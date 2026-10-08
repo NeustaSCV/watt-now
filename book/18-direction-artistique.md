@@ -63,7 +63,9 @@
 | Bas droite | Boutons A, B, Mode, Objet rapide (Book 08 §3) |
 | Au sol | **Cercle de signature** autour du joueur |
 
-> **Décision (2026-10-08) : un écran dégagé sur téléphone.** Les réglages (Commandes, Son, Qualité, Quitter) sont rangés dans un petit menu derrière une **roue dentée ⚙**, en haut à droite ; restent visibles les raccourcis Sac, Fabriquer, Carte. Le **carnet** des objectifs (Book 22) se replie en un petit onglet « 📓 Carnet · 3 objectifs » : replié d'office sur un téléphone, ouvert sur ordinateur, et le choix du joueur est gardé.
+> **Décision (2026-10-08, proposition P-007) : le cercle de visée se voit toujours.** Il est dessiné par-dessus les objets, assez transparent pour qu'on comprenne qu'il est au sol ; un trait clair sur un contour sombre (lisible sur l'herbe, le béton, plus tard la neige) ; à la taille de ce qu'on vise (petit pour un champignon, large pour une épave) ; une pulsation lente. Le liseré lumineux sur l'objet visé reste à faire.
+
+> **Décision (2026-10-08) : un écran dégagé.** Sur téléphone comme sur ordinateur, les réglages (Commandes, Son, Qualité, Quitter) sont rangés dans un petit menu derrière une **roue dentée ⚙**, en haut à droite ; restent visibles les raccourcis Sac, Fabriquer, Carte. Le **carnet** des objectifs (Book 22) se replie en un petit onglet « 📓 Carnet · 3 objectifs » : replié d'office sur un téléphone, ouvert sur ordinateur, et le choix du joueur est gardé.
 
 ---
 

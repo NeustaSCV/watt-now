@@ -4,6 +4,7 @@ import * as THREE from "three";
 import { MARE, RESTE_EN_PLACE, rayonMare, type RessourceSol } from "../../../commun/src/terrain.ts";
 import { PERIODES_FRUITIERS, phaseFruitier, visibleEnSaison } from "../../../commun/src/calendrier.ts";
 import { PALETTE, aleatoire, materiau } from "./materiaux.ts";
+import { ACIER, Assemblage, NOIR, ROUILLE_SOMBRE, SOL_PLAT, V, V3, X, Y, Z, courber, disque, placer, rect, rouille, surface, tache, touffe, type Surface } from "./assemblage.ts";
 
 const geoBranche = new THREE.CylinderGeometry(0.03, 0.045, 1.1, 5).rotateZ(Math.PI / 2).translate(0, 0.05, 0);
 const geoRameau = new THREE.CylinderGeometry(0.015, 0.025, 0.4, 4).rotateZ(Math.PI / 2.6).translate(0.2, 0.12, 0.05);
@@ -755,140 +756,19 @@ export class VueRessource {
 // ---------- L'atelier des épaves (2026-10-08) : tôles profilées, vitres brisées, rouille, mousse, bâche crevée ----------
 // Une épave est faite de dizaines de pièces : on les fusionne par finition, la couleur passant par les sommets.
 // Une voiture ou un camion = 4 à 6 appels de dessin, quelques milliers de triangles (objectif 30 i/s sur iPhone 13).
-
-const V = (x: number, y: number) => new THREE.Vector2(x, y);
-const V3 = THREE.Vector3;
-const X = new V3(1, 0, 0);
-const Y = new V3(0, 1, 0);
-const Z = new V3(0, 0, 1);
+// L'assemblage lui-même (couleurs par sommet, fusion par finition) est dans assemblage.ts, partagé depuis.
 
 const NUIT = 0x1c1e20;
-const NOIR = 0x2a2826;
 const VERRE = 0x7d929c;
 const FISSURE = 0xc4ccd0;
-const ACIER = 0x6b6862;
-const ROUILLE_SOMBRE = 0x6e3a22;
 const MOUSSE = 0x4f6a35;
 const CRASSE = 0x5a4e40;
 const MOUSSE_CLAIRE = 0x66823f;
 const FEUILLES = [0x8a6a3a, 0xa07a3a, 0x6f5a32];
-const HERBES = [PALETTE.herbe, PALETTE.herbeSeche, PALETTE.herbeSombre];
 /** Les arceaux de la benne du camion (x) ; à l'avant, la bâche s'appuie sur la paroi de la benne. */
 const ARCEAUX = [-3.6, -2.25, -0.9, 0.45];
 /** Un éclair stylisé (logo de la société de livraison), dans un carré de côté 2. */
 const ECLAIR = [V(-0.25, 0.9), V(0.35, 0.9), V(0.05, 0.15), V(0.45, 0.15), V(-0.3, -0.95), V(-0.05, -0.1), V(-0.45, -0.1)];
-
-/** La finition d'une pièce : rugosité et métal du matériau partagé (la couleur, elle, est dans les sommets). */
-type Finition = "mat" | "tole" | "metal" | "verre" | "toile" | "sol";
-const FINITIONS: Record<Finition, [rugosite: number, metal: number]> = {
-  mat: [0.9, 0],
-  tole: [0.72, 0.25],
-  metal: [0.5, 0.45],
-  verre: [0.2, 0.15],
-  toile: [0.95, 0],
-  sol: [1, 0],
-};
-const materiauxSommets = new Map<Finition, THREE.MeshStandardMaterial>();
-
-/** Le matériau à facettes d'une finition, couleurs par sommet ; la toile se voit des deux côtés (par les déchirures). */
-function materiauSommets(f: Finition): THREE.MeshStandardMaterial {
-  let m = materiauxSommets.get(f);
-  if (!m) {
-    const [rugosite, metal] = FINITIONS[f];
-    m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: rugosite, metalness: metal, flatShading: true, side: f === "toile" ? THREE.DoubleSide : THREE.FrontSide });
-    materiauxSommets.set(f, m);
-  }
-  return m;
-}
-
-/** Une surface plane où poser une plaque : (u, v) → point 3D, et la direction « dehors ». */
-interface Surface {
-  point: (u: number, v: number) => THREE.Vector3;
-  dehors: THREE.Vector3;
-}
-
-function surface(o: THREE.Vector3, eu: THREE.Vector3, ev: THREE.Vector3, dehors: THREE.Vector3): Surface {
-  return { point: (u, v) => o.clone().addScaledVector(eu, u).addScaledVector(ev, v), dehors: dehors.clone().normalize() };
-}
-
-/** Le sol sous l'épave (u = x, v = z). */
-const SOL_PLAT = surface(new V3(0, 0, 0), X, Z, Y);
-
-/** Accumule des pièces par finition, puis les fusionne en un maillage par finition. */
-class Assemblage {
-  private readonly lots = new Map<Finition, { positions: number[]; couleurs: number[] }>();
-  private readonly teinte = new THREE.Color();
-  /** Transformation appliquée à tout ce qu'on ajoute : la caisse qui penche, une portière ouverte. */
-  repere: THREE.Matrix4 | null = null;
-
-  ajouter(g: THREE.BufferGeometry, couleur: number, finition: Finition = "mat"): void {
-    if (this.repere) g.applyMatrix4(this.repere);
-    const p = g.getAttribute("position");
-    const index = g.getIndex();
-    const n = index ? index.count : p.count;
-    const lot = this.lot(finition);
-    this.teinte.setHex(couleur);
-    for (let i = 0; i < n; i++) {
-      const k = index ? index.getX(i) : i;
-      lot.positions.push(p.getX(k), p.getY(k), p.getZ(k));
-      lot.couleurs.push(this.teinte.r, this.teinte.g, this.teinte.b);
-    }
-    g.dispose();
-  }
-
-  /** Des triangles bruts (x, y, z à la suite). */
-  triangles(positions: number[], couleur: number, finition: Finition): void {
-    const g = new THREE.BufferGeometry();
-    g.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
-    this.ajouter(g, couleur, finition);
-  }
-
-  boite(couleur: number, finition: Finition, l: number, h: number, p: number, x: number, y: number, z: number, rx = 0, ry = 0, rz = 0): void {
-    this.ajouter(placer(new THREE.BoxGeometry(l, h, p), x, y, z, rx, ry, rz), couleur, finition);
-  }
-
-  /** Un polygone plat posé sur une surface, un peu décollé : vitre, phare, tache de rouille, plaque de mousse. */
-  plaque(points: THREE.Vector2[], s: Surface, couleur: number, finition: Finition = "mat", decalage = 0.008): void {
-    const p3 = points.map((q) => s.point(q.x, q.y).addScaledVector(s.dehors, decalage));
-    const ab = new V3();
-    const ac = new V3();
-    const positions: number[] = [];
-    for (const t of THREE.ShapeUtils.triangulateShape(points, [])) {
-      const [a, b, c] = [p3[t[0]!]!, p3[t[1]!]!, p3[t[2]!]!];
-      // Toujours tournée vers le dehors, quel que soit le sens du polygone.
-      const ordre = ab.subVectors(b, a).cross(ac.subVectors(c, a)).dot(s.dehors) >= 0 ? [a, b, c] : [a, c, b];
-      for (const q of ordre) positions.push(q.x, q.y, q.z);
-    }
-    this.triangles(positions, couleur, finition);
-  }
-
-  maillages(ombre: (m: THREE.Mesh) => THREE.Mesh): THREE.Mesh[] {
-    return [...this.lots].map(([f, lot]) => {
-      const g = new THREE.BufferGeometry();
-      g.setAttribute("position", new THREE.Float32BufferAttribute(lot.positions, 3));
-      g.setAttribute("color", new THREE.Float32BufferAttribute(lot.couleurs, 3));
-      g.computeVertexNormals();
-      const m = new THREE.Mesh(g, materiauSommets(f));
-      if (f !== "sol") return ombre(m);
-      m.receiveShadow = true;
-      return m;
-    });
-  }
-
-  private lot(f: Finition): { positions: number[]; couleurs: number[] } {
-    let lot = this.lots.get(f);
-    if (!lot) {
-      lot = { positions: [], couleurs: [] };
-      this.lots.set(f, lot);
-    }
-    return lot;
-  }
-}
-
-function placer<G extends THREE.BufferGeometry>(g: G, x: number, y: number, z: number, rx = 0, ry = 0, rz = 0): G {
-  if (rx || ry || rz) g.applyMatrix4(new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(rx, ry, rz)));
-  return g.translate(x, y, z);
-}
 
 /** Une rotation (roulis rx, tangage rz) autour d'un point : la caisse qui s'affaisse sur une roue crevée. */
 function pivot(px: number, py: number, pz: number, rx: number, rz: number): THREE.Matrix4 {
@@ -903,33 +783,6 @@ function pincer<G extends THREE.BufferGeometry>(g: G, y0: number, h: number, k: 
   const p = g.getAttribute("position");
   for (let i = 0; i < p.count; i++) p.setZ(i, p.getZ(i) * (1 - k * Math.min(1, Math.max(0, (p.getY(i) - y0) / h))));
   return g;
-}
-
-/** Cintre une lame : y monte de `fleche` aux extrémités (x = ±demi). */
-function courber<G extends THREE.BufferGeometry>(g: G, fleche: number, demi: number): G {
-  const p = g.getAttribute("position");
-  for (let i = 0; i < p.count; i++) p.setY(i, p.getY(i) + fleche * (p.getX(i) / demi) ** 2);
-  return g;
-}
-
-/** Un rectangle centré (demi-largeurs du, dv). */
-function rect(u: number, v: number, du: number, dv: number): THREE.Vector2[] {
-  return [V(u - du, v - dv), V(u + du, v - dv), V(u + du, v + dv), V(u - du, v + dv)];
-}
-
-/** Un disque à `n` facettes. */
-function disque(u: number, v: number, r: number, n: number): THREE.Vector2[] {
-  return Array.from({ length: n }, (_, i) => V(u + Math.cos((i / n) * Math.PI * 2) * r, v + Math.sin((i / n) * Math.PI * 2) * r));
-}
-
-/** Une tache irrégulière (rouille, mousse, feuille morte, auréole). */
-function tache(u: number, v: number, ru: number, rv: number, aleat: () => number, n = 7): THREE.Vector2[] {
-  const depart = aleat() * Math.PI * 2;
-  return Array.from({ length: n }, (_, i) => {
-    const a = depart + (i / n) * Math.PI * 2;
-    const r = 0.45 + 0.55 * aleat();
-    return V(u + Math.cos(a) * ru * r, v + Math.sin(a) * rv * r);
-  });
 }
 
 /** Une vitre en trapèze : en bas (v0) de a0 à b0, en haut (v1) de a1 à b1. */
@@ -1002,26 +855,6 @@ function roue(c: Assemblage, x: number, z: number, rayon: number, largeur: numbe
   c.ajouter(pneu.translate(x, y, z), 0x262524);
   c.ajouter(placer(new THREE.CylinderGeometry(rayon * 0.55, rayon * 0.55, largeur * 0.8, 10), x, y, z, Math.PI / 2), jante, "metal");
   c.ajouter(placer(new THREE.CylinderGeometry(rayon * 0.16, rayon * 0.2, 0.06, 6), x, y, z + s * largeur * 0.42, Math.PI / 2), 0x3a3936, "metal");
-}
-
-/** Une touffe d'herbe folle : quelques brins à facettes, verts et secs mêlés. */
-function touffe(c: Assemblage, x: number, z: number, aleat: () => number, n: number, haut: number, y = 0): void {
-  for (let i = 0; i < n * 2; i++) {
-    const h = haut * (0.5 + 0.6 * aleat());
-    const brin = new THREE.ConeGeometry(0.04 + aleat() * 0.03, h, 3, 1, true).scale(1, 1, 0.4).translate(0, h / 2, 0);
-    c.ajouter(placer(brin, x + (aleat() - 0.5) * 0.3, y, z + (aleat() - 0.5) * 0.3, (aleat() - 0.5) * 0.7, aleat() * 6, (aleat() - 0.5) * 0.7), HERBES[Math.floor(aleat() * 3)]!);
-  }
-}
-
-/** Une tache de rouille : une auréole orangée, un cœur brun où la tôle est rongée. */
-function rouille(c: Assemblage, s: Surface, u: number, v: number, ru: number, rv: number, aleat: () => number): void {
-  c.plaque(tache(u, v, ru, rv, aleat, 10), s, PALETTE.rouille, "mat", 0.008);
-  c.plaque(tache(u + (aleat() - 0.5) * ru * 0.6, v + (aleat() - 0.5) * rv * 0.6, ru * 0.5, rv * 0.5, aleat, 7), s, ROUILLE_SOMBRE, "mat", 0.01);
-  // Quelques piqûres autour.
-  for (let i = 0; i < 2; i++) {
-    const a = aleat() * Math.PI * 2;
-    c.plaque(tache(u + Math.cos(a) * ru * 1.3, v + Math.sin(a) * rv * 1.3, ru * 0.18, rv * 0.18, aleat, 5), s, PALETTE.rouille, "mat", 0.008);
-  }
 }
 
 /** Un coussin de mousse bombé. */

@@ -12,38 +12,19 @@ import * as THREE from "three";
 import type { Position } from "../../commun/src/deplacement.ts";
 import { PORTEE_POSE, surLaGrille } from "../../commun/src/emplacement.ts";
 import type { Recette } from "../../commun/src/recettes.ts";
+import { modeleFoyer } from "./rendu/feu.ts";
 
 export type GenrePose = "feu" | "installation";
 
 const VERT = new THREE.Color(0x6fd18a);
 const ROUGE = new THREE.Color(0xe0574a);
 
-/** Un feu de camp en devenir : un cercle de pierres et trois branches (un foyer Dakota : un trou, sans pierres). */
+/**
+ * Un feu de camp en devenir : le vrai foyer (cercle de pierres, ou trou et évent d'un foyer Dakota) et ses bûches
+ * en tipi, le même modèle que le feu posé (rendu/feu.ts) ; ModePose le passe en transparence.
+ */
 export function fantomeFeu(dakota = false): THREE.Group {
-  const g = new THREE.Group();
-  if (dakota) {
-    const trou = new THREE.Mesh(new THREE.CircleGeometry(0.28, 16).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x2e2018 }));
-    trou.position.y = 0.02;
-    const event = new THREE.Mesh(new THREE.CircleGeometry(0.14, 12).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x2e2018 }));
-    event.position.set(0, 0.02, 0.6);
-    g.add(trou, event);
-    return g;
-  }
-  const pierre = new THREE.DodecahedronGeometry(0.13, 0);
-  const mat = new THREE.MeshStandardMaterial({ color: 0x8f8a80, flatShading: true });
-  for (let i = 0; i < 8; i++) {
-    const a = (i / 8) * Math.PI * 2;
-    const p = new THREE.Mesh(pierre, mat);
-    p.position.set(Math.cos(a) * 0.45, 0.08, Math.sin(a) * 0.45);
-    g.add(p);
-  }
-  for (let i = 0; i < 3; i++) {
-    const b = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.04, 0.7, 5), new THREE.MeshStandardMaterial({ color: 0x5a4130, flatShading: true }));
-    b.rotation.set(Math.PI / 2 - 0.5, (i / 3) * Math.PI * 2, 0);
-    b.position.y = 0.18;
-    g.add(b);
-  }
-  return g;
+  return modeleFoyer(dakota);
 }
 
 export class ModePose {

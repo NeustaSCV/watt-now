@@ -1,0 +1,242 @@
+# La recette de chaque fichier livré (son/effets/<identifiant>/<identifiant>_<variante>.*), lue par : python3 son/outils/sons.py rendre son/decoupe.tsv
+# source : couches séparées par « & » ; chaque couche = source@début-fin[~hauteur][+décalage][*gain]
+#   fs:ID = son/sources/freesound/ID.ogg ; sinon chemin sous son/sources/packs/. Fin à 0 = jusqu'au bout.
+# fondu : fondu de sortie (s) ; boucle : recouvrement de la boucle (s), le fichier se raccorde sur lui-même ; passe_haut / passe_bas en Hz.
+identifiant	variante	source	fondu	boucle	passe_haut	passe_bas	note
+pas_herbe_discrete	0	fs:384858@0-0.45	0.12		60		Ali_6868, herbe sèche, pose douce
+pas_herbe_discrete	1	fs:384859@0.01-0.46	0.12		60
+pas_herbe_discrete	2	fs:384860@0-0.45	0.12		60
+pas_herbe_discrete	3	fs:384861@0.09-0.54	0.12		60
+pas_herbe_marche	0	fs:487858@0-0.45	0.12		60		BenDrain, pas isolés
+pas_herbe_marche	1	fs:487859@0-0.45	0.12		60
+pas_herbe_marche	2	fs:488074@0-0.45	0.12		60
+pas_herbe_marche	3	fs:521587@0.79-1.2	0.12		60		Fission9, chaussure de randonnée
+pas_herbe_course	0	fs:556042@21.84-22.25	0.1		60		Nox_Sound, appuis de course sur herbe
+pas_herbe_course	1	fs:556042@23.07-23.48	0.1		60
+pas_herbe_course	2	fs:556042@24.30-24.71	0.1		60
+pas_herbe_course	3	fs:556042@29.34-29.75	0.1		60
+pas_terre_discrete	0	fs:487863@0.02-0.47	0.12		60		BenDrain, terre, les poses les plus légères
+pas_terre_discrete	1	fs:487864@0-0.45	0.12		60
+pas_terre_discrete	2	fs:487869@0-0.45	0.12		60
+pas_terre_discrete	3	fs:548384@0.98-1.43	0.12		60		Nox_Sound, marche lente sur terre humide
+pas_terre_marche	0	fs:487866@0-0.45	0.12		60		BenDrain
+pas_terre_marche	1	fs:487867@0-0.45	0.12		60
+pas_terre_marche	2	fs:487868@0-0.45	0.12		60
+pas_terre_marche	3	fs:487862@0-0.45	0.12		60
+pas_terre_course	0	fs:548384@5.81-6.21	0.1		60		Nox_Sound, course sur terre
+pas_terre_course	1	fs:548384@6.74-7.14	0.1		60
+pas_terre_course	2	fs:548384@7.71-8.11	0.1		60
+pas_terre_course	3	fs:548384@8.62-9.02	0.1		60
+pas_beton_discrete	0	fs:563475@0-0.45	0.12		60		nicholasdaryl, pas furtifs sur sol dur
+pas_beton_discrete	1	fs:563478@0-0.44	0.12		60
+pas_beton_discrete	2	fs:563481@0-0.39	0.12		60
+pas_beton_discrete	3	fs:563483@0-0.44	0.12		60
+pas_beton_marche	0	fs:488078@0-0.45	0.12		60		BenDrain, trottoir
+pas_beton_marche	1	fs:488081@0-0.45	0.12		60
+pas_beton_marche	2	fs:166508@0-0.4	0.1		60		Yoyodaman234, béton
+pas_beton_marche	3	fs:166509@0-0.4	0.1		60
+pas_beton_course	0	fs:563476@0-0.3	0.08		60		nicholasdaryl, course sur sol dur
+pas_beton_course	1	fs:563477@0-0.28	0.08		60
+pas_beton_course	2	fs:777606@0.97-1.33	0.08		60		YannSauvin, bottes sur asphalte
+pas_beton_course	3	fs:777606@3.13-3.49	0.08		60
+pas_gravats_discrete	0	fs:488070@0-0.45	0.12		60		BenDrain, gravier
+pas_gravats_discrete	1	fs:488071@0-0.4	0.12		60
+pas_gravats_discrete	2	fs:488073@0-0.45 & fs:778596@0.09-0.5+0.03*0.25	0.12		60		+ éclats de verre discrets (BlondPanda)
+pas_gravats_discrete	3	fs:488070@0-0.45~1.06	0.12		60
+pas_gravats_marche	0	fs:556002@0.47-0.92	0.12		60		Nox_Sound, gravier
+pas_gravats_marche	1	fs:556002@4.74-5.19 & fs:778594@0.06-0.5+0.02*0.4	0.12		60		+ verre (BlondPanda)
+pas_gravats_marche	2	fs:556002@5.87-6.32	0.12		60
+pas_gravats_marche	3	fs:556002@7.00-7.45 & fs:778597@0.02-0.45+0.02*0.4	0.12		60		+ verre
+pas_gravats_course	0	fs:556002@13.64-14.04	0.1		60		Nox_Sound, course sur gravier
+pas_gravats_course	1	fs:556002@14.01-14.42 & fs:778595@0.07-0.45+0.01*0.35	0.1		60		+ verre
+pas_gravats_course	2	fs:556002@15.52-15.92	0.1		60
+pas_gravats_course	3	fs:556002@16.39-16.79 & fs:778596@0.09-0.45+0.01*0.35	0.1		60		+ verre
+eteint_pas	0	fs:488079@0-0.55	0.12		50		BenDrain, pied qui racle (trottoir)
+eteint_pas	1	fs:556002@28.95-29.50	0.12		50		Nox_Sound, raclement sur gravier
+eteint_pas	2	fs:556002@31.14-31.70	0.12		50
+eteint_pas	3	fs:556042@51.05-51.60	0.12		50		Nox_Sound, raclement sur herbe
+eteint_pas_presse	0	fs:733165@0-0.3	0.08		40		locky_Y, pas lourd frappé
+eteint_pas_presse	1	fs:733166@0-0.3	0.08		40
+eteint_pas_presse	2	fs:733167@0-0.3	0.08		40
+eteint_pas_presse	3	fs:556042@44.56-44.86	0.08		40		Nox_Sound, réception lourde
+eteint_souffle	0	fs:394941@2.50-5.10	0.3		60		giddster, respiration étranglée (inspiration + expiration)
+eteint_souffle	1	fs:394941@6.30-8.70	0.3		60
+eteint_souffle	2	fs:394941@13.35-16.60	0.3		60
+eteint_souffle	3	fs:394941@20.00-22.90	0.3		60
+eteint_machoire	0	fs:517676@0.70-1.03	0.04		80		danlucaz, deux claquements de dents
+eteint_machoire	1	fs:517676@1.37-1.70	0.04		80
+eteint_machoire	2	fs:691909@0-0.22 & fs:691908@0.03-0.19+0.09*0.8	0.04		80		hollandm, deux claquements montés
+eteint_rale	0	fs:483753@0-1.80	0.2		60		Joao_Janz, Creature Long Growl
+eteint_rale	1	fs:483752@0-2.00	0.2		60
+eteint_rale	2	fs:483751@0-1.65	0.2		60
+eteint_rale	3	fs:483757@0-1.90	0.2		60
+eteint_rale	4	fs:483756@0-2.10	0.2		60
+eteint_rale	5	fs:483750@0-1.30	0.2		60
+eteint_rale_coupe	0	fs:483720@0.02-0.60	0.008		60		Joao_Janz, Creature Short Growl, coupé net
+eteint_rale_coupe	1	fs:483722@0.03-0.42	0.008		60
+eteint_rale_coupe	2	fs:483725@0.02-0.50	0.008		60
+eteint_rale_coupe	3	fs:483729@0.04-0.56	0.008		60
+eteint_tete_craque	0	fs:217656@0.03-0.48	0.05		200		Reitanna, craquements d'articulations
+eteint_tete_craque	1	fs:217758@0.02-0.36	0.05		200
+eteint_tete_craque	2	fs:217759@0.01-0.36	0.05		200
+eteint_rale_rapide	0	fs:483717@0.03-0.82	0.12		60		Joao_Janz, Creature Short Growl
+eteint_rale_rapide	1	fs:483719@0.01-0.90	0.12		60
+eteint_rale_rapide	2	fs:483721@0.01-0.80	0.12		60
+eteint_rale_rapide	3	fs:483724@0.02-0.75	0.12		60
+eteint_rale_rapide	4	fs:483727@0.04-0.82	0.12		60
+eteint_rale_rapide	5	fs:483728@0.04-0.86	0.12		60
+eteint_halete	0	fs:483791@0.02-0.95	0.1		60		Joao_Janz, Zombie Pant
+eteint_halete	1	fs:483790@0-0.62	0.1		60
+eteint_halete	2	fs:675489@10.80-11.75	0.12		60		craigsmith, halètement rauque
+saisie	0	fs:789038@0-0.45 & kenney_impact-sounds/Audio/impactSoft_medium_000.ogg@0-0.3*0.5	0.1		40		Mediasaur (vêtement agrippé) + choc mou (Kenney)
+saisie	1	fs:789039@0-0.42 & kenney_impact-sounds/Audio/impactSoft_medium_001.ogg@0-0.3*0.5	0.1		40
+saisie	2	fs:609569@0.02-0.42 & kenney_impact-sounds/Audio/impactSoft_medium_002.ogg@0-0.3*0.5	0.1		40		CJspellsfish + choc mou
+morsure_manquee	0	fs:527489@3.65-3.89	0.05		80		LucasDuff, dents qui claquent dans le vide
+morsure_manquee	1	fs:830093@1.16-1.36	0.05		80		Wigglesworth
+morsure_manquee	2	fs:830093@1.64-1.86	0.05		80
+morsure	0	fs:30930@0-0.74	0.1		40		aust_paul, chair arrachée
+morsure	1	fs:30931@0-0.80	0.1		40
+morsure	2	fs:30929@0-0.80	0.1		40
+impact	0	fs:406458@0.02-0.32	0.06		30		kretopi, coup sourd sur un corps
+impact	1	fs:406459@0.01-0.29	0.06		30
+impact	2	fs:406460@0.05-0.30	0.06		30
+impact	3	fs:406461@0-0.28	0.06		30
+impact_appuye	0	fs:406457@0.08-0.59	0.1		30		kretopi, coup appuyé
+impact_appuye	1	fs:406463@0.04-0.54	0.1		30
+impact_appuye	2	fs:406464@0-0.42	0.1		30
+coup_tete	0	fs:406458@0.02-0.32 & fs:413430@0-0.48*0.9	0.1		30		coup (kretopi) + os qui cède (wackoME)
+coup_tete	1	fs:406459@0.01-0.29 & fs:630594@0-0.35*0.9	0.1		30		+ Vinni_R
+coup_tete	2	fs:406457@0.08-0.50 & fs:449617@0.21-0.40*0.8	0.1		30		+ dasBUTCHER84
+chute_corps	0	fs:346692@0.45-1.12	0.15		30		chute de corps (série de 3, même prise)
+chute_corps	1	fs:346693@0.70-1.60	0.15		30
+chute_corps	2	fs:346694@0.45-1.37	0.15		30
+sifflement	0	fs:422504@0.02-0.25	0.05		100		Nightflame, bâton qui fend l'air
+sifflement	1	fs:422508@0.02-0.24	0.05		100
+sifflement	2	fs:422513@0.02-0.25	0.05		100
+sifflement	3	fs:420668@0.02-0.18	0.04		100		SypherZent
+sifflement_lourd	0	fs:422502@0.01-0.30	0.06		60		Nightflame (low)
+sifflement_lourd	1	fs:352719@0.01-0.45	0.08		60		Dalesome, bâton
+sifflement_lourd	2	fs:485279@0.01-0.45	0.08		60		Joao_Janz, bâton de bois
+esquive	0	fs:753428@0.32-0.55 & fs:504347@0-0.22+0.06*0.7 & fs:504316@0-0.25+0.21*0.5	0.08		60		Vrymaa (esquive) + 2 appuis (Joao_Janz)
+esquive	1	fs:753428@1.64-2.00 & fs:504316@0-0.25+0.07*0.7 & fs:504347@0-0.22+0.23*0.5	0.08		60
+esquive	2	fs:753428@3.07-3.25 & fs:504347@0-0.22+0.05*0.7 & fs:504316@0-0.25+0.20*0.5	0.08		60
+degagement	0	fs:493444@0.04-0.38 & kenney_impact-sounds/Audio/impactSoft_heavy_000.ogg@0-0.25+0.06*0.6	0.08		40		vêtements secoués (Joao_Janz) + coup de coude (Kenney)
+degagement	1	fs:493447@0.05-0.39 & kenney_impact-sounds/Audio/impactSoft_heavy_001.ogg@0-0.25+0.09*0.6	0.08		40
+degagement	2	fs:493463@0.06-0.38 & kenney_impact-sounds/Audio/impactSoft_heavy_002.ogg@0-0.25+0.04*0.6	0.08		40
+degagement	3	fs:493491@0.06-0.44 & kenney_impact-sounds/Audio/impactSoft_heavy_003.ogg@0-0.25+0.08*0.6	0.08		40
+coeur	0	fs:540985@0-0.66	0.1		20	400	magnuswaker, un battement double (boum-boum)
+coeur	1	fs:22440@0-0.30 & fs:22440@0-0.30+0.30*0.65	0.15		20	200	Lunardrive, un battement doublé (boum-boum)
+effondrement	0	fs:346693@0.70-1.60 & fs:540985@0-0.66+0.85*0.8 & fs:540985@0-0.66+1.65*0.5	0.3		20		chute de corps + 2 battements qui faiblissent
+geste_bois	0	fs:277585@0.04-0.45	0.08		80		SketchComPod, deux bâtons qui se cognent
+geste_bois	1	fs:277585@0.70-1.05	0.08		80
+geste_bois	2	fs:737557@6.60-6.76 & fs:737557@7.05-7.22+0.11*0.6	0.08		80		itinerantmonk108, petit bois frappé
+geste_pierre	0	fs:858891@0.05-0.33	0.05		80		xtra1, deux pierres frappées
+geste_pierre	1	fs:858891@3.47-3.78	0.05		80
+geste_pierre	2	fs:858891@8.55-8.87	0.05		80
+geste_feuillage	0	fs:705228@0.09-0.78	0.15		100		hadescolossus, herbe coupée au couteau
+geste_feuillage	1	fs:705228@2.52-3.16	0.15		100
+geste_feuillage	2	fs:705228@1.17-1.95	0.15		100
+fouille	0	fs:257570@1.00-2.20	0.2		60		Kodack, fouille dans des débris
+fouille	1	fs:257570@6.00-7.20	0.2		60
+fouille	2	fs:413277@3.00-4.20	0.2		60		Timmeh515, sac fouillé
+demonter	0	fs:386206@0-1.05	0.1		60		ldezem, clé à cliquet
+demonter	1	fs:386203@0-1.00	0.1		60
+demonter	2	fs:551497@0.06-1.22	0.1		60		AlaskaRobotics, trois tours de cliquet
+visser	0	fs:747175@1.00-1.90	0.12		60		Fwughox_Official, tournevis à main dans le bois
+visser	1	fs:747175@6.10-7.00	0.12		60
+visser	2	fs:747175@9.00-9.90	0.12		60
+marteau_bois	0	fs:386226@0-0.50	0.12		40		ldezem, marteau sur bois
+marteau_bois	1	fs:386225@0-0.50	0.12		40
+marteau_bois	2	fs:386225@2.95-3.45	0.12		40
+marteau_metal	0	fs:386129@0-0.85	0.25		40		ldezem, marteau sur acier
+marteau_metal	1	fs:386111@0-0.80	0.25		40
+marteau_metal	2	fs:784152@0-0.80	0.25		40		loganzsound, plaque de métal
+enclume	0	fs:386099@0-1.60	0.4		40		ldezem, enclume
+enclume	1	fs:386105@0-1.40	0.4		40
+enclume	2	fs:386102@0-1.30	0.4		40
+scie	0	fs:841708@3.00-4.20	0.12		80		RdmnPrd, égoïne
+scie	1	fs:841708@20.00-21.20	0.12		80
+scie	2	fs:841708@35.00-36.20	0.12		80
+hache_coupe	0	fs:386224@0-0.90	0.2		40		ldezem, coup de hache
+hache_coupe	1	fs:386223@0-0.90	0.2		40
+hache_coupe	2	fs:386222@2.97-3.85	0.2		40
+aiguiser	0	fs:336592@0.06-0.52 & fs:336593@0.03-0.45+0.50	0.08		200		Anthousai, deux passes de lame
+aiguiser	1	fs:336593@0.03-0.45 & fs:336592@0.06-0.52+0.48	0.08		200
+aiguiser	2	fs:126488@0.16-0.62 & fs:126488@2.21-2.67+0.50	0.08		200		Sempoo, pierre à aiguiser
+tissu	0	fs:591526@1.85-2.65	0.15		100		Rudmer_Rotteveel, tissu déchiré
+tissu	1	fs:591526@3.88-4.68	0.15		100
+tissu	2	fs:591526@5.44-6.04	0.15		100
+bache	0	fs:481896@4.43-5.45	0.2		40		craigsmith, bâche dépliée et secouée
+bache	1	fs:481896@8.26-9.27	0.2		40
+bache	2	fs:481896@12.54-13.55	0.2		40
+remplir_eau	0	fs:335762@3.90-8.40		0.5	60		j1987, bouteille plongée dans l'eau (boucle de 4 s)
+bouillir	0	fs:730089@10.00-14.50		0.5	60		TravieDoodle, casserole qui frémit (boucle de 4 s)
+manger	0	fs:181922@0.13-0.30 & fs:181922@1.90-2.07+0.38*0.9 & fs:181922@3.11-3.28+0.76*0.8 & fs:181922@8.81-8.98+1.14*0.9	0.1		80		CapsLok, 4 bouchées croquantes
+manger	1	fs:181922@9.72-9.89 & fs:181922@10.93-11.10+0.36*0.9 & fs:181922@0.13-0.30+0.74*0.8 & fs:181922@1.90-2.07+1.12*0.9	0.1		80
+manger	2	fs:435357@0.52-0.69 & fs:435357@1.65-1.82+0.38*0.9 & fs:435357@2.90-3.07+0.76*0.8 & fs:435357@3.87-4.04+1.14*0.7	0.1		80		Yin_Yang_Jake007, céleri
+boire	0	fs:693251@0.14-0.79 & fs:693251@1.61-2.19+0.50 & fs:693251@3.19-3.63+1.00	0.1		40		UnderASpell, 3 gorgées
+boire	1	fs:693251@1.61-2.19 & fs:693251@4.76-5.33+0.48 & fs:693251@6.29-6.74+0.98	0.1		40
+boire	2	fs:693251@3.19-3.63 & fs:693251@0.14-0.79+0.44 & fs:693251@4.76-5.33+0.98	0.1		40
+briquet	0	fs:700894@0.20-1.20	0.2		80		magnuscarlssen, Zippo : molette et flamme
+briquet	1	fs:827018@0-1.00	0.2		80		reergaregs, briquet
+pierre_a_feu	0	fs:538024@0.37-0.67 & fs:538024@1.22-1.53+0.32 & fs:538024@2.23-2.51+0.64	0.1		100		Tairblenn, 3 frappes silex et acier
+pierre_a_feu	1	fs:538024@5.86-6.19 & fs:538024@6.72-7.02+0.33 & fs:538024@8.18-8.51+0.66	0.1		100
+pose_pierres	0	fs:858891@1.39-1.66 & fs:858891@2.48-2.80+0.36*0.8 & fs:858891@4.56-4.74+0.74*0.9	0.1		60		xtra1, 3 pierres posées
+pose_pierres	1	fs:858891@5.25-5.51 & fs:858891@6.29-6.54+0.34*0.9 & fs:858891@7.95-8.27+0.72*0.7	0.1		60
+pose_pierres	2	fs:858891@9.44-9.74 & fs:858891@10.53-10.78+0.38*0.8 & fs:858891@11.36-11.60+0.73*0.9	0.1		60
+charbon	0	fs:362976@0.30-1.50	0.2		100		AurielPerson, charbon de bois versé
+charbon	1	fs:362976@4.60-5.80	0.2		100
+charbon	2	fs:362976@9.40-10.60	0.2		100
+buche_tombe	0	fs:801818@0.06-1.06 & fs:637523@3.0-4.0*0.4	0.2		40		Sadiquecat (bûche lancée) + crépitements (kyles)
+buche_tombe	1	fs:575904@1.76-2.76 & fs:637523@12.0-13.0*0.4	0.2		40		zeteny_zpx + crépitements
+buche_tombe	2	fs:575904@1.13-2.00 & fs:637523@21.0-22.0*0.4	0.2		40
+extinction	0	fs:870180@1.00-2.60	0.5		60		bassimat, feu éteint (vapeur, grésillement)
+extinction	1	fs:461080@0.15-1.75	0.5		60		15GKovacovaJulie
+feu_crepite	0	fs:637523@5.00-11.60		0.6	30		kyles, petit feu de camp (boucle de 6 s)
+soufflet	0	fs:613613@5.63-7.03 & fs:386150@1.0-2.1+0.3*0.35	0.3		40		noisymichael (soufflet) + braises (ldezem)
+soufflet	1	fs:613613@7.93-9.33 & fs:386150@4.0-5.1+0.3*0.35	0.3		40
+soufflet	2	fs:613613@15.22-16.62 & fs:386150@7.0-8.1+0.3*0.35	0.3		40
+braises	0	fs:386150@1.00-6.50		0.5	30		ldezem, charbon de forge et ventilateur (boucle de 5 s)
+trempe	0	fs:386212@0.74-2.34	0.5		40		ldezem, acier chaud dans l'eau
+trempe	1	fs:436470@0.01-1.61	0.5		40		rabban625, pelle chaude dans l'eau
+chaine_velo	0	fs:490878@4.70-9.00		0.3	60		JuandreSound, chaîne de vélo (boucle de 4 s)
+roue_libre	0	fs:494328@8.00-10.00	0.8		100		stib, roue libre
+roue_libre	1	fs:547410@0-0.86	0.2		100		Ian_G, roue libre
+meule	0	fs:423443@0.80-5.20		0.4	100		florianreichelt, couteau sur meule (boucle de 4 s)
+pinces	0	fs:740444@0.23-0.46 & fs:740115@1.81-2.07+0.22*0.8	0.05		200		FOSSarts, deux clips métalliques (ersatz)
+pinces	1	fs:740115@1.81-2.07 & fs:740444@0.23-0.46+0.24*0.8	0.05		200
+pinces	2	fs:740444@0.23-0.46 & fs:740444@0.23-0.46~0.85+0.2*0.8	0.05		200
+bourdonnement	0	fs:733736@0.50-3.95		0.5			chungus43A, ronflement 50 Hz (boucle de 3 s)
+interrupteur	0	fs:870289@0-0.15	0.03		100		funkysandwich, interrupteur
+interrupteur	1	fs:788643@0-0.22	0.04		100		Philip_Berger
+envol	0	fs:719107@0.45-1.85	0.3		100		OwennewO, canard qui bat des ailes
+envol	1	fs:532180@1.05-2.50	0.3		100		mcmikai, envol de pigeons
+envol	2	fs:532180@1.05-2.30~1.08	0.3		100
+caquet	0	fs:456803@2.03-3.30	0.12		100		Breviceps, « cot cot codêêt »
+caquet	1	fs:456803@3.80-5.33	0.12		100
+caquet	2	fs:456803@6.39-7.88	0.12		100
+cancan	0	fs:792532@0-1.39	0.15		100		TheKingOfGeeks360, colvert
+cancan	1	fs:719115@0-1.25	0.15		100		OwennewO, couple de canards
+cancan	2	fs:188375@8.46-9.70	0.15		100		calodas, canard
+pluie	0	fs:672696@5.00-11.80		0.8	60		Cinetony, pluie sur feuillage (boucle de 6 s)
+tonnerre	0	fs:616980@1.40-7.40	1.5		20		TRP, roulement de tonnerre
+tonnerre	1	fs:347562@0.38-6.40	1.5		20		mikala_oidua, tonnerre lointain
+tonnerre	2	fs:683420@0.04-5.20	1.2		20		SholeColtis, tonnerre grave
+ui_charbonniers_ouvrir	0	fs:340501@0.12-0.32	0.06		150		mickyman5000, tôle tapée
+ui_charbonniers_ouvrir	1	fs:410364@0.02-0.28	0.06		150		BenjaminNelan, coup métallique
+ui_charbonniers_fermer	0	fs:191489@0-0.30	0.08		150		Alteration, tape sur métal
+ui_charbonniers_fermer	1	fs:13118@0-0.30	0.08		150		looppool, coup d'enclume
+ui_charbonniers_valider	0	fs:340501@0.12-0.32 & fs:340501@0.12-0.32~1.5+0.07*0.8	0.06		150		deux coups qui montent
+ui_charbonniers_valider	1	fs:410364@0.02-0.26 & fs:410364@0.02-0.26~1.5+0.07*0.8	0.06		150
+ui_voltaiques_ouvrir	0	fs:843148@0-0.15	0.03		150		Sadiquecat, bip de moniteur 795 Hz
+ui_voltaiques_ouvrir	1	fs:843148@0-0.15~1.19	0.03		150
+ui_voltaiques_fermer	0	fs:843148@0-0.15~0.84	0.03		150
+ui_voltaiques_fermer	1	fs:843148@0-0.15~0.75	0.03		150
+ui_voltaiques_valider	0	fs:843148@0-0.08 & fs:843148@0-0.12~1.5+0.08	0.03		150		deux bips qui montent
+ui_voltaiques_valider	1	fs:581603@0-0.20	0.04		150		SamsterBirdies, bip de confirmation
+ui_mecanistes_ouvrir	0	fs:151220@0.01-0.50	0.08		150		OwlStorm, page tournée
+ui_mecanistes_ouvrir	1	fs:484968@0.07-0.47	0.08		150		SpaceJoe, page tournée doucement
+ui_mecanistes_fermer	0	fs:614083@0-0.45	0.08		150		mateusboga, page tournée
+ui_mecanistes_fermer	1	kenney_rpg-audio/Audio/bookClose.ogg@0-0.45	0.08		150		Kenney, carnet refermé
+ui_mecanistes_valider	0	fs:181052@0.01-0.40	0.06		150		jakobhandersen, coche au crayon
+ui_mecanistes_valider	1	fs:181056@0-0.42	0.06		150

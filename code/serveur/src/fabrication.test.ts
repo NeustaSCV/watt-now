@@ -37,7 +37,8 @@ test("la ruine de ferme et ses six vestiges sont sur le terrain", () => {
 });
 
 test("sans clé, le vélo ne se démonte pas ; la caisse à outils en donne une", () => {
-  const { joueur, attendre, dernier, infos, vestige, allerA } = monter({ couteau: 1 });
+  // Avec un sac : la caisse rapporte aussi du bric-à-brac (Vestiges, lot 1), et 10 kg de poches n'y suffiraient pas.
+  const { joueur, attendre, dernier, infos, vestige, allerA } = monter({ couteau: 1, sac_a_dos: 1 });
   const velo = vestige("velo");
   allerA(velo.x, velo.z);
   joueur.recevoir({ t: "interagir", cible: { genre: "ressource", id: velo.id }, verbe: "demonter" });
@@ -89,7 +90,8 @@ test("construire un établi devant soi, pas dans la ruine ni trop loin", () => {
   const i = dernier("installation")!.installation;
   assert.equal(i.type, "etabli");
   assert.equal(dernier("inventaire")!.inventaire.buche, undefined);
-  assert.equal(joueur.bienvenue(0).installations.length, 1);
+  // La décharge du terrain (P-001) est toujours là ; on ne compte que ce qu'on a bâti.
+  assert.equal(joueur.bienvenue(0).installations.filter((x) => x.type !== "decharge").length, 1);
 });
 
 test("une recette inconnue de la famille est refusée", () => {

@@ -3,6 +3,7 @@
 import { REGLAGES } from "./reglages.ts";
 import { OBJETS, type Inventaire, type TypeObjet } from "./objets.ts";
 import type { Famille } from "./regles.ts";
+import { valeursVestiges } from "./vestiges.ts";
 
 // ---------- Qualités d'outil (Book 03 §4) ----------
 
@@ -31,6 +32,8 @@ export const QUALITES_OBJETS: Partial<Record<TypeObjet, Partial<Record<Qualite, 
   tournevis: { visser: 2 },
   scie: { scier_bois: 2 },
   baton_fouir: { creuser: 1 },
+  // Vestiges, lot 1 (0.3) : la bêche trouvée dans la grange.
+  beche: { creuser: 2 },
 };
 
 /** Le meilleur niveau d'une qualité parmi les objets portés (0 si aucun). */
@@ -75,7 +78,9 @@ export type TypeInstallation =
   // La gamme bushcraft, lot 1 (P-002, 2026-10-08)
   | "recuperateur_pluie"
   | "alarme_boites"
-  | "lit_branchages";
+  | "lit_branchages"
+  // La décharge du terrain (P-001) : fixe, elle fait remonter des objets.
+  | "decharge";
 
 export const NOMS_INSTALLATIONS: Record<TypeInstallation, string> = {
   etabli: "établi",
@@ -90,6 +95,7 @@ export const NOMS_INSTALLATIONS: Record<TypeInstallation, string> = {
   recuperateur_pluie: "récupérateur de pluie",
   alarme_boites: "alarme à boîtes de conserve",
   lit_branchages: "lit de branchages",
+  decharge: "décharge",
 };
 
 /** Les petites installations : on peut les poser plus près des autres (un lit à côté de l'abri, une alarme le long du chemin). */
@@ -492,6 +498,9 @@ const ENERGIE_GRISE_BASE: Partial<Record<TypeObjet, number>> = {
   // Une poule : l'approche, le coup, le retour (≈ 15 min de travail léger), plus sa valeur de viande.
   poule: 60,
   volaille_cuite: 18,
+  // Vestiges, lot 1 (0.3) : la valeur de chaque vestige et composant (commun/src/vestiges.ts). Les objets absurdes
+  // valent 1 ou 2 wotts ; l'électronique est plafonnée (Book 01 §6) : on ne sait plus la refaire, mais elle ne marche plus.
+  ...valeursVestiges(),
 };
 
 /** Énergie grise d'une recette : matières + travail humain (procédé de référence, sans malus). */

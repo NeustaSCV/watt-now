@@ -6,6 +6,12 @@
       "runtimeExecutable": "/opt/homebrew/bin/node",
       "runtimeArgs": ["code/scripts/dev.mjs"],
       "port": 5173
+    },
+    {
+      "name": "son-ecoute",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8790", "--bind", "127.0.0.1", "--directory", "son"],
+      "port": 8790
     }
   ]
 }

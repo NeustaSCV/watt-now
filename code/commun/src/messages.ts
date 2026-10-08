@@ -147,6 +147,8 @@ export type MessageClient =
   | { t: "coffre"; id: number; sens: "deposer" | "prendre"; objet: TypeObjet; quantite: number }
   /** Jeter un objet par terre (quand le sac est trop lourd) : il reste au sol, ramassable. */
   | { t: "jeter"; objet: TypeObjet; quantite: number }
+  /** Démonter un vestige du sac en composants (Vestiges, lot 1, 0.3 ; table DEMONTAGE). */
+  | { t: "demonter"; objet: TypeObjet }
   /** Poser devant soi l'objet lourd qu'on porte. */
   | { t: "poser" }
   /** Équiper une arme pour le mode Combat (null : plus d'arme choisie, la meilleure du sac) (P-005). */
@@ -233,6 +235,8 @@ export interface RapportBase {
   feuxEteints: number;
   /** Ce qui a repoussé sur le terrain. */
   repousse: number;
+  /** Ce que la décharge a fait remonter pendant l'absence (P-001). */
+  decharge_remonte?: number;
 }
 
 /** Les wotts du joueur : en bons dans la poche, et sur son compte au comptoir (valeur du moment). */

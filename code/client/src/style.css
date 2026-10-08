@@ -2930,6 +2930,65 @@ body {
   font: inherit;
   cursor: pointer;
 }
+/* Vestiges, lot 1 (0.3) : beaucoup d'objets. La grille défile seule, la fiche reste visible ; un tri simple. */
+#hud .sac .grille {
+  max-height: max(116px, min(292px, calc(100dvh - 380px)));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 2px;
+}
+#hud .sac .tri-sac {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: #7a6a58;
+}
+#hud .sac .tri-sac button {
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 14px;
+  border: 1px solid var(--creme-fonce);
+  background: transparent;
+  color: var(--encre);
+  font: inherit;
+  cursor: pointer;
+}
+#hud .sac .tri-sac button[aria-pressed="true"] {
+  border-color: var(--encre);
+  background: #fffaf0;
+  font-weight: 700;
+}
+#hud .sac .demontage {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--creme-fonce);
+}
+#hud .sac .demontage p {
+  flex: 1;
+  margin: 0;
+}
+#hud .sac .demontage small {
+  color: #7a6a58;
+}
+#hud .sac .demontage button {
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 6px;
+  border: 1px solid var(--encre);
+  background: var(--encre);
+  color: var(--creme);
+  font: inherit;
+  cursor: pointer;
+}
+#hud .sac .demontage button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
 #hud .panneau.coffre {
   position: absolute;
   left: 50%;

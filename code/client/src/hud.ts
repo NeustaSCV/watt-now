@@ -38,6 +38,7 @@ import type { Commande } from "./entrees.ts";
 import { icone, type Pictogramme } from "./icones.ts";
 import type { Propositions } from "./interaction.ts";
 import { ORDRE_NIVEAUX, changerQualite, type NiveauQualite } from "./rendu/qualite.ts";
+import { COMPOSANTS, DEMONTAGE, NOMS_FAMILLES_VESTIGES, VESTIGES, type FamilleVestige } from "../../commun/src/vestiges.ts";
 
 /** Ordre d'affichage dans le sac : à boire et à manger, matériaux, pièces, outils, lumières. */
 const ORDRE_SAC: TypeObjet[] = [
@@ -45,7 +46,23 @@ const ORDRE_SAC: TypeObjet[] = [
   "fibres", "bache", "ressort_lames", "barre_metal", "tete_hache", "cadre_velo", "chaine_velo", "roue_velo", "dynamo_velo", "batterie_voiture",
   "hache", "couteau", "marteau", "scie", "cle_plate", "tournevis", "briquet", "pierre_a_feu", "corde", "petite_batterie",
   "torche", "lampe_frontale", "lanterne", "lampe_dynamo", "sac_a_dos",
+  // Vestiges, lot 1 (0.3) : les composants, puis le bric-à-brac rangé par famille (cuisine, salle de bain…).
+  ...(Object.keys(COMPOSANTS) as TypeObjet[]),
+  ...(["cuisine", "salle_de_bain", "salon", "gadget", "garage", "voiture", "ferme"] as FamilleVestige[]).flatMap((f) =>
+    (Object.keys(VESTIGES) as (keyof typeof VESTIGES)[]).filter((t) => VESTIGES[t].famille === f),
+  ),
 ];
+
+/** Le tri du sac : par sorte (l'ordre ci-dessus) ou par poids (le plus lourd d'abord, pour choisir quoi laisser). */
+type TriSac = "sorte" | "poids";
+
+function lireTriSac(): TriSac {
+  try {
+    return localStorage.getItem("watt.tri-sac") === "poids" ? "poids" : "sorte";
+  } catch {
+    return "sorte";
+  }
+}
 
 export interface ActionsJoueur {
   manger(objet: TypeObjet): void;
@@ -60,6 +77,8 @@ export interface ActionsJoueur {
   passerTutoriel(): void;
   /** Jeter un objet par terre (quand le sac est trop lourd). */
   jeter(objet: TypeObjet, quantite: number): void;
+  /** Démonter un vestige en composants (Vestiges, lot 1). */
+  demonter(objet: TypeObjet): void;
   /** Équiper une arme pour le mode Combat (null : la meilleure du sac) (P-005). */
   equiper(objet: TypeObjet | null): void;
   /** Ranger dans le coffre, ou en sortir. */
@@ -170,6 +189,7 @@ export class Hud {
   private dernierSac = "";
   private derniereFabrication = "";
   private selection: TypeObjet | null = null;
+  private triSac: TriSac = lireTriSac();
   private inventaire: Inventaire = {};
   private gourde: Gourde = { contenu: "potable", litres: 0 };
   private lumiereAllumee = false;
@@ -607,6 +627,7 @@ export class Hud {
     if (r.charbonniere === "prete") lignes.push(`<li><b>La charbonnière</b> a fini de cuire : le charbon est prêt.</li>`);
     else if (typeof r.charbonniere === "number") lignes.push(`<li><b>La charbonnière</b> fume encore : prête dans ${r.charbonniere} min.</li>`);
     if (r.feuxEteints > 0) lignes.push(`<li><b>${r.feuxEteints > 1 ? `${r.feuxEteints} feux se sont éteints` : "Le feu s'est éteint"}</b> faute de bois.</li>`);
+    if (r.decharge_remonte) lignes.push(`<li>La décharge a fait remonter ${r.decharge_remonte > 1 ? `${r.decharge_remonte} objets` : "un objet"}.</li>`);
     if (r.feuxAllumes > 0) lignes.push(`<li>${r.feuxAllumes > 1 ? `${r.feuxAllumes} feux brûlent` : "Le feu brûle"} encore.</li>`);
     if (r.decharge >= 1) lignes.push(`<li>Les batteries se sont déchargées toutes seules : −${r.decharge} Wh.</li>`);
     if (r.repousse > 0) lignes.push(`<li>Du bois mort et des baies ont repoussé (${r.repousse}).</li>`);
@@ -1090,10 +1111,13 @@ export class Hud {
     const presents = ORDRE_SAC.filter((t) => t !== "gourde" && (this.inventaire[t] ?? 0) > 0);
     // Les objets absents de l'ordre prévu viennent à la fin, pour ne rien oublier.
     for (const t of Object.keys(this.inventaire) as TypeObjet[]) if (!ORDRE_SAC.includes(t) && (this.inventaire[t] ?? 0) > 0) presents.push(t);
+    // Par poids : la pile la plus lourde d'abord (le tri est stable : à poids égal, l'ordre par sorte).
+    if (this.triSac === "poids") presents.sort((a, b) => OBJETS[b].poids * (this.inventaire[b] ?? 0) - OBJETS[a].poids * (this.inventaire[a] ?? 0));
     const case_ = (type: TypeObjet, badge: string, classe = "") => {
       const d = OBJETS[type];
+      const pile = d.poids * Math.max(1, this.inventaire[type] ?? 0);
       return `<button type="button" class="case ${classe} ${this.selection === type ? "choisie" : ""}" data-objet="${type}"
-        title="${d.nom} — ${d.description}" aria-label="${d.nom}">${icone(type)}${badge ? `<span class="badge">${badge}</span>` : ""}</button>`;
+        title="${d.nom} (${kg(pile)} kg) — ${d.description}" aria-label="${d.nom}">${icone(type)}${badge ? `<span class="badge">${badge}</span>` : ""}</button>`;
     };
     const cases = [
       (this.inventaire.gourde ?? 0) > 0 ? case_("gourde", g.litres > 0 ? `${kg(g.litres)} L` : "vide", g.contenu === "brute" && g.litres > 0 ? "brute" : "") : "",
@@ -1140,11 +1164,24 @@ export class Hud {
         s === "sac_a_dos" || s === "sac_fortune"
           ? ""
           : `<div class="jeter"><button type="button" data-action="jeter1">Jeter${n > 1 ? " 1" : ""}</button>${n > 1 ? `<button type="button" data-action="jeterTout">Tout jeter (${n})</button>` : ""}</div>`;
+      // Vestiges, lot 1 : ce que donne le démontage, et l'outil qu'il demande.
+      const dem = DEMONTAGE[s];
+      let demontage = "";
+      if (dem) {
+        const donne = (Object.entries(dem.donne) as [TypeObjet, number][]).map(([t, k]) => nommer(t, k)).join(", ");
+        const outils = (Object.entries(dem.qualites) as [Qualite, number][]).map(([q, niv]) => `${NOMS_QUALITES[q]} ${niv}`).join(", ");
+        const facteur = multiplicateurQualites(this.inventaire, dem.qualites);
+        const etat = facteur === null ? "il te manque l'outil" : facteur > 1 ? "ton outil fera l'affaire, plus lentement" : outils ? "tu as l'outil" : "";
+        demontage = `<div class="demontage"><p><strong>Démonter</strong> → ${donne}.<br><small>Outil : ${outils || "aucun"}${etat ? ` (${etat})` : ""}.</small></p>
+          <button type="button" data-action="demonter" ${facteur === null ? "disabled" : ""}>Démonter</button></div>`;
+      }
+      const famille = d.famille ? ` · ${NOMS_FAMILLES_VESTIGES[d.famille]}` : "";
       fiche = `
         <div class="fiche-tete">${icone(s, 44)}<div><strong>${nommer(s, n)}</strong>
-          <small>${kg(d.poids * n)} kg · valeur ≈ ${formaterWotts(energieGrise(s))}</small></div>${action}</div>
+          <small>${kg(d.poids * n)} kg · valeur ≈ ${formaterWotts(energieGrise(s))}${famille}</small></div>${action}</div>
         <p>${detail}</p>
         <p class="energie-grise">${this.texteEnergieGrise(s)}</p>
+        ${demontage}
         ${jeter}`;
     }
 
@@ -1155,6 +1192,9 @@ export class Hud {
         <span class="poids-total">${poids.toFixed(1).replace(".", ",")} / ${capacite} kg</span>
         ${capacite < 30 ? `<p class="sans-sac">Sans sac, tu ne portes que ${capacite} kg : retourne chercher le tien, ou fabrique un sac de fortune (4 branches, 2 cordes).</p>` : ""}
         <button type="button" class="fermer" aria-label="Fermer">✕</button></header>
+      ${presents.length > 8 ? `<div class="tri-sac" role="group" aria-label="Trier le sac">Trier :
+        <button type="button" data-tri="sorte" aria-pressed="${this.triSac === "sorte"}">par sorte</button>
+        <button type="button" data-tri="poids" aria-pressed="${this.triSac === "poids"}">par poids</button></div>` : ""}
       <div class="grille">${cases}</div>
       <div class="fiche">${fiche}</div>`;
 
@@ -1164,6 +1204,17 @@ export class Hud {
     this.sac.innerHTML = html;
 
     this.sac.querySelector(".fermer")!.addEventListener("click", () => this.basculerSac(false));
+    for (const b of this.sac.querySelectorAll<HTMLButtonElement>("[data-tri]")) {
+      b.addEventListener("click", () => {
+        this.triSac = b.dataset.tri === "poids" ? "poids" : "sorte";
+        try {
+          localStorage.setItem("watt.tri-sac", this.triSac);
+        } catch {
+          // Pas de stockage : le tri vaut pour cette partie.
+        }
+        this.dessinerSac();
+      });
+    }
     for (const b of this.sac.querySelectorAll<HTMLButtonElement>(".case")) {
       b.addEventListener("click", () => {
         const type = b.dataset.objet as TypeObjet;
@@ -1180,6 +1231,7 @@ export class Hud {
         if (action === "panser") this.actions.panser();
         if (action === "equiper" && this.selection) this.actions.equiper(this.selection);
         if (action === "desequiper") this.actions.equiper(null);
+        if (action === "demonter" && this.selection) this.actions.demonter(this.selection);
         if ((action === "jeter1" || action === "jeterTout") && this.selection) {
           this.actions.jeter(this.selection, action === "jeter1" ? 1 : (this.inventaire[this.selection] ?? 1));
         }
@@ -1238,24 +1290,27 @@ export class Hud {
     if (!c) return;
     const contenu = c.etat.contenu ?? {};
     const poidsCoffre = poidsInventaire(contenu);
+    // La décharge (P-001) s'ouvre comme un coffre : on n'y fait que prendre, en choisissant (le sac ne suit pas).
+    const estDecharge = c.type === "decharge";
     const poidsSac = poidsInventaire(this.inventaire);
     const cases = (inv: Inventaire, sens: "deposer" | "prendre") =>
       (Object.keys(inv) as TypeObjet[])
         .filter((t) => (inv[t] ?? 0) > 0 && !(sens === "deposer" && t === "sac_a_dos"))
         .map((t) => {
           const n = inv[t] ?? 0;
-          return `<button type="button" class="case" data-sens="${sens}" data-objet="${t}" title="${OBJETS[t].nom} (${kg(OBJETS[t].poids * n)} kg)" aria-label="${OBJETS[t].nom}">${icone(t)}${n > 1 ? `<span class="badge">×${n}</span>` : ""}</button>`;
+          if (estDecharge && sens === "deposer") return `<span class="case" title="${OBJETS[t].nom}" aria-label="${OBJETS[t].nom}">${icone(t)}${n > 1 ? `<span class="badge">×${n}</span>` : ""}</span>`;
+          return `<button type="button" class="case" data-sens="${sens}" data-objet="${t}" title="${OBJETS[t].nom} (${kg(OBJETS[t].poids * n)} kg)" aria-label="${OBJETS[t].nom}">${icone(t)}${n > 1 ? `<span class="badge">×${n}</span>` : `${estDecharge ? `<span class="badge">${kg(OBJETS[t].poids)} kg</span>` : ""}`}</button>`;
         })
         .join("") || `<p class="indice">Rien.</p>`;
     p.innerHTML = `
-      <header><h2>Coffre</h2><button type="button" class="fermer" aria-label="Fermer">✕</button></header>
+      <header><h2>${estDecharge ? "Décharge" : "Coffre"}</h2><button type="button" class="fermer" aria-label="Fermer">✕</button></header>
       <div class="mode-pile">
         <button type="button" data-pile="un" aria-pressed="${!this.parPile}">Un par un</button>
         <button type="button" data-pile="tout" aria-pressed="${this.parPile}">Toute la pile</button>
       </div>
       <div class="colonnes">
-        <section><h3>Sur toi <small>${kg(poidsSac)} / ${capaciteDe(this.inventaire)} kg</small></h3><div class="grille">${cases(this.inventaire, "deposer")}</div><p class="indice">Touche un objet pour le ranger.</p></section>
-        <section><h3>Dans le coffre <small>${kg(poidsCoffre)} / ${CAPACITE_COFFRE} kg</small></h3><div class="grille">${cases(contenu, "prendre")}</div><p class="indice">Touche un objet pour le prendre.</p></section>
+        <section><h3>Sur toi <small>${kg(poidsSac)} / ${capaciteDe(this.inventaire)} kg</small></h3><div class="grille">${cases(this.inventaire, "deposer")}</div><p class="indice">${estDecharge ? "La décharge rend, elle ne reprend pas : choisis ce que tu emportes." : "Touche un objet pour le ranger."}</p></section>
+        <section><h3>${estDecharge ? `Remonté du tas <small>${kg(poidsCoffre)} kg</small>` : `Dans le coffre <small>${kg(poidsCoffre)} / ${CAPACITE_COFFRE} kg</small>`}</h3><div class="grille">${cases(contenu, "prendre")}</div><p class="indice">${estDecharge ? "Touche un objet pour le prendre. Le reste attend ici." : "Touche un objet pour le prendre."}</p></section>
       </div>`;
     p.querySelector(".fermer")!.addEventListener("click", () => this.ouvrir(p, false));
     for (const b of p.querySelectorAll<HTMLButtonElement>("[data-pile]")) {

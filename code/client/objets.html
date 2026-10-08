@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Planche des objets</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #9fb2c2; color: #1d2433; font: 13px/1.3 "Avenir Next", system-ui, sans-serif; overflow: hidden; }
+      canvas { display: block; width: 100%; height: 100%; }
+      .barre { position: fixed; left: 8px; top: 8px; max-width: calc(100vw - 32px); background: rgba(255,255,255,0.85); border-radius: 8px; padding: 6px 10px; }
+      .etiquettes { position: fixed; inset: 0; pointer-events: none; }
+      .etiquette { position: absolute; transform: translate(-50%, 0); font-size: 11px; color: #fff; background: rgba(20,24,32,0.62); padding: 1px 5px; border-radius: 4px; white-space: nowrap; }
+      .mesures { position: fixed; right: 8px; top: 8px; max-height: calc(100vh - 32px); overflow: auto; background: rgba(255,255,255,0.85); border-radius: 8px; padding: 6px 10px; font-size: 11px; }
+      .mesures td { padding: 0 4px; } .mesures td + td { text-align: right; }
+      button { min-height: 32px; margin: 2px; }
+    </style>
+  </head>
+  <body>
+    <canvas id="vue"></canvas>
+    <div class="etiquettes" id="etiquettes"></div>
+    <div class="barre" id="barre"></div>
+    <div class="mesures" id="mesures"></div>
+    <script type="module" src="./src/planche-objets.ts"></script>
+  </body>
+</html>

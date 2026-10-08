@@ -135,6 +135,31 @@ Chaque vestige offre trois options, et chaque option détruit les autres. **Choi
 
 **Valeur des vestiges** (Book 01 §6) : leur prix de base est leur **valeur de remplacement**, c'est-à-dire ce qu'il coûterait de les refaire aujourd'hui. Elle est **plafonnée** pour ce qui ne se fabrique plus (électronique, roulements de précision, cellules solaires).
 
+### Vestiges, lot 1 (0.3, 2026-10-08)
+
+**Le but** : comme dans les ruines de *Fallout*, on peut ramasser tout et n'importe quoi, et l'on finit par **devoir choisir** ce qu'on emporte. Le bric-à-brac de l'Abondance encombre : la plupart des objets ne servent pas tout de suite, certains serviront bien plus tard, d'autres jamais.
+
+**La règle de choix** des 55 vestiges, pris dans le catalogue de P-003 :
+1. **Ce qu'on trouve sur la route de campagne** : cuisine, salle de bain, salon, gadgets connectés morts, garage et atelier, voiture, ferme et jardin. Pas encore d'intimité, d'humour noir cru ni de pop culture : ce premier lot reste de bon goût.
+2. **Le poids réaliste avant tout** : c'est lui qui force le choix. Une télé de 85 pouces pèse 45 kg, un sac de ciment durci 25 kg, une encyclopédie en 24 volumes 36 kg, un groupe électrogène 45 kg, pour un sac de 55 kg.
+3. **La valeur** (énergie grise, ce que paie le Comptoir) : l'électronique est plafonnée (on ne sait plus la refaire, mais elle ne marche plus) ; les objets absurdes valent 1 ou 2 wotts (nain de jardin, coussin péteur, sapin désodorisant, boîte à gants pleine de PV).
+4. **Un mélange** : des utiles plus tard (cocotte en fonte, étau, pied-de-biche, bêche, Creuser 2), des réserves de pièces (gadgets, moteurs, lithium), des absurdes, et quelques raretés (robot domestique, groupe électrogène ; la pyramide de 96 rouleaux est légendaire).
+
+**Treize composants** qui reviennent partout (P-003 §2) : fil de cuivre, petit moteur, pile usagée, cellule lithium, aimant, LED, résistance chauffante, morceau de verre, chute d'aluminium, morceau de plastique, liasse de papier, petit ressort, bande de caoutchouc. Ils n'entrent encore dans aucune recette : ils attendent l'électricité (Book 03 §3.3), la refonte (§4) et les pièges.
+
+**Démonter un vestige** depuis le sac (fiche de l'objet, bouton « Démonter ») : 36 vestiges se démontent (table `DEMONTAGE`, `commun/src/vestiges.ts`). Chacun a ce qu'il donne, la qualité d'outil demandée et une durée de quelques secondes : **Visser 1** (le couteau suffit) pour l'électronique grand public, **Couper 1** pour les câbles, le caoutchouc et les sangles, **Marteler 1** pour aplatir une casserole, **Marteler 2** pour casser un sac de ciment en 6 pierres, **Visser 2** pour le robot domestique, **Serrer 2 et Visser 1** pour le groupe électrogène. Le rebut reste sur place : une télé de 45 kg donne 30 LED, du cuivre, du plastique et de l'aluminium (≈ 3,5 kg). Exemples : un smartphone fêlé donne une cellule lithium, un morceau de verre, un petit moteur (le vibreur) et un aimant ; une ceinture de sécurité, une corde ; la pyramide, ses 96 rouleaux. Ce qui ne se démonte pas garde son usage futur (cocotte, étau, encyclopédie) ou ne sert à rien (le nain).
+
+**La fouille rapporte du bric-à-brac** : fouiller un vestige de la halte ou la caisse à outils de la ferme donne l'objet habituel, **plus 1 à 3 vestiges** tirés au hasard (côté serveur) dans la table du lieu. Ce qui ne rentre pas dans le sac **reste par terre en petit tas** ramassable, et le message dit ce qui a été laissé : il faut alors jeter, démonter ou renoncer.
+
+| Lieu de fouille | Ressources | Familles tirées (poids) |
+|---|---|---|
+| **Boutique** de la station | Rayonnage | Cuisine 3, salle de bain 3, gadgets 3, salon 1 |
+| **Atelier** | Établi de l'atelier, caisse à outils de la ferme | Garage 6, gadgets 1, voiture 1 |
+| **Épaves** | Épave de voiture, benne du camion | Voiture 6, gadgets 1 |
+| **Grange** | Grange effondrée | Ferme 4, salon 2 (le débarras qu'on y entassait), garage 1 |
+
+Le poids de tirage d'un vestige est celui de sa famille dans le lieu × celui de sa rareté : **C 10, P 4, R 1, L 0,25**. Valeurs de réglage, à caler pendant le test.
+
 ---
 
 ## 6. Les domaines de chaque famille

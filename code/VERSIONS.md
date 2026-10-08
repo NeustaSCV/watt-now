@@ -21,6 +21,12 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 - manger une conserve laisse sa boîte vide.
 - « S'installer » passe à 10 objectifs, dans l'ordre de l'urgence ; « Les autres » (le Comptoir, les premiers wotts, l'échange) devient une troisième ligne du carnet.
 
+**Ramasser : les vestiges, lot 1** (proposition P-003, Book 02 §5) : on ramasse tout et n'importe quoi, et il faut choisir.
+- **55 vestiges** du quotidien (cuisine, salle de bain, salon, gadgets morts, garage, voiture, ferme), à leur vrai poids : une télé de 85 pouces fait 45 kg, un sac de ciment durci 25 kg. Chacun a sa valeur au Comptoir ; les absurdes ne valent presque rien.
+- **Fouiller** un rayonnage, l'atelier, une épave, la grange ou la caisse à outils rapporte en plus **1 à 3 vestiges** tirés au hasard selon le lieu. Ce qui ne rentre pas dans le sac reste par terre, en petit tas.
+- **Démonter** un vestige depuis le sac (36 s'y prêtent) : il donne des **composants** (fil de cuivre, petit moteur, cellule lithium, aimant, LED…), avec l'outil qu'il faut. Les composants serviront plus tard.
+- Le sac se **trie** par sorte ou par poids, et sa grille défile ; une icône par famille d'objets, une douzaine dessinées à la main. La bêche creuse (Creuser 2).
+
 **Combat** (propositions P-004 et P-005)
 - Un coup va jusqu'au bout : taper vite ne relance plus le geste ; un appui pendant le coup est gardé pour la suite. Chaque arme a son rythme (hache lente, couteau vif).
 - On choisit son arme dans le sac (« Équiper pour le combat », ⚔). Perdue, on reprend la meilleure du sac.
@@ -30,6 +36,10 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 - Sur téléphone, le carnet se replie en un petit onglet (replié d'office, choix gardé).
 - Commandes, Son, Qualité et Quitter passent dans un menu derrière une roue dentée ⚙.
 - Chaque arme montre dans le sac ses **dégâts**, sa **vitesse** (durée d'un coup) et son **allonge**, en barres comparées aux autres armes, et si elle tue d'un coup appuyé à la tête.
+
+**La décharge du terrain** (proposition P-001, Book 19 §2 ter)
+- Un tas d'ordures au bord de chaque terrain fait **remonter un objet toutes les deux heures**, même hors ligne, jusqu'à 12 : surtout des trucs nuls, parfois une bonne surprise. Le rapport d'absence le dit.
+- On y fouille comme dans un coffre, objet par objet : il faut choisir ce qu'on emporte.
 
 **Construire : la pose revue**
 - Pendant la pose, **le personnage ne bouge plus : seul le fantôme bouge**. Clavier ou joystick le poussent ; un clic (ou un appui du doigt) au sol l'y amène ; un second clic dessus construit.

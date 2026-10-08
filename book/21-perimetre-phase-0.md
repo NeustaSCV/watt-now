@@ -277,6 +277,8 @@ Chaque étape produit quelque chose de **jouable** et de **testable**. Elles ava
 | Route : asphalte fissuré, marquages, glissières, **poteaux électriques abattus et câbles** | S | Libre+ (kit) | Toutes les routes ; « l'énergie se voit partout » (Book 18 §1) |
 | Débris : pneus, bidons, chariots, cartons, gravats | Si | Libre | Partout |
 
+> **Décision (2026-10-08, proposition P-006) : on arrive du bon côté.** Sur la carte du monde, le terrain est à droite (est) de la station, et le Comptoir à gauche (ouest). La caméra du jeu regarde depuis le sud-est : l'est est à droite de l'écran. On arrive donc à la station **par le bout est** de la route (venant du terrain), et on en repart vers le Carrefour **par le bout ouest** ; les panneaux de la route sont retournés. Au Carrefour, la route de la station arrive **par l'est**, et la route fermée de la Ville part à l'ouest (ce qui colle avec la carte, où la Ville est à gauche du Comptoir). Le goulet (x ≈ 154) se trouve maintenant entre le terrain et la station.
+
 #### 5.2.4 Le Comptoir du Carrefour
 
 | Asset | Prio. | Source | Réutilisation |

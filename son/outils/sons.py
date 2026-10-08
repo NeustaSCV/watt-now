@@ -35,34 +35,77 @@ SOURCES = RACINE / "sources"
 # Lecture et écriture
 # ---------------------------------------------------------------------------------------------
 
+# Lancer ffmpeg coûte plusieurs secondes sur certaines machines : on décode et on encode par lots,
+# un seul ffmpeg pour des dizaines de fichiers.
+LOT = 40
+CACHE = SOURCES / "cache-48k"
+TEMPORAIRE = RACINE.parent / ".claude-travail" / "son-rendu"
+
+
+def fichier_cache(chemin: Path) -> Path:
+    try:
+        rel = chemin.resolve().relative_to(RACINE.resolve())
+    except ValueError:
+        rel = Path(chemin.name)
+    return CACHE / (str(rel).replace("/", "__") + ".wav")
+
+
+def decoder(chemins) -> None:
+    """Décode d'avance, par lots, les fichiers pas encore en cache (WAV 48 kHz flottant, canaux d'origine)."""
+    a_faire = [Path(c) for c in dict.fromkeys(chemins) if not fichier_cache(Path(c)).exists()]
+    CACHE.mkdir(parents=True, exist_ok=True)
+    for i in range(0, len(a_faire), LOT):
+        lot = a_faire[i: i + LOT]
+        cmd = ["ffmpeg", "-v", "error", "-y"]
+        for c in lot:
+            cmd += ["-i", str(c)]
+        for k, c in enumerate(lot):
+            cmd += ["-map", f"{k}:a:0", "-ar", str(FE), "-c:a", "pcm_f32le", str(fichier_cache(c))]
+        subprocess.run(cmd, check=True)
+
+
 def lire(chemin: Path | str) -> np.ndarray:
-    """Décode n'importe quel fichier audio en mono 48 kHz (float32), par ffmpeg.
+    """N'importe quel fichier audio en mono 48 kHz (float32).
 
     La moyenne des canaux est faite ici : le « -ac 1 » de ffmpeg monte le niveau (crêtes au-delà de 1).
     """
-    canaux = int(subprocess.run(
-        ["ffprobe", "-v", "error", "-select_streams", "a:0", "-show_entries", "stream=channels", "-of", "csv=p=0", str(chemin)],
-        check=True, capture_output=True, text=True,
-    ).stdout.strip() or 1)
-    sortie = subprocess.run(
-        ["ffmpeg", "-v", "error", "-i", str(chemin), "-ar", str(FE), "-f", "f32le", "-"],
-        check=True, capture_output=True,
-    ).stdout
-    s = np.frombuffer(sortie, dtype=np.float32)
-    return s[: len(s) // canaux * canaux].reshape(-1, canaux).mean(axis=1).astype(np.float32)
+    from scipy.io import wavfile
+
+    chemin = Path(chemin)
+    decoder([chemin])
+    _, s = wavfile.read(fichier_cache(chemin))
+    s = s.astype(np.float32)
+    return s.mean(axis=1).astype(np.float32) if s.ndim == 2 else s
 
 
-def ecrire(s: np.ndarray, base: Path) -> None:
-    """Écrit base.flac (master 24 bits), base.opus (Opus 64 kbit/s) et base.m4a (AAC 96 kbit/s)."""
-    base.parent.mkdir(parents=True, exist_ok=True)
-    brut = s.astype(np.float32).tobytes()
-    entree = ["ffmpeg", "-v", "error", "-y", "-f", "f32le", "-ar", str(FE), "-ac", "1", "-i", "-"]
-    for ext, options in (
-        (".flac", ["-c:a", "flac", "-sample_fmt", "s32", "-bits_per_raw_sample", "24"]),
-        (".opus", ["-c:a", "libopus", "-b:a", "64k", "-vbr", "on", "-application", "audio"]),
-        (".m4a", ["-c:a", "aac", "-b:a", "96k"]),
-    ):
-        subprocess.run(entree + options + [str(base) + ext], input=brut, check=True)
+FORMATS = (
+    (".flac", ["-c:a", "flac", "-sample_fmt", "s32", "-bits_per_raw_sample", "24"]),
+    (".opus", ["-c:a", "libopus", "-b:a", "64k", "-vbr", "on", "-application", "audio"]),
+    (".m4a", ["-c:a", "aac", "-b:a", "96k"]),
+)
+
+
+def ecrire(sons: list[tuple[np.ndarray, Path]]) -> None:
+    """Pour chaque (signal, base) : base.flac (master 24 bits), base.opus (Opus 64 kbit/s), base.m4a (AAC 96 kbit/s)."""
+    from scipy.io import wavfile
+
+    TEMPORAIRE.mkdir(parents=True, exist_ok=True)
+    for i in range(0, len(sons), LOT):
+        lot = sons[i: i + LOT]
+        cmd = ["ffmpeg", "-v", "error", "-y"]
+        temporaires = []
+        for k, (s, base) in enumerate(lot):
+            t = TEMPORAIRE / f"{k}.wav"
+            wavfile.write(t, FE, s.astype(np.float32))
+            temporaires.append(t)
+            cmd += ["-i", str(t)]
+        for k, (_, base) in enumerate(lot):
+            base.parent.mkdir(parents=True, exist_ok=True)
+            for ext, options in FORMATS:
+                cmd += ["-map", f"{k}:a:0"] + options + [str(base) + ext]
+        subprocess.run(cmd, check=True)
+        for t in temporaires:
+            t.unlink()
 
 
 # ---------------------------------------------------------------------------------------------
@@ -243,21 +286,30 @@ def extrait(nom: str, debut: float, fin: float) -> np.ndarray:
 
 
 def couche(spec: str) -> tuple[np.ndarray, float]:
-    """Une couche d'un montage : `source@debut-fin` avec options `+décalage` et `*gain`.
+    """Une couche d'un montage : `source@debut-fin`, avec en option, dans cet ordre, `~hauteur`, `+décalage`, `*gain`.
 
-    Exemple : `fs:346692@0.05-1.0*1` puis `fs:22417@0-0.7+0.8*0.6`.
+    Exemple : `fs:346692@0.05-1.0` puis `fs:22417@0-0.7+0.8*0.6`. `~1.5` monte d'une quinte (et raccourcit d'autant).
+    Chaque couche reçoit des fondus de 2 ms et 10 ms : un extrait coupé dans un enregistrement ne claque pas.
     """
     gain = 1.0
     decalage = 0.0
+    hauteur = 1.0
     if "*" in spec:
         spec, g = spec.rsplit("*", 1)
         gain = float(g)
     if "+" in spec.split("@")[-1]:
         spec, d = spec.rsplit("+", 1)
         decalage = float(d)
+    if "~" in spec:
+        spec, r = spec.rsplit("~", 1)
+        hauteur = float(r)
     nom, plage = spec.split("@")
     a, b = plage.split("-")
-    return extrait(nom, float(a), float(b)) * gain, decalage
+    s = extrait(nom, float(a), float(b))
+    if hauteur != 1.0:
+        x = np.arange(0, len(s) - 1, hauteur)
+        s = np.interp(x, np.arange(len(s)), s).astype(np.float32)
+    return fondus(s, 0.002, 0.01) * gain, decalage
 
 
 def fabriquer(ligne: dict) -> np.ndarray:
@@ -282,15 +334,17 @@ def fabriquer(ligne: dict) -> np.ndarray:
 def rendre(tableau: Path, seul: str | None) -> None:
     sortie = RACINE / "effets"
     with open(tableau, newline="") as f:
-        lignes = [l for l in csv.DictReader((x for x in f if not x.startswith("#")), delimiter="\t")]
+        lignes = [l for l in csv.DictReader((x for x in f if x.strip() and not x.startswith("#")), delimiter="\t")]
+    lignes = [l for l in lignes if not seul or l["identifiant"].strip() == seul]
+    decoder(source(c.split("@")[0].strip()) for l in lignes for c in l["source"].split("&"))
+    sons = []
     for l in lignes:
         ident = l["identifiant"].strip()
-        if seul and ident != seul:
-            continue
         s = fabriquer(l)
         base = sortie / ident / f"{ident}_{int(l['variante'])}"
-        ecrire(s, base)
-        print(f"{base.relative_to(RACINE)}  {len(s) / FE:.2f} s")
+        sons.append((s, base))
+        print(f"{base.relative_to(RACINE)}  {len(s) / FE:.2f} s", flush=True)
+    ecrire(sons)
 
 
 def main() -> None:

@@ -55,6 +55,7 @@ import {
 } from "../../commun/src/survie.ts";
 import { DISTANCE_INTERACTION, PORTEE_ARBRE, distanceMare, RAYON_ESCABEAU, REPOUSSE_MS, USAGES, estFruitier } from "../../commun/src/terrain.ts";
 import { heuresEcoulees } from "../../commun/src/temps.ts";
+import { DEMONTAGE, LIEU_DE_FOUILLE, tirerVestiges } from "../../commun/src/vestiges.ts";
 import {
   DUREE_VOYAGE_S,
   EAU_PAR_KM,
@@ -83,6 +84,7 @@ import {
 import { BONUS_MECANISTE, PORTEE_CABLE_PANNEAU, WH_M_PAR_HEURE, productionPanneau, stocker } from "../../commun/src/energie.ts";
 import type { AutreVu, OffreEchange, OperationComptoir, RapportBase, WottsVus } from "../../commun/src/messages.ts";
 import { COMPTOIR, HALTE, etapeVers } from "../../commun/src/lieux.ts";
+import { DECHARGE, remonter } from "../../commun/src/decharge.ts";
 import type { Quete, VueQuetes } from "../../commun/src/quetes.ts";
 import { SuiviQuetes, type EtatJoueurPourQuetes } from "./quetes.ts";
 import { debout, encaisser, lacher, nouvelEteint, penser, vue as vueEteint, type Eteint, type Humain } from "../../commun/src/eteints.ts";
@@ -307,6 +309,13 @@ export class Joueur implements Voyageur {
       }
       this.installations.set(i.id, i);
     }
+    // Chaque terrain a sa décharge (P-001) : on la pose au premier passage.
+    if (![...this.installations.values()].some((i) => i.type === "decharge")) {
+      const d = base.ajouterInstallation(compte.id, "decharge", DECHARGE.x, DECHARGE.z, 0);
+      d.etat = { contenu: {}, majLe: this.maintenant() };
+      base.sauverEtatInstallation(compte.id, d.id, d.etat);
+      this.installations.set(d.id, d);
+    }
 
     // Les feux ont brûlé pendant l'absence du joueur (processus passif, Book 01 §2 bis).
     const instant = maintenant();
@@ -344,6 +353,7 @@ export class Joueur implements Voyageur {
         feuxAllumes: [...this.feux.values()].filter((f) => f.allume && f.bois > 0).length,
         feuxEteints,
         repousse,
+        ...(bilan.remonte > 0 ? { decharge_remonte: bilan.remonte } : {}),
       };
     }
     for (const b of BATTERIES) {
@@ -457,6 +467,9 @@ export class Joueur implements Voyageur {
         return;
       case "jeter":
         this.jeter(message.objet, message.quantite);
+        return;
+      case "demonter":
+        this.demonter(message.objet);
         return;
       case "tutoriel_passer":
         if (!this.tuto) return;
@@ -1003,30 +1016,84 @@ export class Joueur implements Voyageur {
     this.retirerPlusieurs({ [objet]: n });
     this.bornerCharges();
     this.verifierLumiere();
+    this.poserAuSol({ [objet]: n }, charges);
+    this.info(`Tu as posé ${nommer(objet, n)} par terre.`);
+  }
+
+  /** Pose des objets par terre, en petit tas ramassable par tous (ajoutés au tas tout proche, s'il y en a un à soi). */
+  private poserAuSol(objets: Inventaire, charges: Charges = {}): void {
     // Un tas à moi tout près : on y ajoute (pas une pile de petits tas).
     const tas = this.sacsIci().find((s) => s.contenu.jete && s.proprietaire === this.compte.id && this.proche(s.x, s.z, 1.2));
     if (tas) {
-      const inventaire = { ...tas.contenu.inventaire, [objet]: (tas.contenu.inventaire[objet] ?? 0) + n };
+      const inventaire = { ...tas.contenu.inventaire };
+      for (const [t, k] of Object.entries(objets) as [TypeObjet, number][]) inventaire[t] = (inventaire[t] ?? 0) + k;
       const total = { ...tas.contenu.charges };
       for (const [b, wh] of Object.entries(charges) as [TypeBatterie, number][]) total[b] = (total[b] ?? 0) + wh;
       this.remplacerSac(tas, { ...tas.contenu, inventaire, charges: total });
-    } else {
-      const sac = this.base.poserSac({
-        lieu: this.lieu === "station" ? "station" : "terrain",
-        terrainDe: this.lieu === "station" ? 0 : this.compte.id,
-        proprietaire: this.compte.id,
-        x: this.position.x + Math.sin(this.position.o) * 0.6,
-        z: this.position.z + Math.cos(this.position.o) * 0.6,
-        contenu: { inventaire: { [objet]: n }, charges, jete: true },
-        creeLe: this.maintenant(),
-      });
-      if (this.lieu === "station") this.halte.poserSac(sac);
-      else {
-        this.sacsTerrain.push(sac);
-        this.envoyer({ t: "sacs", sacs: this.sacsVus() });
+      return;
+    }
+    const sac = this.base.poserSac({
+      lieu: this.lieu === "station" ? "station" : "terrain",
+      terrainDe: this.lieu === "station" ? 0 : this.compte.id,
+      proprietaire: this.compte.id,
+      x: this.position.x + Math.sin(this.position.o) * 0.6,
+      z: this.position.z + Math.cos(this.position.o) * 0.6,
+      contenu: { inventaire: { ...objets }, charges, jete: true },
+      creeLe: this.maintenant(),
+    });
+    if (this.lieu === "station") this.halte.poserSac(sac);
+    else {
+      this.sacsTerrain.push(sac);
+      this.envoyer({ t: "sacs", sacs: this.sacsVus() });
+    }
+  }
+
+  /**
+   * Le bric-à-brac d'une fouille (Vestiges, lot 1) : ce qui rentre dans le sac y va, un par un dans l'ordre du tirage ;
+   * le reste tombe par terre, en petit tas. Le joueur voit ce qu'il a trouvé et doit choisir ce qu'il garde.
+   */
+  private recevoirBricABrac(trouve: Inventaire): void {
+    const pris: Inventaire = {};
+    const laisse: Inventaire = {};
+    let poids = poidsInventaire(this.inventaire);
+    const capacite = capaciteDe(this.inventaire);
+    for (const [t, k] of Object.entries(trouve) as [TypeObjet, number][]) {
+      for (let i = 0; i < k; i++) {
+        if (poids + OBJETS[t].poids <= capacite + 1e-9) {
+          pris[t] = (pris[t] ?? 0) + 1;
+          poids += OBJETS[t].poids;
+        } else laisse[t] = (laisse[t] ?? 0) + 1;
       }
     }
-    this.info(`Tu as posé ${nommer(objet, n)} par terre.`);
+    const liste = (inv: Inventaire) => (Object.entries(inv) as [TypeObjet, number][]).map(([t, k]) => `${nommer(t, k)} (${kgTexte(OBJETS[t].poids * k)})`).join(", ");
+    if (Object.keys(pris).length) this.ajouterPlusieurs(pris);
+    if (Object.keys(laisse).length) this.poserAuSol(laisse);
+    const parties = [];
+    if (Object.keys(pris).length) parties.push(`Dans le fatras, tu trouves aussi : ${liste(pris)}.`);
+    if (Object.keys(laisse).length) parties.push(`Trop lourd pour ton sac, laissé par terre : ${liste(laisse)}. Fais de la place (Sac → Jeter, Démonter) pour le prendre.`);
+    if (parties.length) this.info(parties.join(" "));
+  }
+
+  /** Démonter un vestige du sac en composants (Vestiges, lot 1 ; table DEMONTAGE). */
+  private demonter(objet: TypeObjet): void {
+    if (this.voyage || !estObjet(objet) || (this.inventaire[objet] ?? 0) < 1) return;
+    const d = DEMONTAGE[objet];
+    if (!d) return this.info(`${OBJETS[objet].nom[0]!.toUpperCase()}${OBJETS[objet].nom.slice(1)} : rien à en tirer en le démontant, pour l'instant.`);
+    const facteur = multiplicateurQualites(this.inventaire, d.qualites);
+    if (facteur === null) return this.info(outilsManquants(d.qualites, this.inventaire).join(" "));
+    // Le poids d'après : le démontage laisse le rebut sur place, mais une pyramide de rouleaux pèse toujours son poids.
+    const apres: Inventaire = { ...this.inventaire, [objet]: (this.inventaire[objet] ?? 0) - 1 };
+    for (const [t, k] of Object.entries(d.donne) as [TypeObjet, number][]) apres[t] = (apres[t] ?? 0) + k;
+    if (poidsInventaire(apres) > capaciteDe(apres) + 1e-9) return this.sacTropLourd();
+    this.commencer(`Démonter : ${OBJETS[objet].nom}`, (d.duree * facteur) / REGLAGES.gestes_vitesse, () => {
+      if ((this.inventaire[objet] ?? 0) < 1) return;
+      this.retirerPlusieurs({ [objet]: 1 });
+      this.ajouterPlusieurs(d.donne);
+      this.verifierLumiere();
+      this.noterFait(`demonte:${objet}`);
+      this.mesurer("progression", `demontage:${objet}`, 1);
+      this.info(`Démonté : ${OBJETS[objet].nom}. Tu en tires ${(Object.entries(d.donne) as [TypeObjet, number][]).map(([t, k]) => nommer(t, k)).join(", ")}.`);
+    }, 0, d.qualites.marteler ? "lourd" : "outil");
   }
 
   /** Sans plus rien pour l'éclairer, la lumière s'éteint. */
@@ -1040,8 +1107,11 @@ export class Joueur implements Voyageur {
   /** Ranger un objet dans un coffre de son terrain, ou l'en sortir (la charge des batteries suit). */
   private utiliserCoffre(id: number, sens: "deposer" | "prendre", objet: TypeObjet, quantite: number): void {
     const coffre = this.installations.get(id);
-    if (!coffre || coffre.type !== "coffre" || this.lieu !== "terrain" || this.voyage || !estObjet(objet)) return;
-    if (!this.proche(coffre.x, coffre.z, 2.5)) return this.info("Approche-toi du coffre.");
+    // La décharge (P-001) s'ouvre comme un coffre, mais on ne fait qu'y prendre.
+    const estDecharge = coffre?.type === "decharge";
+    if (!coffre || (coffre.type !== "coffre" && !estDecharge) || this.lieu !== "terrain" || this.voyage || !estObjet(objet)) return;
+    if (estDecharge && sens === "deposer") return this.info("La décharge rend, elle ne reprend pas. Pour te débarrasser d'un objet : Sac → Jeter.");
+    if (!this.proche(coffre.x, coffre.z, estDecharge ? 4.2 : 2.5)) return this.info(estDecharge ? "Approche-toi de la décharge." : "Approche-toi du coffre.");
     const n = Math.floor(Number(quantite));
     if (!(n >= 1)) return;
     const contenu: Inventaire = { ...(coffre.etat.contenu ?? {}) };
@@ -1751,6 +1821,9 @@ export class Joueur implements Voyageur {
       }
       this.ajouterPlusieurs(usage.donne);
       for (const b of BATTERIES) if (usage.donne[b]) this.ajouterCharge(b, CHARGE_TROUVEE[b] * (usage.donne[b] ?? 0));
+      // Vestiges, lot 1 : une fouille rapporte aussi du bric-à-brac, tiré dans la table du lieu.
+      const lieuFouille = LIEU_DE_FOUILLE[r.type];
+      if (lieuFouille) this.recevoirBricABrac(tirerVestiges(lieuFouille, this.alea));
       if (this.tuto) {
         this.tuto.branches += usage.donne.branche ?? 0;
         this.tuto.pierres += usage.donne.pierre ?? 0;
@@ -1863,8 +1936,8 @@ export class Joueur implements Voyageur {
    * Fait avancer la production de la base jusqu'à `instant`, au calendrier (connecté ou non) : chaque panneau
    * charge les batteries posées sur son banc ; sans batterie ou batteries pleines, l'énergie est perdue.
    */
-  private mettreAJourBase(instant: number): { produit: number; stocke: number; perdu: number; decharge: number } {
-    const bilan = { produit: 0, stocke: 0, perdu: 0, decharge: 0 };
+  private mettreAJourBase(instant: number): { produit: number; stocke: number; perdu: number; decharge: number; remonte: number } {
+    const bilan = { produit: 0, stocke: 0, perdu: 0, decharge: 0, remonte: 0 };
     const changes = new Set<InstallationVue>();
     // Les batteries posées se déchargent, comme les autres.
     for (const banc of this.installations.values()) {
@@ -1892,6 +1965,21 @@ export class Joueur implements Voyageur {
       banc.etat = { ...banc.etat, charges: r.stockage.charges };
       bilan.stocke += r.stocke;
       bilan.perdu += r.perdu;
+    }
+    // La décharge fait remonter des objets, même hors ligne (P-001).
+    for (const d of this.installations.values()) {
+      if (d.type !== "decharge") continue;
+      const r = remonter({ contenu: d.etat.contenu ?? {}, majLe: d.etat.majLe ?? instant }, instant, this.alea);
+      const n = Object.values(r.arrives).reduce((s, x) => s + (x ?? 0), 0);
+      if (r.etat.majLe === d.etat.majLe && n === 0) continue;
+      d.etat = { ...d.etat, contenu: r.etat.contenu, majLe: r.etat.majLe };
+      changes.add(d);
+      bilan.remonte += n;
+      if (n > 0 && this.lieu === "terrain" && !this.voyage) {
+        this.envoyer({ t: "installation", installation: d });
+        const nom = Object.entries(r.arrives).map(([t, k]) => nommer(t as TypeObjet, k ?? 1)).join(", ");
+        this.info(`La décharge a recraché quelque chose : ${nom}.`);
+      }
     }
     // Les récupérateurs de pluie se remplissent quand il pleut, même hors ligne (P-002).
     for (const r of this.installations.values()) {
@@ -2388,6 +2476,11 @@ export class Joueur implements Voyageur {
   private envoyerBesoins(): void {
     this.envoyer({ t: "besoins", besoins: this.besoins, gourde: this.gourde });
   }
+}
+
+/** « 1,5 kg », « 45 kg ». */
+function kgTexte(kg: number): string {
+  return `${(Math.round(kg * 100) / 100).toString().replace(".", ",")} kg`;
 }
 
 function poidsDe(objets: Inventaire): number {

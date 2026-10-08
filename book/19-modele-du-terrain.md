@@ -103,6 +103,20 @@ Certains terrains tirés à la création (Book 01 §6 bis) contiennent des **rui
 
 > Une ruine est un atout du tirage de terrain, au même titre qu'un ruisseau ou un vieux verger.
 
+### 2 ter. La décharge (proposition P-001, retenue le 2026-10-08, version 0.3)
+
+Chaque terrain a, au bord ouest près de la lisière, un **tas d'ordures de l'Âge de l'Abondance** qui fait **remonter des objets** au fil du temps.
+
+| Règle | Détail |
+|---|---|
+| **Rythme** | Un objet toutes les **deux heures réelles**, même hors ligne (processus passif, Book 01 §2 bis) |
+| **Plafond** | **12 objets** au plus : un tas, pas une montagne. Le temps passé avec un tas plein est perdu |
+| **Ce qui remonte** | Les vestiges du lot 1 (Book 02 §5) de moins de 25 kg, pondérés par rareté **et par nullité** : un objet qui vaut 5 wotts ou moins remonte 4 fois plus souvent, jusqu'à 20 wotts 2 fois plus. Surtout des trucs nuls, parfois une bonne surprise |
+| **Les objets restent** | Tant qu'on ne les prend pas. Le joueur qui joue peu n'est pas puni : il a une surprise en revenant (le rapport d'absence le dit) |
+| **Fouiller** | Comme un coffre, **objet par objet** : on choisit ce qu'on emporte, le sac ne suit pas tout. On n'y dépose rien (« la décharge rend, elle ne reprend pas ») |
+
+> C'est la première pièce de la mécanique « tout se ramasse, il faut choisir » (demande du porteur : « à la manière de Fallout »).
+
 ## 3. Les arêtes
 
 | Type | Rôle | Forme une pièce ? |

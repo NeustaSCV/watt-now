@@ -47,6 +47,7 @@ const EXAMENS_INSTALLATIONS: Record<InstallationVue["type"], string> = {
   recuperateur_pluie: "Une bâche tendue en entonnoir au-dessus d'une bassine. Quand il pleut, elle se remplit, même quand tu n'es pas là. L'eau du ciel se boit sans la faire bouillir.",
   alarme_boites: "Une ficelle tendue entre deux piquets, des boîtes de conserve qui pendent. Si un Éteint passe, tu l'entendras. Lui aussi.",
   lit_branchages: "Un cadre de branches couvert de rameaux. On y dort isolé du sol : à côté de l'abri, le sommeil répare mieux.",
+  decharge: "Un tas d'ordures de l'Âge de l'Abondance, au bord du terrain. La pluie et le temps en font remonter des objets : surtout des trucs nuls, parfois une bonne surprise.",
 };
 
 /** La famille qui sait se servir d'une installation (celle qui sait la construire). */
@@ -79,6 +80,14 @@ function actionsInstallation(
       return [repos < 0.97 ? msg("Dormir dans l'abri", "dormir") : null, examiner];
     case "lit_branchages":
       return [repos < 0.97 ? msg("Dormir sur le lit", "dormir") : null, examiner];
+    case "decharge": {
+      // La décharge (P-001) : on y fouille comme dans un coffre, objet par objet.
+      const n = Object.values(i.etat.contenu ?? {}).reduce((t, x) => t + (x ?? 0), 0);
+      return [
+        n > 0 ? { libelle: `Fouiller la décharge (${n} objet${n > 1 ? "s" : ""})`, ouvrirCoffre: i.id } : null,
+        n > 0 ? examiner : { libelle: "Examiner", examiner: `${EXAMENS_INSTALLATIONS.decharge} Rien de neuf pour l'instant : reviens plus tard.` },
+      ];
+    }
     case "recuperateur_pluie": {
       const l = i.etat.litres ?? 0;
       const examen: ActionProposee = { libelle: "Examiner", examiner: `${EXAMENS_INSTALLATIONS.recuperateur_pluie} Dans la bassine : ${l.toFixed(1).replace(".", ",")} L.` };
@@ -186,9 +195,10 @@ export function proposer(
   }
 
   for (const i of installations) {
-    const d = Math.max(0, Math.hypot(i.x - position.x, i.z - position.z) - 0.6);
+    // La décharge est un grand tas : on la vise depuis son bord (P-001).
+    const d = Math.max(0, Math.hypot(i.x - position.x, i.z - position.z) - (i.type === "decharge" ? 1.9 : 0.6));
     const [A, B] = actionsInstallation(i, repos, famille, inventaire, charges, maintenantServeur);
-    garder(d, { A, B, cible: { x: i.x, z: i.z, rayon: i.type === "escabeau" || i.type === "alarme_boites" ? 0.7 : 1.1 } });
+    garder(d, { A, B, cible: { x: i.x, z: i.z, rayon: i.type === "decharge" ? 2.1 : i.type === "escabeau" || i.type === "alarme_boites" ? 0.7 : 1.1 } });
   }
 
   const aDuBois = (inventaire.buche ?? 0) > 0 || (inventaire.branche ?? 0) > 0;

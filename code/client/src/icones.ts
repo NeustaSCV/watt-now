@@ -3,13 +3,16 @@
 // (Book 21 §5.2.7), mais au même format (carré 48 × 48).
 
 import type { TypeObjet } from "../../commun/src/objets.ts";
+import { definitionVestige, type FamilleVestige } from "../../commun/src/vestiges.ts";
 
 const ENCRE = "#3b2a1e";
 const T = `stroke="${ENCRE}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"`;
 
-export type Pictogramme = TypeObjet | "feu_de_camp" | "etabli" | "abri" | "coffre" | "charbonniere" | "forge" | "pedalier" | "banc_recharge" | "escabeau" | "poches" | "recuperateur_pluie" | "alarme_boites" | "lit_branchages";
+export type Pictogramme = TypeObjet | "feu_de_camp" | "etabli" | "abri" | "coffre" | "charbonniere" | "forge" | "pedalier" | "banc_recharge" | "escabeau" | "poches" | "recuperateur_pluie" | "alarme_boites" | "lit_branchages" | "decharge";
 
-const DESSINS: Record<Pictogramme, string> = {
+// Les vestiges (lot 1, 0.3) sont trop nombreux pour un dessin chacun : une icône générique par famille
+// (un pictogramme simple et une teinte), avec repli automatique ; une douzaine seulement sont dessinés à la main.
+const DESSINS: Partial<Record<Pictogramme, string>> = {
   branche: `
     <path d="M7 36 L40 13" stroke-width="4.5" fill="none" stroke="#5a4130" ${T}/>
     <path d="M7 36 L40 13" stroke="#7a5a3c" stroke-width="2" stroke-linecap="round" fill="none"/>
@@ -351,6 +354,159 @@ const DESSINS: Record<Pictogramme, string> = {
     <circle cx="9" cy="42" r="3" fill="#8f8a80" ${T}/><circle cx="39" cy="42" r="3" fill="#8f8a80" ${T}/>`,
 };
 
+/** Les dessins à la main des vestiges marquants (lot 1). */
+const DESSINS_VESTIGES: Partial<Record<Pictogramme, string>> = {
+  casserole: `
+    <path d="M9 20 h26 v13 a6 6 0 0 1 -6 6 h-14 a6 6 0 0 1 -6 -6 Z" fill="#c9ccd0" ${T}/>
+    <path d="M35 22 L45 19" stroke-width="4" stroke="#3b2a1e" stroke-linecap="round"/>
+    <ellipse cx="22" cy="20" rx="13" ry="3" fill="#e3e6ea" ${T}/>
+    <path d="M14 29 q3 -3 6 0" fill="none" stroke-width="1.2" opacity="0.6" ${T}/>
+    <path d="M27 33 l3 -2" stroke-width="1.2" opacity="0.6" ${T}/>`,
+  tele_85: `
+    <rect x="3" y="9" width="42" height="26" rx="1.5" fill="#1f1f22" ${T}/>
+    <path d="M8 14 L18 14 M8 18 L13 18" stroke="#55606a" stroke-width="1.6" stroke-linecap="round"/>
+    <path d="M30 26 L36 18 M33 29 L40 21" stroke="#3a4048" stroke-width="1.2"/>
+    <path d="M18 35 L15 41 M30 35 L33 41 M12 41 h24" ${T}/>`,
+  nain_jardin: `
+    <path d="M24 3 L33 20 H15 Z" fill="#c8362b" ${T}/>
+    <circle cx="24" cy="23" r="5" fill="#f0c8a0" ${T}/>
+    <path d="M18 25 Q24 38 30 25 Q24 30 18 25 Z" fill="#f4ecd8" ${T}/>
+    <path d="M15 31 h18 v9 h-18 Z" fill="#2f6fa4" ${T}/>
+    <path d="M14 44 h20 M17 40 v4 M31 40 v4" ${T}/>
+    <circle cx="22" cy="22" r="0.9" fill="#3b2a1e"/><circle cx="26" cy="22" r="0.9" fill="#3b2a1e"/>`,
+  smartphone_fele: `
+    <rect x="14" y="5" width="20" height="38" rx="3.5" fill="#2b2b2b" ${T}/>
+    <rect x="16.5" y="9" width="15" height="28" fill="#3d4a5a"/>
+    <path d="M18 12 L25 20 L22 26 L30 34 M25 20 L31 16" stroke="#e8f1fa" stroke-width="1" fill="none"/>
+    <rect x="17.5" y="30" width="4" height="5" fill="#c8362b"/>
+    <circle cx="24" cy="40" r="1.4" fill="#55524d"/>`,
+  pyramide_papier_toilette: `
+    <g fill="#f4ecd8" ${T}>
+      <circle cx="12" cy="38" r="5"/><circle cx="24" cy="38" r="5"/><circle cx="36" cy="38" r="5"/>
+      <circle cx="18" cy="28" r="5"/><circle cx="30" cy="28" r="5"/>
+      <circle cx="24" cy="18" r="5"/>
+    </g>
+    <g fill="#c9b48a"><circle cx="12" cy="38" r="1.6"/><circle cx="24" cy="38" r="1.6"/><circle cx="36" cy="38" r="1.6"/><circle cx="18" cy="28" r="1.6"/><circle cx="30" cy="28" r="1.6"/><circle cx="24" cy="18" r="1.6"/></g>
+    <path d="M24 5 l1.5 3 3 .4 -2.2 2 .6 3 -2.9 -1.5 -2.9 1.5 .6 -3 -2.2 -2 3 -.4 Z" fill="#e8c43a" ${T} stroke-width="1"/>`,
+  sac_ciment: `
+    <path d="M9 14 Q8 10 12 10 H36 Q40 10 39 14 L41 38 Q41 42 37 42 H11 Q7 42 7 38 Z" fill="#a8a296" ${T}/>
+    <path d="M12 10 Q14 14 12 18 M36 10 Q34 14 36 18" fill="none" stroke-width="1.2" ${T}/>
+    <rect x="15" y="21" width="18" height="9" fill="#d6d2ca" ${T} stroke-width="1.2"/>
+    <path d="M17 25.5 h14" stroke="#8f8a80" stroke-width="1.6"/>
+    <path d="M10 34 L18 38 L26 33 L34 37" fill="none" stroke="#6e6a63" stroke-width="1.4"/>`,
+  grille_pain_facial: `
+    <path d="M8 18 Q8 12 14 12 H34 Q40 12 40 18 V38 H8 Z" fill="#d6d2ca" ${T}/>
+    <path d="M15 12 V20 M24 12 V20 M33 12 V20" stroke-width="2.4" ${T}/>
+    <circle cx="24" cy="29" r="5" fill="#1f3550" ${T}/>
+    <circle cx="24" cy="29" r="2" fill="#c8362b"/>
+    <path d="M40 24 h3 v6" fill="none" ${T}/>
+    <path d="M10 41 h28" ${T}/>`,
+  aspirateur_robot: `
+    <ellipse cx="24" cy="28" rx="19" ry="11" fill="#55524d" ${T}/>
+    <ellipse cx="24" cy="25" rx="19" ry="10" fill="#c9ccd0" ${T}/>
+    <circle cx="24" cy="23" r="4" fill="#2b2b2b" ${T}/>
+    <circle cx="24" cy="23" r="1.4" fill="#5d8a46"/>
+    <path d="M9 18 Q4 14 6 9" fill="none" stroke-dasharray="2 2" ${T} stroke-width="1.4"/>`,
+  chambre_air: `
+    <circle cx="24" cy="24" r="17" fill="#2b2b2b" ${T}/>
+    <circle cx="24" cy="24" r="9" fill="#f4ecd8" ${T}/>
+    <path d="M24 7 v-3 h3" fill="none" stroke="#c9ccd0" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M33 33 l5 4 M35 30 l5 2" stroke="#8f8a80" stroke-width="1.4"/>`,
+  pied_de_biche: `
+    <path d="M12 42 L35 9" stroke="#2f5fa4" stroke-width="4.5" stroke-linecap="round"/>
+    <path d="M12 42 L35 9" fill="none" ${T} stroke-width="1"/>
+    <path d="M35 9 Q38 4 42 7 L40 11" fill="none" stroke="#2f5fa4" stroke-width="4" stroke-linecap="round"/>
+    <path d="M12 42 L6 40 M12 42 L9 45" stroke="#3b2a1e" stroke-width="2.4" stroke-linecap="round"/>`,
+  fil_cuivre: `
+    <ellipse cx="24" cy="24" rx="15" ry="13" fill="#c8743a" ${T}/>
+    <ellipse cx="24" cy="24" rx="6" ry="5" fill="#f4ecd8" ${T}/>
+    <path d="M12 18 Q24 12 36 18 M10 25 Q24 19 38 25 M12 31 Q24 26 36 31" fill="none" stroke="#8a4a1e" stroke-width="1.1"/>
+    <path d="M37 30 Q42 34 44 42" fill="none" stroke="#c8743a" stroke-width="2.2" stroke-linecap="round"/>`,
+  petit_moteur: `
+    <rect x="10" y="15" width="22" height="18" rx="9" fill="#9aa4ae" ${T}/>
+    <path d="M32 21 h4 v6 h-4" fill="#c8743a" ${T}/>
+    <path d="M36 24 h7" ${T} stroke-width="2.4"/>
+    <path d="M14 33 v5 M20 33 v5" stroke="#c8362b" stroke-width="2"/>
+    <path d="M16 20 h10" stroke="#e8f1fa" stroke-width="1.4" stroke-linecap="round"/>`,
+};
+
+/** Les teintes de chaque famille de vestiges, pour l'icône générique : chaque objet en prend une, toujours la même. */
+const TEINTES_FAMILLES: Record<FamilleVestige, string[]> = {
+  cuisine: ["#c9ccd0", "#c8362b", "#e8d8a8", "#5f7f45"],
+  salle_de_bain: ["#9cc8d8", "#e8a8b8", "#f4ecd8", "#7fb3a0"],
+  salon: ["#c9a77a", "#a4552f", "#d8c43a", "#7a8fa8"],
+  gadget: ["#55606a", "#2b2b2b", "#c9ccd0", "#3f6f8f"],
+  garage: ["#c8362b", "#2f5fa4", "#d8a83a", "#5f7f45"],
+  voiture: ["#3a3a3a", "#55524d", "#6b7b8c"],
+  ferme: ["#7f8f3a", "#a07c48", "#c9b48a", "#5d8a46"],
+  composant: ["#8a8f96"],
+};
+
+/** Une teinte stable pour un objet (d'après son nom de code), parmi celles de sa famille. */
+function teinteDe(type: string, famille: FamilleVestige): string {
+  const teintes = TEINTES_FAMILLES[famille];
+  let h = 0;
+  for (const c of type) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return teintes[h % teintes.length]!;
+}
+
+/** Le pictogramme générique d'une famille, dans sa teinte. */
+function dessinGenerique(famille: FamilleVestige, teinte: string): string {
+  switch (famille) {
+    case "cuisine":
+      return `
+    <path d="M10 18 h28 v16 a6 6 0 0 1 -6 6 h-16 a6 6 0 0 1 -6 -6 Z" fill="${teinte}" ${T}/>
+    <path d="M10 22 h-4 M38 22 h4" ${T} stroke-width="3"/>
+    <path d="M12 14 h24 l-3 4 h-18 Z" fill="${teinte}" ${T}/><path d="M22 10 h4 v4 h-4 Z" fill="#3b2a1e"/>`;
+    case "salle_de_bain":
+      return `
+    <path d="M17 16 h14 v22 a4 4 0 0 1 -4 4 h-6 a4 4 0 0 1 -4 -4 Z" fill="${teinte}" ${T}/>
+    <path d="M20 10 h8 v6 h-8 Z" fill="#f4ecd8" ${T}/><path d="M28 12 h6 l2 3" fill="none" ${T}/>
+    <path d="M20 26 h8" stroke="#f4ecd8" stroke-width="3" stroke-linecap="round"/>`;
+    case "salon":
+      return `
+    <path d="M14 8 h20 l5 14 h-30 Z" fill="${teinte}" ${T}/>
+    <path d="M24 22 v16" ${T} stroke-width="3"/>
+    <path d="M15 42 Q24 36 33 42 Z" fill="#55524d" ${T}/>`;
+    case "gadget":
+      return `
+    <rect x="8" y="12" width="32" height="22" rx="3" fill="${teinte}" ${T}/>
+    <rect x="12" y="16" width="24" height="14" fill="#2b3440"/>
+    <path d="M15 19 L22 26 L27 22 L33 28" stroke="#8fb3d6" stroke-width="1" fill="none"/>
+    <path d="M20 38 h8 M24 34 v4" ${T}/>`;
+    case "garage":
+      return `
+    <path d="M6 20 h36 v18 h-36 Z" fill="${teinte}" ${T}/>
+    <path d="M17 20 v-5 h14 v5" fill="none" ${T} stroke-width="2.6"/>
+    <path d="M6 27 h36" ${T}/><rect x="21" y="25" width="6" height="5" fill="#c9ccd0" ${T}/>`;
+    case "voiture":
+      return `
+    <circle cx="24" cy="24" r="16" fill="${teinte}" ${T}/>
+    <circle cx="24" cy="24" r="8" fill="#c9ccd0" ${T}/>
+    <path d="M24 16 v16 M16 24 h16 M18.5 18.5 l11 11 M29.5 18.5 l-11 11" stroke="#8f8a80" stroke-width="1.4"/>
+    <circle cx="24" cy="24" r="2.5" fill="#55524d" ${T}/>`;
+    case "ferme":
+      return `
+    <path d="M14 14 Q12 10 16 9 Q24 12 32 9 Q36 10 34 14 L38 38 Q38 42 34 42 H14 Q10 42 10 38 Z" fill="${teinte}" ${T}/>
+    <path d="M16 9 Q24 4 32 9" fill="none" ${T} stroke-width="1.4"/>
+    <path d="M18 24 Q24 20 30 24 M24 21 V33" fill="none" stroke="#f4ecd8" stroke-width="2" stroke-linecap="round"/>`;
+    case "composant":
+      return `
+    <path d="M24 7 L39 15.5 V32.5 L24 41 L9 32.5 V15.5 Z" fill="${teinte}" ${T}/>
+    <circle cx="24" cy="24" r="6.5" fill="#f4ecd8" ${T}/>
+    <path d="M16 13 L22 10" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round" opacity="0.7"/>`;
+  }
+}
+
+/** Le dessin d'un pictogramme : le sien s'il en a un, sinon celui de sa famille de vestiges, sinon un « ? ». */
+function dessinDe(type: Pictogramme): string {
+  const propre = DESSINS[type] ?? DESSINS_VESTIGES[type];
+  if (propre) return propre;
+  const v = definitionVestige(type);
+  if (v) return dessinGenerique(v.famille, v.teinte ?? teinteDe(type, v.famille));
+  return `<rect x="8" y="8" width="32" height="32" rx="5" fill="#d6d2ca" ${T}/><path d="M19 19 Q19 13 24 13 Q29 13 29 18 Q29 22 24 24 V28 M24 33 v1" fill="none" ${T} stroke-width="2.6"/>`;
+}
+
 export function icone(type: Pictogramme, taille = 40): string {
-  return `<svg viewBox="0 0 48 48" width="${taille}" height="${taille}" aria-hidden="true">${DESSINS[type]}</svg>`;
+  return `<svg viewBox="0 0 48 48" width="${taille}" height="${taille}" aria-hidden="true">${dessinDe(type)}</svg>`;
 }

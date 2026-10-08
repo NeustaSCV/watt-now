@@ -2,8 +2,12 @@
 // Poids réalistes (Book 12). Plus tard, ce catalogue viendra d'un tableur (Book 03 §8).
 
 import type { Famille } from "./regles.ts";
+import { TOUS_LES_VESTIGES, type FamilleVestige, type Rarete, type TypeComposant, type TypeVestige } from "./vestiges.ts";
 
-export type TypeObjet =
+/** Tous les objets : ceux du jeu de base, et le bric-à-brac des vestiges (lot 1, 0.3) avec leurs composants. */
+export type TypeObjet = TypeObjetDeBase | TypeVestige | TypeComposant;
+
+type TypeObjetDeBase =
   | "branche"
   | "buche"
   | "pierre"
@@ -93,9 +97,12 @@ export interface DefinitionObjet {
   plat?: { sante: number };
   /** Un champignon toxique : ce qu'il fait si on le mange (Book 05 §5 bis). */
   toxique?: "tue_mouches" | "phalloide" | "viande_crue";
+  /** Un vestige ou un composant (lot 1, 0.3) : sa famille (icône, tri du sac) et sa rareté. */
+  famille?: FamilleVestige;
+  rarete?: Rarete;
 }
 
-export const OBJETS: Record<TypeObjet, DefinitionObjet> = {
+const OBJETS_DE_BASE: Record<TypeObjetDeBase, DefinitionObjet> = {
   branche: { description: "Du bois mort, sec et léger. Parfait pour démarrer un feu.", nom: "branche", pluriel: "branches", poids: 0.5, combustible: 0.5 },
   buche: { description: "Bois sec et dense : un feu tient avec ça. Environ 1 h 20 de flammes.", nom: "bûche de bois sec", pluriel: "bûches de bois sec", poids: 2, combustible: 2 },
   pierre: { description: "Une pierre de la taille d'un poing. Un cercle de pierres garde le feu à sa place.", nom: "pierre", pluriel: "pierres", poids: 2 },
@@ -274,6 +281,8 @@ export const OBJETS: Record<TypeObjet, DefinitionObjet> = {
     kcal: 380, eau: 0.09,
   },
 };
+
+export const OBJETS: Record<TypeObjet, DefinitionObjet> = { ...OBJETS_DE_BASE, ...TOUS_LES_VESTIGES };
 
 export type Inventaire = Partial<Record<TypeObjet, number>>;
 

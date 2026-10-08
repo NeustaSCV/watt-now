@@ -1138,14 +1138,219 @@ Chaque halte générée passe des vérifications avant d'être acceptée. Sinon,
 - **Par instance** (Book 01 §2 bis, instances) : à garder **identique** entre instances d'une même halte pendant un cycle, pour que des joueurs puissent se donner rendez-vous (« au goulet, près du camion »).
 - **Par saison** (Book 13) : la même graine, mais la neige, une rivière en crue qui ferme un gué, un arbre tombé…
 
-#### 6. À trancher
+#### 6. Le thème : une même halte peut passer de la forêt à la montagne (décision du 2026-10-08)
+
+Une map générée doit pouvoir **changer de thème**. La halte actuelle est en thème **forêt**. Si on la passe en thème **montagne**, tout s'adapte : le décor, mais aussi ce qu'on y ramasse (plus de pierre, moins de bois, et ainsi de suite).
+
+**Un thème est une fiche de données**, pas du code. Le générateur lit la fiche du thème et en tire tout le reste. On ajoute un thème sans toucher au moteur.
+
+| Ce que règle le thème | 🌲 Forêt (aujourd'hui) | ⛰️ Montagne |
+|---|---|---|
+| **Sol** | Terre, mousse, feuilles mortes | Rocaille, herbe rase, plaques de neige l'hiver |
+| **Bords infranchissables** | Forêt dense | Falaise d'un côté, ravin de l'autre |
+| **Goulet** | Éboulis, arbre tombé | Col étroit, tunnel, pont sur un torrent |
+| **Végétation** | Feuillus serrés, sous-bois, buissons | Résineux clairsemés, arbustes, rochers |
+| **Ressources naturelles** (proportions) | Beaucoup de bois mort et de branches, peu de pierres, champignons, baies | **Beaucoup de pierres**, calcaire, un peu de bois, peu de baies |
+| **Points d'intérêt possibles** | Ferme en ruine, cabane de chasseur, station-service | Refuge, chalet, carrière, téléski à l'arrêt |
+| **Butin** (catalogue P-003, Book 20 §2) | Outils agricoles, conserves, cordes | Matériel de montagne, cordes, réchauds, duvets |
+| **Faune** (Book 11) | Poules ensauvagées, petit gibier | Chamois, marmottes, rapaces |
+| **Éteints** | Errants dispersés dans les sous-bois | Moins nombreux mais lents dans la neige (Book 06 §7) |
+| **Ambiance** | Lumière filtrée par les feuilles | Lumière crue, **brume** au col, vent plus fort |
+| **Météo** (Book 13) | Pluie, brouillard | Froid plus tôt, neige plus longue |
+| **Sons d'ambiance** | Oiseaux, feuillage | Vent, cailloux qui roulent, torrent (à voir avec la session musique) |
+
+**Les règles qui en découlent :**
+
+- **Chaque brique de décor dit à quels thèmes elle appartient** : la station-service va avec la forêt, la campagne et la route de montagne ; un chalet ne va qu'avec la montagne. Quand on change de thème, le générateur ne garde que les briques permises.
+- **Les ressources suivent le thème par des proportions**, pas par des listes fixes : « bois 20 %, pierre 50 %, calcaire 15 %… ». Le même calcul de placement sert pour tous les thèmes.
+- **Le thème change aussi l'économie locale** : plus de pierre en montagne, c'est cohérent avec les ressources dominantes de chaque environnement (Book 20 §2), et c'est une raison de passer par telle halte plutôt que telle autre.
+- **Le thème peut se mélanger le long de la route.** Une halte est un passage entre deux zones (Book 20 §4) : elle peut commencer en forêt du côté du terrain et finir en montagne de l'autre côté, avec un dégradé au milieu. On sent qu'on change de région en la traversant.
+- **Plus de thèmes que d'environnements.** Le Book 20 regroupe « Montagne et forêt » en un seul environnement. Pour le décor, il vaut mieux deux thèmes séparés. Liste de départ proposée : forêt, montagne, campagne, ville, zone industrielle, littoral, marais.
+- **La saison s'applique par-dessus le thème** (§5) : forêt en automne, montagne sous la neige.
+
+#### 7. À trancher
 
 - Les haltes changent-elles à chaque cycle, ou restent-elles fixes pour qu'on les apprenne ?
-- Combien de nouvelles briques faut-il pour que deux haltes ne se ressemblent pas ? Probablement **une dizaine par environnement** (bords, goulet, deux ou trois points d'intérêt).
-- Le générateur sert-il aussi aux **ruines lointaines** et aux **lieux de flux** (Book 20) ?
+- Combien de nouvelles briques faut-il pour que deux haltes ne se ressemblent pas ? Probablement **une dizaine par thème** (bords, goulet, deux ou trois points d'intérêt).
+- ✅ **Les ruines lointaines ne passent pas par le générateur** (décision du 2026-10-08) : elles ont un **thème fort** et restent faites à la main. Reste à décider pour les **lieux de flux** (Book 20).
+- Le relief de la montagne : vrai dénivelé dans la map, ou seulement suggéré par le décor (falaises, rochers, pentes en bord de map) ? Un sol plat reste bien plus simple pour le moteur et le mobile.
 
 - **Books concernés** : 01-les-trois-feux (§2 bis haltes), 20-carte-du-monde (§4), 17-architecture-technique, 18-direction-artistique, 21-perimetre-phase-0 (§5), 09-cycles-progression-classements
 - **Statut** : 🆕 à étudier
+
+### P-009 — Bricoler ses armes : une grande base de combinaisons de deux objets
+- **Date** : 2026-10-08
+- **Source** : demande du porteur du projet
+- **Idée** : le joueur prend **deux objets** de son sac et essaie de les assembler en arme. Une très grande base de données dit ce que donne chaque paire **prévue** : certaines armes sont excellentes, d'autres ridicules, certaines ont des **effets inattendus** sur les Éteints (les faire tomber, leur briser une jambe, les attirer…). Une paire **non prévue ne s'assemble pas**. Chaque arme prévue a son **graphisme**, sa **description** et ses **caractéristiques**.
+- **L'esprit** : **ne surtout pas brider le joueur**. Toute paire peut être essayée, sans savoir préalable, par toutes les familles, avec des outils de base. La liberté vient de l'**ampleur de la base** et du plaisir de la découverte.
+- **Books concernés** : 06-zombies (§2 corps et fragilité, §3 perception, §8 combat), 02-crafting, 03-bibliotheque-et-savoir (§1 propriétés, §5.5 carnet, §6 expérimentation), 18-direction-artistique, 21-perimetre-phase-0, P-003 (les objets), P-005 (arme équipée)
+- **Statut** : 🆕 à étudier
+
+#### 1. Le geste : « Bricoler une arme »
+
+- Dans le sac, on **pose un objet sur un autre** (ou on choisit deux objets dans un panneau « Bricoler une arme »).
+- **Le liant ne compte pas comme un objet.** Pour emmancher ou attacher, il faut un lien : corde, ficelle, ruban adhésif gris, fil de fer, colliers de serrage, colle. Il est consommé en plus des deux objets. Ainsi, « couteau + longue branche » reste une combinaison de deux, et le ruban adhésif devient un trésor.
+- **Outils** : Couper 1 et Marteler 1 au plus (Book 03 §4). Le couteau abîmé et une pierre suffisent. Quelques armes demandent un feu (pointe durcie) ; aucune ne demande de savoir.
+- **Durée** : de 5 à 20 min de jeu (quelques secondes à l'écran).
+- **Démonter une arme** rend les deux objets, un peu usés, et une partie du liant. On peut donc essayer sans peur de tout perdre.
+- **L'arme bricolée s'équipe** pour le mode Combat (P-005).
+
+#### 2. Une paire non prévue : un refus utile, jamais sec
+
+- Le jeu répond par une **phrase drôle** tirée des propriétés des deux objets : « Rien à emmancher, rien à frapper : le coussin péteur et la poêle n'ont rien à se dire. »
+- **L'indice** (la **recette pressentie** du Book 03 §5.1) : si l'un des deux objets entre dans une arme prévue, le jeu le dit : « La poêle ferait quelque chose avec un long manche… »
+- Les paires déjà tentées sont notées dans le **carnet** (Book 03 §5.5) : on ne retente pas pour rien.
+
+#### 3. Les caractéristiques d'une arme
+
+Le format prolonge celui du code actuel (`commun/src/combat.ts`, interface `Arme` : `degatsTorse`, `tueALaTete`, `allonge`).
+
+| Caractéristique | Sens | Échelle |
+|---|---|---|
+| **Dégâts** | Coups au torse pour faire tomber un Éteint (il tombe à 3 points) | Poings 0,35 · gourdin 1 · hache 2 |
+| **Tête** | Un coup appuyé à la tête le détruit-il ? | Oui / non |
+| **Allonge** | Portée en mètres : garder l'Éteint à distance avant qu'il saisisse | 1,1 (poings) à 2,5 |
+| **Vitesse** | Délai entre deux coups (P-004 : le geste va au bout) | Rapide 0,4 s · moyenne 0,6 s · lente 0,9 s |
+| **Effort** | Endurance par coup | Léger · moyen · lourd |
+| **Usure** | Nombre de coups avant de casser | 3 à 500 |
+| **Bruit** | Signature sonore d'un coup (Book 06 §3) | 5 à 60 m |
+| **Effet** | Effet spécial, avec sa chance de se produire (§4) | — |
+| **Type de geste** | Fixe l'animation (§6) | Court, long, estoc, fléau, lancer, parade |
+| **Verdict** | Ce que vaut l'arme, découvert à l'usage | 🟢 efficace · 🟡 correcte · 🟠 médiocre · 🔴 nulle · 🎲 imprévisible |
+
+> Le verdict n'est **pas affiché avant le premier combat** : le joueur le découvre, puis il est noté dans le carnet. Une arme « nulle » peut avoir un effet utile (leurre, parade).
+
+#### 4. Les effets inattendus
+
+Ils reposent sur le corps et la perception des Éteints (Book 06 §2 et §3). Certains sont **cachés** : on les découvre la première fois qu'ils se produisent.
+
+| Effet | Ce qui se passe | Exemple d'arme |
+|---|---|---|
+| **Renverse** | L'Éteint tombe : on peut l'achever (Book 06 §2.2) | Fléau d'haltère |
+| **Brise-jambe** | Il devient **rampant** | Pique-levier |
+| **Brise-bras** | Il ne peut plus saisir de ce côté | Masse en titane |
+| **Fait lâcher prise** | Un Éteint qui vous tient vous lâche | Bouclier STOP |
+| **Repousse** | Il recule de 2 m | Trident prolongé |
+| **Entrave** | Les jambes liées : il tombe et reste au sol 5 s | Bolas |
+| **Tétanise** | Électrique : il se fige 2 à 3 s | Fourche électrique |
+| **Enflamme** | Il brûle. Mais il est attiré par la chaleur… (Book 06 §3) | Bouteille incendiaire |
+| **Leurre** | Le bruit de l'arme attire les Éteints alentour, ailleurs… ou vers vous | Lance-pierre, batte vibrante |
+| **Fauche** | Touche deux Éteints d'un coup | Faux de tondeuse |
+| **Coincé** | L'arme reste plantée 2 s : on est désarmé | Épieu à lame, batte cloutée |
+| **Retour** | L'arme vous blesse (contusion, coupure, brûlure) | Fléau de cocotte, lance-flammes |
+| **Éclate** | L'arme se brise en un coup, avec un dernier effet | Nain-masse |
+| **Rien du tout** | L'effet espéré n'existe pas sur un Éteint : il est mort | Garrot, lacrymogène, aiguillon de 12 V |
+
+#### 5. Un premier échantillon (65 armes)
+
+Il mêle les objets du jeu, ceux des gammes P-002 et P-003, et le ton du Book 15. Toutes les valeurs sont des premières propositions, à caler en test.
+
+| Objets combinés | Arme | Verdict | Dégâts | Tête | Allonge | Vitesse | Usure | Effet | Description |
+|---|---|---|---|---|---|---|---|---|---|
+| Couteau + longue branche | Épieu à lame | 🟢 | 1,2 | oui | 2,2 | moyenne | 40 | Coincé 15 % | La première bonne idée de l'humanité, refaite au ruban adhésif. |
+| Tête de hache + barre de métal | Hache à manche de fer | 🟢 | 2,2 | oui | 1,9 | lente | 150 | Renverse 30 % | Lourde, mais rien ne la casse. |
+| Clous + batte de baseball | Batte cloutée | 🟢 | 1,6 | oui | 1,5 | moyenne | 60 | Coincé 15 % | Un classique du genre. Les clous restent parfois dans l'autre. |
+| Clous + gourdin | Gourdin clouté | 🟢 | 1,4 | oui | 1,5 | moyenne | 50 | Coincé 10 % | Le gourdin, en plus convaincant. |
+| Lame de ressort + bûche | Machette de ressort | 🟢 | 1,3 | oui | 1,4 | rapide | 80 | Brise-bras 15 % | L'acier de l'Abondance enfin bien employé. |
+| Pied-de-biche + couteau | Pique-levier | 🟢 | 1,6 | oui | 1,3 | moyenne | 200 | Brise-jambe 20 % | Ouvre les portes et ferme les débats. |
+| Fourche + barre de métal | Trident prolongé | 🟢 | 1 | non | 2,6 | lente | 120 | Repousse 40 % | Pour ceux qui aiment garder leurs distances. |
+| Poêle antiadhésive + barre de métal | Poêle à long manche | 🟡 | 0,8 | non | 1,8 | moyenne | 60 | Leurre (bong à 40 m) | Rien n'attache, sauf l'attention des voisins. |
+| Cocotte en fonte + chaîne de vélo | Fléau de cocotte | 🟢 | 1,8 | oui | 1,8 | lente | 200 | Renverse 40 % · Retour 10 % | Mijoté à feu vif. Attention au retour de manivelle. |
+| Boule de pétanque + chaussette | Matraque à chaussette | 🟡 | 1 | non | 1,1 | rapide | 30 | Silencieuse (5 m) | Discrète, un peu honteuse, efficace. |
+| Boules de pétanque + corde | Bolas | 🟢 | 0 | non | jet 8 m | moyenne | 10 jets | Entrave 100 % (60 % de toucher) | Il tombe, et c'est vous qui choisissez la suite. |
+| Chambre à air + branche fourchue | Lance-pierre | 🟡 | 0,3 | non | jet 15 m | rapide | 40 tirs | Leurre à l'impact | Moins une arme qu'une manière de dire « par là ». |
+| Préservatif + branche fourchue | Lance-pierre au latex | 🟠 | 0,2 | non | jet 10 m | rapide | 5 tirs | Leurre à l'impact | Il claque au cinquième tir. Comme prévu. |
+| Godemichet en silicone + chaîne de vélo | Fléau de silicone | 🟡 | 1 | non | 1,6 | moyenne | 300 | Retour 25 % (rebond) | Le silicone rebondit. Partout. |
+| Vibromasseur + batte de baseball | Batte vibrante | 🟠 | 1,1 | non | 1,5 | moyenne | 40 | Leurre sur soi | Le pire leurre : celui qu'on tient à la main. |
+| Poupée gonflable + longue branche | Leurre-bouclier gonflable | 🔴 | 0 | non | — | — | 3 morsures | Les Éteints l'attaquent d'abord, 3 s | Elle a donné sa vie pour vous. |
+| Panneau « STOP » + ceinture | Bouclier STOP | 🟢 | 0,3 | non | 1 | parade | 100 | Fait lâcher prise · Repousse | Enfin respecté. |
+| Rasoirs jetables + gourdin | Gourdin à lames | 🟠 | 1,1 | non | 1,5 | moyenne | 20 | Rien du tout (saignement) | Les Éteints ne saignent plus. Ça n'a servi à rien. |
+| Tesson de bouteille + longue branche | Lance de verre | 🟡 | 1 | oui | 2 | moyenne | 5 | Éclate | Une pointe superbe, cinq fois. |
+| Tube PVC + clous | Sarbacane à clous | 🔴 | 0,1 | non | jet 6 m | rapide | 30 | Rien du tout | Parfait contre un pigeon, inutile contre un mort. |
+| Tringle à rideaux + couteau de chef | Naginata de salon | 🟢 | 1,3 | oui | 2 | moyenne | 60 | Fauche 15 % | La décoration intérieure au service de la survie. |
+| Club de golf + tête de hache | Hache de golf | 🟢 | 2 | oui | 1,6 | moyenne | 100 | Renverse 25 % | Un swing, un trou. |
+| Batte de baseball + fil de fer | Batte barbelée | 🟢 | 1,5 | oui | 1,5 | moyenne | 50 | Coincé 10 % | Le fil de fer : le ruban adhésif des méchants. |
+| Râteau + fourche | Herse à main | 🟡 | 0,7 | non | 1,9 | lente | 80 | Entrave 20 % (accroche les vêtements) | Ralentit surtout les Éteints bien habillés. |
+| Extincteur + corde | Masse d'extincteur | 🟢 | 1,9 | oui | 1,3 | lente | 150 | Une fois : souffle qui renverse tout devant | Une seule fois, mais quelle fois. |
+| Laque à cheveux + briquet | Lance-flammes de salle de bain | 🎲 | 0,5/s | non | 2 | rapide | 8 | Enflamme · Retour 20 % (brûlure) | Tenue impeccable, sourcils en option. Signature énorme. |
+| Bouteille en verre + huile de friture | Bouteille incendiaire | 🟢 | zone | non | jet 10 m | lente | 1 | Enflamme (zone) | Ils sont attirés par la chaleur. Ils y vont d'eux-mêmes. |
+| Batterie de voiture + barre de métal | Aiguillon de 12 V | 🔴 | 1,5 | oui | 1,9 | lente | 150 | Rien du tout (12 V ne traverse pas la peau) | La barre fait tout le travail. La batterie fait 18 kg. |
+| Défibrillateur + fourche | Fourche électrique | 🎲 | 0,8 | non | 1,8 | moyenne | 4 décharges | Tétanise 3 s · Retour 10 % | « Dégagez ! » Lui, ou vous. |
+| Pistolet à impulsion + longue branche | Taser à perche | 🟢 | 0,3 | non | 2 | moyenne | 10 décharges | Tétanise 2 s | Le seul taser qui garde ses distances. |
+| Aspirateur robot + couteau | Robot faucheur | 🔴 | 0,1 | non | sol | — | 20 | Leurre mobile · Brise-jambe 5 % | Il tourne, il coupe des chevilles, il fait surtout du bruit. |
+| Tondeuse thermique + barre de métal | Faux de tondeuse | 🟢 | 1,5 | non | 1,9 | lente | 80 | Fauche 35 % | La lame de tondeuse, sur un manche : on fauche des rangs. |
+| Haltère + chaîne de vélo | Fléau d'haltère | 🟢 | 2 | oui | 1,7 | lente | 300 | Renverse 40 % | La salle de sport sert enfin. |
+| Haltère + bûche | Masse d'haltère | 🟢 | 1,8 | oui | 1,4 | lente | 300 | Renverse 25 % | Simple, lourde, honnête. |
+| Pierre + branche | Hache de pierre (P-002) | 🟡 | 1 | non | 1,4 | moyenne | 30 | — | Comme il y a dix mille ans, en moins bien. |
+| Boule à facettes + chaîne de vélo | Fléau disco | 🟡 | 1,2 | non | 1,7 | moyenne | 40 | Leurre lumineux la nuit | Chaque coup lance des éclats de lumière à 30 m. |
+| Guitare acoustique + clous | Guitare cloutée | 🟡 | 1 | non | 1,3 | moyenne | 6 | Leurre (un accord à 30 m) · Éclate | Le dernier concert de l'Abondance. |
+| Parapluie + couteau | Parapluie-épée | 🟡 | 1 | oui | 1,5 | rapide | 40 | Ouvert : fait lâcher prise 30 % | Élégant sous la pluie comme sous la horde. |
+| Skateboard + clous | Planche cloutée | 🟡 | 1,1 | non | 1,2 | moyenne | 40 | Coincé 10 % | Le dernier trick. |
+| Béquille + couteau | Béquille-lance | 🟢 | 1,1 | oui | 1,8 | moyenne | 50 | — | Une jambe en moins, une revanche en plus. |
+| Jambe de bois + clous | Jambe de bois cloutée | 🟢 | 1,4 | oui | 1,2 | moyenne | 60 | Renverse 15 % | Son ancien propriétaire aurait approuvé. |
+| Prothèse de hanche + bûche | Masse en titane | 🟢 | 1,5 | oui | 1,3 | moyenne | 500 | Brise-bras 20 % | Le titane survit à tout, y compris à son patient. |
+| Dentier + longue branche | Mordeur | 🔴 | 0,1 | non | 2 | rapide | 10 | Rien du tout | Ils mordent ; vous mordez. Égalité, en moins bien. |
+| Perche à selfie + couteau | Lance télescopique | 🟡 | 1 | oui | 1,2 à 2,2 | rapide | 15 | — | Le dernier selfie, pris de plus loin. |
+| Menottes + corde | Entrave à menottes | 🎲 | 0 | non | 1 | lente | 3 | Entrave : attache un Éteint à un poteau ou à un autre Éteint | Deux Éteints menottés tombent ensemble. Parfois avec vous. |
+| Pétards + boîte de conserve | Grenade-leurre | 🟢 | 0 | non | jet 15 m | — | 1 | Leurre : attire tout à 40 m pendant 10 s | On ne les bat pas ; on les envoie ailleurs. |
+| Feux d'artifice + tube PVC | Bazooka d'artifice | 🎲 | zone | non | jet 20 m | lente | 3 | Renverse · Enflamme · Retour 25 % | Un spectacle pour toute la région. Littéralement. |
+| Clé plate + chaussette | Matraque à clé | 🟡 | 0,8 | non | 1,1 | rapide | 50 | Silencieuse | La clé de 13 : utile, même là. |
+| Rouleau à pâtisserie + clous | Rouleau clouté | 🟡 | 1,1 | non | 1,1 | moyenne | 40 | — | La pâte n'a qu'à bien se tenir. |
+| Enjoliveur + ceinture | Bouclier enjoliveur | 🟡 | 0,2 | non | 1 | parade | 40 | Fait lâcher prise 25 % | Il protège aussi bien qu'il roulait. |
+| Mandoline + longue branche | Hachoir à mandoline | 🟢 | 0,9 | non | 1,6 | rapide | 30 | Brise-bras 15 % · Retour 10 % (un doigt) | Tranche fin. Tranche tout. |
+| Fouet en cuir + clous | Fouet clouté | 🟠 | 0,5 | non | 2,5 | rapide | 30 | Entrave 20 % | Plus d'allure que d'effet. |
+| Bâillon-boule + chaîne de vélo | Fléau intime | 🟡 | 0,8 | non | 1,6 | moyenne | 60 | — | Pour un usage dont personne ne parlera. |
+| Escarpin à talon aiguille + longue branche | Pic à talon | 🟡 | 0,7 | oui | 1,8 | rapide | 15 | — | Le talon dans l'œil : l'élégance jusqu'au bout. |
+| Canne à pêche + boîte de leurres | Fouet-hameçon | 🔴 | 0,2 | non | 3 | moyenne | 20 | Accroche et **tire l'Éteint vers vous** | La pêche du jour vient à vous. Trop vite. |
+| Bêche + couteau | Pelle tranchante | 🟢 | 1,4 | oui | 1,6 | moyenne | 150 | Brise-jambe 10 % | Creuse, coupe, et sert aussi pour après. |
+| Trophée d'employé du mois + bûche | Masse du mérite | 🟡 | 1,2 | oui | 1,2 | moyenne | 80 | — | Enfin un trophée qui sert à quelque chose. |
+| Coffret de couteaux japonais + tringle à rideaux | Lance de luxe | 🟢 | 1,4 | oui | 2,1 | rapide | 120 | Fauche 10 % | La meilleure lance du jeu, achetée 3 000 € pour couper des tomates. |
+| Lingot d'or + chaussette | Matraque en or | 🟡 | 1,1 | non | 1,1 | rapide | 1000 | Silencieuse | La richesse a enfin servi à quelque chose. |
+| Cymbale + corde | Gong-bouclier | 🟡 | 0,3 | non | 1 | parade | 80 | Fait lâcher prise 20 % · Leurre (gong à 50 m) | Pour se protéger et prévenir tout le monde. |
+| Ruche + longue branche | Bâton à abeilles | 🎲 | 0 | non | jet 5 m | — | 1 | Rien sur les Éteints · les vivants alentour sont piqués | Les morts ne sentent rien. Les pillards, si. |
+| Fil de fer + deux bouts de bois | Garrot | 🔴 | 0 | non | contact | — | 20 | Rien du tout | Ils ne respirent plus. Bonne idée, mauvais public. |
+| Nain de jardin + longue branche | Nain-masse | 🟡 | 1,2 | non | 1,6 | moyenne | 3 | Éclate (tessons) | Il a vécu pour ce moment. |
+| Sabre de l'Ordre galactique + barre de métal | Sabre lesté | 🟡 | 1,2 | non | 1,5 | moyenne | 100 | Leurre lumineux la nuit | Il vrombit encore. Pas assez pour impressionner. |
+| Marteau de dieu nordique en mousse + pierre | Marteau divin, version honnête | 🟢 | 1,3 | oui | 1,3 | moyenne | 60 | Renverse 15 % | Une pierre dans la mousse : enfin digne de son nom. |
+
+#### 6. Les graphismes : assembler plutôt que dessiner
+
+On ne peut pas modéliser à la main des centaines d'armes. Mais elles sont **faites de deux objets qui ont déjà leur modèle** (P-003) :
+
+- **Chaque objet reçoit des points d'accroche** : où on le tient, où on fixe quelque chose au bout, où on l'enroule. Une batte a une poignée et un bout ; des clous savent se planter « tout autour ».
+- **L'arme est l'assemblage des deux modèles**, placés selon un gabarit par type d'arme (manche + tête, manche + lame, lest + lien…), plus le modèle du liant : un enroulement de ruban adhésif, de corde ou de fil de fer.
+- **L'icône se photographie automatiquement** à partir de l'assemblage, sur le principe des pages de planches existantes.
+- **Six types de geste** suffisent pour les animations (déjà en partie là, `client/src/rendu/personnage.ts`) : court, long, estoc, fléau, lancer, parade.
+- **Une poignée d'armes-vitrines** reçoit un modèle fait à la main (Book 21 §5.7, la méthode « Claude produit »).
+
+#### 7. Faire grandir la base sans tout écrire à la main
+
+- **Chaque objet de P-003 reçoit son rôle d'arme** : manche (court, long), tête (lourde, tranchante, pointue), lest, lien souple, projectile, gadget (lumière, bruit, électricité, feu). C'est le principe du Book 03 §1 : un monde décrit par ses propriétés.
+- **Un outil propose les paires plausibles** à partir des rôles (un manche long avec une tête lourde, un lest avec un lien souple…), avec des caractéristiques calculées. **Chaque arme retenue est relue** et reçoit son nom, sa description et son effet. C'est là que se fait l'humour.
+- **Ordre de grandeur** : une trentaine d'armes pour la phase 0a, avec les objets du jeu actuel ; 300 à 500 au lancement.
+
+```json
+{
+  "id": "batte_cloutee",
+  "objets": ["batte_baseball", "clous"],
+  "liant": ["ruban_adhesif", "fil_de_fer", "corde"],
+  "nom": "Batte cloutée",
+  "description": "Un classique du genre. Les clous restent parfois dans l'autre.",
+  "degatsTorse": 1.6, "tueALaTete": true, "allonge": 1.5,
+  "vitesse": "moyenne", "effort": "moyen", "usure": 60, "bruit_m": 25,
+  "effets": [{ "type": "coince", "chance": 0.15, "cache": true }],
+  "geste": "long", "verdict": "efficace",
+  "gabarit": "manche_tete"
+}
+```
+
+#### 8. À trancher
+
+- **Le liant hors du compte** de deux objets : d'accord ?
+- **L'ordre des objets** compte-t-il ? (« couteau + branche » = « branche + couteau » : je propose que non.)
+- **Les armes de famille** viendront-elles plus tard ? Par exemple une version forgée 🔥 de la machette de ressort, ou une version électrique ⚡ de la fourche.
+- **Les combinaisons de trois objets** : à garder pour plus tard, comme vous l'avez dit.
+- **Le ton** des armes les plus crues : à relire ensemble.
 
 <!-- Modèle d'une entrée :
 

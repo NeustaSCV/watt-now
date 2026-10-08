@@ -347,6 +347,7 @@ const hud = new Hud(
     echange: (op) => envoyer({ t: "echange", op }),
     passerTutoriel: () => envoyer({ t: "tutoriel_passer" }),
     jeter: (objet, quantite) => envoyer({ t: "jeter", objet, quantite }),
+    demonter: (objet) => envoyer({ t: "demonter", objet }),
     equiper: (objet) => envoyer({ t: "equiper", objet }),
     coffre: (id, sens, objet, quantite) => envoyer({ t: "coffre", id, sens, objet, quantite }),
     fabriquer: (r) => {
@@ -1203,7 +1204,7 @@ function boucle(instant: number): void {
     majMode(dt);
     // Le coffre se ferme quand on s'en éloigne.
     const coffre = hud.coffreOuvert;
-    if (coffre && (lieu !== "terrain" || Math.hypot(position.x - coffre.x, position.z - coffre.z) > 3)) hud.fermerPanneaux();
+    if (coffre && (lieu !== "terrain" || Math.hypot(position.x - coffre.x, position.z - coffre.z) > (coffre.type === "decharge" ? 4.5 : 3))) hud.fermerPanneaux();
     // Le guichet se ferme quand on s'en éloigne.
     if (hud.guichetOuvert && (lieu !== "comptoir" || Math.hypot(position.x - COMPTOIR.guichet.x, position.z - COMPTOIR.guichet.z) > 4)) hud.fermerPanneaux();
     personnage.tenir(modeCombat ? armeEnMain(inventaire, armeEquipee).objet : undefined);

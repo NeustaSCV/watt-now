@@ -88,8 +88,14 @@ Les ruines regorgent d'objets de l'Âge de l'Abondance. Beaucoup sont **inutiles
 | **Coffret « Kit de survie premium »** | Couteau en plastique doré, bougie parfumée, guide de méditation | Presque rien. Un trophée. |
 | **Livre « Cuisiner sans cuisiner »** | Un classique de l'époque | Papier (allume-feu) |
 | **Manuel d'entretien automobile** | **Un trésor** | Savoir (Book 03 §5.4) |
+| **Télé plate de 85 pouces** *(dans le jeu, 0.3)* | Quarante-cinq kilos d'écran noir. Elle reflète très bien ton visage fatigué | 30 LED, du cuivre, du plastique |
+| **Balance connectée** *(0.3)* | Elle affiche encore ton poids, et que c'est trop | Piles, verre |
+| **Pyramide de 96 rouleaux** *(0.3, légendaire)* | Le trophée des grands stockeurs de la Grande Panne | 96 rouleaux : des allume-feu |
+| **Nain de jardin** *(0.3)* | Il y a désormais plus de nains de jardin que de survivants | Rien. Trois kilos de céramique |
 
 > Les objets absurdes peuvent aussi devenir des **décorations de collection** pour le terrain (Book 09 §5.1).
+
+> **Vestiges, lot 1 (0.3)** : 55 vestiges du quotidien sont dans le jeu (Book 02 §5, « Vestiges, lot 1 ») : la fouille en rapporte, ils pèsent leur vrai poids, et l'on finit par trier son sac.
 
 ---
 

@@ -63,7 +63,7 @@ test("🔥 charbonnière : allumer, attendre trois jours de jeu, défourner 4 kg
   t.attendre(11);
   assert.equal(t.dernier("inventaire")!.inventaire.charbon_bois, 4);
   assert.deepEqual(t.dernier("installation_retiree"), { t: "installation_retiree", id });
-  assert.equal(t.joueur.bienvenue(0).installations.length, 0);
+  assert.equal(t.joueur.bienvenue(0).installations.filter((x) => x.type !== "decharge").length, 0);
 });
 
 test("🔥 la lame se forge seulement près d'un foyer de forge, avec charbon et marteau", () => {

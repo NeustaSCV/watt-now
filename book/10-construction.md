@@ -147,13 +147,19 @@ Besoin de chauffage de la pièce de vie standard (§2.1), par jour d'hiver, et b
 - **Atelier fermé :** une forge ou un atelier dans une pièce aux murs épais voit sa **signature sonore réduite** (environ −50 % derrière de la pierre). La fumée, elle, sort toujours par la cheminée.
 
 > **Décision (2026-10-08) : on choisit où l'on construit (phase 0a).** Après « Construire » (une installation ou le feu de camp), une étape de pose s'ouvre :
-> - **Le fantôme** de la construction (le vrai modèle, en transparence) suit la souris. Sur téléphone, il se tient devant le personnage : on le déplace en marchant.
-> - **Il se cale sur une grille de 50 cm** et reste à portée de bras (3 m). Plus loin, il s'arrête au bout du bras, dans la direction visée.
+> - **Le fantôme** de la construction (le vrai modèle, en transparence) apparaît devant le personnage.
+> - **Revu pour la 0.3 (retour du porteur : « soit c'est le personnage qui bouge, soit c'est l'objet ; là ça fait bouger les deux, c'est brouillon »)** : pendant la pose, **le personnage ne bouge plus, seul le fantôme bouge**.
+>   - Le clavier (ZQSD, flèches) ou le joystick **poussent** le fantôme ;
+>   - un **clic** (ou un appui du doigt) **au sol** l'y amène ; un **second clic sur le fantôme** construit ;
+>   - **bouger la souris ne le déplace pas** : on va cliquer sur « Tourner » ou « Annuler » sans rien déranger ;
+>   - la **molette** tourne d'un quart de tour, le **clic droit** annule ;
+>   - un **cercle pointillé** autour du personnage montre la portée.
+> - **Il se cale sur une grille de 50 cm** et reste à portée de bras (3 m). Plus loin, il s'arrête au bord du cercle.
 > - **Son empreinte au sol** est verte si l'on peut construire, rouge sinon. La raison s'affiche : trop près du bord, de l'eau, d'un feu, d'une autre construction, dans les ruines. C'est la même règle que celle du serveur (`commun/src/emplacement.ts`). Les escabeaux ne gênent pas, puisqu'on les déplace.
 > - **Commandes** :
->   - construire : A, le clic ou « Construire ici » ;
->   - tourner d'un quart de tour : la touche de lumière (R) ou « Tourner » ;
->   - annuler : B, Échap ou « Annuler ».
+>   - construire : A (E), un second clic sur le fantôme ou « Construire ici » ;
+>   - tourner d'un quart de tour : la molette, la touche de lumière (R) ou « Tourner » ;
+>   - annuler : B, le clic droit, Échap ou « Annuler ».
 > - **Plus tard : un mode Construction** pour déplacer les constructions existantes et poser des murs, des sols et des toits sur cette grille (§7.1).
 
 ### 7.2 Les objets lourds à porter : l'escabeau d'abord (décision du 2026-10-08)

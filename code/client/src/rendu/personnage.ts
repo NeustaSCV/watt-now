@@ -67,6 +67,54 @@ const ANIMATION_GESTE: Record<GesteAction, string> = {
 /** Vitesse propre des animations de déplacement (m/s, mesurée sur la bibliothèque, ramenée à 1,75 m). */
 const VITESSE_ANIM = { accroupi: 0.71, marche: 0.93, trot: 5.1 } as const;
 
+/**
+ * Une arme tenue en main, construite dans le repère du poing : le manche dans l'axe +z (du poing vers l'avant),
+ * le poing à l'origine. Null si l'objet ne se tient pas comme une arme.
+ */
+export function creerArme(objet: TypeObjet): THREE.Group | null {
+  const bois = materiau(PALETTE.bois);
+  const fer = materiau(0x6e6a63, { metal: 0.6, rugosite: 0.45 });
+  // Dans le poing, le manche part vers l'avant et vers le haut (repère du personnage au repos).
+  const arme = new THREE.Group();
+  const ajouter = (geo: THREE.BufferGeometry, mat: THREE.Material, z: number, y = 0) => {
+    const m = new THREE.Mesh(geo, mat);
+    m.position.set(0, y, z);
+    m.castShadow = true;
+    arme.add(m);
+  };
+  switch (objet) {
+    case "hache":
+      ajouter(new THREE.BoxGeometry(0.035, 0.035, 0.62), bois, 0.18);
+      ajouter(new THREE.BoxGeometry(0.025, 0.18, 0.12), fer, 0.44, 0.06);
+      break;
+    case "marteau":
+      ajouter(new THREE.BoxGeometry(0.03, 0.03, 0.34), bois, 0.1);
+      ajouter(new THREE.BoxGeometry(0.05, 0.13, 0.05), fer, 0.26, 0.02);
+      break;
+    case "barre_metal":
+      ajouter(new THREE.CylinderGeometry(0.016, 0.016, 0.9, 6).rotateX(Math.PI / 2), fer, 0.3);
+      break;
+    case "lame_forgee":
+    case "couteau":
+    case "couteau_aiguise":
+      ajouter(new THREE.BoxGeometry(0.025, 0.025, 0.1), materiau(PALETTE.boisSombre), 0.02);
+      ajouter(new THREE.BoxGeometry(0.008, 0.035, objet === "lame_forgee" ? 0.3 : 0.15), fer, objet === "lame_forgee" ? 0.22 : 0.14);
+      break;
+    case "gourdin":
+      // Un bâton de bois dur, plus épais au bout.
+      ajouter(new THREE.CylinderGeometry(0.045, 0.022, 0.62, 6).rotateX(Math.PI / 2), materiau(PALETTE.boisSombre), 0.2);
+      break;
+    case "epieu":
+      // Une longue perche, la pointe noircie au feu (P-002) : on la tient au tiers.
+      ajouter(new THREE.CylinderGeometry(0.02, 0.024, 1.7, 6).rotateX(Math.PI / 2), bois, 0.45);
+      ajouter(new THREE.ConeGeometry(0.022, 0.16, 6).rotateX(Math.PI / 2), materiau(0x2e2018), 1.37);
+      break;
+    default:
+      return null;
+  }
+  return arme;
+}
+
 export class Personnage {
   readonly objet = new THREE.Group();
   readonly famille: Famille;
@@ -107,10 +155,20 @@ export class Personnage {
     });
     this.corps = corps;
     this.habiller(corps);
+    // L'arme se tient dans le poing, pas au poignet (2026-10-08) : l'os de la main a son origine au poignet. Dans son
+    // repère (mesuré sur le modèle), +y va du poignet vers les doigts, +z de l'auriculaire vers l'index, et les doigts
+    // se referment vers −x. On place donc le poing au creux des premières phalanges, et l'arme y est construite
+    // directement : manche selon +z (il sort côté pouce), tête ou tranchant selon +y (devant les doigts).
     const main = corps.osNomme("hand_r");
     if (main) {
-      this.main.position.copy(corps.repere("hand_r"));
-      corps.accrocher(this.main, "hand_r");
+      const majeur = main.getObjectByName("middle_01_r");
+      const poing = majeur ? majeur.position.clone().multiplyScalar(0.92) : new THREE.Vector3(0, 0.08, 0);
+      this.main.position.set(poing.x - 0.032, poing.y, poing.z);
+      // L'os est à l'échelle du corps : on garde l'arme en vraie grandeur.
+      corps.objet.updateMatrixWorld(true);
+      const echelle = main.getWorldScale(new THREE.Vector3());
+      this.main.scale.set(1 / echelle.x, 1 / echelle.y, 1 / echelle.z);
+      main.add(this.main);
     }
     this.objet.add(corps.objet);
     corps.tacher(this.blessures);
@@ -258,50 +316,11 @@ export class Personnage {
     this.armeTenue = objet;
     this.main.clear();
     if (objet === undefined || objet === null) return;
-    const bois = materiau(PALETTE.bois);
-    const fer = materiau(0x6e6a63, { metal: 0.6, rugosite: 0.45 });
-    // Dans le poing, le manche part vers l'avant et vers le haut (repère du personnage au repos).
-    const arme = new THREE.Group();
-    const ajouter = (geo: THREE.BufferGeometry, mat: THREE.Material, z: number, y = 0) => {
-      const m = new THREE.Mesh(geo, mat);
-      m.position.set(0, y, z);
-      m.castShadow = true;
-      arme.add(m);
-    };
-    switch (objet) {
-      case "hache":
-        ajouter(new THREE.BoxGeometry(0.035, 0.035, 0.62), bois, 0.18);
-        ajouter(new THREE.BoxGeometry(0.025, 0.18, 0.12), fer, 0.44, 0.06);
-        break;
-      case "marteau":
-        ajouter(new THREE.BoxGeometry(0.03, 0.03, 0.34), bois, 0.1);
-        ajouter(new THREE.BoxGeometry(0.05, 0.13, 0.05), fer, 0.26, 0.02);
-        break;
-      case "barre_metal":
-        ajouter(new THREE.CylinderGeometry(0.016, 0.016, 0.9, 6).rotateX(Math.PI / 2), fer, 0.3);
-        break;
-      case "lame_forgee":
-      case "couteau":
-      case "couteau_aiguise":
-        ajouter(new THREE.BoxGeometry(0.025, 0.025, 0.1), materiau(PALETTE.boisSombre), 0.02);
-        ajouter(new THREE.BoxGeometry(0.008, 0.035, objet === "lame_forgee" ? 0.3 : 0.15), fer, objet === "lame_forgee" ? 0.22 : 0.14);
-        break;
-      case "gourdin":
-        // Un bâton de bois dur, plus épais au bout.
-        ajouter(new THREE.CylinderGeometry(0.045, 0.022, 0.62, 6).rotateX(Math.PI / 2), materiau(PALETTE.boisSombre), 0.2);
-        break;
-      case "epieu":
-        // Une longue perche, la pointe noircie au feu (P-002) : on la tient au tiers.
-        ajouter(new THREE.CylinderGeometry(0.02, 0.024, 1.7, 6).rotateX(Math.PI / 2), bois, 0.45);
-        ajouter(new THREE.ConeGeometry(0.022, 0.16, 6).rotateX(Math.PI / 2), materiau(0x2e2018), 1.37);
-        break;
-      default:
-        return;
-    }
-    // Le manche traverse le poing dans l'axe du pouce (vers l'avant, bras au repos) : c'est ce que
-    // supposent les animations d'arme ; on l'incline un peu vers le haut.
-    arme.rotation.x = -0.35;
-    arme.position.z = -0.03;
+    const arme = creerArme(objet);
+    if (!arme) return;
+    // Le manche traverse la paume en diagonale, du talon de la main (côté auriculaire) vers la base de l'index :
+    // il penche un peu vers les doigts.
+    arme.rotation.x = -0.3;
     this.main.add(arme);
   }
 
