@@ -150,6 +150,7 @@ Mesurée sur le vrai serveur de la 0a (banc de charge : joueurs simulés qui bou
 >   - les poules sont envoyées seulement quand elles bougent.
 >   - Sur le Mac, à 100 joueurs à la halte : 15 → 7,4 Ko/s par joueur, 0,79 → 0,56 ms de calcul, pire pic de 142 → 40 ms.
 >   - **Remesuré sur le Pi (0.1, 2026-10-08)** : 100 joueurs à la halte 60 → 52 % d'un cœur, p99 54 → 46 ms, pire 135 → 76 ms, 14 → 8,2 Ko/s. Réseau partout ≈ −40 % (terrain 50 : 2,2 Ko/s ; halte 25 : 4,5 ; halte 50 : 6,3). À faible charge, le processeur monte de 2 à 5 points (terrain 50 : 16 % ; halte 50 : 29 %) : surtout le bruit d'un essai unique sans chauffe, à côté du jeu qui tourne, et un peu plus de petits objets à ramasser par la mémoire. Le banc doit gagner une chauffe et 5 essais (médiane) pour départager deux versions.
+>   - **Remesuré sur le Pi (0.3, 2026-10-08)** : stable, dans le bruit d'un essai unique. Terrain 50 : 16,8 % d'un cœur, 2,2 Ko/s ; halte 25 : 14,3 %, 4,5 Ko/s ; halte 50 : 28,1 %, p99 21,5 ms, 6,2 Ko/s ; halte 100 : 55 %, p99 50 ms, pire 118 ms, 8,3 Ko/s, 160 Mo. Le jeu au repos : 0,7 % du processeur. Les vestiges, la décharge, le bushcraft et les quêtes n'ont rien coûté de visible côté serveur ; les pires pics isolés (jusqu'à 160 ms sur un essai à 25 joueurs) restent à surveiller avec un banc à plusieurs essais.
 > - **Fichiers** :
 >   - compression brotli ou gzip : le code passe de 1 024 à 259 Ko ;
 >   - cache d'un an pour les fichiers versionnés, d'un jour avec étiquette (ETag) pour les autres, revérifiés en 0 octet s'ils n'ont pas changé ;
