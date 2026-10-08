@@ -15,6 +15,7 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 ## 0.5.2 · prête à déployer (2026-10-08)
 
 - **Le sac, en vertical** : la grille prend toute la place libre, et on voit tous ses objets d'un coup. La fiche de l'objet touché ne prend que la hauteur dont elle a besoin.
+- **Les messages, en horizontal** : centrés dans la place libre, sous les tuiles et l'heure. Ils ne passent plus sous les jauges.
 
 ## 0.5.1 · déployée le 2026-10-08
 

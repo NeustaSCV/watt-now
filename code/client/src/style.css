@@ -4644,3 +4644,18 @@ body.aide-ouverte #hud .tactile {
   #hud .panneau.sac .grille { flex: 1 1 auto; max-height: none; min-height: 124px; overflow-y: auto; align-content: start; }
   #hud .panneau.sac .fiche { flex: 0 1 auto; max-height: 60%; }
 }
+/* Téléphone en horizontal (retour du porteur, 2026-10-09) : les messages se centrent dans la zone libre, entre le bord
+   droit des jauges et le bord droit de l'écran (sous les tuiles et l'heure), au lieu de déborder sous les jauges. */
+@media (orientation: landscape) and (max-height: 520px) {
+  #hud .messages {
+    left: calc(max(12px, env(safe-area-inset-left)) + min(210px, 25vw) + 12px) !important;
+    right: max(12px, env(safe-area-inset-right)) !important;
+    top: calc(var(--bas-raccourcis, 66px) + 16px) !important;
+    transform: none !important;
+    width: auto !important;
+    align-items: center;
+  }
+  #hud .messages p {
+    max-width: min(440px, 100%) !important;
+  }
+}
