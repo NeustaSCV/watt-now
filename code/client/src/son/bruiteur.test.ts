@@ -81,3 +81,27 @@ test("le premier feu allumé réveille la musique ; un feu qui meurt siffle", ()
   feu("cendres");
   assert.ok(joues.includes("extinction"));
 });
+
+test("à la Coopérative, trois Éteints sur le joueur : la menace « nombre »", () => {
+  const { son, menaces } = fausseSortie();
+  const b = new Bruiteur(son);
+  const moi = { x: 0, z: 0 };
+  const trois = [
+    { id: 1, x: 1, z: 0, etat: "poursuivant" as const },
+    { id: 2, x: -1, z: 0, etat: "poursuivant" as const },
+    { id: 3, x: 0, z: 1.5, etat: "poursuivant" as const },
+  ];
+  b.eteints(0.1, trois, moi, 0, true);
+  assert.equal(menaces.at(-1), "nombre");
+  // Hors de la Coopérative, le même encerclement reste une poursuite.
+  b.eteints(0.1, trois, moi, 0, false);
+  assert.equal(menaces.at(-1), "poursuite");
+  // Deux seulement au contact, le troisième à 5 m : poursuite.
+  b.eteints(0.1, [trois[0]!, trois[1]!, { id: 3, x: 5, z: 0, etat: "poursuivant" as const }], moi, 0, true);
+  assert.equal(menaces.at(-1), "poursuite");
+  // Une saisie avec deux autres au contact : le nombre ; la saisie seule : saisie.
+  b.eteints(0.1, [{ ...trois[0]!, etat: "attire" as const }, trois[1]!, trois[2]!], moi, 1, true);
+  assert.equal(menaces.at(-1), "nombre");
+  b.eteints(0.1, [trois[0]!], moi, 1, true);
+  assert.equal(menaces.at(-1), "saisie");
+});

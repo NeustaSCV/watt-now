@@ -2,7 +2,7 @@
 // tous joués par le même moteur (client/src/audio/moteur-couches.js, Book 21 §6.4).
 // Un seul AudioContext, débloqué au premier geste du joueur (iOS l'exige, Book 21 §6.4.3).
 
-import { MoteurAudio, type NiveauMenace, type VoixEffet } from "../audio/moteur-couches.js";
+import { MoteurAudio, type NiveauMenace, type VoixEffet, type ZoneMusique } from "../audio/moteur-couches.js";
 import { ecrire, lire } from "../stockage.ts";
 import { SONS, fabriquer, type DefSon, type IdSon } from "./catalogue.ts";
 import { FE } from "./dsp.ts";
@@ -21,13 +21,15 @@ interface ManifesteEffets {
 }
 const CLE_SON = "watt.son";
 
-export type LieuMusique = "terrain" | "halte" | "comptoir";
+export type LieuMusique = "terrain" | "halte" | "comptoir" | "cooperative";
 
 /** Les pièces de chaque lieu (musique/LIVRAISON.md §3). */
 const PIECES: Record<LieuMusique, { bpm: number; fond?: string; vie: string; tension?: string; danger?: string }> = {
   terrain: { bpm: 84, fond: "fond-jour", vie: "vie-jour", tension: "tension", danger: "danger" },
   halte: { bpm: 84, fond: "fond-halte", vie: "explo-halte", tension: "tension-halte", danger: "danger-halte" },
   comptoir: { bpm: 96, vie: "comptoir" },
+  // La Coopérative du Plateau (musique/LIVRAISON.md §3 bis) : le Fond a un stem par zone.
+  cooperative: { bpm: 84, fond: "fond-coop", vie: "explo-coop", tension: "tension-coop", danger: "danger-coop" },
 };
 
 /** Ce que le jeu veut entendre ; appliqué dès que le son est débloqué. */
@@ -74,6 +76,8 @@ export class Sonorisation {
   private menaceActuelle: NiveauMenace = "aucune";
   private radioActuelle: boolean | null = null;
   private nuitActuelle = false;
+  /** La zone de la Coopérative où se trouve le personnage (le directeur part de « dehors »). */
+  private zoneActuelle: ZoneMusique = "dehors";
   private enAccueil = true;
   /** La musique du lieu a démarré : le directeur existe, on peut lui parler. */
   private pret = false;
@@ -188,6 +192,8 @@ export class Sonorisation {
     this.boucles.clear();
     this.radioActuelle = null;
     this.pret = false;
+    // Le directeur part de « dehors » ; la boucle du jeu redonne la zone réelle dès que la musique joue.
+    this.zoneActuelle = "dehors";
     const p = PIECES[v.lieu];
     const m = new MoteurAudio(ctx, {
       bpm: p.bpm,
@@ -209,7 +215,7 @@ export class Sonorisation {
     if (p.danger) m.attribuer("danger", p.danger);
     await m.demarrer();
     if (jeton !== this.jeton) return m.arreter();
-    // (Le signal d'arrivée à la halte et au Comptoir est joué par le directeur lui-même.)
+    // (Le signal d'arrivée à la halte, à la Coopérative et au Comptoir est joué par le directeur lui-même.)
     this.pret = true;
     if (nuit) m.changerMoment("nuit");
     if (v.atelier && v.lieu === "terrain") m.installerAtelier();
@@ -226,6 +232,28 @@ export class Sonorisation {
     if (niveau === this.menaceActuelle) return;
     this.menaceActuelle = niveau;
     this.directeur?.signalerMenace(niveau);
+  }
+
+  /**
+   * À la Coopérative : la zone où est le personnage (dehors, dedans, chambre froide). Appelé à chaque image,
+   * ne parle au moteur qu'au changement.
+   */
+  zone(zone: ZoneMusique): void {
+    if (this.voulu?.lieu !== "cooperative" || zone === this.zoneActuelle) return;
+    const d = this.directeur;
+    if (!d) return; // la musique démarre encore : on redira la zone à l'image suivante
+    this.zoneActuelle = zone;
+    d.changerZone(zone);
+  }
+
+  /** Le joueur repart de la Coopérative par le portail, vivant : signal tout de suite, avant le voyage. */
+  sortieCoop(): void {
+    if (this.voulu?.lieu === "cooperative") this.directeur?.jouerSignal("sortieCoop", "maintenant");
+  }
+
+  /** Un butin rare trouvé (chambre froide, coffre) : signal au temps suivant. À brancher avec le butin. */
+  butin(): void {
+    if (this.voulu?.lieu === "cooperative") this.directeur?.jouerSignal("butin", "temps");
   }
 
   /** Crépuscule et aube : sur le terrain seulement (la halte et le Comptoir n'ont pas de musique de nuit). */
@@ -282,6 +310,7 @@ export class Sonorisation {
       contexte: this.ctx?.state ?? "bloqué",
       titre: this.titre !== null,
       lieu: this.voulu?.lieu,
+      zone: this.voulu?.lieu === "cooperative" ? this.zoneActuelle : undefined,
       moteur: this.moteur ? this.moteur.etat() : null,
       boucles: [...this.boucles.keys()],
       tampons: this.tampons.size,

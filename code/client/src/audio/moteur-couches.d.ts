@@ -3,7 +3,10 @@
 
 export type BusEffet = "menaces" | "joueur" | "environnement" | "interface";
 export type Couche = "fond" | "vie" | "tension" | "danger";
-export type NiveauMenace = "aucune" | "attire" | "poursuite" | "saisie";
+/** `nombre` : à la Coopérative, 3 Éteints ou plus sur le joueur (au-dessus de `saisie`). */
+export type NiveauMenace = "aucune" | "attire" | "poursuite" | "saisie" | "nombre";
+/** Les zones de la Coopérative : le Fond change de stem à la mesure suivante. */
+export type ZoneMusique = "dehors" | "dedans" | "froid";
 export type Reglage = "general" | "musique" | "effets" | "ambiance" | "voix";
 
 export interface OptionsEffet {
@@ -30,7 +33,7 @@ export interface VoixEffet {
 export interface OptionsMoteur {
   bpm?: number;
   voixMax?: number;
-  directeur?: { lieu?: "terrain" | "halte" | "comptoir"; attendreFeu?: boolean };
+  directeur?: { lieu?: "terrain" | "halte" | "comptoir" | "cooperative"; attendreFeu?: boolean };
 }
 
 export class MoteurAudio {
@@ -50,6 +53,7 @@ export class MoteurAudio {
   jouerTitre(base: string): Promise<{ dureeIntro: number; dureeBoucle: number }>;
   quitterTitre(fondu?: number): void;
   signalerMenace(niveau: NiveauMenace): void;
+  changerZone(zone: ZoneMusique): void;
   dormir(): void;
   reveiller(): void;
   premierFeu(): void;

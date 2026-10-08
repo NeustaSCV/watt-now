@@ -125,7 +125,8 @@ export class MoteurAudio {
     return e.promesse;
   }
   _liberer(e) { if (e && e.donnees) e.buffer = null; }
-  _stemUtile(stem) { return stem !== 'outil' || (this.directeur && this.directeur.atelier); }
+  /* Le directeur dit quels stems décoder et lancer : l'atelier, et à la coopérative la zone, l'Exploration (dehors), « le nombre » */
+  _stemUtile(stem, couche) { return this.directeur ? this.directeur.stemUtile(couche, stem) : stem !== 'outil'; }
   _choisir(idPiece, exclu) {
     const p = this.pieces[idPiece]; if (!p) return 0;
     let i = Math.floor(Math.random() * p.blocs.length);
@@ -141,7 +142,7 @@ export class MoteurAudio {
       const p = this.pieces[id]; if (!p) return;
       p.blocs.forEach((bloc, b) => {
         const utile = garder.some((g) => g.piece === id && g.b === b);
-        Object.entries(bloc).forEach(([stem, e]) => { if (utile && this._stemUtile(stem)) this._decoderEntree(e); else if (!utile) this._liberer(e); });
+        Object.entries(bloc).forEach(([stem, e]) => { if (utile && this._stemUtile(stem, couche)) this._decoderEntree(e); else this._liberer(e); });
       });
     });
   }
@@ -174,7 +175,7 @@ export class MoteurAudio {
       const c = this.couches[couche]; if (!c.piece) return null;
       c.prochain = { piece: c.piece, b: this._choisir(c.piece, -1) };
       this._entretenir(couche);
-      return Promise.all(Object.entries(this.pieces[c.piece].blocs[c.prochain.b]).filter(([s]) => this._stemUtile(s)).map(([, e]) => this._decoderEntree(e)));
+      return Promise.all(Object.entries(this.pieces[c.piece].blocs[c.prochain.b]).filter(([s]) => this._stemUtile(s, couche)).map(([, e]) => this._decoderEntree(e)));
     }));
     this.horloge = creerHorloge(ctx.currentTime + 0.3, this.o.bpm);
     this.directeur.h = this.horloge;
@@ -234,7 +235,7 @@ export class MoteurAudio {
   }
   _lancer(couche, stem, e, tb, decalage) {
     const c = this.couches[couche], buf = this._buffer(e);
-    if (!c.stems[stem] || !buf || !this._stemUtile(stem)) return false;
+    if (!c.stems[stem] || !buf || !this._stemUtile(stem, couche)) return false;
     const src = this.ctx.createBufferSource();
     src.buffer = buf; src.connect(c.stems[stem]);
     src.start(tb + decalage, decalage); src.fin = tb + buf.duration;
@@ -248,7 +249,7 @@ export class MoteurAudio {
     if (!cour || now < cour.tb) return;
     const p = this.pieces[cour.piece]; if (!p) return;
     Object.entries(p.blocs[cour.b]).forEach(([stem, e]) => {
-      if (cour.programmes.has(stem) || !this._buffer(e) || !this._stemUtile(stem)) return;
+      if (cour.programmes.has(stem) || !this._buffer(e) || !this._stemUtile(stem, couche)) return;
       const decalage = now + 0.05 - cour.tb;
       if (decalage < this._buffer(e).duration - 1 && this._lancer(couche, stem, e, cour.tb, decalage)) cour.programmes.add(stem);
     });
@@ -342,7 +343,10 @@ export class MoteurAudio {
 
   /* ---------- État du jeu → directeur ---------- */
 
-  signalerMenace(niveau) { this._appliquer(this.directeur.signalerMenace(niveau, this.ctx.currentTime)); }
+  signalerMenace(niveau) { this._appliquer(this.directeur.signalerMenace(niveau, this.ctx.currentTime)); this._entretenir('danger'); }
+  /** Coopérative : le joueur passe une porte ('dehors' | 'dedans' | 'froid'). Le stem de la zone est décodé tout de suite
+      et lancé dans le bloc en cours, bien calé (rattrapage) ; il monte à la mesure suivante. */
+  changerZone(zone) { this._appliquer(this.directeur.changerZone(zone, this.ctx.currentTime)); COUCHES.forEach((c) => this._entretenir(c)); }
   dormir() { this._appliquer(this.directeur.dormir(this.ctx.currentTime)); }
   premierFeu() { this._appliquer(this.directeur.premierFeu(this.ctx.currentTime)); }
   installerAtelier() {

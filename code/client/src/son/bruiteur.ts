@@ -14,6 +14,8 @@ import type { AllurePas, Sol } from "./recettes.ts";
 import type { Ou, Sonorisation } from "./audio.ts";
 
 /** La longueur d'un pas selon l'allure (m) : un son par pas. */
+/** La Coopérative : distance (m) à laquelle un Éteint compte dans « le nombre » (musique/LIVRAISON.md §3 bis). */
+const CONTACT_NOMBRE = 2;
 const FOULEE: Record<AllurePas, number> = { discrete: 0.55, marche: 0.75, course: 1.15 };
 
 const dans = (x: number, z: number, b: { x: number; z: number; l: number; p: number }, marge = 0) =>
@@ -169,11 +171,22 @@ export class Bruiteur {
    * La vie sonore des Éteints, et le niveau de menace pour la musique.
    * Dormant : respiration à 3 m. Errant : pas qui traînent, râles espacés. Attiré : le râle se coupe net, la tête
    * craque, puis le silence et les pas. Poursuivant : râles rapprochés, pas pressés, souffle.
+   * `nombre` (à la Coopérative seulement, musique/LIVRAISON.md §3 bis) : la menace « nombre » quand 3 Éteints ou plus
+   * poursuivent le joueur à moins de 2 m, ou pendant une saisie avec 2 autres Éteints au contact.
    */
-  eteints(dt: number, liste: { id: number; x: number; z: number; etat: EtatEteint; saisit?: boolean; gemit?: boolean }[], moi: Ou | null, saisi: number): void {
+  eteints(
+    dt: number,
+    liste: { id: number; x: number; z: number; etat: EtatEteint; saisit?: boolean; gemit?: boolean }[],
+    moi: Ou | null,
+    saisi: number,
+    nombre = false,
+  ): void {
     this.t += dt;
     const vus = new Set<number>();
     let menace: NiveauMenace = saisi > 0 ? "saisie" : "aucune";
+    /** Éteints qui poursuivent le joueur au contact, et Éteints debout au contact (pour la saisie). */
+    let poursuivantsProches = 0;
+    let auContact = 0;
     for (const e of liste) {
       vus.add(e.id);
       let s = this.suivis.get(e.id);
@@ -229,8 +242,13 @@ export class Bruiteur {
         }
         if (e.etat === "poursuivant" && d < 30 && menace !== "saisie") menace = "poursuite";
         else if (e.etat === "attire" && d < 25 && menace === "aucune") menace = "attire";
+        if (d < CONTACT_NOMBRE) {
+          if (e.etat === "poursuivant") poursuivantsProches++;
+          if (e.etat !== "dormant" && e.etat !== "detruit" && e.etat !== "a_terre") auContact++;
+        }
       }
     }
+    if (nombre && (poursuivantsProches >= 3 || (saisi > 0 && Math.max(auContact, saisi) >= 3))) menace = "nombre";
     for (const id of this.suivis.keys()) if (!vus.has(id)) this.suivis.delete(id);
     this.son.menace(menace);
     if (saisi > this.saisiAvant) this.son.jouer("saisie");

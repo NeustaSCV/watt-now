@@ -10,7 +10,10 @@
    - Saisie : Danger sur le temps suivant (≤ 0,7 s à 84 BPM).
    - Fin de menace (10 s sans menace pour la Tension ; dès le dégagement pour le Danger) : Silence 4 à 8 s, puis Fond.
      La Vie revient à la frontière de bloc suivante, après 20 s de calme.
-   - Jamais de va-et-vient : hystérésis à l'entrée (2 s) et à la sortie (10 s). */
+   - Jamais de va-et-vient : hystérésis à l'entrée (2 s) et à la sortie (10 s).
+   Coopérative (Book 23) : la musique suit la PROFONDEUR. Le Fond est une seule pièce à trois stems (dehors, dedans, froid) :
+   passer une porte change de stem à la mesure suivante (fondu d'une mesure). L'Exploration ne joue que dehors.
+   Menace « nombre » (3 Éteints ou plus sur le joueur) : le Danger, plus son stem « nombre ». */
 
 export const STEMS_VIE = ['rythmique', 'basse', 'harmonie', 'effets', 'melodie', 'outil', 'pulsation', 'texture'];
 const STEM_OUTIL = 'outil';                                        // la percussion faite du son de l'atelier : le thème « au complet »
@@ -19,8 +22,12 @@ const STEM_OUTIL = 'outil';                                        // la percuss
 const LIEUX = {
   terrain: { jour: ['rythmique', 'basse', 'harmonie', 'effets'], nuit: ['basse', 'harmonie', 'melodie'], perdus: ['harmonie', 'effets', 'melodie', 'outil'], garde: ['rythmique', 'basse'] },
   halte: { jour: ['pulsation', 'basse', 'texture'], nuit: ['pulsation', 'basse', 'texture'], perdus: ['texture'], garde: ['pulsation', 'basse'] },
+  cooperative: { jour: ['pulsation', 'basse', 'harmonie', 'melodie'], nuit: ['pulsation', 'basse', 'harmonie', 'melodie'], perdus: ['harmonie', 'melodie'], garde: ['pulsation', 'basse'] },
   comptoir: { jour: ['rythmique', 'basse', 'harmonie', 'melodie'], nuit: ['rythmique', 'basse', 'harmonie', 'melodie'], perdus: [], garde: [] }
 };
+/* Coopérative : les zones, chacune un stem de la pièce de Fond */
+export const ZONES = ['dehors', 'dedans', 'froid'];
+const SAISIE = (m) => m === 'saisie' || m === 'nombre';
 
 export class Directeur {
   /**
@@ -39,11 +46,12 @@ export class Directeur {
       fenetreNuitMin: 60, fenetreNuitMax: 150,
       echelle: 1,
       attendreFeu: false,          // tutoriel : la Vie n'entre pas avant le premier feu (moment-vitrine 2)
-      lieu: 'terrain',             // terrain | halte | comptoir (zone sûre : jamais de Tension ni de Danger, 96 BPM)
+      lieu: 'terrain',             // terrain | halte | cooperative | comptoir (zone sûre : jamais de Tension ni de Danger, 96 BPM)
       alea: Math.random
-    }, options || {});
+    }, (options && options.lieu === 'cooperative') ? { calmeAvantVie: 8 } : {}, options || {});
+    this.zone = 'dehors';           // coopérative : dehors | dedans | froid
     this.phase = 'arret';           // arret | calme | tension | danger | silence | sommeil
-    this.menace = 'aucune';         // aucune | attire | poursuite | saisie
+    this.menace = 'aucune';         // aucune | attire | poursuite | saisie | nombre (coopérative : saisie, 3 Éteints ou plus)
     this.menaceDepuis = 0;
     this.sansMenaceDepuis = 0;
     this.moment = 'jour';
@@ -85,6 +93,15 @@ export class Directeur {
       this._log(t, 'Arrivée à la halte : signal, puis le Fond de la halte et l\'Exploration.');
       return this._sortir();
     }
+    if (this.o.lieu === 'cooperative') {
+      /* Coopérative : signal d'arrivée au portail, le Fond de la zone seul ; l'Exploration au premier bloc après 8 s de calme */
+      this._cmds.push({ type: 'signal', nom: 'arriveeCoop', at: this.h.suivant(t, 'mesure') });
+      ZONES.forEach((z) => this._gain('fond', z, z === this.zone ? 1 : 0, this.h.suivant(t, 'maintenant'), 0.03));
+      this._gain('danger', 'nombre', 0, this.h.suivant(t, 'maintenant'), 0.03);
+      this.premiereVie = false; this.feuAllume = true;
+      this._log(t, 'Arrivée à la coopérative : signal, le Fond (' + this.zone + ') ; l\'Exploration entrera à un bloc après ' + this._d(this.o.calmeAvantVie) + ' s de calme.');
+      return this._sortir();
+    }
     this._log(t, 'Démarrage : Fond seul. La Vie entrera après ' + this._d(this.o.calmeAvantVie) + ' s de calme, à une frontière de bloc.');
     return this._sortir();
   }
@@ -97,6 +114,7 @@ export class Directeur {
     if (avant === 'aucune') this.menaceDepuis = t;
     if (niveau === 'aucune') this.sansMenaceDepuis = t;
     this._log(t, 'Menace : ' + avant + ' → ' + niveau);
+    if (this.phase === 'danger' && SAISIE(avant) && SAISIE(niveau)) this._nombre(this.h.suivant(t, 'temps'));
     return this.mettreAJour(t);
   }
 
@@ -107,6 +125,31 @@ export class Directeur {
     this._cmds.push({ type: 'signal', nom: moment === 'nuit' ? 'crepuscule' : 'aube', at: this.h.suivant(t, 'mesure') });
     this._log(t, (moment === 'nuit' ? 'Crépuscule' : 'Aube') + ' : signal à la mesure, changement de musique au prochain bloc.');
     return this._sortir();
+  }
+
+  /** Coopérative : le joueur passe une porte. Le Fond change de stem à la mesure suivante (fondu d'une mesure) ;
+      dedans et dans la chambre froide, l'Exploration se tait ; de retour dehors, elle revient à un bloc, après le calme. */
+  changerZone(zone, t) {
+    if (this.o.lieu !== 'cooperative' || zone === this.zone || !ZONES.includes(zone)) return this._sortir();
+    const at = this.h.suivant(t, 'mesure'), fondu = this.h.dureeMesure;
+    this.zone = zone;
+    ZONES.forEach((z) => this._gain('fond', z, z === zone ? 1 : 0, at, fondu));
+    if (zone !== 'dehors') {
+      if (this.vie) this._stemsLieu().forEach((s) => this._gain('vie', s, 0, at, fondu));
+      this.vie = false;
+    } else { this.calmeDepuis = Math.max(this.calmeDepuis, t); this.finFenetre = 0; }
+    this._log(t, 'Zone : ' + zone + ' (à la mesure, dans ' + (at - t).toFixed(2) + ' s)' + (zone === 'dehors' ? ' ; l\'Exploration reviendra à un bloc, après le calme.' : ' ; l\'Exploration se tait.'));
+    return this._sortir();
+  }
+
+  /** Stems à décoder et à lancer (le reste est libéré : c'est ce qui tient la mémoire, Book 21 §6.4.4) */
+  stemUtile(couche, stem) {
+    if (stem === 'outil') return this.atelier;
+    if (this.o.lieu !== 'cooperative') return true;
+    if (couche === 'fond') return !ZONES.includes(stem) || stem === this.zone;
+    if (couche === 'vie') return this.zone === 'dehors';
+    if (couche === 'danger' && stem === 'nombre') return this.menace === 'nombre';
+    return true;
   }
 
   /** Le premier feu (moment-vitrine 2) : un souffle chaud monte du feu à la mesure suivante,
@@ -166,8 +209,8 @@ export class Directeur {
   mettreAJour(t) {
     const m = this.menace, o = this.o;
     if (this.phase === 'arret' || this.o.lieu === 'comptoir') return this._sortir();       // au Comptoir, aucune menace ne compte
-    if (m === 'saisie' && this.phase !== 'danger') this._danger(t);
-    else if (this.phase === 'danger' && m !== 'saisie') {
+    if (SAISIE(m) && this.phase !== 'danger') this._danger(t);
+    else if (this.phase === 'danger' && !SAISIE(m)) {
       if (m === 'aucune') this._silence(t, 'degagement');
       else this._tension(t, 'temps');
     } else if ((m === 'attire' || m === 'poursuite') && (this.phase === 'calme' || this.phase === 'silence' || this.phase === 'sommeil') && t - this.menaceDepuis >= o.entreeTension) {
@@ -204,7 +247,7 @@ export class Directeur {
         this.finFenetre = tb + f;
         this._log(tb, 'Bloc : fin du passage de Vie (' + this.blocsVie + ' blocs). Fenêtre de silence de ' + Math.round(f) + ' s : Fond seul.');
       }
-    } else if (tb >= this.finFenetre && tb - this.calmeDepuis >= o.calmeAvantVie * o.echelle && (this.feuAllume || !o.attendreFeu)) {
+    } else if (tb >= this.finFenetre && tb - this.calmeDepuis >= o.calmeAvantVie * o.echelle && (this.feuAllume || !o.attendreFeu) && (o.lieu !== 'cooperative' || this.zone === 'dehors')) {
       this._entreeVie(tb, this.premiereVie);
       this.premiereVie = false;
     }
@@ -223,7 +266,7 @@ export class Directeur {
     if (!this.vie) {
       this.vie = true; this.blocsVie = 0;
       this.quotaVie = this.o.blocsVieMin + Math.floor(this.o.alea() * (this.o.blocsVieMax - this.o.blocsVieMin + 1));
-      this._log(tb, 'Bloc : ' + (this.o.lieu === 'halte' ? 'l\'Exploration' : 'la Vie ' + (nuit ? 'de nuit' : '')).trim() + ' entre' + (progressive ? ', un instrument toutes les 4 mesures' : '') + '. Passage prévu : ' + this.quotaVie + ' blocs.');
+      this._log(tb, 'Bloc : ' + (this.o.lieu === 'halte' || this.o.lieu === 'cooperative' ? 'l\'Exploration' : 'la Vie ' + (nuit ? 'de nuit' : '')).trim() + ' entre' + (progressive ? ', un instrument toutes les 4 mesures' : '') + '. Passage prévu : ' + this.quotaVie + ' blocs.');
     }
   }
 
@@ -235,7 +278,7 @@ export class Directeur {
     this._gain('fond', null, 1, at, 0.8);
     LIEUX[this.o.lieu].perdus.forEach((s) => this._gain('vie', s, 0, at, 1.2));
     if (this.vie) LIEUX[this.o.lieu].garde.forEach((s) => this._gain('vie', s, 0.6, at, 1.2));
-    this._log(t, 'Tension (au ' + (quand === 'tempsFort' ? 'temps fort' : 'temps') + ' suivant, dans ' + (at - t).toFixed(2) + ' s). ' + (this.o.lieu === 'halte' ? 'L\'Exploration perd sa texture.' : 'La Vie perd nappes, effets et mélodie.'));
+    this._log(t, 'Tension (au ' + (quand === 'tempsFort' ? 'temps fort' : 'temps') + ' suivant, dans ' + (at - t).toFixed(2) + ' s). ' + (this.o.lieu === 'halte' ? 'L\'Exploration perd sa texture.' : this.o.lieu === 'cooperative' ? 'L\'Exploration perd harmonie et mélodie.' : 'La Vie perd nappes, effets et mélodie.'));
   }
 
   _danger(t) {
@@ -247,7 +290,13 @@ export class Directeur {
     this._gain('fond', null, 0.7, at, 0.25);
     this._cmds.push({ type: 'signal', nom: 'saisie', at });
     this.vie = false;
-    this._log(t, 'Saisie : Danger au temps suivant (dans ' + (at - t).toFixed(2) + ' s).');
+    if (this.o.lieu === 'cooperative') this._nombre(at);
+    this._log(t, 'Saisie : Danger au temps suivant (dans ' + (at - t).toFixed(2) + ' s)' + (this.menace === 'nombre' ? ', avec « le nombre ».' : '.'));
+  }
+  /* Coopérative : le stem « nombre » du Danger suit la menace (3 Éteints ou plus), au temps */
+  _nombre(at) {
+    if (this.o.lieu !== 'cooperative') return;
+    this._gain('danger', 'nombre', this.menace === 'nombre' ? 1 : 0, at, this.menace === 'nombre' ? 0.03 : 0.6);
   }
 
   _silence(t, signal) {

@@ -29,6 +29,7 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 - **Le butin** : du commun dans le libre-service et sur le quai, des outils à l'atelier, des bâches et des cordes dans le hangar. Un **pied-de-biche** t'attend sous le comptoir de caisse. Au fond, le **rare** :
   - le coffre du directeur, qui s'ouvre avec la clé du magasinier ;
   - les caisses de pièces de la chambre froide.
+- **Sa musique** : tonique mi, nostalgique dans la cour, elle **se retire** quand on entre (le hangar, l'atelier) et se tait presque dans la chambre froide, pour qu'on entende respirer les dormants. Un Danger à part quand trois Éteints ou plus sont sur toi ; un signal quand on trouve le butin rare, et à la sortie par le portail.
 - **Ce que tu fais reste fait** : un Éteint détruit ne revient pas tout de suite (quelques-uns toutes les 12 h, la chambre froide d'abord), une porte reste comme tu l'as laissée, et le butin pris revient en quelques heures (en 4 jours pour le rare).
 
 **L'écran**

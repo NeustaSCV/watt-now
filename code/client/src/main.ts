@@ -33,7 +33,7 @@ import { RAYON_ESCABEAU, estFruitier } from "../../commun/src/terrain.ts";
 import { creerRuine } from "./rendu/ruine.ts";
 import { creerHalte, estomperToits } from "./rendu/halte.ts";
 import { animerCooperative, creerCooperative, estomperCooperative, majPortes } from "./rendu/cooperative.ts";
-import { portesInitiales } from "../../commun/src/cooperative.ts";
+import { pieceDe, portesInitiales } from "../../commun/src/cooperative.ts";
 import { animerComptoir, creerComptoir, lumieresComptoir } from "./rendu/comptoir.ts";
 import { VueEteint } from "./rendu/eteint.ts";
 import { VueAutre } from "./rendu/autres.ts";
@@ -483,8 +483,7 @@ function installer(message: Bienvenue): void {
   hud.identite(message.moi.pseudo, message.moi.famille);
   son.entrer({
     famille: message.moi.famille,
-    // La Coopérative emprunte la musique de la halte, en attendant la sienne (session musique).
-    lieu: lieu === "station" || lieu === "cooperative" ? "halte" : lieu,
+    lieu: lieu === "station" ? "halte" : lieu,
     nuit: estNuit(heureDeJeu(Date.now() + decalage, debutMonde)),
     atelier: message.installations.some((i) => i.type === ATELIERS[message.moi.famille]),
     // Tutoriel : la Vie n'entre qu'au premier feu (étape 3, moment-vitrine 2).
@@ -530,9 +529,13 @@ function recevoir(message: MessageServeur): void {
       gourde = message.gourde;
       hud.majBesoins(besoins, gourde);
       return;
-    case "ressource":
-      ressources.get(message.id)?.disponible(message.disponible);
+    case "ressource": {
+      const r = ressources.get(message.id);
+      r?.disponible(message.disponible);
+      // Le butin rare de la Coopérative (le coffre, la chambre froide) : un signal musical (session musique).
+      if (!message.disponible && lieu === "cooperative" && (r?.donnees.type === "coop_coffre" || r?.donnees.type === "coop_caisse_froide")) son.butin();
       return;
+    }
     case "feu": {
       const existant = feux.get(message.feu.id);
       // Du bois en plus : on le montre tout de suite (ajouter du bois est immédiat).
@@ -736,6 +739,8 @@ function recevoir(message: MessageServeur): void {
       hud.majComptoir(message.comptoir);
       return;
     case "voyage":
+      // On repasse le portail de la Coopérative, vivant : son signal de sortie (musique/LIVRAISON.md §3 bis).
+      if (message.de === "cooperative") son.sortieCoop();
       enVoyage = true;
       occupe = false;
       hud.fermerPanneaux();
@@ -1272,6 +1277,9 @@ function boucle(instant: number): void {
     if (lieu === "cooperative" && decorCoop) {
       estomperCooperative(decorCoop, position.x, position.z, dt, scene.angleCamera);
       animerCooperative(decorCoop, dt);
+      // La musique suit la profondeur : dehors, dedans, chambre froide (seul un changement est transmis).
+      const piece = pieceDe(position.x, position.z);
+      son.zone(piece === "chambre_froide" ? "froid" : piece === "dehors" || piece === "libre_service" ? "dehors" : "dedans");
     }
 
     majMode(dt);
@@ -1395,6 +1403,7 @@ function boucle(instant: number): void {
     [...eteints.entries()].map(([id, e]) => ({ id, x: e.objet.position.x, z: e.objet.position.z, etat: e.etat })),
     position,
     saisi,
+    lieu === "cooperative",
   );
   bruiteur.pasDesAutres(lieu, [...autres.entries()].map(([id, a]) => ({ id, x: a.objet.position.x, z: a.objet.position.z })));
   bruiteur.monde({
