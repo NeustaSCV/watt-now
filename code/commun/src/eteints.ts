@@ -3,7 +3,7 @@
 // et retombe quand plus rien ne se passe.
 
 import { DELAI_SAISIE, DUREE_A_TERRE, DUREE_ETOURDI, RESISTANCE_TORSE, type Arme } from "./combat.ts";
-import { dansBoite, type Zone } from "./lieux.ts";
+import { heurte, type Zone } from "./lieux.ts";
 import type { Stimulus } from "./signature.ts";
 
 export type EtatEteint = "dormant" | "errant" | "attire" | "poursuivant" | "a_terre" | "detruit";
@@ -278,7 +278,7 @@ export function penser(
 /** Avance en glissant le long des obstacles (comme les joueurs) ; un Éteint ne contourne rien (Book 06 §2.1). */
 function deplacer(e: Eteint, dx: number, dz: number, zone: Zone): void {
   const libre = (x: number, z: number) =>
-    x >= zone.xMin && x <= zone.xMax && z >= zone.zMin && z <= zone.zMax && !zone.obstacles.some((b) => dansBoite(x, z, b, 0.3));
+    x >= zone.xMin && x <= zone.xMax && z >= zone.zMin && z <= zone.zMax && !heurte(zone, x, z, 0.3);
   if (libre(e.x + dx, e.z + dz)) {
     e.x += dx;
     e.z += dz;

@@ -1,9 +1,9 @@
 // La Coopérative du Plateau, côté serveur (Book 23) : un lieu vivant par joueur. Personne d'autre n'y entre ; ses
 // Éteints, ses sacs tombés et (bientôt) son butin sont à lui. Le jour où on la partage, on ne change que la clé.
 
-import { VERSION_COOP } from "../../commun/src/cooperative.ts";
+import { VERSION_COOP, portesInitiales } from "../../commun/src/cooperative.ts";
 import { eteintsCoop } from "../../commun/src/eteints-coop.ts";
-import { ZONE_COOP } from "../../commun/src/lieux.ts";
+import { ZONE_COOP, zoneCoop } from "../../commun/src/lieux.ts";
 import type { Base } from "./base.ts";
 import { LieuVivant, type DefinitionLieuVivant } from "./lieu-vivant.ts";
 
@@ -12,6 +12,7 @@ export function definitionCoop(compteId: number): DefinitionLieuVivant {
     cle: `cooperative:${compteId}`,
     sacs: { lieu: "cooperative", terrainDe: compteId },
     zone: ZONE_COOP,
+    portes: { initiales: portesInitiales, zone: zoneCoop },
     eteints: eteintsCoop,
     // Le butin arrive avec la persistance et le renouvellement (0.5d).
     ressources: () => [],

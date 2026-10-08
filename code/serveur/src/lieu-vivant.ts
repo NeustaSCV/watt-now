@@ -27,6 +27,8 @@ export interface DefinitionLieuVivant {
   /** Où sont rangés ses sacs tombés : le lieu et, pour un lieu à un joueur, son compte (0 : lieu public). */
   sacs: { lieu: string; terrainDe: number };
   zone: Zone;
+  /** Les portes du lieu et leur état d'origine (ouverte : true), s'il en a ; et la zone selon leur état. */
+  portes?: { initiales: () => Record<string, boolean>; zone: (etats: Readonly<Record<string, boolean>>) => Zone };
   /** Les Éteints du lieu, au calme (au début, et quand le lieu se rendort). */
   eteints: () => Eteint[];
   /** Ses ressources à la première visite (et la version de ce contenu : la changer régénère). */
@@ -62,6 +64,8 @@ export class LieuVivant {
   private readonly debutMonde: number;
   private readonly alea: () => number;
   readonly definition: DefinitionLieuVivant;
+  /** L'état des portes (vide s'il n'y en a pas). Gardé tant que le lieu est en mémoire. */
+  readonly portes: Record<string, boolean>;
 
   constructor(base: Base, definition: DefinitionLieuVivant, alea: () => number = Math.random) {
     this.base = base;
@@ -69,6 +73,7 @@ export class LieuVivant {
     this.debutMonde = base.debutMonde();
     this.alea = alea;
     this.eteints = definition.eteints();
+    this.portes = definition.portes?.initiales() ?? {};
     for (const r of base.chargerRessourcesLieu(definition.cle, definition.ressources, definition.version)) this.ressources.set(r.id, r);
     this.sacs.push(...base.chargerSacs(definition.sacs.lieu, definition.sacs.terrainDe));
   }
@@ -104,6 +109,19 @@ export class LieuVivant {
 
   get nombrePresents(): number {
     return this.presents.size;
+  }
+
+  /** La zone où l'on se déplace : celle du lieu, avec ses portes fermées. */
+  get zone(): Zone {
+    return this.definition.portes ? this.definition.portes.zone(this.portes) : this.definition.zone;
+  }
+
+  /** Ouvre ou ferme une porte, et prévient tous ceux qui sont là. Renvoie false si rien n'a changé. */
+  basculerPorte(id: string, ouverte: boolean): boolean {
+    if (!(id in this.portes) || this.portes[id] === ouverte) return false;
+    this.portes[id] = ouverte;
+    this.diffuser({ t: "portes", portes: { ...this.portes } });
+    return true;
   }
 
   /** Un lieu à un seul joueur, vide depuis longtemps, peut être déchargé de la mémoire. */
@@ -155,7 +173,7 @@ export class LieuVivant {
     const nuit = estNuit(heureDeJeu(instant, this.debutMonde));
     const stimuli = [...this.presents].flatMap((v) => v.stimuli(nuit));
     const humains = [...this.presents].map((v) => v.humain());
-    for (const e of this.eteints) penser(e, dt, stimuli, humains, this.eteints, nuit, this.definition.zone, this.alea);
+    for (const e of this.eteints) penser(e, dt, stimuli, humains, this.eteints, nuit, this.zone, this.alea);
 
     if (instant - this.dernierEnvoi >= INTERVALLE_ETEINTS) {
       this.dernierEnvoi = instant;

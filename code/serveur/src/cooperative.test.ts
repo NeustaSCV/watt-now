@@ -3,8 +3,9 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { ARRIVEE_COOP } from "../../commun/src/cooperative.ts";
-import { DUREE_VOYAGE_S, SORTIES_COMPTOIR, SORTIES_COOP, arriveeDans, etapeVers, sortiesDe } from "../../commun/src/lieux.ts";
+import { ARRIVEE_COOP, PORTES, portesInitiales } from "../../commun/src/cooperative.ts";
+import { avancer } from "../../commun/src/deplacement.ts";
+import { DUREE_VOYAGE_S, SORTIES_COMPTOIR, SORTIES_COOP, arriveeDans, dansBoite, etapeVers, heurte, sortiesDe, zoneCoop } from "../../commun/src/lieux.ts";
 import type { MessageServeur } from "../../commun/src/messages.ts";
 import { Base } from "./base.ts";
 import { Comptoir } from "./comptoir.ts";
@@ -117,4 +118,69 @@ test("se reconnecter dans la Coopérative ramène au portail ; vide depuis 5 min
   revenu.partir();
   t.attendre(6 * 60, 5);
   assert.equal(t.cooperatives.nombre, 0);
+});
+
+// ---------- 0.5b : murs, portes, grille ----------
+
+/** Marche tout droit pendant `secondes`, comme le serveur (pas de 50 ms). */
+function marcher(depart: { x: number; z: number }, dx: number, dz: number, secondes: number, zone: ReturnType<typeof zoneCoop>) {
+  let p = { ...depart, o: 0 };
+  for (let t = 0; t < secondes; t += 0.05) p = avancer(p, { dx, dz, allure: "marche" }, 0.05, zone);
+  return p;
+}
+
+test("0.5b : on ne traverse pas un mur, on passe une porte de 1,2 m ouverte, pas une porte fermée", () => {
+  const fermees = zoneCoop(portesInitiales());
+  // Dans le libre-service, face au mur du hangar (z = 32) : on s'y arrête.
+  assert.ok(marcher({ x: 50, z: 35 }, 0, -1, 4, fermees).z > 32.2);
+  // La porte des bureaux (1,2 m) est fermée au départ : on ne passe pas.
+  const bureaux = PORTES.find((p) => p.id === "bureaux")!;
+  assert.equal(bureaux.largeur, 1.2);
+  assert.ok(marcher({ x: bureaux.x, z: 34.5 }, 0, -1, 4, fermees).z > 32.2);
+  // Ouverte, on la franchit, du hangar au bureau et retour.
+  const ouverte = zoneCoop({ ...portesInitiales(), bureaux: true });
+  assert.ok(marcher({ x: bureaux.x, z: 34.5 }, 0, -1, 4, ouverte).z < 31);
+  // (depuis l'allée du hangar, entre le dernier rayonnage et le mur)
+  assert.ok(marcher({ x: bureaux.x, z: 30.6 }, 0, 1, 4, ouverte).z > 33);
+});
+
+test("0.5b : la grille donne les mêmes collisions que le calcul complet", () => {
+  const zone = zoneCoop(portesInitiales());
+  let graine = 7;
+  const alea = () => ((graine = (graine * 9301 + 49297) % 233280) / 233280);
+  for (let i = 0; i < 4000; i++) {
+    const x = alea() * 80;
+    const z = alea() * 60;
+    const complet = zone.obstacles.some((b) => dansBoite(x, z, b, 0.35));
+    assert.equal(heurte(zone, x, z, 0.35), complet, `(${x.toFixed(2)}, ${z.toFixed(2)})`);
+  }
+});
+
+test("0.5b : on ouvre une porte, tout le monde le sait ; on ne la referme pas sur soi", () => {
+  const t = monter();
+  const a = t.nouveau("Rose");
+  t.allerALaCoop(a.joueur);
+  t.attendre(DUREE_VOYAGE_S + 1);
+  assert.equal(derniere(a.recus)!.portes?.bureaux, false);
+  const coop = t.cooperatives.de(a.compte.id);
+  // Trop loin : rien.
+  a.joueur.recevoir({ t: "interagir", cible: { genre: "porte", id: "bureaux" }, verbe: "ouvrir_porte" });
+  assert.equal(coop.portes.bureaux, false);
+  // Devant la porte : elle s'ouvre, le message part, et ça fait un peu de bruit.
+  a.joueur.position = { x: 61, z: 33.4, o: Math.PI };
+  a.joueur.recevoir({ t: "interagir", cible: { genre: "porte", id: "bureaux" }, verbe: "ouvrir_porte" });
+  assert.equal(coop.portes.bureaux, true);
+  assert.deepEqual(a.recus.findLast((m) => m.t === "portes"), { t: "portes", portes: { ...coop.portes } });
+  assert.ok(a.joueur.stimuli(false).some((s) => s.genre === "son" && s.x === 61 && s.z === 32));
+  // Dans l'embrasure, on ne la referme pas.
+  a.joueur.position = { x: 61, z: 32, o: 0 };
+  a.joueur.recevoir({ t: "interagir", cible: { genre: "porte", id: "bureaux" }, verbe: "fermer_porte" });
+  assert.equal(coop.portes.bureaux, true);
+  // Un pas en arrière : elle se referme.
+  a.joueur.position = { x: 61, z: 33.4, o: 0 };
+  a.joueur.recevoir({ t: "interagir", cible: { genre: "porte", id: "bureaux" }, verbe: "fermer_porte" });
+  assert.equal(coop.portes.bureaux, false);
+  // Une porte qui n'existe pas : rien (le message est contrôlé, mais on vérifie quand même).
+  a.joueur.recevoir({ t: "interagir", cible: { genre: "porte", id: "nulle_part" }, verbe: "ouvrir_porte" });
+  assert.equal("nulle_part" in coop.portes, false);
 });

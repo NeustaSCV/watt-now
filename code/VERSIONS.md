@@ -14,6 +14,12 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ## 0.5 · en préparation
 
+**La Coopérative du Plateau** (Book 23)
+- Un nouveau lieu, **un par joueur** : la Coopérative agricole, au bout d'un chemin agricole qui part au nord du Carrefour. Du terrain, on traverse la station, puis le Carrefour.
+- Un grand hangar à rayonnages, un libre-service, des bureaux, une chambre froide, l'atelier des tracteurs, le quai, les silos. Les toits s'effacent quand on passe dessous.
+- **Des portes** qu'on ouvre et qu'on referme (A) : refermée derrière soi, une porte arrête un Éteint. Ouvrir une porte fait un peu de bruit.
+- Se reconnecter dans la Coopérative ramène au portail.
+
 **L'écran**
 - Les **messages** passent **en haut, juste sous les tuiles**, en petit et sur un fond très léger : ils ne cachent plus la zone de jeu. Sur téléphone en horizontal, ils se placent **au centre**, sans plus jamais recouvrir Explorer, Lumière, A ou B (avis de Sally). Les **indices** (« comment s'y prendre ») sont encore plus discrets.
 - Moins de messages à la fois : 3 sur ordinateur, 2 sur téléphone, 2 lignes au plus. Un message répété ne s'empile plus : il est relancé avec « ×2 ». Quand la place manque, l'indice part avant la leçon. Une même phrase d'indice ne revient pas avant 90 s. Les messages s'effacent en fondu.

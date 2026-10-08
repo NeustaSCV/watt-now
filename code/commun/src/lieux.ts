@@ -2,8 +2,9 @@
 // station-service et le Comptoir du Carrefour, sur la route de la Campagne (Book 20 §4).
 // On ne se promène pas d'un lieu à l'autre : on part d'une sortie, on voyage sur la carte, on arrive.
 
-import { ARRIVEE_COOP, COOP, PORTAIL, obstaclesCoop } from "./cooperative.ts";
+import { ARRIVEE_COOP, COOP, PORTAIL, PORTES, boitePorte, obstaclesCoop, portesInitiales } from "./cooperative.ts";
 import type { Position } from "./deplacement.ts";
+import { MARGE_GRILLE, boitesPres, creerGrille, type GrilleObstacles } from "./grille.ts";
 import { MARGE_BORD, POINT_ARRIVEE, TERRAIN_TAILLE } from "./regles.ts";
 
 export type LieuId = "terrain" | "station" | "comptoir" | "cooperative";
@@ -29,6 +30,15 @@ export interface Zone {
   zMax: number;
   /** Ce qu'on ne traverse pas : bâtiments, épaves, éboulis. */
   obstacles: readonly Boite[];
+  /** Pour les lieux aux nombreux obstacles (la Coopérative) : les obstacles rangés par cases. */
+  grille?: GrilleObstacles;
+}
+
+/** Un point (avec son rayon) touche-t-il un obstacle de la zone ? */
+export function heurte(zone: Zone, x: number, z: number, rayon: number): boolean {
+  const boites = zone.grille && rayon <= MARGE_GRILLE ? boitesPres(zone.grille, x, z) : zone.obstacles;
+  for (const b of boites) if (dansBoite(x, z, b, rayon)) return true;
+  return false;
 }
 
 /** Une sortie : là où l'on se tient pour prendre la route. */
@@ -183,14 +193,27 @@ export const SORTIES_COMPTOIR: Sortie[] = [
 
 // ---------- La Coopérative du Plateau (Book 23) : une par joueur, au bout du chemin agricole ----------
 
-/** On reste dans le grillage ; on entre et on sort par le portail, au sud. */
-export const ZONE_COOP: Zone = {
-  xMin: 1,
-  xMax: COOP.largeur - 1,
-  zMin: 1,
-  zMax: COOP.profondeur - 0.6,
-  obstacles: obstaclesCoop(),
-};
+const FIXES_COOP = obstaclesCoop();
+const zonesCoop = new Map<string, Zone>();
+
+/**
+ * La Coopérative selon l'état de ses portes : une porte fermée bouche son ouverture (Book 23 §2.2). On reste dans le
+ * grillage ; on entre et on sort par le portail, au sud. Une zone par combinaison de portes, gardée.
+ */
+export function zoneCoop(portes: Readonly<Record<string, boolean>>): Zone {
+  const fermees = PORTES.filter((p) => !(portes[p.id] ?? p.ouverte));
+  const cle = fermees.map((p) => p.id).join(",");
+  let z = zonesCoop.get(cle);
+  if (!z) {
+    const obstacles = [...FIXES_COOP, ...fermees.map(boitePorte)];
+    z = { xMin: 1, xMax: COOP.largeur - 1, zMin: 1, zMax: COOP.profondeur - 0.6, obstacles, grille: creerGrille(obstacles) };
+    zonesCoop.set(cle, z);
+  }
+  return z;
+}
+
+/** La Coopérative telle qu'on la trouve : les portes dans leur état d'origine. */
+export const ZONE_COOP: Zone = zoneCoop(portesInitiales());
 
 export const SORTIES_COOP: Sortie[] = [
   {

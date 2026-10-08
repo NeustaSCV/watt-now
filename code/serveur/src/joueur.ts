@@ -85,7 +85,8 @@ import {
 } from "../../commun/src/economie.ts";
 import { BONUS_MECANISTE, PORTEE_CABLE_PANNEAU, WH_M_PAR_HEURE, productionPanneau, stocker } from "../../commun/src/energie.ts";
 import type { AutreVu, OffreEchange, OperationComptoir, RapportBase, WottsVus } from "../../commun/src/messages.ts";
-import { COMPTOIR, HALTE, etapeVers } from "../../commun/src/lieux.ts";
+import { COMPTOIR, HALTE, dansBoite, etapeVers, type Zone } from "../../commun/src/lieux.ts";
+import { PORTEE_PORTE, PORTES, boitePorte, distancePorte } from "../../commun/src/cooperative.ts";
 import { DECHARGE, remonter } from "../../commun/src/decharge.ts";
 import type { Quete, VueQuetes } from "../../commun/src/quetes.ts";
 import { SuiviQuetes, type EtatJoueurPourQuetes } from "./quetes.ts";
@@ -205,6 +206,8 @@ export class Joueur implements Voyageur {
   /** On a déjà prévenu que l'arme équipée n'est plus dans le sac. */
   private armePerdueSignalee = false;
   private bruitCoupJusqua = 0;
+  /** Une porte qu'on vient d'ouvrir ou de fermer : un bruit bref, là où elle est (0.5b). */
+  private bruitPorte: { x: number; z: number; portee: number; jusqua: number } | null = null;
   private appuisDegagement = 0;
   private santeEnvoyee = "";
   private dernierEnvoiSante = 0;
@@ -406,6 +409,7 @@ export class Joueur implements Voyageur {
       quetes: this.vueQuetes(),
       arme: this.armeEquipee,
       ...(this.lieu === "comptoir" ? { comptoir: this.comptoir.vue(instant) } : {}),
+      ...(this.lieu === "cooperative" && this.vivant ? { portes: { ...this.vivant.portes } } : {}),
     };
   }
 
@@ -757,7 +761,7 @@ export class Joueur implements Voyageur {
     const cible = this.cibleDevant(arme.allonge);
     if (!cible) return;
     this.position = { ...this.position, o: Math.atan2(cible.x - this.position.x, cible.z - this.position.z) };
-    const resultat = encaisser(cible, arme, appuye, force, this.position, zoneDe(this.lieu));
+    const resultat = encaisser(cible, arme, appuye, force, this.position, this.zoneIci());
     if (this.tuto && resultat === "detruit") this.tuto.premierEteintDetruit = true;
     const coup = { t: "coup" as const, id: cible.id, x: cible.x, z: cible.z, resultat };
     if (this.vivant) this.vivant.diffuser(coup);
@@ -800,7 +804,7 @@ export class Joueur implements Voyageur {
     this.endurance -= COUT_ENDURANCE.esquive;
     this.esquiveJusqua = instant + ESQUIVE.invulnerable * 1000;
     this.elan = { dx: ux, dz: uz, restant: ESQUIVE.duree };
-    for (const e of this.saisisseurs()) lacher(e, this.position, zoneDe(this.lieu));
+    for (const e of this.saisisseurs()) lacher(e, this.position, this.zoneIci());
     this.appuisDegagement = 0;
   }
 
@@ -813,7 +817,7 @@ export class Joueur implements Voyageur {
     const besoin = APPUIS_DEGAGEMENT * tiennent.length * (this.endurance < SEUIL_EPUISE ? 1.5 : 1);
     if (this.appuisDegagement < besoin) return;
     this.appuisDegagement = 0;
-    for (const e of tiennent) lacher(e, this.position, zoneDe(this.lieu));
+    for (const e of tiennent) lacher(e, this.position, this.zoneIci());
     if (this.tuto) this.tuto.degage = true;
   }
 
@@ -861,7 +865,7 @@ export class Joueur implements Voyageur {
       // L'Éteint du tutoriel ne mord jamais : il lâche prise tout seul (validé, 2026-10-08).
       if (e.tuto) {
         if (e.tenue >= 6) {
-          lacher(e, this.position, zoneDe(this.lieu));
+          lacher(e, this.position, this.zoneIci());
           if (this.tuto) this.tuto.degage = true;
           this.info("Il te lâche… La prochaine fois, tape {examiner} très vite !");
         }
@@ -917,7 +921,7 @@ export class Joueur implements Voyageur {
     const instant = this.maintenant();
     this.reveiller("");
     this.poserObjetLourd();
-    for (const e of this.saisisseurs()) lacher(e, this.position, zoneDe(this.lieu));
+    for (const e of this.saisisseurs()) lacher(e, this.position, this.zoneIci());
     const enPoche = valeurWotts(this.poche, instant);
     if (Object.keys(this.inventaire).length > 0 || enPoche > 0) {
       // Au comptoir, zone gardée : les Compteurs rapportent le sac chez lui.
@@ -1464,7 +1468,9 @@ export class Joueur implements Voyageur {
   /** Ce que le joueur émet : ses pas, son action, sa lumière la nuit (Book 06 §3). */
   stimuli(nuit: boolean): Stimulus[] {
     const portee = this.lumiere ? lumierePortee(this.inventaire) : null;
-    return this.sousLaPluie(stimuliJoueur({
+    const porte = this.bruitPorte && this.maintenant() < this.bruitPorte.jusqua ? this.bruitPorte : null;
+    const bruitPorte: Stimulus[] = porte ? [{ genre: "son", x: porte.x, z: porte.z, portee: porte.portee, intensite: 1 }] : [];
+    return this.sousLaPluie([...bruitPorte, ...stimuliJoueur({
       x: this.position.x,
       z: this.position.z,
       allure: allureAutorisee(this.intention.allure, this.besoins, this.objetPorte() !== undefined || traineTravois(this.inventaire)),
@@ -1473,7 +1479,31 @@ export class Joueur implements Voyageur {
       lumiere: portee ? (OBJETS[portee].lumiere ?? null) : null,
       nuit,
       saigne: this.sante.saignement !== "aucun",
-    }));
+    })]);
+  }
+
+  /** La zone où l'on se déplace ici : celle du lieu vivant (avec ses portes fermées), ou celle du lieu. */
+  private zoneIci(): Zone {
+    return this.vivant?.zone ?? zoneDe(this.lieu);
+  }
+
+  /**
+   * Ouvrir ou refermer une porte de la Coopérative (Book 23 §2.2). Refermer une porte derrière soi, c'est la meilleure
+   * retraite : un Éteint ne la traverse pas. Ça fait un peu de bruit (beaucoup, pour une porte qui grince).
+   */
+  private actionnerPorte(id: string, ouvrir: boolean): void {
+    const vivant = this.vivant;
+    const p = PORTES.find((q) => q.id === id);
+    if (this.lieu !== "cooperative" || !vivant || !p || this.action) return;
+    if (distancePorte(p, this.position.x, this.position.z) > PORTEE_PORTE + 0.5) return this.info("Approche-toi de la porte.");
+    if (!ouvrir) {
+      // On ne referme pas une porte sur quelqu'un : ni sur soi, ni sur un Éteint.
+      const b = boitePorte(p);
+      const coince = dansBoite(this.position.x, this.position.z, b, 0.4) || vivant.eteints.some((e) => e.etat !== "detruit" && dansBoite(e.x, e.z, b, 0.4));
+      if (coince) return this.info("Quelque chose bloque la porte.");
+    }
+    if (!vivant.basculerPorte(id, ouvrir)) return;
+    this.bruitPorte = { x: p.x, z: p.z, portee: p.bruyante ? 18 : 6, jusqua: this.maintenant() + 1500 };
   }
 
   /** La pluie est une alliée : bruits −30 %, odeurs −50 % (Book 06 §3.2, Book 13 §4). */
@@ -1597,12 +1627,12 @@ export class Joueur implements Voyageur {
     let allure = allureAutorisee(this.intention.allure, this.besoins, this.objetPorte() !== undefined || traineTravois(this.inventaire));
     if (allure === "course" && this.endurance < SEUIL_EPUISE) allure = "marche";
     const intention = { dx: this.intention.dx * frein, dz: this.intention.dz * frein, allure };
-    let nouvelle = avancer(this.position, intention, dt, zoneDe(this.lieu));
+    let nouvelle = avancer(this.position, intention, dt, this.zoneIci());
     // L'élan de l'esquive : un bond rapide, sur quelques dixièmes de seconde.
     if (this.elan) {
       const vitesse = ESQUIVE.distance / ESQUIVE.duree;
       const pas = Math.min(dt, this.elan.restant);
-      nouvelle = avancer(nouvelle, { dx: this.elan.dx, dz: this.elan.dz, allure: "course" }, (pas * vitesse) / ALLURES.course, zoneDe(this.lieu));
+      nouvelle = avancer(nouvelle, { dx: this.elan.dx, dz: this.elan.dz, allure: "course" }, (pas * vitesse) / ALLURES.course, this.zoneIci());
       this.elan.restant -= dt;
       if (this.elan.restant <= 0) this.elan = null;
     }
@@ -1797,6 +1827,7 @@ export class Joueur implements Voyageur {
     if (cible?.genre === "sac" && verbe === "reprendre") return this.reprendreSac(cible.id);
     if (cible?.genre === "comptoir" && verbe === "pedaler_comptoir") return this.pedalerAuComptoir();
     if (cible?.genre === "animal" && verbe === "assommer" && this.lieu === "terrain") return this.assommer(cible.id);
+    if (cible?.genre === "porte" && (verbe === "ouvrir_porte" || verbe === "fermer_porte")) return this.actionnerPorte(cible.id, verbe === "ouvrir_porte");
     // Le reste (mare, feux, installations) n'existe que sur le terrain.
     if (this.lieu !== "terrain") return;
     if (cible?.genre === "mare" && verbe === "remplir") return this.remplirGourde();

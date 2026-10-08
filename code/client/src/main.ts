@@ -9,7 +9,7 @@ import { formaterDate, jourDuCalendrier } from "../../commun/src/calendrier.ts";
 import { avecTouches } from "./touches.ts";
 import * as THREE from "three";
 import { INTENTION_REPOS, avancer, type Position } from "../../commun/src/deplacement.ts";
-import { COMPTOIR, sortieIci, zoneDe, type LieuJouable } from "../../commun/src/lieux.ts";
+import { COMPTOIR, sortieIci, zoneCoop, zoneDe, type LieuJouable, type Zone } from "../../commun/src/lieux.ts";
 import type { EteintVu } from "../../commun/src/eteints.ts";
 import { cerclesSignature, type BruitAction } from "../../commun/src/signature.ts";
 import { ALLURES, GESTE_TENU_MAX_S, type Allure } from "../../commun/src/regles.ts";
@@ -32,7 +32,8 @@ import { FauneAmbiante, Volaille, type CriFaune } from "./rendu/faune.ts";
 import { RAYON_ESCABEAU, estFruitier } from "../../commun/src/terrain.ts";
 import { creerRuine } from "./rendu/ruine.ts";
 import { creerHalte, estomperToits } from "./rendu/halte.ts";
-import { animerCooperative, creerCooperative, estomperCooperative } from "./rendu/cooperative.ts";
+import { animerCooperative, creerCooperative, estomperCooperative, majPortes } from "./rendu/cooperative.ts";
+import { portesInitiales } from "../../commun/src/cooperative.ts";
 import { animerComptoir, creerComptoir, lumieresComptoir } from "./rendu/comptoir.ts";
 import { VueEteint } from "./rendu/eteint.ts";
 import { VueAutre } from "./rendu/autres.ts";
@@ -85,6 +86,12 @@ if (import.meta.env.DEV) Object.assign(window, { __watt: { scene } });
 const decors = new Map<LieuJouable, THREE.Group>();
 /** Le décor de la Coopérative (ses toits, ses portes) : construit à la première visite. */
 let decorCoop: THREE.Group | null = null;
+/** L'état des portes de la Coopérative (ouverte : true), tel que le serveur l'a dit. */
+let portesCoop: Record<string, boolean> = portesInitiales();
+/** La zone où l'on se déplace : à la Coopérative, les portes fermées bouchent le passage. */
+function zoneIci(): Zone {
+  return lieu === "cooperative" ? zoneCoop(portesCoop) : zoneDe(lieu);
+}
 function montrerDecor(lieu: LieuJouable): void {
   if (!decors.has(lieu)) {
     const g = new THREE.Group();
@@ -384,6 +391,9 @@ function installer(message: Bienvenue): void {
   voile.hidden = true;
   lieu = message.lieu;
   montrerDecor(lieu);
+  // Les portes de la Coopérative, dans l'état où on les a laissées.
+  if (message.portes) portesCoop = message.portes;
+  if (decorCoop && lieu === "cooperative") majPortes(decorCoop, portesCoop);
   enVoyage = false;
   carte.arriver();
   if (!personnage) {
@@ -663,6 +673,11 @@ function recevoir(message: MessageServeur): void {
       return;
     case "sacs":
       majSacs(message.sacs);
+      return;
+    case "portes":
+      portesCoop = message.portes;
+      if (decorCoop) majPortes(decorCoop, portesCoop, true);
+      son.jouer("geste_bois");
       return;
     case "wotts":
       hud.majWotts(message.wotts);
@@ -1187,10 +1202,10 @@ function boucle(instant: number): void {
     const avant = position;
     // Saisi : ralenti ou immobilisé (le serveur fait de même).
     const frein = freinSaisie(saisi);
-    position = avancer(position, { ...intention, dx: intention.dx * frein, dz: intention.dz * frein }, dt, zoneDe(lieu));
+    position = avancer(position, { ...intention, dx: intention.dx * frein, dz: intention.dz * frein }, dt, zoneIci());
     if (elan) {
       const pas = Math.min(dt, elan.restant);
-      position = avancer(position, { dx: elan.dx, dz: elan.dz, allure: "course" }, (pas * ESQUIVE.distance) / ESQUIVE.duree / ALLURES.course, zoneDe(lieu));
+      position = avancer(position, { dx: elan.dx, dz: elan.dz, allure: "course" }, (pas * ESQUIVE.distance) / ESQUIVE.duree / ALLURES.course, zoneIci());
       elan.restant -= dt;
       if (elan.restant <= 0) elan = null;
     }
@@ -1265,6 +1280,7 @@ function boucle(instant: number): void {
       besoins.repos,
       lieu === "terrain" ? volaille.places() : [],
       jourAffiche,
+      lieu === "cooperative" ? portesCoop : null,
     );
     if (modeCombat) {
       // En combat, A frappe et B esquive ; saisi, B sert à se dégager.

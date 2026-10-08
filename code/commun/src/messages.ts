@@ -58,7 +58,9 @@ export type Cible =
   /** Le pédalier des Compteurs (É4). */
   | { genre: "comptoir" }
   /** Un animal du terrain (la volaille, 2026-10-08). */
-  | { genre: "animal"; id: number };
+  | { genre: "animal"; id: number }
+  /** Une porte de la Coopérative (Book 23 §2.2) : son identifiant dans le plan. */
+  | { genre: "porte"; id: string };
 
 export type Verbe =
   | "ramasser"
@@ -87,7 +89,10 @@ export type Verbe =
   /** Chasse à la volaille : un coup, sur-le-champ. */
   | "assommer"
   /** Au feu : rôtir la volaille crue. */
-  | "rotir";
+  | "rotir"
+  /** Une porte de la Coopérative : l'ouvrir, la refermer. */
+  | "ouvrir_porte"
+  | "fermer_porte";
 
 /** État propre à certaines installations. */
 export interface EtatInstallation {
@@ -308,6 +313,8 @@ export interface Bienvenue {
   arme: TypeObjet | null;
   /** Au comptoir seulement. */
   comptoir?: VueComptoir;
+  /** À la Coopérative seulement : l'état de ses portes (ouverte : true). */
+  portes?: Record<string, boolean>;
   /** La volaille du terrain (2026-10-08). */
   animaux?: AnimalVu[];
 }
@@ -347,6 +354,8 @@ export type MessageServeur =
   /** Il s'effondre : le client montre le réveil, puis arrive un `bienvenue` sur le terrain. */
   | { t: "effondrement" }
   | { t: "sacs"; sacs: SacVu[] }
+  /** L'état des portes de la Coopérative (ouverte : true), à chaque changement (0.5b). */
+  | { t: "portes"; portes: Record<string, boolean> }
   | { t: "wotts"; wotts: WottsVus }
   /** À la reconnexion : ce que la base a fait pendant l'absence (Book 01 §2 bis). */
   | { t: "rapport"; rapport: RapportBase }

@@ -1,7 +1,8 @@
 # Book 23 — La Coopérative et le combat
 
 > Document de conception · version 0.2 · 2026-10-08
-> Statut : **proposition à valider** par le porteur du projet. Cible : versions 0.5 et 0.6.
+> Statut : **validé** par le porteur du projet (2026-10-08), en cours de réalisation. Cible : versions 0.5 et 0.6.
+> Avancement (2026-10-08) : **0.5a fait** (lieu vivant, une Coopérative par joueur, chemin agricole au nord du Carrefour, route en ligne) ; **0.5b fait** (murs, portes qu'on ouvre et referme, grille d'obstacles de 4 m) ; le rendu 3D du lieu est fait et allégé (ombres cuites, carte réduite).
 > Décisions déjà prises (2026-10-08) : le lieu est la **coopérative agricole** (Book 20 §3.1) ; **une par joueur** pour commencer et valider la mécanique (des cartes partagées ne sont pas exclues plus tard) ; **conception écrite d'abord**.
 > La version 0.2 intègre les relectures des agents BMAD : Samus (Game Designer : niveau, difficulté, combat sur téléphone) et Cloud (Game Architect : instances, IA, persistance, Pi).
 

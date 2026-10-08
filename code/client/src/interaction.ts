@@ -5,6 +5,7 @@ import { PERIODES_FRUITIERS, enSaison, etatDuFruitier, phaseFruitier, visibleEnS
 import type { Position } from "../../commun/src/deplacement.ts";
 import { CAPACITES, type Charges } from "../../commun/src/energie.ts";
 import { COMPTOIR, sortieIci, type LieuId, type LieuJouable } from "../../commun/src/lieux.ts";
+import { PORTES, distancePorte } from "../../commun/src/cooperative.ts";
 import type { AutreVu, InstallationVue, MessageClient, SacVu, Verbe } from "../../commun/src/messages.ts";
 import { nommer, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
 import { RECETTES } from "../../commun/src/recettes.ts";
@@ -153,6 +154,8 @@ export function proposer(
   animaux: readonly { id: number; x: number; z: number; robe: number }[] = [],
   /** Le jour du calendrier (0 : inconnu) : les récoltes suivent la saison. */
   jour = 0,
+  /** À la Coopérative : l'état de ses portes (ouverte : true). */
+  portes: Readonly<Record<string, boolean>> | null = null,
 ): Propositions {
   // Un objet lourd dans les bras : A le pose devant soi, rien d'autre (les bras sont pris).
   const installationsVues = [...installations];
@@ -235,6 +238,25 @@ export function proposer(
       },
       cible: { x: a.x, z: a.z },
     });
+  }
+
+  // À la Coopérative : ouvrir une porte, ou la refermer derrière soi (Book 23 §2.2 : c'est la meilleure retraite).
+  if (portes) {
+    for (const p of PORTES) {
+      const ouverte = portes[p.id] ?? p.ouverte;
+      garder(distancePorte(p, position.x, position.z) + 0.3, {
+        A: ouverte
+          ? { libelle: "Refermer la porte", message: { t: "interagir", cible: { genre: "porte", id: p.id }, verbe: "fermer_porte" } }
+          : { libelle: "Ouvrir la porte", message: { t: "interagir", cible: { genre: "porte", id: p.id }, verbe: "ouvrir_porte" } },
+        B: {
+          libelle: "Examiner",
+          examiner: ouverte
+            ? "Une porte ouverte. Refermée derrière toi, elle arrête un Éteint : il pousse, mais il ne passe pas."
+            : "Une porte fermée. Ce qu'il y a derrière, tu ne le sauras qu'en l'ouvrant… ou en écoutant.",
+        },
+        cible: { x: p.x, z: p.z },
+      });
+    }
   }
 
   // Au Carrefour : le guichet des Compteurs, et leur pédalier.

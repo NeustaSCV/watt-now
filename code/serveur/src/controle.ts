@@ -65,7 +65,13 @@ export function messageValide(m: unknown): m is MessageClient {
     case "ping":
       return nombre(m.envoye);
     case "interagir":
-      return estTable(m.cible) && chaine(m.cible.genre) && nombreOuRien(m.cible.id) && chaine(m.verbe);
+      return (
+        estTable(m.cible) &&
+        chaine(m.cible.genre) &&
+        // Une porte se désigne par son nom dans le plan ; tout le reste, par un numéro.
+        (m.cible.genre === "porte" ? chaine(m.cible.id) && m.cible.id.length <= 40 : nombreOuRien(m.cible.id)) &&
+        chaine(m.verbe)
+      );
     case "manger":
       return estObjet(m.objet);
     case "construire_feu":

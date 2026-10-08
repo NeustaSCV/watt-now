@@ -1,7 +1,7 @@
 // Déplacement d'un personnage. La même fonction tourne sur le serveur (qui fait autorité)
 // et sur le client (qui prédit, pour que le mouvement soit immédiat à l'écran).
 
-import { ZONE_TERRAIN, dansBoite, type Zone } from "./lieux.ts";
+import { ZONE_TERRAIN, heurte, type Zone } from "./lieux.ts";
 import { ALLURES, estAllure, type Allure } from "./regles.ts";
 
 export interface Position {
@@ -42,7 +42,7 @@ export function nettoyerIntention(brut: unknown): Intention | null {
 const RAYON = 0.35;
 
 function bloque(x: number, z: number, zone: Zone): boolean {
-  return zone.obstacles.some((b) => dansBoite(x, z, b, RAYON));
+  return heurte(zone, x, z, RAYON);
 }
 
 /**

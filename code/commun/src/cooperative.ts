@@ -163,6 +163,34 @@ export function obstaclesCoop(): Boite[] {
   ];
 }
 
+/** L'état des portes à la première visite (ouvertes ou fermées, selon le plan). */
+export function portesInitiales(): Record<string, boolean> {
+  return Object.fromEntries(PORTES.map((p) => [p.id, p.ouverte]));
+}
+
+/** On ouvre ou ferme une porte jusqu'à cette distance de son battant (une grande porte se prend par un bout). */
+export const PORTEE_PORTE = 1.6;
+
+/** Distance d'un point au battant d'une porte. */
+export function distancePorte(p: PorteCoop, x: number, z: number): number {
+  const b = boitePorte(p);
+  return Math.hypot(Math.max(0, Math.abs(x - b.x) - b.l / 2), Math.max(0, Math.abs(z - b.z) - b.p / 2));
+}
+
+/** La porte la plus proche d'un point, à portée de main ; null s'il n'y en a pas. */
+export function porteProche(x: number, z: number): PorteCoop | null {
+  let meilleure: PorteCoop | null = null;
+  let d = PORTEE_PORTE;
+  for (const p of PORTES) {
+    const e = distancePorte(p, x, z);
+    if (e <= d) {
+      d = e;
+      meilleure = p;
+    }
+  }
+  return meilleure;
+}
+
 /** Une porte fermée : la boîte qui bouche son ouverture. */
 export function boitePorte(p: PorteCoop): Boite {
   return p.sens === "x" ? { x: p.x, z: p.z, l: p.largeur, p: MUR } : { x: p.x, z: p.z, l: MUR, p: p.largeur };
