@@ -92,7 +92,8 @@ function manche(c: Assemblage, z0: number, z1: number, r: number, bois: number =
 export function creerArme(objet: TypeObjet): THREE.Group | null {
   const c = new Assemblage(objet.length * 13);
   const boisClair = 0x9a7650;
-  switch (objet) {
+  // Comparaison sur chaîne : les armes de la 0.5 (machette, masse, lance) arrivent dans les types de `commun/`.
+  switch (objet as string) {
     case "hache":
       // Un manche de frêne légèrement galbé, un fer à joue large : talon sombre, tranchant affûté brillant.
       manche(c, -0.16, 0.6, 0.016, boisClair, PALETTE.cuir);
@@ -145,6 +146,63 @@ export function creerArme(objet: TypeObjet): THREE.Group | null {
       const couleur = (p: THREE.Vector3) => (p.z > 1.42 ? 0x1c1714 : p.z > 1.3 ? 0x2e2420 : p.z > 1.18 ? 0x5a4130 : Math.sin(p.z * 9) > 0.7 ? 0x8a6a48 : 0xa78a62);
       c.ajouterDegrade(perche, couleur);
       c.ajouterDegrade(pointe, couleur);
+      for (const z of [-0.05, 0.08]) c.ligature(new V3(0, 0, z), new V3(0, 0, 1), 0.024);
+      break;
+    }
+    case "pied_de_biche": {
+      // Un pied-de-biche de 75 cm (≈ 86 avec l'agrandissement) : tige à six pans peinte en rouge, la peinture écaillée
+      // de noir et de l'acier nu aux bouts ; le col de cygne et sa griffe fendue en haut, le biseau en bas.
+      const ROUGE = 0x8e2a22;
+      const ecaille = (p: THREE.Vector3) => {
+        const n = Math.sin(p.z * 31 + p.x * 70) + Math.sin(p.z * 83 + p.y * 120);
+        if (p.z < -0.17 || p.y > 0.11) return 0x6b6862; // les bouts usés jusqu'au métal
+        return n > 1.15 ? 0x232120 : n < -1.4 ? 0x6b6862 : ROUGE;
+      };
+      c.ajouterDegrade(new THREE.CylinderGeometry(0.014, 0.014, 0.72, 6, 8).rotateX(Math.PI / 2).translate(0, 0, 0.16), ecaille, "metal");
+      // Le col de cygne : un tube qui se recourbe vers l'avant des doigts.
+      const col = new THREE.CatmullRomCurve3([new V3(0, 0, 0.5), new V3(0, 0.006, 0.57), new V3(0, 0.045, 0.635), new V3(0, 0.1, 0.655), new V3(0, 0.145, 0.63)]);
+      c.ajouterDegrade(new THREE.TubeGeometry(col, 8, 0.0135, 6), ecaille, "metal");
+      // La griffe : deux dents écartées, aplaties, qui pointent vers le bas (on y glisse une tête de clou).
+      for (const x of [-0.0075, 0.0075]) c.ajouter(placer(new THREE.BoxGeometry(0.009, 0.012, 0.05), x, 0.155, 0.605, 0.5, 0, 0), 0x55524d, "metal");
+      // Le biseau, à l'autre bout, un peu relevé.
+      c.ajouterDegrade(placer(new THREE.CylinderGeometry(0.003, 0.014, 0.075, 6).scale(1.9, 1, 0.45).rotateX(-Math.PI / 2), 0, 0.004, -0.235, 0.12, 0, 0), () => 0x6b6862, "metal");
+      break;
+    }
+    case "machette": {
+      // Une machette : lame large de 45 cm (≈ 52 avec l'agrandissement), dos droit, ventre qui s'élargit vers la
+      // pointe et remonte un peu (légère courbe) ; le manche noir rivé, comme un gros couteau.
+      c.boite(0x1f1d1c, "mat", 0.026, 0.036, 0.15, 0, 0.003, 0.0);
+      c.boite(0x1f1d1c, "mat", 0.03, 0.042, 0.02, 0, 0.004, -0.075);
+      for (const z of [-0.045, 0.0, 0.045]) c.ajouter(placer(new THREE.CylinderGeometry(0.0055, 0.0055, 0.03, 6).rotateZ(Math.PI / 2), 0, 0.003, z), 0xa8aaa8, "metal");
+      fer(
+        c,
+        [[0.07, -0.016], [0.3, -0.018], [0.5, -0.012], [0.58, 0.0], [0.615, 0.022], [0.6, 0.045], [0.52, 0.06], [0.36, 0.055], [0.18, 0.04], [0.07, 0.024]],
+        0.005,
+        0.044,
+        0x6f716f,
+        0xd2d4d0,
+      );
+      break;
+    }
+    case "masse": {
+      // Une masse de 3 kg : tête d'acier carrée aux faces chanfreinées, manche de bois de 90 cm (≈ 1 m), tenue au bas
+      // du manche. (Tenue à une main : les animations n'ont pas de prise à deux mains, le manche dépasse sous le poing.)
+      manche(c, -0.14, 0.88, 0.017, boisClair, 0x3a2c22);
+      c.boite(0x4a4744, "metal", 0.078, 0.2, 0.078, 0, 0.0, 0.9);
+      for (const s of [-1, 1]) c.ajouter(placer(new THREE.CylinderGeometry(0.046, 0.052, 0.025, 4, 1).rotateY(Math.PI / 4), 0, s * 0.11, 0.9, s > 0 ? 0 : Math.PI, 0, 0), 0x77746e, "metal");
+      // Le coin d'emmanchement, sur le dessus de la tête.
+      c.boite(0x6b5a3e, "mat", 0.02, 0.04, 0.008, 0, 0.0, 0.942);
+      break;
+    }
+    case "lance": {
+      // Une lance : la perche de l'épieu (environ 2 m en tout), un couteau ligaturé au bout avec de la ficelle.
+      const perche = new THREE.CylinderGeometry(0.017, 0.023, 1.82, 6, 8).rotateX(Math.PI / 2).translate(0, 0, 0.45);
+      c.ajouterDegrade(perche, (p) => (Math.sin(p.z * 9) > 0.7 ? 0x8a6a48 : 0xa78a62));
+      // Le couteau : son manche noir couché contre la perche, côté doigts, la lame qui la prolonge.
+      c.boite(0x2b2826, "mat", 0.02, 0.026, 0.13, 0, 0.026, 1.3);
+      fer(c, [[1.36, 0.006], [1.53, 0.008], [1.6, 0.022], [1.53, 0.038], [1.44, 0.044], [1.36, 0.042]], 0.004, 0.036, 0x9a9c9a, 0xd8dad8);
+      // La ficelle : trois ligatures serrées autour de la perche et du manche.
+      for (const z of [1.26, 1.3, 1.34]) c.ligature(new V3(0, 0.011, z), new V3(0, 0, 1), 0.034, 0xcfc3a0);
       for (const z of [-0.05, 0.08]) c.ligature(new V3(0, 0, z), new V3(0, 0, 1), 0.024);
       break;
     }

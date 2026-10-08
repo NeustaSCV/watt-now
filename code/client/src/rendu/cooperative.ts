@@ -1111,16 +1111,16 @@ function etabli(c: Chantier, b: Boite): void {
     c.boite(b.l, 0.08, b.p, bois, { y: 0.9 }, matiere(), { nuance: 0.05 });
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) c.boite(0.06, 0.86, 0.06, froid(0x3a3d42), { x: sx * (b.l / 2 - 0.08), y: 0.43, z: sz * (b.p / 2 - 0.08) }, acier);
     c.boite(b.l - 0.1, 0.03, b.p - 0.1, bois, { y: 0.25 });
-    // L'étau, des outils, la caisse rouge, des bidons d'huile dessous
-    c.boite(0.2, 0.16, 0.3, froid(0x2f5d8a), { x: b.l / 2 - 0.3, y: 1.02, z: -0.3 }, acier);
-    c.boite(0.04, 0.04, 0.4, 0x8a8f94, { x: b.l / 2 - 0.3, y: 1.06, z: -0.55 }, acier);
+    // L'étau (sa vis vers l'avant, côté caméra), des outils, la caisse rouge, des bidons d'huile dessous
+    c.boite(0.2, 0.16, 0.3, froid(0x2f5d8a), { x: b.l / 2 - 0.3, y: 1.02, z: 0.2 }, acier);
+    c.boite(0.04, 0.04, 0.4, 0x8a8f94, { x: b.l / 2 - 0.3, y: 1.06, z: 0.45 }, acier);
     c.boite(0.5, 0.25, 0.25, froid(0xc8362b), { x: -0.8, y: 1.07, z: 0.1 }, acier);
     for (let i = 0; i < 6; i++) c.boite(0.25, 0.025, 0.04, froid(0x8a8f94), { x: -0.2 + c.hasard() * 1, y: 0.955, z: (c.hasard() - 0.5) * 0.6, ry: c.hasard() * 3 }, acier, { crasse: false });
     for (let i = 0; i < 4; i++) bidon(c, -1.1 + i * 0.4, 0.27, 0.1, froid(i % 2 ? 0x2a2826 : 0x3e7d4c), 0);
-    // Le panneau à outils, debout derrière
-    c.boite(b.l, 1, 0.03, froid(0x8a6a48), { y: 1.55, z: b.p / 2 - 0.02 });
-    for (const sx of [-1, 1]) c.boite(0.06, 2.05, 0.06, froid(0x3a3d42), { x: sx * (b.l / 2 - 0.05), y: 1.03, z: b.p / 2 - 0.02 }, acier);
-    for (let i = 0; i < 10; i++) c.boite(0.05, 0.22 + c.hasard() * 0.18, 0.03, froid(0x55524d), { x: -b.l / 2 + 0.25 + i * 0.28, y: 1.6, z: b.p / 2 - 0.05, rz: (c.hasard() - 0.5) * 0.6 }, acier);
+    // Le panneau à outils, debout derrière (côté nord : la caméra et celui qui travaille voient le plateau, 2026-10-08)
+    c.boite(b.l, 1, 0.03, froid(0x8a6a48), { y: 1.55, z: -(b.p / 2 - 0.02) });
+    for (const sx of [-1, 1]) c.boite(0.06, 2.05, 0.06, froid(0x3a3d42), { x: sx * (b.l / 2 - 0.05), y: 1.03, z: -(b.p / 2 - 0.02) }, acier);
+    for (let i = 0; i < 10; i++) c.boite(0.05, 0.22 + c.hasard() * 0.18, 0.03, froid(0x55524d), { x: -b.l / 2 + 0.25 + i * 0.28, y: 1.6, z: -(b.p / 2 - 0.05), rz: (c.hasard() - 0.5) * 0.6 }, acier);
   });
 }
 
@@ -1207,6 +1207,17 @@ function tracteur(a: Assemblage, x: number, z: number, o: number, cabine: boolea
     // L'arceau de sécurité
     for (const s of [-1, 1]) a.perche(new V3(s * 0.62, 1.32, 1.25), new V3(s * 0.6, 2.5, 1.25), 0.045, NOIR, "metal", 6);
     a.perche(new V3(-0.62, 2.5, 1.25), new V3(0.62, 2.5, 1.25), 0.045, NOIR, "metal", 6);
+    // Le klaxon (un leurre, Book 23 §4.7) : le pavillon chromé au flanc du capot, le gros bouton rouge au centre du
+    // volant, et la batterie sur le garde-boue, qu'il videra.
+    // (Côté droit, celui que voit la caméra.)
+    a.ajouter(placer(new THREE.ConeGeometry(0.09, 0.24, 10, 1, true).rotateX(Math.PI / 2), 0.48, 1.45, -1.38), 0xe4e8ea, "metal");
+    a.ajouter(placer(new THREE.CylinderGeometry(0.055, 0.055, 0.1, 8).rotateX(Math.PI / 2), 0.48, 1.45, -1.21), 0x3a3836, "metal");
+    a.perche(new V3(0.38, 1.45, -1.21), new V3(0.48, 1.45, -1.21), 0.02, 0x3a3836, "metal", 5);
+    a.ajouter(placer(new THREE.CylinderGeometry(0.065, 0.065, 0.035, 10), 0, 1.985, 0.335, -1.0, 0, 0), 0xd42a20, "tole");
+    a.boite(0x232220, "mat", 0.3, 0.2, 0.2, 0.7, 1.45, 0.62);
+    a.ajouter(placer(new THREE.CylinderGeometry(0.024, 0.024, 0.04, 8), 0.62, 1.57, 0.62), 0xd42a20, "metal");
+    a.ajouter(placer(new THREE.CylinderGeometry(0.024, 0.024, 0.04, 8), 0.78, 1.57, 0.62), 0x2a2826, "metal");
+    a.boite(0xd8b52a, "mat", 0.16, 0.06, 0.006, 0.7, 1.45, 0.725);
   }
   // La rouille : sur les flancs et le dessus du capot, sur les garde-boue
   for (const s of [-1, 1]) {
@@ -1570,7 +1581,8 @@ function creerBatiment(ch: Chantiers, mats: Mats & { verre: THREE.Material; ense
   for (let i = 0; i < 6; i++) tacheSol(c, 54 + c.hasard() * 18, SOL + 0.008, 9 + c.hasard() * 6, 0.6 + c.hasard() * 0.8, froid(0x93a0a6, 0.6));
 
   // ---- Le quai de chargement (dehors, contre le mur ouest du hangar) ----
-  // Un auvent en console (sans poteaux), des butoirs, des chevrons, la sonnette du quai
+  // Un auvent en console (sans poteaux), des butoirs, des chevrons, le bouton extérieur de la sonnette (la sonnerie est
+  // dedans, voir creerLeurres)
   const zq = 26;
   for (let z = 19; z < 33.5; z += 1.95) fond.poser(geoToleOndulee(1.98, 4.6, 0.2, 0.04), tole, fond.hasard() < 0.4 ? 0x86604a : 0x8d9396, { x: x0 - 2.3, y: 4.85 + 0.1, z: z + 0.98, ry: Math.PI / 2, rz: 0.08 }, { nuance: 0.08, crasse: false });
   for (const z of [19.2, 26, 32.8]) fond.poutre(new THREE.Vector3(x0 - 0.15, 3.9, z), new THREE.Vector3(x0 - 4.4, 4.62, z), 0.12, 0x55524d, acier);
@@ -1582,6 +1594,92 @@ function creerBatiment(ch: Chantiers, mats: Mats & { verre: THREE.Material; ense
   c.boite(0.12, 0.2, 0.16, 0x3a3d42, { x: x0 - 0.21, y: 1.55, z: zq + 2.7 }, acier);
   c.poser(new THREE.SphereGeometry(0.09, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2), acier, PALETTE.laiton, { x: x0 - 0.3, y: 1.62, z: zq + 2.7, rz: Math.PI / 2 });
   return objets;
+}
+
+// ---------- Les leurres posés dans le décor (Book 23 §4.7) ----------
+
+/** Le tracteur rouge (le premier du plan, sans cabine) : celui dont on peut faire sonner le klaxon. */
+const TRACTEUR_ROUGE = MOBILIER.find((m) => m.genre === "tracteur")!;
+
+/** Un point du repère d'un engin (x à droite, z vers l'arrière) ramené au sol de la Coopérative. */
+function pointDEngin(m: (typeof MOBILIER)[number], x: number, z: number): { x: number; z: number } {
+  const o = m.o ?? 0;
+  const r = (v: number) => Math.round(v * 100) / 100;
+  return { x: r(m.boite.x + x * Math.cos(o) + z * Math.sin(o)), z: r(m.boite.z - x * Math.sin(o) + z * Math.cos(o)) };
+}
+
+/**
+ * Les leurres de la Coopérative, là où le rendu les dessine (mètres, sol du lieu) : à reprendre côté serveur pour
+ * l'interaction. Aucun n'est un obstacle (la sonnette est au mur, la radio sur l'établi, le klaxon dans le tracteur).
+ * - `sonnette` : la sonnerie de quai et son bouton, au mur ouest du hangar, côté intérieur (le mur est en x 34, sa
+ *   face intérieure en x 34,15), juste au sud de la porte du quai (z 24,25 à 27,75). Bouton à 1,4 m, cloche à 2,6 m.
+ *   Dehors, le petit boîtier à dôme de laiton (x 33,8) en est le bouton côté quai, pour les chauffeurs.
+ * - `radio` : la radio à piles, posée sur l'établi de l'atelier (x 7,5, z 30,5) ; l'objet 3D s'appelle
+ *   « leurre-radio » dans le groupe de la Coopérative (à masquer quand on la prend).
+ * - `klaxon` : le volant du tracteur rouge (x 12, z 20, sans cabine). Le tracteur est un obstacle : prévoir une portée
+ *   d'au moins 1,6 m depuis ce point.
+ */
+export const LEURRES_COOP = {
+  sonnette: { x: 34.3, z: 28.6 },
+  radio: { x: 7.2, z: 30.5 },
+  klaxon: pointDEngin(TRACTEUR_ROUGE, 0, 0.33),
+} as const;
+
+/** La sonnette du quai (à l'intérieur) et la radio à piles de l'établi : chacune son petit groupe. */
+function creerLeurres(): THREE.Group {
+  const groupe = new THREE.Group();
+  groupe.name = "leurres";
+
+  // La sonnette : une grosse sonnerie électrique d'entrepôt, cloche de laiton sur un socle rouge, son marteau dessous,
+  // le tube électrique qui descend au boîtier jaune et à son gros bouton rouge. Un peu plus grande que nature (lisible).
+  const s = new Assemblage(2361);
+  const zs = LEURRES_COOP.sonnette.z;
+  const xm = B.x0 + MUR / 2; // la face intérieure du mur
+  s.ajouter(placer(new THREE.CylinderGeometry(0.19, 0.19, 0.045, 14).rotateZ(Math.PI / 2), xm + 0.022, 2.6, zs), 0xb8302a, "tole");
+  s.ajouter(placer(new THREE.SphereGeometry(0.22, 14, 5, 0, Math.PI * 2, 0, Math.PI / 2).rotateZ(-Math.PI / 2), xm + 0.05, 2.6, zs), 0xd2b062, "metal", 0.04);
+  s.ajouter(placer(new THREE.CylinderGeometry(0.025, 0.025, 0.05, 8).rotateZ(Math.PI / 2), xm + 0.28, 2.6, zs), 0x55524d, "metal");
+  s.ajouter(placer(new THREE.BoxGeometry(0.08, 0.1, 0.09), xm + 0.07, 2.32, zs), 0x8e2620, "tole");
+  s.perche(new V3(xm + 0.09, 2.35, zs), new V3(xm + 0.2, 2.44, zs), 0.012, 0x3a3836, "metal", 5);
+  s.ajouter(placer(new THREE.SphereGeometry(0.025, 6, 4), xm + 0.21, 2.45, zs), 0x3a3836, "metal");
+  s.perche(new V3(xm + 0.03, 2.27, zs), new V3(xm + 0.03, 1.5, zs), 0.016, 0x8a8f94, "metal", 6);
+  s.ajouter(placer(new THREE.BoxGeometry(0.07, 0.2, 0.15), xm + 0.035, 1.4, zs), 0xd8b52a, "tole");
+  s.ajouter(placer(new THREE.CylinderGeometry(0.042, 0.048, 0.04, 10).rotateZ(Math.PI / 2), xm + 0.09, 1.42, zs), 0xc8261e, "tole");
+  s.ajouter(placer(new THREE.BoxGeometry(0.008, 0.035, 0.11), xm + 0.072, 1.33, zs), 0x2a2826, "mat");
+  const sonnette = s.groupe();
+  sonnette.name = "leurre-sonnette";
+  groupe.add(sonnette);
+
+  // La radio à piles : un poste portatif des années 70, orange et crème, la grille du haut-parleur, le cadran, la
+  // poignée, et l'antenne télescopique tirée, qui se voit de loin. Construite face à +z, puis tournée vers la caméra ;
+  // nettement plus grande que nature (×1,3) et de couleurs vives : l'atelier est sombre, elle doit s'y repérer.
+  const r = new Assemblage(2362);
+  const ORANGE = 0xe36a2c;
+  const CREME = 0xf0e6c8;
+  r.ajouter(placer(new THREE.BoxGeometry(0.44, 0.26, 0.13), 0, 0.13, 0), ORANGE, "tole", 0.03);
+  r.ajouter(placer(new THREE.BoxGeometry(0.45, 0.045, 0.135), 0, 0.27, 0), CREME, "tole");
+  // La grille : des fentes sombres sur une plaque argentée.
+  r.ajouter(placer(new THREE.BoxGeometry(0.2, 0.17, 0.006), -0.1, 0.13, 0.066), 0xd0d3d3, "metal");
+  for (let i = 0; i < 6; i++) r.ajouter(placer(new THREE.BoxGeometry(0.17, 0.008, 0.004), -0.1, 0.07 + i * 0.024, 0.07), 0x2a2826, "mat");
+  // Le cadran, crème, et ses deux boutons.
+  r.ajouter(placer(new THREE.BoxGeometry(0.15, 0.06, 0.006), 0.11, 0.18, 0.066), CREME, "mat");
+  r.ajouter(placer(new THREE.BoxGeometry(0.004, 0.05, 0.004), 0.09, 0.18, 0.07), 0xc8261e, "mat");
+  for (const x of [0.07, 0.15]) r.ajouter(placer(new THREE.CylinderGeometry(0.022, 0.022, 0.025, 8).rotateX(Math.PI / 2), x, 0.08, 0.075), 0x2a2826, "metal");
+  // La poignée, en arc au-dessus.
+  r.ajouter(placer(new THREE.TorusGeometry(0.13, 0.014, 4, 10, Math.PI), 0, 0.29, 0), 0x2a2826, "mat");
+  // L'antenne : trois brins de plus en plus fins, une boule au bout.
+  const pied = new V3(0.19, 0.29, -0.04);
+  const dir = new V3(0.42, 1, -0.2).normalize();
+  const brins = [0.013, 0.01, 0.008];
+  brins.forEach((rayon, i) => r.perche(pied.clone().addScaledVector(dir, i * 0.24), pied.clone().addScaledVector(dir, (i + 1) * 0.24 + 0.01), rayon, 0xe4e8ea, "metal", 5));
+  const bout = pied.clone().addScaledVector(dir, 0.73);
+  r.ajouter(placer(new THREE.SphereGeometry(0.02, 6, 4), bout.x, bout.y, bout.z), 0xe4e8ea, "metal");
+  const radio = r.groupe();
+  radio.name = "leurre-radio";
+  radio.position.set(LEURRES_COOP.radio.x, SOL + 0.94, LEURRES_COOP.radio.z);
+  radio.rotation.y = 0.55;
+  radio.scale.setScalar(1.3);
+  groupe.add(radio);
+  return groupe;
 }
 
 // ---------- L'atelier des tracteurs ----------
@@ -1963,7 +2061,7 @@ export function creerCooperative(): THREE.Group {
   // Ne portent une ombre en temps réel que le grillage et la camionnette (avec le transpalette, dans la cour).
   for (const o of fixes.children) if (o.name !== "grillage" && o.name !== "engins-cour") sansOmbrePortee(o);
   fixes.name = "fixe";
-  groupe.add(fixes, creerOmbres());
+  groupe.add(fixes, creerOmbres(), creerLeurres());
 
   const effacables: [Chantier, Toit[]][] = [
     [ch.ta, [{ boite: { x: (B.x0 + B.x1) / 2, z: (32 + B.z1) / 2, l: B.x1 - B.x0 + 0.4, p: B.z1 - 32 + 1 }, materiaux: [], bas: SOCLE, haut: HF + 0.6 }]],

@@ -173,13 +173,14 @@ NIVEAUX_INSTALLATIONS.forEach(([nom, type, niveau, etat], i) => {
 
 // ---------- Les armes en main ----------
 
-const ARMES: TypeObjet[] = ["hache", "marteau", "barre_metal", "couteau", "lame_forgee", "gourdin", "epieu"];
+// Les armes de la 0.5 (Book 23 §4.6) : machette, masse et lance arrivent dans les types de `commun/`.
+const ARMES = ["hache", "marteau", "barre_metal", "couteau", "lame_forgee", "gourdin", "epieu", "pied_de_biche", "machette", "masse", "lance"] as TypeObjet[];
 const etatArmes = { pose: "repos" as "repos" | "garde" | "frappe", attente: 0 };
 const porteurs: Personnage[] = [];
 void chargerHumanoides().then(() => {
   ARMES.forEach((arme, i) => {
     const p = new Personnage((["charbonniers", "voltaiques", "mecanistes"] as const)[i % 3]);
-    p.objet.position.set(i * 1.6, 0, 17);
+    p.objet.position.set(i * 1.6, 0, -14); // à l'écart des feux et des installations
     p.tenir(arme);
     scene.add(p.objet);
     porteurs.push(p);
@@ -187,8 +188,8 @@ void chargerHumanoides().then(() => {
     // L'arme seule, posée à plat devant le porteur : pour la regarder de près et la mesurer.
     const seule = creerArme(arme);
     if (seule) {
-      seule.rotation.set(0, -Math.PI / 2, 0);
-      seule.position.set(i * 1.6, 0.05, 18.4);
+      // Couchée vers la caméra : les armes longues (épieu, lance) ne chevauchent plus leurs voisines.
+      seule.position.set(i * 1.6, 0.05, -13.1);
       scene.add(seule);
       articles.push({ nom: `arme ${arme}`, section: "armes", objet: seule, haut: 0.2, mesure: seule });
     }
@@ -302,7 +303,7 @@ function placerEtiquettes(camera: THREE.Camera): void {
 const VUES: Record<Section, { cible: [number, number, number]; distance: number }> = {
   installations: { cible: [14, 0.6, 2.2], distance: 26 },
   feux: { cible: [13.5, 0.3, 11], distance: 20 },
-  armes: { cible: [4.8, 1, 17.5], distance: 9 },
+  armes: { cible: [8, 1, -13.5], distance: 14 },
   ressources: { cible: [8.75, 0.3, 24.5], distance: 15 },
   station: { cible: [8, 1, 36], distance: 26 },
 };
@@ -317,6 +318,8 @@ const perspective = new THREE.PerspectiveCamera(35, 1, 0.1, 300);
 const ortho = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 300);
 const commandes = new OrbitControls(perspective, canvas);
 commandes.enableDamping = true;
+// Pour cadrer depuis la console (et les captures automatiques).
+Object.assign(window, { perspective, commandes, porteurs });
 function choisirVue(s: Section): void {
   etat.section = s;
   const v = VUES[s];

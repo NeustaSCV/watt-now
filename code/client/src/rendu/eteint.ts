@@ -5,8 +5,9 @@
 
 import * as THREE from "three";
 import type { EteintVu } from "../../../commun/src/eteints.ts";
-import { Humanoide, chargerHumanoides, humanoidesPrets, type Coiffure } from "./humanoides.ts";
+import { Humanoide, chargerHumanoides, humanoidesPrets, type Coiffure, type Tenue } from "./humanoides.ts";
 import { aleatoire } from "./materiaux.ts";
+import { Rampement, habillerVariante, herbeDuRampant, tenueDeVariante } from "./variantes-eteints.ts";
 
 const HAUTEUR = 1.72;
 const PEAUX = [0x8a9a7a, 0x7f8f74, 0x95a088, 0x86907c];
@@ -18,6 +19,8 @@ const CHEVEUX = [0x4a4038, 0x3a3330, 0x6b6258, 0x2e2925];
 
 /** Vitesse propre de la marche d'Éteint (m/s, ramenée à sa taille). */
 const VITESSE_MARCHE = 1.0;
+/** Le Rampant, couché sur le ventre : le corps est basculé vers l'avant, relevé de l'épaisseur du torse, recentré. */
+const RAMPANT = { levee: 0.14, recul: -0.8 };
 
 export class VueEteint {
   readonly objet = new THREE.Group();
@@ -29,6 +32,10 @@ export class VueEteint {
   private ouverture: number;
   private taches = 0;
   private readonly aleat: () => number;
+  /** Le Rampant (Book 23 §3) : au sol, sur le ventre, l'herbe qui frémit autour de lui. */
+  private readonly rampant: boolean;
+  private herbe: ReturnType<typeof herbeDuRampant> | null = null;
+  private rampement: Rampement | null = null;
 
   constructor(e: EteintVu) {
     this.cible = e;
@@ -36,6 +43,7 @@ export class VueEteint {
     this.objet.position.set(e.x, 0, e.z);
     this.objet.rotation.y = e.o;
     this.ouverture = e.etat === "dormant" ? 0 : 1;
+    this.rampant = e.variante === "rampant";
     if (humanoidesPrets()) this.construire();
     else void chargerHumanoides().then(() => this.construire());
   }
@@ -45,19 +53,24 @@ export class VueEteint {
     const choisir = <T>(l: readonly T[]): T => l[Math.floor(a() * l.length)]!;
     const genre = a() < 0.5 ? "femme" : "homme";
     const coiffure = choisir(COIFFURES);
+    const v = this.cible.variante;
+    const peau = choisir(PEAUX);
+    const tenueTiree: Tenue = {
+      haut: choisir(HAUTS),
+      // Manches arrachées, pieds nus : il a perdu ce qu'il pouvait perdre.
+      manche: a() < 0.5 ? choisir(HAUTS) : null,
+      bas: choisir(BAS),
+      pieds: a() < 0.6 ? 0x2a2622 : 0x6b6a5a,
+      mains: null,
+      dechirures: 0.25 + a() * 0.25,
+    };
     const corps = new Humanoide({
       genre,
-      peau: choisir(PEAUX),
-      tenue: {
-        haut: choisir(HAUTS),
-        // Manches arrachées, pieds nus : il a perdu ce qu'il pouvait perdre.
-        manche: a() < 0.5 ? choisir(HAUTS) : null,
-        bas: choisir(BAS),
-        pieds: a() < 0.6 ? 0x2a2622 : 0x6b6a5a,
-        mains: null,
-        dechirures: 0.25 + a() * 0.25,
-      },
-      coiffure: coiffure === "buns" && genre === "homme" ? "buzzed" : coiffure,
+      peau,
+      // Les variantes gardent le même tirage (même corps, même taille) et changent seulement d'habits.
+      tenue: v ? tenueDeVariante(v, tenueTiree) : tenueTiree,
+      // Sous le casque de l'Équipé, pas de cheveux.
+      coiffure: v === "equipe" ? null : coiffure === "buns" && genre === "homme" ? "buzzed" : coiffure,
       couleurCheveux: choisir(CHEVEUX),
       tete: 1.25,
       hauteur: HAUTEUR * (0.95 + a() * 0.08),
@@ -65,8 +78,16 @@ export class VueEteint {
       graine: this.cible.id,
     });
     this.corps = corps;
+    if (v) habillerVariante(corps, v, this.cible.id * 17 + 3);
     corps.fermerLesYeux(this.ouverture);
     this.objet.add(corps.objet);
+    if (this.rampant) {
+      this.rampement = new Rampement(corps);
+      corps.objet.rotation.x = Math.PI / 2;
+      corps.objet.position.set(0, RAMPANT.levee, RAMPANT.recul);
+      this.herbe = herbeDuRampant(this.cible.id * 31 + 5);
+      this.objet.add(this.herbe.objet);
+    }
     // Chacun traîne à son rythme.
     corps.mixer.timeScale = 0.9 + a() * 0.2;
   }
@@ -85,7 +106,7 @@ export class VueEteint {
     if (!c) return;
     this.taches = Math.min(4, this.taches + 1);
     c.tacher(this.taches);
-    const debout = this.cible.etat !== "a_terre" && this.cible.etat !== "detruit" && this.cible.etat !== "dormant";
+    const debout = !this.rampant && this.cible.etat !== "a_terre" && this.cible.etat !== "detruit" && this.cible.etat !== "dormant";
     if (!debout) return;
     const a = c.jouer(this.aleat() < 0.5 ? "Hit_Head" : "Hit_Chest", { boucle: false, fondu: 0.06, vitesse: 1.3 });
     if (a) {
@@ -96,7 +117,7 @@ export class VueEteint {
 
   get hauteurTete(): number {
     const e = this.cible.etat;
-    return e === "a_terre" || e === "detruit" || e === "dormant" ? 0.25 : HAUTEUR * 0.92;
+    return this.rampant || e === "a_terre" || e === "detruit" || e === "dormant" ? 0.25 : HAUTEUR * 0.92;
   }
 
   /** `vitesseImposee` : pour la planche des personnages (marche sur place) ; sinon, d'après le déplacement. */
@@ -117,6 +138,11 @@ export class VueEteint {
     const ouvert = etat === "dormant" ? 0 : 1;
     this.ouverture += (ouvert - this.ouverture) * Math.min(1, dt * (ouvert ? 6 : 1));
     c.fermerLesYeux(this.ouverture);
+
+    if (this.rampant) {
+      this.ramper(dt, vitesse);
+      return;
+    }
 
     const avantEtat = this.etatJoue;
     this.etatJoue = etat;
@@ -141,5 +167,18 @@ export class VueEteint {
       c.jouer("Zombie_Walk_Fwd_Loop", { fondu: 0.3, vitesse: Math.min(presse ? 2 : 1.5, Math.max(0.5, vitesse / VITESSE_MARCHE)) });
     } else c.jouer("Zombie_Idle_Loop", { fondu: 0.4 });
     c.mettreAJour(dt);
+  }
+
+  /**
+   * Le Rampant : il ne se relève jamais. Couché sur le ventre, il rampe (Rampement : les bras tirent le corps chacun
+   * son tour, les jambes traînent) ; il griffe quand il saisit une cheville. L'herbe frémit autour de lui quand il
+   * bouge, à peine quand il guette, pas du tout quand il dort.
+   */
+  private ramper(dt: number, vitesse: number): void {
+    const etat = this.cible.etat;
+    const inerte = etat === "dormant" || etat === "a_terre" || etat === "detruit";
+    const bouge = !inerte && vitesse > 0.05;
+    this.rampement?.animer(dt, bouge ? Math.min(1.6, 0.4 + vitesse) : 0, !inerte && !!this.cible.saisit);
+    this.herbe?.animer(dt, inerte ? 0 : bouge ? Math.min(1, 0.45 + vitesse * 0.6) : 0.12);
   }
 }

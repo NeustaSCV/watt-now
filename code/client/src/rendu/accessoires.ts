@@ -59,9 +59,9 @@ export function bandeau(m: Mesure, y: number, hauteur: number, ecart: number, ma
  * Un pan de tissu ou de cuir qui épouse le devant du corps, de y0 (haut) à y1 (bas), sur une demi-largeur
  * donnée ; `courbure` arrondit le pan sur les côtés. `ecart` : son épaisseur au-dessus du corps.
  */
-export function pan(m: Mesure, y0: number, y1: number, demiLargeur: number, materiau: THREE.Material, o: { courbure?: number; ecart?: number; evase?: number } = {}): THREE.Mesh {
-  const lignes = 10;
-  const colonnes = 8;
+export function pan(m: Mesure, y0: number, y1: number, demiLargeur: number, materiau: THREE.Material, o: { courbure?: number; ecart?: number; evase?: number; lignes?: number; colonnes?: number } = {}): THREE.Mesh {
+  const lignes = o.lignes ?? 10;
+  const colonnes = o.colonnes ?? 8;
   const positions: number[] = [];
   const indices: number[] = [];
   for (let i = 0; i <= lignes; i++) {

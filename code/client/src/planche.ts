@@ -45,15 +45,32 @@ const survivants = FAMILLES.map(([f], i) => {
   scene.add(p.objet);
   return p;
 });
-const eteints = [3, 8].map((id, i) => {
-  const e: EteintVu = { id, x: (i + 1) * ECART, z: 0, o: 0, etat: "errant" };
-  const v = new VueEteint(e);
-  scene.add(v.objet);
-  return { v, e };
-});
+// personnages.html#variantes : les variantes d'Éteints de la Coopérative (Book 23 §3), à côté d'un Errant.
+const VARIANTES = location.hash.includes("variantes");
+const LISTE_VARIANTES: [EteintVu["variante"], string][] = [
+  [undefined, "Errant"],
+  ["equipe", "Équipé (casque)"],
+  ["rampant", "Rampant"],
+  ["magasinier", "Magasinier"],
+  ["mecanicien", "Mécanicien"],
+];
+const eteints = VARIANTES
+  ? LISTE_VARIANTES.map(([variante], i) => {
+      const e: EteintVu = { id: 3 + i * 5, x: (i - 2) * ECART, z: 0, o: 0, etat: "errant", ...(variante ? { variante } : {}) };
+      const v = new VueEteint(e);
+      scene.add(v.objet);
+      return { v, e };
+    })
+  : [3, 8].map((id, i) => {
+      const e: EteintVu = { id, x: (i + 1) * ECART, z: 0, o: 0, etat: "errant" };
+      const v = new VueEteint(e);
+      scene.add(v.objet);
+      return { v, e };
+    });
 const compteurs = [new Compteur(-3 * ECART, 0, 0, true, "femme"), new Compteur(-4 * ECART, 0, 0, false, "homme")];
 for (const c of compteurs) scene.add(c.objet);
-document.getElementById("legende")!.innerHTML = [...FAMILLES.map(([, n]) => n), "Éteint", "Éteinte"].map((n) => `<span>${n}</span>`).join("");
+if (VARIANTES) for (const o of [...survivants, ...compteurs]) o.objet.visible = false;
+document.getElementById("legende")!.innerHTML = (VARIANTES ? LISTE_VARIANTES.map(([, n]) => n) : [...FAMILLES.map(([, n]) => n), "Éteint", "Éteinte"]).map((n) => `<span>${n}</span>`).join("");
 
 // ---------- Les réglages ----------
 
@@ -202,6 +219,15 @@ Object.assign(window, {
     },
     etat,
     camera,
+    /** Cadrer de près (captures) : la caméra en (x, y, z), qui regarde (tx, ty, tz). */
+    regarder(x: number, y: number, z: number, tx: number, ty: number, tz: number) {
+      camera.position.set(x, y, z);
+      camera.lookAt(tx, ty, tz);
+    },
+    /** Masquer la barre des réglages (captures). */
+    nue() {
+      barre.style.display = "none";
+    },
     scene,
     survivants,
     eteints,

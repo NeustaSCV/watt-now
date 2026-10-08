@@ -237,8 +237,8 @@ export interface LeurreCoop {
 }
 export const LEURRES: LeurreCoop[] = [
   { id: "klaxon", nom: "le klaxon du tracteur", x: 13.9, z: 21.2, portee: 40, duree: 3 },
-  { id: "sonnette", nom: "la sonnette du quai", x: 34.6, z: 28.6, portee: 28, duree: 2.5 },
-  { id: "radio", nom: "la radio à piles", x: 6.2, z: 30.8, portee: 22, duree: 0 },
+  { id: "sonnette", nom: "la sonnette du quai", x: 34.3, z: 28.6, portee: 28, duree: 2.5 },
+  { id: "radio", nom: "la radio à piles", x: 7.2, z: 30.5, portee: 22, duree: 0 },
 ];
 /** La batterie du tracteur tient quatre coups de klaxon ; les piles de la radio, dix minutes. */
 export const KLAXONS_PAR_BATTERIE = 4;
