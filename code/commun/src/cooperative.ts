@@ -180,6 +180,8 @@ export function pieceDe(x: number, z: number): PieceCoop {
       aire = b.l * b.p;
     }
   }
+  // Le coin nord-ouest du grand bâtiment (derrière le quai, à côté de la chambre froide) appartient au hangar.
+  if (meilleure === "dehors" && Math.abs(x - BATIMENT.x) <= BATIMENT.l / 2 && Math.abs(z - BATIMENT.z) <= BATIMENT.p / 2) return "hangar";
   return meilleure;
 }
 
