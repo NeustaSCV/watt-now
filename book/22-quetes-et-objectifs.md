@@ -185,7 +185,7 @@ Les objets de la quête (cassette, plan, carnet de fan, laissez-passer, boussole
 - `commun/src/quetes.ts` : les objectifs « S'installer » (10), « Le métier » (4 par famille) et « Les autres » (3), leurs conditions et leurs récompenses. Une condition peut accepter plusieurs preuves (« on l'a » ou « on l'a déjà fait ») : personne ne reste bloqué.
 - `serveur/src/quetes.ts` : le suivi. Le serveur constate toutes les demi-secondes ce que le joueur a fait (faits comptés : repas, ventes, dépôts, échanges, visites) ou possède (objets, installations, Wh, vivres). Ce qui est déjà fait compte.
 - Les primes sont versées sur le compte du Comptoir, prises sur la trésorerie ; vide, elles attendent.
-- Le carnet (HUD) prend le relais du tutoriel : une ligne par objectif, ses compteurs, sa récompense ; un message à chaque réussite. Il se replie en un petit onglet (replié d'office sur téléphone ; le choix est gardé).
+- Le carnet (HUD) prend le relais du tutoriel : une ligne par objectif, ses compteurs, sa récompense ; un message à chaque réussite. Depuis la 0.4, c'est une **tuile « Carnet »** à côté de Sac, Fabriquer et Carte (Book 18 §3), avec une pastille quand un objectif avance ; son panneau s'ouvre et se ferme à la demande. Il pourra un jour accueillir le classement (Book 09 §3), quand celui-ci existera.
 - Tout est gardé en base (colonne `quetes` du personnage).
 
 ## 6. Questions ouvertes

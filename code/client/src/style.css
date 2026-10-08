@@ -3306,3 +3306,318 @@ body {
   opacity: 0.6;
   text-align: right;
 }
+
+/* ---------- Le haut de l'écran en bandeau (spécification de Sally, 0.4) ----------
+   Identité à gauche, carnet au centre, état et raccourcis à droite : une seule grille, chacun dans sa colonne.
+   Les anciennes positions absolues des blocs sont neutralisées ici : rien ne peut plus se chevaucher. */
+
+#hud .bandeau {
+  position: absolute;
+  z-index: 12;
+  top: max(8px, env(safe-area-inset-top));
+  left: max(12px, env(safe-area-inset-left));
+  right: max(12px, env(safe-area-inset-right));
+  display: grid;
+  gap: 8px;
+  align-items: start;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    "id etat"
+    "id racc";
+  pointer-events: none;
+}
+#hud .bandeau > * {
+  pointer-events: auto;
+  /* Les anciennes règles plaçaient chaque bloc au pixel (et centraient les raccourcis par translation) : neutralisé. */
+  transform: none;
+}
+#hud .bandeau > .identite {
+  grid-area: id;
+  justify-self: start;
+  position: static;
+  min-width: 0;
+  width: min(260px, calc(50vw - 42px));
+  max-width: min(260px, calc(50vw - 42px));
+}
+#hud .bandeau > .etat {
+  grid-area: etat;
+  justify-self: end;
+  position: static;
+  padding: 0;
+  background: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  text-align: right;
+  color: #f4ecd8;
+}
+#hud .bandeau > .raccourcis {
+  grid-area: racc;
+  justify-self: end;
+  position: static;
+}
+
+/* L'état, sans cadre : deux boutons ronds, puis l'heure et les wotts posés sur le jeu, lisibles par leur ombre. */
+#hud .etat .boutons {
+  gap: 6px;
+}
+#hud .etat .boutons > .partir,
+#hud .etat .boutons > .options {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.28);
+  font-size: 20px;
+}
+#hud .etat .ligne-haut {
+  display: flex;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: 0;
+  margin-top: 4px;
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 2px #000, 0 0 6px rgba(0, 0, 0, 0.6);
+  white-space: nowrap;
+}
+#hud .etat .ligne-haut .horloge,
+#hud .etat .ligne-haut .wotts {
+  display: inline;
+  font-size: inherit;
+}
+#hud .etat .ligne-haut .latence-alerte {
+  margin-right: 6px;
+  color: #ffb347;
+}
+#hud .etat .mesures {
+  font-size: 11px;
+  opacity: 0.85;
+  text-shadow: 0 1px 2px #000;
+}
+#hud .etat .mesures[hidden],
+#hud .etat .meteo[hidden],
+#hud .etat .latence-alerte[hidden] {
+  display: none;
+}
+#hud .etat .menu-options {
+  top: 50px;
+}
+#hud .etat .menu-options button {
+  min-height: 44px;
+}
+
+/* Le carnet : une tuile comme Sac, Fabriquer et Carte (retour du porteur, 0.4), avec sa pastille dans le coin. */
+#hud .raccourcis .b-carnet {
+  position: relative;
+}
+#hud .raccourcis .b-carnet[hidden] {
+  display: none;
+}
+#hud .raccourcis .b-carnet[aria-expanded="true"] {
+  border-color: var(--rouge);
+  box-shadow: 0 0 0 2px var(--rouge);
+}
+#hud .b-carnet .etape-carnet {
+  position: absolute;
+  bottom: -15px;
+  left: 0;
+  right: 0;
+  font-size: 10px;
+  font-weight: 700;
+  color: #f4ecd8;
+  text-shadow: 0 1px 2px #000;
+}
+#hud .b-carnet .pastille-carnet {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: #c8362b;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 18px;
+}
+#hud .b-carnet .pastille-carnet.reussi {
+  background: #4f9e72;
+  animation: rebond-carnet 0.5s ease-out;
+}
+#hud .b-carnet .pastille-carnet[hidden] {
+  display: none;
+}
+@keyframes rebond-carnet {
+  0% { transform: scale(0.4); }
+  70% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #hud .b-carnet .pastille-carnet.reussi {
+    animation: none;
+  }
+}
+
+#hud .carnet,
+#hud .carnet.ouvert {
+  position: absolute;
+  z-index: 13;
+  top: calc(var(--haut-bandeau, 120px) + 8px);
+  /* Les anciennes règles du carnet (à gauche, puis à droite en paysage) sont nombreuses : on les écrase ici. */
+  left: 50% !important;
+  right: auto !important;
+  transform: translateX(-50%);
+  width: min(340px, calc(100vw - 24px)) !important;
+  max-height: min(60dvh, calc(100dvh - var(--haut-bandeau, 120px) - 24px));
+  overflow-y: auto;
+  font-size: 14px;
+}
+#hud .carnet header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 6px 0 12px;
+}
+#hud .carnet header h2 {
+  margin: 0;
+  font-size: 15px;
+  font-family: "Bradley Hand", "Segoe Print", "Chalkboard SE", Georgia, serif;
+}
+#hud .carnet .fermer-carnet {
+  width: 44px;
+  height: 44px;
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  cursor: pointer;
+  color: inherit;
+}
+#hud .carnet .quete .passer {
+  display: block;
+  margin: 6px 0 0 auto;
+  font: inherit;
+  font-size: 12px;
+  border: none;
+  background: transparent;
+  color: var(--canard);
+  text-decoration: underline;
+  cursor: pointer;
+  min-height: 32px;
+}
+
+/* Messages et panneaux : juste sous le bandeau. */
+#hud .messages {
+  top: calc(var(--haut-bandeau, 120px) + 8px);
+}
+
+/* Le dialogue de départ : une page de carnet, comme le rapport d'absence. */
+#hud .depart {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.45);
+  pointer-events: auto;
+}
+#hud .depart[hidden] {
+  display: none;
+}
+#hud .depart .carte-depart {
+  width: min(360px, calc(100vw - 32px));
+  border-radius: 6px;
+  background: #f2ead6;
+  color: var(--encre);
+  box-shadow: 0 0 0 4px #e3d6b5, 0 18px 50px rgba(0, 0, 0, 0.5);
+}
+#hud .depart h2,
+#hud .depart p {
+  margin: 0;
+}
+#hud .depart h2 {
+  padding: 16px 18px 6px;
+  font-size: 18px;
+}
+#hud .depart p {
+  padding: 4px 18px 12px;
+  line-height: 1.45;
+  font-size: 14px;
+}
+#hud .depart .boutons-depart {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  padding: 0 18px 16px;
+}
+#hud .depart button {
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 6px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  border: 2px solid var(--encre);
+  background: transparent;
+  color: var(--encre);
+}
+#hud .depart .rester {
+  background: var(--encre);
+  color: #f2ead6;
+}
+
+/* Téléphone en paysage : une seule ligne, le carnet et les raccourcis au centre. */
+@media (orientation: landscape) and (max-height: 520px) and (pointer: coarse) {
+  #hud .bandeau {
+    grid-template-columns: min(210px, 25vw) auto minmax(0, 1fr);
+    grid-template-areas: "id racc etat";
+  }
+  #hud .bandeau > .identite {
+    min-width: 0;
+    width: min(210px, 25vw);
+    max-width: min(210px, 25vw);
+    padding: 6px 8px;
+    gap: 3px;
+  }
+  #hud .bandeau > .identite .nom {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #hud .bandeau > .raccourcis {
+    justify-self: start;
+  }
+  #hud .bandeau > .raccourcis button {
+    width: 52px;
+  }
+  #hud .carnet,
+  #hud .carnet.ouvert {
+    width: min(380px, 46vw) !important;
+  }
+}
+@media (pointer: coarse) {
+  #hud .etat .ligne-haut {
+    font-size: 14px;
+  }
+}
+
+/* Téléphone en portrait : quatre tuiles un peu plus étroites, le bloc des jauges aussi, pour tenir sur 390 pt. */
+@media (max-width: 560px) and (orientation: portrait) {
+  #hud .bandeau > .identite {
+    width: min(136px, 35vw);
+    max-width: min(136px, 35vw);
+    padding: 6px 8px;
+  }
+  #hud .bandeau > .raccourcis {
+    gap: 6px;
+  }
+  #hud .bandeau > .raccourcis button {
+    width: 50px;
+    font-size: 9px;
+  }
+}

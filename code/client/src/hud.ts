@@ -34,6 +34,7 @@ import type { VueTutoriel } from "../../commun/src/tutoriel.ts";
 import type { VueQuetes } from "../../commun/src/quetes.ts";
 import { formaterHeure } from "../../commun/src/temps.ts";
 import { COULEURS_FAMILLES } from "./accueil.ts";
+import { ecrire, lire } from "./stockage.ts";
 import type { Commande } from "./entrees.ts";
 import { icone, type Pictogramme } from "./icones.ts";
 import type { Propositions } from "./interaction.ts";
@@ -98,15 +99,23 @@ function kg(valeur: number): string {
   return valeur.toFixed(2).replace(".", ",").replace(/,?0+$/, "");
 }
 
-/** Le carnet ouvert ou replié : le choix du joueur s'il en a fait un, sinon replié sur un petit écran tactile. */
-function lireCarnetOuvert(): boolean {
+/** Les infos techniques (images/s, latence, version) affichées ou non. */
+const CLE_INFOS = "watt.infos";
+
+/** Le choix du joueur pour le carnet (ouvert ou fermé), s'il en a fait un. */
+function lireChoixCarnet(): boolean | null {
   try {
     const v = localStorage.getItem("watt.carnet");
     if (v) return v === "ouvert";
   } catch {
-    // Pas de stockage : on prend la valeur par défaut.
+    // Pas de stockage : pas de choix gardé.
   }
-  return !(window.matchMedia("(pointer: coarse)").matches && Math.min(window.innerWidth, window.innerHeight) < 600);
+  return null;
+}
+
+/** Le carnet ouvert ou fermé : le choix du joueur s'il en a fait un ; sinon fermé (l'icône 📓 suffit). */
+function lireCarnetOuvert(): boolean {
+  return lireChoixCarnet() ?? false;
 }
 
 export class Hud {
@@ -149,6 +158,9 @@ export class Hud {
   masquerPose(): void {
     this.element.querySelector<HTMLElement>(".pose")!.hidden = true;
   }
+  /** Le joueur est-il à son abri (pour le conseil du dialogue de départ) ? Branché par le jeu. */
+  aLAbri: (() => boolean) | null = null;
+  private infosTechniques = false;
   /** Le bouton « Son » : coupe ou remet le son, renvoie true si le son est actif. */
   surSon: (() => boolean) | null = null;
   private readonly element: HTMLElement;
@@ -209,6 +221,7 @@ export class Hud {
     this.element = element;
     this.actions = actions;
     element.innerHTML = `
+      <div class="bandeau">
       <div class="bloc identite">
         <div class="nom"><span class="pastille"></span><span class="texte"></span></div>
         <div class="jauge faim" title="Faim : touche pour comprendre" role="button" tabindex="0" data-jauge="faim"><span class="icone">🍞</span><span class="barre"><span></span></span></div>
@@ -219,10 +232,9 @@ export class Hud {
         <div class="blessures" hidden></div>
         <div class="explication-jauge" hidden role="note"></div>
       </div>
-      <div class="bloc etat">
-        <div class="ligne-haut"><span class="meteo" title="Le temps qu'il fait">☀️</span><div class="horloge">–</div><div class="wotts" title="Tes bons de wotts (ils se déchargent d'≈ 2 % par semaine)">⚡ <span>0 wott</span></div></div>
-        <div class="mesures">v${VERSION} · <span class="ips">–</span> img/s · <span class="latence">–</span> ms</div>
+      <div class="etat">
         <div class="boutons">
+          <button type="button" class="partir" aria-label="Partir" title="Partir">🚪</button>
           <button type="button" class="options" aria-label="Options" aria-expanded="false" aria-haspopup="true" title="Options">
             <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3.3h-4L10.7 6a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.4 7.4 0 0 0 1.7 1l.3 2.6h4l.3-2.6a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg>
           </button>
@@ -230,15 +242,29 @@ export class Hud {
             ${tactile ? "" : `<button type="button" class="r-commandes" role="menuitem">Commandes</button>`}
             <button type="button" class="son" role="menuitem" aria-pressed="true">Son : oui</button>
             <button type="button" class="qualite" role="menuitem">Qualité : ${niveau}</button>
-            <button type="button" class="quitter" role="menuitem">Quitter</button>
+            <button type="button" class="infos" role="menuitem" aria-pressed="false">Infos techniques : non</button>
           </div>
         </div>
+        <div class="ligne-haut"><span class="meteo" hidden>☀️</span><span class="latence-alerte" hidden title="Connexion lente">📶</span><span class="horloge">–</span><span class="sep"> · </span><span class="wotts" title="Tes bons de wotts (ils se déchargent d'≈ 2 % par semaine)">⚡ <span>0 wott</span></span></div>
+        <div class="mesures" hidden>v${VERSION} · <span class="ips">–</span> img/s · <span class="latence">–</span> ms</div>
       </div>
       <div class="raccourcis">
+        <button type="button" class="b-carnet" hidden aria-label="Carnet (J)" title="Carnet (J)" aria-expanded="false"><svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><path d="M8 4 h16 a2 2 0 0 1 2 2 v20 a2 2 0 0 1 -2 2 h-16 Z" fill="#a4552f" stroke="#3b2a1e" stroke-width="2" stroke-linejoin="round"/><path d="M8 4 v24" stroke="#3b2a1e" stroke-width="3"/><rect x="12" y="9" width="10" height="6" rx="1" fill="#ecdfbf" stroke="#3b2a1e" stroke-width="1.2"/><path d="M13 19 h8 M13 22 h6" stroke="#ecdfbf" stroke-width="1.4" stroke-linecap="round"/><path d="M22 4 v8 l2 -1.5 l2 1.5 v-8" fill="#c8362b" stroke="#3b2a1e" stroke-width="1"/></svg><span>Carnet</span><span class="etape-carnet"></span><span class="pastille-carnet" hidden></span></button>
         <button type="button" class="r-sac" title="Sac (I)" aria-label="Sac">${icone("sac_a_dos", 30)}<span>Sac</span></button>
         <button type="button" class="r-fabriquer" title="Fabriquer (C)" aria-label="Fabriquer">${icone("marteau", 30)}<span>Fabriquer</span></button>
         <button type="button" class="r-carte" title="Carte (M)" aria-label="Carte"><svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><path d="M4 8 L11 5 L21 8 L28 5 V24 L21 27 L11 24 L4 27 Z" fill="#ecdfbf" stroke="#3b2a1e" stroke-width="2" stroke-linejoin="round"/><path d="M11 5 V24 M21 8 V27" stroke="#3b2a1e" stroke-width="1.5"/><path d="M7 19 C10 15 14 18 17 13 S23 12 25 9" fill="none" stroke="#c8362b" stroke-width="1.8" stroke-dasharray="2 2"/></svg><span>Carte</span></button>
         <button type="button" class="r-tourner" title="Tourner la vue (V)" aria-label="Tourner la vue"><svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><path d="M25 12a10 10 0 1 0 1 8" fill="none" stroke="#1c2333" stroke-width="3" stroke-linecap="round"/><path d="M27 5v8h-8" fill="none" stroke="#c8362b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Vue</span></button>
+      </div>
+      </div>
+      <div class="depart" hidden role="alertdialog" aria-modal="true" aria-labelledby="titre-depart">
+        <div class="carte-depart">
+          <h2 id="titre-depart">Partir pour aujourd'hui ?</h2>
+          <p class="texte-depart"></p>
+          <div class="boutons-depart">
+            <button type="button" class="rester">Rester</button>
+            <button type="button" class="confirmer-depart">Partir quand même</button>
+          </div>
+        </div>
       </div>
       <div class="messages" aria-live="polite"></div>
       <div class="gains" aria-live="polite"></div>
@@ -331,11 +357,54 @@ export class Hud {
     document.addEventListener("pointerdown", (e) => {
       if (!menu.hidden && !(e.target as HTMLElement).closest(".menu-options, .options")) ouvrirMenu(false);
     });
-    for (const b of menu.querySelectorAll<HTMLButtonElement>(".r-commandes, .quitter")) b.addEventListener("click", () => ouvrirMenu(false));
+    for (const b of menu.querySelectorAll<HTMLButtonElement>(".r-commandes")) b.addEventListener("click", () => ouvrirMenu(false));
     q(".qualite").addEventListener("click", () => {
       changerQualite(ORDRE_NIVEAUX[(ORDRE_NIVEAUX.indexOf(niveau) + 1) % ORDRE_NIVEAUX.length]!);
     });
-    q(".quitter").addEventListener("click", quitter);
+    // Infos techniques (images/s, latence, version) : cachées d'office, gardées dans le navigateur.
+    const infos = q<HTMLButtonElement>(".infos");
+    const montrerInfos = (oui: boolean) => {
+      q(".mesures").hidden = !oui;
+      infos.textContent = `Infos techniques : ${oui ? "oui" : "non"}`;
+      infos.setAttribute("aria-pressed", String(oui));
+      this.infosTechniques = oui;
+    };
+    montrerInfos(lire(CLE_INFOS) === "oui");
+    infos.addEventListener("click", () => {
+      montrerInfos(!this.infosTechniques);
+      ecrire(CLE_INFOS, this.infosTechniques ? "oui" : "non");
+    });
+    // Partir : un geste de jeu, pas un réglage. Un dialogue rappelle de dormir à l'abri (spécification de Sally).
+    const depart = q<HTMLDivElement>(".depart");
+    const fermerDepart = () => {
+      depart.hidden = true;
+    };
+    q(".partir").addEventListener("click", () => {
+      ouvrirMenu(false);
+      const aLAbri = this.aLAbri?.() ?? false;
+      q(".texte-depart").textContent = aLAbri
+        ? "Tu es à ton abri : tu vas dormir ici. Si tu reviens dans plus de 8 minutes, tu te réveilleras reposé, comme après une nuit complète. Ta faim et ta soif sont gelées pendant ton absence."
+        : "Conseil : va dormir dans ton abri avant de partir. Se déconnecter dans son abri compte comme une nuit complète. Ta faim, ta soif et ta fatigue sont gelées pendant ton absence.";
+      q(".confirmer-depart").textContent = aLAbri ? "Partir" : "Partir quand même";
+      depart.hidden = false;
+      q<HTMLButtonElement>(".rester").focus();
+    });
+    q(".rester").addEventListener("click", fermerDepart);
+    q(".confirmer-depart").addEventListener("click", () => {
+      fermerDepart();
+      quitter();
+    });
+    depart.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") fermerDepart();
+    });
+    depart.addEventListener("pointerdown", (e) => {
+      if (e.target === depart) fermerDepart();
+    });
+    // Le carnet : l'icône 📓 ouvre et ferme le panneau.
+    q(".b-carnet").addEventListener("click", () => this.basculerCarnet());
+    // La hauteur du bandeau, pour placer messages et panneaux juste dessous (sans jamais le chevaucher).
+    const bandeau = q(".bandeau");
+    new ResizeObserver(() => element.style.setProperty("--haut-bandeau", `${Math.ceil(bandeau.getBoundingClientRect().bottom)}px`)).observe(bandeau);
     this.tactile = tactile;
     if (!tactile) {
       q(".r-commandes").addEventListener("click", () => this.basculerCommandes());
@@ -762,20 +831,33 @@ export class Hud {
     }
   }
 
-  // ---------- Le carnet du tutoriel (É5, Book 14 §4.2) ----------
+  // ---------- Le carnet (tutoriel, puis objectifs) : une icône 📓 en haut au centre (spécification de Sally, 0.4) ----------
 
-  /** Le carnet ouvert ou replié (le choix est gardé ; replié d'office sur téléphone, où la place manque). */
+  /** Le panneau du carnet ouvert ou fermé (le choix est gardé ; au tout début du tutoriel, il s'ouvre d'office). */
   private carnetOuvert = lireCarnetOuvert();
   private tutoriel: VueTutoriel | null = null;
+  /** Objectifs qui ont avancé depuis la dernière ouverture (la pastille rouge). */
+  private nonLus = 0;
+  /** Un objectif vient d'être réussi : la pastille devient un tampon vert un moment. */
+  private reussiJusqua = 0;
+  private derniersProgres = "";
 
   majTutoriel(v: VueTutoriel | null): void {
     const fini = this.tutoriel !== null && v === null;
+    const nouvelleEtape = v !== null && this.tutoriel !== null && v.etape !== this.tutoriel.etape;
+    // Le tout début : le carnet s'ouvre d'office (on n'a pas encore pu choisir).
+    if (v && v.etape === 0 && this.tutoriel === null && lireChoixCarnet() === null) this.carnetOuvert = true;
     this.tutoriel = v;
     // L'aide-mémoire des touches, en bas de l'écran : le temps du tutoriel seulement.
     const aide = this.element.querySelector<HTMLElement>(".bloc.aide");
     if (aide) aide.hidden = !v;
     if (v?.lecon) this.message(`✓ ${v.lecon}`, "lecon");
-    if (fini) this.message("Tutoriel terminé : le monde est à toi. Ton carnet te propose maintenant des objectifs, pour t'installer et faire ton métier.", "lecon");
+    // Une nouvelle étape : sa consigne passe aussi dans les messages, carnet ouvert ou non.
+    if (nouvelleEtape && v) {
+      this.message(`📓 ${v.titre} : ${avecTouches(v.consigne, this.tactile)}`, "lecon");
+      if (!this.carnetOuvert) this.nonLus += 1;
+    }
+    if (fini) this.message("Tutoriel terminé : le monde est à toi. Ton carnet (📓, en haut) te propose maintenant des objectifs.", "lecon");
     this.dessinerCarnet();
   }
 
@@ -784,39 +866,60 @@ export class Hud {
   private quetes: VueQuetes | null = null;
 
   majQuetes(v: VueQuetes | null): void {
+    // Ce qui a avancé depuis la dernière fois : la pastille le compte, si le carnet est fermé.
+    const progres = JSON.stringify(v?.quetes.map((q) => [q.id, q.objectifs.map((o) => o.fait)]) ?? []);
+    if (this.quetes && progres !== this.derniersProgres && !this.carnetOuvert) this.nonLus += 1;
+    this.derniersProgres = progres;
     this.quetes = v;
     for (const r of v?.reussies ?? []) this.message(`✓ ${r.titre} : ${r.lecon}${r.recompense ? ` Reçu : ${r.recompense}.` : ""}`, "lecon");
+    if (v?.reussies?.length) {
+      this.reussiJusqua = performance.now() + 4000;
+      window.setTimeout(() => this.dessinerCarnet(), 4100);
+    }
     this.dessinerCarnet();
   }
 
-  private dessinerQuetes(el: HTMLElement, v: VueQuetes): void {
-    el.hidden = v.quetes.length === 0;
-    if (el.hidden) return;
-    el.classList.toggle("ouvert", this.carnetOuvert);
+  private contenuQuetes(v: VueQuetes): string {
     const LIGNES = { metier: "Le métier", installer: "S'installer", autres: "Les autres" } as const;
-    el.innerHTML = `
-      <button type="button" class="titre" aria-expanded="${this.carnetOuvert}">📓 Carnet · ${v.quetes.length === 1 ? "1 objectif" : `${v.quetes.length} objectifs`} <span class="chevron">${this.carnetOuvert ? "▾" : "▸"}</span></button>
-      ${!this.carnetOuvert ? "" : v.quetes
-        .map(
-          (q) => `<div class="quete">
-            <div class="ligne-quete">${LIGNES[q.ligne]}</div>
-            <div class="nom-quete">${q.titre}</div>
-            ${
-              q.objectifs.some((o) => o.but > 1) || q.objectifs.length > 1
-                ? `<div class="progres-tuto">${q.objectifs
-                    .map((o) => `<span class="${o.fait >= o.but ? "fait" : ""}">${o.libelle}${o.but > 1 ? ` <b>${o.fait}/${o.but}</b>` : ""}${o.fait >= o.but ? " ✓" : ""}</span>`)
-                    .join("")}</div>`
-                : ""
-            }
-            ${this.carnetOuvert ? `<p>${avecTouches(q.texte, this.tactile)}</p>${q.recompense ? `<p class="recompense">Récompense : ${q.recompense}</p>` : ""}` : ""}
-          </div>`,
-        )
-        .join("")}`;
-    el.querySelector(".titre")!.addEventListener("click", () => this.basculerCarnet());
+    return v.quetes
+      .map(
+        (q) => `<div class="quete">
+          <div class="ligne-quete">${LIGNES[q.ligne]}</div>
+          <div class="nom-quete">${q.titre}</div>
+          ${
+            q.objectifs.some((o) => o.but > 1) || q.objectifs.length > 1
+              ? `<div class="progres-tuto">${q.objectifs
+                  .map((o) => `<span class="${o.fait >= o.but ? "fait" : ""}">${o.libelle}${o.but > 1 ? ` <b>${o.fait}/${o.but}</b>` : ""}${o.fait >= o.but ? " ✓" : ""}</span>`)
+                  .join("")}</div>`
+              : ""
+          }
+          <p>${avecTouches(q.texte, this.tactile)}</p>${q.recompense ? `<p class="recompense">Récompense : ${q.recompense}</p>` : ""}
+        </div>`,
+      )
+      .join("");
   }
 
-  private basculerCarnet(): void {
-    this.carnetOuvert = !this.carnetOuvert;
+  private contenuTutoriel(v: VueTutoriel): string {
+    return `
+      <div class="quete">
+        <div class="ligne-quete">Tutoriel · étape ${v.etape + 1} sur ${v.total}</div>
+        <div class="nom-quete">${v.titre}</div>
+        ${
+          v.progres
+            ? `<div class="progres-tuto">${v.progres
+                .map((p) => `<span class="${p.fait >= p.but ? "fait" : ""}">${p.libelle} <b>${p.fait}/${p.but}</b>${p.fait >= p.but ? " ✓" : ""}</span>`)
+                .join("")}</div>`
+            : ""
+        }
+        <p>${avecTouches(v.consigne, this.tactile)}</p>
+        <button type="button" class="passer">Passer le tutoriel</button>
+      </div>`;
+  }
+
+  /** Ouvre ou ferme le panneau du carnet (l'icône, le ✕, Échap ou la touche J). */
+  basculerCarnet(ouvrir?: boolean): void {
+    this.carnetOuvert = ouvrir ?? !this.carnetOuvert;
+    if (this.carnetOuvert) this.nonLus = 0;
     try {
       localStorage.setItem("watt.carnet", this.carnetOuvert ? "ouvert" : "replie");
     } catch {
@@ -825,24 +928,33 @@ export class Hud {
     this.dessinerCarnet();
   }
 
+  get carnetEstOuvert(): boolean {
+    return this.carnetOuvert && !this.element.querySelector<HTMLElement>(".carnet")!.hidden;
+  }
+
   private dessinerCarnet(): void {
     const el = this.element.querySelector<HTMLElement>(".carnet")!;
+    const bouton = this.element.querySelector<HTMLButtonElement>(".b-carnet")!;
     const v = this.tutoriel;
-    if (!v && this.quetes) return this.dessinerQuetes(el, this.quetes);
-    el.hidden = !v;
-    if (!v) return;
-    el.classList.toggle("ouvert", this.carnetOuvert);
-    el.innerHTML = `
-      <button type="button" class="titre" aria-expanded="${this.carnetOuvert}">📓 <b>${v.etape + 1}/${v.total}</b> · ${v.titre}</button>
-      ${
-        v.progres
-          ? `<div class="progres-tuto">${v.progres
-              .map((p) => `<span class="${p.fait >= p.but ? "fait" : ""}">${p.libelle} <b>${p.fait}/${p.but}</b>${p.fait >= p.but ? " ✓" : ""}</span>`)
-              .join("")}</div>`
-          : ""
-      }
-      ${this.carnetOuvert ? `<p>${avecTouches(v.consigne, this.tactile)}</p><button type="button" class="passer">Passer le tutoriel</button>` : ""}`;
-    el.querySelector(".titre")!.addEventListener("click", () => this.basculerCarnet());
+    const q = !v && this.quetes && this.quetes.quetes.length > 0 ? this.quetes : null;
+    // L'icône : visible dès qu'il y a quelque chose à lire ; l'étape du tutoriel en petit ; la pastille.
+    bouton.hidden = !v && !q;
+    bouton.setAttribute("aria-expanded", String(this.carnetOuvert));
+    bouton.querySelector<HTMLElement>(".etape-carnet")!.textContent = v ? `${v.etape + 1}/${v.total}` : "";
+    const pastille = bouton.querySelector<HTMLElement>(".pastille-carnet")!;
+    const reussi = performance.now() < this.reussiJusqua;
+    pastille.hidden = !reussi && (this.nonLus === 0 || this.carnetOuvert);
+    pastille.classList.toggle("reussi", reussi);
+    pastille.textContent = reussi ? "✓" : String(Math.min(9, this.nonLus));
+    el.hidden = bouton.hidden || !this.carnetOuvert;
+    if (el.hidden) return;
+    const titre = v ? "Tutoriel" : `Carnet · ${q!.quetes.length === 1 ? "1 objectif" : `${q!.quetes.length} objectifs`}`;
+    const html = `
+      <header><h2>📓 ${titre}</h2><button type="button" class="fermer-carnet" aria-label="Fermer le carnet">✕</button></header>
+      <div class="contenu-carnet">${v ? this.contenuTutoriel(v) : this.contenuQuetes(q!)}</div>`;
+    if (el.innerHTML === html) return;
+    el.innerHTML = html;
+    el.querySelector(".fermer-carnet")!.addEventListener("click", () => this.basculerCarnet(false));
     el.querySelector(".passer")?.addEventListener("click", () => {
       if (window.confirm("Passer le tutoriel ? Tu pourras tout découvrir par toi-même.")) this.actions.passerTutoriel();
     });
@@ -1490,6 +1602,12 @@ export class Hud {
     if (instant - this.depuis < 500) return;
     this.ips.textContent = String(Math.round((this.images * 1000) / (instant - this.depuis)));
     this.latence.textContent = latenceMs > 0 ? String(Math.round(latenceMs)) : "–";
+    // Une connexion lente se signale même sans les infos techniques (📶 orange près de l'heure).
+    const alerte = this.element.querySelector<HTMLElement>(".latence-alerte");
+    if (alerte) {
+      alerte.hidden = !(latenceMs > 400);
+      alerte.title = `Connexion lente : ${Math.round(latenceMs)} ms`;
+    }
     this.images = 0;
     this.depuis = instant;
   }

@@ -65,7 +65,13 @@
 
 > **Décision (2026-10-08, proposition P-007) : le cercle de visée se voit toujours.** Il est dessiné par-dessus les objets, assez transparent pour qu'on comprenne qu'il est au sol ; un trait clair sur un contour sombre (lisible sur l'herbe, le béton, plus tard la neige) ; à la taille de ce qu'on vise (petit pour un champignon, large pour une épave) ; une pulsation lente. Le liseré lumineux sur l'objet visé reste à faire.
 
-> **Décision (2026-10-08) : un écran dégagé.** Sur téléphone comme sur ordinateur, les réglages (Commandes, Son, Qualité, Quitter) sont rangés dans un petit menu derrière une **roue dentée ⚙**, en haut à droite ; restent visibles les raccourcis Sac, Fabriquer, Carte. Le **carnet** des objectifs (Book 22) se replie en un petit onglet « 📓 Carnet · 3 objectifs » : replié d'office sur un téléphone, ouvert sur ordinateur, et le choix du joueur est gardé.
+> **Décision (2026-10-08, version 0.4, spécification de Sally, designeuse UX BMAD, validée sur maquettes) : un haut d'écran compact.**
+> - **Une seule grille** pour le haut de l'écran : les jauges à gauche, l'état et les tuiles à droite (en paysage téléphone : tout sur une ligne). Chaque élément a sa colonne : plus rien ne se chevauche (le bouton Vue n'est plus recouvert).
+> - **L'état sans cadre**, posé sur le jeu et lisible par son ombre : deux boutons ronds 🚪 **Partir** et ⚙ **Options**, puis la date, l'heure et les wotts. **Plus de météo** (on la voit dans la scène) ni de **version** (seulement sur l'écran titre). Les images/s et la latence passent dans « Infos techniques » (⚙) ; une connexion lente se signale d'un 📶 orange.
+> - **Partir n'est pas un réglage** : c'est un geste de jeu, avec un dialogue « Partir pour aujourd'hui ? » qui conseille d'aller dormir dans l'abri (ou dit « tu vas dormir ici » si l'on y est). [Rester] est le bouton principal.
+> - **Le menu ⚙** : Commandes (ordinateur), Son, Qualité, Infos techniques.
+> - **Le carnet** est une **tuile comme Sac, Fabriquer et Carte**, rangée avec elles (touche J), avec une **pastille** : rouge et chiffrée quand des objectifs ont avancé, verte ✓ quand un objectif est réussi. Son panneau descend sous les tuiles et se ferme par la tuile, ✕ ou Échap. Pas d'onglet « Classement » tant qu'il n'y a pas de classement (décision du porteur).
+> - Cibles tactiles de 44 px au moins ; zones de sécurité de l'iPhone respectées.
 
 ---
 

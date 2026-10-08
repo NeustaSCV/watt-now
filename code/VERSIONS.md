@@ -12,6 +12,19 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
+## 0.4 · en préparation
+
+**L'écran** (spécification de Sally, la designeuse UX de BMAD, validée sur maquettes ; Book 18 §3)
+- Le haut de l'écran tient dans une seule grille : plus rien ne se chevauche, sur ordinateur comme sur iPhone (le bouton Vue n'est plus recouvert).
+- En haut à droite, sans cadre : 🚪 Partir et ⚙ Options, puis la date, l'heure et les wotts. Plus de météo ni de version (la version reste sur l'écran titre).
+- **Partir** sort du menu des réglages : un dialogue conseille d'aller dormir dans son abri avant de partir.
+- Le menu ⚙ : Commandes, Son, Qualité, et « Infos techniques » (images/s, latence, version). Une connexion lente se signale d'un 📶 orange.
+- Le **carnet** devient une tuile, à côté de Sac, Fabriquer et Carte (touche J), avec une pastille quand un objectif avance ou est réussi.
+
+**Jouer**
+- **Déconnexion d'office après 5 minutes sans rien faire** (réglable) : hors ligne, la faim, la soif et la fatigue sont gelées. Un écran explique la pause et propose de reprendre.
+- Un conseil, dès la première nuit : aller dormir dans son abri avant de fermer le jeu (une nuit complète).
+
 ## 0.3 · déployée le 2026-10-08
 
 **Jouer : la gamme bushcraft, lot 1** (proposition P-002, Book 02 §14 bis), rien que des matières qu'on a déjà :

@@ -1,7 +1,7 @@
 {
   "name": "watt-now",
   "private": true,
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Watt Now? — jeu de survie multijoueur dans le navigateur (phase 0a)",
   "type": "module",
   "engines": {

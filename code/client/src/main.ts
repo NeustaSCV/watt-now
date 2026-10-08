@@ -891,6 +891,9 @@ function finirPose(choix: "tourner" | "annuler" | "poser"): void {
   hud.masquerPose();
 }
 hud.surPose = finirPose;
+// Le dialogue de départ dit si l'on part à l'abri (une nuit complète) ou s'il vaut mieux y aller d'abord.
+hud.aLAbri = () =>
+  lieu === "terrain" && position !== null && [...installations.values()].some((i) => i.vue.type === "abri" && Math.hypot(i.vue.x - position!.x, i.vue.z - position!.z) <= 3);
 
 function executer(c: Commande): void {
   // Pendant le choix de l'emplacement : A construit, la touche de lumière tourne, B ou Échap annulent.
@@ -958,11 +961,15 @@ function executer(c: Commande): void {
     case "sac":
       hud.basculerSac();
       return;
+    case "carnet":
+      hud.basculerCarnet();
+      return;
     case "fabriquer":
       hud.basculerFabrication();
       return;
     case "fermer":
       if (carte.ouverte) return carte.fermer();
+      if (hud.carnetEstOuvert) return hud.basculerCarnet(false);
       if (occupe && maintien?.tas) envoyer({ t: "annuler" });
       hud.fermerPanneaux();
       return;

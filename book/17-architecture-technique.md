@@ -39,6 +39,8 @@
 
 **Le serveur fait autorité** : c'est lui qui décide de tout (combat, crafting, économie). Le client ne fait qu'afficher et envoyer les intentions du joueur. Cela empêche la triche et garde le monde cohérent.
 
+**Déconnexion d'office (0.4, 2026-10-08)** : un joueur qui ne fait rien depuis **5 minutes** (réglage à chaud `inactivite_min`) est déconnecté. Ne comptent pas : les pings, les mesures, ni l'intention « ne pas bouger » que le client renvoie par sécurité. Hors ligne, la faim, la soif et la fatigue sont **gelées** (Book 01 §2 bis) : connecté et parti, elles baisseraient pour rien. Le joueur voit un écran qui explique la pause, redonne le conseil de l'abri, et propose « Reprendre ».
+
 **Ce que le serveur ne croit jamais** (0.1.1, 2026-10-08, après la revue BMAD) :
 
 - **Chaque message du client est contrôlé à l'arrivée** (`serveur/src/controle.ts`) : un type connu, des nombres finis, de vrais objets du jeu (pas « toString », qui existe sur tout objet JavaScript), des chaînes courtes. Le reste est ignoré sans réponse. Les règles du jeu (portée, inventaire, prix) sont vérifiées ensuite, comme avant.

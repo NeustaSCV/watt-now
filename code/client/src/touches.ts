@@ -18,6 +18,7 @@ export type Action =
   | "sac"
   | "fabriquer"
   | "carte"
+  | "carnet"
   | "lumiere"
   | "tourner"
   | "photo";
@@ -44,6 +45,7 @@ export const ACTIONS: Record<Action, DefAction> = {
   fabriquer: { libelle: "Fabriquer", defaut: "KeyB" },
   // Le M de l'AZERTY est à la place du « ; » du QWERTY (code Semicolon).
   carte: { libelle: "Carte", defaut: "Semicolon" },
+  carnet: { libelle: "Carnet (objectifs)", defaut: "KeyJ" },
   lumiere: { libelle: "Lumière portée", defaut: "KeyR" },
   tourner: { libelle: "Tourner la vue (Maj : dans l'autre sens)", defaut: "KeyV" },
   photo: { libelle: "Mode photo", defaut: "KeyP" },
@@ -193,6 +195,7 @@ const BOUTONS: Partial<Record<Action, string>> = {
   sac: "Sac",
   fabriquer: "Fabriquer",
   carte: "Carte",
+  carnet: "Carnet",
   lumiere: "Lumière",
   tourner: "⟳",
   courir: "joystick à fond",

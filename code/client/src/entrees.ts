@@ -25,6 +25,7 @@ export type Commande =
   | "sac"
   | "fabriquer"
   | "carte"
+  | "carnet"
   | "lumiere"
   | "tourner+"
   | "tourner-"
@@ -79,6 +80,9 @@ export class Entrees {
           break;
         case "carte":
           this.commande("carte");
+          break;
+        case "carnet":
+          this.commande("carnet");
           break;
         case "lumiere":
           this.commande("lumiere");
