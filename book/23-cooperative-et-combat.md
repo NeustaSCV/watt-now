@@ -2,7 +2,7 @@
 
 > Document de conception · version 0.2 · 2026-10-08
 > Statut : **validé** par le porteur du projet (2026-10-08), en cours de réalisation. Cible : versions 0.5 et 0.6.
-> Avancement (2026-10-08) : **0.5a fait** (lieu vivant, une Coopérative par joueur, chemin agricole au nord du Carrefour, route en ligne) ; **0.5b fait** (murs, portes qu'on ouvre et referme, grille d'obstacles de 4 m) ; le rendu 3D du lieu est fait et allégé (ombres cuites, carte réduite).
+> Avancement (2026-10-08) : **0.5a fait** (lieu vivant, une Coopérative par joueur, chemin agricole au nord du Carrefour, route en ligne) ; **0.5b fait** (murs, portes qu'on ouvre et referme, grille d'obstacles de 4 m) ; **0.5c fait** (les murs étouffent le son et arrêtent la vue, obscurité par pièce, passage par les portes, cascade des gémissements, groupes, Rampant et Équipé, retour dans sa zone après 3 min, IA à 10 Hz et 2 Hz, envoi limité à ce que le joueur perçoit ; 24 Éteints placés) ; le rendu 3D du lieu est fait et allégé (ombres cuites, carte réduite).
 > Décisions déjà prises (2026-10-08) : le lieu est la **coopérative agricole** (Book 20 §3.1) ; **une par joueur** pour commencer et valider la mécanique (des cartes partagées ne sont pas exclues plus tard) ; **conception écrite d'abord**.
 > La version 0.2 intègre les relectures des agents BMAD : Samus (Game Designer : niveau, difficulté, combat sur téléphone) et Cloud (Game Architect : instances, IA, persistance, Pi).
 
@@ -66,6 +66,8 @@
 - **Les Éteints** détruits ne reviennent pas tout de suite : **quelques nouveaux par nuit écoulée**, et la chambre froide se **repeuple** jusqu'à 6 sur plusieurs jours. Tout se calcule **à l'entrée** (une coopérative où l'on n'est pas ne coûte rien).
 
 ## 3. Les méchants : 24 à la première visite
+
+> **À trancher (2026-10-08)** : les lignes du tableau ci-dessous font 28 Éteints (avec 6 Errants), pour un total annoncé de 24. Le code en place 24, total et budget de calcul du Pi, avec **2 Errants** (la cour et le libre-service). Repasser à 6 Errants ne coûte qu'une ligne.
 
 Pas de mutant ni de boss magique (Book 06 §5) : seulement des corps différents, et **le nombre**.
 

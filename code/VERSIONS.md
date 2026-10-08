@@ -19,6 +19,13 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 - Un grand hangar à rayonnages, un libre-service, des bureaux, une chambre froide, l'atelier des tracteurs, le quai, les silos. Les toits s'effacent quand on passe dessous.
 - **Des portes** qu'on ouvre et qu'on referme (A) : refermée derrière soi, une porte arrête un Éteint. Ouvrir une porte fait un peu de bruit.
 - Se reconnecter dans la Coopérative ramène au portail.
+- **24 Éteints** à la première visite, chacun dans sa zone :
+  - des groupes dans le hangar, qui se suivent ;
+  - des dormants serrés dans la chambre froide : un dormant qui se réveille **gémit**, et réveille ses voisins ;
+  - des **Rampants** près des tracteurs : un coup les achève ;
+  - des **Équipés** casqués, plus solides ;
+  - le magasinier et le mécanicien.
+- **Les murs étouffent les bruits et arrêtent la vue** : derrière une porte fermée, on ne t'entend presque pas. Dans les pièces noires, sans lampe, on n'y voit qu'à quelques mètres, et ta lampe se voit de loin. Les Éteints passent par les portes, et un bruit derrière la chambre froide fait sortir ses dormants par la porte de derrière. Après 3 minutes sans te voir, un Éteint rentre chez lui.
 
 **L'écran**
 - Les **messages** passent **en haut, juste sous les tuiles**, en petit et sur un fond très léger : ils ne cachent plus la zone de jeu. Sur téléphone en horizontal, ils se placent **au centre**, sans plus jamais recouvrir Explorer, Lumière, A ou B (avis de Sally). Les **indices** (« comment s'y prendre ») sont encore plus discrets.

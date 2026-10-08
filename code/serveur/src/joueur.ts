@@ -1477,7 +1477,8 @@ export class Joueur implements Voyageur {
       bouge: this.bouge,
       action: this.maintenant() < this.bruitCoupJusqua ? "coup" : (this.action?.bruit ?? "aucun"),
       lumiere: portee ? (OBJETS[portee].lumiere ?? null) : null,
-      nuit,
+      // Dans une pièce noire de la Coopérative, une lampe se voit comme en pleine nuit (Book 23 §2.2).
+      nuit: nuit || (this.vivant?.obscur(this.position.x, this.position.z) ?? false),
       saigne: this.sante.saignement !== "aucun",
     })]);
   }
@@ -1520,7 +1521,7 @@ export class Joueur implements Voyageur {
       x: this.position.x,
       z: this.position.z,
       discret: !this.bouge || this.intention.allure === "discrete",
-      eclaire: this.lumiere && this.nuit(),
+      eclaire: this.lumiere && (this.nuit() || (this.vivant?.obscur(this.position.x, this.position.z) ?? false)),
       intouchable: this.maintenant() < this.esquiveJusqua,
     };
   }

@@ -184,3 +184,21 @@ test("0.5b : on ouvre une porte, tout le monde le sait ; on ne la referme pas su
   a.joueur.recevoir({ t: "interagir", cible: { genre: "porte", id: "nulle_part" }, verbe: "ouvrir_porte" });
   assert.equal("nulle_part" in coop.portes, false);
 });
+
+test("0.5c : on ne reçoit pas les Éteints cachés derrière un mur (pas de triche en lisant les messages)", () => {
+  const t = monter();
+  const a = t.nouveau("Rose");
+  t.allerALaCoop(a.joueur);
+  t.attendre(DUREE_VOYAGE_S + 1);
+  const coop = t.cooperatives.de(a.compte.id);
+  // Dans le hangar, contre le mur de la chambre froide (portes fermées) : les 6 dormants sont à 7 m, mais derrière le mur.
+  a.joueur.position = { x: 64, z: 18.2, o: 0 };
+  const vus = coop.eteintsVus(a.joueur.position).map((e) => e.id);
+  const froide = coop.eteints.filter((e) => e.z < 16 && e.x > 52).map((e) => e.id);
+  assert.equal(froide.length, 6);
+  assert.ok(froide.every((id) => !vus.includes(id)));
+  // Porte de la chambre froide ouverte, en face : on les voit par l'embrasure.
+  coop.basculerPorte("froide_hangar", true);
+  a.joueur.position = { x: 60, z: 18.5, o: 0 };
+  assert.ok(coop.eteintsVus(a.joueur.position).some((e) => froide.includes(e.id)));
+});

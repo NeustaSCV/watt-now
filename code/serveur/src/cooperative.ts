@@ -4,6 +4,7 @@
 import { VERSION_COOP, portesInitiales } from "../../commun/src/cooperative.ts";
 import { eteintsCoop } from "../../commun/src/eteints-coop.ts";
 import { ZONE_COOP, zoneCoop } from "../../commun/src/lieux.ts";
+import { milieuCoop } from "../../commun/src/milieu-coop.ts";
 import type { Base } from "./base.ts";
 import { LieuVivant, type DefinitionLieuVivant } from "./lieu-vivant.ts";
 
@@ -13,6 +14,8 @@ export function definitionCoop(compteId: number): DefinitionLieuVivant {
     sacs: { lieu: "cooperative", terrainDe: compteId },
     zone: ZONE_COOP,
     portes: { initiales: portesInitiales, zone: zoneCoop },
+    milieu: milieuCoop,
+    econome: true,
     eteints: eteintsCoop,
     // Le butin arrive avec la persistance et le renouvellement (0.5d).
     ressources: () => [],

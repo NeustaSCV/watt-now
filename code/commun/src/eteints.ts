@@ -36,6 +36,37 @@ export interface Eteint {
   corps: number;
   /** Mis en scène par le tutoriel : il ne mord jamais (Book 14 §5, validé le 2026-10-08). */
   tuto?: boolean;
+  // ---------- La Coopérative (Book 23 §3, 0.5c) ----------
+  /** Une variante (Book 06 §5) ; sans : l'Errant ordinaire. */
+  variante?: VarianteEteint;
+  /** Son groupe (comportement grégaire) : quand l'un bouge, les autres suivent. */
+  groupe?: number;
+  /** Sa zone : il y revient quand il a perdu le joueur de vue depuis 3 minutes, et y erre. */
+  maison?: { x: number; z: number };
+  /** Il dormait là au départ : revenu chez lui et calmé, il se rendort. */
+  dormeur?: boolean;
+  /** Secondes sans voir personne. */
+  sansVoir?: number;
+  /** Secondes de gémissement qui restent (un dormant qui se réveille gémit : la cascade). */
+  gemit?: number;
+}
+
+/** Les variantes de la Coopérative : le Rampant, l'Équipé (casque de moto), les anciens habitants. */
+export type VarianteEteint = "rampant" | "equipe" | "magasinier" | "mecanicien";
+
+/**
+ * Ce que l'endroit fait à la perception et aux déplacements (Book 23 §7). Sans milieu, tout est à ciel ouvert :
+ * c'est le terrain et la halte. La Coopérative en a un (milieu-coop.ts).
+ */
+export interface Milieu {
+  /** Ce qu'un son garde (0 à 1) entre deux points : 1 dans la même pièce, bien moins à travers une porte ou un mur. */
+  son(ax: number, az: number, bx: number, bz: number): number;
+  /** La vue passe-t-elle de a à b ? (même pièce, ou par l'embrasure d'une porte ouverte) */
+  vue(ax: number, az: number, bx: number, bz: number): boolean;
+  /** Fait-il noir ici, même en plein jour ? */
+  obscur(x: number, z: number): boolean;
+  /** Le prochain point où aller pour rejoindre b depuis a (par les portes). */
+  passage(ax: number, az: number, bx: number, bz: number): { x: number; z: number };
 }
 
 /** Ce que voit un Éteint d'un humain proche. */
@@ -61,6 +92,10 @@ export interface EteintVu {
   saisit?: true;
   /** Il vient d'être frappé. */
   etourdi?: true;
+  /** Sa variante, pour le dessiner (le Rampant au sol, l'Équipé casqué). */
+  variante?: VarianteEteint;
+  /** Il gémit : il vient de se réveiller (on l'entend). */
+  gemit?: true;
 }
 
 /**
@@ -88,11 +123,21 @@ export const CONTACT = 0.9;
 const GREGAIRE = { portee: 8, intensite: 0.15 };
 /** Il oublie la proie qu'il ne voit plus au bout de quelques secondes, et va voir le dernier endroit. */
 const PATIENCE = 4;
+/** Un dormant qui se réveille gémit (Book 23 §3) : un bruit de 6 m, pendant 1,5 s. */
+export const GEMISSEMENT = { portee: 6, intensite: 1.6, duree: 1.5 };
+/** Sans voir personne depuis 3 minutes, il retourne dans sa zone (Book 23 §2.3). */
+export const RETOUR_ZONE_S = 180;
+/** Un groupe se suit : le voisin qui bouge entraîne les autres du groupe, jusqu'à cette distance. */
+const GROUPE = { portee: 14, intensite: 0.9 };
+/** Le Rampant, au sol, avance lentement. */
+const VITESSE_RAMPANT = 0.55;
 
 export function vue(e: Eteint): EteintVu {
   const v: EteintVu = { id: e.id, x: Math.round(e.x * 100) / 100, z: Math.round(e.z * 100) / 100, o: Math.round(e.o * 100) / 100, etat: e.etat };
   if (e.saisit !== null) v.saisit = true;
   if (e.etourdi > 0) v.etourdi = true;
+  if (e.variante) v.variante = e.variante;
+  if ((e.gemit ?? 0) > 0) v.gemit = true;
   return v;
 }
 
@@ -110,7 +155,8 @@ export function encaisser(e: Eteint, arme: Arme, appuye: boolean, force: number,
   e.attention = Math.max(e.attention, 2);
   if (e.etat === "dormant") e.etat = "poursuivant";
   // À terre, la tête est à portée : n'importe quel coup l'achève, même au couteau ou aux poings (décision du 2026-10-08).
-  const auSol = e.etat === "a_terre";
+  // Le Rampant est déjà au sol : un coup l'achève (Book 23 §3, Book 06 §8.4).
+  const auSol = e.etat === "a_terre" || e.variante === "rampant";
   if (auSol || (appuye && arme.tueALaTete && force >= 1)) {
     e.etat = "detruit";
     e.corps = 0;
@@ -118,7 +164,8 @@ export function encaisser(e: Eteint, arme: Arme, appuye: boolean, force: number,
     return "detruit";
   }
   e.degats += arme.degatsTorse * force * (appuye ? 2 : 1);
-  if (e.degats >= RESISTANCE_TORSE) {
+  // L'Équipé (blouson, casque) encaisse un coup de plus au torse (Book 23 §3).
+  if (e.degats >= RESISTANCE_TORSE + (e.variante === "equipe" ? 1 : 0)) {
     e.etat = "a_terre";
     e.aTerre = DUREE_A_TERRE;
     e.degats = 0;
@@ -141,10 +188,14 @@ export function lacher(e: Eteint, de: { x: number; z: number }, zone: Zone): voi
   deplacer(e, ((e.x - de.x) / d) * 0.8, ((e.z - de.z) / d) * 0.8, zone);
 }
 
-function voit(e: Eteint, h: Humain, nuit: boolean): boolean {
-  let portee = nuit ? (h.eclaire ? VUE_LUMIERE : VUE_NUIT) : VUE_JOUR;
+function voit(e: Eteint, h: Humain, nuit: boolean, milieu?: Milieu): boolean {
+  // Dans une pièce noire, il fait nuit en plein jour (l'obscurité est locale, Book 23 §7).
+  const noir = nuit || (milieu?.obscur(h.x, h.z) ?? false);
+  let portee = noir ? (h.eclaire ? VUE_LUMIERE : VUE_NUIT) : VUE_JOUR;
   if (h.discret && !h.eclaire) portee *= 0.5;
-  return Math.hypot(h.x - e.x, h.z - e.z) <= portee;
+  if (Math.hypot(h.x - e.x, h.z - e.z) > portee) return false;
+  // Les murs arrêtent la vue : même pièce, ou par l'embrasure d'une porte ouverte.
+  return !milieu || milieu.vue(e.x, e.z, h.x, h.z);
 }
 
 /**
@@ -160,11 +211,14 @@ export function penser(
   nuit: boolean,
   zone: Zone,
   alea: () => number,
+  /** Ce que l'endroit fait à la perception (la Coopérative) ; sans : à ciel ouvert. */
+  milieu?: Milieu,
 ): void {
   if (e.etat === "detruit") {
     e.corps += dt;
     return;
   }
+  if ((e.gemit ?? 0) > 0) e.gemit = Math.max(0, e.gemit! - dt);
   if (e.etat === "a_terre") {
     e.aTerre -= dt;
     if (e.aTerre <= 0) e.etat = "poursuivant";
@@ -176,7 +230,9 @@ export function penser(
   let meilleur = 0;
   for (const s of stimuli) {
     if (e.etat === "dormant" && s.genre !== "son") continue;
-    const portee = e.etat === "dormant" ? s.portee * OUIE_DORMANT : s.portee;
+    // Les murs étouffent le son : à travers une porte fermée, presque rien n'arrive (Book 23 §7).
+    const attenue = milieu ? milieu.son(s.x, s.z, e.x, e.z) : 1;
+    const portee = (e.etat === "dormant" ? s.portee * OUIE_DORMANT : s.portee) * attenue;
     const d = Math.hypot(s.x - e.x, s.z - e.z);
     if (d >= portee) continue;
     const apport = s.intensite * (1 - d / portee);
@@ -188,14 +244,18 @@ export function penser(
       if (e.etat !== "poursuivant") e.but = { x: s.x, z: s.z };
     }
   }
-  if (e.etat !== "dormant") {
+  if (e.etat !== "dormant" || e.groupe !== undefined) {
     for (const v of voisins) {
       if (v === e || (v.etat !== "attire" && v.etat !== "poursuivant") || !v.but) continue;
+      // Un groupe se suit de plus loin et bien plus fort ; les autres, à peine (Book 06 §4, Book 23 §3).
+      const memeGroupe = e.groupe !== undefined && v.groupe === e.groupe;
+      if (e.etat === "dormant" && !memeGroupe) continue;
+      const g = memeGroupe ? GROUPE : GREGAIRE;
       const d = Math.hypot(v.x - e.x, v.z - e.z);
-      if (d >= GREGAIRE.portee) continue;
-      e.attention += GREGAIRE.intensite * (1 - d / GREGAIRE.portee) * dt;
+      if (d >= g.portee) continue;
+      e.attention += g.intensite * (1 - d / g.portee) * dt;
       percu = true;
-      if (meilleur === 0 && e.etat === "errant") e.but = { ...v.but };
+      if (meilleur === 0 && (e.etat === "errant" || e.etat === "dormant" || (memeGroupe && e.etat === "attire"))) e.but = { ...v.but };
     }
   }
   if (!percu) e.attention -= OUBLI * dt;
@@ -203,8 +263,10 @@ export function penser(
 
   // 2. Décider
   if (e.etat === "dormant") {
-    if (e.attention >= SEUIL_REVEIL) e.etat = "attire";
-    else return;
+    if (e.attention < SEUIL_REVEIL) return;
+    e.etat = "attire";
+    // Il se réveille en gémissant : ses voisins l'entendent (la cascade).
+    if (milieu) e.gemit = GEMISSEMENT.duree;
   }
   if (e.etourdi > 0) {
     e.etourdi -= dt;
@@ -223,8 +285,9 @@ export function penser(
     }
   }
   const proie = humains
-    .filter((h) => voit(e, h, nuit))
+    .filter((h) => voit(e, h, nuit, milieu))
     .sort((a, b) => Math.hypot(a.x - e.x, a.z - e.z) - Math.hypot(b.x - e.x, b.z - e.z))[0];
+  e.sansVoir = proie ? 0 : (e.sansVoir ?? 0) + dt;
   if (proie) {
     e.etat = "poursuivant";
     e.but = { x: proie.x, z: proie.z };
@@ -252,25 +315,46 @@ export function penser(
   }
   if (e.etat === "attire" && !e.but) e.etat = "errant";
 
-  // 3. Errer : un point au hasard, pas loin, de temps en temps.
+  // 3. Errer : un point au hasard, pas loin, de temps en temps ; autour de chez lui s'il a une zone.
   if (e.etat === "errant") {
-    e.flane -= dt;
-    if (e.flane <= 0 || !e.but) {
-      e.flane = 6 + alea() * 8;
-      const a = alea() * Math.PI * 2;
-      const r = 2 + alea() * 6;
-      e.but = alea() < 0.35 ? null : { x: e.x + Math.cos(a) * r, z: e.z + Math.sin(a) * r };
+    const maison = e.maison;
+    const loinDeChezLui = maison && Math.hypot(maison.x - e.x, maison.z - e.z) > 5;
+    if (maison && loinDeChezLui && (e.sansVoir ?? 0) >= RETOUR_ZONE_S) {
+      // Trois minutes sans voir personne : il rentre (Book 23 §2.3 : il ne campe pas à l'entrée).
+      e.but = { ...maison };
+    } else if (maison && !loinDeChezLui && e.dormeur && (e.sansVoir ?? 0) >= RETOUR_ZONE_S && e.attention === 0) {
+      e.etat = "dormant";
+      e.but = null;
+      return;
+    } else {
+      e.flane -= dt;
+      if (e.flane <= 0 || !e.but) {
+        e.flane = 6 + alea() * 8;
+        const a = alea() * Math.PI * 2;
+        const r = 2 + alea() * 6;
+        const centre = maison && !loinDeChezLui ? maison : e;
+        // Un dormeur revenu chez lui ne bouge plus guère ; les autres flânent.
+        e.but = alea() < (e.dormeur ? 0.8 : 0.35) ? null : { x: centre.x + Math.cos(a) * r, z: centre.z + Math.sin(a) * r };
+      }
     }
   }
 
   // 4. Avancer vers le but, sans traverser les obstacles ; il s'arrête au contact d'un humain.
   if (!e.but) return;
-  const dx = e.but.x - e.x;
-  const dz = e.but.z - e.z;
-  const d = Math.hypot(dx, dz);
   const arret = e.etat === "poursuivant" ? CONTACT : 0.2;
-  if (d <= arret) return;
-  const pas = Math.min(d - arret, VITESSES[e.etat] * dt);
+  const dBut = Math.hypot(e.but.x - e.x, e.but.z - e.z);
+  if (dBut <= arret) return;
+  // Dans un bâtiment, on passe par les portes (Book 23 §7) : le prochain point du chemin.
+  const vers = milieu ? milieu.passage(e.x, e.z, e.but.x, e.but.z) : e.but;
+  const dx = vers.x - e.x;
+  const dz = vers.z - e.z;
+  const d = Math.hypot(dx, dz);
+  if (d < 1e-6) return;
+  const vitesse = e.variante === "rampant" ? Math.min(VITESSES[e.etat], VITESSE_RAMPANT) : VITESSES[e.etat];
+  // Le dernier tronçon s'arrête au contact ; un point de passage, on le dépasse.
+  const final = Math.abs(vers.x - e.but.x) < 1e-6 && Math.abs(vers.z - e.but.z) < 1e-6;
+  const pas = Math.min(final ? d - arret : d, vitesse * dt);
+  if (pas <= 0) return;
   deplacer(e, (dx / d) * pas, (dz / d) * pas, zone);
   e.o = Math.atan2(dx, dz);
 }

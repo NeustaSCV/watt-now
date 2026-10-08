@@ -54,6 +54,8 @@ interface SuiviEteint {
   /** Distance parcourue depuis le dernier pas. */
   foulee: number;
   saisit: boolean;
+  /** Il gémissait au dernier envoi (on ne rejoue le gémissement qu'au début). */
+  gemit: boolean;
 }
 
 /** Le geste sonore d'une action, d'après son libellé (et son bruit de signature). */
@@ -168,7 +170,7 @@ export class Bruiteur {
    * Dormant : respiration à 3 m. Errant : pas qui traînent, râles espacés. Attiré : le râle se coupe net, la tête
    * craque, puis le silence et les pas. Poursuivant : râles rapprochés, pas pressés, souffle.
    */
-  eteints(dt: number, liste: { id: number; x: number; z: number; etat: EtatEteint; saisit?: boolean }[], moi: Ou | null, saisi: number): void {
+  eteints(dt: number, liste: { id: number; x: number; z: number; etat: EtatEteint; saisit?: boolean; gemit?: boolean }[], moi: Ou | null, saisi: number): void {
     this.t += dt;
     const vus = new Set<number>();
     let menace: NiveauMenace = saisi > 0 ? "saisie" : "aucune";
@@ -176,7 +178,7 @@ export class Bruiteur {
       vus.add(e.id);
       let s = this.suivis.get(e.id);
       if (!s) {
-        s = { etat: e.etat, x: e.x, z: e.z, prochainCri: this.t + 0.5 + Math.random() * 3, foulee: 0, saisit: false };
+        s = { etat: e.etat, x: e.x, z: e.z, prochainCri: this.t + 0.5 + Math.random() * 3, foulee: 0, saisit: false, gemit: false };
         this.suivis.set(e.id, s);
       }
       const ou = { x: e.x, z: e.z };
@@ -187,6 +189,9 @@ export class Bruiteur {
       s.z = e.z;
       if (e.saisit && !s.saisit) this.son.jouer("saisie", ou);
       s.saisit = Boolean(e.saisit);
+      // Un dormant qui se réveille gémit (Book 23 §3) : la cascade s'entend, pièce après pièce.
+      if (e.gemit && !s.gemit) this.son.jouer("eteint_rale", ou, { gain: 1.2 });
+      s.gemit = Boolean(e.gemit);
 
       // Les pas.
       if (e.etat === "errant" || e.etat === "attire" || e.etat === "poursuivant") {
