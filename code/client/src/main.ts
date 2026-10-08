@@ -13,11 +13,11 @@ import { COMPTOIR, sortieIci, zoneDe, type LieuJouable } from "../../commun/src/
 import type { EteintVu } from "../../commun/src/eteints.ts";
 import { cerclesSignature, type BruitAction } from "../../commun/src/signature.ts";
 import { ALLURES, GESTE_TENU_MAX_S, type Allure } from "../../commun/src/regles.ts";
-import { APPUIS_DEGAGEMENT, ESQUIVE, SEUIL_EPUISE, freinSaisie, meilleureArme } from "../../commun/src/combat.ts";
+import { APPUIS_DEGAGEMENT, ESQUIVE, SEUIL_EPUISE, armeEnMain, freinSaisie } from "../../commun/src/combat.ts";
 import type { AutreVu, SacVu, SanteVue, VueComptoir } from "../../commun/src/messages.ts";
 import { PORTEE_CABLE_PANNEAU, type Charges } from "../../commun/src/energie.ts";
 import type { Bienvenue, InstallationVue, MessageClient, MessageServeur } from "../../commun/src/messages.ts";
-import { OBJETS, lumierePortee, type Inventaire } from "../../commun/src/objets.ts";
+import { OBJETS, lumierePortee, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
 import { aFaim, aSoif, allureAutorisee, fatigue, type Besoins, type Gourde } from "../../commun/src/survie.ts";
 import { estNuit, heureDeJeu, jourDeJeu } from "../../commun/src/temps.ts";
 import { demanderIdentite } from "./accueil.ts";
@@ -124,6 +124,11 @@ let bruitAction: BruitAction = "aucun";
 let enVoyage = false;
 // ---------- Combat et santé (É3, lot 3) ----------
 let modeCombat = false;
+/** L'arme équipée pour le combat (P-005) ; null : la meilleure du sac. */
+let armeEquipee: TypeObjet | null = null;
+/** Un coup va jusqu'au bout (P-004) : pas de nouveau coup avant cet instant ; un appui pendant le geste est gardé pour la suite. */
+let coupFiniLe = 0;
+let coupEnAttente: boolean | null = null;
 /** Depuis quand plus aucun Éteint n'est proche (retour automatique en exploration). */
 let calmeDepuis = 0;
 let sante: SanteVue = { points: 100, saignement: "aucun", blessures: [], convalescence: false };
@@ -327,6 +332,7 @@ const hud = new Hud(
     echange: (op) => envoyer({ t: "echange", op }),
     passerTutoriel: () => envoyer({ t: "tutoriel_passer" }),
     jeter: (objet, quantite) => envoyer({ t: "jeter", objet, quantite }),
+    equiper: (objet) => envoyer({ t: "equiper", objet }),
     coffre: (id, sens, objet, quantite) => envoyer({ t: "coffre", id, sens, objet, quantite }),
     fabriquer: (r) => {
       if (!position) return;
@@ -424,6 +430,8 @@ function installer(message: Bienvenue): void {
   hud.majWotts(message.wotts);
   hud.majTutoriel(message.tutoriel);
   hud.majQuetes(message.quetes);
+  armeEquipee = message.arme;
+  hud.majArme(armeEquipee);
   aides.charger(message.moi.pseudo);
   if (lieu === "station") aider("halte");
   if (lieu === "comptoir") aider("comptoir");
@@ -645,6 +653,10 @@ function recevoir(message: MessageServeur): void {
       return;
     case "quetes":
       hud.majQuetes(message.quetes);
+      break;
+    case "arme":
+      armeEquipee = message.arme;
+      hud.majArme(armeEquipee);
       break;
     case "tutoriel":
       hud.majTutoriel(message.tutoriel);
@@ -900,9 +912,12 @@ function executer(c: Commande): void {
         return;
       }
       if (!modeCombat || enVoyage || carte.ouverte) return;
-      envoyer({ t: "frapper", appuye: c === "A_long" });
-      bruiteur.frappe(c === "A_long");
-      personnage?.frapper(c === "A_long");
+      // Un coup va jusqu'au bout (P-004) : pendant le geste, on garde un seul appui, joué à la fin.
+      if (performance.now() < coupFiniLe) {
+        coupEnAttente = c === "A_long";
+        return;
+      }
+      frapper(c === "A_long");
       return;
     case "B":
       if (modeCombat) return combatB();
@@ -1071,6 +1086,16 @@ function mesurerImages(dtReel: number): void {
   debutMesureImages = maintenant;
 }
 
+/** Un coup : l'animation, le son et le message durent le geste de l'arme en main (P-004). */
+function frapper(appuye: boolean): void {
+  const arme = armeEnMain(inventaire, armeEquipee);
+  const duree = appuye ? arme.coupAppuye : arme.coup;
+  coupFiniLe = performance.now() + duree;
+  envoyer({ t: "frapper", appuye });
+  bruiteur.frappe(appuye);
+  personnage?.frapper(appuye, duree / 1000);
+}
+
 function boucle(instant: number): void {
   requestAnimationFrame(boucle);
   mesurerImages((instant - dernier) / 1000);
@@ -1154,7 +1179,13 @@ function boucle(instant: number): void {
     if (coffre && (lieu !== "terrain" || Math.hypot(position.x - coffre.x, position.z - coffre.z) > 3)) hud.fermerPanneaux();
     // Le guichet se ferme quand on s'en éloigne.
     if (hud.guichetOuvert && (lieu !== "comptoir" || Math.hypot(position.x - COMPTOIR.guichet.x, position.z - COMPTOIR.guichet.z) > 4)) hud.fermerPanneaux();
-    personnage.tenir(modeCombat ? meilleureArme(inventaire).objet : undefined);
+    personnage.tenir(modeCombat ? armeEnMain(inventaire, armeEquipee).objet : undefined);
+    // L'appui gardé pendant le coup précédent part à la fin du geste : on enchaîne sans marteler.
+    if (coupEnAttente !== null && performance.now() >= coupFiniLe) {
+      const appuye = coupEnAttente;
+      coupEnAttente = null;
+      if (modeCombat && !enVoyage) frapper(appuye);
+    }
     personnage.preparer(modeCombat ? entrees.chargeA : 0);
     hud.saisie(saisi, appuisLocaux / (APPUIS_DEGAGEMENT * Math.max(1, saisi) * (endurance < SEUIL_EPUISE ? 1.5 : 1)));
     // Un blessé qui saigne laisse des gouttes derrière lui.

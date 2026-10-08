@@ -15,22 +15,48 @@ export interface Arme {
   tueALaTete: boolean;
   /** Portée en mètres. */
   allonge: number;
+  /**
+   * La durée du geste, en ms : coup simple, coup appuyé (P-004, 2026-10-08). Un coup va jusqu'au bout : on ne
+   * refrappe pas avant. Le client joue l'animation sur cette durée ; le serveur refuse un coup plus tôt.
+   * Une hache est lente et lourde, un couteau vif.
+   */
+  coup: number;
+  coupAppuye: number;
 }
 
-/** Du meilleur au pire : on frappe avec ce qu'on a de mieux dans le sac. */
+/** Du meilleur au pire : sans arme équipée, on frappe avec ce qu'on a de mieux dans le sac. */
 export const ARMES: Arme[] = [
-  { objet: "hache", nom: "la hache", degatsTorse: 2, tueALaTete: true, allonge: 1.7 },
-  { objet: "marteau", nom: "le marteau", degatsTorse: 1.5, tueALaTete: true, allonge: 1.5 },
-  { objet: "barre_metal", nom: "la barre de métal", degatsTorse: 1.5, tueALaTete: true, allonge: 1.9 },
-  { objet: "lame_forgee", nom: "la lame forgée", degatsTorse: 1, tueALaTete: true, allonge: 1.4 },
-  { objet: "gourdin", nom: "le gourdin", degatsTorse: 1, tueALaTete: false, allonge: 1.5 },
-  { objet: "couteau_aiguise", nom: "le couteau aiguisé", degatsTorse: 0.7, tueALaTete: false, allonge: 1.25 },
-  { objet: "couteau", nom: "le couteau", degatsTorse: 0.5, tueALaTete: false, allonge: 1.2 },
+  { objet: "hache", nom: "la hache", degatsTorse: 2, tueALaTete: true, allonge: 1.7, coup: 700, coupAppuye: 950 },
+  { objet: "marteau", nom: "le marteau", degatsTorse: 1.5, tueALaTete: true, allonge: 1.5, coup: 600, coupAppuye: 850 },
+  { objet: "barre_metal", nom: "la barre de métal", degatsTorse: 1.5, tueALaTete: true, allonge: 1.9, coup: 650, coupAppuye: 900 },
+  { objet: "lame_forgee", nom: "la lame forgée", degatsTorse: 1, tueALaTete: true, allonge: 1.4, coup: 480, coupAppuye: 720 },
+  { objet: "gourdin", nom: "le gourdin", degatsTorse: 1, tueALaTete: false, allonge: 1.5, coup: 550, coupAppuye: 800 },
+  { objet: "couteau_aiguise", nom: "le couteau aiguisé", degatsTorse: 0.7, tueALaTete: false, allonge: 1.25, coup: 420, coupAppuye: 650 },
+  { objet: "couteau", nom: "le couteau", degatsTorse: 0.5, tueALaTete: false, allonge: 1.2, coup: 420, coupAppuye: 650 },
 ];
-export const POINGS: Arme = { objet: null, nom: "les poings", degatsTorse: 0.35, tueALaTete: false, allonge: 1.1 };
+export const POINGS: Arme = { objet: null, nom: "les poings", degatsTorse: 0.35, tueALaTete: false, allonge: 1.1, coup: 380, coupAppuye: 600 };
+
+/** Ce que le serveur accepte d'avance sur la fin d'un geste (le réseau n'est pas régulier). */
+export const TOLERANCE_COUP_MS = 80;
 
 export function meilleureArme(inventaire: Inventaire): Arme {
   return ARMES.find((a) => a.objet && (inventaire[a.objet] ?? 0) > 0) ?? POINGS;
+}
+
+/** Cet objet est-il une arme qu'on peut équiper (P-005) ? */
+export function estArme(objet: TypeObjet): boolean {
+  return ARMES.some((a) => a.objet === objet);
+}
+
+/**
+ * L'arme en main en mode Combat (P-005) : celle qu'on a équipée, si on l'a toujours ; sinon la meilleure du sac.
+ */
+export function armeEnMain(inventaire: Inventaire, equipee: TypeObjet | null): Arme {
+  if (equipee && (inventaire[equipee] ?? 0) > 0) {
+    const a = ARMES.find((x) => x.objet === equipee);
+    if (a) return a;
+  }
+  return meilleureArme(inventaire);
 }
 
 /** Un Éteint tombe au bout de 3 « points » de coups au torse, puis se relève (Book 06 §2.2). */

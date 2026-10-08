@@ -296,12 +296,15 @@ export class Personnage {
     this.main.add(arme);
   }
 
-  /** Le geste du coup, joué tout de suite à l'écran (le serveur juge s'il porte). */
-  frapper(appuye = false): void {
+  /**
+   * Le geste du coup, joué tout de suite à l'écran (le serveur juge s'il porte). `duree` (s) : le geste de l'arme
+   * (P-004) ; l'animation est jouée exactement sur cette durée.
+   */
+  frapper(appuye = false, duree?: number): void {
     if (!this.corps) return;
     const arme = this.armeTenue;
     const nom = !arme ? (appuye ? "Punch_Cross" : "Punch_Jab") : appuye ? "Sword_Regular_A" : "Sword_Attack";
-    this.lancer(nom, appuye ? 1.25 : 1.6);
+    this.lancer(nom, appuye ? 1.25 : 1.6, duree);
   }
 
   /** L'esquive : une roulade. */
@@ -314,9 +317,14 @@ export class Personnage {
     this.lancer(Math.random() < 0.5 ? "Hit_Chest" : "Hit_Head", 1.2);
   }
 
-  private lancer(nom: string, vitesse: number): void {
+  /** `duree` (s), si donnée, fixe la vitesse pour que le geste dure exactement ce temps. */
+  private lancer(nom: string, vitesse: number, duree?: number): void {
     const a = this.corps?.jouer(nom, { boucle: false, fondu: 0.08, vitesse });
     if (a) {
+      if (duree) {
+        vitesse = a.getClip().duration / duree;
+        a.timeScale = vitesse;
+      }
       a.reset().play();
       this.unique = a.getClip().duration / vitesse;
     }

@@ -827,6 +827,16 @@ body {
   background: #e9eee2;
 }
 
+/* L'arme équipée pour le combat (P-005) : une petite épée en coin. */
+#hud .sac .case.equipee::after {
+  content: "⚔";
+  position: absolute;
+  left: 3px;
+  top: 1px;
+  font-size: 12px;
+  line-height: 1;
+}
+
 #hud .sac .case .badge {
   position: absolute;
   right: 2px;

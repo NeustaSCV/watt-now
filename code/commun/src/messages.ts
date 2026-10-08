@@ -144,6 +144,8 @@ export type MessageClient =
   | { t: "jeter"; objet: TypeObjet; quantite: number }
   /** Poser devant soi l'objet lourd qu'on porte. */
   | { t: "poser" }
+  /** Équiper une arme pour le mode Combat (null : plus d'arme choisie, la meilleure du sac) (P-005). */
+  | { t: "equiper"; objet: TypeObjet | null }
   /** Les images par seconde de l'appareil, chaque minute (mesures du test familial, Book 17 §6). */
   | { t: "mesures"; ips: number; ipsBas: number; appareil: string; qualite: string };
 
@@ -293,6 +295,8 @@ export interface Bienvenue {
   tutoriel: VueTutoriel | null;
   /** Les quêtes après le tutoriel (Book 22) ; null pendant le tutoriel. */
   quetes: VueQuetes | null;
+  /** L'arme équipée pour le combat (P-005) ; null : la meilleure du sac. */
+  arme: TypeObjet | null;
   /** Au comptoir seulement. */
   comptoir?: VueComptoir;
   /** La volaille du terrain (2026-10-08). */
@@ -340,6 +344,8 @@ export type MessageServeur =
   | { t: "tutoriel"; tutoriel: VueTutoriel | null }
   /** Le carnet des quêtes a changé (un compteur, une réussite). */
   | { t: "quetes"; quetes: VueQuetes | null }
+  /** L'arme équipée a changé (P-005). */
+  | { t: "arme"; arme: TypeObjet | null }
   /** On s'endort (dans l'abri ou par terre) ou on se réveille (É5). */
   | { t: "sommeil"; dort: boolean; dansUnAbri: boolean }
   /** Les autres joueurs du lieu, plusieurs fois par seconde (É4, lot 3). */

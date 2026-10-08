@@ -92,6 +92,10 @@ Garder les commandes **très simples** : un déplacement, **deux boutons d'actio
 - **Suggestion de mode :** quand un zombie approche, le bouton Mode **pulse**. Une option permet la bascule automatique.
 - **Cercle de signature** affiché au sol en permanence (Book 06 §3.3) : l'allure choisie se voit immédiatement.
 
+> **Décisions (2026-10-08, propositions P-004 et P-005 des testeurs)** :
+> - **Un coup va jusqu'au bout.** Pendant le geste, un nouvel appui ne relance ni l'animation, ni le son, ni le coup : il est **gardé** et joué à la fin du geste (on enchaîne sans marteler). Chaque arme a la durée de son geste, coup simple et coup appuyé : la hache est lente (0,7 s / 0,95 s), le couteau vif (0,42 s / 0,65 s). Le serveur refuse un coup avant la fin du geste (80 ms de tolérance pour le réseau). Dix appuis en une seconde à la hache : deux coups.
+> - **On choisit son arme.** Dans le sac, « Équiper pour le combat » sur toute arme (une petite épée ⚔ marque l'équipée). C'est elle qu'on a en main en mode Combat. Si on ne l'a plus (jetée, vendue, tombée avec le sac), on prend la meilleure du sac, et le jeu le dit une fois. Sans choix, la règle d'avant reste : la meilleure du sac. Le choix est gardé d'une session à l'autre. Les emplacements rapides (ceinture, holster, Book 12 §2.1) viendront plus tard.
+
 ### 3.4 Disposition sur mobile
 
 ```

@@ -14,6 +14,7 @@ import { SANTE_DEPART, type Sante } from "../../commun/src/combat.ts";
 import type { Wotts } from "../../commun/src/economie.ts";
 import { TUTORIEL_NEUF, type EtatTutoriel } from "../../commun/src/tutoriel.ts";
 import type { EtatQuetes } from "../../commun/src/quetes.ts";
+import { estArme } from "../../commun/src/combat.ts";
 import type { EtatInstallation, InstallationVue } from "../../commun/src/messages.ts";
 import type { TypeInstallation } from "../../commun/src/recettes.ts";
 import { genererJoncs, genererRessources, genererVergerEtSousBois, genererVestiges, type TypeRessource } from "../../commun/src/terrain.ts";
@@ -204,6 +205,8 @@ const COLONNES_AJOUTEES: [table: string, colonne: string, definition: string][] 
   ["personnages", "peau", "INTEGER NOT NULL DEFAULT -1"],
   // L'apparence choisie à la création (Book 14 §3), en JSON ; vide : un compte d'avant le menu d'apparence.
   ["personnages", "apparence", "TEXT NOT NULL DEFAULT ''"],
+  // L'arme équipée pour le combat (P-005) ; vide : la meilleure du sac.
+  ["personnages", "arme", "TEXT NOT NULL DEFAULT ''"],
   ["personnages", "watts", "TEXT NOT NULL DEFAULT ''"],
   ["personnages", "compte_watts", "TEXT NOT NULL DEFAULT ''"],
   // La faune du terrain (2026-10-08) : quand on a pris des poules (elles reviennent au bout de 2 h).
@@ -301,6 +304,15 @@ export class Base {
 
   sauverTutoriel(compteId: number, etat: EtatTutoriel | null): void {
     this.db.prepare("UPDATE personnages SET tutoriel = ? WHERE compte_id = ?").run(etat ? JSON.stringify(etat) : "termine", compteId);
+  }
+
+  chargerArme(compteId: number): TypeObjet | null {
+    const l = this.db.prepare("SELECT arme FROM personnages WHERE compte_id = ?").get(compteId) as { arme: string } | undefined;
+    return l?.arme && estArme(l.arme as TypeObjet) ? (l.arme as TypeObjet) : null;
+  }
+
+  sauverArme(compteId: number, arme: TypeObjet | null): void {
+    this.db.prepare("UPDATE personnages SET arme = ? WHERE compte_id = ?").run(arme ?? "", compteId);
   }
 
   chargerQuetes(compteId: number): EtatQuetes {

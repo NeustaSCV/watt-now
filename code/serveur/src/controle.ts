@@ -88,6 +88,8 @@ export function messageValide(m: unknown): m is MessageClient {
       return nombre(m.id) && (m.sens === "deposer" || m.sens === "prendre") && estObjet(m.objet) && quantite(m.quantite);
     case "jeter":
       return estObjet(m.objet) && quantite(m.quantite);
+    case "equiper":
+      return m.objet === null || estObjet(m.objet);
     case "mesures":
       return nombre(m.ips) && nombre(m.ipsBas) && chaine(m.appareil, 200) && chaine(m.qualite);
     case "boire":

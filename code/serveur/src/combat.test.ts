@@ -129,3 +129,39 @@ test("un pansement arrête le saignement", () => {
   t.attendre(6.2, 0.25);
   assert.equal(t.dernier("sante")!.sante.saignement, "aucun");
 });
+
+test("un coup va jusqu'au bout (P-004) : dix appuis en une seconde ne donnent que deux coups à la hache", () => {
+  const t = monter({ hache: 1 }, { x: 40, z: 36, etat: "errant" });
+  let coups = 0;
+  for (let i = 0; i < 10; i++) {
+    t.joueur.position = { x: t.z().x, z: t.z().z - 1, o: 0 };
+    const avant = t.recus.length;
+    t.joueur.recevoir({ t: "frapper", appuye: false });
+    if (t.recus.slice(avant).some((m) => m.t === "coup")) coups++;
+    t.attendre(0.1);
+  }
+  // Hache : 700 ms le geste (80 ms de tolérance réseau) → un coup à 0 s, un à 0,7 s.
+  assert.equal(coups, 2);
+});
+
+test("équiper une arme (P-005) : on frappe avec elle, le choix est gardé ; perdue, on revient à la meilleure du sac", () => {
+  const t = monter({ hache: 1, gourdin: 1 }, { x: 40, z: 36, etat: "errant" });
+  t.joueur.recevoir({ t: "equiper", objet: "gourdin" });
+  assert.equal(t.dernier("arme")!.arme, "gourdin");
+  assert.equal(t.base.chargerArme(t.compte.id), "gourdin");
+  // Le gourdin ne tue pas à la tête : un coup appuyé ne détruit pas (la hache l'aurait fait).
+  t.joueur.position = { x: t.z().x, z: t.z().z - 1, o: 0 };
+  t.joueur.recevoir({ t: "frapper", appuye: true });
+  assert.notEqual(t.dernier("coup")!.resultat, "detruit");
+  // On jette le gourdin : la hache reprend, avec un mot.
+  t.joueur.recevoir({ t: "jeter", objet: "gourdin", quantite: 1 });
+  t.attendre(1);
+  t.joueur.position = { x: t.z().x, z: t.z().z - 1, o: 0 };
+  t.joueur.recevoir({ t: "frapper", appuye: true });
+  assert.ok(t.recus.some((m) => m.t === "info" && /Le gourdin n'est plus dans ton sac : tu te bats avec la hache/.test(m.texte)));
+  assert.equal(t.dernier("coup")!.resultat, "detruit");
+  // On n'équipe pas ce qu'on n'a pas, ni ce qui n'est pas une arme.
+  t.joueur.recevoir({ t: "equiper", objet: "conserve" });
+  t.joueur.recevoir({ t: "equiper", objet: "marteau" });
+  assert.equal(t.base.chargerArme(t.compte.id), "gourdin");
+});

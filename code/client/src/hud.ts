@@ -7,7 +7,7 @@ import { REGLAGES } from "../../commun/src/reglages.ts";
 import { ceQuiManque } from "../../commun/src/aide-fabrication.ts";
 import { ACTIONS, RESERVEES, assigner, avecTouches, nomDe, nomTouche, retablir, surChangement, type Action } from "./touches.ts";
 import { CAPACITES, type Charges } from "../../commun/src/energie.ts";
-import { NOMS_BLESSURES } from "../../commun/src/combat.ts";
+import { NOMS_BLESSURES, estArme } from "../../commun/src/combat.ts";
 import type { EchangeVu, InstallationVue, OffreEchange, OperationComptoir, OperationEchange, Personne, RapportBase, SanteVue, VueComptoir, WottsVus } from "../../commun/src/messages.ts";
 import { PRIX_RETRAIT, formaterWotts, prixVente } from "../../commun/src/economie.ts";
 import { detailEnergieGrise } from "../../commun/src/recettes.ts";
@@ -59,6 +59,8 @@ export interface ActionsJoueur {
   passerTutoriel(): void;
   /** Jeter un objet par terre (quand le sac est trop lourd). */
   jeter(objet: TypeObjet, quantite: number): void;
+  /** Équiper une arme pour le mode Combat (null : la meilleure du sac) (P-005). */
+  equiper(objet: TypeObjet | null): void;
   /** Ranger dans le coffre, ou en sortir. */
   coffre(id: number, sens: "deposer" | "prendre", objet: TypeObjet, quantite: number): void;
 }
@@ -1035,6 +1037,15 @@ export class Hud {
 
   // ---------- Le sac ----------
 
+  /** L'arme équipée pour le combat (P-005). */
+  private armeEquipee: TypeObjet | null = null;
+
+  majArme(arme: TypeObjet | null): void {
+    this.armeEquipee = arme;
+    this.dernierSac = "";
+    if (!this.sac.hidden) this.dessinerSac();
+  }
+
   private dessinerSac(): void {
     if (this.selection && this.selection !== "gourde" && !(this.inventaire[this.selection] ?? 0)) this.selection = null;
     const poids = poidsInventaire(this.inventaire);
@@ -1050,7 +1061,7 @@ export class Hud {
     };
     const cases = [
       (this.inventaire.gourde ?? 0) > 0 ? case_("gourde", g.litres > 0 ? `${kg(g.litres)} L` : "vide", g.contenu === "brute" && g.litres > 0 ? "brute" : "") : "",
-      ...presents.map((t) => case_(t, (this.inventaire[t] ?? 0) > 1 ? `×${this.inventaire[t]}` : "")),
+      ...presents.map((t) => case_(t, (this.inventaire[t] ?? 0) > 1 ? `×${this.inventaire[t]}` : "", t === this.armeEquipee ? "equipee" : "")),
     ].join("");
 
     let fiche = `<p class="indice">Touche un objet pour le voir.</p>`;
@@ -1069,6 +1080,12 @@ export class Hud {
         action = `<button type="button" data-action="lumiere">${this.lumiereAllumee ? "Éteindre" : "Allumer"}</button>`;
       } else if (s === "pansement") {
         action = `<button type="button" data-action="panser">Panser</button>`;
+      } else if (estArme(s)) {
+        // P-005 : l'arme qu'on a en main dès qu'on passe en mode Combat.
+        action =
+          s === this.armeEquipee
+            ? `<button type="button" data-action="desequiper" title="En mode Combat, tu prendras la meilleure arme du sac.">⚔ Équipée · retirer</button>`
+            : `<button type="button" data-action="equiper">Équiper pour le combat</button>`;
       }
       // Batteries et lampe frontale : la charge stockée (Book 01 §2).
       const batterie = s === "lampe_frontale" ? "petite_batterie" : s === "petite_batterie" || s === "batterie_voiture" ? s : null;
@@ -1122,6 +1139,8 @@ export class Hud {
         if (action === "manger" && this.selection) this.actions.manger(this.selection);
         if (action === "lumiere") this.actions.lumiere();
         if (action === "panser") this.actions.panser();
+        if (action === "equiper" && this.selection) this.actions.equiper(this.selection);
+        if (action === "desequiper") this.actions.equiper(null);
         if ((action === "jeter1" || action === "jeterTout") && this.selection) {
           this.actions.jeter(this.selection, action === "jeter1" ? 1 : (this.inventaire[this.selection] ?? 1));
         }

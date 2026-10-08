@@ -102,7 +102,11 @@ import {
   evoluer,
   freinSaisie,
   intoxiquer,
-  meilleureArme,
+  ARMES,
+  armeEnMain,
+  type Arme,
+  estArme,
+  TOLERANCE_COUP_MS,
   panser,
   seRelever,
   symptomes,
@@ -190,6 +194,10 @@ export class Joueur implements Voyageur {
   private esquiveJusqua = 0;
   private elan: { dx: number; dz: number; restant: number } | null = null;
   private prochaineFrappe = 0;
+  /** L'arme équipée pour le combat (P-005) ; null : la meilleure du sac. */
+  private armeEquipee: TypeObjet | null = null;
+  /** On a déjà prévenu que l'arme équipée n'est plus dans le sac. */
+  private armePerdueSignalee = false;
   private bruitCoupJusqua = 0;
   private appuisDegagement = 0;
   private santeEnvoyee = "";
@@ -262,6 +270,7 @@ export class Joueur implements Voyageur {
     this.debutMonde = base.debutMonde();
     this.tuto = base.chargerTutoriel(compte.id);
     this.quetes = new SuiviQuetes(base.chargerQuetes(compte.id));
+    this.armeEquipee = base.chargerArme(compte.id);
     this.apparence = base.chargerApparence(compte.id, compte.famille);
     this.faune = base.chargerFaune(compte.id);
     const { sante, endurance } = base.chargerSante(compte.id);
@@ -365,6 +374,7 @@ export class Joueur implements Voyageur {
       wotts: this.wottsVus(),
       tutoriel: this.vueTutoriel(),
       quetes: this.vueQuetes(),
+      arme: this.armeEquipee,
       ...(this.lieu === "comptoir" ? { comptoir: this.comptoir.vue(instant) } : {}),
     };
   }
@@ -414,6 +424,9 @@ export class Joueur implements Voyageur {
         return;
       case "poser":
         this.poserObjetLourd();
+        return;
+      case "equiper":
+        this.equiper(message.objet);
         return;
       case "mesures":
         this.mesuresClient(message);
@@ -699,14 +712,15 @@ export class Joueur implements Voyageur {
   private frapper(appuye: boolean): void {
     this.mesurer("activite", "combat", 0.6);
     const instant = this.maintenant();
+    // Un coup va jusqu'au bout (P-004) : on ne refrappe pas avant la fin du geste.
     if (this.voyage || instant < this.prochaineFrappe) return;
     const cout = appuye ? COUT_ENDURANCE.coupAppuye : COUT_ENDURANCE.coup;
     this.annulerAction();
     const force = this.endurance < SEUIL_EPUISE ? 0.5 : 1;
     this.endurance = Math.max(0, this.endurance - cout);
-    this.prochaineFrappe = instant + (appuye ? 700 : 450);
+    const arme = this.armeDuCombat();
+    this.prochaineFrappe = instant + (appuye ? arme.coupAppuye : arme.coup) - TOLERANCE_COUP_MS;
     this.bruitCoupJusqua = instant + 600;
-    const arme = meilleureArme(this.inventaire);
     const cible = this.cibleDevant(arme.allonge);
     if (!cible) return;
     this.position = { ...this.position, o: Math.atan2(cible.x - this.position.x, cible.z - this.position.z) };
@@ -717,6 +731,29 @@ export class Joueur implements Voyageur {
     else this.envoyer(coup);
     if (resultat === "a_terre") this.indice("a_terre", "Il est à terre, mais il se relèvera : frappe-le encore pour l'achever. Un coup appuyé à la tête (maintenir A, puis relâcher) l'arrête net.");
     if (resultat === "detruit" && arme.objet === null) this.info(`À mains nues, ça ne suffira pas : prends une arme (gourdin, marteau, hache…). ${ouTrouverPhrase("gourdin")}`);
+  }
+
+  /** Équiper une arme pour le mode Combat (P-005) : elle doit être dans le sac. null : revenir au choix automatique. */
+  private equiper(objet: TypeObjet | null): void {
+    if (objet !== null && (!estArme(objet) || (this.inventaire[objet] ?? 0) < 1)) return;
+    this.armeEquipee = objet;
+    this.armePerdueSignalee = false;
+    this.base.sauverArme(this.compte.id, objet);
+    this.envoyer({ t: "arme", arme: objet });
+    if (objet) this.info(`En mode Combat, tu frapperas avec ${armeEnMain(this.inventaire, objet).nom}.`);
+    else this.info("Plus d'arme choisie : en mode Combat, tu prendras la meilleure de ton sac.");
+  }
+
+  /** L'arme en main : l'équipée si on l'a encore, sinon la meilleure du sac (et on le dit, une fois). */
+  private armeDuCombat(): Arme {
+    const arme = armeEnMain(this.inventaire, this.armeEquipee);
+    if (this.armeEquipee && arme.objet !== this.armeEquipee && !this.armePerdueSignalee) {
+      this.armePerdueSignalee = true;
+      const nom = ARMES.find((a) => a.objet === this.armeEquipee)?.nom ?? nommer(this.armeEquipee, 1);
+      this.info(`${nom.charAt(0).toUpperCase()}${nom.slice(1)} n'est plus dans ton sac : tu te bats avec ${arme.nom}.`);
+    }
+    if (arme.objet === this.armeEquipee) this.armePerdueSignalee = false;
+    return arme;
   }
 
   private esquiver(dx: number, dz: number): void {
@@ -1963,7 +2000,7 @@ export class Joueur implements Voyageur {
     const p = this.poules.find((x) => x.id === id);
     if (!p) return;
     if (this.objetPorte()) return this.info("Tu as les bras pris : pose d'abord l'escabeau.");
-    const arme = meilleureArme(this.inventaire);
+    const arme = this.armeDuCombat();
     if (!arme.objet) return this.info(`À mains nues, elle t'échappe : il te faut au moins un gourdin, un couteau ou un outil. ${ouTrouverPhrase("gourdin")}`);
     const d = Math.hypot(p.x - this.position.x, p.z - this.position.z);
     if (d > arme.allonge + 0.3) return this.info(`Trop loin : approche-toi doucement en allure discrète (${p.etat === "fuit" ? "elle détale : attends qu'elle se calme" : "à un mètre"}).`);
