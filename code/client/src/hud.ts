@@ -170,6 +170,27 @@ export class Hud {
   private tactile = false;
   /** Un panneau s'ouvre (true) ou se ferme (false) : pour le son de l'interface. */
   surPanneau: ((ouvert: boolean) => void) | null = null;
+  /** Demander la pause, ou reprendre (le serveur décide). */
+  surPause: ((oui: boolean) => void) | null = null;
+
+  /** Le bouton pause : seulement sur son terrain et dans sa Coopérative, là où l'on est seul. */
+  pausePossible(oui: boolean): void {
+    this.element.querySelector<HTMLElement>(".b-pause")!.hidden = !oui;
+  }
+
+  /** Le voile de pause. */
+  majPause(oui: boolean): void {
+    const v = this.element.querySelector<HTMLElement>(".voile-pause")!;
+    v.hidden = !oui;
+    if (oui) {
+      this.fermerPanneaux();
+      v.querySelector<HTMLElement>(".reprendre")?.focus({ preventScroll: true });
+    }
+  }
+
+  get enPause(): boolean {
+    return !this.element.querySelector<HTMLElement>(".voile-pause")!.hidden;
+  }
   /** Le panneau d'aide (menu ⚙ → Aide). */
   readonly aide: PanneauAide;
   /** Le choix de l'emplacement d'une construction : les trois boutons du bandeau (pour le doigt comme pour la souris). */
@@ -294,6 +315,7 @@ export class Hud {
       </div>
       <div class="etat">
         <div class="boutons">
+          <button type="button" class="b-pause" hidden aria-label="Pause" title="Pause (seulement là où tu es seul)"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor"/></svg></button>
           <button type="button" class="partir" aria-label="Partir" title="Partir">🚪</button>
           <button type="button" class="options" aria-label="Options" aria-expanded="false" aria-haspopup="true" title="Options">
             <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3.3h-4L10.7 6a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.4 7.4 0 0 0 1.7 1l.3 2.6h4l.3-2.6a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg>
@@ -337,6 +359,10 @@ export class Hud {
       <div class="halo" aria-hidden="true"></div>
       <div class="rapport" hidden role="dialog" aria-label="Pendant ton absence"></div>
       <div class="carnet" hidden></div>
+      <div class="voile-pause" hidden role="dialog" aria-modal="true" aria-labelledby="titre-pause">
+        <div class="carte-pause"><h2 id="titre-pause">Pause</h2><p>Le temps s'arrête pour toi : faim, soif, fatigue, Éteints. L'heure du monde, elle, continue.</p>
+        <button type="button" class="reprendre">Reprendre</button></div>
+      </div>
       <div class="pose" hidden role="dialog" aria-label="Choisir l'emplacement">
         <p class="texte-pose"></p>
         <div class="boutons-pose">
@@ -449,6 +475,11 @@ export class Hud {
     const fermerDepart = () => {
       depart.hidden = true;
     };
+    q(".b-pause").addEventListener("click", () => {
+      ouvrirMenu(false);
+      this.surPause?.(true);
+    });
+    q(".reprendre").addEventListener("click", () => this.surPause?.(false));
     q(".partir").addEventListener("click", () => {
       ouvrirMenu(false);
       const aLAbri = this.aLAbri?.() ?? false;

@@ -393,6 +393,7 @@ const horsChamp = new IndicateurHorsChamp(document.getElementById("hud")!);
 
 const carte = new Carte(document.getElementById("carte")!, (vers) => envoyer({ t: "voyager", vers }));
 hud.surPanneau = (ouvert) => uiSon(ouvert ? "ouvrir" : "fermer");
+hud.surPause = (oui) => envoyer({ t: "pause", oui });
 hud.surSon = () => son.basculer();
 hud.surAttendreTouche = (f) => entrees.attendreTouche(f);
 
@@ -400,6 +401,9 @@ function installer(message: Bienvenue): void {
   voile.hidden = true;
   lieu = message.lieu;
   montrerDecor(lieu);
+  // La pause : seulement là où l'on est seul (son terrain, sa Coopérative).
+  hud.pausePossible(lieu === "terrain" || lieu === "cooperative");
+  hud.majPause(false);
   // Les portes de la Coopérative, dans l'état où on les a laissées ; la radio, si elle joue encore.
   if (message.portes) portesCoop = message.portes;
   leurresActifs.clear();
@@ -727,6 +731,9 @@ function recevoir(message: MessageServeur): void {
       etatCoop = message.etat;
       if (decorCoop) placerRadio(decorCoop, etatCoop.radio);
       return;
+    case "pause":
+      hud.majPause(message.oui);
+      return;
     case "portes":
       portesCoop = message.portes;
       if (decorCoop) majPortes(decorCoop, portesCoop, true);
@@ -992,6 +999,11 @@ hud.aLAbri = () =>
   lieu === "terrain" && position !== null && [...installations.values()].some((i) => i.vue.type === "abri" && Math.hypot(i.vue.x - position!.x, i.vue.z - position!.z) <= 3);
 
 function executer(c: Commande): void {
+  // En pause : Échap ou A reprennent ; rien d'autre.
+  if (hud.enPause) {
+    if (c === "fermer" || c === "A") envoyer({ t: "pause", oui: false });
+    return;
+  }
   // Pendant le choix de l'emplacement : A construit, la touche de lumière tourne, B ou Échap annulent.
   if (pose.actif) {
     if (c === "A") return finirPose("poser");
@@ -1274,7 +1286,7 @@ function boucle(instant: number): void {
     const entree = entrees.lire();
     const { dx, dz } = scene.versMonde(entree.x, entree.y);
     // Carte ouverte ou en route : le personnage s'arrête.
-    const immobile = enVoyage || carte.ouverte;
+    const immobile = enVoyage || carte.ouverte || hud.enPause;
     let allure = allureAutorisee(entree.allure, besoins, porteEscabeau() || traineTravois(inventaire));
     if (allure === "course" && endurance < SEUIL_EPUISE) allure = "marche";
     // On voulait courir, mais on marche : on dit pourquoi, et comment y remédier.

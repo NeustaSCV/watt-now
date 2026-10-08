@@ -169,6 +169,8 @@ export type MessageClient =
   | { t: "frapper"; appuye: boolean }
   | { t: "esquiver"; dx: number; dz: number }
   | { t: "degager" }
+  /** La pause (2026-10-09) : seulement là où l'on est seul (son terrain, sa Coopérative). */
+  | { t: "pause"; oui: boolean }
   /** B selon la situation (Book 23 §4.4) : un Éteint à 1,2 m devant soi, on le repousse. */
   | { t: "repousser" }
   /** Réparer une arme (Book 23 §4.3) : de fortune (partout), ou pour de bon à l'atelier qui convient. */
@@ -411,6 +413,8 @@ export type MessageServeur =
   | { t: "leurre"; id: string; actif: boolean; x: number; z: number }
   /** La radio a changé de place, ou le klaxon a sonné (0.5.1). */
   | { t: "etat_coop"; etat: EtatCoopVu }
+  /** La pause est prise (ou refusée), ou finie. */
+  | { t: "pause"; oui: boolean }
   /** L'état des portes de la Coopérative (ouverte : true), à chaque changement (0.5b). */
   | { t: "portes"; portes: Record<string, boolean> }
   | { t: "wotts"; wotts: WottsVus }

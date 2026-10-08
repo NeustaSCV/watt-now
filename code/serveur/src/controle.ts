@@ -97,6 +97,8 @@ export function messageValide(m: unknown): m is MessageClient {
       return booleen(m.appuye);
     case "esquiver":
       return nombre(m.dx) && nombre(m.dz);
+    case "pause":
+      return booleen(m.oui);
     case "reparer":
       return estObjet(m.objet) && booleen(m.fortune);
     case "comptoir":

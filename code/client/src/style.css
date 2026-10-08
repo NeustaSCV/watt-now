@@ -4691,3 +4691,72 @@ body:has(#hud .pose:not([hidden])) #hud .tactile { display: none !important; }
     #hud .panneau.fabrication .onglets-fabrication { flex-wrap: wrap; overflow: visible; row-gap: 8px; padding-top: 8px; }
   }
 }
+
+/* La pause (2026-10-09) : un bouton à côté de la porte, et un voile qui dit que le temps s'est arrêté pour soi. */
+#hud .etat .boutons > .b-pause {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--hud-texte);
+  cursor: pointer;
+  pointer-events: auto;
+}
+#hud .etat .boutons > .b-pause[hidden] {
+  display: none;
+}
+#hud .voile-pause {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  background: rgba(8, 10, 14, 0.5);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  pointer-events: auto;
+}
+#hud .voile-pause[hidden] {
+  display: none;
+}
+#hud .voile-pause .carte-pause {
+  width: min(320px, calc(100vw - 32px));
+  padding: 16px 18px;
+  border-radius: 6px;
+  background: #f2ead6;
+  color: var(--encre);
+  box-shadow: 0 0 0 4px #e3d6b5, 0 18px 50px rgba(0, 0, 0, 0.5);
+  text-align: center;
+}
+#hud .voile-pause h2 {
+  margin: 0 0 6px;
+  font-family: Georgia, serif;
+  font-style: italic;
+  font-size: 22px;
+}
+#hud .voile-pause p {
+  margin: 0 0 14px;
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+#hud .voile-pause .reprendre {
+  min-height: 44px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--rouge);
+  color: var(--creme);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+body:has(#hud .voile-pause:not([hidden])) #joystick,
+body:has(#hud .voile-pause:not([hidden])) #hud .tactile {
+  display: none !important;
+}

@@ -48,6 +48,8 @@ export interface Voyageur {
   envoyer(m: MessageServeur): void;
   stimuli(nuit: boolean): Stimulus[];
   humain(): Humain;
+  /** En pause : le lieu (s'il est à lui seul) ne bouge plus. */
+  enPause?(): boolean;
 }
 
 /** On voit les Éteints de la halte jusqu'à cette distance (la caméra en montre ≈ 30 m ; un peu de marge). */
@@ -214,6 +216,8 @@ export class LieuVivant {
       return;
     }
     this.videDepuis = 0;
+    // Tout le monde est en pause (un lieu à un seul joueur, sa Coopérative) : les Éteints ne bougent plus.
+    if ([...this.presents].every((v) => v.enPause?.() === true)) return;
 
     const nuit = estNuit(heureDeJeu(instant, this.debutMonde));
     // Les gémissements des Éteints qui se réveillent sont des bruits comme les autres : la cascade (Book 23 §3).

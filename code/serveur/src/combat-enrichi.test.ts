@@ -170,3 +170,38 @@ test("0.5e : les leurres du décor — le klaxon vide la batterie du tracteur, l
   actionner("radio");
   assert.ok(!coop.bruitEnCours("radio", instant));
 });
+
+test("la pause : sur son terrain, la faim s'arrête et l'on ne bouge plus ; pas de pause à la station", () => {
+  const base = new Base(":memory:");
+  let instant = 1_000_000;
+  const compte = base.creerCompte("Rose", "potager42", "voltaiques");
+  const recus: MessageServeur[] = [];
+  const j = new Joueur(compte, base, (m) => recus.push(m), () => instant, new Halte(base), () => 0.5);
+  const kcal = () => j.bienvenue(0).besoins.kcal;
+  j.recevoir({ t: "pause", oui: true });
+  assert.deepEqual(recus.findLast((m) => m.t === "pause"), { t: "pause", oui: true });
+  const avant = kcal();
+  const pos = { ...j.position };
+  j.recevoir({ t: "intention", dx: 1, dz: 0, allure: "course", seq: 1 });
+  for (let i = 0; i < 200; i++) {
+    instant += 100;
+    j.tick(0.1);
+  }
+  assert.equal(kcal(), avant);
+  assert.deepEqual({ x: j.position.x, z: j.position.z }, { x: pos.x, z: pos.z });
+  j.recevoir({ t: "pause", oui: false });
+  for (let i = 0; i < 200; i++) {
+    instant += 100;
+    j.tick(0.1);
+  }
+  assert.ok(kcal() < avant, "la faim reprend");
+  // À la station (lieu partagé) : refusée.
+  j.position = { x: SORTIE_TERRAIN.boite.x, z: SORTIE_TERRAIN.boite.z, o: 0 };
+  j.recevoir({ t: "voyager", vers: "station" });
+  for (let i = 0; i < 120; i++) {
+    instant += 100;
+    j.tick(0.1);
+  }
+  j.recevoir({ t: "pause", oui: true });
+  assert.deepEqual(recus.findLast((m) => m.t === "pause"), { t: "pause", oui: false });
+});

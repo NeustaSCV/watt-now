@@ -459,7 +459,41 @@ export class Joueur implements Voyageur {
 
   // ---------- Réception ----------
 
+  /** En pause (2026-10-09) : sur son terrain ou dans sa Coopérative seulement, là où l'on est seul. */
+  private pause = false;
+
+  enPause(): boolean {
+    return this.pause;
+  }
+
+  /** On peut faire une pause là où personne d'autre ne joue : son terrain, sa Coopérative. */
+  private pausePossible(): string | null {
+    if (this.voyage) return "Pas en route.";
+    if (this.lieu !== "terrain" && this.lieu !== "cooperative") return "Pas de pause ici : d'autres joueurs partagent ce lieu.";
+    if (this.saisisseurs().length > 0) return "Pas pendant qu'il te tient !";
+    return null;
+  }
+
+  private basculerPause(oui: boolean): void {
+    if (oui === this.pause) return this.envoyer({ t: "pause", oui });
+    if (oui) {
+      const refus = this.pausePossible();
+      if (refus) {
+        this.info(refus);
+        return this.envoyer({ t: "pause", oui: false });
+      }
+      this.annulerAction();
+      this.intention = INTENTION_REPOS;
+      this.elan = null;
+    }
+    this.pause = oui;
+    this.envoyer({ t: "pause", oui });
+  }
+
   recevoir(message: MessageClient): void {
+    if (message.t === "pause") return this.basculerPause(message.oui === true);
+    // En pause, le monde attend : on n'agit pas (le client le sait aussi).
+    if (this.pause && message.t !== "ping" && message.t !== "mesures") return;
     switch (message.t) {
       case "intention": {
         const intention = nettoyerIntention(message);
@@ -1808,6 +1842,8 @@ export class Joueur implements Voyageur {
   // ---------- Pas de calcul ----------
 
   tick(dt: number): void {
+    // En pause : rien ne bouge pour ce joueur (besoins, actions, Éteints de son terrain).
+    if (this.pause) return;
     const instant = this.maintenant();
     const heures = dt / 60; // horloge d'action : 1 minute réelle = 1 heure de jeu
 

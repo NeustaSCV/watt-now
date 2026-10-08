@@ -129,6 +129,8 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
       "Quand tu n'es pas connecté, **ton personnage ne consomme rien** : faim, soif, fatigue et santé sont gelées. Tu peux partir une semaine, tu le retrouveras comme tu l'as laissé.",
       { sous_titre: "Dors dans ton abri avant de partir" },
       "Se déconnecter à côté de son abri, sur son terrain, compte comme une nuit complète : si tu reviens assez longtemps après (une dizaine de minutes suffit), tu te réveilles reposé. Le bouton 🚪 Partir te le rappelle.",
+      { sous_titre: "Faire une pause" },
+      "Le bouton ⏸, à côté de la porte, met le jeu en pause **là où tu es seul** : ton terrain, ta Coopérative. Faim, soif, fatigue et Éteints s'arrêtent ; l'heure du monde continue. À la station et au Comptoir, d'autres joueurs sont là : pas de pause.",
       { sous_titre: "La pause automatique" },
       "Après quelques minutes sans bouger ni agir (5 par défaut), la partie se met en pause et tu es déconnecté. Rien n'est perdu : appuie sur « Reprendre ».",
       { sous_titre: "Ce qui continue sans toi" },
