@@ -12,6 +12,10 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
+## 0.5.2 · prête à déployer (2026-10-08)
+
+- **Le sac, en vertical** : la grille prend toute la place libre, et on voit tous ses objets d'un coup. La fiche de l'objet touché ne prend que la hauteur dont elle a besoin.
+
 ## 0.5.1 · déployée le 2026-10-08
 
 **Le sac et Fabriquer, enfin utilisables sur téléphone** (avis de Sally ; référence : l'iPhone 13 mini)

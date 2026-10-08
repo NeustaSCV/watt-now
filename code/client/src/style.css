@@ -4638,3 +4638,9 @@ body.aide-ouverte #hud .tactile {
   #hud .identite .blessures { margin-top: 2px; gap: 2px; }
   #hud .identite .puce-blessure { font-size: 10px; line-height: 15px; padding: 0 5px; }
 }
+/* Sac en vertical (retour du porteur sur son iPhone 13 mini, 2026-10-08) : la fiche ne prend que la place dont elle a
+   besoin (au plus 60 % du volet, elle défile au-delà) ; la grille occupe tout le reste, au lieu de deux rangées et demie. */
+@media (max-width: 560px) and (orientation: portrait) {
+  #hud .panneau.sac .grille { flex: 1 1 auto; max-height: none; min-height: 124px; overflow-y: auto; align-content: start; }
+  #hud .panneau.sac .fiche { flex: 0 1 auto; max-height: 60%; }
+}
