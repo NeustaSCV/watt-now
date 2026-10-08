@@ -12,6 +12,7 @@ import * as THREE from "three";
 import { GLTFLoader, type GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import { clone as clonerSquelette } from "three/examples/jsm/utils/SkeletonUtils.js";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { colorer, tailler, zonesDesSommets, type Piece, type Zone } from "./vetements.ts";
 
 const BASE = "/assets/personnages/";
@@ -575,6 +576,40 @@ export class Humanoide {
   get finie(): boolean {
     const a = this.actuelle;
     return !a || (a.loop === THREE.LoopOnce && a.time >= a.getClip().duration - 1e-3);
+  }
+
+  /**
+   * La lueur des yeux (Éteints, Book 23 §4.5) : deux points blancs posés devant les yeux, sans éclairage, accrochés à
+   * la tête. Les yeux du modèle font un pixel en vue de jeu : ces points, eux, se lisent dans le noir. Un seul maillage
+   * (un appel de dessin), à rendre visible et plus ou moins opaque selon l'obscurité. À créer au repos.
+   */
+  creerLueurYeux(): THREE.Mesh | null {
+    const points: THREE.Vector3[] = [];
+    this.objet.updateMatrixWorld(true);
+    const versObjet = this.objet.matrixWorld.clone().invert();
+    const v = new THREE.Vector3();
+    this.modele.traverse((n) => {
+      const m = n as THREE.SkinnedMesh;
+      if (!m.isSkinnedMesh || !this.materiauxYeux.includes(m.material as THREE.MeshStandardMaterial)) return;
+      const p = m.geometry.getAttribute("position");
+      for (let i = 0; i < p.count; i++) points.push(m.getVertexPosition(i, v).clone().applyMatrix4(m.matrixWorld).applyMatrix4(versObjet));
+    });
+    if (points.length === 0) return null;
+    const geometries: THREE.BufferGeometry[] = [];
+    for (const cote of [-1, 1]) {
+      const oeil = points.filter((p) => Math.sign(p.x) === cote);
+      if (oeil.length === 0) continue;
+      const b = new THREE.Box3().setFromPoints(oeil);
+      const c = b.getCenter(new THREE.Vector3());
+      // Un peu plus gros que l'œil, et posé juste devant : il dépasse de la paupière, se voit d'en haut.
+      geometries.push(new THREE.IcosahedronGeometry(0.026, 1).scale(1.2, 0.85, 0.6).translate(c.x, c.y, b.max.z + 0.002));
+    }
+    const geo = geometries.length > 1 ? mergeGeometries(geometries) : geometries[0]!;
+    const lueur = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, fog: false, toneMapped: false }));
+    lueur.castShadow = false;
+    lueur.visible = false;
+    this.accrocher(lueur, "Head");
+    return lueur;
   }
 
   /** Le nombre de taches de sang sur les vêtements. */

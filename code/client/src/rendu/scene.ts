@@ -27,6 +27,8 @@ export class Scene {
   private quartDeTour = 0;
   private lacet = Math.PI / 4;
   private zoom = 1;
+  /** La pièce noire où l'on est (Book 23 §4.5) : l'obscurité locale y monte, en fondu. */
+  private pieceNoireVisee = false;
   /** Mode photo : un angle de caméra libre (en radians), ou null pour suivre les quarts de tour. */
   lacetLibre: number | null = null;
 
@@ -63,7 +65,8 @@ export class Scene {
     this.scene.add(this.soleil, this.soleil.target);
     this.ciel = new Ciel(this.scene, this.rendu, hemi, this.soleil);
     // Réserve fixe de lumières : 4 sur mobile, 8 sur ordinateur (Book 21 §5.3.3).
-    this.lumieres = new ReserveLumieres(this.scene, qualite.niveau === "haut" ? 8 : 4);
+    // En qualité haute seulement, la lumière la plus proche (la lampe qu'on porte) projette une ombre, dans le noir.
+    this.lumieres = new ReserveLumieres(this.scene, qualite.niveau === "haut" ? 8 : 4, qualite.niveau === "haut" && qualite.ombres ? 512 : 0);
 
     window.addEventListener("resize", () => this.redimensionner());
     canvas.addEventListener(
@@ -114,11 +117,21 @@ export class Scene {
 
   }
 
+  /**
+   * On entre dans une pièce noire (ou on en sort) : l'ambiance passe en nuit intérieure en ≈ 0,6 s, même de jour,
+   * et revient de même. Les autres lieux ne l'appellent pas : leur cycle du jour ne change pas.
+   */
+  pieceNoire(oui: boolean): void {
+    this.pieceNoireVisee = oui;
+  }
+
   /** Heure de jeu et sources de lumière artificielles de l'image. */
   eclairer(heure: number, sources: SourceLumiere[], dt: number, nuages = 0): void {
+    const c = this.ciel;
+    c.obscurite = Math.min(1, Math.max(0, c.obscurite + (this.pieceNoireVisee ? 1 : -1) * (dt / 0.6)));
     // Le ciel place aussi le soleil (ou la lune) : une seule carte d'ombre, centrée sur ce qu'on voit.
-    this.ciel.appliquer(heure, this.cible, nuages);
-    this.lumieres.mettreAJour(sources, this.cible, dt);
+    c.appliquer(heure, this.cible, nuages);
+    this.lumieres.mettreAJour(sources, this.cible, dt, c.obscurite > 0.5 || c.nuit > 0.5);
   }
 
   /** Mode photo : régler le zoom (0,6 à 1,7). */

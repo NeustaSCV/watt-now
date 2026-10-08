@@ -30,6 +30,17 @@ const ETAPES: Etape[] = [
 ];
 
 const GRIS = new THREE.Color(0x9aa3ab);
+/** La teinte de l'ambiance d'une pièce noire (Book 23 §4.5) : un reste de jour froid, par les portes et les fentes. */
+const NOIR_INTERIEUR = new THREE.Color(0x56658a);
+const NOIR_SOL = new THREE.Color(0x1c1f26);
+/** Ce que l'obscurité locale retire : la part de lumière ambiante et de soleil éteinte, la part de teinte froide. */
+export const OBSCURITE = { ambiance: 0.6, astre: 0.88, teinte: 0.8 };
+
+/**
+ * Ce que les autres modules du rendu ont besoin de savoir de la lumière de l'image (les yeux des Éteints) :
+ * `noir` de 0 (plein jour dehors) à 1 (la nuit, ou une pièce noire), et le point regardé.
+ */
+export const AMBIANCE = { noir: 0, x: 0, z: 0 };
 const a = new THREE.Color();
 const b = new THREE.Color();
 function melanger(c1: number, c2: number, t: number, cible: THREE.Color): THREE.Color {
@@ -43,6 +54,11 @@ export class Ciel {
   private readonly rendu: THREE.WebGLRenderer;
   /** Part de nuit (0 le jour, 1 en pleine nuit) : sert aux lumières artificielles. */
   nuit = 0;
+  /**
+   * L'obscurité locale (0 dehors, 1 dans une pièce noire : hangar, bureaux, chambre froide, atelier de la
+   * Coopérative). Elle se pose par-dessus l'heure, sans toucher au cycle du jour : soleil et ciel presque éteints.
+   */
+  obscurite = 0;
 
   constructor(scene: THREE.Scene, rendu: THREE.WebGLRenderer, hemi: THREE.HemisphereLight, astre: THREE.DirectionalLight) {
     this.scene = scene;
@@ -81,6 +97,14 @@ export class Ciel {
     this.astre.intensity = (e1.astreIntensite + (e2.astreIntensite - e1.astreIntensite) * lisse) * (1 - 0.72 * nuages);
     this.hemi.intensity *= 1 - 0.18 * nuages;
     this.rendu.toneMappingExposure = e1.exposition + (e2.exposition - e1.exposition) * lisse;
+    if (this.obscurite > 0) {
+      // Une pièce noire : il ne reste qu'un fond de lumière froide, qui découpe à peine les volumes.
+      const o = this.obscurite;
+      this.hemi.color.lerp(NOIR_INTERIEUR, o * OBSCURITE.teinte);
+      this.hemi.groundColor.lerp(NOIR_SOL, o * OBSCURITE.teinte);
+      this.hemi.intensity *= 1 - OBSCURITE.ambiance * o;
+      this.astre.intensity *= 1 - OBSCURITE.astre * o;
+    }
 
     // Le soleil se lève à l'est (−x) et se couche à l'ouest (+x). La nuit, la lune est haute.
     const jour = heure >= 5.5 && heure <= 20.8;
@@ -94,5 +118,8 @@ export class Ciel {
     this.astre.target.position.copy(cible);
 
     this.nuit = heure >= 21 || heure < 5 ? 1 : heure >= 19.5 ? (heure - 19.5) / 1.5 : heure < 6.5 ? (6.5 - heure) / 1.5 : 0;
+    AMBIANCE.noir = Math.max(this.nuit, this.obscurite);
+    AMBIANCE.x = cible.x;
+    AMBIANCE.z = cible.z;
   }
 }

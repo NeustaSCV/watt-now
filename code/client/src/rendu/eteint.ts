@@ -6,6 +6,7 @@
 import * as THREE from "three";
 import type { EteintVu } from "../../../commun/src/eteints.ts";
 import { Humanoide, chargerHumanoides, humanoidesPrets, type Coiffure, type Tenue } from "./humanoides.ts";
+import { AMBIANCE } from "./ciel.ts";
 import { aleatoire } from "./materiaux.ts";
 import { Rampement, habillerVariante, herbeDuRampant, tenueDeVariante } from "./variantes-eteints.ts";
 
@@ -16,6 +17,12 @@ const HAUTS = [0x8a5a52, 0x5a6f8c, 0xb09a6a, 0x7a4a5a, 0xc0b8a4, 0x4f6a72, 0x9a6
 const BAS = [0x34405a, 0x4a3c30, 0x2e2e32, 0x5a5242, 0x3c4a5c];
 const COIFFURES: (Coiffure | null)[] = ["buzzed", "simpleparted", "long", "buns", "buzzedfemale", null];
 const CHEVEUX = [0x4a4038, 0x3a3330, 0x6b6258, 0x2e2925];
+
+/**
+ * Les yeux dans le noir (Book 23 §4.5) : la lueur se voit jusqu'à ≈ 6 m du point regardé (le joueur), puis s'éteint
+ * vers 9 m ; elle n'apparaît que dans le noir (nuit ou pièce noire). Un dormant a les yeux mi-clos : lueur plus faible.
+ */
+const LUEUR = { pleine: 6, eteinte: 9, dormant: 0.7 };
 
 /** Vitesse propre de la marche d'Éteint (m/s, ramenée à sa taille). */
 const VITESSE_MARCHE = 1.0;
@@ -36,6 +43,7 @@ export class VueEteint {
   private readonly rampant: boolean;
   private herbe: ReturnType<typeof herbeDuRampant> | null = null;
   private rampement: Rampement | null = null;
+  private lueur: THREE.Mesh | null = null;
 
   constructor(e: EteintVu) {
     this.cible = e;
@@ -79,6 +87,19 @@ export class VueEteint {
     });
     this.corps = corps;
     if (v) habillerVariante(corps, v, this.cible.id * 17 + 3);
+    this.lueur = corps.creerLueurYeux();
+    // Le corps et ses vêtements ne se dessinent que s'ils sont dans le champ (de la caméra, ou d'une ombre) : une
+    // sphère mesurée au repos, élargie pour les gestes. Sans ça, les 24 Éteints de la Coopérative se dessinaient
+    // tous, toujours, et six fois de plus dans l'ombre de la lampe (2026-10-08).
+    corps.objet.updateMatrixWorld(true);
+    corps.objet.traverse((n) => {
+      const m = n as THREE.SkinnedMesh;
+      if (!m.isSkinnedMesh) return;
+      m.computeBoundingSphere();
+      if (!m.boundingSphere) return;
+      m.boundingSphere.radius *= 1.5;
+      m.frustumCulled = true;
+    });
     corps.fermerLesYeux(this.ouverture);
     this.objet.add(corps.objet);
     if (this.rampant) {
@@ -138,6 +159,7 @@ export class VueEteint {
     const ouvert = etat === "dormant" ? 0 : 1;
     this.ouverture += (ouvert - this.ouverture) * Math.min(1, dt * (ouvert ? 6 : 1));
     c.fermerLesYeux(this.ouverture);
+    this.luire();
 
     if (this.rampant) {
       this.ramper(dt, vitesse);
@@ -180,5 +202,19 @@ export class VueEteint {
     const bouge = !inerte && vitesse > 0.05;
     this.rampement?.animer(dt, bouge ? Math.min(1.6, 0.4 + vitesse) : 0, !inerte && !!this.cible.saisit);
     this.herbe?.animer(dt, inerte ? 0 : bouge ? Math.min(1, 0.45 + vitesse * 0.6) : 0.12);
+  }
+
+  /** La lueur des yeux : nette dans le noir et de près, absente de jour ; éteinte chez un Éteint détruit. */
+  private luire(): void {
+    const l = this.lueur;
+    if (!l) return;
+    const p = this.objet.position;
+    const d = Math.hypot(p.x - AMBIANCE.x, p.z - AMBIANCE.z);
+    const pres = Math.min(1, Math.max(0, (LUEUR.eteinte - d) / (LUEUR.eteinte - LUEUR.pleine)));
+    const n = Math.min(1, Math.max(0, (AMBIANCE.noir - 0.2) / 0.6));
+    const yeux = this.cible.etat === "detruit" ? 0 : LUEUR.dormant + (1 - LUEUR.dormant) * this.ouverture;
+    const opacite = pres * n * n * (3 - 2 * n) * yeux;
+    l.visible = opacite > 0.02;
+    (l.material as THREE.MeshBasicMaterial).opacity = opacite;
   }
 }

@@ -5,7 +5,12 @@
 // Pilotable depuis la console (et par le script de captures) : planche.placer("atelier"), planche.etat.vue = "dessus"…
 
 import * as THREE from "three";
-import { PORTES } from "../../commun/src/cooperative.ts";
+import { PORTES, sombreIci } from "../../commun/src/cooperative.ts";
+import { eteintsCoop } from "../../commun/src/eteints-coop.ts";
+import { vue } from "../../commun/src/eteints.ts";
+import { Ciel, OBSCURITE } from "./rendu/ciel.ts";
+import { VueEteint } from "./rendu/eteint.ts";
+import { ReserveLumieres } from "./rendu/lumieres.ts";
 import { animerCooperative, creerCooperative, estomperCooperative, majPortes } from "./rendu/cooperative.ts";
 import { chargerHumanoides } from "./rendu/humanoides.ts";
 import { PALETTE } from "./rendu/materiaux.ts";
@@ -27,9 +32,14 @@ soleil.castShadow = true;
 soleil.shadow.mapSize.set(2048, 2048);
 soleil.shadow.bias = -0.0006;
 soleil.shadow.normalBias = 0.03;
-// La lampe du personnage, la nuit (l'éclairage dynamique des lieux sombres viendra ensuite).
-const lampe = new THREE.PointLight(0xffd9a0, 0, 11, 1.6);
-scene.add(hemi, soleil, soleil.target, lampe);
+scene.add(hemi, soleil, soleil.target);
+// Comme en jeu (Scene) : le cycle du ciel, l'obscurité locale des pièces noires, la réserve de lumières (8 en qualité
+// haute, avec l'ombre de la lampe ; 4 en moyenne, sans : cooperative.html#qualite=moyen).
+const QUALITE_HAUTE = !location.hash.includes("qualite=moyen");
+const ciel = new Ciel(scene, rendu, hemi, soleil);
+const reserve = new ReserveLumieres(scene, QUALITE_HAUTE ? 8 : 4, QUALITE_HAUTE ? 512 : 0);
+/** La lanterne de Rose (main.ts, LUMIERES_PORTEES) ; dans une pièce noire, comme en jeu (lampeDansLeNoir). */
+const LANTERNE = { couleur: 0xffd27a, intensite: 3.5, portee: 7, vacillement: 0.15 };
 
 const coop = creerCooperative();
 scene.add(coop);
@@ -68,32 +78,27 @@ const POINTS: Record<string, { x: number; z: number; o?: number }> = {
   "brèche": { x: 2.5, z: 31 },
 };
 
-const etat = { point: "portail", vue: "jeu" as "jeu" | "large" | "dessus" | "pres", quart: 0, orbite: Math.PI / 4, hauteur: 0.55, nuit: false, x: 43, z: 56.5, toutesFermees: false };
+const etat = { point: "portail", vue: "jeu" as "jeu" | "large" | "dessus" | "pres", quart: 0, orbite: Math.PI / 4, hauteur: 0.55, nuit: false, x: 43, z: 56.5, toutesFermees: false, lampe: false, eteints: false };
 
 let personnage: Personnage | null = null;
 const camOrtho = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 300);
 const camPersp = new THREE.PerspectiveCamera(35, 1, 0.1, 400);
 const ELEVATION = Math.atan(1 / Math.SQRT2);
 
+/** Le jour (10 h) ou la nuit (23 h), par le cycle du jeu (Ciel) : les couleurs sont appliquées à chaque image. */
 function ambiance(): void {
-  if (etat.nuit) {
-    scene.background = new THREE.Color(0x0e1522);
-    scene.fog = new THREE.Fog(0x0e1522, 70, 140);
-    hemi.color.setHex(0x40557a);
-    hemi.groundColor.setHex(0x101318);
-    hemi.intensity = 0.55;
-    soleil.color.setHex(0x9fb4e0);
-    soleil.intensity = 0.55;
-    lampe.intensity = 14;
-  } else {
-    scene.background = new THREE.Color(PALETTE.ciel);
-    scene.fog = new THREE.Fog(PALETTE.brume, 80, 140);
-    hemi.color.setHex(0xdfe8f0);
-    hemi.groundColor.setHex(0x4d5a3a);
-    hemi.intensity = 1.15;
-    soleil.color.setHex(0xffdcae);
-    soleil.intensity = 2.6;
-    lampe.intensity = 0;
+  if (!(scene.background instanceof THREE.Color)) scene.background = new THREE.Color(PALETTE.ciel);
+  if (!scene.fog) scene.fog = new THREE.Fog(PALETTE.brume, 80, 140);
+}
+
+/** Les 24 Éteints du plan (eteintsCoop), dessinés comme en jeu, immobiles. */
+const eteints: VueEteint[] = [];
+function montrerEteints(oui: boolean): void {
+  etat.eteints = oui;
+  if (oui && eteints.length === 0) for (const e of eteintsCoop()) eteints.push(new VueEteint(vue(e)));
+  for (const v of eteints) {
+    if (oui && !v.objet.parent) scene.add(v.objet);
+    if (!oui) scene.remove(v.objet);
   }
 }
 
@@ -189,6 +194,8 @@ function majBarre(): void {
     ambiance();
   }));
   barre.append(bouton(etat.toutesFermees ? "portes fermées" : "portes du plan", etat.toutesFermees, basculerPortes));
+  barre.append(bouton(etat.lampe ? "lampe allumée" : "lampe éteinte", etat.lampe, () => (etat.lampe = !etat.lampe)));
+  barre.append(bouton("Éteints", etat.eteints, () => montrerEteints(!etat.eteints)));
 }
 
 // Pour piloter la planche depuis la console ou le script de captures.
@@ -201,6 +208,9 @@ function majBarre(): void {
   coop,
   parPartie,
   ambiance,
+  ciel,
+  OBSCURITE,
+  montrerEteints,
   barre: (visible: boolean) => barre.classList.toggle("cache", !visible),
   aller: (x: number, z: number) => {
     etat.x = x;
@@ -231,7 +241,15 @@ void chargerHumanoides().then(() => {
     dernier = t;
     personnage!.animer(dt, 0);
     const p = personnage!.objet.position;
-    lampe.position.set(p.x, 2.2, p.z);
+    // L'obscurité locale (Book 23 §4.5), en fondu de 0,6 s, et la lampe : comme Scene.eclairer en jeu.
+    const noir = sombreIci(p.x, p.z);
+    ciel.obscurite = Math.min(1, Math.max(0, ciel.obscurite + (noir ? 1 : -1) * (dt / 0.6)));
+    ciel.appliquer(etat.nuit ? 23 : 10, p);
+    personnage!.porterLumiere(etat.lampe && (noir || etat.nuit));
+    const o = personnage!.objet.rotation.y;
+    const source = noir ? { ...LANTERNE, x: p.x + Math.sin(o) * 0.45, y: 2.7, z: p.z + Math.cos(o) * 0.45, intensite: LANTERNE.intensite * 2, portee: 9, decroissance: 1 } : { ...LANTERNE, x: p.x, y: 1.7, z: p.z };
+    reserve.mettreAJour(etat.lampe ? [source] : [], p, dt, ciel.obscurite > 0.5 || ciel.nuit > 0.5);
+    for (const e of eteints) e.animer(dt);
     animerCooperative(coop, dt);
     estomperCooperative(coop, p.x, p.z, dt, Math.PI / 4 + (etat.quart * Math.PI) / 2);
     rendu.render(scene, cadrer());

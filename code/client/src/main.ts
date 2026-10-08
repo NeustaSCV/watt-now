@@ -33,7 +33,7 @@ import { RAYON_ESCABEAU, estFruitier } from "../../commun/src/terrain.ts";
 import { creerRuine } from "./rendu/ruine.ts";
 import { creerHalte, estomperToits } from "./rendu/halte.ts";
 import { animerCooperative, creerCooperative, estomperCooperative, majPortes } from "./rendu/cooperative.ts";
-import { LEURRES, pieceDe, portesInitiales } from "../../commun/src/cooperative.ts";
+import { LEURRES, pieceDe, portesInitiales, sombreIci } from "../../commun/src/cooperative.ts";
 import { IndicateurHorsChamp } from "./hors-champ.ts";
 import { animerComptoir, creerComptoir, lumieresComptoir } from "./rendu/comptoir.ts";
 import { VueEteint } from "./rendu/eteint.ts";
@@ -1184,6 +1184,20 @@ async function entrer(messageInitial = ""): Promise<void> {
   reseau.ouvrir();
 }
 
+/**
+ * La lampe qu'on porte. Dans une pièce noire (Book 23 §4.5), elle éclaire ≈ 7 m autour de soi : une lumière plus
+ * égale (décroissance 1, nulle à 9 m), tenue haut et un peu devant (sinon le corps jette une grande ombre à ses pieds).
+ */
+function lampeDansLeNoir(l: (typeof LUMIERES_PORTEES)[keyof typeof LUMIERES_PORTEES], p: { x: number; z: number; o: number }, noir: boolean): SourceLumiere {
+  if (!noir) return { x: p.x, y: 1.7, z: p.z, ...l };
+  return { ...l, x: p.x + Math.sin(p.o) * 0.45, y: 2.7, z: p.z + Math.cos(p.o) * 0.45, intensite: l.intensite * 2, portee: 9, decroissance: 1 };
+}
+
+/** Dans une pièce noire de la Coopérative (Book 23 §4.5) : il y fait nuit, même de jour. */
+function dansLeNoir(): boolean {
+  return lieu === "cooperative" && position !== null && sombreIci(position.x, position.z);
+}
+
 function sourcesDeLumiere(): SourceLumiere[] {
   const sources: SourceLumiere[] = [];
   for (const f of feux.values()) {
@@ -1201,7 +1215,7 @@ function sourcesDeLumiere(): SourceLumiere[] {
   const portee = lumierePortee(inventaire);
   if (lumiere && portee && position) {
     const genre = OBJETS[portee].lumiere!;
-    sources.push({ x: position.x, y: 1.7, z: position.z, ...LUMIERES_PORTEES[genre] });
+    sources.push(lampeDansLeNoir(LUMIERES_PORTEES[genre], position, dansLeNoir()));
   }
   return sources;
 }
@@ -1320,7 +1334,7 @@ function boucle(instant: number): void {
     personnage.animer(dt, vitesse);
     // Endormi : couché au sol, près du feu ou sous l'abri.
     personnage.coucher(endormi);
-    personnage.porterLumiere(lumiere && estNuit(Number.isFinite(HEURE_FORCEE) ? HEURE_FORCEE : heureDeJeu(Date.now() + decalage, debutMonde)));
+    personnage.porterLumiere(lumiere && (dansLeNoir() || estNuit(Number.isFinite(HEURE_FORCEE) ? HEURE_FORCEE : heureDeJeu(Date.now() + decalage, debutMonde))));
     scene.suivre(position.x, position.z, dt);
     const decor = decors.get(lieu);
     // Les toits qui cachent le personnage s'effacent (à la halte et au Comptoir), selon l'angle de la caméra.
@@ -1441,6 +1455,7 @@ function boucle(instant: number): void {
       if (Math.hypot(e.objet.position.x - position.x, e.objet.position.z - position.z) < 14) aider("eteint");
     }
   }
+  scene.pieceNoire(dansLeNoir());
   scene.eclairer(heure, sourcesDeLumiere(), dt, temps.nuages);
   pluie.animer(dt, temps.pluie, scene.centre, scene.ciel.nuit);
   brume.animer(dt, heure, scene.centre, temps.pluie);
