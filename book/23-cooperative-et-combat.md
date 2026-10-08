@@ -1,167 +1,206 @@
 # Book 23 — La Coopérative et le combat
 
-> Document de conception · version 0.1 · 2026-10-08
+> Document de conception · version 0.2 · 2026-10-08
 > Statut : **proposition à valider** par le porteur du projet. Cible : versions 0.5 et 0.6.
 > Décisions déjà prises (2026-10-08) : le lieu est la **coopérative agricole** (Book 20 §3.1) ; **une par joueur** pour commencer et valider la mécanique (des cartes partagées ne sont pas exclues plus tard) ; **conception écrite d'abord**.
+> La version 0.2 intègre les relectures des agents BMAD : Samus (Game Designer : niveau, difficulté, combat sur téléphone) et Cloud (Game Architect : instances, IA, persistance, Pi).
 
 ---
 
 ## 1. Pourquoi
 
-- **Éprouver le combat en vrai.** Aujourd'hui, on ne se bat que contre 1 à 3 Éteints isolés sur son terrain, ou contre les dormants de la halte. Les règles du combat (Book 06 §8, Book 08 §3.3) n'ont jamais été mises à l'épreuve : groupes, surprise, armure, retraite, gestion de l'endurance.
-- **Un vrai niveau** : une entrée, un fond à atteindre, plusieurs chemins, un danger qui monte, et un **butin rare** qui récompense le risque.
-- **Donner une raison aux armes** : leur type, leur usure, et des **armes de lancer** qui ouvrent la tactique (leurrer, isoler, frapper de loin).
+- **Éprouver le combat en vrai.** Aujourd'hui, on ne se bat que contre 1 à 3 Éteints isolés. Les règles du combat (Book 06 §8, Book 08 §3.3) n'ont jamais été mises à l'épreuve : groupes, surprise, armure, retraite, endurance.
+- **Un vrai niveau** : une entrée, un fond à atteindre, plusieurs chemins, un danger qui monte, un **butin rare** qui récompense le risque.
+- **Donner une raison aux armes** (type, usure) et ouvrir la tactique : **leurrer, isoler, repousser**, puis lancer.
 
 ## 2. Le lieu : la Coopérative du Plateau
 
 ### 2.1 Sur la carte
 
-- Dans la Campagne, à **distance moyenne** (danger ●●). On y va **depuis le Carrefour**, par un chemin agricole vers le nord qui s'ouvre sur la carte (Book 20). Le voyage dure comme les autres trajets.
-- **Une coopérative par joueur** (instance, comme le terrain) : son propre butin, ses propres Éteints. On n'y croise personne en 0.5.
+- Dans la Campagne, à **distance moyenne** (danger ●●). Un chemin agricole part **du Carrefour vers le nord** (Book 20). Du terrain, c'est donc **deux traversées à pied** (la station, puis le Carrefour) : on revient chargé, et c'est voulu (la batterie de tracteur pèse).
+- **Une coopérative par joueur** (instance, comme le terrain) : son butin, ses Éteints. On n'y croise personne en 0.5.
+- **Une visite tient en 15 à 20 minutes** (le téléphone) ; le niveau se fait en **trois visites** environ : (1) cour, libre-service, quai, atelier ; (2) hangar et bureaux ; (3) chambre froide.
 
-### 2.2 Le plan (≈ 80 × 60 m)
+### 2.2 Le plan (≈ 80 × 60 m, tout de plain-pied en 0.5)
 
 ```
             N
- ┌─────────────────────────────────────────────┐
- │  SILOS (2)        CHAMBRE FROIDE ●●●        │
- │  échelle → haut   noire, fond du hangar     │
- │       │                   │                 │
- │  ATELIER TRACTEURS ●●    HANGAR : allées    │
- │  fosse, engins,          de rayonnages ●●   │
- │  Rampants dessous        BUREAUX à l'étage  │
- │       │                  (escalier, coffre) │
- │  QUAI DE CHARGEMENT ●    LIBRE-SERVICE ●    │
- │       │                   │                 │
- │  brèche du grillage   COUR, bascule ●       │
- │  (à l'ouest)          PORTAIL (entrée, sud) │
- └─────────────────────────────────────────────┘
+ ┌──────────────────────────────────────────────────┐
+ │  COUR DES SILOS ●      ┌ porte frigorifique arrière
+ │  (silos : décor)  ◄────┤ CHAMBRE FROIDE ●●●     │
+ │       │                └ noire                  │
+ │  ATELIER TRACTEURS ●●       HANGAR ●●           │
+ │  fosse, 2 tracteurs,        3 allées de         │
+ │  Rampants dessous           rayonnages (4 m)    │
+ │       │                     BUREAUX (couloir,   │
+ │  QUAI DE CHARGEMENT ●       une porte, coffre)  │
+ │       │                     LIBRE-SERVICE ●     │
+ │  brèche du grillage         COUR, bascule ●     │
+ │  (à l'ouest)                PORTAIL (sud)       │
+ └──────────────────────────────────────────────────┘
 ```
 
 | Zone | Danger | Ce qu'on y trouve | Ce qu'elle apprend |
 |---|---|---|---|
-| **Cour et bascule à camions** | ● | Vestiges de voiture, bâches | Approcher en allure discrète, lire le terrain |
-| **Libre-service** (comptoir, caisse, rayons) | ● | Vestiges communs, nourriture en conserve, graines | Fouiller sans se faire coincer entre les rayons |
-| **Quai de chargement** | ● | Palettes, sangles, cordes, transpalette | Deux accès : le quai mène à l'atelier |
-| **Atelier des tracteurs** (fosse, deux tracteurs, établi) | ●● | **Outils de qualité**, pièces de tracteur, **batterie de tracteur** (grosse capacité), huile | Les **Rampants** sous les engins ; se battre dans un espace encombré |
-| **Hangar** (allées de rayonnages de 4 m) | ●● | Engrais, soufre, cordes, bâches, vestiges peu communs | Les **groupes** : quand un Éteint bouge, ses voisins suivent |
-| **Bureaux à l'étage** (escalier unique) | ●● | **Coffre du directeur** (clé : le magasinier), registres, vestiges rares | Un seul escalier : on peut s'y faire acculer, ou y tenir |
-| **Silos** (échelle, passerelle) | ● | Point haut : on voit la cour et l'arrière ; un nid de pigeons, du grain | Observer avant d'agir ; un Éteint ne monte pas à l'échelle |
-| **Chambre froide** (fond du hangar, sans lumière) | ●●● | **Le butin légendaire** (armes, pièces rares) | Une demi-horde serrée dans le noir : il faut **la leurrer dehors** ou la prendre un par un |
+| **Cour et bascule à camions** | ● | Vestiges de voiture, bâches | Approcher en discrétion, lire le terrain |
+| **Libre-service** (comptoir, rayons) | ● | Vestiges communs, conserves, graines ; **un pied-de-biche garanti** | Fouiller sans se faire coincer |
+| **Quai de chargement** | ● | Palettes, sangles, cordes, transpalette ; **la sonnette du quai** (leurre) | Un deuxième accès, vers l'atelier |
+| **Atelier des tracteurs** (fosse, 2 tracteurs, établi) | ●● | **Outils de qualité**, pièces, **batterie de tracteur** (grosse capacité, lourde) ; **klaxon du tracteur**, **radio à piles** (leurres) | Les **Rampants** sous les engins ; un espace encombré |
+| **Hangar** (3 allées de rayonnages de 4 m) | ●● | Engrais, soufre, cordes, bâches, vestiges peu communs | Les **groupes**, espacés de **12 m au moins** : on peut en isoler un |
+| **Bureaux** (couloir étroit, une porte, au rez-de-chaussée) | ●● | **Coffre du directeur** (clé : le magasinier), registres, vestiges rares | Un point d'étranglement qu'on tient ou qui piège |
+| **Chambre froide** (fond du hangar, noire, **deux portes** : hangar et cour des silos) | ●●● | **Le butin légendaire : pièces rares** (roulements, alternateur, semences F1). **Pas d'arme unique** (Book 22 §4.6) | **La boucle** : leurrer les dormants par l'arrière, entrer par le hangar |
+| **Cour des silos** | ● | Grain, un nid de pigeons | Le dehors de la boucle ; une sortie de secours |
 
-- **Plusieurs chemins** : le portail (devant, bruyant à ouvrir), la **brèche du grillage** à l'ouest (discrète, par l'atelier, mais des Rampants), et le quai.
-- **Il fait sombre dedans** : hangar et chambre froide demandent une **lumière portée**, qui se voit (signature, Book 06 §3).
-- **Toits qui s'effacent** comme à la station (Book 18), pour voir à l'intérieur.
+- **Trois entrées** : le portail (devant, bruyant), la **brèche du grillage** à l'ouest (discrète, par l'atelier, des Rampants), le quai.
+- **Il fait sombre dedans** : hangar, bureaux et chambre froide demandent une **lumière portée**, qui se voit (Book 06 §3).
+- **Toits qui s'effacent** comme à la station (Book 18).
+- **Portes qu'on referme** : un Éteint bloqué derrière pousse sans passer (comportement « Pressant », Book 06 §4). C'est la meilleure retraite.
+- **Reportés après la 0.5** (coûteux pour peu de jeu) : l'**étage** des bureaux (il demande un niveau dans les positions, le protocole et la prédiction du client), le **point haut des silos** (échelle et vue).
 
-### 2.3 Le renouvellement
+### 2.3 Arrivée, poursuites, renouvellement
 
-- **Ce qui est pris est pris.** Le butin **rare** revient **lentement** (plusieurs jours réels) ; le butin commun en quelques heures, comme la halte.
-- **Les Éteints** : ceux qu'on a détruits ne reviennent pas tout de suite. **De nouveaux arrivent la nuit** (quelques-uns), et la chambre froide se **repeuple** sur plusieurs jours.
-- **Partir et revenir** : la coopérative se souvient (instance gardée en base, comme le terrain).
+- **Arrivée sûre** : aucun Éteint à moins de **15 m du portail** quand on arrive. Une **reconnexion à l'intérieur** ramène au portail.
+- **Poursuites** : un Éteint qui a perdu le joueur de vue depuis **3 minutes** retourne dans sa zone (il ne campe pas à l'entrée).
+- **Ce qui est pris est pris.** Le butin **rare** revient en plusieurs jours réels ; le commun en quelques heures, comme la halte.
+- **Les Éteints** détruits ne reviennent pas tout de suite : **quelques nouveaux par nuit écoulée**, et la chambre froide se **repeuple** jusqu'à 6 sur plusieurs jours. Tout se calcule **à l'entrée** (une coopérative où l'on n'est pas ne coûte rien).
 
-## 3. Les méchants
+## 3. Les méchants : 24 à la première visite
 
 Pas de mutant ni de boss magique (Book 06 §5) : seulement des corps différents, et **le nombre**.
 
-| Variante (Book 06 §5) | Où | Comportement | Réponse attendue |
-|---|---|---|---|
-| **Errant** | Partout, ≈ 10 | Le zombie ordinaire | Viser la tête |
-| **Groupe** (comportement « Grégaire », Book 06 §4) | Hangar, 3 groupes de 3 à 5 | Quand l'un bouge, les autres suivent | Isoler (leurre, couloir), ne pas réveiller tout le hangar |
-| **Rampant** | Sous les tracteurs, dans l'herbe de la brèche, ≈ 4 | Au sol, caché ; mord aux chevilles | Regarder où l'on met les pieds, frapper vers le bas |
-| **Équipé** (casque de moto) | 1 au bureau, 1 dans la cour | **Résiste aux lames à la tête** | **Arme contondante** (marteau, pied-de-biche, masse) |
-| **Ancien habitant : le magasinier** | Bureaux | Comme un errant | Il porte la **clé du coffre** |
-| **Ancien habitant : le mécanicien** | Atelier | Comme un errant | Il porte des **outils** (clé à molette, tournevis de qualité) |
-| **Dormants** | Chambre froide, ≈ 8, serrés | Immobiles tant que rien ne les réveille ; en cascade ensuite | Les leurrer **hors** de la chambre froide (lancer, alarme), ou y entrer très discrètement |
+| Variante (Book 06 §5) | Nombre | Où | Comportement | Réponse attendue |
+|---|---|---|---|---|
+| **Errant** | 6 | Partout | Le zombie ordinaire | Viser la tête |
+| **Groupe** (comportement « Grégaire », Book 06 §4) | 3 groupes de 3 (9) | Hangar, espacés de 12 m au moins | Quand l'un bouge, les autres suivent | Isoler (leurre, couloir), ne pas réveiller tout le hangar (cible : un bruit met en marche **un seul** groupe) |
+| **Rampant** | 3 | Sous les tracteurs, dans l'herbe de la brèche | Au sol, caché ; mord aux chevilles. **Signalé** : herbe qui bouge, raclement | **Un coup l'achève** (il est au sol, Book 06 §8.4) ; le ciblage le prend en priorité au contact |
+| **Équipé** (casque de moto) | 2 | Un **dormant visible** dans la cour (évitable), un aux bureaux | Résistance au torse 4 au lieu de 3 ; **au sol, ne s'achève qu'au contondant ou au perçant** | Le **pied-de-biche** du libre-service, trouvé avant de devoir l'affronter |
+| **Ancien habitant : le magasinier** | 1 | Bureaux | Comme un errant | Il porte la **clé du coffre** |
+| **Ancien habitant : le mécanicien** | 1 | Atelier | Comme un errant | Il porte des **outils** |
+| **Dormants** | 6, serrés | Chambre froide | Immobiles ; **un dormant qui se réveille gémit** (un bruit de 6 m) : la **cascade** | Les leurrer **par la porte arrière**, ou entrer très discrètement |
 
-**Total ≈ 25 à 30 Éteints** à la première visite : c'est un **niveau**, pas une promenade. On peut sortir et revenir (rien ne se remet à zéro).
-
-> **Mesures du test** (Book 17 §6) : morts dans la coopérative et leur cause, armes utilisées, Éteints tués par type, temps passé par zone, objets lancés, retraites. Elles diront si le combat est juste.
-
-## 4. Les armes, enrichies (0.5)
+## 4. Le combat, enrichi (0.5)
 
 ### 4.1 Ce qui existe déjà
 
-Chaque arme a des **dégâts**, une **vitesse** (durée du geste), une **allonge**, et sait ou non **tuer d'un coup appuyé à la tête** (0.3, affiché dans le sac).
+Dégâts, vitesse (durée du geste), allonge, coup appuyé à la tête (0.3, affichés dans le sac) ; un coup va jusqu'au bout ; on choisit son arme.
 
-### 4.2 Le type de dégât
+### 4.2 Le type de dégât : une seule règle, le casque
 
-| Type | Armes | Contre l'Équipé (casque) | Particularité |
-|---|---|---|---|
-| **Contondant** | Marteau, masse, pied-de-biche, gourdin, batte | ✔ Plein effet | Étourdit plus longtemps |
-| **Tranchant** | Hache, machette, couteaux, lame forgée | ✘ À la tête : dégâts ÷ 3 | Peut **rester coincée** (hache) sur un coup appuyé raté |
-| **Perçant** | Épieu, fourche, lance | Moitié | **Allonge** : tient à distance |
+- **Contondant** (marteau, masse, pied-de-biche, gourdin, batte) : plein effet sur l'Équipé, et il étourdit un peu plus longtemps.
+- **Tranchant** (hache, machette, couteaux, lame forgée) : le casque l'arrête à la tête (le coup appuyé ne tue pas un Équipé).
+- **Perçant** (épieu, fourche, lance) : sa force, c'est l'**allonge**.
+- Pas de « lame coincée », pas de règles cachées de plus : sur un téléphone, ce serait vécu comme une injustice.
 
-### 4.3 L'usure (Book 02 §7)
+### 4.3 L'usure
 
-- Chaque arme a une **solidité** (nombre de coups avant d'être **abîmée**, puis **cassée**). Abîmée : dégâts −30 %. Cassée : elle devient un débris (démontable).
-- On **répare** : à l'établi (bois), à la meule (lames, ⚙️), à la forge (métal, 🔥). Les familles s'échangent ce service.
-- La solidité s'affiche dans le sac (barre), comme les autres caractéristiques.
+- L'usure se compte **pour l'arme en main** de chaque type (l'inventaire compte des objets, pas des exemplaires) : quand elle casse, on en perd une et la suivante est neuve.
+- **Solidité, en coups qui touchent** : pied-de-biche 120 · marteau 80 · masse 70 · hache 60 · machette 50 · couteau 40 · épieu 30 · gourdin 25.
+- Sous 30 % : **abîmée** (dégâts −30 %), avec un **signal sonore et visuel** au passage. À 0 : **cassée** (un débris, démontable). Une visite complète use environ une arme : bonne pression.
+- **Réparer** : à l'établi (bois), à la meule (lames, ⚙️), à la forge (métal, 🔥) ; et une **réparation de fortune** pour toutes les familles (ficelle, chiffons), qui remonte jusqu'à « abîmée » seulement. Personne n'est bloqué ; les familles s'échangent la vraie réparation.
+- La solidité s'affiche dans le sac, en barre.
 
-### 4.4 Repousser
+### 4.4 Repousser : B selon la situation
 
-- **B maintenu, au contact** : on **repousse** l'Éteint d'un coup d'épaule ou du manche (il recule et vacille), sans le blesser. Ça coûte de l'endurance ; ça crée l'espace pour frapper ou fuir.
-- (B court reste l'esquive ; B tapé vite reste le dégagement quand on est saisi.)
+- **Un Éteint à 1,2 m ou moins devant soi** : B **repousse** (12 d'endurance ; recul de 1,5 m ; étourdi 0,8 s ; jusqu'à **2 Éteints** dans un cône de 90°). C'est l'**outil contre l'encerclement**.
+- **Sinon** : B **esquive**.
+- **Saisi** : taper B vite **se dégage**.
+- (Pas de « B maintenu » : il faudrait attendre pour savoir, et l'esquive arriverait en retard.)
 
-### 4.5 Nouvelles armes de contact (trouvées dans la coopérative ou fabriquées)
+### 4.5 Ce qui rend le combat juste
+
+- **La fenêtre de frappe** (≈ 1,1 s entre l'allonge d'une hache et la saisie d'un poursuivant) est à **mesurer** ; si elle est trop courte, la saisie passe à 0,8 s face à une arme levée.
+- **Un indicateur au bord de l'écran** pour les Éteints qui approchent hors champ (première cause probable de mort injuste en vue isométrique sur iPhone).
+- **Les yeux blancs se voient dans le noir** à ≈ 6 m, sans lumière.
+
+### 4.6 Nouvelles armes (0.5)
 
 | Arme | Type | Dégâts | Vitesse | Allonge | Origine |
 |---|---|---|---|---|---|
-| **Machette** | Tranchant | Bons | Rapide | Moyenne | Coopérative (atelier) |
-| **Pied-de-biche** (le vestige devient une arme) | Contondant | Bons | Moyenne | Moyenne | Vestige (garage) ; ouvre aussi caisses et portes |
-| **Masse** | Contondant | Très forts | Lente | Moyenne | Coopérative (atelier) |
-| **Fourche** | Perçant | Moyens | Moyenne | **Longue** | Coopérative (hangar) |
-| **Lance** (épieu à pointe ligaturée, évolution P-002) | Perçant | Bons | Moyenne | **Longue** | Fabriquée : épieu + couteau + ficelle |
-| **Batte** | Contondant | Moyens | Rapide | Moyenne | Vestige (salon) |
+| **Pied-de-biche** (le vestige devient une arme) | Contondant | Bons | Moyenne | Moyenne | Vestige ; garanti au libre-service ; ouvre caisses et portes |
+| **Machette** | Tranchant | Bons | Rapide | Moyenne | Atelier |
+| **Masse** | Contondant | Très forts | Lente | Moyenne | Atelier |
+| **Lance** (épieu + couteau + ficelle, évolution P-002) | Perçant | Bons | Moyenne | Longue | Fabriquée |
+
+(Fourche, batte : plus tard.)
+
+### 4.7 Les leurres dès la 0.5 : dans le décor
+
+Le leurre est l'arme reine de la coopérative ; il ne peut pas attendre la 0.6. Trois leurres **posés dans le décor** :
+- le **klaxon du tracteur** : il **vide la batterie de tracteur** (un vrai dilemme pour ⚡ et ⚙️) ;
+- la **sonnette du quai** ;
+- une **radio à piles** sur l'établi (elle se transporte et se pose).
 
 ## 5. Les armes de lancer (0.6)
 
-### 5.1 Le principe : l'objet rapide
+- **L'objet rapide** (Book 08 §3.3) : dans le sac, « **Prêt à lancer** » sur un objet lançable. Il s'affiche près de A.
+- **Lancer** : ordinateur **G** ou clic du milieu ; téléphone : un **troisième bouton** ; manette : la gâchette. **Maintenir** fait apparaître un **arc au sol** ; relâcher lance.
+- **Viser** : une arme qu'on lance s'accroche à l'Éteint le plus proche devant soi (sur ordinateur : la souris) ; un **leurre** vise par défaut **un point au sol à 8 m devant soi**, que le pouce ajuste.
+- **Le serveur décide** : il vérifie l'objet prêt, la cadence et l'angle, borne la distance, cherche **le premier mur sur la trajectoire** (on ne lance pas par-dessus un rayonnage de 4 m), juge l'impact contre la position réelle de l'Éteint, et pose l'objet au sol pour qu'on le ramasse.
 
-- C'est l'**objet rapide** prévu au Book 08 §3.3 : dans le sac, « **Prêt à lancer** » sur un objet lançable (comme « Équiper pour le combat »). Il s'affiche près du bouton A.
-- **Lancer** : un bouton dédié. Ordinateur : **G** ou le **clic du milieu** ; téléphone : un **troisième bouton** à côté de A et B ; manette : la gâchette.
-- **Viser** :
-  - **maintenir** le bouton fait apparaître un **arc au sol** jusqu'au point d'impact ; relâcher lance ;
-  - **assistance** : la visée s'accroche à l'Éteint le plus proche **devant soi** (cône) ; sur ordinateur, elle suit la **souris** ;
-  - au doigt, on peut tirer l'arc avec le pouce droit.
-- **Le serveur décide** : trajectoire simplifiée (ligne droite, temps de vol selon la distance), il juge l'impact.
-
-### 5.2 Ce qu'on lance
-
-| Objet | Portée | Dégâts | Effet | Après |
+| Objet (0.6) | Portée | Dégâts | Effet | Après |
 |---|---|---|---|---|
-| **Pierre** (à la main) | 8 m | Faibles | **Étourdit** 1 s si à la tête ; **bruit à l'impact** : leurre | Reste au sol (ramassable) |
-| **Fronde** + pierre (P-002 : chiffon, ficelle) | 20 m | Moyens | Plus juste ; **leurre lointain** | La pierre reste au sol |
-| **Hachette / couteau de lancer** | 10 m | Bons | Tue un Errant à la tête (coup heureux) | **Il faut aller la reprendre** |
-| **Épieu lancé** | 12 m | Forts | Transperce | On se retrouve **désarmé** jusqu'à le reprendre |
-| **Objet bruyant** (réveil, boîte de conserve, poupée qui parle : P-003) | 10 m | Aucun | **Leurre** : attire les Éteints proches pendant quelques secondes (le réveil sonne 20 s) | Reste là ; le réveil peut se reprendre |
+| **Pierre** | 8 m | Faibles | **Étourdit** 1 s, **sur n'importe quel impact** ; bruit à l'impact (leurre) | Au sol, ramassable |
+| **Réveil** (vestige) | 10 m | — | **Leurre** : sonne 20 s, attire les Éteints proches | Au sol ; il se reprend |
+| **Hachette** | 10 m | Bons | Tue un Errant sur un coup heureux | **Il faut aller la reprendre** |
 
-- **Le leurre est l'arme la plus importante** de la coopérative : vider la chambre froide, séparer un groupe, passer derrière.
-- **Le bruit compte** : un lancer raté qui tape un bidon réveille ce qu'il ne fallait pas.
+(Fronde, épieu lancé, poupée qui parle : plus tard.)
 
 ## 6. Les commandes, en résumé
 
 | | Ordinateur | Téléphone |
 |---|---|---|
 | Frapper / coup appuyé | A (E, clic) / maintenir | A / maintenir |
-| Esquiver / se dégager | B (F, clic droit) / taper vite | B / taper vite |
-| **Repousser** | **B maintenu** au contact | **B maintenu** au contact |
-| **Lancer** | **G** ou clic du milieu (maintenir : viser) | **Bouton Lancer** (maintenir : viser) |
+| **B selon la situation** : repousser (au contact) / esquiver / se dégager (saisi) | B (F, clic droit) | B |
+| **Lancer** (0.6) | **G** ou clic du milieu (maintenir : viser) | **Bouton Lancer** (maintenir : viser) |
 | Choisir l'arme, l'objet à lancer | Sac | Sac |
 
-## 7. Les lots
+## 7. La construction technique (relecture de l'architecte)
 
-| Version | Contenu |
+- **Un « lieu vivant » réutilisable** : on extrait de la halte (`serveur/src/halte.ts`) ce qu'elle sait faire (ressources, Éteints, sacs, présents, envoi filtré) ; la station devient un lieu vivant partagé, la coopérative un lieu vivant **par joueur**. Le jour où on la partage, on ne change que la clé.
+- **Un registre de lieux** (`commun/src/lieux.ts`) remplace les cas particuliers ; les routes deviennent un petit graphe (terrain → station → Carrefour → coopérative).
+- **Le plan est une donnée** (`commun/src/cooperative.ts`) : murs, **pièces et portes**, zones sombres, avec une **grille d'obstacles** (cases de 4 m) pour que les collisions restent bon marché.
+- **L'IA dans un bâtiment** :
+  - **les murs arrêtent le son et la vue** (son atténué d'une pièce à l'autre selon que la porte est ouverte ; vue limitée à la pièce) ;
+  - **l'obscurité est locale** (`obscur(x, z)` au lieu du seul « il fait nuit ») ;
+  - **les Éteints passent par les portes** (un petit graphe des portes) : sans cela, un leurré resterait collé au mur. **C'est le risque n° 1** ;
+  - groupe, variante et ce qu'ils portent deviennent des champs de l'Éteint ; la cascade passe par le gémissement.
+- **Le coût sur le Pi** : 24 Éteints ≈ 1 % d'un cœur par joueur présent. On le borne : IA à 10 Hz, **2 Hz** pour les dormants et les Éteints loin de tout joueur ; on n'envoie que les Éteints **qui ont bougé et que le joueur perçoit** (cela empêche aussi de « voir dans le noir » en trichant) ; un réglage `cooperatives_actives_max` ; un scénario **« 10 joueurs en coopérative »** au banc de charge, avec un seuil de p99 < 25 ms.
+- **La persistance** : une table des instances (graine, version, dernière mise à jour, coffre) et des Éteints d'instance ; le butin réutilise les ressources de lieu. On sauve à chaque destruction, en sortant, et toutes les 30 s ; on ne garde ni l'attention ni le but (au retour, chacun reprend sa place).
+- **Le rendu sur iPhone 13** : bâtiments et toits qui s'effacent généralisés (`rendu/batiments.ts`) ; rayonnages et palettes en lots ; ≈ 150 appels de dessin au plus ; la lampe éclaire à courte portée (≈ 7 m) ; une ombre de lampe seulement en qualité haute.
+
+## 8. Les étapes
+
+| Étape | Contenu | Tests |
+|---|---|---|
+| **0.5a** | Lieu vivant extrait, registre de lieux | Les tests de halte et de voyage passent sans changement ; deux joueurs ne voient pas les Éteints l'un de l'autre |
+| **0.5b** | Le plan en données : murs, pièces, portes, zones sombres, grille | Pas de traversée de mur ; passage d'une porte de 1,2 m ; porte fermée infranchissable |
+| **0.5c** | IA : murs, obscurité locale, portes, cascade, groupes, variantes, retour en zone | Un dormant n'entend pas à travers un mur ; la cascade se propage ; un groupe suit ; le leurre fait **sortir** la chambre froide **par la porte** |
+| **0.5d** | Persistance et renouvellement | Un Éteint détruit le reste ; repeuplement après N nuits ; le butin rare ne revient pas avant son délai |
+| **0.5e** | Type de dégât (le casque), usure et réparation, B selon la situation, nouvelles armes, leurres du décor | Le combat, chiffré |
+| **0.5f** | Rendu : le bâtiment, l'obscurité, l'indicateur hors champ, les yeux dans le noir | Images/s sur iPhone 13 |
+| **0.5g** | Banc de charge | p99 < 25 ms à 10 joueurs en coopérative |
+| **0.6a** | Lancer : message, projectiles, objet prêt | Refus sans objet, distance bornée, cadence, mur avant la cible, objet ramassable |
+| **0.6b** | Pierre, réveil, hachette | Le réveil vide la chambre froide par la porte |
+| **0.6c** | Client : bouton Lancer, arc, visée | Erreurs de bouton en jouant aux pouces (enfants compris) |
+
+**Graphismes** (agent graphisme, planches) : le bâtiment et ses zones, les tracteurs, les silos, l'Éteint casqué, le magasinier, les nouvelles armes en main, les leurres, l'indicateur hors champ, l'arc de visée.
+**Son** (session son) : portail, sonnette, klaxon, radio, gémissement de réveil, raclement du Rampant, coup qui rebondit sur un casque, impact de pierre sur tôle.
+
+## 9. Les tests de jeu (et leurs cibles)
+
+| Test | Cible |
 |---|---|
-| **0.5 : la Coopérative** | Le lieu (plan, zones, toits, obscurité), l'instance par joueur, le voyage depuis le Carrefour ; les variantes (groupe, Rampant, Équipé, anciens habitants, dormants) ; type de dégât, usure et réparation, repousser ; les nouvelles armes de contact ; le butin par zone (tables du lot Vestiges) ; le coffre et sa clé ; les mesures |
-| **0.6 : lancer** | L'objet rapide, le bouton Lancer, la visée (arc, assistance), les projectiles, les leurres et leur effet sur les Éteints |
+| Maquette grise, Errants seuls, sur iPhone 13 : saisies venues de hors champ | < 10 % des saisies |
+| Coup appuyé à la hache face à un poursuivant | ≥ 60 % de réussite (joueur moyen) |
+| Un bruit dans le hangar : groupes mis en marche | 1 |
+| Chambre froide : par discrétion ou leurre / en fonçant | ≥ 50 % / ≤ 20 % de réussite |
+| Encerclé par 3, avec repousser | ≥ 40 % de survie |
+| Effondrement à la première visite | 30 à 50 %, et **aucune cause au-dessus de 40 %** |
 
-**Graphismes** (agent graphisme, planches) : le bâtiment et ses zones, les tracteurs, les silos, l'Éteint casqué, le magasinier, les nouvelles armes en main, l'arc de visée.
-**Son** (session son) : portail, transpalette, réveil-leurre, impact de pierre sur tôle, coup qui rebondit sur un casque.
-
-## 8. Questions ouvertes
+## 10. Questions ouvertes
 
 - [ ] Les nombres (Éteints, butin, renouvellement) : à régler en jouant (réglages à chaud).
 - [ ] La coopérative partagée plus tard : rencontres, entraide, concurrence ?
-- [ ] La batterie de tracteur (grosse capacité) : bonne récompense pour ⚡ et ⚙️, ou trop forte ?
-- [ ] Le butin légendaire de la chambre froide : quoi exactement ?
-- [ ] Les Éteints suivent-ils un joueur qui ressort dans la cour ? (Jusqu'où les poursuites ?)
+- [ ] La batterie de tracteur : bonne récompense pour ⚡ et ⚙️, ou trop forte ?
+- [ ] La liste exacte des pièces rares de la chambre froide.
+- [ ] L'étage des bureaux et le point haut des silos : quand ?
