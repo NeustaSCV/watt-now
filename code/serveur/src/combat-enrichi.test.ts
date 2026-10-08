@@ -205,3 +205,10 @@ test("la pause : sur son terrain, la faim s'arrête et l'on ne bouge plus ; pas 
   j.recevoir({ t: "pause", oui: true });
   assert.deepEqual(recus.findLast((m) => m.t === "pause"), { t: "pause", oui: false });
 });
+
+test("la gourde pleine pèse son litre d'eau en plus", async () => {
+  const { poidsInventaire } = await import("../../commun/src/objets.ts");
+  assert.equal(poidsInventaire({ gourde: 1 }, 0), 0.3);
+  assert.equal(poidsInventaire({ gourde: 1 }, 1), 1.3);
+  assert.equal(poidsInventaire({ couteau: 1 }, 1), poidsInventaire({ couteau: 1 }), "sans gourde, pas d'eau");
+});

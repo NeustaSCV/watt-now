@@ -639,7 +639,7 @@ export class Joueur implements Voyageur {
 
   /** Le poids du sac après l'échange. */
   poidsApres(donne: OffreEchange, recoit: OffreEchange): number {
-    return poidsInventaire(this.inventaire) - poidsInventaire(donne.objets) + poidsInventaire(recoit.objets);
+    return poidsInventaire(this.inventaire, this.gourde.litres) - poidsInventaire(donne.objets) + poidsInventaire(recoit.objets);
   }
 
   /** L'échange validé par les deux : on donne, on reçoit (le serveur a tout vérifié avant). */
@@ -713,7 +713,7 @@ export class Joueur implements Voyageur {
         if (!(n >= 1) || (this.comptoir.stock[op.objet] ?? 0) < n || !estObjet(op.objet)) return;
         const total = prixVente(op.objet) * n;
         if (total > enPoche + 1e-6) return this.info(`Il te faut ${formaterWotts(total)} en bons. Gagne-les : dépose de l'électricité, vends, ou pédale pour les Compteurs.`);
-        if (poidsInventaire(this.inventaire) + OBJETS[op.objet].poids * n > capaciteDe(this.inventaire)) return this.sacTropLourd();
+        if (poidsInventaire(this.inventaire, this.gourde.litres) + OBJETS[op.objet].poids * n > capaciteDe(this.inventaire)) return this.sacTropLourd();
         if (!this.comptoir.sortirDuStock(op.objet, n)) return;
         this.poche = ajouterWotts(this.poche, -total, instant);
         this.mesurer("wotts", "achat", -total, { objet: op.objet, n });
@@ -924,7 +924,7 @@ export class Joueur implements Voyageur {
       const debris = DEBRIS_ARME[o];
       let reste = "";
       if (debris) {
-        if (poidsInventaire(this.inventaire) + poidsDe({ [debris]: 1 }) <= capaciteDe(this.inventaire)) {
+        if (poidsInventaire(this.inventaire, this.gourde.litres) + poidsDe({ [debris]: 1 }) <= capaciteDe(this.inventaire)) {
           this.ajouterPlusieurs({ [debris]: 1 });
           reste = ` Il n'en reste qu'un débris (${nommer(debris, 1)}), qui se démonte : Sac → Démonter.`;
         } else {
@@ -1019,7 +1019,7 @@ export class Joueur implements Voyageur {
     const ou = this.cooperatives.radio(this.compte.id);
     if (!ou) return;
     if (!this.proche(ou.x, ou.z, DISTANCE_INTERACTION + 0.5)) return this.info("Approche-toi.");
-    if (poidsInventaire(this.inventaire) + poidsDe({ radio_piles: 1 }) > capaciteDe(this.inventaire)) return this.sacTropLourd();
+    if (poidsInventaire(this.inventaire, this.gourde.litres) + poidsDe({ radio_piles: 1 }) > capaciteDe(this.inventaire)) return this.sacTropLourd();
     if (!this.cooperatives.prendreRadio(this.compte.id, this.maintenant())) return;
     this.ajouterPlusieurs({ radio_piles: 1 });
     this.info("Tu glisses la radio dans ton sac. Pose-la où tu veux attirer les Éteints, puis allume-la.");
@@ -1198,7 +1198,7 @@ export class Joueur implements Voyageur {
   /** Un tas d'objets jetés : n'importe qui le ramasse, autant que son sac peut porter. */
   private ramasserTas(tas: SacPose): void {
     const pris: Inventaire = {};
-    let poids = poidsInventaire(this.inventaire);
+    let poids = poidsInventaire(this.inventaire, this.gourde.litres);
     // Un sac par terre se prend d'abord : il fait de la place pour le reste.
     const entrees = (Object.entries(tas.contenu.inventaire) as [TypeObjet, number][]).sort(([a], [b]) => (CONTENANTS[b] ?? 0) - (CONTENANTS[a] ?? 0));
     for (const [type, n] of entrees) {
@@ -1301,7 +1301,7 @@ export class Joueur implements Voyageur {
   private recevoirBricABrac(trouve: Inventaire): void {
     const pris: Inventaire = {};
     const laisse: Inventaire = {};
-    let poids = poidsInventaire(this.inventaire);
+    let poids = poidsInventaire(this.inventaire, this.gourde.litres);
     const capacite = capaciteDe(this.inventaire);
     for (const [t, k] of Object.entries(trouve) as [TypeObjet, number][]) {
       for (let i = 0; i < k; i++) {
@@ -1382,7 +1382,7 @@ export class Joueur implements Voyageur {
     } else {
       const dispo = contenu[objet] ?? 0;
       if (dispo < n) return;
-      if (poidsInventaire(this.inventaire) + OBJETS[objet].poids * n > capaciteDe(this.inventaire) + 1e-9) return this.sacTropLourd();
+      if (poidsInventaire(this.inventaire, this.gourde.litres) + OBJETS[objet].poids * n > capaciteDe(this.inventaire) + 1e-9) return this.sacTropLourd();
       let part = 0;
       if (batterie) {
         part = ((charges[b] ?? 0) * n) / dispo;
@@ -2105,7 +2105,7 @@ export class Joueur implements Voyageur {
     if (usage.escabeau && !this.escabeauAuPied(r.x, r.z)) return this.info("Les fruits sont trop haut : pose un escabeau au pied de l'arbre, dans le cercle.");
     const facteur = multiplicateurQualites(this.inventaire, usage.qualites);
     if (facteur === null) return this.infos(outilsManquantsBref(usage.qualites, this.inventaire));
-    if (poidsInventaire(this.inventaire) + poidsDe(usage.donne) > capaciteDe(this.inventaire)) return this.sacTropLourd();
+    if (poidsInventaire(this.inventaire, this.gourde.litres) + poidsDe(usage.donne) > capaciteDe(this.inventaire)) return this.sacTropLourd();
     this.commencer(usage.libelle, (usage.duree * facteur) / REGLAGES.gestes_vitesse, () => {
       const instant = this.maintenant();
       if (r.disponibleLe > instant || this.lieu !== lieu) return;
@@ -2151,7 +2151,7 @@ export class Joueur implements Voyageur {
   private sacTropLourd(): void {
     const capacite = capaciteDe(this.inventaire);
     const sansSac = capacite < CAPACITE_SAC && !(this.inventaire.sac_fortune ?? 0);
-    this.info(`${sansSac ? "Tes poches sont pleines" : "Ton sac est trop lourd"} (${Math.round(poidsInventaire(this.inventaire))} kg sur ${capacite}) : jette (Sac → Jeter) ou range dans un coffre.`);
+    this.info(`${sansSac ? "Tes poches sont pleines" : "Ton sac est trop lourd"} (${Math.round(poidsInventaire(this.inventaire, this.gourde.litres))} kg sur ${capacite}) : jette (Sac → Jeter) ou range dans un coffre.`);
     if (sansSac) this.info("Sans sac, tu ne portes que 10 kg : reprends le tien, ou fabrique un sac de fortune (4 branches, 2 cordes).");
   }
 
@@ -2196,7 +2196,7 @@ export class Joueur implements Voyageur {
     const quantite = produit.quantite * fois;
     const delta = OBJETS[produit.objet].poids * quantite - poidsDe(ingredients);
     // La capacité d'après : fabriquer un sac fait de la place.
-    if (poidsInventaire(this.inventaire) + delta > capaciteDe({ ...this.inventaire, [produit.objet]: (this.inventaire[produit.objet] ?? 0) + quantite })) return this.sacTropLourd();
+    if (poidsInventaire(this.inventaire, this.gourde.litres) + delta > capaciteDe({ ...this.inventaire, [produit.objet]: (this.inventaire[produit.objet] ?? 0) + quantite })) return this.sacTropLourd();
     this.commencer(fois > 1 ? `${r.nom} (deux à la fois)` : r.nom, dureeReelle(r) * facteur, () => {
       if (!Object.entries(ingredients).every(([t, n]) => (this.inventaire[t as TypeObjet] ?? 0) >= (n ?? 0))) return;
       if (cuisine.foyer) {
@@ -2486,7 +2486,7 @@ export class Joueur implements Voyageur {
           : "Raté : elle s'enfuit en caquetant. Approche en allure discrète, sans geste brusque.",
       );
     }
-    if (poidsInventaire(this.inventaire) + OBJETS.poule.poids > capaciteDe(this.inventaire)) return this.sacTropLourd();
+    if (poidsInventaire(this.inventaire, this.gourde.litres) + OBJETS.poule.poids > capaciteDe(this.inventaire)) return this.sacTropLourd();
     this.poules = this.poules.filter((x) => x !== p);
     this.faune.prises.push(this.maintenant());
     this.base.sauverFaune(this.compte.id, this.faune);
@@ -2613,7 +2613,7 @@ export class Joueur implements Voyageur {
 
   /** Rendre des objets au sac : refusé (et dit) si le sac ne peut pas les porter. */
   private peutReprendre(objets: Inventaire, enMoins: Inventaire = {}): boolean {
-    if (poidsInventaire(this.inventaire) - poidsInventaire(enMoins) + poidsInventaire(objets) <= capaciteDe(this.inventaire) + 1e-9) return true;
+    if (poidsInventaire(this.inventaire, this.gourde.litres) - poidsInventaire(enMoins) + poidsInventaire(objets) <= capaciteDe(this.inventaire) + 1e-9) return true;
     this.sacTropLourd();
     return false;
   }
@@ -2990,7 +2990,7 @@ export class Joueur implements Voyageur {
       case "defourner": {
         if (i.type !== "charbonniere" || !i.etat.pretLe) return;
         if (this.maintenant() < i.etat.pretLe) return this.info(`Le charbon n'est pas encore prêt : encore ${Math.ceil((i.etat.pretLe - this.maintenant()) / 60_000)} min réelles.`);
-        if (poidsInventaire(this.inventaire) + CHARBON_PRODUIT > capaciteDe(this.inventaire)) return this.sacTropLourd();
+        if (poidsInventaire(this.inventaire, this.gourde.litres) + CHARBON_PRODUIT > capaciteDe(this.inventaire)) return this.sacTropLourd();
         return this.commencer("Défourner le charbon", 10, () => {
           this.ajouterPlusieurs({ charbon_bois: CHARBON_PRODUIT });
           this.noterFait("defourne");

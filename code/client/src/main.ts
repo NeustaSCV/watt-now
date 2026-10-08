@@ -1546,6 +1546,7 @@ if (import.meta.env.DEV) {
       son: () => son.diagnostic(),
       /** Simuler un message du serveur (captures, essais de rendu : l'indicateur hors champ, les variantes…). */
       simuler: (m: MessageServeur) => recevoir(m),
+      hud,
       scene,
       personnage: () => personnage,
       envoyer,

@@ -1376,7 +1376,7 @@ export class Hud {
 
   private dessinerSac(): void {
     if (this.selection && this.selection !== "gourde" && !(this.inventaire[this.selection] ?? 0)) this.selection = null;
-    const poids = poidsInventaire(this.inventaire);
+    const poids = poidsInventaire(this.inventaire, this.gourde.litres);
     const g = this.gourde;
 
     const presents = ORDRE_SAC.filter((t) => t !== "gourde" && (this.inventaire[t] ?? 0) > 0);
@@ -1460,7 +1460,7 @@ export class Hud {
       const famille = d.famille ? ` · ${NOMS_FAMILLES_VESTIGES[d.famille]}` : "";
       fiche = `
         <div class="fiche-tete">${icone(s, 36)}<div><strong>${nommer(s, n)}</strong>
-          <small>${kg(d.poids * n)} kg · valeur ≈ ${formaterWotts(energieGrise(s))}${famille}${enMain}</small></div></div>
+          <small>${kg(d.poids * n + (s === "gourde" ? g.litres : 0))} kg · valeur ≈ ${formaterWotts(energieGrise(s))}${famille}${enMain}</small></div></div>
         ${actions.length ? `<div class="actions-objet">${actions.join("")}</div>` : ""}
         <p class="description">${detail}</p>
         ${caracs}
@@ -1590,7 +1590,7 @@ export class Hud {
     const poidsCoffre = poidsInventaire(contenu);
     // La décharge (P-001) s'ouvre comme un coffre : on n'y fait que prendre, en choisissant (le sac ne suit pas).
     const estDecharge = c.type === "decharge";
-    const poidsSac = poidsInventaire(this.inventaire);
+    const poidsSac = poidsInventaire(this.inventaire, this.gourde.litres);
     const cases = (inv: Inventaire, sens: "deposer" | "prendre") =>
       (Object.keys(inv) as TypeObjet[])
         .filter((t) => (inv[t] ?? 0) > 0 && !(sens === "deposer" && t === "sac_a_dos"))
