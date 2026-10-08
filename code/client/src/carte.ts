@@ -232,10 +232,22 @@ export class Carte {
   constructor(racine: HTMLElement, partir: (vers: LieuId) => void) {
     this.racine = racine;
     this.partir = partir;
+    // La fiche du lieu est la marge de légende de la feuille, comme dans un atlas (avis de Sally, 2026-10-08) : elle ne
+    // flotte plus à part, et ne recouvre jamais le dessin (pion, lieu choisi, route).
     racine.innerHTML = `
-      <div class="carte-feuille">${dessinCarte()}</div>
-      <aside class="carte-fiche" aria-live="polite"></aside>`;
+      <div class="carte-feuille">${dessinCarte()}<aside class="carte-fiche"></aside></div>`;
+    racine.setAttribute("role", "dialog");
+    racine.setAttribute("aria-modal", "true");
+    racine.setAttribute("aria-labelledby", "titre-carte-fiche");
     this.fiche = racine.querySelector(".carte-fiche")!;
+    // Un clic sur le fond sombre ferme la carte : seulement si le geste commence ET finit sur le fond (un défilement
+    // commencé dans la fiche ne ferme rien). Pendant un voyage, rien.
+    let surLeFond = false;
+    racine.addEventListener("pointerdown", (e) => (surLeFond = e.target === racine));
+    racine.addEventListener("click", (e) => {
+      if (surLeFond && e.target === racine) this.fermer();
+      surLeFond = false;
+    });
     this.pion = racine.querySelector(".pion")!;
     this.trace = racine.querySelector(".trace")!;
     for (const g of racine.querySelectorAll<SVGGElement>(".lieu")) {
@@ -268,12 +280,22 @@ export class Carte {
     this.placerPion(POINTS[lieu]);
     this.trace.setAttribute("d", "");
     this.dessinerFiche();
+    const dejaOuverte = this.ouverte;
     this.racine.hidden = false;
+    if (!dejaOuverte) {
+      this.focusAvant = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      this.racine.querySelector<SVGGElement>(`.lieu[data-lieu="${this.choisi}"]`)?.focus({ preventScroll: true });
+    }
   }
+
+  /** Ce qui avait le focus avant l'ouverture : il le retrouve à la fermeture. */
+  private focusAvant: HTMLElement | null = null;
 
   fermer(): void {
     if (this.enRoute) return;
     this.racine.hidden = true;
+    this.focusAvant?.focus({ preventScroll: true });
+    this.focusAvant = null;
   }
 
   basculer(lieu: LieuJouable, sortie: LieuId | null): void {
@@ -317,6 +339,8 @@ export class Carte {
       }
       this.placerPion(pos);
       this.trace.setAttribute("d", `M${points.map((p) => p.join(" ")).join(" L")}`);
+      // Le trait d'encre sous le titre se remplit avec le trajet.
+      this.fiche.querySelector<HTMLElement>(".progression span")?.style.setProperty("width", `${(t * 100).toFixed(1)}%`);
       if (t < 1) this.animation = requestAnimationFrame(pas);
     };
     this.animation = requestAnimationFrame(pas);
@@ -359,14 +383,16 @@ export class Carte {
       : `<p class="trajet"><span>≈ ${String(km).replace(".", ",")} km à pied</span><span>≈ ${kcal} kcal</span><span>≈ ${eau} L d'eau</span><span>${DUREE_VOYAGE_S} min de route</span></p>${
           parHalte ? `<p class="note">La route passe par la station-service : il faudra la traverser à pied.</p>` : ""
         }`;
+    // En-tête (titre, ✕), corps qui défile, pied fixe : le bouton Partir ne passe jamais sous le bord de l'écran.
+    const corps = this.enRoute ? `<p class="trajet"><span>${DUREE_VOYAGE_S} min de route</span></p>` : `<p>${l.description}</p>${trajet}`;
+    const pied = this.enRoute
+      ? `${etat}<div class="progression" aria-hidden="true"><span></span></div>`
+      : ici || !peutPartir
+        ? etat
+        : `<button type="button" class="partir" data-action="partir">Partir</button>`;
     this.fiche.innerHTML = `
-      <h2>${l.nom}</h2>
-      <p>${l.description}</p>
-      ${trajet}
-      ${etat}
-      <div class="boutons">
-        ${this.enRoute ? "" : `<button type="button" data-action="fermer">Fermer</button>`}
-        ${this.enRoute || ici ? "" : `<button type="button" class="partir" data-action="partir" ${peutPartir ? "" : "disabled"}>Partir</button>`}
-      </div>`;
+      <header><h2 id="titre-carte-fiche">${l.nom}</h2>${this.enRoute ? "" : `<button type="button" class="fermer-x" data-action="fermer" aria-label="Fermer la carte">✕</button>`}</header>
+      <div class="corps" aria-live="polite">${corps}</div>
+      <footer>${pied}</footer>`;
   }
 }

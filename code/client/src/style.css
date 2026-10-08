@@ -4087,3 +4087,143 @@ body.aide-ouverte #hud .tactile {
     top: 6px;
   }
 }
+
+/* ---------- La carte : la fiche devient la marge de légende de la feuille (avis de Sally, 2026-10-08) ----------
+   Une seule feuille de papier : le dessin d'un côté, la légende de l'autre, séparés d'un double filet d'encre. */
+.carte {
+  display: grid;
+  grid-template-columns: none;
+  grid-template-rows: none;
+  place-items: center;
+}
+.carte-feuille {
+  display: grid;
+  grid-template-columns: auto 300px;
+  max-width: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  background: #ecdfbf;
+  border-radius: 3px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(90, 61, 30, 0.4);
+}
+.carte-feuille svg {
+  display: block;
+  aspect-ratio: 10 / 7;
+  width: auto;
+  height: min(calc(100dvh - 28px), calc((100vw - 28px - 300px) * 0.7));
+  max-height: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+.carte-fiche {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  min-height: 0;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+  border-left: 3px double var(--encre);
+  padding: 14px 16px 12px;
+}
+.carte-fiche header {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.carte-fiche h2 {
+  flex: 1;
+  margin: 4px 0 8px;
+}
+.carte-fiche .fermer-x {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  margin: -6px -8px 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--encre);
+  font-size: 22px;
+  font-weight: 400;
+}
+.carte-fiche .fermer-x:hover {
+  background: rgba(59, 42, 30, 0.08);
+}
+.carte-fiche .corps {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.carte-fiche footer {
+  flex: none;
+  padding-top: 10px;
+  border-top: 1px solid rgba(59, 42, 30, 0.35);
+}
+.carte-fiche footer p {
+  margin: 0;
+}
+.carte-fiche footer button.partir {
+  width: 100%;
+}
+.carte-fiche .progression {
+  height: 4px;
+  margin-top: 8px;
+  border-radius: 2px;
+  background: rgba(59, 42, 30, 0.15);
+  overflow: hidden;
+}
+.carte-fiche .progression span {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: var(--encre);
+}
+/* Téléphone vertical (et toute fenêtre plus haute que large) : la légende passe sous le dessin. */
+@media (max-aspect-ratio: 1/1) {
+  .carte-feuille {
+    grid-template-columns: none;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .carte-feuille svg {
+    width: calc(100vw - 28px);
+    height: auto;
+  }
+  .carte-fiche {
+    align-self: start;
+    border-left: 0;
+    border-top: 3px double var(--encre);
+    max-height: calc(100dvh - 28px - (100vw - 28px) * 0.7);
+  }
+}
+/* Téléphone horizontal : une légende étroite à droite, sur toute la hauteur. */
+@media (orientation: landscape) and (max-height: 520px) {
+  .carte {
+    padding: 10px max(10px, env(safe-area-inset-right)) 10px max(10px, env(safe-area-inset-left));
+  }
+  .carte-feuille {
+    grid-template-columns: auto 240px;
+  }
+  .carte-feuille svg {
+    height: min(calc(100dvh - 20px), calc((100vw - 20px - 240px) * 0.7));
+  }
+  .carte-fiche {
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+  .carte-fiche h2 {
+    font-size: 17px;
+  }
+  .carte-fiche .trajet span {
+    font-size: 13px;
+    padding: 1px 8px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .carte .pion {
+    transition: none;
+  }
+}

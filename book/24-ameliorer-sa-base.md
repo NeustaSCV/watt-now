@@ -1,7 +1,7 @@
 # Book 24 — Améliorer sa base
 
-> Document de conception · version 0.1 · 2026-10-08
-> Statut : **proposition à valider** par le porteur du projet. Rien n'est codé.
+> Document de conception · version 0.2 · 2026-10-08
+> Statut : **validé dans ses grandes lignes** par le porteur du projet (« tout ça est cohérent », 2026-10-08). Les six recommandations des questions ouvertes sont retenues. Rien n'est codé.
 > Demande du porteur : « faire évoluer les éléments existants (je pense au feu notamment, pour éviter d'avoir 50 places à feu dans la base) », et ajouter de nouveaux éléments à fabriquer pour la base.
 > S'appuie sur les books [02](02-crafting.md) (§8 installations, §10 démontage, §14 bis bushcraft), [03](03-bibliotheque-et-savoir.md) (§5 savoir), [04](04-siderurgie-et-chimie.md), [06](06-zombies.md) (signature), [10](10-construction.md) (abri, chauffage), [11](11-agriculture-elevage-alimentation.md) (§11 conservation), [19](19-modele-du-terrain.md) (emprises), [21](21-perimetre-phase-0.md) (0a, 0b), [22](22-quetes-et-objectifs.md) (carnet) et sur la proposition P-002 (`PROPOSITIONS.md`, gamme bushcraft et ses « évolutions »).
 

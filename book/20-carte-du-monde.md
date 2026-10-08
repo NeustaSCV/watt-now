@@ -32,6 +32,16 @@ Les prototypes ont validé **l'organisation** (six environnements, trois distanc
 | **Une vraie illustration** | Carte dessinée à la main, façon **vieil atlas régional annoté par les survivants** : routes coupées barrées, notes au crayon, tampons des Compteurs |
 | **Niveau de qualité** | Bien supérieur aux prototypes, qui ne servent qu'à valider l'organisation. À confier à un illustrateur ou une illustratrice. |
 
+**L'écran de la carte (avis de Sally, 2026-10-08).** La fiche du lieu choisi est la **marge de légende** de la feuille, comme dans un atlas : même papier, séparée du dessin par un double filet d'encre.
+- **Placement** : elle est à droite sur ordinateur et en téléphone horizontal, sous le dessin en téléphone vertical. Elle ne recouvre jamais le pion, le lieu choisi ni la route.
+- **Composition** : un en-tête (le nom et ✕), un corps qui défile, et un pied fixe avec **Partir**, ou l'état du lieu à sa place. Le bouton Partir ne passe donc jamais sous le bord de l'écran.
+- **Fermeture** :
+  - un clic sur le fond sombre (le geste doit commencer et finir sur le fond) ;
+  - Échap ;
+  - M ;
+  - le bouton ✕.
+- **Pendant un voyage** : la carte reste ouverte. Un trait d'encre sous le nom du lieu se remplit à mesure que le trajet avance.
+
 ### 1 ter. La géographie de référence (validée sur prototype)
 
 Le prototype « atlas annoté » fixe la **géographie** de la région. Les secteurs du §2 restent la logique de conception ; voici comment ils prennent place sur le terrain :
