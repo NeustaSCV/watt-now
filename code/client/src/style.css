@@ -3755,3 +3755,160 @@ body {
   border-left-width: 0 !important;
   border-right-width: 0 !important;
 }
+
+/* ---------- L'aide du jeu (menu ⚙ → Aide, 2026-10-08) ----------
+   Une fiche crème centrée sur un fond assombri ; sommaire en pastilles, une rubrique dépliée à la fois. */
+#hud .aide-jeu {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  background: rgba(8, 10, 14, 0.55);
+  pointer-events: auto;
+}
+#hud .aide-jeu[hidden] {
+  display: none;
+}
+#hud .aide-jeu .fiche {
+  display: flex;
+  flex-direction: column;
+  width: min(640px, 100%);
+  max-height: 100%;
+  border-radius: 10px;
+  background: var(--creme);
+  color: var(--encre);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+#hud .aide-jeu .entete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px 8px 18px;
+  border-bottom: 2px solid var(--encre);
+}
+#hud .aide-jeu h2 {
+  margin: 0;
+  font-family: Georgia, serif;
+  font-style: italic;
+  font-size: 22px;
+}
+#hud .aide-jeu .fermer {
+  min-width: 40px;
+  min-height: 40px;
+  border: 0;
+  border-radius: 6px;
+  background: rgba(28, 35, 51, 0.08);
+  color: inherit;
+  font-size: 18px;
+  cursor: pointer;
+}
+#hud .aide-jeu .defile {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 10px 16px 18px;
+  font-size: 15px;
+  line-height: 1.45;
+}
+#hud .aide-jeu .chapeau {
+  margin: 0 0 10px;
+  font-style: italic;
+  opacity: 0.8;
+}
+#hud .aide-jeu .sommaire {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+#hud .aide-jeu .sommaire .vers {
+  min-height: 34px;
+  padding: 4px 10px;
+  border: 1px solid rgba(28, 35, 51, 0.25);
+  border-radius: 17px;
+  background: rgba(255, 255, 255, 0.45);
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+#hud .aide-jeu .rubrique {
+  border-top: 1px solid rgba(28, 35, 51, 0.18);
+  scroll-margin-top: 4px;
+}
+#hud .aide-jeu summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 6px 2px;
+  cursor: pointer;
+  list-style: none;
+}
+#hud .aide-jeu summary::-webkit-details-marker {
+  display: none;
+}
+#hud .aide-jeu summary::after {
+  content: "▸";
+  margin-left: auto;
+  opacity: 0.6;
+  transition: transform 0.15s;
+}
+#hud .aide-jeu details[open] > summary::after {
+  transform: rotate(90deg);
+}
+#hud .aide-jeu summary .icone {
+  font-size: 22px;
+  width: 28px;
+  text-align: center;
+}
+#hud .aide-jeu summary .textes {
+  display: flex;
+  flex-direction: column;
+}
+#hud .aide-jeu summary .titre {
+  font-weight: 700;
+}
+#hud .aide-jeu summary .resume {
+  font-size: 13px;
+  opacity: 0.7;
+}
+#hud .aide-jeu .corps {
+  padding: 0 4px 12px 38px;
+}
+#hud .aide-jeu .corps p {
+  margin: 6px 0;
+}
+#hud .aide-jeu .corps h4 {
+  margin: 12px 0 4px;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #a4552f;
+}
+#hud .aide-jeu .corps ul {
+  margin: 4px 0;
+  padding-left: 18px;
+}
+#hud .aide-jeu .corps li {
+  margin: 3px 0;
+}
+@media (max-width: 560px), (max-height: 520px) {
+  #hud .aide-jeu {
+    padding: 8px;
+  }
+  #hud .aide-jeu .defile {
+    font-size: 14px;
+    padding: 8px 12px 14px;
+  }
+  #hud .aide-jeu .corps {
+    padding-left: 6px;
+  }
+}
+body.aide-ouverte #joystick,
+body.aide-ouverte #hud .tactile {
+  display: none !important;
+}

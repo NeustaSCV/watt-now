@@ -92,6 +92,7 @@ Elle a remonté son END à 10 (plafond pour une stat pénalisée), gagné un poi
 - **Le carnet** (Book 03 §5.5) prend le relais : il note ce que le joueur a appris et suggère des **objectifs** (« Construire une cabane avant l'hiver », « Trouver un livre de forge »). **Construit (2026-10-08) : voir Book 22** (« S'installer » et « Le métier » de chaque famille).
 - **Les recettes pressenties** (Book 03 §5.1) guident vers la suite.
 - **Aide contextuelle** discrète la première fois qu'un système apparaît (première pluie, première infection, première halte).
+- **L'aide du jeu** (demande du porteur, 2026-10-08) : menu ⚙ → ❓ Aide, pour le joueur perdu. Elle compte 19 rubriques repliables : premiers pas, commandes, écran, besoins, partir et revenir, manger et boire, récolter, fabriquer, feu, nuit et pluie, terrain, Éteints, combat, blessures, voyager, wotts et Comptoir, carnet, familles, « Je suis coincé ». **Elle explique les mécanismes, jamais les solutions** : aucune liste de recettes, aucun lieu d'objet rare, aucun chiffre fin (dégâts, butins, probabilités), rien sur la grande quête ni sur un lieu pas encore livré. Les touches citées sont celles du joueur (ou ses boutons sur téléphone). Le texte est dans `code/client/src/aide-contenu.ts`. **À tenir à jour à chaque version** : une mécanique livrée a sa place dans l'aide.
 
 ---
 

@@ -847,7 +847,7 @@ export class Joueur implements Voyageur {
         if (e.tenue >= 6) {
           lacher(e, this.position, zoneDe(this.lieu));
           if (this.tuto) this.tuto.degage = true;
-          this.info("Il te lâche… La prochaine fois, tape F (ou B) très vite !");
+          this.info("Il te lâche… La prochaine fois, tape {examiner} très vite !");
         }
         continue;
       }
@@ -2119,7 +2119,7 @@ export class Joueur implements Voyageur {
       // Seulement pour qui pourrait chasser (une arme en main), pas avant d'en avoir attrapé une, et rarement.
       const chasseur = armeEnMain(this.inventaire, this.armeEquipee).objet !== null && (this.quetes.etat.faits.poule_attrapee ?? 0) === 0;
       if (chasseur && avant !== "fuit" && p.etat === "fuit" && qui.bouge && qui.allure !== "discrete") {
-        this.indice("poule", "Les poules se méfient : approche-toi en allure discrète (C), sans courir, et frappe pendant qu'elles picorent.", 10 * 60_000);
+        this.indice("poule", "Les poules se méfient : approche-toi en allure discrète ({discret}), sans courir, et frappe pendant qu'elles picorent.", 10 * 60_000);
       }
     }
     // Les poules : seulement quand elles ont bougé (elles passent beaucoup de temps à gratter sur place).

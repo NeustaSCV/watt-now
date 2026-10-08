@@ -600,11 +600,12 @@ function recevoir(message: MessageServeur): void {
         anneauProgres.visible = false;
       }
       return;
+    // Le serveur écrit les touches en repères {action} : on met celles du joueur (ou ses boutons).
     case "indice":
-      hud.message(message.texte, "indice");
+      hud.message(avecTouches(message.texte, tactile), "indice");
       return;
     case "info":
-      hud.message(message.texte);
+      hud.message(avecTouches(message.texte, tactile));
       if (message.texte === "Échange conclu.") son.signal("echange");
       return;
     case "lumiere":
@@ -971,6 +972,7 @@ function executer(c: Commande): void {
       hud.basculerFabrication();
       return;
     case "fermer":
+      if (hud.aide.ouvert) return hud.aide.fermer();
       if (carte.ouverte) return carte.fermer();
       if (hud.carnetEstOuvert) return hud.basculerCarnet(false);
       if (occupe && maintien?.tas) envoyer({ t: "annuler" });

@@ -6,6 +6,7 @@ import { VERSION } from "../../commun/src/version.ts";
 import { REGLAGES } from "../../commun/src/reglages.ts";
 import { ceQuiManque } from "../../commun/src/aide-fabrication.ts";
 import { ACTIONS, RESERVEES, assigner, avecTouches, nomDe, nomTouche, retablir, surChangement, type Action } from "./touches.ts";
+import { PanneauAide } from "./aide.ts";
 import { CAPACITES, type Charges } from "../../commun/src/energie.ts";
 import { ARMES, NOMS_BLESSURES, RESISTANCE_TORSE, caracteristiquesArme, estArme } from "../../commun/src/combat.ts";
 import type { EchangeVu, InstallationVue, OffreEchange, OperationComptoir, OperationEchange, Personne, RapportBase, SanteVue, VueComptoir, WottsVus } from "../../commun/src/messages.ts";
@@ -127,6 +128,8 @@ export class Hud {
   private tactile = false;
   /** Un panneau s'ouvre (true) ou se ferme (false) : pour le son de l'interface. */
   surPanneau: ((ouvert: boolean) => void) | null = null;
+  /** Le panneau d'aide (menu ⚙ → Aide). */
+  readonly aide: PanneauAide;
   /** Le choix de l'emplacement d'une construction : les trois boutons du bandeau (pour le doigt comme pour la souris). */
   surPose: ((choix: "tourner" | "annuler" | "poser") => void) | null = null;
   private nomPose = "";
@@ -242,6 +245,7 @@ export class Hud {
             <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3.3h-4L10.7 6a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.4 7.4 0 0 0 1.7 1l.3 2.6h4l.3-2.6a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg>
           </button>
           <div class="menu-options" hidden role="menu">
+            <button type="button" class="r-aide" role="menuitem">❓ Aide</button>
             ${tactile ? "" : `<button type="button" class="r-commandes" role="menuitem">Commandes</button>`}
             <button type="button" class="son" role="menuitem" aria-pressed="true">Son : oui</button>
             <button type="button" class="qualite" role="menuitem">Qualité : ${niveau}</button>
@@ -361,6 +365,14 @@ export class Hud {
       if (!menu.hidden && !(e.target as HTMLElement).closest(".menu-options, .options")) ouvrirMenu(false);
     });
     for (const b of menu.querySelectorAll<HTMLButtonElement>(".r-commandes")) b.addEventListener("click", () => ouvrirMenu(false));
+    // L'aide du jeu : tous les mécanismes, sans les secrets (2026-10-08).
+    this.aide = new PanneauAide(element, tactile);
+    this.aide.surBascule = (ouvert) => this.surPanneau?.(ouvert);
+    q(".r-aide").addEventListener("click", () => {
+      ouvrirMenu(false);
+      this.fermerPanneaux();
+      this.aide.ouvrir();
+    });
     q(".qualite").addEventListener("click", () => {
       changerQualite(ORDRE_NIVEAUX[(ORDRE_NIVEAUX.indexOf(niveau) + 1) % ORDRE_NIVEAUX.length]!);
     });
@@ -1608,10 +1620,12 @@ export class Hud {
     }
     const pc = (x: number) => `${Math.round(Math.max(0, Math.min(1, x)) * 100)} %`;
     const b = this.besoins;
+    // Les durées réelles suivent les réglages (rythme 1 : une journée de jeu de 24 min ; 0,35 : ≈ 70 min).
+    const minutes = (base: number, rythme: number) => (rythme > 0 ? `≈ ${Math.round(base / rythme / 5) * 5} min de jeu réel` : "sans limite");
     const textes: Record<NomJauge, [string, string]> = {
       faim: [
         `Faim · ${b ? pc(b.kcal / RESERVE_KCAL_MAX) : "–"}`,
-        "Ta réserve de nourriture : pleine, elle tient une journée de jeu (24 min). Elle baisse avec le temps, plus vite quand tu cours ou travailles dur. Pour la remonter : ouvre ton sac et mange. Sous 15 %, tu ne peux plus courir ; à vide, tes blessures ne guérissent plus.",
+        `Ta réserve de nourriture : pleine, elle tient ${minutes(24, REGLAGES.faim_rythme)} au calme. Elle baisse avec le temps, plus vite quand tu cours ou travailles dur. Pour la remonter : ouvre ton sac et mange. Sous 15 %, tu ne peux plus courir ; à vide, tes blessures ne guérissent plus.`,
       ],
       eau: [
         `Eau · ${b ? pc(b.eau / RESERVE_EAU_MAX) : "–"}`,
@@ -1619,7 +1633,7 @@ export class Hud {
       ],
       sommeil: [
         `Sommeil · ${b ? pc(b.repos ?? 1) : "–"}`,
-        "Ta fraîcheur : éveillé, tu t'uses en 16 heures de jeu (16 min). Pour la remonter : dors dans un abri (8 heures de jeu pour une nuit complète). Sous 15 %, tu es épuisé : plus de course, et tu travailles plus lentement.",
+        `Ta fraîcheur : éveillé, tu t'uses en ${minutes(16, REGLAGES.sommeil_rythme)}. Pour la remonter : dors dans un abri (8 heures de jeu pour une nuit complète). Sous 15 %, tu es épuisé : plus de course, et tu travailles plus lentement.`,
       ],
       sante: [
         `Santé · ${this.santeVue ? `${Math.round(this.santeVue.points)} %` : "–"}`,
