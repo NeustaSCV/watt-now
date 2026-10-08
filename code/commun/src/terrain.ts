@@ -43,7 +43,8 @@ export type TypeRessource =
   | "coop_etabli"
   | "coop_rayonnage"
   | "coop_coffre"
-  | "coop_caisse_froide";
+  | "coop_caisse_froide"
+  | "coop_masse";
 
 /** L'emprise au sol de ce qu'on vise (m) : le cercle de visée s'y ajuste (P-007). 0,5 m par défaut. */
 export const EMPRISE_RESSOURCE: Partial<Record<TypeRessource, number>> = {
@@ -135,6 +136,7 @@ export const REPOUSSE_MS: Record<TypeRessource, number | null> = {
   coop_rayonnage: 8 * 3_600_000,
   coop_coffre: 4 * 24 * 3_600_000,
   coop_caisse_froide: 4 * 24 * 3_600_000,
+  coop_masse: 24 * 3_600_000,
 };
 
 /** Les ressources qui restent en place une fois fouillées (une épave ne disparaît pas). */
@@ -157,6 +159,7 @@ export const RESTE_EN_PLACE: Partial<Record<TypeRessource, true>> = {
   coop_rayonnage: true,
   coop_coffre: true,
   coop_caisse_froide: true,
+  coop_masse: true,
 };
 
 /** La ruine de ferme du terrain (Book 21 §3.2), dans le coin nord-est. */
@@ -383,7 +386,7 @@ export const USAGES: Record<TypeRessource, UsageRessource> = {
   coop_etabli: {
     verbe: "fouiller",
     libelle: "Fouiller l'établi du mécanicien",
-    donne: { cle_plate: 1 },
+    donne: { cle_plate: 1, machette: 1 },
     qualites: {},
     duree: 7,
     examen: "L'établi de l'atelier des tracteurs : des outils de qualité, rangés par quelqu'un qui en prenait soin.",
@@ -403,6 +406,14 @@ export const USAGES: Record<TypeRessource, UsageRessource> = {
     qualites: {},
     duree: 6,
     examen: "Un petit coffre-fort vert, scellé au mur. Fermé à clé : le magasinier la portait toujours sur lui.",
+  },
+  coop_masse: {
+    verbe: "ramasser",
+    libelle: "Prendre la masse",
+    donne: { masse: 1 },
+    qualites: {},
+    duree: 2,
+    examen: "Une masse appuyée contre la roue du tracteur, le manche poli par les mains. Trois kilos d'arguments.",
   },
   coop_caisse_froide: {
     verbe: "fouiller",

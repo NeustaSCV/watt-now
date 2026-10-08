@@ -222,8 +222,30 @@ export function sombreIci(x: number, z: number): boolean {
 /** Où l'on arrive : au portail, face au nord (Book 23 §2.3 : rien à moins de 15 m). */
 export const ARRIVEE_COOP = { x: PORTAIL.x, z: PORTAIL.z - 2.5, o: Math.PI } as const;
 
+/**
+ * Les leurres du décor (Book 23 §4.7) : le klaxon du tracteur (il vide la batterie du tracteur), la sonnette du quai,
+ * la radio à piles sur l'établi (elle joue tant qu'on ne l'éteint pas, ou que les piles tiennent).
+ */
+export interface LeurreCoop {
+  id: "klaxon" | "sonnette" | "radio";
+  nom: string;
+  x: number;
+  z: number;
+  /** Portée du bruit (m) et durée d'un déclenchement (s) ; la radio joue en continu. */
+  portee: number;
+  duree: number;
+}
+export const LEURRES: LeurreCoop[] = [
+  { id: "klaxon", nom: "le klaxon du tracteur", x: 13.9, z: 21.2, portee: 40, duree: 3 },
+  { id: "sonnette", nom: "la sonnette du quai", x: 34.6, z: 28.6, portee: 28, duree: 2.5 },
+  { id: "radio", nom: "la radio à piles", x: 6.2, z: 30.8, portee: 22, duree: 0 },
+];
+/** La batterie du tracteur tient quatre coups de klaxon ; les piles de la radio, dix minutes. */
+export const KLAXONS_PAR_BATTERIE = 4;
+export const PILES_RADIO_S = 600;
+
 /** Version du contenu de la Coopérative (ressources, butin) : la changer régénère les instances. */
-export const VERSION_COOP = 1;
+export const VERSION_COOP = 2;
 
 
 /**
@@ -238,6 +260,7 @@ export function butinCoop(): { id: number; type: TypeRessource; x: number; z: nu
     ["coop_rayon", 52, 36.8],
     ["coop_palettes", 32, 31],
     ["coop_etabli", 7.5, 31.2],
+    ["coop_masse", 22.5, 23.3],
     ["coop_rayonnage", 44, 20.8],
     ["coop_rayonnage", 64, 25.3],
     ["coop_rayonnage", 44, 29.8],

@@ -6,9 +6,18 @@ import type { Inventaire, TypeObjet } from "./objets.ts";
 
 // ---------- Les armes ----------
 
+/**
+ * Le type de dégât (Book 23 §4.2) : une seule règle, le casque. Le contondant passe et étourdit plus longtemps ; le
+ * tranchant ne tue pas un casqué à la tête ; le perçant vaut par son allonge.
+ */
+export type TypeDegat = "contondant" | "tranchant" | "percant";
+
 export interface Arme {
   objet: TypeObjet | null;
   nom: string;
+  type: TypeDegat;
+  /** Coups qui touchent avant qu'elle casse (Book 23 §4.3) ; les poings ne s'usent pas. */
+  solidite: number;
   /** Coups au torse pour le faire tomber. */
   degatsTorse: number;
   /** Un coup appuyé à la tête le détruit-il ? (Book 06 §2.2 : un coup solide, oui) */
@@ -26,17 +35,66 @@ export interface Arme {
 
 /** Du meilleur au pire : sans arme équipée, on frappe avec ce qu'on a de mieux dans le sac. */
 export const ARMES: Arme[] = [
-  { objet: "hache", nom: "la hache", degatsTorse: 2, tueALaTete: true, allonge: 1.7, coup: 700, coupAppuye: 950 },
-  { objet: "marteau", nom: "le marteau", degatsTorse: 1.5, tueALaTete: true, allonge: 1.5, coup: 600, coupAppuye: 850 },
-  { objet: "barre_metal", nom: "la barre de métal", degatsTorse: 1.5, tueALaTete: true, allonge: 1.9, coup: 650, coupAppuye: 900 },
-  { objet: "lame_forgee", nom: "la lame forgée", degatsTorse: 1, tueALaTete: true, allonge: 1.4, coup: 480, coupAppuye: 720 },
-  { objet: "gourdin", nom: "le gourdin", degatsTorse: 1, tueALaTete: false, allonge: 1.5, coup: 550, coupAppuye: 800 },
+  // La masse (Book 23 §4.6) : très forte, lente ; le casque n'y résiste pas.
+  { objet: "masse", nom: "la masse", type: "contondant", solidite: 70, degatsTorse: 2.5, tueALaTete: true, allonge: 1.6, coup: 950, coupAppuye: 1250 },
+  { objet: "hache", nom: "la hache", type: "tranchant", solidite: 60, degatsTorse: 2, tueALaTete: true, allonge: 1.7, coup: 700, coupAppuye: 950 },
+  // Le pied-de-biche : le vestige devient une arme, la plus solide de toutes (Book 23 §4.6).
+  { objet: "pied_de_biche", nom: "le pied-de-biche", type: "contondant", solidite: 120, degatsTorse: 1.5, tueALaTete: true, allonge: 1.5, coup: 600, coupAppuye: 880 },
+  { objet: "machette", nom: "la machette", type: "tranchant", solidite: 50, degatsTorse: 1.5, tueALaTete: true, allonge: 1.6, coup: 500, coupAppuye: 750 },
+  { objet: "marteau", nom: "le marteau", type: "contondant", solidite: 80, degatsTorse: 1.5, tueALaTete: true, allonge: 1.5, coup: 600, coupAppuye: 850 },
+  { objet: "barre_metal", nom: "la barre de métal", type: "contondant", solidite: 100, degatsTorse: 1.5, tueALaTete: true, allonge: 1.9, coup: 650, coupAppuye: 900 },
+  // La lance (épieu + couteau, évolution P-002) : l'allonge, et cette fois la pointe tue à la tête.
+  { objet: "lance", nom: "la lance", type: "percant", solidite: 40, degatsTorse: 1.2, tueALaTete: true, allonge: 2.6, coup: 650, coupAppuye: 900 },
+  { objet: "lame_forgee", nom: "la lame forgée", type: "tranchant", solidite: 60, degatsTorse: 1, tueALaTete: true, allonge: 1.4, coup: 480, coupAppuye: 720 },
+  { objet: "gourdin", nom: "le gourdin", type: "contondant", solidite: 25, degatsTorse: 1, tueALaTete: false, allonge: 1.5, coup: 550, coupAppuye: 800 },
   // L'épieu (P-002) : peu de dégâts, mais l'allonge : on le tient à distance, il saisit avant de mordre.
-  { objet: "epieu", nom: "l'épieu", degatsTorse: 0.8, tueALaTete: false, allonge: 2.3, coup: 650, coupAppuye: 900 },
-  { objet: "couteau_aiguise", nom: "le couteau aiguisé", degatsTorse: 0.7, tueALaTete: false, allonge: 1.25, coup: 420, coupAppuye: 650 },
-  { objet: "couteau", nom: "le couteau", degatsTorse: 0.5, tueALaTete: false, allonge: 1.2, coup: 420, coupAppuye: 650 },
+  { objet: "epieu", nom: "l'épieu", type: "percant", solidite: 30, degatsTorse: 0.8, tueALaTete: false, allonge: 2.3, coup: 650, coupAppuye: 900 },
+  { objet: "couteau_aiguise", nom: "le couteau aiguisé", type: "tranchant", solidite: 40, degatsTorse: 0.7, tueALaTete: false, allonge: 1.25, coup: 420, coupAppuye: 650 },
+  { objet: "couteau", nom: "le couteau", type: "tranchant", solidite: 40, degatsTorse: 0.5, tueALaTete: false, allonge: 1.2, coup: 420, coupAppuye: 650 },
 ];
-export const POINGS: Arme = { objet: null, nom: "les poings", degatsTorse: 0.35, tueALaTete: false, allonge: 1.1, coup: 380, coupAppuye: 600 };
+export const POINGS: Arme = { objet: null, nom: "les poings", type: "contondant", solidite: Infinity, degatsTorse: 0.35, tueALaTete: false, allonge: 1.1, coup: 380, coupAppuye: 600 };
+
+/** Sous 30 % de solidité, l'arme est abîmée : ses coups perdent 30 % (Book 23 §4.3). */
+export const SEUIL_ABIMEE = 0.3;
+export const MALUS_ABIMEE = 0.7;
+/**
+ * La réparation (Book 23 §4.3) : à l'établi pour le bois, à la meule (pédalier) pour les lames, à la forge pour le
+ * métal. La réparation de fortune (ficelle, chiffons), partout et pour toutes les familles, ne remonte pas au-delà
+ * d'« abîmée ».
+ */
+export type MatiereArme = "bois" | "lame" | "metal";
+export const MATIERE_ARME: Partial<Record<TypeObjet, MatiereArme>> = {
+  gourdin: "bois",
+  epieu: "bois",
+  lance: "bois",
+  hache: "lame",
+  machette: "lame",
+  couteau: "lame",
+  couteau_aiguise: "lame",
+  lame_forgee: "lame",
+  marteau: "metal",
+  masse: "metal",
+  barre_metal: "metal",
+  pied_de_biche: "metal",
+};
+export const ATELIER_REPARATION: Record<MatiereArme, { installation: "etabli" | "pedalier" | "forge"; nom: string }> = {
+  bois: { installation: "etabli", nom: "l'établi" },
+  lame: { installation: "pedalier", nom: "la meule du pédalier" },
+  metal: { installation: "forge", nom: "la forge" },
+};
+export const REPARATION_FORTUNE: Inventaire = { ficelle: 1, chiffons: 1 };
+/** La réparation de fortune remonte au plus jusqu'ici : encore abîmée, mais elle tient. */
+export const PLAFOND_FORTUNE = 0.29;
+
+/** La solidité d'une arme, de 0 à 1 (1 : neuve). */
+export function etatArme(objet: TypeObjet, usure: Partial<Record<TypeObjet, number>>): number {
+  const a = ARMES.find((x) => x.objet === objet);
+  if (!a || !Number.isFinite(a.solidite)) return 1;
+  return Math.max(0, Math.min(1, (usure[objet] ?? a.solidite) / a.solidite));
+}
+
+/** Un coup contondant étourdit plus longtemps (Book 23 §4.2). */
+export const BONUS_ETOURDI_CONTONDANT = 1.5;
 
 /** Ce que le serveur accepte d'avance sur la fin d'un geste (le réseau n'est pas régulier). */
 export const TOLERANCE_COUP_MS = 80;
@@ -46,11 +104,13 @@ export function meilleureArme(inventaire: Inventaire): Arme {
 }
 
 /** Les caractéristiques d'une arme, telles que le joueur les lit dans son sac (2026-10-08). */
-export function caracteristiquesArme(objet: TypeObjet): { degats: number; vitesse: number; coup: number; coupAppuye: number; allonge: number; tueALaTete: boolean } | null {
+export function caracteristiquesArme(
+  objet: TypeObjet,
+): { degats: number; vitesse: number; coup: number; coupAppuye: number; allonge: number; tueALaTete: boolean; type: TypeDegat; solidite: number } | null {
   const a = ARMES.find((x) => x.objet === objet);
   if (!a) return null;
   // Vitesse : coups simples par seconde. Dégâts : en « points » de torse (il en faut 3 pour le faire tomber).
-  return { degats: a.degatsTorse, vitesse: 1000 / a.coup, coup: a.coup / 1000, coupAppuye: a.coupAppuye / 1000, allonge: a.allonge, tueALaTete: a.tueALaTete };
+  return { degats: a.degatsTorse, vitesse: 1000 / a.coup, coup: a.coup / 1000, coupAppuye: a.coupAppuye / 1000, allonge: a.allonge, tueALaTete: a.tueALaTete, type: a.type, solidite: a.solidite };
 }
 
 /** Cet objet est-il une arme qu'on peut équiper (P-005) ? */
@@ -90,6 +150,11 @@ export const ENDURANCE_COURSE = 4;
 export const ENDURANCE_RECUPERATION = 12;
 /** En dessous, on est épuisé : coups faibles, pas de course, dégagement plus dur. */
 export const SEUIL_EPUISE = 15;
+
+// ---------- Repousser (Book 23 §4.4) : l'outil contre l'encerclement ----------
+
+/** Un Éteint à 1,2 m ou moins devant soi (cône de 90°) : B le repousse, deux au plus. */
+export const REPOUSSER = { portee: 1.2, demiAngle: Math.PI / 4, cout: 12, recul: 1.5, etourdi: 0.8, max: 2 } as const;
 
 // ---------- L'esquive ----------
 

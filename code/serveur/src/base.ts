@@ -220,6 +220,8 @@ const COLONNES_AJOUTEES: [table: string, colonne: string, definition: string][] 
   ["personnages", "apparence", "TEXT NOT NULL DEFAULT ''"],
   // L'arme équipée pour le combat (P-005) ; vide : la meilleure du sac.
   ["personnages", "arme", "TEXT NOT NULL DEFAULT ''"],
+  // L'usure des armes en main (Book 23 §4.3) : coups qui restent, par type d'arme.
+  ["personnages", "usure_armes", "TEXT NOT NULL DEFAULT '{}'"],
   // Le foyer Dakota (P-002).
   ["feux", "dakota", "INTEGER NOT NULL DEFAULT 0"],
   ["personnages", "watts", "TEXT NOT NULL DEFAULT ''"],
@@ -334,6 +336,21 @@ export class Base {
 
   sauverArme(compteId: number, arme: TypeObjet | null): void {
     this.db.prepare("UPDATE personnages SET arme = ? WHERE compte_id = ?").run(arme ?? "", compteId);
+  }
+
+  /** L'usure de chaque arme en main : les coups qui lui restent (absente : neuve). */
+  chargerUsure(compteId: number): Partial<Record<TypeObjet, number>> {
+    const l = this.db.prepare("SELECT usure_armes FROM personnages WHERE compte_id = ?").get(compteId) as { usure_armes: string } | undefined;
+    try {
+      const brut = JSON.parse(l?.usure_armes ?? "{}") as Record<string, unknown>;
+      return Object.fromEntries(Object.entries(brut).filter(([t, n]) => estArme(t as TypeObjet) && typeof n === "number" && n >= 0)) as Partial<Record<TypeObjet, number>>;
+    } catch {
+      return {};
+    }
+  }
+
+  sauverUsure(compteId: number, usure: Partial<Record<TypeObjet, number>>): void {
+    this.db.prepare("UPDATE personnages SET usure_armes = ? WHERE compte_id = ?").run(JSON.stringify(usure), compteId);
   }
 
   chargerQuetes(compteId: number): EtatQuetes {

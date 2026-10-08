@@ -63,6 +63,22 @@ export class LieuVivant {
   private readonly aucunEnvoye = new Set<Voyageur>();
   private derniereRepousse = 0;
   private dernierEnvoi = 0;
+  /** Des bruits qui durent (un leurre : klaxon, sonnette, radio), jusqu'à un instant réel. */
+  private readonly bruits = new Map<string, { stimulus: Stimulus; jusqua: number }>();
+
+  ajouterBruit(id: string, stimulus: Stimulus, jusqua: number): void {
+    this.bruits.set(id, { stimulus, jusqua });
+  }
+
+  retirerBruit(id: string): void {
+    this.bruits.delete(id);
+  }
+
+  /** Ce bruit dure-t-il encore ? */
+  bruitEnCours(id: string, instant: number): boolean {
+    return (this.bruits.get(id)?.jusqua ?? 0) > instant;
+  }
+
   /** Le temps accumulé par chaque Éteint depuis son dernier calcul (calcul économe). */
   private readonly attente = new Map<number, number>();
   /** Depuis quand personne n'est là (0 : quelqu'un est là). */
@@ -204,7 +220,9 @@ export class LieuVivant {
     const gemissements: Stimulus[] = this.eteints
       .filter((e) => (e.gemit ?? 0) > 0)
       .map((e) => ({ genre: "son", x: e.x, z: e.z, portee: GEMISSEMENT.portee, intensite: GEMISSEMENT.intensite }));
-    const stimuli = [...[...this.presents].flatMap((v) => v.stimuli(nuit)), ...gemissements];
+    for (const [id, b] of this.bruits) if (b.jusqua <= instant) this.bruits.delete(id);
+    const leurres = [...this.bruits.values()].map((b) => b.stimulus);
+    const stimuli = [...[...this.presents].flatMap((v) => v.stimuli(nuit)), ...gemissements, ...leurres];
     const humains = [...this.presents].map((v) => v.humain());
     const zone = this.zone;
     const milieu = this.milieu;

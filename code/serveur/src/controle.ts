@@ -73,7 +73,7 @@ export function messageValide(m: unknown): m is MessageClient {
           estTable(m.cible) &&
           chaine(m.cible.genre) &&
           // Une porte se désigne par son nom dans le plan ; tout le reste, par un numéro.
-          (m.cible.genre === "porte" ? chaine(m.cible.id) && m.cible.id.length <= 40 : nombreOuRien(m.cible.id)) &&
+          (m.cible.genre === "porte" || m.cible.genre === "leurre" ? chaine(m.cible.id) && m.cible.id.length <= 40 : nombreOuRien(m.cible.id)) &&
           chaine(m.verbe)
         )
       )
@@ -95,6 +95,8 @@ export function messageValide(m: unknown): m is MessageClient {
       return booleen(m.appuye);
     case "esquiver":
       return nombre(m.dx) && nombre(m.dz);
+    case "reparer":
+      return estObjet(m.objet) && booleen(m.fortune);
     case "comptoir":
       return operationComptoirValide(m.op);
     case "echange":
@@ -113,6 +115,7 @@ export function messageValide(m: unknown): m is MessageClient {
     case "annuler":
     case "poser":
     case "degager":
+    case "repousser":
     case "panser":
     case "tutoriel_passer":
       return true;

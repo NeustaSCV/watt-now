@@ -7,7 +7,7 @@
 // une Coopérative où l'on n'est pas ne coûte rien.
 
 import { REGLAGES } from "../../commun/src/reglages.ts";
-import { VERSION_COOP, butinCoop, pieceDe, portesInitiales } from "../../commun/src/cooperative.ts";
+import { KLAXONS_PAR_BATTERIE, LEURRES, PILES_RADIO_S, VERSION_COOP, butinCoop, pieceDe, portesInitiales } from "../../commun/src/cooperative.ts";
 import { eteintsCoop } from "../../commun/src/eteints-coop.ts";
 import { ZONE_COOP, zoneCoop } from "../../commun/src/lieux.ts";
 import { milieuCoop } from "../../commun/src/milieu-coop.ts";
@@ -21,6 +21,9 @@ export interface EtatCoop {
   portes: Record<string, boolean>;
   /** Instant réel (ms) du dernier repeuplement calculé. */
   repeupleLe: number;
+  /** Les coups de klaxon qui restent à la batterie du tracteur, et les secondes de piles de la radio (Book 23 §4.7). */
+  klaxons: number;
+  piles: number;
 }
 
 export function definitionCoop(compteId: number, detruits: () => readonly number[] = () => []): DefinitionLieuVivant {
@@ -56,7 +59,7 @@ export function repeupler(etat: EtatCoop, instant: number): EtatCoop {
 }
 
 function lireEtat(brut: unknown, instant: number): EtatCoop {
-  const neuf: EtatCoop = { detruits: [], portes: portesInitiales(), repeupleLe: instant };
+  const neuf: EtatCoop = { detruits: [], portes: portesInitiales(), repeupleLe: instant, klaxons: KLAXONS_PAR_BATTERIE, piles: PILES_RADIO_S };
   if (typeof brut !== "object" || brut === null) return neuf;
   const b = brut as Partial<EtatCoop>;
   const tous = new Set(eteintsCoop().map((e) => e.id));
@@ -65,6 +68,8 @@ function lireEtat(brut: unknown, instant: number): EtatCoop {
     // Les portes connues seulement (le plan a pu changer).
     portes: { ...neuf.portes, ...Object.fromEntries(Object.entries(b.portes ?? {}).filter(([id, v]) => id in neuf.portes && typeof v === "boolean")) },
     repeupleLe: typeof b.repeupleLe === "number" ? b.repeupleLe : instant,
+    klaxons: typeof b.klaxons === "number" ? Math.max(0, Math.min(KLAXONS_PAR_BATTERIE, b.klaxons)) : KLAXONS_PAR_BATTERIE,
+    piles: typeof b.piles === "number" ? Math.max(0, Math.min(PILES_RADIO_S, b.piles)) : PILES_RADIO_S,
   };
 }
 
@@ -112,9 +117,57 @@ export class Cooperatives {
     return this.instances.size;
   }
 
+  /**
+   * Un leurre du décor (Book 23 §4.7). Le klaxon vide la batterie du tracteur (quatre coups) ; la sonnette sonne
+   * toujours ; la radio s'allume et s'éteint, et joue tant que les piles tiennent. Renvoie ce qu'on en dit au joueur.
+   */
+  actionner(compteId: number, id: string, instant: number): string | null {
+    const c = this.instances.get(compteId);
+    const l = LEURRES.find((x) => x.id === id);
+    if (!c || !l) return null;
+    const bruit = (jusqua: number) => {
+      c.lieu.ajouterBruit(l.id, { genre: "son", x: l.x, z: l.z, portee: l.portee, intensite: 1.3 }, jusqua);
+      c.lieu.diffuser({ t: "leurre", id: l.id, actif: true, x: l.x, z: l.z });
+    };
+    if (l.id === "klaxon") {
+      if (c.etat.klaxons <= 0) return "Le klaxon ne fait plus qu'un clic : la batterie du tracteur est morte.";
+      c.etat.klaxons--;
+      bruit(instant + l.duree * 1000);
+      return c.etat.klaxons === 0 ? "Le klaxon s'étrangle : c'était le dernier souffle de la batterie." : null;
+    }
+    if (l.id === "sonnette") {
+      bruit(instant + l.duree * 1000);
+      return null;
+    }
+    // La radio : allumer, éteindre.
+    if (c.lieu.bruitEnCours("radio", instant)) {
+      c.lieu.retirerBruit("radio");
+      c.lieu.diffuser({ t: "leurre", id: "radio", actif: false, x: l.x, z: l.z });
+      return null;
+    }
+    if (c.etat.piles <= 0) return "La radio ne s'allume plus : les piles sont vides.";
+    bruit(instant + c.etat.piles * 1000);
+    return "« … l'engrais Watty ! Watt… Now? » La radio de la Compagnie hurle sa réclame.";
+  }
+
+  /** Les leurres en marche (la radio allumée), pour qui arrive. */
+  leurresActifs(compteId: number, instant: number): string[] {
+    const c = this.instances.get(compteId);
+    return c ? LEURRES.filter((l) => l.id === "radio" && c.lieu.bruitEnCours(l.id, instant)).map((l) => l.id) : [];
+  }
+
   tick(instant: number, dt: number): void {
     for (const [id, c] of this.instances) {
       c.lieu.tick(instant, dt);
+      // Les piles s'usent tant que la radio joue ; vides, elle se tait.
+      if (c.lieu.bruitEnCours("radio", instant)) {
+        c.etat.piles = Math.max(0, c.etat.piles - dt);
+        if (c.etat.piles <= 0) {
+          c.lieu.retirerBruit("radio");
+          const r = LEURRES.find((x) => x.id === "radio")!;
+          c.lieu.diffuser({ t: "leurre", id: "radio", actif: false, x: r.x, z: r.z });
+        }
+      }
       this.noter(c, instant);
       if (JSON.stringify(c.etat) !== c.ecrit || instant - c.sauveLe >= SAUVER_TOUTES_MS) this.sauver(id, c, instant);
       if (c.lieu.videDepuisPlusDe(instant, DECHARGER_APRES_MS)) {

@@ -85,11 +85,11 @@ import {
 import { BONUS_MECANISTE, PORTEE_CABLE_PANNEAU, WH_M_PAR_HEURE, productionPanneau, stocker } from "../../commun/src/energie.ts";
 import type { AutreVu, OffreEchange, OperationComptoir, RapportBase, WottsVus } from "../../commun/src/messages.ts";
 import { COMPTOIR, HALTE, dansBoite, etapeVers, type Zone } from "../../commun/src/lieux.ts";
-import { PORTEE_PORTE, PORTES, boitePorte, distancePorte } from "../../commun/src/cooperative.ts";
+import { LEURRES, PORTEE_PORTE, PORTES, boitePorte, distancePorte } from "../../commun/src/cooperative.ts";
 import { DECHARGE, remonter } from "../../commun/src/decharge.ts";
 import type { Quete, VueQuetes } from "../../commun/src/quetes.ts";
 import { SuiviQuetes, type EtatJoueurPourQuetes } from "./quetes.ts";
-import { debout, encaisser, lacher, nouvelEteint, penser, vue as vueEteint, type Eteint, type Humain } from "../../commun/src/eteints.ts";
+import { debout, encaisser, lacher, nouvelEteint, penser, repousser, vue as vueEteint, type Eteint, type Humain } from "../../commun/src/eteints.ts";
 import {
   ANGLE_CIBLAGE,
   APPUIS_DEGAGEMENT,
@@ -109,7 +109,15 @@ import {
   freinSaisie,
   intoxiquer,
   ARMES,
+  ATELIER_REPARATION,
+  MALUS_ABIMEE,
+  MATIERE_ARME,
+  PLAFOND_FORTUNE,
+  REPARATION_FORTUNE,
+  REPOUSSER,
+  SEUIL_ABIMEE,
   armeEnMain,
+  etatArme,
   type Arme,
   estArme,
   TOLERANCE_COUP_MS,
@@ -320,6 +328,7 @@ export class Joueur implements Voyageur {
     this.tuto = base.chargerTutoriel(compte.id);
     this.quetes = new SuiviQuetes(base.chargerQuetes(compte.id));
     this.armeEquipee = base.chargerArme(compte.id);
+    this.usure = base.chargerUsure(compte.id);
     this.apparence = base.chargerApparence(compte.id, compte.famille);
     this.faune = base.chargerFaune(compte.id);
     const { sante, endurance } = base.chargerSante(compte.id);
@@ -437,6 +446,8 @@ export class Joueur implements Voyageur {
       tutoriel: this.vueTutoriel(),
       quetes: this.vueQuetes(),
       arme: this.armeEquipee,
+      usure: { ...this.usure },
+      ...(this.lieu === "cooperative" ? { leurres: this.cooperatives.leurresActifs(this.compte.id, this.maintenant()) } : {}),
       ...(this.lieu === "comptoir" ? { comptoir: this.comptoir.vue(instant) } : {}),
       ...(this.lieu === "cooperative" && this.vivant ? { portes: { ...this.vivant.portes } } : {}),
     };
@@ -504,6 +515,12 @@ export class Joueur implements Voyageur {
         return;
       case "degager":
         this.degager();
+        return;
+      case "repousser":
+        this.repousserDevant();
+        return;
+      case "reparer":
+        this.reparer(message.objet, message.fortune === true);
         return;
       case "panser":
         this.soigner();
@@ -784,13 +801,17 @@ export class Joueur implements Voyageur {
     this.annulerAction();
     const force = this.endurance < SEUIL_EPUISE ? 0.5 : 1;
     this.endurance = Math.max(0, this.endurance - cout);
-    const arme = this.armeDuCombat();
-    this.prochaineFrappe = instant + (appuye ? arme.coupAppuye : arme.coup) - TOLERANCE_COUP_MS;
+    const enMain = this.armeDuCombat();
+    this.prochaineFrappe = instant + (appuye ? enMain.coupAppuye : enMain.coup) - TOLERANCE_COUP_MS;
     this.bruitCoupJusqua = instant + 600;
-    const cible = this.cibleDevant(arme.allonge);
+    const cible = this.cibleDevant(enMain.allonge);
     if (!cible) return;
     this.position = { ...this.position, o: Math.atan2(cible.x - this.position.x, cible.z - this.position.z) };
+    // Abîmée (sous 30 % de solidité), elle frappe 30 % moins fort (Book 23 §4.3).
+    const abimee = enMain.objet !== null && etatArme(enMain.objet, this.usure) < SEUIL_ABIMEE;
+    const arme = abimee ? { ...enMain, degatsTorse: enMain.degatsTorse * MALUS_ABIMEE } : enMain;
     const resultat = encaisser(cible, arme, appuye, force, this.position, this.zoneIci());
+    this.user(enMain);
     if (this.tuto && resultat === "detruit") this.tuto.premierEteintDetruit = true;
     // Le magasinier portait la clé du coffre à sa ceinture (Book 23 §3) : elle tombe là où il tombe.
     if (resultat === "detruit" && cible.variante === "magasinier") {
@@ -840,6 +861,100 @@ export class Joueur implements Voyageur {
     this.elan = { dx: ux, dz: uz, restant: ESQUIVE.duree };
     for (const e of this.saisisseurs()) lacher(e, this.position, this.zoneIci());
     this.appuisDegagement = 0;
+  }
+
+  /** L'usure de chaque arme en main : coups qui restent (absente : neuve). */
+  private usure: Partial<Record<TypeObjet, number>> = {};
+
+  /**
+   * Un coup qui touche use l'arme en main (Book 23 §4.3). Sous 30 %, elle est abîmée (on le dit, une fois) ; à 0, elle
+   * casse : on en perd une, et la suivante du même type est neuve.
+   */
+  private user(arme: Arme): void {
+    const o = arme.objet;
+    if (!o || !Number.isFinite(arme.solidite)) return;
+    const avant = etatArme(o, this.usure);
+    const reste = (this.usure[o] ?? arme.solidite) - 1;
+    if (reste <= 0) {
+      delete this.usure[o];
+      this.retirer(o, 1);
+      this.envoyer({ t: "usure", usure: { ...this.usure }, evenement: { objet: o, etat: "cassee" } });
+      this.info(`${arme.nom.charAt(0).toUpperCase()}${arme.nom.slice(1)} vient de casser. ${(this.inventaire[o] ?? 0) > 0 ? "Tu prends la suivante, neuve." : "Il te faudra une autre arme."}`);
+      this.base.sauverUsure(this.compte.id, this.usure);
+      return;
+    }
+    this.usure[o] = reste;
+    if (avant >= SEUIL_ABIMEE && reste / arme.solidite < SEUIL_ABIMEE) {
+      this.envoyer({ t: "usure", usure: { ...this.usure }, evenement: { objet: o, etat: "abimee" } });
+      this.info(`${arme.nom.charAt(0).toUpperCase()}${arme.nom.slice(1)} est abîmée : ses coups portent moins. Répare-la (Sac).`);
+    }
+  }
+
+  /**
+   * Réparer une arme (Book 23 §4.3). De fortune, partout (ficelle et chiffons) : elle remonte, mais reste abîmée. Pour
+   * de bon, chez soi : l'établi pour le bois, la meule du pédalier pour les lames, la forge pour le métal.
+   */
+  private reparer(objet: TypeObjet, fortune: boolean): void {
+    const arme = ARMES.find((a) => a.objet === objet);
+    const matiere = MATIERE_ARME[objet];
+    if (!arme || !matiere || !(this.inventaire[objet] ?? 0) || this.voyage || this.action) return;
+    const etat = etatArme(objet, this.usure);
+    if (fortune) {
+      if (etat >= PLAFOND_FORTUNE) return this.info("Une réparation de fortune n'y ferait rien : elle n'est pas assez abîmée pour ça.");
+      const deQuoi = (Object.entries(REPARATION_FORTUNE) as [TypeObjet, number][]).every(([t, n]) => (this.inventaire[t] ?? 0) >= n);
+      if (!deQuoi) return this.info("Pour une réparation de fortune, il faut une ficelle et des chiffons.");
+      this.commencer(`Réparer ${arme.nom} (de fortune)`, 6 / REGLAGES.gestes_vitesse, () => {
+        for (const [t, n] of Object.entries(REPARATION_FORTUNE) as [TypeObjet, number][]) this.retirer(t, n);
+        this.usure[objet] = Math.max(this.usure[objet] ?? 0, Math.floor(arme.solidite * PLAFOND_FORTUNE));
+        this.envoyer({ t: "usure", usure: { ...this.usure }, evenement: { objet, etat: "reparee" } });
+        this.base.sauverUsure(this.compte.id, this.usure);
+      }, 0, "leger");
+      return;
+    }
+    if (etat >= 1) return this.info("Elle est comme neuve.");
+    const atelier = ATELIER_REPARATION[matiere];
+    const ici = this.lieu === "terrain" && [...this.installations.values()].some((i) => i.type === atelier.installation && (atelier.installation !== "pedalier" || i.etat.meule) && this.proche(i.x, i.z, 3));
+    if (!ici) return this.info(`Pour la remettre à neuf, il faut ${atelier.nom}, chez toi${atelier.installation === "pedalier" ? " (avec sa meule)" : ""}. Sinon, une réparation de fortune.`);
+    this.commencer(`Remettre ${arme.nom} à neuf`, 15 / REGLAGES.gestes_vitesse, () => {
+      delete this.usure[objet];
+      this.envoyer({ t: "usure", usure: { ...this.usure }, evenement: { objet, etat: "reparee" } });
+      this.base.sauverUsure(this.compte.id, this.usure);
+    }, 0, "outil");
+  }
+
+  /**
+   * B au contact (Book 23 §4.4) : les Éteints à 1,2 m ou moins devant soi (cône de 90°), deux au plus, reculent d'un
+   * mètre et demi, étourdis un instant. L'outil contre l'encerclement.
+   */
+  private repousserDevant(): void {
+    if (this.voyage) return;
+    if (this.endurance < REPOUSSER.cout) return this.info("Trop essoufflé pour repousser : recule, ton souffle revient vite.");
+    const proches = this.eteintsIci()
+      .filter((e) => debout(e))
+      .map((e) => ({ e, d: Math.hypot(e.x - this.position.x, e.z - this.position.z) }))
+      .filter(({ e, d }) => {
+        if (d > REPOUSSER.portee + 0.3) return false;
+        const angle = Math.atan2(e.x - this.position.x, e.z - this.position.z) - this.position.o;
+        // Celui qui nous tient se repousse toujours, même de côté.
+        return e.saisit === this.compte.id || Math.abs(Math.atan2(Math.sin(angle), Math.cos(angle))) <= REPOUSSER.demiAngle;
+      })
+      .sort((a, b) => a.d - b.d)
+      .slice(0, REPOUSSER.max);
+    if (proches.length === 0) return;
+    this.annulerAction();
+    this.endurance -= REPOUSSER.cout;
+    for (const { e } of proches) repousser(e, this.position, REPOUSSER.recul, REPOUSSER.etourdi, this.zoneIci());
+    this.appuisDegagement = 0;
+    this.bruitCoupJusqua = this.maintenant() + 400;
+  }
+
+  /** Un leurre du décor de la Coopérative : klaxon, sonnette, radio (Book 23 §4.7). */
+  private actionnerLeurre(id: string): void {
+    const l = LEURRES.find((x) => x.id === id);
+    if (this.lieu !== "cooperative" || !l || this.voyage) return;
+    if (!this.proche(l.x, l.z, DISTANCE_INTERACTION + 0.5)) return this.info("Approche-toi.");
+    const texte = this.cooperatives.actionner(this.compte.id, id, this.maintenant());
+    if (texte) this.info(texte);
   }
 
   /** Taper vite pour se dégager (Book 08 §3.3) : il en faut plus quand plusieurs tiennent, et quand on est épuisé. */
@@ -1763,6 +1878,7 @@ export class Joueur implements Voyageur {
     for (const feu of this.feux.values()) this.base.sauverFeu(this.compte.id, feu);
     this.base.sauverCharges(this.compte.id, this.charges, this.maintenant());
     this.base.sauverSante(this.compte.id, this.sante, this.endurance);
+    this.base.sauverUsure(this.compte.id, this.usure);
     // L'escabeau dans les bras : s'il faut le lâcher (déconnexion), il tombe là où l'on est.
     const porte = this.objetPorte();
     if (porte) this.base.deplacerInstallation(this.compte.id, porte.id, this.position.x, this.position.z, this.position.o);
@@ -1867,6 +1983,7 @@ export class Joueur implements Voyageur {
     if (cible?.genre === "comptoir" && verbe === "pedaler_comptoir") return this.pedalerAuComptoir();
     if (cible?.genre === "animal" && verbe === "assommer" && this.lieu === "terrain") return this.assommer(cible.id);
     if (cible?.genre === "porte" && (verbe === "ouvrir_porte" || verbe === "fermer_porte")) return this.actionnerPorte(cible.id, verbe === "ouvrir_porte");
+    if (cible?.genre === "leurre" && verbe === "actionner") return this.actionnerLeurre(cible.id);
     // Le reste (mare, feux, installations) n'existe que sur le terrain.
     if (this.lieu !== "terrain") return;
     if (cible?.genre === "mare" && verbe === "remplir") return this.remplirGourde();

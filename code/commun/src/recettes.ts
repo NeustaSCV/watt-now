@@ -371,6 +371,18 @@ export const RECETTES: Recette[] = [
     famille: "tous",
   },
   {
+    // La lance (Book 23 §4.6, évolution de l'épieu, P-002) : un couteau ligaturé au bout de l'épieu. Perçante, longue.
+    id: "lance",
+    categorie: "outils",
+    nom: "Lance (épieu et couteau ligaturé)",
+    produit: { objet: "lance", quantite: 1 },
+    ingredients: { epieu: 1, couteau: 1, ficelle: 1 },
+    qualites: {},
+    duree: 20,
+    intensite: "legere",
+    famille: "tous",
+  },
+  {
     id: "protege_bras",
     categorie: "sur_soi",
     nom: "Protège-bras de fortune",

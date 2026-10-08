@@ -68,7 +68,9 @@ export type Cible =
   /** Un animal du terrain (la volaille, 2026-10-08). */
   | { genre: "animal"; id: number }
   /** Une porte de la Coopérative (Book 23 §2.2) : son identifiant dans le plan. */
-  | { genre: "porte"; id: string };
+  | { genre: "porte"; id: string }
+  /** Un leurre du décor de la Coopérative (Book 23 §4.7) : le klaxon, la sonnette, la radio. */
+  | { genre: "leurre"; id: string };
 
 export type Verbe =
   | "ramasser"
@@ -101,6 +103,8 @@ export type Verbe =
   /** Une porte de la Coopérative : l'ouvrir, la refermer. */
   | "ouvrir_porte"
   | "fermer_porte"
+  /** Un leurre du décor : klaxonner, sonner, allumer ou éteindre la radio. */
+  | "actionner"
   // Améliorer sa base (Book 24) : sur un feu ou une installation, sur place.
   | "ameliorer"
   | "redescendre"
@@ -163,6 +167,10 @@ export type MessageClient =
   | { t: "frapper"; appuye: boolean }
   | { t: "esquiver"; dx: number; dz: number }
   | { t: "degager" }
+  /** B selon la situation (Book 23 §4.4) : un Éteint à 1,2 m devant soi, on le repousse. */
+  | { t: "repousser" }
+  /** Réparer une arme (Book 23 §4.3) : de fortune (partout), ou pour de bon à l'atelier qui convient. */
+  | { t: "reparer"; objet: TypeObjet; fortune: boolean }
   | { t: "panser" }
   /** Au guichet des Compteurs (É4, Book 07). */
   | { t: "comptoir"; op: OperationComptoir }
@@ -337,6 +345,10 @@ export interface Bienvenue {
   comptoir?: VueComptoir;
   /** À la Coopérative seulement : l'état de ses portes (ouverte : true). */
   portes?: Record<string, boolean>;
+  /** À la Coopérative seulement : les leurres en marche (la radio allumée). */
+  leurres?: string[];
+  /** L'usure des armes (coups qui restent ; absente : neuve). */
+  usure?: Partial<Record<TypeObjet, number>>;
   /** La volaille du terrain (2026-10-08). */
   animaux?: AnimalVu[];
 }
@@ -378,6 +390,10 @@ export type MessageServeur =
   /** Il s'effondre : le client montre le réveil, puis arrive un `bienvenue` sur le terrain. */
   | { t: "effondrement" }
   | { t: "sacs"; sacs: SacVu[] }
+  /** L'usure des armes (coups qui restent ; absente : neuve), et ce qui vient d'arriver à l'une d'elles (Book 23 §4.3). */
+  | { t: "usure"; usure: Partial<Record<TypeObjet, number>>; evenement?: { objet: TypeObjet; etat: "abimee" | "cassee" | "reparee" } }
+  /** Un leurre de la Coopérative s'est déclenché, ou s'est tu (la radio). */
+  | { t: "leurre"; id: string; actif: boolean; x: number; z: number }
   /** L'état des portes de la Coopérative (ouverte : true), à chaque changement (0.5b). */
   | { t: "portes"; portes: Record<string, boolean> }
   | { t: "wotts"; wotts: WottsVus }

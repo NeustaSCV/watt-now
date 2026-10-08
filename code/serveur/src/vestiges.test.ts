@@ -66,7 +66,9 @@ function aleaGraine(graine: number): () => number {
 test("le catalogue : une cinquantaine de vestiges et une dizaine de composants, chacun pesé et valorisé", () => {
   const vestiges = Object.keys(VESTIGES);
   const composants = Object.keys(COMPOSANTS);
-  assert.ok(vestiges.length >= 45 && vestiges.length <= 60, `${vestiges.length} vestiges`);
+  // Ceux qu'on trouve en fouillant ; les objets propres à la Coopérative (hors tirage) viennent en plus.
+  const tirables = Object.values(VESTIGES).filter((d) => !("horsTirage" in d && d.horsTirage));
+  assert.ok(tirables.length >= 45 && tirables.length <= 60, `${tirables.length} vestiges tirables`);
   assert.ok(composants.length >= 10, `${composants.length} composants`);
   for (const t of [...vestiges, ...composants]) {
     assert.ok(estObjet(t), t);

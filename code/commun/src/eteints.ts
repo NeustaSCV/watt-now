@@ -2,7 +2,7 @@
 // Book 06 : lents, bêtes, guidés par l'ouïe ; la vue est mauvaise. L'attention monte avec intensité × durée,
 // et retombe quand plus rien ne se passe.
 
-import { DELAI_SAISIE, DUREE_A_TERRE, DUREE_ETOURDI, RESISTANCE_TORSE, type Arme } from "./combat.ts";
+import { BONUS_ETOURDI_CONTONDANT, DELAI_SAISIE, DUREE_A_TERRE, DUREE_ETOURDI, RESISTANCE_TORSE, type Arme } from "./combat.ts";
 import { heurte, type Zone } from "./lieux.ts";
 import type { Stimulus } from "./signature.ts";
 
@@ -157,7 +157,10 @@ export function encaisser(e: Eteint, arme: Arme, appuye: boolean, force: number,
   // À terre, la tête est à portée : n'importe quel coup l'achève, même au couteau ou aux poings (décision du 2026-10-08).
   // Le Rampant est déjà au sol : un coup l'achève (Book 23 §3, Book 06 §8.4).
   const auSol = e.etat === "a_terre" || e.variante === "rampant";
-  if (auSol || (appuye && arme.tueALaTete && force >= 1)) {
+  // Le casque de l'Équipé (Book 23 §4.2) : à la tête, le tranchant glisse ; au sol, seuls le contondant et le perçant
+  // l'achèvent.
+  const casque = e.variante === "equipe" && arme.type === "tranchant";
+  if ((auSol && !casque) || (appuye && arme.tueALaTete && force >= 1 && !casque && !auSol)) {
     e.etat = "detruit";
     e.corps = 0;
     e.but = null;
@@ -171,11 +174,23 @@ export function encaisser(e: Eteint, arme: Arme, appuye: boolean, force: number,
     e.degats = 0;
     return "a_terre";
   }
-  e.etourdi = DUREE_ETOURDI;
+  e.etourdi = DUREE_ETOURDI * (arme.type === "contondant" && arme.objet !== null ? BONUS_ETOURDI_CONTONDANT : 1);
   // Le coup le fait reculer d'un pas.
   const d = Math.hypot(e.x - de.x, e.z - de.z) || 1;
   deplacer(e, ((e.x - de.x) / d) * 0.6, ((e.z - de.z) / d) * 0.6, zone);
   return "vacille";
+}
+
+/** Repoussé (Book 23 §4.4) : il lâche, recule de `recul` mètres (sans traverser les murs) et reste étourdi un instant. */
+export function repousser(e: Eteint, de: { x: number; z: number }, recul: number, etourdi: number, zone: Zone): void {
+  e.saisit = null;
+  e.tenue = 0;
+  e.contact = 0;
+  e.etourdi = Math.max(e.etourdi, etourdi);
+  if (e.etat === "dormant") e.etat = "poursuivant";
+  const d = Math.hypot(e.x - de.x, e.z - de.z) || 1;
+  // Par petits pas, pour glisser le long d'un mur plutôt que de le traverser.
+  for (let i = 0; i < 6; i++) deplacer(e, (((e.x - de.x) / d) * recul) / 6, (((e.z - de.z) / d) * recul) / 6, zone);
 }
 
 /** Un humain se dégage (ou esquive) : celui qui le tenait lâche et vacille. */
