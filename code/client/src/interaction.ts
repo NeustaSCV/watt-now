@@ -10,7 +10,7 @@ import { nommer, type Inventaire, type TypeObjet } from "../../commun/src/objets
 import { RECETTES } from "../../commun/src/recettes.ts";
 import { NOMS_FAMILLES, type Famille } from "../../commun/src/regles.ts";
 import type { Gourde } from "../../commun/src/survie.ts";
-import { DISTANCE_INTERACTION, PORTEE_ARBRE, distanceMare, RAYON_ESCABEAU, USAGES, estFruitier, type TypeRessource } from "../../commun/src/terrain.ts";
+import { DISTANCE_INTERACTION, EMPRISE_RESSOURCE, PORTEE_ARBRE, distanceMare, RAYON_ESCABEAU, USAGES, estFruitier, type TypeRessource } from "../../commun/src/terrain.ts";
 import type { FeuDeCamp } from "./rendu/feu.ts";
 import type { VueRessource } from "./rendu/ressources.ts";
 
@@ -30,7 +30,8 @@ export interface Propositions {
   A: ActionProposee | null;
   B: ActionProposee | null;
   /** Position de ce qui est visé, pour le surligner. */
-  cible: { x: number; z: number } | null;
+  /** `rayon` : l'emprise de ce qu'on vise, pour ajuster le cercle de visée (P-007). */
+  cible: { x: number; z: number; rayon?: number } | null;
 }
 
 const EXAMENS_INSTALLATIONS: Record<InstallationVue["type"], string> = {
@@ -180,14 +181,14 @@ export function proposer(
         ? { libelle: usage.libelle, message: { t: "interagir", cible: { genre: "ressource", id: r.donnees.id }, verbe: usage.verbe } }
         : { libelle: `${usage.libelle} (escabeau)`, examiner: "Les fruits sont trop haut. Pose un escabeau au pied de l'arbre, dans le cercle, puis monte cueillir." },
       B: { libelle: "Examiner", examiner: arbre && jour > 0 ? `${usage.examen} ${etatDuFruitier(r.donnees.type, jour)}` : usage.examen },
-      cible: { x: r.donnees.x, z: r.donnees.z },
+      cible: { x: r.donnees.x, z: r.donnees.z, rayon: EMPRISE_RESSOURCE[r.donnees.type] ?? 0.5 },
     });
   }
 
   for (const i of installations) {
     const d = Math.max(0, Math.hypot(i.x - position.x, i.z - position.z) - 0.6);
     const [A, B] = actionsInstallation(i, repos, famille, inventaire, charges, maintenantServeur);
-    garder(d, { A, B, cible: { x: i.x, z: i.z } });
+    garder(d, { A, B, cible: { x: i.x, z: i.z, rayon: i.type === "escabeau" || i.type === "alarme_boites" ? 0.7 : 1.1 } });
   }
 
   const aDuBois = (inventaire.buche ?? 0) > 0 || (inventaire.branche ?? 0) > 0;
@@ -210,7 +211,7 @@ export function proposer(
     garder(Math.max(0, d), {
       A: f.aspect === "eteint" ? (allumer ?? ajouter) : brule ? (rotir ?? bouillir ?? ajouter) : ajouter,
       B: f.aspect === "eteint" ? (allumer ? ajouter : null) : brule && (rotir || bouillir) ? ajouter : null,
-      cible: { x: f.x, z: f.z },
+      cible: { x: f.x, z: f.z, rayon: 0.7 },
     });
   }
 

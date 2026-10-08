@@ -82,7 +82,7 @@ import {
 } from "../../commun/src/economie.ts";
 import { BONUS_MECANISTE, PORTEE_CABLE_PANNEAU, WH_M_PAR_HEURE, productionPanneau, stocker } from "../../commun/src/energie.ts";
 import type { AutreVu, OffreEchange, OperationComptoir, RapportBase, WottsVus } from "../../commun/src/messages.ts";
-import { COMPTOIR, etapeVers } from "../../commun/src/lieux.ts";
+import { COMPTOIR, HALTE, etapeVers } from "../../commun/src/lieux.ts";
 import type { Quete, VueQuetes } from "../../commun/src/quetes.ts";
 import { SuiviQuetes, type EtatJoueurPourQuetes } from "./quetes.ts";
 import { debout, encaisser, lacher, nouvelEteint, penser, vue as vueEteint, type Eteint, type Humain } from "../../commun/src/eteints.ts";
@@ -287,8 +287,8 @@ export class Joueur implements Voyageur {
     this.position = perso.position;
     this.lieu = perso.lieu;
     if (this.lieu === "station") {
-      // Reconnexion dans la halte : on réapparaît à l'entrée la plus proche (Book 01 §2 bis).
-      this.position = arriveeDans("station", this.position.x < 100 ? "terrain" : "comptoir");
+      // Reconnexion dans la halte : on réapparaît à l'entrée la plus proche (Book 01 §2 bis). Le terrain est à l'est (P-006).
+      this.position = arriveeDans("station", this.position.x >= HALTE.longueur / 2 ? "terrain" : "comptoir");
       halte.entrer(this);
     }
     if (this.lieu === "comptoir") {

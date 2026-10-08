@@ -45,6 +45,14 @@ export function meilleureArme(inventaire: Inventaire): Arme {
   return ARMES.find((a) => a.objet && (inventaire[a.objet] ?? 0) > 0) ?? POINGS;
 }
 
+/** Les caractéristiques d'une arme, telles que le joueur les lit dans son sac (2026-10-08). */
+export function caracteristiquesArme(objet: TypeObjet): { degats: number; vitesse: number; coup: number; coupAppuye: number; allonge: number; tueALaTete: boolean } | null {
+  const a = ARMES.find((x) => x.objet === objet);
+  if (!a) return null;
+  // Vitesse : coups simples par seconde. Dégâts : en « points » de torse (il en faut 3 pour le faire tomber).
+  return { degats: a.degatsTorse, vitesse: 1000 / a.coup, coup: a.coup / 1000, coupAppuye: a.coupAppuye / 1000, allonge: a.allonge, tueALaTete: a.tueALaTete };
+}
+
 /** Cet objet est-il une arme qu'on peut équiper (P-005) ? */
 export function estArme(objet: TypeObjet): boolean {
   return ARMES.some((a) => a.objet === objet);

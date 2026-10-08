@@ -66,8 +66,9 @@ export function creerComptoir(): THREE.Group {
   COMPTEURS.push(new Compteur(COMPTOIR.guichet.x - 3.2, COMPTOIR.guichet.z + 0.6, 0.3, false, "homme"));
   COMPTEURS.push(new Compteur(COMPTOIR.guichet.x + 3.4, COMPTOIR.guichet.z + 0.8, -0.4, true, "femme"));
   for (const c of COMPTEURS) g.add(c.objet);
-  g.add(creerPanneauRoute("Station-service", "← 2 km · ton terrain 5 km", 7, ROUTE_CARREFOUR.z + ROUTE_CARREFOUR.demiLargeur + 1.6, 0));
-  g.add(creerBarrage(L - 4.5, ROUTE_CARREFOUR.z, Math.PI / 2, "Route de la Ville : fermée"));
+  // P-006 : la station est à l'est (à droite), la Ville à l'ouest (à gauche), comme sur la carte.
+  g.add(creerPanneauRoute("Station-service", "2 km · ton terrain 5 km →", L - 9, ROUTE_CARREFOUR.z + ROUTE_CARREFOUR.demiLargeur + 1.6, 0));
+  g.add(creerBarrage(4.5, ROUTE_CARREFOUR.z, Math.PI / 2, "Route de la Ville : fermée"));
   g.add(creerBarrage(ROUTE_CARREFOUR.x, P - 2.5, 0, "Route de la Côte : fermée"));
   return g;
 }
@@ -107,7 +108,7 @@ function creerRoutes(aleat: () => number): THREE.Group {
     g.add(m);
   };
   const w = ROUTE_CARREFOUR.demiLargeur * 2;
-  // La route de la station, à l'ouest, et la route barrée vers la Ville, à l'est
+  // La route barrée vers la Ville, à l'ouest, et la route de la station, à l'est (P-006)
   route((ROUTE_CARREFOUR.x - 30) / 2, ROUTE_CARREFOUR.z, ROUTE_CARREFOUR.x + 30, w);
   route((ROUTE_CARREFOUR.x + L + 30) / 2, ROUTE_CARREFOUR.z, L + 30 - ROUTE_CARREFOUR.x, w);
   // La route de la Côte, au sud, et l'allée de l'agence, au nord
@@ -116,10 +117,10 @@ function creerRoutes(aleat: () => number): THREE.Group {
   const blanc = materiau(0xd9d2b8);
   for (let i = 0; i < 5; i++) {
     const bande = new THREE.Mesh(new THREE.PlaneGeometry(0.45, w * 0.8).rotateX(-Math.PI / 2), blanc);
-    bande.position.set(ROUTE_CARREFOUR.x - 5.5 - i * 0.9, 0.03, ROUTE_CARREFOUR.z);
+    bande.position.set(ROUTE_CARREFOUR.x + 5.5 + i * 0.9, 0.03, ROUTE_CARREFOUR.z);
     if (aleat() > 0.25) g.add(bande);
   }
-  for (let x = -20; x < ROUTE_CARREFOUR.x - 8; x += 7) {
+  for (let x = ROUTE_CARREFOUR.x + 10; x < L + 20; x += 7) {
     const tiret = new THREE.Mesh(new THREE.PlaneGeometry(3, 0.14).rotateX(-Math.PI / 2), blanc);
     tiret.position.set(x, 0.03, ROUTE_CARREFOUR.z);
     g.add(tiret);

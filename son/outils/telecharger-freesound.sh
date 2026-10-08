@@ -15,7 +15,9 @@ tail -n +2 "$racine/candidats.tsv" | cut -f2,3 | sort -u -t$'\t' -k2,2 | while I
   [ -s "$dest/$id.ogg" ] && continue
   page="https://freesound.org/people/$auteur/sounds/$id/"
   html="$(curl -sL --max-time 30 "$page")"
-  licence="$(printf '%s' "$html" | grep -oE 'Creative Commons[^<"]*' | head -1 | sed 's/[[:space:]]*$//')"
+  # La licence se lit dans son lien officiel (le texte « Creative Commons » peut venir de la description de l'auteur).
+  liens="$(printf '%s' "$html" | grep -oE 'creativecommons\.org/(publicdomain|licenses)/[a-z/.0-9-]+' | sort -u)"
+  if [ "$liens" = "creativecommons.org/publicdomain/zero/1.0/" ]; then licence="Creative Commons 0"; else licence="$(echo $liens)"; fi
   duree="$(printf '%s' "$html" | grep -oE 'data-duration="[^"]+"' | head -1 | cut -d'"' -f2)"
   titre="$(printf '%s' "$html" | grep -oE '<title>[^<]*' | head -1 | sed 's/<title>//; s/ - Freesound$//' | sed 's/&quot;/"/g; s/&amp;/\&/g; s/&#x27;/'"'"'/g')"
   mp3="$(printf '%s' "$html" | grep -oE 'https://cdn\.freesound\.org/previews/[^"]+-hq\.mp3' | head -1)"

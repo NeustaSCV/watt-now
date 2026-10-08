@@ -117,17 +117,21 @@ export const ZONE_STATION: Zone = {
   ],
 };
 
+/**
+ * Les sorties de la halte (P-006, 0.3) : comme sur la carte du monde, le terrain est à l'est (à droite de l'écran)
+ * et le Carrefour à l'ouest (à gauche). On arrive du terrain par le bout est de la route.
+ */
 export const SORTIES_STATION: Sortie[] = [
   {
     vers: "terrain",
-    boite: { x: 2, z: ROUTE.z, l: 4, p: 10 },
-    arrivee: { x: 4.5, z: ROUTE.z, o: Math.PI / 2 },
+    boite: { x: HALTE.longueur - 2, z: ROUTE.z, l: 4, p: 10 },
+    arrivee: { x: HALTE.longueur - 4.5, z: ROUTE.z, o: -Math.PI / 2 },
     libelle: "Rentrer chez toi",
   },
   {
     vers: "comptoir",
-    boite: { x: HALTE.longueur - 2, z: ROUTE.z, l: 4, p: 10 },
-    arrivee: { x: HALTE.longueur - 4.5, z: ROUTE.z, o: -Math.PI / 2 },
+    boite: { x: 2, z: ROUTE.z, l: 4, p: 10 },
+    arrivee: { x: 4.5, z: ROUTE.z, o: Math.PI / 2 },
     libelle: "Continuer vers le Carrefour",
   },
 ];
@@ -135,7 +139,7 @@ export const SORTIES_STATION: Sortie[] = [
 // ---------- Le Comptoir du Carrefour (É4, Book 07 §4) : zone neutre gardée, sans Éteints ----------
 
 export const CARREFOUR = { largeur: 60, profondeur: 44 } as const;
-/** La route arrive de l'ouest et croise trois chemins barrés : on est au carrefour. */
+/** La route de la station arrive de l'est (P-006 : le Carrefour est à l'ouest de la station, comme sur la carte) et croise trois chemins barrés. */
 export const ROUTE_CARREFOUR = { z: 26, demiLargeur: 3.2, x: 32 } as const;
 /** Le bâtiment des Compteurs, au nord du carrefour, façade vers la route ; le guichet devant. */
 export const COMPTOIR = {
@@ -148,8 +152,8 @@ export const COMPTOIR = {
 } as const;
 
 export const ZONE_COMPTOIR: Zone = {
-  xMin: 0.5,
-  xMax: CARREFOUR.largeur - 6,
+  xMin: 6,
+  xMax: CARREFOUR.largeur - 0.5,
   zMin: 4,
   zMax: CARREFOUR.profondeur - 4,
   obstacles: [COMPTOIR.batiment, COMPTOIR.cellules, { x: COMPTOIR.pedalier.x, z: COMPTOIR.pedalier.z - 0.6, l: 1.6, p: 0.7 }],
@@ -158,8 +162,8 @@ export const ZONE_COMPTOIR: Zone = {
 export const SORTIES_COMPTOIR: Sortie[] = [
   {
     vers: "station",
-    boite: { x: 2, z: ROUTE_CARREFOUR.z, l: 4, p: 10 },
-    arrivee: { x: 4.5, z: ROUTE_CARREFOUR.z, o: Math.PI / 2 },
+    boite: { x: CARREFOUR.largeur - 2, z: ROUTE_CARREFOUR.z, l: 4, p: 10 },
+    arrivee: { x: CARREFOUR.largeur - 4.5, z: ROUTE_CARREFOUR.z, o: -Math.PI / 2 },
     libelle: "Reprendre la route",
   },
 ];

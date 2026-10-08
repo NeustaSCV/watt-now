@@ -872,6 +872,39 @@ body {
   background: #e9eee2;
 }
 
+/* Les caractéristiques d'une arme dans le sac : dégâts, vitesse, allonge (2026-10-08). */
+#hud .caracs-arme {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+}
+#hud .carac {
+  display: grid;
+  grid-template-columns: 62px 1fr 44px;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+#hud .barre-carac {
+  height: 7px;
+  border-radius: 4px;
+  background: rgba(59, 42, 30, 0.15);
+  overflow: hidden;
+}
+#hud .barre-carac > span {
+  display: block;
+  height: 100%;
+  background: #a4552f;
+}
+#hud .valeur-carac {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+#hud .tete-carac {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
 /* L'arme équipée pour le combat (P-005) : une petite épée en coin. */
 #hud .sac .case.equipee::after {
   content: "⚔";

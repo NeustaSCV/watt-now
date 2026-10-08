@@ -132,8 +132,9 @@ export function creerHalte(): THREE.Group {
   const n = bruit(aleat, 96);
   groupe.add(creerSol(n), creerRoute(aleat, n), creerForet(aleat), creerStation(aleat), creerFerme(), creerGoulet(aleat));
   groupe.add(creerPoteaux(aleat), creerHerbes(aleat), creerDebris(aleat));
-  groupe.add(creerPanneauRoute("Ton terrain", "← 3 km, par le pont", 7, ROUTE.z + ROUTE.demiLargeur + 1.6, 0));
-  groupe.add(creerPanneauRoute("Le Carrefour", "Comptoir · 2 km →", L - 9, ROUTE.z + ROUTE.demiLargeur + 1.6, 0));
+  // P-006 : le Carrefour à l'ouest (à gauche), le terrain à l'est (à droite), comme sur la carte.
+  groupe.add(creerPanneauRoute("Le Carrefour", "← Comptoir · 2 km", 7, ROUTE.z + ROUTE.demiLargeur + 1.6, 0));
+  groupe.add(creerPanneauRoute("Ton terrain", "3 km, par le pont →", L - 9, ROUTE.z + ROUTE.demiLargeur + 1.6, 0));
   groupe.add(creerBarrage());
   return groupe;
 }

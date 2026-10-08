@@ -37,6 +37,32 @@ export type TypeRessource =
   | "caisse_atelier"
   | "grenier";
 
+/** L'emprise au sol de ce qu'on vise (m) : le cercle de visée s'y ajuste (P-007). 0,5 m par défaut. */
+export const EMPRISE_RESSOURCE: Partial<Record<TypeRessource, number>> = {
+  buisson: 0.8,
+  joncs: 0.9,
+  pommier: 1.1,
+  poirier: 1.1,
+  prunier: 1.0,
+  cerisier: 1.1,
+  noyer: 1.3,
+  cepe: 0.35,
+  amanite_tue_mouches: 0.35,
+  amanite_phalloide: 0.35,
+  velo: 1.0,
+  caisse_outils: 0.6,
+  batterie_voiture: 0.5,
+  ressort: 0.7,
+  bache: 0.6,
+  barre_metal: 0.7,
+  rayonnage: 1.2,
+  panneau_auvent: 0.8,
+  epave_voiture: 2.4,
+  epave_camion: 3.4,
+  caisse_atelier: 1.0,
+  grenier: 2.5,
+};
+
 export interface RessourceSol {
   id: number;
   type: TypeRessource;

@@ -3,7 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { avancer, type Position } from "../../commun/src/deplacement.ts";
-import { DUREE_VOYAGE_S, SORTIES_STATION, SORTIE_TERRAIN, STATION, ZONE_STATION } from "../../commun/src/lieux.ts";
+import { DUREE_VOYAGE_S, SORTIES_COMPTOIR, SORTIES_STATION, SORTIE_TERRAIN, STATION, ZONE_STATION } from "../../commun/src/lieux.ts";
 import type { MessageServeur } from "../../commun/src/messages.ts";
 import { Base } from "./base.ts";
 import { Halte } from "./halte.ts";
@@ -84,21 +84,24 @@ test("la halte est partagée : ce qu'un voyageur prend disparaît pour l'autre",
   assert.equal(halte.nombrePresents, 1);
 });
 
-test("par la sortie est, on rejoint le Carrefour ; par la sortie ouest, on rentre chez soi", () => {
+test("par la sortie ouest, on rejoint le Carrefour ; par la sortie est, on rentre chez soi (P-006, comme sur la carte)", () => {
   const t = monter();
   t.partirVersStation();
-  const est = SORTIES_STATION[1]!;
-  t.allerA(est.boite.x, est.boite.z);
+  // Du terrain, on arrive par le bout est de la route.
+  assert.ok(t.joueur.position.x > 150);
+  const versCarrefour = SORTIES_STATION[1]!;
+  assert.ok(versCarrefour.boite.x < 10);
+  t.allerA(versCarrefour.boite.x, versCarrefour.boite.z);
   t.joueur.recevoir({ t: "voyager", vers: "comptoir" });
   t.attendre(DUREE_VOYAGE_S + 0.5);
   assert.equal(t.dernier("bienvenue")!.lieu, "comptoir");
-  t.joueur.position = { x: 2, z: 26, o: 0 };
+  t.joueur.position = { x: SORTIES_COMPTOIR[0]!.boite.x, z: SORTIES_COMPTOIR[0]!.boite.z, o: 0 };
   t.joueur.recevoir({ t: "voyager", vers: "station" });
   t.attendre(DUREE_VOYAGE_S + 0.5);
   assert.equal(t.dernier("bienvenue")!.lieu, "station");
 
-  const ouest = SORTIES_STATION[0]!;
-  t.allerA(ouest.boite.x, ouest.boite.z);
+  const versTerrain = SORTIES_STATION[0]!;
+  t.allerA(versTerrain.boite.x, versTerrain.boite.z);
   t.joueur.recevoir({ t: "voyager", vers: "terrain" });
   t.attendre(DUREE_VOYAGE_S + 0.5);
   const b = t.dernier("bienvenue")!;

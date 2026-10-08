@@ -7,7 +7,7 @@ import { REGLAGES } from "../../commun/src/reglages.ts";
 import { ceQuiManque } from "../../commun/src/aide-fabrication.ts";
 import { ACTIONS, RESERVEES, assigner, avecTouches, nomDe, nomTouche, retablir, surChangement, type Action } from "./touches.ts";
 import { CAPACITES, type Charges } from "../../commun/src/energie.ts";
-import { NOMS_BLESSURES, estArme } from "../../commun/src/combat.ts";
+import { ARMES, NOMS_BLESSURES, RESISTANCE_TORSE, caracteristiquesArme, estArme } from "../../commun/src/combat.ts";
 import type { EchangeVu, InstallationVue, OffreEchange, OperationComptoir, OperationEchange, Personne, RapportBase, SanteVue, VueComptoir, WottsVus } from "../../commun/src/messages.ts";
 import { PRIX_RETRAIT, formaterWotts, prixVente } from "../../commun/src/economie.ts";
 import { detailEnergieGrise } from "../../commun/src/recettes.ts";
@@ -119,8 +119,8 @@ export class Hud {
     const el = this.element.querySelector<HTMLElement>(".pose")!;
     if (el.hidden) return;
     const aide = this.tactile
-      ? "Marche pour déplacer le fantôme."
-      : avecTouches("Vise l'endroit avec la souris. {agir} ou clic : construire · {lumiere} : tourner · {examiner} ou Échap : annuler.", false);
+      ? "Touche le sol pour l'y placer, ou pousse-le au joystick. Touche-le encore pour construire."
+      : avecTouches("Clique au sol pour le placer, reclique dessus (ou {agir}) pour construire · flèches ou ZQSD : l'ajuster · molette ou {lumiere} : tourner · clic droit ou Échap : annuler.", false);
     const texte = `<b>${this.nomPose}</b> · ${raison ? `<span class="non">${raison}</span>` : "On peut construire ici."}<br><small>${aide}</small>`;
     const p = el.querySelector<HTMLElement>(".texte-pose")!;
     if (p.innerHTML !== texte) p.innerHTML = texte;
@@ -1132,6 +1132,9 @@ export class Hud {
         detail += ` <span class="charge-batterie"><span class="charge-barre"><span style="width:${Math.min(100, pct)}%"></span></span> ${Math.round(wh)} / ${cap} Wh${s === "lampe_frontale" ? " (petite batterie)" : ""}</span>`;
         if (s === "lampe_frontale" && (this.inventaire.petite_batterie ?? 0) === 0) detail += " Il lui faut une petite batterie.";
       }
+      // Une arme : ses dégâts et sa vitesse, comparés aux autres (2026-10-08).
+      const arme = caracteristiquesArme(s);
+      if (arme) detail += this.ficheArme(arme);
       // Jeter par terre, quand le sac est trop lourd (on garde son sac sur le dos).
       const jeter =
         s === "sac_a_dos" || s === "sac_fortune"
@@ -1182,6 +1185,23 @@ export class Hud {
         }
       });
     }
+  }
+
+  /** Les caractéristiques d'une arme, en barres (la meilleure arme du jeu remplit la barre). */
+  private ficheArme(a: NonNullable<ReturnType<typeof caracteristiquesArme>>): string {
+    const maxDegats = Math.max(...ARMES.map((x) => x.degatsTorse));
+    const maxVitesse = Math.max(...ARMES.map((x) => 1000 / x.coup));
+    const maxAllonge = Math.max(...ARMES.map((x) => x.allonge));
+    const virgule = (n: number, d = 1) => n.toFixed(d).replace(".", ",");
+    const barre = (libelle: string, part: number, valeur: string, titre: string) =>
+      `<span class="carac" title="${titre}"><span class="nom-carac">${libelle}</span><span class="barre-carac"><span style="width:${Math.round(Math.min(1, part) * 100)}%"></span></span><span class="valeur-carac">${valeur}</span></span>`;
+    const coupsPourTomber = Math.ceil(RESISTANCE_TORSE / a.degats);
+    return `<span class="caracs-arme">
+      ${barre("Dégâts", a.degats / maxDegats, virgule(a.degats), `${coupsPourTomber} coup${coupsPourTomber > 1 ? "s" : ""} au torse pour le faire tomber`)}
+      ${barre("Vitesse", a.vitesse / maxVitesse, `${virgule(a.coup, 2)} s`, `Un coup simple dure ${virgule(a.coup, 2)} s, un coup appuyé ${virgule(a.coupAppuye, 2)} s`)}
+      ${barre("Allonge", a.allonge / maxAllonge, `${virgule(a.allonge)} m`, "Jusqu'où il porte")}
+      <span class="tete-carac">${a.tueALaTete ? "☠ Un coup appuyé à la tête l'arrête net." : "Ne tue pas d'un coup à la tête : il faut l'achever au sol."}</span>
+    </span>`;
   }
 
   // ---------- Le coffre de rangement ----------

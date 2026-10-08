@@ -1040,6 +1040,113 @@ C'est ce qui relie les 500 objets entre eux : on ne fouille pas pour un objet, o
 - **Books concernés** : 08-plateforme-commandes-financement (§3 emplacements rapides), 12-portage-vetements-protections (§2.1), 06-zombies (§8)
 - **Statut** : ✅ retenue et faite (0.2, 2026-10-08 ; Book 08 §3.3). « Équiper pour le combat » dans le sac, ⚔ sur l'arme équipée, choix gardé d'une session à l'autre, retour à la meilleure arme du sac (avec un message) si on l'a perdue. Les emplacements rapides viendront plus tard.
 
+### P-006 — Anomalie : on arrive à la station par le mauvais côté
+- **Date** : 2026-10-08
+- **Source** : retour de test (voyage)
+- **Constat** : sur la carte du monde, on vient de la **droite** quand on va de son terrain à la station-service. Mais dans la halte, on arrive par la **gauche**. Les deux ne collent pas : on perd le sens de l'orientation.
+- **Ce que montre le code** (lecture seule, rien n'a été modifié) :
+  - Carte du monde (`client/src/carte.ts`) : le terrain est à droite (x = 560), la station au milieu (x = 402), le Comptoir à gauche (x = 300). On va donc **de droite à gauche**.
+  - Halte (`commun/src/lieux.ts`, `SORTIES_STATION`) : la sortie vers le terrain est au bout **ouest** de la route (x = 2, arrivée en x = 4,5), la sortie vers le Comptoir au bout **est** (x = 198). C'est l'inverse de la carte.
+- **Correction proposée** : arriver du terrain par la **droite** (bout est de la route) et repartir vers le Comptoir par la **gauche** (bout ouest).
+  - La solution simple : **échanger les deux sorties** de `SORTIES_STATION` (boîtes, points d'arrivée, orientation du personnage).
+  - La solution complète : faire une **symétrie de toute la halte** (x → 200 − x). Ainsi, la ferme en ruine, le goulet et la station gardent leur place par rapport au trajet. Aujourd'hui, le goulet (x = 154) est entre la station et le Comptoir. Si on n'échange que les sorties, il se retrouve entre le terrain et la station : à décider.
+  - **Les panneaux de la route** de la halte sont à retourner aussi (`client/src/rendu/halte.ts`, ≈ lignes 135-136) : « Ton terrain ← 3 km » est posé à gauche et « Comptoir · 2 km → » à droite.
+  - À vérifier : que la droite de l'écran correspond bien à l'est de la halte avec la caméra du jeu. Sinon, c'est l'axe de la caméra qu'il faut regarder.
+  - **Le Comptoir a la même inversion** : il est à gauche de la station sur la carte, on devrait donc y arriver par la droite. Or la route y arrive de l'**ouest** (`SORTIES_COMPTOIR`, arrivée en x = 4,5, et le commentaire « La route arrive de l'ouest »). Il faut amener la route par l'est du Carrefour (x ≈ 54) et retourner l'orientation à l'arrivée.
+- **Books concernés** : 20-carte-du-monde, 21-perimetre-phase-0 (§5.2.3 la halte)
+- **Statut** : 🆕 à corriger (à transmettre aux agents de développement)
+
+### P-007 — Fouiller la grange pièce par pièce, et un cercle de visée qu'on voit toujours
+- **Date** : 2026-10-08
+- **Source** : retour de test (halte)
+- **Constat** :
+  1. « Fouiller la grange effondrée » est une **seule action pour tout le bâtiment** : un appui, et on reçoit une corde et un chiffon. Le joueur n'explore rien.
+  2. Le **cercle de visée** qui montre l'objet visé est parfois **caché sous l'objet** : on ne le voit pas.
+- **Ce que montre le code** (lecture seule, rien n'a été modifié) :
+  - La grange est une ressource unique `grenier` (`commun/src/terrain.ts`, et sa place dans `commun/src/halte.ts`) : 7 min de fouille, elle donne 1 corde et 1 chiffon, puis se recharge en 12 h.
+  - Le cercle (`client/src/main.ts`, constante `visee`) est un anneau fin de 0,42 à 0,5 m de rayon, posé au sol (3 cm), blanc à 55 % d'opacité. Il est **masqué par tout ce qui est posé dessus** : il est dessiné avec le test de profondeur, et il est plus petit que la plupart des objets (épave, rayonnage, grange).
+- **Proposition, la grange** :
+  - Remplacer la fouille unique par **plusieurs cachettes dans le bâtiment**, chacune avec son objet : une corde à la poulie, une caisse sous le foin, une vieille lanterne au crochet, un sac de grain dans un coin, une fourche contre le mur, des chiffons dans la sellerie… Des cachettes **au sol et en hauteur** (l'escabeau sert enfin ailleurs qu'au verger).
+  - Le joueur **entre et cherche**. Comme pour la boutique (Book 21 §5.1.2), le toit et le mur avant s'effacent quand on est dedans.
+  - Chaque cachette a son propre délai de recharge. Une partie peut tirer ses objets au hasard dans le catalogue de P-003.
+  - La même règle peut servir ensuite pour la boutique et l'atelier de la station.
+- **Proposition, le cercle de visée** :
+  - **Toujours visible** : il est dessiné **par-dessus** les objets (sans test de profondeur, et dessiné en dernier), mais **assez transparent** pour qu'on comprenne qu'il est au sol.
+  - **À la taille de l'objet** : son rayon suit l'emprise de ce qu'on vise (petit pour une pomme, large pour une épave).
+  - **Plus lisible** : un contour sombre autour du trait clair, pour qu'il se voie aussi sur la neige, le sable et la route. Une **pulsation lente** et légère.
+  - **En plus du cercle** : un léger **liseré lumineux sur l'objet** visé, que l'on voit même quand le sol est caché.
+  - Le cercle des cachettes de la grange n'apparaît que de près, pour que la recherche reste une recherche.
+- **Books concernés** : 18-direction-artistique, 21-perimetre-phase-0 (§5.2.3 la halte), 08-plateforme-commandes-financement (§3 visée)
+- **Statut** : 🆕 à étudier (le cercle : à corriger)
+
+### P-008 — Des haltes générées au hasard avec nos briques de décor
+- **Date** : 2026-10-08
+- **Source** : demande du porteur du projet
+- **Idée** : un **générateur de maps** qui assemble au hasard les éléments de décor dont on dispose déjà (bâtiments, épaves, éboulis, arbres, panneaux…) en respectant des règles. On produit ainsi vite de nouvelles maps, et surtout **beaucoup de haltes** : tout long voyage passe par elles (Book 01 §2 bis), et le Book 20 §4 en prévoit déjà **12** (deux par route), sans compter les variantes.
+- **Aujourd'hui** : la seule halte, la station-service, est **placée à la main**. La position de chaque vestige est écrite dans `commun/src/halte.ts` et celle des bâtiments dans `commun/src/lieux.ts`. Seuls le bois mort et les pierres sont tirés au hasard, avec une graine fixe (2027).
+- **Pourquoi c'est intéressant** :
+  - On ne dessine pas douze haltes à la main.
+  - Les trajets ne deviennent pas monotones : on ne connaît pas par cœur chaque épave.
+  - On peut **renouveler les haltes à chaque cycle** de deux mois (Book 09) : les anciens n'ont pas l'avantage de connaître la carte.
+
+#### 1. Le principe : un gabarit, des briques, une graine
+
+- **Le gabarit** reprend le format validé d'une halte (Book 01 §2 bis) : 200 × 70 m ; une route d'un bout à l'autre ; des bords naturels infranchissables ; un ou deux goulets ; des zones à l'écart de la route avec du butin ; 2 à 3 minutes de traversée sans s'arrêter.
+- **Les briques** sont les éléments de décor existants, rangés par rôle :
+
+| Rôle | Briques déjà disponibles | À ajouter |
+|---|---|---|
+| **Route** | Route droite, panneaux de direction | Virage, pont, passage à niveau, barricade |
+| **Bords** | Forêt dense | Falaise, rivière, grillage d'autoroute, immeubles effondrés |
+| **Goulet** | Éboulis de part et d'autre | Pont étroit, tunnel, carcasses de bus en travers, barrière de péage |
+| **Point d'intérêt** (à l'écart) | Station-service (auvent, boutique, atelier), ferme et grange en ruine | Aire de pique-nique, maison isolée, abri bus, cabane de chasseur, entrepôt, chapelle |
+| **Butin** | Épaves de voiture et de camion, rayonnages, établi, panneau solaire | Cachettes de P-007, objets de P-003 |
+| **Nature** | Arbres, bois mort, pierres, buissons | Mare, ruisseau, champignons |
+| **Danger** | Éteints errants, le Dormant | Nid d'Éteints près du butin, pillards (Book 01 §4) |
+
+- **La graine** : un seul nombre suffit à refaire toute la halte, à l'identique, sur le serveur comme dans le navigateur. On ne stocke donc presque rien, ce qui ménage le Raspberry Pi (Book 17). Au lieu de `aleatoire(2027)`, chaque halte reçoit sa graine.
+- **L'environnement** choisit la palette de briques : la route de la Montagne tire des falaises et un tunnel ; le Littoral, une corniche et des bateaux échoués ; la Ville, des immeubles et des bus (Book 20 §4).
+
+#### 2. Les règles d'assemblage
+
+1. **Le sens de la route** vient de la carte du monde : on entre du côté d'où l'on vient (la leçon de P-006). Le générateur reçoit « entrée à l'est, sortie à l'ouest ».
+2. **Un ou deux goulets**, tirés dans le tiers central, jamais collés à une sortie.
+3. **De deux à quatre points d'intérêt**, à l'écart de la route, en alternance nord et sud. Plus on s'écarte de la route, plus il y a de butin… et d'Éteints (Book 01 §2 bis).
+4. **Des zones calmes** près des deux sorties : on n'apparaît pas au milieu des Éteints à la connexion (Book 01 §2 bis, connexion).
+5. **Pas de chevauchement** : chaque brique a une emprise au sol, et le générateur refuse ce qui se superpose (même logique que `libre()` dans `halte.ts` aujourd'hui).
+
+#### 3. Le contrôle automatique
+
+Chaque halte générée passe des vérifications avant d'être acceptée. Sinon, on tire une autre graine.
+
+- On peut aller d'une sortie à l'autre par la route sans obstacle.
+- Les bords sont bien fermés : aucune fuite hors de la map.
+- Le temps de traversée, à vitesse de marche, est entre 2 et 3 minutes.
+- Chaque point d'intérêt est accessible.
+- Le butin total reste dans une fourchette fixée (pas de halte « jackpot »).
+- Le budget d'affichage pour le mobile tient (Book 21 §5.3.4) : nombre d'objets, de lumières, de triangles.
+
+#### 4. Garder la main sur le résultat
+
+- **Une page de visite** (comme les pages de planches déjà faites, `client/batiments.html`, `vehicules.html`…) montre une halte à partir de sa graine, avec un bouton « autre graine ». On fait défiler les propositions et on **garde les bonnes**.
+- **Les haltes-vitrines restent faites à la main** : la station-service de la phase 0a est un moment-vitrine (Book 21 §5.1.2). Le générateur sert pour les autres et pour les variantes.
+- **Une halte peut mêler les deux** : un cœur fait à la main (la station) entouré de parties générées (épaves, lisières, butin).
+
+#### 5. Les variantes
+
+- **Par cycle** : nouvelle graine à chaque cycle de deux mois. Les noms des lieux ne changent pas (« la station-service »), mais leur disposition oui.
+- **Par instance** (Book 01 §2 bis, instances) : à garder **identique** entre instances d'une même halte pendant un cycle, pour que des joueurs puissent se donner rendez-vous (« au goulet, près du camion »).
+- **Par saison** (Book 13) : la même graine, mais la neige, une rivière en crue qui ferme un gué, un arbre tombé…
+
+#### 6. À trancher
+
+- Les haltes changent-elles à chaque cycle, ou restent-elles fixes pour qu'on les apprenne ?
+- Combien de nouvelles briques faut-il pour que deux haltes ne se ressemblent pas ? Probablement **une dizaine par environnement** (bords, goulet, deux ou trois points d'intérêt).
+- Le générateur sert-il aussi aux **ruines lointaines** et aux **lieux de flux** (Book 20) ?
+
+- **Books concernés** : 01-les-trois-feux (§2 bis haltes), 20-carte-du-monde (§4), 17-architecture-technique, 18-direction-artistique, 21-perimetre-phase-0 (§5), 09-cycles-progression-classements
+- **Statut** : 🆕 à étudier
+
 <!-- Modèle d'une entrée :
 
 ### P-001 — Titre court de l'idée

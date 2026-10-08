@@ -178,14 +178,29 @@ let positionServeur: Position | null = null;
 let propositions: Propositions = { A: null, B: null, cible: null };
 let nuitAnnoncee = false;
 
-// Un anneau discret sous ce que le joueur vise.
-const visee = new THREE.Mesh(
-  new THREE.RingGeometry(0.42, 0.5, 24).rotateX(-Math.PI / 2),
-  new THREE.MeshBasicMaterial({ color: 0xf2efe6, transparent: true, opacity: 0.55, depthWrite: false }),
-);
+// L'anneau sous ce que le joueur vise (P-007, 0.3) : toujours visible, dessiné par-dessus les objets mais assez
+// transparent pour qu'on comprenne qu'il est au sol ; un contour sombre sous le trait clair (lisible sur l'herbe, le
+// béton, plus tard la neige) ; à la taille de ce qu'on vise ; une pulsation lente.
+const visee = new THREE.Group();
+for (const [r0, r1, couleur, opacite, ordre] of [
+  [0.86, 1.04, 0x1d1712, 0.45, 20],
+  [0.9, 1.0, 0xf6f1e4, 0.85, 21],
+] as const) {
+  const anneau = new THREE.Mesh(
+    new THREE.RingGeometry(r0, r1, 40).rotateX(-Math.PI / 2),
+    new THREE.MeshBasicMaterial({ color: couleur, transparent: true, opacity: opacite, depthWrite: false, depthTest: false }),
+  );
+  anneau.renderOrder = ordre;
+  visee.add(anneau);
+}
 visee.position.y = 0.03;
 visee.visible = false;
 scene.scene.add(visee);
+/** Ajuste le cercle de visée à ce qu'on vise, et le fait battre doucement. */
+function majVisee(rayon: number, instant: number): void {
+  const r = Math.max(0.45, rayon) * (1 + Math.sin(instant / 420) * 0.04);
+  visee.scale.set(r, 1, r);
+}
 
 /**
  * Le geste en cours sur ce qu'on vise (ramasser, couper, fouiller, pédaler…), ou la fabrication en cours :
@@ -847,12 +862,12 @@ function agir(a: ActionProposee | null): void {
 
 /** Le choix de l'emplacement d'une construction (2026-10-08) : le fantôme, puis construire ici, tourner ou annuler. */
 const pose = new ModePose(canvas);
-scene.scene.add(pose.groupe);
+scene.scene.add(pose.groupe, pose.cerclePortee);
 function commencerPose(genre: GenrePose, recette: Recette | null, modele: THREE.Object3D, rayon: number, nom: string, dakota = false): void {
   if (!position) return;
   // Par défaut, la construction regarde le personnage (au quart de tour près).
   pose.o = Math.round((position.o + Math.PI) / (Math.PI / 2)) * (Math.PI / 2);
-  pose.demarrer(genre, recette, modele, rayon, dakota);
+  pose.demarrer(genre, recette, modele, rayon, dakota, position, scene.camera);
   hud.afficherPose(nom);
 }
 function finirPose(choix: "tourner" | "annuler" | "poser"): void {
@@ -1128,7 +1143,15 @@ function boucle(instant: number): void {
               : "À bout de souffle : marche un moment, ton endurance remonte vite.";
       indice("course", raison);
     }
-    const intention = immobile ? INTENTION_REPOS : { dx, dz, allure };
+    // Pendant la pose, c'est le fantôme qui bouge, pas le personnage (0.3) : les touches et le joystick le poussent.
+    if (pose.actif) {
+      pose.pousser(dx, dz, dt);
+      if (pose.confirme) {
+        pose.confirme = false;
+        finirPose("poser");
+      }
+    }
+    const intention = immobile || pose.actif ? INTENTION_REPOS : { dx, dz, allure };
     reseau.envoyerIntention(intention);
     // La faune réagit à l'allure du joueur (discret, on approche ; en courant, tout détale).
     if (lieu === "terrain") {
@@ -1239,6 +1262,7 @@ function boucle(instant: number): void {
     visee.visible = (propositions.cible !== null && !occupe) || centre !== null;
     if (centre) {
       visee.position.set(centre.x, 0.03, centre.z);
+      majVisee(0.5, instant);
       anneauProgres.visible = true;
       anneauProgres.position.set(centre.x, 0.035, centre.z);
       dessinerProgres((performance.now() - tenu!.debut) / tenu!.duree);
@@ -1247,7 +1271,10 @@ function boucle(instant: number): void {
       hud.placerProgression(((p.x + 1) / 2) * window.innerWidth, ((1 - p.y) / 2) * window.innerHeight);
     } else {
       anneauProgres.visible = false;
-      if (propositions.cible) visee.position.set(propositions.cible.x, 0.03, propositions.cible.z);
+      if (propositions.cible) {
+        visee.position.set(propositions.cible.x, 0.03, propositions.cible.z);
+        majVisee(propositions.cible.rayon ?? 0.5, instant);
+      }
     }
   } else {
     scene.suivre(25, 25, dt);

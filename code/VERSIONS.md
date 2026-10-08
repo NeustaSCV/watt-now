@@ -12,24 +12,14 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
-## 0.2 · en préparation
-
-**Jouer : le carnet guide après le tutoriel** (Book 22)
-- **S'installer** (toutes les familles), dans l'ordre de l'urgence : un vrai repas, un coffre à soi, de quoi se défendre, se soigner, le Comptoir du Carrefour, premiers wotts, la main tendue.
-- **Le métier**, la chaîne de sa famille :
-  - 🔥 charbonnière → défourner → forger une lame → la vendre ;
-  - ⚙️ meule → affûter → dynamo → déposer l'électricité ;
-  - ⚡ rapporter le panneau de la station → l'installer → faire le plein → déposer l'électricité.
-- Chaque objectif a ses compteurs et sa récompense : des objets, ou une prime des Compteurs en wotts, versée sur le compte au Comptoir (prise sur leur trésorerie ; vide, elle attend).
-- Ce qui est déjà fait compte : un ancien bien équipé enchaîne plusieurs objectifs d'un coup.
-- **Les autres** : le Comptoir, les premiers wotts, l'échange, sur une troisième ligne.
+## 0.3 · en préparation
 
 **Jouer : la gamme bushcraft, lot 1** (proposition P-002, Book 02 §14 bis), rien que des matières qu'on a déjà :
 - ficelle, bâton à fouir (Creuser 1), **foyer Dakota** (un feu creusé : il se voit trois fois moins la nuit, fume moins, brûle moins de bois) ;
 - **récupérateur de pluie** (il se remplit même hors ligne ; l'eau de pluie se boit sans bouillir) ;
 - **lit de branchages** (sommeil +30 %), **alarme à boîtes de conserve** (elle tinte quand un Éteint passe, et l'attire), **protège-bras** (une morsure sur deux), **épieu** (la plus longue allonge), **travois** (+50 kg, sans courir) ;
 - manger une conserve laisse sa boîte vide.
-- « S'installer » passe à 10 objectifs, dans l'ordre de l'urgence.
+- « S'installer » passe à 10 objectifs, dans l'ordre de l'urgence ; « Les autres » (le Comptoir, les premiers wotts, l'échange) devient une troisième ligne du carnet.
 
 **Combat** (propositions P-004 et P-005)
 - Un coup va jusqu'au bout : taper vite ne relance plus le geste ; un appui pendant le coup est gardé pour la suite. Chaque arme a son rythme (hache lente, couteau vif).
@@ -39,6 +29,27 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 **Interface**
 - Sur téléphone, le carnet se replie en un petit onglet (replié d'office, choix gardé).
 - Commandes, Son, Qualité et Quitter passent dans un menu derrière une roue dentée ⚙.
+- Chaque arme montre dans le sac ses **dégâts**, sa **vitesse** (durée d'un coup) et son **allonge**, en barres comparées aux autres armes, et si elle tue d'un coup appuyé à la tête.
+
+**Construire : la pose revue**
+- Pendant la pose, **le personnage ne bouge plus : seul le fantôme bouge**. Clavier ou joystick le poussent ; un clic (ou un appui du doigt) au sol l'y amène ; un second clic dessus construit.
+- Bouger la souris ne déplace plus rien : on clique sur « Tourner » ou « Annuler » sans déranger le fantôme. Molette ou R : tourner. Clic droit ou Échap : annuler.
+- Un cercle pointillé montre jusqu'où l'on peut construire.
+
+**Voir**
+- Le **cercle de visée** se voit toujours, même sous un objet, à la taille de ce qu'on vise, avec un contour sombre et une pulsation lente (proposition P-007).
+- **On arrive à la station du bon côté** (proposition P-006) : du terrain par l'est, vers le Carrefour par l'ouest, comme sur la carte. Au Carrefour, la route de la station arrive par l'est ; la route fermée de la Ville part à l'ouest.
+
+## 0.2 · déployée le 2026-10-08
+
+**Jouer : le carnet guide après le tutoriel** (Book 22)
+- **S'installer** (toutes les familles), dans l'ordre de l'urgence : un vrai repas, un coffre à soi, de quoi se défendre, se soigner, le Comptoir du Carrefour, premiers wotts, la main tendue.
+- **Le métier**, la chaîne de sa famille :
+  - 🔥 charbonnière → défourner → forger une lame → la vendre ;
+  - ⚙️ meule → affûter → dynamo → déposer l'électricité ;
+  - ⚡ rapporter le panneau de la station → l'installer → faire le plein → déposer l'électricité.
+- Chaque objectif a ses compteurs et sa récompense : des objets, ou une prime des Compteurs en wotts, versée sur le compte au Comptoir (prise sur leur trésorerie ; vide, elle attend).
+- Ce qui est déjà fait compte : un ancien bien équipé enchaîne plusieurs objectifs d'un coup.
 
 ## 0.1.1 · déployée le 2026-10-08
 
