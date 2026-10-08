@@ -3695,3 +3695,63 @@ body {
     font-size: 10.5px !important;
   }
 }
+
+/* ---------- Les messages, avis de Sally (2026-10-08) ----------
+   Deux lignes au plus, un fondu de sortie. En téléphone horizontal, la colonne de droite tombait sur Explorer, Lumière,
+   A et B : les messages passent en haut au centre, juste sous la rangée de tuiles, dans la bande libre au-dessus du
+   personnage. */
+#hud .messages p {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  padding: 3px 8px;
+  transition: opacity 0.3s ease;
+}
+#hud .messages p.indice {
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  opacity: 0.85;
+}
+#hud .messages p.sortie {
+  opacity: 0 !important;
+}
+@media (max-width: 560px) and (orientation: portrait) {
+  #hud .messages {
+    max-height: 120px;
+    overflow: hidden;
+  }
+}
+@media (orientation: landscape) and (max-height: 520px) {
+  #hud .messages {
+    top: calc(var(--bas-raccourcis, 66px) + 6px) !important;
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) !important;
+    width: min(380px, 45vw) !important;
+    max-height: 58px;
+    overflow: hidden;
+    align-items: center;
+    text-align: center;
+  }
+  #hud .messages p {
+    font-size: 11.5px !important;
+  }
+  #hud .messages p.indice {
+    font-size: 11px !important;
+  }
+  #hud .messages p:not(:last-child) {
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+  }
+}
+/* La ligne coupée ne doit pas dépasser dans la marge : la marge haute et basse est une bordure transparente (le fond
+   passe dessous, le débordement est coupé avant elle). */
+#hud .messages p,
+#hud[class*="habit-"] .messages p:not(.aide):not(.lecon) {
+  padding: 0 8px !important;
+  border: 3px solid transparent !important;
+  border-left-width: 0 !important;
+  border-right-width: 0 !important;
+}

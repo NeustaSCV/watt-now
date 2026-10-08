@@ -118,6 +118,9 @@ function lireCarnetOuvert(): boolean {
   return lireChoixCarnet() ?? false;
 }
 
+/** L'importance d'un message : quand la pile est pleine, le moins important part en premier. */
+const RANG_MESSAGE = { indice: 0, "": 1, aide: 2, lecon: 3 } as const;
+
 export class Hud {
   /** Réassigner une touche : le jeu attend la prochaine touche frappée (null : annulé). */
   surAttendreTouche: ((f: (code: string | null) => void) => void) | null = null;
@@ -404,7 +407,12 @@ export class Hud {
     q(".b-carnet").addEventListener("click", () => this.basculerCarnet());
     // La hauteur du bandeau, pour placer messages et panneaux juste dessous (sans jamais le chevaucher).
     const bandeau = q(".bandeau");
-    new ResizeObserver(() => element.style.setProperty("--haut-bandeau", `${Math.ceil(bandeau.getBoundingClientRect().bottom)}px`)).observe(bandeau);
+    // Et le bas de la rangée de tuiles : en téléphone horizontal, les messages se logent juste dessous, au centre (Sally).
+    const raccourcis = q(".raccourcis");
+    new ResizeObserver(() => {
+      element.style.setProperty("--haut-bandeau", `${Math.ceil(bandeau.getBoundingClientRect().bottom)}px`);
+      element.style.setProperty("--bas-raccourcis", `${Math.ceil(raccourcis.getBoundingClientRect().bottom)}px`);
+    }).observe(bandeau);
     this.tactile = tactile;
     if (!tactile) {
       q(".r-commandes").addEventListener("click", () => this.basculerCommandes());
@@ -1076,13 +1084,58 @@ export class Hud {
     window.setTimeout(() => div.remove(), 2000 + conteneur.children.length * 120);
   }
 
+  /**
+   * Un message en haut de l'écran (avis de Sally, 2026-10-08) : peu nombreux (3 sur ordinateur, 2 sur téléphone), sans
+   * doublon (un message déjà affiché est relancé, avec « ×2 »), et quand la pile est pleine on retire d'abord le moins
+   * important (leçon > aide > info > indice). Une même phrase d'indice ne revient pas avant 90 s.
+   */
   message(texte: string, genre: "" | "aide" | "lecon" | "indice" = ""): void {
+    const maintenant = performance.now();
+    if (genre === "indice") {
+      const vu = this.indicesVus.get(texte);
+      if (vu !== undefined && maintenant - vu < 90_000) return;
+      this.indicesVus.set(texte, maintenant);
+    }
+    const duree = { "": 4000, indice: 5000, aide: 8000, lecon: 9000 }[genre];
+    const present = [...this.messages.children].find((e) => (e as HTMLElement).dataset.texte === texte) as HTMLElement | undefined;
+    if (present) {
+      const n = Number(present.dataset.fois ?? "1") + 1;
+      present.dataset.fois = String(n);
+      present.textContent = `${texte} ×${n}`;
+      present.classList.remove("sortie");
+      this.programmerSortie(present, duree);
+      return;
+    }
     const p = document.createElement("p");
     p.textContent = texte;
+    p.dataset.texte = texte;
+    p.dataset.rang = String(RANG_MESSAGE[genre]);
     if (genre) p.className = genre;
     this.messages.append(p);
-    while (this.messages.children.length > 3) this.messages.firstElementChild!.remove();
-    window.setTimeout(() => p.remove(), genre === "indice" ? 6000 : genre ? 9000 : 5000);
+    const max = this.tactile || matchMedia("(max-width: 560px), (max-height: 520px)").matches ? 2 : 3;
+    while (this.messages.children.length > max) {
+      // Le moins important d'abord ; à importance égale, le plus ancien.
+      const tous = [...this.messages.children] as HTMLElement[];
+      const victime = tous.reduce((a, b) => (Number(b.dataset.rang) < Number(a.dataset.rang) ? b : a));
+      victime.remove();
+    }
+    this.programmerSortie(p, duree);
+  }
+
+  private indicesVus = new Map<string, number>();
+  private sorties = new WeakMap<HTMLElement, number>();
+
+  /** Le message s'efface en fondu (300 ms) au bout de sa durée ; relancé s'il revient entre-temps. */
+  private programmerSortie(p: HTMLElement, duree: number): void {
+    const avant = this.sorties.get(p);
+    if (avant) window.clearTimeout(avant);
+    this.sorties.set(
+      p,
+      window.setTimeout(() => {
+        p.classList.add("sortie");
+        this.sorties.set(p, window.setTimeout(() => p.remove(), 300));
+      }, duree),
+    );
   }
 
   // ---------- Panneaux : un seul ouvert à la fois ----------
