@@ -14,8 +14,8 @@ export type LigneQuete = "metier" | "installer" | "autres";
 export type Condition =
   /** Un fait compté depuis l'arrivée (repas, échange, wotts gagnés…), au moins `but` fois. */
   | { a: "fait"; fait: string; but: number }
-  /** Une installation de ce type sur son terrain (avec un équipement monté, si précisé). */
-  | { a: "installation"; type: string; avec?: "meule" | "dynamo" }
+  /** Une installation de ce type sur son terrain (avec un équipement monté, ou un niveau minimal, si précisé ; Book 24). */
+  | { a: "installation"; type: string; avec?: "meule" | "dynamo"; niveau?: number }
   /** Au moins `n` objets parmi ces types, dans le sac. */
   | { a: "objet"; types: TypeObjet[]; n: number }
   /** De l'électricité dans ses batteries (toutes, ou un type), en Wh. */
@@ -65,8 +65,9 @@ const INSTALLER: Quete[] = [
     id: "lit",
     ligne: "installer",
     titre: "Un vrai lit",
-    texte: "Dormir à même le sol, c'est dormir à moitié. Fais un lit de branchages à côté de ton abri.",
-    objectifs: [{ libelle: "Lit de branchages", condition: installation("lit_branchages") }],
+    texte: "Dormir à même le sol, c'est dormir à moitié. Fais un lit de branchages à côté de ton abri, ou garnis l'abri lui-même (examine-le : « Améliorer »).",
+    // Book 24 §7 : l'abri garni (niveau 2) vaut un lit posé à côté.
+    objectifs: [{ libelle: "Lit de branchages, ou abri garni", condition: { a: "un_de", conditions: [installation("lit_branchages"), { a: "installation", type: "abri", niveau: 2 }] } }],
     lecon: "Isolé du sol, à côté de l'abri, on récupère un tiers plus vite.",
     recompense: { objets: { conserve: 1 } },
   },
@@ -91,7 +92,7 @@ const INSTALLER: Quete[] = [
     id: "dakota",
     ligne: "installer",
     titre: "Un feu qui ne se voit pas",
-    texte: "La nuit, un feu se voit de loin. Durcis une branche au feu pour en faire un bâton à fouir, puis creuse un foyer Dakota (dans Fabriquer).",
+    texte: "La nuit, un feu se voit de loin. Durcis une branche au feu pour en faire un bâton à fouir, puis creuse un foyer Dakota : ton feu de camp lui-même (examine-le), ou un nouveau, depuis Fabriquer.",
     objectifs: [{ libelle: "Foyer Dakota creusé", condition: fait("foyer_dakota") }],
     lecon: "La flamme reste dans le sol : trois fois moins de lumière, moins de fumée, moins de bois.",
     recompense: { objets: { conserve: 1 } },
@@ -140,6 +141,25 @@ const INSTALLER: Quete[] = [
     objectifs: [{ libelle: "Travois", condition: { a: "objet", types: ["travois"], n: 1 } }],
     lecon: "50 kg de plus derrière toi. Chargé, on ne court plus : choisis bien quand tu sors avec.",
     recompense: { wotts: 15 },
+  },
+  // Améliorer sa base (Book 24 §7) : un seul bon foyer, plutôt que trois feux.
+  {
+    id: "foyer_pierres",
+    ligne: "installer",
+    titre: "Un foyer qui tient la nuit",
+    texte: "Un feu de camp mange son bois et se voit de loin. Approche-toi du tien, examine-le, et maçonne-le en foyer de pierres (des pierres, deux bûches, une pierre pour marteler).",
+    objectifs: [{ libelle: "Foyer de pierres", condition: fait("foyer:foyer_pierres") }],
+    lecon: "À l'abri du vent, il brûle moins. Couvert sous la cendre, il tient la nuit et se ranime sans briquet. Son muret réchauffe l'abri voisin.",
+    recompense: { wotts: 10 },
+  },
+  {
+    id: "foyer_cuisine",
+    ligne: "installer",
+    titre: "Une vraie cuisine",
+    texte: "Un trépied, une crémaillère, une grille (un rouleau de grillage, ou deux barres de métal) : ton foyer devient une cuisine.",
+    objectifs: [{ libelle: "Foyer de cuisine", condition: fait("foyer:foyer_cuisine") }],
+    lecon: "Deux plats à la fois, les soupes mijotées, l'eau qui bout deux fois plus vite. Un seul bon foyer fait mieux que trois feux.",
+    recompense: { objets: { conserve: 1 } },
   },
 ];
 

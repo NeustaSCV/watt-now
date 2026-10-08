@@ -44,8 +44,16 @@ export interface FeuVu {
   /** Bois restant, en kg. */
   bois: number;
   aspect: AspectFeu;
-  /** Un foyer Dakota (P-002). */
+  /** Un foyer Dakota (P-002) : la voie creusée de la lignée du feu. */
   dakota?: boolean;
+  /** Son niveau dans la lignée du feu (Book 24 §3.1). Absent : 1. */
+  niveau?: number;
+  /** Les accessoires montés (broche, marmite norvégienne). */
+  accessoires?: string[];
+  /** Couvert sous la cendre pour la nuit. */
+  couvert?: boolean;
+  /** L'orientation du muret réflecteur (foyer de pierres et au-delà). */
+  o?: number;
 }
 
 export type Cible =
@@ -92,7 +100,17 @@ export type Verbe =
   | "rotir"
   /** Une porte de la Coopérative : l'ouvrir, la refermer. */
   | "ouvrir_porte"
-  | "fermer_porte";
+  | "fermer_porte"
+  // Améliorer sa base (Book 24) : sur un feu ou une installation, sur place.
+  | "ameliorer"
+  | "redescendre"
+  | "demonter_installation"
+  | "creuser_dakota"
+  | "combler"
+  | "monter_broche"
+  | "monter_marmite"
+  | "couvrir"
+  | "ranimer";
 
 /** État propre à certaines installations. */
 export interface EtatInstallation {
@@ -111,6 +129,8 @@ export interface EtatInstallation {
   portee?: boolean;
   /** Récupérateur de pluie : l'eau recueillie, en litres (le calcul se fait jusqu'à `majLe`). */
   litres?: number;
+  /** Améliorer sa base (Book 24) : ce qui a été payé à chaque niveau au-delà du premier (pour redescendre ou démonter). */
+  payes?: Inventaire[];
 }
 
 export interface InstallationVue {
@@ -121,6 +141,8 @@ export interface InstallationVue {
   /** Orientation en radians. */
   o: number;
   etat: EtatInstallation;
+  /** Son niveau dans sa lignée (Book 24). Absent : 1. */
+  niveau?: number;
 }
 
 // ---------- WebSocket : du client vers le serveur ----------
@@ -330,6 +352,8 @@ export type MessageServeur =
   | { t: "feu"; feu: FeuVu }
   | { t: "installation"; installation: InstallationVue }
   | { t: "installation_retiree"; id: number }
+  /** Un feu démonté (Book 24 §2.4). */
+  | { t: "feu_retire"; id: number }
   | { t: "charges"; charges: Charges }
   /** `duree` : la durée totale ; `deja` : la part déjà faite (un geste long repris), de 0 à 1. */
   | { t: "action"; etat: "debut"; libelle: string; duree: number; bruit: BruitAction; deja?: number }

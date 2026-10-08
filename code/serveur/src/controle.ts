@@ -16,6 +16,9 @@ const booleen = (v: unknown): v is boolean => typeof v === "boolean";
 /** Une quantité : un nombre fini, raisonnable (les règles du jeu vérifient le reste). */
 const quantite = (v: unknown) => nombre(v) && v >= 0 && v <= 1e6;
 
+/** Les gestes d'aménagement du Book 24 (améliorer, démonter, creuser, accessoires, couvrir). */
+const VERBES_AMENAGEMENT = new Set(["ameliorer", "redescendre", "demonter_installation", "creuser_dakota", "combler", "monter_broche", "monter_marmite", "couvrir", "ranimer"]);
+
 function offreValide(o: unknown): boolean {
   if (!estTable(o) || !nombre(o.wotts) || o.wotts < 0 || !estTable(o.objets)) return false;
   return Object.entries(o.objets).every(([type, n]) => estObjet(type) && Number.isInteger(n) && (n as number) >= 0 && (n as number) <= 1e6);
@@ -65,13 +68,19 @@ export function messageValide(m: unknown): m is MessageClient {
     case "ping":
       return nombre(m.envoye);
     case "interagir":
-      return (
-        estTable(m.cible) &&
-        chaine(m.cible.genre) &&
-        // Une porte se désigne par son nom dans le plan ; tout le reste, par un numéro.
-        (m.cible.genre === "porte" ? chaine(m.cible.id) && m.cible.id.length <= 40 : nombreOuRien(m.cible.id)) &&
-        chaine(m.verbe)
-      );
+      if (
+        !(
+          estTable(m.cible) &&
+          chaine(m.cible.genre) &&
+          // Une porte se désigne par son nom dans le plan ; tout le reste, par un numéro.
+          (m.cible.genre === "porte" ? chaine(m.cible.id) && m.cible.id.length <= 40 : nombreOuRien(m.cible.id)) &&
+          chaine(m.verbe)
+        )
+      )
+        return false;
+      // Améliorer sa base (Book 24) : ces gestes ne visent qu'un feu ou une installation, désignés par leur numéro.
+      if (VERBES_AMENAGEMENT.has(m.verbe)) return (m.cible.genre === "feu" || m.cible.genre === "installation") && Number.isInteger(m.cible.id);
+      return true;
     case "manger":
       return estObjet(m.objet);
     case "construire_feu":

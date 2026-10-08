@@ -3,11 +3,15 @@
 // bois est juste empilé, calcinées au bout une fois le feu pris), langues de flamme vrillées, lit de cendres
 // et de tisons, fumée en un seul appel de dessin (panache.ts). Le foyer Dakota : un trou dans un bourrelet de terre
 // remuée, son évent à côté, le feu au fond.
+// Améliorer sa base (Book 24 §2.5) : chaque niveau a son modèle, lisible de loin — le foyer de pierres maçonné et son
+// muret, le trépied et la crémaillère du foyer de cuisine, les boîtes de conserve du poêle-fusée ; broche et marmite
+// norvégienne en accessoires.
 // Le fantôme de pose (pose.ts) reprend le même foyer et les mêmes bûches : un seul modèle (Book 21 §5.2.5).
 
 import * as THREE from "three";
 import type { FeuVu } from "../../../commun/src/messages.ts";
-import { Assemblage, BOIS, V, V3, X, Y, Z, bosseler, materiauSommets, placer, surface, tache } from "./assemblage.ts";
+import { formeFeu, type FormeFeu } from "../../../commun/src/lignees.ts";
+import { Assemblage, BOIS, ROUILLE_SOMBRE, V, V3, X, Y, Z, bosseler, materiauSommets, placer, surface, tache } from "./assemblage.ts";
 import { PALETTE, aleatoire } from "./materiaux.ts";
 import type { SourceLumiere } from "./lumieres.ts";
 import { Panache } from "./panache.ts";
@@ -37,37 +41,227 @@ function trou(c: Assemblage, x: number, z: number, r: number, aleat: () => numbe
   }
 }
 
-/** Le foyer, sans bois : le cercle de pierres noircies (ou, pour un foyer Dakota, le trou et son évent). */
-export function creerFoyer(dakota: boolean, graine: number): THREE.Group {
+/**
+ * Où brûle le feu selon la forme du foyer (Book 24 §2.5 : on lit le niveau de loin) : hauteur du feu, bûches petites
+ * ou grandes, taille des flammes, éclairage.
+ */
+interface Disposition {
+  /** Hauteur où posent les bûches et naissent les flammes. */
+  y: number;
+  petit: boolean;
+  flamme: number;
+  fumee: number;
+  /** La lumière portée la nuit : intensité et portée (le foyer de pierres éclaire moins vers l'extérieur). */
+  lumiere: [number, number];
+}
+const DISPOSITIONS: Record<FormeFeu, Disposition> = {
+  feu_camp: { y: 0.05, petit: false, flamme: 1, fumee: 1, lumiere: [9, 13] },
+  foyer_pierres: { y: 0.05, petit: false, flamme: 1, fumee: 1, lumiere: [8, 11] },
+  foyer_cuisine: { y: 0.05, petit: false, flamme: 1, fumee: 1, lumiere: [8, 11] },
+  four_terre: { y: 0.05, petit: false, flamme: 0.6, fumee: 0.8, lumiere: [3, 5] },
+  poele: { y: 0.05, petit: false, flamme: 0.6, fumee: 0.8, lumiere: [3, 5] },
+  dakota: { y: 0, petit: true, flamme: 0.45, fumee: 0.35, lumiere: [3, 5] },
+  poele_fusee: { y: 0.3, petit: true, flamme: 0.32, fumee: 0.25, lumiere: [2.2, 4] },
+};
+
+/** La forme d'un feu vu (Book 24) : niveau et voie. */
+export function formeDuFeu(f: Pick<FeuVu, "dakota" | "niveau">): FormeFeu {
+  return formeFeu(f);
+}
+
+/** Le cercle de pierres brutes du feu de camp : dix pierres de la rivière, bosselées, la suie côté feu. */
+function cercleBrut(c: Assemblage, aleat: () => number): void {
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * Math.PI * 2 + aleat() * 0.25;
+    const r = 0.11 + aleat() * 0.05;
+    const teinte = [PALETTE.pierre, PALETTE.pierreSombre, 0x9a958a][Math.floor(aleat() * 3)]!;
+    const g = bosseler(new THREE.IcosahedronGeometry(r, 0), r * 0.2, aleat).scale(1.25 + aleat() * 0.3, 0.75 + aleat() * 0.25, 1);
+    const cx = Math.cos(a) * 0.52;
+    const cz = Math.sin(a) * 0.52;
+    placer(g, cx, r * 0.45, cz, 0, -a + (aleat() - 0.5) * 0.4, 0);
+    c.ajouterDegrade(g, (p) => {
+      const versFeu = (p.x - cx) * -Math.cos(a) + (p.z - cz) * -Math.sin(a);
+      return versFeu > r * 0.25 && p.y > r * 0.3 ? SUIE : versFeu > -r * 0.1 && p.y > r * 0.7 ? 0x6e6a63 : teinte;
+    });
+  }
+  // De petites pierres calées entre les grosses.
+  for (let i = 0; i < 7; i++) {
+    const a = (i / 7) * Math.PI * 2 + 0.3;
+    c.ajouter(placer(bosseler(new THREE.DodecahedronGeometry(0.05, 0), 0.01, aleat), Math.cos(a) * 0.62, 0.03, Math.sin(a) * 0.62), PALETTE.pierreSombre, "mat", 0.06);
+  }
+}
+
+/**
+ * Le foyer de pierres (niveau 2) : un cercle maçonné à sec, deux assises de pierres équarries, plus haut et plus
+ * régulier que le cercle de cailloux ; noirci dedans.
+ */
+function cercleMaconne(c: Assemblage, aleat: () => number): void {
+  for (let assise = 0; assise < 2; assise++) {
+    const n = 12;
+    for (let i = 0; i < n; i++) {
+      const a = ((i + assise * 0.5) / n) * Math.PI * 2;
+      const cx = Math.cos(a) * 0.55;
+      const cz = Math.sin(a) * 0.55;
+      const h = 0.11;
+      const g = bosseler(new THREE.BoxGeometry(0.26, h, 0.17, 2, 1, 1), 0.012, aleat);
+      placer(g, cx, h / 2 + assise * h, cz, 0, -a + Math.PI / 2 + (aleat() - 0.5) * 0.08, 0);
+      const teinte = [PALETTE.pierre, 0x9a958a, PALETTE.pierreSombre][(i + assise) % 3]!;
+      c.ajouterDegrade(g, (p) => {
+        const versFeu = (p.x - cx) * -Math.cos(a) + (p.z - cz) * -Math.sin(a);
+        return versFeu > 0.03 ? SUIE : p.y > h * (assise + 0.85) && versFeu > -0.04 ? 0x6e6a63 : teinte;
+      });
+    }
+  }
+  // Une pierre plate au fond du foyer : la sole.
+  c.ajouter(placer(bosseler(new THREE.CylinderGeometry(0.4, 0.42, 0.03, 9), 0.01, aleat), 0, 0.012, 0), 0x4a4540, "mat", 0.05);
+}
+
+/**
+ * Le muret réflecteur (niveau 2 et au-delà) : un arc de pierres plates, trois assises, derrière le feu. Repère local :
+ * l'abri (ou le maçon) est vers +z ; le muret est de l'autre côté.
+ */
+function muret(c: Assemblage, aleat: () => number): void {
+  const r = 1.05;
+  for (let assise = 0; assise < 3; assise++) {
+    const n = 7 - (assise === 2 ? 1 : 0);
+    for (let i = 0; i < n; i++) {
+      const t = (i + 0.5) / n - 0.5;
+      const a = Math.PI + t * 2 + (assise % 2) * 0.08;
+      const cx = Math.sin(a) * r;
+      const cz = Math.cos(a) * r;
+      const h = 0.1;
+      const g = bosseler(new THREE.BoxGeometry(0.3, h, 0.16, 2, 1, 1), 0.012, aleat);
+      placer(g, cx, h / 2 + assise * h, cz, 0, a, 0);
+      c.ajouterDegrade(g, (p) => (p.x * cx + p.z * cz < r * r - 0.04 && p.y > 0.12 ? SUIE : [PALETTE.pierre, 0x9a958a, PALETTE.pierreSombre][(i + assise) % 3]!));
+    }
+  }
+  // Un chaperon : trois grandes dalles posées à plat sur le haut.
+  for (let i = -1; i <= 1; i++) {
+    const a = Math.PI + i * 0.6;
+    c.ajouter(placer(bosseler(new THREE.BoxGeometry(0.62, 0.05, 0.2, 2, 1, 1), 0.01, aleat), Math.sin(a) * r, 0.325, Math.cos(a) * r, 0, a, 0), 0x8a857b, "mat", 0.06);
+  }
+}
+
+/**
+ * Le foyer de cuisine (niveau 3) : un trépied de perches ligaturé au sommet, la crémaillère de fer à crans qui pend
+ * au-dessus du feu, sa marmite noircie ; une grille posée sur le cercle, côté droit. La crémaillère dépasse : on
+ * reconnaît la cuisine de loin.
+ */
+function cuisine(c: Assemblage, aleat: () => number): void {
+  const sommet = new V3(0, 1.62, 0);
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * Math.PI * 2 + Math.PI / 2;
+    const pied = new V3(Math.cos(a) * 0.88, -0.03, Math.sin(a) * 0.88);
+    c.perche(pied, sommet.clone().add(new V3(Math.cos(a) * -0.12, 0.12, Math.sin(a) * -0.12)), 0.035, BOIS.ecorce, "mat", 6, 0.026);
+  }
+  c.ligature(sommet.clone().add(new V3(0, 0.03, 0)), Y, 0.06);
+  // La crémaillère : une barre plate à crans, son crochet, la marmite.
+  const FER = 0x2e2c2a;
+  c.boite(FER, "metal", 0.025, 0.62, 0.008, 0, sommet.y - 0.33, 0);
+  for (let k = 0; k < 6; k++) c.boite(FER, "metal", 0.045, 0.012, 0.01, 0.012, sommet.y - 0.12 - k * 0.09, 0);
+  c.perche(new V3(0, sommet.y - 0.64, 0), new V3(0.03, sommet.y - 0.76, 0), 0.007, FER, "metal", 4);
+  const yMarmite = 0.58;
+  const profil = [V(0, 0), V(0.13, 0.005), V(0.16, 0.05), V(0.165, 0.16), V(0.15, 0.175), V(0.155, 0.185)];
+  c.ajouterDegrade(placer(bosseler(new THREE.LatheGeometry(profil, 12), 0.003, aleat), 0, yMarmite, 0), (p) => (p.y < yMarmite + 0.06 ? 0x1c1a18 : 0x34312e), "metal");
+  c.ajouter(placer(new THREE.TorusGeometry(0.15, 0.006, 3, 10, Math.PI), 0, yMarmite + 0.19, 0), FER, "metal");
+  c.perche(new V3(0, yMarmite + 0.34, 0), new V3(0, sommet.y - 0.76, 0), 0.006, FER, "metal", 4);
+  // La grille : un cadre et ses barreaux, posée sur deux pierres du cercle.
+  const gx = 0.32;
+  for (const z of [-0.2, 0.2]) c.boite(FER, "metal", 0.4, 0.015, 0.015, gx, 0.235, z);
+  for (let k = 0; k < 7; k++) c.boite(k % 3 === 1 ? ROUILLE_SOMBRE : FER, "metal", 0.012, 0.012, 0.42, gx - 0.18 + k * 0.06, 0.235, 0);
+}
+
+/**
+ * Le poêle-fusée des Abondants (Dakota, niveau 2) : quatre boîtes de conserve en L dans un lit de pierres — deux
+ * couchées (l'entrée du bois), deux debout (la cheminée).
+ */
+function poeleFusee(c: Assemblage, aleat: () => number): void {
+  const BOITE = 0xa8a49c;
+  const ETIQUETTES = [0xa8645a, 0xc9b56a, null, 0xd8ccb0];
+  const boite = (x: number, y: number, z: number, couchee: boolean, i: number) => {
+    const g = bosseler(new THREE.CylinderGeometry(0.062, 0.062, 0.13, 10, 2, true), 0.002, aleat);
+    const rz = couchee ? Math.PI / 2 : 0;
+    c.ajouterDegrade(placer(g, x, y, z, 0, 0, rz), (p) => (p.y > 0.22 || (couchee && p.x < 0.05) ? 0x2a2624 : BOITE), "metal");
+    const e = ETIQUETTES[i];
+    if (e) c.ajouter(placer(new THREE.CylinderGeometry(0.0635, 0.0635, 0.07, 10, 1, true), x, y, z, 0, 0, rz), e, "mat", 0.05);
+    for (const d of [-0.064, 0.064]) c.ajouter(placer(new THREE.TorusGeometry(0.063, 0.004, 3, 10).rotateX(Math.PI / 2).translate(0, d, 0), x, y, z, 0, 0, rz), 0x8f8a82, "metal");
+  };
+  boite(0, 0.12, 0, false, 0);
+  boite(0, 0.25, 0, false, 1);
+  boite(0.13, 0.065, 0, true, 2);
+  boite(0.26, 0.065, 0, true, 3);
+  // Le lit de pierres qui tient le tout et garde la chaleur.
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * Math.PI * 2 + aleat() * 0.2;
+    const r = 0.17 + (i % 2) * 0.07;
+    const x = Math.cos(a) * r + 0.06;
+    const z = Math.sin(a) * r * 0.9;
+    if (x > 0.2 && Math.abs(z) < 0.1) continue;
+    const t = 0.045 + aleat() * 0.025;
+    c.ajouter(placer(bosseler(new THREE.IcosahedronGeometry(t, 0), t * 0.2, aleat).scale(1.2, 0.8, 1), x, t * 0.6 + (i % 2 ? 0 : 0.07), z), [PALETTE.pierre, PALETTE.pierreSombre][i % 2]!, "mat", 0.06);
+  }
+  // La bouche noire de l'entrée, la cheminée qui fume.
+  c.ajouter(placer(new THREE.CircleGeometry(0.055, 10).rotateY(Math.PI / 2), 0.326, 0.065, 0), TROU, "mat");
+  c.ajouter(placer(new THREE.CircleGeometry(0.055, 10).rotateX(-Math.PI / 2), 0, 0.316, 0), TROU, "mat");
+}
+
+/** La broche (accessoire) : deux fourches plantées de part et d'autre, une broche en travers. */
+function broche(c: Assemblage, ecart: number, aleat: () => number): void {
+  for (const s of [-1, 1]) {
+    const x = s * ecart;
+    c.perche(new V3(x, -0.05, 0), new V3(x + s * 0.02, 0.62, 0), 0.022, BOIS.ecorce, "mat", 5, 0.018);
+    c.perche(new V3(x + s * 0.01, 0.52, 0), new V3(x + s * 0.09, 0.66, 0.02), 0.012, BOIS.ecorce, "mat", 4, 0.008);
+    c.perche(new V3(x - s * 0.005, 0.5, 0), new V3(x - s * 0.07, 0.65, -0.02), 0.012, BOIS.ecorce, "mat", 4, 0.008);
+  }
+  c.perche(new V3(-ecart - 0.12, 0.58, 0), new V3(ecart + 0.08, 0.585, 0), 0.012, BOIS.coupe, "mat", 5);
+  // La manivelle de la broche : une branche coudée au bout.
+  c.perche(new V3(ecart + 0.08, 0.585, 0), new V3(ecart + 0.1, 0.5, 0.06), 0.01, BOIS.ecorce, "mat", 4);
+  void aleat;
+}
+
+/** La marmite norvégienne (accessoire) : une caisse de planches garnie de chiffons, à côté du foyer. */
+function marmiteNorvegienne(c: Assemblage, aleat: () => number): void {
+  const x = -0.95;
+  const z = 0.75;
+  const tons = [BOIS.clair, BOIS.moyen, BOIS.gris];
+  for (let k = 0; k < 3; k++) {
+    for (const s of [-1, 1]) {
+      c.boite(tons[(k + 1) % 3]!, "mat", 0.46, 0.1, 0.02, x, 0.06 + k * 0.105, z + s * 0.18);
+      c.boite(tons[k % 3]!, "mat", 0.02, 0.1, 0.36, x + s * 0.22, 0.06 + k * 0.105, z);
+    }
+  }
+  c.boite(BOIS.sombre, "mat", 0.44, 0.02, 0.34, x, 0.012, z);
+  // Les chiffons qui débordent, le couvercle posé de travers.
+  c.ajouter(placer(bosseler(new THREE.IcosahedronGeometry(0.2, 1), 0.04, aleat).scale(1.1, 0.35, 0.85), x, 0.33, z), PALETTE.toileEcrue, "toile", 0.1);
+  c.ajouter(placer(bosseler(new THREE.IcosahedronGeometry(0.08, 0), 0.02, aleat).scale(1, 0.5, 1), x + 0.12, 0.36, z - 0.06), 0x8f3a22, "toile", 0.08);
+  c.boite(BOIS.moyen, "mat", 0.48, 0.025, 0.38, x + 0.05, 0.4, z + 0.12, 0.25, 0.2, 0);
+}
+
+/** Le foyer, sans bois : sa structure selon sa forme (Book 24 §2.5), ses accessoires, son muret tourné vers l'abri. */
+export function creerFoyer(dakota: boolean | FormeFeu, graine: number, o = 0, accessoires: readonly string[] = []): THREE.Group {
+  const forme: FormeFeu = typeof dakota === "string" ? dakota : dakota ? "dakota" : "feu_camp";
   const c = new Assemblage(graine);
   c.occlusion = 0.12;
   c.forceOcclusion = 0.3;
   const aleat = aleatoire(graine);
-  if (dakota) {
+  if (forme === "dakota") {
     trou(c, 0, 0, 0.26, aleat);
     trou(c, 0, 0.55, 0.11, aleat);
+  } else if (forme === "poele_fusee") {
+    poeleFusee(c, aleat);
+  } else if (forme === "feu_camp") {
+    cercleBrut(c, aleat);
   } else {
-    // Dix pierres de la rivière, bosselées, posées en couronne ; la suie monte sur leur face tournée vers le feu.
-    for (let i = 0; i < 10; i++) {
-      const a = (i / 10) * Math.PI * 2 + aleat() * 0.25;
-      const r = 0.11 + aleat() * 0.05;
-      const teinte = [PALETTE.pierre, PALETTE.pierreSombre, 0x9a958a][Math.floor(aleat() * 3)]!;
-      const g = bosseler(new THREE.IcosahedronGeometry(r, 0), r * 0.2, aleat).scale(1.25 + aleat() * 0.3, 0.75 + aleat() * 0.25, 1);
-      const cx = Math.cos(a) * 0.52;
-      const cz = Math.sin(a) * 0.52;
-      placer(g, cx, r * 0.45, cz, 0, -a + (aleat() - 0.5) * 0.4, 0);
-      c.ajouterDegrade(g, (p) => {
-        const versFeu = (p.x - cx) * -Math.cos(a) + (p.z - cz) * -Math.sin(a);
-        return versFeu > r * 0.25 && p.y > r * 0.3 ? SUIE : versFeu > -r * 0.1 && p.y > r * 0.7 ? 0x6e6a63 : teinte;
-      });
-    }
-    // De petites pierres calées entre les grosses.
-    for (let i = 0; i < 7; i++) {
-      const a = (i / 7) * Math.PI * 2 + 0.3;
-      c.ajouter(placer(bosseler(new THREE.DodecahedronGeometry(0.05, 0), 0.01, aleat), Math.cos(a) * 0.62, 0.03, Math.sin(a) * 0.62), PALETTE.pierreSombre, "mat", 0.06);
-    }
+    cercleMaconne(c, aleat);
+    muret(c, aleat);
+    if (forme !== "foyer_pierres") cuisine(c, aleat);
   }
-  return c.groupe();
+  if (accessoires.includes("broche") && forme !== "poele_fusee") broche(c, forme === "dakota" ? 0.42 : 0.72, aleat);
+  if (accessoires.includes("marmite")) marmiteNorvegienne(c, aleat);
+  const g = c.groupe();
+  // Le foyer maçonné tourne son muret à l'opposé de l'abri : tout le foyer suit (le cercle est rond, la grille suit).
+  if (forme !== "feu_camp" && forme !== "dakota" && forme !== "poele_fusee") g.rotation.y = o;
+  return g;
 }
 
 /** Une bûche du tipi (repère : pied à l'origine, montant vers +y), fraîche ou calcinée au bout. */
@@ -90,7 +284,8 @@ function geometrieBuche(dakota: boolean, i: number, calcinee: boolean): THREE.Bu
 }
 
 /** Les quatre bûches du tipi (chacune à part : on en montre plus ou moins selon le bois). */
-function bucheMaillages(dakota: boolean): { maillages: THREE.Mesh[]; fraiches: THREE.BufferGeometry[]; calcinees: THREE.BufferGeometry[] } {
+function bucheMaillages(forme: FormeFeu): { maillages: THREE.Mesh[]; fraiches: THREE.BufferGeometry[]; calcinees: THREE.BufferGeometry[] } {
+  const dakota = DISPOSITIONS[forme].petit;
   const maillages: THREE.Mesh[] = [];
   const fraiches: THREE.BufferGeometry[] = [];
   const calcinees: THREE.BufferGeometry[] = [];
@@ -102,6 +297,11 @@ function bucheMaillages(dakota: boolean): { maillages: THREE.Mesh[]; fraiches: T
     const ecart = dakota ? 0.13 : 0.22;
     m.position.set(Math.cos(a) * ecart, dakota ? 0.0 : 0.02, Math.sin(a) * ecart);
     m.rotation.set(Math.sin(a) * 0.55, 0, -Math.cos(a) * 0.55);
+    // Le poêle-fusée : les bâtons sont couchés dans l'entrée, on les pousse au fur et à mesure.
+    if (forme === "poele_fusee") {
+      m.position.set(0.56 + i * 0.03, 0.05 + (i % 2) * 0.03, (i - 1.5) * 0.022);
+      m.rotation.set(0, 0, Math.PI / 2 - 0.08);
+    }
     m.castShadow = true;
     m.receiveShadow = true;
     maillages.push(m);
@@ -148,6 +348,8 @@ function langue(hauteur: number, largeur: number, vrille: number, graine: number
 export class FeuDeCamp {
   readonly objet = new THREE.Group();
   private etat: FeuVu;
+  /** La forme du foyer (Book 24) : elle fixe le modèle. */
+  readonly forme: FormeFeu;
   private readonly buches: THREE.Mesh[];
   private readonly bucheFraiche: THREE.BufferGeometry[];
   private readonly bucheCalcinee: THREE.BufferGeometry[];
@@ -165,13 +367,15 @@ export class FeuDeCamp {
     this.etat = etat;
     const graine = etat.id * 31 + 7;
     this.objet.position.set(etat.x, 0, etat.z);
-    const dakota = etat.dakota === true;
+    this.forme = formeFeu(etat);
+    const disp = DISPOSITIONS[this.forme];
+    const dakota = disp.petit;
 
-    // Le foyer (pierres ou trou), fondu en un maillage.
-    this.objet.add(creerFoyer(dakota, graine));
+    // Le foyer (pierres, trou, boîtes de conserve), fondu en un maillage, avec ses accessoires.
+    this.objet.add(creerFoyer(this.forme, graine, etat.o ?? 0, etat.accessoires ?? []));
 
-    // Les bûches en tipi (au fond du trou pour un Dakota).
-    const b = bucheMaillages(dakota);
+    // Les bûches en tipi (au fond du trou pour un Dakota, dans l'entrée du poêle-fusée).
+    const b = bucheMaillages(this.forme);
     this.buches = b.maillages;
     this.bucheFraiche = b.fraiches;
     this.bucheCalcinee = b.calcinees;
@@ -190,7 +394,7 @@ export class FeuDeCamp {
     ];
     LANGUES.forEach(([h, l, v, mat, r, a], i) => {
       const m = new THREE.Mesh(langue(h, l, v, graine + i), mat);
-      m.position.set(Math.cos(a) * r, dakota ? 0.0 : 0.05, Math.sin(a) * r);
+      m.position.set(Math.cos(a) * r, disp.y, Math.sin(a) * r);
       m.renderOrder = 3;
       this.flammes.push(m);
       this.objet.add(m);
@@ -201,7 +405,7 @@ export class FeuDeCamp {
       new THREE.CircleGeometry(dakota ? 0.2 : 0.3, 12).rotateX(-Math.PI / 2),
       new THREE.MeshBasicMaterial({ color: 0xff4a1c, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false }),
     );
-    this.braises.position.y = 0.035;
+    this.braises.position.y = this.forme === "poele_fusee" ? 0.318 : 0.035;
     this.objet.add(this.braises);
     this.cendres = lit(dakota, graine + 5);
     this.objet.add(this.cendres);
@@ -229,6 +433,23 @@ export class FeuDeCamp {
 
   get id(): number {
     return this.etat.id;
+  }
+
+  /**
+   * Ce qui change le modèle (Book 24) : niveau, voie, accessoires, orientation du muret. Quand ça change, on le refait
+   * (le reste de l'état, bois et flammes, se met à jour sur place).
+   */
+  static cle(f: FeuVu): string {
+    return `${formeFeu(f)}|${(f.accessoires ?? []).join(",")}|${f.o ?? 0}`;
+  }
+
+  get cle(): string {
+    return FeuDeCamp.cle(this.etat);
+  }
+
+  /** L'état reçu du serveur (pour la fiche du feu). */
+  get vue(): FeuVu {
+    return this.etat;
   }
 
   get x(): number {
@@ -269,9 +490,10 @@ export class FeuDeCamp {
   source(): SourceLumiere | null {
     if (this.etat.aspect === "flammes") {
       const force = Math.min(1, 0.55 + this.etat.bois / 6);
-      // Le foyer Dakota éclaire à peine : la flamme est dans le sol.
-      if (this.etat.dakota) return { x: this.etat.x, y: 0.5, z: this.etat.z, couleur: 0xff7a30, intensite: 3 * force, portee: 5, vacillement: 0.8 };
-      return { x: this.etat.x, y: 1.1, z: this.etat.z, couleur: 0xff8a3d, intensite: 9 * force, portee: 13, vacillement: 1 };
+      // Le foyer Dakota et le poêle-fusée éclairent à peine : la flamme est dans le sol, ou dans la boîte.
+      const [intensite, portee] = DISPOSITIONS[this.forme].lumiere;
+      if (DISPOSITIONS[this.forme].petit) return { x: this.etat.x, y: 0.5, z: this.etat.z, couleur: 0xff7a30, intensite: intensite * force, portee, vacillement: 0.8 };
+      return { x: this.etat.x, y: 1.1, z: this.etat.z, couleur: 0xff8a3d, intensite: intensite * force, portee, vacillement: 1 };
     }
     if (this.etat.aspect === "braises") return { x: this.etat.x, y: 0.5, z: this.etat.z, couleur: 0xff4a1c, intensite: 2.2, portee: 4, vacillement: 0.6 };
     return null;
@@ -280,11 +502,13 @@ export class FeuDeCamp {
   animer(dt: number, nuit: number): void {
     this.temps += dt;
     if (this.etat.aspect === "flammes") {
-      const taille = Math.min(1.25, 0.6 + this.etat.bois / 5) * (this.etat.dakota ? 0.45 : 1);
+      const taille = Math.min(1.25, 0.6 + this.etat.bois / 5) * DISPOSITIONS[this.forme].flamme;
       this.flammes.forEach((f, i) => {
         const s = 0.85 + Math.sin(this.temps * (9 + i * 2.3) + i) * 0.15 + Math.sin(this.temps * 17 + i * 4) * 0.08;
         const l = 1 + Math.sin(this.temps * (6 + i) + i * 2) * 0.12;
-        f.scale.set(l, s * taille, l);
+        // Le poêle-fusée : une flamme fine qui sort de la boîte, pas un feu de camp.
+        const large = this.forme === "poele_fusee" ? 0.4 : 1;
+        f.scale.set(l * large, s * taille, l * large);
         f.rotation.y = this.temps * (0.6 + i * 0.3) * (i % 2 ? -1 : 1);
       });
       this.matFlamme.opacity = 0.75 + Math.sin(this.temps * 21) * 0.1;
@@ -301,7 +525,7 @@ export class FeuDeCamp {
       const vie = age / 6;
       const lueur = this.etat.aspect === "flammes" ? Math.max(0, 1 - vie * 3) * nuit : 0;
       couleur.setRGB(0.73 - nuit * 0.42 + lueur * 0.55, 0.71 - nuit * 0.42 + lueur * 0.25, 0.68 - nuit * 0.4);
-      const opacite = brule ? (this.etat.aspect === "flammes" ? 0.55 : 0.28) * Math.sin(vie * Math.PI) * (1 - nuit * 0.35) * (this.etat.dakota ? 0.35 : 1) : 0;
+      const opacite = brule ? (this.etat.aspect === "flammes" ? 0.55 : 0.28) * Math.sin(vie * Math.PI) * (1 - nuit * 0.35) * DISPOSITIONS[this.forme].fumee * (this.etat.couvert ? 0.4 : 1) : 0;
       this.fumee.regler(i, Math.sin(age * 1.2 + i * 1.7) * 0.3 + vie * 1.6, 0.7 + vie * 7.5, Math.cos(age * 1.1 + i * 1.7) * 0.25, 0.5 + vie * 3, couleur, opacite);
     }
     this.fumee.objet.visible = brule;
@@ -311,7 +535,7 @@ export class FeuDeCamp {
     if (this.etincelles.visible) {
       const pos = this.etincelles.geometry.attributes.position as THREE.BufferAttribute;
       const p = pos.array as Float32Array;
-      const haut = this.etat.dakota ? 1.4 : 2.6;
+      const haut = DISPOSITIONS[this.forme].petit ? 1.4 : 2.6;
       for (let i = 0; i < NB_ETINCELLES; i++) {
         let v = this.vies[i]! + dt * (0.6 + (i % 5) * 0.12);
         if (v > 1) v -= 1;
@@ -329,8 +553,13 @@ export class FeuDeCamp {
 }
 
 /** Le feu en devenir, pour le fantôme de pose : le même foyer et les mêmes bûches, sans flamme ni fumée. */
-export function modeleFoyer(dakota: boolean): THREE.Group {
-  const g = creerFoyer(dakota, 7);
-  for (const m of bucheMaillages(dakota).maillages) g.add(m);
+export function modeleFoyer(dakota: boolean | FormeFeu, o = 0): THREE.Group {
+  const forme: FormeFeu = typeof dakota === "string" ? dakota : dakota ? "dakota" : "feu_camp";
+  const g = creerFoyer(forme, 7, o);
+  const disp = DISPOSITIONS[forme];
+  for (const m of bucheMaillages(forme).maillages) {
+    if (forme !== "poele_fusee") m.position.y = disp.y;
+    g.add(m);
+  }
   return g;
 }

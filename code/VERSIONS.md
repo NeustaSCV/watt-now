@@ -32,9 +32,21 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 - Moins de messages à la fois : 3 sur ordinateur, 2 sur téléphone, 2 lignes au plus. Un message répété ne s'empile plus : il est relancé avec « ×2 ». Quand la place manque, l'indice part avant la leçon. Une même phrase d'indice ne revient pas avant 90 s. Les messages s'effacent en fondu.
 - **La carte du monde** : la fiche du lieu fait maintenant partie de la feuille (la marge de légende d'un atlas). Le bouton Partir est toujours visible, même sur téléphone en horizontal. Un clic à côté de la carte la ferme.
 - **Fabriquer rangé par catégories** (avis de Sally) : les onglets sont Tout, Feu, Outils, Sur soi, Matériaux, Bâtir et Ateliers. Chaque onglet compte ses recettes faisables. Un filtre « Faisable maintenant » est ajouté, et un badge signale les recettes de famille. Le dernier onglet choisi est gardé.
-- **Aide du jeu** : menu ⚙ → ❓ Aide. Elle explique tous les mécanismes en 19 rubriques, sans dévoiler les secrets, pour le joueur perdu. Les touches citées sont les siennes.
+- **Aide du jeu** : menu ⚙ → ❓ Aide. Elle explique tous les mécanismes en 20 rubriques, sans dévoiler les secrets, pour le joueur perdu. Les touches citées sont les siennes.
 - Les bulles des jauges donnent enfin les vraies durées (la faim tient ≈ 70 min réelles, pas 24) ; les messages du serveur citent les touches du joueur au lieu de touches écrites en dur.
 - L'indice des poules ne revient plus à chaque passage : seulement si l'on a de quoi chasser, au plus toutes les 10 minutes, et plus jamais une fois une poule attrapée.
+
+**Améliorer sa base** (Book 24 ; le « ranger » peut sortir à part, en 0.5.1)
+- **Examiner** un feu ou une installation ouvre sa **fiche** : ce qu'il fait, ce qu'on peut y faire, le niveau suivant, ce qu'il coûte et ce qui manque.
+- **Démonter** un feu (éteint) ou une installation : on récupère la moitié des pierres, branches et bûches, et tout le reste (bâche, corde, métal…). Un coffre se vide d'abord.
+- **Creuser son feu de camp en foyer Dakota, sur place** (et le combler pour revenir au feu de camp). Le joueur qui avait déjà trois feux n'est plus bloqué : l'objectif « Un feu qui ne se voit pas » compte le feu creusé.
+- **Le feu grandit sur place** : foyer de pierres (moins de bois, 16 kg de bois, se couvre sous la cendre pour la nuit et se ranime sans briquet, son muret réchauffe l'abri voisin), puis **foyer de cuisine** (deux plats à la fois, l'eau bout deux fois plus vite, on rôtit plus vite). Côté discret, le Dakota devient un **poêle-fusée** en boîtes de conserve.
+- Deux **soupes mijotées** au foyer de cuisine (cèpes, pot-au-feu de volaille) : elles nourrissent et désaltèrent.
+- Accessoires du feu : la **broche** (une portion de plus à la fois) et la **marmite norvégienne** (les soupes demandent moitié moins de bois).
+- **L'abri garni** (le lit de branchages voisin y passe sans rien payer), puis **fermé** : on y dort mieux. **Coffre cerclé** (250 kg) puis **réserve couverte** (400 kg). **Citerne de bâche** : 60 L d'eau de pluie.
+- Chaque niveau a **son modèle**, qu'on reconnaît de loin. Dans Fabriquer, le feu n'a plus qu'une carte : le reste se fait sur place.
+- Allumer un deuxième feu le dit : chaque feu allumé s'ajoute à ce que sentent les Éteints.
+- Carnet : l'abri garni vaut un lit ; deux nouveaux objectifs, « Un foyer qui tient la nuit » et « Une vraie cuisine ». L'aide a une rubrique « Améliorer sa base ».
 
 ## 0.4 · déployée le 2026-10-08
 

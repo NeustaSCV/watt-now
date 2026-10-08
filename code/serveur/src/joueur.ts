@@ -11,8 +11,8 @@ import { nouvellePoule, penserPoule, vuePoule, type Poule } from "../../commun/s
 import type { Apparence } from "../../commun/src/apparence.ts";
 import { INTENTION_REPOS, avancer, nettoyerIntention, type Intention, type Position } from "../../commun/src/deplacement.ts";
 import type { Bienvenue, Cible, FeuVu, InstallationVue, MessageClient, MessageServeur } from "../../commun/src/messages.ts";
-import { CAPACITE_COFFRE, CAPACITE_SAC, CONTENANTS, OBJETS, capaciteDe, estObjet, lumierePortee, nommer, poidsInventaire, traineTravois, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
-import { NOMS_INSTALLATIONS, RECETTES, dureeReelle, ingredientsPresents, multiplicateurQualites, niveauQualite, recette, recettesConnues, type TypeInstallation } from "../../commun/src/recettes.ts";
+import { CAPACITE_SAC, CONTENANTS, OBJETS, capaciteDe, estObjet, lumierePortee, nommer, poidsInventaire, traineTravois, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
+import { NOMS_INSTALLATIONS, RECETTES, dureeReelle, ingredientsPresents, multiplicateurQualites, niveauQualite, recette, recettesConnues, type Recette, type TypeInstallation } from "../../commun/src/recettes.ts";
 import {
   CHARBON_PRODUIT,
   CHARGE_TROUVEE,
@@ -31,7 +31,6 @@ import {
 import { GESTE_TENU_MAX_S, PROGRESSION_GARDEE_MS, TERRAIN_TAILLE, TICK_HZ } from "../../commun/src/regles.ts";
 import {
   BOIS_INITIAL_FEU,
-  BOIS_MAX_FEU,
   BOIS_PAR_LITRE_BOUILLI,
   CONTENANCE_GOURDE,
   DUREES,
@@ -39,7 +38,7 @@ import {
   GORGEE,
   RECETTE_FEU,
   RECETTE_DAKOTA,
-  DAKOTA,
+  BONUS_LIT,
   RESERVE_EAU_MAX,
   RESERVE_KCAL_MAX,
   allureAutorisee,
@@ -124,11 +123,41 @@ import type { SacVu, SanteVue } from "../../commun/src/messages.ts";
 import type { SacEnBase } from "./base.ts";
 import { CHARBONNIERE_ODEUR, FEU_LUMIERE_NUIT, FEU_ODEUR, stimuliJoueur, type BruitAction, type Stimulus } from "../../commun/src/signature.ts";
 import { estNuit, heureDeJeu } from "../../commun/src/temps.ts";
-import { RECUPERATEUR_MAX_L, attenuationMeteo, meteo, pluieRecueillie } from "../../commun/src/meteo.ts";
+import { attenuationMeteo, meteo, pluieRecueillie } from "../../commun/src/meteo.ts";
+import {
+  ACCESSOIRES_FEU,
+  BOUILLIR_AVEC_CASSEROLE,
+  CASSEROLES,
+  COMBLER,
+  CREUSER,
+  FEU_COUVERT,
+  MAX_FOYERS,
+  SOMMEIL_ABRI,
+  VOIE_CREUSEE,
+  VOIE_SURFACE,
+  accessoiresIncompatibles,
+  boisRepris,
+  capaciteCoffre,
+  choisirCout,
+  contenanceRecuperateur,
+  coutPour,
+  effetsFeu,
+  etapeFeu,
+  etapeInstallation,
+  etapeSuivanteFeu,
+  etapeSuivanteInstallation,
+  formeFeu,
+  lignee,
+  niveauFeu,
+  niveauInstallation,
+  rendDuDemontage,
+  somme,
+  type AccessoireFeu,
+  type Etape,
+} from "../../commun/src/lignees.ts";
 import { NOMBRE_ETAPES, etapesTutoriel, type EtatTutoriel, type VueTutoriel } from "../../commun/src/tutoriel.ts";
 
 const JAMAIS = Number.MAX_SAFE_INTEGER;
-const MAX_FEUX = 3;
 const INTERVALLE_BESOINS = 1000;
 const INTERVALLE_FEUX = 2000;
 const INTERVALLE_REPOUSSE = 5000;
@@ -222,7 +251,7 @@ export class Joueur implements Voyageur {
   readonly rapport: RapportBase | null = null;
   private derniereProduction = 0;
   /** Endormi (É5) : dans un abri ou par terre. Bouger, être saisi ou être reposé réveille. */
-  private sommeil: { dansUnAbri: boolean; surUnLit: boolean } | null = null;
+  private sommeil: { dansUnAbri: boolean; surUnLit: boolean; confort?: number } | null = null;
   /** Le tutoriel en cours (null : terminé ou passé). */
   private tuto: EtatTutoriel | null;
   private derniereVerifTuto = 0;
@@ -1141,7 +1170,10 @@ export class Joueur implements Voyageur {
     if (sens === "deposer") {
       if ((this.inventaire[objet] ?? 0) < n) return;
       if (objet === "sac_a_dos" || objet === "sac_fortune") return this.info("Ton sac, tu le gardes sur le dos.");
-      if (poidsInventaire(contenu) + OBJETS[objet].poids * n > CAPACITE_COFFRE + 1e-9) return this.info("Le coffre est plein (150 kg) : construis-en un autre, ou vends le surplus au Comptoir.");
+      const max = capaciteCoffre(coffre);
+      if (poidsInventaire(contenu) + OBJETS[objet].poids * n > max + 1e-9) {
+        return this.info(`Le coffre est plein (${max} kg) : ${etapeSuivanteInstallation(coffre) ? "améliore-le (il tiendra plus)" : "construis-en un autre"}, ou vends le surplus au Comptoir.`);
+      }
       if (batterie) {
         const part = this.chargesQuiPartent({ [objet]: n })[b] ?? 0;
         this.charges = { ...this.charges, [b]: Math.max(0, (this.charges[b] ?? 0) - part) };
@@ -1436,13 +1468,13 @@ export class Joueur implements Voyageur {
 
   // ---------- Le sommeil (É5, Book 05 §3) ----------
 
-  private endormir(dansUnAbri: boolean, surUnLit = false): void {
+  private endormir(dansUnAbri: boolean, surUnLit = false, confort = 1): void {
     if (this.sommeil || this.voyage) return;
     if (this.besoins.repos >= 0.97) return this.info("Tu n'as pas sommeil : reviens quand la jauge de sommeil aura baissé.");
     if (this.saisisseurs().length > 0) return;
     this.annulerAction();
     this.intention = INTENTION_REPOS;
-    this.sommeil = { dansUnAbri, surUnLit };
+    this.sommeil = { dansUnAbri, surUnLit, confort };
     this.endormiDepuis = this.maintenant();
     if (this.tuto && dansUnAbri) this.tuto.dormiAbri = true;
     this.lumiere = false;
@@ -1532,10 +1564,11 @@ export class Joueur implements Voyageur {
     const instant = this.maintenant();
     for (const f of this.feux.values()) {
       if (!f.allume || f.bois <= 0) continue;
-      // Le foyer Dakota (P-002) : la flamme reste sous terre, il fume peu.
-      const k = f.dakota ? DAKOTA : { odeur: 1, lumiere: 1 };
+      // Chaque niveau a ses multiplicateurs (Book 24 §3.1) : le Dakota fume peu, la flamme reste sous terre ; couvert, plus de flamme.
+      const e = effetsFeu(f);
+      const k = { odeur: e.odeur * (f.couvert ? FEU_COUVERT.odeur : 1), lumiere: e.lumiere * (f.couvert ? FEU_COUVERT.lumiere : 1) };
       s.push({ genre: "odeur", x: f.x, z: f.z, portee: FEU_ODEUR.portee * k.odeur, intensite: FEU_ODEUR.intensite });
-      if (nuit) s.push({ genre: "lumiere", x: f.x, z: f.z, portee: FEU_LUMIERE_NUIT.portee * k.lumiere, intensite: FEU_LUMIERE_NUIT.intensite });
+      if (nuit && k.lumiere > 0) s.push({ genre: "lumiere", x: f.x, z: f.z, portee: FEU_LUMIERE_NUIT.portee * k.lumiere, intensite: FEU_LUMIERE_NUIT.intensite });
     }
     // Une alarme qui tinte se fait entendre (les Éteints proches aussi l'entendent).
     for (const [id, jusqua] of this.alarmesSonnent) {
@@ -1618,7 +1651,7 @@ export class Joueur implements Voyageur {
     if (this.sommeil) {
       if (bouge || this.saisisseurs().length > 0) this.reveiller(bouge ? "" : "Réveillé en sursaut !");
       else {
-        this.besoins = dormir(this.besoins, heures, this.sommeil.dansUnAbri, this.sommeil.surUnLit);
+        this.besoins = dormir(this.besoins, heures, this.sommeil.dansUnAbri, this.sommeil.surUnLit, this.sommeil.confort ?? 1);
         if (this.besoins.repos >= 1) this.reveiller("Tu te réveilles, reposé.");
       }
     }
@@ -1841,6 +1874,7 @@ export class Joueur implements Voyageur {
       if (verbe === "allumer") return this.allumer(feu);
       if (verbe === "bouillir") return this.bouillir(feu);
       if (verbe === "rotir") return this.rotir(feu);
+      return this.amenagerFeu(feu, verbe);
     }
   }
 
@@ -1909,9 +1943,12 @@ export class Joueur implements Voyageur {
     if (!ingredientsPresents(this.inventaire, r)) return this.info(ceQuiManque(r, this.inventaire).join(" "));
     const facteur = multiplicateurQualites(this.inventaire, r.qualites);
     if (facteur === null) return this.info(outilsManquants(r.qualites, this.inventaire).join(" "));
-    if (r.feu && ![...this.feux.values()].some((f) => f.allume && f.bois > 0 && this.proche(f.x, f.z, 2.5))) {
+    if (r.feu && ![...this.feux.values()].some((f) => f.allume && f.bois > 0 && !f.couvert && this.proche(f.x, f.z, 2.5))) {
       return this.info("Ça se cuisine près d'un feu allumé : approche-toi de ton feu (ou allumes-en un).");
     }
+    // La cuisine selon le foyer (Book 24 §3.1) : les mijotés demandent la crémaillère, de l'eau et du bois ; deux plats à la fois.
+    const cuisine = r.feu ? this.cuisinePour(r) : { fois: 1, foyer: null, bois: 0, eau: 0 };
+    if ("refus" in cuisine) return this.info(cuisine.refus);
     if (r.installation && ![...this.installations.values()].some((i) => i.type === r.installation && this.proche(i.x, i.z, 2.5))) {
       return this.info(`Il faut être près d'un ${NOMS_INSTALLATIONS[r.installation]}.`);
     }
@@ -1934,13 +1971,29 @@ export class Joueur implements Voyageur {
     }
 
     const produit = r.produit;
-    const delta = OBJETS[produit.objet].poids * produit.quantite - poidsDe(r.ingredients);
+    const fois = cuisine.fois;
+    const ingredients = fois > 1 ? somme(...Array.from({ length: fois }, () => r.ingredients)) : r.ingredients;
+    const quantite = produit.quantite * fois;
+    const delta = OBJETS[produit.objet].poids * quantite - poidsDe(ingredients);
     // La capacité d'après : fabriquer un sac fait de la place.
-    if (poidsInventaire(this.inventaire) + delta > capaciteDe({ ...this.inventaire, [produit.objet]: (this.inventaire[produit.objet] ?? 0) + produit.quantite })) return this.sacTropLourd();
-    this.commencer(r.nom, dureeReelle(r) * facteur, () => {
-      if (!ingredientsPresents(this.inventaire, r)) return;
-      this.retirerPlusieurs(r.ingredients);
-      this.ajouterPlusieurs({ [produit.objet]: produit.quantite });
+    if (poidsInventaire(this.inventaire) + delta > capaciteDe({ ...this.inventaire, [produit.objet]: (this.inventaire[produit.objet] ?? 0) + quantite })) return this.sacTropLourd();
+    this.commencer(fois > 1 ? `${r.nom} (deux à la fois)` : r.nom, dureeReelle(r) * facteur, () => {
+      if (!Object.entries(ingredients).every(([t, n]) => (this.inventaire[t as TypeObjet] ?? 0) >= (n ?? 0))) return;
+      if (cuisine.foyer) {
+        const { foyer, bois, eau } = cuisine;
+        if (foyer.bois < bois - 1e-9 || this.gourde.litres < eau - 1e-9) return;
+        if (bois > 0) {
+          foyer.bois = Math.max(0, foyer.bois - bois);
+          this.envoyer({ t: "feu", feu: vue(foyer) });
+        }
+        if (eau > 0) {
+          this.gourde = { ...this.gourde, litres: Math.max(0, Math.round((this.gourde.litres - eau) * 100) / 100) };
+          if (this.gourde.litres === 0) this.gourde = { contenu: "potable", litres: 0 };
+          this.envoyerBesoins();
+        }
+      }
+      this.retirerPlusieurs(ingredients);
+      this.ajouterPlusieurs({ [produit.objet]: quantite });
       this.mesurer("progression", `recette:${r.id}`, 1);
       this.noterFait(`fabrique:${r.id}`);
     }, 0, r.qualites.marteler ? "lourd" : "outil");
@@ -2037,7 +2090,8 @@ export class Joueur implements Voyageur {
       if (r.type !== "recuperateur_pluie") continue;
       const depuis = r.etat.majLe ?? instant;
       const avant = r.etat.litres ?? 0;
-      const litres = Math.min(RECUPERATEUR_MAX_L, avant + pluieRecueillie(depuis, instant, this.debutMonde, RECUPERATEUR_MAX_L - avant));
+      const max = contenanceRecuperateur(r);
+      const litres = Math.min(max, avant + pluieRecueillie(depuis, instant, this.debutMonde, max - avant));
       r.etat = { ...r.etat, litres: Math.round(litres * 100) / 100, majLe: instant };
       changes.add(r);
       if (Math.abs(litres - avant) >= 0.05 && this.lieu === "terrain" && !this.voyage) this.envoyer({ t: "installation", installation: r });
@@ -2101,7 +2155,11 @@ export class Joueur implements Voyageur {
     if (this.lieu !== "terrain") return this.info("Pas de feu ici : on ne s'installe que sur son terrain.");
     const raison = raisonEmplacement("feu", x, z, this.position, this.feux.values(), this.installations.values());
     if (raison) return this.info(raison);
-    if (this.feux.size >= MAX_FEUX) return this.info(`Pas plus de ${MAX_FEUX} feux sur ton terrain.`);
+    if (this.feux.size >= MAX_FOYERS) {
+      return this.info(
+        `Pas plus de ${MAX_FOYERS} foyers sur ton terrain. Transforme plutôt celui que tu as : approche-toi d'un feu, ${dakota ? "et creuse-le en Dakota" : "et améliore-le"}, ou démonte-le.`,
+      );
+    }
     const recette: Partial<Record<TypeObjet, number>> = dakota ? RECETTE_DAKOTA : RECETTE_FEU;
     // Le foyer Dakota se creuse (P-002) : il faut de quoi creuser.
     if (dakota && niveauQualite(this.inventaire, "creuser") < 1) return this.info("Pour creuser un foyer Dakota, il faut un bâton à fouir (une branche durcie au feu).");
@@ -2128,7 +2186,7 @@ export class Joueur implements Voyageur {
   private ajouterBois(feu: FeuEnBase): void {
     const type: TypeObjet | null = (this.inventaire.buche ?? 0) > 0 ? "buche" : (this.inventaire.branche ?? 0) > 0 ? "branche" : null;
     if (!type) return this.info("Tu n'as pas de bois : ramasse des branches ou des bûches de bois mort sur ton terrain.");
-    if (feu.bois + combustibleDe(type) > BOIS_MAX_FEU) return this.info("Le feu a déjà assez de bois.");
+    if (feu.bois + combustibleDe(type) > effetsFeu(feu).boisMax + 1e-9) return this.info(`Le feu a déjà assez de bois (${effetsFeu(feu).boisMax} kg au plus).`);
     // Immédiat (Book 08 §3, 2026-10-08) : une action sans jauge se fait sur-le-champ, un clic = un morceau de bois.
     if (this.action) return this.info(`Tu es déjà occupé : attends la fin, ou appuie sur A pour arrêter.`);
     this.retirer(type, 1);
@@ -2137,6 +2195,7 @@ export class Joueur implements Voyageur {
   }
 
   private allumer(feu: FeuEnBase): void {
+    if (feu.couvert) return this.ranimer(feu);
     if (feu.allume) return;
     if (feu.bois <= 0) return this.info("Il faut d'abord du bois : ajoute une branche ou une bûche.");
     const outil = (this.inventaire.pierre_a_feu ?? 0) > 0 ? "la pierre à feu" : (this.inventaire.briquet ?? 0) > 0 ? "le briquet" : null;
@@ -2146,6 +2205,7 @@ export class Joueur implements Voyageur {
       feu.allume = true;
       feu.majLe = this.maintenant();
       this.envoyer({ t: "feu", feu: vue(feu) });
+      this.signalerFeux(feu);
     });
   }
 
@@ -2222,7 +2282,9 @@ export class Joueur implements Voyageur {
     if (!feu.allume) return this.info("Le feu n'est pas allumé : allume-le d'abord (briquet ou pierre à feu).");
     const n = this.inventaire.volaille_crue ?? 0;
     if (n <= 0) return this.info("Tu n'as rien à rôtir.");
-    this.commencer("Faire rôtir la volaille", 3 * n, () => {
+    // Une portion à la fois, une de plus avec la broche ; le foyer de cuisine rôtit deux fois plus vite (Book 24 §3.1).
+    const parTour = 1 + (feu.accessoires?.broche ? 1 : 0);
+    this.commencer("Faire rôtir la volaille", (3 * Math.ceil(n / parTour)) / effetsFeu(feu).rotir, () => {
       const crues = Math.min(n, this.inventaire.volaille_crue ?? 0);
       if (crues <= 0) return;
       this.retirer("volaille_crue", crues);
@@ -2234,9 +2296,11 @@ export class Joueur implements Voyageur {
     if (!feu.allume) return this.info("Le feu n'est pas allumé : allume-le d'abord (briquet ou pierre à feu).");
     if (this.gourde.litres <= 0) return this.info("Ta gourde est vide : remplis-la à la mare, puis fais bouillir l'eau sur un feu.");
     if (this.gourde.contenu === "potable") return this.info("L'eau de ta gourde est déjà potable.");
-    const boisNecessaire = BOIS_PAR_LITRE_BOUILLI * this.gourde.litres;
+    const e = effetsFeu(feu);
+    const casserole = e.cuisine >= 3 && CASSEROLES.some((t) => (this.inventaire[t] ?? 0) > 0);
+    const boisNecessaire = BOIS_PAR_LITRE_BOUILLI * this.gourde.litres * e.bouillirBois * (casserole ? BOUILLIR_AVEC_CASSEROLE : 1);
     if (feu.bois < boisNecessaire) return this.info("Le feu n'a pas assez de bois pour faire bouillir l'eau : ajoute une bûche.");
-    this.commencer("Faire bouillir l'eau de la gourde", DUREES.bouillir * this.gourde.litres, () => {
+    this.commencer("Faire bouillir l'eau de la gourde", DUREES.bouillir * this.gourde.litres * e.bouillirDuree, () => {
       feu.bois = Math.max(0, feu.bois - boisNecessaire);
       this.gourde = { contenu: "potable", litres: this.gourde.litres };
       if (this.tuto) this.tuto.bouilli = true;
@@ -2306,6 +2370,340 @@ export class Joueur implements Voyageur {
     }, 0, "aucun");
   }
 
+  // ---------- Améliorer sa base (Book 24) : sur place, au lieu de poser autre chose à côté ----------
+
+  /** Ce qu'il faut pour une étape (montée de niveau, accessoire) : le coût choisi et la durée réelle, ou null (déjà dit). */
+  private preparerEtape(e: { couts: readonly Inventaire[]; qualites: Etape["qualites"]; duree: number; famille?: Etape["famille"] }): { cout: Inventaire; dureeS: number } | null {
+    const { cout, payable } = choisirCout(this.inventaire, e.couts, e, this.compte.famille);
+    if (!payable) {
+      const manque = (Object.entries(cout) as [TypeObjet, number][])
+        .filter(([t, n]) => (this.inventaire[t] ?? 0) < n)
+        .map(([t, n]) => `${nommer(t, n)} (tu en as ${this.inventaire[t] ?? 0})`);
+      const autres = e.couts.length > 1 ? ` Ou bien : ${e.couts.slice(1).map((c) => Object.entries(coutPour(c, e, this.compte.famille)).map(([t, n]) => nommer(t as TypeObjet, n ?? 0)).join(", ")).join(" ; ")}.` : "";
+      this.info(`Il te manque : ${manque.join(", ")}.${autres}`);
+      return null;
+    }
+    const facteur = multiplicateurQualites(this.inventaire, e.qualites);
+    if (facteur === null) {
+      this.info(outilsManquants(e.qualites, this.inventaire).join(" "));
+      return null;
+    }
+    return { cout, dureeS: Math.max(2, e.duree / REGLAGES.fabrication_acceleration) * facteur };
+  }
+
+  /** Rendre des objets au sac : refusé (et dit) si le sac ne peut pas les porter. */
+  private peutReprendre(objets: Inventaire, enMoins: Inventaire = {}): boolean {
+    if (poidsInventaire(this.inventaire) - poidsInventaire(enMoins) + poidsInventaire(objets) <= capaciteDe(this.inventaire) + 1e-9) return true;
+    this.sacTropLourd();
+    return false;
+  }
+
+  /** Ce qui a été payé, niveau après niveau (les feux d'avant le Book 24 : le coût de base de leur voie). */
+  private payesFeu(feu: FeuEnBase): Inventaire[] {
+    return feu.payes ?? [(feu.dakota ? VOIE_CREUSEE : VOIE_SURFACE)[0]!.couts[0]!];
+  }
+
+  /** Les accessoires qui ne vont plus sur la nouvelle forme reviennent dans le sac, entiers. */
+  private rendreAccessoires(feu: FeuEnBase): Inventaire {
+    const rendus: Inventaire[] = [];
+    for (const a of accessoiresIncompatibles(formeFeu(feu), feu.accessoires ?? {})) {
+      rendus.push(feu.accessoires![a]!);
+      delete feu.accessoires![a];
+      this.info(`${ACCESSOIRES_FEU[a].nom} ne va pas sur ce foyer : tu la reprends.`);
+    }
+    return somme(...rendus);
+  }
+
+  /** Le bois en trop quand le foyer devient plus petit (le poêle-fusée tient 4 kg) : on le reprend. */
+  private boisEnTrop(feu: FeuEnBase): Inventaire {
+    const max = effetsFeu(feu).boisMax;
+    if (feu.bois <= max) return {};
+    const repris = boisRepris(feu.bois - max);
+    feu.bois = max;
+    return repris;
+  }
+
+  private majFeu(feu: FeuEnBase): void {
+    this.base.sauverFeu(this.compte.id, feu);
+    this.envoyer({ t: "feu", feu: vue(feu) });
+  }
+
+  /** Les gestes d'aménagement sur un feu (Book 24 §2 et §3.1). */
+  private amenagerFeu(feu: FeuEnBase, verbe: string): void {
+    // On ne maçonne pas dans les flammes : éteint, ou en braises (Book 24 §2.2).
+    const dansLesFlammes = () => feu.allume && aspectFeu(feu) === "flammes";
+    const refusFlammes = "On ne travaille pas dans les flammes : attends qu'il ne reste que des braises, ou couvre le feu.";
+    switch (verbe) {
+      case "couvrir": {
+        if (!effetsFeu(feu).couvrir) return this.info("Il faut un foyer de pierres pour couvrir le feu sous la cendre.");
+        if (!feu.allume || feu.couvert) return;
+        if (this.action) return this.info("Tu es déjà occupé : attends la fin, ou appuie sur A pour arrêter.");
+        feu.couvert = true;
+        this.majFeu(feu);
+        return this.info("Le feu est couvert sous la cendre : il brûle quatre fois moins, sans flamme. Il se ranime sans briquet.");
+      }
+      case "ranimer":
+        return this.ranimer(feu);
+      case "ameliorer": {
+        const suivante = etapeSuivanteFeu(feu);
+        if (!suivante) return this.info(`${etapeFeu(feu).nom} : c'est le plus haut de sa lignée.`);
+        if (suivante.phase) return this.info(`${suivante.nom} : pas encore. Il faudra de l'argile, et du temps.`);
+        if (dansLesFlammes()) return this.info(refusFlammes);
+        const plan = this.preparerEtape(suivante);
+        if (!plan) return;
+        return this.commencer(`Améliorer : ${suivante.nom}`, plan.dureeS, () => {
+          if (!this.feux.has(feu.id) || dansLesFlammes() || niveauFeu(feu) !== suivante.niveau - 1 || !Object.entries(plan.cout).every(([t, n]) => (this.inventaire[t as TypeObjet] ?? 0) >= (n ?? 0))) return;
+          this.retirerPlusieurs(plan.cout);
+          feu.payes = [...this.payesFeu(feu), plan.cout];
+          feu.niveau = suivante.niveau;
+          // Le muret réflecteur se monte derrière le feu, face à l'abri le plus proche (sinon face au maçon).
+          if (feu.o === undefined) feu.o = this.orientationMuret(feu);
+          const rendus = somme(this.rendreAccessoires(feu), this.boisEnTrop(feu));
+          if (Object.keys(rendus).length) this.ajouterPlusieurs(rendus);
+          this.majFeu(feu);
+          this.noterFait(`foyer:${suivante.id}`);
+          this.mesurer("progression", `ameliorer:${suivante.id}`, 1);
+          this.info(`${suivante.nom}. ${suivante.apporte}`);
+        }, 0, suivante.qualites.marteler ? "lourd" : "outil");
+      }
+      case "redescendre": {
+        const niveau = niveauFeu(feu);
+        if (niveau <= 1) return this.info("C'est déjà le premier niveau : pour l'enlever, démonte-le.");
+        if (dansLesFlammes()) return this.info(refusFlammes);
+        const payes = this.payesFeu(feu);
+        const rend = rendDuDemontage(payes.at(-1) ?? {});
+        if (!this.peutReprendre(rend)) return;
+        const avant = etapeFeu(feu);
+        return this.commencer(`Défaire : ${avant.nom}`, Math.max(2, avant.duree / 2 / REGLAGES.fabrication_acceleration), () => {
+          if (!this.feux.has(feu.id) || niveauFeu(feu) !== niveau) return;
+          feu.payes = payes.slice(0, -1);
+          feu.niveau = niveau - 1;
+          if (feu.niveau === 1) delete feu.o;
+          this.ajouterPlusieurs(somme(rend, this.rendreAccessoires(feu), this.boisEnTrop(feu)));
+          this.majFeu(feu);
+          this.info(`Redevenu : ${etapeFeu(feu).nom}. Tu récupères la moitié des matériaux naturels, et tout le reste.`);
+        }, 0, "outil");
+      }
+      case "demonter_installation": {
+        if (feu.allume) return this.info("Éteins-le d'abord : on ne démonte pas un feu qui brûle encore (laisse-le s'éteindre).");
+        const rend = somme(rendDuDemontage(somme(...this.payesFeu(feu), ...Object.values(feu.accessoires ?? {}))), boisRepris(feu.bois));
+        if (!this.peutReprendre(rend)) return;
+        return this.commencer(`Démonter : ${etapeFeu(feu).nom}`, DUREES.construireFeu, () => {
+          if (!this.feux.has(feu.id) || feu.allume) return;
+          this.feux.delete(feu.id);
+          this.base.retirerFeu(this.compte.id, feu.id);
+          this.envoyer({ t: "feu_retire", id: feu.id });
+          if (Object.keys(rend).length) this.ajouterPlusieurs(rend);
+          this.info("Démonté : la moitié des pierres et des branches, et tout le reste, est dans ton sac.");
+        }, 0, "outil");
+      }
+      case "creuser_dakota": {
+        if (feu.dakota) return;
+        if (niveauFeu(feu) !== 1) return this.info("On creuse un feu de camp, pas un foyer maçonné : redescends-le d'abord au feu de camp.");
+        if (dansLesFlammes()) return this.info(refusFlammes);
+        const plan = this.preparerEtape({ couts: [], ...CREUSER });
+        if (!plan) return;
+        if (!this.peutReprendre(CREUSER.rend)) return;
+        return this.commencer("Creuser le feu en foyer Dakota", plan.dureeS, () => {
+          if (!this.feux.has(feu.id) || feu.dakota || niveauFeu(feu) !== 1) return;
+          feu.dakota = true;
+          feu.niveau = 1;
+          feu.payes = [VOIE_CREUSEE[0]!.couts[0]!];
+          delete feu.o;
+          this.ajouterPlusieurs(somme(CREUSER.rend, this.rendreAccessoires(feu), this.boisEnTrop(feu)));
+          this.majFeu(feu);
+          // L'objectif du carnet « Un feu qui ne se voit pas » compte aussi un feu creusé sur place (Book 24 §7).
+          this.noterFait("foyer_dakota");
+          this.info("Foyer Dakota : le feu est dans le sol. Tu récupères 3 pierres.");
+        }, 0, "outil");
+      }
+      case "combler": {
+        if (!feu.dakota) return;
+        if (niveauFeu(feu) !== 1) return this.info("Redescends d'abord le poêle-fusée au foyer Dakota.");
+        if (dansLesFlammes()) return this.info(refusFlammes);
+        const plan = this.preparerEtape({ couts: [COMBLER.cout], qualites: COMBLER.qualites, duree: COMBLER.duree });
+        if (!plan) return;
+        return this.commencer("Combler le Dakota en feu de camp", plan.dureeS, () => {
+          if (!this.feux.has(feu.id) || !feu.dakota || (this.inventaire.pierre ?? 0) < (COMBLER.cout.pierre ?? 0)) return;
+          this.retirerPlusieurs(COMBLER.cout);
+          delete feu.dakota;
+          feu.niveau = 1;
+          feu.payes = [VOIE_SURFACE[0]!.couts[0]!];
+          const rendus = this.rendreAccessoires(feu);
+          if (Object.keys(rendus).length) this.ajouterPlusieurs(rendus);
+          this.majFeu(feu);
+          this.info("Le trou est comblé, le cercle de pierres posé : c'est de nouveau un feu de camp.");
+        }, 0, "outil");
+      }
+      case "monter_broche":
+      case "monter_marmite": {
+        const a: AccessoireFeu = verbe === "monter_broche" ? "broche" : "marmite";
+        const def = ACCESSOIRES_FEU[a];
+        if (feu.accessoires?.[a]) return this.info(`${def.nom} : déjà montée.`);
+        if (!def.formes.includes(formeFeu(feu))) return this.info(`${def.nom} ne va pas sur un ${etapeFeu(feu).nom.toLowerCase()}.${a === "marmite" ? " Il faut un foyer de cuisine." : ""}`);
+        const plan = this.preparerEtape(def);
+        if (!plan) return;
+        return this.commencer(`Monter : ${def.nom}`, plan.dureeS, () => {
+          if (!this.feux.has(feu.id) || feu.accessoires?.[a] || !Object.entries(plan.cout).every(([t, n]) => (this.inventaire[t as TypeObjet] ?? 0) >= (n ?? 0))) return;
+          this.retirerPlusieurs(plan.cout);
+          feu.accessoires = { ...feu.accessoires, [a]: plan.cout };
+          this.majFeu(feu);
+          this.info(`${def.nom}. ${def.apporte}`);
+        }, 0, "outil");
+      }
+    }
+  }
+
+  /**
+   * Cuisiner une recette au feu (Book 24 §3.1) : le meilleur foyer allumé tout près ; les mijotés demandent la
+   * crémaillère (foyer de cuisine), de l'eau et du bois (moitié moins avec la marmite norvégienne) ; le foyer de cuisine
+   * cuit deux plats à la fois quand on a de quoi.
+   */
+  private cuisinePour(r: Recette): { fois: number; foyer: FeuEnBase | null; bois: number; eau: number } | { refus: string } {
+    const proches = [...this.feux.values()].filter((f) => f.allume && f.bois > 0 && !f.couvert && this.proche(f.x, f.z, 2.5));
+    const niveau = r.feuNiveau ?? 1;
+    const foyer = proches.filter((f) => effetsFeu(f).cuisine >= niveau).sort((a, b) => effetsFeu(b).plats - effetsFeu(a).plats)[0];
+    if (!foyer) return { refus: "Ça mijote longtemps, la marmite pendue à la crémaillère : il faut un foyer de cuisine. Améliore ton feu (approche-toi, puis « Améliorer »)." };
+    const parPlat = { bois: (r.boisFeu ?? 0) * (foyer.accessoires?.marmite ? 0.5 : 1), eau: r.eau ?? 0 };
+    if (parPlat.eau > 0 && this.gourde.litres < parPlat.eau - 1e-9) return { refus: `Il faut ${String(parPlat.eau).replace(".", ",")} L d'eau dans ta gourde (celle de la mare suffit : elle va bouillir).` };
+    if (parPlat.bois > 0 && foyer.bois < parPlat.bois - 1e-9) return { refus: "Le feu n'a pas assez de bois pour une longue cuisson : ajoute une bûche." };
+    const deux =
+      effetsFeu(foyer).plats >= 2 &&
+      Object.entries(r.ingredients).every(([t, n]) => (this.inventaire[t as TypeObjet] ?? 0) >= 2 * (n ?? 0)) &&
+      this.gourde.litres >= 2 * parPlat.eau - 1e-9 &&
+      foyer.bois >= 2 * parPlat.bois - 1e-9;
+    const fois = deux ? 2 : 1;
+    return { fois, foyer, bois: parPlat.bois * fois, eau: parPlat.eau * fois };
+  }
+
+  /** Ranimer un feu couvert : on écarte la cendre, les braises reprennent (sans briquet). */
+  private ranimer(feu: FeuEnBase): void {
+    if (!feu.couvert) return;
+    if (this.action) return this.info("Tu es déjà occupé : attends la fin, ou appuie sur A pour arrêter.");
+    feu.couvert = false;
+    if (feu.bois <= 0) feu.allume = false;
+    this.majFeu(feu);
+    this.signalerFeux(feu);
+  }
+
+  /** La signature rendue visible (Book 24 §4.2) : deux feux allumés, on te sent deux fois plus loin. */
+  private signalerFeux(feu: FeuEnBase): void {
+    const n = [...this.feux.values()].filter((f) => f.allume && f.bois > 0 && !f.couvert).length;
+    if (n < 2 || !feu.allume) return;
+    this.indice("feux_allumes", `${n === 2 ? "Deux" : n === 3 ? "Trois" : n} feux allumés : chacun s'ajoute à ce que sentent les Éteints. Un seul bon foyer attire moins.`, 5 * 60_000);
+  }
+
+  /** Le muret réflecteur : derrière le feu, pour renvoyer la chaleur vers l'abri le plus proche (sinon vers le maçon). */
+  private orientationMuret(feu: FeuEnBase): number {
+    let cible = { x: this.position.x, z: this.position.z };
+    let meilleure = 6;
+    for (const i of this.installations.values()) {
+      const d = Math.hypot(i.x - feu.x, i.z - feu.z);
+      if ((i.type === "abri" || i.type === "lit_branchages") && d < meilleure) {
+        meilleure = d;
+        cible = { x: i.x, z: i.z };
+      }
+    }
+    return Math.round(Math.atan2(cible.x - feu.x, cible.z - feu.z) * 1000) / 1000;
+  }
+
+  /** Le confort du sommeil (Book 24 §3.1, §3.3) : l'abri amélioré, le lit voisin, la chaleur d'un foyer de pierres voisin. */
+  private confortDuSommeil(i: InstallationVue): number {
+    const pres = (type: string) => [...this.installations.values()].filter((x) => x.type === type && Math.hypot(x.x - i.x, x.z - i.z) <= 3);
+    const abri = i.type === "abri" ? i : pres("abri")[0];
+    const lit = i.type === "lit_branchages" || pres("lit_branchages").length > 0;
+    const couchage = Math.max(lit ? BONUS_LIT : 1, abri ? (SOMMEIL_ABRI[niveauInstallation(abri) - 1] ?? 1) : 1);
+    const ici = abri ?? i;
+    let chaleur = 1;
+    for (const f of this.feux.values()) {
+      if (f.allume && f.bois > 0 && Math.hypot(f.x - ici.x, f.z - ici.z) <= 3) chaleur = Math.max(chaleur, effetsFeu(f).chaleur);
+    }
+    return couchage * chaleur;
+  }
+
+  /** Améliorer, redescendre ou démonter une installation (Book 24 §2.4, §3.2 à §3.4). */
+  private amenagerInstallation(i: InstallationVue, verbe: string): void {
+    if (i.type === "decharge") return this.info("La décharge ne se démonte pas : elle était là avant toi.");
+    if (i.etat.portee) return this.info("Pose-la d'abord.");
+    const laRecette = RECETTES.find((r) => "installation" in r.produit && r.produit.installation === i.type);
+    const etape = etapeInstallation(i);
+    const nom = etape?.nom ?? laRecette?.nom ?? NOMS_INSTALLATIONS[i.type];
+    const maj = () => {
+      this.base.sauverNiveauInstallation(this.compte.id, i.id, niveauInstallation(i));
+      this.base.sauverEtatInstallation(this.compte.id, i.id, i.etat);
+      this.envoyer({ t: "installation", installation: i });
+    };
+    switch (verbe) {
+      case "ameliorer": {
+        const suivante = etapeSuivanteInstallation(i);
+        if (!lignee(i.type)) return this.info("Cette installation ne s'améliore pas.");
+        if (!suivante) return this.info(`${nom} : c'est le plus haut de sa lignée.`);
+        if (suivante.phase) return this.info(`${suivante.nom} : pas encore. Il faudra de l'argile, et du temps.`);
+        // L'abri garni peut absorber le lit de branchages voisin, sans rien payer (Book 24 §3.3, proposé, jamais d'office).
+        const lit = suivante.id === "abri_garni" ? [...this.installations.values()].find((x) => x.type === "lit_branchages" && Math.hypot(x.x - i.x, x.z - i.z) <= 3) : undefined;
+        const plan = lit ? { cout: {}, dureeS: Math.max(2, suivante.duree / REGLAGES.fabrication_acceleration) } : this.preparerEtape(suivante);
+        if (!plan) return;
+        return this.commencer(lit ? "Glisser le lit sous l'abri" : `Améliorer : ${suivante.nom}`, plan.dureeS, () => {
+          if (!this.installations.has(i.id) || niveauInstallation(i) !== suivante.niveau - 1) return;
+          if (lit) {
+            if (!this.installations.has(lit.id)) return;
+            this.installations.delete(lit.id);
+            this.base.retirerInstallation(this.compte.id, lit.id);
+            this.envoyer({ t: "installation_retiree", id: lit.id });
+          } else {
+            if (!Object.entries(plan.cout).every(([t, n]) => (this.inventaire[t as TypeObjet] ?? 0) >= (n ?? 0))) return;
+            this.retirerPlusieurs(plan.cout);
+          }
+          // Le lit absorbé compte comme payé : le démontage le rendra.
+          i.etat = { ...i.etat, payes: [...(i.etat.payes ?? []), lit ? (recette("lit_branchages")?.ingredients ?? {}) : plan.cout] };
+          i.niveau = suivante.niveau;
+          maj();
+          this.noterFait(`niveau:${suivante.id}`);
+          this.mesurer("progression", `ameliorer:${suivante.id}`, 1);
+          this.info(`${suivante.nom}. ${suivante.apporte}`);
+        }, 0, suivante.qualites.marteler ? "lourd" : "outil");
+      }
+      case "redescendre": {
+        const niveau = niveauInstallation(i);
+        if (niveau <= 1) return this.info("C'est déjà le premier niveau : pour l'enlever, démonte-le.");
+        const payes = i.etat.payes ?? [];
+        const rend = rendDuDemontage(payes.at(-1) ?? {});
+        const apres = { type: i.type, niveau: niveau - 1 };
+        if (i.type === "coffre" && poidsInventaire(i.etat.contenu ?? {}) > capaciteCoffre(apres) + 1e-9) return this.info(`Il y a trop dans le coffre pour qu'il redevienne plus petit : vide-le jusqu'à ${capaciteCoffre(apres)} kg.`);
+        if (!this.peutReprendre(rend)) return;
+        return this.commencer(`Défaire : ${nom}`, Math.max(2, (etape?.duree ?? 20) / 2 / REGLAGES.fabrication_acceleration), () => {
+          if (!this.installations.has(i.id) || niveauInstallation(i) !== niveau) return;
+          i.niveau = niveau - 1;
+          i.etat = { ...i.etat, payes: payes.slice(0, -1) };
+          // La citerne redevient bassine : ce qui déborde se répand.
+          if (i.type === "recuperateur_pluie") i.etat = { ...i.etat, litres: Math.min(i.etat.litres ?? 0, contenanceRecuperateur(i)) };
+          if (i.niveau === 1) delete i.niveau;
+          this.ajouterPlusieurs(rend);
+          maj();
+          this.info(`Redevenu : ${etapeInstallation(i)?.nom ?? nom}. Tu récupères la moitié des matériaux naturels, et tout le reste.`);
+        }, 0, "outil");
+      }
+      case "demonter_installation": {
+        if (!laRecette) return this.info("Ça ne se démonte pas.");
+        if (i.type === "coffre" && Object.values(i.etat.contenu ?? {}).some((n) => (n ?? 0) > 0)) return this.info("Vide d'abord le coffre.");
+        if (i.type === "banc_recharge" && Object.values(i.etat.batteries ?? {}).some((n) => (n ?? 0) > 0)) return this.info("Reprends d'abord les batteries posées sur le banc.");
+        if (i.type === "charbonniere" && i.etat.pretLe) return this.info("La meule cuit : on ne l'ouvre qu'au défournement.");
+        // Les accessoires du pédalier se démontent avec lui.
+        const accessoires = somme(i.etat.meule ? { pierre: 3 } : {}, i.etat.dynamo ? { dynamo_velo: 1 } : {});
+        const rend = rendDuDemontage(somme(laRecette.ingredients, ...(i.etat.payes ?? []), accessoires));
+        if (!this.peutReprendre(rend)) return;
+        return this.commencer(`Démonter : ${nom}`, Math.max(2, dureeReelle(laRecette) / 2), () => {
+          if (!this.installations.has(i.id)) return;
+          this.installations.delete(i.id);
+          this.base.retirerInstallation(this.compte.id, i.id);
+          this.envoyer({ t: "installation_retiree", id: i.id });
+          if (Object.keys(rend).length) this.ajouterPlusieurs(rend);
+          this.info(`${nom} démonté${i.type === "recuperateur_pluie" && (i.etat.litres ?? 0) > 0.05 ? " (l'eau s'est répandue)" : ""} : la moitié des matériaux naturels, et tout le reste, est dans ton sac.`);
+        }, 0, "outil");
+      }
+    }
+  }
+
   // ---------- Installations des familles (É2, lot 2) ----------
 
   /** La famille qui sait se servir de chaque installation (celle de sa recette). */
@@ -2323,6 +2721,7 @@ export class Joueur implements Voyageur {
       this.base.sauverEtatInstallation(this.compte.id, i.id, i.etat);
       this.envoyer({ t: "installation", installation: i });
     };
+    if (verbe === "ameliorer" || verbe === "redescendre" || verbe === "demonter_installation") return this.amenagerInstallation(i, verbe);
 
     switch (verbe) {
       case "porter":
@@ -2335,8 +2734,8 @@ export class Joueur implements Voyageur {
       case "dormir": {
         // Un lit de branchages à côté de l'abri (ou l'abri à côté du lit) : on dort mieux (P-002).
         const pres = (type: string) => [...this.installations.values()].some((x) => x.type === type && Math.hypot(x.x - i.x, x.z - i.z) <= 3);
-        if (i.type === "abri") return this.endormir(true, pres("lit_branchages"));
-        if (i.type === "lit_branchages") return this.endormir(pres("abri"), true);
+        if (i.type === "abri") return this.endormir(true, pres("lit_branchages"), this.confortDuSommeil(i));
+        if (i.type === "lit_branchages") return this.endormir(pres("abri"), true, this.confortDuSommeil(i));
         return;
       }
       case "remplir_pluie": {
@@ -2543,5 +2942,17 @@ function poidsDe(objets: Inventaire): number {
 
 
 function vue(feu: FeuEnBase): FeuVu {
-  return { id: feu.id, x: feu.x, z: feu.z, bois: Math.round(feu.bois * 100) / 100, aspect: aspectFeu(feu), ...(feu.dakota ? { dakota: true } : {}) };
+  const accessoires = Object.keys(feu.accessoires ?? {});
+  return {
+    id: feu.id,
+    x: feu.x,
+    z: feu.z,
+    bois: Math.round(feu.bois * 100) / 100,
+    aspect: aspectFeu(feu),
+    ...(feu.dakota ? { dakota: true } : {}),
+    ...(niveauFeu(feu) > 1 ? { niveau: niveauFeu(feu) } : {}),
+    ...(accessoires.length ? { accessoires } : {}),
+    ...(feu.couvert ? { couvert: true } : {}),
+    ...(feu.o !== undefined ? { o: feu.o } : {}),
+  };
 }

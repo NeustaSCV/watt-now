@@ -139,6 +139,38 @@ for (const [i, dakota] of [false, true].entries()) {
   articles.push({ nom: dakota ? "fantôme Dakota" : "fantôme feu", section: "feux", objet: g, haut: 0.8 });
 }
 
+// ---------- Les niveaux (Book 24) : chaque niveau a son modèle ----------
+
+const NIVEAUX_FEU: [string, Partial<FeuVu>][] = [
+  ["foyer de pierres : flammes", { niveau: 2, aspect: "flammes", bois: 5 }],
+  ["foyer de pierres : couvert", { niveau: 2, aspect: "braises", bois: 5, couvert: true }],
+  ["foyer de cuisine : flammes", { niveau: 3, aspect: "flammes", bois: 5 }],
+  ["foyer de cuisine + broche + marmite", { niveau: 3, aspect: "eteint", bois: 3, accessoires: ["broche", "marmite"] }],
+  ["feu de camp + broche", { aspect: "flammes", bois: 4, accessoires: ["broche"] }],
+  ["poêle-fusée : flammes", { dakota: true, niveau: 2, aspect: "flammes", bois: 3 }],
+  ["poêle-fusée : éteint", { dakota: true, niveau: 2, aspect: "eteint", bois: 2 }],
+];
+NIVEAUX_FEU.forEach(([nom, f], i) => {
+  const feu = new FeuDeCamp({ id: 200 + i, x: i * 3.5, z: 16, bois: 0, aspect: "eteint", ...f });
+  scene.add(feu.objet);
+  animations.push((dt, nuit) => feu.animer(dt, nuit));
+  sources.push(() => feu.source());
+  articles.push({ nom, section: "feux", objet: feu.objet, haut: f.niveau === 3 ? 1.8 : 1.2 });
+});
+const NIVEAUX_INSTALLATIONS: [string, InstallationVue["type"], number, InstallationVue["etat"]][] = [
+  ["abri garni", "abri", 2, {}],
+  ["abri fermé", "abri", 3, {}],
+  ["citerne de bâche", "recuperateur_pluie", 2, { litres: 30 }],
+  ["coffre cerclé", "coffre", 2, {}],
+  ["réserve couverte", "coffre", 3, {}],
+];
+NIVEAUX_INSTALLATIONS.forEach(([nom, type, niveau, etat], i) => {
+  const v = new VueInstallation({ id: 300 + i, type, x: i * 4, z: 21, o: 0, etat, niveau });
+  scene.add(v.objet);
+  animations.push((dt, nuit) => v.animer(dt, Date.now(), nuit, false));
+  articles.push({ nom, section: "installations", objet: v.objet, haut: 1.7 });
+});
+
 // ---------- Les armes en main ----------
 
 const ARMES: TypeObjet[] = ["hache", "marteau", "barre_metal", "couteau", "lame_forgee", "gourdin", "epieu"];

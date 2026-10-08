@@ -9,12 +9,33 @@ import { ACTIONS, RESERVEES, assigner, avecTouches, nomDe, nomTouche, retablir, 
 import { PanneauAide } from "./aide.ts";
 import { CAPACITES, type Charges } from "../../commun/src/energie.ts";
 import { ARMES, NOMS_BLESSURES, RESISTANCE_TORSE, caracteristiquesArme, estArme } from "../../commun/src/combat.ts";
-import type { EchangeVu, InstallationVue, OffreEchange, OperationComptoir, OperationEchange, Personne, RapportBase, SanteVue, VueComptoir, WottsVus } from "../../commun/src/messages.ts";
+import type { EchangeVu, FeuVu, InstallationVue, OffreEchange, OperationComptoir, OperationEchange, Personne, RapportBase, SanteVue, Verbe, VueComptoir, WottsVus } from "../../commun/src/messages.ts";
+import {
+  ACCESSOIRES_FEU,
+  COMBLER,
+  CREUSER,
+  VOIE_CREUSEE,
+  VOIE_SURFACE,
+  capaciteCoffre,
+  choisirCout,
+  contenanceRecuperateur,
+  coutPour,
+  effetsFeu,
+  etapeFeu,
+  etapeInstallation,
+  etapeSuivanteFeu,
+  etapeSuivanteInstallation,
+  formeFeu,
+  lignee,
+  niveauInstallation,
+  type AccessoireFeu,
+  type Etape,
+} from "../../commun/src/lignees.ts";
 import { PRIX_RETRAIT, formaterWotts, prixVente } from "../../commun/src/economie.ts";
 import { detailEnergieGrise } from "../../commun/src/recettes.ts";
 import type { TypeBatterie } from "../../commun/src/energie.ts";
 import type { Inventaire, TypeObjet } from "../../commun/src/objets.ts";
-import { CAPACITE_COFFRE, OBJETS, capaciteDe, nomContenant, nommer, poidsInventaire } from "../../commun/src/objets.ts";
+import { OBJETS, capaciteDe, nomContenant, nommer, poidsInventaire } from "../../commun/src/objets.ts";
 import {
   CATEGORIES_RECETTES,
   NOMS_INSTALLATIONS,
@@ -40,13 +61,13 @@ import { COULEURS_FAMILLES } from "./accueil.ts";
 import { ecrire, lire } from "./stockage.ts";
 import type { Commande } from "./entrees.ts";
 import { icone, type Pictogramme } from "./icones.ts";
-import type { Propositions } from "./interaction.ts";
+import { EXAMENS_INSTALLATIONS, type Propositions } from "./interaction.ts";
 import { ORDRE_NIVEAUX, changerQualite, type NiveauQualite } from "./rendu/qualite.ts";
 import { COMPOSANTS, DEMONTAGE, NOMS_FAMILLES_VESTIGES, VESTIGES, type FamilleVestige } from "../../commun/src/vestiges.ts";
 
 /** Ordre d'affichage dans le sac : à boire et à manger, matériaux, pièces, outils, lumières. */
 const ORDRE_SAC: TypeObjet[] = [
-  "gourde", "volaille_cepes", "cepes_poeles", "pommes_cuites", "volaille_cuite", "volaille_crue", "conserve", "baies", "pomme", "poire", "prunes", "cerises", "noix", "cepe", "amanite_tue_mouches", "amanite_phalloide", "buche", "branche", "pierre",
+  "gourde", "pot_au_feu", "soupe_cepes", "volaille_cepes", "cepes_poeles", "pommes_cuites", "volaille_cuite", "volaille_crue", "conserve", "baies", "pomme", "poire", "prunes", "cerises", "noix", "cepe", "amanite_tue_mouches", "amanite_phalloide", "buche", "branche", "pierre",
   "fibres", "bache", "ressort_lames", "barre_metal", "tete_hache", "cadre_velo", "chaine_velo", "roue_velo", "dynamo_velo", "batterie_voiture",
   "hache", "couteau", "marteau", "scie", "cle_plate", "tournevis", "briquet", "pierre_a_feu", "corde", "petite_batterie",
   "torche", "lampe_frontale", "lanterne", "lampe_dynamo", "sac_a_dos",
@@ -87,6 +108,8 @@ export interface ActionsJoueur {
   equiper(objet: TypeObjet | null): void;
   /** Ranger dans le coffre, ou en sortir. */
   coffre(id: number, sens: "deposer" | "prendre", objet: TypeObjet, quantite: number): void;
+  /** Un geste sur un feu ou une installation, depuis sa fiche (Book 24 : améliorer, démonter, creuser…). */
+  amenager(genre: "feu" | "installation", id: number, verbe: Verbe): void;
 }
 
 /** Le feu de camp, vu comme une recette, pour dire ce qui manque. */
@@ -306,6 +329,7 @@ export class Hud {
       <div class="panneau comptoir" hidden role="dialog" aria-label="Guichet des Compteurs"></div>
       <div class="panneau echange" hidden role="dialog" aria-label="Échange"></div>
       <div class="panneau coffre" hidden role="dialog" aria-label="Coffre"></div>
+      <div class="panneau fiche" hidden role="dialog" aria-label="Fiche"></div>
       <div class="demande-echange" hidden role="alertdialog"></div>
       ${
         tactile
@@ -507,6 +531,7 @@ export class Hud {
     }
     this.redessiner();
     if (this.coffre) this.dessinerCoffre();
+    this.majFiche();
   }
 
   majCharges(charges: Charges): void {
@@ -1265,8 +1290,9 @@ export class Hud {
 
   private ouvrir(panneau: HTMLElement, oui: boolean): void {
     const avant = [this.sac, this.fabrication, this.guichet].some((p) => !p.hidden);
-    for (const p of [this.sac, this.fabrication, this.guichet, this.panneauEchange, this.panneauCoffre, ...this.panneauCommandes]) p.hidden = !(oui && p === panneau);
+    for (const p of [this.sac, this.fabrication, this.guichet, this.panneauEchange, this.panneauCoffre, this.panneauFiche, ...this.panneauCommandes]) p.hidden = !(oui && p === panneau);
     if (panneau !== this.panneauCoffre || !oui) this.coffre = null;
+    if (panneau !== this.panneauFiche || !oui) this.fiche = null;
     if (oui || avant) this.surPanneau?.(oui);
     // Un échange en cours ne se ferme que par ses propres boutons : sa fenêtre revient quand on ferme les autres.
     if (!oui && this.echange) this.panneauEchange.hidden = false;
@@ -1497,7 +1523,7 @@ export class Hud {
       </div>
       <div class="colonnes">
         <section><h3>Sur toi <small>${kg(poidsSac)} / ${capaciteDe(this.inventaire)} kg</small></h3><div class="grille">${cases(this.inventaire, "deposer")}</div><p class="indice">${estDecharge ? "La décharge rend, elle ne reprend pas : choisis ce que tu emportes." : "Touche un objet pour le ranger."}</p></section>
-        <section><h3>${estDecharge ? `Remonté du tas <small>${kg(poidsCoffre)} kg</small>` : `Dans le coffre <small>${kg(poidsCoffre)} / ${CAPACITE_COFFRE} kg</small>`}</h3><div class="grille">${cases(contenu, "prendre")}</div><p class="indice">${estDecharge ? "Touche un objet pour le prendre. Le reste attend ici." : "Touche un objet pour le prendre."}</p></section>
+        <section><h3>${estDecharge ? `Remonté du tas <small>${kg(poidsCoffre)} kg</small>` : `Dans le coffre <small>${kg(poidsCoffre)} / ${capaciteCoffre(c)} kg</small>`}</h3><div class="grille">${cases(contenu, "prendre")}</div><p class="indice">${estDecharge ? "Touche un objet pour le prendre. Le reste attend ici." : "Touche un objet pour le prendre."}</p></section>
       </div>`;
     p.querySelector(".fermer")!.addEventListener("click", () => this.ouvrir(p, false));
     for (const b of p.querySelectorAll<HTMLButtonElement>("[data-pile]")) {
@@ -1514,6 +1540,232 @@ export class Hud {
         this.actions.coffre(c.id, sens, objet, this.parPile ? dispo : 1);
       });
     }
+  }
+
+  // ---------- La fiche d'un feu ou d'une installation (Book 24 : améliorer sa base, sur place) ----------
+
+  /** L'état à jour de ce que montre la fiche (tenu par main.ts). */
+  sourceFiche: ((genre: "feu" | "installation", id: number) => FeuVu | InstallationVue | null) | null = null;
+  /** Les installations et feux du terrain (le lit voisin que l'abri peut absorber). */
+  voisinsFiche: (() => { installations: InstallationVue[]; feux: FeuVu[] }) | null = null;
+  private fiche: { genre: "feu" | "installation"; id: number } | null = null;
+  private derniereFiche = "";
+
+  private get panneauFiche(): HTMLElement {
+    return this.element.querySelector<HTMLElement>(".panneau.fiche")!;
+  }
+
+  /** Où est ce que montre la fiche ouverte (pour la fermer quand on s'en éloigne). */
+  get ficheOuverte(): { x: number; z: number } | null {
+    if (!this.fiche || this.panneauFiche.hidden) return null;
+    const v = this.sourceFiche?.(this.fiche.genre, this.fiche.id);
+    return v ? { x: v.x, z: v.z } : null;
+  }
+
+  ouvrirFiche(genre: "feu" | "installation", id: number): void {
+    this.ouvrir(this.panneauFiche, true);
+    this.fiche = { genre, id };
+    this.derniereFiche = "";
+    this.dessinerFiche();
+  }
+
+  /** Le feu ou l'installation a changé (bois, niveau, démonté) : la fiche suit. */
+  majFiche(): void {
+    if (this.fiche && !this.panneauFiche.hidden) this.dessinerFiche();
+  }
+
+  private dessinerFiche(): void {
+    const f = this.fiche;
+    const p = this.panneauFiche;
+    if (!f) return;
+    const v = this.sourceFiche?.(f.genre, f.id);
+    if (!v) {
+      this.ouvrir(p, false);
+      return;
+    }
+    const html = f.genre === "feu" ? this.ficheFeu(v as FeuVu) : this.ficheInstallation(v as InstallationVue);
+    if (html === this.derniereFiche) return;
+    this.derniereFiche = html;
+    p.innerHTML = html;
+    p.querySelector(".fermer")!.addEventListener("click", () => this.ouvrir(p, false));
+    for (const b of p.querySelectorAll<HTMLButtonElement>("[data-verbe]")) {
+      b.addEventListener("click", () => this.actions.amenager(f.genre, f.id, b.dataset.verbe as Verbe));
+    }
+  }
+
+  /** Les puces d'un coût (avec ses choix : « ou »), et les qualités d'outil demandées. */
+  private pucesCout(couts: readonly Inventaire[], qualites: Partial<Record<Qualite, number>>, famille?: Famille): string {
+    const choix = (couts.length ? couts : []).map((c) =>
+      (Object.entries(famille ? coutPour(c, { famille }, this.famille) : c) as [TypeObjet, number][]).map(([t, n]) => this.puce(t, n)).join(""),
+    );
+    const outils = (Object.entries(qualites) as [Qualite, number][])
+      .map(([q, n]) => {
+        const a = niveauQualite(this.inventaire, q);
+        const etat = a >= n ? "ok" : a >= 1 && a === n - 1 ? "lent" : "manque";
+        return `<span class="outil ${etat}">${NOMS_QUALITES[q]} ${n}</span>`;
+      })
+      .join("");
+    return `<span class="puces">${choix.join(`<span class="ou">ou</span>`)}${outils}</span>`;
+  }
+
+  /**
+   * Une étape à franchir (un niveau, un accessoire, creuser, combler) : ce qu'elle apporte, ce qu'elle coûte, le
+   * bouton, ou ce qui manque et où le trouver (Book 08 §3).
+   */
+  private carteEtape(
+    titre: string,
+    texte: string,
+    e: { couts: readonly Inventaire[]; qualites: Partial<Record<Qualite, number>>; famille?: Famille },
+    verbe: Verbe,
+    bouton: string,
+    bloque: string | null = null,
+    gratuit = false,
+  ): string {
+    const { cout, payable } = choisirCout(this.inventaire, e.couts, e, this.famille);
+    const outils = multiplicateurQualites(this.inventaire, e.qualites) !== null;
+    const possible = (gratuit || (payable && outils)) && !bloque;
+    const badge = e.famille ? ` <span class="badge-famille ${e.famille}" title="Un niveau de métier">${NOMS_FAMILLES[e.famille]}${e.famille !== this.famille ? " · ×1,5" : ""}</span>` : "";
+    const manque =
+      !possible && !bloque && !gratuit
+        ? this.listeManque({ id: "fiche", categorie: "batir", nom: titre, produit: { objet: "branche", quantite: 0 }, ingredients: cout, qualites: e.qualites, duree: 0, intensite: "legere", famille: "tous" })
+        : "";
+    return `
+      <article class="etape ${possible ? "possible" : ""}">
+        <div class="corps"><strong>${titre}</strong>${badge}
+          <small>${texte}</small>
+          ${gratuit ? "" : this.pucesCout(e.couts, e.qualites, e.famille)}
+          ${bloque ? `<small class="bloque">${bloque}</small>` : manque}
+        </div>
+        <button type="button" data-verbe="${verbe}" ${possible ? "" : "disabled"}>${bouton}</button>
+      </article>`;
+  }
+
+  /** « Et après ? » : le niveau d'ensuite, grisé (la recette pressentie, Book 03 §5.1). */
+  private carteApres(e: Etape | null | undefined): string {
+    if (!e) return "";
+    return `<article class="etape apres"><div class="corps"><strong>Et après ? ${e.nom}</strong><small>${e.apporte}${e.phase ? " Pas encore : il faudra de l'argile, et du temps." : ""}</small></div></article>`;
+  }
+
+  private ficheFeu(v: FeuVu): string {
+    const etape = etapeFeu(v);
+    const effets = effetsFeu(v);
+    const voie = v.dakota ? VOIE_CREUSEE : VOIE_SURFACE;
+    const niveau = etape.niveau;
+    const suivante = etapeSuivanteFeu(v);
+    const flammes = v.aspect === "flammes";
+    const aspect = v.couvert ? "couvert sous la cendre" : { flammes: "en flammes", braises: "en braises", eteint: "éteint", cendres: "froid, des cendres" }[v.aspect];
+    const nb = (x: number) => String(Math.round(x * 100) / 100).replace(".", ",");
+    const proprietes = [
+      `${nb(v.bois)} kg de bois sur ${effets.boisMax}`,
+      effets.bois !== 1 ? `brûle ×${nb(effets.bois)}` : "",
+      effets.chaleur > 1 ? "réchauffe l'abri voisin" : "",
+      effets.plats > 1 ? "deux plats à la fois" : "",
+      effets.cuisine >= 3 ? "soupes mijotées" : "",
+    ].filter(Boolean);
+
+    // Ce qu'on fait au feu, tout de suite.
+    const aDuBois = (this.inventaire.buche ?? 0) > 0 || (this.inventaire.branche ?? 0) > 0;
+    const briquet = (this.inventaire.briquet ?? 0) > 0 || (this.inventaire.pierre_a_feu ?? 0) > 0;
+    const gestes = [
+      aDuBois ? `<button type="button" data-verbe="ajouter_bois">Ajouter du bois</button>` : "",
+      v.couvert ? `<button type="button" data-verbe="ranimer">Ranimer</button>` : "",
+      !v.couvert && v.aspect === "eteint" && v.bois > 0 && briquet ? `<button type="button" data-verbe="allumer">Allumer</button>` : "",
+      effets.couvrir && !v.couvert && (v.aspect === "flammes" || v.aspect === "braises") ? `<button type="button" data-verbe="couvrir">Couvrir pour la nuit</button>` : "",
+    ].join("");
+
+    // Améliorer : le niveau suivant (jamais dans les flammes), et celui d'après, grisé.
+    const bloqueFlammes = flammes ? "On ne maçonne pas dans les flammes : attends les braises, ou couvre le feu." : null;
+    let ameliorer = "";
+    if (suivante && !suivante.phase) {
+      ameliorer = this.carteEtape(`Améliorer : ${suivante.nom}`, suivante.apporte, suivante, "ameliorer", "Améliorer", bloqueFlammes) + this.carteApres(voie[niveau + 1]);
+    } else if (suivante) {
+      ameliorer = this.carteApres(suivante);
+    } else {
+      ameliorer = `<p class="indice">C'est le plus haut de sa lignée.</p>`;
+    }
+
+    // L'autre voie, au premier niveau seulement : creuser le feu de camp, ou combler le Dakota.
+    let voieAutre = "";
+    if (!v.dakota && niveau === 1) {
+      voieAutre = this.carteEtape("Creuser en foyer Dakota", `${VOIE_CREUSEE[0]!.apporte} Tu récupères 3 pierres.`, { couts: [], qualites: CREUSER.qualites }, "creuser_dakota", "Creuser", bloqueFlammes);
+    } else if (v.dakota && niveau === 1) {
+      voieAutre = this.carteEtape("Combler en feu de camp", "On rebouche le trou, on pose un cercle de pierres : un feu qui chauffe et éclaire, mais qui se voit.", { couts: [COMBLER.cout], qualites: COMBLER.qualites }, "combler", "Combler", bloqueFlammes);
+    }
+
+    // Les accessoires, comme la meule du pédalier.
+    const forme = formeFeu(v);
+    const accessoires = (Object.entries(ACCESSOIRES_FEU) as [AccessoireFeu, (typeof ACCESSOIRES_FEU)[AccessoireFeu]][])
+      .map(([a, def]) => {
+        if (v.accessoires?.includes(a)) return `<p class="monte">✓ ${def.nom} : ${def.apporte}</p>`;
+        if (!def.formes.includes(forme)) return a === "marmite" && !v.dakota ? `<article class="etape apres"><div class="corps"><strong>${def.nom}</strong><small>${def.apporte} Il faut un foyer de cuisine.</small></div></article>` : "";
+        return this.carteEtape(def.nom, def.apporte, def, a === "broche" ? "monter_broche" : "monter_marmite", "Monter");
+      })
+      .join("");
+
+    // Redescendre, démonter : ce qu'on récupère (Book 24 §2.4).
+    const precedente = niveau > 1 ? voie[niveau - 2]! : null;
+    const defaire = [
+      precedente ? `<button type="button" class="secondaire" data-verbe="redescendre" ${flammes ? "disabled" : ""}>Redescendre en ${precedente.nom.toLowerCase()}</button>` : "",
+      `<button type="button" class="secondaire" data-verbe="demonter_installation" ${v.aspect === "flammes" || v.aspect === "braises" ? "disabled" : ""}>Démonter</button>`,
+    ].join("");
+
+    return `
+      <header><h2>${etape.nom}</h2><button type="button" class="fermer" aria-label="Fermer">✕</button></header>
+      <p class="niveau">Niveau ${niveau} · ${aspect}</p>
+      <p class="examen">${etape.examen}</p>
+      <p class="proprietes">${proprietes.join(" · ")}</p>
+      ${gestes ? `<div class="gestes">${gestes}</div>` : ""}
+      <h3>Améliorer, sur place</h3>
+      ${ameliorer}
+      ${voieAutre ? `<h3>L'autre voie</h3>${voieAutre}` : ""}
+      ${accessoires ? `<h3>Accessoires</h3>${accessoires}` : ""}
+      <div class="defaire">${defaire}</div>
+      <p class="indice">Un démontage rend la moitié des pierres, branches et bûches, et tout le reste. Un feu se démonte éteint.</p>`;
+  }
+
+  private ficheInstallation(i: InstallationVue): string {
+    const etape = etapeInstallation(i);
+    const niveau = niveauInstallation(i);
+    const l = lignee(i.type);
+    const suivante = etapeSuivanteInstallation(i);
+    const nom = etape?.nom ?? NOMS_INSTALLATIONS[i.type].charAt(0).toUpperCase() + NOMS_INSTALLATIONS[i.type].slice(1);
+    const examen = niveau > 1 && etape ? etape.examen : EXAMENS_INSTALLATIONS[i.type];
+    const nb = (x: number) => String(Math.round(x * 10) / 10).replace(".", ",");
+    const etat =
+      i.type === "coffre"
+        ? `${nb(poidsInventaire(i.etat.contenu ?? {}))} kg sur ${capaciteCoffre(i)}`
+        : i.type === "recuperateur_pluie"
+          ? `${nb(i.etat.litres ?? 0)} L sur ${contenanceRecuperateur(i)}`
+          : "";
+
+    let ameliorer = "";
+    if (l && suivante && !suivante.phase) {
+      // L'abri garni peut absorber le lit de branchages voisin, sans rien payer : c'est proposé, jamais fait d'office.
+      const lit = suivante.id === "abri_garni" && this.voisinsFiche?.().installations.some((x) => x.type === "lit_branchages" && Math.hypot(x.x - i.x, x.z - i.z) <= 3);
+      ameliorer = lit
+        ? this.carteEtape(`Améliorer : ${suivante.nom}`, `${suivante.apporte} Ton lit de branchages voisin passe sous la bâche : rien à payer.`, suivante, "ameliorer", "Glisser le lit sous l'abri", null, true)
+        : this.carteEtape(`Améliorer : ${suivante.nom}`, suivante.apporte, suivante, "ameliorer", "Améliorer");
+      ameliorer += this.carteApres(l[niveau + 1]);
+    } else if (l && suivante) {
+      ameliorer = this.carteApres(suivante);
+    } else if (l) {
+      ameliorer = `<p class="indice">C'est le plus haut de sa lignée.</p>`;
+    }
+
+    const plein = i.type === "coffre" && Object.values(i.etat.contenu ?? {}).some((n) => (n ?? 0) > 0);
+    const precedente = niveau > 1 && l ? l[niveau - 2]! : null;
+    const defaire = [
+      precedente ? `<button type="button" class="secondaire" data-verbe="redescendre">Redescendre en ${precedente.nom.toLowerCase()}</button>` : "",
+      `<button type="button" class="secondaire" data-verbe="demonter_installation" ${plein ? "disabled" : ""}>Démonter</button>`,
+    ].join("");
+
+    return `
+      <header><h2>${nom}</h2><button type="button" class="fermer" aria-label="Fermer">✕</button></header>
+      ${l ? `<p class="niveau">Niveau ${niveau}${etat ? ` · ${etat}` : ""}</p>` : etat ? `<p class="niveau">${etat}</p>` : ""}
+      <p class="examen">${examen}</p>
+      ${ameliorer ? `<h3>Améliorer, sur place</h3>${ameliorer}` : ""}
+      <div class="defaire">${defaire}</div>
+      <p class="indice">${plein ? "Vide d'abord le coffre pour le démonter. " : ""}Un démontage rend la moitié des pierres, branches et bûches, et tout le reste (la bâche, la corde, le métal).</p>`;
   }
 
   // ---------- La fabrication ----------
@@ -1533,23 +1785,21 @@ export class Hud {
 
     // Le feu de camp (É1) a sa propre règle, mais il se fabrique au même endroit.
     const feuPossible = Object.entries(RECETTE_FEU).every(([t, n]) => (this.inventaire[t as TypeObjet] ?? 0) >= (n ?? 0));
-    cartes.push({ categorie: "feu", possible: feuPossible, html: `
-      <article class="recette ${feuPossible ? "possible" : ""}">
+    // Le foyer Dakota (P-002) : creusé d'emblée, discret, économe. Il faut de quoi creuser.
+    const dakotaPossible = ingredientsPresents(this.inventaire, RECETTE_DAKOTA_AIDE) && niveauQualite(this.inventaire, "creuser") >= 1;
+    // Une seule carte pour toute la lignée du feu (Book 24) : le reste (foyer de pierres, de cuisine, Dakota, poêle-fusée)
+    // se fait sur place, depuis le feu (« Examiner »).
+    cartes.push({ categorie: "feu", possible: feuPossible || dakotaPossible, html: `
+      <article class="recette ${feuPossible || dakotaPossible ? "possible" : ""}">
         ${icone("feu_de_camp", 40)}
         <div class="corps"><strong>Feu de camp</strong>
           <span class="puces">${Object.entries(RECETTE_FEU).map(([t, n]) => this.puce(t as TypeObjet, n ?? 0)).join("")}</span>
-          <small>Se pose devant toi. Cuire, faire bouillir l'eau, s'éclairer.</small>${this.pourquoi === "feu" ? this.listeManque(RECETTE_FEU_AIDE) : ""}</div>
-        ${feuPossible ? `<button type="button" data-feu>Monter ici</button>` : `<button type="button" class="pourquoi" data-pourquoi="feu" aria-expanded="${this.pourquoi === "feu"}">Ce qu'il manque ?</button>`}
-      </article>` });
-    // Le foyer Dakota (P-002) : creusé, discret, économe. Il faut de quoi creuser.
-    const dakotaPossible = ingredientsPresents(this.inventaire, RECETTE_DAKOTA_AIDE) && niveauQualite(this.inventaire, "creuser") >= 1;
-    cartes.push({ categorie: "feu", possible: dakotaPossible, html: `
-      <article class="recette ${dakotaPossible ? "possible" : ""}">
-        ${icone("feu_de_camp", 40)}
-        <div class="corps"><strong>Foyer Dakota</strong>
-          <span class="puces">${Object.entries(RECETTE_DAKOTA).map(([t, n]) => this.puce(t as TypeObjet, n ?? 0)).join("")}<span class="outil ${niveauQualite(this.inventaire, "creuser") >= 1 ? "ok" : "manque"}">${NOMS_QUALITES.creuser} 1</span></span>
-          <small>Un feu creusé dans le sol : il se voit trois fois moins la nuit, fume moins, et brûle moins de bois.</small>${this.pourquoi === "dakota" ? this.listeManque(RECETTE_DAKOTA_AIDE) : ""}</div>
-        ${dakotaPossible ? `<button type="button" data-dakota>Creuser ici</button>` : `<button type="button" class="pourquoi" data-pourquoi="dakota" aria-expanded="${this.pourquoi === "dakota"}">Ce qu'il manque ?</button>`}
+          <small>Se pose devant toi. Cuire, faire bouillir l'eau, s'éclairer. Il s'améliore sur place (foyer de pierres, de cuisine) ou se creuse en foyer Dakota, plus discret : approche-toi du feu, puis « Examiner ».</small>
+          ${this.pourquoi === "feu" ? this.listeManque(RECETTE_FEU_AIDE) : ""}${this.pourquoi === "dakota" ? this.listeManque(RECETTE_DAKOTA_AIDE) : ""}</div>
+        <div class="boutons-feu">
+          ${feuPossible ? `<button type="button" data-feu>Monter ici</button>` : `<button type="button" class="pourquoi" data-pourquoi="feu" aria-expanded="${this.pourquoi === "feu"}">Ce qu'il manque ?</button>`}
+          ${dakotaPossible ? `<button type="button" data-dakota>Dakota (3 branches, Creuser 1)</button>` : ""}
+        </div>
       </article>` });
 
     for (const r of recettes) {
@@ -1568,7 +1818,8 @@ export class Hud {
       const ou =
         ("installation" in r.produit ? `Se pose devant toi : ${NOMS_INSTALLATIONS[r.produit.installation]}. ` : "") +
         (r.installation ? `Près d'un ${NOMS_INSTALLATIONS[r.installation]}. ` : "") +
-        (r.feu ? "Près d'un feu allumé. " : "");
+        (r.feu ? ((r.feuNiveau ?? 1) >= 3 ? "Sur un foyer de cuisine allumé (la crémaillère). " : "Près d'un feu allumé. ") : "") +
+        (r.eau ? `${String(r.eau).replace(".", ",")} L d'eau de la gourde (celle de la mare suffit). ` : "");
       const secondes = Math.round(dureeReelle(r) * (outils ?? 1) * 10) / 10;
       const badge = r.famille === "tous" ? "" : ` <span class="badge-famille ${r.famille}" title="Recette de ta famille">${NOMS_FAMILLES[r.famille]}</span>`;
       cartes.push({ categorie: r.categorie, possible, html: `
@@ -1610,7 +1861,7 @@ export class Hud {
     if (!contenu) contenu = `<p class="vide">${this.faisableSeulement ? "Rien de faisable ici pour l'instant : décoche « Faisable maintenant » pour voir ce qui manque." : "Aucune recette connue dans cette catégorie pour l'instant."}</p>`;
 
     const html = `
-      <header><h2>Fabriquer</h2><span class="sous-titre">${recettes.length + 2} recettes connues</span>
+      <header><h2>Fabriquer</h2><span class="sous-titre">${recettes.length + 1} recettes connues</span>
         <button type="button" class="fermer" aria-label="Fermer">✕</button></header>
       <div class="onglets-fabrication" role="tablist" aria-label="Catégories">${onglets}</div>
       <label class="filtre-faisable"><input type="checkbox" ${this.faisableSeulement ? "checked" : ""}> Faisable<span class="long"> maintenant</span></label>

@@ -54,3 +54,21 @@ test("les messages trafiqués sont ignorés", () => {
   ];
   for (const m of mauvais) assert.equal(messageValide(m), false, JSON.stringify(m));
 });
+
+test("améliorer sa base (Book 24) : les gestes sur un feu ou une installation passent, visant autre chose non", () => {
+  const bons: unknown[] = [
+    { t: "interagir", cible: { genre: "feu", id: 1 }, verbe: "ameliorer" },
+    { t: "interagir", cible: { genre: "feu", id: 2 }, verbe: "creuser_dakota" },
+    { t: "interagir", cible: { genre: "feu", id: 2 }, verbe: "monter_broche" },
+    { t: "interagir", cible: { genre: "installation", id: 3 }, verbe: "demonter_installation" },
+    { t: "interagir", cible: { genre: "installation", id: 3 }, verbe: "redescendre" },
+  ];
+  for (const m of bons) assert.ok(messageValide(m), JSON.stringify(m));
+  const mauvais: unknown[] = [
+    { t: "interagir", cible: { genre: "mare" }, verbe: "ameliorer" },
+    { t: "interagir", cible: { genre: "feu" }, verbe: "demonter_installation" },
+    { t: "interagir", cible: { genre: "feu", id: 1.5 }, verbe: "combler" },
+    { t: "interagir", cible: { genre: "sac", id: 1 }, verbe: "couvrir" },
+  ];
+  for (const m of mauvais) assert.equal(messageValide(m), false, JSON.stringify(m));
+});

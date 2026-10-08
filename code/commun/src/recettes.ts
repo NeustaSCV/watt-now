@@ -132,6 +132,12 @@ export interface Recette {
   installation?: TypeInstallation;
   /** Il faut un feu allumé tout près (la cuisine, 2026-10-08). */
   feu?: true;
+  /** Le foyer doit savoir le cuire (Book 24 §3.1) : 3 pour les mijotés (la crémaillère du foyer de cuisine). Absent : 1. */
+  feuNiveau?: number;
+  /** De l'eau prise dans la gourde, en litres (elle bout : celle de la mare suffit). */
+  eau?: number;
+  /** Le bois que la cuisson prend au foyer, en kg (moitié moins avec la marmite norvégienne). */
+  boisFeu?: number;
   /**
    * Durée du travail, en minutes de jeu : elle fait l'énergie grise (Book 01 §6).
    * À l'écran, la fabrication va bien plus vite : voir `dureeReelle`.
@@ -271,6 +277,37 @@ export const RECETTES: Recette[] = [
     qualites: {},
     feu: true,
     duree: 30,
+    intensite: "legere",
+    famille: "tous",
+  },
+  // Les mijotés (Book 24 §3.1) : seulement sur un foyer de cuisine, avec de l'eau et du bois.
+  {
+    id: "soupe_cepes",
+    categorie: "feu",
+    nom: "Soupe de cèpes",
+    produit: { objet: "soupe_cepes", quantite: 1 },
+    ingredients: { cepe: 2 },
+    qualites: {},
+    feu: true,
+    feuNiveau: 3,
+    eau: 0.5,
+    boisFeu: 0.5,
+    duree: 40,
+    intensite: "legere",
+    famille: "tous",
+  },
+  {
+    id: "pot_au_feu",
+    categorie: "feu",
+    nom: "Pot-au-feu de volaille",
+    produit: { objet: "pot_au_feu", quantite: 1 },
+    ingredients: { volaille_crue: 1, cepe: 1 },
+    qualites: {},
+    feu: true,
+    feuNiveau: 3,
+    eau: 0.5,
+    boisFeu: 0.8,
+    duree: 60,
     intensite: "legere",
     famille: "tous",
   },
