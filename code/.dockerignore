@@ -1,0 +1,8 @@
+# Ce qui ne part pas dans l'image : dépendances (réinstallées), cache, client déjà compilé, données du jeu.
+node_modules
+.npm-cache
+client/dist
+serveur/donnees
+deploiement
+**/*.log
+**/*.test.ts

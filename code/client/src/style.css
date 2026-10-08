@@ -1,0 +1,3128 @@
+/* Watt Now? — feuille de style du client (É0).
+   L'écran d'accueil reprend la charte de l'affiche de l'Abondance (Book 18 §6.3) :
+   papier crème, rouge publicitaire, brun d'encre, bleu canard. */
+
+:root {
+  --creme: #f4ecd8;
+  --creme-fonce: #e6dabd;
+  --rouge: #c8362b;
+  --encre: #3b2a1e;
+  --canard: #1f5e66;
+  --ocre: #c98a2e;
+  --nuit: #1d2433;
+  --hud-fond: rgba(20, 24, 32, 0.62);
+  --hud-texte: #f2efe6;
+  --charbonniers: #a4552f;
+  --voltaiques: #2f5fa4;
+  --mecanistes: #7f8f3a;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--nuit);
+  font-family: "Avenir Next", "Segoe UI", Roboto, system-ui, sans-serif;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+#monde {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  display: block;
+  touch-action: none;
+}
+
+/* ---------- Accueil : l'affiche ---------- */
+
+#accueil {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  background:
+    radial-gradient(ellipse at 50% 30%, rgba(201, 138, 46, 0.25), transparent 60%),
+    linear-gradient(180deg, #2a3348 0%, var(--nuit) 100%);
+  overflow-y: auto;
+}
+
+#accueil[hidden] {
+  display: none;
+}
+
+.affiche {
+  position: relative;
+  width: min(440px, 100%);
+  background: var(--creme);
+  color: var(--encre);
+  border-radius: 6px;
+  box-shadow:
+    0 0 0 6px var(--creme-fonce),
+    0 24px 60px rgba(0, 0, 0, 0.45);
+  padding: 22px 22px 20px;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.affiche h1 {
+  margin: 0;
+  background: var(--rouge);
+  color: var(--creme);
+  font-family: "Futura", "Avenir Next Condensed", "Arial Black", sans-serif;
+  font-weight: 900;
+  font-size: clamp(34px, 9vw, 46px);
+  letter-spacing: 0.02em;
+  text-align: center;
+  padding: 6px 10px 4px;
+  margin: -6px -6px 6px;
+  transform: rotate(-1.2deg);
+}
+
+.affiche .slogan {
+  margin: 4px 0 18px;
+  text-align: center;
+  font-style: italic;
+  color: var(--canard);
+  font-size: 15px;
+}
+
+.tampon {
+  position: absolute;
+  right: 14px;
+  bottom: 12px;
+  border: 2px solid var(--canard);
+  color: var(--canard);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: "Courier New", monospace;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  transform: rotate(-6deg);
+  opacity: 0.75;
+  pointer-events: none;
+}
+
+.onglets {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.onglets button {
+  flex: 1;
+  font: inherit;
+  font-weight: 700;
+  padding: 10px;
+  border: 2px solid var(--encre);
+  background: transparent;
+  color: var(--encre);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.onglets button[aria-selected="true"] {
+  background: var(--encre);
+  color: var(--creme);
+}
+
+.affiche label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 12px 0 4px;
+}
+
+.affiche input[type="text"],
+.affiche input[type="password"] {
+  width: 100%;
+  font: inherit;
+  font-size: 17px; /* ≥ 16 px : pas de zoom automatique sur iPhone */
+  padding: 11px 12px;
+  border: 2px solid var(--encre);
+  border-radius: 4px;
+  background: #fffaf0;
+  color: var(--encre);
+}
+
+.familles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.familles label {
+  margin: 0;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.familles input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.familles .carte-famille {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 10px 4px;
+  border: 2px solid var(--creme-fonce);
+  border-radius: 6px;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.familles .carte-famille strong {
+  font-size: 13px;
+}
+
+.familles .pastille {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+}
+
+.familles input:checked + .carte-famille {
+  border-color: var(--encre);
+  background: #fffaf0;
+  box-shadow: inset 0 0 0 1px var(--encre);
+}
+
+.familles input:focus-visible + .carte-famille {
+  outline: 3px solid var(--ocre);
+}
+
+.affiche .erreur {
+  min-height: 20px;
+  margin: 10px 0 0;
+  color: var(--rouge);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.affiche .entrer {
+  width: 100%;
+  margin-top: 8px;
+  font: inherit;
+  font-weight: 900;
+  font-size: 18px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 14px;
+  min-height: 48px;
+  border: none;
+  border-radius: 4px;
+  background: var(--rouge);
+  color: var(--creme);
+  cursor: pointer;
+}
+
+.affiche .entrer:disabled {
+  opacity: 0.6;
+}
+
+/* ---------- HUD ---------- */
+
+#hud {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  color: var(--hud-texte);
+  font-size: 14px;
+}
+
+#hud[hidden] {
+  display: none;
+}
+
+#hud .bloc {
+  position: absolute;
+  background: var(--hud-fond);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+#hud .identite {
+  top: max(12px, env(safe-area-inset-top));
+  left: max(12px, env(safe-area-inset-left));
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#hud .identite .pastille {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+#hud .etat {
+  top: max(12px, env(safe-area-inset-top));
+  right: max(12px, env(safe-area-inset-right));
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  pointer-events: auto;
+}
+
+#hud .etat button {
+  font: inherit;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin-top: 6px;
+  min-height: 32px;
+  cursor: pointer;
+}
+
+#hud .aide {
+  bottom: max(12px, env(safe-area-inset-bottom));
+  right: max(12px, env(safe-area-inset-right));
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+/* ---------- Joystick tactile (Book 08 §3.4) ---------- */
+
+#joystick {
+  position: fixed;
+  left: max(28px, env(safe-area-inset-left));
+  bottom: max(28px, env(safe-area-inset-bottom));
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
+  background: rgba(20, 24, 32, 0.35);
+  border: 2px solid rgba(242, 239, 230, 0.35);
+  touch-action: none;
+}
+
+#joystick[hidden] {
+  display: none;
+}
+
+#joystick .manche {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 58px;
+  height: 58px;
+  margin: -29px 0 0 -29px;
+  border-radius: 50%;
+  background: rgba(242, 239, 230, 0.8);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+/* ---------- Voile (reconnexion, messages) ---------- */
+
+#voile {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(13, 16, 24, 0.55);
+  color: var(--hud-texte);
+  font-size: 17px;
+  text-align: center;
+  padding: 24px;
+}
+
+#voile[hidden] {
+  display: none;
+}
+
+#voile button {
+  display: block;
+  margin: 14px auto 0;
+  font: inherit;
+  font-weight: 700;
+  padding: 12px 18px;
+  min-height: 44px;
+  border: none;
+  border-radius: 6px;
+  background: var(--rouge);
+  color: var(--creme);
+}
+
+/* ---------- HUD de l'É1 : jauges, horloge, invite, progression, messages, sac, boutons tactiles ---------- */
+
+#hud .identite {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  min-width: 190px;
+}
+
+#hud .identite .nom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#hud .jauge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+#hud .jauge .barre {
+  flex: 1;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+}
+
+#hud .jauge .barre > span {
+  display: block;
+  height: 100%;
+  width: 100%;
+  border-radius: 4px;
+  transition: width 0.4s;
+}
+
+#hud .jauge.faim .barre > span {
+  background: var(--ocre);
+}
+
+#hud .jauge.eau .barre > span {
+  background: #5aa5c8;
+}
+
+#hud .jauge.manque {
+  animation: manque 1s ease-in-out infinite alternate;
+}
+
+@keyframes manque {
+  to {
+    color: #ff8a7a;
+  }
+}
+
+#hud .horloge {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+#hud .mesures {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+#hud .etat .boutons {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+#hud .messages {
+  position: absolute;
+  top: max(84px, calc(env(safe-area-inset-top) + 72px));
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(520px, calc(100vw - 32px));
+  text-align: center;
+}
+
+#hud .messages p {
+  margin: 6px auto 0;
+  display: table;
+  background: var(--hud-fond);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border-radius: 8px;
+  padding: 7px 12px;
+  animation: apparaitre 0.2s ease-out;
+}
+
+@keyframes apparaitre {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+#hud .invite,
+#hud .progression {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: max(70px, calc(env(safe-area-inset-bottom) + 58px));
+  background: var(--hud-fond);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border-radius: 10px;
+  padding: 9px 14px;
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+#hud .invite b {
+  display: inline-block;
+  min-width: 22px;
+  margin-right: 6px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--hud-texte);
+  color: var(--nuit);
+  text-align: center;
+}
+
+#hud .invite .sep {
+  margin: 0 10px;
+  opacity: 0.5;
+}
+
+#hud .progression {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 240px;
+  /* Au-dessus de l'étiquette du mode (Exploration / Combat), pour ne rien recouvrir. */
+  bottom: max(168px, calc(env(safe-area-inset-bottom) + 156px));
+}
+
+#hud .progression .barre {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+}
+
+#hud .progression .barre > span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--hud-texte);
+}
+
+#hud [hidden] {
+  display: none !important;
+}
+
+/* Le sac : un panneau papier, comme le carnet */
+#hud .sac {
+  position: absolute;
+  right: max(12px, env(safe-area-inset-right));
+  top: 50%;
+  transform: translateY(-50%);
+  width: min(340px, calc(100vw - 24px));
+  max-height: min(560px, calc(100dvh - 140px));
+  overflow-y: auto;
+  pointer-events: auto;
+  background: var(--creme);
+  color: var(--encre);
+  border-radius: 8px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  padding: 14px 16px;
+  font-size: 14px;
+}
+
+#hud .sac header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  border-bottom: 2px solid var(--encre);
+  padding-bottom: 6px;
+  margin-bottom: 8px;
+}
+
+#hud .sac h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+#hud .sac .poids-total {
+  flex: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--canard);
+}
+
+#hud .sac ul {
+  list-style: none;
+  margin: 8px 0;
+  padding: 0;
+}
+
+#hud .sac li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px dashed var(--creme-fonce);
+}
+
+#hud .sac li span:first-child {
+  flex: 1;
+}
+
+#hud .sac .poids {
+  color: #7a6a58;
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+}
+
+#hud .sac button {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  border: 2px solid var(--encre);
+  background: transparent;
+  color: var(--encre);
+  border-radius: 4px;
+  padding: 4px 9px;
+  min-height: 32px;
+  cursor: pointer;
+}
+
+#hud .sac button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+#hud .sac .fermer {
+  border: none;
+  font-size: 18px;
+}
+
+#hud .sac .gourde {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+#hud .sac .fabriquer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 10px 0;
+}
+
+#hud .sac .fabriquer button,
+#hud .sac > button.lumiere {
+  background: var(--rouge);
+  color: var(--creme);
+  border-color: var(--rouge);
+}
+
+/* Boutons tactiles (Book 08 §3.4) : A le plus gros, sous le pouce droit */
+#hud .tactile {
+  position: absolute;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(20px, env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-columns: auto auto;
+  grid-template-areas:
+    "mode lumiere"
+    "tourner tourner"
+    "B A";
+  gap: 10px;
+  align-items: end;
+  justify-items: end;
+  pointer-events: auto;
+}
+
+#hud .tactile button {
+  font: inherit;
+  font-weight: 700;
+  color: var(--hud-texte);
+  background: var(--hud-fond);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 2px solid rgba(242, 239, 230, 0.35);
+  border-radius: 999px;
+  min-width: 52px;
+  min-height: 44px;
+  padding: 6px 12px;
+  touch-action: manipulation;
+}
+
+#hud .tactile button:disabled {
+  opacity: 0.45;
+}
+
+#hud .tactile .b-sac {
+  grid-area: sac;
+}
+
+#hud .tactile .b-lumiere {
+  grid-area: lumiere;
+}
+
+#hud .tactile .b-tourner {
+  grid-area: tourner;
+}
+
+#hud .tactile .b-B {
+  grid-area: B;
+  max-width: 120px;
+  font-size: 12px;
+}
+
+#hud .tactile .b-A {
+  grid-area: A;
+  min-width: 84px;
+  min-height: 84px;
+  max-width: 150px;
+  font-size: 13px;
+  background: rgba(200, 54, 43, 0.85);
+  border-color: rgba(244, 236, 216, 0.6);
+}
+
+/* ---------- Écrans étroits (iPhone en portrait) ---------- */
+
+@media (max-width: 560px) {
+  #hud .identite {
+    min-width: 0;
+    width: calc(50vw - 18px);
+    padding: 7px 10px;
+  }
+
+  #hud .identite .nom .texte {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+  }
+
+  #hud .etat {
+    padding: 7px 10px;
+    max-width: calc(50vw - 18px);
+  }
+
+  #hud .etat .boutons button {
+    font-size: 12px;
+    padding: 4px 8px;
+    min-height: 30px;
+  }
+
+  #hud .messages {
+    top: max(118px, calc(env(safe-area-inset-top) + 106px));
+    font-size: 13px;
+  }
+}
+
+/* Boutons d'action tactiles : ronds, A le plus gros sous le pouce droit */
+#hud .tactile .b-A {
+  width: 96px;
+  height: 96px;
+  min-width: 96px;
+  border-radius: 50%;
+  padding: 8px;
+  line-height: 1.15;
+  font-size: 13px;
+}
+
+#hud .tactile .b-B {
+  width: 68px;
+  height: 68px;
+  min-width: 68px;
+  border-radius: 50%;
+  padding: 6px;
+  line-height: 1.1;
+  font-size: 11px;
+  align-self: center;
+}
+
+#hud .tactile {
+  grid-template-areas:
+    "mode lumiere"
+    ". tourner"
+    "B A";
+}
+
+/* ---------- Le sac, version compacte : grille d'icônes et fiche ---------- */
+
+#hud .sac {
+  top: max(84px, calc(env(safe-area-inset-top) + 72px));
+  transform: none;
+  width: min(330px, calc(100vw - 24px));
+  max-height: calc(100dvh - 180px);
+  padding: 10px 12px 12px;
+}
+
+#hud .sac header {
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+#hud .sac h2 {
+  font-size: 17px;
+}
+
+#hud .sac .charge {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--creme-fonce);
+  overflow: hidden;
+}
+
+#hud .sac .charge > span {
+  display: block;
+  height: 100%;
+  background: var(--canard);
+}
+
+#hud .sac .poids-total {
+  flex: none;
+  font-size: 12px;
+}
+
+#hud .sac .grille {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+  gap: 6px;
+}
+
+#hud .sac .case {
+  position: relative;
+  aspect-ratio: 1;
+  min-height: 0;
+  padding: 3px;
+  display: grid;
+  place-items: center;
+  background: #fffaf0;
+  border: 2px solid var(--creme-fonce);
+  border-radius: 8px;
+}
+
+#hud .sac .case svg {
+  width: 100%;
+  height: 100%;
+}
+
+#hud .sac .case.choisie {
+  border-color: var(--encre);
+  box-shadow: inset 0 0 0 1px var(--encre);
+}
+
+#hud .sac .case.brute {
+  background: #e9eee2;
+}
+
+#hud .sac .case .badge {
+  position: absolute;
+  right: 2px;
+  bottom: 1px;
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--encre);
+  background: rgba(244, 236, 216, 0.9);
+  border-radius: 4px;
+  padding: 0 3px;
+  font-variant-numeric: tabular-nums;
+}
+
+#hud .sac .fiche {
+  margin: 8px 0;
+  padding: 8px;
+  min-height: 52px;
+  border-radius: 6px;
+  background: #fffaf0;
+  font-size: 13px;
+}
+
+#hud .sac .fiche p {
+  margin: 4px 0 0;
+  line-height: 1.35;
+}
+
+#hud .sac .fiche .indice {
+  margin: 8px 0;
+  text-align: center;
+  color: #7a6a58;
+  font-style: italic;
+}
+
+#hud .sac .fiche-tete {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#hud .sac .fiche-tete > div {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+#hud .sac .fiche-tete small {
+  color: #7a6a58;
+}
+
+#hud .sac [data-action] {
+  background: var(--rouge);
+  color: var(--creme);
+  border-color: var(--rouge);
+}
+
+#hud .sac .fabriquer {
+  margin: 0;
+  flex-wrap: nowrap;
+  border-top: 1px dashed var(--creme-fonce);
+  padding-top: 8px;
+}
+
+#hud .sac .recette {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+}
+
+#hud .sac .ingredient {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-right: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #9a8a76;
+}
+
+#hud .sac .ingredient.ok {
+  color: var(--canard);
+}
+
+/* Sur téléphone : le sac reste au-dessus des boutons A, B et du joystick. */
+@media (max-width: 560px) {
+  #hud .sac {
+    top: max(118px, calc(env(safe-area-inset-top) + 106px));
+    right: 12px;
+    left: 12px;
+    width: auto;
+    max-height: calc(100dvh - max(118px, calc(env(safe-area-inset-top) + 106px)) - 300px);
+  }
+}
+
+/* ---------- Raccourcis Sac et Fabriquer : en haut à droite, sous l'heure ---------- */
+
+#hud .raccourcis {
+  position: absolute;
+  top: max(98px, calc(env(safe-area-inset-top) + 86px));
+  right: max(12px, env(safe-area-inset-right));
+  display: flex;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+#hud .raccourcis button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  width: 58px;
+  padding: 5px 2px 4px;
+  border-radius: 10px;
+  border: 2px solid rgba(242, 239, 230, 0.25);
+  background: rgba(244, 236, 216, 0.92);
+  color: var(--encre);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+#hud .raccourcis button.actif {
+  border-color: var(--rouge);
+  box-shadow: 0 0 0 2px var(--rouge);
+}
+
+/* Les panneaux (sac, fabrication) s'ouvrent sous les raccourcis */
+#hud .panneau {
+  top: max(162px, calc(env(safe-area-inset-top) + 150px)) !important;
+  max-height: calc(100dvh - 240px) !important;
+}
+
+#hud .panneau.fabrication {
+  position: absolute;
+  right: max(12px, env(safe-area-inset-right));
+  width: min(380px, calc(100vw - 24px));
+  overflow-y: auto;
+  pointer-events: auto;
+  background: var(--creme);
+  color: var(--encre);
+  border-radius: 8px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  padding: 10px 12px 12px;
+  font-size: 14px;
+}
+
+#hud .fabrication header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 2px solid var(--encre);
+  padding-bottom: 6px;
+  margin-bottom: 8px;
+}
+
+#hud .fabrication h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+#hud .fabrication .sous-titre {
+  flex: 1;
+  font-size: 12px;
+  color: var(--canard);
+}
+
+#hud .fabrication .fermer {
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  color: var(--encre);
+  cursor: pointer;
+}
+
+#hud .fabrication .recette {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  margin-bottom: 6px;
+  border-radius: 6px;
+  background: #fffaf0;
+  opacity: 0.7;
+}
+
+#hud .fabrication .recette.possible {
+  opacity: 1;
+  box-shadow: inset 0 0 0 2px var(--canard);
+}
+
+#hud .fabrication .corps {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+#hud .fabrication .corps small {
+  color: #7a6a58;
+  font-size: 11px;
+}
+
+#hud .fabrication .puces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 6px;
+  align-items: center;
+}
+
+#hud .fabrication .ingredient {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #9a8a76;
+}
+
+#hud .fabrication .ingredient.ok {
+  color: var(--canard);
+}
+
+#hud .fabrication .outil {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid #c9b998;
+  color: #9a8a76;
+}
+
+#hud .fabrication .outil.ok {
+  border-color: var(--canard);
+  color: var(--canard);
+}
+
+#hud .fabrication .outil.lent {
+  border-color: var(--ocre);
+  color: var(--ocre);
+}
+
+#hud .fabrication .outil.manque {
+  border-color: var(--rouge);
+  color: var(--rouge);
+}
+
+#hud .fabrication button[data-recette],
+#hud .fabrication button[data-feu] {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  min-height: 36px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 2px solid var(--rouge);
+  background: var(--rouge);
+  color: var(--creme);
+  cursor: pointer;
+}
+
+#hud .fabrication button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* Une recette grisée : « Ce qu'il manque ? » déplie ce qui manque et par quoi le remplacer. */
+#hud .fabrication button.pourquoi {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  min-height: 36px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 2px dashed #9a8a76;
+  background: transparent;
+  color: #6a5a48;
+  cursor: pointer;
+  white-space: nowrap;
+}
+#hud .fabrication button.pourquoi[aria-expanded="true"] {
+  border-style: solid;
+  border-color: var(--ocre);
+  color: var(--encre);
+}
+#hud .fabrication .recette:has(ul.manque) {
+  opacity: 1;
+  box-shadow: inset 0 0 0 2px var(--ocre);
+}
+#hud .fabrication ul.manque {
+  margin: 4px 0 0;
+  padding-left: 16px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--encre);
+}
+#hud .fabrication ul.manque li + li {
+  margin-top: 3px;
+}
+
+@media (max-width: 560px) {
+  #hud .raccourcis {
+    top: max(112px, calc(env(safe-area-inset-top) + 100px));
+  }
+
+  #hud .messages {
+    top: max(178px, calc(env(safe-area-inset-top) + 166px));
+  }
+
+  #hud .panneau {
+    top: max(176px, calc(env(safe-area-inset-top) + 164px)) !important;
+    left: 12px;
+    right: 12px;
+    width: auto !important;
+    max-height: calc(100dvh - max(176px, calc(env(safe-area-inset-top) + 164px)) - 290px) !important;
+  }
+}
+
+/* Charge d'une batterie, dans la fiche du sac */
+#hud .fiche .charge-batterie { display: flex; align-items: center; gap: 8px; margin-top: 6px; white-space: nowrap; font-size: 12px; font-variant-numeric: tabular-nums; }
+#hud .fiche .charge-batterie .charge-barre { display: block; position: relative; flex: 0 0 72px; width: 72px; height: 7px; border-radius: 4px; background: rgba(28, 35, 51, 0.18); overflow: hidden; }
+#hud .fiche .charge-batterie .charge-barre > span { display: block; position: absolute; inset: 0 auto 0 0; height: 100%; background: #e8c547; }
+
+/* Accueil : conseil pour installer le jeu sur l'écran d'accueil du téléphone */
+.affiche .ecran-accueil {
+  margin: 14px 0 22px;
+  padding: 8px 10px;
+  border: 1.5px dashed var(--canard);
+  border-radius: 4px;
+  color: var(--canard);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* Le bouton « Vue » des raccourcis ne sert qu'en paysage sur téléphone */
+#hud .raccourcis .r-tourner {
+  display: none;
+}
+
+/* ---------- Téléphone en paysage : raccourcis en haut au centre, dans l'espace libre ---------- */
+@media (orientation: landscape) and (max-height: 520px) and (pointer: coarse) {
+  #hud .raccourcis {
+    top: max(10px, env(safe-area-inset-top));
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+  }
+
+  #hud .raccourcis .r-tourner {
+    display: flex;
+  }
+
+  #hud .tactile .b-tourner {
+    display: none;
+  }
+
+  #hud .messages {
+    top: max(78px, calc(env(safe-area-inset-top) + 68px));
+  }
+
+  /* Les panneaux s'ouvrent au centre, sous les raccourcis, sans couvrir A/B ni le joystick */
+  #hud .panneau {
+    top: max(76px, calc(env(safe-area-inset-top) + 66px)) !important;
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%);
+    width: min(400px, 46vw) !important;
+    max-height: calc(100dvh - max(86px, calc(env(safe-area-inset-top) + 76px)) - 12px) !important;
+  }
+}
+
+/* ---------- La carte du monde : un vieil atlas annoté (Book 20 §1 bis) ---------- */
+
+.carte {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  grid-template-columns: 1fr minmax(260px, 320px);
+  gap: 14px;
+  padding: max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom))
+    max(14px, env(safe-area-inset-left));
+  background: rgba(20, 24, 32, 0.78);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  pointer-events: auto;
+}
+.carte[hidden] {
+  display: none;
+}
+.carte-feuille {
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.carte-feuille svg {
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  border-radius: 3px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(90, 61, 30, 0.4);
+}
+.carte .estompe {
+  opacity: 0.5;
+  filter: saturate(0.6);
+}
+.carte .arbre { fill: #93a173; stroke: #3b2a1e; stroke-width: 0.8; }
+.carte .mont { fill: #d9ccab; stroke: #3b2a1e; stroke-width: 1.3; stroke-linejoin: round; }
+.carte .neige { fill: none; stroke: #fff; stroke-width: 2.2; stroke-linecap: round; }
+.carte .trait { fill: none; stroke: #3b2a1e; stroke-width: 1.4; stroke-linecap: round; }
+.carte .trait-fin { fill: none; stroke: #3b2a1e; stroke-width: 0.7; }
+.carte .champ { fill: #d8cf9f; stroke: #6b7a4a; stroke-width: 1.4; stroke-dasharray: 2 2.5; }
+.carte .ilot { fill: #c9b99a; stroke: #3b2a1e; stroke-width: 0.8; }
+.carte .cote { fill: none; stroke: #3b2a1e; stroke-width: 1.3; }
+.carte .riviere { fill: none; stroke: #6f9aa4; stroke-width: 4; stroke-linecap: round; }
+.carte .route { fill: none; stroke: #3b2a1e; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
+.carte .route-pale { fill: none; stroke: #3b2a1e; stroke-width: 1.6; stroke-dasharray: 7 4; }
+.carte .pointilles { fill: none; stroke: #5b5b66; stroke-width: 1.4; stroke-dasharray: 2 5; stroke-linecap: round; }
+.carte .trace { fill: none; stroke: #c8362b; stroke-width: 2.2; stroke-dasharray: 1 6; stroke-linecap: round; }
+.carte .crayon-trait { fill: none; stroke: #5b5b66; stroke-width: 1.6; }
+.carte .crayon { font-family: "Bradley Hand", "Segoe Print", "Chalkboard SE", "Comic Sans MS", cursive; font-size: 17px; fill: #4d4d58; }
+.carte .crayon.petit { font-size: 13px; }
+.carte .nom-zone { font-family: Georgia, "Times New Roman", serif; font-style: italic; font-size: 22px; fill: #3b2a1e; letter-spacing: 0.06em; }
+.carte .nom-lieu { font-family: Georgia, serif; font-style: italic; font-size: 15px; fill: #3b2a1e; }
+.carte .nom-petit { font-family: Georgia, serif; font-size: 11px; fill: #3b2a1e; }
+.carte .nom-ouvert { font-family: "Futura", "Avenir Next Condensed", "Arial Narrow", sans-serif; font-weight: 700; font-size: 15px; fill: #3b2a1e; paint-order: stroke; stroke: #ecdfbf; stroke-width: 4px; }
+.carte .enclos { fill: #b9c48e; stroke: #3b2a1e; stroke-width: 1.6; stroke-dasharray: 3 2; }
+.carte .tampon { fill: none; stroke: #1f7a6d; stroke-width: 2; opacity: 0.8; }
+.carte .tampon-texte { font-family: "Courier New", monospace; font-weight: 700; font-size: 10px; fill: #1f7a6d; opacity: 0.85; }
+.carte .cartouche { font-family: Georgia, serif; font-size: 13px; letter-spacing: 0.18em; fill: #3b2a1e; }
+.carte .cartouche-petit { font-family: Georgia, serif; font-style: italic; font-size: 11px; fill: #3b2a1e; }
+.carte .lieu { cursor: pointer; outline: none; }
+.carte .lieu .zone-clic { fill: transparent; stroke: transparent; stroke-width: 2.5; transition: stroke 0.15s; }
+.carte .lieu:hover .zone-clic,
+.carte .lieu:focus-visible .zone-clic { stroke: rgba(200, 54, 43, 0.45); }
+.carte .lieu.choisi .zone-clic { stroke: #c8362b; stroke-dasharray: 4 3; }
+.carte .lieu.ferme .nom-ouvert { opacity: 0.7; }
+.carte .pion { filter: drop-shadow(0 2px 1px rgba(0, 0, 0, 0.35)); pointer-events: none; }
+
+.carte-fiche {
+  align-self: center;
+  background: var(--creme);
+  color: var(--encre);
+  border-radius: 8px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  padding: 16px 18px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.carte-fiche h2 {
+  margin: 0 0 6px;
+  font-family: "Futura", "Avenir Next Condensed", "Arial Black", sans-serif;
+  font-size: 20px;
+  color: var(--rouge);
+}
+.carte-fiche p {
+  margin: 0 0 10px;
+}
+.carte-fiche .trajet {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.carte-fiche .trajet span {
+  background: rgba(28, 35, 51, 0.08);
+  border-radius: 999px;
+  padding: 2px 9px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.carte-fiche .note {
+  font-style: italic;
+  color: var(--canard);
+}
+.carte-fiche .en-route {
+  font-weight: 700;
+  color: var(--rouge);
+}
+.carte-fiche .boutons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.carte-fiche button {
+  font: inherit;
+  font-weight: 700;
+  border-radius: 6px;
+  border: 2px solid var(--encre);
+  background: transparent;
+  color: var(--encre);
+  padding: 8px 14px;
+  min-height: 44px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.carte-fiche button.partir {
+  background: var(--rouge);
+  border-color: var(--rouge);
+  color: var(--creme);
+}
+.carte-fiche button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* En portrait, la fiche passe sous la carte */
+@media (max-aspect-ratio: 1/1) {
+  .carte {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr auto;
+  }
+  .carte-fiche {
+    align-self: end;
+  }
+}
+
+/* Téléphone en paysage : fiche compacte */
+@media (orientation: landscape) and (max-height: 520px) {
+  .carte {
+    grid-template-columns: 1fr 250px;
+    gap: 10px;
+  }
+  .carte-fiche {
+    padding: 10px 12px;
+    font-size: 12.5px;
+  }
+  .carte-fiche h2 {
+    font-size: 17px;
+  }
+}
+
+/* Touches du clavier dans l'invite d'action (ordinateur) */
+#hud .invite kbd {
+  display: inline-block;
+  min-width: 22px;
+  padding: 1px 6px;
+  margin-right: 4px;
+  border-radius: 5px;
+  border: 1px solid rgba(242, 239, 230, 0.55);
+  border-bottom-width: 3px;
+  background: rgba(242, 239, 230, 0.12);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-align: center;
+}
+
+/* Objets gagnés : « +1 branche » qui monte au-dessus du personnage */
+#hud .gains {
+  position: absolute;
+  left: 50%;
+  top: calc(50% - 70px);
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: 4px;
+  pointer-events: none;
+}
+#hud .gain {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px 3px 4px;
+  border-radius: 999px;
+  background: rgba(244, 236, 216, 0.92);
+  color: var(--encre);
+  font-weight: 700;
+  font-size: 14px;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  opacity: 0;
+  animation: gain 1.9s ease-out forwards;
+}
+#hud .gain svg {
+  border-radius: 50%;
+  background: #fffaf0;
+}
+@keyframes gain {
+  0% { opacity: 0; transform: translateY(10px) scale(0.9); }
+  12% { opacity: 1; transform: translateY(0) scale(1); }
+  70% { opacity: 1; transform: translateY(-16px); }
+  100% { opacity: 0; transform: translateY(-34px); }
+}
+
+/* ---------- Combat et santé (É3, lot 3) ---------- */
+
+#hud .jauge.sante .barre > span {
+  background: #c8362b;
+}
+#hud .jauge.endurance .barre > span {
+  /* Un vert franc, lisible sur tous les habillages (le crème d'avant disparaissait sur le papier des Mécanistes). */
+  background: #4f9e72;
+}
+#hud .jauge.endurance.convalescence .barre {
+  /* En convalescence, l'endurance ne remonte qu'à 60 % : on hachure le reste. */
+  background: repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.15) 0 4px, rgba(255, 255, 255, 0.04) 4px 8px);
+}
+#hud .blessures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+#hud .blessures[hidden] {
+  display: none;
+}
+#hud .puce-blessure {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(200, 54, 43, 0.25);
+  border: 1px solid rgba(200, 54, 43, 0.6);
+}
+#hud .puce-blessure.saigne.fort {
+  background: #c8362b;
+  animation: manque 0.6s ease-in-out infinite alternate;
+}
+#hud .puce-blessure.calme {
+  background: rgba(242, 239, 230, 0.12);
+  border-color: rgba(242, 239, 230, 0.35);
+}
+#hud .blessures button {
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 9px;
+  border-radius: 999px;
+  border: none;
+  background: var(--creme);
+  color: var(--encre);
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+/* Le mode (Book 08 §3.3) : il pulse quand un Éteint approche */
+#hud .tactile .b-mode {
+  grid-area: mode;
+  font-size: 12px;
+}
+#hud .tactile .b-mode.combat,
+#hud .mode-clavier.combat {
+  background: rgba(200, 54, 43, 0.85);
+  border-color: rgba(244, 236, 216, 0.6);
+}
+#hud .tactile .b-mode.alerte,
+#hud .mode-clavier.alerte {
+  animation: pulsation 0.8s ease-in-out infinite alternate;
+}
+@keyframes pulsation {
+  from { box-shadow: 0 0 0 0 rgba(200, 54, 43, 0.7); }
+  to { box-shadow: 0 0 0 10px rgba(200, 54, 43, 0); }
+}
+#hud .mode-clavier {
+  position: absolute;
+  left: 50%;
+  bottom: max(118px, calc(env(safe-area-inset-bottom) + 106px));
+  transform: translateX(-50%);
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--hud-fond);
+  border: 1px solid rgba(242, 239, 230, 0.25);
+  font-size: 12px;
+  font-weight: 700;
+}
+#hud .mode-clavier[hidden] {
+  display: none;
+}
+#hud .mode-clavier kbd {
+  display: inline-block;
+  padding: 0 5px;
+  border-radius: 4px;
+  border: 1px solid rgba(242, 239, 230, 0.55);
+  border-bottom-width: 2px;
+  font-family: inherit;
+}
+#hud.en-combat .invite {
+  border: 1px solid rgba(200, 54, 43, 0.7);
+}
+
+/* Saisi : au centre, gros et clair */
+#hud .saisie {
+  position: absolute;
+  left: 50%;
+  top: 30%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  background: rgba(120, 16, 16, 0.85);
+  color: #fff;
+  text-align: center;
+  animation: secousse 0.25s linear infinite;
+}
+#hud .saisie[hidden] {
+  display: none;
+}
+#hud .saisie strong {
+  font-family: "Futura", "Avenir Next Condensed", "Arial Black", sans-serif;
+  font-size: 22px;
+  letter-spacing: 0.04em;
+}
+#hud .saisie .barre {
+  width: 180px;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  overflow: hidden;
+}
+#hud .saisie .barre > span {
+  display: block;
+  height: 100%;
+  background: #f2efe6;
+  transition: width 0.08s;
+}
+@keyframes secousse {
+  0%, 100% { transform: translateX(-50%); }
+  25% { transform: translateX(calc(-50% - 2px)); }
+  75% { transform: translateX(calc(-50% + 2px)); }
+}
+
+/* Morsure : l'écran rougit un instant */
+#hud .flash {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(160, 0, 0, 0) 40%, rgba(160, 0, 0, 0.55) 100%);
+  opacity: 0;
+}
+#hud .flash.actif {
+  animation: flash 0.9s ease-out;
+}
+@keyframes flash {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* La nuit, une lampe allumée : un halo ambré au bord de l'écran — on te voit de loin */
+#hud .halo {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(255, 196, 107, 0) 55%, rgba(255, 196, 107, 0.16) 100%);
+  opacity: 0;
+  transition: opacity 1.2s;
+}
+#hud .halo.actif {
+  opacity: 1;
+  animation: halo 3s ease-in-out infinite alternate;
+}
+@keyframes halo {
+  from { filter: brightness(0.85); }
+  to { filter: brightness(1.15); }
+}
+
+/* L'effondrement : noir, puis le réveil chez soi */
+#hud .effondrement {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px;
+  background: #0b0d12;
+  color: var(--creme);
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+}
+#hud .effondrement[hidden] {
+  display: none;
+}
+#hud .effondrement.actif {
+  animation: effondrement 6s ease-in-out forwards;
+}
+#hud .effondrement .titre {
+  margin: 0;
+  font-family: Georgia, serif;
+  font-style: italic;
+  font-size: 28px;
+}
+#hud .effondrement .suite {
+  margin: 0;
+  max-width: 420px;
+  opacity: 0.8;
+}
+@keyframes effondrement {
+  0% { opacity: 0; }
+  15% { opacity: 1; }
+  70% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Portrait étroit : le panneau d'identité a grandi (santé, endurance) — on resserre les raccourcis */
+@media (max-width: 420px) {
+  #hud .raccourcis {
+    gap: 5px;
+  }
+  #hud .raccourcis button {
+    width: 50px;
+    font-size: 9.5px;
+  }
+}
+
+/* ---------- Les watts et le guichet des Compteurs (É4) ---------- */
+
+#hud .etat .wotts {
+  font-weight: 700;
+  font-size: 13px;
+  color: #e8c547;
+  font-variant-numeric: tabular-nums;
+}
+
+#hud .fiche .energie-grise {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #6b5a44;
+  font-style: italic;
+}
+
+/* Le guichet : l'affiche de l'Abondance (Book 18 §3), tamponnée par les Compteurs */
+#hud .panneau.comptoir {
+  position: absolute;
+  right: max(12px, env(safe-area-inset-right));
+  width: min(420px, calc(100vw - 24px));
+  overflow-y: auto;
+  pointer-events: auto;
+  background: #f2ead6;
+  color: var(--encre);
+  border-radius: 6px;
+  box-shadow: 0 0 0 4px #e3d6b5, 0 16px 40px rgba(0, 0, 0, 0.45);
+  padding: 0 0 14px;
+  font-size: 14px;
+}
+#hud .panneau.comptoir header {
+  display: flex;
+  align-items: stretch;
+  background: var(--rouge);
+  color: var(--creme);
+}
+#hud .panneau.comptoir .bandeau {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 14px 6px;
+}
+#hud .panneau.comptoir .bandeau strong {
+  font-family: "Futura", "Avenir Next Condensed", "Arial Black", sans-serif;
+  font-size: 22px;
+  letter-spacing: 0.08em;
+}
+#hud .panneau.comptoir .bandeau span {
+  font-size: 12px;
+  font-style: italic;
+  opacity: 0.9;
+}
+#hud .panneau.comptoir header .fermer {
+  border: none;
+  background: transparent;
+  color: var(--creme);
+  font-size: 18px;
+  padding: 0 14px;
+  cursor: pointer;
+}
+#hud .panneau.comptoir .bons {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 10px 14px 4px;
+  font-family: "Courier New", monospace;
+}
+#hud .panneau.comptoir .bons strong {
+  font-size: 20px;
+  color: #1f5e66;
+}
+#hud .panneau.comptoir .bons .sur-compte {
+  margin-left: auto;
+  font-size: 12px;
+  opacity: 0.75;
+}
+#hud .panneau.comptoir nav {
+  display: flex;
+  gap: 4px;
+  padding: 6px 14px 0;
+  border-bottom: 2px solid rgba(59, 42, 30, 0.2);
+}
+#hud .panneau.comptoir nav button {
+  font: inherit;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 5px 5px 0 0;
+  background: transparent;
+  color: var(--encre);
+  cursor: pointer;
+}
+#hud .panneau.comptoir nav button.actif {
+  background: var(--encre);
+  color: var(--creme);
+}
+#hud .panneau.comptoir .contenu {
+  padding: 8px 14px 0;
+}
+#hud .panneau.comptoir .lignes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+#hud .panneau.comptoir .lignes li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px dashed rgba(59, 42, 30, 0.2);
+}
+#hud .panneau.comptoir .lignes li.vide {
+  font-style: italic;
+  opacity: 0.7;
+}
+#hud .panneau.comptoir .lignes .nom {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  font-weight: 700;
+  font-size: 13px;
+}
+#hud .panneau.comptoir .lignes .nom small {
+  font-weight: 400;
+  font-size: 11px;
+  opacity: 0.75;
+}
+#hud .panneau.comptoir .prix {
+  font-family: "Courier New", monospace;
+  font-weight: 700;
+  white-space: nowrap;
+}
+#hud .panneau.comptoir .prix.non {
+  font-weight: 400;
+  opacity: 0.6;
+}
+#hud .panneau.comptoir .contenu button {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 9px;
+  min-height: 34px;
+  border-radius: 5px;
+  border: 2px solid var(--encre);
+  background: transparent;
+  color: var(--encre);
+  cursor: pointer;
+  white-space: nowrap;
+  touch-action: manipulation;
+}
+#hud .panneau.comptoir .contenu button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+#hud .panneau.comptoir .explication,
+#hud .panneau.comptoir .avis {
+  margin: 4px 0 8px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+#hud .panneau.comptoir .avis {
+  color: var(--rouge);
+  font-weight: 700;
+}
+#hud .panneau.comptoir .compte {
+  display: flex;
+  gap: 10px;
+  margin: 6px 0 10px;
+}
+#hud .panneau.comptoir .compte div {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 10px;
+  border: 2px solid rgba(59, 42, 30, 0.25);
+  border-radius: 6px;
+}
+#hud .panneau.comptoir .compte span {
+  font-size: 11px;
+  opacity: 0.75;
+}
+#hud .panneau.comptoir .compte strong {
+  font-family: "Courier New", monospace;
+  font-size: 18px;
+}
+#hud .panneau.comptoir .boutons-compte {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+#hud .panneau.comptoir .tampon-guichet {
+  display: block;
+  width: max-content;
+  margin: 12px 14px 0 auto;
+  border: 2px solid #1f7a6d;
+  color: #1f7a6d;
+  border-radius: 4px;
+  padding: 1px 8px;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  font-weight: 700;
+  transform: rotate(-6deg);
+  opacity: 0.8;
+}
+@media (max-width: 560px) {
+  #hud .panneau.comptoir {
+    left: 12px;
+    right: 12px;
+    width: auto;
+  }
+}
+#hud .etat .ligne-haut {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* Le rapport de la base, au retour (É4, lot 2) : une page de carnet */
+#hud .rapport {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(440px, calc(100vw - 32px));
+  max-height: calc(100dvh - 80px);
+  overflow-y: auto;
+  padding: 16px 18px 14px;
+  border-radius: 6px;
+  background: #f2ead6;
+  color: var(--encre);
+  box-shadow: 0 0 0 4px #e3d6b5, 0 18px 50px rgba(0, 0, 0, 0.5);
+  pointer-events: auto;
+  font-size: 14px;
+  line-height: 1.45;
+}
+#hud .rapport[hidden] {
+  display: none;
+}
+#hud .rapport h2 {
+  margin: 0 0 8px;
+  font-family: Georgia, serif;
+  font-style: italic;
+  font-size: 22px;
+}
+#hud .rapport h2 small {
+  font-family: "Courier New", monospace;
+  font-style: normal;
+  font-size: 13px;
+  opacity: 0.7;
+  margin-left: 6px;
+}
+#hud .rapport ul {
+  margin: 0 0 12px;
+  padding-left: 18px;
+}
+#hud .rapport li {
+  margin: 4px 0;
+}
+#hud .rapport .perdu {
+  color: var(--rouge);
+}
+#hud .rapport button {
+  display: block;
+  margin-left: auto;
+  font: inherit;
+  font-weight: 700;
+  padding: 8px 16px;
+  min-height: 40px;
+  border-radius: 6px;
+  border: none;
+  background: var(--rouge);
+  color: var(--creme);
+  cursor: pointer;
+}
+
+/* ---------- L'échange entre joueurs (É4, lot 3) ---------- */
+
+#hud .demande-echange {
+  position: absolute;
+  left: 50%;
+  top: 22%;
+  transform: translateX(-50%);
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: var(--creme);
+  color: var(--encre);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.45);
+  pointer-events: auto;
+  text-align: center;
+  animation: apparaitre 0.2s ease-out;
+}
+#hud .demande-echange[hidden] {
+  display: none;
+}
+#hud .demande-echange p {
+  margin: 0 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#hud .demande-echange .pastille {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+#hud .demande-echange div,
+#hud .panneau.echange .boutons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+#hud .demande-echange button,
+#hud .panneau.echange .boutons button {
+  font: inherit;
+  font-weight: 700;
+  min-height: 40px;
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 2px solid var(--encre);
+  background: transparent;
+  color: var(--encre);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+#hud .demande-echange button.oui,
+#hud .panneau.echange .boutons button.oui {
+  background: var(--canard);
+  border-color: var(--canard);
+  color: var(--creme);
+}
+#hud .panneau.echange .boutons button.oui.actif {
+  background: transparent;
+  color: var(--canard);
+}
+
+#hud .panneau.echange {
+  position: absolute;
+  left: 50%;
+  top: 50% !important;
+  transform: translate(-50%, -50%);
+  width: min(620px, calc(100vw - 24px));
+  max-height: calc(100dvh - 40px) !important;
+  overflow-y: auto;
+  pointer-events: auto;
+  background: var(--creme);
+  color: var(--encre);
+  border-radius: 8px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+  padding: 12px 14px;
+  font-size: 14px;
+}
+#hud .panneau.echange header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+#hud .panneau.echange h2 {
+  margin: 0;
+  font-family: "Futura", "Avenir Next Condensed", "Arial Black", sans-serif;
+  font-size: 19px;
+}
+#hud .panneau.echange header .fermer {
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  cursor: pointer;
+  color: var(--encre);
+}
+#hud .panneau.echange .colonnes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 8px 0;
+}
+#hud .panneau.echange section {
+  border: 2px solid rgba(59, 42, 30, 0.15);
+  border-radius: 6px;
+  padding: 6px 8px;
+  max-height: 46vh;
+  overflow-y: auto;
+}
+#hud .panneau.echange section.recoit {
+  background: rgba(31, 94, 102, 0.06);
+}
+#hud .panneau.echange h3 {
+  margin: 0 0 4px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.75;
+}
+#hud .panneau.echange .lignes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+#hud .panneau.echange .lignes li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0;
+  border-bottom: 1px dashed rgba(59, 42, 30, 0.15);
+  opacity: 0.75;
+}
+#hud .panneau.echange .lignes li.mis {
+  opacity: 1;
+}
+#hud .panneau.echange .lignes li.vide {
+  font-style: italic;
+}
+#hud .panneau.echange .nom {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+#hud .panneau.echange .nom small {
+  font-weight: 400;
+  font-size: 11px;
+  opacity: 0.7;
+}
+#hud .panneau.echange .pas {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+#hud .panneau.echange .pas b {
+  min-width: 18px;
+  text-align: center;
+}
+#hud .panneau.echange .pas button,
+#hud .panneau.echange .wotts-offre button {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--encre);
+  background: transparent;
+  color: var(--encre);
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+#hud .panneau.echange .wotts-offre button {
+  width: auto;
+  border-radius: 999px;
+  padding: 0 8px;
+}
+#hud .panneau.echange button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+#hud .panneau.echange .wotts-offre {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-family: "Courier New", monospace;
+}
+#hud .panneau.echange .wotts-offre span {
+  font-weight: 700;
+}
+#hud .panneau.echange .wotts-offre small {
+  width: 100%;
+  opacity: 0.7;
+}
+#hud .panneau.echange .accords {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 6px 0 10px;
+  font-size: 13px;
+  font-style: italic;
+}
+#hud .panneau.echange .accords .ok {
+  color: var(--canard);
+  font-style: normal;
+  font-weight: 700;
+}
+@media (max-width: 560px) {
+  #hud .panneau.echange .colonnes {
+    grid-template-columns: 1fr;
+  }
+  #hud .panneau.echange section {
+    max-height: 26vh;
+  }
+}
+
+/* ---------- Sommeil et météo (É5) ---------- */
+
+#hud .jauge.sommeil .barre > span {
+  background: #8f8fd6;
+}
+#hud .etat .meteo {
+  font-size: 15px;
+  line-height: 1;
+}
+#hud .dodo {
+  position: absolute;
+  left: 50%;
+  top: 34%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  background: rgba(16, 18, 32, 0.78);
+  color: #dcdcf2;
+  pointer-events: none;
+}
+#hud .dodo[hidden] {
+  display: none;
+}
+#hud .dodo p {
+  margin: 0;
+  font-family: Georgia, serif;
+  font-style: italic;
+  font-size: 18px;
+}
+#hud .dodo .barre {
+  width: 160px;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+}
+#hud .dodo .barre > span {
+  display: block;
+  height: 100%;
+  background: #8f8fd6;
+}
+#hud .dodo small {
+  font-size: 12px;
+  opacity: 0.7;
+}
+/* Endormi : l'écran s'assombrit doucement */
+#hud::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(8, 10, 24, 0.25) 30%, rgba(8, 10, 24, 0.75) 100%);
+  opacity: 0;
+  transition: opacity 1.5s;
+}
+#hud.endormi::before {
+  opacity: 1;
+}
+
+/* ---------- Le carnet du tutoriel et l'aide contextuelle (É5) ---------- */
+
+#hud .carnet {
+  position: absolute;
+  left: max(12px, env(safe-area-inset-left));
+  top: max(200px, calc(env(safe-area-inset-top) + 188px));
+  width: min(300px, calc(50vw - 18px));
+  pointer-events: auto;
+  border-radius: 8px;
+  background: rgba(242, 234, 214, 0.94);
+  color: var(--encre);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.3);
+  font-size: 14px;
+}
+#hud .carnet[hidden] {
+  display: none;
+}
+#hud .carnet .titre {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  font-weight: 600;
+  padding: 8px 12px;
+  min-height: 40px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-family: "Bradley Hand", "Segoe Print", "Chalkboard SE", Georgia, serif;
+}
+#hud .carnet p {
+  margin: 0;
+  padding: 0 12px 6px;
+  line-height: 1.4;
+}
+#hud .carnet .passer {
+  display: block;
+  margin: 0 12px 8px auto;
+  font: inherit;
+  font-size: 12px;
+  border: none;
+  background: transparent;
+  color: var(--canard);
+  text-decoration: underline;
+  cursor: pointer;
+  min-height: 32px;
+}
+@media (max-width: 560px) {
+  #hud .carnet {
+    top: max(222px, calc(env(safe-area-inset-top) + 210px));
+    width: calc(100vw - 24px);
+  }
+}
+/* Téléphone en paysage : le carnet passe à droite, sous l'heure, là où il y a de la place */
+@media (orientation: landscape) and (max-height: 520px) and (pointer: coarse) {
+  #hud .carnet {
+    left: auto;
+    right: max(12px, env(safe-area-inset-right));
+    top: max(118px, calc(env(safe-area-inset-top) + 106px));
+    width: min(260px, 36vw);
+    font-size: 12.5px;
+  }
+}
+
+#hud .messages p.aide {
+  background: rgba(31, 94, 102, 0.9);
+  max-width: 460px;
+}
+#hud .messages p.lecon {
+  background: rgba(242, 234, 214, 0.95);
+  color: var(--encre);
+  font-family: Georgia, serif;
+  font-style: italic;
+  max-width: 460px;
+}
+
+/* ---------- Watty, le logo, l'écran de chargement (É5, lot 2) ---------- */
+
+.affiche h1.avec-logo {
+  background: none;
+  padding: 0;
+  margin: -14px -10px 0;
+  transform: none;
+  display: flex;
+  justify-content: center;
+}
+.affiche h1.avec-logo svg {
+  width: min(300px, 100%);
+  height: auto;
+}
+.lecteur {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+.affiche .watty-coin {
+  position: absolute;
+  right: -34px;
+  top: -46px;
+  transform: rotate(10deg);
+  filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.35));
+  pointer-events: none;
+}
+@media (max-width: 480px) {
+  .affiche .watty-coin {
+    right: -8px;
+    top: -58px;
+    transform: rotate(10deg) scale(0.75);
+  }
+}
+
+#voile .chargement {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  max-width: 420px;
+}
+#voile .chargement .batterie {
+  position: relative;
+  width: 180px;
+  height: 46px;
+  border: 4px solid var(--creme);
+  border-radius: 8px;
+}
+#voile .chargement .batterie::after {
+  content: "";
+  position: absolute;
+  right: -12px;
+  top: 12px;
+  width: 8px;
+  height: 14px;
+  border-radius: 0 3px 3px 0;
+  background: var(--creme);
+}
+#voile .chargement .batterie span {
+  position: absolute;
+  inset: 4px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #e8c547, #f4d96a);
+  transform-origin: left center;
+  animation: charge 2.4s ease-in-out infinite;
+}
+@keyframes charge {
+  0% { transform: scaleX(0.05); }
+  80% { transform: scaleX(1); }
+  100% { transform: scaleX(1); opacity: 0.6; }
+}
+#voile .chargement .etat-chargement {
+  margin: 0;
+  font-weight: 700;
+}
+#voile .chargement .conseil {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.45;
+  opacity: 0.9;
+}
+
+/* Le tampon des Compteurs sous le bouton, jamais dessus */
+.affiche {
+  padding-bottom: 48px;
+}
+
+/* ---------- Le mode photo (É5, lot 2) ---------- */
+
+#hud.en-photo > *:not(.flash) {
+  visibility: hidden;
+}
+.photo {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 240px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(20, 24, 32, 0.82);
+  color: #f2efe6;
+  font-size: 14px;
+}
+.photo[hidden] {
+  display: none;
+}
+.photo label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.photo label span {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
+}
+.photo input,
+.photo select {
+  width: 100%;
+  font: inherit;
+}
+.photo small {
+  opacity: 0.7;
+}
+
+/* ---------- L'habillage par famille (Book 18 §3, É5) : les mêmes informations, trois habits ---------- */
+
+/* 🔥 Charbonniers : plaques de fonte rivetées, liseré laiton, braise */
+#hud.habit-charbonniers .bloc,
+#hud.habit-charbonniers .invite,
+#hud.habit-charbonniers .messages p:not(.aide):not(.lecon),
+#hud.habit-charbonniers .mode-clavier {
+  background:
+    radial-gradient(circle at 7px 7px, #b59048 2px, transparent 2.6px),
+    radial-gradient(circle at calc(100% - 7px) 7px, #b59048 2px, transparent 2.6px),
+    radial-gradient(circle at 7px calc(100% - 7px), #b59048 2px, transparent 2.6px),
+    radial-gradient(circle at calc(100% - 7px) calc(100% - 7px), #b59048 2px, transparent 2.6px),
+    linear-gradient(160deg, rgba(64, 56, 50, 0.94), rgba(36, 31, 28, 0.94));
+  border: 2px solid #8a6a3a;
+  border-radius: 4px;
+  color: #f0e2c8;
+  font-family: "Avenir Next Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  letter-spacing: 0.01em;
+}
+#hud.habit-charbonniers .etat .horloge {
+  color: #ffb36b;
+}
+
+/* ⚡ Voltaïques : le terminal ambre des Compteurs, bricolé */
+#hud.habit-voltaiques .bloc,
+#hud.habit-voltaiques .invite,
+#hud.habit-voltaiques .messages p:not(.aide):not(.lecon),
+#hud.habit-voltaiques .mode-clavier {
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 191, 74, 0.05) 0 1px, transparent 1px 3px),
+    rgba(10, 11, 8, 0.9);
+  border: 1px solid rgba(232, 166, 64, 0.7);
+  border-radius: 3px;
+  color: #ffbf4a;
+  font-family: "Courier New", "Menlo", monospace;
+  text-shadow: 0 0 6px rgba(255, 170, 60, 0.45);
+}
+#hud.habit-voltaiques .jauge .barre {
+  border-radius: 0;
+}
+
+/* ⚙️ Mécanistes : le carnet du bricoleur, papier ligné et encre bleue */
+#hud.habit-mecanistes .bloc,
+#hud.habit-mecanistes .invite,
+#hud.habit-mecanistes .messages p:not(.aide):not(.lecon),
+#hud.habit-mecanistes .mode-clavier {
+  background:
+    repeating-linear-gradient(0deg, transparent 0 17px, rgba(35, 64, 138, 0.14) 17px 18px),
+    linear-gradient(90deg, transparent 0 16px, rgba(200, 54, 43, 0.35) 16px 17px, transparent 17px),
+    rgba(239, 230, 208, 0.95);
+  border: none;
+  border-radius: 2px 8px 6px 3px;
+  color: #23408a;
+  font-family: "Bradley Hand", "Segoe Print", "Chalkboard SE", "Comic Sans MS", cursive;
+  box-shadow: 2px 3px 0 rgba(0, 0, 0, 0.18);
+}
+#hud.habit-mecanistes .bloc button,
+#hud.habit-mecanistes .invite kbd {
+  color: #23408a;
+  border-color: rgba(35, 64, 138, 0.5);
+}
+#hud.habit-mecanistes .jauge .barre {
+  background: rgba(35, 64, 138, 0.15);
+}
+
+/* Le choix de la carnation (Book 14 §3) */
+.affiche .carnations {
+  display: flex;
+  gap: 12px;
+  margin: 4px 0 6px;
+}
+.affiche .teinte input {
+  position: absolute;
+  opacity: 0;
+}
+.affiche .teinte span {
+  display: block;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  box-shadow: inset 0 0 0 2px rgba(59, 42, 30, 0.35);
+  cursor: pointer;
+}
+.affiche .teinte input:checked + span {
+  border-color: var(--rouge);
+}
+.affiche .teinte input:focus-visible + span {
+  outline: 2px solid var(--canard);
+  outline-offset: 2px;
+}
+
+/* ---------- Accessibilité sur téléphone (Book 21 §5.4.4) : textes ≥ 14 px, zones tactiles ≥ 44 px ----------
+   Restent plus petits, par manque de place et parce qu'ils doublent une icône ou un libellé accessible :
+   les légendes sous les icônes des raccourcis, les badges de quantité, les tampons, le cartouche de la carte. */
+@media (pointer: coarse) {
+  .affiche label,
+  .affiche .ecran-accueil,
+  .familles .carte-famille,
+  .familles .carte-famille strong,
+  #hud .messages,
+  #hud .messages p,
+  #hud .sac .fiche,
+  #hud .sac .recette,
+  #hud .fiche .energie-grise,
+  #hud .fiche .charge-batterie,
+  #hud .carnet,
+  #hud .carnet .passer,
+  #hud .panneau.comptoir .lignes .nom,
+  #hud .panneau.comptoir .contenu button,
+  #hud .panneau.comptoir .avis,
+  #hud .panneau.comptoir .explication,
+  #hud .panneau.comptoir nav button,
+  #hud .panneau.echange .nom,
+  #hud .panneau.echange .accords,
+  #hud .dodo small,
+  #hud .tactile .b-mode,
+  #hud .blessures button,
+  .carte-fiche {
+    font-size: 14px;
+  }
+  #hud .puce-blessure,
+  #hud .tactile .b-B,
+  #hud .etat .boutons button,
+  #hud .fabrication .ingredient,
+  #hud .sac .ingredient,
+  .carte-fiche .trajet span {
+    font-size: 13px;
+  }
+  #hud .blessures button,
+  #hud .carnet .passer,
+  #hud .carnet .titre,
+  #hud .panneau.comptoir .contenu button,
+  #hud .panneau.echange .boutons button,
+  #hud .etat .boutons button {
+    min-height: 44px;
+  }
+  #hud .panneau.echange .pas button,
+  #hud .panneau.echange .wotts-offre button {
+    min-width: 44px;
+    height: 44px;
+  }
+  /* Le bloc de l'heure a grandi : les raccourcis descendent d'autant en portrait */
+  @media (max-width: 560px) {
+    #hud .raccourcis {
+      top: max(126px, calc(env(safe-area-inset-top) + 114px));
+    }
+    #hud .panneau {
+      top: max(190px, calc(env(safe-area-inset-top) + 178px)) !important;
+    }
+    #hud .carnet {
+      top: max(236px, calc(env(safe-area-inset-top) + 224px));
+    }
+  }
+}
+
+/* ---------- L'apparence du personnage (Book 14 §3) : juste après le pseudo et la famille ---------- */
+
+.etape-apparence[hidden] {
+  display: none;
+}
+.affiche.apparence {
+  width: min(880px, 100%);
+}
+.apparence h2 {
+  margin: 0;
+  font-family: "Futura", "Avenir Next Condensed", "Arial Black", sans-serif;
+  font-size: 26px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.apparence .sous-titre {
+  margin: 2px 0 12px;
+  color: #6b5a4a;
+  font-size: 14px;
+}
+.apparence-corps {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(280px, 1.1fr);
+  gap: 16px;
+}
+.apparence .apercu {
+  position: relative;
+  min-height: 420px;
+  border-radius: 6px;
+  background:
+    radial-gradient(ellipse at 50% 35%, rgba(255, 250, 240, 0.9), transparent 70%),
+    linear-gradient(180deg, #e9dfc6, #d8ccab);
+  box-shadow: inset 0 0 0 2px rgba(59, 42, 30, 0.2);
+  overflow: hidden;
+}
+.apparence .apercu canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: grab;
+}
+.apparence .chargement-apercu,
+.apparence .aide-apercu {
+  position: absolute;
+  left: 0;
+  right: 0;
+  margin: 0;
+  text-align: center;
+  font-size: 14px;
+  color: #6b5a4a;
+  pointer-events: none;
+}
+.apparence .chargement-apercu {
+  top: 45%;
+}
+.apparence .aide-apercu {
+  bottom: 8px;
+}
+.apparence .reglages {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 520px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.apparence fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+.apparence legend {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 4px;
+}
+.apparence legend output {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  margin-left: 6px;
+  color: #6b5a4a;
+}
+.apparence .choix {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.apparence .choix button {
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 6px;
+  border: 2px solid rgba(59, 42, 30, 0.35);
+  background: #fffaf0;
+  color: var(--encre);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.apparence .choix button[aria-pressed="true"] {
+  border-color: var(--encre);
+  background: var(--encre);
+  color: var(--creme);
+}
+.apparence .pastilles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.apparence .pastilles button {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  box-shadow: inset 0 0 0 2px rgba(59, 42, 30, 0.35);
+  cursor: pointer;
+}
+.apparence .pastilles button[aria-pressed="true"] {
+  border-color: var(--rouge);
+}
+.apparence input[type="range"] {
+  width: 100%;
+  min-height: 44px;
+  accent-color: var(--rouge);
+}
+.actions-apparence {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+.actions-apparence .secondaire {
+  min-height: 48px;
+  padding: 0 14px;
+  border-radius: 6px;
+  border: 2px solid var(--encre);
+  background: transparent;
+  color: var(--encre);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.actions-apparence .entrer {
+  flex: 1;
+  margin: 0;
+}
+@media (max-width: 720px) {
+  .apparence-corps {
+    grid-template-columns: 1fr;
+  }
+  .apparence .apercu {
+    min-height: 0;
+    height: 42vh;
+  }
+  .apparence .reglages {
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+/* ---------- Le panneau « Commandes » : rappel et réassignation des touches (Book 08 §3) ---------- */
+
+#hud .panneau.commandes {
+  position: absolute;
+  left: 50%;
+  top: max(70px, env(safe-area-inset-top));
+  bottom: auto;
+  transform: translateX(-50%);
+  z-index: 12;
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100dvh - 190px);
+  overflow-y: auto;
+  pointer-events: auto;
+  background: rgba(20, 24, 32, 0.94);
+  color: var(--hud-texte);
+  border-radius: 10px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+  padding: 12px 16px 16px;
+}
+#hud .panneau.commandes[hidden] {
+  display: none;
+}
+.panneau.commandes .entete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.panneau.commandes h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.panneau.commandes .fermer {
+  min-width: 40px;
+  min-height: 40px;
+  border: 0;
+  border-radius: 6px;
+  background: rgba(242, 239, 230, 0.08);
+  color: inherit;
+  font-size: 18px;
+  cursor: pointer;
+}
+.panneau.commandes .explication,
+.panneau.commandes .note {
+  margin: 4px 0 10px;
+  font-size: 14px;
+  opacity: 0.85;
+}
+.panneau.commandes .note {
+  color: #ffd27a;
+}
+.table-commandes {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.table-commandes td {
+  padding: 4px 6px;
+  border-bottom: 1px solid rgba(242, 239, 230, 0.12);
+  vertical-align: middle;
+}
+.table-commandes td:last-child {
+  text-align: right;
+  white-space: nowrap;
+}
+.table-commandes .touche {
+  min-width: 64px;
+  min-height: 36px;
+  padding: 0 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(242, 239, 230, 0.35);
+  background: rgba(242, 239, 230, 0.06);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.table-commandes .touche:hover {
+  border-color: #ffd27a;
+}
+.table-commandes .touche.attente {
+  border-color: #ffd27a;
+  color: #ffd27a;
+}
+.table-commandes .aussi {
+  opacity: 0.7;
+  font-size: 13px;
+}
+.panneau.commandes .retablir {
+  margin-top: 12px;
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(242, 239, 230, 0.35);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* ---------- Le coffre de rangement, et jeter un objet par terre ---------- */
+
+#hud .sac .jeter {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+#hud .sac .jeter button {
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 6px;
+  border: 1px solid var(--encre);
+  background: transparent;
+  color: var(--encre);
+  font: inherit;
+  cursor: pointer;
+}
+#hud .panneau.coffre {
+  position: absolute;
+  left: 50%;
+  top: max(84px, calc(env(safe-area-inset-top) + 72px));
+  transform: translateX(-50%);
+  width: min(620px, calc(100vw - 24px));
+  max-height: calc(100dvh - 180px);
+  overflow-y: auto;
+  pointer-events: auto;
+  background: var(--creme);
+  color: var(--encre);
+  border-radius: 8px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  padding: 10px 14px 14px;
+  font-size: 14px;
+}
+#hud .panneau.coffre[hidden] {
+  display: none;
+}
+#hud .panneau.coffre header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 2px solid var(--encre);
+  padding-bottom: 6px;
+  margin-bottom: 8px;
+}
+#hud .panneau.coffre h2 {
+  margin: 0;
+  font-size: 18px;
+}
+#hud .panneau.coffre .fermer {
+  min-width: 40px;
+  min-height: 40px;
+  border: 0;
+  background: transparent;
+  font-size: 18px;
+  color: var(--encre);
+  cursor: pointer;
+}
+#hud .panneau.coffre .mode-pile {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+#hud .panneau.coffre .mode-pile button {
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 6px;
+  border: 1px solid var(--encre);
+  background: transparent;
+  color: var(--encre);
+  font: inherit;
+  cursor: pointer;
+}
+#hud .panneau.coffre .mode-pile button[aria-pressed="true"] {
+  background: var(--encre);
+  color: var(--creme);
+}
+#hud .panneau.coffre .colonnes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+#hud .panneau.coffre h3 {
+  margin: 0 0 6px;
+  font-size: 14px;
+}
+#hud .panneau.coffre h3 small {
+  font-weight: 400;
+  opacity: 0.75;
+}
+#hud .panneau.coffre .grille {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+  gap: 6px;
+}
+#hud .panneau.coffre .case {
+  position: relative;
+  aspect-ratio: 1;
+  min-height: 44px;
+  padding: 3px;
+  display: grid;
+  place-items: center;
+  background: #fffaf0;
+  border: 2px solid var(--creme-fonce);
+  border-radius: 8px;
+  cursor: pointer;
+}
+#hud .panneau.coffre .case svg {
+  width: 100%;
+  height: 100%;
+}
+#hud .panneau.coffre .case .badge {
+  position: absolute;
+  right: 2px;
+  bottom: 1px;
+  font-size: 11px;
+  font-weight: 800;
+  background: rgba(244, 236, 216, 0.9);
+  border-radius: 4px;
+  padding: 0 2px;
+}
+#hud .panneau.coffre .indice {
+  margin: 6px 0 0;
+  font-size: 13px;
+  opacity: 0.7;
+}
+@media (max-width: 560px) {
+  #hud .panneau.coffre .colonnes {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* La jauge d'une action longue (geste de plus de 5 s, fabrication) : le pourcentage, et comment s'arrêter. */
+#hud .progression .ligne-progression {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+#hud .progression .pourcent {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #ffd27a;
+}
+#hud .progression .barre {
+  height: 9px;
+  border-radius: 5px;
+}
+#hud .progression .barre > span {
+  background: #ffd27a;
+}
+#hud .progression .arreter {
+  font-size: 11px;
+  opacity: 0.75;
+}
+/* Plus de grosse barre : l'anneau autour de la cible fait la jauge ; une petite étiquette le suit, juste dessous. */
+#hud .progression {
+  bottom: auto;
+  min-width: 0;
+  gap: 1px;
+  padding: 4px 9px;
+  border-radius: 8px;
+  font-size: 12px;
+  transform: translateX(-50%);
+  text-align: center;
+  pointer-events: none;
+}
+#hud .progression .ligne-progression {
+  gap: 8px;
+}
+
+/* ---------- Les jauges s'expliquent au toucher ---------- */
+
+#hud .jauge[data-jauge] {
+  pointer-events: auto;
+  cursor: pointer;
+  border-radius: 4px;
+}
+#hud .jauge[data-jauge]:focus-visible,
+#hud .jauge.ouverte {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+#hud .explication-jauge {
+  pointer-events: auto;
+  max-width: 260px;
+  margin-top: 4px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #fffaf0;
+  color: #3a2e22;
+  font-family: system-ui, sans-serif;
+  font-size: 12px;
+  line-height: 1.4;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+}
+#hud .explication-jauge[hidden] {
+  display: none;
+}
+#hud .explication-jauge strong {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 13px;
+}
+#hud .explication-jauge p {
+  margin: 0;
+}
+
+/* Le compteur de l'étape du tutoriel (« Branches 2/3 · Pierres 1/5 »), visible même carnet fermé. */
+#hud .carnet .progres-tuto {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  margin-top: 4px;
+}
+#hud .carnet .progres-tuto span {
+  font-size: 12px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  opacity: 0.85;
+  font-variant-numeric: tabular-nums;
+}
+#hud .carnet .progres-tuto span.fait {
+  background: #4f9e72;
+  border-color: #4f9e72;
+  color: #fff;
+  opacity: 1;
+}
+
+/* Sans sac (perdu à l'effondrement) : on le dit dans le panneau, avec la solution. */
+#hud .sac .sans-sac {
+  flex-basis: 100%;
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--rouge);
+}
+
+/* ---------- Choisir où construire (2026-10-08) ---------- */
+#hud .pose {
+  position: absolute;
+  left: 50%;
+  bottom: max(110px, calc(env(safe-area-inset-bottom) + 98px));
+  transform: translateX(-50%);
+  max-width: min(560px, calc(100vw - 24px));
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--hud-fond);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  pointer-events: auto;
+  text-align: center;
+}
+#hud .pose[hidden] {
+  display: none;
+}
+#hud .pose .texte-pose {
+  margin: 0 0 8px;
+  font-size: 14px;
+  line-height: 1.35;
+}
+#hud .pose .texte-pose small {
+  opacity: 0.8;
+  font-size: 12px;
+}
+#hud .pose .non {
+  color: #ff8a7a;
+  font-weight: 700;
+}
+#hud .pose .boutons-pose {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+#hud .pose button {
+  font: inherit;
+  font-size: 13px;
+  min-height: 38px;
+  padding: 4px 12px;
+  border-radius: 6px;
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+#hud .pose button.poser {
+  background: var(--rouge);
+  border-color: var(--rouge);
+  color: var(--creme);
+  font-weight: 700;
+}
+#hud .pose button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Le numéro de version, discret, sous la carte de l'accueil. */
+.version-jeu {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  opacity: 0.6;
+  text-align: right;
+}

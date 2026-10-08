@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "watt-now",
+      "runtimeExecutable": "/opt/homebrew/bin/node",
+      "runtimeArgs": ["code/scripts/dev.mjs"],
+      "port": 5173
+    }
+  ]
+}

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Le réveil</title>
+<style>
+:root{--bg:#f3ece0;--card:#fbf7ef;--ink:#2b1d12;--muted:#6b5a48;--line:#d8ccb6;--accent:#a8332a;--on:#2f6f78}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1a1714;--card:#24201b;--ink:#efe6d6;--muted:#b3a58f;--line:#3d352c;--accent:#e0705f;--on:#5fb3bd}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:860px;margin:0 auto;padding:24px 16px 48px}
+h1{font-size:24px;font-weight:600;margin:0 0 4px}
+h2{font-size:17px;font-weight:600;margin:0 0 8px}
+p.sub{color:var(--muted);margin:0 0 20px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:0 0 14px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button{font:inherit;font-size:14px;padding:7px 12px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+button:disabled{opacity:.45;cursor:default}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.lay{font-size:13px;padding:5px 10px}
+button.lay.on{border-color:var(--on);color:var(--on);font-weight:600}
+.bar{height:8px;border-radius:4px;background:var(--line);overflow:hidden;margin:12px 0 4px;position:relative}
+.bar>span{display:block;height:100%;width:0;background:var(--accent)}
+.bar>i{position:absolute;top:0;bottom:0;width:2px;background:var(--bg)}
+.pos{font-size:14px;color:var(--muted)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+td,th{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;color:var(--muted)}
+.dl a{display:inline-block;margin:6px 12px 0 0;color:var(--on);font-size:14px}
+label.chk{font-size:14px;display:inline-flex;gap:6px;align-items:center}
+.small{font-size:13px;color:var(--muted)}
+</style>
+</head>
+<body>
+<main>
+<h1>Le réveil et le thème principal</h1>
+<p class="sub">Moment-vitrine 1 (Book 21 §6.1.1) : le jingle publicitaire de Watty sur une radio qui grésille, la coupure de courant, le silence, puis le thème principal qui naît de sons trouvés. Le motif du jingle devient le thème du jeu. Cordes, flûte, harpe, glockenspiel, marimba et percussions : échantillons libres (VSCO 2 CE, CC0) ; orgue, voix, nappes électroniques et sons trouvés : synthèse.</p>
+
+<div class="card">
+<div class="row">
+<button class="primary" id="play" disabled>Chargement…</button>
+<button id="jouer" disabled>▶ Jouer (vers le terrain)</button>
+<label class="chk"><input type="checkbox" id="boucle" checked> Boucler la fin (écran titre qui attend)</label>
+</div>
+<div class="row" style="margin-top:10px" id="lays"></div>
+<div class="bar"><span id="fill"></span><i style="left:7.7%"></i><i style="left:23.1%"></i><i style="left:38.5%"></i><i style="left:53.8%"></i><i style="left:69.2%"></i><i style="left:84.6%"></i></div>
+<div class="pos" id="pos">—</div>
+<p class="small" id="charge"></p>
+</div>
+
+<div class="card">
+<h2>Le plan</h2>
+<table>
+<tr><th>Mesures</th><th>Partie</th><th>Ce qu'on entend</th></tr>
+<tr><td>0-3</td><td>Le réveil</td><td>Jingle Watty à la radio (do majeur, orgue des années 60, voix « Watt Now? »), coupure de courant, silence</td></tr>
+<tr><td>4-11</td><td>Naissance</td><td>Des sons trouvés épars se calent peu à peu sur la grille 3+3+2 ; bourdon de ré, violoncelles, la harpe pose ré, la, mi</td></tr>
+<tr><td>12-19</td><td>🔥 Charbonniers</td><td>Ré dorien : violons en nappe, le motif au violon solo (la ré fa la si la, puis la question la → ré)</td></tr>
+<tr><td>20-27</td><td>⚡ Voltaïques</td><td>Si mineur harmonique : l'onde douce, le motif au glockenspiel en écho</td></tr>
+<tr><td>28-35</td><td>⚙️ Mécanistes</td><td>Ré mixolydien : le motif à la flûte, marimba, harpe, bambou</td></tr>
+<tr><td>36-43</td><td>Les trois ensemble</td><td>Ré lydien : violon et flûte à l'octave, le sol♯</td></tr>
+<tr><td>44-51</td><td>Queue bouclable</td><td>Ré lydien, très doux : l'écran titre qui attend</td></tr>
+</table>
+</div>
+
+<div class="card">
+<h2>Exporter</h2>
+<div class="row"><button id="wav" disabled>Mixage en WAV</button><button id="stems" disabled>Les 5 stems en WAV</button></div>
+<div class="dl" id="dl"></div>
+</div>
+</main>
+
+<script src="../esquisses/js/moteur.js"></script>
+<script src="echantillonneur.js"></script>
+<script src="theme.js"></script>
+<script>
+(function () {
+  const { Player, renderWav, lib: L } = window.WattMusique, th = window.WattThemePrincipal;
+  const $ = (s) => document.querySelector(s);
+  const NOMS = { radio: 'Radio', rythmique: 'Rythmique', basse: 'Basse', harmonie: 'Harmonie', melodie: 'Mélodie' };
+  const PARTIES = [[0, 'le réveil'], [4, 'naissance'], [12, 'Charbonniers'], [20, 'Voltaïques'], [28, 'Mécanistes'], [36, 'les trois ensemble'], [44, 'queue bouclable']];
+  let ctx = null, p = null, aube = null;
+  function audio() { if (!ctx) { const AC = window.AudioContext || window.webkitAudioContext; ctx = new AC({ latencyHint: 'playback' }); } if (ctx.state !== 'running') ctx.resume(); return ctx; }
+
+  th.mix.couches.forEach((k) => {
+    const b = document.createElement('button'); b.className = 'lay on'; b.textContent = NOMS[k]; b.dataset.l = k;
+    b.onclick = () => { if (!p) return; p.layerOn[k] = !p.layerOn[k]; b.classList.toggle('on', p.layerOn[k]); p.applyLayers(); };
+    $('#lays').appendChild(b);
+  });
+
+  /* Chargement des échantillons (décodés une fois, utilisés en direct et pour l'export) */
+  (async () => {
+    const dec = new (window.AudioContext || window.webkitAudioContext)();
+    await window.WattEchantillons.charger(dec, '../banques/', th.instruments, (f, n) => { $('#charge').textContent = 'Échantillons : ' + f + ' / ' + n; });
+    dec.close();
+    $('#charge').textContent = 'Échantillons chargés.';
+    $('#play').disabled = false; $('#play').textContent = 'Écouter'; $('#wav').disabled = false; $('#stems').disabled = false;
+  })();
+
+  $('#play').onclick = () => {
+    if (p && p.timer) { p.stop(); return; }
+    if (aube) { aube.stop(); aube = null; }
+    p = new Player(th); p.boucler = $('#boucle').checked;
+    document.querySelectorAll('.lay').forEach((b) => { p.layerOn[b.dataset.l] = b.classList.contains('on'); });
+    p.onBar = (b, sec) => {
+      $('#fill').style.width = Math.min(100, (b + 1) / th.bars * 100) + '%';
+      const part = PARTIES.filter(([m]) => m <= b).pop()[1];
+      $('#pos').textContent = 'Mesure ' + (b + 1) + ' / ' + th.bars + ' · ' + part;
+    };
+    p.onStop = () => { $('#play').textContent = 'Écouter'; $('#jouer').disabled = true; };
+    p.start(audio(), 0); $('#play').textContent = 'Arrêter'; $('#jouer').disabled = false;
+  };
+  $('#boucle').onchange = () => { if (p) p.boucler = $('#boucle').checked; };
+
+  /* « Jouer » : le thème s'efface en 5 s, et l'on arrive au petit matin sur le terrain : vent, oiseaux, Fond seul */
+  $('#jouer').onclick = () => {
+    if (!p || !p.timer) return;
+    const c = ctx, G0 = p.G, now = c.currentTime;
+    G0.out.gain.cancelScheduledValues(now); G0.out.gain.setValueAtTime(G0.out.gain.value, now); G0.out.gain.linearRampToValueAtTime(0, now + 5);
+    clearInterval(p.timer); p.timer = null; const old = p; setTimeout(() => { try { G0.out.disconnect(); } catch (e) {} old.onStop && old.onStop(); }, 6000);
+    $('#jouer').disabled = true; $('#pos').textContent = 'Le petit matin sur le terrain : vent, oiseaux, Fond seul.';
+    const G = L.buildGraph(c, { rt: [5, 4, 1.8], predelay: 0.03, verbWet: 0.5, tone: 9000, trim: {} });
+    const t = now + 2.5, dur = 90;
+    L.vent(c, G, 'fond', t, dur, 1, { gain: 0.02, center: 420 });
+    L.souffleAccorde(c, G, 'fond', t + 1, 38, dur, 1, { couleur: 'fond', gain: 0.03, attack: 8, release: 5 });
+    L.souffleAccorde(c, G, 'fond', t + 6, 45, dur - 6, 1, { couleur: 'fond', gain: 0.018, attack: 8, release: 5, pan: 0.25 });
+    L.feuillage(c, G, 'rythmique', t, dur, 1, { gain: 0.015 });
+    for (let x = 3; x < dur; x += L.rnd(2.5, 9)) L.oiseau(c, G, 'effets', t + x, { gain: 0.02 });
+    aube = { stop: () => { G.out.gain.setTargetAtTime(0, c.currentTime, 0.5); setTimeout(() => { try { G.out.disconnect(); } catch (e) {} }, 2500); } };
+    $('#play').textContent = 'Écouter';
+  };
+
+  /* Exports */
+  function lien(blob, nom) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nom; a.textContent = 'Télécharger ' + nom; $('#dl').appendChild(a); }
+  $('#wav').onclick = async (e) => {
+    const b = e.currentTarget; b.disabled = true; b.textContent = 'Rendu en cours…';
+    try { const { blob } = await renderWav(th, null, 48000); lien(blob, 'watt-now_theme-principal_mix.wav'); } catch (err) { $('#dl').textContent = 'Échec : ' + err.message; }
+    b.disabled = false; b.textContent = 'Mixage en WAV';
+  };
+  $('#stems').onclick = async (e) => {
+    const b = e.currentTarget; b.disabled = true;
+    for (const k of th.mix.couches) {
+      b.textContent = 'Rendu : ' + NOMS[k] + '…';
+      const on = {}; th.mix.couches.forEach((x) => on[x] = x === k);
+      try { const { blob } = await renderWav(th, on, 48000); lien(blob, 'watt-now_theme-principal_' + k + '.wav'); } catch (err) { $('#dl').textContent = 'Échec : ' + err.message; break; }
+    }
+    b.disabled = false; b.textContent = 'Les 5 stems en WAV';
+  };
+})();
+</script>
+</body>
+</html>

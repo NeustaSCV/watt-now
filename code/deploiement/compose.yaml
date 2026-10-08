@@ -1,0 +1,30 @@
+# Le jeu sur le Raspberry Pi (Book 17 §5). Envoyé sur le Pi par deployer.sh, avec l'image déjà construite.
+# Les données (base, réglages, sauvegardes) sont dans ./donnees, à côté de ce fichier : elles survivent aux mises à jour.
+
+services:
+  jeu:
+    # « courante » : la version qui tourne (deployer.sh la pose ; chaque version garde aussi son propre numéro).
+    image: watt-now:courante
+    container_name: watt-now
+    restart: unless-stopped
+    # Le jeu tourne sous l'utilisateur du Pi qui le déploie (.env, écrit par deployer.sh) : il lit sa clé privée
+    # (droits 600) et écrit dans ./donnees, sans rien ouvrir aux autres.
+    user: "${WATT_UID:-1000}:${WATT_GID:-1000}"
+    ports:
+      # Le Pi a déjà d'autres services : le jeu est publié sur le port 1234 (réglable dans .env : WATT_PORT).
+      - "${WATT_PORT:-1234}:8080"
+    volumes:
+      - ./donnees:/app/serveur/donnees
+      # Pour copier les sauvegardes hors du Pi (Book 17 §5.4) : monter un disque externe ici, par exemple
+      # - /mnt/disque-externe/watt-now:/app/serveur/donnees/sauvegardes
+    environment:
+      TZ: Europe/Paris
+    # Un Pi 4 partagé avec d'autres services : le jeu ne prend pas plus de 2 cœurs ni 768 Mo.
+    cpus: 2
+    mem_limit: 768m
+    stop_grace_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

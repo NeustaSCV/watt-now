@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "ask": [
+      "Bash(docker *)",
+      "Bash(docker-compose *)",
+      "Bash(podman *)",
+      "Bash(sudo *)",
+      "Bash(brew *)",
+      "Bash(npm install -g *)",
+      "Bash(npm i -g *)",
+      "Bash(npm install --global *)",
+      "Bash(pnpm add -g *)",
+      "Bash(yarn global *)",
+      "Bash(pip install *)",
+      "Bash(pip3 install *)",
+      "Bash(pipx *)",
+      "Bash(launchctl *)",
+      "Bash(defaults write *)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/garde-perimetre.py\"",
+            "statusMessage": "Vérification du périmètre du projet"
+          }
+        ]
+      }
+    ]
+  }
+}

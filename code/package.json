@@ -1,0 +1,37 @@
+{
+  "name": "watt-now",
+  "private": true,
+  "version": "0.1.1",
+  "description": "Watt Now? — jeu de survie multijoueur dans le navigateur (phase 0a)",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:iphone": "WATT_HTTPS=1 node scripts/dev.mjs",
+    "serveur": "node --disable-warning=ExperimentalWarning serveur/src/index.ts",
+    "client": "vite --config client/vite.config.ts",
+    "build": "vite build --config client/vite.config.ts",
+    "prod": "npm run build && NODE_ENV=production node --disable-warning=ExperimentalWarning serveur/src/index.ts",
+    "test": "node --disable-warning=ExperimentalWarning --test \"commun/src/**/*.test.ts\" \"serveur/src/**/*.test.ts\" \"client/src/**/*.test.ts\"",
+    "verif": "tsc -p tsconfig.json",
+    "bilan": "node --disable-warning=ExperimentalWarning scripts/bilan-mesures.ts",
+    "reglages": "node --disable-warning=ExperimentalWarning scripts/reglages.ts"
+  },
+  "dependencies": {
+    "three": "^0.186.1",
+    "ws": "^8.22.0"
+  },
+  "devDependencies": {
+    "@gltf-transform/core": "^4.5.1",
+    "@gltf-transform/functions": "^4.5.1",
+    "@types/node": "^26.6.4",
+    "@types/three": "^0.186.0",
+    "@types/ws": "^8.18.2",
+    "@vitejs/plugin-basic-ssl": "^2.3.0",
+    "meshoptimizer": "^1.3.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.3"
+  }
+}

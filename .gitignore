@@ -1,0 +1,15 @@
+# Watt Now? — ce qui ne va pas dans l'historique (voir aussi code/.gitignore)
+
+# Brouillons, sauvegardes de travail, caches (règle du projet : .claude-travail/)
+.claude-travail/
+.npm-cache/
+.DS_Store
+
+# Lourd ou sous licence d'un tiers : reste sur le disque, hors de l'historique
+download/
+musique/banques/
+musique/production/
+code/client/public/assets/musique/
+
+# Sorties des workflows BMAD (brouillons des agents)
+outils/bmad/_bmad-output/

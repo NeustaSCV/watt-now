@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Banc du moteur</title>
+<style>
+:root{--bg:#f3ece0;--card:#fbf7ef;--ink:#2b1d12;--muted:#6b5a48;--line:#d8ccb6;--accent:#a8332a;--on:#2f6f78;--warn:#b5651d}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1a1714;--card:#24201b;--ink:#efe6d6;--muted:#b3a58f;--line:#3d352c;--accent:#e0705f;--on:#5fb3bd;--warn:#e09a4f}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:900px;margin:0 auto;padding:24px 16px 48px}
+h1{font-size:24px;font-weight:600;margin:0 0 4px}
+h2{font-size:17px;font-weight:600;margin:0 0 8px}
+p.sub{color:var(--muted);margin:0 0 20px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:0 0 14px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.meta{color:var(--muted);font-size:14px;margin:4px 0 10px}
+button{font:inherit;font-size:14px;padding:7px 12px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+button:hover:not(:disabled){border-color:var(--muted)}
+button:disabled{opacity:.45;cursor:default}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.sel{border-color:var(--on);color:var(--on);font-weight:600}
+button.menace{border-color:var(--warn)}
+.prog{height:8px;border-radius:4px;background:var(--line);overflow:hidden;margin:10px 0 4px}
+.prog>span{display:block;height:100%;width:0;background:var(--accent)}
+.small{font-size:13px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.meter{font-size:13px}
+.meter .lab{display:flex;justify-content:space-between}
+.meter .b{height:7px;border-radius:4px;background:var(--line);overflow:hidden;margin-top:2px}
+.meter .b>span{display:block;height:100%;width:0;background:var(--on);transition:width .1s linear}
+.meter.sub{padding-left:12px}
+.meter.sub .b>span{background:var(--muted)}
+.etat{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:14px;margin-bottom:10px}
+.etat b{font-weight:600}
+.beats{display:inline-flex;gap:4px;vertical-align:middle}
+.beats i{width:10px;height:10px;border-radius:50%;background:var(--line);display:inline-block}
+.beats i.on{background:var(--accent)}
+.journal{font:12px/1.5 ui-monospace,Menlo,monospace;max-height:220px;overflow:auto;border-top:1px solid var(--line);padding-top:8px;margin-top:10px;white-space:pre-wrap}
+label.chk{font-size:14px;display:inline-flex;gap:6px;align-items:center}
+.sl{display:grid;grid-template-columns:90px 1fr;gap:6px 10px;align-items:center;font-size:14px}
+input[type=range]{width:100%}
+footer{color:var(--muted);font-size:13px;margin-top:24px}
+</style>
+</head>
+<body>
+<main>
+<h1>Banc d'essai du moteur de couches</h1>
+<p class="sub">Phase 0a, étape 3. Le directeur musical (Book 21 §6.2.3) pilote les couches Fond, Vie, Tension et Danger, et le Silence. Les pièces sont tirées des esquisses et découpées en blocs de 8 mesures ; les Éteints et l'ambiance sont <b>provisoires</b>. Tout est synthétisé dans le navigateur.</p>
+
+<div class="card">
+<h2>1. Préparer</h2>
+<div class="row" id="familles"></div>
+<div class="row" style="margin-top:10px">
+<label class="chk"><input type="checkbox" id="rapide" checked> Mode test : attentes raccourcies (le calme avant la Vie et les fenêtres de silence durent 4 fois moins)</label>
+<label class="chk">Lieu : <select id="lieu"><option value="terrain">le terrain de la famille</option><option value="halte">la halte (station-service, la mineur harmonique)</option><option value="comptoir">le Comptoir du Carrefour (sol mixolydien, 96 BPM)</option></select></label>
+<label class="chk"><input type="checkbox" id="tuto" checked> Tutoriel : la Vie attend le premier feu</label>
+<label class="chk"><input type="checkbox" id="prod"> Jouer les fichiers produits (Opus, comme le jeu) au lieu du rendu en direct</label>
+<label class="chk"><input type="checkbox" id="mobile"> … en version mobile (3 couches prémixées)</label>
+</div>
+<div class="row" style="margin-top:10px"><button class="primary" id="go">Préparer et jouer</button><button id="stop" disabled>Arrêter</button></div>
+<div class="prog"><span id="progBar"></span></div>
+<div class="small" id="progTxt">Le rendu des pièces prend environ une minute (une quarantaine de stems, jour et nuit).</div>
+</div>
+
+<div class="card">
+<h2>2. Le premier feu</h2>
+<p class="meta">Moment-vitrine 2 : le briquet, le petit bois qui prend, puis le feu qui crépite tout près. Un souffle chaud monte du feu, et la Vie entre pour la première fois, un instrument toutes les 4 mesures, en commençant par la matière de la famille.</p>
+<div class="row">
+<button class="ev" data-ev="allumer">🔥 Allumer le feu</button>
+<button class="ev" data-ev="buche">Ajouter une bûche</button>
+<button class="ev" data-ev="eteindre">Éteindre le feu</button>
+</div>
+</div>
+
+<div class="card">
+<h2>3. L'installation de famille</h2>
+<p class="meta">Moment-vitrine 4 : on installe l'atelier et on s'en sert, à son rythme (la forge, le pédalier ou le banc de recharge). À la mesure suivante, le thème de famille entre au complet, et sa percussion est faite de ce même son, accordé et posé sur la grille.</p>
+<div class="row"><button class="ev" data-ev="atelier" id="bAtelier">🛠 Installer l'atelier de la famille</button></div>
+</div>
+
+<div class="card">
+<h2>4. Jouer la scène</h2>
+<p class="meta">Un Éteint provisoire, entendu depuis le personnage. Les sons sont placés dans l'espace et s'éteignent à leur portée de signature (Book 21 §6.3).</p>
+<div class="row">
+<button class="ev" data-ev="dormant">Dormant tout près (2 m)</button>
+<button class="ev" data-ev="errant">Errant au loin, à gauche</button>
+<button class="ev menace" data-ev="attire">Il m'a repéré (Attiré)</button>
+<button class="ev menace" data-ev="poursuite">Il me poursuit</button>
+<button class="ev menace" data-ev="saisie">Saisie</button>
+<button class="ev" data-ev="degager">Se dégager (coup, chute)</button>
+<button class="ev" data-ev="semer">Le semer</button>
+</div>
+<div class="row" style="margin-top:10px">
+<button class="ev" data-ev="radio">📻 Au Comptoir : approcher (la radio)</button><button class="ev" data-ev="entrer">🚪 Entrer au Comptoir</button>
+</div>
+<div class="row" style="margin-top:10px">
+<button class="ev" data-ev="jour" id="bJour">☀️ Jour</button><button class="ev" data-ev="nuit" id="bNuit">🌙 Nuit (crépuscule)</button>
+<button class="ev" data-ev="dormir">😴 S'endormir</button><button class="ev" data-ev="reveil">🌅 Se réveiller à l'aube</button>
+</div>
+</div>
+
+<div class="card">
+<h2>5. Ce que fait le directeur</h2>
+<div class="etat" id="etat">—</div>
+<div class="grid" id="meters"></div>
+<div class="journal" id="journal"></div>
+</div>
+
+<div class="card">
+<h2>Réglages</h2>
+<div class="sl">
+<span>Général</span><input type="range" min="0" max="1" step="0.01" value="1" data-r="general">
+<span>Musique</span><input type="range" min="0" max="1" step="0.01" value="1" data-r="musique">
+<span>Effets</span><input type="range" min="0" max="1" step="0.01" value="1" data-r="effets">
+<span>Ambiance</span><input type="range" min="0" max="1" step="0.01" value="1" data-r="ambiance">
+</div>
+</div>
+
+<footer>L'installation de famille : « Installer l'atelier », puis écoutez la percussion du thème reprendre le son de l'outil. Le premier feu : avec « Tutoriel » coché, seul le Fond joue ; « Allumer le feu » fait naître la Vie. La première nuit : « Nuit » (le signal du crépuscule, puis la Vie de nuit au bloc suivant, avec de longues fenêtres de silence), un « Errant au loin », puis « S'endormir » (motif court, puis silence) et « Se réveiller à l'aube ». Le jour : préparez, attendez que la Vie entre (instrument par instrument), puis « Il m'a repéré » : la Tension entre au temps fort suivant, au bout de 2 s. « Saisie » : le Danger tombe sur le temps suivant. « Se dégager » : silence de 4 à 8 s, puis le Fond ; la Vie revient plus tard, à une frontière de bloc. Les effets (pas, râles) ne sont jamais calés sur le tempo, et baissent un peu la musique quand ils sont proches.</footer>
+</main>
+
+<script src="../esquisses/js/moteur.js"></script>
+<script src="../esquisses/js/themes.js"></script>
+<script src="../theme-principal/echantillonneur.js"></script>
+<script src="outils-famille.js"></script>
+<script src="halte-sons.js"></script>
+<script src="comptoir-sons.js"></script>
+<script src="pieces.js"></script>
+<script src="eteints-provisoires.js"></script>
+<script type="module">
+import { MoteurAudio, STEMS_VIE } from './moteur-couches.js';
+
+const $ = (s) => document.querySelector(s);
+let famille = 'charbonniers', ctx = null, moteur = null, sons = null, sim = null, ambiance = null, feu = null, atelier = null;
+const NOMS = { charbonniers: '🔥 Charbonniers', voltaiques: '⚡ Voltaïques', mecanistes: '⚙️ Mécanistes' };
+const PHASES = { calme: 'Calme', tension: 'Tension', danger: 'Danger', silence: 'Silence', sommeil: 'Sommeil', arret: 'Arrêt' };
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+
+/* Familles */
+Object.entries(NOMS).forEach(([id, nom]) => {
+  const b = document.createElement('button'); b.textContent = nom; b.dataset.f = id;
+  b.onclick = () => { famille = id; document.querySelectorAll('#familles button').forEach((x) => x.classList.toggle('sel', x.dataset.f === id)); };
+  $('#familles').appendChild(b);
+});
+document.querySelector('#familles button').classList.add('sel');
+document.querySelectorAll('.ev').forEach((b) => b.disabled = true);
+
+/* Préparation */
+$('#go').onclick = async () => {
+  $('#go').disabled = true; document.querySelectorAll('#familles button').forEach((b) => b.disabled = true);
+  const AC = window.AudioContext || window.webkitAudioContext;
+  ctx = new AC({ latencyHint: 'playback' });
+  /* Déblocage (iOS) : reprendre le contexte et jouer un tampon muet au toucher */
+  await ctx.resume(); const muet = ctx.createBufferSource(); muet.buffer = ctx.createBuffer(1, 1, ctx.sampleRate); muet.connect(ctx.destination); muet.start();
+  const t0 = performance.now();
+  const rapide = $('#rapide').checked;
+  const lieu = $('#lieu').value, halte = lieu === 'halte', comptoir = lieu === 'comptoir';
+  moteur = new MoteurAudio(ctx, { bpm: comptoir ? 96 : 84, directeur: Object.assign(rapide ? { echelle: 0.25 } : {}, { attendreFeu: lieu === 'terrain' && $('#tuto').checked, lieu }) });
+  if ($('#prod').checked) {
+    try {
+      const r = await moteur.chargerProduction('../production/', famille, (f, n) => { $('#progBar').style.width = (f / n * 100) + '%'; $('#progTxt').textContent = 'Fichiers produits : ' + f + ' / ' + n; }, $('#mobile').checked);
+      $('#progTxt').textContent = 'Prêt : ' + r.fichiers + ' fichiers ' + r.format + ($('#mobile').checked ? ' (mobile, prémixés)' : '') + ', ' + r.compresseMo.toFixed(1) + ' Mo compressés en mémoire, chargés en ' + Math.round((performance.now() - t0) / 1000) + ' s. ' + NOMS[famille] + '.';
+    } catch (e) { $('#progTxt').textContent = 'Échec du chargement des fichiers produits : ' + e.message + ' (lancer la production d\'abord).'; $('#go').disabled = false; return; }
+  } else {
+    const inst = halte ? window.WattPieces.instrumentsHalte : comptoir ? window.WattPieces.instrumentsComptoir : window.WattPieces.instruments(famille);
+    if (inst.length) await window.WattEchantillons.charger(ctx, '../banques/', inst, (f, n) => { $('#progTxt').textContent = 'Échantillons : ' + f + ' / ' + n; });
+    const suivi = (i, n, txt) => { $('#progBar').style.width = (i / n * 100) + '%'; $('#progTxt').textContent = 'Rendu ' + Math.min(i + 1, n) + ' / ' + n + ' : ' + txt; };
+    if (comptoir) { const R = await window.WattPieces.preparerComptoir(32000, suivi); R.signaux.comptoir = await window.WattPieces.signal('comptoir', 32000, {}); window.__R = R; }
+    const { pieces, signaux } = comptoir ? window.__R : await window.WattPieces[halte ? 'preparerHalte' : 'preparer'](halte ? 32000 : famille, halte ? suivi : 32000, (i, n, txt) => {
+      $('#progBar').style.width = (i / n * 100) + '%'; $('#progTxt').textContent = 'Rendu ' + (i + 1 > n ? n : i + 1) + ' / ' + n + ' : ' + txt;
+    });
+    Object.entries(pieces).forEach(([id, p]) => moteur.chargerPiece(id, p));
+    Object.entries(signaux).forEach(([n, b]) => moteur.chargerSignal(n, b));
+    $('#progTxt').textContent = 'Prêt (rendu en ' + Math.round((performance.now() - t0) / 1000) + ' s). ' + NOMS[famille] + ' : le Fond joue seul, la Vie entrera à une frontière de bloc.';
+  }
+  if (comptoir) { moteur.attribuer('vie', 'comptoir'); moteur.radio(true, 0.01); }
+  else if (halte) { moteur.attribuer('fond', 'fond-halte'); moteur.attribuer('vie', 'explo-halte'); moteur.attribuer('tension', 'tension-halte'); moteur.attribuer('danger', 'danger-halte'); }
+  else { moteur.attribuer('fond', 'fond-jour'); moteur.attribuer('vie', 'vie-jour'); moteur.attribuer('tension', 'tension'); moteur.attribuer('danger', 'danger'); }
+  sons = window.WattEteints.preparer(ctx);
+  await moteur.demarrer();
+  demarrerAmbiance('jour');
+  construireMetres();
+  moteur.ecouteurs.push(afficher);
+  document.querySelectorAll('.ev').forEach((b) => b.disabled = false);
+  $('#bJour').classList.add('sel');
+  $('#stop').disabled = false;
+};
+$('#stop').onclick = () => {
+  if (moteur) moteur.arreter(); arreterSim(); if (ambiance) ambiance.stop(); if (feu) { feu.timers.forEach(clearTimeout); moteur.arreterEffet(feu.boucle, 1); feu = null; }
+  if (atelier) { atelier.timers.forEach(clearTimeout); moteur.arreterEffet(atelier.boucle, 1); atelier = null; }
+  setTimeout(() => { if (ctx) ctx.close(); ctx = null; moteur = null; }, 1800);
+  $('#stop').disabled = true; $('#go').disabled = false;
+  document.querySelectorAll('#familles button').forEach((b) => b.disabled = false);
+  document.querySelectorAll('.ev').forEach((b) => b.disabled = true);
+};
+
+/* ---------- Ambiance (bus environnement, P3) ---------- */
+function demarrerAmbiance(moment) {
+  if (ambiance) ambiance.stop();
+  const v = ctx.createBufferSource(); v.buffer = sons.vent[0]; v.loop = true; if (sons.vent[0].finBoucle) v.loopEnd = sons.vent[0].finBoucle;
+  const g = ctx.createGain(); g.gain.value = 0; g.gain.setTargetAtTime(moment === 'nuit' ? 0.05 : 0.07, ctx.currentTime, 1);
+  v.connect(g); g.connect(moteur.bus.environnement); v.start();
+  let timer = null;
+  const ponctuel = () => {
+    if (moment === 'jour') moteur.jouerEffet(pick(sons.oiseau), { bus: 'environnement', priorite: 3, gain: 0.25, position: { x: Math.random() * 60 - 30, y: Math.random() * 60 - 20 }, portee: 45 });
+    else moteur.jouerEffet(pick(sons.grillon), { bus: 'environnement', priorite: 3, gain: 0.12, position: { x: Math.random() * 30 - 15, y: Math.random() * 30 - 10 }, portee: 25 });
+    timer = setTimeout(ponctuel, moment === 'jour' ? 3000 + Math.random() * 9000 : 400 + Math.random() * 2500);
+  };
+  timer = setTimeout(ponctuel, 1500);
+  ambiance = { stop: () => { clearTimeout(timer); g.gain.setTargetAtTime(0, ctx.currentTime, 0.8); v.stop(ctx.currentTime + 3); } };
+}
+
+/* ---------- L'Éteint provisoire ---------- */
+function arreterSim() { if (sim) clearInterval(sim.timer); sim = null; }
+function eteint(buf, pos, portee, gain) { moteur.jouerEffet(buf, { bus: 'menaces', priorite: 1, position: pos, portee, gain: gain || 1 }); }
+function lancerSim(etat) {
+  arreterSim();
+  sim = { etat, x: -14, y: 9, prochainPas: 0, prochainRale: 0, t: ctx.currentTime };
+  sim.timer = setInterval(() => {
+    const now = ctx.currentTime, d = Math.hypot(sim.x, sim.y);
+    if (sim.etat === 'attire' || sim.etat === 'poursuite') {
+      const v = sim.etat === 'poursuite' ? 1.6 : 0.6;           // m/s vers le joueur
+      if (d > 2.5) { sim.x -= sim.x / d * v * 0.1; sim.y -= sim.y / d * v * 0.1; }
+      if (now >= sim.prochainPas) {
+        const presse = sim.etat === 'poursuite';
+        eteint(pick(presse ? sons.pasPresse : sons.pasTraine), { x: sim.x, y: sim.y }, presse ? 30 : 25, 0.8);
+        sim.prochainPas = now + (presse ? 0.35 + Math.random() * 0.1 : Math.max(0.5, 1.1 - (now - sim.t) * 0.05) + Math.random() * 0.2);
+      }
+      if (sim.etat === 'poursuite' && now >= sim.prochainRale) { eteint(pick(sons.raleRapproche), { x: sim.x, y: sim.y }, 30, 0.9); sim.prochainRale = now + 1.6 + Math.random() * 1.2; }
+    } else if (sim.etat === 'saisie') {
+      if (now >= sim.prochainRale) { eteint(pick(sons.raleRapproche), { x: 0.3, y: 0.6 }, 30, 1); sim.prochainRale = now + 1 + Math.random() * 0.8; }
+    }
+  }, 100);
+}
+
+document.querySelectorAll('.ev').forEach((b) => b.onclick = () => {
+  if (!moteur) return;
+  const ev = b.dataset.ev;
+  if (ev === 'dormant') { eteint(pick(sons.respiration), { x: 1.4, y: 1.4 }, 3, 1); return; }
+  if (ev === 'errant') { eteint(pick(sons.raleErrant), { x: -18, y: 6 }, 25, 1); setTimeout(() => eteint(pick(sons.pasTraine), { x: -18, y: 6 }, 25, 0.8), 900); return; }
+  if (ev === 'attire') { eteint(pick(sons.raleCoupe), { x: -14, y: 9 }, 25, 1); lancerSim('attire'); moteur.signalerMenace('attire'); }
+  if (ev === 'poursuite') { if (!sim) lancerSim('poursuite'); else sim.etat = 'poursuite'; moteur.signalerMenace('poursuite'); }
+  if (ev === 'saisie') { eteint(pick(sons.saisie), { x: 0.3, y: 0.6 }, 30, 1); if (!sim) lancerSim('saisie'); sim.etat = 'saisie'; sim.prochainRale = ctx.currentTime + 0.3; moteur.signalerMenace('saisie'); }
+  if (ev === 'degager') { arreterSim(); eteint(pick(sons.coup), { x: 0.3, y: 0.8 }, 30, 1); setTimeout(() => eteint(sons.chute[0], { x: 0.8, y: 1.6 }, 30, 1), 450); moteur.signalerMenace('aucune'); }
+  if (ev === 'semer') { arreterSim(); moteur.signalerMenace('aucune'); }
+  if (ev === 'allumer') {
+    if (feu) return;
+    const pos = { x: 0.6, y: 1.2 }, F = { bus: 'joueur', priorite: 2, position: pos, portee: 5 };
+    feu = { boucle: null, timers: [] };
+    moteur.jouerEffet(sons.briquet[0], Object.assign({ gain: 0.8 }, F));
+    feu.timers.push(setTimeout(() => { moteur.jouerEffet(sons.allumage[0], Object.assign({ gain: 1, varier: false }, F)); moteur.premierFeu(); }, 900));
+    feu.timers.push(setTimeout(() => { feu.boucle = moteur.jouerEffet(sons.feu[0], Object.assign({ gain: 0.9, boucle: true, fondu: 1.5, varier: false }, F)); }, 5200));
+    return;
+  }
+  if (ev === 'buche') { if (feu) moteur.jouerEffet(pick(sons.buche), { bus: 'joueur', priorite: 2, position: { x: 0.6, y: 1.2 }, portee: 5, gain: 0.9 }); return; }
+  if (ev === 'eteindre') {
+    if (!feu) return;
+    feu.timers.forEach(clearTimeout);
+    moteur.jouerEffet(sons.extinction[0], { bus: 'joueur', priorite: 2, position: { x: 0.6, y: 1.2 }, portee: 5, gain: 0.8 });
+    moteur.arreterEffet(feu.boucle, 2.5); feu = null; return;
+  }
+  if (ev === 'atelier') { installerAtelier(); return; }
+  if (ev === 'radio') { moteur.radio(true); return; }
+  if (ev === 'entrer') { moteur.radio(false, 2.5); return; }
+  if (ev === 'dormir') { moteur.dormir(); return; }
+  if (ev === 'reveil') { moteur.reveiller(); demarrerAmbiance('jour'); $('#bJour').classList.add('sel'); $('#bNuit').classList.remove('sel'); return; }
+  if (ev === 'jour' || ev === 'nuit') {
+    moteur.changerMoment(ev); demarrerAmbiance(ev);
+    $('#bJour').classList.toggle('sel', ev === 'jour'); $('#bNuit').classList.toggle('sel', ev === 'nuit');
+  }
+});
+
+/* ---------- L'atelier de la famille : le joueur s'en sert à son rythme (effets libres), puis le thème entre au complet ---------- */
+function installerAtelier() {
+  if (atelier) return;
+  const O = window.WattOutils, rnd = (a, b) => a + Math.random() * (b - a);
+  atelier = { timers: [], boucle: null };
+  const fx = (t, buf, pos, portee, gain, extra) => atelier.timers.push(setTimeout(() => { const v = moteur.jouerEffet(buf, Object.assign({ bus: 'joueur', priorite: 2, position: pos, portee, gain }, extra || {})); if (extra && extra.boucle) atelier.boucle = v; }, t * 1000));
+  let quand = 3.5;
+  if (famille === 'charbonniers') {            // la forge : portée 30 m
+    const P = { x: -1.6, y: 1.2 };
+    fx(0, O.soufflet(ctx), P, 30, 0.7); fx(1.4, O.soufflet(ctx), P, 30, 0.7);
+    let t = 2.4; for (let k = 0; k < 6; k++) { fx(t, O.enclume(ctx, 74 + (k % 3 === 2 ? 7 : 0), rnd(0.7, 1)), P, 30, 0.9); t += rnd(0.55, 0.85); }
+    fx(t + 0.6, O.trempe(ctx), P, 30, 0.6);
+  } else if (famille === 'mecanistes') {       // le pédalier et la meule : portée 15 m
+    const P = { x: -1.4, y: 1.4 };
+    fx(0, O.chaine(ctx, 5.5, 3, 9), P, 15, 0.6); fx(2.4, O.meule(ctx, 3.8), P, 15, 0.7); fx(6.2, O.roueLibre(ctx), P, 15, 0.5);
+    quand = 3;
+  } else {                                     // le banc de recharge : portée ≤ 2 m, presque rien ne s'entend de loin
+    const P = { x: 0.5, y: 0.7 };
+    fx(0, O.pince(ctx), P, 2, 0.8); fx(0.7, O.pince(ctx), P, 2, 0.8); fx(1.6, O.interrupteur(ctx), P, 2, 0.8);
+    fx(1.7, O.bourdon(ctx, 4), P, 2, 0.25, { boucle: true, fondu: 0.8, varier: false });
+    quand = 2.5;
+  }
+  atelier.timers.push(setTimeout(() => moteur.installerAtelier(), quand * 1000));
+  $('#bAtelier').disabled = true;
+}
+
+/* ---------- Affichage de l'état ---------- */
+function construireMetres() {
+  const lignes = [['fond', null, 'Fond'], ['vie', null, 'Vie'], ...STEMS_VIE.map((s) => ['vie', s, s]), ['vie', 'mix', 'mix (mobile : prémix)'], ['tension', null, 'Tension'], ['danger', null, 'Danger'], ['duck', null, 'Atténuation musique (ducking)']];
+  $('#meters').innerHTML = lignes.map(([c, s, n]) => '<div class="meter' + (s ? ' sub' : '') + '" data-c="' + c + '" data-s="' + (s || '') + '"><div class="lab"><span>' + n + '</span><span class="v"></span></div><div class="b"><span></span></div></div>').join('');
+}
+let dernierJournal = -1, derniereMaj = 0;
+function afficher(now) {
+  if (now - derniereMaj < 0.1) return; derniereMaj = now;
+  const e = moteur.etat();
+  const p = e.pos || { bloc: 0, mesure: 0, temps: 0 };
+  $('#etat').innerHTML = '<span>Mémoire audio décodée : <b>' + e.memoire.toFixed(0) + ' Mo</b> (budget ' + (e.mobile ? '64' : '160') + ')</span><span>Phase : <b>' + (PHASES[e.phase] || e.phase) + '</b></span><span>Menace : <b>' + e.menace + '</b></span><span>Moment : <b>' + e.moment + '</b></span>' +
+    '<span>Bloc <b>' + (p.bloc + 1) + '</b> · mesure <b>' + (p.mesure + 1) + '</b>/8 · <span class="beats">' + [0, 1, 2, 3].map((i) => '<i class="' + (i === p.temps ? 'on' : '') + '"></i>').join('') + '</span></span>';
+  document.querySelectorAll('.meter').forEach((m) => {
+    const c = m.dataset.c, s = m.dataset.s;
+    let v = c === 'duck' ? e.duck : s ? (e.couches.vie.stems[s] || 0) : e.couches[c].gain;
+    m.querySelector('.b>span').style.width = Math.round(v * 100) + '%';
+    m.querySelector('.v').textContent = c === 'duck' ? (20 * Math.log10(Math.max(v, 1e-4))).toFixed(1) + ' dB' : Math.round(v * 100) + ' %';
+  });
+  if (e.journal.length !== dernierJournal) {
+    dernierJournal = e.journal.length;
+    const t0 = moteur.horloge.t0;
+    $('#journal').textContent = e.journal.slice().reverse().map((j) => (j.t - t0).toFixed(1).padStart(6) + ' s  ' + j.msg).join('\n');
+  }
+}
+
+document.querySelectorAll('[data-r]').forEach((r) => r.oninput = () => { if (moteur) moteur.regler(r.dataset.r, +r.value); });
+</script>
+</body>
+</html>

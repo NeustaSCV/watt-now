@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#1d2433" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Watt Now?" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <title>Watt Now?</title>
+    <link rel="stylesheet" href="./src/style.css" />
+  </head>
+  <body>
+    <canvas id="monde" aria-label="Le monde du jeu"></canvas>
+    <div id="hud" hidden></div>
+    <div id="joystick" hidden><div class="manche"></div></div>
+    <div id="carte" class="carte" hidden></div>
+    <div id="voile" hidden></div>
+    <div id="accueil"></div>
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>

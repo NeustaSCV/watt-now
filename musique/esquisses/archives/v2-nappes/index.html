@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Watt Now? — Esquisses des thèmes de famille</title>
+<style>
+:root{--bg:#f3ece0;--card:#fbf7ef;--ink:#2b1d12;--muted:#6b5a48;--line:#d8ccb6;--accent:#a8332a;--on:#2f6f78}
+@media (prefers-color-scheme:dark){:root{--bg:#1a1714;--card:#24201b;--ink:#efe6d6;--muted:#b3a58f;--line:#3d352c;--accent:#e0705f;--on:#5fb3bd}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:860px;margin:0 auto;padding:24px 16px 48px}
+h1{font-size:24px;font-weight:600;margin:0 0 4px}
+h2{font-size:18px;font-weight:600;margin:0}
+p.sub{color:var(--muted);margin:0 0 20px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:0 0 14px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.meta{color:var(--muted);font-size:14px;margin:6px 0 10px}
+button{font:inherit;font-size:14px;padding:7px 12px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+button:hover{border-color:var(--muted)}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.lay{font-size:13px;padding:5px 10px}
+button.lay.on{border-color:var(--on);color:var(--on);font-weight:600}
+.bar{height:8px;border-radius:4px;background:var(--line);overflow:hidden;margin:10px 0 4px;position:relative}
+.bar>span{display:block;height:100%;width:0;background:var(--accent)}
+.bar>i{position:absolute;top:0;bottom:0;width:2px;background:var(--bg)}
+.pos{font-size:13px;color:var(--muted)}
+.blind{border-style:dashed}
+.res{font-size:14px;margin-top:8px;min-height:22px}
+a.dl{font-size:14px;color:var(--on)}
+footer{color:var(--muted);font-size:13px;margin-top:24px}
+</style>
+</head>
+<body>
+<main>
+<h1>Watt Now? — Esquisses des thèmes de famille</h1>
+<p class="sub">Phase 0a, étape 2. Version 2, « nappes d'ambiance ». Couche « Vie, jour » de chaque famille, ≈ 1 minute : bloc A, bloc B, coda. 84 BPM, tonique ré, un accord toutes les deux mesures. Pas d'imitation d'instruments : des nappes et des textures faites de la matière de chaque famille, et de rares fragments mélodiques lointains. Synthèse dans le navigateur, sans fichier externe. La version 1 (mélodique) est archivée dans <code>archives/v1-melodique/</code>.</p>
+
+<div id="themes"></div>
+
+<div class="card blind">
+<h2>Test à l'aveugle : la famille est-elle reconnaissable ?</h2>
+<p class="meta">Le critère du Book 21 §6.5.4 : reconnaître la famille sur 10 s de musique. Un extrait de 10 s est tiré au hasard, puis vous choisissez.</p>
+<div class="row"><button id="blindPlay" class="primary">Écouter un extrait de 10 s</button>
+<button class="guess" data-g="charbonniers" disabled>Charbonniers</button>
+<button class="guess" data-g="voltaiques" disabled>Voltaïques</button>
+<button class="guess" data-g="mecanistes" disabled>Mécanistes</button></div>
+<div class="res" id="blindRes"></div>
+</div>
+
+<footer>Les couches correspondent aux stems de la production (Book 21 §6.2.2) : Fond (commun au terrain), Texture (stem « rythmique »), Basse, Nappes (stem « harmonie »), Fragments (stem « mélodie »). Elles se coupent par leur volume, sans arrêter la lecture, comme dans le futur moteur. Sur iPhone : touchez « Écouter », et vérifiez que l'interrupteur silencieux est désactivé.</footer>
+</main>
+<script src="js/moteur.js"></script>
+<script src="js/themes.js"></script>
+<script>
+(function(){
+  const { Player, renderWav } = window.WattMusique;
+  let ctx = null;
+  function audio(){ if(!ctx){ const AC = window.AudioContext || window.webkitAudioContext; ctx = new AC({ latencyHint:'playback' }); } if(ctx.state!=='running') ctx.resume(); return ctx; }
+  const LAYERS = [['fond','Fond'],['rythmique','Texture'],['basse','Basse'],['harmonie','Nappes'],['melodie','Fragments']];
+  const players = {};
+  const host = document.getElementById('themes');
+
+  window.WattThemes.forEach((th) => {
+    const info = window.WattThemesInfo[th.id];
+    const el = document.createElement('div'); el.className='card';
+    el.innerHTML = '<h2>'+({charbonniers:'🔥 ',voltaiques:'⚡ ',mecanistes:'⚙️ '})[th.id]+th.nom+'</h2>'+
+      '<div class="meta"><b>'+info.mode+'</b> · '+info.couleur+'<br>'+info.instruments+'</div>'+
+      '<div class="row"><button class="primary play">Écouter</button>'+LAYERS.map(([k,n])=>'<button class="lay on" data-l="'+k+'">'+n+'</button>').join('')+
+      '<span style="flex:1"></span><button class="wav">Exporter en WAV</button></div>'+
+      '<div class="bar"><span></span><i style="left:40%"></i><i style="left:80%"></i></div><div class="pos">Bloc A · Bloc B · Coda</div><div class="dlz"></div>';
+    host.appendChild(el);
+    const p = new Player(th); players[th.id]=p;
+    const btn = el.querySelector('.play'), fill = el.querySelector('.bar span'), pos = el.querySelector('.pos');
+    p.onBar = (b, sec) => { fill.style.width = Math.min(100, sec / (th.bars*240/th.bpm) * 100) + '%'; pos.textContent = 'Mesure ' + (b+1) + ' / ' + th.bars + ' · ' + (b<8?'bloc A':b<16?'bloc B':'coda'); };
+    p.onStop = () => { btn.textContent='Écouter'; fill.style.width='0'; pos.textContent='Bloc A · Bloc B · Coda'; };
+    btn.onclick = () => {
+      if (p.timer) { p.stop(); return; }
+      Object.values(players).forEach(o => { if(o!==p && o.timer) o.stop(); });
+      p.start(audio(), 0); btn.textContent='Arrêter';
+    };
+    el.querySelectorAll('.lay').forEach(b => b.onclick = () => { const k=b.dataset.l; p.layerOn[k]=!p.layerOn[k]; b.classList.toggle('on', p.layerOn[k]); p.applyLayers(); });
+    el.querySelector('.wav').onclick = async (e) => {
+      const b=e.currentTarget; b.disabled=true; b.textContent='Rendu en cours…';
+      try { const { blob } = await renderWav(th, p.layerOn, 48000); const url=URL.createObjectURL(blob);
+        el.querySelector('.dlz').innerHTML='<a class="dl" href="'+url+'" download="watt-now_esquisse_'+th.id+'.wav">Télécharger watt-now_esquisse_'+th.id+'.wav</a>';
+      } catch(err){ el.querySelector('.dlz').textContent='Échec du rendu : '+err.message; }
+      b.disabled=false; b.textContent='Exporter en WAV';
+    };
+  });
+
+  /* Test à l'aveugle */
+  let answer=null, score=0, total=0, blindP=null, blindT=null;
+  try { const s=JSON.parse(localStorage.getItem('wattBlind')||'null'); if(s){score=s.score;total=s.total;} } catch(e){}
+  const res=document.getElementById('blindRes'), guesses=document.querySelectorAll('.guess');
+  function showScore(extra){ res.textContent=(extra?extra+' ':'')+(total?'Score : '+score+' / '+total:''); }
+  showScore();
+  document.getElementById('blindPlay').onclick = () => {
+    Object.values(players).forEach(o => { if(o.timer) o.stop(); });
+    if (blindP && blindP.timer) blindP.stop(); clearTimeout(blindT);
+    const th = window.WattThemes[Math.floor(Math.random()*3)];
+    answer = th.id;
+    blindP = new Player(th);
+    blindP.start(audio(), 2 + Math.floor(Math.random()*12));
+    blindT = setTimeout(()=>{ if(blindP.timer) blindP.stop(); }, 10000);
+    guesses.forEach(g=>g.disabled=false); res.textContent='Extrait en cours… quelle famille ?';
+  };
+  guesses.forEach(g => g.onclick = () => {
+    if(!answer) return; total++; const ok = g.dataset.g===answer; if(ok) score++;
+    try { localStorage.setItem('wattBlind', JSON.stringify({score,total})); } catch(e){}
+    showScore(ok?'Juste.':'Non : c’était '+({charbonniers:'les Charbonniers',voltaiques:'les Voltaïques',mecanistes:'les Mécanistes'})[answer]+'.');
+    answer=null; guesses.forEach(x=>x.disabled=true);
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,626 @@
+// Base de données SQLite (Book 17 §3) : comptes, jetons, personnages, inventaires, terrains, feux.
+// Serveur sans état caché : tout ce qui doit survivre à un redémarrage est ici.
+
+import type { Mesure } from "./mesures.ts";
+import type { SacVu } from "../../commun/src/messages.ts";
+import { apparenceAncienne, apparenceValide, type Apparence } from "../../commun/src/apparence.ts";
+import { DatabaseSync } from "node:sqlite";
+import type { Position } from "../../commun/src/deplacement.ts";
+import { kitDeDepart, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
+import { POINT_ARRIVEE, type Famille } from "../../commun/src/regles.ts";
+import { BESOINS_DEPART, GOURDE_DEPART, type Besoins, type EtatFeu, type Gourde } from "../../commun/src/survie.ts";
+import type { Charges } from "../../commun/src/energie.ts";
+import { SANTE_DEPART, type Sante } from "../../commun/src/combat.ts";
+import type { Wotts } from "../../commun/src/economie.ts";
+import { TUTORIEL_NEUF, type EtatTutoriel } from "../../commun/src/tutoriel.ts";
+import type { EtatInstallation, InstallationVue } from "../../commun/src/messages.ts";
+import type { TypeInstallation } from "../../commun/src/recettes.ts";
+import { genererJoncs, genererRessources, genererVergerEtSousBois, genererVestiges, type TypeRessource } from "../../commun/src/terrain.ts";
+import { VERSION_HALTE, genererHalte } from "../../commun/src/halte.ts";
+import { estLieuJouable, type LieuJouable } from "../../commun/src/lieux.ts";
+import { empreinteMotDePasse, nouveauJeton, verifierMotDePasse } from "./motdepasse.ts";
+
+export interface Compte {
+  id: number;
+  pseudo: string;
+  famille: Famille;
+}
+
+export interface Personnage {
+  compteId: number;
+  famille: Famille;
+  lieu: LieuJouable;
+  position: Position;
+  /** Dernière sauvegarde de la position : le moment où on l'a vu pour la dernière fois (ms). */
+  vuLe: number;
+  besoins: Besoins;
+  gourde: Gourde;
+}
+
+export interface RessourceEnBase {
+  id: number;
+  type: TypeRessource;
+  x: number;
+  z: number;
+  /** Instant réel (ms) à partir duquel la ressource est de nouveau là. 0 : disponible. */
+  disponibleLe: number;
+}
+
+export interface FeuEnBase extends EtatFeu {
+  id: number;
+  x: number;
+  z: number;
+  /** Instant réel (ms) du dernier calcul de combustion. */
+  majLe: number;
+}
+
+export interface ContenuSac {
+  inventaire: Inventaire;
+  charges: Charges;
+  /** Les bons de wotts qu'il avait en poche (valeur au moment de la chute). */
+  wotts?: number;
+  /** Des objets jetés par terre (et non un sac perdu) : ramassables par tous. */
+  jete?: boolean;
+}
+
+/** Ce qu'un joueur voit d'un sac au sol : un sac perdu reste fermé, un tas d'objets jetés se voit. */
+export function vueDuSac(s: SacEnBase, pour: number): SacVu {
+  const v: SacVu = { id: s.id, x: s.x, z: s.z, aMoi: s.proprietaire === pour };
+  if (s.contenu.jete) {
+    v.jete = true;
+    v.contenu = s.contenu.inventaire;
+  }
+  return v;
+}
+
+export interface SacEnBase {
+  id: number;
+  lieu: string;
+  terrainDe: number;
+  proprietaire: number;
+  x: number;
+  z: number;
+  contenu: ContenuSac;
+  creeLe: number;
+}
+
+export class PseudoPris extends Error {
+  constructor() {
+    super("Ce pseudo est déjà pris.");
+  }
+}
+
+const SCHEMA = `
+  CREATE TABLE IF NOT EXISTS comptes (
+    id         INTEGER PRIMARY KEY,
+    pseudo     TEXT NOT NULL UNIQUE COLLATE NOCASE,
+    sel        TEXT NOT NULL,
+    empreinte  TEXT NOT NULL,
+    cree_le    TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS jetons (
+    jeton      TEXT PRIMARY KEY,
+    compte_id  INTEGER NOT NULL REFERENCES comptes(id) ON DELETE CASCADE,
+    cree_le    TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS personnages (
+    compte_id   INTEGER PRIMARY KEY REFERENCES comptes(id) ON DELETE CASCADE,
+    famille     TEXT NOT NULL,
+    x           REAL NOT NULL,
+    z           REAL NOT NULL,
+    orientation REAL NOT NULL,
+    maj_le      TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS inventaires (
+    compte_id  INTEGER NOT NULL REFERENCES comptes(id) ON DELETE CASCADE,
+    type       TEXT NOT NULL,
+    quantite   INTEGER NOT NULL,
+    PRIMARY KEY (compte_id, type)
+  );
+  CREATE TABLE IF NOT EXISTS ressources (
+    compte_id     INTEGER NOT NULL REFERENCES comptes(id) ON DELETE CASCADE,
+    id            INTEGER NOT NULL,
+    type          TEXT NOT NULL,
+    x             REAL NOT NULL,
+    z             REAL NOT NULL,
+    disponible_le INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (compte_id, id)
+  );
+  CREATE TABLE IF NOT EXISTS feux (
+    compte_id  INTEGER NOT NULL REFERENCES comptes(id) ON DELETE CASCADE,
+    id         INTEGER NOT NULL,
+    x          REAL NOT NULL,
+    z          REAL NOT NULL,
+    bois       REAL NOT NULL,
+    allume     INTEGER NOT NULL,
+    maj_le     INTEGER NOT NULL,
+    PRIMARY KEY (compte_id, id)
+  );
+  CREATE TABLE IF NOT EXISTS installations (
+    compte_id  INTEGER NOT NULL REFERENCES comptes(id) ON DELETE CASCADE,
+    id         INTEGER NOT NULL,
+    type       TEXT NOT NULL,
+    x          REAL NOT NULL,
+    z          REAL NOT NULL,
+    o          REAL NOT NULL,
+    PRIMARY KEY (compte_id, id)
+  );
+  CREATE TABLE IF NOT EXISTS ressources_lieux (
+    lieu          TEXT NOT NULL,
+    id            INTEGER NOT NULL,
+    type          TEXT NOT NULL,
+    x             REAL NOT NULL,
+    z             REAL NOT NULL,
+    disponible_le INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (lieu, id)
+  );
+  CREATE TABLE IF NOT EXISTS sacs (
+    id          INTEGER PRIMARY KEY,
+    lieu        TEXT NOT NULL,
+    terrain_de  INTEGER NOT NULL DEFAULT 0,
+    proprietaire INTEGER NOT NULL,
+    x           REAL NOT NULL,
+    z           REAL NOT NULL,
+    contenu     TEXT NOT NULL,
+    cree_le     INTEGER NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS monde (
+    cle    TEXT PRIMARY KEY,
+    valeur TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS mesures (
+    instant    INTEGER NOT NULL,
+    compte_id  INTEGER NOT NULL,
+    famille    TEXT NOT NULL,
+    genre      TEXT NOT NULL,
+    quoi       TEXT NOT NULL,
+    valeur     REAL NOT NULL,
+    details    TEXT
+  );
+  CREATE INDEX IF NOT EXISTS mesures_genre ON mesures (genre, instant);
+`;
+
+/** Colonnes ajoutées après la première version (É0) : ajoutées si elles manquent. */
+const COLONNES_AJOUTEES: [table: string, colonne: string, definition: string][] = [
+  ["personnages", "kcal", `REAL NOT NULL DEFAULT ${BESOINS_DEPART.kcal}`],
+  ["personnages", "eau", `REAL NOT NULL DEFAULT ${BESOINS_DEPART.eau}`],
+  ["personnages", "gourde_contenu", `TEXT NOT NULL DEFAULT '${GOURDE_DEPART.contenu}'`],
+  ["personnages", "gourde_litres", `REAL NOT NULL DEFAULT ${GOURDE_DEPART.litres}`],
+  ["personnages", "equipe", "INTEGER NOT NULL DEFAULT 0"],
+  ["personnages", "contenu", "INTEGER NOT NULL DEFAULT 1"],
+  ["personnages", "charges", "TEXT NOT NULL DEFAULT '{}'"],
+  ["personnages", "charges_maj_le", "INTEGER NOT NULL DEFAULT 0"],
+  ["installations", "etat", "TEXT NOT NULL DEFAULT '{}'"],
+  ["personnages", "lieu", "TEXT NOT NULL DEFAULT 'terrain'"],
+  ["personnages", "sante", "TEXT NOT NULL DEFAULT ''"],
+  ["personnages", "endurance", "REAL NOT NULL DEFAULT 100"],
+  ["personnages", "repos", "REAL NOT NULL DEFAULT 1"],
+  // Les personnages d'avant le tutoriel l'ont « déjà fait » ; les nouveaux le commencent (inscription).
+  ["personnages", "tutoriel", "TEXT NOT NULL DEFAULT 'termine'"],
+  // Ancienne carnation (de 0 à 2 ; −1 : celle de la famille), avant le menu d'apparence.
+  ["personnages", "peau", "INTEGER NOT NULL DEFAULT -1"],
+  // L'apparence choisie à la création (Book 14 §3), en JSON ; vide : un compte d'avant le menu d'apparence.
+  ["personnages", "apparence", "TEXT NOT NULL DEFAULT ''"],
+  ["personnages", "watts", "TEXT NOT NULL DEFAULT ''"],
+  ["personnages", "compte_watts", "TEXT NOT NULL DEFAULT ''"],
+  // La faune du terrain (2026-10-08) : quand on a pris des poules (elles reviennent au bout de 2 h).
+  ["personnages", "faune", "TEXT NOT NULL DEFAULT '{}'"],
+];
+
+function maintenant(): string {
+  return new Date().toISOString();
+}
+
+export class Base {
+  private readonly db: DatabaseSync;
+
+  constructor(chemin: string) {
+    this.db = new DatabaseSync(chemin);
+    // WAL + synchronous NORMAL : plus d'écriture forcée sur le disque à chaque validation (la carte du Pi s'use
+    // moins, plus d'à-coups). En cas de coupure de courant, on peut perdre les dernières secondes, jamais la cohérence.
+    this.db.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL; PRAGMA foreign_keys = ON;");
+    this.db.exec(SCHEMA);
+    this.migrer();
+  }
+
+  private migrer(): void {
+    for (const [table, colonne, definition] of COLONNES_AJOUTEES) {
+      const colonnes = this.db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+      if (!colonnes.some((c) => c.name === colonne)) this.db.exec(`ALTER TABLE ${table} ADD COLUMN ${colonne} ${definition}`);
+    }
+  }
+
+  /** Plusieurs écritures en une seule transaction : bien plus rapide qu'une à une (sauvegardes groupées). */
+  transaction(f: () => void): void {
+    this.db.exec("BEGIN");
+    try {
+      f();
+      this.db.exec("COMMIT");
+    } catch (erreur) {
+      this.db.exec("ROLLBACK");
+      throw erreur;
+    }
+  }
+
+  /** Instant réel du début du monde : fixe l'heure de jeu pour tout le serveur. */
+  debutMonde(): number {
+    const ligne = this.db.prepare("SELECT valeur FROM monde WHERE cle = 'debut'").get() as { valeur: string } | undefined;
+    if (ligne) return Number(ligne.valeur);
+    const debut = Date.now();
+    this.db.prepare("INSERT INTO monde (cle, valeur) VALUES ('debut', ?)").run(String(debut));
+    return debut;
+  }
+
+  /** `tutoriel` : un nouveau joueur commence par le tutoriel (Book 14 §4.2) ; les comptes de test, non. */
+  creerCompte(pseudo: string, motDePasse: string, famille: Famille, tutoriel = false, apparence: Apparence | null = null): Compte {
+    const existe = this.db.prepare("SELECT 1 FROM comptes WHERE pseudo = ?").get(pseudo);
+    if (existe) throw new PseudoPris();
+
+    const { sel, empreinte } = empreinteMotDePasse(motDePasse);
+    const date = maintenant();
+    const resultat = this.db
+      .prepare("INSERT INTO comptes (pseudo, sel, empreinte, cree_le) VALUES (?, ?, ?, ?)")
+      .run(pseudo, sel, empreinte, date);
+    const id = Number(resultat.lastInsertRowid);
+    this.db
+      .prepare("INSERT INTO personnages (compte_id, famille, x, z, orientation, maj_le) VALUES (?, ?, ?, ?, ?, ?)")
+      .run(id, famille, POINT_ARRIVEE.x, POINT_ARRIVEE.z, Math.PI, date);
+    this.equiper(id, famille);
+    if (tutoriel) this.sauverTutoriel(id, { ...TUTORIEL_NEUF });
+    if (apparence) this.db.prepare("UPDATE personnages SET apparence = ? WHERE compte_id = ?").run(JSON.stringify(apparenceValide(apparence, famille)), id);
+    return { id, pseudo, famille };
+  }
+
+  /** Ce pseudo est-il déjà pris ? (vérifié avant l'étape d'apparence, pour ne pas la faire pour rien) */
+  pseudoPris(pseudo: string): boolean {
+    return this.db.prepare("SELECT 1 FROM comptes WHERE pseudo = ?").get(pseudo) !== undefined;
+  }
+
+  /** L'apparence du personnage ; pour un compte d'avant le menu d'apparence, celle de sa famille. */
+  chargerApparence(compteId: number, famille: Famille): Apparence {
+    const l = this.db.prepare("SELECT peau, apparence FROM personnages WHERE compte_id = ?").get(compteId) as { peau: number; apparence: string } | undefined;
+    if (l?.apparence) {
+      try {
+        return apparenceValide(JSON.parse(l.apparence), famille);
+      } catch {
+        // Une apparence illisible : on retombe sur celle de la famille.
+      }
+    }
+    return apparenceAncienne(famille, l?.peau ?? -1);
+  }
+
+  /** null : tutoriel terminé (ou passé). */
+  chargerTutoriel(compteId: number): EtatTutoriel | null {
+    const l = this.db.prepare("SELECT tutoriel FROM personnages WHERE compte_id = ?").get(compteId) as { tutoriel: string } | undefined;
+    if (!l || l.tutoriel === "termine" || !l.tutoriel) return null;
+    return { ...TUTORIEL_NEUF, ...(JSON.parse(l.tutoriel) as EtatTutoriel) };
+  }
+
+  sauverTutoriel(compteId: number, etat: EtatTutoriel | null): void {
+    this.db.prepare("UPDATE personnages SET tutoriel = ? WHERE compte_id = ?").run(etat ? JSON.stringify(etat) : "termine", compteId);
+  }
+
+  /** Donne le kit de départ et génère le terrain, une seule fois par personnage. */
+  private equiper(compteId: number, famille: Famille): void {
+    const ligne = this.db.prepare("SELECT equipe FROM personnages WHERE compte_id = ?").get(compteId) as { equipe: number } | undefined;
+    if (!ligne || ligne.equipe) return;
+    this.sauverInventaire(compteId, kitDeDepart(famille));
+    const inserer = this.db.prepare("INSERT OR IGNORE INTO ressources (compte_id, id, type, x, z) VALUES (?, ?, ?, ?, ?)");
+    for (const r of genererRessources(compteId)) inserer.run(compteId, r.id, r.type, r.x, r.z);
+    this.db.prepare("UPDATE personnages SET equipe = 1 WHERE compte_id = ?").run(compteId);
+  }
+
+  /** Version du contenu du terrain : la 2 ajoute la ruine de ferme et ses vestiges (É2). */
+  private mettreAJourContenu(compteId: number): void {
+    const ligne = this.db.prepare("SELECT contenu FROM personnages WHERE compte_id = ?").get(compteId) as { contenu: number } | undefined;
+    if (!ligne || ligne.contenu >= 2) return;
+    const max = this.db.prepare("SELECT COALESCE(MAX(id), 0) AS m FROM ressources WHERE compte_id = ?").get(compteId) as { m: number };
+    const inserer = this.db.prepare("INSERT OR IGNORE INTO ressources (compte_id, id, type, x, z) VALUES (?, ?, ?, ?, ?)");
+    for (const r of genererVestiges(max.m + 1)) inserer.run(compteId, r.id, r.type, r.x, r.z);
+    this.db.prepare("UPDATE personnages SET contenu = 2 WHERE compte_id = ?").run(compteId);
+  }
+
+  /** Renvoie le compte si le mot de passe est bon, sinon null. */
+  verifierIdentifiants(pseudo: string, motDePasse: string): Compte | null {
+    const ligne = this.db
+      .prepare(
+        `SELECT c.id, c.pseudo, c.sel, c.empreinte, p.famille
+         FROM comptes c JOIN personnages p ON p.compte_id = c.id
+         WHERE c.pseudo = ?`,
+      )
+      .get(pseudo) as { id: number; pseudo: string; sel: string; empreinte: string; famille: Famille } | undefined;
+    if (!ligne || !verifierMotDePasse(motDePasse, ligne.sel, ligne.empreinte)) return null;
+    return { id: ligne.id, pseudo: ligne.pseudo, famille: ligne.famille };
+  }
+
+  creerJeton(compteId: number): string {
+    const jeton = nouveauJeton();
+    this.db.prepare("INSERT INTO jetons (jeton, compte_id, cree_le) VALUES (?, ?, ?)").run(jeton, compteId, maintenant());
+    return jeton;
+  }
+
+  compteParJeton(jeton: string): Compte | null {
+    const ligne = this.db
+      .prepare(
+        `SELECT c.id, c.pseudo, p.famille
+         FROM jetons j JOIN comptes c ON c.id = j.compte_id JOIN personnages p ON p.compte_id = c.id
+         WHERE j.jeton = ?`,
+      )
+      .get(jeton) as { id: number; pseudo: string; famille: Famille } | undefined;
+    return ligne ? { id: ligne.id, pseudo: ligne.pseudo, famille: ligne.famille } : null;
+  }
+
+  chargerPersonnage(compteId: number): Personnage | null {
+    const ligne = this.db
+      .prepare("SELECT famille, lieu, x, z, orientation, maj_le, kcal, eau, repos, gourde_contenu, gourde_litres FROM personnages WHERE compte_id = ?")
+      .get(compteId) as
+      | { famille: Famille; lieu: string; x: number; z: number; orientation: number; maj_le: string; kcal: number; eau: number; repos: number; gourde_contenu: string; gourde_litres: number }
+      | undefined;
+    if (!ligne) return null;
+    // Les personnages créés avant l'É1 reçoivent leur kit et leur terrain à la première connexion.
+    this.equiper(compteId, ligne.famille);
+    this.mettreAJourContenu(compteId);
+    return {
+      compteId,
+      famille: ligne.famille,
+      lieu: estLieuJouable(ligne.lieu) ? ligne.lieu : "terrain",
+      position: { x: ligne.x, z: ligne.z, o: ligne.orientation },
+      vuLe: Date.parse(ligne.maj_le) || 0,
+      besoins: { kcal: ligne.kcal, eau: ligne.eau, repos: ligne.repos },
+      gourde: { contenu: ligne.gourde_contenu === "brute" ? "brute" : "potable", litres: ligne.gourde_litres },
+    };
+  }
+
+  sauverPosition(compteId: number, position: Position, lieu: LieuJouable = "terrain", quand = Date.now()): void {
+    this.db
+      .prepare("UPDATE personnages SET lieu = ?, x = ?, z = ?, orientation = ?, maj_le = ? WHERE compte_id = ?")
+      .run(lieu, position.x, position.z, position.o, new Date(quand).toISOString(), compteId);
+  }
+
+  chargerWotts(compteId: number): { poche: Wotts; compte: Wotts } {
+    const l = this.db.prepare("SELECT watts, compte_watts FROM personnages WHERE compte_id = ?").get(compteId) as { watts: string; compte_watts: string } | undefined;
+    const lire = (s: string | undefined): Wotts => (s ? (JSON.parse(s) as Wotts) : { valeur: 0, majLe: 0 });
+    return { poche: lire(l?.watts), compte: lire(l?.compte_watts) };
+  }
+
+  sauverWotts(compteId: number, poche: Wotts, compte: Wotts): void {
+    this.db.prepare("UPDATE personnages SET watts = ?, compte_watts = ? WHERE compte_id = ?").run(JSON.stringify(poche), JSON.stringify(compte), compteId);
+  }
+
+  nombreComptes(): number {
+    return (this.db.prepare("SELECT COUNT(*) AS n FROM comptes").get() as { n: number }).n;
+  }
+
+  /** Un état du monde gardé en JSON (le comptoir, par exemple). */
+  lireMonde<T>(cle: string): T | null {
+    const l = this.db.prepare("SELECT valeur FROM monde WHERE cle = ?").get(cle) as { valeur: string } | undefined;
+    return l ? (JSON.parse(l.valeur) as T) : null;
+  }
+
+  ecrireMonde(cle: string, valeur: unknown): void {
+    this.db.prepare("INSERT INTO monde (cle, valeur) VALUES (?, ?) ON CONFLICT (cle) DO UPDATE SET valeur = excluded.valeur").run(cle, JSON.stringify(valeur));
+  }
+
+  chargerSante(compteId: number): { sante: Sante; endurance: number } {
+    const l = this.db.prepare("SELECT sante, endurance FROM personnages WHERE compte_id = ?").get(compteId) as { sante: string; endurance: number } | undefined;
+    const sante = l?.sante ? (JSON.parse(l.sante) as Sante) : { ...SANTE_DEPART };
+    return { sante, endurance: l?.endurance ?? 100 };
+  }
+
+  sauverSante(compteId: number, sante: Sante, endurance: number): void {
+    this.db.prepare("UPDATE personnages SET sante = ?, endurance = ? WHERE compte_id = ?").run(JSON.stringify(sante), endurance, compteId);
+  }
+
+  /** Un sac tombé à l'effondrement (Book 05 §10.3) : il reste là où le personnage est tombé. */
+  poserSac(sac: Omit<SacEnBase, "id">): SacEnBase {
+    const r = this.db
+      .prepare("INSERT INTO sacs (lieu, terrain_de, proprietaire, x, z, contenu, cree_le) VALUES (?, ?, ?, ?, ?, ?, ?)")
+      .run(sac.lieu, sac.terrainDe, sac.proprietaire, sac.x, sac.z, JSON.stringify(sac.contenu), sac.creeLe);
+    return { ...sac, id: Number(r.lastInsertRowid) };
+  }
+
+  /** Les sacs d'un lieu : la halte (`terrainDe` = 0) ou le terrain d'un joueur. */
+  chargerSacs(lieu: string, terrainDe = 0): SacEnBase[] {
+    const lignes = this.db
+      .prepare("SELECT id, lieu, terrain_de, proprietaire, x, z, contenu, cree_le FROM sacs WHERE lieu = ? AND terrain_de = ?")
+      .all(lieu, terrainDe) as { id: number; lieu: string; terrain_de: number; proprietaire: number; x: number; z: number; contenu: string; cree_le: number }[];
+    return lignes.map((l) => ({
+      id: l.id,
+      lieu: l.lieu,
+      terrainDe: l.terrain_de,
+      proprietaire: l.proprietaire,
+      x: l.x,
+      z: l.z,
+      contenu: JSON.parse(l.contenu) as ContenuSac,
+      creeLe: l.cree_le,
+    }));
+  }
+
+  retirerSac(id: number): void {
+    this.db.prepare("DELETE FROM sacs WHERE id = ?").run(id);
+  }
+
+  /** Les ressources d'un lieu public (la halte), partagées par tous ; créées au premier chargement. */
+  chargerRessourcesLieu(lieu: string): RessourceEnBase[] {
+    const lire = () =>
+      this.db.prepare("SELECT id, type, x, z, disponible_le FROM ressources_lieux WHERE lieu = ? ORDER BY id").all(lieu) as {
+        id: number;
+        type: TypeRessource;
+        x: number;
+        z: number;
+        disponible_le: number;
+      }[];
+    // Le contenu de la halte a changé depuis la dernière génération : on repart de la nouvelle version.
+    const cle = `version_${lieu}`;
+    const version = this.db.prepare("SELECT valeur FROM monde WHERE cle = ?").get(cle) as { valeur: string } | undefined;
+    if (Number(version?.valeur ?? 0) !== VERSION_HALTE) {
+      this.db.prepare("DELETE FROM ressources_lieux WHERE lieu = ?").run(lieu);
+      this.db.prepare("INSERT INTO monde (cle, valeur) VALUES (?, ?) ON CONFLICT (cle) DO UPDATE SET valeur = excluded.valeur").run(cle, String(VERSION_HALTE));
+    }
+    let lignes = lire();
+    if (lignes.length === 0) {
+      const inserer = this.db.prepare("INSERT INTO ressources_lieux (lieu, id, type, x, z) VALUES (?, ?, ?, ?, ?)");
+      for (const r of genererHalte()) inserer.run(lieu, r.id, r.type, r.x, r.z);
+      lignes = lire();
+    }
+    return lignes.map((l) => ({ id: l.id, type: l.type, x: l.x, z: l.z, disponibleLe: l.disponible_le }));
+  }
+
+  sauverRessourceLieu(lieu: string, id: number, disponibleLe: number): void {
+    this.db.prepare("UPDATE ressources_lieux SET disponible_le = ? WHERE lieu = ? AND id = ?").run(disponibleLe, lieu, id);
+  }
+
+  sauverEtat(compteId: number, besoins: Besoins, gourde: Gourde): void {
+    this.db
+      .prepare("UPDATE personnages SET kcal = ?, eau = ?, repos = ?, gourde_contenu = ?, gourde_litres = ? WHERE compte_id = ?")
+      .run(besoins.kcal, besoins.eau, besoins.repos ?? 1, gourde.contenu, gourde.litres, compteId);
+  }
+
+  chargerInventaire(compteId: number): Inventaire {
+    const lignes = this.db.prepare("SELECT type, quantite FROM inventaires WHERE compte_id = ?").all(compteId) as {
+      type: TypeObjet;
+      quantite: number;
+    }[];
+    const inventaire: Inventaire = {};
+    for (const l of lignes) if (l.quantite > 0) inventaire[l.type] = l.quantite;
+    return inventaire;
+  }
+
+  sauverInventaire(compteId: number, inventaire: Inventaire): void {
+    this.db.prepare("DELETE FROM inventaires WHERE compte_id = ?").run(compteId);
+    const inserer = this.db.prepare("INSERT INTO inventaires (compte_id, type, quantite) VALUES (?, ?, ?)");
+    for (const [type, quantite] of Object.entries(inventaire)) if (quantite && quantite > 0) inserer.run(compteId, type, quantite);
+  }
+
+  chargerRessources(compteId: number): RessourceEnBase[] {
+    // Les terrains créés avant les joncs : on les plante au bord de la mare.
+    const joncs = this.db.prepare("SELECT 1 FROM ressources WHERE compte_id = ? AND type = 'joncs'").get(compteId);
+    const max = this.db.prepare("SELECT MAX(id) AS m FROM ressources WHERE compte_id = ?").get(compteId) as { m: number | null };
+    if (!joncs && max.m !== null) {
+      const inserer = this.db.prepare("INSERT INTO ressources (compte_id, id, type, x, z) VALUES (?, ?, ?, ?, ?)");
+      for (const r of genererJoncs(compteId, max.m + 1)) inserer.run(compteId, r.id, r.type, r.x, r.z);
+    }
+    // La mare a pris une forme naturelle (2026-10-08) : les joncs suivent son nouveau bord (mêmes tirages, même ordre).
+    const touffes = this.db.prepare("SELECT id FROM ressources WHERE compte_id = ? AND type = 'joncs' ORDER BY id").all(compteId) as { id: number }[];
+    if (touffes.length > 0) {
+      const places = genererJoncs(compteId, touffes[0]!.id);
+      const deplacer = this.db.prepare("UPDATE ressources SET x = ?, z = ? WHERE compte_id = ? AND id = ?");
+      touffes.forEach((t, i) => {
+        const p = places[i];
+        if (p) deplacer.run(p.x, p.z, compteId, t.id);
+      });
+    }
+    // Les terrains créés avant le verger et le sous-bois (2026-10-08) : on plante les fruitiers et les champignons.
+    const verger = this.db.prepare("SELECT 1 FROM ressources WHERE compte_id = ? AND type = 'pommier'").get(compteId);
+    if (!verger && max.m !== null) {
+      const occupees = this.db.prepare("SELECT x, z FROM ressources WHERE compte_id = ?").all(compteId) as { x: number; z: number }[];
+      const suivant = (this.db.prepare("SELECT MAX(id) AS m FROM ressources WHERE compte_id = ?").get(compteId) as { m: number }).m + 1;
+      const inserer = this.db.prepare("INSERT INTO ressources (compte_id, id, type, x, z) VALUES (?, ?, ?, ?, ?)");
+      for (const r of genererVergerEtSousBois(compteId, suivant, occupees)) inserer.run(compteId, r.id, r.type, r.x, r.z);
+    }
+    const lignes = this.db
+      .prepare("SELECT id, type, x, z, disponible_le FROM ressources WHERE compte_id = ? ORDER BY id")
+      .all(compteId) as { id: number; type: TypeRessource; x: number; z: number; disponible_le: number }[];
+    return lignes.map((l) => ({ id: l.id, type: l.type, x: l.x, z: l.z, disponibleLe: l.disponible_le }));
+  }
+
+  sauverRessource(compteId: number, id: number, disponibleLe: number): void {
+    this.db.prepare("UPDATE ressources SET disponible_le = ? WHERE compte_id = ? AND id = ?").run(disponibleLe, compteId, id);
+  }
+
+  chargerFeux(compteId: number): FeuEnBase[] {
+    const lignes = this.db.prepare("SELECT id, x, z, bois, allume, maj_le FROM feux WHERE compte_id = ? ORDER BY id").all(compteId) as {
+      id: number;
+      x: number;
+      z: number;
+      bois: number;
+      allume: number;
+      maj_le: number;
+    }[];
+    return lignes.map((l) => ({ id: l.id, x: l.x, z: l.z, bois: l.bois, allume: l.allume === 1, majLe: l.maj_le }));
+  }
+
+  sauverFeu(compteId: number, feu: FeuEnBase): void {
+    this.db
+      .prepare(
+        `INSERT INTO feux (compte_id, id, x, z, bois, allume, maj_le) VALUES (?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT (compte_id, id) DO UPDATE SET bois = excluded.bois, allume = excluded.allume, maj_le = excluded.maj_le`,
+      )
+      .run(compteId, feu.id, feu.x, feu.z, feu.bois, feu.allume ? 1 : 0, feu.majLe);
+  }
+
+  chargerInstallations(compteId: number): InstallationVue[] {
+    const lignes = this.db.prepare("SELECT id, type, x, z, o, etat FROM installations WHERE compte_id = ? ORDER BY id").all(compteId) as {
+      id: number;
+      type: TypeInstallation;
+      x: number;
+      z: number;
+      o: number;
+      etat: string;
+    }[];
+    return lignes.map((l) => ({ id: l.id, type: l.type, x: l.x, z: l.z, o: l.o, etat: JSON.parse(l.etat) as EtatInstallation }));
+  }
+
+  sauverEtatInstallation(compteId: number, id: number, etat: EtatInstallation): void {
+    this.db.prepare("UPDATE installations SET etat = ? WHERE compte_id = ? AND id = ?").run(JSON.stringify(etat), compteId, id);
+  }
+
+  retirerInstallation(compteId: number, id: number): void {
+    this.db.prepare("DELETE FROM installations WHERE compte_id = ? AND id = ?").run(compteId, id);
+  }
+
+  /** Charges des batteries et instant de la dernière mise à jour (pour la décharge spontanée). */
+  chargerCharges(compteId: number): { charges: Charges; majLe: number } {
+    const l = this.db.prepare("SELECT charges, charges_maj_le FROM personnages WHERE compte_id = ?").get(compteId) as
+      | { charges: string; charges_maj_le: number }
+      | undefined;
+    return l ? { charges: JSON.parse(l.charges) as Charges, majLe: l.charges_maj_le } : { charges: {}, majLe: 0 };
+  }
+
+  sauverCharges(compteId: number, charges: Charges, majLe: number): void {
+    this.db.prepare("UPDATE personnages SET charges = ?, charges_maj_le = ? WHERE compte_id = ?").run(JSON.stringify(charges), majLe, compteId);
+  }
+
+  ajouterInstallation(compteId: number, type: TypeInstallation, x: number, z: number, o: number): InstallationVue {
+    const max = this.db.prepare("SELECT COALESCE(MAX(id), 0) AS m FROM installations WHERE compte_id = ?").get(compteId) as { m: number };
+    const id = max.m + 1;
+    this.db.prepare("INSERT INTO installations (compte_id, id, type, x, z, o, etat) VALUES (?, ?, ?, ?, ?, ?, '{}')").run(compteId, id, type, x, z, o);
+    return { id, type, x, z, o, etat: {} };
+  }
+
+  chargerFaune(compteId: number): { prises: number[] } {
+    const l = this.db.prepare("SELECT faune FROM personnages WHERE compte_id = ?").get(compteId) as { faune: string } | undefined;
+    const f = l?.faune ? (JSON.parse(l.faune) as { prises?: number[] }) : {};
+    return { prises: f.prises ?? [] };
+  }
+
+  sauverFaune(compteId: number, faune: { prises: number[] }): void {
+    this.db.prepare("UPDATE personnages SET faune = ? WHERE compte_id = ?").run(JSON.stringify(faune), compteId);
+  }
+
+  /** Une copie cohérente et compacte de toute la base, même pendant que le jeu tourne (Book 17 §5.4). */
+  sauvegarderVers(chemin: string): void {
+    this.db.prepare("VACUUM INTO ?").run(chemin);
+  }
+
+  /** Une mesure du test familial (Book 17 §6). */
+  mesurer(m: Mesure): void {
+    this.db
+      .prepare("INSERT INTO mesures (instant, compte_id, famille, genre, quoi, valeur, details) VALUES (?, ?, ?, ?, ?, ?, ?)")
+      .run(m.instant, m.compteId, m.famille, m.genre, m.quoi, m.valeur, m.details ? JSON.stringify(m.details) : null);
+  }
+
+  /** Les mesures d'un genre (pour les tests et le bilan). */
+  lireMesures(genre: string): { famille: string; quoi: string; valeur: number }[] {
+    return this.db.prepare("SELECT famille, quoi, valeur FROM mesures WHERE genre = ? ORDER BY instant").all(genre) as { famille: string; quoi: string; valeur: number }[];
+  }
+
+  /** Un objet lourd déplacé (l'escabeau) : sa nouvelle place. */
+  deplacerInstallation(compteId: number, id: number, x: number, z: number, o: number): void {
+    this.db.prepare("UPDATE installations SET x = ?, z = ?, o = ? WHERE compte_id = ? AND id = ?").run(x, z, o, compteId, id);
+  }
+
+  fermer(): void {
+    this.db.close();
+  }
+}

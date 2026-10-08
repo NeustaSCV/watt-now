@@ -1,0 +1,9 @@
+node_modules/
+.npm-cache/
+client/dist/
+serveur/donnees/*.sqlite
+serveur/donnees/*.sqlite-*
+serveur/donnees/reglages.json
+serveur/donnees/sauvegardes/
+serveur/donnees/essais-*/
+deploiement/certificat/lettre/

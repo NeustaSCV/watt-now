@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Écoute des effets</title>
+    <style>
+      :root {
+        --fond: #f4ecd8;
+        --encre: #3b2a1e;
+        --carte: #fffaf0;
+        --accent: #c8362b;
+        --doux: #6b5a4a;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) {
+          --fond: #1d2433;
+          --encre: #f2efe6;
+          --carte: #262f42;
+          --accent: #e8735f;
+          --doux: #b9b2a2;
+        }
+      }
+      body {
+        margin: 0;
+        padding: 16px;
+        background: var(--fond);
+        color: var(--encre);
+        font: 15px/1.45 "Avenir Next", "Helvetica Neue", system-ui, sans-serif;
+      }
+      h1 {
+        font-size: 22px;
+        margin: 0 0 4px;
+      }
+      p.intro {
+        margin: 0 0 16px;
+        color: var(--doux);
+        max-width: 60ch;
+      }
+      section {
+        margin-bottom: 18px;
+      }
+      h2 {
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--doux);
+        margin: 0 0 8px;
+      }
+      .grille {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+        gap: 8px;
+      }
+      .son {
+        background: var(--carte);
+        border: 1px solid color-mix(in srgb, var(--encre) 25%, transparent);
+        border-radius: 8px;
+        padding: 8px 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .son strong {
+        font-size: 14px;
+        overflow-wrap: anywhere;
+      }
+      .son small {
+        color: var(--doux);
+        font-size: 12px;
+      }
+      .variantes {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+      }
+      button {
+        min-width: 44px;
+        min-height: 44px;
+        border-radius: 6px;
+        border: 1px solid var(--encre);
+        background: transparent;
+        color: var(--encre);
+        font: inherit;
+        cursor: pointer;
+      }
+      button.joue {
+        background: var(--accent);
+        color: #fff;
+        border-color: var(--accent);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Écoute des effets</h1>
+    <p class="intro">
+      Les effets sonores de la 0a, synthétisés (Book 21 §6.3). Chaque bouton joue une variante telle que le jeu la fabrique, au niveau du mélange.
+      Les sons en boucle s'arrêtent d'un second clic. Les ambiances, la halte et le Comptoir sont dans le banc d'essai de la musique.
+    </p>
+    <main id="sons"></main>
+    <script type="module" src="./src/son/ecoute.ts"></script>
+  </body>
+</html>

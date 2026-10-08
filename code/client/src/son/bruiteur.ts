@@ -1,0 +1,331 @@
+// Le bruiteur : ce qui se passe dans le jeu, traduit en effets sonores (Book 21 §6.3).
+// Les pas selon le sol et l'allure, la vie sonore des Éteints selon leur état, les gestes des actions,
+// les sons continus (feu, pédalier, pluie) et le niveau de menace transmis à la musique.
+
+import type { EtatEteint } from "../../../commun/src/eteints.ts";
+import { BOUTIQUE, COMPTOIR, ROUTE, ROUTE_CARREFOUR, STATION, type LieuJouable } from "../../../commun/src/lieux.ts";
+import type { AspectFeu } from "../../../commun/src/survie.ts";
+import type { BruitAction } from "../../../commun/src/signature.ts";
+import { RUINE } from "../../../commun/src/terrain.ts";
+import type { TypeInstallation } from "../../../commun/src/recettes.ts";
+import type { NiveauMenace } from "../audio/moteur-couches.js";
+import type { IdSon } from "./catalogue.ts";
+import type { AllurePas, Sol } from "./recettes.ts";
+import type { Ou, Sonorisation } from "./audio.ts";
+
+/** La longueur d'un pas selon l'allure (m) : un son par pas. */
+const FOULEE: Record<AllurePas, number> = { discrete: 0.55, marche: 0.75, course: 1.15 };
+
+const dans = (x: number, z: number, b: { x: number; z: number; l: number; p: number }, marge = 0) =>
+  Math.abs(x - b.x) <= b.l / 2 + marge && Math.abs(z - b.z) <= b.p / 2 + marge;
+
+/** Le sol sous les pieds, d'après le lieu (Book 21 §6.3 : terre, herbe, béton, gravats et verre). */
+export function solIci(lieu: LieuJouable, x: number, z: number): Sol {
+  if (lieu === "terrain") {
+    if (dans(x, z, { x: RUINE.x, z: RUINE.z, l: RUINE.largeur, p: RUINE.profondeur }, 0.5)) return "gravats";
+    // Le chemin de terre qui part vers le sud.
+    if (Math.abs(x - 25) < 1.8 && z > 38) return "terre";
+    return "herbe";
+  }
+  if (lieu === "station") {
+    const b = STATION.boutique;
+    if (dans(x, z, b) || dans(x, z, STATION.atelier)) return "gravats";
+    if (Math.abs(z - ROUTE.z) <= ROUTE.demiLargeur) return "beton";
+    // Le parvis de la station, sous l'auvent et jusqu'à la route.
+    if (x > STATION.auvent.x - STATION.auvent.l / 2 - 6 && x < STATION.atelier.x + STATION.atelier.l / 2 + 2 && z > BOUTIQUE.porte.z - 0.5 && z < ROUTE.z) return "beton";
+    return "herbe";
+  }
+  if (Math.abs(z - ROUTE_CARREFOUR.z) <= ROUTE_CARREFOUR.demiLargeur || Math.abs(x - ROUTE_CARREFOUR.x) <= ROUTE_CARREFOUR.demiLargeur) return "beton";
+  if (dans(x, z, COMPTOIR.batiment, 4)) return "beton";
+  return "terre";
+}
+
+/** Dans la boutique de la station : la pluie s'entend sur le toit, assourdie. */
+export function dansLaBoutique(x: number, z: number): boolean {
+  return dans(x, z, STATION.boutique);
+}
+
+interface SuiviEteint {
+  etat: EtatEteint;
+  x: number;
+  z: number;
+  /** Prochain râle ou souffle (s, horloge du bruiteur). */
+  prochainCri: number;
+  /** Distance parcourue depuis le dernier pas. */
+  foulee: number;
+  saisit: boolean;
+}
+
+/** Le geste sonore d'une action, d'après son libellé (et son bruit de signature). */
+interface Geste {
+  id?: IdSon;
+  /** Répété toutes les `periode` secondes pendant l'action. */
+  periode?: number;
+  /** Ou bien joué en continu pendant l'action. */
+  continu?: IdSon;
+  /** Un second son continu (la chaîne sous la meule). */
+  continu2?: IdSon;
+  /** Joué à la fin réussie de l'action. */
+  fin?: IdSon;
+}
+
+export function gesteDe(libelle: string, bruit: BruitAction): Geste {
+  const l = libelle.toLowerCase();
+  if (l.startsWith("ramasser la branche") || l.startsWith("ramasser la bûche")) return { id: "geste_bois" };
+  if (l.startsWith("ramasser la pierre")) return { id: "geste_pierre" };
+  if (l.startsWith("cueillir") || l.startsWith("couper des joncs")) return { id: "geste_feuillage", periode: 1.2 };
+  if (l.startsWith("tresser")) return { id: "tissu", periode: 1.4 };
+  if (l.startsWith("fouiller")) return { id: "fouille", periode: 1.3 };
+  if (l.includes("bâche")) return { id: "bache" };
+  if (l.startsWith("monter un feu")) return { id: "pose_pierres", periode: 1.3 };
+  if (l.startsWith("ajouter")) return { id: "buche_tombe" };
+  if (l.startsWith("allumer le feu")) return { id: l.includes("briquet") ? "briquet" : "pierre_a_feu" };
+  if (l.startsWith("allumer la meule")) return { id: "briquet" };
+  if (l.startsWith("faire bouillir")) return { continu: "bouillir" };
+  if (l.startsWith("remplir")) return { continu: "remplir_eau" };
+  if (l.startsWith("manger")) return { id: "manger" };
+  if (l.startsWith("boire")) return { id: "boire" };
+  if (l.startsWith("pédaler")) return { continu: "chaine_velo", fin: "roue_libre" };
+  if (l.startsWith("affûter")) return { continu: "meule", continu2: "chaine_velo", fin: "roue_libre" };
+  if (l.startsWith("défourner")) return { id: "charbon", periode: 1.4 };
+  if (l.startsWith("brancher") || l.startsWith("reprendre les batteries")) return { id: "pinces", fin: "interrupteur" };
+  if (l.startsWith("recharger")) return { id: "pinces", fin: "interrupteur" };
+  if (l.includes("pansement")) return { id: "tissu", periode: 1.1 };
+  if (l.startsWith("reprendre ton sac")) return { id: "fouille" };
+  if (l.startsWith("monter la meule") || l.startsWith("monter la dynamo") || l.includes("panneau")) return { id: "visser", periode: 1.1 };
+  if (l.startsWith("démonter") || l.startsWith("prendre la batterie") || l.startsWith("prendre les lames")) return { id: "demonter", periode: 1.2 };
+  if (l.startsWith("remmancher")) return { id: "marteau_bois", periode: 0.9 };
+  if (l.startsWith("forger")) return { id: "enclume", periode: 0.85 };
+  if (l.includes("foyer de forge")) return { id: "marteau_metal", periode: 1 };
+  if (l.includes("abri")) return { id: "marteau_bois", periode: 1.1 };
+  if (l.includes("établi") || l.includes("pédalier") || l.includes("banc") || l.includes("charbonnière")) return { id: "marteau_bois", periode: 1 };
+  if (l.startsWith("prendre") || l.startsWith("ramasser")) return { id: "fouille" };
+  // Par défaut, selon le bruit que fait l'action.
+  if (bruit === "lourd") return { id: "marteau_metal", periode: 1 };
+  if (bruit === "outil") return { id: "demonter", periode: 1.2 };
+  return { id: "fouille", periode: 1.5 };
+}
+
+export class Bruiteur {
+  private readonly son: Sonorisation;
+  private t = 0;
+  private foulee = 0;
+  private readonly suivis = new Map<number, SuiviEteint>();
+  private readonly autres = new Map<number, { x: number; z: number; foulee: number }>();
+  private action: { geste: Geste; prochain: number } | null = null;
+  private derniereAction: Geste | null = null;
+  private readonly aspects = new Map<number, AspectFeu>();
+  private prochainTonnerre = 0;
+  private saisiAvant = 0;
+  /** Le premier Éteint repéré de la session a eu son signal musical. */
+  private repere = false;
+
+  constructor(son: Sonorisation) {
+    this.son = son;
+  }
+
+  /** Les pas du joueur : un son à chaque foulée, selon le sol et l'allure. */
+  pas(lieu: LieuJouable, x: number, z: number, allure: AllurePas, distance: number): void {
+    if (distance <= 0) {
+      this.foulee = Math.min(this.foulee, FOULEE[allure] * 0.6);
+      return;
+    }
+    this.foulee += distance;
+    if (this.foulee < FOULEE[allure]) return;
+    // On garde le reste de la foulée : le rythme des pas suit exactement la distance parcourue.
+    this.foulee = Math.min(this.foulee - FOULEE[allure], FOULEE[allure]);
+    this.son.jouer(`pas_${solIci(lieu, x, z)}_${allure}` as IdSon);
+  }
+
+  /** Les autres joueurs : on entend leurs pas (à la marche). */
+  pasDesAutres(lieu: LieuJouable, liste: { id: number; x: number; z: number }[]): void {
+    const vus = new Set<number>();
+    for (const a of liste) {
+      vus.add(a.id);
+      const s = this.autres.get(a.id);
+      if (!s) {
+        this.autres.set(a.id, { x: a.x, z: a.z, foulee: 0 });
+        continue;
+      }
+      s.foulee += Math.hypot(a.x - s.x, a.z - s.z);
+      s.x = a.x;
+      s.z = a.z;
+      if (s.foulee >= FOULEE.marche) {
+        s.foulee = 0;
+        this.son.jouer(`pas_${solIci(lieu, a.x, a.z)}_marche` as IdSon, a);
+      }
+    }
+    for (const id of this.autres.keys()) if (!vus.has(id)) this.autres.delete(id);
+  }
+
+  /**
+   * La vie sonore des Éteints, et le niveau de menace pour la musique.
+   * Dormant : respiration à 3 m. Errant : pas qui traînent, râles espacés. Attiré : le râle se coupe net, la tête
+   * craque, puis le silence et les pas. Poursuivant : râles rapprochés, pas pressés, souffle.
+   */
+  eteints(dt: number, liste: { id: number; x: number; z: number; etat: EtatEteint; saisit?: boolean }[], moi: Ou | null, saisi: number): void {
+    this.t += dt;
+    const vus = new Set<number>();
+    let menace: NiveauMenace = saisi > 0 ? "saisie" : "aucune";
+    for (const e of liste) {
+      vus.add(e.id);
+      let s = this.suivis.get(e.id);
+      if (!s) {
+        s = { etat: e.etat, x: e.x, z: e.z, prochainCri: this.t + 0.5 + Math.random() * 3, foulee: 0, saisit: false };
+        this.suivis.set(e.id, s);
+      }
+      const ou = { x: e.x, z: e.z };
+      if (e.etat !== s.etat) this.changement(s, e.etat, ou);
+      s.etat = e.etat;
+      const bouge = Math.hypot(e.x - s.x, e.z - s.z);
+      s.x = e.x;
+      s.z = e.z;
+      if (e.saisit && !s.saisit) this.son.jouer("saisie", ou);
+      s.saisit = Boolean(e.saisit);
+
+      // Les pas.
+      if (e.etat === "errant" || e.etat === "attire" || e.etat === "poursuivant") {
+        s.foulee += bouge;
+        const presse = e.etat === "poursuivant";
+        if (s.foulee >= (presse ? 0.8 : 0.6)) {
+          s.foulee = 0;
+          this.son.jouer(presse ? "eteint_pas_presse" : "eteint_pas", ou);
+        }
+      }
+      // Les râles et les souffles, à intervalles irréguliers.
+      if (this.t >= s.prochainCri) {
+        if (e.etat === "dormant") {
+          this.son.jouer(Math.random() < 0.15 ? "eteint_machoire" : "eteint_souffle", ou);
+          s.prochainCri = this.t + 3 + Math.random() * 1.5;
+        } else if (e.etat === "errant") {
+          this.son.jouer("eteint_rale", ou);
+          s.prochainCri = this.t + 4 + Math.random() * 6;
+        } else if (e.etat === "attire") {
+          // L'Attiré se tait : on n'entend que son souffle, de temps en temps.
+          if (Math.random() < 0.4) this.son.jouer("eteint_halete", ou, { gain: 0.6 });
+          s.prochainCri = this.t + 3 + Math.random() * 3;
+        } else if (e.etat === "poursuivant") {
+          this.son.jouer(Math.random() < 0.75 ? "eteint_rale_rapide" : "eteint_halete", ou);
+          s.prochainCri = this.t + 1.2 + Math.random() * 1.6;
+        } else s.prochainCri = this.t + 2;
+      }
+
+      // La menace : l'état le plus grave des Éteints qui en veulent au joueur.
+      if (moi) {
+        const d = Math.hypot(e.x - moi.x, e.z - moi.z);
+        if (!this.repere && d < 14 && e.etat !== "dormant" && e.etat !== "detruit") {
+          this.repere = true;
+          this.son.signal("eteintRepere");
+        }
+        if (e.etat === "poursuivant" && d < 30 && menace !== "saisie") menace = "poursuite";
+        else if (e.etat === "attire" && d < 25 && menace === "aucune") menace = "attire";
+      }
+    }
+    for (const id of this.suivis.keys()) if (!vus.has(id)) this.suivis.delete(id);
+    this.son.menace(menace);
+    if (saisi > this.saisiAvant) this.son.jouer("saisie");
+    this.saisiAvant = saisi;
+  }
+
+  private changement(s: SuiviEteint, etat: EtatEteint, ou: Ou): void {
+    if (s.etat === "dormant" && etat !== "detruit") this.son.jouer("eteint_machoire", ou, { portee: 10 });
+    if (etat === "attire" && s.etat !== "poursuivant") {
+      // Le râle coupé net, la tête qui se tourne : le son le plus important du jeu.
+      this.son.jouer("eteint_rale_coupe", ou);
+      setTimeout(() => this.son.jouer("eteint_tete_craque", ou), 450);
+      s.prochainCri = this.t + 3;
+    }
+    if (etat === "poursuivant") {
+      this.son.jouer("eteint_rale_rapide", ou);
+      s.prochainCri = this.t + 1.2;
+    }
+    if (etat === "a_terre") setTimeout(() => this.son.jouer("chute_corps", ou), 150);
+  }
+
+  // ---------- Le combat ----------
+
+  frappe(appuye: boolean): void {
+    this.son.jouer(appuye ? "sifflement_lourd" : "sifflement");
+  }
+
+  coup(resultat: "detruit" | "a_terre" | "vacille", ou: Ou): void {
+    if (resultat === "detruit") {
+      this.son.jouer("coup_tete", ou);
+      setTimeout(() => this.son.jouer("chute_corps", ou), 280);
+    } else this.son.jouer(resultat === "a_terre" ? "impact_appuye" : "impact", ou);
+  }
+
+  esquive(): void {
+    this.son.jouer("esquive");
+  }
+
+  degagement(): void {
+    this.son.jouer("degagement");
+  }
+
+  morsure(): void {
+    this.son.jouer("morsure");
+    setTimeout(() => this.son.jouer("coeur"), 500);
+  }
+
+  effondrement(): void {
+    this.son.jouer("effondrement");
+    this.son.signal("mort");
+  }
+
+  // ---------- Les actions ----------
+
+  debutAction(libelle: string, bruit: BruitAction): void {
+    const geste = gesteDe(libelle, bruit);
+    this.action = { geste, prochain: this.t + (geste.periode ?? Infinity) };
+    this.derniereAction = geste;
+    if (geste.id) this.son.jouer(geste.id);
+  }
+
+  finAction(reussie: boolean): void {
+    const g = this.derniereAction;
+    this.action = null;
+    if (reussie && g?.fin) this.son.jouer(g.fin);
+    else if (!reussie && g?.continu === "chaine_velo") this.son.jouer("roue_libre");
+  }
+
+  // ---------- Les sons continus et le monde ----------
+
+  monde(o: {
+      feux: { id: number; x: number; z: number; aspect: AspectFeu }[];
+      installations: { id: number; type: TypeInstallation; x: number; z: number; batteries: boolean }[];
+      pluie: number;
+      dehors: boolean;
+  }): void {
+    // Les gestes répétés de l'action en cours.
+    const a = this.action;
+    if (a && a.geste.id && a.geste.periode && this.t >= a.prochain) {
+      this.son.jouer(a.geste.id);
+      a.prochain = this.t + a.geste.periode * (0.85 + Math.random() * 0.3);
+    }
+    const voulus: { cle: string; id: IdSon; ou?: Ou; gain?: number }[] = [];
+    if (a?.geste.continu) voulus.push({ cle: "action", id: a.geste.continu });
+    if (a?.geste.continu2) voulus.push({ cle: "action2", id: a.geste.continu2, gain: 0.6 });
+
+    for (const f of o.feux) {
+      const avant = this.aspects.get(f.id);
+      if (avant && avant !== f.aspect) {
+        if ((avant === "flammes" || avant === "braises") && (f.aspect === "cendres" || f.aspect === "eteint")) this.son.jouer("extinction", f);
+        if (f.aspect === "flammes" && avant !== "braises") this.son.premierFeu();
+      }
+      this.aspects.set(f.id, f.aspect);
+      if (f.aspect === "flammes") voulus.push({ cle: `feu${f.id}`, id: "feu_crepite", ou: f });
+      else if (f.aspect === "braises") voulus.push({ cle: `feu${f.id}`, id: "feu_crepite", ou: f, gain: 0.45 });
+    }
+    for (const i of o.installations) {
+      if (i.type === "banc_recharge" && i.batteries) voulus.push({ cle: `banc${i.id}`, id: "bourdonnement", ou: i });
+    }
+    // La pluie couvre tout ; le tonnerre roule de temps en temps quand il pleut fort.
+    if (o.pluie > 0.05) voulus.push({ cle: "pluie", id: "pluie", gain: o.pluie * (o.dehors ? 1 : 0.45) });
+    if (o.pluie > 0.6 && this.t > this.prochainTonnerre) {
+      if (this.prochainTonnerre > 0) this.son.jouer("tonnerre", null, { gain: 0.6 + Math.random() * 0.4 });
+      this.prochainTonnerre = this.t + 25 + Math.random() * 50;
+    }
+    this.son.continus(voulus);
+  }
+}
