@@ -4452,3 +4452,21 @@ body.aide-ouverte #hud .tactile {
     transition: none;
   }
 }
+
+/* L'usure d'une arme (Book 23 §4.3) : réparer depuis le sac. */
+#hud .sac .reparer-arme {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+#hud .sac .reparer-arme button {
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 6px;
+  border: 1px solid var(--encre);
+  background: transparent;
+  color: var(--encre);
+  font: inherit;
+  cursor: pointer;
+}

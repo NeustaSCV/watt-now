@@ -8,7 +8,7 @@ import { ceQuiManque } from "../../commun/src/aide-fabrication.ts";
 import { ACTIONS, RESERVEES, assigner, avecTouches, nomDe, nomTouche, retablir, surChangement, type Action } from "./touches.ts";
 import { PanneauAide } from "./aide.ts";
 import { CAPACITES, type Charges } from "../../commun/src/energie.ts";
-import { ARMES, NOMS_BLESSURES, RESISTANCE_TORSE, caracteristiquesArme, estArme } from "../../commun/src/combat.ts";
+import { ARMES, MATIERE_ARME, NOMS_BLESSURES, PLAFOND_FORTUNE, RESISTANCE_TORSE, SEUIL_ABIMEE, caracteristiquesArme, estArme, etatArme } from "../../commun/src/combat.ts";
 import type { EchangeVu, FeuVu, InstallationVue, OffreEchange, OperationComptoir, OperationEchange, Personne, RapportBase, SanteVue, Verbe, VueComptoir, WottsVus } from "../../commun/src/messages.ts";
 import {
   ACCESSOIRES_FEU,
@@ -106,6 +106,8 @@ export interface ActionsJoueur {
   demonter(objet: TypeObjet): void;
   /** Équiper une arme pour le mode Combat (null : la meilleure du sac) (P-005). */
   equiper(objet: TypeObjet | null): void;
+  /** Réparer une arme (Book 23 §4.3) : de fortune, ou pour de bon à l'atelier. */
+  reparer(objet: TypeObjet, fortune: boolean): void;
   /** Ranger dans le coffre, ou en sortir. */
   coffre(id: number, sens: "deposer" | "prendre", objet: TypeObjet, quantite: number): void;
   /** Un geste sur un feu ou une installation, depuis sa fiche (Book 24 : améliorer, démonter, creuser…). */
@@ -152,6 +154,15 @@ function lireCarnetOuvert(): boolean {
 
 /** L'importance d'un message : quand la pile est pleine, le moins important part en premier. */
 const RANG_MESSAGE = { indice: 0, "": 1, aide: 2, lecon: 3 } as const;
+
+/** Le type de dégât, en une phrase (Book 23 §4.2). */
+const TYPES_DEGATS = {
+  contondant: "Contondant : il passe les casques et étourdit plus longtemps.",
+  tranchant: "Tranchant : un casque l'arrête à la tête.",
+  percant: "Perçant : sa force, c'est l'allonge.",
+} as const;
+/** Où remettre une arme à neuf (Book 23 §4.3). */
+const ATELIERS_REPARATION_NOMS = { bois: "à l'établi", lame: "à la meule", metal: "à la forge" } as const;
 
 export class Hud {
   /** Réassigner une touche : le jeu attend la prochaine touche frappée (null : annulé). */
@@ -1371,7 +1382,7 @@ export class Hud {
       }
       // Une arme : ses dégâts et sa vitesse, comparés aux autres (2026-10-08).
       const arme = caracteristiquesArme(s);
-      if (arme) detail += this.ficheArme(arme);
+      if (arme) detail += this.ficheArme(arme, s);
       // Jeter par terre, quand le sac est trop lourd (on garde son sac sur le dos).
       const jeter =
         s === "sac_a_dos" || s === "sac_fortune"
@@ -1444,6 +1455,7 @@ export class Hud {
         if (action === "panser") this.actions.panser();
         if (action === "equiper" && this.selection) this.actions.equiper(this.selection);
         if (action === "desequiper") this.actions.equiper(null);
+        if ((action === "reparer" || action === "reparer-fortune") && this.selection) this.actions.reparer(this.selection, action === "reparer-fortune");
         if (action === "demonter" && this.selection) this.actions.demonter(this.selection);
         if ((action === "jeter1" || action === "jeterTout") && this.selection) {
           this.actions.jeter(this.selection, action === "jeter1" ? 1 : (this.inventaire[this.selection] ?? 1));
@@ -1453,7 +1465,17 @@ export class Hud {
   }
 
   /** Les caractéristiques d'une arme, en barres (la meilleure arme du jeu remplit la barre). */
-  private ficheArme(a: NonNullable<ReturnType<typeof caracteristiquesArme>>): string {
+  /** L'usure des armes (coups qui restent ; absente : neuve), Book 23 §4.3. */
+  private usureArmes: Partial<Record<TypeObjet, number>> = {};
+
+  majUsure(usure: Partial<Record<TypeObjet, number>>, evenement?: { objet: TypeObjet; etat: "abimee" | "cassee" | "reparee" }): void {
+    this.usureArmes = usure;
+    this.dernierSac = "";
+    if (!this.sac.hidden) this.dessinerSac();
+    if (evenement?.etat === "reparee") this.message(`${nommer(evenement.objet, 1)} : réparée.`);
+  }
+
+  private ficheArme(a: NonNullable<ReturnType<typeof caracteristiquesArme>>, objet: TypeObjet): string {
     const maxDegats = Math.max(...ARMES.map((x) => x.degatsTorse));
     const maxVitesse = Math.max(...ARMES.map((x) => 1000 / x.coup));
     const maxAllonge = Math.max(...ARMES.map((x) => x.allonge));
@@ -1461,12 +1483,23 @@ export class Hud {
     const barre = (libelle: string, part: number, valeur: string, titre: string) =>
       `<span class="carac" title="${titre}"><span class="nom-carac">${libelle}</span><span class="barre-carac"><span style="width:${Math.round(Math.min(1, part) * 100)}%"></span></span><span class="valeur-carac">${valeur}</span></span>`;
     const coupsPourTomber = Math.ceil(RESISTANCE_TORSE / a.degats);
+    const etat = etatArme(objet, this.usureArmes);
+    const abimee = etat < SEUIL_ABIMEE;
     return `<span class="caracs-arme">
       ${barre("Dégâts", a.degats / maxDegats, virgule(a.degats), `${coupsPourTomber} coup${coupsPourTomber > 1 ? "s" : ""} au torse pour le faire tomber`)}
       ${barre("Vitesse", a.vitesse / maxVitesse, `${virgule(a.coup, 2)} s`, `Un coup simple dure ${virgule(a.coup, 2)} s, un coup appuyé ${virgule(a.coupAppuye, 2)} s`)}
       ${barre("Allonge", a.allonge / maxAllonge, `${virgule(a.allonge)} m`, "Jusqu'où il porte")}
+      ${barre("Solidité", etat, abimee ? "abîmée" : `${Math.round(etat * 100)} %`, abimee ? "Abîmée : ses coups portent 30 % moins fort. Répare-la." : "Elle s'use à chaque coup qui touche ; à zéro, elle casse.")}
       <span class="tete-carac">${a.tueALaTete ? "☠ Un coup appuyé à la tête l'arrête net." : "Ne tue pas d'un coup à la tête : il faut l'achever au sol."}</span>
-    </span>`;
+      <span class="tete-carac">${TYPES_DEGATS[a.type]}</span>
+    </span>
+    ${
+      etat < 1
+        ? `<span class="reparer-arme"><button type="button" data-action="reparer">Remettre à neuf (${ATELIERS_REPARATION_NOMS[MATIERE_ARME[objet] ?? "metal"]})</button>${
+            etat < PLAFOND_FORTUNE ? `<button type="button" data-action="reparer-fortune">Réparation de fortune (ficelle, chiffons)</button>` : ""
+          }</span>`
+        : ""
+    }`;
   }
 
   // ---------- Le coffre de rangement ----------

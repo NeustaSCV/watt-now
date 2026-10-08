@@ -13,7 +13,7 @@ import { COMPTOIR, sortieIci, zoneCoop, zoneDe, type LieuJouable, type Zone } fr
 import type { EteintVu } from "../../commun/src/eteints.ts";
 import { cerclesSignature, type BruitAction } from "../../commun/src/signature.ts";
 import { ALLURES, GESTE_TENU_MAX_S, type Allure } from "../../commun/src/regles.ts";
-import { APPUIS_DEGAGEMENT, ESQUIVE, SEUIL_EPUISE, armeEnMain, freinSaisie } from "../../commun/src/combat.ts";
+import { APPUIS_DEGAGEMENT, ESQUIVE, REPOUSSER, SEUIL_EPUISE, armeEnMain, freinSaisie } from "../../commun/src/combat.ts";
 import type { AutreVu, SacVu, SanteVue, VueComptoir } from "../../commun/src/messages.ts";
 import { PORTEE_CABLE_PANNEAU, type Charges } from "../../commun/src/energie.ts";
 import type { Bienvenue, InstallationVue, MessageClient, MessageServeur } from "../../commun/src/messages.ts";
@@ -33,7 +33,7 @@ import { RAYON_ESCABEAU, estFruitier } from "../../commun/src/terrain.ts";
 import { creerRuine } from "./rendu/ruine.ts";
 import { creerHalte, estomperToits } from "./rendu/halte.ts";
 import { animerCooperative, creerCooperative, estomperCooperative, majPortes } from "./rendu/cooperative.ts";
-import { pieceDe, portesInitiales } from "../../commun/src/cooperative.ts";
+import { LEURRES, pieceDe, portesInitiales } from "../../commun/src/cooperative.ts";
 import { animerComptoir, creerComptoir, lumieresComptoir } from "./rendu/comptoir.ts";
 import { VueEteint } from "./rendu/eteint.ts";
 import { VueAutre } from "./rendu/autres.ts";
@@ -86,6 +86,8 @@ if (import.meta.env.DEV) Object.assign(window, { __watt: { scene } });
 const decors = new Map<LieuJouable, THREE.Group>();
 /** Le décor de la Coopérative (ses toits, ses portes) : construit à la première visite. */
 let decorCoop: THREE.Group | null = null;
+/** Les leurres de la Coopérative en marche (la radio allumée). */
+const leurresActifs = new Set<string>();
 /** L'état des portes de la Coopérative (ouverte : true), tel que le serveur l'a dit. */
 let portesCoop: Record<string, boolean> = portesInitiales();
 /** La zone où l'on se déplace : à la Coopérative, les portes fermées bouchent le passage. */
@@ -360,6 +362,7 @@ const hud = new Hud(
     jeter: (objet, quantite) => envoyer({ t: "jeter", objet, quantite }),
     demonter: (objet) => envoyer({ t: "demonter", objet }),
     equiper: (objet) => envoyer({ t: "equiper", objet }),
+    reparer: (objet, fortune) => envoyer({ t: "reparer", objet, fortune }),
     coffre: (id, sens, objet, quantite) => envoyer({ t: "coffre", id, sens, objet, quantite }),
     amenager: (genre, id, verbe) => envoyer({ t: "interagir", cible: { genre, id }, verbe }),
     fabriquer: (r) => {
@@ -392,8 +395,16 @@ function installer(message: Bienvenue): void {
   voile.hidden = true;
   lieu = message.lieu;
   montrerDecor(lieu);
-  // Les portes de la Coopérative, dans l'état où on les a laissées.
+  // Les portes de la Coopérative, dans l'état où on les a laissées ; la radio, si elle joue encore.
   if (message.portes) portesCoop = message.portes;
+  leurresActifs.clear();
+  son.radioCompagnie(false);
+  for (const id of message.leurres ?? []) leurresActifs.add(id);
+  if (leurresActifs.has("radio")) {
+    const r = LEURRES.find((l) => l.id === "radio")!;
+    son.radioCompagnie(true, { x: r.x, z: r.z });
+  }
+  if (message.usure) hud.majUsure(message.usure);
   if (decorCoop && lieu === "cooperative") majPortes(decorCoop, portesCoop);
   enVoyage = false;
   carte.arriver();
@@ -690,6 +701,21 @@ function recevoir(message: MessageServeur): void {
       return;
     case "sacs":
       majSacs(message.sacs);
+      return;
+    case "leurre": {
+      // Un leurre se déclenche : on l'entend, et les Éteints aussi (Book 23 §4.7).
+      const ou = { x: message.x, z: message.z };
+      if (message.id === "radio") {
+        if (message.actif) leurresActifs.add("radio");
+        else leurresActifs.delete("radio");
+        son.radioCompagnie(message.actif, ou);
+      } else if (message.actif) son.jouer(message.id === "klaxon" ? "klaxon" : "sonnette", ou);
+      return;
+    }
+    case "usure":
+      hud.majUsure(message.usure, message.evenement);
+      if (message.evenement?.etat === "cassee") son.jouer("chute_corps", null, { gain: 0.5 });
+      else if (message.evenement?.etat === "abimee") son.jouer("demonter", null, { gain: 0.6 });
       return;
     case "portes":
       portesCoop = message.portes;
@@ -1051,13 +1077,35 @@ function executer(c: Commande): void {
   }
 }
 
-/** B en combat : se dégager si l'on est saisi, esquiver sinon (Book 08 §3.3). */
+/** Un Éteint debout à 1,2 m ou moins devant soi (cône de 90°) : B le repousse (Book 23 §4.4). */
+function aRepousser(): boolean {
+  if (!position) return false;
+  for (const e of eteints.values()) {
+    if (e.etat === "dormant" || e.etat === "detruit" || e.etat === "a_terre") continue;
+    const dx = e.objet.position.x - position.x;
+    const dz = e.objet.position.z - position.z;
+    if (Math.hypot(dx, dz) > REPOUSSER.portee + 0.3) continue;
+    const ecart = Math.atan2(dx, dz) - position.o;
+    if (Math.abs(Math.atan2(Math.sin(ecart), Math.cos(ecart))) <= REPOUSSER.demiAngle) return true;
+  }
+  return false;
+}
+
+/** B en combat, selon la situation (Book 23 §4.4) : saisi, se dégager ; un Éteint au contact devant, le repousser ; sinon, esquiver. */
 function combatB(): void {
   if (!position || enVoyage) return;
   if (saisi > 0) {
     appuisLocaux++;
     envoyer({ t: "degager" });
     bruiteur.degagement();
+    return;
+  }
+  if (aRepousser()) {
+    if (endurance < REPOUSSER.cout) return hud.message("Trop essoufflé pour repousser.");
+    envoyer({ t: "repousser" });
+    bruiteur.esquive();
+    // Une poussée sèche des deux bras : on reprend le geste du coup simple, bref.
+    personnage?.frapper(false, 0.45);
     return;
   }
   if (endurance < 14) return hud.message("Trop essoufflé pour esquiver.");
@@ -1323,12 +1371,13 @@ function boucle(instant: number): void {
       lieu === "terrain" ? volaille.places() : [],
       jourAffiche,
       lieu === "cooperative" ? portesCoop : null,
+      leurresActifs,
     );
     if (modeCombat) {
       // En combat, A frappe et B esquive ; saisi, B sert à se dégager.
       propositions = {
         A: { libelle: "Frapper (maintenir : à la tête)", examiner: "" },
-        B: { libelle: saisi > 0 ? "Se dégager" : "Esquiver", examiner: "" },
+        B: { libelle: saisi > 0 ? "Se dégager" : aRepousser() ? "Repousser" : "Esquiver", examiner: "" },
         cible: null,
       };
     }

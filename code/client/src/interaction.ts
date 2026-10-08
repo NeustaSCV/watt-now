@@ -5,7 +5,7 @@ import { PERIODES_FRUITIERS, enSaison, etatDuFruitier, phaseFruitier, visibleEnS
 import type { Position } from "../../commun/src/deplacement.ts";
 import { CAPACITES, type Charges } from "../../commun/src/energie.ts";
 import { COMPTOIR, sortieIci, type LieuId, type LieuJouable } from "../../commun/src/lieux.ts";
-import { PORTES, distancePorte } from "../../commun/src/cooperative.ts";
+import { LEURRES, PORTES, distancePorte } from "../../commun/src/cooperative.ts";
 import type { AutreVu, InstallationVue, MessageClient, SacVu, Verbe } from "../../commun/src/messages.ts";
 import { nommer, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
 import { RECETTES } from "../../commun/src/recettes.ts";
@@ -158,6 +158,8 @@ export function proposer(
   jour = 0,
   /** À la Coopérative : l'état de ses portes (ouverte : true). */
   portes: Readonly<Record<string, boolean>> | null = null,
+  /** À la Coopérative : les leurres en marche (la radio allumée). */
+  leurresActifs: ReadonlySet<string> = new Set(),
 ): Propositions {
   // Un objet lourd dans les bras : A le pose devant soi, rien d'autre (les bras sont pris).
   const installationsVues = [...installations];
@@ -260,6 +262,24 @@ export function proposer(
             : "Une porte fermée. Ce qu'il y a derrière, tu ne le sauras qu'en l'ouvrant… ou en écoutant.",
         },
         cible: { x: p.x, z: p.z },
+      });
+    }
+  }
+
+  // À la Coopérative : les leurres du décor (Book 23 §4.7). Un bruit qui attire les Éteints ailleurs que sur soi.
+  if (portes) {
+    const EXAMENS: Record<string, string> = {
+      klaxon: "Le klaxon du tracteur rouge. La batterie a encore un peu de jus : de quoi faire venir tous les Éteints du coin… quelques fois. Elle ne se recharge pas.",
+      sonnette: "La sonnette électrique du quai : on sonnait pour la livraison. Elle s'entend dans tout le hangar.",
+      radio: "Un vieux poste à piles, réglé sur la radio de la Compagnie. Allumé, il braille sa réclame : les Éteints vont voir.",
+    };
+    for (const l of LEURRES) {
+      const libelle =
+        l.id === "klaxon" ? "Klaxonner (attire les Éteints)" : l.id === "sonnette" ? "Sonner (attire les Éteints)" : leurresActifs.has("radio") ? "Éteindre la radio" : "Allumer la radio (attire les Éteints)";
+      garder(Math.hypot(l.x - position.x, l.z - position.z) - 0.4, {
+        A: { libelle, message: { t: "interagir", cible: { genre: "leurre", id: l.id }, verbe: "actionner" } },
+        B: { libelle: "Examiner", examiner: EXAMENS[l.id] ?? "" },
+        cible: { x: l.x, z: l.z },
       });
     }
   }

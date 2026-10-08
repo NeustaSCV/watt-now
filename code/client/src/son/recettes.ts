@@ -815,3 +815,32 @@ export const cancan: Recette = (h) => {
   }
   return p.donnees;
 };
+
+/** Le klaxon du tracteur (Book 23 §4.7) : deux tons graves et rauques, une batterie fatiguée, 2,5 s. Un leurre : on l'entend de loin. */
+export const klaxon: Recette = (h) => {
+  const d = 2.5;
+  const p = new Piste(d, h);
+  // La batterie faiblit : le ton descend un peu en cours de route.
+  const chute = (t: number) => 1 - 0.04 * (t / d);
+  const env = (t: number) => Math.min(1, t / 0.03) * Math.min(1, (d - t) / 0.12);
+  for (const [f, a] of [
+    [392, 0.5],
+    [494, 0.4],
+  ] as const) {
+    const ton = oscillateur(n(d), (t) => f * chute(t) * (1 + (h() - 0.5) * 0.002), "carre");
+    p.ajouter(enveloppe(filtrer(ton, "passe-bas", 2200, 0.9), env), 0, a);
+  }
+  return saturer(p.donnees, 1.6);
+};
+
+/** La sonnette électrique du quai : le marteau bat le timbre vingt fois par seconde, 2,2 s. */
+export const sonnette: Recette = (h) => {
+  const p = new Piste(2.3, h);
+  const partiels = [
+    { f: 1870, a: 1, tau: 0.25 },
+    { f: 2940, a: 0.5, tau: 0.15 },
+    { f: 4310, a: 0.3, tau: 0.08 },
+  ];
+  for (let t = 0; t < 2.2; t += 0.05) p.ajouter(modes(0.3, partiels), t, 0.18 + h() * 0.05);
+  return p.donnees;
+};

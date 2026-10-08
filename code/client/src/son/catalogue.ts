@@ -120,6 +120,9 @@ export const SONS = {
   pinces: quotidien(R.pinces, 0.45, PROCHE),
   bourdonnement: { recette: R.bourdonnement, bus: "environnement", priorite: 3, variantes: 1, gain: 0.18, portee: PROCHE, boucle: true },
   interrupteur: quotidien(R.interrupteur, 0.4, PROCHE, 2),
+  // Les leurres du décor de la Coopérative (Book 23 §4.7) : faits pour être entendus de loin.
+  klaxon: { recette: R.klaxon, bus: "environnement", priorite: 2, variantes: 1, gain: 0.7, portee: 45 },
+  sonnette: { recette: R.sonnette, bus: "environnement", priorite: 2, variantes: 1, gain: 0.5, portee: 32 },
 
   // La faune (2026-10-08) : on l'entend de près ; l'envol des canards porte un peu plus loin.
   envol: { recette: R.envol, bus: "environnement", priorite: 3, variantes: 3, gain: 0.5, portee: 25 },

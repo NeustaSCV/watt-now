@@ -295,6 +295,36 @@ export class Sonorisation {
     this.moteur?.radio(actif);
   }
 
+  /**
+   * La radio à piles de la Coopérative (Book 23 §4.7) : la réclame de la Compagnie pour l'« engrais Watty », en boucle,
+   * à sa place (un son diégétique livré par la session musique, LIVRAISON §3 bis). Les Éteints l'entendent aussi.
+   */
+  radioCompagnie(actif: boolean, ou: Ou | null = null): void {
+    if (!actif) {
+      if (this.voixRadio && this.moteur) this.moteur.arreterEffet(this.voixRadio, 0.3);
+      this.voixRadio = null;
+      return;
+    }
+    if (this.voixRadio || !this.ctx || !this.moteur) return;
+    const ctx = this.ctx;
+    const moteur = this.moteur;
+    this.tamponRadio ??= fetch(`${BASE}manifeste${this.mobile ? "-mobile" : ""}.json`)
+      .then((r) => r.json() as Promise<{ diegetiques?: Record<string, { fichier: string }> }>)
+      .then(async (m) => {
+        const d = m.diegetiques?.["radio-compagnie"];
+        if (!d) return null;
+        const r = await fetch(`${BASE}${this.mobile ? "mobile" : "jeu"}/${d.fichier}${this.extensionEffets}`);
+        return r.ok ? ctx.decodeAudioData(await r.arrayBuffer()) : null;
+      })
+      .catch(() => null);
+    void this.tamponRadio.then((tampon) => {
+      if (!tampon || this.voixRadio || this.moteur !== moteur) return;
+      this.voixRadio = moteur.jouerEffet(tampon, { bus: "environnement", priorite: 3, position: ou ? this.relatif(ou) : null, portee: ou ? 25 : 0, boucle: true, varier: false });
+    });
+  }
+  private voixRadio: VoixEffet | null = null;
+  private tamponRadio: Promise<AudioBuffer | null> | null = null;
+
   /** Couper ou remettre le son (préférence gardée). */
   basculer(): boolean {
     this.coupe = !this.coupe;
