@@ -1509,6 +1509,8 @@ if (import.meta.env.DEV) {
       eteints: () => [...eteints.entries()].map(([id, e]) => ({ id, x: e.objet.position.x, z: e.objet.position.z, etat: e.etat })),
       combat: () => ({ modeCombat, saisi, sante, endurance }),
       son: () => son.diagnostic(),
+      /** Simuler un message du serveur (captures, essais de rendu : l'indicateur hors champ, les variantes…). */
+      simuler: (m: MessageServeur) => recevoir(m),
       scene,
       personnage: () => personnage,
       envoyer,

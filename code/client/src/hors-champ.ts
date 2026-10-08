@@ -1,6 +1,6 @@
 // L'indicateur hors champ (Book 23 §4.5) : en vue isométrique sur un téléphone, un Éteint qui approche hors de
-// l'écran est la première cause probable de mort injuste. Une flèche au bord de l'écran montre d'où il vient ; plus il
-// est près, plus elle est nette ; elle bat quand il poursuit.
+// l'écran est la première cause probable de mort injuste. Une flèche, sur un cercle autour du personnage, montre d'où
+// il vient ; plus il est près, plus elle est nette ; elle bat quand il poursuit.
 
 import * as THREE from "three";
 import type { EtatEteint } from "../../commun/src/eteints.ts";
@@ -33,6 +33,7 @@ export class IndicateurHorsChamp {
     if (moi) {
       const l = this.calque.clientWidth || window.innerWidth;
       const h = this.calque.clientHeight || window.innerHeight;
+      const centre = this.v.set(moi.x, 1, moi.z).project(camera).clone();
       for (const e of eteints) {
         if (e.etat !== "attire" && e.etat !== "poursuivant") continue;
         const d = Math.hypot(e.x - moi.x, e.z - moi.z);
@@ -41,23 +42,29 @@ export class IndicateurHorsChamp {
         const nx = this.v.x;
         const ny = this.v.y;
         if (Math.abs(nx) <= BORD && Math.abs(ny) <= BORD) continue;
-        // Du centre vers lui, ramené sur le bord de l'écran.
-        const k = BORD / Math.max(Math.abs(nx), Math.abs(ny));
-        const bx = nx * k;
-        const by = Math.max(-0.8, Math.min(0.72, ny * k));
+        // Autour du personnage, dans la direction de l'Éteint : là où le regard se pose, et jamais sur un
+        // bouton ou une jauge (les bords de l'écran d'un téléphone en sont couverts).
+        const dx = (nx - centre.x) * l;
+        const dy = (centre.y - ny) * h;
+        const n = Math.hypot(dx, dy) || 1;
+        // Une ellipse plus large que haute, comme le sol vu en isométrique (et qui laisse les messages du haut).
+        const rx = Math.min(l, h) * 0.36;
+        const ry = Math.min(l, h) * 0.22;
+        const px = ((centre.x + 1) / 2) * l + (dx / n) * rx;
+        const py = ((1 - centre.y) / 2) * h + (dy / n) * ry;
         let f = this.fleches.get(e.id);
         if (!f) {
           const el = document.createElement("div");
           el.className = "fleche";
-          el.innerHTML = `<svg viewBox="0 0 40 40" width="40" height="40"><circle cx="20" cy="20" r="17" class="fond"/><path d="M14 11 L28 20 L14 29 Z" class="pointe"/></svg>`;
+          el.innerHTML = `<svg viewBox="0 0 40 40" width="48" height="48"><circle cx="20" cy="20" r="17" class="fond"/><path d="M11 11 L30 20 L11 29 L16 20 Z" class="pointe"/></svg>`;
           this.calque.append(el);
           f = { el, vu: true };
           this.fleches.set(e.id, f);
         }
         f.vu = true;
-        const angle = Math.atan2(-ny, nx);
-        f.el.style.transform = `translate(${((bx + 1) / 2) * l - 20}px, ${((1 - by) / 2) * h - 20}px) rotate(${angle}rad)`;
-        f.el.style.opacity = String(0.45 + 0.55 * (1 - d / PORTEE));
+        const angle = Math.atan2(dy, dx);
+        f.el.style.transform = `translate(${px - 24}px, ${py - 24}px) rotate(${angle}rad)`;
+        f.el.style.opacity = String(0.6 + 0.4 * (1 - d / PORTEE));
         f.el.classList.toggle("poursuit", e.etat === "poursuivant");
       }
     }

@@ -4476,27 +4476,28 @@ body.aide-ouverte #hud .tactile {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 8;
+  z-index: 20;
   overflow: hidden;
 }
 .hors-champ .fleche {
   position: absolute;
   left: 0;
   top: 0;
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   transition: opacity 0.2s;
+  filter: drop-shadow(0 0 6px rgba(255, 120, 60, 0.55));
 }
 .hors-champ .fleche .fond {
-  fill: rgba(14, 18, 26, 0.55);
-  stroke: rgba(242, 239, 230, 0.35);
-  stroke-width: 1.5;
+  fill: rgba(14, 18, 26, 0.72);
+  stroke: #ffd9a0;
+  stroke-width: 2;
 }
 .hors-champ .fleche .pointe {
-  fill: #e0a24a;
+  fill: #ffb04a;
 }
 .hors-champ .fleche.poursuit .pointe {
-  fill: #e0523a;
+  fill: #ff5a3a;
 }
 .hors-champ .fleche.poursuit svg {
   animation: hors-champ-bat 0.7s ease-in-out infinite;
