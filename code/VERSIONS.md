@@ -15,7 +15,8 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 ## 0.5 · en préparation
 
 **L'écran**
-- Les **messages** passent **en haut à droite, juste sous les tuiles**, en petit et sur un fond très léger : ils ne cachent plus la zone de jeu. Les **indices** (« comment s'y prendre ») sont encore plus discrets.
+- Les **messages** passent **en haut, juste sous les tuiles**, en petit et sur un fond très léger : ils ne cachent plus la zone de jeu. Sur téléphone en horizontal, ils se placent **au centre**, sans plus jamais recouvrir Explorer, Lumière, A ou B (avis de Sally). Les **indices** (« comment s'y prendre ») sont encore plus discrets.
+- Moins de messages à la fois : 3 sur ordinateur, 2 sur téléphone, 2 lignes au plus. Un message répété ne s'empile plus : il est relancé avec « ×2 ». Quand la place manque, l'indice part avant la leçon. Une même phrase d'indice ne revient pas avant 90 s. Les messages s'effacent en fondu.
 - L'indice des poules ne revient plus à chaque passage : seulement si l'on a de quoi chasser, au plus toutes les 10 minutes, et plus jamais une fois une poule attrapée.
 
 ## 0.4 · déployée le 2026-10-08
