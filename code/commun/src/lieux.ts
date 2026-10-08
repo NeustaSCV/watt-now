@@ -2,13 +2,17 @@
 // station-service et le Comptoir du Carrefour, sur la route de la Campagne (Book 20 §4).
 // On ne se promène pas d'un lieu à l'autre : on part d'une sortie, on voyage sur la carte, on arrive.
 
+import { ARRIVEE_COOP, COOP, PORTAIL, obstaclesCoop } from "./cooperative.ts";
 import type { Position } from "./deplacement.ts";
 import { MARGE_BORD, POINT_ARRIVEE, TERRAIN_TAILLE } from "./regles.ts";
 
-export type LieuId = "terrain" | "station" | "comptoir";
+export type LieuId = "terrain" | "station" | "comptoir" | "cooperative";
 
-/** Lieux où l'on peut se trouver (le comptoir ouvre à l'É4). */
-export type LieuJouable = "terrain" | "station" | "comptoir";
+/** Lieux où l'on peut se trouver (le comptoir ouvre à l'É4, la Coopérative en 0.5). */
+export type LieuJouable = LieuId;
+
+/** Tous les lieux, dans l'ordre de la route (Book 23 §7 : terrain → station → Carrefour → Coopérative). */
+export const ORDRE_ROUTE: readonly LieuId[] = ["terrain", "station", "comptoir", "cooperative"];
 
 /** Une boîte au sol, alignée sur les axes : centre (x, z), largeur en x, profondeur en z. */
 export interface Boite {
@@ -159,12 +163,41 @@ export const ZONE_COMPTOIR: Zone = {
   obstacles: [COMPTOIR.batiment, COMPTOIR.cellules, { x: COMPTOIR.pedalier.x, z: COMPTOIR.pedalier.z - 0.6, l: 1.6, p: 0.7 }],
 };
 
+/** Le chemin agricole qui part au nord du Carrefour, vers la Coopérative du Plateau (Book 23 §1). */
+export const CHEMIN_COOP = { x: 52, demiLargeur: 1.8 } as const;
+
 export const SORTIES_COMPTOIR: Sortie[] = [
   {
     vers: "station",
     boite: { x: CARREFOUR.largeur - 2, z: ROUTE_CARREFOUR.z, l: 4, p: 10 },
     arrivee: { x: CARREFOUR.largeur - 4.5, z: ROUTE_CARREFOUR.z, o: -Math.PI / 2 },
     libelle: "Reprendre la route",
+  },
+  {
+    vers: "cooperative",
+    boite: { x: CHEMIN_COOP.x, z: 5.5, l: 5, p: 3 },
+    arrivee: { x: CHEMIN_COOP.x, z: 8, o: 0 },
+    libelle: "Prendre le chemin de la Coopérative",
+  },
+];
+
+// ---------- La Coopérative du Plateau (Book 23) : une par joueur, au bout du chemin agricole ----------
+
+/** On reste dans le grillage ; on entre et on sort par le portail, au sud. */
+export const ZONE_COOP: Zone = {
+  xMin: 1,
+  xMax: COOP.largeur - 1,
+  zMin: 1,
+  zMax: COOP.profondeur - 0.6,
+  obstacles: obstaclesCoop(),
+};
+
+export const SORTIES_COOP: Sortie[] = [
+  {
+    vers: "comptoir",
+    boite: { x: PORTAIL.x, z: COOP.profondeur - 1.4, l: PORTAIL.largeur, p: 2.8 },
+    arrivee: { ...ARRIVEE_COOP },
+    libelle: "Repartir vers le Carrefour",
   },
 ];
 
@@ -195,6 +228,14 @@ export const LIEUX: Record<LieuId, LieuCarte> = {
     ouvert: true,
     description: "Tenu par les Compteurs. On y vend, on y achète, on y dépose son électricité contre des wotts. Zone neutre : pas d'Éteints, pas de combat.",
   },
+  cooperative: {
+    id: "cooperative",
+    nom: "La Coopérative du Plateau",
+    km: 8,
+    ouvert: true,
+    description:
+      "Au bout du chemin agricole, au nord du Carrefour. Le hangar n'a jamais été vidé : on dit qu'il y reste de quoi tenir un hiver. Les Éteints y sont nombreux, et il fait noir à l'intérieur.",
+  },
 };
 
 /** Coût d'un trajet à pied (Book 01 §2 bis) : ≈ 60 kcal et ≈ 0,08 L d'eau par km. */
@@ -209,22 +250,27 @@ export function distanceKm(de: LieuId, vers: LieuId): number {
 
 // ---------- Outils ----------
 
+const ZONES: Record<LieuId, Zone> = { terrain: ZONE_TERRAIN, station: ZONE_STATION, comptoir: ZONE_COMPTOIR, cooperative: ZONE_COOP };
+const SORTIES: Record<LieuId, Sortie[]> = { terrain: [SORTIE_TERRAIN], station: SORTIES_STATION, comptoir: SORTIES_COMPTOIR, cooperative: SORTIES_COOP };
+
 export function zoneDe(lieu: LieuJouable): Zone {
-  return lieu === "station" ? ZONE_STATION : lieu === "comptoir" ? ZONE_COMPTOIR : ZONE_TERRAIN;
+  return ZONES[lieu];
 }
 
 export function sortiesDe(lieu: LieuJouable): Sortie[] {
-  return lieu === "station" ? SORTIES_STATION : lieu === "comptoir" ? SORTIES_COMPTOIR : [SORTIE_TERRAIN];
+  return SORTIES[lieu];
 }
 
 /**
- * Une halte se traverse à pied (Book 01 §2 bis) : du terrain au Carrefour, la route passe par la station-service.
+ * Les lieux se traversent à pied (Book 01 §2 bis) : la route est une ligne, et l'on s'arrête à chaque lieu entre les
+ * deux (du terrain au Carrefour, la station ; du terrain à la Coopérative, la station puis le Carrefour).
  * Renvoie le lieu où l'on arrive vraiment en prenant la route vers `vers` depuis `de`.
  */
 export function etapeVers(de: LieuJouable, vers: LieuId): LieuJouable {
-  if (de === "terrain" && vers === "comptoir") return "station";
-  if (de === "comptoir" && vers === "terrain") return "station";
-  return vers;
+  const i = ORDRE_ROUTE.indexOf(de);
+  const j = ORDRE_ROUTE.indexOf(vers);
+  if (i === j) return vers;
+  return ORDRE_ROUTE[i + Math.sign(j - i)]!;
 }
 
 export function dansBoite(x: number, z: number, b: Boite, marge = 0): boolean {
@@ -238,14 +284,15 @@ export function sortieIci(lieu: LieuJouable, x: number, z: number): Sortie | nul
 
 /** Où l'on arrive dans un lieu, selon d'où l'on vient. */
 export function arriveeDans(lieu: LieuJouable, depuis: LieuId): Position {
-  if (lieu === "terrain") return { ...SORTIE_TERRAIN.arrivee };
-  if (lieu === "comptoir") return { ...SORTIES_COMPTOIR[0]!.arrivee };
-  return { ...(SORTIES_STATION.find((s) => s.vers === depuis) ?? SORTIES_STATION[0]!).arrivee };
+  const sorties = SORTIES[lieu];
+  // On arrive par la sortie qui mène d'où l'on vient (au Carrefour, par l'est depuis la station, par le nord depuis la Coopérative).
+  const versDepuis = sorties.find((s) => s.vers === etapeVers(lieu, depuis)) ?? sorties[0]!;
+  return { ...versDepuis.arrivee };
 }
 
 /** Point d'arrivée par défaut d'un nouveau personnage. */
 export const ARRIVEE_DEPART: Position = { x: POINT_ARRIVEE.x, z: POINT_ARRIVEE.z, o: 0 };
 
 export function estLieuJouable(valeur: unknown): valeur is LieuJouable {
-  return valeur === "terrain" || valeur === "station" || valeur === "comptoir";
+  return typeof valeur === "string" && (ORDRE_ROUTE as readonly string[]).includes(valeur);
 }

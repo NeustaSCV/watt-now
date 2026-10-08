@@ -6,7 +6,7 @@
 
 import * as THREE from "three";
 import { Compteur } from "./compteur.ts";
-import { CARREFOUR, COMPTOIR, ROUTE_CARREFOUR } from "../../../commun/src/lieux.ts";
+import { CARREFOUR, CHEMIN_COOP, COMPTOIR, ROUTE_CARREFOUR } from "../../../commun/src/lieux.ts";
 import type { SourceLumiere } from "./lumieres.ts";
 import { PALETTE, aleatoire, materiau } from "./materiaux.ts";
 import { Chantier, dessiner, geoToleOndulee, matiere, matiereTexture, textureAffiche, textureEnduit, textureToitPlat } from "./ruine.ts";
@@ -70,6 +70,8 @@ export function creerComptoir(): THREE.Group {
   g.add(creerPanneauRoute("Station-service", "2 km · ton terrain 5 km →", L - 9, ROUTE_CARREFOUR.z + ROUTE_CARREFOUR.demiLargeur + 1.6, 0));
   g.add(creerBarrage(4.5, ROUTE_CARREFOUR.z, Math.PI / 2, "Route de la Ville : fermée"));
   g.add(creerBarrage(ROUTE_CARREFOUR.x, P - 2.5, 0, "Route de la Côte : fermée"));
+  // Le chemin agricole de la Coopérative, au nord (0.5) : ouvert, lui.
+  g.add(creerPanneauRoute("Coopérative du Plateau", "↑ 3 km · chemin agricole", CHEMIN_COOP.x + 3.4, 6.5, 0));
   return g;
 }
 
@@ -113,6 +115,16 @@ function creerRoutes(aleat: () => number): THREE.Group {
   route((ROUTE_CARREFOUR.x + L + 30) / 2, ROUTE_CARREFOUR.z, L + 30 - ROUTE_CARREFOUR.x, w);
   // La route de la Côte, au sud, et l'allée de l'agence, au nord
   route(ROUTE_CARREFOUR.x, (ROUTE_CARREFOUR.z + P + 30) / 2, w, P + 30 - ROUTE_CARREFOUR.z);
+  // Le chemin agricole de la Coopérative : deux ornières de terre qui montent vers le nord, à travers la clôture.
+  const terre = materiau(0x8a6a48, { rugosite: 1 });
+  const zFin = ROUTE_CARREFOUR.z - ROUTE_CARREFOUR.demiLargeur;
+  const longueur = zFin + 40;
+  for (const dx of [-0.75, 0.75]) {
+    const orniere = new THREE.Mesh(new THREE.PlaneGeometry(0.9, longueur).rotateX(-Math.PI / 2), terre);
+    orniere.position.set(CHEMIN_COOP.x + dx, 0.015, zFin - longueur / 2);
+    orniere.receiveShadow = true;
+    g.add(orniere);
+  }
   // Marquages : un stop effacé, des passages piétons
   const blanc = materiau(0xd9d2b8);
   for (let i = 0; i < 5; i++) {
@@ -618,7 +630,9 @@ function creerCloture(aleat: () => number): THREE.Group {
     }
   };
   // Autour de l'esplanade, avec des passages pour les routes
-  segment(6, 3, L - 6, 3);
+  // Une trouée au nord, pour le chemin de la Coopérative.
+  segment(6, 3, CHEMIN_COOP.x - 3, 3);
+  segment(CHEMIN_COOP.x + 3, 3, L - 6, 3);
   segment(6, 3, 6, ROUTE_CARREFOUR.z - 4);
   segment(L - 6, 3, L - 6, ROUTE_CARREFOUR.z - 4);
   return g;
@@ -630,7 +644,10 @@ function creerForet(aleat: () => number): THREE.Group {
     const x = -25 + aleat() * (L + 50);
     const z = -25 + aleat() * (P + 50);
     const dansLieu = x > 3 && x < L - 3 && z > 1 && z < P - 2;
-    const surRoute = Math.abs(z - ROUTE_CARREFOUR.z) < ROUTE_CARREFOUR.demiLargeur + 1.5 || (Math.abs(x - ROUTE_CARREFOUR.x) < ROUTE_CARREFOUR.demiLargeur + 1.5 && z > ROUTE_CARREFOUR.z);
+    const surRoute =
+      Math.abs(z - ROUTE_CARREFOUR.z) < ROUTE_CARREFOUR.demiLargeur + 1.5 ||
+      (Math.abs(x - ROUTE_CARREFOUR.x) < ROUTE_CARREFOUR.demiLargeur + 1.5 && z > ROUTE_CARREFOUR.z) ||
+      (Math.abs(x - CHEMIN_COOP.x) < CHEMIN_COOP.demiLargeur + 2 && z < ROUTE_CARREFOUR.z);
     if (dansLieu || surRoute) continue;
     // Au sud (côté caméra), de jeunes arbres bas.
     places.push({ x, z, e: z > P - 2 && z < P + 6 ? 0.5 : 0.8 + aleat() * 0.7 });

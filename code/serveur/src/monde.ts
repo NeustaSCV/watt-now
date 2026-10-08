@@ -10,6 +10,7 @@ import type { Base, Compte } from "./base.ts";
 import { journal } from "./journal.ts";
 import { Comptoir } from "./comptoir.ts";
 import { Echanges } from "./echange.ts";
+import { Cooperatives } from "./cooperative.ts";
 import { Halte } from "./halte.ts";
 import { Joueur } from "./joueur.ts";
 import { diffuserPresences, type MemoirePresences } from "./presences.ts";
@@ -47,6 +48,8 @@ export class Monde {
   private readonly halte: Halte;
   /** Le Comptoir du Carrefour : un seul pour tout le serveur (Book 21 §3.2). */
   private readonly comptoir: Comptoir;
+  /** Les Coopératives, une par joueur (Book 23), chargées à la demande. */
+  private readonly cooperatives: Cooperatives;
   /** Les échanges entre joueurs (É4, lot 3). */
   private readonly echanges = new Echanges((id) => this.connexions.get(id)?.joueur);
   private dernieresPresences = 0;
@@ -64,6 +67,7 @@ export class Monde {
     this.debutMonde = base.debutMonde();
     this.halte = new Halte(base);
     this.comptoir = new Comptoir(base);
+    this.cooperatives = new Cooperatives(base);
   }
 
   demarrer(): void {
@@ -119,7 +123,7 @@ export class Monde {
     try {
       // Un nouveau joueur apporte sa dotation à la trésorerie du comptoir (Book 07 §3.6).
       this.comptoir.doter();
-      joueur = new Joueur(compte, this.base, (m) => envoyer(socket, m), Date.now, this.halte, Math.random, this.comptoir);
+      joueur = new Joueur(compte, this.base, (m) => envoyer(socket, m), Date.now, this.halte, Math.random, this.comptoir, this.cooperatives);
     } catch (erreur) {
       journal(`Impossible de charger ${compte.pseudo} : ${String(erreur)}`);
       socket.close(1011, "Personnage introuvable");
@@ -175,6 +179,7 @@ export class Monde {
     const dt = Math.min((instant - this.dernierTick) / 1000, 0.25);
     this.dernierTick = instant;
     this.halte.tick(Date.now(), dt);
+    this.cooperatives.tick(Date.now(), dt);
     this.echanges.verifier();
     if (instant - this.dernieresPresences >= INTERVALLE_PRESENCES) {
       this.dernieresPresences = instant;

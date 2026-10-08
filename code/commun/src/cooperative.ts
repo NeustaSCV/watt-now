@@ -192,3 +192,7 @@ export function sombreIci(x: number, z: number): boolean {
 
 /** Où l'on arrive : au portail, face au nord (Book 23 §2.3 : rien à moins de 15 m). */
 export const ARRIVEE_COOP = { x: PORTAIL.x, z: PORTAIL.z - 2.5, o: Math.PI } as const;
+
+/** Version du contenu de la Coopérative (ressources, butin) : la changer régénère les instances. */
+export const VERSION_COOP = 1;
+

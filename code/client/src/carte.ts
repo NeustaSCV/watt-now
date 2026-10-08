@@ -8,6 +8,7 @@ const POINTS: Record<LieuId, [number, number]> = {
   terrain: [560, 382],
   station: [402, 404],
   comptoir: [300, 380],
+  cooperative: [352, 268],
 };
 
 /** Le tracé de la route, du terrain au Carrefour, en passant par le pont. */
@@ -23,8 +24,14 @@ const ROUTE: [number, number][] = [
   [340, 392],
   [318, 386],
   [300, 380],
+  // Le chemin agricole, au nord du Carrefour, jusqu'à la Coopérative (0.5)
+  [303, 354],
+  [312, 328],
+  [325, 304],
+  [339, 284],
+  [352, 268],
 ];
-const INDICES: Record<LieuId, number> = { terrain: 0, station: 6, comptoir: 10 };
+const INDICES: Record<LieuId, number> = { terrain: 0, station: 6, comptoir: 10, cooperative: 15 };
 
 const ENCRE = "#3b2a1e";
 
@@ -146,8 +153,9 @@ function dessinCarte(): string {
     <path d="M592 148 C560 210 520 250 510 300 S486 370 490 394 S476 470 430 520 S300 600 220 640" class="riviere"/>
     <text x="458" y="480" class="nom-petit" transform="rotate(-48 458 480)">la rivière</text>
 
-    <!-- La route de la Campagne, seule ouverte -->
-    <path d="M${ROUTE.map((p) => p.join(" ")).join(" L")}" class="route"/>
+    <!-- La route de la Campagne, puis le chemin agricole de la Coopérative -->
+    <path d="M${ROUTE.slice(0, INDICES.comptoir + 1).map((p) => p.join(" ")).join(" L")}" class="route"/>
+    <path d="M${ROUTE.slice(INDICES.comptoir).map((p) => p.join(" ")).join(" L")}" class="chemin"/>
     <path d="M482 386 h18 M482 402 h18" class="trait"/>
     <text x="474" y="378" class="crayon petit">le pont tient</text>
 
@@ -182,6 +190,16 @@ function dessinCarte(): string {
         <text x="46" y="15" text-anchor="middle" class="tampon-texte">COMPTEURS · VÉRIFIÉ</text>
       </g>
       <text x="-128" y="44" class="crayon petit">on y dépose ses batteries</text>
+    </g>
+    <g class="lieu" data-lieu="cooperative" transform="translate(352 268)" tabindex="0" role="button" aria-label="La Coopérative du Plateau">
+      <circle r="24" class="zone-clic"/>
+      <rect x="-15" y="-6" width="24" height="13" fill="#ecdfbf" stroke="${ENCRE}" stroke-width="1.6"/>
+      <path d="M-15 -6 l12 -6 l12 6" fill="none" stroke="${ENCRE}" stroke-width="1.4"/>
+      <circle cx="13" cy="-6" r="4" fill="#ecdfbf" stroke="${ENCRE}" stroke-width="1.3"/>
+      <circle cx="13" cy="4" r="4" fill="#ecdfbf" stroke="${ENCRE}" stroke-width="1.3"/>
+      <text y="30" text-anchor="middle" class="nom-ouvert">Coopérative</text>
+      <text x="24" y="-4" class="crayon petit">plein d'Éteints.</text>
+      <text x="24" y="11" class="crayon petit">noir dedans</text>
     </g>
 
     <!-- Le pion -->
@@ -276,7 +294,8 @@ export class Carte {
     if (this.enRoute) return;
     this.lieu = lieu;
     this.sortie = sortie;
-    this.choisi = sortie ?? (lieu === "terrain" ? "station" : "terrain");
+    // Sans sortie sous les pieds, on propose le lieu voisin sur la route (vers le terrain, sauf depuis le terrain).
+    this.choisi = sortie ?? (lieu === "terrain" ? "station" : etapeVers(lieu, "terrain"));
     this.placerPion(POINTS[lieu]);
     this.trace.setAttribute("d", "");
     this.dessinerFiche();
@@ -375,13 +394,17 @@ export class Carte {
     else if (!l.ouvert) etat = `<p class="note">Fermé pour l'instant.</p>`;
     else if (this.sortie !== etape) {
       etat = `<p class="note">${
-        this.lieu === "terrain" ? "Pour partir, rejoins le chemin, au sud de ton terrain." : "Pour partir, rejoins le bout de la route, du côté de ta destination."
+        this.lieu === "terrain"
+          ? "Pour partir, rejoins le chemin, au sud de ton terrain."
+          : this.lieu === "cooperative"
+            ? "Pour partir, repasse le portail, au sud."
+            : "Pour partir, rejoins le bout de la route, du côté de ta destination."
       }</p>`;
     } else peutPartir = true;
     const trajet = ici
       ? ""
       : `<p class="trajet"><span>≈ ${String(km).replace(".", ",")} km à pied</span><span>≈ ${kcal} kcal</span><span>≈ ${eau} L d'eau</span><span>${DUREE_VOYAGE_S} min de route</span></p>${
-          parHalte ? `<p class="note">La route passe par la station-service : il faudra la traverser à pied.</p>` : ""
+          parHalte ? `<p class="note">La route passe par ${LIEUX[etape].nom.charAt(0).toLowerCase()}${LIEUX[etape].nom.slice(1)} : il faudra y passer à pied.</p>` : ""
         }`;
     // En-tête (titre, ✕), corps qui défile, pied fixe : le bouton Partir ne passe jamais sous le bord de l'écran.
     const corps = this.enRoute ? `<p class="trajet"><span>${DUREE_VOYAGE_S} min de route</span></p>` : `<p>${l.description}</p>${trajet}`;

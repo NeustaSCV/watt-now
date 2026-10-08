@@ -69,7 +69,9 @@ import {
   type LieuJouable,
 } from "../../commun/src/lieux.ts";
 import { vueDuSac, type Base, type Compte, type FeuEnBase, type RessourceEnBase, type SacEnBase as SacPose } from "./base.ts";
+import { Cooperatives } from "./cooperative.ts";
 import { Halte, type Voyageur } from "./halte.ts";
+import type { LieuVivant } from "./lieu-vivant.ts";
 import { Comptoir } from "./comptoir.ts";
 import {
   PRIX_RETRAIT,
@@ -253,6 +255,13 @@ export class Joueur implements Voyageur {
   private readonly base: Base;
   readonly envoyer: (message: MessageServeur) => void;
   private readonly maintenant: () => number;
+  private readonly cooperatives: Cooperatives;
+
+  /** Le lieu vivant où l'on se trouve (la halte, partagée ; sa Coopérative, à soi) ; null sur le terrain et au Comptoir. */
+  private get vivant(): LieuVivant | null {
+    if (this.voyage) return null;
+    return this.lieu === "station" ? this.halte : this.lieu === "cooperative" ? this.cooperatives.de(this.compte.id) : null;
+  }
 
   constructor(
     compte: Compte,
@@ -262,6 +271,7 @@ export class Joueur implements Voyageur {
     halte: Halte = new Halte(base),
     alea: () => number = Math.random,
     comptoir: Comptoir = new Comptoir(base),
+    cooperatives: Cooperatives = new Cooperatives(base),
   ) {
     this.compte = compte;
     this.base = base;
@@ -270,6 +280,7 @@ export class Joueur implements Voyageur {
     this.halte = halte;
     this.alea = alea;
     this.comptoir = comptoir;
+    this.cooperatives = cooperatives;
     const w = base.chargerWotts(compte.id);
     this.poche = w.poche;
     this.compteWotts = w.compte;
@@ -296,6 +307,11 @@ export class Joueur implements Voyageur {
     if (this.lieu === "comptoir") {
       this.position = arriveeDans("comptoir", "station");
       comptoir.entrer(this.envoyer);
+    }
+    if (this.lieu === "cooperative") {
+      // Reconnexion dans la Coopérative : on réapparaît au portail (Book 23 §3).
+      this.position = arriveeDans("cooperative", "comptoir");
+      cooperatives.de(compte.id).entrer(this);
     }
     this.besoins = perso.besoins;
     this.gourde = perso.gourde;
@@ -380,7 +396,7 @@ export class Joueur implements Voyageur {
       installations: this.lieu === "terrain" ? [...this.installations.values()] : [],
       charges: this.chargesArrondies(),
       lumiere: this.lumiere,
-      eteints: this.lieu === "station" ? this.halte.eteintsVus(this.position) : this.eteints.map(vueEteint),
+      eteints: this.vivant ? this.vivant.eteintsVus(this.position) : this.eteints.map(vueEteint),
       animaux: this.lieu === "terrain" ? this.peuplerPoules().map(vuePoule) : [],
       sante: this.santeVue(),
       endurance: Math.round(this.endurance),
@@ -482,10 +498,10 @@ export class Joueur implements Voyageur {
 
   // ---------- Ensemble (É4, lot 3) : ce que les autres voient, ce qu'on échange ----------
 
-  /** Dans un lieu public (halte, comptoir), on voit les autres et on peut échanger ; le terrain reste privé. */
+  /** Dans un lieu public (halte, comptoir), on voit les autres et on peut échanger ; le terrain et la Coopérative restent privés. */
 
   get enLieuPublic(): boolean {
-    return this.lieu !== "terrain" && !this.voyage;
+    return (this.lieu === "station" || this.lieu === "comptoir") && !this.voyage;
   }
 
   get vu(): AutreVu {
@@ -693,7 +709,7 @@ export class Joueur implements Voyageur {
 
   private eteintsIci(): Eteint[] {
     if (this.lieu === "comptoir") return [];
-    return this.lieu === "station" ? this.halte.eteints : this.eteints;
+    return this.vivant ? this.vivant.eteints : this.eteints;
   }
 
   /** Ceux qui le tiennent. */
@@ -744,7 +760,7 @@ export class Joueur implements Voyageur {
     const resultat = encaisser(cible, arme, appuye, force, this.position, zoneDe(this.lieu));
     if (this.tuto && resultat === "detruit") this.tuto.premierEteintDetruit = true;
     const coup = { t: "coup" as const, id: cible.id, x: cible.x, z: cible.z, resultat };
-    if (this.lieu === "station") this.halte.diffuser(coup);
+    if (this.vivant) this.vivant.diffuser(coup);
     else this.envoyer(coup);
     if (resultat === "a_terre") this.indice("a_terre", "Il est à terre, mais il se relèvera : frappe-le encore pour l'achever. Un coup appuyé à la tête (maintenir A, puis relâcher) l'arrête net.");
     if (resultat === "detruit" && arme.objet === null) this.info(`À mains nues, ça ne suffira pas : prends une arme (gourdin, marteau, hache…). ${ouTrouverPhrase("gourdin")}`);
@@ -908,14 +924,14 @@ export class Joueur implements Voyageur {
       const auComptoir = this.lieu === "comptoir";
       const sac = this.base.poserSac({
         lieu: auComptoir ? "terrain" : this.lieu,
-        terrainDe: this.lieu === "terrain" || auComptoir ? this.compte.id : 0,
+        terrainDe: this.lieu === "station" ? 0 : this.compte.id,
         proprietaire: this.compte.id,
         x: auComptoir ? POINT_ARRIVEE.x + 1.5 : this.position.x,
         z: auComptoir ? POINT_ARRIVEE.z + 1 : this.position.z,
         contenu: { inventaire: this.inventaire, charges: this.charges, wotts: enPoche },
         creeLe: instant,
       });
-      if (this.lieu === "station") this.halte.poserSac(sac);
+      if (this.vivant) this.vivant.poserSac(sac);
       else this.sacsTerrain.push(sac);
     }
     this.poche = { valeur: 0, majLe: instant };
@@ -926,7 +942,7 @@ export class Joueur implements Voyageur {
     this.annulerAction();
     this.lumiere = false;
     this.elan = null;
-    if (this.lieu === "station") this.halte.sortir(this);
+    this.vivant?.sortir(this);
     this.eteints = [];
     this.lieu = "terrain";
     this.position = { x: POINT_ARRIVEE.x, z: POINT_ARRIVEE.z, o: 0 };
@@ -940,13 +956,13 @@ export class Joueur implements Voyageur {
   }
 
   private sacsVus(): SacVu[] {
-    if (this.lieu === "station") return this.halte.sacsVus(this.compte.id);
+    if (this.vivant) return this.vivant.sacsVus(this.compte.id);
     return this.sacsTerrain.map((s) => vueDuSac(s, this.compte.id));
   }
 
-  /** La liste des sacs et tas au sol du lieu (halte partagée, ou terrain). */
+  /** La liste des sacs et tas au sol du lieu (lieu vivant, ou terrain). */
   private sacsIci(): SacPose[] {
-    return this.lieu === "station" ? this.halte.sacs : this.sacsTerrain;
+    return this.vivant ? this.vivant.sacs : this.sacsTerrain;
   }
 
   /** Un tas d'objets jetés : n'importe qui le ramasse, autant que son sac peut porter. */
@@ -991,17 +1007,17 @@ export class Joueur implements Voyageur {
 
   /** Remplace un sac ou un tas au sol par un autre contenu (ou le retire), et prévient ceux qui le voient. */
   private remplacerSac(sac: SacPose, contenu: SacPose["contenu"] | null): void {
-    if (this.lieu === "station") this.halte.retirerSac(sac.id);
+    if (this.vivant) this.vivant.retirerSac(sac.id);
     else {
       this.sacsTerrain = this.sacsTerrain.filter((s) => s.id !== sac.id);
       this.base.retirerSac(sac.id);
     }
     if (contenu) {
       const nouveau = this.base.poserSac({ ...sac, contenu });
-      if (this.lieu === "station") this.halte.poserSac(nouveau);
+      if (this.vivant) this.vivant.poserSac(nouveau);
       else this.sacsTerrain.push(nouveau);
     }
-    if (this.lieu !== "station") this.envoyer({ t: "sacs", sacs: this.sacsVus() });
+    if (!this.vivant) this.envoyer({ t: "sacs", sacs: this.sacsVus() });
   }
 
   /** Jeter un objet par terre (quand le sac est trop lourd) : il reste là, ramassable (Book 01 §8). */
@@ -1033,7 +1049,7 @@ export class Joueur implements Voyageur {
       return;
     }
     const sac = this.base.poserSac({
-      lieu: this.lieu === "station" ? "station" : "terrain",
+      lieu: this.lieu === "station" || this.lieu === "cooperative" ? this.lieu : "terrain",
       terrainDe: this.lieu === "station" ? 0 : this.compte.id,
       proprietaire: this.compte.id,
       x: this.position.x + Math.sin(this.position.o) * 0.6,
@@ -1041,7 +1057,7 @@ export class Joueur implements Voyageur {
       contenu: { inventaire: { ...objets }, charges, jete: true },
       creeLe: this.maintenant(),
     });
-    if (this.lieu === "station") this.halte.poserSac(sac);
+    if (this.vivant) this.vivant.poserSac(sac);
     else {
       this.sacsTerrain.push(sac);
       this.envoyer({ t: "sacs", sacs: this.sacsVus() });
@@ -1152,14 +1168,14 @@ export class Joueur implements Voyageur {
 
   /** Reprendre son sac (en É4, on pourra aussi piller celui des autres à la halte). */
   private reprendreSac(id: number): void {
-    const liste = this.lieu === "station" ? this.halte.sacs : this.sacsTerrain;
+    const liste = this.vivant ? this.vivant.sacs : this.sacsTerrain;
     const sac = liste.find((s) => s.id === id);
     if (!sac) return;
     if (!this.proche(sac.x, sac.z)) return this.info("C'est trop loin.");
     if (sac.contenu.jete) return this.ramasserTas(sac);
     if (sac.proprietaire !== this.compte.id) return this.info("Ce n'est pas ton sac.");
     this.commencer("Reprendre ton sac", 3, () => {
-      const encore = (this.lieu === "station" ? this.halte.sacs : this.sacsTerrain).some((s) => s.id === id);
+      const encore = (this.vivant ? this.vivant.sacs : this.sacsTerrain).some((s) => s.id === id);
       if (!encore) return;
       this.ajouterPlusieurs(sac.contenu.inventaire);
       if (sac.contenu.wotts) {
@@ -1167,7 +1183,7 @@ export class Joueur implements Voyageur {
         this.envoyerWotts();
       }
       for (const [b, wh] of Object.entries(sac.contenu.charges) as [TypeBatterie, number][]) this.ajouterCharge(b, wh);
-      if (this.lieu === "station") this.halte.retirerSac(id);
+      if (this.vivant) this.vivant.retirerSac(id);
       else {
         this.sacsTerrain = this.sacsTerrain.filter((s) => s.id !== id);
         this.base.retirerSac(id);
@@ -1180,7 +1196,7 @@ export class Joueur implements Voyageur {
 
   private ressourcesIci(): Map<number, RessourceEnBase> {
     if (this.lieu === "comptoir") return SANS_RESSOURCES;
-    return this.lieu === "station" ? this.halte.ressources : this.ressources;
+    return this.vivant ? this.vivant.ressources : this.ressources;
   }
 
   get enVoyage(): boolean {
@@ -1207,6 +1223,7 @@ export class Joueur implements Voyageur {
     this.voyage = { de, vers, arrivee: this.maintenant() + DUREE_VOYAGE_S * 1000 };
     this.mesurer("activite", "expédition", DUREE_VOYAGE_S, { vers });
     if (de === "station") this.halte.sortir(this);
+    if (de === "cooperative") this.cooperatives.de(this.compte.id).sortir(this);
     if (de === "comptoir") this.comptoir.sortir(this.envoyer);
     // Les Éteints du terrain ne suivent pas : il n'y a pas de siège en son absence.
     this.eteints = [];
@@ -1221,7 +1238,7 @@ export class Joueur implements Voyageur {
     this.voyage = null;
     this.lieu = voyage.vers;
     this.position = arriveeDans(voyage.vers, voyage.de);
-    if (this.lieu === "station") this.halte.entrer(this);
+    this.vivant?.entrer(this);
     if (this.lieu === "comptoir") this.comptoir.entrer(this.envoyer);
     if (this.tuto && this.lieu === "station") this.tuto.visiteStation = true;
     this.noterFait(`visite:${this.lieu}`);
@@ -1231,6 +1248,7 @@ export class Joueur implements Voyageur {
   /** Le joueur se déconnecte : il quitte la halte (hors ligne, il est sur la carte, Book 01 §2 bis). */
   partir(): void {
     this.halte.sortir(this);
+    if (this.lieu === "cooperative") this.cooperatives.de(this.compte.id).sortir(this);
     this.comptoir.sortir(this.envoyer);
   }
 
@@ -1813,7 +1831,8 @@ export class Joueur implements Voyageur {
       if (r.disponibleLe > instant || this.lieu !== lieu) return;
       const repousse = REPOUSSE_MS[r.type] === null ? null : REPOUSSE_MS[r.type]! / REGLAGES.repousse_rythme;
       const disponibleLe = repousse === null ? JAMAIS : instant + repousse;
-      if (lieu === "station") this.halte.prendre(r, disponibleLe);
+      const vivant = this.vivant;
+      if (vivant) vivant.prendre(r, disponibleLe);
       else {
         r.disponibleLe = disponibleLe;
         this.base.sauverRessource(this.compte.id, r.id, r.disponibleLe);

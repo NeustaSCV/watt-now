@@ -1339,6 +1339,7 @@ body {
 .carte .cote { fill: none; stroke: #3b2a1e; stroke-width: 1.3; }
 .carte .riviere { fill: none; stroke: #6f9aa4; stroke-width: 4; stroke-linecap: round; }
 .carte .route { fill: none; stroke: #3b2a1e; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
+.carte .chemin { fill: none; stroke: #6b4a2e; stroke-width: 2.4; stroke-dasharray: 6 3; stroke-linecap: round; stroke-linejoin: round; }
 .carte .route-pale { fill: none; stroke: #3b2a1e; stroke-width: 1.6; stroke-dasharray: 7 4; }
 .carte .pointilles { fill: none; stroke: #5b5b66; stroke-width: 1.4; stroke-dasharray: 2 5; stroke-linecap: round; }
 .carte .trace { fill: none; stroke: #c8362b; stroke-width: 2.2; stroke-dasharray: 1 6; stroke-linecap: round; }

@@ -32,6 +32,7 @@ import { FauneAmbiante, Volaille, type CriFaune } from "./rendu/faune.ts";
 import { RAYON_ESCABEAU, estFruitier } from "../../commun/src/terrain.ts";
 import { creerRuine } from "./rendu/ruine.ts";
 import { creerHalte, estomperToits } from "./rendu/halte.ts";
+import { animerCooperative, creerCooperative, estomperCooperative } from "./rendu/cooperative.ts";
 import { animerComptoir, creerComptoir, lumieresComptoir } from "./rendu/comptoir.ts";
 import { VueEteint } from "./rendu/eteint.ts";
 import { VueAutre } from "./rendu/autres.ts";
@@ -82,11 +83,14 @@ const scene = new Scene(canvas, qualite);
 if (import.meta.env.DEV) Object.assign(window, { __watt: { scene } });
 // Le décor de chaque lieu, construit à la première visite et gardé ensuite.
 const decors = new Map<LieuJouable, THREE.Group>();
+/** Le décor de la Coopérative (ses toits, ses portes) : construit à la première visite. */
+let decorCoop: THREE.Group | null = null;
 function montrerDecor(lieu: LieuJouable): void {
   if (!decors.has(lieu)) {
     const g = new THREE.Group();
     if (lieu === "terrain") g.add(creerTerrain(), creerMare(), creerRuine());
     else if (lieu === "comptoir") g.add(creerComptoir());
+    else if (lieu === "cooperative") g.add((decorCoop = creerCooperative()));
     else g.add(creerHalte());
     decors.set(lieu, g);
     scene.scene.add(g);
@@ -468,7 +472,8 @@ function installer(message: Bienvenue): void {
   hud.identite(message.moi.pseudo, message.moi.famille);
   son.entrer({
     famille: message.moi.famille,
-    lieu: lieu === "station" ? "halte" : lieu,
+    // La Coopérative emprunte la musique de la halte, en attendant la sienne (session musique).
+    lieu: lieu === "station" || lieu === "cooperative" ? "halte" : lieu,
     nuit: estNuit(heureDeJeu(Date.now() + decalage, debutMonde)),
     atelier: message.installations.some((i) => i.type === ATELIERS[message.moi.famille]),
     // Tutoriel : la Vie n'entre qu'au premier feu (étape 3, moment-vitrine 2).
@@ -1218,6 +1223,10 @@ function boucle(instant: number): void {
     const decor = decors.get(lieu);
     // Les toits qui cachent le personnage s'effacent (à la halte et au Comptoir), selon l'angle de la caméra.
     if ((lieu === "station" || lieu === "comptoir") && decor) estomperToits(decor, position.x, position.z, dt, scene.angleCamera);
+    if (lieu === "cooperative" && decorCoop) {
+      estomperCooperative(decorCoop, position.x, position.z, dt, scene.angleCamera);
+      animerCooperative(decorCoop, dt);
+    }
 
     majMode(dt);
     // Le coffre se ferme quand on s'en éloigne.

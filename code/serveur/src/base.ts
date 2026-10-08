@@ -19,6 +19,7 @@ import type { EtatInstallation, InstallationVue } from "../../commun/src/message
 import type { TypeInstallation } from "../../commun/src/recettes.ts";
 import { genererJoncs, genererRessources, genererVergerEtSousBois, genererVestiges, type TypeRessource } from "../../commun/src/terrain.ts";
 import { VERSION_HALTE, genererHalte } from "../../commun/src/halte.ts";
+import type { RessourceSol } from "../../commun/src/terrain.ts";
 import { estLieuJouable, type LieuJouable } from "../../commun/src/lieux.ts";
 import { empreinteMotDePasse, nouveauJeton, verifierMotDePasse } from "./motdepasse.ts";
 
@@ -472,8 +473,11 @@ export class Base {
     this.db.prepare("DELETE FROM sacs WHERE id = ?").run(id);
   }
 
-  /** Les ressources d'un lieu public (la halte), partagées par tous ; créées au premier chargement. */
-  chargerRessourcesLieu(lieu: string): RessourceEnBase[] {
+  /**
+   * Les ressources d'un lieu vivant (la halte, partagée ; la Coopérative d'un joueur), créées au premier chargement
+   * par `generer` ; si `version` change, on repart de la nouvelle génération.
+   */
+  chargerRessourcesLieu(lieu: string, generer: () => Omit<RessourceSol, "disponible">[] = genererHalte, version = VERSION_HALTE): RessourceEnBase[] {
     const lire = () =>
       this.db.prepare("SELECT id, type, x, z, disponible_le FROM ressources_lieux WHERE lieu = ? ORDER BY id").all(lieu) as {
         id: number;
@@ -484,15 +488,15 @@ export class Base {
       }[];
     // Le contenu de la halte a changé depuis la dernière génération : on repart de la nouvelle version.
     const cle = `version_${lieu}`;
-    const version = this.db.prepare("SELECT valeur FROM monde WHERE cle = ?").get(cle) as { valeur: string } | undefined;
-    if (Number(version?.valeur ?? 0) !== VERSION_HALTE) {
+    const enregistree = this.db.prepare("SELECT valeur FROM monde WHERE cle = ?").get(cle) as { valeur: string } | undefined;
+    if (Number(enregistree?.valeur ?? 0) !== version) {
       this.db.prepare("DELETE FROM ressources_lieux WHERE lieu = ?").run(lieu);
-      this.db.prepare("INSERT INTO monde (cle, valeur) VALUES (?, ?) ON CONFLICT (cle) DO UPDATE SET valeur = excluded.valeur").run(cle, String(VERSION_HALTE));
+      this.db.prepare("INSERT INTO monde (cle, valeur) VALUES (?, ?) ON CONFLICT (cle) DO UPDATE SET valeur = excluded.valeur").run(cle, String(version));
     }
     let lignes = lire();
     if (lignes.length === 0) {
       const inserer = this.db.prepare("INSERT INTO ressources_lieux (lieu, id, type, x, z) VALUES (?, ?, ?, ?, ?)");
-      for (const r of genererHalte()) inserer.run(lieu, r.id, r.type, r.x, r.z);
+      for (const r of generer()) inserer.run(lieu, r.id, r.type, r.x, r.z);
       lignes = lire();
     }
     return lignes.map((l) => ({ id: l.id, type: l.type, x: l.x, z: l.z, disponibleLe: l.disponible_le }));
