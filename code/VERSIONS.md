@@ -12,7 +12,7 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
-## 0.5 · en préparation
+## 0.5 · prête à déployer (2026-10-08)
 
 **La Coopérative du Plateau** (Book 23)
 - Un nouveau lieu, **un par joueur** : la Coopérative agricole, au bout d'un chemin agricole qui part au nord du Carrefour. Du terrain, on traverse la station, puis le Carrefour.
@@ -30,9 +30,12 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
   - le coffre du directeur, qui s'ouvre avec la clé du magasinier ;
   - les caisses de pièces de la chambre froide.
 - **Sa musique** : tonique mi, nostalgique dans la cour, elle **se retire** quand on entre (le hangar, l'atelier) et se tait presque dans la chambre froide, pour qu'on entende respirer les dormants. Un Danger à part quand trois Éteints ou plus sont sur toi ; un signal quand on trouve le butin rare, et à la sortie par le portail.
+- **Il fait noir dedans** : en entrant dans le hangar, les bureaux, l'atelier ou la chambre froide, la lumière tombe, même en plein jour. Ta lampe éclaire alors à quelques mètres… et se voit. Dans le noir, on voit d'abord **les yeux** des Éteints.
+- **On les reconnaît** : l'Équipé et son casque de moto, le Rampant qui avance couché (l'herbe frémit autour de lui), le magasinier en blouse avec ses clés, le mécanicien en combinaison.
 - **Ce que tu fais reste fait** : un Éteint détruit ne revient pas tout de suite (quelques-uns toutes les 12 h, la chambre froide d'abord), une porte reste comme tu l'as laissée, et le butin pris revient en quelques heures (en 4 jours pour le rare).
 
 **Le combat, enrichi** (Book 23 §4)
+- **D'où vient le danger** : un Éteint qui approche hors de l'écran fait apparaître une flèche autour de ton personnage (orange s'il vient, rouge s'il te poursuit).
 - **B selon la situation** : un Éteint au contact devant toi, B le **repousse** d'un grand pas, étourdi (deux à la fois) ; sinon B esquive ; saisi, B dégage. Le bouton dit ce qu'il va faire.
 - **Contondant, tranchant, perçant** : un casque arrête le tranchant à la tête ; le contondant passe et étourdit plus longtemps ; le perçant vaut par son allonge.
 - **Les armes s'usent** : la solidité se lit dans le sac. Sous 30 %, elle est abîmée (le jeu prévient) ; à zéro, elle casse.
@@ -43,6 +46,8 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
   - la **machette**, vive ;
   - la **masse**, lente et terrible ;
   - la **lance**, à fabriquer : un couteau ligaturé au bout d'un épieu.
+
+  Chacune a son modèle en main.
 - **Des leurres dans la Coopérative** : le klaxon du tracteur (sa batterie ne tient que quatre coups), la sonnette du quai, et une radio à piles qui braille la réclame de la Compagnie.
 
 **L'écran**
