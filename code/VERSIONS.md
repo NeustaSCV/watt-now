@@ -12,7 +12,7 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
-## 0.5.1 · prête à déployer (2026-10-08)
+## 0.5.1 · déployée le 2026-10-08
 
 **Le sac et Fabriquer, enfin utilisables sur téléphone** (avis de Sally ; référence : l'iPhone 13 mini)
 - **Le sac** : en vertical, un volet presque plein écran. La grille de petites cases est en haut, et la **fiche de l'objet** est en dessous, toujours visible, avec ses boutons sur une seule ligne. En horizontal, deux colonnes : la grille à gauche, la fiche à droite.
