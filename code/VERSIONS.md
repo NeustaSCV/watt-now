@@ -12,7 +12,7 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
-## 0.5.3 · prête à déployer (2026-10-09)
+## 0.5.3 · déployée le 2026-10-09
 
 - **Le coffre** (et la décharge), refait selon l'avis de Sally :
   - toucher un objet le choisit, et son **nom** s'affiche en bas, avec « Ranger 1 » et « Tout », ou « Prendre 1 » et « Tout » ;
@@ -26,7 +26,7 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 - **Fabriquer, sur ordinateur** : les sept onglets sont tous visibles.
 - **La brume de l'aube** est plus légère et reste au ras de l'herbe. Elle ne devrait plus prendre de reflets de couleur sur iPhone.
 
-## 0.5.2 · prête à déployer (2026-10-08)
+## 0.5.2 · déployée avec la 0.5.3 (2026-10-09)
 
 - **Le sac, en vertical** : la grille prend toute la place libre, et on voit tous ses objets d'un coup. La fiche de l'objet touché ne prend que la hauteur dont elle a besoin.
 - **Les messages, en horizontal** : centrés dans la place libre, sous les tuiles et l'heure. Ils ne passent plus sous les jauges.
