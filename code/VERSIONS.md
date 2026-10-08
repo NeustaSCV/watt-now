@@ -12,7 +12,7 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
-## 0.4 · en préparation
+## 0.4 · déployée le 2026-10-08
 
 **L'écran** (spécification de Sally, la designeuse UX de BMAD, validée sur maquettes ; Book 18 §3)
 - Le haut de l'écran tient dans une seule grille : plus rien ne se chevauche, sur ordinateur comme sur iPhone (le bouton Vue n'est plus recouvert).
