@@ -8,7 +8,20 @@
 >   - **butin** posé sur le décor : pied-de-biche garanti sous la caisse ; libre-service, quai, atelier et hangar reviennent en 6 à 12 h ;
 >   - **coffre du directeur** : il s'ouvre avec la clé que lâche le magasinier ;
 >   - **chambre froide** : roulements et alternateur, qui reviennent en 4 jours ;
->   - **semences F1** au coffre ; ces pièces rares ne sortent d'aucun autre tirage (fouille, décharge) ; le rendu 3D du lieu est fait et allégé (ombres cuites, carte réduite).
+>   - **semences F1** au coffre ; ces pièces rares ne sortent d'aucun autre tirage (fouille, décharge) ;
+> **0.5e fait** :
+>   - **type de dégât** : le casque arrête le tranchant à la tête ; au sol, seuls le contondant et le perçant achèvent un Équipé ; le contondant étourdit ×1,5 ;
+>   - **usure**, aux solidités du §4.3 : abîmée sous 30 % (−30 %), puis cassée, la suivante est neuve ;
+>   - **réparation** de fortune (ficelle et chiffons, qui ne dépasse pas « abîmée »), ou à l'établi, à la meule ou à la forge ;
+>   - **B selon la situation** : repousser, esquiver, se dégager ;
+>   - **nouvelles armes** : pied-de-biche (caisse), machette (établi de l'atelier), masse (contre le tracteur vert), lance (fabriquée) ;
+>   - **leurres du décor** : klaxon (4 coups, la batterie du tracteur se vide), sonnette du quai, radio à piles (10 min ; la réclame de la Compagnie). Klaxon et sonnette sont synthétisés côté code.
+>
+> **Reste de la 0.5e** :
+>   - la batterie du tracteur à emporter (le vrai dilemme ⚡ ⚙️ du klaxon) ;
+>   - la radio qu'on transporte ;
+>   - le débris d'une arme cassée ;
+>   - mesurer la fenêtre de frappe (§4.5) ; le rendu 3D du lieu est fait et allégé (ombres cuites, carte réduite).
 > Décisions déjà prises (2026-10-08) : le lieu est la **coopérative agricole** (Book 20 §3.1) ; **une par joueur** pour commencer et valider la mécanique (des cartes partagées ne sont pas exclues plus tard) ; **conception écrite d'abord**.
 > La version 0.2 intègre les relectures des agents BMAD : Samus (Game Designer : niveau, difficulté, combat sur téléphone) et Cloud (Game Architect : instances, IA, persistance, Pi).
 

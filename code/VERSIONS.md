@@ -32,6 +32,19 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 - **Sa musique** : tonique mi, nostalgique dans la cour, elle **se retire** quand on entre (le hangar, l'atelier) et se tait presque dans la chambre froide, pour qu'on entende respirer les dormants. Un Danger à part quand trois Éteints ou plus sont sur toi ; un signal quand on trouve le butin rare, et à la sortie par le portail.
 - **Ce que tu fais reste fait** : un Éteint détruit ne revient pas tout de suite (quelques-uns toutes les 12 h, la chambre froide d'abord), une porte reste comme tu l'as laissée, et le butin pris revient en quelques heures (en 4 jours pour le rare).
 
+**Le combat, enrichi** (Book 23 §4)
+- **B selon la situation** : un Éteint au contact devant toi, B le **repousse** d'un grand pas, étourdi (deux à la fois) ; sinon B esquive ; saisi, B dégage. Le bouton dit ce qu'il va faire.
+- **Contondant, tranchant, perçant** : un casque arrête le tranchant à la tête ; le contondant passe et étourdit plus longtemps ; le perçant vaut par son allonge.
+- **Les armes s'usent** : la solidité se lit dans le sac. Sous 30 %, elle est abîmée (le jeu prévient) ; à zéro, elle casse.
+  - **Réparation de fortune** partout, avec une ficelle et des chiffons.
+  - **Remise à neuf** chez soi : à l'établi, à la meule ou à la forge.
+- **Quatre armes** :
+  - le **pied-de-biche**, la plus solide ;
+  - la **machette**, vive ;
+  - la **masse**, lente et terrible ;
+  - la **lance**, à fabriquer : un couteau ligaturé au bout d'un épieu.
+- **Des leurres dans la Coopérative** : le klaxon du tracteur (sa batterie ne tient que quatre coups), la sonnette du quai, et une radio à piles qui braille la réclame de la Compagnie.
+
 **L'écran**
 - Les **messages** passent **en haut, juste sous les tuiles**, en petit et sur un fond très léger : ils ne cachent plus la zone de jeu. Sur téléphone en horizontal, ils se placent **au centre**, sans plus jamais recouvrir Explorer, Lumière, A ou B (avis de Sally). Les **indices** (« comment s'y prendre ») sont encore plus discrets.
 - Moins de messages à la fois : 3 sur ordinateur, 2 sur téléphone, 2 lignes au plus. Un message répété ne s'empile plus : il est relancé avec « ×2 ». Quand la place manque, l'indice part avant la leçon. Une même phrase d'indice ne revient pas avant 90 s. Les messages s'effacent en fondu.
