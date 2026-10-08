@@ -24,7 +24,9 @@ export type ActionProposee =
   /** Au comptoir : ouvrir le guichet des Compteurs. */
   | { libelle: string; ouvrirGuichet: true }
   /** Près d'un coffre : ouvrir le coffre (ranger, reprendre). */
-  | { libelle: string; ouvrirCoffre: number };
+  | { libelle: string; ouvrirCoffre: number }
+  /** Un feu ou une installation à soi : sa fiche (ce qu'il fait, l'améliorer, le démonter ; Book 24). */
+  | { libelle: string; ouvrirFiche: { genre: "feu" | "installation"; id: number } };
 
 export interface Propositions {
   A: ActionProposee | null;
@@ -34,7 +36,7 @@ export interface Propositions {
   cible: { x: number; z: number; rayon?: number } | null;
 }
 
-const EXAMENS_INSTALLATIONS: Record<InstallationVue["type"], string> = {
+export const EXAMENS_INSTALLATIONS: Record<InstallationVue["type"], string> = {
   etabli: "Un établi solide. On y fabrique ce qui demande de la précision.",
   abri: "Un appentis de branches et de bâche. De quoi dormir au sec, près du feu.",
   coffre: "Un coffre de planches, ficelé de corde. Ce que tu y ranges ne pèse plus sur ton dos.",
@@ -65,7 +67,8 @@ function actionsInstallation(
   maintenantServeur: number,
 ): [ActionProposee | null, ActionProposee | null] {
   const msg = (libelle: string, verbe: Verbe): ActionProposee => ({ libelle, message: { t: "interagir", cible: { genre: "installation", id: i.id }, verbe } });
-  const examiner: ActionProposee = { libelle: "Examiner", examiner: EXAMENS_INSTALLATIONS[i.type] };
+  // Examiner ouvre la fiche : ce qu'elle fait, l'améliorer, la démonter (Book 24). La décharge, elle, se regarde.
+  const examiner: ActionProposee = i.type === "decharge" ? { libelle: "Examiner", examiner: EXAMENS_INSTALLATIONS[i.type] } : { libelle: "Examiner", ouvrirFiche: { genre: "installation", id: i.id } };
   const sienne = familleDe(i.type);
   if (sienne !== "tous" && sienne !== famille) return [null, { libelle: "Examiner", examiner: `${EXAMENS_INSTALLATIONS[i.type]} Tu ne sais pas t'en servir.` }];
   switch (i.type) {
@@ -90,8 +93,7 @@ function actionsInstallation(
     }
     case "recuperateur_pluie": {
       const l = i.etat.litres ?? 0;
-      const examen: ActionProposee = { libelle: "Examiner", examiner: `${EXAMENS_INSTALLATIONS.recuperateur_pluie} Dans la bassine : ${l.toFixed(1).replace(".", ",")} L.` };
-      return [l >= 0.1 && (inventaire.gourde ?? 0) > 0 ? msg(`Remplir la gourde (eau de pluie, ${l.toFixed(1).replace(".", ",")} L)`, "remplir_pluie") : null, examen];
+      return [l >= 0.1 && (inventaire.gourde ?? 0) > 0 ? msg(`Remplir la gourde (eau de pluie, ${l.toFixed(1).replace(".", ",")} L)`, "remplir_pluie") : null, examiner];
     }
     case "forge":
       return [{ libelle: "Travailler à la forge", ouvrirFabrication: true }, examiner];
@@ -118,7 +120,7 @@ function actionsInstallation(
       const surBanc = Object.entries(i.etat.charges ?? {})
         .map(([b, wh]) => `${b === "petite_batterie" ? "petite batterie" : "batterie de voiture"} ${Math.round(wh ?? 0)} Wh`)
         .join(", ");
-      const examen: ActionProposee = { libelle: "Examiner", examiner: posees ? `Sur le banc : ${surBanc}.` : EXAMENS_INSTALLATIONS.banc_recharge };
+      const examen: ActionProposee = posees ? { libelle: "Examiner", examiner: `Sur le banc : ${surBanc}.` } : examiner;
       if (posees) return [msg("Reprendre les batteries", "reprendre_batteries"), examen];
       const place = CAPACITES.petite_batterie * (inventaire.petite_batterie ?? 0) - (charges.petite_batterie ?? 0);
       if ((charges.batterie_voiture ?? 0) > 1 && place > 0.5) return [msg("Recharger la petite batterie", "recharger"), portees ? msg("Poser les batteries sur le banc", "poser_batteries") : examen];
@@ -218,9 +220,12 @@ export function proposer(
     // De la volaille crue : la rôtir passe avant le reste (2026-10-08).
     const rotir: ActionProposee | null =
       brule && (inventaire.volaille_crue ?? 0) > 0 ? { libelle: "Faire rôtir la volaille", message: { t: "interagir", cible: { genre: "feu", id: f.id }, verbe: "rotir" } } : null;
+    // Un feu couvert sous la cendre se ranime sans briquet (Book 24 §3.1).
+    const ranimer: ActionProposee | null = f.vue.couvert ? { libelle: "Ranimer le feu", message: { t: "interagir", cible: { genre: "feu", id: f.id }, verbe: "ranimer" } } : null;
     garder(Math.max(0, d), {
-      A: f.aspect === "eteint" ? (allumer ?? ajouter) : brule ? (rotir ?? bouillir ?? ajouter) : ajouter,
-      B: f.aspect === "eteint" ? (allumer ? ajouter : null) : brule && (rotir || bouillir) ? ajouter : null,
+      A: ranimer ?? (f.aspect === "eteint" ? (allumer ?? ajouter) : brule ? (rotir ?? bouillir ?? ajouter) : ajouter),
+      // Examiner : la fiche du foyer, avec tout ce qu'on peut y faire (ajouter du bois, l'améliorer, le creuser…).
+      B: { libelle: "Examiner", ouvrirFiche: { genre: "feu", id: f.id } },
       cible: { x: f.x, z: f.z, rayon: 0.7 },
     });
   }

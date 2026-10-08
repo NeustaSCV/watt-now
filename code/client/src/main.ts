@@ -354,6 +354,7 @@ const hud = new Hud(
     demonter: (objet) => envoyer({ t: "demonter", objet }),
     equiper: (objet) => envoyer({ t: "equiper", objet }),
     coffre: (id, sens, objet, quantite) => envoyer({ t: "coffre", id, sens, objet, quantite }),
+    amenager: (genre, id, verbe) => envoyer({ t: "interagir", cible: { genre, id }, verbe }),
     fabriquer: (r) => {
       if (!position) return;
       // Le tas de matières : là où l'installation va se dresser, ou à nos pieds pour un objet.
@@ -531,12 +532,15 @@ function recevoir(message: MessageServeur): void {
         son.jouer("geste_bois");
       }
       boisDesFeux.set(message.feu.id, message.feu.bois);
-      if (existant) existant.mettreAJourEtat(message.feu);
+      // Amélioré, creusé, un accessoire monté (Book 24) : le modèle change, on le refait à la même place.
+      if (existant && existant.cle === FeuDeCamp.cle(message.feu)) existant.mettreAJourEtat(message.feu);
       else {
+        if (existant) contenu.remove(existant.objet);
         const vue = new FeuDeCamp(message.feu);
         feux.set(message.feu.id, vue);
         contenu.add(vue.objet);
       }
+      hud.majFiche();
       return;
     }
     case "installation":
@@ -548,6 +552,16 @@ function recevoir(message: MessageServeur): void {
       const vue = installations.get(message.id);
       if (vue) contenu.remove(vue.objet);
       installations.delete(message.id);
+      hud.majFiche();
+      return;
+    }
+    case "feu_retire": {
+      // Un feu démonté (Book 24 §2.4).
+      const vue = feux.get(message.id);
+      if (vue) contenu.remove(vue.objet);
+      feux.delete(message.id);
+      boisDesFeux.delete(message.id);
+      hud.majFiche();
       return;
     }
     case "charges":
@@ -817,10 +831,19 @@ function majCercles(dt: number, allure: Allure, bouge: boolean, nuit: boolean): 
 
 function ajouterInstallation(i: InstallationVue): void {
   const existante = installations.get(i.id);
-  if (existante) return existante.majEtat(i);
+  // Améliorée ou redescendue (Book 24) : chaque niveau a son modèle, on le refait à la même place.
+  if (existante && (existante.vue.niveau ?? 1) !== (i.niveau ?? 1)) {
+    contenu.remove(existante.objet);
+    installations.delete(i.id);
+  } else if (existante) {
+    existante.majEtat(i);
+    hud.majFiche();
+    return;
+  }
   const vue = new VueInstallation(i);
   installations.set(i.id, vue);
   contenu.add(vue.objet);
+  hud.majFiche();
   cabler();
 }
 
@@ -862,6 +885,8 @@ function agir(a: ActionProposee | null): void {
   else if ("ouvrirCoffre" in a) {
     const c = installations.get(a.ouvrirCoffre);
     if (c) hud.ouvrirCoffre(c.vue);
+  } else if ("ouvrirFiche" in a) {
+    hud.ouvrirFiche(a.ouvrirFiche.genre, a.ouvrirFiche.id);
   } else if ("ouvrirGuichet" in a) {
     if (vueComptoir) hud.ouvrirComptoir(vueComptoir);
   } else if ("ouvrirCarte" in a) {
@@ -900,6 +925,12 @@ function finirPose(choix: "tourner" | "annuler" | "poser"): void {
   hud.masquerPose();
 }
 hud.surPose = finirPose;
+// La fiche d'un feu ou d'une installation (Book 24) lit l'état tenu ici, à jour, et ce qui l'entoure.
+hud.sourceFiche = (genre, id) => {
+  if (genre === "feu") return feux.get(id)?.vue ?? null;
+  return installations.get(id)?.vue ?? null;
+};
+hud.voisinsFiche = () => ({ installations: [...installations.values()].map((i) => i.vue), feux: [...feux.values()].map((f) => f.vue) });
 // Le dialogue de départ dit si l'on part à l'abri (une nuit complète) ou s'il vaut mieux y aller d'abord.
 hud.aLAbri = () =>
   lieu === "terrain" && position !== null && [...installations.values()].some((i) => i.vue.type === "abri" && Math.hypot(i.vue.x - position!.x, i.vue.z - position!.z) <= 3);
@@ -1232,6 +1263,9 @@ function boucle(instant: number): void {
     // Le coffre se ferme quand on s'en éloigne.
     const coffre = hud.coffreOuvert;
     if (coffre && (lieu !== "terrain" || Math.hypot(position.x - coffre.x, position.z - coffre.z) > (coffre.type === "decharge" ? 4.5 : 3))) hud.fermerPanneaux();
+    // La fiche d'un feu ou d'une installation (Book 24) aussi.
+    const fiche = hud.ficheOuverte;
+    if (fiche && (lieu !== "terrain" || Math.hypot(position.x - fiche.x, position.z - fiche.z) > 3.5)) hud.fermerPanneaux();
     // Le guichet se ferme quand on s'en éloigne.
     if (hud.guichetOuvert && (lieu !== "comptoir" || Math.hypot(position.x - COMPTOIR.guichet.x, position.z - COMPTOIR.guichet.z) > 4)) hud.fermerPanneaux();
     personnage.tenir(modeCombat ? armeEnMain(inventaire, armeEquipee).objet : undefined);

@@ -737,6 +737,87 @@ function lit(): THREE.Group {
   return enGroupe(c);
 }
 
+// ---------- Les niveaux (Book 24 §2.5) : des pièces en plus sur le modèle de base, lisibles de loin ----------
+
+/** Un panneau de branches tressées (clayonnage) entre deux points au sol, d'une hauteur donnée. */
+function clayonnage(c: Assemblage, a: THREE.Vector3, b: THREE.Vector3, h: number, aleat: () => number): void {
+  const d = b.clone().sub(a);
+  const n = Math.max(3, Math.round(d.length() / 0.32));
+  for (let k = 0; k <= n; k++) {
+    const p = a.clone().addScaledVector(d, k / n);
+    c.perche(p.clone().add(new V3(0, -0.04, 0)), p.clone().add(new V3((aleat() - 0.5) * 0.03, h + aleat() * 0.08, 0)), 0.02, BOIS.ecorce, "mat", 5, 0.015);
+  }
+  // Les brins souples passés devant, derrière, devant…
+  const cote = new V3(-d.z, 0, d.x).normalize().multiplyScalar(0.018);
+  for (let r = 0; r < Math.floor(h / 0.09); r++) {
+    const y = 0.08 + r * 0.09;
+    const sens = r % 2 ? 1 : -1;
+    c.perche(a.clone().add(new V3(0, y, 0)).addScaledVector(cote, sens), b.clone().add(new V3(0, y + 0.01, 0)).addScaledVector(cote, -sens), 0.014, r % 3 === 0 ? 0x6b5a3a : BOIS.moyen, "mat", 4);
+  }
+}
+
+/** Ce qu'un niveau ajoute au modèle de base. Null : rien à ajouter. */
+function piecesNiveau(type: InstallationVue["type"], niveau: number): THREE.Group | null {
+  if (niveau <= 1) return null;
+  const c = new Assemblage(300 + niveau);
+  c.occlusion = 0.3;
+  const aleat = aleatoire(300 + niveau);
+  if (type === "abri") {
+    // Abri garni : un vrai lit de rameaux de sapin sous la bâche, une couverture dépliée.
+    for (const x of [-0.95, 0.95]) rondin(c, new V3(x, 0.06, -0.35), new V3(x, 0.06, 0.55), 0.06);
+    const verts = [0x4f6b3a, 0x5d7a40, 0x46613a, 0x6b7f45];
+    for (let i = 0; i < 24; i++) {
+      const x = -0.8 + (i % 6) * 0.32 + (aleat() - 0.5) * 0.06;
+      const z = -0.28 + Math.floor(i / 6) * 0.22;
+      const a = Math.PI / 2 + (aleat() - 0.5) * 0.6;
+      const s = surface(new V3(x, 0.12 + aleat() * 0.02, z), new V3(Math.cos(a), 0.2, Math.sin(a)).normalize(), new V3(-Math.sin(a), 0, Math.cos(a)), Y);
+      c.plaque(fronde(0.3, 0.09), s, verts[i % 4]!, "mat", 0);
+    }
+    c.ajouter(placer(bosseler(new THREE.BoxGeometry(0.9, 0.04, 0.6, 3, 1, 2), 0.015, aleat), 0.35, 0.17, 0.12, 0, 0.1, 0), 0x8f3a22, "toile", 0.06);
+    if (niveau >= 3) {
+      // Abri fermé : un coupe-vent tressé sur le côté au vent, et une couverture de chiffons cousus.
+      clayonnage(c, new V3(-1.3, 0, -0.5), new V3(-1.3, 0, 0.9), 1.15, aleat);
+      clayonnage(c, new V3(1.3, 0, -0.5), new V3(1.3, 0, 0.6), 0.9, aleat);
+      const tons = [0x8f3a22, PALETTE.toileEcrue, 0x5a6f8a, PALETTE.vertLaine];
+      for (let k = 0; k < 6; k++) c.boite(tons[k % 4]!, "toile", 0.3, 0.03, 0.3, -0.45 + (k % 3) * 0.3, 0.2, -0.02 + Math.floor(k / 3) * 0.3);
+    }
+  } else if (type === "recuperateur_pluie") {
+    // Citerne de bâche : un bac de perches doublé de bâche sous l'entonnoir, et son couvercle.
+    for (const [x, z] of [[-0.42, -0.42], [0.42, -0.42], [-0.42, 0.42], [0.42, 0.42]] as const) {
+      c.perche(new V3(x, -0.03, z), new V3(x, 0.6, z), 0.035, BOIS.ecorce, "mat", 5);
+    }
+    for (const y of [0.12, 0.5]) {
+      for (const s of [-1, 1]) {
+        rondin(c, new V3(-0.44, y, s * 0.44), new V3(0.44, y, s * 0.44), 0.025);
+        rondin(c, new V3(s * 0.44, y + 0.03, -0.44), new V3(s * 0.44, y + 0.03, 0.44), 0.025);
+      }
+    }
+    // La bâche du bac, tendue entre les perches, et son couvercle de planches (un pan ouvert sous l'entonnoir).
+    for (const s of [-1, 1]) {
+      c.boite(BACHE, "toile", 0.84, 0.52, 0.01, 0, 0.3, s * 0.41);
+      c.boite(BACHE_PASSEE, "toile", 0.01, 0.52, 0.84, s * 0.41, 0.3, 0);
+    }
+    for (let k = 0; k < 4; k++) c.boite([BOIS.clair, BOIS.moyen, BOIS.gris][k % 3]!, "mat", 0.9, 0.025, 0.2, 0, 0.6, -0.36 + k * 0.24 + (k >= 2 ? 0.1 : 0));
+  } else if (type === "coffre") {
+    // Coffre cerclé : de larges feuillards martelés aux deux bouts, des coins de fer, le fond doublé.
+    for (const x of [-0.4, 0.4]) {
+      for (const s of [-1, 1]) c.boite(ACIER, "metal", 0.06, 0.42, 0.008, x, 0.23, s * 0.28);
+      c.boite(ROUILLE_SOMBRE, "metal", 0.06, 0.008, 0.57, x, 0.445, 0);
+    }
+    for (const [x, z] of [[-0.43, -0.26], [0.43, -0.26], [-0.43, 0.26], [0.43, 0.26]] as const) c.boite(NOIR, "metal", 0.07, 0.07, 0.07, x, 0.05, z);
+    c.boite(BOIS.sombre, "mat", 0.9, 0.03, 0.58, 0, 0.015, 0);
+    if (niveau >= 3) {
+      // Réserve couverte : des pierres plates dessous, quatre poteaux et un auvent de bâche.
+      for (let i = 0; i < 6; i++) caillou(c, -0.4 + (i % 3) * 0.4, 0.03, i < 3 ? -0.34 : 0.34, 0.09, aleat, i % 2 ? PALETTE.pierre : PALETTE.pierreSombre, 0.4);
+      for (const [x, z, h] of [[-0.7, -0.55, 1.45], [0.7, -0.55, 1.45], [-0.7, 0.55, 1.2], [0.7, 0.55, 1.2]] as const) {
+        c.perche(new V3(x, -0.04, z), new V3(x, h, z), 0.035, BOIS.ecorce, "mat", 5);
+      }
+      toile(c, 6, 6, (u, v) => new V3((u - 0.5) * 1.6, 1.47 - v * 0.29 - 0.04 * Math.sin(Math.PI * u), (v - 0.5) * 1.3), (i, j) => ((i + j) % 4 === 0 ? BACHE_PASSEE : BACHE));
+    }
+  } else return null;
+  return enGroupe(c);
+}
+
 /** Une installation affichée, avec son état (accessoires montés, meule qui fume). */
 export class VueInstallation {
   readonly objet: THREE.Group;
@@ -825,6 +906,13 @@ export class VueInstallation {
         this.trouvailles = d.trouvailles;
         break;
       }
+    }
+    // Le niveau (Book 24) : des pièces en plus. La citerne couvre la bassine : son eau ne se voit plus.
+    const pieces = piecesNiveau(donnees.type, donnees.niveau ?? 1);
+    if (pieces) this.objet.add(pieces);
+    if (this.eau && (donnees.niveau ?? 1) > 1) {
+      this.eau.removeFromParent();
+      this.eau = null;
     }
     this.objet.position.set(donnees.x, 0, donnees.z);
     // Le panneau regarde toujours le sud, quelle que soit la façon dont on l'a posé.

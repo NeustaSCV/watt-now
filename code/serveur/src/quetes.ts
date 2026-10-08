@@ -21,7 +21,7 @@ export interface EtatJoueurPourQuetes {
   inventaire: Inventaire;
   charges: Charges;
   /** Les installations de son terrain, avec leur état (meule, dynamo…). */
-  installations: Iterable<{ type: string; etat: object }>;
+  installations: Iterable<{ type: string; etat: object; niveau?: number }>;
 }
 
 /** Les lignes du carnet, dans l'ordre d'affichage. */
@@ -57,7 +57,7 @@ export class SuiviQuetes {
       case "fait":
         return { fait: Math.min(c.but, Math.floor(this.etat.faits[c.fait] ?? 0)), but: c.but };
       case "installation": {
-        const ok = [...j.installations].some((i) => i.type === c.type && (!c.avec || (i.etat as Record<string, unknown>)[c.avec] === true));
+        const ok = [...j.installations].some((i) => i.type === c.type && (!c.avec || (i.etat as Record<string, unknown>)[c.avec] === true) && (i.niveau ?? 1) >= (c.niveau ?? 1));
         return { fait: ok ? 1 : 0, but: 1 };
       }
       case "objet": {

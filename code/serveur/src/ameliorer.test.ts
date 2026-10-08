@@ -8,7 +8,9 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import type { MessageServeur } from "../../commun/src/messages.ts";
-import { MAX_FOYERS, VOIE_SURFACE, choisirCout, coutPour, effetsFeu, rendDuDemontage } from "../../commun/src/lignees.ts";
+import { MAX_FOYERS, VOIE_SURFACE, capaciteCoffre, choisirCout, contenanceRecuperateur, coutPour, effetsFeu, rendDuDemontage } from "../../commun/src/lignees.ts";
+import { QUETES } from "../../commun/src/quetes.ts";
+import { SuiviQuetes } from "./quetes.ts";
 import { BOIS_PAR_HEURE, bruler } from "../../commun/src/survie.ts";
 import type { EtatQuetes } from "../../commun/src/quetes.ts";
 import { Base } from "./base.ts";
@@ -246,6 +248,52 @@ test("démonter une installation : le coffre doit être vide ; le récupérateur
   v.joueur.position = { x: d.x, z: d.z - 1, o: 0 };
   v.agir("installation", d.id, "demonter_installation");
   assert.match(v.infos().at(-1)!, /décharge/);
+});
+
+test("l'abri garni absorbe le lit voisin sans rien payer ; il dort comme un lit, et vaut l'objectif « Un vrai lit »", () => {
+  const t = monter({}, (b, id) => {
+    b.ajouterInstallation(id, "abri", 21, 20, 0);
+    b.ajouterInstallation(id, "lit_branchages", 22, 21, 0);
+  });
+  t.agir("installation", 1, "ameliorer");
+  assert.deepEqual(t.dernier("installation_retiree"), { t: "installation_retiree", id: 2 });
+  const abri = t.dernier("installation")!.installation;
+  assert.equal(abri.niveau, 2);
+  assert.deepEqual(abri.etat.payes, [{ branche: 6 }], "le lit absorbé sera rendu au démontage");
+  assert.equal(t.base.chargerInstallations(t.compte.id).find((i) => i.type === "abri")!.niveau, 2);
+  const confort = (t.joueur as unknown as { confortDuSommeil(i: unknown): number }).confortDuSommeil(abri);
+  assert.ok(Math.abs(confort - 1.3) < 1e-9);
+  // L'objectif du carnet accepte l'abri garni.
+  const suivi = new SuiviQuetes({ faits: {}, finies: [], primes: 0 });
+  const lit = QUETES.find((q) => q.id === "lit")!;
+  const etat = { famille: "mecanistes" as const, inventaire: {}, charges: {}, installations: [abri] };
+  assert.equal(suivi.avancement(lit.objectifs[0]!.condition, etat).fait, 1);
+  assert.equal(suivi.avancement(lit.objectifs[0]!.condition, { ...etat, installations: [{ ...abri, niveau: undefined }] }).fait, 0);
+});
+
+test("sans lit voisin, garnir l'abri coûte 6 branches ; le coffre cerclé garde 250 kg, la citerne 60 L", () => {
+  const t = monter({ branche: 6, couteau: 1 }, (b, id) => b.ajouterInstallation(id, "abri", 21, 20, 0));
+  t.agir("installation", 1, "ameliorer");
+  assert.equal(t.dernier("installation")!.installation.niveau, 2);
+  assert.equal(t.inventaireActuel().branche ?? 0, 0);
+
+  const u = monter({ barre_metal: 1, buche: 2, pierre: 80 }, (b, id) => b.ajouterInstallation(id, "coffre", 21, 20, 0));
+  u.agir("installation", 1, "ameliorer");
+  assert.equal(u.dernier("installation")!.installation.niveau, 2);
+  // 80 pierres, 160 kg : plus que les 150 kg d'un coffre simple.
+  u.joueur.recevoir({ t: "coffre", id: 1, sens: "deposer", objet: "pierre", quantite: 80 });
+  assert.equal(u.dernier("installation")!.installation.etat.contenu?.pierre, 80);
+  assert.equal(capaciteCoffre({ type: "coffre", niveau: 2 }), 250);
+  assert.equal(contenanceRecuperateur({ type: "recuperateur_pluie", niveau: 2 }), 60);
+  // Redescendre un coffre trop plein pour sa taille d'avant : refusé.
+  u.base.sauverEtatInstallation(u.compte.id, 1, {});
+  const v = monter({}, (b, id) => {
+    b.ajouterInstallation(id, "coffre", 21, 20, 0);
+    b.sauverNiveauInstallation(id, 1, 2);
+    b.sauverEtatInstallation(id, 1, { contenu: { pierre: 90 }, payes: [{ barre_metal: 1, buche: 2 }] });
+  });
+  v.agir("installation", 1, "redescendre");
+  assert.match(v.infos().at(-1)!, /150 kg/);
 });
 
 test("les niveaux de famille coûtent ×1,5 aux autres familles (arrondi au-dessus)", () => {

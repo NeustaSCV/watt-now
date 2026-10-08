@@ -3108,6 +3108,230 @@ body {
   }
 }
 
+/* La fiche d'un feu ou d'une installation (Book 24) : ce qu'il fait, l'améliorer sur place, le démonter. */
+#hud .panneau.fiche {
+  position: absolute;
+  left: 50%;
+  top: max(84px, calc(env(safe-area-inset-top) + 72px));
+  transform: translateX(-50%);
+  width: min(480px, calc(100vw - 24px));
+  max-height: calc(100dvh - 180px);
+  overflow-y: auto;
+  pointer-events: auto;
+  background: var(--creme);
+  color: var(--encre);
+  border-radius: 8px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  padding: 10px 14px 14px;
+  font-size: 14px;
+}
+#hud .panneau.fiche[hidden] {
+  display: none;
+}
+#hud .panneau.fiche header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 2px solid var(--encre);
+  padding-bottom: 6px;
+  margin-bottom: 6px;
+}
+#hud .panneau.fiche h2 {
+  margin: 0;
+  font-size: 18px;
+}
+#hud .panneau.fiche h3 {
+  margin: 12px 0 6px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.75;
+}
+#hud .panneau.fiche .fermer {
+  min-width: 40px;
+  min-height: 40px;
+  border: 0;
+  background: transparent;
+  font-size: 18px;
+  color: var(--encre);
+  cursor: pointer;
+}
+#hud .panneau.fiche .niveau {
+  margin: 0;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--canard);
+}
+#hud .panneau.fiche .examen {
+  margin: 4px 0;
+  line-height: 1.4;
+}
+#hud .panneau.fiche .proprietes {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: #7a6a58;
+}
+#hud .panneau.fiche .gestes,
+#hud .panneau.fiche .defaire {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0;
+}
+#hud .panneau.fiche button {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  min-height: 40px;
+  padding: 4px 12px;
+  border-radius: 4px;
+  border: 2px solid var(--rouge);
+  background: var(--rouge);
+  color: var(--creme);
+  cursor: pointer;
+}
+#hud .panneau.fiche button.fermer {
+  border: 0;
+  background: transparent;
+  color: var(--encre);
+}
+#hud .panneau.fiche button.secondaire {
+  background: transparent;
+  color: var(--encre);
+  border-color: var(--encre);
+}
+#hud .panneau.fiche button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+#hud .panneau.fiche .etape {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  margin-bottom: 6px;
+  border-radius: 6px;
+  background: #fffaf0;
+  opacity: 0.8;
+}
+#hud .panneau.fiche .etape.possible {
+  opacity: 1;
+  box-shadow: inset 0 0 0 2px var(--canard);
+}
+#hud .panneau.fiche .etape.apres {
+  opacity: 0.55;
+  border: 1px dashed #9a8a76;
+  background: transparent;
+}
+#hud .panneau.fiche .corps {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+#hud .panneau.fiche .corps small {
+  color: #7a6a58;
+  font-size: 12px;
+  line-height: 1.35;
+}
+#hud .panneau.fiche .corps small.bloque {
+  color: var(--ocre);
+  font-weight: 700;
+}
+#hud .panneau.fiche .puces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 6px;
+  align-items: center;
+}
+#hud .panneau.fiche .puces .ou {
+  font-size: 11px;
+  font-style: italic;
+  opacity: 0.7;
+}
+#hud .panneau.fiche .ingredient {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #9a8a76;
+}
+#hud .panneau.fiche .ingredient.ok {
+  color: var(--canard);
+}
+#hud .panneau.fiche .outil {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid #c9b998;
+  color: #9a8a76;
+}
+#hud .panneau.fiche .outil.ok {
+  border-color: var(--canard);
+  color: var(--canard);
+}
+#hud .panneau.fiche .outil.lent {
+  border-color: var(--ocre);
+  color: var(--ocre);
+}
+#hud .panneau.fiche .outil.manque {
+  border-color: var(--rouge);
+  color: var(--rouge);
+}
+#hud .panneau.fiche .badge-famille {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: rgba(59, 42, 30, 0.12);
+  font-size: 11px;
+  font-weight: 600;
+}
+#hud .panneau.fiche ul.manque {
+  margin: 4px 0 0;
+  padding-left: 16px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+#hud .panneau.fiche .monte {
+  margin: 4px 0;
+  font-size: 13px;
+  color: var(--canard);
+}
+#hud .panneau.fiche .indice {
+  margin: 6px 0 0;
+  font-size: 12px;
+  opacity: 0.7;
+}
+/* Une seule carte pour la lignée du feu, dans Fabriquer : ses deux boutons l'un sous l'autre. */
+#hud .fabrication .boutons-feu {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: stretch;
+}
+#hud .fabrication button[data-dakota] {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  min-height: 36px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 2px solid var(--canard);
+  background: transparent;
+  color: var(--canard);
+  cursor: pointer;
+}
+@media (max-width: 560px) {
+  #hud .panneau.fiche .etape {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
 /* La jauge d'une action longue (geste de plus de 5 s, fabrication) : le pourcentage, et comment s'arrêter. */
 #hud .progression .ligne-progression {
   display: flex;
