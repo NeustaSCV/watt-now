@@ -1354,22 +1354,26 @@ export class Hud {
       const d = OBJETS[s];
       const n = Math.max(1, this.inventaire[s] ?? 0);
       let detail = d.description;
-      let action = "";
+      // Une seule rangée d'actions, toujours visible sous la tête de la fiche (avis de Sally, 2026-10-08) :
+      // l'action principale d'abord (en rouge), Jeter tout à droite pour ne pas le toucher par erreur.
+      const actions: string[] = [];
+      const infos: string[] = [];
+      let enMain = "";
       if (s === "gourde") {
         detail = g.litres <= 0 ? "Vide. Remplis-la à la mare." : `${kg(g.litres)} L d'eau ${g.contenu === "potable" ? "potable" : "brute : fais-la bouillir sur le feu avant de la boire"}.`;
-        action = `<button type="button" data-action="boire" ${g.litres > 0 ? "" : "disabled"}>Boire</button>`;
+        actions.push(`<button type="button" class="principal" data-action="boire" ${g.litres > 0 ? "" : "disabled"}>Boire</button>`);
       } else if (d.kcal) {
-        action = `<button type="button" data-action="manger">Manger</button>`;
+        actions.push(`<button type="button" class="principal" data-action="manger">Manger</button>`);
       } else if (d.lumiere) {
-        action = `<button type="button" data-action="lumiere">${this.lumiereAllumee ? "Éteindre" : "Allumer"}</button>`;
+        actions.push(`<button type="button" class="principal" data-action="lumiere">${this.lumiereAllumee ? "Éteindre" : "Allumer"}</button>`);
       } else if (s === "pansement") {
-        action = `<button type="button" data-action="panser">Panser</button>`;
+        actions.push(`<button type="button" class="principal" data-action="panser">Panser</button>`);
       } else if (estArme(s)) {
         // P-005 : l'arme qu'on a en main dès qu'on passe en mode Combat.
-        action =
-          s === this.armeEquipee
-            ? `<button type="button" data-action="desequiper" title="En mode Combat, tu prendras la meilleure arme du sac.">⚔ Équipée · retirer</button>`
-            : `<button type="button" data-action="equiper">Équiper pour le combat</button>`;
+        if (s === this.armeEquipee) {
+          enMain = " · ⚔ en main au combat";
+          actions.push(`<button type="button" data-action="desequiper" title="En mode Combat, tu prendras la meilleure arme du sac.">Retirer</button>`);
+        } else actions.push(`<button type="button" class="principal" data-action="equiper" title="L'arme que tu prends en mode Combat">Équiper</button>`);
       }
       // Batteries et lampe frontale : la charge stockée (Book 01 §2).
       const batterie = s === "lampe_frontale" ? "petite_batterie" : s === "petite_batterie" || s === "batterie_voiture" ? s : null;
@@ -1377,36 +1381,44 @@ export class Hud {
         const wh = this.charges[batterie] ?? 0;
         const cap = CAPACITES[batterie] * Math.max(1, this.inventaire[batterie] ?? 0);
         const pct = Math.round((wh / cap) * 100);
-        detail += ` <span class="charge-batterie"><span class="charge-barre"><span style="width:${Math.min(100, pct)}%"></span></span> ${Math.round(wh)} / ${cap} Wh${s === "lampe_frontale" ? " (petite batterie)" : ""}</span>`;
+        infos.push(`<span class="charge-batterie"><span class="charge-barre"><span style="width:${Math.min(100, pct)}%"></span></span> ${Math.round(wh)} / ${cap} Wh${s === "lampe_frontale" ? " (petite batterie)" : ""}</span>`);
         if (s === "lampe_frontale" && (this.inventaire.petite_batterie ?? 0) === 0) detail += " Il lui faut une petite batterie.";
       }
-      // Une arme : ses dégâts et sa vitesse, comparés aux autres (2026-10-08).
+      // Une arme : ses dégâts et sa vitesse, comparés aux autres (2026-10-08), et sa réparation (Book 23 §4.3).
       const arme = caracteristiquesArme(s);
-      if (arme) detail += this.ficheArme(arme, s);
-      // Jeter par terre, quand le sac est trop lourd (on garde son sac sur le dos).
-      const jeter =
-        s === "sac_a_dos" || s === "sac_fortune"
-          ? ""
-          : `<div class="jeter"><button type="button" data-action="jeter1">Jeter${n > 1 ? " 1" : ""}</button>${n > 1 ? `<button type="button" data-action="jeterTout">Tout jeter (${n})</button>` : ""}</div>`;
+      const caracs = arme ? this.ficheArme(arme, s) : "";
+      if (arme) {
+        const etat = etatArme(s, this.usureArmes);
+        if (etat < 1) {
+          actions.push(`<button type="button" data-action="reparer" title="Remettre à neuf ${ATELIERS_REPARATION_NOMS[MATIERE_ARME[s] ?? "metal"]}">Réparer</button>`);
+          infos.push(`<p class="info-objet">Réparer : ${ATELIERS_REPARATION_NOMS[MATIERE_ARME[s] ?? "metal"]}, chez toi.${etat < PLAFOND_FORTUNE ? " Rafistoler : partout, avec une ficelle et des chiffons (elle reste abîmée)." : ""}</p>`);
+          if (etat < PLAFOND_FORTUNE) actions.push(`<button type="button" data-action="reparer-fortune" title="Une ficelle et des chiffons : elle tient, mais reste abîmée">Rafistoler</button>`);
+        }
+      }
       // Vestiges, lot 1 : ce que donne le démontage, et l'outil qu'il demande.
       const dem = DEMONTAGE[s];
-      let demontage = "";
       if (dem) {
         const donne = (Object.entries(dem.donne) as [TypeObjet, number][]).map(([t, k]) => nommer(t, k)).join(", ");
         const outils = (Object.entries(dem.qualites) as [Qualite, number][]).map(([q, niv]) => `${NOMS_QUALITES[q]} ${niv}`).join(", ");
         const facteur = multiplicateurQualites(this.inventaire, dem.qualites);
         const etat = facteur === null ? "il te manque l'outil" : facteur > 1 ? "ton outil fera l'affaire, plus lentement" : outils ? "tu as l'outil" : "";
-        demontage = `<div class="demontage"><p><strong>Démonter</strong> → ${donne}.<br><small>Outil : ${outils || "aucun"}${etat ? ` (${etat})` : ""}.</small></p>
-          <button type="button" data-action="demonter" ${facteur === null ? "disabled" : ""}>Démonter</button></div>`;
+        actions.push(`<button type="button" data-action="demonter" ${facteur === null ? "disabled" : ""}>Démonter</button>`);
+        infos.push(`<p class="info-objet">Démonter → ${donne}. Outil : ${outils || "aucun"}${etat ? ` (${etat})` : ""}.</p>`);
+      }
+      // Jeter par terre, quand le sac est trop lourd (on garde son sac sur le dos).
+      if (s !== "sac_a_dos" && s !== "sac_fortune") {
+        actions.push(`<button type="button" class="a-part" data-action="jeter1">Jeter${n > 1 ? " 1" : ""}</button>`);
+        if (n > 1) actions.push(`<button type="button" data-action="jeterTout">Jeter les ${n}</button>`);
       }
       const famille = d.famille ? ` · ${NOMS_FAMILLES_VESTIGES[d.famille]}` : "";
       fiche = `
-        <div class="fiche-tete">${icone(s, 44)}<div><strong>${nommer(s, n)}</strong>
-          <small>${kg(d.poids * n)} kg · valeur ≈ ${formaterWotts(energieGrise(s))}${famille}</small></div>${action}</div>
-        <p>${detail}</p>
-        <p class="energie-grise">${this.texteEnergieGrise(s)}</p>
-        ${demontage}
-        ${jeter}`;
+        <div class="fiche-tete">${icone(s, 36)}<div><strong>${nommer(s, n)}</strong>
+          <small>${kg(d.poids * n)} kg · valeur ≈ ${formaterWotts(energieGrise(s))}${famille}${enMain}</small></div></div>
+        ${actions.length ? `<div class="actions-objet">${actions.join("")}</div>` : ""}
+        <p class="description">${detail}</p>
+        ${caracs}
+        ${infos.join("")}
+        <p class="energie-grise">${this.texteEnergieGrise(s)}</p>`;
     }
 
     const capacite = capaciteDe(this.inventaire);
@@ -1485,21 +1497,14 @@ export class Hud {
     const coupsPourTomber = Math.ceil(RESISTANCE_TORSE / a.degats);
     const etat = etatArme(objet, this.usureArmes);
     const abimee = etat < SEUIL_ABIMEE;
-    return `<span class="caracs-arme">
+    return `<div class="caracs-arme">
       ${barre("Dégâts", a.degats / maxDegats, virgule(a.degats), `${coupsPourTomber} coup${coupsPourTomber > 1 ? "s" : ""} au torse pour le faire tomber`)}
       ${barre("Vitesse", a.vitesse / maxVitesse, `${virgule(a.coup, 2)} s`, `Un coup simple dure ${virgule(a.coup, 2)} s, un coup appuyé ${virgule(a.coupAppuye, 2)} s`)}
       ${barre("Allonge", a.allonge / maxAllonge, `${virgule(a.allonge)} m`, "Jusqu'où il porte")}
       ${barre("Solidité", etat, abimee ? "abîmée" : `${Math.round(etat * 100)} %`, abimee ? "Abîmée : ses coups portent 30 % moins fort. Répare-la." : "Elle s'use à chaque coup qui touche ; à zéro, elle casse.")}
       <span class="tete-carac">${a.tueALaTete ? "☠ Un coup appuyé à la tête l'arrête net." : "Ne tue pas d'un coup à la tête : il faut l'achever au sol."}</span>
       <span class="tete-carac">${TYPES_DEGATS[a.type]}</span>
-    </span>
-    ${
-      etat < 1
-        ? `<span class="reparer-arme"><button type="button" data-action="reparer">Remettre à neuf (${ATELIERS_REPARATION_NOMS[MATIERE_ARME[objet] ?? "metal"]})</button>${
-            etat < PLAFOND_FORTUNE ? `<button type="button" data-action="reparer-fortune">Réparation de fortune (ficelle, chiffons)</button>` : ""
-          }</span>`
-        : ""
-    }`;
+    </div>`;
   }
 
   // ---------- Le coffre de rangement ----------
@@ -1664,7 +1669,7 @@ export class Hud {
         : "";
     return `
       <article class="etape ${possible ? "possible" : ""}">
-        <div class="corps"><strong>${titre}</strong>${badge}
+        <div class="corps"><strong>${titre}${badge}</strong>
           <small>${texte}</small>
           ${gratuit ? "" : this.pucesCout(e.couts, e.qualites, e.famille)}
           ${bloque ? `<small class="bloque">${bloque}</small>` : manque}
@@ -1731,14 +1736,14 @@ export class Hud {
       .map(([a, def]) => {
         if (v.accessoires?.includes(a)) return `<p class="monte">✓ ${def.nom} : ${def.apporte}</p>`;
         if (!def.formes.includes(forme)) return a === "marmite" && !v.dakota ? `<article class="etape apres"><div class="corps"><strong>${def.nom}</strong><small>${def.apporte} Il faut un foyer de cuisine.</small></div></article>` : "";
-        return this.carteEtape(def.nom, def.apporte, def, a === "broche" ? "monter_broche" : "monter_marmite", "Monter");
+        return this.carteEtape(def.nom, def.apporte, def, a === "broche" ? "monter_broche" : "monter_marmite", "Installer");
       })
       .join("");
 
     // Redescendre, démonter : ce qu'on récupère (Book 24 §2.4).
     const precedente = niveau > 1 ? voie[niveau - 2]! : null;
     const defaire = [
-      precedente ? `<button type="button" class="secondaire" data-verbe="redescendre" ${flammes ? "disabled" : ""}>Redescendre en ${precedente.nom.toLowerCase()}</button>` : "",
+      precedente ? `<button type="button" class="secondaire" data-verbe="redescendre" ${flammes ? "disabled" : ""} title="Redevient ${precedente.nom.toLowerCase()}">Défaire l'amélioration</button>` : "",
       `<button type="button" class="secondaire" data-verbe="demonter_installation" ${v.aspect === "flammes" || v.aspect === "braises" ? "disabled" : ""}>Démonter</button>`,
     ].join("");
 
@@ -1788,7 +1793,7 @@ export class Hud {
     const plein = i.type === "coffre" && Object.values(i.etat.contenu ?? {}).some((n) => (n ?? 0) > 0);
     const precedente = niveau > 1 && l ? l[niveau - 2]! : null;
     const defaire = [
-      precedente ? `<button type="button" class="secondaire" data-verbe="redescendre">Redescendre en ${precedente.nom.toLowerCase()}</button>` : "",
+      precedente ? `<button type="button" class="secondaire" data-verbe="redescendre" title="Redevient ${precedente.nom.toLowerCase()}">Défaire l'amélioration</button>` : "",
       `<button type="button" class="secondaire" data-verbe="demonter_installation" ${plein ? "disabled" : ""}>Démonter</button>`,
     ].join("");
 
@@ -1827,11 +1832,11 @@ export class Hud {
         ${icone("feu_de_camp", 40)}
         <div class="corps"><strong>Feu de camp</strong>
           <span class="puces">${Object.entries(RECETTE_FEU).map(([t, n]) => this.puce(t as TypeObjet, n ?? 0)).join("")}</span>
-          <small>Se pose devant toi. Cuire, faire bouillir l'eau, s'éclairer. Il s'améliore sur place (foyer de pierres, de cuisine) ou se creuse en foyer Dakota, plus discret : approche-toi du feu, puis « Examiner ».</small>
+          <small>Se pose devant toi. Cuire, faire bouillir l'eau, s'éclairer. Ou en foyer Dakota, plus discret (3 branches, outil Creuser 1). Il s'améliore ensuite sur place : approche-toi, puis « Examiner ».</small>
           ${this.pourquoi === "feu" ? this.listeManque(RECETTE_FEU_AIDE) : ""}${this.pourquoi === "dakota" ? this.listeManque(RECETTE_DAKOTA_AIDE) : ""}</div>
         <div class="boutons-feu">
-          ${feuPossible ? `<button type="button" data-feu>Monter ici</button>` : `<button type="button" class="pourquoi" data-pourquoi="feu" aria-expanded="${this.pourquoi === "feu"}">Ce qu'il manque ?</button>`}
-          ${dakotaPossible ? `<button type="button" data-dakota>Dakota (3 branches, Creuser 1)</button>` : ""}
+          ${feuPossible ? `<button type="button" data-feu>Construire</button>` : `<button type="button" class="pourquoi" data-pourquoi="feu" aria-expanded="${this.pourquoi === "feu"}" aria-label="Voir ce qui manque">Il manque…</button>`}
+          ${dakotaPossible ? `<button type="button" data-dakota title="3 branches, un outil pour creuser (Creuser 1)">Creuser en Dakota</button>` : ""}
         </div>
       </article>` });
 
@@ -1858,13 +1863,13 @@ export class Hud {
       cartes.push({ categorie: r.categorie, possible, html: `
         <article class="recette ${possible ? "possible" : ""}">
           ${icone(pictogramme, 40)}
-          <div class="corps"><strong>${r.nom}</strong>${badge}
+          <div class="corps"><strong>${r.nom}${badge}</strong>
             <span class="puces">${Object.entries(r.ingredients).map(([t, n]) => this.puce(t as TypeObjet, n ?? 0)).join("")}${qualites}</span>
             <small>${ou}${String(secondes).replace(".", ",")} s · ≈ ${Math.round(energieGriseRecette(r))} wotts</small>${this.pourquoi === r.id ? this.listeManque(r) : ""}</div>
           ${
             possible
               ? `<button type="button" data-recette="${r.id}">${"installation" in r.produit ? "Construire" : "Fabriquer"}</button>`
-              : `<button type="button" class="pourquoi" data-pourquoi="${r.id}" aria-expanded="${this.pourquoi === r.id}">Ce qu'il manque ?</button>`
+              : `<button type="button" class="pourquoi" data-pourquoi="${r.id}" aria-expanded="${this.pourquoi === r.id}" aria-label="Voir ce qui manque">Il manque…</button>`
           }
         </article>` });
     }

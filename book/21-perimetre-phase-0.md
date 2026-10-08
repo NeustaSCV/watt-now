@@ -447,7 +447,7 @@ Tout modèle libre passe par la même chaîne avant d'entrer dans le jeu : **éc
 | Chargement jusqu'au premier écran jouable (4G correcte) | ≤ **15 s** |
 | **Test des familles** : silhouette montrée 1 s à 5 personnes | ≥ **4 sur 5** reconnaissent la famille |
 | Éteint de nuit, à 10 m, au zoom par défaut | Reconnu par **5 sur 5** |
-| Textes et zones tactiles sur téléphone | Textes ≥ **14 px** CSS, contraste ≥ 4,5:1 ; zones tactiles ≥ **44 px** |
+| Textes et zones tactiles sur téléphone | Contraste ≥ 4,5:1 ; zones **tactiles** ≥ **44 px** (un bouton peut se dessiner à 30 px si sa zone tactile en fait 44). **Textes : assoupli le 2026-10-08 à la demande du porteur** (« on lit très bien, on peut réduire ») : 13 à 13,5 px pour les textes et les noms, 11 à 12,5 px pour les petits textes et les boutons, **jamais sous 10 px**. Appareil de référence : **l'iPhone 13 mini**, 375 × 630 points en vertical et 812 × 320 en horizontal, dans Safari (avis de Sally) |
 | Daltonisme (simulation) | Éteints, familles et jauges restent distincts |
 | Captures des 5 moments | Utilisables **sans retouche** comme images de présentation |
 

@@ -224,7 +224,7 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
     id: "feu",
     icone: "🔥",
     titre: "Le feu",
-    resume: "Monter un feu, l'entretenir, s'en servir, et ce qu'il trahit.",
+    resume: "Faire un feu, l'entretenir, s'en servir, et ce qu'il trahit.",
     blocs: [
       "Le feu de camp se monte depuis Fabriquer, avec des pierres et des branches. Ensuite, près du feu, {agir} propose le geste le plus utile : **allumer** (il faut un briquet ou une pierre à feu), **ajouter du bois**, **faire bouillir** l'eau de ta gourde, **rôtir** la volaille. {examiner} ouvre la **fiche du feu** : tout ce qu'on peut y faire, et comment l'améliorer.",
       { sous_titre: "L'entretenir" },

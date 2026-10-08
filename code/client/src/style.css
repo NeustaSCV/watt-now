@@ -4512,3 +4512,129 @@ body.aide-ouverte #hud .tactile {
     animation: none;
   }
 }
+
+/* ==== Sac et Fabriquer au petit point (Sally, 2026-10-08) — à garder EN DERNIER ====
+   Référence : l'iPhone 13 mini dans Safari, 375 × 630 en vertical, 812 × 320 en horizontal. Boutons de 30 px visibles,
+   zone tactile de 44 px (::after) ; polices de 10 à 15 px (Book 21 §5.4.4 assoupli, à la demande du porteur). */
+#hud .panneau.sac:not([hidden]) { display: flex; flex-direction: column; overflow: hidden; width: min(380px, calc(100vw - 24px)); }
+#hud .panneau.sac > header { flex: none; margin-bottom: 6px; padding-bottom: 4px; }
+#hud .panneau.sac h2 { font-size: 16px; }
+#hud .panneau.sac .poids-total { font-size: 11.5px; }
+#hud .panneau.sac .tri-sac { flex: none; margin: 0 0 6px; font-size: 11.5px; }
+#hud .panneau.sac .tri-sac button { min-height: 26px; padding: 0 9px; font-size: 11.5px; border-width: 1px; }
+#hud .panneau.sac .grille { flex: none; grid-template-columns: repeat(auto-fill, minmax(46px, 1fr)); gap: 5px; max-height: 204px; }
+#hud .panneau.sac .case { padding: 2px; border-width: 1.5px; border-radius: 7px; }
+#hud .panneau.sac .case .badge { font-size: 10px; }
+#hud .panneau.sac .fiche { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin: 8px 0 0; padding: 8px 10px; font-size: 13px; line-height: 1.4; }
+#hud .panneau.sac .fiche-tete strong { font-size: 14px; line-height: 1.2; }
+#hud .panneau.sac .fiche-tete small,
+#hud .panneau.sac .fiche .info-objet,
+#hud .panneau.sac .fiche .energie-grise,
+#hud .panneau.sac .fiche .charge-batterie { font-size: 11.5px; }
+#hud .panneau.sac .fiche .info-objet { margin: 4px 0 0; opacity: 0.85; }
+#hud .panneau.sac .fiche .energie-grise { min-height: 0; padding: 4px 0; }
+#hud .panneau.sac .fiche .description { margin: 4px 0 0; }
+#hud .panneau.sac .actions-objet { display: flex; flex-wrap: nowrap; gap: 6px; margin: 1px 0 0; padding: 7px 3px; overflow-x: auto; scrollbar-width: none; }
+#hud .panneau.sac .actions-objet::-webkit-scrollbar { display: none; }
+#hud .panneau.sac .actions-objet button { position: relative; flex: none; min-height: 30px; padding: 0 10px; border: 1.5px solid var(--encre); border-radius: 6px; background: transparent; color: var(--encre); font: inherit; font-size: 12.5px; font-weight: 700; white-space: nowrap; cursor: pointer; }
+#hud .panneau.sac .actions-objet button.principal { background: var(--rouge); border-color: var(--rouge); color: var(--creme); }
+#hud .panneau.sac .actions-objet button:disabled { opacity: 0.4; }
+#hud .panneau.sac .actions-objet .a-part { margin-left: auto; }
+#hud .panneau.sac .caracs-arme { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 12px; margin-top: 6px; }
+#hud .panneau.sac .carac { grid-template-columns: 50px minmax(0, 1fr) 38px; gap: 5px; font-size: 11px; }
+#hud .panneau.sac .barre-carac { height: 5px; }
+#hud .panneau.sac .tete-carac { grid-column: 1 / -1; font-size: 11px; }
+
+#hud .panneau.fabrication { width: min(420px, calc(100vw - 24px)); }
+#hud .panneau.fabrication .recette { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; grid-template-areas: "ic nom bouton" ". puces puces" ". texte texte" ". manque manque"; align-items: center; gap: 3px 8px; padding: 7px 8px; margin-bottom: 6px; }
+#hud .panneau.fabrication .recette:has(.boutons-feu) { grid-template-areas: "ic nom nom" ". puces puces" ". texte texte" ". manque manque" ". bouton bouton"; }
+#hud .panneau.fabrication .recette > svg { grid-area: ic; width: 28px; height: 28px; }
+#hud .panneau.fabrication .recette > .corps { display: contents; }
+#hud .panneau.fabrication .recette .corps > strong { grid-area: nom; font-size: 13.5px; line-height: 1.2; }
+#hud .panneau.fabrication .recette .puces { grid-area: puces; gap: 2px 8px; }
+#hud .panneau.fabrication .recette .corps > small { grid-area: texte; font-size: 11.5px; line-height: 1.35; }
+#hud .panneau.fabrication .recette ul.manque { grid-area: manque; margin: 2px 0 0; font-size: 11.5px; }
+#hud .panneau.fabrication .recette > button,
+#hud .panneau.fabrication .recette > .boutons-feu { grid-area: bouton; align-self: start; }
+#hud .panneau.fabrication .boutons-feu { display: flex; flex-direction: row; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+#hud .panneau.fabrication .recette button { position: relative; min-height: 30px; padding: 0 10px; border-radius: 6px; font-size: 12.5px; white-space: nowrap; }
+#hud .panneau.fabrication .ingredient { font-size: 12px; gap: 2px; }
+#hud .panneau.fabrication .ingredient svg { width: 18px; height: 18px; }
+#hud .panneau.fabrication .outil { font-size: 10.5px; padding: 0 4px; }
+#hud .panneau.fabrication .badge-famille { font-size: 10px; }
+#hud .panneau.fabrication .onglets-fabrication { margin: 0; padding: 6px 0 5px; gap: 5px; }
+#hud .panneau.fabrication .onglet { min-height: 34px; min-width: 38px; padding: 2px 9px; font-size: 12px; border-radius: 7px; }
+#hud .panneau.fabrication .onglet svg { width: 20px; height: 20px; }
+#hud .panneau.fabrication .intertitre { font-size: 11px; margin: 8px 0 4px; }
+#hud .panneau.fabrication .filtre-faisable { font-size: 12px; min-height: 30px; }
+#hud .panneau.fabrication .filtre-faisable input { width: 16px; height: 16px; }
+#hud .panneau.sac .actions-objet button::after,
+#hud .panneau.fabrication .recette button::after { content: ""; position: absolute; inset: -7px -3px; }
+#hud .panneau.fabrication .onglet::after { content: ""; position: absolute; inset: -5px 0; }
+
+/* Téléphones : un volet ; Explorer, Lumière, A et B se cachent tant qu'il est ouvert. */
+@media (max-width: 560px) and (orientation: portrait), (orientation: landscape) and (max-height: 520px) {
+  #hud .panneau.sac, #hud .panneau.fabrication { bottom: max(8px, env(safe-area-inset-bottom)) !important; width: auto !important; max-height: none !important; transform: none !important; z-index: 13; padding: 8px 10px 10px; }
+  body:has(#hud :is(.panneau.sac, .panneau.fabrication):not([hidden])) #hud .tactile { display: none !important; }
+  #hud .panneau.sac h2, #hud .panneau.fabrication h2 { font-size: 15px; }
+  #hud .panneau.fabrication:not([hidden]) { display: grid; column-gap: 8px; }
+  #hud .panneau.fabrication > header { display: contents; }
+  #hud .panneau.fabrication > header h2 { grid-area: titre; align-self: center; }
+  #hud .panneau.fabrication .sous-titre { display: none; }
+  #hud .panneau.fabrication > header .fermer { grid-area: fermer; min-width: 36px; min-height: 36px; margin: 0; }
+  #hud .panneau.fabrication .filtre-faisable { grid-area: filtre; position: static !important; }
+  #hud .panneau.fabrication .onglets-fabrication { grid-area: onglets; }
+  #hud .panneau.fabrication .recettes { grid-area: recettes; min-height: 0; border-top: 2px solid var(--encre); padding-top: 6px; }
+}
+@media (max-width: 560px) and (orientation: portrait) {
+  #hud .panneau.sac, #hud .panneau.fabrication { top: calc(var(--bas-raccourcis, 186px) + 6px) !important; left: max(8px, env(safe-area-inset-left)) !important; right: max(8px, env(safe-area-inset-right)) !important; }
+  body:has(#hud :is(.panneau.sac, .panneau.fabrication):not([hidden])) #joystick { display: none !important; }
+  #hud .panneau.sac .grille { max-height: 124px; }
+  #hud .panneau.fabrication:not([hidden]) { grid-template-columns: minmax(0, 1fr) auto auto; grid-template-rows: auto auto minmax(0, 1fr); grid-template-areas: "titre filtre fermer" "onglets onglets onglets" "recettes recettes recettes"; }
+  body:has(#hud :is(.panneau.sac, .panneau.fabrication):not([hidden])) #hud .bandeau > .identite { gap: 2px; padding: 5px 8px; }
+  body:has(#hud :is(.panneau.sac, .panneau.fabrication):not([hidden])) #hud .identite .jauge { gap: 4px; font-size: 11px; line-height: 14px; min-height: 0; }
+  body:has(#hud :is(.panneau.sac, .panneau.fabrication):not([hidden])) #hud .identite .jauge .barre { height: 5px; }
+  body:has(#hud :is(.panneau.sac, .panneau.fabrication):not([hidden])) #hud .identite .blessures { margin-top: 2px; gap: 2px; }
+  body:has(#hud :is(.panneau.sac, .panneau.fabrication):not([hidden])) #hud .identite .puce-blessure { font-size: 10px; line-height: 15px; padding: 0 5px; }
+}
+@media (orientation: landscape) and (max-height: 520px) {
+  #hud .panneau.sac, #hud .panneau.fabrication { top: calc(var(--bas-raccourcis, 66px) + 10px) !important; left: calc(max(12px, env(safe-area-inset-left)) + min(210px, 25vw) + 8px) !important; right: max(12px, env(safe-area-inset-right)) !important; }
+  #hud .panneau.sac:not([hidden]) { display: grid; grid-template-columns: 240px minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr); grid-template-areas: "tete tete" "tri fiche" "grille fiche"; column-gap: 10px; }
+  #hud .panneau.sac > header { grid-area: tete; }
+  #hud .panneau.sac .tri-sac { grid-area: tri; }
+  #hud .panneau.sac .grille { grid-area: grille; max-height: none; min-height: 0; overflow-y: auto; align-content: start; }
+  #hud .panneau.sac .fiche { grid-area: fiche; margin: 0; }
+  #hud .panneau.sac .caracs-arme { grid-template-columns: 1fr; }
+  #hud .panneau.fabrication:not([hidden]) { grid-template-columns: auto minmax(0, 1fr) auto auto; grid-template-rows: auto minmax(0, 1fr); grid-template-areas: "titre onglets filtre fermer" "recettes recettes recettes recettes"; }
+  #hud .panneau.fabrication .filtre-faisable .long { display: none; }
+  #hud .panneau.fabrication .recettes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; align-content: start; overflow-y: auto; }
+  #hud .panneau.fabrication .recettes > :is(.intertitre, .vide) { grid-column: 1 / -1; margin: 4px 0 0; }
+  #hud .panneau.fabrication .recette { margin: 0; }
+}
+
+/* Les petits écrans (l'iPhone 13 mini, 375 points de large) : on lit très bien un peu plus petit (demande du porteur). */
+@media (max-width: 400px), (orientation: landscape) and (max-height: 400px) {
+  #hud .carnet { font-size: 12.5px; }
+  #hud .panneau { font-size: 13px; }
+  #hud .panneau h2 { font-size: 15px; }
+  #hud .invite { font-size: 12.5px; }
+  .aide-jeu .defile { font-size: 13px !important; }
+  .carte-fiche { font-size: 13px !important; }
+  .carte-fiche h2 { font-size: 16px !important; }
+}
+/* Les cases du sac : 46 × 46 px, des rangées exactes (le carré par aspect-ratio débordait de sa rangée). */
+#hud .panneau.sac .grille { grid-template-columns: repeat(auto-fill, 46px); grid-auto-rows: 46px; justify-content: start; }
+#hud .panneau.sac .case { aspect-ratio: auto; width: 46px; height: 46px; }
+@media (min-width: 900px) and (min-height: 600px) {
+  #hud .panneau.sac .grille { grid-template-columns: repeat(auto-fill, 54px); grid-auto-rows: 54px; }
+  #hud .panneau.sac .case { width: 54px; height: 54px; }
+}
+/* Téléphone en horizontal : le bloc des jauges, resserré, ne descend plus jusqu'au joystick (les étiquettes de blessure
+   le faisaient déborder). */
+@media (orientation: landscape) and (max-height: 520px) and (pointer: coarse) {
+  #hud .bandeau > .identite { gap: 2px; padding: 5px 8px; }
+  #hud .identite .jauge { gap: 4px; font-size: 11px; line-height: 14px; min-height: 0; }
+  #hud .identite .jauge .barre { height: 6px; }
+  #hud .identite .blessures { margin-top: 2px; gap: 2px; }
+  #hud .identite .puce-blessure { font-size: 10px; line-height: 15px; padding: 0 5px; }
+}

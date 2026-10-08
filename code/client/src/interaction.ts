@@ -108,8 +108,8 @@ function actionsInstallation(
       return [msg("Défourner le charbon", "defourner"), examiner];
     }
     case "pedalier": {
-      if (!i.etat.dynamo && (inventaire.dynamo_velo ?? 0) > 0) return [msg("Monter la dynamo", "monter_dynamo"), examiner];
-      if (!i.etat.meule && (inventaire.pierre ?? 0) >= 3) return [msg("Monter la meule (3 pierres)", "monter_meule"), examiner];
+      if (!i.etat.dynamo && (inventaire.dynamo_velo ?? 0) > 0) return [msg("Installer la dynamo", "monter_dynamo"), examiner];
+      if (!i.etat.meule && (inventaire.pierre ?? 0) >= 3) return [msg("Installer la meule (3 pierres)", "monter_meule"), examiner];
       const pedaler = i.etat.dynamo ? msg("Pédaler : charger la batterie", "pedaler") : null;
       const affuter = i.etat.meule && (inventaire.couteau ?? 0) > 0 ? msg("Affûter le couteau", "affuter") : null;
       return [pedaler ?? affuter, pedaler && affuter ? affuter : examiner];
