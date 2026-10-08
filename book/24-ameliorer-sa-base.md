@@ -1,7 +1,7 @@
 # Book 24 — Améliorer sa base
 
-> Document de conception · version 0.2 · 2026-10-08
-> Statut : **validé dans ses grandes lignes** par le porteur du projet (« tout ça est cohérent », 2026-10-08). Les six recommandations des questions ouvertes sont retenues. Rien n'est codé.
+> Document de conception · version 0.3 · 2026-10-08
+> Statut : **validé dans ses grandes lignes** par le porteur du projet (« tout ça est cohérent », 2026-10-08). Les six recommandations des questions ouvertes sont retenues. **Lots 0 et 1 codés, lot 2 en partie** (couchage, eau 1 à 2, coffre) : voir §11.
 > Demande du porteur : « faire évoluer les éléments existants (je pense au feu notamment, pour éviter d'avoir 50 places à feu dans la base) », et ajouter de nouveaux éléments à fabriquer pour la base.
 > S'appuie sur les books [02](02-crafting.md) (§8 installations, §10 démontage, §14 bis bushcraft), [03](03-bibliotheque-et-savoir.md) (§5 savoir), [04](04-siderurgie-et-chimie.md), [06](06-zombies.md) (signature), [10](10-construction.md) (abri, chauffage), [11](11-agriculture-elevage-alimentation.md) (§11 conservation), [19](19-modele-du-terrain.md) (emprises), [21](21-perimetre-phase-0.md) (0a, 0b), [22](22-quetes-et-objectifs.md) (carnet) et sur la proposition P-002 (`PROPOSITIONS.md`, gamme bushcraft et ses « évolutions »).
 
@@ -274,18 +274,65 @@ La 0.5 est consacrée à la Coopérative, la 0.6 aux armes de lancer (Book 23 §
 
 | Lot | Contenu | Version proposée | Critère de réussite |
 |---|---|---|---|
-| **0 · Ranger** | Démonter une installation ou un feu ; creuser un feu existant en Dakota, le combler. Aucun niveau encore | **0.5.1** (petit correctif, il débloque les joueurs coincés à 3 feux) | Un joueur à 3 feux de camp creuse un Dakota sans en poser un quatrième |
-| **1 · Le moteur et le feu** | Lignées en données, colonne `niveau`, verbe Améliorer, fantôme, migration ; feu niveaux 1 à 3, poêle-fusée, broche ; signature rendue visible ; aide | **0.6**, en parallèle du lancer | Un foyer de cuisine remplace trois feux ; les tests de migration passent |
-| **2 · La base qui s'organise** | Couchage 1 à 3 (abri garni : fin du lit à côté), eau 1 à 3, coffre 1 à 3, lumière 1 ; bûcher, râtelier, établi utile, claie, fumoir, pieux, carillon ; objectifs « S'installer » 11 et plus | **0.7** | Une base de joueur testeur compte moins d'installations qu'en 0.5, avec plus de fonctions |
+| **0 · Ranger** ✅ codé | Démonter une installation ou un feu ; creuser un feu existant en Dakota, le combler. Aucun niveau encore | **0.5.1** (petit correctif, il débloque les joueurs coincés à 3 feux) | Un joueur à 3 feux de camp creuse un Dakota sans en poser un quatrième |
+| **1 · Le moteur et le feu** ✅ codé (sauf le fantôme) | Lignées en données, colonne `niveau`, verbe Améliorer, fantôme, migration ; feu niveaux 1 à 3, poêle-fusée, broche ; signature rendue visible ; aide | **0.6**, en parallèle du lancer | Un foyer de cuisine remplace trois feux ; les tests de migration passent |
+| **2 · La base qui s'organise** ◐ en partie | Couchage 1 à 3 (abri garni : fin du lit à côté), eau 1 à 3, coffre 1 à 3, lumière 1 ; bûcher, râtelier, établi utile, claie, fumoir, pieux, carillon ; objectifs « S'installer » 11 et plus | **0.7** | Une base de joueur testeur compte moins d'installations qu'en 0.5, avec plus de fonctions |
 | **3 · Le premier hiver** | Argile et sable (nouvelles matières), four de terre, hutte, gouttière, poêle dans la cabane, garde-manger, poulailler, lanternes de famille | **0b**, avec la cabane et la conservation (Book 21 §8.1) | On passe l'hiver avec un seul foyer qui cuit, chauffe et sèche |
 
 ---
 
 ## 10. Questions ouvertes
 
-- [ ] **Niveaux et accessoires, ou un arbre libre ?** *Recommandation :* niveaux linéaires (avec une seule bifurcation pour le feu) plus des accessoires, sur le modèle du pédalier qui marche déjà. Un arbre libre multiplie les modèles 3D et embrouille la fiche.
-- [ ] **Ce que rend un démontage.** *Recommandation :* la moitié des matériaux naturels, la totalité des vestiges et objets fabriqués (Book 02 §10, bas de la fourchette).
-- [ ] **Le plafond de foyers.** *Recommandation :* garder **3**, la forge et la charbonnière à part, avec le démontage et la signature rendue visible ; pas de plafond par zone.
-- [ ] **L'abri et le lit.** Fusion automatique à la mise à jour, ou proposée ? *Recommandation :* proposée, par l'amélioration de l'abri qui absorbe le lit voisin sans frais. Rien ne change sans que le joueur le décide.
-- [ ] **Les niveaux de famille.** Interdits aux autres, ou plus chers ? *Recommandation :* construits à ×1,5 par les autres familles (Book 01 §5), **utilisables par tous** : un four sert à cuire, quel que soit le maçon. Cela demande d'assouplir la règle actuelle « Tu ne sais pas te servir de ça » pour les installations de la vie courante (foyer, couchage, eau), et de la garder pour les machines de métier.
-- [ ] **Le lot 0 en 0.5.1 ?** *Recommandation :* oui. Il est petit, il ne touche pas la Coopérative, et il répare un vrai blocage (le joueur à 3 feux ne peut plus suivre son carnet).
+- [x] **Niveaux et accessoires, ou un arbre libre ?** *Recommandation :* niveaux linéaires (avec une seule bifurcation pour le feu) plus des accessoires, sur le modèle du pédalier qui marche déjà. Un arbre libre multiplie les modèles 3D et embrouille la fiche.
+- [x] **Ce que rend un démontage.** *Recommandation :* la moitié des matériaux naturels, la totalité des vestiges et objets fabriqués (Book 02 §10, bas de la fourchette).
+- [x] **Le plafond de foyers.** *Recommandation :* garder **3**, la forge et la charbonnière à part, avec le démontage et la signature rendue visible ; pas de plafond par zone.
+- [x] **L'abri et le lit.** Fusion automatique à la mise à jour, ou proposée ? *Recommandation :* proposée, par l'amélioration de l'abri qui absorbe le lit voisin sans frais. Rien ne change sans que le joueur le décide.
+- [x] **Les niveaux de famille.** Interdits aux autres, ou plus chers ? *Recommandation :* construits à ×1,5 par les autres familles (Book 01 §5), **utilisables par tous** : un four sert à cuire, quel que soit le maçon. Cela demande d'assouplir la règle actuelle « Tu ne sais pas te servir de ça » pour les installations de la vie courante (foyer, couchage, eau), et de la garder pour les machines de métier.
+- [x] **Le lot 0 en 0.5.1 ?** *Recommandation :* oui. Il est petit, il ne touche pas la Coopérative, et il répare un vrai blocage (le joueur à 3 feux ne peut plus suivre son carnet).
+
+Les six recommandations sont retenues par le porteur du projet (2026-10-08).
+
+---
+
+## 11. Ce qui est codé (2026-10-08)
+
+### 11.1 Lot 0 · Ranger
+
+- **Démonter** un feu (éteint : pas de flammes ni de braises) ou une installation, depuis sa fiche. Rendu : la moitié des matériaux naturels (pierres, branches, bûches, fibres ; arrondi en dessous), tout le reste (bâche, corde, métal, casserole, et les accessoires). Le bois resté dans un feu éteint revient en bûches et branches entières. Refus : la décharge (elle était là avant), un coffre pas vide, un banc avec des batteries, une meule en cuisson, un escabeau dans les bras. Le récupérateur se vide sur place.
+- **Creuser** un feu de camp en Dakota sur place (Creuser 1, 15 min de jeu, rend 3 pierres) ; **combler** un Dakota en feu de camp (5 pierres, Creuser 1). Le fait `foyer_dakota` est noté : l'objectif du carnet est rempli. Le plafond reste à **3 foyers** (`MAX_FOYERS`, `commun/src/lignees.ts`), et son message dit quoi faire à la place.
+
+### 11.2 Lot 1 · Le moteur et le feu
+
+- **Données** : `commun/src/lignees.ts` (voies de surface et creusée, accessoires, lignées des installations, coûts avec choix, surcoût ×1,5 des niveaux de famille, règle du démontage). Les règles lisent les multiplicateurs (`effetsFeu`) : `bruler()`, les signatures, le bois accepté, la cuisine, le sommeil.
+- **Persistance** : colonnes `niveau`, `accessoires`, `etat` (couvert, ce qui a été payé à chaque niveau, orientation du muret) dans `feux` ; `niveau` dans `installations` (le reste dans `etat`). Tout ce qui existe passe au niveau 1 sans rien perdre (test de migration).
+- **Gestes** (verbes de `interagir`, contrôlés dans `controle.ts`) : `ameliorer`, `redescendre`, `demonter_installation`, `creuser_dakota`, `combler`, `monter_broche`, `monter_marmite`, `couvrir`, `ranimer`. Message serveur `feu_retire`.
+- **Le feu** : feu de camp → foyer de pierres (bois ×0,8, 16 kg, se couvre sous la cendre : ×0,25, sans flamme, se ranime sans briquet ; sommeil ×1,15 dans un abri à 3 m quand il brûle ; lumière ×0,8) → foyer de cuisine (deux plats à la fois, soupes mijotées, l'eau bout deux fois plus vite et ×0,7 de bois avec une casserole ou une cocotte dans le sac, rôtir ×2). Four de terre et poêle : montrés grisés (« Et après ? »), pas jouables avant l'argile (0b). Voie creusée : Dakota → poêle-fusée (bois ×0,4, bouillir ×0,6, lumière ×0,2, odeur ×0,3, 4 kg au plus).
+- **Accessoires** : broche (Couper 1, 2 branches : une portion de plus par tour) ; marmite norvégienne (foyer de cuisine : 4 branches, 4 chiffons, une casserole ou une cocotte ; les soupes à moitié de bois).
+- **Signature rendue visible** : allumer (ou ranimer) un deuxième feu le dit, une fois toutes les 5 minutes au plus. La ligne « Ce qui t'attire des Éteints » dans la fiche du terrain reste à faire.
+- **Interface** : « Examiner » sur un feu ou une installation ouvre sa **fiche** (gestes du feu, niveau suivant avec ce qu'il apporte, coûte et ce qui manque, « Et après ? » grisé, autre voie, accessoires, redescendre, démonter). Dans Fabriquer, **une seule carte** pour la lignée du feu (monter un feu de camp, ou creuser d'emblée un Dakota).
+- **Rendu** (`client/rendu/feu.ts`, `installations.ts`) : un modèle par niveau, dans l'atelier d'assemblage ; le muret du foyer de pierres est tourné à l'opposé de l'abri le plus proche. Tous les niveaux sont sur la planche `objets.html` (≈ 1 100 à 2 500 triangles, 2 à 15 appels).
+- **Carnet** : la condition `installation` a un `niveau` minimal ; « Un vrai lit » accepte l'abri garni ; deux objectifs « S'installer » : « Un foyer qui tient la nuit » (foyer de pierres), « Une vraie cuisine » (foyer de cuisine).
+- **Aide du jeu** : rubrique « Améliorer sa base » ; « Le feu », « Fabriquer et construire » et « Cuisiner » mises à jour.
+
+### 11.3 Lot 2 · ce qui est fait
+
+- **Couchage** : abri garni (+6 branches, ou le lit de branchages à moins de 3 m absorbé sans frais, proposé et jamais d'office), sommeil ×1,3 ; abri fermé (+10 branches, 1 corde, 4 chiffons), ×1,45. Hutte : grisée (0b).
+- **Eau** : citerne de bâche, 60 L.
+- **Stockage** : coffre cerclé 250 kg, réserve couverte 400 kg (on ne redescend pas un coffre trop plein pour sa taille d'avant).
+
+### 11.4 Choix tranchés en codant
+
+- **Les soupes** : soupe de cèpes (2 cèpes, 0,5 L d'eau, 0,5 kg de bois du foyer) et pot-au-feu de volaille (1 portion crue, 1 cèpe, 0,5 L, 0,8 kg). L'eau de la gourde peut être celle de la mare : elle bout.
+- **« Bouillir 2 L d'un coup »** : la gourde ne tient qu'un litre ; le foyer de cuisine fait donc bouillir **deux fois plus vite** (et ×0,7 de bois avec une casserole), ce qui revient au même pour le joueur.
+- **Un feu couvert** : il n'émet plus de lumière la nuit, son odeur est réduite de moitié ; on ne cuisine pas dessus.
+- **Ce qu'on récupère** : on garde ce qui a été réellement payé à chaque niveau (le grillage ou les deux barres). Creuser ou combler remet le compte au coût de base de la nouvelle voie.
+- **Un accessoire qui ne va plus** (après une redescente, un creusement) revient entier dans le sac ; démonté avec le foyer, il suit la règle des 50 %.
+- **La fiche** remplace « Examiner » (le texte d'examen y est en tête). Sur un feu, {examiner} ouvre donc toujours la fiche ; « Ajouter du bois » y est le premier bouton (il n'est plus sur B quand le feu est éteint).
+- **Le muret** se tourne vers l'abri (ou le lit) le plus proche à 6 m, sinon vers le maçon.
+
+### 11.5 Ce qui reste
+
+- Le **fantôme** du niveau suivant, en transparence, quand la fiche est ouverte.
+- La contrainte d'emplacement d'un niveau plus grand (aucun niveau jouable ne grandit encore).
+- Lot 2 : citerne filtrante (eau « claire »), gouttière, lumière (panier à feu), bûcher, râtelier, établi utile, claie, fumoir, pieux, carillon ; la ligne « Ce qui t'attire des Éteints » ; la forge qui fait bouillir l'eau ; la charbonnière en fût.
+- Un message à la première connexion pour les joueurs qui ont un lit à côté de l'abri, ou trois feux (§6).

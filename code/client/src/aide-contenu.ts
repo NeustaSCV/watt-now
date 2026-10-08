@@ -165,6 +165,7 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
       },
       { sous_titre: "Cuisiner" },
       "Certaines recettes se préparent **près d'un feu allumé** (ouvre Fabriquer à côté du feu). Un plat cuisiné nourrit mieux que ses ingrédients crus, **cale** (la faim revient moins vite pendant un moment) et remonte un peu la santé. Le carnet t'en suggère quelques-uns ; le reste, c'est à toi d'essayer.",
+      "Un foyer amélioré cuisine mieux : sur un **foyer de cuisine**, deux plats cuisent à la fois, et l'on peut faire mijoter des **soupes** (il faut de l'eau dans la gourde ; celle de la mare suffit, elle va bouillir). Une soupe désaltère aussi.",
       "Quand ta jauge est pleine, le jeu refuse que tu manges : il garde la nourriture pour plus tard.",
       { sous_titre: "Chasser" },
       "Des poules retournées à l'état sauvage picorent autour de la ferme en ruine. Elles se méfient : en courant ou en marchant, tu les fais fuir de loin. **Approche-toi en allure discrète** ({discret}), arrête-toi si elle guette, et frappe ({agir}) pendant qu'elle picore. Il te faut au moins un outil ou une arme simple : à mains nues, elle t'échappe.",
@@ -216,6 +217,7 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
         ],
       },
       "Les petites installations (un lit, une alarme) se glissent plus près des autres. Certaines installations appartiennent au savoir d'une famille : les autres ne savent pas s'en servir.",
+      "Une installation posée **s'améliore sur place** et **se démonte** : voir « Améliorer sa base ».",
     ],
   },
   {
@@ -224,19 +226,51 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
     titre: "Le feu",
     resume: "Monter un feu, l'entretenir, s'en servir, et ce qu'il trahit.",
     blocs: [
-      "Le feu de camp se monte depuis Fabriquer, avec des pierres et des branches. Ensuite, près du feu, {agir} et {examiner} te proposent ce qu'on peut y faire : **ajouter du bois**, **allumer** (il faut un briquet ou une pierre à feu), **faire bouillir** l'eau de ta gourde, **rôtir** la volaille.",
+      "Le feu de camp se monte depuis Fabriquer, avec des pierres et des branches. Ensuite, près du feu, {agir} propose le geste le plus utile : **allumer** (il faut un briquet ou une pierre à feu), **ajouter du bois**, **faire bouillir** l'eau de ta gourde, **rôtir** la volaille. {examiner} ouvre la **fiche du feu** : tout ce qu'on peut y faire, et comment l'améliorer.",
       { sous_titre: "L'entretenir" },
       {
         liste: [
           "Une branche brûle vite ; une bûche tient bien plus longtemps.",
           "Quand il ne reste que des braises, remets du bois avant que tout parte en cendres.",
           "Le feu brûle **même quand tu n'es pas connecté** : il peut s'éteindre pendant ton absence.",
-          "Tu peux avoir quelques feux sur ton terrain, pas plus de trois.",
+          "Un **foyer de pierres** (une amélioration du feu de camp) se **couvre sous la cendre** pour la nuit : il brûle bien moins, sans flamme, et se ranime sans briquet.",
+          "Tu peux avoir trois foyers sur ton terrain, pas plus. Plutôt que d'en ajouter, **améliore** celui que tu as, ou **démonte**-le.",
         ],
       },
       { sous_titre: "Ce qu'il trahit" },
       "Un feu chauffe, cuit, fait bouillir… et **fume**. La fumée se sent de loin, et la nuit, les flammes se voient de très loin. Un feu peut attirer des Éteints sur ton terrain.",
-      "Il existe un feu plus discret, creusé dans le sol : le **foyer Dakota**. Il se voit beaucoup moins la nuit, fume moins et brûle moins de bois. Il faut de quoi creuser.",
+      "Il existe un feu plus discret, creusé dans le sol : le **foyer Dakota**. Il se voit beaucoup moins la nuit, fume moins et brûle moins de bois, mais il ne réchauffe pas l'abri. Il faut de quoi creuser. On peut creuser son feu de camp sur place (depuis sa fiche), ou en creuser un nouveau depuis Fabriquer.",
+      "**Chaque feu allumé s'ajoute** à ce que sentent les Éteints : deux feux, c'est deux fois plus d'odeur et de lumière. Un seul bon foyer attire moins que trois feux de camp.",
+    ],
+  },
+  {
+    id: "ameliorer",
+    icone: "🧱",
+    titre: "Améliorer sa base",
+    resume: "Faire grandir un feu, un abri, un coffre sur place, au lieu d'en poser un autre à côté ; démonter.",
+    blocs: [
+      "Une installation posée n'est pas finie : elle **s'améliore sur place**. Approche-toi, {examiner} ouvre sa **fiche** : ce qu'elle fait, le niveau suivant, ce qu'il apporte, ce qu'il coûte, et ce qui te manque. Le niveau d'après est montré en gris : c'est pour plus tard.",
+      { sous_titre: "Ce que l'amélioration garde" },
+      {
+        liste: [
+          "La place, l'orientation, et le contenu : le bois d'un feu, l'eau d'un récupérateur, les objets d'un coffre.",
+          "On ne paie que **la différence** avec le niveau d'avant : on ajoute des pierres au cercle, on ne repart pas de zéro.",
+          "Un feu s'améliore **éteint ou en braises**, jamais en pleines flammes.",
+        ],
+      },
+      { sous_titre: "Ce qui s'améliore" },
+      {
+        liste: [
+          "**Le feu** : il devient un foyer maçonné, puis une vraie cuisine. Ou bien il se creuse en foyer Dakota, discret, qui peut devenir plus discret encore. Confort ou discrétion : à toi de choisir.",
+          "**L'abri** : on y glisse un lit (le lit de branchages voisin peut y passer sans rien payer), puis on le ferme au vent. On y dort de mieux en mieux.",
+          "**Le coffre** garde plus de poids ; **le récupérateur de pluie** devient une citerne, bien plus grande.",
+          "Certains niveaux sont le **métier d'une famille** : les autres les bâtissent plus cher, mais tout le monde s'en sert.",
+        ],
+      },
+      { sous_titre: "Les accessoires" },
+      "Comme la meule sur le pédalier, certains équipements se **montent** sur une installation (une broche sur le feu, par exemple). La fiche dit lesquels vont où.",
+      { sous_titre: "Redescendre, démonter" },
+      "On peut redescendre d'un niveau, ou tout démonter : tu récupères **la moitié** des pierres, branches et bûches, et **tout le reste** (la bâche, la corde, le métal, une casserole…). Un feu se démonte éteint ; un coffre, vide. Changer d'avis coûte un peu : réfléchis avant de bâtir.",
     ],
   },
   {

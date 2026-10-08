@@ -67,7 +67,7 @@ import { COMPOSANTS, DEMONTAGE, NOMS_FAMILLES_VESTIGES, VESTIGES, type FamilleVe
 
 /** Ordre d'affichage dans le sac : à boire et à manger, matériaux, pièces, outils, lumières. */
 const ORDRE_SAC: TypeObjet[] = [
-  "gourde", "volaille_cepes", "cepes_poeles", "pommes_cuites", "volaille_cuite", "volaille_crue", "conserve", "baies", "pomme", "poire", "prunes", "cerises", "noix", "cepe", "amanite_tue_mouches", "amanite_phalloide", "buche", "branche", "pierre",
+  "gourde", "pot_au_feu", "soupe_cepes", "volaille_cepes", "cepes_poeles", "pommes_cuites", "volaille_cuite", "volaille_crue", "conserve", "baies", "pomme", "poire", "prunes", "cerises", "noix", "cepe", "amanite_tue_mouches", "amanite_phalloide", "buche", "branche", "pierre",
   "fibres", "bache", "ressort_lames", "barre_metal", "tete_hache", "cadre_velo", "chaine_velo", "roue_velo", "dynamo_velo", "batterie_voiture",
   "hache", "couteau", "marteau", "scie", "cle_plate", "tournevis", "briquet", "pierre_a_feu", "corde", "petite_batterie",
   "torche", "lampe_frontale", "lanterne", "lampe_dynamo", "sac_a_dos",

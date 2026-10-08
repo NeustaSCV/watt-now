@@ -294,6 +294,17 @@ const DESSINS: Partial<Record<Pictogramme, string>> = {
     <path d="M22 30 Q22 22 28 22 Q33 22 33 29 Z" fill="#8a5a2e" ${T}/>
     <path d="M28 27 Q29 21 34 21 Q38 22 37 28 Z" fill="#7a4a26" ${T}/>
     <path d="M18 14 q2 -3 0 -6 M27 14 q2 -3 0 -6" fill="none" stroke="#9a9a9a" stroke-width="1.4"/>`,
+  // Les mijotés du foyer de cuisine (Book 24) : un bol fumant.
+  soupe_cepes: `
+    <path d="M7 24 Q24 44 41 24 Z" fill="#8f8a80" ${T}/>
+    <ellipse cx="24" cy="24" rx="17" ry="4.5" fill="#b8874a" ${T}/>
+    <path d="M15 24 Q16 20.5 19.5 21 Q21 23 19.5 24.5 Z" fill="#7a4a26" ${T}/><path d="M27 23.5 Q28 20 31.5 20.5 Q33 22.5 31.5 24 Z" fill="#7a4a26" ${T}/>
+    <path d="M17 15 q2 -3 0 -6 M24 15 q2 -3 0 -6 M31 15 q2 -3 0 -6" fill="none" stroke="#9a9a9a" stroke-width="1.4"/>`,
+  pot_au_feu: `
+    <path d="M7 24 Q24 44 41 24 Z" fill="#3a3632" ${T}/>
+    <ellipse cx="24" cy="24" rx="17" ry="4.5" fill="#c99a52" ${T}/>
+    <path d="M14 24 Q15 18 22 18.5 Q27 19.5 25 24 Z" fill="#b8742e" ${T}/><path d="M28 23.5 Q29 20 32.5 20.5 Q34 22.5 32.5 24 Z" fill="#7a4a26" ${T}/>
+    <path d="M17 15 q2 -3 0 -6 M24 15 q2 -3 0 -6 M31 15 q2 -3 0 -6" fill="none" stroke="#9a9a9a" stroke-width="1.4"/>`,
   pommes_cuites: `
     <path d="M6 34 Q24 44 42 34 Z" fill="#6a6a6a" ${T}/>
     <circle cx="16" cy="28" r="7" fill="#9a3a22" ${T}/><circle cx="30" cy="28" r="7" fill="#a8452a" ${T}/><circle cx="23" cy="22" r="6" fill="#8a3420" ${T}/>
