@@ -8,6 +8,17 @@ import { SONS, fabriquer, type DefSon, type IdSon } from "./catalogue.ts";
 import { FE } from "./dsp.ts";
 
 const BASE = "/assets/musique/";
+/** Les effets enregistrés de la session « son » (son/LIVRAISON.md) : ils remplacent les recettes synthétisées. */
+const BASE_EFFETS = "/assets/effets/";
+/**
+ * Les effets dont on garde la recette synthétisée, même si un fichier existe (son/LIVRAISON.md §7 : à écouter).
+ * Ajouter ici l'identifiant d'un son enregistré qui ne convient pas.
+ */
+const RECETTE_PREFEREE = new Set<string>([]);
+
+interface ManifesteEffets {
+  sons: Record<string, { boucle: boolean; variantes: string[] }>;
+}
 const CLE_SON = "watt.son";
 
 export type LieuMusique = "terrain" | "halte" | "comptoir";
@@ -51,6 +62,12 @@ export class Sonorisation {
   private jeton = 0;
   private readonly mobile: boolean;
   private readonly tampons = new Map<IdSon, AudioBuffer[]>();
+  /** Les effets enregistrés déjà décodés (ils priment sur les recettes). */
+  private readonly enregistres = new Map<IdSon, AudioBuffer[]>();
+  private readonly enChargement = new Set<IdSon>();
+  /** Le manifeste des effets enregistrés, et l'extension que ce navigateur sait lire. */
+  private manifesteEffets: Promise<ManifesteEffets | null> | null = null;
+  private extensionEffets = ".opus";
   private readonly dernieres = new Map<IdSon, number>();
   private readonly boucles = new Map<string, Boucle>();
   private ecoute = { x: 0, z: 0, lacet: Math.PI / 4 };
@@ -99,6 +116,11 @@ export class Sonorisation {
     muet.start();
     if (this.enAccueil) void this.jouerTitre();
     if (this.voulu) void this.demarrerLieu();
+    // Les effets enregistrés (son/LIVRAISON.md §5) : Opus si le navigateur le lit, sinon AAC.
+    this.extensionEffets = new Audio().canPlayType('audio/ogg; codecs="opus"') ? ".opus" : ".m4a";
+    this.manifesteEffets = fetch(`${BASE_EFFETS}manifeste.json`)
+      .then((r) => (r.ok ? (r.json() as Promise<ManifesteEffets>) : null))
+      .catch(() => null);
     this.prechauffer(this.aPrechauffer.splice(0));
   }
 
@@ -286,7 +308,37 @@ export class Sonorisation {
     return Math.hypot(ou.x - this.ecoute.x, ou.z - this.ecoute.z);
   }
 
+  /** Charge et décode, en tâche de fond, les fichiers d'un effet enregistré (s'il existe). */
+  private chargerEnregistre(id: IdSon): void {
+    if (!this.ctx || !this.manifesteEffets || this.enregistres.has(id) || this.enChargement.has(id) || RECETTE_PREFEREE.has(id)) return;
+    this.enChargement.add(id);
+    const ctx = this.ctx;
+    void this.manifesteEffets
+      .then(async (m) => {
+        const entree = m?.sons[id];
+        if (!entree) return;
+        const liste = await Promise.all(
+          entree.variantes.map(async (chemin) => {
+            const r = await fetch(`${BASE_EFFETS}${chemin}${this.extensionEffets}`);
+            if (!r.ok) throw new Error(`${chemin} : ${r.status}`);
+            return ctx.decodeAudioData(await r.arrayBuffer());
+          }),
+        );
+        this.enregistres.set(id, liste);
+      })
+      // Un fichier manque ou ne se décode pas : la recette reste (rien ne casse).
+      .catch(() => undefined)
+      .finally(() => this.enChargement.delete(id));
+  }
+
+  /**
+   * Les tampons d'un effet : le fichier enregistré s'il est déjà décodé ; sinon la recette synthétisée (le fichier
+   * se charge pendant ce temps et servira la fois suivante).
+   */
   private tamponsDe(id: IdSon): AudioBuffer[] {
+    const enregistre = this.enregistres.get(id);
+    if (enregistre) return enregistre;
+    this.chargerEnregistre(id);
     const deja = this.tampons.get(id);
     if (deja) return deja;
     const def: DefSon = SONS[id];
@@ -307,6 +359,8 @@ export class Sonorisation {
       this.aPrechauffer.push(...ids);
       return;
     }
+    // Les fichiers enregistrés se chargent d'avance, à côté des recettes de secours.
+    for (const id of ids) this.chargerEnregistre(id);
     const file = ids.filter((id) => !this.tampons.has(id));
     const suivant = () => {
       const id = file.shift();

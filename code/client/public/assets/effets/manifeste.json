@@ -1,0 +1,1058 @@
+{
+ "version": 1,
+ "formats": [
+  ".opus",
+  ".m4a"
+ ],
+ "frequence": 48000,
+ "sons": {
+  "pas_herbe_discrete": {
+   "boucle": false,
+   "variantes": [
+    "pas_herbe_discrete/pas_herbe_discrete_0",
+    "pas_herbe_discrete/pas_herbe_discrete_1",
+    "pas_herbe_discrete/pas_herbe_discrete_2",
+    "pas_herbe_discrete/pas_herbe_discrete_3"
+   ],
+   "durees": [
+    0.45,
+    0.45,
+    0.45,
+    0.45
+   ]
+  },
+  "pas_herbe_marche": {
+   "boucle": false,
+   "variantes": [
+    "pas_herbe_marche/pas_herbe_marche_0",
+    "pas_herbe_marche/pas_herbe_marche_1",
+    "pas_herbe_marche/pas_herbe_marche_2",
+    "pas_herbe_marche/pas_herbe_marche_3"
+   ],
+   "durees": [
+    0.45,
+    0.45,
+    0.45,
+    0.41
+   ]
+  },
+  "pas_herbe_course": {
+   "boucle": false,
+   "variantes": [
+    "pas_herbe_course/pas_herbe_course_0",
+    "pas_herbe_course/pas_herbe_course_1",
+    "pas_herbe_course/pas_herbe_course_2",
+    "pas_herbe_course/pas_herbe_course_3"
+   ],
+   "durees": [
+    0.41,
+    0.41,
+    0.41,
+    0.41
+   ]
+  },
+  "pas_terre_discrete": {
+   "boucle": false,
+   "variantes": [
+    "pas_terre_discrete/pas_terre_discrete_0",
+    "pas_terre_discrete/pas_terre_discrete_1",
+    "pas_terre_discrete/pas_terre_discrete_2",
+    "pas_terre_discrete/pas_terre_discrete_3"
+   ],
+   "durees": [
+    0.45,
+    0.45,
+    0.45,
+    0.45
+   ]
+  },
+  "pas_terre_marche": {
+   "boucle": false,
+   "variantes": [
+    "pas_terre_marche/pas_terre_marche_0",
+    "pas_terre_marche/pas_terre_marche_1",
+    "pas_terre_marche/pas_terre_marche_2",
+    "pas_terre_marche/pas_terre_marche_3"
+   ],
+   "durees": [
+    0.45,
+    0.45,
+    0.45,
+    0.45
+   ]
+  },
+  "pas_terre_course": {
+   "boucle": false,
+   "variantes": [
+    "pas_terre_course/pas_terre_course_0",
+    "pas_terre_course/pas_terre_course_1",
+    "pas_terre_course/pas_terre_course_2",
+    "pas_terre_course/pas_terre_course_3"
+   ],
+   "durees": [
+    0.4,
+    0.4,
+    0.4,
+    0.4
+   ]
+  },
+  "pas_beton_discrete": {
+   "boucle": false,
+   "variantes": [
+    "pas_beton_discrete/pas_beton_discrete_0",
+    "pas_beton_discrete/pas_beton_discrete_1",
+    "pas_beton_discrete/pas_beton_discrete_2",
+    "pas_beton_discrete/pas_beton_discrete_3"
+   ],
+   "durees": [
+    0.45,
+    0.44,
+    0.39,
+    0.44
+   ]
+  },
+  "pas_beton_marche": {
+   "boucle": false,
+   "variantes": [
+    "pas_beton_marche/pas_beton_marche_0",
+    "pas_beton_marche/pas_beton_marche_1",
+    "pas_beton_marche/pas_beton_marche_2",
+    "pas_beton_marche/pas_beton_marche_3"
+   ],
+   "durees": [
+    0.45,
+    0.45,
+    0.4,
+    0.4
+   ]
+  },
+  "pas_beton_course": {
+   "boucle": false,
+   "variantes": [
+    "pas_beton_course/pas_beton_course_0",
+    "pas_beton_course/pas_beton_course_1",
+    "pas_beton_course/pas_beton_course_2",
+    "pas_beton_course/pas_beton_course_3"
+   ],
+   "durees": [
+    0.3,
+    0.28,
+    0.36,
+    0.36
+   ]
+  },
+  "pas_gravats_discrete": {
+   "boucle": false,
+   "variantes": [
+    "pas_gravats_discrete/pas_gravats_discrete_0",
+    "pas_gravats_discrete/pas_gravats_discrete_1",
+    "pas_gravats_discrete/pas_gravats_discrete_2",
+    "pas_gravats_discrete/pas_gravats_discrete_3"
+   ],
+   "durees": [
+    0.45,
+    0.4,
+    0.45,
+    0.425
+   ]
+  },
+  "pas_gravats_marche": {
+   "boucle": false,
+   "variantes": [
+    "pas_gravats_marche/pas_gravats_marche_0",
+    "pas_gravats_marche/pas_gravats_marche_1",
+    "pas_gravats_marche/pas_gravats_marche_2",
+    "pas_gravats_marche/pas_gravats_marche_3"
+   ],
+   "durees": [
+    0.45,
+    0.46,
+    0.45,
+    0.45
+   ]
+  },
+  "pas_gravats_course": {
+   "boucle": false,
+   "variantes": [
+    "pas_gravats_course/pas_gravats_course_0",
+    "pas_gravats_course/pas_gravats_course_1",
+    "pas_gravats_course/pas_gravats_course_2",
+    "pas_gravats_course/pas_gravats_course_3"
+   ],
+   "durees": [
+    0.4,
+    0.41,
+    0.4,
+    0.4
+   ]
+  },
+  "eteint_pas": {
+   "boucle": false,
+   "variantes": [
+    "eteint_pas/eteint_pas_0",
+    "eteint_pas/eteint_pas_1",
+    "eteint_pas/eteint_pas_2",
+    "eteint_pas/eteint_pas_3"
+   ],
+   "durees": [
+    0.55,
+    0.55,
+    0.56,
+    0.55
+   ]
+  },
+  "eteint_pas_presse": {
+   "boucle": false,
+   "variantes": [
+    "eteint_pas_presse/eteint_pas_presse_0",
+    "eteint_pas_presse/eteint_pas_presse_1",
+    "eteint_pas_presse/eteint_pas_presse_2",
+    "eteint_pas_presse/eteint_pas_presse_3"
+   ],
+   "durees": [
+    0.3,
+    0.3,
+    0.3,
+    0.3
+   ]
+  },
+  "eteint_souffle": {
+   "boucle": false,
+   "variantes": [
+    "eteint_souffle/eteint_souffle_0",
+    "eteint_souffle/eteint_souffle_1",
+    "eteint_souffle/eteint_souffle_2",
+    "eteint_souffle/eteint_souffle_3"
+   ],
+   "durees": [
+    2.6,
+    2.4,
+    3.25,
+    2.9
+   ]
+  },
+  "eteint_machoire": {
+   "boucle": false,
+   "variantes": [
+    "eteint_machoire/eteint_machoire_0",
+    "eteint_machoire/eteint_machoire_1",
+    "eteint_machoire/eteint_machoire_2"
+   ],
+   "durees": [
+    0.33,
+    0.33,
+    0.25
+   ]
+  },
+  "eteint_rale": {
+   "boucle": false,
+   "variantes": [
+    "eteint_rale/eteint_rale_0",
+    "eteint_rale/eteint_rale_1",
+    "eteint_rale/eteint_rale_2",
+    "eteint_rale/eteint_rale_3",
+    "eteint_rale/eteint_rale_4",
+    "eteint_rale/eteint_rale_5"
+   ],
+   "durees": [
+    1.8,
+    2.0,
+    1.65,
+    1.9,
+    2.1,
+    1.3
+   ]
+  },
+  "eteint_rale_coupe": {
+   "boucle": false,
+   "variantes": [
+    "eteint_rale_coupe/eteint_rale_coupe_0",
+    "eteint_rale_coupe/eteint_rale_coupe_1",
+    "eteint_rale_coupe/eteint_rale_coupe_2",
+    "eteint_rale_coupe/eteint_rale_coupe_3"
+   ],
+   "durees": [
+    0.58,
+    0.39,
+    0.48,
+    0.52
+   ]
+  },
+  "eteint_tete_craque": {
+   "boucle": false,
+   "variantes": [
+    "eteint_tete_craque/eteint_tete_craque_0",
+    "eteint_tete_craque/eteint_tete_craque_1",
+    "eteint_tete_craque/eteint_tete_craque_2"
+   ],
+   "durees": [
+    0.45,
+    0.34,
+    0.35
+   ]
+  },
+  "eteint_rale_rapide": {
+   "boucle": false,
+   "variantes": [
+    "eteint_rale_rapide/eteint_rale_rapide_0",
+    "eteint_rale_rapide/eteint_rale_rapide_1",
+    "eteint_rale_rapide/eteint_rale_rapide_2",
+    "eteint_rale_rapide/eteint_rale_rapide_3",
+    "eteint_rale_rapide/eteint_rale_rapide_4",
+    "eteint_rale_rapide/eteint_rale_rapide_5"
+   ],
+   "durees": [
+    0.79,
+    0.89,
+    0.79,
+    0.73,
+    0.78,
+    0.82
+   ]
+  },
+  "eteint_halete": {
+   "boucle": false,
+   "variantes": [
+    "eteint_halete/eteint_halete_0",
+    "eteint_halete/eteint_halete_1",
+    "eteint_halete/eteint_halete_2"
+   ],
+   "durees": [
+    0.93,
+    0.62,
+    0.95
+   ]
+  },
+  "saisie": {
+   "boucle": false,
+   "variantes": [
+    "saisie/saisie_0",
+    "saisie/saisie_1",
+    "saisie/saisie_2"
+   ],
+   "durees": [
+    0.45,
+    0.42,
+    0.4
+   ]
+  },
+  "morsure_manquee": {
+   "boucle": false,
+   "variantes": [
+    "morsure_manquee/morsure_manquee_0",
+    "morsure_manquee/morsure_manquee_1",
+    "morsure_manquee/morsure_manquee_2"
+   ],
+   "durees": [
+    0.24,
+    0.2,
+    0.22
+   ]
+  },
+  "morsure": {
+   "boucle": false,
+   "variantes": [
+    "morsure/morsure_0",
+    "morsure/morsure_1",
+    "morsure/morsure_2"
+   ],
+   "durees": [
+    0.737,
+    0.8,
+    0.8
+   ]
+  },
+  "impact": {
+   "boucle": false,
+   "variantes": [
+    "impact/impact_0",
+    "impact/impact_1",
+    "impact/impact_2",
+    "impact/impact_3"
+   ],
+   "durees": [
+    0.3,
+    0.28,
+    0.25,
+    0.28
+   ]
+  },
+  "impact_appuye": {
+   "boucle": false,
+   "variantes": [
+    "impact_appuye/impact_appuye_0",
+    "impact_appuye/impact_appuye_1",
+    "impact_appuye/impact_appuye_2"
+   ],
+   "durees": [
+    0.51,
+    0.5,
+    0.42
+   ]
+  },
+  "coup_tete": {
+   "boucle": false,
+   "variantes": [
+    "coup_tete/coup_tete_0",
+    "coup_tete/coup_tete_1",
+    "coup_tete/coup_tete_2"
+   ],
+   "durees": [
+    0.48,
+    0.35,
+    0.42
+   ]
+  },
+  "chute_corps": {
+   "boucle": false,
+   "variantes": [
+    "chute_corps/chute_corps_0",
+    "chute_corps/chute_corps_1",
+    "chute_corps/chute_corps_2"
+   ],
+   "durees": [
+    0.67,
+    0.9,
+    0.92
+   ]
+  },
+  "sifflement": {
+   "boucle": false,
+   "variantes": [
+    "sifflement/sifflement_0",
+    "sifflement/sifflement_1",
+    "sifflement/sifflement_2",
+    "sifflement/sifflement_3"
+   ],
+   "durees": [
+    0.23,
+    0.22,
+    0.23,
+    0.16
+   ]
+  },
+  "sifflement_lourd": {
+   "boucle": false,
+   "variantes": [
+    "sifflement_lourd/sifflement_lourd_0",
+    "sifflement_lourd/sifflement_lourd_1",
+    "sifflement_lourd/sifflement_lourd_2"
+   ],
+   "durees": [
+    0.29,
+    0.44,
+    0.44
+   ]
+  },
+  "esquive": {
+   "boucle": false,
+   "variantes": [
+    "esquive/esquive_0",
+    "esquive/esquive_1",
+    "esquive/esquive_2"
+   ],
+   "durees": [
+    0.46,
+    0.45,
+    0.45
+   ]
+  },
+  "degagement": {
+   "boucle": false,
+   "variantes": [
+    "degagement/degagement_0",
+    "degagement/degagement_1",
+    "degagement/degagement_2",
+    "degagement/degagement_3"
+   ],
+   "durees": [
+    0.34,
+    0.34,
+    0.32,
+    0.38
+   ]
+  },
+  "coeur": {
+   "boucle": false,
+   "variantes": [
+    "coeur/coeur_0",
+    "coeur/coeur_1"
+   ],
+   "durees": [
+    0.66,
+    0.6
+   ]
+  },
+  "effondrement": {
+   "boucle": false,
+   "variantes": [
+    "effondrement/effondrement_0"
+   ],
+   "durees": [
+    2.31
+   ]
+  },
+  "geste_bois": {
+   "boucle": false,
+   "variantes": [
+    "geste_bois/geste_bois_0",
+    "geste_bois/geste_bois_1",
+    "geste_bois/geste_bois_2"
+   ],
+   "durees": [
+    0.41,
+    0.35,
+    0.28
+   ]
+  },
+  "geste_pierre": {
+   "boucle": false,
+   "variantes": [
+    "geste_pierre/geste_pierre_0",
+    "geste_pierre/geste_pierre_1",
+    "geste_pierre/geste_pierre_2"
+   ],
+   "durees": [
+    0.28,
+    0.31,
+    0.32
+   ]
+  },
+  "geste_feuillage": {
+   "boucle": false,
+   "variantes": [
+    "geste_feuillage/geste_feuillage_0",
+    "geste_feuillage/geste_feuillage_1",
+    "geste_feuillage/geste_feuillage_2"
+   ],
+   "durees": [
+    0.69,
+    0.64,
+    0.78
+   ]
+  },
+  "fouille": {
+   "boucle": false,
+   "variantes": [
+    "fouille/fouille_0",
+    "fouille/fouille_1",
+    "fouille/fouille_2"
+   ],
+   "durees": [
+    1.2,
+    1.2,
+    1.2
+   ]
+  },
+  "demonter": {
+   "boucle": false,
+   "variantes": [
+    "demonter/demonter_0",
+    "demonter/demonter_1",
+    "demonter/demonter_2"
+   ],
+   "durees": [
+    1.05,
+    1.0,
+    1.16
+   ]
+  },
+  "visser": {
+   "boucle": false,
+   "variantes": [
+    "visser/visser_0",
+    "visser/visser_1",
+    "visser/visser_2"
+   ],
+   "durees": [
+    0.9,
+    0.9,
+    0.9
+   ]
+  },
+  "marteau_bois": {
+   "boucle": false,
+   "variantes": [
+    "marteau_bois/marteau_bois_0",
+    "marteau_bois/marteau_bois_1",
+    "marteau_bois/marteau_bois_2"
+   ],
+   "durees": [
+    0.5,
+    0.5,
+    0.5
+   ]
+  },
+  "marteau_metal": {
+   "boucle": false,
+   "variantes": [
+    "marteau_metal/marteau_metal_0",
+    "marteau_metal/marteau_metal_1",
+    "marteau_metal/marteau_metal_2"
+   ],
+   "durees": [
+    0.85,
+    0.8,
+    0.8
+   ]
+  },
+  "enclume": {
+   "boucle": false,
+   "variantes": [
+    "enclume/enclume_0",
+    "enclume/enclume_1",
+    "enclume/enclume_2"
+   ],
+   "durees": [
+    1.6,
+    1.4,
+    1.3
+   ]
+  },
+  "scie": {
+   "boucle": false,
+   "variantes": [
+    "scie/scie_0",
+    "scie/scie_1",
+    "scie/scie_2"
+   ],
+   "durees": [
+    1.2,
+    1.2,
+    1.2
+   ]
+  },
+  "hache_coupe": {
+   "boucle": false,
+   "variantes": [
+    "hache_coupe/hache_coupe_0",
+    "hache_coupe/hache_coupe_1",
+    "hache_coupe/hache_coupe_2"
+   ],
+   "durees": [
+    0.9,
+    0.9,
+    0.88
+   ]
+  },
+  "aiguiser": {
+   "boucle": false,
+   "variantes": [
+    "aiguiser/aiguiser_0",
+    "aiguiser/aiguiser_1",
+    "aiguiser/aiguiser_2"
+   ],
+   "durees": [
+    0.92,
+    0.94,
+    0.96
+   ]
+  },
+  "tissu": {
+   "boucle": false,
+   "variantes": [
+    "tissu/tissu_0",
+    "tissu/tissu_1",
+    "tissu/tissu_2"
+   ],
+   "durees": [
+    0.8,
+    0.8,
+    0.6
+   ]
+  },
+  "bache": {
+   "boucle": false,
+   "variantes": [
+    "bache/bache_0",
+    "bache/bache_1",
+    "bache/bache_2"
+   ],
+   "durees": [
+    1.02,
+    1.01,
+    1.01
+   ]
+  },
+  "remplir_eau": {
+   "boucle": true,
+   "variantes": [
+    "remplir_eau/remplir_eau_0"
+   ],
+   "durees": [
+    4.0
+   ]
+  },
+  "bouillir": {
+   "boucle": true,
+   "variantes": [
+    "bouillir/bouillir_0"
+   ],
+   "durees": [
+    4.0
+   ]
+  },
+  "manger": {
+   "boucle": false,
+   "variantes": [
+    "manger/manger_0",
+    "manger/manger_1",
+    "manger/manger_2"
+   ],
+   "durees": [
+    1.31,
+    1.29,
+    1.31
+   ]
+  },
+  "boire": {
+   "boucle": false,
+   "variantes": [
+    "boire/boire_0",
+    "boire/boire_1",
+    "boire/boire_2"
+   ],
+   "durees": [
+    1.44,
+    1.43,
+    1.55
+   ]
+  },
+  "briquet": {
+   "boucle": false,
+   "variantes": [
+    "briquet/briquet_0",
+    "briquet/briquet_1"
+   ],
+   "durees": [
+    1.0,
+    1.0
+   ]
+  },
+  "pierre_a_feu": {
+   "boucle": false,
+   "variantes": [
+    "pierre_a_feu/pierre_a_feu_0",
+    "pierre_a_feu/pierre_a_feu_1"
+   ],
+   "durees": [
+    0.92,
+    0.99
+   ]
+  },
+  "pose_pierres": {
+   "boucle": false,
+   "variantes": [
+    "pose_pierres/pose_pierres_0",
+    "pose_pierres/pose_pierres_1",
+    "pose_pierres/pose_pierres_2"
+   ],
+   "durees": [
+    0.92,
+    1.04,
+    0.97
+   ]
+  },
+  "charbon": {
+   "boucle": false,
+   "variantes": [
+    "charbon/charbon_0",
+    "charbon/charbon_1",
+    "charbon/charbon_2"
+   ],
+   "durees": [
+    1.2,
+    1.2,
+    1.2
+   ]
+  },
+  "buche_tombe": {
+   "boucle": false,
+   "variantes": [
+    "buche_tombe/buche_tombe_0",
+    "buche_tombe/buche_tombe_1",
+    "buche_tombe/buche_tombe_2"
+   ],
+   "durees": [
+    1.0,
+    1.0,
+    1.0
+   ]
+  },
+  "extinction": {
+   "boucle": false,
+   "variantes": [
+    "extinction/extinction_0",
+    "extinction/extinction_1"
+   ],
+   "durees": [
+    1.6,
+    1.6
+   ]
+  },
+  "feu_crepite": {
+   "boucle": true,
+   "variantes": [
+    "feu_crepite/feu_crepite_0"
+   ],
+   "durees": [
+    6.0
+   ]
+  },
+  "soufflet": {
+   "boucle": false,
+   "variantes": [
+    "soufflet/soufflet_0",
+    "soufflet/soufflet_1",
+    "soufflet/soufflet_2"
+   ],
+   "durees": [
+    1.4,
+    1.4,
+    1.4
+   ]
+  },
+  "braises": {
+   "boucle": true,
+   "variantes": [
+    "braises/braises_0"
+   ],
+   "durees": [
+    5.0
+   ]
+  },
+  "trempe": {
+   "boucle": false,
+   "variantes": [
+    "trempe/trempe_0",
+    "trempe/trempe_1"
+   ],
+   "durees": [
+    1.6,
+    1.6
+   ]
+  },
+  "chaine_velo": {
+   "boucle": true,
+   "variantes": [
+    "chaine_velo/chaine_velo_0"
+   ],
+   "durees": [
+    4.0
+   ]
+  },
+  "roue_libre": {
+   "boucle": false,
+   "variantes": [
+    "roue_libre/roue_libre_0",
+    "roue_libre/roue_libre_1"
+   ],
+   "durees": [
+    2.0,
+    0.86
+   ]
+  },
+  "meule": {
+   "boucle": true,
+   "variantes": [
+    "meule/meule_0"
+   ],
+   "durees": [
+    4.0
+   ]
+  },
+  "pinces": {
+   "boucle": false,
+   "variantes": [
+    "pinces/pinces_0",
+    "pinces/pinces_1",
+    "pinces/pinces_2"
+   ],
+   "durees": [
+    0.48,
+    0.47,
+    0.471
+   ]
+  },
+  "bourdonnement": {
+   "boucle": true,
+   "variantes": [
+    "bourdonnement/bourdonnement_0"
+   ],
+   "durees": [
+    2.95
+   ]
+  },
+  "interrupteur": {
+   "boucle": false,
+   "variantes": [
+    "interrupteur/interrupteur_0",
+    "interrupteur/interrupteur_1"
+   ],
+   "durees": [
+    0.15,
+    0.22
+   ]
+  },
+  "envol": {
+   "boucle": false,
+   "variantes": [
+    "envol/envol_0",
+    "envol/envol_1",
+    "envol/envol_2"
+   ],
+   "durees": [
+    1.4,
+    1.45,
+    1.157
+   ]
+  },
+  "caquet": {
+   "boucle": false,
+   "variantes": [
+    "caquet/caquet_0",
+    "caquet/caquet_1",
+    "caquet/caquet_2"
+   ],
+   "durees": [
+    1.27,
+    1.53,
+    1.49
+   ]
+  },
+  "cancan": {
+   "boucle": false,
+   "variantes": [
+    "cancan/cancan_0",
+    "cancan/cancan_1",
+    "cancan/cancan_2"
+   ],
+   "durees": [
+    1.39,
+    1.25,
+    1.24
+   ]
+  },
+  "pluie": {
+   "boucle": true,
+   "variantes": [
+    "pluie/pluie_0"
+   ],
+   "durees": [
+    6.0
+   ]
+  },
+  "tonnerre": {
+   "boucle": false,
+   "variantes": [
+    "tonnerre/tonnerre_0",
+    "tonnerre/tonnerre_1",
+    "tonnerre/tonnerre_2"
+   ],
+   "durees": [
+    6.0,
+    6.02,
+    5.16
+   ]
+  },
+  "ui_charbonniers_ouvrir": {
+   "boucle": false,
+   "variantes": [
+    "ui_charbonniers_ouvrir/ui_charbonniers_ouvrir_0",
+    "ui_charbonniers_ouvrir/ui_charbonniers_ouvrir_1"
+   ],
+   "durees": [
+    0.2,
+    0.26
+   ]
+  },
+  "ui_charbonniers_fermer": {
+   "boucle": false,
+   "variantes": [
+    "ui_charbonniers_fermer/ui_charbonniers_fermer_0",
+    "ui_charbonniers_fermer/ui_charbonniers_fermer_1"
+   ],
+   "durees": [
+    0.3,
+    0.296
+   ]
+  },
+  "ui_charbonniers_valider": {
+   "boucle": false,
+   "variantes": [
+    "ui_charbonniers_valider/ui_charbonniers_valider_0",
+    "ui_charbonniers_valider/ui_charbonniers_valider_1"
+   ],
+   "durees": [
+    0.203,
+    0.24
+   ]
+  },
+  "ui_voltaiques_ouvrir": {
+   "boucle": false,
+   "variantes": [
+    "ui_voltaiques_ouvrir/ui_voltaiques_ouvrir_0",
+    "ui_voltaiques_ouvrir/ui_voltaiques_ouvrir_1"
+   ],
+   "durees": [
+    0.15,
+    0.126
+   ]
+  },
+  "ui_voltaiques_fermer": {
+   "boucle": false,
+   "variantes": [
+    "ui_voltaiques_fermer/ui_voltaiques_fermer_0",
+    "ui_voltaiques_fermer/ui_voltaiques_fermer_1"
+   ],
+   "durees": [
+    0.179,
+    0.2
+   ]
+  },
+  "ui_voltaiques_valider": {
+   "boucle": false,
+   "variantes": [
+    "ui_voltaiques_valider/ui_voltaiques_valider_0",
+    "ui_voltaiques_valider/ui_voltaiques_valider_1"
+   ],
+   "durees": [
+    0.16,
+    0.2
+   ]
+  },
+  "ui_mecanistes_ouvrir": {
+   "boucle": false,
+   "variantes": [
+    "ui_mecanistes_ouvrir/ui_mecanistes_ouvrir_0",
+    "ui_mecanistes_ouvrir/ui_mecanistes_ouvrir_1"
+   ],
+   "durees": [
+    0.49,
+    0.4
+   ]
+  },
+  "ui_mecanistes_fermer": {
+   "boucle": false,
+   "variantes": [
+    "ui_mecanistes_fermer/ui_mecanistes_fermer_0",
+    "ui_mecanistes_fermer/ui_mecanistes_fermer_1"
+   ],
+   "durees": [
+    0.45,
+    0.231
+   ]
+  },
+  "ui_mecanistes_valider": {
+   "boucle": false,
+   "variantes": [
+    "ui_mecanistes_valider/ui_mecanistes_valider_0",
+    "ui_mecanistes_valider/ui_mecanistes_valider_1"
+   ],
+   "durees": [
+    0.39,
+    0.42
+   ]
+  }
+ }
+}

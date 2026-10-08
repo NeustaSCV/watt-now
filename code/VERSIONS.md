@@ -41,6 +41,10 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 - Un tas d'ordures au bord de chaque terrain fait **remonter un objet toutes les deux heures**, même hors ligne, jusqu'à 12 : surtout des trucs nuls, parfois une bonne surprise. Le rapport d'absence le dit.
 - On y fouille comme dans un coffre, objet par objet : il faut choisir ce qu'on emporte.
 
+**Entendre**
+- Les **effets sonores enregistrés** de la session son (82 sons, 237 fichiers, CC0) remplacent les sons synthétisés, chargés à la demande ; la recette synthétisée reste en secours.
+- Soufflet et trempe à la forge, scie, hache, aiguiser et braises s'entendent enfin.
+
 **Construire : la pose revue**
 - Pendant la pose, **le personnage ne bouge plus : seul le fantôme bouge**. Clavier ou joystick le poussent ; un clic (ou un appui du doigt) au sol l'y amène ; un second clic dessus construit.
 - Bouger la souris ne déplace plus rien : on clique sur « Tourner » ou « Annuler » sans déranger le fantôme. Molette ou R : tourner. Clic droit ou Échap : annuler.

@@ -86,7 +86,7 @@ export function gesteDe(libelle: string, bruit: BruitAction): Geste {
   if (l.startsWith("manger")) return { id: "manger" };
   if (l.startsWith("boire")) return { id: "boire" };
   if (l.startsWith("pédaler")) return { continu: "chaine_velo", fin: "roue_libre" };
-  if (l.startsWith("affûter")) return { continu: "meule", continu2: "chaine_velo", fin: "roue_libre" };
+  if (l.startsWith("affûter")) return { continu: "meule", continu2: "chaine_velo", fin: "aiguiser" };
   if (l.startsWith("défourner")) return { id: "charbon", periode: 1.4 };
   if (l.startsWith("brancher") || l.startsWith("reprendre les batteries")) return { id: "pinces", fin: "interrupteur" };
   if (l.startsWith("recharger")) return { id: "pinces", fin: "interrupteur" };
@@ -95,7 +95,12 @@ export function gesteDe(libelle: string, bruit: BruitAction): Geste {
   if (l.startsWith("monter la meule") || l.startsWith("monter la dynamo") || l.includes("panneau")) return { id: "visser", periode: 1.1 };
   if (l.startsWith("démonter") || l.startsWith("prendre la batterie") || l.startsWith("prendre les lames")) return { id: "demonter", periode: 1.2 };
   if (l.startsWith("remmancher")) return { id: "marteau_bois", periode: 0.9 };
-  if (l.startsWith("forger")) return { id: "enclume", periode: 0.85 };
+  // La forge : le soufflet sous les coups d'enclume, la trempe à la fin (son/LIVRAISON.md : sons livrés, enfin joués).
+  if (l.startsWith("forger")) return { id: "enclume", periode: 0.85, continu: "soufflet", fin: "trempe" };
+  // Débiter du bois : la scie pour les planches, la hache pour les perches et les branches.
+  if (l.includes("coffre") || l.includes("escabeau")) return { id: "scie", periode: 1.4 };
+  if (l.includes("travois") || l.includes("lit de branchages") || l.includes("épieu") || l.includes("bâton") || l.includes("gourdin") || l.includes("sac de fortune"))
+    return { id: "hache_coupe", periode: 1.1 };
   if (l.includes("foyer de forge")) return { id: "marteau_metal", periode: 1 };
   if (l.includes("abri")) return { id: "marteau_bois", periode: 1.1 };
   if (l.includes("établi") || l.includes("pédalier") || l.includes("banc") || l.includes("charbonnière")) return { id: "marteau_bois", periode: 1 };
@@ -322,7 +327,7 @@ export class Bruiteur {
       }
       this.aspects.set(f.id, f.aspect);
       if (f.aspect === "flammes") voulus.push({ cle: `feu${f.id}`, id: "feu_crepite", ou: f });
-      else if (f.aspect === "braises") voulus.push({ cle: `feu${f.id}`, id: "feu_crepite", ou: f, gain: 0.45 });
+      else if (f.aspect === "braises") voulus.push({ cle: `feu${f.id}`, id: "braises", ou: f });
     }
     for (const i of o.installations) {
       if (i.type === "banc_recharge" && i.batteries) voulus.push({ cle: `banc${i.id}`, id: "bourdonnement", ou: i });
