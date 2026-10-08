@@ -1558,7 +1558,10 @@ export class Hud {
 
   private coffre: InstallationVue | null = null;
   /** Ranger ou sortir un seul objet, ou toute la pile. */
-  private parPile = false;
+  /** L'objet choisi dans le coffre (avis de Sally, 2026-10-09), le dernier toucher (pour le double toucher). */
+  private choixCoffre: { sens: "deposer" | "prendre"; objet: TypeObjet } | null = null;
+  private dernierToucherCoffre = { cle: "", t: 0 };
+  private dernierCoffre = "";
 
   private get panneauCoffre(): HTMLElement {
     return this.element.querySelector<HTMLElement>(".panneau.coffre")!;
@@ -1572,6 +1575,8 @@ export class Hud {
   ouvrirCoffre(i: InstallationVue): void {
     this.ouvrir(this.panneauCoffre, true);
     this.coffre = i;
+    this.choixCoffre = null;
+    this.dernierCoffre = "";
     this.dessinerCoffre();
   }
 
@@ -1591,38 +1596,91 @@ export class Hud {
     // La décharge (P-001) s'ouvre comme un coffre : on n'y fait que prendre, en choisissant (le sac ne suit pas).
     const estDecharge = c.type === "decharge";
     const poidsSac = poidsInventaire(this.inventaire, this.gourde.litres);
+    const capSac = capaciteDe(this.inventaire);
+    const capCoffre = estDecharge ? Infinity : capaciteCoffre(c);
+    const placeSac = capSac - poidsSac;
+    const placeCoffre = capCoffre - poidsCoffre;
+    // Toucher une case la choisit : son nom s'affiche dans la bande, avec ses boutons (avis de Sally, 2026-10-09).
+    const choix = this.choixCoffre;
     const cases = (inv: Inventaire, sens: "deposer" | "prendre") =>
       (Object.keys(inv) as TypeObjet[])
         .filter((t) => (inv[t] ?? 0) > 0 && !(sens === "deposer" && t === "sac_a_dos"))
         .map((t) => {
           const n = inv[t] ?? 0;
-          if (estDecharge && sens === "deposer") return `<span class="case" title="${OBJETS[t].nom}" aria-label="${OBJETS[t].nom}">${icone(t)}${n > 1 ? `<span class="badge">×${n}</span>` : ""}</span>`;
-          return `<button type="button" class="case" data-sens="${sens}" data-objet="${t}" title="${OBJETS[t].nom} (${kg(OBJETS[t].poids * n)} kg)" aria-label="${OBJETS[t].nom}">${icone(t)}${n > 1 ? `<span class="badge">×${n}</span>` : `${estDecharge ? `<span class="badge">${kg(OBJETS[t].poids)} kg</span>` : ""}`}</button>`;
+          const choisie = choix?.sens === sens && choix.objet === t;
+          return `<button type="button" class="case${choisie ? " choisie" : ""}" data-sens="${sens}" data-objet="${t}" aria-pressed="${choisie}" title="${OBJETS[t].nom} (${kg(OBJETS[t].poids * n)} kg)" aria-label="${OBJETS[t].nom}">${icone(t)}${n > 1 ? `<span class="badge">×${n}</span>` : `${estDecharge && sens === "prendre" ? `<span class="badge">${kg(OBJETS[t].poids)} kg</span>` : ""}`}</button>`;
         })
         .join("") || `<p class="indice">Rien.</p>`;
-    p.innerHTML = `
-      <header><h2>${estDecharge ? "Décharge" : "Coffre"}</h2><button type="button" class="fermer" aria-label="Fermer">✕</button></header>
-      <div class="mode-pile">
-        <button type="button" data-pile="un" aria-pressed="${!this.parPile}">Un par un</button>
-        <button type="button" data-pile="tout" aria-pressed="${this.parPile}">Toute la pile</button>
-      </div>
-      <div class="colonnes">
-        <section><h3>Sur toi <small>${kg(poidsSac)} / ${capaciteDe(this.inventaire)} kg</small></h3><div class="grille">${cases(this.inventaire, "deposer")}</div><p class="indice">${estDecharge ? "La décharge rend, elle ne reprend pas : choisis ce que tu emportes." : "Touche un objet pour le ranger."}</p></section>
-        <section><h3>${estDecharge ? `Remonté du tas <small>${kg(poidsCoffre)} kg</small>` : `Dans le coffre <small>${kg(poidsCoffre)} / ${capaciteCoffre(c)} kg</small>`}</h3><div class="grille">${cases(contenu, "prendre")}</div><p class="indice">${estDecharge ? "Touche un objet pour le prendre. Le reste attend ici." : "Touche un objet pour le prendre."}</p></section>
-      </div>`;
-    p.querySelector(".fermer")!.addEventListener("click", () => this.ouvrir(p, false));
-    for (const b of p.querySelectorAll<HTMLButtonElement>("[data-pile]")) {
-      b.addEventListener("click", () => {
-        this.parPile = b.dataset.pile === "tout";
-        this.dessinerCoffre();
-      });
+    // La bande : l'objet choisi, où il est, et ce qu'on peut en faire.
+    let bande = `<p class="vide">Touche un objet pour voir son nom.</p>`;
+    let classeBande = "";
+    if (choix) {
+      const inv = choix.sens === "deposer" ? this.inventaire : contenu;
+      const n = inv[choix.objet] ?? 0;
+      const d = OBJETS[choix.objet];
+      const ou = choix.sens === "deposer" ? "sur toi" : estDecharge ? "dans la décharge" : "dans le coffre";
+      if (n <= 0) classeBande = " absent";
+      let boutons = "";
+      if (n > 0) {
+        if (estDecharge && choix.sens === "deposer") boutons = "";
+        else {
+          const verbe = choix.sens === "deposer" ? "Ranger" : "Prendre";
+          const place = choix.sens === "deposer" ? placeCoffre : placeSac;
+          const peut = place + 1e-9 >= d.poids;
+          boutons = `<button type="button" class="principal" data-deplacer="1" ${peut ? "" : "disabled"}>${verbe}${n > 1 ? " 1" : ""}</button>${
+            n > 1 ? `<button type="button" data-deplacer="tout" ${peut ? "" : "disabled"}>Tout (${n})</button>` : ""
+          }`;
+        }
+      }
+      const note =
+        estDecharge && choix.sens === "deposer" ? " · la décharge ne reprend rien" : n > 0 && !boutons.includes("disabled") ? "" : n > 0 ? ` · ${choix.sens === "deposer" ? "coffre plein" : "sac plein"}` : "";
+      bande = `${icone(choix.objet, 32)}<span class="nom"><strong>${d.nom}</strong><small>${n > 1 ? `×${n} · ` : ""}${kg(d.poids * Math.max(1, n))} kg · ${ou}${note}</small></span><span class="boutons">${boutons}</span>`;
     }
+    const plein = (place: number, inv: Inventaire) => Object.keys(inv).length > 0 && place < Math.min(...(Object.keys(inv) as TypeObjet[]).map((t) => OBJETS[t].poids));
+    const html = `
+      <header><h2>${estDecharge ? "Décharge" : "Coffre"}</h2><button type="button" class="fermer" aria-label="Fermer">✕</button></header>
+      <div class="colonnes">
+        <section><h3>Sur toi <small class="${plein(placeSac, contenu) ? "plein" : ""}">${kg(poidsSac)} / ${capSac} kg</small></h3><div class="grille">${cases(this.inventaire, "deposer")}</div></section>
+        <section><h3>${estDecharge ? `Remonté du tas <small>${kg(poidsCoffre)} kg</small>` : `Dans le coffre <small class="${plein(placeCoffre, this.inventaire) ? "plein" : ""}">${kg(poidsCoffre)} / ${capCoffre} kg</small>`}</h3><div class="grille">${cases(contenu, "prendre")}</div></section>
+      </div>
+      <div class="bande-objet${classeBande}" aria-live="polite">${bande}</div>`;
+    // On ne redessine que si quelque chose a changé, et en gardant le défilement des grilles (sinon un toucher se perd).
+    if (html === this.dernierCoffre) return;
+    this.dernierCoffre = html;
+    const defil = [...p.querySelectorAll<HTMLElement>(".grille")].map((g) => g.scrollTop);
+    p.innerHTML = html;
+    p.querySelectorAll<HTMLElement>(".grille").forEach((g, i) => (g.scrollTop = defil[i] ?? 0));
+    p.querySelector(".fermer")!.addEventListener("click", () => this.ouvrir(p, false));
+    const deplacer = (sens: "deposer" | "prendre", objet: TypeObjet, tout: boolean) => {
+      if (estDecharge && sens === "deposer") return;
+      const dispo = (sens === "deposer" ? this.inventaire[objet] : contenu[objet]) ?? 0;
+      if (dispo <= 0) return;
+      this.actions.coffre(c.id, sens, objet, tout ? dispo : 1);
+      // Le choix suit l'objet : on le retrouve de l'autre côté (et l'on peut défaire d'un toucher).
+      this.choixCoffre = { sens: sens === "deposer" ? "prendre" : "deposer", objet };
+    };
     for (const b of p.querySelectorAll<HTMLButtonElement>(".case[data-sens]")) {
       b.addEventListener("click", () => {
         const sens = b.dataset.sens as "deposer" | "prendre";
         const objet = b.dataset.objet as TypeObjet;
-        const dispo = (sens === "deposer" ? this.inventaire[objet] : contenu[objet]) ?? 0;
-        this.actions.coffre(c.id, sens, objet, this.parPile ? dispo : 1);
+        const cle = `${sens}:${objet}`;
+        const maintenant = performance.now();
+        // Deux touchers rapides : toute la pile, d'un coup (le raccourci de l'habitué).
+        if (cle === this.dernierToucherCoffre.cle && maintenant - this.dernierToucherCoffre.t < 350) {
+          this.dernierToucherCoffre = { cle: "", t: 0 };
+          deplacer(sens, objet, true);
+        } else {
+          this.dernierToucherCoffre = { cle, t: maintenant };
+          this.choixCoffre = { sens, objet };
+        }
+        this.dessinerCoffre();
+      });
+    }
+    for (const b of p.querySelectorAll<HTMLButtonElement>("[data-deplacer]")) {
+      b.addEventListener("click", () => {
+        if (!this.choixCoffre) return;
+        deplacer(this.choixCoffre.sens, this.choixCoffre.objet, b.dataset.deplacer === "tout");
+        this.dessinerCoffre();
       });
     }
   }

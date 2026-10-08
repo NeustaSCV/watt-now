@@ -14,6 +14,10 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ## 0.5.3 · prête à déployer (2026-10-09)
 
+- **Le coffre** (et la décharge), refait selon l'avis de Sally :
+  - toucher un objet le choisit, et son **nom** s'affiche en bas, avec « Ranger 1 » et « Tout », ou « Prendre 1 » et « Tout » ;
+  - deux touchers rapides déplacent toute la pile ;
+  - sur téléphone, le coffre s'ouvre en volet, comme le sac.
 - **La gourde pèse son eau** : un kilo de plus quand elle est pleine, compté dans le poids du sac.
 - **Pause** : un bouton ⏸ à côté de la porte, sur ton terrain et dans ta Coopérative, là où tu es seul. La faim, la soif, la fatigue et les Éteints s'arrêtent ; l'heure du monde, elle, continue. Pas de pause dans les lieux partagés (station, Comptoir), ni quand un Éteint te tient.
 - **Construire** : la barre de placement est une petite barre en bas, plus au centre. On voit enfin où l'on pose. Sur téléphone, elle prend la place de A et B, et le joystick reste pour pousser l'objet.
