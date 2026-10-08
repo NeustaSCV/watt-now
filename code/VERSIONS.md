@@ -12,7 +12,20 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
-## 0.5.1 · en préparation
+## 0.5.1 · prête à déployer (2026-10-08)
+
+**Le sac et Fabriquer, enfin utilisables sur téléphone** (avis de Sally ; référence : l'iPhone 13 mini)
+- **Le sac** : en vertical, un volet presque plein écran. La grille de petites cases est en haut, et la **fiche de l'objet** est en dessous, toujours visible, avec ses boutons sur une seule ligne. En horizontal, deux colonnes : la grille à gauche, la fiche à droite.
+- **Fabriquer** : chaque recette tient sur toute la largeur, avec un petit bouton à côté du nom. Il n'y a plus de texte écrasé dans une colonne étroite. On voit quatre recettes d'un coup (deux colonnes en horizontal).
+- **Des polices plus petites sur les petits écrans** : carnet, sac, Fabriquer, carte, aide.
+- Le bloc des jauges se resserre quand le sac ou Fabriquer est ouvert, et ne touche plus le joystick en horizontal.
+- **Des mots plus clairs** :
+  - « Construire » (le feu de camp) au lieu de « Monter ici » ;
+  - « Il manque… » au lieu de « Ce qu'il manque ? » ;
+  - « Équiper », « Réparer », « Rafistoler » (la réparation de fortune) ;
+  - « Installer » la broche, la marmite, la dynamo et la meule ;
+  - « Défaire l'amélioration ».
+
 
 **La Coopérative, ce qui manquait** (Book 23 §4.3 et §4.7)
 - **La batterie du tracteur rouge se démonte** (une clé plate pour les cosses) : 18 kg, jusqu'à 360 Wh. Mais chaque coup de klaxon en vide un quart : klaxonner ou l'emporter, il faut choisir. Prise, le klaxon reste muet ; une autre batterie se retrouve dans le tracteur au bout de 4 jours. L'examen dit ce qui lui reste.
