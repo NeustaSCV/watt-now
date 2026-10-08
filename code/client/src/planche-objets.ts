@@ -20,6 +20,7 @@ import { PALETTE } from "./rendu/materiaux.ts";
 import { Personnage, creerArme } from "./rendu/personnage.ts";
 import { VueRessource } from "./rendu/ressources.ts";
 
+const parametres = new URLSearchParams(location.hash.slice(1));
 const canvas = document.getElementById("vue") as HTMLCanvasElement;
 const rendu = new THREE.WebGLRenderer({ canvas, antialias: true });
 rendu.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -85,10 +86,12 @@ const INSTALLATIONS: [string, InstallationVue["type"], InstallationVue["etat"]][
   ["récupérateur plein", "recuperateur_pluie", { litres: 5 }],
   ["alarme à boîtes", "alarme_boites", {}],
   ["lit de branchages", "lit_branchages", {}],
+  ["décharge : 5 trouvailles", "decharge", { contenu: { conserve: 5 } }],
+  ["décharge : 12 trouvailles", "decharge", { contenu: { conserve: 12 } }],
 ];
 INSTALLATIONS.forEach(([nom, type, etat], i) => {
-  const x = (i % 8) * 4;
-  const z = Math.floor(i / 8) * 4.5;
+  const x = i >= 16 ? 2 + (i - 16) * 6 : (i % 8) * 4;
+  const z = i >= 16 ? -6 : Math.floor(i / 8) * 4.5;
   const v = new VueInstallation({ id: i + 1, type, x, z, o: 0, etat });
   scene.add(v.objet);
   const enMarche = type === "pedalier" && etat.meule === true;
@@ -271,7 +274,6 @@ const VUES: Record<Section, { cible: [number, number, number]; distance: number 
   ressources: { cible: [8.75, 0.3, 24.5], distance: 15 },
   station: { cible: [8, 1, 36], distance: 26 },
 };
-const parametres = new URLSearchParams(location.hash.slice(1));
 const etat = {
   section: (parametres.get("vue") as Section | null) ?? "installations",
   jeu: parametres.has("jeu"),

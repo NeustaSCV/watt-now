@@ -52,6 +52,8 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 **Voir**
 - Le **cercle de visée** se voit toujours, même sous un objet, à la taille de ce qu'on vise, avec un contour sombre et une pulsation lente (proposition P-007).
+- **Les objets refaits** : toutes les installations, le feu de camp et le foyer Dakota, la fumée (un seul appel de dessin), les ressources du terrain et de la halte, le vélo couché, la décharge. Les armes en main sont redessinées et **tenues dans le poing** (elles traversaient le poignet).
+- **68 icônes dessinées à la main** pour les vestiges et les composants ; quatre anciennes refaites.
 - **On arrive à la station du bon côté** (proposition P-006) : du terrain par l'est, vers le Carrefour par l'ouest, comme sur la carte. Au Carrefour, la route de la station arrive par l'est ; la route fermée de la Ville part à l'ouest.
 
 ## 0.2 · déployée le 2026-10-08

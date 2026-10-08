@@ -11,7 +11,8 @@ const T = `stroke="${ENCRE}" stroke-width="2" stroke-linejoin="round" stroke-lin
 export type Pictogramme = TypeObjet | "feu_de_camp" | "etabli" | "abri" | "coffre" | "charbonniere" | "forge" | "pedalier" | "banc_recharge" | "escabeau" | "poches" | "recuperateur_pluie" | "alarme_boites" | "lit_branchages" | "decharge";
 
 // Les vestiges (lot 1, 0.3) sont trop nombreux pour un dessin chacun : une icône générique par famille
-// (un pictogramme simple et une teinte), avec repli automatique ; une douzaine seulement sont dessinés à la main.
+// (un pictogramme simple et une teinte), avec repli automatique. Depuis le 2026-10-08, tous les vestiges et
+// composants du lot 1 ont leur dessin à la main (l'icône générique reste en repli pour les prochains).
 const DESSINS: Partial<Record<Pictogramme, string>> = {
   branche: `
     <path d="M7 36 L40 13" stroke-width="4.5" fill="none" stroke="#5a4130" ${T}/>
@@ -81,9 +82,12 @@ const DESSINS: Partial<Record<Pictogramme, string>> = {
     <path d="M15 16 V35 M22 14 V37 M29 14 V37 M35 16 V35" stroke-width="1" opacity="0.5" ${T}/>
     <path d="M10 22 Q24 17 38 22 M10 29 Q24 34 38 29" stroke="#8a6a3e" stroke-width="2" fill="none"/>`,
   travois: `
-    <path d="M8 6 L30 42 M40 6 L34 42" stroke="#6b4a32" stroke-width="3.5" stroke-linecap="round"/>
-    <path d="M17 22 H38 M20 28 H37 M23 34 H36" stroke="#a07c48" stroke-width="3" stroke-linecap="round"/>
-    <path d="M8 6 L30 42 M40 6 L34 42" fill="none" ${T} stroke-width="1"/>`,
+    <path d="M10 4 L24 44 M38 4 L28 44" stroke="#3b2a1e" stroke-width="5" stroke-linecap="round"/>
+    <path d="M10 4 L24 44 M38 4 L28 44" stroke="#7a5a3c" stroke-width="2.6" stroke-linecap="round"/>
+    <path d="M14 16 H35 M17 24 H33" stroke="#3b2a1e" stroke-width="4" stroke-linecap="round"/>
+    <path d="M14 16 H35 M17 24 H33" stroke="#a07c48" stroke-width="1.8" stroke-linecap="round"/>
+    <path d="M15 25 Q14 33 20 35 H32 Q36 33 34 25 Z" fill="#6b8b4e" ${T}/>
+    <path d="M18 29 h13" stroke="#b59a6a" stroke-width="1.6"/>`,
   recuperateur_pluie: `
     <path d="M8 16 L40 16 L28 26 L20 26 Z" fill="#2f6fa4" ${T}/>
     <path d="M10 16 V40 M38 16 V40" stroke-width="2.5" ${T}/>
@@ -115,9 +119,11 @@ const DESSINS: Partial<Record<Pictogramme, string>> = {
     <path d="M14 15.5 L18 15" stroke="#e8f1fa" stroke-width="1.6" stroke-linecap="round" fill="none"/>
     <path d="M26 35 L27 41 M20 41 L34 39" fill="none" ${T}/>`,
   chiffons: `
-    <path d="M9 30 C12 22 18 20 24 22 S36 18 40 24 L37 34 C30 36 22 33 16 37 Z" fill="#d8ccb0" ${T}/>
-    <path d="M14 30 C20 27 26 29 32 26" fill="none" stroke="#a89878" stroke-width="1.5"/>
-    <path d="M18 24 L22 31 M29 22 L31 30" fill="none" stroke="#a89878" stroke-width="1.2"/>`,
+    <path d="M7 34 Q6 28 12 27 H38 Q43 28 41 34 Q40 39 34 39 H13 Q8 39 7 34 Z" fill="#c9b48a" ${T}/>
+    <path d="M9 25 Q9 19 15 19 H35 Q40 20 39 25 Q38 29 33 29 H14 Q9 29 9 25 Z" fill="#d8ccb0" ${T}/>
+    <path d="M12 17 Q13 11 19 11 H31 Q36 12 35 17 Q34 21 29 21 H17 Q12 21 12 17 Z" fill="#a4552f" ${T}/>
+    <path d="M16 13 v6 M21 12 v8 M26 12 v8" stroke="#c8743a" stroke-width="1.4"/>
+    <path d="M14 24 h22 M12 33 h26" stroke="#a89878" stroke-width="1.3" stroke-dasharray="3 2"/>`,
   pansement: `
     <rect x="10" y="17" width="28" height="14" rx="4" transform="rotate(-20 24 24)" fill="#f2ead6" ${T}/>
     <rect x="19" y="19" width="10" height="10" rx="1.5" transform="rotate(-20 24 24)" fill="#e6dabd" stroke="#c8362b" stroke-width="1.6"/>
@@ -157,9 +163,11 @@ const DESSINS: Partial<Record<Pictogramme, string>> = {
     <path d="M26 9 Q35 4 41 12 Q36 15 33 22 L27 18 Z" fill="#8a8a88" ${T}/>
     <path d="M38 9 Q41 12 40 16" stroke="#c9ccd0" stroke-width="1.6" fill="none"/>`,
   tete_hache: `
-    <path d="M12 16 Q24 6 38 14 Q33 22 34 34 Q22 30 12 32 Z" fill="#8a6b52" ${T}/>
-    <circle cx="21" cy="21" r="3.5" fill="#3b2a1e"/>
-    <path d="M30 15 Q34 22 33 31" stroke="#c9ccd0" stroke-width="1.6" fill="none"/>`,
+    <path d="M7 12 h13 v13 h-13 Z" fill="#55524d" ${T}/>
+    <path d="M20 12 L39 9 Q44 24 37 41 Q33 30 20 25 Z" fill="#6b6862" ${T}/>
+    <path d="M39 11 Q43 25 37 38" fill="none" stroke="#e8ecee" stroke-width="2.4" stroke-linecap="round"/>
+    <ellipse cx="13.5" cy="18.5" rx="3.5" ry="4.5" fill="#2b2620" ${T} stroke-width="1"/>
+    <path d="M24 16 l5 -1 M25 21 l3 1" stroke="#a4552f" stroke-width="1.6" stroke-linecap="round"/>`,
   cle_plate: `
     <path d="M13 37 L33 15" stroke-width="6" stroke="#8a8a88" ${T}/>
     <path d="M13 37 L33 15" stroke="#c9ccd0" stroke-width="2.5" stroke-linecap="round"/>
@@ -262,9 +270,12 @@ const DESSINS: Partial<Record<Pictogramme, string>> = {
     <circle cx="32" cy="17" r="1.2" fill="#3b2a1e"/>
     <path d="M22 38 v5 M27 38 v5" ${T}/>`,
   volaille_crue: `
-    <path d="M12 30 Q10 18 22 15 Q34 13 36 24 Q37 34 26 36 Q16 38 12 30 Z" fill="#f0b9a8" ${T}/>
-    <path d="M33 30 L40 38 Q43 41 40 43 Q37 43 37 40" fill="#f4ecd8" ${T}/>
-    <path d="M17 24 Q23 21 29 25" fill="none" stroke="#d98a7a" stroke-width="1.6"/>`,
+    <path d="M26 30 L39 41" stroke="#3b2a1e" stroke-width="6" stroke-linecap="round"/>
+    <path d="M26 30 L39 41" stroke="#f4ecd8" stroke-width="3.4" stroke-linecap="round"/>
+    <circle cx="40" cy="39" r="3" fill="#f4ecd8" ${T}/><circle cx="37" cy="43" r="3" fill="#f4ecd8" ${T}/>
+    <path d="M28 31 Q34 22 26 12 Q16 4 9 13 Q4 22 13 29 Q20 34 28 31 Z" fill="#f0b9a8" ${T}/>
+    <path d="M12 16 Q17 11 23 14" fill="none" stroke="#fbe0d6" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M15 24 q4 2 8 0" fill="none" stroke="#d98a7a" stroke-width="1.4"/>`,
   volaille_cuite: `
     <path d="M12 30 Q10 18 22 15 Q34 13 36 24 Q37 34 26 36 Q16 38 12 30 Z" fill="#b8742e" ${T}/>
     <path d="M33 30 L40 38 Q43 41 40 43 Q37 43 37 40" fill="#f4ecd8" ${T}/>
@@ -428,6 +439,307 @@ const DESSINS_VESTIGES: Partial<Record<Pictogramme, string>> = {
     <path d="M36 24 h7" ${T} stroke-width="2.4"/>
     <path d="M14 33 v5 M20 33 v5" stroke="#c8362b" stroke-width="2"/>
     <path d="M16 20 h10" stroke="#e8f1fa" stroke-width="1.4" stroke-linecap="round"/>`,
+  // ---- Les composants (2026-10-08) : on les reconnaît d'un coup d'œil, on les assemble ----
+  pile: `
+    <rect x="17" y="10" width="14" height="32" rx="2" fill="#d8a83a" ${T}/>
+    <path d="M17 33 h14 v7 a2 2 0 0 1 -2 2 h-10 a2 2 0 0 1 -2 -2 Z" fill="#2b2b2b" ${T}/>
+    <rect x="21" y="6" width="6" height="4" fill="#c9ccd0" ${T}/>
+    <path d="M24 16 v8 M20 20 h8" stroke="#3b2a1e" stroke-width="2.2" stroke-linecap="round"/>`,
+  cellule_lithium: `
+    <path d="M15 13 v24 a9 3.5 0 0 0 18 0 v-24" fill="#3f8f6a" ${T}/>
+    <ellipse cx="24" cy="13" rx="9" ry="3.5" fill="#c9ccd0" ${T}/>
+    <circle cx="24" cy="12.5" r="2.4" fill="#8a8f96" ${T} stroke-width="1"/>
+    <path d="M15 32 a9 3.5 0 0 0 18 0" fill="none" stroke="#f4ecd8" stroke-width="1.4"/>
+    <path d="M19 21 h10 M19 25 h6" stroke="#f4ecd8" stroke-width="1.6" stroke-linecap="round"/>`,
+  aimant: `
+    <path d="M11 9 V25 A13 13 0 0 0 37 25 V9 H28 V25 A4 4 0 0 1 20 25 V9 Z" fill="#b3243a" ${T}/>
+    <path d="M11 9 h9 v6 h-9 Z M28 9 h9 v6 h-9 Z" fill="#c9ccd0" ${T}/>
+    <path d="M7 5 l3 3 M41 5 l-3 3 M24 4 v3" stroke="#3b2a1e" stroke-width="1.4" stroke-linecap="round"/>`,
+  led: `
+    <path d="M10 13 l4 3 M38 13 l-4 3 M24 3 v4 M14 5 l3 4 M34 5 l-3 4" stroke="#e8b83a" stroke-width="1.8" stroke-linecap="round"/>
+    <path d="M17 27 V18 a7 7 0 0 1 14 0 V27 Z" fill="#e8d84a" ${T}/>
+    <rect x="15" y="27" width="18" height="4" rx="1" fill="#d8c43a" ${T}/>
+    <path d="M21 31 V44 M27 31 V40" stroke="#8a8f96" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M20 17 a4 4 0 0 1 4 -4" fill="none" stroke="#fff8d0" stroke-width="1.6" stroke-linecap="round"/>`,
+  resistance: `
+    <path d="M5 24 h7 l3 -8 l4 16 l4 -16 l4 16 l4 -16 l4 16 l3 -8 h5" fill="none" stroke="#3b2a1e" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M5 24 h7 l3 -8 l4 16 l4 -16 l4 16 l4 -16 l4 16 l3 -8 h5" fill="none" stroke="#e8743a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M18 40 q2 -3 0 -5 M28 40 q2 -3 0 -5" fill="none" stroke="#d2691e" stroke-width="1.4" opacity="0.7"/>`,
+  verre: `
+    <path d="M9 12 L33 7 L41 20 L35 41 L22 34 L13 38 Z" fill="#bfe0ec" ${T}/>
+    <path d="M22 34 L27 21 L41 20 M27 21 L33 7" fill="none" stroke-width="1.2" opacity="0.6" ${T}/>
+    <path d="M15 15 L22 13 M14 20 L17 19" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>`,
+  aluminium: `
+    <path d="M7 18 L18 12 L27 16 L40 11 L42 27 L33 35 L21 32 L9 37 Z" fill="#c9ccd0" ${T}/>
+    <path d="M18 12 L21 32 M27 16 L33 35 M9 26 L42 22" fill="none" stroke-width="1.1" opacity="0.5" ${T}/>
+    <path d="M12 21 L17 19" stroke="#f4f6f8" stroke-width="2" stroke-linecap="round"/>`,
+  plastique: `
+    <path d="M8 14 H34 Q40 14 40 20 V30 L33 36 L26 31 L19 38 L8 38 Z" fill="#4a8ac2" ${T}/>
+    <circle cx="17" cy="22" r="4" fill="#2f5f8c" ${T}/><rect x="26" y="19" width="8" height="5" rx="1" fill="#2f5f8c" ${T}/>
+    <path d="M11 17 h12" stroke="#a8d0f0" stroke-width="1.8" stroke-linecap="round"/>`,
+  papier: `
+    <path d="M12 12 L36 9 L38 39 L14 42 Z" fill="#e6dcc0" ${T}/>
+    <path d="M9 9 L33 7 L35 36 L11 38 Z" fill="#efe6cf" ${T}/>
+    <path d="M14 15 h15 M14 20 h17 M15 25 h13 M15 30 h16" stroke="#8a7a62" stroke-width="1.4" stroke-linecap="round"/>`,
+  petit_ressort: `
+    <path d="M15 8 h18 M15 40 h18" stroke="#3b2a1e" stroke-width="2.6" stroke-linecap="round"/>
+    <path d="M33 8 L15 13 L33 18 L15 23 L33 28 L15 33 L33 38 L15 40" fill="none" stroke="#3b2a1e" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M33 8 L15 13 L33 18 L15 23 L33 28 L15 33 L33 38 L15 40" fill="none" stroke="#b0b4b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
+  caoutchouc: `
+    <path d="M8 30 C8 16 40 14 40 24 C40 32 20 26 16 34 C13 40 26 42 30 38" fill="none" stroke="#3b2a1e" stroke-width="7" stroke-linecap="round"/>
+    <path d="M8 30 C8 16 40 14 40 24 C40 32 20 26 16 34 C13 40 26 42 30 38" fill="none" stroke="#4a4a4a" stroke-width="3.6" stroke-linecap="round"/>
+    <path d="M13 22 Q20 18 28 18" fill="none" stroke="#7a7a7a" stroke-width="1.2" stroke-linecap="round"/>`,
+  // ---- La cuisine ----
+  cocotte_fonte: `
+    <path d="M9 21 h30 v12 a7 7 0 0 1 -7 7 h-16 a7 7 0 0 1 -7 -7 Z" fill="#b3402b" ${T}/>
+    <path d="M9 24 h-4 M39 24 h4" ${T} stroke-width="3.4"/>
+    <path d="M8 21 Q24 11 40 21 Z" fill="#9a3524" ${T}/>
+    <rect x="20" y="11" width="8" height="4" rx="1.5" fill="#2b2b2b" ${T}/>
+    <path d="M13 28 q2 -2 4 0" fill="none" stroke="#e08a6a" stroke-width="1.4"/>`,
+  autocuiseur: `
+    <path d="M10 20 h28 v14 a6 6 0 0 1 -6 6 h-16 a6 6 0 0 1 -6 -6 Z" fill="#c9ccd0" ${T}/>
+    <path d="M9 20 Q24 13 39 20 Z" fill="#b0b4b8" ${T}/>
+    <path d="M24 16 L44 12" stroke="#2b2b2b" stroke-width="4" stroke-linecap="round"/>
+    <rect x="21" y="9" width="5" height="6" rx="1" fill="#c8362b" ${T}/>
+    <path d="M19 5 q2 -2 0 -4 M27 5 q2 -2 0 -4" fill="none" stroke="#9aa4ae" stroke-width="1.4"/>`,
+  bocal: `
+    <rect x="15" y="6" width="18" height="6" rx="1.5" fill="#c9a03a" ${T}/>
+    <path d="M14 12 h20 q3 0 3 4 v20 q0 6 -6 6 h-14 q-6 0 -6 -6 v-20 q0 -4 3 -4 Z" fill="#cfe4ea" ${T}/>
+    <path d="M16 18 v16" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M14 14 h20" stroke-width="1.2" ${T}/>`,
+  micro_ondes: `
+    <rect x="4" y="11" width="40" height="27" rx="2" fill="#d6d2ca" ${T}/>
+    <rect x="8" y="15" width="24" height="19" rx="1" fill="#3d4a5a" ${T}/>
+    <path d="M11 18 L18 18" stroke="#8fb3d6" stroke-width="1.4" stroke-linecap="round"/>
+    <rect x="35" y="15" width="6" height="5" fill="#2b3440"/><circle cx="38" cy="26" r="1.6" fill="#55524d"/><circle cx="38" cy="31" r="1.6" fill="#55524d"/>`,
+  machine_capsules: `
+    <path d="M14 6 h20 v32 h-20 Z" fill="#2b2b2b" ${T}/>
+    <path d="M14 6 h20 v8 h-20 Z" fill="#c8362b" ${T}/>
+    <path d="M20 18 h8 v4 h-8 Z" fill="#c9ccd0" ${T}/>
+    <path d="M19 30 h10 v5 a5 3 0 0 1 -10 0 Z" fill="#f4ecd8" ${T}/>
+    <path d="M10 38 h28 v4 h-28 Z" fill="#55524d" ${T}/>`,
+  aimant_frigo: `
+    <path d="M8 28 Q24 22 40 28 V40 H8 Z" fill="#e8c46a" ${T}/>
+    <circle cx="33" cy="15" r="6" fill="#e8743a" ${T}/>
+    <path d="M18 38 Q19 26 22 18" fill="none" stroke="#7a5a3c" stroke-width="3" stroke-linecap="round"/>
+    <path d="M22 18 Q14 14 10 19 M22 18 Q18 10 12 11 M22 18 Q26 10 31 12 M22 18 Q30 16 32 22" fill="none" stroke="#3f7a3a" stroke-width="3" stroke-linecap="round"/>`,
+  // ---- La salle de bain ----
+  brosse_dents_connectee: `
+    <path d="M18 18 h12 v22 a6 6 0 0 1 -12 0 Z" fill="#f4ecd8" ${T}/>
+    <path d="M21 18 L22 8 h4 L27 18" fill="#f4ecd8" ${T}/>
+    <path d="M21 5 h6 v4 h-6 Z" fill="#7fb3d0" ${T}/>
+    <circle cx="24" cy="27" r="2.6" fill="#5d8a46" ${T} stroke-width="1"/>
+    <path d="M22 34 h4" stroke="#9cc8d8" stroke-width="2" stroke-linecap="round"/>`,
+  seche_cheveux: `
+    <path d="M8 13 h22 a8 8 0 0 1 0 16 h-22 Z" fill="#e8a8b8" ${T}/>
+    <path d="M8 13 v16 h-3 v-16 Z" fill="#c88898" ${T}/>
+    <path d="M22 29 L26 43 h6 L30 29" fill="#e8a8b8" ${T}/>
+    <circle cx="31" cy="21" r="3.5" fill="#c88898" ${T}/>
+    <path d="M3 17 h-1 M3 21 h-1 M3 25 h-1" stroke="#3b2a1e" stroke-width="1.6" stroke-linecap="round"/>`,
+  miroir_salle_bain: `
+    <rect x="9" y="5" width="30" height="38" rx="3" fill="#c9ccd0" ${T}/>
+    <rect x="12" y="8" width="24" height="32" rx="1" fill="#a8d0e0"/>
+    <path d="M15 20 L24 11 M15 28 L31 12 M24 36 L33 27" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/>`,
+  rouleau_papier_toilette: `
+    <ellipse cx="24" cy="15" rx="12" ry="5" fill="#f4ecd8" ${T}/>
+    <path d="M12 15 v20 a12 5 0 0 0 24 0 v-20" fill="#f4ecd8" ${T}/>
+    <ellipse cx="24" cy="15" rx="4" ry="1.8" fill="#c9b48a" ${T} stroke-width="1"/>
+    <path d="M36 28 h6 v12 h-6" fill="#f4ecd8" ${T}/>
+    <path d="M16 24 v8 M20 26 v8" stroke="#e0d4b8" stroke-width="1.4"/>`,
+  balance_connectee: `
+    <rect x="6" y="14" width="36" height="24" rx="4" fill="#f4ecd8" ${T}/>
+    <rect x="16" y="18" width="16" height="7" rx="1" fill="#2b3440" ${T} stroke-width="1"/>
+    <path d="M19 21.5 h3 M24 21.5 h2 M28 21.5 h1" stroke="#e8743a" stroke-width="1.6"/>
+    <path d="M11 31 h7 M30 31 h7" stroke="#c9b48a" stroke-width="2.4" stroke-linecap="round"/>`,
+  parfum_luxe: `
+    <path d="M14 18 h20 l3 4 v14 a5 5 0 0 1 -5 5 h-16 a5 5 0 0 1 -5 -5 v-14 Z" fill="#e8b8d0" ${T}/>
+    <rect x="20" y="12" width="8" height="6" fill="#d8b04a" ${T}/>
+    <path d="M18 6 h12 l-2 6 h-8 Z" fill="#d8b04a" ${T}/>
+    <rect x="17" y="26" width="14" height="7" fill="#f4ecd8" ${T} stroke-width="1"/>
+    <path d="M15 22 v12" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"/>`,
+  // ---- Le salon ----
+  telecommande: `
+    <rect x="16" y="4" width="16" height="40" rx="5" fill="#2b2b2b" ${T}/>
+    <circle cx="24" cy="11" r="2.6" fill="#c8362b"/>
+    <g fill="#8a8f96"><circle cx="20" cy="19" r="1.6"/><circle cx="24" cy="19" r="1.6"/><circle cx="28" cy="19" r="1.6"/><circle cx="20" cy="24" r="1.6"/><circle cx="24" cy="24" r="1.6"/><circle cx="28" cy="24" r="1.6"/></g>
+    <rect x="20" y="30" width="8" height="8" rx="2" fill="#55606a"/>`,
+  guirlande: `
+    <path d="M4 12 Q14 26 24 14 Q34 26 44 12" fill="none" ${T}/>
+    <g ${T} stroke-width="1.4"><path d="M8 17 l-2 6 h5 Z" fill="#e8d84a"/><path d="M16 21 l-2 6 h5 Z" fill="#c8362b"/><path d="M24 15 l-2 6 h5 Z" fill="#5d8a46"/><path d="M32 21 l-2 6 h5 Z" fill="#4a8ac2"/><path d="M40 17 l-2 6 h5 Z" fill="#e8d84a"/></g>
+    <path d="M10 30 Q20 42 30 32" fill="none" stroke-width="1.4" ${T}/>`,
+  tableau_vivre_rire: `
+    <rect x="5" y="9" width="38" height="30" fill="#c9a77a" ${T}/>
+    <rect x="9" y="13" width="30" height="22" fill="#f4ecd8" ${T} stroke-width="1"/>
+    <path d="M13 19 h12 M15 24 h18 M13 29 h14" stroke="#c9a03a" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M31 28 l2 -2 l2 2 l-2 3 Z" fill="#c8362b"/>`,
+  ventilateur: `
+    <circle cx="24" cy="18" r="13" fill="#e8f1fa" ${T}/>
+    <path d="M24 18 Q20 8 26 7 Q29 13 24 18 Q34 16 34 22 Q28 24 24 18 Q18 27 14 23 Q17 18 24 18 Z" fill="#7a8fa8" ${T} stroke-width="1.2"/>
+    <circle cx="24" cy="18" r="2.4" fill="#3b2a1e"/>
+    <path d="M24 31 v10 M15 43 h18" ${T} stroke-width="2.6"/>`,
+  coussin_peteur: `
+    <ellipse cx="22" cy="28" rx="16" ry="11" fill="#d84a6a" ${T}/>
+    <path d="M36 25 L44 22 L44 30 Z" fill="#d84a6a" ${T}/>
+    <path d="M12 24 Q20 20 28 22" fill="none" stroke="#f0a0b0" stroke-width="2" stroke-linecap="round"/>
+    <path d="M38 14 q3 -2 5 0 M34 10 q2 -3 5 -2" fill="none" stroke="#8a8f96" stroke-width="1.6" stroke-linecap="round"/>`,
+  encyclopedie: `
+    <g ${T}><rect x="6" y="10" width="8" height="32" fill="#2f5f8c"/><rect x="14" y="10" width="8" height="32" fill="#8a2f2a"/><rect x="22" y="10" width="8" height="32" fill="#2f5f8c"/><path d="M30 12 l8 -3 l8 31 l-8 3 Z" fill="#8a2f2a"/></g>
+    <path d="M8 16 h4 M16 16 h4 M24 16 h4 M8 36 h4 M16 36 h4 M24 36 h4" stroke="#d8b04a" stroke-width="1.6"/>`,
+  // ---- Les gadgets ----
+  batterie_externe: `
+    <rect x="10" y="7" width="28" height="35" rx="5" fill="#2b2b2b" ${T}/>
+    <g><rect x="15" y="12" width="4" height="3" fill="#5d8a46"/><rect x="21" y="12" width="4" height="3" fill="#5d8a46"/><rect x="27" y="12" width="4" height="3" fill="#3a3a3a"/></g>
+    <path d="M22 22 L19 30 h5 L22 37 L29 27 h-5 L27 22 Z" fill="#e8d84a" ${T} stroke-width="1"/>`,
+  ordinateur_portable: `
+    <path d="M10 8 h28 v22 h-28 Z" fill="#55606a" ${T}/>
+    <rect x="13" y="11" width="22" height="16" fill="#2b3440"/>
+    <path d="M17 16 h9 M17 20 h6" stroke="#8fb3d6" stroke-width="1.4"/>
+    <path d="M5 34 L10 30 h28 l5 4 v3 h-38 Z" fill="#9aa4ae" ${T}/>
+    <path d="M20 34 h8" stroke="#55606a" stroke-width="1.6"/>`,
+  enceinte_intelligente: `
+    <path d="M14 12 Q14 7 24 7 Q34 7 34 12 V38 Q34 43 24 43 Q14 43 14 38 Z" fill="#55606a" ${T}/>
+    <ellipse cx="24" cy="10" rx="9" ry="2.4" fill="#4ac2e8" ${T} stroke-width="1"/>
+    <g fill="#3a4048"><circle cx="20" cy="20" r="1.2"/><circle cx="24" cy="20" r="1.2"/><circle cx="28" cy="20" r="1.2"/><circle cx="20" cy="25" r="1.2"/><circle cx="24" cy="25" r="1.2"/><circle cx="28" cy="25" r="1.2"/><circle cx="20" cy="30" r="1.2"/><circle cx="24" cy="30" r="1.2"/><circle cx="28" cy="30" r="1.2"/></g>
+    <path d="M38 14 q3 4 0 8 M41 11 q5 7 0 14" fill="none" stroke="#3b2a1e" stroke-width="1.4" stroke-linecap="round"/>`,
+  montre_connectee: `
+    <path d="M18 3 h12 l1 10 h-14 Z M17 35 h14 l-1 10 h-12 Z" fill="#3a3a3a" ${T}/>
+    <rect x="13" y="12" width="22" height="24" rx="5" fill="#2b2b2b" ${T}/>
+    <rect x="16" y="15" width="16" height="18" rx="2" fill="#2b3440"/>
+    <path d="M18 25 h3 l2 -4 l2 7 l2 -3 h3" fill="none" stroke="#e85a5a" stroke-width="1.4" stroke-linejoin="round"/>
+    <path d="M35 21 h2 v5 h-2" fill="#8a8f96"/>`,
+  sac_cables: `
+    <path d="M10 18 Q8 40 14 42 H34 Q40 40 38 18 Z" fill="#c9b48a" ${T}/>
+    <path d="M10 18 Q24 22 38 18" fill="none" ${T}/>
+    <path d="M16 18 C10 8 22 6 20 14 M24 18 C26 6 36 8 30 16 M30 18 C40 10 44 18 38 20" fill="none" stroke="#f4ecd8" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M18 12 h3 v4 h-3 Z M33 9 h3 v4 h-3 Z" fill="#8a8f96" ${T} stroke-width="1"/>`,
+  calculatrice_solaire: `
+    <rect x="12" y="5" width="24" height="38" rx="3" fill="#55524d" ${T}/>
+    <rect x="15" y="8" width="18" height="4" fill="#5a4a2a" ${T} stroke-width="1"/><path d="M16 10 h16" stroke="#8a6a3a" stroke-width="1"/>
+    <rect x="15" y="14" width="18" height="7" fill="#b8c8a0" ${T} stroke-width="1"/>
+    <g fill="#d6d2ca"><rect x="15" y="24" width="4" height="3"/><rect x="22" y="24" width="4" height="3"/><rect x="29" y="24" width="4" height="3"/><rect x="15" y="30" width="4" height="3"/><rect x="22" y="30" width="4" height="3"/><rect x="29" y="30" width="4" height="3" fill="#e8743a"/><rect x="15" y="36" width="4" height="3"/><rect x="22" y="36" width="4" height="3"/><rect x="29" y="36" width="4" height="3"/></g>`,
+  vapoteuse: `
+    <path d="M20 13 h8 v29 a4 4 0 0 1 -8 0 Z" fill="#7a5ab8" ${T}/>
+    <path d="M21 5 h6 v8 h-6 Z" fill="#cfe4ea" ${T}/>
+    <path d="M22 3 h4 v2 h-4 Z" fill="#2b2b2b"/>
+    <circle cx="24" cy="22" r="2" fill="#4ac2e8" ${T} stroke-width="1"/>
+    <path d="M31 6 q4 -2 3 -5 M34 10 q5 -1 6 -5" fill="none" stroke="#c9ccd0" stroke-width="1.6" stroke-linecap="round"/>`,
+  robot_domestique: `
+    <rect x="13" y="6" width="22" height="16" rx="5" fill="#e8f1fa" ${T}/>
+    <rect x="16" y="10" width="16" height="7" rx="3" fill="#2b3440"/>
+    <circle cx="20" cy="13.5" r="1.6" fill="#4ac2e8"/><circle cx="28" cy="13.5" r="1.6" fill="#4ac2e8"/>
+    <path d="M15 24 h18 v13 h-18 Z" fill="#c9ccd0" ${T}/>
+    <path d="M15 27 l-6 7 M33 27 l6 7" ${T} stroke-width="2.6"/>
+    <path d="M18 37 v6 M30 37 v6" ${T} stroke-width="3"/><path d="M24 6 v-3" ${T}/>`,
+  // ---- Le garage ----
+  perceuse_visseuse: `
+    <path d="M6 11 h26 a6 6 0 0 1 0 12 h-26 Z" fill="#d8a83a" ${T}/>
+    <path d="M32 15 h6 v4 h-6 Z" fill="#2b2b2b" ${T}/><path d="M38 17 h6" ${T} stroke-width="2"/>
+    <path d="M14 23 h9 l3 13 h-10 Z" fill="#2b2b2b" ${T}/>
+    <rect x="12" y="36" width="16" height="7" rx="1.5" fill="#55524d" ${T}/>
+    <path d="M23 26 h2" stroke="#c8362b" stroke-width="2.4"/>`,
+  bocal_clous: `
+    <rect x="15" y="6" width="18" height="5" rx="1.5" fill="#c8362b" ${T}/>
+    <path d="M13 11 h22 v27 q0 5 -5 5 h-12 q-5 0 -5 -5 Z" fill="#cfe4ea" ${T}/>
+    <path d="M14 26 h20 v12 q0 4 -4 4 h-12 q-4 0 -4 -4 Z" fill="#8a8780"/>
+    <path d="M17 30 l5 4 M24 29 l-2 7 M28 31 l3 5 M19 37 l6 -2" stroke="#3b2a1e" stroke-width="1.6" stroke-linecap="round"/>
+    <path d="M17 14 v10" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>`,
+  rouleau_fil_fer: `
+    <circle cx="24" cy="24" r="16" fill="#8a8f96" ${T}/>
+    <circle cx="24" cy="24" r="7" fill="#e9e0c8" ${T}/>
+    <path d="M10 20 a15 15 0 0 1 28 0 M9 26 a15 15 0 0 0 30 0 M12 15 a14 14 0 0 1 24 0" fill="none" stroke="#5c5953" stroke-width="1.1"/>
+    <path d="M38 30 Q44 36 42 44" fill="none" stroke="#3b2a1e" stroke-width="1.6" stroke-linecap="round"/>`,
+  ruban_adhesif: `
+    <circle cx="24" cy="24" r="16" fill="#9a9c9a" ${T}/>
+    <circle cx="24" cy="24" r="8" fill="#c9a77a" ${T}/>
+    <circle cx="24" cy="24" r="5.5" fill="#e9e0c8" ${T} stroke-width="1"/>
+    <path d="M38 31 L44 42 L38 44 L33 34" fill="#9a9c9a" ${T}/>
+    <path d="M14 15 a13 13 0 0 1 8 -4" fill="none" stroke="#c9ccd0" stroke-width="2" stroke-linecap="round"/>`,
+  etau: `
+    <path d="M8 34 h32 v6 h-32 Z" fill="#2f5fa4" ${T}/>
+    <path d="M12 16 h9 v18 h-9 Z M27 16 h9 v18 h-9 Z" fill="#2f5fa4" ${T}/>
+    <path d="M12 16 h9 v3 h-9 Z M27 16 h9 v3 h-9 Z" fill="#8a8f96" ${T} stroke-width="1"/>
+    <path d="M36 27 h8 M44 22 v10" stroke="#3b2a1e" stroke-width="2.4" stroke-linecap="round"/>`,
+  groupe_electrogene: `
+    <path d="M6 14 h36 v24 h-36 Z" fill="none" stroke="#3b2a1e" stroke-width="2.6"/>
+    <rect x="9" y="18" width="16" height="17" rx="3" fill="#c8362b" ${T}/>
+    <rect x="26" y="20" width="13" height="15" rx="2" fill="#55524d" ${T}/>
+    <rect x="11" y="10" width="14" height="6" rx="2" fill="#c8362b" ${T}/>
+    <path d="M29 24 h7 M29 28 h7" stroke="#8a8f96" stroke-width="1.6"/><path d="M8 42 v-4 M40 42 v-4" ${T}/>`,
+  rallonge: `
+    <circle cx="22" cy="25" r="15" fill="#e8743a" ${T}/>
+    <circle cx="22" cy="25" r="6" fill="#e9e0c8" ${T}/>
+    <path d="M9 20 Q22 12 35 20 M8 28 Q22 20 36 28 M11 34 Q22 28 33 34" fill="none" stroke="#b8541e" stroke-width="1.4"/>
+    <path d="M36 30 Q40 34 38 40" fill="none" stroke="#e8743a" stroke-width="3" stroke-linecap="round"/>
+    <rect x="34" y="39" width="8" height="6" rx="1.5" fill="#f4ecd8" ${T}/>`,
+  // ---- La voiture ----
+  enjoliveur: `
+    <circle cx="24" cy="24" r="18" fill="#c9ccd0" ${T}/>
+    <circle cx="24" cy="24" r="6" fill="#8a8f96" ${T}/>
+    <path d="M24 8 v10 M24 30 v10 M8 24 h10 M30 24 h10 M13 13 l7 7 M28 28 l7 7 M35 13 l-7 7 M20 28 l-7 7" stroke="#8a8f96" stroke-width="2.6" stroke-linecap="round"/>
+    <path d="M12 17 a14 14 0 0 1 6 -6" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>`,
+  retroviseur: `
+    <path d="M6 14 Q6 8 14 8 H38 Q44 8 42 16 L40 28 Q39 33 33 33 H12 Q6 33 6 27 Z" fill="#2b2b2b" ${T}/>
+    <path d="M10 14 Q10 11 14 11 H37 Q40 11 39 15 L37 26 Q36 29 32 29 H13 Q10 29 10 26 Z" fill="#a8d0e0"/>
+    <path d="M14 24 L22 14 M20 26 L28 16" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"/>
+    <path d="M22 33 v9 h8" fill="none" ${T} stroke-width="3"/>`,
+  ceinture_securite: `
+    <path d="M6 10 L30 34" stroke="#3b2a1e" stroke-width="9" stroke-linecap="round"/>
+    <path d="M6 10 L30 34" stroke="#55606a" stroke-width="6" stroke-linecap="round"/>
+    <rect x="28" y="30" width="12" height="9" rx="2" transform="rotate(45 34 34.5)" fill="#c9ccd0" ${T}/>
+    <rect x="36" y="38" width="8" height="6" rx="1.5" fill="#c8362b" ${T}/>`,
+  cables_demarrage: `
+    <path d="M8 40 C8 22 24 30 22 14" fill="none" stroke="#3b2a1e" stroke-width="5.6" stroke-linecap="round"/>
+    <path d="M8 40 C8 22 24 30 22 14" fill="none" stroke="#c8362b" stroke-width="3" stroke-linecap="round"/>
+    <path d="M40 40 C40 24 28 30 30 14" fill="none" stroke="#3b2a1e" stroke-width="5.6" stroke-linecap="round"/>
+    <path d="M40 40 C40 24 28 30 30 14" fill="none" stroke="#2b2b2b" stroke-width="3" stroke-linecap="round"/>
+    <path d="M18 14 l4 -10 l4 10 Z" fill="#c8362b" ${T}/><path d="M26 14 l4 -10 l4 10 Z" fill="#55524d" ${T}/>`,
+  cric: `
+    <path d="M6 40 h36" ${T} stroke-width="3"/>
+    <path d="M10 40 L24 20 L38 40 M10 40 L24 30 L38 40" fill="none" stroke="#3b2a1e" stroke-width="4.6" stroke-linejoin="round"/>
+    <path d="M10 40 L24 20 L38 40 M10 40 L24 30 L38 40" fill="none" stroke="#c8362b" stroke-width="2.2" stroke-linejoin="round"/>
+    <rect x="17" y="13" width="14" height="7" fill="#55524d" ${T}/>
+    <path d="M38 33 h6" ${T} stroke-width="2.4"/>`,
+  sapin_desodorisant: `
+    <path d="M24 3 v6" ${T}/><circle cx="24" cy="3" r="1.5" fill="none" ${T} stroke-width="1"/>
+    <path d="M24 9 L32 19 H28 L35 28 H30 L38 38 H10 L18 28 H13 L20 19 H16 Z" fill="#3f8f4a" ${T}/>
+    <rect x="21" y="38" width="6" height="5" fill="#3f8f4a" ${T}/>
+    <path d="M18 31 h12" stroke="#f4ecd8" stroke-width="1.6" stroke-linecap="round"/>`,
+  boite_gants_pv: `
+    <path d="M5 14 h38 v24 h-38 Z" fill="#3a3a3a" ${T}/>
+    <path d="M9 18 h30 v16 h-30 Z" fill="#1f1f1f"/>
+    <g ${T} stroke-width="1.2"><path d="M12 30 l5 -14 l10 3 l-3 13 Z" fill="#f4ecd8"/><path d="M22 32 l3 -15 l11 2 l-2 14 Z" fill="#e8f0d8"/></g>
+    <path d="M26 22 h7 M25 26 h7" stroke="#c8362b" stroke-width="1.4"/>`,
+  // ---- La ferme ----
+  beche: `
+    <path d="M24 4 v28" stroke="#3b2a1e" stroke-width="5" stroke-linecap="round"/>
+    <path d="M24 4 v28" stroke="#a07c48" stroke-width="2.6" stroke-linecap="round"/>
+    <path d="M18 4 h12" ${T} stroke-width="3"/>
+    <path d="M15 28 h18 v10 q-1 6 -9 7 q-8 -1 -9 -7 Z" fill="#8a8f96" ${T}/>
+    <path d="M18 33 h12" stroke="#c9ccd0" stroke-width="1.4"/>`,
+  secateur: `
+    <path d="M24 22 L12 42" stroke="#3b2a1e" stroke-width="6" stroke-linecap="round"/><path d="M24 22 L12 42" stroke="#c8362b" stroke-width="3.6" stroke-linecap="round"/>
+    <path d="M24 22 L36 42" stroke="#3b2a1e" stroke-width="6" stroke-linecap="round"/><path d="M24 22 L36 42" stroke="#c8362b" stroke-width="3.6" stroke-linecap="round"/>
+    <path d="M24 22 Q14 14 20 4 Q26 12 24 22 Z" fill="#c9ccd0" ${T}/>
+    <path d="M24 22 Q34 14 28 5 Q24 12 24 22 Z" fill="#8a8f96" ${T}/>
+    <circle cx="24" cy="22" r="2" fill="#3b2a1e"/>`,
+  tuyau_arrosage: `
+    <circle cx="22" cy="24" r="15" fill="none" stroke="#3b2a1e" stroke-width="9"/>
+    <circle cx="22" cy="24" r="15" fill="none" stroke="#5d9a46" stroke-width="5.6"/>
+    <circle cx="22" cy="24" r="8" fill="none" stroke="#3b2a1e" stroke-width="7"/>
+    <circle cx="22" cy="24" r="8" fill="none" stroke="#4a8a3a" stroke-width="3.6"/>
+    <path d="M36 30 l7 6" stroke="#3b2a1e" stroke-width="5" stroke-linecap="round"/><path d="M41 34 l3 3" stroke="#e8c43a" stroke-width="3" stroke-linecap="round"/>`,
+  sac_engrais: `
+    <path d="M10 12 Q9 8 13 8 H35 Q39 8 38 12 L40 39 Q40 43 36 43 H12 Q8 43 8 39 Z" fill="#e8e0c0" ${T}/>
+    <path d="M12 8 Q14 12 12 15 M36 8 Q34 12 36 15" fill="none" stroke-width="1.2" ${T}/>
+    <path d="M16 24 Q24 14 32 24 Q24 22 16 24 Z" fill="#5d8a46" ${T} stroke-width="1"/>
+    <path d="M24 22 v10" stroke="#5d8a46" stroke-width="2"/>
+    <rect x="14" y="33" width="20" height="5" fill="#c8362b"/>`,
+  grillage_rouleau: `
+    <ellipse cx="13" cy="24" rx="7" ry="15" fill="#d6d2ca" ${T}/>
+    <path d="M13 9 H38 M13 39 H38" ${T}/>
+    <path d="M38 9 a7 15 0 0 1 0 30" fill="none" ${T}/>
+    <path d="M18 12 l5 5 l5 -5 l5 5 M18 22 l5 5 l5 -5 l5 5 M18 32 l5 5 l5 -5 l5 5 M23 17 v5 M33 17 v5 M23 27 v5 M33 27 v5" fill="none" stroke="#8a8f96" stroke-width="1.4"/>
+    <ellipse cx="13" cy="24" rx="3" ry="8" fill="#e9e0c8" ${T} stroke-width="1"/>`,
 };
 
 /** Les teintes de chaque famille de vestiges, pour l'icône générique : chaque objet en prend une, toujours la même. */
@@ -505,6 +817,11 @@ function dessinDe(type: Pictogramme): string {
   const v = definitionVestige(type);
   if (v) return dessinGenerique(v.famille, v.teinte ?? teinteDe(type, v.famille));
   return `<rect x="8" y="8" width="32" height="32" rx="5" fill="#d6d2ca" ${T}/><path d="M19 19 Q19 13 24 13 Q29 13 29 18 Q29 22 24 24 V28 M24 33 v1" fill="none" ${T} stroke-width="2.6"/>`;
+}
+
+/** Vrai si l'objet a son propre dessin (et pas l'icône générique de sa famille). */
+export function estDessinee(type: Pictogramme): boolean {
+  return (DESSINS[type] ?? DESSINS_VESTIGES[type]) !== undefined;
 }
 
 export function icone(type: Pictogramme, taille = 40): string {

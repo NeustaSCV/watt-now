@@ -6,12 +6,13 @@
 
 import { fusionnerStatique } from "./fusion.ts";
 import { Panache } from "./panache.ts";
+import { batterieVoiture, modulePanneau, roueVelo } from "./pieces.ts";
 import { decharge, majTrouvailles } from "./decharge.ts";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import type { InstallationVue } from "../../../commun/src/messages.ts";
 import { PALETTE, aleatoire } from "./materiaux.ts";
-import { ACIER, Assemblage, BOIS, CORDE, NOIR, ROUILLE_SOMBRE, V, V3, X, Y, Z, bosseler, placer, surface, tache, touffe } from "./assemblage.ts";
+import { ACIER, Assemblage, BOIS, type Finition, CORDE, NOIR, ROUILLE_SOMBRE, V, V3, X, Y, Z, bosseler, placer, surface, tache, touffe } from "./assemblage.ts";
 
 const BACHE = 0x2f6fa4;
 const BACHE_PASSEE = 0x4a7fa8;
@@ -43,9 +44,9 @@ function caillou(c: Assemblage, x: number, y: number, z: number, r: number, alea
 }
 
 /** Une corde ou un câble souple, le long d'une courbe. */
-function corde(c: Assemblage, points: THREE.Vector3[], rayon: number, couleur: number = CORDE, segments = 8): void {
+function corde(c: Assemblage, points: THREE.Vector3[], rayon: number, couleur: number = CORDE, segments = 8, finition: Finition = "mat"): void {
   const courbe = new THREE.CatmullRomCurve3(points);
-  c.ajouter(new THREE.TubeGeometry(courbe, segments, rayon, 3, false), couleur, "mat", 0.03);
+  c.ajouter(new THREE.TubeGeometry(courbe, segments, rayon, 3, false), couleur, finition, 0.03);
 }
 
 /** Une corde tendue entre deux points, qui pend un peu (chaînette approchée). */
@@ -403,7 +404,7 @@ function forge(): THREE.Group {
   c.ajouter(placer(new THREE.BoxGeometry(0.95, 0.04, 0.42), 0, 0.51, 0), 0x2f2a26, "mat");
   for (let i = 0; i < 26; i++) {
     const r = 0.03 + aleat() * 0.03;
-    c.ajouter(placer(bosseler(new THREE.DodecahedronGeometry(r * 0.8, 0), r * 0.2, aleat), (aleat() - 0.5) * 0.8, 0.54 + aleat() * 0.03, (aleat() - 0.5) * 0.3, aleat() * 3, aleat() * 3, 0), i % 5 === 0 ? 0x4a4440 : CHARBON, "mat", 0.05);
+    c.ajouter(placer(bosseler(new THREE.OctahedronGeometry(r * 0.9, 0), r * 0.25, aleat), (aleat() - 0.5) * 0.8, 0.54 + aleat() * 0.03, (aleat() - 0.5) * 0.3, aleat() * 3, aleat() * 3, 0), i % 5 === 0 ? 0x4a4440 : CHARBON, "mat", 0.05);
   }
   // La tuyère : un tuyau de fer qui entre dans le foyer côté soufflet.
   c.perche(new V3(-0.78, 0.29, 0), new V3(-0.5, 0.4, 0), 0.03, 0x4a4440, "metal", 6);
@@ -447,24 +448,12 @@ function forge(): THREE.Group {
   c.ajouter(placer(new THREE.CircleGeometry(0.155, 10).rotateX(-Math.PI / 2), 0.9, 0.29, -0.62), 0x2c3a40, "verre");
   for (let i = 0; i < 18; i++) {
     const r = 0.04 + aleat() * 0.03;
-    c.ajouter(placer(bosseler(new THREE.DodecahedronGeometry(r * 0.8, 0), r * 0.2, aleat), -0.7 + (aleat() - 0.5) * 0.35, 0.02 + aleat() * 0.08, -0.62 + (aleat() - 0.5) * 0.3, aleat() * 3, aleat() * 3, 0), CHARBON, "mat", 0.05);
+    c.ajouter(placer(bosseler(new THREE.OctahedronGeometry(r * 0.9, 0), r * 0.25, aleat), -0.7 + (aleat() - 0.5) * 0.35, 0.02 + aleat() * 0.08, -0.62 + (aleat() - 0.5) * 0.3, aleat() * 3, aleat() * 3, 0), CHARBON, "mat", 0.05);
   }
   return enGroupe(c);
 }
 
 // ---------- Le pédalier ----------
-
-/** Une roue de vélo d'axe z, centrée sur l'origine : pneu, jante, rayons, moyeu. */
-function roueVelo(c: Assemblage, rayon: number, pneu = 0x2b2b2b, jante = 0x9a968c): void {
-  c.ajouter(new THREE.TorusGeometry(rayon, 0.026, 5, 22), pneu, "mat", 0.03);
-  c.ajouter(new THREE.TorusGeometry(rayon - 0.03, 0.01, 3, 22), jante, "metal");
-  for (let i = 0; i < 12; i++) {
-    const a = (i / 12) * Math.PI * 2;
-    const s = i % 2 === 0 ? 1 : -1;
-    c.perche(new V3(0, 0, s * 0.02), new V3(Math.cos(a) * (rayon - 0.035), Math.sin(a) * (rayon - 0.035), 0), 0.0035, 0xb0aca2, "metal", 3);
-  }
-  c.ajouter(new THREE.CylinderGeometry(0.025, 0.025, 0.1, 6).rotateX(Math.PI / 2), 0x55524d, "metal");
-}
 
 function pedalier(): { groupe: THREE.Group; meule: THREE.Object3D; dynamo: THREE.Object3D; roue: THREE.Object3D; manivelle: THREE.Object3D } {
   const c = new Assemblage(18);
@@ -499,13 +488,13 @@ function pedalier(): { groupe: THREE.Group; meule: THREE.Object3D; dynamo: THREE
   c.ligature(new V3(-0.6, 0.8, 0), Y, 0.08);
   // Les taches de peinture d'origine qui restent sous la rouille.
   c.perche(pedale.clone().lerp(douilleBas, 0.3), pedale.clone().lerp(douilleBas, 0.6), 0.0235, 0x4d6a7a, "tole", 6);
-  c.perche(selle, selle.clone().add(new V3(0.01, 0.1, 0)), 0.013, ACIER, "metal", 5);
+  c.perche(selle, selle.clone().add(new V3(0.01, 0.1, 0)), 0.013, ACIER, "tole", 5);
   c.ajouter(placer(bosseler(new THREE.BoxGeometry(0.26, 0.05, 0.13, 2, 1, 1), 0.008, aleat).scale(1, 1, 1), selle.x - 0.02, selle.y + 0.12, 0), 0x2b2622, "mat", 0.04);
-  c.perche(douille.clone().add(new V3(0.02, 0.06, 0)), douille.clone().add(new V3(-0.06, 0.14, 0)), 0.014, ACIER, "metal", 5);
-  c.perche(new V3(-0.06, 0, -0.24).add(douille).add(new V3(0, 0.14, 0)), new V3(-0.06, 0, 0.24).add(douille).add(new V3(0, 0.14, 0)), 0.012, ACIER, "metal", 5);
+  c.perche(douille.clone().add(new V3(0.02, 0.06, 0)), douille.clone().add(new V3(-0.06, 0.14, 0)), 0.014, ACIER, "tole", 5);
+  c.perche(new V3(-0.06, 0, -0.24).add(douille).add(new V3(0, 0.14, 0)), new V3(-0.06, 0, 0.24).add(douille).add(new V3(0, 0.14, 0)), 0.012, ACIER, "tole", 5);
   for (const s of [-1, 1]) c.perche(douille.clone().add(new V3(-0.06, 0.14, s * 0.18)), douille.clone().add(new V3(-0.06, 0.14, s * 0.27)), 0.02, NOIR, "mat", 6);
   // La chaîne, du plateau au pignon de la roue (en haut et en bas).
-  for (const [dy0, dy1] of [[0.1, 0.05], [-0.1, -0.05]] as const) c.perche(pedale.clone().add(new V3(0, dy0, 0.05)), moyeu.clone().add(new V3(0, dy1, 0.05)), 0.006, 0x3a3836, "metal", 3);
+  for (const [dy0, dy1] of [[0.1, 0.05], [-0.1, -0.05]] as const) c.perche(pedale.clone().add(new V3(0, dy0, 0.05)), moyeu.clone().add(new V3(0, dy1, 0.05)), 0.006, 0x3a3836, "tole", 3);
   const groupe = enGroupe(c);
 
   // La manivelle (plateau, bielles, pédales) : elle tourne avec la roue.
@@ -513,7 +502,7 @@ function pedalier(): { groupe: THREE.Group; meule: THREE.Object3D; dynamo: THREE
   m.ajouter(new THREE.CylinderGeometry(0.1, 0.1, 0.012, 14).rotateX(Math.PI / 2).translate(0, 0, 0.05), 0x55524d, "metal");
   for (const s of [-1, 1]) {
     m.boite(0x77746c, "metal", 0.03, 0.17, 0.015, 0, (s * 0.17) / 2, s * 0.075);
-    m.boite(0x2b2b2b, "mat", 0.1, 0.022, 0.07, 0, s * 0.17, s * 0.12);
+    m.boite(0x2b2b2b, "metal", 0.1, 0.022, 0.07, 0, s * 0.17, s * 0.12);
   }
   const manivelle = enGroupe(m);
   manivelle.position.copy(pedale);
@@ -527,8 +516,8 @@ function pedalier(): { groupe: THREE.Group; meule: THREE.Object3D; dynamo: THREE
   // La meule de grès (montée plus tard), sur l'axe prolongé : elle tourne avec la roue.
   const mm = new Assemblage(24);
   mm.ajouter(bosseler(new THREE.CylinderGeometry(0.21, 0.21, 0.07, 16, 1).rotateX(Math.PI / 2), 0.006, aleat), 0xa49a86, "mat", 0.05);
-  mm.ajouter(new THREE.CylinderGeometry(0.035, 0.035, 0.08, 6).rotateX(Math.PI / 2), 0x55524d, "metal");
-  mm.ajouter(new THREE.CylinderGeometry(0.018, 0.018, 0.3, 5).rotateX(Math.PI / 2).translate(0, 0, -0.13), ACIER, "metal");
+  mm.ajouter(new THREE.CylinderGeometry(0.035, 0.035, 0.08, 6).rotateX(Math.PI / 2), 0x55524d, "mat");
+  mm.ajouter(new THREE.CylinderGeometry(0.018, 0.018, 0.3, 5).rotateX(Math.PI / 2).translate(0, 0, -0.13), ACIER, "mat");
   const meule = enGroupe(mm);
   meule.position.set(moyeu.x, moyeu.y, 0.3);
   // La dynamo (montée plus tard), en appui sur le pneu, et son fil qui file vers le banc.
@@ -538,27 +527,13 @@ function pedalier(): { groupe: THREE.Group; meule: THREE.Object3D; dynamo: THREE
   d.perche(contre, contre.clone().add(new V3(0.04, 0.14, 0)), 0.026, 0xc9ccd0, "metal", 8);
   d.ajouter(placer(new THREE.CylinderGeometry(0.015, 0.012, 0.03, 6), contre.x - 0.004, contre.y - 0.015, contre.z), NOIR, "metal");
   d.perche(contre.clone().add(new V3(0.02, 0.05, -0.02)), moyeu.clone().add(new V3(0.15, 0.06, -0.06)), 0.007, ACIER, "metal", 4);
-  corde(d, [contre.clone().add(new V3(0.04, 0.14, -0.02)), contre.clone().add(new V3(0.12, 0.05, -0.1)), new V3(0.85, 0.2, -0.25), new V3(0.75, 0.02, -0.45), new V3(0.4, 0.015, -0.7)], 0.007, 0xd2691e, 12);
+  corde(d, [contre.clone().add(new V3(0.04, 0.14, -0.02)), contre.clone().add(new V3(0.12, 0.05, -0.1)), new V3(0.85, 0.2, -0.25), new V3(0.75, 0.02, -0.45), new V3(0.4, 0.015, -0.7)], 0.007, 0xd2691e, 12, "metal");
   const dynamo = enGroupe(d);
   groupe.add(manivelle, roue, meule, dynamo);
   return { groupe, meule, dynamo, roue, manivelle };
 }
 
 // ---------- Le banc de recharge ----------
-
-/** Une batterie de voiture : bac noir, couvercle, bouchons des éléments, bornes, poignée, étiquette. */
-function batterieVoiture(c: Assemblage): void {
-  c.boite(0x2b2b2b, "mat", 0.34, 0.18, 0.2, 0, 0.09, 0);
-  c.boite(0x353535, "mat", 0.345, 0.03, 0.205, 0, 0.195, 0);
-  for (let i = 0; i < 6; i++) c.ajouter(placer(new THREE.CylinderGeometry(0.014, 0.014, 0.012, 6), -0.12 + i * 0.048, 0.215, 0.04), 0x4a4744, "mat");
-  for (const [x, couleur] of [[-0.12, 0xc8362b], [0.12, 0x3a3836]] as const) {
-    c.ajouter(placer(new THREE.CylinderGeometry(0.016, 0.018, 0.03, 6), x, 0.225, -0.05), 0x8f8a80, "metal");
-    c.ajouter(placer(new THREE.CylinderGeometry(0.022, 0.022, 0.012, 6), x, 0.24, -0.05), couleur, "mat");
-  }
-  c.plaque([V(-0.1, 0.05), V(0.1, 0.05), V(0.1, 0.14), V(-0.1, 0.14)], surface(new V3(0, 0, 0.1), X, Y, Z), 0xd8ccb0, "mat", 0.003);
-  c.plaque([V(-0.1, 0.11), V(0.1, 0.11), V(0.1, 0.14), V(-0.1, 0.14)], surface(new V3(0, 0, 0.1), X, Y, Z), 0xa8645a, "mat", 0.005);
-  c.ajouter(placer(new THREE.TorusGeometry(0.09, 0.008, 3, 8, Math.PI), 0, 0.21, 0), NOIR, "mat");
-}
 
 function banc(): { groupe: THREE.Group; posees: THREE.Group; voyant: THREE.Mesh } {
   const c = new Assemblage(37);
@@ -616,21 +591,6 @@ function banc(): { groupe: THREE.Group; posees: THREE.Group; voyant: THREE.Mesh 
 }
 
 // ---------- Le panneau solaire ----------
-
-/** Le panneau photovoltaïque (cadre d'alu, cellules en damier, boîte de jonction), à plat, face vers +y. */
-export function modulePanneau(c: Assemblage): void {
-  c.boite(0xb9bcc0, "metal", 1.1, 0.04, 0.7, 0, 0, 0);
-  const dessus = surface(new V3(0, 0.021, 0), X, Z, Y);
-  c.plaque([V(-0.53, -0.33), V(0.53, -0.33), V(0.53, 0.33), V(-0.53, 0.33)], dessus, 0xd8dde4, "metal", 0.001);
-  for (let i = 0; i < 6; i++) {
-    for (let j = 0; j < 4; j++) {
-      const u = -0.44 + i * 0.176;
-      const v = -0.24 + j * 0.16;
-      c.plaque([V(u - 0.083, v - 0.075), V(u + 0.083, v - 0.075), V(u + 0.083, v + 0.075), V(u - 0.083, v + 0.075)], dessus, (i + j) % 3 === 0 ? 0x24405e : 0x1f3550, "verre", 0.003);
-    }
-  }
-  c.boite(0x2b2b2b, "mat", 0.12, 0.04, 0.08, 0, -0.04, 0.2);
-}
 
 function panneauSolaire(): THREE.Group {
   const c = new Assemblage(41);

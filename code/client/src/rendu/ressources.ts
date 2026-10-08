@@ -4,15 +4,70 @@ import * as THREE from "three";
 import { MARE, RESTE_EN_PLACE, rayonMare, type RessourceSol } from "../../../commun/src/terrain.ts";
 import { PERIODES_FRUITIERS, phaseFruitier, visibleEnSaison } from "../../../commun/src/calendrier.ts";
 import { PALETTE, aleatoire, materiau } from "./materiaux.ts";
-import { ACIER, Assemblage, NOIR, ROUILLE_SOMBRE, SOL_PLAT, V, V3, X, Y, Z, courber, disque, placer, rect, rouille, surface, tache, touffe, type Surface } from "./assemblage.ts";
+import { ACIER, Assemblage, BOIS, CORDE, NOIR, ROUILLE_SOMBRE, SOL_PLAT, V, V3, X, Y, Z, bosseler, courber, disque, placer, rect, rouille, surface, tache, touffe, type Surface } from "./assemblage.ts";
+import { batterieVoiture, modulePanneau, roueVelo } from "./pieces.ts";
 
-const geoBranche = new THREE.CylinderGeometry(0.03, 0.045, 1.1, 5).rotateZ(Math.PI / 2).translate(0, 0.05, 0);
-const geoRameau = new THREE.CylinderGeometry(0.015, 0.025, 0.4, 4).rotateZ(Math.PI / 2.6).translate(0.2, 0.12, 0.05);
-const geoBuche = new THREE.CylinderGeometry(0.11, 0.12, 0.62, 7).rotateZ(Math.PI / 2).translate(0, 0.12, 0);
-const geoCoupe = new THREE.CircleGeometry(0.105, 7).rotateY(Math.PI / 2).translate(0.311, 0.12, 0);
-const geoPierre = new THREE.DodecahedronGeometry(0.2, 0);
-const geoBuisson = new THREE.IcosahedronGeometry(0.55, 0);
-const geoBaie = new THREE.SphereGeometry(0.045, 5, 4);
+/**
+ * Les modèles partagés des ressources dessinées en lots (lots.ts : une géométrie et un matériau par type, un appel
+ * de dessin pour toutes). Faits une fois, à la première demande, avec l'assemblage à couleurs par sommet (2026-10-08) :
+ * écorce nuancée, bouts cassés plus clairs, cernes des bûches, lichen sur les pierres.
+ */
+const modeles = new Map<string, THREE.Mesh>();
+function modelePartage(cle: string, construire: (c: Assemblage, aleat: () => number) => void): THREE.Mesh {
+  let m = modeles.get(cle);
+  if (!m) {
+    const c = new Assemblage(cle.length * 17 + cle.charCodeAt(cle.length - 1));
+    c.occlusion = 0.12;
+    c.forceOcclusion = 0.3;
+    construire(c, aleatoire(cle.length * 31 + cle.charCodeAt(0)));
+    m = c.maillages()[0]!;
+    modeles.set(cle, m);
+  }
+  const copie = new THREE.Mesh(m.geometry, m.material);
+  copie.castShadow = true;
+  copie.receiveShadow = true;
+  return copie;
+}
+
+/** Une branche morte tombée : un bois tordu, deux rameaux, les bouts cassés plus clairs. */
+function branche(c: Assemblage): void {
+  const ecorce = PALETTE.boisSombre;
+  const a = new V3(-0.55, 0.04, 0.02);
+  const m = new V3(0.05, 0.06, -0.04);
+  const b = new V3(0.55, 0.045, 0.05);
+  c.perche(a, m, 0.042, ecorce, "mat", 6, 0.036, 0.08);
+  c.perche(m, b, 0.036, ecorce, "mat", 6, 0.026, 0.08);
+  c.perche(new V3(-0.15, 0.06, -0.01), new V3(0.18, 0.2, 0.16), 0.02, ecorce, "mat", 5, 0.01);
+  c.perche(new V3(0.25, 0.055, 0.0), new V3(0.48, 0.12, -0.2), 0.016, ecorce, "mat", 4, 0.008);
+  c.perche(new V3(0.38, 0.05, 0.03), new V3(0.46, 0.09, 0.12), 0.01, ecorce, "mat", 4, 0.005);
+  for (const [p, r] of [[a, 0.04], [b, 0.025]] as const) c.ajouter(placer(new THREE.DodecahedronGeometry(r, 0).scale(0.4, 1, 1), p.x, p.y, p.z), 0xb08a5a, "mat");
+}
+
+/** Une bûche fendue au carré : écorce striée, cernes clairs aux deux bouts, un moignon de branche. */
+function buche(c: Assemblage, aleat: () => number): void {
+  const g = bosseler(new THREE.CylinderGeometry(0.11, 0.12, 0.62, 9, 2).rotateZ(Math.PI / 2), 0.008, aleat).translate(0, 0.12, 0);
+  c.ajouterDegrade(g, (p) => {
+    if (Math.abs(p.x) > 0.305) return BOIS.coupe;
+    const a = Math.atan2(p.y - 0.12, p.z);
+    return Math.sin(a * 9 + p.x * 4) > 0.55 ? 0x5e4430 : Math.sin(a * 5) > 0.7 ? 0x8a6a48 : PALETTE.bois;
+  });
+  for (const s of [-1, 1]) {
+    c.ajouter(placer(new THREE.CircleGeometry(0.085, 9).rotateY((s * Math.PI) / 2), s * 0.312, 0.12, 0), 0xd9bc8e);
+    c.ajouter(placer(new THREE.RingGeometry(0.045, 0.052, 9).rotateY((s * Math.PI) / 2), s * 0.314, 0.12, 0), 0xa8865a);
+    c.ajouter(placer(new THREE.CircleGeometry(0.012, 5).rotateY((s * Math.PI) / 2), s * 0.315, 0.12, 0), 0x8a6a48);
+  }
+  c.perche(new V3(0.05, 0.2, 0.05), new V3(0.12, 0.27, 0.12), 0.022, PALETTE.boisSombre, "mat", 5, 0.016);
+}
+
+/** Une pierre des champs : bosselée, le dessus plus clair, une tache de lichen. */
+function pierre(c: Assemblage, aleat: () => number, sombre: boolean): void {
+  const g = bosseler(new THREE.IcosahedronGeometry(0.2, 1), 0.035, aleat).scale(1.2, 0.62, 1).translate(0, 0.09, 0);
+  const base = sombre ? PALETTE.pierreSombre : PALETTE.pierre;
+  const lichen = new V3((aleat() - 0.5) * 0.2, 0.2, (aleat() - 0.5) * 0.2);
+  c.ajouterDegrade(g, (p) => (p.distanceTo(lichen) < 0.08 ? 0xa8a86a : p.y > 0.15 ? new THREE.Color(base).offsetHSL(0, 0, 0.04).getHex() : base));
+}
+
+const geoBaie = new THREE.IcosahedronGeometry(0.042, 0);
 
 /** L'allure de chaque fruitier : tronc, houppier, et ses fruits (couleur, taille, nombre). */
 const FRUITIERS = {
@@ -105,122 +160,139 @@ export class VueRessource {
 
     switch (donnees.type) {
       case "branche":
-        this.objet.add(ombre(new THREE.Mesh(geoBranche, materiau(PALETTE.boisSombre))), new THREE.Mesh(geoRameau, materiau(PALETTE.boisSombre)));
+        this.objet.add(modelePartage("branche", branche));
         break;
       case "buche":
-        this.objet.add(ombre(new THREE.Mesh(geoBuche, materiau(PALETTE.bois))), new THREE.Mesh(geoCoupe, materiau(0xc9a77a)));
+        this.objet.add(modelePartage("buche", buche));
         break;
       case "pierre": {
-        const m = ombre(new THREE.Mesh(geoPierre, materiau(aleat() < 0.5 ? PALETTE.pierre : PALETTE.pierreSombre)));
-        m.scale.set(1.2, 0.7, 1);
-        m.position.y = 0.1;
-        this.objet.add(m);
+        const sombre = aleat() < 0.5;
+        this.objet.add(modelePartage(sombre ? "pierre sombre" : "pierre", (c, a) => pierre(c, a, sombre)));
         break;
       }
-      case "velo": {
-        // Un vieux vélo couché dans l'herbe : deux roues, le cadre, le guidon.
-        const roue = new THREE.TorusGeometry(0.33, 0.035, 5, 16);
-        const cadre = materiau(PALETTE.rouille, { rugosite: 0.7, metal: 0.3 });
-        const r1 = ombre(new THREE.Mesh(roue, materiau(0x2b2b2b)));
-        const r2 = ombre(new THREE.Mesh(roue, materiau(0x2b2b2b)));
-        r1.rotation.x = r2.rotation.x = Math.PI / 2 - 0.12;
-        r1.position.set(-0.52, 0.07, 0);
-        r2.position.set(0.52, 0.1, 0.05);
-        const tube = (l: number) => new THREE.CylinderGeometry(0.025, 0.025, l, 5);
-        const t1 = ombre(new THREE.Mesh(tube(0.75), cadre));
-        t1.rotation.z = Math.PI / 2;
-        t1.position.set(0, 0.13, -0.1);
-        const t2 = ombre(new THREE.Mesh(tube(0.55), cadre));
-        t2.rotation.set(Math.PI / 2 - 0.1, 0, 0.6);
-        t2.position.set(-0.12, 0.1, -0.05);
-        const guidon = ombre(new THREE.Mesh(tube(0.45), materiau(0x55524d, { metal: 0.5, rugosite: 0.5 })));
-        guidon.position.set(0.45, 0.22, -0.1);
-        this.objet.add(r1, r2, t1, t2, guidon);
+      case "velo":
+        this.velo(aleat, ombre);
         break;
-      }
-      case "caisse_outils": {
-        const caisse = ombre(new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.3, 0.32), materiau(0x7a2f22, { rugosite: 0.6, metal: 0.3 })));
-        caisse.position.y = 0.15;
-        const poignee = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.015, 4, 10, Math.PI), materiau(0x55524d));
-        poignee.position.y = 0.3;
-        this.objet.add(caisse, poignee);
+      case "caisse_outils":
+        this.caisseOutils(aleat, ombre);
         break;
-      }
       case "batterie_voiture": {
-        const b = ombre(new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.22, 0.2), materiau(0x2b2b2b, { rugosite: 0.5 })));
-        b.position.y = 0.11;
-        const plus = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.05, 6), materiau(0xc8362b));
-        plus.position.set(-0.11, 0.245, 0);
-        const moins = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.05, 6), materiau(0x8f8a80));
-        moins.position.set(0.11, 0.245, 0);
-        this.objet.add(b, plus, moins);
+        // La batterie de la vieille voiture, dans l'herbe : celle qu'on posera sur le banc (pieces.ts), crottée.
+        const c = new Assemblage(donnees.id);
+        c.occlusion = 0.12;
+        batterieVoiture(c);
+        c.plaque(tache(0, 0, 0.25, 0.18, aleat, 8), SOL_PLAT, 0x4d4a42, "sol", 0.012);
+        touffe(c, 0.2, 0.12, aleat, 3, 0.25);
+        touffe(c, -0.18, -0.1, aleat, 2, 0.2);
+        for (const m of c.maillages(ombre)) this.objet.add(m);
         break;
       }
       case "ressort": {
+        // Une lame de ressort de camion : trois lames cintrées, les œils roulés aux bouts, la bride au milieu, la rouille.
+        const c = new Assemblage(donnees.id);
         for (let i = 0; i < 3; i++) {
-          const lame = ombre(new THREE.Mesh(new THREE.BoxGeometry(1.1 - i * 0.25, 0.03, 0.07), materiau(0x55524d, { metal: 0.5, rugosite: 0.5 })));
-          lame.position.set(0, 0.03 + i * 0.035, 0);
-          this.objet.add(lame);
+          const lame = courber(new THREE.BoxGeometry(1.1 - i * 0.28, 0.025, 0.07, 6, 1, 1), 0.1, 0.55);
+          c.ajouterDegrade(lame.translate(0, 0.0125 + (2 - i) * 0.026, 0), (q) => (Math.sin(q.x * 13 + i) > 0.5 ? PALETTE.rouille : i === 1 ? ROUILLE_SOMBRE : 0x55524d), "metal");
         }
+        for (const x of [-0.57, 0.57]) c.ajouter(placer(new THREE.TorusGeometry(0.035, 0.013, 4, 8), x, 0.17, 0), 0x55524d, "metal");
+        c.boite(0x3a3836, "metal", 0.09, 0.1, 0.09, 0, 0.06, 0);
+        touffe(c, 0.2, 0.1, aleat, 3, 0.3);
+        for (const m of c.maillages(ombre)) this.objet.add(m);
         break;
       }
       case "bache": {
-        const b = ombre(new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.12, 0.4), materiau(0x2f6fa4, { rugosite: 0.6 })));
-        b.position.y = 0.06;
-        b.rotation.y = 0.3;
-        this.objet.add(b);
+        // La bâche pliée, roulée en ballot et ficelée ; un coin défait retombe dans l'herbe.
+        const c = new Assemblage(donnees.id);
+        c.occlusion = 0.1;
+        for (let i = 0; i < 4; i++) c.ajouter(placer(bosseler(new THREE.BoxGeometry(0.56 - i * 0.03, 0.035, 0.4 - i * 0.02, 3, 1, 2), 0.008, aleat), (aleat() - 0.5) * 0.03, 0.02 + i * 0.034, (aleat() - 0.5) * 0.03), i % 2 ? 0x2a6292 : 0x2f6fa4, "toile", 0.03);
+        c.plaque([V(0.27, -0.18), V(0.5, -0.24), V(0.46, -0.02), V(0.27, 0.05)], SOL_PLAT, 0x3a74a6, "toile", 0.012);
+        for (const x of [-0.15, 0.15]) c.ajouter(placer(new THREE.TorusGeometry(0.21, 0.007, 3, 10).scale(1, 0.38, 1).rotateY(Math.PI / 2), x, 0.08, 0), 0xb59a6a, "mat", 0.04);
+        c.ajouter(placer(new THREE.TorusGeometry(0.016, 0.005, 3, 6).rotateX(Math.PI / 2), -0.26, 0.145, -0.18), 0x9a968c, "metal");
+        for (const m of c.maillages(ombre)) this.objet.add(m);
         break;
       }
       case "barre_metal": {
-        const b = ombre(new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1, 6).rotateZ(Math.PI / 2), materiau(0x6e6a63, { metal: 0.6, rugosite: 0.5 })));
-        b.position.y = 0.03;
-        this.objet.add(b);
+        // La barre à mine, rouillée, couchée dans l'herbe : le bout recourbé, l'autre en biseau.
+        const c = new Assemblage(donnees.id);
+        const tige = new THREE.CylinderGeometry(0.018, 0.018, 0.9, 6, 6).rotateZ(Math.PI / 2).translate(0, 0.02, 0);
+        c.ajouterDegrade(tige, (q) => (Math.sin(q.x * 23) + Math.sin(q.x * 61 + q.z * 90) > 0.8 ? PALETTE.rouille : 0x5c5953), "metal");
+        c.perche(new V3(0.45, 0.02, 0), new V3(0.53, 0.02, 0.06), 0.018, 0x5c5953, "metal", 6);
+        c.perche(new V3(0.53, 0.02, 0.06), new V3(0.53, 0.02, 0.12), 0.016, ROUILLE_SOMBRE, "metal", 6, 0.01);
+        touffe(c, -0.1, 0.05, aleat, 3, 0.28);
+        for (const m of c.maillages(ombre)) this.objet.add(m);
         break;
       }
       case "buisson": {
-        const feuilles = ombre(new THREE.Mesh(geoBuisson, materiau(PALETTE.feuillageSombre)));
-        feuilles.scale.set(1, 0.75, 1);
-        feuilles.position.y = 0.38;
-        this.objet.add(feuilles);
-        const baies = new THREE.Group();
-        for (let i = 0; i < 14; i++) {
-          const b = new THREE.Mesh(geoBaie, materiau(0xb3243a, { rugosite: 0.4 }));
+        // Un roncier de mûres : des lobes de feuillage bosselés, nuancés, quelques tiges ; les baies en grappes.
+        const c = new Assemblage(donnees.id);
+        c.occlusion = 0.35;
+        c.forceOcclusion = 0.35;
+        const lobes: [number, number, number, number][] = [[0, 0.38, 0, 0.5], [0.32, 0.28, 0.12, 0.34], [-0.3, 0.26, -0.1, 0.36], [0.05, 0.3, -0.32, 0.32], [-0.08, 0.6, 0.06, 0.3]];
+        for (const [x, y, z, r] of lobes) {
+          const g = bosseler(new THREE.IcosahedronGeometry(r, 1), r * 0.12, aleat).scale(1, 0.78, 1);
+          c.ajouter(placer(g, x, y, z, aleat(), aleat(), 0), [PALETTE.feuillageSombre, 0x4a7a40, 0x3a6236][Math.floor(aleat() * 3)]!, "mat", 0.05);
+        }
+        for (let i = 0; i < 5; i++) {
           const a = aleat() * Math.PI * 2;
-          const h = 0.15 + aleat() * 0.45;
-          b.position.set(Math.cos(a) * 0.5 * (1 - (h - 0.15) * 0.6), h, Math.sin(a) * 0.5 * (1 - (h - 0.15) * 0.6));
-          baies.add(b);
+          c.perche(new V3(0, 0, 0), new V3(Math.cos(a) * 0.55, 0.3 + aleat() * 0.3, Math.sin(a) * 0.55), 0.012, 0x5a3a3a, "mat", 4, 0.006);
+        }
+        for (const m of c.maillages(ombre)) this.objet.add(m);
+        const baies = new THREE.Group();
+        const mures = materiau(0x3a1a2a, { rugosite: 0.35 });
+        const rouges = materiau(0xb3243a, { rugosite: 0.4 });
+        for (let i = 0; i < 7; i++) {
+          const l = lobes[i % lobes.length]!;
+          const a = aleat() * Math.PI * 2;
+          const h = (aleat() - 0.3) * 0.8;
+          const rh = Math.sqrt(Math.max(0, 1 - h * h)) * l[3] * 1.02;
+          for (let k = 0; k < 3; k++) {
+            const b = new THREE.Mesh(geoBaie, k === 2 ? rouges : mures);
+            b.position.set(l[0] + Math.cos(a) * rh + (k - 1) * 0.04, l[1] + h * l[3] * 0.78 - (k % 2) * 0.03, l[2] + Math.sin(a) * rh);
+            baies.add(b);
+          }
         }
         this.objet.add(baies);
         this.contenu = baies;
         break;
       }
       case "joncs": {
-        // Des moignons au ras de l'eau restent toujours ; les hautes tiges et les épis de massette repoussent.
-        const vert = materiau(0x6f8b4e);
-        const souche = new THREE.Group();
-        for (let i = 0; i < 10; i++) {
-          const t = new THREE.Mesh(new THREE.ConeGeometry(0.025, 0.12, 4), vert);
+        // Des moignons au ras de l'eau restent toujours ; les feuilles en lame et les épis de massette repoussent.
+        const souche = new Assemblage(donnees.id);
+        for (let i = 0; i < 12; i++) {
           const a = aleat() * Math.PI * 2;
-          t.position.set(Math.cos(a) * 0.22 * aleat(), 0.06, Math.sin(a) * 0.22 * aleat());
-          souche.add(t);
+          const r = 0.22 * aleat();
+          souche.perche(new V3(Math.cos(a) * r, 0, Math.sin(a) * r), new V3(Math.cos(a) * r, 0.1 + aleat() * 0.05, Math.sin(a) * r), 0.018, 0x6f7a45, "mat", 4, 0.012);
         }
-        this.objet.add(souche);
-        const tiges = new THREE.Group();
-        for (let i = 0; i < 16; i++) {
-          const h = 0.7 + aleat() * 0.6;
-          const t = ombre(new THREE.Mesh(new THREE.ConeGeometry(0.03, h, 4), materiau(aleat() < 0.5 ? 0x6f8b4e : 0x7f9a55)));
+        souche.plaque(tache(0, 0, 0.35, 0.3, aleat, 8), SOL_PLAT, 0x4a4632, "sol", 0.01);
+        for (const m of souche.maillages(ombre)) this.objet.add(m);
+        const t = new Assemblage(donnees.id + 1);
+        t.occlusion = 0.4;
+        t.forceOcclusion = 0.3;
+        for (let i = 0; i < 18; i++) {
+          const h = 0.75 + aleat() * 0.65;
           const a = aleat() * Math.PI * 2;
           const r = 0.25 * aleat();
-          t.position.set(Math.cos(a) * r, h / 2, Math.sin(a) * r);
-          t.rotation.set((aleat() - 0.5) * 0.35, 0, (aleat() - 0.5) * 0.35);
-          tiges.add(t);
-          // Quelques épis bruns de massette, au bout d'une tige.
+          const x = Math.cos(a) * r;
+          const z = Math.sin(a) * r;
+          // Une feuille en lame : deux triangles, la pointe qui s'incline au vent.
+          const penche = new V3((aleat() - 0.5) * 0.35, 0, (aleat() - 0.5) * 0.35);
+          const o = aleat() * Math.PI;
+          const l = 0.025 + aleat() * 0.015;
+          const dx = Math.cos(o) * l;
+          const dz = Math.sin(o) * l;
+          const milieu = new V3(x + penche.x * 0.4, h * 0.55, z + penche.z * 0.4);
+          const pointe = new V3(x + penche.x, h, z + penche.z);
+          const pos = [x - dx, 0, z - dz, x + dx, 0, z + dz, milieu.x + dx * 0.7, milieu.y, milieu.z + dz * 0.7, x - dx, 0, z - dz, milieu.x + dx * 0.7, milieu.y, milieu.z + dz * 0.7, milieu.x - dx * 0.7, milieu.y, milieu.z - dz * 0.7, milieu.x - dx * 0.7, milieu.y, milieu.z - dz * 0.7, milieu.x + dx * 0.7, milieu.y, milieu.z + dz * 0.7, pointe.x, pointe.y, pointe.z];
+          t.triangles(pos, [0x6f8b4e, 0x7f9a55, 0x5f7a40, 0x9aa65e][i % 4]!, "toile", 0.04);
+          // Quelques massettes : une tige droite, l'épi brun velouté, la pointe sèche.
           if (i % 4 === 0) {
-            const epi = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.16, 6), materiau(0x6b4a2e));
-            epi.position.set(t.position.x, h + 0.02, t.position.z);
-            tiges.add(epi);
+            const tige = new V3(x * 0.8, h + 0.15, z * 0.8);
+            t.perche(new V3(x, 0, z), tige, 0.008, 0x7f9a55, "mat", 4);
+            t.perche(tige.clone().add(new V3(0, -0.2, 0)), tige, 0.034, 0x6b4a2e, "mat", 6, 0.032, 0.05);
+            t.perche(tige, tige.clone().add(new V3(0, 0.12, 0)), 0.006, 0x9a8a5a, "mat", 3, 0.002);
           }
         }
+        const tiges = t.groupe(ombre);
         this.objet.add(tiges);
         this.contenu = tiges;
         break;
@@ -250,40 +322,73 @@ export class VueRessource {
         this.epaveCamion(aleat, ombre);
         break;
       case "caisse_atelier": {
+        // L'établi métallique de l'atelier : plateau de tôle, pieds en cornière, tiroirs (dont un ouvert), l'étau
+        // bleu ; les chutes de barre posées dessus sont ce qu'on vient chercher.
         this.objet.rotation.y = 0;
-        const etabli = ombre(new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.9, 0.7), materiau(0x6e6a63, { metal: 0.3, rugosite: 0.6 })));
-        etabli.position.y = 0.45;
-        const etau = ombre(new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.18, 0.25), materiau(0x2f6fa4, { metal: 0.4 })));
-        etau.position.set(-0.6, 0.99, 0);
-        const chutes = new THREE.Group();
-        for (let i = 0; i < 3; i++) {
-          const b = ombre(new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.9, 6).rotateZ(Math.PI / 2), materiau(0x6e6a63, { metal: 0.6, rugosite: 0.5 })));
-          b.position.set(0.2, 0.93, -0.15 + i * 0.12);
-          b.rotation.y = (aleat() - 0.5) * 0.3;
-          chutes.add(b);
+        const c = new Assemblage(donnees.id);
+        c.occlusion = 0.45;
+        const gris = 0x6e6a63;
+        c.boite(0x5c5953, "metal", 1.8, 0.05, 0.7, 0, 0.88, 0);
+        for (const [x, z] of [[-0.85, -0.3], [0.85, -0.3], [-0.85, 0.3], [0.85, 0.3]] as const) c.boite(gris, "metal", 0.05, 0.86, 0.05, x, 0.43, z);
+        c.boite(gris, "metal", 1.7, 0.04, 0.04, 0, 0.15, 0.3);
+        c.boite(gris, "metal", 1.7, 0.04, 0.04, 0, 0.15, -0.3);
+        c.boite(0x77746c, "tole", 1.7, 0.02, 0.62, 0, 0.17, 0);
+        // Le bloc-tiroirs sous le plateau, à droite.
+        c.boite(0x4a5a6a, "tole", 0.5, 0.6, 0.6, 0.55, 0.55, 0);
+        for (let k = 0; k < 3; k++) {
+          const y = 0.73 - k * 0.19;
+          const ouvert = k === 1 ? 0.18 : 0;
+          c.boite(0x56687a, "tole", 0.46, 0.16, 0.03, 0.55, y, 0.3 + ouvert);
+          c.boite(0xa8a59c, "metal", 0.14, 0.02, 0.02, 0.55, y + 0.03, 0.32 + ouvert);
+          if (ouvert) c.boite(0x2a2826, "mat", 0.44, 0.1, 0.18, 0.55, y + 0.02, 0.3 + ouvert / 2);
         }
-        this.objet.add(etabli, etau, chutes);
-        this.contenu = chutes;
+        rouille(c, surface(new V3(0, 0.906, 0), X, Z, Y), -0.4 + aleat() * 0.3, (aleat() - 0.5) * 0.3, 0.2, 0.12, aleat);
+        // L'étau bleu, vissé au bord gauche.
+        c.boite(0x2f6fa4, "metal", 0.16, 0.08, 0.22, -0.6, 0.95, 0.22);
+        c.boite(0x2f6fa4, "metal", 0.16, 0.12, 0.05, -0.6, 1.03, 0.12);
+        c.boite(0x2f6fa4, "metal", 0.16, 0.12, 0.05, -0.6, 1.03, 0.3);
+        c.perche(new V3(-0.6, 0.98, 0.33), new V3(-0.6, 0.98, 0.5), 0.012, 0xa8a59c, "metal", 5);
+        c.perche(new V3(-0.68, 0.98, 0.5), new V3(-0.52, 0.98, 0.5), 0.01, 0xa8a59c, "metal", 5);
+        for (const m of c.maillages(ombre)) this.objet.add(m);
+        const chutes = new Assemblage(donnees.id + 1);
+        for (let i = 0; i < 3; i++) {
+          const tige = new THREE.CylinderGeometry(0.025, 0.025, 0.9, 6, 4).rotateZ(Math.PI / 2);
+          chutes.ajouterDegrade(placer(tige, 0.1, 0.93, -0.15 + i * 0.12, 0, (aleat() - 0.5) * 0.3, 0), (q) => (Math.sin(q.x * 19 + i * 2) > 0.6 ? PALETTE.rouille : 0x6e6a63), "metal");
+        }
+        const g = chutes.groupe(ombre);
+        this.objet.add(g);
+        this.contenu = g;
         break;
       }
       case "grenier": {
-        // Une poulie au bout d'une poutre restée debout, la corde qui pend
+        // La potence de la grange : un poteau équarri, son bras et la jambe de force, la poulie, la corde qui pend
+        // et son rouleau au pied (la corde est ce qu'on vient chercher).
         this.objet.rotation.y = 0;
-        const poteau = ombre(new THREE.Mesh(new THREE.BoxGeometry(0.22, 3.2, 0.22), materiau(PALETTE.boisSombre)));
-        poteau.position.y = 1.6;
-        const bras = ombre(new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.18, 0.18), materiau(PALETTE.boisSombre)));
-        bras.position.set(0.5, 3.1, 0);
-        const poulie = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.04, 5, 10), materiau(0x55524d, { metal: 0.5 }));
-        poulie.position.set(1, 2.95, 0);
-        const corde = new THREE.Group();
-        const brin = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 2.6, 4), materiau(0xb59a6a));
-        brin.position.set(1.1, 1.65, 0);
-        const rouleau = ombre(new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.06, 5, 12), materiau(0xb59a6a)));
-        rouleau.position.set(1.1, 0.07, 0.1);
-        rouleau.rotation.x = Math.PI / 2;
-        corde.add(brin, rouleau);
-        this.objet.add(poteau, bras, poulie, corde);
-        this.contenu = corde;
+        const c = new Assemblage(donnees.id);
+        c.occlusion = 0.5;
+        c.ajouter(placer(bosseler(new THREE.BoxGeometry(0.22, 3.2, 0.22, 1, 4, 1), 0.01, aleat), 0, 1.6, 0), PALETTE.boisSombre, "mat", 0.07);
+        c.ajouter(placer(bosseler(new THREE.BoxGeometry(1.25, 0.18, 0.18, 4, 1, 1), 0.008, aleat), 0.52, 3.1, 0), PALETTE.boisSombre, "mat", 0.07);
+        c.perche(new V3(0.08, 2.45, 0), new V3(0.62, 3.02, 0), 0.06, BOIS.sombre, "mat", 4);
+        for (const y of [2.45, 3.05]) c.boite(0x3a3836, "metal", 0.24, 0.05, 0.24, 0, y, 0);
+        // La poulie : chape de fer, réa, axe.
+        c.boite(0x3a3836, "metal", 0.04, 0.22, 0.12, 1.0, 2.96, 0);
+        c.ajouter(placer(new THREE.CylinderGeometry(0.13, 0.13, 0.05, 12).rotateX(Math.PI / 2), 1.0, 2.88, 0), 0x55524d, "metal", 0.04);
+        c.ajouter(placer(new THREE.TorusGeometry(0.13, 0.02, 4, 12), 1.0, 2.88, 0), PALETTE.rouille, "metal");
+        // Une pierre d'ancrage au pied du poteau, de l'herbe haute.
+        for (let i = 0; i < 3; i++) {
+          const a = aleat() * Math.PI * 2;
+          c.ajouter(placer(bosseler(new THREE.IcosahedronGeometry(0.12, 0), 0.02, aleat).scale(1.2, 0.6, 1), Math.cos(a) * 0.22, 0.04, Math.sin(a) * 0.22), PALETTE.pierreSombre, "mat", 0.06);
+        }
+        touffe(c, 0.15, 0.15, aleat, 4, 0.5);
+        touffe(c, -0.15, -0.1, aleat, 3, 0.4);
+        for (const m of c.maillages(ombre)) this.objet.add(m);
+        const corde = new Assemblage(donnees.id + 1);
+        corde.perche(new V3(1.13, 2.88, 0), new V3(1.12, 0.3, 0.02), 0.018, CORDE, "mat", 4, 0.018, 0.04);
+        corde.perche(new V3(0.87, 2.88, 0), new V3(0.88, 2.2, 0), 0.018, CORDE, "mat", 4, 0.018, 0.04);
+        for (let k = 0; k < 3; k++) corde.ajouter(placer(new THREE.TorusGeometry(0.2 - k * 0.03, 0.045, 4, 12).rotateX(Math.PI / 2), 1.12, 0.05 + k * 0.07, 0.1), CORDE, "mat", 0.05);
+        const g = corde.groupe(ombre);
+        this.objet.add(g);
+        this.contenu = g;
         break;
       }
     }
@@ -404,29 +509,127 @@ export class VueRessource {
     }
   }
 
-  /** Une étagère de magasin tirée hors de la boutique, avec quelques boîtes oubliées. */
+  /**
+   * Le vieux vélo couché dans l'herbe (moment-vitrine n° 3, tutoriel ét. 5) : cadre en losange à la peinture bleu canard
+   * mangée de rouille, roues à rayons (la même que sur le pédalier), guidon, selle fendue, pédalier et chaîne ;
+   * l'herbe a poussé à travers les rayons.
+   */
+  private velo(aleat: () => number, ombre: (m: THREE.Mesh) => THREE.Mesh): void {
+    const c = new Assemblage(this.donnees.id);
+    // On le monte debout (plan x, y ; roues d'axe z), puis on le couche sur le flanc, appuyé sur la pédale.
+    c.repere = new THREE.Matrix4().makeTranslation(0, 0.07, 0).multiply(new THREE.Matrix4().makeRotationX(-Math.PI / 2 + 0.16)).multiply(new THREE.Matrix4().makeTranslation(0, -0.36, 0));
+    const peinture = 0x4d6a7a;
+    const arriere = new V3(-0.52, 0.34, 0);
+    const avant = new V3(0.55, 0.34, 0);
+    const pedalier = new V3(-0.05, 0.3, 0);
+    const selle = new V3(-0.2, 0.82, 0);
+    const douille = new V3(0.42, 0.78, 0);
+    const douilleBas = new V3(0.45, 0.64, 0);
+    const tube = (a: THREE.Vector3, b: THREE.Vector3, r: number) => {
+      const d = b.clone().sub(a);
+      const g = new THREE.CylinderGeometry(r, r, d.length(), 6, 4).translate(0, d.length() / 2, 0);
+      g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(Y, d.normalize())).translate(a.x, a.y, a.z);
+      c.ajouterDegrade(g, (q) => (Math.sin(q.x * 17 + q.y * 11) + Math.sin(q.x * 41 - q.y * 23) > 0.6 ? PALETTE.rouille : peinture), "tole");
+    };
+    tube(pedalier, selle, 0.02);
+    tube(selle.clone().add(new V3(0.01, -0.05, 0)), douille, 0.018);
+    tube(pedalier, douilleBas, 0.022);
+    tube(douilleBas, douille.clone().add(new V3(-0.01, 0.06, 0)), 0.024);
+    for (const s of [-1, 1]) {
+      tube(pedalier.clone().setZ(s * 0.03), arriere.clone().setZ(s * 0.05), 0.011);
+      tube(selle.clone().add(new V3(0, -0.06, s * 0.02)), arriere.clone().setZ(s * 0.05), 0.01);
+      tube(douilleBas.clone().setZ(s * 0.03), avant.clone().setZ(s * 0.05), 0.013);
+    }
+    for (const centre of [arriere, avant]) {
+      c.repere = c.repere!.clone().multiply(new THREE.Matrix4().makeTranslation(centre.x, centre.y, centre.z));
+      roueVelo(c, 0.33, 0x2b2b2b, aleat() < 0.5 ? ROUILLE_SOMBRE : 0x9a968c);
+      c.repere = c.repere.clone().multiply(new THREE.Matrix4().makeTranslation(-centre.x, -centre.y, -centre.z));
+    }
+    c.perche(selle, selle.clone().add(new V3(-0.01, 0.09, 0)), 0.013, ACIER, "metal", 5);
+    c.ajouter(placer(bosseler(new THREE.BoxGeometry(0.24, 0.05, 0.12, 2, 1, 1), 0.008, aleat), selle.x - 0.02, selle.y + 0.11, 0), 0x2b2622, "mat", 0.04);
+    c.perche(douille.clone().add(new V3(-0.01, 0.06, 0)), douille.clone().add(new V3(0.05, 0.13, 0)), 0.013, ACIER, "metal", 5);
+    c.perche(douille.clone().add(new V3(0.05, 0.13, -0.24)), douille.clone().add(new V3(0.05, 0.13, 0.24)), 0.012, ACIER, "metal", 5);
+    for (const s of [-1, 1]) c.perche(douille.clone().add(new V3(0.05, 0.13, s * 0.17)), douille.clone().add(new V3(0.05, 0.13, s * 0.26)), 0.019, NOIR, "mat", 6);
+    c.ajouter(placer(new THREE.CylinderGeometry(0.09, 0.09, 0.01, 12).rotateX(Math.PI / 2), pedalier.x, pedalier.y, 0.04), 0x55524d, "metal");
+    for (const s of [-1, 1]) {
+      c.boite(0x77746c, "metal", 0.025, 0.16, 0.012, pedalier.x + s * 0.03, pedalier.y - s * 0.07, s * 0.065, 0, 0, s * 0.4);
+      c.boite(0x2b2b2b, "mat", 0.09, 0.02, 0.06, pedalier.x + s * 0.06, pedalier.y - s * 0.14, s * 0.1);
+    }
+    for (const [d0, d1] of [[0.09, 0.04], [-0.09, -0.04]] as const) c.perche(pedalier.clone().add(new V3(0, d0, 0.04)), arriere.clone().add(new V3(0, d1, 0.04)), 0.005, ROUILLE_SOMBRE, "metal", 3);
+    c.repere = null;
+    // Au sol : l'herbe tassée sous le vélo, et des touffes qui passent à travers les rayons.
+    c.plaque(tache(0, 0, 0.85, 0.45, aleat, 10), SOL_PLAT, 0x5f7f45, "sol", 0.008);
+    for (const [x, z] of [[-0.52, 0.05], [0.55, 0.0], [0.1, 0.25], [-0.3, -0.3]] as const) touffe(c, x, z, aleat, 4, 0.4);
+    for (const m of c.maillages(ombre)) this.objet.add(m);
+  }
+
+  /** La caisse à outils de la ferme : tôle rouge passée, couvercle à charnière, poignée, fermoirs ; une clé et un tournevis à côté. */
+  private caisseOutils(aleat: () => number, ombre: (m: THREE.Mesh) => THREE.Mesh): void {
+    const c = new Assemblage(this.donnees.id);
+    c.occlusion = 0.15;
+    const rouge = 0x8a3a2a;
+    c.boite(rouge, "tole", 0.62, 0.22, 0.32, 0, 0.11, 0);
+    c.ajouter(placer(new THREE.CylinderGeometry(0.16, 0.16, 0.62, 8, 1, false, 0, Math.PI).rotateZ(Math.PI / 2).scale(1, 0.4, 1), 0, 0.22, 0), 0x7a3324, "tole", 0.03);
+    c.boite(0x5a2a20, "tole", 0.63, 0.015, 0.325, 0, 0.22, 0);
+    for (const x of [-0.24, 0.24]) c.boite(0xa8a59c, "metal", 0.05, 0.06, 0.01, x, 0.21, 0.165);
+    c.ajouter(placer(new THREE.TorusGeometry(0.1, 0.014, 4, 10, Math.PI), 0, 0.28, 0), 0x2b2b2b, "mat");
+    const face = surface(new V3(0, 0, 0.161), X, Y, Z);
+    for (let i = 0; i < 3; i++) rouille(c, face, (aleat() - 0.5) * 0.45, 0.05 + aleat() * 0.12, 0.05, 0.03, aleat);
+    rouille(c, surface(new V3(0, 0.285, 0), X, Z, Y), (aleat() - 0.5) * 0.3, (aleat() - 0.5) * 0.15, 0.06, 0.05, aleat);
+    // La clé plate et le tournevis tombés dans l'herbe.
+    c.boite(0x8a8780, "metal", 0.2, 0.008, 0.022, 0.42, 0.01, 0.12, 0, 0.4, 0);
+    for (const s of [-1, 1]) c.ajouter(placer(new THREE.TorusGeometry(0.02, 0.008, 3, 6, Math.PI * 1.4).rotateX(Math.PI / 2), 0.42 + s * 0.092, 0.01, 0.12 - s * 0.04, 0, 0.4, 0), 0x8a8780, "metal");
+    c.perche(new V3(-0.42, 0.015, 0.1), new V3(-0.3, 0.015, 0.2), 0.016, 0xd8c43a, "mat", 6);
+    c.perche(new V3(-0.3, 0.015, 0.2), new V3(-0.2, 0.015, 0.28), 0.005, 0xa8a59c, "metal", 4);
+    touffe(c, 0.3, -0.2, aleat, 3, 0.3);
+    touffe(c, -0.32, -0.12, aleat, 2, 0.25);
+    for (const m of c.maillages(ombre)) this.objet.add(m);
+  }
+
+  /** Une étagère de magasin tirée hors de la boutique : montants perforés, tablettes, fond, une tablette tombée ; quelques boîtes oubliées. */
   private rayonnage(aleat: () => number, ombre: (m: THREE.Mesh) => THREE.Mesh): void {
     this.objet.rotation.y = (aleat() - 0.5) * 0.4;
-    const metal = materiau(0x9aa0a6, { metal: 0.4, rugosite: 0.5 });
+    const c = new Assemblage(this.donnees.id);
+    c.occlusion = 0.4;
+    const gris = 0x9aa0a6;
     for (const dx of [-0.75, 0.75]) {
-      const montant = ombre(new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.8, 0.45), metal));
-      montant.position.set(dx, 0.9, 0);
-      this.objet.add(montant);
+      for (const dz of [-0.2, 0.2]) c.boite(gris, "metal", 0.04, 1.8, 0.04, dx, 0.9, dz);
+      for (let k = 0; k < 9; k++) c.plaque(rect(0, 0.2 + k * 0.18, 0.008, 0.02), surface(new V3(dx, 0, 0.221), Z.clone().negate(), Y, Z), 0x3a3836, "metal", 0.002);
+      c.boite(gris, "metal", 0.04, 0.04, 0.44, dx, 0.03, 0);
     }
+    c.boite(0x8a9096, "metal", 1.5, 1.7, 0.015, 0, 0.92, -0.215);
     for (let i = 0; i < 4; i++) {
-      const tablette = ombre(new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.04, 0.45), metal));
-      tablette.position.set(0, 0.2 + i * 0.48, 0);
-      if (i === 2) tablette.rotation.z = 0.18;
-      this.objet.add(tablette);
+      const y = 0.2 + i * 0.48;
+      if (i === 2) {
+        // Une tablette décrochée d'un côté, qui pend en travers.
+        c.boite(gris, "metal", 1.5, 0.03, 0.42, 0, y - 0.1, 0, 0, 0, 0.16);
+        continue;
+      }
+      c.boite(gris, "metal", 1.5, 0.03, 0.42, 0, y, 0);
+      c.boite(0xd8d2b8, "mat", 1.5, 0.05, 0.008, 0, y - 0.01, 0.214);
+      for (let k = 0; k < 3; k++) c.plaque(rect(-0.55 + k * 0.5, y - 0.01, 0.04, 0.012), surface(new V3(0, 0, 0.219), X, Y, Z), 0xc8362b, "mat", 0.002);
     }
-    const boites = new THREE.Group();
+    rouille(c, surface(new V3(0, 0, -0.2), X, Y, Z), (aleat() - 0.5), 0.5 + aleat() * 0.6, 0.15, 0.12, aleat);
+    // Des cartons affaissés au pied.
+    c.ajouter(placer(bosseler(new THREE.BoxGeometry(0.4, 0.28, 0.3, 2, 2, 2), 0.02, aleat), 0.4, 0.14, 0.38, 0, 0.4, 0), 0xa88a5c, "mat", 0.04);
+    c.ajouter(placer(bosseler(new THREE.BoxGeometry(0.34, 0.2, 0.26, 2, 2, 2), 0.02, aleat), -0.45, 0.1, 0.42, 0, -0.3, 0.2), 0x9a7d52, "mat", 0.04);
+    for (const m of c.maillages(ombre)) this.objet.add(m);
+    // Les boîtes de conserve oubliées (étiquettes de l'Abondance) : ce qu'on vient chercher.
+    const b = new Assemblage(this.donnees.id + 1);
     const couleurs = [0xc8362b, 0xd8c43a, 0x2f6fa4];
     for (let i = 0; i < 5; i++) {
-      const b = ombre(new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.13, 8), materiau(couleurs[i % 3]!, { rugosite: 0.5, metal: 0.3 })));
-      b.position.set(-0.55 + aleat() * 1.1, 0.29 + Math.floor(aleat() * 2) * 0.96, (aleat() - 0.5) * 0.25);
-      if (aleat() < 0.3) b.rotation.z = Math.PI / 2;
-      boites.add(b);
+      const x = -0.55 + aleat() * 1.1;
+      const y = 0.29 + Math.floor(aleat() * 2) * 0.96;
+      const z = (aleat() - 0.5) * 0.25;
+      const couche = aleat() < 0.3;
+      const boite = new THREE.CylinderGeometry(0.06, 0.06, 0.13, 9, 3);
+      if (couche) boite.rotateZ(Math.PI / 2).translate(0, -0.005, 0);
+      b.ajouterDegrade(placer(boite, x, couche ? y - 0.005 : y, z), (q) => {
+        const h = couche ? Math.abs(q.x - x) : Math.abs(q.y - y);
+        return h > 0.05 ? 0xb8b4ac : h > 0.035 ? 0xe8e0c8 : couleurs[i % 3]!;
+      }, "metal");
     }
+    const boites = b.groupe(ombre);
     this.objet.add(boites);
     this.contenu = boites;
   }
@@ -434,19 +637,19 @@ export class VueRessource {
   /** Le petit panneau solaire, tombé de l'auvent, appuyé contre le pilier : on le voit et on l'atteint du sol. */
   private panneauAuvent(ombre: (m: THREE.Mesh) => THREE.Mesh): void {
     this.objet.rotation.y = -Math.PI / 2;
-    const cadre = ombre(new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.05, 0.7), materiau(0xc9ccd0, { metal: 0.6, rugosite: 0.4 })));
-    const cellules = new THREE.Mesh(new THREE.PlaneGeometry(1.02, 0.62).rotateX(-Math.PI / 2), materiau(0x1f3550, { rugosite: 0.2, metal: 0.4 }));
-    cellules.position.y = 0.03;
-    // Le câble arraché, qui pend.
-    const cable = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.5, 4), materiau(0x1a1a1a));
-    cable.position.set(0.45, -0.25, -0.2);
-    cable.rotation.z = 0.4;
-    const panneau = new THREE.Group();
-    panneau.add(cadre, cellules, cable);
-    // Debout sur sa tranche, penché contre le pilier (à l'ouest du panneau).
-    panneau.rotation.x = -1.2;
-    panneau.position.set(0, 0.36, 0.12);
-    this.objet.add(panneau);
+    const c = new Assemblage(this.donnees.id);
+    // Debout sur sa tranche, penché contre le pilier (à l'ouest du panneau) ; le même panneau que sur le chevalet.
+    c.repere = new THREE.Matrix4().makeTranslation(0, 0.36, 0.12).multiply(new THREE.Matrix4().makeRotationX(-1.2));
+    modulePanneau(c);
+    // Le câble arraché, qui pend, et une fêlure en étoile dans le verre.
+    c.perche(new V3(0, -0.04, 0.2), new V3(0.35, -0.3, 0.25), 0.008, 0x1a1a1a, "mat", 4);
+    c.perche(new V3(0.35, -0.3, 0.25), new V3(0.5, -0.32, 0.1), 0.008, 0x1a1a1a, "mat", 4);
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      c.plaque([V(0.2, -0.1), V(0.2 + Math.cos(a) * 0.12, -0.1 + Math.sin(a) * 0.12), V(0.2 + Math.cos(a + 0.12) * 0.01, -0.1 + Math.sin(a + 0.12) * 0.01)], surface(new V3(0, 0.021, 0), X, Z, Y), 0xc4ccd0, "verre", 0.006);
+    }
+    c.repere = null;
+    for (const m of c.maillages(ombre)) this.objet.add(m);
   }
 
   /**
