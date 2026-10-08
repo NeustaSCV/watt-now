@@ -12,7 +12,7 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
-## 0.3 · en préparation
+## 0.3 · déployée le 2026-10-08
 
 **Jouer : la gamme bushcraft, lot 1** (proposition P-002, Book 02 §14 bis), rien que des matières qu'on a déjà :
 - ficelle, bâton à fouir (Creuser 1), **foyer Dakota** (un feu creusé : il se voit trois fois moins la nuit, fume moins, brûle moins de bois) ;
