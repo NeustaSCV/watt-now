@@ -34,6 +34,7 @@ import { creerRuine } from "./rendu/ruine.ts";
 import { creerHalte, estomperToits } from "./rendu/halte.ts";
 import { animerCooperative, creerCooperative, estomperCooperative, majPortes } from "./rendu/cooperative.ts";
 import { LEURRES, pieceDe, portesInitiales } from "../../commun/src/cooperative.ts";
+import { IndicateurHorsChamp } from "./hors-champ.ts";
 import { animerComptoir, creerComptoir, lumieresComptoir } from "./rendu/comptoir.ts";
 import { VueEteint } from "./rendu/eteint.ts";
 import { VueAutre } from "./rendu/autres.ts";
@@ -385,6 +386,8 @@ const hud = new Hud(
   (c) => entrees.commande(c),
   { appuyer: () => entrees.appuyerA(), relacher: () => entrees.relacherA() },
 );
+// Après le HUD (il remplit #hud à sa construction) : la flèche des Éteints hors champ.
+const horsChamp = new IndicateurHorsChamp(document.getElementById("hud")!);
 
 const carte = new Carte(document.getElementById("carte")!, (vers) => envoyer({ t: "voyager", vers }));
 hud.surPanneau = (ouvert) => uiSon(ouvert ? "ouvrir" : "fermer");
@@ -1478,6 +1481,12 @@ function boucle(instant: number): void {
   }
   if (!estNuit(heure)) nuitAnnoncee = false;
 
+  // Les Éteints qui approchent hors de l'écran : une flèche au bord (Book 23 §4.5).
+  horsChamp.maj(
+    scene.camera,
+    [...eteints.entries()].map(([id, e]) => ({ id, x: e.objet.position.x, z: e.objet.position.z, etat: e.etat })),
+    enVoyage ? null : position,
+  );
   scene.dessiner();
   hud.compter(reseau?.latence ?? 0);
 }

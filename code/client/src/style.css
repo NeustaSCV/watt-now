@@ -4470,3 +4470,44 @@ body.aide-ouverte #hud .tactile {
   font: inherit;
   cursor: pointer;
 }
+
+/* ---------- L'indicateur hors champ (Book 23 §4.5) : d'où vient l'Éteint qu'on ne voit pas ---------- */
+.hors-champ {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 8;
+  overflow: hidden;
+}
+.hors-champ .fleche {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 40px;
+  height: 40px;
+  transition: opacity 0.2s;
+}
+.hors-champ .fleche .fond {
+  fill: rgba(14, 18, 26, 0.55);
+  stroke: rgba(242, 239, 230, 0.35);
+  stroke-width: 1.5;
+}
+.hors-champ .fleche .pointe {
+  fill: #e0a24a;
+}
+.hors-champ .fleche.poursuit .pointe {
+  fill: #e0523a;
+}
+.hors-champ .fleche.poursuit svg {
+  animation: hors-champ-bat 0.7s ease-in-out infinite;
+}
+@keyframes hors-champ-bat {
+  50% {
+    transform: scale(1.18);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hors-champ .fleche.poursuit svg {
+    animation: none;
+  }
+}
