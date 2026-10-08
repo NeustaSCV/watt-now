@@ -758,6 +758,51 @@ export const VESTIGES = {
     rarete: "C",
     horsTirage: true,
   },
+  // La radio de l'atelier (Book 23 §4.7, 0.5.1) : elle se prend et se pose ailleurs dans la Coopérative.
+  radio_piles: {
+    nom: "radio à piles",
+    pluriel: "radios à piles",
+    description: "Le poste orange de l'atelier, réglé sur la Compagnie. Pose-le où tu veux attirer les Éteints, puis allume-le. Il ne capte l'émetteur qu'au Plateau.",
+    poids: 2,
+    valeur: 8,
+    famille: "gadget",
+    rarete: "C",
+    horsTirage: true,
+  },
+  // Les débris d'une arme cassée (Book 23 §4.3, 0.5.1) : ils se démontent et rendent un peu de matière.
+  manche_fendu: {
+    nom: "manche fendu",
+    pluriel: "manches fendus",
+    description: "Ce qui reste d'une arme de bois : fendu dans le fil, il ne tiendra plus un coup. Démonté, il fait encore du petit bois.",
+    poids: 0.8,
+    valeur: 1,
+    famille: "garage",
+    rarete: "C",
+    teinte: "#8a6a40",
+    horsTirage: true,
+  },
+  lame_ebrechee: {
+    nom: "lame ébréchée",
+    pluriel: "lames ébréchées",
+    description: "Une lame cassée net, le fil en dents de scie. L'acier est bon : au marteau, on en tire une lame de ressort à reforger.",
+    poids: 0.4,
+    valeur: 4,
+    famille: "garage",
+    rarete: "C",
+    teinte: "#9aa3a8",
+    horsTirage: true,
+  },
+  ferraille_tordue: {
+    nom: "ferraille tordue",
+    pluriel: "ferrailles tordues",
+    description: "Le fer d'une arme qui a trop servi, tordu et fendu. Redressé au marteau, il redevient une barre de métal.",
+    poids: 2.2,
+    valeur: 6,
+    famille: "garage",
+    rarete: "C",
+    teinte: "#6b6560",
+    horsTirage: true,
+  },
 } satisfies Record<string, DefinitionVestige>;
 
 export type TypeVestige = keyof typeof VESTIGES;
@@ -828,6 +873,10 @@ export const DEMONTAGE: Partial<Record<TypeObjet, Demontage>> = {
   cables_demarrage: { donne: { fil_cuivre: 5 }, qualites: { couper: 1 }, duree: 6 },
   boite_gants_pv: { donne: { papier: 5 }, qualites: {}, duree: 2 },
   tuyau_arrosage: { donne: { caoutchouc: 4 }, qualites: { couper: 1 }, duree: 4 },
+  // Les débris d'arme (Book 23 §4.3, 0.5.1) : un peu de matière, pas l'arme.
+  manche_fendu: { donne: { branche: 1 }, qualites: {}, duree: 2 },
+  lame_ebrechee: { donne: { ressort_lames: 1 }, qualites: { marteler: 1 }, duree: 5 },
+  ferraille_tordue: { donne: { barre_metal: 1 }, qualites: { marteler: 1 }, duree: 8 },
 };
 
 // ---------- La fouille rapporte du bric-à-brac ----------

@@ -12,6 +12,13 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
+## 0.5.1 · en préparation
+
+**La Coopérative, ce qui manquait** (Book 23 §4.3 et §4.7)
+- **La batterie du tracteur rouge se démonte** (une clé plate pour les cosses) : 18 kg, jusqu'à 360 Wh. Mais chaque coup de klaxon en vide un quart : klaxonner ou l'emporter, il faut choisir. Prise, le klaxon reste muet ; une autre batterie se retrouve dans le tracteur au bout de 4 jours. L'examen dit ce qui lui reste.
+- **La radio à piles se transporte** : B la prend (2 kg, dans le sac), A la pose à tes pieds, où tu veux dans la Coopérative. Allumée, elle attire les Éteints là où elle est. Elle ne capte la Compagnie qu'au Plateau : si tu pars avec, tu la poses au pied du portail.
+- **Une arme cassée laisse un débris** : un manche fendu, une lame ébréchée ou une ferraille tordue. Il va dans le sac (par terre s'il est plein) et se démonte : du petit bois, une lame de ressort à reforger, une barre de métal (ces deux-là demandent un marteau).
+
 ## 0.5 · déployée le 2026-10-08
 
 **La Coopérative du Plateau** (Book 23)

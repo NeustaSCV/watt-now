@@ -16,7 +16,7 @@ import { ALLURES, GESTE_TENU_MAX_S, type Allure } from "../../commun/src/regles.
 import { APPUIS_DEGAGEMENT, ESQUIVE, REPOUSSER, SEUIL_EPUISE, armeEnMain, freinSaisie } from "../../commun/src/combat.ts";
 import type { AutreVu, SacVu, SanteVue, VueComptoir } from "../../commun/src/messages.ts";
 import { PORTEE_CABLE_PANNEAU, type Charges } from "../../commun/src/energie.ts";
-import type { Bienvenue, InstallationVue, MessageClient, MessageServeur } from "../../commun/src/messages.ts";
+import type { Bienvenue, EtatCoopVu, InstallationVue, MessageClient, MessageServeur } from "../../commun/src/messages.ts";
 import { OBJETS, lumierePortee, traineTravois, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
 import { aFaim, aSoif, allureAutorisee, fatigue, type Besoins, type Gourde } from "../../commun/src/survie.ts";
 import { estNuit, heureDeJeu, jourDeJeu } from "../../commun/src/temps.ts";
@@ -32,8 +32,8 @@ import { FauneAmbiante, Volaille, type CriFaune } from "./rendu/faune.ts";
 import { RAYON_ESCABEAU, estFruitier } from "../../commun/src/terrain.ts";
 import { creerRuine } from "./rendu/ruine.ts";
 import { creerHalte, estomperToits } from "./rendu/halte.ts";
-import { animerCooperative, creerCooperative, estomperCooperative, majPortes } from "./rendu/cooperative.ts";
-import { LEURRES, pieceDe, portesInitiales, sombreIci } from "../../commun/src/cooperative.ts";
+import { animerCooperative, creerCooperative, estomperCooperative, majPortes, placerRadio } from "./rendu/cooperative.ts";
+import { KLAXONS_PAR_BATTERIE, RADIO_ETABLI, pieceDe, portesInitiales, sombreIci } from "../../commun/src/cooperative.ts";
 import { IndicateurHorsChamp } from "./hors-champ.ts";
 import { animerComptoir, creerComptoir, lumieresComptoir } from "./rendu/comptoir.ts";
 import { VueEteint } from "./rendu/eteint.ts";
@@ -91,6 +91,8 @@ let decorCoop: THREE.Group | null = null;
 const leurresActifs = new Set<string>();
 /** L'état des portes de la Coopérative (ouverte : true), tel que le serveur l'a dit. */
 let portesCoop: Record<string, boolean> = portesInitiales();
+/** Où est la radio de la Coopérative, et ce qui reste au klaxon (0.5.1). */
+let etatCoop: EtatCoopVu = { radio: { ...RADIO_ETABLI }, klaxons: KLAXONS_PAR_BATTERIE };
 /** La zone où l'on se déplace : à la Coopérative, les portes fermées bouchent le passage. */
 function zoneIci(): Zone {
   return lieu === "cooperative" ? zoneCoop(portesCoop) : zoneDe(lieu);
@@ -403,10 +405,10 @@ function installer(message: Bienvenue): void {
   leurresActifs.clear();
   son.radioCompagnie(false);
   for (const id of message.leurres ?? []) leurresActifs.add(id);
-  if (leurresActifs.has("radio")) {
-    const r = LEURRES.find((l) => l.id === "radio")!;
-    son.radioCompagnie(true, { x: r.x, z: r.z });
-  }
+  // La radio, là où on l'a posée (0.5.1) ; elle joue à sa place.
+  if (message.etatCoop) etatCoop = message.etatCoop;
+  if (decorCoop && lieu === "cooperative") placerRadio(decorCoop, etatCoop.radio);
+  if (leurresActifs.has("radio") && etatCoop.radio) son.radioCompagnie(true, { ...etatCoop.radio });
   if (message.usure) hud.majUsure(message.usure);
   if (decorCoop && lieu === "cooperative") majPortes(decorCoop, portesCoop);
   enVoyage = false;
@@ -719,6 +721,11 @@ function recevoir(message: MessageServeur): void {
       hud.majUsure(message.usure, message.evenement);
       if (message.evenement?.etat === "cassee") son.jouer("chute_corps", null, { gain: 0.5 });
       else if (message.evenement?.etat === "abimee") son.jouer("demonter", null, { gain: 0.6 });
+      return;
+    case "etat_coop":
+      // La radio a changé de place (prise, posée), ou le klaxon a sonné (0.5.1).
+      etatCoop = message.etat;
+      if (decorCoop) placerRadio(decorCoop, etatCoop.radio);
       return;
     case "portes":
       portesCoop = message.portes;
@@ -1389,6 +1396,7 @@ function boucle(instant: number): void {
       jourAffiche,
       lieu === "cooperative" ? portesCoop : null,
       leurresActifs,
+      etatCoop,
     );
     if (modeCombat) {
       // En combat, A frappe et B esquive ; saisi, B sert à se dégager.

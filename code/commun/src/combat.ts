@@ -83,6 +83,23 @@ export const ATELIER_REPARATION: Record<MatiereArme, { installation: "etabli" | 
   metal: { installation: "forge", nom: "la forge" },
 };
 export const REPARATION_FORTUNE: Inventaire = { ficelle: 1, chiffons: 1 };
+/**
+ * Ce que laisse une arme cassée (Book 23 §4.3, 0.5.1) : un débris qui se démonte (table DEMONTAGE). Le bois se fend,
+ * la lame s'ébrèche, le fer se tord. La barre de métal tordue ne laisse rien : redressée, elle redeviendrait elle-même.
+ */
+export const DEBRIS_ARME: Partial<Record<TypeObjet, TypeObjet>> = {
+  gourdin: "manche_fendu",
+  epieu: "manche_fendu",
+  lance: "manche_fendu",
+  hache: "lame_ebrechee",
+  machette: "lame_ebrechee",
+  couteau: "lame_ebrechee",
+  couteau_aiguise: "lame_ebrechee",
+  lame_forgee: "lame_ebrechee",
+  marteau: "ferraille_tordue",
+  masse: "ferraille_tordue",
+  pied_de_biche: "ferraille_tordue",
+};
 /** La réparation de fortune remonte au plus jusqu'ici : encore abîmée, mais elle tient. */
 export const PLAFOND_FORTUNE = 0.29;
 

@@ -428,6 +428,21 @@ export class VueRessource {
         this.contenu = g;
         break;
       }
+      case "coop_batterie": {
+        // La batterie du tracteur rouge (Book 23 §4.7), sanglée sur son garde-boue droit (le tracteur est tourné de
+        // 0,15 rad, son repère est à 8 cm du sol) : prise, il ne reste que le berceau vide (rendu/cooperative.ts).
+        this.objet.rotation.y = 0.15;
+        const c = new Assemblage(donnees.id);
+        c.boite(0x232220, "mat", 0.3, 0.2, 0.2, 0, 1.53, 0);
+        c.ajouter(placer(new THREE.CylinderGeometry(0.024, 0.024, 0.04, 8), -0.08, 1.65, 0), 0xd42a20, "metal");
+        c.ajouter(placer(new THREE.CylinderGeometry(0.024, 0.024, 0.04, 8), 0.08, 1.65, 0), 0x2a2826, "metal");
+        c.boite(0xd8b52a, "mat", 0.16, 0.06, 0.006, 0, 1.53, 0.105);
+        // La sangle par-dessus, et le câble rouge qui file vers le klaxon.
+        c.boite(0x2a2826, "mat", 0.03, 0.012, 0.22, 0.04, 1.636, 0);
+        c.perche(new V3(-0.08, 1.67, 0), new V3(-0.2, 1.62, -0.5), 0.012, 0xd42a20, "mat", 4);
+        for (const m of c.maillages(ombre)) this.objet.add(m);
+        break;
+      }
     }
     // Ce qu'on montre ou cache à part (fruits, fleurs, contenu fouillé) reste un groupe à part, même fusionné.
     for (const g of [this.contenu, this.fleurs, this.verts]) if (g) g.userData.garder = true;

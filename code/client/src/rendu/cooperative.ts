@@ -24,6 +24,7 @@ import {
   PORTAIL,
   PORTES,
   RAYONNAGES,
+  radioSurEtabli,
 } from "../../../commun/src/cooperative.ts";
 import type { Boite } from "../../../commun/src/lieux.ts";
 import { Assemblage, NOIR, V3, X, Y, Z, placer, rouille, surface } from "./assemblage.ts";
@@ -1214,10 +1215,10 @@ function tracteur(a: Assemblage, x: number, z: number, o: number, cabine: boolea
     a.ajouter(placer(new THREE.CylinderGeometry(0.055, 0.055, 0.1, 8).rotateX(Math.PI / 2), 0.48, 1.45, -1.21), 0x3a3836, "metal");
     a.perche(new V3(0.38, 1.45, -1.21), new V3(0.48, 1.45, -1.21), 0.02, 0x3a3836, "metal", 5);
     a.ajouter(placer(new THREE.CylinderGeometry(0.065, 0.065, 0.035, 10), 0, 1.985, 0.335, -1.0, 0, 0), 0xd42a20, "tole");
-    a.boite(0x232220, "mat", 0.3, 0.2, 0.2, 0.7, 1.45, 0.62);
-    a.ajouter(placer(new THREE.CylinderGeometry(0.024, 0.024, 0.04, 8), 0.62, 1.57, 0.62), 0xd42a20, "metal");
-    a.ajouter(placer(new THREE.CylinderGeometry(0.024, 0.024, 0.04, 8), 0.78, 1.57, 0.62), 0x2a2826, "metal");
-    a.boite(0xd8b52a, "mat", 0.16, 0.06, 0.006, 0.7, 1.45, 0.725);
+    // La batterie elle-même se démonte (0.5.1) : c'est une ressource (rendu/ressources.ts, « coop_batterie »). Ici,
+    // son berceau de tôle et sa sangle, qui restent quand on l'a prise.
+    a.boite(0x3a3836, "metal", 0.36, 0.03, 0.26, 0.7, 1.335, 0.62);
+    a.boite(0x3a3836, "metal", 0.02, 0.12, 0.26, 0.53, 1.4, 0.62);
   }
   // La rouille : sur les flancs et le dessus du capot, sur les garde-boue
   for (const s of [-1, 1]) {
@@ -1680,6 +1681,20 @@ function creerLeurres(): THREE.Group {
   radio.scale.setScalar(1.3);
   groupe.add(radio);
   return groupe;
+}
+
+/**
+ * La radio se prend et se pose ailleurs (Book 23 §4.7, 0.5.1) : sur l'établi, à sa place ; ailleurs, au sol, tournée
+ * vers la caméra ; dans un sac (null), on ne la voit plus.
+ */
+export function placerRadio(groupe: THREE.Object3D, ou: { x: number; z: number } | null): void {
+  const radio = groupe.getObjectByName("leurre-radio");
+  if (!radio) return;
+  radio.visible = ou !== null;
+  if (!ou) return;
+  const etabli = radioSurEtabli(ou);
+  radio.position.set(ou.x, etabli ? SOL + 0.94 : SOL + 0.03, ou.z);
+  radio.rotation.y = etabli ? 0.55 : Math.PI / 4;
 }
 
 // ---------- L'atelier des tracteurs ----------

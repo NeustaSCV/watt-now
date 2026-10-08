@@ -80,6 +80,8 @@ export function messageValide(m: unknown): m is MessageClient {
         return false;
       // Améliorer sa base (Book 24) : ces gestes ne visent qu'un feu ou une installation, désignés par leur numéro.
       if (VERBES_AMENAGEMENT.has(m.verbe)) return (m.cible.genre === "feu" || m.cible.genre === "installation") && Number.isInteger(m.cible.id);
+      // Prendre la radio (0.5.1) : seulement elle.
+      if (m.verbe === "prendre_radio") return m.cible.genre === "leurre" && m.cible.id === "radio";
       return true;
     case "manger":
       return estObjet(m.objet);
@@ -114,6 +116,7 @@ export function messageValide(m: unknown): m is MessageClient {
     case "boire":
     case "annuler":
     case "poser":
+    case "poser_radio":
     case "degager":
     case "repousser":
     case "panser":
