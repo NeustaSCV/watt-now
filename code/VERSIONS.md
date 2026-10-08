@@ -12,7 +12,7 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
-## 0.5 · prête à déployer (2026-10-08)
+## 0.5 · déployée le 2026-10-08
 
 **La Coopérative du Plateau** (Book 23)
 - Un nouveau lieu, **un par joueur** : la Coopérative agricole, au bout d'un chemin agricole qui part au nord du Carrefour. Du terrain, on traverse la station, puis le Carrefour.
