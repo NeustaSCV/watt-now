@@ -19,11 +19,11 @@
 >
 > **0.5f fait** : obscurité par pièce (lampe à environ 7 m, même de jour), yeux des Éteints dans le noir, indicateur des Éteints hors champ (une flèche sur une ellipse autour du personnage), apparence des variantes.
 > **0.5g fait** (Pi 4, 2026-10-08) : 10 joueurs en Coopérative, p99 13,6 ms (cible < 25 ms) ; 20 joueurs, p99 23,2 ms. **La 0.5 est déployée.**
-> **Reste de la 0.5e** :
->   - la batterie du tracteur à emporter (le vrai dilemme ⚡ ⚙️ du klaxon) ;
->   - la radio qu'on transporte ;
->   - le débris d'une arme cassée ;
->   - mesurer la fenêtre de frappe (§4.5) ; le rendu 3D du lieu est fait et allégé (ombres cuites, carte réduite).
+> **0.5.1 fait** (le reste de la 0.5e) :
+>   - **batterie du tracteur à emporter** : point de butin sur le garde-boue du tracteur rouge (clé plate, 8 s) ; c'est une batterie de voiture (360 Wh utiles), chargée selon les coups de klaxon restants (un quart par coup) ; prise, le klaxon est muet ; elle revient en 4 jours, pleine ;
+>   - **radio transportable** : elle se prend (objet du sac, 2 kg) et se pose n'importe où dans la Coopérative, où elle attire les Éteints ; ses piles et sa place sont gardées avec la Coopérative ; elle ne quitte pas le Plateau (posée au portail si l'on part avec) ; perdue, elle revient sur l'établi ;
+>   - **débris d'une arme cassée** : manche fendu (bois), lame ébréchée (lames), ferraille tordue (métal), démontables ; dans le sac, ou au sol s'il est plein.
+> **Reste** : mesurer la fenêtre de frappe (§4.5) ; le rendu 3D du lieu est fait et allégé (ombres cuites, carte réduite).
 > Décisions déjà prises (2026-10-08) : le lieu est la **coopérative agricole** (Book 20 §3.1) ; **une par joueur** pour commencer et valider la mécanique (des cartes partagées ne sont pas exclues plus tard) ; **conception écrite d'abord**.
 > La version 0.2 intègre les relectures des agents BMAD : Samus (Game Designer : niveau, difficulté, combat sur téléphone) et Cloud (Game Architect : instances, IA, persistance, Pi).
 

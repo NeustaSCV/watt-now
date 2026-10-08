@@ -44,7 +44,9 @@ export type TypeRessource =
   | "coop_rayonnage"
   | "coop_coffre"
   | "coop_caisse_froide"
-  | "coop_masse";
+  | "coop_masse"
+  // La batterie du tracteur rouge (Book 23 §4.7) : la prendre, c'est faire taire le klaxon.
+  | "coop_batterie";
 
 /** L'emprise au sol de ce qu'on vise (m) : le cercle de visée s'y ajuste (P-007). 0,5 m par défaut. */
 export const EMPRISE_RESSOURCE: Partial<Record<TypeRessource, number>> = {
@@ -70,6 +72,7 @@ export const EMPRISE_RESSOURCE: Partial<Record<TypeRessource, number>> = {
   epave_camion: 3.4,
   caisse_atelier: 1.0,
   grenier: 2.5,
+  coop_batterie: 0.4,
 };
 
 export interface RessourceSol {
@@ -137,6 +140,8 @@ export const REPOUSSE_MS: Record<TypeRessource, number | null> = {
   coop_coffre: 4 * 24 * 3_600_000,
   coop_caisse_froide: 4 * 24 * 3_600_000,
   coop_masse: 24 * 3_600_000,
+  // Une autre batterie se retrouve dans le tracteur en 4 jours, comme le butin rare : le klaxon revit avec elle.
+  coop_batterie: 4 * 24 * 3_600_000,
 };
 
 /** Les ressources qui restent en place une fois fouillées (une épave ne disparaît pas). */
@@ -422,6 +427,15 @@ export const USAGES: Record<TypeRessource, UsageRessource> = {
     qualites: {},
     duree: 10,
     examen: "Des caisses plombées « PIÈCES DÉTACHÉES — STOCK DE RÉSERVE », alignées dans le froid. Personne n'y a touché.",
+  },
+  // Book 23 §4.7 : la batterie du klaxon. Sa charge dépend des coups déjà donnés (le client la dit à l'examen).
+  coop_batterie: {
+    verbe: "demonter",
+    libelle: "Démonter la batterie du tracteur",
+    donne: { batterie_voiture: 1 },
+    qualites: { serrer: 1 },
+    duree: 8,
+    examen: "La batterie du tracteur rouge, sanglée sur le garde-boue : c'est elle qui fait sonner le klaxon. Une 12 V de 18 kg, comme celle d'une voiture.",
   },
 };
 

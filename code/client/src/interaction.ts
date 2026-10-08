@@ -5,8 +5,8 @@ import { PERIODES_FRUITIERS, enSaison, etatDuFruitier, phaseFruitier, visibleEnS
 import type { Position } from "../../commun/src/deplacement.ts";
 import { CAPACITES, type Charges } from "../../commun/src/energie.ts";
 import { COMPTOIR, sortieIci, type LieuId, type LieuJouable } from "../../commun/src/lieux.ts";
-import { LEURRES, PORTES, distancePorte } from "../../commun/src/cooperative.ts";
-import type { AutreVu, InstallationVue, MessageClient, SacVu, Verbe } from "../../commun/src/messages.ts";
+import { KLAXONS_PAR_BATTERIE, LEURRES, PORTES, chargeBatterieTracteur, distancePorte } from "../../commun/src/cooperative.ts";
+import type { AutreVu, EtatCoopVu, InstallationVue, MessageClient, SacVu, Verbe } from "../../commun/src/messages.ts";
 import { nommer, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
 import { RECETTES } from "../../commun/src/recettes.ts";
 import { NOMS_FAMILLES, type Famille } from "../../commun/src/regles.ts";
@@ -160,7 +160,11 @@ export function proposer(
   portes: Readonly<Record<string, boolean>> | null = null,
   /** À la Coopérative : les leurres en marche (la radio allumée). */
   leurresActifs: ReadonlySet<string> = new Set(),
+  /** À la Coopérative : où est la radio, ce qui reste au klaxon (0.5.1). */
+  etatCoop: EtatCoopVu | null = null,
 ): Propositions {
+  const ressourcesVues = [...ressources];
+  ressources = ressourcesVues;
   // Un objet lourd dans les bras : A le pose devant soi, rien d'autre (les bras sont pris).
   const installationsVues = [...installations];
   if (installationsVues.some((i) => i.etat.portee)) {
@@ -196,7 +200,15 @@ export function proposer(
         : escabeau
         ? { libelle: usage.libelle, message: { t: "interagir", cible: { genre: "ressource", id: r.donnees.id }, verbe: usage.verbe } }
         : { libelle: `${usage.libelle} (escabeau)`, examiner: "Les fruits sont trop haut. Pose un escabeau au pied de l'arbre, dans le cercle, puis monte cueillir." },
-      B: { libelle: "Examiner", examiner: arbre && jour > 0 ? `${usage.examen} ${etatDuFruitier(r.donnees.type, jour)}` : usage.examen },
+      B: {
+        libelle: "Examiner",
+        examiner:
+          r.donnees.type === "coop_batterie"
+            ? examenBatterieTracteur(etatCoop?.klaxons ?? KLAXONS_PAR_BATTERIE, famille)
+            : arbre && jour > 0
+              ? `${usage.examen} ${etatDuFruitier(r.donnees.type, jour)}`
+              : usage.examen,
+      },
       cible: { x: r.donnees.x, z: r.donnees.z, rayon: EMPRISE_RESSOURCE[r.donnees.type] ?? 0.5 },
     });
   }
@@ -268,18 +280,43 @@ export function proposer(
 
   // À la Coopérative : les leurres du décor (Book 23 §4.7). Un bruit qui attire les Éteints ailleurs que sur soi.
   if (portes) {
-    const EXAMENS: Record<string, string> = {
-      klaxon: "Le klaxon du tracteur rouge. La batterie a encore un peu de jus : de quoi faire venir tous les Éteints du coin… quelques fois. Elle ne se recharge pas.",
-      sonnette: "La sonnette électrique du quai : on sonnait pour la livraison. Elle s'entend dans tout le hangar.",
-      radio: "Un vieux poste à piles, réglé sur la radio de la Compagnie. Allumé, il braille sa réclame : les Éteints vont voir.",
-    };
+    // Le klaxon : tant que la batterie est dans le tracteur (0.5.1 : on peut la démonter et l'emporter).
+    const klaxons = etatCoop?.klaxons ?? KLAXONS_PAR_BATTERIE;
+    const batterie = ressourcesVues.find((r) => r.donnees.type === "coop_batterie");
+    const batterieEnPlace = !batterie || batterie.donnees.disponible;
+    const wh = Math.round(chargeBatterieTracteur(klaxons));
+    const examenKlaxon = !batterieEnPlace
+      ? "Le klaxon du tracteur rouge. Plus de batterie sous le capot : il ne sonnera plus, tant qu'une autre ne se sera pas retrouvée là."
+      : klaxons > 0
+        ? `Le klaxon du tracteur rouge : de quoi faire venir tous les Éteints du coin. Encore ${klaxons} coup${klaxons > 1 ? "s" : ""} : chacun vide un quart de la batterie (il lui reste ≈ ${wh} Wh), qui ne se recharge pas ici.`
+        : "Le klaxon du tracteur rouge. La batterie est morte : il ne fait plus qu'un clic.";
     for (const l of LEURRES) {
-      const libelle =
-        l.id === "klaxon" ? "Klaxonner (attire les Éteints)" : l.id === "sonnette" ? "Sonner (attire les Éteints)" : leurresActifs.has("radio") ? "Éteindre la radio" : "Allumer la radio (attire les Éteints)";
-      garder(Math.hypot(l.x - position.x, l.z - position.z) - 0.4, {
-        A: { libelle, message: { t: "interagir", cible: { genre: "leurre", id: l.id }, verbe: "actionner" } },
-        B: { libelle: "Examiner", examiner: EXAMENS[l.id] ?? "" },
-        cible: { x: l.x, z: l.z },
+      // La radio est là où on l'a posée ; dans un sac, elle n'est nulle part.
+      const ou = l.id === "radio" ? (etatCoop ? etatCoop.radio : l) : l;
+      if (!ou) continue;
+      const d = Math.hypot(ou.x - position.x, ou.z - position.z) - 0.4;
+      if (l.id === "radio") {
+        garder(d, {
+          A: {
+            libelle: leurresActifs.has("radio") ? "Éteindre la radio" : "Allumer la radio (attire les Éteints)",
+            message: { t: "interagir", cible: { genre: "leurre", id: "radio" }, verbe: "actionner" },
+          },
+          // B la prend : on la pose ailleurs, puis on l'allume (Book 23 §4.7 : « elle se transporte et se pose »).
+          B: { libelle: "Prendre la radio (2 kg)", message: { t: "interagir", cible: { genre: "leurre", id: "radio" }, verbe: "prendre_radio" } },
+          cible: { x: ou.x, z: ou.z },
+        });
+        continue;
+      }
+      const A: ActionProposee =
+        l.id === "klaxon"
+          ? batterieEnPlace
+            ? { libelle: "Klaxonner (attire les Éteints)", message: { t: "interagir", cible: { genre: "leurre", id: l.id }, verbe: "actionner" } }
+            : { libelle: "Klaxon muet (plus de batterie)", examiner: examenKlaxon }
+          : { libelle: "Sonner (attire les Éteints)", message: { t: "interagir", cible: { genre: "leurre", id: l.id }, verbe: "actionner" } };
+      garder(d, {
+        A,
+        B: { libelle: "Examiner", examiner: l.id === "klaxon" ? examenKlaxon : "La sonnette électrique du quai : on sonnait pour la livraison. Elle s'entend dans tout le hangar." },
+        cible: { x: ou.x, z: ou.z },
       });
     }
   }
@@ -344,5 +381,31 @@ export function proposer(
     });
   }
 
+  // La radio dans le sac, à la Coopérative : rien à portée de main, A la pose ici (0.5.1).
+  if (!meilleure.propositions && lieu === "cooperative" && (inventaire.radio_piles ?? 0) > 0) {
+    return {
+      A: { libelle: "Poser la radio ici", message: { t: "poser_radio" } },
+      B: { libelle: "Examiner", examiner: "La radio de l'atelier est dans ton sac. Pose-la là où tu veux attirer les Éteints, allume-la, et éloigne-toi." },
+      cible: null,
+    };
+  }
   return meilleure.propositions ?? { A: null, B: null, cible: null };
+}
+
+/** L'examen de la batterie du tracteur (Book 23 §4.7) : ce qu'elle vaut, ce qu'on perd en la prenant. */
+function examenBatterieTracteur(klaxons: number, famille: Famille): string {
+  const wh = Math.round(chargeBatterieTracteur(klaxons));
+  const charge =
+    klaxons >= KLAXONS_PAR_BATTERIE
+      ? `Encore pleine : ≈ ${wh} Wh.`
+      : wh > 0
+        ? `Les coups de klaxon l'ont entamée : ≈ ${wh} Wh sur ${CAPACITES.batterie_voiture}.`
+        : "Le klaxon l'a vidée : elle se rechargerait sur un banc.";
+  const choix =
+    famille === "voltaiques"
+      ? " Pour toi, c'est du courant en réserve… mais sans elle, plus de klaxon pour vider le hangar."
+      : famille === "mecanistes"
+        ? " Pour un atelier, c'est une batterie de démarrage… mais sans elle, plus de klaxon pour vider le hangar."
+        : " Sans elle, plus de klaxon pour vider le hangar.";
+  return `La batterie du tracteur rouge, sanglée sur le garde-boue : c'est elle qui fait sonner le klaxon. ${charge} 18 kg, une clé plate pour les cosses.${choix} Chaque coup de klaxon en vide un quart.`;
 }

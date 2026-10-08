@@ -529,9 +529,13 @@ export class Base {
       this.db.prepare("INSERT INTO monde (cle, valeur) VALUES (?, ?) ON CONFLICT (cle) DO UPDATE SET valeur = excluded.valeur").run(cle, String(version));
     }
     let lignes = lire();
-    if (lignes.length === 0) {
+    // Un point nouveau, ajouté au contenu sans en changer la version (0.5.1 : la batterie du tracteur), s'ajoute seul :
+    // le reste (le butin déjà pris) ne bouge pas.
+    const connus = new Set(lignes.map((l) => l.id));
+    const manquants = generer().filter((r) => !connus.has(r.id));
+    if (manquants.length > 0) {
       const inserer = this.db.prepare("INSERT INTO ressources_lieux (lieu, id, type, x, z) VALUES (?, ?, ?, ?, ?)");
-      for (const r of generer()) inserer.run(lieu, r.id, r.type, r.x, r.z);
+      for (const r of manquants) inserer.run(lieu, r.id, r.type, r.x, r.z);
       lignes = lire();
     }
     return lignes.map((l) => ({ id: l.id, type: l.type, x: l.x, z: l.z, disponibleLe: l.disponible_le }));

@@ -114,6 +114,7 @@ import {
   MATIERE_ARME,
   PLAFOND_FORTUNE,
   REPARATION_FORTUNE,
+  DEBRIS_ARME,
   REPOUSSER,
   SEUIL_ABIMEE,
   armeEnMain,
@@ -357,6 +358,7 @@ export class Joueur implements Voyageur {
     this.besoins = perso.besoins;
     this.gourde = perso.gourde;
     this.inventaire = base.chargerInventaire(compte.id);
+    if (this.lieu === "cooperative") cooperatives.retrouverRadio(compte.id, (this.inventaire.radio_piles ?? 0) > 0);
     for (const r of base.chargerRessources(compte.id)) this.ressources.set(r.id, r);
     for (const i of base.chargerInstallations(compte.id)) {
       // Parti avec l'escabeau dans les bras : il est resté là où on l'a lâché.
@@ -447,7 +449,9 @@ export class Joueur implements Voyageur {
       quetes: this.vueQuetes(),
       arme: this.armeEquipee,
       usure: { ...this.usure },
-      ...(this.lieu === "cooperative" ? { leurres: this.cooperatives.leurresActifs(this.compte.id, this.maintenant()) } : {}),
+      ...(this.lieu === "cooperative"
+        ? { leurres: this.cooperatives.leurresActifs(this.compte.id, this.maintenant()), etatCoop: this.cooperatives.vue(this.compte.id) }
+        : {}),
       ...(this.lieu === "comptoir" ? { comptoir: this.comptoir.vue(instant) } : {}),
       ...(this.lieu === "cooperative" && this.vivant ? { portes: { ...this.vivant.portes } } : {}),
     };
@@ -498,6 +502,9 @@ export class Joueur implements Voyageur {
         return;
       case "poser":
         this.poserObjetLourd();
+        return;
+      case "poser_radio":
+        this.poserRadio();
         return;
       case "equiper":
         this.equiper(message.objet);
@@ -879,7 +886,19 @@ export class Joueur implements Voyageur {
       delete this.usure[o];
       this.retirer(o, 1);
       this.envoyer({ t: "usure", usure: { ...this.usure }, evenement: { objet: o, etat: "cassee" } });
-      this.info(`${arme.nom.charAt(0).toUpperCase()}${arme.nom.slice(1)} vient de casser. ${(this.inventaire[o] ?? 0) > 0 ? "Tu prends la suivante, neuve." : "Il te faudra une autre arme."}`);
+      // Elle laisse un débris, qui se démonte (Book 23 §4.3) : dans le sac, ou par terre s'il n'y a plus de place.
+      const debris = DEBRIS_ARME[o];
+      let reste = "";
+      if (debris) {
+        if (poidsInventaire(this.inventaire) + poidsDe({ [debris]: 1 }) <= capaciteDe(this.inventaire)) {
+          this.ajouterPlusieurs({ [debris]: 1 });
+          reste = ` Il n'en reste qu'un débris (${nommer(debris, 1)}), qui se démonte : Sac → Démonter.`;
+        } else {
+          this.poserAuSol({ [debris]: 1 });
+          reste = ` Son débris (${nommer(debris, 1)}) est tombé par terre : ton sac est plein.`;
+        }
+      }
+      this.info(`${arme.nom.charAt(0).toUpperCase()}${arme.nom.slice(1)} vient de casser.${reste} ${(this.inventaire[o] ?? 0) > 0 ? "Tu prends la suivante, neuve." : "Il te faudra une autre arme."}`);
       this.base.sauverUsure(this.compte.id, this.usure);
       return;
     }
@@ -952,9 +971,32 @@ export class Joueur implements Voyageur {
   private actionnerLeurre(id: string): void {
     const l = LEURRES.find((x) => x.id === id);
     if (this.lieu !== "cooperative" || !l || this.voyage) return;
-    if (!this.proche(l.x, l.z, DISTANCE_INTERACTION + 0.5)) return this.info("Approche-toi.");
+    // La radio est là où on l'a posée (0.5.1) ; dans le sac, on la pose d'abord.
+    const ou = l.id === "radio" ? this.cooperatives.radio(this.compte.id) : l;
+    if (!ou) return this.info("La radio est dans ton sac : pose-la d'abord, là où tu veux attirer les Éteints.");
+    if (!this.proche(ou.x, ou.z, DISTANCE_INTERACTION + 0.5)) return this.info("Approche-toi.");
     const texte = this.cooperatives.actionner(this.compte.id, id, this.maintenant());
     if (texte) this.info(texte);
+  }
+
+  /** Prendre la radio à piles dans son sac (Book 23 §4.7 : « elle se transporte et se pose »). Elle s'éteint. */
+  private prendreRadio(): void {
+    if (this.lieu !== "cooperative" || this.voyage) return;
+    const ou = this.cooperatives.radio(this.compte.id);
+    if (!ou) return;
+    if (!this.proche(ou.x, ou.z, DISTANCE_INTERACTION + 0.5)) return this.info("Approche-toi.");
+    if (poidsInventaire(this.inventaire) + poidsDe({ radio_piles: 1 }) > capaciteDe(this.inventaire)) return this.sacTropLourd();
+    if (!this.cooperatives.prendreRadio(this.compte.id, this.maintenant())) return;
+    this.ajouterPlusieurs({ radio_piles: 1 });
+    this.info("Tu glisses la radio dans ton sac. Pose-la où tu veux attirer les Éteints, puis allume-la.");
+  }
+
+  /** Poser la radio à ses pieds, dans la Coopérative (éteinte : on l'allume ensuite, ou on s'éloigne d'abord). */
+  private poserRadio(): void {
+    if (this.lieu !== "cooperative" || this.voyage || !(this.inventaire.radio_piles ?? 0)) return;
+    if (this.cooperatives.radio(this.compte.id)) return;
+    this.retirer("radio_piles", 1);
+    this.cooperatives.poserRadio(this.compte.id, this.position.x, this.position.z);
   }
 
   /** Taper vite pour se dégager (Book 08 §3.3) : il en faut plus quand plusieurs tiennent, et quand on est épuisé. */
@@ -1371,6 +1413,11 @@ export class Joueur implements Voyageur {
     if (etape !== vers) this.info(`La route du ${LIEUX[vers].nom.replace(/^Le /, "")} passe par la station-service : il faudra la traverser à pied.`);
     vers = etape;
     this.annulerAction();
+    // La radio ne capte la Compagnie qu'au Plateau (0.5.1) : on la pose au portail en partant.
+    if (this.lieu === "cooperative" && (this.inventaire.radio_piles ?? 0) > 0) {
+      this.poserRadio();
+      this.info("Tu poses la radio au pied du portail : loin du Plateau, elle ne capterait plus la Compagnie.");
+    }
     this.lumiere = false;
     const km = distanceKm(this.lieu, vers);
     this.besoins = { ...this.besoins, kcal: Math.max(0, this.besoins.kcal - km * KCAL_PAR_KM), eau: Math.max(0, this.besoins.eau - km * EAU_PAR_KM) };
@@ -1395,6 +1442,7 @@ export class Joueur implements Voyageur {
     this.lieu = voyage.vers;
     this.position = arriveeDans(voyage.vers, voyage.de);
     this.vivant?.entrer(this);
+    if (this.lieu === "cooperative") this.cooperatives.retrouverRadio(this.compte.id, (this.inventaire.radio_piles ?? 0) > 0);
     if (this.lieu === "comptoir") this.comptoir.entrer(this.envoyer);
     if (this.tuto && this.lieu === "station") this.tuto.visiteStation = true;
     this.noterFait(`visite:${this.lieu}`);
@@ -1984,6 +2032,7 @@ export class Joueur implements Voyageur {
     if (cible?.genre === "animal" && verbe === "assommer" && this.lieu === "terrain") return this.assommer(cible.id);
     if (cible?.genre === "porte" && (verbe === "ouvrir_porte" || verbe === "fermer_porte")) return this.actionnerPorte(cible.id, verbe === "ouvrir_porte");
     if (cible?.genre === "leurre" && verbe === "actionner") return this.actionnerLeurre(cible.id);
+    if (cible?.genre === "leurre" && cible.id === "radio" && verbe === "prendre_radio") return this.prendreRadio();
     // Le reste (mare, feux, installations) n'existe que sur le terrain.
     if (this.lieu !== "terrain") return;
     if (cible?.genre === "mare" && verbe === "remplir") return this.remplirGourde();
@@ -2029,7 +2078,15 @@ export class Joueur implements Voyageur {
         this.envoyer({ t: "ressource", id: r.id, disponible: false });
       }
       this.ajouterPlusieurs(usage.donne);
-      for (const b of BATTERIES) if (usage.donne[b]) this.ajouterCharge(b, CHARGE_TROUVEE[b] * (usage.donne[b] ?? 0));
+      if (r.type === "coop_batterie" && lieu === "cooperative") {
+        // La batterie du tracteur (Book 23 §4.7) : ce que les coups de klaxon lui ont laissé. Le klaxon se tait.
+        const wh = this.ajouterCharge("batterie_voiture", this.cooperatives.prendreBatterie(this.compte.id));
+        this.info(
+          wh >= 1
+            ? `Tu desserres les cosses : la batterie du tracteur est à toi, ${Math.round(wh)} Wh dedans. Le klaxon ne sonnera plus.`
+            : "Tu desserres les cosses : la batterie du tracteur est à toi, mais vide. Le klaxon l'a épuisée ; un banc de recharge la remplira.",
+        );
+      } else for (const b of BATTERIES) if (usage.donne[b]) this.ajouterCharge(b, CHARGE_TROUVEE[b] * (usage.donne[b] ?? 0));
       // Vestiges, lot 1 : une fouille rapporte aussi du bric-à-brac, tiré dans la table du lieu.
       const lieuFouille = LIEU_DE_FOUILLE[r.type];
       if (lieuFouille) this.recevoirBricABrac(tirerVestiges(lieuFouille, this.alea));

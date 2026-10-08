@@ -105,6 +105,8 @@ export type Verbe =
   | "fermer_porte"
   /** Un leurre du décor : klaxonner, sonner, allumer ou éteindre la radio. */
   | "actionner"
+  /** La radio à piles : la prendre dans son sac (0.5.1). */
+  | "prendre_radio"
   // Améliorer sa base (Book 24) : sur un feu ou une installation, sur place.
   | "ameliorer"
   | "redescendre"
@@ -186,6 +188,8 @@ export type MessageClient =
   | { t: "demonter"; objet: TypeObjet }
   /** Poser devant soi l'objet lourd qu'on porte. */
   | { t: "poser" }
+  /** Poser à ses pieds la radio à piles qu'on a dans le sac (à la Coopérative, 0.5.1). */
+  | { t: "poser_radio" }
   /** Équiper une arme pour le mode Combat (null : plus d'arme choisie, la meilleure du sac) (P-005). */
   | { t: "equiper"; objet: TypeObjet | null }
   /** Les images par seconde de l'appareil, chaque minute (mesures du test familial, Book 17 §6). */
@@ -347,10 +351,21 @@ export interface Bienvenue {
   portes?: Record<string, boolean>;
   /** À la Coopérative seulement : les leurres en marche (la radio allumée). */
   leurres?: string[];
+  /** À la Coopérative seulement : où est la radio, et ce qui reste à la batterie du tracteur (0.5.1). */
+  etatCoop?: EtatCoopVu;
   /** L'usure des armes (coups qui restent ; absente : neuve). */
   usure?: Partial<Record<TypeObjet, number>>;
   /** La volaille du terrain (2026-10-08). */
   animaux?: AnimalVu[];
+}
+
+/**
+ * Ce que le joueur sait de sa Coopérative (Book 23 §4.7, 0.5.1) : où est la radio (null : dans un sac), et combien
+ * de coups de klaxon il reste à la batterie du tracteur (sa charge s'en déduit ; la batterie prise : voir la ressource).
+ */
+export interface EtatCoopVu {
+  radio: { x: number; z: number } | null;
+  klaxons: number;
 }
 
 export type MessageServeur =
@@ -394,6 +409,8 @@ export type MessageServeur =
   | { t: "usure"; usure: Partial<Record<TypeObjet, number>>; evenement?: { objet: TypeObjet; etat: "abimee" | "cassee" | "reparee" } }
   /** Un leurre de la Coopérative s'est déclenché, ou s'est tu (la radio). */
   | { t: "leurre"; id: string; actif: boolean; x: number; z: number }
+  /** La radio a changé de place, ou le klaxon a sonné (0.5.1). */
+  | { t: "etat_coop"; etat: EtatCoopVu }
   /** L'état des portes de la Coopérative (ouverte : true), à chaque changement (0.5b). */
   | { t: "portes"; portes: Record<string, boolean> }
   | { t: "wotts"; wotts: WottsVus }

@@ -2,6 +2,7 @@
 // portes, obscurité, Éteints, butin) et par le client (le bâtiment en 3D). Tout est de plain-pied en 0.5.
 // Repère : x vers l'est (0 → 80 m), z vers le sud (0 → 60 m). Le portail est au sud, la cour des silos au nord.
 
+import { CAPACITES } from "./energie.ts";
 import type { Boite } from "./lieux.ts";
 import type { TypeRessource } from "./terrain.ts";
 
@@ -223,6 +224,13 @@ export function sombreIci(x: number, z: number): boolean {
 export const ARRIVEE_COOP = { x: PORTAIL.x, z: PORTAIL.z - 2.5, o: Math.PI } as const;
 
 /**
+ * La radio à piles se prend (dans le sac, 2 kg) et se pose ailleurs dans la Coopérative (0.5.1). Elle ne capte que
+ * l'émetteur de la Compagnie, au Plateau : on ne l'emporte pas sur la route (en partant, on la pose au portail).
+ * Ici, sa place d'origine : sur l'établi de l'atelier.
+ */
+export const RADIO_ETABLI = { x: 7.2, z: 30.5 } as const;
+
+/**
  * Les leurres du décor (Book 23 §4.7) : le klaxon du tracteur (il vide la batterie du tracteur), la sonnette du quai,
  * la radio à piles sur l'établi (elle joue tant qu'on ne l'éteint pas, ou que les piles tiennent).
  */
@@ -236,13 +244,32 @@ export interface LeurreCoop {
   duree: number;
 }
 export const LEURRES: LeurreCoop[] = [
-  { id: "klaxon", nom: "le klaxon du tracteur", x: 13.9, z: 21.2, portee: 40, duree: 3 },
+  // 0.5.1 : on l'actionne depuis l'arrière du tracteur (z 22,2) ; la batterie, plus au nord sur le garde-boue, se vise
+  // depuis l'avant, sans que les deux se disputent la main.
+  { id: "klaxon", nom: "le klaxon du tracteur", x: 13.9, z: 22.2, portee: 40, duree: 3 },
   { id: "sonnette", nom: "la sonnette du quai", x: 34.3, z: 28.6, portee: 28, duree: 2.5 },
-  { id: "radio", nom: "la radio à piles", x: 7.2, z: 30.5, portee: 22, duree: 0 },
+  // La radio : sa place d'origine ; elle se déplace (EtatCoop.radio, côté serveur).
+  { id: "radio", nom: "la radio à piles", x: RADIO_ETABLI.x, z: RADIO_ETABLI.z, portee: 22, duree: 0 },
 ];
 /** La batterie du tracteur tient quatre coups de klaxon ; les piles de la radio, dix minutes. */
 export const KLAXONS_PAR_BATTERIE = 4;
 export const PILES_RADIO_S = 600;
+
+/**
+ * La batterie du tracteur (Book 23 §4.7, 0.5.1) : on peut la démonter et l'emporter (une 12 V de voiture, 360 Wh utiles).
+ * Chaque coup de klaxon en vide un quart : pleine si l'on n'a jamais klaxonné, vide après le quatrième coup.
+ */
+export function chargeBatterieTracteur(klaxonsRestants: number): number {
+  const k = Math.max(0, Math.min(KLAXONS_PAR_BATTERIE, klaxonsRestants));
+  return (CAPACITES.batterie_voiture * k) / KLAXONS_PAR_BATTERIE;
+}
+/** Où elle est sanglée : sur le garde-boue droit du tracteur rouge (le point (0,7 ; 0,62) de l'engin, dans le rendu). */
+export const BATTERIE_TRACTEUR = { x: 12.78, z: 20.51 } as const;
+
+/** La radio est-elle sur l'établi (sa place d'origine) ? Le rendu la met alors sur le plateau ; sinon, au sol. */
+export function radioSurEtabli(ou: { x: number; z: number }): boolean {
+  return Math.hypot(ou.x - RADIO_ETABLI.x, ou.z - RADIO_ETABLI.z) < 0.05;
+}
 
 /** Version du contenu de la Coopérative (ressources, butin) : la changer régénère les instances. */
 export const VERSION_COOP = 2;
@@ -268,6 +295,8 @@ export function butinCoop(): { id: number; type: TypeRessource; x: number; z: nu
     ["coop_coffre", 71.9, 34],
     ["coop_caisse_froide", 70, 13],
     ["coop_caisse_froide", 68.5, 9.5],
+    // 0.5.1 : ajouté sans changer VERSION_COOP (la base ajoute un point nouveau sans régénérer le reste).
+    ["coop_batterie", BATTERIE_TRACTEUR.x, BATTERIE_TRACTEUR.z],
   ];
   return points.map(([type, x, z], i) => ({ id: i + 1, type, x, z }));
 }

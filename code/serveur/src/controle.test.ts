@@ -72,3 +72,10 @@ test("améliorer sa base (Book 24) : les gestes sur un feu ou une installation p
   ];
   for (const m of mauvais) assert.equal(messageValide(m), false, JSON.stringify(m));
 });
+
+test("0.5.1 : la radio se prend et se pose ; « prendre_radio » ne vise qu'elle", () => {
+  assert.ok(messageValide({ t: "poser_radio" }));
+  assert.ok(messageValide({ t: "interagir", cible: { genre: "leurre", id: "radio" }, verbe: "prendre_radio" }));
+  assert.equal(messageValide({ t: "interagir", cible: { genre: "leurre", id: "klaxon" }, verbe: "prendre_radio" }), false);
+  assert.equal(messageValide({ t: "interagir", cible: { genre: "ressource", id: 3 }, verbe: "prendre_radio" }), false);
+});

@@ -230,7 +230,7 @@ test("0.5d : un Éteint détruit le reste, d'une visite à l'autre ; les portes 
 test("0.5d : le repeuplement — quelques Éteints reviennent toutes les 12 h, la chambre froide d'abord", () => {
   const debut = 5_000_000;
   const froide = [19, 20, 21, 22, 23, 24];
-  const etat = { detruits: [1, 2, 5, ...froide], portes: portesInitiales(), repeupleLe: debut, klaxons: 4, piles: 600 };
+  const etat = { detruits: [1, 2, 5, ...froide], portes: portesInitiales(), repeupleLe: debut, klaxons: 4, piles: 600, radio: null };
   assert.deepEqual(repeupler(etat, debut + 11 * 3_600_000), etat, "rien avant 12 h");
   const apres12 = repeupler(etat, debut + 12.5 * 3_600_000);
   assert.equal(apres12.detruits.length, etat.detruits.length - 3);

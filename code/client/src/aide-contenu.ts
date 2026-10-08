@@ -370,7 +370,7 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
       { sous_titre: "Contondant, tranchant, perçant" },
       "Une seule règle : **le casque**. Certains Éteints en portent un. Le **tranchant** (hache, machette, couteaux) glisse dessus ; le **contondant** (marteau, masse, gourdin…) passe, et étourdit plus longtemps ; le **perçant** (épieu, lance) vaut par son allonge. Le sac indique le type de chaque arme.",
       { sous_titre: "L'usure" },
-      "Chaque coup qui touche use l'arme en main. Sous 30 %, elle est **abîmée** (le jeu te prévient) : ses coups portent moins. À zéro, elle **casse**. La solidité se lit dans le sac.",
+      "Chaque coup qui touche use l'arme en main. Sous 30 %, elle est **abîmée** (le jeu te prévient) : ses coups portent moins. À zéro, elle **casse** et laisse un débris, qui se démonte (Sac → Démonter) pour en tirer un peu de matière. La solidité se lit dans le sac.",
       "**Réparer** (Sac → l'arme) : une réparation de fortune, partout, avec une ficelle et des chiffons, la fait tenir sans la remettre à neuf ; pour de bon, chez toi, à l'atelier qui convient (le bois à l'établi, les lames à une meule, le métal à une forge). Ce que ta famille ne sait pas réparer, une autre le sait : échangez.",
     ],
   },
