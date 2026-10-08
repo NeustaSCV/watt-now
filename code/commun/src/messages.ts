@@ -328,6 +328,8 @@ export type MessageServeur =
   | { t: "action"; etat: "debut"; libelle: string; duree: number; bruit: BruitAction; deja?: number }
   | { t: "action"; etat: "fin" | "annulee" }
   | { t: "info"; texte: string }
+  /** Un conseil discret (comment s'y prendre) : affiché en petit, sans gêner le jeu (2026-10-08). */
+  | { t: "indice"; texte: string }
   | { t: "lumiere"; allumee: boolean }
   /** Départ sur la route : le client montre le trajet sur la carte ; l'arrivée est un nouveau `bienvenue`. */
   | { t: "voyage"; de: LieuId; vers: LieuId; duree: number }

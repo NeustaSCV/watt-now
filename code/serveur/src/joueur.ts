@@ -1836,7 +1836,7 @@ export class Joueur implements Voyageur {
     const instant = this.maintenant();
     if (instant - (this.derniersIndices.get(sorte) ?? -Infinity) < periodeMs) return;
     this.derniersIndices.set(sorte, instant);
-    this.info(texte);
+    this.envoyer({ t: "indice", texte });
   }
   private readonly derniersIndices = new Map<string, number>();
 
@@ -2116,8 +2116,10 @@ export class Joueur implements Voyageur {
       const avant = p.etat;
       penserPoule(p, dt, this.sommeil ? null : qui, this.alea);
       // Une poule effarouchée par un pas trop pressé : on dit comment s'y prendre.
-      if (avant !== "fuit" && p.etat === "fuit" && qui.bouge && qui.allure !== "discrete") {
-        this.indice("poule", "Les poules se méfient : approche-toi en allure discrète (C), sans courir, et frappe pendant qu'elles picorent.", 60_000);
+      // Seulement pour qui pourrait chasser (une arme en main), pas avant d'en avoir attrapé une, et rarement.
+      const chasseur = armeEnMain(this.inventaire, this.armeEquipee).objet !== null && (this.quetes.etat.faits.poule_attrapee ?? 0) === 0;
+      if (chasseur && avant !== "fuit" && p.etat === "fuit" && qui.bouge && qui.allure !== "discrete") {
+        this.indice("poule", "Les poules se méfient : approche-toi en allure discrète (C), sans courir, et frappe pendant qu'elles picorent.", 10 * 60_000);
       }
     }
     // Les poules : seulement quand elles ont bougé (elles passent beaucoup de temps à gratter sur place).
@@ -2158,6 +2160,7 @@ export class Joueur implements Voyageur {
     this.faune.prises.push(this.maintenant());
     this.base.sauverFaune(this.compte.id, this.faune);
     this.ajouterPlusieurs({ poule: 1 });
+    this.noterFait("poule_attrapee");
     // Les autres ont tout vu : elles détalent.
     for (const autre of this.poules) penserPoule(autre, 0, { x: this.position.x, z: this.position.z, allure: "course", bouge: true }, this.alea);
     this.envoyer({ t: "animaux", animaux: this.poules.map(vuePoule) });

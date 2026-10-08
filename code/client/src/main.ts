@@ -600,6 +600,9 @@ function recevoir(message: MessageServeur): void {
         anneauProgres.visible = false;
       }
       return;
+    case "indice":
+      hud.message(message.texte, "indice");
+      return;
     case "info":
       hud.message(message.texte);
       if (message.texte === "Échange conclu.") son.signal("echange");
@@ -842,7 +845,7 @@ function indice(sorte: string, texte: string, periodeMs = 20_000): void {
   const maintenant = performance.now();
   if (maintenant - (derniersIndices.get(sorte) ?? -Infinity) < periodeMs) return;
   derniersIndices.set(sorte, maintenant);
-  hud.message(texte);
+  hud.message(texte, "indice");
 }
 
 function agir(a: ActionProposee | null): void {

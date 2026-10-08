@@ -1076,13 +1076,13 @@ export class Hud {
     window.setTimeout(() => div.remove(), 2000 + conteneur.children.length * 120);
   }
 
-  message(texte: string, genre: "" | "aide" | "lecon" = ""): void {
+  message(texte: string, genre: "" | "aide" | "lecon" | "indice" = ""): void {
     const p = document.createElement("p");
     p.textContent = texte;
     if (genre) p.className = genre;
     this.messages.append(p);
     while (this.messages.children.length > 3) this.messages.firstElementChild!.remove();
-    window.setTimeout(() => p.remove(), genre ? 9000 : 5000);
+    window.setTimeout(() => p.remove(), genre === "indice" ? 6000 : genre ? 9000 : 5000);
   }
 
   // ---------- Panneaux : un seul ouvert à la fois ----------

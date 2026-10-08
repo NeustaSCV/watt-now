@@ -15,7 +15,8 @@ function monter(inventaire: Record<string, number>) {
   const recus: MessageServeur[] = [];
   const j = new Joueur(compte, base, (m) => recus.push(m), () => instant, new Halte(base), () => 0, new Comptoir(base, instant));
   (j as unknown as { inventaire: Record<string, number> }).inventaire = inventaire;
-  const infos = () => recus.filter((m) => m.t === "info").map((m) => (m as { texte: string }).texte);
+  // Les messages et les indices (ces derniers s'affichent plus discrètement, 2026-10-08).
+  const infos = () => recus.filter((m) => m.t === "info" || m.t === "indice").map((m) => (m as { texte: string }).texte);
   const attendre = (s: number) => {
     for (let i = 0; i < s * 10; i++) {
       instant += 100;

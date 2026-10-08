@@ -3622,56 +3622,76 @@ body {
   }
 }
 
-/* ---------- Les messages en bas de l'écran (retour du porteur, 2026-10-08) ----------
-   Ils étaient au milieu de l'écran, sur un fond qui cachait le jeu : ils passent en bas, juste au-dessus des
-   commandes, sur un fond léger ; le texte reste lisible par son ombre. Le plus récent est en bas. */
+/* ---------- Les messages, en haut à droite sous les tuiles (retour du porteur, 2026-10-08) ----------
+   Petits, sur un fond très léger, hors de la zone de jeu : on les lit d'un coup d'œil, ils ne cachent rien.
+   Les indices (« comment s'y prendre ») sont encore plus discrets. */
 #hud .messages {
-  top: auto !important;
-  bottom: max(124px, calc(env(safe-area-inset-bottom) + 112px));
+  top: calc(var(--haut-bandeau, 120px) + 6px) !important;
+  bottom: auto !important;
+  left: auto !important;
+  right: max(12px, env(safe-area-inset-right));
+  transform: none !important;
+  width: min(340px, calc(100vw - 24px));
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 4px;
+  align-items: flex-end;
+  gap: 3px;
+  font-size: 12.5px;
+  text-align: right;
   pointer-events: none;
 }
 #hud .messages p,
 #hud .messages p.aide,
-#hud .messages p.lecon {
+#hud .messages p.lecon,
+#hud[class*="habit-"] .messages p:not(.aide):not(.lecon) {
   margin: 0;
-  max-width: min(520px, calc(100vw - 32px));
-  background: rgba(14, 18, 26, 0.42);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
+  max-width: 100%;
+  padding: 4px 9px;
+  border: none;
+  border-radius: 6px;
+  box-shadow: none;
+  background: rgba(14, 18, 26, 0.3);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   color: #f6f1e4;
+  font-family: inherit;
+  font-style: normal;
+  line-height: 1.35;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
 }
 #hud .messages p.aide {
-  background: rgba(31, 94, 102, 0.42);
+  background: rgba(31, 94, 102, 0.3);
 }
 #hud .messages p.lecon {
-  background: rgba(70, 56, 30, 0.42);
-  color: #fbf3df;
+  background: rgba(70, 56, 30, 0.32);
+  font-style: italic;
 }
-/* Téléphone en portrait : au-dessus du joystick et des boutons A/B. */
-@media (pointer: coarse) and (orientation: portrait) {
+#hud .messages p.indice,
+#hud[class*="habit-"] .messages p.indice {
+  background: rgba(14, 18, 26, 0.18);
+  font-size: 11.5px;
+  opacity: 0.9;
+}
+@media (pointer: coarse) {
   #hud .messages {
-    bottom: max(300px, calc(env(safe-area-inset-bottom) + 288px));
-    font-size: 13px;
+    width: min(300px, calc(100vw - 24px));
+    font-size: 12px;
   }
 }
-/* Téléphone en paysage : entre le joystick et les boutons, au-dessus de l'invite. */
-@media (pointer: coarse) and (orientation: landscape) and (max-height: 520px) {
-  #hud .messages {
-    bottom: max(66px, calc(env(safe-area-inset-bottom) + 58px));
-    width: min(420px, 46vw);
-    font-size: 12.5px;
-  }
+#hud .messages p {
+  font-size: 12px !important;
 }
-/* L'habillage de famille reste dans la police, pas dans un fond opaque : les messages laissent voir le jeu. */
-#hud[class*="habit-"] .messages p:not(.aide):not(.lecon) {
-  background: rgba(14, 18, 26, 0.42);
-  border-color: transparent;
-  box-shadow: none;
-  color: #f6f1e4;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+#hud .messages p.indice {
+  font-size: 11px !important;
+}
+@media (pointer: coarse) {
+  #hud .messages {
+    width: min(260px, calc(100vw - 24px));
+  }
+  #hud .messages p {
+    font-size: 11px !important;
+  }
+  #hud .messages p.indice {
+    font-size: 10.5px !important;
+  }
 }

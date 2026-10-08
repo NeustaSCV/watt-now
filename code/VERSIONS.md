@@ -15,7 +15,8 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 ## 0.5 · en préparation
 
 **L'écran**
-- Les **messages d'aide** passent **en bas de l'écran**, juste au-dessus des commandes, sur un fond léger qui laisse voir le jeu (le texte reste lisible par son ombre). Le plus récent est en bas.
+- Les **messages** passent **en haut à droite, juste sous les tuiles**, en petit et sur un fond très léger : ils ne cachent plus la zone de jeu. Les **indices** (« comment s'y prendre ») sont encore plus discrets.
+- L'indice des poules ne revient plus à chaque passage : seulement si l'on a de quoi chasser, au plus toutes les 10 minutes, et plus jamais une fois une poule attrapée.
 
 ## 0.4 · déployée le 2026-10-08
 
