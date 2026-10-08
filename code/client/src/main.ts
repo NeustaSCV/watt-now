@@ -4,7 +4,7 @@ import { Lots } from "./rendu/lots.ts";
 import { fusionnerStatique } from "./rendu/fusion.ts";
 import { ModePose, fantomeFeu, type GenrePose } from "./pose.ts";
 import { raisonEmplacement } from "../../commun/src/emplacement.ts";
-import { appliquerReglages } from "../../commun/src/reglages.ts";
+import { REGLAGES, appliquerReglages } from "../../commun/src/reglages.ts";
 import { formaterDate, jourDuCalendrier } from "../../commun/src/calendrier.ts";
 import { avecTouches } from "./touches.ts";
 import * as THREE from "three";
@@ -1055,6 +1055,12 @@ async function entrer(messageInitial = ""): Promise<void> {
         libelle: "Reprendre ici",
         action: () => reseau?.ouvrir(),
       }),
+    // Rien fait depuis quelques minutes : le serveur a mis la partie en pause (2026-10-08).
+    inactif: () =>
+      afficherVoile(
+        `Tu n'as pas bougé depuis ${REGLAGES.inactivite_min} minutes : la partie s'est mise en pause. Hors ligne, ta faim, ta soif et ta fatigue sont gelées.\n\nConseil : avant de partir, va dormir dans ton abri. Se déconnecter dans son abri compte comme une nuit complète.`,
+        { libelle: "Reprendre", action: () => reseau?.ouvrir() },
+      ),
   });
   reseau.ouvrir();
 }
@@ -1339,6 +1345,7 @@ function boucle(instant: number): void {
     nuitAnnoncee = true;
     if (!lumiere && lumierePortee(inventaire)) hud.message("La nuit tombe. R (ou « Lumière ») pour t'éclairer… mais la lumière se voit de loin.");
     aider("nuit");
+    aider("partir");
   }
   if (!estNuit(heure)) nuitAnnoncee = false;
 

@@ -14,7 +14,8 @@ export type Aide =
   | "halte"
   | "comptoir"
   | "nuit"
-  | "effondrement";
+  | "effondrement"
+  | "partir";
 
 export const TEXTES_AIDES: Record<Aide, string> = {
   pluie: "Il pleut : la pluie couvre les bruits et les odeurs. Bon moment pour travailler sans attirer les Éteints.",
@@ -27,6 +28,7 @@ export const TEXTES_AIDES: Record<Aide, string> = {
   halte: "Une halte : tout le monde y passe. Le butin est maigre, et des Éteints dorment près de la station.",
   comptoir: "Le Comptoir du Carrefour : on vend, on achète, et seule l'électricité déposée crée des wotts.",
   nuit: "La nuit tombe. Ta lumière se voit de loin : allume-la quand il le faut, pas plus.",
+  partir: "Un conseil : avant de fermer le jeu, va dormir dans ton abri. Se déconnecter dans son abri compte comme une nuit complète, et hors ligne ta faim et ta soif sont gelées.",
   effondrement: "Tu t'es effondré. Ton sac est resté là-bas : va le reprendre, il est marqué d'un anneau jaune.",
 };
 

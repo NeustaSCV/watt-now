@@ -3,9 +3,9 @@
 
 import { monitorEventLoopDelay } from "node:perf_hooks";
 import type { WebSocket } from "ws";
-import { FERMETURE_REMPLACE, type MessageClient, type MessageServeur } from "../../commun/src/messages.ts";
+import { FERMETURE_INACTIF, FERMETURE_REMPLACE, type MessageClient, type MessageServeur } from "../../commun/src/messages.ts";
 import { TICK_HZ } from "../../commun/src/regles.ts";
-import { reglagesChanges, type Reglages } from "../../commun/src/reglages.ts";
+import { REGLAGES, reglagesChanges, type Reglages } from "../../commun/src/reglages.ts";
 import type { Base, Compte } from "./base.ts";
 import { journal } from "./journal.ts";
 import { Comptoir } from "./comptoir.ts";
@@ -32,6 +32,8 @@ interface Connexion {
   socket: WebSocket;
   /** Pour mesurer la durée de la séance. */
   arrivee: number;
+  /** Le dernier vrai geste du joueur (ms) : au-delà de `inactivite_min`, on le déconnecte. */
+  activite: number;
 }
 
 export class Monde {
@@ -123,7 +125,8 @@ export class Monde {
       socket.close(1011, "Personnage introuvable");
       return;
     }
-    const connexion = { joueur, socket, arrivee: Date.now() };
+    // `activite` : le dernier vrai geste du joueur (pas les pings, ni l'intention « ne pas bouger » renvoyée par sécurité).
+    const connexion = { joueur, socket, arrivee: Date.now(), activite: Date.now() };
     this.connexions.set(compte.id, connexion);
 
     socket.on("message", (donnees) => {
@@ -136,6 +139,7 @@ export class Monde {
       } catch {
         return;
       }
+      if (estUnGeste(message)) connexion.activite = Date.now();
       try {
         if (message.t === "echange") this.echanges.traiter(joueur, message.op);
         else joueur.recevoir(message);
@@ -187,7 +191,22 @@ export class Monde {
   }
 
   /** Toutes les 5 s : chacun est mis dans la file des sauvegardes, qui se vide sur une seconde. */
+  /**
+   * Un joueur qui ne fait plus rien depuis `inactivite_min` minutes est déconnecté d'office (2026-10-08) : il a sans
+   * doute fermé la page ou quitté son écran. Hors ligne, ses besoins sont gelés (Book 01 §2 bis) ; connecté, ils
+   * continueraient de baisser pour rien.
+   */
+  private deconnecterInactifs(): void {
+    const limite = Date.now() - REGLAGES.inactivite_min * 60_000;
+    for (const c of this.connexions.values()) {
+      if (c.activite >= limite) continue;
+      journal(`${c.joueur.compte.pseudo} ne joue plus depuis ${REGLAGES.inactivite_min} min : déconnecté.`);
+      c.socket.close(FERMETURE_INACTIF, "Inactif");
+    }
+  }
+
   private planifierSauvegardes(): void {
+    this.deconnecterInactifs();
     const deja = new Set(this.aSauver);
     for (const id of this.connexions.keys()) if (!deja.has(id)) this.aSauver.push(id);
     this.parTic = Math.max(1, Math.ceil(this.aSauver.length / TICS_ETALEMENT));
@@ -240,4 +259,11 @@ function envoyer(socket: WebSocket, message: MessageServeur): void {
     dernierTexte = JSON.stringify(message);
   }
   socket.send(dernierTexte);
+}
+
+/** Un vrai geste du joueur (ce qui le garde connecté) : pas un ping, pas une mesure, pas « je ne bouge pas ». */
+export function estUnGeste(m: MessageClient): boolean {
+  if (m.t === "ping" || m.t === "mesures") return false;
+  if (m.t === "intention") return m.dx !== 0 || m.dz !== 0;
+  return true;
 }

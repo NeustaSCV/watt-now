@@ -372,3 +372,5 @@ export type MessageServeur =
 export const FERMETURE_JETON_REFUSE = 4001;
 /** Code de fermeture quand le même compte s'est connecté ailleurs. */
 export const FERMETURE_REMPLACE = 4002;
+/** Code de fermeture quand le joueur n'a rien fait depuis un moment (réglage `inactivite_min`) : ses besoins se figent. */
+export const FERMETURE_INACTIF = 4003;

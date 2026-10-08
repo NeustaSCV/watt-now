@@ -1,7 +1,7 @@
 // Connexion WebSocket au serveur de jeu, avec reconnexion automatique.
 
 import type { Intention } from "../../commun/src/deplacement.ts";
-import { FERMETURE_JETON_REFUSE, FERMETURE_REMPLACE, type MessageClient, type MessageServeur } from "../../commun/src/messages.ts";
+import { FERMETURE_INACTIF, FERMETURE_JETON_REFUSE, FERMETURE_REMPLACE, type MessageClient, type MessageServeur } from "../../commun/src/messages.ts";
 
 export interface Evenements {
   message(message: MessageServeur): void;
@@ -11,6 +11,8 @@ export interface Evenements {
   jetonRefuse(): void;
   /** Le compte vient d'être ouvert sur un autre appareil. */
   remplace(): void;
+  /** Déconnecté d'office : rien fait depuis un moment (le serveur gèle alors les besoins). */
+  inactif(): void;
 }
 
 const INTERVALLE_PING = 5000;
@@ -58,6 +60,7 @@ export class Reseau {
       if (this.socket !== socket || this.arrete) return;
       if (e.code === FERMETURE_JETON_REFUSE) return this.evenements.jetonRefuse();
       if (e.code === FERMETURE_REMPLACE) return this.evenements.remplace();
+      if (e.code === FERMETURE_INACTIF) return this.evenements.inactif();
       this.tentative += 1;
       this.evenements.perdue(this.tentative);
       const delai = Math.min(8000, 500 * 2 ** (this.tentative - 1));

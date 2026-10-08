@@ -352,6 +352,10 @@ body {
   padding: 24px;
 }
 
+/* Les messages du voile peuvent avoir des paragraphes (le conseil de l'abri, à la déconnexion). */
+#voile p {
+  white-space: pre-line;
+}
 #voile[hidden] {
   display: none;
 }
