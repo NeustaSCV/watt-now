@@ -104,8 +104,25 @@ export const PETITES_INSTALLATIONS: readonly string[] = ["lit_branchages", "alar
 /** Intensité du travail (Book 02 §2), en kcal par heure de jeu. */
 export const INTENSITES = { legere: 150, moyenne: 250, lourde: 350, tres_lourde: 500 } as const;
 
+/**
+ * Les onglets du panneau Fabriquer (avis de Sally, 2026-10-08) : on range selon ce à quoi sert l'objet. Une installation
+ * qui fabrique ou produit de l'énergie va dans Ateliers ; une qui sert à vivre au camp, dans Bâtir. Une recette n'a
+ * qu'une catégorie (les compteurs ne mentent pas), et « Tout » reste le filet.
+ */
+export type CategorieRecette = "feu" | "outils" | "sur_soi" | "materiaux" | "batir" | "ateliers";
+export const CATEGORIES_RECETTES: readonly { id: CategorieRecette; nom: string; long: string }[] = [
+  { id: "feu", nom: "Feu", long: "Feu et cuisine" },
+  { id: "outils", nom: "Outils", long: "Outils et armes" },
+  { id: "sur_soi", nom: "Sur soi", long: "Sur soi : sacs, protections, soins" },
+  { id: "materiaux", nom: "Matériaux", long: "Matériaux" },
+  { id: "batir", nom: "Bâtir", long: "Bâtir : vivre au camp" },
+  { id: "ateliers", nom: "Ateliers", long: "Ateliers : fabriquer, produire" },
+];
+
 export interface Recette {
   id: string;
+  /** Son onglet dans le panneau Fabriquer. */
+  categorie: CategorieRecette;
   nom: string;
   /** Ce que la recette produit : un objet dans le sac, ou une installation posée sur le terrain. */
   produit: { objet: TypeObjet; quantite: number } | { installation: TypeInstallation };
@@ -128,6 +145,7 @@ export interface Recette {
 export const RECETTES: Recette[] = [
   {
     id: "hache",
+    categorie: "outils",
     nom: "Remmancher la hache",
     produit: { objet: "hache", quantite: 1 },
     ingredients: { tete_hache: 1, branche: 1 },
@@ -138,6 +156,7 @@ export const RECETTES: Recette[] = [
   },
   {
     id: "etabli",
+    categorie: "ateliers",
     nom: "Établi",
     produit: { installation: "etabli" },
     ingredients: { buche: 4, branche: 6 },
@@ -148,6 +167,7 @@ export const RECETTES: Recette[] = [
   },
   {
     id: "abri",
+    categorie: "batir",
     nom: "Abri de branches et de bâche",
     produit: { installation: "abri" },
     ingredients: { branche: 8, bache: 1 },
@@ -159,6 +179,7 @@ export const RECETTES: Recette[] = [
   {
     // Pour ranger ce qu'on ne porte pas : le sac ne tient que 55 kg (Book 01 §6 bis, Book 19 §2).
     id: "coffre",
+    categorie: "batir",
     nom: "Coffre de rangement",
     produit: { installation: "coffre" },
     ingredients: { buche: 4, branche: 4, corde: 1 },
@@ -170,6 +191,7 @@ export const RECETTES: Recette[] = [
   {
     // Le geste de base du bushcraft : tordre et tresser les feuilles de jonc (Book 02 §4, fibres ; sans rouissage en 0a).
     id: "corde",
+    categorie: "materiaux",
     nom: "Tresser une corde",
     produit: { objet: "corde", quantite: 1 },
     ingredients: { fibres: 4 },
@@ -182,6 +204,7 @@ export const RECETTES: Recette[] = [
     // Deux montants de bûche refendue, des barreaux de branches, le tout ligaturé de corde : pour cueillir dans les arbres.
     // Il se porte et se déplace (le premier objet lourd à porter) ; il servira aussi pour monter un mur (Book 10).
     id: "escabeau",
+    categorie: "batir",
     nom: "Escabeau de bois",
     produit: { installation: "escabeau" },
     ingredients: { buche: 2, branche: 6, corde: 1 },
@@ -193,6 +216,7 @@ export const RECETTES: Recette[] = [
   {
     // Un rondin de bûche, dégrossi au couteau : l'arme la plus simple (Book 11 §10, chasse à la volaille).
     id: "gourdin",
+    categorie: "outils",
     nom: "Tailler un gourdin",
     produit: { objet: "gourdin", quantite: 1 },
     ingredients: { buche: 1 },
@@ -204,6 +228,7 @@ export const RECETTES: Recette[] = [
   {
     // Plumer à l'eau chaude ou à sec, vider, découper : quatre portions de 200 g.
     id: "volaille",
+    categorie: "feu",
     nom: "Plumer et vider la poule",
     produit: { objet: "volaille_crue", quantite: 4 },
     ingredients: { poule: 1 },
@@ -215,6 +240,7 @@ export const RECETTES: Recette[] = [
   // ---------- La cuisine au feu (2026-10-08) : les plats nourrissent mieux que les ingrédients crus ----------
   {
     id: "volaille_cepes",
+    categorie: "feu",
     nom: "Volaille aux cèpes",
     produit: { objet: "volaille_cepes", quantite: 1 },
     ingredients: { volaille_crue: 1, cepe: 2 },
@@ -226,6 +252,7 @@ export const RECETTES: Recette[] = [
   },
   {
     id: "cepes_poeles",
+    categorie: "feu",
     nom: "Poêlée de cèpes",
     produit: { objet: "cepes_poeles", quantite: 1 },
     ingredients: { cepe: 3 },
@@ -237,6 +264,7 @@ export const RECETTES: Recette[] = [
   },
   {
     id: "pommes_cuites",
+    categorie: "feu",
     nom: "Pommes cuites sous la cendre",
     produit: { objet: "pommes_cuites", quantite: 1 },
     ingredients: { pomme: 3 },
@@ -249,6 +277,7 @@ export const RECETTES: Recette[] = [
   {
     // Perdu son sac à l'effondrement ? Un cadre de branches et de la corde : on porte 30 kg au lieu de 10.
     id: "sac_fortune",
+    categorie: "sur_soi",
     nom: "Sac de fortune",
     produit: { objet: "sac_fortune", quantite: 1 },
     ingredients: { branche: 4, corde: 2 },
@@ -259,6 +288,7 @@ export const RECETTES: Recette[] = [
   },
   {
     id: "pansement",
+    categorie: "sur_soi",
     nom: "Pansements",
     produit: { objet: "pansement", quantite: 2 },
     ingredients: { chiffons: 1 },
@@ -270,6 +300,7 @@ export const RECETTES: Recette[] = [
   // ---------- La gamme bushcraft, lot 1 (P-002, Book 02 §14 bis) : avec ce qu'on a déjà, pour tous ----------
   {
     id: "ficelle",
+    categorie: "materiaux",
     nom: "Rouler une ficelle",
     produit: { objet: "ficelle", quantite: 1 },
     ingredients: { fibres: 2 },
@@ -280,6 +311,7 @@ export const RECETTES: Recette[] = [
   },
   {
     id: "baton_fouir",
+    categorie: "outils",
     nom: "Bâton à fouir",
     produit: { objet: "baton_fouir", quantite: 1 },
     ingredients: { branche: 1 },
@@ -291,6 +323,7 @@ export const RECETTES: Recette[] = [
   },
   {
     id: "epieu",
+    categorie: "outils",
     nom: "Épieu durci au feu",
     produit: { objet: "epieu", quantite: 1 },
     ingredients: { branche: 2 },
@@ -302,6 +335,7 @@ export const RECETTES: Recette[] = [
   },
   {
     id: "protege_bras",
+    categorie: "sur_soi",
     nom: "Protège-bras de fortune",
     produit: { objet: "protege_bras", quantite: 1 },
     ingredients: { chiffons: 2, ficelle: 1 },
@@ -312,6 +346,7 @@ export const RECETTES: Recette[] = [
   },
   {
     id: "travois",
+    categorie: "sur_soi",
     nom: "Travois",
     produit: { objet: "travois", quantite: 1 },
     ingredients: { branche: 6, corde: 2 },
@@ -322,6 +357,7 @@ export const RECETTES: Recette[] = [
   },
   {
     id: "recuperateur_pluie",
+    categorie: "batir",
     nom: "Récupérateur de pluie",
     produit: { installation: "recuperateur_pluie" },
     ingredients: { bache: 1, branche: 4, corde: 1 },
@@ -332,6 +368,7 @@ export const RECETTES: Recette[] = [
   },
   {
     id: "alarme_boites",
+    categorie: "batir",
     nom: "Alarme à boîtes de conserve",
     produit: { installation: "alarme_boites" },
     ingredients: { boite_vide: 2, ficelle: 1, branche: 2 },
@@ -342,6 +379,7 @@ export const RECETTES: Recette[] = [
   },
   {
     id: "lit_branchages",
+    categorie: "batir",
     nom: "Lit de branchages",
     produit: { installation: "lit_branchages" },
     ingredients: { branche: 6 },
@@ -353,6 +391,7 @@ export const RECETTES: Recette[] = [
   // ---------- 🔥 Charbonniers : bois → charbonnière → forge → lame (Book 21 §3.4) ----------
   {
     id: "charbonniere",
+    categorie: "ateliers",
     nom: "Meule de charbonnière",
     produit: { installation: "charbonniere" },
     ingredients: { buche: 10, branche: 4 },
@@ -363,6 +402,7 @@ export const RECETTES: Recette[] = [
   },
   {
     id: "forge",
+    categorie: "ateliers",
     nom: "Foyer de forge à soufflet",
     produit: { installation: "forge" },
     ingredients: { pierre: 8, barre_metal: 1, branche: 2 },
@@ -373,6 +413,7 @@ export const RECETTES: Recette[] = [
   },
   {
     id: "lame_forgee",
+    categorie: "outils",
     nom: "Forger une lame",
     produit: { objet: "lame_forgee", quantite: 1 },
     ingredients: { ressort_lames: 1, charbon_bois: 1 },
@@ -385,6 +426,7 @@ export const RECETTES: Recette[] = [
   // ---------- ⚙️ Mécanistes : vieux vélo → pédalier → meule et dynamo ----------
   {
     id: "pedalier",
+    categorie: "ateliers",
     nom: "Pédalier universel",
     produit: { installation: "pedalier" },
     ingredients: { cadre_velo: 1, chaine_velo: 1, roue_velo: 1, buche: 2 },
@@ -396,6 +438,7 @@ export const RECETTES: Recette[] = [
   // ---------- ⚡ Voltaïques : batterie → banc de recharge → lampe ----------
   {
     id: "banc_recharge",
+    categorie: "ateliers",
     nom: "Banc de recharge",
     produit: { installation: "banc_recharge" },
     ingredients: { buche: 2, barre_metal: 1 },
@@ -407,6 +450,7 @@ export const RECETTES: Recette[] = [
   {
     // Le panneau de la station-service, posé sur un support de branches, plein sud, câblé au banc (É4).
     id: "panneau_solaire",
+    categorie: "ateliers",
     nom: "Poser le panneau solaire",
     produit: { installation: "panneau_solaire" },
     ingredients: { panneau_solaire: 1, branche: 3 },

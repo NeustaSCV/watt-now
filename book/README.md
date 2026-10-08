@@ -25,4 +25,5 @@
 | [21 — Périmètre de la phase 0](21-perimetre-phase-0.md) | Tranche verticale (0a) puis premier hiver (0b) : objectifs du test, ce qui est construit et ce qui attend, étapes, graphismes et musique soignés |
 | [22 — Quêtes et objectifs](22-quetes-et-objectifs.md) | Le carnet après le tutoriel : « S'installer », « Le métier » (0b) ; la grande quête du cycle « Où est Bill Murray ? » (1.0) |
 | [23 — La Coopérative et le combat](23-cooperative-et-combat.md) | Un vrai niveau de combat (coopérative agricole, une par joueur), variantes d'Éteints, armes enrichies (type de dégât, usure, repousser), armes de lancer et leurres (0.5, 0.6) |
+| [24 — Améliorer sa base](24-ameliorer-sa-base.md) | Faire évoluer une installation sur place (niveaux, accessoires, démontage) plutôt qu'en empiler : lignées du feu, de l'eau, du couchage, du stockage et de la lumière, limites douces contre les « 50 feux », nouveaux éléments de base (proposition, 0.5.1 à 0b) |
 | [99 — Évolutions futures](99-evolutions-futures.md) | Idées reportées : les Trois Sangs (V2), groupes et communautés |

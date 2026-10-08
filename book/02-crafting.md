@@ -489,6 +489,30 @@ Le lit et l'alarme sont de **petites installations** : on peut les poser à 1,2 
 
 ---
 
+## 14 ter. Le panneau Fabriquer rangé par catégories (avis de Sally, 2026-10-08)
+
+On range les recettes selon **ce à quoi sert l'objet**, pas selon ses ingrédients. Chaque recette a **une seule** catégorie : c'est un champ obligatoire de `Recette` (`categorie`), donc une recette ne peut pas être oubliée.
+
+| Onglet | Contenu (2026-10-08) |
+|---|---|
+| 🔥 **Feu** (feu et cuisine) | feu de camp, foyer Dakota, plats cuisinés, volaille |
+| 🪓 **Outils** (outils et armes) | hache, gourdin, épieu, bâton à fouir, lame forgée |
+| 🎒 **Sur soi** | sac de fortune, protège-bras, pansement, travois |
+| 🧵 **Matériaux** | ficelle, corde (et les matériaux intermédiaires à venir) |
+| 🧱 **Bâtir** (vivre au camp) | abri, coffre, lit, escabeau, alarme, récupérateur d'eau ; plus tard sols et murs |
+| ⚙️ **Ateliers** (fabriquer, produire) | établi, charbonnière, forge, pédalier, banc de recharge, panneau solaire |
+
+- **La règle des cas limites** : une installation qui fabrique ou produit de l'énergie va dans **Ateliers** ; une installation qui sert à vivre au camp va dans **Bâtir**.
+- **« Tout »** est le premier onglet et le filet de sécurité : il montre toutes les recettes, regroupées sous des intertitres.
+- **« Faisable maintenant »** est un filtre, pas un onglet.
+- **Les compteurs** : une pastille sur chaque onglet donne le nombre de recettes faisables, seulement s'il y en a.
+- **L'ordre** ne bouge jamais sous le doigt.
+- **La famille** n'est pas une catégorie : c'est un badge sur la carte de recette.
+- **Le dernier onglet** est gardé sur l'appareil. Pendant le tutoriel, on ouvre toujours sur « Tout ».
+- **En téléphone horizontal**, les onglets n'ont que leur icône.
+- **Les améliorations sur place** (Book 24) n'auront pas d'onglet à elles : le bouton « Améliorer » est sur l'installation, dans le monde.
+- **À tester** : la frontière entre Bâtir et Ateliers, sur quelques joueurs.
+
 ## 15. Règles d'équilibrage du crafting
 
 1. **Domaines :** dans ses domaines (§6), une famille doit produire **au moins 20 % moins cher** que la moyenne des autres voies. En dessous, il n'y a pas de raison de commercer.

@@ -152,6 +152,11 @@ function cadrer(): THREE.Camera {
 
 const barre = document.getElementById("barre")!;
 const stats = document.getElementById("stats")!;
+/** Les compteurs de la dernière image rendue. */
+function afficher(): void {
+  const i = rendu.info.render;
+  stats.textContent = `Image : ${i.calls} appels de dessin · ${Math.round(i.triangles / 1000)} k triangles (ombres comprises) — Lieu : ${maillages} maillages · ${Math.round(triangles / 1000)} k triangles`;
+}
 function bouton(texte: string, actif: boolean, action: () => void): HTMLButtonElement {
   const b = document.createElement("button");
   b.textContent = texte;
@@ -203,6 +208,13 @@ function majBarre(): void {
     personnage?.objet.position.set(x, 0.06, z);
   },
   pret: false,
+  /** Une image rendue tout de suite, et ce qu'elle a coûté (passe d'ombre comprise). */
+  mesurer: () => {
+    rendu.render(scene, cadrer());
+    const i = rendu.info.render;
+    afficher();
+    return { appels: i.calls, triangles: i.triangles };
+  },
 };
 
 ambiance();
@@ -223,10 +235,7 @@ void chargerHumanoides().then(() => {
     animerCooperative(coop, dt);
     estomperCooperative(coop, p.x, p.z, dt, Math.PI / 4 + (etat.quart * Math.PI) / 2);
     rendu.render(scene, cadrer());
-    if (++compte % 15 === 0) {
-      const i = rendu.info.render;
-      stats.textContent = `Image : ${i.calls} appels de dessin · ${Math.round(i.triangles / 1000)} k triangles (ombres comprises) — Lieu : ${maillages} maillages · ${Math.round(triangles / 1000)} k triangles`;
-    }
+    if (++compte % 5 === 0) afficher();
   };
   requestAnimationFrame(boucle);
   (window as unknown as { planche: { pret: boolean } }).planche.pret = true;

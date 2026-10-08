@@ -16,6 +16,7 @@ import type { TypeBatterie } from "../../commun/src/energie.ts";
 import type { Inventaire, TypeObjet } from "../../commun/src/objets.ts";
 import { CAPACITE_COFFRE, OBJETS, capaciteDe, nomContenant, nommer, poidsInventaire } from "../../commun/src/objets.ts";
 import {
+  CATEGORIES_RECETTES,
   NOMS_INSTALLATIONS,
   NOMS_QUALITES,
   dureeReelle,
@@ -25,6 +26,7 @@ import {
   multiplicateurQualites,
   niveauQualite,
   recettesConnues,
+  type CategorieRecette,
   type Qualite,
   type Recette,
 } from "../../commun/src/recettes.ts";
@@ -88,9 +90,9 @@ export interface ActionsJoueur {
 }
 
 /** Le feu de camp, vu comme une recette, pour dire ce qui manque. */
-const RECETTE_FEU_AIDE: Recette = { id: "feu", nom: "Feu de camp", produit: { objet: "branche", quantite: 0 }, ingredients: RECETTE_FEU, qualites: {}, duree: 0, intensite: "legere", famille: "tous" };
+const RECETTE_FEU_AIDE: Recette = { id: "feu", categorie: "feu", nom: "Feu de camp", produit: { objet: "branche", quantite: 0 }, ingredients: RECETTE_FEU, qualites: {}, duree: 0, intensite: "legere", famille: "tous" };
 /** Le foyer Dakota (P-002), vu comme une recette, pour dire ce qui manque. */
-const RECETTE_DAKOTA_AIDE: Recette = { id: "dakota", nom: "Foyer Dakota", produit: { objet: "branche", quantite: 0 }, ingredients: RECETTE_DAKOTA, qualites: { creuser: 1 }, duree: 0, intensite: "legere", famille: "tous" };
+const RECETTE_DAKOTA_AIDE: Recette = { id: "dakota", categorie: "feu", nom: "Foyer Dakota", produit: { objet: "branche", quantite: 0 }, ingredients: RECETTE_DAKOTA, qualites: { creuser: 1 }, duree: 0, intensite: "legere", famille: "tous" };
 
 type NomJauge = "faim" | "eau" | "sommeil" | "sante" | "endurance";
 
@@ -102,6 +104,12 @@ function kg(valeur: number): string {
 
 /** Les infos techniques (images/s, latence, version) affichées ou non. */
 const CLE_INFOS = "watt.infos";
+const CLE_ONGLET_FABRICATION = "watt.fabrication.onglet";
+
+function lireOngletFabrication(): CategorieRecette | "tout" {
+  const v = lire(CLE_ONGLET_FABRICATION);
+  return v && CATEGORIES_RECETTES.some((c) => c.id === v) ? (v as CategorieRecette) : "tout";
+}
 
 /** Le choix du joueur pour le carnet (ouvert ou fermé), s'il en a fait un. */
 function lireChoixCarnet(): boolean | null {
@@ -258,7 +266,7 @@ export class Hud {
       <div class="raccourcis">
         <button type="button" class="b-carnet" hidden aria-label="Carnet (J)" title="Carnet (J)" aria-expanded="false"><svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><path d="M8 4 h16 a2 2 0 0 1 2 2 v20 a2 2 0 0 1 -2 2 h-16 Z" fill="#a4552f" stroke="#3b2a1e" stroke-width="2" stroke-linejoin="round"/><path d="M8 4 v24" stroke="#3b2a1e" stroke-width="3"/><rect x="12" y="9" width="10" height="6" rx="1" fill="#ecdfbf" stroke="#3b2a1e" stroke-width="1.2"/><path d="M13 19 h8 M13 22 h6" stroke="#ecdfbf" stroke-width="1.4" stroke-linecap="round"/><path d="M22 4 v8 l2 -1.5 l2 1.5 v-8" fill="#c8362b" stroke="#3b2a1e" stroke-width="1"/></svg><span>Carnet</span><span class="etape-carnet"></span><span class="pastille-carnet" hidden></span></button>
         <button type="button" class="r-sac" title="Sac (I)" aria-label="Sac">${icone("sac_a_dos", 30)}<span>Sac</span></button>
-        <button type="button" class="r-fabriquer" title="Fabriquer (C)" aria-label="Fabriquer">${icone("marteau", 30)}<span>Fabriquer</span></button>
+        <button type="button" class="r-fabriquer" title="Fabriquer (B)" aria-label="Fabriquer">${icone("marteau", 30)}<span>Fabriquer</span></button>
         <button type="button" class="r-carte" title="Carte (M)" aria-label="Carte"><svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><path d="M4 8 L11 5 L21 8 L28 5 V24 L21 27 L11 24 L4 27 Z" fill="#ecdfbf" stroke="#3b2a1e" stroke-width="2" stroke-linejoin="round"/><path d="M11 5 V24 M21 8 V27" stroke="#3b2a1e" stroke-width="1.5"/><path d="M7 19 C10 15 14 18 17 13 S23 12 25 9" fill="none" stroke="#c8362b" stroke-width="1.8" stroke-dasharray="2 2"/></svg><span>Carte</span></button>
         <button type="button" class="r-tourner" title="Tourner la vue (V)" aria-label="Tourner la vue"><svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><path d="M25 12a10 10 0 1 0 1 8" fill="none" stroke="#1c2333" stroke-width="3" stroke-linecap="round"/><path d="M27 5v8h-8" fill="none" stroke="#c8362b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Vue</span></button>
       </div>
@@ -1157,6 +1165,8 @@ export class Hud {
   }
 
   basculerFabrication(ouvrir?: boolean): void {
+    // Pendant le tutoriel, on ouvre toujours sur « Tout » : le carnet dit « fabrique une hache », elle doit sauter aux yeux.
+    if (this.fabrication.hidden && this.tutoriel && !this.tutoriel.termine) this.ongletFabrication = "tout";
     this.ouvrir(this.fabrication, ouvrir === undefined ? Boolean(this.fabrication.hidden) : ouvrir);
   }
 
@@ -1513,30 +1523,34 @@ export class Hud {
     return `<span class="ingredient ${a >= besoin ? "ok" : ""}" title="${OBJETS[type].nom}">${icone(type, 22)}${Math.min(a, besoin)}/${besoin}</span>`;
   }
 
+  /** L'onglet du panneau Fabriquer : le dernier choisi, gardé sur l'appareil (« Tout » si rien). */
+  private ongletFabrication: CategorieRecette | "tout" = lireOngletFabrication();
+  private faisableSeulement = false;
+
   private dessinerFabrication(): void {
     const recettes = recettesConnues(this.famille);
-    const cartes: string[] = [];
+    const cartes: { categorie: CategorieRecette; possible: boolean; html: string }[] = [];
 
     // Le feu de camp (É1) a sa propre règle, mais il se fabrique au même endroit.
     const feuPossible = Object.entries(RECETTE_FEU).every(([t, n]) => (this.inventaire[t as TypeObjet] ?? 0) >= (n ?? 0));
-    cartes.push(`
+    cartes.push({ categorie: "feu", possible: feuPossible, html: `
       <article class="recette ${feuPossible ? "possible" : ""}">
         ${icone("feu_de_camp", 40)}
         <div class="corps"><strong>Feu de camp</strong>
           <span class="puces">${Object.entries(RECETTE_FEU).map(([t, n]) => this.puce(t as TypeObjet, n ?? 0)).join("")}</span>
           <small>Se pose devant toi. Cuire, faire bouillir l'eau, s'éclairer.</small>${this.pourquoi === "feu" ? this.listeManque(RECETTE_FEU_AIDE) : ""}</div>
         ${feuPossible ? `<button type="button" data-feu>Monter ici</button>` : `<button type="button" class="pourquoi" data-pourquoi="feu" aria-expanded="${this.pourquoi === "feu"}">Ce qu'il manque ?</button>`}
-      </article>`);
+      </article>` });
     // Le foyer Dakota (P-002) : creusé, discret, économe. Il faut de quoi creuser.
     const dakotaPossible = ingredientsPresents(this.inventaire, RECETTE_DAKOTA_AIDE) && niveauQualite(this.inventaire, "creuser") >= 1;
-    cartes.push(`
+    cartes.push({ categorie: "feu", possible: dakotaPossible, html: `
       <article class="recette ${dakotaPossible ? "possible" : ""}">
         ${icone("feu_de_camp", 40)}
         <div class="corps"><strong>Foyer Dakota</strong>
           <span class="puces">${Object.entries(RECETTE_DAKOTA).map(([t, n]) => this.puce(t as TypeObjet, n ?? 0)).join("")}<span class="outil ${niveauQualite(this.inventaire, "creuser") >= 1 ? "ok" : "manque"}">${NOMS_QUALITES.creuser} 1</span></span>
           <small>Un feu creusé dans le sol : il se voit trois fois moins la nuit, fume moins, et brûle moins de bois.</small>${this.pourquoi === "dakota" ? this.listeManque(RECETTE_DAKOTA_AIDE) : ""}</div>
         ${dakotaPossible ? `<button type="button" data-dakota>Creuser ici</button>` : `<button type="button" class="pourquoi" data-pourquoi="dakota" aria-expanded="${this.pourquoi === "dakota"}">Ce qu'il manque ?</button>`}
-      </article>`);
+      </article>` });
 
     for (const r of recettes) {
       const pictogramme: Pictogramme = "objet" in r.produit ? r.produit.objet : r.produit.installation;
@@ -1556,10 +1570,11 @@ export class Hud {
         (r.installation ? `Près d'un ${NOMS_INSTALLATIONS[r.installation]}. ` : "") +
         (r.feu ? "Près d'un feu allumé. " : "");
       const secondes = Math.round(dureeReelle(r) * (outils ?? 1) * 10) / 10;
-      cartes.push(`
+      const badge = r.famille === "tous" ? "" : ` <span class="badge-famille ${r.famille}" title="Recette de ta famille">${NOMS_FAMILLES[r.famille]}</span>`;
+      cartes.push({ categorie: r.categorie, possible, html: `
         <article class="recette ${possible ? "possible" : ""}">
           ${icone(pictogramme, 40)}
-          <div class="corps"><strong>${r.nom}</strong>
+          <div class="corps"><strong>${r.nom}</strong>${badge}
             <span class="puces">${Object.entries(r.ingredients).map(([t, n]) => this.puce(t as TypeObjet, n ?? 0)).join("")}${qualites}</span>
             <small>${ou}${String(secondes).replace(".", ",")} s · ≈ ${Math.round(energieGriseRecette(r))} wotts</small>${this.pourquoi === r.id ? this.listeManque(r) : ""}</div>
           ${
@@ -1567,16 +1582,72 @@ export class Hud {
               ? `<button type="button" data-recette="${r.id}">${"installation" in r.produit ? "Construire" : "Fabriquer"}</button>`
               : `<button type="button" class="pourquoi" data-pourquoi="${r.id}" aria-expanded="${this.pourquoi === r.id}">Ce qu'il manque ?</button>`
           }
-        </article>`);
+        </article>` });
     }
+
+    // Les onglets (avis de Sally, 2026-10-08) : « Tout » en premier, regroupé sous des intertitres ; un compteur des
+    // recettes faisables, seulement s'il y en a ; « Faisable maintenant » est un filtre, pas un onglet. L'ordre ne bouge
+    // jamais sous le doigt.
+    const onglet = this.ongletFabrication;
+    const faisables = (c: CategorieRecette | "tout") => cartes.filter((x) => x.possible && (c === "tout" || x.categorie === c)).length;
+    const bouton = (id: CategorieRecette | "tout", court: string, long: string, image: string) => {
+      const n = faisables(id);
+      const etiquette = `${long}${n ? `, ${n} faisable${n > 1 ? "s" : ""}` : ""}`;
+      return `<button type="button" role="tab" class="onglet" data-onglet="${id}" aria-selected="${onglet === id}" tabindex="${onglet === id ? 0 : -1}" aria-label="${etiquette}" title="${long}">${image}<span class="nom-onglet">${court}</span>${n ? `<span class="compte" aria-hidden="true">${n}</span>` : ""}</button>`;
+    };
+    const IMAGES: Record<CategorieRecette, Pictogramme> = { feu: "feu_de_camp", outils: "hache", sur_soi: "sac_a_dos", materiaux: "corde", batir: "abri", ateliers: "etabli" };
+    const onglets = [bouton("tout", "Tout", "Toutes les recettes", `<span class="image-tout" aria-hidden="true">☰</span>`), ...CATEGORIES_RECETTES.map((c) => bouton(c.id, c.nom, c.long, icone(IMAGES[c.id], 24)))].join("");
+    const visibles = (c: CategorieRecette) => cartes.filter((x) => x.categorie === c && (!this.faisableSeulement || x.possible));
+    let contenu =
+      onglet === "tout"
+        ? CATEGORIES_RECETTES.map((c) => {
+            const v = visibles(c.id);
+            return v.length ? `<h3 class="intertitre">${c.long}</h3>${v.map((x) => x.html).join("")}` : "";
+          }).join("")
+        : visibles(onglet)
+            .map((x) => x.html)
+            .join("");
+    if (!contenu) contenu = `<p class="vide">${this.faisableSeulement ? "Rien de faisable ici pour l'instant : décoche « Faisable maintenant » pour voir ce qui manque." : "Aucune recette connue dans cette catégorie pour l'instant."}</p>`;
 
     const html = `
       <header><h2>Fabriquer</h2><span class="sous-titre">${recettes.length + 2} recettes connues</span>
         <button type="button" class="fermer" aria-label="Fermer">✕</button></header>
-      <div class="recettes">${cartes.join("")}</div>`;
+      <div class="onglets-fabrication" role="tablist" aria-label="Catégories">${onglets}</div>
+      <label class="filtre-faisable"><input type="checkbox" ${this.faisableSeulement ? "checked" : ""}> Faisable<span class="long"> maintenant</span></label>
+      <div class="recettes" role="tabpanel">${contenu}</div>`;
     if (html === this.derniereFabrication) return;
     this.derniereFabrication = html;
+    // Un changement dans le sac redessine le panneau : on garde le défilement (même onglet) et la place dans les onglets.
+    const avant = this.fabrication.querySelector<HTMLElement>(".recettes");
+    const defilement = avant && this.fabrication.dataset.onglet === onglet ? avant.scrollTop : 0;
+    const defilementOnglets = this.fabrication.querySelector<HTMLElement>(".onglets-fabrication")?.scrollLeft ?? 0;
     this.fabrication.innerHTML = html;
+    this.fabrication.dataset.onglet = onglet;
+    this.fabrication.querySelector<HTMLElement>(".recettes")!.scrollTop = defilement;
+    this.fabrication.querySelector<HTMLElement>(".onglets-fabrication")!.scrollLeft = defilementOnglets;
+    const choisir = (id: CategorieRecette | "tout", focus = false) => {
+      this.ongletFabrication = id;
+      this.pourquoi = null;
+      ecrire(CLE_ONGLET_FABRICATION, id);
+      this.dessinerFabrication();
+      if (focus) this.fabrication.querySelector<HTMLElement>(`[data-onglet="${id}"]`)?.focus();
+    };
+    const ids = ["tout", ...CATEGORIES_RECETTES.map((c) => c.id)] as (CategorieRecette | "tout")[];
+    for (const b of this.fabrication.querySelectorAll<HTMLButtonElement>("[data-onglet]")) {
+      b.addEventListener("click", () => choisir(b.dataset.onglet as CategorieRecette | "tout"));
+      // Flèches gauche/droite d'un onglet à l'autre (motif « tablist »).
+      b.addEventListener("keydown", (e) => {
+        if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+        e.preventDefault();
+        e.stopPropagation();
+        const i = ids.indexOf(b.dataset.onglet as CategorieRecette | "tout");
+        choisir(ids[(i + (e.key === "ArrowRight" ? 1 : ids.length - 1)) % ids.length]!, true);
+      });
+    }
+    this.fabrication.querySelector<HTMLInputElement>(".filtre-faisable input")!.addEventListener("change", (e) => {
+      this.faisableSeulement = (e.target as HTMLInputElement).checked;
+      this.dessinerFabrication();
+    });
 
     this.fabrication.querySelector(".fermer")!.addEventListener("click", () => this.basculerFabrication(false));
     this.fabrication.querySelector("[data-feu]")?.addEventListener("click", () => {

@@ -27,11 +27,11 @@ import {
 } from "../../../commun/src/cooperative.ts";
 import type { Boite } from "../../../commun/src/lieux.ts";
 import { Assemblage, NOIR, V3, X, Y, Z, placer, rouille, surface } from "./assemblage.ts";
-import { fusionnerStatique } from "./fusion.ts";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { estomperToits, type Toit } from "./halte.ts";
 import { PALETTE, aleatoire } from "./materiaux.ts";
 import { Chantier, dessiner, geoToleOndulee, lierre, matiere, matiereTexture, matiereVerre, taches, textureEnduit, textureToitPlat, touffes } from "./ruine.ts";
-import { bruit, creerArbres, type PlaceArbre } from "./terrain.ts";
+import { bruit } from "./terrain.ts";
 
 const L = COOP.largeur;
 const P = COOP.profondeur;
@@ -767,7 +767,7 @@ function creerPorte(p: { id: string; x: number; z: number; largeur: number; sens
       break;
   }
   // Ce qui ne bouge pas (rail des portes coulissantes, coffre du rideau, montants du portail) va au chantier fixe.
-  const acier = matiere(0.55, 0.45);
+  const acier = matiere();
   const c = chantiers[MUR_DE_PORTE[p.id] ?? "c"];
   c.repere({ x: p.x, z: p.z, ry: g.rotation.y }, () => {
     if (def.genre === "coulissante" || def.genre === "double_coulissante") c.boite(l * 2.2, 0.1, 0.1, 0x55524d, { x: def.genre === "coulissante" ? (def.dir ?? 1) * l * 0.5 : 0, y: h + 0.12, z: zc + def.cote * 0.06 }, acier);
@@ -775,6 +775,7 @@ function creerPorte(p: { id: string; x: number; z: number; largeur: number; sens
     if (p.id === "portail") for (const s of [-1, 1]) c.boite(0.16, 2.2, 0.16, 0x7d8285, { x: s * (l / 2 + 0.1), y: 1.1 }, acier);
   });
   const materiaux = fondre(g);
+  sansOmbrePortee(g);
   const r = Math.max(l, 2);
   const boite: Boite = p.sens === "x" ? { x: p.x, z: p.z, l: l + 1.2, p: r } : { x: p.x, z: p.z, l: r, p: l + 1.2 };
   // Le portail (1,9 m, ajouré) ne cache personne : il ne s'efface pas.
@@ -836,6 +837,7 @@ function creerSols(aleat: () => number): THREE.Group {
   const c = new THREE.Color();
   const seche = new THREE.Color(PALETTE.herbeSeche);
   const sombre = new THREE.Color(PALETTE.herbeSombre);
+  const sousBois = new THREE.Color(0x34482d);
   const dedans = (x: number, z: number) => x >= -0.01 && x <= L + 0.01 && z >= -0.01 && z <= P + 0.01;
   for (let i = 0; i < pos.count; i += 3) {
     let tous = true;
@@ -850,6 +852,9 @@ function creerSols(aleat: () => number): THREE.Group {
       // Le long du grillage, l'herbe haute et sèche ; au bord du chemin, de la terre.
       const dGrillage = Math.min(Math.abs(x), Math.abs(x - L), Math.abs(z), Math.abs(z - P));
       if (dGrillage < 3) c.lerp(seche, (1 - dGrillage / 3) * 0.45);
+      // Hors du grillage, le sol passe au sous-bois sombre : on ne voit plus le bord du monde.
+      const dehors = Math.hypot(Math.max(0, -x, x - L), Math.max(0, -z, z - P));
+      if (dehors > 4) c.lerp(sousBois, Math.min(1, (dehors - 4) / 12) * 0.85);
       c.offsetHSL(0, 0, (n((x + 60) / 2.5 + 20, (z + 60) / 2.5) - 0.5) * 0.06);
       couleurs.push(c.r, c.g, c.b);
     }
@@ -910,60 +915,56 @@ function bidon(ch: Chantier, x: number, y: number, z: number, couleur: number, r
   ch.boite(0.12, 0.05, 0.04, couleur, { x, y: y + 0.4, z, ry }, matiere(), { crasse: false });
 }
 
-/** Ce qu'on trouve sur un emplacement de 1,2 × 0,8 m (une palette) ; `k` : à quel point c'est sombre. */
+/**
+ * Ce qu'on trouve sur un emplacement de 1,2 × 0,8 m (une palette) ; `k` : à quel point c'est sombre.
+ * Allégé pour le téléphone : des blocs chargés (une palette, un bloc, une bande) plutôt que chaque sac ou bidon ;
+ * de loin, la même allure.
+ */
 function charge(ch: Chantier, x: number, y: number, z: number, k: number, genre = Math.floor(ch.hasard() * 8)): void {
   const h = () => ch.hasard();
-  const r = () => (h() - 0.5) * 0.12;
+  const r = () => (h() - 0.5) * 0.08;
+  const plateau = () => ch.boite(1.2, 0.14, 0.8, froid(BOIS_PALETTE, k), { x, y: y + 0.07, z }, matiere(), { nuance: 0.06, crasse: false });
+  const bloc = (l: number, hh: number, p: number, couleur: number, bande?: number) => {
+    const ry = r();
+    ch.boite(l, hh, p, froid(couleur, k), { x, y: y + 0.14 + hh / 2, z, ry }, matiere(), { nuance: 0.05, crasse: false });
+    if (bande !== undefined) ch.boite(0.26, hh + 0.01, p + 0.01, froid(bande, k), { x: x + 0.22, y: y + 0.14 + hh / 2, z, ry }, matiere(), { nuance: 0, crasse: false });
+  };
   switch (genre) {
     case 0:
-    case 1: {
-      // Des sacs d'engrais sur une palette
-      palette(ch, x, y, z, 0, k);
-      const couleurs = genre === 0 ? [0xe6e2d6, VERT_COOP] : [0x3f6fa8, 0xe9dfc6];
-      const couches = 1 + Math.floor(h() * 3);
-      for (let c = 0; c < couches; c++) for (const dx of [-0.3, 0.3]) for (const dz of [-0.2, 0.2]) if (c < couches - 1 || h() < 0.75) sac(ch, x + dx, y + 0.145 + c * 0.2, z + dz, froid(couleurs[0]!, k), r(), dx > 0 ? froid(couleurs[1]!, k) : undefined);
+    case 1:
+      // Des sacs d'engrais : un bloc par palette, la bande imprimée
+      plateau();
+      bloc(1.18, 0.2 * (1 + Math.floor(h() * 3)), 0.8, genre === 0 ? 0xe6e2d6 : 0x3f6fa8, genre === 0 ? VERT_COOP : 0xe9dfc6);
       break;
-    }
-    case 2: {
-      // Des cartons, mal empilés
-      palette(ch, x, y, z, 0, k);
-      for (let i = 0; i < 2 + Math.floor(h() * 3); i++) {
-        const l = 0.4 + h() * 0.3;
-        const hh = 0.3 + h() * 0.25;
-        ch.boite(l, hh, 0.45 + h() * 0.25, froid(0xb08a5a, k), { x: x + (h() - 0.5) * 0.6, y: y + 0.145 + hh / 2 + (i > 2 ? 0.4 : 0), z: z + (h() - 0.5) * 0.3, ry: r() * 2 }, matiere(), { nuance: 0.08, crasse: false });
-      }
+    case 2:
+      // Des cartons
+      plateau();
+      bloc(1.1, 0.45 + h() * 0.2, 0.75, 0xb08a5a);
+      if (h() < 0.6) ch.boite(0.5, 0.3, 0.5, froid(0xa07a4c, k), { x: x - 0.25, y: y + 0.85, z, ry: r() * 3 }, matiere(), { nuance: 0.05, crasse: false });
       break;
-    }
-    case 3: {
-      // Un big bag (1 m³), ses anses
-      palette(ch, x, y, z, 0, k);
-      const bb = froid(0xe8e4d8, k);
-      ch.boite(0.95, 0.85, 0.78, bb, { x, y: y + 0.145 + 0.43, z, ry: r() }, matiere(), { nuance: 0.04, crasse: false });
-      ch.boite(0.96, 0.18, 0.79, froid(VERT_COOP, k), { x, y: y + 0.145 + 0.55, z }, matiere(), { nuance: 0, crasse: false });
-      for (const sx of [-0.4, 0.4]) for (const sz of [-0.32, 0.32]) ch.boite(0.06, 0.16, 0.06, bb, { x: x + sx, y: y + 1.07, z: z + sz }, matiere(), { crasse: false });
+    case 3:
+      // Un big bag
+      plateau();
+      bloc(0.95, 0.88, 0.78, 0xe8e4d8, VERT_COOP);
       break;
-    }
     case 4: {
-      // Des fûts
-      const t = [froid(0x2f5d8a, k), froid(0x3a6b3a, k), froid(0x2a2826, k), froid(0xb5452e, k)];
-      for (const dx of [-0.3, 0.3]) for (const dz of [-0.2, 0.2]) if (h() < 0.8) fut(ch, x + dx, y, z + dz * 0.9, t[Math.floor(h() * 4)]!);
+      // Des fûts (deux, à six pans)
+      const t = [0x2f5d8a, 0x3a6b3a, 0x2a2826, 0xb5452e];
+      for (const dx of [-0.3, 0.3]) ch.poser(new THREE.CylinderGeometry(0.29, 0.29, 0.88, 6), matiere(), froid(t[Math.floor(h() * 4)]!, k), { x: x + dx, y: y + 0.44, z, ry: h() }, { nuance: 0.05, crasse: false });
       break;
     }
-    case 5: {
-      // Des bidons
-      palette(ch, x, y, z, 0, k);
-      for (let i = 0; i < 8; i++) if (h() < 0.7) bidon(ch, x - 0.45 + (i % 4) * 0.3, y + 0.145, z + (i < 4 ? -0.15 : 0.15), froid(i % 3 ? 0x3e7d4c : 0x2f5d8a, k), r());
+    case 5:
+      // Des bidons, en bloc
+      plateau();
+      bloc(1.15, 0.4, 0.7, h() < 0.5 ? 0x3e7d4c : 0x2f5d8a);
       break;
-    }
-    case 6: {
+    case 6:
       // Des bâches roulées
-      for (let i = 0; i < 4; i++) if (i < 2 || h() < 0.6) ch.poser(new THREE.CylinderGeometry(0.16, 0.16, 1.15, 7).rotateZ(Math.PI / 2), matiere(), froid(i % 2 ? 0x2f5d8a : 0x4f6b3a, k), { x, y: y + 0.16 + (i > 1 ? 0.3 : 0), z: z - 0.2 + (i % 2) * 0.36, ry: r() }, { nuance: 0.05, crasse: false });
+      for (let i = 0; i < 2; i++) ch.poser(new THREE.CylinderGeometry(0.17, 0.17, 1.15, 6).rotateZ(Math.PI / 2), matiere(), froid(i ? 0x2f5d8a : 0x4f6b3a, k), { x, y: y + 0.17, z: z - 0.18 + i * 0.36, ry: r() }, { nuance: 0.05, crasse: false });
       break;
-    }
     default:
-      // Pillé : une palette vide, un sac crevé
-      if (h() < 0.6) palette(ch, x, y, z, r(), k);
-      if (h() < 0.5) sac(ch, x + 0.2, y + 0.145, z, froid(0xd9d3c4, k), 0.4);
+      // Pillé : une palette vide, parfois
+      if (h() < 0.6) plateau();
   }
 }
 
@@ -999,6 +1000,7 @@ function creerRayonnage(r: Boite, c: Chantier, toits: Toit[], graine: number): T
     for (const z of [z0 + 0.05, z1 - 0.05]) haut.boite(lt - 0.08, 0.1, 0.05, froid(ORANGE_RACK, 0.5), { x: xm, y: 3.85, z }, acier);
   }
   const { objet, materiaux } = haut.construireFondu(false);
+  sansOmbrePortee(objet);
   toits.push({ boite: { x: r.x, z: r.z, l: r.l + 0.2, p: r.p + 0.1 }, materiaux, bas: COUPE, haut: 4.2 });
   objet.name = "rayonnage";
   return objet;
@@ -1007,7 +1009,7 @@ function creerRayonnage(r: Boite, c: Chantier, toits: Toit[], graine: number): T
 // ---------- Le mobilier ----------
 
 function caisse(c: Chantier, b: Boite): void {
-  const acier = matiere(0.55, 0.45);
+  const acier = matiere();
   c.repere({ x: b.x, y: SOL, z: b.z }, () => {
     c.boite(b.l, 0.9, b.p, 0xc9c2b2, { y: 0.45 });
     c.boite(b.l + 0.05, 0.04, b.p + 0.05, 0x8e8b84, { y: 0.92 }, acier);
@@ -1028,7 +1030,7 @@ function caisse(c: Chantier, b: Boite): void {
 }
 
 function rayonBas(c: Chantier, b: Boite): void {
-  const acier = matiere(0.55, 0.45);
+  const acier = matiere();
   const tons = [0xc8362b, 0xd8c43a, 0x3b5a8c, 0x5f8a46, 0xe9dfc6, 0xb5452e, 0x7a4a8c, 0xe0a030];
   c.repere({ x: b.x, y: SOL, z: b.z }, () => {
     c.boite(b.l, 0.12, b.p, 0x4a4d50, { y: 0.06 }, acier);
@@ -1043,7 +1045,7 @@ function rayonBas(c: Chantier, b: Boite): void {
           const genre = c.hasard();
           if (y < 0.5) c.boite(0.36, 0.28, 0.3, genre < 0.5 ? 0x6b4a32 : 0x5f7f45, { x, y: y + 0.15, z: s * 0.23, ry: (c.hasard() - 0.5) * 0.3 }, matiere(), { nuance: 0.05, crasse: false });
           else if (genre < 0.4) for (let k = 0; k < 3; k++) c.boite(0.12, 0.17, 0.025, tons[Math.floor(c.hasard() * tons.length)]!, { x: x - 0.06 + k * 0.06, y: y + 0.1, z: s * (0.12 + k * 0.08), rx: 0.15 }, matiere(), { crasse: false });
-          else if (genre < 0.7) for (let k = 0; k < 2; k++) c.poser(new THREE.CylinderGeometry(0.045, 0.045, 0.12, 7), matiere(0.55, 0.45), t, { x: x - 0.05 + k * 0.1, y: y + 0.07, z: s * 0.2 }, { crasse: false });
+          else if (genre < 0.7) for (let k = 0; k < 2; k++) c.poser(new THREE.CylinderGeometry(0.045, 0.045, 0.12, 7), matiere(), t, { x: x - 0.05 + k * 0.1, y: y + 0.07, z: s * 0.2 }, { crasse: false });
           else c.boite(0.16, 0.24, 0.1, t, { x, y: y + 0.13, z: s * 0.2, rz: c.hasard() < 0.2 ? 1.2 : 0 }, matiere(), { crasse: false });
         }
       }
@@ -1057,7 +1059,7 @@ function rayonBas(c: Chantier, b: Boite): void {
 }
 
 function bureau(c: Chantier, b: Boite): void {
-  const acier = matiere(0.55, 0.45);
+  const acier = matiere();
   const bois = froid(0x6e5640);
   c.repere({ x: b.x, y: SOL, z: b.z }, () => {
     c.boite(b.l, 0.05, b.p, bois, { y: 0.74 }, matiere(), { nuance: 0.04 });
@@ -1090,7 +1092,7 @@ function bureau(c: Chantier, b: Boite): void {
 }
 
 function coffreFort(c: Chantier, b: Boite): void {
-  const acier = matiere(0.55, 0.45);
+  const acier = matiere();
   c.repere({ x: b.x, y: SOL, z: b.z }, () => {
     c.boite(b.l, 1.1, b.p, froid(0x34463a, 0.5), { y: 0.6 }, acier);
     c.boite(b.l + 0.02, 0.08, b.p + 0.02, 0x2a2826, { y: 0.04 }, acier);
@@ -1103,7 +1105,7 @@ function coffreFort(c: Chantier, b: Boite): void {
 }
 
 function etabli(c: Chantier, b: Boite): void {
-  const acier = matiere(0.55, 0.45);
+  const acier = matiere();
   const bois = froid(0x8a6a3e, 0.8);
   c.repere({ x: b.x, y: SOL, z: b.z }, () => {
     c.boite(b.l, 0.08, b.p, bois, { y: 0.9 }, matiere(), { nuance: 0.05 });
@@ -1323,7 +1325,7 @@ function silo(c: Chantier, haut: Chantier, b: Boite, toits: Toit[]): void {
 // ---------- La clôture ----------
 
 function creerCloture(c: Chantier, grillage: THREE.Material): void {
-  const acier = matiere(0.55, 0.45);
+  const acier = matiere();
   const segment = (x1: number, z1: number, x2: number, z2: number, trous: [number, number][] = []) => {
     const l = Math.hypot(x2 - x1, z2 - z1);
     const n = Math.max(1, Math.round(l / 2.5));
@@ -1379,8 +1381,8 @@ interface Chantiers {
 
 function creerBatiment(ch: Chantiers, mats: Mats & { verre: THREE.Material; enseigne: THREE.Material; toitPlat: THREE.Material; translucide: THREE.Material; affiches: THREE.Material[]; carrelage: THREE.Material }): THREE.Object3D[] {
   const { c, ta, th, tf, fond } = ch;
-  const acier = matiere(0.55, 0.45);
-  const tole = matiere(0.55, 0.45);
+  const acier = matiere();
+  const tole = matiere();
   const objets: THREE.Object3D[] = [];
   const { x0, x1, z0, z1 } = B;
   const zc = 32; // la cloison entre le hangar et l'avant
@@ -1501,8 +1503,8 @@ function creerBatiment(ch: Chantiers, mats: Mats & { verre: THREE.Material; ense
   // Les pignons : est (côté caméra, avec le hangar), ouest (au fond)
   const pignon = new THREE.Shape([new THREE.Vector2(-12, 0), new THREE.Vector2(12, 0), new THREE.Vector2(0, FAITE - H)]);
   const geoPignon = new THREE.ExtrudeGeometry(pignon, { depth: MUR, bevelEnabled: false }).rotateY(Math.PI / 2);
-  th.poser(geoPignon, matiere(0.55, 0.45), 0x84907f, { x: x1 - MUR / 2, y: H, z: 20 });
-  fond.poser(geoPignon, matiere(0.55, 0.45), 0x84907f, { x: x0 - MUR / 2, y: H, z: 20 });
+  th.poser(geoPignon, matiere(), 0x84907f, { x: x1 - MUR / 2, y: H, z: 20 });
+  fond.poser(geoPignon, matiere(), 0x84907f, { x: x0 - MUR / 2, y: H, z: 20 });
   // Les néons morts, pendus aux fermes
   for (let x = 38; x < 72; x += 6.6) for (const z of [22.2, 26.8]) {
     th.boite(1.5, 0.08, 0.16, froid(0xd8dcd8, 0.6), { x, y: 5.2, z }, acier);
@@ -1520,7 +1522,7 @@ function creerBatiment(ch: Chantiers, mats: Mats & { verre: THREE.Material; ense
 
   // ---- L'intérieur du libre-service (pas sombre) ----
   // Étagères murales le long du mur ouest, des seaux, des outils de jardin
-  const acierClair = matiere(0.55, 0.45);
+  const acierClair = matiere();
   for (const y of [0.4, 1.0, 1.6]) c.pave(x0 + 0.15, SOL + y, 33, x0 + 0.65, SOL + y + 0.03, 39.5, 0xbfbab0, acierClair);
   for (let z = 33.2; z < 39.4; z += 0.35) {
     if (c.hasard() < 0.45) continue;
@@ -1587,8 +1589,8 @@ function creerBatiment(ch: Chantiers, mats: Mats & { verre: THREE.Material; ense
 function creerAtelier(ch: Chantiers, mats: Mats & { translucide: THREE.Material }): void {
   const { c, tt, fond } = ch;
   const { x0, x1, z0, z1 } = A;
-  const acier = matiere(0.55, 0.45);
-  const tole = matiere(0.55, 0.45);
+  const acier = matiere();
+  const tole = matiere();
   const zm = (z0 + z1) / 2;
   // La dalle, découpée autour de la fosse ; la fosse elle-même, un vrai trou d'1,4 m
   const fx0 = FOSSE.x - FOSSE.l / 2;
@@ -1613,7 +1615,7 @@ function creerAtelier(ch: Chantiers, mats: Mats & { translucide: THREE.Material 
   for (let i = 0; i < 8; i++) tacheSol(c, x0 + 2 + c.hasard() * 18, 0.085, z0 + 2 + c.hasard() * 16, 0.35 + c.hasard() * 0.4, 0x46443f);
   for (const [x, z, nb] of [[x1 - 1, z0 + 1.2, 5], [x1 - 2.2, z0 + 1, 3], [x0 + 1, z0 + 6, 4]] as const) for (let i = 0; i < nb; i++) c.poser(new THREE.TorusGeometry(0.45, 0.17, 5, 12).rotateX(Math.PI / 2), matiere(), 0x232220, { x: x + (c.hasard() - 0.5) * 0.1, y: 0.25 + i * 0.32, z }, { nuance: 0.04 });
   for (let i = 0; i < 4; i++) fut(c, x0 + 0.7 + i * 0.65, 0.08, z1 - 0.8, froid([0x2a2826, 0xb5452e, 0x2f5d8a, 0x3a6b3a][i]!, 0.7));
-  c.poser(new THREE.CylinderGeometry(0.28, 0.28, 0.9, 10).rotateZ(Math.PI / 2), matiere(0.55, 0.45), froid(0xc8362b, 0.7), { x: x1 - 1.4, y: 0.42, z: z1 - 1 });
+  c.poser(new THREE.CylinderGeometry(0.28, 0.28, 0.9, 10).rotateZ(Math.PI / 2), matiere(), froid(0xc8362b, 0.7), { x: x1 - 1.4, y: 0.42, z: z1 - 1 });
   // Une étagère de pièces le long du mur nord
   for (const y of [0.5, 1.2, 1.9]) c.pave(x0 + 6, y, z0 + 0.3, x0 + 12, y + 0.04, z0 + 0.9, froid(0x7d7a72, 0.7), acier);
   for (let x = x0 + 6.2; x < x0 + 12; x += 0.45) if (c.hasard() < 0.6) c.boite(0.35, 0.25, 0.4, froid([0xb08a5a, 0x55524d, 0x2f5d8a][Math.floor(c.hasard() * 3)]!, 0.7), { x, y: [0.5, 1.2, 1.9][Math.floor(c.hasard() * 3)]! + 0.17, z: z0 + 0.6 }, acier);
@@ -1655,24 +1657,139 @@ function creerAtelier(ch: Chantiers, mats: Mats & { translucide: THREE.Material 
   lierre(fond, x0 + 4, 0.1, z0 - 0.2, Math.PI, 2.5, 3, 50);
 }
 
-// ---------- La forêt ----------
+// ---------- La lisière (la carte est petite : pas de forêt lointaine) ----------
 
-function creerForet(aleat: () => number): THREE.Group {
-  const places: PlaceArbre[] = [];
-  for (let i = 0; i < 620; i++) {
-    const x = -32 + aleat() * 145;
-    const z = -32 + aleat() * 128;
-    const dedans = x > -5 && x < L + 4 && z > -5 && z < P + 3;
-    const chemin = Math.abs(x - PORTAIL.x) < 6 && z > P - 2;
-    if (dedans || chemin) continue;
-    // Au sud et à l'est (côté caméra), des arbres plus bas qui ne cachent pas la cour.
-    const bas = (z > P && z < P + 12) || (x > L && x < L + 10);
-    places.push({ x, z, e: bas ? 0.5 + aleat() * 0.25 : 0.85 + aleat() * 0.75 });
-  }
-  // Quatre bandes (nord, sud, ouest, est) : hors du cadre, une bande entière n'est pas dessinée (ni son ombre).
+/**
+ * Une lisière basse et peu dense contre le grillage, puis des massifs sombres et le sol de sous-bois : de quoi
+ * fermer tous les cadrages de jeu. Six morceaux (un par côté, nord et sud en deux) : un appel de dessin chacun,
+ * et la caméra n'en voit qu'un ou deux. Ni les arbres ni les massifs ne portent d'ombre en temps réel : leur ombre
+ * est cuite au sol (creerOmbresCuites).
+ */
+function creerLisiere(aleat: () => number, ombres: OmbreCuite[]): THREE.Group {
   const g = new THREE.Group();
-  const bande = (p: PlaceArbre) => (p.z < -5 ? 0 : p.z > P + 3 ? 1 : p.x < 0 ? 2 : 3);
-  for (let i = 0; i < 4; i++) g.add(creerArbres(places.filter((p) => bande(p) === i), aleat));
+  const morceaux = new Map<string, Chantier>();
+  const morceau = (x: number, z: number) => {
+    const cle = x < 0 ? "ouest" : x > L ? "est" : z < 0 ? (x < L / 2 ? "nord-o" : "nord-e") : x < L / 2 ? "sud-o" : "sud-e";
+    let c = morceaux.get(cle);
+    if (!c) morceaux.set(cle, (c = new Chantier(2400 + morceaux.size)));
+    return c;
+  };
+  const tronc = new THREE.CylinderGeometry(0.16, 0.24, 1.6, 5).translate(0, 0.8, 0);
+  const feuillu = new THREE.IcosahedronGeometry(1.25, 0).translate(0, 2.55, 0);
+  const sapin = new THREE.ConeGeometry(1.1, 2.8, 6).translate(0, 2.5, 0);
+  const massif = new THREE.IcosahedronGeometry(1, 0);
+  const tons = [PALETTE.feuillage, PALETTE.feuillageSombre, PALETTE.feuillageClair];
+  const tonsMassif = [0x3f5f35, 0x4a6a3a, 0x35502e];
+  for (let i = 0; i < 700; i++) {
+    const x = -22 + aleat() * (L + 44);
+    const z = -22 + aleat() * (P + 44);
+    const d = Math.hypot(Math.max(0, -x, x - L), Math.max(0, -z, z - P));
+    if (d < 2 || d > 22) continue;
+    if (Math.abs(x - PORTAIL.x) < 5 && z > P) continue; // le chemin
+    const c = morceau(x, z);
+    // Côté caméra (sud, est), plus bas, pour ne pas cacher la cour.
+    const cote = z > P || x > L;
+    if (d < 9 && aleat() < 0.45) {
+      const e = cote ? 0.55 + aleat() * 0.25 : 0.8 + aleat() * 0.6;
+      const ry = aleat() * 6;
+      c.poser(tronc, matiere(), PALETTE.bois, { x, z, ry, e }, { nuance: 0.05, crasse: false });
+      const t = tons[Math.floor(aleat() * 3)]!;
+      if (aleat() < 0.3) c.poser(sapin, matiere(), t, { x, z, ry, e }, { nuance: 0.05, crasse: false });
+      else c.poser(feuillu, matiere(), t, { x, z, ry, e: [e, e * (0.9 + aleat() * 0.3), e] }, { nuance: 0.06, crasse: false });
+      ombres.push({ x: x - 0.5 * e, z: z + 0.8 * e, y: 0.015, l: 2.6 * e, p: 2.6 * e, rond: true });
+    } else if (d > 5 && aleat() < 0.65) {
+      const l = 1.8 + aleat() * 1.8;
+      const hh = cote ? 0.8 + aleat() * 0.5 : 1.1 + aleat() * 1.3;
+      c.poser(massif, matiere(), tonsMassif[Math.floor(aleat() * 3)]!, { x, y: hh * 0.35, z, ry: aleat() * 6, e: [l, hh, l * (0.7 + aleat() * 0.5)] }, { nuance: 0.06, crasse: false });
+    }
+  }
+  for (const [nom, c] of morceaux) {
+    const o = c.construire();
+    sansOmbrePortee(o);
+    o.name = nom;
+    g.add(o);
+  }
+  return g;
+}
+
+// ---------- Les ombres : volumes simples et ombres cuites ----------
+
+/** Rien dans cet objet ne porte d'ombre en temps réel (il en reçoit toujours). */
+function sansOmbrePortee(o: THREE.Object3D): void {
+  o.traverse((m) => {
+    if ((m as THREE.Mesh).isMesh) m.castShadow = false;
+  });
+}
+
+/**
+ * Les ombres portées en temps réel, par des volumes simples et invisibles : les enveloppes du grand bâtiment et de
+ * l'atelier (un peu en retrait des murs et sous les toits), les silos, l'auvent du quai. Un seul maillage, un appel
+ * dans la passe d'ombre. Tout ce qui est dedans est à l'ombre : l'intérieur reste sombre même quand le toit s'efface.
+ */
+function creerOmbres(): THREE.Mesh {
+  const geos: THREE.BufferGeometry[] = [];
+  const boite = (x0: number, y0: number, z0: number, x1: number, y1: number, z1: number) => geos.push(new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0).translate((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2));
+  boite(B.x0 + 0.1, 0, B.z0 + 0.1, B.x1 - 0.1, H - 0.35, 32);
+  boite(B.x0 + 0.1, 0, 32, B.x1 - 0.1, HF - 0.3, B.z1 - 0.1);
+  boite(A.x0 + 0.1, 0, A.z0 + 0.1, A.x1 - 0.1, HA - 0.35, A.z1 - 0.1);
+  boite(B.x0 - 4.3, 4.45, 19.2, B.x0 - 0.3, 4.6, 33.2);
+  for (const m of MOBILIER) if (m.genre === "silo") geos.push(new THREE.CylinderGeometry(m.boite.l / 2 - 0.4, m.boite.l / 2 - 0.4, 9, 12).translate(m.boite.x, 0.35 + 4.5, m.boite.z));
+  // Faces avant dans la passe d'ombre (Three.js prend les faces arrière par défaut : la boîte fermée n'ombrerait
+  // alors que depuis son fond, et l'intérieur resterait au soleil).
+  const m = new THREE.Mesh(mergeGeometries(geos, false)!, new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false, shadowSide: THREE.FrontSide }));
+  m.castShadow = true;
+  m.receiveShadow = false;
+  m.name = "ombres";
+  return m;
+}
+
+/** Une ombre cuite : une tache sombre et floue posée au sol (sous les rayonnages, les engins, les meubles, les arbres). */
+interface OmbreCuite {
+  x: number;
+  z: number;
+  y: number;
+  l: number;
+  p: number;
+  ry?: number;
+  rond?: boolean;
+}
+
+function textureOmbreCuite(rond: boolean): THREE.CanvasTexture {
+  return dessiner(64, 64, (g) => {
+    g.clearRect(0, 0, 64, 64);
+    if (rond) {
+      const d = g.createRadialGradient(32, 32, 2, 32, 32, 32);
+      d.addColorStop(0, "rgba(0,0,0,0.85)");
+      d.addColorStop(0.5, "rgba(0,0,0,0.6)");
+      d.addColorStop(1, "rgba(0,0,0,0)");
+      g.fillStyle = d;
+      g.fillRect(0, 0, 64, 64);
+    } else for (let i = 0; i < 16; i++) {
+      // Un rectangle aux bords flous : des couches de plus en plus petites
+      g.fillStyle = "rgba(0,0,0,0.1)";
+      const m = i * 1.7;
+      g.fillRect(m, m, 64 - 2 * m, 64 - 2 * m);
+    }
+  });
+}
+
+/** Toutes les ombres cuites en deux appels de dessin (rectangles, ronds). */
+function creerOmbresCuites(liste: OmbreCuite[]): THREE.Group {
+  const g = new THREE.Group();
+  g.name = "ombres-cuites";
+  const plan = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
+  const m = new THREE.Matrix4();
+  const q = new THREE.Quaternion();
+  for (const rond of [false, true]) {
+    const ombres = liste.filter((o) => !!o.rond === rond);
+    if (!ombres.length) continue;
+    const mat = new THREE.MeshBasicMaterial({ map: textureOmbreCuite(rond), color: 0x000000, transparent: true, opacity: rond ? 0.42 : 0.55, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+    const inst = new THREE.InstancedMesh(plan, mat, ombres.length);
+    ombres.forEach((o, i) => inst.setMatrixAt(i, m.compose(new THREE.Vector3(o.x, o.y, o.z), q.setFromAxisAngle(Y, o.ry ?? 0), new THREE.Vector3(o.l, 1, o.p))));
+    inst.computeBoundingSphere();
+    inst.renderOrder = 1;
+    g.add(inst);
+  }
   return g;
 }
 
@@ -1709,76 +1826,96 @@ export function creerCooperative(): THREE.Group {
     })(),
   };
 
-  const ch: Chantiers = { c: new Chantier(2330), ta: new Chantier(2331), th: new Chantier(2332), tf: new Chantier(2333), tt: new Chantier(2334), fond: new Chantier(2335) };
+  // Le fixe, découpé par zone (le grand bâtiment, l'atelier, la cour, le grillage) : la caméra et la passe d'ombre
+  // ne dessinent que ce qui sert. Seuls le grillage et la camionnette portent une ombre en temps réel ; le reste
+  // reçoit celle des volumes simples (creerOmbres) et ses ombres cuites (creerOmbresCuites).
+  const zones = { batiment: new Chantier(2330), atelier: new Chantier(2339), cour: new Chantier(2350), grillage: new Chantier(2351) };
+  const ch: Chantiers = { c: zones.batiment, ta: new Chantier(2331), th: new Chantier(2332), tf: new Chantier(2333), tt: new Chantier(2334), fond: new Chantier(2335) };
   const hautSilos = new Chantier(2336);
-  const a = new Assemblage(2337);
-  a.occlusion = 0.7;
-  a.forceOcclusion = 0.45;
-  const c = ch.c;
+  const engins = { atelier: new Assemblage(2337), batiment: new Assemblage(2352), cour: new Assemblage(2353) };
+  for (const a of Object.values(engins)) {
+    a.occlusion = 0.7;
+    a.forceOcclusion = 0.45;
+  }
+  const ombres: OmbreCuite[] = [];
 
   const fixes = new THREE.Group();
   const sols = creerSols(aleat);
   sols.name = "sols";
   groupe.add(sols);
   for (const o of creerBatiment(ch, mats)) fixes.add(o);
+  ch.c = zones.atelier;
   creerAtelier(ch, mats);
-  creerCloture(c, mats.grillage);
+  creerCloture(zones.grillage, mats.grillage);
+  const c = zones.cour;
 
   // La bascule à camions : cadre de béton, tablier d'acier strié, bords jaunes
   c.pave(BASCULE.x - BASCULE.l / 2 - 0.35, 0, BASCULE.z - BASCULE.p / 2 - 0.35, BASCULE.x + BASCULE.l / 2 + 0.35, 0.05, BASCULE.z + BASCULE.p / 2 + 0.35, BETON);
-  c.pave(BASCULE.x - BASCULE.l / 2, 0.05, BASCULE.z - BASCULE.p / 2, BASCULE.x + BASCULE.l / 2, 0.1, BASCULE.z + BASCULE.p / 2, 0x6f736f, matiere(0.55, 0.45));
-  for (let z = BASCULE.z - BASCULE.p / 2 + 0.25; z < BASCULE.z + BASCULE.p / 2; z += 0.5) c.pave(BASCULE.x - BASCULE.l / 2 + 0.1, 0.1, z, BASCULE.x + BASCULE.l / 2 - 0.1, 0.115, z + 0.06, 0x5d615d, matiere(0.55, 0.45), { crasse: false });
+  c.pave(BASCULE.x - BASCULE.l / 2, 0.05, BASCULE.z - BASCULE.p / 2, BASCULE.x + BASCULE.l / 2, 0.1, BASCULE.z + BASCULE.p / 2, 0x6f736f, matiere());
+  for (let z = BASCULE.z - BASCULE.p / 2 + 0.25; z < BASCULE.z + BASCULE.p / 2; z += 0.5) c.pave(BASCULE.x - BASCULE.l / 2 + 0.1, 0.1, z, BASCULE.x + BASCULE.l / 2 - 0.1, 0.115, z + 0.06, 0x5d615d, matiere(), { crasse: false });
   for (const s of [-1, 1]) for (let x = BASCULE.x - BASCULE.l / 2; x < BASCULE.x + BASCULE.l / 2 - 0.1; x += 0.5) c.pave(x, 0.1, BASCULE.z + s * (BASCULE.p / 2 - 0.15) - 0.15, x + 0.25, 0.112, BASCULE.z + s * (BASCULE.p / 2 - 0.15) + 0.15, 0xc9a83a, matiere(), { crasse: false });
   for (let i = 0; i < 9; i++) c.boite(0.08 + c.hasard() * 0.15, 0.01, 0.3 + c.hasard() * 0.9, 0x7a4a30, { x: BASCULE.x + (c.hasard() - 0.5) * 3.4, y: 0.118, z: BASCULE.z + (c.hasard() - 0.5) * 9, ry: (c.hasard() - 0.5) * 0.5 }, matiere(), { crasse: false, nuance: 0.1 });
 
-  // Le mobilier, d'après le plan
+  // Le mobilier, d'après le plan ; une ombre cuite sous chaque meuble et chaque engin (pas sous les silos ni la
+  // camionnette, qui ont la leur en temps réel).
   let nTracteurs = 0;
+  const cb = zones.batiment;
+  const dansBatiment = (b: Boite) => b.x > B.x0 && b.x < B.x1 && b.z > B.z0 && b.z < B.z1;
+  const dansAtelier = (b: Boite) => b.x > A.x0 && b.x < A.x1 && b.z > A.z0 && b.z < A.z1;
   for (const m of MOBILIER) {
     const b = m.boite;
     switch (m.genre) {
       case "caisse":
-        caisse(c, b);
+        caisse(cb, b);
         break;
       case "rayon_bas":
-        rayonBas(c, b);
+        rayonBas(cb, b);
         break;
       case "bureau":
-        bureau(c, b);
+        bureau(cb, b);
         break;
       case "coffre_fort":
-        coffreFort(c, b);
+        coffreFort(cb, b);
         break;
       case "tracteur":
-        tracteur(a, b.x, b.z, m.o ?? 0, ++nTracteurs === 2, aleat);
+        tracteur(engins.atelier, b.x, b.z, m.o ?? 0, ++nTracteurs === 2, aleat);
         break;
       case "etabli":
-        etabli(c, b);
+        etabli(zones.atelier, b);
         break;
       case "palettes":
         pilePalettes(c, b);
         break;
       case "transpalette":
-        transpalette(a, b);
+        transpalette(engins.cour, b);
         break;
       case "silo":
         silo(c, hautSilos, b, toits);
         break;
       case "camionnette":
-        camionnette(a, b.x, b.z, m.o ?? 0, aleat);
+        camionnette(engins.cour, b.x, b.z, m.o ?? 0, aleat);
         break;
     }
+    if (m.genre === "silo" || m.genre === "camionnette") continue;
+    const y = dansBatiment(b) ? SOL + 0.012 : dansAtelier(b) ? 0.092 : 0.022;
+    const grand = m.genre === "tracteur" ? 1 : 0.5;
+    ombres.push({ x: b.x, z: b.z, y, l: b.l + grand, p: b.p + grand, ry: m.o ?? 0 });
   }
-  chariot(a, 47.5, 11.5, 0.6);
+  chariot(engins.batiment, 47.5, 11.5, 0.6);
+  ombres.push({ x: 47.5, z: 11.5, y: SOL + 0.012, l: 1.8, p: 3, ry: 0.6 });
+  // Sous les big bags et les palettes du hangar, et sous les rayonnages
+  ombres.push({ x: 40, z: 12.4, y: SOL + 0.012, l: 8, p: 7 });
+  for (const r of RAYONNAGES) ombres.push({ x: r.x, z: r.z, y: SOL + 0.012, l: r.l + 0.9, p: r.p + 1.1 });
 
   // La cour des silos : la vis à grain entre les deux, une remorque de pièces, des herbes
-  hautSilos.poutre(new THREE.Vector3(18.5, 10.2, 5), new THREE.Vector3(18.5, 1.2, 11.5), 0.3, 0x9a9f9f, matiere(0.55, 0.45));
-  hautSilos.poutre(new THREE.Vector3(14, 10.6, 5), new THREE.Vector3(23, 10.6, 5), 0.25, 0x9a9f9f, matiere(0.55, 0.45));
-  c.boite(0.8, 1.2, 0.8, 0x6d7276, { x: 18.5, y: 0.6, z: 11.7 }, matiere(0.55, 0.45));
+  hautSilos.poutre(new THREE.Vector3(18.5, 10.2, 5), new THREE.Vector3(18.5, 1.2, 11.5), 0.3, 0x9a9f9f, matiere());
+  hautSilos.poutre(new THREE.Vector3(14, 10.6, 5), new THREE.Vector3(23, 10.6, 5), 0.25, 0x9a9f9f, matiere());
+  c.boite(0.8, 1.2, 0.8, 0x6d7276, { x: 18.5, y: 0.6, z: 11.7 }, matiere());
 
   // Le panneau du portail (dehors, contre le grillage)
   const panneau = new Chantier(2338);
   panneau.poser(new THREE.PlaneGeometry(2.6, 1.3), matiereTexture(texturePanneauPortail(), { roughness: 0.8 }), 0xffffff, { x: 36.5, y: 1.55, z: PORTAIL.z + 0.18 }, { nuance: 0, crasse: false });
-  for (const s of [-1, 1]) c.boite(0.08, 2.3, 0.08, 0x55524d, { x: 36.5 + s * 1.2, y: 1.15, z: PORTAIL.z + 0.12 }, matiere(0.55, 0.45));
+  for (const s of [-1, 1]) c.boite(0.08, 2.3, 0.08, 0x55524d, { x: 36.5 + s * 1.2, y: 1.15, z: PORTAIL.z + 0.12 }, matiere());
   fixes.add(panneau.construire());
 
   // Des herbes folles : au pied du grillage, des murs, dans les fissures de la cour
@@ -1795,15 +1932,16 @@ export function creerCooperative(): THREE.Group {
   // Quelques débris bas dans la cour : pneus couchés, une brouette renversée, des bâches
   for (const [x, z] of [[8, 42], [9, 43.3], [62, 52], [70, 47]] as const) c.poser(new THREE.TorusGeometry(0.4, 0.15, 5, 11).rotateX(Math.PI / 2), matiere(), 0x232220, { x, y: 0.15, z });
   c.repere({ x: 34, z: 50, ry: 0.8 }, () => {
-    c.poser(new THREE.CylinderGeometry(0.45, 0.3, 0.35, 8, 1, true), matiere(0.55, 0.45), 0x2f6b8a, { y: 0.3, rz: 2.4 });
+    c.poser(new THREE.CylinderGeometry(0.45, 0.3, 0.35, 8, 1, true), matiere(), 0x2f6b8a, { y: 0.3, rz: 2.4 });
     c.poser(new THREE.CylinderGeometry(0.2, 0.2, 0.08, 8).rotateZ(Math.PI / 2), matiere(), 0x232220, { x: 0.6, y: 0.2 });
   });
   c.poser(new THREE.PlaneGeometry(3, 2, 6, 4).rotateX(-Math.PI / 2), matiere(), 0x2f5d8a, { x: 66, y: 0.06, z: 44, ry: 0.4 }, { crasse: false });
 
   // Les rayonnages du hangar
-  RAYONNAGES.forEach((r, i) => groupe.add(creerRayonnage(r, c, toits, 2340 + i)));
+  RAYONNAGES.forEach((r, i) => groupe.add(creerRayonnage(r, cb, toits, 2340 + i)));
 
-  // Les portes, ouvertes ou fermées selon le plan ; le portail, entrouvert
+  // Les portes, ouvertes ou fermées selon le plan ; le portail, entrouvert (ses montants vont au grillage)
+  ch.c = zones.grillage;
   const vues: VuePorte[] = [];
   for (const p of [...PORTES, { id: "portail", x: PORTAIL.x, z: PORTAIL.z, largeur: PORTAIL.largeur, sens: "x" as const, ouverte: true }]) {
     const { objet, vue } = creerPorte(p, p.id === "portail" ? 1.9 : (HAUT_PORTE[p.id] ?? 2.2) - 0.02, toits, mats, ch);
@@ -1811,11 +1949,21 @@ export function creerCooperative(): THREE.Group {
     groupe.add(objet);
     vues.push(vue);
   }
-  // On assemble : le fixe, fondu par matériau ; les morceaux qui s'effacent, avec leurs matériaux à eux.
-  fixes.add(c.construire(), a.groupe());
-  fusionnerStatique(fixes);
+  // On assemble : le fixe, par zone ; les morceaux qui s'effacent, avec leurs matériaux à eux.
+  for (const [nom, z] of Object.entries(zones)) {
+    const o = z.construire();
+    o.name = nom;
+    fixes.add(o);
+  }
+  for (const [nom, a] of Object.entries(engins)) {
+    const o = a.groupe();
+    o.name = `engins-${nom}`;
+    fixes.add(o);
+  }
+  // Ne portent une ombre en temps réel que le grillage et la camionnette (avec le transpalette, dans la cour).
+  for (const o of fixes.children) if (o.name !== "grillage" && o.name !== "engins-cour") sansOmbrePortee(o);
   fixes.name = "fixe";
-  groupe.add(fixes);
+  groupe.add(fixes, creerOmbres());
 
   const effacables: [Chantier, Toit[]][] = [
     [ch.ta, [{ boite: { x: (B.x0 + B.x1) / 2, z: (32 + B.z1) / 2, l: B.x1 - B.x0 + 0.4, p: B.z1 - 32 + 1 }, materiaux: [], bas: SOCLE, haut: HF + 0.6 }]],
@@ -1843,7 +1991,9 @@ export function creerCooperative(): THREE.Group {
   ];
   const noms = ["toit-avant", "toit-hangar", "toit-froide", "toit-atelier", "murs-du-fond", "silos"];
   for (const [i, [chantier, liste]] of effacables.entries()) {
-    const { objet, materiaux } = chantier.construireFondu();
+    // Pas d'ombre portée par les toits eux-mêmes : les volumes simples (creerOmbres) la portent pour eux.
+    const { objet, materiaux } = chantier.construireFondu(false);
+    sansOmbrePortee(objet);
     objet.name = noms[i]!;
     for (const t of liste) {
       t.materiaux = materiaux;
@@ -1853,9 +2003,9 @@ export function creerCooperative(): THREE.Group {
   }
 
 
-  const foret = creerForet(aleat);
-  foret.name = "foret";
-  groupe.add(foret);
+  const lisiere = creerLisiere(aleat, ombres);
+  lisiere.name = "lisiere";
+  groupe.add(lisiere, creerOmbresCuites(ombres));
   groupe.userData.toits = toits;
   groupe.userData.portes = vues;
   return groupe;
