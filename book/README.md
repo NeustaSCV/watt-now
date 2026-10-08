@@ -24,4 +24,5 @@
 | [20 — La Carte du Monde](20-carte-du-monde.md) | Six environnements, trois anneaux de distance, lieux, comptoirs, hameaux et haltes |
 | [21 — Périmètre de la phase 0](21-perimetre-phase-0.md) | Tranche verticale (0a) puis premier hiver (0b) : objectifs du test, ce qui est construit et ce qui attend, étapes, graphismes et musique soignés |
 | [22 — Quêtes et objectifs](22-quetes-et-objectifs.md) | Le carnet après le tutoriel : « S'installer », « Le métier » (0b) ; la grande quête du cycle « Où est Bill Murray ? » (1.0) |
+| [23 — La Coopérative et le combat](23-cooperative-et-combat.md) | Un vrai niveau de combat (coopérative agricole, une par joueur), variantes d'Éteints, armes enrichies (type de dégât, usure, repousser), armes de lancer et leurres (0.5, 0.6) |
 | [99 — Évolutions futures](99-evolutions-futures.md) | Idées reportées : les Trois Sangs (V2), groupes et communautés |

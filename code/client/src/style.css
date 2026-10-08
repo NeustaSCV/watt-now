@@ -3621,3 +3621,57 @@ body {
     font-size: 9px;
   }
 }
+
+/* ---------- Les messages en bas de l'écran (retour du porteur, 2026-10-08) ----------
+   Ils étaient au milieu de l'écran, sur un fond qui cachait le jeu : ils passent en bas, juste au-dessus des
+   commandes, sur un fond léger ; le texte reste lisible par son ombre. Le plus récent est en bas. */
+#hud .messages {
+  top: auto !important;
+  bottom: max(124px, calc(env(safe-area-inset-bottom) + 112px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  pointer-events: none;
+}
+#hud .messages p,
+#hud .messages p.aide,
+#hud .messages p.lecon {
+  margin: 0;
+  max-width: min(520px, calc(100vw - 32px));
+  background: rgba(14, 18, 26, 0.42);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  color: #f6f1e4;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+#hud .messages p.aide {
+  background: rgba(31, 94, 102, 0.42);
+}
+#hud .messages p.lecon {
+  background: rgba(70, 56, 30, 0.42);
+  color: #fbf3df;
+}
+/* Téléphone en portrait : au-dessus du joystick et des boutons A/B. */
+@media (pointer: coarse) and (orientation: portrait) {
+  #hud .messages {
+    bottom: max(300px, calc(env(safe-area-inset-bottom) + 288px));
+    font-size: 13px;
+  }
+}
+/* Téléphone en paysage : entre le joystick et les boutons, au-dessus de l'invite. */
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 520px) {
+  #hud .messages {
+    bottom: max(66px, calc(env(safe-area-inset-bottom) + 58px));
+    width: min(420px, 46vw);
+    font-size: 12.5px;
+  }
+}
+/* L'habillage de famille reste dans la police, pas dans un fond opaque : les messages laissent voir le jeu. */
+#hud[class*="habit-"] .messages p:not(.aide):not(.lecon) {
+  background: rgba(14, 18, 26, 0.42);
+  border-color: transparent;
+  box-shadow: none;
+  color: #f6f1e4;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+}

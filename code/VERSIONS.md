@@ -12,6 +12,11 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
+## 0.5 · en préparation
+
+**L'écran**
+- Les **messages d'aide** passent **en bas de l'écran**, juste au-dessus des commandes, sur un fond léger qui laisse voir le jeu (le texte reste lisible par son ombre). Le plus récent est en bas.
+
 ## 0.4 · déployée le 2026-10-08
 
 **L'écran** (spécification de Sally, la designeuse UX de BMAD, validée sur maquettes ; Book 18 §3)
