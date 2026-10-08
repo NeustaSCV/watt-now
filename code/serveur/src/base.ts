@@ -17,6 +17,7 @@ import type { EtatQuetes } from "../../commun/src/quetes.ts";
 import { estArme } from "../../commun/src/combat.ts";
 import type { EtatInstallation, InstallationVue } from "../../commun/src/messages.ts";
 import type { TypeInstallation } from "../../commun/src/recettes.ts";
+import type { AccessoireFeu } from "../../commun/src/lignees.ts";
 import { genererJoncs, genererRessources, genererVergerEtSousBois, genererVestiges, type TypeRessource } from "../../commun/src/terrain.ts";
 import { VERSION_HALTE, genererHalte } from "../../commun/src/halte.ts";
 import type { RessourceSol } from "../../commun/src/terrain.ts";
@@ -55,6 +56,12 @@ export interface FeuEnBase extends EtatFeu {
   z: number;
   /** Instant réel (ms) du dernier calcul de combustion. */
   majLe: number;
+  /** Les accessoires montés (Book 24 §3.1), avec ce qu'ils ont coûté (pour le démontage). */
+  accessoires?: Partial<Record<AccessoireFeu, Inventaire>>;
+  /** Ce qui a été payé, niveau après niveau (pour redescendre ou démonter). Absent : le coût de base de sa voie. */
+  payes?: Inventaire[];
+  /** L'orientation du muret réflecteur (radians), choisie à la maçonnerie. */
+  o?: number;
 }
 
 export interface ContenuSac {
@@ -214,6 +221,12 @@ const COLONNES_AJOUTEES: [table: string, colonne: string, definition: string][] 
   ["personnages", "compte_watts", "TEXT NOT NULL DEFAULT ''"],
   // La faune du terrain (2026-10-08) : quand on a pris des poules (elles reviennent au bout de 2 h).
   ["personnages", "faune", "TEXT NOT NULL DEFAULT '{}'"],
+  // Améliorer sa base (Book 24 §7) : le niveau dans la lignée ; tout ce qui est déjà posé est au niveau 1.
+  ["feux", "niveau", "INTEGER NOT NULL DEFAULT 1"],
+  ["feux", "accessoires", "TEXT NOT NULL DEFAULT '{}'"],
+  // Le reste de l'état d'un feu (couvert, ce qui a été payé à chaque niveau, orientation du muret), en JSON.
+  ["feux", "etat", "TEXT NOT NULL DEFAULT '{}'"],
+  ["installations", "niveau", "INTEGER NOT NULL DEFAULT 1"],
 ];
 
 function maintenant(): string {
@@ -565,7 +578,7 @@ export class Base {
   }
 
   chargerFeux(compteId: number): FeuEnBase[] {
-    const lignes = this.db.prepare("SELECT id, x, z, bois, allume, maj_le, dakota FROM feux WHERE compte_id = ? ORDER BY id").all(compteId) as {
+    const lignes = this.db.prepare("SELECT id, x, z, bois, allume, maj_le, dakota, niveau, accessoires, etat FROM feux WHERE compte_id = ? ORDER BY id").all(compteId) as {
       dakota: number;
       id: number;
       x: number;
@@ -573,29 +586,62 @@ export class Base {
       bois: number;
       allume: number;
       maj_le: number;
+      niveau: number;
+      accessoires: string;
+      etat: string;
     }[];
-    return lignes.map((l) => ({ id: l.id, x: l.x, z: l.z, bois: l.bois, allume: l.allume === 1, majLe: l.maj_le, ...(l.dakota ? { dakota: true } : {}) }));
+    return lignes.map((l) => {
+      const accessoires = JSON.parse(l.accessoires || "{}") as FeuEnBase["accessoires"];
+      const etat = JSON.parse(l.etat || "{}") as { couvert?: boolean; payes?: Inventaire[]; o?: number };
+      return {
+        id: l.id,
+        x: l.x,
+        z: l.z,
+        bois: l.bois,
+        allume: l.allume === 1,
+        majLe: l.maj_le,
+        ...(l.dakota ? { dakota: true } : {}),
+        ...(l.niveau > 1 ? { niveau: l.niveau } : {}),
+        ...(accessoires && Object.keys(accessoires).length ? { accessoires } : {}),
+        ...(etat.couvert ? { couvert: true } : {}),
+        ...(etat.payes ? { payes: etat.payes } : {}),
+        ...(etat.o !== undefined ? { o: etat.o } : {}),
+      };
+    });
   }
 
   sauverFeu(compteId: number, feu: FeuEnBase): void {
+    const etat = JSON.stringify({ ...(feu.couvert ? { couvert: true } : {}), ...(feu.payes ? { payes: feu.payes } : {}), ...(feu.o !== undefined ? { o: feu.o } : {}) });
     this.db
       .prepare(
-        `INSERT INTO feux (compte_id, id, x, z, bois, allume, maj_le, dakota) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-         ON CONFLICT (compte_id, id) DO UPDATE SET bois = excluded.bois, allume = excluded.allume, maj_le = excluded.maj_le`,
+        `INSERT INTO feux (compte_id, id, x, z, bois, allume, maj_le, dakota, niveau, accessoires, etat) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT (compte_id, id) DO UPDATE SET bois = excluded.bois, allume = excluded.allume, maj_le = excluded.maj_le,
+           dakota = excluded.dakota, niveau = excluded.niveau, accessoires = excluded.accessoires, etat = excluded.etat`,
       )
-      .run(compteId, feu.id, feu.x, feu.z, feu.bois, feu.allume ? 1 : 0, feu.majLe, feu.dakota ? 1 : 0);
+      .run(compteId, feu.id, feu.x, feu.z, feu.bois, feu.allume ? 1 : 0, feu.majLe, feu.dakota ? 1 : 0, feu.niveau ?? 1, JSON.stringify(feu.accessoires ?? {}), etat);
+  }
+
+  /** Un feu démonté (Book 24 §2.4) : il quitte le terrain. */
+  retirerFeu(compteId: number, id: number): void {
+    this.db.prepare("DELETE FROM feux WHERE compte_id = ? AND id = ?").run(compteId, id);
   }
 
   chargerInstallations(compteId: number): InstallationVue[] {
-    const lignes = this.db.prepare("SELECT id, type, x, z, o, etat FROM installations WHERE compte_id = ? ORDER BY id").all(compteId) as {
+    const lignes = this.db.prepare("SELECT id, type, x, z, o, etat, niveau FROM installations WHERE compte_id = ? ORDER BY id").all(compteId) as {
       id: number;
       type: TypeInstallation;
       x: number;
       z: number;
       o: number;
       etat: string;
+      niveau: number;
     }[];
-    return lignes.map((l) => ({ id: l.id, type: l.type, x: l.x, z: l.z, o: l.o, etat: JSON.parse(l.etat) as EtatInstallation }));
+    return lignes.map((l) => ({ id: l.id, type: l.type, x: l.x, z: l.z, o: l.o, etat: JSON.parse(l.etat) as EtatInstallation, ...(l.niveau > 1 ? { niveau: l.niveau } : {}) }));
+  }
+
+  /** Une installation améliorée ou redescendue sur place (Book 24) : même identifiant, même place. */
+  sauverNiveauInstallation(compteId: number, id: number, niveau: number): void {
+    this.db.prepare("UPDATE installations SET niveau = ? WHERE compte_id = ? AND id = ?").run(niveau, compteId, id);
   }
 
   sauverEtatInstallation(compteId: number, id: number, etat: EtatInstallation): void {

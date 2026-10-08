@@ -67,6 +67,9 @@ type TypeObjetDeBase =
   | "volaille_cepes"
   | "cepes_poeles"
   | "pommes_cuites"
+  // Les mijotés du foyer de cuisine (Book 24 §3.1) : des soupes, qui désaltèrent aussi.
+  | "soupe_cepes"
+  | "pot_au_feu"
   // Le sac de fortune : un cadre de branches lié de corde, quand on a perdu son sac à dos (2026-10-08).
   | "sac_fortune"
   // La gamme bushcraft, lot 1 (P-002, 2026-10-08) : rien que des matières qu'on a déjà.
@@ -230,6 +233,23 @@ const OBJETS_DE_BASE: Record<TypeObjetDeBase, DefinitionObjet> = {
     poids: 0.4,
     kcal: 300, eau: 0.3,
     plat: { sante: 4 },
+  },
+  // Les mijotés (Book 24 §3.1) : il faut la crémaillère du foyer de cuisine, et de l'eau (elle bout, la mare suffit).
+  soupe_cepes: {
+    description: "Une soupe de cèpes mijotée à la crémaillère, dans un demi-litre d'eau. ≈ 110 kcal (2 × 45, ×1,25 par la cuisson), et elle désaltère. Un vrai repas.",
+    nom: "soupe de cèpes",
+    pluriel: "bols de soupe de cèpes",
+    poids: 0.6,
+    kcal: 110, eau: 0.45,
+    plat: { sante: 6 },
+  },
+  pot_au_feu: {
+    description: "Une portion de volaille et un cèpe, mijotés longtemps dans un demi-litre d'eau. ≈ 530 kcal (380 + 45, ×1,25 par la cuisson), et il désaltère. Ça cale, ça réconforte.",
+    nom: "pot-au-feu de volaille",
+    pluriel: "bols de pot-au-feu de volaille",
+    poids: 0.75,
+    kcal: 530, eau: 0.45,
+    plat: { sante: 12 },
   },
   ficelle: {
     description: "Deux fibres de jonc roulées sur la cuisse. Plus fine que la corde : alarmes, ligatures, protège-bras.",

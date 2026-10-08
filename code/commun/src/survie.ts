@@ -4,6 +4,7 @@
 import { REGLAGES } from "./reglages.ts";
 import { OBJETS, type TypeObjet } from "./objets.ts";
 import type { Allure } from "./regles.ts";
+import { FEU_COUVERT, effetsFeu } from "./lignees.ts";
 
 // ---------- Besoins (Book 05 §3) ----------
 
@@ -52,8 +53,12 @@ export function fatigue(b: Besoins): boolean {
 /** Le lit de branchages isole du sol : on récupère un tiers plus vite (P-002). */
 export const BONUS_LIT = 1.3;
 
-export function dormir(b: Besoins, heures: number, dansUnAbri: boolean, surUnLit = false): Besoins {
-  const taux = (dansUnAbri ? REPOS_GAGNE_PAR_HEURE_ABRI : REPOS_GAGNE_PAR_HEURE_SOL) * (surUnLit ? BONUS_LIT : 1);
+/**
+ * `confort` : ce que l'abri amélioré et le foyer voisin ajoutent (Book 24 : abri garni ou fermé, muret qui renvoie
+ * la chaleur). Il remplace le bonus du lit quand il est plus grand (l'abri garni a déjà son lit).
+ */
+export function dormir(b: Besoins, heures: number, dansUnAbri: boolean, surUnLit = false, confort = 1): Besoins {
+  const taux = (dansUnAbri ? REPOS_GAGNE_PAR_HEURE_ABRI : REPOS_GAGNE_PAR_HEURE_SOL) * Math.max(surUnLit ? BONUS_LIT : 1, confort);
   return { ...b, repos: Math.min(1, b.repos + heures * taux) };
 }
 
@@ -117,8 +122,12 @@ export interface EtatFeu {
   /** Bois restant, en kg. */
   bois: number;
   allume: boolean;
-  /** Un foyer Dakota (P-002) : creusé dans le sol, discret et économe. */
+  /** Un foyer Dakota (P-002) : creusé dans le sol, discret et économe. C'est la voie creusée de la lignée du feu. */
   dakota?: boolean;
+  /** Son niveau dans sa lignée (Book 24 §3.1) : absent, le niveau 1 (les feux d'avant). */
+  niveau?: number;
+  /** Couvert sous la cendre pour la nuit (foyer de pierres et au-delà) : il brûle quatre fois moins, sans flamme. */
+  couvert?: boolean;
 }
 
 /**
@@ -133,12 +142,14 @@ export type AspectFeu = "eteint" | "flammes" | "braises" | "cendres";
 /** Le feu brûle à l'horloge d'action, même hors ligne (processus passif, Book 01 §2 bis). */
 export function bruler(feu: EtatFeu, heures: number): EtatFeu {
   if (!feu.allume) return feu;
-  const bois = Math.max(0, feu.bois - BOIS_PAR_HEURE * (feu.dakota ? DAKOTA.bois : 1) * heures);
-  return { ...feu, bois, allume: bois > 0 };
+  // Chaque niveau a son multiplicateur (Book 24 §3.1) : le foyer de pierres ×0,8, le Dakota ×0,6, le poêle-fusée ×0,4.
+  const k = effetsFeu(feu).bois * (feu.couvert ? FEU_COUVERT.bois : 1);
+  const bois = Math.max(0, feu.bois - BOIS_PAR_HEURE * k * heures);
+  return bois > 0 ? { ...feu, bois } : { ...feu, bois, allume: false, couvert: false };
 }
 
 export function aspectFeu(feu: EtatFeu): AspectFeu {
-  if (feu.allume) return feu.bois < SEUIL_BRAISES ? "braises" : "flammes";
+  if (feu.allume) return feu.bois < SEUIL_BRAISES || feu.couvert ? "braises" : "flammes";
   return feu.bois > 0 ? "eteint" : "cendres";
 }
 
