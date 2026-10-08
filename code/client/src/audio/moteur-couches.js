@@ -80,7 +80,9 @@ export class MoteurAudio {
     const c = this.couches[couche], p = this.pieces[idPiece];
     if (!p) return;
     p.stems.forEach((s) => { if (!c.stems[s]) { const n = this.ctx.createGain(); n.gain.value = couche === 'vie' && s !== 'mix' ? 0 : 1; n.connect(c.gain); c.stems[s] = n; } });
-    if (p.stems.includes('mix')) { c.stems.mix.gain.value = 0; c.mobile = true; }
+    /* Version mobile : seule la Vie est réglée stem par stem par le directeur (stems « virtuels » → volume du prémix) ;
+       Fond, Tension et Danger sont réglés en bloc (volume de la couche) : leur prémix joue à plein volume. */
+    if (p.stems.includes('mix')) { const vie = couche === 'vie'; c.stems.mix.gain.value = vie ? 0 : 1; c.mobile = vie; }
   }
 
   /**
