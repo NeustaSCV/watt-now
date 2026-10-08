@@ -2,7 +2,13 @@
 
 > Document de conception · version 0.2 · 2026-10-08
 > Statut : **validé** par le porteur du projet (2026-10-08), en cours de réalisation. Cible : versions 0.5 et 0.6.
-> Avancement (2026-10-08) : **0.5a fait** (lieu vivant, une Coopérative par joueur, chemin agricole au nord du Carrefour, route en ligne) ; **0.5b fait** (murs, portes qu'on ouvre et referme, grille d'obstacles de 4 m) ; **0.5c fait** (les murs étouffent le son et arrêtent la vue, obscurité par pièce, passage par les portes, cascade des gémissements, groupes, Rampant et Équipé, retour dans sa zone après 3 min, IA à 10 Hz et 2 Hz, envoi limité à ce que le joueur perçoit ; 24 Éteints placés) ; le rendu 3D du lieu est fait et allégé (ombres cuites, carte réduite).
+> Avancement (2026-10-08) : **0.5a fait** (lieu vivant, une Coopérative par joueur, chemin agricole au nord du Carrefour, route en ligne) ; **0.5b fait** (murs, portes qu'on ouvre et referme, grille d'obstacles de 4 m) ; **0.5c fait** (les murs étouffent le son et arrêtent la vue, obscurité par pièce, passage par les portes, cascade des gémissements, groupes, Rampant et Équipé, retour dans sa zone après 3 min, IA à 10 Hz et 2 Hz, envoi limité à ce que le joueur perçoit ; 24 Éteints placés) ; **0.5d fait** :
+>   - **sauvegarde** de chaque Coopérative : Éteints détruits, portes, butin pris ;
+>   - **repeuplement** : 3 Éteints toutes les 12 h réelles, la chambre froide d'abord (réglages `coop_repeuplement_h` et `coop_repeuplement_n`) ;
+>   - **butin** posé sur le décor : pied-de-biche garanti sous la caisse ; libre-service, quai, atelier et hangar reviennent en 6 à 12 h ;
+>   - **coffre du directeur** : il s'ouvre avec la clé que lâche le magasinier ;
+>   - **chambre froide** : roulements et alternateur, qui reviennent en 4 jours ;
+>   - **semences F1** au coffre ; ces pièces rares ne sortent d'aucun autre tirage (fouille, décharge) ; le rendu 3D du lieu est fait et allégé (ombres cuites, carte réduite).
 > Décisions déjà prises (2026-10-08) : le lieu est la **coopérative agricole** (Book 20 §3.1) ; **une par joueur** pour commencer et valider la mécanique (des cartes partagées ne sont pas exclues plus tard) ; **conception écrite d'abord**.
 > La version 0.2 intègre les relectures des agents BMAD : Samus (Game Designer : niveau, difficulté, combat sur téléphone) et Cloud (Game Architect : instances, IA, persistance, Pi).
 

@@ -35,7 +35,15 @@ export type TypeRessource =
   | "epave_voiture"
   | "epave_camion"
   | "caisse_atelier"
-  | "grenier";
+  | "grenier"
+  // Butin de la Coopérative du Plateau (Book 23 §2.2) : du commun dehors, du rare au fond.
+  | "coop_caisse"
+  | "coop_rayon"
+  | "coop_palettes"
+  | "coop_etabli"
+  | "coop_rayonnage"
+  | "coop_coffre"
+  | "coop_caisse_froide";
 
 /** L'emprise au sol de ce qu'on vise (m) : le cercle de visée s'y ajuste (P-007). 0,5 m par défaut. */
 export const EMPRISE_RESSOURCE: Partial<Record<TypeRessource, number>> = {
@@ -119,6 +127,14 @@ export const REPOUSSE_MS: Record<TypeRessource, number | null> = {
   epave_camion: 12 * 3_600_000,
   caisse_atelier: 12 * 3_600_000,
   grenier: 12 * 3_600_000,
+  // Le commun revient en quelques heures ; le rare, en plusieurs jours (Book 23 §2.3) ; le pied-de-biche, une fois.
+  coop_caisse: null,
+  coop_rayon: 6 * 3_600_000,
+  coop_palettes: 6 * 3_600_000,
+  coop_etabli: 12 * 3_600_000,
+  coop_rayonnage: 8 * 3_600_000,
+  coop_coffre: 4 * 24 * 3_600_000,
+  coop_caisse_froide: 4 * 24 * 3_600_000,
 };
 
 /** Les ressources qui restent en place une fois fouillées (une épave ne disparaît pas). */
@@ -134,6 +150,13 @@ export const RESTE_EN_PLACE: Partial<Record<TypeRessource, true>> = {
   epave_voiture: true,
   epave_camion: true,
   grenier: true,
+  coop_caisse: true,
+  coop_rayon: true,
+  coop_palettes: true,
+  coop_etabli: true,
+  coop_rayonnage: true,
+  coop_coffre: true,
+  coop_caisse_froide: true,
 };
 
 /** La ruine de ferme du terrain (Book 21 §3.2), dans le coin nord-est. */
@@ -331,6 +354,63 @@ export const USAGES: Record<TypeRessource, UsageRessource> = {
     qualites: {},
     duree: 7,
     examen: "Le toit est tombé sur le foin. Une corde pend encore à la poulie.",
+  },
+  // ---------- La Coopérative du Plateau (Book 23 §2.2) ----------
+  coop_caisse: {
+    verbe: "fouiller",
+    libelle: "Fouiller sous le comptoir de caisse",
+    donne: { pied_de_biche: 1 },
+    qualites: {},
+    duree: 5,
+    examen: "Le comptoir de la caisse, tiroir arraché. Dessous, quelque chose de lourd est resté coincé contre la plinthe.",
+  },
+  coop_rayon: {
+    verbe: "fouiller",
+    libelle: "Fouiller le rayon",
+    donne: { conserve: 1 },
+    qualites: {},
+    duree: 6,
+    examen: "Un rayon bas du libre-service : bocaux cassés, sachets éventrés. Pillé, mais pas par quelqu'un de patient.",
+  },
+  coop_palettes: {
+    verbe: "fouiller",
+    libelle: "Fouiller les palettes du quai",
+    donne: { corde: 1 },
+    qualites: {},
+    duree: 6,
+    examen: "Des palettes filmées, des sangles, des cartons détrempés. Ce qui restait à livrer quand tout s'est arrêté.",
+  },
+  coop_etabli: {
+    verbe: "fouiller",
+    libelle: "Fouiller l'établi du mécanicien",
+    donne: { cle_plate: 1 },
+    qualites: {},
+    duree: 7,
+    examen: "L'établi de l'atelier des tracteurs : des outils de qualité, rangés par quelqu'un qui en prenait soin.",
+  },
+  coop_rayonnage: {
+    verbe: "fouiller",
+    libelle: "Fouiller le rayonnage",
+    donne: { bache: 1 },
+    qualites: {},
+    duree: 8,
+    examen: "Quatre mètres d'étagères : sacs d'engrais, bidons, bâches, cordages. Tout en haut, ce qu'on ne voit pas d'en bas.",
+  },
+  coop_coffre: {
+    verbe: "fouiller",
+    libelle: "Ouvrir le coffre du directeur",
+    donne: { semences_f1: 1 },
+    qualites: {},
+    duree: 6,
+    examen: "Un petit coffre-fort vert, scellé au mur. Fermé à clé : le magasinier la portait toujours sur lui.",
+  },
+  coop_caisse_froide: {
+    verbe: "fouiller",
+    libelle: "Ouvrir les caisses de pièces",
+    donne: { roulements: 1, alternateur_tracteur: 1 },
+    qualites: {},
+    duree: 10,
+    examen: "Des caisses plombées « PIÈCES DÉTACHÉES — STOCK DE RÉSERVE », alignées dans le froid. Personne n'y a touché.",
   },
 };
 

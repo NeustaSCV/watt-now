@@ -9,7 +9,7 @@ import { DUREE_VOYAGE_S, SORTIES_COMPTOIR, SORTIES_COOP, arriveeDans, dansBoite,
 import type { MessageServeur } from "../../commun/src/messages.ts";
 import { Base } from "./base.ts";
 import { Comptoir } from "./comptoir.ts";
-import { Cooperatives } from "./cooperative.ts";
+import { Cooperatives, repeupler } from "./cooperative.ts";
 import { Halte } from "./halte.ts";
 import { Joueur } from "./joueur.ts";
 
@@ -31,8 +31,8 @@ function monter() {
   const base = new Base(":memory:");
   const halte = new Halte(base);
   const comptoir = new Comptoir(base);
-  const cooperatives = new Cooperatives(base);
   let instant = 1_000_000;
+  const cooperatives = new Cooperatives(base, () => 0.5, () => instant);
   const joueurs: { joueur: Joueur; recus: MessageServeur[] }[] = [];
   const nouveau = (pseudo: string) => {
     const compte = base.creerCompte(pseudo, "potager42", "mecanistes");
@@ -61,7 +61,9 @@ function monter() {
     j.partir();
     joueurs.splice(joueurs.findIndex((x) => x.joueur === j), 1);
   };
-  return { base, cooperatives, nouveau, attendre, allerALaCoop, deconnecter };
+  /** Le temps passe d'un coup (hors ligne). */
+  const sauter = (ms: number) => (instant += ms);
+  return { base, cooperatives, nouveau, attendre, allerALaCoop, deconnecter, sauter, halte, comptoir, maintenant: () => instant };
 }
 
 const derniere = (recus: MessageServeur[]) => recus.findLast((m) => m.t === "bienvenue") as Extract<MessageServeur, { t: "bienvenue" }> | undefined;
@@ -201,4 +203,88 @@ test("0.5c : on ne reçoit pas les Éteints cachés derrière un mur (pas de tri
   coop.basculerPorte("froide_hangar", true);
   a.joueur.position = { x: 60, z: 18.5, o: 0 };
   assert.ok(coop.eteintsVus(a.joueur.position).some((e) => froide.includes(e.id)));
+});
+
+// ---------- 0.5d : persistance, repeuplement, butin ----------
+
+test("0.5d : un Éteint détruit le reste, d'une visite à l'autre ; les portes aussi", () => {
+  const t = monter();
+  const a = t.nouveau("Rose");
+  t.allerALaCoop(a.joueur);
+  t.attendre(DUREE_VOYAGE_S + 1);
+  const coop = t.cooperatives.de(a.compte.id);
+  coop.eteints.find((e) => e.id === 1)!.etat = "detruit";
+  coop.basculerPorte("bureaux", true);
+  t.attendre(1);
+  t.deconnecter(a.joueur);
+  t.attendre(6 * 60, 5);
+  assert.equal(t.cooperatives.nombre, 0);
+  // Une heure plus tard (moins que le délai de repeuplement), elle est rechargée telle quelle.
+  t.sauter(3_600_000);
+  const autre = new Cooperatives(t.base, () => 0.5, t.maintenant).de(a.compte.id);
+  assert.ok(!autre.eteints.some((e) => e.id === 1 && e.etat !== "detruit"));
+  assert.equal(autre.eteints.filter((e) => e.etat !== "detruit").length, 23);
+  assert.equal(autre.portes.bureaux, true);
+});
+
+test("0.5d : le repeuplement — quelques Éteints reviennent toutes les 12 h, la chambre froide d'abord", () => {
+  const debut = 5_000_000;
+  const froide = [19, 20, 21, 22, 23, 24];
+  const etat = { detruits: [1, 2, 5, ...froide], portes: portesInitiales(), repeupleLe: debut };
+  assert.deepEqual(repeupler(etat, debut + 11 * 3_600_000), etat, "rien avant 12 h");
+  const apres12 = repeupler(etat, debut + 12.5 * 3_600_000);
+  assert.equal(apres12.detruits.length, etat.detruits.length - 3);
+  assert.ok([1, 2, 5].every((id) => apres12.detruits.includes(id)), "la chambre froide revient d'abord");
+  const apres4j = repeupler(etat, debut + 4 * 24 * 3_600_000);
+  assert.equal(apres4j.detruits.length, 0);
+});
+
+test("0.5d : le butin — un pied-de-biche garanti, le coffre à la clé du magasinier, le rare ne revient pas avant 4 jours", () => {
+  const t = monter();
+  const a = t.nouveau("Rose");
+  t.allerALaCoop(a.joueur);
+  t.attendre(DUREE_VOYAGE_S + 1);
+  const coop = t.cooperatives.de(a.compte.id);
+  const r = (type: string) => [...coop.ressources.values()].find((x) => x.type === type)!;
+  const fouiller = (type: string) => {
+    const p = r(type);
+    a.joueur.position = { x: p.x, z: p.z + 0.8, o: Math.PI };
+    a.joueur.recevoir({ t: "interagir", cible: { genre: "ressource", id: p.id }, verbe: "fouiller" });
+    t.attendre(14);
+  };
+  const inv = () => (a.recus.findLast((m) => m.t === "inventaire") as Extract<MessageServeur, { t: "inventaire" }> | undefined)?.inventaire ?? {};
+  // Les Éteints ne gênent pas ce test : on les couche tous, sauf le magasinier, à terre devant nous.
+  const magasinier = coop.eteints.find((e) => e.variante === "magasinier")!;
+  for (const e of coop.eteints) if (e !== magasinier) e.etat = "detruit";
+  magasinier.etat = "a_terre";
+  magasinier.aTerre = 60;
+  fouiller("coop_caisse");
+  assert.equal(inv().pied_de_biche, 1);
+  // Le coffre : fermé sans la clé.
+  fouiller("coop_coffre");
+  assert.ok(!inv().semences_f1);
+  assert.ok(a.recus.some((m) => m.t === "info" && /Fermé à clé/.test(m.texte)));
+  // On achève le magasinier : sa clé tombe à ses pieds ; on la ramasse.
+  a.joueur.position = { x: magasinier.x, z: magasinier.z - 1, o: 0 };
+  a.joueur.recevoir({ t: "frapper", appuye: false });
+  assert.equal(magasinier.etat, "detruit");
+  const cle = coop.sacs.find((x) => x.contenu.inventaire.cle_coffre)!;
+  assert.ok(cle, "la clé est au sol");
+  t.attendre(1);
+  a.joueur.recevoir({ t: "interagir", cible: { genre: "sac", id: cle.id }, verbe: "reprendre" });
+  t.attendre(5);
+  assert.equal(inv().cle_coffre, 1);
+  fouiller("coop_coffre");
+  assert.equal(inv().semences_f1, 1);
+  // Les caisses de la chambre froide : prises, elles ne reviennent pas avant 4 jours, même après rechargement.
+  fouiller("coop_caisse_froide");
+  assert.equal(inv().roulements, 1);
+  const caisse = r("coop_caisse_froide");
+  t.deconnecter(a.joueur);
+  t.attendre(6 * 60, 5);
+  t.sauter(3 * 24 * 3_600_000);
+  const plusTard = new Cooperatives(t.base, () => 0.5, t.maintenant).de(a.compte.id);
+  assert.ok(plusTard.ressources.get(caisse.id)!.disponibleLe > t.maintenant());
+  t.sauter(1.1 * 24 * 3_600_000);
+  assert.ok(plusTard.ressources.get(caisse.id)!.disponibleLe <= t.maintenant());
 });

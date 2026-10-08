@@ -174,6 +174,11 @@ const SCHEMA = `
     contenu     TEXT NOT NULL,
     cree_le     INTEGER NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS instances (
+    cle    TEXT PRIMARY KEY,
+    etat   TEXT NOT NULL,
+    maj_le INTEGER NOT NULL
+  );
   CREATE TABLE IF NOT EXISTS monde (
     cle    TEXT PRIMARY KEY,
     valeur TEXT NOT NULL
@@ -513,6 +518,18 @@ export class Base {
       lignes = lire();
     }
     return lignes.map((l) => ({ id: l.id, type: l.type, x: l.x, z: l.z, disponibleLe: l.disponible_le }));
+  }
+
+  /** L'état gardé d'une instance de lieu (la Coopérative d'un joueur), en JSON ; null si elle n'a jamais été visitée. */
+  chargerInstance(cle: string): unknown {
+    const l = this.db.prepare("SELECT etat FROM instances WHERE cle = ?").get(cle) as { etat: string } | undefined;
+    return l ? (JSON.parse(l.etat) as unknown) : null;
+  }
+
+  sauverInstance(cle: string, etat: unknown, majLe: number): void {
+    this.db
+      .prepare("INSERT INTO instances (cle, etat, maj_le) VALUES (?, ?, ?) ON CONFLICT (cle) DO UPDATE SET etat = excluded.etat, maj_le = excluded.maj_le")
+      .run(cle, JSON.stringify(etat), majLe);
   }
 
   sauverRessourceLieu(lieu: string, id: number, disponibleLe: number): void {

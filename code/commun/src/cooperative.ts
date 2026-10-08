@@ -3,6 +3,7 @@
 // Repère : x vers l'est (0 → 80 m), z vers le sud (0 → 60 m). Le portail est au sud, la cour des silos au nord.
 
 import type { Boite } from "./lieux.ts";
+import type { TypeRessource } from "./terrain.ts";
 
 export const COOP = { largeur: 80, profondeur: 60 } as const;
 /** Épaisseur des murs (m). */
@@ -224,3 +225,26 @@ export const ARRIVEE_COOP = { x: PORTAIL.x, z: PORTAIL.z - 2.5, o: Math.PI } as 
 /** Version du contenu de la Coopérative (ressources, butin) : la changer régénère les instances. */
 export const VERSION_COOP = 1;
 
+
+/**
+ * Le butin de la Coopérative (Book 23 §2.2), posé sur le décor : commun dehors (libre-service, quai), utile à l'atelier
+ * et au hangar, rare au fond (le coffre des bureaux, les caisses de la chambre froide). Un pied-de-biche est garanti
+ * sous le comptoir de caisse.
+ */
+export function butinCoop(): { id: number; type: TypeRessource; x: number; z: number }[] {
+  const points: [TypeRessource, number, number][] = [
+    ["coop_caisse", 38, 38.9],
+    ["coop_rayon", 46, 35.7],
+    ["coop_rayon", 52, 36.8],
+    ["coop_palettes", 32, 31],
+    ["coop_etabli", 7.5, 31.2],
+    ["coop_rayonnage", 44, 20.8],
+    ["coop_rayonnage", 64, 25.3],
+    ["coop_rayonnage", 44, 29.8],
+    ["coop_rayonnage", 64, 19.2],
+    ["coop_coffre", 71.9, 34],
+    ["coop_caisse_froide", 70, 13],
+    ["coop_caisse_froide", 68.5, 9.5],
+  ];
+  return points.map(([type, x, z], i) => ({ id: i + 1, type, x, z }));
+}

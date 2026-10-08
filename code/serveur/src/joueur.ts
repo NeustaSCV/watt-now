@@ -792,6 +792,11 @@ export class Joueur implements Voyageur {
     this.position = { ...this.position, o: Math.atan2(cible.x - this.position.x, cible.z - this.position.z) };
     const resultat = encaisser(cible, arme, appuye, force, this.position, this.zoneIci());
     if (this.tuto && resultat === "detruit") this.tuto.premierEteintDetruit = true;
+    // Le magasinier portait la clé du coffre à sa ceinture (Book 23 §3) : elle tombe là où il tombe.
+    if (resultat === "detruit" && cible.variante === "magasinier") {
+      this.poserAuSol({ cle_coffre: 1 }, {}, { x: cible.x, z: cible.z });
+      this.info("Une chaînette tinte à sa ceinture : il portait une clé « MAGASIN ».");
+    }
     const coup = { t: "coup" as const, id: cible.id, x: cible.x, z: cible.z, resultat };
     if (this.vivant) this.vivant.diffuser(coup);
     else this.envoyer(coup);
@@ -1070,9 +1075,9 @@ export class Joueur implements Voyageur {
   }
 
   /** Pose des objets par terre, en petit tas ramassable par tous (ajoutés au tas tout proche, s'il y en a un à soi). */
-  private poserAuSol(objets: Inventaire, charges: Charges = {}): void {
+  private poserAuSol(objets: Inventaire, charges: Charges = {}, ou?: { x: number; z: number }): void {
     // Un tas à moi tout près : on y ajoute (pas une pile de petits tas).
-    const tas = this.sacsIci().find((s) => s.contenu.jete && s.proprietaire === this.compte.id && this.proche(s.x, s.z, 1.2));
+    const tas = ou ? undefined : this.sacsIci().find((s) => s.contenu.jete && s.proprietaire === this.compte.id && this.proche(s.x, s.z, 1.2));
     if (tas) {
       const inventaire = { ...tas.contenu.inventaire };
       for (const [t, k] of Object.entries(objets) as [TypeObjet, number][]) inventaire[t] = (inventaire[t] ?? 0) + k;
@@ -1085,8 +1090,8 @@ export class Joueur implements Voyageur {
       lieu: this.lieu === "station" || this.lieu === "cooperative" ? this.lieu : "terrain",
       terrainDe: this.lieu === "station" ? 0 : this.compte.id,
       proprietaire: this.compte.id,
-      x: this.position.x + Math.sin(this.position.o) * 0.6,
-      z: this.position.z + Math.cos(this.position.o) * 0.6,
+      x: ou ? ou.x : this.position.x + Math.sin(this.position.o) * 0.6,
+      z: ou ? ou.z : this.position.z + Math.cos(this.position.o) * 0.6,
       contenu: { inventaire: { ...objets }, charges, jete: true },
       creeLe: this.maintenant(),
     });
@@ -1885,6 +1890,8 @@ export class Joueur implements Voyageur {
     if (!r || r.disponibleLe > this.maintenant()) return;
     if (!this.proche(r.x, r.z, DISTANCE_INTERACTION + (estFruitier(r.type) ? PORTEE_ARBRE : 0))) return this.info("C'est trop loin : approche-toi encore un peu.");
     const usage = USAGES[r.type];
+    // Le coffre du directeur ne s'ouvre qu'avec la clé du magasinier (Book 23 §2.2).
+    if (r.type === "coop_coffre" && !(this.inventaire.cle_coffre ?? 0)) return this.info("Fermé à clé. Le magasinier la portait toujours sur lui…");
     // Le calendrier des récoltes : chaque fruit, chaque champignon à sa saison (2026-10-08).
     const jour = jourDuCalendrier(this.maintenant(), this.debutMonde);
     if (!enSaison(r.type, jour)) return this.info(etatDuFruitier(r.type, jour) ?? `Ce n'est pas la saison : à partir du ${prochaineRecolte(r.type)}.`);

@@ -24,7 +24,7 @@ function nullite(d: DefinitionVestige): number {
 export function tableDecharge(): [TypeVestige, number][] {
   const table: [TypeVestige, number][] = [];
   for (const [type, d] of Object.entries(VESTIGES) as [TypeVestige, DefinitionVestige][]) {
-    if (d.poids > POIDS_MAX) continue;
+    if (d.poids > POIDS_MAX || d.horsTirage) continue;
     table.push([type, POIDS_RARETE[d.rarete] * nullite(d)]);
   }
   return table;

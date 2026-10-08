@@ -26,6 +26,10 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
   - des **Équipés** casqués, plus solides ;
   - le magasinier et le mécanicien.
 - **Les murs étouffent les bruits et arrêtent la vue** : derrière une porte fermée, on ne t'entend presque pas. Dans les pièces noires, sans lampe, on n'y voit qu'à quelques mètres, et ta lampe se voit de loin. Les Éteints passent par les portes, et un bruit derrière la chambre froide fait sortir ses dormants par la porte de derrière. Après 3 minutes sans te voir, un Éteint rentre chez lui.
+- **Le butin** : du commun dans le libre-service et sur le quai, des outils à l'atelier, des bâches et des cordes dans le hangar. Un **pied-de-biche** t'attend sous le comptoir de caisse. Au fond, le **rare** :
+  - le coffre du directeur, qui s'ouvre avec la clé du magasinier ;
+  - les caisses de pièces de la chambre froide.
+- **Ce que tu fais reste fait** : un Éteint détruit ne revient pas tout de suite (quelques-uns toutes les 12 h, la chambre froide d'abord), une porte reste comme tu l'as laissée, et le butin pris revient en quelques heures (en 4 jours pour le rare).
 
 **L'écran**
 - Les **messages** passent **en haut, juste sous les tuiles**, en petit et sur un fond très léger : ils ne cachent plus la zone de jeu. Sur téléphone en horizontal, ils se placent **au centre**, sans plus jamais recouvrir Explorer, Lumière, A ou B (avis de Sally). Les **indices** (« comment s'y prendre ») sont encore plus discrets.

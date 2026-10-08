@@ -40,6 +40,8 @@ export interface DefinitionVestige {
   rarete: Rarete;
   /** Une teinte propre pour l'icône générique (sinon celle de la famille). */
   teinte?: string;
+  /** Hors des tirages (fouilles, décharge) : on ne le trouve qu'à un endroit précis (la Coopérative, Book 23). */
+  horsTirage?: true;
 }
 
 // ---------- Les composants (P-003 §2) : ce qui revient partout ----------
@@ -684,6 +686,47 @@ export const VESTIGES = {
     famille: "ferme",
     rarete: "P",
   },
+  // ---------- La Coopérative du Plateau (Book 23 §2.2) : on ne les trouve que là ----------
+  roulements: {
+    nom: "boîte de roulements à billes",
+    pluriel: "boîtes de roulements à billes",
+    description: "Six roulements neufs, encore graissés dans leur papier huilé. Sans eux, rien ne tourne : ni roue, ni meule, ni dynamo.",
+    poids: 1.2,
+    valeur: 90,
+    famille: "garage",
+    rarete: "R",
+    horsTirage: true,
+  },
+  alternateur_tracteur: {
+    nom: "alternateur de tracteur",
+    pluriel: "alternateurs de tracteur",
+    description: "Neuf, dans son carton : « pièce d'origine ». Du cuivre, des aimants, un régulateur. Bien monté, il fait de l'électricité avec tout ce qui tourne.",
+    poids: 6,
+    valeur: 160,
+    famille: "garage",
+    rarete: "R",
+    horsTirage: true,
+  },
+  semences_f1: {
+    nom: "sachet de semences F1",
+    pluriel: "sachets de semences F1",
+    description: "« Tomate Abondance F1 — rendement garanti ». Des graines de l'ancien monde, gardées au froid. Elles poussent une fois, et très bien.",
+    poids: 0.05,
+    valeur: 120,
+    famille: "ferme",
+    rarete: "L",
+    horsTirage: true,
+  },
+  cle_coffre: {
+    nom: "clé du coffre",
+    pluriel: "clés du coffre",
+    description: "Une clé plate, à double panneton, au bout d'une chaînette « MAGASIN ». Elle ouvre quelque chose d'important.",
+    poids: 0.05,
+    valeur: 1,
+    famille: "salon",
+    rarete: "C",
+    horsTirage: true,
+  },
 } satisfies Record<string, DefinitionVestige>;
 
 export type TypeVestige = keyof typeof VESTIGES;
@@ -759,7 +802,7 @@ export const DEMONTAGE: Partial<Record<TypeObjet, Demontage>> = {
 // ---------- La fouille rapporte du bric-à-brac ----------
 
 /** Les lieux de fouille : chacun a sa table de vestiges. */
-export type LieuFouille = "boutique" | "atelier" | "epave" | "grange";
+export type LieuFouille = "boutique" | "atelier" | "epave" | "grange" | "libre_service" | "quai" | "atelier_coop" | "hangar" | "bureaux" | "chambre_froide";
 
 /** Quel lieu pour quelle ressource fouillée (la halte, et la caisse à outils de la ruine de ferme). */
 export const LIEU_DE_FOUILLE: Partial<Record<TypeRessource, LieuFouille>> = {
@@ -769,6 +812,13 @@ export const LIEU_DE_FOUILLE: Partial<Record<TypeRessource, LieuFouille>> = {
   epave_voiture: "epave",
   epave_camion: "epave",
   grenier: "grange",
+  coop_rayon: "libre_service",
+  coop_caisse: "libre_service",
+  coop_palettes: "quai",
+  coop_etabli: "atelier_coop",
+  coop_rayonnage: "hangar",
+  coop_coffre: "bureaux",
+  coop_caisse_froide: "chambre_froide",
 };
 
 /**
@@ -780,6 +830,13 @@ export const FAMILLES_PAR_LIEU: Record<LieuFouille, Partial<Record<FamilleVestig
   atelier: { garage: 6, gadget: 1, voiture: 1 },
   epave: { voiture: 6, gadget: 1 },
   grange: { ferme: 4, salon: 2, garage: 1 },
+  // La Coopérative (Book 23 §2.2) : commun dehors, plus rare au fond.
+  libre_service: { cuisine: 3, ferme: 3, salle_de_bain: 1, gadget: 1 },
+  quai: { ferme: 3, garage: 3 },
+  atelier_coop: { garage: 6, voiture: 2 },
+  hangar: { ferme: 6, garage: 2 },
+  bureaux: { gadget: 3, salon: 3 },
+  chambre_froide: { garage: 3, ferme: 3 },
 };
 
 /** Le poids de tirage de chaque rareté (P-003 §1). */
@@ -793,6 +850,7 @@ export function tableDeFouille(lieu: LieuFouille): [TypeVestige, number][] {
   const familles = FAMILLES_PAR_LIEU[lieu];
   const table: [TypeVestige, number][] = [];
   for (const [type, d] of Object.entries(VESTIGES) as [TypeVestige, DefinitionVestige][]) {
+    if (d.horsTirage) continue;
     const f = familles[d.famille] ?? 0;
     if (f > 0) table.push([type, f * POIDS_RARETE[d.rarete]]);
   }

@@ -1,14 +1,29 @@
 // La Coopérative du Plateau, côté serveur (Book 23) : un lieu vivant par joueur. Personne d'autre n'y entre ; ses
-// Éteints, ses sacs tombés et (bientôt) son butin sont à lui. Le jour où on la partage, on ne change que la clé.
+// Éteints, ses sacs tombés et son butin sont à lui. Le jour où on la partage, on ne change que la clé.
+//
+// Ce qu'on garde (Book 23 §7, 0.5d) : les Éteints détruits, l'état des portes, le butin pris (ressources de lieu).
+// On ne garde ni l'attention ni le but : au retour, chaque Éteint encore debout reprend sa place. On sauve à chaque
+// destruction, à chaque porte, quand le joueur s'en va, et toutes les 30 s. Le repeuplement se calcule à l'entrée :
+// une Coopérative où l'on n'est pas ne coûte rien.
 
-import { VERSION_COOP, portesInitiales } from "../../commun/src/cooperative.ts";
+import { REGLAGES } from "../../commun/src/reglages.ts";
+import { VERSION_COOP, butinCoop, pieceDe, portesInitiales } from "../../commun/src/cooperative.ts";
 import { eteintsCoop } from "../../commun/src/eteints-coop.ts";
 import { ZONE_COOP, zoneCoop } from "../../commun/src/lieux.ts";
 import { milieuCoop } from "../../commun/src/milieu-coop.ts";
 import type { Base } from "./base.ts";
 import { LieuVivant, type DefinitionLieuVivant } from "./lieu-vivant.ts";
 
-export function definitionCoop(compteId: number): DefinitionLieuVivant {
+/** Ce qu'on garde d'une Coopérative entre deux visites. */
+export interface EtatCoop {
+  /** Les Éteints détruits (leur numéro dans `eteintsCoop`). */
+  detruits: number[];
+  portes: Record<string, boolean>;
+  /** Instant réel (ms) du dernier repeuplement calculé. */
+  repeupleLe: number;
+}
+
+export function definitionCoop(compteId: number, detruits: () => readonly number[] = () => []): DefinitionLieuVivant {
   return {
     cle: `cooperative:${compteId}`,
     sacs: { lieu: "cooperative", terrainDe: compteId },
@@ -16,34 +31,81 @@ export function definitionCoop(compteId: number): DefinitionLieuVivant {
     portes: { initiales: portesInitiales, zone: zoneCoop },
     milieu: milieuCoop,
     econome: true,
-    eteints: eteintsCoop,
-    // Le butin arrive avec la persistance et le renouvellement (0.5d).
-    ressources: () => [],
+    // Quand le lieu se rendort, les Éteints détruits ne reviennent pas pour autant.
+    eteints: () => eteintsCoop().filter((e) => !detruits().includes(e.id)),
+    ressources: butinCoop,
     version: VERSION_COOP,
+  };
+}
+
+/** La chambre froide se repeuple d'abord (Book 23 §2.3 : jusqu'à ses 6 dormants). */
+const DE_LA_CHAMBRE_FROIDE = new Set(eteintsCoop().filter((e) => pieceDe(e.x, e.z) === "chambre_froide").map((e) => e.id));
+
+/**
+ * Le repeuplement (Book 23 §2.3) : toutes les `coop_repeuplement_h` heures réelles, `coop_repeuplement_n` Éteints
+ * détruits reviennent, la chambre froide d'abord. Calculé à l'entrée, d'un coup, pour tout le temps passé.
+ */
+export function repeupler(etat: EtatCoop, instant: number): EtatCoop {
+  if (etat.detruits.length === 0) return { ...etat, repeupleLe: instant };
+  const periode = REGLAGES.coop_repeuplement_h * 3_600_000;
+  const fois = Math.floor((instant - etat.repeupleLe) / periode);
+  if (fois <= 0) return etat;
+  const ordre = [...etat.detruits].sort((a, b) => Number(DE_LA_CHAMBRE_FROIDE.has(b)) - Number(DE_LA_CHAMBRE_FROIDE.has(a)) || a - b);
+  const reviennent = new Set(ordre.slice(0, fois * REGLAGES.coop_repeuplement_n));
+  return { ...etat, detruits: etat.detruits.filter((id) => !reviennent.has(id)), repeupleLe: etat.repeupleLe + fois * periode };
+}
+
+function lireEtat(brut: unknown, instant: number): EtatCoop {
+  const neuf: EtatCoop = { detruits: [], portes: portesInitiales(), repeupleLe: instant };
+  if (typeof brut !== "object" || brut === null) return neuf;
+  const b = brut as Partial<EtatCoop>;
+  const tous = new Set(eteintsCoop().map((e) => e.id));
+  return {
+    detruits: Array.isArray(b.detruits) ? b.detruits.filter((id): id is number => typeof id === "number" && tous.has(id)) : [],
+    // Les portes connues seulement (le plan a pu changer).
+    portes: { ...neuf.portes, ...Object.fromEntries(Object.entries(b.portes ?? {}).filter(([id, v]) => id in neuf.portes && typeof v === "boolean")) },
+    repeupleLe: typeof b.repeupleLe === "number" ? b.repeupleLe : instant,
   };
 }
 
 /** Une Coopérative vide depuis 5 minutes quitte la mémoire (elle sera rechargée au prochain passage). */
 const DECHARGER_APRES_MS = 5 * 60_000;
+/** On sauve aussi, au plus tard, toutes les 30 s. */
+const SAUVER_TOUTES_MS = 30_000;
+
+interface Chargee {
+  lieu: LieuVivant;
+  etat: EtatCoop;
+  /** Ce qui a été écrit la dernière fois (pour ne réécrire qu'en cas de changement). */
+  ecrit: string;
+  sauveLe: number;
+}
 
 /** Les Coopératives chargées, une par joueur, créées au premier besoin. */
 export class Cooperatives {
-  private readonly instances = new Map<number, LieuVivant>();
+  private readonly instances = new Map<number, Chargee>();
   private readonly base: Base;
   private readonly alea: () => number;
+  private readonly maintenant: () => number;
 
-  constructor(base: Base, alea: () => number = Math.random) {
+  constructor(base: Base, alea: () => number = Math.random, maintenant: () => number = Date.now) {
     this.base = base;
     this.alea = alea;
+    this.maintenant = maintenant;
   }
 
   de(compteId: number): LieuVivant {
-    let c = this.instances.get(compteId);
-    if (!c) {
-      c = new LieuVivant(this.base, definitionCoop(compteId), this.alea);
-      this.instances.set(compteId, c);
-    }
-    return c;
+    const deja = this.instances.get(compteId);
+    if (deja) return deja.lieu;
+    const instant = this.maintenant();
+    const cle = `cooperative:${compteId}`;
+    const etat = repeupler(lireEtat(this.base.chargerInstance(cle), instant), instant);
+    const lieu = new LieuVivant(this.base, definitionCoop(compteId, () => etat.detruits), this.alea);
+    Object.assign(lieu.portes, etat.portes);
+    const c: Chargee = { lieu, etat, ecrit: "", sauveLe: instant };
+    this.instances.set(compteId, c);
+    this.sauver(compteId, c, instant);
+    return lieu;
   }
 
   get nombre(): number {
@@ -52,8 +114,32 @@ export class Cooperatives {
 
   tick(instant: number, dt: number): void {
     for (const [id, c] of this.instances) {
-      c.tick(instant, dt);
-      if (c.videDepuisPlusDe(instant, DECHARGER_APRES_MS)) this.instances.delete(id);
+      c.lieu.tick(instant, dt);
+      this.noter(c, instant);
+      if (JSON.stringify(c.etat) !== c.ecrit || instant - c.sauveLe >= SAUVER_TOUTES_MS) this.sauver(id, c, instant);
+      if (c.lieu.videDepuisPlusDe(instant, DECHARGER_APRES_MS)) {
+        this.sauver(id, c, instant);
+        this.instances.delete(id);
+      }
     }
+  }
+
+  /** Relève ce qui a changé dans le lieu : les Éteints détruits, les portes. */
+  private noter(c: Chargee, instant: number): void {
+    const debout = new Set(c.lieu.eteints.filter((e) => e.etat !== "detruit").map((e) => e.id));
+    const detruits = eteintsCoop()
+      .map((e) => e.id)
+      .filter((id) => !debout.has(id));
+    // Le premier détruit après une Coopérative pleine relance l'horloge du repeuplement.
+    if (c.etat.detruits.length === 0 && detruits.length > 0) c.etat.repeupleLe = instant;
+    c.etat.detruits = detruits;
+    c.etat.portes = { ...c.lieu.portes };
+  }
+
+  private sauver(id: number, c: Chargee, instant: number): void {
+    const ecrit = JSON.stringify(c.etat);
+    if (ecrit !== c.ecrit) this.base.sauverInstance(`cooperative:${id}`, c.etat, instant);
+    c.ecrit = ecrit;
+    c.sauveLe = instant;
   }
 }

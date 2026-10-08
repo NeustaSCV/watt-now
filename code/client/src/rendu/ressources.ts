@@ -391,6 +391,43 @@ export class VueRessource {
         this.contenu = g;
         break;
       }
+      // Le butin de la Coopérative (Book 23) : le décor (comptoir, rayonnages, établi, coffre) est dessiné par le lieu ;
+      // ici, seulement ce qu'on vient prendre, qui disparaît une fois pris et revient avec le temps.
+      case "coop_caisse":
+      case "coop_rayon":
+      case "coop_palettes":
+      case "coop_etabli":
+      case "coop_rayonnage":
+      case "coop_coffre":
+      case "coop_caisse_froide": {
+        this.objet.rotation.y = (aleat() - 0.5) * 0.6;
+        const c = new Assemblage(donnees.id);
+        c.occlusion = 0.4;
+        const t = donnees.type;
+        if (t === "coop_caisse") {
+          // Un carton glissé sous le comptoir, un manche d'acier qui dépasse.
+          c.boite(0x9a7a52, "mat", 0.5, 0.28, 0.36, 0, 0.14, 0);
+          c.boite(0x3a3d42, "metal", 0.62, 0.04, 0.04, 0.12, 0.3, 0.05, 0, 0, 0.2);
+        } else if (t === "coop_rayon") {
+          for (let i = 0; i < 4; i++) c.boite(i % 2 ? 0xc8a24a : 0x8f3a2e, "metal", 0.09, 0.12, 0.09, -0.18 + i * 0.12, 0.06, (aleat() - 0.5) * 0.1);
+        } else if (t === "coop_palettes") {
+          c.boite(0xc9b48a, "mat", 0.8, 0.12, 0.6, 0, 0.06, 0);
+          c.boite(0x6a7a3a, "mat", 0.5, 0.18, 0.4, 0, 0.21, 0);
+        } else if (t === "coop_etabli") {
+          c.boite(0xa83a2a, "metal", 0.5, 0.22, 0.24, 0, 0.11, 0);
+          c.boite(0x2a2826, "metal", 0.3, 0.04, 0.04, 0, 0.25, 0);
+        } else if (t === "coop_rayonnage") {
+          c.boite(0xd8cfb4, "mat", 0.5, 0.2, 0.75, 0, 0.1, 0);
+          c.boite(0x2e5c8a, "mat", 0.42, 0.14, 0.42, 0.05, 0.27, 0);
+        } else if (t === "coop_caisse_froide") {
+          c.boite(0xb89a68, "mat", 0.8, 0.55, 0.55, 0, 0.275, 0);
+          c.boite(0x8a6a40, "mat", 0.82, 0.06, 0.57, 0, 0.42, 0);
+        }
+        const g = c.groupe(ombre);
+        this.objet.add(g);
+        this.contenu = g;
+        break;
+      }
     }
     // Ce qu'on montre ou cache à part (fruits, fleurs, contenu fouillé) reste un groupe à part, même fusionné.
     for (const g of [this.contenu, this.fleurs, this.verts]) if (g) g.userData.garder = true;
