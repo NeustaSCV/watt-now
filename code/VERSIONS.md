@@ -12,7 +12,18 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
-## 0.1.1 · en préparation
+## 0.2 · en préparation
+
+**Jouer : le carnet guide après le tutoriel** (Book 22)
+- **S'installer** (toutes les familles), dans l'ordre de l'urgence : un vrai repas, un coffre à soi, de quoi se défendre, se soigner, le Comptoir du Carrefour, premiers wotts, la main tendue.
+- **Le métier**, la chaîne de sa famille :
+  - 🔥 charbonnière → défourner → forger une lame → la vendre ;
+  - ⚙️ meule → affûter → dynamo → déposer l'électricité ;
+  - ⚡ rapporter le panneau de la station → l'installer → faire le plein → déposer l'électricité.
+- Chaque objectif a ses compteurs et sa récompense : des objets, ou une prime des Compteurs en wotts, versée sur le compte au Comptoir (prise sur leur trésorerie ; vide, elle attend).
+- Ce qui est déjà fait compte : un ancien bien équipé enchaîne plusieurs objectifs d'un coup.
+
+## 0.1.1 · déployée le 2026-10-08
 
 Correctifs de sécurité, après la revue des spécialistes BMAD (architecte et développeur).
 

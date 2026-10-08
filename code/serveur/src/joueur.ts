@@ -81,6 +81,8 @@ import {
 import { BONUS_MECANISTE, PORTEE_CABLE_PANNEAU, WH_M_PAR_HEURE, productionPanneau, stocker } from "../../commun/src/energie.ts";
 import type { AutreVu, OffreEchange, OperationComptoir, RapportBase, WottsVus } from "../../commun/src/messages.ts";
 import { COMPTOIR, etapeVers } from "../../commun/src/lieux.ts";
+import type { Quete, VueQuetes } from "../../commun/src/quetes.ts";
+import { SuiviQuetes, type EtatJoueurPourQuetes } from "./quetes.ts";
 import { debout, encaisser, lacher, nouvelEteint, penser, vue as vueEteint, type Eteint, type Humain } from "../../commun/src/eteints.ts";
 import {
   ANGLE_CIBLAGE,
@@ -207,6 +209,12 @@ export class Joueur implements Voyageur {
   /** Le tutoriel en cours (null : terminé ou passé). */
   private tuto: EtatTutoriel | null;
   private derniereVerifTuto = 0;
+  /** Les quêtes après le tutoriel (Book 22). */
+  private readonly quetes: SuiviQuetes;
+  private derniereVerifQuetes = 0;
+  /** Le carnet des quêtes déjà envoyé (on ne le renvoie que s'il change). */
+  private derniereVueQuetes = "";
+  private quetesASauver = false;
   /** La carnation choisie à la création (−1 : celle de la famille). */
   private readonly apparence: Apparence;
   private intention: Intention = INTENTION_REPOS;
@@ -253,6 +261,7 @@ export class Joueur implements Voyageur {
     this.compteWotts = w.compte;
     this.debutMonde = base.debutMonde();
     this.tuto = base.chargerTutoriel(compte.id);
+    this.quetes = new SuiviQuetes(base.chargerQuetes(compte.id));
     this.apparence = base.chargerApparence(compte.id, compte.famille);
     this.faune = base.chargerFaune(compte.id);
     const { sante, endurance } = base.chargerSante(compte.id);
@@ -355,6 +364,7 @@ export class Joueur implements Voyageur {
       sacs: this.sacsVus(),
       wotts: this.wottsVus(),
       tutoriel: this.vueTutoriel(),
+      quetes: this.vueQuetes(),
       ...(this.lieu === "comptoir" ? { comptoir: this.comptoir.vue(instant) } : {}),
     };
   }
@@ -507,6 +517,7 @@ export class Joueur implements Voyageur {
     this.poche = ajouterWotts(this.poche, recoit.wotts - donne.wotts, instant);
     this.base.sauverCharges(this.compte.id, this.charges, instant);
     this.envoyerWotts();
+    this.noterFait("echange");
   }
 
   /** Des écritures qui vont ensemble (un échange : les deux côtés) : toutes enregistrées, ou aucune. */
@@ -555,6 +566,8 @@ export class Joueur implements Voyageur {
         this.comptoir.entrerEnStock(op.objet, n);
         this.poche = ajouterWotts(this.poche, total, instant);
         this.mesurer("wotts", "vente", total, { objet: op.objet, n });
+        this.noterFait("wotts_gagnes", total);
+        this.noterFait(`vente:${op.objet}`, n);
         this.info(`Vendu : ${nommer(op.objet, n)}, +${formaterWotts(total)}.`);
         break;
       }
@@ -582,6 +595,8 @@ export class Joueur implements Voyageur {
         this.comptoir.stocker(wh);
         this.poche = ajouterWotts(this.poche, wotts, instant);
         this.mesurer("wotts", "création (dépôt d'électricité)", wotts, { wh });
+        this.noterFait("wotts_gagnes", wotts);
+        this.noterFait("depot_wh", wh);
         this.info(`${Math.round(wh)} Wh déposés : +${formaterWotts(wotts)} en bons frais.`);
         break;
       }
@@ -634,6 +649,7 @@ export class Joueur implements Voyageur {
         if (!this.comptoir.payer(paie)) return this.info("Les Compteurs n'ont plus de quoi payer.");
         this.poche = ajouterWotts(this.poche, paie, this.maintenant());
         this.mesurer("wotts", "pédalier des Compteurs", paie);
+        this.noterFait("wotts_gagnes", paie);
         this.envoyerWotts();
         this.comptoir.publier(this.maintenant());
         this.info(`+${formaterWotts(paie)} pour une heure de pédalage.`);
@@ -1089,6 +1105,7 @@ export class Joueur implements Voyageur {
     if (this.lieu === "station") this.halte.entrer(this);
     if (this.lieu === "comptoir") this.comptoir.entrer(this.envoyer);
     if (this.tuto && this.lieu === "station") this.tuto.visiteStation = true;
+    this.noterFait(`visite:${this.lieu}`);
     this.envoyer(this.bienvenue(this.base.debutMonde()));
   }
 
@@ -1096,6 +1113,65 @@ export class Joueur implements Voyageur {
   partir(): void {
     this.halte.sortir(this);
     this.comptoir.sortir(this.envoyer);
+  }
+
+  // ---------- Les quêtes après le tutoriel (Book 22) ----------
+
+  private pourQuetes(): EtatJoueurPourQuetes {
+    return { famille: this.compte.famille, inventaire: this.inventaire, charges: this.charges, installations: this.installations.values() };
+  }
+
+  /** Le carnet des quêtes (null pendant le tutoriel : il a son propre carnet). */
+  private vueQuetes(): VueQuetes | null {
+    return this.tuto ? null : this.quetes.vue(this.pourQuetes());
+  }
+
+  /** Un fait pour les quêtes (un repas, une vente, un échange…), compté même pendant le tutoriel. */
+  private noterFait(fait: string, n = 1): void {
+    if (this.quetes.noter(fait, n)) this.quetesASauver = true;
+  }
+
+  private verifierQuetes(instant: number): void {
+    if (this.tuto || instant - this.derniereVerifQuetes < 500) return;
+    this.derniereVerifQuetes = instant;
+    const j = this.pourQuetes();
+    const reussies = this.quetes.verifier(j);
+    for (const q of reussies) {
+      this.recompenser(q);
+      this.mesurer("progression", `quete:${q.id}`, 1);
+    }
+    if (this.quetes.etat.primes > 0) this.verserPrimes();
+    const vue = this.quetes.vue(j, reussies.at(-1));
+    const cle = JSON.stringify(vue.quetes);
+    if (reussies.length > 0 || cle !== this.derniereVueQuetes) {
+      this.derniereVueQuetes = cle;
+      this.envoyer({ t: "quetes", quetes: vue });
+    }
+    if (reussies.length > 0) {
+      this.quetesASauver = false;
+      this.base.sauverQuetes(this.compte.id, this.quetes.etat);
+    }
+  }
+
+  /** La récompense d'une quête : des objets tout de suite, des wotts sur le compte (prime des Compteurs). */
+  private recompenser(q: Quete): void {
+    const r = q.recompense;
+    if (!r) return;
+    if (r.objets) this.ajouterPlusieurs(r.objets);
+    if (r.wotts) {
+      this.quetes.etat.primes += r.wotts;
+      this.verserPrimes();
+    }
+  }
+
+  /** Les Compteurs versent les primes sur leur trésorerie ; vide, la prime attend (Book 22 §1). */
+  private verserPrimes(): void {
+    const primes = this.quetes.etat.primes;
+    if (!(primes > 0) || !this.comptoir.payer(primes)) return;
+    this.quetes.etat.primes = 0;
+    this.compteWotts = ajouterWotts(this.compteWotts, primes, this.maintenant());
+    this.quetesASauver = true;
+    this.envoyerWotts();
   }
 
   // ---------- Le tutoriel (É5, Book 14 §4.2) ----------
@@ -1441,6 +1517,7 @@ export class Joueur implements Voyageur {
     }
     if (!this.voyage) this.tickCombat(instant, dt);
     this.verifierTutoriel(instant);
+    this.verifierQuetes(instant);
 
     // Fin d'action
     if (this.action && instant >= this.action.fin) {
@@ -1464,6 +1541,10 @@ export class Joueur implements Voyageur {
     if (porte) this.base.deplacerInstallation(this.compte.id, porte.id, this.position.x, this.position.z, this.position.o);
     if (this.tuto) this.base.sauverTutoriel(this.compte.id, this.tuto);
     this.base.sauverWotts(this.compte.id, this.poche, this.compteWotts);
+    if (this.quetesASauver) {
+      this.quetesASauver = false;
+      this.base.sauverQuetes(this.compte.id, this.quetes.etat);
+    }
   }
 
   // ---------- Les mesures du test familial (Book 17 §6) ----------
@@ -1653,6 +1734,7 @@ export class Joueur implements Voyageur {
         this.installations.set(installation.id, installation);
         this.envoyer({ t: "installation", installation });
         this.mesurer("progression", `recette:${r.id}`, 1);
+        this.noterFait(`fabrique:${r.id}`);
       }, 0, r.qualites.marteler ? "lourd" : "outil");
       return;
     }
@@ -1666,6 +1748,7 @@ export class Joueur implements Voyageur {
       this.retirerPlusieurs(r.ingredients);
       this.ajouterPlusieurs({ [produit.objet]: produit.quantite });
       this.mesurer("progression", `recette:${r.id}`, 1);
+        this.noterFait(`fabrique:${r.id}`);
     }, 0, r.qualites.marteler ? "lourd" : "outil");
   }
 
@@ -1961,6 +2044,7 @@ export class Joueur implements Voyageur {
       // Un plat chaud réconforte et cale (2026-10-08).
       const plat = OBJETS[objet].plat;
       if (plat) {
+        this.noterFait("plat_mange");
         this.sante = { ...this.sante, points: Math.min(100, this.sante.points + plat.sante) };
         this.caleJusqua = this.maintenant() + RASSASIE_HEURES * 60_000;
         this.envoyerSante(true);
@@ -2034,6 +2118,7 @@ export class Joueur implements Voyageur {
         if (poidsInventaire(this.inventaire) + CHARBON_PRODUIT > capaciteDe(this.inventaire)) return this.sacTropLourd();
         return this.commencer("Défourner le charbon", 10, () => {
           this.ajouterPlusieurs({ charbon_bois: CHARBON_PRODUIT });
+          this.noterFait("defourne");
           this.installations.delete(i.id);
           this.base.retirerInstallation(this.compte.id, i.id);
           this.envoyer({ t: "installation_retiree", id: i.id });
@@ -2085,6 +2170,7 @@ export class Joueur implements Voyageur {
             if (!this.inventaire.couteau) return;
             this.retirerPlusieurs({ couteau: 1 });
             this.ajouterPlusieurs({ couteau_aiguise: 1 });
+            this.noterFait("affute");
             this.info("Le couteau coupe enfin (Couper 2).");
           },
           KCAL_PEDALAGE_EN_PLUS,

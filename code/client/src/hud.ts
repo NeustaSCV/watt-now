@@ -31,6 +31,7 @@ import { NOMS_FAMILLES, type Famille } from "../../commun/src/regles.ts";
 import { RECETTE_FEU, RESERVE_EAU_MAX, RESERVE_KCAL_MAX, aFaim, aSoif, fatigue, type Besoins, type Gourde } from "../../commun/src/survie.ts";
 import { NOMS_TEMPS, type Temps } from "../../commun/src/meteo.ts";
 import type { VueTutoriel } from "../../commun/src/tutoriel.ts";
+import type { VueQuetes } from "../../commun/src/quetes.ts";
 import { formaterHeure } from "../../commun/src/temps.ts";
 import { COULEURS_FAMILLES } from "./accueil.ts";
 import type { Commande } from "./entrees.ts";
@@ -716,13 +717,56 @@ export class Hud {
     const aide = this.element.querySelector<HTMLElement>(".bloc.aide");
     if (aide) aide.hidden = !v;
     if (v?.lecon) this.message(`✓ ${v.lecon}`, "lecon");
-    if (fini) this.message("Tutoriel terminé. Le carnet se referme : le monde est à toi. Le Comptoir du Carrefour t'attend, au-delà de la station.", "lecon");
+    if (fini) this.message("Tutoriel terminé : le monde est à toi. Ton carnet te propose maintenant des objectifs, pour t'installer et faire ton métier.", "lecon");
     this.dessinerCarnet();
+  }
+
+  // ---------- Les quêtes après le tutoriel (Book 22) ----------
+
+  private quetes: VueQuetes | null = null;
+
+  majQuetes(v: VueQuetes | null): void {
+    this.quetes = v;
+    if (v?.reussie) {
+      const r = v.reussie;
+      this.message(`✓ ${r.titre} : ${r.lecon}${r.recompense ? ` Reçu : ${r.recompense}.` : ""}`, "lecon");
+    }
+    this.dessinerCarnet();
+  }
+
+  private dessinerQuetes(el: HTMLElement, v: VueQuetes): void {
+    el.hidden = v.quetes.length === 0;
+    if (el.hidden) return;
+    el.classList.toggle("ouvert", this.carnetOuvert);
+    const LIGNES = { metier: "Le métier", installer: "S'installer" } as const;
+    el.innerHTML = `
+      <button type="button" class="titre" aria-expanded="${this.carnetOuvert}">📓 Carnet · ${v.quetes.length === 1 ? "1 objectif" : `${v.quetes.length} objectifs`}</button>
+      ${v.quetes
+        .map(
+          (q) => `<div class="quete">
+            <div class="ligne-quete">${LIGNES[q.ligne]}</div>
+            <div class="nom-quete">${q.titre}</div>
+            ${
+              q.objectifs.some((o) => o.but > 1) || q.objectifs.length > 1
+                ? `<div class="progres-tuto">${q.objectifs
+                    .map((o) => `<span class="${o.fait >= o.but ? "fait" : ""}">${o.libelle}${o.but > 1 ? ` <b>${o.fait}/${o.but}</b>` : ""}${o.fait >= o.but ? " ✓" : ""}</span>`)
+                    .join("")}</div>`
+                : ""
+            }
+            ${this.carnetOuvert ? `<p>${avecTouches(q.texte, this.tactile)}</p>${q.recompense ? `<p class="recompense">Récompense : ${q.recompense}</p>` : ""}` : ""}
+          </div>`,
+        )
+        .join("")}`;
+    el.querySelector(".titre")!.addEventListener("click", () => {
+      this.carnetOuvert = !this.carnetOuvert;
+      this.dessinerCarnet();
+    });
   }
 
   private dessinerCarnet(): void {
     const el = this.element.querySelector<HTMLElement>(".carnet")!;
     const v = this.tutoriel;
+    if (!v && this.quetes) return this.dessinerQuetes(el, this.quetes);
     el.hidden = !v;
     if (!v) return;
     el.classList.toggle("ouvert", this.carnetOuvert);
@@ -914,7 +958,7 @@ export class Hud {
       if (b) b.title = t ? nom : `${nom} (${nomDe(action)})`;
     }
     this.derniereInvite = "";
-    if (this.tutoriel) this.dessinerCarnet();
+    if (this.tutoriel || this.quetes) this.dessinerCarnet();
     const p = this.panneauCommandes[0];
     if (p && !p.hidden) this.dessinerCommandes();
   }

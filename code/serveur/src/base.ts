@@ -13,6 +13,7 @@ import type { Charges } from "../../commun/src/energie.ts";
 import { SANTE_DEPART, type Sante } from "../../commun/src/combat.ts";
 import type { Wotts } from "../../commun/src/economie.ts";
 import { TUTORIEL_NEUF, type EtatTutoriel } from "../../commun/src/tutoriel.ts";
+import type { EtatQuetes } from "../../commun/src/quetes.ts";
 import type { EtatInstallation, InstallationVue } from "../../commun/src/messages.ts";
 import type { TypeInstallation } from "../../commun/src/recettes.ts";
 import { genererJoncs, genererRessources, genererVergerEtSousBois, genererVestiges, type TypeRessource } from "../../commun/src/terrain.ts";
@@ -197,6 +198,8 @@ const COLONNES_AJOUTEES: [table: string, colonne: string, definition: string][] 
   ["personnages", "repos", "REAL NOT NULL DEFAULT 1"],
   // Les personnages d'avant le tutoriel l'ont « déjà fait » ; les nouveaux le commencent (inscription).
   ["personnages", "tutoriel", "TEXT NOT NULL DEFAULT 'termine'"],
+  // Les quêtes après le tutoriel (Book 22), en JSON : faits comptés, quêtes finies, primes en attente.
+  ["personnages", "quetes", "TEXT NOT NULL DEFAULT ''"],
   // Ancienne carnation (de 0 à 2 ; −1 : celle de la famille), avant le menu d'apparence.
   ["personnages", "peau", "INTEGER NOT NULL DEFAULT -1"],
   // L'apparence choisie à la création (Book 14 §3), en JSON ; vide : un compte d'avant le menu d'apparence.
@@ -298,6 +301,21 @@ export class Base {
 
   sauverTutoriel(compteId: number, etat: EtatTutoriel | null): void {
     this.db.prepare("UPDATE personnages SET tutoriel = ? WHERE compte_id = ?").run(etat ? JSON.stringify(etat) : "termine", compteId);
+  }
+
+  chargerQuetes(compteId: number): EtatQuetes {
+    const l = this.db.prepare("SELECT quetes FROM personnages WHERE compte_id = ?").get(compteId) as { quetes: string } | undefined;
+    const neuf = { faits: {}, finies: [], primes: 0 };
+    if (!l?.quetes) return neuf;
+    try {
+      return { ...neuf, ...(JSON.parse(l.quetes) as EtatQuetes) };
+    } catch {
+      return neuf;
+    }
+  }
+
+  sauverQuetes(compteId: number, etat: EtatQuetes): void {
+    this.db.prepare("UPDATE personnages SET quetes = ? WHERE compte_id = ?").run(JSON.stringify(etat), compteId);
   }
 
   /** Donne le kit de départ et génère le terrain, une seule fois par personnage. */

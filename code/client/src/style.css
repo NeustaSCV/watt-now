@@ -1864,6 +1864,8 @@ body {
 /* Le rapport de la base, au retour (É4, lot 2) : une page de carnet */
 #hud .rapport {
   position: absolute;
+  /* Au-dessus du carnet (qui vient après dans la page). */
+  z-index: 10;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
@@ -3049,6 +3051,33 @@ body {
   border-color: #4f9e72;
   color: #fff;
   opacity: 1;
+}
+
+/* Les quêtes après le tutoriel (Book 22) : une ligne par objectif, le nom de la ligne en petit. */
+#hud .carnet .quete {
+  padding: 0 12px 8px;
+  border-top: 1px dashed rgba(59, 42, 30, 0.25);
+}
+#hud .carnet .quete:first-of-type {
+  border-top: none;
+}
+#hud .carnet .quete p {
+  padding: 4px 0 0;
+}
+#hud .carnet .ligne-quete {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.6;
+  padding-top: 6px;
+}
+#hud .carnet .nom-quete {
+  font-weight: 600;
+  font-family: "Bradley Hand", "Segoe Print", "Chalkboard SE", Georgia, serif;
+}
+#hud .carnet .recompense {
+  font-size: 12px;
+  color: var(--canard);
 }
 
 /* Sans sac (perdu à l'effondrement) : on le dit dans le panneau, avec la solution. */

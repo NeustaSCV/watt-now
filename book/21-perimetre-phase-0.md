@@ -777,6 +777,9 @@ L'audio décodé pèse lourd (≈ 384 Ko par seconde en stéréo). D'où les blo
 | **Santé** | Infection, froid et hypothermie | Book 05 |
 | **Graphismes** | Palettes des quatre saisons, neige, Éteints gelés | Book 18 §5 |
 | **Musique** | Couleurs de saison (automne, hiver), silence de la neige | Book 16 §2.2 |
+| **Objectifs** | Le carnet guide après le tutoriel : **« S'installer »** et **« Le métier »** de chaque famille, avec primes des Compteurs. Ils grandissent avec le contenu de la 0b (potager, cabane, hiver) et la gamme bushcraft (P-002) | Book 22 §3 |
+
+> **Décision (2026-10-08) : la 0b, c'est d'abord un jeu très jouable.** On ne veut pas une grande aventure avant que la boucle quotidienne tienne seule : des objectifs proches, logiques et rentables, qui donnent toujours une chose utile à faire. La **grande quête du cycle** (« Où est Bill Murray ? », Book 22 §4) est conçue, mais elle est **pour la 1.0**.
 
 ### 8.2 Le critère de fin
 
@@ -786,7 +789,7 @@ L'audio décodé pèse lourd (≈ 384 Ko par seconde en stéréo). D'où les blo
 
 ## 9. Après la phase 0
 
-Le cycle complet (Book 09), le Grand Dégel, les classements, les lieux lointains, les filières lourdes (Book 04) et le combat entre joueurs viennent ensuite, au rythme de ce que les deux tests auront appris. La phase 1 (ouverture au public) reste soumise à la décision du porteur du projet (Book 08 §1).
+Le cycle complet (Book 09) et sa **grande quête** (Book 22 §4, nécessaire pour la 1.0), le Grand Dégel, les classements, les lieux lointains, les filières lourdes (Book 04) et le combat entre joueurs viennent ensuite, au rythme de ce que les deux tests auront appris. La phase 1 (ouverture au public) reste soumise à la décision du porteur du projet (Book 08 §1).
 
 ---
 

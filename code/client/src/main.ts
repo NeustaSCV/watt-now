@@ -423,6 +423,7 @@ function installer(message: Bienvenue): void {
   saisi = 0;
   hud.majWotts(message.wotts);
   hud.majTutoriel(message.tutoriel);
+  hud.majQuetes(message.quetes);
   aides.charger(message.moi.pseudo);
   if (lieu === "station") aider("halte");
   if (lieu === "comptoir") aider("comptoir");
@@ -642,6 +643,9 @@ function recevoir(message: MessageServeur): void {
     case "autres":
       majAutres(message.joueurs);
       return;
+    case "quetes":
+      hud.majQuetes(message.quetes);
+      break;
     case "tutoriel":
       hud.majTutoriel(message.tutoriel);
       return;

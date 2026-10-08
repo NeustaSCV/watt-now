@@ -12,6 +12,7 @@ import type { EteintVu } from "./eteints.ts";
 import type { Inventaire, TypeObjet } from "./objets.ts";
 import type { BruitAction } from "./signature.ts";
 import type { VueTutoriel } from "./tutoriel.ts";
+import type { VueQuetes } from "./quetes.ts";
 import type { TypeInstallation } from "./recettes.ts";
 import type { Allure, Famille } from "./regles.ts";
 import type { AspectFeu, Besoins, Gourde } from "./survie.ts";
@@ -290,6 +291,8 @@ export interface Bienvenue {
   sacs: SacVu[];
   wotts: WottsVus;
   tutoriel: VueTutoriel | null;
+  /** Les quêtes après le tutoriel (Book 22) ; null pendant le tutoriel. */
+  quetes: VueQuetes | null;
   /** Au comptoir seulement. */
   comptoir?: VueComptoir;
   /** La volaille du terrain (2026-10-08). */
@@ -335,6 +338,8 @@ export type MessageServeur =
   | { t: "comptoir"; comptoir: VueComptoir }
   /** Le carnet du tutoriel (É5) ; null : terminé. */
   | { t: "tutoriel"; tutoriel: VueTutoriel | null }
+  /** Le carnet des quêtes a changé (un compteur, une réussite). */
+  | { t: "quetes"; quetes: VueQuetes | null }
   /** On s'endort (dans l'abri ou par terre) ou on se réveille (É5). */
   | { t: "sommeil"; dort: boolean; dansUnAbri: boolean }
   /** Les autres joueurs du lieu, plusieurs fois par seconde (É4, lot 3). */

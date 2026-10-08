@@ -12,6 +12,8 @@
 | On fait | On évite |
 |---|---|
 | **Humour noir, satire** des comportements : dépendance aux écrans, aux services, aux gadgets, à l'énergie facile | Se moquer de groupes réels, de personnes réelles, d'opinions politiques partisanes |
+
+> **Une exception assumée (décision du porteur, 2026-10-08) : Bill Murray**, héros de la grande quête du premier cycle (Book 22 §4, pour la 1.0). En hommage affectueux : on va le chercher pour le sauver, pas pour se moquer de lui. Aucune réplique de film. La règle reste valable pour tout le reste du jeu.
 | Un monde **crédible**, où l'absurde se trouve dans les **vestiges** et les **souvenirs** | Un monde de farce : la survie, elle, est sérieuse |
 | Des survivants **intelligents, de toutes origines** | L'idée que l'intelligence dépend du milieu social ou culturel |
 | Une **fin des riches** qui vient de leur **dépendance** (à l'argent, aux services, aux autres) | Le mépris : c'est l'ironie de la situation qui fait sourire, pas la cruauté |

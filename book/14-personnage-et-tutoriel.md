@@ -89,7 +89,7 @@ Elle a remonté son END à 10 (plafond pour une stat pénalisée), gagné un poi
 
 ### 4.3 Après le tutoriel
 
-- **Le carnet** (Book 03 §5.5) prend le relais : il note ce que le joueur a appris et suggère des **objectifs** (« Construire une cabane avant l'hiver », « Trouver un livre de forge »).
+- **Le carnet** (Book 03 §5.5) prend le relais : il note ce que le joueur a appris et suggère des **objectifs** (« Construire une cabane avant l'hiver », « Trouver un livre de forge »). **Construit (2026-10-08) : voir Book 22** (« S'installer » et « Le métier » de chaque famille).
 - **Les recettes pressenties** (Book 03 §5.1) guident vers la suite.
 - **Aide contextuelle** discrète la première fois qu'un système apparaît (première pluie, première infection, première halte).
 
