@@ -6,7 +6,7 @@ import type { Famille } from "./regles.ts";
 
 // ---------- Qualités d'outil (Book 03 §4) ----------
 
-export type Qualite = "couper" | "marteler" | "fendre" | "visser" | "serrer" | "scier_bois";
+export type Qualite = "couper" | "marteler" | "fendre" | "visser" | "serrer" | "scier_bois" | "creuser";
 
 export const NOMS_QUALITES: Record<Qualite, string> = {
   couper: "Couper",
@@ -15,6 +15,7 @@ export const NOMS_QUALITES: Record<Qualite, string> = {
   visser: "Visser",
   serrer: "Serrer",
   scier_bois: "Scier le bois",
+  creuser: "Creuser",
 };
 
 /** Qualités apportées par chaque objet, avec leur niveau (1 à 3). */
@@ -29,6 +30,7 @@ export const QUALITES_OBJETS: Partial<Record<TypeObjet, Partial<Record<Qualite, 
   cle_plate: { serrer: 2 },
   tournevis: { visser: 2 },
   scie: { scier_bois: 2 },
+  baton_fouir: { creuser: 1 },
 };
 
 /** Le meilleur niveau d'une qualité parmi les objets portés (0 si aucun). */
@@ -60,7 +62,20 @@ export function multiplicateurQualites(inventaire: Inventaire, demandees: Partia
 
 // ---------- Recettes ----------
 
-export type TypeInstallation = "etabli" | "abri" | "coffre" | "charbonniere" | "forge" | "pedalier" | "banc_recharge" | "panneau_solaire" | "escabeau";
+export type TypeInstallation =
+  | "etabli"
+  | "abri"
+  | "coffre"
+  | "charbonniere"
+  | "forge"
+  | "pedalier"
+  | "banc_recharge"
+  | "panneau_solaire"
+  | "escabeau"
+  // La gamme bushcraft, lot 1 (P-002, 2026-10-08)
+  | "recuperateur_pluie"
+  | "alarme_boites"
+  | "lit_branchages";
 
 export const NOMS_INSTALLATIONS: Record<TypeInstallation, string> = {
   etabli: "établi",
@@ -72,7 +87,13 @@ export const NOMS_INSTALLATIONS: Record<TypeInstallation, string> = {
   banc_recharge: "banc de recharge",
   panneau_solaire: "petit panneau solaire",
   escabeau: "escabeau",
+  recuperateur_pluie: "récupérateur de pluie",
+  alarme_boites: "alarme à boîtes de conserve",
+  lit_branchages: "lit de branchages",
 };
+
+/** Les petites installations : on peut les poser plus près des autres (un lit à côté de l'abri, une alarme le long du chemin). */
+export const PETITES_INSTALLATIONS: readonly string[] = ["lit_branchages", "alarme_boites"];
 
 /** Intensité du travail (Book 02 §2), en kcal par heure de jeu. */
 export const INTENSITES = { legere: 150, moyenne: 250, lourde: 350, tres_lourde: 500 } as const;
@@ -240,6 +261,89 @@ export const RECETTES: Recette[] = [
     intensite: "legere",
     famille: "tous",
   },
+  // ---------- La gamme bushcraft, lot 1 (P-002, Book 02 §14 bis) : avec ce qu'on a déjà, pour tous ----------
+  {
+    id: "ficelle",
+    nom: "Rouler une ficelle",
+    produit: { objet: "ficelle", quantite: 1 },
+    ingredients: { fibres: 2 },
+    qualites: {},
+    duree: 8,
+    intensite: "legere",
+    famille: "tous",
+  },
+  {
+    id: "baton_fouir",
+    nom: "Bâton à fouir",
+    produit: { objet: "baton_fouir", quantite: 1 },
+    ingredients: { branche: 1 },
+    qualites: { couper: 1 },
+    feu: true,
+    duree: 15,
+    intensite: "legere",
+    famille: "tous",
+  },
+  {
+    id: "epieu",
+    nom: "Épieu durci au feu",
+    produit: { objet: "epieu", quantite: 1 },
+    ingredients: { branche: 2 },
+    qualites: { couper: 1 },
+    feu: true,
+    duree: 30,
+    intensite: "legere",
+    famille: "tous",
+  },
+  {
+    id: "protege_bras",
+    nom: "Protège-bras de fortune",
+    produit: { objet: "protege_bras", quantite: 1 },
+    ingredients: { chiffons: 2, ficelle: 1 },
+    qualites: { couper: 1 },
+    duree: 10,
+    intensite: "legere",
+    famille: "tous",
+  },
+  {
+    id: "travois",
+    nom: "Travois",
+    produit: { objet: "travois", quantite: 1 },
+    ingredients: { branche: 6, corde: 2 },
+    qualites: { couper: 1 },
+    duree: 40,
+    intensite: "moyenne",
+    famille: "tous",
+  },
+  {
+    id: "recuperateur_pluie",
+    nom: "Récupérateur de pluie",
+    produit: { installation: "recuperateur_pluie" },
+    ingredients: { bache: 1, branche: 4, corde: 1 },
+    qualites: { couper: 1 },
+    duree: 30,
+    intensite: "legere",
+    famille: "tous",
+  },
+  {
+    id: "alarme_boites",
+    nom: "Alarme à boîtes de conserve",
+    produit: { installation: "alarme_boites" },
+    ingredients: { boite_vide: 2, ficelle: 1, branche: 2 },
+    qualites: {},
+    duree: 10,
+    intensite: "legere",
+    famille: "tous",
+  },
+  {
+    id: "lit_branchages",
+    nom: "Lit de branchages",
+    produit: { installation: "lit_branchages" },
+    ingredients: { branche: 6 },
+    qualites: { couper: 1 },
+    duree: 20,
+    intensite: "legere",
+    famille: "tous",
+  },
   // ---------- 🔥 Charbonniers : bois → charbonnière → forge → lame (Book 21 §3.4) ----------
   {
     id: "charbonniere",
@@ -343,6 +447,7 @@ const ENERGIE_GRISE_BASE: Partial<Record<TypeObjet, number>> = {
   pierre: 6,
   baies: 33,
   conserve: 80,
+  boite_vide: 2,
   couteau: 30,
   briquet: 20,
   gourde: 15,

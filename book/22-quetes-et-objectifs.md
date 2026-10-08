@@ -19,7 +19,8 @@
 |---|---|---|
 | **La grande quête** (1.0) | L'étape en cours | Dès la première visite au Comptoir, où l'avis est placardé (§4.2) |
 | **Le métier** | L'objectif suivant de la chaîne-vitrine de sa famille (Book 21 §3.3) | Dès la fin du tutoriel |
-| **S'installer** | L'objectif commun suivant | Dès la fin du tutoriel |
+| **S'installer** | L'objectif bushcraft suivant (§3.1) | Dès la fin du tutoriel |
+| **Les autres** | Le Comptoir, la monnaie, l'échange (§3.3) | Dès la fin du tutoriel |
 
 Chaque objectif a un **titre**, **une phrase** dans la voix du carnet (directe, un peu d'humour, Book 15), des **compteurs** quand il y a des quantités (« Charbon 3/5 ») et sa **récompense** annoncée. Réussi : la leçon s'affiche un moment, la récompense tombe, le suivant apparaît.
 
@@ -27,19 +28,22 @@ Chaque objectif a un **titre**, **une phrase** dans la voix du carnet (directe, 
 
 ### 3.1 S'installer (toutes les familles)
 
-L'ordre suit celui de la proposition **P-002** (`PROPOSITIONS.md` : ranger par urgence, la règle des 3 du bushcraft). Le tutoriel a déjà couvert *s'abriter*, *le feu* et *l'eau* ; le fil reprend à *se nourrir*, puis mène au Comptoir et aux autres.
+L'ordre suit celui de la proposition **P-002** (`PROPOSITIONS.md` : ranger par urgence, la règle des 3 du bushcraft) et sa gamme bushcraft, lot 1 (Book 02 §14 bis). Le tutoriel a déjà couvert *s'abriter*, *le feu* et *l'eau*.
 
-| # | Objectif | Ce qu'il faut | Ce qu'on apprend (onglet P-002) | Récompense |
+| # | Objectif | Ce qu'il faut | Ce qu'on apprend | Récompense |
 |---|---|---|---|---|
-| 1 | **Un vrai repas** | Manger un plat cuisiné au feu | 🍖 Se nourrir : les plats calent et soignent | 1 conserve |
-| 2 | **Un coffre à soi** | Avoir un coffre de rangement sur son terrain | 🎒 Porter et ranger | — (le coffre lui-même) |
-| 3 | **De quoi se défendre** | Avoir un gourdin ou une hache | 🛡️ Se défendre (le choix de l'arme viendra avec P-005) | 1 conserve |
-| 4 | **Se soigner** | Avoir 2 pansements | 🩹 Se soigner | 1 pansement |
-| 5 | **Le Comptoir du Carrefour** | Aller au Comptoir | La route, les Compteurs, les prix | 10 wotts |
-| 6 | **Premiers wotts** | Gagner 20 wotts au Comptoir (vente ou dépôt d'électricité) | L'économie | 1 conserve |
-| 7 | **La main tendue** | Conclure un échange avec un autre joueur | Les autres familles ont ce qui te manque | 15 wotts |
+| 1 | **Un vrai repas** | Manger un plat cuisiné au feu | 🍖 Les plats calent et soignent | 1 conserve |
+| 2 | **Un vrai lit** | Un lit de branchages | 🏕️ Mieux dormir à côté de l'abri | 1 conserve |
+| 3 | **L'eau du ciel** | Un récupérateur de pluie (la bâche : benne du camion, à la station) | 💧 L'eau de pluie se boit sans bouillir | 10 wotts |
+| 4 | **Un coffre à soi** | Un coffre de rangement | 🎒 Porter et ranger | — (le coffre lui-même) |
+| 5 | **Un feu qui ne se voit pas** | Creuser un foyer Dakota (bâton à fouir) | 🔥 La signature du feu | 1 conserve |
+| 6 | **De quoi se défendre** | Un gourdin, un épieu ou une hache | 🛡️ Choisir son arme (P-005) | 1 conserve |
+| 7 | **Être prévenu** | Une alarme à boîtes de conserve (les boîtes des conserves mangées) | 🛡️ Prévenir, et leurrer | 10 wotts |
+| 8 | **Se soigner** | 2 pansements | 🩹 Le saignement | 1 pansement |
+| 9 | **Là où ils mordent** | Un protège-bras de fortune | 🩹 Une morsure sur deux | 10 wotts |
+| 10 | **Traîner plus lourd** | Un travois | 🎒 +50 kg, sans courir | 15 wotts |
 
-Quand la gamme bushcraft de P-002 sera faite, chaque onglet pourra ajouter son objectif (« Un filtre à eau », « Une nasse »…) sans rien changer au système.
+Les conserves données en récompense laissent leurs boîtes vides : l'alarme se prépare toute seule. Les lots bushcraft suivants ajouteront leurs objectifs ici, sans rien changer au système.
 
 ### 3.2 Le métier (la chaîne-vitrine de chaque famille, Book 21 §3.3)
 
@@ -52,6 +56,16 @@ Le tutoriel fait déjà bâtir l'installation de famille (étape 10). Le métier
 | ⚡ **Voltaïques** | Rapporter le **panneau solaire** de la station | L'**installer** sur son terrain | Avoir **20 Wh** dans ses batteries | **Déposer de l'électricité** au Comptoir |
 
 Récompenses : 10, 15, 20, 30 wotts. La dernière étape envoie au Comptoir.
+
+### 3.3 Les autres (toutes les familles)
+
+Une ligne à part, pour que le Comptoir ne vienne pas trop tard dans le fil.
+
+| # | Objectif | Ce qu'il faut | Ce qu'on apprend | Récompense |
+|---|---|---|---|---|
+| 1 | **Le Comptoir du Carrefour** | Aller au Comptoir | La route, les Compteurs, les prix | 10 wotts |
+| 2 | **Premiers wotts** | Gagner 20 wotts au Comptoir (vente, dépôt d'électricité ou pédalage) | L'économie | 1 conserve |
+| 3 | **La main tendue** | Conclure un échange avec un autre joueur | Les autres familles ont ce qui te manque | 15 wotts |
 
 ## 4. La grande quête du cycle : « Où est Bill Murray ? »
 
@@ -168,10 +182,10 @@ Les objets de la quête (cassette, plan, carnet de fan, laissez-passer, boussole
 
 ## 5. Ce qui est construit (0.2, 2026-10-08)
 
-- `commun/src/quetes.ts` : les objectifs « S'installer » (7) et « Le métier » (4 par famille), leurs conditions et leurs récompenses.
+- `commun/src/quetes.ts` : les objectifs « S'installer » (10), « Le métier » (4 par famille) et « Les autres » (3), leurs conditions et leurs récompenses. Une condition peut accepter plusieurs preuves (« on l'a » ou « on l'a déjà fait ») : personne ne reste bloqué.
 - `serveur/src/quetes.ts` : le suivi. Le serveur constate toutes les demi-secondes ce que le joueur a fait (faits comptés : repas, ventes, dépôts, échanges, visites) ou possède (objets, installations, Wh, vivres). Ce qui est déjà fait compte.
 - Les primes sont versées sur le compte du Comptoir, prises sur la trésorerie ; vide, elles attendent.
-- Le carnet (HUD) prend le relais du tutoriel : une ligne par objectif, ses compteurs, sa récompense ; un message à chaque réussite.
+- Le carnet (HUD) prend le relais du tutoriel : une ligne par objectif, ses compteurs, sa récompense ; un message à chaque réussite. Il se replie en un petit onglet (replié d'office sur téléphone ; le choix est gardé).
 - Tout est gardé en base (colonne `quetes` du personnage).
 
 ## 6. Questions ouvertes

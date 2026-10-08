@@ -25,7 +25,7 @@ export interface EtatJoueurPourQuetes {
 }
 
 /** Les lignes du carnet, dans l'ordre d'affichage. */
-const LIGNES: LigneQuete[] = ["metier", "installer"];
+const LIGNES: LigneQuete[] = ["metier", "installer", "autres"];
 
 export class SuiviQuetes {
   etat: EtatQuetes;
@@ -103,7 +103,7 @@ export class SuiviQuetes {
     return reussies;
   }
 
-  vue(j: EtatJoueurPourQuetes, reussie?: Quete): VueQuetes {
+  vue(j: EtatJoueurPourQuetes, reussies: Quete[] = []): VueQuetes {
     const quetes: VueQuete[] = this.enCours(j.famille).map((q) => {
       const v: VueQuete = {
         id: q.id,
@@ -117,10 +117,11 @@ export class SuiviQuetes {
       return v;
     });
     const vue: VueQuetes = { quetes };
-    if (reussie) {
-      vue.reussie = { titre: reussie.titre, lecon: reussie.lecon };
-      const r = texteRecompense(reussie);
-      if (r) vue.reussie.recompense = r;
+    if (reussies.length > 0) {
+      vue.reussies = reussies.map((q) => {
+        const r = texteRecompense(q);
+        return { titre: q.titre, lecon: q.lecon, ...(r ? { recompense: r } : {}) };
+      });
     }
     return vue;
   }

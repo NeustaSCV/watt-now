@@ -347,6 +347,76 @@ function fumee(): THREE.Texture {
   return textureFumee;
 }
 
+// ---------- La gamme bushcraft, lot 1 (P-002, 2026-10-08) ----------
+
+/** Une branche droite entre deux points (piquets, perches, lit). */
+function perche(a: THREE.Vector3, b: THREE.Vector3, rayon: number, couleur: number = PALETTE.boisSombre): THREE.Mesh {
+  const d = b.clone().sub(a);
+  const m = ombre(new THREE.Mesh(new THREE.CylinderGeometry(rayon, rayon * 1.15, d.length(), 5), materiau(couleur)));
+  m.position.copy(a).addScaledVector(d, 0.5);
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize());
+  return m;
+}
+
+/** Le récupérateur de pluie : une bâche tendue en entonnoir sur quatre piquets, qui goutte dans une bassine. */
+function recuperateur(): { groupe: THREE.Group; eau: THREE.Mesh } {
+  const g = new THREE.Group();
+  for (const [x, z, h] of [[-0.7, -0.7, 1.25], [0.7, -0.7, 1.25], [-0.7, 0.7, 1.05], [0.7, 0.7, 1.05]] as const) {
+    g.add(perche(new THREE.Vector3(x, 0, z), new THREE.Vector3(x, h, z), 0.035));
+  }
+  // La bâche : un carré qui creuse vers le centre (l'eau y coule).
+  const bache = new THREE.PlaneGeometry(1.5, 1.5, 6, 6).rotateX(-Math.PI / 2);
+  const pos = bache.attributes.position!;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i);
+    const z = pos.getZ(i);
+    pos.setY(i, 1.15 - 0.1 * z - 0.32 * Math.max(0, 1 - Math.hypot(x, z) / 0.75));
+  }
+  bache.computeVertexNormals();
+  g.add(ombre(new THREE.Mesh(bache, new THREE.MeshStandardMaterial({ color: 0x2f6fa4, roughness: 0.7, side: THREE.DoubleSide, flatShading: true }))));
+  // La bassine sous le trou, et l'eau dedans (son niveau suit l'état).
+  const bassine = ombre(new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.2, 0.28, 12, 1, true), new THREE.MeshStandardMaterial({ color: 0x8a8f94, metalness: 0.5, roughness: 0.5, side: THREE.DoubleSide })));
+  bassine.position.y = 0.14;
+  g.add(bassine);
+  const eau = new THREE.Mesh(new THREE.CircleGeometry(0.23, 14).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x5f8fa8, roughness: 0.15 }));
+  eau.position.y = 0.02;
+  g.add(eau);
+  return { groupe: g, eau };
+}
+
+/** L'alarme : deux piquets, une ficelle tendue, des boîtes de conserve qui pendent. */
+function alarme(): THREE.Group {
+  const g = new THREE.Group();
+  for (const x of [-0.6, 0.6]) g.add(perche(new THREE.Vector3(x, 0, 0), new THREE.Vector3(x, 0.55, 0), 0.025));
+  g.add(perche(new THREE.Vector3(-0.6, 0.5, 0), new THREE.Vector3(0.6, 0.47, 0), 0.006, 0xd8cfb8));
+  const boite = new THREE.CylinderGeometry(0.045, 0.045, 0.11, 10);
+  const metal = new THREE.MeshStandardMaterial({ color: 0xb8b4ac, metalness: 0.7, roughness: 0.35 });
+  for (const x of [-0.2, 0.15]) {
+    const b = ombre(new THREE.Mesh(boite, metal));
+    b.position.set(x, 0.36, 0);
+    b.rotation.z = x * 0.6;
+    g.add(b);
+    g.add(perche(new THREE.Vector3(x, 0.48, 0), new THREE.Vector3(x, 0.42, 0), 0.004, 0xd8cfb8));
+  }
+  return g;
+}
+
+/** Le lit de branchages : un cadre de branches, une épaisse couche de rameaux. */
+function lit(): THREE.Group {
+  const g = new THREE.Group();
+  const aleat = aleatoire(57);
+  for (const x of [-0.42, 0.42]) g.add(perche(new THREE.Vector3(x, 0.06, -0.95), new THREE.Vector3(x, 0.06, 0.95), 0.05));
+  for (const z of [-0.95, 0.95]) g.add(perche(new THREE.Vector3(-0.45, 0.06, z), new THREE.Vector3(0.45, 0.06, z), 0.045));
+  const vert = materiau(0x56703d);
+  for (let i = 0; i < 26; i++) {
+    const rameau = ombre(new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.42, 4), i % 3 === 0 ? materiau(0x6b7f45) : vert));
+    rameau.rotation.set(Math.PI / 2, 0, (aleat() - 0.5) * 0.8);
+    rameau.position.set((aleat() - 0.5) * 0.7, 0.1 + aleat() * 0.05, -0.8 + (i / 25) * 1.6);
+    g.add(rameau);
+  }
+  return g;
+}
+
 /** Une installation affichée, avec son état (accessoires montés, meule qui fume). */
 export class VueInstallation {
   readonly objet: THREE.Group;
@@ -357,6 +427,8 @@ export class VueInstallation {
   private dynamo: THREE.Object3D | null = null;
   private roue: THREE.Object3D | null = null;
   private posees: THREE.Group | null = null;
+  /** L'eau dans la bassine du récupérateur de pluie. */
+  private eau: THREE.Mesh | null = null;
   private temps = 0;
 
   constructor(donnees: InstallationVue) {
@@ -407,13 +479,25 @@ export class VueInstallation {
       case "escabeau":
         this.objet = creerEscabeau();
         break;
+      case "recuperateur_pluie": {
+        const r = recuperateur();
+        this.objet = r.groupe;
+        this.eau = r.eau;
+        break;
+      }
+      case "alarme_boites":
+        this.objet = alarme();
+        break;
+      case "lit_branchages":
+        this.objet = lit();
+        break;
     }
     this.objet.position.set(donnees.x, 0, donnees.z);
     // Le panneau regarde toujours le sud, quelle que soit la façon dont on l'a posé.
     this.objet.rotation.y = donnees.type === "panneau_solaire" ? 0 : donnees.o;
     // Même image, moins d'appels de dessin : on fond les morceaux de même matériau, sauf les pièces qui bougent,
     // s'allument ou se montrent une à une (2026-10-08).
-    for (const o of [this.braise, this.meule, this.dynamo, this.roue, this.posees, ...this.fumees]) if (o) o.userData.intact = true;
+    for (const o of [this.braise, this.meule, this.dynamo, this.roue, this.posees, this.eau, ...this.fumees]) if (o) o.userData.intact = true;
     fusionnerStatique(this.objet);
     this.majEtat(donnees);
   }
@@ -435,6 +519,12 @@ export class VueInstallation {
     if (this.meule) this.meule.visible = donnees.etat.meule === true;
     if (this.dynamo) this.dynamo.visible = donnees.etat.dynamo === true;
     if (this.posees) for (const b of this.posees.children) b.visible = (donnees.etat.batteries?.[b.name as "petite_batterie"] ?? 0) > 0;
+    // La bassine se remplit avec la pluie (jusqu'à 5 L : le bord).
+    if (this.eau) {
+      const l = donnees.etat.litres ?? 0;
+      this.eau.visible = l > 0.05;
+      this.eau.position.y = 0.02 + Math.min(1, l / 5) * 0.24;
+    }
   }
 
   /** `maintenantServeur` : heure du serveur, pour savoir si la meule cuit encore. */

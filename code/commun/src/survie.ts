@@ -49,8 +49,12 @@ export function fatigue(b: Besoins): boolean {
   return b.repos < SEUIL_FATIGUE;
 }
 
-export function dormir(b: Besoins, heures: number, dansUnAbri: boolean): Besoins {
-  return { ...b, repos: Math.min(1, b.repos + heures * (dansUnAbri ? REPOS_GAGNE_PAR_HEURE_ABRI : REPOS_GAGNE_PAR_HEURE_SOL)) };
+/** Le lit de branchages isole du sol : on récupère un tiers plus vite (P-002). */
+export const BONUS_LIT = 1.3;
+
+export function dormir(b: Besoins, heures: number, dansUnAbri: boolean, surUnLit = false): Besoins {
+  const taux = (dansUnAbri ? REPOS_GAGNE_PAR_HEURE_ABRI : REPOS_GAGNE_PAR_HEURE_SOL) * (surUnLit ? BONUS_LIT : 1);
+  return { ...b, repos: Math.min(1, b.repos + heures * taux) };
 }
 
 export type ContenuGourde = "potable" | "brute";
@@ -113,15 +117,24 @@ export interface EtatFeu {
   /** Bois restant, en kg. */
   bois: number;
   allume: boolean;
+  /** Un foyer Dakota (P-002) : creusé dans le sol, discret et économe. */
+  dakota?: boolean;
 }
+
+/**
+ * Le foyer Dakota (P-002) : deux trous reliés sous terre, la flamme reste dans le sol. Pas de pierres, un bâton à
+ * fouir (Creuser 1). Il brûle moins de bois, se voit beaucoup moins la nuit et fume moins.
+ */
+export const RECETTE_DAKOTA: Partial<Record<TypeObjet, number>> = { branche: 3 };
+export const DAKOTA = { bois: 0.6, lumiere: 0.3, odeur: 0.4 } as const;
 
 export type AspectFeu = "eteint" | "flammes" | "braises" | "cendres";
 
 /** Le feu brûle à l'horloge d'action, même hors ligne (processus passif, Book 01 §2 bis). */
 export function bruler(feu: EtatFeu, heures: number): EtatFeu {
   if (!feu.allume) return feu;
-  const bois = Math.max(0, feu.bois - BOIS_PAR_HEURE * heures);
-  return { bois, allume: bois > 0 };
+  const bois = Math.max(0, feu.bois - BOIS_PAR_HEURE * (feu.dakota ? DAKOTA.bois : 1) * heures);
+  return { ...feu, bois, allume: bois > 0 };
 }
 
 export function aspectFeu(feu: EtatFeu): AspectFeu {

@@ -22,7 +22,7 @@ Bonnes idées remontées par les testeurs de *Watt Now?*. Ce fichier sert de bo�
 - **Idée** : une quarantaine d'objets bushcraft fabricables dès la première heure, avec ce qu'on trouve sur le terrain. Ils sont rangés **par besoin** (comme le joueur pense), et chacun a une **suite** : une évolution commune à tous, puis une évolution propre à chaque famille.
 - **Pourquoi c'est intéressant** : aujourd'hui, les recettes communes sont peu nombreuses (13 dans `code/commun/src/recettes.ts`) et la première heure s'épuise vite. Le bushcraft donne beaucoup de petits objets utiles, réalistes et bon marché. Les évolutions montrent au joueur où il va et donnent envie de commercer avec les autres familles.
 - **Books concernés** : 02-crafting, 03-bibliotheque-et-savoir (§4 qualités d'outil, §5.6 domaines), 10-construction, 11-agriculture-elevage-alimentation (§10), 12-portage-vetements-protections, 05-sante-et-soins, 06-zombies (§9.3 défenses), 21-perimetre-phase-0
-- **Statut** : 🆕 à étudier
+- **Statut** : ✅ retenue en partie, par lots filtrés (Book 02 §14 bis). **Lot 1 fait (0.2, 2026-10-08)** : ficelle, bâton à fouir, foyer Dakota, récupérateur de pluie, lit de branchages, alarme à boîtes de conserve, protège-bras, épieu, travois, boîte de conserve vide ; ils nourrissent aussi les objectifs « S'installer » (Book 22 §3.1). Filtre : un objet n'entre que s'il agit sur un système qui existe, sans nouvelle matière à modéliser, sans doublon, sans casser un métier. Écartés pour l'instant : cache enterrée (le coffre suffit), pierre à aiguiser (la meule des Mécanistes), torche de résine (les lumières de famille s'échangent). Les autres attendent leur système (conservation, bois humide, faune côté serveur, fractures…).
 
 #### 1. Ce qui existe déjà
 
@@ -1021,7 +1021,7 @@ C'est ce qui relie les 500 objets entre eux : on ne fouille pas pour un objet, o
   2. Caler le délai du serveur sur la durée réelle du geste, par arme : une hache est plus lente qu'un couteau.
   3. Un test : dix appuis en 1 seconde donnent au plus deux ou trois coups, et un seul son par coup.
 - **Books concernés** : 08-plateforme-commandes-financement (§3.3 commandes de combat), 06-zombies (§8 combat)
-- **Statut** : 🆕 à corriger (à transmettre aux agents de développement)
+- **Statut** : ✅ corrigée (0.2, 2026-10-08 ; Book 08 §3.3). Un coup va jusqu'au bout, un seul appui est gardé et joué à la fin du geste, chaque arme a la durée de son geste (le serveur la respecte, 80 ms de tolérance). Testé : dix appuis en une seconde à la hache donnent deux coups.
 
 ### P-005 — Choisir son arme pour le mode Combat
 - **Date** : 2026-10-08
@@ -1038,7 +1038,7 @@ C'est ce qui relie les 500 objets entre eux : on ne fouille pas pour un objet, o
   - Sans arme équipée, la règle actuelle reste : la meilleure du sac.
   - L'arme équipée se voit dans la main du personnage, et ce choix est gardé d'une session à l'autre.
 - **Books concernés** : 08-plateforme-commandes-financement (§3 emplacements rapides), 12-portage-vetements-protections (§2.1), 06-zombies (§8)
-- **Statut** : 🆕 à étudier
+- **Statut** : ✅ retenue et faite (0.2, 2026-10-08 ; Book 08 §3.3). « Équiper pour le combat » dans le sac, ⚔ sur l'arme équipée, choix gardé d'une session à l'autre, retour à la meilleure arme du sac (avec un message) si on l'a perdue. Les emplacements rapides viendront plus tard.
 
 <!-- Modèle d'une entrée :
 

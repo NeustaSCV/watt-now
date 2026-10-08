@@ -69,7 +69,7 @@ export function messageValide(m: unknown): m is MessageClient {
     case "manger":
       return estObjet(m.objet);
     case "construire_feu":
-      return nombre(m.x) && nombre(m.z);
+      return nombre(m.x) && nombre(m.z) && (m.dakota === undefined || booleen(m.dakota));
     case "fabriquer":
       return chaine(m.recette) && nombreOuRien(m.x) && nombreOuRien(m.z) && nombreOuRien(m.o);
     case "lumiere":

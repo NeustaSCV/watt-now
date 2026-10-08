@@ -64,7 +64,14 @@ export type TypeObjet =
   | "cepes_poeles"
   | "pommes_cuites"
   // Le sac de fortune : un cadre de branches lié de corde, quand on a perdu son sac à dos (2026-10-08).
-  | "sac_fortune";
+  | "sac_fortune"
+  // La gamme bushcraft, lot 1 (P-002, 2026-10-08) : rien que des matières qu'on a déjà.
+  | "ficelle"
+  | "baton_fouir"
+  | "epieu"
+  | "boite_vide"
+  | "protege_bras"
+  | "travois";
 
 export interface DefinitionObjet {
   nom: string;
@@ -217,6 +224,42 @@ export const OBJETS: Record<TypeObjet, DefinitionObjet> = {
     kcal: 300, eau: 0.3,
     plat: { sante: 4 },
   },
+  ficelle: {
+    description: "Deux fibres de jonc roulées sur la cuisse. Plus fine que la corde : alarmes, ligatures, protège-bras.",
+    nom: "ficelle",
+    pluriel: "ficelles",
+    poids: 0.02,
+  },
+  baton_fouir: {
+    description: "Une branche taillée en biseau et durcie au feu. On creuse avec (Creuser 1) : un foyer Dakota, un trou, une racine.",
+    nom: "bâton à fouir",
+    pluriel: "bâtons à fouir",
+    poids: 0.6,
+  },
+  epieu: {
+    description: "Une longue branche taillée en pointe et durcie au feu. Il garde un Éteint à distance : il saisit avant de mordre, l'allonge compte.",
+    nom: "épieu",
+    pluriel: "épieux",
+    poids: 1.2,
+  },
+  boite_vide: {
+    description: "Une boîte de conserve vide, rincée. Rien ne se perd : deux boîtes et une ficelle font une alarme.",
+    nom: "boîte de conserve vide",
+    pluriel: "boîtes de conserve vides",
+    poids: 0.06,
+  },
+  protege_bras: {
+    description: "Des chiffons roulés serrés autour de l'avant-bras, liés à la ficelle. L'avant-bras, c'est là qu'ils mordent : une morsure sur deux n'y passe pas.",
+    nom: "protège-bras de fortune",
+    pluriel: "protège-bras de fortune",
+    poids: 0.3,
+  },
+  travois: {
+    description: "Deux longues perches et un plancher de branches liés à la corde. On traîne 50 kg de plus que son sac, mais on ne court plus quand il est chargé.",
+    nom: "travois",
+    pluriel: "travois",
+    poids: 4,
+  },
   sac_fortune: {
     description: "Un cadre de branches lié de corde, des bretelles tressées : on y attache ses affaires. Porte 30 kg (le sac à dos : 55).",
     nom: "sac de fortune",
@@ -249,11 +292,24 @@ export function estObjet(x: unknown): x is TypeObjet {
   return typeof x === "string" && Object.hasOwn(OBJETS, x);
 }
 
-/** Ce qu'on peut porter avec ce qu'on a : le meilleur contenant, ou les poches. */
-export function capaciteDe(inventaire: Inventaire): number {
+/** Le travois traîné derrière soi : 50 kg de plus que le sac (P-002). */
+export const CAPACITE_TRAVOIS = 50;
+
+/** Ce qu'on porte sur soi : le meilleur contenant, ou les poches (sans le travois). */
+export function capaciteSurSoi(inventaire: Inventaire): number {
   let c = CAPACITE_POCHES;
   for (const [type, kg] of Object.entries(CONTENANTS) as [TypeObjet, number][]) if ((inventaire[type] ?? 0) > 0) c = Math.max(c, kg);
   return c;
+}
+
+/** Ce qu'on peut emporter avec ce qu'on a : le meilleur contenant (ou les poches), plus le travois. */
+export function capaciteDe(inventaire: Inventaire): number {
+  return capaciteSurSoi(inventaire) + ((inventaire.travois ?? 0) > 0 ? CAPACITE_TRAVOIS : 0);
+}
+
+/** On traîne le travois chargé : plus lourd que ce qu'on porte sur soi. On ne court plus (P-002). */
+export function traineTravois(inventaire: Inventaire): boolean {
+  return (inventaire.travois ?? 0) > 0 && poidsInventaire(inventaire) > capaciteSurSoi(inventaire) + 1e-9;
 }
 
 /** Le nom de ce qui porte les affaires : « Sac », « Sac de fortune », ou « Poches ». */

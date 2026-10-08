@@ -45,9 +45,20 @@ export class FeuDeCamp {
     const aleat = aleatoire(etat.id * 31 + 7);
     this.objet.position.set(etat.x, 0, etat.z);
 
+    // Le foyer Dakota (P-002) : pas de pierres, un trou dans le sol et son évent ; la flamme reste basse.
+    if (etat.dakota) {
+      const terre = materiau(0x4a3626);
+      const bord = new THREE.Mesh(new THREE.RingGeometry(0.26, 0.42, 14).rotateX(-Math.PI / 2), terre);
+      bord.position.y = 0.025;
+      const trou = new THREE.Mesh(new THREE.CircleGeometry(0.27, 14).rotateX(-Math.PI / 2), materiau(0x1d140e));
+      trou.position.y = 0.012;
+      const event = new THREE.Mesh(new THREE.CircleGeometry(0.12, 10).rotateX(-Math.PI / 2), materiau(0x1d140e));
+      event.position.set(0, 0.012, 0.55);
+      this.objet.add(bord, trou, event);
+    }
     // Cercle de pierres
     const pierre = new THREE.DodecahedronGeometry(0.16, 0);
-    for (let i = 0; i < 9; i++) {
+    for (let i = 0; i < (etat.dakota ? 0 : 9); i++) {
       const a = (i / 9) * Math.PI * 2 + aleat() * 0.2;
       const m = new THREE.Mesh(pierre, materiau(aleat() < 0.5 ? PALETTE.pierre : PALETTE.pierreSombre));
       m.position.set(Math.cos(a) * 0.52, 0.06, Math.sin(a) * 0.52);
@@ -61,6 +72,7 @@ export class FeuDeCamp {
     const buche = new THREE.CylinderGeometry(0.045, 0.06, 0.62, 6).translate(0, 0.31, 0);
     for (let i = 0; i < 4; i++) {
       const m = new THREE.Mesh(buche, materiau(i % 2 ? PALETTE.bois : PALETTE.boisSombre));
+      if (etat.dakota) m.scale.set(0.8, 0.45, 0.8);
       const a = (i / 4) * Math.PI * 2 + 0.4;
       m.position.set(Math.cos(a) * 0.2, 0.02, Math.sin(a) * 0.2);
       m.rotation.set(Math.sin(a) * 0.55, 0, -Math.cos(a) * 0.55);
@@ -162,6 +174,8 @@ export class FeuDeCamp {
   source(): SourceLumiere | null {
     if (this.etat.aspect === "flammes") {
       const force = Math.min(1, 0.55 + this.etat.bois / 6);
+      // Le foyer Dakota éclaire à peine : la flamme est dans le sol.
+      if (this.etat.dakota) return { x: this.etat.x, y: 0.5, z: this.etat.z, couleur: 0xff7a30, intensite: 3 * force, portee: 5, vacillement: 0.8 };
       return { x: this.etat.x, y: 1.1, z: this.etat.z, couleur: 0xff8a3d, intensite: 9 * force, portee: 13, vacillement: 1 };
     }
     if (this.etat.aspect === "braises") return { x: this.etat.x, y: 0.5, z: this.etat.z, couleur: 0xff4a1c, intensite: 2.2, portee: 4, vacillement: 0.6 };
@@ -173,7 +187,7 @@ export class FeuDeCamp {
     if (this.etat.aspect === "flammes") {
       this.flammes.forEach((f, i) => {
         const s = 0.85 + Math.sin(this.temps * (9 + i * 2.3) + i) * 0.15 + Math.sin(this.temps * 17 + i * 4) * 0.08;
-        const taille = Math.min(1.25, 0.6 + this.etat.bois / 5);
+        const taille = Math.min(1.25, 0.6 + this.etat.bois / 5) * (this.etat.dakota ? 0.45 : 1);
         f.scale.set(1, s * taille, 1);
         f.rotation.y = this.temps * (0.6 + i * 0.3);
       });
@@ -193,7 +207,7 @@ export class FeuDeCamp {
       const m = s.material as THREE.SpriteMaterial;
       const lueur = this.etat.aspect === "flammes" ? Math.max(0, 1 - vie * 3) * nuit : 0;
       m.color.setRGB(0.73 - nuit * 0.42 + lueur * 0.55, 0.71 - nuit * 0.42 + lueur * 0.25, 0.68 - nuit * 0.4);
-      m.opacity = brule ? (this.etat.aspect === "flammes" ? 0.55 : 0.28) * Math.sin(vie * Math.PI) * (1 - nuit * 0.35) : 0;
+      m.opacity = brule ? (this.etat.aspect === "flammes" ? 0.55 : 0.28) * Math.sin(vie * Math.PI) * (1 - nuit * 0.35) * (this.etat.dakota ? 0.35 : 1) : 0;
     }
 
     // Les étincelles, seulement quand ça flambe.

@@ -280,6 +280,8 @@ body {
 }
 
 #hud .etat {
+  /* Au-dessus des raccourcis : le menu des options s'ouvre par-dessus. */
+  z-index: 12;
   top: max(12px, env(safe-area-inset-top));
   right: max(12px, env(safe-area-inset-right));
   text-align: right;
@@ -437,6 +439,49 @@ body {
   display: flex;
   gap: 6px;
   justify-content: flex-end;
+  position: relative;
+}
+/* La roue dentée des options (2026-10-08) : Commandes, Son, Qualité, Quitter, dans un petit menu. */
+#hud .etat .boutons .options {
+  display: grid;
+  place-items: center;
+  min-width: 36px;
+  min-height: 32px;
+  padding: 4px 8px;
+}
+#hud .etat .menu-options {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  min-width: 160px;
+  border-radius: 8px;
+  background: rgba(20, 24, 32, 0.94);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.4);
+  pointer-events: auto;
+}
+#hud .etat .menu-options[hidden] {
+  display: none;
+}
+#hud .etat .menu-options button {
+  width: 100%;
+  text-align: left;
+}
+/* Replié, le carnet n'est qu'un petit onglet. */
+#hud .carnet:not(.ouvert) {
+  width: auto;
+  max-width: calc(100vw - 24px);
+}
+#hud .carnet:not(.ouvert) .chevron {
+  margin-left: 8px;
+}
+#hud .carnet .chevron {
+  float: right;
+  opacity: 0.6;
 }
 
 #hud .messages {

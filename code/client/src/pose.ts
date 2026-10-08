@@ -13,9 +13,17 @@ export type GenrePose = "feu" | "installation";
 const VERT = new THREE.Color(0x6fd18a);
 const ROUGE = new THREE.Color(0xe0574a);
 
-/** Un feu de camp en devenir : un cercle de pierres et trois branches. */
-export function fantomeFeu(): THREE.Group {
+/** Un feu de camp en devenir : un cercle de pierres et trois branches (un foyer Dakota : un trou, sans pierres). */
+export function fantomeFeu(dakota = false): THREE.Group {
   const g = new THREE.Group();
+  if (dakota) {
+    const trou = new THREE.Mesh(new THREE.CircleGeometry(0.28, 16).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x2e2018 }));
+    trou.position.y = 0.02;
+    const event = new THREE.Mesh(new THREE.CircleGeometry(0.14, 12).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x2e2018 }));
+    event.position.set(0, 0.02, 0.6);
+    g.add(trou, event);
+    return g;
+  }
   const pierre = new THREE.DodecahedronGeometry(0.13, 0);
   const mat = new THREE.MeshStandardMaterial({ color: 0x8f8a80, flatShading: true });
   for (let i = 0; i < 8; i++) {
@@ -36,7 +44,7 @@ export function fantomeFeu(): THREE.Group {
 export class ModePose {
   readonly groupe = new THREE.Group();
   /** Ce qu'on pose : un feu de camp, ou l'installation d'une recette. */
-  actif: { genre: GenrePose; recette: Recette | null } | null = null;
+  actif: { genre: GenrePose; recette: Recette | null; dakota?: boolean } | null = null;
   x = 0;
   z = 0;
   /** Orientation de la construction (radians), par quarts de tour. */
@@ -64,9 +72,9 @@ export class ModePose {
     });
   }
 
-  demarrer(genre: GenrePose, recette: Recette | null, modele: THREE.Object3D, rayonEmpreinte: number): void {
+  demarrer(genre: GenrePose, recette: Recette | null, modele: THREE.Object3D, rayonEmpreinte: number, dakota = false): void {
     this.arreter();
-    this.actif = { genre, recette };
+    this.actif = { genre, recette, ...(dakota ? { dakota } : {}) };
     // Le fantôme : le vrai modèle, en transparence.
     modele.traverse((n) => {
       const m = n as THREE.Mesh;

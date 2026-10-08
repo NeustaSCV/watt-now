@@ -8,7 +8,7 @@ import type { Famille } from "./regles.ts";
 // La grande quête du cycle (« Où est Bill Murray ? », Book 22 §4) viendra avec la 1.0 : elle s'ajoutera ici
 // comme une troisième ligne. Pour la 0b, on rend d'abord le jeu très jouable (décision du porteur, 2026-10-08).
 
-export type LigneQuete = "metier" | "installer";
+export type LigneQuete = "metier" | "installer" | "autres";
 
 /** Ce qu'un objectif demande. Le serveur sait le constater (serveur/src/quetes.ts). */
 export type Condition =
@@ -46,7 +46,10 @@ export interface Quete {
   recompense?: { wotts?: number; objets?: Inventaire };
 }
 
-// ---------- S'installer (Book 22 §3.1 ; ordre de la proposition P-002) ----------
+// ---------- S'installer (Book 22 §3.1 : l'ordre de l'urgence de la proposition P-002, et sa gamme bushcraft) ----------
+
+const fait = (f: string, but = 1): Condition => ({ a: "fait", fait: f, but });
+const installation = (type: string): Condition => ({ a: "installation", type });
 
 const INSTALLER: Quete[] = [
   {
@@ -54,60 +57,119 @@ const INSTALLER: Quete[] = [
     ligne: "installer",
     titre: "Un vrai repas",
     texte: "Les baies, ça va un moment. Cuisine un plat au feu (volaille aux cèpes, poêlée de cèpes, pommes cuites) et mange-le.",
-    objectifs: [{ libelle: "Plat cuisiné mangé", condition: { a: "fait", fait: "plat_mange", but: 1 } }],
+    objectifs: [{ libelle: "Plat cuisiné mangé", condition: fait("plat_mange") }],
     lecon: "Un plat chaud cale plus longtemps et remonte la santé. Le feu sert aussi à ça.",
     recompense: { objets: { conserve: 1 } },
+  },
+  {
+    id: "lit",
+    ligne: "installer",
+    titre: "Un vrai lit",
+    texte: "Dormir à même le sol, c'est dormir à moitié. Fais un lit de branchages à côté de ton abri.",
+    objectifs: [{ libelle: "Lit de branchages", condition: installation("lit_branchages") }],
+    lecon: "Isolé du sol, à côté de l'abri, on récupère un tiers plus vite.",
+    recompense: { objets: { conserve: 1 } },
+  },
+  {
+    id: "eau_du_ciel",
+    ligne: "installer",
+    titre: "L'eau du ciel",
+    texte: "Bouillir l'eau de la mare coûte du bois. Tends une bâche en entonnoir au-dessus d'une bassine : la pluie se boit telle quelle. Une bâche ? Dans la benne du camion, à la station.",
+    objectifs: [{ libelle: "Récupérateur de pluie", condition: installation("recuperateur_pluie") }],
+    lecon: "Il se remplit quand il pleut, même quand tu n'es pas là.",
+    recompense: { wotts: 10 },
   },
   {
     id: "coffre",
     ligne: "installer",
     titre: "Un coffre à soi",
     texte: "Tout porter, c'est s'épuiser. Fabrique un coffre de rangement (bûches, branches, une corde de fibres de la mare).",
-    objectifs: [{ libelle: "Coffre sur ton terrain", condition: { a: "installation", type: "coffre" } }],
+    objectifs: [{ libelle: "Coffre sur ton terrain", condition: installation("coffre") }],
     lecon: "Le coffre garde 150 kg pour toi. Ne pars en route qu'avec ce qu'il faut.",
+  },
+  {
+    id: "dakota",
+    ligne: "installer",
+    titre: "Un feu qui ne se voit pas",
+    texte: "La nuit, un feu se voit de loin. Durcis une branche au feu pour en faire un bâton à fouir, puis creuse un foyer Dakota (dans Fabriquer).",
+    objectifs: [{ libelle: "Foyer Dakota creusé", condition: fait("foyer_dakota") }],
+    lecon: "La flamme reste dans le sol : trois fois moins de lumière, moins de fumée, moins de bois.",
+    recompense: { objets: { conserve: 1 } },
   },
   {
     id: "defense",
     ligne: "installer",
     titre: "De quoi se défendre",
-    texte: "Les poings, c'est pour les films. Fabrique un gourdin de bois dur, ou garde ta hache sous la main.",
-    objectifs: [{ libelle: "Gourdin ou hache", condition: { a: "objet", types: ["gourdin", "hache"], n: 1 } }],
-    lecon: "Une arme frappe plus fort et de plus loin. Vise toujours la tête.",
+    texte: "Les poings, c'est pour les films. Fabrique un gourdin ou un épieu durci au feu, ou garde ta hache sous la main.",
+    objectifs: [{ libelle: "Gourdin, épieu ou hache", condition: { a: "objet", types: ["gourdin", "epieu", "hache"], n: 1 } }],
+    lecon: "Choisis ton arme dans le sac (« Équiper pour le combat »). L'épieu les tient à distance : ils saisissent avant de mordre.",
     recompense: { objets: { conserve: 1 } },
+  },
+  {
+    id: "alarme",
+    ligne: "installer",
+    titre: "Être prévenu",
+    texte: "Deux boîtes de conserve vides (mange tes conserves), une ficelle de fibres, deux branches : une alarme le long du chemin.",
+    objectifs: [{ libelle: "Alarme posée", condition: installation("alarme_boites") }],
+    lecon: "Si un Éteint passe, les boîtes tintent. Lui aussi les entend : une alarme, c'est aussi un leurre.",
+    recompense: { wotts: 10 },
   },
   {
     id: "soins",
     ligne: "installer",
     titre: "Se soigner",
-    texte: "Une coupure qui saigne, ça ne pardonne pas. Garde deux pansements sur toi (des chiffons, une corde, l'établi).",
+    texte: "Une coupure qui saigne, ça ne pardonne pas. Garde deux pansements sur toi (des chiffons, et ton couteau).",
     objectifs: [{ libelle: "Pansements", condition: { a: "objet", types: ["pansement"], n: 2 } }],
     lecon: "Panser arrête le saignement. Dormir à l'abri fait le reste.",
     recompense: { objets: { pansement: 1 } },
   },
   {
-    id: "comptoir",
+    id: "protege_bras",
     ligne: "installer",
+    titre: "Là où ils mordent",
+    texte: "Ils mordent à l'avant-bras, celui qu'on lève pour se protéger. Roule des chiffons serrés, lie-les à la ficelle.",
+    objectifs: [{ libelle: "Protège-bras", condition: { a: "objet", types: ["protege_bras"], n: 1 } }],
+    lecon: "Une morsure sur deux glisse dessus. Il finit par se déchirer : garde de quoi en refaire.",
+    recompense: { wotts: 10 },
+  },
+  {
+    id: "travois",
+    ligne: "installer",
+    titre: "Traîner plus lourd",
+    texte: "Le bois, la pierre, ça pèse. Deux longues perches, des traverses, deux cordes : un travois.",
+    objectifs: [{ libelle: "Travois", condition: { a: "objet", types: ["travois"], n: 1 } }],
+    lecon: "50 kg de plus derrière toi. Chargé, on ne court plus : choisis bien quand tu sors avec.",
+    recompense: { wotts: 15 },
+  },
+];
+
+// ---------- Les autres (Book 22 §3.3) : le Comptoir, la monnaie, l'échange ----------
+
+const AUTRES: Quete[] = [
+  {
+    id: "comptoir",
+    ligne: "autres",
     titre: "Le Comptoir du Carrefour",
     texte: "Au-delà de la station-service, les Compteurs tiennent le Comptoir : ils achètent, vendent, et paient en wotts. Va les voir.",
-    objectifs: [{ libelle: "Arrivé au Comptoir", condition: { a: "fait", fait: "visite:comptoir", but: 1 } }],
+    objectifs: [{ libelle: "Arrivé au Comptoir", condition: fait("visite:comptoir") }],
     lecon: "Les Compteurs tamponnent tout, mais ils sont honnêtes. Leurs prix sont affichés au guichet.",
     recompense: { wotts: 10 },
   },
   {
     id: "premiers_wotts",
-    ligne: "installer",
+    ligne: "autres",
     titre: "Premiers wotts",
     texte: "Gagne 20 wotts au Comptoir : vends ce que tu as en trop, ou dépose de l'électricité.",
-    objectifs: [{ libelle: "Wotts gagnés", condition: { a: "fait", fait: "wotts_gagnes", but: 20 } }],
+    objectifs: [{ libelle: "Wotts gagnés", condition: fait("wotts_gagnes", 20) }],
     lecon: "Les wotts se déchargent avec le temps : ne les garde pas trop longtemps en poche.",
     recompense: { objets: { conserve: 1 } },
   },
   {
     id: "main_tendue",
-    ligne: "installer",
+    ligne: "autres",
     titre: "La main tendue",
     texte: "Les autres familles ont ce qui te manque, et inversement. À la station ou au Comptoir, propose un échange ({agir} près d'un autre joueur).",
-    objectifs: [{ libelle: "Échange conclu", condition: { a: "fait", fait: "echange", but: 1 } }],
+    objectifs: [{ libelle: "Échange conclu", condition: fait("echange") }],
     lecon: "Seul, on survit. Ensemble, on reconstruit.",
     recompense: { wotts: 15 },
   },
@@ -254,7 +316,7 @@ const METIER: Quete[] = [
   },
 ];
 
-export const QUETES: Quete[] = [...METIER, ...INSTALLER];
+export const QUETES: Quete[] = [...METIER, ...INSTALLER, ...AUTRES];
 
 export const QUETE = new Map(QUETES.map((q) => [q.id, q]));
 
@@ -287,7 +349,7 @@ export interface VueQuete {
 
 export interface VueQuetes {
   quetes: VueQuete[];
-  /** La quête qui vient d'être réussie, et sa leçon, à montrer un moment. */
-  reussie?: { titre: string; lecon: string; recompense?: string };
+  /** Les quêtes qui viennent d'être réussies (souvent une seule), et leur leçon, à montrer un moment. */
+  reussies?: { titre: string; lecon: string; recompense?: string }[];
 }
 

@@ -17,7 +17,7 @@ import { APPUIS_DEGAGEMENT, ESQUIVE, SEUIL_EPUISE, armeEnMain, freinSaisie } fro
 import type { AutreVu, SacVu, SanteVue, VueComptoir } from "../../commun/src/messages.ts";
 import { PORTEE_CABLE_PANNEAU, type Charges } from "../../commun/src/energie.ts";
 import type { Bienvenue, InstallationVue, MessageClient, MessageServeur } from "../../commun/src/messages.ts";
-import { OBJETS, lumierePortee, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
+import { OBJETS, lumierePortee, traineTravois, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
 import { aFaim, aSoif, allureAutorisee, fatigue, type Besoins, type Gourde } from "../../commun/src/survie.ts";
 import { estNuit, heureDeJeu, jourDeJeu } from "../../commun/src/temps.ts";
 import { demanderIdentite } from "./accueil.ts";
@@ -320,11 +320,11 @@ const hud = new Hud(
   {
     manger: (objet) => envoyer({ t: "manger", objet }),
     boire: () => envoyer({ t: "boire" }),
-    construireFeu: () => {
+    construireFeu: (dakota = false) => {
       if (!position) return;
       // On choisit d'abord où le monter (2026-10-08).
       hud.fermerPanneaux();
-      commencerPose("feu", null, fantomeFeu(), 0.75, "Feu de camp");
+      commencerPose("feu", null, fantomeFeu(dakota), 0.75, dakota ? "Foyer Dakota" : "Feu de camp", dakota);
     },
     lumiere: () => envoyer({ t: "lumiere", allumee: !lumiere }),
     panser: () => envoyer({ t: "panser" }),
@@ -658,6 +658,10 @@ function recevoir(message: MessageServeur): void {
       armeEquipee = message.arme;
       hud.majArme(armeEquipee);
       break;
+    case "alarme":
+      // Les boîtes de conserve tintent (P-002) : le serveur le dit aussi par écrit.
+      bruiteur.alarme({ x: message.x, z: message.z });
+      break;
     case "tutoriel":
       hud.majTutoriel(message.tutoriel);
       return;
@@ -844,11 +848,11 @@ function agir(a: ActionProposee | null): void {
 /** Le choix de l'emplacement d'une construction (2026-10-08) : le fantôme, puis construire ici, tourner ou annuler. */
 const pose = new ModePose(canvas);
 scene.scene.add(pose.groupe);
-function commencerPose(genre: GenrePose, recette: Recette | null, modele: THREE.Object3D, rayon: number, nom: string): void {
+function commencerPose(genre: GenrePose, recette: Recette | null, modele: THREE.Object3D, rayon: number, nom: string, dakota = false): void {
   if (!position) return;
   // Par défaut, la construction regarde le personnage (au quart de tour près).
   pose.o = Math.round((position.o + Math.PI) / (Math.PI / 2)) * (Math.PI / 2);
-  pose.demarrer(genre, recette, modele, rayon);
+  pose.demarrer(genre, recette, modele, rayon, dakota);
   hud.afficherPose(nom);
 }
 function finirPose(choix: "tourner" | "annuler" | "poser"): void {
@@ -860,8 +864,8 @@ function finirPose(choix: "tourner" | "annuler" | "poser"): void {
     return;
   }
   if (pose.raison) return hud.message(pose.raison);
-  const { genre, recette } = pose.actif;
-  if (genre === "feu") envoyer({ t: "construire_feu", x: pose.x, z: pose.z });
+  const { genre, recette, dakota } = pose.actif;
+  if (genre === "feu") envoyer({ t: "construire_feu", x: pose.x, z: pose.z, ...(dakota ? { dakota } : {}) });
   else if (recette) {
     // Le tas de matières, là où l'installation va se dresser.
     fabricationDemandee = { nom: recette.nom, ingredients: recette.ingredients, x: pose.x, z: pose.z };
@@ -1109,7 +1113,7 @@ function boucle(instant: number): void {
     const { dx, dz } = scene.versMonde(entree.x, entree.y);
     // Carte ouverte ou en route : le personnage s'arrête.
     const immobile = enVoyage || carte.ouverte;
-    let allure = allureAutorisee(entree.allure, besoins, porteEscabeau());
+    let allure = allureAutorisee(entree.allure, besoins, porteEscabeau() || traineTravois(inventaire));
     if (allure === "course" && endurance < SEUIL_EPUISE) allure = "marche";
     // On voulait courir, mais on marche : on dit pourquoi, et comment y remédier.
     if (entree.allure === "course" && allure !== "course" && Math.hypot(dx, dz) > 0.05) {
@@ -1223,7 +1227,9 @@ function boucle(instant: number): void {
     if (pose.actif) {
       const genre = pose.actif.genre;
       const installationsVues = [...installations.values()].map((i) => i.vue);
-      pose.placer(position, scene.camera, (x, z) => raisonEmplacement(genre, x, z, position!, feux.values(), installationsVues));
+      const r = pose.actif.recette;
+      const type = r && "installation" in r.produit ? r.produit.installation : undefined;
+      pose.placer(position, scene.camera, (x, z) => raisonEmplacement(genre, x, z, position!, feux.values(), installationsVues, type));
       hud.majPose(pose.raison);
     }
     majDisques(porteEscabeau());

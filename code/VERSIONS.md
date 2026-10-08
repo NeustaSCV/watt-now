@@ -22,6 +22,23 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
   - ⚡ rapporter le panneau de la station → l'installer → faire le plein → déposer l'électricité.
 - Chaque objectif a ses compteurs et sa récompense : des objets, ou une prime des Compteurs en wotts, versée sur le compte au Comptoir (prise sur leur trésorerie ; vide, elle attend).
 - Ce qui est déjà fait compte : un ancien bien équipé enchaîne plusieurs objectifs d'un coup.
+- **Les autres** : le Comptoir, les premiers wotts, l'échange, sur une troisième ligne.
+
+**Jouer : la gamme bushcraft, lot 1** (proposition P-002, Book 02 §14 bis), rien que des matières qu'on a déjà :
+- ficelle, bâton à fouir (Creuser 1), **foyer Dakota** (un feu creusé : il se voit trois fois moins la nuit, fume moins, brûle moins de bois) ;
+- **récupérateur de pluie** (il se remplit même hors ligne ; l'eau de pluie se boit sans bouillir) ;
+- **lit de branchages** (sommeil +30 %), **alarme à boîtes de conserve** (elle tinte quand un Éteint passe, et l'attire), **protège-bras** (une morsure sur deux), **épieu** (la plus longue allonge), **travois** (+50 kg, sans courir) ;
+- manger une conserve laisse sa boîte vide.
+- « S'installer » passe à 10 objectifs, dans l'ordre de l'urgence.
+
+**Combat** (propositions P-004 et P-005)
+- Un coup va jusqu'au bout : taper vite ne relance plus le geste ; un appui pendant le coup est gardé pour la suite. Chaque arme a son rythme (hache lente, couteau vif).
+- On choisit son arme dans le sac (« Équiper pour le combat », ⚔). Perdue, on reprend la meilleure du sac.
+- Le gourdin se voit enfin dans la main.
+
+**Interface**
+- Sur téléphone, le carnet se replie en un petit onglet (replié d'office, choix gardé).
+- Commandes, Son, Qualité et Quitter passent dans un menu derrière une roue dentée ⚙.
 
 ## 0.1.1 · déployée le 2026-10-08
 

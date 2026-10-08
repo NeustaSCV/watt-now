@@ -286,6 +286,15 @@ export class Personnage {
         ajouter(new THREE.BoxGeometry(0.025, 0.025, 0.1), materiau(PALETTE.boisSombre), 0.02);
         ajouter(new THREE.BoxGeometry(0.008, 0.035, objet === "lame_forgee" ? 0.3 : 0.15), fer, objet === "lame_forgee" ? 0.22 : 0.14);
         break;
+      case "gourdin":
+        // Un bâton de bois dur, plus épais au bout.
+        ajouter(new THREE.CylinderGeometry(0.045, 0.022, 0.62, 6).rotateX(Math.PI / 2), materiau(PALETTE.boisSombre), 0.2);
+        break;
+      case "epieu":
+        // Une longue perche, la pointe noircie au feu (P-002) : on la tient au tiers.
+        ajouter(new THREE.CylinderGeometry(0.02, 0.024, 1.7, 6).rotateX(Math.PI / 2), bois, 0.45);
+        ajouter(new THREE.ConeGeometry(0.022, 0.16, 6).rotateX(Math.PI / 2), materiau(0x2e2018), 1.37);
+        break;
       default:
         return;
     }

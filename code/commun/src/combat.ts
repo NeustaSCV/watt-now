@@ -31,6 +31,8 @@ export const ARMES: Arme[] = [
   { objet: "barre_metal", nom: "la barre de métal", degatsTorse: 1.5, tueALaTete: true, allonge: 1.9, coup: 650, coupAppuye: 900 },
   { objet: "lame_forgee", nom: "la lame forgée", degatsTorse: 1, tueALaTete: true, allonge: 1.4, coup: 480, coupAppuye: 720 },
   { objet: "gourdin", nom: "le gourdin", degatsTorse: 1, tueALaTete: false, allonge: 1.5, coup: 550, coupAppuye: 800 },
+  // L'épieu (P-002) : peu de dégâts, mais l'allonge : on le tient à distance, il saisit avant de mordre.
+  { objet: "epieu", nom: "l'épieu", degatsTorse: 0.8, tueALaTete: false, allonge: 2.3, coup: 650, coupAppuye: 900 },
   { objet: "couteau_aiguise", nom: "le couteau aiguisé", degatsTorse: 0.7, tueALaTete: false, allonge: 1.25, coup: 420, coupAppuye: 650 },
   { objet: "couteau", nom: "le couteau", degatsTorse: 0.5, tueALaTete: false, allonge: 1.2, coup: 420, coupAppuye: 650 },
 ];

@@ -7,7 +7,7 @@ import type { TypeObjet } from "../../commun/src/objets.ts";
 const ENCRE = "#3b2a1e";
 const T = `stroke="${ENCRE}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"`;
 
-export type Pictogramme = TypeObjet | "feu_de_camp" | "etabli" | "abri" | "coffre" | "charbonniere" | "forge" | "pedalier" | "banc_recharge" | "escabeau" | "poches";
+export type Pictogramme = TypeObjet | "feu_de_camp" | "etabli" | "abri" | "coffre" | "charbonniere" | "forge" | "pedalier" | "banc_recharge" | "escabeau" | "poches" | "recuperateur_pluie" | "alarme_boites" | "lit_branchages";
 
 const DESSINS: Record<Pictogramme, string> = {
   branche: `
@@ -54,6 +54,50 @@ const DESSINS: Record<Pictogramme, string> = {
     <path d="M7 30 L14 17 L26 15 L30 26 L21 36 Z" fill="#5c5650" ${T}/>
     <path d="M27 31 L41 23 L43 27 L29 35 Z" fill="#c9ccd0" ${T}/>
     <path d="M30 14 l3 -5 M35 17 l5 -3 M33 21 l6 0" stroke="#ff8a3d" stroke-width="2.2" stroke-linecap="round"/>`,
+  ficelle: `
+    <path d="M10 30 C16 18 22 40 28 26 S38 16 40 22" fill="none" stroke="#c9b48a" stroke-width="3" stroke-linecap="round"/>
+    <path d="M10 30 C16 18 22 40 28 26 S38 16 40 22" fill="none" ${T} stroke-width="1"/>
+    <circle cx="24" cy="31" r="6" fill="#d8c69c" ${T}/><path d="M19 29 Q24 34 29 29 M20 33 Q24 28 28 33" fill="none" stroke-width="1" ${T}/>`,
+  baton_fouir: `
+    <path d="M12 40 L34 8" stroke="#6b4a32" stroke-width="5" stroke-linecap="round"/>
+    <path d="M12 40 L34 8" fill="none" ${T} stroke-width="1.2"/>
+    <path d="M30 14 L38 4 L36 15 Z" fill="#3b2a1e" ${T}/>
+    <path d="M17 33 l3 1 M21 27 l3 1" stroke-width="1.2" ${T}/>`,
+  epieu: `
+    <path d="M7 43 L38 9" stroke="#7a5a3c" stroke-width="4" stroke-linecap="round"/>
+    <path d="M7 43 L38 9" fill="none" ${T} stroke-width="1"/>
+    <path d="M34 13 L44 4 L40 17 Z" fill="#2e2018" ${T}/>
+    <path d="M33 12 l4 4" stroke="#ff8a3d" stroke-width="1.6"/>`,
+  boite_vide: `
+    <path d="M13 13 h22 v24 a11 4 0 0 1 -22 0 Z" fill="#c8c4bc" ${T}/>
+    <ellipse cx="24" cy="13" rx="11" ry="4" fill="#5c5650" ${T}/>
+    <path d="M30 10 L38 4 L36 12" fill="#d6d2ca" ${T}/>
+    <path d="M14 22 h20 M14 29 h20" stroke-width="1" opacity="0.5" ${T}/>`,
+  protege_bras: `
+    <path d="M10 18 Q24 12 38 18 V32 Q24 38 10 32 Z" fill="#c9b48a" ${T}/>
+    <path d="M15 16 V35 M22 14 V37 M29 14 V37 M35 16 V35" stroke-width="1" opacity="0.5" ${T}/>
+    <path d="M10 22 Q24 17 38 22 M10 29 Q24 34 38 29" stroke="#8a6a3e" stroke-width="2" fill="none"/>`,
+  travois: `
+    <path d="M8 6 L30 42 M40 6 L34 42" stroke="#6b4a32" stroke-width="3.5" stroke-linecap="round"/>
+    <path d="M17 22 H38 M20 28 H37 M23 34 H36" stroke="#a07c48" stroke-width="3" stroke-linecap="round"/>
+    <path d="M8 6 L30 42 M40 6 L34 42" fill="none" ${T} stroke-width="1"/>`,
+  recuperateur_pluie: `
+    <path d="M8 16 L40 16 L28 26 L20 26 Z" fill="#2f6fa4" ${T}/>
+    <path d="M10 16 V40 M38 16 V40" stroke-width="2.5" ${T}/>
+    <path d="M24 27 v4" stroke="#5f8fa8" stroke-width="2" stroke-dasharray="2 2"/>
+    <path d="M17 34 h14 l-2 7 h-10 Z" fill="#8a8f94" ${T}/>
+    <path d="M14 6 l-1 4 M24 4 l-1 4 M34 6 l-1 4" stroke="#5f8fa8" stroke-width="2" stroke-linecap="round"/>`,
+  alarme_boites: `
+    <path d="M8 40 V14 M40 40 V14" stroke="#6b4a32" stroke-width="3" stroke-linecap="round"/>
+    <path d="M8 16 Q24 20 40 16" fill="none" stroke="#c9b48a" stroke-width="1.6"/>
+    <path d="M18 18 v5 M30 18 v5" stroke-width="1" ${T}/>
+    <rect x="14" y="23" width="8" height="10" rx="1.5" fill="#c8c4bc" ${T}/>
+    <rect x="26" y="23" width="8" height="10" rx="1.5" fill="#c8c4bc" ${T}/>
+    <path d="M12 30 l-4 2 M36 30 l4 2" stroke="#ffb347" stroke-width="1.6"/>`,
+  lit_branchages: `
+    <path d="M6 30 L42 30 L38 38 L10 38 Z" fill="#6b4a32" ${T}/>
+    <path d="M8 30 Q14 20 20 30 Q26 18 32 30 Q38 21 42 30" fill="#56703d" ${T}/>
+    <path d="M12 27 l4 -4 M24 25 l3 -5 M35 26 l3 -4" stroke="#3f5a2c" stroke-width="1.4"/>`,
   marteau: `
     <path d="M23 18 L27 18 L28 43 L22 43 Z" fill="#7a5a3c" ${T}/>
     <path d="M10 9 h26 a3 3 0 0 1 3 3 v6 h-29 Z" fill="#55524d" ${T}/>

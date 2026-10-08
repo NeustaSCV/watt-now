@@ -44,6 +44,8 @@ export interface FeuVu {
   /** Bois restant, en kg. */
   bois: number;
   aspect: AspectFeu;
+  /** Un foyer Dakota (P-002). */
+  dakota?: boolean;
 }
 
 export type Cible =
@@ -76,6 +78,7 @@ export type Verbe =
   | "recharger"
   | "reprendre"
   | "pedaler_comptoir"
+  | "remplir_pluie"
   | "dormir"
   | "poser_batteries"
   | "reprendre_batteries"
@@ -101,6 +104,8 @@ export interface EtatInstallation {
   majLe?: number;
   /** Escabeau (objet lourd) : dans les bras du joueur, en cours de déplacement. */
   portee?: boolean;
+  /** Récupérateur de pluie : l'eau recueillie, en litres (le calcul se fait jusqu'à `majLe`). */
+  litres?: number;
 }
 
 export interface InstallationVue {
@@ -121,7 +126,7 @@ export type MessageClient =
   | { t: "interagir"; cible: Cible; verbe: Verbe }
   | { t: "manger"; objet: TypeObjet }
   | { t: "boire" }
-  | { t: "construire_feu"; x: number; z: number }
+  | { t: "construire_feu"; x: number; z: number; dakota?: boolean }
   | { t: "fabriquer"; recette: string; x?: number; z?: number; o?: number }
   | { t: "lumiere"; allumee: boolean }
   | { t: "annuler" }
@@ -346,6 +351,8 @@ export type MessageServeur =
   | { t: "quetes"; quetes: VueQuetes | null }
   /** L'arme équipée a changé (P-005). */
   | { t: "arme"; arme: TypeObjet | null }
+  /** Une alarme à boîtes de conserve tinte sur le terrain (P-002). */
+  | { t: "alarme"; x: number; z: number }
   /** On s'endort (dans l'abri ou par terre) ou on se réveille (É5). */
   | { t: "sommeil"; dort: boolean; dansUnAbri: boolean }
   /** Les autres joueurs du lieu, plusieurs fois par seconde (É4, lot 3). */

@@ -75,6 +75,23 @@ export function meteo(instant: number, debutMonde: number): Meteo {
   return { temps: actuel, pluie, nuages };
 }
 
+/** Ce que recueille un récupérateur de pluie (P-002) : ≈ 0,5 L par minute réelle de pluie, jusqu'à 5 L. */
+export const PLUIE_LITRES_PAR_MINUTE = 0.5;
+export const RECUPERATEUR_MAX_L = 5;
+
+/** Les litres recueillis entre deux instants (au plus `max`) : on suit la météo, minute après minute. */
+export function pluieRecueillie(depuis: number, jusqua: number, debutMonde: number, max = RECUPERATEUR_MAX_L): number {
+  // Une très longue absence : la bassine est pleine bien avant ; on ne regarde que la dernière semaine.
+  const debut = Math.max(depuis, jusqua - 7 * 86_400_000);
+  const pas = 20_000;
+  let litres = 0;
+  for (let t = debut; t < jusqua && litres < max; t += pas) {
+    const d = Math.min(pas, jusqua - t);
+    litres += (meteo(t + d / 2, debutMonde).pluie * PLUIE_LITRES_PAR_MINUTE * d) / 60_000;
+  }
+  return Math.min(max, litres);
+}
+
 /** La pluie est une alliée (Book 06 §3.2, Book 13 §4) : bruits −30 %, odeurs −50 %. */
 export function attenuationMeteo(m: Meteo, genre: GenreStimulus): number {
   if (genre === "son") return 1 - 0.3 * m.pluie;

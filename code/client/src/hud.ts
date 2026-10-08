@@ -28,7 +28,7 @@ import {
   type Recette,
 } from "../../commun/src/recettes.ts";
 import { NOMS_FAMILLES, type Famille } from "../../commun/src/regles.ts";
-import { RECETTE_FEU, RESERVE_EAU_MAX, RESERVE_KCAL_MAX, aFaim, aSoif, fatigue, type Besoins, type Gourde } from "../../commun/src/survie.ts";
+import { RECETTE_DAKOTA, RECETTE_FEU, RESERVE_EAU_MAX, RESERVE_KCAL_MAX, aFaim, aSoif, fatigue, type Besoins, type Gourde } from "../../commun/src/survie.ts";
 import { NOMS_TEMPS, type Temps } from "../../commun/src/meteo.ts";
 import type { VueTutoriel } from "../../commun/src/tutoriel.ts";
 import type { VueQuetes } from "../../commun/src/quetes.ts";
@@ -51,7 +51,8 @@ export interface ActionsJoueur {
   manger(objet: TypeObjet): void;
   boire(): void;
   lumiere(): void;
-  construireFeu(): void;
+  /** `dakota` : un foyer Dakota, creusé dans le sol (P-002). */
+  construireFeu(dakota?: boolean): void;
   fabriquer(recette: Recette): void;
   panser(): void;
   comptoir(op: OperationComptoir): void;
@@ -67,6 +68,8 @@ export interface ActionsJoueur {
 
 /** Le feu de camp, vu comme une recette, pour dire ce qui manque. */
 const RECETTE_FEU_AIDE: Recette = { id: "feu", nom: "Feu de camp", produit: { objet: "branche", quantite: 0 }, ingredients: RECETTE_FEU, qualites: {}, duree: 0, intensite: "legere", famille: "tous" };
+/** Le foyer Dakota (P-002), vu comme une recette, pour dire ce qui manque. */
+const RECETTE_DAKOTA_AIDE: Recette = { id: "dakota", nom: "Foyer Dakota", produit: { objet: "branche", quantite: 0 }, ingredients: RECETTE_DAKOTA, qualites: { creuser: 1 }, duree: 0, intensite: "legere", famille: "tous" };
 
 type NomJauge = "faim" | "eau" | "sommeil" | "sante" | "endurance";
 
@@ -74,6 +77,17 @@ type OngletComptoir = "vendre" | "acheter" | "energie" | "compte";
 
 function kg(valeur: number): string {
   return valeur.toFixed(2).replace(".", ",").replace(/,?0+$/, "");
+}
+
+/** Le carnet ouvert ou replié : le choix du joueur s'il en a fait un, sinon replié sur un petit écran tactile. */
+function lireCarnetOuvert(): boolean {
+  try {
+    const v = localStorage.getItem("watt.carnet");
+    if (v) return v === "ouvert";
+  } catch {
+    // Pas de stockage : on prend la valeur par défaut.
+  }
+  return !(window.matchMedia("(pointer: coarse)").matches && Math.min(window.innerWidth, window.innerHeight) < 600);
 }
 
 export class Hud {
@@ -189,10 +203,15 @@ export class Hud {
         <div class="ligne-haut"><span class="meteo" title="Le temps qu'il fait">☀️</span><div class="horloge">–</div><div class="wotts" title="Tes bons de wotts (ils se déchargent d'≈ 2 % par semaine)">⚡ <span>0 wott</span></div></div>
         <div class="mesures">v${VERSION} · <span class="ips">–</span> img/s · <span class="latence">–</span> ms</div>
         <div class="boutons">
-          ${tactile ? "" : `<button type="button" class="r-commandes">Commandes</button>`}
-          <button type="button" class="son" aria-pressed="true">Son : oui</button>
-          <button type="button" class="qualite">Qualité : ${niveau}</button>
-          <button type="button" class="quitter">Quitter</button>
+          <button type="button" class="options" aria-label="Options" aria-expanded="false" aria-haspopup="true" title="Options">
+            <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3.3h-4L10.7 6a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.4 7.4 0 0 0 1.7 1l.3 2.6h4l.3-2.6a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg>
+          </button>
+          <div class="menu-options" hidden role="menu">
+            ${tactile ? "" : `<button type="button" class="r-commandes" role="menuitem">Commandes</button>`}
+            <button type="button" class="son" role="menuitem" aria-pressed="true">Son : oui</button>
+            <button type="button" class="qualite" role="menuitem">Qualité : ${niveau}</button>
+            <button type="button" class="quitter" role="menuitem">Quitter</button>
+          </div>
         </div>
       </div>
       <div class="raccourcis">
@@ -278,6 +297,21 @@ export class Hud {
       }
     });
 
+    // Les options, derrière la roue dentée (2026-10-08) : on l'ouvre, on la ferme, un clic ailleurs la ferme.
+    const menu = q<HTMLDivElement>(".menu-options");
+    const roue = q(".options");
+    const ouvrirMenu = (oui: boolean) => {
+      menu.hidden = !oui;
+      roue.setAttribute("aria-expanded", String(oui));
+    };
+    roue.addEventListener("click", (e) => {
+      e.stopPropagation();
+      ouvrirMenu(menu.hidden !== false);
+    });
+    document.addEventListener("pointerdown", (e) => {
+      if (!menu.hidden && !(e.target as HTMLElement).closest(".menu-options, .options")) ouvrirMenu(false);
+    });
+    for (const b of menu.querySelectorAll<HTMLButtonElement>(".r-commandes, .quitter")) b.addEventListener("click", () => ouvrirMenu(false));
     q(".qualite").addEventListener("click", () => {
       changerQualite(ORDRE_NIVEAUX[(ORDRE_NIVEAUX.indexOf(niveau) + 1) % ORDRE_NIVEAUX.length]!);
     });
@@ -709,7 +743,8 @@ export class Hud {
 
   // ---------- Le carnet du tutoriel (É5, Book 14 §4.2) ----------
 
-  private carnetOuvert = true;
+  /** Le carnet ouvert ou replié (le choix est gardé ; replié d'office sur téléphone, où la place manque). */
+  private carnetOuvert = lireCarnetOuvert();
   private tutoriel: VueTutoriel | null = null;
 
   majTutoriel(v: VueTutoriel | null): void {
@@ -729,10 +764,7 @@ export class Hud {
 
   majQuetes(v: VueQuetes | null): void {
     this.quetes = v;
-    if (v?.reussie) {
-      const r = v.reussie;
-      this.message(`✓ ${r.titre} : ${r.lecon}${r.recompense ? ` Reçu : ${r.recompense}.` : ""}`, "lecon");
-    }
+    for (const r of v?.reussies ?? []) this.message(`✓ ${r.titre} : ${r.lecon}${r.recompense ? ` Reçu : ${r.recompense}.` : ""}`, "lecon");
     this.dessinerCarnet();
   }
 
@@ -740,10 +772,10 @@ export class Hud {
     el.hidden = v.quetes.length === 0;
     if (el.hidden) return;
     el.classList.toggle("ouvert", this.carnetOuvert);
-    const LIGNES = { metier: "Le métier", installer: "S'installer" } as const;
+    const LIGNES = { metier: "Le métier", installer: "S'installer", autres: "Les autres" } as const;
     el.innerHTML = `
-      <button type="button" class="titre" aria-expanded="${this.carnetOuvert}">📓 Carnet · ${v.quetes.length === 1 ? "1 objectif" : `${v.quetes.length} objectifs`}</button>
-      ${v.quetes
+      <button type="button" class="titre" aria-expanded="${this.carnetOuvert}">📓 Carnet · ${v.quetes.length === 1 ? "1 objectif" : `${v.quetes.length} objectifs`} <span class="chevron">${this.carnetOuvert ? "▾" : "▸"}</span></button>
+      ${!this.carnetOuvert ? "" : v.quetes
         .map(
           (q) => `<div class="quete">
             <div class="ligne-quete">${LIGNES[q.ligne]}</div>
@@ -759,10 +791,17 @@ export class Hud {
           </div>`,
         )
         .join("")}`;
-    el.querySelector(".titre")!.addEventListener("click", () => {
-      this.carnetOuvert = !this.carnetOuvert;
-      this.dessinerCarnet();
-    });
+    el.querySelector(".titre")!.addEventListener("click", () => this.basculerCarnet());
+  }
+
+  private basculerCarnet(): void {
+    this.carnetOuvert = !this.carnetOuvert;
+    try {
+      localStorage.setItem("watt.carnet", this.carnetOuvert ? "ouvert" : "replie");
+    } catch {
+      // Pas de stockage (navigation privée) : le choix vaut pour la session.
+    }
+    this.dessinerCarnet();
   }
 
   private dessinerCarnet(): void {
@@ -782,10 +821,7 @@ export class Hud {
           : ""
       }
       ${this.carnetOuvert ? `<p>${avecTouches(v.consigne, this.tactile)}</p><button type="button" class="passer">Passer le tutoriel</button>` : ""}`;
-    el.querySelector(".titre")!.addEventListener("click", () => {
-      this.carnetOuvert = !this.carnetOuvert;
-      this.dessinerCarnet();
-    });
+    el.querySelector(".titre")!.addEventListener("click", () => this.basculerCarnet());
     el.querySelector(".passer")?.addEventListener("click", () => {
       if (window.confirm("Passer le tutoriel ? Tu pourras tout découvrir par toi-même.")) this.actions.passerTutoriel();
     });
@@ -1239,6 +1275,16 @@ export class Hud {
           <small>Se pose devant toi. Cuire, faire bouillir l'eau, s'éclairer.</small>${this.pourquoi === "feu" ? this.listeManque(RECETTE_FEU_AIDE) : ""}</div>
         ${feuPossible ? `<button type="button" data-feu>Monter ici</button>` : `<button type="button" class="pourquoi" data-pourquoi="feu" aria-expanded="${this.pourquoi === "feu"}">Ce qu'il manque ?</button>`}
       </article>`);
+    // Le foyer Dakota (P-002) : creusé, discret, économe. Il faut de quoi creuser.
+    const dakotaPossible = ingredientsPresents(this.inventaire, RECETTE_DAKOTA_AIDE) && niveauQualite(this.inventaire, "creuser") >= 1;
+    cartes.push(`
+      <article class="recette ${dakotaPossible ? "possible" : ""}">
+        ${icone("feu_de_camp", 40)}
+        <div class="corps"><strong>Foyer Dakota</strong>
+          <span class="puces">${Object.entries(RECETTE_DAKOTA).map(([t, n]) => this.puce(t as TypeObjet, n ?? 0)).join("")}<span class="outil ${niveauQualite(this.inventaire, "creuser") >= 1 ? "ok" : "manque"}">${NOMS_QUALITES.creuser} 1</span></span>
+          <small>Un feu creusé dans le sol : il se voit trois fois moins la nuit, fume moins, et brûle moins de bois.</small>${this.pourquoi === "dakota" ? this.listeManque(RECETTE_DAKOTA_AIDE) : ""}</div>
+        ${dakotaPossible ? `<button type="button" data-dakota>Creuser ici</button>` : `<button type="button" class="pourquoi" data-pourquoi="dakota" aria-expanded="${this.pourquoi === "dakota"}">Ce qu'il manque ?</button>`}
+      </article>`);
 
     for (const r of recettes) {
       const pictogramme: Pictogramme = "objet" in r.produit ? r.produit.objet : r.produit.installation;
@@ -1273,7 +1319,7 @@ export class Hud {
     }
 
     const html = `
-      <header><h2>Fabriquer</h2><span class="sous-titre">${recettes.length + 1} recettes connues</span>
+      <header><h2>Fabriquer</h2><span class="sous-titre">${recettes.length + 2} recettes connues</span>
         <button type="button" class="fermer" aria-label="Fermer">✕</button></header>
       <div class="recettes">${cartes.join("")}</div>`;
     if (html === this.derniereFabrication) return;
@@ -1284,6 +1330,10 @@ export class Hud {
     this.fabrication.querySelector("[data-feu]")?.addEventListener("click", () => {
       this.basculerFabrication(false);
       this.actions.construireFeu();
+    });
+    this.fabrication.querySelector("[data-dakota]")?.addEventListener("click", () => {
+      this.basculerFabrication(false);
+      this.actions.construireFeu(true);
     });
     // Une recette grisée : un appui dit ce qui manque, et par quoi le remplacer.
     for (const b of this.fabrication.querySelectorAll<HTMLButtonElement>("[data-pourquoi]")) {

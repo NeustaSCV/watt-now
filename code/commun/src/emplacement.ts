@@ -2,6 +2,7 @@
 // vert ou rouge, 2026-10-08). On construit sur une grille de 50 cm, à portée de bras.
 
 import { TERRAIN_TAILLE } from "./regles.ts";
+import { PETITES_INSTALLATIONS } from "./recettes.ts";
 import { RUINE, distanceMare } from "./terrain.ts";
 
 /** Le pas de la grille de construction (m). */
@@ -29,6 +30,8 @@ export function raisonEmplacement(
   joueur: Point,
   feux: Iterable<Point>,
   installations: Iterable<Point & { type: string }>,
+  /** Ce qu'on construit (pour les petites installations). */
+  type?: string,
 ): string | null {
   const bord = genre === "feu" ? 1 : 1.5;
   if (x < bord || z < bord || x > TERRAIN_TAILLE - bord || z > TERRAIN_TAILLE - bord) return "Pas ici : trop près du bord.";
@@ -38,7 +41,10 @@ export function raisonEmplacement(
   for (const f of feux) if (Math.hypot(f.x - x, f.z - z) < (genre === "feu" ? 2.5 : 2.2)) return genre === "feu" ? "Il y a déjà un feu tout près." : "Trop près d'un feu.";
   for (const i of installations) {
     if (i.type === "escabeau") continue;
-    if (Math.hypot(i.x - x, i.z - z) < (genre === "feu" ? 2.2 : 2.4)) return genre === "feu" ? "Trop près d'une installation." : "Il y a déjà quelque chose ici.";
+    // Les petites installations (lit, alarme) se glissent à côté des autres (P-002).
+    const petite = genre === "installation" && (PETITES_INSTALLATIONS.includes(i.type) || (type !== undefined && PETITES_INSTALLATIONS.includes(type)));
+    const ecart = genre === "feu" ? 2.2 : petite ? 1.2 : 2.4;
+    if (Math.hypot(i.x - x, i.z - z) < ecart) return genre === "feu" ? "Trop près d'une installation." : "Il y a déjà quelque chose ici.";
   }
   return null;
 }

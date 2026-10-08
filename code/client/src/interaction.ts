@@ -43,6 +43,9 @@ const EXAMENS_INSTALLATIONS: Record<InstallationVue["type"], string> = {
   banc_recharge: "Des pinces, des fils et un régulateur bricolé : on passe l'énergie d'une batterie à l'autre.",
   panneau_solaire: "Le petit panneau de la station, plein sud. Il charge les batteries posées sur le banc, même quand tu n'es pas là.",
   escabeau: "Un escabeau de bois ligaturé de corde. Posé au pied d'un arbre fruitier, dans son cercle, il permet de cueillir en haut.",
+  recuperateur_pluie: "Une bâche tendue en entonnoir au-dessus d'une bassine. Quand il pleut, elle se remplit, même quand tu n'es pas là. L'eau du ciel se boit sans la faire bouillir.",
+  alarme_boites: "Une ficelle tendue entre deux piquets, des boîtes de conserve qui pendent. Si un Éteint passe, tu l'entendras. Lui aussi.",
+  lit_branchages: "Un cadre de branches couvert de rameaux. On y dort isolé du sol : à côté de l'abri, le sommeil répare mieux.",
 };
 
 /** La famille qui sait se servir d'une installation (celle qui sait la construire). */
@@ -73,6 +76,13 @@ function actionsInstallation(
     case "abri":
       // Dormir à l'abri récupère deux fois plus vite que par terre (É5, Book 05 §3).
       return [repos < 0.97 ? msg("Dormir dans l'abri", "dormir") : null, examiner];
+    case "lit_branchages":
+      return [repos < 0.97 ? msg("Dormir sur le lit", "dormir") : null, examiner];
+    case "recuperateur_pluie": {
+      const l = i.etat.litres ?? 0;
+      const examen: ActionProposee = { libelle: "Examiner", examiner: `${EXAMENS_INSTALLATIONS.recuperateur_pluie} Dans la bassine : ${l.toFixed(1).replace(".", ",")} L.` };
+      return [l >= 0.1 && (inventaire.gourde ?? 0) > 0 ? msg(`Remplir la gourde (eau de pluie, ${l.toFixed(1).replace(".", ",")} L)`, "remplir_pluie") : null, examen];
+    }
     case "forge":
       return [{ libelle: "Travailler à la forge", ouvrirFabrication: true }, examiner];
     case "charbonniere": {

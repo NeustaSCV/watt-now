@@ -244,6 +244,13 @@ export class Bruiteur {
 
   // ---------- Le combat ----------
 
+  /** L'alarme à boîtes de conserve (P-002) : du métal qui s'entrechoque, plusieurs fois. */
+  alarme(ou: Ou): void {
+    this.son.jouer("marteau_metal", ou);
+    setTimeout(() => this.son.jouer("marteau_metal", ou), 160);
+    setTimeout(() => this.son.jouer("marteau_metal", ou), 420);
+  }
+
   frappe(appuye: boolean): void {
     this.son.jouer(appuye ? "sifflement_lourd" : "sifflement");
   }

@@ -30,7 +30,7 @@ function monter(famille: Famille, inventaire: Record<string, number>, base = new
   };
   const carnet = () => recus.findLast((m) => m.t === "quetes") as Extract<MessageServeur, { t: "quetes" }> | undefined;
   const titres = () => carnet()?.quetes?.quetes.map((q) => q.titre) ?? [];
-  const reussies = () => recus.filter((m) => m.t === "quetes" && m.quetes?.reussie).map((m) => (m as Extract<MessageServeur, { t: "quetes" }>).quetes!.reussie!.titre);
+  const reussies = () => recus.flatMap((m) => (m.t === "quetes" ? (m.quetes?.reussies ?? []).map((r) => r.titre) : []));
   const dernier = <T extends MessageServeur["t"]>(t: T) => recus.findLast((m) => m.t === t) as Extract<MessageServeur, { t: T }> | undefined;
   const allerAuGuichet = () => {
     joueur.position = { x: SORTIE_TERRAIN.boite.x, z: SORTIE_TERRAIN.boite.z, o: 0 };
@@ -48,7 +48,7 @@ function monter(famille: Famille, inventaire: Record<string, number>, base = new
 test("après le tutoriel, le carnet propose le métier et un objectif pour s'installer", () => {
   const t = monter("charbonniers", {});
   t.attendre(1);
-  assert.deepEqual(t.titres(), ["La charbonnière", "Un vrai repas"]);
+  assert.deepEqual(t.titres(), ["La charbonnière", "Un vrai repas", "Le Comptoir du Carrefour"]);
   const q = t.carnet()!.quetes!.quetes[0]!;
   assert.equal(q.ligne, "metier");
   assert.match(q.recompense!, /10 wotts/);
@@ -73,7 +73,7 @@ test("manger un plat cuisiné réussit « Un vrai repas » et donne une conserve
   t.attendre(3);
   assert.ok(t.reussies().includes("Un vrai repas"));
   assert.equal(t.dernier("inventaire")!.inventaire.conserve, 1);
-  assert.equal(t.titres()[1], "Un coffre à soi");
+  assert.equal(t.titres()[1], "Un vrai lit");
 });
 
 test("ce qui est déjà fait compte : un ancien bien équipé enchaîne plusieurs objectifs d'un coup", () => {
@@ -88,8 +88,7 @@ test("la prime en wotts est versée sur le compte, prise sur la trésorerie des 
   const t = monter("charbonniers", {});
   t.attendre(1);
   const avant = t.comptoir.tresorerie;
-  // Aller au Comptoir réussit « Le Comptoir du Carrefour »… une fois les objectifs d'avant faits.
-  t.joueur["quetes"].etat.finies.push("repas", "coffre", "defense", "soins");
+  // Aller au Comptoir réussit « Le Comptoir du Carrefour » (ligne « Les autres »).
   t.allerAuGuichet();
   t.attendre(1);
   assert.ok(t.reussies().includes("Le Comptoir du Carrefour"));
@@ -107,7 +106,7 @@ test("vendre une lame au Comptoir finit le métier des Charbonniers ; tout est g
   t.joueur.recevoir({ t: "comptoir", op: { genre: "vendre", objet: "lame_forgee", quantite: 1 } });
   t.attendre(1);
   assert.ok(t.reussies().includes("Le premier client"));
-  // Rechargé depuis la base : le métier est fini, il ne reste que « S'installer ».
+  // Rechargé depuis la base : le métier est fini.
   t.joueur.sauvegarder();
   const etat = t.base.chargerQuetes(t.compte.id);
   assert.ok(etat.finies.includes("vendre_lame"));
@@ -119,7 +118,6 @@ test("la trésorerie vide fait attendre la prime, versée dès qu'elle se rempli
   t.attendre(1);
   const tresor = t.comptoir.tresorerie;
   assert.ok(t.comptoir.payer(tresor));
-  t.joueur["quetes"].etat.finies.push("repas", "coffre", "defense", "soins");
   t.allerAuGuichet();
   t.attendre(1);
   assert.ok(t.reussies().includes("Le Comptoir du Carrefour"));

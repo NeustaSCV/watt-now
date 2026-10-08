@@ -17,6 +17,8 @@ function monter(inventaire: Record<string, number>, famille: Famille = "voltaiqu
   const base = new Base(":memory:");
   const compte = base.creerCompte("Rose", "potager42", famille);
   base.sauverInventaire(compte.id, inventaire);
+  // Les primes des quêtes (Book 22) faussent les comptes : ici, elles sont déjà touchées.
+  base.sauverQuetes(compte.id, { faits: {}, finies: ["comptoir"], primes: 0 });
   let instant = 1_000_000;
   const halte = new Halte(base, () => 0.5);
   halte.eteints = [];

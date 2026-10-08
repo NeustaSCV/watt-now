@@ -63,6 +63,8 @@
 | Bas droite | Boutons A, B, Mode, Objet rapide (Book 08 §3) |
 | Au sol | **Cercle de signature** autour du joueur |
 
+> **Décision (2026-10-08) : un écran dégagé sur téléphone.** Les réglages (Commandes, Son, Qualité, Quitter) sont rangés dans un petit menu derrière une **roue dentée ⚙**, en haut à droite ; restent visibles les raccourcis Sac, Fabriquer, Carte. Le **carnet** des objectifs (Book 22) se replie en un petit onglet « 📓 Carnet · 3 objectifs » : replié d'office sur un téléphone, ouvert sur ordinateur, et le choix du joueur est gardé.
+
 ---
 
 ## 4. Personnages (décidé)

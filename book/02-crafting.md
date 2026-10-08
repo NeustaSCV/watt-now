@@ -434,6 +434,36 @@ Commun à tous : couteau abîmé, briquet, gourde, bâche, sac à dos.
 
 ---
 
+## 14 bis. La gamme bushcraft (proposition P-002, retenue le 2026-10-08)
+
+Une quarantaine d'objets bushcraft étaient proposés, rangés par besoin (l'ordre de l'urgence : s'abriter, le feu, l'eau, se nourrir, porter, se défendre, se soigner). **On les filtre** avant de les construire, avec quatre questions :
+
+1. **L'objet a-t-il un effet dans un système qui existe ?** Sinon c'est un objet mort, qui attend son système : l'étendoir attend les vêtements mouillés, l'attelle les fractures, la tisane de saule la fièvre, les feuillées la dysenterie, l'aiguille d'os la couture, le panier et la claie de séchage la conservation (0b).
+2. **Demande-t-il une matière nouvelle ?** Chaque matière à ramasser (écorce, résine, argile, sable, fougères) coûte un modèle 3D, des points de ramassage et une icône (Book 21 §5) : on les ajoute par petits groupes, quand plusieurs objets en ont besoin.
+3. **Fait-il doublon ?** La cache enterrée garde ses objets après un effondrement… mais le coffre le fait déjà, puisque le terrain ne se perd pas. Écartée.
+4. **Casse-t-il un métier ou un échange ?** La pierre à aiguiser rendrait inutile la meule des Mécanistes ; la torche de résine pour tous, les lumières de famille qu'on échange. Écartées pour l'instant.
+
+**Lot 1 (0.2) : rien que des matières qu'on a déjà**, branché sur des systèmes qui existent :
+
+| Objet | Matières | Outil | Effet |
+|---|---|---|---|
+| **Ficelle** | 2 fibres | — | Lien fin : alarme, protège-bras |
+| **Bâton à fouir** | 1 branche | Couper 1, près d'un feu | **Creuser 1** (nouvelle qualité d'outil) |
+| **Foyer Dakota** | 3 branches, pas de pierres | Creuser 1 | Un feu creusé : bois brûlé ×0,6, lumière la nuit ×0,3, odeur ×0,4 (portée de la signature, Book 06) |
+| **Récupérateur de pluie** | 1 bâche, 4 branches, 1 corde | Couper 1 | Processus passif : ≈ 0,5 L par minute réelle de pluie, 5 L au plus, même hors ligne. **L'eau de pluie se boit sans bouillir** (mélangée à de l'eau brute, non). La bâche : la benne du camion, à la halte |
+| **Lit de branchages** | 6 branches | Couper 1 | Sommeil +30 % ; à moins de 3 m de l'abri, il s'ajoute à l'abri |
+| **Alarme à boîtes de conserve** | 2 boîtes vides, 1 ficelle, 2 branches | — | Un Éteint à moins de 2,5 m : elle tinte (son, message). C'est aussi un **leurre** : un bruit de 14 m de portée |
+| **Protège-bras de fortune** | 2 chiffons, 1 ficelle | Couper 1 | Une morsure sur deux glisse dessus ; il se déchire une fois sur quatre |
+| **Épieu durci au feu** | 2 branches | Couper 1, près d'un feu | Arme : peu de dégâts (0,8), la plus longue allonge (2,3 m) : on le tient à distance |
+| **Travois** | 6 branches, 2 cordes | Couper 1 | +50 kg traînés ; chargé au-delà du sac, on ne court plus |
+| **Boîte de conserve vide** | — | — | Rien ne se perd : manger une conserve laisse sa boîte |
+
+Le lit et l'alarme sont de **petites installations** : on peut les poser à 1,2 m des autres (le lit à côté de l'abri).
+
+**Lots suivants**, dans l'ordre de ce qui rapporte le plus au joueur : l'archet à feu quand le briquet s'usera ; la claie de séchage et le panier avec la conservation (0b) ; le bûcher couvert avec le bois humide (0b) ; le collet et la nasse quand la faune sera côté serveur ; l'écorce de bouleau et la résine quand assez d'objets en auront besoin.
+
+---
+
 ## 15. Règles d'équilibrage du crafting
 
 1. **Domaines :** dans ses domaines (§6), une famille doit produire **au moins 20 % moins cher** que la moyenne des autres voies. En dessous, il n'y a pas de raison de commercer.

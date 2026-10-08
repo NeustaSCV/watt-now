@@ -11,8 +11,8 @@ import { nouvellePoule, penserPoule, vuePoule, type Poule } from "../../commun/s
 import type { Apparence } from "../../commun/src/apparence.ts";
 import { INTENTION_REPOS, avancer, nettoyerIntention, type Intention, type Position } from "../../commun/src/deplacement.ts";
 import type { Bienvenue, Cible, FeuVu, InstallationVue, MessageClient, MessageServeur } from "../../commun/src/messages.ts";
-import { CAPACITE_COFFRE, CAPACITE_SAC, CONTENANTS, OBJETS, capaciteDe, estObjet, lumierePortee, nommer, poidsInventaire, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
-import { NOMS_INSTALLATIONS, RECETTES, dureeReelle, ingredientsPresents, multiplicateurQualites, recette, recettesConnues, type TypeInstallation } from "../../commun/src/recettes.ts";
+import { CAPACITE_COFFRE, CAPACITE_SAC, CONTENANTS, OBJETS, capaciteDe, estObjet, lumierePortee, nommer, poidsInventaire, traineTravois, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
+import { NOMS_INSTALLATIONS, RECETTES, dureeReelle, ingredientsPresents, multiplicateurQualites, niveauQualite, recette, recettesConnues, type TypeInstallation } from "../../commun/src/recettes.ts";
 import {
   CHARBON_PRODUIT,
   CHARGE_TROUVEE,
@@ -38,6 +38,8 @@ import {
   EFFORT_PAR_ALLURE,
   GORGEE,
   RECETTE_FEU,
+  RECETTE_DAKOTA,
+  DAKOTA,
   RESERVE_EAU_MAX,
   RESERVE_KCAL_MAX,
   allureAutorisee,
@@ -117,7 +119,7 @@ import type { SacVu, SanteVue } from "../../commun/src/messages.ts";
 import type { SacEnBase } from "./base.ts";
 import { CHARBONNIERE_ODEUR, FEU_LUMIERE_NUIT, FEU_ODEUR, stimuliJoueur, type BruitAction, type Stimulus } from "../../commun/src/signature.ts";
 import { estNuit, heureDeJeu } from "../../commun/src/temps.ts";
-import { attenuationMeteo, meteo } from "../../commun/src/meteo.ts";
+import { RECUPERATEUR_MAX_L, attenuationMeteo, meteo, pluieRecueillie } from "../../commun/src/meteo.ts";
 import { NOMBRE_ETAPES, etapesTutoriel, type EtatTutoriel, type VueTutoriel } from "../../commun/src/tutoriel.ts";
 
 const JAMAIS = Number.MAX_SAFE_INTEGER;
@@ -213,7 +215,7 @@ export class Joueur implements Voyageur {
   readonly rapport: RapportBase | null = null;
   private derniereProduction = 0;
   /** Endormi (É5) : dans un abri ou par terre. Bouger, être saisi ou être reposé réveille. */
-  private sommeil: { dansUnAbri: boolean } | null = null;
+  private sommeil: { dansUnAbri: boolean; surUnLit: boolean } | null = null;
   /** Le tutoriel en cours (null : terminé ou passé). */
   private tuto: EtatTutoriel | null;
   private derniereVerifTuto = 0;
@@ -243,6 +245,8 @@ export class Joueur implements Voyageur {
   private dernierEnvoiFeux = 0;
   private derniereRepousse = 0;
   private readonly meulesAnnoncees = new Set<number>();
+  /** Les alarmes qui tintent : jusqu'à quand (puis 20 s de silence avant de pouvoir retinter). */
+  private readonly alarmesSonnent = new Map<number, number>();
 
   private readonly base: Base;
   readonly envoyer: (message: MessageServeur) => void;
@@ -403,7 +407,7 @@ export class Joueur implements Voyageur {
         this.boire();
         return;
       case "construire_feu":
-        this.construireFeu(message.x, message.z);
+        this.construireFeu(message.x, message.z, message.dakota === true);
         return;
       case "fabriquer":
         this.fabriquer(message.recette, message.x, message.z, message.o);
@@ -836,6 +840,14 @@ export class Joueur implements Voyageur {
       }
       if (e.tenue < DELAI_MORSURE) continue;
       e.tenue = 0;
+      // Le protège-bras de fortune (P-002) : une morsure sur deux n'y passe pas ; il finit par se déchirer.
+      if ((this.inventaire.protege_bras ?? 0) > 0 && this.alea() < 0.5) {
+        if (this.alea() < 0.25) {
+          this.retirer("protege_bras", 1);
+          this.info("Les dents ont glissé sur le protège-bras… qui part en lambeaux. Refais-en un (chiffons, ficelle).");
+        } else this.info("Les dents ont glissé sur le protège-bras.");
+        continue;
+      }
       this.sante = aggraver(this.sante, "morsure", DEGATS_MORSURE, instant);
       this.envoyer({ t: "morsure" });
       this.envoyerSante(true);
@@ -1178,7 +1190,7 @@ export class Joueur implements Voyageur {
       this.mesurer("progression", `quete:${q.id}`, 1);
     }
     if (this.quetes.etat.primes > 0) this.verserPrimes();
-    const vue = this.quetes.vue(j, reussies.at(-1));
+    const vue = this.quetes.vue(j, reussies);
     const cle = JSON.stringify(vue.quetes);
     if (reussies.length > 0 || cle !== this.derniereVueQuetes) {
       this.derniereVueQuetes = cle;
@@ -1332,13 +1344,13 @@ export class Joueur implements Voyageur {
 
   // ---------- Le sommeil (É5, Book 05 §3) ----------
 
-  private endormir(dansUnAbri: boolean): void {
+  private endormir(dansUnAbri: boolean, surUnLit = false): void {
     if (this.sommeil || this.voyage) return;
     if (this.besoins.repos >= 0.97) return this.info("Tu n'as pas sommeil : reviens quand la jauge de sommeil aura baissé.");
     if (this.saisisseurs().length > 0) return;
     this.annulerAction();
     this.intention = INTENTION_REPOS;
-    this.sommeil = { dansUnAbri };
+    this.sommeil = { dansUnAbri, surUnLit };
     this.endormiDepuis = this.maintenant();
     if (this.tuto && dansUnAbri) this.tuto.dormiAbri = true;
     this.lumiere = false;
@@ -1367,7 +1379,7 @@ export class Joueur implements Voyageur {
     return this.sousLaPluie(stimuliJoueur({
       x: this.position.x,
       z: this.position.z,
-      allure: allureAutorisee(this.intention.allure, this.besoins, this.objetPorte() !== undefined),
+      allure: allureAutorisee(this.intention.allure, this.besoins, this.objetPorte() !== undefined || traineTravois(this.inventaire)),
       bouge: this.bouge,
       action: this.maintenant() < this.bruitCoupJusqua ? "coup" : (this.action?.bruit ?? "aucun"),
       lumiere: portee ? (OBJETS[portee].lumiere ?? null) : null,
@@ -1398,16 +1410,36 @@ export class Joueur implements Voyageur {
   /** Les sources fixes du terrain : feux allumés, charbonnière qui fume. */
   private sourcesTerrain(nuit: boolean): Stimulus[] {
     const s: Stimulus[] = [];
+    const instant = this.maintenant();
     for (const f of this.feux.values()) {
       if (!f.allume || f.bois <= 0) continue;
-      s.push({ genre: "odeur", x: f.x, z: f.z, ...FEU_ODEUR });
-      if (nuit) s.push({ genre: "lumiere", x: f.x, z: f.z, ...FEU_LUMIERE_NUIT });
+      // Le foyer Dakota (P-002) : la flamme reste sous terre, il fume peu.
+      const k = f.dakota ? DAKOTA : { odeur: 1, lumiere: 1 };
+      s.push({ genre: "odeur", x: f.x, z: f.z, portee: FEU_ODEUR.portee * k.odeur, intensite: FEU_ODEUR.intensite });
+      if (nuit) s.push({ genre: "lumiere", x: f.x, z: f.z, portee: FEU_LUMIERE_NUIT.portee * k.lumiere, intensite: FEU_LUMIERE_NUIT.intensite });
     }
-    const instant = this.maintenant();
+    // Une alarme qui tinte se fait entendre (les Éteints proches aussi l'entendent).
+    for (const [id, jusqua] of this.alarmesSonnent) {
+      const a = this.installations.get(id);
+      if (!a || instant >= jusqua) this.alarmesSonnent.delete(id);
+      else s.push({ genre: "son", x: a.x, z: a.z, portee: 14, intensite: 0.5 });
+    }
     for (const i of this.installations.values()) {
       if (i.type === "charbonniere" && i.etat.pretLe && instant < i.etat.pretLe) s.push({ genre: "odeur", x: i.x, z: i.z, ...CHARBONNIERE_ODEUR });
     }
     return this.sousLaPluie(s);
+  }
+
+  /** Les alarmes à boîtes de conserve (P-002) : un Éteint qui passe tout près les fait tinter. On est prévenu. */
+  private verifierAlarmes(instant: number): void {
+    for (const a of this.installations.values()) {
+      if (a.type !== "alarme_boites" || (this.alarmesSonnent.get(a.id) ?? 0) > instant - 20_000) continue;
+      const passe = this.eteints.some((e) => debout(e) && Math.hypot(e.x - a.x, e.z - a.z) < 2.5);
+      if (!passe) continue;
+      this.alarmesSonnent.set(a.id, instant + 3000);
+      this.envoyer({ t: "alarme", x: a.x, z: a.z });
+      this.info("Les boîtes de conserve tintent ! Quelque chose passe près de ton alarme.");
+    }
   }
 
   /** La vie des Éteints du terrain : ils arrivent de la lisière quand la signature les attire. */
@@ -1417,6 +1449,7 @@ export class Joueur implements Voyageur {
     const stimuli = [...this.stimuli(nuit), ...sources];
     for (const e of this.eteints) penser(e, dt, stimuli, [this.humain()], this.eteints, nuit, zoneDe("terrain"), this.alea);
     this.eteints = this.eteints.filter((e) => e.etat !== "detruit" || e.corps < DUREE_CORPS);
+    this.verifierAlarmes(instant);
 
     if (instant - this.dernierTirage >= INTERVALLE_TIRAGE) {
       this.dernierTirage = instant;
@@ -1466,14 +1499,14 @@ export class Joueur implements Voyageur {
     if (this.sommeil) {
       if (bouge || this.saisisseurs().length > 0) this.reveiller(bouge ? "" : "Réveillé en sursaut !");
       else {
-        this.besoins = dormir(this.besoins, heures, this.sommeil.dansUnAbri);
+        this.besoins = dormir(this.besoins, heures, this.sommeil.dansUnAbri, this.sommeil.surUnLit);
         if (this.besoins.repos >= 1) this.reveiller("Tu te réveilles, reposé.");
       }
     }
     if (bouge && this.action) this.annulerAction();
     // Saisi : ralenti par un, immobilisé par deux (Book 06 §2.3). Épuisé : on ne court plus.
     const frein = freinSaisie(this.saisisseurs().length);
-    let allure = allureAutorisee(this.intention.allure, this.besoins, this.objetPorte() !== undefined);
+    let allure = allureAutorisee(this.intention.allure, this.besoins, this.objetPorte() !== undefined || traineTravois(this.inventaire));
     if (allure === "course" && this.endurance < SEUIL_EPUISE) allure = "marche";
     const intention = { dx: this.intention.dx * frein, dz: this.intention.dz * frein, allure };
     let nouvelle = avancer(this.position, intention, dt, zoneDe(this.lieu));
@@ -1762,16 +1795,16 @@ export class Joueur implements Voyageur {
     if ("installation" in r.produit) {
       const type = r.produit.installation;
       if (x === undefined || z === undefined || !Number.isFinite(x) || !Number.isFinite(z)) return;
-      const erreur = this.emplacementInvalide(x, z);
+      const erreur = this.emplacementInvalide(x, z, type);
       if (erreur) return this.info(erreur);
       this.commencer(r.nom, dureeReelle(r) * facteur, () => {
-        if (!ingredientsPresents(this.inventaire, r) || this.emplacementInvalide(x, z)) return;
+        if (!ingredientsPresents(this.inventaire, r) || this.emplacementInvalide(x, z, type)) return;
         this.retirerPlusieurs(r.ingredients);
         const installation = this.base.ajouterInstallation(this.compte.id, type, x, z, Number.isFinite(o) ? (o as number) : 0);
         this.installations.set(installation.id, installation);
         this.envoyer({ t: "installation", installation });
         this.mesurer("progression", `recette:${r.id}`, 1);
-        this.noterFait(`fabrique:${r.id}`);
+      this.noterFait(`fabrique:${r.id}`);
       }, 0, r.qualites.marteler ? "lourd" : "outil");
       return;
     }
@@ -1785,13 +1818,13 @@ export class Joueur implements Voyageur {
       this.retirerPlusieurs(r.ingredients);
       this.ajouterPlusieurs({ [produit.objet]: produit.quantite });
       this.mesurer("progression", `recette:${r.id}`, 1);
-        this.noterFait(`fabrique:${r.id}`);
+      this.noterFait(`fabrique:${r.id}`);
     }, 0, r.qualites.marteler ? "lourd" : "outil");
   }
 
   /** Raison pour laquelle on ne peut pas poser quelque chose ici, ou null. */
-  private emplacementInvalide(x: number, z: number): string | null {
-    return raisonEmplacement("installation", x, z, this.position, this.feux.values(), this.installations.values());
+  private emplacementInvalide(x: number, z: number, type?: string): string | null {
+    return raisonEmplacement("installation", x, z, this.position, this.feux.values(), this.installations.values(), type);
   }
 
   /** Ce qui a repoussé (bois mort, baies) ; renvoie combien. */
@@ -1860,6 +1893,16 @@ export class Joueur implements Voyageur {
       bilan.stocke += r.stocke;
       bilan.perdu += r.perdu;
     }
+    // Les récupérateurs de pluie se remplissent quand il pleut, même hors ligne (P-002).
+    for (const r of this.installations.values()) {
+      if (r.type !== "recuperateur_pluie") continue;
+      const depuis = r.etat.majLe ?? instant;
+      const avant = r.etat.litres ?? 0;
+      const litres = Math.min(RECUPERATEUR_MAX_L, avant + pluieRecueillie(depuis, instant, this.debutMonde, RECUPERATEUR_MAX_L - avant));
+      r.etat = { ...r.etat, litres: Math.round(litres * 100) / 100, majLe: instant };
+      changes.add(r);
+      if (Math.abs(litres - avant) >= 0.05 && this.lieu === "terrain" && !this.voyage) this.envoyer({ t: "installation", installation: r });
+    }
     for (const i of changes) this.base.sauverEtatInstallation(this.compte.id, i.id, i.etat);
     return bilan;
   }
@@ -1914,21 +1957,29 @@ export class Joueur implements Voyageur {
     }, 0, "leger");
   }
 
-  private construireFeu(x: number, z: number): void {
+  private construireFeu(x: number, z: number, dakota = false): void {
     if (!Number.isFinite(x) || !Number.isFinite(z)) return;
     if (this.lieu !== "terrain") return this.info("Pas de feu ici : on ne s'installe que sur son terrain.");
     const raison = raisonEmplacement("feu", x, z, this.position, this.feux.values(), this.installations.values());
     if (raison) return this.info(raison);
     if (this.feux.size >= MAX_FEUX) return this.info(`Pas plus de ${MAX_FEUX} feux sur ton terrain.`);
-    for (const [type, n] of Object.entries(RECETTE_FEU)) {
+    const recette: Partial<Record<TypeObjet, number>> = dakota ? RECETTE_DAKOTA : RECETTE_FEU;
+    // Le foyer Dakota se creuse (P-002) : il faut de quoi creuser.
+    if (dakota && niveauQualite(this.inventaire, "creuser") < 1) return this.info("Pour creuser un foyer Dakota, il faut un bâton à fouir (une branche durcie au feu).");
+    for (const [type, n] of Object.entries(recette)) {
       if ((this.inventaire[type as TypeObjet] ?? 0) < (n ?? 0)) {
-        return this.info(`Il te faut 5 pierres et 3 branches (tu as ${this.inventaire.pierre ?? 0} pierres et ${this.inventaire.branche ?? 0} branches). On les ramasse sur ton terrain.`);
+        return this.info(
+          dakota
+            ? `Il te faut 3 branches (tu en as ${this.inventaire.branche ?? 0}).`
+            : `Il te faut 5 pierres et 3 branches (tu as ${this.inventaire.pierre ?? 0} pierres et ${this.inventaire.branche ?? 0} branches). On les ramasse sur ton terrain.`,
+        );
       }
     }
-    this.commencer("Monter un feu de camp", DUREES.construireFeu, () => {
-      for (const [type, n] of Object.entries(RECETTE_FEU)) this.retirer(type as TypeObjet, n ?? 0);
+    this.commencer(dakota ? "Creuser un foyer Dakota" : "Monter un feu de camp", DUREES.construireFeu * (dakota ? 1.6 : 1), () => {
+      for (const [type, n] of Object.entries(recette)) this.retirer(type as TypeObjet, n ?? 0);
       const id = Math.max(0, ...this.feux.keys()) + 1;
-      const feu: FeuEnBase = { id, x, z, bois: BOIS_INITIAL_FEU, allume: false, majLe: this.maintenant() };
+      const feu: FeuEnBase = { id, x, z, bois: BOIS_INITIAL_FEU, allume: false, majLe: this.maintenant(), ...(dakota ? { dakota: true } : {}) };
+      if (dakota) this.noterFait("foyer_dakota");
       this.feux.set(id, feu);
       this.base.sauverFeu(this.compte.id, feu);
       this.envoyer({ t: "feu", feu: vue(feu) });
@@ -1972,7 +2023,7 @@ export class Joueur implements Voyageur {
   }
 
   private animerPoules(instant: number, dt: number): void {
-    const qui = { x: this.position.x, z: this.position.z, allure: allureAutorisee(this.intention.allure, this.besoins, this.objetPorte() !== undefined), bouge: this.bouge };
+    const qui = { x: this.position.x, z: this.position.z, allure: allureAutorisee(this.intention.allure, this.besoins, this.objetPorte() !== undefined || traineTravois(this.inventaire)), bouge: this.bouge };
     for (const p of this.peuplerPoules()) {
       const avant = p.etat;
       penserPoule(p, dt, this.sommeil ? null : qui, this.alea);
@@ -2076,6 +2127,8 @@ export class Joueur implements Voyageur {
     this.commencer(`Manger : ${nommer(objet, 1)}`, DUREES.manger, () => {
       if ((this.inventaire[objet] ?? 0) < 1) return;
       this.retirer(objet, 1);
+      // Rien ne se perd (P-002) : la conserve laisse sa boîte.
+      if (objet === "conserve") this.ajouterPlusieurs({ boite_vide: 1 });
       // Manger désaltère aussi : l'eau des fruits, des champignons, des plats (2026-10-08).
       this.besoins = { ...this.besoins, kcal: Math.min(RESERVE_KCAL_MAX, this.besoins.kcal + kcal), eau: Math.min(RESERVE_EAU_MAX, this.besoins.eau + (OBJETS[objet].eau ?? 0)) };
       // Un plat chaud réconforte et cale (2026-10-08).
@@ -2137,9 +2190,33 @@ export class Joueur implements Voyageur {
         // Immédiat : on le prend dans les bras (on marche, on ne court plus).
         i.etat = { ...i.etat, portee: true };
         return maj();
-      case "dormir":
-        if (i.type !== "abri") return;
-        return this.endormir(true);
+      case "dormir": {
+        // Un lit de branchages à côté de l'abri (ou l'abri à côté du lit) : on dort mieux (P-002).
+        const pres = (type: string) => [...this.installations.values()].some((x) => x.type === type && Math.hypot(x.x - i.x, x.z - i.z) <= 3);
+        if (i.type === "abri") return this.endormir(true, pres("lit_branchages"));
+        if (i.type === "lit_branchages") return this.endormir(pres("abri"), true);
+        return;
+      }
+      case "remplir_pluie": {
+        if (i.type !== "recuperateur_pluie") return;
+        this.mettreAJourBase(this.maintenant());
+        const l = i.etat.litres ?? 0;
+        if (!this.inventaire.gourde) return this.info("Il te faut une gourde.");
+        const place = CONTENANCE_GOURDE - (this.gourde.contenu === "potable" ? this.gourde.litres : 0);
+        if (l < 0.1) return this.info("La bassine est vide : il faut attendre la pluie.");
+        if (place < 0.05) return this.info("Ta gourde est déjà pleine d'eau potable.");
+        return this.commencer("Remplir la gourde (eau de pluie)", DUREES.remplirGourde, () => {
+          const verse = Math.min(place, i.etat.litres ?? 0);
+          // L'eau du ciel, tombée sur une bâche propre : elle se boit sans bouillir. Mélangée à de l'eau brute, non.
+          const brute = this.gourde.contenu === "brute" && this.gourde.litres > 0.01;
+          this.gourde = brute ? { contenu: "brute", litres: Math.min(CONTENANCE_GOURDE, this.gourde.litres + verse) } : { contenu: "potable", litres: Math.min(CONTENANCE_GOURDE, (this.gourde.contenu === "potable" ? this.gourde.litres : 0) + verse) };
+          i.etat = { ...i.etat, litres: Math.max(0, (i.etat.litres ?? 0) - verse) };
+          maj();
+          this.envoyerBesoins();
+          this.noterFait("eau_de_pluie");
+          this.info(brute ? "Mélangée à l'eau brute de la mare, elle ne se boit pas : fais bouillir la gourde." : "De l'eau de pluie : elle se boit telle quelle.");
+        });
+      }
       case "allumer_meule": {
         if (i.type !== "charbonniere" || i.etat.pretLe) return;
         if (!(this.inventaire.pierre_a_feu || this.inventaire.briquet)) return this.info("Tu n'as rien pour allumer la meule : il faut une pierre à feu ou un briquet.");
@@ -2319,5 +2396,5 @@ function poidsDe(objets: Inventaire): number {
 
 
 function vue(feu: FeuEnBase): FeuVu {
-  return { id: feu.id, x: feu.x, z: feu.z, bois: Math.round(feu.bois * 100) / 100, aspect: aspectFeu(feu) };
+  return { id: feu.id, x: feu.x, z: feu.z, bois: Math.round(feu.bois * 100) / 100, aspect: aspectFeu(feu), ...(feu.dakota ? { dakota: true } : {}) };
 }

@@ -207,6 +207,8 @@ const COLONNES_AJOUTEES: [table: string, colonne: string, definition: string][] 
   ["personnages", "apparence", "TEXT NOT NULL DEFAULT ''"],
   // L'arme équipée pour le combat (P-005) ; vide : la meilleure du sac.
   ["personnages", "arme", "TEXT NOT NULL DEFAULT ''"],
+  // Le foyer Dakota (P-002).
+  ["feux", "dakota", "INTEGER NOT NULL DEFAULT 0"],
   ["personnages", "watts", "TEXT NOT NULL DEFAULT ''"],
   ["personnages", "compte_watts", "TEXT NOT NULL DEFAULT ''"],
   // La faune du terrain (2026-10-08) : quand on a pris des poules (elles reviennent au bout de 2 h).
@@ -559,7 +561,8 @@ export class Base {
   }
 
   chargerFeux(compteId: number): FeuEnBase[] {
-    const lignes = this.db.prepare("SELECT id, x, z, bois, allume, maj_le FROM feux WHERE compte_id = ? ORDER BY id").all(compteId) as {
+    const lignes = this.db.prepare("SELECT id, x, z, bois, allume, maj_le, dakota FROM feux WHERE compte_id = ? ORDER BY id").all(compteId) as {
+      dakota: number;
       id: number;
       x: number;
       z: number;
@@ -567,16 +570,16 @@ export class Base {
       allume: number;
       maj_le: number;
     }[];
-    return lignes.map((l) => ({ id: l.id, x: l.x, z: l.z, bois: l.bois, allume: l.allume === 1, majLe: l.maj_le }));
+    return lignes.map((l) => ({ id: l.id, x: l.x, z: l.z, bois: l.bois, allume: l.allume === 1, majLe: l.maj_le, ...(l.dakota ? { dakota: true } : {}) }));
   }
 
   sauverFeu(compteId: number, feu: FeuEnBase): void {
     this.db
       .prepare(
-        `INSERT INTO feux (compte_id, id, x, z, bois, allume, maj_le) VALUES (?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO feux (compte_id, id, x, z, bois, allume, maj_le, dakota) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT (compte_id, id) DO UPDATE SET bois = excluded.bois, allume = excluded.allume, maj_le = excluded.maj_le`,
       )
-      .run(compteId, feu.id, feu.x, feu.z, feu.bois, feu.allume ? 1 : 0, feu.majLe);
+      .run(compteId, feu.id, feu.x, feu.z, feu.bois, feu.allume ? 1 : 0, feu.majLe, feu.dakota ? 1 : 0);
   }
 
   chargerInstallations(compteId: number): InstallationVue[] {
