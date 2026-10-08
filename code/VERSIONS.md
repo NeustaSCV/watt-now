@@ -12,6 +12,14 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
+## 0.5.3 · prête à déployer (2026-10-09)
+
+- **Construire** : la barre de placement est une petite barre en bas, plus au centre. On voit enfin où l'on pose. Sur téléphone, elle prend la place de A et B, et le joystick reste pour pousser l'objet.
+- **Améliorer** : après un geste, la fiche se ferme seule, et l'on voit tout de suite l'objet amélioré.
+- **Messages plus courts** : deux lignes au plus, un conseil sur une ligne, plus jamais coupés par « … ». Quand il y a beaucoup à dire, deux messages se suivent.
+- **Fabriquer, sur ordinateur** : les sept onglets sont tous visibles.
+- **La brume de l'aube** est plus légère et reste au ras de l'herbe. Elle ne devrait plus prendre de reflets de couleur sur iPhone.
+
 ## 0.5.2 · prête à déployer (2026-10-08)
 
 - **Le sac, en vertical** : la grille prend toute la place libre, et on voit tous ses objets d'un coup. La fiche de l'objet touché ne prend que la hauteur dont elle a besoin.

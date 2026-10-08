@@ -47,7 +47,8 @@ test("un outil manque : on dit lequel, et où le trouver", () => {
   const velo = t.j.bienvenue(0).ressources.find((r) => r.type === "velo")!;
   t.j.position = { x: velo.x + 1, z: velo.z, o: 0 };
   t.j.recevoir({ t: "interagir", cible: { genre: "ressource", id: velo.id }, verbe: "demonter" });
-  assert.match(t.infos().at(-1)!, /clé plate.*caisse à outils/);
+  // Deux outils manquent : un message court pour chacun (deux lignes au plus).
+  assert.match(t.infos().slice(-2).join(" "), /clé plate.*caisse à outils/);
 });
 
 test("rassasié, on ne gaspille pas sa nourriture ; un indice ne se répète pas aussitôt", () => {

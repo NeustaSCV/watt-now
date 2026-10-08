@@ -935,7 +935,7 @@ function indice(sorte: string, texte: string, periodeMs = 20_000): void {
 
 function agir(a: ActionProposee | null): void {
   // Rien à portée : on dit comment trouver quelque chose à faire, plutôt que de ne rien faire.
-  if (!a) return indice("rien", "Rien à portée de main : approche-toi d'un objet. Quand un cercle apparaît au sol, tu peux agir.");
+  if (!a) return indice("rien", "Rien à portée : approche-toi jusqu'à voir un cercle au sol.");
   if ("message" in a) envoyer(a.message);
   else if ("examiner" in a) hud.message(a.examiner);
   else if ("ouvrirCoffre" in a) {
@@ -1075,7 +1075,7 @@ function executer(c: Commande): void {
       carte.basculer(lieu, position ? (sortieIci(lieu, position.x, position.z)?.vers ?? null) : null);
       return;
     case "lumiere":
-      if (!lumierePortee(inventaire)) return hud.message("Tu n'as rien pour t'éclairer : une torche, une lampe frontale ou une lanterne. Chacune est dans le kit de départ d'une famille : échange-la avec un autre joueur.");
+      if (!lumierePortee(inventaire)) return hud.message("Rien pour t'éclairer : torche, frontale ou lanterne sont dans le kit d'une famille : échange-la.");
       envoyer({ t: "lumiere", allumee: !lumiere });
       return;
     case "tourner+":
@@ -1282,12 +1282,12 @@ function boucle(instant: number): void {
       const raison = porteEscabeau()
         ? "Les bras chargés, on ne court pas : pose d'abord l'escabeau."
         : aFaim(besoins)
-          ? "Trop faible pour courir : tu as faim. Mange quelque chose (Sac)."
+          ? "Trop faible pour courir : tu as faim. Mange (Sac)."
           : aSoif(besoins)
-            ? "Trop faible pour courir : tu as soif. Bois à ta gourde (Sac)."
+            ? "Trop faible pour courir : tu as soif. Bois (Sac)."
             : fatigue(besoins)
               ? "Trop épuisé pour courir : dors dans un abri."
-              : "À bout de souffle : marche un moment, ton endurance remonte vite.";
+              : "À bout de souffle : marche un peu, ça revient vite.";
       indice("course", raison);
     }
     // Pendant la pose, c'est le fantôme qui bouge, pas le personnage (0.3) : les touches et le joystick le poussent.

@@ -3,7 +3,7 @@
 
 import { raisonEmplacement } from "../../commun/src/emplacement.ts";
 import { RASSASIE_HEURES } from "../../commun/src/survie.ts";
-import { ceQuiManque, outilsManquants, ouTrouverPhrase } from "../../commun/src/aide-fabrication.ts";
+import { ceQuiManqueBref, outilsManquantsBref, ouTrouverPhrase } from "../../commun/src/aide-fabrication.ts";
 import { categorieAction, type GenreMesure } from "./mesures.ts";
 import { REGLAGES } from "../../commun/src/reglages.ts";
 import { enSaison, etatDuFruitier, jourDuCalendrier, prochaineRecolte } from "../../commun/src/calendrier.ts";
@@ -487,7 +487,7 @@ export class Joueur implements Voyageur {
         this.fabriquer(message.recette, message.x, message.z, message.o);
         return;
       case "lumiere":
-        if (message.allumee && !lumierePortee(this.inventaire)) return this.info("Tu n'as rien pour t'éclairer : une torche, une lampe frontale ou une lanterne. Chacune est dans le kit de départ d'une famille : échange-la avec un autre joueur.");
+        if (message.allumee && !lumierePortee(this.inventaire)) return this.info("Rien pour t'éclairer : torche, frontale ou lanterne sont dans le kit d'une famille : échange-la.");
         if (message.allumee && lumierePortee(this.inventaire) === "lampe_frontale" && (this.charges.petite_batterie ?? 0) <= 0.1) {
           return this.info("La petite batterie est vide : recharge-la au banc de recharge.");
         }
@@ -678,7 +678,7 @@ export class Joueur implements Voyageur {
         const n = Math.floor(op.quantite);
         if (!(n >= 1) || (this.comptoir.stock[op.objet] ?? 0) < n || !estObjet(op.objet)) return;
         const total = prixVente(op.objet) * n;
-        if (total > enPoche + 1e-6) return this.info(`Il te faut ${formaterWotts(total)} en bons. Pour en gagner : dépose de l'électricité au guichet, vends ce que tu as en trop, ou pédale pour les Compteurs.`);
+        if (total > enPoche + 1e-6) return this.info(`Il te faut ${formaterWotts(total)} en bons. Gagne-les : dépose de l'électricité, vends, ou pédale pour les Compteurs.`);
         if (poidsInventaire(this.inventaire) + OBJETS[op.objet].poids * n > capaciteDe(this.inventaire)) return this.sacTropLourd();
         if (!this.comptoir.sortirDuStock(op.objet, n)) return;
         this.poche = ajouterWotts(this.poche, -total, instant);
@@ -828,8 +828,8 @@ export class Joueur implements Voyageur {
     const coup = { t: "coup" as const, id: cible.id, x: cible.x, z: cible.z, resultat };
     if (this.vivant) this.vivant.diffuser(coup);
     else this.envoyer(coup);
-    if (resultat === "a_terre") this.indice("a_terre", "Il est à terre, mais il se relèvera : frappe-le encore pour l'achever. Un coup appuyé à la tête (maintenir A, puis relâcher) l'arrête net.");
-    if (resultat === "detruit" && arme.objet === null) this.info(`À mains nues, ça ne suffira pas : prends une arme (gourdin, marteau, hache…). ${ouTrouverPhrase("gourdin")}`);
+    if (resultat === "a_terre") this.indice("a_terre", "Achève-le : frappe à la tête (maintiens {agir}, relâche).");
+    if (resultat === "detruit" && arme.objet === null) this.info(`À mains nues, ça ne suffira pas : prends une arme. ${ouTrouverPhrase("gourdin")}`);
   }
 
   /** Équiper une arme pour le mode Combat (P-005) : elle doit être dans le sac. null : revenir au choix automatique. */
@@ -1146,7 +1146,8 @@ export class Joueur implements Voyageur {
     this.endurance = ENDURANCE_CONVALESCENCE;
     this.sauvegarder();
     this.envoyer({ t: "effondrement" });
-    this.info(`${raison} Des inconnus t'ont ramené chez toi. Ton sac est resté là-bas : tu n'as plus que tes poches (10 kg). Retourne le chercher, ou fabrique un sac de fortune (4 branches, 2 cordes).`);
+    this.info(`${raison} Des inconnus t'ont ramené chez toi, sans ton sac.`);
+    this.info("Tu n'as plus que tes poches (10 kg) : va reprendre ton sac, ou fabrique un sac de fortune.");
     this.envoyer(this.bienvenue(this.debutMonde));
   }
 
@@ -1279,10 +1280,9 @@ export class Joueur implements Voyageur {
     const liste = (inv: Inventaire) => (Object.entries(inv) as [TypeObjet, number][]).map(([t, k]) => `${nommer(t, k)} (${kgTexte(OBJETS[t].poids * k)})`).join(", ");
     if (Object.keys(pris).length) this.ajouterPlusieurs(pris);
     if (Object.keys(laisse).length) this.poserAuSol(laisse);
-    const parties = [];
-    if (Object.keys(pris).length) parties.push(`Dans le fatras, tu trouves aussi : ${liste(pris)}.`);
-    if (Object.keys(laisse).length) parties.push(`Trop lourd pour ton sac, laissé par terre : ${liste(laisse)}. Fais de la place (Sac → Jeter, Démonter) pour le prendre.`);
-    if (parties.length) this.info(parties.join(" "));
+    // Deux messages courts plutôt qu'un long : chacun tient en deux lignes en haut de l'écran.
+    if (Object.keys(pris).length) this.info(`Dans le fatras, tu trouves aussi : ${liste(pris)}.`);
+    if (Object.keys(laisse).length) this.info(`Trop lourd, laissé par terre : ${liste(laisse)}. Fais de la place pour le prendre.`);
   }
 
   /** Démonter un vestige du sac en composants (Vestiges, lot 1 ; table DEMONTAGE). */
@@ -1291,7 +1291,7 @@ export class Joueur implements Voyageur {
     const d = DEMONTAGE[objet];
     if (!d) return this.info(`${OBJETS[objet].nom[0]!.toUpperCase()}${OBJETS[objet].nom.slice(1)} : rien à en tirer en le démontant, pour l'instant.`);
     const facteur = multiplicateurQualites(this.inventaire, d.qualites);
-    if (facteur === null) return this.info(outilsManquants(d.qualites, this.inventaire).join(" "));
+    if (facteur === null) return this.infos(outilsManquantsBref(d.qualites, this.inventaire));
     // Le poids d'après : le démontage laisse le rebut sur place, mais une pyramide de rouleaux pèse toujours son poids.
     const apres: Inventaire = { ...this.inventaire, [objet]: (this.inventaire[objet] ?? 0) - 1 };
     for (const [t, k] of Object.entries(d.donne) as [TypeObjet, number][]) apres[t] = (apres[t] ?? 0) + k;
@@ -2021,6 +2021,11 @@ export class Joueur implements Voyageur {
     this.envoyer({ t: "info", texte });
   }
 
+  /** Plusieurs messages courts, dans l'ordre (chacun tient en deux lignes en haut de l'écran). */
+  private infos(textes: string[]): void {
+    for (const texte of textes) this.info(texte);
+  }
+
   private proche(x: number, z: number, distance = DISTANCE_INTERACTION): boolean {
     return Math.hypot(this.position.x - x, this.position.z - z) <= distance;
   }
@@ -2063,7 +2068,7 @@ export class Joueur implements Voyageur {
     if (!enSaison(r.type, jour)) return this.info(etatDuFruitier(r.type, jour) ?? `Ce n'est pas la saison : à partir du ${prochaineRecolte(r.type)}.`);
     if (usage.escabeau && !this.escabeauAuPied(r.x, r.z)) return this.info("Les fruits sont trop haut : pose un escabeau au pied de l'arbre, dans le cercle.");
     const facteur = multiplicateurQualites(this.inventaire, usage.qualites);
-    if (facteur === null) return this.info(outilsManquants(usage.qualites, this.inventaire).join(" "));
+    if (facteur === null) return this.infos(outilsManquantsBref(usage.qualites, this.inventaire));
     if (poidsInventaire(this.inventaire) + poidsDe(usage.donne) > capaciteDe(this.inventaire)) return this.sacTropLourd();
     this.commencer(usage.libelle, (usage.duree * facteur) / REGLAGES.gestes_vitesse, () => {
       const instant = this.maintenant();
@@ -2083,8 +2088,8 @@ export class Joueur implements Voyageur {
         const wh = this.ajouterCharge("batterie_voiture", this.cooperatives.prendreBatterie(this.compte.id));
         this.info(
           wh >= 1
-            ? `Tu desserres les cosses : la batterie du tracteur est à toi, ${Math.round(wh)} Wh dedans. Le klaxon ne sonnera plus.`
-            : "Tu desserres les cosses : la batterie du tracteur est à toi, mais vide. Le klaxon l'a épuisée ; un banc de recharge la remplira.",
+            ? `Tu desserres les cosses : la batterie du tracteur est à toi, ${Math.round(wh)} Wh dedans. Le klaxon se tait.`
+            : "La batterie du tracteur est à toi, mais vide : le klaxon l'a épuisée. Recharge-la au banc.",
         );
       } else for (const b of BATTERIES) if (usage.donne[b]) this.ajouterCharge(b, CHARGE_TROUVEE[b] * (usage.donne[b] ?? 0));
       // Vestiges, lot 1 : une fouille rapporte aussi du bric-à-brac, tiré dans la table du lieu.
@@ -2110,10 +2115,8 @@ export class Joueur implements Voyageur {
   private sacTropLourd(): void {
     const capacite = capaciteDe(this.inventaire);
     const sansSac = capacite < CAPACITE_SAC && !(this.inventaire.sac_fortune ?? 0);
-    this.info(
-      `${sansSac ? "Tes poches sont pleines" : "Ton sac est trop lourd"} (${Math.round(poidsInventaire(this.inventaire))} kg sur ${capacite}) : jette ce qui ne sert pas (Sac → Jeter) ou range-le dans un coffre.` +
-        (sansSac ? " Sans sac, tu ne portes que 10 kg : retourne chercher le tien, ou fabrique un sac de fortune (4 branches, 2 cordes)." : ""),
-    );
+    this.info(`${sansSac ? "Tes poches sont pleines" : "Ton sac est trop lourd"} (${Math.round(poidsInventaire(this.inventaire))} kg sur ${capacite}) : jette (Sac → Jeter) ou range dans un coffre.`);
+    if (sansSac) this.info("Sans sac, tu ne portes que 10 kg : reprends le tien, ou fabrique un sac de fortune (4 branches, 2 cordes).");
   }
 
   /** Fabriquer un objet ou poser une installation (Book 02 §2). */
@@ -2121,9 +2124,9 @@ export class Joueur implements Voyageur {
     const r = recette(id);
     if (!r || !recettesConnues(this.compte.famille).includes(r)) return this.info("Tu ne connais pas cette recette.");
     if (this.lieu !== "terrain" && ("installation" in r.produit || r.installation)) return this.info("Ça se construit chez toi, sur ton terrain.");
-    if (!ingredientsPresents(this.inventaire, r)) return this.info(ceQuiManque(r, this.inventaire).join(" "));
+    if (!ingredientsPresents(this.inventaire, r)) return this.info(ceQuiManqueBref(r, this.inventaire));
     const facteur = multiplicateurQualites(this.inventaire, r.qualites);
-    if (facteur === null) return this.info(outilsManquants(r.qualites, this.inventaire).join(" "));
+    if (facteur === null) return this.infos(outilsManquantsBref(r.qualites, this.inventaire));
     if (r.feu && ![...this.feux.values()].some((f) => f.allume && f.bois > 0 && !f.couvert && this.proche(f.x, f.z, 2.5))) {
       return this.info("Ça se cuisine près d'un feu allumé : approche-toi de ton feu (ou allumes-en un).");
     }
@@ -2338,7 +2341,7 @@ export class Joueur implements Voyageur {
     if (raison) return this.info(raison);
     if (this.feux.size >= MAX_FOYERS) {
       return this.info(
-        `Pas plus de ${MAX_FOYERS} foyers sur ton terrain. Transforme plutôt celui que tu as : approche-toi d'un feu, ${dakota ? "et creuse-le en Dakota" : "et améliore-le"}, ou démonte-le.`,
+        `Pas plus de ${MAX_FOYERS} foyers sur ton terrain : approche-toi d'un feu et ${dakota ? "creuse-le en Dakota" : "améliore-le"}, ou démonte-le.`,
       );
     }
     const recette: Partial<Record<TypeObjet, number>> = dakota ? RECETTE_DAKOTA : RECETTE_FEU;
@@ -2349,7 +2352,7 @@ export class Joueur implements Voyageur {
         return this.info(
           dakota
             ? `Il te faut 3 branches (tu en as ${this.inventaire.branche ?? 0}).`
-            : `Il te faut 5 pierres et 3 branches (tu as ${this.inventaire.pierre ?? 0} pierres et ${this.inventaire.branche ?? 0} branches). On les ramasse sur ton terrain.`,
+            : `Il te faut 5 pierres et 3 branches (tu as ${this.inventaire.pierre ?? 0} et ${this.inventaire.branche ?? 0}), à ramasser sur ton terrain.`,
         );
       }
     }
@@ -2380,7 +2383,7 @@ export class Joueur implements Voyageur {
     if (feu.allume) return;
     if (feu.bois <= 0) return this.info("Il faut d'abord du bois : ajoute une branche ou une bûche.");
     const outil = (this.inventaire.pierre_a_feu ?? 0) > 0 ? "la pierre à feu" : (this.inventaire.briquet ?? 0) > 0 ? "le briquet" : null;
-    if (!outil) return this.info(`Tu n'as rien pour allumer le feu : il faut un briquet ou une pierre à feu. ${ouTrouverPhrase("briquet")}`);
+    if (!outil) return this.info(`Rien pour allumer le feu : il faut un briquet ou une pierre à feu. ${ouTrouverPhrase("briquet")}`);
     this.commencer(`Allumer le feu avec ${outil}`, DUREES.allumer, () => {
       if (feu.bois <= 0) return;
       feu.allume = true;
@@ -2411,7 +2414,7 @@ export class Joueur implements Voyageur {
       // Seulement pour qui pourrait chasser (une arme en main), pas avant d'en avoir attrapé une, et rarement.
       const chasseur = armeEnMain(this.inventaire, this.armeEquipee).objet !== null && (this.quetes.etat.faits.poule_attrapee ?? 0) === 0;
       if (chasseur && avant !== "fuit" && p.etat === "fuit" && qui.bouge && qui.allure !== "discrete") {
-        this.indice("poule", "Les poules se méfient : approche-toi en allure discrète ({discret}), sans courir, et frappe pendant qu'elles picorent.", 10 * 60_000);
+        this.indice("poule", "Les poules se méfient : approche en discret ({discret}).", 10 * 60_000);
       }
     }
     // Les poules : seulement quand elles ont bougé (elles passent beaucoup de temps à gratter sur place).
@@ -2434,7 +2437,7 @@ export class Joueur implements Voyageur {
     if (!p) return;
     if (this.objetPorte()) return this.info("Tu as les bras pris : pose d'abord l'escabeau.");
     const arme = this.armeDuCombat();
-    if (!arme.objet) return this.info(`À mains nues, elle t'échappe : il te faut au moins un gourdin, un couteau ou un outil. ${ouTrouverPhrase("gourdin")}`);
+    if (!arme.objet) return this.info(`À mains nues, elle t'échappe : prends un gourdin. ${ouTrouverPhrase("gourdin")}`);
     const d = Math.hypot(p.x - this.position.x, p.z - this.position.z);
     if (d > arme.allonge + 0.3) return this.info(`Trop loin : approche-toi doucement en allure discrète (${p.etat === "fuit" ? "elle détale : attends qu'elle se calme" : "à un mètre"}).`);
     // Une poule qui picore ne voit rien venir ; une poule qui guette esquive souvent ; une poule qui fuit, jamais.
@@ -2443,7 +2446,7 @@ export class Joueur implements Voyageur {
       penserPoule(p, 0, { x: this.position.x, z: this.position.z, allure: "course", bouge: true }, this.alea);
       return this.info(
         p.etat === "inquiete"
-          ? "Raté : elle te guettait. Attends qu'elle se remette à picorer avant de frapper, et approche en allure discrète."
+          ? "Raté : elle te guettait. Attends qu'elle picore de nouveau, et approche en allure discrète."
           : "Raté : elle s'enfuit en caquetant. Approche en allure discrète, sans geste brusque.",
       );
     }
@@ -2566,7 +2569,7 @@ export class Joueur implements Voyageur {
     }
     const facteur = multiplicateurQualites(this.inventaire, e.qualites);
     if (facteur === null) {
-      this.info(outilsManquants(e.qualites, this.inventaire).join(" "));
+      this.infos(outilsManquantsBref(e.qualites, this.inventaire));
       return null;
     }
     return { cout, dureeS: Math.max(2, e.duree / REGLAGES.fabrication_acceleration) * facteur };
@@ -2744,7 +2747,7 @@ export class Joueur implements Voyageur {
     const proches = [...this.feux.values()].filter((f) => f.allume && f.bois > 0 && !f.couvert && this.proche(f.x, f.z, 2.5));
     const niveau = r.feuNiveau ?? 1;
     const foyer = proches.filter((f) => effetsFeu(f).cuisine >= niveau).sort((a, b) => effetsFeu(b).plats - effetsFeu(a).plats)[0];
-    if (!foyer) return { refus: "Ça mijote longtemps, la marmite pendue à la crémaillère : il faut un foyer de cuisine. Améliore ton feu (approche-toi, puis « Améliorer »)." };
+    if (!foyer) return { refus: "Ça mijote à la crémaillère : il faut un foyer de cuisine. Améliore ton feu (« Améliorer »)." };
     const parPlat = { bois: (r.boisFeu ?? 0) * (foyer.accessoires?.marmite ? 0.5 : 1), eau: r.eau ?? 0 };
     if (parPlat.eau > 0 && this.gourde.litres < parPlat.eau - 1e-9) return { refus: `Il faut ${String(parPlat.eau).replace(".", ",")} L d'eau dans ta gourde (celle de la mare suffit : elle va bouillir).` };
     if (parPlat.bois > 0 && foyer.bois < parPlat.bois - 1e-9) return { refus: "Le feu n'a pas assez de bois pour une longue cuisson : ajoute une bûche." };
@@ -2771,7 +2774,7 @@ export class Joueur implements Voyageur {
   private signalerFeux(feu: FeuEnBase): void {
     const n = [...this.feux.values()].filter((f) => f.allume && f.bois > 0 && !f.couvert).length;
     if (n < 2 || !feu.allume) return;
-    this.indice("feux_allumes", `${n === 2 ? "Deux" : n === 3 ? "Trois" : n} feux allumés : chacun s'ajoute à ce que sentent les Éteints. Un seul bon foyer attire moins.`, 5 * 60_000);
+    this.indice("feux_allumes", `${n === 2 ? "Deux" : n === 3 ? "Trois" : n} feux : chacun attire les Éteints. Un seul suffit.`, 5 * 60_000);
   }
 
   /** Le muret réflecteur : derrière le feu, pour renvoyer la chaleur vers l'abri le plus proche (sinon vers le maçon). */
@@ -2879,7 +2882,7 @@ export class Joueur implements Voyageur {
           this.base.retirerInstallation(this.compte.id, i.id);
           this.envoyer({ t: "installation_retiree", id: i.id });
           if (Object.keys(rend).length) this.ajouterPlusieurs(rend);
-          this.info(`${nom} démonté${i.type === "recuperateur_pluie" && (i.etat.litres ?? 0) > 0.05 ? " (l'eau s'est répandue)" : ""} : la moitié des matériaux naturels, et tout le reste, est dans ton sac.`);
+          this.info(`${nom} démonté${i.type === "recuperateur_pluie" && (i.etat.litres ?? 0) > 0.05 ? " (eau perdue)" : ""}. Dans ton sac : la moitié des matériaux naturels, tout le reste.`);
         }, 0, "outil");
       }
     }
@@ -2897,7 +2900,7 @@ export class Joueur implements Voyageur {
     if (!i) return;
     if (!this.proche(i.x, i.z, DISTANCE_INTERACTION + 0.6)) return this.info("Approche-toi.");
     const famille = this.famillePour(i.type);
-    if (famille !== "tous" && famille !== this.compte.famille) return this.info("Tu ne sais pas te servir de ça : c'est un savoir d'une autre famille. Échange avec un joueur de cette famille à la halte ou au Carrefour.");
+    if (famille !== "tous" && famille !== this.compte.famille) return this.info("C'est le savoir d'une autre famille : échange avec l'un des siens, à la halte ou au Carrefour.");
     const maj = () => {
       this.base.sauverEtatInstallation(this.compte.id, i.id, i.etat);
       this.envoyer({ t: "installation", installation: i });

@@ -94,7 +94,7 @@ const INSTALLER: Quete[] = [
     titre: "Un feu qui ne se voit pas",
     texte: "La nuit, un feu se voit de loin. Durcis une branche au feu pour en faire un bâton à fouir, puis creuse un foyer Dakota : ton feu de camp lui-même (examine-le), ou un nouveau, depuis Fabriquer.",
     objectifs: [{ libelle: "Foyer Dakota creusé", condition: fait("foyer_dakota") }],
-    lecon: "La flamme reste dans le sol : trois fois moins de lumière, moins de fumée, moins de bois.",
+    lecon: "La flamme reste dans le sol : moins de lumière, moins de fumée, moins de bois.",
     recompense: { objets: { conserve: 1 } },
   },
   {
@@ -103,7 +103,7 @@ const INSTALLER: Quete[] = [
     titre: "De quoi se défendre",
     texte: "Les poings, c'est pour les films. Fabrique un gourdin ou un épieu durci au feu, ou garde ta hache sous la main.",
     objectifs: [{ libelle: "Gourdin, épieu ou hache", condition: { a: "objet", types: ["gourdin", "epieu", "hache"], n: 1 } }],
-    lecon: "Choisis ton arme dans le sac (« Équiper pour le combat »). L'épieu les tient à distance : ils saisissent avant de mordre.",
+    lecon: "Équipe ton arme depuis le sac. L'épieu les tient à distance, avant qu'ils saisissent.",
     recompense: { objets: { conserve: 1 } },
   },
   {
@@ -112,7 +112,7 @@ const INSTALLER: Quete[] = [
     titre: "Être prévenu",
     texte: "Deux boîtes de conserve vides (mange tes conserves), une ficelle de fibres, deux branches : une alarme le long du chemin.",
     objectifs: [{ libelle: "Alarme posée", condition: installation("alarme_boites") }],
-    lecon: "Si un Éteint passe, les boîtes tintent. Lui aussi les entend : une alarme, c'est aussi un leurre.",
+    lecon: "Un Éteint passe, les boîtes tintent. Lui aussi les entend : c'est aussi un leurre.",
     recompense: { wotts: 10 },
   },
   {
@@ -149,7 +149,7 @@ const INSTALLER: Quete[] = [
     titre: "Un foyer qui tient la nuit",
     texte: "Un feu de camp mange son bois et se voit de loin. Approche-toi du tien, examine-le, et maçonne-le en foyer de pierres (des pierres, deux bûches, une pierre pour marteler).",
     objectifs: [{ libelle: "Foyer de pierres", condition: fait("foyer:foyer_pierres") }],
-    lecon: "À l'abri du vent, il brûle moins. Couvert sous la cendre, il tient la nuit et se ranime sans briquet. Son muret réchauffe l'abri voisin.",
+    lecon: "Couvert, il tient la nuit et repart sans briquet. Son muret chauffe l'abri.",
     recompense: { wotts: 10 },
   },
   {
@@ -158,7 +158,7 @@ const INSTALLER: Quete[] = [
     titre: "Une vraie cuisine",
     texte: "Un trépied, une crémaillère, une grille (un rouleau de grillage, ou deux barres de métal) : ton foyer devient une cuisine.",
     objectifs: [{ libelle: "Foyer de cuisine", condition: fait("foyer:foyer_cuisine") }],
-    lecon: "Deux plats à la fois, les soupes mijotées, l'eau qui bout deux fois plus vite. Un seul bon foyer fait mieux que trois feux.",
+    lecon: "Deux plats à la fois, des mijotés, l'eau bout plus vite. Un bon foyer vaut trois feux.",
     recompense: { objets: { conserve: 1 } },
   },
 ];
@@ -172,7 +172,7 @@ const AUTRES: Quete[] = [
     titre: "Le Comptoir du Carrefour",
     texte: "Au-delà de la station-service, les Compteurs tiennent le Comptoir : ils achètent, vendent, et paient en wotts. Va les voir.",
     objectifs: [{ libelle: "Arrivé au Comptoir", condition: fait("visite:comptoir") }],
-    lecon: "Les Compteurs tamponnent tout, mais ils sont honnêtes. Leurs prix sont affichés au guichet.",
+    lecon: "Les Compteurs tamponnent tout, mais sont honnêtes. Les prix sont au guichet.",
     recompense: { wotts: 10 },
   },
   {
@@ -249,7 +249,7 @@ const METIER: Quete[] = [
     titre: "Le premier client",
     texte: "Vends une lame forgée au Comptoir. Les Compteurs la revendront à ceux qui ne savent pas forger.",
     objectifs: [{ libelle: "Lame vendue", condition: { a: "fait", fait: "vente:lame_forgee", but: 1 } }],
-    lecon: "Tu ne crées pas d'électricité : tu vis de ton savoir-faire. Ça suffit, si on travaille bien.",
+    lecon: "Tu ne crées pas d'électricité : tu vis de ton savoir-faire. Et ça suffit.",
     recompense: { wotts: 30 },
   },
   // ⚙️ Mécanistes
@@ -290,7 +290,7 @@ const METIER: Quete[] = [
     titre: "Déposer l'électricité",
     texte: "Charge une batterie en pédalant, porte-la au Comptoir et dépose son électricité : c'est ainsi qu'on crée des wotts.",
     objectifs: [{ libelle: "Électricité déposée", condition: { a: "fait", fait: "depot_wh", but: 1 } }],
-    lecon: "Seul le dépôt d'électricité crée des wotts. Tu fabriques de la monnaie avec tes jambes.",
+    lecon: "Seul le dépôt d'électricité crée des wotts : tu fais de la monnaie avec tes jambes.",
     recompense: { wotts: 30 },
   },
   // ⚡ Voltaïques

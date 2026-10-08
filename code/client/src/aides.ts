@@ -19,7 +19,7 @@ export type Aide =
 
 export const TEXTES_AIDES: Record<Aide, string> = {
   pluie: "Il pleut : la pluie couvre les bruits et les odeurs. Bon moment pour travailler sans attirer les Éteints.",
-  eteint: "Un Éteint ! Lent, aveugle ou presque, mais il entend tout. En allure discrète, il ne te remarquera peut-être pas.",
+  eteint: "Un Éteint ! Lent, presque aveugle, mais il entend tout. En allure discrète, il peut te manquer.",
   saisie: "Saisi : tape {examiner} très vite pour te dégager. Plus ils sont nombreux, plus c'est dur.",
   saignement: "Tu saignes : un pansement arrête le saignement. Les Éteints sentent le sang de loin.",
   faim: "Tu as faim : mange quelque chose (le sac, puis « Manger »). Affamé, tu ne peux plus courir.",
@@ -28,7 +28,7 @@ export const TEXTES_AIDES: Record<Aide, string> = {
   halte: "Une halte : tout le monde y passe. Le butin est maigre, et des Éteints dorment près de la station.",
   comptoir: "Le Comptoir du Carrefour : on vend, on achète, et seule l'électricité déposée crée des wotts.",
   nuit: "La nuit tombe. Ta lumière se voit de loin : allume-la quand il le faut, pas plus.",
-  partir: "Un conseil : avant de fermer le jeu, va dormir dans ton abri. Se déconnecter dans son abri compte comme une nuit complète, et hors ligne ta faim et ta soif sont gelées.",
+  partir: "Avant de quitter, dors dans ton abri : ça compte comme une nuit, et hors ligne faim et soif sont gelées.",
   effondrement: "Tu t'es effondré. Ton sac est resté là-bas : va le reprendre, il est marqué d'un anneau jaune.",
 };
 

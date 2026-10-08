@@ -3,29 +3,37 @@
 
 import * as THREE from "three";
 
-function textureBrume(): THREE.CanvasTexture {
-  const c = document.createElement("canvas");
-  c.width = c.height = 256;
-  const g = c.getContext("2d")!;
-  g.clearRect(0, 0, 256, 256);
-  // Des taches douces qui se recouvrent : une brume en lambeaux, jamais un mur uniforme.
+function textureBrume(): THREE.DataTexture {
+  // Une texture en niveaux d'alpha seulement, sur du blanc pur, calculée pixel par pixel (2026-10-09). Les dégradés
+  // presque transparents d'un canevas, réduits en mipmaps, prenaient des reflets colorés sur iPhone (« brouillard
+  // multicolore ») : ici, aucune couleur ne peut apparaître, et pas de mipmaps.
+  const n = 128;
+  const donnees = new Uint8Array(n * n * 4);
   let s = 7;
   const alea = () => ((s = (s * 9301 + 49297) % 233280) / 233280);
-  for (let i = 0; i < 60; i++) {
-    const x = alea() * 256;
-    const y = alea() * 256;
-    const r = 30 + alea() * 70;
-    for (const [dx, dy] of [[0, 0], [256, 0], [-256, 0], [0, 256], [0, -256]] as const) {
-      const d = g.createRadialGradient(x + dx, y + dy, 0, x + dx, y + dy, r);
-      d.addColorStop(0, `rgba(255,255,255,${0.10 + alea() * 0.08})`);
-      d.addColorStop(1, "rgba(255,255,255,0)");
-      g.fillStyle = d;
-      g.fillRect(x + dx - r, y + dy - r, r * 2, r * 2);
+  const taches = Array.from({ length: 40 }, () => ({ x: alea() * n, y: alea() * n, r: 15 + alea() * 35, a: 0.1 + alea() * 0.08 }));
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) {
+      let a = 0;
+      for (const t of taches) {
+        // Le motif se répète sans couture : on prend la distance la plus courte, d'un bord à l'autre.
+        const dx = Math.min(Math.abs(x - t.x), n - Math.abs(x - t.x));
+        const dy = Math.min(Math.abs(y - t.y), n - Math.abs(y - t.y));
+        const d = Math.hypot(dx, dy) / t.r;
+        if (d < 1) a += t.a * (1 - d * d);
+      }
+      const i = (y * n + x) * 4;
+      donnees[i] = donnees[i + 1] = donnees[i + 2] = 255;
+      donnees[i + 3] = Math.round(Math.min(1, a) * 255);
     }
   }
-  const t = new THREE.CanvasTexture(c);
+  const t = new THREE.DataTexture(donnees, n, n, THREE.RGBAFormat);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.repeat.set(2, 2);
+  t.magFilter = THREE.LinearFilter;
+  t.minFilter = THREE.LinearFilter;
+  t.generateMipmaps = false;
+  t.needsUpdate = true;
   return t;
 }
 
@@ -52,7 +60,8 @@ export class Brume {
         new THREE.PlaneGeometry(70, 70).rotateX(-Math.PI / 2),
         new THREE.MeshBasicMaterial({ map: tex, color: 0xf2ead8, transparent: true, opacity: 0, depthWrite: false, fog: false }),
       );
-      m.position.y = 0.25 + i * 0.45;
+      // Au ras de l'herbe : la brume ne doit pas couper le personnage à mi-corps.
+      m.position.y = 0.12 + i * 0.18;
       m.renderOrder = 2;
       m.visible = false;
       this.nappes.push(m);
@@ -69,7 +78,7 @@ export class Brume {
       m.position.x = centre.x;
       m.position.z = centre.z;
       const mat = m.material as THREE.MeshBasicMaterial;
-      mat.opacity = e * (0.75 - i * 0.18);
+      mat.opacity = e * (0.5 - i * 0.12);
       // Le soleil rasant dore la brume à mesure qu'il monte.
       mat.color.setHex(heure < 6 ? 0xd8dde6 : 0xf6e3c4);
       // La nappe suit la caméra, mais sa texture reste posée sur le monde (et dérive avec le vent).

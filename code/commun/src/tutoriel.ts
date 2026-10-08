@@ -15,22 +15,22 @@ export interface EtapeTutoriel {
 }
 
 const FAMILLE: Record<Famille, string> = {
-  charbonniers: "Bâtis un foyer de forge (8 pierres, la barre de métal de la ruine, 2 branches). Le feu ne trahit pas.",
-  voltaiques: "Bâtis un banc de recharge (2 bûches, la barre de métal de la ruine). Le silence est une arme.",
-  mecanistes: "Bâtis le pédalier avec le cadre, la chaîne et une roue du vélo. Ce qui tourne ne meurt pas.",
+  charbonniers: "Bâtis un foyer de forge (8 pierres, la barre de métal, 2 branches). Le feu ne trahit pas.",
+  voltaiques: "Bâtis un banc de recharge (2 bûches, la barre de métal). Le silence est une arme.",
+  mecanistes: "Bâtis le pédalier : cadre, chaîne et une roue du vélo. Ce qui tourne ne meurt pas.",
 };
 
 export function etapesTutoriel(famille: Famille): EtapeTutoriel[] {
   return [
     {
       titre: "L'arrivée",
-      consigne: "Cours jusqu'à la ruine de ferme, à droite de l'écran (vers l'est). Essaie les trois allures : discrète ({discret}), marche, course ({courir}). Regarde le cercle au sol.",
+      consigne: "Va à la ruine, à l'est. Essaie les allures : discrète ({discret}), marche, course ({courir}).",
       lecon: "Le cercle, c'est jusqu'où porte le bruit que tu fais. Plus tu cours, plus on t'entend.",
     },
     { titre: "Ramasser", consigne: "Ramasse 3 branches et 5 pierres ({agir}).", lecon: "Tout pèse : ton sac porte 55 kg." },
     {
       titre: "Le feu",
-      consigne: "Monte un feu de camp (5 pierres, 3 branches) depuis Fabriquer, ajoute du bois et allume-le au briquet.",
+      consigne: "Monte un feu de camp (5 pierres, 3 branches) via Fabriquer, ajoute du bois, allume-le.",
       lecon: "Un feu chauffe, cuit, fait bouillir… et fume. La fumée se sent de loin : c'est de la signature.",
     },
     {
@@ -40,14 +40,14 @@ export function etapesTutoriel(famille: Famille): EtapeTutoriel[] {
     },
     {
       titre: "Le vestige",
-      consigne: "Examine le vieux vélo ({examiner}), fouille la caisse à outils de la ruine, puis démonte le vélo.",
+      consigne: "Examine le vieux vélo ({examiner}), fouille la caisse à outils, puis démonte le vélo.",
       lecon: "Un vestige s'utilise tel quel ou se démonte en pièces. L'énergie de l'ancien monde est dedans.",
     },
-    { titre: "L'outil", consigne: "Remmanche la tête de hache trouvée dans la caisse : une branche pour le manche, ton couteau pour couper, et une pierre (ou un marteau) pour marteler.", lecon: "Un bon outil va plus vite, et frappe plus fort." },
+    { titre: "L'outil", consigne: "Remmanche la tête de hache de la caisse : une branche, ton couteau, une pierre pour marteler.", lecon: "Un bon outil va plus vite, et frappe plus fort." },
     { titre: "L'abri", consigne: "Monte un abri de branches et de bâche (la bâche est dans la ruine).", lecon: "Un toit pour dormir : on y récupère deux fois plus vite." },
     {
       titre: "Le premier Éteint",
-      consigne: "Un Éteint arrive, attiré par la fumée. Passe en mode Combat ({combat}) et vise la tête : maintiens {agir}, puis relâche.",
+      consigne: "Un Éteint arrive ! Mode Combat ({combat}), vise la tête : maintiens {agir}, relâche.",
       lecon: "Seul, un Éteint est lent et fragile. Le danger, c'est le nombre et la surprise.",
     },
     {
@@ -58,12 +58,12 @@ export function etapesTutoriel(famille: Famille): EtapeTutoriel[] {
     { titre: "La famille", consigne: FAMILLE[famille], lecon: "Chaque famille produit son énergie à sa façon. Les autres auront besoin de ce que tu sais faire." },
     {
       titre: "La nuit",
-      consigne: "Dors dans l'abri, près du feu ({agir} devant l'abri). La nuit, toute lumière se voit de loin.",
+      consigne: "Dors dans l'abri ({agir} devant), près du feu. La nuit, toute lumière se voit de loin.",
       lecon: "Se déconnecter dans son abri compte comme une nuit complète.",
     },
     {
       titre: "La carte",
-      consigne: "Ouvre la carte ({carte}) au bout du chemin, va jusqu'à la station-service, puis reviens chez toi.",
+      consigne: "Ouvre la carte ({carte}) au bout du chemin, va à la station-service, puis reviens.",
       lecon: "Le monde est grand et la route coûte. Au-delà de la station, le Comptoir du Carrefour t'attend.",
     },
   ];

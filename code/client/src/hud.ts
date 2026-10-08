@@ -188,16 +188,28 @@ export class Hud {
       }
     }
     this.majPose(null);
+    // L'aide, en message, aux deux premières poses de la partie seulement (avis de Sally, 2026-10-09).
+    if (this.posesVues < 2) {
+      this.posesVues++;
+      this.message(this.aidePose(), "aide");
+    }
+  }
+
+  private posesVues = 0;
+
+  private aidePose(): string {
+    return this.tactile
+      ? "Touche le sol pour placer le fantôme, retouche-le pour construire."
+      : avecTouches("Clic : placer · reclic ou {agir} : construire · flèches : ajuster · molette ou {lumiere} : tourner · Échap : annuler.", false);
   }
 
   /** `raison` : pourquoi on ne peut pas construire là (null : on peut). */
   majPose(raison: string | null): void {
     const el = this.element.querySelector<HTMLElement>(".pose")!;
     if (el.hidden) return;
-    const aide = this.tactile
-      ? "Touche le sol pour l'y placer, ou pousse-le au joystick. Touche-le encore pour construire."
-      : avecTouches("Clique au sol pour le placer, reclique dessus (ou {agir}) pour construire · flèches ou ZQSD : l'ajuster · molette ou {lumiere} : tourner · clic droit ou Échap : annuler.", false);
-    const texte = `<b>${this.nomPose}</b> · ${raison ? `<span class="non">${raison}</span>` : "On peut construire ici."}<br><small>${aide}</small>`;
+    // Une seule ligne d'état : le nom, et « ✓ ici » ou la raison du refus. L'aide passe en infobulle (et en message).
+    el.title = this.aidePose();
+    const texte = `<b>${this.nomPose}</b> ${raison ? `<span class="non">✗ ${raison}</span>` : `<span class="oui">✓ ici</span>`}`;
     const p = el.querySelector<HTMLElement>(".texte-pose")!;
     if (p.innerHTML !== texte) p.innerHTML = texte;
     el.querySelector<HTMLButtonElement>(".poser")!.disabled = raison !== null;
@@ -328,9 +340,9 @@ export class Hud {
       <div class="pose" hidden role="dialog" aria-label="Choisir l'emplacement">
         <p class="texte-pose"></p>
         <div class="boutons-pose">
-          <button type="button" data-pose="tourner">Tourner</button>
-          <button type="button" data-pose="annuler">Annuler</button>
-          <button type="button" data-pose="poser" class="poser">Construire ici</button>
+          <button type="button" data-pose="tourner" aria-label="Tourner" title="Tourner"><span class="ic" aria-hidden="true">↻</span><span class="lib">Tourner</span></button>
+          <button type="button" data-pose="annuler" aria-label="Annuler" title="Annuler"><span class="ic" aria-hidden="true">✕</span><span class="lib">Annuler</span></button>
+          <button type="button" data-pose="poser" class="poser" aria-label="Construire ici"><span class="ic" aria-hidden="true">✓</span><span class="lib">Construire</span></button>
         </div>
       </div>
       <div class="dodo" hidden><p>Tu dors…</p><span class="barre"><span></span></span><small>Bouge pour te réveiller</small></div>
@@ -935,7 +947,11 @@ export class Hud {
     if (this.quetes && progres !== this.derniersProgres && !this.carnetOuvert) this.nonLus += 1;
     this.derniersProgres = progres;
     this.quetes = v;
-    for (const r of v?.reussies ?? []) this.message(`✓ ${r.titre} : ${r.lecon}${r.recompense ? ` Reçu : ${r.recompense}.` : ""}`, "lecon");
+    // La leçon, puis la récompense à part : chaque message tient en deux lignes.
+    for (const r of v?.reussies ?? []) {
+      this.message(`✓ ${r.titre} : ${r.lecon}`, "lecon");
+      if (r.recompense) this.message(`Reçu : ${r.recompense}.`, "lecon");
+    }
     if (v?.reussies?.length) {
       this.reussiJusqua = performance.now() + 4000;
       window.setTimeout(() => this.dessinerCarnet(), 4100);
@@ -1627,7 +1643,13 @@ export class Hud {
     p.innerHTML = html;
     p.querySelector(".fermer")!.addEventListener("click", () => this.ouvrir(p, false));
     for (const b of p.querySelectorAll<HTMLButtonElement>("[data-verbe]")) {
-      b.addEventListener("click", () => this.actions.amenager(f.genre, f.id, b.dataset.verbe as Verbe));
+      b.addEventListener("click", () => {
+        const verbe = b.dataset.verbe as Verbe;
+        this.actions.amenager(f.genre, f.id, verbe);
+        // On ferme la fiche pour voir le résultat (retour du porteur, 2026-10-09) ; sauf pour remettre du bois, qu'on
+        // fait souvent plusieurs fois de suite.
+        if (verbe !== "ajouter_bois") this.ouvrir(this.panneauFiche, false);
+      });
     }
   }
 

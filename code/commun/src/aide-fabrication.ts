@@ -36,10 +36,76 @@ export function outilsPour(qualite: Qualite, niveau: number): TypeObjet[] {
 
 const ou = (l: string[]) => (l.length <= 1 ? (l[0] ?? "") : `${l.slice(0, -1).join(", ")} ou ${l.at(-1)}`);
 
-/** « Pour en avoir : ramasser la branche (sur ton terrain) ou l'acheter au Comptoir. » (vide si on ne sait pas) */
+/**
+ * « Pour en avoir : ramasser la branche (sur ton terrain). » (vide si on ne sait pas). La première source seulement :
+ * la phrase finit dans un message du haut de l'écran, limité à deux lignes.
+ */
 export function ouTrouverPhrase(type: TypeObjet): string {
   const sources = ouTrouver(type);
-  return sources.length ? `Pour en avoir : ${ou(sources)}.` : "";
+  return sources.length ? `Pour en avoir : ${sources[0]}.` : "";
+}
+
+/** Longueur d'un message du haut de l'écran : deux lignes sur l'iPhone 13 mini. */
+export const MESSAGE_MAX = 110;
+
+const et = (l: string[]) => (l.length <= 1 ? (l[0] ?? "") : `${l.slice(0, -1).join(", ")} et ${l.at(-1)}`);
+
+/** La première phrase qui tient dans un message (sinon la dernière, la plus courte). */
+const tenir = (candidates: string[], max: number) => candidates.find((c) => c.length <= max) ?? candidates.at(-1)!;
+
+/**
+ * Les outils qui manquent, en messages courts (deux lignes au plus chacun) : au plus deux outils par qualité, et où
+ * trouver le premier si la place le permet. Un seul message si tout y tient ; sinon un par qualité (deux au plus, au-delà
+ * une phrase compacte). Le détail complet reste dans le panneau Fabriquer (outilsManquants).
+ */
+export function outilsManquantsBref(qualites: Partial<Record<Qualite, number>>, inventaire: Inventaire, max = MESSAGE_MAX): string[] {
+  const manques = (Object.entries(qualites) as [Qualite, number][])
+    .filter(([q, requis]) => {
+      const possede = niveauQualite(inventaire, q);
+      return possede < requis && !(possede === requis - 1 && possede > 0);
+    })
+    .map(([q, requis]) => {
+      const types = outilsPour(q, requis);
+      const fortune = requis >= 2 ? outilsPour(q, requis - 1).filter((t) => (QUALITES_OBJETS[t]?.[q] ?? 0) === requis - 1).map((t) => OBJETS[t].nom) : [];
+      const source = types.map((t) => ouTrouver(t)).find((l) => l.length > 0)?.[0];
+      return { q: NOMS_QUALITES[q].toLowerCase(), requis, bons: ou(types.slice(0, 2).map((t) => OBJETS[t].nom)), fortune: fortune[0], source };
+    });
+  if (manques.length === 0) return ["Il te manque un outil."];
+  const phrase = (m: (typeof manques)[number], details: boolean) =>
+    `Pour ${m.q} (niveau ${m.requis}), il te faut ${m.bons}${details && m.fortune ? ` (ou ${m.fortune}, plus lent)` : ""}.` +
+    (details && m.source ? ` Où : ${m.source}.` : "");
+  const sansSource = (m: (typeof manques)[number]) => phrase({ ...m, source: undefined }, true);
+  const ensemble = manques.map((m) => phrase(m, true)).join(" ");
+  if (ensemble.length > max && manques.length <= 2) return manques.map((m) => tenir([phrase(m, true), sansSource(m), phrase(m, false)], max));
+  return [tenir(
+    [
+      manques.map((m) => phrase(m, true)).join(" "),
+      manques.map(sansSource).join(" "),
+      manques.map((m) => phrase(m, false)).join(" "),
+      `Il te faut ${et(manques.map((m) => `${m.bons} (${m.q} ${m.requis})`))}.`,
+      `Il te faut ${manques[0]!.bons} (${manques[0]!.q} ${manques[0]!.requis}), et d'autres outils.`,
+    ],
+    max,
+  )];
+}
+
+/** Ce qui manque pour une recette, en un message court (deux lignes au plus) ; le détail est dans Fabriquer. */
+export function ceQuiManqueBref(r: Recette, inventaire: Inventaire, max = MESSAGE_MAX): string {
+  const manquants = (Object.entries(r.ingredients) as [TypeObjet, number][]).filter(([t, besoin]) => (inventaire[t] ?? 0) < besoin);
+  const noms = manquants.map(([t, besoin]) => {
+    const a = inventaire[t] ?? 0;
+    return besoin - a > 1 ? nommer(t, besoin - a) : `1 ${minuscule(OBJETS[t].nom)}`;
+  });
+  const outils = outilsManquantsBref(r.qualites, inventaire, max).join(" ");
+  const outilsVides = Object.entries(r.qualites).every(([q, n]) => niveauQualite(inventaire, q as Qualite) >= (n ?? 0));
+  const reste = [outilsVides ? "" : outils, r.feu ? "Elle se cuisine près d'un feu allumé." : "", r.installation ? `Elle se fait près d'un ${NOMS_INSTALLATIONS[r.installation]}.` : ""].filter(Boolean);
+  if (noms.length === 0) return tenir([reste.join(" ")], max);
+  const manque = `Il te manque ${et(noms)}.`;
+  const unSeul = manquants.length === 1 ? manquants[0]! : null;
+  const source = unSeul ? ouTrouver(unSeul[0])[0] : undefined;
+  const a = unSeul ? (inventaire[unSeul[0]] ?? 0) : 0;
+  const detail = `Il te manque ${noms[0]}${a > 0 ? ` (tu en as ${a})` : ""}.${source ? ` Pour en avoir : ${source}.` : ""}`;
+  return tenir([[unSeul ? detail : manque, ...reste].join(" "), [manque, ...reste].join(" "), `${manque} Le détail est dans Fabriquer.`, manque], max);
 }
 
 /** Les outils qui manquent pour ces qualités, en phrases (vide : tout y est). */
