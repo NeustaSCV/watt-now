@@ -1,6 +1,8 @@
 // Banc de charge du serveur : N joueurs simulés (faux sockets) dans le vrai Monde, pendant quelques secondes.
 // Mesure : CPU (part d'un cœur), retard de la boucle d'événements, mémoire, débit envoyé par joueur.
-// Usage : node scripts/banc-charge.ts <terrain|halte> <joueurs> <secondes>  (dans le conteneur : docker compose exec jeu node scripts/banc-charge.ts halte 50 30)
+// Usage : node scripts/banc-charge.ts <terrain|halte|cooperative> <joueurs> <secondes>  (dans le conteneur : docker compose exec jeu node scripts/banc-charge.ts halte 50 30)
+// « cooperative » (0.5g, Book 23 §7) : chacun dans sa Coopérative (24 Éteints chacune), une hache à la main ; il
+// bouge et frappe sans arrêt : le pire cas pour l'IA. Cible : retard p99 < 25 ms à 10 joueurs sur le Pi.
 // La base du banc est jetable : serveur/donnees/banc.sqlite, effacée à chaque lancement.
 
 import { monitorEventLoopDelay } from "node:perf_hooks";
@@ -25,6 +27,8 @@ interface FauxClient {
   messages: number;
   x: number;
   z: number;
+  /** Le dernier lieu annoncé par le serveur (un effondrement ramène au terrain). */
+  lieu: string;
 }
 const clients: FauxClient[] = [];
 const parType = new Map<string, number>();
@@ -32,12 +36,17 @@ const parType = new Map<string, number>();
 for (let i = 0; i < N; i++) {
   const compte = base.creerCompte(`Joueur ${i}`, "motdepasse1", (["charbonniers", "voltaiques", "mecanistes"] as const)[i % 3]);
   if (scenario === "halte") base.sauverPosition(compte.id, { x: 20 + (i % 20) * 8, z: 33 + (i % 3), o: 0 }, "station", Date.now());
+  if (scenario === "cooperative") {
+    base.sauverInventaire(compte.id, { sac_a_dos: 1, hache: 1, lampe_frontale: 1 });
+    base.sauverPosition(compte.id, { x: 43, z: 56, o: Math.PI }, "cooperative", Date.now());
+  }
   const ecouteurs: Record<string, (d: Buffer) => void> = {};
   const c: FauxClient = {
     octets: 0,
     messages: 0,
     x: 0,
     z: 0,
+    lieu: "",
     envoyer: (m) => ecouteurs.message?.(Buffer.from(JSON.stringify(m))),
   };
   const socket = {
@@ -49,6 +58,7 @@ for (let i = 0; i < N; i++) {
       c.messages += 1;
       // Ce qui pèse, par type de message (pour savoir quoi alléger).
       const t = /"t":"([a-z_]+)"/.exec(s)?.[1] ?? "?";
+      if (t === "bienvenue") c.lieu = /"lieu":"([a-z_]+)"/.exec(s)?.[1] ?? c.lieu;
       parType.set(t, (parType.get(t) ?? 0) + octets);
     },
     on(ev: string, f: (d: Buffer) => void) {
@@ -75,6 +85,11 @@ const pilote = setInterval(() => {
     c.envoyer({ t: "intention", dx: Math.cos(a), dz: Math.sin(a), allure: Math.random() < 0.2 ? "course" : "marche", seq: ++seq });
   }
 }, 250);
+// En Coopérative, on se bat : un coup toutes les 0,8 s (le serveur refuse ceux qui arrivent trop tôt).
+const coups = setInterval(() => {
+  if (scenario !== "cooperative") return;
+  for (const c of clients) c.envoyer({ t: "frapper", appuye: Math.random() < 0.3 });
+}, 800);
 const pings = setInterval(() => {
   for (const c of clients) c.envoyer({ t: "ping", envoye: Date.now() });
 }, 2000);
@@ -89,6 +104,7 @@ setTimeout(() => {
   monde.arreter();
   clearInterval(pilote);
   clearInterval(pings);
+  clearInterval(coups);
   retard.disable();
   const duree = (performance.now() - t0) / 1000;
   const cpu = process.cpuUsage(cpu0);
@@ -108,6 +124,7 @@ setTimeout(() => {
       debit_ko_s_par_joueur: +(octets / 1024 / duree / N).toFixed(2),
       messages_s_par_joueur: +(messages / duree / N).toFixed(1),
       memoire_rss_mo: Math.round(mem.rss / 1048576),
+      encore_sur_place: clients.filter((c) => c.lieu === (scenario === "halte" ? "station" : scenario)).length,
       tas_mo: Math.round(mem.heapUsed / 1048576),
     }),
   );

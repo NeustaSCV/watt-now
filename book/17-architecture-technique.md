@@ -153,6 +153,11 @@ Mesurée sur le vrai serveur de la 0a (banc de charge : joueurs simulés qui bou
 >   - Sur le Mac, à 100 joueurs à la halte : 15 → 7,4 Ko/s par joueur, 0,79 → 0,56 ms de calcul, pire pic de 142 → 40 ms.
 >   - **Remesuré sur le Pi (0.1, 2026-10-08)** : 100 joueurs à la halte 60 → 52 % d'un cœur, p99 54 → 46 ms, pire 135 → 76 ms, 14 → 8,2 Ko/s. Réseau partout ≈ −40 % (terrain 50 : 2,2 Ko/s ; halte 25 : 4,5 ; halte 50 : 6,3). À faible charge, le processeur monte de 2 à 5 points (terrain 50 : 16 % ; halte 50 : 29 %) : surtout le bruit d'un essai unique sans chauffe, à côté du jeu qui tourne, et un peu plus de petits objets à ramasser par la mémoire. Le banc doit gagner une chauffe et 5 essais (médiane) pour départager deux versions.
 >   - **Remesuré sur le Pi (0.3, 2026-10-08)** : stable, dans le bruit d'un essai unique. Terrain 50 : 16,8 % d'un cœur, 2,2 Ko/s ; halte 25 : 14,3 %, 4,5 Ko/s ; halte 50 : 28,1 %, p99 21,5 ms, 6,2 Ko/s ; halte 100 : 55 %, p99 50 ms, pire 118 ms, 8,3 Ko/s, 160 Mo. Le jeu au repos : 0,7 % du processeur. Les vestiges, la décharge, le bushcraft et les quêtes n'ont rien coûté de visible côté serveur ; les pires pics isolés (jusqu'à 160 ms sur un essai à 25 joueurs) restent à surveiller avec un banc à plusieurs essais.
+>   - **La Coopérative (0.5g, 2026-10-08)** : nouveau scénario `cooperative` du banc. Chaque joueur est dans sa propre Coopérative (24 Éteints), une hache à la main, et bouge et frappe sans arrêt : c'est le pire cas pour l'IA. Cible du Book 23 §7 : retard p99 < 25 ms à 10 joueurs, **sur le Pi**.
+>     - Sur le Mac, 10 joueurs : 3,6 % d'un cœur, p99 10,6 ms, 2,6 Ko/s par joueur, 70 Mo, tous restés sur place.
+>     - Sur le Mac, 20 joueurs : 5 % d'un cœur, p99 14,6 ms, 2,5 Ko/s.
+>     - Les pics isolés (jusqu'à 280 ms) existent aussi à la halte dans les mêmes conditions : c'est le Mac chargé par d'autres programmes, pas la Coopérative.
+>     - `mesurer-pi.sh` fait maintenant une chauffe, puis trois essais à 10 et à 20 joueurs en Coopérative (on retient la médiane). **À lancer sur le Pi une fois la 0.5 déployée.**
 > - **Fichiers** :
 >   - compression brotli ou gzip : le code passe de 1 024 à 259 Ko ;
 >   - cache d'un an pour les fichiers versionnés, d'un jour avec étiquette (ETag) pour les autres, revérifiés en 0 octet s'ils n'ont pas changé ;
