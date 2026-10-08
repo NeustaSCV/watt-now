@@ -157,7 +157,13 @@ Mesurée sur le vrai serveur de la 0a (banc de charge : joueurs simulés qui bou
 >     - Sur le Mac, 10 joueurs : 3,6 % d'un cœur, p99 10,6 ms, 2,6 Ko/s par joueur, 70 Mo, tous restés sur place.
 >     - Sur le Mac, 20 joueurs : 5 % d'un cœur, p99 14,6 ms, 2,5 Ko/s.
 >     - Les pics isolés (jusqu'à 280 ms) existent aussi à la halte dans les mêmes conditions : c'est le Mac chargé par d'autres programmes, pas la Coopérative.
->     - `mesurer-pi.sh` fait maintenant une chauffe, puis trois essais à 10 et à 20 joueurs en Coopérative (on retient la médiane). **À lancer sur le Pi une fois la 0.5 déployée.**
+>     - `mesurer-pi.sh` fait maintenant une chauffe, puis trois essais à 10 et à 20 joueurs en Coopérative (on retient la médiane).
+>     - **Mesuré sur le Pi (0.5, 2026-10-08), médiane de 3 essais** :
+>       - 10 joueurs en Coopérative : 18 % d'un cœur, **p99 13,6 ms** (cible < 25 ms : tenue), 2,6 Ko/s par joueur, 123 Mo ;
+>       - 20 joueurs : 33 % d'un cœur, p99 23,2 ms (encore sous la cible), 2,6 Ko/s ;
+>       - un joueur en Coopérative coûte environ 17 ms de calcul par seconde, trois fois un joueur à la halte (6 ms), pour 24 Éteints rien qu'à lui ;
+>       - un pic isolé revient à chaque essai, vers 180 ms. On en voit d'aussi hauts à la halte (jusqu'à 235 ms). À surveiller : un banc plus long dira s'il vient du démarrage (compilation à la volée) ou d'un travail périodique.
+>     - **La halte, sur le même Pi** : stable depuis la 0.3. Halte 50 : 30 %, p99 20,6 ms ; halte 100 : 55 %, p99 49 ms, 180 Mo.
 > - **Fichiers** :
 >   - compression brotli ou gzip : le code passe de 1 024 à 259 Ko ;
 >   - cache d'un an pour les fichiers versionnés, d'un jour avec étiquette (ETag) pour les autres, revérifiés en 0 octet s'ils n'ont pas changé ;

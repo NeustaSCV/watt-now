@@ -17,6 +17,8 @@
 >   - **nouvelles armes** : pied-de-biche (caisse), machette (établi de l'atelier), masse (contre le tracteur vert), lance (fabriquée) ;
 >   - **leurres du décor** : klaxon (4 coups, la batterie du tracteur se vide), sonnette du quai, radio à piles (10 min ; la réclame de la Compagnie). Klaxon et sonnette sont synthétisés côté code.
 >
+> **0.5f fait** : obscurité par pièce (lampe à environ 7 m, même de jour), yeux des Éteints dans le noir, indicateur des Éteints hors champ (une flèche sur une ellipse autour du personnage), apparence des variantes.
+> **0.5g fait** (Pi 4, 2026-10-08) : 10 joueurs en Coopérative, p99 13,6 ms (cible < 25 ms) ; 20 joueurs, p99 23,2 ms. **La 0.5 est déployée.**
 > **Reste de la 0.5e** :
 >   - la batterie du tracteur à emporter (le vrai dilemme ⚡ ⚙️ du klaxon) ;
 >   - la radio qu'on transporte ;
