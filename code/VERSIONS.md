@@ -12,6 +12,10 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
+## 0.7 · en préparation
+
+- **Moins d'appels de dessin, même image** (chantier 8) : les ressources du sol dessinées en lots par matériau (≈ 14 appels au lieu de ≈ 125 au point d'arrivée du terrain), chaque personnage et chaque Éteint en un seul maillage (1 appel et 1 d'ombre au lieu de 14 à 17 de chaque), la forêt et les herbes triées arbre par arbre (halte devant la station : ≈ 75 000 triangles au lieu de ≈ 250 000), les joueurs hors de l'écran plus dessinés.
+
 ## 0.6 · déployée le 2026-10-09
 
 Le métier des familles (Book 25) : chaque famille fabrique seule son arme de métier, et les autres lui apportent les améliorations. Le lancer, l'arc pour tous, les étoiles, les lames des Charbonniers, l'électricité des Voltaïques, l'arbalète et les pièges des Mécanistes.
