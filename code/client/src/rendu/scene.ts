@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { Ciel } from "./ciel.ts";
 import { ReserveLumieres, type SourceLumiere } from "./lumieres.ts";
 import { PALETTE } from "./materiaux.ts";
+import { FrustumOmbre } from "./ombres.ts";
 import type { Qualite } from "./qualite.ts";
 
 /** Élévation isométrique « vraie » : arctan(1/√2) ≈ 35,26°. */
@@ -22,6 +23,8 @@ export class Scene {
   private readonly soleil: THREE.DirectionalLight;
   readonly ciel: Ciel;
   private readonly lumieres: ReserveLumieres;
+  /** La passe d'ombre du soleil n'écarte que les objets dont l'ombre ne peut pas tomber à l'écran (ombres.ts). */
+  readonly frustumOmbre: FrustumOmbre | null = null;
   private readonly cible = new THREE.Vector3(25, 0, 25);
   /** Orientation de la caméra autour du joueur, par quarts de tour. */
   private quartDeTour = 0;
@@ -61,6 +64,9 @@ export class Scene {
       c.far = 90;
       this.soleil.shadow.bias = -0.0006;
       this.soleil.shadow.normalBias = 0.03;
+      this.frustumOmbre = new FrustumOmbre();
+      // three.js range les objets de la passe d'ombre avec ce frustum (LightShadow.getFrustum).
+      (this.soleil.shadow as unknown as { _frustum: THREE.Frustum })._frustum = this.frustumOmbre;
     }
     this.scene.add(this.soleil, this.soleil.target);
     this.ciel = new Ciel(this.scene, this.rendu, hemi, this.soleil);
@@ -150,6 +156,7 @@ export class Scene {
   }
 
   dessiner(): void {
+    if (this.frustumOmbre && this.soleil.castShadow) this.frustumOmbre.preparer(this.camera, this.soleil);
     this.rendu.render(this.scene, this.camera);
   }
 

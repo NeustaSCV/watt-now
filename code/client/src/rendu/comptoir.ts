@@ -8,7 +8,7 @@ import * as THREE from "three";
 import { Compteur } from "./compteur.ts";
 import { CARREFOUR, CHEMIN_COOP, COMPTOIR, ROUTE_CARREFOUR } from "../../../commun/src/lieux.ts";
 import type { SourceLumiere } from "./lumieres.ts";
-import { PALETTE, aleatoire, materiau } from "./materiaux.ts";
+import { PALETTE, aleatoire, materiau, nommer } from "./materiaux.ts";
 import { Chantier, dessiner, geoToleOndulee, matiere, matiereTexture, textureAffiche, textureEnduit, textureToitPlat } from "./ruine.ts";
 import { bruit, creerArbres, creerPanneauRoute, type PlaceArbre } from "./terrain.ts";
 
@@ -72,6 +72,7 @@ export function creerComptoir(): THREE.Group {
   g.add(creerBarrage(ROUTE_CARREFOUR.x, P - 2.5, 0, "Route de la Côte : fermée"));
   // Le chemin agricole de la Coopérative, au nord (0.5) : ouvert, lui.
   g.add(creerPanneauRoute("Coopérative du Plateau", "↑ 3 km · chemin agricole", CHEMIN_COOP.x + 3.4, 6.5, 0));
+  nommer(g, ["sol", "routes", "agence", "cellules", "pedalier", "cloture", "foret", "lampadaire"]);
   return g;
 }
 

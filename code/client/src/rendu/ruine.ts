@@ -385,6 +385,7 @@ export function touffes(c: Chantier, points: readonly (readonly [number, number]
 
 export function creerRuine(): THREE.Group {
   const groupe = new THREE.Group();
+  groupe.name = "ruine";
   groupe.position.set(RUINE.x, 0, RUINE.z);
   const aleat = aleatoire(404);
   const L = RUINE.largeur;

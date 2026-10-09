@@ -41,6 +41,7 @@ export class Sang {
   private readonly matGoutte = new THREE.MeshBasicMaterial({ color: 0x9a1515 });
 
   constructor(scene: THREE.Scene) {
+    this.groupe.userData.poste = "sang";
     scene.add(this.groupe);
     let s = 17;
     const alea = () => ((s = (s * 9301 + 49297) % 233280) / 233280);

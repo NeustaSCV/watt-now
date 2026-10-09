@@ -58,6 +58,17 @@ export function materiau(couleur: number, options: OptionsMateriau = {}): THREE.
 }
 
 /** Générateur pseudo-aléatoire déterministe : le même terrain à chaque chargement. */
+/**
+ * Nomme les enfants d'un décor, dans l'ordre où ils ont été ajoutés (sans écraser un nom déjà donné). Le mode mesure
+ * (`?mesure=1`) s'en sert pour ranger les appels de dessin par morceau (sol, herbe, lisière, bâtiments…).
+ */
+export function nommer(groupe: THREE.Object3D, noms: string[]): void {
+  noms.forEach((nom, i) => {
+    const enfant = groupe.children[i];
+    if (enfant && !enfant.name) enfant.name = nom;
+  });
+}
+
 export function aleatoire(graine: number): () => number {
   let a = graine >>> 0;
   return () => {

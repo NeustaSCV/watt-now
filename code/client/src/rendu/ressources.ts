@@ -7,6 +7,7 @@ import { PALETTE, aleatoire, materiau } from "./materiaux.ts";
 import { ACIER, Assemblage, BOIS, CORDE, NOIR, ROUILLE_SOMBRE, SOL_PLAT, V, V3, X, Y, Z, bosseler, courber, disque, placer, rect, rouille, surface, tache, touffe, type Surface } from "./assemblage.ts";
 import { batterieVoiture, modulePanneau, roueVelo } from "./pieces.ts";
 import { frene, haieIfs, ifSombre } from "./essences.ts";
+import { fusionnerStatique } from "./fusion.ts";
 
 /**
  * Les modèles partagés des ressources dessinées en lots (lots.ts : une géométrie et un matériau par type, un appel
@@ -1208,6 +1209,7 @@ function bache(b: Assemblage, couleur: number, bande: number, aleat: () => numbe
 
 export function creerMare(): THREE.Group {
   const groupe = new THREE.Group();
+  groupe.name = "mare";
   groupe.position.set(MARE.x, 0, MARE.z);
   // Un contour naturel (rayonMare) : la berge déborde de 0,55 m tout autour.
   const contour = (marge: number) => {
@@ -1245,5 +1247,7 @@ export function creerMare(): THREE.Group {
     m.castShadow = true;
     groupe.add(m);
   }
+  // Les 22 roseaux, fondus par couleur (2026-10-09) : 2 appels de dessin au lieu de 22, autant dans l'ombre. Même image.
+  fusionnerStatique(groupe);
   return groupe;
 }

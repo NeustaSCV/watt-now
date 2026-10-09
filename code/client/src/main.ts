@@ -66,6 +66,7 @@ import type { ResultatCoup } from "../../commun/src/eteints.ts";
 import type { ProjectileVu } from "../../commun/src/messages.ts";
 import { DessinVisee, viser, type Visee } from "./visee.ts";
 import { Projectiles } from "./rendu/projectiles.ts";
+import type { Mesureur } from "./mesure/mesure.ts";
 // La couche de déchets (0.7) : un affichage provisoire, isolé (le vrai rendu en amas viendra au chantier 7).
 import { CoucheDechetsVue } from "./rendu/dechets-provisoire.ts";
 
@@ -1460,6 +1461,7 @@ function frapper(appuye: boolean): void {
 
 function boucle(instant: number): void {
   requestAnimationFrame(boucle);
+  mesureur?.debut(instant);
   mesurerImages((instant - dernier) / 1000);
   const dt = Math.min(0.1, (instant - dernier) / 1000);
   dernier = instant;
@@ -1721,6 +1723,7 @@ function boucle(instant: number): void {
   );
   scene.dessiner();
   hud.compter(reseau?.latence ?? 0);
+  mesureur?.fin();
 }
 
 // Onglet masqué : la boucle s'arrête, donc le personnage doit s'arrêter aussi côté serveur.
@@ -1749,6 +1752,41 @@ if (import.meta.env.DEV) {
       envoyer,
     },
   });
+}
+
+// Le mode mesure (`?mesure=1`, 2026-10-09) : images par seconde, appels de dessin par poste, interrupteurs, déchets
+// simulés. Chargé seulement si l'adresse le demande : rien ne change sinon.
+let mesureur: Mesureur | null = null;
+const MESURE = new URLSearchParams(location.search).get("mesure");
+if (MESURE !== null && MESURE !== "0") {
+  void import("./mesure/mesure.ts").then((m) => {
+    mesureur = m.demarrerMesure({ scene, qualite, lieu: () => lieu, postes: postesMesures });
+  });
+}
+/** Les objets du jeu et leur poste, pour ranger les appels de dessin (mode mesure). */
+function* postesMesures(): Generator<readonly [string, THREE.Object3D | null | undefined]> {
+  yield ["décor", decors.get(lieu)];
+  for (const r of ressources.values()) yield [`ressource:${r.donnees.type}`, r.objet];
+  yield ["ressource:lots (branches, bûches, pierres)", lots.groupe];
+  for (const f of feux.values()) yield ["feux", f.objet];
+  for (const i of installations.values()) yield ["installations", i.objet];
+  yield ["installations", cables];
+  for (const e of eteints.values()) yield ["éteints", e.objet];
+  for (const a of autres.values()) yield ["autres joueurs", a.objet];
+  yield ["personnage", personnage?.objet];
+  yield ["faune", volaille.groupe];
+  yield ["faune", fauneAmbiante.groupe];
+  yield ["effets:rôdeurs", rodeurs.objet];
+  yield ["effets:visée", visee];
+  yield ["effets:visée", anneauProgres];
+  yield ["effets:visée", dessinVisee.objet];
+  yield ["effets:projectiles", projectiles.objet];
+  yield ["effets:pose", pose.groupe];
+  yield ["effets:pose", pose.cerclePortee];
+  yield ["effets:cercles", cercleSon];
+  yield ["effets:cercles", cercleLumiere];
+  for (const s of sacs.values()) yield ["effets:sacs", s.vue];
+  yield ["divers (contenu)", contenu];
 }
 
 requestAnimationFrame(boucle);

@@ -64,6 +64,7 @@ export class Brume {
       m.position.y = 0.12 + i * 0.18;
       m.renderOrder = 2;
       m.visible = false;
+      m.userData.poste = "brume";
       this.nappes.push(m);
       scene.add(m);
     }
