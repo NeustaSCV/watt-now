@@ -1,6 +1,6 @@
 // Point d'entrée du client : accueil, connexion au monde, boucle de jeu.
 
-import { Lots } from "./rendu/lots.ts";
+import { LotsDeRessources, basculerRegroupements } from "./rendu/lots.ts";
 import { fusionnerStatique } from "./rendu/fusion.ts";
 import { ModePose, fantomeFeu, type GenrePose } from "./pose.ts";
 import { raisonEmplacement } from "../../commun/src/emplacement.ts";
@@ -38,6 +38,7 @@ import { animerCooperative, creerCooperative, estomperCooperative, majPortes, pl
 import { KLAXONS_PAR_BATTERIE, RADIO_ETABLI, pieceDe, portesInitiales, sombreIci } from "../../commun/src/cooperative.ts";
 import { IndicateurHorsChamp } from "./hors-champ.ts";
 import { InterfaceLecon } from "./lecon-ui.ts";
+import { MenuAdmin } from "./admin-ui.ts";
 import { animerComptoir, creerComptoir, lumieresComptoir } from "./rendu/comptoir.ts";
 import { VueEteint } from "./rendu/eteint.ts";
 import { VueAutre } from "./rendu/autres.ts";
@@ -67,6 +68,8 @@ import type { ProjectileVu } from "../../commun/src/messages.ts";
 import { DessinVisee, viser, type Visee } from "./visee.ts";
 import { Projectiles } from "./rendu/projectiles.ts";
 import type { Mesureur } from "./mesure/mesure.ts";
+// La couche de déchets (0.7) : un affichage provisoire, isolé (le vrai rendu en amas viendra au chantier 7).
+import { CoucheDechetsVue } from "./rendu/dechets-provisoire.ts";
 
 const CLE_JETON = "watt.jeton";
 /** En développement : `?heure=22` fige l'heure affichée, pour régler la nuit sans attendre. */
@@ -251,9 +254,11 @@ scene.scene.add(volaille.groupe, fauneAmbiante.groupe);
 function crierFaune(cri: CriFaune, x: number, z: number): void {
   son.jouer(cri, { x, z });
 }
-/** Les ressources dessinées en lots (voir lots.ts). */
-const lots = new Lots();
-const EN_LOTS = new Set(["branche", "buche", "pierre"]);
+/** Les ressources du lieu, dessinées en lots par matériau (voir lots.ts). */
+const lots = new LotsDeRessources();
+/** Les déchets du lieu : amas, conteneurs, points du monde (0.7, affichage provisoire). */
+const dechetsVue = new CoucheDechetsVue((m) => envoyer(m), document.getElementById("hud")!);
+scene.scene.add(dechetsVue.objet);
 /** L'escabeau porté, et les disques autour des fruitiers où il faut le poser (2026-10-08). */
 const escabeauPorte = creerEscabeau();
 const DISQUE_ESCABEAU = new THREE.RingGeometry(RAYON_ESCABEAU - 0.08, RAYON_ESCABEAU, 64).rotateX(-Math.PI / 2);
@@ -374,6 +379,7 @@ const hud = new Hud(
     jeter: (objet, quantite) => envoyer({ t: "jeter", objet, quantite }),
     demonter: (objet) => envoyer({ t: "demonter", objet }),
     lire: (objet) => envoyer({ t: "lire", objet }),
+    recettesVues: (recettes) => envoyer({ t: "recettes_vues", recettes }),
     manivelle: (objet) => envoyer({ t: "manivelle", objet }),
     equiper: (objet) => envoyer({ t: "equiper", objet }),
     preparer: (objet) => envoyer({ t: "preparer", objet }),
@@ -403,6 +409,15 @@ const hud = new Hud(
 );
 /** La leçon entre joueurs (Book 25 §2.3) : choisir, accepter, la barre de la leçon en cours. */
 const lecons = new InterfaceLecon(document.getElementById("hud")!, (op) => envoyer({ t: "lecon", op }));
+/** Le menu ⚙ du compte admin « god » (admin-ui.ts) : caché pour tout autre compte. */
+const menuAdmin = new MenuAdmin(
+  document.querySelector<HTMLElement>("#hud .menu-options")!,
+  (op) => envoyer({ t: "admin", op }),
+  () => {
+    document.querySelector<HTMLElement>("#hud .menu-options")!.hidden = true;
+    document.querySelector("#hud .options")?.setAttribute("aria-expanded", "false");
+  },
+);
 // Après le HUD (il remplit #hud à sa construction) : la flèche des Éteints hors champ.
 const horsChamp = new IndicateurHorsChamp(document.getElementById("hud")!);
 
@@ -467,10 +482,10 @@ function installer(message: Bienvenue): void {
   else fauneAmbiante.desactiver();
   for (const r of message.ressources) {
     const vue = new VueRessource(r);
-    // Même image, bien moins d'appels de dessin (2026-10-08) : les ressources nombreuses et identiques sont
-    // dessinées en lots ; les autres ont leurs morceaux de même matériau fondus.
-    if (EN_LOTS.has(r.type)) lots.prendre(vue);
-    else fusionnerStatique(vue.objet);
+    // Même image, bien moins d'appels de dessin (2026-10-08, 0.7) : les morceaux de même matériau sont fondus, puis
+    // toutes les ressources du lieu sont dessinées en lots, un par matériau (lots.ts).
+    fusionnerStatique(vue.objet);
+    lots.prendre(vue);
     ressources.set(r.id, vue);
     contenu.add(vue.objet);
     // Le disque où l'escabeau doit être posé pour cueillir : affiché quand il sert (on le porte, ou on vise l'arbre).
@@ -483,6 +498,7 @@ function installer(message: Bienvenue): void {
     }
   }
   lots.construire();
+  dechetsVue.installer(message.dechets);
   contenu.add(lots.groupe);
   for (const f of message.feux) {
     const vue = new FeuDeCamp(f);
@@ -501,6 +517,8 @@ function installer(message: Bienvenue): void {
   hud.majWotts(message.wotts);
   hud.majTutoriel(message.tutoriel);
   hud.majQuetes(message.quetes);
+  // Le carnet note la dernière idée venue (0.7, chantier 6).
+  if (message.progression) hud.majIdees(message.progression.devoilees);
   armeEquipee = message.arme;
   hud.majArme(armeEquipee);
   aides.charger(message.moi.pseudo);
@@ -521,7 +539,10 @@ function installer(message: Bienvenue): void {
   charges = message.charges;
   occupe = false;
   hud.identite(message.moi.pseudo, message.moi.famille);
+  menuAdmin.maj(message.moi.admin);
+  hud.admin = message.moi.admin !== undefined;
   hud.majSavoir(message.savoir ?? { apprises: [], manuels: [] });
+  hud.majProgression(message.progression ?? null);
   lecons.maj(null);
   son.entrer({
     famille: message.moi.famille,
@@ -918,6 +939,25 @@ function recevoir(message: MessageServeur): void {
     // Le savoir des autres familles (Book 25 §2.3) : leçons et manuels.
     case "savoir":
       hud.majSavoir(message.savoir);
+      return;
+    case "admin":
+      menuAdmin.maj(message.admin);
+      return;
+    // La couche de déchets (0.7) : une pièce prise, un remplissage neuf, un point, la liste d'une fouille.
+    case "dechets_carreau":
+      dechetsVue.majCarreau(message.cx, message.cz, message.r, message.pris);
+      return;
+    case "dechets_point":
+      dechetsVue.majPoint(message.point);
+      return;
+    case "fouille":
+      dechetsVue.fouille(message.fouille);
+      return;
+    // L'arbre de progression (0.7) : « Tu y penses : … » ; les cartes, la pastille et « À découvrir » (hud.ts).
+    case "devoilement":
+      hud.majProgression(message.progression);
+      if (message.texte) hud.message(message.texte, "aide");
+      hud.majIdees(message.progression.devoilees, message.nouvelles);
       return;
     case "lecons_possibles":
       lecons.choisir(message.a, message.recettes);
@@ -1576,6 +1616,13 @@ function boucle(instant: number): void {
       leurresActifs,
       etatCoop,
     );
+    // Les déchets à portée de main (0.7) : la cible la plus proche l'emporte.
+    const dechet = dechetsVue.proposer(position);
+    if (dechet) {
+      const c = propositions.cible;
+      // Une sortie ou la mare (sans cible au sol) passent avant : on s'y tient exprès.
+      if (!propositions.A || (c && dechet.distance < Math.max(0, Math.hypot(c.x - position.x, c.z - position.z) - (c.rayon ?? 0.5)))) propositions = dechet.propositions;
+    }
     if (modeCombat) {
       // En combat, A frappe et B esquive ; saisi, B sert à se dégager.
       propositions = {
@@ -1717,6 +1764,8 @@ if (import.meta.env.DEV) {
       scene,
       personnage: () => personnage,
       envoyer,
+      /** Mode mesure : dessin regroupé (true) ou d'avant (false), pour comparer les deux images (lots.ts). */
+      fondre: basculerRegroupements,
     },
   });
 }
@@ -1734,7 +1783,7 @@ if (MESURE !== null && MESURE !== "0") {
 function* postesMesures(): Generator<readonly [string, THREE.Object3D | null | undefined]> {
   yield ["décor", decors.get(lieu)];
   for (const r of ressources.values()) yield [`ressource:${r.donnees.type}`, r.objet];
-  yield ["ressource:lots (branches, bûches, pierres)", lots.groupe];
+  yield ["ressource:lots", lots.groupe];
   for (const f of feux.values()) yield ["feux", f.objet];
   for (const i of installations.values()) yield ["installations", i.objet];
   yield ["installations", cables];

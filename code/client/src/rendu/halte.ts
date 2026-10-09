@@ -9,6 +9,7 @@
 import * as THREE from "three";
 import { BOUTIQUE, FERME_HALTE, GOULET, HALTE, ROUTE, STATION, dansBoite, type Boite } from "../../../commun/src/lieux.ts";
 import { PALETTE, aleatoire, materiau, nommer } from "./materiaux.ts";
+import { trierParInstance } from "./lots.ts";
 import {
   Chantier,
   dessiner,
@@ -296,7 +297,7 @@ function creerForet(aleat: () => number): THREE.Group {
   }
   buissons.castShadow = true;
   buissons.receiveShadow = true;
-  groupe.add(buissons);
+  groupe.add(trierParInstance(buissons));
   return groupe;
 }
 
@@ -1004,7 +1005,7 @@ function creerPoteaux(aleat: () => number): THREE.Group {
 
 // ---------- Herbes folles, y compris dans les fissures ----------
 
-function creerHerbes(aleat: () => number): THREE.InstancedMesh {
+function creerHerbes(aleat: () => number): THREE.Object3D {
   const brin = (angle: number) =>
     new THREE.ConeGeometry(0.05, 0.42, 3).translate(0, 0.21, 0).rotateZ(0.3).rotateY(angle).translate(Math.cos(angle) * 0.05, 0, Math.sin(angle) * 0.05);
   const touffes = new THREE.InstancedMesh(fusionner([brin(0), brin(2.1), brin(4.2)]), materiau(0xffffff), 1400);
@@ -1025,7 +1026,8 @@ function creerHerbes(aleat: () => number): THREE.InstancedMesh {
     touffes.setColorAt(i, teinte.setHex(aleat() < 0.55 ? PALETTE.herbeSeche : PALETTE.herbe).offsetHSL(0, 0, (aleat() - 0.5) * 0.08));
   }
   touffes.receiveShadow = true;
-  return touffes;
+  // Triées touffe par touffe (lots.ts) : à la halte, 1 400 touffes, dont la plupart hors champ.
+  return trierParInstance(touffes);
 }
 
 // ---------- Petits débris le long de la route ----------

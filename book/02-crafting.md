@@ -1,6 +1,6 @@
 # Book 02 — Le Crafting
 
-> Document de conception · version 0.6 · 2026-10-07
+> Document de conception · version 0.7 · 2026-10-09
 > Statut : **brouillon de travail**. Les valeurs chiffrées sont des hypothèses de départ, réalistes en ordre de grandeur, à calibrer en playtest.
 > S'appuie sur le [Book 01 — Les Trois Feux](01-les-trois-feux.md) : familles, énergie en Wh, énergie grise, wotts.
 
@@ -159,6 +159,15 @@ Chaque vestige offre trois options, et chaque option détruit les autres. **Choi
 | **Grange** | Grange effondrée | Ferme 4, salon 2 (le débarras qu'on y entassait), garage 1 |
 
 Le poids de tirage d'un vestige est celui de sa famille dans le lieu × celui de sa rareté : **C 10, P 4, R 1, L 0,25**. Valeurs de réglage, à caler pendant le test.
+
+### Vestiges, lot 2 : les déchets de l'Abondance (0.7, 2026-10-09)
+
+Le détail est au [Book 26](26-les-dechets-de-l-abondance.md). En bref, pour le crafting :
+
+- **91 objets nouveaux**, presque tous sans valeur, en trois familles nouvelles (déchet, textile, loisir), posés **partout** en amas et en conteneurs : **tout ce qu'on voit au sol se ramasse**.
+- **Aucune recette ne change, aucun composant nouveau** : chaque objet se démonte en matières qui existent déjà. Un stylo donne un petit ressort, un oreiller des plumes, un piquet de clôture une barre de métal, un ressort de suspension deux lames de ressort, une lame de tondeuse deux lames ébréchées, un onduleur une petite batterie.
+- **Les manques de la 0.6 sont comblés** dans le monde ordinaire : barres de métal et lames de ressort (🔥), appareils photo jetables et petites batteries (⚡), vélos, petits ressorts et plumes (⚙️). Chaque famille trouve sa base seule (Book 25 §2.5).
+- **Une ordure vaut 0** : le Comptoir la refuse ; jetée hors du terrain personnel, elle disparaît en 24 h.
 
 ---
 
@@ -447,6 +456,8 @@ Le crafting doit être accessible **sans rien** et devenir profond **avec le tem
 | 7 | Construit sa **première installation native** | Identité de famille |
 | 8 | Premier voyage vers un **lieu proche** | Monde, risque, retour |
 
+> **Depuis la 0.7**, ces premières heures suivent l'**arbre de progression** (§14 quater) : le premier clic sur Fabriquer ne montre que **deux cartes**, le feu de camp et l'abri ; les autres recettes viennent quand le personnage **y pense**, et chaque étape du tutoriel qui fait fabriquer trouve sa recette déjà dévoilée.
+
 ### Kit de départ (proposition)
 
 Commun à tous : couteau abîmé, briquet, gourde, bâche, sac à dos.
@@ -512,6 +523,77 @@ On range les recettes selon **ce à quoi sert l'objet**, pas selon ses ingrédie
 - **En téléphone horizontal**, les onglets n'ont que leur icône.
 - **Les améliorations sur place** (Book 24) n'auront pas d'onglet à elles : le bouton « Améliorer » est sur l'installation, dans le monde.
 - **À tester** : la frontière entre Bâtir et Ateliers, sur quelques joueurs.
+- **Depuis la 0.7**, le panneau ne montre que les recettes **dévoilées**, et la barre d'onglets n'apparaît qu'à 8 recettes (§14 quater).
+
+## 14 quater. L'arbre de progression : on y pense au bon moment (0.7, 2026-10-09)
+
+Demande du porteur : « afficher les crafts progressivement, pour que le nouveau joueur soit obligé de commencer par un feu ou un abri et qu'il ne soit pas noyé sous tous les crafts possibles », avec un arbre « logique, qui respecte la pyramide de Maslow et cohérent en termes de gameplay ». Avant la 0.7, un nouveau joueur voyait **plus de cent cartes** au premier clic sur Fabriquer (59 à 64 de sa famille et communes, et 44 à 49 grisées des autres familles), sur un iPhone 13 mini. **Construit en 0.7** ; la table complète est en **annexe A**.
+
+### Le principe : connu n'est pas dévoilé
+
+- Tout survivant **sait** faire un feu, un abri, remmancher, panser (Book 03 §5.2). On ne lui fait pas « apprendre » le feu : on règle son **attention**. Une recette commune ou de sa famille est **connue**, mais elle n'apparaît dans Fabriquer qu'une fois **dévoilée** : quand le personnage en a eu **besoin**, ou qu'il a **tenu l'ingrédient clé**.
+- Le mot du jeu : **« Tu y penses »** (dévoiler), jamais « tu apprends », réservé à la leçon et au manuel des autres familles (Book 25 §2.3).
+- Une recette dévoilée **le reste** : à l'effondrement, d'une session à l'autre. Elle s'efface en fin de cycle, avec le reste.
+- Le savoir des **autres familles** garde sa règle (leçon, manuel, ×1,5, ★★) ; seul change le moment où l'on en voit les cartes grisées (ci-dessous).
+
+### Les cinq paliers, calqués sur Maslow
+
+| Palier | Maslow | Dans *Watt Now?* | Recettes (code 0.7) |
+|---|---|---|---|
+| **1 · Le corps** | Physiologique | Chaleur, dormir, boire, manger | 14 (avec les cartes Feu de camp et Foyer Dakota) |
+| **2 · À l'abri du danger** | Sécurité | S'outiller, se défendre, se cacher, se soigner, ranger | 17 |
+| **3 · Les tiens, puis les autres** | Appartenance | 3a : l'atelier et l'arme de sa famille ; 3b : le Comptoir, la rencontre, les pièces à vendre | 35 |
+| **4 · Le métier** | Estime | Toute la gamme de sa famille, l'arc vrai | 31 |
+| **5 · L'œuvre** | Accomplissement | Les pièces à deux ou trois familles | 12 |
+
+Les paliers **ne sont pas des niveaux** : aucune jauge, aucun « palier 3 atteint ». Une recette s'ouvre dès que **l'un** de ses déclencheurs est vrai. Le palier sert à concevoir, à régler le rythme et à choisir les silhouettes « À découvrir ».
+
+### Les six règles
+
+1. **Premier écran : deux cartes**, le feu de camp et l'abri (décision Q3).
+2. **Un déclencheur lié à l'action**, jamais un compteur abstrait : on **tient** l'ingrédient clé (« vu : X » : l'objet est entré une fois dans le sac), on a **fabriqué** la recette d'avant, on a **ressenti** un besoin (nuit, sommeil bas, morsure, sac trop lourd, arbre trop haut), on a **vu** quelque chose (un Éteint, la pluie).
+3. **Plusieurs déclencheurs par recette, reliés par « ou »** : personne ne reste bloqué parce qu'il n'a pas vécu *la* bonne scène.
+4. **La chaîne tire ses maillons** : dévoiler une recette dévoile la voie de base de ses ingrédients fabricables et de son installation (le récupérateur de pluie fait penser à la corde).
+5. **Le tutoriel et le carnet dévoilent ce qu'ils demandent** : chaque étape du tutoriel qui fait fabriquer (le feu, la hache, l'abri, l'atelier de famille) et chaque quête en cours (« Forger une lame » : la lame et sa forge). Le carnet ne demande jamais une recette invisible.
+6. **Le serveur constate et refuse** (décision Q1) : tout déclencheur se vérifie côté serveur, et le serveur refuse de fabriquer une recette non dévoilée (« Tu n'y as pas encore pensé. »). En jeu normal, ce cas n'arrive pas, puisque le client ne montre pas la recette : c'est un filet de sécurité.
+
+### Les seuils
+
+- **Le seuil S, « ton métier commence »** : l'abri posé **et** un premier danger surmonté (un Éteint détruit, ou une nuit dormie), **ou** l'étape « La famille » du tutoriel, **ou** 2 h de jeu. Il dévoile l'**atelier** de la famille (foyer de forge, banc de recharge, pédalier) et son **arme de métier** ; rien du métier ne se dévoile avant l'atelier, sauf ce qu'une quête demande. Pendant le tutoriel, l'Éteint scénarisé ne compte pas : le seuil tombe **pile** à l'étape « La famille », avant « La nuit » (décision Q9). Message, une seule fois : « Ton métier commence : le foyer de forge t'attend dans Fabriquer. »
+- **Le déclencheur A, « les autres »** : une visite au Comptoir, un échange, **une rencontre** (rester une minute à moins de 3 m d'un joueur d'une autre famille) ou **voir faire** (être à moins de 5 m d'un joueur qui fabrique). Il ouvre les pièces qu'on vend aux autres (rivets, pointes, lampe bricolée) et les cartes grisées des autres familles.
+- **Voir faire** (décision Q7) : une recette commune ou de sa famille qu'on a vu fabriquer se dévoile ; celle d'une autre famille s'affiche grisée et dépliée.
+- **Au palier 5, la rencontre est un raccourci, pas une porte** : le Charbonnier seul ouvre le ressort retrempé et les électrodes par la **pratique** (5 lames forgées, avec A), comme le veut la règle d'or (Book 25 §2.5).
+
+### Le rythme (décision Q5 : rapide au début pour accrocher, puis régulier)
+
+- **Le filet du temps** : au plus tard après **20 min** de jeu connecté, tout le palier 1 est dévoilé ; après **1 h**, tout le palier 2 ; après **2 h**, le seuil S tombe de lui-même.
+- **Le vétéran qui saute le tutoriel**, et les comptes créés sans tutoriel, ont les **paliers 1 et 2 d'emblée** (décision Q8).
+- **Mesuré** par `npm run rythme` (neuf parcours types : prudent, pressé, sans tutoriel, pour chaque famille ; 300 min simulées) : dans les 30 premières minutes, **15 à 24 nouveautés** (recettes ou buts) selon le joueur, jamais plus de 4,5 min sans rien (10 min pour le vétéran, qui a déjà tout le début) ; ensuite, un but nouveau au plus tard toutes les **13,5 à 23 min** jusqu'au dernier objectif du carnet ; **aucun blocage**, chaque ingrédient demandé se trouve. Cible : 10 nouveautés en 30 min, un but toutes les 20 min ; le joueur prudent (×1,3 plus lent) la dépasse un peu, à surveiller au test familial.
+- **Un message au plus toutes les 10 s** : « Tu y penses : tresser une corde. », ou, regroupées, « Tu y penses : 3 idées nouvelles dans Fabriquer. »
+
+### Les personnages d'avant la 0.7 (décision Q4)
+
+- L'arbre **s'applique à eux aussi** : ils **ne voient plus** ce qu'ils n'ont pas encore validé.
+- **On ne détruit rien** : leurs installations, leurs objets, leurs fabrications restent. Ce qu'ils ont déjà fabriqué ou posé compte comme vécu : ces recettes-là restent dévoilées.
+- La migration se fait une fois, à la première connexion en 0.7 (colonne `progression` du personnage, vide avant).
+
+### Le panneau Fabriquer (décisions Q2, Q6 et « pastille »)
+
+- **Moins de 8 recettes dévoilées : pas de barre d'onglets**, une seule liste. **À 8**, toute la barre apparaît, une fois pour toutes, dans son ordre fixe (§14 ter) ; un onglet encore vide est **atténué**, pas caché : les onglets ne bougent jamais.
+- **L'en-tête** : « 23 recettes · 3 à découvrir ».
+- **« Nouveau »** : la carte d'une recette dévoilée porte l'étiquette et un **liseré doré** jusqu'à ce qu'elle ait été montrée ; elle passe **en tête de son onglet** le temps d'une ouverture, puis reprend sa place (on ne réordonne qu'à l'ouverture du panneau : l'ordre ne bouge pas sous le doigt). Le « vu » est gardé par le serveur : le téléphone et l'ordinateur sont d'accord.
+- **La pastille** (décision du porteur) : une **pastille rouge dans le coin du bouton Fabriquer**, qui compte les recettes nouvelles non regardées, **et** un point rouge sur l'**onglet** concerné (par exemple Matériaux).
+- **« À découvrir »** (décision Q2) : en bas du panneau, les **silhouettes des recettes du prochain palier** (celui dont une recette reste à dévoiler), celles que demande une quête en cours d'abord. L'icône assombrie, **pas de nom**, une ligne d'**indice** qui dit le besoin, jamais la solution ni le lieu (« Dormir par terre, c'est dormir à moitié. »). **Trois** d'abord, « Voir les N autres » pour le reste. La section est dépliée la première fois, puis repliée sur téléphone. « Faisable maintenant » la cache aussi.
+- **Les cartes grisées des autres familles** (décision Q6) : **cachées** jusqu'au déclencheur A ; ensuite **une ligne repliée par famille** (« Chez les Voltaïques · 20 recettes »), qu'on déplie d'un doigt. Se montrent **une à une, dépliées** : celle qu'on a vu faire, celle dont on tient le produit, celle qui est la pièce d'une recette qu'on voit. La leçon et le manuel **dévoilent** en même temps qu'ils apprennent.
+- **« Il manque… »** ne cite plus une recette cachée : « ça se fabrique (tu y penseras) ».
+
+### Ce que garde le serveur
+
+Par personnage, une liste courte (colonne `progression`, en JSON) : les recettes **dévoilées** (dans l'ordre), celles **pas encore vues** (la pastille), les **types d'objets entrés une fois dans le sac** (le « vu : X ») et le **temps de jeu connecté** (le filet). Rien ne tourne en continu : on ne réévalue que lorsque quelque chose change (un fait noté, le sac, une quête, une étape du tutoriel, une échéance du filet), au plus deux fois par seconde ; les constats d'état (sommeil bas, Éteint en vue, pluie, plaie, saisie, sac chargé) sont regardés une fois par seconde, et seulement tant qu'ils n'ont jamais été vus.
+
+### Les fichiers
+
+`code/commun/src/progression.ts` (la table, les déclencheurs, les calculs purs ; un test vérifie que chaque recette de `RECETTES` y a sa ligne, comme la `categorie` obligatoire), `code/serveur/src/devoilement.ts` (le suivi, la migration, les messages), `code/serveur/src/rencontres.ts` (rencontre et voir faire), `code/client/src/fabrication-arbre.ts` (ce que montre le panneau), `code/client/src/carnet-idees.ts` (« Dernière idée » dans le carnet), `code/commun/src/rythme.ts` et `code/scripts/rythme.ts` (le simulateur). **Rien ne change dans les recettes elles-mêmes.**
 
 ## 15. Règles d'équilibrage du crafting
 
@@ -572,7 +654,7 @@ Les recettes sont des **données**, pas du code. On peut en ajouter sans toucher
 - [x] **Cours de la kcal :** ✅ 0,2 wott/kcal pour le **travail** seulement. La nourriture se vend à son énergie grise (≈ 0,06 wott/kcal). Le surplus qui en découle est voulu, son ampleur reste à vérifier en simulation.
 - [ ] **Qualité :** échelle à 5 niveaux et règle du maillon faible, à valider.
 - [ ] **Kit de départ :** à valider, et à équilibrer en énergie grise (les trois kits doivent avoir la même valeur).
-- [ ] **Arbre complet des recettes :** à construire, sans doute dans un book par famille.
+- [ ] **Arbre complet des recettes :** à construire, sans doute dans un book par famille. *(0.7 : l'arbre de **progression** des 107 recettes existantes, c'est-à-dire l'ordre dans lequel on y pense, est construit : §14 quater et annexe A. L'arbre complet des recettes à venir reste à faire.)*
 
 ---
 
@@ -585,3 +667,149 @@ Les recettes sont des **données**, pas du code. On peut en ajouter sans toucher
 - **Processus passif** : transformation qui continue sans le joueur, même hors ligne.
 - **Sous-produit** : ce qu'une recette produit en plus de l'objet recherché.
 - **Domaine** : catégorie de production où une famille est la moins chère.
+- **Recette dévoilée** : recette connue à laquelle le personnage a pensé (§14 quater) ; seules celles-là s'affichent dans Fabriquer et se fabriquent.
+- **Palier** : une des cinq familles de déclencheurs de l'arbre de progression (le corps, l'abri du danger, les tiens puis les autres, le métier, l'œuvre). Pas un niveau.
+- **Silhouette « À découvrir »** : une recette du prochain palier, montrée sans nom, l'icône assombrie, avec un indice qui dit le besoin.
+
+---
+
+## Annexe A. La table complète de l'arbre de progression (code 0.7)
+
+Tirée de `code/commun/src/progression.ts` (2026-10-09) : 107 recettes et les deux cartes à part (Feu de camp, Foyer Dakota). Une recette se dévoile dès que **l'un** de ses déclencheurs est vrai (séparés par « · »). En plus de ses déclencheurs, toute recette se dévoile aussi : si on l'a **vu faire** ; si le **tutoriel** ou une **quête en cours** la demande (règle 5) ; si on l'a **déjà fabriquée** ; par le **filet du temps** de son palier ; par la **chaîne** d'une recette dévoilée (règle 4). Une recette de famille autre que l'atelier attend l'atelier, sauf demande d'une quête.
+
+**Notation** : « vu : X » = l'objet X est entré au moins une fois dans le sac ; « fait : R » = la recette R a été fabriquée (ou son installation posée) ; **seuil S** = l'abri et un premier danger surmonté, ou l'étape « La famille » du tutoriel, ou 2 h de jeu ; **A** = le Comptoir, un échange, une rencontre d'une autre famille ou avoir vu faire ; « « R » dévoilée » = la recette R est déjà dans Fabriquer. Les indices font environ 60 caractères : le besoin, jamais la solution ni le lieu.
+
+#### Palier 1 · Le corps (14) · filet du temps : 20 min
+
+| Recette | Famille | Déclencheurs (l'un ou l'autre) | Indice « À découvrir » |
+|---|---|---|---|
+| Feu de camp | Tous | **d'emblée** | Chaleur, eau bouillie, cuisine : tout commence là. |
+| Abri de branches et de bâche | Tous | **d'emblée** | Un toit pour dormir deux fois mieux. |
+| Lit de branchages | Tous | fait : Abri de branches et de bâche · une nuit dormie · sommeil sous la moitié · quête « Un vrai lit » | Dormir par terre, c'est dormir à moitié. |
+| Rouler une ficelle | Tous | vu : poignée de fibres | Des fibres au bord de l'eau, et tes doigts. |
+| Tresser une corde | Tous | vu : poignée de fibres | Plus solide qu'une ficelle, pour ce qui pèse. |
+| Récupérateur de pluie | Tous | la pluie · 3e ébullition · quête « L'eau du ciel » | Bouillir l'eau coûte du bois. Le ciel, lui, la donne. |
+| Plumer et vider la poule | Tous | vu : poule | Une poule, ça ne se mange pas avec les plumes. |
+| Poêlée de cèpes | Tous | vu : cèpe · quête « Un vrai repas » | Ce qui pousse sous les arbres, cuit, cale bien. |
+| Volaille aux cèpes | Tous | vu : portion de volaille crue **et** vu : cèpe · quête « Un vrai repas » | Le vrai repas : de la viande et ce qui l'accompagne. |
+| Pommes cuites sous la cendre | Tous | vu : pomme · quête « Un vrai repas » | Un fruit sous la cendre devient un dessert. |
+| Escabeau de bois | Tous | un arbre hors de portée | Les plus belles pommes sont toujours en haut. |
+| Soupe de cèpes | Tous | (foyer de cuisine ou foyer de niveau 3) · quête « Une vraie cuisine » | Un mijoté nourrit et désaltère à la fois. |
+| Pot-au-feu de volaille | Tous | (foyer de cuisine ou foyer de niveau 3) · quête « Une vraie cuisine » | Ce qui mijote longtemps cale longtemps. |
+| Foyer Dakota | Tous | vu : bâton à fouir ou bêche · quête « Un feu qui ne se voit pas » | Un feu qui ne se voit pas de loin. |
+
+#### Palier 2 · À l'abri du danger (17) · filet du temps : 60 min
+
+| Recette | Famille | Déclencheurs (l'un ou l'autre) | Indice « À découvrir » |
+|---|---|---|---|
+| Remmancher la hache | Tous | vu : tête de hache · tutoriel, étape « L'outil » | Une tête d'outil sans manche ne sert à rien. |
+| Établi | Tous | fait : Remmancher la hache · vu : hache remmanchée ou perche de frêne | Les gestes fins demandent un plan de travail. |
+| Tailler un gourdin | Tous | premier feu allumé · un Éteint en vue · quête « De quoi se défendre » | Les poings, c'est pour les films. |
+| Épieu durci au feu | Tous | un Éteint en vue · fait : Tailler un gourdin · quête « De quoi se défendre » | Mieux vaut les tenir à distance. |
+| Lance (épieu et couteau ligaturé) | Tous | fait : Épieu durci au feu | Une pointe d'acier au bout du bois. |
+| Arc de fortune (branche droite) | Tous | un Éteint détruit · quête « Le premier arc » | Frapper de plus loin, la prochaine fois. |
+| Arc de fortune (perche de frêne) | Tous | vu : perche de frêne · un Éteint détruit · quête « Le premier arc » | Frapper avant d'être saisi. |
+| Flèches durcies au feu | Tous | un arc de fortune fait · un arc en main | Un arc sans flèches, c'est un bâton. |
+| Flèches à pointe d'os | Tous | vu : os de poule **et** un arc en main | Une pointe plus dure que le bois. |
+| Flèches à pointe de clou (douze) | Tous | vu : bocal de clous et vis mélangés **et** un arc en main | Des pointes toutes faites, par douzaines. |
+| Bâton à fouir | Tous | une nuit dormie · quête « Un feu qui ne se voit pas » | La nuit, toute lumière se voit de loin. |
+| Alarme à boîtes de conserve | Tous | vu : boîte de conserve vide **et** (une nuit dormie ou un Éteint en vue) · quête « Être prévenu » | Être prévenu avant qu'ils arrivent. |
+| Pansements | Tous | vu : chiffon · une plaie · quête « Se soigner » | Un chiffon propre vaut de l'or quand ça saigne. |
+| Protège-bras de fortune | Tous | saisi · mordu · quête « Là où ils mordent » | Ils mordent l'avant-bras qu'on lève. |
+| Coffre de rangement | Tous | sac chargé à 70 % · 2 nuits dormies · quête « Un coffre à soi » | Quand ton sac pèsera trop lourd… |
+| Sac de fortune | Tous | sans sac | Sans sac, tes poches ne portent pas grand-chose. |
+| Travois | Tous | trop lourd pour ramasser · quête « Traîner plus lourd » | Ce qu'on ne porte pas, on le traîne. |
+
+#### Palier 3 · Les tiens, puis les autres (35)
+
+| Recette | Famille | Déclencheurs (l'un ou l'autre) | Indice « À découvrir » |
+|---|---|---|---|
+| Foyer de forge à soufflet | 🔥 | **seuil S** | Quand tu auras un toit et tenu tête une fois… |
+| Meule de charbonnière | 🔥 | fait : Foyer de forge à soufflet · quête « La charbonnière » | Ta forge aura faim d'un feu plus chaud. |
+| Forger un couteau (fer doux) | 🔥 | (premier charbon défourné ou vu : kilo de charbon de bois) · quête « Forger une lame » | Ton premier charbon, ta première lame. |
+| Forger un couteau | 🔥 | (premier charbon défourné ou vu : kilo de charbon de bois) **et** vu : lame de ressort | Un bon acier de ressort fait une bonne lame. |
+| Forger un couteau (lime usée) | 🔥 | (premier charbon défourné ou vu : kilo de charbon de bois) **et** vu : lime usée | Le meilleur acier dort dans les vieux outils. |
+| Forger une machette (fer doux) | 🔥 | **seuil S** · un couteau forgé · quête « La trempe » | Ton arme de métier : plus longue qu'un couteau. |
+| Forger une machette | 🔥 | un couteau forgé **et** vu : lame de ressort | Une longue lame dans un bon acier. |
+| Forger une machette (lames ébréchées) | 🔥 | un couteau forgé **et** vu : lame ébréchée | Deux lames cassées en font une neuve. |
+| Forger de nouveau une lame ébréchée | 🔥 | vu : lame ébréchée | Une lame cassée n'est pas perdue. |
+| Banc de recharge | ⚡ | **seuil S** | Quand tu auras un toit et tenu tête une fois… |
+| Matraque de fortune | ⚡ | **seuil S** · fait : Banc de recharge · vu : appareil photo jetable | Ton arme de métier : le silence qui mord. |
+| Module de décharge (flash) | ⚡ | vu : appareil photo jetable | Un flash garde une belle décharge en réserve. |
+| Poser le panneau solaire | ⚡ | vu : petit panneau solaire · quête « Le panneau de la station » · quête « Installer le panneau » | Le soleil donne, encore faut-il le recueillir. |
+| Monter un pack de cellules | ⚡ | vu : cellule lithium · quête « Du courant en poche » | Des petites piles ensemble font une vraie batterie. |
+| Module de décharge (raquette) | ⚡ | vu : raquette anti-moustiques · quête « La Raquette » | Ce qui grillait les moustiques peut servir encore. |
+| Matraque électrique | ⚡ | fait : Monter un pack de cellules · un module de décharge fait · quête « La Raquette » | Une décharge qui les éteint pour de bon. |
+| Pédalier universel | ⚙️ | **seuil S** · vu : cadre de vélo · quête « La meule » · quête « La dynamo » | Ce qui tourne ne meurt pas. |
+| Monter l'arbalète | ⚙️ | **seuil S** · fait : Pédalier universel · quête « Le bois qui plie » | Ton arme de métier : rien à bander, tout à viser. |
+| Arbrier d'arbalète | ⚙️ | « Monter l'arbalète » dévoilée | Le corps de l'arme, taillé dans une bûche. |
+| Noix et détente (bois) | ⚙️ | « Monter l'arbalète » dévoilée | Ce qui retient la corde jusqu'au tir. |
+| Arc d'arbalète (frêne) | ⚙️ | « Monter l'arbalète » dévoilée | Un arc court et raide pour l'arbalète. |
+| Corde d'arbalète (cordes d'arc) | ⚙️ | « Monter l'arbalète » dévoilée | Une corde doublée, pour tenir la tension. |
+| Arc d'arbalète (lame de ressort) | ⚙️ | vu : lame de ressort **et** « Monter l'arbalète » dévoilée | Un ressort plie mieux que le bois. |
+| Noix et détente (os) | ⚙️ | vu : os de poule **et** « Monter l'arbalète » dévoilée | Un os dur tient mieux qu'un bout de bois. |
+| Corde d'arbalète (ceinture de sécurité) | ⚙️ | vu : ceinture de sécurité **et** « Monter l'arbalète » dévoilée | Une sangle faite pour ne jamais lâcher. |
+| Carreaux à pointe d'os | ⚙️ | fait : Monter l'arbalète · « Monter l'arbalète » dévoilée · quête « Le carreau » | Une arbalète sans carreaux, c'est un meuble. |
+| Carreaux à pointe de clou | ⚙️ | vu : bocal de clous et vis mélangés **et** « Monter l'arbalète » dévoilée | Des pointes toutes faites, par douzaines. |
+| Carreaux empennés de papier | ⚙️ | vu : liasse de papier **et** « Monter l'arbalète » dévoilée | Pas de plumes ? Le papier vole aussi. |
+| Forger vingt rivets | 🔥 | **A** · une machette forgée · quête « Le fournisseur » | De petites pièces que les autres achètent. |
+| Forger douze pointes d'acier | 🔥 | **A** · une machette forgée · vu : une flèche ou un carreau | Les flèches des autres ont besoin de pointes. |
+| Forger douze pointes (fil de fer) | 🔥 | (**A** ou une machette forgée ou vu : une flèche ou un carreau) **et** vu : rouleau de fil de fer | Du fil de fer, frappé à chaud. |
+| Forger deux pointes de lance | 🔥 | **A** · fait : Lance (épieu et couteau ligaturé) | Une vraie pointe, pour une vraie lance. |
+| Emmancher une pointe de lance | 🔥 | fait : Forger deux pointes de lance · vu : pointe de lance forgée | L'épieu coiffé d'acier. |
+| Lampe de poche bricolée | ⚡ | vu : LED **et** **A** · quête « Le courant chez les autres » | Une lumière à vendre aux autres familles. |
+| Flèches à pointe d'acier | Tous | vu : pointe d'acier | Une pointe d'acier perce mieux que l'os. |
+
+#### Palier 4 · Le métier (31)
+
+| Recette | Famille | Déclencheurs (l'un ou l'autre) | Indice « À découvrir » |
+|---|---|---|---|
+| Ébaucher un arc de frêne | Tous | un arc de fortune fait · un Éteint abattu d'une flèche à la tête | Le bois vert fatigue vite : il faut un bois sec. |
+| Corde d'arc (3 ficelles retordues) | Tous | un arc de fortune fait · un Éteint abattu d'une flèche à la tête | Un arc ne vaut pas mieux que sa corde. |
+| Monter l'arc de frêne | Tous | un arc de fortune fait · un Éteint abattu d'une flèche à la tête | Un arc qui dure, et qui porte plus loin. |
+| Corde d'arc (une corde retordue) | Tous | vu : rouleau de corde **et** « Monter l'arc de frêne » dévoilée | Une corde défaite fait une meilleure corde d'arc. |
+| Corde d'arc (fil dentaire) | Tous | vu : bobine de fil dentaire **et** « Monter l'arc de frêne » dévoilée | Le fil le plus solide est dans la salle de bains. |
+| Corde d'arc (boyau séché) | Tous | vu : boyau séché **et** « Monter l'arc de frêne » dévoilée | Les anciens tendaient leurs arcs autrement. |
+| Ébaucher un arc d'if | Tous | vu : bâton d'if | Le meilleur bois d'arc pousse au fond du bois. |
+| Monter l'arc d'if | Tous | vu : bâton d'if | Le meilleur arc, s'il sèche bien. |
+| Forger des pinces de forge | 🔥 | un couteau forgé · quête « Les pinces » | Sans pinces, pas plus de deux étoiles. |
+| Forger deux hachettes | 🔥 | fait : Forger des pinces de forge **et** une machette forgée · quête « La mise d'acier » | Une lame qui fend et qui se lance. |
+| Forger une hache | 🔥 | fait : Forger des pinces de forge **et** une machette forgée · quête « La mise d'acier » | Les vieilles têtes rouillées ne durent pas. |
+| Forger une hache (soc de charrue) | 🔥 | vu : soc de charrue | Un vieil outil des champs cache un bel acier. |
+| Forger une serpe (soc de charrue) | 🔥 | vu : soc de charrue | Un vieil outil des champs cache un bel acier. |
+| Forger une serpe | 🔥 | un couteau forgé | Une lame courbe pour élaguer. |
+| Forger un ciseau à bois et un burin | 🔥 | fait : Forger des pinces de forge | Tailler le bois et trancher le métal. |
+| Module de décharge (bobine) | ⚡ | vu : bobine d'allumage | Ce qui allumait un moteur claque plus fort. |
+| Aiguillon de défense | ⚡ | une matraque électrique faite **et** fait : Épieu durci au feu | La décharge au bout d'une longue hampe. |
+| Alarme électrique | ⚡ | (vu : rouleau de fil de fer ou fait : Alarme à boîtes de conserve) **et** fait : Banc de recharge · quête « Prévenu sans bruit » | Une alarme qui ne fait pas de bruit. |
+| Clôture de fortune | ⚡ | fait : Module de décharge (raquette) · fait : Alarme électrique | Un fil qui mord ceux qui passent. |
+| Électrificateur | ⚡ | vu : résistance chauffante | Une décharge qui revient sans cesse. |
+| Clôture électrique | ⚡ | fait : Électrificateur | Un vrai enclos qui se défend seul. |
+| Plaque de choc | ⚡ | vu : casserole cabossée **et** un module de décharge fait | Le sol lui-même peut mordre. |
+| Bain de dérouillage | ⚡ | vu : casserole cabossée **et** vu : machette de fortune | La rouille se défait, avec un peu de courant. |
+| Dérouiller une machette | ⚡ | fait : Bain de dérouillage | Une lame rouillée retrouve son tranchant. |
+| Arc d'arbalète (if) | ⚙️ | vu : bâton d'if | Le meilleur bois d'arc, en court et raide. |
+| Assommoir | ⚙️ | 3 Éteints détruits · fait : Monter l'arbalète · quête « Les mâchoires » | Ils reviennent : qu'un piège travaille pour toi. |
+| Fosse à pieux | ⚙️ | vu : bêche | Un trou bien caché arrête net. |
+| Mâchoires de fortune | ⚙️ | fait : Assommoir **et** vu : lame de ressort | Un piège qui tient au lieu d'assommer. |
+| Tour à perche | ⚙️ | fait : Monter l'arbalète | Ce qui tourne façonne le bois. |
+| Manche tourné | ⚙️ | fait : Tour à perche | Un manche rond et droit, fait au tour. |
+| Brouette | ⚙️ | (trop lourd pour ramasser ou fait : Travois) **et** vu : roue de vélo | Ce qui roule porte plus que ce qu'on traîne. |
+
+#### Palier 5 · L'œuvre (12)
+
+| Recette | Famille | Déclencheurs (l'un ou l'autre) | Indice « À découvrir » |
+|---|---|---|---|
+| Forger un ressort retrempé | 🔥 | rencontre : un Mécaniste · **A** **et** 5 lames forgées | Un ressort qui ne casse plus, pour d'autres que toi. |
+| Forger deux paires d'électrodes | 🔥 | rencontre : un Voltaïque · **A** **et** 5 lames forgées | Des pointes d'acier pour ceux qui manient le courant. |
+| Forger un glaive de ressort | 🔥 | forge ventilée (forge de niveau 2) **et** vu : rivet forgé | Ta plus belle lame, quand ta forge soufflera fort. |
+| Matraque à électrodes forgées | ⚡ | vu : paire d'électrodes forgées | Des électrodes forgées mordent plus fort. |
+| Matraque à manche tourné | ⚡ | vu : manche tourné | Un manche tourné, une matraque qui dure. |
+| Ventilateur de forge 12 V | ⚡ | vu : petit moteur · rencontre : un Charbonnier | Une forge souffle mieux avec un moteur. |
+| Noix et détente (rivets forgés) | ⚙️ | vu : rivet forgé | Des rivets d'acier, une détente qui ne s'use plus. |
+| Arc d'arbalète (ressort retrempé) | ⚙️ | vu : ressort retrempé | Un ressort retrempé, l'arc le plus puissant. |
+| Monter l'arbalète lourde | ⚙️ | vu : ressort retrempé | Deux ressorts retrempés, une arme lourde. |
+| Piège à mâchoires | ⚙️ | vu : ressort retrempé | Des mâchoires qui ne lâchent jamais. |
+| Cranequin | ⚙️ | fait : Monter l'arbalète lourde **et** vu : boîte de roulements à billes | Une manivelle pour bander l'arme lourde. |
+| Carreaux à pointe d'acier | ⚙️ | vu : pointe d'acier | Une pointe d'acier perce mieux que l'os. |
+

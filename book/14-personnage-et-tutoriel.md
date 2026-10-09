@@ -1,6 +1,6 @@
 # Book 14 — Création de Personnage et Tutoriel
 
-> Document de conception · version 0.1 · 2026-10-07
+> Document de conception · version 0.2 · 2026-10-09
 > Statut : **brouillon de travail**.
 
 ---
@@ -90,9 +90,22 @@ Elle a remonté son END à 10 (plafond pour une stat pénalisée), gagné un poi
 ### 4.3 Après le tutoriel
 
 - **Le carnet** (Book 03 §5.5) prend le relais : il note ce que le joueur a appris et suggère des **objectifs** (« Construire une cabane avant l'hiver », « Trouver un livre de forge »). **Construit (2026-10-08) : voir Book 22** (« S'installer » et « Le métier » de chaque famille).
-- **Les recettes pressenties** (Book 03 §5.1) guident vers la suite.
+- **Les recettes pressenties** (Book 03 §5.1) guident vers la suite. *(0.7 : ce sont les silhouettes « À découvrir » du panneau Fabriquer, celles du prochain palier, §4.4.)*
 - **Aide contextuelle** discrète la première fois qu'un système apparaît (première pluie, première infection, première halte).
 - **L'aide du jeu** (demande du porteur, 2026-10-08) : menu ⚙ → ❓ Aide, pour le joueur perdu. Elle compte 19 rubriques repliables : premiers pas, commandes, écran, besoins, partir et revenir, manger et boire, récolter, fabriquer, feu, nuit et pluie, terrain, Éteints, combat, blessures, voyager, wotts et Comptoir, carnet, familles, « Je suis coincé ». **Elle explique les mécanismes, jamais les solutions** : aucune liste de recettes, aucun lieu d'objet rare, aucun chiffre fin (dégâts, butins, probabilités), rien sur la grande quête ni sur un lieu pas encore livré. Les touches citées sont celles du joueur (ou ses boutons sur téléphone). Le texte est dans `code/client/src/aide-contenu.ts`. **À tenir à jour à chaque version** : une mécanique livrée a sa place dans l'aide.
+  - **En 0.7** : « Fabriquer » dit que les recettes viennent quand on y pense (le message « Tu y penses », la pastille, « À découvrir ») ; « Je suis coincé » répond à la recette qui ne vient pas (ramasser, explorer, dormir, aller au Comptoir ; et le filet du temps) ; une rubrique nouvelle, « Les déchets de l'Abondance » (tout se ramasse, presque rien ne vaut, les conteneurs se fouillent, le Comptoir refuse les ordures).
+
+### 4.4 Le tutoriel et l'arbre de progression (0.7, 2026-10-09)
+
+Depuis la 0.7, les recettes ne s'affichent dans Fabriquer qu'une fois **dévoilées**, quand le personnage y pense (Book 02 §14 quater, Book 03 §5.7). Le tutoriel est le premier fil de cet arbre ; **ses textes ne changent pas**.
+
+- **Au départ, deux cartes** : le feu de camp et l'abri. Le premier clic sur Fabriquer n'est plus une liste de cent lignes.
+- **Le tutoriel ne demande jamais une recette invisible** : chaque étape qui fait fabriquer la dévoile en arrivant, si son déclencheur naturel ne l'a pas déjà fait. Étape 3 « Le feu » : le feu de camp ; étape 6 « L'outil » : remmancher la hache ; étape 7 « L'abri » : l'abri ; étape 10 « La famille » : l'atelier de la famille (foyer de forge, banc de recharge, pédalier).
+- **Le métier commence pile à l'étape « La famille »** (décision Q9) : le seuil du métier, c'est l'abri posé et un premier danger surmonté. Pendant le tutoriel, l'Éteint scénarisé de l'étape 8 ne compte pas (il ferait tomber le seuil deux étapes trop tôt) ; une nuit dormie, si. Le message est un peu plus solennel : « Ton métier commence : le foyer de forge t'attend dans Fabriquer. »
+- **Ce que le joueur vit dévoile la suite** : les joncs ramassés font penser à la ficelle et à la corde, le premier feu au gourdin (« la fumée se sent de loin »), la tête de hache trouvée à son manche.
+- **Le vétéran qui saute le tutoriel** (§4.1, facultatif), et tout compte créé sans tutoriel, a d'emblée les **paliers 1 et 2** : les gestes du corps (feu, abri, lit, cuisine, eau de pluie…) et de l'abri du danger (outils, armes simples, alarme, soins, coffre, travois). Il connaît le début ; on ne lui fait pas refaire la cueillette pour voir le gourdin (décision Q8).
+- **Le filet du temps** : au plus tard après 20 min de jeu, tout le palier 1 ; après 1 h, tout le palier 2 ; après 2 h, le métier. Personne ne reste bloqué parce qu'il n'a pas vécu la bonne scène.
+- **Le rythme mesuré** (`npm run rythme`) : un élève du tutoriel a 15 à 24 nouveautés (recettes ou étapes) dans sa première demi-heure, jamais plus de 4,5 min sans rien.
 
 ---
 

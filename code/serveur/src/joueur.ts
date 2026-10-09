@@ -58,7 +58,7 @@ import {
 } from "../../commun/src/survie.ts";
 import { DISTANCE_INTERACTION, PORTEE_ARBRE, distanceMare, RAYON_ESCABEAU, REPOUSSE_MS, USAGES, estArbre, ressourceVisible } from "../../commun/src/terrain.ts";
 import { heuresEcoulees } from "../../commun/src/temps.ts";
-import { DEMONTAGE, LIEU_DE_FOUILLE, tirerVestiges } from "../../commun/src/vestiges.ts";
+import { DEMONTAGE, LIEU_DE_FOUILLE, estOrdure, tirerVestiges } from "../../commun/src/vestiges.ts";
 import {
   DUREE_VOYAGE_S,
   EAU_PAR_KM,
@@ -78,6 +78,10 @@ import type { LieuVivant } from "./lieu-vivant.ts";
 import { Comptoir } from "./comptoir.ts";
 import { Tir, type ContexteTir } from "./tir.ts";
 import { Sechage, accelerationFleches } from "./arc.ts";
+// L'arbre de progression (0.7) : les recettes dévoilées (serveur/src/devoilement.ts).
+import { SuiviDevoilement, type Constat, type SourceDevoilement } from "./devoilement.ts";
+// La couche de déchets (0.7) : ramasser, fouiller, démonter (serveur/src/couche-dechets.ts).
+import { CoucheDechets } from "./couche-dechets.ts";
 import { REDRESSEUR } from "../../commun/src/arc.ts";
 import { Forge, type ContexteForge } from "./forge.ts";
 import { declencher, declencheurNeuf, definitionDeclencheur, estDeclencheur, type DeclencheurPose } from "./declencheurs.ts";
@@ -181,6 +185,12 @@ import {
   type Etape,
 } from "../../commun/src/lignees.ts";
 import { NOMBRE_ETAPES, etapesTutoriel, type EtatTutoriel, type VueTutoriel } from "../../commun/src/tutoriel.ts";
+// Le compte admin « god » (outil du porteur) : serveur/src/admin.ts.
+import { remplirCoffres, savoirAdmin, vueProgressionAdmin } from "./admin.ts";
+import { ARRIVEE_DEPART } from "../../commun/src/lieux.ts";
+import { SANTE_DEPART } from "../../commun/src/combat.ts";
+import type { OperationAdmin, VueAdmin } from "../../commun/src/admin.ts";
+import type { VueProgression } from "../../commun/src/progression.ts";
 
 const JAMAIS = Number.MAX_SAFE_INTEGER;
 const INTERVALLE_BESOINS = 1000;
@@ -249,6 +259,21 @@ export class Joueur implements Voyageur, ParticipantLecon {
   private faune: { prises: number[] } = { prises: [] };
   /** Le savoir hors de sa famille (Book 25 §2.3) : leçons reçues, manuels lus, leçons données. Voir lecon.ts. */
   savoir: Savoir;
+  /** Les recettes dévoilées (l'arbre de progression, 0.7) : serveur/src/devoilement.ts. */
+  private devoilement!: SuiviDevoilement;
+  /** La couche de déchets du lieu où l'on est (0.7) : serveur/src/couche-dechets.ts. */
+  private dechets!: CoucheDechets;
+  /** « Il te manque… » ne cite pas une recette encore cachée (l'arbre de progression, 0.7, chantier 5). L'admin voit tout. */
+  private readonly recetteVisible = (id: string): boolean => this.admin || (this.devoilement?.estDevoilee(id) ?? true);
+  /**
+   * Le compte admin (serveur/src/admin.ts) : lu en base à la connexion, relu toutes les 5 s (un autre peut avoir été
+   * désigné), et relu à chaque geste admin. Invincible : ni dégâts, ni faim, ni soif, ni fatigue.
+   */
+  private admin = false;
+  private invincible = false;
+  private derniereVerifAdmin = 0;
+  /** Le monde est prévenu de chaque fabrication (« voir faire », à 5 m) ; null : personne n'écoute. */
+  surFabrication: ((recette: string) => void) | null = null;
   private bouge = false;
   // ---------- Combat et santé (É3, lot 3) ----------
   private sante: Sante;
@@ -369,7 +394,10 @@ export class Joueur implements Voyageur, ParticipantLecon {
     this.armeEquipee = base.chargerArme(compte.id);
     this.usure = base.chargerUsure(compte.id);
     this.chargeArmes = base.chargerChargeArmes(compte.id);
-    this.apparence = base.chargerApparence(compte.id, compte.famille);
+    this.admin = base.estAdmin(compte.id);
+    this.invincible = this.admin && base.adminInvincible(compte.id);
+    // L'admin porte la toge blanche : posée ici, jamais venue du client ni gardée en base.
+    this.apparence = this.admin ? { ...base.chargerApparence(compte.id, compte.famille), toge: true } : base.chargerApparence(compte.id, compte.famille);
     this.faune = base.chargerFaune(compte.id);
     this.savoir = base.chargerSavoir(compte.id);
     const { sante, endurance } = base.chargerSante(compte.id);
@@ -429,7 +457,10 @@ export class Joueur implements Voyageur, ParticipantLecon {
 
     // Se déconnecter dans son abri compte comme une nuit complète (Book 05 §3).
     const abri = [...this.installations.values()].some((i) => i.type === "abri" && Math.hypot(i.x - this.position.x, i.z - this.position.z) <= 3);
-    if (this.lieu === "terrain" && abri && perso.vuLe > 0 && instant - perso.vuLe >= 8 * 60_000) this.besoins = { ...this.besoins, repos: 1 };
+    if (this.lieu === "terrain" && abri && perso.vuLe > 0 && instant - perso.vuLe >= 8 * 60_000) {
+      this.besoins = { ...this.besoins, repos: 1 };
+      this.noterFait("nuit");
+    }
 
     // Les batteries se déchargent un peu pendant l'absence (calendrier, Book 01 §2 bis).
     const { charges, majLe } = base.chargerCharges(compte.id);
@@ -459,13 +490,15 @@ export class Joueur implements Voyageur, ParticipantLecon {
       const n = this.inventaire[b] ?? 0;
       if (n > 0 && this.charges[b] === undefined) this.charges[b] = Math.min(CHARGE_TROUVEE[b] * n, capacite(b, n));
     }
+    this.devoilement = this.creerDevoilement();
+    this.dechets = this.creerDechets();
   }
 
   bienvenue(debutMonde: number): Bienvenue {
     const instant = this.maintenant();
     return {
       t: "bienvenue",
-      moi: { id: this.compte.id, pseudo: this.compte.pseudo, famille: this.compte.famille, apparence: this.apparence },
+      moi: { id: this.compte.id, pseudo: this.compte.pseudo, famille: this.compte.famille, apparence: this.apparence, ...(this.admin ? { admin: this.vueAdmin() } : {}) },
       lieu: this.lieu,
       position: this.position,
       terrain: { taille: TERRAIN_TAILLE },
@@ -494,7 +527,9 @@ export class Joueur implements Voyageur, ParticipantLecon {
       usure: { ...this.usure },
       charge: { ...this.chargeArmes },
       pret: this.tir.pret,
-      savoir: { apprises: [...this.savoir.apprises], manuels: [...this.savoir.manuels] },
+      savoir: this.vueSavoir(),
+      progression: this.vueProgression(this.devoilement.vue()),
+      dechets: this.dechets.vue(),
       ...(this.lieu === "cooperative"
         ? { leurres: this.cooperatives.leurresActifs(this.compte.id, this.maintenant()), etatCoop: this.cooperatives.vue(this.compte.id) }
         : {}),
@@ -638,13 +673,99 @@ export class Joueur implements Voyageur, ParticipantLecon {
       case "lire":
         this.lire(message.objet);
         return;
+      case "dechets":
+        if (!this.voyage) this.dechets.recevoir(message.op);
+        return;
       case "tutoriel_passer":
         if (!this.tuto) return;
         this.tuto = null;
         this.base.sauverTutoriel(this.compte.id, null);
         this.envoyer({ t: "tutoriel", tutoriel: null });
+        // Le vétéran qui saute le tutoriel connaît le début (Q8) : les paliers 1 et 2 d'emblée.
+        this.devoilement.devoilerDEmblee();
+        return;
+      case "recettes_vues":
+        this.devoilement.marquerVues(message.recettes);
+        return;
+      case "admin":
+        this.commandeAdmin(message.op);
         return;
     }
+  }
+
+  // ---------- Le compte admin « god » (outil du porteur ; serveur/src/admin.ts) ----------
+
+  private vueAdmin(): VueAdmin {
+    return { invincible: this.invincible };
+  }
+
+  /** Le savoir montré au client : l'admin a les manuels des quatre familles (toutes les recettes dans Fabriquer). */
+  private vueSavoir(): { apprises: string[]; manuels: Famille[] } {
+    return this.admin ? savoirAdmin(this.savoir.apprises) : { apprises: [...this.savoir.apprises], manuels: [...this.savoir.manuels] };
+  }
+
+  /** La progression montrée au client : pour l'admin, tout est dévoilé. */
+  private vueProgression(v: VueProgression): VueProgression {
+    return this.admin ? vueProgressionAdmin(v) : v;
+  }
+
+  /** Relit en base si ce compte est (toujours) l'admin, et s'il est invincible. */
+  private relireAdmin(): void {
+    this.admin = this.base.estAdmin(this.compte.id);
+    this.invincible = this.admin && this.base.adminInvincible(this.compte.id);
+    this.derniereVerifAdmin = this.maintenant();
+  }
+
+  /** Un geste du menu ⚙ admin : refusé (sans bruit) à tout compte qui n'est pas l'admin en base, à cet instant. */
+  private commandeAdmin(op: OperationAdmin): void {
+    this.relireAdmin();
+    if (!this.admin) return;
+    switch (op.genre) {
+      case "invincible":
+        this.base.reglerInvincible(this.compte.id, op.oui);
+        this.invincible = op.oui;
+        this.envoyer({ t: "admin", admin: this.vueAdmin() });
+        this.info(op.oui ? "Invincible." : "Plus invincible : tu peux mourir.");
+        return;
+      case "aller":
+        return this.allerA(op.vers);
+      case "remplir": {
+        // Les coffres sont remplis en base, puis relus : le terrain se met à jour s'il y est.
+        const { coffres, sansPlace } = remplirCoffres(this.base, this.compte.id);
+        this.installations.clear();
+        for (const i of this.base.chargerInstallations(this.compte.id)) this.installations.set(i.id, i);
+        if (this.lieu === "terrain" && !this.voyage) for (const i of this.installations.values()) if (i.type === "coffre") this.envoyer({ t: "installation", installation: i });
+        this.info(sansPlace ? `${coffres} coffres remplis : plus de place pour en poser d'autres.` : `${coffres} coffres remplis.`);
+        return;
+      }
+    }
+  }
+
+  /** « Aller à… » : l'admin arrive tout de suite dans un lieu, sans trajet ni dépense. */
+  private allerA(vers: LieuId): void {
+    if (this.voyage) return;
+    this.annulerAction();
+    this.tir.quitterLieu();
+    if (this.objetPorte()) this.poserObjetLourd();
+    const de = this.lieu;
+    if (de === "cooperative" && (this.inventaire.radio_piles ?? 0) > 0) this.poserRadio();
+    if (de === "station") this.halte.sortir(this);
+    if (de === "cooperative") this.cooperatives.de(this.compte.id).sortir(this);
+    if (de === "comptoir") this.comptoir.sortir(this.envoyer);
+    this.eteints = [];
+    this.intention = INTENTION_REPOS;
+    this.elan = null;
+    // Chez lui, il arrive au camp (et non à la sortie du terrain).
+    this.arriver({ de, vers, arrivee: this.maintenant() }, vers === "terrain" ? { ...ARRIVEE_DEPART } : undefined);
+    this.base.sauverPosition(this.compte.id, this.position, this.lieu, this.maintenant());
+  }
+
+  /** Invincible : santé, besoins et endurance restent pleins (les Éteints l'attaquent quand même). */
+  private garderInvincible(): void {
+    if (!this.invincible) return;
+    if (this.sante.points < 100 || this.sante.blessures.length > 0 || this.sante.saignement !== "aucun" || this.sante.intoxication) this.sante = { ...SANTE_DEPART };
+    this.besoins = { kcal: RESERVE_KCAL_MAX, eau: RESERVE_EAU_MAX, repos: 1 };
+    this.endurance = this.enduranceMax();
   }
 
   // ---------- Ensemble (É4, lot 3) : ce que les autres voient, ce qu'on échange ----------
@@ -715,6 +836,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     this.base.sauverCharges(this.compte.id, this.charges, instant);
     this.envoyerWotts();
     this.noterFait("echange");
+    if (avec && avec !== this.compte.famille) this.noterFait(`rencontre:${avec}`);
     // Ce qu'on a passé à une autre famille (Book 25 §9.4 : « Le fournisseur », « Le carquois des autres »).
     if (avec && avec !== this.compte.famille) for (const [cle, n] of Object.entries(donne.objets)) this.noterFait(`don_autre_famille:${typeDe(cle)}`, n ?? 0);
     if (objetsDeMetierDonnes(donne.objets) > 0) this.mesurer("metier", "echange", objetsDeMetierDonnes(donne.objets));
@@ -758,6 +880,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
         const n = Math.floor(op.quantite);
         if (!estCleObjet(op.objet) || !(n >= 1) || (this.inventaire[op.objet] ?? 0) < n) return;
         // Un exemplaire étoilé se paie selon ses étoiles (Book 25 §4.2) ; il entre en stock tel quel.
+        // Une ordure (valeur 0, lot 2) ne se reprend jamais, trésorerie basse ou non (Q2).
+        if (estOrdure(typeDe(op.objet))) return this.info("Les Compteurs ne reprennent pas les ordures.");
         const prix = prixAchatCle(op.objet, this.comptoir.basse);
         if (prix === null) return this.info(this.comptoir.basse ? "Les caisses sont presque vides : on ne rachète plus que le bois, la pierre et la nourriture." : "Les Compteurs ne rachètent pas ça.");
         const total = prix * n;
@@ -939,7 +1063,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       if (resultat === "detruit") this.info("Il s'éteint.");
       else if (resultat === "raidi") this.indice("raidi", "Il est raidi : maintiens {agir} pour l'éteindre.");
     } else if (resultat === "a_terre") this.indice("a_terre", "Achève-le : frappe à la tête (maintiens {agir}, relâche).");
-    if (resultat === "detruit" && arme.objet === null) this.info(`À mains nues, ça ne suffira pas : prends une arme. ${ouTrouverPhrase("gourdin")}`);
+    if (resultat === "detruit" && arme.objet === null) this.info(`À mains nues, ça ne suffira pas : prends une arme. ${ouTrouverPhrase("gourdin", this.recetteVisible)}`);
   }
 
   /** Ce que le joueur prête au moteur des projectiles (tir.ts) : rien que des accès, aucune règle. */
@@ -993,6 +1117,28 @@ export class Joueur implements Voyageur, ParticipantLecon {
   }
 
   /** Ce que le joueur prête à la forge (forge.ts) : rien que des accès, aucune règle. */
+  /** La couche de déchets (0.7) : ce qu'elle demande au joueur. */
+  private creerDechets(): CoucheDechets {
+    const j = this;
+    return new CoucheDechets({
+      id: j.compte.id,
+      base: j.base,
+      maintenant: () => j.maintenant(),
+      lieu: () => (j.voyage ? null : j.lieu),
+      position: () => j.position,
+      inventaire: () => j.inventaire,
+      litresGourde: () => j.gourde.litres,
+      ajouter: (objets) => j.ajouterPlusieurs(objets),
+      commencer: (libelle, duree, appliquer, bruit) => j.commencer(libelle, duree, appliquer, 0, bruit),
+      info: (t) => j.info(t),
+      envoyer: (m) => j.envoyer(m),
+      sacTropLourd: () => j.sacTropLourd(),
+      vivant: () => j.vivant,
+      noterFait: (f) => j.noterFait(f),
+      recetteVisible: (id) => j.recetteVisible(id),
+    });
+  }
+
   private contexteForge(): ContexteForge {
     const j = this;
     return {
@@ -1334,8 +1480,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
   private tickCombat(instant: number, dt: number): void {
     const tiennent = this.saisisseurs();
     if (tiennent.length === 0) this.appuisDegagement = 0;
-    // Trois ou plus : effondrement quasi certain (Book 06 §2.3).
-    if (tiennent.length >= 3) return this.effondrer("Ils sont trop nombreux.");
+    // Trois ou plus : effondrement quasi certain (Book 06 §2.3). Sauf l'admin invincible.
+    if (tiennent.length >= 3 && !this.invincible) return this.effondrer("Ils sont trop nombreux.");
     for (const e of tiennent) {
       // L'Éteint du tutoriel ne mord jamais : il lâche prise tout seul (validé, 2026-10-08).
       if (e.tuto) {
@@ -1356,7 +1502,9 @@ export class Joueur implements Voyageur, ParticipantLecon {
         } else this.info("Les dents ont glissé sur le protège-bras.");
         continue;
       }
-      this.sante = aggraver(this.sante, "morsure", DEGATS_MORSURE, instant);
+      // L'admin invincible : la morsure se voit et s'entend, sans blessure.
+      if (!this.invincible) this.sante = aggraver(this.sante, "morsure", DEGATS_MORSURE, instant);
+      this.noterFait("morsure");
       this.envoyer({ t: "morsure" });
       this.envoyerSante(true);
     }
@@ -1368,6 +1516,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     this.endurance = Math.max(0, Math.min(this.enduranceMax(), this.endurance));
 
     this.sante = evoluer(this.sante, dt, instant, this.besoins.kcal > 0 && this.besoins.eau > 0);
+    this.garderInvincible();
     // Un champignon toxique : vomissements (on perd de l'eau), et la santé qui baisse (Book 05 §5 bis).
     const malade = symptomes(this.sante, instant);
     const intox = this.sante.intoxication;
@@ -1378,7 +1527,9 @@ export class Joueur implements Voyageur, ParticipantLecon {
         this.info(
           intox.champignon === "phalloide"
             ? "Des crampes terribles, des vomissements : ce champignon était une amanite phalloïde. Ton foie lâche."
-            : "Tu vomis, la tête tourne, tu vois trouble : ce champignon était toxique.",
+            : intox.champignon === "conserve_bombee"
+              ? "Tu vomis, les jambes flanchent : la conserve bombée était avariée. Bois, et repose-toi."
+              : "Tu vomis, la tête tourne, tu vois trouble : ce champignon était toxique.",
         );
         this.envoyerBesoins();
       }
@@ -1392,6 +1543,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
    * et se réveille chez lui. Les blessures restent, stabilisées ; faim et soif à 30 % ; convalescence.
    */
   private effondrer(raison: string): void {
+    if (this.invincible) return this.garderInvincible();
     this.mesurer("effondrement", raison, 1, { lieu: this.lieu });
     const instant = this.maintenant();
     this.reveiller("");
@@ -1575,7 +1727,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     const d = DEMONTAGE[objet];
     if (!d) return this.info(`${OBJETS[objet].nom[0]!.toUpperCase()}${OBJETS[objet].nom.slice(1)} : rien à en tirer en le démontant, pour l'instant.`);
     const facteur = multiplicateurQualites(this.inventaire, d.qualites);
-    if (facteur === null) return this.infos(outilsManquantsBref(d.qualites, this.inventaire));
+    if (facteur === null) return this.infos(outilsManquantsBref(d.qualites, this.inventaire, undefined, this.recetteVisible));
     // Le poids d'après : le démontage laisse le rebut sur place, mais une pyramide de rouleaux pèse toujours son poids.
     const apres: Inventaire = { ...this.inventaire, [objet]: (this.inventaire[objet] ?? 0) - 1 };
     for (const [t, k] of Object.entries(d.donne) as [TypeObjet, number][]) apres[t] = (apres[t] ?? 0) + k;
@@ -1610,7 +1762,9 @@ export class Joueur implements Voyageur, ParticipantLecon {
   majSavoir(savoir: Savoir, fait?: string): void {
     this.savoir = savoir;
     this.base.sauverSavoir(this.compte.id, savoir);
-    this.envoyer({ t: "savoir", savoir: { apprises: [...savoir.apprises], manuels: [...savoir.manuels] } });
+    this.envoyer({ t: "savoir", savoir: this.vueSavoir() });
+    // La leçon et le manuel dévoilent ce qu'ils apprennent (§3.3).
+    this.devoilement.aRevoir();
     if (fait) {
       this.noterFait(fait);
       this.mesurer("progression", `savoir:${fait}`, 1);
@@ -1748,10 +1902,11 @@ export class Joueur implements Voyageur, ParticipantLecon {
     this.envoyer({ t: "voyage", de, vers, duree: DUREE_VOYAGE_S });
   }
 
-  private arriver(voyage: Voyage): void {
+  /** `ou` : un point d'arrivée choisi (l'admin qui va chez lui arrive au camp) ; sinon, l'entrée du lieu. */
+  private arriver(voyage: Voyage, ou?: Position): void {
     this.voyage = null;
     this.lieu = voyage.vers;
-    this.position = arriveeDans(voyage.vers, voyage.de);
+    this.position = ou ?? arriveeDans(voyage.vers, voyage.de);
     this.vivant?.entrer(this);
     if (this.lieu === "cooperative") this.cooperatives.retrouverRadio(this.compte.id, (this.inventaire.radio_piles ?? 0) > 0);
     if (this.lieu === "comptoir") this.comptoir.entrer(this.envoyer);
@@ -1762,6 +1917,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
 
   /** Le joueur se déconnecte : il quitte la halte (hors ligne, il est sur la carte, Book 01 §2 bis). */
   partir(): void {
+    this.dechets.partir();
     this.halte.sortir(this);
     if (this.lieu === "cooperative") this.cooperatives.de(this.compte.id).sortir(this);
     this.comptoir.sortir(this.envoyer);
@@ -1781,6 +1937,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
   /** Un fait pour les quêtes (un repas, une vente, un échange…), compté même pendant le tutoriel. */
   private noterFait(fait: string, n = 1): void {
     if (this.quetes.noter(fait, n)) this.quetesASauver = true;
+    // Un fait de plus peut faire penser à une recette : on réévaluera au prochain passage (pas de calcul continu).
+    this.devoilement?.aRevoir();
   }
 
   private verifierQuetes(instant: number): void {
@@ -1913,6 +2071,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       if (!fini) this.dernierProgresTuto = JSON.stringify(this.progresTutoriel());
       if (fini) {
         this.tuto = null;
+        this.noterFait("tutoriel_fini");
         return;
       }
     }
@@ -1963,6 +2122,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
 
   private reveiller(message: string): void {
     if (!this.sommeil) return;
+    // Une vraie nuit (abri ou lit, une demi-minute au moins) : elle fait penser au bâton à fouir, au coffre…
+    if ((this.sommeil.dansUnAbri || this.sommeil.surUnLit) && this.maintenant() - this.endormiDepuis >= 30_000) this.noterFait("nuit");
     this.sommeil = null;
     this.mesurer("activite", "sommeil", (this.maintenant() - this.endormiDepuis) / 1000);
     this.envoyer({ t: "sommeil", dort: false, dansUnAbri: false });
@@ -2199,6 +2360,12 @@ export class Joueur implements Voyageur, ParticipantLecon {
     // Besoins : ils baissent seulement quand le joueur est connecté.
     this.besoins = consommer(this.besoins, heures, EFFORT_PAR_ALLURE[bouge ? intention.allure : "repos"], this.sommeil !== null, instant < this.caleJusqua);
     if (this.action?.kcalEnPlus) this.besoins = { ...this.besoins, kcal: Math.max(0, this.besoins.kcal - this.action.kcalEnPlus * heures) };
+    // L'admin : relu en base toutes les 5 s (un autre a pu être désigné) ; invincible, ni faim, ni soif, ni fatigue.
+    if (this.admin && instant - this.derniereVerifAdmin >= 5000) {
+      this.relireAdmin();
+      if (!this.admin) this.envoyer(this.bienvenue(this.debutMonde));
+    }
+    this.garderInvincible();
 
     // La lampe frontale vide la petite batterie (Book 18 §2 : la lumière a un prix).
     if (this.lumiere && lumierePortee(this.inventaire) === "lampe_frontale") {
@@ -2223,6 +2390,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
     }
     // Les ébauches d'arc sèchent (Book 25 §3.3).
     this.sechage.avancer();
+    // La couche de déchets : renouvellement, balises, ordures jetées (au plus toutes les 5 s).
+    this.dechets.tick(instant);
 
     // Feux : ils brûlent leur bois.
     const envoyerFeux = instant - this.dernierEnvoiFeux >= INTERVALLE_FEUX;
@@ -2253,6 +2422,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     this.tir.tick(dt);
     this.verifierTutoriel(instant);
     this.verifierQuetes(instant);
+    this.devoilement.tick(dt);
 
     // Fin d'action
     if (this.action && instant >= this.action.fin) {
@@ -2281,6 +2451,67 @@ export class Joueur implements Voyageur, ParticipantLecon {
       this.quetesASauver = false;
       this.base.sauverQuetes(this.compte.id, this.quetes.etat);
     }
+    const progression = this.devoilement.aEnregistrer();
+    if (progression) this.base.sauverProgression(this.compte.id, progression);
+  }
+
+  // ---------- L'arbre de progression (0.7) : ce que le suivi des dévoilements regarde ----------
+
+  /** Le suivi des recettes dévoilées ; un personnage d'avant la 0.7 est migré ici (Q4 : on cache, on ne détruit rien). */
+  private creerDevoilement(): SuiviDevoilement {
+    const source: SourceDevoilement = {
+      famille: this.compte.famille,
+      maintenant: () => this.maintenant(),
+      savoir: () => this.savoir,
+      inventaire: () => this.inventaire,
+      faits: () => this.quetes.etat.faits,
+      installations: () => [...this.installations.values(), ...[...this.feux.values()].map((f) => ({ type: "feu", niveau: niveauFeu(f) }))],
+      quetes: () => (this.tuto ? [] : [...this.quetes.enCours(this.compte.famille).map((q) => q.id), ...this.quetes.etat.finies]),
+      tuto: () => this.tuto?.etape ?? null,
+      sansSac: () => capaciteDe(this.inventaire) < CAPACITE_SAC && !(this.inventaire.sac_fortune ?? 0),
+      constats: (quels) => quels.filter((c) => this.constat(c)),
+      noter: (fait) => this.noterFait(fait),
+      // L'admin voit toujours tout dévoilé : ses messages de dévoilement le gardent.
+      envoyer: (m) => this.envoyer(m.t === "devoilement" ? { ...m, progression: this.vueProgression(m.progression) } : m),
+    };
+    let etat = this.base.chargerProgression(this.compte.id);
+    if (!etat) {
+      const coffres = [...this.installations.values()].filter((i) => i.type === "coffre").map((i) => i.etat.contenu ?? {});
+      etat = SuiviDevoilement.migrer(source, coffres);
+      this.base.sauverProgression(this.compte.id, etat);
+    }
+    return new SuiviDevoilement(etat, source);
+  }
+
+  /** Un constat d'état, regardé une fois par seconde tant qu'il n'a jamais été vrai (§2.3). */
+  private constat(c: Constat): boolean {
+    switch (c) {
+      case "sommeil_bas":
+        return this.besoins.repos < 0.5;
+      case "eteint_vu": {
+        const eteints = this.vivant ? this.vivant.eteintsVus(this.position) : this.lieu === "terrain" && !this.voyage ? this.eteints : [];
+        return eteints.some((e) => e.etat !== "detruit" && Math.hypot(e.x - this.position.x, e.z - this.position.z) <= 20);
+      }
+      case "blessure":
+        return this.sante.saignement !== "aucun";
+      case "saisi":
+        return this.saisisseurs().length > 0;
+      case "pluie":
+        return this.lieu === "terrain" && !this.voyage && meteo(this.maintenant(), this.debutMonde).pluie > 0.5;
+      case "sac_lourd":
+        return poidsInventaire(this.inventaire, this.gourde.litres) > 0.7 * capaciteDe(this.inventaire);
+    }
+  }
+
+  /** On a vu un joueur fabriquer cette recette, à moins de 5 m (« voir faire », Q7). */
+  vuFaire(recette: string): void {
+    this.noterFait(`vu_faire:${recette}`);
+    this.noterFait("vu_faire");
+  }
+
+  /** On est resté une minute à portée de voix d'un joueur de cette famille (la rencontre). */
+  noterRencontre(famille: Famille): void {
+    this.noterFait(`rencontre:${famille}`);
   }
 
   // ---------- Les mesures du test familial (Book 17 §6) ----------
@@ -2412,9 +2643,13 @@ export class Joueur implements Voyageur, ParticipantLecon {
     // Le calendrier des récoltes : chaque fruit, chaque champignon à sa saison (2026-10-08).
     const jour = jourDuCalendrier(this.maintenant(), this.debutMonde);
     if (!enSaison(r.type, jour)) return this.info(etatDuFruitier(r.type, jour) ?? `Ce n'est pas la saison : à partir du ${prochaineRecolte(r.type)}.`);
-    if (usage.escabeau && !this.escabeauAuPied(r.x, r.z)) return this.info("Les fruits sont trop haut : pose un escabeau au pied de l'arbre, dans le cercle.");
+    if (usage.escabeau && !this.escabeauAuPied(r.x, r.z)) {
+      // L'arbre hors de portée fait penser à l'escabeau (l'arbre de progression).
+      this.noterFait("arbre_haut");
+      return this.info("Les fruits sont trop haut : pose un escabeau au pied de l'arbre, dans le cercle.");
+    }
     const facteur = multiplicateurQualites(this.inventaire, usage.qualites);
-    if (facteur === null) return this.infos(outilsManquantsBref(usage.qualites, this.inventaire));
+    if (facteur === null) return this.infos(outilsManquantsBref(usage.qualites, this.inventaire, undefined, this.recetteVisible));
     if (poidsInventaire(this.inventaire, this.gourde.litres) + poidsDe(usage.donne) > capaciteDe(this.inventaire)) return this.sacTropLourd();
     this.commencer(usage.libelle, (usage.duree * facteur) / REGLAGES.gestes_vitesse, () => {
       const instant = this.maintenant();
@@ -2459,6 +2694,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
 
   /** Le sac est trop lourd : on dit de combien, et comment s'en sortir. */
   private sacTropLourd(): void {
+    this.noterFait("trop_lourd");
     const capacite = capaciteDe(this.inventaire);
     const sansSac = capacite < CAPACITE_SAC && !(this.inventaire.sac_fortune ?? 0);
     this.info(`${sansSac ? "Tes poches sont pleines" : "Ton sac est trop lourd"} (${Math.round(poidsInventaire(this.inventaire, this.gourde.litres))} kg sur ${capacite}) : jette (Sac → Jeter) ou range dans un coffre.`);
@@ -2468,16 +2704,20 @@ export class Joueur implements Voyageur, ParticipantLecon {
   /** Fabriquer un objet ou poser une installation (Book 02 §2). */
   private fabriquer(id: string, x?: number, z?: number, o?: number): void {
     const modele = recette(id);
-    if (!modele || !recettesConnues(this.compte.famille, this.savoir).includes(modele)) {
+    // L'admin (vérifié en base) connaît toutes les recettes, des quatre familles, sans apprentissage ni surcoût.
+    const admin = modele !== undefined && this.base.estAdmin(this.compte.id);
+    if (!modele || (!admin && !recettesConnues(this.compte.famille, this.savoir).includes(modele))) {
       return this.info(modele && modele.famille !== "tous" ? `Recette ${chezLaFamille(modele.famille)} : une leçon, ou leur manuel, te l'ouvrira.` : "Tu ne connais pas cette recette.");
     }
+    // Une recette pas encore dévoilée (Q1) : le client ne la montre pas ; c'est un filet de sécurité.
+    if (!admin && !this.devoilement.estDevoilee(modele.id)) return this.info("Tu n'y as pas encore pensé.");
     // Hors de sa famille (Book 25 §2.2) : ×1,5 en matières et en temps, et ★★ au plus.
-    const horsFamille = estHorsFamille(modele, this.compte.famille);
-    const r = recettePour(modele, this.compte.famille);
+    const horsFamille = !admin && estHorsFamille(modele, this.compte.famille);
+    const r = admin ? modele : recettePour(modele, this.compte.famille);
     if (this.lieu !== "terrain" && ("installation" in r.produit || r.installation)) return this.info("Ça se construit chez toi, sur ton terrain.");
-    if (!ingredientsPresents(this.inventaire, r)) return this.info(ceQuiManqueBref(r, this.inventaire));
+    if (!ingredientsPresents(this.inventaire, r)) return this.info(ceQuiManqueBref(r, this.inventaire, undefined, this.recetteVisible));
     const facteur = multiplicateurQualites(this.inventaire, r.qualites);
-    if (facteur === null) return this.infos(outilsManquantsBref(r.qualites, this.inventaire));
+    if (facteur === null) return this.infos(outilsManquantsBref(r.qualites, this.inventaire, undefined, this.recetteVisible));
     if (r.feu && ![...this.feux.values()].some((f) => f.allume && f.bois > 0 && !f.couvert && this.proche(f.x, f.z, 2.5))) {
       return this.info("Ça se cuisine près d'un feu allumé : approche-toi de ton feu (ou allumes-en un).");
     }
@@ -2503,7 +2743,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
         this.installations.set(installation.id, installation);
         this.envoyer({ t: "installation", installation });
         this.mesurer("progression", `recette:${r.id}`, 1);
-      this.noterFait(`fabrique:${r.id}`);
+        this.noterFait(`fabrique:${r.id}`);
+        this.surFabrication?.(r.id);
       }, 0, r.qualites.marteler ? "lourd" : "outil");
       return;
     }
@@ -2545,6 +2786,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       for (const m of mesuresFabrication(sortie)) this.mesurer("metier", m.quoi, m.valeur);
       this.mesurer("progression", `recette:${r.id}`, 1);
       this.noterFait(`fabrique:${r.id}`);
+      this.surFabrication?.(r.id);
     }, this.forge.kcalEnPlus(r), r.qualites.marteler ? "lourd" : "outil");
   }
 
@@ -2713,6 +2955,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
   private construireFeu(x: number, z: number, dakota = false): void {
     if (!Number.isFinite(x) || !Number.isFinite(z)) return;
     if (this.lieu !== "terrain") return this.info("Pas de feu ici : on ne s'installe que sur son terrain.");
+    // Le foyer Dakota, comme une recette : pas avant d'y avoir pensé (l'arbre de progression, Q1).
+    if (dakota && !this.admin && !this.devoilement.estDevoilee("foyer_dakota")) return this.info("Tu n'y as pas encore pensé.");
     const raison = raisonEmplacement("feu", x, z, this.position, this.feux.values(), this.installations.values());
     if (raison) return this.info(raison);
     if (this.feux.size >= MAX_FOYERS) {
@@ -2759,11 +3003,12 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (feu.allume) return;
     if (feu.bois <= 0) return this.info("Il faut d'abord du bois : ajoute une branche ou une bûche.");
     const outil = (this.inventaire.pierre_a_feu ?? 0) > 0 ? "la pierre à feu" : (this.inventaire.briquet ?? 0) > 0 ? "le briquet" : null;
-    if (!outil) return this.info(`Rien pour allumer le feu : il faut un briquet ou une pierre à feu. ${ouTrouverPhrase("briquet")}`);
+    if (!outil) return this.info(`Rien pour allumer le feu : il faut un briquet ou une pierre à feu. ${ouTrouverPhrase("briquet", this.recetteVisible)}`);
     this.commencer(`Allumer le feu avec ${outil}`, DUREES.allumer, () => {
       if (feu.bois <= 0) return;
       feu.allume = true;
       feu.majLe = this.maintenant();
+      this.noterFait("feu_allume");
       this.envoyer({ t: "feu", feu: vue(feu) });
       this.signalerFeux(feu);
     });
@@ -2813,7 +3058,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (!p) return;
     if (this.objetPorte()) return this.info("Tu as les bras pris : pose d'abord l'escabeau.");
     const arme = this.armeDuCombat();
-    if (!arme.objet) return this.info(`À mains nues, elle t'échappe : prends un gourdin. ${ouTrouverPhrase("gourdin")}`);
+    if (!arme.objet) return this.info(`À mains nues, elle t'échappe : prends un gourdin. ${ouTrouverPhrase("gourdin", this.recetteVisible)}`);
     const d = Math.hypot(p.x - this.position.x, p.z - this.position.z);
     if (d > arme.allonge + 0.3) return this.info(`Trop loin : approche-toi doucement en allure discrète (${p.etat === "fuit" ? "elle détale : attends qu'elle se calme" : "à un mètre"}).`);
     // Une poule qui picore ne voit rien venir ; une poule qui guette esquive souvent ; une poule qui fuit, jamais.
@@ -2865,6 +3110,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       feu.bois = Math.max(0, feu.bois - boisNecessaire);
       this.gourde = { contenu: "potable", litres: this.gourde.litres };
       if (this.tuto) this.tuto.bouilli = true;
+      this.noterFait("ebullition");
       this.envoyerBesoins();
       this.envoyer({ t: "feu", feu: vue(feu) });
       this.info("L'eau est potable.");
@@ -2872,7 +3118,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
   }
 
   private remplirGourde(): void {
-    if ((this.inventaire.gourde ?? 0) < 1) return this.info(`Tu n'as pas de gourde. ${ouTrouverPhrase("gourde")}`);
+    if ((this.inventaire.gourde ?? 0) < 1) return this.info(`Tu n'as pas de gourde. ${ouTrouverPhrase("gourde", this.recetteVisible)}`);
     if (distanceMare(this.position.x, this.position.z) > 1.5) return this.info("Approche-toi de la mare.");
     if (this.gourde.litres >= CONTENANCE_GOURDE && this.gourde.contenu === "brute") return this.info("Ta gourde est déjà pleine.");
     this.commencer("Remplir la gourde à la mare", DUREES.remplirGourde, () => {
@@ -2895,7 +3141,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       if ((this.inventaire[objet] ?? 0) < 1) return;
       this.retirer(objet, 1);
       // Rien ne se perd (P-002) : la conserve laisse sa boîte.
-      if (objet === "conserve") this.ajouterPlusieurs({ boite_vide: 1 });
+      if (objet === "conserve" || objet === "conserve_bombee") this.ajouterPlusieurs({ boite_vide: 1 });
       // Manger désaltère aussi : l'eau des fruits, des champignons, des plats (2026-10-08).
       this.besoins = { ...this.besoins, kcal: Math.min(RESERVE_KCAL_MAX, this.besoins.kcal + kcal), eau: Math.min(RESERVE_EAU_MAX, this.besoins.eau + (OBJETS[objet].eau ?? 0)) };
       // Un plat chaud réconforte et cale (2026-10-08).
@@ -2946,7 +3192,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     }
     const facteur = multiplicateurQualites(this.inventaire, e.qualites);
     if (facteur === null) {
-      this.infos(outilsManquantsBref(e.qualites, this.inventaire));
+      this.infos(outilsManquantsBref(e.qualites, this.inventaire, undefined, this.recetteVisible));
       return null;
     }
     return { cout, dureeS: Math.max(2, e.duree / REGLAGES.fabrication_acceleration) * facteur };
@@ -3060,6 +3306,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       }
       case "creuser_dakota": {
         if (feu.dakota) return;
+        if (!this.devoilement.estDevoilee("foyer_dakota")) return this.info("Tu n'y as pas encore pensé.");
         if (niveauFeu(feu) !== 1) return this.info("On creuse un feu de camp, pas un foyer maçonné : redescends-le d'abord au feu de camp.");
         if (dansLesFlammes()) return this.info(refusFlammes);
         const plan = this.preparerEtape({ couts: [], ...CREUSER });
@@ -3375,7 +3622,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       }
       case "monter_dynamo": {
         if (i.type !== "pedalier" || i.etat.dynamo) return;
-        if (!this.inventaire.dynamo_velo) return this.info(`Il te faut la dynamo du vélo. ${ouTrouverPhrase("dynamo_velo")}`);
+        if (!this.inventaire.dynamo_velo) return this.info(`Il te faut la dynamo du vélo. ${ouTrouverPhrase("dynamo_velo", this.recetteVisible)}`);
         return this.commencer("Monter la dynamo sur le pédalier", 20, () => {
           if (!this.inventaire.dynamo_velo) return;
           this.retirerPlusieurs({ dynamo_velo: 1 });

@@ -118,6 +118,15 @@ cd ~/watt-now && docker compose exec jeu node --disable-warning=ExperimentalWarn
 
 Viser un **retard de boucle p99 sous 50 ms** (le temps entre deux calculs du monde). Sur le Mac (M2), dans le conteneur, avec 50 joueurs à la halte : 15 ms, 11 % d'un cœur, 128 Mo.
 
+## 8 bis. Le compte admin « god » (pour tout tester)
+
+Un seul compte admin : son terrain a toutes les constructions, ses coffres tout le catalogue, et son menu ⚙ « Invincible », « Aller à… », « Remplir mes coffres ». Après un déploiement qui contient la 0.7, depuis le Mac (god déconnecté du jeu) :
+
+```bash
+code/deploiement/admin-pi.sh            # crée god (ou l'écrase s'il existe) : son mot de passe se tape au clavier
+code/deploiement/admin-pi.sh --remplir  # re-remplit seulement ses coffres
+```
+
 ## 9. Jouer depuis l'extérieur
 
 À choisir (Book 17 §5.3) :
