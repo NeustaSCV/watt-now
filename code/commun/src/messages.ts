@@ -2,6 +2,7 @@
 // Connexion et inscription passent par HTTP (JSON) ; le jeu passe par WebSocket (JSON).
 
 import type { VueProgression } from "./progression.ts";
+import type { OperationAdmin, VueAdmin } from "./admin.ts";
 import type { FouilleVue, OperationDechets, PointDechetsVu, VueDechets } from "./couche-dechets.ts";
 import type { Reglages } from "./reglages.ts";
 import type { AnimalVu } from "./faune.ts";
@@ -232,6 +233,8 @@ export type MessageClient =
   | { t: "echange"; op: OperationEchange }
   /** Passer le tutoriel (É5). */
   | { t: "tutoriel_passer" }
+  /** Le compte admin (outil du porteur, commun/src/admin.ts) : refusé à tout autre compte, vérifié à chaque fois. */
+  | { t: "admin"; op: OperationAdmin }
   /** Ranger un objet dans un coffre, ou l'en sortir. */
   | { t: "coffre"; id: number; sens: "deposer" | "prendre"; objet: CleObjet; quantite: number }
   /** Jeter un objet par terre (quand le sac est trop lourd) : il reste au sol, ramassable. */
@@ -381,6 +384,8 @@ export interface Moi {
   famille: Famille;
   /** L'apparence choisie à la création (Book 14 §3). */
   apparence: Apparence;
+  /** Le compte admin seulement (commun/src/admin.ts) : son menu ⚙ montre les gestes admin. */
+  admin?: VueAdmin;
 }
 
 export interface Bienvenue {
@@ -587,6 +592,8 @@ export type MessageClientSavoir =
 
 export type MessageServeurSavoir =
   | { t: "savoir"; savoir: SavoirVu }
+  /** Le statut de l'admin a changé (invincible ou non). */
+  | { t: "admin"; admin: VueAdmin }
   /** Ce que le maître peut enseigner à ce joueur (les recettes de son métier qu'il ne sait pas). */
   | { t: "lecons_possibles"; a: Personne; recettes: string[] }
   | { t: "demande_lecon"; de: Personne; recette: string }
