@@ -1,6 +1,7 @@
 // Messages échangés entre le client et le serveur.
 // Connexion et inscription passent par HTTP (JSON) ; le jeu passe par WebSocket (JSON).
 
+import type { VueProgression } from "./progression.ts";
 import type { Reglages } from "./reglages.ts";
 import type { AnimalVu } from "./faune.ts";
 import type { Apparence } from "./apparence.ts";
@@ -200,6 +201,8 @@ export type MessageClient =
   | { t: "ping"; envoye: number }
   // Le métier des familles (Book 25 §2.3, chantier 3) : voir le bloc « savoir » en fin de fichier.
   | MessageClientSavoir
+  // L'arbre de progression (0.7) : voir le bloc « progression » en fin de fichier.
+  | MessageClientProgression
   | { t: "interagir"; cible: Cible; verbe: Verbe }
   | { t: "manger"; objet: TypeObjet }
   | { t: "boire" }
@@ -424,6 +427,8 @@ export interface Bienvenue {
   pret?: CleObjet | null;
   /** Ce qu'on a appris hors de sa famille (Book 25 §2.3) ; absent : rien. */
   savoir?: SavoirVu;
+  /** Les recettes dévoilées, vues, et le prochain palier (l'arbre de progression, 0.7). */
+  progression?: VueProgression;
 }
 
 /**
@@ -441,6 +446,8 @@ export type MessageServeur =
   | { t: "pong"; envoye: number; serveur: number }
   // Le métier des familles (Book 25 §2.3, chantier 3) : voir le bloc « savoir » en fin de fichier.
   | MessageServeurSavoir
+  // L'arbre de progression (0.7) : voir le bloc « progression » en fin de fichier.
+  | MessageServeurProgression
   | { t: "expulse"; raison: string }
   | { t: "inventaire"; inventaire: Inventaire }
   | { t: "besoins"; besoins: Besoins; gourde: Gourde }
@@ -577,3 +584,16 @@ export type MessageServeurSavoir =
   | { t: "lecons_possibles"; a: Personne; recettes: string[] }
   | { t: "demande_lecon"; de: Personne; recette: string }
   | { t: "lecon"; lecon: LeconVue | null };
+
+// ---------- L'arbre de progression : les recettes dévoilées (0.7, commun/src/progression.ts) ----------
+
+export type MessageClientProgression =
+  /** Le client a montré ces cartes (« Nouveau ») : elles ne comptent plus dans la pastille. */
+  { t: "recettes_vues"; recettes: string[] };
+
+export type MessageServeurProgression =
+  /**
+   * Des recettes dévoilées (`nouvelles`), ou la liste qui change (les autres familles). `texte` : « Tu y penses : … »,
+   * au plus un toutes les 10 s (les idées d'entre-temps sont regroupées).
+   */
+  { t: "devoilement"; progression: VueProgression; nouvelles: string[]; texte?: string };

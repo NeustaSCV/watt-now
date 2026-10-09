@@ -1,6 +1,7 @@
 // Tests du lot 2 de l'É4 : le panneau solaire produit au calendrier, même hors ligne ; le rapport de la base.
 
 import { test } from "node:test";
+import { toutDevoile } from "../../commun/src/progression.ts";
 import assert from "node:assert/strict";
 import { MS_JOUR_CALENDRIER, productionPanneau } from "../../commun/src/energie.ts";
 import { REGLAGES } from "../../commun/src/reglages.ts";
@@ -13,6 +14,8 @@ import { Joueur } from "./joueur.ts";
 function monter(inventaire: Record<string, number>, avecBanc = true) {
   const base = new Base(":memory:");
   const compte = base.creerCompte("Rose", "potager42", "voltaiques");
+  // Ces tests portent sur le métier, pas sur l'arbre de progression : tout est dévoilé.
+  base.sauverProgression(compte.id, toutDevoile("voltaiques"));
   base.sauverInventaire(compte.id, inventaire);
   let instant = 10_000_000;
   const halte = new Halte(base);

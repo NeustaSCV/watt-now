@@ -130,6 +130,9 @@ export function messageValide(m: unknown): m is MessageClient {
       return operationLeconValide(m.op);
     case "lire":
       return estObjet(m.objet);
+    // L'arbre de progression (0.7) : les cartes que le client a montrées, une liste courte d'identifiants courts.
+    case "recettes_vues":
+      return Array.isArray(m.recettes) && m.recettes.length <= 200 && m.recettes.every((r) => chaine(r));
     case "coffre":
       return nombre(m.id) && (m.sens === "deposer" || m.sens === "prendre") && estCleObjet(m.objet) && quantite(m.quantite);
     case "jeter":

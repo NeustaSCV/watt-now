@@ -918,6 +918,10 @@ function recevoir(message: MessageServeur): void {
     case "savoir":
       hud.majSavoir(message.savoir);
       return;
+    // L'arbre de progression (0.7) : « Tu y penses : … ». Les cartes, la pastille et « À découvrir » : chantier 5.
+    case "devoilement":
+      if (message.texte) hud.message(message.texte);
+      return;
     case "lecons_possibles":
       lecons.choisir(message.a, message.recettes);
       return;

@@ -1,6 +1,7 @@
 // Tests du lot 2 de l'É2 : la chaîne de chaque famille (charbonnière et forge, pédalier, banc de recharge).
 
 import { test } from "node:test";
+import { toutDevoile } from "../../commun/src/progression.ts";
 import assert from "node:assert/strict";
 import { CHARGE_TROUVEE, DUREE_CHARBONNIERE_MS, whEDePedalage } from "../../commun/src/energie.ts";
 import type { MessageServeur, Verbe } from "../../commun/src/messages.ts";
@@ -19,6 +20,8 @@ const JAMAIS_D_ETEINT = () => 1;
 function monter(famille: Famille, inventaire: Record<string, number>) {
   const base = new Base(":memory:");
   const compte = base.creerCompte("Rose", "potager42", famille);
+  // Ces tests portent sur le métier, pas sur l'arbre de progression : tout est dévoilé.
+  base.sauverProgression(compte.id, toutDevoile(famille));
   // Un sac à dos, comme dans le kit de départ (sans lui, on ne porte que 10 kg).
   base.sauverInventaire(compte.id, { sac_a_dos: 1, ...inventaire });
   let instant = 1_000_000;

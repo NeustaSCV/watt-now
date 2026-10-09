@@ -78,6 +78,8 @@ import type { LieuVivant } from "./lieu-vivant.ts";
 import { Comptoir } from "./comptoir.ts";
 import { Tir, type ContexteTir } from "./tir.ts";
 import { Sechage, accelerationFleches } from "./arc.ts";
+// L'arbre de progression (0.7) : les recettes dévoilées (serveur/src/devoilement.ts).
+import { SuiviDevoilement, type Constat, type SourceDevoilement } from "./devoilement.ts";
 import { REDRESSEUR } from "../../commun/src/arc.ts";
 import { Forge, type ContexteForge } from "./forge.ts";
 import { declencher, declencheurNeuf, definitionDeclencheur, estDeclencheur, type DeclencheurPose } from "./declencheurs.ts";
@@ -249,6 +251,10 @@ export class Joueur implements Voyageur, ParticipantLecon {
   private faune: { prises: number[] } = { prises: [] };
   /** Le savoir hors de sa famille (Book 25 §2.3) : leçons reçues, manuels lus, leçons données. Voir lecon.ts. */
   savoir: Savoir;
+  /** Les recettes dévoilées (l'arbre de progression, 0.7) : serveur/src/devoilement.ts. */
+  private devoilement!: SuiviDevoilement;
+  /** Le monde est prévenu de chaque fabrication (« voir faire », à 5 m) ; null : personne n'écoute. */
+  surFabrication: ((recette: string) => void) | null = null;
   private bouge = false;
   // ---------- Combat et santé (É3, lot 3) ----------
   private sante: Sante;
@@ -429,7 +435,10 @@ export class Joueur implements Voyageur, ParticipantLecon {
 
     // Se déconnecter dans son abri compte comme une nuit complète (Book 05 §3).
     const abri = [...this.installations.values()].some((i) => i.type === "abri" && Math.hypot(i.x - this.position.x, i.z - this.position.z) <= 3);
-    if (this.lieu === "terrain" && abri && perso.vuLe > 0 && instant - perso.vuLe >= 8 * 60_000) this.besoins = { ...this.besoins, repos: 1 };
+    if (this.lieu === "terrain" && abri && perso.vuLe > 0 && instant - perso.vuLe >= 8 * 60_000) {
+      this.besoins = { ...this.besoins, repos: 1 };
+      this.noterFait("nuit");
+    }
 
     // Les batteries se déchargent un peu pendant l'absence (calendrier, Book 01 §2 bis).
     const { charges, majLe } = base.chargerCharges(compte.id);
@@ -459,6 +468,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       const n = this.inventaire[b] ?? 0;
       if (n > 0 && this.charges[b] === undefined) this.charges[b] = Math.min(CHARGE_TROUVEE[b] * n, capacite(b, n));
     }
+    this.devoilement = this.creerDevoilement();
   }
 
   bienvenue(debutMonde: number): Bienvenue {
@@ -495,6 +505,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       charge: { ...this.chargeArmes },
       pret: this.tir.pret,
       savoir: { apprises: [...this.savoir.apprises], manuels: [...this.savoir.manuels] },
+      progression: this.devoilement.vue(),
       ...(this.lieu === "cooperative"
         ? { leurres: this.cooperatives.leurresActifs(this.compte.id, this.maintenant()), etatCoop: this.cooperatives.vue(this.compte.id) }
         : {}),
@@ -643,6 +654,11 @@ export class Joueur implements Voyageur, ParticipantLecon {
         this.tuto = null;
         this.base.sauverTutoriel(this.compte.id, null);
         this.envoyer({ t: "tutoriel", tutoriel: null });
+        // Le vétéran qui saute le tutoriel connaît le début (Q8) : les paliers 1 et 2 d'emblée.
+        this.devoilement.devoilerDEmblee();
+        return;
+      case "recettes_vues":
+        this.devoilement.marquerVues(message.recettes);
         return;
     }
   }
@@ -715,6 +731,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     this.base.sauverCharges(this.compte.id, this.charges, instant);
     this.envoyerWotts();
     this.noterFait("echange");
+    if (avec && avec !== this.compte.famille) this.noterFait(`rencontre:${avec}`);
     // Ce qu'on a passé à une autre famille (Book 25 §9.4 : « Le fournisseur », « Le carquois des autres »).
     if (avec && avec !== this.compte.famille) for (const [cle, n] of Object.entries(donne.objets)) this.noterFait(`don_autre_famille:${typeDe(cle)}`, n ?? 0);
     if (objetsDeMetierDonnes(donne.objets) > 0) this.mesurer("metier", "echange", objetsDeMetierDonnes(donne.objets));
@@ -1357,6 +1374,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
         continue;
       }
       this.sante = aggraver(this.sante, "morsure", DEGATS_MORSURE, instant);
+      this.noterFait("morsure");
       this.envoyer({ t: "morsure" });
       this.envoyerSante(true);
     }
@@ -1611,6 +1629,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
     this.savoir = savoir;
     this.base.sauverSavoir(this.compte.id, savoir);
     this.envoyer({ t: "savoir", savoir: { apprises: [...savoir.apprises], manuels: [...savoir.manuels] } });
+    // La leçon et le manuel dévoilent ce qu'ils apprennent (§3.3).
+    this.devoilement.aRevoir();
     if (fait) {
       this.noterFait(fait);
       this.mesurer("progression", `savoir:${fait}`, 1);
@@ -1781,6 +1801,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
   /** Un fait pour les quêtes (un repas, une vente, un échange…), compté même pendant le tutoriel. */
   private noterFait(fait: string, n = 1): void {
     if (this.quetes.noter(fait, n)) this.quetesASauver = true;
+    // Un fait de plus peut faire penser à une recette : on réévaluera au prochain passage (pas de calcul continu).
+    this.devoilement?.aRevoir();
   }
 
   private verifierQuetes(instant: number): void {
@@ -1913,6 +1935,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       if (!fini) this.dernierProgresTuto = JSON.stringify(this.progresTutoriel());
       if (fini) {
         this.tuto = null;
+        this.noterFait("tutoriel_fini");
         return;
       }
     }
@@ -1963,6 +1986,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
 
   private reveiller(message: string): void {
     if (!this.sommeil) return;
+    // Une vraie nuit (abri ou lit, une demi-minute au moins) : elle fait penser au bâton à fouir, au coffre…
+    if ((this.sommeil.dansUnAbri || this.sommeil.surUnLit) && this.maintenant() - this.endormiDepuis >= 30_000) this.noterFait("nuit");
     this.sommeil = null;
     this.mesurer("activite", "sommeil", (this.maintenant() - this.endormiDepuis) / 1000);
     this.envoyer({ t: "sommeil", dort: false, dansUnAbri: false });
@@ -2253,6 +2278,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     this.tir.tick(dt);
     this.verifierTutoriel(instant);
     this.verifierQuetes(instant);
+    this.devoilement.tick(dt);
 
     // Fin d'action
     if (this.action && instant >= this.action.fin) {
@@ -2281,6 +2307,66 @@ export class Joueur implements Voyageur, ParticipantLecon {
       this.quetesASauver = false;
       this.base.sauverQuetes(this.compte.id, this.quetes.etat);
     }
+    const progression = this.devoilement.aEnregistrer();
+    if (progression) this.base.sauverProgression(this.compte.id, progression);
+  }
+
+  // ---------- L'arbre de progression (0.7) : ce que le suivi des dévoilements regarde ----------
+
+  /** Le suivi des recettes dévoilées ; un personnage d'avant la 0.7 est migré ici (Q4 : on cache, on ne détruit rien). */
+  private creerDevoilement(): SuiviDevoilement {
+    const source: SourceDevoilement = {
+      famille: this.compte.famille,
+      maintenant: () => this.maintenant(),
+      savoir: () => this.savoir,
+      inventaire: () => this.inventaire,
+      faits: () => this.quetes.etat.faits,
+      installations: () => [...this.installations.values(), ...[...this.feux.values()].map((f) => ({ type: "feu", niveau: niveauFeu(f) }))],
+      quetes: () => (this.tuto ? [] : [...this.quetes.enCours(this.compte.famille).map((q) => q.id), ...this.quetes.etat.finies]),
+      tuto: () => this.tuto?.etape ?? null,
+      sansSac: () => capaciteDe(this.inventaire) < CAPACITE_SAC && !(this.inventaire.sac_fortune ?? 0),
+      constats: (quels) => quels.filter((c) => this.constat(c)),
+      noter: (fait) => this.noterFait(fait),
+      envoyer: (m) => this.envoyer(m),
+    };
+    let etat = this.base.chargerProgression(this.compte.id);
+    if (!etat) {
+      const coffres = [...this.installations.values()].filter((i) => i.type === "coffre").map((i) => i.etat.contenu ?? {});
+      etat = SuiviDevoilement.migrer(source, coffres);
+      this.base.sauverProgression(this.compte.id, etat);
+    }
+    return new SuiviDevoilement(etat, source);
+  }
+
+  /** Un constat d'état, regardé une fois par seconde tant qu'il n'a jamais été vrai (§2.3). */
+  private constat(c: Constat): boolean {
+    switch (c) {
+      case "sommeil_bas":
+        return this.besoins.repos < 0.5;
+      case "eteint_vu": {
+        const eteints = this.vivant ? this.vivant.eteintsVus(this.position) : this.lieu === "terrain" && !this.voyage ? this.eteints : [];
+        return eteints.some((e) => e.etat !== "detruit" && Math.hypot(e.x - this.position.x, e.z - this.position.z) <= 20);
+      }
+      case "blessure":
+        return this.sante.saignement !== "aucun";
+      case "saisi":
+        return this.saisisseurs().length > 0;
+      case "pluie":
+        return this.lieu === "terrain" && !this.voyage && meteo(this.maintenant(), this.debutMonde).pluie > 0.5;
+      case "sac_lourd":
+        return poidsInventaire(this.inventaire, this.gourde.litres) > 0.7 * capaciteDe(this.inventaire);
+    }
+  }
+
+  /** On a vu un joueur fabriquer cette recette, à moins de 5 m (« voir faire », Q7). */
+  vuFaire(recette: string): void {
+    this.noterFait(`vu_faire:${recette}`);
+    this.noterFait("vu_faire");
+  }
+
+  /** On est resté une minute à portée de voix d'un joueur de cette famille (la rencontre). */
+  noterRencontre(famille: Famille): void {
+    this.noterFait(`rencontre:${famille}`);
   }
 
   // ---------- Les mesures du test familial (Book 17 §6) ----------
@@ -2412,7 +2498,11 @@ export class Joueur implements Voyageur, ParticipantLecon {
     // Le calendrier des récoltes : chaque fruit, chaque champignon à sa saison (2026-10-08).
     const jour = jourDuCalendrier(this.maintenant(), this.debutMonde);
     if (!enSaison(r.type, jour)) return this.info(etatDuFruitier(r.type, jour) ?? `Ce n'est pas la saison : à partir du ${prochaineRecolte(r.type)}.`);
-    if (usage.escabeau && !this.escabeauAuPied(r.x, r.z)) return this.info("Les fruits sont trop haut : pose un escabeau au pied de l'arbre, dans le cercle.");
+    if (usage.escabeau && !this.escabeauAuPied(r.x, r.z)) {
+      // L'arbre hors de portée fait penser à l'escabeau (l'arbre de progression).
+      this.noterFait("arbre_haut");
+      return this.info("Les fruits sont trop haut : pose un escabeau au pied de l'arbre, dans le cercle.");
+    }
     const facteur = multiplicateurQualites(this.inventaire, usage.qualites);
     if (facteur === null) return this.infos(outilsManquantsBref(usage.qualites, this.inventaire));
     if (poidsInventaire(this.inventaire, this.gourde.litres) + poidsDe(usage.donne) > capaciteDe(this.inventaire)) return this.sacTropLourd();
@@ -2459,6 +2549,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
 
   /** Le sac est trop lourd : on dit de combien, et comment s'en sortir. */
   private sacTropLourd(): void {
+    this.noterFait("trop_lourd");
     const capacite = capaciteDe(this.inventaire);
     const sansSac = capacite < CAPACITE_SAC && !(this.inventaire.sac_fortune ?? 0);
     this.info(`${sansSac ? "Tes poches sont pleines" : "Ton sac est trop lourd"} (${Math.round(poidsInventaire(this.inventaire, this.gourde.litres))} kg sur ${capacite}) : jette (Sac → Jeter) ou range dans un coffre.`);
@@ -2471,6 +2562,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (!modele || !recettesConnues(this.compte.famille, this.savoir).includes(modele)) {
       return this.info(modele && modele.famille !== "tous" ? `Recette ${chezLaFamille(modele.famille)} : une leçon, ou leur manuel, te l'ouvrira.` : "Tu ne connais pas cette recette.");
     }
+    // Une recette pas encore dévoilée (Q1) : le client ne la montre pas ; c'est un filet de sécurité.
+    if (!this.devoilement.estDevoilee(modele.id)) return this.info("Tu n'y as pas encore pensé.");
     // Hors de sa famille (Book 25 §2.2) : ×1,5 en matières et en temps, et ★★ au plus.
     const horsFamille = estHorsFamille(modele, this.compte.famille);
     const r = recettePour(modele, this.compte.famille);
@@ -2503,7 +2596,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
         this.installations.set(installation.id, installation);
         this.envoyer({ t: "installation", installation });
         this.mesurer("progression", `recette:${r.id}`, 1);
-      this.noterFait(`fabrique:${r.id}`);
+        this.noterFait(`fabrique:${r.id}`);
+        this.surFabrication?.(r.id);
       }, 0, r.qualites.marteler ? "lourd" : "outil");
       return;
     }
@@ -2545,6 +2639,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       for (const m of mesuresFabrication(sortie)) this.mesurer("metier", m.quoi, m.valeur);
       this.mesurer("progression", `recette:${r.id}`, 1);
       this.noterFait(`fabrique:${r.id}`);
+      this.surFabrication?.(r.id);
     }, this.forge.kcalEnPlus(r), r.qualites.marteler ? "lourd" : "outil");
   }
 
@@ -2713,6 +2808,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
   private construireFeu(x: number, z: number, dakota = false): void {
     if (!Number.isFinite(x) || !Number.isFinite(z)) return;
     if (this.lieu !== "terrain") return this.info("Pas de feu ici : on ne s'installe que sur son terrain.");
+    // Le foyer Dakota, comme une recette : pas avant d'y avoir pensé (l'arbre de progression, Q1).
+    if (dakota && !this.devoilement.estDevoilee("foyer_dakota")) return this.info("Tu n'y as pas encore pensé.");
     const raison = raisonEmplacement("feu", x, z, this.position, this.feux.values(), this.installations.values());
     if (raison) return this.info(raison);
     if (this.feux.size >= MAX_FOYERS) {
@@ -2764,6 +2861,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       if (feu.bois <= 0) return;
       feu.allume = true;
       feu.majLe = this.maintenant();
+      this.noterFait("feu_allume");
       this.envoyer({ t: "feu", feu: vue(feu) });
       this.signalerFeux(feu);
     });
@@ -2865,6 +2963,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       feu.bois = Math.max(0, feu.bois - boisNecessaire);
       this.gourde = { contenu: "potable", litres: this.gourde.litres };
       if (this.tuto) this.tuto.bouilli = true;
+      this.noterFait("ebullition");
       this.envoyerBesoins();
       this.envoyer({ t: "feu", feu: vue(feu) });
       this.info("L'eau est potable.");
@@ -3060,6 +3159,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       }
       case "creuser_dakota": {
         if (feu.dakota) return;
+        if (!this.devoilement.estDevoilee("foyer_dakota")) return this.info("Tu n'y as pas encore pensé.");
         if (niveauFeu(feu) !== 1) return this.info("On creuse un feu de camp, pas un foyer maçonné : redescends-le d'abord au feu de camp.");
         if (dansLesFlammes()) return this.info(refusFlammes);
         const plan = this.preparerEtape({ couts: [], ...CREUSER });
