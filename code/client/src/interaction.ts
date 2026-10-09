@@ -5,7 +5,7 @@ import { PERIODES_FRUITIERS, enSaison, etatDuFruitier, phaseFruitier, visibleEnS
 import type { Position } from "../../commun/src/deplacement.ts";
 import { armeDeCle } from "../../commun/src/combat.ts";
 import { CAPACITES, type Charges } from "../../commun/src/energie.ts";
-import { COMPTOIR, sortieIci, type LieuId, type LieuJouable } from "../../commun/src/lieux.ts";
+import { COMPTOIR, destinations, sortieIci, type LieuId, type LieuJouable } from "../../commun/src/lieux.ts";
 import { KLAXONS_PAR_BATTERIE, LEURRES, PORTES, chargeBatterieTracteur, distancePorte } from "../../commun/src/cooperative.ts";
 import type { AutreVu, EtatCoopVu, InstallationVue, MessageClient, SacVu, Verbe } from "../../commun/src/messages.ts";
 import { nommer, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
@@ -23,7 +23,7 @@ export type ActionProposee =
   | { libelle: string; examiner: string }
   | { libelle: string; ouvrirFabrication: true }
   /** À une sortie : ouvrir la carte, la destination déjà choisie. */
-  | { libelle: string; ouvrirCarte: LieuId }
+  | { libelle: string; ouvrirCarte: readonly LieuId[] }
   /** Au comptoir : ouvrir le guichet des Compteurs. */
   | { libelle: string; ouvrirGuichet: true }
   /** Près d'un coffre : ouvrir le coffre (ranger, reprendre). */
@@ -440,8 +440,16 @@ export function proposer(
   const sortie = sortieIci(lieu, position.x, position.z);
   if (sortie) {
     garder(0, {
-      A: { libelle: sortie.libelle, ouvrirCarte: sortie.vers },
-      B: { libelle: "Examiner", examiner: lieu === "terrain" ? "Le chemin de terre rejoint la route de la Campagne, vers la station-service." : "La route continue. Au bout, il faudra la carte." },
+      A: { libelle: sortie.libelle, ouvrirCarte: destinations(sortie) },
+      B: {
+        libelle: "Examiner",
+        examiner:
+          lieu === "terrain"
+            ? "Le chemin de terre rejoint la route de la Campagne, vers la station-service."
+            : lieu === "station" && sortie.vers === "cooperative"
+              ? "Un chemin de terre file vers le nord, sous les arbres : la Coopérative du Plateau, à 2 km. Au bout, il faudra la carte."
+              : "La route continue. Au bout, il faudra la carte.",
+      },
       cible: null,
     });
   }

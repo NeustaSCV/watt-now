@@ -10,7 +10,7 @@ import { avecTouches } from "./touches.ts";
 import { sousTension, suivreElectrique } from "./electricite.ts";
 import * as THREE from "three";
 import { INTENTION_REPOS, avancer, type Position } from "../../commun/src/deplacement.ts";
-import { COMPTOIR, sortieIci, sortiesDe, zoneCoop, zoneDe, type LieuJouable, type Zone } from "../../commun/src/lieux.ts";
+import { COMPTOIR, destinations, sortieIci, sortiesDe, zoneCoop, zoneDe, type LieuJouable, type Zone } from "../../commun/src/lieux.ts";
 import type { EteintVu } from "../../commun/src/eteints.ts";
 import { cerclesSignature, type BruitAction } from "../../commun/src/signature.ts";
 import { ALLURES, GESTE_TENU_MAX_S, type Allure } from "../../commun/src/regles.ts";
@@ -1346,10 +1346,12 @@ function executer(c: Commande): void {
       if (occupe && maintien?.tas) envoyer({ t: "annuler" });
       hud.fermerPanneaux();
       return;
-    case "carte":
+    case "carte": {
       hud.fermerPanneaux();
-      carte.basculer(lieu, position ? (sortieIci(lieu, position.x, position.z)?.vers ?? null) : null);
+      const sortie = position ? sortieIci(lieu, position.x, position.z) : null;
+      carte.basculer(lieu, sortie ? destinations(sortie) : []);
       return;
+    }
     case "lumiere":
       if (!lumierePortee(inventaire)) return hud.message("Rien pour t'éclairer : torche, frontale ou lanterne sont dans le kit d'une famille : échange-la.");
       envoyer({ t: "lumiere", allumee: !lumiere });
