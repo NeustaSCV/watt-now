@@ -73,6 +73,21 @@ Le prototype « atlas annoté » fixe la **géographie** de la région. Les sect
 
 > **Piste :** les annotations pourraient devenir **personnelles**. Chaque joueur ajoute ses propres notes au crayon sur sa carte (ses coins de cueillette, ses dangers), et peut les partager avec ses amis.
 
+### 1 quater. La route de la Campagne en 0a (0.7.3)
+
+La carte du jeu n'ouvre encore que quatre lieux, reliés par des tronçons (`commun/src/lieux.ts`, `TRONCONS`) :
+
+| Tronçon | Distance | Sur la carte |
+|---|---|---|
+| Ton terrain – station-service | 3 km | La route, par le pont |
+| Station-service – Comptoir du Carrefour | 2 km | La route, vers l'ouest |
+| Station-service – Coopérative du Plateau | 2 km | **Chemin de terre** vers le nord-ouest (0.7.3) |
+| Comptoir du Carrefour – Coopérative du Plateau | 3 km | Chemin agricole, au nord du Carrefour |
+
+- **La Coopérative est derrière la station, comme le Comptoir** (0.7.3, demande du porteur du projet) : on ne passe plus par le Carrefour pour y aller. Le chemin agricole du Carrefour reste, comme un deuxième accès.
+- **L'étape** : on s'arrête à chaque lieu du plus court chemin. Du terrain au Carrefour ou à la Coopérative, il faut traverser la station à pied. La fiche du lieu donne la distance, les calories et l'eau de **l'étape**.
+- **Le pion** suit le tracé du tronçon pris : la route, ou l'un des deux chemins de terre.
+
 ## 2. Les six environnements
 
 | Environnement | Ressources dominantes | Famille la plus concernée |

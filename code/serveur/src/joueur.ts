@@ -68,6 +68,7 @@ import {
   arriveeDans,
   distanceKm,
   sortieIci,
+  sortiesDe,
   zoneDe,
   type LieuId,
   type LieuJouable,
@@ -101,7 +102,7 @@ import {
 } from "../../commun/src/economie.ts";
 import { BONUS_MECANISTE, PORTEE_CABLE_PANNEAU, WH_M_PAR_HEURE, productionPanneau, stocker } from "../../commun/src/energie.ts";
 import type { AutreVu, OffreEchange, OperationComptoir, RapportBase, WottsVus } from "../../commun/src/messages.ts";
-import { COMPTOIR, HALTE, dansBoite, etapeVers, type Zone } from "../../commun/src/lieux.ts";
+import { COMPTOIR, dansBoite, deLieu, destinations, etapeVers, minuscule, type Zone } from "../../commun/src/lieux.ts";
 import { LEURRES, PORTEE_PORTE, PORTES, boitePorte, distancePorte } from "../../commun/src/cooperative.ts";
 import { DECHARGE, remonter } from "../../commun/src/decharge.ts";
 import type { Quete, VueQuetes } from "../../commun/src/quetes.ts";
@@ -411,8 +412,11 @@ export class Joueur implements Voyageur, ParticipantLecon {
     this.position = perso.position;
     this.lieu = perso.lieu;
     if (this.lieu === "station") {
-      // Reconnexion dans la halte : on réapparaît à l'entrée la plus proche (Book 01 §2 bis). Le terrain est à l'est (P-006).
-      this.position = arriveeDans("station", this.position.x >= HALTE.longueur / 2 ? "terrain" : "comptoir");
+      // Reconnexion dans la halte : on réapparaît à l'entrée la plus proche (Book 01 §2 bis) : le bout est de la route
+      // (le terrain, P-006), le bout ouest (le Carrefour) ou le chemin de la Coopérative (0.7.3).
+      const { x, z } = this.position;
+      const entree = sortiesDe("station").reduce((a, b) => (Math.hypot(b.arrivee.x - x, b.arrivee.z - z) < Math.hypot(a.arrivee.x - x, a.arrivee.z - z) ? b : a));
+      this.position = { ...entree.arrivee };
       halte.entrer(this);
     }
     if (this.lieu === "comptoir") {
@@ -1889,10 +1893,10 @@ export class Joueur implements Voyageur, ParticipantLecon {
     const sortie = sortieIci(this.lieu, this.position.x, this.position.z);
     // Du terrain au Carrefour, la route passe par la halte : on s'y arrête, il faut la traverser (Book 01 §2 bis).
     const etape = etapeVers(this.lieu, vers);
-    if (!sortie || sortie.vers !== etape) return this.info("Pour prendre la route, va jusqu'à la sortie.");
+    if (!sortie || !destinations(sortie).includes(etape)) return this.info("Pour prendre la route, va jusqu'à la sortie.");
     if (this.objetPorte()) return this.info("Pose d'abord l'escabeau : il reste sur ton terrain.");
     if (!LIEUX[etape].ouvert) return this.info(`${LIEUX[etape].nom} n'a pas encore ouvert ses portes.`);
-    if (etape !== vers) this.info(`La route du ${LIEUX[vers].nom.replace(/^Le /, "")} passe par la station-service : il faudra la traverser à pied.`);
+    if (etape !== vers) this.info(`La route ${deLieu(vers)} passe par ${minuscule(LIEUX[etape].nom)} : il faudra ${etape === "station" ? "la traverser" : "y passer"} à pied.`);
     vers = etape;
     this.annulerAction();
     this.tir.quitterLieu();

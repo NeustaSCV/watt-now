@@ -40,6 +40,12 @@
 ### 2.1 Sur la carte
 
 - Dans la Campagne, à **distance moyenne** (danger ●●). Un chemin agricole part **du Carrefour vers le nord** (Book 20). Du terrain, c'est donc **deux traversées à pied** (la station, puis le Carrefour) : on revient chargé, et c'est voulu (la batterie de tracteur pèse).
+- **0.7.3 : la Coopérative est derrière la station, comme le Comptoir** (le porteur du projet : « ça ne sert à rien de passer au Comptoir pour aller à la Coopérative, c'est lourd en jeu »). On a **ajouté** un chemin, sans rien retirer :
+  - à la halte, un **chemin de terre** quitte la route vers le nord, entre la grange et la station (x = 72). Un panneau « Coopérative du Plateau · 2 km ↑ » est planté au bord de la route. La forêt s'ouvre sur la largeur du chemin, avec un fourré de part et d'autre : la sortie couvre toute la trouée, il n'y a pas de bord invisible ;
+  - **station ↔ Coopérative : 2 km** (≈ 120 kcal, ≈ 0,16 L d'eau, 10 min de route), comme station ↔ Carrefour. Du terrain, c'est donc **une seule traversée à pied** (la station) ;
+  - le **portail** mène à la station (proposée d'abord sur la carte) **et**, comme avant, au Carrefour (chemin agricole, 3 km). La **brèche** mène toujours au Carrefour. Vers le terrain, il faut repasser le portail ;
+  - **le chemin agricole du Carrefour reste**, avec son panneau : c'est un deuxième accès. On arrive toujours au portail, d'où qu'on vienne ;
+  - **rien à migrer** : un voyage n'est pas gardé en base (la destination est enregistrée au départ). Qui était en route ou dans la Coopérative s'y retrouve au portail.
 - **Une coopérative par joueur** (instance, comme le terrain) : son butin, ses Éteints. On n'y croise personne en 0.5.
 - **Une visite tient en 15 à 20 minutes** (le téléphone) ; le niveau se fait en **trois visites** environ : (1) cour, libre-service, quai, atelier ; (2) hangar et bureaux ; (3) chambre froide.
 
@@ -195,6 +201,7 @@ Le leurre est l'arme reine de la coopérative ; il ne peut pas attendre la 0.6. 
 
 - **Un « lieu vivant » réutilisable** : on extrait de la halte (`serveur/src/halte.ts`) ce qu'elle sait faire (ressources, Éteints, sacs, présents, envoi filtré) ; la station devient un lieu vivant partagé, la coopérative un lieu vivant **par joueur**. Le jour où on la partage, on ne change que la clé.
 - **Un registre de lieux** (`commun/src/lieux.ts`) remplace les cas particuliers ; les routes deviennent un petit graphe (terrain → station → Carrefour → coopérative).
+  - *0.7.3 :* le graphe est écrit tel quel (`TRONCONS` : terrain–station 3 km, station–Carrefour 2 km, station–Coopérative 2 km, Carrefour–Coopérative 3 km). L'étape vers un lieu est le premier voisin sur le plus court chemin (`etapeVers`), et la distance est la plus courte (`distanceKm`). Une sortie peut mener à plusieurs lieux (`aussi` : le portail de la Coopérative).
 - **Le plan est une donnée** (`commun/src/cooperative.ts`) : murs, **pièces et portes**, zones sombres, avec une **grille d'obstacles** (cases de 4 m) pour que les collisions restent bon marché.
 - **L'IA dans un bâtiment** :
   - **les murs arrêtent le son et la vue** (son atténué d'une pièce à l'autre selon que la porte est ouverte ; vue limitée à la pièce) ;

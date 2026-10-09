@@ -1,37 +1,39 @@
 // La carte du monde (Book 20, réduite pour la 0a) : un vieil atlas régional annoté au crayon par les survivants.
 // On y choisit une destination ; on ne s'y promène pas (Book 01 §2 bis). Pendant le trajet, le pion avance.
 
-import { DUREE_VOYAGE_S, EAU_PAR_KM, KCAL_PAR_KM, LIEUX, distanceKm, etapeVers, type LieuId, type LieuJouable } from "../../commun/src/lieux.ts";
+import { DUREE_VOYAGE_S, EAU_PAR_KM, KCAL_PAR_KM, LIEUX, distanceKm, etapeVers, minuscule, type LieuId, type LieuJouable } from "../../commun/src/lieux.ts";
 
 /** Les lieux de la route de la Campagne sur la feuille (viewBox 1000 × 700). */
 const POINTS: Record<LieuId, [number, number]> = {
   terrain: [560, 382],
   station: [402, 404],
   comptoir: [300, 380],
-  cooperative: [352, 268],
+  // 0.7.3 : derrière la station, comme le Comptoir (≈ 2 km de chemin de terre, au nord-ouest).
+  cooperative: [376, 296],
 };
 
-/** Le tracé de la route, du terrain au Carrefour, en passant par le pont. */
-const ROUTE: [number, number][] = [
-  [560, 382],
-  [532, 390],
-  [506, 393],
-  [490, 394],
-  [466, 400],
-  [436, 405],
-  [402, 404],
-  [372, 399],
-  [340, 392],
-  [318, 386],
-  [300, 380],
+/** Le tracé de chaque tronçon de route (commun/src/lieux.ts, TRONCONS), d'un bout à l'autre. */
+const TRACES: { a: LieuId; b: LieuId; points: [number, number][]; genre: "route" | "chemin" }[] = [
+  // La route de la Campagne, du terrain à la station, en passant par le pont
+  {
+    a: "terrain",
+    b: "station",
+    genre: "route",
+    points: [[560, 382], [532, 390], [506, 393], [490, 394], [466, 400], [436, 405], [402, 404]],
+  },
+  { a: "station", b: "comptoir", genre: "route", points: [[402, 404], [372, 399], [340, 392], [318, 386], [300, 380]] },
+  // Le chemin de terre de la station à la Coopérative (0.7.3), qui part de la route à l'ouest de la station
+  { a: "station", b: "cooperative", genre: "chemin", points: [[402, 404], [394, 402], [392, 380], [388, 356], [383, 330], [379, 310], [376, 296]] },
   // Le chemin agricole, au nord du Carrefour, jusqu'à la Coopérative (0.5)
-  [303, 354],
-  [312, 328],
-  [325, 304],
-  [339, 284],
-  [352, 268],
+  { a: "comptoir", b: "cooperative", genre: "chemin", points: [[300, 380], [304, 356], [314, 334], [332, 316], [354, 303], [376, 296]] },
 ];
-const INDICES: Record<LieuId, number> = { terrain: 0, station: 6, comptoir: 10, cooperative: 15 };
+
+/** Le tracé d'un lieu à son voisin, dans le sens du trajet. */
+function traceEntre(de: LieuId, vers: LieuId): [number, number][] {
+  const t = TRACES.find((t) => (t.a === de && t.b === vers) || (t.a === vers && t.b === de));
+  if (!t) return [POINTS[de], POINTS[vers]];
+  return t.a === de ? t.points : [...t.points].reverse();
+}
 
 const ENCRE = "#3b2a1e";
 
@@ -153,9 +155,8 @@ function dessinCarte(): string {
     <path d="M592 148 C560 210 520 250 510 300 S486 370 490 394 S476 470 430 520 S300 600 220 640" class="riviere"/>
     <text x="458" y="480" class="nom-petit" transform="rotate(-48 458 480)">la rivière</text>
 
-    <!-- La route de la Campagne, puis le chemin agricole de la Coopérative -->
-    <path d="M${ROUTE.slice(0, INDICES.comptoir + 1).map((p) => p.join(" ")).join(" L")}" class="route"/>
-    <path d="M${ROUTE.slice(INDICES.comptoir).map((p) => p.join(" ")).join(" L")}" class="chemin"/>
+    <!-- La route de la Campagne, puis les chemins de terre de la Coopérative (depuis la station, depuis le Carrefour) -->
+    ${TRACES.map((t) => `<path d="M${t.points.map((p) => p.join(" ")).join(" L")}" class="${t.genre}"/>`).join("")}
     <path d="M482 386 h18 M482 402 h18" class="trait"/>
     <text x="474" y="378" class="crayon petit">le pont tient</text>
 
@@ -191,13 +192,13 @@ function dessinCarte(): string {
       </g>
       <text x="-128" y="44" class="crayon petit">on y dépose ses batteries</text>
     </g>
-    <g class="lieu" data-lieu="cooperative" transform="translate(352 268)" tabindex="0" role="button" aria-label="La Coopérative du Plateau">
+    <g class="lieu" data-lieu="cooperative" transform="translate(376 296)" tabindex="0" role="button" aria-label="La Coopérative du Plateau">
       <circle r="24" class="zone-clic"/>
       <rect x="-15" y="-6" width="24" height="13" fill="#ecdfbf" stroke="${ENCRE}" stroke-width="1.6"/>
       <path d="M-15 -6 l12 -6 l12 6" fill="none" stroke="${ENCRE}" stroke-width="1.4"/>
       <circle cx="13" cy="-6" r="4" fill="#ecdfbf" stroke="${ENCRE}" stroke-width="1.3"/>
       <circle cx="13" cy="4" r="4" fill="#ecdfbf" stroke="${ENCRE}" stroke-width="1.3"/>
-      <text y="30" text-anchor="middle" class="nom-ouvert">Coopérative</text>
+      <text x="-20" y="-8" text-anchor="end" class="nom-ouvert">Coopérative</text>
       <text x="24" y="-4" class="crayon petit">plein d'Éteints.</text>
       <text x="24" y="11" class="crayon petit">noir dedans</text>
     </g>
@@ -241,7 +242,8 @@ export class Carte {
   private readonly pion: SVGGElement;
   private readonly trace: SVGPathElement;
   private lieu: LieuJouable = "terrain";
-  private sortie: LieuId | null = null;
+  /** Les lieux où mène la sortie où se tient le joueur (vide s'il n'est pas à une sortie). */
+  private sorties: readonly LieuId[] = [];
   private choisi: LieuId = "station";
   private enRoute = false;
   private animation = 0;
@@ -289,13 +291,13 @@ export class Carte {
     return !this.racine.hidden;
   }
 
-  /** `sortie` : la destination de la sortie où se tient le joueur, s'il y est. */
-  ouvrir(lieu: LieuJouable, sortie: LieuId | null): void {
+  /** `sorties` : les destinations de la sortie où se tient le joueur, s'il y est (la première est proposée). */
+  ouvrir(lieu: LieuJouable, sorties: readonly LieuId[]): void {
     if (this.enRoute) return;
     this.lieu = lieu;
-    this.sortie = sortie;
+    this.sorties = sorties;
     // Sans sortie sous les pieds, on propose le lieu voisin sur la route (vers le terrain, sauf depuis le terrain).
-    this.choisi = sortie ?? (lieu === "terrain" ? "station" : etapeVers(lieu, "terrain"));
+    this.choisi = sorties[0] ?? (lieu === "terrain" ? "station" : etapeVers(lieu, "terrain"));
     this.placerPion(POINTS[lieu]);
     this.trace.setAttribute("d", "");
     this.dessinerFiche();
@@ -317,20 +319,18 @@ export class Carte {
     this.focusAvant = null;
   }
 
-  basculer(lieu: LieuJouable, sortie: LieuId | null): void {
+  basculer(lieu: LieuJouable, sortie: readonly LieuId[]): void {
     if (this.ouverte) this.fermer();
     else this.ouvrir(lieu, sortie);
   }
 
   /** Le trajet : le pion suit la route, une trace de pas derrière lui. */
   voyager(de: LieuId, vers: LieuId, dureeS: number): void {
-    this.ouvrir(de, null);
+    this.ouvrir(de, []);
     this.enRoute = true;
     this.choisi = vers;
     this.dessinerFiche();
-    const a = INDICES[de];
-    const b = INDICES[vers];
-    const chemin = a <= b ? ROUTE.slice(a, b + 1) : ROUTE.slice(b, a + 1).reverse();
+    const chemin = traceEntre(de, vers);
     const longueurs = chemin.slice(1).map((p, i) => Math.hypot(p[0] - chemin[i]![0], p[1] - chemin[i]![1]));
     const total = longueurs.reduce((s, l) => s + l, 0);
     const debut = performance.now();
@@ -381,7 +381,7 @@ export class Carte {
     for (const g of this.racine.querySelectorAll<SVGGElement>(".lieu")) g.classList.toggle("choisi", g.dataset.lieu === this.choisi);
     const l = LIEUX[this.choisi];
     const ici = this.choisi === this.lieu;
-    // Une halte se traverse à pied : du terrain au Carrefour, on s'arrête d'abord à la station-service.
+    // Une halte se traverse à pied : du terrain au Carrefour ou à la Coopérative, on s'arrête d'abord à la station-service.
     const etape = ici ? this.lieu : etapeVers(this.lieu, this.choisi);
     const parHalte = !ici && etape !== this.choisi;
     const km = distanceKm(this.lieu, etape);
@@ -389,22 +389,26 @@ export class Carte {
     const eau = (km * EAU_PAR_KM).toFixed(2).replace(".", ",");
     let etat = "";
     let peutPartir = false;
-    if (this.enRoute) etat = `<p class="en-route">En route vers ${l.nom.charAt(0).toLowerCase()}${l.nom.slice(1)}…</p>`;
+    if (this.enRoute) etat = `<p class="en-route">En route vers ${minuscule(l.nom)}…</p>`;
     else if (ici) etat = `<p class="note">Tu es ici.</p>`;
     else if (!l.ouvert) etat = `<p class="note">Fermé pour l'instant.</p>`;
-    else if (this.sortie !== etape) {
+    else if (!this.sorties.includes(etape)) {
       etat = `<p class="note">${
         this.lieu === "terrain"
           ? "Pour partir, rejoins le chemin, au sud de ton terrain."
           : this.lieu === "cooperative"
-            ? "Pour partir, repasse le portail, au sud."
-            : "Pour partir, rejoins le bout de la route, du côté de ta destination."
+            ? etape === "comptoir"
+              ? "Pour partir, repasse le portail, au sud (ou glisse-toi par la brèche, à l'ouest)."
+              : "Pour partir, repasse le portail, au sud."
+            : this.lieu === "station" && etape === "cooperative"
+              ? "Pour partir, prends le chemin de terre au nord de la route, à l'ouest de la station, jusqu'à la lisière."
+              : "Pour partir, rejoins le bout de la route, du côté de ta destination."
       }</p>`;
     } else peutPartir = true;
     const trajet = ici
       ? ""
       : `<p class="trajet"><span>≈ ${String(km).replace(".", ",")} km à pied</span><span>≈ ${kcal} kcal</span><span>≈ ${eau} L d'eau</span><span>${DUREE_VOYAGE_S} min de route</span></p>${
-          parHalte ? `<p class="note">La route passe par ${LIEUX[etape].nom.charAt(0).toLowerCase()}${LIEUX[etape].nom.slice(1)} : il faudra y passer à pied.</p>` : ""
+          parHalte ? `<p class="note">La route passe par ${minuscule(LIEUX[etape].nom)} : il faudra y passer à pied.</p>` : ""
         }`;
     // En-tête (titre, ✕), corps qui défile, pied fixe : le bouton Partir ne passe jamais sous le bord de l'écran.
     const corps = this.enRoute ? `<p class="trajet"><span>${DUREE_VOYAGE_S} min de route</span></p>` : `<p>${l.description}</p>${trajet}`;

@@ -7,7 +7,7 @@
 // s'effacer complètement quand on passe dessous ou derrière (voir estomperToits).
 
 import * as THREE from "three";
-import { BOUTIQUE, FERME_HALTE, GOULET, HALTE, ROUTE, STATION, dansBoite, type Boite } from "../../../commun/src/lieux.ts";
+import { BOUTIQUE, CHEMIN_COOP_HALTE, FERME_HALTE, GOULET, HALTE, ROUTE, STATION, ZONE_STATION, dansBoite, type Boite } from "../../../commun/src/lieux.ts";
 import { PALETTE, aleatoire, materiau, nommer } from "./materiaux.ts";
 import { trierParInstance } from "./lots.ts";
 import {
@@ -144,7 +144,9 @@ export function creerHalte(): THREE.Group {
   groupe.add(creerPanneauRoute("Le Carrefour", "← Comptoir · 2 km", 7, ROUTE.z + ROUTE.demiLargeur + 1.6, 0));
   groupe.add(creerPanneauRoute("Ton terrain", "3 km, par le pont →", L - 9, ROUTE.z + ROUTE.demiLargeur + 1.6, 0));
   groupe.add(creerBarrage());
-  nommer(groupe, ["sol", "route", "foret", "station", "ferme", "goulet", "poteaux", "herbes", "debris", "panneau", "panneau", "barrage"]);
+  // 0.7.3 : le chemin de terre de la Coopérative, au nord de la route, à l'ouest de la station (Book 23 §1).
+  groupe.add(creerCheminCoop(), creerPanneauRoute("Coopérative", "du Plateau · 2 km ↑", CHEMIN_COOP_HALTE.x - CHEMIN_COOP_HALTE.demiLargeur - 1.6, ROUTE.z - ROUTE.demiLargeur - 1.5, 0));
+  nommer(groupe, ["sol", "route", "foret", "station", "ferme", "goulet", "poteaux", "herbes", "debris", "panneau", "panneau", "barrage", "chemin-coop", "panneau"]);
   return groupe;
 }
 
@@ -283,6 +285,9 @@ function creerForet(aleat: () => number): THREE.Group {
     if (Math.abs(z - ROUTE.z) < ROUTE.demiLargeur + 1.2) continue;
     ajouter(x, z, 0.9 + aleat() * 0.6);
   }
+  // La trouée du chemin de la Coopérative (0.7.3) : ses arbres sont tirés quand même (taille nulle), pour que le reste
+  // de la halte (goulet, poteaux, herbes…), tiré à la suite, ne bouge pas d'un pouce.
+  for (const p of places) if (dansTroueeCoop(p.x, p.z, 2.2)) p.e = 0;
   const groupe = creerArbres(places, aleat);
 
   // Sous-bois en lisière : des buissons sombres qui ferment le passage.
@@ -294,7 +299,9 @@ function creerForet(aleat: () => number): THREE.Group {
   for (let i = 0; i < buissons.count; i++) {
     const nord = i % 2 === 0;
     const x = -10 + aleat() * (L + 20);
-    const z = nord ? 7.6 + aleat() * 1.6 : 59.8 + aleat() * 1.6;
+    let z = nord ? 7.6 + aleat() * 1.6 : 59.8 + aleat() * 1.6;
+    // Dans la trouée du chemin de la Coopérative, le buisson recule sous les arbres (même tirage pour les autres).
+    if (nord && dansTroueeCoop(x, z, 1.4)) z = -40;
     q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), aleat() * 6.28);
     const s = 0.7 + aleat() * 0.8;
     m.compose(new THREE.Vector3(x, 0.35 * s, z), q, new THREE.Vector3(s * 1.3, s * 0.85, s));
@@ -304,8 +311,93 @@ function creerForet(aleat: () => number): THREE.Group {
   buissons.castShadow = true;
   buissons.receiveShadow = true;
   groupe.add(trierParInstance(buissons));
-  groupe.add(creerFourresDesBouts());
+  groupe.add(creerFourresDesBouts(), creerFourresDuChemin());
   return groupe;
+}
+
+/** Le tracé du chemin de la Coopérative (0.7.3) : droit jusqu'à la lisière, puis il s'enfonce vers le nord-ouest. */
+function xCheminCoop(z: number): number {
+  const lisiere = ZONE_STATION.zMin;
+  return CHEMIN_COOP_HALTE.x - (z < lisiere ? ((lisiere - z) * (lisiere - z)) / 60 : 0);
+}
+
+/** Un point est-il dans la trouée du chemin de la Coopérative, à `marge` près de ses bords ? */
+function dansTroueeCoop(x: number, z: number, marge: number): boolean {
+  return z < ROUTE.z && Math.abs(x - xCheminCoop(z)) < CHEMIN_COOP_HALTE.demiLargeur + marge;
+}
+
+/**
+ * De part et d'autre du chemin de la Coopérative, à la lisière, un fourré serré (0.7.3) : la forêt s'ouvre sur la
+ * largeur du chemin, et nulle part ailleurs (la sortie couvre toute la trouée : pas de bord invisible).
+ */
+function creerFourresDuChemin(): THREE.Object3D {
+  const aleat = aleatoire(317);
+  const places: THREE.Matrix4[] = [];
+  const q = new THREE.Quaternion();
+  for (const cote of [-1, 1]) {
+    for (let z = 4; z <= ZONE_STATION.zMin + 1.4; z += 0.9) {
+      for (const recul of [0, 1.5]) {
+        const s = 0.7 + aleat() * 0.45;
+        q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), aleat() * 6.28);
+        const x = xCheminCoop(z) + cote * (CHEMIN_COOP_HALTE.demiLargeur + 1.5 + recul + aleat() * 0.3);
+        places.push(new THREE.Matrix4().compose(new THREE.Vector3(x, 0.35 * s, z + (aleat() - 0.5) * 0.3), q, new THREE.Vector3(s * 1.2, s * 0.9, s)));
+      }
+    }
+  }
+  const fourres = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.9, 0), materiau(0xffffff), places.length);
+  const teinte = new THREE.Color();
+  places.forEach((m, i) => {
+    fourres.setMatrixAt(i, m);
+    fourres.setColorAt(i, teinte.setHex(aleat() < 0.5 ? PALETTE.feuillageSombre : 0x4b6b3a).offsetHSL(0, 0, (aleat() - 0.5) * 0.06));
+  });
+  fourres.castShadow = true;
+  fourres.receiveShadow = true;
+  return trierParInstance(fourres);
+}
+
+/**
+ * Le chemin de terre de la Coopérative (0.7.3) : deux ornières et une bande d'herbe au milieu, de la route jusque sous
+ * les arbres, où il tourne vers le nord-ouest.
+ */
+function creerCheminCoop(): THREE.Group {
+  const g = new THREE.Group();
+  const aleat = aleatoire(319);
+  const zDebut = ROUTE.z - ROUTE.demiLargeur + 0.2;
+  const zFin = -16;
+  const n = 40;
+  const largeur = CHEMIN_COOP_HALTE.demiLargeur * 2;
+  // Un ruban qui suit le tracé : 3 sommets de large (bord, milieu, bord), teintés terre / herbe / terre.
+  const positions: number[] = [];
+  const couleurs: number[] = [];
+  const index: number[] = [];
+  const terre = new THREE.Color(PALETTE.terre);
+  const herbe = new THREE.Color(PALETTE.herbeSeche);
+  const c = new THREE.Color();
+  for (let i = 0; i <= n; i++) {
+    const z = zDebut + ((zFin - zDebut) * i) / n;
+    const x = xCheminCoop(z);
+    for (let k = 0; k < 5; k++) {
+      const u = k / 4 - 0.5;
+      positions.push(x + u * largeur * (1 + (aleat() - 0.5) * 0.12), 0.025, z);
+      // Les ornières (k = 1 et 3) en terre nue, le milieu et les rives envahis d'herbe sèche.
+      c.copy(terre).lerp(herbe, k === 2 ? 0.6 : k === 0 || k === 4 ? 0.45 : 0.05).offsetHSL(0, 0, (aleat() - 0.5) * 0.06);
+      couleurs.push(c.r, c.g, c.b);
+    }
+    if (i > 0) for (let k = 0; k < 4; k++) {
+      const a = (i - 1) * 5 + k;
+      const b = i * 5 + k;
+      index.push(a, a + 1, b, a + 1, b + 1, b);
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  geo.setAttribute("color", new THREE.Float32BufferAttribute(couleurs, 3));
+  geo.setIndex(index);
+  geo.computeVertexNormals();
+  const sol = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 }));
+  sol.receiveShadow = true;
+  g.add(sol);
+  return g;
 }
 
 /**

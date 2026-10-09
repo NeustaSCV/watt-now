@@ -12,8 +12,20 @@ export type LieuId = "terrain" | "station" | "comptoir" | "cooperative";
 /** Lieux où l'on peut se trouver (le comptoir ouvre à l'É4, la Coopérative en 0.5). */
 export type LieuJouable = LieuId;
 
-/** Tous les lieux, dans l'ordre de la route (Book 23 §7 : terrain → station → Carrefour → Coopérative). */
+/** Tous les lieux, dans l'ordre où on les découvre (Book 23 §7 : terrain → station → Carrefour → Coopérative). */
 export const ORDRE_ROUTE: readonly LieuId[] = ["terrain", "station", "comptoir", "cooperative"];
+
+/**
+ * Les tronçons de la route, d'un lieu à son voisin, en km (Book 01 §2 bis : ≈ 60 kcal et 0,08 L d'eau par km).
+ * 0.7.3 : la Coopérative est derrière la station-service, comme le Comptoir (un chemin de terre part de la halte) ;
+ * le chemin agricole du Carrefour à la Coopérative reste (un deuxième accès).
+ */
+export const TRONCONS: readonly { a: LieuId; b: LieuId; km: number }[] = [
+  { a: "terrain", b: "station", km: 3 },
+  { a: "station", b: "comptoir", km: 2 },
+  { a: "station", b: "cooperative", km: 2 },
+  { a: "comptoir", b: "cooperative", km: 3 },
+];
 
 /** Une boîte au sol, alignée sur les axes : centre (x, z), largeur en x, profondeur en z. */
 export interface Boite {
@@ -44,6 +56,8 @@ export function heurte(zone: Zone, x: number, z: number, rayon: number): boolean
 /** Une sortie : là où l'on se tient pour prendre la route. */
 export interface Sortie {
   vers: LieuId;
+  /** Les autres lieux où mène la même sortie (le chemin du portail de la Coopérative va à la station et au Carrefour). */
+  aussi?: readonly LieuId[];
   /** Boîte où il faut se tenir. */
   boite: Boite;
   /** Où l'on apparaît en revenant par cette sortie. */
@@ -72,6 +86,9 @@ export const SORTIE_TERRAIN: Sortie = {
 // ---------- La halte : la station-service (≈ 200 × 70 m, Book 01 §2 bis) ----------
 
 export const HALTE = { longueur: 200, largeur: 70 } as const;
+
+/** Le chemin de terre de la Coopérative (0.7.3) : il quitte la route vers le nord, entre la ferme et la station. */
+export const CHEMIN_COOP_HALTE = { x: 72, demiLargeur: 1.8 } as const;
 
 /** La route traverse la halte d'ouest en est, au milieu. */
 export const ROUTE = { z: 35, demiLargeur: 3.5 } as const;
@@ -147,6 +164,14 @@ export const SORTIES_STATION: Sortie[] = [
     boite: { x: 2, z: ROUTE.z, l: 4, p: 10 },
     arrivee: { x: 4.5, z: ROUTE.z, o: Math.PI / 2 },
     libelle: "Continuer vers le Carrefour",
+  },
+  // 0.7.3 : le chemin de terre de la Coopérative, au nord de la route, à l'ouest de la station (on n'a plus à passer
+  // par le Carrefour). La forêt s'ouvre sur sa largeur ; on part en le remontant jusqu'à la lisière.
+  {
+    vers: "cooperative",
+    boite: { x: CHEMIN_COOP_HALTE.x, z: ZONE_STATION.zMin + 1.5, l: CHEMIN_COOP_HALTE.demiLargeur * 2 + 1.4, p: 3 },
+    arrivee: { x: CHEMIN_COOP_HALTE.x, z: ZONE_STATION.zMin + 3.5, o: 0 },
+    libelle: "Prendre le chemin de la Coopérative",
   },
 ];
 
@@ -346,13 +371,15 @@ export const ZONE_COOP: Zone = zoneCoop(portesInitiales());
 
 export const SORTIES_COOP: Sortie[] = [
   {
-    vers: "comptoir",
+    // 0.7.3 : le chemin du portail mène à la station-service (le plus court pour rentrer) et, comme avant, au Carrefour.
+    vers: "station",
+    aussi: ["comptoir"],
     boite: { x: PORTAIL.x, z: COOP.profondeur - 1.4, l: PORTAIL.largeur, p: 2.8 },
     arrivee: { ...ARRIVEE_COOP },
-    libelle: "Repartir vers le Carrefour",
+    libelle: "Reprendre le chemin",
   },
   // La brèche du grillage, à l'ouest (Book 23 §2 : une des entrées) : on la voit ouverte, on y passe (0.7.1). On arrive
-  // toujours par le portail (la première sortie vers le Carrefour), mais on peut repartir par là, discrètement.
+  // toujours par le portail (la première sortie, qui mène aussi au Carrefour), mais on peut repartir par là, discrètement.
   {
     vers: "comptoir",
     boite: { x: BRECHE.x + 1.2, z: BRECHE.z, l: 2.4, p: BRECHE.largeur },
@@ -391,12 +418,23 @@ export const LIEUX: Record<LieuId, LieuCarte> = {
   cooperative: {
     id: "cooperative",
     nom: "La Coopérative du Plateau",
-    km: 8,
+    km: 5,
     ouvert: true,
     description:
-      "Au bout du chemin agricole, au nord du Carrefour. Le hangar n'a jamais été vidé : on dit qu'il y reste de quoi tenir un hiver. Les Éteints y sont nombreux, et il fait noir à l'intérieur.",
+      "Au bout d'un chemin de terre qui part de la station-service vers le nord (un chemin agricole y mène aussi depuis le Carrefour). Le hangar n'a jamais été vidé : on dit qu'il y reste de quoi tenir un hiver. Les Éteints y sont nombreux, et il fait noir à l'intérieur.",
   },
 };
+
+/** Le nom d'un lieu en milieu de phrase : « la station-service », « le Comptoir du Carrefour », « ton terrain ». */
+export function minuscule(nom: string): string {
+  return nom.charAt(0).toLowerCase() + nom.slice(1);
+}
+
+/** « du Comptoir du Carrefour », « de la Coopérative du Plateau », « de ton terrain ». */
+export function deLieu(id: LieuId): string {
+  const nom = minuscule(LIEUX[id].nom);
+  return nom.startsWith("le ") ? `du ${nom.slice(3)}` : `de ${nom}`;
+}
 
 /** Coût d'un trajet à pied (Book 01 §2 bis) : ≈ 60 kcal et ≈ 0,08 L d'eau par km. */
 export const KCAL_PAR_KM = 60;
@@ -404,8 +442,26 @@ export const EAU_PAR_KM = 0.08;
 /** Durée du trajet à l'écran : une courte séquence sur la carte, quelle que soit la distance en 0a. */
 export const DUREE_VOYAGE_S = 10;
 
+/** Les distances les plus courtes, par la route, de chaque lieu à chaque autre (calculées une fois). */
+const DISTANCES: Record<LieuId, Record<LieuId, number>> = (() => {
+  const d = {} as Record<LieuId, Record<LieuId, number>>;
+  for (const a of ORDRE_ROUTE) {
+    d[a] = {} as Record<LieuId, number>;
+    for (const b of ORDRE_ROUTE) d[a][b] = a === b ? 0 : Infinity;
+  }
+  for (const t of TRONCONS) d[t.a][t.b] = d[t.b][t.a] = t.km;
+  for (const k of ORDRE_ROUTE) for (const a of ORDRE_ROUTE) for (const b of ORDRE_ROUTE) d[a][b] = Math.min(d[a][b], d[a][k] + d[k][b]);
+  return d;
+})();
+
+/** Les lieux voisins de `lieu` (un tronçon de route les relie directement). */
+export function voisins(lieu: LieuId): LieuId[] {
+  return TRONCONS.flatMap((t) => (t.a === lieu ? [t.b] : t.b === lieu ? [t.a] : []));
+}
+
+/** La distance par la route, en km (par le plus court). */
 export function distanceKm(de: LieuId, vers: LieuId): number {
-  return Math.abs(LIEUX[de].km - LIEUX[vers].km);
+  return DISTANCES[de][vers];
 }
 
 // ---------- Outils ----------
@@ -422,15 +478,18 @@ export function sortiesDe(lieu: LieuJouable): Sortie[] {
 }
 
 /**
- * Les lieux se traversent à pied (Book 01 §2 bis) : la route est une ligne, et l'on s'arrête à chaque lieu entre les
- * deux (du terrain au Carrefour, la station ; du terrain à la Coopérative, la station puis le Carrefour).
- * Renvoie le lieu où l'on arrive vraiment en prenant la route vers `vers` depuis `de`.
+ * Les lieux se traversent à pied (Book 01 §2 bis) : on s'arrête à chaque lieu entre les deux (du terrain au Carrefour
+ * ou à la Coopérative, la station). Renvoie le lieu où l'on arrive vraiment en prenant la route vers `vers` depuis
+ * `de` : le premier voisin sur le plus court chemin.
  */
 export function etapeVers(de: LieuJouable, vers: LieuId): LieuJouable {
-  const i = ORDRE_ROUTE.indexOf(de);
-  const j = ORDRE_ROUTE.indexOf(vers);
-  if (i === j) return vers;
-  return ORDRE_ROUTE[i + Math.sign(j - i)]!;
+  if (de === vers) return vers;
+  return voisins(de).find((v) => DISTANCES[de][v] + DISTANCES[v][vers] === DISTANCES[de][vers])!;
+}
+
+/** Les lieux où mène une sortie. */
+export function destinations(s: Sortie): LieuId[] {
+  return [s.vers, ...(s.aussi ?? [])];
 }
 
 export function dansBoite(x: number, z: number, b: Boite, marge = 0): boolean {
@@ -504,8 +563,10 @@ export function sortieIci(lieu: LieuJouable, x: number, z: number): Sortie | nul
 /** Où l'on arrive dans un lieu, selon d'où l'on vient. */
 export function arriveeDans(lieu: LieuJouable, depuis: LieuId): Position {
   const sorties = SORTIES[lieu];
-  // On arrive par la sortie qui mène d'où l'on vient (au Carrefour, par l'est depuis la station, par le nord depuis la Coopérative).
-  const versDepuis = sorties.find((s) => s.vers === etapeVers(lieu, depuis)) ?? sorties[0]!;
+  // On arrive par la sortie qui mène d'où l'on vient (au Carrefour, par l'est depuis la station, par le nord depuis la
+  // Coopérative ; à la Coopérative, toujours par le portail, la première de ses sorties).
+  const etape = etapeVers(lieu, depuis);
+  const versDepuis = sorties.find((s) => destinations(s).includes(etape)) ?? sorties[0]!;
   return { ...versDepuis.arrivee };
 }
 

@@ -1,5 +1,5 @@
 // Étape 0.5a (Book 23 §8) : la Coopérative est un lieu vivant par joueur, au bout du chemin agricole qui part du
-// Carrefour ; la route est une ligne (terrain → station → Carrefour → Coopérative).
+// Carrefour ; depuis la 0.7.3, un chemin de terre y mène aussi tout droit depuis la station (chemin-coop.test.ts).
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -13,18 +13,19 @@ import { Cooperatives, repeupler } from "./cooperative.ts";
 import { Halte } from "./halte.ts";
 import { Joueur } from "./joueur.ts";
 
-test("la route est une ligne : du terrain à la Coopérative, on traverse la station puis le Carrefour", () => {
+test("du terrain à la Coopérative, on traverse la station (0.7.3 : plus le Carrefour)", () => {
   assert.equal(etapeVers("terrain", "cooperative"), "station");
-  assert.equal(etapeVers("station", "cooperative"), "comptoir");
+  assert.equal(etapeVers("station", "cooperative"), "cooperative");
   assert.equal(etapeVers("comptoir", "cooperative"), "cooperative");
-  assert.equal(etapeVers("cooperative", "terrain"), "comptoir");
+  assert.equal(etapeVers("cooperative", "terrain"), "station");
   assert.equal(etapeVers("comptoir", "terrain"), "station");
   // Au Carrefour, on arrive par l'est depuis la station, par le nord depuis la Coopérative.
   const depuisCoop = arriveeDans("comptoir", "cooperative");
   const depuisStation = arriveeDans("comptoir", "station");
   assert.ok(depuisCoop.z < 10 && depuisStation.x > 50);
   assert.deepEqual(arriveeDans("cooperative", "terrain"), { ...ARRIVEE_COOP });
-  assert.equal(sortiesDe("cooperative")[0]!.vers, "comptoir");
+  assert.equal(sortiesDe("cooperative")[0]!.vers, "station");
+  assert.deepEqual(sortiesDe("cooperative")[0]!.aussi, ["comptoir"]);
 });
 
 function monter() {
