@@ -50,7 +50,12 @@ export const OBJETS_DE_METIER: Partial<Record<TypeObjet, Etoiles>> = {
   lame_forgee: 3,
   // La machette de fortune, trouvée : une tôle découpée, un manche ficelé ; une lame ★ (Book 25 §0.2).
   machette: 1,
-  // ⚡ Voltaïques (chantier 6)
+  // ⚡ Voltaïques (chantier 6) : la matraque de fortune est une arme ★ ; la matraque et l'aiguillon sont donnés à ★★★
+  // (module à bobine). Le module de décharge porte ses étoiles (★ flash, ★★ raquette, ★★★ bobine) jusqu'à l'arme.
+  matraque_fortune: 1,
+  matraque_electrique: 3,
+  aiguillon: 3,
+  module_decharge: 3,
   // ⚙️ Mécanistes (chantier 7)
   // Tous : l'arc (chantier 4)
 };

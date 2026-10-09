@@ -145,6 +145,10 @@ export const MATIERE_ARME: Partial<Record<TypeObjet, MatiereArme>> = {
   masse: "metal",
   barre_metal: "metal",
   pied_de_biche: "metal",
+  // ⚡ Les armes électriques (Book 25 §5.3) : un manche de bois (gourdin, épieu), qui se reprend à l'établi.
+  matraque_fortune: "bois",
+  matraque_electrique: "bois",
+  aiguillon: "bois",
 };
 /** Un atelier où remettre une arme à neuf : l'installation, l'accessoire qu'il y faut, ce que le geste consomme. */
 export interface AtelierReparation {
@@ -192,6 +196,10 @@ export const DEBRIS_ARME: Partial<Record<TypeObjet, TypeObjet>> = {
   marteau: "ferraille_tordue",
   masse: "ferraille_tordue",
   pied_de_biche: "ferraille_tordue",
+  // ⚡ Le manche fend ; le câblage brûlé ne se récupère pas.
+  matraque_fortune: "manche_fendu",
+  matraque_electrique: "manche_fendu",
+  aiguillon: "manche_fendu",
 };
 /** La réparation de fortune remonte au plus jusqu'ici : encore abîmée, mais elle tient. */
 export const PLAFOND_FORTUNE = 0.29;

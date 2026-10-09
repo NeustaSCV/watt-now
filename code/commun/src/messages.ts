@@ -119,7 +119,9 @@ export type Verbe =
   | "couvrir"
   | "ranimer"
   /** Un piège, une plaque de choc (Book 25 §5.3 et §6.3) : le réarmer ; une clôture couchée : la relever (chantiers 6 et 7). */
-  | "rearmer_piege";
+  | "rearmer_piege"
+  /** Au banc de recharge : recharger ses armes électriques (Voltaïques, chantier 6). */
+  | "recharger_armes";
 
 /** État propre à certaines installations. */
 export interface EtatInstallation {

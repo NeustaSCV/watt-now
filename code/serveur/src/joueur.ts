@@ -78,6 +78,7 @@ import type { LieuVivant } from "./lieu-vivant.ts";
 import { Comptoir } from "./comptoir.ts";
 import { Tir, type ContexteTir } from "./tir.ts";
 import { declencher, declencheurNeuf, definitionDeclencheur, estDeclencheur, type DeclencheurPose } from "./declencheurs.ts";
+import { Electricite, alimenterClotures, coutEnduranceCoup, type ContexteElectricite } from "./electricite.ts";
 import {
   PRIX_RETRAIT,
   WOTTS_PAR_WH_M,
@@ -313,6 +314,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
   private readonly cooperatives: Cooperatives;
   /** Le lancer et le tir (Book 25 §10.3) : son moteur est dans serveur/src/tir.ts. */
   private readonly tir: Tir = new Tir(this.contexteTir());
+  /** L'électricité des Voltaïques (Book 25 §5) : décharges, recharge, pièges électriques (serveur/src/electricite.ts). */
+  private readonly electricite: Electricite = new Electricite(this.contexteElectricite());
 
   /** Le lieu vivant où l'on se trouve (la halte, partagée ; sa Coopérative, à soi) ; null sur le terrain et au Comptoir. */
   private get vivant(): LieuVivant | null {
@@ -611,6 +614,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
         return this.tir.lancer(message.dx, message.dz, message.cible, message.distance);
       case "rearmer":
         return this.tir.rearmer();
+      case "manivelle":
+        return this.electricite.manivelle(message.objet);
       case "lire":
         this.lire(message.objet);
         return;
@@ -870,15 +875,17 @@ export class Joueur implements Voyageur, ParticipantLecon {
   }
 
   private frapper(appuye: boolean): void {
+    let enMain: Arme;
     this.mesurer("activite", "combat", 0.6);
     const instant = this.maintenant();
     // Un coup va jusqu'au bout (P-004) : on ne refrappe pas avant la fin du geste.
     if (this.voyage || instant < this.prochaineFrappe) return;
-    const cout = appuye ? COUT_ENDURANCE.coupAppuye : COUT_ENDURANCE.coup;
+    // L'arme électrique sans courant n'est qu'un gourdin court ; trop faible, la longue part en courte (Book 25 §8.2).
+    ({ arme: enMain, appuye } = this.electricite.pourFrapper(this.armeDuCombat(), appuye));
+    const cout = coutEnduranceCoup(enMain, appuye);
     this.annulerAction();
     const force = this.endurance < SEUIL_EPUISE ? 0.5 : 1;
     this.endurance = Math.max(0, this.endurance - cout);
-    const enMain = this.armeDuCombat();
     this.prochaineFrappe = instant + (appuye ? enMain.coupAppuye : enMain.coup) - TOLERANCE_COUP_MS;
     this.bruitCoupJusqua = instant + 600;
     // Le choc s'entend plus loin que le tranchant ; la décharge crépite (Book 25 §8.4).
@@ -894,6 +901,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     const effet = encaisserCoup(cible, arme, appuye, force, this.position, this.zoneIci(), this.eteintsIci());
     const resultat = effet.resultat;
     this.user(enMain);
+    this.electricite.apresDecharge(enMain, appuye);
     if (resultat === "detruit") this.apresDestruction(cible);
     const electrique = arme.type === "electrique" ? ({ electrique: true } as const) : {};
     const coups = [{ t: "coup" as const, id: cible.id, x: cible.x, z: cible.z, resultat, ...electrique }];
@@ -951,6 +959,33 @@ export class Joueur implements Voyageur, ParticipantLecon {
       user: (arme) => j.user(arme),
       apresDestruction: (e) => j.apresDestruction(e),
       commencer: (libelle, dureeS, appliquer) => j.commencer(libelle, dureeS, appliquer, 0, "outil"),
+    };
+  }
+
+  /** Ce que le joueur prête au module de l'électricité (electricite.ts) : des accès, aucune règle. */
+  private contexteElectricite(): ContexteElectricite {
+    const j = this;
+    return {
+      maintenant: () => j.maintenant(),
+      inventaire: () => j.inventaire,
+      chargeArmes: () => j.chargeArmes,
+      majChargeArme: (cle, wh) => j.majChargeArme(cle, wh),
+      charges: () => j.charges,
+      majCharges: (c) => {
+        j.charges = c;
+        j.envoyerCharges();
+      },
+      endurance: () => j.endurance,
+      depenser: (n) => {
+        j.endurance = Math.max(0, j.endurance - n);
+      },
+      sauverInstallation: (i) => {
+        j.base.sauverEtatInstallation(j.compte.id, i.id, i.etat);
+        j.envoyer({ t: "installation", installation: i });
+      },
+      info: (t) => j.info(t),
+      indice: (sorte, t) => j.indice(sorte, t),
+      commencer: (libelle, dureeS, appliquer, kcal) => j.commencer(libelle, dureeS, appliquer, kcal ?? 0, "outil"),
     };
   }
 
@@ -2505,6 +2540,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
       bilan.stocke += r.stocke;
       bilan.perdu += r.perdu;
     }
+    // Les clôtures électriques tirent leur courant du banc, même hors ligne (Book 25 §5.3).
+    for (const c of alimenterClotures(this.installations.values(), instant, (c) => this.lieu === "terrain" && !this.voyage && this.envoyer({ t: "installation", installation: c }))) changes.add(c);
     // La décharge fait remonter des objets, même hors ligne (P-001).
     for (const d of this.installations.values()) {
       if (d.type !== "decharge") continue;
@@ -3268,6 +3305,14 @@ export class Joueur implements Voyageur, ParticipantLecon {
           "outil",
         );
       }
+      // L'électricité (Book 25 §5) : recharger ses armes au banc ; réarmer la plaque, relever une clôture.
+      case "recharger_armes":
+        if (i.type !== "banc_recharge") return;
+        this.mettreAJourBase(this.maintenant());
+        return this.electricite.rechargerAuBanc(i);
+      case "rearmer_piege":
+        if (this.electricite.rearmer(i)) return;
+        break;
       case "poser_batteries":
         if (i.type !== "banc_recharge") return;
         return this.poserBatteries(i);

@@ -57,8 +57,9 @@ const equipe = (id = 1, x = 0, z = 0) => Object.assign(errant(id, x, z), { varia
 
 test("0.6 socle : ARMES rassemble les fichiers par famille, triés par rang, sans rien changer à l'ordre d'avant", () => {
   const ordre = ["masse", "hache", "pied_de_biche", "machette", "marteau", "barre_metal", "lance", "lame_forgee", "gourdin", "epieu", "couteau_aiguise", "couteau"];
+  // Les armes de métier de la vague 2 (chantiers 5 à 7) se glissent entre elles : l'ordre de celles d'avant ne bouge pas.
   assert.deepEqual(
-    ARMES.map((a) => a.objet),
+    ARMES.map((a) => a.objet).filter((o) => o !== null && ordre.includes(o)),
     ordre,
   );
   assert.equal(ARMES.length, ARMES_COMMUNES.length + ARMES_CHARBONNIERS.length + ARMES_VOLTAIQUES.length + ARMES_MECANISTES.length);
