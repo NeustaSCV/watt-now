@@ -2,6 +2,7 @@
 // Les pas selon le sol et l'allure, la vie sonore des Éteints selon leur état, les gestes des actions,
 // les sons continus (feu, pédalier, pluie) et le niveau de menace transmis à la musique.
 
+import type { BruitVu, GenreBruit } from "../../../commun/src/bruits.ts";
 import type { EtatEteint } from "../../../commun/src/eteints.ts";
 import { BOUTIQUE, COMPTOIR, ROUTE, ROUTE_CARREFOUR, STATION, type LieuJouable } from "../../../commun/src/lieux.ts";
 import type { AspectFeu } from "../../../commun/src/survie.ts";
@@ -119,6 +120,23 @@ export function gesteDe(libelle: string, bruit: BruitAction): Geste {
   return { id: "fouille", periode: 1.5 };
 }
 
+/** Le son d'un bruit entendu sans le voir (0.7.2), et son volume. */
+const SON_DU_BRUIT: Record<GenreBruit, { id: IdSon; gain?: number }> = {
+  pas: { id: "eteint_pas" },
+  pas_presses: { id: "eteint_pas_presse" },
+  rale: { id: "eteint_rale" },
+  rale_rapide: { id: "eteint_rale_rapide" },
+  halete: { id: "eteint_halete", gain: 0.7 },
+  souffle: { id: "eteint_souffle" },
+  gemissement: { id: "eteint_rale", gain: 1.2 },
+  rale_coupe: { id: "eteint_rale_coupe" },
+  coups: { id: "impact_appuye", gain: 1.1 },
+  chute: { id: "chute_corps" },
+  presence: { id: "eteint_souffle", gain: 1.3 },
+};
+/** Ce qu'on entend sans le voir garde la musique en alerte ce nombre de secondes. */
+const ALERTE_ENTENDUE = 4;
+
 export class Bruiteur {
   private readonly son: Sonorisation;
   private t = 0;
@@ -132,6 +150,24 @@ export class Bruiteur {
   private saisiAvant = 0;
   /** Le premier Éteint repéré de la session a eu son signal musical. */
   private repere = false;
+  /** Ce qu'on entend derrière un mur tient la musique en alerte (0.7.2) : le niveau, et jusqu'à quand. */
+  private entendu: { niveau: "attire" | "poursuite"; jusqua: number } | null = null;
+
+  /**
+   * Ce qu'on entend sans le voir (message « bruits », 0.7.2) : étouffé, depuis le point de passage (la porte, le
+   * mur). Un Éteint qui cogne, qui poursuit ou qu'on sent tout près met la musique en poursuite ; un râle coupé, en
+   * tension. On n'entend jamais que le bruit : ni qui le fait, ni où il est.
+   */
+  entendre(bruits: readonly BruitVu[]): void {
+    for (const b of bruits) {
+      const s = SON_DU_BRUIT[b.g];
+      this.son.jouerEtouffe(s.id, b, b.f, { gain: s.gain ?? 1 });
+      const niveau = b.g === "coups" || b.g === "presence" || b.g === "pas_presses" || b.g === "rale_rapide" ? "poursuite" : b.g === "rale_coupe" || b.g === "halete" || b.g === "gemissement" ? "attire" : null;
+      if (!niveau || b.f < 0.15) continue;
+      const garde = this.entendu && this.entendu.jusqua > this.t && this.entendu.niveau === "poursuite" ? "poursuite" : niveau;
+      this.entendu = { niveau: garde, jusqua: this.t + ALERTE_ENTENDUE };
+    }
+  }
 
   constructor(son: Sonorisation) {
     this.son = son;
@@ -253,6 +289,10 @@ export class Bruiteur {
       }
     }
     if (nombre && (poursuivantsProches >= 3 || (saisi > 0 && Math.max(auContact, saisi) >= 3))) menace = "nombre";
+    // Ce qu'on entend derrière un mur compte aussi (0.7.2) : sinon, l'Éteint caché ne ferait plus peur.
+    if (this.entendu && this.entendu.jusqua > this.t) {
+      if (menace === "aucune" || (menace === "attire" && this.entendu.niveau === "poursuite")) menace = this.entendu.niveau;
+    }
     for (const id of this.suivis.keys()) if (!vus.has(id)) this.suivis.delete(id);
     this.son.menace(menace);
     if (saisi > this.saisiAvant) this.son.jouer("saisie");

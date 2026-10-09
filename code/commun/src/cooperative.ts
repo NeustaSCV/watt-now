@@ -56,8 +56,8 @@ export const PORTES: PorteCoop[] = [
   { id: "atelier_est", x: 28, z: 20, largeur: 1.4, sens: "z", entre: ["atelier", "dehors"], ouverte: true },
 ];
 
-/** Les vitres condamnées, dans l'ordre (de l'ouest à l'est). */
-const VITRES_CONDAMNEES = new Set<number>([]);
+/** Les vitres condamnées, dans l'ordre (de l'ouest à l'est) : la huitième, au milieu de la vitrine est. */
+const VITRES_CONDAMNEES = new Set<number>([7]);
 /**
  * Les vitres de la façade du libre-service (z = 40), de x0 à x1, et si elles sont condamnées (contreplaqué). Deux
  * vitrines, de part et d'autre de la porte de la cour, découpées en vitres d'environ 2 m (rendu/cooperative.ts).

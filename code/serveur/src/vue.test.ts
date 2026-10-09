@@ -63,7 +63,8 @@ test("fenêtres : du libre-service, on voit la cour à travers les vitrines ; le
   const ov = obstaclesVue(PLAN_VUE_COOP, portesInitiales());
   // Du fond du libre-service vers la cour, droit devant, à travers une vitrine (pas par la porte, en x 44).
   assert.ok(voit(ov, 37, 36, 37, 46), "à travers la vitrine ouest");
-  assert.ok(voit(ov, 53, 36, 53, 46), "à travers la vitrine est");
+  assert.ok(voit(ov, 55, 36, 55, 46), "à travers la vitrine est");
+  assert.ok(!voit(ov, 52.5, 36, 52.5, 46), "pas à travers la vitre condamnée (contreplaqué)");
   // Des bureaux : par la fenêtre à barreaux (x 62), oui ; par celle au store baissé (x 66), non.
   assert.ok(voit(ov, 62, 37, 62, 46));
   assert.ok(!voit(ov, 66, 37, 66, 46));

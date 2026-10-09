@@ -24,6 +24,7 @@ import {
   PORTAIL,
   PORTES,
   RAYONNAGES,
+  VITRES_LIBRE_SERVICE,
   radioSurEtabli,
 } from "../../../commun/src/cooperative.ts";
 import type { Boite } from "../../../commun/src/lieux.ts";
@@ -599,7 +600,12 @@ interface VuePorte {
   t: number;
   cible: number;
   pivots: THREE.Object3D[];
+  /** Un Éteint la pousse de l'autre côté (0.7.2) : elle tremble encore ce nombre de secondes. */
+  secousse?: number;
 }
+
+/** Combien de temps une porte tremble sous les coups. */
+const SECOUSSE = 0.45;
 
 interface DefPorte {
   genre: GenrePorte;
@@ -810,16 +816,43 @@ export function majPortes(groupe: THREE.Object3D, etats: Record<string, boolean>
   }
 }
 
-/** À chaque image : les portes en mouvement (voir majPortes). */
+/** À chaque image : les portes en mouvement (voir majPortes), et celles qui tremblent sous les coups. */
 export function animerCooperative(groupe: THREE.Object3D, dt: number): void {
   const portes = groupe.userData.portes as VuePorte[] | undefined;
   if (!portes) return;
   for (const v of portes) {
-    if (v.t === v.cible) continue;
-    const pas = dt * (v.genre === "rideau" ? 0.8 : 2.2);
-    v.t = v.cible > v.t ? Math.min(v.cible, v.t + pas) : Math.max(v.cible, v.t - pas);
+    const tremble = (v.secousse ?? 0) > 0;
+    if (v.t === v.cible && !tremble) continue;
+    if (v.t !== v.cible) {
+      const pas = dt * (v.genre === "rideau" ? 0.8 : 2.2);
+      v.t = v.cible > v.t ? Math.min(v.cible, v.t + pas) : Math.max(v.cible, v.t - pas);
+    }
     appliquerPorte(v);
+    if (!tremble) continue;
+    v.secousse = Math.max(0, v.secousse! - dt);
+    // Le battant bat dans son cadre : de petits coups, de moins en moins forts (rien si elle est ouverte).
+    const k = (v.secousse / SECOUSSE) * (1 - v.t) * Math.sin(performance.now() / 22);
+    // (Seulement ce qu'appliquerPorte remet en place à chaque image : rien ne dérive.)
+    for (const p of v.pivots) {
+      if (v.genre === "battant" || v.genre === "double_battant") p.rotation.y += k * 0.03;
+      else if (v.genre === "rideau") p.scale.y *= 1 + k * 0.01;
+      else p.position.x += k * 0.025;
+    }
+    if (v.secousse === 0) appliquerPorte(v);
   }
+}
+
+/** Un Éteint cogne contre cette porte, de l'autre côté (message « bruits », 0.7.2) : elle tremble. */
+export function secouerPorte(groupe: THREE.Object3D, id: string): void {
+  const v = (groupe.userData.portes as VuePorte[] | undefined)?.find((p) => p.id === id);
+  if (v) v.secousse = SECOUSSE;
+}
+
+/** L'ouverture de chaque porte en ce moment (0 : fermée, 1 : ouverte ; entre les deux, elle bouge) : pour la vue. */
+export function ouverturesPortes(groupe: THREE.Object3D): Record<string, number> {
+  const res: Record<string, number> = {};
+  for (const v of (groupe.userData.portes as VuePorte[] | undefined) ?? []) if (v.id !== "portail") res[v.id] = v.t;
+  return res;
 }
 
 /**
@@ -1429,6 +1462,8 @@ function creerBatiment(ch: Chantiers, mats: Mats & { verre: THREE.Material; ense
   pan(ta, "x", z1, x0, xc, HV, HF, 0xffffff, mats.enduit);
   pan(ta, "x", z1, 44 - 1.2, 44 + 1.2, 2.5, HV, 0xffffff, mats.enduit);
   pan(ta, "x", z1, xc, x1, SOCLE, HF, 0xffffff, mats.enduit);
+  // Les vitres condamnées viennent du plan (VITRES_LIBRE_SERVICE) : elles arrêtent la vue, les autres non (0.7.2).
+  let vitre = 0;
   for (const [u0, u1] of vitrines) {
     const n = Math.max(1, Math.round((u1 - u0) / 2));
     const lv = (u1 - u0) / n;
@@ -1437,11 +1472,13 @@ function creerBatiment(ch: Chantiers, mats: Mats & { verre: THREE.Material; ense
     ta.pave(u0, HV - 0.08, z1 - 0.07, u1, HV, z1 + 0.07, 0x8e9396, acier);
     for (let i = 0; i < n; i++) {
       const xm = u0 + (i + 0.5) * lv;
+      // (Le tirage reste fait : le reste du chantier garde les mêmes hasards.)
       const casse = ta.hasard();
-      if (casse < 0.18) {
+      const condamnee = VITRES_LIBRE_SERVICE[vitre++]?.[2] ?? false;
+      if (!condamnee && casse < 0.18) {
         // Vitre brisée : des éclats restés dans le cadre
         for (let k = 0; k < 3; k++) ta.poser(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-0.5 + k * 0.4, 0, 0), new THREE.Vector3(-0.2 + k * 0.4, 0, 0), new THREE.Vector3(-0.35 + k * 0.4, 0.3 + ta.hasard() * 0.5, 0)]), mats.verre, 0xffffff, { x: xm, y: SOCLE + 0.08, z: z1 }, { nuance: 0, crasse: false });
-      } else if (casse < 0.3) {
+      } else if (condamnee) {
         // Condamnée par un panneau de contreplaqué
         ta.boite(lv - 0.1, HV - SOCLE - 0.2, 0.03, 0xb39566, { x: xm, y: (SOCLE + HV) / 2, z: z1 + 0.09 }, matiere(), { nuance: 0.04 });
       } else ta.boite(lv - 0.1, HV - SOCLE - 0.16, 0.02, 0xffffff, { x: xm, y: (SOCLE + HV) / 2, z: z1 }, mats.verre, { nuance: 0, crasse: false });
