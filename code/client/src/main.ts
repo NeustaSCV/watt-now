@@ -378,6 +378,7 @@ const hud = new Hud(
     jeter: (objet, quantite) => envoyer({ t: "jeter", objet, quantite }),
     demonter: (objet) => envoyer({ t: "demonter", objet }),
     lire: (objet) => envoyer({ t: "lire", objet }),
+    recettesVues: (recettes) => envoyer({ t: "recettes_vues", recettes }),
     manivelle: (objet) => envoyer({ t: "manivelle", objet }),
     equiper: (objet) => envoyer({ t: "equiper", objet }),
     preparer: (objet) => envoyer({ t: "preparer", objet }),
@@ -527,6 +528,7 @@ function installer(message: Bienvenue): void {
   occupe = false;
   hud.identite(message.moi.pseudo, message.moi.famille);
   hud.majSavoir(message.savoir ?? { apprises: [], manuels: [] });
+  hud.majProgression(message.progression ?? null);
   lecons.maj(null);
   son.entrer({
     famille: message.moi.famille,
@@ -924,7 +926,6 @@ function recevoir(message: MessageServeur): void {
     case "savoir":
       hud.majSavoir(message.savoir);
       return;
-    // L'arbre de progression (0.7) : « Tu y penses : … ». Les cartes, la pastille et « À découvrir » : chantier 5.
     // La couche de déchets (0.7) : une pièce prise, un remplissage neuf, un point, la liste d'une fouille.
     case "dechets_carreau":
       dechetsVue.majCarreau(message.cx, message.cz, message.r, message.pris);
@@ -935,8 +936,10 @@ function recevoir(message: MessageServeur): void {
     case "fouille":
       dechetsVue.fouille(message.fouille);
       return;
+    // L'arbre de progression (0.7) : « Tu y penses : … » ; les cartes, la pastille et « À découvrir » (hud.ts).
     case "devoilement":
-      if (message.texte) hud.message(message.texte);
+      hud.majProgression(message.progression);
+      if (message.texte) hud.message(message.texte, "aide");
       return;
     case "lecons_possibles":
       lecons.choisir(message.a, message.recettes);

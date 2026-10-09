@@ -5,6 +5,8 @@
 import { VERSION } from "../../commun/src/version.ts";
 import { REGLAGES } from "../../commun/src/reglages.ts";
 import { ceQuiManque } from "../../commun/src/aide-fabrication.ts";
+import type { VueProgression } from "../../commun/src/progression.ts";
+import { SILHOUETTES_DEPLIEES, enTete, nouveautesParOnglet, ongletsVides, planFabrication, recetteVisible, sousTitre, type PlanFabrication } from "./fabrication-arbre.ts";
 import { ACTIONS, RESERVEES, assigner, avecTouches, nomDe, nomTouche, retablir, surChangement, type Action } from "./touches.ts";
 import { PanneauAide } from "./aide.ts";
 import { CAPACITES, type Charges } from "../../commun/src/energie.ts";
@@ -48,12 +50,11 @@ import {
   ingredientsPresents,
   multiplicateurQualites,
   niveauQualite,
-  recettesConnues,
   type CategorieRecette,
   type Qualite,
   type Recette,
 } from "../../commun/src/recettes.ts";
-import { estHorsFamille, recettePour, recettesAutresFamilles } from "../../commun/src/recettes.ts";
+import { estHorsFamille, recettePour } from "../../commun/src/recettes.ts";
 import type { SavoirVu } from "../../commun/src/messages.ts";
 import { MANUELS, chezLaFamille, estManuel } from "../../commun/src/savoir.ts";
 import { NOMS_FAMILLES, type Famille } from "../../commun/src/regles.ts";
@@ -111,6 +112,8 @@ export interface ActionsJoueur {
   demonter(objet: TypeObjet): void;
   /** Lire un manuel : il ouvre les recettes d'une autre famille (Book 25 §2.3). */
   lire(objet: TypeObjet): void;
+  /** Le panneau Fabriquer a montré ces recettes nouvelles (l'arbre de progression, 0.7). */
+  recettesVues(recettes: string[]): void;
   /** Équiper une arme pour le mode Combat (null : la meilleure du sac) (P-005). */
   equiper(objet: CleObjet | null): void;
   /** L'objet rapide : « Prêt à lancer / Prêt à tirer » (null : la pierre), Book 25 §3.4. */
@@ -157,6 +160,8 @@ function kg(valeur: number): string {
 /** Les infos techniques (images/s, latence, version) affichées ou non. */
 const CLE_INFOS = "watt.infos";
 const CLE_ONGLET_FABRICATION = "watt.fabrication.onglet";
+/** « À découvrir » replié ou ouvert (l'arbre de progression, 0.7). */
+const CLE_A_DECOUVRIR = "watt.fabrication.a-decouvrir";
 
 function lireOngletFabrication(): CategorieRecette | "tout" {
   const v = lire(CLE_ONGLET_FABRICATION);
@@ -365,7 +370,7 @@ export class Hud {
       <div class="raccourcis">
         <button type="button" class="b-carnet" hidden aria-label="Carnet (J)" title="Carnet (J)" aria-expanded="false"><svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><path d="M8 4 h16 a2 2 0 0 1 2 2 v20 a2 2 0 0 1 -2 2 h-16 Z" fill="#a4552f" stroke="#3b2a1e" stroke-width="2" stroke-linejoin="round"/><path d="M8 4 v24" stroke="#3b2a1e" stroke-width="3"/><rect x="12" y="9" width="10" height="6" rx="1" fill="#ecdfbf" stroke="#3b2a1e" stroke-width="1.2"/><path d="M13 19 h8 M13 22 h6" stroke="#ecdfbf" stroke-width="1.4" stroke-linecap="round"/><path d="M22 4 v8 l2 -1.5 l2 1.5 v-8" fill="#c8362b" stroke="#3b2a1e" stroke-width="1"/></svg><span>Carnet</span><span class="etape-carnet"></span><span class="pastille-carnet" hidden></span></button>
         <button type="button" class="r-sac" title="Sac (I)" aria-label="Sac">${icone("sac_a_dos", 30)}<span>Sac</span></button>
-        <button type="button" class="r-fabriquer" title="Fabriquer (B)" aria-label="Fabriquer">${icone("marteau", 30)}<span>Fabriquer</span></button>
+        <button type="button" class="r-fabriquer" title="Fabriquer (B)" aria-label="Fabriquer">${icone("marteau", 30)}<span>Fabriquer</span><span class="pastille-fabriquer" hidden></span></button>
         <button type="button" class="r-carte" title="Carte (M)" aria-label="Carte"><svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><path d="M4 8 L11 5 L21 8 L28 5 V24 L21 27 L11 24 L4 27 Z" fill="#ecdfbf" stroke="#3b2a1e" stroke-width="2" stroke-linejoin="round"/><path d="M11 5 V24 M21 8 V27" stroke="#3b2a1e" stroke-width="1.5"/><path d="M7 19 C10 15 14 18 17 13 S23 12 25 9" fill="none" stroke="#c8362b" stroke-width="1.8" stroke-dasharray="2 2"/></svg><span>Carte</span></button>
         <button type="button" class="r-tourner" title="Tourner la vue (V)" aria-label="Tourner la vue"><svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><path d="M25 12a10 10 0 1 0 1 8" fill="none" stroke="#1c2333" stroke-width="3" stroke-linecap="round"/><path d="M27 5v8h-8" fill="none" stroke="#c8362b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Vue</span></button>
       </div>
@@ -1307,7 +1312,10 @@ export class Hud {
   basculerFabrication(ouvrir?: boolean): void {
     // Pendant le tutoriel, on ouvre toujours sur « Tout » : le carnet dit « fabrique une hache », elle doit sauter aux yeux.
     if (this.fabrication.hidden && this.tutoriel && !this.tutoriel.termine) this.ongletFabrication = "tout";
-    this.ouvrir(this.fabrication, ouvrir === undefined ? Boolean(this.fabrication.hidden) : ouvrir);
+    const oui = ouvrir === undefined ? Boolean(this.fabrication.hidden) : ouvrir;
+    if (oui && this.fabrication.hidden) this.ouvertureFabrication();
+    this.ouvrir(this.fabrication, oui);
+    this.majPastilleFabriquer();
   }
 
   fermerPanneaux(): void {
@@ -2130,22 +2138,88 @@ export class Hud {
   private ongletFabrication: CategorieRecette | "tout" = lireOngletFabrication();
   private faisableSeulement = false;
 
+  // ---------- L'arbre de progression (0.7, chantier 5) : ce que Fabriquer dévoile ----------
+
+  /** Les recettes dévoilées, vues, et le prochain palier ; null : un serveur d'avant la 0.7 (on montre tout). */
+  private vueProgression: VueProgression | null = null;
+  /** Les nouveautés à l'ouverture du panneau : en tête de leur onglet, cette fois-ci seulement (§4.1). */
+  private nouvellesOuverture = new Set<string>();
+  /** Les cartes qui portent « Nouveau » jusqu'à la fermeture du panneau (déjà marquées vues auprès du serveur). */
+  private etiquetteNouveau = new Set<string>();
+  /** Les onglets regardés depuis l'ouverture : leur pastille s'éteint. */
+  private ongletsVus = new Set<CategorieRecette | "tout">();
+  /** Les familles dépliées (« Chez les Charbonniers · 6 ici »), le temps du panneau. */
+  private famillesDepliees = new Set<Famille>();
+  /** « À découvrir » : toutes les silhouettes du palier, ou les trois premières. */
+  private silhouettesToutes = false;
+  /** « À découvrir » ouvert : dépliée la première fois, puis repliée par défaut sur téléphone (§4.2). */
+  private decouvrirOuvert = true;
+
+  /** L'état de l'arbre de progression (bienvenue, puis chaque dévoilement). */
+  majProgression(vue: VueProgression | null): void {
+    this.vueProgression = vue ? { ...vue, nonVues: vue.nonVues.filter((id) => !this.etiquetteNouveau.has(id)) } : null;
+    this.majPastilleFabriquer();
+    if (!this.fabrication.hidden) this.dessinerFabrication();
+  }
+
+  /** Ce que le joueur voit dans Fabriquer, à cet instant. */
+  private planFabrication(): PlanFabrication {
+    return planFabrication(this.famille, this.savoir, this.vueProgression);
+  }
+
+  /** La pastille dans le coin du bouton Fabriquer : les recettes nouvelles pas encore regardées. */
+  private majPastilleFabriquer(): void {
+    const pastille = this.element.querySelector<HTMLElement>(".r-fabriquer .pastille-fabriquer");
+    if (!pastille) return;
+    const n = this.vueProgression?.nonVues.length ?? 0;
+    pastille.hidden = n === 0 || !this.fabrication.hidden;
+    pastille.textContent = String(Math.min(9, n));
+    this.element.querySelector(".r-fabriquer")!.setAttribute("aria-label", n > 0 ? `Fabriquer, ${n} idée${n > 1 ? "s" : ""} nouvelle${n > 1 ? "s" : ""}` : "Fabriquer");
+  }
+
+  /** Le panneau s'ouvre : les nouveautés passent en tête, cette fois-ci. */
+  private ouvertureFabrication(): void {
+    this.nouvellesOuverture = new Set(this.vueProgression?.nonVues ?? []);
+    this.etiquetteNouveau = new Set();
+    this.ongletsVus = new Set();
+    this.famillesDepliees = new Set();
+    this.silhouettesToutes = false;
+    // « À découvrir » : déplié la première fois ; ensuite, sur téléphone, replié par défaut (§4.2), sauf choix du joueur.
+    const choix = lire(CLE_A_DECOUVRIR);
+    this.decouvrirOuvert = choix !== "replie";
+    if (choix === null && matchMedia("(max-width: 560px), (orientation: landscape) and (max-height: 520px)").matches) ecrire(CLE_A_DECOUVRIR, "replie");
+  }
+
+  /** Ces cartes ont été montrées : plus de pastille ; « Nouveau » reste jusqu'à la fermeture du panneau. */
+  private marquerVues(ids: readonly string[]): void {
+    if (ids.length === 0 || !this.vueProgression) return;
+    for (const id of ids) this.etiquetteNouveau.add(id);
+    const vues = new Set(ids);
+    this.vueProgression = { ...this.vueProgression, nonVues: this.vueProgression.nonVues.filter((id) => !vues.has(id)) };
+    this.actions.recettesVues([...ids]);
+    this.majPastilleFabriquer();
+  }
+
   private dessinerFabrication(): void {
-    const recettes = recettesConnues(this.famille, this.savoir);
-    const cartes: { categorie: CategorieRecette; possible: boolean; html: string; grisee?: true }[] = [];
+    const plan = this.planFabrication();
+    const recettes = plan.recettes;
+    const nonVues = new Set(plan.nonVues);
+    const nouveau = (id: string) => nonVues.has(id) || this.etiquetteNouveau.has(id);
+    const etiquette = (id: string) => (nouveau(id) ? ` <span class="nouveau">Nouveau</span>` : "");
+    const cartes: { id: string; categorie: CategorieRecette; possible: boolean; html: string; grisee?: true }[] = [];
 
     // Le feu de camp (É1) a sa propre règle, mais il se fabrique au même endroit.
     const feuPossible = Object.entries(RECETTE_FEU).every(([t, n]) => (this.inventaire[t as TypeObjet] ?? 0) >= (n ?? 0));
-    // Le foyer Dakota (P-002) : creusé d'emblée, discret, économe. Il faut de quoi creuser.
-    const dakotaPossible = ingredientsPresents(this.inventaire, RECETTE_DAKOTA_AIDE) && niveauQualite(this.inventaire, "creuser") >= 1;
+    // Le foyer Dakota (P-002) : creusé d'emblée, discret, économe. Il faut de quoi creuser, et y avoir pensé (0.7).
+    const dakotaPossible = plan.dakota && ingredientsPresents(this.inventaire, RECETTE_DAKOTA_AIDE) && niveauQualite(this.inventaire, "creuser") >= 1;
     // Une seule carte pour toute la lignée du feu (Book 24) : le reste (foyer de pierres, de cuisine, Dakota, poêle-fusée)
     // se fait sur place, depuis le feu (« Examiner »).
-    cartes.push({ categorie: "feu", possible: feuPossible || dakotaPossible, html: `
-      <article class="recette ${feuPossible || dakotaPossible ? "possible" : ""}">
+    if (plan.feu) cartes.push({ id: "feu_de_camp", categorie: "feu", possible: feuPossible || dakotaPossible, html: `
+      <article class="recette ${feuPossible || dakotaPossible ? "possible" : ""} ${nouveau("feu_de_camp") || nouveau("foyer_dakota") ? "nouvelle" : ""}">
         ${icone("feu_de_camp", 40)}
-        <div class="corps"><strong>Feu de camp</strong>
+        <div class="corps"><strong>Feu de camp${etiquette("feu_de_camp") || etiquette("foyer_dakota")}</strong>
           <span class="puces">${Object.entries(RECETTE_FEU).map(([t, n]) => this.puce(t as TypeObjet, n ?? 0)).join("")}</span>
-          <small>Se pose devant toi. Cuire, faire bouillir l'eau, s'éclairer. Ou en foyer Dakota, plus discret (3 branches, outil Creuser 1). Il s'améliore ensuite sur place : approche-toi, puis « Examiner ».</small>
+          <small>Se pose devant toi. Cuire, faire bouillir l'eau, s'éclairer.${plan.dakota ? " Ou en foyer Dakota, plus discret (3 branches, outil Creuser 1)." : ""} Il s'améliore ensuite sur place : approche-toi, puis « Examiner ».</small>
           ${this.pourquoi === "feu" ? this.listeManque(RECETTE_FEU_AIDE) : ""}${this.pourquoi === "dakota" ? this.listeManque(RECETTE_DAKOTA_AIDE) : ""}</div>
         <div class="boutons-feu">
           ${feuPossible ? `<button type="button" data-feu>Construire</button>` : `<button type="button" class="pourquoi" data-pourquoi="feu" aria-expanded="${this.pourquoi === "feu"}" aria-label="Voir ce qui manque">Il manque…</button>`}
@@ -2181,10 +2255,10 @@ export class Hud {
           : appris
             ? ` <span class="badge-famille appris ${r.famille}" title="Apprise ${chezLaFamille(r.famille)} : ×1,5 en matières et en temps, ★★ au plus">Appris · ★★</span>`
             : ` <span class="badge-famille ${r.famille}" title="Recette de ta famille">${NOMS_FAMILLES[r.famille]}</span>`;
-      cartes.push({ categorie: r.categorie, possible, html: `
-        <article class="recette ${possible ? "possible" : ""}">
+      cartes.push({ id: r.id, categorie: r.categorie, possible, html: `
+        <article class="recette ${possible ? "possible" : ""} ${nouveau(r.id) ? "nouvelle" : ""}">
           ${icone(pictogramme, 40)}
-          <div class="corps"><strong>${r.nom}${badge}</strong>
+          <div class="corps"><strong>${r.nom}${badge}${etiquette(r.id)}</strong>
             <span class="puces">${Object.entries(r.ingredients).map(([t, n]) => this.puce(t as TypeObjet, n ?? 0)).join("")}${qualites}</span>
             <small>${ou}${String(secondes).replace(".", ",")} s · ≈ ${Math.round(energieGriseRecette(r))} wotts</small>${this.pourquoi === r.id ? this.listeManque(r) : ""}</div>
           ${
@@ -2196,48 +2270,85 @@ export class Hud {
     }
 
     // Les recettes des autres familles (Book 25 §2.3) : grisées, « chez les Charbonniers », sans bouton. Une leçon d'un
-    // joueur de la famille, ou son manuel, les ouvre. « Faisable maintenant » les cache.
-    for (const r of recettesAutresFamilles(this.famille, this.savoir)) {
-      if (r.famille === "tous") continue;
+    // joueur de la famille, ou son manuel, les ouvre. Cachées au début, puis repliées par famille (Q6) ; celles qu'on a
+    // entrevues (vu faire, tenu le produit, pièce d'une recette qu'on voit) se montrent une à une. « Faisable » les cache.
+    const grisee = (r: Recette) => {
       const pictogramme: Pictogramme = "objet" in r.produit ? r.produit.objet : r.produit.installation;
-      cartes.push({ categorie: r.categorie, possible: false, grisee: true, html: `
+      return `
         <article class="recette grisee" aria-disabled="true">
           ${icone(pictogramme, 40)}
-          <div class="corps"><strong>${r.nom} <span class="badge-famille ${r.famille}">${chezLaFamille(r.famille)}</span></strong>
+          <div class="corps"><strong>${r.nom} <span class="badge-famille ${r.famille}">${chezLaFamille(r.famille as Famille)}</span></strong>
             <small>Une leçon d'un joueur de cette famille, ou leur manuel, l'ouvre : ×1,5, ★★ au plus.</small></div>
-        </article>` });
-    }
+        </article>`;
+    };
+    for (const r of plan.entrevues) cartes.push({ id: r.id, categorie: r.categorie, possible: false, grisee: true, html: grisee(r) });
 
     // Les onglets (avis de Sally, 2026-10-08) : « Tout » en premier, regroupé sous des intertitres ; un compteur des
     // recettes faisables, seulement s'il y en a ; « Faisable maintenant » est un filtre, pas un onglet. L'ordre ne bouge
-    // jamais sous le doigt.
-    const onglet = this.ongletFabrication;
+    // jamais sous le doigt. 0.7 : pas de barre avant 8 recettes, puis toute la barre (les onglets vides atténués).
+    const onglet = plan.avecOnglets ? this.ongletFabrication : "tout";
+    this.ongletsVus.add(onglet);
+    const vides = ongletsVides(plan);
+    const pastilles = nouveautesParOnglet(new Set([...nonVues, ...this.etiquetteNouveau]), this.ongletsVus);
     const faisables = (c: CategorieRecette | "tout") => cartes.filter((x) => x.possible && (c === "tout" || x.categorie === c)).length;
     const bouton = (id: CategorieRecette | "tout", court: string, long: string, image: string) => {
       const n = faisables(id);
-      const etiquette = `${long}${n ? `, ${n} faisable${n > 1 ? "s" : ""}` : ""}`;
-      return `<button type="button" role="tab" class="onglet" data-onglet="${id}" aria-selected="${onglet === id}" tabindex="${onglet === id ? 0 : -1}" aria-label="${etiquette}" title="${long}">${image}<span class="nom-onglet">${court}</span>${n ? `<span class="compte" aria-hidden="true">${n}</span>` : ""}</button>`;
+      const neuves = id === "tout" ? 0 : (pastilles[id] ?? 0);
+      const vide = id !== "tout" && vides.has(id);
+      const etiquetteOnglet = `${long}${n ? `, ${n} faisable${n > 1 ? "s" : ""}` : ""}${neuves ? `, ${neuves} nouvelle${neuves > 1 ? "s" : ""}` : ""}${vide ? ", rien encore" : ""}`;
+      return `<button type="button" role="tab" class="onglet${vide ? " vide" : ""}" data-onglet="${id}" aria-selected="${onglet === id}" tabindex="${onglet === id ? 0 : -1}" aria-label="${etiquetteOnglet}" title="${long}">${image}<span class="nom-onglet">${court}</span>${n ? `<span class="compte" aria-hidden="true">${n}</span>` : ""}${neuves ? `<span class="pastille-nouveau" aria-hidden="true"></span>` : ""}</button>`;
     };
     const IMAGES: Record<CategorieRecette, Pictogramme> = { feu: "feu_de_camp", outils: "hache", sur_soi: "sac_a_dos", materiaux: "corde", batir: "abri", ateliers: "etabli" };
-    const onglets = [bouton("tout", "Tout", "Toutes les recettes", `<span class="image-tout" aria-hidden="true">☰</span>`), ...CATEGORIES_RECETTES.map((c) => bouton(c.id, c.nom, c.long, icone(IMAGES[c.id], 24)))].join("");
-    const visibles = (c: CategorieRecette) => cartes.filter((x) => x.categorie === c && (!this.faisableSeulement || x.possible));
+    const onglets = plan.avecOnglets ? [bouton("tout", "Tout", "Toutes les recettes", `<span class="image-tout" aria-hidden="true">☰</span>`), ...CATEGORIES_RECETTES.map((c) => bouton(c.id, c.nom, c.long, icone(IMAGES[c.id], 24)))].join("") : "";
+    const visibles = (c: CategorieRecette) => enTete(cartes.filter((x) => x.categorie === c && (!this.faisableSeulement || x.possible)), this.nouvellesOuverture);
+    const montrees = onglet === "tout" ? CATEGORIES_RECETTES.flatMap((c) => visibles(c.id)) : visibles(onglet);
     let contenu =
       onglet === "tout"
         ? CATEGORIES_RECETTES.map((c) => {
             const v = visibles(c.id);
             return v.length ? `<h3 class="intertitre">${c.long}</h3>${v.map((x) => x.html).join("")}` : "";
           }).join("")
-        : visibles(onglet)
-            .map((x) => x.html)
-            .join("");
-    if (!contenu) contenu = `<p class="vide">${this.faisableSeulement ? "Rien de faisable ici pour l'instant : décoche « Faisable maintenant » pour voir ce qui manque." : "Aucune recette connue dans cette catégorie pour l'instant."}</p>`;
+        : montrees.map((x) => x.html).join("");
+    if (!contenu) contenu = `<p class="vide">${this.faisableSeulement ? "Rien de faisable ici pour l'instant : décoche « Faisable maintenant » pour voir ce qui manque." : "Rien encore ici : les idées te viendront en faisant."}</p>`;
+
+    // Les autres familles, repliées en une ligne chacune (Q6), en bas de « Tout » et de chaque onglet.
+    if (!this.faisableSeulement) {
+      for (const g of plan.repliees) {
+        const ici = onglet === "tout" ? g.recettes : g.recettes.filter((r) => r.categorie === onglet);
+        if (ici.length === 0) continue;
+        const ouvert = this.famillesDepliees.has(g.famille);
+        const compte = onglet === "tout" ? `${ici.length} recette${ici.length > 1 ? "s" : ""}` : `${ici.length} ici`;
+        contenu += `<button type="button" class="famille-repliee ${g.famille}" data-famille="${g.famille}" aria-expanded="${ouvert}"><span class="fleche" aria-hidden="true">${ouvert ? "▾" : "▸"}</span> ${chezLaFamille(g.famille).replace(/^c/, "C")} · ${compte}</button>`;
+        if (ouvert) contenu += ici.map(grisee).join("");
+      }
+    }
+
+    // « À découvrir » : les silhouettes du prochain palier (décision Q2), l'icône assombrie et le besoin, jamais le nom.
+    const silhouettes = plan.silhouettes.filter((s) => onglet === "tout" || s.categorie === onglet);
+    if (silhouettes.length > 0 && !this.faisableSeulement) {
+      const montrer = this.silhouettesToutes ? silhouettes : silhouettes.slice(0, SILHOUETTES_DEPLIEES);
+      const reste = silhouettes.length - montrer.length;
+      contenu += `<section class="a-decouvrir">
+        <button type="button" class="titre-decouvrir" aria-expanded="${this.decouvrirOuvert}"><span class="fleche" aria-hidden="true">${this.decouvrirOuvert ? "▾" : "▸"}</span> À découvrir (${silhouettes.length})</button>
+        ${
+          this.decouvrirOuvert
+            ? `${montrer.map((s) => `<article class="recette silhouette" aria-label="Recette à découvrir : ${s.indice}">${icone(s.pictogramme, 40)}<div class="corps"><small>${s.indice}</small></div></article>`).join("")}
+               ${reste > 0 ? `<button type="button" class="plus-silhouettes">Voir les ${reste} autre${reste > 1 ? "s" : ""}</button>` : ""}`
+            : ""
+        }
+      </section>`;
+    }
 
     const html = `
-      <header><h2>Fabriquer</h2><span class="sous-titre">${recettes.length + 1} recettes connues</span>
+      <header><h2>Fabriquer</h2><span class="sous-titre">${sousTitre(plan)}</span>
         <button type="button" class="fermer" aria-label="Fermer">✕</button></header>
-      <div class="onglets-fabrication" role="tablist" aria-label="Catégories">${onglets}</div>
+      ${plan.avecOnglets ? `<div class="onglets-fabrication" role="tablist" aria-label="Catégories">${onglets}</div>` : ""}
       <label class="filtre-faisable"><input type="checkbox" ${this.faisableSeulement ? "checked" : ""}> Faisable<span class="long"> maintenant</span></label>
-      <div class="recettes" role="tabpanel">${contenu}</div>`;
+      <div class="recettes" role="${plan.avecOnglets ? "tabpanel" : "list"}">${contenu}</div>`;
+    // Ce qu'on vient de montrer n'est plus nouveau (le serveur le garde : le téléphone et l'ordinateur sont d'accord).
+    const vuesIci = montrees.filter((x) => !x.grisee && nonVues.has(x.id)).map((x) => x.id);
+    if (montrees.some((x) => x.id === "feu_de_camp") && nonVues.has("foyer_dakota")) vuesIci.push("foyer_dakota");
+    this.marquerVues(vuesIci);
     if (html === this.derniereFabrication) return;
     this.derniereFabrication = html;
     // Un changement dans le sac redessine le panneau : on garde le défilement (même onglet) et la place dans les onglets.
@@ -2247,7 +2358,8 @@ export class Hud {
     this.fabrication.innerHTML = html;
     this.fabrication.dataset.onglet = onglet;
     this.fabrication.querySelector<HTMLElement>(".recettes")!.scrollTop = defilement;
-    this.fabrication.querySelector<HTMLElement>(".onglets-fabrication")!.scrollLeft = defilementOnglets;
+    const barre = this.fabrication.querySelector<HTMLElement>(".onglets-fabrication");
+    if (barre) barre.scrollLeft = defilementOnglets;
     const choisir = (id: CategorieRecette | "tout", focus = false) => {
       this.ongletFabrication = id;
       this.pourquoi = null;
@@ -2269,6 +2381,22 @@ export class Hud {
     }
     this.fabrication.querySelector<HTMLInputElement>(".filtre-faisable input")!.addEventListener("change", (e) => {
       this.faisableSeulement = (e.target as HTMLInputElement).checked;
+      this.dessinerFabrication();
+    });
+    for (const b of this.fabrication.querySelectorAll<HTMLButtonElement>("[data-famille]")) {
+      b.addEventListener("click", () => {
+        const f = b.dataset.famille as Famille;
+        if (!this.famillesDepliees.delete(f)) this.famillesDepliees.add(f);
+        this.dessinerFabrication();
+      });
+    }
+    this.fabrication.querySelector(".titre-decouvrir")?.addEventListener("click", () => {
+      this.decouvrirOuvert = !this.decouvrirOuvert;
+      ecrire(CLE_A_DECOUVRIR, this.decouvrirOuvert ? "ouvert" : "replie");
+      this.dessinerFabrication();
+    });
+    this.fabrication.querySelector(".plus-silhouettes")?.addEventListener("click", () => {
+      this.silhouettesToutes = true;
       this.dessinerFabrication();
     });
 
@@ -2347,7 +2475,8 @@ export class Hud {
   private pourquoi: string | null = null;
 
   private listeManque(r: Recette): string {
-    const lignes = ceQuiManque(r, this.inventaire);
+    // Une recette encore cachée ne se cite pas : « ça se fabrique (tu y penseras) » (l'arbre de progression, 0.7).
+    const lignes = ceQuiManque(r, this.inventaire, recetteVisible(this.planFabrication()));
     return lignes.length ? `<ul class="manque">${lignes.map((l) => `<li>${l}</li>`).join("")}</ul>` : "";
   }
 
