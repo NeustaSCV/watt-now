@@ -584,7 +584,8 @@ export class CoucheDechetsVue {
           garder(c.x, c.z, 0.4, { libelle: `Fouiller : ${nomConteneur(genre)}`, message: op({ genre: "fouiller", ref: refConteneur(cx, cz, em) }) }, { libelle: "Examiner", examiner: POINTS_DECHETS[genre].examen }, null);
         } else if (!this.terrain) {
           // Vidé, il reste là jusqu'à ce que le carreau se remplisse : on peut seulement le regarder.
-          garder(c.x, c.z, 0.4, null, { libelle: "Examiner", examiner: `Un ${nomConteneur(genre)}, déjà fouillé. Il n'y a plus rien dedans… pour l'instant.` }, null);
+          const f = genre === "poubelle_renversee";
+          garder(c.x, c.z, 0.4, null, { libelle: "Examiner", examiner: `${f ? "Une" : "Un"} ${nomConteneur(genre)}, déjà fouillé${f ? "e" : ""}. Plus rien dedans… pour l'instant.` }, null);
         }
       }
     }
