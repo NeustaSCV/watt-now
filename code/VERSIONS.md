@@ -51,6 +51,19 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 - La masse et le pied-de-biche valent enfin ce qu'ils coûteraient à refaire (200 et 150 wotts) ; la lance vaut ce que vaut sa recette.
 - Après dix exemplaires d'une même lame, la forge est maîtrisée : une étoile de plus.
 
+**L'arc pour tous** (Book 25, chantier 4)
+- **L'arc de fortune** : une perche de frêne (ou une branche droite) et une ficelle. Il tire tout de suite, mais c'est un arc ★ : le bois vert fatigue vite.
+- **L'arc de frêne** : ébauche la perche à l'établi, laisse-la **sécher deux heures** (dans ton sac, même quand tu n'es pas là), puis monte-la près d'un feu avec une corde d'arc. Un arc ★★★.
+- **L'arc d'if** : pareil, avec un bâton d'if. Le meilleur bois d'arc : ★★★★, il porte plus loin et il dure.
+- **La corde d'arc** fait la qualité de l'arc : 3 ficelles retordues (★★), une corde défaite (★★★), une bobine de fil dentaire (★★★★). Un arc ne vaut jamais mieux que sa corde.
+- **Quatre flèches** : durcie au feu (elle blesse, mais ne tue pas à la tête), à pointe d'os, à pointe de clou (douze d'un coup avec un bocal de clous), à pointe d'acier (forgée par un Charbonnier). Toutes se font seul, quelle que soit ta famille.
+- **Tirer** : Sac → « Prêt à tirer », puis maintiens Lancer pour bander. Après 1,5 s, c'est un tir plein ; le cercle rougit quand la tête est à portée : 6 m pour un arc ★★★ (4 m à ★, 5 m à ★★, 7 m pour l'if). Relâché trop tôt, la flèche touche le torse. Encocher prend 1 s.
+- Un **Équipé** casqué ne meurt d'une flèche que **de face**, par la visière, et deux fois plus près.
+- **Les flèches se ramassent** là où elles tombent, ou sur le corps. Elles cassent parfois : une durcie sur deux, une d'os ou de clou sur trois, une d'acier sur cinq.
+- L'**arc de tir sportif** trouvé dans les bureaux de la Coopérative est un arc ★★★★★ tout fait ; ses flèches en carbone ne cassent jamais.
+- **Le redresseur de fûts** : sur ton établi, 2 branches et 1 pierre. À côté, tes flèches se font deux fois plus vite.
+- La corde claque, tout doucement : l'arc ne s'entend qu'à 3 m. Le personnage tient l'arc en main pendant qu'il vise.
+
 ## 0.5.3 · déployée le 2026-10-09
 
 - **Le coffre** (et la décharge), refait selon l'avis de Sally :

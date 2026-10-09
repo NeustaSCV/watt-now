@@ -18,7 +18,7 @@ import type { AutreVu, SacVu, SanteVue, VueComptoir } from "../../commun/src/mes
 import { PORTEE_CABLE_PANNEAU, type Charges } from "../../commun/src/energie.ts";
 import type { Bienvenue, EtatCoopVu, InstallationVue, MessageClient, MessageServeur } from "../../commun/src/messages.ts";
 import { OBJETS, lumierePortee, traineTravois, type Inventaire } from "../../commun/src/objets.ts";
-import type { CleObjet } from "../../commun/src/etoiles.ts";
+import { typeDe, type CleObjet } from "../../commun/src/etoiles.ts";
 import { aFaim, aSoif, allureAutorisee, fatigue, type Besoins, type Gourde } from "../../commun/src/survie.ts";
 import { estNuit, heureDeJeu, jourDeJeu } from "../../commun/src/temps.ts";
 import { demanderIdentite } from "./accueil.ts";
@@ -614,6 +614,8 @@ function finirVisee(lancer = false): void {
   envoyer({ t: "lancer", dx: v.visee.dx, dz: v.visee.dz, ...(v.visee.cible !== null ? { cible: v.visee.cible } : {}), distance: Math.round(v.visee.distance * 10) / 10 });
   // Le geste se joue tout de suite (le serveur juge le reste) : on se tourne, le bras part.
   position = { ...position, o: Math.atan2(v.visee.dx, v.visee.dz) };
+  // L'arc ne se lance pas d'un geste du bras : la corde part (son claquement vient avec le projectile).
+  if (v.pret.genre === "tir" && !v.pret.arme.armeeDAvance) return;
   personnage?.frapper(false, 0.45);
   bruiteur.frappe(false);
 }
@@ -632,6 +634,8 @@ function majViseeLancer(): void {
 
 /** Un projectile vole (le sien, ou celui d'un autre joueur) : on le dessine, puis l'impact. */
 function lancerProjectile(p: ProjectileVu): void {
+  // Une flèche part : la corde de l'arc claque (Book 25 §3.4 : à 3 m, l'arme la plus silencieuse).
+  if (p.tir && p.objet.startsWith("fleche")) son.jouer("corde_arc", { x: p.x0, z: p.z0 });
   projectiles.lancer(p, () => {
     const ou = { x: p.x1, z: p.z1 };
     if (p.coup) return montrerCoup({ id: p.coup.id, x: p.x1, z: p.z1, resultat: p.coup.resultat });
@@ -1523,14 +1527,16 @@ function boucle(instant: number): void {
     if (fiche && (lieu !== "terrain" || Math.hypot(position.x - fiche.x, position.z - fiche.z) > 3.5)) hud.fermerPanneaux();
     // Le guichet se ferme quand on s'en éloigne.
     if (hud.guichetOuvert && (lieu !== "comptoir" || Math.hypot(position.x - COMPTOIR.guichet.x, position.z - COMPTOIR.guichet.z) > 4)) hud.fermerPanneaux();
-    personnage.tenir(modeCombat ? armeEnMain(inventaire, armeEquipee).objet : undefined);
+    // L'arc en main pendant qu'on vise, bras levé : le personnage bande (Book 25 §3.4).
+    const arcVise = viseeEnCours?.pret.genre === "tir" && !viseeEnCours.pret.arme.armeeDAvance ? typeDe(viseeEnCours.pret.cle) : null;
+    personnage.tenir(arcVise ?? (modeCombat ? armeEnMain(inventaire, armeEquipee).objet : undefined));
     // L'appui gardé pendant le coup précédent part à la fin du geste : on enchaîne sans marteler.
     if (coupEnAttente !== null && performance.now() >= coupFiniLe) {
       const appuye = coupEnAttente;
       coupEnAttente = null;
       if (modeCombat && !enVoyage) frapper(appuye);
     }
-    personnage.preparer(modeCombat ? entrees.chargeA : viseeEnCours ? 1 : 0);
+    personnage.preparer(arcVise ? 1 : modeCombat ? entrees.chargeA : viseeEnCours ? 1 : 0);
     // Le lancer (0.6) : la visée suit l'Éteint accroché ; le bouton dit ce qu'il fera (Lancer, Tirer, Réarmer).
     majViseeLancer();
     projectiles.animer(dt);

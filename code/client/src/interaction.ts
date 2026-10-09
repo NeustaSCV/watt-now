@@ -85,8 +85,11 @@ function actionsInstallation(
   const sienne = familleDe(i.type);
   if (sienne !== "tous" && sienne !== famille) return [null, { libelle: "Examiner", examiner: `${EXAMENS_INSTALLATIONS[i.type]} Tu ne sais pas t'en servir.` }];
   switch (i.type) {
-    case "etabli":
-      return [{ libelle: "Travailler à l'établi", ouvrirFabrication: true }, examiner];
+    case "etabli": {
+      // Le redresseur de fûts (Book 25 §9.3) : proposé tant qu'il manque, si l'on a de quoi le monter.
+      const redresseur = !i.etat.redresseur && (inventaire.branche ?? 0) >= 2 && (inventaire.pierre ?? 0) >= 1;
+      return [{ libelle: "Travailler à l'établi", ouvrirFabrication: true }, redresseur ? msg("Monter le redresseur de fûts", "monter_redresseur") : examiner];
+    }
     case "coffre":
       return [{ libelle: "Ouvrir le coffre", ouvrirCoffre: i.id }, examiner];
     case "escabeau":

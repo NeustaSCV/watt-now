@@ -12,7 +12,7 @@ import type { Apparence } from "../../commun/src/apparence.ts";
 import { INTENTION_REPOS, avancer, nettoyerIntention, type Intention, type Position } from "../../commun/src/deplacement.ts";
 import type { Bienvenue, Cible, FeuVu, InstallationVue, MessageClient, MessageServeur } from "../../commun/src/messages.ts";
 import { CAPACITE_SAC, CONTENANTS, OBJETS, capaciteDe, estCleObjet, estObjet, lumierePortee, nommer, poidsInventaire, traineTravois, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
-import { cleExemplaire, compter, estMaitrisee, retirerExemplaires, typeDe, type CleObjet } from "../../commun/src/etoiles.ts";
+import { cleExemplaire, compter, estMaitrisee, estObjetDeMetier, retirerExemplaires, typeDe, type CleObjet } from "../../commun/src/etoiles.ts";
 import { NOMS_INSTALLATIONS, RECETTES, dureeReelle, ingredientsPresents, multiplicateurQualites, niveauQualite, recette, recettesConnues, type Recette, type TypeInstallation } from "../../commun/src/recettes.ts";
 import { estHorsFamille, etoilesDuProduit, recettePour } from "../../commun/src/recettes.ts";
 import { chezLaFamille, estManuel, type Savoir } from "../../commun/src/savoir.ts";
@@ -77,6 +77,8 @@ import { Halte, type Voyageur } from "./halte.ts";
 import type { LieuVivant } from "./lieu-vivant.ts";
 import { Comptoir } from "./comptoir.ts";
 import { Tir, type ContexteTir } from "./tir.ts";
+import { Sechage, accelerationFleches } from "./arc.ts";
+import { REDRESSEUR } from "../../commun/src/arc.ts";
 import { declencher, declencheurNeuf, definitionDeclencheur, estDeclencheur, type DeclencheurPose } from "./declencheurs.ts";
 import {
   PRIX_RETRAIT,
@@ -313,6 +315,18 @@ export class Joueur implements Voyageur, ParticipantLecon {
   private readonly cooperatives: Cooperatives;
   /** Le lancer et le tir (Book 25 §10.3) : son moteur est dans serveur/src/tir.ts. */
   private readonly tir: Tir = new Tir(this.contexteTir());
+  /** Les ébauches d'arc qui sèchent dans le sac, même hors ligne (Book 25 §3.3) : serveur/src/arc.ts. */
+  private readonly sechage: Sechage = new Sechage({
+    maintenant: () => this.maintenant(),
+    inventaire: () => this.inventaire,
+    echanger: (retire, ajoute) => {
+      this.retirerPlusieurs(retire);
+      this.ajouterPlusieurs(ajoute);
+    },
+    charger: () => this.base.chargerSechage(this.compte.id),
+    sauver: (etat) => this.base.sauverSechage(this.compte.id, etat),
+    info: (t) => this.info(t),
+  });
 
   /** Le lieu vivant où l'on se trouve (la halte, partagée ; sa Coopérative, à soi) ; null sur le terrain et au Comptoir. */
   private get vivant(): LieuVivant | null {
@@ -2108,6 +2122,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
         }
       }
     }
+    // Les ébauches d'arc sèchent (Book 25 §3.3).
+    this.sechage.avancer();
 
     // Feux : ils brûlent leur bois.
     const envoyerFeux = instant - this.dernierEnvoiFeux >= INTERVALLE_FEUX;
@@ -2400,7 +2416,9 @@ export class Joueur implements Voyageur, ParticipantLecon {
     const delta = OBJETS[produit.objet].poids * quantite + poidsDe(sousProduits) - poidsDe(ingredients);
     // La capacité d'après : fabriquer un sac fait de la place.
     if (poidsInventaire(this.inventaire, this.gourde.litres) + delta > capaciteDe({ ...this.inventaire, [produit.objet]: (this.inventaire[produit.objet] ?? 0) + quantite })) return this.sacTropLourd();
-    this.commencer(fois > 1 ? `${r.nom} (deux à la fois)` : r.nom, dureeReelle(r) * facteur, () => {
+    // Le redresseur de fûts de l'établi : les flèches vont deux fois plus vite (Book 25 §9.3).
+    const redresse = accelerationFleches(r.id, this.installations.values(), (ix, iz) => this.proche(ix, iz, 3));
+    this.commencer(fois > 1 ? `${r.nom} (deux à la fois)` : r.nom, dureeReelle(r) * facteur * redresse, () => {
       // Un ingrédient de métier compte toutes étoiles confondues.
       if (!Object.entries(ingredients).every(([t, n]) => compter(this.inventaire, t as TypeObjet) >= (n ?? 0))) return;
       if (cuisine.foyer) {
@@ -3005,6 +3023,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (parPlat.bois > 0 && foyer.bois < parPlat.bois - 1e-9) return { refus: "Le feu n'a pas assez de bois pour une longue cuisson : ajoute une bûche." };
     const deux =
       effetsFeu(foyer).plats >= 2 &&
+      // Deux plats à la fois, oui ; deux arcs montés d'un coup, non (un objet de métier se fait un par un).
+      !("objet" in r.produit && estObjetDeMetier(r.produit.objet)) &&
       Object.entries(r.ingredients).every(([t, n]) => (this.inventaire[t as TypeObjet] ?? 0) >= 2 * (n ?? 0)) &&
       this.gourde.litres >= 2 * parPlat.eau - 1e-9 &&
       foyer.bois >= 2 * parPlat.bois - 1e-9;
@@ -3125,7 +3145,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
         if (i.type === "banc_recharge" && Object.values(i.etat.batteries ?? {}).some((n) => (n ?? 0) > 0)) return this.info("Reprends d'abord les batteries posées sur le banc.");
         if (i.type === "charbonniere" && i.etat.pretLe) return this.info("La meule cuit : on ne l'ouvre qu'au défournement.");
         // Les accessoires du pédalier se démontent avec lui.
-        const accessoires = somme(i.etat.meule ? { pierre: 3 } : {}, i.etat.dynamo ? { dynamo_velo: 1 } : {});
+        const accessoires = somme(i.etat.meule ? { pierre: 3 } : {}, i.etat.dynamo ? { dynamo_velo: 1 } : {}, i.etat.redresseur ? REDRESSEUR.cout : {});
         const rend = rendDuDemontage(somme(laRecette.ingredients, ...(i.etat.payes ?? []), accessoires));
         if (!this.peutReprendre(rend)) return;
         return this.commencer(`Démonter : ${nom}`, Math.max(2, dureeReelle(laRecette) / 2), () => {
@@ -3223,6 +3243,18 @@ export class Joueur implements Voyageur, ParticipantLecon {
           this.retirerPlusieurs({ pierre: 3 });
           i.etat = { ...i.etat, meule: true };
           maj();
+        }, 0, "outil");
+      }
+      case "monter_redresseur": {
+        // L'établi reçoit son redresseur de fûts (Book 25 §9.3) : les flèches y vont deux fois plus vite.
+        if (i.type !== "etabli" || i.etat.redresseur) return;
+        if (!this.aDeQuoi(REDRESSEUR.cout)) return this.info("Pour le redresseur de fûts, il faut 2 branches et 1 pierre.");
+        return this.commencer("Monter le redresseur de fûts", REDRESSEUR.dureeS / REGLAGES.gestes_vitesse, () => {
+          if (i.etat.redresseur || !this.aDeQuoi(REDRESSEUR.cout)) return;
+          this.retirerPlusieurs(REDRESSEUR.cout);
+          i.etat = { ...i.etat, redresseur: true };
+          maj();
+          this.info("Le redresseur est en place : à côté de l'établi, tes flèches vont deux fois plus vite.");
         }, 0, "outil");
       }
       case "monter_dynamo": {

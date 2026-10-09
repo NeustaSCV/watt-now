@@ -119,7 +119,9 @@ export type Verbe =
   | "couvrir"
   | "ranimer"
   /** Un piège, une plaque de choc (Book 25 §5.3 et §6.3) : le réarmer ; une clôture couchée : la relever (chantiers 6 et 7). */
-  | "rearmer_piege";
+  | "rearmer_piege"
+  /** L'établi : y monter le redresseur de fûts (Book 25 §9.3, chantier 4) ; les flèches vont deux fois plus vite. */
+  | "monter_redresseur";
 
 /** État propre à certaines installations. */
 export interface EtatInstallation {
@@ -128,6 +130,8 @@ export interface EtatInstallation {
   /** Pédalier : accessoires montés. */
   meule?: boolean;
   dynamo?: boolean;
+  /** Établi : le redresseur de fûts est monté (Book 25 §9.3). */
+  redresseur?: boolean;
   /** Coffre : ce qu'il contient (la charge des batteries rangées est dans `charges`). */
   contenu?: Inventaire;
   /** Banc de recharge : les batteries posées dessus, leur charge, et le dernier calcul de production (É4). */
