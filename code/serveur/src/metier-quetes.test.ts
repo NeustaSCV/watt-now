@@ -8,8 +8,9 @@ import { facteurPrix, prixAchat, prixAchatCle, prixAchatExemplaire, prixVenteCle
 import { nouvelEteint, type Eteint } from "../../commun/src/eteints.ts";
 import { COMPTOIR, DUREE_VOYAGE_S, SORTIES_STATION, SORTIE_TERRAIN, type Zone } from "../../commun/src/lieux.ts";
 import type { MessageServeur, OperationEchange, ProjectileVu } from "../../commun/src/messages.ts";
-import type { Inventaire } from "../../commun/src/objets.ts";
+import { estObjet, type Inventaire } from "../../commun/src/objets.ts";
 import { QUETES } from "../../commun/src/quetes.ts";
+import { NOMS_INSTALLATIONS } from "../../commun/src/recettes.ts";
 import type { Famille } from "../../commun/src/regles.ts";
 import { Base } from "./base.ts";
 import { Comptoir } from "./comptoir.ts";
@@ -80,6 +81,10 @@ test("0.6 carnet : quatre étapes de plus par famille, et deux pour l'arc dans �
   assert.ok(installer.indexOf("tir_plein") === installer.indexOf("premier_arc") + 1);
   assert.deepEqual(QUETES.find((q) => q.id === "premier_arc")!.recompense?.objets, { fleche_os: 3 });
   assert.equal(new Set(QUETES.map((q) => q.id)).size, QUETES.length, "des identifiants uniques");
+  // Chaque étape du métier a son icône : un objet du sac, ou une installation.
+  for (const q of QUETES.filter((x) => x.ligne === "metier" || x.id === "premier_arc" || x.id === "tir_plein")) {
+    assert.ok(q.icone && (estObjet(q.icone) || Object.hasOwn(NOMS_INSTALLATIONS, q.icone)), `${q.id} : icône ${q.icone}`);
+  }
 });
 
 test("0.6 carnet : un objet de métier compte toutes étoiles confondues, au-dessus du seuil s'il y en a un", () => {

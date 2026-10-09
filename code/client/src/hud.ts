@@ -1047,7 +1047,7 @@ export class Hud {
       .map(
         (q) => `<div class="quete">
           <div class="ligne-quete">${LIGNES[q.ligne]}</div>
-          <div class="nom-quete">${q.titre}</div>
+          <div class="nom-quete">${q.icone ? `<span class="icone-quete">${icone(q.icone as Pictogramme, 26)}</span>` : ""}${q.titre}</div>
           ${
             q.objectifs.some((o) => o.but > 1) || q.objectifs.length > 1
               ? `<div class="progres-tuto">${q.objectifs

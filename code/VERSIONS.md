@@ -128,6 +128,7 @@ Le métier des familles (Book 25) : chaque famille fabrique seule son arme de m�
 - **Le sac, pour le tir** : l'arc et l'arbalète montrent sur leur case ce qui leur reste à tirer (« ➶7 », en rouge à zéro) ; leur fiche dit leurs portées, la portée de tête, la cadence, les flèches ou carreaux du sac, et leur solidité.
 - **L'aide du jeu** : cinq rubriques nouvelles (Lancer et tirer, Les étoiles, Le métier des autres, L'électricité contre les Éteints, Pièges et défenses) ; le combat, les familles, le carnet et le Comptoir sont mis à jour.
 - Les leçons des quêtes réussies citent tes touches.
+- Dans le carnet, chaque étape du métier (et de l'arc) a son icône, celle de l'objet à faire.
 
 ## 0.5.3 · déployée le 2026-10-09
 

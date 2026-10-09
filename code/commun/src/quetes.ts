@@ -43,6 +43,8 @@ export interface Quete {
   /** Réservée à une famille (le métier). */
   famille?: Famille;
   titre: string;
+  /** L'icône du carnet : le pictogramme d'un objet ou d'une installation (Book 25 §10.3, chantier 8). */
+  icone?: string;
   /** La phrase du carnet (Book 22 §2). Les touches s'écrivent {action}, comme dans le tutoriel. */
   texte: string;
   objectifs: Objectif[];
@@ -126,6 +128,7 @@ const INSTALLER: Quete[] = [
     id: "premier_arc",
     ligne: "installer",
     titre: "Le premier arc",
+    icone: "arc_simple",
     texte: "Une perche de frêne (à la lisière) ou une branche droite, et une ficelle : un arc de fortune. Ou mieux, un arc de frêne séché.",
     objectifs: [{ libelle: "Un arc", condition: fabriqueOuObjet(["arc_fortune", "arc_fortune_branche", "arc_simple", "arc_if"], ["arc_fortune", "arc_simple", "arc_if", "arc_sportif"]) }],
     lecon: "Sac → « Prêt à tirer », puis maintiens {lancer} pour bander. Ramasse tes flèches.",
@@ -135,6 +138,7 @@ const INSTALLER: Quete[] = [
     id: "tir_plein",
     ligne: "installer",
     titre: "Tir plein",
+    icone: "fleche_os",
     texte: "Bande l'arc à fond ({lancer} maintenu), attends que le cercle rougisse, et lâche : une flèche à la tête.",
     objectifs: [{ libelle: "Éteint détruit d'une flèche", condition: fait("tete:fleche") }],
     lecon: "L'arc est l'arme la plus discrète : la corde ne s'entend qu'à quelques pas.",
@@ -238,6 +242,7 @@ const METIER: Quete[] = [
     ligne: "metier",
     famille: "charbonniers",
     titre: "La charbonnière",
+    icone: "charbonniere",
     texte: "Ta forge a faim. Bâtis une charbonnière : du bois, de la terre, et trois jours de patience.",
     // La meule disparaît au défournement : l'avoir bâtie, ou avoir déjà son charbon, compte aussi.
     objectifs: [
@@ -261,6 +266,7 @@ const METIER: Quete[] = [
     ligne: "metier",
     famille: "charbonniers",
     titre: "Défourner",
+    icone: "charbon_bois",
     texte: "Allume la meule, attends qu'elle ait fini de fumer, et défourne : une meule donne 4 charbons de bois.",
     objectifs: [{ libelle: "Charbon défourné", condition: { a: "un_de", conditions: [{ a: "fait", fait: "defourne", but: 1 }, { a: "objet", types: ["charbon_bois"], n: 4 }] } }],
     lecon: "Une meule qui fume se voit de loin. Le feu bavarde : choisis ton moment.",
@@ -271,6 +277,7 @@ const METIER: Quete[] = [
     ligne: "metier",
     famille: "charbonniers",
     titre: "Forger une lame",
+    icone: "lame_forgee",
     texte: "Au foyer de forge, avec un charbon et le ressort à lames de la ruine : forge une lame.",
     objectifs: [{ libelle: "Lame forgée", condition: { a: "un_de", conditions: [{ a: "fait", fait: "fabrique:lame_forgee", but: 1 }, { a: "objet", types: ["lame_forgee"], n: 1 }] } }],
     lecon: "Une lame forgée se vend bien : tout le monde a besoin de couper.",
@@ -281,6 +288,7 @@ const METIER: Quete[] = [
     ligne: "metier",
     famille: "charbonniers",
     titre: "Le premier client",
+    icone: "lame_forgee",
     texte: "Vends une lame forgée au Comptoir. Les Compteurs la revendront à ceux qui ne savent pas forger.",
     objectifs: [{ libelle: "Lame vendue", condition: { a: "fait", fait: "vente:lame_forgee", but: 1 } }],
     lecon: "Tu ne crées pas d'électricité : tu vis de ton savoir-faire. Et ça suffit.",
@@ -292,6 +300,7 @@ const METIER: Quete[] = [
     ligne: "metier",
     famille: "mecanistes",
     titre: "La meule",
+    icone: "pedalier",
     texte: "Ton pédalier peut entraîner une meule. Taille-la dans 3 pierres et monte-la ({agir} au pédalier).",
     objectifs: [{ libelle: "Meule sur le pédalier", condition: { a: "installation", type: "pedalier", avec: "meule" } }],
     lecon: "Ce qui tourne ne meurt pas : le même pédalier fera dix métiers.",
@@ -302,6 +311,7 @@ const METIER: Quete[] = [
     ligne: "metier",
     famille: "mecanistes",
     titre: "Affûter",
+    icone: "couteau_aiguise",
     texte: "Ton couteau abîmé ne coupe plus rien. Affûte-le à la meule.",
     objectifs: [{ libelle: "Couteau aiguisé", condition: { a: "un_de", conditions: [{ a: "fait", fait: "affute", but: 1 }, { a: "objet", types: ["couteau_aiguise"], n: 1 }] } }],
     lecon: "Un outil entretenu travaille deux fois plus vite. Les autres familles paieront pour ça.",
@@ -312,6 +322,7 @@ const METIER: Quete[] = [
     ligne: "metier",
     famille: "mecanistes",
     titre: "La dynamo",
+    icone: "pedalier",
     texte: "Monte la dynamo du vélo sur le pédalier : tes jambes feront de l'électricité.",
     objectifs: [{ libelle: "Dynamo sur le pédalier", condition: { a: "installation", type: "pedalier", avec: "dynamo" } }],
     lecon: "Une heure de pédalage, quelques Wh. C'est peu, mais c'est à toi.",
@@ -322,6 +333,7 @@ const METIER: Quete[] = [
     ligne: "metier",
     famille: "mecanistes",
     titre: "Déposer l'électricité",
+    icone: "petite_batterie",
     texte: "Charge une batterie en pédalant, porte-la au Comptoir et dépose son électricité : c'est ainsi qu'on crée des wotts.",
     objectifs: [{ libelle: "Électricité déposée", condition: { a: "fait", fait: "depot_wh", but: 1 } }],
     lecon: "Seul le dépôt d'électricité crée des wotts : tu fais de la monnaie avec tes jambes.",
@@ -333,6 +345,7 @@ const METIER: Quete[] = [
     ligne: "metier",
     famille: "voltaiques",
     titre: "Le panneau de la station",
+    icone: "panneau_solaire",
     texte: "Un petit panneau solaire est appuyé contre un pilier de l'auvent, à la station-service. Rapporte-le.",
     objectifs: [{ libelle: "Panneau solaire", condition: { a: "un_de", conditions: [{ a: "objet", types: ["panneau_solaire"], n: 1 }, { a: "installation", type: "panneau_solaire" }] } }],
     lecon: "Le soleil ne fait pas de bruit, ne fume pas, et ne se fatigue jamais.",
@@ -343,6 +356,7 @@ const METIER: Quete[] = [
     ligne: "metier",
     famille: "voltaiques",
     titre: "Installer le panneau",
+    icone: "panneau_solaire",
     texte: "Installe le panneau sur ton terrain (depuis Fabriquer), au soleil, près de ton banc de recharge.",
     objectifs: [{ libelle: "Panneau installé", condition: { a: "installation", type: "panneau_solaire" } }],
     lecon: "Il charge le jour, même quand tu n'es pas là.",
@@ -353,6 +367,7 @@ const METIER: Quete[] = [
     ligne: "metier",
     famille: "voltaiques",
     titre: "Faire le plein",
+    icone: "petite_batterie",
     texte: "Laisse le soleil travailler : il te faut 20 Wh dans tes batteries.",
     objectifs: [{ libelle: "Wh en batteries", condition: { a: "wh", but: 20 } }],
     lecon: "Une batterie pleine pèse pareil qu'une vide. Le transport, c'est ton vrai coût.",
@@ -363,6 +378,7 @@ const METIER: Quete[] = [
     ligne: "metier",
     famille: "voltaiques",
     titre: "Déposer l'électricité",
+    icone: "petite_batterie",
     texte: "Porte une batterie chargée au Comptoir et dépose son électricité : c'est ainsi qu'on crée des wotts.",
     objectifs: [{ libelle: "Électricité déposée", condition: { a: "fait", fait: "depot_wh", but: 1 } }],
     lecon: "Seul le dépôt d'électricité crée des wotts. Le soleil, changé en monnaie.",
@@ -382,6 +398,7 @@ const METIER_06: Quete[] = [
     ligne: "metier",
     famille: "charbonniers",
     titre: "Les pinces",
+    icone: "pinces_forge",
     texte: "Le premier outil du forgeron : forge des pinces de forge (une barre de métal, du charbon).",
     objectifs: [{ libelle: "Pinces de forge", condition: fabriqueOuObjet(["pinces_forge"], ["pinces_forge"]) }],
     lecon: "Sans pinces, pas plus de ★★. Avec elles et une enclume, ★★★.",
@@ -392,6 +409,7 @@ const METIER_06: Quete[] = [
     ligne: "metier",
     famille: "charbonniers",
     titre: "La trempe",
+    icone: "machette_forgee",
     texte: "Forge une machette, l'arme de ton métier. Ressort ou fer doux, trempe à l'eau ou à l'huile : vise ★★ ou mieux.",
     objectifs: [{ libelle: "Machette forgée ★★", condition: { a: "objet", types: ["machette_forgee"], n: 1, etoiles: 2 } }],
     lecon: "Une lame vaut sa moins bonne part : l'acier, la trempe ou la forge.",
@@ -402,6 +420,7 @@ const METIER_06: Quete[] = [
     ligne: "metier",
     famille: "charbonniers",
     titre: "La mise d'acier",
+    icone: "hachette",
     texte: "Soude un tranchant de ressort sur un corps de fer : forge des hachettes, ou une hache.",
     objectifs: [{ libelle: "Hachette ou hache forgée", condition: fabriqueOuObjet(["hachette", "hache_forgee", "hache_forgee_soc"], ["hachette", "hache_forgee"]) }],
     lecon: "La hachette se lance : va la reprendre là où elle tombe.",
@@ -412,6 +431,7 @@ const METIER_06: Quete[] = [
     ligne: "metier",
     famille: "charbonniers",
     titre: "Le fournisseur",
+    icone: "machette_forgee",
     texte: "Une lame pour un joueur d'une autre famille : échange-la ({agir} près de lui), ou vends-la au Comptoir.",
     objectifs: [{ libelle: "Lame passée aux autres", condition: passeAuxAutres(LAMES) }],
     lecon: "Une lame s'use, un débris se reforge : tes clients reviendront.",
@@ -423,6 +443,7 @@ const METIER_06: Quete[] = [
     ligne: "metier",
     famille: "voltaiques",
     titre: "Du courant en poche",
+    icone: "pack_cellules",
     texte: "Trois cellules lithium (une batterie externe, une perceuse…), du fil de cuivre : monte un pack de cellules.",
     objectifs: [{ libelle: "Pack de cellules", condition: fabriqueOuObjet(["pack_cellules"], ["pack_cellules"]) }],
     lecon: "12 Wh qui tiennent dans la main : de quoi éteindre neuf Éteints.",
@@ -433,6 +454,7 @@ const METIER_06: Quete[] = [
     ligne: "metier",
     famille: "voltaiques",
     titre: "La Raquette",
+    icone: "matraque_electrique",
     texte: "Monte une matraque électrique, puis éteins un Éteint : une courte ({agir}) le raidit, une longue l'éteint.",
     objectifs: [
       { libelle: "Matraque électrique", condition: fabriqueOuObjet(["matraque_electrique", "matraque_electrodes", "matraque_manche_tourne"], ["matraque_electrique"]) },
@@ -446,6 +468,7 @@ const METIER_06: Quete[] = [
     ligne: "metier",
     famille: "voltaiques",
     titre: "Prévenu sans bruit",
+    icone: "alarme_electrique",
     texte: "Tends une alarme électrique (fil de fer, pile, LED, petit ressort) là où ils passent.",
     objectifs: [{ libelle: "Alarme électrique posée", condition: { a: "un_de", conditions: [installation("alarme_electrique"), fait("fabrique:alarme_electrique")] } }],
     lecon: "La LED s'allume, ton téléphone vibre, et rien ne fait de bruit.",
@@ -456,6 +479,7 @@ const METIER_06: Quete[] = [
     ligne: "metier",
     famille: "voltaiques",
     titre: "Le courant chez les autres",
+    icone: "lampe_bricolee",
     texte: "Un pack ou une lampe bricolée pour un joueur d'une autre famille : échange-le, ou vends-le au Comptoir.",
     objectifs: [{ libelle: "Pack ou lampe passé aux autres", condition: passeAuxAutres(["pack_cellules", "lampe_bricolee"]) }],
     lecon: "Un pack se vide, une lampe aussi : on reviendra te voir.",
@@ -467,6 +491,7 @@ const METIER_06: Quete[] = [
     ligne: "metier",
     famille: "mecanistes",
     titre: "Le bois qui plie",
+    icone: "arbalete",
     texte: "À l'établi : un arbrier scié, une noix, un arc (une perche de frêne suffit), une corde. Monte une arbalète.",
     objectifs: [{ libelle: "Arbalète", condition: fabriqueOuObjet(["arbalete", "arbalete_lourde"], ["arbalete", "arbalete_lourde"]) }],
     lecon: "Armée d'avance, elle tire tout de suite. Réarmer : 3 s sans bouger.",
@@ -477,6 +502,7 @@ const METIER_06: Quete[] = [
     ligne: "metier",
     famille: "mecanistes",
     titre: "Le carreau",
+    icone: "carreau",
     texte: "Sac → « Prêt à tirer », puis {lancer} : un carreau à la tête, et l'Éteint ne se relève plus.",
     objectifs: [{ libelle: "Éteint détruit d'un carreau", condition: fait("tete:carreau") }],
     lecon: "Jusqu'à 12 m, rien à bander. Au contact, il te faut une autre arme.",
@@ -487,6 +513,7 @@ const METIER_06: Quete[] = [
     ligne: "metier",
     famille: "mecanistes",
     titre: "Les mâchoires",
+    icone: "assommoir",
     texte: "Pose un piège sur leur passage : un assommoir (bûches, corde) ou des mâchoires (lames de ressort).",
     objectifs: [
       {
@@ -510,6 +537,7 @@ const METIER_06: Quete[] = [
     ligne: "metier",
     famille: "mecanistes",
     titre: "Le carquois des autres",
+    icone: "carreau",
     texte: "8 carreaux pour un joueur d'une autre famille : échange-les, ou vends-les au Comptoir.",
     objectifs: [{ libelle: "Carreaux passés aux autres", condition: passeAuxAutres(["carreau", "carreau_acier"], 8) }],
     lecon: "Un carreau se perd, un carreau casse : ton carquois se vendra chaque semaine.",
@@ -543,6 +571,7 @@ export interface VueQuete {
   id: string;
   ligne: LigneQuete;
   titre: string;
+  icone?: string;
   texte: string;
   objectifs: { libelle: string; fait: number; but: number }[];
   recompense?: string;

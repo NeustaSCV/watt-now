@@ -3518,6 +3518,15 @@ body {
   font-weight: 600;
   font-family: "Bradley Hand", "Segoe Print", "Chalkboard SE", Georgia, serif;
 }
+/* L'icône d'une étape du métier (0.6) : le pictogramme du sac, devant le titre, sans le pousser à la ligne. */
+#hud .carnet .nom-quete .icone-quete {
+  display: inline-block;
+  vertical-align: -7px;
+  margin-right: 5px;
+}
+#hud .carnet .nom-quete .icone-quete svg {
+  display: block;
+}
 #hud .carnet .recompense {
   font-size: 12px;
   color: var(--canard);

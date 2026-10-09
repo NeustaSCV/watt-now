@@ -116,6 +116,7 @@ export class SuiviQuetes {
         id: q.id,
         ligne: q.ligne,
         titre: q.titre,
+        ...(q.icone ? { icone: q.icone } : {}),
         texte: q.texte,
         objectifs: q.objectifs.map((o) => ({ libelle: o.libelle, ...this.avancement(o.condition, j) })),
       };
