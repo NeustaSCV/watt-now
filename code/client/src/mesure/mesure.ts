@@ -4,7 +4,8 @@
 // - les appels de dessin et les triangles, rangés par poste (sol, herbe, arbres, bâtiments, ressources…), dans
 //   l'image et dans la passe d'ombre ;
 // - des interrupteurs pour couper un poste à la fois et voir le gain sur l'appareil ;
-// - une couche de déchets simulée (0.7), pour mesurer son coût avant de l'écrire ;
+// - la couche de déchets réelle (0.7, rendu/dechets/) : son bilan, son dessin (lot unique ou fusion par carreau, le
+//   repli sans dessin multiple) et l'ombre de ses pièces, à basculer pour mesurer ;
 // - un banc d'essai automatique (≈ 80 s, sans bouger) qui coupe les postes un par un et envoie le relevé au Mac.
 // Comment on compte : chaque appel de dessin passe par `renderer.renderBufferDirect` (image et ombres). On
 // l'enveloppe : on range l'appel selon l'objet dessiné, et on le saute si son poste est coupé.
@@ -12,7 +13,7 @@
 import * as THREE from "three";
 import type { Scene } from "../rendu/scene.ts";
 import { changerQualite, type Qualite, type NiveauQualite } from "../rendu/qualite.ts";
-import { creerDechets, libererDechets, type BilanDechets, type ModeDechets } from "./dechets-simules.ts";
+import type { BilanCoucheDechets, ModeDessinDechets } from "../rendu/dechets/couche.ts";
 
 export interface SourcesMesure {
   scene: Scene;
@@ -21,6 +22,8 @@ export interface SourcesMesure {
   postes: () => Iterable<readonly [string, THREE.Object3D | null | undefined]>;
   /** Le lieu où l'on est. */
   lieu: () => string;
+  /** La couche de déchets du jeu (son bilan, et de quoi changer son dessin pour comparer). */
+  dechets?: { bilan(): BilanCoucheDechets; regler(r: { mode?: ModeDessinDechets; ombresPieces?: boolean }): void };
 }
 
 export interface Mesureur {
@@ -43,7 +46,7 @@ const POSTES: { cle: ClePoste; nom: string }[] = [
   { cle: "faune", nom: "Faune" },
   { cle: "brume", nom: "Brume" },
   { cle: "effets", nom: "Pluie, visée, effets" },
-  { cle: "dechets", nom: "Déchets simulés" },
+  { cle: "dechets", nom: "Déchets (amas, points)" },
   { cle: "autre", nom: "Autre" },
 ];
 
@@ -215,25 +218,11 @@ export function demarrerMesure(s: SourcesMesure): Mesureur {
     rendu.setPixelRatio(v);
     window.dispatchEvent(new Event("resize"));
   }
-  let dechets: { objet: THREE.Group; bilan: BilanDechets } | null = null;
-  let reglageDechets = { mode: "aucun" as ModeDechets, densite: 1, ombres: false };
-  function reglerDechets(r: Partial<typeof reglageDechets>): void {
-    reglageDechets = { ...reglageDechets, ...r };
-    if (dechets) {
-      s.scene.scene.remove(dechets.objet);
-      libererDechets(dechets.objet);
-      dechets = null;
-    }
-    if (reglageDechets.mode !== "aucun") {
-      const c = s.scene.centre;
-      const t0 = performance.now();
-      dechets = creerDechets(reglageDechets.mode, c.x, c.z, reglageDechets.densite, reglageDechets.ombres, rendu);
-      s.scene.scene.add(dechets.objet);
-      tempsDechets = performance.now() - t0;
-    }
+  /** La couche de déchets réelle : lot unique ou fusion par carreau, ombre des pièces (pour comparer). */
+  function reglerDechets(r: { mode?: ModeDessinDechets; ombresPieces?: boolean }): void {
+    s.dechets?.regler(r);
     majBoutons();
   }
-  let tempsDechets = 0;
 
   // ---------- Le panneau ----------
   const style = document.createElement("style");
@@ -291,10 +280,9 @@ export function demarrerMesure(s: SourcesMesure): Mesureur {
   ${ligneBoutons("Pixels", "pixels", [["1", "×1"], ["1.5", "×1,5"], ["2", "×2"], ["3", "×3"]])}
   <div class="ligne"><span>Ombres</span><button data-action="tri-ombres">hors champ écartées</button></div>
   </details>
-  <details><summary>Déchets simulés (amas, carreaux de 20 m)</summary>
-  ${ligneBoutons("Dessin", "dechets", [["aucun", "aucun"], ["instancie", "instancié"], ["lot", "lot"], ["fusion", "fusion"]])}
-  ${ligneBoutons("Densité", "densite", [["0.5", "×½"], ["1", "×1"], ["2", "×2"]])}
-  <div class="ligne"><span>Ombres</span><button data-action="ombres-dechets">ombre des déchets</button></div>
+  <details><summary>Déchets (la couche du lieu)</summary>
+  ${ligneBoutons("Dessin", "dechets", [["lot", "lot unique"], ["fusion", "fusion/carreau"]])}
+  <div class="ligne"><span>Ombres</span><button data-action="ombres-dechets">ombre des pièces</button></div>
   <div class="petit" data-v="dechets"></div>
   </details>
   <div class="sec ligne"><button data-action="banc">Banc d'essai (90 s)</button>${DEV ? `<button data-action="envoyer">Envoyer au Mac</button>` : ""}<button data-action="detail">Détail</button></div>
@@ -310,9 +298,9 @@ export function demarrerMesure(s: SourcesMesure): Mesureur {
   function majBoutons(): void {
     p.querySelectorAll<HTMLElement>("[data-qualite]").forEach((b) => b.classList.toggle("actif", b.dataset.qualite === s.qualite.niveau));
     p.querySelectorAll<HTMLElement>("[data-pixels]").forEach((b) => b.classList.toggle("actif", Number(b.dataset.pixels) === rendu.getPixelRatio()));
-    p.querySelectorAll<HTMLElement>("[data-dechets]").forEach((b) => b.classList.toggle("actif", b.dataset.dechets === reglageDechets.mode));
-    p.querySelectorAll<HTMLElement>("[data-densite]").forEach((b) => b.classList.toggle("actif", Number(b.dataset.densite) === reglageDechets.densite));
-    p.querySelector<HTMLElement>('[data-action="ombres-dechets"]')!.classList.toggle("actif", reglageDechets.ombres);
+    const d = s.dechets?.bilan();
+    p.querySelectorAll<HTMLElement>("[data-dechets]").forEach((b) => b.classList.toggle("actif", b.dataset.dechets === d?.mode));
+    p.querySelector<HTMLElement>('[data-action="ombres-dechets"]')!.classList.toggle("actif", d?.ombresPieces ?? false);
     const tri = p.querySelector<HTMLElement>('[data-action="tri-ombres"]')!;
     tri.classList.toggle("actif", s.scene.frustumOmbre?.actif ?? false);
     tri.textContent = !s.scene.frustumOmbre ? "sans ombres" : s.scene.frustumOmbre.actif ? "hors champ écartées" : "toutes (three.js)";
@@ -320,9 +308,8 @@ export function demarrerMesure(s: SourcesMesure): Mesureur {
       const cle = tr.dataset.poste!;
       tr.classList.toggle("coupe", cle === "ombres" ? !ombres : coupes.has(cle as ClePoste));
     });
-    const d = dechets?.bilan;
     v("dechets").textContent = d
-      ? `${d.pieces} pièces en ${d.amas} amas sur ${d.carreaux} carreaux · ${Math.round(d.triangles / 1000)} k tri en tout · construit en ${Math.round(tempsDechets)} ms · dessin multiple : ${d.multiDraw ? "oui" : "NON"}`
+      ? `${d.pieces} pièces en ${d.amas} amas, ${d.conteneurs} conteneurs, ${d.points} points · ${fmt(d.triangles / 1000, 1)} k tri posés · ${d.geometries} géométries · construit en ${Math.round(d.construction)} ms · dessin multiple : ${d.multiDraw ? "oui" : "NON"}`
       : "";
   }
 
@@ -338,9 +325,8 @@ export function demarrerMesure(s: SourcesMesure): Mesureur {
       else coupes.add(cle as ClePoste);
     } else if (b.dataset.qualite) changerQualite(b.dataset.qualite as NiveauQualite);
     else if (b.dataset.pixels) reglerPixels(Number(b.dataset.pixels));
-    else if (b.dataset.dechets) reglerDechets({ mode: b.dataset.dechets as ModeDechets });
-    else if (b.dataset.densite) reglerDechets({ densite: Number(b.dataset.densite) });
-    else if (b.dataset.action === "ombres-dechets") reglerDechets({ ombres: !reglageDechets.ombres });
+    else if (b.dataset.dechets) reglerDechets({ mode: b.dataset.dechets as ModeDessinDechets });
+    else if (b.dataset.action === "ombres-dechets") reglerDechets({ ombresPieces: !(s.dechets?.bilan().ombresPieces ?? false) });
     else if (b.dataset.action === "tri-ombres" && s.scene.frustumOmbre) s.scene.frustumOmbre.actif = !s.scene.frustumOmbre.actif;
     else if (b.dataset.action === "replier") p.classList.toggle("replie");
     else if (b.dataset.action === "cote") p.classList.toggle("droite");
@@ -397,7 +383,7 @@ export function demarrerMesure(s: SourcesMesure): Mesureur {
       textures: info.memory.textures,
       postes: Object.fromEntries(parPoste),
       detail: Object.fromEntries([...parDetail.entries()].sort((a, b) => b[1].image + b[1].ombre - (a[1].image + a[1].ombre))),
-      dechets: dechets?.bilan ?? null,
+      dechets: s.dechets?.bilan() ?? null,
       banc,
     };
   }
@@ -417,7 +403,7 @@ export function demarrerMesure(s: SourcesMesure): Mesureur {
     couper?: ClePoste[];
     ombres?: false;
     pixels?: number;
-    dechets?: ModeDechets;
+    dechets?: ModeDessinDechets;
     ombresDechets?: boolean;
     triOmbres?: false;
   }
@@ -433,16 +419,16 @@ export function demarrerMesure(s: SourcesMesure): Mesureur {
     { nom: "sans persos/Éteints", couper: ["personnages", "eteints", "faune"] },
     { nom: "sans brume/effets", couper: ["brume", "effets"] },
     { nom: "pixels ×1", pixels: 1 },
-    { nom: "déchets instancié", dechets: "instancie" },
-    { nom: "déchets lot", dechets: "lot" },
-    { nom: "déchets fusion", dechets: "fusion" },
-    { nom: "déchets lot+ombre", dechets: "lot", ombresDechets: true },
+    { nom: "sans déchets", couper: ["dechets"] },
+    { nom: "déchets en fusion", dechets: "fusion" },
+    { nom: "déchets + ombres", ombresDechets: true },
     { nom: "référence (fin)" },
   ];
   async function lancerBanc(): Promise<void> {
     bancEnCours = true;
     banc = [];
-    const avant = { tri: s.scene.frustumOmbre?.actif ?? false, coupes: new Set(coupes), ombres, pixels: rendu.getPixelRatio(), dechets: { ...reglageDechets } };
+    const d0 = s.dechets?.bilan();
+    const avant = { tri: s.scene.frustumOmbre?.actif ?? false, coupes: new Set(coupes), ombres, pixels: rendu.getPixelRatio(), dechets: { mode: d0?.mode ?? "lot", ombresPieces: d0?.ombresPieces ?? false } };
     try {
       for (const [i, e] of ETAPES.entries()) {
         v("etat").textContent = `Banc d'essai : ${i + 1}/${ETAPES.length} (${e.nom}). Ne bouge pas.`;
@@ -451,7 +437,9 @@ export function demarrerMesure(s: SourcesMesure): Mesureur {
         reglerOmbres(e.ombres !== false);
         if (s.scene.frustumOmbre) s.scene.frustumOmbre.actif = e.triOmbres !== false;
         if (rendu.getPixelRatio() !== (e.pixels ?? pixelsOrigine)) reglerPixels(e.pixels ?? pixelsOrigine);
-        if (reglageDechets.mode !== (e.dechets ?? "aucun") || reglageDechets.ombres !== (e.ombresDechets ?? false)) reglerDechets({ mode: e.dechets ?? "aucun", ombres: e.ombresDechets ?? false, densite: 1 });
+        const d = s.dechets?.bilan();
+        const voulu = { mode: e.dechets ?? avant.dechets.mode, ombresPieces: e.ombresDechets ?? avant.dechets.ombresPieces };
+        if (d && (d.mode !== voulu.mode || d.ombresPieces !== voulu.ombresPieces)) reglerDechets(voulu);
         majBoutons();
         await attendre(1500);
         const t0 = performance.now();

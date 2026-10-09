@@ -68,7 +68,7 @@ import { DessinVisee, viser, type Visee } from "./visee.ts";
 import { Projectiles } from "./rendu/projectiles.ts";
 import type { Mesureur } from "./mesure/mesure.ts";
 // La couche de déchets (0.7) : un affichage provisoire, isolé (le vrai rendu en amas viendra au chantier 7).
-import { CoucheDechetsVue } from "./rendu/dechets-provisoire.ts";
+import { CoucheDechetsVue } from "./rendu/dechets/couche.ts";
 
 const CLE_JETON = "watt.jeton";
 /** En développement : `?heure=22` fige l'heure affichée, pour régler la nuit sans attendre. */
@@ -255,8 +255,12 @@ function crierFaune(cri: CriFaune, x: number, z: number): void {
 }
 /** Les ressources dessinées en lots (voir lots.ts). */
 const lots = new Lots();
-/** Les déchets du lieu : amas, conteneurs, points du monde (0.7, affichage provisoire). */
-const dechetsVue = new CoucheDechetsVue((m) => envoyer(m), document.getElementById("hud")!);
+/** Les déchets du lieu : amas, conteneurs, points du monde (0.7, rendu en amas, rendu/dechets/). */
+const dechetsVue = new CoucheDechetsVue((m) => envoyer(m), document.getElementById("hud")!, {
+  multiDraw: scene.rendu.extensions.has("WEBGL_multi_draw"),
+  ombresPieces: qualite.niveau === "haut",
+  ombresPoints: qualite.ombres,
+});
 scene.scene.add(dechetsVue.objet);
 const EN_LOTS = new Set(["branche", "buche", "pierre"]);
 /** L'escabeau porté, et les disques autour des fruitiers où il faut le poser (2026-10-08). */
@@ -1617,6 +1621,8 @@ function boucle(instant: number): void {
         cible: null,
       };
     }
+    // La pièce visée bat avec l'anneau (son liseré), seulement si c'est bien elle qu'on vise.
+    dechetsVue.cibler(dechet !== null && propositions === dechet.propositions);
     hud.propositions(propositions, occupe, maintien?.tenu && occupe ? actionEnCours : null);
     if (pose.actif) {
       const genre = pose.actif.genre;
@@ -1679,6 +1685,8 @@ function boucle(instant: number): void {
   pluie.animer(dt, temps.pluie, scene.centre, scene.ciel.nuit);
   brume.animer(dt, heure, scene.centre, temps.pluie);
   for (const f of feux.values()) f.animer(dt, scene.ciel.nuit);
+  // L'éclat de repère des déchets : de jour à moins de 8 m ; la nuit, seulement dans la lumière qu'on porte.
+  dechetsVue.animer(dt, enVoyage ? null : position, lumiere && lumierePortee(inventaire) !== null);
   for (const e of eteints.values()) e.animer(dt);
   for (const a of autres.values()) a.animer(dt);
   if (lieu === "comptoir") animerComptoir(dt);
@@ -1760,7 +1768,7 @@ let mesureur: Mesureur | null = null;
 const MESURE = new URLSearchParams(location.search).get("mesure");
 if (MESURE !== null && MESURE !== "0") {
   void import("./mesure/mesure.ts").then((m) => {
-    mesureur = m.demarrerMesure({ scene, qualite, lieu: () => lieu, postes: postesMesures });
+    mesureur = m.demarrerMesure({ scene, qualite, lieu: () => lieu, postes: postesMesures, dechets: dechetsVue });
   });
 }
 /** Les objets du jeu et leur poste, pour ranger les appels de dessin (mode mesure). */
@@ -1786,6 +1794,7 @@ function* postesMesures(): Generator<readonly [string, THREE.Object3D | null | u
   yield ["effets:cercles", cercleSon];
   yield ["effets:cercles", cercleLumiere];
   for (const s of sacs.values()) yield ["effets:sacs", s.vue];
+  yield ["déchets", dechetsVue.objet];
   yield ["divers (contenu)", contenu];
 }
 
