@@ -16,6 +16,9 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 - **Le cercle de signature dit vrai** : un Éteint qu'il touche réagit, god compris. Les dormants n'entendaient qu'à la moitié du cercle et ignoraient la lampe ; ils perçoivent tout le cercle (blanc et ambre), bord compris. Atteint, un dormant remue (yeux, corps, un indice) puis se réveille en quelques secondes.
 - **Plus rien à travers les murs, et la porte des bureaux qui reste visible** (Coopérative) : un coup, un tir, une pierre lancée ou une morsure ne passent plus à travers un mur, une cloison, une porte fermée ou un rayonnage (une seule règle, partout où il y a des murs : la Coopérative, la boutique de la halte…) ; le coup part dans le vide. Et en approchant des bureaux (la salle du coin bas de l'écran) par le hangar, leur porte ne disparaît plus : elle s'estompe en transparence, on la voit (fermée ou ouverte) et l'on se voit derrière.
+- **Les trois écrans d'accueil** (session intro, `intro/NOTICE-DEV.md`) : juste après la création du personnage, avant le terrain, « Ton terrain », « Les lieux lointains », « Le Comptoir », en 3D avec ton personnage. Une seule fois : une connexion ou un rechargement ne les montre pas ; si le module manque ou plante, on entre directement dans le monde. Copie dans `client/public/intro/` (≈ 2,8 Mo, ≈ 0,8 Mo transférés), refaite par `npm run accueil:importer`.
+
+---
 
 ## 0.7 · déployée le 2026-10-09
 

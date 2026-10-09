@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 import { WebSocket } from "ws";
 import { FERMETURE_JETON_REFUSE, FERMETURE_REMPLACE, type MessageServeur, type ReponseAuth } from "../../commun/src/messages.ts";
 import { POINT_ARRIVEE } from "../../commun/src/regles.ts";
+import { APPARENCES_DE_REFERENCE } from "../../commun/src/apparence.ts";
 import { rendreSilencieux } from "./journal.ts";
 import { demarrerServeur } from "./serveur.ts";
 
@@ -128,5 +129,32 @@ test("trop de mots de passe faux : le serveur fait attendre (0.1.1)", async () =
   } finally {
     await serveur.fermer();
     rmSync(dossierTests, { recursive: true, force: true });
+  }
+});
+
+test("écrans d'accueil : l'inscription dit « nouveau » et renvoie l'apparence ; la connexion, jamais (0.7.1)", async () => {
+  const serveur = await demarrerServeur({ port: 0, hote: "127.0.0.1", cheminBase: ":memory:" });
+  try {
+    const choisie = { silhouette: "masculine", taille: 0.8, corpulence: 0.3, peau: 5, coiffure: "ras", cheveux: 3, barbe: true };
+    const creation = await poster(serveur.port, "/api/inscription", { pseudo: "Malik", motDePasse: "pylone42", famille: "voltaiques", apparence: choisie });
+    assert.equal(creation.statut, 201);
+    assert.ok(creation.reponse.ok);
+    assert.equal(creation.reponse.nouveau, true);
+    assert.deepEqual(creation.reponse.apparence, choisie, "l'apparence enregistrée : l'écran n° 1 montre CE personnage");
+
+    // Un ancien client (sans apparence) : celle de référence de la famille, renvoyée quand même.
+    const ancien = await poster(serveur.port, "/api/inscription", { pseudo: "Rose", motDePasse: "potager42", famille: "mecanistes" });
+    assert.ok(ancien.reponse.ok);
+    assert.equal(ancien.reponse.nouveau, true);
+    assert.deepEqual(ancien.reponse.apparence, APPARENCES_DE_REFERENCE.mecanistes);
+
+    // Une simple connexion, même juste après la création : pas d'accueil.
+    const connexion = await poster(serveur.port, "/api/connexion", { pseudo: "Malik", motDePasse: "pylone42" });
+    assert.equal(connexion.statut, 200);
+    assert.ok(connexion.reponse.ok);
+    assert.equal(connexion.reponse.nouveau, false);
+    assert.equal(connexion.reponse.apparence, undefined);
+  } finally {
+    await serveur.fermer();
   }
 });

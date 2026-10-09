@@ -109,6 +109,8 @@ function servirFichier(dossier: string, req: IncomingMessage, res: ServerRespons
   // Jamais hors du dossier (avec le séparateur : « dist-autre » n'est pas dans « dist »).
   if (chemin !== dossier && !chemin.startsWith(dossier.endsWith(sep) ? dossier : dossier + sep)) return false;
   let cible = chemin;
+  // Un fichier absent des écrans d'accueil : une vraie 404 (pas la page du jeu, qu'un chargeur glTF lirait de travers).
+  if (!existsSync(cible) && chemin.startsWith(join(dossier, "intro") + sep)) return false;
   if (!existsSync(cible) || statSync(cible).isDirectory()) cible = join(dossier, "index.html");
   if (!existsSync(cible)) return false;
   const infos = statSync(cible);
@@ -116,9 +118,12 @@ function servirFichier(dossier: string, req: IncomingMessage, res: ServerRespons
   const etiquette = `"${infos.size.toString(36)}-${Math.floor(infos.mtimeMs).toString(36)}"`;
   const nom = cible.slice(dossier.length);
   const versionne = /\/assets\/[^/]+-[A-Za-z0-9_-]{8,}\.(js|css)$/.test(nom);
+  // Les modules des écrans d'accueil (/intro/, copiés tels quels de la session intro) n'ont pas d'empreinte dans leur
+  // nom : revalidés à chaque fois (l'ETag répond 304), pour qu'une nouvelle livraison ne mélange pas deux versions.
+  const sansEmpreinte = ext === ".html" || (nom.startsWith(`${sep}intro${sep}`) && (ext === ".js" || ext === ".css"));
   const entetes: Record<string, string> = {
     "Content-Type": TYPES[ext] ?? "application/octet-stream",
-    "Cache-Control": versionne ? "public, max-age=31536000, immutable" : ext === ".html" ? "no-cache" : "public, max-age=86400",
+    "Cache-Control": versionne ? "public, max-age=31536000, immutable" : sansEmpreinte ? "no-cache" : "public, max-age=86400",
     ETag: etiquette,
   };
   if (req.headers["if-none-match"] === etiquette) {
@@ -187,11 +192,11 @@ export async function demarrerServeur(options: OptionsServeur): Promise<ServeurD
     if (!estFamille(famille)) return repondre(res, 400, { ok: false, erreur: "Choisis une famille." });
     // Le pseudo admin (« god » et ses variantes) : seule la commande admin le crée (scripts/admin.ts).
     if (pseudoReserve(pseudo)) return repondre(res, 409, { ok: false, erreur: "Ce pseudo est réservé." });
+    // L'apparence choisie à la création (Book 14 §3) ; un ancien client n'envoie que sa carnation.
+    const apparence =
+      corps?.apparence !== undefined ? apparenceValide(corps.apparence, famille) : apparenceAncienne(famille, typeof corps?.peau === "number" ? corps.peau : -1);
     let compte: Compte;
     try {
-      // L'apparence choisie à la création (Book 14 §3) ; un ancien client n'envoie que sa carnation.
-      const apparence =
-        corps?.apparence !== undefined ? apparenceValide(corps.apparence, famille) : apparenceAncienne(famille, typeof corps?.peau === "number" ? corps.peau : -1);
       inscriptionsParAdresse.compter(adresse);
       compte = base.creerCompte(pseudo, motDePasse, famille, true, apparence);
     } catch (erreur) {
@@ -199,7 +204,9 @@ export async function demarrerServeur(options: OptionsServeur): Promise<ServeurD
       throw erreur;
     }
     journal(`Nouveau personnage : ${compte.pseudo} (${compte.famille})`);
-    repondre(res, 201, { ok: true, jeton: base.creerJeton(compte.id), pseudo: compte.pseudo, famille: compte.famille });
+    // `nouveau` : le client montre les trois écrans d'accueil, une seule fois, avant le terrain ; `apparence` : le
+    // personnage que l'écran n° 1 met en scène (intro/NOTICE-DEV.md §2b).
+    repondre(res, 201, { ok: true, jeton: base.creerJeton(compte.id), pseudo: compte.pseudo, famille: compte.famille, nouveau: true, apparence });
   }
 
   /** Avant l'étape d'apparence : le pseudo est-il valide et libre ? */
@@ -228,7 +235,7 @@ export async function demarrerServeur(options: OptionsServeur): Promise<ServeurD
       echecsParPseudo.compter(clePseudo);
       return repondre(res, 401, { ok: false, erreur: "Pseudo ou mot de passe incorrect." });
     }
-    repondre(res, 200, { ok: true, jeton: base.creerJeton(compte.id), pseudo: compte.pseudo, famille: compte.famille });
+    repondre(res, 200, { ok: true, jeton: base.creerJeton(compte.id), pseudo: compte.pseudo, famille: compte.famille, nouveau: false });
   }
 
   const traiterRequete = (req: IncomingMessage, res: ServerResponse): void => {

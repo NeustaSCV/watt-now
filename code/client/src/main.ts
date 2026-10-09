@@ -22,7 +22,7 @@ import { OBJETS, lumierePortee, traineTravois, type Inventaire } from "../../com
 import { typeDe, type CleObjet } from "../../commun/src/etoiles.ts";
 import { aFaim, aSoif, allureAutorisee, fatigue, type Besoins, type Gourde } from "../../commun/src/survie.ts";
 import { estNuit, heureDeJeu, jourDeJeu } from "../../commun/src/temps.ts";
-import { demanderIdentite } from "./accueil.ts";
+import { demanderIdentite, presenterEcransAccueil } from "./accueil.ts";
 import { Carte } from "./carte.ts";
 import { Entrees, type Commande } from "./entrees.ts";
 import { Hud } from "./hud.ts";
@@ -1378,7 +1378,12 @@ async function entrer(messageInitial = ""): Promise<void> {
   if (!jeton) {
     const identite = await demanderIdentite(accueil, messageInitial);
     jeton = identite.jeton;
+    // Le jeton d'abord : un rechargement pendant l'accueil entre directement dans le monde (l'accueil, une seule fois).
     ecrire(CLE_JETON, jeton);
+    // Juste après une création (pas une connexion) : les trois écrans d'accueil, avant le terrain.
+    accueilEnCours = identite.nouveau;
+    await presenterEcransAccueil(identite);
+    accueilEnCours = false;
   } else {
     accueil.hidden = true;
   }
@@ -1479,8 +1484,16 @@ function frapper(appuye: boolean): void {
   personnage?.frapper(appuye, duree / 1000);
 }
 
+/** Vrai pendant les écrans d'accueil : ils ont leur propre rendu 3D, le jeu ne dessine rien en dessous. */
+let accueilEnCours = false;
+
 function boucle(instant: number): void {
   requestAnimationFrame(boucle);
+  if (accueilEnCours) {
+    dernier = instant;
+    entrees.prendreCommandes(); // les touches frappées pendant l'accueil ne valent pas pour le jeu
+    return;
+  }
   mesureur?.debut(instant);
   mesurerImages((instant - dernier) / 1000);
   const dt = Math.min(0.1, (instant - dernier) / 1000);

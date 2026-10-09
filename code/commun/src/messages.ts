@@ -36,7 +36,17 @@ export interface DemandeConnexion {
 }
 
 export type ReponseAuth =
-  | { ok: true; jeton: string; pseudo: string; famille: Famille }
+  | {
+      ok: true;
+      jeton: string;
+      pseudo: string;
+      famille: Famille;
+      /** Vrai seulement juste après une création de personnage (/api/inscription) : le client montre alors, une
+       *  seule fois, les trois écrans d'accueil (intro/NOTICE-DEV.md). Une connexion répond faux. */
+      nouveau: boolean;
+      /** L'apparence enregistrée à la création (celle que l'écran d'accueil n° 1 met en scène). */
+      apparence?: Apparence;
+    }
   | { ok: false; erreur: string };
 
 // ---------- Objets du monde vus par le client ----------
