@@ -9,6 +9,7 @@ import type { Position } from "../../commun/src/deplacement.ts";
 import { estCleObjet, estObjet, kitDeDepart, type Inventaire } from "../../commun/src/objets.ts";
 import { canoniser, cleExemplaire, lireCle, type CleObjet } from "../../commun/src/etoiles.ts";
 import { POINT_ARRIVEE, type Famille } from "../../commun/src/regles.ts";
+import { savoirValide, type Savoir } from "../../commun/src/savoir.ts";
 import { BESOINS_DEPART, GOURDE_DEPART, type Besoins, type EtatFeu, type Gourde } from "../../commun/src/survie.ts";
 import type { Charges } from "../../commun/src/energie.ts";
 import { SANTE_DEPART, type Sante } from "../../commun/src/combat.ts";
@@ -19,7 +20,7 @@ import { estArme } from "../../commun/src/combat.ts";
 import type { EtatInstallation, InstallationVue } from "../../commun/src/messages.ts";
 import type { TypeInstallation } from "../../commun/src/recettes.ts";
 import type { AccessoireFeu } from "../../commun/src/lignees.ts";
-import { genererJoncs, genererRessources, genererVergerEtSousBois, genererVestiges, type TypeRessource } from "../../commun/src/terrain.ts";
+import { genererEssences, genererJoncs, genererRessources, genererVergerEtSousBois, genererVestiges, type TypeRessource } from "../../commun/src/terrain.ts";
 import { VERSION_HALTE, genererHalte } from "../../commun/src/halte.ts";
 import type { RessourceSol } from "../../commun/src/terrain.ts";
 import { estLieuJouable, type LieuJouable } from "../../commun/src/lieux.ts";
@@ -243,6 +244,8 @@ const COLONNES_AJOUTEES: [table: string, colonne: string, definition: string][] 
   // Le reste de l'état d'un feu (couvert, ce qui a été payé à chaque niveau, orientation du muret), en JSON.
   ["feux", "etat", "TEXT NOT NULL DEFAULT '{}'"],
   ["installations", "niveau", "INTEGER NOT NULL DEFAULT 1"],
+  // Le savoir hors de sa famille (Book 25 §2.3) : recettes apprises, manuels lus, leçons données, en JSON.
+  ["personnages", "savoir", "TEXT NOT NULL DEFAULT '{}'"],
 ];
 
 function maintenant(): string {
@@ -347,6 +350,20 @@ export class Base {
 
   sauverArme(compteId: number, arme: CleObjet | null): void {
     this.db.prepare("UPDATE personnages SET arme = ? WHERE compte_id = ?").run(arme ?? "", compteId);
+  }
+
+  /** Le savoir hors de sa famille (Book 25 §2.3) ; illisible ou absent : rien d'appris. */
+  chargerSavoir(compteId: number): Savoir {
+    const l = this.db.prepare("SELECT savoir FROM personnages WHERE compte_id = ?").get(compteId) as { savoir: string } | undefined;
+    try {
+      return savoirValide(JSON.parse(l?.savoir || "{}"));
+    } catch {
+      return savoirValide(null);
+    }
+  }
+
+  sauverSavoir(compteId: number, savoir: Savoir): void {
+    this.db.prepare("UPDATE personnages SET savoir = ? WHERE compte_id = ?").run(JSON.stringify(savoir), compteId);
   }
 
   /**
@@ -647,6 +664,14 @@ export class Base {
       const suivant = (this.db.prepare("SELECT MAX(id) AS m FROM ressources WHERE compte_id = ?").get(compteId) as { m: number }).m + 1;
       const inserer = this.db.prepare("INSERT INTO ressources (compte_id, id, type, x, z) VALUES (?, ?, ?, ?, ?)");
       for (const r of genererVergerEtSousBois(compteId, suivant, occupees)) inserer.run(compteId, r.id, r.type, r.x, r.z);
+    }
+    // Les terrains créés avant la 0.6 (Book 25 §3.2) : on plante les deux frênes de la lisière et l'if du fond du bois.
+    const essences = this.db.prepare("SELECT 1 FROM ressources WHERE compte_id = ? AND type = 'frene'").get(compteId);
+    if (!essences && max.m !== null) {
+      const occupees = this.db.prepare("SELECT x, z FROM ressources WHERE compte_id = ?").all(compteId) as { x: number; z: number }[];
+      const suivant = (this.db.prepare("SELECT MAX(id) AS m FROM ressources WHERE compte_id = ?").get(compteId) as { m: number }).m + 1;
+      const inserer = this.db.prepare("INSERT INTO ressources (compte_id, id, type, x, z) VALUES (?, ?, ?, ?, ?)");
+      for (const r of genererEssences(compteId, suivant, occupees)) inserer.run(compteId, r.id, r.type, r.x, r.z);
     }
     const lignes = this.db
       .prepare("SELECT id, type, x, z, disponible_le FROM ressources WHERE compte_id = ? ORDER BY id")

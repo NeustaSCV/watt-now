@@ -11,7 +11,7 @@ import { nommer, type Inventaire, type TypeObjet } from "../../commun/src/objets
 import { RECETTES } from "../../commun/src/recettes.ts";
 import { NOMS_FAMILLES, type Famille } from "../../commun/src/regles.ts";
 import type { Gourde } from "../../commun/src/survie.ts";
-import { DISTANCE_INTERACTION, EMPRISE_RESSOURCE, PORTEE_ARBRE, distanceMare, RAYON_ESCABEAU, USAGES, estFruitier, type TypeRessource } from "../../commun/src/terrain.ts";
+import { DISTANCE_INTERACTION, EMPRISE_RESSOURCE, PORTEE_ARBRE, distanceMare, RAYON_ESCABEAU, USAGES, estArbre, estFruitier, type TypeRessource } from "../../commun/src/terrain.ts";
 import type { FeuDeCamp } from "./rendu/feu.ts";
 import type { VueRessource } from "./rendu/ressources.ts";
 
@@ -51,6 +51,18 @@ export const EXAMENS_INSTALLATIONS: Record<InstallationVue["type"], string> = {
   alarme_boites: "Une ficelle tendue entre deux piquets, des boîtes de conserve qui pendent. Si un Éteint passe, tu l'entendras. Lui aussi.",
   lit_branchages: "Un cadre de branches couvert de rameaux. On y dort isolé du sol : à côté de l'abri, le sommeil répare mieux.",
   decharge: "Un tas d'ordures de l'Âge de l'Abondance, au bord du terrain. La pluie et le temps en font remonter des objets : surtout des trucs nuls, parfois une bonne surprise.",
+  // Le métier des familles (Book 25, 0.6) : les chantiers 6 et 7 les font vivre.
+  alarme_electrique: "Un fil de fer tendu bas, une pile, une LED. Si un Éteint passe, la LED s'allume et ton alerte vibre, sans un bruit.",
+  cloture_fortune: "Quatre mètres de fil de fer sur des piquets, isolés au plastique, branchés au banc. L'Éteint qui la touche se raidit.",
+  cloture_electrique: "Six mètres de fil sous tension, sur isolateurs. Un Éteint ne passe pas tant que le courant passe ; à trois, ils la couchent.",
+  plaque_choc: "Une tôle posée dans le passage, branchée à un pack. Le premier qui marche dessus tombe à terre.",
+  bain_derouillage: "Une casserole d'eau salée, une barre sacrificielle, du courant du banc : la rouille s'en va, lentement.",
+  collet: "Un nœud coulant de ficelle tendu sur une coulée. Pour les lapins, pas pour les Éteints.",
+  assommoir: "Deux bûches en équilibre sur une détente. Le premier qui passe dessous est mis à terre.",
+  machoires_fortune: "Deux lames de ressort brutes, armées en mâchoires. Elles brisent une jambe, et se faussent vite.",
+  piege_machoires: "Deux ressorts retrempés, armés en mâchoires, ancrés à la chaîne. L'Éteint pris ne repart plus que sur les mains.",
+  fosse_pieux: "Une fosse creusée sur le passage, des pieux au fond. Celui qui tombe reste coincé.",
+  tour_perche: "Une perche de frêne en ressort, une corde, une pédale : le bois tourne, et le ciseau le façonne.",
 };
 
 /** La famille qui sait se servir d'une installation (celle qui sait la construire). */
@@ -190,7 +202,8 @@ export function proposer(
     if (jour > 0 && !visibleEnSaison(r.donnees.type, jour)) continue;
     const usage = USAGES[r.donnees.type];
     const horsSaison = jour > 0 && !enSaison(r.donnees.type, jour);
-    const arbre = estFruitier(r.donnees.type);
+    const arbre = estArbre(r.donnees.type);
+    const fruitier = estFruitier(r.donnees.type);
     const d = Math.max(0, Math.hypot(r.donnees.x - position.x, r.donnees.z - position.z) - (arbre ? PORTEE_ARBRE : 0));
     // Un fruitier sans escabeau dans son cercle : on le dit tout de suite (rien ne se lance pour rien).
     const escabeau = !usage.escabeau || installationsVues.some((i) => i.type === "escabeau" && Math.hypot(i.x - r.donnees.x, i.z - r.donnees.z) <= RAYON_ESCABEAU);
@@ -205,7 +218,7 @@ export function proposer(
         examiner:
           r.donnees.type === "coop_batterie"
             ? examenBatterieTracteur(etatCoop?.klaxons ?? KLAXONS_PAR_BATTERIE, famille)
-            : arbre && jour > 0
+            : fruitier && jour > 0
               ? `${usage.examen} ${etatDuFruitier(r.donnees.type, jour)}`
               : usage.examen,
       },
@@ -339,7 +352,11 @@ export function proposer(
   for (const a of autres) {
     garder(Math.max(0, Math.hypot(a.x - position.x, a.z - position.z) - 0.6), {
       A: { libelle: `Proposer un échange à ${a.pseudo}`, message: { t: "echange", op: { genre: "proposer", a: a.id } } },
-      B: { libelle: "Examiner", examiner: `${a.pseudo}, de la famille des ${NOMS_FAMILLES[a.famille]}.` },
+      // D'une autre famille : on peut lui enseigner une recette de son métier (Book 25 §2.3, la leçon).
+      B:
+        a.famille !== famille
+          ? { libelle: `Enseigner à ${a.pseudo}`, message: { t: "lecon", op: { genre: "choisir", a: a.id } } }
+          : { libelle: "Examiner", examiner: `${a.pseudo}, de la famille des ${NOMS_FAMILLES[a.famille]}.` },
       cible: { x: a.x, z: a.z },
     });
   }

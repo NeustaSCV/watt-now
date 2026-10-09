@@ -707,6 +707,21 @@ function alarme(): THREE.Group {
 }
 
 /** Le lit de branchages : un cadre de rondins, une épaisse couche de rameaux de sapin, une couverture roulée. */
+/**
+ * Les installations du métier (Book 25 : pièges, clôtures, tour à perche) arrivent avec leur modèle, aux chantiers 6
+ * et 7 ; en attendant, un piquet de bois ligaturé, planté là où on l'a posée.
+ */
+function piquetProvisoire(): THREE.Group {
+  const c = new Assemblage(71);
+  c.occlusion = 0.2;
+  const aleat = aleatoire(71);
+  c.perche(new V3(0, -0.05, 0), new V3(0.02, 0.7, 0), 0.03, BOIS.ecorce, "mat", 5, 0.024);
+  c.ajouter(placer(new THREE.ConeGeometry(0.034, 0.07, 5), 0.02, 0.73, 0), BOIS.coupe, "mat");
+  c.ligature(new V3(0.015, 0.5, 0), Y, 0.034);
+  touffe(c, 0, 0, aleat, 3, 0.3);
+  return enGroupe(c);
+}
+
 function lit(): THREE.Group {
   const c = new Assemblage(57);
   c.occlusion = 0.2;
@@ -906,6 +921,8 @@ export class VueInstallation {
         this.trouvailles = d.trouvailles;
         break;
       }
+      default:
+        this.objet = piquetProvisoire();
     }
     // Le niveau (Book 24) : des pièces en plus. La citerne couvre la bassine : son eau ne se voit plus.
     const pieces = piecesNiveau(donnees.type, donnees.niveau ?? 1);

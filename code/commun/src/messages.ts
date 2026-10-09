@@ -171,6 +171,8 @@ export interface InstallationVue {
 export type MessageClient =
   | { t: "intention"; dx: number; dz: number; allure: Allure; seq: number }
   | { t: "ping"; envoye: number }
+  // Le métier des familles (Book 25 §2.3, chantier 3) : voir le bloc « savoir » en fin de fichier.
+  | MessageClientSavoir
   | { t: "interagir"; cible: Cible; verbe: Verbe }
   | { t: "manger"; objet: TypeObjet }
   | { t: "boire" }
@@ -376,6 +378,8 @@ export interface Bienvenue {
   charge?: Partial<Record<CleObjet, number>>;
   /** La volaille du terrain (2026-10-08). */
   animaux?: AnimalVu[];
+  /** Ce qu'on a appris hors de sa famille (Book 25 §2.3) ; absent : rien. */
+  savoir?: SavoirVu;
 }
 
 /**
@@ -391,6 +395,8 @@ export type MessageServeur =
   | Bienvenue
   | { t: "etat"; position: Position; seq: number }
   | { t: "pong"; envoye: number; serveur: number }
+  // Le métier des familles (Book 25 §2.3, chantier 3) : voir le bloc « savoir » en fin de fichier.
+  | MessageServeurSavoir
   | { t: "expulse"; raison: string }
   | { t: "inventaire"; inventaire: Inventaire }
   | { t: "besoins"; besoins: Besoins; gourde: Gourde }
@@ -463,3 +469,42 @@ export const FERMETURE_JETON_REFUSE = 4001;
 export const FERMETURE_REMPLACE = 4002;
 /** Code de fermeture quand le joueur n'a rien fait depuis un moment (réglage `inactivite_min`) : ses besoins se figent. */
 export const FERMETURE_INACTIF = 4003;
+
+// ---------- Le savoir : leçons et manuels (Book 25 §2.3, chantier 3 de la 0.6) ----------
+
+/** Ce que le joueur sait hors de sa famille : les recettes apprises en leçon, les familles dont il a lu le manuel. */
+export interface SavoirVu {
+  apprises: string[];
+  manuels: Famille[];
+}
+
+export type OperationLecon =
+  /** Le maître demande ce qu'il peut enseigner au joueur `a` (le serveur répond par « lecons_possibles »). */
+  | { genre: "choisir"; a: number }
+  /** Le maître propose une recette de son métier au joueur `a`. */
+  | { genre: "proposer"; a: number; recette: string }
+  /** L'élève accepte ou refuse. */
+  | { genre: "repondre"; accepte: boolean }
+  /** L'un ou l'autre arrête la leçon. */
+  | { genre: "annuler" };
+
+/** La leçon en cours, vue par l'un des deux. */
+export interface LeconVue {
+  avec: Personne;
+  recette: string;
+  role: "maitre" | "eleve";
+  /** Sa durée, en secondes réelles (elle commence à la réception). */
+  duree: number;
+}
+
+export type MessageClientSavoir =
+  | { t: "lecon"; op: OperationLecon }
+  /** Lire un manuel du sac : il ouvre les recettes d'une famille. */
+  | { t: "lire"; objet: TypeObjet };
+
+export type MessageServeurSavoir =
+  | { t: "savoir"; savoir: SavoirVu }
+  /** Ce que le maître peut enseigner à ce joueur (les recettes de son métier qu'il ne sait pas). */
+  | { t: "lecons_possibles"; a: Personne; recettes: string[] }
+  | { t: "demande_lecon"; de: Personne; recette: string }
+  | { t: "lecon"; lecon: LeconVue | null };

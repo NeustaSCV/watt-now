@@ -59,6 +59,23 @@ function operationEchangeValide(op: unknown): boolean {
   }
 }
 
+/** La leçon (Book 25 §2.3) : un joueur désigné par son numéro, une recette par son identifiant (chaîne courte). */
+function operationLeconValide(op: unknown): boolean {
+  if (!estTable(op)) return false;
+  switch (op.genre) {
+    case "choisir":
+      return nombre(op.a);
+    case "proposer":
+      return nombre(op.a) && chaine(op.recette);
+    case "repondre":
+      return booleen(op.accepte);
+    case "annuler":
+      return true;
+    default:
+      return false;
+  }
+}
+
 /** Le message a-t-il la forme attendue ? (Sinon on l'ignore.) */
 export function messageValide(m: unknown): m is MessageClient {
   if (!estTable(m) || typeof m.t !== "string") return false;
@@ -105,6 +122,10 @@ export function messageValide(m: unknown): m is MessageClient {
       return operationComptoirValide(m.op);
     case "echange":
       return operationEchangeValide(m.op);
+    case "lecon":
+      return operationLeconValide(m.op);
+    case "lire":
+      return estObjet(m.objet);
     case "coffre":
       return nombre(m.id) && (m.sens === "deposer" || m.sens === "prendre") && estCleObjet(m.objet) && quantite(m.quantite);
     case "jeter":

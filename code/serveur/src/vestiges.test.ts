@@ -68,7 +68,8 @@ test("le catalogue : une cinquantaine de vestiges et une dizaine de composants, 
   const composants = Object.keys(COMPOSANTS);
   // Ceux qu'on trouve en fouillant ; les objets propres à la Coopérative (hors tirage) viennent en plus.
   const tirables = Object.values(VESTIGES).filter((d) => !("horsTirage" in d && d.horsTirage));
-  assert.ok(tirables.length >= 45 && tirables.length <= 60, `${tirables.length} vestiges tirables`);
+  // Le métier des familles (Book 25 §9.2, 0.6) en ajoute treize, qui servent enfin à quelque chose.
+  assert.ok(tirables.length >= 45 && tirables.length <= 75, `${tirables.length} vestiges tirables`);
   assert.ok(composants.length >= 10, `${composants.length} composants`);
   for (const t of [...vestiges, ...composants]) {
     assert.ok(estObjet(t), t);

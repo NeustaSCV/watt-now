@@ -4,8 +4,10 @@
 import { OBJETS, type TypeObjet } from "../../commun/src/objets.ts";
 import { NOMS_FAMILLES_VESTIGES, definitionVestige, type FamilleVestige } from "../../commun/src/vestiges.ts";
 import { estDessinee, icone, type Pictogramme } from "./icones.ts";
+import { NOMS_INSTALLATIONS, type TypeInstallation } from "../../commun/src/recettes.ts";
 
-const INSTALLATIONS: Pictogramme[] = ["feu_de_camp", "etabli", "abri", "coffre", "charbonniere", "forge", "pedalier", "banc_recharge", "escabeau", "poches", "recuperateur_pluie", "alarme_boites", "lit_branchages", "decharge"];
+// Toutes les installations, celles du métier des familles comprises (Book 25).
+const INSTALLATIONS: Pictogramme[] = ["feu_de_camp", "poches", ...(Object.keys(NOMS_INSTALLATIONS) as TypeInstallation[])];
 
 const groupes = new Map<string, Pictogramme[]>();
 for (const type of Object.keys(OBJETS) as TypeObjet[]) {
