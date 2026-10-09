@@ -117,7 +117,9 @@ export type Verbe =
   | "monter_broche"
   | "monter_marmite"
   | "couvrir"
-  | "ranimer";
+  | "ranimer"
+  /** Un piège, une plaque de choc (Book 25 §5.3 et §6.3) : le réarmer ; une clôture couchée : la relever (chantiers 6 et 7). */
+  | "rearmer_piege";
 
 /** État propre à certaines installations. */
 export interface EtatInstallation {
@@ -210,7 +212,21 @@ export type MessageClient =
   /** Équiper une arme pour le mode Combat (null : plus d'arme choisie, la meilleure du sac) (P-005). */
   | { t: "equiper"; objet: CleObjet | null }
   /** Les images par seconde de l'appareil, chaque minute (mesures du test familial, Book 17 §6). */
-  | { t: "mesures"; ips: number; ipsBas: number; appareil: string; qualite: string };
+  | { t: "mesures"; ips: number; ipsBas: number; appareil: string; qualite: string }
+  // ---- Le lancer et le tir (Book 23 §5, Book 25 §3.4 et §10.3, chantier 1 · 0.6) ----
+  /** L'objet rapide : « Prêt à lancer » (pierre, réveil, hachette) ou « Prêt à tirer » (arc, arbalète) ; null : la pierre. */
+  | { t: "preparer"; objet: CleObjet | null }
+  /** Le bouton Lancer enfoncé : l'arc se bande (le serveur compte le temps tenu : tir rapide ou tir plein). */
+  | { t: "bander" }
+  /**
+   * Le bouton Lancer relâché : l'objet part dans la direction (dx, dz). `cible` : l'Éteint accroché (une arme) ;
+   * `distance` : le point visé (un leurre). Le serveur vérifie tout et décide de l'impact.
+   */
+  | { t: "lancer"; dx: number; dz: number; cible?: number; distance?: number }
+  /** Réarmer l'arbalète : un geste, immobile (chantier 7). */
+  | { t: "rearmer" }
+  /** Recharger un pack à la manivelle de la lampe à dynamo (Voltaïques, chantier 6). */
+  | { t: "manivelle"; objet: CleObjet };
 
 export type OperationEchange =
   /** Proposer un échange à un joueur proche. */
@@ -376,6 +392,8 @@ export interface Bienvenue {
   charge?: Partial<Record<CleObjet, number>>;
   /** La volaille du terrain (2026-10-08). */
   animaux?: AnimalVu[];
+  /** L'objet rapide choisi (« Prêt à lancer / Prêt à tirer », 0.6) ; absent : la pierre. */
+  pret?: CleObjet | null;
 }
 
 /**
@@ -455,7 +473,32 @@ export type MessageServeur =
   | { t: "positions"; p: number[] }
   | { t: "demande_echange"; de: Personne }
   /** L'échange en cours (null : terminé ou annulé). */
-  | { t: "echange"; echange: EchangeVu | null };
+  | { t: "echange"; echange: EchangeVu | null }
+  // ---- Le lancer et le tir (chantier 1 · 0.6) ----
+  /** Ce qui est prêt à lancer (null : la pierre, s'il y en a), et si l'arbalète est armée. */
+  | { t: "pret"; objet: CleObjet | null; armee?: boolean }
+  /** Un objet en vol, du lanceur au point d'impact : le client le dessine, puis montre l'impact. */
+  | { t: "projectile"; projectile: ProjectileVu };
+
+/** Un projectile, vu par le client (Book 25 §10.3) : d'où il part, où il arrive, et ce qu'il y fait. */
+export interface ProjectileVu {
+  /** Qui l'a lancé. */
+  de: number;
+  /** Ce qui vole : la pierre, le réveil, la hachette, la flèche… */
+  objet: TypeObjet;
+  x0: number;
+  z0: number;
+  x1: number;
+  z1: number;
+  /** Durée du vol (ms). */
+  duree: number;
+  /** Ce qu'il heurte : un Éteint, un mur, le sol, l'eau de la mare. */
+  impact: "eteint" | "mur" | "sol" | "eau";
+  /** Un Éteint touché : lequel, et ce que ça lui a fait (le client en tire le sang, comme pour un coup). */
+  coup?: { id: number; resultat: ResultatCoup };
+  /** Une flèche ou un carreau (tendu, presque à plat) plutôt qu'un objet lancé en cloche. */
+  tir?: true;
+}
 
 /** Code de fermeture WebSocket quand le jeton est refusé : le client doit redemander la connexion. */
 export const FERMETURE_JETON_REFUSE = 4001;

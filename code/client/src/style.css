@@ -4863,3 +4863,30 @@ body:has(#hud .voile-pause:not([hidden])) #hud .tactile {
   #hud .panneau.coffre .bande-objet .boutons { grid-column: 1 / -1; justify-content: flex-end; }
   #hud .panneau.coffre .bande-objet .boutons:empty { display: none; }
 }
+
+/* ==== Le bouton Lancer (0.6, Book 23 §6, Book 25 §3.4) : à gauche de « Vue », au-dessus de B ====
+   Il n'apparaît que s'il y a quelque chose à lancer (une pierre, l'objet « Prêt à lancer ») ; son mot dit ce qu'il fera :
+   Lancer, Tirer, Réarmer. Rond de 60 px : assez gros pour le pouce, plus petit que A. */
+#hud .tactile {
+  grid-template-areas:
+    "mode lumiere"
+    "lancer tourner"
+    "B A";
+}
+#hud .tactile .b-lancer {
+  grid-area: lancer;
+  width: 60px;
+  height: 60px;
+  min-width: 60px;
+  min-height: 60px;
+  border-radius: 50%;
+  padding: 4px;
+  font-size: 12px;
+  line-height: 1.1;
+  align-self: center;
+  background: rgba(150, 98, 36, 0.85);
+  border-color: rgba(244, 236, 216, 0.6);
+}
+#hud .tactile .b-lancer[hidden] {
+  display: none;
+}

@@ -25,6 +25,17 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 - **Les pièges** ont leur moteur (plaque de choc, clôture, mâchoires, à venir avec les Voltaïques et les Mécanistes) : raidir, mettre à terre, briser la jambe, tenir sur place ; jamais détruire.
 - Les sauvegardes d'avant se relisent sans rien perdre.
 
+**Le lancer et le tir** (Book 25, chantier 1 ; Book 23 §5)
+- **Lancer** : G, le clic du milieu, ou le nouveau bouton rond « Lancer » du téléphone (il n'apparaît que si tu as de quoi lancer). Maintiens pour viser, relâche pour lancer.
+- **La visée** : une ligne de points au sol et un cercle. Une arme s'accroche à l'Éteint le plus proche devant toi (sur ordinateur, la souris oriente) ; un leurre vise un point à 8 m.
+- **La pierre** (8 m) étourdit l'Éteint touché une seconde, et fait un petit bruit là où elle tombe. Elle n'achève pas un Éteint à terre.
+- **Le réveil à piles** (nouveau vestige, au salon) : lancé à 8 m, il sonne vingt secondes et attire les Éteints vers lui.
+- **Sac → « Prêt à lancer »** : choisis ce que le bouton lancera ; sans choix, c'est une pierre.
+- **Ce qu'on lance retombe au sol** et se ramasse, là où il est tombé ; dans la mare, il est perdu.
+- **Les murs arrêtent tout** : on ne lance pas par-dessus un rayonnage de la Coopérative (une caisse basse, si).
+- Saisi, on ne lance rien : il faut d'abord se dégager.
+- Prêt pour la suite de la 0.6 : l'arc et l'arbalète tireront par ce même bouton (tir rapide, tir plein, le cercle qui se referme et rougit quand la tête est à portée, les flèches qui cassent parfois) ; la hachette se lancera dès qu'elle sera forgée.
+
 ## 0.5.3 · déployée le 2026-10-09
 
 - **Le coffre** (et la décharge), refait selon l'avis de Sally :

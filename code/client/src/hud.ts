@@ -36,6 +36,7 @@ import { detailEnergieGrise } from "../../commun/src/recettes.ts";
 import type { TypeBatterie } from "../../commun/src/energie.ts";
 import type { Inventaire, TypeObjet } from "../../commun/src/objets.ts";
 import { ETOILES, etoilesDe, etoilesTexte, typeDe, type CleObjet } from "../../commun/src/etoiles.ts";
+import { armeTirDe, estLancable } from "../../commun/src/tir.ts";
 import { OBJETS, capaciteDe, estObjet, nomContenant, nommer, poidsInventaire } from "../../commun/src/objets.ts";
 import {
   CATEGORIES_RECETTES,
@@ -107,6 +108,8 @@ export interface ActionsJoueur {
   demonter(objet: TypeObjet): void;
   /** Équiper une arme pour le mode Combat (null : la meilleure du sac) (P-005). */
   equiper(objet: CleObjet | null): void;
+  /** L'objet rapide : « Prêt à lancer / Prêt à tirer » (null : la pierre), Book 25 §3.4. */
+  preparer(objet: CleObjet | null): void;
   /** Réparer une arme (Book 23 §4.3) : de fortune, ou pour de bon à l'atelier. */
   reparer(objet: CleObjet, fortune: boolean): void;
   /** Ranger dans le coffre, ou en sortir. */
@@ -305,6 +308,8 @@ export class Hud {
     actions: ActionsJoueur,
     commande: (c: Commande) => void,
     boutonA: { appuyer(): void; relacher(): void },
+    /** Le bouton Lancer (0.6) : maintenir pour viser, relâcher pour lancer. */
+    boutonLancer?: { appuyer(): void; relacher(): void },
   ) {
     this.element = element;
     this.actions = actions;
@@ -393,6 +398,7 @@ export class Hud {
               <button type="button" class="b-mode" aria-label="Mode">Explorer</button>
               <button type="button" class="b-lumiere">Lumière</button>
               <button type="button" class="b-tourner" aria-label="Tourner la vue">⟳</button>
+              <button type="button" class="b-lancer" hidden aria-label="Lancer">Lancer</button>
               <button type="button" class="b-B" disabled>B</button>
               <button type="button" class="b-A" disabled>A</button>
             </div>`
@@ -547,6 +553,15 @@ export class Hud {
       });
       a.addEventListener("pointerup", () => boutonA.relacher());
       a.addEventListener("pointercancel", () => boutonA.relacher());
+      // Lancer (0.6) : comme A, maintenir puis relâcher (l'arc de visée paraît, l'arc se bande).
+      const l = q(".b-lancer");
+      l.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        l.setPointerCapture(e.pointerId);
+        boutonLancer?.appuyer();
+      });
+      l.addEventListener("pointerup", () => boutonLancer?.relacher());
+      l.addEventListener("pointercancel", () => boutonLancer?.relacher());
       lier(".b-mode", "mode");
       lier(".b-B", "B");
       lier(".b-lumiere", "lumiere");
@@ -1384,6 +1399,31 @@ export class Hud {
     if (!this.sac.hidden) this.dessinerSac();
   }
 
+  /** L'objet rapide choisi (« Prêt à lancer », 0.6) ; null : la pierre. */
+  private pret: CleObjet | null = null;
+  /** Le bouton tactile Lancer (absent sur ordinateur). */
+  private boutonLancer: HTMLButtonElement | undefined;
+
+  /**
+   * L'objet rapide a changé, ou le sac : le bouton Lancer se montre s'il y a quelque chose à lancer, avec son verbe
+   * (« Lancer », « Tirer », « Réarmer »). `verbe` null : rien à lancer.
+   */
+  majPret(pret: CleObjet | null, verbe: string | null): void {
+    const change = pret !== this.pret;
+    this.pret = pret;
+    // Appelé à chaque image : on ne touche au bouton que s'il change.
+    this.boutonLancer ??= this.element.querySelector<HTMLButtonElement>(".b-lancer") ?? undefined;
+    const b = this.boutonLancer;
+    if (b) {
+      if (b.hidden !== (verbe === null)) b.hidden = verbe === null;
+      if (verbe && b.textContent !== verbe) b.textContent = verbe;
+    }
+    if (change) {
+      this.dernierSac = "";
+      if (!this.sac.hidden) this.dessinerSac();
+    }
+  }
+
   private dessinerSac(): void {
     if (this.selection && this.selection !== "gourde" && !(this.inventaire[this.selection] ?? 0)) this.selection = null;
     const poids = poidsInventaire(this.inventaire, this.gourde.litres);
@@ -1448,6 +1488,12 @@ export class Hud {
           enMain = " · ⚔ en main au combat";
           actions.push(`<button type="button" data-action="desequiper" title="En mode Combat, tu prendras la meilleure arme du sac.">Retirer</button>`);
         } else actions.push(`<button type="button" class="principal" data-action="equiper" title="L'arme que tu prends en mode Combat">Équiper</button>`);
+      }
+      // L'objet rapide (Book 25 §3.4, 0.6) : ce que le bouton Lancer fera partir. On en change en choisissant un autre.
+      if (estLancable(s)) {
+        const tir = armeTirDe(t) !== null;
+        if (s === this.pret) enMain += tir ? " · 🎯 prêt à tirer" : " · 🎯 prêt à lancer";
+        else actions.push(`<button type="button" ${estArme(s) ? "" : `class="principal"`} data-action="preparer" title="Ce que le bouton Lancer fera partir">${tir ? "Prêt à tirer" : "Prêt à lancer"}</button>`);
       }
       // Batteries et lampe frontale : la charge stockée (Book 01 §2).
       const batterie = s === "lampe_frontale" ? "petite_batterie" : s === "petite_batterie" || s === "batterie_voiture" ? s : null;
@@ -1551,6 +1597,7 @@ export class Hud {
         if (action === "panser") this.actions.panser();
         if (action === "equiper" && this.selection) this.actions.equiper(this.selection);
         if (action === "desequiper") this.actions.equiper(null);
+        if (action === "preparer" && this.selection) this.actions.preparer(this.selection);
         if ((action === "reparer" || action === "reparer-fortune") && this.selection) this.actions.reparer(this.selection, action === "reparer-fortune");
         if (action === "demonter" && this.selection) this.actions.demonter(typeDe(this.selection));
         if ((action === "jeter1" || action === "jeterTout") && this.selection) {

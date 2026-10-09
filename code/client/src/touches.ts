@@ -21,7 +21,8 @@ export type Action =
   | "carnet"
   | "lumiere"
   | "tourner"
-  | "photo";
+  | "photo"
+  | "lancer";
 
 interface DefAction {
   libelle: string;
@@ -49,6 +50,8 @@ export const ACTIONS: Record<Action, DefAction> = {
   lumiere: { libelle: "Lumière portée", defaut: "KeyR" },
   tourner: { libelle: "Tourner la vue (Maj : dans l'autre sens)", defaut: "KeyV" },
   photo: { libelle: "Mode photo", defaut: "KeyP" },
+  // Le lancer et le tir (Book 23 §6, 0.6) : G, ou le clic du milieu.
+  lancer: { libelle: "Lancer, tirer (maintenir : viser)", defaut: "KeyG" },
 };
 
 /** Les touches qu'on ne peut pas prendre (fermer les fenêtres, et les touches de secours). */
@@ -198,6 +201,7 @@ const BOUTONS: Partial<Record<Action, string>> = {
   carnet: "Carnet",
   lumiere: "Lumière",
   tourner: "⟳",
+  lancer: "Lancer",
   courir: "joystick à fond",
   discret: "joystick à peine incliné",
 };

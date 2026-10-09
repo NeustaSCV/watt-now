@@ -73,6 +73,7 @@ import { Cooperatives } from "./cooperative.ts";
 import { Halte, type Voyageur } from "./halte.ts";
 import type { LieuVivant } from "./lieu-vivant.ts";
 import { Comptoir } from "./comptoir.ts";
+import { Tir, type ContexteTir } from "./tir.ts";
 import { declencher, declencheurNeuf, definitionDeclencheur, estDeclencheur, type DeclencheurPose } from "./declencheurs.ts";
 import {
   PRIX_RETRAIT,
@@ -305,6 +306,8 @@ export class Joueur implements Voyageur {
   readonly envoyer: (message: MessageServeur) => void;
   private readonly maintenant: () => number;
   private readonly cooperatives: Cooperatives;
+  /** Le lancer et le tir (Book 25 §10.3) : son moteur est dans serveur/src/tir.ts. */
+  private readonly tir: Tir = new Tir(this.contexteTir());
 
   /** Le lieu vivant où l'on se trouve (la halte, partagée ; sa Coopérative, à soi) ; null sur le terrain et au Comptoir. */
   private get vivant(): LieuVivant | null {
@@ -459,6 +462,7 @@ export class Joueur implements Voyageur {
       arme: this.armeEquipee,
       usure: { ...this.usure },
       charge: { ...this.chargeArmes },
+      pret: this.tir.pret,
       ...(this.lieu === "cooperative"
         ? { leurres: this.cooperatives.leurresActifs(this.compte.id, this.maintenant()), etatCoop: this.cooperatives.vue(this.compte.id) }
         : {}),
@@ -588,6 +592,15 @@ export class Joueur implements Voyageur {
       case "demonter":
         this.demonter(message.objet);
         return;
+      // Le lancer et le tir (Book 25 §10.3, chantier 1) : tout se juge dans serveur/src/tir.ts.
+      case "preparer":
+        return this.tir.preparer(message.objet);
+      case "bander":
+        return this.tir.bander();
+      case "lancer":
+        return this.tir.lancer(message.dx, message.dz, message.cible, message.distance);
+      case "rearmer":
+        return this.tir.rearmer();
       case "tutoriel_passer":
         if (!this.tuto) return;
         this.tuto = null;
@@ -868,12 +881,7 @@ export class Joueur implements Voyageur {
     const effet = encaisserCoup(cible, arme, appuye, force, this.position, this.zoneIci(), this.eteintsIci());
     const resultat = effet.resultat;
     this.user(enMain);
-    if (this.tuto && resultat === "detruit") this.tuto.premierEteintDetruit = true;
-    // Le magasinier portait la clé du coffre à sa ceinture (Book 23 §3) : elle tombe là où il tombe.
-    if (resultat === "detruit" && cible.variante === "magasinier") {
-      this.poserAuSol({ cle_coffre: 1 }, {}, { x: cible.x, z: cible.z });
-      this.info("Une chaînette tinte à sa ceinture : il portait une clé « MAGASIN ».");
-    }
+    if (resultat === "detruit") this.apresDestruction(cible);
     const electrique = arme.type === "electrique" ? ({ electrique: true } as const) : {};
     const coups = [{ t: "coup" as const, id: cible.id, x: cible.x, z: cible.z, resultat, ...electrique }];
     if (effet.voisinRaidi) coups.push({ t: "coup" as const, id: effet.voisinRaidi.id, x: effet.voisinRaidi.x, z: effet.voisinRaidi.z, resultat: "raidi", ...electrique });
@@ -886,6 +894,61 @@ export class Joueur implements Voyageur {
       else if (resultat === "raidi") this.indice("raidi", "Il est raidi : maintiens {agir} pour l'éteindre.");
     } else if (resultat === "a_terre") this.indice("a_terre", "Achève-le : frappe à la tête (maintiens {agir}, relâche).");
     if (resultat === "detruit" && arme.objet === null) this.info(`À mains nues, ça ne suffira pas : prends une arme. ${ouTrouverPhrase("gourdin")}`);
+  }
+
+  /** Ce que le joueur prête au moteur des projectiles (tir.ts) : rien que des accès, aucune règle. */
+  private contexteTir(): ContexteTir {
+    const j = this;
+    return {
+      get id() {
+        return j.compte.id;
+      },
+      maintenant: () => j.maintenant(),
+      alea: () => j.alea(),
+      position: () => j.position,
+      orienter: (o) => {
+        j.position = { ...j.position, o };
+        j.positionEnvoyee = false;
+      },
+      lieu: () => j.lieu,
+      zone: () => j.zoneIci(),
+      eteints: () => j.eteintsIci(),
+      inventaire: () => j.inventaire,
+      retirer: (cle, n) => j.retirer(cle, n),
+      poserAuSol: (objets, ou) => j.poserAuSol(objets, {}, ou),
+      saisi: () => j.saisisseurs().length > 0,
+      empeche: () =>
+        j.voyage
+          ? "En route, on ne lance rien."
+          : j.lieu === "comptoir"
+            ? "Pas au Comptoir : les Compteurs n'aiment pas le désordre."
+            : j.objetPorte()
+            ? "Tu as les bras pris : pose d'abord l'escabeau."
+            : j.sommeil
+              ? "Tu dors."
+              : null,
+      endurance: () => j.endurance,
+      depenser: (n) => {
+        j.endurance = Math.max(0, j.endurance - n);
+      },
+      info: (t) => j.info(t),
+      indice: (sorte, t) => j.indice(sorte, t),
+      envoyer: (m) => j.envoyer(m),
+      diffuser: (m) => (j.vivant ? j.vivant.diffuser(m) : j.envoyer(m)),
+      user: (arme) => j.user(arme),
+      apresDestruction: (e) => j.apresDestruction(e),
+      commencer: (libelle, dureeS, appliquer) => j.commencer(libelle, dureeS, appliquer, 0, "outil"),
+    };
+  }
+
+  /** Ce qui suit la destruction d'un Éteint, au contact comme au tir. */
+  private apresDestruction(cible: Eteint): void {
+    if (this.tuto) this.tuto.premierEteintDetruit = true;
+    // Le magasinier portait la clé du coffre à sa ceinture (Book 23 §3) : elle tombe là où il tombe.
+    if (cible.variante === "magasinier") {
+      this.poserAuSol({ cle_coffre: 1 }, {}, { x: cible.x, z: cible.z });
+      this.info("Une chaînette tinte à sa ceinture : il portait une clé « MAGASIN ».");
+    }
   }
 
   /** Équiper une arme pour le mode Combat (P-005) : elle doit être dans le sac. null : revenir au choix automatique. */
@@ -1508,6 +1571,7 @@ export class Joueur implements Voyageur {
     if (etape !== vers) this.info(`La route du ${LIEUX[vers].nom.replace(/^Le /, "")} passe par la station-service : il faudra la traverser à pied.`);
     vers = etape;
     this.annulerAction();
+    this.tir.quitterLieu();
     // La radio ne capte la Compagnie qu'au Plateau (0.5.1) : on la pose au portail en partant.
     if (this.lieu === "cooperative" && (this.inventaire.radio_piles ?? 0) > 0) {
       this.poserRadio();
@@ -1765,7 +1829,7 @@ export class Joueur implements Voyageur {
     const portee = this.lumiere ? lumierePortee(this.inventaire) : null;
     const porte = this.bruitPorte && this.maintenant() < this.bruitPorte.jusqua ? this.bruitPorte : null;
     const bruitPorte: Stimulus[] = porte ? [{ genre: "son", x: porte.x, z: porte.z, portee: porte.portee, intensite: 1 }] : [];
-    return this.sousLaPluie([...bruitPorte, ...stimuliJoueur({
+    return this.sousLaPluie([...bruitPorte, ...this.tir.stimuli(), ...stimuliJoueur({
       x: this.position.x,
       z: this.position.z,
       allure: allureAutorisee(this.intention.allure, this.besoins, this.objetPorte() !== undefined || traineTravois(this.inventaire)),
@@ -2032,6 +2096,7 @@ export class Joueur implements Voyageur {
       this.animerPoules(instant, dt);
     }
     if (!this.voyage) this.tickCombat(instant, dt);
+    this.tir.tick(dt);
     this.verifierTutoriel(instant);
     this.verifierQuetes(instant);
 

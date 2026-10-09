@@ -115,6 +115,15 @@ export function messageValide(m: unknown): m is MessageClient {
       return estObjet(m.objet);
     case "mesures":
       return nombre(m.ips) && nombre(m.ipsBas) && chaine(m.appareil, 200) && chaine(m.qualite);
+    // Le lancer et le tir (0.6) : une direction finie, une cible désignée par son numéro, une distance raisonnable.
+    case "preparer":
+      return m.objet === null || estCleObjet(m.objet);
+    case "lancer":
+      return nombre(m.dx) && nombre(m.dz) && (m.cible === undefined || Number.isInteger(m.cible)) && (m.distance === undefined || (nombre(m.distance) && m.distance >= 0 && m.distance <= 100));
+    case "manivelle":
+      return estCleObjet(m.objet);
+    case "bander":
+    case "rearmer":
     case "boire":
     case "annuler":
     case "poser":

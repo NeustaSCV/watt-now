@@ -385,6 +385,16 @@ export const VESTIGES = {
     famille: "salon",
     rarete: "C",
   },
+  // Le leurre qu'on lance (Book 23 §5, 0.6) : il sonne vingt secondes là où il tombe.
+  reveil: {
+    nom: "réveil à piles",
+    pluriel: "réveils à piles",
+    description: "Deux cloches, un marteau, « Debout les Abondants ! ». Lancé, il sonne vingt secondes là où il tombe. Les Éteints accourent.",
+    poids: 0.4,
+    valeur: 6,
+    famille: "salon",
+    rarete: "C",
+  },
   encyclopedie: {
     nom: "encyclopédie en 24 volumes",
     pluriel: "encyclopédies en 24 volumes",
@@ -854,6 +864,7 @@ export const DEMONTAGE: Partial<Record<TypeObjet, Demontage>> = {
   tableau_vivre_rire: { donne: { branche: 2 }, qualites: {}, duree: 3 },
   ventilateur: { donne: { petit_moteur: 1, fil_cuivre: 1, plastique: 3 }, qualites: { visser: 1 }, duree: 6 },
   coussin_peteur: { donne: { caoutchouc: 1 }, qualites: { couper: 1 }, duree: 1 },
+  reveil: { donne: { pile: 2, petit_ressort: 1 }, qualites: {}, duree: 2 },
   smartphone_fele: { donne: { cellule_lithium: 1, verre: 1, petit_moteur: 1, aimant: 1 }, qualites: { visser: 1 }, duree: 5 },
   batterie_externe: { donne: { cellule_lithium: 4 }, qualites: { visser: 1 }, duree: 4 },
   ordinateur_portable: { donne: { cellule_lithium: 6, petit_moteur: 1, aimant: 2, fil_cuivre: 1 }, qualites: { visser: 1 }, duree: 10 },

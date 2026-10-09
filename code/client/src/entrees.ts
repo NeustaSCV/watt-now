@@ -29,7 +29,10 @@ export type Commande =
   | "lumiere"
   | "tourner+"
   | "tourner-"
-  | "fermer";
+  | "fermer"
+  /** Lancer (0.6, Book 23 §6) : enfoncé (on vise, l'arc se bande), relâché (l'objet part). */
+  | "lancer"
+  | "lancer_fin";
 
 /** Seuils d'inclinaison du joystick pour les trois allures. */
 const SEUIL_DISCRETE = 0.45;
@@ -93,6 +96,9 @@ export class Entrees {
         case "photo":
           this.commande("photo");
           break;
+        case "lancer":
+          this.appuyerLancer();
+          break;
         default:
           break;
       }
@@ -100,20 +106,35 @@ export class Entrees {
     window.addEventListener("keyup", (e) => {
       this.touches.delete(e.code);
       if (actionDe(e.code) === "agir") this.relacherA();
+      if (actionDe(e.code) === "lancer") this.relacherLancer();
     });
     window.addEventListener("blur", () => {
       this.touches.clear();
       this.debutA = null;
+      this.relacherLancer();
     });
 
-    // Souris : clic gauche = A, clic droit = B (Book 08 §3.5).
+    // Souris : clic gauche = A, clic droit = B, clic du milieu = Lancer (Book 08 §3.5, Book 23 §6).
     canvas.addEventListener("pointerdown", (e) => {
       if (e.pointerType !== "mouse") return;
       if (e.button === 0) this.appuyerA();
+      if (e.button === 1) {
+        e.preventDefault();
+        this.appuyerLancer();
+      }
       if (e.button === 2) this.commande("B");
     });
     canvas.addEventListener("pointerup", (e) => {
       if (e.pointerType === "mouse" && e.button === 0) this.relacherA();
+      if (e.pointerType === "mouse" && e.button === 1) this.relacherLancer();
+    });
+    // La souris vise (sur ordinateur) : on garde sa dernière place sur l'écran.
+    canvas.addEventListener("pointermove", (e) => {
+      if (e.pointerType === "mouse") this.souris = { x: e.clientX, y: e.clientY, le: performance.now() };
+    });
+    // Le clic du milieu ne doit pas lancer le défilement automatique du navigateur.
+    canvas.addEventListener("mousedown", (e) => {
+      if (e.button === 1) e.preventDefault();
     });
     canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 
@@ -143,6 +164,30 @@ export class Entrees {
     const duree = performance.now() - this.debutA;
     this.debutA = null;
     this.commande(duree >= DUREE_APPUI_MS ? "A_long" : "A_court");
+  }
+
+  /** Instant où Lancer a été enfoncé (null : relâché). */
+  private debutLancer: number | null = null;
+  /** La dernière place de la souris sur l'écran (null : jamais bougée), pour viser sur ordinateur. */
+  souris: { x: number; y: number; le: number } | null = null;
+
+  /** Lancer enfoncé (clavier, clic du milieu, bouton tactile). */
+  appuyerLancer(): void {
+    if (this.debutLancer !== null) return;
+    this.debutLancer = performance.now();
+    this.commande("lancer");
+  }
+
+  /** Lancer relâché : l'objet part. */
+  relacherLancer(): void {
+    if (this.debutLancer === null) return;
+    this.debutLancer = null;
+    this.commande("lancer_fin");
+  }
+
+  /** Depuis combien de temps Lancer est tenu (ms) ; null : relâché. */
+  get tenuLancer(): number | null {
+    return this.debutLancer === null ? null : performance.now() - this.debutLancer;
   }
 
   /** A est-il tenu depuis assez longtemps pour un coup appuyé ? (pour l'animation de préparation) */
