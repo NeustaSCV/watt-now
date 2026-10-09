@@ -1,6 +1,6 @@
 # Book 17 — Architecture Technique
 
-> Document de conception · version 0.3 · 2026-10-07
+> Document de conception · version 0.4 · 2026-10-09
 > Statut : **brouillon de travail**. Propositions de technologies, à confirmer au démarrage du développement.
 
 ---
@@ -172,6 +172,19 @@ Mesurée sur le vrai serveur de la 0a (banc de charge : joueurs simulés qui bou
 >   - Les morceaux de même matériau sont fondus (`rendu/fusion.ts`).
 >   - Branches, bûches et pierres sont dessinées en lots (`rendu/lots.ts`).
 >   - Les ombres comptent pour près de la moitié des appels qui restent.
+
+> **La 0.7 (2026-10-09) : la couche de déchets et l'arbre de progression.**
+>
+> - **Côté serveur, rien qui tourne en continu.** Les déchets (Book 26 §6) : le contenu se recalcule d'une graine par carreau de 20 m ; la base ne garde qu'une ligne par carreau entamé (table `dechets` : remplissage, pièces prises, instant du renouvellement), soit **≈ 1 850 lignes au plus pour 100 joueurs** ; le renouvellement est regardé quand quelqu'un est là, au plus toutes les 5 s par lieu. L'arbre de progression (Book 02 §14 quater) : une colonne `progression` par personnage (une liste courte), réévaluée seulement quand quelque chose change, au plus deux fois par seconde.
+> - **Le coût mesuré, sur le Mac** (banc de charge, option `--dechets` nouvelle : chaque joueur tente un ramassage au hasard deux fois par seconde ; 50 joueurs à la halte, 15 s, deux essais de chaque) :
+>
+>   | 50 joueurs à la halte | Calcul par joueur | Part d'un cœur | Retard p99 | Envoyé par joueur | Mémoire |
+>   |---|---|---|---|---|---|
+>   | Sans ramassages | 1,02 à 1,12 ms/s | 5,1 à 5,6 % | 11,8 à 12,5 ms | 6,5 Ko/s | 86 à 124 Mo |
+>   | Avec ramassages (`--dechets`) | 1,01 à 1,05 ms/s | 5,0 à 5,2 % | 9,2 à 10,6 ms | 6,6 Ko/s | 115 à 120 Mo |
+>
+>   **Aucune différence visible** : la couche de déchets et l'arbre de progression tiennent dans le bruit d'un essai. Ces chiffres ne valent que pour le Mac : la mesure du chantier qui a écrit les déchets n'a pas été consignée, et le Pi 4 est ≈ 6 fois plus lent. **À remesurer sur le Pi** au déploiement de la 0.7 (`mesurer-pi.sh`, en ajoutant un essai `halte 50 --dechets`).
+> - **Côté client** (iPhone 13 mini) : la passe d'ombre écarte maintenant les objets dont l'ombre ne peut pas tomber à l'écran (sur le terrain, c'était 196 appels sur 326), et la mare, les panneaux et la halte sont regroupés. Le **mode mesure** (`?mesure=1`) compte les appels de dessin et les triangles par poste, coupe un poste à la fois et simule la couche de déchets. **Le rendu en amas des déchets et la suite de la réduction des appels de dessin attendent l'essai sur l'iPhone** du porteur (Book 26 §9.4).
 
 ### 5.3 Accès depuis l'extérieur
 
