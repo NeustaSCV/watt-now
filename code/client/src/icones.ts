@@ -6,6 +6,7 @@ import type { TypeObjet } from "../../commun/src/objets.ts";
 import type { TypeInstallation } from "../../commun/src/recettes.ts";
 import { definitionVestige, type FamilleVestige } from "../../commun/src/vestiges.ts";
 import { DESSINS_METIER } from "./icones-metier.ts";
+import { DESSINS_DECHETS } from "./icones-dechets.ts";
 
 const ENCRE = "#3b2a1e";
 const T = `stroke="${ENCRE}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"`;
@@ -824,27 +825,39 @@ function dessinGenerique(famille: FamilleVestige, teinte: string): string {
     <path d="M24 7 L39 15.5 V32.5 L24 41 L9 32.5 V15.5 Z" fill="${teinte}" ${T}/>
     <circle cx="24" cy="24" r="6.5" fill="#f4ecd8" ${T}/>
     <path d="M16 13 L22 10" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round" opacity="0.7"/>`;
-    // Lot 2 (0.7) : pictogrammes provisoires (sac froissé, t-shirt, ballon), en attendant les icônes du lot 2.
+    // Lot 2 (0.7) : les pictogrammes des trois familles nouvelles (chiffrage graphique §2.3) : un sac-poubelle
+    // froissé et noué (déchet), un t-shirt plié (textile), un ballon de plage (loisir).
     case "dechet":
       return `
-    <path d="M14 16 Q12 10 18 11 L24 8 L30 11 Q36 10 34 16 L38 36 Q38 42 32 42 H16 Q10 42 10 36 Z" fill="${teinte}" ${T}/>
-    <path d="M18 11 L24 15 L30 11" fill="none" ${T} stroke-width="1.4"/>
-    <path d="M17 24 l5 3 M28 30 l4 -3 M20 34 l4 1" stroke="#55524d" stroke-width="1.4" stroke-linecap="round"/>`;
+    <path d="M19 12 Q14 6 18 4 Q22 6 24 10 Q26 6 30 4 Q34 6 29 12" fill="${teinte}" ${T} stroke-width="1.6"/>
+    <path d="M18 13 Q20 11 24 12 Q28 11 30 13 Q40 18 40 32 Q40 43 24 43 Q8 43 8 32 Q8 18 18 13 Z" fill="${teinte}" ${T}/>
+    <path d="M20 12.5 h8" ${T} stroke-width="2.6"/>
+    <path d="M15 22 l5 4 l-2 5 M30 19 l-2 6 l5 3 M19 36 l5 -2 l4 3" stroke="#55524d" stroke-width="1.3" fill="none" stroke-linejoin="round"/>
+    <path d="M13 26 Q12 33 15 38" stroke="#ffffff" stroke-width="1.6" fill="none" stroke-linecap="round" opacity="0.6"/>`;
     case "textile":
       return `
-    <path d="M17 9 L8 15 L12 22 L16 20 V40 H32 V20 L36 22 L40 15 L31 9 Q24 14 17 9 Z" fill="${teinte}" ${T}/>
-    <path d="M19 9.5 Q24 16 29 9.5" fill="none" ${T} stroke-width="1.4"/>`;
+    <path d="M8 18 H40 V38 Q40 41 37 41 H11 Q8 41 8 38 Z" fill="${teinte}" ${T}/>
+    <path d="M8 18 L15 11 H20 Q24 16 28 11 H33 L40 18" fill="${teinte}" ${T}/>
+    <path d="M20 11 Q24 18 28 11" fill="none" ${T} stroke-width="1.6"/>
+    <path d="M15 18 V41 M33 18 V41" stroke="${ENCRE}" stroke-width="1.2" opacity="0.55"/>
+    <path d="M8 33 H40" stroke="${ENCRE}" stroke-width="1.2" opacity="0.55"/>
+    <path d="M19 25 h10" stroke="#f4ecd8" stroke-width="2" stroke-linecap="round"/>`;
     case "loisir":
       return `
-    <circle cx="24" cy="24" r="15" fill="${teinte}" ${T}/>
-    <path d="M24 17 L30 21 L28 28 H20 L18 21 Z" fill="#2b2b2b"/>
-    <path d="M24 9 V17 M30 21 L38 18 M28 28 L33 36 M20 28 L15 36 M18 21 L10 18" stroke="#2b2b2b" stroke-width="1.2"/>`;
+    <circle cx="24" cy="24" r="16" fill="#f4f4ee" ${T}/>
+    <path d="M24 8 A8 16 0 0 0 24 40 Z" fill="${teinte}"/>
+    <path d="M24 8 A16 16 0 0 0 24 40 A8 16 0 0 1 24 8 Z" fill="#3f8fb0"/>
+    <path d="M24 8 A16 16 0 0 1 24 40 A8 16 0 0 0 24 8 Z" fill="#d8c43a"/>
+    <path d="M24 8 A8 16 0 0 0 24 40 M24 8 A8 16 0 0 1 24 40 M24 8 V40" fill="none" stroke="${ENCRE}" stroke-width="1"/>
+    <circle cx="24" cy="24" r="16" fill="none" ${T}/>
+    <circle cx="24" cy="10.5" r="2.6" fill="#f4f4ee" ${T} stroke-width="1.2"/>
+    <path d="M14 15 Q16 12 19 11" stroke="#ffffff" stroke-width="1.8" fill="none" stroke-linecap="round"/>`;
   }
 }
 
 /** Le dessin d'un pictogramme : le sien s'il en a un, sinon celui de sa famille de vestiges, sinon un « ? ». */
 function dessinDe(type: Pictogramme): string {
-  const propre = DESSINS[type] ?? DESSINS_VESTIGES[type] ?? DESSINS_METIER[type];
+  const propre = dessinPropre(type);
   if (propre) return propre;
   const v = definitionVestige(type);
   if (v) return dessinGenerique(v.famille, v.teinte ?? teinteDe(type, v.famille));
@@ -853,7 +866,17 @@ function dessinDe(type: Pictogramme): string {
 
 /** Vrai si l'objet a son propre dessin (et pas l'icône générique de sa famille). */
 export function estDessinee(type: Pictogramme): boolean {
-  return (DESSINS[type] ?? DESSINS_VESTIGES[type] ?? DESSINS_METIER[type]) !== undefined;
+  return dessinPropre(type) !== undefined;
+}
+
+/** Le dessin propre d'un pictogramme, s'il en a un (lot 1, métier, lot 2 des déchets). */
+function dessinPropre(type: Pictogramme): string | undefined {
+  return DESSINS[type] ?? DESSINS_VESTIGES[type] ?? DESSINS_METIER[type] ?? (Object.hasOwn(DESSINS_DECHETS, type) ? DESSINS_DECHETS[type] : undefined);
+}
+
+/** Le pictogramme d'une famille de vestiges, dans sa première teinte (planche des icônes, repli des prochains lots). */
+export function iconeFamille(famille: FamilleVestige, taille = 40): string {
+  return `<svg viewBox="0 0 48 48" width="${taille}" height="${taille}" aria-hidden="true">${dessinGenerique(famille, TEINTES_FAMILLES[famille][0]!)}</svg>`;
 }
 
 export function icone(type: Pictogramme, taille = 40): string {

@@ -1503,7 +1503,8 @@ export class Hud {
       const reste = tir ? this.munitionsDe(tir.objet).total : null;
       const munitions = reste === null ? "" : `<span class="munitions-case ${reste === 0 ? "vide" : ""}" title="${reste} ${tir?.armeeDAvance ? "carreaux" : "flèches"}">➶${reste}</span>`;
       const nom = nommer(cle, 1);
-      return `<button type="button" class="case ${classe} ${this.selection === cle ? "choisie" : ""}" data-objet="${cle}"
+      // Une ordure (valeur 0, 0.7) a son icône grisée : le sac se lit d'un regard, « ça, c'est à jeter ».
+      return `<button type="button" class="case ${classe} ${estOrdure(typeDe(cle)) ? "ordure" : ""} ${this.selection === cle ? "choisie" : ""}" data-objet="${cle}"
         title="${nom} (${kg(pile)} kg) — ${d.description}" aria-label="${nom}">${icone(typeDe(cle))}${etoiles}${barre}${munitions}${badge ? `<span class="badge">${badge}</span>` : ""}</button>`;
     };
     const cases = [
