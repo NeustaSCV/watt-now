@@ -23,6 +23,8 @@ const CHEVEUX = [0x4a4038, 0x3a3330, 0x6b6258, 0x2e2925];
  * vers 9 m ; elle n'apparaît que dans le noir (nuit ou pièce noire). Un dormant a les yeux mi-clos : lueur plus faible.
  */
 const LUEUR = { pleine: 6, eteinte: 9, dormant: 0.7 };
+/** Un dormant qui remue : jusqu'où il avance dans son relevé (secondes de l'animation LayToIdle) avant de se réveiller. */
+const REMUE_S = 0.5;
 
 /** Vitesse propre de la marche d'Éteint (m/s, ramenée à sa taille). */
 const VITESSE_MARCHE = 1.0;
@@ -62,6 +64,8 @@ export class VueEteint {
   /** Les petits arcs bleus d'un Éteint raidi (créés à la première décharge). */
   private arcs: THREE.LineSegments | null = null;
   private arcsMinuterie = 0;
+  /** Où en est le dormant qui remue (0 : il dort ; suit `eveil`, en douceur). */
+  private remue = 0;
   /** L'anneau bleu au sol d'un Éteint raidi (créé à la première décharge). */
   private halo: THREE.Mesh | null = null;
 
@@ -178,7 +182,8 @@ export class VueEteint {
     if (!c) return;
     const etat = this.cible.etat;
     // Les yeux s'ouvrent d'un coup quand il se réveille ; un détruit les garde ouverts, éteints.
-    const ouvert = etat === "dormant" ? 0 : 1;
+    // Un dormant que la signature atteint entrouvre les yeux, de plus en plus (eveil : 1, il se réveille).
+    const ouvert = etat === "dormant" ? (this.cible.eveil ?? 0) * 0.6 : 1;
     this.ouverture += (ouvert - this.ouverture) * Math.min(1, dt * (ouvert ? 6 : 1));
     c.fermerLesYeux(this.ouverture);
     this.luire();
@@ -199,7 +204,11 @@ export class VueEteint {
     // Raidi : la pose se fige là où la décharge l'a pris (on ne fait plus avancer l'animation).
     if (raidi) return;
 
-    if (etat === "dormant") c.poser("LayToIdle", 0, avantEtat === null ? 0 : 0.6);
+    if (etat === "dormant") {
+      // Il remue : le corps commence à se soulever, d'autant plus que le réveil approche.
+      this.remue += ((this.cible.eveil ?? 0) - this.remue) * Math.min(1, dt * 3);
+      c.poser("LayToIdle", this.remue * REMUE_S, avantEtat === null ? 0 : 0.6);
+    }
     else if (etat === "a_terre" || etat === "detruit") {
       if (avantEtat !== etat) {
         // Éteint par le courant, il s'affaisse plus lentement, sans être projeté.

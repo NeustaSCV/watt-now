@@ -12,6 +12,10 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
+## 0.7.1 · en préparation
+
+- **Le cercle de signature dit vrai** : un Éteint qu'il touche réagit, god compris. Les dormants n'entendaient qu'à la moitié du cercle et ignoraient la lampe ; ils perçoivent tout le cercle (blanc et ambre), bord compris. Atteint, un dormant remue (yeux, corps, un indice) puis se réveille en quelques secondes.
+
 ## 0.7 · déployée le 2026-10-09
 
 Penser au bon moment, et des déchets partout (Book 26, Book 02 §14 quater). Les recettes ne tombent plus toutes d'un coup : ton personnage y pense quand il en a besoin. Et le monde de l'Abondance est enfin jonché de ce qu'il a jeté : tout se ramasse, presque rien ne vaut quelque chose.

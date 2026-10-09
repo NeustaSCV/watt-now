@@ -1032,6 +1032,8 @@ function majEteints(liste: EteintVu[]): void {
   const vus = new Set<number>();
   for (const e of liste) {
     vus.add(e.id);
+    // Le cercle touche un dormant : il remue. On dit pourquoi, et comment l'éviter (le lien doit se voir).
+    if (e.eveil) indice("eveil", "Un Éteint endormi remue : ton cercle l'atteint. Arrête-toi ou éloigne-toi, il va se réveiller.", 60_000);
     const vue = eteints.get(e.id);
     if (vue) vue.maj(e);
     else {
@@ -1534,7 +1536,8 @@ function boucle(instant: number): void {
       if (elan.restant <= 0) elan = null;
     }
     const enMouvement = position !== avant;
-    majCercles(dt, intention.allure, enMouvement, estNuit(Number.isFinite(HEURE_FORCEE) ? HEURE_FORCEE : heureDeJeu(Date.now() + decalage, debutMonde)));
+    // Dans une pièce noire de la Coopérative, la lampe porte comme la nuit : le serveur le compte, le cercle ambre aussi.
+    majCercles(dt, intention.allure, enMouvement, estNuit(Number.isFinite(HEURE_FORCEE) ? HEURE_FORCEE : heureDeJeu(Date.now() + decalage, debutMonde)) || dansLeNoir());
     if (!enMouvement && positionServeur) {
       // À l'arrêt, on rejoint en douceur la position confirmée par le serveur.
       const k = Math.min(1, dt * 8);

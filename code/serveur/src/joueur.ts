@@ -147,7 +147,7 @@ import {
   symptomes,
   type Sante,
 } from "../../commun/src/combat.ts";
-import { ALLURES, POINT_ARRIVEE } from "../../commun/src/regles.ts";
+import { ALLURES, POINT_ARRIVEE, type Allure } from "../../commun/src/regles.ts";
 import type { SacVu, SanteVue, Verbe } from "../../commun/src/messages.ts";
 import type { SacEnBase } from "./base.ts";
 import { CHARBONNIERE_ODEUR, FEU_LUMIERE_NUIT, FEU_ODEUR, stimuliJoueur, type BruitAction, type Stimulus } from "../../commun/src/signature.ts";
@@ -2145,7 +2145,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     return this.sousLaPluie([...bruitPorte, ...this.tir.stimuli(), ...stimuliJoueur({
       x: this.position.x,
       z: this.position.z,
-      allure: allureAutorisee(this.intention.allure, this.besoins, this.objetPorte() !== undefined || traineTravois(this.inventaire)),
+      allure: this.allureEffective(),
       bouge: this.bouge,
       action: this.maintenant() < this.bruitCoupJusqua ? "coup" : (this.action?.bruit ?? "aucun"),
       porteeCoup: this.porteeDuCoup,
@@ -2154,6 +2154,15 @@ export class Joueur implements Voyageur, ParticipantLecon {
       nuit: nuit || (this.vivant?.obscur(this.position.x, this.position.z) ?? false),
       saigne: this.sante.saignement !== "aucun",
     })]);
+  }
+
+  /**
+   * L'allure qu'on a vraiment : épuisé, on ne court plus. Le bruit des pas en dépend, comme le cercle que le client
+   * dessine (il fait le même calcul) : à bout de souffle, on ne fait pas le bruit d'une course.
+   */
+  private allureEffective(): Allure {
+    const allure = allureAutorisee(this.intention.allure, this.besoins, this.objetPorte() !== undefined || traineTravois(this.inventaire));
+    return allure === "course" && this.endurance < SEUIL_EPUISE ? "marche" : allure;
   }
 
   /** La zone où l'on se déplace ici : celle du lieu vivant (avec ses portes fermées), ou celle du lieu. */
@@ -2329,8 +2338,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (bouge && this.action) this.annulerAction();
     // Saisi : ralenti par un, immobilisé par deux (Book 06 §2.3). Épuisé : on ne court plus.
     const frein = freinSaisie(this.saisisseurs().length);
-    let allure = allureAutorisee(this.intention.allure, this.besoins, this.objetPorte() !== undefined || traineTravois(this.inventaire));
-    if (allure === "course" && this.endurance < SEUIL_EPUISE) allure = "marche";
+    const allure = this.allureEffective();
     const intention = { dx: this.intention.dx * frein, dz: this.intention.dz * frein, allure };
     let nouvelle = avancer(this.position, intention, dt, this.zoneIci());
     // L'élan de l'esquive : un bond rapide, sur quelques dixièmes de seconde.
