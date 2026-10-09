@@ -208,7 +208,8 @@ test("0.5.1 : chaque arme qui s'use laisse son débris, qui se démonte ; sac pl
   for (const a of ARMES) {
     if (!a.objet || a.objet === "barre_metal") continue;
     const debris = DEBRIS_ARME[a.objet];
-    assert.ok(debris && DEMONTAGE[debris], a.objet);
+    // La lame ébréchée ne se démonte pas : elle se reforge (Book 25, chez les Charbonniers).
+    assert.ok(debris && (DEMONTAGE[debris] || debris === "lame_ebrechee"), a.objet);
   }
   assert.equal(DEBRIS_ARME.barre_metal, undefined, "une barre tordue redeviendrait une barre : rien");
   // La masse casse dans un sac plein à ras bord : sa ferraille tombe par terre, à la halte.

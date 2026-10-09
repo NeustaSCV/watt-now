@@ -40,7 +40,7 @@ export const ARMES: Arme[] = [
   { objet: "hache", nom: "la hache", type: "tranchant", solidite: 60, degatsTorse: 2, tueALaTete: true, allonge: 1.7, coup: 700, coupAppuye: 950 },
   // Le pied-de-biche : le vestige devient une arme, la plus solide de toutes (Book 23 §4.6).
   { objet: "pied_de_biche", nom: "le pied-de-biche", type: "contondant", solidite: 120, degatsTorse: 1.5, tueALaTete: true, allonge: 1.5, coup: 600, coupAppuye: 880 },
-  { objet: "machette", nom: "la machette", type: "tranchant", solidite: 50, degatsTorse: 1.5, tueALaTete: true, allonge: 1.6, coup: 500, coupAppuye: 750 },
+  { objet: "machette", nom: "la machette de fortune", type: "tranchant", solidite: 40, degatsTorse: 1.2, tueALaTete: true, allonge: 1.6, coup: 500, coupAppuye: 750 },
   { objet: "marteau", nom: "le marteau", type: "contondant", solidite: 80, degatsTorse: 1.5, tueALaTete: true, allonge: 1.5, coup: 600, coupAppuye: 850 },
   { objet: "barre_metal", nom: "la barre de métal", type: "contondant", solidite: 100, degatsTorse: 1.5, tueALaTete: true, allonge: 1.9, coup: 650, coupAppuye: 900 },
   // La lance (épieu + couteau, évolution P-002) : l'allonge, et cette fois la pointe tue à la tête.

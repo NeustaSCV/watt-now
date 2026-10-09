@@ -719,9 +719,9 @@ export const VESTIGES = {
   },
   // Les armes de la Coopérative (Book 23 §4.6).
   machette: {
-    nom: "machette",
-    pluriel: "machettes",
-    description: "Quarante-cinq centimètres de lame, un manche noir rivé. Elle servait à dégager les fossés. Vive, tranchante : contre un casque, elle glisse.",
+    nom: "machette de fortune",
+    pluriel: "machettes de fortune",
+    description: "Une tôle d'acier découpée et meulée, un manche de bois ficelé. Elle a dégagé des fossés ; elle tranche encore, sans plus. Contre un casque, elle glisse.",
     poids: 0.8,
     valeur: 30,
     famille: "garage",
@@ -784,7 +784,7 @@ export const VESTIGES = {
   lame_ebrechee: {
     nom: "lame ébréchée",
     pluriel: "lames ébréchées",
-    description: "Une lame cassée net, le fil en dents de scie. L'acier est bon : au marteau, on en tire une lame de ressort à reforger.",
+    description: "Une lame cassée net, le fil en dents de scie. L'acier est bon : un Charbonnier saura le reforger.",
     poids: 0.4,
     valeur: 4,
     famille: "garage",
@@ -875,7 +875,6 @@ export const DEMONTAGE: Partial<Record<TypeObjet, Demontage>> = {
   tuyau_arrosage: { donne: { caoutchouc: 4 }, qualites: { couper: 1 }, duree: 4 },
   // Les débris d'arme (Book 23 §4.3, 0.5.1) : un peu de matière, pas l'arme.
   manche_fendu: { donne: { branche: 1 }, qualites: {}, duree: 2 },
-  lame_ebrechee: { donne: { ressort_lames: 1 }, qualites: { marteler: 1 }, duree: 5 },
   ferraille_tordue: { donne: { barre_metal: 1 }, qualites: { marteler: 1 }, duree: 8 },
 };
 
