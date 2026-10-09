@@ -116,6 +116,8 @@ export class CoucheDechetsVue {
   private points: PointDechetsVu[] = [];
   private readonly envoyer: (m: MessageClient) => void;
   private readonly panneau: HTMLElement;
+  /** Le HUD qui porte la liste de la fouille. */
+  private readonly hud: HTMLElement;
   private readonly options: OptionsCoucheDechets;
   private mode: ModeDessinDechets;
 
@@ -159,6 +161,7 @@ export class CoucheDechetsVue {
     this.panneau.className = "fouille-dechets";
     this.panneau.hidden = true;
     this.panneau.setAttribute("role", "dialog");
+    this.hud = hud;
     hud.appendChild(this.panneau);
     this.objet.name = "déchets";
     const t = new THREE.MeshStandardMaterial({ color: 0x3a3328, roughness: 1, transparent: true, opacity: 0.5, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
@@ -609,6 +612,9 @@ export class CoucheDechetsVue {
       p.innerHTML = "";
       return;
     }
+    // Le HUD réécrit son contenu en se construisant (main.ts le crée après cette couche) : sans ça, la liste restait
+    // détachée de la page, et une fouille finie ne montrait rien (bug de la 0.7 : « aucun sac ne contient rien »).
+    if (!p.isConnected) this.hud.appendChild(p);
     p.hidden = false;
     const objets = f.objets
       .map(

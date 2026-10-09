@@ -160,6 +160,9 @@ test("un « god » déjà inscrit est écrasé : nouveau mot de passe, jetons ef
   const jeton = base.creerJeton(ancien.id);
   base.sauverInventaire(ancien.id, { pierre: 7 });
   base.ajouterInstallation(ancien.id, "abri", 20, 20, 0);
+  // Des déchets déjà pris, sur son terrain et dans sa Coopérative.
+  base.sauverDechets(`terrain:${ancien.id}`, "1,1", 0, [0], 0);
+  base.sauverDechets(`cooperative:${ancien.id}`, "2,2", 0, [0, 1], 5000);
   const autre = base.creerCompte("Rose", "potager42", "mecanistes");
   base.designerAdmin(autre.id);
   const r = preparerGod(base, "olympe42", undefined, 1000);
@@ -173,6 +176,8 @@ test("un « god » déjà inscrit est écrasé : nouveau mot de passe, jetons ef
   assert.equal(base.chargerInventaire(ancien.id).pierre, undefined, "l'ancien sac est parti");
   assert.ok(!base.chargerInstallations(ancien.id).some((i) => i.type === "abri" && i.x === 20 && i.z === 20), "l'ancien terrain est parti");
   assert.ok(base.estAdmin(ancien.id) && !base.estAdmin(autre.id), "god est le seul admin");
+  assert.deepEqual(base.chargerDechets(`terrain:${ancien.id}`), [], "les déchets de son terrain sont à neuf");
+  assert.deepEqual(base.chargerDechets(`cooperative:${ancien.id}`), [], "ceux de sa Coopérative aussi");
   // Une deuxième fois : toujours un seul compte god, toujours admin.
   preparerGod(base, "olympe43", undefined, 1000);
   assert.equal(base.verifierIdentifiants("god", "olympe43")?.id, ancien.id);
