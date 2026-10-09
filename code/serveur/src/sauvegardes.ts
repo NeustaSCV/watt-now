@@ -1,10 +1,12 @@
 // Les sauvegardes de la base (Book 17 §5.4) : une par jour, gardées 7 jours, et une par semaine, gardées 4 semaines.
 // Le serveur s'en charge lui-même (pas de tâche planifiée à installer sur le Pi). Le dossier peut être un disque
-// externe (variable WATT_SAUVEGARDES) : c'est la copie hors du Pi demandée par le Book 17.
+// externe (variable WATT_SAUVEGARDES). Depuis la 0.7, la copie hors de la carte SD se fait sur la clé USB du Pi
+// (variable WATT_CLE_USB, voir cle-sauvegardes.ts) : chaque vérification y recopie ce qui manque, sans bloquer le jeu.
 
 import { existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import type { Base } from "./base.ts";
+import { CleSauvegardes, type EtatCle } from "./cle-sauvegardes.ts";
 import { journal } from "./journal.ts";
 
 const GARDER_QUOTIDIENNES = 7;
@@ -40,24 +42,31 @@ export function aSupprimer(fichiers: readonly string[]): string[] {
 export class Sauvegardes {
   private readonly base: Base;
   private readonly dossier: string;
+  /** La copie sur la clé USB (absente : pas de clé configurée, comme en local). */
+  readonly cle: CleSauvegardes | null;
   private minuterie: NodeJS.Timeout | undefined;
 
-  constructor(base: Base, dossier: string) {
+  constructor(base: Base, dossier: string, cle?: { dossier: string; reglages?: string; certificat?: string }) {
     this.base = base;
     this.dossier = dossier;
+    this.cle = cle ? new CleSauvegardes(cle.dossier, { sauvegardes: dossier, reglages: cle.reglages, certificat: cle.certificat }) : null;
   }
 
   demarrer(): void {
-    this.verifier();
-    this.minuterie = setInterval(() => this.verifier(), INTERVALLE_VERIFICATION);
+    void this.verifier();
+    this.minuterie = setInterval(() => void this.verifier(), INTERVALLE_VERIFICATION);
   }
 
   arreter(): void {
     clearInterval(this.minuterie);
   }
 
-  /** Fait la sauvegarde du jour (et de la semaine) si elle manque, puis fait le ménage. */
-  verifier(maintenant = new Date()): void {
+  /**
+   * Fait la sauvegarde du jour (et de la semaine) si elle manque, puis fait le ménage. La sauvegarde elle-même est
+   * immédiate (≈ 20 ms) ; la copie sur la clé suit en arrière-plan : la promesse rendue ne sert qu'à l'attendre (tests).
+   */
+  verifier(maintenant = new Date()): Promise<EtatCle | null> {
+    let nouvelle = false;
     try {
       mkdirSync(this.dossier, { recursive: true });
       const { quotidienne, hebdomadaire } = nomsDuJour(maintenant);
@@ -66,11 +75,13 @@ export class Sauvegardes {
         if (existsSync(chemin)) continue;
         const debut = performance.now();
         this.base.sauvegarderVers(chemin);
+        nouvelle = true;
         journal(`Sauvegarde : ${nom} (${Math.round(performance.now() - debut)} ms)`);
       }
       for (const f of aSupprimer(readdirSync(this.dossier))) rmSync(join(this.dossier, f));
     } catch (erreur) {
       journal(`Sauvegarde impossible : ${String(erreur)}`);
     }
+    return this.cle ? this.cle.synchroniser(nouvelle, maintenant.getTime()) : Promise.resolve(null);
   }
 }

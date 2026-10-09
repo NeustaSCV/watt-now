@@ -15,10 +15,16 @@ services:
       - "${WATT_PORT:-1234}:8080"
     volumes:
       - ./donnees:/app/serveur/donnees
-      # Pour copier les sauvegardes hors du Pi (Book 17 §5.4) : monter un disque externe ici, par exemple
-      # - /mnt/disque-externe/watt-now:/app/serveur/donnees/sauvegardes
+      # La clé USB des sauvegardes (Book 17 §5.4, LISEZMOI §7), montée par le porteur dans /mnt/watt-cle (FAT).
+      # Le jeu y recopie ses sauvegardes, reglages.json et certificat/ — seulement si le fichier repère
+      # .cle-watt-now est dans ce dossier. Clé débranchée : Docker crée ici un dossier vide sur la carte SD,
+      # sans repère, et le jeu n'y écrit rien (il le signale dans son journal).
+      # Après avoir rebranché et remonté la clé : « docker compose restart » pour que le conteneur la voie.
+      - /mnt/watt-cle/watt-now:/app/serveur/donnees/cle
     environment:
       TZ: Europe/Paris
+      # Où le jeu trouve la clé dans le conteneur (sans cette variable, pas de copie : le jeu marche normalement).
+      WATT_CLE_USB: /app/serveur/donnees/cle
     # Un Pi 4 partagé avec d'autres services : le jeu ne prend pas plus de 2 cœurs ni 768 Mo.
     cpus: 2
     mem_limit: 768m

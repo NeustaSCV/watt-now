@@ -209,6 +209,15 @@ Mesurée sur le vrai serveur de la 0a (banc de charge : joueurs simulés qui bou
 > - **Où** : dans `donnees/sauvegardes/`, que l'on peut remplacer par un disque externe monté à cette place (copie hors du Pi).
 > - **Pas encore** : la sauvegarde de fin de cycle, puisqu'il n'y a pas de cycle en 0a.
 >
+> **La copie hors de la carte SD : la clé USB du Pi (0.7, 2026-10-09).**
+> - **Le support** : une clé USB de 57 Go, en FAT, réservée aux sauvegardes, montée par le porteur dans `/mnt/watt-cle`. `compose.yaml` en monte le dossier `watt-now/` dans le conteneur (variable `WATT_CLE_USB` ; sans elle, pas de copie).
+> - **Le garde-fou** : rien n'est écrit sans le fichier repère `.cle-watt-now`. Clé absente, Docker met à sa place un dossier vide de la carte SD, qu'il ne faut pas remplir.
+> - **Quoi** : les sauvegardes cohérentes déjà faites (jamais la base vivante), `reglages.json` et `certificat/`, de quoi remonter le jeu sur une carte SD neuve.
+> - **Comment** : après chaque vérification horaire, en arrière-plan (la boucle de jeu n'attend jamais la clé). Chaque fichier est écrit à côté, puis renommé. Une clé rebranchée rattrape ce qui manque.
+> - **Rétention, plus longue sur la clé** : 30 quotidiennes, 26 hebdomadaires, 24 mensuelles.
+> - **Signalement** : une ligne au journal à chaque copie (taille, place libre), une alerte si la clé manque, est pleine ou en erreur ; « clé : dernière copie il y a X h » en tête du bilan.
+> - **Mode d'emploi et restauration** (sur le Pi ou depuis un Mac) : `code/deploiement/LISEZMOI.md` §7 bis.
+>
 > **Le déploiement** : un seul conteneur Docker (le serveur sert aussi le client compilé), un volume pour les données, un redémarrage automatique, et un contrôle de santé sur `/api/sante`. Mode d'emploi : `code/deploiement/LISEZMOI.md`.
 >
 > **Le certificat HTTPS (2026-10-08)** est un certificat **Let's Encrypt** pour `preprod.example.org`. Le wildcard `*.example.org` n'était pas utilisable.

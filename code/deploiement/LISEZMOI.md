@@ -102,11 +102,63 @@ cd ~/watt-now && docker compose exec jeu node --disable-warning=ExperimentalWarn
 ## 7. Les sauvegardes
 
 - Une sauvegarde par jour, gardée **7 jours**, et une par semaine, gardée **4 semaines**, dans `~/watt-now/donnees/sauvegardes/`.
-- Pour les avoir **hors du Pi** (Book 17 §5.4) : monter un disque externe à la place de ce dossier (voir `compose.yaml`), ou les copier régulièrement depuis un autre ordinateur :
+- On peut aussi les copier depuis un autre ordinateur :
   ```bash
   rsync -av pi@192.168.254.99:~/watt-now/donnees/sauvegardes/ ./sauvegardes-watt-now/   # demande le mot de passe
   ```
 - **Restaurer** : arrêter le jeu (`docker compose down`), remplacer `donnees/watt.sqlite` par la sauvegarde choisie (et supprimer `watt.sqlite-wal` et `watt.sqlite-shm`), relancer (`docker compose up -d`).
+
+### 7 bis. La copie sur la clé USB (0.7)
+
+La carte SD peut lâcher : le jeu recopie donc tout seul ses sauvegardes sur la **clé USB de 57 Go** branchée sur le Pi (Book 17 §5.4).
+
+**Ce que le porteur prépare sur le Pi (une fois, à la main)** :
+- la clé, en FAT, montée dans `/mnt/watt-cle` ;
+- elle doit être montée **avec les droits de l'utilisateur qui fait tourner le jeu** (le FAT n'a pas de droits à lui), par exemple avec les options `uid=1000,gid=1000` ; avec `nofail` dans `/etc/fstab`, le Pi démarre même sans la clé ;
+- un dossier `/mnt/watt-cle/watt-now/` contenant un fichier repère vide `.cle-watt-now`.
+
+**Ce que fait le jeu** (`compose.yaml` monte `/mnt/watt-cle/watt-now` dans le conteneur, variable `WATT_CLE_USB`) :
+- Après chaque vérification des sauvegardes (au démarrage, puis toutes les heures), il recopie sur la clé ce qui lui manque, **en arrière-plan** (le jeu n'attend jamais la clé). Une clé rebranchée rattrape les jours manqués, dans la limite de ce que le Pi garde encore.
+- **Seulement si le repère `.cle-watt-now` est là.** Clé débranchée ou pas montée : Docker met à sa place un dossier vide de la carte SD, sans repère, et le jeu n'y écrit rien.
+- Chaque copie passe par un fichier `….partiel`, renommé une fois complet : une copie interrompue n'abîme jamais une sauvegarde. Il ne copie jamais la base vivante, seulement les sauvegardes cohérentes déjà faites.
+- Sur la clé, il range :
+  - `sauvegardes/` : **30** quotidiennes, **26** hebdomadaires et une **mensuelle** par mois, gardée **24 mois** ;
+  - `reglages.json` et `certificat/` (quand ils changent) : de quoi remonter le jeu sur une carte SD neuve.
+- **Attention** : `certificat/privkey.pem` est sur la clé, lisible par qui la branche (le FAT n'a pas de droits). La clé se garde comme une clé de maison.
+
+**Comment savoir que ça marche** :
+- Dans le journal (`docker compose logs jeu | grep Clé`), une ligne à chaque copie : `Clé de sauvegarde : 2 fichier(s) copié(s) (… ; 1,2 Mo, 52,3 Go libres)`.
+- Une alerte `⚠ Clé de sauvegarde — CLÉ ABSENTE`, `CLÉ PLEINE` ou `ERREUR` quand ça ne va pas. Elle est redite à chaque nouvelle sauvegarde tant que le problème dure.
+- En tête du bilan (§6) : `Sauvegardes — clé : dernière copie il y a 3 h, 52,3 Go libres.`
+- Après avoir **rebranché** la clé et l'avoir remontée : `docker compose restart`, pour que le conteneur la voie (sinon il garde le dossier vide de la carte SD).
+
+**Restaurer depuis la clé, sur le Pi** :
+1. `cd ~/watt-now && docker compose down`
+2. Choisir la sauvegarde : `ls /mnt/watt-cle/watt-now/sauvegardes/` (par exemple `quotidienne-2026-11-03.sqlite`).
+3. La remettre en place :
+   ```bash
+   cp /mnt/watt-cle/watt-now/sauvegardes/quotidienne-2026-11-03.sqlite donnees/watt.sqlite
+   rm -f donnees/watt.sqlite-wal donnees/watt.sqlite-shm
+   ```
+4. `docker compose up -d`
+
+**Sur une carte SD neuve** :
+- Réinstaller le Pi (§1) et déployer le jeu depuis le Mac (§3) : cela crée `~/watt-now/` et son `compose.yaml`.
+- Remonter la clé (voir plus haut), puis arrêter le jeu (`docker compose down`).
+- Recopier depuis la clé, dans `~/watt-now/donnees/` :
+  - la base (étape 3 ci-dessus) ;
+  - `reglages.json` ;
+  - le dossier `certificat/`, puis remettre ses droits : `chmod 700 donnees/certificat && chmod 600 donnees/certificat/privkey.pem`.
+- Relancer : `docker compose up -d`.
+
+**Depuis un Mac** (la clé branchée dessus, elle apparaît dans le Finder, par exemple `/Volumes/WATT`) :
+- Les sauvegardes sont dans `watt-now/sauvegardes/`. Ce sont des bases SQLite ordinaires, qu'on peut ouvrir pour vérifier : `sqlite3 /Volumes/WATT/watt-now/sauvegardes/quotidienne-2026-11-03.sqlite "SELECT pseudo FROM comptes"`.
+- Pour remettre l'une d'elles sur le Pi, depuis le Mac (le jeu arrêté sur le Pi) :
+  ```bash
+  scp /Volumes/WATT/watt-now/sauvegardes/quotidienne-2026-11-03.sqlite pi@192.168.254.99:watt-now/donnees/watt.sqlite   # demande le mot de passe
+  ```
+  Puis, sur le Pi : `rm -f ~/watt-now/donnees/watt.sqlite-wal ~/watt-now/donnees/watt.sqlite-shm && cd ~/watt-now && docker compose up -d`.
+- Éjecter la clé avant de la débrancher. Ne pas supprimer le fichier repère `.cle-watt-now` (caché dans le Finder : `Cmd + Maj + .` pour le voir).
 
 ## 8. Mesurer la capacité sur le Pi
 
