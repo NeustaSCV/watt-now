@@ -77,6 +77,9 @@ export const SONS = {
   sifflement: joueur(R.sifflement(false), 0.4, PROCHE, 4),
   sifflement_lourd: joueur(R.sifflement(true), 0.45, PROCHE, 3),
   esquive: joueur(R.esquive, 0.5, BRUIT_ALLURE.course.portee, 3),
+  // L'électricité (Book 25 §5.4) : la courte crépite à 6 m, la longue claque à 8 m.
+  decharge_courte: joueur(R.dechargeCourte, 0.7, 6, 3),
+  decharge_longue: joueur(R.dechargeLongue, 0.85, 8, 3),
   degagement: joueur(R.degagement, 0.6, 6, 4),
   coeur: { recette: R.coeur, bus: "joueur", priorite: 2, variantes: 2, gain: 0.7, portee: 0 },
   effondrement: joueur(R.effondrement, 0.9, 10, 1),

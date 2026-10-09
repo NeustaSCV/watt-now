@@ -3,6 +3,7 @@
 
 import { PERIODES_FRUITIERS, enSaison, etatDuFruitier, phaseFruitier, visibleEnSaison } from "../../commun/src/calendrier.ts";
 import type { Position } from "../../commun/src/deplacement.ts";
+import { armeDeCle } from "../../commun/src/combat.ts";
 import { CAPACITES, type Charges } from "../../commun/src/energie.ts";
 import { COMPTOIR, sortieIci, type LieuId, type LieuJouable } from "../../commun/src/lieux.ts";
 import { KLAXONS_PAR_BATTERIE, LEURRES, PORTES, chargeBatterieTracteur, distancePorte } from "../../commun/src/cooperative.ts";
@@ -126,9 +127,25 @@ function actionsInstallation(
       const affuter = i.etat.meule && (inventaire.couteau ?? 0) > 0 ? msg("Affûter le couteau", "affuter") : null;
       return [pedaler ?? affuter, pedaler && affuter ? affuter : examiner];
     }
+    case "plaque_choc": {
+      // Book 25 §5.3 : une décharge, puis il faut la réarmer (0,5 Wh).
+      const armee = i.etat.declencheur?.arme ?? true;
+      return [armee ? null : msg("Réarmer la plaque (0,5 Wh)", "rearmer_piege"), { libelle: "Examiner", examiner: `${EXAMENS_INSTALLATIONS.plaque_choc} ${armee ? "Elle est armée." : "Elle a servi : réarme-la."}` }];
+    }
+    case "cloture_fortune":
+    case "cloture_electrique": {
+      // Elle tire son courant d'un banc chargé à moins de 6 m ; trois Éteints qui poussent la couchent.
+      const d = i.etat.declencheur;
+      if (d?.couche) return [msg("Relever la clôture", "rearmer_piege"), { libelle: "Examiner", examiner: "Couchée : trois Éteints ont poussé ensemble. Relève-la." }];
+      const courant = d?.arme === false ? "Le courant ne passe pas : il lui faut un banc chargé à moins de 6 m." : "Le courant passe.";
+      return [null, { libelle: "Examiner", examiner: `${EXAMENS_INSTALLATIONS[i.type]} ${courant}` }];
+    }
     case "banc_recharge": {
       // Sur le banc : les batteries posées, que le panneau charge, même hors ligne (É4).
       const posees = Object.values(i.etat.batteries ?? {}).some((n) => (n ?? 0) > 0);
+      // Les armes électriques (Book 25 §5.4) : on les recharge aux batteries du banc.
+      const armes = Object.keys(inventaire).some((cle) => (inventaire[cle as keyof typeof inventaire] ?? 0) > 0 && armeDeCle(cle)?.electrique);
+      if (armes && posees) return [msg("Recharger tes armes électriques", "recharger_armes"), msg("Reprendre les batteries", "reprendre_batteries")];
       const portees = (inventaire.petite_batterie ?? 0) > 0 || (inventaire.batterie_voiture ?? 0) > 0;
       const surBanc = Object.entries(i.etat.charges ?? {})
         .map(([b, wh]) => `${b === "petite_batterie" ? "petite batterie" : "batterie de voiture"} ${Math.round(wh ?? 0)} Wh`)

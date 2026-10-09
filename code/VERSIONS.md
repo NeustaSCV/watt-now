@@ -51,6 +51,25 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 - La masse et le pied-de-biche valent enfin ce qu'ils coûteraient à refaire (200 et 150 wotts) ; la lance vaut ce que vaut sa recette.
 - Après dix exemplaires d'une même lame, la forge est maîtrisée : une étoile de plus.
 
+**Les Voltaïques : l'électricité** (Book 25, chantier 6)
+- **La matraque de fortune** : un gourdin, un appareil photo jetable, la petite batterie du kit. Un Voltaïque seul la monte dès le premier jour (★, 50 Wh).
+- **La matraque électrique**, « la Raquette » : ★★ au module de raquette, ★★★ au module à bobine (sa décharge saute alors au voisin). Les électrodes forgées d'un Charbonnier ajoutent une étoile, un manche tourné d'un Mécaniste une autre.
+- **L'aiguillon de défense** : la même décharge au bout d'un épieu, à 2,3 m.
+- **La décharge** : A, une courte, il lâche et se raidit ; maintenu, une longue, il tombe ; sur un Éteint raidi ou à terre, il s'éteint pour de bon. Casque ou pas.
+- **Une courte libère** : saisi, une décharge et il lâche.
+- **Chaque décharge prend du courant** : 0,25 Wh la courte, 1 Wh la longue. La barre bleue du sac le montre.
+- **Pack vide** : la matraque n'est plus qu'un gourdin court ; « Plus de courant » s'affiche une seule fois.
+- **Recharger au banc** : « Recharger tes armes électriques », pris aux batteries posées sur le banc ; un pack vide en 25 s.
+- **La manivelle** : Sac → l'arme → « Manivelle », avec la lampe à dynamo du kit. 1 Wh par minute, à la force du bras, même sans soleil.
+- **Les pièces** : le pack de cellules (3 cellules, 12 Wh) et le module de décharge (flash ★, raquette ★★, bobine ★★★), au banc.
+- **La lampe de poche bricolée** : quatre LED et un pack, une lumière blanche sans manivelle.
+- **L'alarme électrique** : un fil tendu bas. Un Éteint passe : la LED s'allume, le téléphone vibre, et rien ne fait de bruit.
+- **La clôture de fortune** (4 m) et **la clôture électrique** (6 m) : branchées à un banc chargé à moins de 6 m, elles raidissent l'Éteint et le repoussent. Trois qui poussent ensemble la couchent : relève-la. Elles ne tuent jamais.
+- **La plaque de choc** : le premier Éteint qui marche dessus tombe à terre. Réarme-la (0,5 Wh) après chaque décharge.
+- **Le ventilateur de forge 12 V** et **l'électrificateur** se fabriquent, pour les forgerons et les clôtures.
+- **Le bain de dérouillage** : douze heures de jeu, et la machette de fortune passe à ★★.
+- On entend la décharge : un crépitement (à 6 m), un claquement pour la longue (à 8 m). La clôture sous tension bourdonne.
+
 ## 0.5.3 · déployée le 2026-10-09
 
 - **Le coffre** (et la décharge), refait selon l'avis de Sally :

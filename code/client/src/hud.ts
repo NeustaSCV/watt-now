@@ -117,6 +117,8 @@ export interface ActionsJoueur {
   preparer(objet: CleObjet | null): void;
   /** Réparer une arme (Book 23 §4.3) : de fortune, ou pour de bon à l'atelier. */
   reparer(objet: CleObjet, fortune: boolean): void;
+  /** Recharger une arme électrique à la manivelle de la lampe à dynamo (Book 25 §5.4). */
+  manivelle(objet: CleObjet): void;
   /** Ranger dans le coffre, ou en sortir. */
   coffre(id: number, sens: "deposer" | "prendre", objet: CleObjet, quantite: number): void;
   /** Un geste sur un feu ou une installation, depuis sa fiche (Book 24 : améliorer, démonter, creuser…). */
@@ -1556,6 +1558,8 @@ export class Hud {
       if (charge !== null) {
         const wh = this.chargeArmes[s];
         infos.push(`<span class="charge-batterie charge-arme"><span class="charge-barre"><span style="width:${Math.round(charge * 100)}%"></span></span> ${charge <= 0 ? "Plus de courant : un gourdin court." : wh === undefined ? "Pleine" : `${virguleWh(wh)} Wh`}</span>`);
+        // La voie autonome (Book 25 §5.4) : la manivelle de la lampe à dynamo, 1 Wh par minute.
+        if (charge < 1 && (this.inventaire.lampe_dynamo ?? 0) > 0) actions.push(`<button type="button" data-action="manivelle" title="La lampe à dynamo : 1 Wh par minute, à la force du bras">Manivelle</button>`);
       }
       // Les étoiles d'un objet de métier (Book 25 §4.2), en clair : « ★★★☆☆ ».
       const etoiles = etoilesDe(s);
@@ -1621,6 +1625,7 @@ export class Hud {
         if ((action === "reparer" || action === "reparer-fortune") && this.selection) this.actions.reparer(this.selection, action === "reparer-fortune");
         if (action === "demonter" && this.selection) this.actions.demonter(typeDe(this.selection));
         if (action === "lire" && this.selection) this.actions.lire(typeDe(this.selection));
+        if (action === "manivelle" && this.selection) this.actions.manivelle(this.selection);
         if ((action === "jeter1" || action === "jeterTout") && this.selection) {
           this.actions.jeter(this.selection, action === "jeter1" ? 1 : (this.inventaire[this.selection] ?? 1));
         }

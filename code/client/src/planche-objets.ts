@@ -88,6 +88,12 @@ const INSTALLATIONS: [string, InstallationVue["type"], InstallationVue["etat"]][
   ["lit de branchages", "lit_branchages", {}],
   ["décharge : 5 trouvailles", "decharge", { contenu: { conserve: 5 } }],
   ["décharge : 12 trouvailles", "decharge", { contenu: { conserve: 12 } }],
+  // ⚡ Les Voltaïques (Book 25 §5.3, chantier 6).
+  ["alarme électrique", "alarme_electrique", {}],
+  ["clôture de fortune", "cloture_fortune", {}],
+  ["clôture électrique", "cloture_electrique", {}],
+  ["plaque de choc", "plaque_choc", {}],
+  ["bain de dérouillage", "bain_derouillage", {}],
 ];
 INSTALLATIONS.forEach(([nom, type, etat], i) => {
   const x = i >= 16 ? 2 + (i - 16) * 6 : (i % 8) * 4;
@@ -174,7 +180,7 @@ NIVEAUX_INSTALLATIONS.forEach(([nom, type, niveau, etat], i) => {
 // ---------- Les armes en main ----------
 
 // Les armes de la 0.5 (Book 23 §4.6) : machette, masse et lance arrivent dans les types de `commun/`.
-const ARMES = ["hache", "marteau", "barre_metal", "couteau", "lame_forgee", "gourdin", "epieu", "pied_de_biche", "machette", "masse", "lance"] as TypeObjet[];
+const ARMES = ["hache", "marteau", "barre_metal", "couteau", "lame_forgee", "gourdin", "epieu", "pied_de_biche", "machette", "masse", "lance", "matraque_fortune", "matraque_electrique", "aiguillon"] as TypeObjet[];
 const etatArmes = { pose: "repos" as "repos" | "garde" | "frappe", attente: 0 };
 const porteurs: Personnage[] = [];
 void chargerHumanoides().then(() => {

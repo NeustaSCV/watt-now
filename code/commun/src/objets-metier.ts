@@ -244,6 +244,7 @@ export const OBJETS_METIER = {
     pluriel: "lampes de poche bricolées",
     poids: 0.25,
     description: "Quatre LED, un pack, une boîte de conserve en réflecteur : une lumière blanche, sans manivelle.",
+    lumiere: "frontale",
   },
   ventilateur_forge: {
     nom: "ventilateur de forge 12 V",

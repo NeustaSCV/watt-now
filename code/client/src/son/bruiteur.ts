@@ -94,6 +94,10 @@ export function gesteDe(libelle: string, bruit: BruitAction): Geste {
   if (l.startsWith("défourner")) return { id: "charbon", periode: 1.4 };
   if (l.startsWith("brancher") || l.startsWith("reprendre les batteries")) return { id: "pinces", fin: "interrupteur" };
   if (l.startsWith("recharger")) return { id: "pinces", fin: "interrupteur" };
+  // L'électricité des Voltaïques (Book 25 §5) : la manivelle de la dynamo ronronne ; on câble au tournevis.
+  if (l.startsWith("tourner la manivelle")) return { continu: "chaine_velo", fin: "interrupteur" };
+  if (l.includes("module de décharge") || l.includes("matraque") || l.includes("pack de cellules") || l.includes("aiguillon") || l.includes("électri") || l.includes("plaque de choc"))
+    return { id: "visser", periode: 1.1, fin: "interrupteur" };
   if (l.includes("pansement")) return { id: "tissu", periode: 1.1 };
   if (l.startsWith("reprendre ton sac")) return { id: "fouille" };
   if (l.startsWith("monter la meule") || l.startsWith("monter la dynamo") || l.includes("panneau")) return { id: "visser", periode: 1.1 };
@@ -283,8 +287,13 @@ export class Bruiteur {
     this.son.jouer(appuye ? "sifflement_lourd" : "sifflement");
   }
 
-  coup(resultat: "detruit" | "a_terre" | "vacille" | "raidi", ou: Ou): void {
-    // Raidi par une décharge : le crépitement viendra avec les sons des Voltaïques (chantier 6) ; un impact léger.
+  coup(resultat: "detruit" | "a_terre" | "vacille" | "raidi", ou: Ou & { electrique?: true }): void {
+    // La décharge (Book 25 §5.4) : la courte crépite (il se raidit) ; la longue claque (à terre, ou il s'éteint).
+    if (ou.electrique) {
+      this.son.jouer(resultat === "raidi" ? "decharge_courte" : "decharge_longue", ou);
+      if (resultat === "detruit") setTimeout(() => this.son.jouer("chute_corps", ou), 450);
+      return;
+    }
     if (resultat === "raidi") this.son.jouer("impact", ou);
     else if (resultat === "detruit") {
       this.son.jouer("coup_tete", ou);
@@ -330,7 +339,7 @@ export class Bruiteur {
 
   monde(o: {
       feux: { id: number; x: number; z: number; aspect: AspectFeu }[];
-      installations: { id: number; type: TypeInstallation; x: number; z: number; batteries: boolean }[];
+      installations: { id: number; type: TypeInstallation; x: number; z: number; batteries: boolean; sousTension?: boolean }[];
       pluie: number;
       dehors: boolean;
   }): void {
@@ -356,6 +365,8 @@ export class Bruiteur {
     }
     for (const i of o.installations) {
       if (i.type === "banc_recharge" && i.batteries) voulus.push({ cle: `banc${i.id}`, id: "bourdonnement", ou: i });
+      // Une clôture sous tension bourdonne, à deux pas (Book 25 §5.3).
+      if ((i.type === "cloture_fortune" || i.type === "cloture_electrique") && i.sousTension) voulus.push({ cle: `cloture${i.id}`, id: "bourdonnement", ou: i });
     }
     // La pluie couvre tout ; le tonnerre roule de temps en temps quand il pleut fort.
     if (o.pluie > 0.05) voulus.push({ cle: "pluie", id: "pluie", gain: o.pluie * (o.dehors ? 1 : 0.45) });

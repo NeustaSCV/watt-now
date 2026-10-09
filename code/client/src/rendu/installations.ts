@@ -8,6 +8,7 @@ import { fusionnerStatique } from "./fusion.ts";
 import { Panache } from "./panache.ts";
 import { batterieVoiture, modulePanneau, roueVelo } from "./pieces.ts";
 import { decharge, majTrouvailles } from "./decharge.ts";
+import { modeleMetier } from "./metier/index.ts";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import type { InstallationVue } from "../../../commun/src/messages.ts";
@@ -711,6 +712,15 @@ function alarme(): THREE.Group {
  * Les installations du métier (Book 25 : pièges, clôtures, tour à perche) arrivent avec leur modèle, aux chantiers 6
  * et 7 ; en attendant, un piquet de bois ligaturé, planté là où on l'a posée.
  */
+/** Un modèle du registre des métiers, rangé dans un groupe (null : pas de modèle). */
+function enGroupeMetier(o: THREE.Object3D | null): THREE.Group | null {
+  if (!o) return null;
+  if ((o as THREE.Group).isGroup) return o as THREE.Group;
+  const g = new THREE.Group();
+  g.add(o);
+  return g;
+}
+
 function piquetProvisoire(): THREE.Group {
   const c = new Assemblage(71);
   c.occlusion = 0.2;
@@ -922,7 +932,8 @@ export class VueInstallation {
         break;
       }
       default:
-        this.objet = piquetProvisoire();
+        // Les installations du métier (Book 25) : leur modèle vient du registre des métiers, sinon un piquet provisoire.
+        this.objet = enGroupeMetier(modeleMetier(donnees.type, "sol")) ?? piquetProvisoire();
     }
     // Le niveau (Book 24) : des pièces en plus. La citerne couvre la bassine : son eau ne se voit plus.
     const pieces = piecesNiveau(donnees.type, donnees.niveau ?? 1);
