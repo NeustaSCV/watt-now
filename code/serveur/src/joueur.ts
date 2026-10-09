@@ -253,6 +253,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
   savoir: Savoir;
   /** Les recettes dévoilées (l'arbre de progression, 0.7) : serveur/src/devoilement.ts. */
   private devoilement!: SuiviDevoilement;
+  /** « Il te manque… » ne cite pas une recette encore cachée (l'arbre de progression, 0.7, chantier 5). */
+  private readonly recetteVisible = (id: string): boolean => this.devoilement?.estDevoilee(id) ?? true;
   /** Le monde est prévenu de chaque fabrication (« voir faire », à 5 m) ; null : personne n'écoute. */
   surFabrication: ((recette: string) => void) | null = null;
   private bouge = false;
@@ -958,7 +960,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       if (resultat === "detruit") this.info("Il s'éteint.");
       else if (resultat === "raidi") this.indice("raidi", "Il est raidi : maintiens {agir} pour l'éteindre.");
     } else if (resultat === "a_terre") this.indice("a_terre", "Achève-le : frappe à la tête (maintiens {agir}, relâche).");
-    if (resultat === "detruit" && arme.objet === null) this.info(`À mains nues, ça ne suffira pas : prends une arme. ${ouTrouverPhrase("gourdin")}`);
+    if (resultat === "detruit" && arme.objet === null) this.info(`À mains nues, ça ne suffira pas : prends une arme. ${ouTrouverPhrase("gourdin", this.recetteVisible)}`);
   }
 
   /** Ce que le joueur prête au moteur des projectiles (tir.ts) : rien que des accès, aucune règle. */
@@ -1597,7 +1599,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     const d = DEMONTAGE[objet];
     if (!d) return this.info(`${OBJETS[objet].nom[0]!.toUpperCase()}${OBJETS[objet].nom.slice(1)} : rien à en tirer en le démontant, pour l'instant.`);
     const facteur = multiplicateurQualites(this.inventaire, d.qualites);
-    if (facteur === null) return this.infos(outilsManquantsBref(d.qualites, this.inventaire));
+    if (facteur === null) return this.infos(outilsManquantsBref(d.qualites, this.inventaire, undefined, this.recetteVisible));
     // Le poids d'après : le démontage laisse le rebut sur place, mais une pyramide de rouleaux pèse toujours son poids.
     const apres: Inventaire = { ...this.inventaire, [objet]: (this.inventaire[objet] ?? 0) - 1 };
     for (const [t, k] of Object.entries(d.donne) as [TypeObjet, number][]) apres[t] = (apres[t] ?? 0) + k;
@@ -2508,7 +2510,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       return this.info("Les fruits sont trop haut : pose un escabeau au pied de l'arbre, dans le cercle.");
     }
     const facteur = multiplicateurQualites(this.inventaire, usage.qualites);
-    if (facteur === null) return this.infos(outilsManquantsBref(usage.qualites, this.inventaire));
+    if (facteur === null) return this.infos(outilsManquantsBref(usage.qualites, this.inventaire, undefined, this.recetteVisible));
     if (poidsInventaire(this.inventaire, this.gourde.litres) + poidsDe(usage.donne) > capaciteDe(this.inventaire)) return this.sacTropLourd();
     this.commencer(usage.libelle, (usage.duree * facteur) / REGLAGES.gestes_vitesse, () => {
       const instant = this.maintenant();
@@ -2572,9 +2574,9 @@ export class Joueur implements Voyageur, ParticipantLecon {
     const horsFamille = estHorsFamille(modele, this.compte.famille);
     const r = recettePour(modele, this.compte.famille);
     if (this.lieu !== "terrain" && ("installation" in r.produit || r.installation)) return this.info("Ça se construit chez toi, sur ton terrain.");
-    if (!ingredientsPresents(this.inventaire, r)) return this.info(ceQuiManqueBref(r, this.inventaire));
+    if (!ingredientsPresents(this.inventaire, r)) return this.info(ceQuiManqueBref(r, this.inventaire, undefined, this.recetteVisible));
     const facteur = multiplicateurQualites(this.inventaire, r.qualites);
-    if (facteur === null) return this.infos(outilsManquantsBref(r.qualites, this.inventaire));
+    if (facteur === null) return this.infos(outilsManquantsBref(r.qualites, this.inventaire, undefined, this.recetteVisible));
     if (r.feu && ![...this.feux.values()].some((f) => f.allume && f.bois > 0 && !f.couvert && this.proche(f.x, f.z, 2.5))) {
       return this.info("Ça se cuisine près d'un feu allumé : approche-toi de ton feu (ou allumes-en un).");
     }
@@ -2860,7 +2862,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (feu.allume) return;
     if (feu.bois <= 0) return this.info("Il faut d'abord du bois : ajoute une branche ou une bûche.");
     const outil = (this.inventaire.pierre_a_feu ?? 0) > 0 ? "la pierre à feu" : (this.inventaire.briquet ?? 0) > 0 ? "le briquet" : null;
-    if (!outil) return this.info(`Rien pour allumer le feu : il faut un briquet ou une pierre à feu. ${ouTrouverPhrase("briquet")}`);
+    if (!outil) return this.info(`Rien pour allumer le feu : il faut un briquet ou une pierre à feu. ${ouTrouverPhrase("briquet", this.recetteVisible)}`);
     this.commencer(`Allumer le feu avec ${outil}`, DUREES.allumer, () => {
       if (feu.bois <= 0) return;
       feu.allume = true;
@@ -2915,7 +2917,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (!p) return;
     if (this.objetPorte()) return this.info("Tu as les bras pris : pose d'abord l'escabeau.");
     const arme = this.armeDuCombat();
-    if (!arme.objet) return this.info(`À mains nues, elle t'échappe : prends un gourdin. ${ouTrouverPhrase("gourdin")}`);
+    if (!arme.objet) return this.info(`À mains nues, elle t'échappe : prends un gourdin. ${ouTrouverPhrase("gourdin", this.recetteVisible)}`);
     const d = Math.hypot(p.x - this.position.x, p.z - this.position.z);
     if (d > arme.allonge + 0.3) return this.info(`Trop loin : approche-toi doucement en allure discrète (${p.etat === "fuit" ? "elle détale : attends qu'elle se calme" : "à un mètre"}).`);
     // Une poule qui picore ne voit rien venir ; une poule qui guette esquive souvent ; une poule qui fuit, jamais.
@@ -2975,7 +2977,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
   }
 
   private remplirGourde(): void {
-    if ((this.inventaire.gourde ?? 0) < 1) return this.info(`Tu n'as pas de gourde. ${ouTrouverPhrase("gourde")}`);
+    if ((this.inventaire.gourde ?? 0) < 1) return this.info(`Tu n'as pas de gourde. ${ouTrouverPhrase("gourde", this.recetteVisible)}`);
     if (distanceMare(this.position.x, this.position.z) > 1.5) return this.info("Approche-toi de la mare.");
     if (this.gourde.litres >= CONTENANCE_GOURDE && this.gourde.contenu === "brute") return this.info("Ta gourde est déjà pleine.");
     this.commencer("Remplir la gourde à la mare", DUREES.remplirGourde, () => {
@@ -3049,7 +3051,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     }
     const facteur = multiplicateurQualites(this.inventaire, e.qualites);
     if (facteur === null) {
-      this.infos(outilsManquantsBref(e.qualites, this.inventaire));
+      this.infos(outilsManquantsBref(e.qualites, this.inventaire, undefined, this.recetteVisible));
       return null;
     }
     return { cout, dureeS: Math.max(2, e.duree / REGLAGES.fabrication_acceleration) * facteur };
@@ -3479,7 +3481,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       }
       case "monter_dynamo": {
         if (i.type !== "pedalier" || i.etat.dynamo) return;
-        if (!this.inventaire.dynamo_velo) return this.info(`Il te faut la dynamo du vélo. ${ouTrouverPhrase("dynamo_velo")}`);
+        if (!this.inventaire.dynamo_velo) return this.info(`Il te faut la dynamo du vélo. ${ouTrouverPhrase("dynamo_velo", this.recetteVisible)}`);
         return this.commencer("Monter la dynamo sur le pédalier", 20, () => {
           if (!this.inventaire.dynamo_velo) return;
           this.retirerPlusieurs({ dynamo_velo: 1 });

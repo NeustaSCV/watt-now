@@ -35,6 +35,15 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 - **Les personnages d'avant** ne voient plus ce qu'ils n'ont pas encore vécu, mais **rien n'est détruit** : leurs installations, leurs objets, ce qu'ils ont déjà fabriqué restent.
 - Une recette à laquelle on n'a pas encore pensé ne se fabrique pas : « Tu n'y as pas encore pensé. »
 
+**L'arbre de progression dans Fabriquer**
+- **Fabriquer ne montre que tes idées** : le premier jour, le feu de camp et l'abri ; l'en-tête dit « 4 recettes · 3 à découvrir ».
+- **À découvrir** : en bas du panneau, des silhouettes des prochaines recettes, l'icône assombrie et sans nom, avec ce dont tu auras besoin (« Dormir par terre, c'est dormir à moitié. »). Trois d'abord, « Voir les autres » pour le reste.
+- **Une pastille rouge** dans le coin du bouton Fabriquer compte les idées nouvelles ; un point rouge marque l'onglet où elles sont (Matériaux, Outils…).
+- **« Nouveau »** : la carte d'une idée nouvelle porte l'étiquette et un liseré doré, et passe en tête de son onglet le temps d'une ouverture. Le téléphone et l'ordinateur sont d'accord sur ce qui a été vu.
+- **Les onglets arrivent à 8 recettes** : avant, une seule liste ; ensuite toute la barre, dans le même ordre, les onglets encore vides atténués.
+- **Les recettes des autres familles** ne s'affichent plus d'emblée : après le Comptoir, un échange ou une rencontre, une ligne par famille (« Chez les Voltaïques · 20 recettes »), à déplier. Celles qu'on a vu faire, ou dont on tient le produit, se montrent une à une.
+- **« Il manque… »** ne nomme plus une recette à laquelle tu n'as pas encore pensé : « ça se fabrique (tu y penseras) ».
+
 ---
 
 ## 0.6 · déployée le 2026-10-09
