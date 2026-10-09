@@ -949,6 +949,29 @@ body {
   height: 100%;
   background: #3d8fd6;
 }
+/* Les munitions d'une arme de tir (Book 25 §8.6) : « ➶7 » en bas à gauche de la case, rouge quand il n'y a plus rien. */
+#hud .sac .case .munitions-case {
+  position: absolute;
+  left: 2px;
+  bottom: 1px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: #3b2a1e;
+  background: rgba(255, 250, 238, 0.9);
+  border-radius: 3px;
+  padding: 0 2px;
+  font-variant-numeric: tabular-nums;
+}
+#hud .sac .case .munitions-case.vide {
+  color: #b3261e;
+}
+/* Les étoiles dans un nom (guichet du Comptoir, échange) : dorées, sans retour à la ligne. */
+#hud .etoiles-nom {
+  color: #b07a00;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
 #hud .fiche .etoiles-fiche {
   margin-left: 4px;
   font-size: 13px;

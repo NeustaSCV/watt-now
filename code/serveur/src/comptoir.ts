@@ -15,6 +15,7 @@ import {
 } from "../../commun/src/economie.ts";
 import type { MessageServeur, VueComptoir } from "../../commun/src/messages.ts";
 import { OBJETS, type TypeObjet } from "../../commun/src/objets.ts";
+import type { CleObjet } from "../../commun/src/etoiles.ts";
 import type { Base } from "./base.ts";
 
 interface EtatEnBase extends EtatComptoir {
@@ -99,11 +100,11 @@ export class Comptoir {
     this.etat.tresorerie += montant;
   }
 
-  entrerEnStock(type: TypeObjet, n: number): void {
+  entrerEnStock(type: CleObjet, n: number): void {
     this.etat.stock = { ...this.etat.stock, [type]: (this.etat.stock[type] ?? 0) + n };
   }
 
-  sortirDuStock(type: TypeObjet, n: number): boolean {
+  sortirDuStock(type: CleObjet, n: number): boolean {
     if ((this.etat.stock[type] ?? 0) < n) return false;
     const stock = { ...this.etat.stock, [type]: (this.etat.stock[type] ?? 0) - n };
     if (!stock[type]) delete stock[type];

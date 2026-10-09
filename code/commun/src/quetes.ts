@@ -16,8 +16,13 @@ export type Condition =
   | { a: "fait"; fait: string; but: number }
   /** Une installation de ce type sur son terrain (avec un équipement monté, ou un niveau minimal, si précisé ; Book 24). */
   | { a: "installation"; type: string; avec?: "meule" | "dynamo"; niveau?: number }
-  /** Au moins `n` objets parmi ces types, dans le sac. */
-  | { a: "objet"; types: TypeObjet[]; n: number }
+  /** Plusieurs faits additionnés (vendus ou donnés, de plusieurs sortes), au moins `but` en tout (0.6). */
+  | { a: "faits"; faits: string[]; but: number }
+  /**
+   * Au moins `n` objets parmi ces types, dans le sac, toutes étoiles confondues ; avec `etoiles`, seuls comptent les
+   * exemplaires qui en ont au moins autant (Book 25 §4.2).
+   */
+  | { a: "objet"; types: TypeObjet[]; n: number; etoiles?: number }
   /** De l'électricité dans ses batteries (toutes, ou un type), en Wh. */
   | { a: "wh"; but: number; batterie?: TypeBatterie }
   /** De quoi manger dans le sac (hors toxiques), en kcal. */
@@ -50,6 +55,16 @@ export interface Quete {
 
 const fait = (f: string, but = 1): Condition => ({ a: "fait", fait: f, but });
 const installation = (type: string): Condition => ({ a: "installation", type });
+/** On l'a fabriqué (par l'une de ces recettes), ou on l'a dans le sac. */
+const fabriqueOuObjet = (recettes: string[], types: TypeObjet[]): Condition => ({
+  a: "un_de",
+  conditions: [{ a: "faits", faits: recettes.map((r) => `fabrique:${r}`), but: 1 }, { a: "objet", types, n: 1 }],
+});
+/**
+ * Passé à une autre famille (Book 25 §9.4) : vendu au Comptoir, ou donné dans un échange à un joueur d'une autre
+ * famille. L'étape se fait donc seul, même quand personne d'une autre famille n'est sur le serveur.
+ */
+const passeAuxAutres = (types: TypeObjet[], but = 1): Condition => ({ a: "faits", faits: types.flatMap((t) => [`vente:${t}`, `don_autre_famille:${t}`]), but });
 
 const INSTALLER: Quete[] = [
   {
@@ -105,6 +120,25 @@ const INSTALLER: Quete[] = [
     objectifs: [{ libelle: "Gourdin, épieu ou hache", condition: { a: "objet", types: ["gourdin", "epieu", "hache"], n: 1 } }],
     lecon: "Équipe ton arme depuis le sac. L'épieu les tient à distance, avant qu'ils saisissent.",
     recompense: { objets: { conserve: 1 } },
+  },
+  // L'arc pour tous (Book 25 §3 et §9.4) : monter un arc, puis un tir plein qui détruit.
+  {
+    id: "premier_arc",
+    ligne: "installer",
+    titre: "Le premier arc",
+    texte: "Une perche de frêne (à la lisière) ou une branche droite, et une ficelle : un arc de fortune. Ou mieux, un arc de frêne séché.",
+    objectifs: [{ libelle: "Un arc", condition: fabriqueOuObjet(["arc_fortune", "arc_fortune_branche", "arc_simple", "arc_if"], ["arc_fortune", "arc_simple", "arc_if", "arc_sportif"]) }],
+    lecon: "Sac → « Prêt à tirer », puis maintiens {lancer} pour bander. Ramasse tes flèches.",
+    recompense: { objets: { fleche_os: 3 } },
+  },
+  {
+    id: "tir_plein",
+    ligne: "installer",
+    titre: "Tir plein",
+    texte: "Bande l'arc à fond ({lancer} maintenu), attends que le cercle rougisse, et lâche : une flèche à la tête.",
+    objectifs: [{ libelle: "Éteint détruit d'une flèche", condition: fait("tete:fleche") }],
+    lecon: "L'arc est l'arme la plus discrète : la corde ne s'entend qu'à quelques pas.",
+    recompense: { wotts: 15 },
   },
   {
     id: "alarme",
@@ -336,7 +370,154 @@ const METIER: Quete[] = [
   },
 ];
 
-export const QUETES: Quete[] = [...METIER, ...INSTALLER, ...AUTRES];
+// ---------- Le métier, suite (Book 25 §9.4, 0.6) : quatre étapes par famille, qui mènent vers l'échange ----------
+// Chacune se fait seul (Book 22 §1) ; l'étape 8 se valide aussi au Comptoir, s'il n'y a personne d'une autre famille.
+
+const LAMES: TypeObjet[] = ["lame_forgee", "machette_forgee", "hachette", "serpe", "hache_forgee", "glaive"];
+
+const METIER_06: Quete[] = [
+  // 🔥 Charbonniers : les lames
+  {
+    id: "pinces",
+    ligne: "metier",
+    famille: "charbonniers",
+    titre: "Les pinces",
+    texte: "Le premier outil du forgeron : forge des pinces de forge (une barre de métal, du charbon).",
+    objectifs: [{ libelle: "Pinces de forge", condition: fabriqueOuObjet(["pinces_forge"], ["pinces_forge"]) }],
+    lecon: "Sans pinces, pas plus de ★★. Avec elles et une enclume, ★★★.",
+    recompense: { wotts: 20 },
+  },
+  {
+    id: "trempe",
+    ligne: "metier",
+    famille: "charbonniers",
+    titre: "La trempe",
+    texte: "Forge une machette, l'arme de ton métier. Ressort ou fer doux, trempe à l'eau ou à l'huile : vise ★★ ou mieux.",
+    objectifs: [{ libelle: "Machette forgée ★★", condition: { a: "objet", types: ["machette_forgee"], n: 1, etoiles: 2 } }],
+    lecon: "Une lame vaut sa moins bonne part : l'acier, la trempe ou la forge.",
+    recompense: { wotts: 25 },
+  },
+  {
+    id: "mise_acier",
+    ligne: "metier",
+    famille: "charbonniers",
+    titre: "La mise d'acier",
+    texte: "Soude un tranchant de ressort sur un corps de fer : forge des hachettes, ou une hache.",
+    objectifs: [{ libelle: "Hachette ou hache forgée", condition: fabriqueOuObjet(["hachette", "hache_forgee", "hache_forgee_soc"], ["hachette", "hache_forgee"]) }],
+    lecon: "La hachette se lance : va la reprendre là où elle tombe.",
+    recompense: { wotts: 30 },
+  },
+  {
+    id: "fournisseur",
+    ligne: "metier",
+    famille: "charbonniers",
+    titre: "Le fournisseur",
+    texte: "Une lame pour un joueur d'une autre famille : échange-la ({agir} près de lui), ou vends-la au Comptoir.",
+    objectifs: [{ libelle: "Lame passée aux autres", condition: passeAuxAutres(LAMES) }],
+    lecon: "Une lame s'use, un débris se reforge : tes clients reviendront.",
+    recompense: { wotts: 40 },
+  },
+  // ⚡ Voltaïques : l'électricité
+  {
+    id: "pack",
+    ligne: "metier",
+    famille: "voltaiques",
+    titre: "Du courant en poche",
+    texte: "Trois cellules lithium (une batterie externe, une perceuse…), du fil de cuivre : monte un pack de cellules.",
+    objectifs: [{ libelle: "Pack de cellules", condition: fabriqueOuObjet(["pack_cellules"], ["pack_cellules"]) }],
+    lecon: "12 Wh qui tiennent dans la main : de quoi éteindre neuf Éteints.",
+    recompense: { wotts: 20 },
+  },
+  {
+    id: "raquette",
+    ligne: "metier",
+    famille: "voltaiques",
+    titre: "La Raquette",
+    texte: "Monte une matraque électrique, puis éteins un Éteint : une courte ({agir}) le raidit, une longue l'éteint.",
+    objectifs: [
+      { libelle: "Matraque électrique", condition: fabriqueOuObjet(["matraque_electrique", "matraque_electrodes", "matraque_manche_tourne"], ["matraque_electrique"]) },
+      { libelle: "Éteint éteint à la décharge", condition: fait("detruit:electrique") },
+    ],
+    lecon: "Casque ou pas, le courant passe. Et une courte fait lâcher qui te tient.",
+    recompense: { wotts: 25 },
+  },
+  {
+    id: "alarme_electrique",
+    ligne: "metier",
+    famille: "voltaiques",
+    titre: "Prévenu sans bruit",
+    texte: "Tends une alarme électrique (fil de fer, pile, LED, petit ressort) là où ils passent.",
+    objectifs: [{ libelle: "Alarme électrique posée", condition: { a: "un_de", conditions: [installation("alarme_electrique"), fait("fabrique:alarme_electrique")] } }],
+    lecon: "La LED s'allume, ton téléphone vibre, et rien ne fait de bruit.",
+    recompense: { wotts: 30 },
+  },
+  {
+    id: "courant_autres",
+    ligne: "metier",
+    famille: "voltaiques",
+    titre: "Le courant chez les autres",
+    texte: "Un pack ou une lampe bricolée pour un joueur d'une autre famille : échange-le, ou vends-le au Comptoir.",
+    objectifs: [{ libelle: "Pack ou lampe passé aux autres", condition: passeAuxAutres(["pack_cellules", "lampe_bricolee"]) }],
+    lecon: "Un pack se vide, une lampe aussi : on reviendra te voir.",
+    recompense: { wotts: 40 },
+  },
+  // ⚙️ Mécanistes : l'arbalète, les pièges
+  {
+    id: "arbalete",
+    ligne: "metier",
+    famille: "mecanistes",
+    titre: "Le bois qui plie",
+    texte: "À l'établi : un arbrier scié, une noix, un arc (une perche de frêne suffit), une corde. Monte une arbalète.",
+    objectifs: [{ libelle: "Arbalète", condition: fabriqueOuObjet(["arbalete", "arbalete_lourde"], ["arbalete", "arbalete_lourde"]) }],
+    lecon: "Armée d'avance, elle tire tout de suite. Réarmer : 3 s sans bouger.",
+    recompense: { wotts: 20 },
+  },
+  {
+    id: "carreau",
+    ligne: "metier",
+    famille: "mecanistes",
+    titre: "Le carreau",
+    texte: "Sac → « Prêt à tirer », puis {lancer} : un carreau à la tête, et l'Éteint ne se relève plus.",
+    objectifs: [{ libelle: "Éteint détruit d'un carreau", condition: fait("tete:carreau") }],
+    lecon: "Jusqu'à 12 m, rien à bander. Au contact, il te faut une autre arme.",
+    recompense: { wotts: 25 },
+  },
+  {
+    id: "machoires",
+    ligne: "metier",
+    famille: "mecanistes",
+    titre: "Les mâchoires",
+    texte: "Pose un piège sur leur passage : un assommoir (bûches, corde) ou des mâchoires (lames de ressort).",
+    objectifs: [
+      {
+        libelle: "Piège posé",
+        condition: {
+          a: "un_de",
+          conditions: [
+            installation("assommoir"),
+            installation("machoires_fortune"),
+            installation("piege_machoires"),
+            { a: "faits", faits: ["fabrique:assommoir", "fabrique:machoires_fortune", "fabrique:piege_machoires"], but: 1 },
+          ],
+        },
+      },
+    ],
+    lecon: "Un piège ne tue pas : il le tient pour toi. À toi d'achever.",
+    recompense: { wotts: 30 },
+  },
+  {
+    id: "carquois",
+    ligne: "metier",
+    famille: "mecanistes",
+    titre: "Le carquois des autres",
+    texte: "8 carreaux pour un joueur d'une autre famille : échange-les, ou vends-les au Comptoir.",
+    objectifs: [{ libelle: "Carreaux passés aux autres", condition: passeAuxAutres(["carreau", "carreau_acier"], 8) }],
+    lecon: "Un carreau se perd, un carreau casse : ton carquois se vendra chaque semaine.",
+    recompense: { wotts: 40 },
+  },
+];
+
+export const QUETES: Quete[] = [...METIER, ...METIER_06, ...INSTALLER, ...AUTRES];
 
 export const QUETE = new Map(QUETES.map((q) => [q.id, q]));
 

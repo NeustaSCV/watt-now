@@ -21,7 +21,8 @@ const VERBES_AMENAGEMENT = new Set(["ameliorer", "redescendre", "demonter_instal
 
 function offreValide(o: unknown): boolean {
   if (!estTable(o) || !nombre(o.wotts) || o.wotts < 0 || !estTable(o.objets)) return false;
-  return Object.entries(o.objets).every(([type, n]) => estObjet(type) && Number.isInteger(n) && (n as number) >= 0 && (n as number) <= 1e6);
+  // Un exemplaire étoilé s'échange aussi (Book 25 §4.2, 0.6).
+  return Object.entries(o.objets).every(([type, n]) => estCleObjet(type) &&Number.isInteger(n) && (n as number) >= 0 && (n as number) <= 1e6);
 }
 
 function operationComptoirValide(op: unknown): boolean {
@@ -29,7 +30,8 @@ function operationComptoirValide(op: unknown): boolean {
   switch (op.genre) {
     case "vendre":
     case "acheter":
-      return estObjet(op.objet) && quantite(op.quantite);
+      // Un exemplaire étoilé aussi (Book 25 §4.2, 0.6), sous sa forme canonique.
+      return estCleObjet(op.objet) && quantite(op.quantite);
     case "deposer":
     case "retirer":
       return op.batterie === "petite_batterie" || op.batterie === "batterie_voiture";

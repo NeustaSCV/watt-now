@@ -5,6 +5,7 @@
 import { REGLAGES } from "./reglages.ts";
 import type { Inventaire, TypeObjet } from "./objets.ts";
 import { energieGrise } from "./recettes.ts";
+import { etoilesDe, facteurs, typeDe, type CleObjet } from "./etoiles.ts";
 
 // ---------- Les prix (Book 07 §4) ----------
 
@@ -35,6 +36,33 @@ export function prixAchat(type: TypeObjet, tresorerieBasse: boolean): number | n
   if (base <= 0) return null;
   if (tresorerieBasse) return RESSOURCES_DE_BASE.includes(type) ? Math.max(1, Math.round(base * PLANCHER * 10) / 10) : null;
   return Math.max(0.5, Math.round(base * (1 - REGLAGES.prix_fourchette) * 10) / 10);
+}
+
+// ---------- Les exemplaires étoilés (Book 25 §4.2, 0.6) ----------
+
+/**
+ * Ce que changent les étoiles d'un exemplaire au Comptoir : sa durée de vie. Une ★★★★★ dure deux fois plus qu'une
+ * ★★★, elle vaut deux fois plus ; une ★ moitié moins. Un objet sans étoiles : ×1.
+ */
+export function facteurPrix(cle: string): number {
+  const e = etoilesDe(cle);
+  return e === null ? 1 : facteurs(typeDe(cle), e).solidite;
+}
+
+/** Ce que coûte un exemplaire (« machette_forgee#4 ») au Comptoir. */
+export function prixVenteCle(cle: CleObjet): number {
+  return Math.max(1, Math.round(prixVente(typeDe(cle)) * facteurPrix(cle)));
+}
+
+/** Ce que le Comptoir paie pour un exemplaire (null : il n'achète pas). */
+export function prixAchatCle(cle: CleObjet, tresorerieBasse: boolean): number | null {
+  return prixAchatExemplaire(prixAchat(typeDe(cle), tresorerieBasse), cle);
+}
+
+/** Le prix d'achat d'un exemplaire, à partir de celui de son type (le guichet du client n'a que celui-ci). */
+export function prixAchatExemplaire(prixDuType: number | null | undefined, cle: string): number | null {
+  if (prixDuType === null || prixDuType === undefined) return null;
+  return Math.max(0.5, Math.round(prixDuType * facteurPrix(cle) * 10) / 10);
 }
 
 // ---------- L'énergie (Book 07 §3.4) ----------

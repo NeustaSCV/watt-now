@@ -32,7 +32,7 @@ import {
   type Charges,
   type TypeBatterie,
 } from "../../commun/src/energie.ts";
-import { GESTE_TENU_MAX_S, PROGRESSION_GARDEE_MS, TERRAIN_TAILLE, TICK_HZ } from "../../commun/src/regles.ts";
+import { GESTE_TENU_MAX_S, PROGRESSION_GARDEE_MS, TERRAIN_TAILLE, TICK_HZ, type Famille } from "../../commun/src/regles.ts";
 import {
   BOIS_INITIAL_FEU,
   BOIS_PAR_LITRE_BOUILLI,
@@ -89,8 +89,8 @@ import {
   WOTTS_PAR_WH_M,
   ajouterWotts,
   formaterWotts,
-  prixAchat,
-  prixVente,
+  prixAchatCle,
+  prixVenteCle,
   valeurWotts,
   type Wotts,
 } from "../../commun/src/economie.ts";
@@ -670,8 +670,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
 
   /** Ce qui manque pour donner une offre, ou null si tout y est. */
   manqueA(offre: OffreEchange): string | null {
-    for (const [type, n] of Object.entries(offre.objets) as [TypeObjet, number][]) {
-      if (!estObjet(type) || !Number.isInteger(n) || n < 0) return "Offre invalide.";
+    for (const [type, n] of Object.entries(offre.objets) as [CleObjet, number][]) {
+      if (!estCleObjet(type) ||!Number.isInteger(n) || n < 0) return "Offre invalide.";
       if ((this.inventaire[type] ?? 0) < n) return `${this.compte.pseudo} n'a plus ${nommer(type, n)}.`;
     }
     if (!(offre.wotts >= 0) || offre.wotts > valeurWotts(this.poche, this.maintenant()) + 1e-6) return `${this.compte.pseudo} n'a pas assez de wotts en poche.`;
@@ -703,7 +703,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
   }
 
   /** L'échange validé par les deux : on donne, on reçoit (le serveur a tout vérifié avant). */
-  appliquerEchange(donne: OffreEchange, recoit: OffreEchange, chargesRecues: Charges): void {
+  appliquerEchange(donne: OffreEchange, recoit: OffreEchange, chargesRecues: Charges, avec?: Famille): void {
     const instant = this.maintenant();
     const partent = this.chargesQuiPartent(donne.objets);
     this.charges = Object.fromEntries(BATTERIES.map((b) => [b, Math.max(0, (this.charges[b] ?? 0) - (partent[b] ?? 0))])) as Charges;
@@ -715,6 +715,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
     this.base.sauverCharges(this.compte.id, this.charges, instant);
     this.envoyerWotts();
     this.noterFait("echange");
+    // Ce qu'on a passé à une autre famille (Book 25 §9.4 : « Le fournisseur », « Le carquois des autres »).
+    if (avec && avec !== this.compte.famille) for (const [cle, n] of Object.entries(donne.objets)) this.noterFait(`don_autre_famille:${typeDe(cle)}`, n ?? 0);
   }
 
   /** Des écritures qui vont ensemble (un échange : les deux côtés) : toutes enregistrées, ou aucune. */
@@ -753,8 +755,9 @@ export class Joueur implements Voyageur, ParticipantLecon {
     switch (op?.genre) {
       case "vendre": {
         const n = Math.floor(op.quantite);
-        if (!estObjet(op.objet) || !(n >= 1) || (this.inventaire[op.objet] ?? 0) < n) return;
-        const prix = prixAchat(op.objet, this.comptoir.basse);
+        if (!estCleObjet(op.objet) || !(n >= 1) || (this.inventaire[op.objet] ?? 0) < n) return;
+        // Un exemplaire étoilé se paie selon ses étoiles (Book 25 §4.2) ; il entre en stock tel quel.
+        const prix = prixAchatCle(op.objet, this.comptoir.basse);
         if (prix === null) return this.info(this.comptoir.basse ? "Les caisses sont presque vides : on ne rachète plus que le bois, la pierre et la nourriture." : "Les Compteurs ne rachètent pas ça.");
         const total = prix * n;
         if (!this.comptoir.payer(total)) return this.info("Le comptoir n'a plus de quoi payer. Reviens plus tard : sa trésorerie se refait quand les joueurs achètent.");
@@ -764,16 +767,16 @@ export class Joueur implements Voyageur, ParticipantLecon {
         this.poche = ajouterWotts(this.poche, total, instant);
         this.mesurer("wotts", "vente", total, { objet: op.objet, n });
         this.noterFait("wotts_gagnes", total);
-        this.noterFait(`vente:${op.objet}`, n);
+        this.noterFait(`vente:${typeDe(op.objet)}`, n);
         this.info(`Vendu : ${nommer(op.objet, n)}, +${formaterWotts(total)}.`);
         break;
       }
       case "acheter": {
         const n = Math.floor(op.quantite);
-        if (!(n >= 1) || (this.comptoir.stock[op.objet] ?? 0) < n || !estObjet(op.objet)) return;
-        const total = prixVente(op.objet) * n;
+        if (!(n >= 1) || !estCleObjet(op.objet) || (this.comptoir.stock[op.objet] ?? 0) < n) return;
+        const total = prixVenteCle(op.objet) * n;
         if (total > enPoche + 1e-6) return this.info(`Il te faut ${formaterWotts(total)} en bons. Gagne-les : dépose de l'électricité, vends, ou pédale pour les Compteurs.`);
-        if (poidsInventaire(this.inventaire, this.gourde.litres) + OBJETS[op.objet].poids * n > capaciteDe(this.inventaire)) return this.sacTropLourd();
+        if (poidsInventaire(this.inventaire, this.gourde.litres) + OBJETS[typeDe(op.objet)].poids * n > capaciteDe(this.inventaire)) return this.sacTropLourd();
         if (!this.comptoir.sortirDuStock(op.objet, n)) return;
         this.poche = ajouterWotts(this.poche, -total, instant);
         this.mesurer("wotts", "achat", -total, { objet: op.objet, n });
@@ -922,7 +925,9 @@ export class Joueur implements Voyageur, ParticipantLecon {
     this.user(enMain);
     this.electricite.apresDecharge(enMain, appuye);
     if (resultat === "detruit") this.apresDestruction(cible);
-    const electrique = arme.type === "electrique" ? ({ electrique: true } as const) : {};
+    // Pour les quêtes (Book 25 §9.4 : « La Raquette ») : détruit au contact, et de quel type.
+    if (resultat === "detruit") this.noterFait(`detruit:${arme.type}`);
+    const electrique =arme.type === "electrique" ? ({ electrique: true } as const) : {};
     const coups = [{ t: "coup" as const, id: cible.id, x: cible.x, z: cible.z, resultat, ...electrique }];
     if (effet.voisinRaidi) coups.push({ t: "coup" as const, id: effet.voisinRaidi.id, x: effet.voisinRaidi.x, z: effet.voisinRaidi.z, resultat: "raidi", ...electrique });
     for (const coup of coups) {
@@ -978,6 +983,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       user: (arme) => j.user(arme),
       apresDestruction: (e) => j.apresDestruction(e),
       commencer: (libelle, dureeS, appliquer) => j.commencer(libelle, dureeS, appliquer, 0, "outil"),
+      noter: (fait) => j.noterFait(fait),
     };
   }
 
