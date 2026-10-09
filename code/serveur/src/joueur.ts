@@ -58,7 +58,7 @@ import {
 } from "../../commun/src/survie.ts";
 import { DISTANCE_INTERACTION, PORTEE_ARBRE, distanceMare, RAYON_ESCABEAU, REPOUSSE_MS, USAGES, estArbre, ressourceVisible } from "../../commun/src/terrain.ts";
 import { heuresEcoulees } from "../../commun/src/temps.ts";
-import { DEMONTAGE, LIEU_DE_FOUILLE, tirerVestiges } from "../../commun/src/vestiges.ts";
+import { DEMONTAGE, LIEU_DE_FOUILLE, estOrdure, tirerVestiges } from "../../commun/src/vestiges.ts";
 import {
   DUREE_VOYAGE_S,
   EAU_PAR_KM,
@@ -758,6 +758,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
         const n = Math.floor(op.quantite);
         if (!estCleObjet(op.objet) || !(n >= 1) || (this.inventaire[op.objet] ?? 0) < n) return;
         // Un exemplaire étoilé se paie selon ses étoiles (Book 25 §4.2) ; il entre en stock tel quel.
+        // Une ordure (valeur 0, lot 2) ne se reprend jamais, trésorerie basse ou non (Q2).
+        if (estOrdure(typeDe(op.objet))) return this.info("Les Compteurs ne reprennent pas les ordures.");
         const prix = prixAchatCle(op.objet, this.comptoir.basse);
         if (prix === null) return this.info(this.comptoir.basse ? "Les caisses sont presque vides : on ne rachète plus que le bois, la pierre et la nourriture." : "Les Compteurs ne rachètent pas ça.");
         const total = prix * n;
@@ -1378,7 +1380,9 @@ export class Joueur implements Voyageur, ParticipantLecon {
         this.info(
           intox.champignon === "phalloide"
             ? "Des crampes terribles, des vomissements : ce champignon était une amanite phalloïde. Ton foie lâche."
-            : "Tu vomis, la tête tourne, tu vois trouble : ce champignon était toxique.",
+            : intox.champignon === "conserve_bombee"
+              ? "Tu vomis, les jambes flanchent : la conserve bombée était avariée. Bois, et repose-toi."
+              : "Tu vomis, la tête tourne, tu vois trouble : ce champignon était toxique.",
         );
         this.envoyerBesoins();
       }
@@ -2895,7 +2899,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       if ((this.inventaire[objet] ?? 0) < 1) return;
       this.retirer(objet, 1);
       // Rien ne se perd (P-002) : la conserve laisse sa boîte.
-      if (objet === "conserve") this.ajouterPlusieurs({ boite_vide: 1 });
+      if (objet === "conserve" || objet === "conserve_bombee") this.ajouterPlusieurs({ boite_vide: 1 });
       // Manger désaltère aussi : l'eau des fruits, des champignons, des plats (2026-10-08).
       this.besoins = { ...this.besoins, kcal: Math.min(RESERVE_KCAL_MAX, this.besoins.kcal + kcal), eau: Math.min(RESERVE_EAU_MAX, this.besoins.eau + (OBJETS[objet].eau ?? 0)) };
       // Un plat chaud réconforte et cale (2026-10-08).

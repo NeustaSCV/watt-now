@@ -765,6 +765,10 @@ const TEINTES_FAMILLES: Record<FamilleVestige, string[]> = {
   voiture: ["#3a3a3a", "#55524d", "#6b7b8c"],
   ferme: ["#7f8f3a", "#a07c48", "#c9b48a", "#5d8a46"],
   composant: ["#8a8f96"],
+  // Lot 2 (0.7) : teintes provisoires ; les pictogrammes et les dessins propres viennent avec les icônes du lot 2.
+  dechet: ["#9a958c", "#b8b2a6", "#7f8a7a"],
+  textile: ["#4a6fa5", "#c8362b", "#e8d8a8", "#55524d"],
+  loisir: ["#e8a8b8", "#5f9f55", "#d8c43a", "#3f8fb0"],
 };
 
 /** Une teinte stable pour un objet (d'après son nom de code), parmi celles de sa famille. */
@@ -820,6 +824,21 @@ function dessinGenerique(famille: FamilleVestige, teinte: string): string {
     <path d="M24 7 L39 15.5 V32.5 L24 41 L9 32.5 V15.5 Z" fill="${teinte}" ${T}/>
     <circle cx="24" cy="24" r="6.5" fill="#f4ecd8" ${T}/>
     <path d="M16 13 L22 10" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round" opacity="0.7"/>`;
+    // Lot 2 (0.7) : pictogrammes provisoires (sac froissé, t-shirt, ballon), en attendant les icônes du lot 2.
+    case "dechet":
+      return `
+    <path d="M14 16 Q12 10 18 11 L24 8 L30 11 Q36 10 34 16 L38 36 Q38 42 32 42 H16 Q10 42 10 36 Z" fill="${teinte}" ${T}/>
+    <path d="M18 11 L24 15 L30 11" fill="none" ${T} stroke-width="1.4"/>
+    <path d="M17 24 l5 3 M28 30 l4 -3 M20 34 l4 1" stroke="#55524d" stroke-width="1.4" stroke-linecap="round"/>`;
+    case "textile":
+      return `
+    <path d="M17 9 L8 15 L12 22 L16 20 V40 H32 V20 L36 22 L40 15 L31 9 Q24 14 17 9 Z" fill="${teinte}" ${T}/>
+    <path d="M19 9.5 Q24 16 29 9.5" fill="none" ${T} stroke-width="1.4"/>`;
+    case "loisir":
+      return `
+    <circle cx="24" cy="24" r="15" fill="${teinte}" ${T}/>
+    <path d="M24 17 L30 21 L28 28 H20 L18 21 Z" fill="#2b2b2b"/>
+    <path d="M24 9 V17 M30 21 L38 18 M28 28 L33 36 M20 28 L15 36 M18 21 L10 18" stroke="#2b2b2b" stroke-width="1.2"/>`;
   }
 }
 
