@@ -1,7 +1,8 @@
 # Book 06 — Les Zombies
 
-> Document de conception · version 0.6 · 2026-10-07
+> Document de conception · version 0.7 · 2026-10-09
 > Statut : **brouillon de travail**. Valeurs indicatives, à calibrer en playtest.
+> v0.7 (2026-10-09) : §8.2 et §9.3 alignés sur le [Book 25](25-le-metier-des-familles.md) : l'arc pour tous, l'arbalète mécaniste, l'arme électrique qui raidit puis détruit (le casque n'y change rien), la clôture qui raidit sans détruire, l'arme à feu reportée après la 1.0, le bruit d'un coup tranchant à 10 m.
 > S'appuie sur les books [01](01-les-trois-feux.md) (signature, monde, temps), [02](02-crafting.md) (bruit des outils) et [05](05-sante-et-soins.md) (morsure, infection).
 
 ---
@@ -40,6 +41,7 @@
 | **Au sol** | **N'importe quel coup l'achève**, même au couteau ou aux poings : la tête est à portée |
 | **Jambe** | Un coup solide la brise : il devient **rampant** |
 | **Bras** | Un coup solide le brise : il ne peut plus saisir de ce côté |
+| **Le courant** | Il ne sent pas la douleur, mais ses muscles obéissent encore aux nerfs : une décharge le fait **lâcher** et le **raidit** ; maintenue, elle le couche. Tenue une seconde à la tempe d'un Éteint raidi ou à terre, elle **grille ce qui l'anime** : il s'éteint (Book 25 §5.1). Le casque n'y change rien |
 
 > **Décision (2026-10-08) : on achève un Éteint à terre.** Tomber ne suffit pas : il se relève au bout de quelques secondes (5 s en 0a). Pendant ce temps, n'importe quel coup le détruit. Le combat de base devient : le faire tomber, puis l'achever vite. Le coup appuyé à la tête avec une arme solide reste le seul moyen de le détruire debout.
 
@@ -200,12 +202,17 @@ Chaque zombie tué coûte :
 
 | Arme | Efficacité | Bruit | Remarque |
 |---|---|---|---|
-| Marteau, masse, pied-de-biche | Très bonne à la tête | Faible | Contondant : efficace même contre les **casqués** |
-| Hache, machette | Très bonne | Faible | S'émousse, peut rester coincée |
-| Lance, pique | Bonne : **tient à distance** | Faible | Idéale derrière une palissade |
-| Arc, arbalète (⚙️) | Bonne à la tête | Très faible | Carreaux récupérables |
-| Arme à feu (🔥) | Excellente | **Énorme** (300 m) | Chaque tir peut attirer plus de zombies qu'il n'en tue |
-| Clôture électrique (⚡) | Étourdit, blesse | Nul | Défense passive, consomme des Wh_é |
+| Marteau, masse, pied-de-biche | Très bonne à la tête | Moyen (un coup : 14 m) | Contondant : efficace même contre les **casqués** |
+| Hache, machette, lames forgées (🔥) | Très bonne : la mise à mort la plus rapide | Moyen (un coup tranchant : 10 m) | S'émousse ; le **casque** l'arrête à la tête. Le forgeron la reprend et la reforge |
+| Lance, pique | Bonne : **tient à distance** | Moyen | Idéale derrière une palissade |
+| Arc (tous) | Bonne à la tête, au **tir plein** et de près (≤ 6 m à ★★★) | Très faible (3 m) | Flèches récupérables ; passe la visière d'un casqué de face, à moitié de la portée |
+| Arbalète (⚙️) | Bonne à la tête, **avant le contact** (≤ 12 m à ★★★) | Faible (6 m) | Armée d'avance ; réarmer immobilise. Carreaux récupérables |
+| Arme électrique (⚡) | Bonne, en deux temps : une décharge courte **raidit** et fait lâcher, une longue à la tête d'un raidi ou d'un Éteint à terre le **détruit** | Faible (6 à 8 m) | **Passe le casque** ; rien au torse ; consomme des Wh_é |
+| Arme à feu (🔥) | Excellente | **Énorme** (300 m) | **Reportée après la 1.0** (Book 25 §12, n° 7) : chaque tir peut attirer plus de zombies qu'il n'en tue |
+| Clôture électrique, plaque de choc (⚡) | **Raidit** et repousse, ou **couche** ; ne détruit pas | Nul (la clôture bourdonne) | Défense passive, consomme des Wh_é. Trois Éteints qui poussent ensemble couchent la clôture |
+| Pièges (⚙️) : assommoir, mâchoires, fosse | **Couchent**, **brisent la jambe** (un Rampant), **retiennent** ; ne détruisent pas | Faible | Aucune énergie après la pose ; à réarmer |
+
+Chaque famille a son terrain et aucune arme ne domine : le tableau chiffré, niveau par niveau, est au Book 25 §8.4.
 
 ### 8.3 Les corps
 
@@ -296,9 +303,9 @@ force de l'attaque = f(niveau du joueur) × (1 + bonus si pression très forte)
 | **Fossé, pieux** | Travail, bois | Tout : les zombies tombent et restent coincés | ⚙️ |
 | **Entonnoir** | Murs + passage étroit | Hordes : on les affronte un par un | Tous |
 | **Fosse à feu, braseros** | Combustible | Hordes : barrage et destruction (fumée = signature) | 🔥 |
-| **Clôture électrique** | Fil, batteries, Wh_é | Groupes : défense silencieuse | ⚡ |
-| **Alarmes, capteurs** | Électronique | **Prévenir** avant l'arrivée | ⚡ |
-| **Pièges mécaniques** | Bois, ressorts, contrepoids | Rampants, groupes | ⚙️ |
+| **Clôture électrique** | Fil, batteries, Wh_é | Groupes : défense silencieuse ; elle raidit et repousse, ne détruit pas | ⚡ |
+| **Alarmes, capteurs** | Électronique (l'alarme électrique ne fait aucun bruit) | **Prévenir** avant l'arrivée | ⚡ |
+| **Pièges mécaniques** | Bois, ressorts, contrepoids (assommoir, mâchoires, fosse) | Rampants, groupes : ils couchent ou retiennent ; à toi d'achever | ⚙️ |
 | **Leurre** | Sonore (réveil, carillon) ou lumineux (projecteur) | Détourner une horde **avant** qu'elle arrive | ⚡ ⚙️ |
 | **Baliste de rempart** | Bois, corde, acier | Meutes, hordes | ⚙️ (palier III) |
 

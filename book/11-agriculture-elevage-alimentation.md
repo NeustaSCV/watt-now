@@ -1,7 +1,8 @@
 # Book 11 — Agriculture, Élevage et Alimentation
 
-> Document de conception · version 0.7 · 2026-10-07
+> Document de conception · version 0.8 · 2026-10-09
 > Statut : **brouillon de travail**. Rendements et durées réalistes en ordre de grandeur, à calibrer.
+> v0.8 (2026-10-09) : §10 aligné sur le [Book 25](25-le-metier-des-familles.md) : l'arc est commun à tous, l'arbalète reste mécaniste, l'arme à feu est reportée après la 1.0. Plumer une poule laisse aussi des plumes et un os (empenne et pointes de flèches).
 
 ---
 
@@ -214,7 +215,7 @@ Toutes les productions animales suivent le **calendrier** (1 an de jeu = 4 semai
 |---|---|---|---|
 | **Cueillette** | Lieux de flux | Baies, noix, châtaignes, plantes sauvages comestibles, **champignons** | **Champignons : savoir obligatoire** (risque d'intoxication grave, Book 05). Saisonnière. |
 | **Piégeage** | Lieux de flux, terrain | Collets, cages | **Processus passif** : on pose, on revient |
-| **Chasse** | Lieux de flux | Arc, arbalète (⚙️, silencieux), arme à feu (🔥, bruyante) | Le gibier fuit le bruit, comme les zombies y accourent |
+| **Chasse** | Lieux de flux, terrain (les lapins) | **Arc (tous**, le plus silencieux), arbalète (⚙️, silencieuse) ; l'arme à feu (🔥) est reportée après la 1.0 | Le gibier fuit le bruit, comme les zombies y accourent. Un lapin : une flèche, 2 portions de viande, des boyaux pour une corde d'arc (Book 25 §3.4) |
 | **Pêche** | Rivière, étang, mare | Ligne, **nasse** (passive), filet | La nasse est un piège passif |
 
 > **Décision (2026-10-08) : un verger et un sous-bois sur chaque terrain (phase 0a).**
@@ -251,12 +252,12 @@ Toutes les productions animales suivent le **calendrier** (1 an de jeu = 4 semai
 
 >   - **Assommer** (A, immédiat) demande un outil de base : le **gourdin de bois dur** (recette commune : 1 bûche, Couper 1), un couteau, un marteau, une hache… À mains nues, elle échappe.
 >   - Les chances : 95 % sur une poule qui picore, 55 % sur une poule qui guette, aucune sur une poule qui fuit. Raté, elle détale ; réussi, les autres détalent.
->   - **Plumer et vider** (Couper 1) donne 4 portions de 200 g de **volaille crue**. Au feu allumé, « **Faire rôtir la volaille** » prend 3 s par portion et donne de la **volaille rôtie** (150 g, ≈ 380 kcal).
+>   - **Plumer et vider** (Couper 1) donne 4 portions de 200 g de **volaille crue**, et, depuis la 0.6, une poignée de **plumes** et un **os** (Book 25 §3.2). Au feu allumé, « **Faire rôtir la volaille** » prend 3 s par portion et donne de la **volaille rôtie** (150 g, ≈ 380 kcal).
 >   - Mangée crue, la volaille rend malade **une fois sur deux** (salmonelles, campylobacter) : malaise 3 min plus tard, perte d'eau et de santé (Book 05 §6 bis).
 > - **Les lapins** (lapins de garenne), quatre, broutent dans la prairie.
 >   - Ils fuient le joueur : à 12 m en courant, 7 m en marchant, 3,5 m en allure discrète.
 >   - Ils filent en zigzag à ≈ 40 km/h vers la lisière, la queue blanche bien visible, puis reviennent plus tard.
->   - **Trop rapides pour les outils de contact** : ils ne se chassent pas en 0a. Il faudra les **armes de jet** (arc, arbalète).
+>   - **Trop rapides pour les outils de contact** : ils ne se chassent pas en 0a. Il faudra les **armes de jet** : l'arc, que **tout le monde** sait faire depuis la 0.6, et l'arbalète des Mécanistes (Book 25 §3). La chasse viendra quand la faune vivra côté serveur (0b).
 > - **Le renard roux** passe de temps en temps.
 >   - Il sort de la lisière, trotte vers un lapin, le **traque ventre à terre**, puis charge (≈ 48 km/h).
 >   - Il l'attrape parfois et l'emporte dans le bois ; parfois le lapin gagne le couvert.
