@@ -175,7 +175,7 @@ Mesurée sur le vrai serveur de la 0a (banc de charge : joueurs simulés qui bou
 
 > **La 0.7 (2026-10-09) : la couche de déchets et l'arbre de progression.**
 >
-> - **Côté serveur, rien qui tourne en continu.** Les déchets (Book 26 §6) : le contenu se recalcule d'une graine par carreau de 20 m ; la base ne garde qu'une ligne par carreau entamé (table `dechets` : remplissage, pièces prises, instant du renouvellement), soit **≈ 1 850 lignes au plus pour 100 joueurs** ; le renouvellement est regardé quand quelqu'un est là, au plus toutes les 5 s par lieu. L'arbre de progression (Book 02 §14 quater) : une colonne `progression` par personnage (une liste courte), réévaluée seulement quand quelque chose change, au plus deux fois par seconde.
+> - **Côté serveur, rien qui tourne en continu.** Les déchets (Book 26 §6) : le contenu se recalcule d'une graine par carreau de 20 m ; la base ne garde qu'une ligne par carreau entamé (table `dechets` : remplissage, pièces prises, instant du renouvellement), soit **≈ 2 050 lignes au plus pour 100 joueurs** (points du monde compris) ; le renouvellement est regardé quand quelqu'un est là, au plus toutes les 5 s par lieu. L'arbre de progression (Book 02 §14 quater) : une colonne `progression` par personnage (une liste courte), réévaluée seulement quand quelque chose change, au plus deux fois par seconde.
 > - **Le coût mesuré, sur le Mac** (banc de charge, option `--dechets` nouvelle : chaque joueur tente un ramassage au hasard deux fois par seconde ; 50 joueurs à la halte, 15 s, deux essais de chaque) :
 >
 >   | 50 joueurs à la halte | Calcul par joueur | Part d'un cœur | Retard p99 | Envoyé par joueur | Mémoire |

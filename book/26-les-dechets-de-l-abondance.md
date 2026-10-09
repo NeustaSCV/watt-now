@@ -330,7 +330,7 @@ Chaque lieu reçoit simplement une liste de **zones typées** (`ZONES_DECHETS`, 
 
 - Le monde est découpé en **carreaux de 20 × 20 m**. Chaque pièce d'un amas est un objet du catalogue **tiré d'une graine** (lieu, carreau, numéro de remplissage). Le serveur et le client calculent la même chose : **le contenu ne se stocke pas, ne s'envoie pas**.
 - Le serveur ne garde, **par carreau entamé**, que trois choses (table `dechets`) : son **numéro de remplissage**, la **liste des pièces prises** (le bit « ramassé ») et **l'instant où il se remplit**. Un carreau jamais touché n'a pas de ligne. Pour les points du monde, une ligne par point.
-- **La base ne grossit pas sans fin** : au plus une ligne par carreau. La halte en a 27, le Carrefour 6, une Coopérative 12, un terrain 6. Pour 100 joueurs : **≈ 1 850 lignes au plus**, de quelques dizaines d'octets.
+- **La base ne grossit pas sans fin** : au plus une ligne par carreau et par point. La halte en a 27 (et 9 points), le Carrefour 6, une Coopérative 12 (et 2 points), un terrain 6. Pour 100 joueurs : **≈ 2 050 lignes au plus**, de quelques dizaines d'octets.
 - **Rien ne tourne en continu** (Book 17 §4) : le renouvellement, les balises et les ordures jetées sont regardés **quand quelqu'un est là**, au plus toutes les 5 s par lieu (les ordures jetées, une fois par minute).
 - **Le réseau** : à l'entrée d'un lieu, le serveur n'envoie que la clé de la couche, les pièces prises et l'état des points ; ensuite, seulement ce qui change quand quelqu'un prend.
 
