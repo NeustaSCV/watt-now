@@ -12,7 +12,7 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
-## 0.6 · en préparation
+## 0.6 · déployée le 2026-10-09
 
 Le métier des familles (Book 25) : chaque famille fabrique seule son arme de métier, et les autres lui apportent les améliorations. Le lancer, l'arc pour tous, les étoiles, les lames des Charbonniers, l'électricité des Voltaïques, l'arbalète et les pièges des Mécanistes.
 
