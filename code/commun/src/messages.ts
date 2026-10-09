@@ -119,7 +119,10 @@ export type Verbe =
   | "couvrir"
   | "ranimer"
   /** Un piège, une plaque de choc (Book 25 §5.3 et §6.3) : le réarmer ; une clôture couchée : la relever (chantiers 6 et 7). */
-  | "rearmer_piege";
+  | "rearmer_piege"
+  /** Le pédalier des Mécanistes (Book 25 §6.4, chantier 7) : monter le soufflet à manivelle, la meule fine. */
+  | "monter_soufflet"
+  | "monter_meule_fine";
 
 /** État propre à certaines installations. */
 export interface EtatInstallation {
@@ -128,6 +131,9 @@ export interface EtatInstallation {
   /** Pédalier : accessoires montés. */
   meule?: boolean;
   dynamo?: boolean;
+  /** Pédalier, accessoires mécanistes (Book 25 §6.4) : le soufflet à manivelle, la meule fine. */
+  soufflet?: boolean;
+  meuleFine?: boolean;
   /** Coffre : ce qu'il contient (la charge des batteries rangées est dans `charges`). */
   contenu?: Inventaire;
   /** Banc de recharge : les batteries posées dessus, leur charge, et le dernier calcul de production (É4). */

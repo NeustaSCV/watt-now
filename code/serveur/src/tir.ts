@@ -16,6 +16,7 @@ import type { Position } from "../../commun/src/deplacement.ts";
 import type { Stimulus } from "../../commun/src/signature.ts";
 import { distanceMare } from "../../commun/src/terrain.ts";
 import { typeDe, type CleObjet } from "../../commun/src/etoiles.ts";
+import { rearmement } from "../../commun/src/mecanique.ts";
 import {
   BRUIT_IMPACT_TIR,
   DISTANCE_LEURRE,
@@ -210,7 +211,10 @@ export class Tir {
     if (this.ctx.endurance() < p.arme.endurance) return this.ctx.info("Trop essoufflé pour réarmer : souffle un instant.");
     const cle = p.cle;
     const arme = p.arme;
-    this.ctx.commencer(`Réarmer ${arme.nom}`, arme.rechargeMs / 1000, () => {
+    // La lourde est trop raide pour le pied : le cranequin ou le pied-de-biche (Book 25 §6.1, chantier 7).
+    const comment = rearmement(arme, this.ctx.inventaire());
+    if (!comment) return this.ctx.info(`Trop raide pour le pied : il faut ${(arme.rearmerAvec ?? []).map((o) => `un ${nommer(o.objet, 1)}`).join(" ou ")}.`);
+    this.ctx.commencer(`Réarmer ${arme.nom}${comment.outil ? ` (${nommer(comment.outil, 1)})` : ""}`, comment.ms / 1000, () => {
       this.ctx.depenser(Math.min(this.ctx.endurance(), arme.endurance));
       this.desarmees.delete(cle);
       this.envoyerPret();
