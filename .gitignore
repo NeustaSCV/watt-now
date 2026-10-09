@@ -16,3 +16,4 @@ outils/bmad/_bmad-output/
 
 # Sons : sources brutes téléchargées (Freesound, Kenney, OpenGameArt), seuls les fichiers finaux sont versionnés
 son/sources/
+.claude/worktrees/
