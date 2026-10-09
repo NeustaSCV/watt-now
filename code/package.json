@@ -17,6 +17,7 @@
     "test": "node --disable-warning=ExperimentalWarning --test \"commun/src/**/*.test.ts\" \"serveur/src/**/*.test.ts\" \"client/src/**/*.test.ts\"",
     "verif": "tsc -p tsconfig.json",
     "bilan": "node --disable-warning=ExperimentalWarning scripts/bilan-mesures.ts",
+    "equilibre": "node --disable-warning=ExperimentalWarning scripts/equilibre.ts",
     "reglages": "node --disable-warning=ExperimentalWarning scripts/reglages.ts"
   },
   "dependencies": {

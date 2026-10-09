@@ -36,6 +36,13 @@ const RAMPANT = { levee: 0.14, recul: -0.8 };
  */
 const ARCS = { nombre: 4, segments: 4, periode: 0.07, rayon: 0.24, bas: 0.85, haut: 1.5, tremblement: 0.035 };
 const MATIERE_ARCS = new THREE.LineBasicMaterial({ color: 0x9ad8ff, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending });
+/**
+ * Le halo du raidi (chantier 9, passe de lisibilité) : un trait de ligne ne fait qu'un pixel, à peine visible sur
+ * l'iPhone 13 mini ; un anneau bleu pâle au sol, qui palpite, dit « raidi » d'un coup d'œil, de jour comme de nuit.
+ * Il palpite au rythme de tous les raidis ensemble (une seule matière).
+ */
+const HALO_RAIDI = { interieur: 0.38, exterieur: 0.52, rampant: 0.7, opacite: 0.55, battement: 9 };
+const MATIERE_HALO = new THREE.MeshBasicMaterial({ color: 0x7cc8ff, transparent: true, opacity: HALO_RAIDI.opacite, depthWrite: false, blending: THREE.AdditiveBlending });
 
 export class VueEteint {
   readonly objet = new THREE.Group();
@@ -55,6 +62,8 @@ export class VueEteint {
   /** Les petits arcs bleus d'un Éteint raidi (créés à la première décharge). */
   private arcs: THREE.LineSegments | null = null;
   private arcsMinuterie = 0;
+  /** L'anneau bleu au sol d'un Éteint raidi (créé à la première décharge). */
+  private halo: THREE.Mesh | null = null;
 
   constructor(e: EteintVu) {
     this.cible = e;
@@ -228,10 +237,20 @@ export class VueEteint {
     if (!c) return;
     if (!raidi) {
       if (this.arcs) this.arcs.visible = false;
+      if (this.halo) this.halo.visible = false;
       if (!this.rampant) c.objet.rotation.z = 0;
       return;
     }
     if (!this.rampant) c.objet.rotation.z = (Math.random() - 0.5) * ARCS.tremblement;
+    if (!this.halo) {
+      const k = this.rampant ? HALO_RAIDI.rampant / HALO_RAIDI.exterieur : 1;
+      this.halo = new THREE.Mesh(new THREE.RingGeometry(HALO_RAIDI.interieur * k, HALO_RAIDI.exterieur * k, 24).rotateX(-Math.PI / 2), MATIERE_HALO);
+      this.halo.position.set(0, 0.03, this.rampant ? RAMPANT.recul * 0.5 : 0);
+      this.halo.renderOrder = 2;
+      this.objet.add(this.halo);
+    }
+    this.halo.visible = true;
+    MATIERE_HALO.opacity = HALO_RAIDI.opacite * (0.65 + 0.35 * Math.sin((performance.now() / 1000) * HALO_RAIDI.battement));
     if (!this.arcs) {
       const n = ARCS.nombre * ARCS.segments * 2;
       const geometrie = new THREE.BufferGeometry();
