@@ -594,6 +594,9 @@ export class Hud {
     }
   }
 
+  /** Le compte admin « god » (admin-ui.ts) : ses recettes s'affichent sans le surcoût hors famille. */
+  admin = false;
+
   /** Ce qu'on a appris hors de sa famille (Book 25 §2.3) : leçons et manuels. */
   private savoir: SavoirVu = { apprises: [], manuels: [] };
 
@@ -2242,8 +2245,9 @@ export class Hud {
 
     for (const modele of recettes) {
       // Une recette apprise d'une autre famille (Book 25 §2.2) : ×1,5 en matières et en temps, ★★ au plus.
-      const appris = estHorsFamille(modele, this.famille);
-      const r = recettePour(modele, this.famille);
+      // Le compte admin fabrique tout au prix de la famille (le serveur le vérifie) : ni ×1,5, ni « appris ».
+      const appris = !this.admin && estHorsFamille(modele, this.famille);
+      const r = this.admin ? modele : recettePour(modele, this.famille);
       const pictogramme: Pictogramme = "objet" in r.produit ? r.produit.objet : r.produit.installation;
       const outils = multiplicateurQualites(this.inventaire, r.qualites);
       const possible = ingredientsPresents(this.inventaire, r) && outils !== null;

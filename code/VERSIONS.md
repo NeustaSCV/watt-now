@@ -83,6 +83,7 @@ Penser au bon moment, et des déchets partout (Book 26, Book 02 §14 quater). Le
 - **`npm run rythme`** joue neuf parcours types (prudent, pressé, sans tutoriel, pour chaque famille) et vérifie le rythme : une nouveauté toutes les 3 min en moyenne la première demi-heure, un but au moins toutes les 20 min ensuite, et aucun blocage.
 - **`?mesure=1`** dans l'adresse ouvre le panneau de mesure (images par seconde, appels de dessin et triangles par poste, déchets simulés, banc d'essai automatique) pour l'essai sur iPhone.
 - **Le banc de charge** a l'option `--dechets` (des ramassages au hasard). Sur le Mac, 50 joueurs à la halte : ≈ 1 ms de calcul par joueur et par seconde, avec ou sans déchets (Book 17 §5.2).
+- Outil du porteur : un compte admin unique (`npm run admin -- god`, sur le Pi `deploiement/admin-pi.sh`), pour tout tester ; le pseudo « god » est réservé.
 
 ---
 

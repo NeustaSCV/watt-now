@@ -22,7 +22,7 @@ function arreter(message: string): never {
   process.exit(1);
 }
 
-/** Lit une ligne au clavier sans l'afficher (une étoile par caractère). Ctrl-C annule. */
+/** Lit une ligne au clavier sans rien afficher (comme sudo). Ctrl-C annule. */
 function lireSecret(invite: string): Promise<string> {
   const entree = process.stdin;
   if (!entree.isTTY) arreter("Il faut un terminal pour taper le mot de passe (avec docker : « docker exec -it »).");
@@ -47,13 +47,9 @@ function lireSecret(invite: string): Promise<string> {
           finir();
           return resoudre(saisi);
         } else if (c === "\u007f" || c === "\b") {
-          if (saisi.length > 0) {
-            saisi = saisi.slice(0, -1);
-            process.stdout.write("\b \b");
-          }
+          saisi = saisi.slice(0, -1);
         } else if (c >= " ") {
           saisi += c;
-          process.stdout.write("*");
         }
       }
     };
