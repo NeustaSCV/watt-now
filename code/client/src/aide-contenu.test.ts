@@ -36,3 +36,32 @@ test("0.6 aide : comment, jamais où est le rare (l'if, la lime, le rail, les ma
     assert.ok(!secret.test(tout), `l'aide ne doit pas dire ${secret}`);
   }
 });
+
+// 0.7, chantier 6 : l'arbre de progression et les déchets de l'Abondance dans l'aide.
+const rubrique = (id: string) => texte(RUBRIQUES_AIDE.find((r) => r.id === id)!);
+
+test("0.7 aide : « Fabriquer » dit que les recettes viennent quand on y pense, et la pastille", () => {
+  const t = rubrique("fabriquer");
+  assert.match(t, /apparaissent quand tu y penses/);
+  assert.match(t, /pastille/);
+  assert.match(t, /À découvrir/);
+  assert.match(rubrique("ecran"), /Fabriquer.*pastille/);
+});
+
+test("0.7 aide : « Je suis coincé » répond à la recette qui ne vient pas, et aux trouvailles invendables", () => {
+  const t = rubrique("questions");
+  assert.match(t, /Une recette ne vient pas/);
+  assert.match(t, /deux heures/);
+  assert.match(t, /refuse les ordures/);
+});
+
+test("0.7 aide : les déchets — tout se ramasse, presque rien ne vaut, les conteneurs se fouillent, le Comptoir refuse", () => {
+  const t = rubrique("dechets");
+  assert.match(t, /Tout ce que tu vois au sol se ramasse/);
+  assert.match(t, /ordures/);
+  assert.match(t, /se \*\*fouillent\*\*/);
+  assert.match(t, /Comptoir les refuse/);
+  assert.match(t, /sauf sur ton terrain/);
+  assert.match(rubrique("wotts"), /refuse les ordures/);
+  assert.match(rubrique("carnet"), /dernière idée/);
+});

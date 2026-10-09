@@ -390,7 +390,7 @@ export interface Sante {
 }
 
 export interface Intoxication {
-  champignon: "tue_mouches" | "phalloide" | "viande_crue";
+  champignon: "tue_mouches" | "phalloide" | "viande_crue" | "conserve_bombee";
   /** Instants réels : début et fin des symptômes. */
   debutLe: number;
   finLe: number;
@@ -408,6 +408,9 @@ export const INTOXICATIONS = {
   phalloide: { latenceMs: 8 * 60_000, dureeMs: 4 * 60_000, santeParSeconde: 0.5, eauParSeconde: 0.004 },
   // Une volaille mangée crue (salmonelles, campylobacter) : 6 à 72 h dans la réalité ; ici 3 min, puis 2 min de malaise.
   viande_crue: { latenceMs: 3 * 60_000, dureeMs: 2 * 60_000, santeParSeconde: 0.08, eauParSeconde: 0.005 },
+  // Une conserve bombée (Book 05 §4, intoxication alimentaire) : vomissements et faiblesse, plus vite et plus fort que
+  // la volaille crue, sans tuer un joueur en bonne santé (lot 2, 0.7).
+  conserve_bombee: { latenceMs: 2 * 60_000, dureeMs: 3 * 60_000, santeParSeconde: 0.12, eauParSeconde: 0.006 },
 } as const;
 
 export function intoxiquer(s: Sante, champignon: Intoxication["champignon"], instant: number): Sante {

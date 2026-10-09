@@ -5001,3 +5001,258 @@ body:has(#hud .voile-pause:not([hidden])) #hud .tactile {
     line-clamp: 2;
   }
 }
+
+/* La fouille d'un conteneur de déchets (0.7, chantier 2 ; affichage provisoire) : une liste au choix, comme à la
+   décharge. Touche ce que tu prends ; le reste reste dedans. */
+#hud .fouille-dechets {
+  position: absolute;
+  left: 50%;
+  top: max(84px, calc(env(safe-area-inset-top) + 72px));
+  transform: translateX(-50%);
+  width: min(360px, calc(100vw - 24px));
+  max-height: calc(100dvh - 180px);
+  overflow-y: auto;
+  pointer-events: auto;
+  background: var(--creme);
+  color: var(--encre);
+  border-radius: 8px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  padding: 8px 12px 10px;
+  font-size: 13px;
+}
+#hud .fouille-dechets[hidden] {
+  display: none;
+}
+#hud .fouille-dechets header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 2px solid var(--encre);
+  margin-bottom: 6px;
+}
+#hud .fouille-dechets h2 {
+  margin: 0;
+  font-size: 13.5px;
+}
+#hud .fouille-dechets .fermer {
+  min-width: 44px;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  font-size: 16px;
+  color: var(--encre);
+  cursor: pointer;
+}
+#hud .fouille-dechets .liste {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+#hud .fouille-dechets .liste button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 2px 8px;
+  border: 1px solid rgba(59, 42, 30, 0.35);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.5);
+  color: var(--encre);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+#hud .fouille-dechets .liste button span {
+  display: flex;
+  flex-direction: column;
+}
+#hud .fouille-dechets .liste button small {
+  font-size: 11px;
+  opacity: 0.75;
+}
+/* Une ordure (valeur 0) : grisée, elle se lit d'un regard. */
+#hud .fouille-dechets .liste button.ordure svg {
+  filter: grayscale(0.75) opacity(0.8);
+}
+#hud .fouille-dechets .indice {
+  margin: 6px 0 0;
+  font-size: 11px;
+  opacity: 0.8;
+}
+@media (orientation: landscape) and (max-height: 420px) {
+  #hud .fouille-dechets {
+    top: max(8px, env(safe-area-inset-top));
+    max-height: calc(100dvh - 90px);
+  }
+}
+
+/* ---------- Les déchets de l'Abondance (0.7, chantier 3 · les icônes) ---------- */
+
+/* Une ordure (valeur 0, que le Comptoir ne reprend pas) : son icône grisée et un peu effacée, la case reste lisible.
+   Le sac se lit d'un regard : « ça, c'est à jeter » (chiffrage graphique §2.3). La case choisie garde son cadre. */
+#hud .sac .case.ordure svg {
+  filter: grayscale(0.75) opacity(0.8);
+}
+#hud .sac .case.ordure {
+  background: #f4efe4;
+}
+
+/* ---------- L'arbre de progression dans Fabriquer (0.7, chantier 5) ----------
+   La pastille des idées nouvelles (le bouton Fabriquer et l'onglet concerné), l'étiquette « Nouveau » sur la carte,
+   les onglets encore vides atténués, les silhouettes « À découvrir » et les autres familles repliées. */
+#hud .raccourcis .r-fabriquer {
+  position: relative;
+}
+#hud .r-fabriquer .pastille-fabriquer {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: var(--rouge);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 18px;
+  text-align: center;
+  animation: rebond-carnet 0.5s ease-out;
+}
+#hud .r-fabriquer .pastille-fabriquer[hidden] {
+  display: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  #hud .r-fabriquer .pastille-fabriquer {
+    animation: none;
+  }
+}
+/* Dans l'onglet, après son nom : un point rouge qui ne se confond pas avec le compteur vert des faisables. */
+#hud .fabrication .onglet .pastille-nouveau {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  box-shadow: 0 0 0 1.5px var(--creme);
+  border-radius: 50%;
+  background: var(--rouge);
+}
+#hud .fabrication .onglet.vide:not([aria-selected="true"]) {
+  opacity: 0.45;
+}
+#hud .panneau.fabrication .recette.nouvelle {
+  box-shadow: inset 0 0 0 2px #d9a21b;
+}
+#hud .fabrication .recette .nouveau {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: var(--rouge);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 15px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  vertical-align: 1px;
+}
+#hud .fabrication .a-decouvrir {
+  margin-top: 8px;
+  padding-top: 4px;
+  border-top: 1.5px dashed rgba(59, 42, 30, 0.35);
+}
+#hud .fabrication :is(.titre-decouvrir, .plus-silhouettes, .famille-repliee) {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 30px;
+  margin: 2px 0 4px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--encre);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+#hud .fabrication :is(.titre-decouvrir, .plus-silhouettes, .famille-repliee)::after {
+  content: "";
+  position: absolute;
+  inset: -7px 0;
+}
+#hud .fabrication .titre-decouvrir {
+  color: #a4552f;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 11.5px;
+}
+#hud .fabrication .plus-silhouettes {
+  justify-content: center;
+  font-weight: 600;
+  text-decoration: underline;
+}
+#hud .fabrication .famille-repliee {
+  margin-top: 6px;
+  border-radius: 6px;
+  background: rgba(59, 42, 30, 0.07);
+  font-weight: 600;
+}
+#hud .fabrication .famille-repliee .fleche,
+#hud .fabrication .titre-decouvrir .fleche {
+  width: 12px;
+  font-size: 12px;
+}
+#hud .panneau.fabrication .recette.silhouette {
+  grid-template-columns: 28px minmax(0, 1fr);
+  grid-template-areas: "ic texte";
+  border-style: dashed;
+  background: transparent;
+  box-shadow: none;
+}
+#hud .panneau.fabrication .recette.silhouette > svg {
+  filter: brightness(0);
+  opacity: 0.4;
+}
+#hud .panneau.fabrication .recette.silhouette .corps > small {
+  font-size: 12px;
+  font-style: italic;
+  line-height: 1.3;
+}
+/* Téléphone en horizontal : les recettes vont par deux ; « À découvrir » et les familles repliées prennent la largeur. */
+@media (orientation: landscape) and (max-height: 520px) {
+  #hud .panneau.fabrication .recettes > :is(.a-decouvrir, .famille-repliee) {
+    grid-column: 1 / -1;
+  }
+  #hud .panneau.fabrication .a-decouvrir {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-top: 4px;
+  }
+  #hud .panneau.fabrication .a-decouvrir > button {
+    grid-column: 1 / -1;
+    margin: 0;
+  }
+}
+
+/* 0.7, chantier 6 : le carnet note la dernière idée venue (« Dernière idée : Tresser une corde »), une ligne
+   discrète sous les objectifs, comme une note au crayon. Jamais coupée : elle passe à la ligne au besoin. */
+#hud .carnet .derniere-idee {
+  margin: 2px 12px 8px;
+  padding: 5px 0 0;
+  border-top: 1px dashed rgba(59, 42, 30, 0.3);
+  font-size: 12px;
+  line-height: 1.35;
+  font-style: italic;
+  color: var(--canard);
+  overflow-wrap: anywhere;
+}
+@media (orientation: landscape) and (max-height: 520px) and (pointer: coarse) {
+  #hud .carnet .derniere-idee {
+    font-size: 11px;
+  }
+}

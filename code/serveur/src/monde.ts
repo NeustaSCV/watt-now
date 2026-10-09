@@ -16,6 +16,7 @@ import { Halte } from "./halte.ts";
 import { Joueur } from "./joueur.ts";
 import { diffuserPresences, type MemoirePresences } from "./presences.ts";
 import { messageValide } from "./controle.ts";
+import { Rencontres, temoins, type Present } from "./rencontres.ts";
 
 /** Intervalle entre deux sauvegardes de chaque joueur, en millisecondes. */
 const INTERVALLE_SAUVEGARDE = 5000;
@@ -28,6 +29,8 @@ const TICS_ETALEMENT = 20;
 const INTERVALLE_MESURES = 60_000;
 /** Les autres joueurs d'un lieu public sont envoyés 10 fois par seconde. */
 const INTERVALLE_PRESENCES = 100;
+/** Les rencontres (l'arbre de progression, 0.7) sont regardées une fois par seconde. */
+const INTERVALLE_RENCONTRES = 1000;
 
 interface Connexion {
   joueur: Joueur;
@@ -56,6 +59,9 @@ export class Monde {
   /** Les leçons entre joueurs de familles différentes (Book 25 §2.3). */
   private readonly lecons = new Lecons((id) => this.connexions.get(id)?.joueur);
   private dernieresPresences = 0;
+  /** Les rencontres entre familles et le « voir faire » (l'arbre de progression, 0.7). */
+  private readonly rencontres = new Rencontres();
+  private dernieresRencontres = 0;
   private minuterieMesures: NodeJS.Timeout | undefined;
   private readonly retard = monitorEventLoopDelay({ resolution: 10 });
   private cpuAvant = process.cpuUsage();
@@ -135,6 +141,12 @@ export class Monde {
     // `activite` : le dernier vrai geste du joueur (pas les pings, ni l'intention « ne pas bouger » renvoyée par sécurité).
     const connexion = { joueur, socket, arrivee: Date.now(), activite: Date.now() };
     this.connexions.set(compte.id, connexion);
+    // « Voir faire » (Q7) : ceux qui sont à 5 m de lui, dans un lieu public, y penseront aussi.
+    joueur.surFabrication = (recette) => {
+      const presents = this.presents();
+      const moi = presents.find((p) => p.id === compte.id);
+      if (moi) for (const t of temoins(moi, presents)) this.connexions.get(t.id)?.joueur.vuFaire(recette);
+    };
 
     socket.on("message", (donnees) => {
       let message: MessageClient;
@@ -191,6 +203,14 @@ export class Monde {
       this.dernieresPresences = instant;
       this.diffuserPresences();
     }
+    if (instant - this.dernieresRencontres >= INTERVALLE_RENCONTRES) {
+      const dtRencontres = this.dernieresRencontres > 0 ? (instant - this.dernieresRencontres) / 1000 : 1;
+      this.dernieresRencontres = instant;
+      for (const [a, b] of this.rencontres.verifier(this.presents(), Math.min(dtRencontres, 2))) {
+        this.connexions.get(a.id)?.joueur.noterRencontre(b.famille);
+        this.connexions.get(b.id)?.joueur.noterRencontre(a.famille);
+      }
+    }
     for (const { joueur } of this.connexions.values()) {
       try {
         joueur.tick(dt);
@@ -246,6 +266,17 @@ export class Monde {
       })),
       this.memoirePresences,
     );
+  }
+
+  /** Les joueurs connectés, et le lieu public où chacun se trouve (pour les rencontres et le « voir faire »). */
+  private presents(): Present[] {
+    return [...this.connexions.values()].map(({ joueur }) => ({
+      id: joueur.compte.id,
+      famille: joueur.compte.famille,
+      lieu: joueur.enLieuPublic ? joueur.lieu : null,
+      x: joueur.vu.x,
+      z: joueur.vu.z,
+    }));
   }
 
   /** Sauvegarde tout le monde d'un coup (à l'arrêt du serveur), en une seule transaction. */

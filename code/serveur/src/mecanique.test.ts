@@ -4,6 +4,7 @@
 // étoiles de l'arbalète, l'assommoir et la fosse, le tour, les accessoires du pédalier, la brouette.
 
 import { test } from "node:test";
+import { toutDevoile } from "../../commun/src/progression.ts";
 import assert from "node:assert/strict";
 import { nouvelEteint, type Eteint } from "../../commun/src/eteints.ts";
 import type { Zone } from "../../commun/src/lieux.ts";
@@ -214,6 +215,8 @@ const JAMAIS_D_ETEINT = () => 1;
 function monter(famille: Famille, depart: Record<string, number>) {
   const base = new Base(":memory:");
   const compte = base.creerCompte("Lucien", "manivelle7", famille);
+  // Ces tests portent sur le métier, pas sur l'arbre de progression : tout est dévoilé.
+  base.sauverProgression(compte.id, toutDevoile(famille));
   base.sauverInventaire(compte.id, { sac_a_dos: 1, ...depart });
   let instant = 1_000_000;
   const recus: MessageServeur[] = [];

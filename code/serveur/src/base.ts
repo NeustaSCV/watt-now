@@ -11,6 +11,7 @@ import { canoniser, cleExemplaire, lireCle, type CleObjet } from "../../commun/s
 import { POINT_ARRIVEE, type Famille } from "../../commun/src/regles.ts";
 import { savoirValide, type Savoir } from "../../commun/src/savoir.ts";
 import { sechageValide, type EtatSechage } from "../../commun/src/arc.ts";
+import { PROGRESSION_VIDE, devoileesAuDepart, devoileesDEmblee, progressionValide, type EtatProgression } from "../../commun/src/progression.ts";
 import { BESOINS_DEPART, GOURDE_DEPART, type Besoins, type EtatFeu, type Gourde } from "../../commun/src/survie.ts";
 import type { Charges } from "../../commun/src/energie.ts";
 import { SANTE_DEPART, type Sante } from "../../commun/src/combat.ts";
@@ -202,6 +203,16 @@ const SCHEMA = `
     details    TEXT
   );
   CREATE INDEX IF NOT EXISTS mesures_genre ON mesures (genre, instant);
+  -- La couche de déchets (0.7) : une ligne par carreau entamé (ou par point du monde, « p:velo »), jamais par objet.
+  -- Le contenu se recalcule d'une graine ; on ne garde que le remplissage, les pièces prises et le renouvellement.
+  CREATE TABLE IF NOT EXISTS dechets (
+    lieu          TEXT NOT NULL,
+    carreau       TEXT NOT NULL,
+    remplissage   INTEGER NOT NULL DEFAULT 0,
+    pris          TEXT NOT NULL DEFAULT '[]',
+    renouvele_le  INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (lieu, carreau)
+  );
 `;
 
 /** Colonnes ajoutées après la première version (É0) : ajoutées si elles manquent. */
@@ -249,6 +260,8 @@ const COLONNES_AJOUTEES: [table: string, colonne: string, definition: string][] 
   ["personnages", "savoir", "TEXT NOT NULL DEFAULT '{}'"],
   // L'arc pour tous (Book 25 §3.3) : les ébauches d'arc qui sèchent, et depuis quand, en JSON.
   ["personnages", "sechage", "TEXT NOT NULL DEFAULT '{}'"],
+  // L'arbre de progression (0.7) : recettes dévoilées et vues, objets vus, temps de jeu, en JSON ; vide : à migrer.
+  ["personnages", "progression", "TEXT NOT NULL DEFAULT ''"],
 ];
 
 function maintenant(): string {
@@ -311,6 +324,10 @@ export class Base {
       .run(id, famille, POINT_ARRIVEE.x, POINT_ARRIVEE.z, Math.PI, date);
     this.equiper(id, famille);
     if (tutoriel) this.sauverTutoriel(id, { ...TUTORIEL_NEUF });
+    // L'arbre de progression (0.7) : le tutoriel commence au feu et à l'abri ; sans tutoriel (le vétéran, les comptes
+    // de test), les paliers 1 et 2 d'emblée (Q8).
+    const devoilees = tutoriel ? devoileesAuDepart() : [...new Set([...devoileesAuDepart(), ...devoileesDEmblee(famille)])];
+    this.sauverProgression(id, { ...PROGRESSION_VIDE, devoilees, nonVues: [], vus: [] });
     if (apparence) this.db.prepare("UPDATE personnages SET apparence = ? WHERE compte_id = ?").run(JSON.stringify(apparenceValide(apparence, famille)), id);
     return { id, pseudo, famille };
   }
@@ -367,6 +384,24 @@ export class Base {
 
   sauverSavoir(compteId: number, savoir: Savoir): void {
     this.db.prepare("UPDATE personnages SET savoir = ? WHERE compte_id = ?").run(JSON.stringify(savoir), compteId);
+  }
+
+  /**
+   * Les recettes dévoilées (l'arbre de progression, 0.7) ; null : un personnage d'avant la 0.7, à migrer (Q4).
+   * Illisible : comme un personnage d'avant (on réévalue sur son état, rien n'est détruit).
+   */
+  chargerProgression(compteId: number): EtatProgression | null {
+    const l = this.db.prepare("SELECT progression FROM personnages WHERE compte_id = ?").get(compteId) as { progression: string } | undefined;
+    if (!l?.progression) return null;
+    try {
+      return progressionValide(JSON.parse(l.progression));
+    } catch {
+      return null;
+    }
+  }
+
+  sauverProgression(compteId: number, etat: EtatProgression): void {
+    this.db.prepare("UPDATE personnages SET progression = ? WHERE compte_id = ?").run(JSON.stringify(etat), compteId);
   }
 
   /**
@@ -822,6 +857,50 @@ export class Base {
   }
 
   /** Un objet lourd déplacé (l'escabeau) : sa nouvelle place. */
+  // ---------- La couche de déchets (0.7, serveur/src/couche-dechets.ts) ----------
+
+  /** Les carreaux entamés et les points d'une couche de déchets (« station », « cooperative:12 »…). */
+  chargerDechets(lieu: string): { carreau: string; remplissage: number; pris: number[]; renouveleLe: number }[] {
+    const lignes = this.db.prepare("SELECT carreau, remplissage, pris, renouvele_le FROM dechets WHERE lieu = ?").all(lieu) as {
+      carreau: string;
+      remplissage: number;
+      pris: string;
+      renouvele_le: number;
+    }[];
+    return lignes.map((l) => {
+      const pris = JSON.parse(l.pris) as unknown;
+      return {
+        carreau: l.carreau,
+        remplissage: l.remplissage,
+        pris: Array.isArray(pris) ? pris.filter((i): i is number => Number.isInteger(i)) : [],
+        renouveleLe: l.renouvele_le,
+      };
+    });
+  }
+
+  sauverDechets(lieu: string, carreau: string, remplissage: number, pris: readonly number[], renouveleLe: number): void {
+    this.db
+      .prepare(
+        "INSERT INTO dechets (lieu, carreau, remplissage, pris, renouvele_le) VALUES (?, ?, ?, ?, ?) ON CONFLICT (lieu, carreau) DO UPDATE SET remplissage = excluded.remplissage, pris = excluded.pris, renouvele_le = excluded.renouvele_le",
+      )
+      .run(lieu, carreau, remplissage, JSON.stringify(pris), renouveleLe);
+  }
+
+  /**
+   * Efface les sacs et tas posés ailleurs que sur un terrain personnel avant `avant` (ms) que `aEffacer` désigne (les
+   * ordures jetées depuis plus de 24 h, Q10). Renvoie leurs ids.
+   */
+  purgerSacsHorsTerrain(avant: number, aEffacer: (contenu: ContenuSac, creeLe: number) => boolean): number[] {
+    const lignes = this.db.prepare("SELECT id, contenu, cree_le FROM sacs WHERE lieu != 'terrain' AND cree_le <= ?").all(avant) as { id: number; contenu: string; cree_le: number }[];
+    const effaces: number[] = [];
+    for (const l of lignes) {
+      if (!aEffacer(JSON.parse(l.contenu) as ContenuSac, l.cree_le)) continue;
+      this.retirerSac(l.id);
+      effaces.push(l.id);
+    }
+    return effaces;
+  }
+
   deplacerInstallation(compteId: number, id: number, x: number, z: number, o: number): void {
     this.db.prepare("UPDATE installations SET x = ?, z = ?, o = ? WHERE compte_id = ? AND id = ?").run(x, z, o, compteId, id);
   }

@@ -67,6 +67,8 @@ import type { ProjectileVu } from "../../commun/src/messages.ts";
 import { DessinVisee, viser, type Visee } from "./visee.ts";
 import { Projectiles } from "./rendu/projectiles.ts";
 import type { Mesureur } from "./mesure/mesure.ts";
+// La couche de déchets (0.7) : un affichage provisoire, isolé (le vrai rendu en amas viendra au chantier 7).
+import { CoucheDechetsVue } from "./rendu/dechets-provisoire.ts";
 
 const CLE_JETON = "watt.jeton";
 /** En développement : `?heure=22` fige l'heure affichée, pour régler la nuit sans attendre. */
@@ -253,6 +255,9 @@ function crierFaune(cri: CriFaune, x: number, z: number): void {
 }
 /** Les ressources dessinées en lots (voir lots.ts). */
 const lots = new Lots();
+/** Les déchets du lieu : amas, conteneurs, points du monde (0.7, affichage provisoire). */
+const dechetsVue = new CoucheDechetsVue((m) => envoyer(m), document.getElementById("hud")!);
+scene.scene.add(dechetsVue.objet);
 const EN_LOTS = new Set(["branche", "buche", "pierre"]);
 /** L'escabeau porté, et les disques autour des fruitiers où il faut le poser (2026-10-08). */
 const escabeauPorte = creerEscabeau();
@@ -374,6 +379,7 @@ const hud = new Hud(
     jeter: (objet, quantite) => envoyer({ t: "jeter", objet, quantite }),
     demonter: (objet) => envoyer({ t: "demonter", objet }),
     lire: (objet) => envoyer({ t: "lire", objet }),
+    recettesVues: (recettes) => envoyer({ t: "recettes_vues", recettes }),
     manivelle: (objet) => envoyer({ t: "manivelle", objet }),
     equiper: (objet) => envoyer({ t: "equiper", objet }),
     preparer: (objet) => envoyer({ t: "preparer", objet }),
@@ -483,6 +489,7 @@ function installer(message: Bienvenue): void {
     }
   }
   lots.construire();
+  dechetsVue.installer(message.dechets);
   contenu.add(lots.groupe);
   for (const f of message.feux) {
     const vue = new FeuDeCamp(f);
@@ -501,6 +508,8 @@ function installer(message: Bienvenue): void {
   hud.majWotts(message.wotts);
   hud.majTutoriel(message.tutoriel);
   hud.majQuetes(message.quetes);
+  // Le carnet note la dernière idée venue (0.7, chantier 6).
+  if (message.progression) hud.majIdees(message.progression.devoilees);
   armeEquipee = message.arme;
   hud.majArme(armeEquipee);
   aides.charger(message.moi.pseudo);
@@ -522,6 +531,7 @@ function installer(message: Bienvenue): void {
   occupe = false;
   hud.identite(message.moi.pseudo, message.moi.famille);
   hud.majSavoir(message.savoir ?? { apprises: [], manuels: [] });
+  hud.majProgression(message.progression ?? null);
   lecons.maj(null);
   son.entrer({
     famille: message.moi.famille,
@@ -918,6 +928,22 @@ function recevoir(message: MessageServeur): void {
     // Le savoir des autres familles (Book 25 §2.3) : leçons et manuels.
     case "savoir":
       hud.majSavoir(message.savoir);
+      return;
+    // La couche de déchets (0.7) : une pièce prise, un remplissage neuf, un point, la liste d'une fouille.
+    case "dechets_carreau":
+      dechetsVue.majCarreau(message.cx, message.cz, message.r, message.pris);
+      return;
+    case "dechets_point":
+      dechetsVue.majPoint(message.point);
+      return;
+    case "fouille":
+      dechetsVue.fouille(message.fouille);
+      return;
+    // L'arbre de progression (0.7) : « Tu y penses : … » ; les cartes, la pastille et « À découvrir » (hud.ts).
+    case "devoilement":
+      hud.majProgression(message.progression);
+      if (message.texte) hud.message(message.texte, "aide");
+      hud.majIdees(message.progression.devoilees, message.nouvelles);
       return;
     case "lecons_possibles":
       lecons.choisir(message.a, message.recettes);
@@ -1576,6 +1602,13 @@ function boucle(instant: number): void {
       leurresActifs,
       etatCoop,
     );
+    // Les déchets à portée de main (0.7) : la cible la plus proche l'emporte.
+    const dechet = dechetsVue.proposer(position);
+    if (dechet) {
+      const c = propositions.cible;
+      // Une sortie ou la mare (sans cible au sol) passent avant : on s'y tient exprès.
+      if (!propositions.A || (c && dechet.distance < Math.max(0, Math.hypot(c.x - position.x, c.z - position.z) - (c.rayon ?? 0.5)))) propositions = dechet.propositions;
+    }
     if (modeCombat) {
       // En combat, A frappe et B esquive ; saisi, B sert à se dégager.
       propositions = {
