@@ -147,6 +147,10 @@ export const MATIERE_ARME: Partial<Record<TypeObjet, MatiereArme>> = {
   pied_de_biche: "metal",
   // 🔥 Les lames des Charbonniers (Book 25 §4.4, chantier 5).
   ...MATIERES_ARMES_CHARBONNIERS,
+  // ⚡ Les armes électriques (Book 25 §5.3) : un manche de bois (gourdin, épieu), qui se reprend à l'établi.
+  matraque_fortune: "bois",
+  matraque_electrique: "bois",
+  aiguillon: "bois",
 };
 /** Un atelier où remettre une arme à neuf : l'installation, l'accessoire qu'il y faut, ce que le geste consomme. */
 export interface AtelierReparation {
@@ -196,6 +200,10 @@ export const DEBRIS_ARME: Partial<Record<TypeObjet, TypeObjet>> = {
   pied_de_biche: "ferraille_tordue",
   // 🔥 Les lames des Charbonniers : une lame ébréchée, que la forge reforge (Book 25 §4.4, chantier 5).
   ...DEBRIS_ARMES_CHARBONNIERS,
+  // ⚡ Le manche fend ; le câblage brûlé ne se récupère pas.
+  matraque_fortune: "manche_fendu",
+  matraque_electrique: "manche_fendu",
+  aiguillon: "manche_fendu",
 };
 /** La réparation de fortune remonte au plus jusqu'ici : encore abîmée, mais elle tient. */
 export const PLAFOND_FORTUNE = 0.29;

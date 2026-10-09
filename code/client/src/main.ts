@@ -7,6 +7,7 @@ import { raisonEmplacement } from "../../commun/src/emplacement.ts";
 import { REGLAGES, appliquerReglages } from "../../commun/src/reglages.ts";
 import { formaterDate, jourDuCalendrier } from "../../commun/src/calendrier.ts";
 import { avecTouches } from "./touches.ts";
+import { sousTension, suivreElectrique } from "./electricite.ts";
 import * as THREE from "three";
 import { INTENTION_REPOS, avancer, type Position } from "../../commun/src/deplacement.ts";
 import { COMPTOIR, sortieIci, zoneCoop, zoneDe, type LieuJouable, type Zone } from "../../commun/src/lieux.ts";
@@ -372,6 +373,7 @@ const hud = new Hud(
     jeter: (objet, quantite) => envoyer({ t: "jeter", objet, quantite }),
     demonter: (objet) => envoyer({ t: "demonter", objet }),
     lire: (objet) => envoyer({ t: "lire", objet }),
+    manivelle: (objet) => envoyer({ t: "manivelle", objet }),
     equiper: (objet) => envoyer({ t: "equiper", objet }),
     preparer: (objet) => envoyer({ t: "preparer", objet }),
     reparer: (objet, fortune) => envoyer({ t: "reparer", objet, fortune }),
@@ -710,11 +712,15 @@ function recevoir(message: MessageServeur): void {
       hud.majFiche();
       return;
     }
-    case "installation":
+    case "installation": {
+      // L'alarme électrique franchie, la clôture couchée ou sans courant (Book 25 §5.3) : client/src/electricite.ts.
+      const dit = suivreElectrique(installations.get(message.installation.id)?.vue, message.installation);
+      if (dit) hud.message(avecTouches(dit, tactile));
       hud.majCoffre(message.installation);
       if (personnage && message.installation.type === ATELIERS[personnage.famille]) son.atelier();
       ajouterInstallation(message.installation);
       return;
+    }
     case "installation_retiree": {
       const vue = installations.get(message.id);
       if (vue) contenu.remove(vue.objet);
@@ -1653,7 +1659,7 @@ function boucle(instant: number): void {
   bruiteur.pasDesAutres(lieu, [...autres.entries()].map(([id, a]) => ({ id, x: a.objet.position.x, z: a.objet.position.z })));
   bruiteur.monde({
     feux: [...feux.values()].map((f) => ({ id: f.id, x: f.objet.position.x, z: f.objet.position.z, aspect: f.aspect })),
-    installations: [...installations.values()].map((i) => ({ id: i.vue.id, type: i.vue.type, x: i.vue.x, z: i.vue.z, batteries: Object.values(i.vue.etat.batteries ?? {}).some((n) => (n ?? 0) > 0) })),
+    installations: [...installations.values()].map((i) => ({ id: i.vue.id, type: i.vue.type, x: i.vue.x, z: i.vue.z, batteries: Object.values(i.vue.etat.batteries ?? {}).some((n) => (n ?? 0) > 0), sousTension: sousTension(i.vue) })),
     pluie: enVoyage ? 0 : temps.pluie,
     dehors: !(lieu === "station" && position !== null && dansLaBoutique(position.x, position.z)),
   });

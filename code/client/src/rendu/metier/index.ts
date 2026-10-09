@@ -15,16 +15,23 @@ export type FabriqueModele = () => THREE.Object3D;
 /** Où sert le modèle : en vol (flèche, carreau), en main, au sol. */
 export type UsageModele = "vol" | "main" | "sol";
 
-const MODELES = new Map<string, FabriqueModele>();
+/**
+ * Le registre lui-même. Une fonction (hissée) plutôt qu'une constante : les fichiers des métiers, importés en fin de ce
+ * fichier, s'enregistrent pendant son chargement, avant que ses constantes n'existent (import circulaire).
+ */
+function modeles(): Map<string, FabriqueModele> {
+  const r = modeles as unknown as { carte?: Map<string, FabriqueModele> };
+  return (r.carte ??= new Map());
+}
 
 /** Enregistre le modèle d'un objet de métier pour un usage (le dernier enregistré l'emporte). */
 export function enregistrerModele(objet: string, usage: UsageModele, fabrique: FabriqueModele): void {
-  MODELES.set(`${usage}:${objet}`, fabrique);
+  modeles().set(`${usage}:${objet}`, fabrique);
 }
 
 /** Un modèle neuf de cet objet pour cet usage, s'il est enregistré (sinon null : on prend le dessin par défaut). */
 export function modeleMetier(objet: string, usage: UsageModele): THREE.Object3D | null {
-  return MODELES.get(`${usage}:${objet}`)?.() ?? null;
+  return modeles().get(`${usage}:${objet}`)?.() ?? null;
 }
 
 // ---- Les fichiers des métiers, une ligne chacun (chantiers 4 à 7) ----
@@ -34,3 +41,4 @@ import { enregistrerArc } from "./arc.ts";
 enregistrerArc(enregistrerModele);
 // Chaque fichier exporte ses modèles (sans importer ce registre : pas d'import circulaire) ; on les enregistre ici.
 for (const [objet, usage, fabrique] of [...MODELES_FORGE]) enregistrerModele(objet, usage, fabrique);
+import "./electricite.ts";

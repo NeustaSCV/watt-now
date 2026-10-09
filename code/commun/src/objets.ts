@@ -410,6 +410,7 @@ export function nommer(cle: CleObjet, quantite: number): string {
 
 /** La lumière portée que possède un personnage, s'il en a une. */
 export function lumierePortee(inventaire: Inventaire): TypeObjet | null {
-  for (const type of ["torche", "lampe_frontale", "lanterne"] as const) if ((inventaire[type] ?? 0) > 0) return type;
+  // La lampe de poche bricolée des Voltaïques (Book 25 §5.3) : une lumière blanche, sans manivelle.
+  for (const type of ["torche", "lampe_frontale", "lanterne", "lampe_bricolee"] as const) if ((inventaire[type] ?? 0) > 0) return type;
   return null;
 }

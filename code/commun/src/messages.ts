@@ -126,7 +126,9 @@ export type Verbe =
   | "poser_enclume"
   | "poser_bac"
   | "verser_huile"
-  | "monter_ventilateur";
+  | "monter_ventilateur"
+  /** Au banc de recharge : recharger ses armes électriques (Voltaïques, chantier 6). */
+  | "recharger_armes";
 
 /** État propre à certaines installations. */
 export interface EtatInstallation {

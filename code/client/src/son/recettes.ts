@@ -859,3 +859,31 @@ export const cordeArc: Recette = (h) => {
   p.ajouter(souffle(0.12, h, { filtre: "passe-bande", f: (t) => Math.max(600, 2400 - t * 9000), q: 1.6, env: points([0, 0], [0.01, 1], [0.12, 0]) }), 0.005, 0.35);
   return p.donnees;
 };
+
+// =====================================================================================
+// L'électricité des Voltaïques (Book 25 §5.4, chantier 6 · 0.6) : la décharge crépite, la longue claque.
+// =====================================================================================
+
+/** La décharge courte : un crépitement sec, aigu, une demi-seconde (un aiguillon, un briquet piézo démesuré). */
+export const dechargeCourte: Recette = (h) => {
+  const d = entre(h, 0.38, 0.5);
+  const p = new Piste(d + 0.05, h);
+  // Les étincelles : des grains très courts, très denses, dans l'aigu ; le bourdon du condensateur dessous.
+  p.ajouter(grains(d, h, (t) => 900 * (1 - t / d) + 200, { f: [2500, 9000], q: 1.2, longueur: [0.0003, 0.0012], amplitude: [0.3, 1] }), 0, 0.9);
+  p.ajouter(enveloppe(oscillateur(n(d), entre(h, 95, 120), "scie"), (t) => (t < d ? 0.4 * (1 - t / d) : 0)), 0, 0.25);
+  p.ajouter(souffle(d, h, { bruit: "blanc", filtre: "passe-haut", f: 4000, env: (t) => (t < d ? 1 - t / d : 0) }), 0, 0.12);
+  return saturer(p.donnees, 1.8);
+};
+
+/** La décharge longue : un claquement franc, puis une seconde d'arc qui grésille et retombe. */
+export const dechargeLongue: Recette = (h) => {
+  const d = entre(h, 1, 1.2);
+  const p = new Piste(d + 0.1, h);
+  // Le claquement : un choc large bande, très bref.
+  p.ajouter(enveloppe(filtrer(bruitBlanc(n(0.02), h), "passe-bande", 3000, 0.6), percussive(0.0001, 0.004)), 0, 1);
+  p.ajouter(sourd(180, 70, 0.02), 0, 0.5);
+  // L'arc tenu : des grains serrés, un ronflement grave qui monte un peu puis retombe.
+  p.ajouter(grains(d, h, 1400, { f: [1800, 7000], q: 1.4, longueur: [0.0004, 0.0016], amplitude: [0.2, 0.8] }), 0.01, 0.75);
+  p.ajouter(enveloppe(oscillateur(n(d), (t) => 100 + 20 * Math.sin(Math.PI * Math.min(1, t / d)), "scie"), cloche(d)), 0.01, 0.3);
+  return saturer(p.donnees, 1.6);
+};
