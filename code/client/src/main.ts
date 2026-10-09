@@ -66,6 +66,8 @@ import type { ResultatCoup } from "../../commun/src/eteints.ts";
 import type { ProjectileVu } from "../../commun/src/messages.ts";
 import { DessinVisee, viser, type Visee } from "./visee.ts";
 import { Projectiles } from "./rendu/projectiles.ts";
+// La couche de déchets (0.7) : un affichage provisoire, isolé (le vrai rendu en amas viendra au chantier 7).
+import { CoucheDechetsVue } from "./rendu/dechets-provisoire.ts";
 
 const CLE_JETON = "watt.jeton";
 /** En développement : `?heure=22` fige l'heure affichée, pour régler la nuit sans attendre. */
@@ -252,6 +254,9 @@ function crierFaune(cri: CriFaune, x: number, z: number): void {
 }
 /** Les ressources dessinées en lots (voir lots.ts). */
 const lots = new Lots();
+/** Les déchets du lieu : amas, conteneurs, points du monde (0.7, affichage provisoire). */
+const dechetsVue = new CoucheDechetsVue((m) => envoyer(m), document.getElementById("hud")!);
+scene.scene.add(dechetsVue.objet);
 const EN_LOTS = new Set(["branche", "buche", "pierre"]);
 /** L'escabeau porté, et les disques autour des fruitiers où il faut le poser (2026-10-08). */
 const escabeauPorte = creerEscabeau();
@@ -482,6 +487,7 @@ function installer(message: Bienvenue): void {
     }
   }
   lots.construire();
+  dechetsVue.installer(message.dechets);
   contenu.add(lots.groupe);
   for (const f of message.feux) {
     const vue = new FeuDeCamp(f);
@@ -919,6 +925,16 @@ function recevoir(message: MessageServeur): void {
       hud.majSavoir(message.savoir);
       return;
     // L'arbre de progression (0.7) : « Tu y penses : … ». Les cartes, la pastille et « À découvrir » : chantier 5.
+    // La couche de déchets (0.7) : une pièce prise, un remplissage neuf, un point, la liste d'une fouille.
+    case "dechets_carreau":
+      dechetsVue.majCarreau(message.cx, message.cz, message.r, message.pris);
+      return;
+    case "dechets_point":
+      dechetsVue.majPoint(message.point);
+      return;
+    case "fouille":
+      dechetsVue.fouille(message.fouille);
+      return;
     case "devoilement":
       if (message.texte) hud.message(message.texte);
       return;
@@ -1578,6 +1594,13 @@ function boucle(instant: number): void {
       leurresActifs,
       etatCoop,
     );
+    // Les déchets à portée de main (0.7) : la cible la plus proche l'emporte.
+    const dechet = dechetsVue.proposer(position);
+    if (dechet) {
+      const c = propositions.cible;
+      // Une sortie ou la mare (sans cible au sol) passent avant : on s'y tient exprès.
+      if (!propositions.A || (c && dechet.distance < Math.max(0, Math.hypot(c.x - position.x, c.z - position.z) - (c.rayon ?? 0.5)))) propositions = dechet.propositions;
+    }
     if (modeCombat) {
       // En combat, A frappe et B esquive ; saisi, B sert à se dégager.
       propositions = {
