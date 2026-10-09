@@ -452,6 +452,50 @@ export class Sonorisation {
     });
   }
 
+  /** Les sons étouffés (passés derrière un mur), fabriqués à la demande et gardés. */
+  private readonly etouffes = new WeakMap<AudioBuffer, AudioBuffer | "en cours">();
+
+  /**
+   * Un son entendu à travers un mur ou une porte (0.7.2, message « bruits ») : joué depuis le point de passage, étouffé
+   * (un filtre passe-bas, appliqué une fois au tampon) et aussi faible que la force reçue (0 à 1) le dit.
+   */
+  jouerEtouffe(id: IdSon, ou: Ou, force: number, o: { gain?: number } = {}): void {
+    if (!this.moteur || !this.ctx || this.ctx.state !== "running") return;
+    const def: DefSon = SONS[id];
+    const liste = this.tamponsDe(id);
+    let v = Math.floor(Math.random() * liste.length);
+    if (liste.length > 1 && v === this.dernieres.get(id)) v = (v + 1) % liste.length;
+    this.dernieres.set(id, v);
+    const brut = liste[v]!;
+    const pret = this.etouffes.get(brut);
+    if (pret === undefined) {
+      // La première fois, on le fabrique (en tâche de fond) ; en attendant, le son brut, plus bas.
+      this.etouffes.set(brut, "en cours");
+      const hors = new OfflineAudioContext(1, brut.length, brut.sampleRate);
+      const src = hors.createBufferSource();
+      src.buffer = brut;
+      const filtre = hors.createBiquadFilter();
+      filtre.type = "lowpass";
+      filtre.frequency.value = 650;
+      filtre.Q.value = 0.4;
+      src.connect(filtre);
+      filtre.connect(hors.destination);
+      src.start();
+      void hors.startRendering().then((t) => this.etouffes.set(brut, t));
+    }
+    const tampon = pret instanceof AudioBuffer ? pret : brut;
+    // Le moteur éteint un son à sa portée selon (1 − d / portée)^1,6 : on choisit la portée pour qu'il reste `force`.
+    const d = this.distance(ou);
+    const f = Math.max(0.02, Math.min(0.98, force));
+    this.moteur.jouerEffet(tampon, {
+      bus: def.bus,
+      priorite: def.priorite,
+      gain: def.gain * (o.gain ?? 1) * (tampon === brut ? 0.5 : 1.4),
+      position: this.relatif(ou),
+      portee: Math.max(0.3, d) / (1 - f),
+    });
+  }
+
   /**
    * Les sons continus voulus à cet instant (feu, pluie, pédalier…) : on lance ceux qui manquent, on règle
    * le volume des autres selon la distance, on arrête ceux qui ne sont plus voulus.

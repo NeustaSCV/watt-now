@@ -265,6 +265,8 @@ export class Monde {
         envoyer: (m: MessageServeur) => joueur.envoyer(m),
       })),
       this.memoirePresences,
+      // À la halte, les murs de la boutique arrêtent la vue (0.7.2).
+      (lieu, a, b) => lieu !== "station" || this.halte.voitEntre(a, b),
     );
   }
 

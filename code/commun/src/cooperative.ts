@@ -56,6 +56,26 @@ export const PORTES: PorteCoop[] = [
   { id: "atelier_est", x: 28, z: 20, largeur: 1.4, sens: "z", entre: ["atelier", "dehors"], ouverte: true },
 ];
 
+/** Les vitres condamnées, dans l'ordre (de l'ouest à l'est) : la huitième, au milieu de la vitrine est. */
+const VITRES_CONDAMNEES = new Set<number>([7]);
+/**
+ * Les vitres de la façade du libre-service (z = 40), de x0 à x1, et si elles sont condamnées (contreplaqué). Deux
+ * vitrines, de part et d'autre de la porte de la cour, découpées en vitres d'environ 2 m (rendu/cooperative.ts).
+ */
+export const VITRES_LIBRE_SERVICE: readonly [number, number, boolean][] = vitres([
+  [34.15, 42.8],
+  [45.2, 57.85],
+]);
+function vitres(vitrines: [number, number][]): [number, number, boolean][] {
+  const res: [number, number, boolean][] = [];
+  for (const [u0, u1] of vitrines) {
+    const n = Math.max(1, Math.round((u1 - u0) / 2));
+    const lv = (u1 - u0) / n;
+    for (let i = 0; i < n; i++) res.push([u0 + i * lv, u0 + (i + 1) * lv, VITRES_CONDAMNEES.has(res.length)]);
+  }
+  return res;
+}
+
 /** Le portail (sud) et la brèche du grillage (ouest) : les entrées depuis la route. */
 export const PORTAIL = { x: 43, z: 59, largeur: 6 } as const;
 export const BRECHE = { x: 0.5, z: 31, largeur: 3 } as const;
@@ -167,13 +187,37 @@ function boitesRondes(b: Boite): Boite[] {
   ];
 }
 
+/** Les murs et les cloisons des bâtiments (sans les portes) : ils arrêtent le passage et la vue (commun/src/vue.ts). */
+export function mursCoop(): Boite[] {
+  const portesBat = PORTES.filter((p) => p.entre.includes("dehors"));
+  return [...mursDe(BATIMENT, portesBat), ...mursDe(ATELIER, portesBat), ...cloisons()];
+}
+
+/**
+ * Les fenêtres et les vitrines (0.7.2) : elles arrêtent le passage (ce sont des murs), pas la vue. Le libre-service est
+ * vitré sur la cour, d'un bout à l'autre de sa façade ; deux de ses vitres sont condamnées par du contreplaqué. Les
+ * bureaux ont trois fenêtres à barreaux sur la cour (celle du milieu a son store baissé) et une à l'est.
+ */
+export const FENETRES_COOP: { id: string; x: number; z: number; largeur: number; sens: "x" | "z"; entre: [PieceCoop, PieceCoop]; opaque?: boolean }[] = [
+  ...VITRES_LIBRE_SERVICE.map(([x0, x1, opaque], i) => ({
+    id: `vitrine_${i + 1}`,
+    x: (x0 + x1) / 2,
+    z: 40,
+    largeur: x1 - x0,
+    sens: "x" as const,
+    entre: ["dehors", "libre_service"] as [PieceCoop, PieceCoop],
+    ...(opaque ? { opaque: true } : {}),
+  })),
+  { id: "bureau_1", x: 62, z: 40, largeur: 1.4, sens: "x", entre: ["dehors", "bureaux"] },
+  { id: "bureau_2", x: 66, z: 40, largeur: 1.4, sens: "x", entre: ["dehors", "bureaux"], opaque: true },
+  { id: "bureau_3", x: 70.5, z: 40, largeur: 1.4, sens: "x", entre: ["dehors", "bureaux"] },
+  { id: "bureau_est", x: 74, z: 36, largeur: 1.4, sens: "z", entre: ["dehors", "bureaux"] },
+];
+
 /** Tous les obstacles fixes (les portes fermées s'y ajoutent selon leur état). */
 export function obstaclesCoop(): Boite[] {
-  const portesBat = PORTES.filter((p) => p.entre.includes("dehors"));
   return [
-    ...mursDe(BATIMENT, portesBat),
-    ...mursDe(ATELIER, portesBat),
-    ...cloisons(),
+    ...mursCoop(),
     ...RAYONNAGES,
     ...MOBILIER.filter((m) => m.genre !== "bascule").flatMap((m) => (m.genre === "silo" ? boitesRondes(m.boite) : [m.boite])),
   ];

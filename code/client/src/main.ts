@@ -34,7 +34,11 @@ import { FauneAmbiante, Volaille, type CriFaune } from "./rendu/faune.ts";
 import { RAYON_ESCABEAU, estFruitier } from "../../commun/src/terrain.ts";
 import { creerRuine } from "./rendu/ruine.ts";
 import { creerHalte, estomperToits } from "./rendu/halte.ts";
-import { animerCooperative, creerCooperative, estomperCooperative, majPortes, placerRadio } from "./rendu/cooperative.ts";
+import { animerCooperative, creerCooperative, estomperCooperative, majPortes, ouverturesPortes, placerRadio, secouerPorte } from "./rendu/cooperative.ts";
+import { CarteVue, arcsParPiece, brouillerTout, clartesDe } from "./rendu/carte-vue.ts";
+import { Ondes } from "./rendu/ondes.ts";
+import { planVue } from "../../commun/src/vue-lieux.ts";
+import { bruitAlarmant } from "../../commun/src/bruits.ts";
 import { KLAXONS_PAR_BATTERIE, RADIO_ETABLI, pieceDe, portesInitiales, sombreIci } from "../../commun/src/cooperative.ts";
 import { IndicateurHorsChamp } from "./hors-champ.ts";
 import { InterfaceLecon } from "./lecon-ui.ts";
@@ -117,6 +121,8 @@ function montrerDecor(lieu: LieuJouable): void {
     else if (lieu === "comptoir") g.add(creerComptoir());
     else if (lieu === "cooperative") g.add((decorCoop = creerCooperative()));
     else g.add(creerHalte());
+    // Les lieux à murs (0.7.2) : ce que le personnage ne voit pas est dessiné « en souvenir » (rendu/carte-vue.ts).
+    if (planVue(lieu)) brouillerTout([g]);
     decors.set(lieu, g);
     scene.scene.add(g);
   }
@@ -141,6 +147,10 @@ function uiSon(geste: "ouvrir" | "fermer" | "valider"): void {
 // Ce qui vient du serveur
 const contenu = new THREE.Group();
 scene.scene.add(contenu);
+/** La vue par pièce (0.7.2) : la carte de ce que voit le personnage, et les ondes de ce qu'il entend sans le voir. */
+const carteVue = new CarteVue();
+const ondes = new Ondes();
+scene.scene.add(ondes.objet);
 const ressources = new Map<number, VueRessource>();
 const feux = new Map<number, FeuDeCamp>();
 const installations = new Map<number, VueInstallation>();
@@ -475,6 +485,8 @@ function installer(message: Bienvenue): void {
 
   contenu.clear();
   ressources.clear();
+  carteVue.activer(planVue(lieu), clartesDe(lieu));
+  ondes.vider();
   feux.clear();
   installations.clear();
   for (const i of message.installations) ajouterInstallation(i);
@@ -487,6 +499,8 @@ function installer(message: Bienvenue): void {
   else fauneAmbiante.desactiver();
   for (const r of message.ressources) {
     const vue = new VueRessource(r);
+    // Dans un lieu à murs, le butin hors de vue est « en souvenir » comme le décor (avant les lots : ils le gardent).
+    if (carteVue.actif) brouillerTout([vue.objet]);
     // Même image, bien moins d'appels de dessin (2026-10-08, 0.7) : les morceaux de même matériau sont fondus, puis
     // toutes les ressources du lieu sont dessinées en lots, un par matériau (lots.ts).
     fusionnerStatique(vue.objet);
@@ -836,6 +850,15 @@ function recevoir(message: MessageServeur): void {
     case "eteints":
       majEteints(message.eteints);
       return;
+    case "bruits":
+      // Ce qu'on entend sans le voir (0.7.2) : le son, étouffé, et une onde au point de passage ; la porte qu'on pousse
+      // tremble. Jamais la silhouette.
+      bruiteur.entendre(message.bruits);
+      for (const b of message.bruits) {
+        if (position) ondes.ajouter(b.x, b.z, position, b.f, bruitAlarmant(b.g));
+        if (b.porte && decorCoop && lieu === "cooperative") secouerPorte(decorCoop, b.porte);
+      }
+      return;
     case "animaux":
       volaille.maj(message.animaux);
       return;
@@ -1065,7 +1088,8 @@ function cercle(couleur: number, opacite: number): THREE.LineLoop {
     new THREE.LineDashedMaterial({ color: couleur, transparent: true, opacity: opacite, dashSize: 0.05, gapSize: 0.04, depthWrite: false }),
   );
   l.computeLineDistances();
-  l.position.y = 0.06;
+  // (0.7.2 : 10 cm au-dessus du sol ; à 6 cm, le carrelage du libre-service et le sol des bureaux le cachaient.)
+  l.position.y = 0.1;
   l.visible = false;
   scene.scene.add(l);
   return l;
@@ -1073,15 +1097,37 @@ function cercle(couleur: number, opacite: number): THREE.LineLoop {
 const cercleSon = cercle(0xf2efe6, 0.5);
 const cercleLumiere = cercle(0xffc46b, 0.45);
 
+/**
+ * À la Coopérative (0.7.2, décision 6) : le même cercle, mais pièce par pièce, à la portée que le serveur lui donne
+ * vraiment derrière une porte, une vitrine, un mur (rendu/carte-vue.ts, arcsParPiece). Un seul objet à la place du
+ * cercle : pas d'appel de dessin en plus.
+ */
+function cerclePieces(couleur: number, opacite: number): THREE.LineSegments {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(6 * 96 * 6), 3).setUsage(THREE.DynamicDrawUsage));
+  g.setAttribute("lineDistance", new THREE.BufferAttribute(new Float32Array(6 * 96 * 2), 1).setUsage(THREE.DynamicDrawUsage));
+  const l = new THREE.LineSegments(g, new THREE.LineDashedMaterial({ color: couleur, transparent: true, opacity: opacite, dashSize: 0.05, gapSize: 0.04, depthWrite: false }));
+  l.position.y = 0.1;
+  l.visible = false;
+  l.frustumCulled = false;
+  l.userData.rayon = 0;
+  l.userData.cle = "";
+  scene.scene.add(l);
+  return l;
+}
+const cercleSonPieces = cerclePieces(0xf2efe6, 0.5);
+const cercleLumierePieces = cerclePieces(0xffc46b, 0.45);
+
 function majCercles(dt: number, allure: Allure, bouge: boolean, nuit: boolean): void {
   if (!position) return;
   const portee = lumiere ? lumierePortee(inventaire) : null;
   const c = cerclesSignature({ x: position.x, z: position.z, allure, bouge, action: bruitAction, lumiere: portee ? (OBJETS[portee].lumiere ?? null) : null, nuit });
   // La pluie couvre le bruit (Book 13 §4) : le cercle rétrécit.
   c.son *= attenuationMeteo(meteo(Date.now() + decalage, debutMonde), "son");
-  for (const [ligne, rayon] of [
-    [cercleSon, c.son],
-    [cercleLumiere, c.lumiere],
+  const plan = lieu === "cooperative" ? planVue(lieu) : null;
+  for (const [ligne, pieces, rayon] of [
+    [cercleSon, cercleSonPieces, c.son],
+    [cercleLumiere, cercleLumierePieces, c.lumiere],
   ] as const) {
     const actuel = ligne.scale.x;
     const vise = Math.max(0.01, rayon);
@@ -1090,7 +1136,21 @@ function majCercles(dt: number, allure: Allure, bouge: boolean, nuit: boolean): 
     ligne.position.x = position.x;
     ligne.position.z = position.z;
     // En mode photo, l'image doit rester propre : pas de cercle.
-    ligne.visible = r > 1.2 && !enVoyage && !photo.actif;
+    const montre = r > 1.2 && !enVoyage && !photo.actif;
+    ligne.visible = montre && !plan;
+    pieces.visible = montre && plan !== null;
+    if (!pieces.visible || !plan) continue;
+    // Redessiné seulement s'il a changé (on a bougé, il a grandi, une porte s'est ouverte).
+    const cle = `${position.x.toFixed(2)},${position.z.toFixed(2)},${r.toFixed(2)},${Object.values(portesCoop).join()}`;
+    if (cle === pieces.userData.cle) continue;
+    pieces.userData.cle = cle;
+    const g = pieces.geometry;
+    const pos = g.getAttribute("position") as THREE.BufferAttribute;
+    const dist = g.getAttribute("lineDistance") as THREE.BufferAttribute;
+    const n = arcsParPiece(plan, portesCoop, position.x, position.z, r, pos.array as Float32Array, dist.array as Float32Array);
+    g.setDrawRange(0, n);
+    pos.needsUpdate = true;
+    dist.needsUpdate = true;
   }
 }
 
@@ -1716,6 +1776,15 @@ function boucle(instant: number): void {
   }
   scene.pieceNoire(dansLeNoir());
   scene.eclairer(heure, sourcesDeLumiere(), dt, temps.nuages);
+  // La vue par pièce (0.7.2) : la carte suit le personnage et les portes qui s'animent ; ce qui bouge n'est montré que
+  // s'il est vu (le serveur ne l'envoie déjà que dans ce cas : c'est la double sécurité, pendant qu'une porte s'ouvre).
+  if (carteVue.actif && position) {
+    carteVue.souvenir(scene.ciel.nuit, scene.ciel.obscurite);
+    carteVue.maj(scene.rendu, position.x, position.z, lieu === "cooperative" && decorCoop ? ouverturesPortes(decorCoop) : {});
+    for (const e of eteints.values()) e.objet.visible = carteVue.voit(position, e.objet.position.x, e.objet.position.z);
+    for (const a of autres.values()) a.objet.visible = carteVue.voit(position, a.objet.position.x, a.objet.position.z);
+  }
+  ondes.animer(dt);
   pluie.animer(dt, temps.pluie, scene.centre, scene.ciel.nuit);
   brume.animer(dt, heure, scene.centre, temps.pluie);
   for (const f of feux.values()) f.animer(dt, scene.ciel.nuit);
@@ -1760,7 +1829,7 @@ function boucle(instant: number): void {
   // Les Éteints qui approchent hors de l'écran : une flèche au bord (Book 23 §4.5).
   horsChamp.maj(
     scene.camera,
-    [...eteints.entries()].map(([id, e]) => ({ id, x: e.objet.position.x, z: e.objet.position.z, etat: e.etat })),
+    [...eteints.entries()].filter(([, e]) => e.objet.visible).map(([id, e]) => ({ id, x: e.objet.position.x, z: e.objet.position.z, etat: e.etat })),
     enVoyage ? null : position,
   );
   scene.dessiner();
@@ -1794,6 +1863,8 @@ if (import.meta.env.DEV) {
       envoyer,
       /** Mode mesure : dessin regroupé (true) ou d'avant (false), pour comparer les deux images (lots.ts). */
       fondre: basculerRegroupements,
+      /** La vue par pièce (0.7.2) : la carte de vue (souvenirImpose, redessins). */
+      carteVue,
     },
   });
 }
@@ -1849,6 +1920,9 @@ function* postesMesures(): Generator<readonly [string, THREE.Object3D | null | u
   yield ["effets:pose", pose.cerclePortee];
   yield ["effets:cercles", cercleSon];
   yield ["effets:cercles", cercleLumiere];
+  yield ["effets:cercles", cercleSonPieces];
+  yield ["effets:cercles", cercleLumierePieces];
+  yield ["effets:ondes", ondes.objet];
   for (const s of sacs.values()) yield ["effets:sacs", s.vue];
   yield ["déchets", dechetsVue.objet];
   yield ["divers (contenu)", contenu];

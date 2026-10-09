@@ -13,8 +13,14 @@
 // Pourquoi l'image ne change pas : un matériau à couleur unie devient le même matériau en blanc, avec sa couleur
 // portée par l'objet du lot (dans le shader, couleur × 1 = couleur) ; un matériau à couleurs par sommet garde les
 // siennes. Rugosité, métal, émission, faces, ombres : on ne regroupe que des matériaux identiques sur tout le reste.
+//
+// Le greffon « brouillard » de la vue par pièce (0.7.2, carte-vue.ts) est le seul retouche de nuanceur qu'on accepte :
+// il est le même pour tous (une seule fonction, une seule clé de cache), et il lit la position dans le monde à travers
+// la matrice de l'objet du lot. Un matériau brouillé se regroupe avec les matériaux brouillés identiques ; son lot est
+// brouillé à son tour. Sans cela, revenir dans un lieu à murs défaisait tous les lots (un appel par morceau).
 
 import * as THREE from "three";
+import { brouiller, estBrouille } from "./carte-vue.ts";
 import { FrustumOmbre } from "./ombres.ts";
 
 const sphere = new THREE.Sphere();
@@ -109,17 +115,21 @@ const SIGNATURES = new WeakMap<THREE.Material, string | null>();
 
 /**
  * Ce qui doit être identique pour partager un lot : tout le matériau sauf sa couleur (portée par l'objet du lot).
- * Null : matériau qu'on ne regroupe pas (texture, transparence, shader retouché, autre type).
+ * Null : matériau qu'on ne regroupe pas (texture, transparence, shader retouché, autre type). Le greffon « brouillard »
+ * n'empêche pas de regrouper : il entre dans la signature (0.7.2).
  */
 function signature(m: THREE.Material): string | null {
-  if (SIGNATURES.has(m)) return SIGNATURES.get(m)!;
+  // Pas de cache pour un matériau qu'on brouillera peut-être plus tard : sa signature changera.
+  const brouille = estBrouille(m);
+  const cle = SIGNATURES.get(m);
+  if (cle !== undefined && (cle === null || cle.endsWith("|brouillard") === brouille)) return cle;
   let s: string | null = null;
   const std = m as THREE.MeshStandardMaterial;
-  const retouche = m.onBeforeCompile !== THREE.Material.prototype.onBeforeCompile || m.customProgramCacheKey !== THREE.Material.prototype.customProgramCacheKey;
+  const retouche = !brouille && (m.onBeforeCompile !== THREE.Material.prototype.onBeforeCompile || m.customProgramCacheKey !== THREE.Material.prototype.customProgramCacheKey);
   if (m.type === "MeshStandardMaterial" && !m.transparent && m.opacity === 1 && m.alphaTest === 0 && m.visible && !retouche && !std.wireframe && TEXTURES.every((t) => !std[t])) {
     const json = m.toJSON() as unknown as Record<string, unknown>;
     for (const cle of ["uuid", "name", "color", "vertexColors", "metadata"]) delete json[cle];
-    s = JSON.stringify(json);
+    s = JSON.stringify(json) + (brouille ? "|brouillard" : "");
   }
   SIGNATURES.set(m, s);
   return s;
@@ -212,6 +222,8 @@ export class LotsDeRessources {
       const materiau = (modele.material as THREE.MeshStandardMaterial).clone();
       materiau.color.setRGB(1, 1, 1);
       materiau.vertexColors = true;
+      // Le clone ne garde pas le greffon : on le repose (même fonction, même clé de cache, même programme).
+      if (estBrouille(modele.material as THREE.Material)) brouiller(materiau);
       const lot = new LotTrie(liste.length, sommets, indices, materiau);
       lot.castShadow = modele.castShadow;
       lot.receiveShadow = modele.receiveShadow;

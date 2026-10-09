@@ -1060,7 +1060,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
     const coups = [{ t: "coup" as const, id: cible.id, x: cible.x, z: cible.z, resultat, ...electrique }];
     if (effet.voisinRaidi) coups.push({ t: "coup" as const, id: effet.voisinRaidi.id, x: effet.voisinRaidi.x, z: effet.voisinRaidi.z, resultat: "raidi", ...electrique });
     for (const coup of coups) {
-      if (this.vivant) this.vivant.diffuser(coup);
+      // Seuls ceux qui voient le coup (le frappeur ou sa cible) le reçoivent (0.7.2) ; le frappeur, toujours.
+      if (this.vivant) this.vivant.diffuserVu(coup, [this.position, coup]);
       else this.envoyer(coup);
     }
     if (arme.type === "electrique") {
@@ -1108,7 +1109,13 @@ export class Joueur implements Voyageur, ParticipantLecon {
       info: (t) => j.info(t),
       indice: (sorte, t) => j.indice(sorte, t),
       envoyer: (m) => j.envoyer(m),
-      diffuser: (m) => (j.vivant ? j.vivant.diffuser(m) : j.envoyer(m)),
+      // Un projectile ne part qu'à ceux qui voient son départ ou son arrivée (0.7.2).
+      diffuser: (m) =>
+        j.vivant
+          ? m.t === "projectile"
+            ? j.vivant.diffuserVu(m, [{ x: m.projectile.x0, z: m.projectile.z0 }, { x: m.projectile.x1, z: m.projectile.z1 }])
+            : j.vivant.diffuser(m)
+          : j.envoyer(m),
       user: (arme) => j.user(arme),
       apresDestruction: (e, comment) => j.apresDestruction(e, comment),
       noterTir: (objet, secondes) => {

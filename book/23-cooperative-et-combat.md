@@ -86,6 +86,19 @@
 - **Ce qui est pris est pris.** Le butin **rare** revient en plusieurs jours réels ; le commun en quelques heures, comme la halte.
 - **Les Éteints** détruits ne reviennent pas tout de suite : **quelques nouveaux par nuit écoulée**, et la chambre froide se **repeuple** jusqu'à 6 sur plusieurs jours. Tout se calcule **à l'entrée** (une coopérative où l'on n'est pas ne coûte rien).
 
+### 2.4 Ce qu'on voit, ce qu'on entend : la vue par pièce (0.7.2)
+
+> Ajouté le 2026-10-10, d'après l'étude « visibilité par pièce » validée par le porteur du projet (2026-10-09, ses huit
+> décisions). Même règle à la halte, pour la boutique de la station.
+
+- **Une porte fermée cache ce qu'il y a derrière ; c'est l'ouvrir qui révèle.** On voit en ligne droite : dans sa pièce, tout (les rayonnages du hangar n'arrêtent **pas** la vue, pour l'instant) ; par une porte ouverte, **dans le prolongement de l'ouverture** (un cône, étroit de loin, presque toute la pièce depuis le seuil) ; deux portes alignées se traversent. Le cône s'ouvre avec le battant.
+- **On voit à travers les vitrines et les fenêtres** : le libre-service sur la cour, les bureaux par leurs fenêtres à barreaux. Une vitre condamnée (le contreplaqué d'une vitrine du libre-service, le store baissé du bureau du milieu, les planches de la boutique) arrête la vue.
+- **Ce qu'on ne voit pas est « en souvenir »** : le décor reste lisible, assombri et désaturé, **jamais noir**, même dans une pièce jamais visitée ; **rien de ce qui bouge** n'y apparaît (ni Éteint, ni joueur). Un butin pris hors de vue disparaît tout de suite. **La lampe ne traverse plus les murs.**
+- **Ce qu'on entend sans le voir** : le serveur envoie un « bruit » (son genre, sa force étouffée par les murs, un point de passage **de notre côté** : la porte par où il arrive, ou le mur), **jamais la position de l'Éteint ni son numéro**. On l'entend étouffé, et une **onde** s'élargit sur la porte ou le mur (orangée ; rouge pour des coups ou une présence). **Un Éteint qui pousse une porte fermée cogne, et la porte tremble.** À **moins de 3 m** derrière un mur, on le **sent** (onde rouge, souffle), sans le voir.
+- **Le cercle de signature montre sa vraie portée** dans chaque pièce : ×0,5 par une porte ouverte, ×0,15 par une porte fermée, ×0,3 par une vitrine, ×0,05 à travers un mur (le meilleur chemin). C'est la règle des Éteints : le cercle ne ment plus.
+- **« Si je le vois, il me voit »** : les Éteints voient par la même règle (un Éteint de la cour te voit par la vitrine ; ceux des bureaux, par les fenêtres à barreaux) et entendent à travers les vitrines (×0,3).
+- **À plusieurs, chacun sa vue** : le serveur n'envoie à chacun que les Éteints, les joueurs, les coups et les projectiles qu'il voit (la Coopérative reste à un joueur ; c'est déjà vrai à la halte, autour de la boutique).
+
 ## 3. Les méchants : 24 à la première visite
 
 > **À trancher (2026-10-08)** : les lignes du tableau ci-dessous font 28 Éteints (avec 6 Errants), pour un total annoncé de 24. Le code en place 24, total et budget de calcul du Pi, avec **2 Errants** (la cour et le libre-service). Repasser à 6 Errants ne coûte qu'une ligne.
@@ -191,6 +204,10 @@ Le leurre est l'arme reine de la coopérative ; il ne peut pas attendre la 0.6. 
 - **Le coût sur le Pi** : 24 Éteints ≈ 1 % d'un cœur par joueur présent. On le borne : IA à 10 Hz, **2 Hz** pour les dormants et les Éteints loin de tout joueur ; on n'envoie que les Éteints **qui ont bougé et que le joueur perçoit** (cela empêche aussi de « voir dans le noir » en trichant) ; un réglage `cooperatives_actives_max` ; un scénario **« 10 joueurs en coopérative »** au banc de charge, avec un seuil de p99 < 25 ms.
 - **La persistance** : une table des instances (graine, version, dernière mise à jour, coffre) et des Éteints d'instance ; le butin réutilise les ressources de lieu. On sauve à chaque destruction, en sortant, et toutes les 30 s ; on ne garde ni l'attention ni le but (au retour, chacun reprend sa place).
 - **Le rendu sur iPhone 13** : bâtiments et toits qui s'effacent généralisés (`rendu/batiments.ts`) ; rayonnages et palettes en lots ; ≈ 150 appels de dessin au plus ; la lampe éclaire à courte portée (≈ 7 m) ; une ombre de lampe seulement en qualité haute.
+- **La vue par pièce (0.7.2, §2.4)** :
+  - **un plan de vue partagé** (`commun/src/vue.ts`, `vue-lieux.ts`) : les murs de plus de 1,2 m percés de leurs fenêtres, les portes fermées ; un seul test en ligne droite pour ce que le serveur envoie, ce que voient les Éteints et ce que l'écran éclaire ;
+  - **côté serveur** : le fil des bruits des Éteints cachés (`commun/src/bruits.ts`), envoyé 5 fois par seconde avec les Éteints ; envoi immédiat à l'ouverture d'une porte ; banc « 10 joueurs en Coopérative » inchangé (4 à 5 % d’un cœur du Mac avant comme après, p99 7,5 à 8,6 ms ; les bruits ajoutent ≈ 0,5 Ko/s par joueur) ;
+  - **côté écran** : une carte de vue au sol (`rendu/carte-vue.ts`), dessinée seulement quand la vue change, lue par un greffon de nuanceur sur les matériaux du lieu (les lots le reconnaissent) : **aucun appel de dessin de plus** par image (55 et 70 appels mesurés, avant comme après) ; ondes en un seul maillage instancié, seulement quand on entend quelque chose.
 
 ## 8. Les étapes
 
