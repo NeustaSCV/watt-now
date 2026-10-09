@@ -163,6 +163,10 @@ const NIVEAUX_INSTALLATIONS: [string, InstallationVue["type"], number, Installat
   ["citerne de bâche", "recuperateur_pluie", 2, { litres: 30 }],
   ["coffre cerclé", "coffre", 2, {}],
   ["réserve couverte", "coffre", 3, {}],
+  // 🔥 La forge (Book 25 §9.3) : les trois enclumes, le bac de trempe et son huile, la forge ventilée et son ventilateur.
+  ["forge + étau + bac", "forge", 1, { enclume: "etau", bac: true }],
+  ["forge + masse + bac d'huile", "forge", 1, { enclume: "masse", bac: true, huile: 12 }],
+  ["forge ventilée + rail + ventilateur", "forge", 2, { enclume: "rail", bac: true, huile: 20, ventilateur: true }],
 ];
 NIVEAUX_INSTALLATIONS.forEach(([nom, type, niveau, etat], i) => {
   const v = new VueInstallation({ id: 300 + i, type, x: i * 4, z: 21, o: 0, etat, niveau });
@@ -174,7 +178,7 @@ NIVEAUX_INSTALLATIONS.forEach(([nom, type, niveau, etat], i) => {
 // ---------- Les armes en main ----------
 
 // Les armes de la 0.5 (Book 23 §4.6) : machette, masse et lance arrivent dans les types de `commun/`.
-const ARMES = ["hache", "marteau", "barre_metal", "couteau", "lame_forgee", "gourdin", "epieu", "pied_de_biche", "machette", "masse", "lance"] as TypeObjet[];
+const ARMES = ["hache", "marteau", "barre_metal", "couteau", "lame_forgee", "gourdin", "epieu", "pied_de_biche", "machette", "masse", "lance", "hachette", "serpe", "machette_forgee", "hache_forgee", "glaive", "lance_forgee"] as TypeObjet[];
 const etatArmes = { pose: "repos" as "repos" | "garde" | "frappe", attente: 0 };
 const porteurs: Personnage[] = [];
 void chargerHumanoides().then(() => {

@@ -197,13 +197,15 @@ test("une recette d'une autre famille est grisée, s'ouvre par une leçon, coût
   assert.ok(!recettesAutresFamilles("mecanistes", savoir).includes(lame));
   // ×1,5 en matières (arrondi au-dessus) et en temps.
   const h = recetteHorsFamille(lame);
-  assert.deepEqual(h.ingredients, { ressort_lames: 2, charbon_bois: 2 });
+  assert.deepEqual(h.ingredients, { ressort_lames: 2, charbon_bois: 2, branche: 2 });
   assert.equal(h.duree, lame.duree * 1.5);
-  // ★★ au plus, même maîtrisée ; dans sa famille, ★★★ (et ★★★★ maîtrisée).
-  assert.equal(etoilesDuProduit(lame, {}, { horsFamille: true }), 2);
-  assert.equal(etoilesDuProduit(lame, {}, { horsFamille: true, maitrise: true }), 2);
-  assert.equal(etoilesDuProduit(lame, {}), 3);
-  assert.equal(etoilesDuProduit(lame, {}, { maitrise: true }), 4);
+  // ★★ au plus, même maîtrisée ; dans sa famille, à la forge ventilée avec pinces et graisse, ★★★★ (★★★★★ maîtrisée).
+  const sac = { pinces_forge: 1, graisse: 1 };
+  const contexte = { installations: [{ type: "forge" as const, niveau: 2, etat: {} }] };
+  assert.equal(etoilesDuProduit(lame, sac, { horsFamille: true, contexte }), 2);
+  assert.equal(etoilesDuProduit(lame, sac, { horsFamille: true, maitrise: true, contexte }), 2);
+  assert.equal(etoilesDuProduit(lame, sac, { contexte }), 4);
+  assert.equal(etoilesDuProduit(lame, sac, { maitrise: true, contexte }), 5);
   // Un objet sans étoiles n'en reçoit pas.
   assert.equal(etoilesDuProduit(recette("gourdin")!, {}), null);
 });
@@ -310,7 +312,7 @@ test("lire un manuel ouvre les recettes d'une famille ; dans la sienne, rien ; u
 });
 
 test("un Mécaniste lit le Manuel du forgeron, monte une forge et forge une lame : ×1,5, et ★★", () => {
-  const t = monter("mecanistes", { manuel_forgeron: 1, pierre: 12, barre_metal: 2, branche: 3, marteau: 1, ressort_lames: 2, charbon_bois: 2 });
+  const t = monter("mecanistes", { manuel_forgeron: 1, pierre: 12, barre_metal: 2, branche: 5, marteau: 1, ressort_lames: 2, charbon_bois: 2, graisse: 1 });
   // Sans l'avoir lu : grisée.
   t.joueur.recevoir({ t: "fabriquer", recette: "forge", x: 20, z: 21.8, o: 0 });
   assert.match(t.infos().at(-1)!, /chez les Charbonniers/);

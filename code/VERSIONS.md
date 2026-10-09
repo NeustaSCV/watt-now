@@ -51,6 +51,24 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 - La masse et le pied-de-biche valent enfin ce qu'ils coûteraient à refaire (200 et 150 wotts) ; la lance vaut ce que vaut sa recette.
 - Après dix exemplaires d'une même lame, la forge est maîtrisée : une étoile de plus.
 
+**Les Charbonniers : les lames** (Book 25, chantier 5)
+- **La gamme de la forge** : pinces de forge, couteau de forge (l'ancienne « lame forgée », désormais emmanchée), deux hachettes, serpe, machette forgée, hache forgée, glaive de ressort, pointes de lance, pointes d'acier, rivets, ciseau à bois et burin, ressort retrempé, électrodes.
+- **La machette forgée**, l'arme de métier : 1,5 de dégâts et 80 de solidité, deux fois plus solide que la machette de fortune.
+- **La hachette** se lance ; **la serpe** élague ; **la hache forgée** remplace les têtes rouillées qu'on ne trouve plus.
+- **La lance à pointe forgée** : un épieu coiffé d'une vraie pointe d'acier (1,4 de dégâts, solidité 60).
+- **La qualité d'une lame**, c'est la moins bonne de trois choses : l'acier, la trempe, la forge. Seul, dès le premier jour : ★★.
+- **L'acier** : le fer doux (barre, fil de fer) ★★, une lame ébréchée ou un soc de charrue ★★★, un ressort ★★★★, une lime usée ★★★★★.
+- **La trempe à l'eau** : une lame sur trois se fend (le jeu le dit avant). Elle devient une lame ébréchée, qui se reforge.
+- **La trempe à l'huile** est sûre : une noix de graisse dans le sac, ou l'huile du bac de trempe.
+- **La forge** : sans pinces, pas plus de ★★ ; avec les pinces et une enclume, ★★★ ; à la forge ventilée, ★★★★ ; avec le rail, ★★★★★.
+- **Les accessoires de la forge**, à poser sur place (B) : l'enclume (étau, tête de masse, tronçon de rail), le bac de trempe (une casserole) où l'on verse un bidon d'huile (vingt trempes), le ventilateur des Voltaïques.
+- **La forge ventilée** : Examiner la forge → Améliorer (bâche ou chiffons, 6 pierres, 1 barre). La hache et le glaive s'y forgent ; on y pompe le soufflet, sauf avec un ventilateur.
+- **Le glaive** demande la maîtrise du couteau : dix couteaux forgés d'abord.
+- **Un manche tourné** des Mécanistes dans le sac : une étoile de plus à la lame qu'on emmanche.
+- **Reforger une lame ébréchée** à la forge : la lame cassée redevient la même arme, une étoile de moins, pour un kilo de charbon.
+- Une machette forgée peut aussi naître de deux lames ébréchées (acier ★★★).
+- Hors de sa famille, une lame forgée ne dépasse jamais ★★, quelle que soit la forge.
+
 ## 0.5.3 · déployée le 2026-10-09
 
 - **Le coffre** (et la décharge), refait selon l'avis de Sally :

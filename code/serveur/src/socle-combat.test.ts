@@ -57,8 +57,9 @@ const equipe = (id = 1, x = 0, z = 0) => Object.assign(errant(id, x, z), { varia
 
 test("0.6 socle : ARMES rassemble les fichiers par famille, triés par rang, sans rien changer à l'ordre d'avant", () => {
   const ordre = ["masse", "hache", "pied_de_biche", "machette", "marteau", "barre_metal", "lance", "lame_forgee", "gourdin", "epieu", "couteau_aiguise", "couteau"];
+  // Les lames des Charbonniers (chantier 5) se glissent entre elles ; l'ordre des armes d'avant ne bouge pas.
   assert.deepEqual(
-    ARMES.map((a) => a.objet),
+    ARMES.map((a) => a.objet).filter((o) => ordre.includes(o as string)),
     ordre,
   );
   assert.equal(ARMES.length, ARMES_COMMUNES.length + ARMES_CHARBONNIERS.length + ARMES_VOLTAIQUES.length + ARMES_MECANISTES.length);
@@ -96,8 +97,8 @@ test("0.6 socle : un exemplaire étoilé frappe selon ses étoiles ; la clé nue
 
 test("0.6 socle : un exemplaire étoilé pèse son poids, se nomme avec ses étoiles, passe le contrôle", () => {
   assert.equal(poidsInventaire({ "lame_forgee#4": 2, lame_forgee: 1 }), poidsInventaire({ lame_forgee: 3 }));
-  assert.equal(nommer("lame_forgee#4", 1), "lame forgée ★★★★");
-  assert.equal(nommer("lame_forgee", 2), "2 lames forgées");
+  assert.equal(nommer("lame_forgee#4", 1), "couteau de forge ★★★★");
+  assert.equal(nommer("lame_forgee", 2), "2 couteaux de forge");
   assert.ok(estCleObjet("lame_forgee#4"));
   assert.ok(!estCleObjet("lame_forgee#3"));
   assert.ok(!estCleObjet("pierre#2"));

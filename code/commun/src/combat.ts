@@ -5,7 +5,7 @@
 import type { Inventaire, TypeObjet } from "./objets.ts";
 import { ETOILES, etoilesDe, etoilesDeBase, facteurs, meilleurExemplaire, soliditeExemplaire, typeDe, type CleObjet, type Etoiles } from "./etoiles.ts";
 import { ARMES_COMMUNES } from "./armes/communes.ts";
-import { ARMES_CHARBONNIERS } from "./armes/charbonniers.ts";
+import { ARMES_CHARBONNIERS, DEBRIS_ARMES_CHARBONNIERS, MATIERES_ARMES_CHARBONNIERS } from "./armes/charbonniers.ts";
 import { ARMES_VOLTAIQUES } from "./armes/voltaiques.ts";
 import { ARMES_MECANISTES } from "./armes/mecanistes.ts";
 
@@ -145,6 +145,8 @@ export const MATIERE_ARME: Partial<Record<TypeObjet, MatiereArme>> = {
   masse: "metal",
   barre_metal: "metal",
   pied_de_biche: "metal",
+  // 🔥 Les lames des Charbonniers (Book 25 §4.4, chantier 5).
+  ...MATIERES_ARMES_CHARBONNIERS,
 };
 /** Un atelier où remettre une arme à neuf : l'installation, l'accessoire qu'il y faut, ce que le geste consomme. */
 export interface AtelierReparation {
@@ -192,6 +194,8 @@ export const DEBRIS_ARME: Partial<Record<TypeObjet, TypeObjet>> = {
   marteau: "ferraille_tordue",
   masse: "ferraille_tordue",
   pied_de_biche: "ferraille_tordue",
+  // 🔥 Les lames des Charbonniers : une lame ébréchée, que la forge reforge (Book 25 §4.4, chantier 5).
+  ...DEBRIS_ARMES_CHARBONNIERS,
 };
 /** La réparation de fortune remonte au plus jusqu'ici : encore abîmée, mais elle tient. */
 export const PLAFOND_FORTUNE = 0.29;

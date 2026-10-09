@@ -8,6 +8,7 @@ import { REGLAGES } from "./reglages.ts";
 import { OBJETS, type Inventaire, type TypeObjet } from "./objets.ts";
 import { ENERGIE_GRISE_PROVISOIRE } from "./objets-metier.ts";
 import type { Famille } from "./regles.ts";
+import type { InstallationVue } from "./messages.ts";
 import { valeursVestiges } from "./vestiges.ts";
 import { compter, estObjetDeMetier, etoilesDeBase, maillonFaible, typeDe, type Etoiles } from "./etoiles.ts";
 import { SURCOUT_AUTRE_FAMILLE } from "./lignees.ts";
@@ -217,7 +218,15 @@ export interface Recette {
    * Pour un objet de métier : les étoiles de chaque facteur (matière, geste, outils), d'après le sac au moment de
    * fabriquer (Book 25 §4.2 : le maillon faible). Absent : les étoiles de base de l'objet. Rempli par les chantiers 4 à 7.
    */
-  facteursEtoiles?: (inventaire: Inventaire) => number[];
+  facteursEtoiles?: (inventaire: Inventaire, contexte?: ContexteFabrication) => number[];
+}
+
+/**
+ * Ce qui entoure le geste, pour les étoiles (Book 25 §4.2) : les installations tout près, avec leur niveau et leurs
+ * accessoires (la forge ventilée, son enclume). Le serveur le remplit ; absent, on fait comme s'il n'y avait rien.
+ */
+export interface ContexteFabrication {
+  installations?: readonly Pick<InstallationVue, "type" | "niveau" | "etat">[];
 }
 
 /** Toutes les recettes : les communes, puis celles de chaque famille (Book 25 §10.4). */
@@ -300,9 +309,9 @@ export function recettePour(r: Recette, famille: Famille): Recette {
  * Les étoiles de ce que produit une recette (Book 25 §4.2) : null si le produit n'est pas un objet de métier. Le maillon
  * faible de ses facteurs (sinon les étoiles de base de l'objet), +1 si la sorte est maîtrisée ; plafond ★★ hors famille.
  */
-export function etoilesDuProduit(r: Recette, inventaire: Inventaire, conditions: { horsFamille?: boolean; maitrise?: boolean } = {}): Etoiles | null {
+export function etoilesDuProduit(r: Recette, inventaire: Inventaire, conditions: { horsFamille?: boolean; maitrise?: boolean; contexte?: ContexteFabrication } = {}): Etoiles | null {
   if (!("objet" in r.produit) || !estObjetDeMetier(r.produit.objet)) return null;
-  const facteurs = r.facteursEtoiles?.(inventaire) ?? [etoilesDeBase(r.produit.objet)];
+  const facteurs = r.facteursEtoiles?.(inventaire, conditions.contexte) ?? [etoilesDeBase(r.produit.objet)];
   return maillonFaible(facteurs, conditions);
 }
 

@@ -12,6 +12,7 @@ import { APPARENCES_DE_REFERENCE, CARNATIONS, COULEURS_CHEVEUX, hauteurDe, type 
 import { PALETTE, materiau } from "./materiaux.ts";
 import { Assemblage, V3, placer } from "./assemblage.ts";
 import { Mesure, bandeau, bandouliere, pan } from "./accessoires.ts";
+import { modeleMetier } from "./metier/index.ts";
 
 /** La surface du corps, mesurée une fois par famille et par corps (elle ne dépend ni de la carnation ni des cheveux). */
 const MESURES = new Map<string, Mesure>();
@@ -206,8 +207,14 @@ export function creerArme(objet: TypeObjet): THREE.Group | null {
       for (const z of [-0.05, 0.08]) c.ligature(new V3(0, 0, z), new V3(0, 0, 1), 0.024);
       break;
     }
-    default:
-      return null;
+    default: {
+      // Les armes de métier de la 0.6 (Book 25 §10.4) : leur modèle vient du registre (rendu/metier/).
+      const modele = modeleMetier(objet, "main");
+      if (!modele) return null;
+      const groupe = new THREE.Group();
+      groupe.add(modele);
+      return groupe;
+    }
   }
   const arme = new THREE.Group();
   for (const m of c.maillages()) {

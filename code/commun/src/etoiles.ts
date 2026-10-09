@@ -46,8 +46,13 @@ export const ETOILES = {
  * 0.6). Chaque chantier de métier ajoute ses lignes dans son bloc, sans toucher aux autres (Book 25 §10.4).
  */
 export const OBJETS_DE_METIER: Partial<Record<TypeObjet, Etoiles>> = {
-  // 🔥 Charbonniers (chantier 5)
+  // 🔥 Charbonniers (chantier 5) : les lames de la forge, toutes à ★★★ de base.
   lame_forgee: 3,
+  hachette: 3,
+  serpe: 3,
+  machette_forgee: 3,
+  hache_forgee: 3,
+  glaive: 3,
   // La machette de fortune, trouvée : une tôle découpée, un manche ficelé ; une lame ★ (Book 25 §0.2).
   machette: 1,
   // ⚡ Voltaïques (chantier 6)

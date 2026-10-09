@@ -7,6 +7,7 @@
 // Le registre est vide à la création : les chantiers 4 à 7 y ajoutent chacun une ligne d'import, en fin de liste.
 
 import type * as THREE from "three";
+import { MODELES_FORGE } from "./forge.ts";
 
 /** Fabrique un modèle neuf (chaque appel rend un nouvel objet, qu'on peut placer et animer seul). */
 export type FabriqueModele = () => THREE.Object3D;
@@ -27,3 +28,5 @@ export function modeleMetier(objet: string, usage: UsageModele): THREE.Object3D 
 }
 
 // ---- Les fichiers des métiers, une ligne chacun (chantiers 4 à 7) ----
+// Chaque fichier exporte ses modèles (sans importer ce registre : pas d'import circulaire) ; on les enregistre ici.
+for (const [objet, usage, fabrique] of [...MODELES_FORGE]) enregistrerModele(objet, usage, fabrique);
