@@ -34,6 +34,11 @@ export interface Apparence {
   /** Indice dans COULEURS_CHEVEUX. */
   cheveux: number;
   barbe: boolean;
+  /**
+   * La toge blanche du compte admin (commun/src/admin.ts) : posée par le serveur seul, jamais lue du client
+   * (`apparenceValide` ne la garde pas) ni enregistrée en base.
+   */
+  toge?: true;
 }
 
 export const TAILLE_MIN = 1.6;

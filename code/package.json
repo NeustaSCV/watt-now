@@ -19,7 +19,8 @@
     "bilan": "node --disable-warning=ExperimentalWarning scripts/bilan-mesures.ts",
     "equilibre": "node --disable-warning=ExperimentalWarning scripts/equilibre.ts",
     "rythme": "node --disable-warning=ExperimentalWarning scripts/rythme.ts",
-    "reglages": "node --disable-warning=ExperimentalWarning scripts/reglages.ts"
+    "reglages": "node --disable-warning=ExperimentalWarning scripts/reglages.ts",
+    "admin": "node --disable-warning=ExperimentalWarning scripts/admin.ts"
   },
   "dependencies": {
     "three": "^0.186.1",

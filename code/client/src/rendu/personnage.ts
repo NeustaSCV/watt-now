@@ -13,6 +13,7 @@ import { PALETTE, materiau } from "./materiaux.ts";
 import { Assemblage, V3, placer } from "./assemblage.ts";
 import { Mesure, bandeau, bandouliere, pan } from "./accessoires.ts";
 import { modeleMetier } from "./metier/index.ts";
+import { TENUE_TOGE, habillerToge } from "./toge.ts";
 
 /** La surface du corps, mesurée une fois par famille et par corps (elle ne dépend ni de la carnation ni des cheveux). */
 const MESURES = new Map<string, Mesure>();
@@ -253,7 +254,7 @@ export class Personnage {
     const corps = new Humanoide({
       genre: a.silhouette === "feminine" ? "femme" : "homme",
       peau: CARNATIONS[a.peau] ?? CARNATIONS[2],
-      tenue: TENUES[this.famille],
+      tenue: a.toge ? TENUE_TOGE : TENUES[this.famille],
       coiffure: FICHIERS_COIFFURE[a.coiffure],
       couleurCheveux: COULEURS_CHEVEUX[a.cheveux] ?? COULEURS_CHEVEUX[0],
       barbe: a.barbe,
@@ -293,7 +294,7 @@ export class Personnage {
   /** Les accessoires de silhouette de la famille (Book 18 §4.1), moulés sur le corps habillé. */
   private habiller(corps: Humanoide): void {
     // La coiffure compte : chapeau, bandana et lanière de lampe passent par-dessus les cheveux.
-    const cle = `${this.famille}|${this.apparence.silhouette}|${this.apparence.taille}|${this.apparence.corpulence}|${this.apparence.coiffure}|${this.apparence.barbe}`;
+    const cle = `${this.famille}|${this.apparence.silhouette}|${this.apparence.taille}|${this.apparence.corpulence}|${this.apparence.coiffure}|${this.apparence.barbe}|${this.apparence.toge === true}`;
     let m = MESURES.get(cle);
     if (!m) MESURES.set(cle, (m = new Mesure(corps.points())));
     const cou = corps.repere("neck_01");
@@ -316,6 +317,9 @@ export class Personnage {
       if (o.children.length > 0) fusionnerStatique(o);
       corps.accrocher(o, os);
     };
+
+    // Le compte admin « god » : la toge blanche à la place des accessoires de sa famille (rendu/toge.ts).
+    if (this.apparence.toge) return habillerToge(corps, m, coller, tete);
 
     if (this.famille === "charbonniers") {
       // Le tablier de cuir : la bavette sur la poitrine, la jupe jusqu'aux genoux.

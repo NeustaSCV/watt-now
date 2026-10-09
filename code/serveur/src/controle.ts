@@ -5,6 +5,7 @@
 
 import { estCleObjet, estObjet } from "../../commun/src/objets.ts";
 import type { MessageClient } from "../../commun/src/messages.ts";
+import { estOperationAdmin } from "../../commun/src/admin.ts";
 
 type Champs = Record<string, unknown>;
 
@@ -154,6 +155,9 @@ export function messageValide(m: unknown): m is MessageClient {
     // L'arbre de progression (0.7) : les cartes que le client a montrées, une liste courte d'identifiants courts.
     case "recettes_vues":
       return Array.isArray(m.recettes) && m.recettes.length <= 200 && m.recettes.every((r) => chaine(r));
+    // Le compte admin : la forme seulement ; que ce soit bien l'admin, le joueur le vérifie à chaque fois (base).
+    case "admin":
+      return estOperationAdmin(m.op);
     case "coffre":
       return nombre(m.id) && (m.sens === "deposer" || m.sens === "prendre") && estCleObjet(m.objet) && quantite(m.quantite);
     case "jeter":

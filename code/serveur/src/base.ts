@@ -27,6 +27,7 @@ import { VERSION_HALTE, genererHalte } from "../../commun/src/halte.ts";
 import type { RessourceSol } from "../../commun/src/terrain.ts";
 import { estLieuJouable, type LieuJouable } from "../../commun/src/lieux.ts";
 import { empreinteMotDePasse, nouveauJeton, verifierMotDePasse } from "./motdepasse.ts";
+import { pseudoReserve } from "../../commun/src/admin.ts";
 
 /** La forme canonique d'une clé lue en base (« lame_forgee#3 » → « lame_forgee »), Book 25 §9.6. */
 function cleCanonique(cle: string): string {
@@ -105,8 +106,15 @@ export interface SacEnBase {
 }
 
 export class PseudoPris extends Error {
+  constructor(message = "Ce pseudo est déjà pris.") {
+    super(message);
+  }
+}
+
+/** Le pseudo admin et ses variantes (commun/src/admin.ts) : jamais par l'inscription. */
+export class PseudoReserve extends PseudoPris {
   constructor() {
-    super("Ce pseudo est déjà pris.");
+    super("Ce pseudo est réservé.");
   }
 }
 
@@ -213,6 +221,12 @@ const SCHEMA = `
     renouvele_le  INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (lieu, carreau)
   );
+  -- Le compte admin (outil du porteur, 0.7) : une seule ligne possible (seul = 1), donc un seul admin.
+  CREATE TABLE IF NOT EXISTS admin (
+    seul       INTEGER PRIMARY KEY CHECK (seul = 1),
+    compte_id  INTEGER NOT NULL UNIQUE REFERENCES comptes(id) ON DELETE CASCADE,
+    invincible INTEGER NOT NULL DEFAULT 1
+  );
 `;
 
 /** Colonnes ajoutées après la première version (É0) : ajoutées si elles manquent. */
@@ -275,7 +289,8 @@ export class Base {
     this.db = new DatabaseSync(chemin);
     // WAL + synchronous NORMAL : plus d'écriture forcée sur le disque à chaque validation (la carte du Pi s'use
     // moins, plus d'à-coups). En cas de coupure de courant, on peut perdre les dernières secondes, jamais la cohérence.
-    this.db.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL; PRAGMA foreign_keys = ON;");
+    // busy_timeout : la commande admin écrit pendant que le serveur tourne ; chacun attend son tour au lieu d'échouer.
+    this.db.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;");
     this.db.exec(SCHEMA);
     this.migrer();
   }
@@ -308,8 +323,12 @@ export class Base {
     return debut;
   }
 
-  /** `tutoriel` : un nouveau joueur commence par le tutoriel (Book 14 §4.2) ; les comptes de test, non. */
-  creerCompte(pseudo: string, motDePasse: string, famille: Famille, tutoriel = false, apparence: Apparence | null = null): Compte {
+  /**
+   * `tutoriel` : un nouveau joueur commence par le tutoriel (Book 14 §4.2) ; les comptes de test, non.
+   * Le pseudo admin (« god » et ses variantes) est refusé : seule la commande admin le crée (`reserveAutorise`).
+   */
+  creerCompte(pseudo: string, motDePasse: string, famille: Famille, tutoriel = false, apparence: Apparence | null = null, reserveAutorise = false): Compte {
+    if (!reserveAutorise && pseudoReserve(pseudo)) throw new PseudoReserve();
     const existe = this.db.prepare("SELECT 1 FROM comptes WHERE pseudo = ?").get(pseudo);
     if (existe) throw new PseudoPris();
 
@@ -319,6 +338,12 @@ export class Base {
       .prepare("INSERT INTO comptes (pseudo, sel, empreinte, cree_le) VALUES (?, ?, ?, ?)")
       .run(pseudo, sel, empreinte, date);
     const id = Number(resultat.lastInsertRowid);
+    this.initialiserPersonnage(id, famille, tutoriel, apparence, date);
+    return { id, pseudo, famille };
+  }
+
+  /** Le personnage d'un compte neuf (ou remis à neuf) : le kit, le terrain, la progression, l'apparence. */
+  private initialiserPersonnage(id: number, famille: Famille, tutoriel: boolean, apparence: Apparence | null, date: string): void {
     this.db
       .prepare("INSERT INTO personnages (compte_id, famille, x, z, orientation, maj_le) VALUES (?, ?, ?, ?, ?, ?)")
       .run(id, famille, POINT_ARRIVEE.x, POINT_ARRIVEE.z, Math.PI, date);
@@ -329,7 +354,65 @@ export class Base {
     const devoilees = tutoriel ? devoileesAuDepart() : [...new Set([...devoileesAuDepart(), ...devoileesDEmblee(famille)])];
     this.sauverProgression(id, { ...PROGRESSION_VIDE, devoilees, nonVues: [], vus: [] });
     if (apparence) this.db.prepare("UPDATE personnages SET apparence = ? WHERE compte_id = ?").run(JSON.stringify(apparenceValide(apparence, famille)), id);
-    return { id, pseudo, famille };
+  }
+
+  // ---------- Le compte admin (commun/src/admin.ts, scripts/admin.ts) ----------
+
+  /** Le compte qui porte ce pseudo (insensible à la casse), ou null. */
+  compteParPseudo(pseudo: string): Compte | null {
+    const l = this.db.prepare("SELECT c.id, c.pseudo, p.famille FROM comptes c JOIN personnages p ON p.compte_id = c.id WHERE c.pseudo = ?").get(pseudo) as
+      | { id: number; pseudo: string; famille: Famille }
+      | undefined;
+    return l ? { id: l.id, pseudo: l.pseudo, famille: l.famille } : null;
+  }
+
+  /**
+   * Remet un compte à neuf (la commande admin, quand « god » existe déjà) : nouveau mot de passe, jetons effacés (il faut
+   * se reconnecter), et un personnage neuf, sans tutoriel : terrain, sac, coffres, quêtes, progression, sacs perdus.
+   */
+  reinitialiserCompte(id: number, motDePasse: string, famille: Famille, apparence: Apparence | null = null): Compte {
+    const compte = this.db.prepare("SELECT pseudo FROM comptes WHERE id = ?").get(id) as { pseudo: string } | undefined;
+    if (!compte) throw new Error(`Compte ${id} introuvable`);
+    this.transaction(() => {
+      const { sel, empreinte } = empreinteMotDePasse(motDePasse);
+      this.db.prepare("UPDATE comptes SET sel = ?, empreinte = ? WHERE id = ?").run(sel, empreinte, id);
+      for (const table of ["jetons", "inventaires", "ressources", "feux", "installations", "personnages"]) this.db.prepare(`DELETE FROM ${table} WHERE compte_id = ?`).run(id);
+      this.db.prepare("DELETE FROM sacs WHERE proprietaire = ? OR terrain_de = ?").run(id, id);
+      this.db.prepare("DELETE FROM instances WHERE cle = ?").run(`cooperative:${id}`);
+      this.db.prepare("DELETE FROM dechets WHERE lieu = ?").run(`cooperative:${id}`);
+      this.initialiserPersonnage(id, famille, false, apparence, maintenant());
+    });
+    return { id, pseudo: compte.pseudo, famille };
+  }
+
+  /**
+   * Désigne l'admin. La table n'a qu'une ligne possible (`seul` = 1) : en désigner un autre retire l'ancien.
+   * Il commence invincible.
+   */
+  designerAdmin(compteId: number): void {
+    this.db
+      .prepare("INSERT INTO admin (seul, compte_id, invincible) VALUES (1, ?, 1) ON CONFLICT (seul) DO UPDATE SET compte_id = excluded.compte_id, invincible = 1")
+      .run(compteId);
+  }
+
+  /** Le compte admin, ou null. */
+  admin(): number | null {
+    const l = this.db.prepare("SELECT compte_id FROM admin").get() as { compte_id: number } | undefined;
+    return l ? l.compte_id : null;
+  }
+
+  estAdmin(compteId: number): boolean {
+    return this.db.prepare("SELECT 1 FROM admin WHERE compte_id = ?").get(compteId) !== undefined;
+  }
+
+  /** L'admin est-il invincible ? (false pour tout autre compte) */
+  adminInvincible(compteId: number): boolean {
+    const l = this.db.prepare("SELECT invincible FROM admin WHERE compte_id = ?").get(compteId) as { invincible: number } | undefined;
+    return l?.invincible === 1;
+  }
+
+  reglerInvincible(compteId: number, oui: boolean): void {
+    this.db.prepare("UPDATE admin SET invincible = ? WHERE compte_id = ?").run(oui ? 1 : 0, compteId);
   }
 
   /** Ce pseudo est-il déjà pris ? (vérifié avant l'étape d'apparence, pour ne pas la faire pour rien) */

@@ -38,6 +38,7 @@ import { animerCooperative, creerCooperative, estomperCooperative, majPortes, pl
 import { KLAXONS_PAR_BATTERIE, RADIO_ETABLI, pieceDe, portesInitiales, sombreIci } from "../../commun/src/cooperative.ts";
 import { IndicateurHorsChamp } from "./hors-champ.ts";
 import { InterfaceLecon } from "./lecon-ui.ts";
+import { MenuAdmin } from "./admin-ui.ts";
 import { animerComptoir, creerComptoir, lumieresComptoir } from "./rendu/comptoir.ts";
 import { VueEteint } from "./rendu/eteint.ts";
 import { VueAutre } from "./rendu/autres.ts";
@@ -408,6 +409,15 @@ const hud = new Hud(
 );
 /** La leçon entre joueurs (Book 25 §2.3) : choisir, accepter, la barre de la leçon en cours. */
 const lecons = new InterfaceLecon(document.getElementById("hud")!, (op) => envoyer({ t: "lecon", op }));
+/** Le menu ⚙ du compte admin « god » (admin-ui.ts) : caché pour tout autre compte. */
+const menuAdmin = new MenuAdmin(
+  document.querySelector<HTMLElement>("#hud .menu-options")!,
+  (op) => envoyer({ t: "admin", op }),
+  () => {
+    document.querySelector<HTMLElement>("#hud .menu-options")!.hidden = true;
+    document.querySelector("#hud .options")?.setAttribute("aria-expanded", "false");
+  },
+);
 // Après le HUD (il remplit #hud à sa construction) : la flèche des Éteints hors champ.
 const horsChamp = new IndicateurHorsChamp(document.getElementById("hud")!);
 
@@ -529,6 +539,8 @@ function installer(message: Bienvenue): void {
   charges = message.charges;
   occupe = false;
   hud.identite(message.moi.pseudo, message.moi.famille);
+  menuAdmin.maj(message.moi.admin);
+  hud.admin = message.moi.admin !== undefined;
   hud.majSavoir(message.savoir ?? { apprises: [], manuels: [] });
   hud.majProgression(message.progression ?? null);
   lecons.maj(null);
@@ -927,6 +939,9 @@ function recevoir(message: MessageServeur): void {
     // Le savoir des autres familles (Book 25 §2.3) : leçons et manuels.
     case "savoir":
       hud.majSavoir(message.savoir);
+      return;
+    case "admin":
+      menuAdmin.maj(message.admin);
       return;
     // La couche de déchets (0.7) : une pièce prise, un remplissage neuf, un point, la liste d'une fouille.
     case "dechets_carreau":
