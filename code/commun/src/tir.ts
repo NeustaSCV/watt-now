@@ -14,6 +14,7 @@ import { ETOILES, compter, etoilesDe, etoilesDeBase, estObjetDeMetier, meilleurE
 import type { Boite, Zone } from "./lieux.ts";
 import type { TypeDegat } from "./combat.ts";
 import { MOBILIER } from "./cooperative.ts";
+import { REGLAGES } from "./reglages.ts";
 
 // ---------- Ce qu'on lance à la main (Book 23 §5) ----------
 
@@ -219,7 +220,10 @@ export function pretALancer(inventaire: Inventaire, choisi: CleObjet | null, tab
 // ---------- Les étoiles d'une arme de tir (Book 25 §8.3) ----------
 
 /** Une arme de tir telle que la donne un exemplaire : dégâts et portées suivent ses étoiles. */
-export function armeTirExemplaire(cle: string, base: ArmeTir): ArmeTir & { etoiles: Etoiles | null } {
+export function armeTirExemplaire(cle: string, declaree: ArmeTir): ArmeTir & { etoiles: Etoiles | null } {
+  // Le réglage d'équilibre du test (chantier 9, reglages.ts) : la portée de tête, à 1 par défaut.
+  const k = REGLAGES.equilibre_tir_portee_tete;
+  const base = k === 1 ? declaree : { ...declaree, porteeTete: declaree.porteeTete * k };
   const n = base.metier && estObjetDeMetier(base.objet) ? etoilesDe(cle) : null;
   if (n === null) return { ...base, etoiles: null };
   const ref = ETOILES[etoilesDeBase(base.objet)];

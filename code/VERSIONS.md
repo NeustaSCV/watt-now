@@ -130,6 +130,12 @@ Le métier des familles (Book 25) : chaque famille fabrique seule son arme de m�
 - Les leçons des quêtes réussies citent tes touches.
 - Dans le carnet, chaque étape du métier (et de l'arc) a son icône, celle de l'objet à faire.
 
+**L'équilibre des armes de métier** (Book 25, chantier 9)
+- **La lame, la matraque et l'arbalète ont chacune leur terrain**, vérifié par un simulateur qui rejoue les vraies règles du jeu : la lame au corps à corps, l'électrique contre le casqué et le groupe serré, l'arbalète à distance. Aucune n'est plus de deux fois moins bonne ailleurs. Aucune valeur n'a eu à changer.
+- **Le cercle de visée se lit mieux sur un petit écran** : son trait reste épais même refermé, et il se remplit d'un rouge pâle quand la tête est à portée.
+- **Un Éteint raidi** par une décharge porte un anneau bleu au sol, qui palpite : on le reconnaît d'un coup d'œil, de jour comme de nuit.
+- Pour le test : cinq réglages d'équilibre modifiables à chaud (dégâts des lames, raidissement, décharge longue, réarmement, portée de tête) ; `npm run equilibre` dit si l'équilibre tient encore, `npm run bilan` mesure les critères de réussite de la 0.6.
+
 ## 0.5.3 · déployée le 2026-10-09
 
 - **Le coffre** (et la décharge), refait selon l'avis de Sally :

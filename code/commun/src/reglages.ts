@@ -30,6 +30,13 @@ export const DEFINITIONS_REGLAGES = {
   coop_repeuplement_n: { defaut: 3, min: 0, max: 24, aide: "Coopérative : combien d'Éteints reviennent à chaque fois (la chambre froide d'abord, jusqu'à ses 6 dormants)." },
   inactivite_min: { defaut: 5, min: 1, max: 120, aide: "Minutes sans bouger ni agir avant d'être déconnecté d'office : hors ligne, la faim, la soif et la fatigue sont gelées." },
   panneau_wh_jour: { defaut: 80, min: 0, max: 500, aide: "Wh produits par le petit panneau solaire par jour de calendrier (1 h 50 réelle)." },
+  // L'équilibre des armes de métier (Book 25 §8.4, chantier 9) : des multiplicateurs, à 1 par défaut. `npm run equilibre`
+  // rejoue le tableau du §8.4 avec les réglages du fichier, et dit si le garde-fou tient encore.
+  equilibre_lames_degats: { defaut: 1, min: 0.5, max: 2, aide: "Dégâts des lames de métier (machette, couteau de forge, glaive…) : 1,2 = 20 % de plus." },
+  equilibre_electrique_raidi: { defaut: 1, min: 0.5, max: 2, aide: "Durée pendant laquelle une décharge courte raidit l'Éteint (2,5 s à ★★★) : 1,2 = 20 % de plus." },
+  equilibre_electrique_longue: { defaut: 1, min: 0.5, max: 2, aide: "Durée à tenir la décharge longue pour éteindre (1 s à ★★★) : 0,8 = plus rapide." },
+  equilibre_arbalete_rearmer: { defaut: 1, min: 0.5, max: 2, aide: "Temps pour réarmer une arbalète (3 s au pied, 4 à 6 s pour la lourde) : 0,8 = plus rapide." },
+  equilibre_tir_portee_tete: { defaut: 1, min: 0.5, max: 2, aide: "Portée jusqu'où un tir plein détruit à la tête (arc 6 m, arbalète 12 m à ★★★) : 1,2 = 20 % plus loin." },
 } satisfies Record<string, DefinitionReglage>;
 
 export type NomReglage = keyof typeof DEFINITIONS_REGLAGES;

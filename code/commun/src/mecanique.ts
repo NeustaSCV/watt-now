@@ -8,6 +8,7 @@ import { exemplaires, etoilesDeBase, type Etoiles } from "./etoiles.ts";
 import type { Inventaire, TypeObjet } from "./objets.ts";
 import type { EtatInstallation } from "./messages.ts";
 import type { ArmeTir } from "./tir.ts";
+import { REGLAGES } from "./reglages.ts";
 
 // ---------- Les étoiles des pièces (Book 25 §6.1, règle du maillon faible) ----------
 
@@ -57,12 +58,14 @@ export interface Rearmement {
  * au meilleur outil qu'on ait (le cranequin 4 s, le pied-de-biche 6 s). null : il manque l'outil.
  */
 export function rearmement(arme: Pick<ArmeTir, "rechargeMs" | "rearmerAvec">, inventaire: Inventaire): Rearmement | null {
-  if (!arme.rearmerAvec?.length) return { ms: arme.rechargeMs, outil: null };
+  // Le réglage d'équilibre du test (Book 25 §8.4, chantier 9) : à 1 par défaut.
+  const k = REGLAGES.equilibre_arbalete_rearmer;
+  if (!arme.rearmerAvec?.length) return { ms: Math.round(arme.rechargeMs * k), outil: null };
   let meilleur: Rearmement | null = null;
   for (const o of arme.rearmerAvec) {
     if ((inventaire[o.objet] ?? 0) > 0 && (!meilleur || o.ms < meilleur.ms)) meilleur = { ms: o.ms, outil: o.objet };
   }
-  return meilleur;
+  return meilleur && { ...meilleur, ms: Math.round(meilleur.ms * k) };
 }
 
 // ---------- Les pièges (Book 25 §6.3) ----------

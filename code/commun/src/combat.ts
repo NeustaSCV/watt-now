@@ -8,6 +8,7 @@ import { ARMES_COMMUNES } from "./armes/communes.ts";
 import { ARMES_CHARBONNIERS, DEBRIS_ARMES_CHARBONNIERS, MATIERES_ARMES_CHARBONNIERS } from "./armes/charbonniers.ts";
 import { ARMES_VOLTAIQUES } from "./armes/voltaiques.ts";
 import { ARMES_MECANISTES } from "./armes/mecanistes.ts";
+import { REGLAGES } from "./reglages.ts";
 
 // ---------- Les armes ----------
 
@@ -98,8 +99,10 @@ export function cleArme(a: Arme): CleObjet | null {
  */
 export function armeDeCle(cle: string): Arme | null {
   const type = typeDe(cle);
-  const base = ARMES.find((a) => a.objet === type);
-  if (!base || !base.objet) return null;
+  const declaree = ARMES.find((a) => a.objet === type);
+  if (!declaree || !declaree.objet) return null;
+  const base = armeReglee(declaree);
+  if (!base.objet) return null;
   const n = base.metier ? etoilesDe(cle) : null;
   if (n === null || n === etoilesDeBase(base.objet)) return base;
   const f = facteurs(base.objet, n);
@@ -107,10 +110,25 @@ export function armeDeCle(cle: string): Arme | null {
   if (base.electrique) {
     const ref = ETOILES[etoilesDeBase(base.objet)];
     // Le raidissement suit les étoiles ; la longue raccourcit avec elles (l'aiguillon garde son retard d'une perche).
-    arme.electrique = { ...base.electrique, raidi: ETOILES[n].raidi, saute: base.electrique.saute && n >= 3 };
+    arme.electrique = { ...base.electrique, raidi: ETOILES[n].raidi * REGLAGES.equilibre_electrique_raidi, saute: base.electrique.saute && n >= 3 };
     arme.coupAppuye = Math.round((base.coupAppuye * ETOILES[n].longueMs) / ref.longueMs);
   }
   return arme;
+}
+
+/**
+ * Les réglages d'équilibre du test (Book 25 §10.3, chantier 9 ; `reglages.ts`) : des multiplicateurs, à 1 par défaut,
+ * sur les armes de métier seulement. Sans réglage changé, c'est l'arme déclarée elle-même.
+ */
+export function armeReglee(a: Arme): Arme {
+  if (!a.metier) return a;
+  const lame = a.type === "tranchant" ? REGLAGES.equilibre_lames_degats : 1;
+  const raidi = a.electrique ? REGLAGES.equilibre_electrique_raidi : 1;
+  const longue = a.electrique ? REGLAGES.equilibre_electrique_longue : 1;
+  if (lame === 1 && raidi === 1 && longue === 1) return a;
+  const r: Arme = { ...a, degatsTorse: a.degatsTorse * lame, coupAppuye: Math.round(a.coupAppuye * longue) };
+  if (a.electrique) r.electrique = { ...a.electrique, raidi: a.electrique.raidi * raidi };
+  return r;
 }
 
 /**

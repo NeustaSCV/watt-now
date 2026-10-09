@@ -68,8 +68,10 @@ export interface ContexteTir {
   diffuser(m: MessageServeur): void;
   /** Un tir use l'arme (Book 23 §4.3) : elle peut casser. */
   user(arme: Arme): void;
-  /** Ce qui suit la destruction d'un Éteint (la clé du magasinier, le tutoriel). */
-  apresDestruction(e: Eteint): void;
+  /** Ce qui suit la destruction d'un Éteint (la clé du magasinier, le tutoriel) ; `comment` : pour les mesures. */
+  apresDestruction(e: Eteint, comment?: string): void;
+  /** Les mesures du métier (Book 25 §10.1) : un tir de cette arme, et le temps qu'il a pris. */
+  noterTir?(objet: string, secondes: number): void;
   /** Un geste (réarmer l'arbalète : immobile, il s'arrête si l'on bouge). */
   commencer(libelle: string, dureeS: number, appliquer: () => void): void;
   /** Un fait pour les quêtes (« tete:fleche », « tete:carreau » : un Éteint détruit d'un tir à la tête, Book 25 §9.4). */
@@ -342,6 +344,7 @@ export class Tir {
     if (tir && munition) {
       // Les munitions n'ont pas d'étoiles : leur clé est leur type.
       ctx.retirer(munition.objet, 1);
+      ctx.noterTir?.(tir.objet, (tir.pleinMs + tir.rechargeMs) / 1000);
       this.prochain = instant + (tir.armeeDAvance ? tir.pleinMs : tir.rechargeMs);
       this.bruit(pos.x, pos.z, tir.bruit, DUREE_BRUIT_TIR);
       // Chaque tir use l'arme (150 tirs pour un arc simple).
@@ -362,6 +365,7 @@ export class Tir {
       ou = { x: touche.x, z: touche.z };
       impact = "eteint";
       let resultat: ResultatCoup;
+      let comment = "lancer";
       if (tir && munition) {
         const d = Math.hypot(touche.x - pos.x, touche.z - pos.z);
         // Le casque : la flèche passe par la visière, de face, à la moitié de la portée de tête.
@@ -370,12 +374,13 @@ export class Tir {
         const aLaTete = d <= porteeTete;
         resultat = toucher(touche, { genre: "tir", degats, tete: aLaTete }, pos, zone);
         if (resultat === "detruit" && aLaTete) ctx.noter?.(tir.armeeDAvance ? "tete:carreau" : "tete:fleche");
+        comment = aLaTete ? "tir_plein" : "tir";
       } else {
         const def = (p as Extract<Pret, { genre: "lancer" }>).def;
         resultat = toucher(touche, { genre: "lancer", def, heureux: def.coupHeureux > 0 && ctx.alea() < def.coupHeureux }, pos, zone);
       }
       coup = { id: touche.id, resultat };
-      if (resultat === "detruit") ctx.apresDestruction(touche);
+      if (resultat === "detruit") ctx.apresDestruction(touche, comment);
     }
 
     // Ce qui retombe : au sol, ramassable ; dans la mare, perdu ; une flèche qui touche casse parfois.

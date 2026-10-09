@@ -4,6 +4,7 @@
 
 import { DatabaseSync } from "node:sqlite";
 import { join } from "node:path";
+import { bilanMetier, type GenreMesure } from "../serveur/src/mesures.ts";
 
 const args = process.argv.slice(2);
 const option = (nom: string) => {
@@ -125,6 +126,30 @@ titre("Progression par famille et par semaine");
   const recettes = new Map<string, number>();
   for (const l of p.filter((x) => x.quoi.startsWith("recette:"))) recettes.set(l.quoi.slice(8), (recettes.get(l.quoi.slice(8)) ?? 0) + 1);
   if (recettes.size) sortie.push("", `Recettes les plus faites : ${[...recettes].sort((a, b) => b[1] - a[1]).slice(0, 10).map(([r, n]) => `${r} (${n})`).join(", ")}.`);
+}
+
+// ---------- Le métier des familles (Book 25 §10.1, 0.6) ----------
+titre("Le métier des familles : les critères de réussite de la 0.6");
+{
+  const b = bilanMetier(lignes.map((l) => ({ instant: l.instant, compteId: l.compte_id, famille: l.famille, genre: l.genre as GenreMesure, quoi: l.quoi, valeur: l.valeur })));
+  const part = (v: number | null) => (v === null ? "–" : `${nombre(v * 100)} %`);
+  const jours = (v: number | null) => (v === null ? "pas encore" : `${nombre(v, 1)} j`);
+  sortie.push(
+    tableau(
+      ["Critère", "Mesure", "Objectif"],
+      [
+        ["Joueurs qui ont tiré une flèche ou un carreau", `${b.tireurs} sur ${b.joueurs} (${part(b.partTireurs)})`, "60 % ou plus"],
+        ["Éteints détruits d'un tir plein à la tête", String(b.tirPlein), "au moins 1"],
+        ...FAMILLES.map((f) => [`${NOMS[f]} : première arme de métier ★★`, jours(b.armeDeMetier[f as keyof typeof b.armeDeMetier] ?? null), "moins de 2 jours de calendrier"]),
+        ["Échanges de métier entre joueurs", b.echangesParJoueurSemaine === null ? "–" : `${nombre(b.echangesParJoueurSemaine, 1)} par joueur et par semaine`, "1 ou plus, les trois familles là"],
+        ["Temps à se défendre", FAMILLES.map((f) => `${NOMS[f]} ${part(b.defense[f as keyof typeof b.defense] ?? null)}`).join(" · "), `écart de 5 points au plus (${b.ecartDefense === null ? "–" : `${nombre(b.ecartDefense * 100, 1)} points`})`],
+        ["Arbalètes lourdes faites", String(b.arbaletesLourdes), "au moins 1 par test"],
+      ],
+    ),
+  );
+  const d = Object.entries(b.destructions).sort((x, y) => y[1] - x[1]);
+  if (d.length) sortie.push("", `Éteints détruits, par façon de faire : ${d.map(([c, n]) => `${c} (${n})`).join(", ")}.`);
+  sortie.push("", "La clôture qui tient une nuit ne se mesure pas encore : à noter à la main pendant le test.");
 }
 
 // ---------- Serveur ----------

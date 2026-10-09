@@ -78,6 +78,11 @@ export function viser(de: { x: number; z: number }, o: number, pret: Pret, etein
 
 const COULEURS = { blanc: 0xf6f1e4, orange: 0xf0a030, rouge: 0xd8352a } as const;
 const NB_POINTS = 14;
+/**
+ * L'épaisseur du trait (m), la même quel que soit le rayon : un cercle refermé ne s'amincit plus jusqu'à disparaître
+ * sur l'iPhone 13 mini (chantier 9, passe de lisibilité). Le contour sombre déborde de chaque côté.
+ */
+const TRAIT = { clair: 0.11, sombre: 0.2 } as const;
 
 /** Le dessin de la visée : la ligne de points au sol, et le cercle qui se referme. */
 export class DessinVisee {
@@ -87,6 +92,11 @@ export class DessinVisee {
   private readonly contour: THREE.Mesh;
   private readonly matiere = new THREE.MeshBasicMaterial({ color: COULEURS.blanc, transparent: true, opacity: 0.9, depthWrite: false, depthTest: false });
   private readonly sombre = new THREE.MeshBasicMaterial({ color: 0x1d1712, transparent: true, opacity: 0.45, depthWrite: false, depthTest: false });
+  /** Le disque rouge, très pâle, quand la tête est à portée : la couleur se lit même d'un coup d'œil. */
+  private readonly voile = new THREE.MeshBasicMaterial({ color: COULEURS.rouge, transparent: true, opacity: 0.22, depthWrite: false, depthTest: false });
+  private readonly disque: THREE.Mesh;
+  /** Le rayon pour lequel l'anneau a été construit (on le refait quand il change). */
+  private rayonConstruit = -1;
 
   constructor() {
     const geoPoint = new THREE.CircleGeometry(0.06, 8).rotateX(-Math.PI / 2);
@@ -101,7 +111,10 @@ export class DessinVisee {
     this.contour.renderOrder = 22;
     this.anneau = new THREE.Mesh(new THREE.RingGeometry(0.93, 1.02, 40).rotateX(-Math.PI / 2), this.matiere);
     this.anneau.renderOrder = 23;
-    this.objet.add(this.contour, this.anneau);
+    this.disque = new THREE.Mesh(new THREE.CircleGeometry(1, 32).rotateX(-Math.PI / 2), this.voile);
+    this.disque.renderOrder = 21;
+    this.disque.visible = false;
+    this.objet.add(this.disque, this.contour, this.anneau);
     this.objet.position.y = 0.04;
     this.objet.visible = false;
   }
@@ -124,10 +137,12 @@ export class DessinVisee {
       couleur = v.cible === null ? (v.distance <= a.porteeUtile ? "blanc" : "orange") : couleurVisee(v.distance, a.porteeUtile, tete, plein);
     } else rayon = pret.def.genre === "leurre" ? 0.7 : 0.45;
     this.matiere.color.setHex(COULEURS[couleur]);
-    this.anneau.scale.set(rayon, 1, rayon);
-    this.contour.scale.set(rayon, 1, rayon);
+    this.construireAnneau(rayon);
     this.anneau.position.set(v.x, 0, v.z);
     this.contour.position.set(v.x, 0, v.z);
+    this.disque.visible = couleur === "rouge";
+    this.disque.scale.set(rayon, 1, rayon);
+    this.disque.position.set(v.x, 0, v.z);
     // La ligne de points, du pied au cercle (elle s'arrête au bord du cercle).
     const dx = v.x - de.x;
     const dz = v.z - de.z;
@@ -148,5 +163,16 @@ export class DessinVisee {
 
   cacher(): void {
     this.objet.visible = false;
+  }
+
+  /** L'anneau et son contour, au rayon voulu, d'un trait d'épaisseur constante (refaits au centimètre près). */
+  private construireAnneau(rayon: number): void {
+    if (Math.abs(rayon - this.rayonConstruit) < 0.01) return;
+    this.rayonConstruit = rayon;
+    const anneau = (largeur: number) => new THREE.RingGeometry(Math.max(0.02, rayon - largeur / 2), rayon + largeur / 2, 40).rotateX(-Math.PI / 2);
+    this.anneau.geometry.dispose();
+    this.contour.geometry.dispose();
+    this.anneau.geometry = anneau(TRAIT.clair);
+    this.contour.geometry = anneau(TRAIT.sombre);
   }
 }

@@ -544,6 +544,8 @@ Les trois armes de métier, et l'arc commun pour repère, aux niveaux ★, ★�
 
 Repères de calcul (code 0.5.3) : un Errant tombe à 3 points au torse, un Équipé à 4 ; le coup appuyé compte double ; un appuyé à la tête avec une arme qui « tue à la tête » détruit un Errant ; le tranchant n'achève jamais un Équipé, même au sol ; la saisie part après 0,6 s de contact, la morsure 3 s après ; un Éteint en poursuite avance à 0,9 m/s ; un coup porté s'entend à 14 m (`BRUIT_ACTION.coup`) ; on propose **10 m** pour le tranchant (§8.5).
 
+> **Rejoué par le simulateur (chantier 9, 2026-10-09)** : le code fait avancer un Éteint en poursuite à **1,55 m/s** (`VITESSES.poursuivant`), pas 0,9 : un groupe surgi à 5 m est au contact en ≈ 2,6 s, pas 5,5 s. Les chiffres ci-dessous sont ceux de la v0.2, gardés pour l'histoire ; **les chiffres qui font foi sont au §8.7**, rejoués avec les vraies règles du jeu.
+
 **Les chiffres :**
 
 | Arme | Niv. | Ce que c'est | Dégâts | Détruire un Errant | Détruire un Équipé | Groupe de 3 (surgis à 5 m, ≈ 5,5 s avant le contact) | Coût d'usage par Errant | Bruit | Portée |
@@ -576,7 +578,7 @@ Repères de calcul (code 0.5.3) : un Errant tombe à 3 points au torse, un Équi
 - **Contre un groupe**, l'arbalète et l'arc en éclaircissent deux avant le contact, puis cèdent la place ; l'électrique tient le contact sans être saisi ; la lame va le plus vite, mais au risque d'une prise.
 - **Au coût**, les trois armes de métier sont du même ordre : ≈ 3 à 5 wotts par Errant détruit. Chacune paie dans sa monnaie : la lame en **usure et en bruit**, l'électrique en **Wh et en temps**, l'arbalète en **carreaux et en réarmement**.
 - **L'arc commun** reste juste en dessous de l'arbalète à niveau égal (portée de tête 6 m contre 12 m, il faut bander) : le métier des Mécanistes vaut quelque chose, sans priver les autres d'une arme de jet.
-- **Garde-fou chiffré**, à vérifier par un test automatique (§10, chantier 9) : sur son propre terrain, chaque arme de métier est la meilleure des trois ; hors de son terrain, à ★★★, elle n'est jamais plus de **2 fois** moins bonne que la meilleure, sauf la lame contre l'Équipé, qui demande une seconde arme et le dit.
+- **Garde-fou chiffré**, à vérifier par un test automatique (§10, chantier 9) : sur son propre terrain, chaque arme de métier est la meilleure des trois ; hors de son terrain, à ★★★, elle n'est jamais plus de **2 fois** moins bonne que la meilleure, sauf la lame contre l'Équipé, qui demande une seconde arme et le dit. **Vérifié** : le test `commun/src/equilibre.test.ts` le rejoue à chaque `npm test` ; le détail et ce qu'il a appris sont au §8.7.
 
 ### 8.5 Les valeurs dans le langage de `combat.ts`
 
@@ -655,6 +657,72 @@ if (arme.type === "electrique") {
 ### 8.6 Ce que le joueur lit dans son sac
 
 Une ligne par type, pas de règle cachée (Book 23 §4.2) : **contondant** « Passe le casque, étourdit plus longtemps » ; **tranchant** « Le casque l'arrête à la tête » ; **perçant** « Sa force, c'est l'allonge » (au tir : « Tir plein à la tête : il tombe pour de bon ») ; **électrique** « Il lâche et se raidit. Maintenu sur un Éteint raidi ou à terre, il l'éteint. Passe le casque. » Plus, pour les armes de métier, les **étoiles**, la **charge** et les **munitions**.
+
+### 8.7 Le simulateur et le garde-fou (chantier 9, 2026-10-09)
+
+**Ce qu'il fait.** `commun/src/equilibre.ts` rejoue le tableau du §8.4 avec les **vraies règles du jeu** : les Éteints pensent et marchent par `penser` (leur vitesse, la saisie à 0,6 s, la morsure à 3 s), les coups passent par `encaisserCoup` (le casque, l'électrique en deux temps, le saut au voisin), les armes sont celles des tables `ARMES` et `ARMES_TIR`, corrigées par les étoiles de l'exemplaire. Rien n'est recopié : si une valeur change dans `armes/*.ts` ou `tir.ts`, le simulateur le voit, et le test casse si le garde-fou ne tient plus. `npm run equilibre` imprime le tableau complet, avec les réglages du serveur.
+
+**Le modèle, en clair.** Le joueur reste sur place, sur un terrain vide ; les Éteints surgissent déjà en poursuite. Un geste compte **à la fin** de sa durée (la convention du §8.4). Une conduite simple, la même pour tous : frapper d'abord celui qui tient, achever celui qui est à terre, viser la tête ; à l'électrique, raidir avant d'éteindre ; au tir, tirer dès que la tête est à portée, ne réarmer que si l'on en a le temps. Saisi, on frappe celui qui tient, ou l'on se dégage (6 appuis par Éteint). Une rencontre vaut son **temps équivalent** : le temps jusqu'au dernier détruit, plus 6 s par morsure (se panser) ; perdue ou impossible, l'infini.
+
+**Les rencontres.** Un Errant, un Équipé, trois Errants surgis à 5 m, trois à 15 m (terrain ouvert), **le groupe serré** (un Équipé et deux Errants à 2,5 m, au coin d'un rayonnage), **la visite** (huit Errants, un toutes les 2 s, à 3 m), **la cascade** (les mêmes, un toutes les 1,2 s : un repère, le terrain de personne).
+
+**Les terrains jugés par le garde-fou** : la lame, la visite et les trois à 5 m ; l'électrique, le groupe serré ; l'arbalète, les trois à 15 m.
+
+**Les chiffres (chaque arme seule) :**
+
+| Arme | Niv. | Un Errant à 5 m | Un Équipé à 5 m | Trois à 5 m | Trois à 15 m | Groupe serré (2,5 m) | La visite | La cascade | Détruits avant le contact (15 m) | Wotts par Errant | Autonomie |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 🔥 Lame | ★ | 2,0 s | impossible seule | 3,5 s (1 saisie) | 10,0 s (1 saisie) | impossible seule | 14,8 s | 14,8 s (3 saisies) | 0 | 0,8 | 40 |
+| | ★★ | 2,0 s | impossible seule | 3,5 s (1 saisie) | 10,0 s (1 saisie) | impossible seule | 14,8 s | 14,8 s (3 saisies) | 0 | 6,3 | 60 |
+| | ★★★ | 2,0 s | impossible seule | 3,5 s (1 saisie) | 10,0 s (1 saisie) | impossible seule | **14,8 s** | 12,5 s (1 saisie) | 0 | 4,7 | **80** |
+| ⚡ Électrique | ★ | 3,6 s | 3,6 s | 8,7 s (3 saisies) | 15,1 s (3 saisies) | 7,1 s (3 saisies) | 16,3 s | effondré | 0 | 14,5 | 15 |
+| | ★★ | 3,4 s | 3,4 s | 8,1 s | 14,1 s (1 saisie) | 6,5 s | 16,1 s | 16,5 s (5 saisies) | 0 | 8,5 | 9 |
+| | ★★★ | 3,2 s | 3,2 s | 6,1 s | 12,6 s | **4,5 s** | 15,9 s | **12,1 s** | 0 | 6,7 | 9 |
+| ⚙️ Arbalète | ★ | 0,3 s | 0,7 s | 9,1 s (3 saisies) | 11,8 s (1 saisie) | 21,1 s (2 morsures) | effondré | effondré | 2 | 4,1 | 36 |
+| | ★★ | 0,3 s | 0,3 s | 9,1 s (3 saisies) | 9,8 s (1 saisie) | 21,1 s (2 morsures) | effondré | effondré | 2 | 3,3 | 36 |
+| | ★★★ | 0,3 s | 0,3 s | 9,1 s (3 saisies) | **8,5 s** | 21,1 s (2 morsures) | effondré | effondré | 2 | 2,9 | 36 |
+| Arc (commun) | ★ | 1,5 s | 1,9 s | 7,2 s (3 saisies) | 12,4 s (1 saisie) | 7,5 s (3 saisies) | 24,4 s (12 saisies) | effondré | 1 | 3,8 | 36 |
+| | ★★ | 1,5 s | 1,6 s | 7,2 s (3 saisies) | 11,8 s | 7,5 s (3 saisies) | 24,4 s (12 saisies) | effondré | 1 | 4,2 | 36 |
+| | ★★★ | 1,5 s | 1,5 s | 7,2 s (3 saisies) | 10,8 s (1 saisie) | 7,5 s (3 saisies) | 24,4 s (12 saisies) | effondré | 2 | 4,0 | 36 |
+
+Les temps comptent l'approche (un Errant à 5 m met ≈ 1,3 s à venir à portée de lame). « Wotts par Errant » : l'usure de l'arme (son énergie grise sur sa solidité), les Wh au prix du dépôt, les munitions cassées. « Autonomie » : Errants détruits avant de devoir réparer, recharger (un pack de 12 Wh ; 50 Wh pour la matraque de fortune) ou refaire des munitions (12 emportées).
+
+**Avec la seconde arme** (★★★ ; les ★ et ★★ suivent la même pente) :
+
+| Arme | Un Équipé à 5 m | Trois à 5 m | Groupe serré | La visite | La cascade |
+|---|---|---|---|---|---|
+| 🔥 Lame + le marteau du kit | 2,1 s | 3,5 s (1 saisie) | 2,4 s (1 saisie) | 14,8 s | 12,5 s (1 saisie) |
+| ⚙️ Arbalète + la lance | 0,3 s | 2,2 s | 2,1 s (1 saisie) | 17,1 s (4 saisies) | 16,6 s (2 saisies) |
+| Arc + la lance | 1,5 s | 4,3 s (2 saisies) | 3,3 s (2 saisies) | 16,9 s | 15,3 s (7 saisies) |
+
+**Le garde-fou, à ★★★ : il tient, sans changer aucune valeur.**
+
+| Terrain | 🔥 Lame | ⚡ Électrique | ⚙️ Arbalète |
+|---|---|---|---|
+| La visite (lame) | **1** | 1,08 | 1,16 (avec la lance) |
+| Trois à 5 m (lame) | **1** | 1,74 | 0,64 (avec la lance) |
+| Groupe serré (électrique) | 0,53 (avec le marteau) | **1** | 0,47 (avec la lance) |
+| Trois à 15 m (arbalète) | 1,17 | 1,47 | **1** |
+
+(Le rapport au meilleur temps des trois armes **seules** ; au-dessus de 2, le garde-fou casse.) Au coût, de 2,9 à 6,7 wotts par Errant : sous les 3 fois du Book 02 §15.
+
+**Ce que le simulateur a appris :**
+
+1. **La vitesse des Éteints.** Le §8.4 comptait 0,9 m/s ; le code dit 1,55 m/s. Le groupe arrive deux fois plus vite : à 5 m, l'arbalète n'en détruit qu'**un** avant le contact (pas deux) ; à 15 m, **deux** (pas trois). L'ordre des armes ne change pas.
+2. **L'arbalète seule ne tient pas le contact** : 2,6 fois moins bonne que la lame contre trois Errants à 5 m, effondrée dans la visite (réarmer 3 s, c'est trop long quand ils arrivent toutes les 2 s). Le §8.4 le disait (« il faut une seconde arme au contact ») et son tableau comptait déjà « le 3ᵉ à l'arme de contact ». Le garde-fou la juge donc, **au contact**, avec la **lance** que les Mécanistes font seuls (§7.1), comme il juge la lame contre l'Équipé avec le **marteau** du kit des Charbonniers. **C'est une seconde exception, à faire valider par le porteur** (`DEMANDE_UNE_SECONDE_ARME`, equilibre.ts).
+3. **La seconde arme est forte.** Avec la lance, l'arbalète devient la plus rapide au contact (2,2 s contre 3,5 s pour la lame à 5 m ; 2,1 s contre 4,5 s pour l'électrique dans le groupe serré). La lance (commune, perçante, allonge 2,6 m) passe le casque et frappe avant qu'on l'approche ; le marteau aussi passe le casque. Le §8.4 disait l'électrique « la seule arme de contact qui détruit un Équipé aussi vite qu'un Errant » : c'est vrai **parmi les armes de métier**, pas parmi toutes. Ce qui reste à l'électrique : **aucune saisie** dans le groupe serré et la cascade, là où la lance et le marteau en prennent une ou deux. **Question au porteur** : la lance doit-elle rester aussi forte ? (Elle s'use vite : solidité 40.)
+4. **L'électrique ★★★ tient son terrain** et gagne même la cascade (12,1 s sans une saisie, contre 12,5 s et une saisie pour la lame) : la lame s'essouffle (16 d'endurance par mise à mort), la décharge non. **Mais l'électrique ★★**, celle qu'un Voltaïque fait seul dès le premier jour, est **2,3 fois** moins bonne que la lame ★★ contre trois Errants à 5 m (8,1 s contre 3,5 s). Le garde-fou ne juge que ★★★ ; c'est à surveiller au test de jeu (le porteur trouvait la matraque « un peu en dessous »). Les réglages le corrigeraient sans toucher au code : `equilibre_electrique_longue` à 0,7 (la longue tenue 0,7 s au lieu de 1 s à ★★★, 0,84 s à ★★) et `equilibre_electrique_raidi` à 1,2 ramènent l'électrique ★★ à 6,1 s (1,7 fois), et le garde-fou tient toujours ; la longue seule à 0,8 ne suffit pas (7,4 s, 2,1 fois). **Proposition, non appliquée** : on garde les valeurs validées tant que le test de jeu n'a pas parlé.
+5. **La lame ★ ne coûte presque rien** (0,8 wotts par Errant) : la machette de fortune est un vestige à 30 wotts. Ce n'est pas un problème : elle casse en 40 coups, et l'on ne la refait pas.
+6. **L'autonomie** sépare les trois : 80 Errants pour la machette ★★★, 36 pour 12 carreaux, **9 pour un pack** : un Voltaïque emporte deux ou trois packs pour une visite (§5.4 le disait). Ce n'est pas dans le garde-fou (chacune paie dans sa monnaie), mais c'est la vraie faiblesse de l'électrique.
+
+**Les réglages d'équilibre** (`commun/src/reglages.ts`, modifiables à chaud pendant le test, Book 21 §3.9) : cinq multiplicateurs, à 1 par défaut, sur les seules armes de métier — `equilibre_lames_degats`, `equilibre_electrique_raidi`, `equilibre_electrique_longue`, `equilibre_arbalete_rearmer`, `equilibre_tir_portee_tete`. On en change un dans `serveur/donnees/reglages.json`, on relance `npm run equilibre`, et l'on voit tout de suite si le garde-fou tient encore.
+
+**Les mesures des critères de réussite** (§10.1, `serveur/src/mesures.ts`, genre « metier ») : chaque tir (`tir:<arme>`), chaque Éteint détruit et comment (`detruit:tranchant`, `detruit:electrique`, `detruit:tir_plein`…), chaque objet de métier fabriqué avec ses étoiles, chaque échange d'objets de métier entre joueurs. `npm run bilan` en tire une section « Le métier des familles » : part des joueurs qui ont tiré, Éteints détruits au tir plein, délai de la première arme de métier ★★ par famille (en jours de calendrier), échanges par joueur et par semaine, part du temps passé à se défendre par famille (écart ≤ 5 points), arbalètes lourdes. **La clôture qui tient une nuit** ne se mesure pas encore : à noter à la main.
+
+**Le test de jeu à la Coopérative** (à faire par le porteur et la famille, la 0.6 en main) :
+1. **Seul, une famille à la fois, sur un serveur neuf** : faire son arme de métier ★★ (noter le temps de calendrier), puis une visite de la Coopérative avec elle et l'arc. Noter : les saisies, les morsures, l'arme cassée ou le pack vide, ce qui a manqué.
+2. **À trois**, une famille chacun : une visite ensemble ; puis une semaine de jeu pour les échanges (une arbalète lourde à deux familles, une matraque ★★★★ avec les électrodes forgées).
+3. Après chaque séance : `npm run bilan` et `npm run equilibre` ; reporter ici ce qui s'écarte du tableau (en particulier l'électrique ★★ et la lance).
 
 ---
 
