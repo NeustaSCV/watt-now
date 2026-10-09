@@ -2,7 +2,7 @@
 // station-service et le Comptoir du Carrefour, sur la route de la Campagne (Book 20 §4).
 // On ne se promène pas d'un lieu à l'autre : on part d'une sortie, on voyage sur la carte, on arrive.
 
-import { ARRIVEE_COOP, COOP, PORTAIL, PORTES, boitePorte, obstaclesCoop, portesInitiales } from "./cooperative.ts";
+import { ARRIVEE_COOP, BRECHE, COOP, PORTAIL, PORTES, boitePorte, obstaclesCoop, portesInitiales } from "./cooperative.ts";
 import type { Position } from "./deplacement.ts";
 import { MARGE_GRILLE, boitesPres, creerGrille, type GrilleObstacles } from "./grille.ts";
 import { MARGE_BORD, POINT_ARRIVEE, TERRAIN_TAILLE } from "./regles.ts";
@@ -165,27 +165,156 @@ export const COMPTOIR = {
   pedalier: { x: 19, z: 15.5 },
 } as const;
 
-export const ZONE_COMPTOIR: Zone = {
-  xMin: 6,
-  xMax: CARREFOUR.largeur - 0.5,
-  zMin: 4,
-  zMax: CARREFOUR.profondeur - 4,
-  obstacles: [COMPTOIR.batiment, COMPTOIR.cellules, { x: COMPTOIR.pedalier.x, z: COMPTOIR.pedalier.z - 0.6, l: 1.6, p: 0.7 }],
-};
-
 /** Le chemin agricole qui part au nord du Carrefour, vers la Coopérative du Plateau (Book 23 §1). */
 export const CHEMIN_COOP = { x: 52, demiLargeur: 1.8 } as const;
+
+/** Le bord est du Carrefour : le grillage au nord de la route, la haie au sud ; la route de la station passe entre. */
+export const BORD_EST_CARREFOUR = CARREFOUR.largeur - 6;
+
+/** Un tronçon au sol (clôture, haie), droit, d'un point à un autre ; aligné sur un axe pour les collisions. */
+export interface Troncon {
+  x1: number;
+  z1: number;
+  x2: number;
+  z2: number;
+}
+
+/** La boîte de collision d'un tronçon aligné sur un axe, d'une épaisseur donnée (débordant d'une demi-épaisseur aux bouts). */
+export function boiteTroncon(t: Troncon, epaisseur: number): Boite {
+  return {
+    x: (t.x1 + t.x2) / 2,
+    z: (t.z1 + t.z2) / 2,
+    l: Math.abs(t.x2 - t.x1) + epaisseur,
+    p: Math.abs(t.z2 - t.z1) + epaisseur,
+  };
+}
+
+/**
+ * L'enceinte du Carrefour (0.7.1 : plus de barrière invisible). Chaque bord du lieu est quelque chose qu'on voit :
+ * le grillage des Compteurs autour de l'esplanade (une trouée au nord pour le chemin de la Coopérative), les barrages
+ * des routes fermées (la Ville à l'ouest, la Côte au sud), une haie basse au sud de la route (basse : elle est côté
+ * caméra). Le seul bord ouvert est la route de la station, à l'est : c'est la sortie. Le rendu (comptoir.ts) dessine
+ * ces mêmes tronçons ; les collisions en sont tirées.
+ */
+export const ENCEINTE_COMPTOIR = {
+  /** Le grillage des Compteurs, tenu (pas de pan arraché : ici, on entretient). */
+  grillage: [
+    { x1: 6, z1: 3, x2: CHEMIN_COOP.x - 3, z2: 3 },
+    { x1: 6, z1: 3, x2: 6, z2: ROUTE_CARREFOUR.z - ROUTE_CARREFOUR.demiLargeur - 0.3 },
+    { x1: BORD_EST_CARREFOUR, z1: 3, x2: BORD_EST_CARREFOUR, z2: ROUTE_CARREFOUR.z - ROUTE_CARREFOUR.demiLargeur - 0.3 },
+  ] as readonly Troncon[],
+  epaisseurGrillage: 0.2,
+  /** La haie basse, au sud de la route : de l'ouest au barrage de la Côte, puis jusqu'à l'est. */
+  haies: [
+    { x1: 6, z1: ROUTE_CARREFOUR.z + 4, x2: 6, z2: CARREFOUR.profondeur - 2.5 },
+    { x1: 6, z1: CARREFOUR.profondeur - 2.5, x2: ROUTE_CARREFOUR.x - ROUTE_CARREFOUR.demiLargeur - 0.4, z2: CARREFOUR.profondeur - 2.5 },
+    { x1: ROUTE_CARREFOUR.x + ROUTE_CARREFOUR.demiLargeur + 0.4, z1: CARREFOUR.profondeur - 2.5, x2: BORD_EST_CARREFOUR, z2: CARREFOUR.profondeur - 2.5 },
+    { x1: BORD_EST_CARREFOUR, z1: ROUTE_CARREFOUR.z + 4, x2: BORD_EST_CARREFOUR, z2: CARREFOUR.profondeur - 2.5 },
+  ] as readonly Troncon[],
+  epaisseurHaie: 1,
+  /** Les routes barrées par les Compteurs : centre, orientation (0 : la planche suit x), longueur de la planche. */
+  barrages: [
+    { x: 6, z: ROUTE_CARREFOUR.z, o: Math.PI / 2, texte: "Route de la Ville : fermée" },
+    { x: ROUTE_CARREFOUR.x, z: CARREFOUR.profondeur - 2.5, o: 0, texte: "Route de la Côte : fermée" },
+  ],
+  longueurBarrage: 6.2,
+} as const;
+
+/** La boîte d'un barrage de route (planche sur deux chevalets). */
+export function boiteBarrage(b: { x: number; z: number; o: number }): Boite {
+  const long = ENCEINTE_COMPTOIR.longueurBarrage;
+  return Math.abs(Math.sin(b.o)) > 0.5 ? { x: b.x, z: b.z, l: 0.5, p: long } : { x: b.x, z: b.z, l: long, p: 0.5 };
+}
+
+/**
+ * Ce qui meuble l'esplanade et qu'on ne traverse pas (0.7.1) : le rendu (comptoir.ts) pose chaque objet à ces places.
+ * Les Compteurs (les deux gardes) ne bloquent pas : ce sont des personnages, comme les autres joueurs.
+ */
+const FACADE_AGENCE = COMPTOIR.batiment.z + COMPTOIR.batiment.p / 2;
+export const MOBILIER_COMPTOIR = {
+  /** Les deux chicanes de sacs de sable, devant l'agence (centre du premier sac du rang du bas). */
+  sacs: [
+    { x: COMPTOIR.batiment.x - 6.6, z: FACADE_AGENCE + 1.6 },
+    { x: COMPTOIR.batiment.x + 6.8, z: FACADE_AGENCE + 1.6 },
+  ],
+  /** Les bacs de légumes, contre la façade. */
+  bacs: [COMPTOIR.batiment.x - COMPTOIR.batiment.l / 2 + 1.2, COMPTOIR.batiment.x - COMPTOIR.batiment.l / 2 + 3.4],
+  /** Le récupérateur d'eau de pluie, contre le pignon ouest. */
+  tonneau: { x: COMPTOIR.batiment.x - COMPTOIR.batiment.l / 2 - 0.6, z: FACADE_AGENCE - 1.2 },
+  /** Le panneau d'affichage. */
+  avis: { x: COMPTOIR.batiment.x - 9.4, z: FACADE_AGENCE + 2.6, o: 0.35 },
+  /** Le banc de la file d'attente. */
+  banc: { x: COMPTOIR.guichet.x - 5.4, z: FACADE_AGENCE + 3.6, o: 0.1 },
+  /** Le mât du drapeau des Compteurs. */
+  drapeau: { x: COMPTOIR.batiment.x + COMPTOIR.batiment.l / 2 + 3.2, z: FACADE_AGENCE + 2.4 },
+  /** Le lampadaire de la Compagnie, au coin du carrefour. */
+  lampadaire: { x: ROUTE_CARREFOUR.x - 7, z: ROUTE_CARREFOUR.z - 4.4 },
+  /** Le panneau de la route de la station. */
+  panneauStation: { x: CARREFOUR.largeur - 9, z: ROUTE_CARREFOUR.z + ROUTE_CARREFOUR.demiLargeur + 1.6 },
+} as const;
+
+/** Les poteaux et la corde de la file d'attente : trois poteaux de chaque côté, en biais vers le guichet. */
+export function poteauxFile(): { x: number; z: number }[][] {
+  return [-1, 1].map((s) => [0, 1, 2].map((k) => ({ x: COMPTOIR.guichet.x + s * (1.8 + k * 0.35), z: FACADE_AGENCE + 2.2 + k * 1.1 })));
+}
+
+function obstaclesComptoir(): Boite[] {
+  const { batiment, cellules, pedalier, guichet } = COMPTOIR;
+  const m = MOBILIER_COMPTOIR;
+  const e = ENCEINTE_COMPTOIR;
+  return [
+    batiment,
+    cellules,
+    // Le banc du pédalier
+    { x: pedalier.x, z: pedalier.z - 0.6, l: 1.6, p: 0.7 },
+    // La tablette du guichet, qui déborde de la façade
+    { x: guichet.x, z: FACADE_AGENCE + 0.3, l: 3, p: 0.6 },
+    // Le compteur à aiguille sur son poteau, au coin des cellules
+    { x: cellules.x + cellules.l / 2 + 0.6, z: cellules.z + 1.45, l: 1, p: 0.3 },
+    ...m.sacs.map((s) => ({ x: s.x + 0.22, z: s.z, l: 3.45, p: 0.75 })),
+    { x: (m.bacs[0] + m.bacs[1]) / 2, z: FACADE_AGENCE + 0.8, l: m.bacs[1] - m.bacs[0] + 1.8, p: 0.6 },
+    { x: m.tonneau.x, z: m.tonneau.z, l: 0.9, p: 0.9 },
+    { x: m.avis.x, z: m.avis.z, l: 1.6, p: 0.7 },
+    { x: m.banc.x, z: m.banc.z, l: 1.85, p: 0.6 },
+    { x: m.drapeau.x, z: m.drapeau.z, l: 0.8, p: 0.8 },
+    { x: m.lampadaire.x, z: m.lampadaire.z, l: 0.35, p: 0.35 },
+    { x: m.panneauStation.x, z: m.panneauStation.z, l: 0.35, p: 0.35 },
+    // La corde de la file : une boîte par longueur de corde, d'un poteau au suivant
+    ...poteauxFile().flatMap((cote) =>
+      cote.slice(1).map((b, k) => {
+        const a = cote[k]!;
+        return { x: (a.x + b.x) / 2, z: (a.z + b.z) / 2, l: Math.abs(b.x - a.x) + 0.3, p: Math.abs(b.z - a.z) + 0.3 };
+      }),
+    ),
+    // L'enceinte
+    ...e.grillage.map((t) => boiteTroncon(t, e.epaisseurGrillage)),
+    ...e.haies.map((t) => boiteTroncon(t, e.epaisseurHaie)),
+    ...e.barrages.map(boiteBarrage),
+  ];
+}
+
+/**
+ * Les bornes du Carrefour sont celles de l'enceinte : on bute toujours sur le grillage, la haie ou un barrage avant
+ * d'atteindre une borne, sauf aux deux sorties (la route de la station à l'est, le chemin de la Coopérative au nord).
+ */
+export const ZONE_COMPTOIR: Zone = {
+  xMin: 6,
+  xMax: BORD_EST_CARREFOUR,
+  zMin: 3,
+  zMax: CARREFOUR.profondeur - 2.5,
+  obstacles: obstaclesComptoir(),
+};
 
 export const SORTIES_COMPTOIR: Sortie[] = [
   {
     vers: "station",
-    boite: { x: CARREFOUR.largeur - 2, z: ROUTE_CARREFOUR.z, l: 4, p: 10 },
-    arrivee: { x: CARREFOUR.largeur - 4.5, z: ROUTE_CARREFOUR.z, o: -Math.PI / 2 },
+    boite: { x: BORD_EST_CARREFOUR, z: ROUTE_CARREFOUR.z, l: 4, p: 10 },
+    arrivee: { x: BORD_EST_CARREFOUR - 2.5, z: ROUTE_CARREFOUR.z, o: -Math.PI / 2 },
     libelle: "Reprendre la route",
   },
   {
     vers: "cooperative",
-    boite: { x: CHEMIN_COOP.x, z: 5.5, l: 5, p: 3 },
+    boite: { x: CHEMIN_COOP.x, z: 5, l: 6, p: 4 },
     arrivee: { x: CHEMIN_COOP.x, z: 8, o: 0 },
     libelle: "Prendre le chemin de la Coopérative",
   },
@@ -221,6 +350,14 @@ export const SORTIES_COOP: Sortie[] = [
     boite: { x: PORTAIL.x, z: COOP.profondeur - 1.4, l: PORTAIL.largeur, p: 2.8 },
     arrivee: { ...ARRIVEE_COOP },
     libelle: "Repartir vers le Carrefour",
+  },
+  // La brèche du grillage, à l'ouest (Book 23 §2 : une des entrées) : on la voit ouverte, on y passe (0.7.1). On arrive
+  // toujours par le portail (la première sortie vers le Carrefour), mais on peut repartir par là, discrètement.
+  {
+    vers: "comptoir",
+    boite: { x: BRECHE.x + 1.2, z: BRECHE.z, l: 2.4, p: BRECHE.largeur },
+    arrivee: { x: BRECHE.x + 2.5, z: BRECHE.z, o: Math.PI / 2 },
+    libelle: "Se glisser dehors par la brèche",
   },
 ];
 
@@ -298,6 +435,65 @@ export function etapeVers(de: LieuJouable, vers: LieuId): LieuJouable {
 
 export function dansBoite(x: number, z: number, b: Boite, marge = 0): boolean {
   return Math.abs(x - b.x) <= b.l / 2 + marge && Math.abs(z - b.z) <= b.p / 2 + marge;
+}
+
+/** Un morceau de bord de zone, de (x1, z1) à (x2, z2). */
+export type MorceauBord = Troncon;
+
+/**
+ * Les bords de zone qu'on peut toucher sans rien voir (0.7.1) : les morceaux de bornes (xMin… zMax) qu'un personnage
+ * (de `rayon`) atteint à pied depuis les arrivées du lieu, sans heurter d'obstacle et hors des sorties. Un lieu bien
+ * fait n'en a aucun : avant chaque borne, il y a un mur, une clôture, une haie… (sauf aux sorties, où le bord est le
+ * départ sur la route). On parcourt le lieu sur une grille de `pas` mètres, de proche en proche.
+ */
+export function bordsLibres(zone: Zone, sorties: readonly Sortie[], rayon = 0.35, pas = 0.25): MorceauBord[] {
+  const nx = Math.max(1, Math.round((zone.xMax - zone.xMin) / pas));
+  const nz = Math.max(1, Math.round((zone.zMax - zone.zMin) / pas));
+  const px = (zone.xMax - zone.xMin) / nx;
+  const pz = (zone.zMax - zone.zMin) / nz;
+  const x = (i: number) => zone.xMin + i * px;
+  const z = (j: number) => zone.zMin + j * pz;
+  const vu = new Uint8Array((nx + 1) * (nz + 1));
+  const pile: number[] = [];
+  const visiter = (i: number, j: number) => {
+    if (i < 0 || j < 0 || i > nx || j > nz) return;
+    const k = j * (nx + 1) + i;
+    if (vu[k]) return;
+    vu[k] = 1;
+    if (heurte(zone, x(i), z(j), rayon)) return;
+    vu[k] = 2;
+    pile.push(i, j);
+  };
+  for (const s of sorties) visiter(Math.round((s.arrivee.x - zone.xMin) / px), Math.round((s.arrivee.z - zone.zMin) / pz));
+  while (pile.length) {
+    const j = pile.pop()!;
+    const i = pile.pop()!;
+    visiter(i + 1, j);
+    visiter(i - 1, j);
+    visiter(i, j + 1);
+    visiter(i, j - 1);
+  }
+  const libre = (i: number, j: number) => vu[j * (nx + 1) + i] === 2 && !sorties.some((s) => dansBoite(x(i), z(j), s.boite));
+  const morceaux: MorceauBord[] = [];
+  const cotes: [number, number, number, number, number][] = [
+    // i0, j0, di, dj, n
+    [0, 0, 1, 0, nx],
+    [nx, 0, 0, 1, nz],
+    [0, nz, 1, 0, nx],
+    [0, 0, 0, 1, nz],
+  ];
+  for (const [i0, j0, di, dj, n] of cotes) {
+    let debut = -1;
+    for (let t = 0; t <= n + 1; t++) {
+      const ok = t <= n && libre(i0 + di * t, j0 + dj * t);
+      if (ok && debut < 0) debut = t;
+      if (!ok && debut >= 0) {
+        morceaux.push({ x1: x(i0 + di * debut), z1: z(j0 + dj * debut), x2: x(i0 + di * (t - 1)), z2: z(j0 + dj * (t - 1)) });
+        debut = -1;
+      }
+    }
+  }
+  return morceaux;
 }
 
 /** La sortie où se tient le personnage, s'il y en a une. */

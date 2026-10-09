@@ -199,25 +199,78 @@ export function creerArbres(places: PlaceArbre[], aleat: () => number): THREE.Gr
 }
 
 /** Clôture effondrée sur le bord du terrain : poteaux penchés, quelques manques. */
-function creerCloture(aleat: () => number): THREE.InstancedMesh {
+/**
+ * La clôture effondrée du bord du terrain : des piquets penchés (certains tombés) et deux rangs de barbelé qui pendent
+ * de l'un à l'autre (0.7.1 : le bord du terrain se voit sur toute sa longueur, même là où un piquet manque ; on ne
+ * bute plus sur rien).
+ */
+function creerCloture(aleat: () => number): THREE.Group {
+  const groupe = new THREE.Group();
   const poteau = new THREE.BoxGeometry(0.12, 1.1, 0.12).translate(0, 0.55, 0);
   const places: THREE.Matrix4[] = [];
+  /** Le long du bord, dans l'ordre : chaque place de piquet, debout (sa hauteur) ou tombé (null). */
+  const rangs: { x: number; z: number; h: number | null; d: number }[] = [];
   const q = new THREE.Quaternion();
   const e = new THREE.Euler();
   for (let d = 0; d <= T * 4; d += 2.5) {
-    if (aleat() < 0.18) continue; // poteau tombé
-    const cote = Math.floor(d / T);
+    const cote = Math.min(3, Math.floor(d / T));
     const t = d % T;
-    const [x, z] = [[t, 0], [T, t], [T - t, T], [0, T - t]][Math.min(cote, 3)]!;
+    const [x, z] = [[t, 0], [T, t], [T - t, T], [0, T - t]][cote]!;
+    if (aleat() < 0.18) {
+      // poteau tombé
+      rangs.push({ x, z, h: null, d });
+      continue;
+    }
     if (z === T && Math.abs(x - 25) < 2.5) continue; // l'entrée du chemin
     e.set((aleat() - 0.5) * 0.35, aleat() * Math.PI, (aleat() - 0.5) * 0.35);
     q.setFromEuler(e);
-    places.push(new THREE.Matrix4().compose(new THREE.Vector3(x, 0, z), q, new THREE.Vector3(1, 0.7 + aleat() * 0.4, 1)));
+    const h = 0.7 + aleat() * 0.4;
+    places.push(new THREE.Matrix4().compose(new THREE.Vector3(x, 0, z), q, new THREE.Vector3(1, h, 1)));
+    rangs.push({ x, z, h: 1.1 * h, d });
   }
   const poteaux = new THREE.InstancedMesh(poteau, materiau(PALETTE.boisSombre), places.length);
   places.forEach((m, i) => poteaux.setMatrixAt(i, m));
   poteaux.castShadow = true;
-  return poteaux;
+  groupe.add(poteaux);
+
+  // Les barbelés : deux rangs, d'un piquet au suivant (pas à travers l'entrée du chemin). Là où un piquet est tombé, le
+  // fil descend jusqu'à l'herbe. Chaque travée pend un peu en son milieu.
+  const fil = new THREE.BoxGeometry(1, 0.018, 0.018);
+  const travees: THREE.Matrix4[] = [];
+  const debut = new THREE.Vector3();
+  const fin = new THREE.Vector3();
+  const milieu = new THREE.Vector3();
+  const ajouter = (a: THREE.Vector3, b: THREE.Vector3) => {
+    const l = a.distanceTo(b);
+    if (l < 0.01) return;
+    milieu.addVectors(a, b).multiplyScalar(0.5);
+    const dir = b.clone().sub(a).normalize();
+    travees.push(new THREE.Matrix4().compose(milieu.clone(), new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(1, 0, 0), dir), new THREE.Vector3(l, 1, 1)));
+  };
+  // Le tour du terrain : la dernière place (d = 4 T) retombe sur le coin nord-ouest, déjà compté ; on boucle sur la première.
+  const tour = rangs.filter((r) => r.d < T * 4);
+  for (let i = 0; i < tour.length; i++) {
+    const a = tour[i]!;
+    const b = tour[(i + 1) % tour.length]!;
+    const dansEntree = (r: { x: number; z: number }) => r.z === T && Math.abs(r.x - 25) < 2.5;
+    if (dansEntree(a) || dansEntree(b)) continue;
+    for (const part of [0.45, 0.85]) {
+      const ya = a.h === null ? 0.12 : a.h * part;
+      const yb = b.h === null ? 0.12 : b.h * part;
+      // Deux demi-travées qui pendent au milieu.
+      const fleche = 0.08 + (a.h === null || b.h === null ? 0 : 0.05);
+      debut.set(a.x, ya, a.z);
+      fin.set(b.x, yb, b.z);
+      const bas = new THREE.Vector3().lerpVectors(debut, fin, 0.5);
+      bas.y = Math.max(0.08, bas.y - fleche);
+      ajouter(debut, bas);
+      ajouter(bas, fin);
+    }
+  }
+  const barbeles = new THREE.InstancedMesh(fil, materiau(0x4a4440, { metal: 0.5, rugosite: 0.7 }), travees.length);
+  travees.forEach((m, i) => barbeles.setMatrixAt(i, m));
+  groupe.add(barbeles);
+  return groupe;
 }
 
 /** Fusionne des géométries non indexées en une seule (positions et normales). */

@@ -304,7 +304,38 @@ function creerForet(aleat: () => number): THREE.Group {
   buissons.castShadow = true;
   buissons.receiveShadow = true;
   groupe.add(trierParInstance(buissons));
+  groupe.add(creerFourresDesBouts());
   return groupe;
+}
+
+/**
+ * Aux deux bouts de la halte, hors de la route, un fourré serré ferme le lieu (0.7.1) : avant, la forêt ne commençait
+ * qu'à 4 m au-delà de la borne, et l'on butait sur rien. Son propre tirage, pour ne rien déplacer du reste de la forêt.
+ */
+function creerFourresDesBouts(): THREE.Object3D {
+  const aleat = aleatoire(313);
+  const places: THREE.Matrix4[] = [];
+  const q = new THREE.Quaternion();
+  for (const x of [-0.7, L + 0.7]) {
+    for (let z = 7.8; z <= 61; z += 1.05) {
+      if (Math.abs(z - ROUTE.z) < ROUTE.demiLargeur + 1.4) continue;
+      for (const recul of [0, 1.6]) {
+        const s = 0.75 + aleat() * 0.5;
+        q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), aleat() * 6.28);
+        const xx = x + Math.sign(x - L / 2) * (recul + (aleat() - 0.5) * 0.3);
+        places.push(new THREE.Matrix4().compose(new THREE.Vector3(xx, 0.35 * s, z + (aleat() - 0.5) * 0.4), q, new THREE.Vector3(s * 1.2, s * 0.9, s)));
+      }
+    }
+  }
+  const fourres = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.9, 0), materiau(0xffffff), places.length);
+  const teinte = new THREE.Color();
+  places.forEach((m, i) => {
+    fourres.setMatrixAt(i, m);
+    fourres.setColorAt(i, teinte.setHex(aleat() < 0.5 ? PALETTE.feuillageSombre : 0x4b6b3a).offsetHSL(0, 0, (aleat() - 0.5) * 0.06));
+  });
+  fourres.castShadow = true;
+  fourres.receiveShadow = true;
+  return trierParInstance(fourres);
 }
 
 // ---------- La station « Abondance » ----------

@@ -34,6 +34,8 @@ export class Scene {
   private pieceNoireVisee = false;
   /** Mode photo : un angle de caméra libre (en radians), ou null pour suivre les quarts de tour. */
   lacetLibre: number | null = null;
+  /** Le dézoom le plus large (le mode `?obstacles=1` le pousse, pour voir un lieu en entier). */
+  zoomMax = ZOOM_MAX;
 
   constructor(canvas: HTMLCanvasElement, qualite: Qualite) {
     this.rendu = new THREE.WebGLRenderer({ canvas, antialias: qualite.anticrenelage, powerPreference: "high-performance" });
@@ -79,7 +81,7 @@ export class Scene {
       "wheel",
       (e) => {
         e.preventDefault();
-        this.zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, this.zoom * (e.deltaY > 0 ? 1.1 : 1 / 1.1)));
+        this.zoom = Math.min(this.zoomMax, Math.max(ZOOM_MIN, this.zoom * (e.deltaY > 0 ? 1.1 : 1 / 1.1)));
         this.redimensionner();
       },
       { passive: false },
@@ -142,7 +144,7 @@ export class Scene {
 
   /** Mode photo : régler le zoom (0,6 à 1,7). */
   reglerZoom(z: number): void {
-    this.zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
+    this.zoom = Math.min(this.zoomMax, Math.max(ZOOM_MIN, z));
     this.redimensionner();
   }
 

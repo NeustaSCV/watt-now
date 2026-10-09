@@ -6,8 +6,9 @@
 
 import * as THREE from "three";
 import { Compteur } from "./compteur.ts";
-import { CARREFOUR, CHEMIN_COOP, COMPTOIR, ROUTE_CARREFOUR } from "../../../commun/src/lieux.ts";
+import { CARREFOUR, CHEMIN_COOP, COMPTOIR, ENCEINTE_COMPTOIR, MOBILIER_COMPTOIR, ROUTE_CARREFOUR, poteauxFile, type Troncon } from "../../../commun/src/lieux.ts";
 import type { SourceLumiere } from "./lumieres.ts";
+import { trierParInstance } from "./lots.ts";
 import { PALETTE, aleatoire, materiau, nommer } from "./materiaux.ts";
 import { Chantier, dessiner, geoToleOndulee, matiere, matiereTexture, textureAffiche, textureEnduit, textureToitPlat } from "./ruine.ts";
 import { bruit, creerArbres, creerPanneauRoute, type PlaceArbre } from "./terrain.ts";
@@ -43,7 +44,7 @@ function texture(largeur: number, hauteur: number, dessiner: (g: CanvasRendering
 export function lumieresComptoir(): SourceLumiere[] {
   return [
     { x: COMPTOIR.guichet.x, y: 3.2, z: COMPTOIR.guichet.z + 0.6, couleur: BLANC_ELECTRIQUE, intensite: 7, portee: 13, vacillement: 0 },
-    { x: ROUTE_CARREFOUR.x - 7, y: 4.6, z: ROUTE_CARREFOUR.z - 4.4, couleur: BLANC_ELECTRIQUE, intensite: 5, portee: 12, vacillement: 0.03 },
+    { x: MOBILIER_COMPTOIR.lampadaire.x, y: 4.6, z: MOBILIER_COMPTOIR.lampadaire.z, couleur: BLANC_ELECTRIQUE, intensite: 5, portee: 12, vacillement: 0.03 },
     { x: COMPTOIR.cellules.x, y: 2.6, z: COMPTOIR.cellules.z + 3.2, couleur: 0xdfe9ff, intensite: 3, portee: 8, vacillement: 0 },
   ];
 }
@@ -60,19 +61,19 @@ export function creerComptoir(): THREE.Group {
   const g = new THREE.Group();
   const aleat = aleatoire(1789);
   const n = bruit(aleat, 64);
-  g.add(creerSol(n), creerRoutes(aleat), creerAgence(aleat), creerCellules(), creerPedalier(), creerCloture(aleat), creerForet(aleat));
-  g.add(creerLampadaire(ROUTE_CARREFOUR.x - 7, ROUTE_CARREFOUR.z - 4.4));
+  g.add(creerSol(n), creerRoutes(aleat), creerAgence(aleat), creerCellules(), creerPedalier(), creerCloture(), creerHaies(aleatoire(1791)), creerForet(aleat));
+  g.add(creerLampadaire(MOBILIER_COMPTOIR.lampadaire.x, MOBILIER_COMPTOIR.lampadaire.z));
   // Les deux gardes du guichet, animés (voir animerComptoir).
   COMPTEURS.push(new Compteur(COMPTOIR.guichet.x - 3.2, COMPTOIR.guichet.z + 0.6, 0.3, false, "homme"));
   COMPTEURS.push(new Compteur(COMPTOIR.guichet.x + 3.4, COMPTOIR.guichet.z + 0.8, -0.4, true, "femme"));
   for (const c of COMPTEURS) g.add(c.objet);
   // P-006 : la station est à l'est (à droite), la Ville à l'ouest (à gauche), comme sur la carte.
-  g.add(creerPanneauRoute("Station-service", "2 km · ton terrain 5 km →", L - 9, ROUTE_CARREFOUR.z + ROUTE_CARREFOUR.demiLargeur + 1.6, 0));
-  g.add(creerBarrage(4.5, ROUTE_CARREFOUR.z, Math.PI / 2, "Route de la Ville : fermée"));
-  g.add(creerBarrage(ROUTE_CARREFOUR.x, P - 2.5, 0, "Route de la Côte : fermée"));
+  g.add(creerPanneauRoute("Station-service", "2 km · ton terrain 5 km →", MOBILIER_COMPTOIR.panneauStation.x, MOBILIER_COMPTOIR.panneauStation.z, 0));
+  // Les routes fermées : la Ville à l'ouest, la Côte au sud (l'enceinte du lieu, lieux.ts).
+  for (const b of ENCEINTE_COMPTOIR.barrages) g.add(creerBarrage(b.x, b.z, b.o, b.texte));
   // Le chemin agricole de la Coopérative, au nord (0.5) : ouvert, lui.
   g.add(creerPanneauRoute("Coopérative du Plateau", "↑ 3 km · chemin agricole", CHEMIN_COOP.x + 3.4, 6.5, 0));
-  nommer(g, ["sol", "routes", "agence", "cellules", "pedalier", "cloture", "foret", "lampadaire"]);
+  nommer(g, ["sol", "routes", "agence", "cellules", "pedalier", "cloture", "haies", "foret", "lampadaire"]);
   return g;
 }
 
@@ -387,11 +388,8 @@ function creerAgence(aleat: () => number): THREE.Group {
 
   // Sacs de sable en chicane devant l'agence
   const sac = new THREE.SphereGeometry(0.42, 7, 4).scale(1.3, 0.48, 0.75);
-  for (const [cx, rangs] of [
-    [b.x - 6.6, 3],
-    [b.x + 6.8, 3],
-  ] as const) {
-    for (let r = 0; r < rangs; r++) {
+  for (const { x: cx } of MOBILIER_COMPTOIR.sacs) {
+    for (let r = 0; r < 3; r++) {
       for (let k = 0; k < 3 - (r === 2 ? 1 : 0); k++) {
         c.poser(sac, matiere(), aleat() < 0.5 ? 0xb8a77f : 0xa8986f, { x: cx + (k - 1) * 0.95 + (r % 2) * 0.45, y: 0.2 + r * 0.38, z: face + 1.6 + (aleat() - 0.5) * 0.1, ry: (aleat() - 0.5) * 0.3 }, { nuance: 0.06 });
       }
@@ -402,27 +400,26 @@ function creerAgence(aleat: () => number): THREE.Group {
   for (let i = 0; i < 6; i++) c.pave(xa + 0.6 + i * 1.3, 0.06, za + 0.25, xa + 1.7 + i * 1.3, 2.2, za + 0.85, 0x3a3d42, fer);
 
   // Le panneau d'affichage, le banc de la file d'attente, les poteaux et la corde, le drapeau des Compteurs
-  c.repere({ x: b.x - 9.4, z: face + 2.6, ry: 0.35 }, () => {
+  const { avis, banc, tonneau, bacs } = MOBILIER_COMPTOIR;
+  c.repere({ x: avis.x, z: avis.z, ry: avis.o }, () => {
     for (const s of [-1, 1]) c.boite(0.1, 2.1, 0.1, 0x5a4130, { x: s * 0.75, y: 1.05 });
     c.boite(1.7, 0.12, 0.35, 0x5a4130, { y: 2.12 });
     c.poser(new THREE.PlaneGeometry(1.45, 0.9), matiereTexture(textureAvis()), 0xffffff, { y: 1.45, z: 0.06 }, { nuance: 0, crasse: false });
   });
-  c.repere({ x: gx - 5.4, z: face + 3.6, ry: 0.1 }, () => {
+  c.repere({ x: banc.x, z: banc.z, ry: banc.o }, () => {
     c.boite(1.8, 0.07, 0.45, 0x7a5a3c, { y: 0.45 });
     c.boite(1.8, 0.4, 0.06, 0x7a5a3c, { y: 0.75, z: -0.22 });
     for (const s of [-1, 1]) c.boite(0.08, 0.45, 0.4, 0x3a3d42, { x: s * 0.8, y: 0.22 }, fer);
   });
-  for (const s of [-1, 1]) {
-    for (let k = 0; k < 3; k++) {
-      const x = gx + s * (1.8 + k * 0.35);
-      const z = face + 2.2 + k * 1.1;
+  for (const cote of poteauxFile()) {
+    cote.forEach(({ x, z }, k) => {
       c.poser(new THREE.CylinderGeometry(0.04, 0.04, 0.95, 6), fer, 0xb59048, { x, y: 0.48, z });
       c.poser(new THREE.CylinderGeometry(0.15, 0.17, 0.05, 8), fer, 0x3a3d42, { x, y: 0.03, z });
-      if (k < 2) c.poutre(new THREE.Vector3(x, 0.88, z), new THREE.Vector3(gx + s * (1.8 + (k + 1) * 0.35), 0.88, z + 1.1), 0.03, 0x8a3b2a);
-    }
+      const suivant = cote[k + 1];
+      if (suivant) c.poutre(new THREE.Vector3(x, 0.88, z), new THREE.Vector3(suivant.x, 0.88, suivant.z), 0.03, 0x8a3b2a);
+    });
   }
-  const xd = xb + 3.2;
-  const zd = face + 2.4;
+  const { x: xd, z: zd } = MOBILIER_COMPTOIR.drapeau;
   c.poser(new THREE.CylinderGeometry(0.05, 0.07, 6.5, 6), fer, 0xd9d4c8, { x: xd, y: 3.25, z: zd });
   c.poser(new THREE.CylinderGeometry(0.3, 0.38, 0.3, 8), matiere(), 0x8e8b84, { x: xd, y: 0.15, z: zd });
   const drapeau = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.95, 6, 1), new THREE.MeshStandardMaterial({ map: textureDrapeau(), side: THREE.DoubleSide, roughness: 0.9 }));
@@ -434,10 +431,10 @@ function creerAgence(aleat: () => number): THREE.Group {
   drapeau.castShadow = true;
   g.add(drapeau);
   // Un récupérateur d'eau de pluie, contre le pignon ouest
-  c.poser(new THREE.CylinderGeometry(0.45, 0.45, 1.1, 10), matiere(0.7, 0.1), 0x2f6fa4, { x: xa - 0.6, y: 0.55, z: face - 1.2 });
+  c.poser(new THREE.CylinderGeometry(0.45, 0.45, 1.1, 10), matiere(0.7, 0.1), 0x2f6fa4, { x: tonneau.x, y: 0.55, z: tonneau.z });
   c.pave(xa - 0.12, 1.1, face - 1.25, xa - 0.04, hauteur, face - 1.15, 0x8a8f94, fer);
   // Des bacs de légumes : les Compteurs cultivent aussi
-  for (const x of [xa + 1.2, xa + 3.4]) {
+  for (const x of bacs) {
     c.pave(x - 0.9, 0, face + 0.5, x + 0.9, 0.4, face + 1.1, 0x7a5a3c);
     for (let k = 0; k < 5; k++) c.poser(new THREE.IcosahedronGeometry(0.18, 0), matiere(), k % 2 ? 0x5d8a46 : 0x7da150, { x: x - 0.7 + k * 0.35, y: 0.52, z: face + 0.8, e: [1, 0.7, 1] }, { crasse: false });
   }
@@ -608,35 +605,64 @@ function creerLampadaire(x: number, z: number): THREE.Group {
   return g;
 }
 
-function creerCloture(aleat: () => number): THREE.Group {
+/**
+ * Le grillage des Compteurs, autour de l'esplanade (ENCEINTE_COMPTOIR, lieux.ts) : un poteau tous les 3 m au plus, des
+ * pans entiers (ici, on entretient : pas de pan arraché, puisqu'on ne passe pas), une lisse en haut. Il bloque.
+ */
+function creerCloture(): THREE.Group {
   const g = new THREE.Group();
   const poteau = materiau(0x8a8f94, { metal: 0.4, rugosite: 0.6 });
   const grillage = new THREE.MeshStandardMaterial({ color: 0x9aa0a6, transparent: true, opacity: 0.35, side: THREE.DoubleSide, roughness: 0.7, metalness: 0.3 });
-  const segment = (x1: number, z1: number, x2: number, z2: number) => {
+  const segment = ({ x1, z1, x2, z2 }: Troncon) => {
     const l = Math.hypot(x2 - x1, z2 - z1);
     const n = Math.ceil(l / 3);
-    for (let i = 0; i < n; i++) {
-      const t0 = i / n;
-      const t1 = (i + 1) / n;
-      const xa = x1 + (x2 - x1) * t0;
-      const za = z1 + (z2 - z1) * t0;
-      const xb = x1 + (x2 - x1) * t1;
-      const zb = z1 + (z2 - z1) * t1;
+    for (let i = 0; i <= n; i++) {
+      const xa = x1 + ((x2 - x1) * i) / n;
+      const za = z1 + ((z2 - z1) * i) / n;
       g.add(boite(0.08, 1.9, 0.08, poteau, xa, 0.95, za));
-      if (aleat() < 0.12) continue; // un pan arraché
-      const pan = new THREE.Mesh(new THREE.PlaneGeometry(Math.hypot(xb - xa, zb - za), 1.7), grillage);
-      pan.position.set((xa + xb) / 2, 0.95, (za + zb) / 2);
-      pan.rotation.y = -Math.atan2(zb - za, xb - xa);
-      g.add(pan);
     }
+    const pan = new THREE.Mesh(new THREE.PlaneGeometry(l, 1.7), grillage);
+    pan.position.set((x1 + x2) / 2, 0.95, (z1 + z2) / 2);
+    pan.rotation.y = -Math.atan2(z2 - z1, x2 - x1);
+    const lisse = boite(Math.abs(x2 - x1) + 0.06, 0.05, Math.abs(z2 - z1) + 0.06, poteau, (x1 + x2) / 2, 1.82, (z1 + z2) / 2);
+    g.add(pan, lisse);
   };
-  // Autour de l'esplanade, avec des passages pour les routes
-  // Une trouée au nord, pour le chemin de la Coopérative.
-  segment(6, 3, CHEMIN_COOP.x - 3, 3);
-  segment(CHEMIN_COOP.x + 3, 3, L - 6, 3);
-  segment(6, 3, 6, ROUTE_CARREFOUR.z - 4);
-  segment(L - 6, 3, L - 6, ROUTE_CARREFOUR.z - 4);
+  for (const t of ENCEINTE_COMPTOIR.grillage) segment(t);
   return g;
+}
+
+/**
+ * La haie basse au sud de la route (ENCEINTE_COMPTOIR, lieux.ts) : des touffes de buis serrées, à facettes, qui ne
+ * dépassent pas la taille (elle est côté caméra : on voit toujours son personnage derrière). Elle bloque.
+ */
+function creerHaies(aleat: () => number): THREE.Object3D {
+  const { haies, epaisseurHaie } = ENCEINTE_COMPTOIR;
+  const places: THREE.Matrix4[] = [];
+  const q = new THREE.Quaternion();
+  for (const { x1, z1, x2, z2 } of haies) {
+    const l = Math.hypot(x2 - x1, z2 - z1);
+    const n = Math.max(1, Math.round(l / 0.55));
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      const s = 0.85 + aleat() * 0.3;
+      q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), aleat() * Math.PI * 2);
+      // Un écart de quelques centimètres de part et d'autre de la ligne, pour que la haie ne soit pas tirée au cordeau.
+      const ecart = (aleat() - 0.5) * 0.15;
+      const x = x1 + (x2 - x1) * t + (x1 === x2 ? ecart : 0);
+      const z = z1 + (z2 - z1) * t + (z1 === z2 ? ecart : 0);
+      places.push(new THREE.Matrix4().compose(new THREE.Vector3(x, 0.42 * s, z), q, new THREE.Vector3(s * (epaisseurHaie / 1.2), s * 0.62, s * (epaisseurHaie / 1.2))));
+    }
+  }
+  const touffe = new THREE.IcosahedronGeometry(0.62, 0);
+  const haie = new THREE.InstancedMesh(touffe, materiau(0xffffff), places.length);
+  const teinte = new THREE.Color();
+  places.forEach((m, i) => {
+    haie.setMatrixAt(i, m);
+    haie.setColorAt(i, teinte.setHex(aleat() < 0.5 ? PALETTE.feuillageSombre : 0x4b6b3a).offsetHSL(0, 0, (aleat() - 0.5) * 0.05));
+  });
+  haie.castShadow = true;
+  haie.receiveShadow = true;
+  return trierParInstance(haie);
 }
 
 function creerForet(aleat: () => number): THREE.Group {
