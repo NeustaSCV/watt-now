@@ -18,7 +18,8 @@ test("version : package.json porte le même numéro que commun/src/version.ts", 
 
 test("version : VERSIONS.md a une section pour la version courante, en tête", () => {
   const notes = readFileSync(join(racine, "VERSIONS.md"), "utf8");
-  const sections = [...notes.matchAll(/^## (\S+) · /gm)].map((m) => m[1]);
+  // Une section « en préparation » (la prochaine version, pas encore livrée) peut la précéder.
+  const sections = [...notes.matchAll(/^## (\S+) · (.*)$/gm)].filter((m) => !m[2]!.startsWith("en préparation")).map((m) => m[1]);
   assert.ok(sections.length > 0, "aucune section « ## x.y · … »");
   assert.equal(sections[0], VERSION, "la première section de VERSIONS.md doit être celle de la version courante");
 });

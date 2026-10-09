@@ -106,6 +106,11 @@ export interface EteintVu {
   variante?: VarianteEteint;
   /** Il gémit : il vient de se réveiller (on l'entend). */
   gemit?: true;
+  /**
+   * Un dormant que la signature atteint remue (de 0,1 à 1 : 1, il se réveille). Le joueur voit le lien entre son cercle
+   * et le réveil qui vient : les yeux s'entrouvrent, le corps commence à se soulever.
+   */
+  eveil?: number;
   /** Raidi par une décharge (Book 25 §5.1) : la pose tétanisée, de petits arcs bleus. */
   raidi?: true;
   /** Détruit par le courant : il s'affaisse, les yeux ternissent (pas de sang). */
@@ -125,8 +130,14 @@ export const SEUIL_REVEIL = 0.8;
 export const ATTENTION_MAX = 5;
 /** Oubli par seconde, quand plus rien n'est perçu. */
 export const OUBLI = 0.12;
-/** Les dormants n'entendent qu'à moitié (Book 06 §4 : invisibles tant qu'on ne s'approche pas). */
-const OUIE_DORMANT = 0.5;
+/**
+ * La règle du cercle (bug du 2026-10-09) : si le cercle de signature affiché touche un Éteint, il réagit. La formule du
+ * Book 06 §3.1 (intensité × (1 − d / portée)) ne donnait presque rien au bord du cercle ; on lui garde ce plancher, pour
+ * que tout ce qui est dans le cercle compte (au bord, un dormant met une dizaine de secondes à se réveiller au pas).
+ * Les dormants entendent tout le cercle (ils n'entendaient qu'à moitié : le cercle les touchait sans effet) et voient
+ * la lumière qu'on porte (le cercle ambre) ; seule l'odeur, que le cercle ne montre pas, ne les tire pas du sommeil.
+ */
+export const PLANCHER_PERCEPTION = 0.2;
 /** Vue : mauvaise (Book 06 §2.1). Le jour ≈ 12 m, la nuit ≈ 5 m ; bien plus si l'humain porte une lumière. */
 export const VUE_JOUR = 12;
 export const VUE_NUIT = 5;
@@ -152,6 +163,7 @@ export function vue(e: Eteint): EteintVu {
   if (e.etourdi > 0) v.etourdi = true;
   if (e.variante) v.variante = e.variante;
   if ((e.gemit ?? 0) > 0) v.gemit = true;
+  if (e.etat === "dormant" && e.attention > 0) v.eveil = Math.max(0.1, Math.round(Math.min(1, e.attention / SEUIL_REVEIL) * 10) / 10);
   if ((e.raidi ?? 0) > 0 && e.etat !== "detruit") v.raidi = true;
   if (e.eteintParLeCourant && e.etat === "detruit") v.eteintParLeCourant = true;
   return v;
@@ -346,13 +358,13 @@ export function penser(
   let percu = false;
   let meilleur = 0;
   for (const s of stimuli) {
-    if (e.etat === "dormant" && s.genre !== "son") continue;
+    if (e.etat === "dormant" && s.genre === "odeur") continue;
     // Les murs étouffent le son : à travers une porte fermée, presque rien n'arrive (Book 23 §7).
     const attenue = milieu ? milieu.son(s.x, s.z, e.x, e.z) : 1;
-    const portee = (e.etat === "dormant" ? s.portee * OUIE_DORMANT : s.portee) * attenue;
+    const portee = s.portee * attenue;
     const d = Math.hypot(s.x - e.x, s.z - e.z);
     if (d >= portee) continue;
-    const apport = s.intensite * (1 - d / portee);
+    const apport = s.intensite * Math.max(PLANCHER_PERCEPTION, 1 - d / portee);
     e.attention += apport * dt;
     percu = true;
     // Il se tourne vers la source la plus forte.
