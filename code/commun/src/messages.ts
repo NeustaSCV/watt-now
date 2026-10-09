@@ -8,8 +8,9 @@ import type { Position } from "./deplacement.ts";
 import type { Charges, TypeBatterie } from "./energie.ts";
 import type { LieuId, LieuJouable } from "./lieux.ts";
 import type { Saignement, TypeBlessure } from "./combat.ts";
-import type { EteintVu } from "./eteints.ts";
+import type { EteintVu, ResultatCoup } from "./eteints.ts";
 import type { Inventaire, TypeObjet } from "./objets.ts";
+import type { CleObjet } from "./etoiles.ts";
 import type { BruitAction } from "./signature.ts";
 import type { VueTutoriel } from "./tutoriel.ts";
 import type { VueQuetes } from "./quetes.ts";
@@ -137,6 +138,20 @@ export interface EtatInstallation {
   litres?: number;
   /** Améliorer sa base (Book 24) : ce qui a été payé à chaque niveau au-delà du premier (pour redescendre ou démonter). */
   payes?: Inventaire[];
+  /** Un piège, une plaque de choc, une clôture (Book 25 §5.3 et §6.3) : son état (serveur/src/declencheurs.ts). */
+  declencheur?: EtatDeclencheur;
+}
+
+/** L'état d'une installation à déclencheur. */
+export interface EtatDeclencheur {
+  /** Armé : il prendra le prochain Éteint qui passe. Désarmé : il faut le réarmer (A sur le piège). */
+  arme: boolean;
+  /** Prises depuis qu'on l'a fait (les mâchoires de fortune se faussent au bout de 5). */
+  prises: number;
+  /** Faussé : il ne se réarme plus, il faut le refaire. */
+  fausse?: boolean;
+  /** Couché par des Éteints qui ont poussé ensemble (la clôture) : il faut la relever. */
+  couche?: boolean;
 }
 
 export interface InstallationVue {
@@ -174,7 +189,7 @@ export type MessageClient =
   /** B selon la situation (Book 23 §4.4) : un Éteint à 1,2 m devant soi, on le repousse. */
   | { t: "repousser" }
   /** Réparer une arme (Book 23 §4.3) : de fortune (partout), ou pour de bon à l'atelier qui convient. */
-  | { t: "reparer"; objet: TypeObjet; fortune: boolean }
+  | { t: "reparer"; objet: CleObjet; fortune: boolean }
   | { t: "panser" }
   /** Au guichet des Compteurs (É4, Book 07). */
   | { t: "comptoir"; op: OperationComptoir }
@@ -183,9 +198,9 @@ export type MessageClient =
   /** Passer le tutoriel (É5). */
   | { t: "tutoriel_passer" }
   /** Ranger un objet dans un coffre, ou l'en sortir. */
-  | { t: "coffre"; id: number; sens: "deposer" | "prendre"; objet: TypeObjet; quantite: number }
+  | { t: "coffre"; id: number; sens: "deposer" | "prendre"; objet: CleObjet; quantite: number }
   /** Jeter un objet par terre (quand le sac est trop lourd) : il reste au sol, ramassable. */
-  | { t: "jeter"; objet: TypeObjet; quantite: number }
+  | { t: "jeter"; objet: CleObjet; quantite: number }
   /** Démonter un vestige du sac en composants (Vestiges, lot 1, 0.3 ; table DEMONTAGE). */
   | { t: "demonter"; objet: TypeObjet }
   /** Poser devant soi l'objet lourd qu'on porte. */
@@ -193,7 +208,7 @@ export type MessageClient =
   /** Poser à ses pieds la radio à piles qu'on a dans le sac (à la Coopérative, 0.5.1). */
   | { t: "poser_radio" }
   /** Équiper une arme pour le mode Combat (null : plus d'arme choisie, la meilleure du sac) (P-005). */
-  | { t: "equiper"; objet: TypeObjet | null }
+  | { t: "equiper"; objet: CleObjet | null }
   /** Les images par seconde de l'appareil, chaque minute (mesures du test familial, Book 17 §6). */
   | { t: "mesures"; ips: number; ipsBas: number; appareil: string; qualite: string };
 
@@ -346,7 +361,7 @@ export interface Bienvenue {
   /** Les quêtes après le tutoriel (Book 22) ; null pendant le tutoriel. */
   quetes: VueQuetes | null;
   /** L'arme équipée pour le combat (P-005) ; null : la meilleure du sac. */
-  arme: TypeObjet | null;
+  arme: CleObjet | null;
   /** Au comptoir seulement. */
   comptoir?: VueComptoir;
   /** À la Coopérative seulement : l'état de ses portes (ouverte : true). */
@@ -356,7 +371,9 @@ export interface Bienvenue {
   /** À la Coopérative seulement : où est la radio, et ce qui reste à la batterie du tracteur (0.5.1). */
   etatCoop?: EtatCoopVu;
   /** L'usure des armes (coups qui restent ; absente : neuve). */
-  usure?: Partial<Record<TypeObjet, number>>;
+  usure?: Partial<Record<CleObjet, number>>;
+  /** La charge des armes électriques, par exemplaire (Wh qui restent ; absente : pleine), Book 25 §5.4. */
+  charge?: Partial<Record<CleObjet, number>>;
   /** La volaille du terrain (2026-10-08). */
   animaux?: AnimalVu[];
 }
@@ -402,13 +419,13 @@ export type MessageServeur =
   /** Santé, endurance, et combien d'Éteints le tiennent. */
   | { t: "sante"; sante: SanteVue; endurance: number; saisi: number }
   /** Un coup a porté : le client en tire le sang et l'impact. */
-  | { t: "coup"; id: number; x: number; z: number; resultat: "detruit" | "a_terre" | "vacille" }
+  | { t: "coup"; id: number; x: number; z: number; resultat: ResultatCoup; electrique?: true }
   | { t: "morsure" }
   /** Il s'effondre : le client montre le réveil, puis arrive un `bienvenue` sur le terrain. */
   | { t: "effondrement" }
   | { t: "sacs"; sacs: SacVu[] }
   /** L'usure des armes (coups qui restent ; absente : neuve), et ce qui vient d'arriver à l'une d'elles (Book 23 §4.3). */
-  | { t: "usure"; usure: Partial<Record<TypeObjet, number>>; evenement?: { objet: TypeObjet; etat: "abimee" | "cassee" | "reparee" } }
+  | { t: "usure"; usure: Partial<Record<CleObjet, number>>; evenement?: { objet: CleObjet; etat: "abimee" | "cassee" | "reparee" }; charge?: Partial<Record<CleObjet, number>> }
   /** Un leurre de la Coopérative s'est déclenché, ou s'est tu (la radio). */
   | { t: "leurre"; id: string; actif: boolean; x: number; z: number }
   /** La radio a changé de place, ou le klaxon a sonné (0.5.1). */
@@ -426,7 +443,7 @@ export type MessageServeur =
   /** Le carnet des quêtes a changé (un compteur, une réussite). */
   | { t: "quetes"; quetes: VueQuetes | null }
   /** L'arme équipée a changé (P-005). */
-  | { t: "arme"; arme: TypeObjet | null }
+  | { t: "arme"; arme: CleObjet | null }
   /** Une alarme à boîtes de conserve tinte sur le terrain (P-002). */
   | { t: "alarme"; x: number; z: number }
   /** On s'endort (dans l'abri ou par terre) ou on se réveille (É5). */

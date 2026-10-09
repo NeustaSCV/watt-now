@@ -4,6 +4,7 @@ import { REGLAGES } from "./reglages.ts";
 import { OBJETS, type Inventaire, type TypeObjet } from "./objets.ts";
 import type { Famille } from "./regles.ts";
 import { valeursVestiges } from "./vestiges.ts";
+import { typeDe } from "./etoiles.ts";
 
 // ---------- Qualités d'outil (Book 03 §4) ----------
 
@@ -41,7 +42,8 @@ export function niveauQualite(inventaire: Inventaire, qualite: Qualite): number 
   let meilleur = 0;
   for (const [type, n] of Object.entries(inventaire)) {
     if (!n) continue;
-    meilleur = Math.max(meilleur, QUALITES_OBJETS[type as TypeObjet]?.[qualite] ?? 0);
+    // Un exemplaire étoilé (« lame_forgee#4 ») a les qualités de son objet.
+    meilleur = Math.max(meilleur, QUALITES_OBJETS[typeDe(type)]?.[qualite] ?? 0);
   }
   return meilleur;
 }

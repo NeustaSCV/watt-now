@@ -6,7 +6,8 @@ import type { SacVu } from "../../commun/src/messages.ts";
 import { apparenceAncienne, apparenceValide, type Apparence } from "../../commun/src/apparence.ts";
 import { DatabaseSync } from "node:sqlite";
 import type { Position } from "../../commun/src/deplacement.ts";
-import { kitDeDepart, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
+import { estCleObjet, estObjet, kitDeDepart, type Inventaire } from "../../commun/src/objets.ts";
+import { canoniser, cleExemplaire, lireCle, type CleObjet } from "../../commun/src/etoiles.ts";
 import { POINT_ARRIVEE, type Famille } from "../../commun/src/regles.ts";
 import { BESOINS_DEPART, GOURDE_DEPART, type Besoins, type EtatFeu, type Gourde } from "../../commun/src/survie.ts";
 import type { Charges } from "../../commun/src/energie.ts";
@@ -23,6 +24,12 @@ import { VERSION_HALTE, genererHalte } from "../../commun/src/halte.ts";
 import type { RessourceSol } from "../../commun/src/terrain.ts";
 import { estLieuJouable, type LieuJouable } from "../../commun/src/lieux.ts";
 import { empreinteMotDePasse, nouveauJeton, verifierMotDePasse } from "./motdepasse.ts";
+
+/** La forme canonique d'une clé lue en base (« lame_forgee#3 » → « lame_forgee »), Book 25 §9.6. */
+function cleCanonique(cle: string): string {
+  const { type, etoiles } = lireCle(cle);
+  return estObjet(type) ? cleExemplaire(type, etoiles ?? undefined) : cle;
+}
 
 export interface Compte {
   id: number;
@@ -222,6 +229,8 @@ const COLONNES_AJOUTEES: [table: string, colonne: string, definition: string][] 
   ["personnages", "arme", "TEXT NOT NULL DEFAULT ''"],
   // L'usure des armes en main (Book 23 §4.3) : coups qui restent, par type d'arme.
   ["personnages", "usure_armes", "TEXT NOT NULL DEFAULT '{}'"],
+  // La charge des armes électriques, par exemplaire (Book 25 §5.4) : Wh qui restent ; absente : pleine.
+  ["personnages", "charge_armes", "TEXT NOT NULL DEFAULT '{}'"],
   // Le foyer Dakota (P-002).
   ["feux", "dakota", "INTEGER NOT NULL DEFAULT 0"],
   ["personnages", "watts", "TEXT NOT NULL DEFAULT ''"],
@@ -329,27 +338,57 @@ export class Base {
     this.db.prepare("UPDATE personnages SET tutoriel = ? WHERE compte_id = ?").run(etat ? JSON.stringify(etat) : "termine", compteId);
   }
 
-  chargerArme(compteId: number): TypeObjet | null {
+  /** L'arme équipée : un type, ou un exemplaire étoilé (« lame_forgee#4 », Book 25 §9.6). */
+  chargerArme(compteId: number): CleObjet | null {
     const l = this.db.prepare("SELECT arme FROM personnages WHERE compte_id = ?").get(compteId) as { arme: string } | undefined;
-    return l?.arme && estArme(l.arme as TypeObjet) ? (l.arme as TypeObjet) : null;
+    const cle = l?.arme ? cleCanonique(l.arme) : null;
+    return cle && estCleObjet(cle) && estArme(cle) ? cle : null;
   }
 
-  sauverArme(compteId: number, arme: TypeObjet | null): void {
+  sauverArme(compteId: number, arme: CleObjet | null): void {
     this.db.prepare("UPDATE personnages SET arme = ? WHERE compte_id = ?").run(arme ?? "", compteId);
   }
 
-  /** L'usure de chaque arme en main : les coups qui lui restent (absente : neuve). */
-  chargerUsure(compteId: number): Partial<Record<TypeObjet, number>> {
+  /**
+   * L'usure de chaque exemplaire d'arme : les coups qui lui restent (absente : neuf). Les sauvegardes d'avant la 0.6
+   * (clés par type) se lisent telles quelles : la clé nue est l'exemplaire de base.
+   */
+  chargerUsure(compteId: number): Partial<Record<CleObjet, number>> {
     const l = this.db.prepare("SELECT usure_armes FROM personnages WHERE compte_id = ?").get(compteId) as { usure_armes: string } | undefined;
     try {
       const brut = JSON.parse(l?.usure_armes ?? "{}") as Record<string, unknown>;
-      return Object.fromEntries(Object.entries(brut).filter(([t, n]) => estArme(t as TypeObjet) && typeof n === "number" && n >= 0)) as Partial<Record<TypeObjet, number>>;
+      const usure: Partial<Record<CleObjet, number>> = {};
+      for (const [t, n] of Object.entries(brut)) {
+        const cle = cleCanonique(t);
+        if (estCleObjet(cle) && estArme(cle) && typeof n === "number" && n >= 0) usure[cle] = n;
+      }
+      return usure;
     } catch {
       return {};
     }
   }
 
-  sauverUsure(compteId: number, usure: Partial<Record<TypeObjet, number>>): void {
+  /** La charge des armes électriques, par exemplaire (Wh qui restent ; absente : pleine), Book 25 §5.4. */
+  chargerChargeArmes(compteId: number): Partial<Record<CleObjet, number>> {
+    const l = this.db.prepare("SELECT charge_armes FROM personnages WHERE compte_id = ?").get(compteId) as { charge_armes: string } | undefined;
+    try {
+      const brut = JSON.parse(l?.charge_armes ?? "{}") as Record<string, unknown>;
+      const charge: Partial<Record<CleObjet, number>> = {};
+      for (const [t, n] of Object.entries(brut)) {
+        const cle = cleCanonique(t);
+        if (estCleObjet(cle) && estArme(cle) && typeof n === "number" && Number.isFinite(n) && n >= 0) charge[cle] = n;
+      }
+      return charge;
+    } catch {
+      return {};
+    }
+  }
+
+  sauverChargeArmes(compteId: number, charge: Partial<Record<CleObjet, number>>): void {
+    this.db.prepare("UPDATE personnages SET charge_armes = ? WHERE compte_id = ?").run(JSON.stringify(charge), compteId);
+  }
+
+  sauverUsure(compteId: number, usure: Partial<Record<CleObjet, number>>): void {
     this.db.prepare("UPDATE personnages SET usure_armes = ? WHERE compte_id = ?").run(JSON.stringify(usure), compteId);
   }
 
@@ -563,14 +602,18 @@ export class Base {
       .run(besoins.kcal, besoins.eau, besoins.repos ?? 1, gourde.contenu, gourde.litres, compteId);
   }
 
+  /**
+   * L'inventaire, sous sa forme canonique (Book 25 §9.6) : la colonne `type` tient aussi les exemplaires étoilés
+   * (« lame_forgee#4 »). Une sauvegarde d'avant la 0.6 se relit sans changement : ses objets sont aux étoiles de base.
+   */
   chargerInventaire(compteId: number): Inventaire {
     const lignes = this.db.prepare("SELECT type, quantite FROM inventaires WHERE compte_id = ?").all(compteId) as {
-      type: TypeObjet;
+      type: string;
       quantite: number;
     }[];
-    const inventaire: Inventaire = {};
-    for (const l of lignes) if (l.quantite > 0) inventaire[l.type] = l.quantite;
-    return inventaire;
+    const brut: Record<string, number> = {};
+    for (const l of lignes) if (l.quantite > 0) brut[l.type] = (brut[l.type] ?? 0) + l.quantite;
+    return canoniser(brut);
   }
 
   sauverInventaire(compteId: number, inventaire: Inventaire): void {

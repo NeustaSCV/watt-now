@@ -12,6 +12,19 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
+## 0.6 · en préparation
+
+**Le socle du combat et les étoiles** (Book 25, chantier 2)
+- **Les étoiles** : les objets de métier (lames, et bientôt arcs, arbalètes, armes électriques) ont une qualité de ★ à ★★★★★, par exemplaire. Leur case du sac montre « 4★ », leur fiche les cinq étoiles.
+- Deux exemplaires d'étoiles différentes ne s'empilent plus. Plus d'étoiles : plus de dégâts, et une arme qui dure plus longtemps (une ★★★★★ dure deux fois plus qu'une ★★★).
+- **L'usure par exemplaire** : chaque lame s'use de son côté ; quand l'une casse, l'autre reste comme elle était.
+- La **machette de fortune** compte comme une lame ★.
+- **Réparer une lame : à la meule ou à la forge.** La meule du pédalier l'affûte, sans rien consommer ; la forge la reprend pour un kilo de charbon. Un Charbonnier répare enfin ses lames lui-même.
+- **Un coup tranchant s'entend moins loin** : 10 m au lieu de 14 (le choc d'une masse ou d'un marteau, lui, porte toujours à 14 m).
+- **L'électricité contre les Éteints** (pour les armes des Voltaïques, à venir) : une décharge courte fait lâcher et raidit ; maintenue, elle met à terre, et elle **éteint pour de bon** un Éteint raidi ou à terre, casque ou pas. L'Éteint raidi se fige, de petits arcs bleus sur le torse ; éteint, il s'affaisse, sans sang.
+- **Les pièges** ont leur moteur (plaque de choc, clôture, mâchoires, à venir avec les Voltaïques et les Mécanistes) : raidir, mettre à terre, briser la jambe, tenir sur place ; jamais détruire.
+- Les sauvegardes d'avant se relisent sans rien perdre.
+
 ## 0.5.3 · déployée le 2026-10-09
 
 - **Le coffre** (et la décharge), refait selon l'avis de Sally :

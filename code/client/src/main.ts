@@ -17,7 +17,8 @@ import { APPUIS_DEGAGEMENT, ESQUIVE, REPOUSSER, SEUIL_EPUISE, armeEnMain, freinS
 import type { AutreVu, SacVu, SanteVue, VueComptoir } from "../../commun/src/messages.ts";
 import { PORTEE_CABLE_PANNEAU, type Charges } from "../../commun/src/energie.ts";
 import type { Bienvenue, EtatCoopVu, InstallationVue, MessageClient, MessageServeur } from "../../commun/src/messages.ts";
-import { OBJETS, lumierePortee, traineTravois, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
+import { OBJETS, lumierePortee, traineTravois, type Inventaire } from "../../commun/src/objets.ts";
+import type { CleObjet } from "../../commun/src/etoiles.ts";
 import { aFaim, aSoif, allureAutorisee, fatigue, type Besoins, type Gourde } from "../../commun/src/survie.ts";
 import { estNuit, heureDeJeu, jourDeJeu } from "../../commun/src/temps.ts";
 import { demanderIdentite } from "./accueil.ts";
@@ -141,7 +142,7 @@ let enVoyage = false;
 // ---------- Combat et santé (É3, lot 3) ----------
 let modeCombat = false;
 /** L'arme équipée pour le combat (P-005) ; null : la meilleure du sac. */
-let armeEquipee: TypeObjet | null = null;
+let armeEquipee: CleObjet | null = null;
 /** Un coup va jusqu'au bout (P-004) : pas de nouveau coup avant cet instant ; un appui pendant le geste est gardé pour la suite. */
 let coupFiniLe = 0;
 let coupEnAttente: boolean | null = null;
@@ -413,7 +414,7 @@ function installer(message: Bienvenue): void {
   if (message.etatCoop) etatCoop = message.etatCoop;
   if (decorCoop && lieu === "cooperative") placerRadio(decorCoop, etatCoop.radio);
   if (leurresActifs.has("radio") && etatCoop.radio) son.radioCompagnie(true, { ...etatCoop.radio });
-  if (message.usure) hud.majUsure(message.usure);
+  if (message.usure) hud.majUsure(message.usure, undefined, message.charge);
   if (decorCoop && lieu === "cooperative") majPortes(decorCoop, portesCoop);
   enVoyage = false;
   carte.arriver();
@@ -688,6 +689,12 @@ function recevoir(message: MessageServeur): void {
     case "coup": {
       // Le sang : un peu plus marqué que la moyenne, aucune plaie visible (Book 21 §3.5).
       const vue = eteints.get(message.id);
+      // La décharge (Book 25 §5.1) : ni sang ni impact ; il se raidit, ou il s'éteint (le rendu de l'Éteint le montre).
+      if (message.electrique) {
+        bruiteur.coup(message.resultat, message);
+        if (message.resultat === "a_terre") hud.message(avecTouches("Il est à terre : une décharge ({agir}) l'éteint pour de bon.", tactile));
+        return;
+      }
       vue?.toucher();
       bruiteur.coup(message.resultat, message);
       if (message.resultat === "a_terre") hud.message(avecTouches("Il est à terre : frappe encore ({agir}) pour l'achever, avant qu'il se relève !", tactile));
@@ -722,7 +729,7 @@ function recevoir(message: MessageServeur): void {
       return;
     }
     case "usure":
-      hud.majUsure(message.usure, message.evenement);
+      hud.majUsure(message.usure, message.evenement, message.charge);
       if (message.evenement?.etat === "cassee") son.jouer("chute_corps", null, { gain: 0.5 });
       else if (message.evenement?.etat === "abimee") son.jouer("demonter", null, { gain: 0.6 });
       return;
