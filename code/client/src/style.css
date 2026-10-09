@@ -4863,3 +4863,55 @@ body:has(#hud .voile-pause:not([hidden])) #hud .tactile {
   #hud .panneau.coffre .bande-objet .boutons { grid-column: 1 / -1; justify-content: flex-end; }
   #hud .panneau.coffre .bande-objet .boutons:empty { display: none; }
 }
+
+/* ---------- Le métier des familles (Book 25 §2.3, 0.6) : recettes des autres, leçon ---------- */
+
+/* Une recette d'une autre famille, pas encore apprise : grisée, sans bouton, « chez les Charbonniers ». */
+#hud .fabrication .recette.grisee {
+  opacity: 0.45;
+  filter: grayscale(0.8);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px rgba(59, 42, 30, 0.25);
+}
+#hud .fabrication .recette.grisee .corps > small { font-style: italic; }
+#hud .fabrication .badge-famille.appris { background: rgba(31, 107, 107, 0.16); }
+
+/* Choisir ce qu'on enseigne : une liste de recettes, un bouton de 44 px par ligne. */
+#hud .demande-lecon { width: min(340px, calc(100vw - 32px)); max-height: 70vh; display: flex; flex-direction: column; text-align: left; }
+#hud .demande-lecon[hidden] { display: none; }
+#hud .demande-lecon small { font-size: 11px; opacity: 0.75; }
+#hud .demande-lecon .detail-lecon { font-size: 12px; margin-top: -4px; opacity: 0.85; }
+#hud .demande-lecon .liste-lecons { display: flex; flex-direction: column; gap: 4px; overflow-y: auto; margin-bottom: 10px; justify-content: flex-start; }
+#hud .demande-lecon .choix-lecon { display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: 13px; font-weight: 600; text-align: left; border-width: 1px; }
+#hud .demande-lecon .choix-lecon svg { flex: none; }
+
+/* La leçon en cours : une bande en haut, la jauge qui se remplit en deux minutes, et « Arrêter ». */
+#hud .lecon-en-cours {
+  position: absolute;
+  left: 50%;
+  top: calc(max(8px, env(safe-area-inset-top)) + 64px);
+  transform: translateX(-50%);
+  width: min(360px, calc(100vw - 32px));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "texte bouton" "jauge bouton";
+  gap: 4px 8px;
+  align-items: center;
+  padding: 6px 8px 6px 12px;
+  border-radius: 8px;
+  background: var(--creme);
+  color: var(--encre);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
+  pointer-events: auto;
+  font-size: 12px;
+  line-height: 1.3;
+}
+#hud .lecon-en-cours[hidden] { display: none; }
+#hud .lecon-en-cours .texte-lecon { grid-area: texte; overflow-wrap: anywhere; }
+#hud .lecon-en-cours .jauge-lecon { grid-area: jauge; height: 5px; border-radius: 3px; background: rgba(59, 42, 30, 0.15); overflow: hidden; }
+#hud .lecon-en-cours .jauge-lecon > span { display: block; height: 100%; width: 0; background: var(--canard); transition: width 0.5s linear; }
+#hud .lecon-en-cours button { grid-area: bouton; position: relative; min-height: 30px; padding: 0 10px; border-radius: 6px; border: 2px solid var(--encre); background: transparent; color: var(--encre); font: inherit; font-weight: 700; cursor: pointer; touch-action: manipulation; }
+#hud .lecon-en-cours button::after { content: ""; position: absolute; inset: -7px -4px; }
+@media (orientation: landscape) and (max-height: 520px) {
+  #hud .lecon-en-cours { top: max(6px, env(safe-area-inset-top)); width: min(320px, 42vw); }
+}

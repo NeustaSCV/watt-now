@@ -25,6 +25,21 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 - **Les pièges** ont leur moteur (plaque de choc, clôture, mâchoires, à venir avec les Voltaïques et les Mécanistes) : raidir, mettre à terre, briser la jambe, tenir sur place ; jamais détruire.
 - Les sauvegardes d'avant se relisent sans rien perdre.
 
+**Les recettes de métier et les matières** (Book 25, chantier 3)
+- **Le métier des autres** : dans Fabriquer, les recettes des autres familles se voient, grisées, « chez les Charbonniers ».
+- **La leçon** : à la halte ou au Comptoir, près d'un joueur d'une autre famille, B « Enseigner » : tu choisis une recette de ton métier. Deux minutes côte à côte, et il la sait.
+- Enseigner fait circuler ton nom (du rayonnement), une fois par élève et par recette.
+- **Les manuels** (*Manuel du forgeron amateur*, *Guide de l'électricien du dimanche*, *L'Arbalète pour les nuls*) : « Lire », dans le sac, ouvre toutes les recettes d'une famille. Le livre reste dans le sac. Un de chaque attend au coffre du directeur de la Coopérative.
+- Une recette apprise hors de sa famille coûte **une fois et demie** plus de matières et de temps, et ce qu'elle produit ne dépasse pas **★★**.
+- **Les frênes** : deux à la lisière de chaque terrain. Une perche de frêne se coupe au couteau aiguisé (au couteau du kit, plus lentement) et repousse en 6 h, même quand tu n'es pas là.
+- **L'if** : une haie d'ifs taillés en boules devant les bureaux de la Coopérative ; et, au fond du bois, un if que seuls les Mécanistes reconnaissent.
+- Plumer une poule laisse une **poignée de plumes** et un **os** ; la volaille rôtie laisse de la **graisse**.
+- **Treize vestiges nouveaux** dans les fouilles : fil dentaire, appareil photo jetable, raquette anti-moustiques, bobine d'allumage, lime usée, soc de charrue, bidon d'huile, tronçon de rail, arc de tir sportif, flèches en carbone, et les trois manuels.
+- Les Mécanistes ont une **clé plate** dans leur kit de départ.
+- La masse martèle (et mieux que le marteau), le pied-de-biche aussi, la machette de fortune coupe.
+- La masse et le pied-de-biche valent enfin ce qu'ils coûteraient à refaire (200 et 150 wotts) ; la lance vaut ce que vaut sa recette.
+- Après dix exemplaires d'une même lame, la forge est maîtrisée : une étoile de plus.
+
 ## 0.5.3 · déployée le 2026-10-09
 
 - **Le coffre** (et la décharge), refait selon l'avis de Sally :

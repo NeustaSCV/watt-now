@@ -52,6 +52,9 @@ import {
   type Qualite,
   type Recette,
 } from "../../commun/src/recettes.ts";
+import { estHorsFamille, recettePour, recettesAutresFamilles } from "../../commun/src/recettes.ts";
+import type { SavoirVu } from "../../commun/src/messages.ts";
+import { MANUELS, chezLaFamille, estManuel } from "../../commun/src/savoir.ts";
 import { NOMS_FAMILLES, type Famille } from "../../commun/src/regles.ts";
 import { RECETTE_DAKOTA, RECETTE_FEU, RESERVE_EAU_MAX, RESERVE_KCAL_MAX, aFaim, aSoif, fatigue, type Besoins, type Gourde } from "../../commun/src/survie.ts";
 import { NOMS_TEMPS, type Temps } from "../../commun/src/meteo.ts";
@@ -105,6 +108,8 @@ export interface ActionsJoueur {
   jeter(objet: CleObjet, quantite: number): void;
   /** Démonter un vestige en composants (Vestiges, lot 1). */
   demonter(objet: TypeObjet): void;
+  /** Lire un manuel : il ouvre les recettes d'une autre famille (Book 25 §2.3). */
+  lire(objet: TypeObjet): void;
   /** Équiper une arme pour le mode Combat (null : la meilleure du sac) (P-005). */
   equiper(objet: CleObjet | null): void;
   /** Réparer une arme (Book 23 §4.3) : de fortune, ou pour de bon à l'atelier. */
@@ -552,6 +557,15 @@ export class Hud {
       lier(".b-lumiere", "lumiere");
       lier(".b-tourner", "tourner+");
     }
+  }
+
+  /** Ce qu'on a appris hors de sa famille (Book 25 §2.3) : leçons et manuels. */
+  private savoir: SavoirVu = { apprises: [], manuels: [] };
+
+  majSavoir(savoir: SavoirVu): void {
+    this.savoir = savoir;
+    if (!this.fabrication.hidden) this.dessinerFabrication();
+    if (!this.sac.hidden) this.dessinerSac();
   }
 
   identite(pseudo: string, famille: Famille): void {
@@ -1448,6 +1462,12 @@ export class Hud {
           enMain = " · ⚔ en main au combat";
           actions.push(`<button type="button" data-action="desequiper" title="En mode Combat, tu prendras la meilleure arme du sac.">Retirer</button>`);
         } else actions.push(`<button type="button" class="principal" data-action="equiper" title="L'arme que tu prends en mode Combat">Équiper</button>`);
+      } else if (estManuel(s)) {
+        // Un manuel (Book 25 §2.3) : le lire ouvre les recettes d'une autre famille ; le livre reste dans le sac.
+        const de = MANUELS[s]!;
+        const deja = de === this.famille || this.savoir.manuels.includes(de);
+        actions.push(`<button type="button" class="principal" data-action="lire" ${deja ? "disabled" : ""}>Lire</button>`);
+        infos.push(`<p class="info-objet">${de === this.famille ? "Ton propre métier : il se vend bien." : deja ? "Déjà lu." : `Lire ouvre les recettes ${chezLaFamille(de)} (×1,5, ★★ au plus).`}</p>`);
       }
       // Batteries et lampe frontale : la charge stockée (Book 01 §2).
       const batterie = s === "lampe_frontale" ? "petite_batterie" : s === "petite_batterie" || s === "batterie_voiture" ? s : null;
@@ -1553,6 +1573,7 @@ export class Hud {
         if (action === "desequiper") this.actions.equiper(null);
         if ((action === "reparer" || action === "reparer-fortune") && this.selection) this.actions.reparer(this.selection, action === "reparer-fortune");
         if (action === "demonter" && this.selection) this.actions.demonter(typeDe(this.selection));
+        if (action === "lire" && this.selection) this.actions.lire(typeDe(this.selection));
         if ((action === "jeter1" || action === "jeterTout") && this.selection) {
           this.actions.jeter(this.selection, action === "jeter1" ? 1 : (this.inventaire[this.selection] ?? 1));
         }
@@ -1990,8 +2011,8 @@ export class Hud {
   private faisableSeulement = false;
 
   private dessinerFabrication(): void {
-    const recettes = recettesConnues(this.famille);
-    const cartes: { categorie: CategorieRecette; possible: boolean; html: string }[] = [];
+    const recettes = recettesConnues(this.famille, this.savoir);
+    const cartes: { categorie: CategorieRecette; possible: boolean; html: string; grisee?: true }[] = [];
 
     // Le feu de camp (É1) a sa propre règle, mais il se fabrique au même endroit.
     const feuPossible = Object.entries(RECETTE_FEU).every(([t, n]) => (this.inventaire[t as TypeObjet] ?? 0) >= (n ?? 0));
@@ -2012,7 +2033,10 @@ export class Hud {
         </div>
       </article>` });
 
-    for (const r of recettes) {
+    for (const modele of recettes) {
+      // Une recette apprise d'une autre famille (Book 25 §2.2) : ×1,5 en matières et en temps, ★★ au plus.
+      const appris = estHorsFamille(modele, this.famille);
+      const r = recettePour(modele, this.famille);
       const pictogramme: Pictogramme = "objet" in r.produit ? r.produit.objet : r.produit.installation;
       const outils = multiplicateurQualites(this.inventaire, r.qualites);
       const possible = ingredientsPresents(this.inventaire, r) && outils !== null;
@@ -2031,7 +2055,12 @@ export class Hud {
         (r.feu ? ((r.feuNiveau ?? 1) >= 3 ? "Sur un foyer de cuisine allumé (la crémaillère). " : "Près d'un feu allumé. ") : "") +
         (r.eau ? `${String(r.eau).replace(".", ",")} L d'eau de la gourde (celle de la mare suffit). ` : "");
       const secondes = Math.round(dureeReelle(r) * (outils ?? 1) * 10) / 10;
-      const badge = r.famille === "tous" ? "" : ` <span class="badge-famille ${r.famille}" title="Recette de ta famille">${NOMS_FAMILLES[r.famille]}</span>`;
+      const badge =
+        r.famille === "tous"
+          ? ""
+          : appris
+            ? ` <span class="badge-famille appris ${r.famille}" title="Apprise ${chezLaFamille(r.famille)} : ×1,5 en matières et en temps, ★★ au plus">Appris · ★★</span>`
+            : ` <span class="badge-famille ${r.famille}" title="Recette de ta famille">${NOMS_FAMILLES[r.famille]}</span>`;
       cartes.push({ categorie: r.categorie, possible, html: `
         <article class="recette ${possible ? "possible" : ""}">
           ${icone(pictogramme, 40)}
@@ -2043,6 +2072,19 @@ export class Hud {
               ? `<button type="button" data-recette="${r.id}">${"installation" in r.produit ? "Construire" : "Fabriquer"}</button>`
               : `<button type="button" class="pourquoi" data-pourquoi="${r.id}" aria-expanded="${this.pourquoi === r.id}" aria-label="Voir ce qui manque">Il manque…</button>`
           }
+        </article>` });
+    }
+
+    // Les recettes des autres familles (Book 25 §2.3) : grisées, « chez les Charbonniers », sans bouton. Une leçon d'un
+    // joueur de la famille, ou son manuel, les ouvre. « Faisable maintenant » les cache.
+    for (const r of recettesAutresFamilles(this.famille, this.savoir)) {
+      if (r.famille === "tous") continue;
+      const pictogramme: Pictogramme = "objet" in r.produit ? r.produit.objet : r.produit.installation;
+      cartes.push({ categorie: r.categorie, possible: false, grisee: true, html: `
+        <article class="recette grisee" aria-disabled="true">
+          ${icone(pictogramme, 40)}
+          <div class="corps"><strong>${r.nom} <span class="badge-famille ${r.famille}">${chezLaFamille(r.famille)}</span></strong>
+            <small>Une leçon d'un joueur de cette famille, ou leur manuel, l'ouvre : ×1,5, ★★ au plus.</small></div>
         </article>` });
     }
 
