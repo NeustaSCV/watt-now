@@ -31,13 +31,13 @@ import {
   type AccessoireFeu,
   type Etape,
 } from "../../commun/src/lignees.ts";
-import { PRIX_RETRAIT, formaterWotts, prixVente } from "../../commun/src/economie.ts";
+import { PRIX_RETRAIT, formaterWotts, prixAchatExemplaire, prixVenteCle } from "../../commun/src/economie.ts";
 import { detailEnergieGrise } from "../../commun/src/recettes.ts";
 import type { TypeBatterie } from "../../commun/src/energie.ts";
 import type { Inventaire, TypeObjet } from "../../commun/src/objets.ts";
-import { ETOILES, etoilesDe, etoilesTexte, typeDe, type CleObjet } from "../../commun/src/etoiles.ts";
-import { armeTirDe, estLancable } from "../../commun/src/tir.ts";
-import { OBJETS, capaciteDe, estObjet, nomContenant, nommer, poidsInventaire } from "../../commun/src/objets.ts";
+import { ETOILES, compter, etoilesDe, etoilesTexte, typeDe, type CleObjet } from "../../commun/src/etoiles.ts";
+import { MUNITIONS, armeTirDe, armeTirExemplaire, estLancable } from "../../commun/src/tir.ts";
+import { OBJETS, capaciteDe, estCleObjet, nomContenant, nommer, poidsInventaire } from "../../commun/src/objets.ts";
 import {
   CATEGORIES_RECETTES,
   NOMS_INSTALLATIONS,
@@ -133,6 +133,17 @@ const RECETTE_DAKOTA_AIDE: Recette = { id: "dakota", categorie: "feu", nom: "Foy
 type NomJauge = "faim" | "eau" | "sommeil" | "sante" | "endurance";
 
 type OngletComptoir = "vendre" | "acheter" | "energie" | "compte";
+
+/**
+ * Le nom d'un objet, avec ses étoiles s'il en porte (★★★ compris, à la différence de `nommer`) : au guichet et dans
+ * l'échange, on doit voir ce qu'on vend ou ce qu'on reçoit (Book 25 §4.2).
+ */
+function nomEtoile(cle: CleObjet, n = 1): string {
+  const t = typeDe(cle);
+  const e = etoilesDe(cle);
+  const nom = n > 1 ? `${n} ${OBJETS[t].pluriel}` : OBJETS[t].nom;
+  return e === null ? nom : `${nom} <span class="etoiles-nom">${etoilesTexte(e)}</span>`;
+}
 
 /** Des Wh lisibles : « 11,5 ». */
 function virguleWh(wh: number): string {
@@ -767,18 +778,18 @@ export class Hud {
     const el = this.panneauEchange;
     if (!e || el.hidden) return;
     const o = this.monOffre;
-    const mesObjets = (Object.entries(this.inventaire) as [TypeObjet, number][])
-      // Les exemplaires étoilés ne s'échangent pas encore (Book 25 : chantier 8).
-      .filter(([t, n]) => n > 0 && estObjet(t))
+    const mesObjets = (Object.entries(this.inventaire) as [CleObjet, number][])
+      // Un exemplaire étoilé s'échange comme le reste, avec ses étoiles (Book 25 §4.2).
+      .filter(([t, n]) => n > 0 && estCleObjet(t))
       .map(([type, n]) => {
         const mis = o.objets[type] ?? 0;
-        return `<li class="${mis > 0 ? "mis" : ""}">${icone(type, 28)}<span class="nom">${OBJETS[type].nom}<small>${n} dans ton sac</small></span>
+        return `<li class="${mis > 0 ? "mis" : ""}">${icone(typeDe(type), 28)}<span class="nom">${nomEtoile(type)}<small>${n} dans ton sac</small></span>
           <span class="pas"><button type="button" data-moins="${type}" ${mis > 0 ? "" : "disabled"} aria-label="Moins">−</button><b>${mis}</b><button type="button" data-plus="${type}" ${mis < n ? "" : "disabled"} aria-label="Plus">+</button></span></li>`;
       })
       .join("");
-    const sesObjets = (Object.entries(e.lui.objets) as [TypeObjet, number][])
+    const sesObjets = (Object.entries(e.lui.objets) as [CleObjet, number][])
       .filter(([, n]) => n > 0)
-      .map(([type, n]) => `<li class="mis">${icone(type, 28)}<span class="nom">${nommer(type, n)}</span></li>`)
+      .map(([type, n]) => `<li class="mis">${icone(typeDe(type), 28)}<span class="nom">${nomEtoile(type, n)}</span></li>`)
       .join("");
     const html = `
       <header><h2>Échange avec ${e.avec.pseudo}</h2><button type="button" class="fermer" aria-label="Annuler l'échange">✕</button></header>
@@ -803,7 +814,7 @@ export class Hud {
     if (html === this.dernierEchange) return;
     this.dernierEchange = html;
     el.innerHTML = html;
-    const total = (type: TypeObjet, delta: number) => {
+    const total = (type: CleObjet, delta: number) => {
       const n = Math.max(0, Math.min(this.inventaire[type] ?? 0, (o.objets[type] ?? 0) + delta));
       const objets = { ...o.objets };
       if (n > 0) objets[type] = n;
@@ -811,8 +822,8 @@ export class Hud {
       this.monOffre = { ...o, objets };
       this.envoyerOffre();
     };
-    for (const b of el.querySelectorAll<HTMLButtonElement>("[data-plus]")) b.addEventListener("click", () => total(b.dataset.plus as TypeObjet, 1));
-    for (const b of el.querySelectorAll<HTMLButtonElement>("[data-moins]")) b.addEventListener("click", () => total(b.dataset.moins as TypeObjet, -1));
+    for (const b of el.querySelectorAll<HTMLButtonElement>("[data-plus]")) b.addEventListener("click", () => total(b.dataset.plus as CleObjet, 1));
+    for (const b of el.querySelectorAll<HTMLButtonElement>("[data-moins]")) b.addEventListener("click", () => total(b.dataset.moins as CleObjet, -1));
     for (const b of el.querySelectorAll<HTMLButtonElement>("[data-wotts]")) {
       b.addEventListener("click", () => {
         const w = Math.max(0, Math.min(Math.floor(this.wotts.poche * 10) / 10, o.wotts + Number(b.dataset.wotts)));
@@ -881,16 +892,16 @@ export class Hud {
     const v = this.vueComptoir;
     if (!v) return;
     const w = this.wotts;
-    const ligne = (type: TypeObjet, droite: string, sous = "") =>
-      `<li>${icone(type, 32)}<span class="nom">${OBJETS[type].nom}${sous ? `<small>${sous}</small>` : ""}</span>${droite}</li>`;
+    // Un exemplaire étoilé (Book 25 §4.2) montre ses étoiles, et se paie selon elles (une ★★★★★ dure deux fois plus).
+    const ligne = (cle: CleObjet, droite: string, sous = "") =>
+      `<li>${icone(typeDe(cle), 32)}<span class="nom">${nomEtoile(cle)}${sous ? `<small>${sous}</small>` : ""}</span>${droite}</li>`;
     let corps = "";
     if (this.onglet === "vendre") {
-      const lignes = (Object.entries(this.inventaire) as [TypeObjet, number][])
-        // Le Comptoir ne rachète pas encore les exemplaires étoilés (Book 25 : chantier 8).
-        .filter(([t, n]) => n > 0 && estObjet(t))
+      const lignes = (Object.entries(this.inventaire) as [CleObjet, number][])
+        .filter(([t, n]) => n > 0 && estCleObjet(t))
         .map(([type, n]) => {
-          const prix = v.achats[type];
-          if (prix === null || prix === undefined) return ligne(type, `<span class="prix non">non racheté</span>`, `× ${n}`);
+          const prix = prixAchatExemplaire(v.achats[typeDe(type)], type);
+          if (prix === null) return ligne(type, `<span class="prix non">non racheté</span>`, `× ${n}`);
           return ligne(
             type,
             `<span class="prix">${formaterWotts(prix)}</span><button type="button" data-op="vendre" data-objet="${type}" data-n="1">Vendre</button>${n > 1 ? `<button type="button" data-op="vendre" data-objet="${type}" data-n="${n}">Tout · ${formaterWotts(prix * n)}</button>` : ""}`,
@@ -900,10 +911,10 @@ export class Hud {
       corps = `${v.tresorerieBasse ? `<p class="avis">Les caisses sont presque vides : on ne rachète plus que le bois, la pierre et la nourriture, au prix plancher.</p>` : ""}
         <ul class="lignes">${lignes.join("") || "<li class=\"vide\">Ton sac est vide.</li>"}</ul>`;
     } else if (this.onglet === "acheter") {
-      const lignes = (Object.entries(v.stock) as [TypeObjet, number][])
-        .filter(([, n]) => n > 0)
+      const lignes = (Object.entries(v.stock) as [CleObjet, number][])
+        .filter(([t, n]) => n > 0 && estCleObjet(t))
         .map(([type, n]) => {
-          const prix = prixVente(type);
+          const prix = prixVenteCle(type);
           return ligne(type, `<span class="prix">${formaterWotts(prix)}</span><button type="button" data-op="acheter" data-objet="${type}" data-n="1" ${w.poche + 1e-6 >= prix ? "" : "disabled"}>Acheter</button>`, `en stock : ${n}`);
         });
       corps = `<ul class="lignes">${lignes.join("") || "<li class=\"vide\">Rien en stock.</li>"}</ul>`;
@@ -964,7 +975,7 @@ export class Hud {
     for (const b of this.guichet.querySelectorAll<HTMLButtonElement>("[data-op]")) {
       b.addEventListener("click", () => {
         const op = b.dataset.op;
-        const objet = b.dataset.objet as TypeObjet;
+        const objet = b.dataset.objet as CleObjet;
         const n = Number(b.dataset.n);
         const batterie = b.dataset.batterie as TypeBatterie;
         const montant = Number(b.dataset.montant);
@@ -1020,7 +1031,7 @@ export class Hud {
     this.quetes = v;
     // La leçon, puis la récompense à part : chaque message tient en deux lignes.
     for (const r of v?.reussies ?? []) {
-      this.message(`✓ ${r.titre} : ${r.lecon}`, "lecon");
+      this.message(`✓ ${r.titre} : ${avecTouches(r.lecon, this.tactile)}`, "lecon");
       if (r.recompense) this.message(`Reçu : ${r.recompense}.`, "lecon");
     }
     if (v?.reussies?.length) {
@@ -1036,7 +1047,7 @@ export class Hud {
       .map(
         (q) => `<div class="quete">
           <div class="ligne-quete">${LIGNES[q.ligne]}</div>
-          <div class="nom-quete">${q.titre}</div>
+          <div class="nom-quete">${q.icone ? `<span class="icone-quete">${icone(q.icone as Pictogramme, 26)}</span>` : ""}${q.titre}</div>
           ${
             q.objectifs.some((o) => o.but > 1) || q.objectifs.length > 1
               ? `<div class="progres-tuto">${q.objectifs
@@ -1468,9 +1479,13 @@ export class Hud {
       const etoiles = n === null ? "" : `<span class="etoiles-case" title="${etoilesTexte(n)}">${n}★</span>`;
       const charge = this.partCharge(cle);
       const barre = charge === null ? "" : `<span class="charge-case" aria-hidden="true"><span style="width:${Math.round(charge * 100)}%"></span></span>`;
+      // Une arme de tir montre ce qui lui reste à tirer (Book 25 §8.6), en bas à gauche : « ➶7 ».
+      const tir = armeTirDe(typeDe(cle));
+      const reste = tir ? this.munitionsDe(tir.objet).total : null;
+      const munitions = reste === null ? "" : `<span class="munitions-case ${reste === 0 ? "vide" : ""}" title="${reste} ${tir?.armeeDAvance ? "carreaux" : "flèches"}">➶${reste}</span>`;
       const nom = nommer(cle, 1);
       return `<button type="button" class="case ${classe} ${this.selection === cle ? "choisie" : ""}" data-objet="${cle}"
-        title="${nom} (${kg(pile)} kg) — ${d.description}" aria-label="${nom}">${icone(typeDe(cle))}${etoiles}${barre}${badge ? `<span class="badge">${badge}</span>` : ""}</button>`;
+        title="${nom} (${kg(pile)} kg) — ${d.description}" aria-label="${nom}">${icone(typeDe(cle))}${etoiles}${barre}${munitions}${badge ? `<span class="badge">${badge}</span>` : ""}</button>`;
     };
     const cases = [
       (this.inventaire.gourde ?? 0) > 0 ? case_("gourde", g.litres > 0 ? `${kg(g.litres)} L` : "vide", g.contenu === "brute" && g.litres > 0 ? "brute" : "") : "",
@@ -1528,7 +1543,8 @@ export class Hud {
       }
       // Une arme : ses dégâts et sa vitesse, comparés aux autres (2026-10-08), et sa réparation (Book 23 §4.3).
       const arme = caracteristiquesArme(s);
-      const caracs = arme ? this.ficheArme(arme, s) : "";
+      // Une arme de tir (Book 25 §8.6) : ses portées, sa cadence, ses munitions, à ses étoiles.
+      const caracs = arme ? this.ficheArme(arme, s) : armeTirDe(t) ? this.ficheTir(s) : "";
       if (arme) {
         const etat = etatArme(s, this.usureArmes);
         if (etat < 1) {
@@ -1655,6 +1671,37 @@ export class Hud {
     this.dernierSac = "";
     if (!this.sac.hidden) this.dessinerSac();
     if (evenement?.etat === "reparee") this.message(`${nommer(evenement.objet, 1)} : réparée.`);
+  }
+
+  /** Les munitions du sac pour une arme de tir : leur total, et le détail par sorte (« 3 d'os, 2 de clou »). */
+  private munitionsDe(arme: TypeObjet): { total: number; detail: string } {
+    const sortes = MUNITIONS.filter((m) => m.pour.includes(arme))
+      .map((m) => ({ m, n: compter(this.inventaire, m.objet) }))
+      .filter((x) => x.n > 0);
+    return { total: sortes.reduce((s, x) => s + x.n, 0), detail: sortes.map((x) => nommer(x.m.objet, x.n)).join(", ") };
+  }
+
+  /** La fiche d'une arme de tir (Book 25 §8.3 et §8.6) : une ligne par fait, rien de caché. */
+  private ficheTir(cle: CleObjet): string {
+    const base = armeTirDe(typeDe(cle));
+    if (!base) return "";
+    const a = armeTirExemplaire(cle, base);
+    const m = (v: number) => `${Math.round(v * 10) / 10}`.replace(".", ",");
+    const s = (ms: number) => `${Math.round(ms / 100) / 10}`.replace(".", ",");
+    const munitions = this.munitionsDe(base.objet);
+    const reste = this.usureArmes[cle];
+    const etat = reste === undefined || !Number.isFinite(a.solidite) ? 1 : Math.max(0, Math.min(1, reste / a.solidite));
+    const cadence = a.armeeDAvance
+      ? `Armée d'avance : le tir part tout de suite. Réarmer : ${s(a.rechargeMs)} s, sans bouger.`
+      : `Bander ${s(a.pleinMs)} s pour un tir plein ; encocher ${s(a.rechargeMs)} s.`;
+    return `<div class="caracs-arme caracs-tir">
+      <span class="tete-carac">🎯 Sûr jusqu'à ${m(a.porteeUtile)} m, au plus ${m(a.porteeMax)} m.</span>
+      <span class="tete-carac">☠ Tir plein à la tête : il tombe pour de bon, jusqu'à ${m(a.porteeTete)} m.</span>
+      <span class="tete-carac">${cadence}</span>
+      <span class="tete-carac munitions-fiche">${munitions.total > 0 ? `${a.armeeDAvance ? "Carreaux" : "Flèches"} : ${munitions.detail}.` : `Plus de ${a.armeeDAvance ? "carreaux" : "flèches"} : fabrique-en.`}</span>
+      <span class="carac" title="Chaque tir l'use ; à zéro, elle casse."><span class="nom-carac">Solidité</span><span class="barre-carac"><span style="width:${Math.round(etat * 100)}%"></span></span><span class="valeur-carac">${Math.round(etat * 100)} %</span></span>
+      <span class="tete-carac">Perçant : un casque ne l'arrête que de dos ; de face, à moitié moins loin.</span>
+    </div>`;
   }
 
   private ficheArme(a: NonNullable<ReturnType<typeof caracteristiquesArme>>, objet: CleObjet): string {

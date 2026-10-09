@@ -852,9 +852,9 @@ vague 3   [8 Intégration] ◄────┴───────────�
 
 | Sujet | Code | Books | Proposition | État |
 |---|---|---|---|---|
-| **L'arc** | — | Book 01 §4 et §5, Book 06 §8.2, Book 11 §10 : arc et arbalète **mécanistes** | Arc pour tous, arbalète mécaniste (§3.1) | **Décidé** (décision 1) ; Books 01, 06 et 11 à mettre à jour (chantier 8) |
-| **Le combat des Charbonniers** | — | Book 01 §5 : la **poudre noire** | Les lames ; la poudre noire reportée après la 1.0 | **Décidé** (décision 7) ; Book 01 à mettre à jour |
-| **L'électricité** | — | Book 01 §4 et Book 06 §8.2 : la clôture « étourdit et **blesse** » | L'arme électrique raidit, met à terre, et **détruit** à la tête un Éteint raidi ou à terre ; la clôture raidit et ne détruit pas (§5.1) | **Décidé** (2026-10-09) ; Books 01 et 06 à mettre à jour |
+| **L'arc** | — | Book 01 §4 et §5, Book 06 §8.2, Book 11 §10 : arc et arbalète **mécanistes** | Arc pour tous, arbalète mécaniste (§3.1) | **Décidé** (décision 1) ; Books 01 (v1.8), 06 (v0.7) et 11 (v0.8) **mis à jour** (chantier 8, 2026-10-09) |
+| **Le combat des Charbonniers** | — | Book 01 §5 : la **poudre noire** | Les lames ; la poudre noire reportée après la 1.0 | **Décidé** (décision 7) ; Book 01 **mis à jour** (v1.8) |
+| **L'électricité** | — | Book 01 §4 et Book 06 §8.2 : la clôture « étourdit et **blesse** » | L'arme électrique raidit, met à terre, et **détruit** à la tête un Éteint raidi ou à terre ; la clôture raidit et ne détruit pas (§5.1) | **Décidé** (2026-10-09) ; Books 01 et 06 **mis à jour** (v1.8, v0.7) |
 | **Recettes des autres familles** | `recettesConnues` : invisibles, impossibles | Book 01 §5 : apprentissage, puis ×1,5 ; Book 24 l'applique aux lignées seulement | Grisées, ouvertes par la leçon ou un manuel, ×1,5, plafond ★★ (§2.3) | **Décidé** (décision 3) ; chantier 3 |
 | **Réparer une lame** | `ATELIER_REPARATION.lame` = la meule du **pédalier**, recette mécaniste | Book 23 §4.3 | Un **Charbonnier ne peut pas réparer sa propre lame** : la meule **et** la forge (§4.4) | **Décidé** (décision 8) ; chantier 2 |
 | **La qualité ★** | Absente ; l'inventaire compte des types | Book 02 §9 : maillon faible ; Book 23 §4.3 : l'usure par type | Qualité par exemplaire pour les seuls objets de métier (§9.6) | **Décidé** (décision 2) ; chantier 2 |
@@ -877,7 +877,7 @@ Le Book 02 §14 bis (« pierre à aiguiser écartée, pour ne pas casser la meul
 
 Les huit questions de la v0.1 sont tranchées par le porteur : toutes à « oui », la n° 8 à « les deux ».
 
-1. **L'arc pour tous ; les Mécanistes gardent l'arbalète.** L'arc simple est commun ; les Mécanistes gardent **l'arbalète, les pièges et le tour**, et un avantage sur l'arc qui vient de leur savoir (ils trouvent l'if, leurs arcs passent ★★★★). Books 01, 06 et 11 à mettre à jour. → §3, §6.
+1. **L'arc pour tous ; les Mécanistes gardent l'arbalète.** L'arc simple est commun ; les Mécanistes gardent **l'arbalète, les pièges et le tour**, et un avantage sur l'arc qui vient de leur savoir (ils trouvent l'if, leurs arcs passent ★★★★). Books 01, 06 et 11 mis à jour (2026-10-09). → §3, §6.
 
 2. **La qualité ★ par exemplaire, pour les seuls objets de métier** (lames, arcs, arbalètes, armes électriques), par un suffixe d'étoiles dans l'inventaire. Un caillou n'a pas d'étoile. À faire relire par l'architecte BMAD avant le code. → §4.2, §9.6, chantier 2.
 

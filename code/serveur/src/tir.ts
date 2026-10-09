@@ -72,6 +72,8 @@ export interface ContexteTir {
   apresDestruction(e: Eteint): void;
   /** Un geste (réarmer l'arbalète : immobile, il s'arrête si l'on bouge). */
   commencer(libelle: string, dureeS: number, appliquer: () => void): void;
+  /** Un fait pour les quêtes (« tete:fleche », « tete:carreau » : un Éteint détruit d'un tir à la tête, Book 25 §9.4). */
+  noter?(fait: string): void;
 }
 
 /** On accroche un Éteint jusqu'à 35° de la direction donnée (le client l'a visé ; une petite marge pour le réseau). */
@@ -365,7 +367,9 @@ export class Tir {
         // Le casque : la flèche passe par la visière, de face, à la moitié de la portée de tête.
         const porteeTete = tete === null ? -1 : touche.variante === "equipe" ? (deFace(touche, pos) ? tete * PART_TETE_EQUIPE : -1) : tete;
         const degats = plein ? tir.degatsPlein : (tir.degatsRapide ?? tir.degatsPlein);
-        resultat = toucher(touche, { genre: "tir", degats, tete: d <= porteeTete }, pos, zone);
+        const aLaTete = d <= porteeTete;
+        resultat = toucher(touche, { genre: "tir", degats, tete: aLaTete }, pos, zone);
+        if (resultat === "detruit" && aLaTete) ctx.noter?.(tir.armeeDAvance ? "tete:carreau" : "tete:fleche");
       } else {
         const def = (p as Extract<Pret, { genre: "lancer" }>).def;
         resultat = toucher(touche, { genre: "lancer", def, heureux: def.coupHeureux > 0 && ctx.alea() < def.coupHeureux }, pos, zone);

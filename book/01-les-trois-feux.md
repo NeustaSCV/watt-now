@@ -1,7 +1,8 @@
 # Book 01 — Les Trois Feux
 
-> Document de conception · version 1.7 · 2026-10-07
+> Document de conception · version 1.8 · 2026-10-09
 > Statut : **brouillon de travail**. Les valeurs chiffrées sont des hypothèses de départ à calibrer en playtest.
+> v1.8 (2026-10-09) : aligné sur le [Book 25](25-le-metier-des-familles.md), validé par le porteur. L'arc devient commun à tous (les Mécanistes gardent l'arbalète, les pièges et le tour) ; le combat des Charbonniers passe aux **lames**, la poudre noire est **reportée après la 1.0** ; l'électricité **raidit, met à terre, et détruit** à la tête un Éteint raidi ou à terre ; chaque famille fait **seule** sa base.
 
 ---
 
@@ -330,7 +331,7 @@ On ne fond pas de l'acier sur un feu de camp, même avec une montagne de bois. C
 | Installation | Température max | Rendement thermique | Palier |
 |---|---|---|---|
 | Feu de camp | ≈ 600 °C | ≈ 5 % | I |
-| Foyer de forge à soufflet manuel (bois) | ≈ 900 °C | ≈ 8 % | I |
+| Foyer de forge à soufflet manuel (bois ou charbon de bois ; en jeu, 1 kg de charbon pour un couteau) | ≈ 900 °C | ≈ 8 % | I |
 | Forge au charbon de bois avec ventilation | ≈ 1 300 °C | ≈ 10 % | II |
 | Creuset isolé (four de fonderie) | ≈ 1 200 °C | ≈ 15 % | II |
 | Four à arc ou à induction (électrique) | ≈ 1 600 °C et plus | ≈ 60 % | III, très énergivore |
@@ -394,31 +395,29 @@ Ce sont les descendants des forgerons, chauffagistes et ouvriers d'usine. Ils on
 
 | Type | Trait | Effet |
 |---|---|---|
-| ✅ Signature | **Maîtres du feu** | Rendement des installations thermiques +30 %. Fours, forges et poudre noire natifs. |
+| ✅ Signature | **Maîtres du feu** | Rendement des installations thermiques +30 %. Fours, forges et lames natifs. |
 | ✅ Atout | **Peau tannée** | Résistance au froid élevée. Le corps brûle moins de calories pour se réchauffer. |
 | ❌ Handicap | **Poumons de suie** | Jauge de *Suie* qui monte près des fumées et réduit l'END max. Un masque ou un filtre la ralentit. |
 | ❌ Handicap | **Feu bavard** | Leurs installations ont une signature olfactive et sonore **+50 %**. |
 
 - **Style de jeu :** bâtisseur et forgeron. Base fortifiée qu'on défend et qu'on agrandit.
-- **Ce qu'ils font mieux que les autres :** métallurgie, outils, cuisson, chauffage, **poudre noire**.
+- **Ce qu'ils font mieux que les autres :** métallurgie, outils, **lames forgées**, cuisson, chauffage.
 - **Leur problème :** ils attirent les hordes. Une Charbonnière qui forge doit d'abord avoir des murs.
 
-**Combat : la poudre noire.** C'est la puissance de feu brute, au prix du bruit.
+**Combat : les lames** (Book 25 §4, décision du 2026-10-09). Le corps à corps durable, au prix du bruit et de l'usure.
 
-La poudre noire est cohérente avec cette famille : c'est 75 % de salpêtre, 15 % de **charbon de bois** et 10 % de soufre. Ce sont les seuls à produire du charbon de bois de bonne qualité en quantité. Mais ce n'est pas qu'une affaire de feu, et sa fabrication est volontairement exigeante :
+Les Charbonniers forgent de l'acier récupéré (lames de ressort, socs, limes) : couteau de forge, hachette qui se lance, serpe, **machette forgée** (leur arme de métier), hache, et, à la forge ventilée, le glaive. La qualité d'une lame est le maillon faible de l'acier, de la trempe et de la forge (★ à ★★★★★). C'est l'arme qui tue le plus vite et qui dure le plus ; mais elle est **tranchante** (le casque d'un Équipé l'arrête à la tête) et un coup s'entend à 10 m. Ils reprennent et reforgent eux-mêmes leurs lames à la forge.
 
-- **Salpêtre :** il faut une *nitrière* (compost, fumier, urine), ce qui prend des semaines de jeu. On peut aussi en trouver en jardinerie ou dans les stocks d'engrais (fouille).
-- **Soufre :** rare. Fongicide de jardinerie, pharmacie, ruines industrielles (fouille).
-- **Munitions :** le plomb se coule facilement (300 Wh_th/kg). Les **amorces**, en revanche, ne se fabriquent pas avant le palier III : il faut les trouver ou utiliser des mécanismes à silex.
-- **Contrepartie :** un coup de feu = signature sonore de **300 m**. Tirer, c'est appeler la horde.
+**La poudre noire est reportée après la 1.0** (Book 25 §12, n° 7). Les lames suffisent à faire un métier, et un coup de feu qui s'entend à 300 m changerait tout l'équilibre de la Coopérative. On la garde ici en idée, pour plus tard : 75 % de salpêtre (une *nitrière* : compost, fumier, urine, des semaines de jeu), 15 % de **charbon de bois**, 10 % de soufre (rare) ; du plomb coulé facilement (300 Wh_th/kg) ; des amorces introuvables avant le palier III (ou un mécanisme à silex) ; et un coup de feu qui appelle la horde.
 
 **Progression énergétique**
 
 | Palier | Technologies |
 |---|---|
-| I | Feu ouvert, foyer de pierres, fumage, fonte du plomb |
-| II | Poêle-fusée, four à pain, charbonnière, forge ventilée, creuset, nitrière, poudre noire, mousquet à silex |
-| III | Bas fourneau, gazogène, distillerie, petite machine à vapeur (avec un alternateur : électricité), rechargement de cartouches, amorces |
+| I | Feu ouvert, foyer de pierres, foyer de forge à soufflet, fumage, fonte du plomb, couteau et machette forgés |
+| II | Poêle-fusée, four à pain, charbonnière, forge ventilée, enclume, creuset, glaive |
+| III | Bas fourneau, gazogène, distillerie, petite machine à vapeur (avec un alternateur : électricité) |
+| Après la 1.0 (idée) | Nitrière, poudre noire, mousquet à silex, rechargement de cartouches, amorces |
 
 ---
 
@@ -445,19 +444,20 @@ Ce sont les anciens de la **Compagnie d'électricité** de l'Âge de l'Abondance
 
 **Combat : le contrôle et l'information.** Ils ne frappent pas fort, ils choisissent leurs combats.
 
-Leur faiblesse physique (FOR −2) est cohérente avec leur histoire et doit rester. Faire des Voltaïques des combattants physiques pour contrebalancer la poudre noire casserait leur identité. Leur réponse est ailleurs :
+Leur faiblesse physique (FOR −2) est cohérente avec leur histoire et doit rester. Faire des Voltaïques des combattants physiques casserait leur identité. Leur réponse est ailleurs :
 
-- **Détection :** alarmes, capteurs de mouvement, radio. Ils savent où est la horde **avant** qu'elle arrive. Ils sont rarement surpris.
-- **Défense passive :** clôtures électrifiées (≈ 2 à 5 W en continu, soit 50 à 120 Wh_é/jour) qui étourdissent et blessent des zombies fragiles, sans aucun bruit.
+- **L'arme électrique** (Book 25 §5, décision du 2026-10-09) : matraque (de fortune, à la raquette, à bobine), aiguillon de défense. **Une décharge courte fait lâcher et raidit ; maintenue sur un Éteint debout, elle le met à terre ; maintenue à la tête d'un Éteint raidi ou à terre, elle le détruit. Le casque n'y change rien.** Rien au torse : on raidit, puis on éteint, sans jamais se laisser saisir. C'est la meilleure arme de contact contre l'Équipé casqué, et une courte libère un joueur saisi.
+- **Détection :** alarmes (l'alarme électrique est silencieuse), capteurs de mouvement, radio. Ils savent où est la horde **avant** qu'elle arrive. Ils sont rarement surpris.
+- **Défense passive :** clôtures électrifiées (≈ 2 à 5 W en continu, soit 50 à 120 Wh_é/jour) qui **raidissent** l'Éteint et le repoussent, et plaques de choc qui le couchent, sans aucun bruit. Elles **ne détruisent pas** : il faut quelqu'un pour achever.
 - **Éblouissement :** projecteurs qui désorientent les zombies et attirent la horde **ailleurs** (leurre lumineux).
-- **Contrepartie :** tout cela consomme des Wh_é et rien ne tue vite. Pris au dépourvu en pleine rue, un Voltaïque doit fuir.
+- **Contrepartie :** tout cela consomme des Wh_é (≈ 1,25 Wh par Éteint détruit), et l'arme électrique tue deux fois moins vite qu'une lame. L'hiver gris rationne le courant ; la manivelle de la lampe à dynamo les empêche d'être désarmés.
 
 **Progression énergétique**
 
 | Palier | Technologies |
 |---|---|
 | I | Piles et batteries récupérées, lampe à dynamo, chargeur bricolé, alarme à fil |
-| II | Panneau solaire + régulateur, banc de batteries, petite éolienne, soudure à l'arc, clôture électrique |
+| II | Panneau solaire + régulateur, banc de batteries, petite éolienne, soudure à l'arc, matraque électrique, clôture électrique |
 | III | Micro-réseau, onduleur, outillage électrique, réfrigérateur, radio longue portée, four électrique |
 
 ---
@@ -485,7 +485,8 @@ Ce sont les descendants des paysans, meuniers et cyclistes. Ils ont renoncé au 
 
 **Combat : la mécanique silencieuse.** Précision et endurance.
 
-- **Armes à ressort et à corde :** arc, arbalète à cranequin, lance-pierre lourd. Silencieuses, carreaux **récupérables**, mais rechargement lent.
+- **L'arbalète** (Book 25 §6) : armée d'avance, elle détruit à la tête jusqu'à 12 m sans rien bander ; mais la réarmer immobilise. Arbalète légère (arc de frêne, lame de ressort, if), arbalète lourde et cranequin (avec les ressorts retrempés des Charbonniers), lance-pierre lourd plus tard. Silencieuses, carreaux **récupérables**, rechargement lent.
+- **L'arc** n'est plus un métier : il est **commun à tous** (Book 25 §3). Les Mécanistes y gardent un avantage de savoir : ils reconnaissent les essences (l'if), et leurs arcs passent au tour.
 - **Pièges mécaniques :** fosses, contrepoids, mâchoires. Aucune énergie après la pose.
 - **Endurance :** ils peuvent nettoyer une zone longtemps sans s'épuiser.
 - **Contrepartie :** faible cadence et puissance moyenne. Face à une horde, ils reculent en tirant.
@@ -494,8 +495,8 @@ Ce sont les descendants des paysans, meuniers et cyclistes. Ils ont renoncé au 
 
 | Palier | Technologies |
 |---|---|
-| I | Manivelle, pédalier, meule à bras, pompe à main, arc, travail à froid |
-| II | Système de poulies, tour à perche, vélo-cargo, treuil, arbalète, rivetage |
+| I | Manivelle, pédalier, meule à bras, pompe à main, arbalète légère, assommoir, travail à froid |
+| II | Système de poulies, tour à perche, vélo-cargo, treuil, arbalète lourde et cranequin, piège à mâchoires, rivetage |
 | III | Roue hydraulique, moulin à vent, manège et traction animale (bœuf, cheval), digesteur à biogaz, scierie mécanique, baliste de rempart |
 
 ---
@@ -519,28 +520,32 @@ Chaque famille paie son énergie dans **une monnaie différente** :
 
 Chaque famille a une force de combat différente, et aucune ne domine les deux autres.
 
-| | 🔥 Poudre noire | ⚡ Contrôle électrique | ⚙️ Mécanique silencieuse |
+| | 🔥 Lames | ⚡ Contrôle électrique | ⚙️ Mécanique silencieuse |
 |---|---|---|---|
-| **Puissance** | Très élevée | Faible | Moyenne |
-| **Bruit** | Énorme | Nul | Faible |
-| **Coût par usage** | Élevé (salpêtre, soufre, amorces) | Wh_é | Quasi nul (munitions récupérables) |
-| **Brille quand…** | On doit tuer vite, en dernier recours | On défend une base ou on évite le combat | On nettoie une zone méthodiquement |
-| **Échoue quand…** | La discrétion compte | On est pris au dépourvu | La horde est déjà là |
+| **Puissance** | Élevée : la mise à mort la plus rapide | Moyenne : raidir, puis éteindre | Moyenne, mais **avant le contact** |
+| **Bruit** | Élevé (un coup : 10 m ; la forge : 40 m) | Faible (crépitement, 6 à 8 m) | Faible (la corde, 3 à 6 m) |
+| **Coût par usage** | Usure (la lame la plus solide) | Wh_é | Quasi nul (munitions récupérables) |
+| **Brille quand…** | La visite est longue, l'Éteint après l'Éteint | Il est casqué, on est saisi, ils sont serrés | Le terrain est ouvert, on frappe le premier |
+| **Échoue quand…** | L'Éteint est casqué, la discrétion compte | Les batteries sont vides | La horde est déjà là |
+
+Le détail chiffré, niveau par niveau (★ à ★★★), est au Book 25 §8.4 : chacune est la meilleure sur son terrain, et jamais plus de deux fois moins bonne ailleurs. **L'arc**, commun à tous, sert de repère.
 
 ### Interdépendance
 
 | A besoin de → | 🔥 Charbonniers | ⚡ Voltaïques | ⚙️ Mécanistes |
 |---|---|---|---|
-| **🔥 Charbonniers** | — | Détection (alerte horde), filtres | Nourriture, bois transporté, carreaux silencieux |
-| **⚡ Voltaïques** | Cuivre fondu, pièces forgées, poudre (défense d'urgence) | — | Dynamos à pédale (secours hiver), nourriture |
-| **⚙️ Mécanistes** | Outils forgés, ressorts trempés, engrenages | Conservation (froid), éclairage, soudure | — |
+| **🔥 Charbonniers** | — | Détection (alarme silencieuse), filtres, ventilateur de forge | Nourriture, bois transporté, affûtage, manches tournés, arbalètes et carreaux |
+| **⚡ Voltaïques** | Cuivre fondu, pièces forgées, électrodes forgées, une lame pour les jours sans courant | — | Recharge par pédalage (secours hiver), manches tournés, nourriture |
+| **⚙️ Mécanistes** | Outils forgés, ressorts retrempés, pointes d'acier, engrenages | Conservation (froid), éclairage (lampe bricolée), packs de cellules, soudure | — |
+
+Ces besoins sont des **améliorations**, jamais des verrous : chaque famille fabrique **seule** sa base (son arme de métier ★ et ★★, ses outils, ses installations), et les autres lui ouvrent les étoiles hautes, les variantes et le confort (Book 25 §2.5 et §7).
 
 ### Accès aux technologies des autres familles
 
 Aucune technologie n'est verrouillée, pour éviter qu'une famille soit coincée.
 
 - **Technologie native :** coût normal.
-- **Technologie étrangère :** apprentissage requis (livre, PNJ, autre joueur), puis **coût ×1,5** et **temps de craft ×1,5**.
+- **Technologie étrangère :** apprentissage requis (livre, PNJ, autre joueur), puis **coût ×1,5** et **temps de craft ×1,5**. En jeu (0.6, Book 25 §2.3) : les recettes des autres familles se voient grisées, s'ouvrent par la leçon d'un joueur ou un manuel, et ce qu'elles produisent ne dépasse pas **★★**.
 - Les traits de signature (+30 %, sans signature, etc.) ne s'appliquent **qu'aux technologies natives**.
 
 ---
@@ -551,7 +556,7 @@ Aucune technologie n'est verrouillée, pour éviter qu'une famille soit coincée
 
 Le prix des biens dépend de **l'offre et de la demande réelles sur le serveur**. Si la majorité des joueurs sont Charbonniers :
 
-- ce qu'ils produisent en abondance (charbon de bois, outils forgés, poudre) **perd de la valeur** ;
+- ce qu'ils produisent en abondance (charbon de bois, outils et lames forgés) **perd de la valeur** ;
 - ce dont ils manquent (nourriture, filtres, composants) **prend de la valeur** ;
 - jouer une famille minoritaire devient **plus rentable**.
 
@@ -828,7 +833,7 @@ Chaque famille est testée avec chaque profil (matrice 3 × 3) :
 | ⚡ Voltaïques | **Meilleur** | Correct | Pénible |
 | ⚙️ Mécanistes | Correct | Pénible ² | **Meilleur** ³ |
 
-¹ La poudre noire est la plus puissante, mais le bruit rend chaque combat coûteux. Il faut vérifier qu'elle ne fait pas des Charbonniers les « meilleurs » combattants.
+¹ La lame tue le plus vite et dure le plus, mais elle fait du bruit et ne vient pas à bout d'un Équipé casqué. Il faut vérifier qu'elle ne fait pas des Charbonniers les « meilleurs » combattants (le simulateur du Book 25 §8.4 et §10, chantier 9).
 ² Le Mécaniste bâtisseur stagne : les grands chantiers demandent trop de calories.
 ³ Arbalète silencieuse, munitions récupérables, endurance : cohérent sur le papier, à confirmer en test.
 
@@ -849,8 +854,8 @@ Chaque force doit avoir une situation où elle **ne sert à rien** :
 
 | Force | Situation où elle ne sert à rien |
 |---|---|
-| Rendement du feu, poudre noire (Charbonniers) | Mission de discrétion, infiltration |
-| Silence électrique, détection (Voltaïques) | Combat imprévu loin de la base |
+| Rendement du feu, lames (Charbonniers) | Mission de discrétion, infiltration ; l'Équipé casqué |
+| Silence électrique, détection, arme électrique (Voltaïques) | Combat imprévu loin de la base, batteries vides |
 | Endurance, arbalète (Mécanistes) | Pénurie de nourriture, horde déjà au contact |
 
 ---
@@ -882,6 +887,7 @@ Chaque force doit avoir une situation où elle **ne sert à rien** :
 | Prix | **Le prix de base d'un bien est son énergie grise**, convertie en wotts, nourriture comprise. Seul le travail humain a un cours propre (0,2 wott/kcal) (§6). |
 | Création des wotts | **Seul le Wh_é déposé au comptoir crée des wotts.** Combustibles, nourriture, objets et travail (pédalage au comptoir compris) sont payés sur la trésorerie (§6, Book 07 §3.1). |
 | Énergie de la base | **Production au calendrier, consommée sur place** : machines d'abord (selon la priorité et ce qui leur a été chargé), batteries ensuite, surplus perdu. Contrainte par famille : remplir (🔥), attendre (⚡), réparer (⚙️) (§2 bis). |
+| Métier des familles | **Book 25 (2026-10-09)** : l'arc est commun à tous ; 🔥 les lames, ⚡ l'électricité qui raidit et détruit, ⚙️ l'arbalète, les pièges et le tour. **Seul, on fait sa base ; ensemble, on la fait mieux.** La poudre noire est reportée après la 1.0. |
 | Transport d'énergie | **Limité par le poids des batteries** : plomb courant et lourd (≈ 20 Wh/kg), lithium rare et léger (≈ 150 Wh/kg), usure à chaque cycle (§2 bis). |
 
 ---
@@ -905,7 +911,7 @@ Chaque force doit avoir une situation où elle **ne sert à rien** :
 - [ ] **Réputation des pillards :** *en suspens*. Pas d'intégration crédible trouvée pour l'instant.
 - [ ] **Création de personnage :** on change librement de famille entre deux cycles (Book 09 §4). Reste : peut-on « changer de feu » **en cours de cycle**, par un long apprentissage ?
 - [ ] **Valeurs des traits :** les poids +6/+3/−5/−4 restent à valider en simulation.
-- [ ] **Poudre noire :** vérifier en test qu'elle ne domine pas le triangle de combat.
+- [x] **Poudre noire :** ✅ reportée après la 1.0 (Book 25 §12, n° 7) ; le combat des Charbonniers passe aux lames. Reste à vérifier en test que la lame ne domine pas le triangle (Book 25 §8.4).
 - [ ] **Épuisement du bois :** levier de réserve si la simulation montre que le bois reste trop facile (§7.2) : bois mort du terrain en quantité finie, forêts qui se régénèrent au calendrier.
 
 ---

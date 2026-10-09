@@ -296,8 +296,9 @@ export interface AutreVu extends Personne {
 }
 
 export type OperationComptoir =
-  | { genre: "vendre"; objet: TypeObjet; quantite: number }
-  | { genre: "acheter"; objet: TypeObjet; quantite: number }
+  /** Un exemplaire étoilé (« machette_forgee#4 ») se vend et s'achète à son prix (Book 25 §4.2, 0.6). */
+  | { genre: "vendre"; objet: CleObjet; quantite: number }
+  | { genre: "acheter"; objet: CleObjet; quantite: number }
   /** Déposer l'électricité d'un type de batterie (crée des wotts), ou en racheter pour la recharger. */
   | { genre: "deposer"; batterie: TypeBatterie }
   | { genre: "retirer"; batterie: TypeBatterie }

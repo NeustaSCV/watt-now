@@ -128,8 +128,8 @@ export class Echanges {
     const chargesDeB = e.b.chargesQuiPartent(ob.objets);
     // Les deux côtés dans une seule transaction : un plantage au milieu ne peut ni dupliquer ni perdre d'objets.
     e.a.enBloc(() => {
-      e.a.appliquerEchange(oa, ob, chargesDeB);
-      e.b.appliquerEchange(ob, oa, chargesDeA);
+      e.a.appliquerEchange(oa, ob, chargesDeB, e.b.compte.famille);
+      e.b.appliquerEchange(ob, oa, chargesDeA, e.a.compte.famille);
     });
     this.fermer(e);
     for (const j of [e.a, e.b]) j.envoyer({ t: "info", texte: "Échange conclu." });

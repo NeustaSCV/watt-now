@@ -14,6 +14,7 @@ import {
   type VueQuetes,
 } from "../../commun/src/quetes.ts";
 import type { Famille } from "../../commun/src/regles.ts";
+import { ETOILES_MAX, exemplaires } from "../../commun/src/etoiles.ts";
 
 /** Ce que le suivi peut regarder chez le joueur. */
 export interface EtatJoueurPourQuetes {
@@ -60,8 +61,14 @@ export class SuiviQuetes {
         const ok = [...j.installations].some((i) => i.type === c.type && (!c.avec || (i.etat as Record<string, unknown>)[c.avec] === true) && (i.niveau ?? 1) >= (c.niveau ?? 1));
         return { fait: ok ? 1 : 0, but: 1 };
       }
+      case "faits": {
+        const n = c.faits.reduce((s, f) => s + (this.etat.faits[f] ?? 0), 0);
+        return { fait: Math.min(c.but, Math.floor(n)), but: c.but };
+      }
       case "objet": {
-        const n = c.types.reduce((s, t) => s + (j.inventaire[t] ?? 0), 0);
+        // Les objets de métier comptent toutes étoiles confondues (« machette_forgee#2 »), au-dessus du seuil s'il y en a un.
+        const min = c.etoiles ?? 0;
+        const n = c.types.reduce((s, t) => s + exemplaires(j.inventaire, t).reduce((k, e) => k + ((e.etoiles ?? ETOILES_MAX) >= min ? e.nombre : 0), 0), 0);
         return { fait: Math.min(c.n, n), but: c.n };
       }
       case "wh": {
@@ -109,6 +116,7 @@ export class SuiviQuetes {
         id: q.id,
         ligne: q.ligne,
         titre: q.titre,
+        ...(q.icone ? { icone: q.icone } : {}),
         texte: q.texte,
         objectifs: q.objectifs.map((o) => ({ libelle: o.libelle, ...this.avancement(o.condition, j) })),
       };
