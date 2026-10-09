@@ -12,6 +12,18 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
+## 0.7.2 · en préparation
+
+- **Chaque pièce se découvre** : à la Coopérative et dans la boutique de la halte, ce que ton personnage ne voit pas est assombri, « en souvenir » : le décor reste lisible, mais aucun Éteint ni joueur n'y apparaît. Une porte fermée cache ce qu'il y a derrière ; ouverte, on voit dans son prolongement, et presque toute la pièce depuis le seuil.
+- **La lampe ne traverse plus les murs** : la nuit ou dans une pièce noire, elle n'éclaire que ce que tu vois. Par une porte ouverte, sa lumière entre en cône dans la pièce d'à côté.
+- **On voit à travers les vitrines et les fenêtres** : du libre-service, la cour ; des bureaux, par les fenêtres à barreaux. Une vitre condamnée (contreplaqué, store, planches) arrête la vue. Les Éteints suivent la même règle : s'ils te voient par la vitrine, tu les vois aussi.
+- **Ce qu'on entend sans le voir** : un Éteint caché derrière un mur n'est plus muet. Ses pas, ses râles, ses coups s'entendent étouffés, et une onde orange s'élargit sur la porte ou le mur par où le son arrive. Jamais sa silhouette, ni sa place exacte.
+- **Une porte qu'un Éteint pousse tremble**, et l'onde devient rouge. À moins de 3 m derrière un mur, on le sent : une onde rouge, un souffle.
+- **Le cercle de signature dit sa vraie portée pièce par pièce**, à la Coopérative : bien plus petit derrière une porte fermée, moitié moins par une porte ouverte. Et il ne se cache plus sous le carrelage du libre-service.
+- **À la halte, chacun sa vue** : on ne voit plus un autre joueur, un coup ou une pierre lancée de l'autre côté des murs de la boutique.
+
+---
+
 ## 0.7.1 · déployée le 2026-10-09
 
 - **Le cercle de signature dit vrai** : un Éteint qu'il touche réagit, god compris. Les dormants n'entendaient qu'à la moitié du cercle et ignoraient la lampe ; ils perçoivent tout le cercle (blanc et ambre), bord compris. Atteint, un dormant remue (yeux, corps, un indice) puis se réveille en quelques secondes.

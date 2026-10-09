@@ -39,6 +39,13 @@
 | Lampe électrique (⚡) | **Blanc froid** | Signature d'une famille qui a du courant |
 | Lanterne, lampe à dynamo (⚙️) | Jaune doux | Faible portée |
 
+**Ce qu'on ne voit pas : le souvenir (0.7.2, dans les lieux à murs : la Coopérative, la boutique de la halte)** :
+
+- Ce que le personnage voit (en ligne droite, par les portes ouvertes, les vitrines et les fenêtres) est dessiné normalement, avec la lumière du moment. Le reste est dessiné **« en souvenir »** : la forme et la teinte propre du décor, **désaturées et tirées vers le bleu-gris**, sans aucune lumière (la lampe ne traverse donc plus les murs).
+- **Jamais noir** (décision du porteur du projet, 2026-10-09) : le décor d'une pièce jamais visitée est lisible dès le départ. Le souvenir est plus clair dehors qu'à l'intérieur, plus sombre dans une pièce noire ; de jour assez clair pour lire le plan, la nuit bien plus sombre (le souvenir ne doit jamais paraître plus éclairé que ce qu'on voit).
+- **Rien de ce qui bouge** n'apparaît en souvenir : un Éteint, un autre joueur n'est montré que s'il est vu. Les toits et les hauts de murs qui s'effacent pour montrer le personnage ne sont pas assombris : ils cachent, ils ne racontent rien.
+- **Ce qu'on entend sans le voir** se montre par une **onde** au sol, sur la porte ou le mur par où le son arrive : trois arcs qui s'élargissent vers le personnage, **orangés** pour un bruit, **rouges** pour ce qui alarme (des coups dans la porte, une présence toute proche). Une porte qu'un Éteint pousse **tremble** dans son cadre.
+
 ---
 
 ## 3. Interface (proposition à valider)

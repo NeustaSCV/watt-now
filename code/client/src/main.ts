@@ -1088,7 +1088,8 @@ function cercle(couleur: number, opacite: number): THREE.LineLoop {
     new THREE.LineDashedMaterial({ color: couleur, transparent: true, opacity: opacite, dashSize: 0.05, gapSize: 0.04, depthWrite: false }),
   );
   l.computeLineDistances();
-  l.position.y = 0.06;
+  // (0.7.2 : 10 cm au-dessus du sol ; à 6 cm, le carrelage du libre-service et le sol des bureaux le cachaient.)
+  l.position.y = 0.1;
   l.visible = false;
   scene.scene.add(l);
   return l;
@@ -1106,7 +1107,7 @@ function cerclePieces(couleur: number, opacite: number): THREE.LineSegments {
   g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(6 * 96 * 6), 3).setUsage(THREE.DynamicDrawUsage));
   g.setAttribute("lineDistance", new THREE.BufferAttribute(new Float32Array(6 * 96 * 2), 1).setUsage(THREE.DynamicDrawUsage));
   const l = new THREE.LineSegments(g, new THREE.LineDashedMaterial({ color: couleur, transparent: true, opacity: opacite, dashSize: 0.05, gapSize: 0.04, depthWrite: false }));
-  l.position.y = 0.06;
+  l.position.y = 0.1;
   l.visible = false;
   l.frustumCulled = false;
   l.userData.rayon = 0;
