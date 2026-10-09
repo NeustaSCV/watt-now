@@ -14,18 +14,9 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ## 0.6 · en préparation
 
-**Le socle du combat et les étoiles** (Book 25, chantier 2)
-- **Les étoiles** : les objets de métier (lames, et bientôt arcs, arbalètes, armes électriques) ont une qualité de ★ à ★★★★★, par exemplaire. Leur case du sac montre « 4★ », leur fiche les cinq étoiles.
-- Deux exemplaires d'étoiles différentes ne s'empilent plus. Plus d'étoiles : plus de dégâts, et une arme qui dure plus longtemps (une ★★★★★ dure deux fois plus qu'une ★★★).
-- **L'usure par exemplaire** : chaque lame s'use de son côté ; quand l'une casse, l'autre reste comme elle était.
-- La **machette de fortune** compte comme une lame ★.
-- **Réparer une lame : à la meule ou à la forge.** La meule du pédalier l'affûte, sans rien consommer ; la forge la reprend pour un kilo de charbon. Un Charbonnier répare enfin ses lames lui-même.
-- **Un coup tranchant s'entend moins loin** : 10 m au lieu de 14 (le choc d'une masse ou d'un marteau, lui, porte toujours à 14 m).
-- **L'électricité contre les Éteints** (pour les armes des Voltaïques, à venir) : une décharge courte fait lâcher et raidit ; maintenue, elle met à terre, et elle **éteint pour de bon** un Éteint raidi ou à terre, casque ou pas. L'Éteint raidi se fige, de petits arcs bleus sur le torse ; éteint, il s'affaisse, sans sang.
-- **Les pièges** ont leur moteur (plaque de choc, clôture, mâchoires, à venir avec les Voltaïques et les Mécanistes) : raidir, mettre à terre, briser la jambe, tenir sur place ; jamais détruire.
-- Les sauvegardes d'avant se relisent sans rien perdre.
+Le métier des familles (Book 25) : chaque famille fabrique seule son arme de métier, et les autres lui apportent les améliorations. Le lancer, l'arc pour tous, les étoiles, les lames des Charbonniers, l'électricité des Voltaïques, l'arbalète et les pièges des Mécanistes.
 
-**Le lancer et le tir** (Book 25, chantier 1 ; Book 23 §5)
+**Le lancer** (Book 23 §5, Book 25 §3.4)
 - **Lancer** : G, le clic du milieu, ou le nouveau bouton rond « Lancer » du téléphone (il n'apparaît que si tu as de quoi lancer). Maintiens pour viser, relâche pour lancer.
 - **La visée** : une ligne de points au sol et un cercle. Une arme s'accroche à l'Éteint le plus proche devant toi (sur ordinateur, la souris oriente) ; un leurre vise un point à 8 m.
 - **La pierre** (8 m) étourdit l'Éteint touché une seconde, et fait un petit bruit là où elle tombe. Elle n'achève pas un Éteint à terre.
@@ -34,24 +25,9 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 - **Ce qu'on lance retombe au sol** et se ramasse, là où il est tombé ; dans la mare, il est perdu.
 - **Les murs arrêtent tout** : on ne lance pas par-dessus un rayonnage de la Coopérative (une caisse basse, si).
 - Saisi, on ne lance rien : il faut d'abord se dégager.
-- Prêt pour la suite de la 0.6 : l'arc et l'arbalète tireront par ce même bouton (tir rapide, tir plein, le cercle qui se referme et rougit quand la tête est à portée, les flèches qui cassent parfois) ; la hachette se lancera dès qu'elle sera forgée.
+- La **hachette** forgée se lance aussi : va la reprendre là où elle tombe.
 
-**Les recettes de métier et les matières** (Book 25, chantier 3)
-- **Le métier des autres** : dans Fabriquer, les recettes des autres familles se voient, grisées, « chez les Charbonniers ».
-- **La leçon** : à la halte ou au Comptoir, près d'un joueur d'une autre famille, B « Enseigner » : tu choisis une recette de ton métier. Deux minutes côte à côte, et il la sait.
-- Enseigner fait circuler ton nom (du rayonnement), une fois par élève et par recette.
-- **Les manuels** (*Manuel du forgeron amateur*, *Guide de l'électricien du dimanche*, *L'Arbalète pour les nuls*) : « Lire », dans le sac, ouvre toutes les recettes d'une famille. Le livre reste dans le sac. Un de chaque attend au coffre du directeur de la Coopérative.
-- Une recette apprise hors de sa famille coûte **une fois et demie** plus de matières et de temps, et ce qu'elle produit ne dépasse pas **★★**.
-- **Les frênes** : deux à la lisière de chaque terrain. Une perche de frêne se coupe au couteau aiguisé (au couteau du kit, plus lentement) et repousse en 6 h, même quand tu n'es pas là.
-- **L'if** : une haie d'ifs taillés en boules devant les bureaux de la Coopérative ; et, au fond du bois, un if que seuls les Mécanistes reconnaissent.
-- Plumer une poule laisse une **poignée de plumes** et un **os** ; la volaille rôtie laisse de la **graisse**.
-- **Treize vestiges nouveaux** dans les fouilles : fil dentaire, appareil photo jetable, raquette anti-moustiques, bobine d'allumage, lime usée, soc de charrue, bidon d'huile, tronçon de rail, arc de tir sportif, flèches en carbone, et les trois manuels.
-- Les Mécanistes ont une **clé plate** dans leur kit de départ.
-- La masse martèle (et mieux que le marteau), le pied-de-biche aussi, la machette de fortune coupe.
-- La masse et le pied-de-biche valent enfin ce qu'ils coûteraient à refaire (200 et 150 wotts) ; la lance vaut ce que vaut sa recette.
-- Après dix exemplaires d'une même lame, la forge est maîtrisée : une étoile de plus.
-
-**L'arc pour tous** (Book 25, chantier 4)
+**L'arc pour tous** (Book 25 §3)
 - **L'arc de fortune** : une perche de frêne (ou une branche droite) et une ficelle. Il tire tout de suite, mais c'est un arc ★ : le bois vert fatigue vite.
 - **L'arc de frêne** : ébauche la perche à l'établi, laisse-la **sécher deux heures** (dans ton sac, même quand tu n'es pas là), puis monte-la près d'un feu avec une corde d'arc. Un arc ★★★.
 - **L'arc d'if** : pareil, avec un bâton d'if. Le meilleur bois d'arc : ★★★★, il porte plus loin et il dure.
@@ -64,7 +40,18 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 - **Le redresseur de fûts** : sur ton établi, 2 branches et 1 pierre. À côté, tes flèches se font deux fois plus vite.
 - La corde claque, tout doucement : l'arc ne s'entend qu'à 3 m. Le personnage tient l'arc en main pendant qu'il vise.
 
-**Les Charbonniers : les lames** (Book 25, chantier 5)
+**Le combat et les étoiles** (Book 25 §4.2, §5.1 et §8)
+- **Les étoiles** : les objets de métier (lames, arcs, arbalètes, armes électriques) ont une qualité de ★ à ★★★★★, par exemplaire. Leur case du sac montre « 4★ », leur fiche les cinq étoiles.
+- Deux exemplaires d'étoiles différentes ne s'empilent plus. Plus d'étoiles : plus de dégâts, et une arme qui dure plus longtemps (une ★★★★★ dure deux fois plus qu'une ★★★).
+- **L'usure par exemplaire** : chaque lame s'use de son côté ; quand l'une casse, l'autre reste comme elle était.
+- La **machette de fortune** compte comme une lame ★.
+- **Réparer une lame : à la meule ou à la forge.** La meule du pédalier l'affûte, sans rien consommer ; la forge la reprend pour un kilo de charbon. Un Charbonnier répare enfin ses lames lui-même.
+- **Un coup tranchant s'entend moins loin** : 10 m au lieu de 14 (le choc d'une masse ou d'un marteau, lui, porte toujours à 14 m).
+- **L'électricité contre les Éteints** : une décharge courte fait lâcher et raidit ; maintenue, elle met à terre, et elle **éteint pour de bon** un Éteint raidi ou à terre, casque ou pas. L'Éteint raidi se fige, de petits arcs bleus sur le torse ; éteint, il s'affaisse, sans sang.
+- **Les pièges** ont leur moteur (plaque de choc, clôtures, assommoir, mâchoires) : raidir, mettre à terre, briser la jambe, tenir sur place ; jamais détruire.
+- Les sauvegardes d'avant se relisent sans rien perdre.
+
+**🔥 Les Charbonniers : les lames** (Book 25 §4)
 - **La gamme de la forge** : pinces de forge, couteau de forge (l'ancienne « lame forgée », désormais emmanchée), deux hachettes, serpe, machette forgée, hache forgée, glaive de ressort, pointes de lance, pointes d'acier, rivets, ciseau à bois et burin, ressort retrempé, électrodes.
 - **La machette forgée**, l'arme de métier : 1,5 de dégâts et 80 de solidité, deux fois plus solide que la machette de fortune.
 - **La hachette** se lance ; **la serpe** élague ; **la hache forgée** remplace les têtes rouillées qu'on ne trouve plus.
@@ -82,7 +69,7 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 - Une machette forgée peut aussi naître de deux lames ébréchées (acier ★★★).
 - Hors de sa famille, une lame forgée ne dépasse jamais ★★, quelle que soit la forge.
 
-**Les Voltaïques : l'électricité** (Book 25, chantier 6)
+**⚡ Les Voltaïques : l'électricité** (Book 25 §5)
 - **La matraque de fortune** : un gourdin, un appareil photo jetable, la petite batterie du kit. Un Voltaïque seul la monte dès le premier jour (★, 50 Wh).
 - **La matraque électrique**, « la Raquette » : ★★ au module de raquette, ★★★ au module à bobine (sa décharge saute alors au voisin). Les électrodes forgées d'un Charbonnier ajoutent une étoile, un manche tourné d'un Mécaniste une autre.
 - **L'aiguillon de défense** : la même décharge au bout d'un épieu, à 2,3 m.
@@ -101,7 +88,7 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 - **Le bain de dérouillage** : douze heures de jeu, et la machette de fortune passe à ★★.
 - On entend la décharge : un crépitement (à 6 m), un claquement pour la longue (à 8 m). La clôture sous tension bourdonne.
 
-**Les Mécanistes : l'arbalète, les pièges, le tour** (Book 25, chantier 7)
+**⚙️ Les Mécanistes : l'arbalète, les pièges, le tour** (Book 25 §6)
 - **L'arbalète** : à l'établi, un arbrier scié dans une bûche, une noix et sa détente, un arc, une corde. Un Mécaniste seul en monte une dès le premier jour, avec la scie et la clé plate de son kit.
 - Ses étoiles sont celles de sa moins bonne pièce : arc de frêne ★, lame de ressort ★★, if ★★★, ressort retrempé d'un Charbonnier ★★★★ ; noix de bois ★★, d'os ★★★, de rivets forgés ★★★★. Le ciseau à bois d'un Charbonnier donne une étoile de plus à l'arbrier.
 - **Armée d'avance** : Sac → « Prêt à tirer », puis le bouton Lancer : le carreau part tout de suite. Un tir à la tête détruit jusqu'à 12 m (8 m pour une ★, 10 m pour une ★★) ; un Équipé, de face, à moitié moins.
@@ -113,6 +100,34 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 - **Le tour à perche** : une installation des Mécanistes. On y tourne des **manches**, qui donneront une étoile de plus aux armes des autres familles.
 - **Le pédalier** reçoit deux accessoires : le **soufflet à manivelle** (souffle sur une forge à moins de 3 m) et la **meule fine** (posée sur la meule : une lame affûtée y gagne 10 % de dégâts jusqu'à ce qu'elle casse).
 - **La brouette** : 60 kg roulés de plus que le sac, et l'on court encore (le travois, lui, traîne).
+
+**Le métier des autres, les matières nouvelles** (Book 25 §2.3 et §9)
+- **Le métier des autres** : dans Fabriquer, les recettes des autres familles se voient, grisées, « chez les Charbonniers ».
+- **La leçon** : à la halte ou au Comptoir, près d'un joueur d'une autre famille, B « Enseigner » : tu choisis une recette de ton métier. Deux minutes côte à côte, et il la sait.
+- Enseigner fait circuler ton nom (du rayonnement), une fois par élève et par recette.
+- **Les manuels** (*Manuel du forgeron amateur*, *Guide de l'électricien du dimanche*, *L'Arbalète pour les nuls*) : « Lire », dans le sac, ouvre toutes les recettes d'une famille. Le livre reste dans le sac. Un de chaque attend au coffre du directeur de la Coopérative.
+- Une recette apprise hors de sa famille coûte **une fois et demie** plus de matières et de temps, et ce qu'elle produit ne dépasse pas **★★**.
+- **Les frênes** : deux à la lisière de chaque terrain. Une perche de frêne se coupe au couteau aiguisé (au couteau du kit, plus lentement) et repousse en 6 h, même quand tu n'es pas là.
+- **L'if** : une haie d'ifs taillés en boules devant les bureaux de la Coopérative ; et, au fond du bois, un if que seuls les Mécanistes reconnaissent.
+- Plumer une poule laisse une **poignée de plumes** et un **os** ; la volaille rôtie laisse de la **graisse**.
+- **Treize vestiges nouveaux** dans les fouilles : fil dentaire, appareil photo jetable, raquette anti-moustiques, bobine d'allumage, lime usée, soc de charrue, bidon d'huile, tronçon de rail, arc de tir sportif, flèches en carbone, et les trois manuels.
+- Les Mécanistes ont une **clé plate** dans leur kit de départ.
+- La masse martèle (et mieux que le marteau), le pied-de-biche aussi, la machette de fortune coupe.
+- La masse et le pied-de-biche valent enfin ce qu'ils coûteraient à refaire (200 et 150 wotts) ; la lance vaut ce que vaut sa recette.
+- Après dix exemplaires d'une même lame, la forge est maîtrisée : une étoile de plus.
+
+**Le carnet, le sac, le Comptoir, l'aide** (Book 25 §9.4 à §9.6)
+- **Le métier, suite** : quatre étapes de plus dans le carnet pour chaque famille, qui mènent jusqu'à l'échange. Toutes se font seul.
+  - 🔥 Les pinces, La trempe (une machette ★★), La mise d'acier (hachette ou hache), Le fournisseur (une lame).
+  - ⚡ Du courant en poche (un pack), La Raquette (éteindre un Éteint à la décharge), Prévenu sans bruit (l'alarme électrique), Le courant chez les autres (un pack ou une lampe).
+  - ⚙️ Le bois qui plie (une arbalète), Le carreau (un Éteint à la tête), Les mâchoires (un piège posé), Le carquois des autres (8 carreaux).
+- La dernière étape de chaque métier se valide en donnant à un joueur d'une **autre famille** dans un échange, ou, si tu es seul, en vendant au Comptoir.
+- **S'installer** gagne deux étapes : **Le premier arc** (3 flèches à pointe d'os en récompense) et **Tir plein** (un Éteint détruit d'une flèche à la tête).
+- **Le Comptoir rachète les armes de métier** selon leurs étoiles : une ★★★★★ vaut deux fois une ★★★, une ★ moitié moins. Elles entrent en stock telles quelles, et se rachètent pareil.
+- **Les armes de métier s'échangent** entre joueurs, étoiles comprises. Le guichet et la fenêtre d'échange montrent les étoiles.
+- **Le sac, pour le tir** : l'arc et l'arbalète montrent sur leur case ce qui leur reste à tirer (« ➶7 », en rouge à zéro) ; leur fiche dit leurs portées, la portée de tête, la cadence, les flèches ou carreaux du sac, et leur solidité.
+- **L'aide du jeu** : cinq rubriques nouvelles (Lancer et tirer, Les étoiles, Le métier des autres, L'électricité contre les Éteints, Pièges et défenses) ; le combat, les familles, le carnet et le Comptoir sont mis à jour.
+- Les leçons des quêtes réussies citent tes touches.
 
 ## 0.5.3 · déployée le 2026-10-09
 
