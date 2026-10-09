@@ -12,7 +12,7 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
-## 0.7 · en préparation
+## 0.7 · déployée le 2026-10-09
 
 Penser au bon moment, et des déchets partout (Book 26, Book 02 §14 quater). Les recettes ne tombent plus toutes d'un coup : ton personnage y pense quand il en a besoin. Et le monde de l'Abondance est enfin jonché de ce qu'il a jeté : tout se ramasse, presque rien ne vaut quelque chose.
 
