@@ -1256,6 +1256,8 @@ function executer(c: Commande): void {
       if (modeCombat) return combatB();
       // Pendant une action, n'importe quelle touche d'action l'arrête.
       if (occupe) return envoyer({ t: "annuler" });
+      // B (F au clavier) ouvre la fiche Examiner, et la referme.
+      if (hud.ficheOuverte) return hud.fermerPanneaux();
       agir(propositions.B);
       return;
     case "photo":
