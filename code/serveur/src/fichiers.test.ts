@@ -38,3 +38,35 @@ test("code compressé et gardé un an ; musique revérifiée par étiquette (304
     rmSync(dossier, { recursive: true, force: true });
   }
 });
+
+test("écrans d'accueil (/intro/) : modules revérifiés à chaque fois, fichier absent en 404 (pas la page du jeu)", async () => {
+  const dossier = join(import.meta.dirname, "..", "donnees", "essais-client-intro");
+  rmSync(dossier, { recursive: true, force: true });
+  mkdirSync(join(dossier, "intro", "src"), { recursive: true });
+  mkdirSync(join(dossier, "intro", "assets", "kenney"), { recursive: true });
+  writeFileSync(join(dossier, "index.html"), "<!doctype html><title>Watt Now?</title>");
+  writeFileSync(join(dossier, "intro", "src", "intro.js"), "export async function jouerAccueil() {}\n");
+  writeFileSync(join(dossier, "intro", "assets", "kenney", "box.glb"), Buffer.alloc(300, 1));
+  const serveur = await demarrerServeur({ port: 0, hote: "127.0.0.1", cheminBase: ":memory:", dossierClient: dossier });
+  try {
+    const base = `http://127.0.0.1:${serveur.port}`;
+    const module = await fetch(`${base}/intro/src/intro.js`);
+    assert.equal(module.status, 200);
+    assert.match(module.headers.get("content-type") ?? "", /javascript/);
+    assert.equal(module.headers.get("cache-control"), "no-cache", "une nouvelle livraison ne mélange pas deux versions");
+    assert.match(await module.text(), /jouerAccueil/);
+
+    const objet = await fetch(`${base}/intro/assets/kenney/box.glb`);
+    assert.equal(objet.headers.get("cache-control"), "public, max-age=86400");
+    await objet.arrayBuffer();
+
+    const absent = await fetch(`${base}/intro/assets/personnages/animations_intro_1.glb`);
+    assert.equal(absent.status, 404);
+    await absent.arrayBuffer();
+    // Ailleurs, une adresse inconnue donne toujours la page du jeu.
+    assert.equal((await fetch(`${base}/une/page`)).status, 200);
+  } finally {
+    await serveur.fermer();
+    rmSync(dossier, { recursive: true, force: true });
+  }
+});

@@ -12,6 +12,12 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
+## 0.7.1 · en préparation
+
+- **Les trois écrans d'accueil** (session intro, `intro/NOTICE-DEV.md`) : juste après la création du personnage, avant le terrain, « Ton terrain », « Les lieux lointains », « Le Comptoir », en 3D avec ton personnage. Une seule fois : une connexion ou un rechargement ne les montre pas ; si le module manque ou plante, on entre directement dans le monde. Copie dans `client/public/intro/` (≈ 2,8 Mo, ≈ 0,8 Mo transférés), refaite par `npm run accueil:importer`.
+
+---
+
 ## 0.7 · déployée le 2026-10-09
 
 Penser au bon moment, et des déchets partout (Book 26, Book 02 §14 quater). Les recettes ne tombent plus toutes d'un coup : ton personnage y pense quand il en a besoin. Et le monde de l'Abondance est enfin jonché de ce qu'il a jeté : tout se ramasse, presque rien ne vaut quelque chose.

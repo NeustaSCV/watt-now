@@ -11,6 +11,10 @@ export interface Identite {
   jeton: string;
   pseudo: string;
   famille: Famille;
+  /** Vrai juste après une création de personnage : on montre alors les écrans d'accueil (une seule fois). */
+  nouveau: boolean;
+  /** L'apparence enregistrée à la création. */
+  apparence?: Apparence;
 }
 
 const DESCRIPTIONS: Record<Famille, string> = {
@@ -159,7 +163,14 @@ export function demanderIdentite(conteneur: HTMLElement, messageInitial = ""): P
           return;
         }
         conteneur.hidden = true;
-        resolve({ jeton: reponse.jeton, pseudo: reponse.pseudo, famille: reponse.famille });
+        resolve({
+          jeton: reponse.jeton,
+          pseudo: reponse.pseudo,
+          famille: reponse.famille,
+          // Une connexion n'est jamais « nouvelle », même si le serveur (ancien) ne le dit pas.
+          nouveau: mode === "creation" && reponse.nouveau !== false,
+          apparence: reponse.apparence ?? apparence,
+        });
       } catch {
         erreur.textContent = "Le serveur ne répond pas. Réessaie dans un instant.";
       } finally {
@@ -167,4 +178,32 @@ export function demanderIdentite(conteneur: HTMLElement, messageInitial = ""): P
       }
     });
   });
+}
+
+/** Le module des écrans d'accueil (client/public/intro/, copie de la livraison de la session intro). */
+interface ModuleAccueil {
+  jouerAccueil(conteneur: HTMLElement, options: { famille: Famille; apparence?: Apparence; base: string }): Promise<void>;
+}
+
+/** L'adresse du dossier des écrans d'accueil : servi tel quel (sans compilation), en développement comme en production. */
+const BASE_ACCUEIL = "/intro/";
+
+/**
+ * Les trois écrans d'accueil (« Ton terrain », « Les lieux lointains », « Le Comptoir »), montrés une seule fois,
+ * juste après la création du personnage et avant le chargement du terrain (intro/NOTICE-DEV.md). La promesse se
+ * résout au clic sur « Entrer dans le monde ». Si le module ne se charge pas ou plante, on passe directement au
+ * terrain : le joueur n'est jamais bloqué.
+ */
+export async function presenterEcransAccueil(identite: Identite): Promise<void> {
+  if (!identite.nouveau) return;
+  try {
+    // Adresse calculée : Vite ne cherche pas à empaqueter ce module servi tel quel depuis public/.
+    const adresse = `${BASE_ACCUEIL}src/intro.js`;
+    const module = (await import(/* @vite-ignore */ adresse)) as ModuleAccueil;
+    await module.jouerAccueil(document.body, { famille: identite.famille, apparence: identite.apparence, base: BASE_ACCUEIL });
+  } catch (erreur) {
+    console.warn("Écrans d'accueil indisponibles : on entre directement dans le monde.", erreur);
+    // Un calque à moitié construit ne doit pas cacher le jeu.
+    for (const reste of document.querySelectorAll(".wi-racine")) reste.remove();
+  }
 }

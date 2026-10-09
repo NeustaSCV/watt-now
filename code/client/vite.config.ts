@@ -4,7 +4,8 @@ import { fileURLToPath } from "node:url";
 import { appendFileSync, mkdirSync } from "node:fs";
 
 const racineCode = fileURLToPath(new URL("..", import.meta.url));
-const serveurDeJeu = "http://localhost:8787";
+// Réglable pour faire tourner une seconde copie à côté (WATT_SERVEUR_JEU=http://localhost:8800).
+const serveurDeJeu = process.env.WATT_SERVEUR_JEU ?? "http://localhost:8787";
 // HTTPS pour l'iPhone (Safari passe en HTTPS, et le Service Worker l'exige) : `npm run dev:iphone`.
 const https = process.env.WATT_HTTPS === "1";
 
