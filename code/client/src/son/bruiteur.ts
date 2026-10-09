@@ -283,8 +283,10 @@ export class Bruiteur {
     this.son.jouer(appuye ? "sifflement_lourd" : "sifflement");
   }
 
-  coup(resultat: "detruit" | "a_terre" | "vacille", ou: Ou): void {
-    if (resultat === "detruit") {
+  coup(resultat: "detruit" | "a_terre" | "vacille" | "raidi", ou: Ou): void {
+    // Raidi par une décharge : le crépitement viendra avec les sons des Voltaïques (chantier 6) ; un impact léger.
+    if (resultat === "raidi") this.son.jouer("impact", ou);
+    else if (resultat === "detruit") {
       this.son.jouer("coup_tete", ou);
       setTimeout(() => this.son.jouer("chute_corps", ou), 280);
     } else this.son.jouer(resultat === "a_terre" ? "impact_appuye" : "impact", ou);

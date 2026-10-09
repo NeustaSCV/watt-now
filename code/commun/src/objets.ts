@@ -2,6 +2,7 @@
 // Poids réalistes (Book 12). Plus tard, ce catalogue viendra d'un tableur (Book 03 §8).
 
 import type { Famille } from "./regles.ts";
+import { estCleEtoileeValide, etoilesDe, etoilesTexte, typeDe, type CleObjet } from "./etoiles.ts";
 import { TOUS_LES_VESTIGES, type FamilleVestige, type Rarete, type TypeComposant, type TypeVestige } from "./vestiges.ts";
 
 /** Tous les objets : ceux du jeu de base, et le bric-à-brac des vestiges (lot 1, 0.3) avec leurs composants. */
@@ -304,7 +305,11 @@ const OBJETS_DE_BASE: Record<TypeObjetDeBase, DefinitionObjet> = {
 
 export const OBJETS: Record<TypeObjet, DefinitionObjet> = { ...OBJETS_DE_BASE, ...TOUS_LES_VESTIGES };
 
-export type Inventaire = Partial<Record<TypeObjet, number>>;
+/**
+ * Un inventaire : combien de chaque objet. Les objets de métier y portent leurs étoiles par exemplaire (Book 25 §9.6) :
+ * « lame_forgee#4 » à côté de « lame_forgee » (★★★, la clé nue). Voir etoiles.ts.
+ */
+export type Inventaire = Partial<Record<CleObjet, number>>;
 
 /** Capacité de portage du sac à dos de départ (Book 12 §2.1), en kg. */
 export const CAPACITE_SAC = 55;
@@ -319,6 +324,14 @@ export const CONTENANTS: Partial<Record<TypeObjet, number>> = { sac_a_dos: CAPAC
  */
 export function estObjet(x: unknown): x is TypeObjet {
   return typeof x === "string" && Object.hasOwn(OBJETS, x);
+}
+
+/**
+ * Une clé d'inventaire valide : un type d'objet, ou un exemplaire étoilé d'un objet de métier sous sa forme canonique
+ * (« lame_forgee#4 », Book 25 §9.6). Pour tout ce qui vient du client et désigne un objet du sac ou d'un coffre.
+ */
+export function estCleObjet(x: unknown): x is CleObjet {
+  return estObjet(x) || (typeof x === "string" && estObjet(typeDe(x)) && estCleEtoileeValide(x));
 }
 
 /** Le travois traîné derrière soi : 50 kg de plus que le sac (P-002). */
@@ -367,14 +380,19 @@ export function kitDeDepart(famille: Famille): Inventaire {
  */
 export function poidsInventaire(inventaire: Inventaire, litresGourde = 0): number {
   let total = 0;
-  for (const [type, quantite] of Object.entries(inventaire)) total += OBJETS[type as TypeObjet].poids * (quantite ?? 0);
+  // Un exemplaire étoilé pèse ce que pèse son objet.
+  for (const [cle, quantite] of Object.entries(inventaire)) total += (OBJETS[typeDe(cle)]?.poids ?? 0) * (quantite ?? 0);
   if ((inventaire.gourde ?? 0) > 0) total += Math.max(0, litresGourde);
   return total;
 }
 
-export function nommer(type: TypeObjet, quantite: number): string {
+/** « lame forgée », « 3 lames forgées » ; un exemplaire étoilé dit ses étoiles : « lame forgée ★★★★ ». */
+export function nommer(cle: CleObjet, quantite: number): string {
+  const type = typeDe(cle);
   const d = OBJETS[type];
-  return quantite > 1 ? `${quantite} ${d.pluriel}` : `${d.nom}`;
+  const n = cle === type ? null : etoilesDe(cle);
+  const etoiles = n === null ? "" : ` ${etoilesTexte(n)}`;
+  return quantite > 1 ? `${quantite} ${d.pluriel}${etoiles}` : `${d.nom}${etoiles}`;
 }
 
 /** La lumière portée que possède un personnage, s'il en a une. */

@@ -3,14 +3,50 @@
 // Valeurs de réglage, à caler en test.
 
 import type { Inventaire, TypeObjet } from "./objets.ts";
+import { ETOILES, etoilesDe, etoilesDeBase, facteurs, meilleurExemplaire, soliditeExemplaire, typeDe, type CleObjet, type Etoiles } from "./etoiles.ts";
+import { ARMES_COMMUNES } from "./armes/communes.ts";
+import { ARMES_CHARBONNIERS } from "./armes/charbonniers.ts";
+import { ARMES_VOLTAIQUES } from "./armes/voltaiques.ts";
+import { ARMES_MECANISTES } from "./armes/mecanistes.ts";
 
 // ---------- Les armes ----------
 
 /**
  * Le type de dégât (Book 23 §4.2) : une seule règle, le casque. Le contondant passe et étourdit plus longtemps ; le
- * tranchant ne tue pas un casqué à la tête ; le perçant vaut par son allonge.
+ * tranchant ne tue pas un casqué à la tête ; le perçant vaut par son allonge. L'électrique (Book 25 §5.1 et §8.2) ne
+ * fait rien au torse : il fait lâcher, raidit, met à terre, et détruit en deux temps, casque ou pas.
  */
-export type TypeDegat = "contondant" | "tranchant" | "percant";
+export type TypeDegat = "contondant" | "tranchant" | "percant" | "electrique";
+
+/** Ce qu'une arme électrique fait de plus (Book 25 §8.2), à ses étoiles de base. */
+export interface ArmeElectrique {
+  /** Secondes de raidissement d'une décharge courte. */
+  raidi: number;
+  /** Wh pris au pack par la décharge courte, et par la longue (chantier 6). */
+  whCourte: number;
+  whLongue: number;
+  /** La courte saute à un second Éteint à moins de 1 m (★★★ et plus). */
+  saute: boolean;
+  /** Ce que tient sa source, en Wh (absent : un pack de cellules, 12 Wh ; la petite batterie du kit : 50). */
+  capaciteWh?: number;
+}
+
+/** Un pack de cellules plein (Book 25 §5.4). */
+export const CAPACITE_PACK_WH = 12;
+/** Ce que tient la source d'une arme électrique, en Wh (0 pour une autre arme). */
+export function capaciteChargeArme(a: Arme): number {
+  return a.electrique ? (a.electrique.capaciteWh ?? CAPACITE_PACK_WH) : 0;
+}
+
+/**
+ * La charge d'un exemplaire d'arme électrique (Wh qui restent ; absente du registre : pleine, comme l'usure absente
+ * veut dire neuve). Le chantier 6 la fait baisser à chaque décharge et remonter au banc ou à la manivelle.
+ */
+export function chargeArme(cle: string, charges: Partial<Record<string, number>>): number {
+  const a = armeDeCle(cle);
+  if (!a?.electrique) return 0;
+  return Math.max(0, charges[cle] ?? capaciteChargeArme(a));
+}
 
 export interface Arme {
   objet: TypeObjet | null;
@@ -27,40 +63,73 @@ export interface Arme {
   /**
    * La durée du geste, en ms : coup simple, coup appuyé (P-004, 2026-10-08). Un coup va jusqu'au bout : on ne
    * refrappe pas avant. Le client joue l'animation sur cette durée ; le serveur refuse un coup plus tôt.
-   * Une hache est lente et lourde, un couteau vif.
+   * Une hache est lente et lourde, un couteau vif. Pour l'électrique, l'appuyé est la décharge longue.
    */
   coup: number;
   coupAppuye: number;
+  /** Sa place dans ARMES, de la meilleure à la moins bonne (Book 25 §10.4 : les fichiers par famille). */
+  rang?: number;
+  /** Objet de métier : il porte des étoiles par exemplaire (Book 25 §4.2). Ses valeurs sont à ses étoiles de base. */
+  metier?: true;
+  /** Électrique (Book 25 §5.1). */
+  electrique?: ArmeElectrique;
+  /** Pour un exemplaire étoilé : sa clé dans le sac (« lame_forgee#4 ») et ses étoiles. */
+  cle?: CleObjet;
+  etoiles?: Etoiles;
 }
 
-/** Du meilleur au pire : sans arme équipée, on frappe avec ce qu'on a de mieux dans le sac. */
-export const ARMES: Arme[] = [
-  // La masse (Book 23 §4.6) : très forte, lente ; le casque n'y résiste pas.
-  { objet: "masse", nom: "la masse", type: "contondant", solidite: 70, degatsTorse: 2.5, tueALaTete: true, allonge: 1.6, coup: 950, coupAppuye: 1250 },
-  { objet: "hache", nom: "la hache", type: "tranchant", solidite: 60, degatsTorse: 2, tueALaTete: true, allonge: 1.7, coup: 700, coupAppuye: 950 },
-  // Le pied-de-biche : le vestige devient une arme, la plus solide de toutes (Book 23 §4.6).
-  { objet: "pied_de_biche", nom: "le pied-de-biche", type: "contondant", solidite: 120, degatsTorse: 1.5, tueALaTete: true, allonge: 1.5, coup: 600, coupAppuye: 880 },
-  { objet: "machette", nom: "la machette de fortune", type: "tranchant", solidite: 40, degatsTorse: 1.2, tueALaTete: true, allonge: 1.6, coup: 500, coupAppuye: 750 },
-  { objet: "marteau", nom: "le marteau", type: "contondant", solidite: 80, degatsTorse: 1.5, tueALaTete: true, allonge: 1.5, coup: 600, coupAppuye: 850 },
-  { objet: "barre_metal", nom: "la barre de métal", type: "contondant", solidite: 100, degatsTorse: 1.5, tueALaTete: true, allonge: 1.9, coup: 650, coupAppuye: 900 },
-  // La lance (épieu + couteau, évolution P-002) : l'allonge, et cette fois la pointe tue à la tête.
-  { objet: "lance", nom: "la lance", type: "percant", solidite: 40, degatsTorse: 1.2, tueALaTete: true, allonge: 2.6, coup: 650, coupAppuye: 900 },
-  { objet: "lame_forgee", nom: "la lame forgée", type: "tranchant", solidite: 60, degatsTorse: 1, tueALaTete: true, allonge: 1.4, coup: 480, coupAppuye: 720 },
-  { objet: "gourdin", nom: "le gourdin", type: "contondant", solidite: 25, degatsTorse: 1, tueALaTete: false, allonge: 1.5, coup: 550, coupAppuye: 800 },
-  // L'épieu (P-002) : peu de dégâts, mais l'allonge : on le tient à distance, il saisit avant de mordre.
-  { objet: "epieu", nom: "l'épieu", type: "percant", solidite: 30, degatsTorse: 0.8, tueALaTete: false, allonge: 2.3, coup: 650, coupAppuye: 900 },
-  { objet: "couteau_aiguise", nom: "le couteau aiguisé", type: "tranchant", solidite: 40, degatsTorse: 0.7, tueALaTete: false, allonge: 1.25, coup: 420, coupAppuye: 650 },
-  { objet: "couteau", nom: "le couteau", type: "tranchant", solidite: 40, degatsTorse: 0.5, tueALaTete: false, allonge: 1.2, coup: 420, coupAppuye: 650 },
-];
+/**
+ * Du meilleur au pire : sans arme équipée, on frappe avec ce qu'on a de mieux dans le sac. Chaque famille déclare ses
+ * armes dans son fichier (`armes/<famille>.ts`) ; on les rassemble ici, triées par rang.
+ */
+export const ARMES: Arme[] = [...ARMES_COMMUNES, ...ARMES_CHARBONNIERS, ...ARMES_VOLTAIQUES, ...ARMES_MECANISTES].sort(
+  (a, b) => (a.rang ?? 0) - (b.rang ?? 0),
+);
 export const POINGS: Arme = { objet: null, nom: "les poings", type: "contondant", solidite: Infinity, degatsTorse: 0.35, tueALaTete: false, allonge: 1.1, coup: 380, coupAppuye: 600 };
+
+/** La clé de l'exemplaire d'une arme (celle de l'usure et de la charge) : « lame_forgee#4 », ou son type nu. */
+export function cleArme(a: Arme): CleObjet | null {
+  return a.cle ?? a.objet;
+}
+
+/**
+ * L'arme que donne un exemplaire du sac : les valeurs de son objet, corrigées par ses étoiles (Book 25 §4.2 et §8.2).
+ * Aux étoiles de base, c'est l'arme déclarée elle-même. null : ce n'est pas une arme.
+ */
+export function armeDeCle(cle: string): Arme | null {
+  const type = typeDe(cle);
+  const base = ARMES.find((a) => a.objet === type);
+  if (!base || !base.objet) return null;
+  const n = base.metier ? etoilesDe(cle) : null;
+  if (n === null || n === etoilesDeBase(base.objet)) return base;
+  const f = facteurs(base.objet, n);
+  const arme: Arme = { ...base, cle: cle as CleObjet, etoiles: n, degatsTorse: base.degatsTorse * f.degats, solidite: soliditeExemplaire(base.objet, n, base.solidite) };
+  if (base.electrique) {
+    const ref = ETOILES[etoilesDeBase(base.objet)];
+    // Le raidissement suit les étoiles ; la longue raccourcit avec elles (l'aiguillon garde son retard d'une perche).
+    arme.electrique = { ...base.electrique, raidi: ETOILES[n].raidi, saute: base.electrique.saute && n >= 3 };
+    arme.coupAppuye = Math.round((base.coupAppuye * ETOILES[n].longueMs) / ref.longueMs);
+  }
+  return arme;
+}
+
+/**
+ * Une arme électrique dont le pack est vide (Book 25 §8.2) : un gourdin court. Contondant, 0,6, ne tue pas à la tête ;
+ * elle s'use comme l'arme qu'elle est. Le chantier 6 s'en sert quand la charge manque.
+ */
+export function armeSansCharge(a: Arme): Arme {
+  if (a.type !== "electrique") return a;
+  const { electrique: _electrique, ...reste } = a;
+  return { ...reste, type: "contondant", degatsTorse: 0.6, tueALaTete: false };
+}
 
 /** Sous 30 % de solidité, l'arme est abîmée : ses coups perdent 30 % (Book 23 §4.3). */
 export const SEUIL_ABIMEE = 0.3;
 export const MALUS_ABIMEE = 0.7;
 /**
- * La réparation (Book 23 §4.3) : à l'établi pour le bois, à la meule (pédalier) pour les lames, à la forge pour le
- * métal. La réparation de fortune (ficelle, chiffons), partout et pour toutes les familles, ne remonte pas au-delà
- * d'« abîmée ».
+ * La réparation (Book 23 §4.3, Book 25 §4.4) : à l'établi pour le bois, à la meule (pédalier) ou à la forge pour les
+ * lames, à la forge pour le métal. La réparation de fortune (ficelle, chiffons), partout et pour toutes les familles,
+ * ne remonte pas au-delà d'« abîmée ».
  */
 export type MatiereArme = "bois" | "lame" | "metal";
 export const MATIERE_ARME: Partial<Record<TypeObjet, MatiereArme>> = {
@@ -77,11 +146,35 @@ export const MATIERE_ARME: Partial<Record<TypeObjet, MatiereArme>> = {
   barre_metal: "metal",
   pied_de_biche: "metal",
 };
-export const ATELIER_REPARATION: Record<MatiereArme, { installation: "etabli" | "pedalier" | "forge"; nom: string }> = {
-  bois: { installation: "etabli", nom: "l'établi" },
-  lame: { installation: "pedalier", nom: "la meule du pédalier" },
-  metal: { installation: "forge", nom: "la forge" },
+/** Un atelier où remettre une arme à neuf : l'installation, l'accessoire qu'il y faut, ce que le geste consomme. */
+export interface AtelierReparation {
+  installation: "etabli" | "pedalier" | "forge";
+  nom: string;
+  /** L'accessoire posé sur l'installation (la meule du pédalier). */
+  accessoire?: "meule";
+  /** Ce que coûte la remise à neuf ici (absent : rien). */
+  cout?: Inventaire;
+  /** Le geste, s'il a un nom à lui : « Affûter », « Reprendre la lame ». */
+  geste?: string;
+}
+/**
+ * Où l'on remet une arme à neuf, dans l'ordre où on les cherche (décision 8 du Book 25 : les deux pour les lames). La
+ * meule affûte, vite et sans rien consommer ; la forge reprend la lame (chauffer, redresser, limer) pour un kilo de
+ * charbon (le Book 25 §4.4 dit ½ kg ; le sac compte le charbon au kilo).
+ */
+export const ATELIER_REPARATION: Record<MatiereArme, AtelierReparation[]> = {
+  bois: [{ installation: "etabli", nom: "l'établi" }],
+  lame: [
+    { installation: "pedalier", accessoire: "meule", nom: "la meule du pédalier", geste: "Affûter" },
+    { installation: "forge", nom: "la forge", cout: { charbon_bois: 1 }, geste: "Reprendre la lame" },
+  ],
+  metal: [{ installation: "forge", nom: "la forge" }],
 };
+/** Les ateliers d'une matière, en toutes lettres : « la meule du pédalier ou la forge ». */
+export function nomsAteliers(matiere: MatiereArme): string {
+  const noms = ATELIER_REPARATION[matiere].map((a) => a.nom);
+  return noms.length > 1 ? `${noms.slice(0, -1).join(", ")} ou ${noms[noms.length - 1]}` : (noms[0] ?? "");
+}
 export const REPARATION_FORTUNE: Inventaire = { ficelle: 1, chiffons: 1 };
 /**
  * Ce que laisse une arme cassée (Book 23 §4.3, 0.5.1) : un débris qui se démonte (table DEMONTAGE). Le bois se fend,
@@ -103,45 +196,93 @@ export const DEBRIS_ARME: Partial<Record<TypeObjet, TypeObjet>> = {
 /** La réparation de fortune remonte au plus jusqu'ici : encore abîmée, mais elle tient. */
 export const PLAFOND_FORTUNE = 0.29;
 
-/** La solidité d'une arme, de 0 à 1 (1 : neuve). */
-export function etatArme(objet: TypeObjet, usure: Partial<Record<TypeObjet, number>>): number {
-  const a = ARMES.find((x) => x.objet === objet);
+/** La solidité d'un exemplaire d'arme, de 0 à 1 (1 : neuf). `cle` : son type, ou « type#n » pour un exemplaire étoilé. */
+export function etatArme(cle: string, usure: Partial<Record<string, number>>): number {
+  const a = armeDeCle(cle);
   if (!a || !Number.isFinite(a.solidite)) return 1;
-  return Math.max(0, Math.min(1, (usure[objet] ?? a.solidite) / a.solidite));
+  return Math.max(0, Math.min(1, (usure[cle] ?? a.solidite) / a.solidite));
 }
 
 /** Un coup contondant étourdit plus longtemps (Book 23 §4.2). */
 export const BONUS_ETOURDI_CONTONDANT = 1.5;
 
+/**
+ * Jusqu'où s'entend un coup porté (Book 25 §8.4, réglage accepté le 2026-10-09) : le choc porte loin, le tranchant et
+ * le perçant moins ; l'électrique crépite (la décharge courte) et claque (la longue).
+ */
+export const BRUIT_COUP: Record<TypeDegat, number> = { contondant: 14, tranchant: 10, percant: 10, electrique: 6 };
+export const BRUIT_DECHARGE_LONGUE = 8;
+export function porteeBruitCoup(a: Arme, appuye: boolean): number {
+  return a.type === "electrique" && appuye ? BRUIT_DECHARGE_LONGUE : BRUIT_COUP[a.type];
+}
+
 /** Ce que le serveur accepte d'avance sur la fin d'un geste (le réseau n'est pas régulier). */
 export const TOLERANCE_COUP_MS = 80;
 
+/** La meilleure arme du sac ; pour une arme de métier, son meilleur exemplaire. */
 export function meilleureArme(inventaire: Inventaire): Arme {
-  return ARMES.find((a) => a.objet && (inventaire[a.objet] ?? 0) > 0) ?? POINGS;
+  for (const a of ARMES) {
+    if (!a.objet) continue;
+    if (!a.metier) {
+      if ((inventaire[a.objet] ?? 0) > 0) return a;
+      continue;
+    }
+    const cle = meilleurExemplaire(inventaire, a.objet);
+    if (cle) return armeDeCle(cle) ?? a;
+  }
+  return POINGS;
 }
 
-/** Les caractéristiques d'une arme, telles que le joueur les lit dans son sac (2026-10-08). */
-export function caracteristiquesArme(
-  objet: TypeObjet,
-): { degats: number; vitesse: number; coup: number; coupAppuye: number; allonge: number; tueALaTete: boolean; type: TypeDegat; solidite: number } | null {
-  const a = ARMES.find((x) => x.objet === objet);
-  if (!a) return null;
+/** Les caractéristiques d'une arme (ou d'un exemplaire étoilé), telles que le joueur les lit dans son sac (2026-10-08). */
+export function caracteristiquesArme(cle: string): {
+  degats: number;
+  vitesse: number;
+  coup: number;
+  coupAppuye: number;
+  allonge: number;
+  tueALaTete: boolean;
+  type: TypeDegat;
+  solidite: number;
+  etoiles: Etoiles | null;
+  raidi: number | null;
+} | null {
+  const a = armeDeCle(cle);
+  if (!a || !a.objet) return null;
   // Vitesse : coups simples par seconde. Dégâts : en « points » de torse (il en faut 3 pour le faire tomber).
-  return { degats: a.degatsTorse, vitesse: 1000 / a.coup, coup: a.coup / 1000, coupAppuye: a.coupAppuye / 1000, allonge: a.allonge, tueALaTete: a.tueALaTete, type: a.type, solidite: a.solidite };
+  return {
+    degats: a.degatsTorse,
+    vitesse: 1000 / a.coup,
+    coup: a.coup / 1000,
+    coupAppuye: a.coupAppuye / 1000,
+    allonge: a.allonge,
+    tueALaTete: a.tueALaTete,
+    type: a.type,
+    solidite: a.solidite,
+    etoiles: a.metier ? (a.etoiles ?? etoilesDeBase(a.objet)) : null,
+    raidi: a.electrique?.raidi ?? null,
+  };
 }
 
-/** Cet objet est-il une arme qu'on peut équiper (P-005) ? */
-export function estArme(objet: TypeObjet): boolean {
-  return ARMES.some((a) => a.objet === objet);
+/** Cet objet (ou cet exemplaire) est-il une arme qu'on peut équiper (P-005) ? */
+export function estArme(cle: string): boolean {
+  return armeDeCle(cle) !== null;
 }
 
 /**
- * L'arme en main en mode Combat (P-005) : celle qu'on a équipée, si on l'a toujours ; sinon la meilleure du sac.
+ * L'arme en main en mode Combat (P-005) : l'exemplaire équipé, si on l'a toujours ; sinon le meilleur exemplaire de la
+ * même arme ; sinon la meilleure du sac.
  */
-export function armeEnMain(inventaire: Inventaire, equipee: TypeObjet | null): Arme {
-  if (equipee && (inventaire[equipee] ?? 0) > 0) {
-    const a = ARMES.find((x) => x.objet === equipee);
-    if (a) return a;
+export function armeEnMain(inventaire: Inventaire, equipee: CleObjet | null): Arme {
+  if (equipee) {
+    if ((inventaire[equipee] ?? 0) > 0) {
+      const a = armeDeCle(equipee);
+      if (a) return a;
+    }
+    const memeArme = meilleurExemplaire(inventaire, typeDe(equipee));
+    if (memeArme) {
+      const a = armeDeCle(memeArme);
+      if (a) return a;
+    }
   }
   return meilleureArme(inventaire);
 }
@@ -149,6 +290,10 @@ export function armeEnMain(inventaire: Inventaire, equipee: TypeObjet | null): A
 /** Un Éteint tombe au bout de 3 « points » de coups au torse, puis se relève (Book 06 §2.2). */
 export const RESISTANCE_TORSE = 3;
 export const DUREE_A_TERRE = 5;
+/** La décharge longue sur un Éteint debout le met à terre 4 s (Book 25 §5.1). */
+export const DUREE_A_TERRE_ELECTRIQUE = 4;
+/** La décharge courte d'une arme ★★★ saute à un voisin à moins de 1 m (Book 25 §8.2). */
+export const PORTEE_SAUT_DECHARGE = 1;
 /** Un coup le fait vaciller : il lâche prise et recule. */
 export const DUREE_ETOURDI = 1.2;
 /** Un corps reste au sol un moment, puis on n'en parle plus (en 0a). */

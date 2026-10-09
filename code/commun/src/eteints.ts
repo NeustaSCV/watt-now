@@ -2,7 +2,7 @@
 // Book 06 : lents, bêtes, guidés par l'ouïe ; la vue est mauvaise. L'attention monte avec intensité × durée,
 // et retombe quand plus rien ne se passe.
 
-import { BONUS_ETOURDI_CONTONDANT, DELAI_SAISIE, DUREE_A_TERRE, DUREE_ETOURDI, RESISTANCE_TORSE, type Arme } from "./combat.ts";
+import { BONUS_ETOURDI_CONTONDANT, DELAI_SAISIE, DUREE_A_TERRE, DUREE_A_TERRE_ELECTRIQUE, DUREE_ETOURDI, PORTEE_SAUT_DECHARGE, RESISTANCE_TORSE, type Arme } from "./combat.ts";
 import { heurte, type Zone } from "./lieux.ts";
 import type { Stimulus } from "./signature.ts";
 
@@ -49,6 +49,16 @@ export interface Eteint {
   sansVoir?: number;
   /** Secondes de gémissement qui restent (un dormant qui se réveille gémit : la cascade). */
   gemit?: number;
+  // ---------- Le métier des familles (Book 25 §5.1, 0.6) ----------
+  /**
+   * Secondes de tétanie qui restent : une décharge l'a raidi (il ne bouge plus, ne saisit plus). Il est aussi
+   * étourdi pendant ce temps ; ce champ sert à le montrer raidi plutôt que vacillant.
+   */
+  raidi?: number;
+  /** Détruit par le courant : « il s'éteint » (le client le montre s'affaisser, les yeux qui ternissent). */
+  eteintParLeCourant?: boolean;
+  /** Secondes pendant lesquelles un piège le tient sur place (mâchoires, Book 25 §6.3) : il ne peut plus avancer. */
+  retenu?: number;
 }
 
 /** Les variantes de la Coopérative : le Rampant, l'Équipé (casque de moto), les anciens habitants. */
@@ -96,6 +106,10 @@ export interface EteintVu {
   variante?: VarianteEteint;
   /** Il gémit : il vient de se réveiller (on l'entend). */
   gemit?: true;
+  /** Raidi par une décharge (Book 25 §5.1) : la pose tétanisée, de petits arcs bleus. */
+  raidi?: true;
+  /** Détruit par le courant : il s'affaisse, les yeux ternissent (pas de sang). */
+  eteintParLeCourant?: true;
 }
 
 /**
@@ -138,17 +152,107 @@ export function vue(e: Eteint): EteintVu {
   if (e.etourdi > 0) v.etourdi = true;
   if (e.variante) v.variante = e.variante;
   if ((e.gemit ?? 0) > 0) v.gemit = true;
+  if ((e.raidi ?? 0) > 0 && e.etat !== "detruit") v.raidi = true;
+  if (e.eteintParLeCourant && e.etat === "detruit") v.eteintParLeCourant = true;
   return v;
 }
 
-/** Le résultat d'un coup porté à un Éteint. */
-export type ResultatCoup = "detruit" | "a_terre" | "vacille";
+/** Le résultat d'un coup porté à un Éteint. « raidi » : une décharge courte l'a tétanisé (Book 25 §5.1). */
+export type ResultatCoup = "detruit" | "a_terre" | "vacille" | "raidi";
+
+/** Ce que fait un coup, et à qui : l'électricité peut raidir un second Éteint (★★★, la décharge saute). */
+export interface EffetCoup {
+  resultat: ResultatCoup;
+  /** Un voisin raidi par la décharge qui a sauté. */
+  voisinRaidi?: Eteint;
+}
+
+function detruire(e: Eteint): ResultatCoup {
+  e.etat = "detruit";
+  e.corps = 0;
+  e.but = null;
+  e.raidi = 0;
+  e.etourdi = 0;
+  return "detruit";
+}
+
+/** Raidir un Éteint (Book 25 §5.1) : il lâche, ne bouge plus, ne saisit plus, pendant `secondes`. */
+export function raidir(e: Eteint, secondes: number): void {
+  e.saisit = null;
+  e.tenue = 0;
+  e.contact = 0;
+  if (e.etat === "dormant") e.etat = "poursuivant";
+  e.etourdi = Math.max(e.etourdi, secondes);
+  e.raidi = Math.max(e.raidi ?? 0, secondes);
+}
+
+/** Le mettre à terre (un piège, la décharge longue) : il se relèvera au bout de `secondes`. */
+export function mettreATerre(e: Eteint, secondes: number): void {
+  e.saisit = null;
+  e.tenue = 0;
+  e.contact = 0;
+  e.etat = "a_terre";
+  e.aTerre = Math.max(e.aTerre, secondes);
+  e.degats = 0;
+  e.raidi = 0;
+}
+
+/**
+ * La règle électrique (Book 25 §5.1 et §8.2), la même pour toutes les armes électriques : une décharge courte le fait
+ * lâcher et le raidit ; maintenue sur un Éteint debout, elle le met à terre ; maintenue à la tête d'un Éteint raidi
+ * (ou étourdi), ou n'importe quelle décharge sur un Éteint à terre, elle le détruit. Le casque n'y change rien, et
+ * rien ne va au torse.
+ */
+function encaisserDecharge(e: Eteint, arme: Arme, appuye: boolean, voisins: readonly Eteint[]): EffetCoup {
+  const auSol = e.etat === "a_terre" || e.variante === "rampant";
+  const pris = e.etourdi > 0 || (e.raidi ?? 0) > 0;
+  if (auSol || (appuye && pris)) {
+    e.eteintParLeCourant = true;
+    return { resultat: detruire(e) };
+  }
+  if (appuye) {
+    mettreATerre(e, DUREE_A_TERRE_ELECTRIQUE);
+    return { resultat: "a_terre" };
+  }
+  const elec = arme.electrique;
+  raidir(e, elec?.raidi ?? DUREE_ETOURDI);
+  if (!elec?.saute) return { resultat: "raidi" };
+  // ★★★ et plus : la courte saute au plus proche voisin debout, à moins d'un mètre.
+  let voisin: Eteint | undefined;
+  let meilleure = PORTEE_SAUT_DECHARGE;
+  for (const v of voisins) {
+    if (v === e || !debout(v) || v.etat === "dormant") continue;
+    const d = Math.hypot(v.x - e.x, v.z - e.z);
+    if (d <= meilleure) {
+      meilleure = d;
+      voisin = v;
+    }
+  }
+  if (voisin) raidir(voisin, elec.raidi);
+  return voisin ? { resultat: "raidi", voisinRaidi: voisin } : { resultat: "raidi" };
+}
+
+/**
+ * Un coup, avec tout ce qu'il fait (le voisin raidi d'une décharge qui saute). `encaisser` en est la forme courte.
+ * `voisins` : les autres Éteints du lieu.
+ */
+export function encaisserCoup(e: Eteint, arme: Arme, appuye: boolean, force: number, de: { x: number; z: number }, zone: Zone, voisins: readonly Eteint[] = []): EffetCoup {
+  if (arme.type !== "electrique") return { resultat: encaisser(e, arme, appuye, force, de, zone) };
+  e.saisit = null;
+  e.tenue = 0;
+  e.contact = 0;
+  e.attention = Math.max(e.attention, 2);
+  if (e.etat === "dormant") e.etat = "poursuivant";
+  return encaisserDecharge(e, arme, appuye, voisins);
+}
 
 /**
  * Un coup (Book 06 §2.2) : à la tête avec une arme solide, il est détruit ; au torse, il vacille, puis tombe
  * au bout de plusieurs coups, et se relève s'il n'est pas achevé : au sol, tout coup le détruit. `force` : 1, ou moins si l'on est épuisé.
  */
-export function encaisser(e: Eteint, arme: Arme, appuye: boolean, force: number, de: { x: number; z: number }, zone: Zone): ResultatCoup {
+export function encaisser(e: Eteint, arme: Arme, appuye: boolean, force: number, de: { x: number; z: number }, zone: Zone, voisins: readonly Eteint[] = []): ResultatCoup {
+  // L'électricité a sa règle à elle (Book 25 §5.1) : rien au torse, le casque n'y fait rien.
+  if (arme.type === "electrique") return encaisserCoup(e, arme, appuye, force, de, zone, voisins).resultat;
   e.saisit = null;
   e.tenue = 0;
   e.contact = 0;
@@ -160,21 +264,19 @@ export function encaisser(e: Eteint, arme: Arme, appuye: boolean, force: number,
   // Le casque de l'Équipé (Book 23 §4.2) : à la tête, le tranchant glisse ; au sol, seuls le contondant et le perçant
   // l'achèvent.
   const casque = e.variante === "equipe" && arme.type === "tranchant";
-  if ((auSol && !casque) || (appuye && arme.tueALaTete && force >= 1 && !casque && !auSol)) {
-    e.etat = "detruit";
-    e.corps = 0;
-    e.but = null;
-    return "detruit";
-  }
+  if ((auSol && !casque) || (appuye && arme.tueALaTete && force >= 1 && !casque && !auSol)) return detruire(e);
   e.degats += arme.degatsTorse * force * (appuye ? 2 : 1);
   // L'Équipé (blouson, casque) encaisse un coup de plus au torse (Book 23 §3).
   if (e.degats >= RESISTANCE_TORSE + (e.variante === "equipe" ? 1 : 0)) {
     e.etat = "a_terre";
     e.aTerre = DUREE_A_TERRE;
     e.degats = 0;
+    e.raidi = 0;
     return "a_terre";
   }
-  e.etourdi = DUREE_ETOURDI * (arme.type === "contondant" && arme.objet !== null ? BONUS_ETOURDI_CONTONDANT : 1);
+  const vacille = DUREE_ETOURDI * (arme.type === "contondant" && arme.objet !== null ? BONUS_ETOURDI_CONTONDANT : 1);
+  // Raidi par une décharge, un coup ne raccourcit pas la tétanie.
+  e.etourdi = (e.raidi ?? 0) > 0 ? Math.max(e.etourdi, vacille) : vacille;
   // Le coup le fait reculer d'un pas.
   const d = Math.hypot(e.x - de.x, e.z - de.z) || 1;
   deplacer(e, ((e.x - de.x) / d) * 0.6, ((e.z - de.z) / d) * 0.6, zone);
@@ -283,6 +385,7 @@ export function penser(
     // Il se réveille en gémissant : ses voisins l'entendent (la cascade).
     if (milieu) e.gemit = GEMISSEMENT.duree;
   }
+  if ((e.raidi ?? 0) > 0) e.raidi = Math.max(0, e.raidi! - dt);
   if (e.etourdi > 0) {
     e.etourdi -= dt;
     return;
@@ -355,6 +458,11 @@ export function penser(
   }
 
   // 4. Avancer vers le but, sans traverser les obstacles ; il s'arrête au contact d'un humain.
+  // Tenu par un piège (Book 25 §6.3), il se débat sur place : il saisit encore qui s'approche, mais n'avance plus.
+  if ((e.retenu ?? 0) > 0) {
+    e.retenu = Math.max(0, e.retenu! - dt);
+    return;
+  }
   if (!e.but) return;
   const arret = e.etat === "poursuivant" ? CONTACT : 0.2;
   const dBut = Math.hypot(e.but.x - e.x, e.but.z - e.z);

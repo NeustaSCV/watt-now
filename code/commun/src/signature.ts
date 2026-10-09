@@ -66,13 +66,18 @@ export interface EtatSignature {
   nuit: boolean;
   /** Il saigne : les Éteints le sentent. */
   saigne?: boolean;
+  /**
+   * Jusqu'où porte le coup qu'il vient de porter, quand l'action est « coup » (Book 25 §8.4 : 14 m pour le choc, 10 m
+   * pour le tranchant et le perçant, 6 ou 8 m pour la décharge). Absent : la portée de BRUIT_ACTION.coup.
+   */
+  porteeCoup?: number;
 }
 
 /** Les stimuli qu'émet un joueur. */
 export function stimuliJoueur(e: EtatSignature): Stimulus[] {
   const s: Stimulus[] = [];
   const pas = e.bouge ? BRUIT_ALLURE[e.allure] : BRUIT_IMMOBILE;
-  const action = BRUIT_ACTION[e.action];
+  const action = e.action === "coup" && e.porteeCoup !== undefined ? { ...BRUIT_ACTION.coup, portee: e.porteeCoup } : BRUIT_ACTION[e.action];
   const son = action.portee > pas.portee ? action : pas;
   s.push({ genre: "son", x: e.x, z: e.z, ...son });
   if (e.nuit && e.lumiere) s.push({ genre: "lumiere", x: e.x, z: e.z, ...LUMIERE_NUIT[e.lumiere] });

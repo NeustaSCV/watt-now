@@ -3,7 +3,7 @@
 // (pas « toString »), des chaînes courtes. Ce qui ne passe pas est ignoré sans bruit (un client honnête n'envoie
 // jamais ça). Les règles du jeu restent vérifiées plus loin (portée, inventaire, prix…).
 
-import { estObjet } from "../../commun/src/objets.ts";
+import { estCleObjet, estObjet } from "../../commun/src/objets.ts";
 import type { MessageClient } from "../../commun/src/messages.ts";
 
 type Champs = Record<string, unknown>;
@@ -100,17 +100,17 @@ export function messageValide(m: unknown): m is MessageClient {
     case "pause":
       return booleen(m.oui);
     case "reparer":
-      return estObjet(m.objet) && booleen(m.fortune);
+      return estCleObjet(m.objet) && booleen(m.fortune);
     case "comptoir":
       return operationComptoirValide(m.op);
     case "echange":
       return operationEchangeValide(m.op);
     case "coffre":
-      return nombre(m.id) && (m.sens === "deposer" || m.sens === "prendre") && estObjet(m.objet) && quantite(m.quantite);
+      return nombre(m.id) && (m.sens === "deposer" || m.sens === "prendre") && estCleObjet(m.objet) && quantite(m.quantite);
     case "jeter":
-      return estObjet(m.objet) && quantite(m.quantite);
+      return estCleObjet(m.objet) && quantite(m.quantite);
     case "equiper":
-      return m.objet === null || estObjet(m.objet);
+      return m.objet === null || estCleObjet(m.objet);
     case "demonter":
       return estObjet(m.objet);
     case "mesures":

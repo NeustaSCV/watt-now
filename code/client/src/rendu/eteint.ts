@@ -29,6 +29,14 @@ const VITESSE_MARCHE = 1.0;
 /** Le Rampant, couché sur le ventre : le corps est basculé vers l'avant, relevé de l'épaisseur du torse, recentré. */
 const RAMPANT = { levee: 0.14, recul: -0.8 };
 
+/**
+ * L'Éteint raidi par une décharge (Book 25 §5.1) : la pose se fige, le corps tremble, et de petits arcs bleus courent
+ * sur le torse. Sobre : pas d'éclair, pas de fumée. Quatre arcs brisés de quatre segments, retirés au hasard
+ * toutes les 70 ms.
+ */
+const ARCS = { nombre: 4, segments: 4, periode: 0.07, rayon: 0.24, bas: 0.85, haut: 1.5, tremblement: 0.035 };
+const MATIERE_ARCS = new THREE.LineBasicMaterial({ color: 0x9ad8ff, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending });
+
 export class VueEteint {
   readonly objet = new THREE.Group();
   private corps: Humanoide | null = null;
@@ -44,6 +52,9 @@ export class VueEteint {
   private herbe: ReturnType<typeof herbeDuRampant> | null = null;
   private rampement: Rampement | null = null;
   private lueur: THREE.Mesh | null = null;
+  /** Les petits arcs bleus d'un Éteint raidi (créés à la première décharge). */
+  private arcs: THREE.LineSegments | null = null;
+  private arcsMinuterie = 0;
 
   constructor(e: EteintVu) {
     this.cible = e;
@@ -161,8 +172,11 @@ export class VueEteint {
     c.fermerLesYeux(this.ouverture);
     this.luire();
 
+    const raidi = !!this.cible.raidi && etat !== "a_terre" && etat !== "detruit";
+    this.electriser(dt, raidi);
+
     if (this.rampant) {
-      this.ramper(dt, vitesse);
+      this.ramper(dt, raidi ? 0 : vitesse);
       return;
     }
 
@@ -171,10 +185,14 @@ export class VueEteint {
     const auSol = (x: EteintVu["etat"] | null) => x === "dormant" || x === "a_terre" || x === "detruit";
     this.unique = Math.max(0, this.unique - dt);
 
+    // Raidi : la pose se fige là où la décharge l'a pris (on ne fait plus avancer l'animation).
+    if (raidi) return;
+
     if (etat === "dormant") c.poser("LayToIdle", 0, avantEtat === null ? 0 : 0.6);
     else if (etat === "a_terre" || etat === "detruit") {
       if (avantEtat !== etat) {
-        c.jouer("Death01", { boucle: false, fondu: 0.12, vitesse: 1.4 });
+        // Éteint par le courant, il s'affaisse plus lentement, sans être projeté.
+        c.jouer("Death01", { boucle: false, fondu: 0.12, vitesse: this.cible.eteintParLeCourant ? 0.8 : 1.4 });
         this.unique = 0;
       }
     } else if (auSol(avantEtat)) {
@@ -202,6 +220,54 @@ export class VueEteint {
     const bouge = !inerte && vitesse > 0.05;
     this.rampement?.animer(dt, bouge ? Math.min(1.6, 0.4 + vitesse) : 0, !inerte && !!this.cible.saisit);
     this.herbe?.animer(dt, inerte ? 0 : bouge ? Math.min(1, 0.45 + vitesse * 0.6) : 0.12);
+  }
+
+  /** Raidi : le corps tremble, de petits arcs bleus courent sur le torse ; sinon, tout revient en place. */
+  private electriser(dt: number, raidi: boolean): void {
+    const c = this.corps;
+    if (!c) return;
+    if (!raidi) {
+      if (this.arcs) this.arcs.visible = false;
+      if (!this.rampant) c.objet.rotation.z = 0;
+      return;
+    }
+    if (!this.rampant) c.objet.rotation.z = (Math.random() - 0.5) * ARCS.tremblement;
+    if (!this.arcs) {
+      const n = ARCS.nombre * ARCS.segments * 2;
+      const geometrie = new THREE.BufferGeometry();
+      geometrie.setAttribute("position", new THREE.BufferAttribute(new Float32Array(n * 3), 3));
+      this.arcs = new THREE.LineSegments(geometrie, MATIERE_ARCS);
+      this.arcs.frustumCulled = false;
+      this.arcs.renderOrder = 2;
+      this.objet.add(this.arcs);
+      this.arcsMinuterie = 0;
+    }
+    this.arcs.visible = true;
+    this.arcsMinuterie -= dt;
+    if (this.arcsMinuterie > 0) return;
+    this.arcsMinuterie = ARCS.periode;
+    // Couché (le Rampant), les arcs courent au ras du sol, le long du dos.
+    const bas = this.rampant ? 0.1 : ARCS.bas;
+    const haut = this.rampant ? 0.35 : ARCS.haut;
+    const pos = this.arcs.geometry.getAttribute("position") as THREE.BufferAttribute;
+    let i = 0;
+    for (let a = 0; a < ARCS.nombre; a++) {
+      const angle = Math.random() * Math.PI * 2;
+      let x = Math.cos(angle) * ARCS.rayon;
+      let z = Math.sin(angle) * ARCS.rayon + (this.rampant ? RAMPANT.recul * 0.5 : 0);
+      let y = bas + Math.random() * (haut - bas);
+      for (let s = 0; s < ARCS.segments; s++) {
+        const nx = x + (Math.random() - 0.5) * 0.14;
+        const ny = Math.min(haut + 0.1, y + (Math.random() - 0.3) * 0.16);
+        const nz = z + (Math.random() - 0.5) * 0.14;
+        pos.setXYZ(i++, x, y, z);
+        pos.setXYZ(i++, nx, ny, nz);
+        x = nx;
+        y = ny;
+        z = nz;
+      }
+    }
+    pos.needsUpdate = true;
   }
 
   /** La lueur des yeux : nette dans le noir et de près, absente de jour ; éteinte chez un Éteint détruit. */

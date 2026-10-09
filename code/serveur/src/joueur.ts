@@ -11,7 +11,8 @@ import { nouvellePoule, penserPoule, vuePoule, type Poule } from "../../commun/s
 import type { Apparence } from "../../commun/src/apparence.ts";
 import { INTENTION_REPOS, avancer, nettoyerIntention, type Intention, type Position } from "../../commun/src/deplacement.ts";
 import type { Bienvenue, Cible, FeuVu, InstallationVue, MessageClient, MessageServeur } from "../../commun/src/messages.ts";
-import { CAPACITE_SAC, CONTENANTS, OBJETS, capaciteDe, estObjet, lumierePortee, nommer, poidsInventaire, traineTravois, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
+import { CAPACITE_SAC, CONTENANTS, OBJETS, capaciteDe, estCleObjet, estObjet, lumierePortee, nommer, poidsInventaire, traineTravois, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
+import { compter, typeDe, type CleObjet } from "../../commun/src/etoiles.ts";
 import { NOMS_INSTALLATIONS, RECETTES, dureeReelle, ingredientsPresents, multiplicateurQualites, niveauQualite, recette, recettesConnues, type Recette, type TypeInstallation } from "../../commun/src/recettes.ts";
 import {
   CHARBON_PRODUIT,
@@ -72,6 +73,7 @@ import { Cooperatives } from "./cooperative.ts";
 import { Halte, type Voyageur } from "./halte.ts";
 import type { LieuVivant } from "./lieu-vivant.ts";
 import { Comptoir } from "./comptoir.ts";
+import { declencher, declencheurNeuf, definitionDeclencheur, estDeclencheur, type DeclencheurPose } from "./declencheurs.ts";
 import {
   PRIX_RETRAIT,
   WOTTS_PAR_WH_M,
@@ -89,7 +91,7 @@ import { LEURRES, PORTEE_PORTE, PORTES, boitePorte, distancePorte } from "../../
 import { DECHARGE, remonter } from "../../commun/src/decharge.ts";
 import type { Quete, VueQuetes } from "../../commun/src/quetes.ts";
 import { SuiviQuetes, type EtatJoueurPourQuetes } from "./quetes.ts";
-import { debout, encaisser, lacher, nouvelEteint, penser, repousser, vue as vueEteint, type Eteint, type Humain } from "../../commun/src/eteints.ts";
+import { debout, encaisserCoup, lacher, nouvelEteint, penser, repousser, vue as vueEteint, type Eteint, type Humain } from "../../commun/src/eteints.ts";
 import {
   ANGLE_CIBLAGE,
   APPUIS_DEGAGEMENT,
@@ -108,7 +110,6 @@ import {
   evoluer,
   freinSaisie,
   intoxiquer,
-  ARMES,
   ATELIER_REPARATION,
   MALUS_ABIMEE,
   MATIERE_ARME,
@@ -117,7 +118,12 @@ import {
   DEBRIS_ARME,
   REPOUSSER,
   SEUIL_ABIMEE,
+  armeDeCle,
+  capaciteChargeArme,
   armeEnMain,
+  cleArme,
+  nomsAteliers,
+  porteeBruitCoup,
   etatArme,
   type Arme,
   estArme,
@@ -240,10 +246,12 @@ export class Joueur implements Voyageur {
   private elan: { dx: number; dz: number; restant: number } | null = null;
   private prochaineFrappe = 0;
   /** L'arme équipée pour le combat (P-005) ; null : la meilleure du sac. */
-  private armeEquipee: TypeObjet | null = null;
+  private armeEquipee: CleObjet | null = null;
   /** On a déjà prévenu que l'arme équipée n'est plus dans le sac. */
   private armePerdueSignalee = false;
   private bruitCoupJusqua = 0;
+  /** Jusqu'où porte le dernier coup (Book 25 §8.4 : le choc, le tranchant, la décharge). */
+  private porteeDuCoup: number | undefined;
   /** Une porte qu'on vient d'ouvrir ou de fermer : un bruit bref, là où elle est (0.5b). */
   private bruitPorte: { x: number; z: number; portee: number; jusqua: number } | null = null;
   private appuisDegagement = 0;
@@ -330,6 +338,7 @@ export class Joueur implements Voyageur {
     this.quetes = new SuiviQuetes(base.chargerQuetes(compte.id));
     this.armeEquipee = base.chargerArme(compte.id);
     this.usure = base.chargerUsure(compte.id);
+    this.chargeArmes = base.chargerChargeArmes(compte.id);
     this.apparence = base.chargerApparence(compte.id, compte.famille);
     this.faune = base.chargerFaune(compte.id);
     const { sante, endurance } = base.chargerSante(compte.id);
@@ -449,6 +458,7 @@ export class Joueur implements Voyageur {
       quetes: this.vueQuetes(),
       arme: this.armeEquipee,
       usure: { ...this.usure },
+      charge: { ...this.chargeArmes },
       ...(this.lieu === "cooperative"
         ? { leurres: this.cooperatives.leurresActifs(this.compte.id, this.maintenant()), etatCoop: this.cooperatives.vue(this.compte.id) }
         : {}),
@@ -845,13 +855,18 @@ export class Joueur implements Voyageur {
     const enMain = this.armeDuCombat();
     this.prochaineFrappe = instant + (appuye ? enMain.coupAppuye : enMain.coup) - TOLERANCE_COUP_MS;
     this.bruitCoupJusqua = instant + 600;
+    // Le choc s'entend plus loin que le tranchant ; la décharge crépite (Book 25 §8.4).
+    this.porteeDuCoup = porteeBruitCoup(enMain, appuye);
     const cible = this.cibleDevant(enMain.allonge);
     if (!cible) return;
     this.position = { ...this.position, o: Math.atan2(cible.x - this.position.x, cible.z - this.position.z) };
     // Abîmée (sous 30 % de solidité), elle frappe 30 % moins fort (Book 23 §4.3).
-    const abimee = enMain.objet !== null && etatArme(enMain.objet, this.usure) < SEUIL_ABIMEE;
+    const cle = cleArme(enMain);
+    const abimee = cle !== null && etatArme(cle, this.usure) < SEUIL_ABIMEE;
     const arme = abimee ? { ...enMain, degatsTorse: enMain.degatsTorse * MALUS_ABIMEE } : enMain;
-    const resultat = encaisser(cible, arme, appuye, force, this.position, this.zoneIci());
+    // L'électricité (Book 25 §5.1) peut raidir un voisin : on donne les autres Éteints du lieu.
+    const effet = encaisserCoup(cible, arme, appuye, force, this.position, this.zoneIci(), this.eteintsIci());
+    const resultat = effet.resultat;
     this.user(enMain);
     if (this.tuto && resultat === "detruit") this.tuto.premierEteintDetruit = true;
     // Le magasinier portait la clé du coffre à sa ceinture (Book 23 §3) : elle tombe là où il tombe.
@@ -859,16 +874,23 @@ export class Joueur implements Voyageur {
       this.poserAuSol({ cle_coffre: 1 }, {}, { x: cible.x, z: cible.z });
       this.info("Une chaînette tinte à sa ceinture : il portait une clé « MAGASIN ».");
     }
-    const coup = { t: "coup" as const, id: cible.id, x: cible.x, z: cible.z, resultat };
-    if (this.vivant) this.vivant.diffuser(coup);
-    else this.envoyer(coup);
-    if (resultat === "a_terre") this.indice("a_terre", "Achève-le : frappe à la tête (maintiens {agir}, relâche).");
+    const electrique = arme.type === "electrique" ? ({ electrique: true } as const) : {};
+    const coups = [{ t: "coup" as const, id: cible.id, x: cible.x, z: cible.z, resultat, ...electrique }];
+    if (effet.voisinRaidi) coups.push({ t: "coup" as const, id: effet.voisinRaidi.id, x: effet.voisinRaidi.x, z: effet.voisinRaidi.z, resultat: "raidi", ...electrique });
+    for (const coup of coups) {
+      if (this.vivant) this.vivant.diffuser(coup);
+      else this.envoyer(coup);
+    }
+    if (arme.type === "electrique") {
+      if (resultat === "detruit") this.info("Il s'éteint.");
+      else if (resultat === "raidi") this.indice("raidi", "Il est raidi : maintiens {agir} pour l'éteindre.");
+    } else if (resultat === "a_terre") this.indice("a_terre", "Achève-le : frappe à la tête (maintiens {agir}, relâche).");
     if (resultat === "detruit" && arme.objet === null) this.info(`À mains nues, ça ne suffira pas : prends une arme. ${ouTrouverPhrase("gourdin")}`);
   }
 
   /** Équiper une arme pour le mode Combat (P-005) : elle doit être dans le sac. null : revenir au choix automatique. */
-  private equiper(objet: TypeObjet | null): void {
-    if (objet !== null && (!estArme(objet) || (this.inventaire[objet] ?? 0) < 1)) return;
+  private equiper(objet: CleObjet | null): void {
+    if (objet !== null && (!estCleObjet(objet) || !estArme(objet) || (this.inventaire[objet] ?? 0) < 1)) return;
     this.armeEquipee = objet;
     this.armePerdueSignalee = false;
     this.base.sauverArme(this.compte.id, objet);
@@ -877,15 +899,19 @@ export class Joueur implements Voyageur {
     else this.info("Plus d'arme choisie : en mode Combat, tu prendras la meilleure de ton sac.");
   }
 
-  /** L'arme en main : l'équipée si on l'a encore, sinon la meilleure du sac (et on le dit, une fois). */
+  /**
+   * L'arme en main : l'exemplaire équipé si on l'a encore (ou un autre de la même arme), sinon la meilleure du sac (et
+   * on le dit, une fois).
+   */
   private armeDuCombat(): Arme {
     const arme = armeEnMain(this.inventaire, this.armeEquipee);
-    if (this.armeEquipee && arme.objet !== this.armeEquipee && !this.armePerdueSignalee) {
+    const memeArme = this.armeEquipee !== null && arme.objet === typeDe(this.armeEquipee);
+    if (this.armeEquipee && !memeArme && !this.armePerdueSignalee) {
       this.armePerdueSignalee = true;
-      const nom = ARMES.find((a) => a.objet === this.armeEquipee)?.nom ?? nommer(this.armeEquipee, 1);
+      const nom = armeDeCle(this.armeEquipee)?.nom ?? nommer(this.armeEquipee, 1);
       this.info(`${nom.charAt(0).toUpperCase()}${nom.slice(1)} n'est plus dans ton sac : tu te bats avec ${arme.nom}.`);
     }
-    if (arme.objet === this.armeEquipee) this.armePerdueSignalee = false;
+    if (memeArme) this.armePerdueSignalee = false;
     return arme;
   }
 
@@ -904,16 +930,34 @@ export class Joueur implements Voyageur {
     this.appuisDegagement = 0;
   }
 
-  /** L'usure de chaque arme en main : coups qui restent (absente : neuve). */
-  private usure: Partial<Record<TypeObjet, number>> = {};
+  /** L'usure de chaque exemplaire d'arme en main : coups qui restent (absente : neuf). Clé : « lame_forgee#4 », ou le type. */
+  private usure: Partial<Record<CleObjet, number>> = {};
+  /** La charge de chaque exemplaire d'arme électrique : Wh qui restent (absente : pleine), Book 25 §5.4. */
+  private chargeArmes: Partial<Record<CleObjet, number>> = {};
+
+  /**
+   * Fixe la charge d'un exemplaire d'arme électrique (Wh qui restent), la sauve et la montre dans le sac. C'est le point
+   * d'entrée du chantier 6 (décharges, recharge au banc et à la manivelle) ; `chargeArme` (combat.ts) la lit.
+   */
+  majChargeArme(cle: CleObjet, wh: number): void {
+    const a = armeDeCle(cle);
+    if (!a?.electrique || !Number.isFinite(wh)) return;
+    const max = capaciteChargeArme(a);
+    const borne = Math.max(0, Math.min(max, wh));
+    if (borne >= max) delete this.chargeArmes[cle];
+    else this.chargeArmes[cle] = Math.round(borne * 1000) / 1000;
+    this.base.sauverChargeArmes(this.compte.id, this.chargeArmes);
+    this.envoyer({ t: "usure", usure: { ...this.usure }, charge: { ...this.chargeArmes } });
+  }
 
   /**
    * Un coup qui touche use l'arme en main (Book 23 §4.3). Sous 30 %, elle est abîmée (on le dit, une fois) ; à 0, elle
-   * casse : on en perd une, et la suivante du même type est neuve.
+   * casse : on en perd une, et la suivante du même exemplaire est neuve. L'usure est tenue par exemplaire (Book 25
+   * §9.6) : une lame ★★ et une lame ★★★★ s'usent chacune de leur côté.
    */
   private user(arme: Arme): void {
-    const o = arme.objet;
-    if (!o || !Number.isFinite(arme.solidite)) return;
+    const o = cleArme(arme);
+    if (!o || !arme.objet || !Number.isFinite(arme.solidite)) return;
     const avant = etatArme(o, this.usure);
     const reste = (this.usure[o] ?? arme.solidite) - 1;
     if (reste <= 0) {
@@ -921,7 +965,7 @@ export class Joueur implements Voyageur {
       this.retirer(o, 1);
       this.envoyer({ t: "usure", usure: { ...this.usure }, evenement: { objet: o, etat: "cassee" } });
       // Elle laisse un débris, qui se démonte (Book 23 §4.3) : dans le sac, ou par terre s'il n'y a plus de place.
-      const debris = DEBRIS_ARME[o];
+      const debris = DEBRIS_ARME[arme.objet];
       let reste = "";
       if (debris) {
         if (poidsInventaire(this.inventaire, this.gourde.litres) + poidsDe({ [debris]: 1 }) <= capaciteDe(this.inventaire)) {
@@ -932,7 +976,7 @@ export class Joueur implements Voyageur {
           reste = ` Son débris (${nommer(debris, 1)}) est tombé par terre : ton sac est plein.`;
         }
       }
-      this.info(`${arme.nom.charAt(0).toUpperCase()}${arme.nom.slice(1)} vient de casser.${reste} ${(this.inventaire[o] ?? 0) > 0 ? "Tu prends la suivante, neuve." : "Il te faudra une autre arme."}`);
+      this.info(`${arme.nom.charAt(0).toUpperCase()}${arme.nom.slice(1)} vient de casser.${reste} ${compter(this.inventaire, arme.objet) > 0 ? "Tu prends la suivante, neuve." : "Il te faudra une autre arme."}`);
       this.base.sauverUsure(this.compte.id, this.usure);
       return;
     }
@@ -944,12 +988,14 @@ export class Joueur implements Voyageur {
   }
 
   /**
-   * Réparer une arme (Book 23 §4.3). De fortune, partout (ficelle et chiffons) : elle remonte, mais reste abîmée. Pour
-   * de bon, chez soi : l'établi pour le bois, la meule du pédalier pour les lames, la forge pour le métal.
+   * Réparer une arme (Book 23 §4.3, Book 25 §4.4). De fortune, partout (ficelle et chiffons) : elle remonte, mais reste
+   * abîmée. Pour de bon, chez soi : l'établi pour le bois ; pour les lames, la meule du pédalier (affûter, sans rien
+   * consommer) ou la forge (reprendre la lame, un kilo de charbon) ; la forge pour le métal.
    */
-  private reparer(objet: TypeObjet, fortune: boolean): void {
-    const arme = ARMES.find((a) => a.objet === objet);
-    const matiere = MATIERE_ARME[objet];
+  private reparer(objet: CleObjet, fortune: boolean): void {
+    if (!estCleObjet(objet)) return;
+    const arme = armeDeCle(objet);
+    const matiere = MATIERE_ARME[typeDe(objet)];
     if (!arme || !matiere || !(this.inventaire[objet] ?? 0) || this.voyage || this.action) return;
     const etat = etatArme(objet, this.usure);
     if (fortune) {
@@ -965,14 +1011,28 @@ export class Joueur implements Voyageur {
       return;
     }
     if (etat >= 1) return this.info("Elle est comme neuve.");
-    const atelier = ATELIER_REPARATION[matiere];
-    const ici = this.lieu === "terrain" && [...this.installations.values()].some((i) => i.type === atelier.installation && (atelier.installation !== "pedalier" || i.etat.meule) && this.proche(i.x, i.z, 3));
-    if (!ici) return this.info(`Pour la remettre à neuf, il faut ${atelier.nom}, chez toi${atelier.installation === "pedalier" ? " (avec sa meule)" : ""}. Sinon, une réparation de fortune.`);
-    this.commencer(`Remettre ${arme.nom} à neuf`, 15 / REGLAGES.gestes_vitesse, () => {
+    // Les ateliers qui conviennent, dans l'ordre (la meule d'abord : le geste le moins cher) ; le premier tout proche.
+    const proches = this.lieu !== "terrain" ? [] : ATELIER_REPARATION[matiere].filter((atelier) =>
+      [...this.installations.values()].some((i) => i.type === atelier.installation && (atelier.accessoire !== "meule" || i.etat.meule) && this.proche(i.x, i.z, 3)),
+    );
+    if (proches.length === 0) return this.info(`Pour la remettre à neuf, il faut ${nomsAteliers(matiere)}, chez toi. Sinon, une réparation de fortune.`);
+    const atelier = proches.find((a) => !a.cout || this.aDeQuoi(a.cout));
+    if (!atelier) {
+      const manque = Object.entries(proches[0]!.cout ?? {}).map(([t, n]) => nommer(t as CleObjet, n ?? 1)).join(", ");
+      return this.info(`Pour reprendre la lame à ${proches[0]!.nom}, il faut ${manque}.`);
+    }
+    this.commencer(`${atelier.geste ?? "Remettre à neuf"} : ${arme.nom}`, 15 / REGLAGES.gestes_vitesse, () => {
+      if (atelier.cout && !this.aDeQuoi(atelier.cout)) return;
+      if (atelier.cout) this.retirerPlusieurs(atelier.cout);
       delete this.usure[objet];
       this.envoyer({ t: "usure", usure: { ...this.usure }, evenement: { objet, etat: "reparee" } });
       this.base.sauverUsure(this.compte.id, this.usure);
-    }, 0, "outil");
+    }, 0, atelier.installation === "forge" ? "lourd" : "outil");
+  }
+
+  /** A-t-on tout cela dans le sac ? */
+  private aDeQuoi(objets: Inventaire): boolean {
+    return Object.entries(objets).every(([t, n]) => (this.inventaire[t as CleObjet] ?? 0) >= (n ?? 0));
   }
 
   /**
@@ -999,6 +1059,7 @@ export class Joueur implements Voyageur {
     for (const { e } of proches) repousser(e, this.position, REPOUSSER.recul, REPOUSSER.etourdi, this.zoneIci());
     this.appuisDegagement = 0;
     this.bruitCoupJusqua = this.maintenant() + 400;
+    this.porteeDuCoup = undefined;
   }
 
   /** Un leurre du décor de la Coopérative : klaxon, sonnette, radio (Book 23 §4.7). */
@@ -1200,9 +1261,9 @@ export class Joueur implements Voyageur {
     const pris: Inventaire = {};
     let poids = poidsInventaire(this.inventaire, this.gourde.litres);
     // Un sac par terre se prend d'abord : il fait de la place pour le reste.
-    const entrees = (Object.entries(tas.contenu.inventaire) as [TypeObjet, number][]).sort(([a], [b]) => (CONTENANTS[b] ?? 0) - (CONTENANTS[a] ?? 0));
+    const entrees = (Object.entries(tas.contenu.inventaire) as [CleObjet, number][]).sort(([a], [b]) => (CONTENANTS[typeDe(b)] ?? 0) - (CONTENANTS[typeDe(a)] ?? 0));
     for (const [type, n] of entrees) {
-      const unite = OBJETS[type].poids;
+      const unite = OBJETS[typeDe(type)].poids;
       const capacite = capaciteDe({ ...this.inventaire, ...pris });
       const k = unite > 0 ? Math.min(n, Math.floor((capacite - poids + 1e-9) / unite)) : n;
       if (k > 0) {
@@ -1251,8 +1312,8 @@ export class Joueur implements Voyageur {
   }
 
   /** Jeter un objet par terre (quand le sac est trop lourd) : il reste là, ramassable (Book 01 §8). */
-  private jeter(objet: TypeObjet, quantite: number): void {
-    if (this.voyage || !estObjet(objet)) return;
+  private jeter(objet: CleObjet, quantite: number): void {
+    if (this.voyage || !estCleObjet(objet)) return;
     const n = Math.floor(Number(quantite));
     if (!(n >= 1) || (this.inventaire[objet] ?? 0) < n) return;
     if (this.lieu === "comptoir") return this.info("Pas ici : les Compteurs n'aiment pas le désordre. Va au guichet, ou range-le chez toi.");
@@ -1350,11 +1411,11 @@ export class Joueur implements Voyageur {
   }
 
   /** Ranger un objet dans un coffre de son terrain, ou l'en sortir (la charge des batteries suit). */
-  private utiliserCoffre(id: number, sens: "deposer" | "prendre", objet: TypeObjet, quantite: number): void {
+  private utiliserCoffre(id: number, sens: "deposer" | "prendre", objet: CleObjet, quantite: number): void {
     const coffre = this.installations.get(id);
     // La décharge (P-001) s'ouvre comme un coffre, mais on ne fait qu'y prendre.
     const estDecharge = coffre?.type === "decharge";
-    if (!coffre || (coffre.type !== "coffre" && !estDecharge) || this.lieu !== "terrain" || this.voyage || !estObjet(objet)) return;
+    if (!coffre || (coffre.type !== "coffre" && !estDecharge) || this.lieu !== "terrain" || this.voyage || !estCleObjet(objet)) return;
     if (estDecharge && sens === "deposer") return this.info("La décharge rend, elle ne reprend pas. Pour te débarrasser d'un objet : Sac → Jeter.");
     if (!this.proche(coffre.x, coffre.z, estDecharge ? 4.2 : 2.5)) return this.info(estDecharge ? "Approche-toi de la décharge." : "Approche-toi du coffre.");
     const n = Math.floor(Number(quantite));
@@ -1367,7 +1428,7 @@ export class Joueur implements Voyageur {
       if ((this.inventaire[objet] ?? 0) < n) return;
       if (objet === "sac_a_dos" || objet === "sac_fortune") return this.info("Ton sac, tu le gardes sur le dos.");
       const max = capaciteCoffre(coffre);
-      if (poidsInventaire(contenu) + OBJETS[objet].poids * n > max + 1e-9) {
+      if (poidsInventaire(contenu) + OBJETS[typeDe(objet)].poids * n > max + 1e-9) {
         return this.info(`Le coffre est plein (${max} kg) : ${etapeSuivanteInstallation(coffre) ? "améliore-le (il tiendra plus)" : "construis-en un autre"}, ou vends le surplus au Comptoir.`);
       }
       if (batterie) {
@@ -1382,7 +1443,7 @@ export class Joueur implements Voyageur {
     } else {
       const dispo = contenu[objet] ?? 0;
       if (dispo < n) return;
-      if (poidsInventaire(this.inventaire, this.gourde.litres) + OBJETS[objet].poids * n > capaciteDe(this.inventaire) + 1e-9) return this.sacTropLourd();
+      if (poidsInventaire(this.inventaire, this.gourde.litres) + OBJETS[typeDe(objet)].poids * n > capaciteDe(this.inventaire) + 1e-9) return this.sacTropLourd();
       let part = 0;
       if (batterie) {
         part = ((charges[b] ?? 0) * n) / dispo;
@@ -1710,6 +1771,7 @@ export class Joueur implements Voyageur {
       allure: allureAutorisee(this.intention.allure, this.besoins, this.objetPorte() !== undefined || traineTravois(this.inventaire)),
       bouge: this.bouge,
       action: this.maintenant() < this.bruitCoupJusqua ? "coup" : (this.action?.bruit ?? "aucun"),
+      porteeCoup: this.porteeDuCoup,
       lumiere: portee ? (OBJETS[portee].lumiere ?? null) : null,
       // Dans une pièce noire de la Coopérative, une lampe se voit comme en pleine nuit (Book 23 §2.2).
       nuit: nuit || (this.vivant?.obscur(this.position.x, this.position.z) ?? false),
@@ -1796,6 +1858,33 @@ export class Joueur implements Voyageur {
     }
   }
 
+  /** Les dernières prises des déclencheurs, par déclencheur et par Éteint (declencheurs.ts). */
+  private readonly prisesDeclencheurs = new Map<string, number>();
+
+  /**
+   * Les pièges, la plaque de choc, la clôture (Book 25 §5.3 et §6.3) : le moteur des déclencheurs prend les Éteints
+   * qui passent. Sans déclencheur enregistré sur le terrain, rien ne se passe.
+   */
+  private verifierDeclencheurs(instant: number): void {
+    const poses: DeclencheurPose[] = [];
+    for (const i of this.installations.values()) {
+      if (!estDeclencheur(i.type)) continue;
+      // L'état vit dans celui de l'installation (sauvé avec elle) : le moteur le modifie en place.
+      const etat = (i.etat.declencheur ??= declencheurNeuf());
+      poses.push({ id: i.id, type: i.type, x: i.x, z: i.z, o: i.o, etat });
+    }
+    if (poses.length === 0) return;
+    const faits = declencher(poses, this.eteints, instant, zoneDe("terrain"), this.prisesDeclencheurs);
+    for (const id of new Set(faits.map((f) => f.declencheur))) {
+      const i = this.installations.get(id);
+      if (!i) continue;
+      this.base.sauverEtatInstallation(this.compte.id, i.id, i.etat);
+      this.envoyer({ t: "installation", installation: i });
+      const message = definitionDeclencheur(i.type)?.message;
+      if (message) this.info(message);
+    }
+  }
+
   /** La vie des Éteints du terrain : ils arrivent de la lisière quand la signature les attire. */
   private animerEteintsTerrain(instant: number, dt: number): void {
     const nuit = this.nuit();
@@ -1804,6 +1893,7 @@ export class Joueur implements Voyageur {
     for (const e of this.eteints) penser(e, dt, stimuli, [this.humain()], this.eteints, nuit, zoneDe("terrain"), this.alea);
     this.eteints = this.eteints.filter((e) => e.etat !== "detruit" || e.corps < DUREE_CORPS);
     this.verifierAlarmes(instant);
+    this.verifierDeclencheurs(instant);
 
     if (instant - this.dernierTirage >= INTERVALLE_TIRAGE) {
       this.dernierTirage = instant;
@@ -3116,7 +3206,7 @@ export class Joueur implements Voyageur {
 
   // ---------- Inventaire ----------
 
-  private retirer(type: TypeObjet, n: number): void {
+  private retirer(type: CleObjet, n: number): void {
     const reste = (this.inventaire[type] ?? 0) - n;
     const inventaire = { ...this.inventaire };
     if (reste > 0) inventaire[type] = reste;

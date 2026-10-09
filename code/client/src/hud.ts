@@ -8,7 +8,7 @@ import { ceQuiManque } from "../../commun/src/aide-fabrication.ts";
 import { ACTIONS, RESERVEES, assigner, avecTouches, nomDe, nomTouche, retablir, surChangement, type Action } from "./touches.ts";
 import { PanneauAide } from "./aide.ts";
 import { CAPACITES, type Charges } from "../../commun/src/energie.ts";
-import { ARMES, MATIERE_ARME, NOMS_BLESSURES, PLAFOND_FORTUNE, RESISTANCE_TORSE, SEUIL_ABIMEE, caracteristiquesArme, estArme, etatArme } from "../../commun/src/combat.ts";
+import { ARMES, MATIERE_ARME, NOMS_BLESSURES, PLAFOND_FORTUNE, RESISTANCE_TORSE, SEUIL_ABIMEE, armeDeCle, capaciteChargeArme, caracteristiquesArme, estArme, etatArme } from "../../commun/src/combat.ts";
 import type { EchangeVu, FeuVu, InstallationVue, OffreEchange, OperationComptoir, OperationEchange, Personne, RapportBase, SanteVue, Verbe, VueComptoir, WottsVus } from "../../commun/src/messages.ts";
 import {
   ACCESSOIRES_FEU,
@@ -35,7 +35,8 @@ import { PRIX_RETRAIT, formaterWotts, prixVente } from "../../commun/src/economi
 import { detailEnergieGrise } from "../../commun/src/recettes.ts";
 import type { TypeBatterie } from "../../commun/src/energie.ts";
 import type { Inventaire, TypeObjet } from "../../commun/src/objets.ts";
-import { OBJETS, capaciteDe, nomContenant, nommer, poidsInventaire } from "../../commun/src/objets.ts";
+import { ETOILES, etoilesDe, etoilesTexte, typeDe, type CleObjet } from "../../commun/src/etoiles.ts";
+import { OBJETS, capaciteDe, estObjet, nomContenant, nommer, poidsInventaire } from "../../commun/src/objets.ts";
 import {
   CATEGORIES_RECETTES,
   NOMS_INSTALLATIONS,
@@ -101,15 +102,15 @@ export interface ActionsJoueur {
   echange(op: OperationEchange): void;
   passerTutoriel(): void;
   /** Jeter un objet par terre (quand le sac est trop lourd). */
-  jeter(objet: TypeObjet, quantite: number): void;
+  jeter(objet: CleObjet, quantite: number): void;
   /** Démonter un vestige en composants (Vestiges, lot 1). */
   demonter(objet: TypeObjet): void;
   /** Équiper une arme pour le mode Combat (null : la meilleure du sac) (P-005). */
-  equiper(objet: TypeObjet | null): void;
+  equiper(objet: CleObjet | null): void;
   /** Réparer une arme (Book 23 §4.3) : de fortune, ou pour de bon à l'atelier. */
-  reparer(objet: TypeObjet, fortune: boolean): void;
+  reparer(objet: CleObjet, fortune: boolean): void;
   /** Ranger dans le coffre, ou en sortir. */
-  coffre(id: number, sens: "deposer" | "prendre", objet: TypeObjet, quantite: number): void;
+  coffre(id: number, sens: "deposer" | "prendre", objet: CleObjet, quantite: number): void;
   /** Un geste sur un feu ou une installation, depuis sa fiche (Book 24 : améliorer, démonter, creuser…). */
   amenager(genre: "feu" | "installation", id: number, verbe: Verbe): void;
 }
@@ -122,6 +123,11 @@ const RECETTE_DAKOTA_AIDE: Recette = { id: "dakota", categorie: "feu", nom: "Foy
 type NomJauge = "faim" | "eau" | "sommeil" | "sante" | "endurance";
 
 type OngletComptoir = "vendre" | "acheter" | "energie" | "compte";
+
+/** Des Wh lisibles : « 11,5 ». */
+function virguleWh(wh: number): string {
+  return (Math.round(wh * 10) / 10).toString().replace(".", ",");
+}
 
 function kg(valeur: number): string {
   return valeur.toFixed(2).replace(".", ",").replace(/,?0+$/, "");
@@ -160,9 +166,10 @@ const TYPES_DEGATS = {
   contondant: "Contondant : il passe les casques et étourdit plus longtemps.",
   tranchant: "Tranchant : un casque l'arrête à la tête.",
   percant: "Perçant : sa force, c'est l'allonge.",
+  electrique: "Électrique : il lâche et se raidit. Maintenu sur un Éteint raidi ou à terre, il l'éteint. Passe le casque.",
 } as const;
 /** Où remettre une arme à neuf (Book 23 §4.3). */
-const ATELIERS_REPARATION_NOMS = { bois: "à l'établi", lame: "à la meule", metal: "à la forge" } as const;
+const ATELIERS_REPARATION_NOMS = { bois: "à l'établi", lame: "à la meule ou à la forge", metal: "à la forge" } as const;
 
 export class Hud {
   /** Réassigner une touche : le jeu attend la prochaine touche frappée (null : annulé). */
@@ -281,7 +288,7 @@ export class Hud {
   private dureeAction = 0;
   private dernierSac = "";
   private derniereFabrication = "";
-  private selection: TypeObjet | null = null;
+  private selection: CleObjet | null = null;
   private triSac: TriSac = lireTriSac();
   private inventaire: Inventaire = {};
   private gourde: Gourde = { contenu: "potable", litres: 0 };
@@ -730,7 +737,8 @@ export class Hud {
     if (!e || el.hidden) return;
     const o = this.monOffre;
     const mesObjets = (Object.entries(this.inventaire) as [TypeObjet, number][])
-      .filter(([, n]) => n > 0)
+      // Les exemplaires étoilés ne s'échangent pas encore (Book 25 : chantier 8).
+      .filter(([t, n]) => n > 0 && estObjet(t))
       .map(([type, n]) => {
         const mis = o.objets[type] ?? 0;
         return `<li class="${mis > 0 ? "mis" : ""}">${icone(type, 28)}<span class="nom">${OBJETS[type].nom}<small>${n} dans ton sac</small></span>
@@ -847,7 +855,8 @@ export class Hud {
     let corps = "";
     if (this.onglet === "vendre") {
       const lignes = (Object.entries(this.inventaire) as [TypeObjet, number][])
-        .filter(([, n]) => n > 0)
+        // Le Comptoir ne rachète pas encore les exemplaires étoilés (Book 25 : chantier 8).
+        .filter(([t, n]) => n > 0 && estObjet(t))
         .map(([type, n]) => {
           const prix = v.achats[type];
           if (prix === null || prix === undefined) return ligne(type, `<span class="prix non">non racheté</span>`, `× ${n}`);
@@ -1170,7 +1179,8 @@ export class Hud {
   }
 
   /** Un objet gagné : « +1 branche » qui monte au-dessus du personnage et s'efface. */
-  gain(type: TypeObjet, n: number): void {
+  gain(cle: CleObjet, n: number): void {
+    const type = typeDe(cle);
     const d = OBJETS[type];
     this.pastille(type, `+${n} ${n > 1 ? d.pluriel : d.nom}`);
   }
@@ -1366,9 +1376,9 @@ export class Hud {
   // ---------- Le sac ----------
 
   /** L'arme équipée pour le combat (P-005). */
-  private armeEquipee: TypeObjet | null = null;
+  private armeEquipee: CleObjet | null = null;
 
-  majArme(arme: TypeObjet | null): void {
+  majArme(arme: CleObjet | null): void {
     this.armeEquipee = arme;
     this.dernierSac = "";
     if (!this.sac.hidden) this.dessinerSac();
@@ -1379,16 +1389,32 @@ export class Hud {
     const poids = poidsInventaire(this.inventaire, this.gourde.litres);
     const g = this.gourde;
 
-    const presents = ORDRE_SAC.filter((t) => t !== "gourde" && (this.inventaire[t] ?? 0) > 0);
+    // Les clés du sac : les types, et les exemplaires étoilés (« lame_forgee#4 », Book 25 §9.6), rangés à côté de
+    // leur type, les meilleurs d'abord.
+    const rangSac = (cle: CleObjet) => {
+      const i = ORDRE_SAC.indexOf(typeDe(cle));
+      return i < 0 ? ORDRE_SAC.length : i;
+    };
+    const cles = (Object.keys(this.inventaire) as CleObjet[]).filter((c) => c !== "gourde" && (this.inventaire[c] ?? 0) > 0);
     // Les objets absents de l'ordre prévu viennent à la fin, pour ne rien oublier.
-    for (const t of Object.keys(this.inventaire) as TypeObjet[]) if (!ORDRE_SAC.includes(t) && (this.inventaire[t] ?? 0) > 0) presents.push(t);
+    const presents = cles
+      .map((c, i) => ({ c, i }))
+      .sort((a, b) => rangSac(a.c) - rangSac(b.c) || (rangSac(a.c) === ORDRE_SAC.length ? a.i - b.i : 0) || (etoilesDe(b.c) ?? 0) - (etoilesDe(a.c) ?? 0))
+      .map(({ c }) => c);
     // Par poids : la pile la plus lourde d'abord (le tri est stable : à poids égal, l'ordre par sorte).
-    if (this.triSac === "poids") presents.sort((a, b) => OBJETS[b].poids * (this.inventaire[b] ?? 0) - OBJETS[a].poids * (this.inventaire[a] ?? 0));
-    const case_ = (type: TypeObjet, badge: string, classe = "") => {
-      const d = OBJETS[type];
-      const pile = d.poids * Math.max(1, this.inventaire[type] ?? 0);
-      return `<button type="button" class="case ${classe} ${this.selection === type ? "choisie" : ""}" data-objet="${type}"
-        title="${d.nom} (${kg(pile)} kg) — ${d.description}" aria-label="${d.nom}">${icone(type)}${badge ? `<span class="badge">${badge}</span>` : ""}</button>`;
+    if (this.triSac === "poids") presents.sort((a, b) => OBJETS[typeDe(b)].poids * (this.inventaire[b] ?? 0) - OBJETS[typeDe(a)].poids * (this.inventaire[a] ?? 0));
+    const case_ = (cle: CleObjet, badge: string, classe = "") => {
+      const d = OBJETS[typeDe(cle)];
+      const pile = d.poids * Math.max(1, this.inventaire[cle] ?? 0);
+      // Un objet de métier montre ses étoiles sur sa case (Book 25 §4.2), et une arme électrique sa charge.
+      const n = etoilesDe(cle);
+      // Sur une case de 46 px, « 4★ » se lit mieux que cinq étoiles serrées ; la fiche les montre toutes.
+      const etoiles = n === null ? "" : `<span class="etoiles-case" title="${etoilesTexte(n)}">${n}★</span>`;
+      const charge = this.partCharge(cle);
+      const barre = charge === null ? "" : `<span class="charge-case" aria-hidden="true"><span style="width:${Math.round(charge * 100)}%"></span></span>`;
+      const nom = nommer(cle, 1);
+      return `<button type="button" class="case ${classe} ${this.selection === cle ? "choisie" : ""}" data-objet="${cle}"
+        title="${nom} (${kg(pile)} kg) — ${d.description}" aria-label="${nom}">${icone(typeDe(cle))}${etoiles}${barre}${badge ? `<span class="badge">${badge}</span>` : ""}</button>`;
     };
     const cases = [
       (this.inventaire.gourde ?? 0) > 0 ? case_("gourde", g.litres > 0 ? `${kg(g.litres)} L` : "vide", g.contenu === "brute" && g.litres > 0 ? "brute" : "") : "",
@@ -1398,7 +1424,8 @@ export class Hud {
     let fiche = `<p class="indice">Touche un objet pour le voir.</p>`;
     const s = this.selection;
     if (s) {
-      const d = OBJETS[s];
+      const t = typeDe(s);
+      const d = OBJETS[t];
       const n = Math.max(1, this.inventaire[s] ?? 0);
       let detail = d.description;
       // Une seule rangée d'actions, toujours visible sous la tête de la fiche (avis de Sally, 2026-10-08) :
@@ -1437,13 +1464,14 @@ export class Hud {
       if (arme) {
         const etat = etatArme(s, this.usureArmes);
         if (etat < 1) {
-          actions.push(`<button type="button" data-action="reparer" title="Remettre à neuf ${ATELIERS_REPARATION_NOMS[MATIERE_ARME[s] ?? "metal"]}">Réparer</button>`);
-          infos.push(`<p class="info-objet">Réparer : ${ATELIERS_REPARATION_NOMS[MATIERE_ARME[s] ?? "metal"]}, chez toi.${etat < PLAFOND_FORTUNE ? " Rafistoler : partout, avec une ficelle et des chiffons (elle reste abîmée)." : ""}</p>`);
+          actions.push(`<button type="button" data-action="reparer" title="Remettre à neuf ${ATELIERS_REPARATION_NOMS[MATIERE_ARME[t] ?? "metal"]}">Réparer</button>`);
+          infos.push(`<p class="info-objet">Réparer : ${ATELIERS_REPARATION_NOMS[MATIERE_ARME[t] ?? "metal"]}, chez toi.${etat < PLAFOND_FORTUNE ? " Rafistoler : partout, avec une ficelle et des chiffons (elle reste abîmée)." : ""}</p>`);
           if (etat < PLAFOND_FORTUNE) actions.push(`<button type="button" data-action="reparer-fortune" title="Une ficelle et des chiffons : elle tient, mais reste abîmée">Rafistoler</button>`);
         }
       }
       // Vestiges, lot 1 : ce que donne le démontage, et l'outil qu'il demande.
-      const dem = DEMONTAGE[s];
+      // Un exemplaire étoilé ne se démonte pas (il se reforge, Book 25 §4.4).
+      const dem = s === t ? DEMONTAGE[t] : undefined;
       if (dem) {
         const donne = (Object.entries(dem.donne) as [TypeObjet, number][]).map(([t, k]) => nommer(t, k)).join(", ");
         const outils = (Object.entries(dem.qualites) as [Qualite, number][]).map(([q, niv]) => `${NOMS_QUALITES[q]} ${niv}`).join(", ");
@@ -1457,15 +1485,24 @@ export class Hud {
         actions.push(`<button type="button" class="a-part" data-action="jeter1">Jeter${n > 1 ? " 1" : ""}</button>`);
         if (n > 1) actions.push(`<button type="button" data-action="jeterTout">Jeter les ${n}</button>`);
       }
+      // La charge d'une arme électrique, en barre bleue (Book 25 §5.4) : le pack se vide à chaque décharge.
+      const charge = this.partCharge(s);
+      if (charge !== null) {
+        const wh = this.chargeArmes[s];
+        infos.push(`<span class="charge-batterie charge-arme"><span class="charge-barre"><span style="width:${Math.round(charge * 100)}%"></span></span> ${charge <= 0 ? "Plus de courant : un gourdin court." : wh === undefined ? "Pleine" : `${virguleWh(wh)} Wh`}</span>`);
+      }
+      // Les étoiles d'un objet de métier (Book 25 §4.2), en clair : « ★★★☆☆ ».
+      const etoiles = etoilesDe(s);
+      const etoilesFiche = etoiles === null ? "" : ` <span class="etoiles-fiche" title="${etoiles} étoile${etoiles > 1 ? "s" : ""} sur 5">${etoilesTexte(etoiles)}<span class="etoiles-vides">${"☆".repeat(5 - etoiles)}</span></span>`;
       const famille = d.famille ? ` · ${NOMS_FAMILLES_VESTIGES[d.famille]}` : "";
       fiche = `
-        <div class="fiche-tete">${icone(s, 36)}<div><strong>${nommer(s, n)}</strong>
-          <small>${kg(d.poids * n + (s === "gourde" ? g.litres : 0))} kg · valeur ≈ ${formaterWotts(energieGrise(s))}${famille}${enMain}</small></div></div>
+        <div class="fiche-tete">${icone(t, 36)}<div><strong>${nommer(t, n)}${etoilesFiche}</strong>
+          <small>${kg(d.poids * n + (s === "gourde" ? g.litres : 0))} kg · valeur ≈ ${formaterWotts(energieGrise(t))}${famille}${enMain}</small></div></div>
         ${actions.length ? `<div class="actions-objet">${actions.join("")}</div>` : ""}
         <p class="description">${detail}</p>
         ${caracs}
         ${infos.join("")}
-        <p class="energie-grise">${this.texteEnergieGrise(s)}</p>`;
+        <p class="energie-grise">${this.texteEnergieGrise(t)}</p>`;
     }
 
     const capacite = capaciteDe(this.inventaire);
@@ -1500,7 +1537,7 @@ export class Hud {
     }
     for (const b of this.sac.querySelectorAll<HTMLButtonElement>(".case")) {
       b.addEventListener("click", () => {
-        const type = b.dataset.objet as TypeObjet;
+        const type = b.dataset.objet as CleObjet;
         this.selection = this.selection === type ? null : type;
         this.dessinerSac();
       });
@@ -1509,13 +1546,13 @@ export class Hud {
       b.addEventListener("click", () => {
         const action = b.dataset.action;
         if (action === "boire") this.actions.boire();
-        if (action === "manger" && this.selection) this.actions.manger(this.selection);
+        if (action === "manger" && this.selection) this.actions.manger(typeDe(this.selection));
         if (action === "lumiere") this.actions.lumiere();
         if (action === "panser") this.actions.panser();
         if (action === "equiper" && this.selection) this.actions.equiper(this.selection);
         if (action === "desequiper") this.actions.equiper(null);
         if ((action === "reparer" || action === "reparer-fortune") && this.selection) this.actions.reparer(this.selection, action === "reparer-fortune");
-        if (action === "demonter" && this.selection) this.actions.demonter(this.selection);
+        if (action === "demonter" && this.selection) this.actions.demonter(typeDe(this.selection));
         if ((action === "jeter1" || action === "jeterTout") && this.selection) {
           this.actions.jeter(this.selection, action === "jeter1" ? 1 : (this.inventaire[this.selection] ?? 1));
         }
@@ -1525,16 +1562,29 @@ export class Hud {
 
   /** Les caractéristiques d'une arme, en barres (la meilleure arme du jeu remplit la barre). */
   /** L'usure des armes (coups qui restent ; absente : neuve), Book 23 §4.3. */
-  private usureArmes: Partial<Record<TypeObjet, number>> = {};
+  private usureArmes: Partial<Record<CleObjet, number>> = {};
 
-  majUsure(usure: Partial<Record<TypeObjet, number>>, evenement?: { objet: TypeObjet; etat: "abimee" | "cassee" | "reparee" }): void {
+  /** La charge des armes électriques, par exemplaire (Wh qui restent ; absente : pleine), Book 25 §5.4. */
+  private chargeArmes: Partial<Record<CleObjet, number>> = {};
+
+  /** La part de charge d'une arme électrique (0 à 1), ou null si ce n'est pas une arme électrique. */
+  private partCharge(cle: CleObjet): number | null {
+    const a = armeDeCle(cle);
+    if (!a?.electrique) return null;
+    const max = capaciteChargeArme(a);
+    const wh = this.chargeArmes[cle];
+    return wh === undefined ? 1 : Math.max(0, Math.min(1, wh / max));
+  }
+
+  majUsure(usure: Partial<Record<CleObjet, number>>, evenement?: { objet: CleObjet; etat: "abimee" | "cassee" | "reparee" }, charge?: Partial<Record<CleObjet, number>>): void {
     this.usureArmes = usure;
+    if (charge) this.chargeArmes = charge;
     this.dernierSac = "";
     if (!this.sac.hidden) this.dessinerSac();
     if (evenement?.etat === "reparee") this.message(`${nommer(evenement.objet, 1)} : réparée.`);
   }
 
-  private ficheArme(a: NonNullable<ReturnType<typeof caracteristiquesArme>>, objet: TypeObjet): string {
+  private ficheArme(a: NonNullable<ReturnType<typeof caracteristiquesArme>>, objet: CleObjet): string {
     const maxDegats = Math.max(...ARMES.map((x) => x.degatsTorse));
     const maxVitesse = Math.max(...ARMES.map((x) => 1000 / x.coup));
     const maxAllonge = Math.max(...ARMES.map((x) => x.allonge));
@@ -1544,12 +1594,23 @@ export class Hud {
     const coupsPourTomber = Math.ceil(RESISTANCE_TORSE / a.degats);
     const etat = etatArme(objet, this.usureArmes);
     const abimee = etat < SEUIL_ABIMEE;
+    // L'électrique ne fait rien au torse : on montre ce qu'il fait, le raidissement (Book 25 §8.2).
+    const premiere =
+      a.type === "electrique"
+        ? barre("Raidit", (a.raidi ?? 0) / ETOILES[5].raidi, `${virgule(a.raidi ?? 0)} s`, "Une décharge courte : il lâche et ne bouge plus pendant ce temps")
+        : barre("Dégâts", a.degats / maxDegats, virgule(a.degats), `${coupsPourTomber} coup${coupsPourTomber > 1 ? "s" : ""} au torse pour le faire tomber`);
+    const tete =
+      a.type === "electrique"
+        ? "☠ Maintenu sur un Éteint raidi ou à terre : il s'éteint."
+        : a.tueALaTete
+          ? "☠ Un coup appuyé à la tête l'arrête net."
+          : "Ne tue pas d'un coup à la tête : il faut l'achever au sol.";
     return `<div class="caracs-arme">
-      ${barre("Dégâts", a.degats / maxDegats, virgule(a.degats), `${coupsPourTomber} coup${coupsPourTomber > 1 ? "s" : ""} au torse pour le faire tomber`)}
+      ${premiere}
       ${barre("Vitesse", a.vitesse / maxVitesse, `${virgule(a.coup, 2)} s`, `Un coup simple dure ${virgule(a.coup, 2)} s, un coup appuyé ${virgule(a.coupAppuye, 2)} s`)}
       ${barre("Allonge", a.allonge / maxAllonge, `${virgule(a.allonge)} m`, "Jusqu'où il porte")}
       ${barre("Solidité", etat, abimee ? "abîmée" : `${Math.round(etat * 100)} %`, abimee ? "Abîmée : ses coups portent 30 % moins fort. Répare-la." : "Elle s'use à chaque coup qui touche ; à zéro, elle casse.")}
-      <span class="tete-carac">${a.tueALaTete ? "☠ Un coup appuyé à la tête l'arrête net." : "Ne tue pas d'un coup à la tête : il faut l'achever au sol."}</span>
+      <span class="tete-carac">${tete}</span>
       <span class="tete-carac">${TYPES_DEGATS[a.type]}</span>
     </div>`;
   }
@@ -1559,7 +1620,7 @@ export class Hud {
   private coffre: InstallationVue | null = null;
   /** Ranger ou sortir un seul objet, ou toute la pile. */
   /** L'objet choisi dans le coffre (avis de Sally, 2026-10-09), le dernier toucher (pour le double toucher). */
-  private choixCoffre: { sens: "deposer" | "prendre"; objet: TypeObjet } | null = null;
+  private choixCoffre: { sens: "deposer" | "prendre"; objet: CleObjet } | null = null;
   private dernierToucherCoffre = { cle: "", t: 0 };
   private dernierCoffre = "";
 
@@ -1603,12 +1664,12 @@ export class Hud {
     // Toucher une case la choisit : son nom s'affiche dans la bande, avec ses boutons (avis de Sally, 2026-10-09).
     const choix = this.choixCoffre;
     const cases = (inv: Inventaire, sens: "deposer" | "prendre") =>
-      (Object.keys(inv) as TypeObjet[])
+      (Object.keys(inv) as CleObjet[])
         .filter((t) => (inv[t] ?? 0) > 0 && !(sens === "deposer" && t === "sac_a_dos"))
         .map((t) => {
           const n = inv[t] ?? 0;
           const choisie = choix?.sens === sens && choix.objet === t;
-          return `<button type="button" class="case${choisie ? " choisie" : ""}" data-sens="${sens}" data-objet="${t}" aria-pressed="${choisie}" title="${OBJETS[t].nom} (${kg(OBJETS[t].poids * n)} kg)" aria-label="${OBJETS[t].nom}">${icone(t)}${n > 1 ? `<span class="badge">×${n}</span>` : `${estDecharge && sens === "prendre" ? `<span class="badge">${kg(OBJETS[t].poids)} kg</span>` : ""}`}</button>`;
+          return `<button type="button" class="case${choisie ? " choisie" : ""}" data-sens="${sens}" data-objet="${t}" aria-pressed="${choisie}" title="${OBJETS[typeDe(t)].nom} (${kg(OBJETS[typeDe(t)].poids * n)} kg)" aria-label="${OBJETS[typeDe(t)].nom}">${icone(typeDe(t))}${n > 1 ? `<span class="badge">×${n}</span>` : `${estDecharge && sens === "prendre" ? `<span class="badge">${kg(OBJETS[typeDe(t)].poids)} kg</span>` : ""}`}</button>`;
         })
         .join("") || `<p class="indice">Rien.</p>`;
     // La bande : l'objet choisi, où il est, et ce qu'on peut en faire.
@@ -1617,7 +1678,7 @@ export class Hud {
     if (choix) {
       const inv = choix.sens === "deposer" ? this.inventaire : contenu;
       const n = inv[choix.objet] ?? 0;
-      const d = OBJETS[choix.objet];
+      const d = OBJETS[typeDe(choix.objet)];
       const ou = choix.sens === "deposer" ? "sur toi" : estDecharge ? "dans la décharge" : "dans le coffre";
       if (n <= 0) classeBande = " absent";
       let boutons = "";
@@ -1634,9 +1695,9 @@ export class Hud {
       }
       const note =
         estDecharge && choix.sens === "deposer" ? " · la décharge ne reprend rien" : n > 0 && !boutons.includes("disabled") ? "" : n > 0 ? ` · ${choix.sens === "deposer" ? "coffre plein" : "sac plein"}` : "";
-      bande = `${icone(choix.objet, 32)}<span class="nom"><strong>${d.nom}</strong><small>${n > 1 ? `×${n} · ` : ""}${kg(d.poids * Math.max(1, n))} kg · ${ou}${note}</small></span><span class="boutons">${boutons}</span>`;
+      bande = `${icone(typeDe(choix.objet), 32)}<span class="nom"><strong>${nommer(choix.objet, 1)}</strong><small>${n > 1 ? `×${n} · ` : ""}${kg(d.poids * Math.max(1, n))} kg · ${ou}${note}</small></span><span class="boutons">${boutons}</span>`;
     }
-    const plein = (place: number, inv: Inventaire) => Object.keys(inv).length > 0 && place < Math.min(...(Object.keys(inv) as TypeObjet[]).map((t) => OBJETS[t].poids));
+    const plein = (place: number, inv: Inventaire) => Object.keys(inv).length > 0 && place < Math.min(...(Object.keys(inv) as CleObjet[]).map((t) => OBJETS[typeDe(t)].poids));
     const html = `
       <header><h2>${estDecharge ? "Décharge" : "Coffre"}</h2><button type="button" class="fermer" aria-label="Fermer">✕</button></header>
       <div class="colonnes">
@@ -1651,7 +1712,7 @@ export class Hud {
     p.innerHTML = html;
     p.querySelectorAll<HTMLElement>(".grille").forEach((g, i) => (g.scrollTop = defil[i] ?? 0));
     p.querySelector(".fermer")!.addEventListener("click", () => this.ouvrir(p, false));
-    const deplacer = (sens: "deposer" | "prendre", objet: TypeObjet, tout: boolean) => {
+    const deplacer = (sens: "deposer" | "prendre", objet: CleObjet, tout: boolean) => {
       if (estDecharge && sens === "deposer") return;
       const dispo = (sens === "deposer" ? this.inventaire[objet] : contenu[objet]) ?? 0;
       if (dispo <= 0) return;
@@ -1662,7 +1723,7 @@ export class Hud {
     for (const b of p.querySelectorAll<HTMLButtonElement>(".case[data-sens]")) {
       b.addEventListener("click", () => {
         const sens = b.dataset.sens as "deposer" | "prendre";
-        const objet = b.dataset.objet as TypeObjet;
+        const objet = b.dataset.objet as CleObjet;
         const cle = `${sens}:${objet}`;
         const maintenant = performance.now();
         // Deux touchers rapides : toute la pile, d'un coup (le raccourci de l'habitué).
