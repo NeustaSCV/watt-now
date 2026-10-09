@@ -12,7 +12,7 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
-## 0.7.2 · en préparation
+## 0.7.2 · prête à déployer
 
 - **Chaque pièce se découvre** : à la Coopérative et dans la boutique de la halte, ce que ton personnage ne voit pas est assombri, « en souvenir » : le décor reste lisible, mais aucun Éteint ni joueur n'y apparaît. Une porte fermée cache ce qu'il y a derrière ; ouverte, on voit dans son prolongement, et presque toute la pièce depuis le seuil.
 - **La lampe ne traverse plus les murs** : la nuit ou dans une pièce noire, elle n'éclaire que ce que tu vois. Par une porte ouverte, sa lumière entre en cône dans la pièce d'à côté.
@@ -21,6 +21,7 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 - **Une porte qu'un Éteint pousse tremble**, et l'onde devient rouge. À moins de 3 m derrière un mur, on le sent : une onde rouge, un souffle.
 - **Le cercle de signature dit sa vraie portée pièce par pièce**, à la Coopérative : bien plus petit derrière une porte fermée, moitié moins par une porte ouverte. Et il ne se cache plus sous le carrelage du libre-service.
 - **À la halte, chacun sa vue** : on ne voit plus un autre joueur, un coup ou une pierre lancée de l'autre côté des murs de la boutique.
+- **F referme la fiche Examiner** qu'il a ouverte (B sur téléphone), au lieu de la laisser ouverte.
 
 ---
 
