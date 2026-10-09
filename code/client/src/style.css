@@ -5238,3 +5238,21 @@ body:has(#hud .voile-pause:not([hidden])) #hud .tactile {
     margin: 0;
   }
 }
+
+/* 0.7, chantier 6 : le carnet note la dernière idée venue (« Dernière idée : Tresser une corde »), une ligne
+   discrète sous les objectifs, comme une note au crayon. Jamais coupée : elle passe à la ligne au besoin. */
+#hud .carnet .derniere-idee {
+  margin: 2px 12px 8px;
+  padding: 5px 0 0;
+  border-top: 1px dashed rgba(59, 42, 30, 0.3);
+  font-size: 12px;
+  line-height: 1.35;
+  font-style: italic;
+  color: var(--canard);
+  overflow-wrap: anywhere;
+}
+@media (orientation: landscape) and (max-height: 520px) and (pointer: coarse) {
+  #hud .carnet .derniere-idee {
+    font-size: 11px;
+  }
+}

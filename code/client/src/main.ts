@@ -507,6 +507,8 @@ function installer(message: Bienvenue): void {
   hud.majWotts(message.wotts);
   hud.majTutoriel(message.tutoriel);
   hud.majQuetes(message.quetes);
+  // Le carnet note la dernière idée venue (0.7, chantier 6).
+  if (message.progression) hud.majIdees(message.progression.devoilees);
   armeEquipee = message.arme;
   hud.majArme(armeEquipee);
   aides.charger(message.moi.pseudo);
@@ -940,6 +942,7 @@ function recevoir(message: MessageServeur): void {
     case "devoilement":
       hud.majProgression(message.progression);
       if (message.texte) hud.message(message.texte, "aide");
+      hud.majIdees(message.progression.devoilees, message.nouvelles);
       return;
     case "lecons_possibles":
       lecons.choisir(message.a, message.recettes);

@@ -18,6 +18,7 @@
     "verif": "tsc -p tsconfig.json",
     "bilan": "node --disable-warning=ExperimentalWarning scripts/bilan-mesures.ts",
     "equilibre": "node --disable-warning=ExperimentalWarning scripts/equilibre.ts",
+    "rythme": "node --disable-warning=ExperimentalWarning scripts/rythme.ts",
     "reglages": "node --disable-warning=ExperimentalWarning scripts/reglages.ts"
   },
   "dependencies": {

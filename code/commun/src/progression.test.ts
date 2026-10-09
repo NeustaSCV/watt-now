@@ -117,6 +117,22 @@ test("le seuil S ouvre l'atelier et l'arme de base de sa famille, avec leurs mai
   assert.ok(voltaique.has("banc_recharge") && voltaique.has("matraque_fortune"));
 });
 
+test("chantier 6 : pendant le tutoriel, le seuil S attend l'étape « La famille » (l'Éteint du script ne compte pas)", () => {
+  const abriEtEteint = { installations: new Map([["abri", 1]]), faits: { "detruit:hache": 1 } };
+  // Étape 8 (« Le premier Éteint ») : l'abri est posé, l'Éteint détruit, mais le métier attend encore.
+  assert.ok(!apres(etat({ ...abriEtEteint, tuto: 7 })).has("forge"));
+  assert.ok(apres(etat({ ...abriEtEteint, tuto: 9 })).has("forge"));
+  // Une nuit dormie hors du script compte toujours ; et sans tutoriel, l'Éteint suffit.
+  assert.ok(apres(etat({ installations: new Map([["abri", 1]]), faits: { nuit: 1 }, tuto: 3 })).has("forge"));
+  assert.ok(apres(etat(abriEtEteint)).has("forge"));
+});
+
+test("chantier 6 : la quête en cours dévoile ce qu'elle fait fabriquer, même ce que sa ligne de l'arbre ne dit pas", () => {
+  // « Forger une lame » demande la lame de ressort : elle se dévoile avec la quête, et sa forge avec elle.
+  const d = apres(etat({ quetes: new Set(["lame"]) }));
+  assert.ok(d.has("lame_forgee") && d.has("forge"));
+});
+
 test("le métier commence à l'atelier : une matière rare trouvée avant ne dévoile rien de sa famille", () => {
   const avant = apres(etat({ vus: new Set(["lame_ebrechee"]) }));
   assert.ok(!avant.has("reforger_lame") && !avant.has("forge"));

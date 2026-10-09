@@ -11,6 +11,7 @@
 
 import { RECETTES, estApprise, estHorsFamille, recette, type Recette, type SavoirRecettes } from "./recettes.ts";
 import type { TypeObjet } from "./objets.ts";
+import { QUETE, type Condition, type Quete } from "./quetes.ts";
 import type { Famille } from "./regles.ts";
 
 // ---------- Les déclencheurs ----------
@@ -275,6 +276,89 @@ export function maillons(r: Recette): Recette[] {
   return liste;
 }
 
+// ---------- Ce que demandent le tutoriel et le carnet (règle 5) ----------
+
+/**
+ * Les étapes du tutoriel qui demandent une fabrication (Book 14 §4.2) : le feu (étape 3), la hache (6), l'abri (7) et
+ * l'atelier de famille (10). Une étape atteinte dévoile ce qu'elle demande : le tutoriel ne demande jamais une
+ * recette invisible.
+ */
+export function recettesDeLEtape(etape: number, famille: Famille): string[] {
+  switch (etape) {
+    case 2:
+      return ["feu_de_camp"];
+    case 5:
+      return ["hache"];
+    case 6:
+      return ["abri"];
+    case 9:
+      return [ATELIER[famille]];
+    default:
+      return [];
+  }
+}
+
+/**
+ * Les faits du carnet qui demandent une fabrication : le plat cuisiné, le foyer Dakota (et son bâton à fouir), le tir à
+ * la tête (les flèches, les carreaux), le charbon (la meule).
+ */
+const FAITS_A_FABRIQUER: Readonly<Record<string, readonly string[]>> = {
+  plat_mange: ["cepes_poeles", "pommes_cuites", "volaille_cepes"],
+  foyer_dakota: ["foyer_dakota", "baton_fouir"],
+  "tete:fleche": ["fleches_durcies"],
+  "tete:carreau": ["carreaux_os"],
+  defourne: ["charbonniere"],
+};
+
+/** La recette qui pose cette installation. */
+function recetteDInstallation(type: string): Recette | undefined {
+  return RECETTES.find((r) => "installation" in r.produit && r.produit.installation === type);
+}
+
+/** Ce qu'une condition du carnet demande de fabriquer : la voie la plus simple, la première qui passe par une recette. */
+function recettesDeCondition(c: Condition): string[] {
+  switch (c.a) {
+    case "installation": {
+      const r = recetteDInstallation(c.type);
+      return r ? [r.id] : [];
+    }
+    case "fait":
+      return [...(FAITS_A_FABRIQUER[c.fait] ?? []), ...(c.fait.startsWith("fabrique:") ? [c.fait.slice("fabrique:".length)] : [])];
+    case "faits": {
+      const f = c.faits.find((x) => x.startsWith("fabrique:") || FAITS_A_FABRIQUER[x]);
+      return f ? recettesDeCondition({ a: "fait", fait: f, but: 1 }) : [];
+    }
+    case "objet": {
+      const r = recetteDeBase(c.types[0]!);
+      return r ? [r.id] : [];
+    }
+    case "un_de":
+      for (const x of c.conditions) {
+        const ids = recettesDeCondition(x);
+        if (ids.length > 0) return ids;
+      }
+      return [];
+    default:
+      return [];
+  }
+}
+
+/** Ce qu'une quête du carnet demande de fabriquer (règle 5) : elle le dévoile dès qu'elle est en cours. */
+export function recettesDeLaQuete(q: Quete): string[] {
+  return [...new Set(q.objectifs.flatMap((o) => recettesDeCondition(o.condition)).filter((id) => PROGRESSION[id] !== undefined))];
+}
+
+/** Tout ce que demandent le tutoriel (ses étapes atteintes) et le carnet (ses quêtes en cours ou finies). */
+export function recettesDemandees(e: Pick<EtatPourDevoilement, "famille" | "quetes" | "tuto">): Set<string> {
+  const ids = new Set<string>();
+  if (e.tuto !== null) for (let etape = 0; etape <= Math.min(e.tuto, 11); etape++) for (const id of recettesDeLEtape(etape, e.famille)) ids.add(id);
+  for (const id of e.quetes) {
+    const q = QUETE.get(id);
+    if (q) for (const r of recettesDeLaQuete(q)) ids.add(r);
+  }
+  return ids;
+}
+
 // ---------- L'état qu'on regarde ----------
 
 /** Ce que le serveur sait du personnage, pour décider ce qui se dévoile. */
@@ -321,7 +405,10 @@ function aFabrique(e: EtatPourDevoilement, id: string): number {
 /** Le seuil S : un toit, et un premier danger surmonté ; ou l'étape « La famille » du tutoriel ; ou le filet du temps. */
 export function seuilAtteint(e: EtatPourDevoilement): boolean {
   const abri = e.installations.has("abri") || (e.faits["fabrique:abri"] ?? 0) > 0;
-  const danger = somme(e.faits, "detruit:") >= 1 || (e.faits.nuit ?? 0) >= 1;
+  // L'élève du tutoriel : le seuil tombe exactement à l'étape « La famille » (§2.6), pas deux étapes plus tôt parce
+  // que l'Éteint du tutoriel (étape 8) suit l'abri (étape 7). Une nuit dormie hors du script compte toujours.
+  const enTutoriel = e.tuto !== null && e.tuto < 12;
+  const danger = (!enTutoriel && somme(e.faits, "detruit:") >= 1) || (e.faits.nuit ?? 0) >= 1;
   return (abri && danger) || (e.tuto !== null && e.tuto >= 9) || e.minutes >= FILET_SEUIL_MIN;
 }
 
@@ -369,8 +456,10 @@ export function declencheurVrai(d: Declencheur, e: EtatPourDevoilement): boolean
 }
 
 /** La ligne seule dit-elle oui (sans la garde du métier ni la chaîne) ? */
-function ligneVraie(id: string, ligne: LigneProgression, e: EtatPourDevoilement): boolean {
+function ligneVraie(id: string, ligne: LigneProgression, e: EtatPourDevoilement, demandees: ReadonlySet<string>): boolean {
   if ((e.faits[`vu_faire:${id}`] ?? 0) > 0) return true;
+  // Le tutoriel et le carnet ne demandent jamais une recette invisible (règle 5), même avant l'atelier.
+  if (demandees.has(id)) return true;
   // Ce qu'on a déjà fait (ou posé), on y a forcément pensé (un personnage d'avant la 0.7, Q4).
   if (recette(id) && aFabrique(e, id) > 0) return true;
   const filet = FILET_MINUTES[ligne.palier];
@@ -402,13 +491,14 @@ export function aDevoiler(e: EtatPourDevoilement): string[] {
   };
   // Une leçon ou un manuel dévoile en même temps qu'il apprend (§3.3).
   for (const r of RECETTES) if (estHorsFamille(r, e.famille) && estApprise(r, savoir)) ajouter(r.id);
+  const demandees = recettesDemandees(e);
   // Un dévoilement peut en ouvrir un autre (« une fois l'arbalète dévoilée ») : on repasse tant que ça bouge.
   for (let passe = 0; passe < 8; passe++) {
     const avant = nouvelles.length;
     const vue = { ...e, devoilees };
     for (const [id, ligne] of Object.entries(PROGRESSION)) {
       if (devoilees.has(id) || !accessible(id, e.famille, savoir)) continue;
-      if (ligneVraie(id, ligne, vue)) ajouter(id);
+      if (ligneVraie(id, ligne, vue, demandees)) ajouter(id);
     }
     if (nouvelles.length === avant) break;
   }
