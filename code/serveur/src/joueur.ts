@@ -80,6 +80,8 @@ import { Tir, type ContexteTir } from "./tir.ts";
 import { Sechage, accelerationFleches } from "./arc.ts";
 // L'arbre de progression (0.7) : les recettes dévoilées (serveur/src/devoilement.ts).
 import { SuiviDevoilement, type Constat, type SourceDevoilement } from "./devoilement.ts";
+// La couche de déchets (0.7) : ramasser, fouiller, démonter (serveur/src/couche-dechets.ts).
+import { CoucheDechets } from "./couche-dechets.ts";
 import { REDRESSEUR } from "../../commun/src/arc.ts";
 import { Forge, type ContexteForge } from "./forge.ts";
 import { declencher, declencheurNeuf, definitionDeclencheur, estDeclencheur, type DeclencheurPose } from "./declencheurs.ts";
@@ -253,6 +255,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
   savoir: Savoir;
   /** Les recettes dévoilées (l'arbre de progression, 0.7) : serveur/src/devoilement.ts. */
   private devoilement!: SuiviDevoilement;
+  /** La couche de déchets du lieu où l'on est (0.7) : serveur/src/couche-dechets.ts. */
+  private dechets!: CoucheDechets;
   /** Le monde est prévenu de chaque fabrication (« voir faire », à 5 m) ; null : personne n'écoute. */
   surFabrication: ((recette: string) => void) | null = null;
   private bouge = false;
@@ -469,6 +473,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       if (n > 0 && this.charges[b] === undefined) this.charges[b] = Math.min(CHARGE_TROUVEE[b] * n, capacite(b, n));
     }
     this.devoilement = this.creerDevoilement();
+    this.dechets = this.creerDechets();
   }
 
   bienvenue(debutMonde: number): Bienvenue {
@@ -506,6 +511,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       pret: this.tir.pret,
       savoir: { apprises: [...this.savoir.apprises], manuels: [...this.savoir.manuels] },
       progression: this.devoilement.vue(),
+      dechets: this.dechets.vue(),
       ...(this.lieu === "cooperative"
         ? { leurres: this.cooperatives.leurresActifs(this.compte.id, this.maintenant()), etatCoop: this.cooperatives.vue(this.compte.id) }
         : {}),
@@ -648,6 +654,9 @@ export class Joueur implements Voyageur, ParticipantLecon {
         return this.electricite.manivelle(message.objet);
       case "lire":
         this.lire(message.objet);
+        return;
+      case "dechets":
+        if (!this.voyage) this.dechets.recevoir(message.op);
         return;
       case "tutoriel_passer":
         if (!this.tuto) return;
@@ -1012,6 +1021,27 @@ export class Joueur implements Voyageur, ParticipantLecon {
   }
 
   /** Ce que le joueur prête à la forge (forge.ts) : rien que des accès, aucune règle. */
+  /** La couche de déchets (0.7) : ce qu'elle demande au joueur. */
+  private creerDechets(): CoucheDechets {
+    const j = this;
+    return new CoucheDechets({
+      id: j.compte.id,
+      base: j.base,
+      maintenant: () => j.maintenant(),
+      lieu: () => (j.voyage ? null : j.lieu),
+      position: () => j.position,
+      inventaire: () => j.inventaire,
+      litresGourde: () => j.gourde.litres,
+      ajouter: (objets) => j.ajouterPlusieurs(objets),
+      commencer: (libelle, duree, appliquer, bruit) => j.commencer(libelle, duree, appliquer, 0, bruit),
+      info: (t) => j.info(t),
+      envoyer: (m) => j.envoyer(m),
+      sacTropLourd: () => j.sacTropLourd(),
+      vivant: () => j.vivant,
+      noterFait: (f) => j.noterFait(f),
+    });
+  }
+
   private contexteForge(): ContexteForge {
     const j = this;
     return {
@@ -1786,6 +1816,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
 
   /** Le joueur se déconnecte : il quitte la halte (hors ligne, il est sur la carte, Book 01 §2 bis). */
   partir(): void {
+    this.dechets.partir();
     this.halte.sortir(this);
     if (this.lieu === "cooperative") this.cooperatives.de(this.compte.id).sortir(this);
     this.comptoir.sortir(this.envoyer);
@@ -2252,6 +2283,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
     }
     // Les ébauches d'arc sèchent (Book 25 §3.3).
     this.sechage.avancer();
+    // La couche de déchets : renouvellement, balises, ordures jetées (au plus toutes les 5 s).
+    this.dechets.tick(instant);
 
     // Feux : ils brûlent leur bois.
     const envoyerFeux = instant - this.dernierEnvoiFeux >= INTERVALLE_FEUX;
