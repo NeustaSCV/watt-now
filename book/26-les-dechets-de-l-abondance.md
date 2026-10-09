@@ -1,7 +1,7 @@
 # Book 26 — Les déchets de l'Abondance
 
 > Document de conception · version 0.1 · 2026-10-09
-> Statut : **décisions du porteur prises (2026-10-09), construit en 0.7** côté serveur, catalogue et icônes ; **affichage au sol provisoire**, le vrai rendu en amas attend un essai sur iPhone (§9).
+> Statut : **décisions du porteur prises (2026-10-09), construit en 0.7** : serveur, catalogue, icônes et **rendu au sol en amas** (§9, après l'essai sur l'iPhone du porteur).
 > Demande du porteur : « Il va falloir créer de nouveaux objets dans le monde en cohérence avec les nouveaux crafts. Il faut rajouter beaucoup d'objets différents et il va falloir faire en sorte qu'il y en ait partout. Nous sortons d'un monde d'abondance, il doit y avoir des déchets partout. La grande majorité sans valeur. »
 > Né de deux brouillons de travail : la proposition « objets et déchets » (vestiges, lot 2) et son chiffrage graphique. S'appuie sur les books [01](01-les-trois-feux.md) §6 (valeur), [02](02-crafting.md) §5 (vestiges, lot 1), [05](05-sante-et-soins.md) §4 (la conserve bombée), [12](12-portage-vetements-protections.md) (poids), [15](15-univers.md) §1 et §4 (ton, ni marque ni personne réelle), [17](17-architecture-technique.md) §4 et §5 (calcul à la demande, Pi 4), [18](18-direction-artistique.md) §2, [21](21-perimetre-phase-0.md) §5.3 (palette, budgets) et [25](25-le-metier-des-familles.md) §2.5 (la règle d'or).
 
@@ -375,30 +375,42 @@ Banc de charge du serveur (`code/scripts/banc-charge.ts`, option `--dechets` : c
 
 ## 9. Le rendu au sol
 
-### 9.1 Ce qui est dans la 0.7 : un affichage provisoire
+### 9.1 Ce qui est dans la 0.7 : le rendu en amas
 
-`code/client/src/rendu/dechets-provisoire.ts` reconstruit les amas de la graine du lieu et les dessine **en lots** : des **boîtes teintées** pour les objets, des **sacs sombres** pour les conteneurs, des **blocs** pour les points du monde. Juste assez pour voir, ramasser et fouiller.
+L'affichage provisoire du début de la 0.7 (des boîtes teintées) est remplacé par le vrai rendu, dans `code/client/src/rendu/dechets/` : `apparence.ts` (chaque objet : silhouette, teinte, échelle), `silhouettes.ts`, `points.ts` (conteneurs et points du monde), `eclats.ts`, `couche.ts` (le dessin, la visée, la liste de fouille). Le client reconstruit tout de la graine du lieu ; le serveur n'envoie que la clé, les pièces prises et les points.
 
-### 9.2 Le rendu visé (chiffrage graphique, décisions du porteur)
-
-Il viendra **après un essai sur l'iPhone** du porteur, avec la réduction des appels de dessin (§9.4).
-
-- **Des amas, pas des pièces isolées.** Au zoom normal, 1 m ≈ 40 px sur l'iPhone 13 mini : une canette de 12 cm fait 5 px et ne se lit pas ; l'amas, lui, se lit comme « des ordures ». Une tache de crasse au sol et quelques pièces serrées.
-- **Des silhouettes partagées, toutes celles qu'il faut** (décision Q-G5) : on ne dessine pas 92 modèles. Chaque objet est une **silhouette**, une **teinte** (celle de son icône) et une **échelle**. Seize silhouettes au chiffrage : cylindre couché, boîte, plaque plate, chiffon froissé, coussin, barre, roue, ressort, petit appareil, lame plate, cadre de vélo, sac plastique, cylindre debout, cône, grille, boule. Plus **les modèles des points du monde** (sac-poubelle, poubelle renversée, tas de gravats, coffre entrouvert, vélo couché, mobylette, trampoline, machine à laver, frigo connecté, carcasse), en assemblages à couleurs par sommet, comme la décharge.
-- **Les couleurs** : les teintes de l'Abondance (crème, rouge publicitaire, bleu canard, ocre) sont réservées aux vestiges (Book 21 §5.3.1) ; posé à sa taille (× 1,15 comme les outils tenus), l'objet garde ses couleurs franches.
-- **L'éclat de repère** : à moins de 8 m, chaque objet ramassable **scintille** de temps en temps (une petite étoile blanc chaud `#FFF0BE`, en décalé, toutes les 3 à 5 s), pour **un seul appel de dessin**. Un conteneur plein scintille ; vide, il ne scintille plus. La maquette a montré que, sans repère, un objet aux couleurs franches se perd parmi les autres.
-- **La nuit** (décision Q-G3) : l'éclat ne vient **que dans la lumière du joueur** (lampe, torche, à moins de 4 m), comme un vrai reflet. Ailleurs, rien ne brille, sauf la balise solaire.
+- **Des amas, pas des pièces isolées.** Au zoom normal, 1 m ≈ 40 px sur l'iPhone 13 mini : une canette de 12 cm fait 5 px et ne se lit pas ; l'amas, lui, se lit comme « des ordures ». Sous chaque amas, **une tache de crasse** ; elle s'efface quand on a tout ramassé. **Tout ce qu'on voit au sol se ramasse** : il n'y a aucun décor de déchets inerte.
+- **Les silhouettes partagées** (décision Q-G5) : on ne dessine pas 160 modèles. Chaque objet qui peut traîner au sol est une **silhouette**, une **teinte** (celle de son icône, sauf exception) et une **échelle** (sa taille réelle, × 1,15 comme les outils tenus). **24 silhouettes** : les 16 du chiffrage (cylindre couché, boîte, plaque plate, chiffon froissé, coussin, barre, roue, ressort, petit appareil, lame plate, vélo, sac plastique, cylindre debout, cône de chantier, grille du caddie, ballon) et 8 de plus pour que rien ne soit absurde (bouteille, livre, bobine de câble ou de tuyau, galet du robot, trottinette, barbecue, flamant rose, nain de jardin). Un test vérifie que chacun des ≈ 160 objets possibles au sol a la sienne.
+- **Les conteneurs** (sac-poubelle crevé noir ou vert, poubelle renversée) ont deux états : **plein** (des ordures sortent de l'accroc) et **vidé** (affaissé, rien autour). Vidé, il reste là jusqu'à son remplissage (on peut seulement l'examiner) ; **sur le terrain personnel, qui ne se renouvelle pas, il disparaît** (décision Q-G1 : rien d'inerte sur le terrain).
+- **Les points du monde** ont leur modèle, à couleurs par sommet : tas de gravats (les pierres du dessus partent à la fouille), vélo couché dans l'herbe du fossé, épave de mobylette, trampoline éventré, machine à laver au hublot ouvert, frigo connecté couché à l'écran mort, carcasse de mouton **sobre** (des os blanchis, de la laine grise, ni chair ni sang, décision Q-G7). **Le coffre d'épave** : on ne touche pas au modèle de l'épave ; ce qui déborde du coffre (un carton, un sac, une couverture) est posé au sol derrière, et disparaît une fois le coffre vidé.
+- **L'éclat de repère** : à moins de 8 m, chaque objet ramassable **scintille** de temps en temps (une petite étoile blanc chaud `#FFF0BE`, en décalé, toutes les 3 à 5 s), comme un conteneur plein ou un point qu'on peut fouiller ; un conteneur vide ne scintille plus.
+- **La nuit** (décision Q-G3), et dans une pièce noire de la Coopérative : l'éclat ne vient **que dans la lumière qu'on porte** (lampe ou torche allumée, à moins de 4 m). Ailleurs, rien ne brille, sauf **les balises solaires**, qui s'allument (une petite lueur qui respire).
 - **La visée** : l'anneau existant, et la teinte de l'objet visé éclaircie qui bat avec lui.
-- **Les ombres** (décision Q-G6) : en **qualité haute seulement**. En qualité moyenne et basse, l'occlusion cuite au ras du sol pose l'objet.
+- **Une pièce ramassée disparaît aussitôt** ; un carreau renouvelé se redessine (même disposition, autre tirage).
+- **Les ombres** (décision Q-G6) : celles des objets au sol en **qualité haute seulement** (elles faisaient chuter le 1 % d'images le plus lent sur l'iPhone). En qualité moyenne et basse, l'occlusion cuite au ras du sol pose l'objet. Les points du monde gardent la leur dès que les ombres sont là, comme les épaves.
 
-### 9.3 Le budget de l'iPhone 13 mini
+### 9.2 Comment c'est dessiné
 
-| Poste | Budget visé | Comment |
-|---|---|---|
-| Objets ramassables | 1 à 16 appels de dessin, aucun dans la passe d'ombre en qualité moyenne | Une silhouette par lot (`InstancedMesh` et teinte par instance), ou un seul `BatchedMesh` si Safari le gère bien |
-| Points du monde visibles | ≤ 6 × 2 appels, et leurs ombres | Le modèle des épaves |
-| Éclat | 1 appel | Un seul lot, animé dans le shader |
-| **Toute la couche** | **≈ 15 à 25 appels, ≈ 25 000 triangles** | Sur un budget de 120 appels et 150 000 triangles (Book 21 §5.3.4) |
+L'essai sur l'iPhone 13 mini du porteur (60 images par seconde partout, dessin multiple `WEBGL_multi_draw` présent dans Safari) a tranché pour le **lot unique** :
+
+- **tous les objets et conteneurs au sol d'un lieu : un seul `BatchedMesh`** (le `LotTrie` des ressources du sol, `rendu/lots.ts`) : 1 appel de dessin ; chaque objet hors champ est écarté, et, dans la passe d'ombre, chaque objet dont l'ombre ne peut pas tomber à l'écran. Une géométrie par objet du catalogue (teinte et taille cuites), construite à la première rencontre ;
+- **repli** si le navigateur ne sait pas dessiner en multiple : une géométrie fondue par carreau de 20 m (1 appel par carreau visible, sans le liseré de visée) ;
+- **les taches de crasse : 1 appel** (un lot, transparent, sans ombre) ; **l'éclat : 1 appel** (un lot, animé dans le shader) ;
+- **chaque point du monde : 1 appel** (son assemblage fondu en un maillage), et 1 dans l'ombre.
+
+### 9.3 Ce que ça coûte (mesuré, 2026-10-09)
+
+Relevé dans Chrome sur le Mac (rendu logiciel : les appels et les triangles comptent, pas les images par seconde), `?mesure=1`, poste « Déchets » :
+
+| Lieu, écran | Appels (image + ombre) | Triangles à l'écran | Construction |
+|---|---|---|---|
+| Halte, iPhone portrait (qualité moyenne) | 7 + 6 | ≈ 4 750 | 17 ms (110 objets, 23 conteneurs, 9 points) |
+| Halte, iPhone paysage | 5 + 2 | ≈ 2 500 | |
+| Halte, ordinateur (qualité haute) | 5 + 4 | ≈ 2 900 | 20 ms |
+| Coopérative, iPhone portrait | 3 + 0 | ≈ 2 500 | 19 à 35 ms (58 objets, 29 conteneurs, 2 points) |
+| Terrain, iPhone portrait | 3 + 0 | ≈ 660 | 4 ms (9 objets, 3 sacs) |
+
+**Toute la couche tient en 2 à 7 appels et moins de 5 000 triangles**, bien sous le budget visé (≈ 15 à 25 appels, ≈ 25 000 triangles). Le reste de l'image : 84 appels à la halte en portrait, 75 à la Coopérative, 36 sur le terrain.
 
 ### 9.4 Le vrai risque : le jeu dessine déjà trop
 
@@ -406,9 +418,7 @@ Le jeu dessinait ≈ 390 appels par image sur le terrain (Book 17 §5.2), pour u
 
 - **Les ombres hors champ sont écartées** : un objet n'entre plus dans la passe d'ombre si son ombre ne peut pas tomber à l'écran (sur le terrain, c'était 196 appels sur 326). Même image.
 - **Des regroupements** : la mare, les panneaux, la halte.
-- **Le mode mesure** (`?mesure=1` dans l'adresse) : images par seconde, appels de dessin et triangles par poste, interrupteurs pour couper un poste à la fois, une **couche de déchets simulée** pour en mesurer le coût avant de l'écrire, et un banc d'essai automatique qui envoie le relevé au Mac.
-
-**Ce qui attend l'essai sur iPhone** : le vrai rendu en amas (§9.2) et la suite de la réduction des appels de dessin.
+- **Le mode mesure** (`?mesure=1` dans l'adresse) : images par seconde, appels de dessin et triangles par poste, interrupteurs pour couper un poste à la fois, et un banc d'essai automatique qui envoie le relevé au Mac. La couche de déchets simulée qui avait servi à mesurer avant d'écrire le rendu est retirée : le poste « Déchets » mesure la vraie couche, et l'on peut y basculer son dessin (lot unique ou fusion par carreau) et l'ombre de ses objets.
 
 ### 9.5 Si le budget ne tient pas
 
@@ -448,13 +458,13 @@ Dans l'ordre, du moins coûteux pour le jeu au plus coûteux : qualité basse mo
 | Le Comptoir qui refuse les ordures, la conserve bombée | `serveur/src/joueur.ts`, `commun/src/combat.ts` |
 | Les fouilles existantes enrichies (couteau abîmé, onduleur, trottinette électrique, sac de charbon, conserve bombée) | `commun/src/vestiges.ts` |
 | Les 91 icônes, les pictogrammes de famille, le grisé des ordures | `client/src/icones-dechets.ts`, `icones.ts` |
-| L'affichage provisoire et la liste de fouille | `client/src/rendu/dechets-provisoire.ts`, fin de `style.css` |
+| Le rendu en amas (silhouettes, conteneurs, points du monde, éclat, visée) et la liste de fouille | `client/src/rendu/dechets/`, fin de `style.css` |
 | La rubrique d'aide « Les déchets de l'Abondance » | `client/src/aide-contenu.ts` |
 | Le banc de charge `--dechets`, le mode mesure `?mesure=1` | `scripts/banc-charge.ts`, `client/src/mesure/` |
 
 **Reste à faire** :
 
-- **Le rendu en amas** (§9.2) et **la réduction des appels de dessin** (§9.4), **après l'essai sur l'iPhone** du porteur.
+- **Le rendu à l'essai sur l'iPhone** du porteur : lisibilité des petits objets (un stylo, des billets se voient à peine), réglage des taches, de l'éclat et de la lueur des balises.
 - **Remesurer sur le Pi 4** la halte pleine, déchets compris (`mesurer-pi.sh`).
 - **Caler les densités** au test familial (Q3) ; le débit visé par jour (≥ 2 barres de métal, ≈ 1 lame de ressort, ≥ 3 petits ressorts, ≥ 2 poignées de plumes, ≈ 1 appareil jetable, une petite batterie et un vélo complet tous les 3 jours) est vérifié par les tests de `dechets.test.ts`, à confirmer en jeu.
 - **Les usages « plus tard »** de certains objets : la couverture de survie (chaleur, Book 13), le rideau (occulter une fenêtre, Book 06), le jerrican (porter l'eau, Book 11), le fût de 200 L (charbonnière en fût, Book 02 §5), le tuyau de cuivre (alambic), la bougie parfumée (cire, lumière).
@@ -462,7 +472,7 @@ Dans l'ordre, du moins coûteux pour le jeu au plus coûteux : qualité basse mo
 ## 12. Questions ouvertes
 
 - [ ] **La gestion des déchets du terrain personnel** (décision Q10) : brûler, enterrer, un tas de compost, une benne qu'on porte à la décharge ? À concevoir quand le terrain en aura besoin.
-- [ ] **`BatchedMesh` ou `InstancedMesh`** pour les ramassables : à trancher à l'essai sur iPhone (Safari et le dessin multiple).
+- [x] **`BatchedMesh` ou `InstancedMesh`** pour les ramassables : **`BatchedMesh`** (Safari dessine en multiple sur l'iPhone 13 mini), repli par carreau sinon (§9.2).
 - [ ] **Les papiers et les sacs qui volent au vent** : quelques plaques animées, en un seul lot. Hors de la 0.7.
 - [ ] **La carte du monde** (Book 20) : quelles zones typées pour chaque lieu nouveau ? La couche s'y posera seule.
 
@@ -477,4 +487,4 @@ Dans l'ordre, du moins coûteux pour le jeu au plus coûteux : qualité basse mo
 - **Remplissage** : le numéro du tirage d'un carreau ; il avance à chaque renouvellement.
 - **Ordure** : un objet qui vaut 0 wott. Le Comptoir la refuse ; jetée hors du terrain, elle disparaît en 24 h.
 - **Point du monde** : ce qui ne se porte pas et se fouille, se démonte ou se ramasse sur place (vélo du fossé, trampoline, gravats…).
-- **Éclat** : la petite étoile qui scintille sur un objet à ramasser (rendu visé, §9.2).
+- **Éclat** : la petite étoile qui scintille sur un objet à ramasser (§9.1).

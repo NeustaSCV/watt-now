@@ -54,7 +54,10 @@ Penser au bon moment, et des déchets partout (Book 26, Book 02 §14 quater). Le
 - **Le tas de gravats** (des pierres, parfois un déchet ; un bâton à fouir va deux fois plus vite) et **la carcasse de mouton** (6 os), à la halte et à la Coopérative : ils reviennent en 3 jours.
 - **Les ordures jetées par terre disparaissent au bout de 24 h**, sauf sur ton terrain. Ce qui vaut quelque chose reste.
 - **Les balises solaires de jardin** restées au sol s'allument la nuit : une petite lumière que les Éteints viennent voir. Ramasse-les pour éteindre le coin.
-- **Pour l'instant, les déchets ont des formes simples** (des boîtes teintées, des sacs sombres) : c'est un affichage provisoire. Le vrai rendu, en amas, viendra après un essai sur iPhone (voir « Pour la suite »).
+- **Les déchets ont leur vraie forme, en amas** : une tache de crasse au sol et quelques objets serrés dessus, chacun reconnaissable à sa silhouette et à la couleur de son icône (canette, bouteille, carton, pneu, caddie, cône de chantier, vélo, ballon, flamant rose, nain de jardin…). Ce qu'on ramasse disparaît tout de suite ; un coin qui se remplit à nouveau se redessine.
+- **Un éclat scintille** de temps en temps sur ce qui se ramasse, à moins de 8 m (et sur un sac-poubelle plein ; vidé, il ne scintille plus). **La nuit, rien ne brille hors de ta lumière** : l'éclat ne vient qu'à moins de 4 m, lampe ou torche allumée. Les balises solaires, elles, s'allument.
+- **L'objet que tu vises** s'éclaircit en battant avec l'anneau.
+- **Les points du monde ont leur modèle** : sac-poubelle crevé, poubelle renversée, tas de gravats, ce qui déborde du coffre des épaves, vélo couché dans le fossé, épave de mobylette, trampoline éventré, machine à laver, frigo connecté, carcasse de mouton (des os blanchis, de la laine grise, rien d'autre).
 
 **91 objets nouveaux, presque tous sans valeur**
 - **Canettes, stylos, oreillers, pneus, vélos en libre-service, onduleurs…** : 91 objets au catalogue, et le trampoline éventré à démonter sur place. La plupart ne valent rien.
@@ -76,13 +79,14 @@ Penser au bon moment, et des déchets partout (Book 26, Book 02 §14 quater). Le
 **Sur téléphone**
 - **Moins d'ombres inutiles** : le jeu ne calcule plus l'ombre des objets dont l'ombre tombe hors de l'écran, et regroupe le dessin de la mare, des panneaux et de la halte. Même image, moins de travail pour le téléphone.
 - **Moins d'appels de dessin, même image** : chaque personnage et chaque Éteint en un seul morceau, les ressources du sol regroupées, la forêt hors de l'écran plus dessinée. Le téléphone travaille trois fois moins à la halte.
+- **Les déchets coûtent peu** : tous les objets au sol d'un lieu en un seul appel de dessin (et un pour les taches, un pour l'éclat), chaque point du monde en un seul ; l'ombre des objets seulement en qualité haute.
 
 **Pour la suite** (pas dans cette version)
-- **Le vrai rendu des déchets, en amas** (des tas de pièces serrées, un éclat qui scintille sur ce qui se ramasse, rien qui brille la nuit hors de ta lumière).
+- **Les papiers et les sacs qui volent au vent.**
 
 **Pour l'équipe**
 - **`npm run rythme`** joue neuf parcours types (prudent, pressé, sans tutoriel, pour chaque famille) et vérifie le rythme : une nouveauté toutes les 3 min en moyenne la première demi-heure, un but au moins toutes les 20 min ensuite, et aucun blocage.
-- **`?mesure=1`** dans l'adresse ouvre le panneau de mesure (images par seconde, appels de dessin et triangles par poste, déchets simulés, banc d'essai automatique) pour l'essai sur iPhone.
+- **`?mesure=1`** dans l'adresse ouvre le panneau de mesure (images par seconde, appels de dessin et triangles par poste, dont la couche de déchets réelle et son dessin de repli, banc d'essai automatique) pour l'essai sur iPhone.
 - **Le banc de charge** a l'option `--dechets` (des ramassages au hasard). Sur le Mac, 50 joueurs à la halte : ≈ 1 ms de calcul par joueur et par seconde, avec ou sans déchets (Book 17 §5.2).
 - Outil du porteur : un compte admin unique (`npm run admin -- god`, sur le Pi `deploiement/admin-pi.sh`), pour tout tester ; le pseudo « god » est réservé.
 - **Sauvegardes sur la clé USB du Pi** : le serveur y recopie en arrière-plan ses sauvegardes, `reglages.json` et `certificat/`, seulement si le repère `.cle-watt-now` est là. La clé garde 30 quotidiennes, 26 hebdomadaires et 24 mensuelles ; le journal et `npm run bilan` disent quand date la dernière copie (LISEZMOI §7 bis, Book 17 §5.4).
