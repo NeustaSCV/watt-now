@@ -379,7 +379,8 @@ export class Base {
       for (const table of ["jetons", "inventaires", "ressources", "feux", "installations", "personnages"]) this.db.prepare(`DELETE FROM ${table} WHERE compte_id = ?`).run(id);
       this.db.prepare("DELETE FROM sacs WHERE proprietaire = ? OR terrain_de = ?").run(id, id);
       this.db.prepare("DELETE FROM instances WHERE cle = ?").run(`cooperative:${id}`);
-      this.db.prepare("DELETE FROM dechets WHERE lieu = ?").run(`cooperative:${id}`);
+      // Les déchets de sa Coopérative et ceux de son terrain (les 12 de départ, qui ne se renouvellent pas) : à neuf.
+      this.db.prepare("DELETE FROM dechets WHERE lieu IN (?, ?)").run(`cooperative:${id}`, `terrain:${id}`);
       this.initialiserPersonnage(id, famille, false, apparence, maintenant());
     });
     return { id, pseudo: compte.pseudo, famille };

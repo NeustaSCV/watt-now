@@ -13,9 +13,9 @@ import {
   refConteneur,
   ZONES_DECHETS,
 } from "./couche-dechets.ts";
-import { palierDe } from "./dechets.ts";
+import { CONTENEURS, PROFILS_DECHETS, contenuConteneur, graineDe, palierDe, type TypeConteneur, type TypeLieuDechets } from "./dechets.ts";
 import { heurte, zoneDe, type LieuJouable } from "./lieux.ts";
-import { OBJETS } from "./objets.ts";
+import { OBJETS, type TypeObjet } from "./objets.ts";
 
 function bilan(cle: string) {
   const d = dispositionLieu(cle);
@@ -107,4 +107,71 @@ test("les zones ne débordent pas de leur lieu et les objets existent", () => {
     for (const r of zones) assert.ok(r.x0 >= z.xMin - 0.01 && r.x1 <= z.xMax + 0.01 && r.z0 >= z.zMin - 0.01 && r.z1 <= z.zMax + 0.01, `${lieu} ${r.type}`);
   }
   for (const p of bilan("station").pieces) assert.ok(OBJETS[p.objet], p.objet);
+});
+
+// Bug de la 0.7 (0.7.1) : « à la Coopérative, j'en ai fouillé 10, aucun ne contenait quelque chose ». Le tirage n'y
+// était pour rien (la liste de la fouille ne s'affichait pas, rendu/dechets/couche.ts) ; ce test tient la promesse
+// du porteur : au moins 3 conteneurs sur 4 ont quelque chose à la première fouille, partout, à chaque remplissage.
+test("au moins 3 conteneurs sur 4 contiennent un objet, dans chaque lieu, sur un grand nombre de graines", () => {
+  const compter = (cles: string[], remplissages: number) => {
+    let conteneurs = 0;
+    let pleins = 0;
+    for (const cle of cles) {
+      for (const [k, l] of dispositionLieu(cle)) {
+        const [cx, cz] = k.split(",").map(Number) as [number, number];
+        for (let r = 0; r < remplissages; r++) {
+          const pieces = piecesCarreau(cle, cx, cz, r);
+          for (const em of l) {
+            if (em.genre === "sol") continue;
+            conteneurs++;
+            // Ce que le client dessine (plein ou vidé) vient de ces mêmes pièces : plein si et seulement s'il y a un objet.
+            if (pieces.some((p) => p.e === em.e && p.dedans)) pleins++;
+          }
+        }
+      }
+    }
+    return { conteneurs, pleins };
+  };
+  const ids = Array.from({ length: 150 }, (_, i) => i + 1);
+  const lieux = {
+    cooperative: compter(ids.map((i) => cleCouche("cooperative", i)), 3),
+    terrain: compter(ids.map((i) => cleCouche("terrain", i)), 1),
+    station: compter(["station"], 200),
+  };
+  for (const [lieu, { conteneurs, pleins }] of Object.entries(lieux)) {
+    assert.ok(conteneurs > 100, `${lieu} : ${conteneurs} conteneurs`);
+    assert.ok(pleins / conteneurs >= 0.75, `${lieu} : ${pleins} pleins sur ${conteneurs}`);
+  }
+  // Les coffres d'épave (des points qui se fouillent), sur 200 cycles.
+  for (const p of POINTS_LIEUX.station!.filter((x) => x.type === "coffre_voiture")) {
+    let pleins = 0;
+    for (let c = 0; c < 200; c++) if (contenuPointCycle("station", p, c).length > 0) pleins++;
+    assert.ok(pleins / 200 >= 0.75, `${p.id} : ${pleins} sur 200`);
+  }
+});
+
+test("chaque type de conteneur, dans chaque type de lieu, contient au moins un objet ; les trois paliers tiennent", () => {
+  for (const lieu of Object.keys(PROFILS_DECHETS) as TypeLieuDechets[]) {
+    for (const conteneur of Object.keys(CONTENEURS) as TypeConteneur[]) {
+      const parts: Record<string, number> = { dechet: 0, petite: 0, bonne: 0 };
+      let pleins = 0;
+      let objets = 0;
+      const N = 2000;
+      for (let g = 0; g < N; g++) {
+        const contenu = contenuConteneur(graineDe("essai", lieu, conteneur, g), lieu, conteneur);
+        let n = 0;
+        for (const [t, x] of Object.entries(contenu)) {
+          parts[palierDe(t as TypeObjet)]! += x ?? 0;
+          n += x ?? 0;
+        }
+        objets += n;
+        if (n > 0) pleins++;
+      }
+      assert.ok(pleins / N >= 0.75, `${lieu}/${conteneur} : ${pleins} sur ${N}`);
+      if (PROFILS_DECHETS[lieu].seulementDechets) continue;
+      // ≈ 70 % de déchets, ≈ 25 % de petites trouvailles, ≈ 5 % de bonnes (à quelques points près).
+      assert.ok(Math.abs(parts.dechet! / objets - 0.7) < 0.05, `${lieu}/${conteneur} déchets ${parts.dechet! / objets}`);
+      assert.ok(Math.abs(parts.petite! / objets - 0.25) < 0.05, `${lieu}/${conteneur} petites ${parts.petite! / objets}`);
+    }
+  }
 });
