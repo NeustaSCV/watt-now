@@ -14,62 +14,75 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ## 0.7 · en préparation
 
-**Les déchets de l'Abondance : le catalogue**
-- **91 objets nouveaux** au catalogue, et le trampoline éventré à démonter sur place : canettes, stylos, oreillers, pneus, vélos en libre-service, onduleurs… La plupart ne valent rien.
-- **Trois familles de vestiges nouvelles** : déchet, textile, loisir.
-- **Les ordures valent 0** : le Comptoir les refuse (« Les Compteurs ne reprennent pas les ordures. ») ; au guichet, elles sont marquées « ordure ». Un sac de canettes, lui, vaut un peu.
-- **Tout se démonte en matières connues** : un stylo donne un petit ressort, un oreiller des plumes, un piquet de clôture une barre de métal, un ressort de suspension deux lames de ressort, un onduleur une petite batterie.
-- **Les fouilles existantes** donnent aussi le couteau abîmé (rare), l'onduleur et la trottinette électrique (peu communs, pour leur petite batterie), le sac de charbon de barbecue (peu commun, à la station) et la conserve bombée.
-- **La conserve bombée** ressemble à une conserve. Mangée, elle rend malade deux minutes plus tard : vomissements, faiblesse. Démontée, une boîte vide.
-- **La décharge du terrain** remonte aussi les déchets du lot 2, surtout des ordures.
+Penser au bon moment, et des déchets partout (Book 26, Book 02 §14 quater). Les recettes ne tombent plus toutes d'un coup : ton personnage y pense quand il en a besoin. Et le monde de l'Abondance est enfin jonché de ce qu'il a jeté : tout se ramasse, presque rien ne vaut quelque chose.
 
-**Les déchets de l'Abondance : il y en a partout** (affichage provisoire : le vrai rendu en amas suit)
-- **Des déchets dans chaque lieu** : ≈ 75 amas et sacs-poubelle à la halte, ≈ 60 à la Coopérative, ≈ 20 au Carrefour (rien que des ordures). Bas-côtés, parking, cour de ferme, jardin, lisières : chaque coin a ses objets.
+**On y pense au bon moment** (l'arbre de progression)
+- **On ne voit plus cent recettes d'un coup.** Au début, deux idées : le feu de camp et l'abri. Les autres viennent quand ton personnage **y pense** : en tenant l'ingrédient (des joncs : la ficelle), en ayant besoin (un arbre trop haut : l'escabeau), en vivant quelque chose (le premier feu : le gourdin ; la première nuit : le bâton à fouir).
+- **« Tu y penses : … »** : un message annonce chaque idée nouvelle ; plusieurs à la fois sont regroupées (« 3 idées nouvelles »), au plus un message toutes les 10 s.
+- **Cinq paliers**, du plus urgent au plus beau : le corps (manger, boire, dormir), l'abri du danger (se défendre, se soigner, ranger), les tiens puis les autres (ton atelier, ton arme de métier, le Comptoir), le métier, l'œuvre (les pièces à plusieurs familles).
+- **Ton métier commence** quand tu as un toit et que tu as tenu tête une fois (un Éteint détruit, ou une nuit dormie) : pile à l'étape « La famille » du tutoriel.
+- **Une recette fait penser à ses pièces** : le récupérateur de pluie fait penser à la corde.
+- **Voir faire** : à 5 m d'un joueur qui fabrique, tu y penses aussi. Rester une minute près d'un joueur d'une autre famille, c'est une rencontre.
+- **Personne ne reste bloqué** : après 20 min de jeu, tous les gestes du corps ; après 1 h, ceux de l'abri du danger ; après 2 h, ton métier.
+- **Sans tutoriel**, le survivant connaît d'emblée les gestes du corps et de l'abri du danger.
+- **Les personnages d'avant** ne voient plus ce qu'ils n'ont pas encore vécu, mais **rien n'est détruit** : leurs installations, leurs objets, ce qu'ils ont déjà fabriqué restent, et ce qu'ils ont déjà fait reste une idée.
+- Une recette à laquelle on n'a pas encore pensé ne se fabrique pas : « Tu n'y as pas encore pensé. »
+
+**Le panneau Fabriquer**
+- **Fabriquer ne montre que tes idées** : le premier jour, le feu de camp et l'abri ; l'en-tête dit par exemple « 4 recettes · 3 à découvrir ».
+- **À découvrir** : en bas du panneau, les silhouettes des recettes du prochain palier, l'icône assombrie et sans nom, avec ce dont tu auras besoin (« Dormir par terre, c'est dormir à moitié. »). Trois d'abord, « Voir les autres » pour le reste.
+- **Une pastille rouge** dans le coin du bouton Fabriquer compte les idées nouvelles ; un point rouge marque l'onglet où elles sont (Matériaux, Outils…).
+- **« Nouveau »** : la carte d'une idée nouvelle porte l'étiquette et un liseré doré, et passe en tête de son onglet le temps d'une ouverture. Le téléphone et l'ordinateur sont d'accord sur ce qui a été vu.
+- **Les onglets arrivent à 8 recettes** : avant, une seule liste ; ensuite toute la barre, toujours dans le même ordre, les onglets encore vides atténués.
+- **Les recettes des autres familles** ne s'affichent plus d'emblée : après le Comptoir, un échange ou une rencontre, une ligne par famille (« Chez les Voltaïques · 20 recettes »), à déplier. Celles qu'on a vu faire, ou dont on tient le produit, se montrent une à une.
+- **« Il manque… »** ne nomme plus une recette à laquelle tu n'as pas encore pensé : « ça se fabrique (tu y penseras) ».
+
+**Le tutoriel, le carnet et l'aide**
+- **Le tutoriel ne demande jamais une recette invisible** : chaque étape qui fait fabriquer (le feu, la hache, l'abri, l'atelier de ta famille) te la fait penser.
+- **Chaque objectif du carnet en cours fait penser à ce qu'il demande**, pièces comprises : « Forger une lame » fait penser à la lame et à sa forge.
+- **Le carnet note ta dernière idée**, tout en bas : « Dernière idée : Tresser une corde ».
+- **Le Comptoir vend une scie** : l'arbrier et la brouette, appris d'un Mécaniste, se font enfin.
+- **L'aide** : « Fabriquer » dit que les recettes viennent quand on y pense (le message, la pastille, « À découvrir ») ; « Je suis coincé » répond à la recette qui ne vient pas ; nouvelle rubrique « Les déchets de l'Abondance ».
+
+**Des déchets partout, et tout se ramasse**
+- **Des déchets dans chaque lieu** : ≈ 75 coins jonchés à la halte, ≈ 60 à la Coopérative, ≈ 20 au Carrefour (rien que des ordures). Bas-côtés, parking, cour de ferme, jardin, lisières : chaque coin a ses objets.
 - **Tout ce qu'on voit au sol se ramasse** : approche-toi, A, une seconde, c'est dans le sac. B dit ce que c'est (« Rien d'utile. » pour une ordure).
-- **Fouiller un sac-poubelle, une poubelle renversée, le coffre d'une voiture** : 4 à 8 s, puis une liste ; touche ce que tu prends, le reste reste dedans.
+- **Fouiller un sac-poubelle, une poubelle renversée, le coffre d'une voiture** : 4 à 8 s, puis une liste ; touche ce que tu prends, le reste reste dedans. Les tout petits objets (un stylo, un briquet, des pinces à linge) ne se trouvent qu'en fouillant.
 - **On revient, on trouve autre chose** : un coin entamé se remplit à nouveau, d'autres objets, 8 à 24 h réelles plus tard.
-- **Ton terrain** : 12 déchets de départ (dont 3 sacs-poubelle), qui ne reviennent pas. Le nettoyer, c'est pour de bon.
-- **À la halte, des points à démonter** : un vélo dans le fossé, une épave de mobylette, un trampoline éventré, une machine à laver, un frigo connecté. Il faut une clé et un tournevis ; ils reviennent 7 jours plus tard, ailleurs.
+- **Ton terrain** : 12 déchets de départ (dont 3 sacs-poubelle), qui ne reviennent pas. Le nettoyer, c'est pour de bon. La décharge, elle, continue de remonter des objets.
+- **À la halte, des choses à démonter sur place** : un vélo dans le fossé, une épave de mobylette, un trampoline éventré, une machine à laver, un frigo connecté. Il faut une clé et un tournevis ; ils reviennent 7 jours plus tard, ailleurs.
 - **Le tas de gravats** (des pierres, parfois un déchet ; un bâton à fouir va deux fois plus vite) et **la carcasse de mouton** (6 os), à la halte et à la Coopérative : ils reviennent en 3 jours.
 - **Les ordures jetées par terre disparaissent au bout de 24 h**, sauf sur ton terrain. Ce qui vaut quelque chose reste.
 - **Les balises solaires de jardin** restées au sol s'allument la nuit : une petite lumière que les Éteints viennent voir. Ramasse-les pour éteindre le coin.
+- **Pour l'instant, les déchets ont des formes simples** (des boîtes teintées, des sacs sombres) : c'est un affichage provisoire. Le vrai rendu, en amas, viendra après un essai sur iPhone (voir « Pour la suite »).
 
-**Les icônes des déchets**
-- **Chaque déchet a son icône**, dessinée dans la charte du sac : 91 dessins, de la canette écrasée à la débroussailleuse.
+**91 objets nouveaux, presque tous sans valeur**
+- **Canettes, stylos, oreillers, pneus, vélos en libre-service, onduleurs…** : 91 objets au catalogue, et le trampoline éventré à démonter sur place. La plupart ne valent rien.
+- **Trois familles de vestiges nouvelles** : déchet, textile, loisir.
+- **Les ordures valent 0** : le Comptoir les refuse (« Les Compteurs ne reprennent pas les ordures. ») ; au guichet, elles sont marquées « ordure ». Un sac de canettes, lui, vaut un peu.
+- **Tout se démonte en matières connues** : un stylo donne un petit ressort, un oreiller des plumes, un piquet de clôture une barre de métal, un ressort de suspension deux lames de ressort, un onduleur une petite batterie.
+- **Ce qui manquait aux familles se trouve enfin** : des barres de métal et des lames de ressort pour les Charbonniers, des appareils photo jetables et des petites batteries (peu communes) pour les Voltaïques, des vélos, des petits ressorts et des plumes pour les Mécanistes.
+- **Les fouilles d'avant** donnent aussi le couteau abîmé (rare), l'onduleur et la trottinette électrique (peu communs, pour leur petite batterie), le sac de charbon de barbecue (peu commun, à la station) et la conserve bombée.
+- **La conserve bombée** ressemble à une conserve. Mangée, elle rend malade deux minutes plus tard : vomissements, faiblesse. Démontée, une boîte vide.
+- **La décharge du terrain** remonte aussi les nouveaux déchets, surtout des ordures.
+
+**Les icônes**
+- **Chaque objet nouveau a son icône**, dessinée dans la charte du sac : 91 dessins, de la canette écrasée à la débroussailleuse.
 - **Deux pièges se reconnaissent** : la conserve bombée a l'étiquette rouge de la bonne conserve, couvercle gonflé ; l'os en nylon est trop lisse et trop rose.
 - **Les ordures sont grisées dans le sac** : ce qui ne vaut rien se repère d'un coup d'œil.
 - **Trois pictogrammes de famille** : un sac-poubelle noué (déchet), un t-shirt plié (textile), un ballon de plage (loisir).
 - **Plus aucune icône générique** : le réveil, les roulements, l'alternateur, les semences, la clé du coffre, la radio, le manche fendu, la ferraille tordue et la décharge ont aussi leur dessin.
 
-**L'arbre de progression : on y pense au bon moment** (côté serveur ; l'affichage dans Fabriquer suit)
-- **On ne voit plus cent recettes d'un coup.** Au début, deux idées : le feu de camp et l'abri. Les autres viennent quand ton personnage **y pense** : en tenant l'ingrédient (des joncs : la ficelle), en ayant besoin (un arbre trop haut : l'escabeau), en vivant quelque chose (le premier feu : le gourdin ; la première nuit : le bâton à fouir).
-- **« Tu y penses : … »** : un message annonce chaque idée nouvelle ; plusieurs à la fois sont regroupées (« 3 idées nouvelles »), au plus un message toutes les 10 s.
-- **Cinq paliers**, du plus urgent au plus beau : le corps (manger, boire, dormir), l'abri du danger (se défendre, se soigner, ranger), les tiens puis les autres (ton atelier, ton arme de métier, le Comptoir), le métier, l'œuvre (les pièces à plusieurs familles).
-- **Ton métier commence** quand tu as un toit et que tu as tenu tête une fois (un Éteint détruit, ou une nuit) : c'est l'étape « La famille » du tutoriel.
-- **Une quête du carnet fait penser à ce qu'elle demande**, et une recette fait penser à ses pièces (le récupérateur de pluie : la corde).
-- **Voir faire** : à 5 m d'un joueur qui fabrique, tu y penses aussi. Rester une minute près d'un joueur d'une autre famille, c'est une rencontre.
-- **Personne ne reste bloqué** : après 20 min de jeu, tous les gestes du corps ; après 1 h, ceux de l'abri du danger ; après 2 h, ton métier.
-- **Sans tutoriel**, le survivant connaît d'emblée les gestes du corps et de l'abri du danger.
-- **Les personnages d'avant** ne voient plus ce qu'ils n'ont pas encore vécu, mais **rien n'est détruit** : leurs installations, leurs objets, ce qu'ils ont déjà fabriqué restent.
-- Une recette à laquelle on n'a pas encore pensé ne se fabrique pas : « Tu n'y as pas encore pensé. »
+**Sur téléphone**
+- **Moins d'ombres inutiles** : le jeu ne calcule plus l'ombre des objets dont l'ombre tombe hors de l'écran, et regroupe le dessin de la mare, des panneaux et de la halte. Même image, moins de travail pour le téléphone.
 
-**L'arbre de progression dans Fabriquer**
-- **Fabriquer ne montre que tes idées** : le premier jour, le feu de camp et l'abri ; l'en-tête dit « 4 recettes · 3 à découvrir ».
-- **À découvrir** : en bas du panneau, des silhouettes des prochaines recettes, l'icône assombrie et sans nom, avec ce dont tu auras besoin (« Dormir par terre, c'est dormir à moitié. »). Trois d'abord, « Voir les autres » pour le reste.
-- **Une pastille rouge** dans le coin du bouton Fabriquer compte les idées nouvelles ; un point rouge marque l'onglet où elles sont (Matériaux, Outils…).
-- **« Nouveau »** : la carte d'une idée nouvelle porte l'étiquette et un liseré doré, et passe en tête de son onglet le temps d'une ouverture. Le téléphone et l'ordinateur sont d'accord sur ce qui a été vu.
-- **Les onglets arrivent à 8 recettes** : avant, une seule liste ; ensuite toute la barre, dans le même ordre, les onglets encore vides atténués.
-- **Les recettes des autres familles** ne s'affichent plus d'emblée : après le Comptoir, un échange ou une rencontre, une ligne par famille (« Chez les Voltaïques · 20 recettes »), à déplier. Celles qu'on a vu faire, ou dont on tient le produit, se montrent une à une.
-- **« Il manque… »** ne nomme plus une recette à laquelle tu n'as pas encore pensé : « ça se fabrique (tu y penseras) ».
+**Pour la suite** (pas dans cette version)
+- **Le vrai rendu des déchets, en amas** (des tas de pièces serrées, un éclat qui scintille sur ce qui se ramasse, rien qui brille la nuit hors de ta lumière) et **un dessin plus léger de l'image** (moins d'appels de dessin, pour tenir sur l'iPhone 13 mini) viendront **après un essai sur l'iPhone** du porteur du projet.
 
-**Le rythme, les quêtes et l'aide**
-- **Le tutoriel ne demande jamais une recette invisible** : chaque étape qui fait fabriquer (le feu, la hache, l'abri, l'atelier de ta famille) te la fait penser.
-- **Chaque objectif du carnet en cours dévoile ce qu'il fait fabriquer**, pièces comprises : « Forger une lame » fait penser à la lame de ressort et à sa forge.
-- **Ton métier commence pile à l'étape « La famille »** du tutoriel : il venait deux étapes trop tôt (l'Éteint du tutoriel ne compte plus ; une nuit dormie, si).
-- **Le carnet note ta dernière idée**, tout en bas : « Dernière idée : Tresser une corde ».
-- **Le Comptoir vend une scie** : l'arbrier et la brouette, appris d'un Mécaniste, se font enfin.
-- **L'aide** : « Fabriquer » dit que les recettes viennent quand on y pense (le message, la pastille, « À découvrir ») ; « Je suis coincé » répond à la recette qui ne vient pas ; nouvelle rubrique « Les déchets de l'Abondance » (tout se ramasse, presque rien ne vaut, les conteneurs se fouillent, le Comptoir refuse les ordures).
-- (Pour l'équipe) **`npm run rythme`** joue neuf parcours types (prudent, pressé, sans tutoriel, pour chaque famille) et vérifie le rythme : une nouveauté toutes les 3 min en moyenne la première demi-heure, un but au moins toutes les 20 min ensuite, et aucun blocage.
+**Pour l'équipe**
+- **`npm run rythme`** joue neuf parcours types (prudent, pressé, sans tutoriel, pour chaque famille) et vérifie le rythme : une nouveauté toutes les 3 min en moyenne la première demi-heure, un but au moins toutes les 20 min ensuite, et aucun blocage.
+- **`?mesure=1`** dans l'adresse ouvre le panneau de mesure (images par seconde, appels de dessin et triangles par poste, déchets simulés, banc d'essai automatique) pour l'essai sur iPhone.
+- **Le banc de charge** a l'option `--dechets` (des ramassages au hasard). Sur le Mac, 50 joueurs à la halte : ≈ 1 ms de calcul par joueur et par seconde, avec ou sans déchets (Book 17 §5.2).
 
 ---
 
