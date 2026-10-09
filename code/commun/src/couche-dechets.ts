@@ -313,7 +313,7 @@ export const POINTS_LIEUX: Partial<Record<LieuJouable, readonly PointLieu[]>> = 
     { id: "machine", type: "machine_laver", zone: "village", places: [[36, 25.5], [49, 14.5]], o: 0.2 },
     { id: "trampoline", type: "trampoline", zone: "jardin", places: [[57, 18], [59.5, 21]], o: 0 },
     // Le coffre des deux voitures de la route : à l'arrière de l'épave, du côté ouest.
-    { id: "coffre_1", type: "coffre_voiture", zone: "route", places: [[60.4, 33.2]], o: 0 },
+    { id: "coffre_1", type: "coffre_voiture", zone: "route", places: [[65.6, 33.2]], o: 0 },
     { id: "coffre_2", type: "coffre_voiture", zone: "route", places: [[136.4, 37]], o: 0 },
   ],
   cooperative: [
