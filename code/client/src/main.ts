@@ -1805,8 +1805,9 @@ if (MESURE !== null && MESURE !== "0") {
     mesureur = m.demarrerMesure({ scene, qualite, lieu: () => lieu, postes: postesMesures, dechets: dechetsVue });
   });
 }
-// Le mode obstacles (`?obstacles=1`, 0.7.1) : ce qui bloque le déplacement, dessiné par-dessus le lieu (vert : on voit ce
-// qui bloque ; rouge : barrière invisible). Chargé seulement si l'adresse le demande : rien ne change sinon.
+// Le mode obstacles (`?obstacles=1`, ou `?obstacles=ensemble` pour voir tout le lieu, 0.7.1) : ce qui bloque le
+// déplacement, dessiné par-dessus le lieu (vert : on voit ce qui bloque ; rouge : barrière invisible). Chargé seulement
+// si l'adresse le demande : rien ne change sinon.
 let controleObstacles: ControleEnDirect | null = null;
 const OBSTACLES = new URLSearchParams(location.search).get("obstacles");
 if (OBSTACLES !== null && OBSTACLES !== "0") {
@@ -1818,9 +1819,9 @@ if (OBSTACLES !== null && OBSTACLES !== "0") {
       sorties: () => sortiesDe(lieu),
       visibles: () => {
         const decor = decors.get(lieu);
-        return [...(decor ? [decor] : []), ...[...ressources.values()].map((r) => r.objet), ...[...installations.values()].map((i) => i.objet)];
+        return [...(decor ? [decor] : []), lots.groupe, ...[...ressources.values()].map((r) => r.objet), ...[...installations.values()].map((i) => i.objet)];
       },
-    });
+    }, OBSTACLES === "ensemble");
   });
 }
 

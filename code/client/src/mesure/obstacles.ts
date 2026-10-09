@@ -3,7 +3,8 @@
 // voit quelque chose à cet endroit (rendu/controle-obstacles.ts) :
 // - obstacles en vert (un mur, une haie, une épave… le matérialise) ou en rouge (rien de visible : barrière invisible) ;
 // - sorties en bleu, bornes de la zone en jaune, bords qu'on touche à pied en orange (matérialisés) ou rouge.
-// Un petit panneau résume le contrôle. La molette dézoome plus loin que d'habitude, pour voir le lieu en entier.
+// Un petit panneau résume le contrôle. La molette dézoome plus loin que d'habitude ; `?obstacles=ensemble` centre la
+// caméra sur le lieu (et non sur le personnage), dézoomée pour le voir en entier.
 
 import * as THREE from "three";
 import type { Sortie, Zone } from "../../../commun/src/lieux.ts";
@@ -25,7 +26,7 @@ export interface ControleEnDirect {
   maj(): void;
 }
 
-export function demarrerObstacles(s: SourcesObstacles): ControleEnDirect {
+export function demarrerObstacles(s: SourcesObstacles, ensemble = false): ControleEnDirect {
   s.scene.zoomMax = 4;
   const panneau = document.createElement("div");
   panneau.style.cssText =
@@ -37,7 +38,14 @@ export function demarrerObstacles(s: SourcesObstacles): ControleEnDirect {
     maj() {
       const zone = s.zone();
       const visibles = s.visibles();
-      const nouvelle = `${s.lieu()}|${zone.obstacles.length}|${zone.xMin},${zone.xMax},${zone.zMin},${zone.zMax}|${visibles.length}`;
+      // Ce qu'on voit change quand des ressources arrivent, se regroupent (lots), disparaissent : on compte ce qui se dessine.
+      let dessines = 0;
+      for (const v of visibles) {
+        v.traverseVisible((o) => {
+          dessines += o instanceof THREE.BatchedMesh ? o.instanceCount : o instanceof THREE.InstancedMesh ? o.count : 1;
+        });
+      }
+      const nouvelle = `${s.lieu()}|${zone.obstacles.length}|${zone.xMin},${zone.xMax},${zone.zMin},${zone.zMax}|${dessines}`;
       if (nouvelle === cle) return;
       cle = nouvelle;
       if (dessin) {
@@ -48,6 +56,11 @@ export function demarrerObstacles(s: SourcesObstacles): ControleEnDirect {
             (o.material as THREE.Material).dispose();
           }
         });
+      }
+      if (ensemble) {
+        // Vue d'ensemble : la caméra au centre du lieu, dézoomée pour le voir en entier (dans la limite du zoom).
+        s.scene.cibleForcee = { x: (zone.xMin + zone.xMax) / 2, z: (zone.zMin + zone.zMax) / 2 };
+        s.scene.reglerZoom(Math.max(zone.xMax - zone.xMin, zone.zMax - zone.zMin) / 13);
       }
       const controle = controlerLieu(zone, s.sorties(), visibles);
       dessin = dessinControle(zone, s.sorties(), controle);

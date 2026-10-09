@@ -36,6 +36,8 @@ export class Scene {
   lacetLibre: number | null = null;
   /** Le dézoom le plus large (le mode `?obstacles=1` le pousse, pour voir un lieu en entier). */
   zoomMax = ZOOM_MAX;
+  /** Le mode `?obstacles=ensemble` : la caméra regarde ce point (le centre du lieu) au lieu du personnage. */
+  cibleForcee: { x: number; z: number } | null = null;
 
   constructor(canvas: HTMLCanvasElement, qualite: Qualite) {
     this.rendu = new THREE.WebGLRenderer({ canvas, antialias: qualite.anticrenelage, powerPreference: "high-performance" });
@@ -109,6 +111,7 @@ export class Scene {
   }
 
   suivre(x: number, z: number, dt: number, immediat = false): void {
+    if (this.cibleForcee) ({ x, z } = this.cibleForcee);
     const lacetVise = this.lacetLibre ?? Math.PI / 4 + (this.quartDeTour * Math.PI) / 2;
     const lissage = immediat ? 1 : Math.min(1, dt * 6);
     this.lacet += (lacetVise - this.lacet) * (immediat ? 1 : Math.min(1, dt * 8));
