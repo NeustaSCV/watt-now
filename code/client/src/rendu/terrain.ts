@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { TERRAIN_TAILLE } from "../../../commun/src/regles.ts";
 import { distanceMare } from "../../../commun/src/terrain.ts";
 import { PALETTE, aleatoire, materiau, nommer } from "./materiaux.ts";
+import { trierParInstance } from "./lots.ts";
 
 const T = TERRAIN_TAILLE;
 
@@ -191,7 +192,8 @@ export function creerArbres(places: PlaceArbre[], aleat: () => number): THREE.Gr
   for (const maillage of [troncs, feuillus, sapins]) {
     maillage.castShadow = true;
     maillage.receiveShadow = true;
-    groupe.add(maillage);
+    // Trié arbre par arbre (lots.ts) : un arbre hors champ ne se dessine pas, ni son ombre hors de l'écran.
+    groupe.add(trierParInstance(maillage));
   }
   return groupe;
 }

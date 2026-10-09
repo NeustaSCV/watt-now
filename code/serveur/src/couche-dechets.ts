@@ -244,6 +244,8 @@ export interface ContexteDechets {
   /** Le lieu vivant (la halte, sa Coopérative) : ses Éteints voient les balises, ses ordures jetées s'effacent. */
   vivant(): LieuVivant | null;
   noterFait(fait: string): void;
+  /** « Il te manque… » ne nomme pas une recette encore cachée (l'arbre de progression) ; absent : toutes se citent. */
+  recetteVisible?(id: string): boolean;
 }
 
 /** La couche de déchets vue par un joueur : ses gestes, et ce qu'il reçoit. */
@@ -436,7 +438,7 @@ export class CoucheDechets {
     if (!this.proche(x, z, DISTANCE_INTERACTION + 0.6)) return this.ctx.info("C'est trop loin : approche-toi encore un peu.");
     const facteur = multiplicateurQualites(this.ctx.inventaire(), d.qualites);
     if (facteur === null) {
-      for (const t of outilsManquantsBref(d.qualites, this.ctx.inventaire())) this.ctx.info(t);
+      for (const t of outilsManquantsBref(d.qualites, this.ctx.inventaire(), undefined, (id) => this.ctx.recetteVisible?.(id) ?? true)) this.ctx.info(t);
       return;
     }
     const donne: Inventaire = {};

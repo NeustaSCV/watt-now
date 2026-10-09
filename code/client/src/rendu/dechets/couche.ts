@@ -3,9 +3,10 @@
 // catalogue, à sa silhouette, sa teinte et sa taille (apparence.ts, silhouettes.ts), posée sur une tache de crasse.
 //
 // Comment c'est dessiné (mesures sur l'iPhone 13 mini du porteur, 2026-10-09) :
-// - les pièces et les conteneurs des amas : un seul BatchedMesh pour tout le lieu (≈ 2 appels avec WEBGL_multi_draw,
-//   écart hors champ objet par objet). Si le navigateur ne sait pas dessiner en multiple, repli : une géométrie fondue
-//   par carreau de 20 m (1 appel par carreau visible) ;
+// - les pièces et les conteneurs des amas : un seul lot trié (`LotTrie` de lots.ts, un BatchedMesh : 1 appel avec
+//   WEBGL_multi_draw), chaque pièce écartée si elle est hors champ, et dans la passe d'ombre si son ombre ne peut pas
+//   tomber à l'écran (la même règle que les ressources du sol). Si le navigateur ne sait pas dessiner en multiple,
+//   repli : une géométrie fondue par carreau de 20 m (1 appel par carreau visible) ;
 // - les taches de crasse : un lot (1 appel), transparent, jamais d'ombre ;
 // - l'éclat de repère : un lot (1 appel, eclats.ts) ;
 // - les points du monde (vélo du fossé, trampoline…) : 1 à 3 appels chacun, avec leur ombre comme les épaves.
@@ -36,6 +37,7 @@ import { estOrdure } from "../../../../commun/src/vestiges.ts";
 import { icone } from "../../icones.ts";
 import type { ActionProposee, Propositions } from "../../interaction.ts";
 import { AMBIANCE } from "../ciel.ts";
+import { LotTrie } from "../lots.ts";
 import { aleatoire } from "../materiaux.ts";
 import { apparenceDe, type Silhouette } from "./apparence.ts";
 import { Eclats } from "./eclats.ts";
@@ -122,7 +124,13 @@ export class CoucheDechetsVue {
   private readonly geometries = new Map<string, THREE.BufferGeometry>();
   /** Le haut de chaque géométrie (pour l'éclat), et la tête lumineuse de la balise. */
   private readonly hauteurs = new Map<string, number>();
-  private lot: THREE.BatchedMesh | null = null;
+  private lot: LotTrie | null = null;
+  /**
+   * Les instances du lot qu'on peut reprendre : une pièce ramassée est seulement éteinte (jamais retirée du lot, qui
+   * garde ainsi des numéros d'instance continus, comme le veut le tri des ombres de LotTrie) ; la pièce suivante
+   * reprend sa place, avec une autre géométrie.
+   */
+  private readonly libres: number[] = [];
   private capaciteSommets = 0;
   private readonly idsGeometries = new Map<string, number>();
   /** Ce qui est posé, par carreau : clé de la pose → pose (et son instance dans le lot). */
@@ -267,6 +275,7 @@ export class CoucheDechetsVue {
       this.lot = null;
     }
     this.idsGeometries.clear();
+    this.libres.length = 0;
     this.poses.clear();
     for (const m of this.fondus.values()) {
       this.objet.remove(m);
@@ -292,9 +301,8 @@ export class CoucheDechetsVue {
       if (this.mode === "lot") {
         // De la marge : un renouvellement amène d'autres objets, donc d'autres géométries.
         this.capaciteSommets = Math.max(30_000, sommets * 2);
-        this.lot = new THREE.BatchedMesh(Math.max(64, Math.ceil(instances * 1.5)), this.capaciteSommets, 0, this.materiau);
+        this.lot = new LotTrie(Math.max(64, Math.ceil(instances * 1.5)), this.capaciteSommets, 0, this.materiau);
         this.lot.name = "pièces";
-        this.lot.sortObjects = false;
         this.lot.castShadow = this.options.ombresPieces;
         this.lot.receiveShadow = true;
         this.objet.add(this.lot);
@@ -334,15 +342,22 @@ export class CoucheDechetsVue {
     for (const [cle, pose] of actuelles) {
       const v = voulues.get(cle);
       if (v && v.geometrie === pose.geometrie) continue;
-      lot.deleteInstance(pose.id);
+      lot.setVisibleAt(pose.id, false);
+      this.libres.push(pose.id);
       if (this.liseree === pose.id) this.liseree = null;
       actuelles.delete(cle);
     }
     for (const [cle, pose] of voulues) {
       if (actuelles.has(cle)) continue;
       const g = this.idGeometrie(pose.geometrie);
-      if (lot.instanceCount >= lot.maxInstanceCount) lot.setInstanceCount(lot.maxInstanceCount * 2);
-      const id = lot.addInstance(g);
+      let id = this.libres.pop();
+      if (id === undefined) {
+        if (lot.instanceCount >= lot.maxInstanceCount) lot.setInstanceCount(lot.maxInstanceCount * 2);
+        id = lot.addInstance(g);
+      } else {
+        lot.setGeometryIdAt(id, g);
+        lot.setVisibleAt(id, true);
+      }
       lot.setMatrixAt(id, pose.matrice);
       lot.setColorAt(id, BLANC);
       actuelles.set(cle, { ...pose, id });
