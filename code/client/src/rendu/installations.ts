@@ -9,6 +9,7 @@ import { Panache } from "./panache.ts";
 import { batterieVoiture, modulePanneau, roueVelo } from "./pieces.ts";
 import { decharge, majTrouvailles } from "./decharge.ts";
 import { modeleMetier } from "./metier/index.ts";
+import { accessoiresForge, majAccessoiresForge, piecesForgeVentilee, type AccessoiresForge } from "./metier/forge.ts";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import type { InstallationVue } from "../../../commun/src/messages.ts";
@@ -775,6 +776,8 @@ function clayonnage(c: Assemblage, a: THREE.Vector3, b: THREE.Vector3, h: number
 /** Ce qu'un niveau ajoute au modèle de base. Null : rien à ajouter. */
 function piecesNiveau(type: InstallationVue["type"], niveau: number): THREE.Group | null {
   if (niveau <= 1) return null;
+  // La forge ventilée (Book 25 §9.3) : ses pièces sont dessinées avec les autres modèles des Charbonniers.
+  if (type === "forge") return piecesForgeVentilee();
   const c = new Assemblage(300 + niveau);
   c.occlusion = 0.3;
   const aleat = aleatoire(300 + niveau);
@@ -855,6 +858,8 @@ export class VueInstallation {
   private trouvailles: THREE.Group | null = null;
   /** Le redresseur de fûts monté sur l'établi (Book 25 §9.3). */
   private redresseur: THREE.Object3D | null = null;
+  /** La forge : l'enclume posée, le bac de trempe, le ventilateur (Book 25 §9.3). */
+  private forge: AccessoiresForge | null = null;
   private temps = 0;
 
   constructor(donnees: InstallationVue) {
@@ -889,6 +894,8 @@ export class VueInstallation {
       }
       case "forge":
         this.objet = forge();
+        this.forge = accessoiresForge();
+        this.objet.add(this.forge.groupe);
         break;
       case "pedalier": {
         const p = pedalier();
@@ -976,6 +983,7 @@ export class VueInstallation {
       }
     }
     if (this.voyant) (this.voyant.material as THREE.MeshBasicMaterial).color.setHex(chargees > 0 ? 0x5aff7a : 0x1f3324);
+    if (this.forge) majAccessoiresForge(this.forge, donnees.etat);
     if (this.trouvailles) majTrouvailles(this.trouvailles, Object.values(donnees.etat.contenu ?? {}).reduce((s, n) => s + (n ?? 0), 0));
     // La bassine se remplit avec la pluie (jusqu'à 5 L : le bord) ; elle s'évase, l'eau s'élargit en montant.
     if (this.eau) {
@@ -1004,6 +1012,7 @@ export class VueInstallation {
       });
       this.fumee.objet.visible = cuit;
     }
+    if (this.forge?.ventilateur.visible) this.forge.helice.rotation.z -= dt * 25;
     if (enMarche) {
       if (this.roue) this.roue.rotation.z -= dt * 9;
       // La meule est sur l'axe de la roue ; le plateau tourne moins vite (rapport de la chaîne).

@@ -9,6 +9,7 @@ import { KLAXONS_PAR_BATTERIE, LEURRES, PORTES, chargeBatterieTracteur, distance
 import type { AutreVu, EtatCoopVu, InstallationVue, MessageClient, SacVu, Verbe } from "../../commun/src/messages.ts";
 import { nommer, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
 import { RECETTES } from "../../commun/src/recettes.ts";
+import { ENCLUMES, NIVEAU_FORGE_VENTILEE, enclumeDuSac } from "../../commun/src/forge.ts";
 import { NOMS_FAMILLES, type Famille } from "../../commun/src/regles.ts";
 import type { Gourde } from "../../commun/src/survie.ts";
 import { DISTANCE_INTERACTION, EMPRISE_RESSOURCE, PORTEE_ARBRE, distanceMare, RAYON_ESCABEAU, USAGES, estArbre, estFruitier, type TypeRessource } from "../../commun/src/terrain.ts";
@@ -111,8 +112,22 @@ function actionsInstallation(
       const l = i.etat.litres ?? 0;
       return [l >= 0.1 && (inventaire.gourde ?? 0) > 0 ? msg(`Remplir la gourde (eau de pluie, ${l.toFixed(1).replace(".", ",")} L)`, "remplir_pluie") : null, examiner];
     }
-    case "forge":
-      return [{ libelle: "Travailler à la forge", ouvrirFabrication: true }, examiner];
+    case "forge": {
+      // B : un accessoire à poser, s'il y a de quoi dans le sac (Book 25 §9.3) ; sinon, la fiche (améliorer la forge).
+      const enclume = enclumeDuSac(inventaire);
+      const posee = i.etat.enclume ? ENCLUMES[i.etat.enclume].etoiles : 2;
+      const accessoire =
+        enclume && ENCLUMES[enclume].etoiles > posee
+          ? msg(`Poser l'enclume (${ENCLUMES[enclume].nom.replace(/^l'|^la |^le /, "")})`, "poser_enclume")
+          : !i.etat.ventilateur && (i.niveau ?? 1) >= NIVEAU_FORGE_VENTILEE && (inventaire.ventilateur_forge ?? 0) > 0
+            ? msg("Monter le ventilateur", "monter_ventilateur")
+            : i.etat.bac && (inventaire.bidon_huile ?? 0) > 0
+              ? msg("Verser l'huile dans le bac", "verser_huile")
+              : !i.etat.bac && (inventaire.casserole ?? 0) > 0 && ((inventaire.bidon_huile ?? 0) > 0 || (inventaire.graisse ?? 0) > 0)
+                ? msg("Poser le bac de trempe (casserole)", "poser_bac")
+                : null;
+      return [{ libelle: "Travailler à la forge", ouvrirFabrication: true }, accessoire ?? examiner];
+    }
     case "charbonniere": {
       if (!i.etat.pretLe) return [msg("Allumer la meule", "allumer_meule"), examiner];
       const reste = i.etat.pretLe - maintenantServeur;

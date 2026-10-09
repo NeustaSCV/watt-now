@@ -121,7 +121,12 @@ export type Verbe =
   /** Un piège, une plaque de choc (Book 25 §5.3 et §6.3) : le réarmer ; une clôture couchée : la relever (chantiers 6 et 7). */
   | "rearmer_piege"
   /** L'établi : y monter le redresseur de fûts (Book 25 §9.3, chantier 4) ; les flèches vont deux fois plus vite. */
-  | "monter_redresseur";
+  | "monter_redresseur"
+  // La forge des Charbonniers (Book 25 §9.3, chantier 5) : ses accessoires (serveur/src/forge.ts).
+  | "poser_enclume"
+  | "poser_bac"
+  | "verser_huile"
+  | "monter_ventilateur";
 
 /** État propre à certaines installations. */
 export interface EtatInstallation {
@@ -146,6 +151,14 @@ export interface EtatInstallation {
   payes?: Inventaire[];
   /** Un piège, une plaque de choc, une clôture (Book 25 §5.3 et §6.3) : son état (serveur/src/declencheurs.ts). */
   declencheur?: EtatDeclencheur;
+  /**
+   * La forge (Book 25 §9.3, chantier 5) : l'enclume posée (absente : la pierre plate du foyer), le bac de trempe, l'huile
+   * qu'il tient (en trempes), le ventilateur 12 V des Voltaïques (la forge ventilée souffle seule).
+   */
+  enclume?: "etau" | "masse" | "rail";
+  bac?: boolean;
+  huile?: number;
+  ventilateur?: boolean;
 }
 
 /** L'état d'une installation à déclencheur. */

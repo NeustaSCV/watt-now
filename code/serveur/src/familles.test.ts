@@ -67,16 +67,19 @@ test("🔥 charbonnière : allumer, attendre trois jours de jeu, défourner 4 kg
 });
 
 test("🔥 la lame se forge seulement près d'un foyer de forge, avec charbon et marteau", () => {
-  const t = monter("charbonniers", { pierre: 8, barre_metal: 1, branche: 2, marteau: 1, ressort_lames: 1, charbon_bois: 2 });
+  // La graisse : une trempe à l'huile, sûre (à l'eau, une lame sur trois se fend : voir forge.test.ts).
+  const t = monter("charbonniers", { pierre: 8, barre_metal: 1, branche: 3, marteau: 1, ressort_lames: 1, charbon_bois: 2, graisse: 1 });
   t.joueur.recevoir({ t: "fabriquer", recette: "lame_forgee" });
   assert.match(t.infos().at(-1)!, /foyer de forge/);
   t.construire("forge", 90);
   t.joueur.recevoir({ t: "fabriquer", recette: "lame_forgee" });
   t.attendre(91);
   const inv = t.dernier("inventaire")!.inventaire;
-  assert.equal(inv.lame_forgee, 1);
+  // Le foyer et le marteau, sans pinces : un couteau de forge ★★ (Book 25 §4.2).
+  assert.equal(inv["lame_forgee#2"], 1);
   assert.equal(inv.charbon_bois, 1);
   assert.equal(inv.ressort_lames, undefined);
+  assert.equal(inv.graisse, undefined, "la graisse a servi à la trempe");
 });
 
 test("⚙️ pédalier : dynamo montée, une heure de pédalage charge la batterie et coûte des calories", () => {

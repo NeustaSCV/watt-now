@@ -144,7 +144,7 @@ const OBJETS_DE_BASE: Record<TypeObjetDeBase, DefinitionObjet> = {
   barre_metal: { description: "Un mètre de fer rond. Levier, arme, ou matière à forger.", nom: "barre de métal", pluriel: "barres de métal", poids: 2 },
   batterie_voiture: { description: "12 V, 60 Ah : environ 360 Wh utiles. Lourde, mais précieuse.", nom: "batterie de voiture", pluriel: "batteries de voiture", poids: 18 },
   charbon_bois: { description: "Léger, noir, il chauffe à 1 300 °C : de quoi forger. Un kilo par lame.", nom: "kilo de charbon de bois", pluriel: "kilos de charbon de bois", poids: 1, combustible: 1.8 },
-  lame_forgee: { description: "Une lame forgée dans un ressort de camionnette, trempée à l'huile. Elle se vendra bien.", nom: "lame forgée", pluriel: "lames forgées", poids: 0.3 },
+  lame_forgee: { description: "Un couteau de forge : une lame tirée d'un ressort, trempée, emmanchée sur une branche. Il se vendra bien.", nom: "couteau de forge", pluriel: "couteaux de forge", poids: 0.3 },
   couteau_aiguise: { description: "Le même couteau, repassé à la meule. Il coupe enfin.", nom: "couteau aiguisé", pluriel: "couteaux aiguisés", poids: 0.2 },
   panneau_solaire: {
     description: "Un petit panneau de 20 W démonté de l'auvent. Personne ne sait plus en fabriquer : il vaut ce qu'il coûterait à refaire.",

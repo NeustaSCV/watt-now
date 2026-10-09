@@ -12,7 +12,7 @@ import type { Apparence } from "../../commun/src/apparence.ts";
 import { INTENTION_REPOS, avancer, nettoyerIntention, type Intention, type Position } from "../../commun/src/deplacement.ts";
 import type { Bienvenue, Cible, FeuVu, InstallationVue, MessageClient, MessageServeur } from "../../commun/src/messages.ts";
 import { CAPACITE_SAC, CONTENANTS, OBJETS, capaciteDe, estCleObjet, estObjet, lumierePortee, nommer, poidsInventaire, traineTravois, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
-import { cleExemplaire, compter, estMaitrisee, estObjetDeMetier, retirerExemplaires, typeDe, type CleObjet } from "../../commun/src/etoiles.ts";
+import { compter, estMaitrisee, estObjetDeMetier, retirerExemplaires, typeDe, type CleObjet } from "../../commun/src/etoiles.ts";
 import { NOMS_INSTALLATIONS, RECETTES, dureeReelle, ingredientsPresents, multiplicateurQualites, niveauQualite, recette, recettesConnues, type Recette, type TypeInstallation } from "../../commun/src/recettes.ts";
 import { estHorsFamille, etoilesDuProduit, recettePour } from "../../commun/src/recettes.ts";
 import { chezLaFamille, estManuel, type Savoir } from "../../commun/src/savoir.ts";
@@ -79,6 +79,7 @@ import { Comptoir } from "./comptoir.ts";
 import { Tir, type ContexteTir } from "./tir.ts";
 import { Sechage, accelerationFleches } from "./arc.ts";
 import { REDRESSEUR } from "../../commun/src/arc.ts";
+import { Forge, type ContexteForge } from "./forge.ts";
 import { declencher, declencheurNeuf, definitionDeclencheur, estDeclencheur, type DeclencheurPose } from "./declencheurs.ts";
 import {
   PRIX_RETRAIT,
@@ -327,6 +328,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
     sauver: (etat) => this.base.sauverSechage(this.compte.id, etat),
     info: (t) => this.info(t),
   });
+  /** La forge des Charbonniers (Book 25 §4) : trempe, reforgeage, accessoires ; dans serveur/src/forge.ts. */
+  private readonly forge: Forge = new Forge(this.contexteForge());
 
   /** Le lieu vivant où l'on se trouve (la halte, partagée ; sa Coopérative, à soi) ; null sur le terrain et au Comptoir. */
   private get vivant(): LieuVivant | null {
@@ -968,6 +971,30 @@ export class Joueur implements Voyageur, ParticipantLecon {
     };
   }
 
+  /** Ce que le joueur prête à la forge (forge.ts) : rien que des accès, aucune règle. */
+  private contexteForge(): ContexteForge {
+    const j = this;
+    return {
+      get id() {
+        return j.compte.id;
+      },
+      alea: () => j.alea(),
+      inventaire: () => j.inventaire,
+      retirer: (cle, n) => j.retirer(cle, n),
+      ajouter: (objets) => j.ajouterPlusieurs(objets),
+      installationsProches: () => (j.lieu !== "terrain" || j.voyage ? [] : [...j.installations.values()].filter((i) => j.proche(i.x, i.z, 3))),
+      majInstallation: (i) => {
+        j.base.sauverEtatInstallation(j.compte.id, i.id, i.etat);
+        j.envoyer({ t: "installation", installation: i });
+      },
+      faits: (cle) => j.quetes.etat.faits[cle] ?? 0,
+      info: (t) => j.info(t),
+      commencer: (libelle, dureeS, appliquer) => j.commencer(libelle, dureeS, appliquer, 0, "outil"),
+      lire: (cle) => j.base.lireMonde(cle),
+      ecrire: (cle, valeur) => j.base.ecrireMonde(cle, valeur),
+    };
+  }
+
   /** Ce qui suit la destruction d'un Éteint, au contact comme au tir. */
   private apresDestruction(cible: Eteint): void {
     if (this.tuto) this.tuto.premierEteintDetruit = true;
@@ -1060,6 +1087,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       if (debris) {
         if (poidsInventaire(this.inventaire, this.gourde.litres) + poidsDe({ [debris]: 1 }) <= capaciteDe(this.inventaire)) {
           this.ajouterPlusieurs({ [debris]: 1 });
+          if (debris === "lame_ebrechee") this.forge.noterDebris(o);
           reste = ` Il n'en reste qu'un débris (${nommer(debris, 1)}), qui se démonte : Sac → Démonter.`;
         } else {
           this.poserAuSol({ [debris]: 1 });
@@ -2388,6 +2416,9 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (r.installation && ![...this.installations.values()].some((i) => i.type === r.installation && this.proche(i.x, i.z, 2.5))) {
       return this.info(`Il faut être près d'un ${NOMS_INSTALLATIONS[r.installation]}.`);
     }
+    // La forge (Book 25 §4) : forge ventilée, maîtrise, huile ; le risque de la trempe à l'eau est dit ici.
+    const refusForge = this.forge.refus(r);
+    if (refusForge) return this.info(refusForge);
 
     if ("installation" in r.produit) {
       const type = r.produit.installation;
@@ -2435,12 +2466,13 @@ export class Joueur implements Voyageur, ParticipantLecon {
         }
       }
       // Les étoiles d'un objet de métier (Book 25 §4.2) : le maillon faible, la maîtrise (10 faits), ★★ hors famille.
-      const etoiles = etoilesDuProduit(r, this.inventaire, { horsFamille, maitrise: estMaitrisee(this.quetes.etat.faits[`fabrique:${r.id}`] ?? 0) });
+      const etoiles = etoilesDuProduit(r, this.inventaire, { horsFamille, maitrise: estMaitrisee(this.quetes.etat.faits[`fabrique:${r.id}`] ?? 0), contexte: this.forge.contexte() });
       this.retirerIngredients(ingredients);
-      this.ajouterPlusieurs({ [cleExemplaire(produit.objet, etoiles ?? undefined)]: quantite, ...sousProduits });
+      // Ce qui sort de la forge (trempe, reforgeage, manche tourné : forge.ts) ; ailleurs, le produit à ses étoiles.
+      this.ajouterPlusieurs(somme(this.forge.sortie(r, produit.objet, etoiles, quantite, horsFamille), sousProduits));
       this.mesurer("progression", `recette:${r.id}`, 1);
       this.noterFait(`fabrique:${r.id}`);
-    }, 0, r.qualites.marteler ? "lourd" : "outil");
+    }, this.forge.kcalEnPlus(r), r.qualites.marteler ? "lourd" : "outil");
   }
 
   /** Retire les ingrédients d'une recette : un objet de métier, les exemplaires les moins bons d'abord. */
@@ -3145,7 +3177,12 @@ export class Joueur implements Voyageur, ParticipantLecon {
         if (i.type === "banc_recharge" && Object.values(i.etat.batteries ?? {}).some((n) => (n ?? 0) > 0)) return this.info("Reprends d'abord les batteries posées sur le banc.");
         if (i.type === "charbonniere" && i.etat.pretLe) return this.info("La meule cuit : on ne l'ouvre qu'au défournement.");
         // Les accessoires du pédalier se démontent avec lui.
-        const accessoires = somme(i.etat.meule ? { pierre: 3 } : {}, i.etat.dynamo ? { dynamo_velo: 1 } : {}, i.etat.redresseur ? REDRESSEUR.cout : {});
+        const accessoires = somme(
+          i.etat.meule ? { pierre: 3 } : {},
+          i.etat.dynamo ? { dynamo_velo: 1 } : {},
+          i.etat.redresseur ? REDRESSEUR.cout : {},
+          Forge.accessoiresRendus(i),
+        );
         const rend = rendDuDemontage(somme(laRecette.ingredients, ...(i.etat.payes ?? []), accessoires));
         if (!this.peutReprendre(rend)) return;
         return this.commencer(`Démonter : ${nom}`, Math.max(2, dureeReelle(laRecette) / 2), () => {
@@ -3178,6 +3215,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       this.envoyer({ t: "installation", installation: i });
     };
     if (verbe === "ameliorer" || verbe === "redescendre" || verbe === "demonter_installation") return this.amenagerInstallation(i, verbe);
+    if (this.forge.utiliser(i, verbe)) return;
 
     switch (verbe) {
       case "porter":

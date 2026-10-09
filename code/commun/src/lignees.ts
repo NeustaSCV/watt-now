@@ -368,6 +368,38 @@ export const LIGNEES_INSTALLATIONS: Partial<Record<TypeInstallation, readonly Et
       examen: "Le coffre cerclé, monté sur des pierres sous un auvent de bâche.",
     },
   ],
+  // 🔥 La lignée de la forge (Book 25 §4.1 et §9.3, chantier 5) : le foyer à soufflet, puis la forge ventilée. Ses
+  // accessoires (enclume, bac de trempe, ventilateur ⚡) se posent sur place : serveur/src/forge.ts.
+  forge: [
+    {
+      id: "forge",
+      nom: "Foyer de forge à soufflet",
+      niveau: 1,
+      couts: [{ pierre: 8, barre_metal: 1, branche: 2 }],
+      qualites: { marteler: 1 },
+      duree: 90,
+      intensite: "lourde",
+      famille: "charbonniers",
+      apporte: "Forger au charbon, vers 900 °C : couteau, hachette, machette, serpe, pointes. Les lames montent à ★★, ★★★ avec des pinces et une enclume.",
+      examen: "Un foyer de pierres, un soufflet, une pierre plate pour enclume. Il faut du charbon de bois.",
+    },
+    {
+      id: "forge_ventilee",
+      nom: "Forge ventilée",
+      niveau: 2,
+      // La tuyère d'argile et le soufflet double : du cuir de bâche, ou des chiffons cousus.
+      couts: [
+        { bache: 1, pierre: 6, barre_metal: 1 },
+        { chiffons: 4, pierre: 6, barre_metal: 1 },
+      ],
+      qualites: { marteler: 1 },
+      duree: 60,
+      intensite: "lourde",
+      famille: "charbonniers",
+      apporte: "Un soufflet double et une tuyère : vers 1 300 °C. Les lames montent à ★★★★ ; la hache et le glaive s'y forgent. On pompe soi-même, sauf avec un ventilateur.",
+      examen: "Le foyer, chemisé d'argile, une tuyère de fer, et un grand soufflet double qu'on pompe d'une main. Le charbon y blanchit.",
+    },
+  ],
 };
 
 /** Ce que tient un coffre selon son niveau (kg). */
