@@ -4,7 +4,7 @@
 import * as THREE from "three";
 import { TERRAIN_TAILLE } from "../../../commun/src/regles.ts";
 import { distanceMare } from "../../../commun/src/terrain.ts";
-import { PALETTE, aleatoire, materiau } from "./materiaux.ts";
+import { PALETTE, aleatoire, materiau, nommer } from "./materiaux.ts";
 
 const T = TERRAIN_TAILLE;
 
@@ -78,6 +78,7 @@ export function creerTerrain(): THREE.Group {
   groupe.add(creerCloture(aleat));
   groupe.add(creerDetails(aleat));
   groupe.add(creerPanneauRoute("Route de la Campagne", "Station-service 3 km", 27.8, T - 1.2, 0));
+  nommer(groupe, ["sol", "exterieur", "lisiere", "cloture", "details", "panneau"]);
   return groupe;
 }
 
@@ -107,14 +108,15 @@ export function creerPanneauRoute(titre: string, sousTitre: string, x: number, z
   ctx.fillText(sousTitre, 128, 78, 236);
   const texture = new THREE.CanvasTexture(c);
   texture.colorSpace = THREE.SRGBColorSpace;
-  const planche = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.64, 0.06), [
-    materiau(0x7a5a3c),
-    materiau(0x7a5a3c),
-    materiau(0x7a5a3c),
-    materiau(0x7a5a3c),
-    new THREE.MeshStandardMaterial({ map: texture, roughness: 0.9 }),
-    materiau(0x7a5a3c),
-  ]);
+  // Les cinq faces de bois en un seul morceau, la face peinte (+z) à part : 2 appels de dessin au lieu de 6, autant
+  // dans l'ombre (2026-10-09). Même image : on ne fait que réordonner les triangles de la boîte.
+  const boite = new THREE.BoxGeometry(1.7, 0.64, 0.06);
+  const ordre = Array.from(boite.index!.array);
+  boite.setIndex([...ordre.slice(0, 24), ...ordre.slice(30, 36), ...ordre.slice(24, 30)]);
+  boite.clearGroups();
+  boite.addGroup(0, 30, 0);
+  boite.addGroup(30, 6, 1);
+  const planche = new THREE.Mesh(boite, [materiau(0x7a5a3c), new THREE.MeshStandardMaterial({ map: texture, roughness: 0.9 })]);
   planche.position.set(0, 1.65, 0.08);
   planche.rotation.z = 0.04;
   planche.castShadow = true;

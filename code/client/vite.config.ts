@@ -1,6 +1,7 @@
 import { defineConfig, type PluginOption } from "vite";
 import basicSsl from "@vitejs/plugin-basic-ssl";
 import { fileURLToPath } from "node:url";
+import { appendFileSync, mkdirSync } from "node:fs";
 
 const racineCode = fileURLToPath(new URL("..", import.meta.url));
 const serveurDeJeu = "http://localhost:8787";
@@ -10,6 +11,38 @@ const https = process.env.WATT_HTTPS === "1";
 const extensions: PluginOption[] = [];
 // Certificat auto-signé, gardé dans node_modules/.vite (dans le projet).
 if (https) extensions.push(basicSsl({ name: "watt-now-dev" }));
+
+// Le mode mesure (`?mesure=1`) envoie ses relevés au Mac (bouton « Envoyer au Mac », fin du banc d'essai) : une ligne
+// JSON par relevé dans `.claude-travail/mesures/releves.jsonl` (dans le projet). En développement seulement.
+const dossierMesures = fileURLToPath(new URL("../../.claude-travail/mesures/", import.meta.url));
+extensions.push({
+  name: "watt-releves-de-mesure",
+  configureServer(serveur) {
+    serveur.middlewares.use("/__mesure", (req, res) => {
+      if (req.method !== "POST") {
+        res.statusCode = 405;
+        res.end();
+        return;
+      }
+      let corps = "";
+      req.on("data", (morceau: Buffer) => {
+        corps += morceau;
+        if (corps.length > 500_000) req.destroy();
+      });
+      req.on("end", () => {
+        try {
+          const releve = JSON.parse(corps) as object;
+          mkdirSync(dossierMesures, { recursive: true });
+          appendFileSync(dossierMesures + "releves.jsonl", JSON.stringify({ recu: new Date().toISOString(), ...releve }) + "\n");
+          res.end("ok");
+        } catch {
+          res.statusCode = 400;
+          res.end();
+        }
+      });
+    });
+  },
+});
 
 export default defineConfig({
   root: fileURLToPath(new URL(".", import.meta.url)),

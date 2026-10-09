@@ -8,7 +8,7 @@
 
 import * as THREE from "three";
 import { BOUTIQUE, FERME_HALTE, GOULET, HALTE, ROUTE, STATION, dansBoite, type Boite } from "../../../commun/src/lieux.ts";
-import { PALETTE, aleatoire, materiau } from "./materiaux.ts";
+import { PALETTE, aleatoire, materiau, nommer } from "./materiaux.ts";
 import {
   Chantier,
   dessiner,
@@ -25,6 +25,7 @@ import {
   type Pose,
 } from "./ruine.ts";
 import { bruit, creerArbres, creerPanneauRoute, fusionner, type PlaceArbre } from "./terrain.ts";
+import { fusionnerStatique } from "./fusion.ts";
 
 const L = HALTE.longueur;
 const ASPHALTE = 0x56575b;
@@ -136,6 +137,7 @@ export function creerHalte(): THREE.Group {
   groupe.add(creerPanneauRoute("Le Carrefour", "← Comptoir · 2 km", 7, ROUTE.z + ROUTE.demiLargeur + 1.6, 0));
   groupe.add(creerPanneauRoute("Ton terrain", "3 km, par le pont →", L - 9, ROUTE.z + ROUTE.demiLargeur + 1.6, 0));
   groupe.add(creerBarrage());
+  nommer(groupe, ["sol", "route", "foret", "station", "ferme", "goulet", "poteaux", "herbes", "debris", "panneau", "panneau", "barrage"]);
   return groupe;
 }
 
@@ -1105,6 +1107,8 @@ function creerBarrage(): THREE.Group {
   avis.position.set(-0.06, 1.35, 1.2);
   avis.rotation.y = -Math.PI / 2;
   g.add(avis);
+  // Les quatre pieds des chevalets fondus en un seul maillage (2026-10-09) : 3 appels au lieu de 6. Même image.
+  fusionnerStatique(g);
   return g;
 }
 

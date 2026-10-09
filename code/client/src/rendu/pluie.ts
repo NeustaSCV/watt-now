@@ -29,6 +29,7 @@ export class Pluie {
     this.segments = new THREE.LineSegments(geo, this.materiau);
     this.segments.frustumCulled = false;
     this.segments.visible = false;
+    this.segments.userData.poste = "pluie";
     scene.add(this.segments);
   }
 
