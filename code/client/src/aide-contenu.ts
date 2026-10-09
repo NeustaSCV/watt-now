@@ -67,6 +67,7 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
         liste: [
           "Sac : {sac} · Fabriquer : {fabriquer} · Carte : {carte} · Carnet : {carnet}.",
           "Lumière portée : {lumiere} (si tu as une torche, une lampe ou une lanterne).",
+          "Lancer, tirer : {lancer} (maintenir pour viser). Voir « Lancer, tirer à l'arc et à l'arbalète ».",
           "Tourner la vue d'un quart de tour : {tourner}. Sur ordinateur, Maj + {tourner} tourne dans l'autre sens, et la molette zoome.",
           "Échap ferme la fenêtre ouverte.",
           "Sur ordinateur, le menu ⚙ → Commandes permet de changer chaque touche. Le jeu part d'un clavier AZERTY.",
@@ -369,11 +370,143 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
       "Reste trop longtemps à son contact et il **t'attrape**. Saisi, tu ralentis ; à deux, ils t'immobilisent ; à trois, c'est fini. Quelques secondes après la saisie, il mord. **Tape {examiner} très vite** pour te dégager. Ne te laisse jamais encercler.",
       { sous_titre: "Les armes" },
       "En Combat, tu frappes avec l'arme **équipée** (Sac → l'arme → Équiper pour le combat), sinon avec la meilleure de ton sac. Chaque arme montre dans le sac ses **dégâts**, sa **vitesse** et son **allonge**, comparés aux autres, et si elle tue d'un coup appuyé à la tête. Une longue arme garde l'Éteint à distance ; une lourde frappe fort mais lentement. À mains nues, ça ne suffit pas.",
-      { sous_titre: "Contondant, tranchant, perçant" },
-      "Une seule règle : **le casque**. Certains Éteints en portent un. Le **tranchant** (hache, machette, couteaux) glisse dessus ; le **contondant** (marteau, masse, gourdin…) passe, et étourdit plus longtemps ; le **perçant** (épieu, lance) vaut par son allonge. Le sac indique le type de chaque arme.",
+      { sous_titre: "Contondant, tranchant, perçant, électrique" },
+      "Une seule règle : **le casque**. Certains Éteints en portent un. Le **tranchant** (hache, machette, couteaux) glisse dessus ; le **contondant** (marteau, masse, gourdin…) passe, et étourdit plus longtemps ; le **perçant** (épieu, lance) vaut par son allonge, et la flèche passe par la visière, de face ; l'**électrique** passe le casque (voir « L'électricité contre les Éteints »). Le sac indique le type de chaque arme.",
+      { sous_titre: "Les armes de métier" },
+      "Chaque famille a la sienne : les **lames** forgées des Charbonniers, solides et rapides ; les **armes électriques** des Voltaïques, qui raidissent avant d'éteindre ; l'**arbalète** des Mécanistes, qui frappe de loin. Chacune a son terrain ; aucune ne fait tout. Et l'**arc** est à tout le monde.",
       { sous_titre: "L'usure" },
       "Chaque coup qui touche use l'arme en main. Sous 30 %, elle est **abîmée** (le jeu te prévient) : ses coups portent moins. À zéro, elle **casse** et laisse un débris, qui se démonte (Sac → Démonter) pour en tirer un peu de matière. La solidité se lit dans le sac.",
-      "**Réparer** (Sac → l'arme) : une réparation de fortune, partout, avec une ficelle et des chiffons, la fait tenir sans la remettre à neuf ; pour de bon, chez toi, à l'atelier qui convient (le bois à l'établi, les lames à une meule, le métal à une forge). Ce que ta famille ne sait pas réparer, une autre le sait : échangez.",
+      "**Réparer** (Sac → l'arme) : une réparation de fortune, partout, avec une ficelle et des chiffons, la fait tenir sans la remettre à neuf ; pour de bon, chez toi, à l'atelier qui convient (le bois à l'établi, les lames à une meule ou à une forge, le métal à une forge). Ce que ta famille ne sait pas réparer, une autre le sait : échangez. Une lame cassée laisse une lame ébréchée : un forgeron la reforge.",
+    ],
+  },
+  {
+    id: "tirer",
+    icone: "🏹",
+    titre: "Lancer, tirer à l'arc et à l'arbalète",
+    resume: "Le bouton Lancer, la visée, le tir plein, réarmer l'arbalète, ramasser ses flèches.",
+    blocs: [
+      "Le bouton **Lancer** ({lancer}, ou le clic du milieu ; sur téléphone, le bouton rond « Lancer », quand tu as de quoi lancer) sert à tout ce qui part de ta main : une pierre, un réveil, une hachette, une flèche, un carreau.",
+      { sous_titre: "Choisir ce qui part" },
+      "Sac → l'objet → « **Prêt à lancer** » ou « **Prêt à tirer** ». Sans choix, c'est une pierre. Ton arme de contact reste en main : tu as les deux à la fois.",
+      { sous_titre: "Viser" },
+      "**Maintiens** {lancer} : une ligne de points et un cercle apparaissent. Une arme s'accroche à l'Éteint le plus proche devant toi (sur ordinateur, la souris oriente). Relâche pour lancer.",
+      {
+        liste: [
+          "Le cercle **blanc** : il sera touché. **Orange** : trop loin, la chance baisse.",
+          "Le cercle **rouge** : la tête est à portée. Un tir plein l'arrête pour de bon.",
+          "Les murs arrêtent tout. Une caisse basse, non.",
+        ],
+      },
+      { sous_titre: "L'arc" },
+      "Tout le monde sait faire un arc : une perche ou une branche droite, une corde. Bande-le en maintenant {lancer} : relâché trop tôt, c'est un **tir rapide**, au corps ; quand le cercle s'est refermé, c'est un **tir plein**. Il faut ensuite encocher la flèche suivante. Tenir l'arc bandé trop longtemps fait trembler le bras et use ton souffle.",
+      "La pointe compte : une flèche simplement durcie au feu blesse, mais ne perce pas un crâne. L'arc est l'arme la plus discrète du jeu.",
+      { sous_titre: "L'arbalète (les Mécanistes)" },
+      "Elle se porte **armée** : le carreau part dès que tu relâches, sans rien bander, et porte loin. Ensuite, {lancer} la **réarme** : quelques secondes **sans bouger**. La plus lourde demande un outil pour la réarmer.",
+      { sous_titre: "Ce qu'il faut savoir" },
+      {
+        liste: [
+          "**Saisi, on ne tire pas** : dégage-toi d'abord ({examiner}).",
+          "Un Éteint **casqué** ne meurt d'une flèche ou d'un carreau que **de face**, par la visière, et de plus près.",
+          "**Ramasse tes munitions** : ce qui manque tombe au sol, ce qui touche reste sur le corps. Elles cassent parfois ; dans la mare, elles sont perdues.",
+          "Le tir éclaircit **avant** le contact. Contre trois Éteints sur toi, il te faut une arme de contact.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "etoiles",
+    icone: "⭐",
+    titre: "Les étoiles d'un objet",
+    resume: "La qualité des armes de métier, de ★ à ★★★★★ : d'où elle vient, ce qu'elle change.",
+    blocs: [
+      "Les **objets de métier** (lames, arcs, arbalètes, armes électriques) ont une qualité, de ★ à ★★★★★. Un caillou n'en a pas. La case du sac montre « 3★ », la fiche les cinq étoiles.",
+      { sous_titre: "D'où viennent les étoiles" },
+      "**La moins bonne des trois choses fixe la qualité** : la matière, le geste, les outils. Une lame d'un excellent acier, trempée à la va-vite, reste une lame moyenne. Fabriquer dix fois le même objet fait de toi un maître : une étoile de plus.",
+      { sous_titre: "Ce qu'elles changent" },
+      {
+        liste: [
+          "Plus d'étoiles : plus de **dégâts**, et une arme qui **dure** plus longtemps (une ★★★★★ dure deux fois plus qu'une ★★★).",
+          "Une arme électrique raidit plus longtemps, et éteint plus vite.",
+          "Un arc ou une arbalète arrête un Éteint à la tête de plus loin.",
+          "Deux exemplaires d'étoiles différentes ne s'empilent pas. Au Comptoir, ils se vendent selon leurs étoiles.",
+        ],
+      },
+      { sous_titre: "Seul, on fait sa base ; ensemble, on la fait mieux" },
+      "Chaque famille fabrique **seule** son arme de métier, jusqu'à ★★ dès le début, ★★★ en s'y mettant. Ce que les autres familles savent faire (une pièce forgée, un manche tourné, un service) n'ouvre que **les améliorations** : une étoile de plus, une variante, du temps gagné.",
+    ],
+  },
+  {
+    id: "metier-autres",
+    icone: "📖",
+    titre: "Le métier des autres",
+    resume: "Les recettes des autres familles : les voir, les apprendre, ce qu'elles coûtent.",
+    blocs: [
+      "Dans Fabriquer, les recettes des autres familles se voient **grisées**, avec la mention « chez les Charbonniers » (ou les Voltaïques, les Mécanistes). Tu sais ce qu'elles demandent, pas encore comment les faire.",
+      { sous_titre: "Les apprendre" },
+      {
+        liste: [
+          "**La leçon** : à la halte ou au Comptoir, un joueur de la famille se tient près de toi et fait {examiner} « Enseigner » ; il choisit une recette de son métier. Deux minutes côte à côte, et tu la sais. Enseigner fait circuler son nom : rends la pareille.",
+          "**Un manuel** : rare, au fond des fouilles. Sac → « Lire » ouvre les recettes de toute une famille ; le livre reste dans le sac.",
+        ],
+      },
+      { sous_titre: "Ce qu'elles coûtent" },
+      "Une recette apprise hors de ta famille coûte **une fois et demie** plus de matières et de temps, et ce qu'elle produit ne dépasse pas **★★**. Personne n'est bloqué ; mais acheter à la famille qui sait reste souvent la meilleure affaire.",
+    ],
+  },
+  {
+    id: "electricite",
+    icone: "🔌",
+    titre: "L'électricité contre les Éteints",
+    resume: "Raidir, faire lâcher, éteindre : les armes des Voltaïques, leur charge et leur recharge.",
+    blocs: [
+      "**Une décharge courte le fait lâcher et le raidit. Maintenue sur un Éteint debout, elle le met à terre ; maintenue sur un Éteint raidi ou à terre, elle l'éteint pour de bon. Le casque n'y change rien.**",
+      { sous_titre: "Au combat" },
+      {
+        liste: [
+          "**Courte** : un appui sur {agir}. Il se fige un instant, et lâche ce qu'il tenait (toi, ou un autre joueur).",
+          "**Longue** : maintiens {agir}. Sur un Éteint raidi, elle l'éteint ; sinon, elle le couche.",
+          "L'électricité ne fait rien au corps : on raidit d'abord, on éteint ensuite.",
+          "On l'entend : un crépitement pour la courte, un claquement pour la longue, moins loin qu'un coup de masse.",
+        ],
+      },
+      { sous_titre: "La charge" },
+      "Chaque décharge prend du courant à l'arme ; la longue bien plus que la courte. La **barre bleue** du sac le montre. Vide, l'arme n'est plus qu'un gourdin court, et le jeu le dit une fois.",
+      { sous_titre: "Recharger" },
+      {
+        liste: [
+          "**Au banc de recharge**, chez toi : il prend le courant de ses batteries. Encore faut-il qu'elles en aient.",
+          "**À la manivelle** : Sac → l'arme → « Manivelle », avec la lampe à dynamo. Lent, fatigant, mais possible même sans soleil.",
+          "**Au pédalier** d'un Mécaniste, contre un service.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "pieges",
+    icone: "🪤",
+    titre: "Pièges et défenses",
+    resume: "Ce qu'on pose autour de chez soi : poser, réarmer, ce que fait chaque piège.",
+    blocs: [
+      "Un piège se fabrique et se **pose** comme une installation (Fabriquer). Il ne consomme rien tant qu'il attend. **Aucun ne tue** : il te prévient, il le tient, il le couche ; à toi d'achever.",
+      { sous_titre: "Être prévenu" },
+      {
+        liste: [
+          "**L'alarme à boîtes de conserve** tinte quand un Éteint passe. Lui aussi l'entend.",
+          "**L'alarme électrique** (Voltaïques) : un fil tendu bas. La LED s'allume, le téléphone vibre, et **rien ne fait de bruit**.",
+        ],
+      },
+      { sous_titre: "Le tenir, le coucher" },
+      {
+        liste: [
+          "**La plaque de choc** (Voltaïques) : le premier qui marche dessus tombe à terre. Elle se réarme avec un peu de courant.",
+          "**La clôture électrique** (Voltaïques), branchée sur un banc chargé tout proche : elle raidit l'Éteint et le repousse. Plusieurs qui poussent ensemble la couchent : relève-la.",
+          "**L'assommoir** (Mécanistes) : un poids qui tombe, et il est à terre.",
+          "**Les mâchoires** (Mécanistes) : elles brisent la jambe, il rampe et reste sur place un moment. Celles de fortune se faussent à l'usage.",
+          "**La fosse à pieux** : il tombe dedans et y reste coincé.",
+        ],
+      },
+      { sous_titre: "Réarmer" },
+      "Un piège qui a pris doit être réarmé : {agir} dessus. Quelques secondes, un peu de souffle (ou de courant, pour la plaque). Va voir tes pièges en rentrant.",
     ],
   },
   {
@@ -427,7 +560,7 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
       "Approche-toi du guichet et {agir}. Les prix sont fixes et affichés.",
       {
         liste: [
-          "**Vendre** : le Comptoir rachète presque tout, moins cher qu'il ne le vend. Les objets absurdes de l'Abondance ne valent presque rien.",
+          "**Vendre** : le Comptoir rachète presque tout, moins cher qu'il ne le vend. Les objets absurdes de l'Abondance ne valent presque rien. Une arme de métier se paie selon ses étoiles.",
           "**Acheter** : quelques articles utiles. Le stock se refait lentement.",
           "**Énergie** : déposer l'électricité de tes batteries contre des wotts, ou recharger une batterie en payant.",
           "**Compte** : mettre tes wotts à l'abri sur ton compte, ou les reprendre. Les primes du carnet y sont versées.",
@@ -453,7 +586,7 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
       {
         liste: [
           "**S'installer** : manger mieux, dormir mieux, se défendre, se soigner… dans l'ordre de l'urgence.",
-          "**Le métier** : la chaîne de ta famille, étape par étape.",
+          "**Le métier** : la chaîne de ta famille, étape par étape, jusqu'à ton arme de métier et à ce que tu vends aux autres. Seul sur le serveur, le Comptoir remplace les clients.",
           "**Les autres** : le Comptoir, les premiers wotts, l'échange.",
         ],
       },
@@ -469,12 +602,12 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
       "Tu as choisi ta famille en créant ton personnage. Elle décide de ton kit de départ, de ta lumière, des recettes que tu connais en plus de celles de tout le monde, et de ton métier.",
       {
         liste: [
-          "🔥 **Charbonniers** : ceux qui savaient entretenir un feu quand tout s'est éteint. Leur affaire : le charbon de bois et la forge.",
-          "⚡ **Voltaïques** : les anciens de la Compagnie d'électricité. Leur affaire : stocker, recharger, capter l'énergie.",
-          "⚙️ **Mécanistes** : ceux qui n'avaient jamais vraiment eu besoin du réseau. Leur affaire : ce qui tourne, le pédalier et ce qu'on y monte.",
+          "🔥 **Charbonniers** : ceux qui savaient entretenir un feu quand tout s'est éteint. Leur affaire : le charbon de bois, la forge et les lames.",
+          "⚡ **Voltaïques** : les anciens de la Compagnie d'électricité. Leur affaire : stocker, recharger, capter l'énergie, et les armes électriques.",
+          "⚙️ **Mécanistes** : ceux qui n'avaient jamais vraiment eu besoin du réseau. Leur affaire : ce qui tourne, le pédalier, l'arbalète et les pièges.",
         ],
       },
-      "Une famille ne sait pas se servir des installations d'une autre. C'est voulu : **les autres ont ce qui te manque**, et inversement. Une lumière, un outil, un service : échange.",
+      "Chaque famille se débrouille **seule** pour l'essentiel : son arme, ses outils, ses installations. Mais **les autres ont ce qui te manque**, et inversement : une pièce, un service, une étoile de plus. Leurs recettes, tu peux les apprendre (voir « Le métier des autres ») ; souvent, il vaut mieux échanger.",
     ],
   },
   {
