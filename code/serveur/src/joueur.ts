@@ -918,9 +918,11 @@ export class Joueur implements Voyageur {
       poserAuSol: (objets, ou) => j.poserAuSol(objets, {}, ou),
       saisi: () => j.saisisseurs().length > 0,
       empeche: () =>
-        j.voyage || j.lieu === "comptoir"
-          ? "Pas ici."
-          : j.objetPorte()
+        j.voyage
+          ? "En route, on ne lance rien."
+          : j.lieu === "comptoir"
+            ? "Pas au Comptoir : les Compteurs n'aiment pas le désordre."
+            : j.objetPorte()
             ? "Tu as les bras pris : pose d'abord l'escabeau."
             : j.sommeil
               ? "Tu dors."

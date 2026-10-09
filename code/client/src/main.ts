@@ -59,6 +59,11 @@ import { Sonorisation } from "./son/audio.ts";
 import { Bruiteur, dansLaBoutique } from "./son/bruiteur.ts";
 import type { IdSon } from "./son/catalogue.ts";
 import { RECETTES, type Recette } from "../../commun/src/recettes.ts";
+import { pretALancer, type Pret } from "../../commun/src/tir.ts";
+import type { ResultatCoup } from "../../commun/src/eteints.ts";
+import type { ProjectileVu } from "../../commun/src/messages.ts";
+import { DessinVisee, viser, type Visee } from "./visee.ts";
+import { Projectiles } from "./rendu/projectiles.ts";
 
 const CLE_JETON = "watt.jeton";
 /** En développement : `?heure=22` fige l'heure affichée, pour régler la nuit sans attendre. */
@@ -366,6 +371,7 @@ const hud = new Hud(
     jeter: (objet, quantite) => envoyer({ t: "jeter", objet, quantite }),
     demonter: (objet) => envoyer({ t: "demonter", objet }),
     equiper: (objet) => envoyer({ t: "equiper", objet }),
+    preparer: (objet) => envoyer({ t: "preparer", objet }),
     reparer: (objet, fortune) => envoyer({ t: "reparer", objet, fortune }),
     coffre: (id, sens, objet, quantite) => envoyer({ t: "coffre", id, sens, objet, quantite }),
     amenager: (genre, id, verbe) => envoyer({ t: "interagir", cible: { genre, id }, verbe }),
@@ -388,6 +394,7 @@ const hud = new Hud(
   },
   (c) => entrees.commande(c),
   { appuyer: () => entrees.appuyerA(), relacher: () => entrees.relacherA() },
+  { appuyer: () => entrees.appuyerLancer(), relacher: () => entrees.relacherLancer() },
 );
 // Après le HUD (il remplit #hud à sa construction) : la flèche des Éteints hors champ.
 const horsChamp = new IndicateurHorsChamp(document.getElementById("hud")!);
@@ -415,6 +422,11 @@ function installer(message: Bienvenue): void {
   if (decorCoop && lieu === "cooperative") placerRadio(decorCoop, etatCoop.radio);
   if (leurresActifs.has("radio") && etatCoop.radio) son.radioCompagnie(true, { ...etatCoop.radio });
   if (message.usure) hud.majUsure(message.usure, undefined, message.charge);
+  // Le lancer (0.6) : l'objet prêt reste choisi d'un lieu à l'autre ; ce qui volait et ce qui sonnait reste là-bas.
+  pretChoisi = message.pret ?? null;
+  projectiles.vider();
+  arreterReveils();
+  finirVisee();
   if (decorCoop && lieu === "cooperative") majPortes(decorCoop, portesCoop);
   enVoyage = false;
   carte.arriver();
@@ -518,6 +530,117 @@ function installer(message: Bienvenue): void {
   hud.majCharges(charges);
   hud.masquerProgression();
   document.getElementById("joystick")!.hidden = !tactile;
+}
+
+/** Un coup qui porte (au contact, ou un projectile qui arrive) : le sang, le son, ce qu'il faut faire ensuite. */
+function montrerCoup(message: { id: number; x: number; z: number; resultat: ResultatCoup; electrique?: true }): void {
+  // Le sang : un peu plus marqué que la moyenne, aucune plaie visible (Book 21 §3.5).
+  const vue = eteints.get(message.id);
+  // La décharge (Book 25 §5.1) : ni sang ni impact ; il se raidit, ou il s'éteint (le rendu de l'Éteint le montre).
+  if (message.electrique) {
+    bruiteur.coup(message.resultat, message);
+    if (message.resultat === "a_terre") hud.message(avecTouches("Il est à terre : une décharge ({agir}) l'éteint pour de bon.", tactile));
+    return;
+  }
+  vue?.toucher();
+  bruiteur.coup(message.resultat, message);
+  if (message.resultat === "a_terre") hud.message(avecTouches("Il est à terre : frappe encore ({agir}) pour l'achever, avant qu'il se relève !", tactile));
+  sang.eclabousser(message.x, message.z, message.resultat === "detruit" ? 1.5 : 1.25, message.resultat === "detruit" ? 2 : 1);
+  if (message.resultat === "detruit") window.setTimeout(() => sang.tacher(message.x, message.z, 0.8), 400);
+}
+
+// ---------- Le lancer et le tir (Book 23 §5, Book 25 §3.4, chantier 1 · 0.6) ----------
+
+/** L'objet rapide choisi (null : la pierre) ; l'arbalète armée (undefined : pas d'arbalète prête). */
+let pretChoisi: CleObjet | null = null;
+let arbaleteArmee: boolean | undefined;
+/** Lancer est tenu : on vise (ce qu'on vise, recalculé à chaque image). */
+let viseeEnCours: { pret: Pret; visee: Visee | null } | null = null;
+const dessinVisee = new DessinVisee();
+scene.scene.add(dessinVisee.objet);
+const projectiles = new Projectiles();
+scene.scene.add(projectiles.objet);
+/** Les réveils qui sonnent (Book 23 §5 : 20 s) : leurs minuteries, pour les arrêter en changeant de lieu. */
+const reveils: number[] = [];
+function arreterReveils(): void {
+  for (const r of reveils) window.clearInterval(r);
+  reveils.length = 0;
+}
+
+/** Ce que le bouton Lancer fera partir, et son verbe (« Lancer », « Tirer », « Réarmer ») ; null : rien. */
+function verbeLancer(): { pret: Pret; verbe: string } | null {
+  const pret = pretALancer(inventaire, pretChoisi);
+  if (!pret) return null;
+  if (pret.genre === "lancer") return { pret, verbe: "Lancer" };
+  return { pret, verbe: pret.arme.armeeDAvance && arbaleteArmee === false ? "Réarmer" : "Tirer" };
+}
+
+/** Le point du sol sous la souris (sur ordinateur, quand elle a bougé il y a peu) : il donne la direction du lancer. */
+const rayonSouris = new THREE.Raycaster();
+const SOL = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+function pointSouris(): { x: number; z: number } | null {
+  const s = entrees.souris;
+  if (tactile || !s || performance.now() - s.le > 4000) return null;
+  const ndc = new THREE.Vector2((s.x / window.innerWidth) * 2 - 1, -(s.y / window.innerHeight) * 2 + 1);
+  rayonSouris.setFromCamera(ndc, scene.camera);
+  const p = new THREE.Vector3();
+  return rayonSouris.ray.intersectPlane(SOL, p) ? { x: p.x, z: p.z } : null;
+}
+
+/** Lancer enfoncé : on prend l'objet en main, l'arc se bande, la visée paraît. */
+function commencerVisee(): void {
+  if (enVoyage || carte.ouverte || pose.actif || !position) return;
+  const v = verbeLancer();
+  if (!v) return hud.message(avecTouches("Rien à lancer : une pierre, ou Sac → « Prêt à lancer ».", tactile));
+  if (saisi > 0) return hud.message(avecTouches("Il te tient : dégage-toi d'abord ({examiner}).", tactile));
+  envoyer({ t: "bander" });
+  // L'arbalète désarmée : l'appui la réarme (le serveur lance le geste) ; pas de visée.
+  if (v.verbe === "Réarmer") return;
+  viseeEnCours = { pret: v.pret, visee: null };
+}
+
+/** Lancer relâché : l'objet part vers ce qu'on vise. */
+function finirVisee(lancer = false): void {
+  const v = viseeEnCours;
+  viseeEnCours = null;
+  dessinVisee.cacher();
+  if (!lancer || !v?.visee || !position) return;
+  envoyer({ t: "lancer", dx: v.visee.dx, dz: v.visee.dz, ...(v.visee.cible !== null ? { cible: v.visee.cible } : {}), distance: Math.round(v.visee.distance * 10) / 10 });
+  // Le geste se joue tout de suite (le serveur juge le reste) : on se tourne, le bras part.
+  position = { ...position, o: Math.atan2(v.visee.dx, v.visee.dz) };
+  personnage?.frapper(false, 0.45);
+  bruiteur.frappe(false);
+}
+
+/** Chaque image, tant que Lancer est tenu : ce qu'on vise, et son dessin. */
+function majViseeLancer(): void {
+  if (!viseeEnCours || !position) return;
+  const pret = pretALancer(inventaire, pretChoisi);
+  if (!pret) return finirVisee();
+  viseeEnCours.pret = pret;
+  const visables = [...eteints.entries()].map(([id, e]) => ({ id, x: e.objet.position.x, z: e.objet.position.z, debout: e.etat !== "a_terre" && e.etat !== "detruit" }));
+  const v = viser(position, position.o, pret, visables, pointSouris());
+  viseeEnCours.visee = v;
+  dessinVisee.montrer(position, v, pret, entrees.tenuLancer ?? 0);
+}
+
+/** Un projectile vole (le sien, ou celui d'un autre joueur) : on le dessine, puis l'impact. */
+function lancerProjectile(p: ProjectileVu): void {
+  projectiles.lancer(p, () => {
+    const ou = { x: p.x1, z: p.z1 };
+    if (p.coup) return montrerCoup({ id: p.coup.id, x: p.x1, z: p.z1, resultat: p.coup.resultat });
+    if (p.impact === "eau") return son.jouer("remplir_eau", ou, { gain: 0.6 });
+    son.jouer(p.impact === "mur" ? "marteau_metal" : "geste_pierre", ou, { gain: 0.7 });
+    // Le réveil sonne vingt secondes là où il est tombé : les Éteints l'entendent (le serveur), nous aussi.
+    if (p.objet === "reveil") {
+      let fois = 0;
+      const r = window.setInterval(() => {
+        son.jouer("sonnette", ou, { gain: 0.55 });
+        if (++fois >= 16) window.clearInterval(r);
+      }, 1250);
+      reveils.push(r);
+    }
+  });
 }
 
 function recevoir(message: MessageServeur): void {
@@ -686,22 +809,17 @@ function recevoir(message: MessageServeur): void {
       personnage?.blesser(sante.blessures.length);
       hud.majSante(sante, endurance, inventaire.pansement ?? 0);
       return;
-    case "coup": {
-      // Le sang : un peu plus marqué que la moyenne, aucune plaie visible (Book 21 §3.5).
-      const vue = eteints.get(message.id);
-      // La décharge (Book 25 §5.1) : ni sang ni impact ; il se raidit, ou il s'éteint (le rendu de l'Éteint le montre).
-      if (message.electrique) {
-        bruiteur.coup(message.resultat, message);
-        if (message.resultat === "a_terre") hud.message(avecTouches("Il est à terre : une décharge ({agir}) l'éteint pour de bon.", tactile));
-        return;
-      }
-      vue?.toucher();
-      bruiteur.coup(message.resultat, message);
-      if (message.resultat === "a_terre") hud.message(avecTouches("Il est à terre : frappe encore ({agir}) pour l'achever, avant qu'il se relève !", tactile));
-      sang.eclabousser(message.x, message.z, message.resultat === "detruit" ? 1.5 : 1.25, message.resultat === "detruit" ? 2 : 1);
-      if (message.resultat === "detruit") window.setTimeout(() => sang.tacher(message.x, message.z, 0.8), 400);
+    case "coup":
+      montrerCoup(message);
       return;
-    }
+    // Le lancer et le tir (0.6) : l'objet prêt a changé ; un projectile vole.
+    case "pret":
+      pretChoisi = message.objet;
+      arbaleteArmee = message.armee;
+      return;
+    case "projectile":
+      lancerProjectile(message.projectile);
+      return;
     case "morsure":
       bruiteur.morsure();
       personnage?.toucher();
@@ -1016,7 +1134,7 @@ function executer(c: Commande): void {
     if (c === "A") return finirPose("poser");
     if (c === "lumiere") return finirPose("tourner");
     if (c === "B" || c === "fermer") return finirPose("annuler");
-    if (c === "A_court" || c === "A_long") return;
+    if (c === "A_court" || c === "A_long" || c === "lancer" || c === "lancer_fin") return;
   }
   switch (c) {
     case "A":
@@ -1103,6 +1221,10 @@ function executer(c: Commande): void {
     case "tourner-":
       scene.tourner(-1);
       return;
+    case "lancer":
+      return commencerVisee();
+    case "lancer_fin":
+      return finirVisee(true);
   }
 }
 
@@ -1389,7 +1511,11 @@ function boucle(instant: number): void {
       coupEnAttente = null;
       if (modeCombat && !enVoyage) frapper(appuye);
     }
-    personnage.preparer(modeCombat ? entrees.chargeA : 0);
+    personnage.preparer(modeCombat ? entrees.chargeA : viseeEnCours ? 1 : 0);
+    // Le lancer (0.6) : la visée suit l'Éteint accroché ; le bouton dit ce qu'il fera (Lancer, Tirer, Réarmer).
+    majViseeLancer();
+    projectiles.animer(dt);
+    hud.majPret(pretChoisi, verbeLancer()?.verbe ?? null);
     hud.saisie(saisi, appuisLocaux / (APPUIS_DEGAGEMENT * Math.max(1, saisi) * (endurance < SEUIL_EPUISE ? 1.5 : 1)));
     // Un blessé qui saigne laisse des gouttes derrière lui.
     if (sante.saignement !== "aucun" && instant > prochaineGoutte) {
