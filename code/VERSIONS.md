@@ -12,7 +12,7 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
-## 0.7.2 · prête à déployer
+## 0.7.2 · déployée le 2026-10-10
 
 - **Chaque pièce se découvre** : à la Coopérative et dans la boutique de la halte, ce que ton personnage ne voit pas est assombri, « en souvenir » : le décor reste lisible, mais aucun Éteint ni joueur n'y apparaît. Une porte fermée cache ce qu'il y a derrière ; ouverte, on voit dans son prolongement, et presque toute la pièce depuis le seuil.
 - **La lampe ne traverse plus les murs** : la nuit ou dans une pièce noire, elle n'éclaire que ce que tu vois. Par une porte ouverte, sa lumière entre en cône dans la pièce d'à côté.
