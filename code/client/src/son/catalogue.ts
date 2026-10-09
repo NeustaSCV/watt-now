@@ -76,6 +76,8 @@ export const SONS = {
   chute_corps: joueur(R.chuteCorps, 0.75, 10, 3),
   sifflement: joueur(R.sifflement(false), 0.4, PROCHE, 4),
   sifflement_lourd: joueur(R.sifflement(true), 0.45, PROCHE, 3),
+  // L'arc (Book 25 §3.4, chantier 4) : la corde claque à 3 m, l'arme la plus silencieuse du jeu.
+  corde_arc: joueur(R.cordeArc, 0.55, 3, 3),
   esquive: joueur(R.esquive, 0.5, BRUIT_ALLURE.course.portee, 3),
   degagement: joueur(R.degagement, 0.6, 6, 4),
   coeur: { recette: R.coeur, bus: "joueur", priorite: 2, variantes: 2, gain: 0.7, portee: 0 },

@@ -12,6 +12,7 @@ import { APPARENCES_DE_REFERENCE, CARNATIONS, COULEURS_CHEVEUX, hauteurDe, type 
 import { PALETTE, materiau } from "./materiaux.ts";
 import { Assemblage, V3, placer } from "./assemblage.ts";
 import { Mesure, bandeau, bandouliere, pan } from "./accessoires.ts";
+import { modeleMetier } from "./metier/index.ts";
 
 /** La surface du corps, mesurée une fois par famille et par corps (elle ne dépend ni de la carnation ni des cheveux). */
 const MESURES = new Map<string, Mesure>();
@@ -418,7 +419,8 @@ export class Personnage {
     this.armeTenue = objet;
     this.main.clear();
     if (objet === undefined || objet === null) return;
-    const arme = creerArme(objet);
+    // Les armes de métier (l'arc, Book 25) viennent du registre des modèles de métier.
+    const arme = creerArme(objet) ?? modeleMetier(objet, "main");
     if (!arme) return;
     // Le manche traverse la paume en diagonale, du talon de la main (côté auriculaire) vers la base de l'index :
     // il penche un peu vers les doigts.

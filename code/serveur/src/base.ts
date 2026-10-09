@@ -10,6 +10,7 @@ import { estCleObjet, estObjet, kitDeDepart, type Inventaire } from "../../commu
 import { canoniser, cleExemplaire, lireCle, type CleObjet } from "../../commun/src/etoiles.ts";
 import { POINT_ARRIVEE, type Famille } from "../../commun/src/regles.ts";
 import { savoirValide, type Savoir } from "../../commun/src/savoir.ts";
+import { sechageValide, type EtatSechage } from "../../commun/src/arc.ts";
 import { BESOINS_DEPART, GOURDE_DEPART, type Besoins, type EtatFeu, type Gourde } from "../../commun/src/survie.ts";
 import type { Charges } from "../../commun/src/energie.ts";
 import { SANTE_DEPART, type Sante } from "../../commun/src/combat.ts";
@@ -246,6 +247,8 @@ const COLONNES_AJOUTEES: [table: string, colonne: string, definition: string][] 
   ["installations", "niveau", "INTEGER NOT NULL DEFAULT 1"],
   // Le savoir hors de sa famille (Book 25 §2.3) : recettes apprises, manuels lus, leçons données, en JSON.
   ["personnages", "savoir", "TEXT NOT NULL DEFAULT '{}'"],
+  // L'arc pour tous (Book 25 §3.3) : les ébauches d'arc qui sèchent, et depuis quand, en JSON.
+  ["personnages", "sechage", "TEXT NOT NULL DEFAULT '{}'"],
 ];
 
 function maintenant(): string {
@@ -785,6 +788,20 @@ export class Base {
 
   sauverFaune(compteId: number, faune: { prises: number[] }): void {
     this.db.prepare("UPDATE personnages SET faune = ? WHERE compte_id = ?").run(JSON.stringify(faune), compteId);
+  }
+
+  /** Les ébauches d'arc qui sèchent (Book 25 §3.3) ; illisible ou absent : rien ne sèche. */
+  chargerSechage(compteId: number): EtatSechage {
+    const l = this.db.prepare("SELECT sechage FROM personnages WHERE compte_id = ?").get(compteId) as { sechage: string } | undefined;
+    try {
+      return sechageValide(JSON.parse(l?.sechage || "{}"));
+    } catch {
+      return {};
+    }
+  }
+
+  sauverSechage(compteId: number, etat: EtatSechage): void {
+    this.db.prepare("UPDATE personnages SET sechage = ? WHERE compte_id = ?").run(JSON.stringify(etat), compteId);
   }
 
   /** Une copie cohérente et compacte de toute la base, même pendant que le jeu tourne (Book 17 §5.4). */

@@ -844,3 +844,18 @@ export const sonnette: Recette = (h) => {
   for (let t = 0; t < 2.2; t += 0.05) p.ajouter(modes(0.3, partiels), t, 0.18 + h() * 0.05);
   return p.donnees;
 };
+
+/**
+ * La corde de l'arc qui claque (Book 25 §3.4, chantier 4) : une corde pincée grave, qui s'éteint vite, le choc sourd
+ * du bois dans la main, et le souffle bref de la flèche qui part. Discret : on l'entend à 3 m.
+ */
+export const cordeArc: Recette = (h) => {
+  const p = new Piste(0.42, h);
+  const f = entre(h, 105, 135);
+  // La corde : des harmoniques presque justes, les aiguës meurent les premières.
+  const partiels = [1, 2, 3, 4.02, 5.05].map((r, i) => ({ f: f * r * (1 + (h() - 0.5) * 0.01), a: 1 / (1 + i * 0.9), tau: 0.09 / (1 + i * 0.6) }));
+  p.ajouter(modes(0.38, partiels), 0, 0.8);
+  p.ajouter(sourd(150, 70, 0.015), 0, 0.5);
+  p.ajouter(souffle(0.12, h, { filtre: "passe-bande", f: (t) => Math.max(600, 2400 - t * 9000), q: 1.6, env: points([0, 0], [0.01, 1], [0.12, 0]) }), 0.005, 0.35);
+  return p.donnees;
+};

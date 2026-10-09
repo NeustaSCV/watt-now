@@ -27,3 +27,7 @@ export function modeleMetier(objet: string, usage: UsageModele): THREE.Object3D 
 }
 
 // ---- Les fichiers des métiers, une ligne chacun (chantiers 4 à 7) ----
+// L'arc pour tous (chantier 4) : les arcs en main, les flèches en vol, le redresseur de l'établi. Un appel, et non un
+// import à effet : les imports passent avant ce fichier, quand le registre n'existe pas encore.
+import { enregistrerArc } from "./arc.ts";
+enregistrerArc(enregistrerModele);

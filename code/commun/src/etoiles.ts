@@ -52,7 +52,14 @@ export const OBJETS_DE_METIER: Partial<Record<TypeObjet, Etoiles>> = {
   machette: 1,
   // ⚡ Voltaïques (chantier 6)
   // ⚙️ Mécanistes (chantier 7)
-  // Tous : l'arc (chantier 4)
+  // Tous : l'arc (chantier 4). Le bois vert fatigue vite (★) ; le frêne séché fait ★★★, l'if ★★★★ ; l'arc de tir sportif
+  // trouvé est tout fait (★★★★★). La corde d'arc porte la qualité de ses brins : ficelle ★★, corde ★★★, fil dentaire
+  // ou boyau ★★★★ (Book 25 §3.2 et §3.3) ; un arc monté ne vaut jamais mieux que sa corde.
+  arc_fortune: 1,
+  arc_simple: 3,
+  arc_if: 4,
+  arc_sportif: 5,
+  corde_arc: 3,
 };
 
 /** Cet objet porte-t-il des étoiles ? */

@@ -8,6 +8,7 @@ import { fusionnerStatique } from "./fusion.ts";
 import { Panache } from "./panache.ts";
 import { batterieVoiture, modulePanneau, roueVelo } from "./pieces.ts";
 import { decharge, majTrouvailles } from "./decharge.ts";
+import { modeleMetier } from "./metier/index.ts";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import type { InstallationVue } from "../../../commun/src/messages.ts";
@@ -852,14 +853,23 @@ export class VueInstallation {
   private eau: THREE.Mesh | null = null;
   /** Les objets remontés, posés sur la décharge (P-001). */
   private trouvailles: THREE.Group | null = null;
+  /** Le redresseur de fûts monté sur l'établi (Book 25 §9.3). */
+  private redresseur: THREE.Object3D | null = null;
   private temps = 0;
 
   constructor(donnees: InstallationVue) {
     this.donnees = donnees;
     switch (donnees.type) {
-      case "etabli":
+      case "etabli": {
         this.objet = etabli();
+        // Le redresseur de fûts, au bout de l'établi : il ne se montre qu'une fois monté.
+        this.redresseur = modeleMetier("redresseur_futs", "sol");
+        if (this.redresseur) {
+          this.redresseur.position.set(1.05, 0, 0.05);
+          this.objet.add(this.redresseur);
+        }
         break;
+      }
       case "abri":
         this.objet = abri();
         break;
@@ -936,7 +946,7 @@ export class VueInstallation {
     this.objet.rotation.y = donnees.type === "panneau_solaire" ? 0 : donnees.o;
     // Même image, moins d'appels de dessin : on fond les morceaux de même matériau, sauf les pièces qui bougent,
     // s'allument ou se montrent une à une (2026-10-08).
-    for (const o of [this.braise, this.meule, this.dynamo, this.roue, this.manivelle, this.posees, this.voyant, this.eau, this.trouvailles, this.fumee?.objet]) if (o) o.userData.intact = true;
+    for (const o of [this.braise, this.redresseur, this.meule, this.dynamo, this.roue, this.manivelle, this.posees, this.voyant, this.eau, this.trouvailles, this.fumee?.objet]) if (o) o.userData.intact = true;
     fusionnerStatique(this.objet);
     this.majEtat(donnees);
   }
@@ -956,6 +966,7 @@ export class VueInstallation {
     if (donnees.type !== "panneau_solaire") this.objet.rotation.y = donnees.o;
     this.objet.visible = !donnees.etat.portee;
     if (this.meule) this.meule.visible = donnees.etat.meule === true;
+    if (this.redresseur) this.redresseur.visible = donnees.etat.redresseur === true;
     if (this.dynamo) this.dynamo.visible = donnees.etat.dynamo === true;
     let chargees = 0;
     if (this.posees) {

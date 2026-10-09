@@ -96,8 +96,18 @@ export const PART_TETE_EQUIPE = 0.5;
 /** Les armes de tir. Deux blocs réservés, un par chantier (Book 25 §10.4) ; rien d'autre n'y écrit. */
 export const ARMES_TIR: ArmeTir[] = [
   // ---- Bloc « arc » (chantier 4) ----
+  // L'arc pour tous (Book 25 §3 et §8.3). Chaque ligne est donnée à ses étoiles de base (etoiles.ts) : l'arc de fortune
+  // à ★, l'arc de frêne à ★★★, l'arc d'if à ★★★★, l'arc de tir sportif à ★★★★★ ; `armeTirExemplaire` règle le reste.
+  // Bander 1,5 s pour le tir plein, encocher 1 s (réglage accepté par le porteur, 2026-10-09). La corde claque à 3 m.
+  { objet: "arc_fortune", nom: "l'arc de fortune", type: "percant", porteeUtile: 8, porteeMax: 15, porteeTete: 4, degatsRapide: 0.5, degatsPlein: 1, pleinMs: 1500, rechargeMs: 1000, endurance: 6, bruit: 3, solidite: 75, metier: true },
+  { objet: "arc_simple", nom: "l'arc", type: "percant", porteeUtile: 12, porteeMax: 25, porteeTete: 6, degatsRapide: 0.6, degatsPlein: 1.2, pleinMs: 1500, rechargeMs: 1000, endurance: 6, bruit: 3, solidite: 150, metier: true },
+  { objet: "arc_if", nom: "l'arc d'if", type: "percant", porteeUtile: 15, porteeMax: 30, porteeTete: 7, degatsRapide: 0.65, degatsPlein: 1.3, pleinMs: 1500, rechargeMs: 1000, endurance: 6, bruit: 3, solidite: 225, metier: true },
+  { objet: "arc_sportif", nom: "l'arc de tir sportif", type: "percant", porteeUtile: 16, porteeMax: 33, porteeTete: 8, degatsRapide: 0.72, degatsPlein: 1.44, pleinMs: 1500, rechargeMs: 1000, endurance: 6, bruit: 3, solidite: 300, metier: true },
   // ---- Bloc « arbalète » (chantier 7) ----
 ];
+
+/** Les arcs (chantier 4) : ils tirent toutes les flèches. */
+export const ARCS: readonly TypeObjet[] = ["arc_fortune", "arc_simple", "arc_if", "arc_sportif"];
 
 /** Une munition : la flèche ou le carreau, et ce qu'il fait de plus. */
 export interface Munition {
@@ -113,6 +123,12 @@ export interface Munition {
 /** Les munitions, des meilleures aux moins bonnes. Mêmes blocs réservés que ARMES_TIR. */
 export const MUNITIONS: Munition[] = [
   // ---- Bloc « arc » (chantier 4) ----
+  // Toutes les flèches vont à tous les arcs. La pointe durcie au feu blesse, mais ne perce pas un crâne (Book 25 §3.4).
+  { objet: "fleche_carbone", pour: ARCS, casse: 0, tueALaTete: true },
+  { objet: "fleche_acier", pour: ARCS, casse: 1 / 5, tueALaTete: true },
+  { objet: "fleche_os", pour: ARCS, casse: 1 / 3, tueALaTete: true },
+  { objet: "fleche_clou", pour: ARCS, casse: 1 / 3, tueALaTete: true },
+  { objet: "fleche_durcie", pour: ARCS, casse: 1 / 2, tueALaTete: false },
   // ---- Bloc « arbalète » (chantier 7) ----
 ];
 
