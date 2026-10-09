@@ -61,6 +61,7 @@ import { RECETTE_DAKOTA, RECETTE_FEU, RESERVE_EAU_MAX, RESERVE_KCAL_MAX, aFaim, 
 import { NOMS_TEMPS, type Temps } from "../../commun/src/meteo.ts";
 import type { VueTutoriel } from "../../commun/src/tutoriel.ts";
 import type { VueQuetes } from "../../commun/src/quetes.ts";
+import { derniereIdee, ligneDerniereIdee, type DerniereIdee } from "./carnet-idees.ts";
 import { formaterHeure } from "../../commun/src/temps.ts";
 import { COULEURS_FAMILLES } from "./accueil.ts";
 import { ecrire, lire } from "./stockage.ts";
@@ -1046,6 +1047,18 @@ export class Hud {
     this.dessinerCarnet();
   }
 
+  // ---------- Le carnet note les idées (0.7, chantier 6) : « Dernière idée : Tresser une corde » ----------
+
+  private idee: DerniereIdee | null = null;
+
+  /** Les recettes dévoilées (bienvenue, puis chaque dévoilement) : la dernière idée venue, en bas du carnet. */
+  majIdees(devoilees: readonly string[], nouvelles: readonly string[] = []): void {
+    const d = derniereIdee(devoilees, nouvelles);
+    if (!d || (this.idee && d.id === this.idee.id && d.avec === this.idee.avec)) return;
+    this.idee = d;
+    this.dessinerCarnet();
+  }
+
   private contenuQuetes(v: VueQuetes): string {
     const LIGNES = { metier: "Le métier", installer: "S'installer", autres: "Les autres" } as const;
     return v.quetes
@@ -1118,7 +1131,7 @@ export class Hud {
     const titre = v ? "Tutoriel" : `Carnet · ${q!.quetes.length === 1 ? "1 objectif" : `${q!.quetes.length} objectifs`}`;
     const html = `
       <header><h2>📓 ${titre}</h2><button type="button" class="fermer-carnet" aria-label="Fermer le carnet">✕</button></header>
-      <div class="contenu-carnet">${v ? this.contenuTutoriel(v) : this.contenuQuetes(q!)}</div>`;
+      <div class="contenu-carnet">${v ? this.contenuTutoriel(v) : this.contenuQuetes(q!)}${ligneDerniereIdee(this.idee)}</div>`;
     if (el.innerHTML === html) return;
     el.innerHTML = html;
     el.querySelector(".fermer-carnet")!.addEventListener("click", () => this.basculerCarnet(false));

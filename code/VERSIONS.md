@@ -35,6 +35,15 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 - **Les personnages d'avant** ne voient plus ce qu'ils n'ont pas encore vécu, mais **rien n'est détruit** : leurs installations, leurs objets, ce qu'ils ont déjà fabriqué restent.
 - Une recette à laquelle on n'a pas encore pensé ne se fabrique pas : « Tu n'y as pas encore pensé. »
 
+**Le rythme, les quêtes et l'aide**
+- **Le tutoriel ne demande jamais une recette invisible** : chaque étape qui fait fabriquer (le feu, la hache, l'abri, l'atelier de ta famille) te la fait penser.
+- **Chaque objectif du carnet en cours dévoile ce qu'il fait fabriquer**, pièces comprises : « Forger une lame » fait penser à la lame de ressort et à sa forge.
+- **Ton métier commence pile à l'étape « La famille »** du tutoriel : il venait deux étapes trop tôt (l'Éteint du tutoriel ne compte plus ; une nuit dormie, si).
+- **Le carnet note ta dernière idée**, tout en bas : « Dernière idée : Tresser une corde ».
+- **Le Comptoir vend une scie** : l'arbrier et la brouette, appris d'un Mécaniste, se font enfin.
+- **L'aide** : « Fabriquer » dit que les recettes viennent quand on y pense (le message, la pastille, « À découvrir ») ; « Je suis coincé » répond à la recette qui ne vient pas ; nouvelle rubrique « Les déchets de l'Abondance » (tout se ramasse, presque rien ne vaut, les conteneurs se fouillent, le Comptoir refuse les ordures).
+- (Pour l'équipe) **`npm run rythme`** joue neuf parcours types (prudent, pressé, sans tutoriel, pour chaque famille) et vérifie le rythme : une nouveauté toutes les 3 min en moyenne la première demi-heure, un but au moins toutes les 20 min ensuite, et aucun blocage.
+
 ---
 
 ## 0.6 · déployée le 2026-10-09
