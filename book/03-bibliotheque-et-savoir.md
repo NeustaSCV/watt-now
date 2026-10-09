@@ -1,6 +1,6 @@
 # Book 03 — La Bibliothèque et le Savoir
 
-> Document de conception · version 0.4 · 2026-10-07
+> Document de conception · version 0.5 · 2026-10-09
 > Statut : **brouillon de travail**.
 > S'appuie sur le [Book 01 — Les Trois Feux](01-les-trois-feux.md) et le [Book 02 — Le Crafting](02-crafting.md).
 
@@ -152,6 +152,8 @@ Une recette ne demande **pas un outil précis**, mais une **qualité** d'un cert
 
 > La **recette pressentie** évite la frustration : quand le joueur possède des éléments utiles à une recette qu'il ne connaît pas, le jeu lui laisse entrevoir qu'elle existe et lui dit où chercher (livre, PNJ, expérimentation).
 
+> **Depuis la 0.7** (§5.7) : la recette pressentie a pris deux formes. Pour une recette **connue** (commune ou de sa famille) mais pas encore **dévoilée**, c'est la **silhouette « À découvrir »** du panneau Fabriquer : l'icône assombrie, sans nom, avec un indice qui dit le besoin. Pour une recette d'une **autre famille**, c'est la carte **grisée** « chez les Charbonniers », montrée après le Comptoir ou une rencontre (Book 25 §2.3).
+
 ### 5.2 Le savoir de base, commun à tous
 
 Tout survivant adulte sait :
@@ -164,6 +166,8 @@ Tout survivant adulte sait :
 | Outils | Utiliser les outils courants, remmancher, affûter |
 | Démontage | Démonter avec tournevis et clés, sans comprendre tout ce qu'on récupère |
 | Corps | Pansement simple, nœuds, transport de charges |
+
+Ce savoir de base est **connu** de tout survivant, mais il n'apparaît dans Fabriquer qu'une fois **dévoilé**, quand le personnage y pense (§5.7). On ne retire pas un savoir : on y pense au bon moment.
 
 ### 5.3 Le savoir de famille
 
@@ -198,6 +202,8 @@ Tout ce que le joueur apprend est consigné dans son **carnet** :
 - les recettes connues et pressenties ;
 - les livres lus, ce qu'ils ont appris et ce qu'il reste à y trouver.
 
+**Construit en 0.7** : le carnet du jeu note, tout en bas, la **dernière idée** venue au personnage (« Dernière idée : Tresser une corde »), à la bienvenue et à chaque dévoilement. Le reste du carnet de savoir (matériaux identifiés, livres lus) attend l'expérimentation et les livres.
+
 Le carnet est **personnel**. Il est **conservé à l'effondrement** en cours de cycle (on perd son inventaire courant, pas son savoir), et **effacé en fin de cycle**, comme tout le reste (Book 09 §4). On ne partage pas un carnet, on **enseigne** (§5.4).
 
 ---
@@ -222,6 +228,21 @@ Le savoir est rangé en **douze domaines**, chacun à **trois niveaux**. Une rec
 | **Météo** | Lire le ciel | Lire un baromètre, monter une station météo | Prévoir les épisodes climatiques (Book 13 §2.1, §5) | — |
 
 > **Forge, Métallurgie et Sidérurgie** sont regroupées dans le seul domaine **Métal** : forger une lame (II) et conduire un bas fourneau (III) en sont deux niveaux. Le niveau d'un savoir est distinct du palier d'une installation : on peut connaître *Chimie II* sans posséder d'alambic.
+
+### 5.7 Connu n'est pas dévoilé : l'arbre de progression (0.7, 2026-10-09)
+
+Le détail, les règles et la table complète sont au Book 02 (§14 quater et annexe A). Ce qui touche au savoir :
+
+| Une recette est… | Ce que ça veut dire | Ce qu'en voit le joueur |
+|---|---|---|
+| **Connue** | Commune, de sa famille, ou apprise (leçon, manuel) | Rien de plus, tant qu'elle n'est pas dévoilée |
+| **Dévoilée** | Connue, **et** le personnage **y a pensé** : il en a eu besoin, ou il a tenu l'ingrédient clé | La carte dans Fabriquer ; seule une recette dévoilée se fabrique (le serveur refuse les autres) |
+| **Pressentie** | On la devine : une recette du prochain palier, pas encore dévoilée ; ou celle d'une autre famille, pas encore apprise | Une silhouette « À découvrir » (sans nom, l'icône assombrie, un indice) ; ou une carte grisée « chez les… » (§5.1) |
+
+- **Deux verbes, deux sens** (décision Q10) : **« Tu y penses »** pour le savoir de base et de famille, qu'on a toujours eu ; **« apprendre »** pour la leçon et le manuel, qui ouvrent le savoir d'une autre famille. La leçon et le manuel **dévoilent** en même temps qu'ils apprennent : un livre, on le lit en entier.
+- **Le dévoilé est du savoir** : il est conservé à l'effondrement et effacé en fin de cycle, comme le carnet (§5.5).
+- **Les cinq paliers** suivent la pyramide de Maslow (le corps, l'abri du danger, les tiens puis les autres, le métier, l'œuvre) : ce sont des familles de déclencheurs, pas des niveaux à atteindre.
+- **Voir faire** est une cinquième façon, discrète, de penser à une recette : à moins de 5 m d'un joueur qui la fabrique. Pour une recette d'une autre famille, on ne l'apprend pas ainsi ; on la voit seulement, grisée, ce qui donne envie d'une leçon (§5.4).
 
 ---
 
@@ -344,5 +365,6 @@ Il n'est pas nécessaire d'avoir 1 150 objets pour commencer à tester.
 - **Propriété** : caractéristique physique d'un matériau (dureté, corrosivité…), qui décide de ce qu'on peut en faire.
 - **Niveaux N0 à N4** : ressource, matériau, pièce, objet, ensemble.
 - **Recette pressentie** : recette dont le joueur devine l'existence sans la connaître encore.
+- **Recette dévoilée** : recette connue à laquelle le personnage a pensé (§5.7) ; seule une recette dévoilée s'affiche dans Fabriquer et se fabrique.
 - **Carnet** : registre personnel du savoir du joueur.
 - **Expérimentation** : test réaliste qui révèle les propriétés d'un objet inconnu.
