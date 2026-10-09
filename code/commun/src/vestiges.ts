@@ -10,12 +10,25 @@
 import type { Inventaire, TypeObjet } from "./objets.ts";
 import type { Qualite } from "./recettes.ts";
 import type { TypeRessource } from "./terrain.ts";
+import { DEMONTAGE_LOT2, VESTIGES_LOT2 } from "./vestiges-lot2.ts";
 
 /** Rareté (P-003 §1) : commun, peu commun, rare, légendaire. */
 export type Rarete = "C" | "P" | "R" | "L";
 
 /** La famille d'un vestige : où on le trouve, et son icône générique. */
-export type FamilleVestige = "cuisine" | "salle_de_bain" | "salon" | "gadget" | "garage" | "voiture" | "ferme" | "composant";
+export type FamilleVestige =
+  | "cuisine"
+  | "salle_de_bain"
+  | "salon"
+  | "gadget"
+  | "garage"
+  | "voiture"
+  | "ferme"
+  | "composant"
+  // Lot 2 (0.7, les déchets de l'Abondance) : emballages et ordures ; vêtements et linge ; sport, jouets et jardin.
+  | "dechet"
+  | "textile"
+  | "loisir";
 
 export const NOMS_FAMILLES_VESTIGES: Record<FamilleVestige, string> = {
   cuisine: "cuisine",
@@ -26,6 +39,9 @@ export const NOMS_FAMILLES_VESTIGES: Record<FamilleVestige, string> = {
   voiture: "voiture",
   ferme: "ferme",
   composant: "composant",
+  dechet: "déchet",
+  textile: "textile",
+  loisir: "loisir",
 };
 
 export interface DefinitionVestige {
@@ -42,6 +58,10 @@ export interface DefinitionVestige {
   teinte?: string;
   /** Hors des tirages (fouilles, décharge) : on ne le trouve qu'à un endroit précis (la Coopérative, Book 23). */
   horsTirage?: true;
+  /** Il se mange (la conserve bombée, lot 2) : énergie, eau, et le mal qu'il fait (Book 05 §4). */
+  kcal?: number;
+  eau?: number;
+  toxique?: "conserve_bombee";
 }
 
 // ---------- Les composants (P-003 §2) : ce qui revient partout ----------
@@ -183,7 +203,7 @@ export type TypeComposant = keyof typeof COMPOSANTS;
 
 // ---------- Les vestiges du lot 1 ----------
 
-export const VESTIGES = {
+const VESTIGES_LOT1 = {
   // ---- 🍳 Cuisine ----
   casserole: {
     nom: "casserole cabossée",
@@ -938,6 +958,9 @@ export const VESTIGES = {
   },
 } satisfies Record<string, DefinitionVestige>;
 
+/** Les vestiges : le lot 1 (0.3 et 0.6) et les déchets de l'Abondance (lot 2, 0.7 : vestiges-lot2.ts). */
+export const VESTIGES = { ...VESTIGES_LOT1, ...VESTIGES_LOT2 };
+
 export type TypeVestige = keyof typeof VESTIGES;
 
 /** Les vestiges et les composants, pour le catalogue des objets. */
@@ -946,6 +969,14 @@ export const TOUS_LES_VESTIGES: Record<TypeVestige | TypeComposant, DefinitionVe
 /** La valeur de chacun (énergie grise, en wotts) : elle s'ajoute à ENERGIE_GRISE_BASE. */
 export function valeursVestiges(): Partial<Record<TypeObjet, number>> {
   return Object.fromEntries(Object.entries(TOUS_LES_VESTIGES).map(([t, d]) => [t, d.valeur]));
+}
+
+/**
+ * Une ordure : un vestige qui ne vaut rien (valeur 0, lot 2). Le Comptoir ne la reprend pas (« Les Compteurs ne
+ * reprennent pas les ordures. ») ; jetée hors du terrain personnel, elle disparaît au bout de 24 h (Q10).
+ */
+export function estOrdure(type: string): boolean {
+  return definitionVestige(type)?.valeur === 0;
 }
 
 /** La définition d'un objet s'il est un vestige ou un composant. */
@@ -1010,6 +1041,8 @@ export const DEMONTAGE: Partial<Record<TypeObjet, Demontage>> = {
   // Les débris d'arme (Book 23 §4.3, 0.5.1) : un peu de matière, pas l'arme.
   manche_fendu: { donne: { branche: 1 }, qualites: {}, duree: 2 },
   ferraille_tordue: { donne: { barre_metal: 1 }, qualites: { marteler: 1 }, duree: 8 },
+  // Les déchets de l'Abondance (lot 2, 0.7) : vestiges-lot2.ts.
+  ...DEMONTAGE_LOT2,
 };
 
 // ---------- La fouille rapporte du bric-à-brac ----------
@@ -1052,21 +1085,40 @@ export const FAMILLES_PAR_LIEU: Record<LieuFouille, Partial<Record<FamilleVestig
   chambre_froide: { garage: 3, ferme: 3 },
 };
 
+/**
+ * Ce que les fouilles existantes donnent en plus de leurs familles (lot 2, 0.7) : le couteau abîmé (rare), pour la
+ * lance ; l'onduleur et la trottinette électrique (peu communs), pour leur petite batterie ; le sac de charbon de
+ * barbecue (peu commun) à la boutique de la station ; la conserve bombée parmi les conserves. Chacun pèse comme un
+ * vestige d'une famille de poids 3, selon sa rareté.
+ */
+export const EN_PLUS_PAR_LIEU: Partial<Record<LieuFouille, Partial<Record<TypeObjet, Rarete>>>> = {
+  boutique: { couteau: "R", sac_charbon_bbq: "P", conserve_bombee: "C", onduleur: "P" },
+  libre_service: { couteau: "R", conserve_bombee: "C" },
+  grange: { couteau: "R" },
+  hangar: { trottinette_electrique: "P" },
+  bureaux: { onduleur: "P" },
+};
+
 /** Le poids de tirage de chaque rareté (P-003 §1). */
 export const POIDS_RARETE: Record<Rarete, number> = { C: 10, P: 4, R: 1, L: 0.25 };
 
 /** De 1 à 3 vestiges par fouille. */
 export const VESTIGES_PAR_FOUILLE = { min: 1, max: 3 } as const;
 
-/** La table pondérée d'un lieu : chaque vestige, avec son poids (famille × rareté). Dans l'ordre du catalogue. */
-export function tableDeFouille(lieu: LieuFouille): [TypeVestige, number][] {
+/**
+ * La table pondérée d'un lieu : chaque vestige du lot 1, avec son poids (famille × rareté), dans l'ordre du
+ * catalogue ; puis ce que le lieu donne en plus (EN_PLUS_PAR_LIEU). Les déchets du lot 2 ont leurs propres tables
+ * (dechets.ts) : ils n'encombrent pas les caisses et les rayonnages.
+ */
+export function tableDeFouille(lieu: LieuFouille): [TypeObjet, number][] {
   const familles = FAMILLES_PAR_LIEU[lieu];
-  const table: [TypeVestige, number][] = [];
-  for (const [type, d] of Object.entries(VESTIGES) as [TypeVestige, DefinitionVestige][]) {
+  const table: [TypeObjet, number][] = [];
+  for (const [type, d] of Object.entries(VESTIGES_LOT1) as [TypeVestige, DefinitionVestige][]) {
     if (d.horsTirage) continue;
     const f = familles[d.famille] ?? 0;
     if (f > 0) table.push([type, f * POIDS_RARETE[d.rarete]]);
   }
+  for (const [type, r] of Object.entries(EN_PLUS_PAR_LIEU[lieu] ?? {}) as [TypeObjet, Rarete][]) table.push([type, 3 * POIDS_RARETE[r]]);
   return table;
 }
 

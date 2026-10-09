@@ -9,7 +9,8 @@ import type { MessageServeur } from "../../commun/src/messages.ts";
 import { OBJETS, estObjet } from "../../commun/src/objets.ts";
 import { energieGrise, multiplicateurQualites, objetsSansEnergieGrise } from "../../commun/src/recettes.ts";
 import { USAGES } from "../../commun/src/terrain.ts";
-import { COMPOSANTS, DEMONTAGE, LIEU_DE_FOUILLE, VESTIGES, tableDeFouille, tirerVestiges, type LieuFouille } from "../../commun/src/vestiges.ts";
+import { COMPOSANTS, DEMONTAGE, LIEU_DE_FOUILLE, VESTIGES, estOrdure, tableDeFouille, tirerVestiges, type LieuFouille } from "../../commun/src/vestiges.ts";
+import { estVestigeLot2 } from "../../commun/src/vestiges-lot2.ts";
 import { Base } from "./base.ts";
 import { Comptoir } from "./comptoir.ts";
 import { messageValide } from "./controle.ts";
@@ -66,15 +67,17 @@ function aleaGraine(graine: number): () => number {
 test("le catalogue : une cinquantaine de vestiges et une dizaine de composants, chacun pesé et valorisé", () => {
   const vestiges = Object.keys(VESTIGES);
   const composants = Object.keys(COMPOSANTS);
-  // Ceux qu'on trouve en fouillant ; les objets propres à la Coopérative (hors tirage) viennent en plus.
-  const tirables = Object.values(VESTIGES).filter((d) => !("horsTirage" in d && d.horsTirage));
+  // Ceux qu'on trouve en fouillant ; les objets propres à la Coopérative (hors tirage) viennent en plus. Les déchets
+  // du lot 2 (0.7) ont leur propre test (commun/src/dechets.test.ts).
+  const tirables = Object.entries(VESTIGES).filter(([t, d]) => !("horsTirage" in d && d.horsTirage) && !estVestigeLot2(t));
   // Le métier des familles (Book 25 §9.2, 0.6) en ajoute treize, qui servent enfin à quelque chose.
   assert.ok(tirables.length >= 45 && tirables.length <= 75, `${tirables.length} vestiges tirables`);
   assert.ok(composants.length >= 10, `${composants.length} composants`);
   for (const t of [...vestiges, ...composants]) {
     assert.ok(estObjet(t), t);
     assert.ok(OBJETS[t].poids > 0, `${t} a un poids`);
-    assert.ok(energieGrise(t) > 0, `${t} a une valeur`);
+    // Les ordures du lot 2 valent 0, exprès (Q2).
+    assert.ok(energieGrise(t) > 0 || estOrdure(t), `${t} a une valeur`);
   }
   assert.deepEqual(objetsSansEnergieGrise(), []);
   // Ce que donne un démontage existe, et ce sont de vrais objets.

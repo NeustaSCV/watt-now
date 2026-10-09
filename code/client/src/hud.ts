@@ -68,7 +68,7 @@ import type { Commande } from "./entrees.ts";
 import { icone, type Pictogramme } from "./icones.ts";
 import { EXAMENS_INSTALLATIONS, type Propositions } from "./interaction.ts";
 import { ORDRE_NIVEAUX, changerQualite, type NiveauQualite } from "./rendu/qualite.ts";
-import { COMPOSANTS, DEMONTAGE, NOMS_FAMILLES_VESTIGES, VESTIGES, type FamilleVestige } from "../../commun/src/vestiges.ts";
+import { COMPOSANTS, DEMONTAGE, NOMS_FAMILLES_VESTIGES, VESTIGES, estOrdure, type FamilleVestige } from "../../commun/src/vestiges.ts";
 
 /** Ordre d'affichage dans le sac : à boire et à manger, matériaux, pièces, outils, lumières. */
 const ORDRE_SAC: TypeObjet[] = [
@@ -78,7 +78,7 @@ const ORDRE_SAC: TypeObjet[] = [
   "torche", "lampe_frontale", "lanterne", "lampe_dynamo", "sac_a_dos",
   // Vestiges, lot 1 (0.3) : les composants, puis le bric-à-brac rangé par famille (cuisine, salle de bain…).
   ...(Object.keys(COMPOSANTS) as TypeObjet[]),
-  ...(["cuisine", "salle_de_bain", "salon", "gadget", "garage", "voiture", "ferme"] as FamilleVestige[]).flatMap((f) =>
+  ...(["cuisine", "salle_de_bain", "salon", "gadget", "garage", "voiture", "ferme", "loisir", "textile", "dechet"] as FamilleVestige[]).flatMap((f) =>
     (Object.keys(VESTIGES) as (keyof typeof VESTIGES)[]).filter((t) => VESTIGES[t].famille === f),
   ),
 ];
@@ -906,7 +906,7 @@ export class Hud {
         .filter(([t, n]) => n > 0 && estCleObjet(t))
         .map(([type, n]) => {
           const prix = prixAchatExemplaire(v.achats[typeDe(type)], type);
-          if (prix === null) return ligne(type, `<span class="prix non">non racheté</span>`, `× ${n}`);
+          if (prix === null) return ligne(type, `<span class="prix non">${estOrdure(typeDe(type)) ? "ordure" : "non racheté"}</span>`, `× ${n}`);
           return ligne(
             type,
             `<span class="prix">${formaterWotts(prix)}</span><button type="button" data-op="vendre" data-objet="${type}" data-n="1">Vendre</button>${n > 1 ? `<button type="button" data-op="vendre" data-objet="${type}" data-n="${n}">Tout · ${formaterWotts(prix * n)}</button>` : ""}`,

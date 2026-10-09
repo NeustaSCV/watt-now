@@ -12,6 +12,19 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
+## 0.7 · en préparation
+
+**Les déchets de l'Abondance : le catalogue**
+- **91 objets nouveaux** au catalogue, et le trampoline éventré à démonter sur place : canettes, stylos, oreillers, pneus, vélos en libre-service, onduleurs… La plupart ne valent rien.
+- **Trois familles de vestiges nouvelles** : déchet, textile, loisir.
+- **Les ordures valent 0** : le Comptoir les refuse (« Les Compteurs ne reprennent pas les ordures. ») ; au guichet, elles sont marquées « ordure ». Un sac de canettes, lui, vaut un peu.
+- **Tout se démonte en matières connues** : un stylo donne un petit ressort, un oreiller des plumes, un piquet de clôture une barre de métal, un ressort de suspension deux lames de ressort, un onduleur une petite batterie.
+- **Les fouilles existantes** donnent aussi le couteau abîmé (rare), l'onduleur et la trottinette électrique (peu communs, pour leur petite batterie), le sac de charbon de barbecue (peu commun, à la station) et la conserve bombée.
+- **La conserve bombée** ressemble à une conserve. Mangée, elle rend malade deux minutes plus tard : vomissements, faiblesse. Démontée, une boîte vide.
+- **La décharge du terrain** remonte aussi les déchets du lot 2, surtout des ordures.
+
+---
+
 ## 0.6 · déployée le 2026-10-09
 
 Le métier des familles (Book 25) : chaque famille fabrique seule son arme de métier, et les autres lui apportent les améliorations. Le lancer, l'arc pour tous, les étoiles, les lames des Charbonniers, l'électricité des Voltaïques, l'arbalète et les pièges des Mécanistes.
