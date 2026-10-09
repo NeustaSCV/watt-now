@@ -12,7 +12,7 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
-## 0.7.3 · en préparation
+## 0.7.3 · prête à déployer
 
 - **Fouiller, c'est tout prendre** : un sac-poubelle, une poubelle ou un coffre de voiture fouillé passe tout entier dans ton sac, avec les « +1 … » habituels. Plus de fenêtre où choisir. Si ton sac est plein, ce qui ne rentre pas reste dedans.
 - **La Coopérative est derrière la station** : à la halte, un chemin de terre part vers le nord (panneau « Coopérative du Plateau »), à 2 km, comme le Comptoir. Son portail te ramène à la station, ou au Carrefour ; le chemin agricole du Carrefour et la brèche restent.

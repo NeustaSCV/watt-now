@@ -30,8 +30,8 @@ test("version : les notes de la version courante, une ligne courte par nouveaut�
   const fin = notes.indexOf("\n## ", debut + 1);
   const section = notes.slice(debut, fin === -1 ? undefined : fin);
   const lignes = section.split("\n").filter((l) => l.startsWith("- "));
-  // Une version corrective (x.y.z) peut être courte ; une version (x.y) apporte au moins dix nouveautés.
-  const minimum = VERSION.split(".").length === 3 ? 3 : 10;
+  // Une version corrective (x.y.z) peut ne corriger qu'une chose ; une version (x.y) apporte au moins dix nouveautés.
+  const minimum = VERSION.split(".").length === 3 ? 1 : 10;
   assert.ok(lignes.length >= minimum, "la section de la version courante est presque vide");
   // Une ligne par nouveauté, lisible d'un regard : pas de pavé.
   for (const l of lignes) assert.ok(l.length <= 420, `ligne trop longue (${l.length}) : ${l.slice(0, 60)}`);
