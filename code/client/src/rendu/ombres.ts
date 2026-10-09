@@ -26,6 +26,8 @@ export class FrustumOmbre extends THREE.Frustum {
   private readonly rayons = new THREE.Vector3(0, -1, 0);
   /** Faux : comportement d'origine de three.js (le mode mesure peut comparer). */
   actif = true;
+  /** Le dernier préparé : les lots (lots.ts) s'en servent pour trier leurs objets un par un dans la passe d'ombre. */
+  static courant: FrustumOmbre | null = null;
 
   /** À chaque image, avant le rendu : la caméra et la lumière du moment. */
   preparer(camera: THREE.Camera, lumiere: THREE.DirectionalLight): void {
@@ -35,23 +37,33 @@ export class FrustumOmbre extends THREE.Frustum {
     lumiere.updateMatrixWorld();
     lumiere.target.updateMatrixWorld();
     this.rayons.setFromMatrixPosition(lumiere.target.matrixWorld).sub(bas.setFromMatrixPosition(lumiere.matrixWorld)).normalize();
+    this.cameraOmbre = lumiere.shadow.camera;
+    FrustumOmbre.courant = this;
   }
+
+  /** La caméra de la passe d'ombre du soleil (celle des lampes ne suit pas cette règle). */
+  cameraOmbre: THREE.Camera | null = null;
 
   override intersectsObject(objet: THREE.Object3D): boolean {
     if (!super.intersectsObject(objet)) return false;
-    if (!this.actif || this.rayons.y > -0.05) return true;
     // La même sphère que three.js (Frustum.intersectsObject).
     const o = objet as THREE.Mesh & { boundingSphere?: THREE.Sphere | null };
     if (o.boundingSphere) sphere.copy(o.boundingSphere).applyMatrix4(o.matrixWorld);
     else if (o.geometry?.boundingSphere) sphere.copy(o.geometry.boundingSphere).applyMatrix4(o.matrixWorld);
     else return true;
+    return this.ombreDansLeChamp(sphere);
+  }
+
+  /** L'ombre de cette sphère (repère du monde) peut-elle tomber dans le champ de la caméra ? */
+  ombreDansLeChamp(s: THREE.Sphere): boolean {
+    if (!this.actif || this.rayons.y > -0.05) return true;
     // Le trajet de l'ombre : du centre de la sphère jusque sous le sol, le long des rayons.
-    const t = (sphere.center.y + sphere.radius + SOUS_LE_SOL) / -this.rayons.y;
+    const t = (s.center.y + s.radius + SOUS_LE_SOL) / -this.rayons.y;
     if (t <= 0) return true;
-    bas.copy(sphere.center).addScaledVector(this.rayons, t);
-    const r = sphere.radius + MARGE;
+    bas.copy(s.center).addScaledVector(this.rayons, t);
+    const r = s.radius + MARGE;
     for (const plan of this.vue.planes) {
-      if (plan.distanceToPoint(sphere.center) < -r && plan.distanceToPoint(bas) < -r) return false;
+      if (plan.distanceToPoint(s.center) < -r && plan.distanceToPoint(bas) < -r) return false;
     }
     return true;
   }

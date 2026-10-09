@@ -75,9 +75,10 @@ Penser au bon moment, et des déchets partout (Book 26, Book 02 §14 quater). Le
 
 **Sur téléphone**
 - **Moins d'ombres inutiles** : le jeu ne calcule plus l'ombre des objets dont l'ombre tombe hors de l'écran, et regroupe le dessin de la mare, des panneaux et de la halte. Même image, moins de travail pour le téléphone.
+- **Moins d'appels de dessin, même image** : chaque personnage et chaque Éteint en un seul morceau, les ressources du sol regroupées, la forêt hors de l'écran plus dessinée. Le téléphone travaille trois fois moins à la halte.
 
 **Pour la suite** (pas dans cette version)
-- **Le vrai rendu des déchets, en amas** (des tas de pièces serrées, un éclat qui scintille sur ce qui se ramasse, rien qui brille la nuit hors de ta lumière) et **un dessin plus léger de l'image** (moins d'appels de dessin, pour tenir sur l'iPhone 13 mini) viendront **après un essai sur l'iPhone** du porteur du projet.
+- **Le vrai rendu des déchets, en amas** (des tas de pièces serrées, un éclat qui scintille sur ce qui se ramasse, rien qui brille la nuit hors de ta lumière).
 
 **Pour l'équipe**
 - **`npm run rythme`** joue neuf parcours types (prudent, pressé, sans tutoriel, pour chaque famille) et vérifie le rythme : une nouveauté toutes les 3 min en moyenne la première demi-heure, un but au moins toutes les 20 min ensuite, et aucun blocage.

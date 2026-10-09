@@ -14,6 +14,8 @@ import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.j
 import { clone as clonerSquelette } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { colorer, tailler, zonesDesSommets, type Piece, type Zone } from "./vetements.ts";
+import { GENRE, fondrePersonnage, type MorceauAFondre } from "./fusion-personnage.ts";
+import { enregistrerBascule } from "./lots.ts";
 
 const BASE = "/assets/personnages/";
 
@@ -206,18 +208,30 @@ function materiauCorps(origine: THREE.MeshStandardMaterial, r: Reglages, coquill
         uniform float uCoquille;
         varying vec4 vTenue;
         varying vec3 vRepos;
-        float hachage(vec3 p) { return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719)) + uGraine) * 43758.5453); }
-        float bruit(vec3 p) {
-          vec3 i = floor(p); vec3 f = fract(p); f = f * f * (3.0 - 2.0 * f);
-          return mix(mix(mix(hachage(i), hachage(i + vec3(1,0,0)), f.x), mix(hachage(i + vec3(0,1,0)), hachage(i + vec3(1,1,0)), f.x), f.y),
-                     mix(mix(hachage(i + vec3(0,0,1)), hachage(i + vec3(1,0,1)), f.x), mix(hachage(i + vec3(0,1,1)), hachage(i + vec3(1,1,1)), f.x), f.y), f.z);
-        }`,
+        ${GLSL_BRUIT}`,
       )
       .replace(
         "#include <map_fragment>",
         `#include <map_fragment>
-        vec3 m = vRepos * uEchelle;
-        if (uCoquille > 0.5) {
+        ${glslPeauTissu("uCoquille > 0.5")}`,
+      );
+  };
+  m.customProgramCacheKey = () => "corps-watt-2";
+  return m;
+}
+
+/** Le bruit du tissu et des taches (même graine pour un personnage). */
+const GLSL_BRUIT = `float hachage(vec3 p) { return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719)) + uGraine) * 43758.5453); }
+        float bruit(vec3 p) {
+          vec3 i = floor(p); vec3 f = fract(p); f = f * f * (3.0 - 2.0 * f);
+          return mix(mix(mix(hachage(i), hachage(i + vec3(1,0,0)), f.x), mix(hachage(i + vec3(0,1,0)), hachage(i + vec3(1,1,0)), f.x), f.y),
+                     mix(mix(hachage(i + vec3(0,0,1)), hachage(i + vec3(1,0,1)), f.x), mix(hachage(i + vec3(0,1,1)), hachage(i + vec3(1,1,1)), f.x), f.y), f.z);
+        }`;
+
+/** La peau et le tissu, après la texture de couleur : `tissu` dit si ce point est un vêtement. */
+function glslPeauTissu(tissu: string): string {
+  return `vec3 m = vRepos * uEchelle;
+        if (${tissu}) {
           // Déchirures (Éteints) : des trous où l'on voit la peau du dessous.
           if (uDechirures > 0.0 && bruit(m * 9.0 + 3.1) < uDechirures * 0.42) discard;
           // Le tissu : sa couleur, un grain léger, et une usure plus claire par endroits.
@@ -230,10 +244,149 @@ function materiauCorps(origine: THREE.MeshStandardMaterial, r: Reglages, coquill
           diffuseColor.rgb *= uPeau;
         }
         // Le sang : des taches sombres, une de plus par blessure (aucune plaie visible).
-        if (uTaches > 0.0 && bruit(m * 7.0 + 7.0) > 1.0 - uTaches * 0.035) diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.42, 0.04, 0.04), 0.85);`,
+        if (uTaches > 0.0 && bruit(m * 7.0 + 7.0) > 1.0 - uTaches * 0.035) diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.42, 0.04, 0.04), 0.85);`;
+}
+
+/**
+ * Le matériau du personnage fondu (fusion-personnage.ts) : un seul matériau pour le corps, les vêtements, les yeux,
+ * les poils et les accessoires. Chaque point sait de quel morceau il vient (attributs par sommet) et refait le calcul
+ * de son matériau d'origine : texture de couleur, couleur, peau ou tissu, rugosité, métal, émission, facettes, face
+ * avant seule, coupe des cheveux sous le chapeau. `corps` : le matériau du corps (ses réglages, ses options).
+ */
+function materiauPersonnage(corps: THREE.MeshStandardMaterial, r: Reglages, cartes: THREE.Texture[], yeux: THREE.Color | null): THREE.MeshStandardMaterial {
+  const m = corps.clone();
+  m.map = null;
+  m.color.setRGB(1, 1, 1);
+  m.vertexColors = false;
+  m.flatShading = false;
+  m.side = THREE.DoubleSide;
+  m.emissive.setRGB(0, 0, 0);
+  const rapport = new THREE.Color(r.peau.r / PEAU_TEXTURE.r, r.peau.g / PEAU_TEXTURE.g, r.peau.b / PEAU_TEXTURE.b);
+  m.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, {
+      uPeau: { value: rapport },
+      uTaches: r.taches,
+      uDechirures: r.dechirures,
+      uGraine: r.graine,
+      uEchelle: r.echelle,
+      uHaut: r.haut,
+      uBande: r.bande,
+      uCouleurBande: r.couleurBande,
+      uYeux: { value: yeux ?? new THREE.Color(1, 1, 1) },
+      uCarte1: { value: cartes[0] ?? null },
+      uCarte2: { value: cartes[1] ?? null },
+      uCarte3: { value: cartes[2] ?? null },
+      uCarte4: { value: cartes[3] ?? null },
+    });
+    shader.vertexShader = shader.vertexShader
+      .replace(
+        "#include <common>",
+        `#include <common>
+        attribute vec4 tenue;
+        attribute vec4 aPiece;
+        attribute vec4 aTeinte;
+        attribute vec3 aEmission;
+        attribute vec4 aCoupe;
+        attribute vec3 aSommet;
+        varying vec4 vTenue;
+        varying vec3 vRepos;
+        flat varying vec4 vPiece;
+        flat varying vec4 vTeinte;
+        flat varying vec3 vEmission;
+        flat varying vec4 vCoupe;
+        varying vec3 vSommet;
+        varying vec2 vUvP;`,
+      )
+      .replace(
+        "#include <begin_vertex>",
+        `#include <begin_vertex>
+        vTenue = tenue;
+        vRepos = position;
+        vPiece = aPiece;
+        vTeinte = aTeinte;
+        vEmission = aEmission;
+        vCoupe = aCoupe;
+        vSommet = aSommet;
+        vUvP = uv;`,
       );
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        "#include <common>",
+        `#include <common>
+        uniform vec3 uPeau;
+        uniform float uTaches;
+        uniform float uDechirures;
+        uniform float uGraine;
+        uniform float uEchelle;
+        uniform vec3 uHaut;
+        uniform vec2 uBande;
+        uniform vec3 uCouleurBande;
+        uniform vec3 uYeux;
+        uniform sampler2D uCarte1;
+        uniform sampler2D uCarte2;
+        uniform sampler2D uCarte3;
+        uniform sampler2D uCarte4;
+        varying vec4 vTenue;
+        varying vec3 vRepos;
+        flat varying vec4 vPiece;
+        flat varying vec4 vTeinte;
+        flat varying vec3 vEmission;
+        flat varying vec4 vCoupe;
+        varying vec3 vSommet;
+        varying vec2 vUvP;
+        ${GLSL_BRUIT}`,
+      )
+      .replace(
+        "void main() {",
+        `void main() {
+        // Les cheveux sous le chapeau (coupe), les morceaux qui n'avaient qu'une face.
+        if (dot(vCoupe.xyz, vRepos) + vCoupe.w > 0.0) discard;
+        float drapeaux = vPiece.z;
+        if (mod(floor(drapeaux / 2.0), 2.0) > 0.5 && !gl_FrontFacing) discard;`,
+      )
+      .replace(
+        "#include <map_fragment>",
+        `vec4 t1 = texture2D(uCarte1, vUvP);
+        vec4 t2 = texture2D(uCarte2, vUvP);
+        vec4 t3 = texture2D(uCarte3, vUvP);
+        vec4 t4 = texture2D(uCarte4, vUvP);
+        float carte = vPiece.y;
+        if (carte > 0.5) diffuseColor *= carte < 1.5 ? t1 : carte < 2.5 ? t2 : carte < 3.5 ? t3 : t4;
+        float genre = vPiece.x;
+        if (genre < 1.5) {
+          ${glslPeauTissu("genre > 0.5")}
+        } else if (genre < 2.5) diffuseColor.rgb *= uYeux;
+        diffuseColor.rgb *= vTeinte.rgb;
+        if (mod(floor(drapeaux / 4.0), 2.0) > 0.5) diffuseColor.rgb *= vSommet;`,
+      )
+      .replace("#include <roughnessmap_fragment>", "float roughnessFactor = vPiece.w;")
+      .replace("#include <metalnessmap_fragment>", "float metalnessFactor = vTeinte.w;")
+      .replace(
+        "#include <normal_fragment_begin>",
+        `#include <normal_fragment_begin>
+        vec3 normalePlate = normalize(cross(dFdx(vViewPosition), dFdy(vViewPosition)));
+        if (mod(drapeaux, 2.0) > 0.5) {
+          normal = normalePlate;
+          nonPerturbedNormal = normal;
+        }`,
+      )
+      .replace("#include <emissivemap_fragment>", "totalEmissiveRadiance = vEmission;");
   };
-  m.customProgramCacheKey = () => "corps-watt-2";
+  m.customProgramCacheKey = () => "personnage-watt-1";
+  return m;
+}
+
+/** L'ombre du personnage fondu : les morceaux qui n'avaient qu'une face n'ombraient que par leur face arrière. */
+function ombrePersonnage<T extends THREE.MeshDepthMaterial | THREE.MeshDistanceMaterial>(m: T, cle: string): T {
+  m.onBeforeCompile = (shader) => {
+    shader.vertexShader = shader.vertexShader
+      .replace("#include <common>", "#include <common>\nattribute vec4 aPiece;\nflat varying float vDrapeaux;")
+      .replace("#include <begin_vertex>", "#include <begin_vertex>\nvDrapeaux = aPiece.z;");
+    shader.fragmentShader = shader.fragmentShader
+      .replace("#include <common>", "#include <common>\nflat varying float vDrapeaux;")
+      .replace("void main() {", "void main() {\nif (mod(floor(vDrapeaux / 2.0), 2.0) > 0.5 && gl_FrontFacing) discard;");
+  };
+  m.customProgramCacheKey = () => cle;
   return m;
 }
 
@@ -300,6 +453,9 @@ export class Humanoide {
   private readonly materiauxYeux: THREE.MeshStandardMaterial[] = [];
   /** Le bassin au repos, dans le corps (les pistes du mannequin sont ramenées à ce repos). */
   private readonly bassinRepos = new THREE.Vector3();
+  /** Le maillage du corps (la cible de la fusion) et les vêtements taillés dedans. */
+  private maillageCorps: THREE.SkinnedMesh | null = null;
+  private readonly vetements: THREE.SkinnedMesh[] = [];
 
   constructor(o: OptionsHumanoide) {
     const b = bibliotheque!;
@@ -377,6 +533,7 @@ export class Humanoide {
         geo.setIndex(taillee.corps);
         geo.setAttribute("tenue", taillee.tenueCorps);
         m.material = materiauCorps(mat, this.reglages, false);
+        this.maillageCorps = m;
         for (const source of taillee.pieces) {
           const g = partager(source);
           colorer(g, coupe[source.userData.piece as number]!.zones);
@@ -384,6 +541,7 @@ export class Humanoide {
           v.castShadow = true;
           v.frustumCulled = false;
           vetements.push([m, v]);
+          this.vetements.push(v);
         }
       }
     });
@@ -485,6 +643,8 @@ export class Humanoide {
           .replace("void main() {", "void main() {\n  if (dot(planCoupe.xyz, vLocalCoupe) + planCoupe.w > 0.0) discard;");
       };
       mat.customProgramCacheKey = () => "cheveux-sous-chapeau";
+      // Pour la fusion du personnage (fusion-personnage.ts) : la même coupe, dans son repère.
+      m.userData.planCoupe = local;
       m.material = mat;
     });
   }
@@ -511,6 +671,79 @@ export class Humanoide {
     const os = this.os.get(nomOs);
     const p = os ? os.getWorldPosition(new THREE.Vector3()) : new THREE.Vector3();
     return this.objet.worldToLocal(p);
+  }
+
+  /**
+   * Fond le personnage en un seul maillage (fusion-personnage.ts) : même image, un appel de dessin (et un dans
+   * l'ombre). À appeler une fois habillé (accessoires accrochés, cheveux coupés sous le chapeau, lueur des yeux
+   * créée) ; `exclure` : ce qui change ensuite (l'arme en main) reste à part.
+   */
+  fondre(exclure: THREE.Object3D[] = []): void {
+    const corps = this.maillageCorps;
+    if (!corps || this.fondu) return;
+    this.objet.updateMatrixWorld(true);
+    const morceaux: MorceauAFondre[] = [{ maillage: corps, genre: GENRE.peau }];
+    const parcourir = (o: THREE.Object3D) => {
+      if (exclure.includes(o)) return;
+      const m = o as THREE.Mesh;
+      if (m.isMesh && m !== corps) {
+        const genre = this.vetements.includes(m as THREE.SkinnedMesh) ? GENRE.tissu : this.materiauxYeux.includes(m.material as THREE.MeshStandardMaterial) ? GENRE.yeux : GENRE.autre;
+        morceaux.push({ maillage: m, genre });
+      }
+      for (const enfant of o.children) parcourir(enfant);
+    };
+    parcourir(this.modele);
+    // Les yeux d'un personnage ont tous la même couleur (fermerLesYeux) : le matériau fondu suit celle du premier.
+    const yeux = this.materiauxYeux[0]?.color ?? null;
+    const f = fondrePersonnage(corps, morceaux, yeux);
+    if (!f) return;
+    const avant = { geometrie: corps.geometry, materiau: corps.material };
+    const materiau = materiauPersonnage(corps.material as THREE.MeshStandardMaterial, this.reglages, f.cartes, yeux);
+    const profondeur = ombrePersonnage(new THREE.MeshDepthMaterial(), "ombre-personnage");
+    const distance = ombrePersonnage(new THREE.MeshDistanceMaterial(), "distance-personnage");
+    const retires = f.fondus.filter((m) => m !== corps).map((m) => ({ m, parent: m.parent! }));
+    // La sphère englobante de chaque état (les Éteints l'élargissent pour leurs gestes, eteint.ts).
+    const spheres: [THREE.Sphere | null, THREE.Sphere | null] = [corps.boundingSphere, null];
+    const bornes = corps as unknown as { boundingSphere: THREE.Sphere | null; boundingBox: THREE.Box3 | null };
+    const appliquer = (fondu: boolean) => {
+      if (fondu === this.fondu) return;
+      this.fondu = fondu;
+      spheres[fondu ? 0 : 1] = corps.boundingSphere;
+      bornes.boundingSphere = spheres[fondu ? 1 : 0];
+      corps.geometry = fondu ? f.geometrie : avant.geometrie;
+      corps.material = fondu ? materiau : avant.materiau;
+      corps.customDepthMaterial = fondu ? profondeur : undefined;
+      corps.customDistanceMaterial = fondu ? distance : undefined;
+      bornes.boundingBox = null;
+      for (const { m, parent } of retires) {
+        if (fondu) parent.remove(m);
+        else parent.add(m);
+      }
+    };
+    appliquer(true);
+    // Le mode mesure compare l'image avant et après la fusion (lots.ts).
+    enregistrerBascule(appliquer);
+  }
+  private fondu = false;
+
+  /**
+   * Le corps ne se dessine que s'il est dans le champ (de la caméra, ou d'une ombre) : une sphère de `rayon` mètres
+   * autour du bassin, large pour tous les gestes (couché, roulade, frappe). Sans ça, chaque joueur de la halte était
+   * dessiné, même hors de l'écran (12 500 triangles chacun, plus son ombre).
+   */
+  cadrer(rayon: number): void {
+    this.objet.updateMatrixWorld(true);
+    const centre = this.objet.localToWorld(new THREE.Vector3(0, 0.9, 0));
+    const r = rayon * this.objet.getWorldScale(new THREE.Vector3()).x;
+    this.modele.traverse((n) => {
+      const m = n as THREE.SkinnedMesh;
+      if (!m.isSkinnedMesh) return;
+      // La sphère dans le repère du maillage, assez grande quelle que soit l'échelle (la corpulence n'est pas uniforme).
+      const inverse = m.matrixWorld.clone().invert();
+      const s = new THREE.Sphere(centre.clone().applyMatrix4(inverse), r * inverse.getMaxScaleOnAxis());
+      m.boundingSphere = s;
+      m.frustumCulled = true;
+    });
   }
 
   /** Un os du squelette (pour accrocher un objet : main, dos, tête…). */

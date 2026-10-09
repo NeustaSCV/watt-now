@@ -1,6 +1,6 @@
 // Point d'entrée du client : accueil, connexion au monde, boucle de jeu.
 
-import { Lots } from "./rendu/lots.ts";
+import { LotsDeRessources, basculerRegroupements } from "./rendu/lots.ts";
 import { fusionnerStatique } from "./rendu/fusion.ts";
 import { ModePose, fantomeFeu, type GenrePose } from "./pose.ts";
 import { raisonEmplacement } from "../../commun/src/emplacement.ts";
@@ -253,12 +253,11 @@ scene.scene.add(volaille.groupe, fauneAmbiante.groupe);
 function crierFaune(cri: CriFaune, x: number, z: number): void {
   son.jouer(cri, { x, z });
 }
-/** Les ressources dessinées en lots (voir lots.ts). */
-const lots = new Lots();
+/** Les ressources du lieu, dessinées en lots par matériau (voir lots.ts). */
+const lots = new LotsDeRessources();
 /** Les déchets du lieu : amas, conteneurs, points du monde (0.7, affichage provisoire). */
 const dechetsVue = new CoucheDechetsVue((m) => envoyer(m), document.getElementById("hud")!);
 scene.scene.add(dechetsVue.objet);
-const EN_LOTS = new Set(["branche", "buche", "pierre"]);
 /** L'escabeau porté, et les disques autour des fruitiers où il faut le poser (2026-10-08). */
 const escabeauPorte = creerEscabeau();
 const DISQUE_ESCABEAU = new THREE.RingGeometry(RAYON_ESCABEAU - 0.08, RAYON_ESCABEAU, 64).rotateX(-Math.PI / 2);
@@ -473,10 +472,10 @@ function installer(message: Bienvenue): void {
   else fauneAmbiante.desactiver();
   for (const r of message.ressources) {
     const vue = new VueRessource(r);
-    // Même image, bien moins d'appels de dessin (2026-10-08) : les ressources nombreuses et identiques sont
-    // dessinées en lots ; les autres ont leurs morceaux de même matériau fondus.
-    if (EN_LOTS.has(r.type)) lots.prendre(vue);
-    else fusionnerStatique(vue.objet);
+    // Même image, bien moins d'appels de dessin (2026-10-08, 0.7) : les morceaux de même matériau sont fondus, puis
+    // toutes les ressources du lieu sont dessinées en lots, un par matériau (lots.ts).
+    fusionnerStatique(vue.objet);
+    lots.prendre(vue);
     ressources.set(r.id, vue);
     contenu.add(vue.objet);
     // Le disque où l'escabeau doit être posé pour cueillir : affiché quand il sert (on le porte, ou on vise l'arbre).
@@ -1750,6 +1749,8 @@ if (import.meta.env.DEV) {
       scene,
       personnage: () => personnage,
       envoyer,
+      /** Mode mesure : dessin regroupé (true) ou d'avant (false), pour comparer les deux images (lots.ts). */
+      fondre: basculerRegroupements,
     },
   });
 }
@@ -1767,7 +1768,7 @@ if (MESURE !== null && MESURE !== "0") {
 function* postesMesures(): Generator<readonly [string, THREE.Object3D | null | undefined]> {
   yield ["décor", decors.get(lieu)];
   for (const r of ressources.values()) yield [`ressource:${r.donnees.type}`, r.objet];
-  yield ["ressource:lots (branches, bûches, pierres)", lots.groupe];
+  yield ["ressource:lots", lots.groupe];
   for (const f of feux.values()) yield ["feux", f.objet];
   for (const i of installations.values()) yield ["installations", i.objet];
   yield ["installations", cables];
