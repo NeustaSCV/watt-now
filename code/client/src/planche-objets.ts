@@ -15,6 +15,7 @@ import { FeuDeCamp } from "./rendu/feu.ts";
 import { fusionnerStatique } from "./rendu/fusion.ts";
 import { chargerHumanoides } from "./rendu/humanoides.ts";
 import { VueInstallation } from "./rendu/installations.ts";
+import { modeleMetier } from "./rendu/metier/index.ts";
 import { ReserveLumieres, type SourceLumiere } from "./rendu/lumieres.ts";
 import { PALETTE } from "./rendu/materiaux.ts";
 import { Personnage, creerArme } from "./rendu/personnage.ts";
@@ -179,6 +180,34 @@ NIVEAUX_INSTALLATIONS.forEach(([nom, type, niveau, etat], i) => {
   scene.add(v.objet);
   animations.push((dt, nuit) => v.animer(dt, Date.now(), nuit, false));
   articles.push({ nom, section: "installations", objet: v.objet, haut: 1.7 });
+});
+
+// ---------- ⚙️ Les Mécanistes (Book 25 §6, chantier 7 · 0.6) : pièges armés et déclenchés, tour, pédalier équipé ----------
+
+const MECANIQUE: [string, InstallationVue["type"], InstallationVue["etat"]][] = [
+  ["assommoir armé", "assommoir", { declencheur: { arme: true, prises: 0 } }],
+  ["assommoir tombé", "assommoir", { declencheur: { arme: false, prises: 1 } }],
+  ["mâchoires de fortune armées", "machoires_fortune", { declencheur: { arme: true, prises: 0 } }],
+  ["mâchoires de fortune fermées", "machoires_fortune", { declencheur: { arme: false, prises: 1 } }],
+  ["piège à mâchoires armé", "piege_machoires", { declencheur: { arme: true, prises: 0 } }],
+  ["fosse couverte", "fosse_pieux", { declencheur: { arme: true, prises: 0 } }],
+  ["fosse ouverte", "fosse_pieux", { declencheur: { arme: false, prises: 1 } }],
+  ["tour à perche", "tour_perche", {}],
+  ["pédalier + soufflet + meule fine", "pedalier", { meule: true, dynamo: true, soufflet: true, meuleFine: true }],
+];
+MECANIQUE.forEach(([nom, type, etat], i) => {
+  const v = new VueInstallation({ id: 400 + i, type, x: i * 3.5, z: 48, o: 0, etat });
+  scene.add(v.objet);
+  animations.push((dt, nuit) => v.animer(dt, Date.now(), nuit, type === "pedalier"));
+  articles.push({ nom, section: "installations", objet: v.objet, haut: 1.5 });
+});
+// L'arbalète et la lourde (en main), le carreau (en vol), posés sur un tréteau invisible.
+[["arbalète", "arbalete", "main"], ["arbalète lourde", "arbalete_lourde", "main"], ["carreau", "carreau", "vol"], ["carreau à pointe d'acier", "carreau_acier", "vol"]].forEach(([nom, objet, usage], i) => {
+  const m = modeleMetier(objet!, usage as "main" | "vol");
+  if (!m) return;
+  m.position.set(MECANIQUE.length * 3.5 + i * 1.2, 0.6, 48);
+  scene.add(m);
+  articles.push({ nom: nom!, section: "installations", objet: m, haut: 0.3 });
 });
 
 // ---------- Les armes en main ----------

@@ -128,7 +128,10 @@ export type Verbe =
   | "verser_huile"
   | "monter_ventilateur"
   /** Au banc de recharge : recharger ses armes électriques (Voltaïques, chantier 6). */
-  | "recharger_armes";
+  | "recharger_armes"
+  /** Le pédalier des Mécanistes (Book 25 §6.4, chantier 7) : monter le soufflet à manivelle, la meule fine. */
+  | "monter_soufflet"
+  | "monter_meule_fine";
 
 /** État propre à certaines installations. */
 export interface EtatInstallation {
@@ -139,6 +142,9 @@ export interface EtatInstallation {
   dynamo?: boolean;
   /** Établi : le redresseur de fûts est monté (Book 25 §9.3). */
   redresseur?: boolean;
+  /** Pédalier, accessoires mécanistes (Book 25 §6.4) : le soufflet à manivelle, la meule fine. */
+  soufflet?: boolean;
+  meuleFine?: boolean;
   /** Coffre : ce qu'il contient (la charge des batteries rangées est dans `charges`). */
   contenu?: Inventaire;
   /** Banc de recharge : les batteries posées dessus, leur charge, et le dernier calcul de production (É4). */

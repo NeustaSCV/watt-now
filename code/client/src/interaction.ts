@@ -143,7 +143,10 @@ function actionsInstallation(
       if (!i.etat.meule && (inventaire.pierre ?? 0) >= 3) return [msg("Installer la meule (3 pierres)", "monter_meule"), examiner];
       const pedaler = i.etat.dynamo ? msg("Pédaler : charger la batterie", "pedaler") : null;
       const affuter = i.etat.meule && (inventaire.couteau ?? 0) > 0 ? msg("Affûter le couteau", "affuter") : null;
-      return [pedaler ?? affuter, pedaler && affuter ? affuter : examiner];
+      // Les accessoires mécanistes (Book 25 §6.4) : proposés quand on a de quoi les monter, sans prendre la place du reste.
+      const accessoire = accessoirePedalier(i, inventaire, msg);
+      if (!pedaler && !affuter && accessoire) return [accessoire, examiner];
+      return [pedaler ?? affuter, pedaler && affuter ? affuter : (accessoire ?? examiner)];
     }
     case "plaque_choc": {
       // Book 25 §5.3 : une décharge, puis il faut la réarmer (0,5 Wh).
@@ -158,6 +161,17 @@ function actionsInstallation(
       const courant = d?.arme === false ? "Le courant ne passe pas : il lui faut un banc chargé à moins de 6 m." : "Le courant passe.";
       return [null, { libelle: "Examiner", examiner: `${EXAMENS_INSTALLATIONS[i.type]} ${courant}` }];
     }
+    // ⚙️ Les pièges (Book 25 §6.3) : réarmer ce qui a pris ; le tour à perche, un atelier.
+    case "assommoir":
+    case "machoires_fortune":
+    case "piege_machoires":
+    case "fosse_pieux": {
+      const d = i.etat.declencheur;
+      if (d?.fausse) return [null, { libelle: "Examiner", examiner: "Faussées : elles ne se réarment plus. Démonte-les, refais-en." }];
+      return [d && !d.arme ? msg(i.type === "fosse_pieux" ? "Dégager la fosse" : "Réarmer le piège", "rearmer_piege") : null, examiner];
+    }
+    case "tour_perche":
+      return [{ libelle: "Travailler au tour", ouvrirFabrication: true }, examiner];
     case "banc_recharge": {
       // Sur le banc : les batteries posées, que le panneau charge, même hors ligne (É4).
       const posees = Object.values(i.etat.batteries ?? {}).some((n) => (n ?? 0) > 0);
@@ -177,6 +191,14 @@ function actionsInstallation(
     default:
       return [null, examiner];
   }
+}
+
+/** Le soufflet à manivelle, la meule fine (Book 25 §6.4) : à monter sur le pédalier, si l'on a de quoi. */
+function accessoirePedalier(i: InstallationVue, inventaire: Inventaire, msg: (libelle: string, verbe: Verbe) => ActionProposee): ActionProposee | null {
+  const a = (t: TypeObjet, n = 1) => (inventaire[t] ?? 0) >= n;
+  if (i.etat.meule && !i.etat.meuleFine && a("pierre") && a("chiffons")) return msg("Monter la meule fine", "monter_meule_fine");
+  if (!i.etat.soufflet && a("roue_velo") && a("bache") && a("branche", 4)) return msg("Monter le soufflet à manivelle", "monter_soufflet");
+  return null;
 }
 
 /** Ce que montre un arbre fruitier hors saison (A ne fait que le dire). */

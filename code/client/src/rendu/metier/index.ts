@@ -42,3 +42,7 @@ enregistrerArc(enregistrerModele);
 // Chaque fichier exporte ses modèles (sans importer ce registre : pas d'import circulaire) ; on les enregistre ici.
 for (const [objet, usage, fabrique] of [...MODELES_FORGE]) enregistrerModele(objet, usage, fabrique);
 import "./electricite.ts";
+// ⚙️ Les Mécanistes (chantier 7) : la liste est lue ici, après la création du registre (un import qui enregistrerait de
+// lui-même tomberait avant elle : les imports passent avant le corps du module).
+import { modelesMecanique } from "./mecanique.ts";
+for (const [objet, usage, fabrique] of modelesMecanique()) enregistrerModele(objet, usage, fabrique);

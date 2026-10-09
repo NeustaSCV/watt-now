@@ -356,14 +356,24 @@ export function capaciteSurSoi(inventaire: Inventaire): number {
   return c;
 }
 
-/** Ce qu'on peut emporter avec ce qu'on a : le meilleur contenant (ou les poches), plus le travois. */
+/** La brouette des Mécanistes (Book 25 §6.4) : 60 kg roulés de plus que le sac, et l'on court encore. */
+export const CAPACITE_BROUETTE = 60;
+
+/**
+ * Ce qu'on peut emporter avec ce qu'on a : le meilleur contenant (ou les poches), plus le travois ou la brouette (on
+ * ne pousse pas l'une en traînant l'autre : la meilleure des deux compte).
+ */
 export function capaciteDe(inventaire: Inventaire): number {
-  return capaciteSurSoi(inventaire) + ((inventaire.travois ?? 0) > 0 ? CAPACITE_TRAVOIS : 0);
+  const roule = Math.max((inventaire.travois ?? 0) > 0 ? CAPACITE_TRAVOIS : 0, (inventaire.brouette ?? 0) > 0 ? CAPACITE_BROUETTE : 0);
+  return capaciteSurSoi(inventaire) + roule;
 }
 
-/** On traîne le travois chargé : plus lourd que ce qu'on porte sur soi. On ne court plus (P-002). */
+/**
+ * On traîne le travois chargé : plus lourd que ce qu'on porte sur soi. On ne court plus (P-002). La brouette, elle,
+ * roule : avec elle, on court encore (Book 25 §6.4).
+ */
 export function traineTravois(inventaire: Inventaire): boolean {
-  return (inventaire.travois ?? 0) > 0 && poidsInventaire(inventaire) > capaciteSurSoi(inventaire) + 1e-9;
+  return (inventaire.travois ?? 0) > 0 && (inventaire.brouette ?? 0) === 0 && poidsInventaire(inventaire) > capaciteSurSoi(inventaire) + 1e-9;
 }
 
 /** Le nom de ce qui porte les affaires : « Sac », « Sac de fortune », ou « Poches ». */

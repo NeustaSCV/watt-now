@@ -88,6 +88,11 @@ export interface ArmeTir {
    * immobile (le geste « Réarmer », `rechargeMs`). Sans : l'arc, qu'on encoche tout seul en `rechargeMs`.
    */
   armeeDAvance?: true;
+  /**
+   * Trop raide pour le pied (l'arbalète lourde, Book 25 §6.1) : il faut l'un de ces outils pour la réarmer, chacun à sa
+   * durée (ms) ; le meilleur du sac sert. Absent : à la main ou au pied, dans l'étrier, en `rechargeMs`.
+   */
+  rearmerAvec?: readonly { objet: TypeObjet; ms: number }[];
 }
 
 /** Contre un Équipé, la flèche passe la visière ouverte : de face, à la moitié de la portée de tête (Book 25 §3.4). */
@@ -104,6 +109,12 @@ export const ARMES_TIR: ArmeTir[] = [
   { objet: "arc_if", nom: "l'arc d'if", type: "percant", porteeUtile: 15, porteeMax: 30, porteeTete: 7, degatsRapide: 0.65, degatsPlein: 1.3, pleinMs: 1500, rechargeMs: 1000, endurance: 6, bruit: 3, solidite: 225, metier: true },
   { objet: "arc_sportif", nom: "l'arc de tir sportif", type: "percant", porteeUtile: 16, porteeMax: 33, porteeTete: 8, degatsRapide: 0.72, degatsPlein: 1.44, pleinMs: 1500, rechargeMs: 1000, endurance: 6, bruit: 3, solidite: 300, metier: true },
   // ---- Bloc « arbalète » (chantier 7) ----
+  // L'arbalète légère (Book 25 §6.1 et §8.3), valeurs à ★★★ (arc d'if) : armée d'avance, elle tire tout de suite ;
+  // réarmer au pied prend 3 s, immobile. Un tir plein à 12 m détruit (réglage accepté le 2026-10-09).
+  { objet: "arbalete", nom: "l'arbalète", type: "percant", porteeUtile: 15, porteeMax: 30, porteeTete: 12, degatsRapide: null, degatsPlein: 1.5, pleinMs: 300, rechargeMs: 3000, endurance: 10, bruit: 6, solidite: 200, metier: true, armeeDAvance: true },
+  // L'arbalète lourde : deux ressorts retrempés (🔥), son niveau réel est ★★★★ et ses valeurs y sont données. Un
+  // carreau met à terre (3 au torse). Trop raide pour le pied : le cranequin (4 s) ou le pied-de-biche (6 s).
+  { objet: "arbalete_lourde", nom: "l'arbalète lourde", type: "percant", porteeUtile: 20, porteeMax: 35, porteeTete: 15, degatsRapide: null, degatsPlein: 3, pleinMs: 300, rechargeMs: 6000, endurance: 16, bruit: 8, solidite: 300, metier: true, armeeDAvance: true, rearmerAvec: [{ objet: "cranequin", ms: 4000 }, { objet: "pied_de_biche", ms: 6000 }] },
 ];
 
 /** Les arcs (chantier 4) : ils tirent toutes les flèches. */
@@ -130,6 +141,9 @@ export const MUNITIONS: Munition[] = [
   { objet: "fleche_clou", pour: ARCS, casse: 1 / 3, tueALaTete: true },
   { objet: "fleche_durcie", pour: ARCS, casse: 1 / 2, tueALaTete: false },
   // ---- Bloc « arbalète » (chantier 7) ----
+  // Les carreaux (Book 25 §6.1) : la pointe d'acier d'un Charbonnier casse une fois sur cinq, l'os ou le clou une sur trois.
+  { objet: "carreau_acier", pour: ["arbalete", "arbalete_lourde"], casse: 1 / 5, tueALaTete: true },
+  { objet: "carreau", pour: ["arbalete", "arbalete_lourde"], casse: 1 / 3, tueALaTete: true },
 ];
 
 /** L'impact d'une flèche ou d'un carreau s'entend à 4 m (Book 25 §3.4). */

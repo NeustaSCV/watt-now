@@ -951,6 +951,11 @@ export class VueInstallation {
         // Les installations du métier (Book 25) : leur modèle vient du registre des métiers, sinon un piquet provisoire.
         this.objet = enGroupeMetier(modeleMetier(donnees.type, "sol")) ?? piquetProvisoire();
     }
+    // Les accessoires mécanistes du pédalier (soufflet à manivelle, meule fine), montrés selon son état.
+    if (donnees.type === "pedalier") for (const a of ["pedalier_meule_fine", "pedalier_soufflet"]) {
+      const m = modeleMetier(a, "sol");
+      if (m) this.objet.add(m);
+    }
     // Le niveau (Book 24) : des pièces en plus. La citerne couvre la bassine : son eau ne se voit plus.
     const pieces = piecesNiveau(donnees.type, donnees.niveau ?? 1);
     if (pieces) this.objet.add(pieces);
@@ -985,6 +990,12 @@ export class VueInstallation {
     if (this.meule) this.meule.visible = donnees.etat.meule === true;
     if (this.redresseur) this.redresseur.visible = donnees.etat.redresseur === true;
     if (this.dynamo) this.dynamo.visible = donnees.etat.dynamo === true;
+    // Les modèles de métier (rendu/metier/) : un piège armé ou qui a pris ; un accessoire monté ou non.
+    const arme = donnees.etat.declencheur?.arme !== false;
+    this.objet.traverse((o) => {
+      if (typeof o.userData.siArme === "boolean") o.visible = o.userData.siArme === arme;
+      if (typeof o.userData.siEtat === "string") o.visible = donnees.etat[o.userData.siEtat as keyof typeof donnees.etat] === true;
+    });
     let chargees = 0;
     if (this.posees) {
       for (const b of this.posees.children) {

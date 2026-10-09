@@ -82,6 +82,8 @@ import { REDRESSEUR } from "../../commun/src/arc.ts";
 import { Forge, type ContexteForge } from "./forge.ts";
 import { declencher, declencheurNeuf, definitionDeclencheur, estDeclencheur, type DeclencheurPose } from "./declencheurs.ts";
 import { Electricite, alimenterClotures, coutEnduranceCoup, type ContexteElectricite } from "./electricite.ts";
+import { FilsDeRasoir, utiliserMecanique, type ContexteMecanique } from "./mecanique.ts";
+import { rendDesAccessoires } from "../../commun/src/mecanique.ts";
 import {
   PRIX_RETRAIT,
   WOTTS_PAR_WH_M,
@@ -142,7 +144,7 @@ import {
   type Sante,
 } from "../../commun/src/combat.ts";
 import { ALLURES, POINT_ARRIVEE } from "../../commun/src/regles.ts";
-import type { SacVu, SanteVue } from "../../commun/src/messages.ts";
+import type { SacVu, SanteVue, Verbe } from "../../commun/src/messages.ts";
 import type { SacEnBase } from "./base.ts";
 import { CHARBONNIERE_ODEUR, FEU_LUMIERE_NUIT, FEU_ODEUR, stimuliJoueur, type BruitAction, type Stimulus } from "../../commun/src/signature.ts";
 import { estNuit, heureDeJeu } from "../../commun/src/temps.ts";
@@ -913,7 +915,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     // Abîmée (sous 30 % de solidité), elle frappe 30 % moins fort (Book 23 §4.3).
     const cle = cleArme(enMain);
     const abimee = cle !== null && etatArme(cle, this.usure) < SEUIL_ABIMEE;
-    const arme = abimee ? { ...enMain, degatsTorse: enMain.degatsTorse * MALUS_ABIMEE } : enMain;
+    const arme = abimee ? { ...enMain, degatsTorse: enMain.degatsTorse * MALUS_ABIMEE } : this.filsDeRasoir.affile(enMain, cle);
     // L'électricité (Book 25 §5.1) peut raidir un voisin : on donne les autres Éteints du lieu.
     const effet = encaisserCoup(cible, arme, appuye, force, this.position, this.zoneIci(), this.eteintsIci());
     const resultat = effet.resultat;
@@ -1030,6 +1032,22 @@ export class Joueur implements Voyageur, ParticipantLecon {
     };
   }
 
+  /** Ce que le joueur prête à la mécanique des Mécanistes (mecanique.ts) : des accès, aucune règle. */
+  private contexteMecanique(maj: () => void): ContexteMecanique {
+    return {
+      inventaire: () => this.inventaire,
+      endurance: () => this.endurance,
+      depenser: (n) => {
+        this.endurance = Math.max(0, this.endurance - n);
+      },
+      retirer: (objets) => this.retirerPlusieurs(objets),
+      info: (t) => this.info(t),
+      commencer: (libelle, secondes, appliquer, bruit) => this.commencer(libelle, secondes, appliquer, 0, bruit),
+      maj,
+      noter: (fait) => this.noterFait(fait),
+    };
+  }
+
   /** Ce qui suit la destruction d'un Éteint, au contact comme au tir. */
   private apresDestruction(cible: Eteint): void {
     if (this.tuto) this.tuto.premierEteintDetruit = true;
@@ -1084,6 +1102,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
 
   /** L'usure de chaque exemplaire d'arme en main : coups qui restent (absente : neuf). Clé : « lame_forgee#4 », ou le type. */
   private usure: Partial<Record<CleObjet, number>> = {};
+  /** Les lames affûtées à la meule fine : +10 % jusqu'à la casse (Book 25 §6.4, serveur/src/mecanique.ts). */
+  private readonly filsDeRasoir = new FilsDeRasoir();
   /** La charge de chaque exemplaire d'arme électrique : Wh qui restent (absente : pleine), Book 25 §5.4. */
   private chargeArmes: Partial<Record<CleObjet, number>> = {};
 
@@ -1114,6 +1134,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     const reste = (this.usure[o] ?? arme.solidite) - 1;
     if (reste <= 0) {
       delete this.usure[o];
+      this.filsDeRasoir.casse(o);
       this.retirer(o, 1);
       this.envoyer({ t: "usure", usure: { ...this.usure }, evenement: { objet: o, etat: "cassee" } });
       // Elle laisse un débris, qui se démonte (Book 23 §4.3) : dans le sac, ou par terre s'il n'y a plus de place.
@@ -1178,6 +1199,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
       if (atelier.cout && !this.aDeQuoi(atelier.cout)) return;
       if (atelier.cout) this.retirerPlusieurs(atelier.cout);
       delete this.usure[objet];
+      // La meule fine (Book 25 §6.4) : l'affûtage donne un fil de rasoir.
+      if (atelier.accessoire === "meule" && [...this.installations.values()].some((i) => i.type === "pedalier" && i.etat.meuleFine && this.proche(i.x, i.z, 3))) this.filsDeRasoir.affuter(objet);
       this.envoyer({ t: "usure", usure: { ...this.usure }, evenement: { objet, etat: "reparee" } });
       this.base.sauverUsure(this.compte.id, this.usure);
     }, 0, atelier.installation === "forge" ? "lourd" : "outil");
@@ -3219,6 +3242,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
           i.etat.dynamo ? { dynamo_velo: 1 } : {},
           i.etat.redresseur ? REDRESSEUR.cout : {},
           Forge.accessoiresRendus(i),
+          rendDesAccessoires(i.etat),
         );
         const rend = rendDuDemontage(somme(laRecette.ingredients, ...(i.etat.payes ?? []), accessoires));
         if (!this.peutReprendre(rend)) return;
@@ -3253,6 +3277,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
     };
     if (verbe === "ameliorer" || verbe === "redescendre" || verbe === "demonter_installation") return this.amenagerInstallation(i, verbe);
     if (this.forge.utiliser(i, verbe)) return;
+    // Les pièges et les accessoires du pédalier des Mécanistes (Book 25 §6, chantier 7) : serveur/src/mecanique.ts.
+    if (utiliserMecanique(this.contexteMecanique(maj), i, verbe as Verbe)) return;
 
     switch (verbe) {
       case "porter":

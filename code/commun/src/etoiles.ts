@@ -61,7 +61,14 @@ export const OBJETS_DE_METIER: Partial<Record<TypeObjet, Etoiles>> = {
   matraque_electrique: 3,
   aiguillon: 3,
   module_decharge: 3,
-  // ⚙️ Mécanistes (chantier 7)
+  // ⚙️ Mécanistes (chantier 7) : l'arbalète et ses pièces, qui portent chacune la qualité de sa matière (Book 25 §6.1 :
+  // arc de frêne ★ à ressort retrempé ★★★★ ; noix de bois ★★ à forgée ★★★★ ; arbrier scié ★★★★, au ciseau ★★★★★).
+  // L'arbalète lourde n'existe qu'avec deux ressorts retrempés : sa clé nue est ★★★★.
+  arbalete: 3,
+  arbalete_lourde: 4,
+  arc_arbalete: 3,
+  noix_detente: 3,
+  arbrier: 4,
   // Tous : l'arc (chantier 4). Le bois vert fatigue vite (★) ; le frêne séché fait ★★★, l'if ★★★★ ; l'arc de tir sportif
   // trouvé est tout fait (★★★★★). La corde d'arc porte la qualité de ses brins : ficelle ★★, corde ★★★, fil dentaire
   // ou boyau ★★★★ (Book 25 §3.2 et §3.3) ; un arc monté ne vaut jamais mieux que sa corde.
