@@ -26,6 +26,8 @@ const serveur = await demarrerServeur({
     cle: process.env.WATT_CLE ?? join(dossierDonnees, "certificat", "privkey.pem"),
   },
   dossierSauvegardes: production ? (process.env.WATT_SAUVEGARDES ?? join(dossierDonnees, "sauvegardes")) : undefined,
+  // La copie des sauvegardes sur la clé USB du Pi (compose.yaml) ; sans la variable, pas de copie.
+  dossierCle: process.env.WATT_CLE_USB || undefined,
   dossierClient: production ? join(racine, "client", "dist") : undefined,
 });
 

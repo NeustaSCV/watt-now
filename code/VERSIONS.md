@@ -85,6 +85,7 @@ Penser au bon moment, et des déchets partout (Book 26, Book 02 §14 quater). Le
 - **`?mesure=1`** dans l'adresse ouvre le panneau de mesure (images par seconde, appels de dessin et triangles par poste, déchets simulés, banc d'essai automatique) pour l'essai sur iPhone.
 - **Le banc de charge** a l'option `--dechets` (des ramassages au hasard). Sur le Mac, 50 joueurs à la halte : ≈ 1 ms de calcul par joueur et par seconde, avec ou sans déchets (Book 17 §5.2).
 - Outil du porteur : un compte admin unique (`npm run admin -- god`, sur le Pi `deploiement/admin-pi.sh`), pour tout tester ; le pseudo « god » est réservé.
+- **Sauvegardes sur la clé USB du Pi** : le serveur y recopie en arrière-plan ses sauvegardes, `reglages.json` et `certificat/`, seulement si le repère `.cle-watt-now` est là. La clé garde 30 quotidiennes, 26 hebdomadaires et 24 mensuelles ; le journal et `npm run bilan` disent quand date la dernière copie (LISEZMOI §7 bis, Book 17 §5.4).
 
 ---
 
