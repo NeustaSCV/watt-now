@@ -47,7 +47,7 @@ Penser au bon moment, et des déchets partout (Book 26, Book 02 §14 quater). Le
 **Des déchets partout, et tout se ramasse**
 - **Des déchets dans chaque lieu** : ≈ 75 coins jonchés à la halte, ≈ 60 à la Coopérative, ≈ 20 au Carrefour (rien que des ordures). Bas-côtés, parking, cour de ferme, jardin, lisières : chaque coin a ses objets.
 - **Tout ce qu'on voit au sol se ramasse** : approche-toi, A, une seconde, c'est dans le sac. B dit ce que c'est (« Rien d'utile. » pour une ordure).
-- **Fouiller un sac-poubelle, une poubelle renversée, le coffre d'une voiture** : 4 à 8 s, puis une liste ; touche ce que tu prends, le reste reste dedans. Les tout petits objets (un stylo, un briquet, des pinces à linge) ne se trouvent qu'en fouillant.
+- **Fouiller un sac-poubelle, une poubelle renversée, le coffre d'une voiture** : 4 à 8 s, puis une liste ; touche ce que tu prends, le reste reste dedans. Les tout petits objets (une carte bancaire, un briquet, des pinces à linge) ne se trouvent qu'en fouillant.
 - **On revient, on trouve autre chose** : un coin entamé se remplit à nouveau, d'autres objets, 8 à 24 h réelles plus tard.
 - **Ton terrain** : 12 déchets de départ (dont 3 sacs-poubelle), qui ne reviennent pas. Le nettoyer, c'est pour de bon. La décharge, elle, continue de remonter des objets.
 - **À la halte, des choses à démonter sur place** : un vélo dans le fossé, une épave de mobylette, un trampoline éventré, une machine à laver, un frigo connecté. Il faut une clé et un tournevis ; ils reviennent 7 jours plus tard, ailleurs.
