@@ -344,4 +344,27 @@ export const DESSINS_METIER: Partial<Record<string, string>> = {
     <path d="M10 26 H38" stroke="${BOIS_CLAIR}" stroke-width="5" stroke-linecap="round"/>
     <path d="M24 26 V6 Q30 4 40 4" fill="none" stroke="#9a968c" stroke-width="2.4"/>
     <path d="M24 22 v-2 M24 30 v8" stroke="${CORDE}" stroke-width="1.6"/>`,
+
+  // Les armes trouvées qui servent aux recettes de la 0.6 : sans dessin, elles prenaient l'icône générique de leur
+  // famille de vestiges (une boîte à outils), qu'on lisait mal dans Fabriquer et le sac.
+  // La machette de fortune : une tôle découpée, piquée de rouille, un manche ficelé.
+  machette: `
+    <path d="M17 33 L38 8 Q44 6 42 12 L21 37 Z" fill="#b9a48a" ${T}/>
+    <circle cx="30" cy="20" r="1.6" fill="#a0522d"/><circle cx="36" cy="13" r="1.2" fill="#a0522d"/><circle cx="25" cy="27" r="1" fill="#a0522d"/>
+    <path d="M7 41 L15 33 L19 37 L11 45 Z" fill="#6b4a32" ${T}/>
+    <path d="M10 38 l4 4 M12 36 l4 4" stroke="${CORDE}" stroke-width="1.4"/>`,
+  // La lame ébréchée : une lame sans manche, le fil entamé, qu'on reforge.
+  lame_ebrechee: `
+    <path d="M10 38 L34 10 Q42 6 40 14 L36 18 L37 21 L33 23 L33 26 L16 44 Z" fill="${ACIER_SOMBRE}" ${T}/>
+    <path d="M12 41 L8 45" stroke="${ACIER_SOMBRE}" stroke-width="3" stroke-linecap="round"/>`,
+  // La lance : un couteau ligaturé au bout d'une perche.
+  lance: `
+    <path d="M6 44 L35 13" stroke="#7a5a3c" stroke-width="3.5" stroke-linecap="round"/>
+    <path d="M33 9 L44 4 L39 15 L35 16 Z" fill="${ACIER}" ${T}/>
+    <path d="M30 14 l4 4 M28 16 l4 4" stroke="${CORDE}" stroke-width="1.6"/>`,
+  // La masse : une tête de fonte carrée au bout d'un long manche.
+  masse: `
+    <path d="M8 44 L30 16" stroke="${BOIS}" stroke-width="4.5" stroke-linecap="round"/>
+    <path d="M24.9 5.6 L40.9 17.6 L37.1 22.4 L21.1 10.4 Z" fill="${ACIER_SOMBRE}" ${T}/>
+    <path d="M24 7.5 L40 19.5" stroke="${ACIER}" stroke-width="1.4"/>`,
 };

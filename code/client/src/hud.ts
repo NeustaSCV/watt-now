@@ -187,7 +187,8 @@ const TYPES_DEGATS = {
   contondant: "Contondant : il passe les casques et étourdit plus longtemps.",
   tranchant: "Tranchant : un casque l'arrête à la tête.",
   percant: "Perçant : sa force, c'est l'allonge.",
-  electrique: "Électrique : il lâche et se raidit. Maintenu sur un Éteint raidi ou à terre, il l'éteint. Passe le casque.",
+  // « Maintenu… il l'éteint » est déjà dit par la ligne ☠ de la fiche : on ne le répète pas.
+  electrique: "Électrique : il lâche et se raidit, casque ou pas.",
 } as const;
 /** Où remettre une arme à neuf (Book 23 §4.3). */
 const ATELIERS_REPARATION_NOMS = { bois: "à l'établi", lame: "à la meule ou à la forge", metal: "à la forge" } as const;
@@ -602,7 +603,11 @@ export class Hud {
     this.element.classList.remove("habit-charbonniers", "habit-voltaiques", "habit-mecanistes");
     this.element.classList.add(`habit-${famille}`);
     this.element.querySelector<HTMLElement>(".pastille")!.style.background = COULEURS_FAMILLES[famille];
-    this.element.querySelector(".nom .texte")!.textContent = `${pseudo} · ${NOMS_FAMILLES[famille]}`;
+    // Deux morceaux : sur un téléphone en vertical, la famille s'efface (la pastille et l'habillage la disent déjà)
+    // plutôt que de couper le pseudo par « … ».
+    const texte = this.element.querySelector<HTMLElement>(".nom .texte")!;
+    texte.replaceChildren(Object.assign(document.createElement("span"), { className: "pseudo", textContent: pseudo }), Object.assign(document.createElement("span"), { className: "famille-nom", textContent: ` · ${NOMS_FAMILLES[famille]}` }));
+    texte.title = `${pseudo} · ${NOMS_FAMILLES[famille]}`;
     this.element.hidden = false;
   }
 
@@ -670,8 +675,8 @@ export class Hud {
     const texte = occupe
       ? ""
       : // Au clavier, on montre les vraies touches (E ou clic gauche, F ou clic droit).
-        [p.A ? `<kbd>${nomDe("agir")}</kbd> ${p.A.libelle}` : "", p.B ? `<kbd>${nomDe("examiner")}</kbd> ${p.B.libelle}` : ""].filter(Boolean).join("<span class='sep'>·</span>");
-    const cle = `${occupe}|${tenu}|${p.A?.libelle ?? ""}|${p.B?.libelle ?? ""}|${nomDe("agir")}|${nomDe("examiner")}`;
+        [p.A ? `<kbd>${nomDe("agir")}</kbd> ${p.A.libelle}` : "", p.B ? `<kbd>${nomDe("examiner")}</kbd> ${p.B.libelle}` : "", this.inviteTir()].filter(Boolean).join("<span class='sep'>·</span>");
+    const cle = `${occupe}|${tenu}|${p.A?.libelle ?? ""}|${p.B?.libelle ?? ""}|${nomDe("agir")}|${nomDe("examiner")}|${this.inviteTir()}`;
     if (cle === this.derniereInvite) return;
     this.derniereInvite = cle;
     this.invite.innerHTML = texte;
@@ -1430,6 +1435,19 @@ export class Hud {
   private pret: CleObjet | null = null;
   /** Le bouton tactile Lancer (absent sur ordinateur). */
   private boutonLancer: HTMLButtonElement | undefined;
+  /** Le verbe du lancer (« Lancer », « Tirer », « Réarmer »), ou null : rien à lancer. */
+  private verbeLancer: string | null = null;
+
+  /**
+   * Au clavier, en combat, avec un arc ou une arbalète prêts : la touche pour tirer, dans l'invite (sans bouton à
+   * l'écran, rien ne disait comment tirer). La pierre, toujours prête, n'y figure pas : l'invite resterait chargée.
+   */
+  private inviteTir(): string {
+    if (this.boutonA || !this.element.classList.contains("en-combat")) return "";
+    if (this.verbeLancer === "Tirer") return `<kbd>${nomDe("lancer")}</kbd> Tirer (maintenir : viser)`;
+    if (this.verbeLancer === "Réarmer") return `<kbd>${nomDe("lancer")}</kbd> Réarmer`;
+    return "";
+  }
 
   /**
    * L'objet rapide a changé, ou le sac : le bouton Lancer se montre s'il y a quelque chose à lancer, avec son verbe
@@ -1438,6 +1456,7 @@ export class Hud {
   majPret(pret: CleObjet | null, verbe: string | null): void {
     const change = pret !== this.pret;
     this.pret = pret;
+    this.verbeLancer = verbe;
     // Appelé à chaque image : on ne touche au bouton que s'il change.
     this.boutonLancer ??= this.element.querySelector<HTMLButtonElement>(".b-lancer") ?? undefined;
     const b = this.boutonLancer;
@@ -1670,7 +1689,8 @@ export class Hud {
     if (charge) this.chargeArmes = charge;
     this.dernierSac = "";
     if (!this.sac.hidden) this.dessinerSac();
-    if (evenement?.etat === "reparee") this.message(`${nommer(evenement.objet, 1)} : réparée.`);
+    // « Remise à neuf : … » plutôt que « … : réparée » : pas de minuscule en tête, et juste pour un arc comme une lame.
+    if (evenement?.etat === "reparee") this.message(`Remise à neuf : ${nommer(evenement.objet, 1)}.`);
   }
 
   /** Les munitions du sac pour une arme de tir : leur total, et le détail par sorte (« 3 d'os, 2 de clou »). */

@@ -390,7 +390,7 @@ export class Tir {
     let reste = !dansLaMare;
     if (touche && tir && munition && ctx.alea() < munition.casse) {
       reste = false;
-      ctx.indice("casse", `${majuscule(nommer(munition.objet, 1))} s'est cassée.`);
+      ctx.indice("casse", `Cassé au choc : ${nommer(munition.objet, 1)}.`);
     }
     if (reste) ctx.poserAuSol({ [objet]: 1 }, ou);
     else if (dansLaMare) ctx.indice("mare", "Perdu dans la mare.");

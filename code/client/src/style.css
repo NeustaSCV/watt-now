@@ -4974,3 +4974,30 @@ body:has(#hud .voile-pause:not([hidden])) #hud .tactile {
 @media (orientation: landscape) and (max-height: 520px) {
   #hud .lecon-en-cours { top: max(6px, env(safe-area-inset-top)); width: min(320px, 42vw); }
 }
+
+/* ---------- Contrôle d'affichage des métiers (0.6, 2026-10-09) ---------- */
+/* Le pseudo et la famille : en vertical étroit, la famille s'efface (pastille et habillage la disent) plutôt que
+   de couper le nom par « … ». */
+@media (max-width: 560px), (orientation: landscape) and (max-height: 520px) {
+  #hud .identite .nom .famille-nom {
+    display: none;
+  }
+}
+/* La pastille de famille ne s'écrase pas en trait quand le nom est long. */
+#hud .identite .nom .pastille {
+  flex: none;
+}
+/* Les actions d'une arme de la 0.6 (Équiper, Réparer, Rafistoler, Manivelle, Jeter) ne tiennent plus toujours sur une
+   rangée : le dernier bouton était coupé au bord, sans barre pour le deviner. Elles passent à la ligne au besoin. */
+#hud .panneau.sac .actions-objet {
+  flex-wrap: wrap;
+  overflow-x: visible;
+}
+/* En vertical étroit (260 px), un indice du métier sur une ligne était coupé par « … » (« Plus assez de courant pour une
+   décharge longue : recharge. ») : il a droit à deux lignes, comme les messages. */
+@media (max-width: 560px) and (orientation: portrait) {
+  #hud .messages p.indice {
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+}
