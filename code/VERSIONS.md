@@ -12,6 +12,12 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
+## 0.7.3 · en préparation
+
+- **Fouiller, c'est tout prendre** : un sac-poubelle, une poubelle ou un coffre de voiture fouillé passe tout entier dans ton sac, avec les « +1 … » habituels. Plus de fenêtre où choisir. Si ton sac est plein, ce qui ne rentre pas reste dedans.
+
+---
+
 ## 0.7.2 · déployée le 2026-10-10
 
 - **Chaque pièce se découvre** : à la Coopérative et dans la boutique de la halte, ce que ton personnage ne voit pas est assombri, « en souvenir » : le décor reste lisible, mais aucun Éteint ni joueur n'y apparaît. Une porte fermée cache ce qu'il y a derrière ; ouverte, on voit dans son prolongement, et presque toute la pièce depuis le seuil.

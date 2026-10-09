@@ -371,7 +371,10 @@ export class CoucheDechets {
     return { x, z, nom: d.nom, duree: vite ? d.duree / 2 : d.duree, r: e.r, objets };
   }
 
-  /** Fouiller un conteneur : 4 à 8 s, puis la liste s'ouvre ; on choisit ce qu'on prend. */
+  /**
+   * Fouiller un conteneur : 4 à 8 s, puis tout ce qu'il contient passe dans le sac (« + objet » à l'écran, comme un
+   * ramassage) — pas de liste à choisir (choix du porteur, 2026-10-10). Ce qui ne rentre plus reste dedans.
+   */
   private fouiller(ref: string): void {
     const c = this.couche();
     if (!c) return;
@@ -382,10 +385,30 @@ export class CoucheDechets {
     this.ctx.commencer(`Fouiller : ${k.nom}`, k.duree / REGLAGES.gestes_vitesse, () => {
       const encore = this.conteneur(c, ref);
       if (!encore || this.cle() !== c.cle) return;
-      this.fouille = { cle: c.cle, ref, r: encore.r, x: encore.x, z: encore.z };
       this.ctx.noterFait("dechet_fouille");
-      this.envoyerFouille(c, ref);
+      let reste = 0;
+      for (const o of encore.objets) {
+        if (!this.peutPorter({ [o.objet]: 1 })) {
+          reste++;
+          continue;
+        }
+        this.retirerDuConteneur(c, ref, o.i);
+        this.ctx.ajouter({ [o.objet]: 1 });
+      }
+      if (reste > 0) this.ctx.info(`Ton sac est plein : ${reste === 1 ? "un objet reste" : `${reste} objets restent`} dans le ${encore.nom}.`);
     }, "leger");
+  }
+
+  /** Marque un objet du conteneur (ou du point qui se fouille) comme pris. */
+  private retirerDuConteneur(c: CoucheLieu, ref: string, i: number): void {
+    const lu = lireRef(ref)!;
+    if (lu.genre === "conteneur") return this.prendrePiece(c, lu.cx, lu.cz, i);
+    const p = c.definitionPoint(lu.id)!;
+    const avant = c.point(p.id);
+    const e: EtatCase = { r: avant.r, pris: [...avant.pris, i].sort((a, b) => a - b), renouvLe: avant.renouvLe };
+    if (c.renouvelable && e.renouvLe === 0) e.renouvLe = this.ctx.maintenant() + delaiPoint(c.cle, p, e.r);
+    this.registre.sauverPoint(c, p.id, e);
+    this.registre.diffuser(c.cle, { t: "dechets_point", point: c.vuePoint(p) });
   }
 
   private envoyerFouille(c: CoucheLieu, ref: string): void {
@@ -410,16 +433,7 @@ export class CoucheDechets {
     const o = k.objets.find((x) => x.i === i);
     if (!o) return this.envoyerFouille(c, ref);
     if (!this.peutPorter({ [o.objet]: 1 })) return this.ctx.sacTropLourd();
-    const lu = lireRef(ref)!;
-    if (lu.genre === "conteneur") this.prendrePiece(c, lu.cx, lu.cz, i);
-    else {
-      const p = c.definitionPoint(lu.id)!;
-      const avant = c.point(p.id);
-      const e: EtatCase = { r: avant.r, pris: [...avant.pris, i].sort((a, b) => a - b), renouvLe: avant.renouvLe };
-      if (c.renouvelable && e.renouvLe === 0) e.renouvLe = this.ctx.maintenant() + delaiPoint(c.cle, p, e.r);
-      this.registre.sauverPoint(c, p.id, e);
-      this.registre.diffuser(c.cle, { t: "dechets_point", point: c.vuePoint(p) });
-    }
+    this.retirerDuConteneur(c, ref, i);
     this.ctx.ajouter({ [o.objet]: 1 });
     this.envoyerFouille(c, ref);
   }

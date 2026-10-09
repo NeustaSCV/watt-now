@@ -56,15 +56,19 @@ test("un nouveau joueur fouille dix sacs-poubelle de sa Coopérative : au moins 
   for (const sac of sacs.slice(0, 10)) {
     joueur.position = { x: sac.x, z: sac.z + 0.8, o: 0 };
     const avant = recus.length;
+    const total = () => {
+      const m = recus.findLast((x) => x.t === "inventaire") as Extract<MessageServeur, { t: "inventaire" }> | undefined;
+      return Object.values(m?.inventaire ?? {}).reduce((n: number, v) => n + (v ?? 0), 0);
+    };
+    const compteAvant = total();
     joueur.recevoir({ t: "dechets", op: { genre: "fouiller", ref: sac.ref } });
     attendre(10);
     const nouveaux = recus.slice(avant);
-    const liste = (nouveaux.findLast((m) => m.t === "fouille") as Extract<MessageServeur, { t: "fouille" }> | undefined)?.fouille;
-    const objets = liste?.objets ?? [];
-    if (objets.length > 0) pleins++;
+    // La fouille met tout dans le sac directement (plus de liste à choisir, 2026-10-10).
+    const gagnes = total() - compteAvant;
+    if (gagnes > 0) pleins++;
     const infos = nouveaux.filter((m) => m.t === "info").map((m) => (m as { texte: string }).texte);
-    journal.push(`${sac.ref} : ${objets.map((o) => o.objet).join(", ") || "rien"} ${infos.join(" | ")}`);
-    joueur.recevoir({ t: "dechets", op: { genre: "fermer" } });
+    journal.push(`${sac.ref} : ${gagnes} objet(s) ${infos.join(" | ")}`);
   }
   assert.ok(pleins >= 7, journal.join("\n"));
 });

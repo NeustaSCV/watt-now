@@ -120,29 +120,25 @@ test("à la halte, un carreau entamé se remplit à nouveau (8 à 24 h), d'un ti
   assert.equal(base.chargerDechets("station")[0]!.remplissage, 1);
 });
 
-test("fouiller un sac-poubelle : 4 à 8 s, une liste au choix ; ce qu'on laisse reste dedans", () => {
+test("fouiller un sac-poubelle : 4 à 8 s, puis tout passe dans le sac, sans liste à choisir ; il est alors vide", () => {
   const t = monter("terrain");
   const cle = cleCouche("terrain", t.compte.id);
   const { cx, cz, e } = unConteneur(cle);
   const ref = refConteneur(cx, cz, e.e);
-  // Prendre sans avoir fouillé : refusé sans bruit.
-  t.joueur.recevoir({ t: "dechets", op: { genre: "prendre", ref, i: 0 } });
   t.joueur.position = { x: e.x, z: e.z + 1, o: 0 };
+  const avant = { ...(t.dernier("inventaire")?.inventaire ?? {}) };
   t.joueur.recevoir({ t: "dechets", op: { genre: "fouiller", ref } });
   const debut = t.dernier("action")!;
   assert.ok(debut.etat === "debut" && debut.duree >= 4 && debut.duree <= 8);
-  t.attendre(6);
-  const liste = t.dernier("fouille")!.fouille!;
-  assert.equal(liste.ref, ref);
-  assert.ok(liste.objets.length >= 1);
-  const premier = liste.objets[0]!;
-  t.joueur.recevoir({ t: "dechets", op: { genre: "prendre", ref, i: premier.i } });
-  assert.equal(t.dernier("inventaire")!.inventaire[premier.objet], 1);
-  assert.deepEqual(t.dernier("fouille")!.fouille!.objets, liste.objets.slice(1));
-  // En s'éloignant, la liste se referme.
-  t.joueur.position = { x: e.x + 10, z: e.z, o: 0 };
-  t.attendre(6);
-  assert.equal(t.dernier("fouille")!.fouille, null);
+  t.attendre(9);
+  // Aucune fenêtre de choix ne s'ouvre.
+  assert.equal(t.dernier("fouille"), undefined);
+  const apres = t.dernier("inventaire")!.inventaire;
+  const gagnes = Object.entries(apres).reduce((n, [k, v]) => n + Math.max(0, (v ?? 0) - ((avant as Record<string, number>)[k] ?? 0)), 0);
+  assert.ok(gagnes >= 1, "le sac a reçu ce que contenait le sac-poubelle");
+  // Refouiller : il est vide.
+  t.joueur.recevoir({ t: "dechets", op: { genre: "fouiller", ref } });
+  assert.match(t.infos().at(-1)!, /vide/);
 });
 
 test("démonter le vélo du fossé : il faut les outils ; il revient 7 jours plus tard, ailleurs", () => {
