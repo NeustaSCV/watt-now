@@ -12,6 +12,10 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
+## 0.7.1 · en préparation
+
+- **Plus rien à travers les murs, et la porte des bureaux qui reste visible** (Coopérative) : un coup, un tir, une pierre lancée ou une morsure ne passent plus à travers un mur, une cloison, une porte fermée ou un rayonnage (une seule règle, partout où il y a des murs : la Coopérative, la boutique de la halte…) ; le coup part dans le vide. Et en approchant des bureaux (la salle du coin bas de l'écran) par le hangar, leur porte ne disparaît plus : elle s'estompe en transparence, on la voit (fermée ou ouverte) et l'on se voit derrière.
+
 ## 0.7 · déployée le 2026-10-09
 
 Penser au bon moment, et des déchets partout (Book 26, Book 02 §14 quater). Les recettes ne tombent plus toutes d'un coup : ton personnage y pense quand il en a besoin. Et le monde de l'Abondance est enfin jonché de ce qu'il a jeté : tout se ramasse, presque rien ne vaut quelque chose.

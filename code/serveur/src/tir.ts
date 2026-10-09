@@ -38,6 +38,7 @@ import {
   type Pret,
   type TablesTir,
 } from "../../commun/src/tir.ts";
+import { voieLibre } from "../../commun/src/murs.ts";
 
 /** Ce que le joueur prête au moteur des projectiles. */
 export interface ContexteTir {
@@ -309,15 +310,16 @@ export class Tir {
     let x1 = pos.x + ux * longueur - uz * ecartLateral;
     let z1 = pos.z + uz * longueur + ux * ecartLateral;
 
-    // Le premier mur : on ne lance pas à travers un rayonnage, ni par-dessus.
+    // Le premier mur : on ne lance pas à travers un rayonnage, ni par-dessus. On le cherche depuis le tireur lui-même
+    // (0.7.1) : plaqué contre un mur, le point de départ du projectile (DEPART plus loin) serait déjà dedans.
     const zone = ctx.zone();
-    const t = premierMur(zone, x0, z0, x1, z1);
+    const t = premierMur(zone, pos.x, pos.z, x1, z1);
     let impact: ProjectileVu["impact"] = "sol";
     if (t < 1) {
-      const recul = 0.15 / Math.max(Math.hypot(x1 - x0, z1 - z0), 1e-6);
+      const recul = 0.15 / Math.max(Math.hypot(x1 - pos.x, z1 - pos.z), 1e-6);
       const k = Math.max(0, t - recul);
-      x1 = x0 + (x1 - x0) * k;
-      z1 = z0 + (z1 - z0) * k;
+      x1 = pos.x + (x1 - pos.x) * k;
+      z1 = pos.z + (z1 - pos.z) * k;
       impact = "mur";
     }
 
@@ -329,6 +331,8 @@ export class Tir {
         if (e.etat === "detruit" || (manque && e === visee)) continue;
         // Un Éteint couché ne se touche que si on le vise.
         if (e.etat === "a_terre" && e !== visee) continue;
+        // Un mur entre le tireur et lui (0.7.1) : il n'a rien, même frôlé par la trajectoire.
+        if (!voieLibre(zone, pos, e)) continue;
         const s = distanceAuSegment(e.x, e.z, x0, z0, x1, z1);
         const proche = e === visee && !manque ? s.d <= RAYON_TOUCHE + 0.3 : s.d <= RAYON_TOUCHE;
         if (proche && s.t < meilleur) {

@@ -11,9 +11,9 @@
 
 import { estObjet, type Inventaire, type TypeObjet } from "./objets.ts";
 import { ETOILES, compter, etoilesDe, etoilesDeBase, estObjetDeMetier, meilleurExemplaire, soliditeExemplaire, typeDe, type CleObjet, type Etoiles } from "./etoiles.ts";
-import type { Boite, Zone } from "./lieux.ts";
+import type { Zone } from "./lieux.ts";
 import type { TypeDegat } from "./combat.ts";
-import { MOBILIER } from "./cooperative.ts";
+import { murEntre } from "./murs.ts";
 import { REGLAGES } from "./reglages.ts";
 
 // ---------- Ce qu'on lance à la main (Book 23 §5) ----------
@@ -244,54 +244,15 @@ export function armeTirExemplaire(cle: string, declaree: ArmeTir): ArmeTir & { e
 
 // ---------- La géométrie : la trajectoire et le premier mur ----------
 
-/** Le mobilier bas, par-dessus lequel on lance (une caisse, un rayon bas, des palettes) ; pas un rayonnage de 4 m. */
-const GENRES_BAS = new Set(["caisse", "rayon_bas", "palettes", "transpalette", "bureau", "etabli", "coffre_fort"]);
-const BOITES_BASSES = new Set<Boite>(MOBILIER.filter((m) => GENRES_BAS.has(m.genre)).map((m) => m.boite));
-
-/** Un obstacle arrête-t-il un objet lancé ? (les murs, les rayonnages, les tracteurs ; pas le mobilier bas) */
-export function arreteLeLancer(b: Boite): boolean {
-  return !BOITES_BASSES.has(b);
-}
-
-/**
- * Où un segment (de a vers b) entre-t-il dans une boîte élargie de `marge` ? En part du segment (0 à 1), ou null.
- * La méthode des tranches : on coupe le segment par les deux plans de chaque axe.
- */
-export function entreeDansBoite(ax: number, az: number, bx: number, bz: number, boite: Boite, marge = 0): number | null {
-  let t0 = 0;
-  let t1 = 1;
-  const axes: [number, number, number, number][] = [
-    [ax, bx - ax, boite.x - boite.l / 2 - marge, boite.x + boite.l / 2 + marge],
-    [az, bz - az, boite.z - boite.p / 2 - marge, boite.z + boite.p / 2 + marge],
-  ];
-  for (const [o, d, min, max] of axes) {
-    if (Math.abs(d) < 1e-9) {
-      if (o < min || o > max) return null;
-      continue;
-    }
-    let ta = (min - o) / d;
-    let tb = (max - o) / d;
-    if (ta > tb) [ta, tb] = [tb, ta];
-    t0 = Math.max(t0, ta);
-    t1 = Math.min(t1, tb);
-    if (t0 > t1) return null;
-  }
-  return t0;
-}
+// Ce qui arrête un objet lancé est ce qui arrête un coup : la règle commune est dans murs.ts.
+export { arreteLesCoups as arreteLeLancer, entreeDansBoite } from "./murs.ts";
 
 /**
  * Le premier mur sur la trajectoire de a vers b (Book 23 §5 : « on ne lance pas par-dessus un rayonnage de 4 m ») :
  * la part du trajet faite avant de le heurter (1 : rien ne l'arrête). Les bords du lieu arrêtent aussi.
  */
 export function premierMur(zone: Zone, ax: number, az: number, bx: number, bz: number, marge = 0.05): number {
-  let t = 1;
-  for (const b of zone.obstacles) {
-    if (!arreteLeLancer(b)) continue;
-    // Une boîte où l'on se tient déjà (on lance depuis le seuil d'une porte) ne compte pas.
-    if (ax > b.x - b.l / 2 - marge && ax < b.x + b.l / 2 + marge && az > b.z - b.p / 2 - marge && az < b.z + b.p / 2 + marge) continue;
-    const e = entreeDansBoite(ax, az, bx, bz, b, marge);
-    if (e !== null && e < t) t = e;
-  }
+  let t = murEntre(zone, ax, az, bx, bz, { marge })?.t ?? 1;
   // Les bords du lieu (le grillage de la Coopérative, la lisière du terrain).
   const dx = bx - ax;
   const dz = bz - az;

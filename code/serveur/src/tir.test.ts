@@ -409,3 +409,35 @@ test("tir : dans le jeu — à la halte, une pierre lancée touche l'Éteint, to
   attendre(2);
   assert.equal(inventaire().pierre, 2);
 });
+
+test("tir (0.7.1) : plaqué contre un mur, on ne lance ni ne tire à travers ; l'Éteint de l'autre côté n'a rien", () => {
+  // Dans la boutique de la halte, contre son mur est (x 109,7 → 110) ; l'Éteint dehors, à un mètre, accroché.
+  for (const arc of [false, true]) {
+    const e = nouvelEteint(1, 110.36, 14.5, "errant");
+    const b = banc({ inventaire: arc ? { corde: 1, branche: 3 } : { pierre: 2 }, eteints: [e], x: 109.36, z: 14.5, alea: () => 0.99 });
+    if (arc) {
+      b.tir.preparer("corde");
+      b.tir.bander();
+      b.attendre(1600);
+    }
+    b.tir.lancer(1, 0, e.id);
+    const [p] = b.projectiles();
+    assert.ok(p, "il part");
+    assert.equal(p!.impact, "mur");
+    assert.equal(p!.coup, undefined);
+    assert.equal(e.etourdi, 0);
+    assert.equal(e.degats, 0);
+    assert.ok(p!.x1 < 109.7, `il reste de ce côté-ci (x = ${p!.x1})`);
+  }
+});
+
+test("tir (0.7.1) : un Éteint derrière un mur, frôlé par la trajectoire, n'est pas touché", () => {
+  // On lance le long du mur nord de la boutique, de l'intérieur : l'Éteint est dehors, à 0,4 m de la ligne.
+  const e = nouvelEteint(1, 103, 11.2, "errant");
+  const b = banc({ inventaire: { pierre: 2 }, eteints: [e], x: 100, z: 11.95 });
+  b.tir.lancer(1, 0, undefined, 6);
+  const [p] = b.projectiles();
+  assert.ok(p, "il part");
+  assert.notEqual(p!.impact, "eteint");
+  assert.equal(e.etourdi, 0);
+});
