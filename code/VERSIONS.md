@@ -23,6 +23,17 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 - **La conserve bombée** ressemble à une conserve. Mangée, elle rend malade deux minutes plus tard : vomissements, faiblesse. Démontée, une boîte vide.
 - **La décharge du terrain** remonte aussi les déchets du lot 2, surtout des ordures.
 
+**Les déchets de l'Abondance : il y en a partout** (affichage provisoire : le vrai rendu en amas suit)
+- **Des déchets dans chaque lieu** : ≈ 75 amas et sacs-poubelle à la halte, ≈ 60 à la Coopérative, ≈ 20 au Carrefour (rien que des ordures). Bas-côtés, parking, cour de ferme, jardin, lisières : chaque coin a ses objets.
+- **Tout ce qu'on voit au sol se ramasse** : approche-toi, A, une seconde, c'est dans le sac. B dit ce que c'est (« Rien d'utile. » pour une ordure).
+- **Fouiller un sac-poubelle, une poubelle renversée, le coffre d'une voiture** : 4 à 8 s, puis une liste ; touche ce que tu prends, le reste reste dedans.
+- **On revient, on trouve autre chose** : un coin entamé se remplit à nouveau, d'autres objets, 8 à 24 h réelles plus tard.
+- **Ton terrain** : 12 déchets de départ (dont 3 sacs-poubelle), qui ne reviennent pas. Le nettoyer, c'est pour de bon.
+- **À la halte, des points à démonter** : un vélo dans le fossé, une épave de mobylette, un trampoline éventré, une machine à laver, un frigo connecté. Il faut une clé et un tournevis ; ils reviennent 7 jours plus tard, ailleurs.
+- **Le tas de gravats** (des pierres, parfois un déchet ; un bâton à fouir va deux fois plus vite) et **la carcasse de mouton** (6 os), à la halte et à la Coopérative : ils reviennent en 3 jours.
+- **Les ordures jetées par terre disparaissent au bout de 24 h**, sauf sur ton terrain. Ce qui vaut quelque chose reste.
+- **Les balises solaires de jardin** restées au sol s'allument la nuit : une petite lumière que les Éteints viennent voir. Ramasse-les pour éteindre le coin.
+
 **L'arbre de progression : on y pense au bon moment** (côté serveur ; l'affichage dans Fabriquer suit)
 - **On ne voit plus cent recettes d'un coup.** Au début, deux idées : le feu de camp et l'abri. Les autres viennent quand ton personnage **y pense** : en tenant l'ingrédient (des joncs : la ficelle), en ayant besoin (un arbre trop haut : l'escabeau), en vivant quelque chose (le premier feu : le gourdin ; la première nuit : le bâton à fouir).
 - **« Tu y penses : … »** : un message annonce chaque idée nouvelle ; plusieurs à la fois sont regroupées (« 3 idées nouvelles »), au plus un message toutes les 10 s.

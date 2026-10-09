@@ -2,6 +2,7 @@
 // Connexion et inscription passent par HTTP (JSON) ; le jeu passe par WebSocket (JSON).
 
 import type { VueProgression } from "./progression.ts";
+import type { FouilleVue, OperationDechets, PointDechetsVu, VueDechets } from "./couche-dechets.ts";
 import type { Reglages } from "./reglages.ts";
 import type { AnimalVu } from "./faune.ts";
 import type { Apparence } from "./apparence.ts";
@@ -203,6 +204,8 @@ export type MessageClient =
   | MessageClientSavoir
   // L'arbre de progression (0.7) : voir le bloc « progression » en fin de fichier.
   | MessageClientProgression
+  // La couche de déchets (0.7) : voir le bloc « déchets » en fin de fichier.
+  | MessageClientDechets
   | { t: "interagir"; cible: Cible; verbe: Verbe }
   | { t: "manger"; objet: TypeObjet }
   | { t: "boire" }
@@ -429,6 +432,8 @@ export interface Bienvenue {
   savoir?: SavoirVu;
   /** Les recettes dévoilées, vues, et le prochain palier (l'arbre de progression, 0.7). */
   progression?: VueProgression;
+  /** La couche de déchets du lieu (0.7) : de quoi reconstruire les amas, les conteneurs et les points (≈ 1 Ko). */
+  dechets?: VueDechets;
 }
 
 /**
@@ -448,6 +453,8 @@ export type MessageServeur =
   | MessageServeurSavoir
   // L'arbre de progression (0.7) : voir le bloc « progression » en fin de fichier.
   | MessageServeurProgression
+  // La couche de déchets (0.7) : voir le bloc « déchets » en fin de fichier.
+  | MessageServeurDechets
   | { t: "expulse"; raison: string }
   | { t: "inventaire"; inventaire: Inventaire }
   | { t: "besoins"; besoins: Besoins; gourde: Gourde }
@@ -597,3 +604,15 @@ export type MessageServeurProgression =
    * au plus un toutes les 10 s (les idées d'entre-temps sont regroupées).
    */
   { t: "devoilement"; progression: VueProgression; nouvelles: string[]; texte?: string };
+
+// ---------- La couche de déchets : ramasser, fouiller, démonter (0.7, commun/src/couche-dechets.ts) ----------
+
+export type MessageClientDechets = { t: "dechets"; op: OperationDechets };
+
+export type MessageServeurDechets =
+  /** Un carreau a changé : une pièce prise, ou un remplissage neuf (`pris` vide). */
+  | { t: "dechets_carreau"; cx: number; cz: number; r: number; pris: number[] }
+  /** Un point a changé : démonté, vidé, revenu (ailleurs). */
+  | { t: "dechets_point"; point: PointDechetsVu }
+  /** La liste du conteneur qu'on fouille (null : refermé). */
+  | { t: "fouille"; fouille: FouilleVue | null };

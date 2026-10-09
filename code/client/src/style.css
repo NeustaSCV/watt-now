@@ -5001,3 +5001,87 @@ body:has(#hud .voile-pause:not([hidden])) #hud .tactile {
     line-clamp: 2;
   }
 }
+
+/* La fouille d'un conteneur de déchets (0.7, chantier 2 ; affichage provisoire) : une liste au choix, comme à la
+   décharge. Touche ce que tu prends ; le reste reste dedans. */
+#hud .fouille-dechets {
+  position: absolute;
+  left: 50%;
+  top: max(84px, calc(env(safe-area-inset-top) + 72px));
+  transform: translateX(-50%);
+  width: min(360px, calc(100vw - 24px));
+  max-height: calc(100dvh - 180px);
+  overflow-y: auto;
+  pointer-events: auto;
+  background: var(--creme);
+  color: var(--encre);
+  border-radius: 8px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  padding: 8px 12px 10px;
+  font-size: 13px;
+}
+#hud .fouille-dechets[hidden] {
+  display: none;
+}
+#hud .fouille-dechets header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 2px solid var(--encre);
+  margin-bottom: 6px;
+}
+#hud .fouille-dechets h2 {
+  margin: 0;
+  font-size: 13.5px;
+}
+#hud .fouille-dechets .fermer {
+  min-width: 44px;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  font-size: 16px;
+  color: var(--encre);
+  cursor: pointer;
+}
+#hud .fouille-dechets .liste {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+#hud .fouille-dechets .liste button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 2px 8px;
+  border: 1px solid rgba(59, 42, 30, 0.35);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.5);
+  color: var(--encre);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+#hud .fouille-dechets .liste button span {
+  display: flex;
+  flex-direction: column;
+}
+#hud .fouille-dechets .liste button small {
+  font-size: 11px;
+  opacity: 0.75;
+}
+/* Une ordure (valeur 0) : grisée, elle se lit d'un regard. */
+#hud .fouille-dechets .liste button.ordure svg {
+  filter: grayscale(0.75) opacity(0.8);
+}
+#hud .fouille-dechets .indice {
+  margin: 6px 0 0;
+  font-size: 11px;
+  opacity: 0.8;
+}
+@media (orientation: landscape) and (max-height: 420px) {
+  #hud .fouille-dechets {
+    top: max(8px, env(safe-area-inset-top));
+    max-height: calc(100dvh - 90px);
+  }
+}

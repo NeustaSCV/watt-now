@@ -203,6 +203,16 @@ const SCHEMA = `
     details    TEXT
   );
   CREATE INDEX IF NOT EXISTS mesures_genre ON mesures (genre, instant);
+  -- La couche de déchets (0.7) : une ligne par carreau entamé (ou par point du monde, « p:velo »), jamais par objet.
+  -- Le contenu se recalcule d'une graine ; on ne garde que le remplissage, les pièces prises et le renouvellement.
+  CREATE TABLE IF NOT EXISTS dechets (
+    lieu          TEXT NOT NULL,
+    carreau       TEXT NOT NULL,
+    remplissage   INTEGER NOT NULL DEFAULT 0,
+    pris          TEXT NOT NULL DEFAULT '[]',
+    renouvele_le  INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (lieu, carreau)
+  );
 `;
 
 /** Colonnes ajoutées après la première version (É0) : ajoutées si elles manquent. */
@@ -847,6 +857,50 @@ export class Base {
   }
 
   /** Un objet lourd déplacé (l'escabeau) : sa nouvelle place. */
+  // ---------- La couche de déchets (0.7, serveur/src/couche-dechets.ts) ----------
+
+  /** Les carreaux entamés et les points d'une couche de déchets (« station », « cooperative:12 »…). */
+  chargerDechets(lieu: string): { carreau: string; remplissage: number; pris: number[]; renouveleLe: number }[] {
+    const lignes = this.db.prepare("SELECT carreau, remplissage, pris, renouvele_le FROM dechets WHERE lieu = ?").all(lieu) as {
+      carreau: string;
+      remplissage: number;
+      pris: string;
+      renouvele_le: number;
+    }[];
+    return lignes.map((l) => {
+      const pris = JSON.parse(l.pris) as unknown;
+      return {
+        carreau: l.carreau,
+        remplissage: l.remplissage,
+        pris: Array.isArray(pris) ? pris.filter((i): i is number => Number.isInteger(i)) : [],
+        renouveleLe: l.renouvele_le,
+      };
+    });
+  }
+
+  sauverDechets(lieu: string, carreau: string, remplissage: number, pris: readonly number[], renouveleLe: number): void {
+    this.db
+      .prepare(
+        "INSERT INTO dechets (lieu, carreau, remplissage, pris, renouvele_le) VALUES (?, ?, ?, ?, ?) ON CONFLICT (lieu, carreau) DO UPDATE SET remplissage = excluded.remplissage, pris = excluded.pris, renouvele_le = excluded.renouvele_le",
+      )
+      .run(lieu, carreau, remplissage, JSON.stringify(pris), renouveleLe);
+  }
+
+  /**
+   * Efface les sacs et tas posés ailleurs que sur un terrain personnel avant `avant` (ms) que `aEffacer` désigne (les
+   * ordures jetées depuis plus de 24 h, Q10). Renvoie leurs ids.
+   */
+  purgerSacsHorsTerrain(avant: number, aEffacer: (contenu: ContenuSac, creeLe: number) => boolean): number[] {
+    const lignes = this.db.prepare("SELECT id, contenu, cree_le FROM sacs WHERE lieu != 'terrain' AND cree_le <= ?").all(avant) as { id: number; contenu: string; cree_le: number }[];
+    const effaces: number[] = [];
+    for (const l of lignes) {
+      if (!aEffacer(JSON.parse(l.contenu) as ContenuSac, l.cree_le)) continue;
+      this.retirerSac(l.id);
+      effaces.push(l.id);
+    }
+    return effaces;
+  }
+
   deplacerInstallation(compteId: number, id: number, x: number, z: number, o: number): void {
     this.db.prepare("UPDATE installations SET x = ?, z = ?, o = ? WHERE compte_id = ? AND id = ?").run(x, z, o, compteId, id);
   }
