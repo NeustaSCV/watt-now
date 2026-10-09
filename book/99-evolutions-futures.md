@@ -103,3 +103,9 @@ Aujourd'hui, le seul lien entre joueurs est l'**amitié** (accès au terrain, co
   - la zone contaminée de l'usine chimique (champ `zones`) et la santé (Book 05) ;
   - le mode mesure `?mesure=1` pour vérifier chaque lieu sur l'iPhone 13 mini.
 - **À prévoir à l'intégration** : un alias Vite `three` vers `code/node_modules/three` et `server.fs.allow` sur `batiment/` (ou une copie dans `code/`) ; une construction derrière un écran de chargement (50 à 800 ms) ; les règles de jeu de certains passages (ramper sous la citerne, passerelle, barrière payante du péage, bac du gué) ; les petites marches ; l'aire du Bois-Joli, volontairement crue, à revoir pour un jeu familial.
+
+### Une halte de cueillette et de chasse (porteur du projet, 2026-10-09)
+
+- **L'idée** : une halte où l'on va **récolter du bois, des champignons et chasser des animaux sauvages**, par exemple une **aire d'autoroute** (la bibliothèque `batiment/` a déjà une « aire d'autoroute » et une « aire du Bois-Joli »).
+- **Ce qu'elle débloque** : les **boyaux** (gibier), donc la **corde d'arc en boyau** (aujourd'hui cachée faute de source : coherence-progression, H1), et un bois plus abondant qu'au terrain.
+- **Points d'accroche** : l'équilibre des espèces ci-dessus (lapins, renards), les armes de jet (arc, arbalète), la faune du terrain (Book 11 §10), la carte du monde (Book 20).
