@@ -23,6 +23,13 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 - **La conserve bombée** ressemble à une conserve. Mangée, elle rend malade deux minutes plus tard : vomissements, faiblesse. Démontée, une boîte vide.
 - **La décharge du terrain** remonte aussi les déchets du lot 2, surtout des ordures.
 
+**Les icônes des déchets**
+- **Chaque déchet a son icône**, dessinée dans la charte du sac : 91 dessins, de la canette écrasée à la débroussailleuse.
+- **Deux pièges se reconnaissent** : la conserve bombée a l'étiquette rouge de la bonne conserve, couvercle gonflé ; l'os en nylon est trop lisse et trop rose.
+- **Les ordures sont grisées dans le sac** : ce qui ne vaut rien se repère d'un coup d'œil.
+- **Trois pictogrammes de famille** : un sac-poubelle noué (déchet), un t-shirt plié (textile), un ballon de plage (loisir).
+- **Plus aucune icône générique** : le réveil, les roulements, l'alternateur, les semences, la clé du coffre, la radio, le manche fendu, la ferraille tordue et la décharge ont aussi leur dessin.
+
 **L'arbre de progression : on y pense au bon moment** (côté serveur ; l'affichage dans Fabriquer suit)
 - **On ne voit plus cent recettes d'un coup.** Au début, deux idées : le feu de camp et l'abri. Les autres viennent quand ton personnage **y pense** : en tenant l'ingrédient (des joncs : la ficelle), en ayant besoin (un arbre trop haut : l'escabeau), en vivant quelque chose (le premier feu : le gourdin ; la première nuit : le bâton à fouir).
 - **« Tu y penses : … »** : un message annonce chaque idée nouvelle ; plusieurs à la fois sont regroupées (« 3 idées nouvelles »), au plus un message toutes les 10 s.

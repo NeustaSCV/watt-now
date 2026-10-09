@@ -5001,3 +5001,14 @@ body:has(#hud .voile-pause:not([hidden])) #hud .tactile {
     line-clamp: 2;
   }
 }
+
+/* ---------- Les déchets de l'Abondance (0.7, chantier 3 · les icônes) ---------- */
+
+/* Une ordure (valeur 0, que le Comptoir ne reprend pas) : son icône grisée et un peu effacée, la case reste lisible.
+   Le sac se lit d'un regard : « ça, c'est à jeter » (chiffrage graphique §2.3). La case choisie garde son cadre. */
+#hud .sac .case.ordure svg {
+  filter: grayscale(0.75) opacity(0.8);
+}
+#hud .sac .case.ordure {
+  background: #f4efe4;
+}
