@@ -34,6 +34,10 @@ export class Scene {
   private pieceNoireVisee = false;
   /** Mode photo : un angle de caméra libre (en radians), ou null pour suivre les quarts de tour. */
   lacetLibre: number | null = null;
+  /** Le dézoom le plus large (le mode `?obstacles=1` le pousse, pour voir un lieu en entier). */
+  zoomMax = ZOOM_MAX;
+  /** Le mode `?obstacles=ensemble` : la caméra regarde ce point (le centre du lieu) au lieu du personnage. */
+  cibleForcee: { x: number; z: number } | null = null;
 
   constructor(canvas: HTMLCanvasElement, qualite: Qualite) {
     this.rendu = new THREE.WebGLRenderer({ canvas, antialias: qualite.anticrenelage, powerPreference: "high-performance" });
@@ -79,7 +83,7 @@ export class Scene {
       "wheel",
       (e) => {
         e.preventDefault();
-        this.zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, this.zoom * (e.deltaY > 0 ? 1.1 : 1 / 1.1)));
+        this.zoom = Math.min(this.zoomMax, Math.max(ZOOM_MIN, this.zoom * (e.deltaY > 0 ? 1.1 : 1 / 1.1)));
         this.redimensionner();
       },
       { passive: false },
@@ -107,6 +111,7 @@ export class Scene {
   }
 
   suivre(x: number, z: number, dt: number, immediat = false): void {
+    if (this.cibleForcee) ({ x, z } = this.cibleForcee);
     const lacetVise = this.lacetLibre ?? Math.PI / 4 + (this.quartDeTour * Math.PI) / 2;
     const lissage = immediat ? 1 : Math.min(1, dt * 6);
     this.lacet += (lacetVise - this.lacet) * (immediat ? 1 : Math.min(1, dt * 8));
@@ -142,7 +147,7 @@ export class Scene {
 
   /** Mode photo : régler le zoom (0,6 à 1,7). */
   reglerZoom(z: number): void {
-    this.zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
+    this.zoom = Math.min(this.zoomMax, Math.max(ZOOM_MIN, z));
     this.redimensionner();
   }
 

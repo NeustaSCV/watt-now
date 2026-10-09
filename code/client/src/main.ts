@@ -10,7 +10,7 @@ import { avecTouches } from "./touches.ts";
 import { sousTension, suivreElectrique } from "./electricite.ts";
 import * as THREE from "three";
 import { INTENTION_REPOS, avancer, type Position } from "../../commun/src/deplacement.ts";
-import { COMPTOIR, sortieIci, zoneCoop, zoneDe, type LieuJouable, type Zone } from "../../commun/src/lieux.ts";
+import { COMPTOIR, sortieIci, sortiesDe, zoneCoop, zoneDe, type LieuJouable, type Zone } from "../../commun/src/lieux.ts";
 import type { EteintVu } from "../../commun/src/eteints.ts";
 import { cerclesSignature, type BruitAction } from "../../commun/src/signature.ts";
 import { ALLURES, GESTE_TENU_MAX_S, type Allure } from "../../commun/src/regles.ts";
@@ -68,6 +68,7 @@ import type { ProjectileVu } from "../../commun/src/messages.ts";
 import { DessinVisee, viser, type Visee } from "./visee.ts";
 import { Projectiles } from "./rendu/projectiles.ts";
 import type { Mesureur } from "./mesure/mesure.ts";
+import type { ControleEnDirect } from "./mesure/obstacles.ts";
 // La couche de déchets (0.7) : un affichage provisoire, isolé (le vrai rendu en amas viendra au chantier 7).
 import { CoucheDechetsVue } from "./rendu/dechets/couche.ts";
 
@@ -1495,6 +1496,7 @@ function boucle(instant: number): void {
     return;
   }
   mesureur?.debut(instant);
+  controleObstacles?.maj();
   mesurerImages((instant - dernier) / 1000);
   const dt = Math.min(0.1, (instant - dernier) / 1000);
   dernier = instant;
@@ -1803,6 +1805,26 @@ if (MESURE !== null && MESURE !== "0") {
     mesureur = m.demarrerMesure({ scene, qualite, lieu: () => lieu, postes: postesMesures, dechets: dechetsVue });
   });
 }
+// Le mode obstacles (`?obstacles=1`, ou `?obstacles=ensemble` pour voir tout le lieu, 0.7.1) : ce qui bloque le
+// déplacement, dessiné par-dessus le lieu (vert : on voit ce qui bloque ; rouge : barrière invisible). Chargé seulement
+// si l'adresse le demande : rien ne change sinon.
+let controleObstacles: ControleEnDirect | null = null;
+const OBSTACLES = new URLSearchParams(location.search).get("obstacles");
+if (OBSTACLES !== null && OBSTACLES !== "0") {
+  void import("./mesure/obstacles.ts").then((m) => {
+    controleObstacles = m.demarrerObstacles({
+      scene,
+      lieu: () => lieu,
+      zone: zoneIci,
+      sorties: () => sortiesDe(lieu),
+      visibles: () => {
+        const decor = decors.get(lieu);
+        return [...(decor ? [decor] : []), lots.groupe, ...[...ressources.values()].map((r) => r.objet), ...[...installations.values()].map((i) => i.objet)];
+      },
+    }, OBSTACLES === "ensemble");
+  });
+}
+
 /** Les objets du jeu et leur poste, pour ranger les appels de dessin (mode mesure). */
 function* postesMesures(): Generator<readonly [string, THREE.Object3D | null | undefined]> {
   yield ["décor", decors.get(lieu)];

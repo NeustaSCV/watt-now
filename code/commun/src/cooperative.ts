@@ -153,6 +153,20 @@ export const MOBILIER: { genre: string; boite: Boite; o?: number }[] = [
 export const BASCULE: Boite = { x: 52, z: 50, l: 4, p: 10 };
 export const FOSSE: Boite = { x: 17, z: 30, l: 1.4, p: 4 };
 
+/**
+ * Un silo est rond (rendu/cooperative.ts : sa semelle de béton fait ≈ 3,2 m de rayon) : sa boîte carrée laissait aux
+ * quatre coins un mètre de vide où l'on butait sur rien (0.7.1). Quatre boîtes croisées épousent le cercle.
+ */
+function boitesRondes(b: Boite): Boite[] {
+  const r = b.l / 2;
+  return [
+    { x: b.x, z: b.z, l: 2 * r, p: 0.8 * r },
+    { x: b.x, z: b.z, l: 0.8 * r, p: 2 * r },
+    { x: b.x, z: b.z, l: 1.6 * r, p: 1.34 * r },
+    { x: b.x, z: b.z, l: 1.34 * r, p: 1.6 * r },
+  ];
+}
+
 /** Tous les obstacles fixes (les portes fermées s'y ajoutent selon leur état). */
 export function obstaclesCoop(): Boite[] {
   const portesBat = PORTES.filter((p) => p.entre.includes("dehors"));
@@ -161,7 +175,7 @@ export function obstaclesCoop(): Boite[] {
     ...mursDe(ATELIER, portesBat),
     ...cloisons(),
     ...RAYONNAGES,
-    ...MOBILIER.filter((m) => m.genre !== "bascule").map((m) => m.boite),
+    ...MOBILIER.filter((m) => m.genre !== "bascule").flatMap((m) => (m.genre === "silo" ? boitesRondes(m.boite) : [m.boite])),
   ];
 }
 
