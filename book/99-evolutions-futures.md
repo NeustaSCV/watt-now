@@ -92,3 +92,14 @@ Aujourd'hui, le seul lien entre joueurs est l'**amitié** (accès au terrain, co
   - les maladies (Book 05 §6) ;
   - le calendrier des saisons (Book 13).
 - **À prévoir** : faire vivre les lapins et les renards par le serveur, comme la volaille, et suivre leurs effectifs.
+
+### La bibliothèque de bâtiments urbex et de haltes (porteur du projet, 2026-10-09)
+
+- **Ce qui existe** : une session dédiée a livré, dans `batiment/` (voir `batiment/LIVRAISON.md` et `batiment/README.md`), **21 bâtiments urbex** (villa du milliardaire, château, hôpital, centrale thermique, gare, siège de la Compagnie, théâtre, Grand Hôtel, église, mine, sanatoriums, médiathèque, aciérie, phare, Galerie de l'Abondance, Wattyland, usine chimique, château d'eau, moulin, piscine Art déco) et **14 haltes** (aire d'autoroute, grand bouchon, tunnel, péage, col, passage à niveau, gué, Superchargeurs Watty…). Statut : **à valider** par le porteur ; rien n'est encore branché dans le jeu ni commité.
+- **Format** : modules three.js procéduraux (`batiment/<id>/modele.js`, fonction `creer({ usure, carte })`), avec leurs points de fouille, d'apparition des Éteints, entrées, obstacles, toits estompables (`estomperToits` de `client/src/rendu/halte.ts`) et lumières de nuit (8 au plus). Budget : 60 000 triangles et 40 appels de dessin par carte.
+- **Points d'accroche** :
+  - les lieux de la carte du monde (Book 20) et le modèle du terrain (Book 19) ;
+  - la couche de déchets (Book 26) : les points de `fouille` de chaque carte deviennent des conteneurs ;
+  - la zone contaminée de l'usine chimique (champ `zones`) et la santé (Book 05) ;
+  - le mode mesure `?mesure=1` pour vérifier chaque lieu sur l'iPhone 13 mini.
+- **À prévoir à l'intégration** : un alias Vite `three` vers `code/node_modules/three` et `server.fs.allow` sur `batiment/` (ou une copie dans `code/`) ; une construction derrière un écran de chargement (50 à 800 ms) ; les règles de jeu de certains passages (ramper sous la citerne, passerelle, barrière payante du péage, bac du gué) ; les petites marches ; l'aire du Bois-Joli, volontairement crue, à revoir pour un jeu familial.
