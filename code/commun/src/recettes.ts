@@ -9,7 +9,7 @@ import { OBJETS, type Inventaire, type TypeObjet } from "./objets.ts";
 import { ENERGIE_GRISE_PROVISOIRE } from "./objets-metier.ts";
 import type { Famille } from "./regles.ts";
 import type { InstallationVue } from "./messages.ts";
-import { valeursVestiges } from "./vestiges.ts";
+import { estOrdure, valeursVestiges } from "./vestiges.ts";
 import { compter, estObjetDeMetier, etoilesDeBase, maillonFaible, typeDe, type Etoiles } from "./etoiles.ts";
 import { SURCOUT_AUTRE_FAMILLE } from "./lignees.ts";
 import { RECETTES_COMMUNES } from "./recettes/communes.ts";
@@ -465,7 +465,7 @@ export function detailEnergieGrise(type: TypeObjet): DetailEnergieGrise {
   return { total, nature: "vestige" };
 }
 
-/** Vérifie que tous les objets du catalogue ont une énergie grise (utilisé par les tests). */
+/** Vérifie que tous les objets du catalogue ont une énergie grise, sauf les ordures, à 0 exprès (utilisé par les tests). */
 export function objetsSansEnergieGrise(): TypeObjet[] {
-  return (Object.keys(OBJETS) as TypeObjet[]).filter((t) => energieGrise(t) <= 0);
+  return (Object.keys(OBJETS) as TypeObjet[]).filter((t) => energieGrise(t) <= 0 && !estOrdure(t));
 }

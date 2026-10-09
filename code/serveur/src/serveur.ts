@@ -4,12 +4,13 @@ import { apparenceAncienne, apparenceValide } from "../../commun/src/apparence.t
 import { createReadStream, existsSync, readFileSync, statSync } from "node:fs";
 import { brotliCompressSync, constants as zlibConstants, gzipSync } from "node:zlib";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { extname, join, normalize, sep } from "node:path";
+import { dirname, extname, join, normalize, sep } from "node:path";
 import type { AddressInfo } from "node:net";
 import { WebSocketServer } from "ws";
 import { FERMETURE_JETON_REFUSE, type ReponseAuth } from "../../commun/src/messages.ts";
 import { MOT_DE_PASSE_MIN, PSEUDO_MAX, PSEUDO_MIN, estFamille } from "../../commun/src/regles.ts";
 import { Base, PseudoPris, type Compte } from "./base.ts";
+import { pseudoReserve } from "../../commun/src/admin.ts";
 import { Limiteur } from "./limiteur.ts";
 import { journal } from "./journal.ts";
 import { Monde } from "./monde.ts";
@@ -28,6 +29,8 @@ export interface OptionsServeur {
   cheminReglages?: string;
   /** Le dossier des sauvegardes quotidiennes de la base (absent : pas de sauvegarde, comme dans les tests). */
   dossierSauvegardes?: string;
+  /** Le dossier de la clé USB où recopier les sauvegardes (absent : pas de copie ; Book 17 §5.4). */
+  dossierCle?: string;
   /** Le certificat HTTPS : s'il est là, le port sert HTTPS (et renvoie le HTTP en clair vers HTTPS). */
   certificat?: Certificat;
 }
@@ -149,7 +152,16 @@ export async function demarrerServeur(options: OptionsServeur): Promise<ServeurD
   const reglages = options.cheminReglages ? new FichierReglages(options.cheminReglages, (changes) => monde.diffuserReglages(changes)) : null;
   reglages?.charger();
   reglages?.surveiller();
-  const sauvegardes = options.dossierSauvegardes ? new Sauvegardes(base, options.dossierSauvegardes) : null;
+  const sauvegardes = options.dossierSauvegardes
+    ? new Sauvegardes(
+        base,
+        options.dossierSauvegardes,
+        // La clé reçoit aussi de quoi remonter le jeu : les réglages et le dossier du certificat.
+        options.dossierCle
+          ? { dossier: options.dossierCle, reglages: options.cheminReglages, certificat: options.certificat ? dirname(options.certificat.cert) : undefined }
+          : undefined,
+      )
+    : null;
   sauvegardes?.demarrer();
 
   // Les essais (0.1.1) : 10 mots de passe faux par adresse et par pseudo en 10 min ; 10 inscriptions par adresse en 10 min.
@@ -173,6 +185,8 @@ export async function demarrerServeur(options: OptionsServeur): Promise<ServeurD
       return repondre(res, 400, { ok: false, erreur: `Mot de passe d'au moins ${MOT_DE_PASSE_MIN} caractères.` });
     }
     if (!estFamille(famille)) return repondre(res, 400, { ok: false, erreur: "Choisis une famille." });
+    // Le pseudo admin (« god » et ses variantes) : seule la commande admin le crée (scripts/admin.ts).
+    if (pseudoReserve(pseudo)) return repondre(res, 409, { ok: false, erreur: "Ce pseudo est réservé." });
     let compte: Compte;
     try {
       // L'apparence choisie à la création (Book 14 §3) ; un ancien client n'envoie que sa carnation.
@@ -194,6 +208,7 @@ export async function demarrerServeur(options: OptionsServeur): Promise<ServeurD
     const pseudo = typeof corps?.pseudo === "string" ? corps.pseudo.trim() : "";
     let erreur = "";
     if (!pseudoValide(pseudo)) erreur = `Pseudo de ${PSEUDO_MIN} à ${PSEUDO_MAX} caractères (lettres, chiffres, espaces, - et ').`;
+    else if (pseudoReserve(pseudo)) erreur = "Ce pseudo est réservé.";
     else if (base.pseudoPris(pseudo)) erreur = "Ce pseudo est déjà pris.";
     res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
     res.end(JSON.stringify({ libre: erreur === "", erreur }));

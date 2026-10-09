@@ -106,7 +106,7 @@ export interface DefinitionObjet {
   /** Un plat chaud : points de santé rendus (le réconfort d'un vrai repas), et il cale (RASSASIE_HEURES). */
   plat?: { sante: number };
   /** Un champignon toxique : ce qu'il fait si on le mange (Book 05 §5 bis). */
-  toxique?: "tue_mouches" | "phalloide" | "viande_crue";
+  toxique?: "tue_mouches" | "phalloide" | "viande_crue" | "conserve_bombee";
   /** Un vestige ou un composant (lot 1, 0.3) : sa famille (icône, tri du sac) et sa rareté. */
   famille?: FamilleVestige;
   rarete?: Rarete;

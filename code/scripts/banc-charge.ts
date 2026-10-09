@@ -1,6 +1,6 @@
 // Banc de charge du serveur : N joueurs simulés (faux sockets) dans le vrai Monde, pendant quelques secondes.
 // Mesure : CPU (part d'un cœur), retard de la boucle d'événements, mémoire, débit envoyé par joueur.
-// Usage : node scripts/banc-charge.ts <terrain|halte|cooperative> <joueurs> <secondes>  (dans le conteneur : docker compose exec jeu node scripts/banc-charge.ts halte 50 30)
+// Usage : node scripts/banc-charge.ts <terrain|halte|cooperative> <joueurs> <secondes> [--detail] [--dechets]  (dans le conteneur : docker compose exec jeu node scripts/banc-charge.ts halte 50 30)
 // « cooperative » (0.5g, Book 23 §7) : chacun dans sa Coopérative (24 Éteints chacune), une hache à la main ; il
 // bouge et frappe sans arrêt : le pire cas pour l'IA. Cible : retard p99 < 25 ms à 10 joueurs sur le Pi.
 // La base du banc est jetable : serveur/donnees/banc.sqlite, effacée à chaque lancement.
@@ -90,6 +90,12 @@ const coups = setInterval(() => {
   if (scenario !== "cooperative") return;
   for (const c of clients) c.envoyer({ t: "frapper", appuye: Math.random() < 0.3 });
 }, 800);
+// La couche de déchets (0.7) : avec --dechets, chacun tente de ramasser une pièce au hasard deux fois par seconde
+// (le serveur calcule le carreau, la distance, et refuse le plus souvent : « trop loin »).
+const dechets = setInterval(() => {
+  if (!process.argv.includes("--dechets")) return;
+  for (const c of clients) c.envoyer({ t: "dechets", op: { genre: "ramasser", cx: Math.floor(Math.random() * 10), cz: Math.floor(Math.random() * 3), i: Math.floor(Math.random() * 12) } });
+}, 500);
 const pings = setInterval(() => {
   for (const c of clients) c.envoyer({ t: "ping", envoye: Date.now() });
 }, 2000);
@@ -105,6 +111,7 @@ setTimeout(() => {
   clearInterval(pilote);
   clearInterval(pings);
   clearInterval(coups);
+  clearInterval(dechets);
   retard.disable();
   const duree = (performance.now() - t0) / 1000;
   const cpu = process.cpuUsage(cpu0);

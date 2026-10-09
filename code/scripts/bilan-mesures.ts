@@ -3,8 +3,10 @@
 // La base est ouverte en lecture seule : on peut lancer le bilan pendant que le serveur tourne.
 
 import { DatabaseSync } from "node:sqlite";
-import { join } from "node:path";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { bilanMetier, type GenreMesure } from "../serveur/src/mesures.ts";
+import { FICHIER_ETAT_CLE, resumeEtatCle, type EtatCle } from "../serveur/src/cle-sauvegardes.ts";
 
 const args = process.argv.slice(2);
 const option = (nom: string) => {
@@ -39,6 +41,14 @@ const sortie: string[] = [];
 const titre = (t: string) => sortie.push("", `## ${t}`, "");
 
 sortie.push("# Bilan des mesures du test familial");
+// L'état de la copie des sauvegardes sur la clé USB (écrit par le serveur à côté de ses sauvegardes).
+try {
+  const dossierSauvegardes = process.env.WATT_SAUVEGARDES ?? join(dirname(chemin), "sauvegardes");
+  const etatCle = JSON.parse(readFileSync(join(dossierSauvegardes, FICHIER_ETAT_CLE), "utf8")) as Partial<EtatCle>;
+  sortie.push("", `Sauvegardes — ${resumeEtatCle(etatCle)}.`);
+} catch {
+  // pas de clé configurée : rien à dire
+}
 if (lignes.length === 0) {
   sortie.push("", "Aucune mesure pour l'instant.");
   console.log(sortie.join("\n"));

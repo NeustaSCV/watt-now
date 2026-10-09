@@ -2,6 +2,7 @@
 // faible, la trempe, la forge ventilée et ses accessoires, la réparation et le reforgeage.
 
 import { test } from "node:test";
+import { toutDevoile } from "../../commun/src/progression.ts";
 import assert from "node:assert/strict";
 import { ARMES, DEBRIS_ARME, MATIERE_ARME, armeDeCle } from "../../commun/src/combat.ts";
 import { OBJETS_DE_METIER } from "../../commun/src/etoiles.ts";
@@ -24,6 +25,8 @@ import type { Inventaire } from "../../commun/src/objets.ts";
 function monter(famille: Famille, inventaire: Inventaire, forge: { niveau?: number; etat?: InstallationVue["etat"] } | null = {}, alea: () => number = () => 1, avant?: (base: Base, compteId: number) => void) {
   const base = new Base(":memory:");
   const compte = base.creerCompte("Nadia", "enclume42", famille);
+  // Ces tests portent sur le métier, pas sur l'arbre de progression : tout est dévoilé.
+  base.sauverProgression(compte.id, toutDevoile(famille));
   base.sauverInventaire(compte.id, { sac_a_dos: 1, ...inventaire });
   avant?.(base, compte.id);
   let id = 0;
@@ -285,6 +288,8 @@ test("🔥 une machette forgée qui casse au combat laisse une lame ébréchée 
   const base = new Base(":memory:");
   const halte = new Halte(base, () => 0.5);
   const compte = base.creerCompte("Nadia", "enclume42", "charbonniers");
+  // Ces tests portent sur le métier, pas sur l'arbre de progression : tout est dévoilé.
+  base.sauverProgression(compte.id, toutDevoile("charbonniers"));
   base.sauverInventaire(compte.id, { sac_a_dos: 1, "machette_forgee#4": 1 });
   base.sauverUsure(compte.id, { "machette_forgee#4": 1 });
   let instant = 1_000_000;

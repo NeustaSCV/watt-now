@@ -4,6 +4,7 @@
 // Éteint, trois qui poussent la couchent, elle ne détruit jamais ; la plaque se réarme pour 0,5 Wh.
 
 import { test } from "node:test";
+import { toutDevoile } from "../../commun/src/progression.ts";
 import assert from "node:assert/strict";
 import { ARMES, armeDeCle, chargeArme, type Arme } from "../../commun/src/combat.ts";
 import { MS_JOUR_CALENDRIER } from "../../commun/src/energie.ts";
@@ -25,6 +26,8 @@ type Recu<T extends MessageServeur["t"]> = Extract<MessageServeur, { t: T }>;
 function surLeTerrain(inventaire: Inventaire, installations: { type: InstallationVue["type"]; x: number; z: number; etat?: InstallationVue["etat"] }[] = [], charges?: Record<string, number>) {
   const base = new Base(":memory:");
   const compte = base.creerCompte("Ampère", "volts1234", "voltaiques");
+  // Ces tests portent sur le métier, pas sur l'arbre de progression : tout est dévoilé.
+  base.sauverProgression(compte.id, toutDevoile("voltaiques"));
   base.sauverInventaire(compte.id, inventaire);
   if (charges) base.sauverChargeArmes(compte.id, charges);
   for (const i of installations) {
@@ -51,6 +54,8 @@ function aLaHalte(inventaire: Inventaire, charges?: Record<string, number>) {
   const base = new Base(":memory:");
   const halte = new Halte(base, () => 0.5);
   const compte = base.creerCompte("Ampère", "volts1234", "voltaiques");
+  // Ces tests portent sur le métier, pas sur l'arbre de progression : tout est dévoilé.
+  base.sauverProgression(compte.id, toutDevoile("voltaiques"));
   base.sauverInventaire(compte.id, { sac_a_dos: 1, ...inventaire });
   if (charges) base.sauverChargeArmes(compte.id, charges);
   let instant = 1_000_000;

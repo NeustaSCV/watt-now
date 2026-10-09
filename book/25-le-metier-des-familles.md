@@ -111,6 +111,15 @@ Une fois ouverte, la recette coûte **×1,5** en matières et en temps, et ce qu
 
 Les installations de métier restent **utilisables par tous** quand on les visite (Book 24 Q5), sauf les machines qui demandent le savoir (la forge, le banc).
 
+**Quand on voit les cartes grisées (0.7, arbre de progression, Book 02 §14 quater ; décisions Q6 et Q7 du 2026-10-09)** :
+
+- **Pas d'emblée.** Avant la 0.7, un nouveau joueur voyait 44 à 49 cartes grisées des autres familles dès le premier clic sur Fabriquer. Elles sont désormais **cachées** jusqu'au **déclencheur A** : une visite au **Comptoir**, un **échange**, une **rencontre** (rester une minute à moins de 3 m d'un joueur d'une autre famille) ou **voir faire** quelqu'un.
+- **Ensuite, repliées** : une ligne par famille, « Chez les Voltaïques · 20 recettes », qu'on déplie d'un doigt.
+- **Dépliées une à une** quand on en a besoin : la recette qu'on a **vu faire** (à moins de 5 m d'un joueur qui fabrique), celle dont on **tient le produit** (une machette forgée dans le sac fait voir « Forger une machette, chez les Charbonniers »), celle qui est la **pièce** d'une recette qu'on voit (le ressort retrempé pour l'arbalète lourde).
+- **Voir faire** une recette commune ou de sa famille la **dévoile** ; voir faire celle d'une autre famille la montre seulement, grisée : la meilleure publicité pour une leçon.
+- **La leçon et le manuel dévoilent** en même temps qu'ils apprennent : un manuel ouvre et montre toutes les recettes de sa famille. Le ×1,5 et le plafond ★★ ne changent pas.
+- Les personnages d'avant la 0.7 voient eux aussi le nouvel affichage (décision Q4).
+
 ### 2.4 Les garde-fous du Book 02 §15
 
 La famille native produit au moins 20 % moins cher (×1,5 hors famille : 33 %), et personne ne paie plus de 3 fois la voie la moins chère. Chaque métier paie dans **sa monnaie** (Book 01 §5) : 🔥 le charbon et le bruit, ⚡ les Wh et les composants rares, ⚙️ le temps et les calories. **Rien de puissant ne sort d'une quête** (Book 22 §1).
@@ -142,6 +151,15 @@ Au début d'un serveur, toutes les familles ne sont pas là. Un Voltaïque seul 
 | 🔥 La forge ventilée demandait le **ventilateur ⚡** ou le **soufflet à manivelle ⚙️** | Le **soufflet double** en cuir ou en bâche, à pomper soi-même (§9.3) | On pompe : 2 d'endurance par minute de forge |
 | Tous : la **perche de frêne** demandait Couper 2 (couteau aiguisé ⚙️ ou lame 🔥) | Le **couteau du kit** (Couper 1) la coupe, avec le malus du Book 03 §4 | Temps ×1,5 |
 | ⚡ La clôture demandait un module **★★★★** (bobine d'allumage) | **Clôture de fortune** au module de raquette (§5.3) | Raidit 1 s, ligne de 4 m |
+
+**La règle d'or s'applique aussi au dévoilement (0.7, arbre de progression, Book 02 §14 quater et annexe A)** :
+
+- **Toute la base d'une famille se dévoile seul**, par des déclencheurs qu'on vit seul : le **seuil du métier** (l'abri posé et un premier danger surmonté, ou l'étape « La famille » du tutoriel, ou 2 h de jeu), son propre premier charbon, sa propre arme, une matière ramassée. **Aucune recette des paliers « les tiens » et « le métier » ne demande une rencontre.**
+- **Au seuil, chaque famille voit son atelier et son arme de base** : une recette-but, pas une liste. 🔥 le foyer de forge, puis la meule de charbonnière, le couteau au fer doux dès le premier charbon, la machette ; ⚡ le banc de recharge et la matraque de fortune (l'appareil photo jetable y fait penser aussi) ; ⚙️ le pédalier (le cadre du vélo démonté y fait penser), puis l'arbalète, ses pièces par la chaîne. Rien du métier ne se dévoile avant l'atelier, sauf ce qu'une quête demande.
+- **Les voies autonomes se dévoilent en même temps que la voie « avec les autres », jamais après** : le Mécaniste voit « Arc d'arbalète (frêne) » dès l'arbalète, et « (ressort retrempé) » seulement quand il en tient un.
+- **Au palier de l'œuvre, la rencontre est un raccourci, pas une porte** : le Charbonnier seul ouvre le ressort retrempé et les électrodes par la **pratique** (5 lames forgées, une fois passé au Comptoir). Il ne peut pas encore les vendre à personne, mais il le pourra le jour où quelqu'un arrive.
+- **Les matières de base existent dans le monde ordinaire** depuis la 0.7 : la couche de déchets de l'Abondance (Book 26) donne barres de métal, lames de ressort, appareils jetables, petites batteries, vélos, petits ressorts et plumes, sans dépendre d'un seul point de fouille.
+- **Mesuré** (`npm run rythme`, neuf parcours, trois par famille) : aucune famille ne reste bloquée, et chaque ingrédient demandé se trouve.
 
 ---
 

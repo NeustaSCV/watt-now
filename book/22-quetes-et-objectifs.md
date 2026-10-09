@@ -1,6 +1,6 @@
 # Book 22 — Quêtes et objectifs
 
-> Document de conception · version 0.1 · 2026-10-08
+> Document de conception · version 0.2 · 2026-10-09
 > Statut : **brouillon de travail**. Né de la revue BMAD (Game Designer) : « après le tutoriel, il n'y a plus rien ». Ce qui fait revenir un joueur, c'est la deuxième session.
 
 ---
@@ -12,6 +12,7 @@
 - **Le serveur constate, il ne croit pas.** Un objectif est rempli par ce que le joueur a vraiment fait ou possède (comme le tutoriel, Book 14 §4.2). Ce qui est déjà fait compte : un ancien qui a déjà son coffre voit l'objectif réussi tout de suite.
 - **Les récompenses en wotts** sont des **primes des Compteurs** (ils financent la remise en route du pays), versées **sur le compte** au Comptoir et prises sur leur trésorerie (Book 07 §3.6) : elles ne créent pas de monnaie de nulle part. Trésorerie vide : la prime attend.
 - **Rien de puissant** : pas d'arme unique, pas d'objet introuvable autrement. La gloire, elle, est unique (§4.6).
+- **Le carnet ne demande jamais une recette invisible** (0.7, arbre de progression, Book 02 §14 quater) : une quête **en cours** fait **penser** à ce qu'elle demande de fabriquer, pièces comprises. « Un coffre à soi » dévoile le coffre ; « Forger une lame » dévoile la lame et sa forge. Les quêtes « S'installer » et « Le métier » sont la **colonne vertébrale** de l'arbre : leur ordre (repas, lit, eau du ciel, coffre, Dakota, défense…) suit déjà la pyramide de Maslow, on n'y touche pas.
 
 ## 2. Le carnet après le tutoriel
 
@@ -187,6 +188,12 @@ Les objets de la quête (cassette, plan, carnet de fan, laissez-passer, boussole
 - Les primes sont versées sur le compte du Comptoir, prises sur la trésorerie ; vide, elles attendent.
 - Le carnet (HUD) prend le relais du tutoriel : une ligne par objectif, ses compteurs, sa récompense ; un message à chaque réussite. Depuis la 0.4, c'est une **tuile « Carnet »** à côté de Sac, Fabriquer et Carte (Book 18 §3), avec une pastille quand un objectif avance ; son panneau s'ouvre et se ferme à la demande. Il pourra un jour accueillir le classement (Book 09 §3), quand celui-ci existera.
 - Tout est gardé en base (colonne `quetes` du personnage).
+
+**Ajouté en 0.7 (2026-10-09), avec l'arbre de progression** :
+- **La quête active dévoile sa recette** (`recettesDeLaQuete`, `code/commun/src/progression.ts`) : pour chaque objectif, la voie la plus simple qui passe par une recette (une installation : la recette qui la pose ; un objet : sa recette de base ; un fait comme « manger un plat cuisiné » ou « défourner » : les recettes qui y mènent). La chaîne suit : la recette dévoile ses pièces fabricables.
+- **Dans « À découvrir »** (le bas du panneau Fabriquer), les silhouettes que demande une quête en cours passent **en tête**.
+- **Le carnet note la dernière idée**, tout en bas : « Dernière idée : Tresser une corde ».
+- **Le rythme** est vérifié par `npm run rythme` : après le tutoriel, un objectif nouveau arrive au plus tard toutes les 13,5 à 23 minutes de jeu selon le joueur, jusqu'au dernier objectif du carnet, sans aucun blocage (Book 02 §14 quater).
 
 ## 6. Questions ouvertes
 

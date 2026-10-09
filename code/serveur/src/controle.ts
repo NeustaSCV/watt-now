@@ -5,6 +5,7 @@
 
 import { estCleObjet, estObjet } from "../../commun/src/objets.ts";
 import type { MessageClient } from "../../commun/src/messages.ts";
+import { estOperationAdmin } from "../../commun/src/admin.ts";
 
 type Champs = Record<string, unknown>;
 
@@ -78,6 +79,25 @@ function operationLeconValide(op: unknown): boolean {
   }
 }
 
+/** La couche de déchets (0.7) : un carreau et une pièce par leurs numéros, un conteneur ou un point par une référence courte. */
+function operationDechetsValide(op: unknown): boolean {
+  if (!estTable(op)) return false;
+  const entier = (v: unknown) => Number.isInteger(v) && Math.abs(v as number) <= 10_000;
+  switch (op.genre) {
+    case "ramasser":
+      return entier(op.cx) && entier(op.cz) && entier(op.i);
+    case "fouiller":
+    case "demonter":
+      return chaine(op.ref, 40);
+    case "prendre":
+      return chaine(op.ref, 40) && entier(op.i);
+    case "fermer":
+      return true;
+    default:
+      return false;
+  }
+}
+
 /** Le message a-t-il la forme attendue ? (Sinon on l'ignore.) */
 export function messageValide(m: unknown): m is MessageClient {
   if (!estTable(m) || typeof m.t !== "string") return false;
@@ -130,6 +150,14 @@ export function messageValide(m: unknown): m is MessageClient {
       return operationLeconValide(m.op);
     case "lire":
       return estObjet(m.objet);
+    case "dechets":
+      return operationDechetsValide(m.op);
+    // L'arbre de progression (0.7) : les cartes que le client a montrées, une liste courte d'identifiants courts.
+    case "recettes_vues":
+      return Array.isArray(m.recettes) && m.recettes.length <= 200 && m.recettes.every((r) => chaine(r));
+    // Le compte admin : la forme seulement ; que ce soit bien l'admin, le joueur le vérifie à chaque fois (base).
+    case "admin":
+      return estOperationAdmin(m.op);
     case "coffre":
       return nombre(m.id) && (m.sens === "deposer" || m.sens === "prendre") && estCleObjet(m.objet) && quantite(m.quantite);
     case "jeter":

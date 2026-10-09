@@ -3,6 +3,7 @@
 // un Équipé de dos ne meurt pas d'une flèche ; la qualité d'un arc monté ; le redresseur de fûts.
 
 import { test } from "node:test";
+import { toutDevoile } from "../../commun/src/progression.ts";
 import assert from "node:assert/strict";
 import { nouvelEteint, type Eteint } from "../../commun/src/eteints.ts";
 import { ZONE_STATION } from "../../commun/src/lieux.ts";
@@ -246,6 +247,8 @@ test("arc : le séchage pur — deux heures, les plus avancées d'abord ; une é
 function monter(inventaire: Record<string, number>) {
   const base = new Base(":memory:");
   const compte = base.creerCompte("Rose", "potager42", "voltaiques");
+  // Ces tests portent sur le métier, pas sur l'arbre de progression : tout est dévoilé.
+  base.sauverProgression(compte.id, toutDevoile("voltaiques"));
   base.sauverInventaire(compte.id, { sac_a_dos: 1, ...inventaire });
   const etabli = base.ajouterInstallation(compte.id, "etabli", 21.5, 20, 0);
   let instant = base.debutMonde() + 60_000;

@@ -108,6 +108,8 @@ export class VueEteint {
     this.corps = corps;
     if (v) habillerVariante(corps, v, this.cible.id * 17 + 3);
     this.lueur = corps.creerLueurYeux();
+    // Un seul maillage pour tout l'Éteint, habits de variante compris (même image, un appel de dessin).
+    corps.fondre();
     // Le corps et ses vêtements ne se dessinent que s'ils sont dans le champ (de la caméra, ou d'une ombre) : une
     // sphère mesurée au repos, élargie pour les gestes. Sans ça, les 24 Éteints de la Coopérative se dessinaient
     // tous, toujours, et six fois de plus dans l'ombre de la lampe (2026-10-08).

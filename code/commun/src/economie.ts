@@ -124,6 +124,9 @@ export const STOCK_DE_BASE: Inventaire = {
   tournevis: 2,
   marteau: 2,
   petite_batterie: 1,
+  // L'arbrier et la brouette demandent de scier le bois, et seuls les Mécanistes partent avec une scie (0.7,
+  // chantier 6) : sans elle, celui qui les apprend d'un Mécaniste ou d'un manuel ne pouvait jamais les faire.
+  scie: 1,
 };
 /** Un objet du stock de base revient toutes les deux heures réelles, jusqu'au niveau de départ. */
 export const REASSORT_MS = 2 * 3_600_000;
