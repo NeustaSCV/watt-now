@@ -12,6 +12,7 @@ import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import type { InstallationVue } from "../../../commun/src/messages.ts";
 import { PALETTE, aleatoire } from "./materiaux.ts";
+import { modeleMetier } from "./metier/index.ts";
 import { ACIER, Assemblage, BOIS, type Finition, CORDE, NOIR, ROUILLE_SOMBRE, V, V3, X, Y, Z, bosseler, placer, surface, tache, touffe } from "./assemblage.ts";
 
 const BACHE = 0x2f6fa4;
@@ -921,8 +922,16 @@ export class VueInstallation {
         this.trouvailles = d.trouvailles;
         break;
       }
-      default:
-        this.objet = piquetProvisoire();
+      default: {
+        // Les installations de métier (Book 25, 0.6) : leur modèle vient du registre (rendu/metier/), sinon un piquet.
+        const modele = modeleMetier(donnees.type, "sol");
+        this.objet = modele ? new THREE.Group().add(modele) : piquetProvisoire();
+      }
+    }
+    // Les accessoires mécanistes du pédalier (soufflet à manivelle, meule fine), montrés selon son état.
+    if (donnees.type === "pedalier") for (const a of ["pedalier_meule_fine", "pedalier_soufflet"]) {
+      const m = modeleMetier(a, "sol");
+      if (m) this.objet.add(m);
     }
     // Le niveau (Book 24) : des pièces en plus. La citerne couvre la bassine : son eau ne se voit plus.
     const pieces = piecesNiveau(donnees.type, donnees.niveau ?? 1);
@@ -957,6 +966,12 @@ export class VueInstallation {
     this.objet.visible = !donnees.etat.portee;
     if (this.meule) this.meule.visible = donnees.etat.meule === true;
     if (this.dynamo) this.dynamo.visible = donnees.etat.dynamo === true;
+    // Les modèles de métier (rendu/metier/) : un piège armé ou qui a pris ; un accessoire monté ou non.
+    const arme = donnees.etat.declencheur?.arme !== false;
+    this.objet.traverse((o) => {
+      if (typeof o.userData.siArme === "boolean") o.visible = o.userData.siArme === arme;
+      if (typeof o.userData.siEtat === "string") o.visible = donnees.etat[o.userData.siEtat as keyof typeof donnees.etat] === true;
+    });
     let chargees = 0;
     if (this.posees) {
       for (const b of this.posees.children) {

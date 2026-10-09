@@ -51,6 +51,19 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 - La masse et le pied-de-biche valent enfin ce qu'ils coûteraient à refaire (200 et 150 wotts) ; la lance vaut ce que vaut sa recette.
 - Après dix exemplaires d'une même lame, la forge est maîtrisée : une étoile de plus.
 
+**Les Mécanistes : l'arbalète, les pièges, le tour** (Book 25, chantier 7)
+- **L'arbalète** : à l'établi, un arbrier scié dans une bûche, une noix et sa détente, un arc, une corde. Un Mécaniste seul en monte une dès le premier jour, avec la scie et la clé plate de son kit.
+- Ses étoiles sont celles de sa moins bonne pièce : arc de frêne ★, lame de ressort ★★, if ★★★, ressort retrempé d'un Charbonnier ★★★★ ; noix de bois ★★, d'os ★★★, de rivets forgés ★★★★. Le ciseau à bois d'un Charbonnier donne une étoile de plus à l'arbrier.
+- **Armée d'avance** : Sac → « Prêt à tirer », puis le bouton Lancer : le carreau part tout de suite. Un tir à la tête détruit jusqu'à 12 m (8 m pour une ★, 10 m pour une ★★) ; un Équipé, de face, à moitié moins.
+- **Réarmer** : appuie sur Lancer ; 3 s sans bouger, 10 d'endurance. Saisi, on ne tire pas.
+- **L'arbalète lourde** (deux ressorts retrempés d'un Charbonnier) : un carreau met un Éteint à terre, jusqu'à 15 m pour la tête. Trop raide pour le pied : on la réarme au pied-de-biche (6 s) ou au **cranequin** (4 s), qui se fait au pédalier.
+- **Les carreaux**, quatre par recette (douze avec un bocal de clous) : pointe d'os ou de clou (un sur trois casse), d'acier forgé (un sur cinq). Le papier des boîtes à gants remplace les plumes.
+- **Les pièges** : l'**assommoir** met à terre le premier qui passe ; les **mâchoires de fortune** (deux lames de ressort) lui brisent la jambe et le tiennent 10 s, mais se faussent au bout de cinq prises ; le **piège à mâchoires** (ressorts retrempés) le tient 20 s et ne se fausse pas ; la **fosse à pieux** (il faut une bêche) le garde au fond. Aucun ne tue : à toi d'achever.
+- A sur un piège qui a pris : le **réarmer** (quelques secondes, de l'endurance).
+- **Le tour à perche** : une installation des Mécanistes. On y tourne des **manches**, qui donneront une étoile de plus aux armes des autres familles.
+- **Le pédalier** reçoit deux accessoires : le **soufflet à manivelle** (souffle sur une forge à moins de 3 m) et la **meule fine** (posée sur la meule : une lame affûtée y gagne 10 % de dégâts jusqu'à ce qu'elle casse).
+- **La brouette** : 60 kg roulés de plus que le sac, et l'on court encore (le travois, lui, traîne).
+
 ## 0.5.3 · déployée le 2026-10-09
 
 - **Le coffre** (et la décharge), refait selon l'avis de Sally :
