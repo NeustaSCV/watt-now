@@ -297,6 +297,8 @@ export function butinCoop(): { id: number; type: TypeRessource; x: number; z: nu
     ["coop_caisse_froide", 68.5, 9.5],
     // 0.5.1 : ajouté sans changer VERSION_COOP (la base ajoute un point nouveau sans régénérer le reste).
     ["coop_batterie", BATTERIE_TRACTEUR.x, BATTERIE_TRACTEUR.z],
+    // 0.6 : la haie d'ifs taillés en boules, devant les bureaux (Book 25 §3.2), ajoutée de la même façon.
+    ["coop_ifs", 67, 43.6],
   ];
   return points.map(([type, x, z], i) => ({ id: i + 1, type, x, z }));
 }

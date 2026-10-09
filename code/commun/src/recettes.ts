@@ -1,14 +1,36 @@
 // Fabrication de l'É2 (Book 02, Book 03 §4) : qualités d'outil, recettes, énergie grise.
+//
+// Depuis la 0.6 (Book 25 §10.4), ce fichier ne garde que le moteur : les recettes elles-mêmes sont rangées par famille
+// dans `recettes/<famille>.ts` (et `recettes/communes.ts` pour celles de tout le monde). Les recettes d'une autre
+// famille se voient grisées, s'apprennent (leçon, manuel), coûtent ×1,5 et plafonnent à ★★ (Book 25 §2.2 et §2.3).
 
 import { REGLAGES } from "./reglages.ts";
 import { OBJETS, type Inventaire, type TypeObjet } from "./objets.ts";
+import { ENERGIE_GRISE_PROVISOIRE } from "./objets-metier.ts";
 import type { Famille } from "./regles.ts";
 import { valeursVestiges } from "./vestiges.ts";
-import { typeDe } from "./etoiles.ts";
+import { compter, estObjetDeMetier, etoilesDeBase, maillonFaible, typeDe, type Etoiles } from "./etoiles.ts";
+import { SURCOUT_AUTRE_FAMILLE } from "./lignees.ts";
+import { RECETTES_COMMUNES } from "./recettes/communes.ts";
+import { RECETTES_CHARBONNIERS } from "./recettes/charbonniers.ts";
+import { RECETTES_MECANISTES } from "./recettes/mecanistes.ts";
+import { RECETTES_VOLTAIQUES } from "./recettes/voltaiques.ts";
 
 // ---------- Qualités d'outil (Book 03 §4) ----------
 
-export type Qualite = "couper" | "marteler" | "fendre" | "visser" | "serrer" | "scier_bois" | "creuser";
+export type Qualite =
+  | "couper"
+  | "marteler"
+  | "fendre"
+  | "visser"
+  | "serrer"
+  | "scier_bois"
+  | "creuser"
+  // Le métier des familles (Book 25 §4.3, 0.6)
+  | "saisir_chaud"
+  | "tailler_bois"
+  | "trancher_metal"
+  | "elaguer";
 
 export const NOMS_QUALITES: Record<Qualite, string> = {
   couper: "Couper",
@@ -18,6 +40,10 @@ export const NOMS_QUALITES: Record<Qualite, string> = {
   serrer: "Serrer",
   scier_bois: "Scier le bois",
   creuser: "Creuser",
+  saisir_chaud: "Saisir à chaud",
+  tailler_bois: "Tailler le bois",
+  trancher_metal: "Trancher le métal",
+  elaguer: "Élaguer",
 };
 
 /** Qualités apportées par chaque objet, avec leur niveau (1 à 3). */
@@ -35,6 +61,19 @@ export const QUALITES_OBJETS: Partial<Record<TypeObjet, Partial<Record<Qualite, 
   baton_fouir: { creuser: 1 },
   // Vestiges, lot 1 (0.3) : la bêche trouvée dans la grange.
   beche: { creuser: 2 },
+  // Les armes trouvées, qui sont aussi des outils (Book 25 §11) : la masse martèle, la machette coupe.
+  masse: { marteler: 3 },
+  pied_de_biche: { marteler: 1 },
+  machette: { couper: 1 },
+  // 🔥 La gamme des Charbonniers (Book 25 §4.3) : les qualités nouvelles viennent de leurs outils.
+  pinces_forge: { saisir_chaud: 2 },
+  machette_forgee: { couper: 2 },
+  hachette: { fendre: 2, couper: 1 },
+  hache_forgee: { fendre: 3, couper: 1 },
+  serpe: { couper: 2, elaguer: 1 },
+  glaive: { couper: 2 },
+  ciseau_bois: { tailler_bois: 2 },
+  burin: { trancher_metal: 1 },
 };
 
 /** Le meilleur niveau d'une qualité parmi les objets portés (0 si aucun). */
@@ -82,7 +121,20 @@ export type TypeInstallation =
   | "alarme_boites"
   | "lit_branchages"
   // La décharge du terrain (P-001) : fixe, elle fait remonter des objets.
-  | "decharge";
+  | "decharge"
+  // ⚡ Les Voltaïques (Book 25 §5.3, chantier 6) : l'alarme, les clôtures, la plaque de choc, le bain de dérouillage.
+  | "alarme_electrique"
+  | "cloture_fortune"
+  | "cloture_electrique"
+  | "plaque_choc"
+  | "bain_derouillage"
+  // ⚙️ Les Mécanistes (Book 25 §6.3 et §6.4, chantier 7) : les pièges et le tour à perche ; le collet, pour tous.
+  | "collet"
+  | "assommoir"
+  | "machoires_fortune"
+  | "piege_machoires"
+  | "fosse_pieux"
+  | "tour_perche";
 
 export const NOMS_INSTALLATIONS: Record<TypeInstallation, string> = {
   etabli: "établi",
@@ -98,10 +150,21 @@ export const NOMS_INSTALLATIONS: Record<TypeInstallation, string> = {
   alarme_boites: "alarme à boîtes de conserve",
   lit_branchages: "lit de branchages",
   decharge: "décharge",
+  alarme_electrique: "alarme électrique",
+  cloture_fortune: "clôture de fortune",
+  cloture_electrique: "clôture électrique",
+  plaque_choc: "plaque de choc",
+  bain_derouillage: "bain de dérouillage",
+  collet: "collet",
+  assommoir: "assommoir",
+  machoires_fortune: "mâchoires de fortune",
+  piege_machoires: "piège à mâchoires",
+  fosse_pieux: "fosse à pieux",
+  tour_perche: "tour à perche",
 };
 
 /** Les petites installations : on peut les poser plus près des autres (un lit à côté de l'abri, une alarme le long du chemin). */
-export const PETITES_INSTALLATIONS: readonly string[] = ["lit_branchages", "alarme_boites"];
+export const PETITES_INSTALLATIONS: readonly string[] = ["lit_branchages", "alarme_boites", "alarme_electrique", "collet", "plaque_choc", "machoires_fortune", "piege_machoires"];
 
 /** Intensité du travail (Book 02 §2), en kcal par heure de jeu. */
 export const INTENSITES = { legere: 150, moyenne: 250, lourde: 350, tres_lourde: 500 } as const;
@@ -128,6 +191,8 @@ export interface Recette {
   nom: string;
   /** Ce que la recette produit : un objet dans le sac, ou une installation posée sur le terrain. */
   produit: { objet: TypeObjet; quantite: number } | { installation: TypeInstallation };
+  /** Ce qui reste en plus (Book 25 §9.6) : plumer une poule laisse des plumes et un os. */
+  sousProduits?: Inventaire;
   ingredients: Inventaire;
   qualites: Partial<Record<Qualite, number>>;
   /** Installation à proximité nécessaire. */
@@ -148,369 +213,15 @@ export interface Recette {
   intensite: keyof typeof INTENSITES;
   /** « tous » : recette commune, connue d'emblée par tous (Book 03 §5.2). */
   famille: Famille | "tous";
+  /**
+   * Pour un objet de métier : les étoiles de chaque facteur (matière, geste, outils), d'après le sac au moment de
+   * fabriquer (Book 25 §4.2 : le maillon faible). Absent : les étoiles de base de l'objet. Rempli par les chantiers 4 à 7.
+   */
+  facteursEtoiles?: (inventaire: Inventaire) => number[];
 }
 
-export const RECETTES: Recette[] = [
-  {
-    id: "hache",
-    categorie: "outils",
-    nom: "Remmancher la hache",
-    produit: { objet: "hache", quantite: 1 },
-    ingredients: { tete_hache: 1, branche: 1 },
-    qualites: { couper: 1, marteler: 1 },
-    duree: 30,
-    intensite: "moyenne",
-    famille: "tous",
-  },
-  {
-    id: "etabli",
-    categorie: "ateliers",
-    nom: "Établi",
-    produit: { installation: "etabli" },
-    ingredients: { buche: 4, branche: 6 },
-    qualites: { marteler: 1, couper: 1 },
-    duree: 90,
-    intensite: "moyenne",
-    famille: "tous",
-  },
-  {
-    id: "abri",
-    categorie: "batir",
-    nom: "Abri de branches et de bâche",
-    produit: { installation: "abri" },
-    ingredients: { branche: 8, bache: 1 },
-    qualites: { couper: 1 },
-    duree: 60,
-    intensite: "lourde",
-    famille: "tous",
-  },
-  {
-    // Pour ranger ce qu'on ne porte pas : le sac ne tient que 55 kg (Book 01 §6 bis, Book 19 §2).
-    id: "coffre",
-    categorie: "batir",
-    nom: "Coffre de rangement",
-    produit: { installation: "coffre" },
-    ingredients: { buche: 4, branche: 4, corde: 1 },
-    qualites: { couper: 1, marteler: 1 },
-    duree: 60,
-    intensite: "moyenne",
-    famille: "tous",
-  },
-  {
-    // Le geste de base du bushcraft : tordre et tresser les feuilles de jonc (Book 02 §4, fibres ; sans rouissage en 0a).
-    id: "corde",
-    categorie: "materiaux",
-    nom: "Tresser une corde",
-    produit: { objet: "corde", quantite: 1 },
-    ingredients: { fibres: 4 },
-    qualites: {},
-    duree: 20,
-    intensite: "legere",
-    famille: "tous",
-  },
-  {
-    // Deux montants de bûche refendue, des barreaux de branches, le tout ligaturé de corde : pour cueillir dans les arbres.
-    // Il se porte et se déplace (le premier objet lourd à porter) ; il servira aussi pour monter un mur (Book 10).
-    id: "escabeau",
-    categorie: "batir",
-    nom: "Escabeau de bois",
-    produit: { installation: "escabeau" },
-    ingredients: { buche: 2, branche: 6, corde: 1 },
-    qualites: { couper: 1, marteler: 1 },
-    duree: 45,
-    intensite: "moyenne",
-    famille: "tous",
-  },
-  {
-    // Un rondin de bûche, dégrossi au couteau : l'arme la plus simple (Book 11 §10, chasse à la volaille).
-    id: "gourdin",
-    categorie: "outils",
-    nom: "Tailler un gourdin",
-    produit: { objet: "gourdin", quantite: 1 },
-    ingredients: { buche: 1 },
-    qualites: { couper: 1 },
-    duree: 20,
-    intensite: "legere",
-    famille: "tous",
-  },
-  {
-    // Plumer à l'eau chaude ou à sec, vider, découper : quatre portions de 200 g.
-    id: "volaille",
-    categorie: "feu",
-    nom: "Plumer et vider la poule",
-    produit: { objet: "volaille_crue", quantite: 4 },
-    ingredients: { poule: 1 },
-    qualites: { couper: 1 },
-    duree: 25,
-    intensite: "legere",
-    famille: "tous",
-  },
-  // ---------- La cuisine au feu (2026-10-08) : les plats nourrissent mieux que les ingrédients crus ----------
-  {
-    id: "volaille_cepes",
-    categorie: "feu",
-    nom: "Volaille aux cèpes",
-    produit: { objet: "volaille_cepes", quantite: 1 },
-    ingredients: { volaille_crue: 1, cepe: 2 },
-    qualites: {},
-    feu: true,
-    duree: 40,
-    intensite: "legere",
-    famille: "tous",
-  },
-  {
-    id: "cepes_poeles",
-    categorie: "feu",
-    nom: "Poêlée de cèpes",
-    produit: { objet: "cepes_poeles", quantite: 1 },
-    ingredients: { cepe: 3 },
-    qualites: {},
-    feu: true,
-    duree: 20,
-    intensite: "legere",
-    famille: "tous",
-  },
-  {
-    id: "pommes_cuites",
-    categorie: "feu",
-    nom: "Pommes cuites sous la cendre",
-    produit: { objet: "pommes_cuites", quantite: 1 },
-    ingredients: { pomme: 3 },
-    qualites: {},
-    feu: true,
-    duree: 30,
-    intensite: "legere",
-    famille: "tous",
-  },
-  // Les mijotés (Book 24 §3.1) : seulement sur un foyer de cuisine, avec de l'eau et du bois.
-  {
-    id: "soupe_cepes",
-    categorie: "feu",
-    nom: "Soupe de cèpes",
-    produit: { objet: "soupe_cepes", quantite: 1 },
-    ingredients: { cepe: 2 },
-    qualites: {},
-    feu: true,
-    feuNiveau: 3,
-    eau: 0.5,
-    boisFeu: 0.5,
-    duree: 40,
-    intensite: "legere",
-    famille: "tous",
-  },
-  {
-    id: "pot_au_feu",
-    categorie: "feu",
-    nom: "Pot-au-feu de volaille",
-    produit: { objet: "pot_au_feu", quantite: 1 },
-    ingredients: { volaille_crue: 1, cepe: 1 },
-    qualites: {},
-    feu: true,
-    feuNiveau: 3,
-    eau: 0.5,
-    boisFeu: 0.8,
-    duree: 60,
-    intensite: "legere",
-    famille: "tous",
-  },
-  {
-    // Perdu son sac à l'effondrement ? Un cadre de branches et de la corde : on porte 30 kg au lieu de 10.
-    id: "sac_fortune",
-    categorie: "sur_soi",
-    nom: "Sac de fortune",
-    produit: { objet: "sac_fortune", quantite: 1 },
-    ingredients: { branche: 4, corde: 2 },
-    qualites: { couper: 1 },
-    duree: 40,
-    intensite: "legere",
-    famille: "tous",
-  },
-  {
-    id: "pansement",
-    categorie: "sur_soi",
-    nom: "Pansements",
-    produit: { objet: "pansement", quantite: 2 },
-    ingredients: { chiffons: 1 },
-    qualites: { couper: 1 },
-    duree: 15,
-    intensite: "legere",
-    famille: "tous",
-  },
-  // ---------- La gamme bushcraft, lot 1 (P-002, Book 02 §14 bis) : avec ce qu'on a déjà, pour tous ----------
-  {
-    id: "ficelle",
-    categorie: "materiaux",
-    nom: "Rouler une ficelle",
-    produit: { objet: "ficelle", quantite: 1 },
-    ingredients: { fibres: 2 },
-    qualites: {},
-    duree: 8,
-    intensite: "legere",
-    famille: "tous",
-  },
-  {
-    id: "baton_fouir",
-    categorie: "outils",
-    nom: "Bâton à fouir",
-    produit: { objet: "baton_fouir", quantite: 1 },
-    ingredients: { branche: 1 },
-    qualites: { couper: 1 },
-    feu: true,
-    duree: 15,
-    intensite: "legere",
-    famille: "tous",
-  },
-  {
-    id: "epieu",
-    categorie: "outils",
-    nom: "Épieu durci au feu",
-    produit: { objet: "epieu", quantite: 1 },
-    ingredients: { branche: 2 },
-    qualites: { couper: 1 },
-    feu: true,
-    duree: 30,
-    intensite: "legere",
-    famille: "tous",
-  },
-  {
-    // La lance (Book 23 §4.6, évolution de l'épieu, P-002) : un couteau ligaturé au bout de l'épieu. Perçante, longue.
-    id: "lance",
-    categorie: "outils",
-    nom: "Lance (épieu et couteau ligaturé)",
-    produit: { objet: "lance", quantite: 1 },
-    ingredients: { epieu: 1, couteau: 1, ficelle: 1 },
-    qualites: {},
-    duree: 20,
-    intensite: "legere",
-    famille: "tous",
-  },
-  {
-    id: "protege_bras",
-    categorie: "sur_soi",
-    nom: "Protège-bras de fortune",
-    produit: { objet: "protege_bras", quantite: 1 },
-    ingredients: { chiffons: 2, ficelle: 1 },
-    qualites: { couper: 1 },
-    duree: 10,
-    intensite: "legere",
-    famille: "tous",
-  },
-  {
-    id: "travois",
-    categorie: "sur_soi",
-    nom: "Travois",
-    produit: { objet: "travois", quantite: 1 },
-    ingredients: { branche: 6, corde: 2 },
-    qualites: { couper: 1 },
-    duree: 40,
-    intensite: "moyenne",
-    famille: "tous",
-  },
-  {
-    id: "recuperateur_pluie",
-    categorie: "batir",
-    nom: "Récupérateur de pluie",
-    produit: { installation: "recuperateur_pluie" },
-    ingredients: { bache: 1, branche: 4, corde: 1 },
-    qualites: { couper: 1 },
-    duree: 30,
-    intensite: "legere",
-    famille: "tous",
-  },
-  {
-    id: "alarme_boites",
-    categorie: "batir",
-    nom: "Alarme à boîtes de conserve",
-    produit: { installation: "alarme_boites" },
-    ingredients: { boite_vide: 2, ficelle: 1, branche: 2 },
-    qualites: {},
-    duree: 10,
-    intensite: "legere",
-    famille: "tous",
-  },
-  {
-    id: "lit_branchages",
-    categorie: "batir",
-    nom: "Lit de branchages",
-    produit: { installation: "lit_branchages" },
-    ingredients: { branche: 6 },
-    qualites: { couper: 1 },
-    duree: 20,
-    intensite: "legere",
-    famille: "tous",
-  },
-  // ---------- 🔥 Charbonniers : bois → charbonnière → forge → lame (Book 21 §3.4) ----------
-  {
-    id: "charbonniere",
-    categorie: "ateliers",
-    nom: "Meule de charbonnière",
-    produit: { installation: "charbonniere" },
-    ingredients: { buche: 10, branche: 4 },
-    qualites: {},
-    duree: 60,
-    intensite: "lourde",
-    famille: "charbonniers",
-  },
-  {
-    id: "forge",
-    categorie: "ateliers",
-    nom: "Foyer de forge à soufflet",
-    produit: { installation: "forge" },
-    ingredients: { pierre: 8, barre_metal: 1, branche: 2 },
-    qualites: { marteler: 1 },
-    duree: 90,
-    intensite: "lourde",
-    famille: "charbonniers",
-  },
-  {
-    id: "lame_forgee",
-    categorie: "outils",
-    nom: "Forger une lame",
-    produit: { objet: "lame_forgee", quantite: 1 },
-    ingredients: { ressort_lames: 1, charbon_bois: 1 },
-    qualites: { marteler: 2 },
-    installation: "forge",
-    duree: 90,
-    intensite: "lourde",
-    famille: "charbonniers",
-  },
-  // ---------- ⚙️ Mécanistes : vieux vélo → pédalier → meule et dynamo ----------
-  {
-    id: "pedalier",
-    categorie: "ateliers",
-    nom: "Pédalier universel",
-    produit: { installation: "pedalier" },
-    ingredients: { cadre_velo: 1, chaine_velo: 1, roue_velo: 1, buche: 2 },
-    qualites: { serrer: 1, visser: 1, marteler: 1 },
-    duree: 90,
-    intensite: "moyenne",
-    famille: "mecanistes",
-  },
-  // ---------- ⚡ Voltaïques : batterie → banc de recharge → lampe ----------
-  {
-    id: "banc_recharge",
-    categorie: "ateliers",
-    nom: "Banc de recharge",
-    produit: { installation: "banc_recharge" },
-    ingredients: { buche: 2, barre_metal: 1 },
-    qualites: { visser: 1, serrer: 1 },
-    duree: 60,
-    intensite: "moyenne",
-    famille: "voltaiques",
-  },
-  {
-    // Le panneau de la station-service, posé sur un support de branches, plein sud, câblé au banc (É4).
-    id: "panneau_solaire",
-    categorie: "ateliers",
-    nom: "Poser le panneau solaire",
-    produit: { installation: "panneau_solaire" },
-    ingredients: { panneau_solaire: 1, branche: 3 },
-    qualites: { visser: 1 },
-    duree: 30,
-    intensite: "legere",
-    famille: "voltaiques",
-  },
-];
+/** Toutes les recettes : les communes, puis celles de chaque famille (Book 25 §10.4). */
+export const RECETTES: Recette[] = [...RECETTES_COMMUNES, ...RECETTES_CHARBONNIERS, ...RECETTES_MECANISTES, ...RECETTES_VOLTAIQUES];
 
 /**
  * Combien de secondes réelles dure une fabrication (décision du 2026-10-08) : le travail est condensé
@@ -524,13 +235,80 @@ export function recette(id: string): Recette | undefined {
   return RECETTES.find((r) => r.id === id);
 }
 
-/** Les recettes qu'un personnage connaît (Book 21 §3.4 : celles de sa famille et les communes). */
-export function recettesConnues(famille: Famille): Recette[] {
-  return RECETTES.filter((r) => r.famille === "tous" || r.famille === famille);
+// ---------- Le savoir : sa famille, et ce qu'on a appris des autres (Book 25 §2.2 et §2.3) ----------
+
+/** Ce qu'un personnage a appris hors de sa famille : des recettes (leçons), et les manuels qu'il a lus. */
+export interface SavoirRecettes {
+  /** Les recettes apprises d'un joueur d'une autre famille (identifiants). */
+  apprises?: readonly string[];
+  /** Les familles dont on a lu le manuel : toutes leurs recettes s'ouvrent. */
+  manuels?: readonly Famille[];
 }
 
+/** Une recette d'une autre famille que la sienne (ni commune, ni de sa famille). */
+export function estHorsFamille(r: Recette, famille: Famille): boolean {
+  return r.famille !== "tous" && r.famille !== famille;
+}
+
+/** A-t-on appris cette recette d'une autre famille (leçon ou manuel) ? */
+export function estApprise(r: Recette, savoir: SavoirRecettes = {}): boolean {
+  if (r.famille === "tous") return false;
+  return (savoir.apprises ?? []).includes(r.id) || (savoir.manuels ?? []).includes(r.famille);
+}
+
+/**
+ * Les recettes qu'un personnage connaît (Book 21 §3.4 : celles de sa famille et les communes ; Book 25 §2.3 : plus
+ * celles qu'il a apprises d'une autre famille).
+ */
+export function recettesConnues(famille: Famille, savoir: SavoirRecettes = {}): Recette[] {
+  return RECETTES.filter((r) => !estHorsFamille(r, famille) || estApprise(r, savoir));
+}
+
+/** Les recettes des autres familles qu'on n'a pas encore apprises : montrées grisées, « chez les Charbonniers ». */
+export function recettesAutresFamilles(famille: Famille, savoir: SavoirRecettes = {}): Recette[] {
+  return RECETTES.filter((r) => estHorsFamille(r, famille) && !estApprise(r, savoir));
+}
+
+/** Les recettes qu'un joueur de cette famille peut enseigner (Book 03 §5.4 : celles de son métier). */
+export function recettesEnseignables(famille: Famille): Recette[] {
+  return RECETTES.filter((r) => r.famille === famille);
+}
+
+const horsFamille = new Map<string, Recette>();
+
+/**
+ * La même recette faite hors de sa famille (Book 01 §5, Book 25 §2.2) : ×1,5 en matières (arrondi au-dessus) et en
+ * temps. L'énergie grise suit. Le plafond ★★ est appliqué par `etoilesDuProduit`.
+ */
+export function recetteHorsFamille(r: Recette): Recette {
+  let h = horsFamille.get(r.id);
+  if (!h) {
+    const ingredients: Inventaire = {};
+    for (const [t, n] of Object.entries(r.ingredients)) ingredients[t as TypeObjet] = Math.ceil((n ?? 0) * SURCOUT_AUTRE_FAMILLE);
+    h = { ...r, ingredients, duree: r.duree * SURCOUT_AUTRE_FAMILLE };
+    horsFamille.set(r.id, h);
+  }
+  return h;
+}
+
+/** La recette telle qu'un personnage de cette famille la fait : normale, ou ×1,5 hors de sa famille. */
+export function recettePour(r: Recette, famille: Famille): Recette {
+  return estHorsFamille(r, famille) ? recetteHorsFamille(r) : r;
+}
+
+/**
+ * Les étoiles de ce que produit une recette (Book 25 §4.2) : null si le produit n'est pas un objet de métier. Le maillon
+ * faible de ses facteurs (sinon les étoiles de base de l'objet), +1 si la sorte est maîtrisée ; plafond ★★ hors famille.
+ */
+export function etoilesDuProduit(r: Recette, inventaire: Inventaire, conditions: { horsFamille?: boolean; maitrise?: boolean } = {}): Etoiles | null {
+  if (!("objet" in r.produit) || !estObjetDeMetier(r.produit.objet)) return null;
+  const facteurs = r.facteursEtoiles?.(inventaire) ?? [etoilesDeBase(r.produit.objet)];
+  return maillonFaible(facteurs, conditions);
+}
+
+/** Les ingrédients sont-ils dans le sac ? Un objet de métier compte toutes étoiles confondues. */
 export function ingredientsPresents(inventaire: Inventaire, r: Recette): boolean {
-  return Object.entries(r.ingredients).every(([t, n]) => (inventaire[t as TypeObjet] ?? 0) >= (n ?? 0));
+  return Object.entries(r.ingredients).every(([t, n]) => compter(inventaire, t as TypeObjet) >= (n ?? 0));
 }
 
 // ---------- Énergie grise (Book 01 §6, Book 02 §3) ----------
@@ -593,6 +371,13 @@ const ENERGIE_GRISE_BASE: Partial<Record<TypeObjet, number>> = {
   // Une poule : l'approche, le coup, le retour (≈ 15 min de travail léger), plus sa valeur de viande.
   poule: 60,
   volaille_cuite: 18,
+  // Les matières du métier (Book 25 §9.1) : couper une perche, tailler l'if, et les restes de la volaille.
+  perche_frene: 10,
+  baton_if: 30,
+  plumes: 2,
+  os: 2,
+  graisse: 3,
+  boyaux: 4,
   // Vestiges, lot 1 (0.3) : la valeur de chaque vestige et composant (commun/src/vestiges.ts). Les objets absurdes
   // valent 1 ou 2 wotts ; l'électronique est plafonnée (Book 01 §6) : on ne sait plus la refaire, mais elle ne marche plus.
   ...valeursVestiges(),
@@ -607,13 +392,13 @@ export function energieGriseRecette(r: Recette): number {
   return total;
 }
 
-/** Énergie grise d'une unité d'objet, en wotts. */
+/** Énergie grise d'une unité d'objet, en wotts : sa valeur de base, sinon sa recette, sinon sa valeur provisoire (0.6). */
 export function energieGrise(type: TypeObjet): number {
   const base = ENERGIE_GRISE_BASE[type];
   if (base !== undefined) return base;
   const r = RECETTES.find((x) => "objet" in x.produit && x.produit.objet === type);
   if (r && "objet" in r.produit) return energieGriseRecette(r) / r.produit.quantite;
-  return 0;
+  return ENERGIE_GRISE_PROVISOIRE[type] ?? 0;
 }
 
 /** Ce qui compose l'énergie grise d'un objet, pour la fiche (Book 01 §6, affichage validé le 2026-10-07). */
@@ -628,7 +413,27 @@ export interface DetailEnergieGrise {
   travail?: number;
 }
 
-const COLLECTE: TypeObjet[] = ["branche", "buche", "pierre", "baies", "fibres", "pomme", "poire", "prunes", "cerises", "noix", "cepe", "amanite_tue_mouches", "amanite_phalloide"];
+const COLLECTE: TypeObjet[] = [
+  "branche",
+  "buche",
+  "pierre",
+  "baies",
+  "fibres",
+  "pomme",
+  "poire",
+  "prunes",
+  "cerises",
+  "noix",
+  "cepe",
+  "amanite_tue_mouches",
+  "amanite_phalloide",
+  "perche_frene",
+  "baton_if",
+  "plumes",
+  "os",
+  "graisse",
+  "boyaux",
+];
 /** Le charbon : 10 bûches, 4 branches et une heure de travail lourd, pour 4 kg (Book 02 §12.2). */
 const CHARBON = { matieres: 10 * 16 + 4 * 4, minutes: 60, kcal: 350, parUnite: 4 };
 
@@ -646,6 +451,8 @@ export function detailEnergieGrise(type: TypeObjet): DetailEnergieGrise {
     const kcal = (r.duree / 60) * INTENSITES[r.intensite];
     return { total, nature: "fabrique", matieres: matieres / n, minutes: r.duree / n, kcal: kcal / n, travail: (kcal * WOTTS_PAR_KCAL) / n };
   }
+  // Un objet de la 0.6 pas encore fabricable : il vaut sa valeur provisoire, comme un objet fabriqué.
+  if (ENERGIE_GRISE_PROVISOIRE[type] !== undefined) return { total, nature: "fabrique" };
   return { total, nature: "vestige" };
 }
 

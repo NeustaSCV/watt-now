@@ -3,7 +3,8 @@
 
 import type { Inventaire } from "./objets.ts";
 import type { Qualite } from "./recettes.ts";
-import { TERRAIN_TAILLE } from "./regles.ts";
+import { TERRAIN_TAILLE, type Famille } from "./regles.ts";
+import { MS_JOUR_CALENDRIER } from "./energie.ts";
 
 export type TypeRessource =
   | "branche"
@@ -22,6 +23,10 @@ export type TypeRessource =
   | "cepe"
   | "amanite_tue_mouches"
   | "amanite_phalloide"
+  // Les essences du métier (Book 25 §3.2) : deux frênes à la lisière, et un if au fond du bois, que seuls les
+  // Mécanistes repèrent (ils reconnaissent le bois par essence, Book 03 §5.3).
+  | "frene"
+  | "if_bois"
   // Vestiges de la ruine de ferme (Book 21 §3.2) : ils ne repoussent pas.
   | "velo"
   | "caisse_outils"
@@ -46,7 +51,9 @@ export type TypeRessource =
   | "coop_caisse_froide"
   | "coop_masse"
   // La batterie du tracteur rouge (Book 23 §4.7) : la prendre, c'est faire taire le klaxon.
-  | "coop_batterie";
+  | "coop_batterie"
+  // La haie d'ifs taillés en boules, devant les bureaux de la Coopérative (Book 25 §3.2) : un bâton d'if par visite.
+  | "coop_ifs";
 
 /** L'emprise au sol de ce qu'on vise (m) : le cercle de visée s'y ajuste (P-007). 0,5 m par défaut. */
 export const EMPRISE_RESSOURCE: Partial<Record<TypeRessource, number>> = {
@@ -73,6 +80,9 @@ export const EMPRISE_RESSOURCE: Partial<Record<TypeRessource, number>> = {
   caisse_atelier: 1.0,
   grenier: 2.5,
   coop_batterie: 0.4,
+  frene: 0.9,
+  if_bois: 1.1,
+  coop_ifs: 1.2,
 };
 
 export interface RessourceSol {
@@ -142,6 +152,11 @@ export const REPOUSSE_MS: Record<TypeRessource, number | null> = {
   coop_masse: 24 * 3_600_000,
   // Une autre batterie se retrouve dans le tracteur en 4 jours, comme le butin rare : le klaxon revit avec elle.
   coop_batterie: 4 * 24 * 3_600_000,
+  // Le frêne : une perche en 6 h réelles, même hors ligne (Book 25 §3.2). L'if du fond du bois : un bâton par jour de
+  // calendrier (≈ 1 h 50 réelles) ; la haie de la Coopérative, un par visite (elle repousse en 12 h).
+  frene: 6 * 3_600_000,
+  if_bois: MS_JOUR_CALENDRIER,
+  coop_ifs: 12 * 3_600_000,
 };
 
 /** Les ressources qui restent en place une fois fouillées (une épave ne disparaît pas). */
@@ -165,6 +180,9 @@ export const RESTE_EN_PLACE: Partial<Record<TypeRessource, true>> = {
   coop_coffre: true,
   coop_caisse_froide: true,
   coop_masse: true,
+  frene: true,
+  if_bois: true,
+  coop_ifs: true,
 };
 
 /** La ruine de ferme du terrain (Book 21 §3.2), dans le coin nord-est. */
@@ -189,6 +207,17 @@ export interface UsageRessource {
 export const ARBRES_FRUITIERS: readonly TypeRessource[] = ["pommier", "poirier", "prunier", "cerisier", "noyer"];
 export function estFruitier(type: TypeRessource): boolean {
   return ARBRES_FRUITIERS.includes(type);
+}
+/** Les arbres (fruitiers et essences du métier) : larges, on les touche d'un peu plus loin (PORTEE_ARBRE). */
+export function estArbre(type: TypeRessource): boolean {
+  return estFruitier(type) || type === "frene" || type === "if_bois" || type === "coop_ifs";
+}
+/**
+ * Ce qu'une famille voit (Book 25 §3.2) : l'if du fond du bois ne se repère que si l'on reconnaît le bois par essence,
+ * comme les Mécanistes (Book 03 §5.3). Pour les autres, c'est un arbre sombre du décor de la lisière.
+ */
+export function ressourceVisible(type: TypeRessource, famille: Famille): boolean {
+  return type !== "if_bois" || famille === "mecanistes";
 }
 /** L'escabeau sert s'il est posé dans ce disque autour du tronc (m). */
 export const RAYON_ESCABEAU = 2.4;
@@ -279,6 +308,31 @@ export const USAGES: Record<TypeRessource, UsageRessource> = {
     qualites: {},
     duree: 1.5,
     examen: "Chapeau vert olive pâle, lames blanches, un anneau, et le pied pris dans un sac blanc (la volve) : une amanite phalloïde. Mortelle.",
+  },
+  // Les essences du métier (Book 25 §3.2) : Couper 2 (couteau aiguisé, serpe, lame) ; le couteau du kit, ×1,5.
+  frene: {
+    verbe: "ramasser",
+    libelle: "Couper une perche de frêne",
+    donne: { perche_frene: 1 },
+    qualites: { couper: 2 },
+    duree: 6,
+    examen: "Un frêne : écorce grise et lisse, bourgeons noirs comme du velours. Ses rejets droits font de bons arcs.",
+  },
+  if_bois: {
+    verbe: "ramasser",
+    libelle: "Tailler un bâton d'if",
+    donne: { baton_if: 1 },
+    qualites: { couper: 2 },
+    duree: 8,
+    examen: "Un if, sombre et lent, au fond du bois : le meilleur bois d'arc. Toxique : on n'en mange ni baies ni aiguilles.",
+  },
+  coop_ifs: {
+    verbe: "ramasser",
+    libelle: "Tailler un bâton d'if",
+    donne: { baton_if: 1 },
+    qualites: { couper: 2 },
+    duree: 8,
+    examen: "La haie d'ifs taillés en boules : on la faisait tailler tous les mois. Une branche droite s'y cache encore.",
   },
   velo: {
     verbe: "demonter",
@@ -407,7 +461,8 @@ export const USAGES: Record<TypeRessource, UsageRessource> = {
   coop_coffre: {
     verbe: "fouiller",
     libelle: "Ouvrir le coffre du directeur",
-    donne: { semences_f1: 1 },
+    // Et un manuel de chaque famille (Book 25 §2.3) : le joueur seul sur le serveur y apprend le métier des autres.
+    donne: { semences_f1: 1, manuel_forgeron: 1, manuel_electricien: 1, manuel_arbalete: 1 },
     qualites: {},
     duree: 6,
     examen: "Un petit coffre-fort vert, scellé au mur. Fermé à clé : le magasinier la portait toujours sur lui.",
@@ -507,6 +562,48 @@ export function genererRessources(graine: number): Omit<RessourceSol, "disponibl
   }
   ressources.push(...genererJoncs(graine, id));
   ressources.push(...genererVergerEtSousBois(graine, ressources.length + 1, ressources));
+  ressources.push(...genererEssences(graine, ressources.length + 1, ressources));
+  return ressources;
+}
+
+/**
+ * Les essences du métier (Book 25 §3.2, 0.6) : deux frênes à la lisière, sur deux bords différents, et un if au fond du
+ * bois, contre la lisière ouest, loin du feu. `occupees` : ce qui est déjà posé (pour les terrains d'avant la 0.6).
+ */
+export function genererEssences(graine: number, premierId: number, occupees: readonly { x: number; z: number }[] = []): Omit<RessourceSol, "disponible">[] {
+  const aleat = aleatoire(graine * 2654435761 + 41);
+  const T = TERRAIN_TAILLE;
+  const places = [...occupees];
+  const ressources: Omit<RessourceSol, "disponible">[] = [];
+  let id = premierId;
+  const libre = (x: number, z: number, d: number) =>
+    Math.hypot(x - 25, z - 26) > 10 &&
+    distanceMare(x, z) > 3 &&
+    !(Math.abs(x - RUINE.x) < RUINE.largeur / 2 + 3 && Math.abs(z - RUINE.z) < RUINE.profondeur / 2 + 3) &&
+    !(z > T - 8 && Math.abs(x - 25) < 4) && // le chemin du sud
+    ARBRES_ISOLES.every(([ax, az]) => Math.hypot(ax - x, az - z) > 4) &&
+    places.every((p) => Math.hypot(p.x - x, p.z - z) > d);
+  const poser = (type: TypeRessource, tirer: () => [number, number]) => {
+    for (let essai = 0; essai < 200; essai++) {
+      const [x, z] = tirer();
+      if (!libre(x, z, essai < 150 ? 2.2 : 1.2) && essai < 199) continue;
+      const p = { x: Math.round(x * 100) / 100, z: Math.round(z * 100) / 100 };
+      places.push(p);
+      ressources.push({ id: id++, type, ...p });
+      return;
+    }
+  };
+  // Deux frênes, chacun sur un bord (nord, est, sud ou ouest), à 2,5 à 4 m de la lisière.
+  const premier = Math.floor(aleat() * 4);
+  for (const bord of [premier, (premier + 1 + Math.floor(aleat() * 3)) % 4]) {
+    poser("frene", () => {
+      const t = 6 + aleat() * (T - 12);
+      const d = 2.5 + aleat() * 1.5;
+      return ([[t, d], [T - d, t], [t, T - d], [d, t]] as const)[bord]! as [number, number];
+    });
+  }
+  // L'if, au fond du bois : contre la lisière ouest, dans le tiers nord ou sud.
+  poser("if_bois", () => [2.2 + aleat() * 1.6, aleat() < 0.5 ? 5 + aleat() * 9 : T - 14 + aleat() * 8]);
   return ressources;
 }
 

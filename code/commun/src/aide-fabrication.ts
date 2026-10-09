@@ -16,9 +16,14 @@ const minuscule = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
 export function ouTrouver(type: TypeObjet): string[] {
   const ou: string[] = [];
   for (const [r, u] of Object.entries(USAGES) as [TypeRessource, (typeof USAGES)[TypeRessource]][]) {
-    if ((u.donne[type] ?? 0) > 0) ou.push(`${minuscule(u.libelle)} (${A_LA_HALTE.has(r) ? "à la station-service" : "sur ton terrain"})`);
+    // L'if du fond du bois ne se dit pas : l'aide explique comment, jamais où est le rare (Book 25 §9.5).
+    if (r === "if_bois") continue;
+    const ici = A_LA_HALTE.has(r) ? "à la station-service" : r.startsWith("coop_") ? "à la Coopérative" : "sur ton terrain";
+    if ((u.donne[type] ?? 0) > 0) ou.push(`${minuscule(u.libelle)} (${ici})`);
   }
   for (const r of RECETTES) if ("objet" in r.produit && r.produit.objet === type) ou.push(`le fabriquer (« ${r.nom} »)`);
+  // Ce qui reste d'une recette (Book 25 §9.6) : les plumes et l'os de la poule qu'on plume.
+  for (const r of RECETTES) if ((r.sousProduits?.[type] ?? 0) > 0) ou.push(`ce qui reste quand on fait « ${r.nom} »`);
   if ((STOCK_DE_BASE[type] ?? 0) > 0) ou.push("l'acheter au Comptoir");
   // Le kit de départ : celui de tout le monde, ou celui d'une famille (on peut alors l'échanger avec elle).
   const familles = FAMILLES.filter((f) => (kitDeDepart(f)[type] ?? 0) > 0);

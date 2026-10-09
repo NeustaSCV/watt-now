@@ -140,12 +140,12 @@ test("⚡ la lampe frontale vide la petite batterie, puis s'éteint", () => {
   assert.match(t.infos().at(-1)!, /recharge-la/);
 });
 
-test("les recettes d'une autre famille sont inconnues", () => {
+test("les recettes d'une autre famille sont inconnues, tant qu'on ne les a pas apprises (Book 25 §2.3)", () => {
   const t = monter("charbonniers", { cadre_velo: 1, chaine_velo: 1, roue_velo: 1, buche: 2, cle_plate: 1, couteau: 1, pierre: 1 });
   t.joueur.recevoir({ t: "fabriquer", recette: "pedalier", x: 20, z: 21.8, o: 0 });
-  assert.match(t.infos().at(-1)!, /ne connais pas/);
+  assert.match(t.infos().at(-1)!, /chez les Mécanistes : une leçon, ou leur manuel/);
   t.joueur.recevoir({ t: "fabriquer", recette: "banc_recharge", x: 20, z: 21.8, o: 0 });
-  assert.match(t.infos().at(-1)!, /ne connais pas/);
+  assert.match(t.infos().at(-1)!, /chez les Voltaïques/);
 });
 
 test("la batterie de voiture de la ruine est trouvée à moitié pleine", () => {

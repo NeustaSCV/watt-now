@@ -12,8 +12,11 @@ import type { Apparence } from "../../commun/src/apparence.ts";
 import { INTENTION_REPOS, avancer, nettoyerIntention, type Intention, type Position } from "../../commun/src/deplacement.ts";
 import type { Bienvenue, Cible, FeuVu, InstallationVue, MessageClient, MessageServeur } from "../../commun/src/messages.ts";
 import { CAPACITE_SAC, CONTENANTS, OBJETS, capaciteDe, estCleObjet, estObjet, lumierePortee, nommer, poidsInventaire, traineTravois, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
-import { compter, typeDe, type CleObjet } from "../../commun/src/etoiles.ts";
+import { cleExemplaire, compter, estMaitrisee, retirerExemplaires, typeDe, type CleObjet } from "../../commun/src/etoiles.ts";
 import { NOMS_INSTALLATIONS, RECETTES, dureeReelle, ingredientsPresents, multiplicateurQualites, niveauQualite, recette, recettesConnues, type Recette, type TypeInstallation } from "../../commun/src/recettes.ts";
+import { estHorsFamille, etoilesDuProduit, recettePour } from "../../commun/src/recettes.ts";
+import { chezLaFamille, estManuel, type Savoir } from "../../commun/src/savoir.ts";
+import { lireManuel, type ParticipantLecon } from "./lecon.ts";
 import {
   CHARBON_PRODUIT,
   CHARGE_TROUVEE,
@@ -53,7 +56,7 @@ import {
   type Besoins,
   type Gourde,
 } from "../../commun/src/survie.ts";
-import { DISTANCE_INTERACTION, PORTEE_ARBRE, distanceMare, RAYON_ESCABEAU, REPOUSSE_MS, USAGES, estFruitier } from "../../commun/src/terrain.ts";
+import { DISTANCE_INTERACTION, PORTEE_ARBRE, distanceMare, RAYON_ESCABEAU, REPOUSSE_MS, USAGES, estArbre, ressourceVisible } from "../../commun/src/terrain.ts";
 import { heuresEcoulees } from "../../commun/src/temps.ts";
 import { DEMONTAGE, LIEU_DE_FOUILLE, tirerVestiges } from "../../commun/src/vestiges.ts";
 import {
@@ -209,7 +212,7 @@ interface Voyage {
   arrivee: number;
 }
 
-export class Joueur implements Voyageur {
+export class Joueur implements Voyageur, ParticipantLecon {
   readonly compte: Compte;
   position: Position;
   /** Le lieu où se trouve le personnage (É3). */
@@ -238,6 +241,8 @@ export class Joueur implements Voyageur {
   private dernierEnvoiAnimaux = 0;
   private derniersAnimaux = "";
   private faune: { prises: number[] } = { prises: [] };
+  /** Le savoir hors de sa famille (Book 25 §2.3) : leçons reçues, manuels lus, leçons données. Voir lecon.ts. */
+  savoir: Savoir;
   private bouge = false;
   // ---------- Combat et santé (É3, lot 3) ----------
   private sante: Sante;
@@ -344,6 +349,7 @@ export class Joueur implements Voyageur {
     this.chargeArmes = base.chargerChargeArmes(compte.id);
     this.apparence = base.chargerApparence(compte.id, compte.famille);
     this.faune = base.chargerFaune(compte.id);
+    this.savoir = base.chargerSavoir(compte.id);
     const { sante, endurance } = base.chargerSante(compte.id);
     this.sante = sante;
     this.endurance = endurance;
@@ -446,7 +452,10 @@ export class Joueur implements Voyageur {
       inventaire: this.inventaire,
       besoins: this.besoins,
       gourde: this.gourde,
-      ressources: [...this.ressourcesIci().values()].map((r) => ({ id: r.id, type: r.type, x: r.x, z: r.z, disponible: r.disponibleLe <= instant })),
+      // L'if du fond du bois ne se voit que si l'on reconnaît les essences (Book 25 §3.2).
+      ressources: [...this.ressourcesIci().values()]
+        .filter((r) => ressourceVisible(r.type, this.compte.famille))
+        .map((r) => ({ id: r.id, type: r.type, x: r.x, z: r.z, disponible: r.disponibleLe <= instant })),
       feux: this.lieu === "terrain" ? [...this.feux.values()].map(vue) : [],
       installations: this.lieu === "terrain" ? [...this.installations.values()] : [],
       charges: this.chargesArrondies(),
@@ -463,6 +472,7 @@ export class Joueur implements Voyageur {
       usure: { ...this.usure },
       charge: { ...this.chargeArmes },
       pret: this.tir.pret,
+      savoir: { apprises: [...this.savoir.apprises], manuels: [...this.savoir.manuels] },
       ...(this.lieu === "cooperative"
         ? { leurres: this.cooperatives.leurresActifs(this.compte.id, this.maintenant()), etatCoop: this.cooperatives.vue(this.compte.id) }
         : {}),
@@ -601,6 +611,9 @@ export class Joueur implements Voyageur {
         return this.tir.lancer(message.dx, message.dz, message.cible, message.distance);
       case "rearmer":
         return this.tir.rearmer();
+      case "lire":
+        this.lire(message.objet);
+        return;
       case "tutoriel_passer":
         if (!this.tuto) return;
         this.tuto = null;
@@ -1465,6 +1478,32 @@ export class Joueur implements Voyageur {
     }, 0, d.qualites.marteler ? "lourd" : "outil");
   }
 
+  // ---------- Le savoir des autres familles (Book 25 §2.3) : la leçon (lecon.ts) et les manuels ----------
+
+  /** Lire un manuel du sac : il ouvre les recettes de sa famille. Le livre reste dans le sac. */
+  private lire(objet: TypeObjet): void {
+    if (this.voyage || !estManuel(objet) || (this.inventaire[objet] ?? 0) < 1) return;
+    const essai = lireManuel(this.savoir, this.compte.famille, objet);
+    if ("refus" in essai) return this.info(essai.refus);
+    this.commencer(`Lire : ${OBJETS[objet].nom}`, 8 / REGLAGES.gestes_vitesse, () => {
+      const r = lireManuel(this.savoir, this.compte.famille, objet);
+      if ((this.inventaire[objet] ?? 0) < 1 || "refus" in r) return;
+      this.majSavoir(r.savoir, `lu:${objet}`);
+      this.info(r.message);
+    }, 0, "leger");
+  }
+
+  /** Le savoir a changé (leçon, manuel) : on le garde, on le dit au client, on le compte. */
+  majSavoir(savoir: Savoir, fait?: string): void {
+    this.savoir = savoir;
+    this.base.sauverSavoir(this.compte.id, savoir);
+    this.envoyer({ t: "savoir", savoir: { apprises: [...savoir.apprises], manuels: [...savoir.manuels] } });
+    if (fait) {
+      this.noterFait(fait);
+      this.mesurer("progression", `savoir:${fait}`, 1);
+    }
+  }
+
   /** Sans plus rien pour l'éclairer, la lumière s'éteint. */
   private verifierLumiere(): void {
     if (this.lumiere && !lumierePortee(this.inventaire)) {
@@ -2249,8 +2288,9 @@ export class Joueur implements Voyageur {
   private utiliserRessource(id: number): void {
     const lieu = this.lieu;
     const r = this.ressourcesIci().get(id);
-    if (!r || r.disponibleLe > this.maintenant()) return;
-    if (!this.proche(r.x, r.z, DISTANCE_INTERACTION + (estFruitier(r.type) ? PORTEE_ARBRE : 0))) return this.info("C'est trop loin : approche-toi encore un peu.");
+    // L'if du fond du bois : qui ne reconnaît pas les essences ne le voit pas (Book 25 §3.2).
+    if (!r || r.disponibleLe > this.maintenant() || !ressourceVisible(r.type, this.compte.famille)) return;
+    if (!this.proche(r.x, r.z, DISTANCE_INTERACTION + (estArbre(r.type) ? PORTEE_ARBRE : 0))) return this.info("C'est trop loin : approche-toi encore un peu.");
     const usage = USAGES[r.type];
     // Le coffre du directeur ne s'ouvre qu'avec la clé du magasinier (Book 23 §2.2).
     if (r.type === "coop_coffre" && !(this.inventaire.cle_coffre ?? 0)) return this.info("Fermé à clé. Le magasinier la portait toujours sur lui…");
@@ -2312,8 +2352,13 @@ export class Joueur implements Voyageur {
 
   /** Fabriquer un objet ou poser une installation (Book 02 §2). */
   private fabriquer(id: string, x?: number, z?: number, o?: number): void {
-    const r = recette(id);
-    if (!r || !recettesConnues(this.compte.famille).includes(r)) return this.info("Tu ne connais pas cette recette.");
+    const modele = recette(id);
+    if (!modele || !recettesConnues(this.compte.famille, this.savoir).includes(modele)) {
+      return this.info(modele && modele.famille !== "tous" ? `Recette ${chezLaFamille(modele.famille)} : une leçon, ou leur manuel, te l'ouvrira.` : "Tu ne connais pas cette recette.");
+    }
+    // Hors de sa famille (Book 25 §2.2) : ×1,5 en matières et en temps, et ★★ au plus.
+    const horsFamille = estHorsFamille(modele, this.compte.famille);
+    const r = recettePour(modele, this.compte.famille);
     if (this.lieu !== "terrain" && ("installation" in r.produit || r.installation)) return this.info("Ça se construit chez toi, sur ton terrain.");
     if (!ingredientsPresents(this.inventaire, r)) return this.info(ceQuiManqueBref(r, this.inventaire));
     const facteur = multiplicateurQualites(this.inventaire, r.qualites);
@@ -2349,11 +2394,15 @@ export class Joueur implements Voyageur {
     const fois = cuisine.fois;
     const ingredients = fois > 1 ? somme(...Array.from({ length: fois }, () => r.ingredients)) : r.ingredients;
     const quantite = produit.quantite * fois;
-    const delta = OBJETS[produit.objet].poids * quantite - poidsDe(ingredients);
+    // Ce qui reste en plus (plumes et os de la poule, Book 25 §9.6).
+    const sousProduits: Inventaire = {};
+    for (const [t, n] of Object.entries(r.sousProduits ?? {})) sousProduits[t as TypeObjet] = (n ?? 0) * fois;
+    const delta = OBJETS[produit.objet].poids * quantite + poidsDe(sousProduits) - poidsDe(ingredients);
     // La capacité d'après : fabriquer un sac fait de la place.
     if (poidsInventaire(this.inventaire, this.gourde.litres) + delta > capaciteDe({ ...this.inventaire, [produit.objet]: (this.inventaire[produit.objet] ?? 0) + quantite })) return this.sacTropLourd();
     this.commencer(fois > 1 ? `${r.nom} (deux à la fois)` : r.nom, dureeReelle(r) * facteur, () => {
-      if (!Object.entries(ingredients).every(([t, n]) => (this.inventaire[t as TypeObjet] ?? 0) >= (n ?? 0))) return;
+      // Un ingrédient de métier compte toutes étoiles confondues.
+      if (!Object.entries(ingredients).every(([t, n]) => compter(this.inventaire, t as TypeObjet) >= (n ?? 0))) return;
       if (cuisine.foyer) {
         const { foyer, bois, eau } = cuisine;
         if (foyer.bois < bois - 1e-9 || this.gourde.litres < eau - 1e-9) return;
@@ -2367,11 +2416,22 @@ export class Joueur implements Voyageur {
           this.envoyerBesoins();
         }
       }
-      this.retirerPlusieurs(ingredients);
-      this.ajouterPlusieurs({ [produit.objet]: quantite });
+      // Les étoiles d'un objet de métier (Book 25 §4.2) : le maillon faible, la maîtrise (10 faits), ★★ hors famille.
+      const etoiles = etoilesDuProduit(r, this.inventaire, { horsFamille, maitrise: estMaitrisee(this.quetes.etat.faits[`fabrique:${r.id}`] ?? 0) });
+      this.retirerIngredients(ingredients);
+      this.ajouterPlusieurs({ [cleExemplaire(produit.objet, etoiles ?? undefined)]: quantite, ...sousProduits });
       this.mesurer("progression", `recette:${r.id}`, 1);
       this.noterFait(`fabrique:${r.id}`);
     }, 0, r.qualites.marteler ? "lourd" : "outil");
+  }
+
+  /** Retire les ingrédients d'une recette : un objet de métier, les exemplaires les moins bons d'abord. */
+  private retirerIngredients(ingredients: Inventaire): void {
+    const inventaire = { ...this.inventaire };
+    for (const [t, n] of Object.entries(ingredients)) retirerExemplaires(inventaire, t as TypeObjet, n ?? 0);
+    this.inventaire = inventaire;
+    this.base.sauverInventaire(this.compte.id, this.inventaire);
+    this.envoyer({ t: "inventaire", inventaire: this.inventaire });
   }
 
   /** Raison pour laquelle on ne peut pas poser quelque chose ici, ou null. */
@@ -2663,7 +2723,8 @@ export class Joueur implements Voyageur {
       const crues = Math.min(n, this.inventaire.volaille_crue ?? 0);
       if (crues <= 0) return;
       this.retirer("volaille_crue", crues);
-      this.ajouterPlusieurs({ volaille_cuite: crues });
+      // La graisse qui coule sous la broche (Book 25 §9.1) : de quoi tremper une lame à l'huile.
+      this.ajouterPlusieurs({ volaille_cuite: crues, graisse: crues });
     }, 0, "leger");
   }
 

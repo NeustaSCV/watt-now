@@ -4,9 +4,13 @@
 import type { Famille } from "./regles.ts";
 import { estCleEtoileeValide, etoilesDe, etoilesTexte, typeDe, type CleObjet } from "./etoiles.ts";
 import { TOUS_LES_VESTIGES, type FamilleVestige, type Rarete, type TypeComposant, type TypeVestige } from "./vestiges.ts";
+import { OBJETS_METIER, type TypeObjetMetier } from "./objets-metier.ts";
 
-/** Tous les objets : ceux du jeu de base, et le bric-à-brac des vestiges (lot 1, 0.3) avec leurs composants. */
-export type TypeObjet = TypeObjetDeBase | TypeVestige | TypeComposant;
+/**
+ * Tous les objets : ceux du jeu de base, le bric-à-brac des vestiges (lot 1, 0.3) avec leurs composants, et les
+ * matières et objets du métier des familles (Book 25, 0.6 : objets-metier.ts).
+ */
+export type TypeObjet = TypeObjetDeBase | TypeVestige | TypeComposant | TypeObjetMetier;
 
 type TypeObjetDeBase =
   | "branche"
@@ -79,7 +83,9 @@ type TypeObjetDeBase =
   | "epieu"
   | "boite_vide"
   | "protege_bras"
-  | "travois";
+  | "travois"
+  // La lance n'est plus un vestige (Book 25 §11) : elle se fabrique (épieu, couteau, ficelle).
+  | "lance";
 
 export interface DefinitionObjet {
   nom: string;
@@ -288,6 +294,12 @@ const OBJETS_DE_BASE: Record<TypeObjetDeBase, DefinitionObjet> = {
     pluriel: "travois",
     poids: 4,
   },
+  lance: {
+    description: "Un épieu au bout duquel on a ligaturé un couteau. On le tient à deux mètres, et cette fois la pointe entre.",
+    nom: "lance",
+    pluriel: "lances",
+    poids: 1.6,
+  },
   sac_fortune: {
     description: "Un cadre de branches lié de corde, des bretelles tressées : on y attache ses affaires. Porte 30 kg (le sac à dos : 55).",
     nom: "sac de fortune",
@@ -303,7 +315,7 @@ const OBJETS_DE_BASE: Record<TypeObjetDeBase, DefinitionObjet> = {
   },
 };
 
-export const OBJETS: Record<TypeObjet, DefinitionObjet> = { ...OBJETS_DE_BASE, ...TOUS_LES_VESTIGES };
+export const OBJETS: Record<TypeObjet, DefinitionObjet> = { ...OBJETS_DE_BASE, ...OBJETS_METIER, ...TOUS_LES_VESTIGES };
 
 /**
  * Un inventaire : combien de chaque objet. Les objets de métier y portent leurs étoiles par exemplaire (Book 25 §9.6) :
@@ -369,7 +381,8 @@ export function kitDeDepart(famille: Famille): Inventaire {
   const parFamille: Record<Famille, Inventaire> = {
     charbonniers: { pierre_a_feu: 1, marteau: 1, torche: 1 },
     voltaiques: { lampe_dynamo: 1, petite_batterie: 1, lampe_frontale: 1 },
-    mecanistes: { scie: 1, corde: 1, lanterne: 1 },
+    // La clé plate (Serrer 2) entre dans le kit (Book 25 §2.5) : l'arbalète et le pédalier demandent de serrer.
+    mecanistes: { scie: 1, corde: 1, lanterne: 1, cle_plate: 1 },
   };
   return { ...commun, ...parFamille[famille] };
 }

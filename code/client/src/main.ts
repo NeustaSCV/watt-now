@@ -36,6 +36,7 @@ import { creerHalte, estomperToits } from "./rendu/halte.ts";
 import { animerCooperative, creerCooperative, estomperCooperative, majPortes, placerRadio } from "./rendu/cooperative.ts";
 import { KLAXONS_PAR_BATTERIE, RADIO_ETABLI, pieceDe, portesInitiales, sombreIci } from "../../commun/src/cooperative.ts";
 import { IndicateurHorsChamp } from "./hors-champ.ts";
+import { InterfaceLecon } from "./lecon-ui.ts";
 import { animerComptoir, creerComptoir, lumieresComptoir } from "./rendu/comptoir.ts";
 import { VueEteint } from "./rendu/eteint.ts";
 import { VueAutre } from "./rendu/autres.ts";
@@ -370,6 +371,7 @@ const hud = new Hud(
     passerTutoriel: () => envoyer({ t: "tutoriel_passer" }),
     jeter: (objet, quantite) => envoyer({ t: "jeter", objet, quantite }),
     demonter: (objet) => envoyer({ t: "demonter", objet }),
+    lire: (objet) => envoyer({ t: "lire", objet }),
     equiper: (objet) => envoyer({ t: "equiper", objet }),
     preparer: (objet) => envoyer({ t: "preparer", objet }),
     reparer: (objet, fortune) => envoyer({ t: "reparer", objet, fortune }),
@@ -396,6 +398,8 @@ const hud = new Hud(
   { appuyer: () => entrees.appuyerA(), relacher: () => entrees.relacherA() },
   { appuyer: () => entrees.appuyerLancer(), relacher: () => entrees.relacherLancer() },
 );
+/** La leçon entre joueurs (Book 25 §2.3) : choisir, accepter, la barre de la leçon en cours. */
+const lecons = new InterfaceLecon(document.getElementById("hud")!, (op) => envoyer({ t: "lecon", op }));
 // Après le HUD (il remplit #hud à sa construction) : la flèche des Éteints hors champ.
 const horsChamp = new IndicateurHorsChamp(document.getElementById("hud")!);
 
@@ -514,6 +518,8 @@ function installer(message: Bienvenue): void {
   charges = message.charges;
   occupe = false;
   hud.identite(message.moi.pseudo, message.moi.famille);
+  hud.majSavoir(message.savoir ?? { apprises: [], manuels: [] });
+  lecons.maj(null);
   son.entrer({
     famille: message.moi.famille,
     lieu: lieu === "station" ? "halte" : lieu,
@@ -897,6 +903,19 @@ function recevoir(message: MessageServeur): void {
       return;
     case "demande_echange":
       hud.demandeEchange(message.de);
+      return;
+    // Le savoir des autres familles (Book 25 §2.3) : leçons et manuels.
+    case "savoir":
+      hud.majSavoir(message.savoir);
+      return;
+    case "lecons_possibles":
+      lecons.choisir(message.a, message.recettes);
+      return;
+    case "demande_lecon":
+      lecons.demande(message.de, message.recette);
+      return;
+    case "lecon":
+      lecons.maj(message.lecon);
       return;
     case "echange":
       hud.majEchange(message.echange);

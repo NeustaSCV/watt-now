@@ -3,12 +3,14 @@
 // (Book 21 §5.2.7), mais au même format (carré 48 × 48).
 
 import type { TypeObjet } from "../../commun/src/objets.ts";
+import type { TypeInstallation } from "../../commun/src/recettes.ts";
 import { definitionVestige, type FamilleVestige } from "../../commun/src/vestiges.ts";
+import { DESSINS_METIER } from "./icones-metier.ts";
 
 const ENCRE = "#3b2a1e";
 const T = `stroke="${ENCRE}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"`;
 
-export type Pictogramme = TypeObjet | "feu_de_camp" | "etabli" | "abri" | "coffre" | "charbonniere" | "forge" | "pedalier" | "banc_recharge" | "escabeau" | "poches" | "recuperateur_pluie" | "alarme_boites" | "lit_branchages" | "decharge";
+export type Pictogramme = TypeObjet | TypeInstallation | "feu_de_camp" | "poches";
 
 // Les vestiges (lot 1, 0.3) sont trop nombreux pour un dessin chacun : une icône générique par famille
 // (un pictogramme simple et une teinte), avec repli automatique. Depuis le 2026-10-08, tous les vestiges et
@@ -823,7 +825,7 @@ function dessinGenerique(famille: FamilleVestige, teinte: string): string {
 
 /** Le dessin d'un pictogramme : le sien s'il en a un, sinon celui de sa famille de vestiges, sinon un « ? ». */
 function dessinDe(type: Pictogramme): string {
-  const propre = DESSINS[type] ?? DESSINS_VESTIGES[type];
+  const propre = DESSINS[type] ?? DESSINS_VESTIGES[type] ?? DESSINS_METIER[type];
   if (propre) return propre;
   const v = definitionVestige(type);
   if (v) return dessinGenerique(v.famille, v.teinte ?? teinteDe(type, v.famille));
@@ -832,7 +834,7 @@ function dessinDe(type: Pictogramme): string {
 
 /** Vrai si l'objet a son propre dessin (et pas l'icône générique de sa famille). */
 export function estDessinee(type: Pictogramme): boolean {
-  return (DESSINS[type] ?? DESSINS_VESTIGES[type]) !== undefined;
+  return (DESSINS[type] ?? DESSINS_VESTIGES[type] ?? DESSINS_METIER[type]) !== undefined;
 }
 
 export function icone(type: Pictogramme, taille = 40): string {

@@ -10,6 +10,7 @@ import type { Base, Compte } from "./base.ts";
 import { journal } from "./journal.ts";
 import { Comptoir } from "./comptoir.ts";
 import { Echanges } from "./echange.ts";
+import { Lecons } from "./lecon.ts";
 import { Cooperatives } from "./cooperative.ts";
 import { Halte } from "./halte.ts";
 import { Joueur } from "./joueur.ts";
@@ -52,6 +53,8 @@ export class Monde {
   private readonly cooperatives: Cooperatives;
   /** Les échanges entre joueurs (É4, lot 3). */
   private readonly echanges = new Echanges((id) => this.connexions.get(id)?.joueur);
+  /** Les leçons entre joueurs de familles différentes (Book 25 §2.3). */
+  private readonly lecons = new Lecons((id) => this.connexions.get(id)?.joueur);
   private dernieresPresences = 0;
   private minuterieMesures: NodeJS.Timeout | undefined;
   private readonly retard = monitorEventLoopDelay({ resolution: 10 });
@@ -146,6 +149,7 @@ export class Monde {
       if (estUnGeste(message)) connexion.activite = Date.now();
       try {
         if (message.t === "echange") this.echanges.traiter(joueur, message.op);
+        else if (message.t === "lecon") this.lecons.traiter(joueur, message.op);
         else joueur.recevoir(message);
       } catch (erreur) {
         journal(`Message refusé de ${compte.pseudo} : ${String(erreur)}`);
@@ -166,6 +170,7 @@ export class Monde {
     const connexion = this.connexions.get(compteId);
     if (!connexion) return;
     this.echanges.annuler(connexion.joueur, `${connexion.joueur.compte.pseudo} est parti.`);
+    this.lecons.annuler(connexion.joueur, `${connexion.joueur.compte.pseudo} est parti : la leçon s'arrête.`);
     connexion.joueur.sauvegarder();
     connexion.joueur.partir();
     this.connexions.delete(compteId);
@@ -181,6 +186,7 @@ export class Monde {
     this.halte.tick(Date.now(), dt);
     this.cooperatives.tick(Date.now(), dt);
     this.echanges.verifier();
+    this.lecons.verifier();
     if (instant - this.dernieresPresences >= INTERVALLE_PRESENCES) {
       this.dernieresPresences = instant;
       this.diffuserPresences();

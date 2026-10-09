@@ -6,6 +6,7 @@ import { PERIODES_FRUITIERS, phaseFruitier, visibleEnSaison } from "../../../com
 import { PALETTE, aleatoire, materiau } from "./materiaux.ts";
 import { ACIER, Assemblage, BOIS, CORDE, NOIR, ROUILLE_SOMBRE, SOL_PLAT, V, V3, X, Y, Z, bosseler, courber, disque, placer, rect, rouille, surface, tache, touffe, type Surface } from "./assemblage.ts";
 import { batterieVoiture, modulePanneau, roueVelo } from "./pieces.ts";
+import { frene, haieIfs, ifSombre } from "./essences.ts";
 
 /**
  * Les modèles partagés des ressources dessinées en lots (lots.ts : une géométrie et un matériau par type, un appel
@@ -309,6 +310,17 @@ export class VueRessource {
       case "amanite_phalloide":
         this.champignons(donnees.type, aleat, ombre);
         break;
+      // Les essences du métier (Book 25 §3.2) : ce qu'on coupe (perches, branche droite) revient à la repousse.
+      case "frene":
+      case "if_bois":
+      case "coop_ifs": {
+        const m = donnees.type === "frene" ? frene(aleat, ombre) : donnees.type === "if_bois" ? ifSombre(aleat, ombre) : haieIfs(aleat, ombre);
+        // La haie longe la façade des bureaux : elle ne tourne pas.
+        if (donnees.type === "coop_ifs") this.objet.rotation.y = 0;
+        this.objet.add(m.groupe);
+        this.contenu = m.contenu;
+        break;
+      }
       case "rayonnage":
         this.rayonnage(aleat, ombre);
         break;
