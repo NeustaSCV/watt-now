@@ -4,6 +4,7 @@
 
 import { BONUS_ETOURDI_CONTONDANT, DELAI_SAISIE, DUREE_A_TERRE, DUREE_A_TERRE_ELECTRIQUE, DUREE_ETOURDI, PORTEE_SAUT_DECHARGE, RESISTANCE_TORSE, type Arme } from "./combat.ts";
 import { heurte, type Zone } from "./lieux.ts";
+import { voieLibre } from "./murs.ts";
 import type { Stimulus } from "./signature.ts";
 
 export type EtatEteint = "dormant" | "errant" | "attire" | "poursuivant" | "a_terre" | "detruit";
@@ -215,7 +216,7 @@ export function mettreATerre(e: Eteint, secondes: number): void {
  * (ou étourdi), ou n'importe quelle décharge sur un Éteint à terre, elle le détruit. Le casque n'y change rien, et
  * rien ne va au torse.
  */
-function encaisserDecharge(e: Eteint, arme: Arme, appuye: boolean, voisins: readonly Eteint[]): EffetCoup {
+function encaisserDecharge(e: Eteint, arme: Arme, appuye: boolean, voisins: readonly Eteint[], zone: Zone): EffetCoup {
   const auSol = e.etat === "a_terre" || e.variante === "rampant";
   const pris = e.etourdi > 0 || (e.raidi ?? 0) > 0;
   if (auSol || (appuye && pris)) {
@@ -234,6 +235,8 @@ function encaisserDecharge(e: Eteint, arme: Arme, appuye: boolean, voisins: read
   let meilleure = PORTEE_SAUT_DECHARGE;
   for (const v of voisins) {
     if (v === e || !debout(v) || v.etat === "dormant") continue;
+    // Le courant ne saute pas à travers un mur (0.7.1).
+    if (!voieLibre(zone, e, v)) continue;
     const d = Math.hypot(v.x - e.x, v.z - e.z);
     if (d <= meilleure) {
       meilleure = d;
@@ -255,7 +258,7 @@ export function encaisserCoup(e: Eteint, arme: Arme, appuye: boolean, force: num
   e.contact = 0;
   e.attention = Math.max(e.attention, 2);
   if (e.etat === "dormant") e.etat = "poursuivant";
-  return encaisserDecharge(e, arme, appuye, voisins);
+  return encaisserDecharge(e, arme, appuye, voisins, zone);
 }
 
 /**
@@ -405,7 +408,8 @@ export function penser(
   // Il tient quelqu'un : il ne lâche pas, sauf si l'humain s'est dégagé ou éloigné (Book 06 §2.3).
   if (e.saisit !== null) {
     const tenu = humains.find((h) => h.id === e.saisit);
-    if (!tenu || tenu.intouchable || Math.hypot(tenu.x - e.x, tenu.z - e.z) > CONTACT + 0.6) {
+    // Un mur entre eux (0.7.1) : il ne tient plus personne.
+    if (!tenu || tenu.intouchable || Math.hypot(tenu.x - e.x, tenu.z - e.z) > CONTACT + 0.6 || !voieLibre(zone, e, tenu)) {
       e.saisit = null;
       e.tenue = 0;
     } else {
@@ -423,8 +427,8 @@ export function penser(
     e.but = { x: proie.x, z: proie.z };
     e.perdu = 0;
     e.attention = Math.max(e.attention, SEUIL_ATTIRE + 1);
-    // Au contact un instant, il attrape.
-    if (Math.hypot(proie.x - e.x, proie.z - e.z) <= CONTACT + 0.15 && !proie.intouchable) {
+    // Au contact un instant, il attrape ; jamais à travers un mur (0.7.1 : ni saisie, ni morsure).
+    if (Math.hypot(proie.x - e.x, proie.z - e.z) <= CONTACT + 0.15 && !proie.intouchable && voieLibre(zone, e, proie)) {
       e.contact += dt;
       if (e.contact >= DELAI_SAISIE) {
         e.saisit = proie.id;

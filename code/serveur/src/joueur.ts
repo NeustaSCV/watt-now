@@ -6,6 +6,7 @@ import { RASSASIE_HEURES } from "../../commun/src/survie.ts";
 import { ceQuiManqueBref, outilsManquantsBref, ouTrouverPhrase } from "../../commun/src/aide-fabrication.ts";
 import { categorieAction, mesuresFabrication, objetsDeMetierDonnes, type GenreMesure } from "./mesures.ts";
 import { REGLAGES } from "../../commun/src/reglages.ts";
+import { voieLibre } from "../../commun/src/murs.ts";
 import { enSaison, etatDuFruitier, jourDuCalendrier, prochaineRecolte } from "../../commun/src/calendrier.ts";
 import { nouvellePoule, penserPoule, vuePoule, type Poule } from "../../commun/src/faune.ts";
 import type { Apparence } from "../../commun/src/apparence.ts";
@@ -1000,10 +1001,14 @@ export class Joueur implements Voyageur, ParticipantLecon {
     return this.maintenant() < this.sante.convalescenceJusqua ? ENDURANCE_CONVALESCENCE : ENDURANCE_MAX;
   }
 
-  /** Ciblage assisté (Book 08 §3.3) : l'Éteint le plus proche, devant soi, à portée d'arme. */
+  /**
+   * Ciblage assisté (Book 08 §3.3) : l'Éteint le plus proche, devant soi, à portée d'arme. Jamais à travers un mur
+   * (0.7.1) : celui qui est derrière ne se touche pas, et le coup part dans le vide.
+   */
   private cibleDevant(allonge: number): Eteint | null {
     let meilleur: Eteint | null = null;
     let meilleureDistance = Infinity;
+    const zone = this.zoneIci();
     for (const e of this.eteintsIci()) {
       if (e.etat === "detruit") continue;
       const dx = e.x - this.position.x;
@@ -1013,10 +1018,9 @@ export class Joueur implements Voyageur, ParticipantLecon {
       const ecart = Math.abs(Math.atan2(Math.sin(Math.atan2(dx, dz) - this.position.o), Math.cos(Math.atan2(dx, dz) - this.position.o)));
       // Celui qui nous tient se frappe toujours, même dans le dos.
       if (ecart > ANGLE_CIBLAGE && e.saisit !== this.compte.id) continue;
-      if (d < meilleureDistance) {
-        meilleur = e;
-        meilleureDistance = d;
-      }
+      if (d >= meilleureDistance || !voieLibre(zone, this.position, e)) continue;
+      meilleur = e;
+      meilleureDistance = d;
     }
     return meilleur;
   }
@@ -1382,6 +1386,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
       .map((e) => ({ e, d: Math.hypot(e.x - this.position.x, e.z - this.position.z) }))
       .filter(({ e, d }) => {
         if (d > REPOUSSER.portee + 0.3) return false;
+        // On ne repousse pas à travers un mur (0.7.1).
+        if (!voieLibre(this.zoneIci(), this.position, e)) return false;
         const angle = Math.atan2(e.x - this.position.x, e.z - this.position.z) - this.position.o;
         // Celui qui nous tient se repousse toujours, même de côté.
         return e.saisit === this.compte.id || Math.abs(Math.atan2(Math.sin(angle), Math.cos(angle))) <= REPOUSSER.demiAngle;
@@ -1494,6 +1500,11 @@ export class Joueur implements Voyageur, ParticipantLecon {
       }
       if (e.tenue < DELAI_MORSURE) continue;
       e.tenue = 0;
+      // Pas de morsure à travers un mur (0.7.1) : il lâche.
+      if (!voieLibre(this.zoneIci(), e, this.position)) {
+        lacher(e, this.position, this.zoneIci());
+        continue;
+      }
       // Le protège-bras de fortune (P-002) : une morsure sur deux n'y passe pas ; il finit par se déchirer.
       if ((this.inventaire.protege_bras ?? 0) > 0 && this.alea() < 0.5) {
         if (this.alea() < 0.25) {

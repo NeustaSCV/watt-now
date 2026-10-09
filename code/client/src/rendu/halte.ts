@@ -65,6 +65,11 @@ export interface Toit {
   haut?: number;
   /** Rien ne s'efface tant que le personnage est dans cette boîte (les murs du fond, vus de l'intérieur). */
   horsDe?: Boite;
+  /**
+   * Ce qui reste visible quand il s'efface (0 à 1 ; 0 par défaut : il disparaît). Une porte ne disparaît jamais tout à
+   * fait : on la voit (fermée ou ouverte) en s'en approchant, et l'on se voit à travers.
+   */
+  fantome?: number;
   /** État courant (géré par estomperToits). */
   efface?: boolean;
 }
@@ -103,22 +108,23 @@ function cacheLePersonnage(t: Toit, x: number, z: number, lacet: number): boolea
  * `lacet` : l'angle horizontal de la caméra (par défaut, la vue du sud-est).
  */
 export function estomperToits(halte: THREE.Object3D, x: number, z: number, dt: number, lacet = Math.PI / 4): void {
-  const voulu = new Map<THREE.Material, boolean>();
+  // Pour chaque matériau, ce qu'il doit garder : 1 (rien ne s'efface), sinon le plus bas des fantômes voulus.
+  const voulu = new Map<THREE.Material, number>();
   halte.traverse((o) => {
     const toits = o.userData.toits as Toit[] | undefined;
     if (!toits) return;
     for (const t of toits) {
       const efface = cacheLePersonnage(t, x, z, lacet);
       t.efface = efface;
-      for (const m of t.materiaux) voulu.set(m, (voulu.get(m) ?? false) || efface);
+      const garde = efface ? (t.fantome ?? 0) : 1;
+      for (const m of t.materiaux) voulu.set(m, Math.min(voulu.get(m) ?? 1, garde));
     }
   });
   const k = 1 - Math.exp(-dt * 14);
-  for (const [m, efface] of voulu) {
+  for (const [m, cible] of voulu) {
     const avant = (m.userData.fondu as number | undefined) ?? 1;
-    let f = avant + ((efface ? 0 : 1) - avant) * k;
-    if (efface && f < 0.03) f = 0;
-    if (!efface && f > 0.97) f = 1;
+    let f = avant + (cible - avant) * k;
+    if (Math.abs(f - cible) < 0.03) f = cible;
     if (f === avant && m.userData.fondu !== undefined) continue;
     m.userData.fondu = f;
     const opacite = (m.userData.opacite as number | undefined) ?? 1;

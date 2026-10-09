@@ -60,6 +60,9 @@ const BOIS_PALETTE = 0x9c8261;
 const GALVA = 0xb4b9ba;
 
 /** Hauteur de passage de chaque porte (le linteau est au-dessus). */
+/** Ce qu'une porte garde d'opacité quand elle s'estompe devant le personnage (voir Toit.fantome). */
+const FANTOME_PORTE = 0.5;
+
 const HAUT_PORTE: Record<string, number> = {
   libre_service_cour: 2.5,
   libre_service_hangar: 2.2,
@@ -779,8 +782,10 @@ function creerPorte(p: { id: string; x: number; z: number; largeur: number; sens
   sansOmbrePortee(g);
   const r = Math.max(l, 2);
   const boite: Boite = p.sens === "x" ? { x: p.x, z: p.z, l: l + 1.2, p: r } : { x: p.x, z: p.z, l: r, p: l + 1.2 };
-  // Le portail (1,9 m, ajouré) ne cache personne : il ne s'efface pas.
-  if (p.id !== "portail") toits.push({ boite, materiaux, bas: 0.5, haut: h + 0.3 });
+  // Le portail (1,9 m, ajouré) ne cache personne : il ne s'efface pas. Les autres portes s'estompent sans disparaître
+  // (0.7.1) : en s'approchant de la porte des bureaux par le hangar, elle s'effaçait tout entière, et l'on ne voyait
+  // plus ni la porte ni si elle était fermée ; elle reste maintenant visible, en transparence.
+  if (p.id !== "portail") toits.push({ boite, materiaux, bas: 0.5, haut: h + 0.3, fantome: FANTOME_PORTE });
   const vue: VuePorte = { id: p.id, genre: def.genre, largeur: l, h, cote: def.cote, dir: def.dir ?? 1, t: p.ouverte ? 1 : 0, cible: p.ouverte ? 1 : 0, pivots };
   appliquerPorte(vue);
   g.userData.porte = p.id;
