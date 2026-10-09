@@ -11,6 +11,7 @@ import { canoniser, cleExemplaire, lireCle, type CleObjet } from "../../commun/s
 import { POINT_ARRIVEE, type Famille } from "../../commun/src/regles.ts";
 import { savoirValide, type Savoir } from "../../commun/src/savoir.ts";
 import { sechageValide, type EtatSechage } from "../../commun/src/arc.ts";
+import { PROGRESSION_VIDE, devoileesAuDepart, devoileesDEmblee, progressionValide, type EtatProgression } from "../../commun/src/progression.ts";
 import { BESOINS_DEPART, GOURDE_DEPART, type Besoins, type EtatFeu, type Gourde } from "../../commun/src/survie.ts";
 import type { Charges } from "../../commun/src/energie.ts";
 import { SANTE_DEPART, type Sante } from "../../commun/src/combat.ts";
@@ -249,6 +250,8 @@ const COLONNES_AJOUTEES: [table: string, colonne: string, definition: string][] 
   ["personnages", "savoir", "TEXT NOT NULL DEFAULT '{}'"],
   // L'arc pour tous (Book 25 §3.3) : les ébauches d'arc qui sèchent, et depuis quand, en JSON.
   ["personnages", "sechage", "TEXT NOT NULL DEFAULT '{}'"],
+  // L'arbre de progression (0.7) : recettes dévoilées et vues, objets vus, temps de jeu, en JSON ; vide : à migrer.
+  ["personnages", "progression", "TEXT NOT NULL DEFAULT ''"],
 ];
 
 function maintenant(): string {
@@ -311,6 +314,10 @@ export class Base {
       .run(id, famille, POINT_ARRIVEE.x, POINT_ARRIVEE.z, Math.PI, date);
     this.equiper(id, famille);
     if (tutoriel) this.sauverTutoriel(id, { ...TUTORIEL_NEUF });
+    // L'arbre de progression (0.7) : le tutoriel commence au feu et à l'abri ; sans tutoriel (le vétéran, les comptes
+    // de test), les paliers 1 et 2 d'emblée (Q8).
+    const devoilees = tutoriel ? devoileesAuDepart() : [...new Set([...devoileesAuDepart(), ...devoileesDEmblee(famille)])];
+    this.sauverProgression(id, { ...PROGRESSION_VIDE, devoilees, nonVues: [], vus: [] });
     if (apparence) this.db.prepare("UPDATE personnages SET apparence = ? WHERE compte_id = ?").run(JSON.stringify(apparenceValide(apparence, famille)), id);
     return { id, pseudo, famille };
   }
@@ -367,6 +374,24 @@ export class Base {
 
   sauverSavoir(compteId: number, savoir: Savoir): void {
     this.db.prepare("UPDATE personnages SET savoir = ? WHERE compte_id = ?").run(JSON.stringify(savoir), compteId);
+  }
+
+  /**
+   * Les recettes dévoilées (l'arbre de progression, 0.7) ; null : un personnage d'avant la 0.7, à migrer (Q4).
+   * Illisible : comme un personnage d'avant (on réévalue sur son état, rien n'est détruit).
+   */
+  chargerProgression(compteId: number): EtatProgression | null {
+    const l = this.db.prepare("SELECT progression FROM personnages WHERE compte_id = ?").get(compteId) as { progression: string } | undefined;
+    if (!l?.progression) return null;
+    try {
+      return progressionValide(JSON.parse(l.progression));
+    } catch {
+      return null;
+    }
+  }
+
+  sauverProgression(compteId: number, etat: EtatProgression): void {
+    this.db.prepare("UPDATE personnages SET progression = ? WHERE compte_id = ?").run(JSON.stringify(etat), compteId);
   }
 
   /**

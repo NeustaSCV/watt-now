@@ -23,6 +23,18 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 - **La conserve bombée** ressemble à une conserve. Mangée, elle rend malade deux minutes plus tard : vomissements, faiblesse. Démontée, une boîte vide.
 - **La décharge du terrain** remonte aussi les déchets du lot 2, surtout des ordures.
 
+**L'arbre de progression : on y pense au bon moment** (côté serveur ; l'affichage dans Fabriquer suit)
+- **On ne voit plus cent recettes d'un coup.** Au début, deux idées : le feu de camp et l'abri. Les autres viennent quand ton personnage **y pense** : en tenant l'ingrédient (des joncs : la ficelle), en ayant besoin (un arbre trop haut : l'escabeau), en vivant quelque chose (le premier feu : le gourdin ; la première nuit : le bâton à fouir).
+- **« Tu y penses : … »** : un message annonce chaque idée nouvelle ; plusieurs à la fois sont regroupées (« 3 idées nouvelles »), au plus un message toutes les 10 s.
+- **Cinq paliers**, du plus urgent au plus beau : le corps (manger, boire, dormir), l'abri du danger (se défendre, se soigner, ranger), les tiens puis les autres (ton atelier, ton arme de métier, le Comptoir), le métier, l'œuvre (les pièces à plusieurs familles).
+- **Ton métier commence** quand tu as un toit et que tu as tenu tête une fois (un Éteint détruit, ou une nuit) : c'est l'étape « La famille » du tutoriel.
+- **Une quête du carnet fait penser à ce qu'elle demande**, et une recette fait penser à ses pièces (le récupérateur de pluie : la corde).
+- **Voir faire** : à 5 m d'un joueur qui fabrique, tu y penses aussi. Rester une minute près d'un joueur d'une autre famille, c'est une rencontre.
+- **Personne ne reste bloqué** : après 20 min de jeu, tous les gestes du corps ; après 1 h, ceux de l'abri du danger ; après 2 h, ton métier.
+- **Sans tutoriel**, le survivant connaît d'emblée les gestes du corps et de l'abri du danger.
+- **Les personnages d'avant** ne voient plus ce qu'ils n'ont pas encore vécu, mais **rien n'est détruit** : leurs installations, leurs objets, ce qu'ils ont déjà fabriqué restent.
+- Une recette à laquelle on n'a pas encore pensé ne se fabrique pas : « Tu n'y as pas encore pensé. »
+
 ---
 
 ## 0.6 · déployée le 2026-10-09
