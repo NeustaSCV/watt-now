@@ -281,6 +281,9 @@ export class Personnage {
       main.add(this.main);
     }
     this.objet.add(corps.objet);
+    // Un seul maillage pour tout le personnage (même image, un appel de dessin) ; l'arme en main reste à part.
+    corps.fondre([this.main]);
+    corps.cadrer(2.5);
     corps.tacher(this.blessures);
     const arme = this.armeTenue;
     this.armeTenue = null;
