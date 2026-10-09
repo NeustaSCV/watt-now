@@ -54,6 +54,7 @@ function banc(o: { inventaire: Inventaire; eteints?: Eteint[]; zone?: Zone; lieu
     textes: [] as string[],
     uses: [] as Arme[],
     detruits: [] as Eteint[],
+    mesures: [] as string[],
     gestes: [] as { libelle: string; appliquer: () => void }[],
   };
   const ctx: ContexteTir = {
@@ -84,7 +85,11 @@ function banc(o: { inventaire: Inventaire; eteints?: Eteint[]; zone?: Zone; lieu
     envoyer: (m) => etat.recus.push(m),
     diffuser: (m) => etat.recus.push(m),
     user: (a) => etat.uses.push(a),
-    apresDestruction: (e) => etat.detruits.push(e),
+    apresDestruction: (e, comment) => {
+      etat.detruits.push(e);
+      if (comment) etat.mesures.push(`detruit:${comment}`);
+    },
+    noterTir: (objet) => etat.mesures.push(`tir:${objet}`),
     commencer: (libelle, _d, appliquer) => etat.gestes.push({ libelle, appliquer }),
   };
   const tir = new Tir(ctx, o.tables ?? TABLES);
@@ -265,6 +270,16 @@ test("tir : l'arc — tir plein à portée de tête, il est détruit ; plus loin
   rapide.b.tir.bander();
   rapide.b.tir.lancer(0, 1, 1);
   assert.equal(rapide.b.projectiles().length, 1);
+});
+
+test("tir : les mesures du métier — chaque tir, et l'Éteint détruit d'un tir plein (Book 25 §10.1)", () => {
+  const e = nouvelEteint(1, 40, 35, "poursuivant");
+  const b = banc({ inventaire: { corde: 1, branche: 5 }, eteints: [e], alea: () => 0.99 });
+  b.tir.preparer("corde");
+  b.tir.bander();
+  b.attendre(1600);
+  b.tir.lancer(0, 1, e.id);
+  assert.deepEqual(b.etat.mesures, ["tir:corde", "detruit:tir_plein"]);
 });
 
 test("tir : contre un Équipé, la flèche passe la visière de face, à la moitié de la portée de tête ; de dos, non", () => {

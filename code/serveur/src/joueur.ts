@@ -4,7 +4,7 @@
 import { raisonEmplacement } from "../../commun/src/emplacement.ts";
 import { RASSASIE_HEURES } from "../../commun/src/survie.ts";
 import { ceQuiManqueBref, outilsManquantsBref, ouTrouverPhrase } from "../../commun/src/aide-fabrication.ts";
-import { categorieAction, type GenreMesure } from "./mesures.ts";
+import { categorieAction, mesuresFabrication, objetsDeMetierDonnes, type GenreMesure } from "./mesures.ts";
 import { REGLAGES } from "../../commun/src/reglages.ts";
 import { enSaison, etatDuFruitier, jourDuCalendrier, prochaineRecolte } from "../../commun/src/calendrier.ts";
 import { nouvellePoule, penserPoule, vuePoule, type Poule } from "../../commun/src/faune.ts";
@@ -715,6 +715,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     this.base.sauverCharges(this.compte.id, this.charges, instant);
     this.envoyerWotts();
     this.noterFait("echange");
+    if (objetsDeMetierDonnes(donne.objets) > 0) this.mesurer("metier", "echange", objetsDeMetierDonnes(donne.objets));
   }
 
   /** Des écritures qui vont ensemble (un échange : les deux côtés) : toutes enregistrées, ou aucune. */
@@ -921,7 +922,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     const resultat = effet.resultat;
     this.user(enMain);
     this.electricite.apresDecharge(enMain, appuye);
-    if (resultat === "detruit") this.apresDestruction(cible);
+    if (resultat === "detruit") this.apresDestruction(cible, arme.type);
     const electrique = arme.type === "electrique" ? ({ electrique: true } as const) : {};
     const coups = [{ t: "coup" as const, id: cible.id, x: cible.x, z: cible.z, resultat, ...electrique }];
     if (effet.voisinRaidi) coups.push({ t: "coup" as const, id: effet.voisinRaidi.id, x: effet.voisinRaidi.x, z: effet.voisinRaidi.z, resultat: "raidi", ...electrique });
@@ -976,7 +977,11 @@ export class Joueur implements Voyageur, ParticipantLecon {
       envoyer: (m) => j.envoyer(m),
       diffuser: (m) => (j.vivant ? j.vivant.diffuser(m) : j.envoyer(m)),
       user: (arme) => j.user(arme),
-      apresDestruction: (e) => j.apresDestruction(e),
+      apresDestruction: (e, comment) => j.apresDestruction(e, comment),
+      noterTir: (objet, secondes) => {
+        j.mesurer("metier", `tir:${objet}`, 1);
+        j.mesurer("activite", "combat", secondes);
+      },
       commencer: (libelle, dureeS, appliquer) => j.commencer(libelle, dureeS, appliquer, 0, "outil"),
     };
   }
@@ -1049,7 +1054,9 @@ export class Joueur implements Voyageur, ParticipantLecon {
   }
 
   /** Ce qui suit la destruction d'un Éteint, au contact comme au tir. */
-  private apresDestruction(cible: Eteint): void {
+  private apresDestruction(cible: Eteint, comment?: string): void {
+    // Les mesures du métier (Book 25 §10.1) : comment on l'a détruit (tranchant, électrique, tir plein…).
+    if (comment) this.mesurer("metier", `detruit:${comment}`, 1);
     if (this.tuto) this.tuto.premierEteintDetruit = true;
     // Le magasinier portait la clé du coffre à sa ceinture (Book 23 §3) : elle tombe là où il tombe.
     if (cible.variante === "magasinier") {
@@ -2527,7 +2534,9 @@ export class Joueur implements Voyageur, ParticipantLecon {
       const etoiles = etoilesDuProduit(r, this.inventaire, { horsFamille, maitrise: estMaitrisee(this.quetes.etat.faits[`fabrique:${r.id}`] ?? 0), contexte: this.forge.contexte() });
       this.retirerIngredients(ingredients);
       // Ce qui sort de la forge (trempe, reforgeage, manche tourné : forge.ts) ; ailleurs, le produit à ses étoiles.
-      this.ajouterPlusieurs(somme(this.forge.sortie(r, produit.objet, etoiles, quantite, horsFamille), sousProduits));
+      const sortie = this.forge.sortie(r, produit.objet, etoiles, quantite, horsFamille);
+      this.ajouterPlusieurs(somme(sortie, sousProduits));
+      for (const m of mesuresFabrication(sortie)) this.mesurer("metier", m.quoi, m.valeur);
       this.mesurer("progression", `recette:${r.id}`, 1);
       this.noterFait(`fabrique:${r.id}`);
     }, this.forge.kcalEnPlus(r), r.qualites.marteler ? "lourd" : "outil");
