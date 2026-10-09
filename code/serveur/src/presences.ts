@@ -4,7 +4,9 @@
 //   entre dans le champ (message « autres ») ;
 // - sa position part 10 fois par seconde, en quelques nombres (message « positions »), et seulement si elle a changé
 //   depuis le dernier envoi à cet observateur (un joueur immobile ne coûte plus rien, 2026-10-08) ;
-// - on ne voit que les joueurs à moins de RAYON_INTERET mètres (on les oublie au-delà de RAYON_OUBLI).
+// - on ne voit que les joueurs à moins de RAYON_INTERET mètres (on les oublie au-delà de RAYON_OUBLI) ;
+// - et, dans un lieu à murs, seulement ceux qu'on voit (0.7.2 : la boutique de la halte ; commun/src/vue.ts) : chacun
+//   sa vue, on ne lit pas à travers les murs dans les messages.
 
 import type { AutreVu, MessageServeur } from "../../commun/src/messages.ts";
 
@@ -28,8 +30,11 @@ function cleIdentite(a: AutreVu): string {
   return `${a.pseudo}|${a.famille}|${a.lumiere ? 1 : 0}|${JSON.stringify(a.apparence)}`;
 }
 
+/** La vue passe-t-elle de a à b dans ce lieu ? (sans : à ciel ouvert) */
+export type VueDuLieu = (lieu: string, a: { x: number; z: number }, b: { x: number; z: number }) => boolean;
+
 /** Une diffusion : à appeler 10 fois par seconde. */
-export function diffuserPresences(observateurs: Observateur[], memoire: MemoirePresences): void {
+export function diffuserPresences(observateurs: Observateur[], memoire: MemoirePresences, vueDuLieu?: VueDuLieu): void {
   const parLieu = new Map<string, Observateur[]>();
   for (const o of observateurs) {
     if (!o.lieu) continue;
@@ -52,7 +57,8 @@ export function diffuserPresences(observateurs: Observateur[], memoire: MemoireP
           if (o === moi) return false;
           const d = Math.hypot(o.vu.x - moi.vu.x, o.vu.z - moi.vu.z);
           // Une marge entre entrer et sortir du champ : pas de va-et-vient à la limite.
-          return d <= (avant.has(o.id) ? RAYON_OUBLI : RAYON_INTERET);
+          if (d > (avant.has(o.id) ? RAYON_OUBLI : RAYON_INTERET)) return false;
+          return !vueDuLieu || vueDuLieu(moi.lieu!, moi.vu, o.vu);
         })
       : [];
     // L'identité : seulement si quelqu'un entre ou sort du champ, ou si elle a changé.
@@ -67,7 +73,8 @@ export function diffuserPresences(observateurs: Observateur[], memoire: MemoireP
       // « autres » porte déjà les positions : on repart de là.
       dejaVues.clear();
       for (const o of voisins) dejaVues.set(o.id, `${o.vu.x},${o.vu.z},${o.vu.o}`);
-      return;
+      // (0.7.2 : on passe à l'observateur suivant ; un « return » ici privait tous les suivants de leur envoi.)
+      continue;
     }
     // Les positions : id, x, z, orientation, à la suite ; seulement celles qui ont changé.
     const p: number[] = [];

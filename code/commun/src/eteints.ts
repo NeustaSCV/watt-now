@@ -67,17 +67,20 @@ export type VarianteEteint = "rampant" | "equipe" | "magasinier" | "mecanicien";
 
 /**
  * Ce que l'endroit fait à la perception et aux déplacements (Book 23 §7). Sans milieu, tout est à ciel ouvert :
- * c'est le terrain et la halte. La Coopérative en a un (milieu-coop.ts).
+ * c'est le terrain. La Coopérative en a un (milieu-coop.ts) ; la halte aussi, pour la vue seulement (les murs de la
+ * boutique, 0.7.2).
  */
 export interface Milieu {
   /** Ce qu'un son garde (0 à 1) entre deux points : 1 dans la même pièce, bien moins à travers une porte ou un mur. */
   son(ax: number, az: number, bx: number, bz: number): number;
-  /** La vue passe-t-elle de a à b ? (même pièce, ou par l'embrasure d'une porte ouverte) */
+  /** La vue passe-t-elle de a à b ? (en ligne droite, ni mur ni porte fermée entre les deux : commun/src/vue.ts) */
   vue(ax: number, az: number, bx: number, bz: number): boolean;
   /** Fait-il noir ici, même en plein jour ? */
   obscur(x: number, z: number): boolean;
   /** Le prochain point où aller pour rejoindre b depuis a (par les portes). */
   passage(ax: number, az: number, bx: number, bz: number): { x: number; z: number };
+  /** Un dormant qui se réveille gémit, et réveille ses voisins (Book 23 §3) ; false : pas ici (la halte, 0.7.2). */
+  cascade?: boolean;
 }
 
 /** Ce que voit un Éteint d'un humain proche. */
@@ -398,7 +401,7 @@ export function penser(
     if (e.attention < SEUIL_REVEIL) return;
     e.etat = "attire";
     // Il se réveille en gémissant : ses voisins l'entendent (la cascade).
-    if (milieu) e.gemit = GEMISSEMENT.duree;
+    if (milieu && milieu.cascade !== false) e.gemit = GEMISSEMENT.duree;
   }
   if ((e.raidi ?? 0) > 0) e.raidi = Math.max(0, e.raidi! - dt);
   if (e.etourdi > 0) {

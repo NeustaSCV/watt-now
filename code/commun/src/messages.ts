@@ -11,6 +11,7 @@ import type { Position } from "./deplacement.ts";
 import type { Charges, TypeBatterie } from "./energie.ts";
 import type { LieuId, LieuJouable } from "./lieux.ts";
 import type { Saignement, TypeBlessure } from "./combat.ts";
+import type { BruitVu } from "./bruits.ts";
 import type { EteintVu, ResultatCoup } from "./eteints.ts";
 import type { Inventaire, TypeObjet } from "./objets.ts";
 import type { CleObjet } from "./etoiles.ts";
@@ -491,6 +492,8 @@ export type MessageServeur =
   | { t: "voyage"; de: LieuId; vers: LieuId; duree: number }
   /** Positions des Éteints du lieu, quelques fois par seconde. */
   | { t: "eteints"; eteints: EteintVu[] }
+  /** Ce qu'on entend sans le voir (0.7.2, bruits.ts) : genre, force, point de passage de notre côté ; jamais la source. */
+  | { t: "bruits"; bruits: BruitVu[] }
   /** Les réglages d'équilibrage qui diffèrent du défaut (à la connexion, puis à chaque changement). */
   | { t: "reglages"; reglages: Partial<Reglages> }
   /** La volaille du terrain, quelques fois par seconde. */

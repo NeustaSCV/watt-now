@@ -1,15 +1,15 @@
 // Le milieu de la Coopérative, tel que le perçoivent les Éteints (Book 23 §7) : les murs arrêtent le son et la vue,
 // l'obscurité est propre à chaque pièce, et l'on passe d'une pièce à l'autre par les portes (un petit graphe).
 // Sans cela, un Éteint leurré resterait collé au mur : c'est le risque n° 1 du Book 23.
+// 0.7.2 : la vue et le son suivent le plan de vue partagé (vue.ts) : en ligne droite contre les murs et les portes
+// fermées, à travers les vitrines du libre-service et les fenêtres des bureaux. « Si je le vois, il me voit » : c'est la
+// même règle que pour ce que le serveur envoie au joueur, et que pour ce que l'écran éclaire.
 
-import { PORTES, boitePorte, pieceDe, sombreIci, type PieceCoop, type PorteCoop } from "./cooperative.ts";
+import { PORTES, pieceDe, sombreIci, type PieceCoop, type PorteCoop } from "./cooperative.ts";
 import type { Milieu } from "./eteints.ts";
+import { PLAN_VUE_COOP, PLAN_VUE_HALTE } from "./vue-lieux.ts";
+import { facteurSon, obstaclesVue, voit } from "./vue.ts";
 
-/** Ce qu'un son garde en passant une porte : ouverte, la moitié de sa portée ; fermée, presque rien. */
-const SON_PORTE_OUVERTE = 0.5;
-const SON_PORTE_FERMEE = 0.15;
-/** À travers un mur sans porte (deux pièces non voisines) : un bruit très fort s'entend encore un peu. */
-const SON_MUR = 0.05;
 /** Au milieu d'une porte, l'Éteint vise un point un peu plus loin, de l'autre côté. */
 const AU_DELA = 1.3;
 
@@ -27,26 +27,9 @@ export function milieuCoop(portes: Readonly<Record<string, boolean>>): Milieu {
 }
 
 function construire(ouverte: (p: PorteCoop) => boolean): Milieu {
-  // Ce qu'un son garde d'une pièce à l'autre : le meilleur chemin, porte après porte (6 pièces : on calcule tout).
+  const etats = Object.fromEntries(PORTES.map((p) => [p.id, ouverte(p)]));
+  const ov = obstaclesVue(PLAN_VUE_COOP, etats);
   const pieces = [...new Set(PORTES.flatMap((p) => p.entre))] as PieceCoop[];
-  const passe = new Map<string, number>();
-  for (const a of pieces) {
-    const meilleur = new Map<PieceCoop, number>([[a, 1]]);
-    const file: PieceCoop[] = [a];
-    while (file.length) {
-      const ici = file.shift()!;
-      for (const p of PORTES) {
-        if (!p.entre.includes(ici)) continue;
-        const la = p.entre[0] === ici ? p.entre[1] : p.entre[0];
-        const v = meilleur.get(ici)! * (ouverte(p) ? SON_PORTE_OUVERTE : SON_PORTE_FERMEE);
-        if (v > (meilleur.get(la) ?? 0)) {
-          meilleur.set(la, v);
-          file.push(la);
-        }
-      }
-    }
-    for (const [b, v] of meilleur) passe.set(`${a}>${b}`, v);
-  }
 
   // Le chemin le plus court (en nombre de portes ouvertes) d'une pièce à une autre : la première porte à prendre.
   const premiere = new Map<string, PorteCoop | null>();
@@ -66,21 +49,12 @@ function construire(ouverte: (p: PorteCoop) => boolean): Milieu {
     for (const [b, p] of venu) premiere.set(`${a}>${b}`, p);
   }
 
-  /** Le segment a → b passe-t-il par l'embrasure d'une porte ouverte entre ces deux pièces ? */
-  const parLaPorte = (ax: number, az: number, bx: number, bz: number, pa: PieceCoop, pb: PieceCoop) =>
-    PORTES.some((p) => ouverte(p) && p.entre.includes(pa) && p.entre.includes(pb) && coupe(ax, az, bx, bz, boitePorte(p)));
-
   return {
     son(ax, az, bx, bz) {
-      const pa = pieceDe(ax, az);
-      const pb = pieceDe(bx, bz);
-      if (pa === pb) return 1;
-      return Math.max(SON_MUR, passe.get(`${pa}>${pb}`) ?? 0);
+      return facteurSon(PLAN_VUE_COOP, etats, pieceDe(ax, az), pieceDe(bx, bz));
     },
     vue(ax, az, bx, bz) {
-      const pa = pieceDe(ax, az);
-      const pb = pieceDe(bx, bz);
-      return pa === pb || parLaPorte(ax, az, bx, bz, pa, pb);
+      return voit(ov, ax, az, bx, bz);
     },
     obscur: sombreIci,
     passage(ax, az, bx, bz) {
@@ -102,26 +76,23 @@ function construire(ouverte: (p: PorteCoop) => boolean): Milieu {
   };
 }
 
-/** Le segment a → b traverse-t-il la boîte ? (méthode des dalles) */
-function coupe(ax: number, az: number, bx: number, bz: number, b: { x: number; z: number; l: number; p: number }): boolean {
-  let t0 = 0;
-  let t1 = 1;
-  const dx = bx - ax;
-  const dz = bz - az;
-  for (const [o, d, min, max] of [
-    [ax, dx, b.x - b.l / 2 - 0.3, b.x + b.l / 2 + 0.3],
-    [az, dz, b.z - b.p / 2 - 0.3, b.z + b.p / 2 + 0.3],
-  ] as const) {
-    if (Math.abs(d) < 1e-9) {
-      if (o < min || o > max) return false;
-      continue;
-    }
-    let ta = (min - o) / d;
-    let tb = (max - o) / d;
-    if (ta > tb) [ta, tb] = [tb, ta];
-    t0 = Math.max(t0, ta);
-    t1 = Math.min(t1, tb);
-    if (t0 > t1) return false;
-  }
-  return true;
+/**
+ * Le milieu de la halte (0.7.2) : on y est à ciel ouvert (le son porte partout, on va tout droit), sauf la vue, que
+ * les murs de la boutique et de l'atelier arrêtent. L'Éteint de la boutique ne voit pas à travers ses murs, et l'on ne
+ * le voit pas non plus ; par les vitrines brisées et la porte, si. Pas de cascade de gémissements : la halte reste
+ * telle qu'avant pour le reste.
+ */
+const MILIEU_HALTE: Milieu = (() => {
+  const ov = obstaclesVue(PLAN_VUE_HALTE, {});
+  return {
+    son: () => 1,
+    vue: (ax, az, bx, bz) => voit(ov, ax, az, bx, bz),
+    obscur: () => false,
+    passage: (_ax, _az, bx, bz) => ({ x: bx, z: bz }),
+    cascade: false,
+  };
+})();
+
+export function milieuHalte(): Milieu {
+  return MILIEU_HALTE;
 }

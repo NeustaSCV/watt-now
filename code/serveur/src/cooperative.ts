@@ -22,6 +22,7 @@ import type { EtatCoopVu } from "../../commun/src/messages.ts";
 import { eteintsCoop } from "../../commun/src/eteints-coop.ts";
 import { ZONE_COOP, zoneCoop } from "../../commun/src/lieux.ts";
 import { milieuCoop } from "../../commun/src/milieu-coop.ts";
+import { PLAN_VUE_COOP } from "../../commun/src/vue-lieux.ts";
 import type { Base } from "./base.ts";
 import { LieuVivant, type DefinitionLieuVivant } from "./lieu-vivant.ts";
 
@@ -46,6 +47,7 @@ export function definitionCoop(compteId: number, detruits: () => readonly number
     zone: ZONE_COOP,
     portes: { initiales: portesInitiales, zone: zoneCoop },
     milieu: milieuCoop,
+    plan: PLAN_VUE_COOP,
     econome: true,
     // Quand le lieu se rendort, les Éteints détruits ne reviennent pas pour autant.
     eteints: () => eteintsCoop().filter((e) => !detruits().includes(e.id)),
