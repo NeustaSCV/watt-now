@@ -264,17 +264,33 @@ export const DESSINS_METIER: Partial<Record<string, string>> = {
     <path d="M6 24 Q24 34 42 24" fill="none" stroke="${CORDE}" stroke-width="4"/>
     <path d="M6 24 Q24 34 42 24" ${F}/>
     <circle cx="6" cy="24" r="3" fill="none" ${T}/><circle cx="42" cy="24" r="3" fill="none" ${T}/>`,
+  // L'arbalète (plan 0.8 §9.2, chantier 13 : l'ancienne passait pour une pioche) : vue de dessus, en diagonale comme les
+  // autres armes. La crosse en bas à gauche, l'arc arqué en travers de l'avant, la corde tendue jusqu'à la noix, le
+  // carreau posé dans l'arbrier, la détente dessous. Lisible à 28 px : l'arc et la corde forment un « D » couché.
   arbalete: `
-    <path d="M10 42 L34 14" stroke="${BOIS}" stroke-width="6" stroke-linecap="round"/>
-    <path d="M22 6 Q34 6 42 18" fill="none" stroke="${BOIS_CLAIR}" stroke-width="3.5" stroke-linecap="round"/>
-    <path d="M22 6 L42 18" stroke="${CORDE}" stroke-width="1.2"/>
-    <path d="M20 32 l-4 5" ${T}/>`,
+    <g transform="rotate(45 24 24)">
+      <path d="M21.5 9 h5 v24 l2.5 9 h-10 l2.5 -9 Z" fill="${BOIS}" ${T}/>
+      <path d="M5 14 Q24 2 43 14" fill="none" stroke="${ENCRE}" stroke-width="6.5" stroke-linecap="round"/>
+      <path d="M5 14 Q24 2 43 14" fill="none" stroke="${BOIS_CLAIR}" stroke-width="3.5" stroke-linecap="round"/>
+      <path d="M5.5 14.5 L24 27 L42.5 14.5" fill="none" stroke="${CORDE}" stroke-width="1.6" stroke-linejoin="round"/>
+      <path d="M24 26 v-21" stroke="${ACIER_SOMBRE}" stroke-width="1.8"/>
+      <path d="M21.5 6 L24 1.5 L26.5 6 Z" fill="${ACIER}" ${T} stroke-width="1.2"/>
+      <circle cx="24" cy="27" r="2.2" fill="${ACIER}" ${T} stroke-width="1.2"/>
+      <path d="M26.5 31 q4 1.5 3 5.5" fill="none" ${T}/>
+    </g>`,
+  // L'arbalète lourde : la même silhouette, l'arc d'acier double et la crosse sombre (plus tard, niveau 3).
   arbalete_lourde: `
-    <path d="M10 42 L34 14" stroke="#5a4130" stroke-width="7" stroke-linecap="round"/>
-    <path d="M20 5 Q34 4 43 19" fill="none" stroke="#3a3a3a" stroke-width="4" stroke-linecap="round"/>
-    <path d="M22 8 Q33 8 40 19" fill="none" stroke="#3a3a3a" stroke-width="3" stroke-linecap="round"/>
-    <path d="M20 5 L43 19" stroke="${CORDE}" stroke-width="1.4"/>
-    <path d="M20 32 l-4 5" ${T}/>`,
+    <g transform="rotate(45 24 24)">
+      <path d="M21 9 h6 v24 l3 9 h-12 l3 -9 Z" fill="#5a4130" ${T}/>
+      <path d="M4 15 Q24 1 44 15" fill="none" stroke="${ENCRE}" stroke-width="7" stroke-linecap="round"/>
+      <path d="M4 15 Q24 1 44 15" fill="none" stroke="#3a3a3a" stroke-width="4" stroke-linecap="round"/>
+      <path d="M8 15 Q24 6 40 15" fill="none" stroke="${ACIER_SOMBRE}" stroke-width="1.6"/>
+      <path d="M4.5 15.5 L24 27 L43.5 15.5" fill="none" stroke="${CORDE}" stroke-width="1.8" stroke-linejoin="round"/>
+      <path d="M24 26 v-21" stroke="${ACIER_SOMBRE}" stroke-width="2"/>
+      <path d="M21.5 6 L24 1.5 L26.5 6 Z" fill="${ACIER}" ${T} stroke-width="1.2"/>
+      <circle cx="24" cy="27" r="2.4" fill="${ACIER}" ${T} stroke-width="1.2"/>
+      <path d="M27 31 q4 1.5 3 5.5" fill="none" ${T}/>
+    </g>`,
   cranequin: `
     <circle cx="20" cy="26" r="11" fill="${ACIER_SOMBRE}" ${T}/>
     <circle cx="20" cy="26" r="4" fill="#55524d" ${T} stroke-width="1"/>

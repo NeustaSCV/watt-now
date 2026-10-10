@@ -12,6 +12,27 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
+## 0.8 · en préparation
+
+- **La base grandit avec tes sorties** : plus de paliers. Chaque meuble monte d'un niveau avec le niveau d'avant, des matériaux de la maison et un outil ; au niveau 1, il lui faut en plus **une clé** qu'on trouve dehors : une grille, une grosse toile, un seau, un étau… Chaque sortie peut changer ta base.
+- **« Tu y penses »** : la première fois que tu ramasses la pièce qui ferait monter un de tes meubles, le carnet te souffle l'idée, dans un bandeau qui se ferme d'un bouton. Trop tôt ? L'idée est gardée « pour un jour » : la fiche du meuble dira « déjà en poche » quand tu y arriveras.
+- **La fiche d'un meuble devient son arbre** : ce qu'il fait, le niveau suivant, sa clé, ce qui manque (une ligne par chose), et un indice « Où chercher ? », replié, qui se précise quand tu es allé au bon endroit sans trouver. Jamais de flèche sur la carte. Elle tient enfin sur un téléphone, en vertical comme en paysage.
+- **Ta famille t'attend à la station** : le tutoriel t'y emmène (« La carte ») chercher ta pièce, le petit panneau solaire, l'enclume de dépanneur et son sac de charbon, ou le petit alternateur. Au retour, « La famille » : ton banc solaire, ton foyer de forge ou ton pédalier générateur, la pièce posée dessus. Puis ta première nuit.
+- **Deux routes, à la même distance** : par la station jusqu'à la Coopérative, ou par le Gué-aux-Saules jusqu'au Moulin du Gué. « S'installer » commence par un foyer de pierres, puis ouvre deux portes à la fois, une par route ; au départ de chaque sortie, le carnet te rappelle ce qu'il te faut.
+- **Le Gué-aux-Saules** : une halte au bord de la rivière. Le radier gronde et couvre les pas ; après deux averses, la crue le noie, et le bac à câble prend le relais, de jour comme de nuit. La cloche du passeur, les ricochets pour détourner un Éteint, la glaise de la rive, et la pierre qui revient.
+- **Le Moulin du Gué** : un moulin à eau à toi seul, bien gardé. Trouve la grosse clé de la grande porte, méfie-toi de la fosse du rouet (un Éteint repoussé au bord y reste), et repars par le chemin de halage. Tout y revient au bout de 24 h, comme à la Coopérative.
+- **Les armes évoluent sur leur meuble** : rapporte ton arme près de son établi, de sa forge, de sa meule ou de son banc, et « Reprendre » : la remettre à neuf, ou la monter d'une étoile, le même exemplaire. Le marteau et la masse retrouvent un manche à l'établi à étau, sans forge.
+- **La fourche à foin** : une arme trouvée au Moulin, longue et perçante, qui passe le casque et se porte dans le dos. Une seule par personnage.
+- **Le bois et la pierre reviennent** : à la station et au gué, les bûches et les pierres en vrac reviennent en 30 min, plus nombreuses quand vous êtes plusieurs, et chacun a son tas de bois et son banc de galets. Sur ton terrain, elles ne repoussent pas : la première nuit, le carnet te conseille les branches au feu, et te prévient si tu brûles tes dernières bûches.
+- **Le Comptoir** garde des bûches et des pierres en stock, et vend les clés du niveau 1, cher, à qui connaît déjà leur lieu : avant ta première visite, elles ne sont pas sur l'étal.
+- **De nouveaux meubles** : le récupérateur de 5 L puis le seau de 10 L, l'abri fermé, le coffre cerclé, l'établi à étau, la marmite norvégienne, le râtelier à outils, la torche plantée qui brûle jusqu'au matin, le bac de trempe en auge calfatée de glaise.
+- **Les outils sont des portes** : il faut le niveau demandé. Une pierre, un éclat de verre, un coin de bois donnent le premier ; des outils de fortune se fabriquent à la main ; le marteau se remmanche avec la tête trouvée dans la caisse à outils de la ruine.
+- **Les armes du niveau 1** : des dégâts revus étape par étape, les décharges électriques qui s'ajoutent au coup, la maîtrise sans plafond, la hachette au foyer de forge. Et l'arbalète a une icône qui ne ressemble plus à une pioche.
+- **L'aide** suit : trois rubriques nouvelles (le gué, le Moulin, faire évoluer une arme) ; « Fabriquer » et « Améliorer sa base » racontent les clés, les indices et les replis ; « Je suis coincé » renvoie à la fiche du meuble.
+- **Tout le monde repart de zéro** : au passage à la 0.8, tous les personnages sont remis à neuf. Nouvelle famille, nouveau terrain si tu veux : le niveau 1 est fait pour être découvert.
+
+---
+
 ## 0.7.3 · déployée le 2026-10-10
 
 - **Fouiller, c'est tout prendre** : un sac-poubelle, une poubelle ou un coffre de voiture fouillé passe tout entier dans ton sac, avec les « +1 … » habituels. Plus de fenêtre où choisir. Si ton sac est plein, ce qui ne rentre pas reste dedans.

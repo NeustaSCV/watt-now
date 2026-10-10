@@ -5,7 +5,7 @@ import type { Charges } from "../../commun/src/energie.ts";
 import { OBJETS, lumierePortee, nommer, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
 import {
   QUETES,
-  queteSuivante,
+  quetesOuvertes,
   type Condition,
   type EtatQuetes,
   type LigneQuete,
@@ -42,14 +42,9 @@ export class SuiviQuetes {
     return true;
   }
 
-  /** Les quêtes en cours (une par ligne au plus). */
+  /** Les quêtes en cours : une par ligne, deux pour « S'installer » arrivé aux portes du niveau 1 (une par route). */
   enCours(famille: Famille): Quete[] {
-    const quetes: Quete[] = [];
-    for (const ligne of LIGNES) {
-      const q = queteSuivante(ligne, famille, this.etat.finies);
-      if (q) quetes.push(q);
-    }
-    return quetes;
+    return LIGNES.flatMap((ligne) => quetesOuvertes(ligne, famille, this.etat.finies));
   }
 
   /** Où en est cet objectif : fait / but. */
@@ -115,6 +110,7 @@ export class SuiviQuetes {
       const v: VueQuete = {
         id: q.id,
         ligne: q.ligne,
+        ...(q.route ? { route: q.route } : {}),
         titre: q.titre,
         ...(q.icone ? { icone: q.icone } : {}),
         texte: q.texte,

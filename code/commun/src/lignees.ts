@@ -651,7 +651,7 @@ export const LIGNEES_INSTALLATIONS: Partial<Record<TypeInstallation, readonly Et
     },
   ],
   // ---------- La lumière (plan 0.8 §2.3, chantier 6 ; Book 24 §3.5) ----------
-  // La torche plantée brûle une nuit entière, puis il faut en planter une autre (torche.ts).
+  // La torche plantée brûle jusqu'au matin suivant, puis il faut en planter une autre (torche.ts).
   torche_plantee: [
     {
       id: "torche_plantee",
@@ -662,8 +662,8 @@ export const LIGNEES_INSTALLATIONS: Partial<Record<TypeInstallation, readonly Et
       duree: 10,
       intensite: "legere",
       etapeLieu: "maison",
-      apporte: "Éclaire 6 m autour une nuit entière, sans allumer de feu. La nuit, elle se voit de loin.",
-      examen: "Une branche plantée, un chiffon gras qui brûle au bout. Elle éclaire six mètres autour, une nuit durant.",
+      apporte: "Éclaire 6 m autour jusqu'au matin, sans allumer de feu. La nuit, elle se voit de loin.",
+      examen: "Une branche plantée, un chiffon gras qui brûle au bout. Elle éclaire six mètres autour, jusqu'au matin.",
     },
     {
       id: "lanterne_fixe",

@@ -21,6 +21,7 @@ import type { Inventaire, TypeObjet } from "./objets.ts";
 import { QUETE, type Condition, type Quete } from "./quetes.ts";
 import type { Famille } from "./regles.ts";
 import { NOMS_ACCESSOIRES, lieuPossede, nomConstruction, nomFormeFeu } from "./lieu-recette.ts";
+import { ETAPE_ABRI, ETAPE_FAMILLE, ETAPE_FEU, ETAPE_OUTIL } from "./tutoriel.ts";
 
 // ---------- Les déclencheurs ----------
 
@@ -340,18 +341,18 @@ export function maillons(r: Recette): Recette[] {
 
 /**
  * Les étapes du tutoriel qui demandent une fabrication (Book 14 §4.2) : le feu (étape 3), la hache (6), l'abri (7) et
- * l'atelier de famille (10). Une étape atteinte dévoile ce qu'elle demande : le tutoriel ne demande jamais une
- * recette invisible.
+ * le meuble de famille (11 : « La famille », après « La carte », plan 0.8 V5-2). Une étape atteinte dévoile ce qu'elle
+ * demande : le tutoriel ne demande jamais une recette invisible.
  */
 export function recettesDeLEtape(etape: number, famille: Famille): string[] {
   switch (etape) {
-    case 2:
+    case ETAPE_FEU:
       return ["feu_de_camp"];
-    case 5:
+    case ETAPE_OUTIL:
       return ["hache"];
-    case 6:
+    case ETAPE_ABRI:
       return ["abri"];
-    case 9:
+    case ETAPE_FAMILLE:
       return [ATELIER[famille]];
     default:
       return [];
@@ -363,7 +364,8 @@ export function recettesDeLEtape(etape: number, famille: Famille): string[] {
  * la tête (les flèches, les carreaux), le charbon (la meule).
  */
 const FAITS_A_FABRIQUER: Readonly<Record<string, readonly string[]>> = {
-  plat_mange: ["cepes_poeles", "pommes_cuites", "volaille_cepes"],
+  // Q-0.8-11 : les pommes cuites (feu de camp), puis la poêlée (foyer de pierres) ; la volaille attend le four.
+  plat_mange: ["pommes_cuites", "cepes_poeles", "volaille_cepes"],
   foyer_dakota: ["foyer_dakota", "baton_fouir"],
   "tete:fleche": ["fleches_durcies"],
   "tete:carreau": ["carreaux_os"],
@@ -470,11 +472,11 @@ function aFabrique(e: EtatPourDevoilement, id: string): number {
 /** Le seuil S : un toit, et un premier danger surmonté ; ou l'étape « La famille » du tutoriel ; ou le filet du temps. */
 export function seuilAtteint(e: EtatPourDevoilement): boolean {
   const abri = e.installations.has("abri") || (e.faits["fabrique:abri"] ?? 0) > 0;
-  // L'élève du tutoriel : le seuil tombe exactement à l'étape « La famille » (§2.6), pas deux étapes plus tôt parce
+  // L'élève du tutoriel : le seuil tombe exactement à l'étape « La famille » (§2.6), pas trois étapes plus tôt parce
   // que l'Éteint du tutoriel (étape 8) suit l'abri (étape 7). Une nuit dormie hors du script compte toujours.
   const enTutoriel = e.tuto !== null && e.tuto < 12;
   const danger = (!enTutoriel && somme(e.faits, "detruit:") >= 1) || (e.faits.nuit ?? 0) >= 1;
-  return (abri && danger) || (e.tuto !== null && e.tuto >= 9) || e.minutes >= FILET_SEUIL_MIN;
+  return (abri && danger) || (e.tuto !== null && e.tuto >= ETAPE_FAMILLE) || e.minutes >= FILET_SEUIL_MIN;
 }
 
 /** Le déclencheur A : le Comptoir, un échange, une rencontre d'une autre famille, avoir vu faire. */

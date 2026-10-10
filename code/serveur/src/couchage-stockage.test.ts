@@ -8,8 +8,8 @@ import type { MessageServeur } from "../../commun/src/messages.ts";
 import { SOMMEIL_ABRI, SOMMEIL_ABRI_FERME_REPLI, capaciteCoffre, lignee } from "../../commun/src/lignees.ts";
 import { POSTE_ETABLI_ETAU, etauMonte, outilsAPortee } from "../../commun/src/outils-a-portee.ts";
 import { QUALITES_OBJETS, niveauQualite, recette } from "../../commun/src/recettes.ts";
-import { MS_PAR_HEURE_JEU } from "../../commun/src/temps.ts";
-import { DUREE_TORCHE_MS, stimuliTorches, torcheAllumee, torcheConsumee } from "../../commun/src/torche.ts";
+import { MS_PAR_HEURE_JEU, heureDeJeu } from "../../commun/src/temps.ts";
+import { extinctionTorche, stimuliTorches, torcheAllumee, torcheConsumee } from "../../commun/src/torche.ts";
 import { outilsManquants } from "../../commun/src/aide-fabrication.ts";
 import { Base } from "./base.ts";
 import { Joueur } from "./joueur.ts";
@@ -200,7 +200,7 @@ test("les outils de fortune se font à la main : serre-joint, scie, marteau, coi
   assert.equal(niveauQualite(sac, "marteler"), 2, "le marteau de fortune martèle à 2");
 });
 
-test("la torche plantée : on l'allume, elle éclaire une nuit entière, se voit la nuit, puis s'éteint", () => {
+test("la torche plantée : on l'allume, elle éclaire jusqu'au matin suivant, se voit la nuit, puis s'éteint", () => {
   const t = monter({ branche: 1, chiffons: 1, graisse: 1, couteau: 1, briquet: 1 });
   t.joueur.recevoir({ t: "fabriquer", recette: "torche_plantee", x: 20, z: 21.2, o: 0 });
   t.attendre(3);
@@ -212,14 +212,28 @@ test("la torche plantée : on l'allume, elle éclaire une nuit entière, se voit
   assert.ok(torcheAllumee(allumee, t.maintenant()));
   assert.equal(stimuliTorches([allumee], t.maintenant(), true)[0]?.genre, "lumiere", "la nuit, elle compte dans la signature");
   assert.equal(stimuliTorches([allumee], t.maintenant(), false).length, 0, "le jour, non");
-  // Plan 0.8 §9.2 : une nuit entière (de 21 h à 5 h 30, 8 h 30 de jeu), plus seulement une heure.
-  assert.equal(DUREE_TORCHE_MS, 8.5 * MS_PAR_HEURE_JEU, "la torche dure une nuit");
-  t.attendre(2 * MS_PAR_HEURE_JEU / 1000, 1);
-  assert.ok(torcheAllumee(t.installation(torche.id), t.maintenant()), "deux heures de jeu plus tard, elle brûle encore");
-  t.attendre(DUREE_TORCHE_MS / 1000 - 2 * MS_PAR_HEURE_JEU / 1000 + 1, 1);
+  // Plan 0.8 §9.2 (chantier 13) : allumée le matin (vers 6 h), elle brûle jusqu'au lendemain 5 h 30.
+  const debut = t.base.debutMonde();
+  assert.equal(heureDeJeu(allumee.etat.eteinteLe!, debut), 5.5, "elle s'éteint à 5 h 30");
+  const reste = allumee.etat.eteinteLe! - t.maintenant();
+  assert.ok(reste > 20 * MS_PAR_HEURE_JEU && reste < 24 * MS_PAR_HEURE_JEU, `jusqu'au matin suivant : ${reste / MS_PAR_HEURE_JEU} h`);
+  t.attendre(reste / 1000 - 10, 2);
+  assert.ok(torcheAllumee(t.installation(torche.id), t.maintenant()), "à 5 h 29, elle brûle encore");
+  t.attendre(12, 1);
   const apres = t.installation(torche.id);
   assert.ok(torcheConsumee(apres, t.maintenant()));
   assert.equal(stimuliTorches([apres], t.maintenant(), true).length, 0);
   t.agir(torche.id, "allumer", 1);
   assert.match(t.infos().at(-1)!, /consumée/);
+});
+
+test("la torche plantée brûle jusqu'au matin suivant, quelle que soit l'heure où on l'allume", () => {
+  // Le monde part à 6 h : une heure de jeu par minute réelle.
+  const a = (heure: number) => ((heure - 6 + 24) % 24) * MS_PAR_HEURE_JEU;
+  const duree = (heure: number) => (extinctionTorche(a(heure), 0) - a(heure)) / MS_PAR_HEURE_JEU;
+  assert.equal(duree(21), 8.5, "à 21 h : toute la nuit");
+  assert.equal(duree(3), 2.5, "à 3 h : jusqu'à 5 h 30");
+  assert.equal(duree(12), 17.5, "à midi : jusqu'au lendemain matin");
+  assert.equal(duree(5.5), 24, "pile à 5 h 30 : jusqu'au matin d'après");
+  for (const h of [0, 4, 7, 15, 20, 22.75]) assert.equal(heureDeJeu(extinctionTorche(a(h), 0), 0), 5.5, `${h} h`);
 });

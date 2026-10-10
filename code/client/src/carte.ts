@@ -285,6 +285,11 @@ export function dessinCarte(): string {
   </svg>`;
 }
 
+/** Un clic en dehors de la feuille : commencé et fini sur le fond de la carte (pas sur la feuille ni sur sa fiche). */
+export function clicEnDehors(debut: unknown, fin: unknown, fond: unknown): boolean {
+  return debut === fond && fin === fond;
+}
+
 export class Carte {
   private readonly racine: HTMLElement;
   private readonly fiche: HTMLElement;
@@ -309,13 +314,13 @@ export class Carte {
     racine.setAttribute("aria-modal", "true");
     racine.setAttribute("aria-labelledby", "titre-carte-fiche");
     this.fiche = racine.querySelector(".carte-fiche")!;
-    // Un clic sur le fond sombre ferme la carte : seulement si le geste commence ET finit sur le fond (un défilement
-    // commencé dans la fiche ne ferme rien). Pendant un voyage, rien.
-    let surLeFond = false;
-    racine.addEventListener("pointerdown", (e) => (surLeFond = e.target === racine));
+    // Plan 0.8 §9.2 : la carte garde sa croix, et un clic (ou un toucher) en dehors de la feuille la ferme : seulement si
+    // le geste commence ET finit sur le fond (un défilement commencé dans la fiche ne ferme rien). Pendant un voyage, rien.
+    let debut: EventTarget | null = null;
+    racine.addEventListener("pointerdown", (e) => (debut = e.target));
     racine.addEventListener("click", (e) => {
-      if (surLeFond && e.target === racine) this.fermer();
-      surLeFond = false;
+      if (clicEnDehors(debut, e.target, racine)) this.fermer();
+      debut = null;
     });
     this.pion = racine.querySelector(".pion")!;
     this.trace = racine.querySelector(".trace")!;

@@ -158,6 +158,13 @@ const DUREES_QUETES: Readonly<Record<string, { travail: number; lieu?: "station"
   travois: { travail: 6 },
   foyer_pierres: { travail: 5 },
   foyer_cuisine: { travail: 8 },
+  // Les portes du niveau 1 (plan 0.8, chantier 13) : le travail à la maison, la clé en poche. La sortie qui la rapporte
+  // reste à apprendre au simulateur (chantier 14).
+  abri_ferme: { travail: 5 },
+  marmite: { travail: 4 },
+  coffre_cercle: { travail: 4 },
+  dix_litres: { travail: 3 },
+  etabli_etau: { travail: 4 },
   comptoir: { travail: 10, lieu: "comptoir" },
   premiers_wotts: { travail: 8, lieu: "comptoir" },
   main_tendue: { travail: 10, lieu: "comptoir" },
@@ -1135,21 +1142,23 @@ class Simulation {
     };
     const duree = (base: number) => base * this.def.facteur;
 
+    // Le garage de la station : la caisse de l'atelier et la pièce de sa famille. Plan 0.8 (chantier 13) : on y arrive
+    // au milieu de la visite (on traverse d'abord la cour), ce qui compte quand la visite est celle du tutoriel.
+    const garage = () => {
+      // La caisse de l'atelier (I1, I2) : la barre, le bocal de clous, le fil de fer, le bidon d'huile.
+      this.voir(Object.keys(USAGES.caisse_atelier.donne));
+      // La pièce de sa famille (personnelle), et le sac de charbon des Charbonniers (I23).
+      const piece = objetPiece(ATELIER[this.famille] as "forge" | "banc_recharge" | "pedalier");
+      this.obtenirCle(piece, s);
+      charge += OBJETS[piece]?.poids ?? 0;
+      if (this.famille === "charbonniers" && !this.faits0_8.has("sac_charbon")) {
+        this.faits0_8.add("sac_charbon");
+        porter("charbon_bois", USAGES.piece_enclume.donne.charbon_bois ?? 0, "sac_charbon");
+      }
+    };
     const station = (dureeLa: number, ravitailler: boolean) => {
       arriver("station", dureeLa);
-      if (!ravitailler) {
-        this.fouiller(["boutique", "atelier", "epave", "grange"], "H1A");
-        // La caisse de l'atelier (I1, I2) : la barre, le bocal de clous, le fil de fer, le bidon d'huile.
-        this.voir(Object.keys(USAGES.caisse_atelier.donne));
-        // La pièce de sa famille (personnelle), et le sac de charbon des Charbonniers (I23).
-        const piece = objetPiece(ATELIER[this.famille] as "forge" | "banc_recharge" | "pedalier");
-        this.obtenirCle(piece, s);
-        charge += OBJETS[piece]?.poids ?? 0;
-        if (this.famille === "charbonniers" && !this.faits0_8.has("sac_charbon")) {
-          this.faits0_8.add("sac_charbon");
-          porter("charbon_bois", USAGES.piece_enclume.donne.charbon_bois ?? 0, "sac_charbon");
-        }
-      }
+      if (!ravitailler) this.fouiller(["boutique", "atelier", "epave", "grange"], "H1A");
       // Le bois : ce que demandent les portes qui restent, et une réserve ; son tas d'abord, puis le vrac.
       const veut = this.aRapporter("buche");
       porter("buche", this.haltes.prendreTas("tas_bois", this.absolu, Math.min(veut, place(2))), "tas_bois");
@@ -1175,8 +1184,15 @@ class Simulation {
 
     switch (lieu) {
       case "station":
-        station(duree(motif === "ravitaillement" ? DUREES_SORTIES.ravitaillement : DUREES_SORTIES.station), motif === "ravitaillement");
-        this.avancerEnSortie(duree(motif === "ravitaillement" ? DUREES_SORTIES.ravitaillement : DUREES_SORTIES.station));
+        if (motif === "ravitaillement") {
+          station(duree(DUREES_SORTIES.ravitaillement), true);
+          this.avancerEnSortie(duree(DUREES_SORTIES.ravitaillement));
+          break;
+        }
+        station(duree(DUREES_SORTIES.station), false);
+        this.avancerEnSortie(duree(DUREES_SORTIES.station) / 2);
+        garage();
+        this.avancerEnSortie(duree(DUREES_SORTIES.station) / 2);
         break;
       case "gue":
         gue(duree(DUREES_SORTIES.gue));

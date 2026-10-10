@@ -5424,11 +5424,45 @@ body:has(#hud .voile-pause:not([hidden])) #hud .tactile {
 }
 #hud .panneau.fiche .ligne-cle .indice-cle {
   flex-basis: 100%;
-  font-style: italic;
 }
-#hud .panneau.fiche .ligne-cle .indice-cle::before {
-  content: "🔎 ";
-  font-style: normal;
+/* Plan 0.8, chantier 13 : l'indice replié sous la clé ; on le déplie d'un toucher (« Où chercher ? »). */
+#hud .panneau.fiche .ligne-cle .indice-cle summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--canard);
+}
+#hud .panneau.fiche .ligne-cle .indice-cle summary::-webkit-details-marker {
+  display: none;
+}
+#hud .panneau.fiche .ligne-cle .indice-cle summary::before {
+  content: "🔎";
+}
+#hud .panneau.fiche .ligne-cle .indice-cle summary::after {
+  content: "▸";
+  transition: transform 0.15s;
+}
+#hud .panneau.fiche .ligne-cle .indice-cle[open] summary::after {
+  transform: rotate(90deg);
+}
+#hud .panneau.fiche .ligne-cle .indice-cle .precis {
+  font-weight: 400;
+  font-style: italic;
+  opacity: 0.75;
+}
+#hud .panneau.fiche .ligne-cle .indice-cle small {
+  display: block;
+  padding: 2px 8px 2px 30px;
+  font-style: italic;
+  font-size: 12.5px;
+  line-height: 1.35;
 }
 #hud .panneau.fiche .ligne-cle.poche {
   background: rgba(31, 94, 102, 0.12);
@@ -5555,4 +5589,164 @@ body:has(#hud .voile-pause:not([hidden])) #hud .tactile {
     padding: 8px 14px 10px;
     background: var(--creme);
   }
+}
+
+/* ---------- L'avertissement du carnet (plan 0.8, chantier 13 ; B14 : la bûche du terrain au feu) ----------
+   La charte du bandeau de l'idée (papier crème, encre brune), un filet rouge : c'est un avertissement. Il reste jusqu'à
+   son bouton « Compris » ; jamais de croix. */
+#hud .bandeau-avertissement {
+  position: absolute;
+  top: calc(var(--haut-bandeau, 120px) + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 31;
+  width: min(460px, calc(100vw - 32px));
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px 9px 12px;
+  border-radius: 10px;
+  border-left: 4px solid var(--rouge);
+  background: rgba(244, 236, 216, 0.97);
+  color: var(--encre);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  pointer-events: auto;
+  animation: idee-entre 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+#hud .bandeau-avertissement[hidden] {
+  display: none;
+}
+#hud .bandeau-avertissement .sujet {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(178, 58, 46, 0.22), rgba(178, 58, 46, 0.05) 70%);
+}
+#hud .bandeau-avertissement p {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.35;
+}
+#hud .bandeau-avertissement strong {
+  display: block;
+  font-family: Georgia, "Times New Roman", serif;
+  font-style: italic;
+  font-size: 14.5px;
+  color: var(--rouge);
+}
+#hud .bandeau-avertissement .texte {
+  display: block;
+}
+#hud .bandeau-avertissement .compris {
+  flex: none;
+  min-height: 40px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 8px;
+  background: var(--rouge);
+  color: var(--creme);
+  font: inherit;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+@media (max-width: 420px) {
+  #hud .bandeau-avertissement {
+    top: calc(var(--haut-bandeau, 120px) + 58px);
+    width: calc(100vw - 24px);
+  }
+  #hud .bandeau-avertissement p {
+    font-size: 13px;
+  }
+}
+@media (orientation: landscape) and (max-height: 520px) {
+  #hud .bandeau-avertissement {
+    width: min(400px, 49vw);
+    padding: 6px 8px 6px 10px;
+  }
+  #hud .bandeau-avertissement .sujet {
+    width: 34px;
+    height: 34px;
+  }
+  #hud .bandeau-avertissement .compris {
+    min-height: 36px;
+  }
+}
+
+/* ---------- La fiche Examiner sur téléphone (plan 0.8, chantier 13) ----------
+   En vertical, elle prend toute la largeur (12 px de marge), sous les jauges et les tuiles, jusqu'au-dessus du joystick
+   et du bouton B qui la referme ; en paysage, une colonne au centre, toute la hauteur, entre le joystick et les boutons. */
+@media (max-width: 560px) {
+  #hud .panneau.fiche {
+    left: 12px !important;
+    right: 12px !important;
+    width: auto !important;
+    transform: none;
+    z-index: 13;
+    top: max(172px, calc(env(safe-area-inset-top) + 160px)) !important;
+    /* Jusqu'au-dessus du joystick et du bouton B (≈ 160 px du bas), qui restent à portée du pouce. */
+    max-height: calc(100dvh - max(172px, calc(env(safe-area-inset-top) + 160px)) - 164px) !important;
+    padding: 8px 12px 10px;
+  }
+  #hud .panneau.fiche h2 {
+    font-size: 17px;
+  }
+  #hud .panneau.fiche .examen {
+    font-size: 13px;
+  }
+}
+@media (orientation: landscape) and (max-height: 520px) {
+  #hud .panneau.fiche {
+    top: max(8px, env(safe-area-inset-top)) !important;
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%);
+    width: min(460px, 56vw) !important;
+    max-height: calc(100dvh - 16px) !important;
+    z-index: 13;
+    padding: 6px 12px 8px;
+    font-size: 13px;
+  }
+  #hud .panneau.fiche h2 {
+    font-size: 16px;
+  }
+}
+/* Ce qui manque à une étape de la fiche : replié, une ligne par chose une fois déplié. */
+#hud .panneau.fiche details.ou-trouver summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--rouge);
+}
+#hud .panneau.fiche details.ou-trouver summary::-webkit-details-marker {
+  display: none;
+}
+#hud .panneau.fiche details.ou-trouver summary::after {
+  content: "▸";
+  transition: transform 0.15s;
+}
+#hud .panneau.fiche details.ou-trouver[open] summary::after {
+  transform: rotate(90deg);
+}
+#hud .panneau.fiche details.ou-trouver .nombre {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--rouge);
+  color: var(--creme);
+  font-size: 11px;
+  text-align: center;
+}
+#hud .panneau.fiche details.ou-trouver ul.manque li + li {
+  margin-top: 3px;
 }
