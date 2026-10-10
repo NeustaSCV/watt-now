@@ -5464,16 +5464,14 @@ body:has(#hud .voile-pause:not([hidden])) #hud .tactile {
   content: "✓ ";
 }
 
-/* Plan 0.8 §9.2 : la fiche Examiner n'a plus de croix. Elle se ferme par B, ou par ce bouton « Fermer » en bas, collé
-   au bas de la fiche quand elle défile (on l'atteint sans chercher). */
+/* Plan 0.8 §9.2 : la fiche Examiner n'a plus de croix. Elle se ferme par B (le bouton tactile B dit alors « Fermer »),
+   ou par ce bouton « Fermer » en bas. Sur un grand écran, il reste collé au bas de la fiche quand elle défile ; sur un
+   téléphone, il suit la fiche, pour ne pas manger sa hauteur (le bouton B est toujours là). */
 #hud .panneau.fiche .pied-fiche {
-  position: sticky;
-  bottom: -14px;
   display: flex;
   justify-content: center;
-  margin: 10px -14px -14px;
-  padding: 8px 14px 10px;
-  background: var(--creme);
+  margin-top: 10px;
+  padding-top: 8px;
   border-top: 1px solid rgba(28, 35, 51, 0.2);
 }
 #hud .panneau.fiche button.fermer-fiche {
@@ -5482,4 +5480,13 @@ body:has(#hud .voile-pause:not([hidden])) #hud .tactile {
   background: transparent;
   color: var(--encre);
   border-color: var(--encre);
+}
+@media (min-height: 700px) {
+  #hud .panneau.fiche .pied-fiche {
+    position: sticky;
+    bottom: -14px;
+    margin: 10px -14px -14px;
+    padding: 8px 14px 10px;
+    background: var(--creme);
+  }
 }
