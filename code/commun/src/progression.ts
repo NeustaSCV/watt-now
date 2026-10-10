@@ -1,18 +1,26 @@
-// L'arbre de progression des recettes (proposition « arbre-de-progression », décisions du porteur du 2026-10-09).
+// L'arbre de progression des recettes (proposition « arbre-de-progression », décisions du porteur du 2026-10-09 ;
+// plan 0.8 §2.1 et §2.2, chantier 2 : la fin des paliers).
 //
 // Tout survivant connaît les gestes de base (Book 03 §5.2) ; il n'y **pense** qu'au bon moment. Une recette connue
-// (sa famille, les communes, ce qu'il a appris) n'apparaît dans Fabriquer qu'une fois **dévoilée** : quand le
-// personnage en a eu besoin, ou qu'il a tenu l'ingrédient clé. Cinq paliers, calqués sur Maslow, servent à concevoir
-// et à trier (le corps, l'abri du danger, les siens puis les autres, le métier, l'œuvre) ; ce ne sont pas des niveaux.
+// (sa famille, les communes, ce qu'il a appris) n'apparaît dans Fabriquer qu'une fois **dévoilée**. Depuis la 0.8, plus
+// de paliers : chaque recette a un **lieu** (`recettes-par-construction.md` §1.1) :
+// - **à la main** : elle se dévoile quand on y pense (ses déclencheurs « l'un ou l'autre »), ou au plus tard à son filet
+//   du temps, porté par sa ligne ;
+// - **posée** (une construction, racine d'une lignée) : par ses déclencheurs, comme avant ;
+// - **à une construction** : par la construction seule, dès qu'on la possède au bon niveau.
+// Les silhouettes « À découvrir » sont ce que le niveau suivant d'une construction qu'on possède ouvrirait, plus ce
+// qu'une quête en cours demande. Les **clés** des niveaux (`Etape.cle`, lignees.ts) font naître une idée au premier
+// ramassage (« Tu y penses »), gardée si c'est trop tôt, et un indice « où chercher » en deux temps.
 //
-// Ce fichier ne fait que des calculs purs : la table (chaque recette, son palier, ses déclencheurs « l'un ou
-// l'autre », son indice), et les fonctions qui disent ce qui se dévoile. Le serveur constate les faits
-// (serveur/src/devoilement.ts) ; le client affiche (chantier 5).
+// Ce fichier ne fait que des calculs purs. Le serveur constate les faits (serveur/src/devoilement.ts) ; le client
+// affiche (client/src/fabrication-arbre.ts, la fiche d'installation de hud.ts, client/src/bandeau-idee.ts).
 
-import { RECETTES, estApprise, estHorsFamille, recette, type Recette, type SavoirRecettes } from "./recettes.ts";
-import type { TypeObjet } from "./objets.ts";
+import { NOMS_INSTALLATIONS, RECETTES, estApprise, estHorsFamille, niveauQualite, recette, type LieuRecette, type Recette, type SavoirRecettes } from "./recettes.ts";
+import { LIGNEES_INSTALLATIONS, VOIE_CREUSEE, VOIE_SURFACE, lignee, type CleEvolution, type Etape, type FormeFeu } from "./lignees.ts";
+import type { Inventaire, TypeObjet } from "./objets.ts";
 import { QUETE, type Condition, type Quete } from "./quetes.ts";
 import type { Famille } from "./regles.ts";
+import { FORGE_VENTILEE_REQUISE } from "./recettes/charbonniers.ts";
 
 // ---------- Les déclencheurs ----------
 
@@ -32,8 +40,13 @@ export type Declencheur =
   | { a: "quete"; quete: string }
   /** Le tutoriel a atteint cette étape (ou il est fini). */
   | { a: "tuto"; etape: number }
-  /** Une installation de ce type, à ce niveau au moins (« feu » : le meilleur foyer). */
+  /** Une installation de ce type, à ce niveau au moins (« feu » : le meilleur foyer ; « feu:dakota » : cette forme). */
   | { a: "installation"; type: string; niveau: number }
+  /**
+   * La clé d'un niveau (plan 0.8 §2.2) : l'idée en est venue, au premier `vu` de l'objet clé ou avec l'outil clé en main
+   * (`etape` : l'identifiant de l'étape de lignée qui la demande).
+   */
+  | { a: "cle"; etape: string }
   /** Le seuil S : l'abri posé et un premier danger surmonté (un Éteint détruit, ou une nuit), ou l'étape « La famille ». */
   | { a: "seuil" }
   /** Le déclencheur A : le Comptoir, un échange, une rencontre d'une autre famille, ou avoir vu faire quelqu'un. */
@@ -47,14 +60,16 @@ export type Declencheur =
   | { a: "et"; tous: Declencheur[] }
   | { a: "ou"; un: Declencheur[] };
 
-export type Palier = 1 | 2 | 3 | 4 | 5;
-
 export interface LigneProgression {
-  palier: Palier;
-  /** L'un ou l'autre suffit (règle 3). */
+  /** L'un ou l'autre suffit (règle 3). Sans effet pour une recette liée à une construction (la construction seule). */
   quand: Declencheur[];
-  /** La silhouette « À découvrir » : le besoin, jamais la solution ni le lieu (Book 14 §4.3). ~60 caractères. */
+  /** Le besoin, en une phrase, jamais la solution ni le lieu (Book 14 §4.3). ~60 caractères. */
   indice: string;
+  /**
+   * Le filet du temps d'une recette **à la main** (plan 0.8 §3, chantier 2) : au plus tard après ces minutes de jeu
+   * connecté, elle se dévoile (les 20 et 60 min des anciens paliers 1 et 2, portées par la ligne).
+   */
+  filet?: number;
 }
 
 const depart: Declencheur = { a: "depart" };
@@ -92,144 +107,221 @@ export type CarteSpeciale = (typeof CARTES_SPECIALES)[number];
 
 /**
  * La table complète (§2.4 à §2.8 de la proposition). Chaque recette de `RECETTES` y a sa ligne (un test le vérifie).
- * Le rythme (décision Q5) : les paliers 1 et 2 viennent vite, par des gestes de la première heure ; le filet du temps
- * (`FILET_MINUTES`) les ouvre de toute façon.
+ * Le rythme (décision Q5) : les gestes à la main de la première heure viennent vite ; leur filet du temps (`filet`) les
+ * ouvre de toute façon. Les lignes des recettes liées à une construction gardent leurs déclencheurs pour mémoire : seule
+ * la construction les dévoile (`lieuDe`).
  */
 export const PROGRESSION: Readonly<Record<string, LigneProgression>> = {
-  // ---------- Palier 1 · Le corps ----------
-  feu_de_camp: { palier: 1, quand: [depart], indice: "Chaleur, eau bouillie, cuisine : tout commence là." },
-  abri: { palier: 1, quand: [depart], indice: "Un toit pour dormir deux fois mieux." },
-  lit_branchages: { palier: 1, quand: [fab("abri"), fait("nuit"), fait("sommeil_bas"), quete("lit")], indice: "Dormir par terre, c'est dormir à moitié." },
-  ficelle: { palier: 1, quand: [vu("fibres")], indice: "Des fibres au bord de l'eau, et tes doigts." },
-  corde: { palier: 1, quand: [vu("fibres")], indice: "Plus solide qu'une ficelle, pour ce qui pèse." },
-  recuperateur_pluie: { palier: 1, quand: [fait("pluie"), fait("ebullition", 3), quete("eau_du_ciel")], indice: "Bouillir l'eau coûte du bois. Le ciel, lui, la donne." },
-  volaille: { palier: 1, quand: [vu("poule")], indice: "Une poule, ça ne se mange pas avec les plumes." },
-  cepes_poeles: { palier: 1, quand: [vu("cepe"), quete("repas")], indice: "Ce qui pousse sous les arbres, cuit, cale bien." },
-  volaille_cepes: { palier: 1, quand: [et(vu("volaille_crue"), vu("cepe")), quete("repas")], indice: "Le vrai repas : de la viande et ce qui l'accompagne." },
-  pommes_cuites: { palier: 1, quand: [vu("pomme"), quete("repas")], indice: "Un fruit sous la cendre devient un dessert." },
-  escabeau: { palier: 1, quand: [fait("arbre_haut")], indice: "Les plus belles pommes sont toujours en haut." },
-  soupe_cepes: { palier: 1, quand: [FOYER_CUISINE, quete("foyer_cuisine")], indice: "Un mijoté nourrit et désaltère à la fois." },
-  pot_au_feu: { palier: 1, quand: [FOYER_CUISINE, quete("foyer_cuisine")], indice: "Ce qui mijote longtemps cale longtemps." },
-  foyer_dakota: { palier: 1, quand: [vu("baton_fouir", "beche"), quete("dakota")], indice: "Un feu qui ne se voit pas de loin." },
+  // ---------- Le corps (la grille de conception du Book 02 : plus un palier du code) ----------
+  feu_de_camp: { quand: [depart], indice: "Chaleur, eau bouillie, cuisine : tout commence là." },
+  abri: { quand: [depart], indice: "Un toit pour dormir deux fois mieux." },
+  lit_branchages: { quand: [fab("abri"), fait("nuit"), fait("sommeil_bas"), quete("lit")], indice: "Dormir par terre, c'est dormir à moitié." },
+  ficelle: { filet: 20, quand: [vu("fibres")], indice: "Des fibres au bord de l'eau, et tes doigts." },
+  corde: { filet: 20, quand: [vu("fibres")], indice: "Plus solide qu'une ficelle, pour ce qui pèse." },
+  recuperateur_pluie: { quand: [fait("pluie"), fait("ebullition", 3), quete("eau_du_ciel")], indice: "Bouillir l'eau coûte du bois. Le ciel, lui, la donne." },
+  volaille: { filet: 20, quand: [vu("poule")], indice: "Une poule, ça ne se mange pas avec les plumes." },
+  cepes_poeles: { quand: [vu("cepe"), quete("repas")], indice: "Ce qui pousse sous les arbres, cuit, cale bien." },
+  volaille_cepes: { quand: [et(vu("volaille_crue"), vu("cepe")), quete("repas")], indice: "Le vrai repas : de la viande et ce qui l'accompagne." },
+  pommes_cuites: { quand: [vu("pomme"), quete("repas")], indice: "Un fruit sous la cendre devient un dessert." },
+  escabeau: { quand: [fait("arbre_haut")], indice: "Les plus belles pommes sont toujours en haut." },
+  soupe_cepes: { quand: [FOYER_CUISINE, quete("foyer_cuisine")], indice: "Un mijoté nourrit et désaltère à la fois." },
+  pot_au_feu: { quand: [FOYER_CUISINE, quete("foyer_cuisine")], indice: "Ce qui mijote longtemps cale longtemps." },
+  foyer_dakota: { quand: [vu("baton_fouir", "beche"), quete("dakota")], indice: "Un feu qui ne se voit pas de loin." },
 
-  // ---------- Palier 2 · À l'abri du danger ----------
-  hache: { palier: 2, quand: [vu("tete_hache"), tuto(5)], indice: "Une tête d'outil sans manche ne sert à rien." },
-  etabli: { palier: 2, quand: [fab("hache"), vu("hache", "perche_frene")], indice: "Les gestes fins demandent un plan de travail." },
-  gourdin: { palier: 2, quand: [fait("feu_allume"), fait("eteint_vu"), quete("defense")], indice: "Les poings, c'est pour les films." },
-  epieu: { palier: 2, quand: [fait("eteint_vu"), fab("gourdin"), quete("defense")], indice: "Mieux vaut les tenir à distance." },
-  lance: { palier: 2, quand: [fab("epieu")], indice: "Une pointe d'acier au bout du bois." },
-  arc_fortune_branche: { palier: 2, quand: [detruits(1), quete("premier_arc")], indice: "Frapper de plus loin, la prochaine fois." },
-  arc_fortune: { palier: 2, quand: [vu("perche_frene"), detruits(1), quete("premier_arc")], indice: "Frapper avant d'être saisi." },
-  fleches_durcies: { palier: 2, quand: [ARCS_FORTUNE, ARC], indice: "Un arc sans flèches, c'est un bâton." },
-  fleches_os: { palier: 2, quand: [et(vu("os"), ARC)], indice: "Une pointe plus dure que le bois." },
-  fleches_clou: { palier: 2, quand: [et(vu("bocal_clous"), ARC)], indice: "Des pointes toutes faites, par douzaines." },
-  baton_fouir: { palier: 2, quand: [fait("nuit"), quete("dakota")], indice: "La nuit, toute lumière se voit de loin." },
-  alarme_boites: { palier: 2, quand: [et(vu("boite_vide"), ou(fait("nuit"), fait("eteint_vu"))), quete("alarme")], indice: "Être prévenu avant qu'ils arrivent." },
-  pansement: { palier: 2, quand: [vu("chiffons"), fait("blessure"), quete("soins")], indice: "Un chiffon propre vaut de l'or quand ça saigne." },
-  protege_bras: { palier: 2, quand: [fait("saisi"), fait("morsure"), quete("protege_bras")], indice: "Ils mordent l'avant-bras qu'on lève." },
-  coffre: { palier: 2, quand: [fait("sac_lourd"), fait("nuit", 2), quete("coffre")], indice: "Quand ton sac pèsera trop lourd…" },
-  sac_fortune: { palier: 2, quand: [{ a: "sans_sac" }], indice: "Sans sac, tes poches ne portent pas grand-chose." },
-  travois: { palier: 2, quand: [fait("trop_lourd"), quete("travois")], indice: "Ce qu'on ne porte pas, on le traîne." },
+  // ---------- À l'abri du danger ----------
+  hache: { filet: 60, quand: [vu("tete_hache"), tuto(5)], indice: "Une tête d'outil sans manche ne sert à rien." },
+  etabli: { quand: [fab("hache"), vu("hache", "perche_frene")], indice: "Les gestes fins demandent un plan de travail." },
+  gourdin: { filet: 60, quand: [fait("feu_allume"), fait("eteint_vu"), quete("defense")], indice: "Les poings, c'est pour les films." },
+  epieu: { quand: [fait("eteint_vu"), fab("gourdin"), quete("defense")], indice: "Mieux vaut les tenir à distance." },
+  lance: { filet: 60, quand: [fab("epieu")], indice: "Une pointe d'acier au bout du bois." },
+  arc_fortune_branche: { filet: 60, quand: [detruits(1), quete("premier_arc")], indice: "Frapper de plus loin, la prochaine fois." },
+  arc_fortune: { filet: 60, quand: [vu("perche_frene"), detruits(1), quete("premier_arc")], indice: "Frapper avant d'être saisi." },
+  fleches_durcies: { quand: [ARCS_FORTUNE, ARC], indice: "Un arc sans flèches, c'est un bâton." },
+  fleches_os: { filet: 60, quand: [et(vu("os"), ARC)], indice: "Une pointe plus dure que le bois." },
+  fleches_clou: { filet: 60, quand: [et(vu("bocal_clous"), ARC)], indice: "Des pointes toutes faites, par douzaines." },
+  baton_fouir: { quand: [fait("nuit"), quete("dakota")], indice: "La nuit, toute lumière se voit de loin." },
+  alarme_boites: { quand: [et(vu("boite_vide"), ou(fait("nuit"), fait("eteint_vu"))), quete("alarme")], indice: "Être prévenu avant qu'ils arrivent." },
+  pansement: { filet: 60, quand: [vu("chiffons"), fait("blessure"), quete("soins")], indice: "Un chiffon propre vaut de l'or quand ça saigne." },
+  protege_bras: { filet: 60, quand: [fait("saisi"), fait("morsure"), quete("protege_bras")], indice: "Ils mordent l'avant-bras qu'on lève." },
+  coffre: { quand: [fait("sac_lourd"), fait("nuit", 2), quete("coffre")], indice: "Quand ton sac pèsera trop lourd…" },
+  sac_fortune: { filet: 60, quand: [{ a: "sans_sac" }], indice: "Sans sac, tes poches ne portent pas grand-chose." },
+  travois: { filet: 60, quand: [fait("trop_lourd"), quete("travois")], indice: "Ce qu'on ne porte pas, on le traîne." },
 
-  // ---------- Palier 3a · Les tiens : l'atelier et l'arme de base, seul ----------
-  forge: { palier: 3, quand: [SEUIL], indice: "Quand tu auras un toit et tenu tête une fois…" },
-  charbonniere: { palier: 3, quand: [fab("forge"), quete("charbonniere")], indice: "Ta forge aura faim d'un feu plus chaud." },
-  lame_forgee_fer: { palier: 3, quand: [CHARBON, quete("lame")], indice: "Ton premier charbon, ta première lame." },
-  lame_forgee: { palier: 3, quand: [et(CHARBON, vu("ressort_lames"))], indice: "Un bon acier de ressort fait une bonne lame." },
-  lame_forgee_lime: { palier: 3, quand: [et(CHARBON, vu("lime_usee"))], indice: "Le meilleur acier dort dans les vieux outils." },
-  machette_forgee_fer: { palier: 3, quand: [SEUIL, COUTEAUX_FORGES, quete("trempe")], indice: "Ton arme de métier : plus longue qu'un couteau." },
-  machette_forgee: { palier: 3, quand: [et(COUTEAUX_FORGES, vu("ressort_lames"))], indice: "Une longue lame dans un bon acier." },
-  machette_forgee_ebrechee: { palier: 3, quand: [et(COUTEAUX_FORGES, vu("lame_ebrechee"))], indice: "Deux lames cassées en font une neuve." },
-  reforger_lame: { palier: 3, quand: [vu("lame_ebrechee")], indice: "Une lame cassée n'est pas perdue." },
-  banc_recharge: { palier: 3, quand: [SEUIL], indice: "Quand tu auras un toit et tenu tête une fois…" },
-  matraque_fortune: { palier: 3, quand: [SEUIL, fab("banc_recharge"), vu("appareil_photo_jetable")], indice: "Ton arme de métier : le silence qui mord." },
-  module_flash: { palier: 3, quand: [vu("appareil_photo_jetable")], indice: "Un flash garde une belle décharge en réserve." },
-  panneau_solaire: { palier: 3, quand: [vu("panneau_solaire"), quete("panneau_trouve"), quete("panneau_pose")], indice: "Le soleil donne, encore faut-il le recueillir." },
-  pack_cellules: { palier: 3, quand: [vu("cellule_lithium"), quete("pack")], indice: "Des petites piles ensemble font une vraie batterie." },
-  module_raquette: { palier: 3, quand: [vu("raquette_moustiques"), quete("raquette")], indice: "Ce qui grillait les moustiques peut servir encore." },
-  matraque_electrique: { palier: 3, quand: [fab("pack_cellules"), MODULES, quete("raquette")], indice: "Une décharge qui les éteint pour de bon." },
-  pedalier: { palier: 3, quand: [SEUIL, vu("cadre_velo"), quete("meule"), quete("dynamo")], indice: "Ce qui tourne ne meurt pas." },
-  arbalete: { palier: 3, quand: [SEUIL, fab("pedalier"), quete("arbalete")], indice: "Ton arme de métier : rien à bander, tout à viser." },
-  arbrier: { palier: 3, quand: [devoilee("arbalete")], indice: "Le corps de l'arme, taillé dans une bûche." },
-  noix_bois: { palier: 3, quand: [devoilee("arbalete")], indice: "Ce qui retient la corde jusqu'au tir." },
-  arc_arbalete_frene: { palier: 3, quand: [devoilee("arbalete")], indice: "Un arc court et raide pour l'arbalète." },
-  corde_arbalete: { palier: 3, quand: [devoilee("arbalete")], indice: "Une corde doublée, pour tenir la tension." },
-  arc_arbalete_ressort: { palier: 3, quand: [et(vu("ressort_lames"), devoilee("arbalete"))], indice: "Un ressort plie mieux que le bois." },
-  noix_os: { palier: 3, quand: [et(vu("os"), devoilee("arbalete"))], indice: "Un os dur tient mieux qu'un bout de bois." },
-  corde_arbalete_ceinture: { palier: 3, quand: [et(vu("ceinture_securite"), devoilee("arbalete"))], indice: "Une sangle faite pour ne jamais lâcher." },
-  carreaux_os: { palier: 3, quand: [fab("arbalete"), devoilee("arbalete"), quete("carreau")], indice: "Une arbalète sans carreaux, c'est un meuble." },
-  carreaux_clou: { palier: 3, quand: [et(vu("bocal_clous"), devoilee("arbalete"))], indice: "Des pointes toutes faites, par douzaines." },
-  carreaux_papier: { palier: 3, quand: [et(vu("papier"), devoilee("arbalete"))], indice: "Pas de plumes ? Le papier vole aussi." },
+  // ---------- Les tiens : l'atelier et l'arme de base, seul ----------
+  forge: { quand: [SEUIL], indice: "Quand tu auras un toit et tenu tête une fois…" },
+  charbonniere: { quand: [fab("forge"), quete("charbonniere")], indice: "Ta forge aura faim d'un feu plus chaud." },
+  lame_forgee_fer: { quand: [CHARBON, quete("lame")], indice: "Ton premier charbon, ta première lame." },
+  lame_forgee: { quand: [et(CHARBON, vu("ressort_lames"))], indice: "Un bon acier de ressort fait une bonne lame." },
+  lame_forgee_lime: { quand: [et(CHARBON, vu("lime_usee"))], indice: "Le meilleur acier dort dans les vieux outils." },
+  machette_forgee_fer: { quand: [SEUIL, COUTEAUX_FORGES, quete("trempe")], indice: "Ton arme de métier : plus longue qu'un couteau." },
+  machette_forgee: { quand: [et(COUTEAUX_FORGES, vu("ressort_lames"))], indice: "Une longue lame dans un bon acier." },
+  machette_forgee_ebrechee: { quand: [et(COUTEAUX_FORGES, vu("lame_ebrechee"))], indice: "Deux lames cassées en font une neuve." },
+  reforger_lame: { quand: [vu("lame_ebrechee")], indice: "Une lame cassée n'est pas perdue." },
+  banc_recharge: { quand: [SEUIL], indice: "Quand tu auras un toit et tenu tête une fois…" },
+  matraque_fortune: { quand: [SEUIL, fab("banc_recharge"), vu("appareil_photo_jetable")], indice: "Ton arme de métier : le silence qui mord." },
+  module_flash: { quand: [vu("appareil_photo_jetable")], indice: "Un flash garde une belle décharge en réserve." },
+  panneau_solaire: { quand: [vu("panneau_solaire"), quete("panneau_trouve"), quete("panneau_pose")], indice: "Le soleil donne, encore faut-il le recueillir." },
+  pack_cellules: { quand: [vu("cellule_lithium"), quete("pack")], indice: "Des petites piles ensemble font une vraie batterie." },
+  module_raquette: { quand: [vu("raquette_moustiques"), quete("raquette")], indice: "Ce qui grillait les moustiques peut servir encore." },
+  matraque_electrique: { quand: [fab("pack_cellules"), MODULES, quete("raquette")], indice: "Une décharge qui les éteint pour de bon." },
+  pedalier: { quand: [SEUIL, vu("cadre_velo"), quete("meule"), quete("dynamo")], indice: "Ce qui tourne ne meurt pas." },
+  arbalete: { quand: [SEUIL, fab("pedalier"), quete("arbalete")], indice: "Ton arme de métier : rien à bander, tout à viser." },
+  arbrier: { quand: [devoilee("arbalete")], indice: "Le corps de l'arme, taillé dans une bûche." },
+  noix_bois: { quand: [devoilee("arbalete")], indice: "Ce qui retient la corde jusqu'au tir." },
+  arc_arbalete_frene: { quand: [devoilee("arbalete")], indice: "Un arc court et raide pour l'arbalète." },
+  corde_arbalete: { quand: [devoilee("arbalete")], indice: "Une corde doublée, pour tenir la tension." },
+  arc_arbalete_ressort: { quand: [et(vu("ressort_lames"), devoilee("arbalete"))], indice: "Un ressort plie mieux que le bois." },
+  noix_os: { quand: [et(vu("os"), devoilee("arbalete"))], indice: "Un os dur tient mieux qu'un bout de bois." },
+  corde_arbalete_ceinture: { quand: [et(vu("ceinture_securite"), devoilee("arbalete"))], indice: "Une sangle faite pour ne jamais lâcher." },
+  carreaux_os: { quand: [fab("arbalete"), devoilee("arbalete"), quete("carreau")], indice: "Une arbalète sans carreaux, c'est un meuble." },
+  carreaux_clou: { quand: [et(vu("bocal_clous"), devoilee("arbalete"))], indice: "Des pointes toutes faites, par douzaines." },
+  carreaux_papier: { quand: [et(vu("papier"), devoilee("arbalete"))], indice: "Pas de plumes ? Le papier vole aussi." },
 
-  // ---------- Palier 3b · Les autres : le Comptoir, la rencontre ----------
-  rivet: { palier: 3, quand: [A, MACHETTES_FORGEES, quete("fournisseur")], indice: "De petites pièces que les autres achètent." },
-  pointe_acier: { palier: 3, quand: [A, MACHETTES_FORGEES, FLECHES_OU_CARREAUX], indice: "Les flèches des autres ont besoin de pointes." },
-  pointe_acier_fil: { palier: 3, quand: [et(ou(A, MACHETTES_FORGEES, FLECHES_OU_CARREAUX), vu("rouleau_fil_fer"))], indice: "Du fil de fer, frappé à chaud." },
-  pointe_lance: { palier: 3, quand: [A, fab("lance")], indice: "Une vraie pointe, pour une vraie lance." },
-  lance_forgee: { palier: 3, quand: [fab("pointe_lance"), vu("pointe_lance")], indice: "L'épieu coiffé d'acier." },
-  lampe_bricolee: { palier: 3, quand: [et(vu("led"), A), quete("courant_autres")], indice: "Une lumière à vendre aux autres familles." },
-  fleches_acier: { palier: 3, quand: [vu("pointe_acier")], indice: "Une pointe d'acier perce mieux que l'os." },
+  // ---------- Les autres : le Comptoir, la rencontre ----------
+  rivet: { quand: [A, MACHETTES_FORGEES, quete("fournisseur")], indice: "De petites pièces que les autres achètent." },
+  pointe_acier: { quand: [A, MACHETTES_FORGEES, FLECHES_OU_CARREAUX], indice: "Les flèches des autres ont besoin de pointes." },
+  pointe_acier_fil: { quand: [et(ou(A, MACHETTES_FORGEES, FLECHES_OU_CARREAUX), vu("rouleau_fil_fer"))], indice: "Du fil de fer, frappé à chaud." },
+  pointe_lance: { quand: [A, fab("lance")], indice: "Une vraie pointe, pour une vraie lance." },
+  lance_forgee: { quand: [fab("pointe_lance"), vu("pointe_lance")], indice: "L'épieu coiffé d'acier." },
+  lampe_bricolee: { quand: [et(vu("led"), A), quete("courant_autres")], indice: "Une lumière à vendre aux autres familles." },
+  fleches_acier: { quand: [vu("pointe_acier")], indice: "Une pointe d'acier perce mieux que l'os." },
 
-  // ---------- Palier 4 · Le métier ----------
-  ebauche_arc: { palier: 4, quand: [ARCS_FORTUNE, fait("tete:fleche")], indice: "Le bois vert fatigue vite : il faut un bois sec." },
-  corde_arc_ficelle: { palier: 4, quand: [ARCS_FORTUNE, fait("tete:fleche")], indice: "Un arc ne vaut pas mieux que sa corde." },
-  arc_simple: { palier: 4, quand: [ARCS_FORTUNE, fait("tete:fleche")], indice: "Un arc qui dure, et qui porte plus loin." },
-  corde_arc_corde: { palier: 4, quand: [et(vu("corde"), devoilee("arc_simple"))], indice: "Une corde défaite fait une meilleure corde d'arc." },
-  corde_arc_dentaire: { palier: 4, quand: [et(vu("fil_dentaire"), devoilee("arc_simple"))], indice: "Le fil le plus solide est dans la salle de bains." },
-  corde_arc_boyau: { palier: 4, quand: [et(vu("boyaux"), devoilee("arc_simple"))], indice: "Les anciens tendaient leurs arcs autrement." },
-  ebauche_if: { palier: 4, quand: [vu("baton_if")], indice: "Le meilleur bois d'arc pousse au fond du bois." },
-  arc_if: { palier: 4, quand: [vu("baton_if")], indice: "Le meilleur arc, s'il sèche bien." },
-  pinces_forge: { palier: 4, quand: [COUTEAUX_FORGES, quete("pinces")], indice: "Sans pinces, pas plus de deux étoiles." },
-  hachette: { palier: 4, quand: [et(fab("pinces_forge"), MACHETTES_FORGEES), quete("mise_acier")], indice: "Une lame qui fend et qui se lance." },
-  hache_forgee: { palier: 4, quand: [et(fab("pinces_forge"), MACHETTES_FORGEES), quete("mise_acier")], indice: "Les vieilles têtes rouillées ne durent pas." },
-  hache_forgee_soc: { palier: 4, quand: [vu("soc_charrue")], indice: "Un vieil outil des champs cache un bel acier." },
-  serpe_soc: { palier: 4, quand: [vu("soc_charrue")], indice: "Un vieil outil des champs cache un bel acier." },
-  serpe: { palier: 4, quand: [COUTEAUX_FORGES], indice: "Une lame courbe pour élaguer." },
-  ciseau_bois: { palier: 4, quand: [fab("pinces_forge")], indice: "Tailler le bois et trancher le métal." },
-  module_bobine: { palier: 4, quand: [vu("bobine_allumage")], indice: "Ce qui allumait un moteur claque plus fort." },
-  aiguillon: { palier: 4, quand: [et(fab("matraque_electrique", "matraque_electrodes", "matraque_manche_tourne"), fab("epieu"))], indice: "La décharge au bout d'une longue hampe." },
-  alarme_electrique: { palier: 4, quand: [et(ou(vu("rouleau_fil_fer"), fab("alarme_boites")), fab("banc_recharge")), quete("alarme_electrique")], indice: "Une alarme qui ne fait pas de bruit." },
-  cloture_fortune: { palier: 4, quand: [fab("module_raquette"), fab("alarme_electrique")], indice: "Un fil qui mord ceux qui passent." },
-  electrificateur: { palier: 4, quand: [vu("resistance")], indice: "Une décharge qui revient sans cesse." },
-  cloture_electrique: { palier: 4, quand: [fab("electrificateur")], indice: "Un vrai enclos qui se défend seul." },
-  plaque_choc: { palier: 4, quand: [et(vu("casserole"), MODULES)], indice: "Le sol lui-même peut mordre." },
-  bain_derouillage: { palier: 4, quand: [et(vu("casserole"), vu("machette"))], indice: "La rouille se défait, avec un peu de courant." },
-  derouiller_machette: { palier: 4, quand: [fab("bain_derouillage")], indice: "Une lame rouillée retrouve son tranchant." },
-  arc_arbalete_if: { palier: 4, quand: [vu("baton_if")], indice: "Le meilleur bois d'arc, en court et raide." },
-  assommoir: { palier: 4, quand: [detruits(3), fab("arbalete"), quete("machoires")], indice: "Ils reviennent : qu'un piège travaille pour toi." },
-  fosse_pieux: { palier: 4, quand: [vu("beche")], indice: "Un trou bien caché arrête net." },
-  machoires_fortune: { palier: 4, quand: [et(fab("assommoir"), vu("ressort_lames"))], indice: "Un piège qui tient au lieu d'assommer." },
-  tour_perche: { palier: 4, quand: [fab("arbalete")], indice: "Ce qui tourne façonne le bois." },
-  manche_tourne: { palier: 4, quand: [fab("tour_perche")], indice: "Un manche rond et droit, fait au tour." },
-  brouette: { palier: 4, quand: [et(ou(fait("trop_lourd"), fab("travois")), vu("roue_velo"))], indice: "Ce qui roule porte plus que ce qu'on traîne." },
+  // ---------- Le métier ----------
+  ebauche_arc: { quand: [ARCS_FORTUNE, fait("tete:fleche")], indice: "Le bois vert fatigue vite : il faut un bois sec." },
+  corde_arc_ficelle: { quand: [ARCS_FORTUNE, fait("tete:fleche")], indice: "Un arc ne vaut pas mieux que sa corde." },
+  arc_simple: { quand: [ARCS_FORTUNE, fait("tete:fleche")], indice: "Un arc qui dure, et qui porte plus loin." },
+  corde_arc_corde: { quand: [et(vu("corde"), devoilee("arc_simple"))], indice: "Une corde défaite fait une meilleure corde d'arc." },
+  corde_arc_dentaire: { quand: [et(vu("fil_dentaire"), devoilee("arc_simple"))], indice: "Le fil le plus solide est dans la salle de bains." },
+  corde_arc_boyau: { quand: [et(vu("boyaux"), devoilee("arc_simple"))], indice: "Les anciens tendaient leurs arcs autrement." },
+  ebauche_if: { quand: [vu("baton_if")], indice: "Le meilleur bois d'arc pousse au fond du bois." },
+  arc_if: { quand: [vu("baton_if")], indice: "Le meilleur arc, s'il sèche bien." },
+  pinces_forge: { quand: [COUTEAUX_FORGES, quete("pinces")], indice: "Sans pinces, pas plus de deux étoiles." },
+  hachette: { quand: [et(fab("pinces_forge"), MACHETTES_FORGEES), quete("mise_acier")], indice: "Une lame qui fend et qui se lance." },
+  hache_forgee: { quand: [et(fab("pinces_forge"), MACHETTES_FORGEES), quete("mise_acier")], indice: "Les vieilles têtes rouillées ne durent pas." },
+  hache_forgee_soc: { quand: [vu("soc_charrue")], indice: "Un vieil outil des champs cache un bel acier." },
+  serpe_soc: { quand: [vu("soc_charrue")], indice: "Un vieil outil des champs cache un bel acier." },
+  serpe: { quand: [COUTEAUX_FORGES], indice: "Une lame courbe pour élaguer." },
+  ciseau_bois: { quand: [fab("pinces_forge")], indice: "Tailler le bois et trancher le métal." },
+  module_bobine: { quand: [vu("bobine_allumage")], indice: "Ce qui allumait un moteur claque plus fort." },
+  aiguillon: { quand: [et(fab("matraque_electrique", "matraque_electrodes", "matraque_manche_tourne"), fab("epieu"))], indice: "La décharge au bout d'une longue hampe." },
+  alarme_electrique: { quand: [et(ou(vu("rouleau_fil_fer"), fab("alarme_boites")), fab("banc_recharge")), quete("alarme_electrique")], indice: "Une alarme qui ne fait pas de bruit." },
+  cloture_fortune: { quand: [fab("module_raquette"), fab("alarme_electrique")], indice: "Un fil qui mord ceux qui passent." },
+  electrificateur: { quand: [vu("resistance")], indice: "Une décharge qui revient sans cesse." },
+  cloture_electrique: { quand: [fab("electrificateur")], indice: "Un vrai enclos qui se défend seul." },
+  plaque_choc: { quand: [et(vu("casserole"), MODULES)], indice: "Le sol lui-même peut mordre." },
+  bain_derouillage: { quand: [et(vu("casserole"), vu("machette"))], indice: "La rouille se défait, avec un peu de courant." },
+  derouiller_machette: { quand: [fab("bain_derouillage")], indice: "Une lame rouillée retrouve son tranchant." },
+  arc_arbalete_if: { quand: [vu("baton_if")], indice: "Le meilleur bois d'arc, en court et raide." },
+  assommoir: { quand: [detruits(3), fab("arbalete"), quete("machoires")], indice: "Ils reviennent : qu'un piège travaille pour toi." },
+  fosse_pieux: { quand: [vu("beche")], indice: "Un trou bien caché arrête net." },
+  machoires_fortune: { quand: [et(fab("assommoir"), vu("ressort_lames"))], indice: "Un piège qui tient au lieu d'assommer." },
+  tour_perche: { quand: [fab("arbalete")], indice: "Ce qui tourne façonne le bois." },
+  manche_tourne: { quand: [fab("tour_perche")], indice: "Un manche rond et droit, fait au tour." },
+  brouette: { quand: [et(ou(fait("trop_lourd"), fab("travois")), vu("roue_velo"))], indice: "Ce qui roule porte plus que ce qu'on traîne." },
 
-  // ---------- Palier 5 · L'œuvre ----------
-  ressort_retrempe: { palier: 5, quand: [fait("rencontre:mecanistes"), et(A, CINQ_LAMES)], indice: "Un ressort qui ne casse plus, pour d'autres que toi." },
-  electrodes_forgees: { palier: 5, quand: [fait("rencontre:voltaiques"), et(A, CINQ_LAMES)], indice: "Des pointes d'acier pour ceux qui manient le courant." },
-  glaive: { palier: 5, quand: [et({ a: "installation", type: "forge", niveau: 2 }, vu("rivet"))], indice: "Ta plus belle lame, quand ta forge soufflera fort." },
-  matraque_electrodes: { palier: 5, quand: [vu("electrodes_forgees")], indice: "Des électrodes forgées mordent plus fort." },
-  matraque_manche_tourne: { palier: 5, quand: [vu("manche_tourne")], indice: "Un manche tourné, une matraque qui dure." },
-  ventilateur_forge: { palier: 5, quand: [vu("petit_moteur"), fait("rencontre:charbonniers")], indice: "Une forge souffle mieux avec un moteur." },
-  noix_forgee: { palier: 5, quand: [vu("rivet")], indice: "Des rivets d'acier, une détente qui ne s'use plus." },
-  arc_arbalete_retrempe: { palier: 5, quand: [vu("ressort_retrempe")], indice: "Un ressort retrempé, l'arc le plus puissant." },
-  arbalete_lourde: { palier: 5, quand: [vu("ressort_retrempe")], indice: "Deux ressorts retrempés, une arme lourde." },
-  piege_machoires: { palier: 5, quand: [vu("ressort_retrempe")], indice: "Des mâchoires qui ne lâchent jamais." },
-  cranequin: { palier: 5, quand: [et(fab("arbalete_lourde"), vu("roulements"))], indice: "Une manivelle pour bander l'arme lourde." },
-  carreaux_acier: { palier: 5, quand: [vu("pointe_acier")], indice: "Une pointe d'acier perce mieux que l'os." },
+  // ---------- L'œuvre ----------
+  ressort_retrempe: { quand: [fait("rencontre:mecanistes"), et(A, CINQ_LAMES)], indice: "Un ressort qui ne casse plus, pour d'autres que toi." },
+  electrodes_forgees: { quand: [fait("rencontre:voltaiques"), et(A, CINQ_LAMES)], indice: "Des pointes d'acier pour ceux qui manient le courant." },
+  glaive: { quand: [et({ a: "installation", type: "forge", niveau: 2 }, vu("rivet"))], indice: "Ta plus belle lame, quand ta forge soufflera fort." },
+  matraque_electrodes: { quand: [vu("electrodes_forgees")], indice: "Des électrodes forgées mordent plus fort." },
+  matraque_manche_tourne: { quand: [vu("manche_tourne")], indice: "Un manche tourné, une matraque qui dure." },
+  ventilateur_forge: { quand: [vu("petit_moteur"), fait("rencontre:charbonniers")], indice: "Une forge souffle mieux avec un moteur." },
+  noix_forgee: { quand: [vu("rivet")], indice: "Des rivets d'acier, une détente qui ne s'use plus." },
+  arc_arbalete_retrempe: { quand: [vu("ressort_retrempe")], indice: "Un ressort retrempé, l'arc le plus puissant." },
+  arbalete_lourde: { quand: [vu("ressort_retrempe")], indice: "Deux ressorts retrempés, une arme lourde." },
+  piege_machoires: { quand: [vu("ressort_retrempe")], indice: "Des mâchoires qui ne lâchent jamais." },
+  cranequin: { quand: [et(fab("arbalete_lourde"), vu("roulements"))], indice: "Une manivelle pour bander l'arme lourde." },
+  carreaux_acier: { quand: [vu("pointe_acier")], indice: "Une pointe d'acier perce mieux que l'os." },
 };
 
 /** L'atelier de chaque famille : rien de son métier ne se dévoile avant lui (sauf ce qu'une quête demande). */
 export const ATELIER: Readonly<Record<Famille, string>> = { charbonniers: "forge", voltaiques: "banc_recharge", mecanistes: "pedalier" };
 
-/**
- * Le filet du temps (décision Q5 : rapide au début pour accrocher, puis un rythme régulier) : au plus tard après ces
- * minutes de jeu connecté, tout le palier est dévoilé. Le seuil S tombe de lui-même après `FILET_SEUIL_MIN`.
- */
-export const FILET_MINUTES: Readonly<Partial<Record<Palier, number>>> = { 1: 20, 2: 60 };
+/** Le seuil du métier tombe de lui-même après ces minutes de jeu (l'étape « La famille » le fait plus tôt). */
 export const FILET_SEUIL_MIN = 120;
 
 /** Le pas (en minutes) du temps de jeu qui mérite de réévaluer les dévoilements : seuls les filets en dépendent. */
-export const ECHEANCES_TEMPS: readonly number[] = [...new Set([...Object.values(FILET_MINUTES), FILET_SEUIL_MIN])].sort((a, b) => a - b);
+export const ECHEANCES_TEMPS: readonly number[] = [
+  ...new Set([...Object.values(PROGRESSION).flatMap((l) => (l.filet !== undefined ? [l.filet] : [])), FILET_SEUIL_MIN]),
+].sort((a, b) => a - b);
+
+// ---------- Le lieu d'une recette (plan 0.8 §2.1) ----------
+
+/**
+ * Les recettes du feu, décidées au plan 0.8 §2.3 (« Les recettes permises, pour le feu ») : les formes qui les cuisent.
+ * Chaque niveau garde ce que faisaient ceux d'avant ; la poêlée se fait aussi au Dakota (et au poêle-fusée, §3.2).
+ * Partie de l'adaptation provisoire ci-dessous : le chantier 1 porte ces formes dans le `lieu` de chaque recette.
+ */
+const FORMES_PROVISOIRES: Readonly<Record<string, readonly FormeFeu[]>> = {
+  pommes_cuites: ["feu_camp", "foyer_pierres", "foyer_cuisine", "four_terre", "dakota"],
+  cepes_poeles: ["foyer_pierres", "foyer_cuisine", "four_terre", "poele", "dakota", "poele_fusee"],
+  epieu: ["foyer_pierres", "foyer_cuisine", "four_terre"],
+  fleches_durcies: ["foyer_pierres", "foyer_cuisine", "four_terre"],
+  baton_fouir: ["foyer_pierres", "foyer_cuisine", "four_terre"],
+  soupe_cepes: ["foyer_cuisine", "four_terre", "poele"],
+  pot_au_feu: ["four_terre", "poele"],
+  volaille_cepes: ["four_terre", "poele"],
+};
+
+/**
+ * Où se fait une recette : à la main, posée, ou à une construction (et à quel niveau, sous quelle forme).
+ *
+ * **Adaptation provisoire, retirée à l'intégration du chantier 1** : elle renvoie `r.lieu` quand il est là ; sinon,
+ * elle le déduit des anciens champs (`produit.installation`, `installation`, `feu`, `feuNiveau`, la forge ventilée de
+ * `FORGE_VENTILEE_REQUISE`) et des formes du feu décidées (§2.3). Tout le dévoilement passe par elle.
+ */
+export function lieuDe(r: Recette): LieuRecette {
+  if (r.lieu) return r.lieu;
+  if ("installation" in r.produit) return { genre: "posee" };
+  if (r.installation) return { genre: "construction", construction: r.installation, ...(FORGE_VENTILEE_REQUISE.has(r.id) ? { niveau: 2 } : {}) };
+  const formes = FORMES_PROVISOIRES[r.id];
+  if (formes) return { genre: "construction", construction: "feu", formes };
+  if (r.feu) return { genre: "construction", construction: "feu", niveau: r.feuNiveau ?? 1 };
+  return { genre: "main" };
+}
+
+/**
+ * Le lieu est-il atteint avec ces constructions ? La carte des constructions (`EtatPourDevoilement.installations`) :
+ * `type` → meilleur niveau ; « feu » → le meilleur foyer, et `feu:<forme>` pour chaque forme qu'on a ;
+ * `<type>+<accessoire>` pour un accessoire monté (la broche, la marmite, la meule, le bac de trempe…).
+ */
+export function lieuAtteint(lieu: LieuRecette, installations: ReadonlyMap<string, number>): boolean {
+  if (lieu.genre !== "construction") return true;
+  if (lieu.construction === "feu" && lieu.formes && lieu.formes.length > 0) {
+    if (!lieu.formes.some((f) => installations.has(`feu:${f}`))) return false;
+  } else if ((installations.get(lieu.construction) ?? 0) < (lieu.niveau ?? 1)) return false;
+  return !lieu.accessoire || installations.has(`${lieu.construction}+${lieu.accessoire}`);
+}
+
+/** Les deux voies du feu, avec leur forme. */
+function etapeDeForme(forme: string): { voie: readonly Etape[]; etape: Etape } | null {
+  for (const voie of [VOIE_SURFACE, VOIE_CREUSEE]) {
+    const etape = voie.find((x) => x.id === forme);
+    if (etape) return { voie, etape };
+  }
+  return null;
+}
+
+/** Le nom de la construction qu'un lieu demande (« Foyer de cuisine », « Forge ventilée »). */
+export function nomConstruction(lieu: LieuRecette): string | null {
+  if (lieu.genre !== "construction") return null;
+  if (lieu.construction === "feu") {
+    const premiere = lieu.formes?.[0];
+    return (premiere ? etapeDeForme(premiere)?.etape.nom : VOIE_SURFACE[(lieu.niveau ?? 1) - 1]?.nom) ?? "Feu de camp";
+  }
+  const nom = lignee(lieu.construction)?.[(lieu.niveau ?? 1) - 1]?.nom ?? NOMS_INSTALLATIONS[lieu.construction];
+  return nom.charAt(0).toUpperCase() + nom.slice(1);
+}
+
+/** Les noms de construction au féminin (pour « À la forge ventilée »). */
+const FEMININS = new Set(["forge", "réserve", "citerne", "meule", "charbonnière", "marmite", "broche", "torche", "clôture", "fosse", "plaque", "hutte", "cabane"]);
+
+/** « Au foyer de cuisine », « À la forge ventilée », « À l'établi à étau ». */
+export function aLaConstruction(nom: string): string {
+  const bas = nom.charAt(0).toLowerCase() + nom.slice(1);
+  if (/^[aeiouyhéèêâîôû]/i.test(bas)) return `À l'${bas}`;
+  return FEMININS.has(bas.split(/[ -]/)[0]!) ? `À la ${bas}` : `Au ${bas}`;
+}
 
 /**
  * Les voies « de base » de la chaîne (règle 4) : quand une recette demande un ingrédient fabricable, on dévoile la
@@ -269,8 +361,9 @@ export function maillons(r: Recette): Recette[] {
     const m = recetteDeBase(t);
     if (m && m.id !== r.id) liste.push(m);
   }
-  if (r.installation) {
-    const m = RECETTES.find((x) => "installation" in x.produit && x.produit.installation === r.installation);
+  const lieu = lieuDe(r);
+  if (lieu.genre === "construction" && lieu.construction !== "feu") {
+    const m = RECETTES.find((x) => "installation" in x.produit && x.produit.installation === lieu.construction);
     if (m) liste.push(m);
   }
   return liste;
@@ -369,16 +462,21 @@ export interface EtatPourDevoilement {
   vus: ReadonlySet<string>;
   /** Les faits comptés (ceux des quêtes, plus ceux de la progression). */
   faits: Readonly<Record<string, number>>;
-  /** Les installations du terrain : type → meilleur niveau (« feu » : le meilleur foyer). */
+  /**
+   * Les constructions du terrain : type → meilleur niveau (« feu » : le meilleur foyer) ; `feu:<forme>` pour chaque forme
+   * de feu qu'on a ; `<type>+<accessoire>` pour un accessoire monté (voir `lieuAtteint`).
+   */
   installations: ReadonlyMap<string, number>;
   /** Les quêtes en cours ou finies. */
   quetes: ReadonlySet<string>;
-  /** L'étape atteinte du tutoriel (12 : fini) ; null : pas de tutoriel suivi (passé, ou compte d'avant). */
+  /** L'étape atteinte du tutoriel (12 : fini) ; null : pas de tutoriel suivi (passé). */
   tuto: number | null;
   minutes: number;
   sansSac: boolean;
   /** Ce qui est déjà dévoilé. */
   devoilees: ReadonlySet<string>;
+  /** Les étapes dont l'idée est venue (la clé ramassée une fois) : « déjà en poche » dans la fiche. */
+  idees?: ReadonlySet<string>;
 }
 
 /** Cette recette (ou carte) est-elle pour ce personnage : commune, de sa famille, ou apprise ? */
@@ -397,7 +495,7 @@ function somme(faits: Readonly<Record<string, number>>, prefixe: string): number
 function aFabrique(e: EtatPourDevoilement, id: string): number {
   let n = e.faits[`fabrique:${id}`] ?? 0;
   const r = recette(id);
-  // Une installation déjà posée compte (les personnages d'avant la 0.7 n'ont pas toujours le fait).
+  // Une installation déjà posée compte, même sans le fait.
   if (n === 0 && r && "installation" in r.produit && e.installations.has(r.produit.installation)) n = 1;
   return n;
 }
@@ -438,6 +536,8 @@ export function declencheurVrai(d: Declencheur, e: EtatPourDevoilement): boolean
       return e.tuto !== null && e.tuto >= d.etape;
     case "installation":
       return (e.installations.get(d.type) ?? 0) >= d.niveau;
+    case "cle":
+      return e.idees?.has(d.etape) ?? false;
     case "seuil":
       return seuilAtteint(e);
     case "autres":
@@ -455,18 +555,21 @@ export function declencheurVrai(d: Declencheur, e: EtatPourDevoilement): boolean
   }
 }
 
-/** La ligne seule dit-elle oui (sans la garde du métier ni la chaîne) ? */
+/** La ligne seule dit-elle oui (sans la chaîne) ? */
 function ligneVraie(id: string, ligne: LigneProgression, e: EtatPourDevoilement, demandees: ReadonlySet<string>): boolean {
+  const r = recette(id);
+  // Ce qu'on a déjà fait (ou posé), on y a forcément pensé.
+  if (r && aFabrique(e, id) > 0) return true;
+  const lieu = r ? lieuDe(r) : null;
+  // Liée à une construction : la construction seule la dévoile (plan 0.8 §2.1).
+  if (lieu?.genre === "construction") return lieuAtteint(lieu, e.installations);
   if ((e.faits[`vu_faire:${id}`] ?? 0) > 0) return true;
   // Le tutoriel et le carnet ne demandent jamais une recette invisible (règle 5), même avant l'atelier.
   if (demandees.has(id)) return true;
-  // Ce qu'on a déjà fait (ou posé), on y a forcément pensé (un personnage d'avant la 0.7, Q4).
-  if (recette(id) && aFabrique(e, id) > 0) return true;
-  const filet = FILET_MINUTES[ligne.palier];
-  if (filet !== undefined && e.minutes >= filet) return true;
+  // Le filet du temps, porté par la ligne : les recettes à la main seulement.
+  if (lieu?.genre === "main" && ligne.filet !== undefined && e.minutes >= ligne.filet) return true;
   if (!ligne.quand.some((d) => declencheurVrai(d, e))) return false;
   // Le métier commence à l'atelier (§3.1) : avant lui, rien de sa famille, sauf ce qu'une quête demande (règle 5).
-  const r = recette(id);
   if (r && r.famille !== "tous" && r.famille === e.famille && id !== ATELIER[e.famille] && !e.devoilees.has(ATELIER[e.famille])) {
     return ligne.quand.some((d) => d.a === "quete" && declencheurVrai(d, e));
   }
@@ -481,41 +584,51 @@ export function aDevoiler(e: EtatPourDevoilement): string[] {
   const devoilees = new Set(e.devoilees);
   const nouvelles: string[] = [];
   const savoir = e.savoir ?? {};
-  const ajouter = (id: string) => {
+  const ajouter = (id: string, parLaChaine: boolean) => {
     if (devoilees.has(id) || !accessible(id, e.famille, savoir)) return;
+    const r = recette(id);
+    // La chaîne ne tire pas une recette liée à une construction qu'on n'a pas : elle attend sa construction.
+    if (parLaChaine && r && !lieuAtteint(lieuDe(r), e.installations)) return;
     devoilees.add(id);
     nouvelles.push(id);
     // La chaîne tire ses maillons, de proche en proche.
-    const r = recette(id);
-    if (r) for (const m of maillons(r)) ajouter(m.id);
+    if (r) for (const m of maillons(r)) ajouter(m.id, true);
   };
   // Une leçon ou un manuel dévoile en même temps qu'il apprend (§3.3).
-  for (const r of RECETTES) if (estHorsFamille(r, e.famille) && estApprise(r, savoir)) ajouter(r.id);
+  for (const r of RECETTES) if (estHorsFamille(r, e.famille) && estApprise(r, savoir)) ajouter(r.id, false);
   const demandees = recettesDemandees(e);
+  // Une recette demandée qui attend sa construction reste en silhouette, mais ce qu'il faut pour y arriver (la
+  // construction à poser, ses ingrédients) se dévoile : le carnet ne mène jamais à une impasse invisible (règle 5).
+  for (const id of demandees) {
+    const r = recette(id);
+    if (r && accessible(id, e.famille, savoir) && !lieuAtteint(lieuDe(r), e.installations)) for (const m of maillons(r)) ajouter(m.id, true);
+  }
   // Un dévoilement peut en ouvrir un autre (« une fois l'arbalète dévoilée ») : on repasse tant que ça bouge.
   for (let passe = 0; passe < 8; passe++) {
     const avant = nouvelles.length;
     const vue = { ...e, devoilees };
     for (const [id, ligne] of Object.entries(PROGRESSION)) {
       if (devoilees.has(id) || !accessible(id, e.famille, savoir)) continue;
-      if (ligneVraie(id, ligne, vue, demandees)) ajouter(id);
+      if (ligneVraie(id, ligne, vue, demandees)) ajouter(id, false);
     }
     if (nouvelles.length === avant) break;
   }
   return nouvelles;
 }
 
-/** Les recettes (et cartes) d'un palier, pour ce personnage. */
-export function recettesDuPalier(palier: Palier, famille: Famille, savoir: SavoirRecettes = {}): string[] {
-  return Object.entries(PROGRESSION)
-    .filter(([id, l]) => l.palier === palier && accessible(id, famille, savoir))
-    .map(([id]) => id);
+/**
+ * Le vétéran qui saute le tutoriel, et les comptes créés sans tutoriel (Q8, plan 0.8 §3) : les recettes communes **à la
+ * main** d'emblée. Les recettes liées à une construction arrivent avec la construction.
+ */
+export function devoileesDEmblee(famille: Famille): string[] {
+  return Object.keys(PROGRESSION).filter((id) => {
+    const r = recette(id);
+    return r !== undefined && r.famille === "tous" && accessible(id, famille) && lieuDe(r).genre === "main";
+  });
 }
 
-/** Le vétéran qui saute le tutoriel, et les comptes créés sans tutoriel (Q8) : les paliers 1 et 2 d'emblée. */
-export function devoileesDEmblee(famille: Famille): string[] {
-  return [...recettesDuPalier(1, famille), ...recettesDuPalier(2, famille)];
-}
+/** Le message du vétéran (Q-0.8-15) : il doit encore aller chercher la pièce de sa famille à la station. */
+export const TEXTE_VETERAN = "Tu y penses : les gestes de base te reviennent tous. Ta famille t'attend à la station.";
 
 /** Les recettes de départ d'un nouveau joueur : le feu et l'abri (Q3). */
 export function devoileesAuDepart(): string[] {
@@ -524,18 +637,68 @@ export function devoileesAuDepart(): string[] {
     .map(([id]) => id);
 }
 
-/**
- * Le prochain palier (décision Q2 : les silhouettes « À découvrir » sont celles du prochain palier) : le premier palier
- * dont une recette reste à dévoiler, et ces recettes, celles que demande une quête en cours d'abord.
- */
-export function prochainPalier(famille: Famille, devoilees: ReadonlySet<string>, quetes: ReadonlySet<string> = new Set(), savoir: SavoirRecettes = {}): { palier: Palier; recettes: string[] } | null {
-  for (const palier of [1, 2, 3, 4, 5] as Palier[]) {
-    const reste = recettesDuPalier(palier, famille, savoir).filter((id) => !devoilees.has(id));
-    if (reste.length === 0) continue;
-    const parQuete = (id: string) => (PROGRESSION[id]!.quand.some((d) => d.a === "quete" && quetes.has(d.quete)) ? 0 : 1);
-    return { palier, recettes: reste.sort((a, b) => parQuete(a) - parQuete(b)) };
+// ---------- Les silhouettes « À découvrir » (plan 0.8 §3, chantier 2) ----------
+
+/** Une recette encore cachée, et la construction qui l'ouvrira (« Au foyer de cuisine »). */
+export interface SilhouetteVue {
+  id: string;
+  /** « Au foyer de cuisine », « À la forge ventilée » : où elle se fera. */
+  ou: string;
+  /** Une quête en cours la demande. */
+  quete?: true;
+}
+
+/** Ce que le niveau suivant de chaque construction possédée ajouterait à la carte des constructions. */
+function niveauxSuivants(installations: ReadonlyMap<string, number>): { nom: string; avec: Map<string, number> }[] {
+  const suivants: { nom: string; avec: Map<string, number> }[] = [];
+  for (const [cle, niveau] of installations) {
+    if (cle.startsWith("feu:")) {
+      const f = etapeDeForme(cle.slice(4));
+      const suivante = f ? f.voie[f.etape.niveau] : undefined;
+      if (!suivante) continue;
+      const avec = new Map(installations);
+      avec.set(`feu:${suivante.id}`, 1);
+      avec.set("feu", Math.max(avec.get("feu") ?? 0, suivante.niveau));
+      suivants.push({ nom: suivante.nom, avec });
+    } else if (!cle.includes("+") && cle !== "feu") {
+      const suivante = lignee(cle)?.[niveau];
+      if (!suivante) continue;
+      suivants.push({ nom: suivante.nom, avec: new Map(installations).set(cle, niveau + 1) });
+    }
   }
-  return null;
+  return suivants;
+}
+
+/**
+ * Les silhouettes : ce que **le niveau suivant** d'une construction qu'on possède ouvrirait (« Au foyer de cuisine : soupe
+ * de cèpes »), plus ce qu'une quête en cours demande et qui attend une construction. Celles de la quête d'abord.
+ */
+export function silhouettes(e: EtatPourDevoilement): SilhouetteVue[] {
+  const savoir = e.savoir ?? {};
+  const liste: SilhouetteVue[] = [];
+  const deja = new Set<string>();
+  const cachee = (id: string) => !e.devoilees.has(id) && !deja.has(id) && accessible(id, e.famille, savoir);
+  for (const id of recettesDemandees(e)) {
+    const r = recette(id);
+    if (!r || !cachee(id)) continue;
+    const lieu = lieuDe(r);
+    const nom = nomConstruction(lieu);
+    if (!nom || lieuAtteint(lieu, e.installations)) continue;
+    liste.push({ id, ou: aLaConstruction(nom), quete: true });
+    deja.add(id);
+  }
+  const suivants = niveauxSuivants(e.installations);
+  for (const id of Object.keys(PROGRESSION)) {
+    const r = recette(id);
+    if (!r || !cachee(id)) continue;
+    const lieu = lieuDe(r);
+    if (lieu.genre !== "construction" || lieuAtteint(lieu, e.installations)) continue;
+    const s = suivants.find((x) => lieuAtteint(lieu, x.avec));
+    if (!s) continue;
+    liste.push({ id, ou: aLaConstruction(s.nom) });
+    deja.add(id);
+  }
+  return liste;
 }
 
 /**
@@ -559,7 +722,104 @@ export function entrevues(e: EtatPourDevoilement): string[] {
   return [...ids];
 }
 
+// ---------- Les clés : l'idée au ramassage et l'indice en deux temps (plan 0.8 §2.2) ----------
+
+/** Après ce temps de jeu (minutes) sans la clé, l'indice passe au second temps (Q-0.8-16). */
+export const INDICE_SECOND_TEMPS_MIN = 45;
+
+/** Une étape de lignée qui a une clé, et sa construction (« feu », ou le type d'installation). */
+export interface EtapeAvecCle {
+  construction: string;
+  etape: Etape & { cle: CleEvolution };
+}
+
+let etapesCle: EtapeAvecCle[] | null = null;
+
+/** Toutes les étapes à clé des lignées (le feu, puis les installations), relevées une fois (les lignées sont fixes). */
+export function etapesAvecCle(): EtapeAvecCle[] {
+  if (etapesCle) return etapesCle;
+  const liste: EtapeAvecCle[] = [];
+  const ajouter = (construction: string, etapes: readonly Etape[]) => {
+    for (const etape of etapes) if (etape.cle) liste.push({ construction, etape: etape as Etape & { cle: CleEvolution } });
+  };
+  ajouter("feu", VOIE_SURFACE);
+  ajouter("feu", VOIE_CREUSEE);
+  for (const [type, etapes] of Object.entries(LIGNEES_INSTALLATIONS)) if (etapes) ajouter(type, etapes);
+  etapesCle = liste;
+  return liste;
+}
+
+export function etapeAvecCle(id: string): EtapeAvecCle | undefined {
+  return etapesAvecCle().find((x) => x.etape.id === id);
+}
+
+/** Le niveau qu'on a dans la voie de cette étape (0 : rien de cette lignée). Pour le feu : la voie de surface ou creusée. */
+export function niveauPossede(x: EtapeAvecCle, installations: ReadonlyMap<string, number>): number {
+  if (x.construction !== "feu") return installations.get(x.construction) ?? 0;
+  const voie = VOIE_SURFACE.some((v) => v.id === x.etape.id) ? VOIE_SURFACE : VOIE_CREUSEE;
+  return Math.max(0, ...voie.filter((v) => installations.has(`feu:${v.id}`)).map((v) => v.niveau));
+}
+
+/** La clé est-elle là : l'objet entré une fois dans le sac, ou l'outil en main (sa qualité au niveau demandé) ? */
+export function cleTenue(c: CleEvolution, vus: ReadonlySet<string>, inventaire: Inventaire): boolean {
+  if (c.objet && vus.has(c.objet)) return true;
+  return c.qualite !== undefined && niveauQualite(inventaire, c.qualite.qualite) >= c.qualite.niveau;
+}
+
+/** Une idée qui vient : on la garde toujours ; on ne la dit qu'une fois par trouvaille (`texte` null : gardée en silence). */
+export interface IdeeNouvelle {
+  etape: string;
+  /** Le niveau d'avant n'est pas posé : « un jour ». */
+  plusTard: boolean;
+  texte: string | null;
+  objet?: TypeObjet;
+}
+
+/**
+ * Les idées qui viennent maintenant (jamais deux fois : `idees` les garde). « Une trouvaille, plusieurs idées » : pour un
+ * même objet, le message cite la plus proche (celle dont le niveau d'avant est posé, sinon la plus basse) ; les autres
+ * sont gardées en silence. Un niveau déjà construit (par un repli) est gardé sans message.
+ */
+export function nouvellesIdees(e: Pick<EtatPourDevoilement, "vus" | "installations"> & { idees: ReadonlySet<string>; inventaire: Inventaire }): IdeeNouvelle[] {
+  const venues = etapesAvecCle()
+    .filter((x) => !e.idees.has(x.etape.id) && cleTenue(x.etape.cle, e.vus, e.inventaire))
+    .map((x) => {
+      const a = niveauPossede(x, e.installations);
+      return { x, a, plusTard: x.etape.niveau > 1 && a < x.etape.niveau - 1, faite: a >= x.etape.niveau };
+    })
+    .sort((p, q) => Number(p.plusTard) - Number(q.plusTard) || p.x.etape.niveau - q.x.etape.niveau);
+  const dites = new Set<string>();
+  return venues.map(({ x, plusTard, faite }) => {
+    const cle = x.etape.cle;
+    const quoi = cle.objet ?? `${cle.qualite?.qualite}`;
+    const dire = !faite && !dites.has(quoi);
+    if (dire) dites.add(quoi);
+    const texte = dire ? (plusTard ? cle.ideePlusTard || cle.idee : cle.idee) : null;
+    return { etape: x.etape.id, plusTard, texte, ...(cle.objet ? { objet: cle.objet } : {}) };
+  });
+}
+
+/**
+ * Les indices « où chercher » ouverts : les étapes à clé qui sont **le niveau suivant** d'une construction qu'on a (ou,
+ * au niveau 1, dont la construction est dévoilée), pas encore jouables exceptées, et dont la clé n'est pas venue.
+ */
+export function indicesOuverts(e: Pick<EtatPourDevoilement, "installations" | "devoilees"> & { idees: ReadonlySet<string> }): EtapeAvecCle[] {
+  return etapesAvecCle().filter((x) => {
+    if (e.idees.has(x.etape.id) || x.etape.aVenir || x.etape.phase) return false;
+    const a = niveauPossede(x, e.installations);
+    if (a >= x.etape.niveau) return false;
+    if (x.etape.niveau === 1) return x.construction !== "feu" && RECETTES.some((r) => "installation" in r.produit && r.produit.installation === x.construction && e.devoilees.has(r.id));
+    return a >= x.etape.niveau - 1;
+  });
+}
+
 // ---------- Ce que le serveur garde, et ce qu'il envoie ----------
+
+/** L'indice d'une étape : depuis quand il est ouvert (secondes de jeu), et son temps (1 : le type de lieu ; 2 : le coin). */
+export interface EtatIndice {
+  depuis: number;
+  temps: 1 | 2;
+}
 
 /** L'état gardé en base, par personnage (une liste courte, bornée par le nombre de recettes et d'objets). */
 export interface EtatProgression {
@@ -571,22 +831,35 @@ export interface EtatProgression {
   vus: string[];
   /** Le temps de jeu connecté, en secondes (le filet du temps). */
   secondes: number;
+  /** Les idées gardées : les étapes dont la clé est venue une fois (jamais redites). */
+  idees: string[];
+  /** Les indices ouverts, par étape. */
+  indices: Record<string, EtatIndice>;
 }
 
-export const PROGRESSION_VIDE: EtatProgression = { devoilees: [], nonVues: [], vus: [], secondes: 0 };
+export const PROGRESSION_VIDE: EtatProgression = { devoilees: [], nonVues: [], vus: [], secondes: 0, idees: [], indices: {} };
 
 /** Lit un état venu de la base : ce qui n'a pas la bonne forme est ignoré ; une recette disparue est oubliée. */
 export function progressionValide(x: unknown): EtatProgression {
-  if (typeof x !== "object" || x === null) return { ...PROGRESSION_VIDE, devoilees: [], nonVues: [], vus: [] };
+  if (typeof x !== "object" || x === null) return { ...PROGRESSION_VIDE, devoilees: [], nonVues: [], vus: [], idees: [], indices: {} };
   const o = x as Record<string, unknown>;
   const chaines = (v: unknown) => (Array.isArray(v) ? v.filter((s): s is string => typeof s === "string" && s.length <= 80) : []);
   const connues = (v: unknown) => [...new Set(chaines(v).filter((id) => PROGRESSION[id] !== undefined))];
   const devoilees = connues(o.devoilees);
+  const indices: Record<string, EtatIndice> = {};
+  if (typeof o.indices === "object" && o.indices !== null) {
+    for (const [id, v] of Object.entries(o.indices as Record<string, unknown>).slice(0, 200)) {
+      const i = v as Partial<EtatIndice> | null;
+      if (id.length <= 80 && i && typeof i.depuis === "number" && Number.isFinite(i.depuis) && (i.temps === 1 || i.temps === 2)) indices[id] = { depuis: i.depuis, temps: i.temps };
+    }
+  }
   return {
     devoilees,
     nonVues: connues(o.nonVues).filter((id) => devoilees.includes(id)),
     vus: [...new Set(chaines(o.vus))].slice(0, 2000),
     secondes: typeof o.secondes === "number" && Number.isFinite(o.secondes) && o.secondes >= 0 ? o.secondes : 0,
+    idees: [...new Set(chaines(o.idees))].slice(0, 200),
+    indices,
   };
 }
 
@@ -594,12 +867,16 @@ export function progressionValide(x: unknown): EtatProgression {
 export interface VueProgression {
   devoilees: string[];
   nonVues: string[];
-  /** Le prochain palier et ses recettes cachées (les silhouettes « À découvrir ») ; null : tout est dévoilé. */
-  prochain: { palier: Palier; recettes: string[] } | null;
+  /** Les silhouettes « À découvrir » : ce que le niveau suivant d'une construction ouvrirait, et ce que demande une quête. */
+  silhouettes: SilhouetteVue[];
   /** Les cartes grisées des autres familles se montrent (repliées par famille) : le déclencheur A est atteint. */
   autres: boolean;
   /** Les recettes des autres familles à montrer dépliées. */
   entrevues: string[];
+  /** Les idées gardées (étapes de lignée) : la fiche montre leur clé « déjà en poche ». */
+  idees: string[];
+  /** Le temps de l'indice de chaque étape ouverte (1 : le type de lieu ; 2 : le coin). */
+  indices: Record<string, 1 | 2>;
 }
 
 const NOM_ATELIER: Readonly<Record<Famille, string>> = { charbonniers: "le foyer de forge", voltaiques: "le banc de recharge", mecanistes: "le pédalier" };
@@ -621,5 +898,5 @@ export function nomDevoile(id: string): string {
 
 /** Tout ce qu'un personnage de cette famille peut dévoiler (les tests du métier, qui ne portent pas sur l'arbre). */
 export function toutDevoile(famille: Famille): EtatProgression {
-  return { ...PROGRESSION_VIDE, devoilees: Object.keys(PROGRESSION).filter((id) => accessible(id, famille)), nonVues: [], vus: [] };
+  return { ...PROGRESSION_VIDE, devoilees: Object.keys(PROGRESSION).filter((id) => accessible(id, famille)), nonVues: [], vus: [], idees: [], indices: {} };
 }

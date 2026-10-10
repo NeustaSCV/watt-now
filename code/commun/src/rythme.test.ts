@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { FAMILLES, type Famille } from "./regles.ts";
 import { RECETTES, estHorsFamille, recette } from "./recettes.ts";
 import { QUETES } from "./quetes.ts";
-import { ATELIER, aDevoiler, devoileesAuDepart, maillons, recettesDeLEtape, recettesDeLaQuete, type EtatPourDevoilement } from "./progression.ts";
+import { ATELIER, aDevoiler, devoileesAuDepart, lieuAtteint, lieuDe, maillons, recettesDeLEtape, recettesDeLaQuete, silhouettes, type EtatPourDevoilement } from "./progression.ts";
 import { CIBLE, cibleDuProfil, ecartsALaCible, jouerParcours, quetesDeLaFamille, tousLesParcours } from "./rythme.ts";
 import { trouvables } from "./trouvables.ts";
 
@@ -75,15 +75,20 @@ test("le tutoriel ne demande que ce qui est dévoilé : chaque étape dévoile c
   }
 });
 
-test("la quête active dévoile sa recette et ses maillons, même avant l'atelier (règle 5)", () => {
+test("la quête active dévoile sa recette et ses maillons, même avant l'atelier (règle 5) ; liée à une construction, elle est en silhouette", () => {
   for (const famille of FAMILLES) {
     for (const q of quetesDeLaFamille(famille)) {
       const e = etat(famille, { quetes: new Set([q.id]) });
       const d = new Set([...e.devoilees, ...aDevoiler(e)]);
+      const enSilhouette = new Set(silhouettes({ ...e, devoilees: d }).filter((s) => s.quete).map((s) => s.id));
       for (const id of recettesDeLaQuete(q)) {
-        assert.ok(d.has(id), `${famille}, quête ${q.id} : ${id}`);
+        // Plan 0.8 : une recette liée à une construction qu'on n'a pas attend sa construction (en silhouette, en tête).
+        const r0 = recette(id);
+        if (r0 && !lieuAtteint(lieuDe(r0), e.installations)) assert.ok(enSilhouette.has(id), `${famille}, quête ${q.id} : ${id} en silhouette`);
+        else assert.ok(d.has(id), `${famille}, quête ${q.id} : ${id}`);
         const r = recette(id);
-        if (r) for (const m of maillons(r)) if (!estHorsFamille(m, famille)) assert.ok(d.has(m.id), `${famille}, quête ${q.id} : maillon ${m.id}`);
+        // Un maillon lié à une construction qu'on n'a pas l'attend, comme toute recette de ce genre (plan 0.8).
+        if (r) for (const m of maillons(r)) if (!estHorsFamille(m, famille) && lieuAtteint(lieuDe(m), e.installations)) assert.ok(d.has(m.id), `${famille}, quête ${q.id} : maillon ${m.id}`);
       }
     }
   }

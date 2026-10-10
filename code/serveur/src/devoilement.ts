@@ -1,41 +1,67 @@
-// Le dévoilement des recettes côté serveur (l'arbre de progression, commun/src/progression.ts).
+// Le dévoilement des recettes côté serveur (l'arbre de progression, commun/src/progression.ts ; plan 0.8, chantier 2).
 //
-// Le serveur constate ce que vit le personnage (ce qui entre dans son sac, les faits comptés, ses installations, ses
-// quêtes, son tutoriel), et dévoile les recettes auxquelles il pense. Pas de calcul continu : on ne réévalue que
-// lorsque quelque chose a changé (un fait noté, le sac qui change, une quête, une étape du tutoriel, une échéance du
-// filet du temps), au plus deux fois par seconde. Les constats d'état (sommeil bas, Éteint en vue, pluie…) sont
-// regardés une fois par seconde, et seulement tant qu'ils n'ont jamais été vus.
+// Le serveur constate ce que vit le personnage (ce qui entre dans son sac, les faits comptés, ses constructions, ses
+// quêtes, son tutoriel, les lieux qu'il quitte), et dévoile les recettes auxquelles il pense. Pas de calcul continu : on
+// ne réévalue que lorsque quelque chose a changé (un fait noté, le sac qui change, une quête, une étape du tutoriel, une
+// échéance du filet du temps), au plus deux fois par seconde. Les constats d'état (sommeil bas, Éteint en vue, pluie…)
+// et les indices des clés sont regardés une fois par seconde.
+//
+// Depuis la 0.8 : l'idée au ramassage d'une clé (« Tu y penses », gardée si c'est trop tôt, jamais redite) et l'indice
+// « où chercher » en deux temps (le type de lieu, puis le coin, après une visite du bon lieu sans la clé ou 45 min).
 
 import type { Inventaire } from "../../commun/src/objets.ts";
 import { typeDe } from "../../commun/src/etoiles.ts";
 import type { Famille } from "../../commun/src/regles.ts";
-import { RECETTES, type SavoirRecettes } from "../../commun/src/recettes.ts";
+import type { SavoirRecettes } from "../../commun/src/recettes.ts";
+import { formeFeu, niveauFeu, type EtapeMonde, type FeuDansLignee } from "../../commun/src/lignees.ts";
 import {
   ECHEANCES_TEMPS,
+  INDICE_SECOND_TEMPS_MIN,
+  PROGRESSION_VIDE,
+  TEXTE_VETERAN,
   aDevoiler,
   autresAtteints,
   devoileesAuDepart,
   devoileesDEmblee,
   entrevues,
-  prochainPalier,
+  etapeAvecCle,
+  indicesOuverts,
+  nouvellesIdees,
   progressionValide,
+  silhouettes,
   texteDevoilement,
   type EtatPourDevoilement,
   type EtatProgression,
   type VueProgression,
 } from "../../commun/src/progression.ts";
-import type { MessageServeur } from "../../commun/src/messages.ts";
+import type { EtatInstallation, MessageServeur } from "../../commun/src/messages.ts";
 
 /** Au plus un message « Tu y penses » toutes les 10 s : les idées d'une même fouille sont regroupées (§4.1). */
 export const INTERVALLE_MESSAGE_MS = 10_000;
 /** On regarde s'il y a du neuf au plus deux fois par seconde. */
 const INTERVALLE_VERIF_MS = 500;
-/** Les constats d'état, une fois par seconde. */
+/** Les constats d'état et les indices, une fois par seconde. */
 const INTERVALLE_CONSTATS_MS = 1000;
 
 /** Les constats d'état que le serveur note une fois, la première fois qu'ils sont vrais (§2.3). */
 export const CONSTATS = ["sommeil_bas", "eteint_vu", "blessure", "saisi", "pluie", "sac_lourd"] as const;
 export type Constat = (typeof CONSTATS)[number];
+
+/**
+ * Le lieu du jeu de chaque étape du monde, pour « une visite du bon lieu sans la clé ». Provisoire : la table
+ * `ETAPES_LIEUX` de `lieux.ts` (chantier 4) la remplace à l'intégration ; le gué et le Moulin y entrent avec elle.
+ */
+const LIEU_DE_L_ETAPE: Partial<Record<EtapeMonde, string>> = { maison: "terrain", H1A: "station", H1B: "gue", L1A: "cooperative", L1B: "moulin" };
+
+/** Une construction du terrain, telle que le dévoilement la regarde. */
+export interface ConstructionVue {
+  type: string;
+  niveau?: number;
+  /** Un feu : sa forme (`feu_camp`, `foyer_pierres`, `dakota`…). */
+  forme?: string;
+  /** Les accessoires montés (la broche, la marmite, la meule, le bac de trempe…). */
+  accessoires?: readonly string[];
+}
 
 /** Ce que le suivi regarde chez le joueur (le joueur le remplit ; les tests aussi). */
 export interface SourceDevoilement {
@@ -44,17 +70,45 @@ export interface SourceDevoilement {
   savoir(): SavoirRecettes;
   inventaire(): Inventaire;
   faits(): Readonly<Record<string, number>>;
-  /** Les installations du terrain (type, niveau), et les feux sous le type « feu ». */
-  installations(): Iterable<{ type: string; niveau?: number }>;
+  /** Les constructions du terrain (type, niveau), et les feux sous le type « feu », avec leur forme. */
+  installations(): Iterable<ConstructionVue>;
   /** Les quêtes en cours ou finies (aucune pendant le tutoriel). */
   quetes(): Iterable<string>;
   /** L'étape du tutoriel en cours ; null : pas de tutoriel en cours. */
   tuto(): number | null;
   sansSac(): boolean;
+  /** Le lieu où l'on est (« terrain », « station »…) ; null : en route. */
+  lieu(): string | null;
   /** Les constats vrais à cet instant (seulement ceux qu'on demande : ceux jamais encore notés). */
   constats(quels: readonly Constat[]): Constat[];
   noter(fait: string): void;
   envoyer(m: MessageServeur): void;
+}
+
+/** Les accessoires d'une installation, lus dans son état (le pédalier, l'établi, la forge). */
+const ACCESSOIRES_ETAT = ["meule", "dynamo", "redresseur", "soufflet", "meuleFine", "bac", "ventilateur", "enclume", "huile"] as const;
+
+/** Une installation du terrain, pour le dévoilement : son type, son niveau, ses accessoires montés. */
+export function constructionDuTerrain(i: { type: string; niveau?: number; etat?: EtatInstallation }): ConstructionVue {
+  const etat = i.etat ?? {};
+  const accessoires = ACCESSOIRES_ETAT.filter((a) => Boolean(etat[a]));
+  return { type: i.type, niveau: i.niveau ?? 1, ...(accessoires.length ? { accessoires } : {}) };
+}
+
+/** Un feu du terrain : « feu », son niveau, sa forme (`feu:dakota`…) et ses accessoires (la broche, la marmite). */
+export function feuDuTerrain(f: FeuDansLignee & { accessoires?: object }): ConstructionVue {
+  return { type: "feu", niveau: niveauFeu(f), forme: formeFeu(f), accessoires: Object.keys(f.accessoires ?? {}) };
+}
+
+/** La carte des constructions du dévoilement : type → niveau, `feu:<forme>`, `<type>+<accessoire>` (`lieuAtteint`). */
+export function carteConstructions(liste: Iterable<ConstructionVue>): Map<string, number> {
+  const carte = new Map<string, number>();
+  for (const i of liste) {
+    carte.set(i.type, Math.max(carte.get(i.type) ?? 0, i.niveau ?? 1));
+    if (i.forme) carte.set(`${i.type}:${i.forme}`, 1);
+    for (const a of i.accessoires ?? []) carte.set(`${i.type}+${a}`, 1);
+  }
+  return carte;
 }
 
 export class SuiviDevoilement {
@@ -62,6 +116,7 @@ export class SuiviDevoilement {
   private readonly source: SourceDevoilement;
   private readonly devoilees: Set<string>;
   private readonly vus: Set<string>;
+  private readonly idees: Set<string>;
   /** Quelque chose a changé : il faut réévaluer. */
   private sale = true;
   /** L'état a changé depuis la dernière sauvegarde. */
@@ -74,50 +129,28 @@ export class SuiviDevoilement {
   private enAttente: string[] = [];
   private cleQuetes = "";
   private tutoVu: number | null = null;
+  private lieuVu: string | null;
   /** Ce qu'on a envoyé des autres familles (pour ne renvoyer la liste que si elle change). */
   private cleAutres = "";
   private secondesSauvees = 0;
 
-  constructor(etat: EtatProgression, source: SourceDevoilement) {
-    this.etat = progressionValide(etat);
+  /** `etat` null : un personnage neuf (la base démarre neuve en 0.8, §9.1) : le feu et l'abri. */
+  constructor(etat: EtatProgression | null, source: SourceDevoilement) {
+    this.etat = progressionValide(etat ?? { ...PROGRESSION_VIDE, devoilees: devoileesAuDepart() });
     this.source = source;
     this.devoilees = new Set(this.etat.devoilees);
     this.vus = new Set(this.etat.vus);
+    this.idees = new Set(this.etat.idees);
     this.tutoVu = source.tuto();
+    this.lieuVu = source.lieu();
     this.secondesSauvees = this.etat.secondes;
-  }
-
-  // ---------- Les personnages d'avant la 0.7 ----------
-  // (Un nouveau personnage reçoit son état à la création : base.ts, `creerCompte`.)
-
-  /**
-   * Un personnage d'avant la 0.7 (décision Q4) : il ne voit plus ce qu'il n'a pas encore validé, mais on ne détruit
-   * rien. On évalue les déclencheurs sur son état actuel : son sac, ses coffres, ses installations, les recettes déjà
-   * fabriquées (les faits `fabrique:`), ses quêtes. Tout ce qui se dévoile ainsi est marqué vu (pas de pastille « 40 »).
-   */
-  static migrer(source: SourceDevoilement, coffres: Iterable<Inventaire> = []): EtatProgression {
-    const vus = new Set<string>();
-    const ajouter = (inv: Inventaire) => {
-      for (const [cle, n] of Object.entries(inv)) if ((n ?? 0) > 0) vus.add(typeDe(cle));
-    };
-    ajouter(source.inventaire());
-    for (const c of coffres) ajouter(c);
-    // Ce qu'il a déjà fabriqué est passé par son sac.
-    for (const [cle, n] of Object.entries(source.faits())) {
-      if (!cle.startsWith("fabrique:") || !(n > 0)) continue;
-      const r = RECETTES.find((x) => x.id === cle.slice("fabrique:".length));
-      if (r && "objet" in r.produit) vus.add(r.produit.objet);
-    }
-    const suivi = new SuiviDevoilement({ devoilees: devoileesAuDepart(), nonVues: [], vus: [...vus], secondes: 0 }, source);
-    suivi.reevaluer(false);
-    return { ...suivi.etat, nonVues: [] };
   }
 
   // ---------- Ce que le joueur demande ----------
 
   /**
-   * L'état à sauver, s'il le faut (un dévoilement, une carte vue, un objet nouveau, ou une minute de jeu de plus) ;
-   * null : rien de neuf. On considère qu'il est sauvé.
+   * L'état à sauver, s'il le faut (un dévoilement, une carte vue, un objet nouveau, une idée, un indice, ou une minute
+   * de jeu de plus) ; null : rien de neuf. On considère qu'il est sauvé.
    */
   aEnregistrer(): EtatProgression | null {
     if (!this.aSauver && this.etat.secondes - this.secondesSauvees < 60) return null;
@@ -130,7 +163,7 @@ export class SuiviDevoilement {
     return this.devoilees.has(id);
   }
 
-  /** Quelque chose a changé (un fait, une quête, le savoir) : on réévaluera au prochain passage. */
+  /** Quelque chose a changé (un fait, une quête, le savoir, une construction) : on réévaluera au prochain passage. */
   aRevoir(): void {
     this.sale = true;
   }
@@ -143,11 +176,14 @@ export class SuiviDevoilement {
     if (this.etat.nonVues.length !== avant) this.aSauver = true;
   }
 
-  /** Le vétéran qui passe le tutoriel (Q8) : les paliers 1 et 2 d'un coup, annoncés sobrement. */
+  /**
+   * Le vétéran qui passe le tutoriel (Q8, plan 0.8 §3) : les recettes communes à la main d'un coup, annoncées sobrement ;
+   * le carnet lui dit que sa famille l'attend à la station (Q-0.8-15).
+   */
   devoilerDEmblee(): void {
     const neuves = devoileesDEmblee(this.source.famille).filter((id) => !this.devoilees.has(id));
     this.ajouter(neuves, false);
-    if (neuves.length > 0) this.annoncer(neuves, true);
+    this.annoncer(neuves, true);
   }
 
   // ---------- Le passage régulier ----------
@@ -164,6 +200,8 @@ export class SuiviDevoilement {
     if (instant - this.derniersConstats >= INTERVALLE_CONSTATS_MS) {
       this.derniersConstats = instant;
       this.constater();
+      this.suivreLieu();
+      this.suivreIndices();
     }
     this.regarderSac();
     const tuto = this.source.tuto();
@@ -188,7 +226,7 @@ export class SuiviDevoilement {
     for (const c of this.source.constats(manquent)) this.source.noter(c);
   }
 
-  /** Le sac a changé : ce qui y est entré pour la première fois rejoint les objets vus. */
+  /** Le sac a changé : ce qui y est entré pour la première fois rejoint les objets vus ; une clé fait naître son idée. */
   private regarderSac(): void {
     const inv = this.source.inventaire();
     if (inv === this.inventaireVu) return;
@@ -206,11 +244,82 @@ export class SuiviDevoilement {
       this.aSauver = true;
       this.sale = true;
     }
+    this.penser(inv);
+  }
+
+  /**
+   * L'idée au ramassage (plan 0.8 §2.2) : la première fois qu'une clé entre dans le sac (ou l'outil clé en main), le
+   * message `idee` (ou « un jour », si le niveau d'avant n'est pas posé). L'idée est gardée : jamais redite.
+   */
+  private penser(inv: Inventaire): void {
+    const idees = nouvellesIdees({ vus: this.vus, installations: this.constructions(), idees: this.idees, inventaire: inv });
+    if (idees.length === 0) return;
+    for (const i of idees) {
+      this.idees.add(i.etape);
+      this.etat.idees.push(i.etape);
+      this.source.noter(`idee:${i.etape}`);
+      if (i.texte) this.source.envoyer({ t: "idee", etape: i.etape, texte: i.texte, plusTard: i.plusTard, ...(i.objet ? { objet: i.objet } : {}) });
+    }
+    this.aSauver = true;
+    this.sale = true;
+    // La fiche montre la clé « déjà en poche » : la vue suit tout de suite.
+    this.source.envoyer({ t: "devoilement", progression: this.vue(), nouvelles: [] });
+  }
+
+  /**
+   * Les indices « où chercher » (plan 0.8 §2.2, Q-0.8-16) : un indice s'ouvre au premier temps (le type de lieu) quand
+   * son étape devient le niveau suivant d'une construction qu'on a ; il passe au second (le coin) après 45 min de jeu.
+   * Chaque passage est noté en fait `indice:<étape>` (1, puis 2).
+   */
+  private suivreIndices(): void {
+    let change = false;
+    const ouverts = indicesOuverts({ installations: this.constructions(), devoilees: this.devoilees, idees: this.idees });
+    for (const x of ouverts) {
+      const id = x.etape.id;
+      const i = this.etat.indices[id];
+      if (!i) {
+        this.etat.indices[id] = { depuis: this.etat.secondes, temps: 1 };
+        this.source.noter(`indice:${id}`);
+        change = true;
+      } else if (i.temps === 1 && this.etat.secondes - i.depuis >= INDICE_SECOND_TEMPS_MIN * 60) change = this.secondTemps(id) || change;
+    }
+    if (change) this.indicesChanges();
+  }
+
+  /** On quitte un lieu : un indice ouvert de ce lieu, dont on n'a pas trouvé la clé, passe au second temps. */
+  private suivreLieu(): void {
+    const lieu = this.source.lieu();
+    if (lieu === this.lieuVu) return;
+    const quitte = this.lieuVu;
+    this.lieuVu = lieu;
+    if (quitte === null) return;
+    let change = false;
+    for (const [id, i] of Object.entries(this.etat.indices)) {
+      if (i.temps !== 1 || this.idees.has(id)) continue;
+      const cle = etapeAvecCle(id)?.etape.cle;
+      if (cle && LIEU_DE_L_ETAPE[cle.ou] === quitte && !(cle.objet && this.vus.has(cle.objet))) change = this.secondTemps(id) || change;
+    }
+    if (change) this.indicesChanges();
+  }
+
+  private secondTemps(id: string): boolean {
+    const i = this.etat.indices[id];
+    if (!i || i.temps === 2) return false;
+    i.temps = 2;
+    this.source.noter(`indice:${id}`);
+    return true;
+  }
+
+  private indicesChanges(): void {
+    this.aSauver = true;
+    this.source.envoyer({ t: "devoilement", progression: this.vue(), nouvelles: [] });
+  }
+
+  private constructions(): Map<string, number> {
+    return carteConstructions(this.source.installations());
   }
 
   private etatPour(): EtatPourDevoilement {
-    const installations = new Map<string, number>();
-    for (const i of this.source.installations()) installations.set(i.type, Math.max(installations.get(i.type) ?? 0, i.niveau ?? 1));
     const faits = this.source.faits();
     const tutoEnCours = this.source.tuto();
     return {
@@ -218,12 +327,13 @@ export class SuiviDevoilement {
       savoir: this.source.savoir(),
       vus: this.vus,
       faits,
-      installations,
+      installations: this.constructions(),
       quetes: new Set(this.source.quetes()),
       tuto: tutoEnCours ?? ((faits.tutoriel_fini ?? 0) > 0 ? 12 : null),
       minutes: this.etat.secondes / 60,
       sansSac: this.source.sansSac(),
       devoilees: this.devoilees,
+      idees: this.idees,
     };
   }
 
@@ -237,7 +347,7 @@ export class SuiviDevoilement {
       if (annoncer) this.annoncer(neuves, false);
       return;
     }
-    // Rien de neuf à fabriquer, mais les cartes des autres familles ont pu se montrer (Comptoir, rencontre, vu faire).
+    // Rien de neuf à fabriquer, mais les cartes des autres familles, ou les silhouettes, ont pu changer.
     if (!annoncer) return;
     const avant = this.cleAutres;
     const v = this.vue();
@@ -263,7 +373,7 @@ export class SuiviDevoilement {
     this.enAttente.push(...neuves);
     let texte: string | null = null;
     if (sobre) {
-      texte = "Tu y penses : les gestes de base te reviennent tous.";
+      texte = TEXTE_VETERAN;
       this.enAttente = [];
       this.dernierMessage = instant;
     } else if (this.enAttente.length > 0 && instant - this.dernierMessage >= INTERVALLE_MESSAGE_MS) {
@@ -277,14 +387,18 @@ export class SuiviDevoilement {
   /** Ce que le client reçoit (bienvenue, et chaque dévoilement). */
   vue(): VueProgression {
     const e = this.etatPour();
+    const indices: Record<string, 1 | 2> = {};
+    for (const [id, i] of Object.entries(this.etat.indices)) if (!this.idees.has(id)) indices[id] = i.temps;
     const v: VueProgression = {
       devoilees: [...this.etat.devoilees],
       nonVues: [...this.etat.nonVues],
-      prochain: prochainPalier(this.source.famille, this.devoilees, e.quetes, e.savoir),
+      silhouettes: silhouettes(e),
       autres: autresAtteints(e),
       entrevues: entrevues(e),
+      idees: [...this.etat.idees],
+      indices,
     };
-    this.cleAutres = `${v.autres}|${v.entrevues.join(",")}`;
+    this.cleAutres = `${v.autres}|${v.entrevues.join(",")}|${v.silhouettes.map((s) => s.id).join(",")}`;
     return v;
   }
 }

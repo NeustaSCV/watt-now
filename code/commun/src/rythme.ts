@@ -19,7 +19,8 @@ import { tirerVestiges, type LieuFouille } from "./vestiges.ts";
 import { aleaDe, contenuConteneur, graineDe, piecesAmas, type TypeLieuDechets } from "./dechets.ts";
 import { tableDecharge } from "./decharge.ts";
 import type { TypeObjet } from "./objets.ts";
-import { ATELIER, aDevoiler, devoileesAuDepart, devoileesDEmblee, recetteDeBase, recettesDeLEtape, type EtatPourDevoilement } from "./progression.ts";
+import { ATELIER, aDevoiler, devoileesAuDepart, devoileesDEmblee, lieuAtteint, lieuDe, nomConstruction, recetteDeBase, recettesDeLEtape, type EtatPourDevoilement } from "./progression.ts";
+import type { LieuRecette } from "./recettes.ts";
 import { QUETES, queteSuivante, type Condition, type LigneQuete, type Quete } from "./quetes.ts";
 import { RECETTES, recette, type Recette } from "./recettes.ts";
 import type { Famille } from "./regles.ts";
@@ -307,7 +308,7 @@ class Simulation {
     else if ("atelier" in g) faire(ATELIER[this.famille]);
     else {
       faire(g.fabriquer);
-      if (g.fabriquer === "feu_de_camp") this.installations.set("feu", Math.max(1, this.installations.get("feu") ?? 0));
+      if (g.fabriquer === "feu_de_camp") this.poserFeu("feu_camp", 1);
     }
   }
 
@@ -419,10 +420,10 @@ class Simulation {
       if (!this.devoilees.has(id)) return { ok: false, raison: `${id} pas dévoilé` };
       return OK;
     }
-    if (r.installation && !this.installations.has(r.installation)) {
-      const ri = RECETTES.find((x) => "installation" in x.produit && x.produit.installation === r.installation);
-      if (!ri) return { ok: false, raison: `installation ${r.installation} introuvable` };
-      const i = this.fabriquer(ri.id, profondeur + 1);
+    // Plan 0.8 (chantier 2, en attendant le chantier 14) : une recette liée à une construction attend sa construction.
+    const lieu = lieuDe(r);
+    if (lieu.genre === "construction" && !lieuAtteint(lieu, this.installations)) {
+      const i = this.batirPour(lieu, profondeur);
       if (!i.ok) return i;
     }
     const aFabriquer: TypeObjet[] = [];
@@ -449,6 +450,33 @@ class Simulation {
     if (!this.devoilees.has(id)) return { ok: false, raison: `${id} pas dévoilé` };
     this.produire(r);
     return OK;
+  }
+
+  /** Un foyer de cette forme : le niveau du feu, et sa forme (`feu:<forme>`), comme la carte des constructions du jeu. */
+  poserFeu(forme: string, niveau: number): void {
+    this.installations.set("feu", Math.max(niveau, this.installations.get("feu") ?? 0));
+    this.installations.set(`feu:${forme}`, 1);
+  }
+
+  /**
+   * Bâtir la construction qu'une recette demande, si la maison y suffit : la racine d'une lignée (la posée), ou le foyer
+   * de pierres (des pierres et des bûches du terrain). Au-delà (une clé de dehors, un niveau plus tard), elle attend.
+   * Une première approche, en attendant que le chantier 14 apprenne au simulateur les sorties et les clés.
+   */
+  batirPour(lieu: LieuRecette, profondeur: number): Issue {
+    if (lieu.genre !== "construction") return OK;
+    if (lieu.construction === "feu") {
+      const avec = new Map(this.installations).set("feu", Math.max(2, this.installations.get("feu") ?? 0)).set("feu:foyer_pierres", 1);
+      if (!lieuAtteint(lieu, avec)) return { ok: false, raison: `attend : ${nomConstruction(lieu)}` };
+      this.voir(["pierre", "buche"]);
+      this.poserFeu("foyer_pierres", 2);
+      this.reevaluer();
+      return OK;
+    }
+    if ((lieu.niveau ?? 1) > 1 || lieu.accessoire) return { ok: false, raison: `attend : ${nomConstruction(lieu)}` };
+    const ri = RECETTES.find((x) => "installation" in x.produit && x.produit.installation === lieu.construction);
+    if (!ri) return { ok: false, raison: `installation ${lieu.construction} introuvable` };
+    return this.fabriquer(ri.id, profondeur + 1);
   }
 
   /** Du charbon de bois : bâtir la meule s'il le faut, attendre qu'elle cuise, défourner. */
@@ -569,10 +597,10 @@ class Simulation {
         return w.ok ? reussi() : w;
       }
       case "foyer:foyer_pierres":
-        this.installations.set("feu", Math.max(2, this.installations.get("feu") ?? 1));
+        this.poserFeu("foyer_pierres", 2);
         return reussi();
       case "foyer:foyer_cuisine":
-        this.installations.set("feu", 3);
+        this.poserFeu("foyer_cuisine", 3);
         return reussi();
       default:
         // Les faits du voyage et du métier (vendre, affûter, détruire à la décharge…) : le travail suffit.

@@ -2,6 +2,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { toutDevoile } from "../../commun/src/progression.ts";
 import type { MessageServeur } from "../../commun/src/messages.ts";
 import { energieGrise, multiplicateurQualites, objetsSansEnergieGrise, recette } from "../../commun/src/recettes.ts";
 import { Base } from "./base.ts";
@@ -14,6 +15,9 @@ const JAMAIS_D_ETEINT = () => 1;
 function monter(inventaire?: Record<string, number>) {
   const base = new Base(":memory:");
   const compte = base.creerCompte("Rose", "potager42", "mecanistes");
+  // Ces tests portent sur autre chose que l'arbre de progression : tout est dévoilé (plan 0.8 : le vétéran
+  // n'a plus d'emblée que les recettes à la main).
+  base.sauverProgression(compte.id, toutDevoile("mecanistes"));
   if (inventaire) base.sauverInventaire(compte.id, inventaire);
   let instant = 1_000_000;
   const recus: MessageServeur[] = [];

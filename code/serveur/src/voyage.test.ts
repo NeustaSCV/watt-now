@@ -2,6 +2,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { toutDevoile } from "../../commun/src/progression.ts";
 import { avancer, type Position } from "../../commun/src/deplacement.ts";
 import { DUREE_VOYAGE_S, SORTIES_COMPTOIR, SORTIES_STATION, SORTIE_TERRAIN, STATION, ZONE_STATION } from "../../commun/src/lieux.ts";
 import type { MessageServeur } from "../../commun/src/messages.ts";
@@ -11,6 +12,9 @@ import { Joueur } from "./joueur.ts";
 
 function monter(base = new Base(":memory:"), halte = new Halte(base), pseudo = "Rose", inventaire?: Record<string, number>) {
   const compte = base.creerCompte(pseudo, "potager42", "voltaiques");
+  // Ces tests portent sur autre chose que l'arbre de progression : tout est dévoilé (plan 0.8 : le vétéran
+  // n'a plus d'emblée que les recettes à la main).
+  base.sauverProgression(compte.id, toutDevoile("voltaiques"));
   if (inventaire) base.sauverInventaire(compte.id, { sac_a_dos: 1, ...inventaire });
   let instant = 1_000_000;
   const recus: MessageServeur[] = [];

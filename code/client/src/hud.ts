@@ -6,7 +6,7 @@ import { VERSION } from "../../commun/src/version.ts";
 import { REGLAGES } from "../../commun/src/reglages.ts";
 import { ceQuiManque } from "../../commun/src/aide-fabrication.ts";
 import type { VueProgression } from "../../commun/src/progression.ts";
-import { SILHOUETTES_DEPLIEES, enTete, nouveautesParOnglet, ongletsVides, planFabrication, recetteVisible, sousTitre, type PlanFabrication } from "./fabrication-arbre.ts";
+import { SILHOUETTES_DEPLIEES, enTete, etatCle, nouveautesParOnglet, ongletsVides, planFabrication, recetteVisible, sousTitre, type PlanFabrication } from "./fabrication-arbre.ts";
 import { ACTIONS, RESERVEES, assigner, avecTouches, nomDe, nomTouche, retablir, surChangement, type Action } from "./touches.ts";
 import { PanneauAide } from "./aide.ts";
 import { CAPACITES, type Charges } from "../../commun/src/energie.ts";
@@ -31,6 +31,7 @@ import {
   lignee,
   niveauInstallation,
   type AccessoireFeu,
+  type CleEvolution,
   type Etape,
 } from "../../commun/src/lignees.ts";
 import { PRIX_RETRAIT, formaterWotts, prixAchatExemplaire, prixVenteCle } from "../../commun/src/economie.ts";
@@ -1990,7 +1991,7 @@ export class Hud {
   private carteEtape(
     titre: string,
     texte: string,
-    e: { couts: readonly Inventaire[]; qualites: Partial<Record<Qualite, number>>; famille?: Famille },
+    e: { couts: readonly Inventaire[]; qualites: Partial<Record<Qualite, number>>; famille?: Famille; id?: string; cle?: CleEvolution },
     verbe: Verbe,
     bouton: string,
     bloque: string | null = null,
@@ -2008,6 +2009,7 @@ export class Hud {
       <article class="etape ${possible ? "possible" : ""}">
         <div class="corps"><strong>${titre}${badge}</strong>
           <small>${texte}</small>
+          ${this.ligneCle(e)}
           ${gratuit ? "" : this.pucesCout(e.couts, e.qualites, e.famille)}
           ${bloque ? `<small class="bloque">${bloque}</small>` : manque}
         </div>
@@ -2015,10 +2017,30 @@ export class Hud {
       </article>`;
   }
 
-  /** « Et après ? » : le niveau d'ensuite, grisé (la recette pressentie, Book 03 §5.1). */
+  /** « Et après ? » : le niveau d'ensuite, grisé (la recette pressentie, Book 03 §5.1), avec sa clé. */
   private carteApres(e: Etape | null | undefined): string {
     if (!e) return "";
-    return `<article class="etape apres"><div class="corps"><strong>Et après ? ${e.nom}</strong><small>${e.apporte}${e.phase ? " Pas encore : il faudra de l'argile, et du temps." : ""}</small></div></article>`;
+    return `<article class="etape apres"><div class="corps"><strong>Et après ? ${e.nom}</strong>${this.ligneCle(e)}<small>${e.apporte}${e.phase ? " Pas encore : il faudra de l'argile, et du temps." : ""}</small></div></article>`;
+  }
+
+  /**
+   * La ligne de la clé d'un niveau (plan 0.8 §2.2, chantier 2) : l'icône et le nom de la clé ; « déjà en poche » si
+   * l'idée en est venue (ramassée une fois, même trop tôt) ; sinon l'indice « où chercher », au premier ou au second
+   * temps ; « à trouver plus loin » pour un niveau pas encore jouable. Jamais de flèche sur la carte.
+   */
+  private ligneCle(e: { id?: string; cle?: CleEvolution; aVenir?: string; phase?: string }): string {
+    const cle = e.cle;
+    if (!cle || !e.id) return "";
+    const nom = cle.objet ? OBJETS[cle.objet].nom : cle.qualite ? `${NOMS_QUALITES[cle.qualite.qualite]} ${cle.qualite.niveau}` : "";
+    const image = cle.objet ? icone(cle.objet, 22) : "";
+    const etat = etatCle({ ...e, id: e.id, cle }, this.vueProgression);
+    const suite =
+      "enPoche" in etat
+        ? `<span class="en-poche">✓ déjà en poche</span>`
+        : "plusLoin" in etat
+          ? `<span class="plus-loin">à trouver plus loin</span>`
+          : `<small class="indice-cle">${etat.indice}</small>`;
+    return `<span class="ligne-cle${"enPoche" in etat ? " poche" : ""}">${image}<span class="nom-cle">${nom}</span>${suite}</span>`;
   }
 
   private ficheFeu(v: FeuVu): string {
@@ -2156,7 +2178,7 @@ export class Hud {
 
   // ---------- L'arbre de progression (0.7, chantier 5) : ce que Fabriquer dévoile ----------
 
-  /** Les recettes dévoilées, vues, et le prochain palier ; null : un serveur d'avant la 0.7 (on montre tout). */
+  /** Les recettes dévoilées, vues, les silhouettes, les idées gardées ; null : un serveur d'avant la 0.7 (on montre tout). */
   private vueProgression: VueProgression | null = null;
   /** Les nouveautés à l'ouverture du panneau : en tête de leur onglet, cette fois-ci seulement (§4.1). */
   private nouvellesOuverture = new Set<string>();
@@ -2166,7 +2188,7 @@ export class Hud {
   private ongletsVus = new Set<CategorieRecette | "tout">();
   /** Les familles dépliées (« Chez les Charbonniers · 6 ici »), le temps du panneau. */
   private famillesDepliees = new Set<Famille>();
-  /** « À découvrir » : toutes les silhouettes du palier, ou les trois premières. */
+  /** « À découvrir » : toutes les silhouettes, ou les trois premières. */
   private silhouettesToutes = false;
   /** « À découvrir » ouvert : dépliée la première fois, puis repliée par défaut sur téléphone (§4.2). */
   private decouvrirOuvert = true;
@@ -2176,6 +2198,8 @@ export class Hud {
     this.vueProgression = vue ? { ...vue, nonVues: vue.nonVues.filter((id) => !this.etiquetteNouveau.has(id)) } : null;
     this.majPastilleFabriquer();
     if (!this.fabrication.hidden) this.dessinerFabrication();
+    // La fiche ouverte suit : une clé « déjà en poche », un indice au second temps.
+    this.majFiche();
   }
 
   /** Ce que le joueur voit dans Fabriquer, à cet instant. */
@@ -2340,7 +2364,7 @@ export class Hud {
       }
     }
 
-    // « À découvrir » : les silhouettes du prochain palier (décision Q2), l'icône assombrie et le besoin, jamais le nom.
+    // « À découvrir » : ce que le niveau suivant d'une construction ouvrirait (plan 0.8), l'icône assombrie, et où.
     const silhouettes = plan.silhouettes.filter((s) => onglet === "tout" || s.categorie === onglet);
     if (silhouettes.length > 0 && !this.faisableSeulement) {
       const montrer = this.silhouettesToutes ? silhouettes : silhouettes.slice(0, SILHOUETTES_DEPLIEES);

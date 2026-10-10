@@ -45,7 +45,7 @@ export function toutesLesCartes(): string[] {
 
 /** La progression telle que god la voit : tout dévoilé, rien à découvrir, pas de pastille. */
 export function vueProgressionAdmin(v: VueProgression): VueProgression {
-  return { devoilees: [...new Set([...v.devoilees, ...toutesLesCartes()])], nonVues: [], prochain: null, autres: false, entrevues: [] };
+  return { ...v, devoilees: [...new Set([...v.devoilees, ...toutesLesCartes()])], nonVues: [], silhouettes: [], autres: false, entrevues: [] };
 }
 
 /** Le savoir tel que god le voit : les manuels des quatre familles (toutes les recettes s'ouvrent dans Fabriquer). */

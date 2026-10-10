@@ -171,6 +171,15 @@ export const VOIE_SURFACE: readonly Etape[] = [
     qualites: { couper: 1, marteler: 1 },
     duree: 30,
     intensite: "moyenne",
+    // La clé (tableau maître, `progression-par-ingredients-page.json`), posée par le chantier 2 pour ses tests ; le
+    // chantier 5 complète ce niveau (repli, Marteler 2).
+    cle: {
+      objet: "grillage_rouleau",
+      ou: "L1A",
+      idee: "Ce grillage, posé sur ton foyer, ferait une grille. Tu y penses.",
+      ideePlusTard: "Ce grillage pourra servir à ton feu, un jour.",
+      indice: ["Une grille ? Les clôtures en sont faites.", "Le parc à volailles de L1A."],
+    },
     apporte: "Une crémaillère et une grille : deux plats à la fois, les soupes mijotées, l'eau bout deux fois plus vite, on rôtit deux fois plus vite.",
     examen: "Un trépied et sa crémaillère au-dessus du foyer, une grille posée sur les pierres. Une vraie cuisine.",
   },
