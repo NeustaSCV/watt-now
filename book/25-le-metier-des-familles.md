@@ -1052,4 +1052,12 @@ Les dégâts au torse d'un coup simple, ou d'un tir plein ; un Errant tombe à 3
 
 ### 13.7 Le garde-fou rejoué par étape (P11)
 
-`npm run equilibre -- --etape maison|H1|L1` rejoue les scénarios du §8.4 avec les armes **de l'étape** : à chaque étape, l'arme qui possède un terrain y est la meilleure ; les autres au plus 2 fois moins bonnes ; au coût, au plus 3 fois d'écart. **Mesuré dans l'étude : OK à H1 et L1** (pire rapport ⚡ 1,87 ; coût 1,4 fois). À rejouer avec les valeurs finales au chantier 14 (en cours).
+`npm run equilibre -- --etape maison|H1|L1` rejoue les scénarios du §8.4 avec les armes **de l'étape** : à chaque étape, l'arme qui possède un terrain y est la meilleure ; les autres au plus 2 fois moins bonnes ; au coût, au plus 3 fois d'écart. **Rejoué avec les valeurs codées en 0.8** (chantier 14, `npm run equilibre -- --etape …`) :
+
+| Étape | Pire rapport hors terrain (au plus 2) | Écart de coût par Errant (au plus 3) | Verdict |
+|---|---|---|---|
+| Maison | 1,39 | 1,22 fois | OK |
+| H1 | 1,87 | 1,40 fois | OK |
+| L1 | 1,87 | 1,40 fois | OK |
+
+L1 donne les mêmes chiffres que H1 : le niveau 1 se joue avec les armes de la station (K-Q2).
