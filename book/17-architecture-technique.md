@@ -263,7 +263,9 @@ Le test familial sert aussi à **récolter des données d'équilibrage** :
 >
 > `npm run bilan` (ou le même script dans le conteneur) en fait un compte rendu en français, par famille et par semaine.
 >
-> **La vitesse de progression (0.8, décision du porteur du 2026-10-10).** Une mesure de plus, du genre **Progression** : `atteint:<étape>` (la maison, H1A, H1B, L1A, L1B…), notée **une fois par étape**, à la première arrivée du personnage, en **minutes de jeu** depuis sa création. Elle répond à « en combien de temps de jeu arrive-t-on à L1, à L2 ? ». **Quand le porteur supprime un compte** depuis la page d'administration, toutes ses mesures partent, **sauf celle-là** : elle est gardée, **rendue anonyme** (compte 0, sans détails). La suppression la garde déjà (chantier 16, `serveur/src/base.ts`, `serveur/src/mesures.ts`) ; c'est le chantier 14 du plan 0.8 (en cours) qui l'écrit.
+> **La vitesse de progression (0.8, décision du porteur du 2026-10-10).** Une mesure de plus, du genre **Progression** : `atteint:<étape>` (la maison, H1A, H1B, L1A, L1B…), notée **une fois par étape**, à la première arrivée du personnage, en **minutes de jeu** depuis sa création. Elle répond à « en combien de temps de jeu arrive-t-on à L1, à L2 ? ». **Quand le porteur supprime un compte** depuis la page d'administration, toutes ses mesures partent, **sauf celle-là** : elle est gardée, **rendue anonyme** (compte 0, sans détails). La suppression la garde (chantier 16, `serveur/src/base.ts`) ; le chantier 14 l'écrit (`serveur/src/mesures.ts`) : « maison » à la naissance du personnage, puis H1A, H1B, L1A, L1B à la première arrivée.
+>
+> **Les autres faits du niveau 1** (0.8, chantier 14), du genre **Progression**, en minutes de jeu depuis la création : `visite:<lieu>` à chaque arrivée ; `vu:<clé>` la première fois qu'une clé entre dans le sac (l'idée « Tu y penses ») ; `niveau:<lignée>` quand une construction monte (la valeur : le niveau atteint) ; `fiche_bloquee:<construction>` quand on ouvre la fiche d'une construction sans pouvoir l'améliorer ; `aide_coince` quand on ouvre « Je suis coincé ». Les deux derniers sont des constats que le client signale.
 
 ---
 
