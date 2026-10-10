@@ -121,6 +121,8 @@ export interface RessourceSol {
   z: number;
   /** Faux tant que la ressource n'a pas repoussé (bois mort, baies). */
   disponible: boolean;
+  /** Un butin personnel à plusieurs prises (le tas de bois de la station) : ce qu'il en reste pour ce joueur (0.8). */
+  reste?: number;
 }
 
 /** La mare du terrain : de l'eau brute, à faire bouillir (Book 14 §4.2, étape 4). `rayon` : son rayon moyen. */
@@ -142,10 +144,14 @@ export function distanceMare(x: number, z: number): number {
 /** Distance maximale pour interagir avec un objet, en mètres. */
 export const DISTANCE_INTERACTION = 2;
 
-/** Délai réel avant qu'une ressource ramassée réapparaisse, en millisecondes (null : ne revient pas). */
+/**
+ * Délai réel avant qu'une ressource ramassée réapparaisse, en millisecondes (null : ne revient pas). C'est le délai du
+ * terrain, et celui de partout où un lieu ne dit pas autre chose (ButinLieu.repousse, plan 0.8 B4) : au terrain, les
+ * bûches et les pierres ne reviennent jamais (B1) ; dans les haltes, elles reviennent en 30 min.
+ */
 export const REPOUSSE_MS: Record<TypeRessource, number | null> = {
   branche: 40 * 60_000,
-  buche: 90 * 60_000,
+  buche: null,
   pierre: null,
   buisson: 20 * 60_000,
   joncs: 30 * 60_000,
@@ -231,6 +237,52 @@ export const RESTE_EN_PLACE: Partial<Record<TypeRessource, true>> = {
   coop_ifs: true,
 };
 
+// ---------- Le butin d'un lieu vivant (plan 0.8, chantier 10 ; le moteur est serveur/src/lieu-vivant.ts) ----------
+
+/**
+ * Ce qu'un lieu vivant fait de ses ressources, en plus de REPOUSSE_MS : sa repousse à lui (B4), son butin personnel
+ * (R4 du game designer, B3, B5) et son vrac qui grandit avec les voyageurs (B8). Un lieu sans `butin` se comporte comme
+ * avant la 0.8 : tout est partagé, au délai de REPOUSSE_MS.
+ */
+export interface ButinLieu {
+  /** Les délais du lieu (ms ; null : jamais), à la place de REPOUSSE_MS pour ces types (B4 : 30 min dans les haltes). */
+  repousse?: Partial<Record<TypeRessource, number | null>>;
+  /**
+   * Le butin personnel : chacun voit le sien et le prend pour lui ; il revient pour lui à son délai, sans rien changer
+   * pour les autres. La valeur dit combien de prises il tient (1 : une pièce de famille ; 10 : le tas de bois, une
+   * bûche par prise). Le délai court à partir de la première prise ; au bout, tout est de nouveau là.
+   */
+  personnel?: Partial<Record<TypeRessource, number>>;
+  /**
+   * Le vrac qui grandit avec les voyageurs (B8) : pour ces types, combien de points sont en jeu pour un voyageur seul.
+   * Le lieu en pose VRAC_MAX fois plus ; facteurVrac() dit combien sont en jeu selon le nombre de présents.
+   */
+  vrac?: Partial<Record<TypeRessource, number>>;
+}
+
+/** Le vrac ne dépasse jamais trois fois sa quantité de base (B8). */
+export const VRAC_MAX = 3;
+
+/** +50 % par voyageur présent en plus du premier, jusqu'à ×3 (B8) : 1 → ×1, 3 → ×2, 5 et plus → ×3. */
+export function facteurVrac(voyageurs: number): number {
+  return Math.min(VRAC_MAX, 1 + 0.5 * Math.max(0, voyageurs - 1));
+}
+
+/** Combien de points d'un vrac de base `base` sont en jeu avec ce nombre de voyageurs. */
+export function vracEnJeu(base: number, voyageurs: number): number {
+  return Math.round(base * facteurVrac(voyageurs));
+}
+
+/**
+ * Les pièces de famille (plan 0.8 §2.5) : seule leur famille les voit. Le panneau du Voltaïque (déjà à la station),
+ * l'enclume et le sac de charbon du Charbonnier, le petit alternateur du Mécaniste.
+ */
+export const FAMILLE_DE_RESSOURCE: Partial<Record<TypeRessource, Famille>> = {
+  panneau_auvent: "voltaiques",
+  piece_enclume: "charbonniers",
+  piece_alternateur: "mecanistes",
+};
+
 /** La ruine de ferme du terrain (Book 21 §3.2), dans le coin nord-est. */
 export const RUINE = { x: 40.5, z: 11, largeur: 8, profondeur: 6 } as const;
 
@@ -260,10 +312,13 @@ export function estArbre(type: TypeRessource): boolean {
 }
 /**
  * Ce qu'une famille voit (Book 25 §3.2) : l'if du fond du bois ne se repère que si l'on reconnaît le bois par essence,
- * comme les Mécanistes (Book 03 §5.3). Pour les autres, c'est un arbre sombre du décor de la lisière.
+ * comme les Mécanistes (Book 03 §5.3). Pour les autres, c'est un arbre sombre du décor de la lisière. Une pièce de famille
+ * (FAMILLE_DE_RESSOURCE, 0.8) ne se voit que de sa famille.
  */
 export function ressourceVisible(type: TypeRessource, famille: Famille): boolean {
-  return type !== "if_bois" || famille === "mecanistes";
+  if (type === "if_bois") return famille === "mecanistes";
+  const de = FAMILLE_DE_RESSOURCE[type];
+  return de === undefined || de === famille;
 }
 /** L'escabeau sert s'il est posé dans ce disque autour du tronc (m). */
 export const RAYON_ESCABEAU = 2.4;

@@ -539,10 +539,13 @@ export class Joueur implements Voyageur, ParticipantLecon {
       inventaire: this.inventaire,
       besoins: this.besoins,
       gourde: this.gourde,
-      // L'if du fond du bois ne se voit que si l'on reconnaît les essences (Book 25 §3.2).
-      ressources: [...this.ressourcesIci().values()]
-        .filter((r) => ressourceVisible(r.type, this.compte.famille))
-        .map((r) => ({ id: r.id, type: r.type, x: r.x, z: r.z, disponible: r.disponibleLe <= instant })),
+      // L'if du fond du bois ne se voit que si l'on reconnaît les essences (Book 25 §3.2) ; dans un lieu vivant, le butin
+      // personnel et le vrac qui grandit (plan 0.8, chantier 10 : serveur/src/lieu-vivant.ts).
+      ressources: this.vivant
+        ? this.vivant.vuePour(this.compte.id, this.compte.famille, instant)
+        : [...this.ressourcesIci().values()]
+            .filter((r) => ressourceVisible(r.type, this.compte.famille))
+            .map((r) => ({ id: r.id, type: r.type, x: r.x, z: r.z, disponible: r.disponibleLe <= instant })),
       feux: this.lieu === "terrain" ? [...this.feux.values()].map(vue) : [],
       installations: this.lieu === "terrain" ? [...this.installations.values()] : [],
       charges: this.chargesArrondies(),
@@ -2702,7 +2705,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     const lieu = this.lieu;
     const r = this.ressourcesIci().get(id);
     // L'if du fond du bois : qui ne reconnaît pas les essences ne le voit pas (Book 25 §3.2).
-    if (!r || r.disponibleLe > this.maintenant() || !ressourceVisible(r.type, this.compte.famille)) return;
+    if (!r || !this.ressourceLibre(r, this.maintenant()) || !ressourceVisible(r.type, this.compte.famille)) return;
     if (!this.proche(r.x, r.z, DISTANCE_INTERACTION + (estArbre(r.type) ? PORTEE_ARBRE : 0))) return this.info("C'est trop loin : approche-toi encore un peu.");
     const usage = USAGES[r.type];
     // Le coffre du directeur ne s'ouvre qu'avec la clé du magasinier (Book 23 §2.2).
@@ -2720,13 +2723,13 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (poidsInventaire(this.inventaire, this.gourde.litres) + poidsDe(usage.donne) > capaciteDe(this.inventaire)) return this.sacTropLourd();
     this.commencer(usage.libelle, (usage.duree * facteur) / REGLAGES.gestes_vitesse, () => {
       const instant = this.maintenant();
-      if (r.disponibleLe > instant || this.lieu !== lieu) return;
-      const repousse = REPOUSSE_MS[r.type] === null ? null : REPOUSSE_MS[r.type]! / REGLAGES.repousse_rythme;
-      const disponibleLe = repousse === null ? JAMAIS : instant + repousse;
+      if (this.lieu !== lieu || !this.ressourceLibre(r, instant)) return;
       const vivant = this.vivant;
-      if (vivant) vivant.prendre(r, disponibleLe);
+      // Un lieu vivant a sa repousse, son butin personnel et son vrac (plan 0.8, chantier 10 : serveur/src/lieu-vivant.ts).
+      if (vivant) vivant.prendrePar(r, this.compte.id, instant);
       else {
-        r.disponibleLe = disponibleLe;
+        const repousse = REPOUSSE_MS[r.type] === null ? null : REPOUSSE_MS[r.type]! / REGLAGES.repousse_rythme;
+        r.disponibleLe = repousse === null ? JAMAIS : instant + repousse;
         this.base.sauverRessource(this.compte.id, r.id, r.disponibleLe);
         this.envoyer({ t: "ressource", id: r.id, disponible: false });
       }
@@ -2748,6 +2751,12 @@ export class Joueur implements Voyageur, ParticipantLecon {
         this.tuto.pierres += usage.donne.pierre ?? 0;
       }
     }, 0, usage.verbe === "demonter" ? "outil" : "leger");
+  }
+
+  /** Cette ressource est-elle là pour moi ? (dans un lieu vivant : mon butin personnel, le vrac en jeu) */
+  private ressourceLibre(r: RessourceEnBase, instant: number): boolean {
+    const vivant = this.vivant;
+    return vivant ? vivant.disponiblePour(r, this.compte.id, instant) : r.disponibleLe <= instant;
   }
 
   /** Un indice, au plus une fois par période pour chaque sorte : on aide sans rabâcher. */

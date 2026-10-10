@@ -4,10 +4,18 @@
 
 import { FERME_HALTE, GOULET, ROUTE, STATION, ZONE_STATION, dansBoite } from "./lieux.ts";
 import { nouvelEteint, type Eteint } from "./eteints.ts";
-import { aleatoire, type RessourceSol, type TypeRessource } from "./terrain.ts";
+import { aleatoire, type ButinLieu, type RessourceSol, type TypeRessource } from "./terrain.ts";
 
 /** À augmenter quand le contenu de la halte change : la base le régénère alors. */
 export const VERSION_HALTE = 5;
+
+/**
+ * Le butin de la halte (plan 0.8, chantier 10 ; le moteur : serveur/src/lieu-vivant.ts). Les bûches et les pierres
+ * reviennent en 30 min (B2, B4), alors qu'au terrain elles ne reviennent jamais (B1).
+ */
+export const BUTIN_HALTE: ButinLieu = {
+  repousse: { buche: 30 * 60_000, pierre: 30 * 60_000 },
+};
 
 export function genererHalte(): Omit<RessourceSol, "disponible">[] {
   const fixes: [TypeRessource, number, number][] = [
