@@ -112,7 +112,8 @@ test("aucun ingrédient introuvable : tout ce que l'arbre peut dévoiler se fabr
     const infaisables = RECETTES.filter((r) => !t.recettes.has(r.id)).map((r) => r.id);
     // Le boyau séché vient du lapin, et le collet n'attrape encore rien : sa corde d'arc ne se dévoile jamais
     // (déclencheur « vu : boyaux »), elle ne trompe donc personne.
-    assert.deepEqual(infaisables, ["corde_arc_boyau"], famille);
+    // Le marteau remmanché attend sa tête de marteau dans la caisse de la ruine (chantier 10, I10).
+    assert.deepEqual(infaisables.filter((id) => id !== "marteau"), ["corde_arc_boyau"], famille);
   }
 });
 

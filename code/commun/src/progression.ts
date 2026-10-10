@@ -115,7 +115,6 @@ export const PROGRESSION: Readonly<Record<string, LigneProgression>> = {
   // ---------- Le corps (la grille de conception du Book 02 : plus un palier du code) ----------
   feu_de_camp: { quand: [depart], indice: "Chaleur, eau bouillie, cuisine : tout commence là." },
   abri: { quand: [depart], indice: "Un toit pour dormir deux fois mieux." },
-  lit_branchages: { quand: [fab("abri"), fait("nuit"), fait("sommeil_bas"), quete("lit")], indice: "Dormir par terre, c'est dormir à moitié." },
   ficelle: { filet: 20, quand: [vu("fibres")], indice: "Des fibres au bord de l'eau, et tes doigts." },
   corde: { filet: 20, quand: [vu("fibres")], indice: "Plus solide qu'une ficelle, pour ce qui pèse." },
   recuperateur_pluie: { quand: [fait("pluie"), fait("ebullition", 3), quete("eau_du_ciel")], indice: "Bouillir l'eau coûte du bois. Le ciel, lui, la donne." },
@@ -232,6 +231,19 @@ export const PROGRESSION: Readonly<Record<string, LigneProgression>> = {
   piege_machoires: { quand: [vu("ressort_retrempe")], indice: "Des mâchoires qui ne lâchent jamais." },
   cranequin: { quand: [et(fab("arbalete_lourde"), vu("roulements"))], indice: "Une manivelle pour bander l'arme lourde." },
   carreaux_acier: { quand: [vu("pointe_acier")], indice: "Une pointe d'acier perce mieux que l'os." },
+
+  // ---------- Le niveau 1 : le stockage, l'établi, la lumière, les outils de fortune (plan 0.8, chantier 6) ----------
+  ratelier_outils: { quand: [fab("coffre"), fait("trop_lourd")], indice: "Tes outils pèsent : chacun pourrait avoir sa place." },
+  torche_plantee: { quand: [et(vu("graisse"), fait("nuit"))], indice: "Voir autour de l'abri, la nuit, sans allumer un feu." },
+  marteau: { filet: 60, quand: [vu("tete_marteau")], indice: "Une tête d'outil sans manche ne sert à rien." },
+  serre_joint_fortune: { filet: 60, quand: [fab("etabli"), vu("etau")], indice: "Tenir une pièce quand deux mains ne suffisent pas." },
+  scie_fortune: { quand: [vu("disque_scie")], indice: "Des dents d'acier mordent le bois sans bruit." },
+  scie_fortune_lames: { quand: [et(vu("lame_ebrechee"), fab("etabli"))], indice: "Des dents d'acier mordent le bois sans bruit." },
+  marteau_fortune: { quand: [et(vu("barre_metal"), vu("feuillards"))], indice: "Une barre repliée tape plus fort qu'une pierre." },
+  coin_bois: { filet: 60, quand: [fab("etabli"), vu("buche")], indice: "Un coin bien enfoncé ouvre une bûche en deux." },
+  maillet: { quand: [{ a: "installation", type: "etabli", niveau: 2 }], indice: "Frapper un coin sans le fendre." },
+  coins_bois: { quand: [{ a: "installation", type: "etabli", niveau: 2 }], indice: "Un coin bien enfoncé ouvre une bûche en deux." },
+  planches_fendues: { quand: [{ a: "installation", type: "etabli", niveau: 2 }], indice: "Une bûche fendue droit donne de vraies planches." },
 };
 
 /** L'atelier de chaque famille : rien de son métier ne se dévoile avant lui (sauf ce qu'une quête demande). */

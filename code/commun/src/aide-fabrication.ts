@@ -5,7 +5,7 @@ import { STOCK_DE_BASE } from "./economie.ts";
 import { OBJETS, kitDeDepart, nommer, type Inventaire, type TypeObjet } from "./objets.ts";
 import { FAMILLES, NOMS_FAMILLES } from "./regles.ts";
 import { ouSeFait } from "./lieu-recette.ts";
-import { NOMS_QUALITES, QUALITES_OBJETS, RECETTES, niveauQualite, type Qualite, type Recette } from "./recettes.ts";
+import { NOMS_QUALITES, QUALITES_OBJETS, QUALITES_POSTES, RECETTES, niveauQualite, type Qualite, type Recette } from "./recettes.ts";
 import { USAGES, type TypeRessource } from "./terrain.ts";
 
 /** Les vestiges de la station-service (le reste se trouve sur son terrain). */
@@ -57,6 +57,13 @@ export function outilsPour(qualite: Qualite, niveau: number): TypeObjet[] {
     .map(([t]) => t);
 }
 
+/** Les postes de travail qui donnent une qualité à ce niveau (l'établi à étau : Serrer 3), nommés. */
+export function postesPour(qualite: Qualite, niveau: number): string[] {
+  return Object.values(QUALITES_POSTES)
+    .filter((p) => (p.qualites[qualite] ?? 0) >= niveau)
+    .map((p) => p.nom);
+}
+
 const ou = (l: string[]) => (l.length <= 1 ? (l[0] ?? "") : `${l.slice(0, -1).join(", ")} ou ${l.at(-1)}`);
 
 /**
@@ -86,21 +93,23 @@ export function outilsManquantsBref(qualites: Partial<Record<Qualite, number>>, 
     // Les outils sont des portes dures (plan 0.8 §2.1) : un niveau en dessous ne fait plus l'affaire.
     .filter(([q, requis]) => niveauQualite(inventaire, q) < requis)
     .map(([q, requis]) => {
-      // On propose d'abord les outils qu'on sait où trouver (plan 0.8 : l'étau, clé de L1B, serre à 3 mais ne se trouve
-      // qu'au Moulin ; on ne le cite pas à qui cherche Serrer 1).
+      // On propose d'abord les outils qu'on sait où trouver. Serrer 3 ne vient que d'un poste (l'établi à étau).
       const tous = outilsPour(q, requis);
       const trouvables = tous.filter((t) => ouTrouver(t, visible).length > 0);
       const types = trouvables.length > 0 ? trouvables : tous;
       const source = types.map((t) => ouTrouver(t, visible)).find((l) => l.length > 0)?.[0];
-      return { q: NOMS_QUALITES[q].toLowerCase(), requis, bons: ou(types.slice(0, 2).map((t) => OBJETS[t].nom)), source };
+      const noms = [...types.map((t) => OBJETS[t].nom), ...postesPour(q, requis)];
+      return { q: NOMS_QUALITES[q].toLowerCase(), requis, bons: ou(noms.slice(0, 2)), premier: noms[0] ?? "", source };
     });
   if (manques.length === 0) return ["Il te manque un outil."];
   const phrase = (m: (typeof manques)[number], details: boolean) =>
     `Pour ${m.q} (niveau ${m.requis}), il te faut ${m.bons}.` +
     (details && m.source ? ` Où : ${m.source}.` : "");
   const sansSource = (m: (typeof manques)[number]) => phrase({ ...m, source: undefined }, true);
+  // Le premier outil seul, avec où le trouver (plan 0.8 : les outils de fortune allongent la liste).
+  const lePremier = (m: (typeof manques)[number]) => phrase({ ...m, bons: m.premier }, true);
   const ensemble = manques.map((m) => phrase(m, true)).join(" ");
-  if (ensemble.length > max && manques.length <= 2) return manques.map((m) => tenir([phrase(m, true), sansSource(m), phrase(m, false)], max));
+  if (ensemble.length > max && manques.length <= 2) return manques.map((m) => tenir([phrase(m, true), lePremier(m), sansSource(m), phrase(m, false)], max));
   return [tenir(
     [
       manques.map((m) => phrase(m, true)).join(" "),
@@ -139,7 +148,7 @@ export function outilsManquants(qualites: Partial<Record<Qualite, number>>, inve
     const possede = niveauQualite(inventaire, q);
     if (possede >= requis) continue;
     const types = outilsPour(q, requis);
-    const bons = types.map((t) => OBJETS[t].nom);
+    const bons = [...types.map((t) => OBJETS[t].nom), ...postesPour(q, requis)];
     // Où trouver le plus simple d'entre eux (le premier qui a une source connue).
     const source = types.map((t) => ouTrouver(t, visible)).find((l) => l.length > 0);
     const ouLeTrouver = source ? ` Où en trouver : ${ou(source)}.` : "";

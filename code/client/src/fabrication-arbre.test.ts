@@ -29,7 +29,8 @@ test("premier écran : le feu et l'abri, sans barre d'onglets, sans silhouette t
 });
 
 test("la barre d'onglets apparaît à 8 recettes, en entier ; les onglets vides sont atténués", () => {
-  const sept = ["feu_de_camp", "abri", "lit_branchages", "ficelle", "corde", "volaille", "cepes_poeles"];
+  // Plan 0.8 : le lit de branchages ne se pose plus à part (l'abri garni) ; la torche plantée prend sa place.
+  const sept = ["feu_de_camp", "abri", "torche_plantee", "ficelle", "corde", "volaille", "cepes_poeles"];
   assert.equal(planFabrication("charbonniers", {}, vue(sept)).avecOnglets, false);
   const huit = [...sept, "hache"];
   const plan = planFabrication("charbonniers", {}, vue(huit));

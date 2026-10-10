@@ -99,9 +99,8 @@ export const QUALITES_OBJETS: Partial<Record<TypeObjet, Partial<Record<Qualite, 
   lime_usee: { trancher_metal: 1 },
   // 0.8 : les objets nouveaux (plan 0.8, chantier 3 ; tableau `outils` de la v5). Les objets de fortune donnent le
   // niveau 1 de leur qualité ; le marteau de fortune, une barre repliée, tape comme un marteau. La tête de marteau
-  // remmanchée (I10) est le `marteau` (Marteler 2), déjà plus haut. L'étau serre fort (Serrer 3) ; posé sur
-  // l'établi, il en fait l'établi à étau (chantier 6).
-  etau: { serrer: 3 },
+  // remmanchée (I10) est le `marteau` (Marteler 2), déjà plus haut. L'étau, lui, ne serre pas dans le sac (décision du
+  // porteur, 2026-10-10) : boulonné sur l'établi, il en fait l'établi à étau, qui serre fort (QUALITES_POSTES).
   serre_joint_fortune: { serrer: 1 },
   scie_fortune: { scier_bois: 1 },
   marteau_fortune: { marteler: 2 },
@@ -109,13 +108,22 @@ export const QUALITES_OBJETS: Partial<Record<TypeObjet, Partial<Record<Qualite, 
   baton_fouir_durci: { creuser: 1 },
 };
 
-/** Le meilleur niveau d'une qualité parmi les objets portés (0 si aucun). */
+/**
+ * Les postes de travail qui comptent comme un outil quand on est à côté (plan 0.8, chantier 6) : l'établi à étau serre
+ * fort (Serrer 3). Ils ne sont jamais dans le sac : `outilsAPortee` (outils-a-portee.ts) les ajoute aux outils portés,
+ * sous la clé `poste:<id>`, quand on est à 3 m.
+ */
+export const QUALITES_POSTES: Readonly<Record<string, { nom: string; qualites: Partial<Record<Qualite, number>> }>> = {
+  "poste:etabli_etau": { nom: "un établi à étau (à 3 m)", qualites: { serrer: 3 } },
+};
+
+/** Le meilleur niveau d'une qualité parmi les objets portés (0 si aucun), et les postes à portée s'il y en a. */
 export function niveauQualite(inventaire: Inventaire, qualite: Qualite): number {
   let meilleur = 0;
   for (const [type, n] of Object.entries(inventaire)) {
     if (!n) continue;
     // Un exemplaire étoilé (« lame_forgee#4 ») a les qualités de son objet.
-    meilleur = Math.max(meilleur, QUALITES_OBJETS[typeDe(type)]?.[qualite] ?? 0);
+    meilleur = Math.max(meilleur, (QUALITES_OBJETS[typeDe(type)] ?? QUALITES_POSTES[type]?.qualites)?.[qualite] ?? 0);
   }
   return meilleur;
 }
@@ -196,7 +204,7 @@ export const NOMS_INSTALLATIONS: Record<TypeInstallation, string> = {
 };
 
 /** Les petites installations : on peut les poser plus près des autres (un lit à côté de l'abri, une alarme le long du chemin). */
-export const PETITES_INSTALLATIONS: readonly string[] = ["lit_branchages", "alarme_boites", "alarme_electrique", "collet", "plaque_choc", "machoires_fortune", "piege_machoires"];
+export const PETITES_INSTALLATIONS: readonly string[] = ["lit_branchages", "torche_plantee", "alarme_boites", "alarme_electrique", "collet", "plaque_choc", "machoires_fortune", "piege_machoires"];
 
 /** Intensité du travail (Book 02 §2), en kcal par heure de jeu. */
 export const INTENSITES = { legere: 150, moyenne: 250, lourde: 350, tres_lourde: 500 } as const;

@@ -245,8 +245,9 @@ function monter(famille: Famille, depart: Record<string, number>) {
 }
 
 test("⚙️ un Mécaniste seul monte une arbalète ★ avec son kit et une perche de frêne (règle d'or du Book 25 §2.5)", () => {
-  // Le kit mécaniste (scie, clé plate, couteau), une pierre pour l'établi, ce qu'on trouve au terrain et dans une épave.
-  const t = monter("mecanistes", { scie: 1, cle_plate: 1, couteau: 1, corde: 1, pierre: 1, buche: 5, branche: 7, petit_ressort: 1, perche_frene: 1, ceinture_securite: 1 });
+  // Le kit mécaniste (scie, clé plate, couteau), une pierre et la tête de hache de la caisse pour l'établi (plan 0.8 :
+  // Fendre 1), ce qu'on trouve au terrain et dans une épave.
+  const t = monter("mecanistes", { scie: 1, cle_plate: 1, couteau: 1, tete_hache: 1, corde: 1, pierre: 1, buche: 5, branche: 7, petit_ressort: 1, perche_frene: 1, ceinture_securite: 1 });
   t.construire("etabli", 4.5);
   t.fabriquer("arbrier", 4.5);
   t.fabriquer("noix_bois", 2);

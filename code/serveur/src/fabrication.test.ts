@@ -87,7 +87,7 @@ test("remmancher la hache : la tête, une branche, de quoi couper et de quoi mar
 });
 
 test("construire un établi devant soi, pas dans la ruine ni trop loin", () => {
-  const { joueur, attendre, dernier, infos } = monter({ buche: 4, branche: 6, couteau: 1, pierre: 1 });
+  const { joueur, attendre, dernier, infos } = monter({ buche: 4, branche: 6, couteau: 1, pierre: 1, tete_hache: 1 });
   joueur.position = { x: 20, z: 20, o: 0 };
   joueur.recevoir({ t: "fabriquer", recette: "etabli", x: 30, z: 30, o: 0 });
   assert.match(infos().at(-1)!, /trop loin/);

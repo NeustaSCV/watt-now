@@ -190,6 +190,9 @@ import {
   type Etape,
 } from "../../commun/src/lignees.ts";
 import { refusAVenir, type AVenir } from "../../commun/src/lignees.ts";
+import { outilsAPortee, refusRatelier } from "../../commun/src/outils-a-portee.ts";
+import { stimuliTorches } from "../../commun/src/torche.ts";
+import { utiliserNiveau1 } from "./niveau1-base.ts";
 import { carteInstallations, feuxDuLieu, refusLieu, type Alentours } from "../../commun/src/lieu-recette.ts";
 import { NOMBRE_ETAPES, etapesTutoriel, type EtatTutoriel, type VueTutoriel } from "../../commun/src/tutoriel.ts";
 // Le compte admin « god » (outil du porteur) : serveur/src/admin.ts.
@@ -1773,8 +1776,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (this.voyage || !estObjet(objet) || (this.inventaire[objet] ?? 0) < 1) return;
     const d = DEMONTAGE[objet];
     if (!d) return this.info(`${OBJETS[objet].nom[0]!.toUpperCase()}${OBJETS[objet].nom.slice(1)} : rien à en tirer en le démontant, pour l'instant.`);
-    const facteur = multiplicateurQualites(this.inventaire, d.qualites);
-    if (facteur === null) return this.infos(outilsManquantsBref(d.qualites, this.inventaire, undefined, this.recetteVisible));
+    const facteur = multiplicateurQualites(this.outils(), d.qualites);
+    if (facteur === null) return this.infos(outilsManquantsBref(d.qualites, this.outils(), undefined, this.recetteVisible));
     // Le poids d'après : le démontage laisse le rebut sur place, mais une pyramide de rouleaux pèse toujours son poids.
     const apres: Inventaire = { ...this.inventaire, [objet]: (this.inventaire[objet] ?? 0) - 1 };
     for (const [t, k] of Object.entries(d.donne) as [TypeObjet, number][]) apres[t] = (apres[t] ?? 0) + k;
@@ -1831,9 +1834,12 @@ export class Joueur implements Voyageur, ParticipantLecon {
     const coffre = this.installations.get(id);
     // La décharge (P-001) s'ouvre comme un coffre, mais on ne fait qu'y prendre.
     const estDecharge = coffre?.type === "decharge";
-    if (!coffre || (coffre.type !== "coffre" && !estDecharge) || this.lieu !== "terrain" || this.voyage || !estCleObjet(objet)) return;
+    // Le râtelier à outils (plan 0.8, chantier 6) se remplit comme un coffre, d'outils seulement.
+    const ratelier = coffre?.type === "ratelier_outils";
+    if (!coffre || (coffre.type !== "coffre" && !estDecharge && !ratelier) || this.lieu !== "terrain" || this.voyage || !estCleObjet(objet)) return;
+    if (ratelier && sens === "deposer" && refusRatelier(objet)) return this.info(refusRatelier(objet)!);
     if (estDecharge && sens === "deposer") return this.info("La décharge rend, elle ne reprend pas. Pour te débarrasser d'un objet : Sac → Jeter.");
-    if (!this.proche(coffre.x, coffre.z, estDecharge ? 4.2 : 2.5)) return this.info(estDecharge ? "Approche-toi de la décharge." : "Approche-toi du coffre.");
+    if (!this.proche(coffre.x, coffre.z, estDecharge ? 4.2 : 2.5)) return this.info(estDecharge ? "Approche-toi de la décharge." : ratelier ? "Approche-toi du râtelier." : "Approche-toi du coffre.");
     const n = Math.floor(Number(quantite));
     if (!(n >= 1)) return;
     const contenu: Inventaire = { ...(coffre.etat.contenu ?? {}) };
@@ -1843,7 +1849,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (sens === "deposer") {
       if ((this.inventaire[objet] ?? 0) < n) return;
       if (objet === "sac_a_dos" || objet === "sac_fortune") return this.info("Ton sac, tu le gardes sur le dos.");
-      const max = capaciteCoffre(coffre);
+      const max = ratelier ? Infinity : capaciteCoffre(coffre);
       if (poidsInventaire(contenu) + OBJETS[typeDe(objet)].poids * n > max + 1e-9) {
         return this.info(`Le coffre est plein (${max} kg) : ${etapeSuivanteInstallation(coffre) ? "améliore-le (il tiendra plus)" : "construis-en un autre"}, ou vends le surplus au Comptoir.`);
       }
@@ -2279,6 +2285,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     for (const i of this.installations.values()) {
       if (i.type === "charbonniere" && i.etat.pretLe && instant < i.etat.pretLe) s.push({ genre: "odeur", x: i.x, z: i.z, ...CHARBONNIERE_ODEUR });
     }
+    s.push(...stimuliTorches(this.installations.values(), instant, nuit));
     return this.sousLaPluie(s);
   }
 
@@ -2703,8 +2710,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
       this.noterFait("arbre_haut");
       return this.info("Les fruits sont trop haut : pose un escabeau au pied de l'arbre, dans le cercle.");
     }
-    const facteur = multiplicateurQualites(this.inventaire, usage.qualites);
-    if (facteur === null) return this.infos(outilsManquantsBref(usage.qualites, this.inventaire, undefined, this.recetteVisible));
+    const facteur = multiplicateurQualites(this.outils(), usage.qualites);
+    if (facteur === null) return this.infos(outilsManquantsBref(usage.qualites, this.outils(), undefined, this.recetteVisible));
     if (poidsInventaire(this.inventaire, this.gourde.litres) + poidsDe(usage.donne) > capaciteDe(this.inventaire)) return this.sacTropLourd();
     this.commencer(usage.libelle, (usage.duree * facteur) / REGLAGES.gestes_vitesse, () => {
       const instant = this.maintenant();
@@ -2774,8 +2781,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (plusTard) return this.info(plusTard);
     if (this.lieu !== "terrain" && r.lieu.genre !== "main") return this.info(r.lieu.genre === "posee" ? "Ça se construit chez toi, sur ton terrain." : "Ça se fait chez toi, à côté de ce que tu y as construit.");
     if (!ingredientsPresents(this.inventaire, r)) return this.info(ceQuiManqueBref(r, this.inventaire, undefined, this.recetteVisible));
-    const facteur = multiplicateurQualites(this.inventaire, r.qualites);
-    if (facteur === null) return this.infos(outilsManquantsBref(r.qualites, this.inventaire, undefined, this.recetteVisible));
+    const facteur = multiplicateurQualites(this.outils(), r.qualites);
+    if (facteur === null) return this.infos(outilsManquantsBref(r.qualites, this.outils(), undefined, this.recetteVisible));
     // Le lieu (plan 0.8, chantier 1) : la forme du foyer, la construction à son niveau, l'accessoire ; le refus nomme ce qui manque.
     const refus = refusLieu(r.lieu, this.alentours());
     if (refus) return this.info(refus);
@@ -2857,6 +2864,11 @@ export class Joueur implements Voyageur, ParticipantLecon {
   /** Ce qu'il y a autour de soi pour le lieu d'une recette (commun/src/lieu-recette.ts) : sa position, ses feux, ses installations. */
   private alentours(): Alentours<FeuEnBase> {
     return { x: this.position.x, z: this.position.z, feux: this.feux.values(), installations: this.installations.values(), inventaire: this.inventaire };
+  }
+
+  /** Les outils à portée (plan 0.8, chantier 6) : le sac, et chez soi le râtelier et l'établi à étau à 3 m. */
+  private outils(): Inventaire {
+    return this.lieu === "terrain" && !this.voyage ? outilsAPortee(this.alentours()) : this.inventaire;
   }
 
   /** Raison pour laquelle on ne peut pas poser quelque chose ici, ou null. */
@@ -3026,7 +3038,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     }
     const recette: Partial<Record<TypeObjet, number>> = dakota ? RECETTE_DAKOTA : RECETTE_FEU;
     // Le foyer Dakota se creuse (P-002) : il faut de quoi creuser.
-    if (dakota && niveauQualite(this.inventaire, "creuser") < 1) return this.info("Pour creuser un foyer Dakota, il faut un bâton à fouir (une branche durcie au feu).");
+    if (dakota && niveauQualite(this.outils(), "creuser") < 1) return this.info("Pour creuser un foyer Dakota, il faut un bâton à fouir (une branche durcie au feu).");
     for (const [type, n] of Object.entries(recette)) {
       if ((this.inventaire[type as TypeObjet] ?? 0) < (n ?? 0)) {
         return this.info(
@@ -3256,9 +3268,9 @@ export class Joueur implements Voyageur, ParticipantLecon {
       this.info(`Il te manque : ${manque.join(", ")}.${autres}`);
       return null;
     }
-    const facteur = multiplicateurQualites(this.inventaire, e.qualites);
+    const facteur = multiplicateurQualites(this.outils(), e.qualites);
     if (facteur === null) {
-      this.infos(outilsManquantsBref(e.qualites, this.inventaire, undefined, this.recetteVisible));
+      this.infos(outilsManquantsBref(e.qualites, this.outils(), undefined, this.recetteVisible));
       return null;
     }
     return { cout, dureeS: Math.max(2, e.duree / REGLAGES.fabrication_acceleration) * facteur };
@@ -3528,7 +3540,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
             this.retirerPlusieurs(plan.cout);
           }
           // Le lit absorbé compte comme payé : le démontage le rendra.
-          i.etat = { ...i.etat, payes: [...(i.etat.payes ?? []), lit ? (recette("lit_branchages")?.ingredients ?? {}) : plan.cout] };
+          i.etat = { ...i.etat, payes: [...(i.etat.payes ?? []), lit ? suivante.couts[0]! : plan.cout] };
           i.niveau = suivante.niveau;
           maj();
           this.noterFait(`niveau:${suivante.id}`);
@@ -3559,6 +3571,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       case "demonter_installation": {
         if (!laRecette) return this.info("Ça ne se démonte pas.");
         if (i.type === "coffre" && Object.values(i.etat.contenu ?? {}).some((n) => (n ?? 0) > 0)) return this.info("Vide d'abord le coffre.");
+        if (i.type === "ratelier_outils" && Object.values(i.etat.contenu ?? {}).some((n) => (n ?? 0) > 0)) return this.info("Reprends d'abord les outils du râtelier.");
         if (i.type === "banc_recharge" && Object.values(i.etat.batteries ?? {}).some((n) => (n ?? 0) > 0)) return this.info("Reprends d'abord les batteries posées sur le banc.");
         if (i.type === "charbonniere" && i.etat.pretLe) return this.info("La meule cuit : on ne l'ouvre qu'au défournement.");
         // Les accessoires du pédalier se démontent avec lui.
@@ -3604,6 +3617,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (this.forge.utiliser(i, verbe)) return;
     // Les pièges et les accessoires du pédalier des Mécanistes (Book 25 §6, chantier 7) : serveur/src/mecanique.ts.
     if (utiliserMecanique(this.contexteMecanique(maj), i, verbe as Verbe)) return;
+    if (utiliserNiveau1(this.contexteMecanique(maj), i, verbe as Verbe, () => this.maintenant())) return;
 
     switch (verbe) {
       case "porter":

@@ -46,8 +46,9 @@ test("chaque objet nouveau de la 0.8 est déclaré : nom, pluriel, poids, descri
   assert.equal(OBJETS.glaise.poids, 2);
 });
 
-test("les qualités des objets nouveaux : la fortune donne le niveau 1, l'étau serre à 3, le marteau de fortune martèle à 2", () => {
-  assert.deepEqual(QUALITES_OBJETS.etau, { serrer: 3 });
+test("les qualités des objets nouveaux : la fortune donne le niveau 1, l'étau ne serre que sur l'établi, le marteau de fortune martèle à 2", () => {
+  // Décision du porteur (2026-10-10) : l'étau porté ne serre pas ; l'établi à étau donne Serrer 3 (outils-a-portee.ts).
+  assert.equal(QUALITES_OBJETS.etau, undefined);
   assert.deepEqual(QUALITES_OBJETS.serre_joint_fortune, { serrer: 1 });
   assert.deepEqual(QUALITES_OBJETS.scie_fortune, { scier_bois: 1 });
   assert.deepEqual(QUALITES_OBJETS.marteau_fortune, { marteler: 2 });
