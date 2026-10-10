@@ -785,7 +785,7 @@ function creerGarage(c: Chantier): void {
   // La voiture éventrée : sur quatre parpaings, sans roues ; capot levé sur sa béquille, la baie moteur vidée (il reste
   // le radiateur, des durites coupées, le support de batterie vide) ; une portière arrachée posée contre la caisse.
   const v = GARAGE.voitureEventree;
-  const peinture = 0x5c6b4a;
+  const peinture = 0x7f8c66;
   const tole = matiere(0.62, 0.3);
   c.repere({ x: v.x, z: v.z }, () => {
     for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) c.boite(0.4, 0.38, 0.22, 0x9a958a, { x: sx * 1.35, y: 0.19, z: sz * 0.62 }, matiere(), { nuance: 0.05 });
@@ -800,6 +800,10 @@ function creerGarage(c: Chantier): void {
     c.boite(1.95, 0.05, 1.55, peinture, { x: 0.45, y: 1.42 }, tole);
     // La baie moteur (à l'ouest) : le noir du vide, le radiateur au fond, le support de batterie, des durites.
     c.boite(1.15, 0.03, 1.45, 0x141414, { x: -1.35, y: 0.91 });
+    // Ce qui reste du moteur : le bloc de fonte, sans culasse ni alternateur (sur l'établi), la boîte au fond.
+    c.boite(0.5, 0.22, 0.6, 0x55524d, { x: -1.35, y: 1.0, z: -0.15 }, acier, { nuance: 0.06 });
+    c.boite(0.36, 0.06, 0.5, 0x3a3836, { x: -1.35, y: 1.14, z: -0.15 }, acier);
+    c.boite(0.12, 0.1, 0.12, 0x8a8f94, { x: -1.62, y: 1.0, z: -0.5 }, acier);
     c.boite(0.08, 0.36, 1.2, 0x55524d, { x: -1.88, y: 0.75 }, acier);
     for (let k = 0; k < 8; k++) c.boite(0.085, 0.3, 0.012, 0x3a3836, { x: -1.88, y: 0.75, z: -0.5 + k * 0.14 }, acier);
     c.boite(0.3, 0.05, 0.22, 0x2a2826, { x: -1.1, y: 0.92, z: 0.45 }, acier);
@@ -808,7 +812,8 @@ function creerGarage(c: Chantier): void {
     // Le capot, levé sur sa charnière (au pied du pare-brise), et sa béquille ; la face intérieure grise, sa mousse.
     c.repere({ x: -0.78, y: 0.92 }, () => {
       c.boite(1.2, 0.04, 1.6, peinture, { x: -0.6 * Math.cos(1.05), y: 0.6 * Math.sin(1.05), rz: -1.05 }, tole);
-      c.boite(1.1, 0.02, 1.4, 0x8a8a82, { x: -0.6 * Math.cos(1.05) + 0.02, y: 0.6 * Math.sin(1.05) - 0.03, rz: -1.05 }, matiere());
+      // La face intérieure (côté avant : la normale du dessous pointe vers l'ouest et le bas), sa mousse grise.
+      c.boite(1.1, 0.02, 1.4, 0xa8a89e, { x: -0.6 * Math.cos(1.05) - 0.026, y: 0.6 * Math.sin(1.05) - 0.015, rz: -1.05 }, matiere());
     });
     c.poutre(new THREE.Vector3(-1.85, 0.92, 0.6), new THREE.Vector3(-1.25, 1.85, 0.6), 0.015, 0x8a8f94, acier);
     // Les phares crevés, la calandre, une plaque.

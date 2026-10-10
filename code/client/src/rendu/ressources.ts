@@ -61,6 +61,9 @@ function buche(c: Assemblage, aleat: () => number): void {
   c.perche(new V3(0.05, 0.2, 0.05), new V3(0.12, 0.27, 0.12), 0.022, PALETTE.boisSombre, "mat", 5, 0.016);
 }
 
+/** Le tas de bois de chauffage de la station : 10 bûches à chacun (plan 0.8, B3 ; BUTIN_HALTE). */
+const TAS_BOIS = 10;
+
 /**
  * Un seau de laiterie en tôle galvanisée (10 L, plan 0.8) : le fût évasé, ses deux nervures, l'anse de fil. Renversé
  * (`renverse`), on le voit par le fond, empilé sur les autres.
@@ -510,8 +513,11 @@ export class VueRessource {
     this.majVisibilite();
   }
 
-  /** Les bûches du tas de bois, de la première posée (en bas) à la dernière (en haut, la première qu'on prend). */
-  private buchesDuTas: THREE.Object3D[] = [];
+  /**
+   * Les bûches du tas de bois, en un seul appel de dessin : une instance par bûche, de la première posée (en bas) à la
+   * dernière (en haut, la première qu'on prend) ; on n'en dessine que ce qu'il reste.
+   */
+  private buchesDuTas: THREE.InstancedMesh | null = null;
 
   /** Le calendrier avance : fleurs, fruits verts, fruits mûrs, champignons de saison. */
   saison(jour: number): void {
@@ -530,8 +536,7 @@ export class VueRessource {
     if (RESTE_EN_PLACE[t]) {
       if (this.contenu) this.contenu.visible = oui && (phase === null || phase === "murs");
       // Le tas de bois : autant de bûches qu'il m'en reste.
-      const n = oui ? (this.donnees.reste ?? this.buchesDuTas.length) : 0;
-      this.buchesDuTas.forEach((b, i) => (b.visible = i < n));
+      if (this.buchesDuTas) this.buchesDuTas.count = oui ? Math.min(TAS_BOIS, this.donnees.reste ?? TAS_BOIS) : 0;
     } else this.objet.visible = oui && (this.jour === 0 || visibleEnSaison(t, this.jour));
     this.surVisibilite?.(this.objet.visible);
   }
@@ -776,17 +781,22 @@ export class VueRessource {
     c.plaque(tache(0, 0, 0.75, 0.22, aleat, 9), SOL_PLAT, 0x5a4632, "sol", 0.006);
     for (const m of c.maillages(ombre)) this.objet.add(m);
     // Les bûches : 4, puis 3, 2 et 1, couchées vers le mur (l'axe selon z).
-    const rangs = [4, 3, 2, 1];
-    rangs.forEach((n, r) => {
+    const modele = modelePartage("buche", buche);
+    const tas = new THREE.InstancedMesh(modele.geometry, modele.material, TAS_BOIS);
+    tas.castShadow = true;
+    tas.receiveShadow = true;
+    const m = new THREE.Matrix4();
+    let k = 0;
+    [4, 3, 2, 1].forEach((n, r) => {
       for (let i = 0; i < n; i++) {
-        const b = modelePartage("buche", buche);
-        b.rotation.y = Math.PI / 2 + (aleat() - 0.5) * 0.12;
-        b.position.set((i - (n - 1) / 2) * 0.25, 0.06 + r * 0.205, 0.36 + (aleat() - 0.5) * 0.06);
-        b.userData.garder = true;
-        this.objet.add(b);
-        this.buchesDuTas.push(b);
+        m.makeRotationY(Math.PI / 2 + (aleat() - 0.5) * 0.12).setPosition((i - (n - 1) / 2) * 0.25, 0.06 + r * 0.205, 0.36 + (aleat() - 0.5) * 0.06);
+        tas.setMatrixAt(k++, m);
       }
     });
+    tas.computeBoundingSphere();
+    tas.userData.garder = true;
+    this.objet.add(tas);
+    this.buchesDuTas = tas;
   }
 
   /** La clé du foyer de cuisine (L1A) : un rouleau de grillage à poules neuf, debout contre un piquet du parc. */
@@ -810,12 +820,25 @@ export class VueRessource {
     this.objet.add(groupe);
   }
 
-  /** La clé de la marmite norvégienne (L1A) : la cocotte en fonte émaillée rouge, sur l'étagère du milieu du rayon. */
+  /**
+   * La clé de la marmite norvégienne (L1A) : la cocotte en fonte émaillée rouge, en tête de gondole au bout du premier
+   * rayon, sous sa pancarte de promotion. Prise, la tête de gondole reste, vide.
+   */
   private cocotte(ombre: (m: THREE.Mesh) => THREE.Mesh): void {
     this.objet.rotation.y = 0;
+    const socle = new Assemblage(this.donnees.id + 3);
+    socle.occlusion = 0.3;
+    // La tête de gondole : un présentoir bas, une pancarte jaune sur sa tige (« −20 % »).
+    socle.boite(0xd2cdc2, "metal", 0.6, 0.62, 0.55, 0, 0.37, 0);
+    socle.boite(0x2f5d3a, "mat", 0.62, 0.05, 0.57, 0, 0.68, 0);
+    socle.boite(0xe9dfc6, "mat", 0.003, 0.1, 0.5, -0.301, 0.5, 0);
+    socle.perche(new V3(0.22, 0.7, -0.2), new V3(0.22, 1.35, -0.2), 0.008, ACIER, "metal", 4);
+    socle.boite(0xf2d23a, "mat", 0.34, 0.24, 0.01, 0.22, 1.42, -0.2, 0, -0.5, 0);
+    socle.boite(0xc8362b, "mat", 0.2, 0.08, 0.004, 0.24, 1.42, -0.192, 0, -0.5, 0);
+    for (const m of socle.maillages(ombre)) this.objet.add(m);
     const c = new Assemblage(this.donnees.id);
     c.occlusion = 0.2;
-    const y = 0.06 + 0.79;
+    const y = 0.705;
     const rouge = 0xb8322a;
     c.ajouter(placer(new THREE.CylinderGeometry(0.13, 0.12, 0.13, 14), 0, y + 0.065, 0), rouge, "metal");
     c.ajouter(placer(new THREE.CylinderGeometry(0.115, 0.115, 0.004, 14), 0, y + 0.002, 0), 0x2a2826, "metal");
@@ -825,7 +848,9 @@ export class VueRessource {
     for (const s of [-1, 1]) c.boite(rouge, "metal", 0.05, 0.025, 0.07, s * 0.15, y + 0.1, 0);
     // L'étiquette de prix, pendue à une poignée.
     c.boite(0xf2eee2, "mat", 0.04, 0.025, 0.002, 0.18, y + 0.07, 0.03, 0, 0, 0.3);
-    for (const m of c.maillages(ombre)) this.objet.add(m);
+    const g = c.groupe(ombre);
+    this.objet.add(g);
+    this.contenu = g;
   }
 
   /** La laiterie (plan 0.8, I8) : la caisse qui porte les seaux, et deux bidons à lait de 20 L contre elle. */

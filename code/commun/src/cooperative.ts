@@ -372,9 +372,10 @@ export function butinCoop(): { id: number; type: TypeRessource; x: number; z: nu
     ["coop_batterie", BATTERIE_TRACTEUR.x, BATTERIE_TRACTEUR.z],
     // 0.6 : la haie d'ifs taillés en boules, devant les bureaux (Book 25 §3.2), ajoutée de la même façon.
     ["coop_ifs", 67, 43.6],
-    // 0.8 (chantier 10) : le grillage contre un piquet du parc à volailles, la cocotte sur le rayon bas.
+    // 0.8 (chantier 10) : le grillage contre un piquet du parc à volailles ; la cocotte en tête de gondole, au bout
+    // du premier rayon du libre-service (on la voit de l'entrée).
     ["coop_grillage", PARC_VOLAILLES.x - 2.25, PARC_VOLAILLES.z + 2.2],
-    ["coop_cocotte", 44.2, 34.77],
+    ["coop_cocotte", 42.35, 35],
   ];
   return points.map(([type, x, z], i) => ({ id: i + 1, type, x, z }));
 }

@@ -248,6 +248,8 @@ export const RESTE_EN_PLACE: Partial<Record<TypeRessource, true>> = {
   coop_ifs: true,
   // Le tas de bois de la station reste là, plus bas à chaque bûche (rendu/ressources.ts).
   tas_bois: true,
+  // La tête de gondole de la cocotte reste, vide, sa pancarte de promotion encore plantée.
+  coop_cocotte: true,
 };
 
 // ---------- Le butin d'un lieu vivant (plan 0.8, chantier 10 ; le moteur est serveur/src/lieu-vivant.ts) ----------
@@ -669,7 +671,7 @@ const USAGES_NIVEAU1: Partial<Record<TypeRessourceNiveau1, UsageRessource>> = {
     donne: { cocotte_fonte: 1 },
     qualites: {},
     duree: 2,
-    examen: "En rayon, une cocotte en fonte rouge, son couvercle encore posé dessus. Cinq kilos et demi.",
+    examen: "En tête de gondole, sous une pancarte « −20 % », une cocotte en fonte rouge, son couvercle encore posé dessus. Cinq kilos et demi.",
   },
 };
 
