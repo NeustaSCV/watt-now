@@ -51,6 +51,8 @@ export interface RepliCle {
   couts?: Inventaire;
   /** Les outils qu'il demande à la place. */
   qualites?: Partial<Record<Qualite, number>>;
+  /** La durée du travail, multipliée (2 : deux fois plus long). 1 par défaut. */
+  dureeFois?: number;
   /** Ce qu'on y perd, en une phrase (« deux fois plus long », « la soupe refroidit plus vite »). */
   note: string;
 }
@@ -64,6 +66,8 @@ export interface CleEvolution {
   objet?: TypeObjet;
   /** Ou l'outil clé : une qualité et son niveau. */
   qualite?: { qualite: Qualite; niveau: number };
+  /** Le nom de la clé quand son objet n'existe pas encore (une clé du niveau 2 : « porte de four en fonte »). */
+  nom?: string;
   /** Où on la trouve à place fixe. */
   ou: EtapeMonde;
   /** Les replis (fabricables) : ils franchissent le niveau sans la clé, en moins bien. */
@@ -149,6 +153,10 @@ export const FEU_COUVERT = { bois: 0.25, lumiere: 0, odeur: 0.5 } as const;
 export const BOUILLIR_AVEC_CASSEROLE = 0.7;
 export const CASSEROLES: readonly TypeObjet[] = ["casserole", "cocotte_fonte"];
 
+// La lignée du feu jusqu'au niveau 1 (plan 0.8 §2.3, chantier 5 ; tableau maître de `progression-par-ingredients-page.json`).
+// La maison : feu de camp, foyer de pierres, Dakota, poêle-fusée. La Coopérative : le foyer de cuisine (clé : le grillage)
+// et la marmite norvégienne (clé : la cocotte). Le four de terre attend sa porte de fonte (« plus tard », niveau 2).
+
 /** La voie de surface : de la flamme au poêle. */
 export const VOIE_SURFACE: readonly Etape[] = [
   {
@@ -159,6 +167,7 @@ export const VOIE_SURFACE: readonly Etape[] = [
     qualites: {},
     duree: 15,
     intensite: "legere",
+    etapeLieu: "maison",
     apporte: "Cuire les plats, faire bouillir l'eau, rôtir, s'éclairer.",
     examen: "Un cercle de pierres noircies. On y cuit, on y fait bouillir l'eau, on s'y éclaire.",
   },
@@ -170,43 +179,51 @@ export const VOIE_SURFACE: readonly Etape[] = [
     qualites: { marteler: 1 },
     duree: 30,
     intensite: "moyenne",
-    apporte: "Brûle 20 % de bois en moins, tient 16 kg de bois, se couvre sous la cendre pour la nuit ; son muret renvoie la chaleur vers l'abri (sommeil ×1,15 à moins de 3 m).",
+    etapeLieu: "maison",
+    apporte: "Brûle 20 % de bois en moins, tient 16 kg de bois, se couvre sous la cendre pour la nuit ; son muret renvoie la chaleur vers l'abri (sommeil ×1,15 à moins de 3 m). On y durcit au feu l'épieu, les flèches, le bâton à fouir.",
     examen: "Un foyer maçonné à sec, plus haut et plus régulier, avec un muret réflecteur. À l'abri du vent, il brûle moins de bois.",
   },
   {
     id: "foyer_cuisine",
     nom: "Foyer de cuisine",
     niveau: 3,
-    couts: [
-      { branche: 3, corde: 1, grillage_rouleau: 1 },
-      { branche: 3, corde: 1, barre_metal: 2 },
-    ],
+    couts: [{ branche: 3, corde: 1, grillage_rouleau: 1 }],
     qualites: { couper: 1, marteler: 1 },
     duree: 30,
     intensite: "moyenne",
-    // La clé (tableau maître, `progression-par-ingredients-page.json`), posée par le chantier 2 pour ses tests ; le
-    // chantier 5 complète ce niveau (repli, Marteler 2).
+    etapeLieu: "L1",
     cle: {
       objet: "grillage_rouleau",
       ou: "L1A",
+      // Sans grillage, le repli du tableau maître : deux barres martelées en grille.
+      replis: [{ couts: { barre_metal: 2 }, qualites: { marteler: 2 }, dureeFois: 2, note: "Ou deux barres de métal martelées en grille : il faut Marteler 2, et c'est deux fois plus long." }],
       idee: "Ce grillage, posé sur ton foyer, ferait une grille. Tu y penses.",
       ideePlusTard: "Ce grillage pourra servir à ton feu, un jour.",
       indice: ["Une grille ? Les clôtures en sont faites.", "Le parc à volailles de la Coopérative."],
     },
-    apporte: "Une crémaillère et une grille : deux plats à la fois, les soupes mijotées, l'eau bout deux fois plus vite, on rôtit deux fois plus vite.",
-    examen: "Un trépied et sa crémaillère au-dessus du foyer, une grille posée sur les pierres. Une vraie cuisine.",
+    apporte: "Une crémaillère et une grille : deux plats à la fois, la soupe de cèpes, l'eau bout deux fois plus vite, on rôtit deux fois plus vite.",
+    examen: "Un trépied et sa crémaillère au-dessus du foyer, une grille de grillage replié posée sur les pierres. Une vraie cuisine.",
   },
   {
     id: "four_terre",
     nom: "Four de terre",
     niveau: 4,
-    couts: [{ pierre: 6, branche: 4 }],
+    couts: [{ pierre: 6, branche: 4, glaise: 4 }],
     qualites: { marteler: 1 },
     duree: 180,
     intensite: "lourde",
-    aVenir: "0b",
-    apporte: "Un dôme d'argile : la cuisson continue seule, même quand tu n'es pas là ; deux fois moins de bois ; le pain.",
-    examen: "Un dôme d'argile sur le foyer.",
+    // Plus tard (plan 0.8 §1.3, V4-6) : sa clé est au niveau 2 ; ses deux plats attendent, grisés.
+    aVenir: "niveau 2",
+    etapeLieu: "L2",
+    cle: {
+      nom: "porte de four en fonte",
+      ou: "L2B",
+      idee: "Cette porte de fonte sur un dôme de glaise : un vrai four.",
+      ideePlusTard: "Cette porte servira à un four, un jour.",
+      indice: ["Fermer un four ? Une porte de fonte.", "Le fournil d'un lieu plus loin."],
+    },
+    apporte: "Un dôme de glaise fermé d'une porte de fonte : deux fois moins de bois en cuisine, le pot-au-feu de volaille et la volaille aux cèpes.",
+    examen: "Un dôme de glaise sur le foyer, fermé d'une porte de fonte.",
   },
   {
     id: "poele",
@@ -218,6 +235,7 @@ export const VOIE_SURFACE: readonly Etape[] = [
     intensite: "lourde",
     famille: "charbonniers",
     aVenir: "0b",
+    etapeLieu: "L3",
     apporte: "Dans une cabane : il chauffe la pièce, et l'on cuisine sur sa plaque.",
     examen: "Un poêle, au cœur de la cabane.",
   },
@@ -233,7 +251,8 @@ export const VOIE_CREUSEE: readonly Etape[] = [
     qualites: { creuser: 1 },
     duree: 15,
     intensite: "moyenne",
-    apporte: "Un feu creusé dans le sol : 40 % de bois en moins, il se voit trois fois moins la nuit, fume moins. Pas de chaleur pour l'abri.",
+    etapeLieu: "maison",
+    apporte: "Un feu creusé dans le sol : 40 % de bois en moins, il se voit trois fois moins la nuit, fume moins ; la poêle posée sur le trou fait un réchaud. Pas de chaleur pour l'abri.",
     examen: "Deux trous reliés sous terre : la flamme reste dans le sol. On le voit à peine la nuit.",
   },
   {
@@ -244,13 +263,17 @@ export const VOIE_CREUSEE: readonly Etape[] = [
     qualites: { marteler: 1 },
     duree: 20,
     intensite: "legere",
+    etapeLieu: "maison",
     apporte: "Quatre boîtes de conserve dans un lit de pierres : le bois ×0,4, l'eau bout avec 40 % de bois en moins, presque invisible. Mais petit : 4 kg de bois, un seul plat.",
     examen: "Quatre boîtes de conserve emboîtées dans un lit de pierres : le tirage aspire la flamme. Les déchets de l'Âge de l'Abondance font le meilleur réchaud de bivouac.",
   },
 ];
 
-/** Creuser un feu de camp en Dakota, sur place (Book 24 §3.1) : on retire des pierres, on creuse. */
-export const CREUSER: { qualites: Partial<Record<Qualite, number>>; duree: number; rend: Inventaire } = { qualites: { creuser: 1 }, duree: 15, rend: { pierre: 3 } };
+/**
+ * Creuser un feu de camp en Dakota, sur place (Book 24 §3.1) : on retire les pierres du cercle, on creuse. On les reprend
+ * toutes (B12) : combler en coûte autant, plus rien ne se perd à changer de voie.
+ */
+export const CREUSER: { qualites: Partial<Record<Qualite, number>>; duree: number; rend: Inventaire } = { qualites: { creuser: 1 }, duree: 15, rend: { pierre: 5 } };
 /** Combler un Dakota pour en refaire un feu de camp : des pierres pour le cercle. */
 export const COMBLER: { qualites: Partial<Record<Qualite, number>>; duree: number; cout: Inventaire } = { qualites: { creuser: 1 }, duree: 10, cout: { pierre: 5 } };
 
@@ -292,36 +315,71 @@ export function etapeSuivanteFeu(f: FeuDansLignee): Etape | null {
 export type AccessoireFeu = "broche" | "marmite";
 
 export interface DefAccessoire {
+  /** Son identifiant (celui de la carte des constructions, « feu+marmite », et de l'idée gardée). */
+  id: AccessoireFeu;
   nom: string;
   /** Les formes qui l'acceptent. */
   formes: readonly FormeFeu[];
   couts: Inventaire[];
   qualites: Partial<Record<Qualite, number>>;
   duree: number;
+  /** Plan 0.8 : l'étape de la grille où il se monte. */
+  etapeLieu?: EtapeGrille;
+  /** Plan 0.8 : sa clé, s'il en a une (la marmite : la cocotte en fonte). */
+  cle?: CleEvolution;
   apporte: string;
 }
 
 export const ACCESSOIRES_FEU: Record<AccessoireFeu, DefAccessoire> = {
   broche: {
+    id: "broche",
     nom: "Broche",
     formes: ["feu_camp", "foyer_pierres", "foyer_cuisine", "dakota"],
     couts: [{ branche: 2 }],
     qualites: { couper: 1 },
     duree: 5,
+    etapeLieu: "maison",
     apporte: "Deux fourches et une broche : on rôtit une portion de plus à la fois.",
   },
   marmite: {
+    id: "marmite",
     nom: "Marmite norvégienne",
     formes: ["foyer_cuisine", "four_terre", "poele"],
-    couts: [
-      { branche: 4, chiffons: 4, casserole: 1 },
-      { branche: 4, chiffons: 4, cocotte_fonte: 1 },
-    ],
+    couts: [{ branche: 4, chiffons: 4, cocotte_fonte: 1 }],
     qualites: {},
     duree: 20,
-    apporte: "Une caisse garnie de chiffons où la cuisson finit sans feu : les soupes demandent moitié moins de bois.",
+    etapeLieu: "L1",
+    cle: {
+      objet: "cocotte_fonte",
+      ou: "L1A",
+      // La casserole reste commune (⚡ plaque de choc, dérouillage) : elle fait le repli, en moins bien (I6).
+      replis: [{ couts: { casserole: 1 }, note: "Ou une casserole : la soupe refroidit plus vite, on économise moins de bois." }],
+      idee: "Une cocotte dans une caisse de chiffons : la soupe finirait de cuire sans feu.",
+      ideePlusTard: "Cette cocotte servira à ta cuisine, un jour.",
+      indice: ["Une cocotte en fonte ? Une cuisine en a toujours.", "La cuisine de la Coopérative."],
+    },
+    apporte: "Une caisse garnie de chiffons, la cocotte dedans : la soupe finit de cuire sans feu, avec moitié moins de bois.",
   },
 };
+
+/**
+ * Le bois d'un mijoté avec la marmite norvégienne montée (`paye` : ce qu'elle a coûté) : moitié moins avec la cocotte en
+ * fonte, qui garde la chaleur ; un quart de moins seulement avec la casserole du repli (la soupe refroidit plus vite).
+ */
+export const BOIS_MARMITE = { cocotte: 0.5, casserole: 0.75 } as const;
+
+export function boisMarmite(paye: Inventaire | undefined): number {
+  if (!paye) return 1;
+  return (paye.cocotte_fonte ?? 0) > 0 || (paye.casserole ?? 0) === 0 ? BOIS_MARMITE.cocotte : BOIS_MARMITE.casserole;
+}
+
+/**
+ * Un accessoire à clé vu comme une étape (pour l'idée au ramassage, l'indice, la fiche) : un cran au-dessus des foyers qui
+ * l'acceptent (niveau 2 : la forme posée vaut 1, l'accessoire monté 2).
+ */
+export function etapeAccessoire(def: DefAccessoire): Etape {
+  return { id: def.id, nom: def.nom, niveau: 2, couts: def.couts, qualites: def.qualites, duree: def.duree, intensite: "legere", ...(def.etapeLieu ? { etapeLieu: def.etapeLieu } : {}), ...(def.cle ? { cle: def.cle } : {}), apporte: def.apporte, examen: def.apporte };
+}
 
 export function estAccessoireFeu(x: unknown): x is AccessoireFeu {
   return typeof x === "string" && Object.hasOwn(ACCESSOIRES_FEU, x);
@@ -368,10 +426,7 @@ export const LIGNEES_INSTALLATIONS: Partial<Record<TypeInstallation, readonly Et
       nom: "Abri fermé",
       niveau: 3,
       // La clé : la toile de jute du Moulin, tendue côté vent. Le repli : des chiffons et des sacs plastique cousus.
-      couts: [
-        { branche: 10, corde: 1, poignee_clous: 1, toile_jute: 1 },
-        { branche: 10, corde: 1, poignee_clous: 1, chiffons: 4, sac_plastique: 2 },
-      ],
+      couts: [{ branche: 10, corde: 1, poignee_clous: 1, toile_jute: 1 }],
       qualites: { couper: 1, marteler: 1 },
       duree: 40,
       intensite: "moyenne",
@@ -379,7 +434,7 @@ export const LIGNEES_INSTALLATIONS: Partial<Record<TypeInstallation, readonly Et
       cle: {
         objet: "toile_jute",
         ou: "L1B",
-        replis: [{ couts: { chiffons: 4, sac_plastique: 2 }, note: "4 chiffons et 2 sacs plastique cousus : ça ferme, mais c'est moins chaud." }],
+        replis: [{ couts: { chiffons: 4, sac_plastique: 2 }, note: "Ou 4 chiffons et 2 sacs plastique cousus : ça ferme, mais c'est moins chaud." }],
         idee: "Cette toile tendue côté vent, et ton abri devient une chambre.",
         ideePlusTard: "Cette toile pourra fermer ton abri, un jour.",
         indice: ["De quoi fermer ton abri ? De la grosse toile.", "Les sacs de jute du magasin, au Moulin du Gué."],
@@ -397,6 +452,14 @@ export const LIGNEES_INSTALLATIONS: Partial<Record<TypeInstallation, readonly Et
       intensite: "legere",
       aVenir: "niveau 2",
       etapeLieu: "L2",
+      cle: {
+        nom: "couvertures de laine",
+        ou: "L2A",
+        replis: [{ couts: { chiffons: 8 }, note: "Ou 8 chiffons cousus : moins chaud." }],
+        idee: "Ces couvertures sur ton lit : tu dormirais comme avant.",
+        ideePlusTard: "Ces couvertures serviront, un jour.",
+        indice: ["Avoir chaud la nuit ? De la vraie laine.", "Les lits d'un lieu plus loin."],
+      },
       apporte: "Des couvertures de laine sur le lit : on dort comme avant la Panne (sommeil ×1,6).",
       examen: "L'abri fermé, le lit doublé de couvertures de laine.",
     },
@@ -414,28 +477,62 @@ export const LIGNEES_INSTALLATIONS: Partial<Record<TypeInstallation, readonly Et
       examen: "Une hutte de torchis.",
     },
   ],
+  // L'eau jusqu'au niveau 1 (plan 0.8 §2.3, chantier 5) : le bidon de 5 L de la ruine sous un entonnoir de sacs plastique,
+  // puis le seau de 10 L de la Coopérative. La citerne de 60 L sort de la lignée (V4-7) ; le 20 L attend le niveau 2.
   recuperateur_pluie: [
     {
       id: "recuperateur_pluie",
       nom: "Récupérateur de pluie",
       niveau: 1,
-      couts: [{ bache: 1, branche: 4, corde: 1 }],
+      couts: [{ bidon_5l: 1, branche: 4, corde: 1, sac_plastique: 4 }],
       qualites: { couper: 1 },
       duree: 30,
       intensite: "legere",
+      etapeLieu: "maison",
       apporte: "5 L d'eau de pluie, potable, qui se remplit même quand tu n'es pas là.",
-      examen: "Une bâche tendue en entonnoir au-dessus d'une bassine.",
+      examen: "Quatre sacs plastique tendus en entonnoir sur quatre piquets, qui gouttent dans un bidon de 5 L.",
     },
     {
-      id: "citerne",
-      nom: "Citerne de bâche",
+      id: "recuperateur_seau",
+      nom: "Récupérateur à seau",
       niveau: 2,
-      couts: [{ bache: 1, branche: 6, corde: 1 }],
+      couts: [{ seau_10l: 1, branche: 2 }],
       qualites: { couper: 1 },
-      duree: 40,
-      intensite: "moyenne",
-      apporte: "Un bac de perches doublé d'une deuxième bâche, avec un couvercle : 60 L d'eau de pluie, toujours potable.",
-      examen: "Un grand bac de perches doublé de bâche, sous l'entonnoir, avec un couvercle. L'eau y reste propre.",
+      duree: 20,
+      intensite: "legere",
+      etapeLieu: "L1",
+      cle: {
+        objet: "seau_10l",
+        ou: "L1A",
+        // Un seul bidon de 5 L existe (I4) : le bidon d'huile de la station, rincé, lui sert de second.
+        replis: [{ couts: { bidon_huile: 1 }, note: "Ou le bidon d'huile de la station, rincé, à côté du bidon de 5 L : 10 L aussi, mais l'huile est perdue." }],
+        idee: "Ce seau sous ton entonnoir : deux fois plus d'eau.",
+        ideePlusTard: "Ce seau pourra garder ton eau, un jour.",
+        indice: ["Plus de 5 litres ? Un seau de 10 L.", "La laiterie de la Coopérative."],
+      },
+      apporte: "Un seau galvanisé sous l'entonnoir, calé sur deux branches : 10 L d'eau de pluie, potable, même quand tu n'es pas là.",
+      examen: "L'entonnoir de sacs plastique goutte dans un seau de laiterie, calé sur deux branches. Dix litres.",
+    },
+    {
+      id: "recuperateur_jerrican",
+      nom: "Récupérateur à jerrican",
+      niveau: 3,
+      couts: [{ branche: 2 }],
+      qualites: { couper: 1 },
+      duree: 20,
+      intensite: "legere",
+      // Plus tard (plan 0.8 §1.2) : le jerrican de 20 L est la clé d'un lieu du niveau 2.
+      aVenir: "niveau 2",
+      etapeLieu: "L2",
+      cle: {
+        nom: "jerrican de 20 L",
+        ou: "L2B",
+        idee: "Ce jerrican sous ton entonnoir : vingt litres d'eau de pluie.",
+        ideePlusTard: "Ce jerrican gardera ton eau, un jour.",
+        indice: ["Encore plus d'eau ? Un jerrican de 20 L.", "Le quai d'un lieu plus loin."],
+      },
+      apporte: "20 L d'eau de pluie : l'eau d'une famille entière, et de quoi en vendre.",
+      examen: "Un jerrican de 20 L sous l'entonnoir.",
     },
   ],
   // ---------- Le stockage (plan 0.8 §2.3, chantier 6) ----------
@@ -458,10 +555,7 @@ export const LIGNEES_INSTALLATIONS: Partial<Record<TypeInstallation, readonly Et
       nom: "Coffre cerclé",
       niveau: 2,
       // La clé : les feuillards des barils du Moulin. Le repli : la barre de la ruine, martelée en bandes (long).
-      couts: [
-        { buche: 2, poignee_clous: 1, feuillards: 1 },
-        { buche: 2, poignee_clous: 1, barre_metal: 1 },
-      ],
+      couts: [{ buche: 2, poignee_clous: 1, feuillards: 1 }],
       qualites: { marteler: 2 },
       duree: 30,
       intensite: "lourde",
@@ -469,7 +563,7 @@ export const LIGNEES_INSTALLATIONS: Partial<Record<TypeInstallation, readonly Et
       cle: {
         objet: "feuillards",
         ou: "L1B",
-        replis: [{ couts: { barre_metal: 1 }, qualites: { marteler: 2 }, note: "Une barre martelée en bandes : c'est long, et il faut Marteler 2." }],
+        replis: [{ couts: { barre_metal: 1 }, qualites: { marteler: 2 }, dureeFois: 2, note: "Ou la barre de la ruine, martelée en bandes (Marteler 2) : deux fois plus long." }],
         idee: "Ces cercles de fer autour de ton coffre : il tiendrait le double.",
         ideePlusTard: "Ces cercles tiendront un coffre, un jour.",
         indice: ["Cercler un coffre ? Des cercles de tonneau.", "Les barils cerclés du magasin, au Moulin du Gué."],
@@ -487,6 +581,14 @@ export const LIGNEES_INSTALLATIONS: Partial<Record<TypeInstallation, readonly Et
       intensite: "moyenne",
       aVenir: "niveau 2",
       etapeLieu: "L2",
+      cle: {
+        nom: "tôles ondulées",
+        ou: "L2A",
+        replis: [{ couts: { bache: 2 }, note: "Ou 2 bâches : l'auvent fuit." }],
+        idee: "Ces tôles sur des perches : un vrai toit pour tes réserves.",
+        ideePlusTard: "Ces tôles feront un toit, un jour.",
+        indice: ["Un toit qui dure ? De la tôle.", "Le hangar d'un lieu plus loin."],
+      },
       apporte: "Sous un toit de tôles ondulées, sur des pierres : il garde 400 kg.",
       examen: "Le coffre cerclé, monté sur des pierres sous un auvent de tôles.",
     },
@@ -511,7 +613,7 @@ export const LIGNEES_INSTALLATIONS: Partial<Record<TypeInstallation, readonly Et
       nom: "Établi à étau",
       niveau: 2,
       // La clé : l'étau du rhabilleur, boulonné sur le plateau. Le repli : le serre-joint de fortune, qui tient sans serrer fort.
-      couts: [{ etau: 1 }, { serre_joint_fortune: 1 }],
+      couts: [{ etau: 1 }],
       qualites: { serrer: 1 },
       duree: 30,
       intensite: "moyenne",
@@ -519,7 +621,7 @@ export const LIGNEES_INSTALLATIONS: Partial<Record<TypeInstallation, readonly Et
       cle: {
         objet: "etau",
         ou: "L1B",
-        replis: [{ couts: { serre_joint_fortune: 1 }, note: "Un serre-joint de fortune tient la pièce, sans le serrage fort (pas de Serrer 3)." }],
+        replis: [{ couts: { serre_joint_fortune: 1 }, note: "Ou un serre-joint de fortune : il tient la pièce, sans le serrage fort (pas de Serrer 3)." }],
         idee: "Un étau ! Boulonné sur ton établi, il serrerait ce que tes mains ne tiennent pas.",
         ideePlusTard: "Cet étau servira sur un établi, un jour.",
         indice: ["Un étau ? Un atelier en a toujours un.", "L'établi du rhabilleur, aux meules du Moulin du Gué."],
@@ -537,6 +639,13 @@ export const LIGNEES_INSTALLATIONS: Partial<Record<TypeInstallation, readonly Et
       intensite: "moyenne",
       aVenir: "niveau 2",
       etapeLieu: "L2",
+      cle: {
+        qualite: { qualite: "raboter", niveau: 1 },
+        ou: "L2B",
+        idee: "Avec ce rabot, ton établi devient celui d'un menuisier.",
+        ideePlusTard: "Ce rabot servira sur un établi, un jour.",
+        indice: ["Des planches lisses ? Un rabot.", "L'atelier d'un menuisier, plus loin."],
+      },
       apporte: "Un rabot : des planches lisses, des manches d'outils plus solides.",
       examen: "Un établi de menuisier, son rabot et ses planches lisses.",
     },
@@ -566,6 +675,13 @@ export const LIGNEES_INSTALLATIONS: Partial<Record<TypeInstallation, readonly Et
       intensite: "legere",
       aVenir: "niveau 2",
       etapeLieu: "L2",
+      cle: {
+        nom: "lanterne-tempête",
+        ou: "L2A",
+        idee: "Cette lanterne pendue à ton abri : de la lumière toute la nuit, sans feu.",
+        ideePlusTard: "Cette lanterne servira, un jour.",
+        indice: ["Une lumière qui tient la nuit ? Une lanterne-tempête.", "La remise d'un lieu plus loin."],
+      },
       apporte: "Une lanterne-tempête pendue à une perche : 14 m de lumière toute la nuit, sans flamme nue.",
       examen: "Une lanterne-tempête pendue à une perche.",
     },
@@ -606,8 +722,8 @@ export const LIGNEES_INSTALLATIONS: Partial<Record<TypeInstallation, readonly Et
 
 /** Ce que tient un coffre selon son niveau (kg). */
 export const CAPACITES_COFFRE = [150, 250, 400] as const;
-/** Ce que tient le récupérateur selon son niveau (L). */
-export const CONTENANCES_RECUPERATEUR = [5, 60] as const;
+/** Ce que tient le récupérateur selon son niveau (L) : le bidon, le seau, le jerrican (plus tard). */
+export const CONTENANCES_RECUPERATEUR = [5, 10, 20] as const;
 /** Le sommeil dans l'abri selon son niveau (multiplicateur, comme le lit de branchages). */
 export const SOMMEIL_ABRI = [1, 1.3, 1.45, 1.6, 1.6] as const;
 

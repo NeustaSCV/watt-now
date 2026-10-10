@@ -64,11 +64,11 @@ test("la poêlée se fait au Dakota, pas sur un feu de camp ; ni sur un feu éte
   assert.match(eteint.infos().at(-1)!, /allume ton foyer de pierres/);
 });
 
-test("une étape « plus tard » est refusée : le foyer de cuisine ne monte pas en four de terre (0b)", () => {
+test("une étape « plus tard » est refusée : le foyer de cuisine ne monte pas en four de terre (niveau 2)", () => {
   const t = monter({ pierre: 6, branche: 4 }, { niveau: 3, allume: false });
   t.joueur.recevoir({ t: "interagir", cible: { genre: "feu", id: 1 }, verbe: "ameliorer" });
   t.attendre(30);
-  assert.equal(t.infos().at(-1), "Four de terre : pas encore. Il faudra de l'argile, et du temps.");
+  assert.equal(t.infos().at(-1), "Four de terre : plus tard. Sa clé est à trouver plus loin.");
   assert.equal(t.base.chargerFeux(t.compte.id)[0]!.niveau, 3);
   assert.equal(t.sac().pierre, 6);
 });

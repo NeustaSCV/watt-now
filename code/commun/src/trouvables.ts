@@ -33,6 +33,9 @@ const DU_MONDE: readonly { objet: TypeObjet; depuis: TypeObjet | "charbonniere" 
   { objet: "ebauche_if_seche", depuis: "ebauche_if" },
   // La graisse qui coule sous la broche quand on rôtit la volaille (joueur.ts) : la torche plantée en brûle.
   { objet: "graisse", depuis: "volaille_crue" },
+  // Le bidon de 5 L de la ruine (plan 0.8 §2.5) : le chantier 10 le pose dans la ruine ; d'ici là, le simulateur l'y
+  // suppose (le récupérateur de 5 L le demande, chantier 5). À retirer quand la ruine le donne (USAGES).
+  { objet: "bidon_5l", depuis: null },
 ];
 
 /** Ce qu'on peut se procurer, et d'où (la première source trouvée). */

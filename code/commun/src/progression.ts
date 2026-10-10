@@ -16,7 +16,7 @@
 // affiche (client/src/fabrication-arbre.ts, la fiche d'installation de hud.ts, client/src/bandeau-idee.ts).
 
 import { RECETTES, estApprise, installationDuLieu, estHorsFamille, niveauQualite, recette, type LieuRecette, type Recette, type SavoirRecettes } from "./recettes.ts";
-import { LIGNEES_INSTALLATIONS, VOIE_CREUSEE, VOIE_SURFACE, lignee, type CleEvolution, type Etape } from "./lignees.ts";
+import { ACCESSOIRES_FEU, LIGNEES_INSTALLATIONS, VOIE_CREUSEE, VOIE_SURFACE, etapeAccessoire, lignee, type AccessoireFeu, type CleEvolution, type Etape } from "./lignees.ts";
 import type { Inventaire, TypeObjet } from "./objets.ts";
 import { QUETE, type Condition, type Quete } from "./quetes.ts";
 import type { Famille } from "./regles.ts";
@@ -139,6 +139,8 @@ export const PROGRESSION: Readonly<Record<string, LigneProgression>> = {
   fleches_os: { filet: 60, quand: [et(vu("os"), ARC)], indice: "Une pointe plus dure que le bois." },
   fleches_clou: { filet: 60, quand: [et(vu("bocal_clous"), ARC)], indice: "Des pointes toutes faites, par douzaines." },
   baton_fouir: { quand: [fait("nuit"), quete("dakota")], indice: "La nuit, toute lumière se voit de loin." },
+  // Plan 0.8 (chantier 5, I24) : le bâton à fouir passé au foyer de pierres. Seule la construction le dévoile.
+  baton_fouir_durci: { quand: [fab("baton_fouir"), fait("foyer:foyer_pierres")], indice: "Une pointe passée au feu ne s'émousse plus." },
   alarme_boites: { quand: [et(vu("boite_vide"), ou(fait("nuit"), fait("eteint_vu"))), quete("alarme")], indice: "Être prévenu avant qu'ils arrivent." },
   pansement: { filet: 60, quand: [vu("chiffons"), fait("blessure"), quete("soins")], indice: "Un chiffon propre vaut de l'or quand ça saigne." },
   protege_bras: { filet: 60, quand: [fait("saisi"), fait("morsure"), quete("protege_bras")], indice: "Ils mordent l'avant-bras qu'on lève." },
@@ -163,6 +165,8 @@ export const PROGRESSION: Readonly<Record<string, LigneProgression>> = {
   pack_cellules: { quand: [vu("cellule_lithium"), quete("pack")], indice: "Des petites piles ensemble font une vraie batterie." },
   module_raquette: { quand: [vu("raquette_moustiques"), quete("raquette")], indice: "Ce qui grillait les moustiques peut servir encore." },
   matraque_electrique: { quand: [fab("pack_cellules"), MODULES, quete("raquette")], indice: "Une décharge qui les éteint pour de bon." },
+  // La petite batterie du kit, source de la matraque ★★ (plan 0.8 §2.4, Q-A5 ; chantier 8).
+  matraque_petite_batterie: { quand: [et(fab("banc_recharge"), MODULES)], indice: "Ta petite batterie peut nourrir une vraie matraque." },
   pedalier: { quand: [SEUIL, vu("cadre_velo"), quete("meule"), quete("dynamo")], indice: "Ce qui tourne ne meurt pas." },
   arbalete: { quand: [SEUIL, fab("pedalier"), quete("arbalete")], indice: "Ton arme de métier : rien à bander, tout à viser." },
   arbrier: { quand: [devoilee("arbalete")], indice: "Le corps de l'arme, taillé dans une bûche." },
@@ -716,6 +720,8 @@ export function etapesAvecCle(): EtapeAvecCle[] {
   ajouter("feu", VOIE_SURFACE);
   ajouter("feu", VOIE_CREUSEE);
   for (const [type, etapes] of Object.entries(LIGNEES_INSTALLATIONS)) if (etapes) ajouter(type, etapes);
+  // Les accessoires du feu à clé (la marmite norvégienne, chantier 5) : « feu+marmite », un cran au-dessus des foyers.
+  for (const def of Object.values(ACCESSOIRES_FEU)) if (def.cle) ajouter(`feu+${def.id}`, [etapeAccessoire(def)]);
   etapesCle = liste;
   return liste;
 }
@@ -726,6 +732,12 @@ export function etapeAvecCle(id: string): EtapeAvecCle | undefined {
 
 /** Le niveau qu'on a dans la voie de cette étape (0 : rien de cette lignée). Pour le feu : la voie de surface ou creusée. */
 export function niveauPossede(x: EtapeAvecCle, installations: ReadonlyMap<string, number>): number {
+  // Un accessoire du feu : 2 s'il est monté, 1 si l'on a un foyer qui l'accepte, sinon 0.
+  if (x.construction.startsWith("feu+")) {
+    const def = ACCESSOIRES_FEU[x.construction.slice(4) as AccessoireFeu];
+    if (installations.has(x.construction)) return 2;
+    return def?.formes.some((f) => installations.has(`feu:${f}`)) ? 1 : 0;
+  }
   if (x.construction !== "feu") return installations.get(x.construction) ?? 0;
   const voie = VOIE_SURFACE.some((v) => v.id === x.etape.id) ? VOIE_SURFACE : VOIE_CREUSEE;
   return Math.max(0, ...voie.filter((v) => installations.has(`feu:${v.id}`)).map((v) => v.niveau));

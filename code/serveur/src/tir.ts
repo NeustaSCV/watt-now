@@ -28,6 +28,7 @@ import {
   armeTirExemplaire,
   chanceDeToucher,
   deFace,
+  degatsLances,
   distanceAuSegment,
   estLancable,
   premierMur,
@@ -380,7 +381,9 @@ export class Tir {
         if (resultat === "detruit" && aLaTete) ctx.noter?.(tir.armeeDAvance ? "tete:carreau" : "tete:fleche");
         comment = aLaTete ? "tir_plein" : "tir";
       } else {
-        const def = (p as Extract<Pret, { genre: "lancer" }>).def;
+        // La hachette lancée frappe avec les dégâts de l'exemplaire (K45, plan 0.8 §2.4).
+        const lance = p as Extract<Pret, { genre: "lancer" }>;
+        const def = { ...lance.def, degats: degatsLances(lance.def, lance.cle) };
         resultat = toucher(touche, { genre: "lancer", def, heureux: def.coupHeureux > 0 && ctx.alea() < def.coupHeureux }, pos, zone);
       }
       coup = { id: touche.id, resultat };

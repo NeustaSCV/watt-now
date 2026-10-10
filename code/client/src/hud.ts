@@ -19,7 +19,6 @@ import {
   VOIE_CREUSEE,
   VOIE_SURFACE,
   capaciteCoffre,
-  choisirCout,
   contenanceRecuperateur,
   coutPour,
   effetsFeu,
@@ -35,6 +34,7 @@ import {
   type Etape,
 } from "../../commun/src/lignees.ts";
 import { texteAVenir } from "../../commun/src/lignees.ts";
+import { choisirFacon } from "../../commun/src/replis.ts";
 import { texteLieu } from "../../commun/src/lieu-recette.ts";
 import { PRIX_RETRAIT, formaterWotts, prixAchatExemplaire, prixVenteCle } from "../../commun/src/economie.ts";
 import { detailEnergieGrise } from "../../commun/src/recettes.ts";
@@ -1763,11 +1763,13 @@ export class Hud {
     const coupsPourTomber = Math.ceil(RESISTANCE_TORSE / a.degats);
     const etat = etatArme(objet, this.usureArmes);
     const abimee = etat < SEUIL_ABIMEE;
-    // L'électrique ne fait rien au torse : on montre ce qu'il fait, le raidissement (Book 25 §8.2).
+    // L'électrique frappe aussi le torse depuis la 0.8 (plan §2.4) : ses dégâts, puis ce qu'il fait de plus, le
+    // raidissement (Book 25 §8.2).
+    const degats = barre("Dégâts", a.degats / maxDegats, virgule(a.degats), `${coupsPourTomber} coup${coupsPourTomber > 1 ? "s" : ""} au torse pour le faire tomber`);
     const premiere =
       a.type === "electrique"
-        ? barre("Raidit", (a.raidi ?? 0) / ETOILES[5].raidi, `${virgule(a.raidi ?? 0)} s`, "Une décharge courte : il lâche et ne bouge plus pendant ce temps")
-        : barre("Dégâts", a.degats / maxDegats, virgule(a.degats), `${coupsPourTomber} coup${coupsPourTomber > 1 ? "s" : ""} au torse pour le faire tomber`);
+        ? degats + barre("Raidit", (a.raidi ?? 0) / ETOILES[5].raidi, `${virgule(a.raidi ?? 0)} s`, "Une décharge courte : il lâche et ne bouge plus pendant ce temps")
+        : degats;
     const tete =
       a.type === "electrique"
         ? "☠ Maintenu sur un Éteint raidi ou à terre : il s'éteint."
@@ -2008,13 +2010,14 @@ export class Hud {
     bloque: string | null = null,
     gratuit = false,
   ): string {
-    const { cout, payable } = choisirCout(this.inventaire, e.couts, e, this.famille);
-    const outils = multiplicateurQualites(this.outils, e.qualites) !== null;
+    // Avec la clé, ou par un repli (plan 0.8 §2.2 ; commun/src/replis.ts) : la première façon possible.
+    const { facon, cout, payable, outils: facteur } = choisirFacon(this.inventaire, { duree: 0, ...e }, this.famille, (q) => multiplicateurQualites(this.outils, q));
+    const outils = facteur !== null;
     const possible = (gratuit || (payable && outils)) && !bloque;
     const badge = e.famille ? ` <span class="badge-famille ${e.famille}" title="Un niveau de métier">${NOMS_FAMILLES[e.famille]}${e.famille !== this.famille ? " · ×1,5" : ""}</span>` : "";
     const manque =
       !possible && !bloque && !gratuit
-        ? this.listeManque({ id: "fiche", lieu: { genre: "main" }, categorie: "batir", nom: titre, produit: { objet: "branche", quantite: 0 }, ingredients: cout, qualites: e.qualites, duree: 0, intensite: "legere", famille: "tous" })
+        ? this.listeManque({ id: "fiche", lieu: { genre: "main" }, categorie: "batir", nom: titre, produit: { objet: "branche", quantite: 0 }, ingredients: cout, qualites: facon.qualites, duree: 0, intensite: "legere", famille: "tous" })
         : "";
     return `
       <article class="etape ${possible ? "possible" : ""}">
@@ -2022,6 +2025,7 @@ export class Hud {
           <small>${texte}</small>
           ${this.ligneCle(e)}
           ${gratuit ? "" : this.pucesCout(e.couts, e.qualites, e.famille)}
+          ${gratuit ? "" : (e.cle?.replis ?? []).map((r) => `<small class="repli${facon.repli === r ? " retenu" : ""}">${r.note}</small>`).join("")}
           ${bloque ? `<small class="bloque">${bloque}</small>` : manque}
         </div>
         <button type="button" data-verbe="${verbe}" ${possible ? "" : "disabled"}>${bouton}</button>
@@ -2042,7 +2046,7 @@ export class Hud {
   private ligneCle(e: { id?: string; cle?: CleEvolution; aVenir?: string }): string {
     const cle = e.cle;
     if (!cle || !e.id) return "";
-    const nom = cle.objet ? OBJETS[cle.objet].nom : cle.qualite ? `${NOMS_QUALITES[cle.qualite.qualite]} ${cle.qualite.niveau}` : "";
+    const nom = cle.objet ? OBJETS[cle.objet].nom : cle.qualite ? `${NOMS_QUALITES[cle.qualite.qualite]} ${cle.qualite.niveau}` : (cle.nom ?? "");
     const image = cle.objet ? icone(cle.objet, 22) : "";
     const etat = etatCle({ ...e, id: e.id, cle }, this.vueProgression);
     const suite =
@@ -2095,7 +2099,7 @@ export class Hud {
     // L'autre voie, au premier niveau seulement : creuser le feu de camp, ou combler le Dakota.
     let voieAutre = "";
     if (!v.dakota && niveau === 1) {
-      voieAutre = this.carteEtape("Creuser en foyer Dakota", `${VOIE_CREUSEE[0]!.apporte} Tu récupères 3 pierres.`, { couts: [], qualites: CREUSER.qualites }, "creuser_dakota", "Creuser", bloqueFlammes);
+      voieAutre = this.carteEtape("Creuser en foyer Dakota", `${VOIE_CREUSEE[0]!.apporte} Tu récupères ${CREUSER.rend.pierre ?? 0} pierres.`, { couts: [], qualites: CREUSER.qualites }, "creuser_dakota", "Creuser", bloqueFlammes);
     } else if (v.dakota && niveau === 1) {
       voieAutre = this.carteEtape("Combler en feu de camp", "On rebouche le trou, on pose un cercle de pierres : un feu qui chauffe et éclaire, mais qui se voit.", { couts: [COMBLER.cout], qualites: COMBLER.qualites }, "combler", "Combler", bloqueFlammes);
     }
@@ -2300,6 +2304,7 @@ export class Hud {
       const ou =
         ("installation" in r.produit ? `Se pose devant toi : ${NOMS_INSTALLATIONS[r.produit.installation]}. ` : "") +
         texteLieu(r) +
+        (r.note ? `${r.note} ` : "") +
         (plusTard ? `${texteAVenir(plusTard)} ` : "") +
         (r.eau ? `${String(r.eau).replace(".", ",")} L d'eau de la gourde (celle de la mare suffit). ` : "");
       const secondes = Math.round(dureeReelle(r) * (outils ?? 1) * 10) / 10;

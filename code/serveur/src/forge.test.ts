@@ -76,9 +76,10 @@ test("🔥 la gamme : six lames de métier, la machette forgée solide, toutes r
   assert.equal(armeDeCle("machette_forgee")!.solidite, 80);
   assert.equal(armeDeCle("machette")!.solidite, 40, "la machette de fortune, deux fois moins solide");
   assert.equal(armeDeCle("lame_forgee")!.nom, "le couteau de forge");
-  // Aucune lame nouvelle ne dépasse la masse en dégâts par coup (Book 25 §8.1).
+  // Au niveau 1 (la forge fait ★★), aucune lame ne dépasse la masse en dégâts par coup (Book 25 §8.1) ; au-delà, les
+  // dégâts suivent la bande de l'étape de l'étoile (plan 0.8 §2.4 : 2 à 3 à L2).
   const masse = armeDeCle("masse")!.degatsTorse;
-  for (const o of ["hachette", "serpe", "machette_forgee", "hache_forgee", "glaive", "lance_forgee"]) assert.ok(armeDeCle(o)!.degatsTorse < masse, o);
+  for (const o of ["hachette#2", "serpe#2", "machette_forgee#2", "lame_forgee#2", "lance_forgee"]) assert.ok(armeDeCle(o)!.degatsTorse < masse, o);
   // Un glaive ★★ casse bien plus tôt qu'un glaive ★★★★★.
   assert.ok(armeDeCle("glaive#2")!.solidite * 2 < armeDeCle("glaive#5")!.solidite);
 });
