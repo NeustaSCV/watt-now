@@ -31,7 +31,7 @@
 
 ## 1. Les règles à respecter
 
-*Chaque règle porte un numéro (R1…R48) et sa source. « Décidé » : une décision du porteur ; « repère » : une valeur d'étude, pas encore tranchée. Les identifiants entre parenthèses renvoient au champ `decisions` du tableau maître ou aux études citées.*
+*Chaque règle porte un numéro (R1…R50) et sa source. « Décidé » : une décision du porteur ; « repère » : une valeur d'étude, pas encore tranchée. Les identifiants entre parenthèses renvoient au champ `decisions` du tableau maître ou aux études citées.*
 
 ### 1.A Les meubles et la progression
 
@@ -129,6 +129,8 @@
 | **R45** | **Les réserves des haltes reviennent vite ; celles du terrain jamais.** Le vrac partagé d'une halte (bûches, pierres) revient **en 30 minutes** (la station : 12 bûches) ; les pierres et les bûches du **terrain** ne reviennent pas (les branches, oui, en 40 min). Le vrac grandit avec le nombre de voyageurs présents : **+ 50 % par voyageur, jusqu'à × 3**. | B1, B2, B4, B8 (`candidats-h1b-l1b-et-budget.md`) |
 | **R46** | **Les tas personnels.** Une halte qui fournit la matière lourde d'un niveau a, en plus du vrac, un **tas personnel** par joueur, qui revient en **6 h réelles** (station : un tas de bois de 10 bûches ; gué : un banc de galets de 8 pierres). Un joueur n'attend jamais qu'un autre ait vidé le stock. | B3, B5 ; R22 |
 | **R47** | **Le Comptoir est un filet payant pour les matériaux de base** : un petit stock (10 bûches, 10 pierres), un réassort lent (1 toutes les 2 h), au prix de vente. Ni bloquant, ni gratuit. | B13 |
+| **R49** | **Un lieu L se mérite par un parcours.** L'accès au lieu personnel L#X passe par une **clé d'accès** trouvée dans un **bâtiment annexe** (isolé, devant le lieu) ; elle ouvre le bâtiment principal. Dedans, un **parcours imposé** mène à la **partie du fond**, où sont le butin intéressant et les **clés du niveau** ; on en ressort par un **chemin à sens unique** (visible et crédible : saut, trappe, échelle qu'on fait tomber, porte qui ne s'ouvre que d'un côté ; garanti par le serveur), pour qu'on ne puisse pas aller tout droit au butin. Les Éteints sont placés le long du parcours. Compatible avec la vision par pièce (0.7.2). | Le porteur, conception du Moulin (L1B), 2026-10-10 |
+| **R50** | **Une halte H a ses moments de jeu propres**, liés à son thème et à son lieu (au gué : traverser, la crue, le bac à câble, la roselière, les galets, la glaise…), pas seulement un stock de matières. On en retient deux ou trois par halte, choisis pour le plaisir de jeu et leur coût de développement. | Le porteur, conception du gué (H1B), 2026-10-10 ; étude `h1b-l1b-conception.md` (en cours) |
 | **R48** | **Pas de dialogue à croix.** Un avertissement ou un conseil se ferme **avec un bouton**, jamais par une fenêtre de dialogue avec une croix : « les dialogues avec une croix cassent complètement la dynamique de jeu ». | B14 (condition du porteur) |
 
 ---
@@ -342,6 +344,19 @@ et dégâts(étoile) > dégâts(étoile − 1)
 4. Les deux haltes et les deux lieux sont-ils de **même danger** et de **même longueur de trajet** ?
 
 **Ce qu'on écrit** : pour chaque lieu, une proposition au format `lieux` (avec `nom` provisoire entre parenthèses), sa note sur les critères, une alternative.
+
+**Concevoir l'intérieur d'un lieu L (R49)** — pour chaque L#X retenu :
+
+1. **Le bâtiment annexe et la clé d'accès** : quel bâtiment isolé, devant le lieu ; quel objet sert de clé (crédible : une clé, un cadenas, un levier, une manivelle…) ; ce qui le garde (Éteints, piège, obstacle).
+2. **L'entrée** : la porte du bâtiment principal que cette clé ouvre (fermée sans elle, visible de dehors).
+3. **Le parcours** pièce par pièce jusqu'à la partie du fond : ses étapes (étages, passages, obstacles), ses Éteints (dormants, errants, leur place), ses fouilles secondaires (matériaux de base, butin opportuniste selon la règle du butin).
+4. **La partie du fond** : les **clés du niveau** garanties, l'arme trouvée éventuelle, le butin intéressant.
+5. **La sortie à sens unique** : comment elle s'impose (geste, objet du décor), comment le serveur la garantit (passage franchissable dans un seul sens), et où elle ramène (près de la sortie du lieu).
+6. **Le renouvellement** (lieu personnel) : ce qui revient, et en combien de temps ; la clé d'accès revient-elle ou la porte reste-t-elle ouverte ?
+7. **Ce qu'il faut ajouter au modèle `batiment/`** (portes, obstacles, pièces, points de fouille et d'Éteints), compatible avec la vision par pièce.
+8. **La difficulté**, comparée à l'autre lieu L du niveau (nombre et placement des Éteints, longueur du parcours) : les deux routes restent équivalentes.
+
+**Les moments de jeu d'une halte H (R50)** : pour chaque H#X, lister les moments propres au lieu (ce que fait le joueur, pourquoi c'est amusant, coût S/M/L, ce qui existe déjà dans le modèle), et en recommander deux ou trois.
 
 ### 3.i Le budget de matériaux et d'allers-retours
 
