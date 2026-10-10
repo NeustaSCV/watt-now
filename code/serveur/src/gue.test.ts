@@ -35,6 +35,7 @@ import { Cooperatives } from "./cooperative.ts";
 import { Gue, LIBELLE_HALER, fouilleDuGue } from "./gue.ts";
 import { Halte } from "./halte.ts";
 import { Joueur } from "./joueur.ts";
+import { messageValide } from "./controle.ts";
 import { rendreSilencieux } from "./journal.ts";
 import { Moulins } from "./moulin.ts";
 
@@ -317,6 +318,7 @@ test("le bac : on hale ≈ 15 s, le radeau emporte ses passagers, de nuit comme 
   // Rose et Malo montent à bord, à la cale (côté terrain).
   rose.joueur.position = { x: BAC.cale.x + 1, z: BAC.z, o: 0 };
   malo.joueur.position = { x: BAC.cale.x - 1, z: BAC.z + 0.3, o: 0 };
+  assert.ok(messageValide({ t: "gue", op: "haler" }) && messageValide({ t: "gue", op: "cloche" }) && !messageValide({ t: "gue", op: "couler" }));
   rose.joueur.recevoir({ t: "gue", op: "haler" });
   assert.equal(rose.dernier("action")?.etat, "debut");
   assert.ok(Math.abs((rose.dernier("action") as { duree: number }).duree - DUREE_TRAVERSEE_S) < 0.01);
