@@ -116,7 +116,7 @@ test("à une construction : la bonne, à son niveau, à 3 m, avec son accessoire
   assert.equal(refusLieu(recette("corde")!.lieu, autour([])), null);
   assert.equal(refusLieu(recette("abri")!.lieu, autour([])), null);
   // Le métier se fait à l'atelier : la matraque de fortune au banc.
-  assert.equal(refusLieu(recette("matraque_fortune")!.lieu, autour([])), "Il te faut un banc de recharge.");
+  assert.equal(refusLieu(recette("matraque_fortune")!.lieu, autour([])), "Il te faut un banc solaire.");
 });
 
 test("la carte des installations distingue les formes du feu et les accessoires ; elle dit si un lieu est à portée", () => {
