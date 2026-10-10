@@ -47,6 +47,8 @@ export interface ContexteForge {
   readonly id: number;
   alea(): number;
   inventaire(): Inventaire;
+  /** Les outils à portée (le sac, le râtelier et l'établi à étau à 3 m) : pour juger les qualités, pas pour payer. */
+  outils(): Inventaire;
   retirer(cle: CleObjet, n: number): void;
   ajouter(objets: Inventaire): void;
   /** Les installations de son terrain à moins de 3 m (aucune ailleurs). */
@@ -241,7 +243,8 @@ export class Forge {
           this.ctx.info(`Le bac de trempe, c'est une auge de planches calfatée de glaise : il manque ${manque.map(([t, n]) => nommer(t as TypeObjet, n ?? 1)).join(", ")}. La glaise se creuse au gué.`);
           return true;
         }
-        if (niveauQualite(inv, "creuser") < QUALITES_BAC.creuser) {
+        // Creuser 1 se lit aussi dans les outils à portée : le bâton à fouir rangé au râtelier (plan 0.8 §9.2).
+        if (niveauQualite(this.ctx.outils(), "creuser") < QUALITES_BAC.creuser) {
           this.ctx.info("Il faut de quoi creuser l'assise de l'auge : un bâton à fouir, une pelle.");
           return true;
         }

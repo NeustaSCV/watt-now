@@ -1190,6 +1190,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       },
       alea: () => j.alea(),
       inventaire: () => j.inventaire,
+      outils: () => j.outils(),
       retirer: (cle, n) => j.retirer(cle, n),
       ajouter: (objets) => j.ajouterPlusieurs(objets),
       installationsProches: () => (j.lieu !== "terrain" || j.voyage ? [] : [...j.installations.values()].filter((i) => j.proche(i.x, i.z, 3))),
