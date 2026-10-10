@@ -87,10 +87,12 @@ Elle a remonté son END à 10 (plafond pour une stat pénalisée), gagné un poi
 | 11. **La nuit** | La nuit tombe : dormir dans l'abri, près du feu | Sommeil, froid, lumière = signature la nuit | Book 05 §3 |
 | 12. **La carte** | Au matin, ouvrir la carte, partir vers un lieu proche, revenir | Carte du monde, voyage, retour | Book 01 §2 bis |
 
+> **En 0.8, la carte passe avant la famille** (§4.5) : l'ordre de la fin devient la saisie, **la carte**, **la famille**, la nuit.
+
 ### 4.3 Après le tutoriel
 
 - **Le carnet** (Book 03 §5.5) prend le relais : il note ce que le joueur a appris et suggère des **objectifs** (« Construire une cabane avant l'hiver », « Trouver un livre de forge »). **Construit (2026-10-08) : voir Book 22** (« S'installer » et « Le métier » de chaque famille).
-- **Les recettes pressenties** (Book 03 §5.1) guident vers la suite. *(0.7 : ce sont les silhouettes « À découvrir » du panneau Fabriquer, celles du prochain palier, §4.4.)*
+- **Les recettes pressenties** (Book 03 §5.1) guident vers la suite. *(0.7 : ce sont les silhouettes « À découvrir » du panneau Fabriquer, celles du prochain palier, §4.4. 0.8 : le niveau suivant des constructions qu'on possède, et l'indice « où chercher » de sa clé, Book 03 §5.8.)*
 - **Aide contextuelle** discrète la première fois qu'un système apparaît (première pluie, première infection, première halte).
 - **L'aide du jeu** (demande du porteur, 2026-10-08) : menu ⚙ → ❓ Aide, pour le joueur perdu. Elle compte 19 rubriques repliables : premiers pas, commandes, écran, besoins, partir et revenir, manger et boire, récolter, fabriquer, feu, nuit et pluie, terrain, Éteints, combat, blessures, voyager, wotts et Comptoir, carnet, familles, « Je suis coincé ». **Elle explique les mécanismes, jamais les solutions** : aucune liste de recettes, aucun lieu d'objet rare, aucun chiffre fin (dégâts, butins, probabilités), rien sur la grande quête ni sur un lieu pas encore livré. Les touches citées sont celles du joueur (ou ses boutons sur téléphone). Le texte est dans `code/client/src/aide-contenu.ts`. **À tenir à jour à chaque version** : une mécanique livrée a sa place dans l'aide.
   - **En 0.7** : « Fabriquer » dit que les recettes viennent quand on y pense (le message « Tu y penses », la pastille, « À découvrir ») ; « Je suis coincé » répond à la recette qui ne vient pas (ramasser, explorer, dormir, aller au Comptoir ; et le filet du temps) ; une rubrique nouvelle, « Les déchets de l'Abondance » (tout se ramasse, presque rien ne vaut, les conteneurs se fouillent, le Comptoir refuse les ordures).
@@ -100,12 +102,32 @@ Elle a remonté son END à 10 (plafond pour une stat pénalisée), gagné un poi
 Depuis la 0.7, les recettes ne s'affichent dans Fabriquer qu'une fois **dévoilées**, quand le personnage y pense (Book 02 §14 quater, Book 03 §5.7). Le tutoriel est le premier fil de cet arbre ; **ses textes ne changent pas**.
 
 - **Au départ, deux cartes** : le feu de camp et l'abri. Le premier clic sur Fabriquer n'est plus une liste de cent lignes.
-- **Le tutoriel ne demande jamais une recette invisible** : chaque étape qui fait fabriquer la dévoile en arrivant, si son déclencheur naturel ne l'a pas déjà fait. Étape 3 « Le feu » : le feu de camp ; étape 6 « L'outil » : remmancher la hache ; étape 7 « L'abri » : l'abri ; étape 10 « La famille » : l'atelier de la famille (foyer de forge, banc de recharge, pédalier).
+- **Le tutoriel ne demande jamais une recette invisible** : chaque étape qui fait fabriquer la dévoile en arrivant, si son déclencheur naturel ne l'a pas déjà fait. Étape 3 « Le feu » : le feu de camp ; étape 6 « L'outil » : remmancher la hache ; étape 7 « L'abri » : l'abri ; étape 10 « La famille » : l'atelier de la famille (foyer de forge, banc solaire, pédalier générateur).
 - **Le métier commence pile à l'étape « La famille »** (décision Q9) : le seuil du métier, c'est l'abri posé et un premier danger surmonté. Pendant le tutoriel, l'Éteint scénarisé de l'étape 8 ne compte pas (il ferait tomber le seuil deux étapes trop tôt) ; une nuit dormie, si. Le message est un peu plus solennel : « Ton métier commence : le foyer de forge t'attend dans Fabriquer. »
 - **Ce que le joueur vit dévoile la suite** : les joncs ramassés font penser à la ficelle et à la corde, le premier feu au gourdin (« la fumée se sent de loin »), la tête de hache trouvée à son manche.
 - **Le vétéran qui saute le tutoriel** (§4.1, facultatif), et tout compte créé sans tutoriel, a d'emblée les **paliers 1 et 2** : les gestes du corps (feu, abri, lit, cuisine, eau de pluie…) et de l'abri du danger (outils, armes simples, alarme, soins, coffre, travois). Il connaît le début ; on ne lui fait pas refaire la cueillette pour voir le gourdin (décision Q8).
 - **Le filet du temps** : au plus tard après 20 min de jeu, tout le palier 1 ; après 1 h, tout le palier 2 ; après 2 h, le métier. Personne ne reste bloqué parce qu'il n'a pas vécu la bonne scène.
 - **Le rythme mesuré** (`npm run rythme`) : un élève du tutoriel a 15 à 24 nouveautés (recettes ou étapes) dans sa première demi-heure, jamais plus de 4,5 min sans rien.
+
+### 4.5 La carte avant la famille (0.8, 2026-10-10)
+
+*Plan 0.8 §2.6 et chantier 13 (décisions V5-2, Q-0.8-15, Q-0.8-18, B14). **Décidé ; en cours de codage** (chantier 13) : ce paragraphe dit ce que le plan décide, il sera relu sur le jeu livré.*
+
+Depuis la 0.8, la base grandit **avec les sorties** (Book 24 §12), et chaque famille trouve **la pièce de son premier meuble** à la station-service (H1A). Le tutoriel suit : **« La carte » passe avant « La famille »**.
+
+| Étape | Ce que fait le joueur (0.8) |
+|---|---|
+| 1 à 9 | Inchangées : l'arrivée, ramasser, le feu, l'eau, le vestige, l'outil, l'abri, le premier Éteint, la saisie |
+| 10. **La carte** | Ouvrir la carte, partir à **la station-service**, y trouver **la pièce de sa famille** (⚡ le panneau, 🔥 l'enclume de dépanneur et son sac de charbon, ⚙️ le petit alternateur), garantie et **à soi**, et du bois (le tas de bois de chauffage derrière l'atelier) ; revenir |
+| 11. **La famille** | **Au retour**, avec la pièce : « Pose le panneau sur ton banc… », « Cale l'enclume près de ta forge… », « Monte l'alternateur sur le vélo de la ruine… ». Bâtir son **premier meuble de famille** (banc solaire, foyer de forge, pédalier générateur) et faire son premier geste (brancher, forger un couteau, pédaler). C'est le **seuil du métier** |
+| 12. **La nuit** | La première nuit se passe **avec le premier meuble de famille** |
+
+- **Pourquoi** : la sortie 1 du parcours visé (25 à 50 min de jeu) est la station ; « La famille » au retour donne à la première sortie un but qu'on rapporte.
+- **La première nuit** (B14) : la consigne conseille les **branches** au feu. Si l'on met une **bûche** au feu du terrain alors qu'il en reste **moins de 6**, un avertissement : « Une bûche ne repousse pas : garde-la pour bâtir. » C'est un **bandeau** dans la charte du carnet, qui **se ferme d'un bouton** (« Compris »), jamais une fenêtre à croix ; une fois par nuit au plus ; jamais au feu d'une halte.
+- **Le vétéran qui saute le tutoriel** reçoit d'emblée les recettes communes **à la main** ; il doit quand même aller à la station chercher sa pièce, et le carnet le lui dit : « Ta famille t'attend à la station. » (Q-0.8-15, déjà codé).
+- **Le tutoriel ne demande jamais une recette invisible** (§4.4) : les recettes liées à une construction viennent avec la construction (Book 02 §14 quinquies).
+- **Le carnet prend le relais** avec « S'installer » en **portes successives** (Book 22 §3.1 bis).
+- **À vérifier au test** (chantier 14) : la première sortie avant 60 min ; chaque famille finit le tutoriel seule en passant par la station.
 
 ---
 
