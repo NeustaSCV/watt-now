@@ -172,7 +172,7 @@ import {
   accessoiresIncompatibles,
   boisRepris,
   capaciteCoffre,
-  choisirCout,
+  boisMarmite,
   contenanceRecuperateur,
   coutPour,
   effetsFeu,
@@ -190,6 +190,7 @@ import {
   type Etape,
 } from "../../commun/src/lignees.ts";
 import { refusAVenir, type AVenir } from "../../commun/src/lignees.ts";
+import { choisirFacon } from "../../commun/src/replis.ts";
 import { carteInstallations, feuxDuLieu, refusLieu, type Alentours } from "../../commun/src/lieu-recette.ts";
 import { NOMBRE_ETAPES, etapesTutoriel, type EtatTutoriel, type VueTutoriel } from "../../commun/src/tutoriel.ts";
 // Le compte admin « god » (outil du porteur) : serveur/src/admin.ts.
@@ -3240,28 +3241,29 @@ export class Joueur implements Voyageur, ParticipantLecon {
   // ---------- Améliorer sa base (Book 24) : sur place, au lieu de poser autre chose à côté ----------
 
   /** Ce qu'il faut pour une étape (montée de niveau, accessoire) : le coût choisi et la durée réelle, ou null (déjà dit). */
-  private preparerEtape(e: { nom?: string; aVenir?: AVenir; couts: readonly Inventaire[]; qualites: Etape["qualites"]; duree: number; famille?: Etape["famille"] }): { cout: Inventaire; dureeS: number } | null {
+  private preparerEtape(e: { nom?: string; aVenir?: AVenir; couts: readonly Inventaire[]; qualites: Etape["qualites"]; duree: number; famille?: Etape["famille"]; cle?: Etape["cle"] }): { cout: Inventaire; dureeS: number } | null {
     // Plus tard (plan 0.8 §1.3) : le niveau se voit, grisé, mais ne se bâtit pas encore.
     const plusTard = refusAVenir({ nom: e.nom ?? "Ce niveau", aVenir: e.aVenir });
     if (plusTard) {
       this.info(plusTard);
       return null;
     }
-    const { cout, payable } = choisirCout(this.inventaire, e.couts, e, this.compte.famille);
+    // Avec la clé, ou par un repli (plan 0.8 §2.2, chantier 5 : commun/src/replis.ts) : la première façon possible.
+    const { facon, cout, payable, outils: facteur } = choisirFacon(this.inventaire, e, this.compte.famille);
     if (!payable) {
       const manque = (Object.entries(cout) as [TypeObjet, number][])
         .filter(([t, n]) => (this.inventaire[t] ?? 0) < n)
         .map(([t, n]) => `${nommer(t, n)} (tu en as ${this.inventaire[t] ?? 0})`);
-      const autres = e.couts.length > 1 ? ` Ou bien : ${e.couts.slice(1).map((c) => Object.entries(coutPour(c, e, this.compte.famille)).map(([t, n]) => nommer(t as TypeObjet, n ?? 0)).join(", ")).join(" ; ")}.` : "";
-      this.info(`Il te manque : ${manque.join(", ")}.${autres}`);
+      const autres = facon.couts.length > 1 ? ` Ou bien : ${facon.couts.slice(1).map((c) => Object.entries(coutPour(c, e, this.compte.famille)).map(([t, n]) => nommer(t as TypeObjet, n ?? 0)).join(", ")).join(" ; ")}.` : "";
+      const replis = (e.cle?.replis ?? []).map((r) => ` ${r.note}`).join("");
+      this.info(`Il te manque : ${manque.join(", ")}.${autres}${replis}`);
       return null;
     }
-    const facteur = multiplicateurQualites(this.inventaire, e.qualites);
     if (facteur === null) {
-      this.infos(outilsManquantsBref(e.qualites, this.inventaire, undefined, this.recetteVisible));
+      this.infos(outilsManquantsBref(facon.qualites, this.inventaire, undefined, this.recetteVisible));
       return null;
     }
-    return { cout, dureeS: Math.max(2, e.duree / REGLAGES.fabrication_acceleration) * facteur };
+    return { cout, dureeS: Math.max(2, facon.duree / REGLAGES.fabrication_acceleration) * facteur };
   }
 
   /** Rendre des objets au sac : refusé (et dit) si le sac ne peut pas les porter. */
@@ -3387,7 +3389,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
           this.majFeu(feu);
           // L'objectif du carnet « Un feu qui ne se voit pas » compte aussi un feu creusé sur place (Book 24 §7).
           this.noterFait("foyer_dakota");
-          this.info("Foyer Dakota : le feu est dans le sol. Tu récupères 3 pierres.");
+          this.info(`Foyer Dakota : le feu est dans le sol. Tu récupères ${nommer("pierre", CREUSER.rend.pierre ?? 0)}.`);
         }, 0, "outil");
       }
       case "combler": {
@@ -3436,7 +3438,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     // Le foyer : un feu allumé tout près, de la forme que demande la recette (le lieu), celui qui cuit le plus de plats.
     const foyer = feuxDuLieu(r.lieu, this.alentours()).sort((a, b) => effetsFeu(b).plats - effetsFeu(a).plats)[0];
     if (!foyer) return { refus: refusLieu(r.lieu, this.alentours()) ?? "Il te faut un feu allumé, tout près." };
-    const parPlat = { bois: (r.boisFeu ?? 0) * (foyer.accessoires?.marmite ? 0.5 : 1), eau: r.eau ?? 0 };
+    const parPlat = { bois: (r.boisFeu ?? 0) * boisMarmite(foyer.accessoires?.marmite), eau: r.eau ?? 0 };
     if (parPlat.eau > 0 && this.gourde.litres < parPlat.eau - 1e-9) return { refus: `Il faut ${String(parPlat.eau).replace(".", ",")} L d'eau dans ta gourde (celle de la mare suffit : elle va bouillir).` };
     if (parPlat.bois > 0 && foyer.bois < parPlat.bois - 1e-9) return { refus: "Le feu n'a pas assez de bois pour une longue cuisson : ajoute une bûche." };
     const deux =
@@ -3548,7 +3550,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
           if (!this.installations.has(i.id) || niveauInstallation(i) !== niveau) return;
           i.niveau = niveau - 1;
           i.etat = { ...i.etat, payes: payes.slice(0, -1) };
-          // La citerne redevient bassine : ce qui déborde se répand.
+          // Le seau redevient bidon : ce qui déborde se répand.
           if (i.type === "recuperateur_pluie") i.etat = { ...i.etat, litres: Math.min(i.etat.litres ?? 0, contenanceRecuperateur(i)) };
           if (i.niveau === 1) delete i.niveau;
           this.ajouterPlusieurs(rend);
@@ -3626,7 +3628,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
         const l = i.etat.litres ?? 0;
         if (!this.inventaire.gourde) return this.info("Il te faut une gourde.");
         const place = CONTENANCE_GOURDE - (this.gourde.contenu === "potable" ? this.gourde.litres : 0);
-        if (l < 0.1) return this.info("La bassine est vide : il faut attendre la pluie.");
+        if (l < 0.1) return this.info("Le récupérateur est vide : il faut attendre la pluie.");
         if (place < 0.05) return this.info("Ta gourde est déjà pleine d'eau potable.");
         return this.commencer("Remplir la gourde (eau de pluie)", DUREES.remplirGourde, () => {
           const verse = Math.min(place, i.etat.litres ?? 0);
