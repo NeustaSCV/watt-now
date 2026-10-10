@@ -541,6 +541,8 @@ On range les recettes selon **ce à quoi sert l'objet**, pas selon ses ingrédie
 > - **les clés** des niveaux font naître une **idée au ramassage** (« Tu y penses »), gardée si c'est trop tôt, et un **indice en deux temps** (Book 03 §5.8) ;
 > - **pas de migration** : tous les joueurs sont remis à zéro au déploiement de la 0.8 (plan 0.8 §9.1) ; le paragraphe « Les personnages d'avant la 0.7 » ne vaut plus que pour l'histoire.
 >
+> - **le rythme mesuré en 0.8** (`npm run rythme`, chantier 14, douze parcours : prudent, pressé, malchanceux, sans tutoriel, pour chaque famille ; 360 min simulées) : dans les 30 premières minutes, **16 à 22 nouveautés** (recettes ou buts), dont 11 à 16 recettes pour qui suit le tutoriel ; le plus long sans rien, **4 à 5,2 min** (6 à 9 min pour le vétéran sans tutoriel) ; ensuite, un but nouveau au plus tard toutes les **11,5 à 19,5 min** dans les trois premières heures ; **aucun blocage**. La cible Q5 (10 nouveautés en 30 min, jamais 5 min sans rien, un but toutes les 20 min) : le prudent est à 5,2 min sans rien (il est ×1,3 plus lent).
+>
 > Le texte qui suit décrit la 0.7 ; il reste juste pour les déclencheurs, l'interface du panneau et ce que garde le serveur.
 
 Demande du porteur : « afficher les crafts progressivement, pour que le nouveau joueur soit obligé de commencer par un feu ou un abri et qu'il ne soit pas noyé sous tous les crafts possibles », avec un arbre « logique, qui respecte la pyramide de Maslow et cohérent en termes de gameplay ». Avant la 0.7, un nouveau joueur voyait **plus de cent cartes** au premier clic sur Fabriquer (59 à 64 de sa famille et communes, et 44 à 49 grisées des autres familles), sur un iPhone 13 mini. **Construit en 0.7** ; la table complète est en **annexe A**.
