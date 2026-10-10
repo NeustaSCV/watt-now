@@ -12,7 +12,7 @@
 import { estObjet, type Inventaire, type TypeObjet } from "./objets.ts";
 import { ETOILES, compter, etoilesDe, etoilesDeBase, estObjetDeMetier, meilleurExemplaire, soliditeExemplaire, typeDe, type CleObjet, type Etoiles } from "./etoiles.ts";
 import type { Zone } from "./lieux.ts";
-import type { TypeDegat } from "./combat.ts";
+import { armeDeCle, valeurDecidee, type TypeDegat, type ValeursEtoile } from "./combat.ts";
 import { murEntre } from "./murs.ts";
 import { REGLAGES } from "./reglages.ts";
 
@@ -53,8 +53,18 @@ export interface ObjetLance {
 export const OBJETS_LANCES: ObjetLance[] = [
   { objet: "pierre", nom: "la pierre", genre: "arme", portee: 8, degats: 0.3, type: "contondant", etourdi: 1, coupHeureux: 0, cadenceMs: 1000, endurance: 4, bruitImpact: { portee: 8, duree: 1 }, vitesse: 14 },
   { objet: "reveil", nom: "le réveil", genre: "leurre", portee: 10, degats: 0, type: "contondant", etourdi: 0, coupHeureux: 0, cadenceMs: 1000, endurance: 3, bruitImpact: { portee: 4, duree: 0.5 }, sonne: { portee: 18, duree: 20, intensite: 1.3 }, vitesse: 12 },
-  { objet: "hachette", nom: "la hachette", genre: "arme", portee: 10, degats: 1.3, type: "tranchant", etourdi: 1.2, coupHeureux: 0.25, cadenceMs: 1000, endurance: 8, bruitImpact: { portee: 6, duree: 1 }, vitesse: 13 },
+  // La hachette lancée fait les dégâts de l'exemplaire qu'on lance (K45, `degatsLances`) : 1,1 à ★★, sa forge du niveau 1.
+  { objet: "hachette", nom: "la hachette", genre: "arme", portee: 10, degats: 1.1, type: "tranchant", etourdi: 1.2, coupHeureux: 0.25, cadenceMs: 1000, endurance: 8, bruitImpact: { portee: 6, duree: 1 }, vitesse: 13 },
 ];
+
+/**
+ * Les dégâts d'un objet lancé (Book 23 §5) : ceux de sa table, ou, pour une arme de métier qu'on lance (la hachette),
+ * ceux de l'exemplaire, à ses étoiles (K45, plan 0.8 §2.4).
+ */
+export function degatsLances(def: ObjetLance, cle: string): number {
+  const a = armeDeCle(cle);
+  return a?.metier ? a.degatsTorse : def.degats;
+}
 
 /** Le point qu'un leurre vise par défaut : à 8 m devant soi (Book 23 §5). */
 export const DISTANCE_LEURRE = 8;
@@ -94,6 +104,11 @@ export interface ArmeTir {
    * durée (ms) ; le meilleur du sac sert. Absent : à la main ou au pied, dans l'étrier, en `rechargeMs`.
    */
   rearmerAvec?: readonly { objet: TypeObjet; ms: number }[];
+  /**
+   * Les valeurs décidées étoile par étoile (plan 0.8 §2.4, K40 à K56) : `degats` est le tir plein (le tir rapide en
+   * garde la part déclarée). Comme pour les armes de contact (`valeurDecidee`, combat.ts).
+   */
+  parEtoiles?: Partial<Record<Etoiles, ValeursEtoile>>;
 }
 
 /** Contre un Équipé, la flèche passe la visière ouverte : de face, à la moitié de la portée de tête (Book 25 §3.4). */
@@ -105,17 +120,23 @@ export const ARMES_TIR: ArmeTir[] = [
   // L'arc pour tous (Book 25 §3 et §8.3). Chaque ligne est donnée à ses étoiles de base (etoiles.ts) : l'arc de fortune
   // à ★, l'arc de frêne à ★★★, l'arc d'if à ★★★★, l'arc de tir sportif à ★★★★★ ; `armeTirExemplaire` règle le reste.
   // Bander 1,5 s pour le tir plein, encocher 1 s (réglage accepté par le porteur, 2026-10-09). La corde claque à 3 m.
-  { objet: "arc_fortune", nom: "l'arc de fortune", type: "percant", porteeUtile: 8, porteeMax: 15, porteeTete: 4, degatsRapide: 0.5, degatsPlein: 1, pleinMs: 1500, rechargeMs: 1000, endurance: 6, bruit: 3, solidite: 75, metier: true },
-  { objet: "arc_simple", nom: "l'arc", type: "percant", porteeUtile: 12, porteeMax: 25, porteeTete: 6, degatsRapide: 0.6, degatsPlein: 1.2, pleinMs: 1500, rechargeMs: 1000, endurance: 6, bruit: 3, solidite: 150, metier: true },
-  { objet: "arc_if", nom: "l'arc d'if", type: "percant", porteeUtile: 15, porteeMax: 30, porteeTete: 7, degatsRapide: 0.65, degatsPlein: 1.3, pleinMs: 1500, rechargeMs: 1000, endurance: 6, bruit: 3, solidite: 225, metier: true },
+  // Plan 0.8 §2.4 (chantier 8) : les dégâts suivent l'étape de l'étoile (D28, D29, D33, K50 à K56), l'arc juste sous
+  // l'arbalète ; l'arc simple ★★★★ ne vient que de la maîtrise (Q-0.8-4), l'arc d'if est plafonné à ★★ au niveau 1.
+  { objet: "arc_fortune", nom: "l'arc de fortune", type: "percant", porteeUtile: 8, porteeMax: 15, porteeTete: 4, degatsRapide: 0.35, degatsPlein: 0.7, pleinMs: 1500, rechargeMs: 1000, endurance: 6, bruit: 3, solidite: 75, metier: true, parEtoiles: { 1: { degats: 0.7, etape: "maison" }, 2: { degats: 0.75, etape: "maison" } } },
+  { objet: "arc_simple", nom: "l'arc", type: "percant", porteeUtile: 12, porteeMax: 25, porteeTete: 6, degatsRapide: 0.55, degatsPlein: 1.1, pleinMs: 1500, rechargeMs: 1000, endurance: 6, bruit: 3, solidite: 150, metier: true, parEtoiles: { 2: { degats: 0.8, etape: "maison" }, 3: { degats: 1.1, etape: "H1" }, 4: { degats: 1.35, etape: "L1" } } },
+  { objet: "arc_if", nom: "l'arc d'if", type: "percant", porteeUtile: 15, porteeMax: 30, porteeTete: 7, degatsRapide: 1.575, degatsPlein: 3.15, pleinMs: 1500, rechargeMs: 1000, endurance: 6, bruit: 3, solidite: 225, metier: true, parEtoiles: { 2: { degats: 1.35, etape: "L1" }, 3: { degats: 2.25, etape: "L2" }, 4: { degats: 3.15, etape: "L3" }, 5: { degats: 4.05, etape: "plus_tard" } } },
+  // L'arc de tir sportif : « plus tard » (Q-A2c) ; ses valeurs restent celles d'avant la 0.8 (Q-0.8-7).
   { objet: "arc_sportif", nom: "l'arc de tir sportif", type: "percant", porteeUtile: 16, porteeMax: 33, porteeTete: 8, degatsRapide: 0.72, degatsPlein: 1.44, pleinMs: 1500, rechargeMs: 1000, endurance: 6, bruit: 3, solidite: 300, metier: true },
   // ---- Bloc « arbalète » (chantier 7) ----
   // L'arbalète légère (Book 25 §6.1 et §8.3), valeurs à ★★★ (arc d'if) : armée d'avance, elle tire tout de suite ;
   // réarmer au pied prend 3 s, immobile. Un tir plein à 12 m détruit (réglage accepté le 2026-10-09).
-  { objet: "arbalete", nom: "l'arbalète", type: "percant", porteeUtile: 15, porteeMax: 30, porteeTete: 12, degatsRapide: null, degatsPlein: 1.5, pleinMs: 300, rechargeMs: 3000, endurance: 10, bruit: 6, solidite: 200, metier: true, armeeDAvance: true },
+  // Plan 0.8 §2.4 (chantier 8, K40 à K44) : égale à la lame en dégâts (sa force est la portée), moins solide (M1) ;
+  // ★★ au niveau 1 (le ressort), ★★★ par la maîtrise, l'arc d'if attend le niveau 2 (Q-0.8-3).
+  { objet: "arbalete", nom: "l'arbalète", type: "percant", porteeUtile: 15, porteeMax: 30, porteeTete: 12, degatsRapide: null, degatsPlein: 2.5, pleinMs: 300, rechargeMs: 3000, endurance: 10, bruit: 6, solidite: 100, metier: true, armeeDAvance: true, parEtoiles: { 1: { degats: 1.1, solidite: 60, etape: "H1" }, 2: { degats: 1.2, solidite: 80, etape: "H1" }, 3: { degats: 2.5, solidite: 100, etape: "L2" }, 4: { degats: 3.5, solidite: 140, etape: "L3" }, 5: { degats: 4.5, solidite: 180, etape: "plus_tard" } } },
   // L'arbalète lourde : deux ressorts retrempés (🔥), son niveau réel est ★★★★ et ses valeurs y sont données. Un
-  // carreau met à terre (3 au torse). Trop raide pour le pied : le cranequin (4 s) ou le pied-de-biche (6 s).
-  { objet: "arbalete_lourde", nom: "l'arbalète lourde", type: "percant", porteeUtile: 20, porteeMax: 35, porteeTete: 15, degatsRapide: null, degatsPlein: 3, pleinMs: 300, rechargeMs: 6000, endurance: 16, bruit: 8, solidite: 300, metier: true, armeeDAvance: true, rearmerAvec: [{ objet: "cranequin", ms: 4000 }, { objet: "pied_de_biche", ms: 6000 }] },
+  // carreau met à terre. Trop raide pour le pied : le cranequin (4 s) ou le pied-de-biche (6 s). Niveau 3 (K46 à K49) ;
+  // sa solidité reste celle d'avant la 0.8 (Q-0.8-7).
+  { objet: "arbalete_lourde", nom: "l'arbalète lourde", type: "percant", porteeUtile: 20, porteeMax: 35, porteeTete: 15, degatsRapide: null, degatsPlein: 4, pleinMs: 300, rechargeMs: 6000, endurance: 16, bruit: 8, solidite: 300, metier: true, armeeDAvance: true, rearmerAvec: [{ objet: "cranequin", ms: 4000 }, { objet: "pied_de_biche", ms: 6000 }], parEtoiles: { 2: { degats: 3.3, etape: "L3" }, 3: { degats: 3.6, etape: "L3" }, 4: { degats: 4, etape: "L3" }, 5: { degats: 5, etape: "plus_tard" } } },
 ];
 
 /** Les arcs (chantier 4) : ils tirent toutes les flèches. */
@@ -228,17 +249,18 @@ export function armeTirExemplaire(cle: string, declaree: ArmeTir): ArmeTir & { e
   if (n === null) return { ...base, etoiles: null };
   const ref = ETOILES[etoilesDeBase(base.objet)];
   const e = ETOILES[n];
-  const kd = e.degats / ref.degats;
   const kp = e.porteeTete / ref.porteeTete;
+  // Les dégâts décidés de l'étoile (plan 0.8 §2.4), sinon les multiplicateurs ; le tir rapide garde sa part du plein.
+  const plein = valeurDecidee(base.parEtoiles, n, "degats") ?? base.degatsPlein * (e.degats / ref.degats);
   return {
     ...base,
     etoiles: n,
     porteeUtile: base.porteeUtile * kp,
     porteeMax: base.porteeMax * kp,
     porteeTete: base.porteeTete * kp,
-    degatsRapide: base.degatsRapide === null ? null : base.degatsRapide * kd,
-    degatsPlein: base.degatsPlein * kd,
-    solidite: estObjetDeMetier(base.objet) ? soliditeExemplaire(base.objet, n, base.solidite) : base.solidite,
+    degatsRapide: base.degatsRapide === null ? null : (base.degatsRapide * plein) / base.degatsPlein,
+    degatsPlein: plein,
+    solidite: valeurDecidee(base.parEtoiles, n, "solidite") ?? (estObjetDeMetier(base.objet) ? soliditeExemplaire(base.objet, n, base.solidite) : base.solidite),
   };
 }
 

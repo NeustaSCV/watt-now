@@ -44,7 +44,7 @@ test("0.5e : le casque — le tranchant glisse à la tête, le contondant passe 
 });
 
 test("0.5e : les nouvelles armes — solidités du Book 23, la lance se fabrique", () => {
-  const solidites: Record<string, number> = { pied_de_biche: 120, marteau: 80, masse: 70, hache: 60, machette: 40, couteau: 40, epieu: 30, gourdin: 25 };
+  const solidites: Record<string, number> = { pied_de_biche: 120, marteau: 40, masse: 70, hache: 60, machette: 40, couteau: 40, epieu: 30, gourdin: 25 };
   for (const [o, s] of Object.entries(solidites)) assert.equal(arme(o).solidite, s, o);
   assert.equal(arme("lance").type, "percant");
   assert.ok(arme("lance").allonge > arme("epieu").allonge);

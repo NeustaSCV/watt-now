@@ -239,7 +239,8 @@ test("tir : la hachette lancée — au torse, ou sur un coup heureux à la tête
   b2.tir.preparer("marteau");
   b2.tir.lancer(0, 1, 3);
   assert.equal(b2.projectiles()[0]!.coup?.resultat, "vacille");
-  assert.ok(Math.abs(torse.degats - 1.3) < 1e-9);
+  // 1,1 : la hachette de la forge du niveau 1 (★★, D32 et K45, plan 0.8 §2.4).
+  assert.ok(Math.abs(torse.degats - 1.1) < 1e-9);
 });
 
 test("tir : une pierre n'achève pas un Éteint à terre (il faut une vraie arme)", () => {

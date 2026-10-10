@@ -5,7 +5,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   ARMES_DE_METIER,
+  ARMES_DES_ETAPES,
   ECART_COUT_MAX,
+  ECART_MAX,
+  ETAPES_EQUILIBRE,
   ENDURANCE_DECHARGE_SIM,
   NIVEAUX,
   SCENARIOS,
@@ -13,17 +16,26 @@ import {
   armeComparee,
   armeDeContact,
   gardeFou,
+  gardeFouEtape,
   simuler,
   tableau,
+  tableauEtape,
   tableauTexte,
   type Ligne,
   type NomScenario,
 } from "./equilibre.ts";
-import { ARMES, armeDeCle } from "./combat.ts";
+import { ARMES, MATIERE_ARME, armeDeCle, armeSansCharge } from "./combat.ts";
+import { encaisser, encaisserCoup, nouvelEteint } from "./eteints.ts";
+import { OBJETS_LANCES, armeTirDe, armeTirExemplaire, degatsLances } from "./tir.ts";
+import { cleExemplaire, etoilesDe, maillonFaible, typeDe } from "./etoiles.ts";
+import { QUALITES_OBJETS, etoilesDuProduit, recette } from "./recettes.ts";
+import { PLAFONDS_NIVEAU_1, PLAFOND_ARC_IF_NIVEAU_1 } from "./armes/grille.ts";
+import type { Zone } from "./lieux.ts";
 import { appliquerReglages } from "./reglages.ts";
 import { ENDURANCE_DECHARGE } from "../../serveur/src/electricite.ts";
 
 const LIGNES = tableau();
+const ZONE_VIDE: Zone = { xMin: -60, xMax: 60, zMin: -60, zMax: 60, obstacles: [] };
 const ligne = (famille: Ligne["famille"], niveau: Ligne["niveau"]) => LIGNES.find((l) => l.famille === famille && l.niveau === niveau)!;
 
 test("équilibre : le garde-fou du §8.4 tient avec les valeurs du jeu", () => {
@@ -46,7 +58,11 @@ test("équilibre : la lame seule n'achève pas un Équipé ; avec le marteau du 
   assert.equal(seule.impossible, true);
   assert.equal(seule.temps, Infinity);
   const avec = simuler(lame, SCENARIOS.equipe, { seconde: armeDeContact("marteau") });
-  assert.ok(avec.reussi && avec.temps < 3);
+  // Le marteau ne tue plus à la tête (Q-A3) : il finit l'Équipé à terre. À ★★★ (2,5), la lame le met à terre d'un
+  // appuyé, et le marteau finit plus tard (8,4 s, `armes-par-niveau.md` §11.5) ; à ★★, la lame du niveau 1, en 4,5 s.
+  assert.ok(avec.reussi && avec.temps < 9);
+  const niveau1 = simuler(armeComparee("lame", 2), SCENARIOS.equipe, { seconde: armeDeContact("marteau") });
+  assert.ok(niveau1.reussi && niveau1.temps < 5);
 });
 
 test("équilibre : l'électrique détruit un Équipé aussi vite qu'un Errant, sans jamais être saisie", () => {
@@ -96,11 +112,11 @@ test("équilibre : le simulateur est reproductible", () => {
 });
 
 test("équilibre : le garde-fou voit une arme qui faiblit", () => {
-  // L'électrique cinq fois plus lente partout : elle perd son terrain, et sort des 2 fois ailleurs.
+  // L'électrique six fois plus lente partout : elle perd son terrain, et sort des 2 fois ailleurs.
   const affaiblie = LIGNES.map((l) =>
     l.famille !== "electrique"
       ? l
-      : { ...l, seule: Object.fromEntries(Object.entries(l.seule).map(([k, r]) => [k, { ...r, temps: r.temps * 5 }])) as Ligne["seule"] },
+      : { ...l, seule: Object.fromEntries(Object.entries(l.seule).map(([k, r]) => [k, { ...r, temps: r.temps * 6 }])) as Ligne["seule"] },
   );
   const { fautes } = gardeFou(affaiblie);
   assert.ok(fautes.some((f) => f.includes("n'y est pas la meilleure")));
@@ -126,4 +142,139 @@ test("équilibre : les réglages d'équilibre changent les armes, et le simulate
 
 test("équilibre : l'endurance d'une décharge est celle du serveur", () => {
   assert.deepEqual(ENDURANCE_DECHARGE_SIM, ENDURANCE_DECHARGE);
+});
+
+// ---------- Plan 0.8 §2.4 (chantier 8) : les chiffres décidés, les plafonds, le garde-fou par étape ----------
+
+test("0.8 : le garde-fou rejoué par étape tient à la maison, à H1 et à L1 (pire rapport ≤ 2, coût ≤ 3 fois)", () => {
+  for (const etape of ETAPES_EQUILIBRE) {
+    const v = gardeFouEtape(etape);
+    assert.deepEqual(v.fautes, [], `${etape} :\n${v.fautes.join("\n")}`);
+    assert.ok(v.pireRapport <= ECART_MAX, `${etape} : pire rapport ${v.pireRapport}`);
+    assert.ok(v.ecartCout <= ECART_COUT_MAX, `${etape} : coût ${v.ecartCout}`);
+  }
+  // À H1 et L1, chaque arme de métier tient son terrain (à la maison, personne n'a de terrain : armes communes).
+  const h1 = tableauEtape("H1");
+  for (const famille of ARMES_DE_METIER) {
+    const sienne = h1.find((l) => l.famille === famille)!;
+    for (const s of TERRAINS[famille]) for (const autre of ARMES_DE_METIER) assert.ok(sienne.seule[s].temps <= h1.find((l) => l.famille === autre)!.seule[s].temps, `${famille}, « ${SCENARIOS[s].titre} »`);
+  }
+  // Les armes de l'étape sont celles de la grille : ★★ à H1 et L1.
+  assert.deepEqual(ARMES_DES_ETAPES.H1, { lame: "machette_forgee#2", electrique: "matraque_electrique#2", arbalete: "arbalete#2", arc: "arc_simple" });
+});
+
+test("0.8 : le garde-fou d'une étape voit une faute", () => {
+  const lignes = tableauEtape("H1").map((l) =>
+    l.famille !== "electrique" ? l : { ...l, seule: Object.fromEntries(Object.entries(l.seule).map(([k, r]) => [k, { ...r, temps: r.temps * 3 }])) as Ligne["seule"] },
+  );
+  const v = gardeFouEtape("H1", lignes);
+  assert.ok(v.fautes.length > 0 && v.pireRapport > ECART_MAX);
+});
+
+test("0.8 : une courte de matraque ★★ ajoute 1,1 au torse ; vide, elle frappe à 0,55", () => {
+  const m2 = armeDeCle("matraque_electrique#2")!;
+  assert.equal(m2.degatsTorse, 1.1);
+  const e = nouvelEteint(1, 0, 1, "poursuivant");
+  assert.equal(encaisserCoup(e, m2, false, 1, { x: 0, z: 0 }, ZONE_VIDE).resultat, "raidi");
+  assert.ok(Math.abs(e.degats - 1.1) < 1e-9);
+  // Trois courtes : 3,3 points, il tombe (l'Équipé tient jusqu'à 4).
+  encaisserCoup(e, m2, false, 1, { x: 0, z: 0 }, ZONE_VIDE);
+  assert.equal(encaisserCoup(e, m2, false, 1, { x: 0, z: 0 }, ZONE_VIDE).resultat, "a_terre");
+  // La longue ne fait pas de dégâts : elle met à terre, ou elle détruit.
+  const f = nouvelEteint(2, 0, 1, "poursuivant");
+  assert.equal(encaisserCoup(f, m2, true, 1, { x: 0, z: 0 }, ZONE_VIDE).resultat, "a_terre");
+  // Pack vide : un gourdin court, à la moitié de ses dégâts (C11).
+  const vide = armeSansCharge(m2);
+  assert.ok(Math.abs(vide.degatsTorse - 0.55) < 1e-9);
+  assert.equal(vide.type, "contondant");
+  assert.equal(vide.tueALaTete, false);
+  // Les trois armes électriques ont des dégâts au torse.
+  for (const o of ["matraque_electrique", "aiguillon", "matraque_fortune"]) assert.ok(armeDeCle(o)!.degatsTorse > 0, o);
+});
+
+test("0.8 : le réglage equilibre_electrique_degats règle la courte (1 par défaut ; 0 : rien au torse)", () => {
+  try {
+    appliquerReglages({ equilibre_electrique_degats: 0 });
+    const e = nouvelEteint(1, 0, 1, "poursuivant");
+    encaisserCoup(e, armeDeCle("matraque_electrique#2")!, false, 1, { x: 0, z: 0 }, ZONE_VIDE);
+    assert.equal(e.degats, 0);
+    appliquerReglages({ equilibre_electrique_degats: 2 });
+    assert.ok(Math.abs(armeDeCle("matraque_electrique#2")!.degatsTorse - 2.2) < 1e-9);
+  } finally {
+    appliquerReglages({});
+  }
+  assert.equal(armeDeCle("matraque_electrique#2")!.degatsTorse, 1.1);
+});
+
+test("0.8 : la maîtrise sans plafond (K-Q1) — une machette ★★ maîtrisée fait 2,5 ; un arc simple maîtrisé, 1,35", () => {
+  const n = maillonFaible([2], { maitrise: true });
+  assert.equal(n, 3);
+  assert.equal(armeDeCle(cleExemplaire("machette_forgee", n))!.degatsTorse, 2.5);
+  assert.equal(armeDeCle("machette_forgee#2")!.degatsTorse, 1.2);
+  // L'arc simple ★★★★ ne vient que de la maîtrise (Q-0.8-4) : la meilleure corde fait ★★★.
+  const frene = recette("arc_simple")!;
+  assert.equal(etoilesDuProduit(frene, { ebauche_arc_seche: 1, corde_arc: 1 }), 3);
+  assert.equal(etoilesDuProduit(recette("corde_arc_dentaire")!, { fil_dentaire: 1 }), 3);
+  const maitrise = etoilesDuProduit(frene, { ebauche_arc_seche: 1, corde_arc: 1 }, { maitrise: true })!;
+  assert.equal(maitrise, 4);
+  assert.equal(armeTirExemplaire(cleExemplaire("arc_simple", maitrise), armeTirDe("arc_simple")!).degatsPlein, 1.35);
+});
+
+test("0.8 : la fourche à foin tue à la tête et passe le casque ; 1,5, allonge 2 m, 80 coups, ni étoiles ni outil", () => {
+  const f = armeDeCle("fourche_foin")!;
+  assert.deepEqual([f.type, f.degatsTorse, f.allonge, f.coup, f.coupAppuye, f.solidite, f.tueALaTete], ["percant", 1.5, 2, 650, 900, 80, true]);
+  assert.equal(f.metier, undefined);
+  assert.equal(etoilesDe("fourche_foin"), null);
+  assert.equal(QUALITES_OBJETS.fourche_foin, undefined, "pas un outil");
+  const casque = Object.assign(nouvelEteint(1, 0, 1, "poursuivant"), { variante: "equipe" as const });
+  assert.equal(encaisser(casque, f, true, 1, { x: 0, z: 0 }, ZONE_VIDE), "detruit");
+  assert.equal(MATIERE_ARME.fourche_foin, "bois");
+});
+
+test("0.8 : les valeurs décidées (§2.4) — marteau 40 qui ne tue plus à la tête, matraques 60, arbalète 60 et 80", () => {
+  const m = armeDeCle("marteau")!;
+  assert.deepEqual([m.degatsTorse, m.solidite, m.tueALaTete], [0.8, 40, false]);
+  const contact: [string, number, number?][] = [
+    ["lance", 0.7], ["gourdin", 0.7], ["epieu", 0.6], ["hache", 1], ["lance_forgee", 1.15], ["couteau_aiguise", 0.85],
+    ["hachette#2", 1.1], ["lame_forgee#2", 0.9], ["serpe#2", 1],
+    ["matraque_fortune", 0.9, 60], ["matraque_fortune#2", 1, 60], ["matraque_electrique#1", 1, 60], ["matraque_electrique#2", 1.1, 60],
+  ];
+  for (const [cle, d, s] of contact) {
+    const a = armeDeCle(cle)!;
+    assert.ok(Math.abs(a.degatsTorse - d) < 1e-9, `${cle} : ${a.degatsTorse}`);
+    if (s !== undefined) assert.equal(a.solidite, s, cle);
+  }
+  const tir: [string, number, number?][] = [["arc_fortune", 0.7], ["arc_fortune#2", 0.75], ["arc_simple#2", 0.8], ["arc_simple", 1.1], ["arc_if#2", 1.35], ["arbalete#1", 1.1, 60], ["arbalete#2", 1.2, 80]];
+  for (const [cle, d, s] of tir) {
+    const w = armeTirExemplaire(cle, armeTirDe(typeDe(cle))!);
+    assert.ok(Math.abs(w.degatsPlein - d) < 1e-9, `${cle} : ${w.degatsPlein}`);
+    if (s !== undefined) assert.equal(w.solidite, s, cle);
+  }
+  // La hachette lancée fait les dégâts de l'exemplaire (K45).
+  const hachette = OBJETS_LANCES.find((o) => o.objet === "hachette")!;
+  assert.equal(degatsLances(hachette, "hachette#2"), 1.1);
+  assert.equal(degatsLances(hachette, "hachette"), 2.25);
+});
+
+test("0.8 : les plafonds de la grille par les recettes (I13, Q-A5, Q-0.8-3) ; les dégâts montent avec les étoiles", () => {
+  // La corde de joncs ★★, le fil dentaire et le boyau ★★★ ; l'arc d'if se monte ★★.
+  assert.equal(etoilesDuProduit(recette("corde_arc_corde")!, { corde: 1 }), 2);
+  assert.equal(etoilesDuProduit(recette("corde_arc_boyau")!, { boyaux: 1 }), 3);
+  assert.equal(etoilesDuProduit(recette("arc_if")!, { ebauche_if_seche: 1, "corde_arc#4": 1 }), PLAFOND_ARC_IF_NIVEAU_1);
+  // La petite batterie, source de la matraque ★★ : même au module à bobine, ★★ ; au flash, ★.
+  const batterie = recette("matraque_petite_batterie")!;
+  assert.equal(etoilesDuProduit(batterie, { gourdin: 1, "module_decharge#2": 1, petite_batterie: 1, caoutchouc: 1 }), 2);
+  assert.equal(etoilesDuProduit(batterie, { gourdin: 1, module_decharge: 1, petite_batterie: 1, caoutchouc: 1 }), 2);
+  assert.equal(etoilesDuProduit(batterie, { gourdin: 1, "module_decharge#1": 1, petite_batterie: 1, caoutchouc: 1 }), 1);
+  // Le même texte sur les deux fiches qui prennent la petite batterie (Q-B6).
+  assert.ok(batterie.note && batterie.note === recette("matraque_fortune")!.note);
+  // Chaque plafond : la maîtrise donne une étoile de plus ; et les dégâts ne baissent jamais quand les étoiles montent.
+  for (const [objet, p] of Object.entries(PLAFONDS_NIVEAU_1)) {
+    if (p!.recette !== null) assert.equal(p!.maitrise, p!.recette + 1, objet);
+    const degats = ([1, 2, 3, 4, 5] as const).map((n) => {
+      const w = armeTirDe(objet);
+      return w ? armeTirExemplaire(`${objet}#${n}`, w).degatsPlein : armeDeCle(`${objet}#${n}`)!.degatsTorse;
+    });
+    for (let i = 1; i < degats.length; i++) assert.ok(degats[i]! >= degats[i - 1]! - 1e-9, `${objet} : ${degats.join(" / ")}`);
+  }
 });
