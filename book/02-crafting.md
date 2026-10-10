@@ -206,11 +206,13 @@ Chaque famille est **la moins chère dans ses domaines**. C'est ce qui la rend a
 | **Lime** | Ajustage, affûtage, mise en forme à froid | Vestige. Fabrication : palier III (taillage + trempe). | Pierre abrasive : temps ×3 |
 | **Enclume** | Forge | Rail, bloc d'acier | Grosse pierre plate : qualité −2 |
 | **Pinces de forge** | Tenir le métal chaud | Forgées | Bâton vert mouillé : 1 ou 2 chauffes seulement |
-| **Soufflet** | Ventiler la forge | Cuir + bois (🔥) **ou ventilateur 12 V (⚡)** | Souffler dans un tube : température max 800 °C |
+| **Soufflet de forge** | Ventiler la forge | Cuir + bois (🔥) **ou ventilateur 12 V (⚡)** | Souffler dans un tube : température max 800 °C |
 | **Vilebrequin, perceuse** | Perçage | Vestige. Perceuse électrique (⚡). | Couteau et rotation à la main : temps ×6 |
 | **Pierre à aiguiser** | Affûtage | Grès naturel, vestige | — |
 
 > **Remplacé par les qualités d'outil (Book 03 §4).** La dernière colonne donne des exemples de malus, mais la règle qui s'applique est celle du Book 03 : un niveau en dessous de la qualité demandée, malus de temps et de qualité ; deux niveaux en dessous, recette impossible. Une pierre emmanchée (niveau 1) ne remplace donc pas une hache (niveau 3), et une grosse pierre (niveau 1) ne remplace pas une enclume (niveau 3).
+>
+> **Depuis la 0.8 : des portes dures.** Le malus d'un niveau en dessous disparaît : **il faut le niveau demandé**, ou la recette est refusée (Book 03 §4). En échange, **plusieurs outils sont compatibles**, et **les objets de fortune donnent le niveau 1** de leur qualité ; les outils de fortune à fabriquer sont au §14 quinquies.
 
 ### Le bruit des outils
 
@@ -242,8 +244,8 @@ Les installations sont construites sur le terrain du joueur. Elles définissent 
 | Établi | I | Tous | — | — | — | Actif |
 | Séchoir à bois (abri ventilé) | I | Tous | — | — | — | **Passif** |
 | Foyer de forge | I | 🔥 | 900 °C | 8 % | Sonore 30 m, olfactive 40 m | Actif |
-| Pédalier universel (entraîne une meule, une scie, une dynamo) | I | ⚙️ | — | 100 Wh_m/h | Sonore 15 m | Actif |
-| Banc de recharge (batteries + régulateur) | I | ⚡ | — | 85 % | — | **Passif** |
+| Pédalier générateur (entraîne une meule, une scie, une dynamo) | I | ⚙️ | — | 100 Wh_m/h | Sonore 15 m | Actif |
+| Banc solaire (batteries + régulateur) | I | ⚡ | — | 85 % | — | **Passif** |
 | Charbonnière (meule couverte ; le fût est une amélioration de palier III, §12.2) | II | 🔥 | — | 20 à 30 % en masse | **Olfactive 150 m pendant toute la combustion** | **Passif** (3 jours) |
 | Forge ventilée au charbon de bois | II | 🔥 | 1 300 °C | 10 % | Sonore 40 m, olfactive 50 m | Actif |
 | Creuset, four de fonderie | II | 🔥 | 1 200 °C | 15 % | Olfactive 50 m | Actif |
@@ -261,7 +263,7 @@ Les installations sont construites sur le terrain du joueur. Elles définissent 
 | Alambic | III | 🔥 | — | — | Olfactive 50 m | Actif |
 | Four électrique (à arc ou à induction) | III | ⚡ | 1 600 °C et plus | 60 % | Lumineuse | Actif |
 
-> **Les installations croisées sont voulues.** Un soufflet électrique (⚡) sur une forge (🔥), ou un marteau-pilon hydraulique (⚙️) alimenté en métal chaud par une forge (🔥) : les meilleures installations naissent de la coopération.
+> **Les installations croisées sont voulues.** Un ventilateur électrique (⚡) sur une forge (🔥), ou un marteau-pilon hydraulique (⚙️) alimenté en métal chaud par une forge (🔥) : les meilleures installations naissent de la coopération.
 
 ---
 
@@ -346,7 +348,7 @@ Chaque recette réaliste produit **autre chose** que ce qu'on cherche. Ce qui es
 | | 🔥 Forge | ⚡ Meuleuse électrique | ⚙️ Meule à pédale |
 |---|---|---|---|
 | **Principe** | Chauffer, forger, tremper, revenir | Découper et meuler à froid, sans perdre la trempe d'origine | Meuler à froid, lentement |
-| **Installation** | Forge ventilée (II) | Atelier électrique (II) | Pédalier universel + meule (I) |
+| **Installation** | Forge ventilée (II) | Atelier électrique (II) | Pédalier générateur + meule (I) |
 | Ressort à lames | 50 wotts | 50 wotts | 50 wotts |
 | Énergie | 1,25 kg de charbon : **59 wotts** | 333 Wh_é (20 min à 1 kW) : **333 wotts** | Compris dans le travail |
 | Consommables rares | — | 2 disques abrasifs : **100 wotts** | — |
@@ -487,7 +489,7 @@ Une quarantaine d'objets bushcraft étaient proposés, rangés par besoin (l'ord
 | **Bâton à fouir** | 1 branche | Couper 1, près d'un feu | **Creuser 1** (nouvelle qualité d'outil) |
 | **Foyer Dakota** | 3 branches, pas de pierres | Creuser 1 | Un feu creusé : bois brûlé ×0,6, lumière la nuit ×0,3, odeur ×0,4 (portée de la signature, Book 06) |
 | **Récupérateur de pluie** | 1 bâche, 4 branches, 1 corde | Couper 1 | Processus passif : ≈ 0,5 L par minute réelle de pluie, 5 L au plus, même hors ligne. **L'eau de pluie se boit sans bouillir** (mélangée à de l'eau brute, non). La bâche : la benne du camion, à la halte |
-| **Lit de branchages** | 6 branches | Couper 1 | Sommeil +30 % ; à moins de 3 m de l'abri, il s'ajoute à l'abri |
+| **Lit de branchages** | 6 branches | Couper 1 | Sommeil +30 % ; à moins de 3 m de l'abri, il s'ajoute à l'abri. **Depuis la 0.8, fondu dans l'abri garni** (Book 24 §12) |
 | **Alarme à boîtes de conserve** | 2 boîtes vides, 1 ficelle, 2 branches | — | Un Éteint à moins de 2,5 m : elle tinte (son, message). C'est aussi un **leurre** : un bruit de 14 m de portée |
 | **Protège-bras de fortune** | 2 chiffons, 1 ficelle | Couper 1 | Une morsure sur deux glisse dessus ; il se déchire une fois sur quatre |
 | **Épieu durci au feu** | 2 branches | Couper 1, près d'un feu | Arme : peu de dégâts (0,8), la plus longue allonge (2,3 m) : on le tient à distance |
@@ -511,7 +513,7 @@ On range les recettes selon **ce à quoi sert l'objet**, pas selon ses ingrédie
 | 🎒 **Sur soi** | sac de fortune, protège-bras, pansement, travois |
 | 🧵 **Matériaux** | ficelle, corde (et les matériaux intermédiaires à venir) |
 | 🧱 **Bâtir** (vivre au camp) | abri, coffre, lit, escabeau, alarme, récupérateur d'eau ; plus tard sols et murs |
-| ⚙️ **Ateliers** (fabriquer, produire) | établi, charbonnière, forge, pédalier, banc de recharge, panneau solaire |
+| ⚙️ **Ateliers** (fabriquer, produire) | établi, charbonnière, forge, pédalier, banc solaire, panneau solaire |
 
 - **La règle des cas limites** : une installation qui fabrique ou produit de l'énergie va dans **Ateliers** ; une installation qui sert à vivre au camp va dans **Bâtir**.
 - **« Tout »** est le premier onglet et le filet de sécurité : il montre toutes les recettes, regroupées sous des intertitres.
@@ -526,6 +528,20 @@ On range les recettes selon **ce à quoi sert l'objet**, pas selon ses ingrédie
 - **Depuis la 0.7**, le panneau ne montre que les recettes **dévoilées**, et la barre d'onglets n'apparaît qu'à 8 recettes (§14 quater).
 
 ## 14 quater. L'arbre de progression : on y pense au bon moment (0.7, 2026-10-09)
+
+> **Depuis la 0.8 (2026-10-10, plan 0.8 §2.1 et §2.2) : plus de paliers dans le jeu.** Les cinq paliers ci-dessous restent une **grille de conception** : ils servent à penser l'ordre des besoins, à régler le rythme et à ranger la table de l'annexe A, mais le code ne les connaît plus (ni « palier », ni filet par palier, ni silhouettes du « prochain palier »). Ce qui les remplace :
+>
+> - **chaque recette a un lieu** (§14 quinquies) : **à la main**, **posée**, ou **à une construction** ;
+> - une recette **à la main** se dévoile toujours par ses déclencheurs (« l'un ou l'autre »), et au plus tard par **son propre filet du temps**, porté par sa ligne (les 20 et 60 min des anciens paliers 1 et 2) ;
+> - une recette **posée** (la racine d'une lignée : établi, abri, coffre, récupérateur, râtelier, torche plantée, meubles de famille…) garde ses déclencheurs ;
+> - une recette **liée à une construction** est dévoilée **par la construction seule**, dès qu'on la possède au bon niveau (la soupe de cèpes apparaît avec le foyer de cuisine, le maillet avec l'établi à étau) ;
+> - **les silhouettes « À découvrir »** deviennent **le niveau suivant** des constructions qu'on possède (« Au foyer de cuisine : soupe de cèpes »), plus ce qu'une quête en cours demande ;
+> - **le seuil du métier** reste : l'étape « La famille » du tutoriel, l'abri et un premier danger surmonté, ou 2 h de jeu ;
+> - **le vétéran sans tutoriel** reçoit d'emblée les recettes communes **à la main** (plus « les paliers 1 et 2 ») ; il va chercher la pièce de sa famille à la station, et le carnet le lui dit (« Ta famille t'attend à la station », Q-0.8-15) ;
+> - **les clés** des niveaux font naître une **idée au ramassage** (« Tu y penses »), gardée si c'est trop tôt, et un **indice en deux temps** (Book 03 §5.8) ;
+> - **pas de migration** : tous les joueurs sont remis à zéro au déploiement de la 0.8 (plan 0.8 §9.1) ; le paragraphe « Les personnages d'avant la 0.7 » ne vaut plus que pour l'histoire.
+>
+> Le texte qui suit décrit la 0.7 ; il reste juste pour les déclencheurs, l'interface du panneau et ce que garde le serveur.
 
 Demande du porteur : « afficher les crafts progressivement, pour que le nouveau joueur soit obligé de commencer par un feu ou un abri et qu'il ne soit pas noyé sous tous les crafts possibles », avec un arbre « logique, qui respecte la pyramide de Maslow et cohérent en termes de gameplay ». Avant la 0.7, un nouveau joueur voyait **plus de cent cartes** au premier clic sur Fabriquer (59 à 64 de sa famille et communes, et 44 à 49 grisées des autres familles), sur un iPhone 13 mini. **Construit en 0.7** ; la table complète est en **annexe A**.
 
@@ -559,7 +575,7 @@ Les paliers **ne sont pas des niveaux** : aucune jauge, aucun « palier 3 attein
 
 ### Les seuils
 
-- **Le seuil S, « ton métier commence »** : l'abri posé **et** un premier danger surmonté (un Éteint détruit, ou une nuit dormie), **ou** l'étape « La famille » du tutoriel, **ou** 2 h de jeu. Il dévoile l'**atelier** de la famille (foyer de forge, banc de recharge, pédalier) et son **arme de métier** ; rien du métier ne se dévoile avant l'atelier, sauf ce qu'une quête demande. Pendant le tutoriel, l'Éteint scénarisé ne compte pas : le seuil tombe **pile** à l'étape « La famille », avant « La nuit » (décision Q9). Message, une seule fois : « Ton métier commence : le foyer de forge t'attend dans Fabriquer. »
+- **Le seuil S, « ton métier commence »** : l'abri posé **et** un premier danger surmonté (un Éteint détruit, ou une nuit dormie), **ou** l'étape « La famille » du tutoriel, **ou** 2 h de jeu. Il dévoile l'**atelier** de la famille (foyer de forge, banc solaire, pédalier) et son **arme de métier** ; rien du métier ne se dévoile avant l'atelier, sauf ce qu'une quête demande. Pendant le tutoriel, l'Éteint scénarisé ne compte pas : le seuil tombe **pile** à l'étape « La famille », avant « La nuit » (décision Q9). Message, une seule fois : « Ton métier commence : le foyer de forge t'attend dans Fabriquer. »
 - **Le déclencheur A, « les autres »** : une visite au Comptoir, un échange, **une rencontre** (rester une minute à moins de 3 m d'un joueur d'une autre famille) ou **voir faire** (être à moins de 5 m d'un joueur qui fabrique). Il ouvre les pièces qu'on vend aux autres (rivets, pointes, lampe bricolée) et les cartes grisées des autres familles.
 - **Voir faire** (décision Q7) : une recette commune ou de sa famille qu'on a vu fabriquer se dévoile ; celle d'une autre famille s'affiche grisée et dépliée.
 - **Au palier 5, la rencontre est un raccourci, pas une porte** : le Charbonnier seul ouvre le ressort retrempé et les électrodes par la **pratique** (5 lames forgées, avec A), comme le veut la règle d'or (Book 25 §2.5).
@@ -594,6 +610,68 @@ Par personnage, une liste courte (colonne `progression`, en JSON) : les recettes
 ### Les fichiers
 
 `code/commun/src/progression.ts` (la table, les déclencheurs, les calculs purs ; un test vérifie que chaque recette de `RECETTES` y a sa ligne, comme la `categorie` obligatoire), `code/serveur/src/devoilement.ts` (le suivi, la migration, les messages), `code/serveur/src/rencontres.ts` (rencontre et voir faire), `code/client/src/fabrication-arbre.ts` (ce que montre le panneau), `code/client/src/carnet-idees.ts` (« Dernière idée » dans le carnet), `code/commun/src/rythme.ts` et `code/scripts/rythme.ts` (le simulateur). **Rien ne change dans les recettes elles-mêmes.**
+
+## 14 quinquies. Les recettes liées aux meubles, et les outils de fortune (0.8, 2026-10-10)
+
+Plan 0.8 §2.1 (`recettes-par-construction.md`, décisions du porteur). **Construire**, c'est désormais trois choses : **le niveau d'avant posé**, **les matériaux**, **l'outil**. Rien d'autre (Book 24 §12).
+
+### Le lieu d'une recette
+
+Chaque recette a un **lieu**, un seul champ (`Recette.lieu`), qui remplace les anciennes listes cachées (installation, feu, niveau du feu, forge ventilée requise, huile requise).
+
+| Lieu | Ce que c'est | Exemples (code 0.8) |
+|---|---|---|
+| **À la main** | Ce qu'on fait assis par terre avec ce qu'on porte (29 recettes) | Ficelle, corde, gourdin, lance, bâton à fouir, sac de fortune, pansements, travois, arcs de fortune, cordes d'arc, flèches à pointe d'os, de clou ou d'acier, **remmancher la hache**, **remmancher le marteau**, les **outils de fortune** |
+| **Posée** | La construction elle-même, racine d'une lignée (22 recettes) | Établi, abri, coffre, récupérateur de pluie, **râtelier à outils**, **torche plantée**, alarme à boîtes, escabeau, les trois meubles de famille (foyer de forge, banc solaire, pédalier générateur), la meule de charbonnière, les pièges |
+| **À une construction** | Tout ce qui demande de la chaleur, un plan de travail, un serrage, une machine ou du courant | Au feu, à la forge, à l'établi, au banc solaire, au tour à perche (ci-dessous) |
+
+- Une recette **à une construction** apparaît **dès qu'on possède la construction au bon niveau**, et se fait **à côté d'elle** : **2,5 m** pour un feu, **3 m** pour le reste.
+- **Le feu a des formes**, pas seulement des niveaux : une recette peut demander le foyer de pierres, le foyer de cuisine ou le Dakota, et la carte des installations les distingue (`feu:dakota`, `feu:foyer_pierres`…).
+- **Un accessoire** peut être demandé en plus : le **bac de trempe** de la forge pour les lames trempées.
+- **Le refus nomme ce qui manque** : « Il te faut un foyer de pierres. »
+- **« Plus tard »** : une recette ou une étape marquée `aVenir` (« 0b », « niveau 2 », « niveau 3 ») est grisée dans la fiche et refusée par le serveur.
+
+### Les recettes du feu (décidé)
+
+| Construction | Recettes |
+|---|---|
+| **Feu de camp** (et toute forme au-dessus) | Pommes cuites sous la cendre |
+| **Foyer de pierres** (et au-dessus) | Poêlée de cèpes (aussi au **Dakota** et au **poêle-fusée**) ; épieu durci, flèches durcies, **bâton à fouir durci** (Creuser 1, I24) ; **monter l'arc** (arc de frêne, arc d'if) |
+| **Foyer de cuisine** | Soupe de cèpes |
+| **Four de terre** (plus tard, niveau 2) | Pot-au-feu de volaille, volaille aux cèpes : **grisés** dans la fiche du foyer de cuisine |
+
+### Le métier se fait à l'atelier
+
+| Construction | Recettes (code 0.8) |
+|---|---|
+| **Foyer de forge** 🔥 | Pinces, couteau et machette **au fer doux**, pointes de lance, pointes d'acier (et au fil de fer), rivets, électrodes ; **avec le bac de trempe** : couteau, couteau à la lime usée, **hachette** (Q-0.8-2), machette, machette aux lames ébréchées, serpe (et au soc de charrue), ciseau à bois et burin, reforger une lame ébréchée |
+| **Forge ventilée** 🔥 (plus tard) | Hache forgée, glaive ; le ressort retrempé (à l'huile, niveau 3) |
+| **Banc solaire** ⚡ | Pack de cellules, modules de décharge (flash, raquette), matraques de fortune et électrique (et à la petite batterie), lampe bricolée ; plus tard, au poste de montage : module à bobine, aiguillon, électrificateur, ventilateur de forge 12 V |
+| **Établi** | Ébauches d'arc (frêne, if) ; ⚙️ l'arbalète et ses pièces (arbrier, noix de bois ou d'os, arcs de frêne ou de lame de ressort, carreaux), brouette |
+| **Établi à étau** | **Maillet** (1 bûche, 1 branche) ; **coins de bois** (1 bûche → 4) ; **planches fendues** (1 bûche, 1 coin, le maillet → 2 planches ; le maillet revient) ; **réparer le manche** d'une arme (Book 25 §12) |
+| **Tour à perche** ⚙️ | Manche tourné |
+
+### Les outils de fortune
+
+La règle des **portes dures** (Book 03 §4) a sa contrepartie : ce qu'on trouve dans les déchets et les vestiges donne **le niveau 1** de sa qualité, et quelques outils se fabriquent **à la main**.
+
+| Qualité | Trouvés (niveau 1) | À fabriquer, à la main |
+|---|---|---|
+| **Marteler** | Pierre, clé plate, cric, ferraille tordue, pied-de-biche | **Marteau de fortune** : une barre repliée (**Marteler 2**) ; **marteau remmanché** : la tête de marteau de la caisse et une branche (**Marteler 2**, pour toutes les familles, I10) |
+| **Couper** | Éclat de verre, lame ébréchée, boîte de conserve vide (le couvercle), sécateur, machette | — |
+| **Visser** | Couteau, lame ébréchée (le fer plat) | — |
+| **Serrer** | — | **Serre-joint de fortune** : 2 branches, 1 corde (**Serrer 1**) |
+| **Scier le bois** | — | **Scie de fortune** : un disque, ou 2 lames ébréchées (**Scier 1**) |
+| **Fendre** | Tête de hache sans manche | **Coin de bois** (**Fendre 1**) |
+| **Creuser** | Enjoliveur, casserole | Bâton à fouir, **bâton à fouir durci** (Creuser 1) |
+
+- **L'étau porté dans le sac ne donne rien** : boulonné sur l'établi, il en fait l'**établi à étau**, qui donne **Serrer 3** à qui travaille à côté (décision du porteur, 2026-10-10).
+- **Les outils à portée** : un outil rangé au **râtelier à outils**, à 3 m, compte comme s'il était dans le sac (Book 24 §12).
+- **Le maillet** n'a pas de qualité d'outil : il sert aux planches fendues.
+
+### Une clé par niveau
+
+Chaque niveau d'un meuble au-delà de la maison demande **une clé** trouvée dehors : un ingrédient **ou** un outil, jamais les deux (règle 2 du game designer). Chaque clé a ses **replis** : une façon de s'en passer, plus chère, plus lente ou moins bonne (deux barres et Marteler 2 pour la grille du foyer de cuisine ; une casserole pour la cocotte ; le serre-joint de fortune pour l'étau…). La liste des clés du niveau 1 est au Book 24 §12.
 
 ## 15. Règles d'équilibrage du crafting
 
@@ -668,12 +746,16 @@ Les recettes sont des **données**, pas du code. On peut en ajouter sans toucher
 - **Sous-produit** : ce qu'une recette produit en plus de l'objet recherché.
 - **Domaine** : catégorie de production où une famille est la moins chère.
 - **Recette dévoilée** : recette connue à laquelle le personnage a pensé (§14 quater) ; seules celles-là s'affichent dans Fabriquer et se fabriquent.
-- **Palier** : une des cinq familles de déclencheurs de l'arbre de progression (le corps, l'abri du danger, les tiens puis les autres, le métier, l'œuvre). Pas un niveau.
-- **Silhouette « À découvrir »** : une recette du prochain palier, montrée sans nom, l'icône assombrie, avec un indice qui dit le besoin.
+- **Palier** : une des cinq familles de déclencheurs de l'arbre de progression (le corps, l'abri du danger, les tiens puis les autres, le métier, l'œuvre). Pas un niveau. Depuis la 0.8, une **grille de conception** seulement : le jeu ne la connaît plus (§14 quater).
+- **Lieu d'une recette** (0.8) : à la main, posée, ou à une construction (à son niveau, à côté d'elle) ; une recette liée à une construction se dévoile par la construction seule (§14 quinquies).
+- **Outil de fortune** : un objet trouvé ou fait à la main qui donne le niveau 1 d'une qualité (parfois 2 : le marteau de fortune) ; depuis la 0.8, le niveau demandé est une porte dure (§14 quinquies).
+- **Silhouette « À découvrir »** : en 0.7, une recette du prochain palier ; depuis la 0.8, ce qu'ouvrirait le niveau suivant d'une construction qu'on possède, ou ce que demande une quête. Montrée sans nom, l'icône assombrie, avec un indice qui dit le besoin.
 
 ---
 
 ## Annexe A. La table complète de l'arbre de progression (code 0.7)
+
+> **En 0.8, cette table devient une grille de conception.** Les intertitres « Palier » rangent les recettes par besoin ; le jeu ne s'en sert plus. Ce qui change dans la lecture (code 0.8, `progression.ts`) : le **filet du temps** est porté par chaque recette **à la main** (20 ou 60 min), plus par le palier ; une recette **liée à une construction** (§14 quinquies) se dévoile par la construction seule, et ses déclencheurs ne sont plus gardés que pour mémoire (la soupe de cèpes, au foyer de cuisine ; le pot-au-feu et la volaille aux cèpes, au four de terre, **plus tard**) ; le seuil S tombe à l'étape « La famille », qui vient désormais **après** « La carte » (Book 14 §4.5). La 0.8 ajoute les lignes du niveau 1 : le **bâton à fouir durci** (au foyer de pierres), la **charbonnette** (avec le foyer de forge), la **matraque à la petite batterie** (au banc solaire), le **râtelier à outils**, la **torche plantée**, le **marteau remmanché**, le **serre-joint**, la **scie** et le **marteau de fortune**, le **coin de bois**, et, à l'établi à étau, le **maillet**, les **coins** et les **planches fendues**.
 
 Tirée de `code/commun/src/progression.ts` (2026-10-09) : 107 recettes et les deux cartes à part (Feu de camp, Foyer Dakota). Une recette se dévoile dès que **l'un** de ses déclencheurs est vrai (séparés par « · »). En plus de ses déclencheurs, toute recette se dévoile aussi : si on l'a **vu faire** ; si le **tutoriel** ou une **quête en cours** la demande (règle 5) ; si on l'a **déjà fabriquée** ; par le **filet du temps** de son palier ; par la **chaîne** d'une recette dévoilée (règle 4). Une recette de famille autre que l'atelier attend l'atelier, sauf demande d'une quête.
 
@@ -733,15 +815,15 @@ Tirée de `code/commun/src/progression.ts` (2026-10-09) : 107 recettes et les de
 | Forger une machette | 🔥 | un couteau forgé **et** vu : lame de ressort | Une longue lame dans un bon acier. |
 | Forger une machette (lames ébréchées) | 🔥 | un couteau forgé **et** vu : lame ébréchée | Deux lames cassées en font une neuve. |
 | Forger de nouveau une lame ébréchée | 🔥 | vu : lame ébréchée | Une lame cassée n'est pas perdue. |
-| Banc de recharge | ⚡ | **seuil S** | Quand tu auras un toit et tenu tête une fois… |
-| Matraque de fortune | ⚡ | **seuil S** · fait : Banc de recharge · vu : appareil photo jetable | Ton arme de métier : le silence qui mord. |
+| Banc solaire | ⚡ | **seuil S** | Quand tu auras un toit et tenu tête une fois… |
+| Matraque de fortune | ⚡ | **seuil S** · fait : Banc solaire · vu : appareil photo jetable | Ton arme de métier : le silence qui mord. |
 | Module de décharge (flash) | ⚡ | vu : appareil photo jetable | Un flash garde une belle décharge en réserve. |
 | Poser le panneau solaire | ⚡ | vu : petit panneau solaire · quête « Le panneau de la station » · quête « Installer le panneau » | Le soleil donne, encore faut-il le recueillir. |
 | Monter un pack de cellules | ⚡ | vu : cellule lithium · quête « Du courant en poche » | Des petites piles ensemble font une vraie batterie. |
 | Module de décharge (raquette) | ⚡ | vu : raquette anti-moustiques · quête « La Raquette » | Ce qui grillait les moustiques peut servir encore. |
 | Matraque électrique | ⚡ | fait : Monter un pack de cellules · un module de décharge fait · quête « La Raquette » | Une décharge qui les éteint pour de bon. |
-| Pédalier universel | ⚙️ | **seuil S** · vu : cadre de vélo · quête « La meule » · quête « La dynamo » | Ce qui tourne ne meurt pas. |
-| Monter l'arbalète | ⚙️ | **seuil S** · fait : Pédalier universel · quête « Le bois qui plie » | Ton arme de métier : rien à bander, tout à viser. |
+| Pédalier générateur | ⚙️ | **seuil S** · vu : cadre de vélo · quête « La meule » · quête « La dynamo » | Ce qui tourne ne meurt pas. |
+| Monter l'arbalète | ⚙️ | **seuil S** · fait : Pédalier générateur · quête « Le bois qui plie » | Ton arme de métier : rien à bander, tout à viser. |
 | Arbrier d'arbalète | ⚙️ | « Monter l'arbalète » dévoilée | Le corps de l'arme, taillé dans une bûche. |
 | Noix et détente (bois) | ⚙️ | « Monter l'arbalète » dévoilée | Ce qui retient la corde jusqu'au tir. |
 | Arc d'arbalète (frêne) | ⚙️ | « Monter l'arbalète » dévoilée | Un arc court et raide pour l'arbalète. |
@@ -781,7 +863,7 @@ Tirée de `code/commun/src/progression.ts` (2026-10-09) : 107 recettes et les de
 | Forger un ciseau à bois et un burin | 🔥 | fait : Forger des pinces de forge | Tailler le bois et trancher le métal. |
 | Module de décharge (bobine) | ⚡ | vu : bobine d'allumage | Ce qui allumait un moteur claque plus fort. |
 | Aiguillon de défense | ⚡ | une matraque électrique faite **et** fait : Épieu durci au feu | La décharge au bout d'une longue hampe. |
-| Alarme électrique | ⚡ | (vu : rouleau de fil de fer ou fait : Alarme à boîtes de conserve) **et** fait : Banc de recharge · quête « Prévenu sans bruit » | Une alarme qui ne fait pas de bruit. |
+| Alarme électrique | ⚡ | (vu : rouleau de fil de fer ou fait : Alarme à boîtes de conserve) **et** fait : Banc solaire · quête « Prévenu sans bruit » | Une alarme qui ne fait pas de bruit. |
 | Clôture de fortune | ⚡ | fait : Module de décharge (raquette) · fait : Alarme électrique | Un fil qui mord ceux qui passent. |
 | Électrificateur | ⚡ | vu : résistance chauffante | Une décharge qui revient sans cesse. |
 | Clôture électrique | ⚡ | fait : Électrificateur | Un vrai enclos qui se défend seul. |
