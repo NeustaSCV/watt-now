@@ -39,3 +39,13 @@ test("chaque tronçon a son tracé, d'un lieu à l'autre ; la route B a la longu
   assert.ok(Math.abs(b1 - a1) / a1 < 0.1, `terrain → gué ${b1.toFixed(0)} contre terrain → station ${a1.toFixed(0)}`);
   assert.ok(Math.abs(b2 - a2) / a2 < 0.1, `gué → Moulin ${b2.toFixed(0)} contre station → Coopérative ${a2.toFixed(0)}`);
 });
+
+test("plan 0.8 §9.2 : la carte garde sa croix, et un clic ou un toucher en dehors de la feuille la ferme", async () => {
+  const { clicEnDehors } = await import("./carte.ts");
+  const fond = {};
+  const feuille = {};
+  assert.equal(clicEnDehors(fond, fond, fond), true, "sur le fond : elle se ferme");
+  assert.equal(clicEnDehors(feuille, feuille, fond), false, "sur la feuille : non");
+  assert.equal(clicEnDehors(feuille, fond, fond), false, "un geste commencé sur la feuille (un défilement) : non");
+  assert.equal(clicEnDehors(null, fond, fond), false);
+});
