@@ -165,7 +165,7 @@ Un trajet long passe obligatoirement par une ou plusieurs **haltes**. Une halte 
 
 ### Le bois, la pierre et les clés du niveau 1 (0.8, 2026-10-10)
 
-*Plan 0.8 §2.5 et §2.7 (décisions B1 à B17 du porteur, étude `candidats-h1b-l1b-et-budget.md`), §9.1 et §9.2 ; **codé en 0.8** (chantiers 5, 7, 10, 11 et 12). Les chiffres marqués « à régler » sont des réglages, vérifiés au test de jeu (chantier 14).*
+*Plan 0.8 §2.5 et §2.7 (décisions B1 à B17 du porteur, étude `candidats-h1b-l1b-et-budget.md`), §9.1 et §9.2 ; **codé en 0.8** (chantiers 5, 7, 10, 11 et 12). Les chiffres marqués « à régler » sont des réglages : le simulateur du chantier 14 les a vérifiés (ci-dessous), le test de jeu les confirmera.*
 
 **Le constat** : le poids ne bloquait pas, **le stock** bloquait (6 bûches à la station pour tout le serveur, 13 pierres qui ne revenaient jamais). La 0.8 fait revenir le bois et la pierre **dans les haltes**, et les garde rares **sur le terrain**.
 
@@ -180,10 +180,22 @@ Un trajet long passe obligatoirement par une ou plusieurs **haltes**. Une halte 
 | **La charbonnette** (B9) | La meule de charbonnière se charge de **10 bûches, ou de 5 bûches et 20 branches**, pour 4 charbons |
 | **Le Moulin** (B11) | Les **poutres de chêne** de l'atelier du charpentier donnent **2 bûches garanties** (24 h) : de quoi cercler le coffre sur place |
 | **Le Comptoir** (B13) | Il garde en stock **10 bûches et 10 pierres**, réassort d'une unité toutes les **2 h**, au prix de vente (19 et 7 wotts) : un filet, pas une carrière |
-| **La première nuit** (B14) | Le tutoriel conseille les branches au feu ; une bûche mise au feu du terrain quand il en reste moins de 6 fait paraître un avertissement fermé d'un bouton (Book 14 §4.5 ; chantier 13, en cours) |
+| **La première nuit** (B14) | Le tutoriel conseille les branches au feu ; une bûche mise au feu du terrain quand il en reste moins de 6 fait paraître un avertissement fermé d'un bouton (« Compris », une fois par nuit, jamais au feu d'une halte : Book 14 §4.5) |
 | **Refusée, ou plus tard** | B10 (le gourdin garde sa bûche) ; B15 (le tas de bois de H2B, au niveau 2) |
 
-**Ce que cela donne** (calcul de l'étude) : en plus de la visite du tutoriel, ⚡ n'a besoin d'**aucun** aller-retour de ravitaillement à la station, ⚙️ de 0 à 1, 🔥 d'un seul pour tout le niveau 1 ; une visite typique rapporte ≈ 14 bûches et 10 pierres, soit **48 kg** : le sac est plein, le travois devient utile. Confortable sans être gratuit. À vérifier au simulateur (`npm run rythme`, chantier 14), seul puis à cinq.
+**Ce que cela donne** (calcul de l'étude) : en plus de la visite du tutoriel, ⚡ n'a besoin d'**aucun** aller-retour de ravitaillement à la station, ⚙️ de 0 à 1, 🔥 d'un seul pour tout le niveau 1 ; une visite typique rapporte ≈ 14 bûches et 10 pierres, soit **48 kg** : le sac est plein, le travois devient utile. Confortable sans être gratuit.
+
+**Ce que mesure le simulateur** (`npm run rythme`, chantier 14, sur le code de la 0.8) :
+
+| | ⚡ Voltaïques | ⚙️ Mécanistes | 🔥 Charbonniers |
+|---|---|---|---|
+| Tout le niveau 1 coûte (le prudent, seul) | 21 bûches, 15 pierres, 84 branches | 29 bûches, 18 pierres, 83 branches | 29 bûches, 23 pierres, 81 branches, 2 glaises, 1 meule |
+| D'où viennent les bûches | 11 du terrain, 8 du tas, 2 du Moulin | 11 du terrain, 10 du tas, 6 du vrac, 2 du Moulin | 10 du terrain, 10 du tas, 7 du vrac, 2 du Moulin |
+| Allers-retours de ravitaillement en plus du tutoriel : seul · malchanceux · à trois · à cinq | 0 · 0 · 0 · 0 | 0 · 1 (et 1 bûche au Comptoir) · 0 · 0 | 0 · 1 (et 1 bûche au Comptoir) · 0 · 0 |
+
+- **Les pierres** viennent toutes du terrain dans ce parcours : le vrac et le banc de galets du gué restent une réserve.
+- **Les haltes à plusieurs** (critère 7) : la station n'est jamais vide de bûches en vrac plus de **4 min** à trois, **14 min** à cinq ; le gué n'est jamais vide de pierres. On reste sous les 30 min.
+- **Les chiffres « à régler »** : avec un tas de 8 ou de 6 bûches, sans tas, avec un retour en 3 h, ou un Comptoir sans stock, aucun joueur seul n'a besoin d'un aller-retour de plus ; seuls 6 bûches brûlées la première nuit (l'avertissement pas suivi) coûtent un aller-retour au Mécaniste, à cinq en file. Les valeurs décidées sont gardées.
 
 **Les clés du niveau 1 et le butin opportuniste (R-BUTIN).** Les lieux personnels (L1A, L1B) donnent les **clés** des meubles, chacune à sa **place fixe** (Book 23 §11, Book 24 §12). Ailleurs, une clé de L1 ne sort que **rarement** d'une fouille (2 %), à la station, au gué et dans l'autre L1. **Le Comptoir** les vend **500 wotts** (il les rachète 90), une de chaque en stock, mais **seulement après une première visite du lieu** où elles se trouvent : avant, il les **masque** (absentes de l'étal, pas grisées). Les pièces de famille ne s'y vendent pas.
 
