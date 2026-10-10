@@ -231,6 +231,8 @@ export type MessageClient =
   | MessageClientProgression
   // La couche de déchets (0.7) : voir le bloc « déchets » en fin de fichier.
   | MessageClientDechets
+  // Reprendre une arme sur son meuble (plan 0.8, chantier 9) : voir le bloc « reprise » en fin de fichier.
+  | MessageClientReprise
   | { t: "interagir"; cible: Cible; verbe: Verbe }
   | { t: "manger"; objet: TypeObjet }
   | { t: "boire" }
@@ -484,6 +486,8 @@ export type MessageServeur =
   | MessageServeurProgression
   // La couche de déchets (0.7) : voir le bloc « déchets » en fin de fichier.
   | MessageServeurDechets
+  // Reprendre une arme sur son meuble (plan 0.8, chantier 9) : voir le bloc « reprise » en fin de fichier.
+  | MessageServeurReprise
   | { t: "expulse"; raison: string }
   | { t: "inventaire"; inventaire: Inventaire }
   | { t: "besoins"; besoins: Besoins; gourde: Gourde }
@@ -655,3 +659,19 @@ export type MessageServeurDechets =
   | { t: "dechets_point"; point: PointDechetsVu }
   /** La liste du conteneur qu'on fouille (null : refermé). */
   | { t: "fouille"; fouille: FouilleVue | null };
+
+// ---------- Reprendre une arme sur son meuble (plan 0.8, chantier 9 ; commun/src/evolution-armes.ts) ----------
+
+/** Réparer l'arme à son niveau, ou la monter d'une étoile. */
+export type GesteRepriseArme = "reparer" | "monter";
+
+export type MessageClientReprise =
+  /** « Reprendre l'arme » (R-ARMES-5), près de son meuble : la réparer, ou la monter d'une étoile. */
+  { t: "reprendre_arme"; objet: CleObjet; geste: GesteRepriseArme };
+
+export type MessageServeurReprise =
+  /**
+   * L'arme est reprise : réparée (`avant` = `apres`), ou montée d'une étoile (le même exemplaire, sa clé a changé
+   * d'étoile). Le client fait briller l'étoile qui s'ajoute dans le sac.
+   */
+  { t: "arme_reprise"; avant: CleObjet; apres: CleObjet; geste: GesteRepriseArme };

@@ -88,6 +88,7 @@ import { SuiviDevoilement, type Constat, type SourceDevoilement } from "./devoil
 import { CoucheDechets } from "./couche-dechets.ts";
 import { REDRESSEUR } from "../../commun/src/arc.ts";
 import { Forge, type ContexteForge } from "./forge.ts";
+import { EvolutionArmes, type ContexteEvolution } from "./evolution-armes.ts";
 import { declencher, declencheurNeuf, definitionDeclencheur, estDeclencheur, type DeclencheurPose } from "./declencheurs.ts";
 import { Electricite, alimenterClotures, coutEnduranceCoup, produireBancsSolaires, type ContexteElectricite } from "./electricite.ts";
 import { FilsDeRasoir, utiliserMecanique, type ContexteMecanique } from "./mecanique.ts";
@@ -128,11 +129,7 @@ import {
   evoluer,
   freinSaisie,
   intoxiquer,
-  ATELIER_REPARATION,
   MALUS_ABIMEE,
-  MATIERE_ARME,
-  PLAFOND_FORTUNE,
-  REPARATION_FORTUNE,
   DEBRIS_ARME,
   REPOUSSER,
   SEUIL_ABIMEE,
@@ -140,7 +137,6 @@ import {
   capaciteChargeArme,
   armeEnMain,
   cleArme,
-  nomsAteliers,
   porteeBruitCoup,
   etatArme,
   type Arme,
@@ -373,6 +369,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
   private readonly forge: Forge = new Forge(this.contexteForge());
   /** L'électricité des Voltaïques (Book 25 §5) : décharges, recharge, pièges électriques (serveur/src/electricite.ts). */
   private readonly electricite: Electricite = new Electricite(this.contexteElectricite());
+  /** Reprendre une arme sur son meuble : la réparer, la monter d'une étoile (plan 0.8, chantier 9 ; serveur/src/evolution-armes.ts). */
+  private readonly evolution: EvolutionArmes = new EvolutionArmes(this.contexteEvolution());
 
   /** Le lieu vivant où l'on se trouve (la halte, le gué, partagés ; sa Coopérative, son Moulin, à soi) ; null sur le terrain et au Comptoir. */
   private get vivant(): LieuVivant | null {
@@ -674,8 +672,11 @@ export class Joueur implements Voyageur, ParticipantLecon {
         this.repousserDevant();
         return;
       case "reparer":
-        this.reparer(message.objet, message.fortune === true);
+        this.evolution.reparer(message.objet, message.fortune === true);
         return;
+      // Reprendre une arme sur son meuble : la réparer, ou la monter d'une étoile (plan 0.8, chantier 9).
+      case "reprendre_arme":
+        return this.evolution.reprendre(message.objet, message.geste);
       case "panser":
         this.soigner();
         return;
@@ -1369,48 +1370,48 @@ export class Joueur implements Voyageur, ParticipantLecon {
   }
 
   /**
-   * Réparer une arme (Book 23 §4.3, Book 25 §4.4). De fortune, partout (ficelle et chiffons) : elle remonte, mais reste
-   * abîmée. Pour de bon, chez soi : l'établi pour le bois ; pour les lames, la meule du pédalier (affûter, sans rien
-   * consommer) ou la forge (reprendre la lame, un kilo de charbon) ; la forge pour le métal.
+   * Ce que le joueur prête à la reprise des armes (serveur/src/evolution-armes.ts, plan 0.8 chantier 9) : rien que des
+   * accès, aucune règle. Le `reparer` d'avant la 0.8 y est.
    */
-  private reparer(objet: CleObjet, fortune: boolean): void {
-    if (!estCleObjet(objet)) return;
-    const arme = armeDeCle(objet);
-    const matiere = MATIERE_ARME[typeDe(objet)];
-    if (!arme || !matiere || !(this.inventaire[objet] ?? 0) || this.voyage || this.action) return;
-    const etat = etatArme(objet, this.usure);
-    if (fortune) {
-      if (etat >= PLAFOND_FORTUNE) return this.info("Une réparation de fortune n'y ferait rien : elle n'est pas assez abîmée pour ça.");
-      const deQuoi = (Object.entries(REPARATION_FORTUNE) as [TypeObjet, number][]).every(([t, n]) => (this.inventaire[t] ?? 0) >= n);
-      if (!deQuoi) return this.info("Pour une réparation de fortune, il faut une ficelle et des chiffons.");
-      this.commencer(`Réparer ${arme.nom} (de fortune)`, 6 / REGLAGES.gestes_vitesse, () => {
-        for (const [t, n] of Object.entries(REPARATION_FORTUNE) as [TypeObjet, number][]) this.retirer(t, n);
-        this.usure[objet] = Math.max(this.usure[objet] ?? 0, Math.floor(arme.solidite * PLAFOND_FORTUNE));
-        this.envoyer({ t: "usure", usure: { ...this.usure }, evenement: { objet, etat: "reparee" } });
-        this.base.sauverUsure(this.compte.id, this.usure);
-      }, 0, "leger");
-      return;
-    }
-    if (etat >= 1) return this.info("Elle est comme neuve.");
-    // Les ateliers qui conviennent, dans l'ordre (la meule d'abord : le geste le moins cher) ; le premier tout proche.
-    const proches = this.lieu !== "terrain" ? [] : ATELIER_REPARATION[matiere].filter((atelier) =>
-      [...this.installations.values()].some((i) => i.type === atelier.installation && (atelier.accessoire !== "meule" || i.etat.meule) && this.proche(i.x, i.z, 3)),
-    );
-    if (proches.length === 0) return this.info(`Pour la remettre à neuf, il faut ${nomsAteliers(matiere)}, chez toi. Sinon, une réparation de fortune.`);
-    const atelier = proches.find((a) => !a.cout || this.aDeQuoi(a.cout));
-    if (!atelier) {
-      const manque = Object.entries(proches[0]!.cout ?? {}).map(([t, n]) => nommer(t as CleObjet, n ?? 1)).join(", ");
-      return this.info(`Pour reprendre la lame à ${proches[0]!.nom}, il faut ${manque}.`);
-    }
-    this.commencer(`${atelier.geste ?? "Remettre à neuf"} : ${arme.nom}`, 15 / REGLAGES.gestes_vitesse, () => {
-      if (atelier.cout && !this.aDeQuoi(atelier.cout)) return;
-      if (atelier.cout) this.retirerPlusieurs(atelier.cout);
-      delete this.usure[objet];
-      // La meule fine (Book 25 §6.4) : l'affûtage donne un fil de rasoir.
-      if (atelier.accessoire === "meule" && [...this.installations.values()].some((i) => i.type === "pedalier" && i.etat.meuleFine && this.proche(i.x, i.z, 3))) this.filsDeRasoir.affuter(objet);
-      this.envoyer({ t: "usure", usure: { ...this.usure }, evenement: { objet, etat: "reparee" } });
-      this.base.sauverUsure(this.compte.id, this.usure);
-    }, 0, atelier.installation === "forge" ? "lourd" : "outil");
+  private contexteEvolution(): ContexteEvolution {
+    const j = this;
+    return {
+      inventaire: () => j.inventaire,
+      usure: () => j.usure,
+      chargeArmes: () => j.chargeArmes,
+      alentours: () => (j.lieu === "terrain" && !j.voyage ? j.alentours() : null),
+      occupe: () => j.voyage !== null || j.action !== null,
+      retirerPlusieurs: (objets) => j.retirerPlusieurs(objets),
+      // En un seul envoi : le client ne doit pas voir l'arme quitter le sac puis y revenir (« +1 arbalète »).
+      echanger: (retire, ajoute) => {
+        const inventaire = { ...j.inventaire };
+        for (const [t, n] of Object.entries(retire) as [CleObjet, number][]) {
+          const reste = (inventaire[t] ?? 0) - n;
+          if (reste > 0) inventaire[t] = reste;
+          else delete inventaire[t];
+        }
+        for (const [t, n] of Object.entries(ajoute) as [CleObjet, number][]) inventaire[t] = (inventaire[t] ?? 0) + n;
+        j.inventaire = inventaire;
+        j.base.sauverInventaire(j.compte.id, j.inventaire);
+        j.envoyer({ t: "inventaire", inventaire: j.inventaire });
+      },
+      commencer: (libelle, dureeS, appliquer, pose) => j.commencer(libelle, dureeS, appliquer, 0, pose),
+      info: (t) => j.info(t),
+      envoyer: (m) => j.envoyer(m),
+      sauver: () => {
+        j.base.sauverUsure(j.compte.id, j.usure);
+        j.base.sauverChargeArmes(j.compte.id, j.chargeArmes);
+      },
+      armeEquipee: () => j.armeEquipee,
+      changerArmeEquipee: (cle) => {
+        j.armeEquipee = cle;
+        j.base.sauverArme(j.compte.id, cle);
+        j.envoyer({ t: "arme", arme: cle });
+      },
+      affuterFin: (cle) => {
+        if ([...j.installations.values()].some((i) => i.type === "pedalier" && i.etat.meuleFine && j.proche(i.x, i.z, 3))) j.filsDeRasoir.affuter(cle);
+      },
+    };
   }
 
   /** A-t-on tout cela dans le sac ? */

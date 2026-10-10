@@ -144,6 +144,9 @@ export function messageValide(m: unknown): m is MessageClient {
       return booleen(m.oui);
     case "reparer":
       return estCleObjet(m.objet) && booleen(m.fortune);
+    // Reprendre une arme sur son meuble (plan 0.8, chantier 9).
+    case "reprendre_arme":
+      return estCleObjet(m.objet) && (m.geste === "reparer" || m.geste === "monter");
     case "comptoir":
       return operationComptoirValide(m.op);
     case "echange":

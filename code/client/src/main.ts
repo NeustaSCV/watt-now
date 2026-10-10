@@ -19,7 +19,7 @@ import type { AutreVu, SacVu, SanteVue, VueComptoir } from "../../commun/src/mes
 import { PORTEE_CABLE_PANNEAU, type Charges } from "../../commun/src/energie.ts";
 import type { Bienvenue, EtatCoopVu, InstallationVue, MessageClient, MessageServeur } from "../../commun/src/messages.ts";
 import { OBJETS, lumierePortee, traineTravois, type Inventaire } from "../../commun/src/objets.ts";
-import { typeDe, type CleObjet } from "../../commun/src/etoiles.ts";
+import { compter, typeDe, type CleObjet } from "../../commun/src/etoiles.ts";
 import { aFaim, aSoif, allureAutorisee, fatigue, type Besoins, type Gourde } from "../../commun/src/survie.ts";
 import { estNuit, heureDeJeu, jourDeJeu } from "../../commun/src/temps.ts";
 import { demanderIdentite, presenterEcransAccueil } from "./accueil.ts";
@@ -406,6 +406,7 @@ const hud = new Hud(
     equiper: (objet) => envoyer({ t: "equiper", objet }),
     preparer: (objet) => envoyer({ t: "preparer", objet }),
     reparer: (objet, fortune) => envoyer({ t: "reparer", objet, fortune }),
+    reprendre: (objet, geste) => envoyer({ t: "reprendre_arme", objet, geste }),
     coffre: (id, sens, objet, quantite) => envoyer({ t: "coffre", id, sens, objet, quantite }),
     amenager: (genre, id, verbe) => envoyer({ t: "interagir", cible: { genre, id }, verbe }),
     fabriquer: (r) => {
@@ -722,10 +723,15 @@ function recevoir(message: MessageServeur): void {
       decalage = message.serveur + (reseau?.latence ?? 0) / 2 - Date.now();
       return;
     case "inventaire":
-      // Ce qui vient d'entrer dans le sac s'affiche au-dessus du personnage.
+      // Ce qui vient d'entrer dans le sac s'affiche au-dessus du personnage. On compte par sorte, toutes étoiles
+      // confondues : une arme montée d'une étoile sur son meuble (chantier 9) change de clé, ce n'est pas un gain.
+      const vues = new Set<string>();
       for (const [type, n] of Object.entries(message.inventaire) as [keyof Inventaire, number][]) {
-        const avant = inventaire[type] ?? 0;
-        if (n > avant) hud.gain(type, n - avant);
+        const sorte = typeDe(type);
+        if (!(n > (inventaire[type] ?? 0)) || vues.has(sorte)) continue;
+        vues.add(sorte);
+        const gagne = compter(message.inventaire, sorte) - compter(inventaire, sorte);
+        if (gagne > 0) hud.gain(type, gagne);
       }
       inventaire = message.inventaire;
       hud.majInventaire(inventaire);
@@ -921,6 +927,10 @@ function recevoir(message: MessageServeur): void {
       } else if (message.actif) son.jouer(message.id === "klaxon" ? "klaxon" : "sonnette", ou);
       return;
     }
+    // Reprendre une arme sur son meuble (plan 0.8, chantier 9) : l'étoile qui s'ajoute brille dans le sac.
+    case "arme_reprise":
+      hud.armeReprise(message.avant, message.apres, message.geste);
+      return;
     case "usure":
       hud.majUsure(message.usure, message.evenement, message.charge);
       if (message.evenement?.etat === "cassee") son.jouer("chute_corps", null, { gain: 0.5 });
@@ -1270,6 +1280,8 @@ hud.sourceFiche = (genre, id) => {
   return installations.get(id)?.vue ?? null;
 };
 hud.voisinsFiche = () => ({ installations: [...installations.values()].map((i) => i.vue), feux: [...feux.values()].map((f) => f.vue) });
+// Reprendre une arme sur son meuble (chantier 9) : les installations du terrain autour de soi.
+hud.alentoursReprise = () => (position && lieu === "terrain" ? { x: position.x, z: position.z, feux: [], installations: [...installations.values()].map((i) => i.vue), inventaire } : null);
 hud.outilsAPortee = () => (position && lieu === "terrain" ? outilsAPortee({ x: position.x, z: position.z, installations: [...installations.values()].map((i) => i.vue), inventaire }) : inventaire);
 // Le dialogue de départ dit si l'on part à l'abri (une nuit complète) ou s'il vaut mieux y aller d'abord.
 hud.aLAbri = () =>

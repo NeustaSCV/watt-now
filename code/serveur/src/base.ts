@@ -19,6 +19,7 @@ import type { Wotts } from "../../commun/src/economie.ts";
 import { TUTORIEL_NEUF, type EtatTutoriel } from "../../commun/src/tutoriel.ts";
 import type { EtatQuetes } from "../../commun/src/quetes.ts";
 import { estArme } from "../../commun/src/combat.ts";
+import { soliditeDe } from "../../commun/src/evolution-armes.ts";
 import type { EtatInstallation, InstallationVue } from "../../commun/src/messages.ts";
 import type { TypeInstallation } from "../../commun/src/recettes.ts";
 import type { AccessoireFeu } from "../../commun/src/lignees.ts";
@@ -552,7 +553,8 @@ export class Base {
       const usure: Partial<Record<CleObjet, number>> = {};
       for (const [t, n] of Object.entries(brut)) {
         const cle = cleCanonique(t);
-        if (estCleObjet(cle) && estArme(cle) && typeof n === "number" && n >= 0) usure[cle] = n;
+        // Les armes de tir s'usent aussi (un tir, un coup) : leur usure se garde, pour les reprendre à l'établi (0.8, chantier 9).
+        if (estCleObjet(cle) && soliditeDe(cle) !== null && typeof n === "number" && n >= 0) usure[cle] = n;
       }
       return usure;
     } catch {

@@ -180,6 +180,17 @@ export function uneEtoileDePlus(n: Etoiles): Etoiles {
   return borner(n + 1);
 }
 
+/**
+ * Le même exemplaire, une étoile de plus (faire évoluer une arme sur son meuble, plan 0.8 R-ARMES-5) : sa clé change
+ * d'étoile (« arbalete#1 » → « arbalete#2 », ou la clé nue si l'on retombe sur les étoiles de base). null : ce n'est
+ * pas un objet de métier, ou il est déjà à ★★★★★.
+ */
+export function exemplaireUneEtoileDePlus(cle: string): CleObjet | null {
+  const { type, etoiles } = lireCle(cle);
+  if (etoiles === null || etoiles >= ETOILES_MAX) return null;
+  return cleExemplaire(type, uneEtoileDePlus(etoiles));
+}
+
 // ---------- Ce que changent les étoiles ----------
 
 /**

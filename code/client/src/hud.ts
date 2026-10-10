@@ -10,8 +10,8 @@ import { SILHOUETTES_DEPLIEES, enTete, etatCle, nouveautesParOnglet, ongletsVide
 import { ACTIONS, RESERVEES, assigner, avecTouches, nomDe, nomTouche, retablir, surChangement, type Action } from "./touches.ts";
 import { PanneauAide } from "./aide.ts";
 import { CAPACITES, type Charges } from "../../commun/src/energie.ts";
-import { ARMES, MATIERE_ARME, NOMS_BLESSURES, PLAFOND_FORTUNE, RESISTANCE_TORSE, SEUIL_ABIMEE, armeDeCle, capaciteChargeArme, caracteristiquesArme, estArme, etatArme } from "../../commun/src/combat.ts";
-import type { EchangeVu, FeuVu, InstallationVue, OffreEchange, OperationComptoir, OperationEchange, Personne, RapportBase, SanteVue, Verbe, VueComptoir, WottsVus } from "../../commun/src/messages.ts";
+import { ARMES, NOMS_BLESSURES, PLAFOND_FORTUNE, RESISTANCE_TORSE, SEUIL_ABIMEE, armeDeCle, capaciteChargeArme, caracteristiquesArme, estArme, etatArme } from "../../commun/src/combat.ts";
+import type { EchangeVu, FeuVu, GesteRepriseArme, InstallationVue, OffreEchange, OperationComptoir, OperationEchange, Personne, RapportBase, SanteVue, Verbe, VueComptoir, WottsVus } from "../../commun/src/messages.ts";
 import {
   ACCESSOIRES_FEU,
   COMBLER,
@@ -35,12 +35,13 @@ import {
 } from "../../commun/src/lignees.ts";
 import { texteAVenir } from "../../commun/src/lignees.ts";
 import { choisirFacon } from "../../commun/src/replis.ts";
-import { texteLieu } from "../../commun/src/lieu-recette.ts";
+import { texteLieu, type Alentours } from "../../commun/src/lieu-recette.ts";
+import { reprise, seReprend, type Reprise } from "../../commun/src/evolution-armes.ts";
 import { PRIX_RETRAIT, formaterWotts, prixAchatExemplaire, prixVenteCle } from "../../commun/src/economie.ts";
 import { detailEnergieGrise } from "../../commun/src/recettes.ts";
 import type { TypeBatterie } from "../../commun/src/energie.ts";
 import type { Inventaire, TypeObjet } from "../../commun/src/objets.ts";
-import { ETOILES, compter, etoilesDe, etoilesTexte, typeDe, type CleObjet } from "../../commun/src/etoiles.ts";
+import { ETOILES, compter, etoilesDe, etoilesTexte, typeDe, type CleObjet, type Etoiles } from "../../commun/src/etoiles.ts";
 import { MUNITIONS, armeTirDe, armeTirExemplaire, estLancable } from "../../commun/src/tir.ts";
 import { OBJETS, capaciteDe, estCleObjet, nomContenant, nommer, poidsInventaire } from "../../commun/src/objets.ts";
 import { estOutil } from "../../commun/src/outils-a-portee.ts";
@@ -125,6 +126,8 @@ export interface ActionsJoueur {
   preparer(objet: CleObjet | null): void;
   /** Réparer une arme (Book 23 §4.3) : de fortune, ou pour de bon à l'atelier. */
   reparer(objet: CleObjet, fortune: boolean): void;
+  /** Reprendre une arme sur son meuble : la réparer, ou la monter d'une étoile (plan 0.8, chantier 9). */
+  reprendre(objet: CleObjet, geste: GesteRepriseArme): void;
   /** Recharger une arme électrique à la manivelle de la lampe à dynamo (Book 25 §5.4). */
   manivelle(objet: CleObjet): void;
   /** Ranger dans le coffre, ou en sortir. */
@@ -200,8 +203,6 @@ const TYPES_DEGATS = {
   // « Maintenu… il l'éteint » est déjà dit par la ligne ☠ de la fiche : on ne le répète pas.
   electrique: "Électrique : il lâche et se raidit, casque ou pas.",
 } as const;
-/** Où remettre une arme à neuf (Book 23 §4.3). */
-const ATELIERS_REPARATION_NOMS = { bois: "à l'établi", lame: "à la meule ou à la forge", metal: "à la forge" } as const;
 
 export class Hud {
   /** Réassigner une touche : le jeu attend la prochaine touche frappée (null : annulé). */
@@ -1523,7 +1524,7 @@ export class Hud {
       // Un objet de métier montre ses étoiles sur sa case (Book 25 §4.2), et une arme électrique sa charge.
       const n = etoilesDe(cle);
       // Sur une case de 46 px, « 4★ » se lit mieux que cinq étoiles serrées ; la fiche les montre toutes.
-      const etoiles = n === null ? "" : `<span class="etoiles-case" title="${etoilesTexte(n)}">${n}★</span>`;
+      const etoiles = n === null ? "" : `<span class="etoiles-case ${this.etoileGagnee === cle ? "etoile-gagnee" : ""}" title="${etoilesTexte(n)}">${n}★</span>`;
       const charge = this.partCharge(cle);
       const barre = charge === null ? "" : `<span class="charge-case" aria-hidden="true"><span style="width:${Math.round(charge * 100)}%"></span></span>`;
       // Une arme de tir montre ce qui lui reste à tirer (Book 25 §8.6), en bas à gauche : « ➶7 ».
@@ -1593,13 +1594,20 @@ export class Hud {
       const arme = caracteristiquesArme(s);
       // Une arme de tir (Book 25 §8.6) : ses portées, sa cadence, ses munitions, à ses étoiles.
       const caracs = arme ? this.ficheArme(arme, s) : armeTirDe(t) ? this.ficheTir(s) : "";
-      if (arme) {
-        const etat = etatArme(s, this.usureArmes);
-        if (etat < 1) {
-          actions.push(`<button type="button" data-action="reparer" title="Remettre à neuf ${ATELIERS_REPARATION_NOMS[MATIERE_ARME[t] ?? "metal"]}">Réparer</button>`);
-          infos.push(`<p class="info-objet">Réparer : ${ATELIERS_REPARATION_NOMS[MATIERE_ARME[t] ?? "metal"]}, chez toi.${etat < PLAFOND_FORTUNE ? " Rafistoler : partout, avec une ficelle et des chiffons (elle reste abîmée)." : ""}</p>`);
-          if (etat < PLAFOND_FORTUNE) actions.push(`<button type="button" data-action="reparer-fortune" title="Une ficelle et des chiffons : elle tient, mais reste abîmée">Rafistoler</button>`);
+      // Reprendre l'arme sur son meuble (plan 0.8, chantier 9) : le bouton n'est là que tout près du meuble ; ailleurs, la
+      // fiche dit où, et le rafistolage de fortune reste possible partout.
+      let reprendre = "";
+      if (seReprend(s)) {
+        const r = this.repriseDe(s);
+        const montee = r.monter?.possible === true;
+        if (r.aPortee && (r.etat < 1 || r.monter)) {
+          const ouverte = this.repriseOuverte === s;
+          actions.push(`<button type="button" ${r.etat < 1 || montee ? `class="principal"` : ""} data-action="reprendre" aria-expanded="${ouverte}" title="Le réparer ou le monter d'une étoile, ici">Reprendre</button>`);
+          if (ouverte) reprendre = this.ficheReprise(r);
+        } else if (r.etat < 1) {
+          infos.push(`<p class="info-objet">Reprendre : ${r.ou}, chez toi.${arme && r.etat < PLAFOND_FORTUNE ? " Rafistoler : partout, avec une ficelle et des chiffons (elle reste abîmée)." : ""}</p>`);
         }
+        if (arme && r.etat < PLAFOND_FORTUNE) actions.push(`<button type="button" data-action="reparer-fortune" title="Une ficelle et des chiffons : elle tient, mais reste abîmée">Rafistoler</button>`);
       }
       // Vestiges, lot 1 : ce que donne le démontage, et l'outil qu'il demande.
       // Un exemplaire étoilé ne se démonte pas (il se reforge, Book 25 §4.4).
@@ -1627,12 +1635,16 @@ export class Hud {
       }
       // Les étoiles d'un objet de métier (Book 25 §4.2), en clair : « ★★★☆☆ ».
       const etoiles = etoilesDe(s);
-      const etoilesFiche = etoiles === null ? "" : ` <span class="etoiles-fiche" title="${etoiles} étoile${etoiles > 1 ? "s" : ""} sur 5">${etoilesTexte(etoiles)}<span class="etoiles-vides">${"☆".repeat(5 - etoiles)}</span></span>`;
+      // L'étoile qui vient de s'ajouter sur le meuble (chantier 9) brille un instant, en or.
+      const neuve = etoiles !== null && this.etoileGagnee === s;
+      const pleines = etoiles === null ? "" : neuve ? `${etoilesTexte((etoiles - 1) as Etoiles)}<span class="etoile-neuve">★</span>` : etoilesTexte(etoiles);
+      const etoilesFiche = etoiles === null ? "" : ` <span class="etoiles-fiche" title="${etoiles} étoile${etoiles > 1 ? "s" : ""} sur 5">${pleines}<span class="etoiles-vides">${"☆".repeat(5 - etoiles)}</span></span>`;
       const famille = d.famille ? ` · ${NOMS_FAMILLES_VESTIGES[d.famille]}` : "";
       fiche = `
         <div class="fiche-tete">${icone(t, 36)}<div><strong>${nommer(t, n)}${etoilesFiche}</strong>
           <small>${kg(d.poids * n + (s === "gourde" ? g.litres : 0))} kg · valeur ≈ ${formaterWotts(energieGrise(t))}${famille}${enMain}</small></div></div>
         ${actions.length ? `<div class="actions-objet">${actions.join("")}</div>` : ""}
+        ${reprendre}
         <p class="description">${detail}</p>
         ${caracs}
         ${infos.join("")}
@@ -1687,6 +1699,13 @@ export class Hud {
         if (action === "desequiper") this.actions.equiper(null);
         if (action === "preparer" && this.selection) this.actions.preparer(this.selection);
         if ((action === "reparer" || action === "reparer-fortune") && this.selection) this.actions.reparer(this.selection, action === "reparer-fortune");
+        if (action === "reprendre" && this.selection) {
+          this.repriseOuverte = this.repriseOuverte === this.selection ? null : this.selection;
+          this.dessinerSac();
+        }
+        if ((action === "reprendre-reparer" || action === "reprendre-monter") && this.selection) {
+          this.actions.reprendre(this.selection, action === "reprendre-monter" ? "monter" : "reparer");
+        }
         if (action === "demonter" && this.selection) this.actions.demonter(typeDe(this.selection));
         if (action === "lire" && this.selection) this.actions.lire(typeDe(this.selection));
         if (action === "manivelle" && this.selection) this.actions.manivelle(this.selection);
@@ -1695,6 +1714,63 @@ export class Hud {
         }
       });
     }
+  }
+
+  // ---------- Reprendre une arme sur son meuble (plan 0.8, chantier 9) ----------
+
+  /** Ce qu'il y a autour pour reprendre une arme (main.ts) : sa position, ses installations ; null ailleurs que chez soi. */
+  alentoursReprise: (() => Alentours | null) | null = null;
+  /** L'arme dont on a déplié les propositions du meuble (« Reprendre »). */
+  private repriseOuverte: CleObjet | null = null;
+  /** L'exemplaire qui vient de gagner une étoile : sa case et sa fiche brillent un instant. */
+  private etoileGagnee: CleObjet | null = null;
+  /** On s'approche ou on s'éloigne du meuble le sac ouvert : le bouton « Reprendre » suit (deux fois par seconde). */
+  private minuteurReprise: ReturnType<typeof setInterval> | null = null;
+
+  /** Ce que les meubles d'à côté proposent pour cet exemplaire. */
+  private repriseDe(cle: CleObjet): Reprise {
+    this.minuteurReprise ??= setInterval(() => {
+      if (!this.sac.hidden && this.selection && seReprend(this.selection)) this.dessinerSac();
+    }, 500);
+    const a = this.alentoursReprise?.() ?? { x: 0, z: 0, feux: [], installations: [], inventaire: this.inventaire };
+    return reprise(cle, a, this.usureArmes);
+  }
+
+  /**
+   * Les deux propositions du meuble, dépliées sous les actions (jamais une fenêtre à part) : remettre à neuf, monter
+   * d'une étoile ; chacune avec ce qu'elle prend, ou ce qui manque.
+   */
+  private ficheReprise(r: Reprise): string {
+    const cout = (c: Inventaire) => (Object.entries(c) as [CleObjet, number][]).map(([t, n]) => `${icone(typeDe(t), 16)}${nommer(t, n)}`).join(" · ");
+    const ligne = (action: string, libelle: string, p: { possible: boolean; raison?: string; cout: Inventaire }) => `
+      <div class="proposition ${p.possible ? "" : "impossible"}">
+        <button type="button" data-action="${action}" ${p.possible ? "" : "disabled"}>${libelle}</button>
+        <small>${p.possible ? (Object.keys(p.cout).length ? cout(p.cout) : "Rien à fournir.") : (p.raison ?? "")}</small>
+      </div>`;
+    const lignes = [ligne("reprendre-reparer", r.etat < 1 ? `Remettre à neuf (${Math.round(r.etat * 100)} %)` : "Remettre à neuf", r.reparer)];
+    if (r.monter) {
+      const cible = r.monter.cible ?? (((r.etoiles ?? 0) + 1) as Etoiles);
+      lignes.push(ligne("reprendre-monter", `Monter à <span class="etoiles-nom">${etoilesTexte(Math.min(5, cible) as Etoiles)}</span>`, r.monter));
+    }
+    return `<div class="reprise" role="group" aria-label="Reprendre l'arme">${lignes.join("")}</div>`;
+  }
+
+  /** Le serveur a repris l'arme : montée d'une étoile, la nouvelle clé est choisie, et son étoile brille en or. */
+  armeReprise(avant: CleObjet, apres: CleObjet, geste: GesteRepriseArme): void {
+    this.repriseOuverte = null;
+    if (geste === "monter") {
+      // La pile d'avant a pu se vider à la mise à jour du sac (la sélection est tombée) : on choisit l'exemplaire monté.
+      if (this.selection === avant || this.selection === null) this.selection = apres;
+      this.etoileGagnee = apres;
+      setTimeout(() => {
+        if (this.etoileGagnee !== apres) return;
+        this.etoileGagnee = null;
+        this.dernierSac = "";
+        if (!this.sac.hidden) this.dessinerSac();
+      }, 2200);
+    }
+    this.dernierSac = "";
+    if (!this.sac.hidden) this.dessinerSac();
   }
 
   /** Les caractéristiques d'une arme, en barres (la meilleure arme du jeu remplit la barre). */
