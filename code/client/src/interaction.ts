@@ -16,6 +16,7 @@ import type { Gourde } from "../../commun/src/survie.ts";
 import { DISTANCE_INTERACTION, EMPRISE_RESSOURCE, PORTEE_ARBRE, distanceMare, RAYON_ESCABEAU, USAGES, estArbre, estFruitier, type TypeRessource } from "../../commun/src/terrain.ts";
 import type { FeuDeCamp } from "./rendu/feu.ts";
 import type { VueRessource } from "./rendu/ressources.ts";
+import { proposerMoulin } from "./moulin.ts";
 
 export type ActionProposee =
   | { libelle: string; message: MessageClient }
@@ -359,7 +360,7 @@ export function proposer(
   }
 
   // À la Coopérative : ouvrir une porte, ou la refermer derrière soi (Book 23 §2.2 : c'est la meilleure retraite).
-  if (portes) {
+  if (portes && lieu === "cooperative") {
     for (const p of PORTES) {
       const ouverte = portes[p.id] ?? p.ouverte;
       garder(distancePorte(p, position.x, position.z) + 0.3, {
@@ -378,7 +379,7 @@ export function proposer(
   }
 
   // À la Coopérative : les leurres du décor (Book 23 §4.7). Un bruit qui attire les Éteints ailleurs que sur soi.
-  if (portes) {
+  if (portes && lieu === "cooperative") {
     // Le klaxon : tant que la batterie est dans le tracteur (0.5.1 : on peut la démonter et l'emporter).
     const klaxons = etatCoop?.klaxons ?? KLAXONS_PAR_BATTERIE;
     const batterie = ressourcesVues.find((r) => r.donnees.type === "coop_batterie");
@@ -419,6 +420,9 @@ export function proposer(
       });
     }
   }
+
+  // Au Moulin du Gué : la grande porte, les leurres du décor (plan 0.8, chantier 12 : client/src/moulin.ts).
+  if (portes && lieu === "moulin") proposerMoulin(position, portes, inventaire, garder);
 
   // Au Carrefour : le guichet des Compteurs, et leur pédalier.
   if (lieu === "comptoir") {

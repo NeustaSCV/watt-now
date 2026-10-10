@@ -144,6 +144,11 @@ export const SONS = {
   ...interfaceFamilles,
   // « Tu y penses » (plan 0.8, chantier 2) : l'idée au ramassage d'une clé, pour soi seul.
   idee: { recette: R.idee, bus: "interface", priorite: 2, variantes: 2, gain: 0.32, portee: 0 },
+  // Le Moulin du Gué (plan 0.8, chantier 12) : la grande porte qui grince (M6), les trois leurres du décor (M31).
+  grande_porte: { recette: R.grandePorte, bus: "environnement", priorite: 2, variantes: 2, gain: 0.6, portee: 18 },
+  monte_sacs: { recette: R.monteSacs, bus: "environnement", priorite: 2, variantes: 1, gain: 0.75, portee: 30 },
+  babillard: { recette: R.babillard, bus: "environnement", priorite: 2, variantes: 1, gain: 0.45, portee: 20 },
+  borne: { recette: R.borneJingle, bus: "environnement", priorite: 2, variantes: 1, gain: 0.4, portee: 22 },
 } satisfies Record<string, DefSon>;
 
 export type IdSon = keyof typeof SONS;

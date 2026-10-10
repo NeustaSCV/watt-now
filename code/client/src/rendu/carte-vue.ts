@@ -17,7 +17,8 @@
 
 import * as THREE from "three";
 import { COOP, PIECES, pieceDe } from "../../../commun/src/cooperative.ts";
-import { HALTE } from "../../../commun/src/lieux.ts";
+import { HALTE, MOULIN } from "../../../commun/src/lieux.ts";
+import { PIECES_MOULIN, pieceMoulin } from "../../../commun/src/moulin.ts";
 import { PLAN_VUE_HALTE } from "../../../commun/src/vue-lieux.ts";
 import { facteurSon, obstaclesVue, polygoneVue, voit, type EtatsPortes, type ObstaclesVue, type PlanVue } from "../../../commun/src/vue.ts";
 
@@ -301,6 +302,19 @@ export function clartesDe(lieu: string): ClartesLieu | null {
     };
   }
   if (lieu === "station") return { x0: 0, z0: 0, largeur: HALTE.longueur, profondeur: HALTE.largeur, clarte: (x, z) => (PLAN_VUE_HALTE.pieceDe(x, z) === "boutique" ? 0.8 : 1) };
+  // Le Moulin du Gué (0.8, chantier 12) : la cour et le jardin restent clairs ; les pièces sombres, assombries.
+  if (lieu === "moulin") {
+    return {
+      x0: 0,
+      z0: 0,
+      largeur: MOULIN.largeur,
+      profondeur: MOULIN.profondeur,
+      clarte: (x, z) => {
+        const p = pieceMoulin(x, z);
+        return p === "dehors" || p === "jardin" ? 1 : PIECES_MOULIN[p].sombre ? 0.6 : 0.8;
+      },
+    };
+  }
   return null;
 }
 

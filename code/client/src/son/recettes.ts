@@ -951,3 +951,79 @@ export const idee: Recette = (h) => {
   p.ajouter(souffle(0.5, h, { bruit: "rose", filtre: "passe-bas", f: 900, env: percussive(0.03, 0.15) }), 0, 0.05);
   return p.normaliser(0.6).donnees;
 };
+
+// =====================================================================================
+// Le Moulin du Gué (plan 0.8, chantier 12) : la grande porte qui grince, les trois leurres du décor (M6, M31)
+// =====================================================================================
+
+/**
+ * La grande porte du moulin : deux battants de chêne sur des gonds rouillés. Un grincement long qui monte et se casse,
+ * le loquet de fer, et le battant qui cogne le mur. On l'entend de loin : les garçons meuniers se lèvent.
+ */
+export const grandePorte: Recette = (h) => {
+  const d = 1.9;
+  const p = new Piste(d + 0.4, h);
+  p.ajouter(metal(h, entre(h, 900, 1100), 0.05, 0.25, 1.2), 0, 0.5);
+  // Le gond : un frottement aigu, saccadé, dont la hauteur hésite.
+  const f = entre(h, 520, 640);
+  const grince = oscillateur(n(d), (t) => f * (1 + 0.35 * Math.sin(t * 2.3)) * (1 + 0.04 * Math.sin(t * 61)), "scie");
+  filtrer(grince, "passe-bande", (t) => 1300 + 700 * Math.sin(t * 1.7), 4);
+  const saccade = (t: number) => (0.55 + 0.45 * Math.abs(Math.sin(t * 19 + Math.sin(t * 5)))) * points([0, 0], [0.12, 1], [d * 0.7, 0.8], [d, 0])(t);
+  p.ajouter(enveloppe(grince, saccade), 0.08, 0.55);
+  p.ajouter(souffle(d, h, { bruit: "rose", filtre: "passe-bande", f: 900, q: 1.5, env: cloche(d) }), 0.08, 0.15);
+  p.ajouter(bois(h, entre(h, 110, 150), 0.35, 0.5), d + 0.05, 0.9);
+  p.ajouter(sourd(80, 40, 0.06), d + 0.05, 0.6);
+  return saturer(p.donnees, 1.3);
+};
+
+/** Le monte-sacs : la corde qui file dans la poulie, et le sac de farine qui s'écrase dans la cour (≈ 30 m). */
+export const monteSacs: Recette = (h) => {
+  const p = new Piste(2.4, h);
+  // La poulie qui tourne à vide, de plus en plus vite.
+  for (let t = 0, pas = 0.14; t < 1.1; t += pas, pas = Math.max(0.035, pas * 0.85)) p.ajouter(bois(h, entre(h, 600, 760), 0.06, 1.4), t, 0.25);
+  p.ajouter(souffle(1.1, h, { filtre: "passe-bande", f: (t) => 600 + t * 1400, q: 1.2, env: points([0, 0], [0.2, 0.5], [1.1, 1]) }), 0, 0.2);
+  // Le choc : un sac de 50 kg, la farine qui s'échappe en nuage.
+  p.ajouter(sourd(70, 30, 0.12), 1.15, 1);
+  p.ajouter(sourd(55, 28, 0.2), 1.17, 0.7);
+  p.ajouter(souffle(1, h, { bruit: "rose", filtre: "passe-bas", f: 1800, env: percussive(0.005, 0.25) }), 1.15, 0.5);
+  p.ajouter(grains(0.6, h, (t) => 400 * Math.exp(-t * 6), { f: [800, 4000], longueur: [0.002, 0.006], amplitude: [0.1, 0.5] }), 1.18, 0.4);
+  return saturer(p.donnees, 1.4);
+};
+
+/** Le babillard de la trémie : une petite clochette de laiton, secouée par l'auget, 2,5 s (≈ 20 m). */
+export const babillard: Recette = (h) => {
+  const p = new Piste(2.8, h);
+  const f = entre(h, 2350, 2550);
+  const partiels = [
+    { f, a: 1, tau: 0.35 },
+    { f: f * 2.32, a: 0.45, tau: 0.18 },
+    { f: f * 4.1, a: 0.2, tau: 0.08 },
+  ];
+  let t = 0;
+  while (t < 2.3) {
+    p.ajouter(modes(0.5, partiels), t, 0.2 + h() * 0.12);
+    t += entre(h, 0.09, 0.2);
+  }
+  return p.donnees;
+};
+
+/**
+ * La borne « Pétrissez virtuellement ! » : un jingle de réclame en boucle, joyeux et faux, par un haut-parleur fatigué
+ * (≈ 22 m). Six notes qui montent, une qui retombe, deux fois.
+ */
+export const borneJingle: Recette = (h) => {
+  const p = new Piste(5.2, h);
+  const notes = [523, 659, 784, 1047, 880, 784, 659, 1047];
+  const note = (f: number, d: number) =>
+    enveloppe(
+      filtrer(oscillateur(n(d), (t) => f * (1 + 0.006 * Math.sin(t * 40)), "carre"), "passe-bande", 1400, 0.9),
+      points([0, 0], [0.01, 1], [d * 0.6, 0.6], [d, 0]),
+    );
+  for (let r = 0; r < 2; r++) {
+    notes.forEach((f, i) => p.ajouter(note(f, 0.24), r * 2.4 + i * 0.27, 0.35));
+    p.ajouter(note(392, 0.5), r * 2.4 + notes.length * 0.27, 0.3);
+  }
+  // Le grésillement du haut-parleur.
+  p.ajouter(souffle(5, h, { filtre: "passe-haut", f: 3000, env: () => 1 }), 0, 0.03);
+  return saturer(p.donnees, 1.8);
+};

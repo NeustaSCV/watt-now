@@ -536,7 +536,7 @@ export function butinMoulin(): { id: number; type: TypeRessource; x: number; z: 
   const points: [TypeRessource, number, number][] = [
     ["moulin_cle", -17, 9.4],
     ["moulin_fourche", -6.75, 10.4],
-    ["moulin_etau", 2.1, -10.2],
+    ["moulin_etau", 2.65, -10.2],
     ["poutres_chene", 6, -10.3],
     ["moulin_jute", -15, -10.5],
     ["moulin_feuillards", -7.3, -12],
