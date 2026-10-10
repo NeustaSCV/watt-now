@@ -65,3 +65,52 @@ test("0.7 aide : les déchets — tout se ramasse, presque rien ne vaut, les con
   assert.match(rubrique("wotts"), /refuse les ordures/);
   assert.match(rubrique("carnet"), /dernière idée/);
 });
+
+// Plan 0.8, chantier 13 : l'aide du niveau 1. Chaque rubrique s'ouvre (le test 0.6 ci-dessus les vérifie toutes) ; les
+// nouvelles disent ce qu'elles doivent dire, sans rien dévoiler du rare.
+
+test("0.8 aide : chaque rubrique s'ouvre, dont « Le gué », « Le Moulin » et « Faire évoluer une arme »", () => {
+  const ids = RUBRIQUES_AIDE.map((r) => r.id);
+  for (const id of ["fabriquer", "ameliorer", "questions", "gue", "moulin", "evoluer-arme"]) assert.ok(ids.includes(id), id);
+  for (const r of RUBRIQUES_AIDE) {
+    // S'ouvrir : un titre, un résumé, au moins un paragraphe de texte (pas seulement des sous-titres).
+    assert.ok(r.blocs.some((b) => typeof b === "string" || "liste" in b), `${r.id} : rien à lire`);
+    assert.ok([...r.icone].length <= 3, `${r.id} : une icône`);
+  }
+});
+
+test("0.8 aide : « Fabriquer » — les recettes liées aux meubles, « Tu y penses », l'idée gardée ; les outils sont des portes dures", () => {
+  const t = rubrique("fabriquer");
+  assert.match(t, /À la main/);
+  assert.match(t, /À un meuble/);
+  assert.match(t, /Tu y penses/);
+  assert.match(t, /gardée pour plus tard/);
+  assert.match(t, /déjà en poche/);
+  assert.match(t, /Il faut le niveau demandé/);
+  assert.doesNotMatch(t, /plus lentement \(« outil de fortune »\)/);
+});
+
+test("0.8 aide : « Améliorer sa base » — la clé, l'indice, les replis, les outils de fortune, le râtelier", () => {
+  const t = rubrique("ameliorer");
+  for (const m of [/une clé/i, /indice/, /Où chercher/, /repli/, /outils de fortune/, /râtelier/]) assert.match(t, m);
+  // « Je suis coincé » renvoie à la fiche du meuble et à ses indices.
+  const q = rubrique("questions");
+  assert.match(q, /Un meuble ne monte pas/);
+  assert.match(q, /fiche/);
+  assert.match(q, /Où chercher/);
+});
+
+test("0.8 aide : « Le gué » et « Le Moulin » disent leurs mécanismes", () => {
+  const g = rubrique("gue");
+  for (const m of [/radier/, /crue/, /bac/, /cloche/, /ricoche/, /glaise/]) assert.match(g, m);
+  const m = rubrique("moulin");
+  for (const x of [/grosse clé/, /grande porte/, /fosse/, /halage/, /24 h/]) assert.match(m, x);
+});
+
+test("0.8 aide : « Faire évoluer une arme » remplace « Réparer (Sac → l'arme) » : Reprendre, remettre à neuf, monter d'une étoile, le manche", () => {
+  const t = rubrique("evoluer-arme");
+  for (const m of [/Reprendre/, /Remettre à neuf/, /Monter d'une étoile/, /établi à étau/, /masse/]) assert.match(t, m);
+  const tout = RUBRIQUES_AIDE.map(texte).join("\n");
+  assert.ok(!tout.includes("**Réparer** (Sac → l'arme)"), "l'ancien texte est parti");
+  assert.match(rubrique("combat"), /Faire évoluer une arme/);
+});
