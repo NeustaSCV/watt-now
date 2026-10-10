@@ -448,10 +448,12 @@ export function proposer(
         libelle: "Examiner",
         examiner:
           lieu === "terrain"
-            ? "Le chemin de terre rejoint la route de la Campagne, vers la station-service."
+            ? "Le chemin de terre rejoint la route de la Campagne : par le pont vers la station-service, ou en aval vers le gué."
             : lieu === "station" && sortie.vers === "cooperative"
               ? "Un chemin de terre file vers le nord, sous les arbres : la Coopérative du Plateau, à 2 km. Au bout, il faudra la carte."
-              : "La route continue. Au bout, il faudra la carte.",
+              : sortie.sansArrivee && lieu === "moulin"
+                ? "Le chemin de halage suit la levée vers le gué, à 2 km. On part par là ; on n'y revient jamais."
+                : "La route continue. Au bout, il faudra la carte.",
       },
       cible: null,
     });

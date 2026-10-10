@@ -85,6 +85,9 @@ export const ZONES_DECHETS: Record<Exclude<LieuJouable, "terrain">, readonly Zon
     { ...rect(PIECES.bureaux.boite), type: "interieur", densite: 2.5 },
     { ...rect(PIECES.chambre_froide.boite), type: "interieur", densite: 2 },
   ],
+  // 0.8 : le gué et le Moulin, branchés vides (chantier 4) ; leurs chantiers (11, 12) y mettront leurs zones.
+  gue: [],
+  moulin: [],
 };
 
 // ---------- La disposition ----------
@@ -120,9 +123,9 @@ export function cleCarreau(cx: number, cz: number): string {
   return `${cx},${cz}`;
 }
 
-/** La clé de la couche d'un lieu : partagée (« station »), ou à un joueur (« cooperative:12 », « terrain:12 »). */
+/** La clé de la couche d'un lieu : partagée (« station », « gue »), ou à un joueur (« cooperative:12 », « terrain:12 »). */
 export function cleCouche(lieu: LieuJouable, compteId: number): string {
-  return lieu === "station" || lieu === "comptoir" ? lieu : `${lieu}:${compteId}`;
+  return lieu === "station" || lieu === "comptoir" || lieu === "gue" ? lieu : `${lieu}:${compteId}`;
 }
 
 /** Le lieu d'une clé de couche. */

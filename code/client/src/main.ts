@@ -34,6 +34,7 @@ import { FauneAmbiante, Volaille, type CriFaune } from "./rendu/faune.ts";
 import { RAYON_ESCABEAU, estFruitier } from "../../commun/src/terrain.ts";
 import { creerRuine } from "./rendu/ruine.ts";
 import { creerHalte, estomperToits } from "./rendu/halte.ts";
+import { creerLieuVide } from "./rendu/lieu-vide.ts";
 import { animerCooperative, creerCooperative, estomperCooperative, majPortes, ouverturesPortes, placerRadio, secouerPorte } from "./rendu/cooperative.ts";
 import { CarteVue, arcsParPiece, brouillerTout, clartesDe } from "./rendu/carte-vue.ts";
 import { Ondes } from "./rendu/ondes.ts";
@@ -120,6 +121,7 @@ function montrerDecor(lieu: LieuJouable): void {
     if (lieu === "terrain") g.add(creerTerrain(), creerMare(), creerRuine());
     else if (lieu === "comptoir") g.add(creerComptoir());
     else if (lieu === "cooperative") g.add((decorCoop = creerCooperative()));
+    else if (lieu === "gue" || lieu === "moulin") g.add(creerLieuVide(lieu)); // 0.8 : branchés vides (chantiers 11 et 12)
     else g.add(creerHalte());
     // Les lieux à murs (0.7.2) : ce que le personnage ne voit pas est dessiné « en souvenir » (rendu/carte-vue.ts).
     if (planVue(lieu)) brouillerTout([g]);
@@ -447,7 +449,7 @@ function installer(message: Bienvenue): void {
   lieu = message.lieu;
   montrerDecor(lieu);
   // La pause : seulement là où l'on est seul (son terrain, sa Coopérative).
-  hud.pausePossible(lieu === "terrain" || lieu === "cooperative");
+  hud.pausePossible(lieu === "terrain" || lieu === "cooperative" || lieu === "moulin");
   hud.majPause(false);
   // Les portes de la Coopérative, dans l'état où on les a laissées ; la radio, si elle joue encore.
   if (message.portes) portesCoop = message.portes;

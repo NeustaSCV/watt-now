@@ -66,6 +66,7 @@ import {
   KCAL_PAR_KM,
   LIEUX,
   arriveeDans,
+  entreesDe,
   distanceKm,
   sortieIci,
   sortiesDe,
@@ -76,6 +77,8 @@ import {
 import { vueDuSac, type Base, type Compte, type FeuEnBase, type RessourceEnBase, type SacEnBase as SacPose } from "./base.ts";
 import { Cooperatives } from "./cooperative.ts";
 import { Halte, type Voyageur } from "./halte.ts";
+import { Gue } from "./gue.ts";
+import { Moulins } from "./moulin.ts";
 import type { LieuVivant } from "./lieu-vivant.ts";
 import { Comptoir } from "./comptoir.ts";
 import { Tir, type ContexteTir } from "./tir.ts";
@@ -346,6 +349,9 @@ export class Joueur implements Voyageur, ParticipantLecon {
   readonly envoyer: (message: MessageServeur) => void;
   private readonly maintenant: () => number;
   private readonly cooperatives: Cooperatives;
+  /** 0.8 : le Gué-aux-Saules (partagé, comme la halte) et les Moulins du Gué (un par joueur, comme les Coopératives). */
+  private readonly gue: Gue;
+  private readonly moulins: Moulins;
   /** Le lancer et le tir (Book 25 §10.3) : son moteur est dans serveur/src/tir.ts. */
   private readonly tir: Tir = new Tir(this.contexteTir());
   /** Les ébauches d'arc qui sèchent dans le sac, même hors ligne (Book 25 §3.3) : serveur/src/arc.ts. */
@@ -365,10 +371,15 @@ export class Joueur implements Voyageur, ParticipantLecon {
   /** L'électricité des Voltaïques (Book 25 §5) : décharges, recharge, pièges électriques (serveur/src/electricite.ts). */
   private readonly electricite: Electricite = new Electricite(this.contexteElectricite());
 
-  /** Le lieu vivant où l'on se trouve (la halte, partagée ; sa Coopérative, à soi) ; null sur le terrain et au Comptoir. */
+  /** Le lieu vivant où l'on se trouve (la halte, le gué, partagés ; sa Coopérative, son Moulin, à soi) ; null sur le terrain et au Comptoir. */
   private get vivant(): LieuVivant | null {
     if (this.voyage) return null;
-    return this.lieu === "station" ? this.halte : this.lieu === "cooperative" ? this.cooperatives.de(this.compte.id) : null;
+    return this.lieu === "station" ? this.halte : this.lieu === "cooperative" ? this.cooperatives.de(this.compte.id) : this.vivantRouteB(this.lieu);
+  }
+
+  /** Le gué ou son Moulin, si c'est là qu'on est (0.8, route B). */
+  private vivantRouteB(lieu: LieuJouable): LieuVivant | null {
+    return lieu === "gue" ? this.gue : lieu === "moulin" ? this.moulins.de(this.compte.id) : null;
   }
 
   constructor(
@@ -380,6 +391,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
     alea: () => number = Math.random,
     comptoir: Comptoir = new Comptoir(base),
     cooperatives: Cooperatives = new Cooperatives(base),
+    gue: Gue = new Gue(base),
+    moulins: Moulins = new Moulins(base),
   ) {
     this.compte = compte;
     this.base = base;
@@ -389,6 +402,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
     this.alea = alea;
     this.comptoir = comptoir;
     this.cooperatives = cooperatives;
+    this.gue = gue;
+    this.moulins = moulins;
     const w = base.chargerWotts(compte.id);
     this.poche = w.poche;
     this.compteWotts = w.compte;
@@ -429,6 +444,13 @@ export class Joueur implements Voyageur, ParticipantLecon {
       // Reconnexion dans la Coopérative : on réapparaît au portail (Book 23 §3).
       this.position = arriveeDans("cooperative", "comptoir");
       cooperatives.de(compte.id).entrer(this);
+    }
+    if (this.lieu === "gue" || this.lieu === "moulin") {
+      // Reconnexion au gué : à l'entrée la plus proche, comme à la halte ; au Moulin : toujours au pont (M19).
+      const { x, z } = this.position;
+      const entree = entreesDe(this.lieu).reduce((a, b) => (Math.hypot(b.arrivee.x - x, b.arrivee.z - z) < Math.hypot(a.arrivee.x - x, a.arrivee.z - z) ? b : a));
+      this.position = this.lieu === "gue" ? { ...entree.arrivee } : arriveeDans("moulin", "gue");
+      this.vivantRouteB(this.lieu)!.entrer(this);
     }
     this.besoins = perso.besoins;
     this.gourde = perso.gourde;
@@ -554,10 +576,10 @@ export class Joueur implements Voyageur, ParticipantLecon {
     return this.pause;
   }
 
-  /** On peut faire une pause là où personne d'autre ne joue : son terrain, sa Coopérative. */
+  /** On peut faire une pause là où personne d'autre ne joue : son terrain, sa Coopérative, son Moulin. */
   private pausePossible(): string | null {
     if (this.voyage) return "Pas en route.";
-    if (this.lieu !== "terrain" && this.lieu !== "cooperative") return "Pas de pause ici : d'autres joueurs partagent ce lieu.";
+    if (this.lieu !== "terrain" && this.lieu !== "cooperative" && this.lieu !== "moulin") return "Pas de pause ici : d'autres joueurs partagent ce lieu.";
     if (this.saisisseurs().length > 0) return "Pas pendant qu'il te tient !";
     return null;
   }
@@ -759,6 +781,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (de === "station") this.halte.sortir(this);
     if (de === "cooperative") this.cooperatives.de(this.compte.id).sortir(this);
     if (de === "comptoir") this.comptoir.sortir(this.envoyer);
+    this.vivantRouteB(de)?.sortir(this);
     this.eteints = [];
     this.intention = INTENTION_REPOS;
     this.elan = null;
@@ -780,7 +803,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
   /** Dans un lieu public (halte, comptoir), on voit les autres et on peut échanger ; le terrain et la Coopérative restent privés. */
 
   get enLieuPublic(): boolean {
-    return (this.lieu === "station" || this.lieu === "comptoir") && !this.voyage;
+    return (this.lieu === "station" || this.lieu === "comptoir" || this.lieu === "gue") && !this.voyage;
   }
 
   get vu(): AutreVu {
@@ -1579,7 +1602,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       const auComptoir = this.lieu === "comptoir";
       const sac = this.base.poserSac({
         lieu: auComptoir ? "terrain" : this.lieu,
-        terrainDe: this.lieu === "station" ? 0 : this.compte.id,
+        terrainDe: this.lieu === "station" || this.lieu === "gue" ? 0 : this.compte.id,
         proprietaire: this.compte.id,
         x: auComptoir ? POINT_ARRIVEE.x + 1.5 : this.position.x,
         z: auComptoir ? POINT_ARRIVEE.z + 1 : this.position.z,
@@ -1705,8 +1728,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
       return;
     }
     const sac = this.base.poserSac({
-      lieu: this.lieu === "station" || this.lieu === "cooperative" ? this.lieu : "terrain",
-      terrainDe: this.lieu === "station" ? 0 : this.compte.id,
+      lieu: this.lieu === "station" || this.lieu === "cooperative" || this.lieu === "gue" || this.lieu === "moulin" ? this.lieu : "terrain",
+      terrainDe: this.lieu === "station" || this.lieu === "gue" ? 0 : this.compte.id,
       proprietaire: this.compte.id,
       x: ou ? ou.x : this.position.x + Math.sin(this.position.o) * 0.6,
       z: ou ? ou.z : this.position.z + Math.cos(this.position.o) * 0.6,
@@ -1898,7 +1921,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (!sortie || !destinations(sortie).includes(etape)) return this.info("Pour prendre la route, va jusqu'à la sortie.");
     if (this.objetPorte()) return this.info("Pose d'abord l'escabeau : il reste sur ton terrain.");
     if (!LIEUX[etape].ouvert) return this.info(`${LIEUX[etape].nom} n'a pas encore ouvert ses portes.`);
-    if (etape !== vers) this.info(`La route ${deLieu(vers)} passe par ${minuscule(LIEUX[etape].nom)} : il faudra ${etape === "station" ? "la traverser" : "y passer"} à pied.`);
+    if (etape !== vers) this.info(`La route ${deLieu(vers)} passe par ${minuscule(LIEUX[etape].nom)} : il faudra ${etape === "station" ? "la traverser" : etape === "gue" ? "le traverser" : "y passer"} à pied.`);
     vers = etape;
     this.annulerAction();
     this.tir.quitterLieu();
@@ -1917,6 +1940,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (de === "station") this.halte.sortir(this);
     if (de === "cooperative") this.cooperatives.de(this.compte.id).sortir(this);
     if (de === "comptoir") this.comptoir.sortir(this.envoyer);
+    this.vivantRouteB(de)?.sortir(this);
     // Les Éteints du terrain ne suivent pas : il n'y a pas de siège en son absence.
     this.eteints = [];
     // On enregistre tout de suite la destination : une déconnexion en route fait arriver à bon port.
@@ -1944,6 +1968,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
     this.dechets.partir();
     this.halte.sortir(this);
     if (this.lieu === "cooperative") this.cooperatives.de(this.compte.id).sortir(this);
+    this.gue.sortir(this);
+    if (this.lieu === "moulin") this.moulins.de(this.compte.id).sortir(this);
     this.comptoir.sortir(this.envoyer);
   }
 
