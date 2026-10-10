@@ -21,6 +21,8 @@ export class PanneauAide {
   readonly element: HTMLDivElement;
   /** Appelé à l'ouverture et à la fermeture (le petit son des panneaux). */
   surBascule: ((ouvert: boolean) => void) | null = null;
+  /** Appelé quand une rubrique s'ouvre (son identifiant) : « Je suis coincé » est un constat des mesures. */
+  surRubrique: ((id: string) => void) | null = null;
 
   private readonly tactile: boolean;
 
@@ -91,6 +93,7 @@ export class PanneauAide {
     for (const d of this.element.querySelectorAll<HTMLDetailsElement>("details.rubrique")) {
       d.addEventListener("toggle", () => {
         if (!d.open) return;
+        this.surRubrique?.(d.id.replace(/^aide-/, ""));
         for (const autre of this.element.querySelectorAll<HTMLDetailsElement>("details.rubrique")) if (autre !== d) autre.open = false;
       });
     }

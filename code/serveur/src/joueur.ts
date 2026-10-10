@@ -4,7 +4,7 @@
 import { raisonEmplacement } from "../../commun/src/emplacement.ts";
 import { RASSASIE_HEURES } from "../../commun/src/survie.ts";
 import { ceQuiManqueBref, outilsManquantsBref, ouTrouverPhrase } from "../../commun/src/aide-fabrication.ts";
-import { categorieAction, mesuresFabrication, objetsDeMetierDonnes, type GenreMesure } from "./mesures.ts";
+import { categorieAction, mesuresDuFait, mesuresFabrication, mesuresNaissance, objetsDeMetierDonnes, type GenreMesure, type MesureDuFait } from "./mesures.ts";
 import { REGLAGES } from "../../commun/src/reglages.ts";
 import { voieLibre } from "../../commun/src/murs.ts";
 import { enSaison, etatDuFruitier, jourDuCalendrier, prochaineRecolte } from "../../commun/src/calendrier.ts";
@@ -328,6 +328,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
   /** Le carnet des quêtes déjà envoyé (on ne le renvoie que s'il change). */
   private derniereVueQuetes = "";
   private quetesASauver = false;
+  /** Le dernier constat de l'interface reçu (plan 0.8, chantier 14) : un par 10 s au plus. */
+  private dernierConstat = 0;
   /** La carnation choisie à la création (−1 : celle de la famille). */
   private readonly apparence: Apparence;
   private intention: Intention = INTENTION_REPOS;
@@ -529,6 +531,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
     }
     this.devoilement = this.creerDevoilement();
     this.dechets = this.creerDechets();
+    // Plan 0.8 (chantier 14) : la naissance du personnage, `atteint:maison` (une fois).
+    this.mesurerLesFaits(mesuresNaissance(this.quetes.etat.faits, this.devoilement.etat.secondes / 60));
   }
 
   bienvenue(debutMonde: number): Bienvenue {
@@ -666,6 +670,12 @@ export class Joueur implements Voyageur, ParticipantLecon {
         return;
       case "mesures":
         this.mesuresClient(message);
+        return;
+      case "constat":
+        // Plan 0.8 (chantier 14) : la fiche ouverte sans pouvoir améliorer, l'aide « Je suis coincé » (une fois par 10 s).
+        if (Date.now() - this.dernierConstat < 10_000) return;
+        this.dernierConstat = Date.now();
+        this.noterFait(message.quoi === "fiche_bloquee" ? `fiche_bloquee:${message.construction ?? "?"}` : message.quoi);
         return;
       case "frapper":
         // On ne frappe pas avec un escabeau dans les bras : on le lâche d'abord.
@@ -2062,9 +2072,17 @@ export class Joueur implements Voyageur, ParticipantLecon {
 
   /** Un fait pour les quêtes (un repas, une vente, un échange…), compté même pendant le tutoriel. */
   private noterFait(fait: string, n = 1): void {
+    // Plan 0.8 (chantier 14) : les faits du niveau 1 qui se mesurent (serveur/src/mesures.ts), avant d'être comptés.
+    this.mesurerLesFaits(mesuresDuFait(fait, this.quetes.etat.faits, (this.devoilement?.etat.secondes ?? 0) / 60));
     if (this.quetes.noter(fait, n)) this.quetesASauver = true;
     // Un fait de plus peut faire penser à une recette : on réévaluera au prochain passage (pas de calcul continu).
     this.devoilement?.aRevoir();
+  }
+
+  /** Écrire les mesures d'un fait, et noter les faits qui les gardent d'être écrites deux fois (`atteint:<étape>`). */
+  private mesurerLesFaits(r: { mesures: MesureDuFait[]; faits: string[] }): void {
+    for (const m of r.mesures) this.mesurer("progression", m.quoi, m.valeur, m.details);
+    for (const f of r.faits) if (this.quetes.noter(f)) this.quetesASauver = true;
   }
 
   private verifierQuetes(instant: number): void {

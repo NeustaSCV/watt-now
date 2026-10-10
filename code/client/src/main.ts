@@ -418,6 +418,7 @@ const hud = new Hud(
     reprendre: (objet, geste) => envoyer({ t: "reprendre_arme", objet, geste }),
     coffre: (id, sens, objet, quantite) => envoyer({ t: "coffre", id, sens, objet, quantite }),
     amenager: (genre, id, verbe) => envoyer({ t: "interagir", cible: { genre, id }, verbe }),
+    constat: (quoi, construction) => envoyer({ t: "constat", quoi, ...(construction ? { construction } : {}) }),
     fabriquer: (r) => {
       if (!position) return;
       // Le tas de matières : là où l'installation va se dresser, ou à nos pieds pour un objet.

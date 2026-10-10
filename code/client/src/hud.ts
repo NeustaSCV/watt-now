@@ -136,6 +136,8 @@ export interface ActionsJoueur {
   coffre(id: number, sens: "deposer" | "prendre", objet: CleObjet, quantite: number): void;
   /** Un geste sur un feu ou une installation, depuis sa fiche (Book 24 : améliorer, démonter, creuser…). */
   amenager(genre: "feu" | "installation", id: number, verbe: Verbe): void;
+  /** Un constat pour les mesures (plan 0.8, chantier 14) : la fiche d'un meuble qu'on ne peut pas améliorer, l'aide « Je suis coincé ». */
+  constat(quoi: "fiche_bloquee" | "aide_coince", construction?: string): void;
 }
 
 /** Le feu de camp, vu comme une recette, pour dire ce qui manque. */
@@ -493,6 +495,8 @@ export class Hud {
     for (const b of menu.querySelectorAll<HTMLButtonElement>(".r-commandes")) b.addEventListener("click", () => ouvrirMenu(false));
     // L'aide du jeu : tous les mécanismes, sans les secrets (2026-10-08).
     this.aide = new PanneauAide(element, tactile);
+    // Plan 0.8 (chantier 14) : l'aide « Je suis coincé » ouverte est un constat des mesures.
+    this.aide.surRubrique = (id) => id === "questions" && this.actions.constat("aide_coince");
     this.aide.surBascule = (ouvert) => this.surPanneau?.(ouvert);
     q(".r-aide").addEventListener("click", () => {
       ouvrirMenu(false);
@@ -2033,6 +2037,12 @@ export class Hud {
     this.fiche = { genre, id };
     this.derniereFiche = "";
     this.dessinerFiche();
+    // Plan 0.8 (chantier 14) : la fiche ouverte sans pouvoir monter d'un niveau (il y en a un, il manque quelque chose).
+    const p = this.panneauFiche;
+    if (!p.hidden && p.querySelector('[data-verbe="ameliorer"]') && !p.querySelector('.etape.possible [data-verbe="ameliorer"]')) {
+      const v = this.sourceFiche?.(genre, id);
+      this.actions.constat("fiche_bloquee", genre === "feu" ? "feu" : (v as InstallationVue | null)?.type);
+    }
   }
 
   /** Le feu ou l'installation a changé (bois, niveau, démonté) : la fiche suit. */

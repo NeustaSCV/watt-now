@@ -4,6 +4,9 @@
 
 import { MS_JOUR_CALENDRIER } from "../../commun/src/energie.ts";
 import { estObjetDeMetier, etoilesDe, typeDe } from "../../commun/src/etoiles.ts";
+import { ETAPES_LIEUX } from "../../commun/src/lieux.ts";
+import { LIGNEES_INSTALLATIONS, VOIE_CREUSEE, VOIE_SURFACE, type EtapeMonde } from "../../commun/src/lignees.ts";
+import { etapeAvecCle } from "../../commun/src/progression.ts";
 import type { TypeObjet } from "../../commun/src/objets.ts";
 import { RECETTES } from "../../commun/src/recettes.ts";
 import { FAMILLES, type Famille } from "../../commun/src/regles.ts";
@@ -159,4 +162,92 @@ export function bilanMetier(mesures: readonly Pick<Mesure, "instant" | "compteId
     ecartDefense: parts.length >= 2 ? Math.max(...parts) - Math.min(...parts) : null,
     arbaletesLourdes: metier.filter((m) => m.quoi === "fabrique:arbalete_lourde").length,
   };
+}
+
+// ---------- Les faits du niveau 1 (plan 0.8, chantier 14 ; avis-game-designer.md §5.2, point 4) ----------
+//
+// Ce qu'on note, genre « progression », la valeur en minutes de jeu depuis la création du personnage (le temps joué,
+// celui du dévoilement), sauf pour un niveau :
+// - `visite:<lieu>` à chaque arrivée dans un lieu ;
+// - `atteint:<étape>` (maison, H1A, H1B, L1A, L1B) à la **première** arrivée : la vitesse de progression décidée par le
+//   porteur, la seule mesure gardée (anonyme) quand on supprime un compte. « maison » : la naissance du personnage ;
+// - `vu:<clé>` la première fois qu'une clé entre dans le sac (l'idée « Tu y penses », `idee:<étape>`) ;
+// - `niveau:<lignée>` quand une construction monte d'un niveau (la valeur : le niveau atteint ; les minutes en détail) ;
+// - `fiche_bloquee:<construction>` : la fiche d'une construction ouverte sans pouvoir l'améliorer ;
+// - `aide_coince` : l'aide « Je suis coincé » ouverte.
+
+/** Les étapes du rythme de progression, dans l'ordre du parcours (§1.1). */
+export const ETAPES_ATTEINTES: readonly EtapeMonde[] = ["maison", "H1A", "H1B", "L1A", "L1B"];
+
+/** Les constats de l'interface que le client signale (chantier 13 : la fiche, l'aide), notés en faits. */
+export const CONSTATS_INTERFACE = ["fiche_bloquee", "aide_coince"] as const;
+export type ConstatInterface = (typeof CONSTATS_INTERFACE)[number];
+
+export interface MesureDuFait {
+  quoi: string;
+  valeur: number;
+  details?: Record<string, unknown>;
+}
+
+/** L'étape du monde d'un lieu (H1A pour la station ; maison pour le terrain), ou null. */
+export function etapeDuLieu(lieu: string): EtapeMonde | null {
+  for (const [etape, l] of Object.entries(ETAPES_LIEUX)) if (l === lieu) return etape as EtapeMonde;
+  return null;
+}
+
+/** La lignée d'une étape (« feu », « abri », « coffre »…) et son niveau, ou null. */
+export function ligneeDeLEtape(id: string): { lignee: string; niveau: number } | null {
+  for (const e of [...VOIE_SURFACE, ...VOIE_CREUSEE]) if (e.id === id) return { lignee: "feu", niveau: e.niveau };
+  for (const [type, etapes] of Object.entries(LIGNEES_INSTALLATIONS)) for (const e of etapes ?? []) if (e.id === id) return { lignee: type, niveau: e.niveau };
+  return null;
+}
+
+/**
+ * Les mesures qu'un fait fait écrire, et les faits à noter en plus (`atteint:<étape>`, pour ne l'écrire qu'une fois).
+ * `faits` : les faits déjà comptés, avant celui-ci ; `minutes` : les minutes de jeu depuis la création du personnage.
+ */
+export function mesuresDuFait(fait: string, faits: Readonly<Record<string, number>>, minutes: number): { mesures: MesureDuFait[]; faits: string[] } {
+  const m = Math.round(minutes * 10) / 10;
+  const deux = fait.indexOf(":");
+  const genre = deux < 0 ? fait : fait.slice(0, deux);
+  const quoi = deux < 0 ? "" : fait.slice(deux + 1);
+  switch (genre) {
+    case "visite": {
+      const mesures: MesureDuFait[] = [{ quoi: fait, valeur: m }];
+      const etape = etapeDuLieu(quoi);
+      const atteint = `${PREFIXE_ATTEINT}${etape}`;
+      if (!etape || (faits[atteint] ?? 0) > 0) return { mesures, faits: [] };
+      return { mesures: [...mesures, { quoi: atteint, valeur: m }], faits: [atteint] };
+    }
+    case "idee": {
+      // L'idée naît au premier ramassage de la clé (ou en tenant l'outil clé) : `vu:<objet>`, ou `vu:<qualité>`.
+      const cle = etapeAvecCle(quoi)?.etape.cle;
+      const objet = cle?.objet ?? cle?.qualite?.qualite ?? quoi;
+      return { mesures: [{ quoi: `vu:${objet}`, valeur: m, details: { etape: quoi } }], faits: [] };
+    }
+    case "niveau":
+    case "foyer": {
+      const l = ligneeDeLEtape(quoi);
+      if (!l) return { mesures: [], faits: [] };
+      return { mesures: [{ quoi: `niveau:${l.lignee}`, valeur: l.niveau, details: { etape: quoi, minutes: m } }], faits: [] };
+    }
+    case "fiche_bloquee": {
+      // Rien de personnel dans une mesure : seulement un type de construction connu (sinon « ? »).
+      const type = quoi === "feu" || Object.hasOwn(LIGNEES_INSTALLATIONS, quoi) ? quoi : "?";
+      return { mesures: [{ quoi: `fiche_bloquee:${type}`, valeur: m }], faits: [] };
+    }
+    case "aide_coince":
+      return { mesures: [{ quoi: fait, valeur: m }], faits: [] };
+    default:
+      return { mesures: [], faits: [] };
+  }
+}
+
+/**
+ * La naissance d'un personnage : `atteint:maison` (une fois), et `visite:terrain`. À appeler à chaque connexion ; il
+ * ne se passe rien si l'étape est déjà notée.
+ */
+export function mesuresNaissance(faits: Readonly<Record<string, number>>, minutes: number): { mesures: MesureDuFait[]; faits: string[] } {
+  if ((faits[`${PREFIXE_ATTEINT}maison`] ?? 0) > 0) return { mesures: [], faits: [] };
+  return mesuresDuFait("visite:terrain", faits, minutes);
 }
