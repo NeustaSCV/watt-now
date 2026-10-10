@@ -795,6 +795,23 @@ export const LIGNEES_INSTALLATIONS: Partial<Record<TypeInstallation, readonly Et
   ],
 };
 
+/**
+ * La pièce de chaque meuble de famille (plan 0.8 §9.2) : le champ de son état qui dit qu'elle est posée (l'enclume, le
+ * panneau, l'alternateur). Le meuble ne compte comme monté au niveau de sa clé qu'une fois sa pièce posée : sans elle,
+ * « Tu y penses » parle encore au ramassage de la pièce, et la fiche montre la clé à trouver.
+ */
+export const PIECES_DE_FAMILLE: Partial<Record<TypeInstallation, "enclume" | "panneau" | "alternateur">> = {
+  forge: "enclume",
+  banc_recharge: "panneau",
+  pedalier: "alternateur",
+};
+
+/** Ce meuble de famille attend-il encore sa pièce ? (false pour tout autre meuble.) */
+export function pieceAPoser(i: { type: string; etat?: Partial<Record<"enclume" | "panneau" | "alternateur", unknown>> }): boolean {
+  const piece = PIECES_DE_FAMILLE[i.type as TypeInstallation];
+  return piece !== undefined && !i.etat?.[piece];
+}
+
 /** Ce que tient un coffre selon son niveau (kg). */
 export const CAPACITES_COFFRE = [150, 250, 400] as const;
 /** Ce que tient le récupérateur selon son niveau (L) : le bidon, le seau, le jerrican (plus tard). */

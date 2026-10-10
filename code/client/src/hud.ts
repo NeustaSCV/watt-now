@@ -29,6 +29,7 @@ import {
   formeFeu,
   lignee,
   niveauInstallation,
+  pieceAPoser,
   type AccessoireFeu,
   type CleEvolution,
   type Etape,
@@ -2164,6 +2165,12 @@ export class Hud {
       ameliorer = `<p class="indice">C'est le plus haut de sa lignée.</p>`;
     }
 
+    // Un meuble de famille sans sa pièce (plan 0.8 §9.2) : la clé de son niveau reste à trouver, ou à poser dessus.
+    const piece =
+      etape?.cle && pieceAPoser(i)
+        ? `<h3>Sa pièce, à poser dessus</h3><article class="etape apres"><div class="corps">${this.ligneCle(etape)}${(etape.cle.replis ?? []).map((r) => `<small class="repli retenu">En attendant : ${r.note.charAt(0).toLowerCase()}${r.note.slice(1)}</small>`).join("")}</div></article>`
+        : "";
+
     const plein = i.type === "coffre" && Object.values(i.etat.contenu ?? {}).some((n) => (n ?? 0) > 0);
     const precedente = niveau > 1 && l ? l[niveau - 2]! : null;
     const defaire = [
@@ -2175,6 +2182,7 @@ export class Hud {
       <header><h2>${nom}</h2><button type="button" class="fermer" aria-label="Fermer">✕</button></header>
       ${l ? `<p class="niveau">Niveau ${niveau}${etat ? ` · ${etat}` : ""}</p>` : etat ? `<p class="niveau">${etat}</p>` : ""}
       <p class="examen">${examen}</p>
+      ${piece}
       ${ameliorer ? `<h3>Améliorer, sur place</h3>${ameliorer}` : ""}
       <div class="defaire">${defaire}</div>
       <p class="indice">${plein ? "Vide d'abord le coffre pour le démonter. " : ""}Un démontage rend la moitié des pierres, branches et bûches, et tout le reste (la bâche, la corde, le métal).</p>`;
