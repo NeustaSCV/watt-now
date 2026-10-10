@@ -10,7 +10,7 @@
 > - `batiment/LIVRAISON.md`, `batiment/catalogue.js` et les `FICHE` des modèles ;
 > - le code, en lecture seule : `commun/src/lignees.ts`, `recettes.ts` et `recettes/*.ts`, `armes/*.ts`, `etoiles.ts`, `dechets.ts`, `vestiges.ts`, `halte.ts`, `lieux.ts`, `objets.ts`.
 >
-> L'étude `candidats-h1b-l1b-et-budget.md` n'existait pas encore au moment de l'écriture ; si elle paraît, ses chiffres de budget remplacent les repères du §3.9.
+> Le budget du §3.i reprend les chiffres et les décisions de l'étude `candidats-h1b-l1b-et-budget.md` (2026-10-10).
 
 ---
 
@@ -31,7 +31,7 @@
 
 ## 1. Les règles à respecter
 
-*Chaque règle porte un numéro (R1…R44) et sa source. « Décidé » : une décision du porteur ; « repère » : une valeur d'étude, pas encore tranchée. Les identifiants entre parenthèses renvoient au champ `decisions` du tableau maître ou aux études citées.*
+*Chaque règle porte un numéro (R1…R48) et sa source. « Décidé » : une décision du porteur ; « repère » : une valeur d'étude, pas encore tranchée. Les identifiants entre parenthèses renvoient au champ `decisions` du tableau maître ou aux études citées.*
 
 ### 1.A Les meubles et la progression
 
@@ -121,6 +121,15 @@
 | **R42** | **La performance** (Raspberry Pi 4, iPhone 13 mini) : une instance L coûte ≈ 17 ms de calcul par seconde et par joueur pour **24 Éteints** (cible : retard p99 < 25 ms à 10 joueurs, tenue à 13,6 ms ; 23,2 ms à 20 joueurs) ; IA à 10 Hz et 2 Hz, calcul à l'entrée. Un modèle de lieu : **≤ 60 000 triangles, ≤ 40 appels de dessin, ≤ 8 lumières** par carte ; construction de 50 à 800 ms, derrière un chargement. Une halte fait ≈ 200 × 70 m, en tronçons. La fiche tient en 375 px. | Book 17 §5.2 ; Book 23 (0.5g) ; `batiment/LIVRAISON.md` ; `avis-game-designer.md` R5 |
 | **R43** | **Le ton** : l'absurde est dans les vestiges et les souvenirs, la survie est sérieuse ; pas d'armes modernes (un fusil trouvé reste du décor). | Book 15 §1 et §4 ; Book 20 §6 |
 | **R44** | **La méthode du porteur** : proposer, ne rien appliquer sans décision explicite, **une modification par ligne** ; relire un book juste avant de le modifier (plusieurs sessions y travaillent) ; `PROPOSITIONS.md` en lecture seule ; brouillons et sauvegardes dans `.claude-travail/` ; tout en français. | V5-7 ; `CLAUDE.md` du projet |
+
+### 1.J Les réserves, le ravitaillement et l'interface (décisions du 2026-10-10)
+
+| # | Règle | Source |
+|---|---|---|
+| **R45** | **Les réserves des haltes reviennent vite ; celles du terrain jamais.** Le vrac partagé d'une halte (bûches, pierres) revient **en 30 minutes** (la station : 12 bûches) ; les pierres et les bûches du **terrain** ne reviennent pas (les branches, oui, en 40 min). Le vrac grandit avec le nombre de voyageurs présents : **+ 50 % par voyageur, jusqu'à × 3**. | B1, B2, B4, B8 (`candidats-h1b-l1b-et-budget.md`) |
+| **R46** | **Les tas personnels.** Une halte qui fournit la matière lourde d'un niveau a, en plus du vrac, un **tas personnel** par joueur, qui revient en **6 h réelles** (station : un tas de bois de 10 bûches ; gué : un banc de galets de 8 pierres). Un joueur n'attend jamais qu'un autre ait vidé le stock. | B3, B5 ; R22 |
+| **R47** | **Le Comptoir est un filet payant pour les matériaux de base** : un petit stock (10 bûches, 10 pierres), un réassort lent (1 toutes les 2 h), au prix de vente. Ni bloquant, ni gratuit. | B13 |
+| **R48** | **Pas de dialogue à croix.** Un avertissement ou un conseil se ferme **avec un bouton**, jamais par une fenêtre de dialogue avec une croix : « les dialogues avec une croix cassent complètement la dynamique de jeu ». | B14 (condition du porteur) |
 
 ---
 
@@ -336,17 +345,73 @@ et dégâts(étoile) > dégâts(étoile − 1)
 
 ### 3.i Le budget de matériaux et d'allers-retours
 
-**Le calcul**, route par route :
+*Méthode et chiffres de l'étude `candidats-h1b-l1b-et-budget.md` (2026-10-10), avec les décisions du porteur en fin de fichier (B1 à B17). Elle a été faite pour le niveau 1 et une estimation du niveau 2 ; pour le niveau N, on refait les mêmes quatre tableaux.*
 
-1. **Poids des matériaux** : Σ (quantité × poids du code) pour les évolutions communes de la route, puis pour chaque famille. Poids repères : pierre 2 kg, bûche 2 kg, barre 2 kg, corde 1 kg, bâche 1,5 kg, branche 0,5 kg, charbon 1 kg, chiffon 0,1 kg. Un objet sans poids dans le code (la glaise, par exemple) : **à fixer**, noté dans `objets_a_creer`.
-2. **Charges de sac** : poids ÷ 30 kg (sac de fortune) ou ÷ 55 kg (sac à dos), arrondi au-dessus. Les clés sont légères et se portent en plus.
-3. **Sorties** : au moins une par L (la clé), et une par halte si elle fournit plus d'une demi-charge. Une visite de L tient en **15 à 20 minutes** ; un lieu se fait en **trois visites** environ (Book 23 §2.1).
-4. **Coût d'un aller-retour** : 2 × km × 60 kcal et 2 × km × 0,08 L.
-5. **La cadence** : chaque retour rapporte une porte (R40) ; si deux sorties de suite ne changent rien à la maison, la courbe est cassée (`avis-game-designer.md` §4.2).
+**Les constantes (code et décisions)**
 
-**Les cibles (repères proposés)** : au plus **une charge de sac à dos** de matériaux communs par route et par niveau ; la matière lourde (pierres, bûches) vient de la halte **juste avant** le lieu qui la demande ; aucune famille n'a plus d'une charge de plus que les autres.
+| Valeur | Chiffre | Source |
+|---|---|---|
+| Poids | bûche 2 kg, pierre 2 kg, glaise 2 kg (B6), barre 2 kg, corde 1 kg, bâche 1,5 kg, charbon 1 kg, branche 0,5 kg, chiffon 0,1 kg | `objets.ts` ; B6 |
+| Portage | sac à dos 55 kg (**≈ 45 kg libres** avec le kit, la gourde et les outils) ; travois + 50 kg ; brouette ⚙️ + 60 kg | `objets.ts`, `communes.ts`, `mecanistes.ts` |
+| Trajet | ≈ 60 kcal/km à vide, ≈ 85 chargé : **≈ 435 kcal** par aller-retour terrain ↔ station (3 km). Les deux routes à la même distance : **3 km jusqu'à H1, puis 2 km jusqu'à L1** | `lieux.ts` ; B16 |
+| Temps | 1 h de jeu = 1 min réelle ; un jour = 24 min réelles ; une nuit (21 h – 5 h 30) = 8,5 min réelles | `temps.ts` |
+| Feu | feu de camp 1,5 kg/h ; foyer de pierres × 0,8, **× 0,2 couvert** ; poêle-fusée × 0,4 ; Dakota × 0,6 ; 1 L d'eau bouillie : 0,45 kg | `survie.ts`, `lignees.ts` |
+| Charbon | une meule : **10 bûches, ou 5 bûches et 20 branches** (la charbonnette), + 4 branches → 4 charbons ; on la refait à chaque fournée | `charbonniers.ts` ; B9 |
+| Corde | 4 fibres = 2 coupes de joncs ; ficelle : 2 fibres | `communes.ts` |
 
-**Ce qu'on écrit** : un tableau par route (matériau, quantité, poids, d'où), le nombre de charges et de sorties, le temps de jeu estimé.
+**Étape 1 — La demande « confortable », par famille et par niveau.** « Confortable » : chaque meuble de la bible jusqu'au niveau N, les deux voies du feu, l'escabeau, le râtelier, un travois et les armes de base de chaque famille. On compte, à partir du `tableau_maitre` (le chiffre du code entre parenthèses s'il diffère), un **tronc commun** puis ce que **chaque famille ajoute**. Les chiffres de l'étude :
+
+| | Niveau 1 : bûches / pierres | Jusqu'au niveau 2 : bûches / pierres |
+|---|---|---|
+| Tronc commun | 17 / 15 (+ ≈ 82 branches, ≈ 20 coupes de joncs) | + 2 / + 10 (+ 4 glaises, 4 perches) |
+| ⚡ | **20 / 15** | 22 / 25 |
+| ⚙️ | **30 / 18** | 33 / 28 |
+| 🔥 | **30 à 40 / 23** (1 ou 2 meules) | **62 à 72 / 39** (≈ 3 meules de plus) ; ≈ 30 bûches de moins avec la charbonnette (B9) |
+
+*Le gourdin garde sa bûche (B10 refusée) : elle est comptée.*
+
+**Étape 2 — Le feu à entretenir.** Il s'ajoute à la demande et se paie surtout en branches :
+
+| Façon de faire | Par nuit | Par heure réelle |
+|---|---|---|
+| Feu de camp gardé toute la nuit | **6,4 bûches** (12,75 kg) | ≈ 23 bûches ou 93 branches |
+| Foyer de pierres couvert la nuit | 1,3 bûche ou 5 branches | ≈ **37 branches** |
+| Poêle-fusée, l'eau et un plat | — | ≈ 10 branches |
+
+Les branches du terrain repoussent à ≈ 51 par heure réelle : avec le foyer couvert, le feu se fait aux branches. Le piège est le feu de camp gardé la nuit aux bûches (le terrain vide en 3 nuits) : d'où l'avertissement B14 (R48).
+
+**Étape 3 — L'offre.** Pour chaque source jusqu'à H_N : la quantité, si elle revient et en combien de temps, si elle est **partagée** ou **personnelle**.
+
+| Source | Bûches | Pierres | Branches | Autres |
+|---|---|---|---|---|
+| Terrain | 16, ne reviennent **jamais** | 26, ne reviennent **jamais** | 34, en 40 min | 7 touffes de joncs (30 min), 2 frênes (une perche / 6 h) |
+| H1A, la station | **12 en vrac, toutes les 30 min** (B2) + **tas personnel de 10, toutes les 6 h** (B3) | en vrac, reviennent **en 30 min** (B4) | 26, en 40 min | — |
+| H1B, le gué | — | **15 en vrac (30 min)** + **banc de galets personnel de 8 (6 h)** (B4, B5) | — | glaise inépuisable, 1 par geste de 6 s (B6) ; 6 touffes de joncs (30 min, B7) |
+| L1B, le Moulin | **2 garanties (24 h)**, les poutres de l'atelier (B11) | — | — | — |
+| Comptoir | **10 en stock**, + 1 toutes les 2 h, 19 wotts (B13) | **10**, + 1 toutes les 2 h, 7 wotts (B13) | — | un filet payant |
+| Toutes les haltes | le vrac grandit de + 50 % par voyageur présent, jusqu'à × 3 (B8) | idem | — | — |
+
+*Creuser un Dakota rend 5 pierres (B12). Le tas de bois personnel de H2B (B15) est « plus tard » : à proposer avec le niveau 2.*
+
+**Étape 4 — Le bilan et les allers-retours.**
+
+1. **Ce qui manque après le terrain** = demande − terrain, par famille et par matériau.
+2. **Les visites** = manque ÷ ce qu'une visite rapporte à **un** joueur (son tas personnel + sa part du vrac), sans dépasser ≈ 45 kg par sac. Repère de l'étude : une visite typique à H1A rapporte **14 bûches et 10 pierres, soit 48 kg** : le sac est plein, le travois devient utile.
+3. **Le coût** : 435 kcal et la traversée d'une halte par aller-retour ; le temps d'attente si le stock ne suffit pas.
+4. **Le test « à 5 joueurs »** : refaire le calcul avec le vrac partagé entre 5 joueurs actifs (avant B2 à B8, la station donnait 1 à 2 bûches par visite, et le 🔥 du niveau 2 demandait 30 allers-retours et plus : bloquant).
+
+Le résultat de l'étude, avec les décisions :
+
+| | Allers-retours de ravitaillement, en plus des sorties prévues | Pierres |
+|---|---|---|
+| ⚡ | 0 (la visite du tutoriel suffit) | le terrain suffit |
+| ⚙️ | 0 à 1 | le terrain suffit |
+| 🔥, niveau 1 | 1 | la sortie au gué rapporte 8 à 15 pierres de réserve |
+| 🔥, niveau 2 | 2 à 3, ou 1 à 2 avec la charbonnette | le gué puis H2B couvrent les 13 à 23 qui manquent |
+
+**Le critère « confortable »** (celui de l'étude) : **confortable sans être gratuit**. Il faut sortir, porter et traverser une halte ; **1 à 4 sorties de ravitaillement** selon la famille et le niveau ; jamais d'attente bloquante sur un stock partagé ; le Comptoir reste un raccourci payant. Un résultat se classe : **confortable** ; **pénible** (plus de 4 sorties, ou des heures réelles d'attente) ; **bloquant** (un stock qui ne revient pas, ou une trentaine de sorties).
+
+**Ce qu'on écrit** : les quatre tableaux (demande par famille, feu, offre, bilan), le classement de chaque famille au niveau N, et, si une famille est « pénible » ou « bloquante », les réglages proposés (vrac, tas personnel, délai de retour, recette de repli) au format des propositions B de l'étude.
 
 ---
 
@@ -581,7 +646,7 @@ On ajoute, hors format, la note du §3.h et le modèle `batiment/` retenu.
 | 3.c Les armes | Bande 2 – 3, centre 2,5, ★★★ : machette 2,5, hache 3,0, glaive 2,6 (🔥 forge ventilée) ; contacts soudés 2,25, aiguillon 2,0 – 2,1 (⚡ poste de montage) ; arbalète 2,5 et cranequin léger (⚙️ roulements montés). Garde-fou : **OK**, l'électrique à 1,92 contre trois à 15 m (`armes-par-niveau.md` §10.1) |
 | 3.d Les matériaux | H2A électrique et atelier ; H2B pierre, terre et bois d'œuvre. Croisements écrits : l'acier 🔥 à H2A pour la forge de L2B (I14) ; les perches de la réserve (L2A) aussi à H2A (I29) |
 | 3.e Les outils | Deux qualités nouvelles, Raboter et Souder, chacune portée par une clé-outil (V4-9) |
-| 3.i Le budget | Communs de la route B ≈ 21 kg (6 pierres, 9 branches, 2 bûches, 1 corde) plus 4 glaises ; 🔥 + 14 kg (6 pierres, 1 barre) plus 2 glaises. Route A ≈ 11 kg plus 4 perches et une poignée de clous. Les pierres font l'essentiel : elles viennent de H2B (12, qui reviennent), juste avant L2B. **Une charge de sac à dos par route** : dans la cible. Le poids de la glaise reste à fixer |
+| 3.i Le budget | Communs de la route B ≈ 21 kg (6 pierres, 9 branches, 2 bûches, 1 corde) plus 4 glaises ; 🔥 + 14 kg (6 pierres, 1 barre) plus 2 glaises. Route A ≈ 11 kg plus 4 perches et une poignée de clous. Les pierres font l'essentiel : elles viennent de H2B (12, qui reviennent), juste avant L2B. **Une charge de sac à dos par route** : dans la cible. La glaise pèse 2 kg (B6) |
 
 **Ce que la notice signale (contrôles en défaut ou vides)**
 
