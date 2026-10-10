@@ -395,8 +395,8 @@ Les six recommandations sont retenues par le porteur du projet (2026-10-08).
 
 Une recette **liée à une construction** apparaît dès qu'on possède la construction au bon niveau, et se fait à côté d'elle (2,5 m pour un feu, 3 m pour le reste) : la liste est au Book 02 §14 quinquies. La **fiche du meuble** (Examiner) devient l'arbre : ce qu'on y fait, le niveau suivant (sa clé, ses matériaux, son outil, ce qui manque, l'indice), et celui d'après, grisé.
 
-### 12.5 Ce qui reste
+### 12.5 Le rythme, et ce qui reste
 
-- **Le rythme** (chantier 14, en cours) : vérifier au simulateur que tout le niveau 1 tient en ≈ 3 h 20 pour le joueur prudent, avec 0 à 1 aller-retour de ravitaillement à la station selon la famille (Book 01 §2 bis).
-- **Le tutoriel et les quêtes** (chantier 13, en cours) : « S'installer » en portes successives (Book 22 §3.1 bis), l'aide « Améliorer sa base » (la clé, l'indice, les outils de fortune).
+- **Le rythme, mesuré** (`npm run rythme`, chantier 14) : le joueur prudent atteint la station à 38 min, le gué à 85, la Coopérative vers 104 à 107, le Moulin vers 163 à 166 ; sa **dernière porte à clé** tombe à **209 à 212 min**, et **tout le niveau 1** (avec le reste de la maison et du métier) à **277 à 278 min**. Le joueur pressé : 110 à 125 min pour les portes, 141 à 179 min pour tout ; le malchanceux : 161 à 163 min, puis 219 à 254 min ; le vétéran sans tutoriel : 126 à 141 min, puis 191 à 196 min. Aucun aller-retour de ravitaillement à la station pour le joueur seul ; un pour le malchanceux ⚙️ ou 🔥 (Book 01 §2 bis). La cible « ≈ 3 h 20 pour le prudent » (critère 6 du plan) est en cours d'arbitrage par le porteur : les portes à clé la tiennent, tout le niveau 1 la dépasse.
+- **Le tutoriel et les quêtes** (chantier 13, codé) : « S'installer » en portes successives (Book 22 §3.1 bis) ; l'aide « Améliorer sa base » raconte la clé, l'indice, les replis, les outils de fortune et le râtelier.
 - **Hors de la 0.8** : le niveau 2 de chaque lignée (§12.2, colonne « plus tard ») ; la citerne filtrante, la gouttière, le bûcher, la claie, le fumoir, la charbonnière en fût (§11.5).
