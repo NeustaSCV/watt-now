@@ -90,16 +90,17 @@ test("⚙️ arbalète : dans ARMES_TIR (bloc « arbalète »), armée d'avance 
   assert.equal(a.porteeTete, 12, "réglage accepté : 12 m à ★★★");
   assert.equal(a.rechargeMs, 3000);
   const l = armeTirDe("arbalete_lourde")!;
-  assert.equal(l.degatsPlein, 3);
+  assert.equal(l.degatsPlein, 4, "★★★★ au niveau 3 : 4,0 (K48)");
   assert.deepEqual(MUNITIONS.filter((m) => m.pour.includes("arbalete")).map((m) => [m.objet, m.casse]), [["carreau_acier", 1 / 5], ["carreau", 1 / 3]]);
   assert.ok(ARMES_TIR.every((x) => x.metier));
-  // Les étoiles règlent dégâts et portées (Book 25 §8.4) : ★ 1,2 et 8 m de tête, ★★ 1,35 et 10 m.
+  // Les étoiles règlent dégâts et portées (Book 25 §8.4 ; dégâts décidés, plan 0.8 §2.4) : ★ 1,1 et 8 m de tête,
+  // ★★ 1,2 et 10 m.
   const une = armeTirExemplaire("arbalete#1", a);
-  assert.ok(Math.abs(une.degatsPlein - 1.2) < 1e-9 && Math.abs(une.porteeTete - 8) < 1e-9 && Math.abs(une.porteeUtile - 10) < 1e-9);
+  assert.ok(Math.abs(une.degatsPlein - 1.1) < 1e-9 && Math.abs(une.porteeTete - 8) < 1e-9 && Math.abs(une.porteeUtile - 10) < 1e-9);
   const deux = armeTirExemplaire("arbalete#2", a);
-  assert.ok(Math.abs(deux.degatsPlein - 1.35) < 1e-9 && Math.abs(deux.porteeTete - 10) < 1e-9);
+  assert.ok(Math.abs(deux.degatsPlein - 1.2) < 1e-9 && Math.abs(deux.porteeTete - 10) < 1e-9);
   // La lourde est déclarée à ★★★★ : sa clé nue a ses valeurs telles quelles.
-  assert.equal(armeTirExemplaire("arbalete_lourde", l).degatsPlein, 3);
+  assert.equal(armeTirExemplaire("arbalete_lourde", l).degatsPlein, 4);
 });
 
 test("⚙️ arbalète armée : le tir part tout de suite et détruit à la tête à 11 m ; puis il faut la réarmer, 3 s, immobile", () => {

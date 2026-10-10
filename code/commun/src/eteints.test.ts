@@ -64,7 +64,8 @@ test("coups au torse : il tombe, et se relève si on ne l'achève pas", () => {
   const marteau = ARMES.find((a) => a.objet === "marteau")!;
   const e = nouvelEteint(1, 10, 10, "poursuivant");
   const de = { x: 9, z: 10 };
-  assert.equal(encaisser(e, marteau, false, 1, de, ZONE_STATION), "vacille");
+  // Le marteau fait 0,8 au torse (plan 0.8 §2.4) : il tombe au quatrième coup (3 points).
+  for (let i = 0; i < 3; i++) assert.equal(encaisser(e, marteau, false, 1, de, ZONE_STATION), "vacille");
   assert.equal(encaisser(e, marteau, false, 1, de, ZONE_STATION), "a_terre");
   for (let t = 0; t < DUREE_A_TERRE + 0.5; t += 0.1) penser(e, 0.1, [], [], [e], false, ZONE_STATION, () => 0.5);
   assert.notEqual(e.etat, "a_terre");

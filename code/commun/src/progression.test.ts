@@ -316,7 +316,9 @@ test("chaque clé posée a ses textes : l'idée, « un jour », et deux temps d'
   assert.ok(cles.some((x) => x.etape.id === "foyer_cuisine"), "la clé du foyer de cuisine (posée pour les tests)");
   for (const { etape } of cles) {
     const c = etape.cle;
-    assert.ok((c.objet === undefined) !== (c.qualite === undefined), `${etape.id} : un ingrédient ou un outil, jamais les deux`);
+    // Une clé d'un niveau « plus tard » peut n'être qu'un nom (son objet n'existe pas encore : la porte de four).
+    const genres = [c.objet, c.qualite, etape.aVenir ? c.nom : undefined].filter((x) => x !== undefined);
+    assert.equal(genres.length, 1, `${etape.id} : un ingrédient ou un outil, jamais les deux`);
     if (c.objet) assert.ok(estObjet(c.objet), `${etape.id} : ${c.objet}`);
     assert.ok(c.idee.length > 10 && c.idee.length <= 110, etape.id);
     assert.ok(c.indice.every((t) => t.length > 5 && t.length <= 70), etape.id);

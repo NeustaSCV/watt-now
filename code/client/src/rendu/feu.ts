@@ -165,10 +165,46 @@ function cuisine(c: Assemblage, aleat: () => number): void {
   c.ajouterDegrade(placer(bosseler(new THREE.LatheGeometry(profil, 12), 0.003, aleat), 0, yMarmite, 0), (p) => (p.y < yMarmite + 0.06 ? 0x1c1a18 : 0x34312e), "metal");
   c.ajouter(placer(new THREE.TorusGeometry(0.15, 0.006, 3, 10, Math.PI), 0, yMarmite + 0.19, 0), FER, "metal");
   c.perche(new V3(0, yMarmite + 0.34, 0), new V3(0, sommet.y - 0.76, 0), 0.006, FER, "metal", 4);
-  // La grille : un cadre et ses barreaux, posée sur deux pierres du cercle.
-  const gx = 0.32;
-  for (const z of [-0.2, 0.2]) c.boite(FER, "metal", 0.4, 0.015, 0.015, gx, 0.235, z);
-  for (let k = 0; k < 7; k++) c.boite(k % 3 === 1 ? ROUILLE_SOMBRE : FER, "metal", 0.012, 0.012, 0.42, gx - 0.18 + k * 0.06, 0.235, 0);
+  grille(c, 0.3, 0.235, 0, aleat);
+}
+
+/**
+ * La grille du foyer de cuisine (plan 0.8, chantier 5) : un rouleau de grillage de poulailler replié en double sur un
+ * cadre de fil, posé à plat sur les pierres du cercle, à côté de la crémaillère. Les mailles en losange se lisent de près ;
+ * de loin, une trame grise et rouillée au-dessus des braises. Quelques ligatures de fil la tiennent au cadre.
+ */
+function grille(c: Assemblage, gx: number, gy: number, gz: number, aleat: () => number): void {
+  const FIL = 0x7d7a74;
+  const demiX = 0.21;
+  const demiZ = 0.19;
+  // Le cadre : quatre fils plus gros, aux coins tordus ensemble.
+  for (const s of [-1, 1]) {
+    c.perche(new V3(gx - demiX, gy, gz + s * demiZ), new V3(gx + demiX, gy, gz + s * demiZ), 0.006, 0x4a4744, "metal", 4);
+    c.perche(new V3(gx + s * demiX, gy, gz - demiZ), new V3(gx + s * demiX, gy, gz + demiZ), 0.006, 0x4a4744, "metal", 4);
+  }
+  // Les mailles : deux nappes de fils en diagonale, coupées au cadre (le grillage replié en double tient mieux).
+  const pas = 0.042;
+  for (const sens of [-1, 1]) {
+    for (let k = -14; k <= 14; k++) {
+      // La droite z = sens · x + k · pas, dans le repère du cadre, coupée au rectangle.
+      const bouts: THREE.Vector3[] = [];
+      for (const x of [-demiX, demiX]) {
+        const z = sens * x + k * pas;
+        if (Math.abs(z) <= demiZ) bouts.push(new V3(x, 0, z));
+      }
+      for (const z of [-demiZ, demiZ]) {
+        const x = (z - k * pas) * sens;
+        if (Math.abs(x) < demiX) bouts.push(new V3(x, 0, z));
+      }
+      if (bouts.length < 2) continue;
+      const [a, b] = bouts;
+      const rouille = (k * 5 + sens * 3 + 40) % 7 === 0;
+      c.perche(a!.add(new V3(gx, gy + 0.004 * sens, gz)), b!.add(new V3(gx, gy + 0.004 * sens, gz)), 0.0028, rouille ? ROUILLE_SOMBRE : FIL, "metal", 3);
+    }
+  }
+  // Les ligatures de fil qui tiennent le grillage au cadre, et une tache de suie au milieu (les marmites y sont posées).
+  for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1], [0, -1], [0, 1]] as const) c.ligature(new V3(gx + x * demiX * 0.98, gy, gz + z * demiZ), X, 0.009, 0x55524d);
+  c.plaque(tache(0, 0, 0.09, 0.07, aleat, 7), surface(new V3(gx, gy + 0.008, gz), X, Z, Y), 0x2a2522, "metal", 0);
 }
 
 /**
@@ -219,7 +255,11 @@ function broche(c: Assemblage, ecart: number, aleat: () => number): void {
   void aleat;
 }
 
-/** La marmite norvégienne (accessoire) : une caisse de planches garnie de chiffons, à côté du foyer. */
+/**
+ * La marmite norvégienne (accessoire, plan 0.8 : sa clé est la cocotte en fonte) : une caisse de planches bourrée de
+ * chiffons de toutes les couleurs, la cocotte noire enfoncée au milieu, son couvercle à bouton ; le couvercle de la caisse
+ * appuyé contre son flanc, le temps de sortir la soupe. Un chiffon pend par-dessus le bord.
+ */
 function marmiteNorvegienne(c: Assemblage, aleat: () => number): void {
   const x = -0.95;
   const z = 0.75;
@@ -231,10 +271,32 @@ function marmiteNorvegienne(c: Assemblage, aleat: () => number): void {
     }
   }
   c.boite(BOIS.sombre, "mat", 0.44, 0.02, 0.34, x, 0.012, z);
-  // Les chiffons qui débordent, le couvercle posé de travers.
-  c.ajouter(placer(bosseler(new THREE.IcosahedronGeometry(0.2, 1), 0.04, aleat).scale(1.1, 0.35, 0.85), x, 0.33, z), PALETTE.toileEcrue, "toile", 0.1);
-  c.ajouter(placer(bosseler(new THREE.IcosahedronGeometry(0.08, 0), 0.02, aleat).scale(1, 0.5, 1), x + 0.12, 0.36, z - 0.06), 0x8f3a22, "toile", 0.08);
-  c.boite(BOIS.moyen, "mat", 0.48, 0.025, 0.38, x + 0.05, 0.4, z + 0.12, 0.25, 0.2, 0);
+  // Les coins cloués : quatre tasseaux debout.
+  for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) c.boite(BOIS.sombre, "mat", 0.03, 0.31, 0.03, x + sx * 0.205, 0.165, z + sz * 0.165);
+  // Le lit de chiffons, de toutes les couleurs, tassé autour de la cocotte.
+  const CHIFFONS = [PALETTE.toileEcrue, 0x8f3a22, 0x5a6f8a, PALETTE.vertLaine, 0xb8a27a, 0x7a4f6a];
+  for (let i = 0; i < 9; i++) {
+    const a = (i / 9) * Math.PI * 2 + aleat() * 0.3;
+    const cx = x + Math.cos(a) * (0.16 + aleat() * 0.02);
+    const cz = z + Math.sin(a) * (0.115 + aleat() * 0.015);
+    c.ajouter(placer(bosseler(new THREE.IcosahedronGeometry(0.065, 1), 0.018, aleat).scale(1.15, 0.6, 1), cx, 0.29 + aleat() * 0.02, cz, 0, a, 0), CHIFFONS[i % CHIFFONS.length]!, "toile", 0.08);
+  }
+  // Un chiffon rouge qui pend par-dessus le bord, côté feu.
+  c.ajouter(placer(bosseler(new THREE.BoxGeometry(0.16, 0.012, 0.13, 3, 1, 3), 0.008, aleat), x + 0.13, 0.3, z - 0.2, -1.2, 0.1, 0), 0x8f3a22, "toile", 0.06);
+  // La cocotte en fonte : noire, le bord usé plus clair, deux oreilles ; son couvercle bombé et son bouton.
+  const FONTE = 0x232120;
+  const y0 = 0.27;
+  const corps = [V(0, 0), V(0.1, 0), V(0.118, 0.015), V(0.124, 0.1), V(0.12, 0.118), V(0.112, 0.118)];
+  c.ajouterDegrade(placer(bosseler(new THREE.LatheGeometry(corps, 14), 0.002, aleat), x, y0, z), (p) => (p.y > y0 + 0.11 ? 0x4a4642 : FONTE), "metal");
+  // (Du bord vers le bouton : les faces regardent vers le haut.)
+  const couvercle = [V(0.12, 0.114), V(0.124, 0.12), V(0.1, 0.133), V(0.05, 0.15), V(0, 0.155)];
+  // Le couvercle : la fonte patinée, plus claire là où la main le soulève (le bouton, le bord).
+  c.ajouterDegrade(placer(new THREE.LatheGeometry(couvercle, 14), x, y0, z), (p) => (p.y < y0 + 0.122 ? 0x5a5550 : Math.hypot(p.x - x, p.z - z) < 0.05 ? 0x4a4642 : 0x34312e), "metal");
+  c.ajouter(placer(new THREE.CylinderGeometry(0.016, 0.022, 0.022, 8), x, y0 + 0.165, z), 0x1a1918, "metal");
+  for (const s of [-1, 1]) c.ajouter(placer(new THREE.TorusGeometry(0.022, 0.007, 4, 8, Math.PI).rotateZ(-Math.PI / 2 * s), x + s * 0.128, y0 + 0.095, z), FONTE, "metal");
+  // Le couvercle de la caisse, appuyé contre son flanc arrière (côté feu).
+  c.boite(BOIS.moyen, "mat", 0.48, 0.36, 0.025, x, 0.17, z - 0.25, 0.3, 0, 0);
+  c.boite(BOIS.sombre, "mat", 0.48, 0.04, 0.03, x, 0.29, z - 0.215, 0.3, 0, 0);
 }
 
 /** Le foyer, sans bois : sa structure selon sa forme (Book 24 §2.5), ses accessoires, son muret tourné vers l'abri. */

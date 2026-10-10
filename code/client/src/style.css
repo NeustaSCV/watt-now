@@ -5459,3 +5459,21 @@ body:has(#hud .voile-pause:not([hidden])) #hud .tactile {
   font-style: italic;
   opacity: 0.75;
 }
+
+/* Plan 0.8, chantier 5 : la phrase d'un repli sous le coût d'un niveau (« Ou deux barres de métal… ») ; quand c'est
+   par lui que la montée se fera (on n'a pas la clé, mais de quoi faire le repli), elle passe en clair, cochée. */
+#hud .panneau.fiche .etape .repli {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  font-style: italic;
+  opacity: 0.8;
+}
+#hud .panneau.fiche .etape .repli.retenu {
+  font-style: normal;
+  opacity: 1;
+  color: var(--canard);
+}
+#hud .panneau.fiche .etape .repli.retenu::before {
+  content: "✓ ";
+}

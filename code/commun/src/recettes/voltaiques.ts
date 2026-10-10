@@ -24,6 +24,14 @@ const AU_POSTE_DE_MONTAGE = aCote("banc_recharge", { accessoire: "poste_montage"
 const NIVEAU_2 = { aVenir: "niveau 2" } as const;
 
 /**
+ * La petite batterie du kit est unique (Q-B6) : la même phrase sur les deux fiches qui la prennent (la matraque de
+ * fortune et la matraque ★★, chantier 8).
+ */
+const NOTE_PETITE_BATTERIE = "La petite batterie du kit est unique : elle va à la matraque de fortune ou à la matraque ★★, pas aux deux.";
+/** La petite batterie, source d'une matraque électrique : une source ★★ (Q-A5). */
+const SOURCE_PETITE_BATTERIE = 2;
+
+/**
  * Les étoiles du module de décharge que la recette prendra : le moins bon du sac (une recette prend toujours les
  * exemplaires les moins bons d'abord, `retirerExemplaires`). Sans module : ★.
  */
@@ -139,6 +147,7 @@ export const RECETTES_VOLTAIQUES: Recette[] = [
     intensite: "legere",
     famille: "voltaiques",
     facteursEtoiles: () => [1],
+    note: NOTE_PETITE_BATTERIE,
   },
   {
     // « La Raquette » : l'arme de métier. ★★ au module de raquette, ★★★ au module à bobine.
@@ -322,5 +331,23 @@ export const RECETTES_VOLTAIQUES: Recette[] = [
     intensite: "legere",
     famille: "voltaiques",
     facteursEtoiles: derouille("machette"),
+  },
+
+  // ---------- Chantier 8 (plan 0.8 §2.4) : la petite batterie, source de la matraque ★★ (Q-A5) ----------
+  {
+    // Le module de raquette sur la petite batterie du kit : la ★★ sûre dès le retour de la station, sans cellules
+    // (50 Wh, environ 40 Errants). La batterie vaut ★★ : même au module à bobine, elle ne fait pas une ★★★.
+    id: "matraque_petite_batterie",
+    lieu: AU_BANC,
+    categorie: "outils",
+    nom: "Matraque électrique (petite batterie)",
+    produit: { objet: "matraque_electrique", quantite: 1 },
+    ingredients: { gourdin: 1, module_decharge: 1, petite_batterie: 1, caoutchouc: 1 },
+    qualites: { visser: 1, couper: 1 },
+    duree: 40,
+    intensite: "legere",
+    famille: "voltaiques",
+    facteursEtoiles: (inventaire) => [etoilesModule(inventaire), SOURCE_PETITE_BATTERIE, 3],
+    note: NOTE_PETITE_BATTERIE,
   },
 ];

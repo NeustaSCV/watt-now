@@ -14,8 +14,9 @@ import { REGLAGES } from "./reglages.ts";
 
 /**
  * Le type de dégât (Book 23 §4.2) : une seule règle, le casque. Le contondant passe et étourdit plus longtemps ; le
- * tranchant ne tue pas un casqué à la tête ; le perçant vaut par son allonge. L'électrique (Book 25 §5.1 et §8.2) ne
- * fait rien au torse : il fait lâcher, raidit, met à terre, et détruit en deux temps, casque ou pas.
+ * tranchant ne tue pas un casqué à la tête ; le perçant vaut par son allonge. L'électrique (Book 25 §5.1 et §8.2) fait
+ * lâcher, raidit, met à terre, et détruit en deux temps, casque ou pas ; depuis la 0.8, sa courte ajoute aussi ses
+ * dégâts au torse (plan 0.8 §2.4).
  */
 export type TypeDegat = "contondant" | "tranchant" | "percant" | "electrique";
 
@@ -77,6 +78,45 @@ export interface Arme {
   /** Pour un exemplaire étoilé : sa clé dans le sac (« lame_forgee#4 ») et ses étoiles. */
   cle?: CleObjet;
   etoiles?: Etoiles;
+  /**
+   * Les valeurs décidées étoile par étoile (plan 0.8 §2.4, `decisions-armes.json`, K1 à K56) : elles remplacent les
+   * multiplicateurs de `ETOILES` pour ce qu'elles donnent. Une étoile absente prend la valeur de l'étoile décidée la plus
+   * proche en dessous (sinon au-dessus) ; un champ décidé nulle part suit `ETOILES`, comme avant la 0.8.
+   */
+  parEtoiles?: Partial<Record<Etoiles, ValeursEtoile>>;
+}
+
+/** Ce qu'une étoile d'une arme donne en propre (plan 0.8 §2.4) : les dégâts suivent l'étape de l'étoile (D1 à D37). */
+export interface ValeursEtoile {
+  /** Dégâts au torse d'un coup simple (pour une arme de tir : d'un tir plein). */
+  degats?: number;
+  solidite?: number;
+  /** L'étape où cette étoile se fait seul (la grille Q-A2), pour la fiche et le chantier 9. */
+  etape?: EtapeArme;
+  /** Électrique : raidissement de la courte (s), durée de la longue (ms), source (Wh). Lus à leur étoile seulement. */
+  raidi?: number;
+  longueMs?: number;
+  capaciteWh?: number;
+}
+
+/** Les étapes d'une étoile (la grille du plan 0.8 §2.4) : jusqu'au niveau 3, puis « plus tard ». */
+export type EtapeArme = "maison" | "H1" | "L1" | "L2" | "L3" | "plus_tard";
+
+/**
+ * La valeur décidée d'un champ à `n` étoiles : celle de l'étoile, sinon celle de l'étoile décidée la plus proche en
+ * dessous, sinon au-dessus (les dégâts ne baissent jamais quand les étoiles montent). undefined : rien de décidé.
+ */
+export function valeurDecidee<K extends keyof ValeursEtoile>(table: Partial<Record<Etoiles, ValeursEtoile>> | undefined, n: Etoiles, champ: K): ValeursEtoile[K] | undefined {
+  if (!table) return undefined;
+  for (let k = n; k >= 1; k--) {
+    const v = table[k as Etoiles]?.[champ];
+    if (v !== undefined) return v;
+  }
+  for (let k = n + 1; k <= 5; k++) {
+    const v = table[k as Etoiles]?.[champ];
+    if (v !== undefined) return v;
+  }
+  return undefined;
 }
 
 /**
@@ -94,51 +134,72 @@ export function cleArme(a: Arme): CleObjet | null {
 }
 
 /**
- * L'arme que donne un exemplaire du sac : les valeurs de son objet, corrigées par ses étoiles (Book 25 §4.2 et §8.2).
- * Aux étoiles de base, c'est l'arme déclarée elle-même. null : ce n'est pas une arme.
+ * L'arme que donne un exemplaire du sac : les valeurs de son objet à ses étoiles (Book 25 §4.2 et §8.2), les valeurs
+ * décidées par étoile d'abord (`parEtoiles`, plan 0.8 §2.4), puis les réglages d'équilibre. Aux étoiles de base et aux
+ * réglages par défaut, c'est l'arme déclarée elle-même. null : ce n'est pas une arme.
+ *
+ * La maîtrise n'a pas de plafond (K-Q1, refusé le 2026-10-10) : l'étoile du dessus vaut ses vrais dégâts, même quand elle
+ * appartient à l'étape suivante.
  */
 export function armeDeCle(cle: string): Arme | null {
   const type = typeDe(cle);
   const declaree = ARMES.find((a) => a.objet === type);
   if (!declaree || !declaree.objet) return null;
-  const base = armeReglee(declaree);
-  if (!base.objet) return null;
-  const n = base.metier ? etoilesDe(cle) : null;
-  if (n === null || n === etoilesDeBase(base.objet)) return base;
-  const f = facteurs(base.objet, n);
-  const arme: Arme = { ...base, cle: cle as CleObjet, etoiles: n, degatsTorse: base.degatsTorse * f.degats, solidite: soliditeExemplaire(base.objet, n, base.solidite) };
-  if (base.electrique) {
-    const ref = ETOILES[etoilesDeBase(base.objet)];
-    // Le raidissement suit les étoiles ; la longue raccourcit avec elles (l'aiguillon garde son retard d'une perche).
-    arme.electrique = { ...base.electrique, raidi: ETOILES[n].raidi * REGLAGES.equilibre_electrique_raidi, saute: base.electrique.saute && n >= 3 };
-    arme.coupAppuye = Math.round((base.coupAppuye * ETOILES[n].longueMs) / ref.longueMs);
+  const n = declaree.metier ? etoilesDe(cle) : null;
+  if (n === null || n === etoilesDeBase(declaree.objet)) return armeReglee(declaree);
+  const t = declaree.parEtoiles;
+  const f = facteurs(declaree.objet, n);
+  const arme: Arme = {
+    ...declaree,
+    cle: cle as CleObjet,
+    etoiles: n,
+    degatsTorse: valeurDecidee(t, n, "degats") ?? declaree.degatsTorse * f.degats,
+    solidite: valeurDecidee(t, n, "solidite") ?? soliditeExemplaire(declaree.objet, n, declaree.solidite),
+  };
+  if (declaree.electrique) {
+    const ref = ETOILES[etoilesDeBase(declaree.objet)];
+    // Le raidissement suit les étoiles ; la longue raccourcit avec elles. La courte ne saute qu'à ★★★ et plus.
+    arme.electrique = {
+      ...declaree.electrique,
+      raidi: t?.[n]?.raidi ?? ETOILES[n].raidi,
+      saute: declaree.electrique.saute && n >= 3,
+    };
+    const capacite = t?.[n]?.capaciteWh;
+    if (capacite !== undefined) arme.electrique.capaciteWh = capacite;
+    arme.coupAppuye = t?.[n]?.longueMs ?? Math.round((declaree.coupAppuye * ETOILES[n].longueMs) / ref.longueMs);
   }
-  return arme;
+  return armeReglee(arme);
 }
 
 /**
  * Les réglages d'équilibre du test (Book 25 §10.3, chantier 9 ; `reglages.ts`) : des multiplicateurs, à 1 par défaut,
- * sur les armes de métier seulement. Sans réglage changé, c'est l'arme déclarée elle-même.
+ * sur les armes de métier seulement. Sans réglage changé, c'est l'arme elle-même.
  */
 export function armeReglee(a: Arme): Arme {
   if (!a.metier) return a;
-  const lame = a.type === "tranchant" ? REGLAGES.equilibre_lames_degats : 1;
+  const degats = a.type === "tranchant" ? REGLAGES.equilibre_lames_degats : a.electrique ? REGLAGES.equilibre_electrique_degats : 1;
   const raidi = a.electrique ? REGLAGES.equilibre_electrique_raidi : 1;
   const longue = a.electrique ? REGLAGES.equilibre_electrique_longue : 1;
-  if (lame === 1 && raidi === 1 && longue === 1) return a;
-  const r: Arme = { ...a, degatsTorse: a.degatsTorse * lame, coupAppuye: Math.round(a.coupAppuye * longue) };
+  if (degats === 1 && raidi === 1 && longue === 1) return a;
+  const r: Arme = { ...a, degatsTorse: a.degatsTorse * degats, coupAppuye: Math.round(a.coupAppuye * longue) };
   if (a.electrique) r.electrique = { ...a.electrique, raidi: a.electrique.raidi * raidi };
   return r;
 }
 
 /**
- * Une arme électrique dont le pack est vide (Book 25 §8.2) : un gourdin court. Contondant, 0,6, ne tue pas à la tête ;
- * elle s'use comme l'arme qu'elle est. Le chantier 6 s'en sert quand la charge manque.
+ * Les dégâts d'une arme électrique sont ceux du **coup** (C11, plan 0.8 §2.4) : pack vide, le courant n'en fait plus la
+ * moitié, et elle frappe à la moitié de ses dégâts (elle remplace les 0,6 fixes d'avant la 0.8).
+ */
+export const PART_PACK_VIDE = 0.5;
+
+/**
+ * Une arme électrique dont le pack est vide (Book 25 §8.2, C11) : un gourdin court. Contondant, à la moitié de ses
+ * dégâts, ne tue pas à la tête ; elle s'use comme l'arme qu'elle est. Le serveur s'en sert quand la charge manque.
  */
 export function armeSansCharge(a: Arme): Arme {
   if (a.type !== "electrique") return a;
   const { electrique: _electrique, ...reste } = a;
-  return { ...reste, type: "contondant", degatsTorse: 0.6, tueALaTete: false };
+  return { ...reste, type: "contondant", degatsTorse: a.degatsTorse * PART_PACK_VIDE, tueALaTete: false };
 }
 
 /** Sous 30 % de solidité, l'arme est abîmée : ses coups perdent 30 % (Book 23 §4.3). */
@@ -163,6 +224,8 @@ export const MATIERE_ARME: Partial<Record<TypeObjet, MatiereArme>> = {
   masse: "metal",
   barre_metal: "metal",
   pied_de_biche: "metal",
+  // La fourche à foin (L1B, I30) : un manche de frêne, des dents d'acier ; c'est le manche qui lâche.
+  fourche_foin: "bois",
   // 🔥 Les lames des Charbonniers (Book 25 §4.4, chantier 5).
   ...MATIERES_ARMES_CHARBONNIERS,
   // ⚡ Les armes électriques (Book 25 §5.3) : un manche de bois (gourdin, épieu), qui se reprend à l'établi.
@@ -216,6 +279,7 @@ export const DEBRIS_ARME: Partial<Record<TypeObjet, TypeObjet>> = {
   marteau: "ferraille_tordue",
   masse: "ferraille_tordue",
   pied_de_biche: "ferraille_tordue",
+  fourche_foin: "manche_fendu",
   // 🔥 Les lames des Charbonniers : une lame ébréchée, que la forge reforge (Book 25 §4.4, chantier 5).
   ...DEBRIS_ARMES_CHARBONNIERS,
   // ⚡ Le manche fend ; le câblage brûlé ne se récupère pas.

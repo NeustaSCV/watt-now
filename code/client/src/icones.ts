@@ -94,12 +94,18 @@ const DESSINS: Partial<Record<Pictogramme, string>> = {
     <path d="M14 16 H35 M17 24 H33" stroke="#a07c48" stroke-width="1.8" stroke-linecap="round"/>
     <path d="M15 25 Q14 33 20 35 H32 Q36 33 34 25 Z" fill="#6b8b4e" ${T}/>
     <path d="M18 29 h13" stroke="#b59a6a" stroke-width="1.6"/>`,
+  // Plan 0.8 (chantier 5) : quatre sacs plastique en entonnoir sur leurs piquets, au-dessus du bidon de 5 L.
   recuperateur_pluie: `
-    <path d="M8 16 L40 16 L28 26 L20 26 Z" fill="#2f6fa4" ${T}/>
-    <path d="M10 16 V40 M38 16 V40" stroke-width="2.5" ${T}/>
-    <path d="M24 27 v4" stroke="#5f8fa8" stroke-width="2" stroke-dasharray="2 2"/>
-    <path d="M17 34 h14 l-2 7 h-10 Z" fill="#8a8f94" ${T}/>
-    <path d="M14 6 l-1 4 M24 4 l-1 4 M34 6 l-1 4" stroke="#5f8fa8" stroke-width="2" stroke-linecap="round"/>`,
+    <path d="M9 13 V31 M39 13 V31" stroke="#6b4a32" stroke-width="3" stroke-linecap="round"/>
+    <path d="M7 13 L17 13 L23 23 L19 22 Z" fill="#ece8dc" ${T}/>
+    <path d="M17 13 L27 13 L24 24 L23 23 Z" fill="#9cc2d6" ${T}/>
+    <path d="M27 13 L41 13 L29 22 L24 24 Z" fill="#e6d46a" ${T}/>
+    <path d="M21 22 Q24 26 27 22 L25 27 H23 Z" fill="#c9c4b4" stroke-width="1.4" ${T}/>
+    <path d="M24 28 v2" stroke="#5f8fa8" stroke-width="2" stroke-linecap="round"/>
+    <path d="M15 34 Q15 32 17 32 H31 Q33 32 33 34 V42 Q33 44 31 44 H17 Q15 44 15 42 Z" fill="#ece8dc" ${T}/>
+    <rect x="28" y="29.5" width="4" height="3" rx="0.8" fill="#2f5fa4" stroke-width="1.2" ${T}/>
+    <path d="M16.5 37 H31.5 V42.5 H16.5 Z" fill="#9cc8d8" stroke-width="1" ${T}/>
+    <path d="M14 5 l-1 4 M24 3 l-1 4 M34 5 l-1 4" stroke="#5f8fa8" stroke-width="2" stroke-linecap="round"/>`,
   alarme_boites: `
     <path d="M8 40 V14 M40 40 V14" stroke="#6b4a32" stroke-width="3" stroke-linecap="round"/>
     <path d="M8 16 Q24 20 40 16" fill="none" stroke="#c9b48a" stroke-width="1.6"/>

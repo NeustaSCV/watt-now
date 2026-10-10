@@ -31,6 +31,9 @@ const DU_MONDE: readonly { objet: TypeObjet; depuis: TypeObjet | "charbonniere" 
   // L'ébauche d'arc sèche d'elle-même dans le sac (Book 25 §3.3).
   { objet: "ebauche_arc_seche", depuis: "ebauche_arc" },
   { objet: "ebauche_if_seche", depuis: "ebauche_if" },
+  // Le bidon de 5 L de la ruine (plan 0.8 §2.5) : le chantier 10 le pose dans la ruine ; d'ici là, le simulateur l'y
+  // suppose (le récupérateur de 5 L le demande, chantier 5). À retirer quand la ruine le donne (USAGES).
+  { objet: "bidon_5l", depuis: null },
 ];
 
 /** Ce qu'on peut se procurer, et d'où (la première source trouvée). */

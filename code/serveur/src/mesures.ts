@@ -26,6 +26,15 @@ export type GenreMesure =
   /** Le métier des familles (Book 25 §10.1) : tirs, destructions par arme, objets de métier faits et échangés. */
   | "metier";
 
+/**
+ * Le rythme de progression (décision du porteur, 2026-10-10) : `progression` / `atteint:<étape>` (maison, H1A, L1A…),
+ * la valeur en minutes de jeu depuis la création du personnage. Ce sont les seules mesures gardées quand on supprime un
+ * compte, rendues anonymes (compte 0, sans détails) : « en combien de temps de jeu il est arrivé à L1, à L2 ».
+ */
+export const PREFIXE_ATTEINT = "atteint:";
+/** Le compte des mesures rendues anonymes (aucun compte réel n'a le numéro 0). */
+export const COMPTE_ANONYME = 0;
+
 export interface Mesure {
   instant: number;
   compteId: number;

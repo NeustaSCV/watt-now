@@ -49,7 +49,7 @@ export const EXAMENS_INSTALLATIONS: Record<InstallationVue["type"], string> = {
   banc_recharge: "Un banc de planches, des pinces, un régulateur bricolé. Le panneau posé dessus remplit ses batteries au soleil.",
   panneau_solaire: "Le petit panneau de la station, plein sud. Il charge les batteries posées sur le banc, même quand tu n'es pas là.",
   escabeau: "Un escabeau de bois ligaturé de corde. Posé au pied d'un arbre fruitier, dans son cercle, il permet de cueillir en haut.",
-  recuperateur_pluie: "Une bâche tendue en entonnoir au-dessus d'une bassine. Quand il pleut, elle se remplit, même quand tu n'es pas là. L'eau du ciel se boit sans la faire bouillir.",
+  recuperateur_pluie: "Quatre sacs plastique tendus en entonnoir au-dessus d'un bidon de 5 L. Quand il pleut, il se remplit, même quand tu n'es pas là. L'eau du ciel se boit sans la faire bouillir.",
   alarme_boites: "Une ficelle tendue entre deux piquets, des boîtes de conserve qui pendent. Si un Éteint passe, tu l'entendras. Lui aussi.",
   lit_branchages: "Un cadre de branches couvert de rameaux. On y dort isolé du sol : à côté de l'abri, le sommeil répare mieux.",
   decharge: "Un tas d'ordures de l'Âge de l'Abondance, au bord du terrain. La pluie et le temps en font remonter des objets : surtout des trucs nuls, parfois une bonne surprise.",

@@ -296,7 +296,7 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
         liste: [
           "**Le feu** : il devient un foyer maçonné, puis une vraie cuisine. Ou bien il se creuse en foyer Dakota, discret, qui peut devenir plus discret encore. Confort ou discrétion : à toi de choisir.",
           "**L'abri** : on y glisse un lit (le lit de branchages voisin peut y passer sans rien payer), puis on le ferme au vent. On y dort de mieux en mieux.",
-          "**Le coffre** garde plus de poids ; **le récupérateur de pluie** devient une citerne, bien plus grande.",
+          "**Le coffre** garde plus de poids ; **le récupérateur de pluie** passe du bidon de 5 L au seau de 10 L.",
           "Certains niveaux sont le **métier d'une famille** : les autres les bâtissent plus cher, mais tout le monde s'en sert.",
         ],
       },

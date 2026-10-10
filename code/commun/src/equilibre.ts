@@ -24,7 +24,7 @@
 import { ARMES, APPUIS_DEGAGEMENT, COUT_ENDURANCE, DELAI_MORSURE, ENDURANCE_MAX, ENDURANCE_RECUPERATION, REPOUSSER, SEUIL_EPUISE, armeDeCle, capaciteChargeArme, type Arme } from "./combat.ts";
 import { CONTACT, VITESSES, debout, encaisser, encaisserCoup, lacher, nouvelEteint, penser, repousser, type Eteint, type Humain } from "./eteints.ts";
 import { ARMES_TIR, MUNITIONS, PART_TETE_EQUIPE, armeTirDe, armeTirExemplaire, deFace, type ArmeTir, type Munition } from "./tir.ts";
-import { typeDe, type Etoiles } from "./etoiles.ts";
+import { etoilesDe, typeDe, type Etoiles } from "./etoiles.ts";
 import { rearmement } from "./mecanique.ts";
 import { energieGrise } from "./recettes.ts";
 import { REGLAGES } from "./reglages.ts";
@@ -85,7 +85,11 @@ export interface ArmeComparee {
 }
 
 export function armeComparee(famille: FamilleArme, niveau: Niveau): ArmeComparee {
-  const cle = EXEMPLAIRES[famille][niveau];
+  return armeCompareeDe(famille, EXEMPLAIRES[famille][niveau], niveau);
+}
+
+/** L'arme d'une famille donnée par la clé d'un exemplaire (« machette_forgee#2 », « marteau »). */
+export function armeCompareeDe(famille: FamilleArme, cle: string, niveau: Niveau): ArmeComparee {
   const base = armeTirDe(typeDe(cle), ARMES_TIR);
   if (base) {
     const tir = armeTirExemplaire(cle, base);
@@ -535,6 +539,8 @@ export function coutUsage(arme: ArmeComparee): CoutUsage {
 export interface Ligne {
   famille: FamilleArme;
   niveau: Niveau;
+  /** L'exemplaire comparé (« machette_forgee#2 »). */
+  cle: string;
   nom: string;
   /** L'arme seule. */
   seule: Record<NomScenario, Resultat>;
@@ -547,20 +553,22 @@ export interface Ligne {
 export function tableau(): Ligne[] {
   const lignes: Ligne[] = [];
   for (const famille of FAMILLES_ARMES) {
-    for (const niveau of NIVEAUX) {
-      const arme = armeComparee(famille, niveau);
-      const objetSeconde = SECONDE_ARME[famille];
-      const seconde = objetSeconde ? armeDeContact(objetSeconde) : null;
-      const seule = {} as Record<NomScenario, Resultat>;
-      const avecSeconde = {} as Record<NomScenario, Resultat>;
-      for (const s of Object.values(SCENARIOS)) {
-        seule[s.nom] = simuler(arme, s);
-        avecSeconde[s.nom] = seconde ? simuler(arme, s, { seconde }) : seule[s.nom];
-      }
-      lignes.push({ famille, niveau, nom: arme.nom, seule, avecSeconde, cout: coutUsage(arme) });
-    }
+    for (const niveau of NIVEAUX) lignes.push(ligneDe(armeComparee(famille, niveau)));
   }
   return lignes;
+}
+
+/** Une ligne du tableau : l'arme, seule et avec sa seconde arme, dans chaque rencontre ; et son coût. */
+function ligneDe(arme: ArmeComparee): Ligne {
+  const objetSeconde = SECONDE_ARME[arme.famille];
+  const seconde = objetSeconde ? armeDeContact(objetSeconde) : null;
+  const seule = {} as Record<NomScenario, Resultat>;
+  const avecSeconde = {} as Record<NomScenario, Resultat>;
+  for (const s of Object.values(SCENARIOS)) {
+    seule[s.nom] = simuler(arme, s);
+    avecSeconde[s.nom] = seconde ? simuler(arme, s, { seconde }) : seule[s.nom];
+  }
+  return { famille: arme.famille, niveau: arme.niveau, cle: arme.cle, nom: arme.nom, seule, avecSeconde, cout: coutUsage(arme) };
 }
 
 // ---------- Le garde-fou (Book 25 §8.4) ----------
@@ -600,33 +608,98 @@ export interface Rapport {
   avecSeconde: boolean;
 }
 
+/** Ce que rend le garde-fou : les fautes (vide : il tient), les rapports, le pire rapport hors terrain, l'écart de coût. */
+export interface Verdict {
+  fautes: string[];
+  rapports: Rapport[];
+  /** Le plus mauvais rapport d'une arme hors de son terrain (≤ 2 : ça tient). */
+  pireRapport: number;
+  /** Le coût par Errant le plus cher sur le moins cher (≤ 3 : ça tient). */
+  ecartCout: number;
+}
+
 /**
  * Le garde-fou du §8.4, à ★★★ : sur chaque terrain, l'arme qui le possède est la meilleure des trois armes de métier,
  * seules ; les deux autres n'y sont jamais plus de 2 fois moins bonnes (avec leur seconde arme quand elles en
  * demandent une) ; et le coût par Errant ne varie pas de plus de 3 fois. Rend les fautes (vide : le garde-fou tient)
  * et les rapports.
  */
-export function gardeFou(lignes: Ligne[] = tableau()): { fautes: string[]; rapports: Rapport[] } {
+export function gardeFou(lignes: Ligne[] = tableau()): Verdict {
+  return juger((f) => lignes.find((l) => l.niveau === 3 && l.famille === f)!);
+}
+
+/** Le garde-fou sur trois armes de métier, une par famille (à ★★★, ou celles d'une étape). */
+function juger(arme: (f: ArmeDeMetier) => Ligne): Verdict {
   const fautes: string[] = [];
   const rapports: Rapport[] = [];
-  const a3 = (f: ArmeDeMetier) => lignes.find((l) => l.niveau === 3 && l.famille === f)!;
+  let pireRapport = 0;
   for (const proprietaire of ARMES_DE_METIER) {
     for (const s of TERRAINS[proprietaire]) {
-      const meilleurTemps = Math.min(...ARMES_DE_METIER.map((f) => a3(f).seule[s].temps));
-      if (a3(proprietaire).seule[s].temps > meilleurTemps + 1e-9) fautes.push(`${SCENARIOS[s].titre} : ${NOMS_FAMILLES_ARMES[proprietaire]} n'y est pas la meilleure`);
+      const meilleurTemps = Math.min(...ARMES_DE_METIER.map((f) => arme(f).seule[s].temps));
+      if (arme(proprietaire).seule[s].temps > meilleurTemps + 1e-9) fautes.push(`${SCENARIOS[s].titre} : ${NOMS_FAMILLES_ARMES[proprietaire]} n'y est pas la meilleure`);
       for (const f of ARMES_DE_METIER) {
         const seconde = DEMANDE_UNE_SECONDE_ARME.some((x) => x.famille === f && x.scenario === s);
-        const rapport = (seconde ? a3(f).avecSeconde : a3(f).seule)[s].temps / meilleurTemps;
+        const rapport = (seconde ? arme(f).avecSeconde : arme(f).seule)[s].temps / meilleurTemps;
         rapports.push({ famille: f, scenario: s, rapport, avecSeconde: seconde });
-        if (f !== proprietaire && !(rapport <= ECART_MAX)) {
+        if (f === proprietaire) continue;
+        pireRapport = Math.max(pireRapport, rapport);
+        if (!(rapport <= ECART_MAX)) {
           fautes.push(`${SCENARIOS[s].titre} : ${NOMS_FAMILLES_ARMES[f]}${seconde ? " (avec sa seconde arme)" : ""} y est ${Number.isFinite(rapport) ? `${rapport.toFixed(2)} fois` : "infiniment"} moins bonne`);
         }
       }
     }
   }
-  const couts = ARMES_DE_METIER.map((f) => a3(f).cout.wotts);
-  if (Math.max(...couts) > ECART_COUT_MAX * Math.min(...couts)) fautes.push(`Coût par Errant : de ${Math.min(...couts).toFixed(1)} à ${Math.max(...couts).toFixed(1)} wotts, plus de 3 fois d'écart`);
-  return { fautes, rapports };
+  const couts = ARMES_DE_METIER.map((f) => arme(f).cout.wotts);
+  const ecartCout = Math.max(...couts) / Math.min(...couts);
+  if (!(ecartCout <= ECART_COUT_MAX)) fautes.push(`Coût par Errant : de ${Math.min(...couts).toFixed(1)} à ${Math.max(...couts).toFixed(1)} wotts, plus de 3 fois d'écart`);
+  return { fautes, rapports, pireRapport, ecartCout };
+}
+
+// ---------- Le garde-fou rejoué par étape (plan 0.8 §2.4, P11 ; chantier 8) ----------
+
+/** Les étapes que la 0.8 met en jeu : la maison, puis H1 (la station, le gué) et L1 (la Coopérative, le Moulin). */
+export type EtapeEquilibre = "maison" | "H1" | "L1";
+export const ETAPES_EQUILIBRE: readonly EtapeEquilibre[] = ["maison", "H1", "L1"];
+
+/**
+ * Les armes de chaque famille à chaque étape, **seul**, selon la grille (plan 0.8 §2.4 ; `armes-par-niveau.md` §6.2 et
+ * §10.1) : l'arme qui défend chaque terrain, avec ce qu'une famille fait seule à cette étape.
+ * - à la maison, rien de métier : le marteau remmanché pour tous (la tête de la caisse, I10), l'arc simple ★★ (corde
+ *   de ficelle) et la lance pour qui tient la distance ; l'arc de fortune pour repère ;
+ * - à H1 : la machette forgée ★★ (l'enclume de dépanneur), la matraque ★★ (la petite batterie, Q-A5), l'arbalète ★★
+ *   (le ressort) ; l'arc simple ★★★ (fil dentaire) pour repère ;
+ * - à L1 : les armes de la station (K-Q2, pas d'étoile intermédiaire) ; l'arc d'if ★★ pour repère.
+ * La seconde arme reste celle du §8.4 (`SECONDE_ARME`) : le marteau pour la lame, la lance pour le tireur.
+ */
+export const ARMES_DES_ETAPES: Record<EtapeEquilibre, Record<FamilleArme, string>> = {
+  maison: { lame: "marteau", electrique: "marteau", arbalete: "arc_simple#2", arc: "arc_fortune" },
+  H1: { lame: "machette_forgee#2", electrique: "matraque_electrique#2", arbalete: "arbalete#2", arc: "arc_simple" },
+  L1: { lame: "machette_forgee#2", electrique: "matraque_electrique#2", arbalete: "arbalete#2", arc: "arc_if#2" },
+};
+
+/** Les étoiles d'une clé, pour la colonne « Niv. » (1 pour une arme sans étoiles). */
+function niveauDe(cle: string): Niveau {
+  const n = etoilesDe(cle) ?? 1;
+  return (n >= 3 ? 3 : n) as Niveau;
+}
+
+/** Le tableau d'une étape : une ligne par famille, avec les armes de l'étape. */
+export function tableauEtape(etape: EtapeEquilibre): Ligne[] {
+  return FAMILLES_ARMES.map((f) => {
+    const cle = ARMES_DES_ETAPES[etape][f];
+    return ligneDe(armeCompareeDe(f, cle, niveauDe(cle)));
+  });
+}
+
+/**
+ * Le garde-fou d'une étape (P11) : à chaque étape, l'arme qui possède un terrain y est la meilleure ; les autres au plus
+ * 2 fois moins bonnes ; au coût, au plus 3 fois d'écart. À la maison, il n'y a pas d'arme de métier : personne ne
+ * possède de terrain (les armes communes), on ne juge que les écarts.
+ */
+export function gardeFouEtape(etape: EtapeEquilibre, lignes: Ligne[] = tableauEtape(etape)): Verdict {
+  const v = juger((f) => lignes.find((l) => l.famille === f)!);
+  if (etape !== "maison") return v;
+  return { ...v, fautes: v.fautes.filter((f) => !f.endsWith("n'y est pas la meilleure")) };
 }
 
 // ---------- En texte ----------
@@ -647,8 +720,8 @@ export function tableauTexte(lignes: Ligne[] = tableau(), avecSeconde = false): 
   const rangs = lignes.map((l) => {
     const r = avecSeconde ? l.avecSeconde : l.seule;
     return [
-      NOMS_FAMILLES_ARMES[l.famille] + (avecSeconde && SECONDE_ARME[l.famille] ? ` + ${armeDeContact(SECONDE_ARME[l.famille]!).nom}` : ""),
-      "★".repeat(l.niveau),
+      (l.cle === EXEMPLAIRES[l.famille][l.niveau] ? NOMS_FAMILLES_ARMES[l.famille] : `${NOMS_FAMILLES_ARMES[l.famille]} : ${l.nom}`) + (avecSeconde && SECONDE_ARME[l.famille] ? ` + ${armeDeContact(SECONDE_ARME[l.famille]!).nom}` : ""),
+      etoilesDe(l.cle) === null ? "—" : "★".repeat(etoilesDe(l.cle)!),
       ...Object.values(SCENARIOS).map((x) => caseResultat(r[x.nom])),
       String(r.groupe15.avantContact),
       virgule(l.cout.wotts, 1),

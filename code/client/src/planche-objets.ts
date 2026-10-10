@@ -82,9 +82,9 @@ const INSTALLATIONS: [string, InstallationVue["type"], InstallationVue["etat"]][
   ["banc + batteries", "banc_recharge", { batteries: { batterie_voiture: 0.6, petite_batterie: 0.3 } }],
   ["panneau solaire", "panneau_solaire", {}],
   ["escabeau", "escabeau", {}],
-  ["récupérateur vide", "recuperateur_pluie", { litres: 0 }],
-  ["récupérateur ½", "recuperateur_pluie", { litres: 2.5 }],
-  ["récupérateur plein", "recuperateur_pluie", { litres: 5 }],
+  ["récupérateur 5 L vide", "recuperateur_pluie", { litres: 0 }],
+  ["récupérateur 5 L ½", "recuperateur_pluie", { litres: 2.5 }],
+  ["récupérateur 5 L plein", "recuperateur_pluie", { litres: 5 }],
   ["alarme à boîtes", "alarme_boites", {}],
   ["lit de branchages", "lit_branchages", {}],
   ["décharge : 5 trouvailles", "decharge", { contenu: { conserve: 5 } }],
@@ -164,10 +164,19 @@ NIVEAUX_FEU.forEach(([nom, f], i) => {
   sources.push(() => feu.source());
   articles.push({ nom, section: "feux", objet: feu.objet, haut: f.niveau === 3 ? 1.8 : 1.2 });
 });
+// De près (plan 0.8, chantier 5) : des repères sur la caisse de la marmite et sur la grille de grillage, pour les cadrer
+// (objets.html#objet=marmite).
+for (const [nom, i, dx, dz] of [["marmite norvégienne (de près)", 3, -0.95, 0.75], ["grille de grillage (de près)", 2, 0.3, 0]] as const) {
+  const repere = new THREE.Object3D();
+  repere.position.set(i * 3.5 + dx, 0, 16 + dz);
+  scene.add(repere);
+  articles.push({ nom, section: "feux", objet: repere, haut: 0.5 });
+}
 const NIVEAUX_INSTALLATIONS: [string, InstallationVue["type"], number, InstallationVue["etat"]][] = [
   ["abri garni", "abri", 2, {}],
   ["abri fermé", "abri", 3, {}],
-  ["citerne de bâche", "recuperateur_pluie", 2, { litres: 30 }],
+  ["récupérateur à seau, 10 L (6 L)", "recuperateur_pluie", 2, { litres: 6, payes: [{ seau_10l: 1, branche: 2 }] }],
+  ["récupérateur à seau, repli (6 L)", "recuperateur_pluie", 2, { litres: 6, payes: [{ branche: 2, bidon_huile: 1 }] }],
   ["coffre cerclé", "coffre", 2, {}],
   ["réserve couverte", "coffre", 3, {}],
   // 🔥 La forge (Book 25 §9.3) : les trois enclumes, le bac de trempe et son huile, la forge ventilée et son ventilateur.
@@ -213,7 +222,7 @@ MECANIQUE.forEach(([nom, type, etat], i) => {
 // ---------- Les armes en main ----------
 
 // Les armes de la 0.5 (Book 23 §4.6) : machette, masse et lance arrivent dans les types de `commun/`.
-const ARMES = ["hache", "marteau", "barre_metal", "couteau", "lame_forgee", "gourdin", "epieu", "pied_de_biche", "machette", "masse", "lance", "hachette", "serpe", "machette_forgee", "hache_forgee", "glaive", "lance_forgee", "matraque_fortune", "matraque_electrique", "aiguillon"] as TypeObjet[];
+const ARMES = ["hache", "marteau", "barre_metal", "couteau", "lame_forgee", "gourdin", "epieu", "pied_de_biche", "machette", "masse", "lance", "hachette", "serpe", "machette_forgee", "hache_forgee", "glaive", "lance_forgee", "matraque_fortune", "matraque_electrique", "aiguillon", "fourche_foin"] as TypeObjet[];
 const etatArmes = { pose: "repos" as "repos" | "garde" | "frappe", attente: 0 };
 const porteurs: Personnage[] = [];
 void chargerHumanoides().then(() => {
@@ -232,6 +241,16 @@ void chargerHumanoides().then(() => {
       scene.add(seule);
       articles.push({ nom: `arme ${arme}`, section: "armes", objet: seule, haut: 0.2, mesure: seule });
     }
+  });
+  // La fourche à foin dans le dos, hors du combat (plan 0.8 §2.4), une par famille : derrière la batterie, la hotte.
+  (["charbonniers", "voltaiques", "mecanistes"] as const).forEach((famille, i) => {
+    const p = new Personnage(famille);
+    p.objet.position.set((ARMES.length + i) * 1.6, 0, -14);
+    p.objet.rotation.y = Math.PI * 0.85;
+    p.porterDansLeDos("fourche_foin");
+    scene.add(p.objet);
+    porteurs.push(p);
+    articles.push({ nom: `fourche dans le dos (${famille})`, section: "armes", objet: p.objet, haut: 1.9, sansMesure: true });
   });
   const pose = parametres.get("pose");
   if (pose === "garde" || pose === "frappe") etatArmes.pose = pose;

@@ -205,18 +205,19 @@ test("arc : toutes les recettes de l'arc sont communes ; un arc monté vaut sa c
   }
   // L'arc de fortune : ★, quoi qu'on fasse.
   assert.equal(etoilesDuProduit(recette("arc_fortune")!, { perche_frene: 1, ficelle: 1 }), 1);
-  // Les cordes : ficelle ★★, corde ★★★, fil dentaire ★★★★.
+  // Les cordes (plan 0.8 §2.4, I13) : ficelle et corde de joncs ★★, fil dentaire et boyau ★★★.
   assert.equal(etoilesDuProduit(recette("corde_arc_ficelle")!, { ficelle: 3 }), 2);
-  assert.equal(etoilesDuProduit(recette("corde_arc_corde")!, { corde: 1 }), 3);
-  assert.equal(etoilesDuProduit(recette("corde_arc_dentaire")!, { fil_dentaire: 1 }), 4);
-  // Le frêne fait ★★★ ; avec une corde de ficelle, ★★. L'if fait ★★★★ avec une corde de fil dentaire, ★★★ avec la corde.
+  assert.equal(etoilesDuProduit(recette("corde_arc_corde")!, { corde: 1 }), 2);
+  assert.equal(etoilesDuProduit(recette("corde_arc_dentaire")!, { fil_dentaire: 1 }), 3);
+  assert.equal(etoilesDuProduit(recette("corde_arc_boyau")!, { boyaux: 1 }), 3);
+  // Le frêne fait ★★★ ; avec une corde de ficelle, ★★. L'if se monte ★★ au niveau 1 (Q-A2b), quelle que soit la corde.
   const frene = recette("arc_simple")!;
   assert.equal(etoilesDuProduit(frene, { ebauche_arc_seche: 1, "corde_arc#2": 1 }), 2);
   assert.equal(etoilesDuProduit(frene, { ebauche_arc_seche: 1, corde_arc: 1 }), 3);
   assert.equal(etoilesDuProduit(frene, { ebauche_arc_seche: 1, "corde_arc#4": 1 }), 3);
   const arcIf = recette("arc_if")!;
-  assert.equal(etoilesDuProduit(arcIf, { ebauche_if_seche: 1, "corde_arc#4": 1 }), 4);
-  assert.equal(etoilesDuProduit(arcIf, { ebauche_if_seche: 1, corde_arc: 1 }), 3);
+  assert.equal(etoilesDuProduit(arcIf, { ebauche_if_seche: 1, "corde_arc#4": 1 }), 2);
+  assert.equal(etoilesDuProduit(arcIf, { ebauche_if_seche: 1, corde_arc: 1 }), 2);
   // La recette prend la moins bonne corde du sac : c'est elle qui compte.
   assert.equal(etoilesDuProduit(arcIf, { ebauche_if_seche: 1, "corde_arc#4": 1, "corde_arc#2": 1 }), 2);
   // La maîtrise (dix arcs de frêne) : une étoile de plus.

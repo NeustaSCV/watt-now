@@ -593,6 +593,8 @@ function montrerCoup(message: { id: number; x: number; z: number; resultat: Resu
   const vue = eteints.get(message.id);
   // La décharge (Book 25 §5.1) : ni sang ni impact ; il se raidit, ou il s'éteint (le rendu de l'Éteint le montre).
   if (message.electrique) {
+    // La courte porte : elle raidit, ou met à terre (ses dégâts au torse, plan 0.8 §2.4) ; un éclat d'arc plus vif.
+    if (message.resultat === "raidi" || message.resultat === "a_terre") vue?.eclatDecharge();
     bruiteur.coup(message.resultat, message);
     if (message.resultat === "a_terre") hud.message(avecTouches("Il est à terre : une décharge ({agir}) l'éteint pour de bon.", tactile));
     return;
@@ -1675,6 +1677,8 @@ function boucle(instant: number): void {
     // L'arc en main pendant qu'on vise, bras levé : le personnage bande (Book 25 §3.4).
     const arcVise = viseeEnCours?.pret.genre === "tir" && !viseeEnCours.pret.arme.armeeDAvance ? typeDe(viseeEnCours.pret.cle) : null;
     personnage.tenir(arcVise ?? (modeCombat ? armeEnMain(inventaire, armeEquipee).objet : undefined));
+    // Hors du combat, la fourche à foin se porte dans le dos (plan 0.8 §2.4, chantier 8).
+    personnage.porterDansLeDos(!modeCombat && !arcVise && armeEnMain(inventaire, armeEquipee).objet === "fourche_foin" ? "fourche_foin" : null);
     // L'appui gardé pendant le coup précédent part à la fin du geste : on enchaîne sans marteler.
     if (coupEnAttente !== null && performance.now() >= coupFiniLe) {
       const appuye = coupEnAttente;

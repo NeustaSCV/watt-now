@@ -216,10 +216,11 @@ export function mettreATerre(e: Eteint, secondes: number): void {
 /**
  * La règle électrique (Book 25 §5.1 et §8.2), la même pour toutes les armes électriques : une décharge courte le fait
  * lâcher et le raidit ; maintenue sur un Éteint debout, elle le met à terre ; maintenue à la tête d'un Éteint raidi
- * (ou étourdi), ou n'importe quelle décharge sur un Éteint à terre, elle le détruit. Le casque n'y change rien, et
- * rien ne va au torse.
+ * (ou étourdi), ou n'importe quelle décharge sur un Éteint à terre, elle le détruit. Le casque n'y change rien.
+ * Depuis la 0.8 (plan §2.4, `degats-electriques.md` E5 et E6), la courte ajoute aussi ses dégâts au torse : à 3 points
+ * (4 pour l'Équipé), il tombe. La longue n'en fait pas : elle met à terre, ou elle détruit déjà.
  */
-function encaisserDecharge(e: Eteint, arme: Arme, appuye: boolean, voisins: readonly Eteint[], zone: Zone): EffetCoup {
+function encaisserDecharge(e: Eteint, arme: Arme, appuye: boolean, force: number, voisins: readonly Eteint[], zone: Zone): EffetCoup {
   const auSol = e.etat === "a_terre" || e.variante === "rampant";
   const pris = e.etourdi > 0 || (e.raidi ?? 0) > 0;
   if (auSol || (appuye && pris)) {
@@ -231,6 +232,12 @@ function encaisserDecharge(e: Eteint, arme: Arme, appuye: boolean, voisins: read
     return { resultat: "a_terre" };
   }
   const elec = arme.electrique;
+  // La courte frappe le torse : à 3 points (4 pour l'Équipé), il tombe, comme sous un coup.
+  e.degats += arme.degatsTorse * force;
+  if (arme.degatsTorse > 0 && e.degats >= RESISTANCE_TORSE + (e.variante === "equipe" ? 1 : 0)) {
+    mettreATerre(e, DUREE_A_TERRE);
+    return { resultat: "a_terre" };
+  }
   raidir(e, elec?.raidi ?? DUREE_ETOURDI);
   if (!elec?.saute) return { resultat: "raidi" };
   // ★★★ et plus : la courte saute au plus proche voisin debout, à moins d'un mètre.
@@ -261,7 +268,7 @@ export function encaisserCoup(e: Eteint, arme: Arme, appuye: boolean, force: num
   e.contact = 0;
   e.attention = Math.max(e.attention, 2);
   if (e.etat === "dormant") e.etat = "poursuivant";
-  return encaisserDecharge(e, arme, appuye, voisins, zone);
+  return encaisserDecharge(e, arme, appuye, force, voisins, zone);
 }
 
 /**
@@ -269,7 +276,7 @@ export function encaisserCoup(e: Eteint, arme: Arme, appuye: boolean, force: num
  * au bout de plusieurs coups, et se relève s'il n'est pas achevé : au sol, tout coup le détruit. `force` : 1, ou moins si l'on est épuisé.
  */
 export function encaisser(e: Eteint, arme: Arme, appuye: boolean, force: number, de: { x: number; z: number }, zone: Zone, voisins: readonly Eteint[] = []): ResultatCoup {
-  // L'électricité a sa règle à elle (Book 25 §5.1) : rien au torse, le casque n'y fait rien.
+  // L'électricité a sa règle à elle (Book 25 §5.1) : le casque n'y fait rien.
   if (arme.type === "electrique") return encaisserCoup(e, arme, appuye, force, de, zone, voisins).resultat;
   e.saisit = null;
   e.tenue = 0;
