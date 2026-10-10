@@ -1964,6 +1964,9 @@ export class Hud {
     p.querySelectorAll<HTMLElement>(".grille").forEach((g, i) => (g.scrollTop = defil[i] ?? 0));
     // Plus de croix (plan 0.8 §9.2) : le bouton « Fermer » du bas, ou B.
     p.querySelector(".fermer-fiche")!.addEventListener("click", () => this.ouvrir(p, false));
+    for (const d of p.querySelectorAll<HTMLDetailsElement>("details.indice-cle")) {
+      d.addEventListener("toggle", () => (d.open ? this.indicesDeplies.add(d.dataset.etape!) : this.indicesDeplies.delete(d.dataset.etape!)));
+    }
     const deplacer = (sens: "deposer" | "prendre", objet: CleObjet, tout: boolean) => {
       if (estDecharge && sens === "deposer") return;
       const dispo = (sens === "deposer" ? this.inventaire[objet] : contenu[objet]) ?? 0;
@@ -2011,6 +2014,8 @@ export class Hud {
   }
   private fiche: { genre: "feu" | "installation"; id: number } | null = null;
   private derniereFiche = "";
+  /** Les indices « Où chercher ? » dépliés (par étape), le temps de la session. */
+  private readonly indicesDeplies = new Set<string>();
 
   private get panneauFiche(): HTMLElement {
     return this.element.querySelector<HTMLElement>(".panneau.fiche")!;
@@ -2050,6 +2055,9 @@ export class Hud {
     p.innerHTML = html;
     // Plus de croix (plan 0.8 §9.2) : le bouton « Fermer » du bas, ou B.
     p.querySelector(".fermer-fiche")!.addEventListener("click", () => this.ouvrir(p, false));
+    for (const d of p.querySelectorAll<HTMLDetailsElement>("details.indice-cle")) {
+      d.addEventListener("toggle", () => (d.open ? this.indicesDeplies.add(d.dataset.etape!) : this.indicesDeplies.delete(d.dataset.etape!)));
+    }
     for (const b of p.querySelectorAll<HTMLButtonElement>("[data-verbe]")) {
       b.addEventListener("click", () => {
         const verbe = b.dataset.verbe as Verbe;
@@ -2095,9 +2103,12 @@ export class Hud {
     const outils = facteur !== null;
     const possible = (gratuit || (payable && outils)) && !bloque;
     const badge = e.famille ? ` <span class="badge-famille ${e.famille}" title="Un niveau de métier">${NOMS_FAMILLES[e.famille]}${e.famille !== this.famille ? " · ×1,5" : ""}</span>` : "";
+    // Plan 0.8, chantier 13 : la clé a sa ligne et son indice en deux temps ; elle ne se répète pas dans ce qui manque
+    // (sinon la liste dirait d'emblée où la trouver). Le reste : une ligne par manque, repliée sous « Où trouver ? ».
+    const sansCle = e.cle?.objet ? (Object.fromEntries(Object.entries(cout).filter(([t]) => t !== e.cle!.objet)) as Inventaire) : cout;
     const manque =
       !possible && !bloque && !gratuit
-        ? this.listeManque({ id: "fiche", lieu: { genre: "main" }, categorie: "batir", nom: titre, produit: { objet: "branche", quantite: 0 }, ingredients: cout, qualites: facon.qualites, duree: 0, intensite: "legere", famille: "tous" })
+        ? this.listeManqueRepliee({ id: "fiche", lieu: { genre: "main" }, categorie: "batir", nom: titre, produit: { objet: "branche", quantite: 0 }, ingredients: sansCle, qualites: facon.qualites, duree: 0, intensite: "legere", famille: "tous" })
         : "";
     return `
       <article class="etape ${possible ? "possible" : ""}">
@@ -2129,12 +2140,15 @@ export class Hud {
     const nom = cle.objet ? OBJETS[cle.objet].nom : cle.qualite ? `${NOMS_QUALITES[cle.qualite.qualite]} ${cle.qualite.niveau}` : (cle.nom ?? "");
     const image = cle.objet ? icone(cle.objet, 22) : "";
     const etat = etatCle({ ...e, id: e.id, cle }, this.vueProgression);
-    const suite =
-      "enPoche" in etat
-        ? `<span class="en-poche">✓ déjà en poche</span>`
-        : "plusLoin" in etat
-          ? `<span class="plus-loin">à trouver plus loin</span>`
-          : `<small class="indice-cle">${etat.indice}</small>`;
+    // Plan 0.8, chantier 13 : l'indice est replié sous la clé (« Où chercher ? ») ; au second temps, le coin précis
+    // s'ajoute au genre de lieu. Le pli reste ouvert d'une mise à jour à l'autre de la fiche.
+    const indice = () => {
+      const t = etat as { indice: string; temps: 1 | 2 };
+      const lignes = t.temps === 2 ? [cle.indice[0], t.indice] : [t.indice];
+      const ouvert = this.indicesDeplies.has(e.id!) ? " open" : "";
+      return `<details class="indice-cle" data-etape="${e.id}"${ouvert}><summary>Où chercher ?${t.temps === 2 ? ` <span class="precis">plus précis</span>` : ""}</summary>${lignes.map((l) => `<small>${l}</small>`).join("")}</details>`;
+    };
+    const suite = "enPoche" in etat ? `<span class="en-poche">✓ déjà en poche</span>` : "plusLoin" in etat ? `<span class="plus-loin">à trouver plus loin</span>` : indice();
     return `<span class="ligne-cle${"enPoche" in etat ? " poche" : ""}">${image}<span class="nom-cle">${nom}</span>${suite}</span>`;
   }
 
@@ -2623,6 +2637,14 @@ export class Hud {
 
   /** La recette dont on montre ce qui manque (ou « feu »). */
   private pourquoi: string | null = null;
+
+  /** Dans la fiche d'un meuble : ce qui manque, une ligne chacun, replié (les puces du coût disent déjà combien). */
+  private listeManqueRepliee(r: Recette): string {
+    const liste = this.listeManque(r);
+    if (!liste) return "";
+    const n = (liste.match(/<li>/g) ?? []).length;
+    return `<details class="ou-trouver"><summary>Où trouver ce qui manque ? <span class="nombre">${n}</span></summary>${liste}</details>`;
+  }
 
   private listeManque(r: Recette): string {
     // Une recette encore cachée ne se cite pas : « ça se fabrique (tu y penseras) » (l'arbre de progression, 0.7).

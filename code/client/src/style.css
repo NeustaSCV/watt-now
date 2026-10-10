@@ -5424,11 +5424,45 @@ body:has(#hud .voile-pause:not([hidden])) #hud .tactile {
 }
 #hud .panneau.fiche .ligne-cle .indice-cle {
   flex-basis: 100%;
-  font-style: italic;
 }
-#hud .panneau.fiche .ligne-cle .indice-cle::before {
-  content: "🔎 ";
-  font-style: normal;
+/* Plan 0.8, chantier 13 : l'indice replié sous la clé ; on le déplie d'un toucher (« Où chercher ? »). */
+#hud .panneau.fiche .ligne-cle .indice-cle summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--canard);
+}
+#hud .panneau.fiche .ligne-cle .indice-cle summary::-webkit-details-marker {
+  display: none;
+}
+#hud .panneau.fiche .ligne-cle .indice-cle summary::before {
+  content: "🔎";
+}
+#hud .panneau.fiche .ligne-cle .indice-cle summary::after {
+  content: "▸";
+  transition: transform 0.15s;
+}
+#hud .panneau.fiche .ligne-cle .indice-cle[open] summary::after {
+  transform: rotate(90deg);
+}
+#hud .panneau.fiche .ligne-cle .indice-cle .precis {
+  font-weight: 400;
+  font-style: italic;
+  opacity: 0.75;
+}
+#hud .panneau.fiche .ligne-cle .indice-cle small {
+  display: block;
+  padding: 2px 8px 2px 30px;
+  font-style: italic;
+  font-size: 12.5px;
+  line-height: 1.35;
 }
 #hud .panneau.fiche .ligne-cle.poche {
   background: rgba(31, 94, 102, 0.12);
@@ -5642,4 +5676,77 @@ body:has(#hud .voile-pause:not([hidden])) #hud .tactile {
   #hud .bandeau-avertissement .compris {
     min-height: 36px;
   }
+}
+
+/* ---------- La fiche Examiner sur téléphone (plan 0.8, chantier 13) ----------
+   En vertical, elle prend toute la largeur (12 px de marge), sous les jauges et les tuiles, jusqu'au-dessus du joystick
+   et du bouton B qui la referme ; en paysage, une colonne au centre, toute la hauteur, entre le joystick et les boutons. */
+@media (max-width: 560px) {
+  #hud .panneau.fiche {
+    left: 12px !important;
+    right: 12px !important;
+    width: auto !important;
+    transform: none;
+    z-index: 13;
+    top: max(172px, calc(env(safe-area-inset-top) + 160px)) !important;
+    /* Jusqu'au-dessus du joystick et du bouton B (≈ 160 px du bas), qui restent à portée du pouce. */
+    max-height: calc(100dvh - max(172px, calc(env(safe-area-inset-top) + 160px)) - 164px) !important;
+    padding: 8px 12px 10px;
+  }
+  #hud .panneau.fiche h2 {
+    font-size: 17px;
+  }
+  #hud .panneau.fiche .examen {
+    font-size: 13px;
+  }
+}
+@media (orientation: landscape) and (max-height: 520px) {
+  #hud .panneau.fiche {
+    top: max(8px, env(safe-area-inset-top)) !important;
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%);
+    width: min(460px, 56vw) !important;
+    max-height: calc(100dvh - 16px) !important;
+    z-index: 13;
+    padding: 6px 12px 8px;
+    font-size: 13px;
+  }
+  #hud .panneau.fiche h2 {
+    font-size: 16px;
+  }
+}
+/* Ce qui manque à une étape de la fiche : replié, une ligne par chose une fois déplié. */
+#hud .panneau.fiche details.ou-trouver summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--rouge);
+}
+#hud .panneau.fiche details.ou-trouver summary::-webkit-details-marker {
+  display: none;
+}
+#hud .panneau.fiche details.ou-trouver summary::after {
+  content: "▸";
+  transition: transform 0.15s;
+}
+#hud .panneau.fiche details.ou-trouver[open] summary::after {
+  transform: rotate(90deg);
+}
+#hud .panneau.fiche details.ou-trouver .nombre {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--rouge);
+  color: var(--creme);
+  font-size: 11px;
+  text-align: center;
+}
+#hud .panneau.fiche details.ou-trouver ul.manque li + li {
+  margin-top: 3px;
 }
