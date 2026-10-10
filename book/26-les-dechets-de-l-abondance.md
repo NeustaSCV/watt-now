@@ -62,7 +62,7 @@ Le relevé des recettes de la 0.6 (Book 25) montrait des ingrédients sans sourc
 | 8 | **Chiffons, bâche, ficelle, corde** | Tous | Vêtements, rideaux, tente, parasol, piscine gonflable, hamac, laisse à enrouleur |
 | 9 | **Couteau** (la lance) | Tous | Le **couteau abîmé** existant entre dans les fouilles, **rare** (décision Q8) |
 | 10 | **Pierre** (le terrain ne la repousse pas) | 🔥 | Tas de gravats |
-| 11 | **Roulements** | ⚙️ | Planche à roulettes, trottinette électrique, machine à laver |
+| 11 | **Roulements** | ⚙️ | Planche à roulettes, trottinette électrique, machine à laver. **Retirés en 0.8** (I9) : la boîte de roulements est une clé du niveau 2 (§11 bis) |
 
 ### 2.2 Chaque famille trouve sa base seule
 
@@ -160,13 +160,13 @@ Tiré du code (0.7). Les descriptions, dans le ton du Book 15, sont dans le fich
 | ballon de foot crevé | 0,4 | 0 | C | J, C, V | bande de caoutchouc 1 (C) |
 | peluche qui parle | 0,4 | 1 | C | V | pile usagée 2, chiffon 1 (C) |
 | toupie à main | 0,05 | 1 | C | partout (conteneurs) | — |
-| planche à roulettes | 2,5 | 15 | P | V, R | boîte de roulements à billes 1, chute d'aluminium 2, branche 2 (S) |
+| planche à roulettes | 2,5 | 15 | P | V, R | chute d'aluminium 2, branche 2 (S) ; plus de roulements en 0.8 |
 | trottinette d'enfant | 3 | 4 | C | V, R | chute d'aluminium 4, bande de caoutchouc 1 (S) |
 | laisse à enrouleur | 0,3 | 2 | C | V, R | ficelle 2, petit ressort 1, morceau de plastique 1 (V) |
 | vélo en libre-service | 22 | 45 | P | R, P, V | cadre de vélo 1, chaîne de vélo 1, roue de vélo 2, dynamo de vélo 1 (S, V) |
 | vélo d'enfant | 8 | 10 | C | V, J | chaîne de vélo 1, roue de vélo 1, barre de métal 1 (S) |
 | vélo d'appartement connecté | 35 | 20 | P | V, I | barre de métal 3, aimant 4, petit moteur 1, morceau de plastique 4 (S) |
-| trottinette électrique | 14 | 60 | P | R, V, P | petite batterie 1, petit moteur 1, aimant 4, boîte de roulements à billes 1 (V, S) |
+| trottinette électrique | 14 | 60 | P | R, V, P | petite batterie 1, petit moteur 1, aimant 4 (V, S) ; plus de roulements en 0.8 |
 
 #### Maison, famille salon (6)
 
@@ -198,7 +198,7 @@ Tiré du code (0.7). Les descriptions, dans le ton du Book 15, sont dans le fich
 | Objet | kg | W | Rar. | Lieux | Démontage |
 |---|---|---|---|---|---|
 | morceau de tuyau de cuivre | 1 | 15 | C | V, A | bobine de fil de cuivre 3 (C) |
-| jerrican vide | 1 | 3 | C | P, R, F | — |
+| jerrican percé (« jerrican vide » avant la 0.8) | 1 | 3 | C | P, R, F | morceau de plastique 2 (C) |
 | ressort de porte de garage | 4 | 40 | P | V, A | lame de ressort 2 (M 2) |
 | disque de scie émoussé | 0,6 | 12 | C | A, V | lame ébréchée 2 (M) |
 | fût métallique de 200 L | 18 | 15 | P | F, A, P | — |
@@ -226,7 +226,7 @@ Tiré du code (0.7). Les descriptions, dans le ton du Book 15, sont dans le fich
 | piquet de clôture tordu | 2,2 | 3 | C | C, F, R | barre de métal 1 (M) |
 | lame de tondeuse | 0,9 | 12 | C | J, F, A | lame ébréchée 2 (M) |
 | robot tondeuse | 10 | 25 | C | J | lame ébréchée 1, petit moteur 2, cellule lithium 4, morceau de plastique 4 (V) |
-| débroussailleuse | 7 | 20 | P | F, J, A | bobine d'allumage 1, barre de métal 1, morceau de plastique 2 (S) |
+| débroussailleuse | 7 | 20 | P | F, J, A | barre de métal 1, morceau de plastique 2 (S) ; plus de bobine en 0.8 |
 
 ### 3.3 Les points du monde (pas des objets du sac)
 
@@ -240,9 +240,9 @@ Comme le vélo de la ruine : ils ne se portent pas, ils se **fouillent**, se **d
 | **Tas de gravats** | Fouiller (8 s) | 2 pierres, et une fois sur trois un déchet | Un outil Creuser (bâton à fouir) va **deux fois plus vite** | Halte, Coopérative | 3 jours |
 | **Carcasse de mouton** | Prendre les os (4 s) | 6 os | — | Halte, Coopérative | 3 jours |
 | **Vélo couché dans le fossé** | Démonter (45 s) | Cadre, chaîne, 2 roues, dynamo | Serrer 1, Visser 1 | Halte | 7 jours, ailleurs |
-| **Épave de mobylette** | Démonter (40 s) | Bobine d'allumage, 2 roues de vélo, chaîne, barre de métal | Serrer 1, Visser 1 | Halte | 7 jours, ailleurs |
+| **Épave de mobylette** | Démonter (40 s) | 2 roues de vélo, chaîne, barre de métal (la bobine est grillée depuis la 0.8, I12) | Serrer 1, Visser 1 | Halte | 7 jours, ailleurs |
 | **Trampoline éventré** | Démonter (60 s) | 12 petits ressorts, 3 barres de métal, 1 bâche | Serrer 1 | Halte | 7 jours, ailleurs |
-| **Machine à laver** | Démonter (40 s) | 1 roulement, 6 fils de cuivre, 6 pierres (le contrepoids) | Visser 1, Serrer 1 | Halte | 7 jours, ailleurs |
+| **Machine à laver** | Démonter (40 s) | 6 fils de cuivre, 6 pierres (le contrepoids) ; le roulement du tambour est mort depuis la 0.8 (I9) | Visser 1, Serrer 1 | Halte | 7 jours, ailleurs |
 | **Frigo connecté** | Démonter (30 s) | 4 fils de cuivre, 2 chutes d'aluminium, 6 morceaux de plastique | Visser 1 | Halte | 7 jours, ailleurs |
 
 - **Le terrain personnel n'a aucun point** (décision Q-G1 : rien qu'on ne puisse ramasser, rien de plus que ses 12 déchets et sa décharge). **Le Carrefour non plus** : les Compteurs veillent.
@@ -468,6 +468,22 @@ Dans l'ordre, du moins coûteux pour le jeu au plus coûteux : qualité basse mo
 - **Remesurer sur le Pi 4** la halte pleine, déchets compris (`mesurer-pi.sh`).
 - **Caler les densités** au test familial (Q3) ; le débit visé par jour (≥ 2 barres de métal, ≈ 1 lame de ressort, ≥ 3 petits ressorts, ≥ 2 poignées de plumes, ≈ 1 appareil jetable, une petite batterie et un vélo complet tous les 3 jours) est vérifié par les tests de `dechets.test.ts`, à confirmer en jeu.
 - **Les usages « plus tard »** de certains objets : la couverture de survie (chaleur, Book 13), le rideau (occulter une fenêtre, Book 06), le jerrican (porter l'eau, Book 11), le fût de 200 L (charbonnière en fût, Book 02 §5), le tuyau de cuivre (alambic), la bougie parfumée (cire, lumière).
+
+## 11 bis. Ce que la 0.8 change (2026-10-10)
+
+*Plan 0.8 §2.5 (propositions I1 à I31 d'`ingredients-par-lieu.md`) ; **codé en 0.8** (chantiers 3 et 10 : `vestiges.ts`, `vestiges-lot2.ts`, `dechets.ts`, `couche-dechets.ts`).*
+
+- **Le jerrican percé** (I5) : le « jerrican vide » devient un **jerrican percé**, un déchet (« il sent encore l'essence, et il fuit par le fond ») qui se démonte en 2 morceaux de plastique. L'identifiant reste. **Le vrai jerrican de 20 L** sera la clé du niveau 3 de l'eau, au niveau 2 (L2B) ; l'usage « porter l'eau » du §11 attend celui-là.
+- **Les sacs plastique** (I28) : le **premier sac-poubelle du chemin**, sur le terrain, donne toujours **4 sacs plastique** en plus de son tirage : de quoi faire l'entonnoir du **récupérateur de 5 L** dès la maison (Book 24 §12). C'est le seul point garanti de la couche sur le terrain personnel.
+- **Les tables de fouille** :
+  - **la bobine d'allumage** quitte la station (I12) : l'épave de mobylette et la débroussailleuse ne la donnent plus ; la matraque ★★★ ne vient plus que de la maîtrise ;
+  - **les roulements** quittent la machine à laver, la trottinette électrique et la planche à roulettes (I9), comme la chambre froide de la Coopérative (I8) : ils ne débloquent plus rien avant le niveau 2 ;
+  - **l'étau, le grillage et la cocotte sortent des tables courantes** (I7) : ce sont les **clés du niveau 1**, à leur place fixe (la Coopérative, le Moulin du Gué) ;
+  - **R-BUTIN** : une clé de L1 sort **rarement** d'une fouille, **2 %** par fouille, en plus du tirage : à la station et au gué, l'une des six ; à la Coopérative, l'une des trois du Moulin, et inversement. Elle n'est dans aucune table (un test le vérifie) ;
+  - **par chance**, à la station : lames de ressort, appareil photo jetable, petit ressort, chiffons, bâche, cellules lithium (les démontages, I18), fil dentaire ; au gué : bâche, chiffons, casserole, cordes.
+- **Ce qu'on a ne disparaît pas** : on retire des **sources**, pas des objets (et tous les joueurs repartent de zéro au déploiement de la 0.8).
+- **Les ingrédients orphelins** (I31) ne sont pas créés : sable, bois flotté (le « bois flotté » du modèle du gué devient un tas de branches), planches comme matériau, mèche, chablis.
+- **La couche de déchets n'est pas encore posée** au **gué** ni au **Moulin du Gué** : leurs zones typées sont vides dans le code (`couche-dechets.ts`) ; c'est la question du §12 sur les lieux nouveaux.
 
 ## 12. Questions ouvertes
 
