@@ -1,6 +1,8 @@
 # Plan de développement — version 0.8 : le niveau 1
 
-*Version du plan : v0.2 · 2026-10-10 · **Statut : brouillon, à amender.** On l'amendera avec les dernières analyses qui tournent encore (encart du §10).*
+*Version du plan : v0.3 · 2026-10-10 · **Statut : décidé, en cours de codage.***
+
+*v0.3 (2026-10-10) : toutes les questions ouvertes du §9 sont tranchées (§9.1), dont la **remise à zéro de tous les joueurs** au déploiement de la 0.8 : la migration des personnages 0.7.3 sort du plan. Le codage commence (branche `integration-0-8`).*
 
 *v0.2 (2026-10-10) : intègre l'étude `candidats-h1b-l1b-et-budget.md` et les décisions du porteur qui la closent. **Le gué (H1B) et le Moulin à eau (L1B) sont retenus** ; le budget de pierre et de bois est décidé (B1 à B17, §2.7).*
 
@@ -647,6 +649,33 @@ vague 4   [13 Tutoriel, quêtes, aide] ◄────────────�
 | **Q-0.8-26** | Le Book 25 §2.5 (« ★★★ seul, en s'y mettant ») contredit la grille (★★ jusqu'au niveau 1, ★★★ à L2). On réécrit la règle d'or avec la grille ? | Oui (chantier 15) | 15 |
 | **Q-0.8-27** ✅ | La page d'administration (chantier 16) : quelle adresse source le Pi voit-il pour un poste du réseau 192.168.1.0/24 (la vraie adresse, ou celle de la box si elle traduit les adresses entre le réseau local et la DMZ) ? | La mesurer au premier déploiement (le journal de la page l'affiche) avant de figer la liste blanche  **Réponse du porteur (2026-10-10) : simple routage entre le réseau local et la DMZ, sans traduction d'adresses : le Pi voit la vraie adresse 192.168.1.x. La liste blanche 192.168.1.0/24 tient.** |
 | **Q-0.8-28** ✅ | La DMZ de la box est-elle une DMZ « hôte exposé » (tous les ports du Pi ouverts sur Internet) ? Si oui, une page sans mot de passe n'est protégée que par la liste blanche | Ajouter tout de même un mot de passe simple ou un jeton dans l'adresse, saisi une fois sur le poste du porteur ; sinon, vérifier sur la box que seul le port 1234 est ouvert  **Réponse du porteur (2026-10-10) : la box ne publie que des ports (le 1234), pas des hôtes. Pas de mot de passe : la page reste sans authentification, protégée par le port non publié et la liste blanche.** |
+
+### 9.1 Les décisions du lancement (2026-10-10)
+
+*Le porteur a tranché en bloc les questions encore ouvertes, au lancement du codage.*
+
+- **Remise à zéro (Q-0.8-8, Q-0.8-9)** : **tous les joueurs sont remis à zéro** au déploiement de la 0.8. Il n'y a donc **plus de migration** : le chantier 2 ne recalcule pas le dévoilement d'un personnage 0.7.3 (ni `versionDevoilement`, ni relecture d'une sauvegarde 0.7.3) ; le critère de réussite 15 tombe ; la citerne de 60 L, la forge ventilée, la réserve couverte et le lit de branchages déjà posés n'ont plus à être gérés. Le serveur démarre sur une base neuve.
+- **Q-0.8-4** : l'arc simple ★★★★ ne s'obtient que par la maîtrise (K54 corrigé en « maîtrise »).
+- **Q-0.8-6** : la lance commune (0,7) et la lance forgée (sans étoiles) restent ainsi ; on mesure au test de jeu.
+- **Q-0.8-7** : les valeurs d'armes hors de la 0.8 restent au plan du niveau 2.
+- **Q-0.8-10** : « La mise d'acier » est réécrite pour la hachette au foyer de forge.
+- **Q-0.8-11** : « Un vrai repas » garde « pommes cuites, ou une poêlée ».
+- **Q-0.8-12** : le prix des clés de L1 au Comptoir ≈ deux allers-retours de travail, en stock limité ; le chantier 10 propose les chiffres.
+- **Q-0.8-13** : l'accessoire ⚙️ devient le « **ventilateur à manivelle** ».
+- **Q-0.8-14** : la pièce de famille revient pour son joueur au bout de **24 h**.
+- **Q-0.8-15** : le vétéran sans tutoriel va chercher sa pièce à H1A ; le carnet le lui dit (« Ta famille t'attend à la station »).
+- **Q-0.8-16** : l'indice passe au second temps après une visite du bon lieu sans la clé, ou **45 min** de jeu.
+- **Q-0.8-17** : la 0.8 n'ajoute que les indices à la fiche d'installation.
+- **Q-0.8-18** : fin du tutoriel : la saisie, la carte, la famille, la nuit.
+- **Q-0.8-19** : « S'installer » au niveau 1 : deux portes ouvertes à la fois, une par route.
+- **Q-0.8-20** : la matraque électrique ★ reste (1,0 ; solidité 60).
+- **Q-0.8-21** : Raboter et Souder sont déclarées dans le type, sans usage.
+- **Q-0.8-22** : le bac à câble est **gratuit, lent, et marche de jour comme de nuit** (G15 l'emporte sur « pas de nuit » du chantier 11 ; le panneau du modèle reste un décor) ; sur le radier, on marche, on n'y court pas.
+- **Q-0.8-24** : la session « bâtiments » travaille déjà sur le Moulin (portes, fenêtres, pièces, changements du §10.1) ; le chantier 12 part de son modèle livré.
+- **Q-0.8-25** : « Le Gué-aux-Saules » et « Le Moulin du Gué ».
+- **Q-0.8-26** : la règle d'or du Book 25 §2.5 est réécrite avec la grille (chantier 15).
+- **N1 (R51 et les délais)** : à la Coopérative et au Moulin, **tout revient à 24 h** (Éteints, butin, clés garanties, grande porte refermée) ; le grillage et l'étau passent de 4 jours à 24 h, l'if de 12 h à 24 h ; le repeuplement partiel de 3 Éteints toutes les 12 h disparaît. **La fourche à foin ne se trouve qu'une fois par personnage.**
+- **N2** : le bac marche la nuit (voir Q-0.8-22).
 
 **Une note sur les sources.** Le bloc `familles` de `progression-par-ingredients-page.json` (et le §4 du `.md` v5) dit encore que l'enclume donne ★★★ et que le sac donne « les 4 premiers charbons ». Les décisions plus récentes l'emportent : **★★** (P1, Q-A6) et **4 charbons** (I23). La question V5-3 est donc réglée.
 
