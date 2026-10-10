@@ -343,7 +343,7 @@ export const RECETTES_COMMUNES: Recette[] = [
     famille: "tous",
   },
   {
-    // Elle brûle une heure de jeu une fois allumée (torche.ts).
+    // Elle brûle une nuit entière une fois allumée (torche.ts).
     id: "torche_plantee",
     lieu: POSEE,
     categorie: "batir",

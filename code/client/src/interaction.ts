@@ -67,7 +67,7 @@ export const EXAMENS_INSTALLATIONS: Record<InstallationVue["type"], string> = {
   tour_perche: "Une perche de frêne en ressort, une corde, une pédale : le bois tourne, et le ciseau le façonne.",
   // Le niveau 1 (plan 0.8, chantier 6).
   ratelier_outils: "Deux perches et des chevilles contre un piquet : chaque outil a sa place. Rangé ici, il sert à tout ce qu'on bâtit autour.",
-  torche_plantee: "Une branche plantée, un chiffon gras qui brûle au bout. Elle éclaire six mètres autour, une heure durant.",
+  torche_plantee: "Une branche plantée, un chiffon gras qui brûle au bout. Elle éclaire six mètres autour, une nuit durant.",
 };
 
 /** La famille qui sait se servir d'une installation (celle qui sait la construire). */

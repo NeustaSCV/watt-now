@@ -1,5 +1,5 @@
 // Le couchage, le stockage, l'établi, la lumière côté serveur (plan 0.8 §2.3, chantier 6).
-// - La torche plantée : on l'allume (briquet ou pierre à feu), elle brûle une heure de jeu, puis elle est consumée.
+// - La torche plantée : on l'allume (briquet ou pierre à feu), elle brûle une nuit entière, puis elle est consumée.
 // - Le râtelier à outils : il se remplit comme un coffre, mais seulement d'outils (joueur.ts, `utiliserCoffre`).
 // - Les outils à portée (le râtelier, l'établi à étau) : commun/src/outils-a-portee.ts.
 //
@@ -40,7 +40,7 @@ export function utiliserNiveau1(ctx: ContexteMecanique, i: InstallationVue, verb
       i.etat = { ...i.etat, eteinteLe: maintenant() + DUREE_TORCHE_MS };
       ctx.maj();
       ctx.noter("torche_allumee");
-      ctx.info("La torche brûle : six mètres de lumière pendant une heure de jeu. La nuit, elle se voit de loin.");
+      ctx.info("La torche brûle : six mètres de lumière pour toute une nuit. La nuit, elle se voit de loin.");
     },
     "outil",
   );
