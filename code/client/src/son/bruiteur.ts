@@ -38,6 +38,8 @@ export function solIci(lieu: LieuJouable, x: number, z: number): Sol {
     if (x > STATION.auvent.x - STATION.auvent.l / 2 - 6 && x < STATION.atelier.x + STATION.atelier.l / 2 + 2 && z > BOUTIQUE.porte.z - 0.5 && z < ROUTE.z) return "beton";
     return "herbe";
   }
+  // 0.8 : le gué et le Moulin, branchés vides (chantier 4) : de la terre, en attendant leurs sols (chantiers 11 et 12).
+  if (lieu === "gue" || lieu === "moulin") return "terre";
   if (Math.abs(z - ROUTE_CARREFOUR.z) <= ROUTE_CARREFOUR.demiLargeur || Math.abs(x - ROUTE_CARREFOUR.x) <= ROUTE_CARREFOUR.demiLargeur) return "beton";
   if (dans(x, z, COMPTOIR.batiment, 4)) return "beton";
   return "terre";
