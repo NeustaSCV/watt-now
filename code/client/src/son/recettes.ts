@@ -642,6 +642,41 @@ export const pinces: Recette = (h) => {
   return p.donnees;
 };
 
+/**
+ * Le petit alternateur du pédalier générateur (plan 0.8, chantier 7) : le sifflement du rotor (une fondamentale et ses
+ * harmoniques, adoucies), le souffle de son ventilateur, le frottement des balais. `hauteur` : 0 à l'arrêt, 1 au régime
+ * de croisière ; la cadence des pédales (≈ 1 coup par seconde) fait respirer la hauteur et le volume.
+ */
+function rotor(d: number, h: Hasard, hauteur: (t: number) => number, volume: (t: number) => number): Piste {
+  const p = new Piste(d, h);
+  const cadence = (t: number) => 1 + 0.025 * Math.sin(t * 2 * Math.PI);
+  const f0 = (t: number) => (70 + 160 * hauteur(t)) * cadence(t);
+  for (const [k, a] of [
+    [1, 0.5],
+    [2, 0.28],
+    [3, 0.16],
+    [6, 0.05],
+  ] as const) {
+    const s = oscillateur(n(d), (t) => f0(t) * k, k === 1 ? "triangle" : "sinus");
+    p.ajouter(enveloppe(s, (t) => volume(t) * (0.85 + 0.15 * Math.sin(t * 2 * Math.PI))), 0, a * 0.5);
+  }
+  // Le ventilateur du carter : un souffle qui monte avec le régime.
+  p.ajouter(souffle(d, h, { bruit: "rose", filtre: "passe-bande", f: (t) => 900 + 1600 * hauteur(t), q: 1.2, env: (t) => volume(t) * hauteur(t) }), 0, 0.16);
+  // Les balais sur les bagues : un grésillement fin.
+  p.ajouter(souffle(d, h, { filtre: "passe-haut", f: 5000, env: (t) => volume(t) * 0.5 }), 0, 0.025);
+  return p;
+}
+
+/** L'alternateur qui se lance : en trois secondes, il monte du grave au sifflement de croisière (joué une fois). */
+export const alternateurLance: Recette = (h) => {
+  const d = 3;
+  const monte = (t: number) => Math.min(1, t / 2.6) ** 0.7;
+  return rotor(d, h, monte, (t) => 0.25 + 0.75 * monte(t)).fondre(0.01, 0.4).donnees;
+};
+
+/** L'alternateur au régime de croisière (en boucle, pendant qu'on pédale) : il ronronne avec les coups de pédale. */
+export const alternateur: Recette = (h) => rotor(3, h, () => 1, () => 1).boucler(0.5);
+
 /** Le bourdonnement du banc de recharge (en boucle) : on ne l'entend qu'à deux pas. */
 export const bourdonnement: Recette = (h) => {
   const d = 3;
@@ -886,4 +921,170 @@ export const dechargeLongue: Recette = (h) => {
   p.ajouter(grains(d, h, 1400, { f: [1800, 7000], q: 1.4, longueur: [0.0004, 0.0016], amplitude: [0.2, 0.8] }), 0.01, 0.75);
   p.ajouter(enveloppe(oscillateur(n(d), (t) => 100 + 20 * Math.sin(Math.PI * Math.min(1, t / d)), "scie"), cloche(d)), 0.01, 0.3);
   return saturer(p.donnees, 1.6);
+};
+
+// =====================================================================================
+// « Tu y penses » (plan 0.8 §2.2, chantier 2) : l'idée au ramassage d'une clé
+// =====================================================================================
+
+/**
+ * Une idée qui vient : deux notes boisées qui montent d'une tierce majeure, douces, comme un petit carillon de bois.
+ * Court (moins d'une seconde) et chaleureux ; rien du froissement de la fouille ni du choc d'un ramassage.
+ */
+export const idee: Recette = (h) => {
+  const p = new Piste(1.1, h);
+  const fondamentale = entre(h, 510, 535);
+  const note = (f: number) =>
+    enveloppe(
+      modes(0.9, [
+        { f, a: 1, tau: 0.32 },
+        { f: f * 2, a: 0.28, tau: 0.16 },
+        { f: f * 3.98, a: 0.07, tau: 0.06 },
+        { f: f / 2, a: 0.18, tau: 0.22 },
+      ]),
+      // Une attaque de 12 ms : on effleure, on ne frappe pas.
+      (t) => Math.min(1, t / 0.012),
+    );
+  p.ajouter(note(fondamentale), 0, 0.8);
+  p.ajouter(note(fondamentale * 1.26), entre(h, 0.11, 0.14), 0.9);
+  // Un souffle très léger dessous, pour la chaleur.
+  p.ajouter(souffle(0.5, h, { bruit: "rose", filtre: "passe-bas", f: 900, env: percussive(0.03, 0.15) }), 0, 0.05);
+  return p.normaliser(0.6).donnees;
+};
+
+// =====================================================================================
+// Le gué (plan 0.8, chantier 11) : le radier, le bac, la cloche du passeur, le galet dans l'eau. L'ambiance de l'eau
+// courante est à la session musique ; ces effets-là sont synthétisés ici.
+// =====================================================================================
+
+/** Le clapot du radier : une nappe d'eau qui court sur le béton, des remous, des gouttes qui sautent. En boucle. */
+export const clapotRadier: Recette = (h) => {
+  const d = 6;
+  const p = new Piste(d, h);
+  p.ajouter(souffle(d, h, { bruit: "rose", filtre: "passe-bande", f: (t) => 900 + 250 * Math.sin(t * 1.7) + 120 * Math.sin(t * 4.1), q: 0.7 }), 0, 0.55);
+  p.ajouter(souffle(d, h, { bruit: "brun", filtre: "passe-bas", f: 260 }), 0, 0.35);
+  p.ajouter(grains(d, h, 140, { f: [600, 2600], q: 7, longueur: [0.01, 0.035], amplitude: [0.1, 0.7] }), 0, 0.5);
+  return p.boucler(0.8);
+};
+
+/** Le câble du bac qui grince dans ses poulies, et la traille qui frotte : en boucle, tant que le radeau avance. */
+export const grincementCable: Recette = (h) => {
+  const d = 3.2;
+  const p = new Piste(d, h);
+  let t = 0;
+  while (t < d - 0.6) {
+    const long = entre(h, 0.25, 0.55);
+    const f = entre(h, 420, 640);
+    // Le grincement : une note qui frotte et glisse, un peu sale.
+    p.ajouter(saturer(enveloppe(oscillateur(n(long), (x) => f * (1 + 0.18 * Math.sin(x * 9)) * (1 - 0.12 * x)), points([0, 0], [0.08, 1], [long * 0.7, 0.6], [long, 0])), 1.6), t, entre(h, 0.15, 0.3));
+    t += long + entre(h, 0.35, 0.9);
+  }
+  p.ajouter(souffle(d, h, { filtre: "passe-bande", f: 1800, q: 1.2 }), 0, 0.05);
+  p.ajouter(grains(d, h, 18, { f: [150, 400], q: 3, longueur: [0.02, 0.05], amplitude: [0.2, 0.6] }), 0, 0.3);
+  return p.boucler(0.4);
+};
+
+/** La cloche du passeur : trois coups de bronze, une note grave qui tient, qu'on entend loin. */
+export const clocheBac: Recette = (h) => {
+  const p = new Piste(3.6, h);
+  const f = entre(h, 610, 650);
+  const partiels = [
+    { f: f * 0.5, a: 0.6, tau: 1.4 },
+    { f, a: 1, tau: 1.1 },
+    { f: f * 1.19, a: 0.45, tau: 0.7 },
+    { f: f * 1.5, a: 0.35, tau: 0.5 },
+    { f: f * 2.0, a: 0.3, tau: 0.35 },
+    { f: f * 2.74, a: 0.2, tau: 0.2 },
+  ];
+  for (const t of [0, 0.85, 1.7]) {
+    p.ajouter(modes(1.9, partiels), t, 0.55);
+    p.ajouter(metal(h, 2400, 0.01, 0.04), t, 0.25);
+  }
+  return p.donnees;
+};
+
+/** Un galet qui tombe dans l'eau : un « plouf » rond, une goutte qui remonte. */
+export const plouf: Recette = (h) => {
+  const p = new Piste(0.7, h);
+  const f = entre(h, 380, 520);
+  p.ajouter(enveloppe(oscillateur(n(0.12), (x) => f * (1 + 2.2 * x)), cloche(0.12)), 0.01, 0.7);
+  p.ajouter(souffle(0.45, h, { filtre: "passe-bande", f: (t) => 1600 - t * 1800, q: 0.9, env: points([0, 0], [0.01, 1], [0.45, 0]) }), 0, 0.5);
+  p.ajouter(sourd(140, 60, 0.03), 0, 0.5);
+  return p.donnees;
+};
+
+// =====================================================================================
+// Le Moulin du Gué (plan 0.8, chantier 12) : la grande porte qui grince, les trois leurres du décor (M6, M31)
+// =====================================================================================
+
+/**
+ * La grande porte du moulin : deux battants de chêne sur des gonds rouillés. Un grincement long qui monte et se casse,
+ * le loquet de fer, et le battant qui cogne le mur. On l'entend de loin : les garçons meuniers se lèvent.
+ */
+export const grandePorte: Recette = (h) => {
+  const d = 1.9;
+  const p = new Piste(d + 0.4, h);
+  p.ajouter(metal(h, entre(h, 900, 1100), 0.05, 0.25, 1.2), 0, 0.5);
+  // Le gond : un frottement aigu, saccadé, dont la hauteur hésite.
+  const f = entre(h, 520, 640);
+  const grince = oscillateur(n(d), (t) => f * (1 + 0.35 * Math.sin(t * 2.3)) * (1 + 0.04 * Math.sin(t * 61)), "scie");
+  filtrer(grince, "passe-bande", (t) => 1300 + 700 * Math.sin(t * 1.7), 4);
+  const saccade = (t: number) => (0.55 + 0.45 * Math.abs(Math.sin(t * 19 + Math.sin(t * 5)))) * points([0, 0], [0.12, 1], [d * 0.7, 0.8], [d, 0])(t);
+  p.ajouter(enveloppe(grince, saccade), 0.08, 0.55);
+  p.ajouter(souffle(d, h, { bruit: "rose", filtre: "passe-bande", f: 900, q: 1.5, env: cloche(d) }), 0.08, 0.15);
+  p.ajouter(bois(h, entre(h, 110, 150), 0.35, 0.5), d + 0.05, 0.9);
+  p.ajouter(sourd(80, 40, 0.06), d + 0.05, 0.6);
+  return saturer(p.donnees, 1.3);
+};
+
+/** Le monte-sacs : la corde qui file dans la poulie, et le sac de farine qui s'écrase dans la cour (≈ 30 m). */
+export const monteSacs: Recette = (h) => {
+  const p = new Piste(2.4, h);
+  // La poulie qui tourne à vide, de plus en plus vite.
+  for (let t = 0, pas = 0.14; t < 1.1; t += pas, pas = Math.max(0.035, pas * 0.85)) p.ajouter(bois(h, entre(h, 600, 760), 0.06, 1.4), t, 0.25);
+  p.ajouter(souffle(1.1, h, { filtre: "passe-bande", f: (t) => 600 + t * 1400, q: 1.2, env: points([0, 0], [0.2, 0.5], [1.1, 1]) }), 0, 0.2);
+  // Le choc : un sac de 50 kg, la farine qui s'échappe en nuage.
+  p.ajouter(sourd(70, 30, 0.12), 1.15, 1);
+  p.ajouter(sourd(55, 28, 0.2), 1.17, 0.7);
+  p.ajouter(souffle(1, h, { bruit: "rose", filtre: "passe-bas", f: 1800, env: percussive(0.005, 0.25) }), 1.15, 0.5);
+  p.ajouter(grains(0.6, h, (t) => 400 * Math.exp(-t * 6), { f: [800, 4000], longueur: [0.002, 0.006], amplitude: [0.1, 0.5] }), 1.18, 0.4);
+  return saturer(p.donnees, 1.4);
+};
+
+/** Le babillard de la trémie : une petite clochette de laiton, secouée par l'auget, 2,5 s (≈ 20 m). */
+export const babillard: Recette = (h) => {
+  const p = new Piste(2.8, h);
+  const f = entre(h, 2350, 2550);
+  const partiels = [
+    { f, a: 1, tau: 0.35 },
+    { f: f * 2.32, a: 0.45, tau: 0.18 },
+    { f: f * 4.1, a: 0.2, tau: 0.08 },
+  ];
+  let t = 0;
+  while (t < 2.3) {
+    p.ajouter(modes(0.5, partiels), t, 0.2 + h() * 0.12);
+    t += entre(h, 0.09, 0.2);
+  }
+  return p.donnees;
+};
+
+/**
+ * La borne « Pétrissez virtuellement ! » : un jingle de réclame en boucle, joyeux et faux, par un haut-parleur fatigué
+ * (≈ 22 m). Six notes qui montent, une qui retombe, deux fois.
+ */
+export const borneJingle: Recette = (h) => {
+  const p = new Piste(5.2, h);
+  const notes = [523, 659, 784, 1047, 880, 784, 659, 1047];
+  const note = (f: number, d: number) =>
+    enveloppe(
+      filtrer(oscillateur(n(d), (t) => f * (1 + 0.006 * Math.sin(t * 40)), "carre"), "passe-bande", 1400, 0.9),
+      points([0, 0], [0.01, 1], [d * 0.6, 0.6], [d, 0]),
+    );
+  for (let r = 0; r < 2; r++) {
+    notes.forEach((f, i) => p.ajouter(note(f, 0.24), r * 2.4 + i * 0.27, 0.35));
+    p.ajouter(note(392, 0.5), r * 2.4 + notes.length * 0.27, 0.3);
+  }
+  // Le grésillement du haut-parleur.
+  p.ajouter(souffle(5, h, { filtre: "passe-haut", f: 3000, env: () => 1 }), 0, 0.03);
+  return saturer(p.donnees, 1.8);
 };

@@ -193,7 +193,8 @@ test("les points du monde (§3.8) : ce qu'ils donnent existe ; on fouille, on d�
     assert.ok(d.verbe !== "fouiller" || d.conteneur || d.chanceDechet, `${p} : on y trouve quelque chose`);
   }
   assert.deepEqual(POINTS_DECHETS.trampoline.donne, { petit_ressort: 12, barre_metal: 3, bache: 1 });
-  assert.equal(POINTS_DECHETS.machine_laver.donne.roulements, 1);
+  // Plan 0.8 (I9) : la machine à laver ne donne plus de roulement.
+  assert.equal(POINTS_DECHETS.machine_laver.donne.roulements, undefined);
   assert.equal(POINTS_DECHETS.carcasse_mouton.donne.os, 6);
   // Le tas de gravats : toujours deux pierres, parfois un déchet en plus.
   let avecDechet = 0;
@@ -283,8 +284,10 @@ test("chaque matière qui manquait (§2.2) se trouve désormais, au débit visé
   // 7. Plumes : au moins 2 poignées par jour ; des os aussi.
   assert.ok(v("plumes") >= 2, `plumes : ${v("plumes").toFixed(2)}`);
   assert.ok(v("os") > 0);
-  // 8 à 11. Chiffons, bâche, ficelle, couteau, roulements : trouvables.
-  for (const t of ["chiffons", "bache", "ficelle", "couteau", "roulements"] as TypeObjet[]) assert.ok(v(t) > 0, `${t} introuvable`);
+  // 8 à 10. Chiffons, bâche, ficelle, couteau : trouvables. Les roulements, non : plan 0.8 (I9, §9.2), la boîte de
+  // roulements est une clé de L2A ; la planche à roulettes et la trottinette n'en donnent plus.
+  for (const t of ["chiffons", "bache", "ficelle", "couteau"] as TypeObjet[]) assert.ok(v(t) > 0, `${t} introuvable`);
+  assert.equal(v("roulements"), 0);
   // 10. La pierre : le tas de gravats en donne, partout où il y a des ruines.
   assert.ok((POINTS_DECHETS.tas_gravats.donne.pierre ?? 0) > 0);
   // Le couteau et la conserve restent rares ; les matières de base, communes.

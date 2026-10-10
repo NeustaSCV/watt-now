@@ -2,6 +2,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { toutDevoile } from "../../commun/src/progression.ts";
 import type { MessageServeur } from "../../commun/src/messages.ts";
 import { energieGrise, multiplicateurQualites, objetsSansEnergieGrise, recette } from "../../commun/src/recettes.ts";
 import { Base } from "./base.ts";
@@ -14,6 +15,9 @@ const JAMAIS_D_ETEINT = () => 1;
 function monter(inventaire?: Record<string, number>) {
   const base = new Base(":memory:");
   const compte = base.creerCompte("Rose", "potager42", "mecanistes");
+  // Ces tests portent sur autre chose que l'arbre de progression : tout est dévoilé (plan 0.8 : le vétéran
+  // n'a plus d'emblée que les recettes à la main).
+  base.sauverProgression(compte.id, toutDevoile("mecanistes"));
   if (inventaire) base.sauverInventaire(compte.id, inventaire);
   let instant = 1_000_000;
   const recus: MessageServeur[] = [];
@@ -62,9 +66,11 @@ test("sans clé, le vélo ne se démonte pas ; la caisse à outils en donne une"
   assert.deepEqual(dernier("ressource"), { t: "ressource", id: velo.id, disponible: false });
 });
 
-test("un outil d'un niveau en dessous ralentit, deux niveaux en dessous empêchent", () => {
+test("les outils sont des portes dures : il faut le niveau demandé (plan 0.8 §2.1)", () => {
   assert.equal(multiplicateurQualites({ couteau: 1 }, { couper: 1 }), 1);
-  assert.equal(multiplicateurQualites({ pierre: 1 }, { marteler: 2 }), 1.5);
+  // Avant la 0.8, un niveau en dessous ralentissait (×1,5) : Marteler 1 ne suffit plus pour Marteler 2.
+  assert.equal(multiplicateurQualites({ pierre: 1 }, { marteler: 2 }), null);
+  assert.equal(multiplicateurQualites({ marteau: 1 }, { marteler: 2 }), 1);
   assert.equal(multiplicateurQualites({}, { marteler: 2 }), null);
 });
 
@@ -81,7 +87,7 @@ test("remmancher la hache : la tête, une branche, de quoi couper et de quoi mar
 });
 
 test("construire un établi devant soi, pas dans la ruine ni trop loin", () => {
-  const { joueur, attendre, dernier, infos } = monter({ buche: 4, branche: 6, couteau: 1, pierre: 1 });
+  const { joueur, attendre, dernier, infos } = monter({ buche: 4, branche: 6, couteau: 1, pierre: 1, tete_hache: 1 });
   joueur.position = { x: 20, z: 20, o: 0 };
   joueur.recevoir({ t: "fabriquer", recette: "etabli", x: 30, z: 30, o: 0 });
   assert.match(infos().at(-1)!, /trop loin/);

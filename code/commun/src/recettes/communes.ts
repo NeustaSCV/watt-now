@@ -3,10 +3,18 @@
 
 import type { Recette } from "../recettes.ts";
 import { facteursArc } from "../arc.ts";
+import { PLAFOND_ARC_IF_NIVEAU_1 } from "../armes/grille.ts";
+import { A_LA_CREMAILLERE, A_LA_MAIN, A_LA_POELE, AU_FOUR, AU_FOYER_DE_PIERRES, POSEE, SOUS_LA_CENDRE, aCote } from "./lieux.ts";
+
+/** L'établi à étau (niveau 2 de l'établi) : ses recettes, et réparer un manche sans forge (le geste : chantier 9). */
+export const A_L_ETABLI_A_ETAU = aCote("etabli", { niveau: 2 });
+/** Où l'on répare le manche d'une arme ou d'un outil, sans forge, pour toutes les familles (R-ARMES-4, I19). */
+export const LIEU_REPARER_MANCHE = A_L_ETABLI_A_ETAU;
 
 export const RECETTES_COMMUNES: Recette[] = [
   {
     id: "hache",
+    lieu: A_LA_MAIN,
     categorie: "outils",
     nom: "Remmancher la hache",
     produit: { objet: "hache", quantite: 1 },
@@ -18,17 +26,20 @@ export const RECETTES_COMMUNES: Recette[] = [
   },
   {
     id: "etabli",
+    lieu: POSEE,
     categorie: "ateliers",
     nom: "Établi",
     produit: { installation: "etabli" },
     ingredients: { buche: 4, branche: 6 },
-    qualites: { marteler: 1, couper: 1 },
+    // Plan 0.8 (tableau maître) : Couper 1, Fendre 1 (la tête de hache de la caisse suffit), Marteler 1.
+    qualites: { marteler: 1, couper: 1, fendre: 1 },
     duree: 90,
     intensite: "moyenne",
     famille: "tous",
   },
   {
     id: "abri",
+    lieu: POSEE,
     categorie: "batir",
     nom: "Abri de branches et de bâche",
     produit: { installation: "abri" },
@@ -41,11 +52,13 @@ export const RECETTES_COMMUNES: Recette[] = [
   {
     // Pour ranger ce qu'on ne porte pas : le sac ne tient que 55 kg (Book 01 §6 bis, Book 19 §2).
     id: "coffre",
+    lieu: POSEE,
     categorie: "batir",
     nom: "Coffre de rangement",
     produit: { installation: "coffre" },
     ingredients: { buche: 4, branche: 4, corde: 1 },
-    qualites: { couper: 1, marteler: 1 },
+    // Plan 0.8 (tableau maître) : les planches se fendent dans les bûches (Fendre 1).
+    qualites: { couper: 1, fendre: 1, marteler: 1 },
     duree: 60,
     intensite: "moyenne",
     famille: "tous",
@@ -53,6 +66,7 @@ export const RECETTES_COMMUNES: Recette[] = [
   {
     // Le geste de base du bushcraft : tordre et tresser les feuilles de jonc (Book 02 §4, fibres ; sans rouissage en 0a).
     id: "corde",
+    lieu: A_LA_MAIN,
     categorie: "materiaux",
     nom: "Tresser une corde",
     produit: { objet: "corde", quantite: 1 },
@@ -66,6 +80,7 @@ export const RECETTES_COMMUNES: Recette[] = [
     // Deux montants de bûche refendue, des barreaux de branches, le tout ligaturé de corde : pour cueillir dans les arbres.
     // Il se porte et se déplace (le premier objet lourd à porter) ; il servira aussi pour monter un mur (Book 10).
     id: "escabeau",
+    lieu: POSEE,
     categorie: "batir",
     nom: "Escabeau de bois",
     produit: { installation: "escabeau" },
@@ -78,6 +93,7 @@ export const RECETTES_COMMUNES: Recette[] = [
   {
     // Un rondin de bûche, dégrossi au couteau : l'arme la plus simple (Book 11 §10, chasse à la volaille).
     id: "gourdin",
+    lieu: A_LA_MAIN,
     categorie: "outils",
     nom: "Tailler un gourdin",
     produit: { objet: "gourdin", quantite: 1 },
@@ -91,6 +107,7 @@ export const RECETTES_COMMUNES: Recette[] = [
     // Plumer à l'eau chaude ou à sec, vider, découper : quatre portions de 200 g. Les plumes et un os restent : de quoi
     // empenner et armer des flèches (Book 25 §3.2).
     id: "volaille",
+    lieu: A_LA_MAIN,
     categorie: "feu",
     nom: "Plumer et vider la poule",
     produit: { objet: "volaille_crue", quantite: 4 },
@@ -101,39 +118,43 @@ export const RECETTES_COMMUNES: Recette[] = [
     intensite: "legere",
     famille: "tous",
   },
-  // ---------- La cuisine au feu (2026-10-08) : les plats nourrissent mieux que les ingrédients crus ----------
+  // ---------- Le feu et la cuisine (2026-10-08 ; plan 0.8 §2.3, chantier 5) : les plats nourrissent mieux que les
+  // ingrédients crus. Feu de camp : les pommes cuites ; foyer de pierres : la poêlée (aussi au Dakota) et ce qui se durcit ;
+  // foyer de cuisine : la soupe ; le four (plus tard) : la volaille aux cèpes et le pot-au-feu, grisés en attendant. ----------
   {
     id: "volaille_cepes",
+    lieu: AU_FOUR,
+    // Le four de terre attend sa porte de fonte (niveau 2) : grisée, dans la fiche du foyer de cuisine (V4-6).
+    aVenir: "niveau 2",
     categorie: "feu",
     nom: "Volaille aux cèpes",
     produit: { objet: "volaille_cepes", quantite: 1 },
     ingredients: { volaille_crue: 1, cepe: 2 },
     qualites: {},
-    feu: true,
     duree: 40,
     intensite: "legere",
     famille: "tous",
   },
   {
     id: "cepes_poeles",
+    lieu: A_LA_POELE,
     categorie: "feu",
     nom: "Poêlée de cèpes",
     produit: { objet: "cepes_poeles", quantite: 1 },
     ingredients: { cepe: 3 },
     qualites: {},
-    feu: true,
     duree: 20,
     intensite: "legere",
     famille: "tous",
   },
   {
     id: "pommes_cuites",
+    lieu: SOUS_LA_CENDRE,
     categorie: "feu",
     nom: "Pommes cuites sous la cendre",
     produit: { objet: "pommes_cuites", quantite: 1 },
     ingredients: { pomme: 3 },
     qualites: {},
-    feu: true,
     duree: 30,
     intensite: "legere",
     famille: "tous",
@@ -141,13 +162,12 @@ export const RECETTES_COMMUNES: Recette[] = [
   // Les mijotés (Book 24 §3.1) : seulement sur un foyer de cuisine, avec de l'eau et du bois.
   {
     id: "soupe_cepes",
+    lieu: A_LA_CREMAILLERE,
     categorie: "feu",
     nom: "Soupe de cèpes",
     produit: { objet: "soupe_cepes", quantite: 1 },
     ingredients: { cepe: 2 },
     qualites: {},
-    feu: true,
-    feuNiveau: 3,
     eau: 0.5,
     boisFeu: 0.5,
     duree: 40,
@@ -156,13 +176,13 @@ export const RECETTES_COMMUNES: Recette[] = [
   },
   {
     id: "pot_au_feu",
+    lieu: AU_FOUR,
+    aVenir: "niveau 2",
     categorie: "feu",
     nom: "Pot-au-feu de volaille",
     produit: { objet: "pot_au_feu", quantite: 1 },
     ingredients: { volaille_crue: 1, cepe: 1 },
     qualites: {},
-    feu: true,
-    feuNiveau: 3,
     eau: 0.5,
     boisFeu: 0.8,
     duree: 60,
@@ -170,8 +190,22 @@ export const RECETTES_COMMUNES: Recette[] = [
     famille: "tous",
   },
   {
+    // Le bâton à fouir taillé à la main, passé au feu du foyer de pierres (I24) : la pointe durcie ne s'émousse plus.
+    id: "baton_fouir_durci",
+    lieu: AU_FOYER_DE_PIERRES,
+    categorie: "outils",
+    nom: "Bâton à fouir durci au feu",
+    produit: { objet: "baton_fouir_durci", quantite: 1 },
+    ingredients: { baton_fouir: 1 },
+    qualites: {},
+    duree: 15,
+    intensite: "legere",
+    famille: "tous",
+  },
+  {
     // Perdu son sac à l'effondrement ? Un cadre de branches et de la corde : on porte 30 kg au lieu de 10.
     id: "sac_fortune",
+    lieu: A_LA_MAIN,
     categorie: "sur_soi",
     nom: "Sac de fortune",
     produit: { objet: "sac_fortune", quantite: 1 },
@@ -183,6 +217,7 @@ export const RECETTES_COMMUNES: Recette[] = [
   },
   {
     id: "pansement",
+    lieu: A_LA_MAIN,
     categorie: "sur_soi",
     nom: "Pansements",
     produit: { objet: "pansement", quantite: 2 },
@@ -195,6 +230,7 @@ export const RECETTES_COMMUNES: Recette[] = [
   // ---------- La gamme bushcraft, lot 1 (P-002, Book 02 §14 bis) : avec ce qu'on a déjà, pour tous ----------
   {
     id: "ficelle",
+    lieu: A_LA_MAIN,
     categorie: "materiaux",
     nom: "Rouler une ficelle",
     produit: { objet: "ficelle", quantite: 1 },
@@ -206,24 +242,24 @@ export const RECETTES_COMMUNES: Recette[] = [
   },
   {
     id: "baton_fouir",
+    lieu: A_LA_MAIN,
     categorie: "outils",
     nom: "Bâton à fouir",
     produit: { objet: "baton_fouir", quantite: 1 },
     ingredients: { branche: 1 },
     qualites: { couper: 1 },
-    feu: true,
     duree: 15,
     intensite: "legere",
     famille: "tous",
   },
   {
     id: "epieu",
+    lieu: AU_FOYER_DE_PIERRES,
     categorie: "outils",
     nom: "Épieu durci au feu",
     produit: { objet: "epieu", quantite: 1 },
     ingredients: { branche: 2 },
     qualites: { couper: 1 },
-    feu: true,
     duree: 30,
     intensite: "legere",
     famille: "tous",
@@ -231,6 +267,7 @@ export const RECETTES_COMMUNES: Recette[] = [
   {
     // La lance (Book 23 §4.6, évolution de l'épieu, P-002) : un couteau ligaturé au bout de l'épieu. Perçante, longue.
     id: "lance",
+    lieu: A_LA_MAIN,
     categorie: "outils",
     nom: "Lance (épieu et couteau ligaturé)",
     produit: { objet: "lance", quantite: 1 },
@@ -242,6 +279,7 @@ export const RECETTES_COMMUNES: Recette[] = [
   },
   {
     id: "protege_bras",
+    lieu: A_LA_MAIN,
     categorie: "sur_soi",
     nom: "Protège-bras de fortune",
     produit: { objet: "protege_bras", quantite: 1 },
@@ -253,6 +291,7 @@ export const RECETTES_COMMUNES: Recette[] = [
   },
   {
     id: "travois",
+    lieu: A_LA_MAIN,
     categorie: "sur_soi",
     nom: "Travois",
     produit: { objet: "travois", quantite: 1 },
@@ -264,10 +303,12 @@ export const RECETTES_COMMUNES: Recette[] = [
   },
   {
     id: "recuperateur_pluie",
+    lieu: POSEE,
     categorie: "batir",
     nom: "Récupérateur de pluie",
     produit: { installation: "recuperateur_pluie" },
-    ingredients: { bache: 1, branche: 4, corde: 1 },
+    // Le bidon de la ruine sous les 4 sacs plastique du chemin (plan 0.8 §2.3, I28 ; chantier 5).
+    ingredients: { bidon_5l: 1, branche: 4, corde: 1, sac_plastique: 4 },
     qualites: { couper: 1 },
     duree: 30,
     intensite: "legere",
@@ -275,6 +316,7 @@ export const RECETTES_COMMUNES: Recette[] = [
   },
   {
     id: "alarme_boites",
+    lieu: POSEE,
     categorie: "batir",
     nom: "Alarme à boîtes de conserve",
     produit: { installation: "alarme_boites" },
@@ -284,21 +326,154 @@ export const RECETTES_COMMUNES: Recette[] = [
     intensite: "legere",
     famille: "tous",
   },
+  // ---------- Outils et bâtir (plan 0.8 §2.1 et §2.3, chantier 6) ----------
+  // Le lit de branchages ne se pose plus à part : c'est l'abri garni (I25, lignees.ts). Le râtelier et la torche se
+  // posent ; les outils de fortune et le marteau remmanché se font à la main ; l'établi à étau a ses recettes.
   {
-    id: "lit_branchages",
+    // Les outils rangés ici comptent pour ce qu'on bâtit à 3 m (outils-a-portee.ts).
+    id: "ratelier_outils",
+    lieu: POSEE,
     categorie: "batir",
-    nom: "Lit de branchages",
-    produit: { installation: "lit_branchages" },
-    ingredients: { branche: 6 },
+    nom: "Râtelier à outils",
+    produit: { installation: "ratelier_outils" },
+    ingredients: { buche: 2, branche: 6, corde: 1 },
+    qualites: { couper: 1 },
+    duree: 40,
+    intensite: "moyenne",
+    famille: "tous",
+  },
+  {
+    // Une fois allumée, elle brûle jusqu'au matin suivant (torche.ts).
+    id: "torche_plantee",
+    lieu: POSEE,
+    categorie: "batir",
+    nom: "Torche plantée",
+    produit: { installation: "torche_plantee" },
+    ingredients: { branche: 1, chiffons: 1, graisse: 1 },
+    qualites: { couper: 1 },
+    duree: 10,
+    intensite: "legere",
+    famille: "tous",
+  },
+  {
+    // I10 : la tête de marteau de la caisse de la ruine et une branche. Marteler 2 pour toutes les familles.
+    id: "marteau",
+    lieu: A_LA_MAIN,
+    categorie: "outils",
+    nom: "Remmancher le marteau",
+    produit: { objet: "marteau", quantite: 1 },
+    ingredients: { tete_marteau: 1, branche: 1 },
+    qualites: { couper: 1, marteler: 1 },
+    duree: 30,
+    intensite: "moyenne",
+    famille: "tous",
+  },
+  {
+    id: "serre_joint_fortune",
+    lieu: A_LA_MAIN,
+    categorie: "outils",
+    nom: "Serre-joint de fortune",
+    produit: { objet: "serre_joint_fortune", quantite: 1 },
+    ingredients: { branche: 2, corde: 1 },
+    qualites: { couper: 1 },
+    duree: 15,
+    intensite: "legere",
+    famille: "tous",
+  },
+  {
+    id: "scie_fortune",
+    lieu: A_LA_MAIN,
+    categorie: "outils",
+    nom: "Scie de fortune (un disque)",
+    produit: { objet: "scie_fortune", quantite: 1 },
+    ingredients: { disque_scie: 1 },
     qualites: { couper: 1 },
     duree: 20,
     intensite: "legere",
+    famille: "tous",
+  },
+  {
+    id: "scie_fortune_lames",
+    lieu: A_LA_MAIN,
+    categorie: "outils",
+    nom: "Scie de fortune (deux lames ébréchées)",
+    produit: { objet: "scie_fortune", quantite: 1 },
+    ingredients: { lame_ebrechee: 2 },
+    qualites: { couper: 1 },
+    duree: 20,
+    intensite: "legere",
+    famille: "tous",
+  },
+  {
+    // Une barre repliée sur elle-même, à coups de pierre : Marteler 2 (de quoi cercler un coffre).
+    id: "marteau_fortune",
+    lieu: A_LA_MAIN,
+    categorie: "outils",
+    nom: "Marteau de fortune (une barre repliée)",
+    produit: { objet: "marteau_fortune", quantite: 1 },
+    ingredients: { barre_metal: 1 },
+    qualites: { marteler: 1 },
+    duree: 30,
+    intensite: "lourde",
+    famille: "tous",
+  },
+  {
+    // Un coin taillé dans une branche dure, qu'on enfonce à coups de pierre : Fendre 1.
+    id: "coin_bois",
+    lieu: A_LA_MAIN,
+    categorie: "outils",
+    nom: "Coin de bois",
+    produit: { objet: "coin_bois", quantite: 1 },
+    ingredients: { branche: 1 },
+    qualites: { couper: 1 },
+    duree: 10,
+    intensite: "legere",
+    famille: "tous",
+  },
+  // À l'établi à étau (I19) : l'étau tient la pièce, Serrer 3. Monté au serre-joint de fortune, il ne serre pas assez.
+  {
+    id: "maillet",
+    lieu: A_L_ETABLI_A_ETAU,
+    categorie: "outils",
+    nom: "Maillet de bois",
+    produit: { objet: "maillet", quantite: 1 },
+    ingredients: { buche: 1, branche: 1 },
+    qualites: { couper: 1, serrer: 3 },
+    duree: 25,
+    intensite: "moyenne",
+    famille: "tous",
+  },
+  {
+    id: "coins_bois",
+    lieu: A_L_ETABLI_A_ETAU,
+    categorie: "outils",
+    nom: "Coins de bois dur (quatre)",
+    produit: { objet: "coin_bois", quantite: 4 },
+    ingredients: { buche: 1 },
+    qualites: { fendre: 1, serrer: 3 },
+    duree: 20,
+    intensite: "moyenne",
+    famille: "tous",
+  },
+  {
+    // Fendue au coin et au maillet, dressée à l'étau : le coin y reste, le maillet revient.
+    id: "planches_fendues",
+    lieu: A_L_ETABLI_A_ETAU,
+    categorie: "materiaux",
+    nom: "Planches fendues (deux)",
+    produit: { objet: "planche_fendue", quantite: 2 },
+    sousProduits: { maillet: 1 },
+    ingredients: { buche: 1, coin_bois: 1, maillet: 1 },
+    qualites: { serrer: 3 },
+    duree: 40,
+    intensite: "moyenne",
     famille: "tous",
   },
   // ---------- L'arc pour tous (Book 25 §3.3, chantier 4 · 0.6) : tout se fait seul, quelle que soit la famille ----------
   {
     // Une perche verte et une ficelle : il tire tout de suite, mais le bois vert fatigue vite (★).
     id: "arc_fortune",
+    lieu: A_LA_MAIN,
     categorie: "outils",
     nom: "Arc de fortune (perche de frêne)",
     produit: { objet: "arc_fortune", quantite: 1 },
@@ -310,6 +485,7 @@ export const RECETTES_COMMUNES: Recette[] = [
   },
   {
     id: "arc_fortune_branche",
+    lieu: A_LA_MAIN,
     categorie: "outils",
     nom: "Arc de fortune (branche droite)",
     produit: { objet: "arc_fortune", quantite: 1 },
@@ -322,31 +498,33 @@ export const RECETTES_COMMUNES: Recette[] = [
   {
     // L'ébauche doit sécher deux heures réelles avant d'être montée, même quand on n'est pas là (arc.ts).
     id: "ebauche_arc",
+    lieu: aCote("etabli"),
     categorie: "outils",
     nom: "Ébaucher un arc de frêne",
     produit: { objet: "ebauche_arc", quantite: 1 },
     ingredients: { perche_frene: 1 },
     qualites: { couper: 1 },
-    installation: "etabli",
     duree: 45,
     intensite: "moyenne",
     famille: "tous",
   },
   {
     id: "ebauche_if",
+    lieu: aCote("etabli"),
     categorie: "outils",
     nom: "Ébaucher un arc d'if",
     produit: { objet: "ebauche_if", quantite: 1 },
     ingredients: { baton_if: 1 },
     qualites: { couper: 1 },
-    installation: "etabli",
     duree: 45,
     intensite: "moyenne",
     famille: "tous",
   },
-  // La corde d'arc porte la qualité de ses brins : ficelle ★★, corde du kit ★★★, fil dentaire ou boyau ★★★★.
+  // La corde d'arc porte la qualité de ses brins (plan 0.8 §2.4, I13) : ficelle ou corde de joncs ★★ ; fil dentaire (la
+  // boutique de la station) ou boyau ★★★. L'arc simple ★★★★ ne vient que de la maîtrise (Q-0.8-4).
   {
     id: "corde_arc_ficelle",
+    lieu: A_LA_MAIN,
     categorie: "materiaux",
     nom: "Corde d'arc (3 ficelles retordues)",
     produit: { objet: "corde_arc", quantite: 1 },
@@ -359,6 +537,7 @@ export const RECETTES_COMMUNES: Recette[] = [
   },
   {
     id: "corde_arc_corde",
+    lieu: A_LA_MAIN,
     categorie: "materiaux",
     nom: "Corde d'arc (une corde retordue)",
     produit: { objet: "corde_arc", quantite: 1 },
@@ -367,10 +546,11 @@ export const RECETTES_COMMUNES: Recette[] = [
     duree: 10,
     intensite: "legere",
     famille: "tous",
-    facteursEtoiles: () => [3],
+    facteursEtoiles: () => [2],
   },
   {
     id: "corde_arc_dentaire",
+    lieu: A_LA_MAIN,
     categorie: "materiaux",
     nom: "Corde d'arc (fil dentaire)",
     produit: { objet: "corde_arc", quantite: 1 },
@@ -379,10 +559,11 @@ export const RECETTES_COMMUNES: Recette[] = [
     duree: 10,
     intensite: "legere",
     famille: "tous",
-    facteursEtoiles: () => [4],
+    facteursEtoiles: () => [3],
   },
   {
     id: "corde_arc_boyau",
+    lieu: A_LA_MAIN,
     categorie: "materiaux",
     nom: "Corde d'arc (boyau séché)",
     produit: { objet: "corde_arc", quantite: 1 },
@@ -391,17 +572,17 @@ export const RECETTES_COMMUNES: Recette[] = [
     duree: 10,
     intensite: "legere",
     famille: "tous",
-    facteursEtoiles: () => [4],
+    facteursEtoiles: () => [3],
   },
   {
     // On durcit le ventre de l'arc à la chaleur d'un feu. Le maillon faible : frêne ★★★, corde de ficelle ★★.
     id: "arc_simple",
+    lieu: AU_FOYER_DE_PIERRES,
     categorie: "outils",
     nom: "Monter l'arc de frêne",
     produit: { objet: "arc_simple", quantite: 1 },
     ingredients: { ebauche_arc_seche: 1, corde_arc: 1 },
     qualites: { couper: 1 },
-    feu: true,
     duree: 20,
     intensite: "legere",
     famille: "tous",
@@ -409,33 +590,35 @@ export const RECETTES_COMMUNES: Recette[] = [
   },
   {
     id: "arc_if",
+    lieu: AU_FOYER_DE_PIERRES,
     categorie: "outils",
     nom: "Monter l'arc d'if",
     produit: { objet: "arc_if", quantite: 1 },
     ingredients: { ebauche_if_seche: 1, corde_arc: 1 },
     qualites: { couper: 1 },
-    feu: true,
     duree: 20,
     intensite: "legere",
     famille: "tous",
-    facteursEtoiles: facteursArc("arc_if"),
+    // Au niveau 1, l'arc d'if se monte ★★ (Q-A2b, Q-B1d) : ★★★ attend le rabot (L2B), sauf par la maîtrise.
+    facteursEtoiles: (inventaire) => [...facteursArc("arc_if")(inventaire), PLAFOND_ARC_IF_NIVEAU_1],
   },
   // Les flèches : une branche droite donne trois fûts, redressés au-dessus d'un feu ; une poignée de plumes les empenne.
   // À côté d'un établi qui a son redresseur de fûts, elles vont deux fois plus vite (arc.ts).
   {
     id: "fleches_durcies",
+    lieu: AU_FOYER_DE_PIERRES,
     categorie: "outils",
     nom: "Flèches durcies au feu",
     produit: { objet: "fleche_durcie", quantite: 3 },
     ingredients: { branche: 1, plumes: 1, ficelle: 1 },
     qualites: { couper: 1 },
-    feu: true,
     duree: 20,
     intensite: "legere",
     famille: "tous",
   },
   {
     id: "fleches_os",
+    lieu: A_LA_MAIN,
     categorie: "outils",
     nom: "Flèches à pointe d'os",
     produit: { objet: "fleche_os", quantite: 3 },
@@ -448,6 +631,7 @@ export const RECETTES_COMMUNES: Recette[] = [
   {
     // Un bocal de clous donne douze pointes, aplaties à la pierre : douze flèches d'un coup.
     id: "fleches_clou",
+    lieu: A_LA_MAIN,
     categorie: "outils",
     nom: "Flèches à pointe de clou (douze)",
     produit: { objet: "fleche_clou", quantite: 12 },
@@ -460,6 +644,7 @@ export const RECETTES_COMMUNES: Recette[] = [
   {
     // L'amélioration : des pointes forgées par un Charbonnier, qui cassent bien moins.
     id: "fleches_acier",
+    lieu: A_LA_MAIN,
     categorie: "outils",
     nom: "Flèches à pointe d'acier",
     produit: { objet: "fleche_acier", quantite: 3 },

@@ -5,12 +5,14 @@ import type { Famille } from "./regles.ts";
 import { estCleEtoileeValide, etoilesDe, etoilesTexte, typeDe, type CleObjet } from "./etoiles.ts";
 import { TOUS_LES_VESTIGES, type FamilleVestige, type Rarete, type TypeComposant, type TypeVestige } from "./vestiges.ts";
 import { OBJETS_METIER, type TypeObjetMetier } from "./objets-metier.ts";
+import { OBJETS_NIVEAU1, type TypeObjetNiveau1 } from "./objets-niveau1.ts";
 
 /**
  * Tous les objets : ceux du jeu de base, le bric-à-brac des vestiges (lot 1, 0.3) avec leurs composants, et les
- * matières et objets du métier des familles (Book 25, 0.6 : objets-metier.ts).
+ * matières et objets du métier des familles (Book 25, 0.6 : objets-metier.ts), et ceux du niveau 1 (plan 0.8 :
+ * objets-niveau1.ts pour ce qu'on fabrique, vestiges.ts pour ce qu'on trouve).
  */
-export type TypeObjet = TypeObjetDeBase | TypeVestige | TypeComposant | TypeObjetMetier;
+export type TypeObjet = TypeObjetDeBase | TypeVestige | TypeComposant | TypeObjetMetier | TypeObjetNiveau1;
 
 type TypeObjetDeBase =
   | "branche"
@@ -265,7 +267,8 @@ const OBJETS_DE_BASE: Record<TypeObjetDeBase, DefinitionObjet> = {
     poids: 0.02,
   },
   baton_fouir: {
-    description: "Une branche taillée en biseau et durcie au feu. On creuse avec (Creuser 1) : un foyer Dakota, un trou, une racine.",
+    // Taillé à la main ; on le durcit au foyer de pierres (I24, « bâton à fouir durci », objets-niveau1.ts).
+    description: "Une branche taillée en biseau au couteau. On creuse avec (Creuser 1) : un foyer Dakota, un trou, une racine.",
     nom: "bâton à fouir",
     pluriel: "bâtons à fouir",
     poids: 0.6,
@@ -315,7 +318,7 @@ const OBJETS_DE_BASE: Record<TypeObjetDeBase, DefinitionObjet> = {
   },
 };
 
-export const OBJETS: Record<TypeObjet, DefinitionObjet> = { ...OBJETS_DE_BASE, ...OBJETS_METIER, ...TOUS_LES_VESTIGES };
+export const OBJETS: Record<TypeObjet, DefinitionObjet> = { ...OBJETS_DE_BASE, ...OBJETS_METIER, ...OBJETS_NIVEAU1, ...TOUS_LES_VESTIGES };
 
 /**
  * Un inventaire : combien de chaque objet. Les objets de métier y portent leurs étoiles par exemplaire (Book 25 §9.6) :

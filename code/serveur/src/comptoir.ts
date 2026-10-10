@@ -8,6 +8,7 @@ import {
   DOTATION_PAR_JOUEUR,
   RESERVE_ENERGIE_DEPART,
   STOCK_DE_BASE,
+  etalPour,
   prixAchat,
   reassortir,
   tresorerieBasse,
@@ -26,7 +27,8 @@ interface EtatEnBase extends EtatComptoir {
 export class Comptoir {
   private etat: EtatEnBase;
   private readonly base: Base;
-  private readonly presents = new Set<(m: MessageServeur) => void>();
+  /** Ceux qui sont au Comptoir, et ce qu'ils ont fait (leurs visites : l'étal masque les clés d'un lieu jamais vu). */
+  private readonly presents = new Map<(m: MessageServeur) => void, (() => Readonly<Record<string, number>>) | undefined>();
 
   constructor(base: Base, instant = Date.now()) {
     this.base = base;
@@ -70,8 +72,8 @@ export class Comptoir {
     return this.etat.reserveWh;
   }
 
-  entrer(envoyer: (m: MessageServeur) => void): void {
-    this.presents.add(envoyer);
+  entrer(envoyer: (m: MessageServeur) => void, faits?: () => Readonly<Record<string, number>>): void {
+    this.presents.set(envoyer, faits);
   }
 
   sortir(envoyer: (m: MessageServeur) => void): void {
@@ -130,8 +132,9 @@ export class Comptoir {
   /** Après chaque opération : on enregistre, et tout le monde au comptoir voit le nouveau stock. */
   publier(instant: number): void {
     this.sauver();
-    const m: MessageServeur = { t: "comptoir", comptoir: this.vue(instant) };
-    for (const envoyer of this.presents) envoyer(m);
+    const vue = this.vue(instant);
+    // Plan 0.8 §9.2 : chacun voit l'étal de ses visites (les clés de L1 d'un lieu jamais vu en sont absentes).
+    for (const [envoyer, faits] of this.presents) envoyer({ t: "comptoir", comptoir: faits ? { ...vue, stock: etalPour(vue.stock, faits()) } : vue });
   }
 
   private sauver(): void {

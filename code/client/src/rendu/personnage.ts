@@ -9,8 +9,8 @@ import type { TypeObjet } from "../../../commun/src/objets.ts";
 import type { Famille } from "../../../commun/src/regles.ts";
 import { Humanoide, chargerHumanoides, humanoidesPrets, type Coiffure, type Tenue } from "./humanoides.ts";
 import { APPARENCES_DE_REFERENCE, CARNATIONS, COULEURS_CHEVEUX, hauteurDe, type Apparence, type Coiffure as CoiffureChoisie } from "../../../commun/src/apparence.ts";
-import { PALETTE, materiau } from "./materiaux.ts";
-import { Assemblage, V3, placer } from "./assemblage.ts";
+import { PALETTE, aleatoire, materiau } from "./materiaux.ts";
+import { Assemblage, V3, bosseler, placer } from "./assemblage.ts";
 import { Mesure, bandeau, bandouliere, pan } from "./accessoires.ts";
 import { modeleMetier } from "./metier/index.ts";
 import { TENUE_TOGE, habillerToge } from "./toge.ts";
@@ -91,6 +91,9 @@ function manche(c: Assemblage, z0: number, z1: number, r: number, bois: number =
  * nature (+15 à 20 %, Book 21 §5.3.2) pour rester lisibles. Couleurs par sommet : un ou deux appels de dessin.
  * Null si l'objet ne se tient pas comme une arme.
  */
+/** Le coin de bois enfoncé dans l'œil d'un outil remmanché. */
+const BOIS_COIN = 0xc9a77a;
+
 export function creerArme(objet: TypeObjet): THREE.Group | null {
   const c = new Assemblage(objet.length * 13);
   const boisClair = 0x9a7650;
@@ -102,13 +105,24 @@ export function creerArme(objet: TypeObjet): THREE.Group | null {
       fer(c, [[0.46, -0.05], [0.56, -0.05], [0.565, 0.03], [0.63, 0.16], [0.6, 0.2], [0.5, 0.19], [0.43, 0.165], [0.47, 0.035]], 0.026, 0.155);
       c.ajouter(placer(new THREE.CylinderGeometry(0.018, 0.018, 0.04, 6).rotateX(Math.PI / 2), 0, -0.01, 0.51), 0x4a4744, "metal");
       break;
-    case "marteau":
-      // Un marteau de charpentier : la table de frappe ronde devant les doigts, l'arrache-clou fendu de l'autre côté.
-      manche(c, -0.1, 0.34, 0.014, boisClair, 0x3a2c22);
-      c.boite(0x4a4744, "metal", 0.034, 0.075, 0.04, 0, 0.0, 0.32);
-      c.ajouter(placer(new THREE.CylinderGeometry(0.022, 0.019, 0.045, 8), 0, 0.058, 0.32), 0x8a8780, "metal");
-      for (const x of [-0.009, 0.009]) fer(c, [[0.3, -0.03], [0.34, -0.03], [0.31, -0.08], [0.27, -0.105], [0.29, -0.07]], 0.008, 1, 0x4a4744, 0x4a4744, x);
+    case "marteau": {
+      // Le marteau remmanché (plan 0.8, I10) : la vieille tête de la caisse de la ruine, piquée de rouille, sur un
+      // manche taillé dans une branche (l'écorce gardée au bout, la poignée blanchie au couteau), un coin de bois
+      // enfoncé dans l'œil, une ligature de fil de fer sous la tête.
+      const ecorce = 0x5e4632;
+      const branche = new THREE.CylinderGeometry(0.017, 0.015, 0.46, 6, 6).rotateX(Math.PI / 2).translate(0, 0, 0.12);
+      c.ajouterDegrade(bosseler(branche, 0.0015, aleatoire(7)), (p) => (p.z < 0.07 ? (Math.sin(p.z * 90) > 0.6 ? 0xa88a62 : 0xb89a70) : Math.sin(p.z * 40 + p.x * 200) > 0.5 ? 0x4a3828 : ecorce));
+      // Un nœud de la branche.
+      c.perche(new V3(0, 0.012, 0.2), new V3(0, 0.026, 0.215), 0.007, ecorce, "mat", 4, 0.004);
+      const rouille = (p: THREE.Vector3) => (Math.sin(p.y * 90 + p.x * 140) + Math.sin(p.z * 120) > 0.9 ? PALETTE.rouille : 0x4a4744);
+      c.ajouterDegrade(placer(new THREE.BoxGeometry(0.036, 0.08, 0.042), 0, 0.0, 0.33), rouille, "metal");
+      c.ajouter(placer(new THREE.CylinderGeometry(0.023, 0.02, 0.045, 8), 0, 0.06, 0.33), 0x7a7770, "metal");
+      for (const x of [-0.009, 0.009]) fer(c, [[0.31, -0.03], [0.35, -0.03], [0.32, -0.085], [0.28, -0.11], [0.3, -0.07]], 0.008, 1, 0x5a3a28, 0x5a3a28, x);
+      // Le coin dans l'œil, et la ligature de fil de fer.
+      c.boite(BOIS_COIN, "mat", 0.012, 0.03, 0.01, 0, 0.0, 0.354);
+      c.ligature(new V3(0, 0, 0.285), new V3(0, 0, 1), 0.019, 0x6b6862);
       break;
+    }
     case "barre_metal": {
       // Une barre à mine (pied-de-biche) : tige à six pans piquée de rouille, le bout recourbé et fendu, l'autre en biseau.
       const tige = new THREE.CylinderGeometry(0.015, 0.015, 0.84, 6, 6).rotateX(Math.PI / 2).translate(0, 0, 0.18);
@@ -208,6 +222,28 @@ export function creerArme(objet: TypeObjet): THREE.Group | null {
       for (const z of [-0.05, 0.08]) c.ligature(new V3(0, 0, z), new V3(0, 0, 1), 0.024);
       break;
     }
+    case "fourche_foin": {
+      // La fourche à foin de l'étable du Moulin (plan 0.8 §2.4, I30) : un long manche de frêne patiné par les mains,
+      // une douille de fer, trois dents d'acier forgé un peu cintrées vers l'avant, la pointe usée claire. Tenue comme la
+      // lance (≈ 1,9 m), à une main.
+      const perche = new THREE.CylinderGeometry(0.016, 0.02, 1.62, 6, 8).rotateX(Math.PI / 2).translate(0, 0, 0.43);
+      // Le bois blondi, plus sombre et lustré là où on le tient (le tiers bas et le bout).
+      c.ajouterDegrade(perche, (p) => (p.z < 0.2 || p.z > 1.05 ? 0x6e5236 : Math.sin(p.z * 7) > 0.75 ? 0x9a7a52 : 0xb08e62));
+      // La douille et sa bague : le fer qui enserre le bout du manche.
+      c.perche(new V3(0, 0, 1.18), new V3(0, 0, 1.3), 0.021, 0x3c3a37, "metal", 6, 0.017);
+      c.ajouter(placer(new THREE.CylinderGeometry(0.024, 0.024, 0.014, 8).rotateX(Math.PI / 2), 0, 0, 1.2), 0x55524d, "metal");
+      // La traverse, d'où partent les trois dents.
+      c.perche(new V3(-0.075, 0.004, 1.32), new V3(0.075, 0.004, 1.32), 0.011, 0x3c3a37, "metal", 5);
+      c.perche(new V3(0, 0, 1.29), new V3(0, 0.004, 1.33), 0.014, 0x3c3a37, "metal", 5);
+      for (const x of [-0.072, 0, 0.072]) {
+        // Chaque dent : trois segments qui s'effilent, cintrés vers les doigts (+y), la pointe claire.
+        const points = [new V3(x, 0.004, 1.32), new V3(x * 1.08, 0.012, 1.45), new V3(x * 1.12, 0.03, 1.57), new V3(x * 1.12, 0.058, 1.67)];
+        // Un peu plus épaisses que nature (Book 21 §5.3.2) : à l'écran d'un iPhone, trois traits lisibles.
+        const rayons = [0.0105, 0.0092, 0.0075, 0.0035];
+        for (let i = 0; i < 3; i++) c.perche(points[i]!, points[i + 1]!, rayons[i]!, i === 2 ? 0xb4b6b2 : 0x5e5c58, "metal", 5, rayons[i + 1]!);
+      }
+      break;
+    }
     default: {
       // Les armes de métier de la 0.6 (Book 25 §10.4) : leur modèle vient du registre (rendu/metier/).
       const modele = modeleMetier(objet, "main");
@@ -232,6 +268,11 @@ export class Personnage {
   private corps: Humanoide | null = null;
   private readonly main = new THREE.Group();
   private armeTenue: TypeObjet | null | undefined = undefined;
+  /** L'arme longue portée dans le dos hors du combat (la fourche à foin, plan 0.8 §2.4), accrochée au torse. */
+  private readonly dos = new THREE.Group();
+  private armeDansLeDos: TypeObjet | null = null;
+  /** Où pend l'arme dans le dos, dans le repère du personnage (mesuré à l'habillage). */
+  private poseDos: { y: number; z: number } | null = null;
   private blessures = 0;
   private geste: GesteAction | null = null;
   private couche = false;
@@ -280,14 +321,19 @@ export class Personnage {
       this.main.scale.set(1 / echelle.x, 1 / echelle.y, 1 / echelle.z);
       main.add(this.main);
     }
+    // L'arme dans le dos : un groupe accroché au torse, à part comme l'arme en main (on la montre ou la cache).
+    corps.accrocher(this.dos, "spine_03");
     this.objet.add(corps.objet);
     // Un seul maillage pour tout le personnage (même image, un appel de dessin) ; l'arme en main reste à part.
-    corps.fondre([this.main]);
+    corps.fondre([this.main, this.dos]);
     corps.cadrer(2.5);
     corps.tacher(this.blessures);
     const arme = this.armeTenue;
     this.armeTenue = null;
     this.tenir(arme);
+    const dos = this.armeDansLeDos;
+    this.armeDansLeDos = null;
+    this.porterDansLeDos(dos);
     corps.jouer("Idle_Loop");
   }
 
@@ -317,6 +363,10 @@ export class Personnage {
       if (o.children.length > 0) fusionnerStatique(o);
       corps.accrocher(o, os);
     };
+
+    // L'arme dans le dos passe derrière ce que la famille y porte déjà : la batterie ⚡, la hotte ⚙️.
+    const recul = this.apparence.toge ? 0.05 : { charbonniers: 0.05, voltaiques: 0.15, mecanistes: 0.32 }[this.famille];
+    this.poseDos = { y: torse.y, z: m.derriere(torse.y, 0, 0.08) - recul };
 
     // Le compte admin « god » : la toge blanche à la place des accessoires de sa famille (rendu/toge.ts).
     if (this.apparence.toge) return habillerToge(corps, m, coller, tete);
@@ -439,6 +489,30 @@ export class Personnage {
     // il penche un peu vers les doigts.
     arme.rotation.x = -0.3;
     this.main.add(arme);
+  }
+
+  /**
+   * L'arme portée dans le dos hors du combat (null : rien). Seule la fourche à foin s'y porte (plan 0.8 §2.4) : en travers
+   * du dos, les dents en haut, derrière l'épaule gauche. En combat, elle passe en main (`tenir`).
+   */
+  porterDansLeDos(objet: TypeObjet | null): void {
+    if (objet === this.armeDansLeDos) return;
+    this.armeDansLeDos = objet;
+    this.dos.clear();
+    if (!objet || !this.poseDos) return;
+    const arme = creerArme(objet);
+    if (!arme) return;
+    // Le modèle est construit dans le repère du poing (manche selon +z, dents vers +y) : on le redresse (manche vers le
+    // haut, dents vers l'arrière), on le centre sur le dos, puis on l'incline en travers.
+    arme.position.z = -0.72;
+    const redresse = new THREE.Group();
+    redresse.rotation.x = -Math.PI / 2;
+    redresse.add(arme);
+    const travers = new THREE.Group();
+    travers.position.set(0, this.poseDos.y - 0.04, this.poseDos.z);
+    travers.rotation.z = -0.5;
+    travers.add(redresse);
+    this.dos.add(travers);
   }
 
   /**

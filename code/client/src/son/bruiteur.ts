@@ -38,6 +38,8 @@ export function solIci(lieu: LieuJouable, x: number, z: number): Sol {
     if (x > STATION.auvent.x - STATION.auvent.l / 2 - 6 && x < STATION.atelier.x + STATION.atelier.l / 2 + 2 && z > BOUTIQUE.porte.z - 0.5 && z < ROUTE.z) return "beton";
     return "herbe";
   }
+  // 0.8 : le gué et le Moulin, branchés vides (chantier 4) : de la terre, en attendant leurs sols (chantiers 11 et 12).
+  if (lieu === "gue" || lieu === "moulin") return "terre";
   if (Math.abs(z - ROUTE_CARREFOUR.z) <= ROUTE_CARREFOUR.demiLargeur || Math.abs(x - ROUTE_CARREFOUR.x) <= ROUTE_CARREFOUR.demiLargeur) return "beton";
   if (dans(x, z, COMPTOIR.batiment, 4)) return "beton";
   return "terre";
@@ -68,8 +70,13 @@ interface Geste {
   periode?: number;
   /** Ou bien joué en continu pendant l'action. */
   continu?: IdSon;
-  /** Un second son continu (la chaîne sous la meule). */
+  /** Un second son continu (la chaîne sous la meule, l'alternateur sur la chaîne). */
   continu2?: IdSon;
+  /**
+   * Le second son continu n'entre qu'au bout de ces secondes, en fondu : le son joué au début (l'alternateur qui se
+   * lance, du grave au sifflement) lui passe alors la main.
+   */
+  apres2?: number;
   /** Joué à la fin réussie de l'action. */
   fin?: IdSon;
 }
@@ -90,6 +97,8 @@ export function gesteDe(libelle: string, bruit: BruitAction): Geste {
   if (l.startsWith("remplir")) return { continu: "remplir_eau" };
   if (l.startsWith("manger")) return { id: "manger" };
   if (l.startsWith("boire")) return { id: "boire" };
+  // Le pédalier générateur (plan 0.8) : l'alternateur se lance, puis son ronronnement monte avec le pédalage.
+  if (l.startsWith("pédaler") && l.includes("alternateur")) return { id: "alternateur_lance", continu: "chaine_velo", continu2: "alternateur", apres2: 2.3, fin: "roue_libre" };
   if (l.startsWith("pédaler")) return { continu: "chaine_velo", fin: "roue_libre" };
   if (l.startsWith("affûter")) return { continu: "meule", continu2: "chaine_velo", fin: "aiguiser" };
   if (l.startsWith("défourner")) return { id: "charbon", periode: 1.4 };
@@ -101,7 +110,7 @@ export function gesteDe(libelle: string, bruit: BruitAction): Geste {
     return { id: "visser", periode: 1.1, fin: "interrupteur" };
   if (l.includes("pansement")) return { id: "tissu", periode: 1.1 };
   if (l.startsWith("reprendre ton sac")) return { id: "fouille" };
-  if (l.startsWith("monter la meule") || l.startsWith("monter la dynamo") || l.includes("panneau")) return { id: "visser", periode: 1.1 };
+  if (l.startsWith("monter la meule") || l.startsWith("monter la dynamo") || l.startsWith("monter l'alternateur") || l.includes("panneau")) return { id: "visser", periode: 1.1 };
   if (l.startsWith("démonter") || l.startsWith("prendre la batterie") || l.startsWith("prendre les lames")) return { id: "demonter", periode: 1.2 };
   if (l.startsWith("remmancher")) return { id: "marteau_bois", periode: 0.9 };
   // La forge : le soufflet sous les coups d'enclume, la trempe à la fin (son/LIVRAISON.md : sons livrés, enfin joués).
@@ -143,7 +152,7 @@ export class Bruiteur {
   private foulee = 0;
   private readonly suivis = new Map<number, SuiviEteint>();
   private readonly autres = new Map<number, { x: number; z: number; foulee: number }>();
-  private action: { geste: Geste; prochain: number } | null = null;
+  private action: { geste: Geste; prochain: number; debut: number } | null = null;
   private derniereAction: Geste | null = null;
   private readonly aspects = new Map<number, AspectFeu>();
   private prochainTonnerre = 0;
@@ -363,7 +372,7 @@ export class Bruiteur {
 
   debutAction(libelle: string, bruit: BruitAction): void {
     const geste = gesteDe(libelle, bruit);
-    this.action = { geste, prochain: this.t + (geste.periode ?? Infinity) };
+    this.action = { geste, prochain: this.t + (geste.periode ?? Infinity), debut: this.t };
     this.derniereAction = geste;
     if (geste.id) this.son.jouer(geste.id);
   }
@@ -382,6 +391,8 @@ export class Bruiteur {
       installations: { id: number; type: TypeInstallation; x: number; z: number; batteries: boolean; sousTension?: boolean }[];
       pluie: number;
       dehors: boolean;
+      /** Les sons continus d'un lieu (plan 0.8, chantier 11 : au gué, le clapot du radier, le câble du bac). */
+      lieu?: { cle: string; id: IdSon; ou?: Ou; gain?: number }[];
   }): void {
     // Les gestes répétés de l'action en cours.
     const a = this.action;
@@ -391,7 +402,7 @@ export class Bruiteur {
     }
     const voulus: { cle: string; id: IdSon; ou?: Ou; gain?: number }[] = [];
     if (a?.geste.continu) voulus.push({ cle: "action", id: a.geste.continu });
-    if (a?.geste.continu2) voulus.push({ cle: "action2", id: a.geste.continu2, gain: 0.6 });
+    if (a?.geste.continu2 && this.t - a.debut >= (a.geste.apres2 ?? 0)) voulus.push({ cle: "action2", id: a.geste.continu2, gain: a.geste.apres2 ? 1 : 0.6 });
 
     for (const f of o.feux) {
       const avant = this.aspects.get(f.id);
@@ -414,6 +425,7 @@ export class Bruiteur {
       if (this.prochainTonnerre > 0) this.son.jouer("tonnerre", null, { gain: 0.6 + Math.random() * 0.4 });
       this.prochainTonnerre = this.t + 25 + Math.random() * 50;
     }
+    voulus.push(...(o.lieu ?? []));
     this.son.continus(voulus);
   }
 }

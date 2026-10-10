@@ -76,9 +76,10 @@ test("🔥 la gamme : six lames de métier, la machette forgée solide, toutes r
   assert.equal(armeDeCle("machette_forgee")!.solidite, 80);
   assert.equal(armeDeCle("machette")!.solidite, 40, "la machette de fortune, deux fois moins solide");
   assert.equal(armeDeCle("lame_forgee")!.nom, "le couteau de forge");
-  // Aucune lame nouvelle ne dépasse la masse en dégâts par coup (Book 25 §8.1).
+  // Au niveau 1 (la forge fait ★★), aucune lame ne dépasse la masse en dégâts par coup (Book 25 §8.1) ; au-delà, les
+  // dégâts suivent la bande de l'étape de l'étoile (plan 0.8 §2.4 : 2 à 3 à L2).
   const masse = armeDeCle("masse")!.degatsTorse;
-  for (const o of ["hachette", "serpe", "machette_forgee", "hache_forgee", "glaive", "lance_forgee"]) assert.ok(armeDeCle(o)!.degatsTorse < masse, o);
+  for (const o of ["hachette#2", "serpe#2", "machette_forgee#2", "lame_forgee#2", "lance_forgee"]) assert.ok(armeDeCle(o)!.degatsTorse < masse, o);
   // Un glaive ★★ casse bien plus tôt qu'un glaive ★★★★★.
   assert.ok(armeDeCle("glaive#2")!.solidite * 2 < armeDeCle("glaive#5")!.solidite);
 });
@@ -99,29 +100,55 @@ test("🔥 toutes les recettes de la forge sont des Charbonniers, ont une catég
   assert.ok(!LAMES_TREMPEES.has("machette_forgee_fer"));
 });
 
-test("🔥 la lignée de la forge : le foyer, puis la forge ventilée (bâtie seul, au soufflet double)", () => {
+test("🔥 la lignée de la forge : le foyer (clé : l'enclume de dépanneur), puis la forge ventilée, plus tard", () => {
   const l = LIGNEES_INSTALLATIONS.forge!;
   assert.equal(l.length, 2);
   assert.deepEqual(l[0]!.couts[0], recette("forge")!.ingredients, "le niveau 1 coûte ce que coûte sa recette");
+  assert.equal(l[0]!.cle?.objet, "enclume_depanneur");
+  assert.equal(l[0]!.cle?.ou, "H1A");
+  assert.ok(l[0]!.cle?.replis?.some((r) => /pierre plate/.test(r.note)), "le repli : la grosse pierre plate");
+  // Le mot « soufflet » est réservé à la clé de la forge ventilée (Q-0.8-13).
+  for (const t of [l[0]!.nom, l[0]!.apporte, l[0]!.examen]) assert.ok(!/soufflet/i.test(t), t);
   assert.equal(l[1]!.id, "forge_ventilee");
   assert.equal(l[1]!.famille, "charbonniers");
-  assert.ok(l[1]!.couts.some((c) => c.chiffons), "sans bâche, des chiffons");
+  assert.equal(l[1]!.aVenir, "niveau 2");
+  assert.ok(/soufflet de forge/.test(l[1]!.apporte));
+  assert.deepEqual(l[1]!.couts, [{ pierre: 6, glaise: 2, barre_metal: 1 }]);
 });
 
 // ---------- La qualité : le maillon faible ----------
 
-test("🔥 les maillons : le foyer et le marteau ★★, les pinces et une enclume ★★★, ventilée ★★★★, le rail ★★★★★", () => {
-  assert.equal(etoilesForge({}, forgeProche(contexte())), 2);
-  assert.equal(etoilesForge({ pinces_forge: 1 }, forgeProche(contexte())), 2, "les pinces sans enclume");
-  assert.equal(etoilesForge({}, forgeProche(contexte(1, { enclume: "etau" }))), 2, "l'enclume sans les pinces");
-  assert.equal(etoilesForge({ pinces_forge: 1 }, forgeProche(contexte(1, { enclume: "etau" }))), 3);
-  assert.equal(etoilesForge({ pinces_forge: 1 }, forgeProche(contexte(2))), 4);
+test("🔥 les maillons (plan 0.8) : la pierre plate ★, le foyer sur une enclume ★★, ventilée ★★★, le rail ★★★★★", () => {
+  assert.equal(etoilesForge({}, null), 1, "sans forge, un feu et une pierre");
+  assert.equal(etoilesForge({}, forgeProche(contexte())), 1, "la grosse pierre plate du foyer (Q-0.8-1)");
+  assert.equal(etoilesForge({ pinces_forge: 1 }, forgeProche(contexte())), 1, "les pinces n'y changent rien");
+  for (const enclume of ["depanneur", "etau", "masse"] as const) {
+    assert.equal(etoilesForge({}, forgeProche(contexte(1, { enclume }))), 2, enclume);
+    assert.equal(etoilesForge({ pinces_forge: 1 }, forgeProche(contexte(1, { enclume }))), 2, `${enclume} et les pinces : plus ★★★ (P1, Q-A6)`);
+  }
+  assert.equal(etoilesForge({}, forgeProche(contexte(2))), 2, "ventilée sans pinces");
+  assert.equal(etoilesForge({ pinces_forge: 1 }, forgeProche(contexte(2))), 3, "ventilée et pinces (Q-A2d)");
   assert.equal(etoilesForge({ pinces_forge: 1 }, forgeProche(contexte(2, { enclume: "rail" }))), 5);
   assert.equal(trempeDisponible({}, null).genre, "eau");
   assert.equal(trempeDisponible({ graisse: 1 }, null).genre, "huile");
   assert.equal(trempeDisponible({}, forgeProche(contexte(1, { bac: true, huile: 3 }))).genre, "huile");
   // Le fer doux ne se juge pas à la trempe.
-  assert.deepEqual(facteursLame(2, {}, contexte()), [2, 2]);
+  assert.deepEqual(facteursLame(2, {}, contexte(1, { enclume: "depanneur" })), [2, 2]);
+  // La trempe à l'eau (★★★) ne dépasse pas le maillon de la forge : un ressort au foyer reste à ★★.
+  assert.equal(Math.min(...facteursLame(4, {}, contexte(1, { enclume: "depanneur", bac: true }))), 2);
+});
+
+test("🔥 le maillon faible au foyer : une machette sur l'enclume de dépanneur ★★, ★★★ maîtrisée ; sur la pierre plate ★", () => {
+  const depanneur = contexte(1, { enclume: "depanneur", bac: true });
+  const pierre = contexte(1, { bac: true });
+  for (const id of ["machette_forgee", "machette_forgee_fer", "hachette", "lame_forgee_fer", "serpe"]) {
+    const r = recette(id)!;
+    assert.equal(etoilesDuProduit(r, { pinces_forge: 1 }, { contexte: depanneur }), 2, id);
+    assert.equal(etoilesDuProduit(r, { pinces_forge: 1 }, { contexte: depanneur, maitrise: true }), 3, `${id} maîtrisée`);
+    assert.equal(etoilesDuProduit(r, {}, { contexte: pierre }), 1, `${id} sur la pierre plate`);
+  }
+  // Un étau posé sur la forge ne donne plus ★★★ (Q-A6).
+  assert.equal(etoilesDuProduit(recette("machette_forgee")!, { pinces_forge: 1, graisse: 1 }, { contexte: contexte(1, { enclume: "etau", bac: true }) }), 2);
 });
 
 test("🔥 hors famille, jamais plus de ★★, même avec la meilleure forge du monde", () => {
@@ -132,21 +159,41 @@ test("🔥 hors famille, jamais plus de ★★, même avec la meilleure forge du
   assert.equal(etoilesDuProduit(r, { pinces_forge: 1 }, { contexte: meilleure, horsFamille: true, maitrise: true }), 2);
 });
 
-test("🔥 un Charbonnier seul, dès le premier jour : ressort, eau, foyer, marteau → un couteau ★★", () => {
-  const t = monter("charbonniers", { marteau: 1, ressort_lames: 1, charbon_bois: 1, branche: 1 });
+test("🔥 un Charbonnier seul : ressort, eau, foyer et bac de trempe, marteau → un couteau ★★", () => {
+  // Plan 0.8 : l'acier se trempe au bac de trempe (le lieu de la recette) ; sans lui, la recette est refusée.
+  const sans = monter("charbonniers", { marteau: 1, ressort_lames: 1, charbon_bois: 1, branche: 1 });
+  sans.fabriquer("lame_forgee");
+  assert.match(sans.infos().at(-1)!, /Il te faut un bac de trempe/);
+  const t = monter("charbonniers", { marteau: 1, ressort_lames: 1, charbon_bois: 1, branche: 1 }, { etat: { bac: true, enclume: "depanneur" } });
   t.fabriquer("lame_forgee");
   assert.match(t.infos().join(" "), /Trempe à l'eau : une lame sur trois se fend/, "le risque est dit avant le geste");
   assert.equal(t.sac()["lame_forgee#2"], 1);
   assert.equal(t.sac().ressort_lames, undefined);
 });
 
-test("🔥 avec les pinces et un étau posé en enclume, la machette forgée monte à ★★★", () => {
-  const t = monter("charbonniers", { marteau: 1, pinces_forge: 1, etau: 1, ressort_lames: 2, charbon_bois: 2, branche: 1, ficelle: 1 });
+test("🔥 un étau posé en enclume ne donne plus ★★★ : la machette forgée reste à ★★ (plan 0.8, Q-A6)", () => {
+  const t = monter("charbonniers", { marteau: 1, pinces_forge: 1, etau: 1, ressort_lames: 2, charbon_bois: 2, branche: 1, ficelle: 1 }, { etat: { bac: true } });
   t.utiliser("poser_enclume");
   assert.equal(t.laForge().etat.enclume, "etau");
   assert.equal(t.sac().etau, undefined, "l'étau est sur la forge");
   t.fabriquer("machette_forgee");
-  assert.equal(t.sac().machette_forgee, 1, "★★★ : la clé nue");
+  assert.equal(t.sac()["machette_forgee#2"], 1, "★★, même avec les pinces");
+  assert.equal(t.sac().machette_forgee, undefined, "plus de ★★★ au foyer");
+});
+
+test("🔥 l'enclume de dépanneur se cale sur le billot : la pierre plate (★) cède la place, les lames montent à ★★", () => {
+  const t = monter("charbonniers", { marteau: 1, enclume_depanneur: 1, etau: 1, barre_metal: 2, charbon_bois: 2, branche: 1, ficelle: 1 });
+  t.utiliser("poser_enclume");
+  // Dans le sac, l'enclume de dépanneur passe avant l'étau (à étoiles égales, la pièce faite pour ça).
+  assert.equal(t.laForge().etat.enclume, "depanneur");
+  assert.equal(t.sac().enclume_depanneur, undefined);
+  assert.equal(t.sac().etau, 1, "l'étau reste pour l'établi");
+  assert.match(t.infos().at(-1)!, /enclume de dépanneur sert d'enclume/i);
+  // L'étau n'apporte rien de plus.
+  t.utiliser("poser_enclume");
+  assert.match(t.infos().at(-1)!, /vaut déjà/);
+  t.fabriquer("machette_forgee_fer");
+  assert.equal(t.sac()["machette_forgee#2"], 1);
 });
 
 test("🔥 un manche tourné ⚙️ donne une étoile de plus ; le fer doux plafonne à ★★", () => {
@@ -170,6 +217,7 @@ function forgeSeule(sac: Inventaire, forge: Partial<InstallationVue> | null = nu
     id: 1,
     alea,
     inventaire: () => sac,
+    outils: () => sac,
     retirer: (cle, n) => {
       sac[cle] = (sac[cle] ?? 0) - n;
       if (!sac[cle]) delete sac[cle];
@@ -209,7 +257,7 @@ test("🔥 la trempe à l'eau fend une lame sur trois (graine fixe) ; à l'huile
 
 test("🔥 une lame fendue à la trempe tombe en lame ébréchée, sur le joueur aussi (jamais de disparition totale)", () => {
   // alea à 0 : la trempe fend toujours (et les Éteints restent loin : le terrain n'en fait venir que s'ils entendent).
-  const t = monter("charbonniers", { marteau: 1, ressort_lames: 1, charbon_bois: 1, branche: 1 }, {}, () => 0);
+  const t = monter("charbonniers", { marteau: 1, ressort_lames: 1, charbon_bois: 1, branche: 1 }, { etat: { bac: true } }, () => 0);
   t.fabriquer("lame_forgee");
   const inv = t.sac();
   assert.equal(inv.lame_ebrechee, 1);
@@ -218,45 +266,63 @@ test("🔥 une lame fendue à la trempe tombe en lame ébréchée, sur le joueur
   assert.match(t.infos().join(" "), /fendue à la trempe/);
 });
 
-test("🔥 le ressort retrempé ne se fait qu'à l'huile ; le bac de trempe et le bidon la donnent", () => {
-  const t = monter("charbonniers", { marteau: 1, ressort_lames: 2, charbon_bois: 2, casserole: 1, bidon_huile: 1 });
-  t.fabriquer("ressort_retrempe");
-  assert.match(t.infos().at(-1)!, /à l'huile/);
-  assert.equal(t.sac().ressort_retrempe, undefined);
+test("🔥 le bac de trempe : une auge de 2 bûches et 2 glaises (Creuser 1, au sac ou au râtelier), plus de casserole ; l'huile s'y verse", () => {
+  // La casserole ne fait plus le bac (V4-4).
+  const casserole = monter("charbonniers", { marteau: 1, casserole: 1, bidon_huile: 1 });
+  casserole.utiliser("poser_bac", 25);
+  assert.equal(casserole.laForge().etat.bac, undefined);
+  assert.match(casserole.infos().at(-1)!, /glaise/);
+  assert.equal(casserole.sac().casserole, 1);
+  // Sans de quoi creuser : refusé.
+  const sansOutil = monter("charbonniers", { marteau: 1, buche: 2, glaise: 2 });
+  sansOutil.utiliser("poser_bac", 25);
+  assert.equal(sansOutil.laForge().etat.bac, undefined);
+  assert.match(sansOutil.infos().at(-1)!, /creuser/);
+  // Le bâton à fouir, deux bûches, deux glaises du gué : l'auge est posée.
+  const t = monter("charbonniers", { marteau: 1, buche: 2, glaise: 2, baton_fouir: 1, bidon_huile: 1, ressort_lames: 1, charbon_bois: 1 });
   t.utiliser("verser_huile");
   assert.match(t.infos().at(-1)!, /bac de trempe/, "pas de bac, pas d'huile");
-  t.utiliser("poser_bac");
+  t.utiliser("poser_bac", 25);
+  assert.equal(t.laForge().etat.bac, true);
+  assert.equal(t.sac().buche, undefined);
+  assert.equal(t.sac().glaise, undefined);
+  assert.equal(t.sac().baton_fouir, 1, "l'outil reste");
   t.utiliser("verser_huile");
   assert.equal(t.laForge().etat.huile, 20);
+  // Le bâton à fouir rangé au râtelier, à 3 m, compte comme les autres outils à portée (plan 0.8 §9.2).
+  const ratelier = monter("charbonniers", { buche: 2, glaise: 2 }, {}, () => 1, (b, id) => {
+    const r = b.ajouterInstallation(id, "ratelier_outils", 21.5, 20, 0);
+    b.sauverEtatInstallation(id, r.id, { contenu: { baton_fouir: 1 } });
+  });
+  ratelier.utiliser("poser_bac", 25);
+  assert.equal(ratelier.laForge().etat.bac, true, "le bâton du râtelier suffit");
+  assert.equal(ratelier.sac().glaise, undefined);
+  // Le ressort retrempé (la trempe douce de l'arbalète lourde) est du niveau 3 : « plus tard ».
+  assert.equal(recette("ressort_retrempe")!.aVenir, "niveau 3");
   t.fabriquer("ressort_retrempe");
-  assert.equal(t.sac().ressort_retrempe, 1);
-  assert.equal(t.laForge().etat.huile, 19);
+  assert.match(t.infos().at(-1)!, /plus tard/i);
+  assert.equal(t.sac().ressort_retrempe, undefined);
 });
 
 // ---------- La forge ventilée ----------
 
-test("🔥 la hache forgée attend la forge ventilée ; le Charbonnier la bâtit seul, puis pompe (sauf ventilateur ⚡)", () => {
-  const t = monter("charbonniers", { marteau: 1, pinces_forge: 1, barre_metal: 2, ressort_lames: 1, charbon_bois: 2, buche: 1, bache: 1, pierre: 6, graisse: 1, ventilateur_forge: 1 });
+test("🔥 la forge ventilée, la hache et le glaive sont « plus tard » (niveau 2) ; la hachette se forge au foyer, à ★★", () => {
+  const t = monter("charbonniers", { marteau: 2, pinces_forge: 1, barre_metal: 2, ressort_lames: 4, charbon_bois: 4, buche: 1, glaise: 2, pierre: 6, graisse: 1, branche: 3, rivet: 2 }, { etat: { bac: true, enclume: "depanneur" } });
   t.fabriquer("hache_forgee");
-  assert.match(t.infos().at(-1)!, /forge ventilée/);
+  assert.match(t.infos().at(-1)!, /plus tard/i);
   t.utiliser("ameliorer", 10);
-  assert.equal(t.laForge().niveau, 2);
-  t.utiliser("monter_ventilateur");
-  assert.equal(t.laForge().etat.ventilateur, true);
-  t.fabriquer("hache_forgee");
-  // Ressort ★★★★, huile ★★★★, ventilée et pinces ★★★★.
-  assert.equal(t.sac()["hache_forgee#4"], 1);
+  assert.equal(t.laForge().niveau ?? 1, 1, "pas de forge ventilée en 0.8");
+  // Même devant une forge ventilée (posée à la main), le glaive attend.
+  for (const id of ["hache_forgee", "hache_forgee_soc", "glaive"]) assert.equal(recette(id)!.aVenir, "niveau 2", id);
+  // La hachette (Q-0.8-2) : au foyer de forge et à son bac, à ★★.
+  assert.equal(recette("hachette")!.aVenir, undefined);
+  t.fabriquer("hachette", 160);
+  assert.equal(t.sac()["hachette#2"], 2);
 });
 
-test("🔥 le glaive : la forge ventilée et la maîtrise du couteau (dix forgés)", () => {
-  const t = monter("charbonniers", { marteau: 1, ressort_lames: 3, charbon_bois: 3, branche: 1, rivet: 2 }, { niveau: 2 });
-  t.fabriquer("glaive");
-  assert.match(t.infos().at(-1)!, /maîtriser le couteau/);
-  assert.equal(t.sac().ressort_lames, 3);
-});
-
-test("🔥 démonter la forge rend ses accessoires entiers", () => {
-  assert.deepEqual(Forge.accessoiresRendus({ type: "forge", etat: { enclume: "rail", bac: true, huile: 4, ventilateur: true } }), { troncon_rail: 1, casserole: 1, ventilateur_forge: 1 });
+test("🔥 démonter la forge rend ses accessoires entiers (l'auge : ses bûches et sa glaise)", () => {
+  assert.deepEqual(Forge.accessoiresRendus({ type: "forge", etat: { enclume: "rail", bac: true, huile: 4, ventilateur: true } }), { troncon_rail: 1, buche: 2, glaise: 2, ventilateur_forge: 1 });
+  assert.deepEqual(Forge.accessoiresRendus({ type: "forge", etat: { enclume: "depanneur" } }), { enclume_depanneur: 1 });
   assert.deepEqual(Forge.accessoiresRendus({ type: "pedalier", etat: { meule: true } }), {});
 });
 
@@ -274,7 +340,7 @@ test("🔥 un Charbonnier seul répare sa machette forgée à la forge, pour un 
 
 test("🔥 la lame ébréchée se reforge en la même arme, une étoile de moins ; d'origine inconnue, un couteau", () => {
   // La forge se souvient d'une machette ★★★★ cassée.
-  const t = monter("charbonniers", { marteau: 1, lame_ebrechee: 2, charbon_bois: 2 }, {}, () => 1, (base, id) => base.ecrireMonde(`forge:${id}`, { ebrechees: ["machette_forgee#4"] }));
+  const t = monter("charbonniers", { marteau: 1, lame_ebrechee: 2, charbon_bois: 2 }, { etat: { bac: true, enclume: "depanneur" } }, () => 1, (base, id) => base.ecrireMonde(`forge:${id}`, { ebrechees: ["machette_forgee#4"] }));
   t.fabriquer(RECETTE_REFORGER);
   assert.equal(t.sac().machette_forgee, 1, "★★★★ − 1 = ★★★");
   assert.match(t.infos().join(" "), /redevient machette forgée/);
@@ -327,7 +393,7 @@ test("🔥 la forge se souvient des lames cassées, la dernière d'abord ; hors 
 // ---------- Le contrôle des messages ----------
 
 test("🔥 les gestes de la forge passent le contrôle des messages", () => {
-  for (const verbe of ["poser_enclume", "poser_bac", "verser_huile", "monter_ventilateur"]) {
+  for (const verbe of ["poser_enclume", "poser_bac", "verser_huile", "monter_ventilateur", "poser_panneau", "monter_alternateur"]) {
     assert.ok(messageValide({ t: "interagir", cible: { genre: "installation", id: 3 }, verbe }), verbe);
   }
 });

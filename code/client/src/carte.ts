@@ -1,19 +1,27 @@
 // La carte du monde (Book 20, réduite pour la 0a) : un vieil atlas régional annoté au crayon par les survivants.
 // On y choisit une destination ; on ne s'y promène pas (Book 01 §2 bis). Pendant le trajet, le pion avance.
+// 0.8 (plan §3, chantier 4) : deux routes passent la rivière. La route A par le pont (la station, la Coopérative), la
+// route B à gué, en aval (le Gué-aux-Saules, puis le Moulin du Gué, au bord de la rivière).
 
 import { DUREE_VOYAGE_S, EAU_PAR_KM, KCAL_PAR_KM, LIEUX, distanceKm, etapeVers, minuscule, type LieuId, type LieuJouable } from "../../commun/src/lieux.ts";
 
-/** Les lieux de la route de la Campagne sur la feuille (viewBox 1000 × 700). */
-const POINTS: Record<LieuId, [number, number]> = {
+/** Les lieux de la route de la Campagne sur la feuille (viewBox 1000 × 700 ; l'échelle : 53 unités par km). */
+export const POINTS: Record<LieuId, [number, number]> = {
   terrain: [560, 382],
   station: [402, 404],
   comptoir: [300, 380],
   // 0.7.3 : derrière la station, comme le Comptoir (≈ 2 km de chemin de terre, au nord-ouest).
   cooperative: [376, 296],
+  // 0.8 : le gué, sur la rivière en aval du pont (3 km du terrain) ; le Moulin, 2 km plus bas, au bord de l'eau.
+  gue: [462, 481],
+  moulin: [379, 560],
 };
 
+/** Le chemin de halage, le long de la rive est, du Moulin au gué : une sortie du Moulin, jamais une arrivée. */
+const HALAGE: [number, number][] = [[379, 560], [398, 560], [416, 550], [432, 534], [446, 516], [458, 498], [462, 481]];
+
 /** Le tracé de chaque tronçon de route (commun/src/lieux.ts, TRONCONS), d'un bout à l'autre. */
-const TRACES: { a: LieuId; b: LieuId; points: [number, number][]; genre: "route" | "chemin" }[] = [
+export const TRACES: { a: LieuId; b: LieuId; points: [number, number][]; genre: "route" | "chemin" }[] = [
   // La route de la Campagne, du terrain à la station, en passant par le pont
   {
     a: "terrain",
@@ -26,6 +34,10 @@ const TRACES: { a: LieuId; b: LieuId; points: [number, number][]; genre: "route"
   { a: "station", b: "cooperative", genre: "chemin", points: [[402, 404], [394, 402], [392, 380], [388, 356], [383, 330], [379, 310], [376, 296]] },
   // Le chemin agricole, au nord du Carrefour, jusqu'à la Coopérative (0.5)
   { a: "comptoir", b: "cooperative", genre: "chemin", points: [[300, 380], [304, 356], [314, 334], [332, 316], [354, 303], [376, 296]] },
+  // La route B (0.8) : du terrain, elle descend la rive est jusqu'au gué, passe l'eau sur le radier, puis suit la rive
+  // ouest jusqu'au Moulin.
+  { a: "terrain", b: "gue", genre: "route", points: [[560, 382], [563, 410], [556, 438], [540, 460], [516, 476], [488, 483], [462, 481]] },
+  { a: "gue", b: "moulin", genre: "route", points: [[462, 481], [446, 490], [432, 503], [418, 520], [402, 537], [379, 560]] },
 ];
 
 /** Le tracé d'un lieu à son voisin, dans le sens du trajet. */
@@ -37,7 +49,7 @@ function traceEntre(de: LieuId, vers: LieuId): [number, number][] {
 
 const ENCRE = "#3b2a1e";
 
-function dessinCarte(): string {
+export function dessinCarte(): string {
   const arbres = (cx: number, cy: number, n: number, rx: number, ry: number, graine: number) => {
     let s = graine;
     const alea = () => ((s = (s * 9301 + 49297) % 233280) / 233280);
@@ -153,23 +165,28 @@ function dessinCarte(): string {
 
     <!-- La rivière : du barrage à la mer, en contournant le terrain par l'ouest -->
     <path d="M592 148 C560 210 520 250 510 300 S486 370 490 394 S476 470 430 520 S300 600 220 640" class="riviere"/>
-    <text x="458" y="480" class="nom-petit" transform="rotate(-48 458 480)">la rivière</text>
+    <text x="318" y="618" class="nom-petit" transform="rotate(-26 318 618)">la rivière</text>
 
-    <!-- La route de la Campagne, puis les chemins de terre de la Coopérative (depuis la station, depuis le Carrefour) -->
+    <!-- Le chemin de halage, sur la rive est (0.8) : on part du Moulin par là, vers le gué -->
+    <path d="M${HALAGE.map((p) => p.join(" ")).join(" L")}" fill="none" stroke="#6b4a2e" stroke-width="1.5" stroke-dasharray="1.5 3.5" stroke-linecap="round"/>
+    <text x="446" y="550" class="crayon petit" transform="rotate(-50 446 550)">halage</text>
+
+    <!-- La route de la Campagne, les chemins de terre de la Coopérative (depuis la station, depuis le Carrefour), la route du gué -->
     ${TRACES.map((t) => `<path d="M${t.points.map((p) => p.join(" ")).join(" L")}" class="${t.genre}"/>`).join("")}
     <path d="M482 386 h18 M482 402 h18" class="trait"/>
     <text x="474" y="378" class="crayon petit">le pont tient</text>
 
     <!-- Itinéraire au crayon -->
     <path d="M560 395 C520 410 460 420 410 418" class="pointilles"/>
-    <text x="512" y="426" class="crayon">1re sortie</text>
+    <text x="470" y="444" class="crayon">1re sortie</text>
 
-    <!-- Les trois lieux -->
+    <!-- Les lieux -->
     <g class="lieu" data-lieu="terrain" transform="translate(560 382)" tabindex="0" role="button" aria-label="Ton terrain">
       <circle r="22" class="zone-clic"/>
       <rect x="-11" y="-11" width="22" height="22" class="enclos"/>
       <path d="M-5 4 l5 -9 l5 9 z" fill="#c8362b" stroke="${ENCRE}" stroke-width="1.2"/>
-      <text y="34" text-anchor="middle" class="nom-ouvert">Ton terrain</text>
+      <!-- 0.8 : le nom à droite, la route du gué descend sous l'enclos -->
+      <text x="17" y="6" class="nom-ouvert">Ton terrain</text>
       <text x="16" y="-14" class="crayon petit">chez moi</text>
     </g>
     <g class="lieu" data-lieu="station" transform="translate(402 404)" tabindex="0" role="button" aria-label="La station-service">
@@ -178,8 +195,8 @@ function dessinCarte(): string {
       <path d="M-9 -3 v10 M9 -3 v10" class="trait"/>
       <rect x="-4" y="1" width="8" height="7" fill="#c8362b" stroke="${ENCRE}" stroke-width="1"/>
       <text y="30" text-anchor="middle" class="nom-ouvert">Station-service</text>
-      <text x="-34" y="52" class="crayon petit">panneau solaire sur l'auvent !</text>
-      <text x="-20" y="68" class="crayon petit">ça dort, dans le coin…</text>
+      <text x="-112" y="52" class="crayon petit">panneau solaire sur l'auvent !</text>
+      <text x="-98" y="68" class="crayon petit">ça dort, dans le coin…</text>
     </g>
     <g class="lieu" data-lieu="comptoir" transform="translate(300 380)" tabindex="0" role="button" aria-label="Le Comptoir du Carrefour">
       <circle r="22" class="zone-clic"/>
@@ -201,6 +218,38 @@ function dessinCarte(): string {
       <text x="-20" y="-8" text-anchor="end" class="nom-ouvert">Coopérative</text>
       <text x="24" y="-4" class="crayon petit">plein d'Éteints.</text>
       <text x="24" y="11" class="crayon petit">noir dedans</text>
+    </g>
+    <!-- Le gué : le radier en travers du courant, ses balises rouge et blanc, les piles du pont emporté en amont -->
+    <g class="lieu" data-lieu="gue" transform="translate(462 481)" tabindex="0" role="button" aria-label="Le Gué-aux-Saules">
+      <circle r="22" class="zone-clic"/>
+      <g transform="rotate(34)">
+        <rect x="-8.5" y="-15" width="3" height="6" fill="${ENCRE}"/>
+        <rect x="5.5" y="-13" width="3" height="4" fill="${ENCRE}" transform="rotate(-18 7 -11)"/>
+        <path d="M-7 -15 q4 6 8 4" class="trait-fin"/>
+        <rect x="-13" y="-3" width="26" height="6" fill="#ecdfbf" stroke="${ENCRE}" stroke-width="1.3"/>
+        <path d="M-9 0 h4 M-2 0 h4 M5 0 h4" stroke="#5f8590" stroke-width="1.1" stroke-linecap="round"/>
+        <rect x="-16" y="-4.5" width="3" height="9" fill="#c8362b" stroke="${ENCRE}" stroke-width="0.8"/>
+        <rect x="13" y="-4.5" width="3" height="9" fill="#c8362b" stroke="${ENCRE}" stroke-width="0.8"/>
+        <path d="M-16 -1.5 h3 M-16 1.5 h3 M13 -1.5 h3 M13 1.5 h3" stroke="#ecdfbf" stroke-width="1"/>
+      </g>
+      <text x="16" y="28" class="nom-ouvert">Gué-aux-Saules</text>
+      <text x="18" y="45" class="crayon petit">le pont est parti : à gué</text>
+    </g>
+    <!-- Le Moulin du Gué : la minoterie au bord de l'eau, sa roue à aubes arrêtée -->
+    <g class="lieu" data-lieu="moulin" transform="translate(379 560)" tabindex="0" role="button" aria-label="Le Moulin du Gué">
+      <circle r="24" class="zone-clic"/>
+      <rect x="-16" y="-7" width="17" height="14" fill="#ecdfbf" stroke="${ENCRE}" stroke-width="1.6"/>
+      <path d="M-17.5 -7 l9 -7 l9 7" fill="none" stroke="${ENCRE}" stroke-width="1.4"/>
+      <rect x="-11" y="0" width="4" height="7" fill="${ENCRE}"/>
+      <circle cx="9" cy="2" r="8" fill="#ecdfbf" stroke="${ENCRE}" stroke-width="1.5"/>
+      <path d="M9 -6 v16 M1 2 h16 M3.3 -3.7 l11.4 11.4 M14.7 -3.7 l-11.4 11.4" class="trait-fin"/>
+      ${Array.from({ length: 8 }, (_, i) => {
+        const a = (i * Math.PI) / 4;
+        return `<path d="M${(9 + Math.cos(a) * 8).toFixed(1)} ${(2 + Math.sin(a) * 8).toFixed(1)} L${(9 + Math.cos(a) * 10.5).toFixed(1)} ${(2 + Math.sin(a) * 10.5).toFixed(1)}" class="trait"/>`;
+      }).join("")}
+      <circle cx="9" cy="2" r="2.2" fill="#c8362b" stroke="${ENCRE}" stroke-width="0.8"/>
+      <text x="-24" y="4" text-anchor="end" class="nom-ouvert">Moulin du Gué</text>
+      <text x="14" y="26" class="crayon petit">la roue ne tourne plus</text>
     </g>
 
     <!-- Le pion -->
@@ -236,6 +285,11 @@ function dessinCarte(): string {
   </svg>`;
 }
 
+/** Un clic en dehors de la feuille : commencé et fini sur le fond de la carte (pas sur la feuille ni sur sa fiche). */
+export function clicEnDehors(debut: unknown, fin: unknown, fond: unknown): boolean {
+  return debut === fond && fin === fond;
+}
+
 export class Carte {
   private readonly racine: HTMLElement;
   private readonly fiche: HTMLElement;
@@ -260,13 +314,13 @@ export class Carte {
     racine.setAttribute("aria-modal", "true");
     racine.setAttribute("aria-labelledby", "titre-carte-fiche");
     this.fiche = racine.querySelector(".carte-fiche")!;
-    // Un clic sur le fond sombre ferme la carte : seulement si le geste commence ET finit sur le fond (un défilement
-    // commencé dans la fiche ne ferme rien). Pendant un voyage, rien.
-    let surLeFond = false;
-    racine.addEventListener("pointerdown", (e) => (surLeFond = e.target === racine));
+    // Plan 0.8 §9.2 : la carte garde sa croix, et un clic (ou un toucher) en dehors de la feuille la ferme : seulement si
+    // le geste commence ET finit sur le fond (un défilement commencé dans la fiche ne ferme rien). Pendant un voyage, rien.
+    let debut: EventTarget | null = null;
+    racine.addEventListener("pointerdown", (e) => (debut = e.target));
     racine.addEventListener("click", (e) => {
-      if (surLeFond && e.target === racine) this.fermer();
-      surLeFond = false;
+      if (clicEnDehors(debut, e.target, racine)) this.fermer();
+      debut = null;
     });
     this.pion = racine.querySelector(".pion")!;
     this.trace = racine.querySelector(".trace")!;
@@ -402,7 +456,9 @@ export class Carte {
               : "Pour partir, repasse le portail, au sud."
             : this.lieu === "station" && etape === "cooperative"
               ? "Pour partir, prends le chemin de terre au nord de la route, à l'ouest de la station, jusqu'à la lisière."
-              : "Pour partir, rejoins le bout de la route, du côté de ta destination."
+              : this.lieu === "moulin"
+                ? "Pour partir, repasse le pont de pierre (ou prends le chemin de halage, au bout de la levée)."
+                : "Pour partir, rejoins le bout de la route, du côté de ta destination."
       }</p>`;
     } else peutPartir = true;
     const trajet = ici
@@ -411,7 +467,9 @@ export class Carte {
           parHalte ? `<p class="note">La route passe par ${minuscule(LIEUX[etape].nom)} : il faudra y passer à pied.</p>` : ""
         }`;
     // En-tête (titre, ✕), corps qui défile, pied fixe : le bouton Partir ne passe jamais sous le bord de l'écran.
-    const corps = this.enRoute ? `<p class="trajet"><span>${DUREE_VOYAGE_S} min de route</span></p>` : `<p>${l.description}</p>${trajet}`;
+    // La promesse du lieu, en une ligne, avant sa description (plan 0.8 : ce qu'on va y chercher).
+    const promesse = l.promesse ? `<p><strong>${l.promesse}</strong></p>` : "";
+    const corps = this.enRoute ? `<p class="trajet"><span>${DUREE_VOYAGE_S} min de route</span></p>` : `${promesse}<p>${l.description}</p>${trajet}`;
     const pied = this.enRoute
       ? `${etat}<div class="progression" aria-hidden="true"><span></span></div>`
       : ici || !peutPartir

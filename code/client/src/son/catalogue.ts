@@ -121,6 +121,9 @@ export const SONS = {
   trempe: quotidien(R.trempe, 0.6, 30, 2),
   chaine_velo: { ...quotidien(R.chaineVelo, 0.4, 15, 1), boucle: true },
   roue_libre: quotidien(R.roueLibre, 0.45, 15, 2),
+  // Le pédalier générateur (plan 0.8, chantier 7) : l'alternateur se lance, puis ronronne tant qu'on pédale.
+  alternateur_lance: quotidien(R.alternateurLance, 0.32, 15, 2),
+  alternateur: { ...quotidien(R.alternateur, 0.3, 15, 1), boucle: true },
   meule: { ...quotidien(R.meule, 0.45, 15, 1), boucle: true },
   pinces: quotidien(R.pinces, 0.45, PROCHE),
   bourdonnement: { recette: R.bourdonnement, bus: "environnement", priorite: 3, variantes: 1, gain: 0.18, portee: PROCHE, boucle: true },
@@ -139,6 +142,20 @@ export const SONS = {
   tonnerre: { recette: R.tonnerre, bus: "environnement", priorite: 3, variantes: 3, gain: 0.6, portee: 0 },
 
   ...interfaceFamilles,
+  // « Tu y penses » (plan 0.8, chantier 2) : l'idée au ramassage d'une clé, pour soi seul.
+  idee: { recette: R.idee, bus: "interface", priorite: 2, variantes: 2, gain: 0.32, portee: 0 },
+  // Le Moulin du Gué (plan 0.8, chantier 12) : la grande porte qui grince (M6), les trois leurres du décor (M31).
+  grande_porte: { recette: R.grandePorte, bus: "environnement", priorite: 2, variantes: 2, gain: 0.6, portee: 18 },
+  monte_sacs: { recette: R.monteSacs, bus: "environnement", priorite: 2, variantes: 1, gain: 0.75, portee: 30 },
+  babillard: { recette: R.babillard, bus: "environnement", priorite: 2, variantes: 1, gain: 0.45, portee: 20 },
+  borne: { recette: R.borneJingle, bus: "environnement", priorite: 2, variantes: 1, gain: 0.4, portee: 22 },
+
+  // Le gué (plan 0.8, chantier 11) : le clapot du radier, le câble du bac, la cloche du passeur (un leurre : 40 m), le
+  // galet dans l'eau (8 m, comme une pierre qui tombe).
+  clapot_radier: { recette: R.clapotRadier, bus: "environnement", priorite: 3, variantes: 1, gain: 0.45, portee: 14, boucle: true },
+  cable_bac: { recette: R.grincementCable, bus: "environnement", priorite: 3, variantes: 1, gain: 0.4, portee: 18, boucle: true },
+  cloche_bac: { recette: R.clocheBac, bus: "environnement", priorite: 2, variantes: 1, gain: 0.6, portee: 40 },
+  plouf: { recette: R.plouf, bus: "environnement", priorite: 3, variantes: 3, gain: 0.5, portee: 8 },
 } satisfies Record<string, DefSon>;
 
 export type IdSon = keyof typeof SONS;

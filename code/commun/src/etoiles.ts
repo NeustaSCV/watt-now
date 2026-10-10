@@ -35,7 +35,8 @@ export const SEUIL_MAITRISE = 10;
  */
 export const ETOILES = {
   1: { degats: 0.8, solidite: 0.5, raidi: 1.5, longueMs: 1400, porteeTete: 2 / 3 },
-  2: { degats: 0.9, solidite: 0.75, raidi: 2, longueMs: 1200, porteeTete: 5 / 6 },
+  // ★★ électrique (P6, plan 0.8 §2.4) : elle raidit 2,5 s et sa longue dure 1,0 s, comme ★★★, qui seule saute au voisin.
+  2: { degats: 0.9, solidite: 0.75, raidi: 2.5, longueMs: 1000, porteeTete: 5 / 6 },
   3: { degats: 1, solidite: 1, raidi: 2.5, longueMs: 1000, porteeTete: 1 },
   4: { degats: 1.1, solidite: 1.5, raidi: 3, longueMs: 900, porteeTete: 7 / 6 },
   5: { degats: 1.2, solidite: 2, raidi: 3.5, longueMs: 800, porteeTete: 4 / 3 },
@@ -177,6 +178,17 @@ export function uneEtoileDeMoins(n: Etoiles): Etoiles {
 /** Une étoile de plus (manche tourné, dérouillage), jamais au-delà de ★★★★★. */
 export function uneEtoileDePlus(n: Etoiles): Etoiles {
   return borner(n + 1);
+}
+
+/**
+ * Le même exemplaire, une étoile de plus (faire évoluer une arme sur son meuble, plan 0.8 R-ARMES-5) : sa clé change
+ * d'étoile (« arbalete#1 » → « arbalete#2 », ou la clé nue si l'on retombe sur les étoiles de base). null : ce n'est
+ * pas un objet de métier, ou il est déjà à ★★★★★.
+ */
+export function exemplaireUneEtoileDePlus(cle: string): CleObjet | null {
+  const { type, etoiles } = lireCle(cle);
+  if (etoiles === null || etoiles >= ETOILES_MAX) return null;
+  return cleExemplaire(type, uneEtoileDePlus(etoiles));
 }
 
 // ---------- Ce que changent les étoiles ----------

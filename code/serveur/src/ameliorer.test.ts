@@ -3,6 +3,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { toutDevoile } from "../../commun/src/progression.ts";
 import { mkdirSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -21,6 +22,9 @@ const dossierTests = join(dirname(fileURLToPath(import.meta.url)), "..", "donnee
 function monter(inventaire: Record<string, number>, avant?: (base: Base, id: number) => void, famille: "mecanistes" | "charbonniers" | "voltaiques" = "mecanistes") {
   const base = new Base(":memory:");
   const compte = base.creerCompte("Rose", "potager42", famille);
+  // Ces tests portent sur autre chose que l'arbre de progression : tout est dévoilé (plan 0.8 : le vétéran
+  // n'a plus d'emblée que les recettes à la main).
+  base.sauverProgression(compte.id, toutDevoile(famille));
   base.sauverInventaire(compte.id, { sac_a_dos: 1, ...inventaire });
   avant?.(base, compte.id);
   let instant = base.debutMonde() + 60_000;
@@ -59,13 +63,13 @@ test("le bug du Book 24 : à 3 feux de camp, on ne pose pas de Dakota, mais on e
   // Un quatrième foyer : refusé, et le message dit quoi faire à la place.
   t.joueur.recevoir({ t: "construire_feu", x: 18, z: 18, dakota: true });
   assert.match(t.infos().at(-1)!, /Pas plus de 3 foyers.*creuse-le en Dakota/);
-  // Creuser le feu existant : même identifiant, même place, 3 pierres rendues.
+  // Creuser le feu existant : même identifiant, même place, ses 5 pierres rendues (B12).
   t.agir("feu", 1, "creuser_dakota");
   const feu = t.dernier("feu")!.feu;
   assert.equal(feu.id, 1);
   assert.equal(feu.dakota, true);
   assert.deepEqual([feu.x, feu.z], [21, 20]);
-  assert.equal(t.inventaireActuel().pierre, 3);
+  assert.equal(t.inventaireActuel().pierre, 5);
   assert.equal(t.base.chargerFeux(t.compte.id).length, 3, "toujours trois foyers");
   assert.equal(t.base.chargerFeux(t.compte.id)[0]!.dakota, true);
   assert.equal(t.faits().foyer_dakota, 1, "l'objectif « Un feu qui ne se voit pas » est rempli");
@@ -133,12 +137,13 @@ test("un feu en braises s'améliore ; il manque des matériaux : on dit lesquels
   u.agir("feu", 1, "ameliorer");
   const dit = u.infos().at(-1)!;
   assert.match(dit, /rouleau de grillage/);
-  assert.match(dit, /2 barres de métal/);
+  assert.match(dit, /deux barres de métal.*Marteler 2/);
 });
 
 test("le foyer de cuisine se monte avec deux barres de métal au lieu du grillage ; il rôtit deux fois plus vite", () => {
-  const t = monter({ branche: 3, corde: 1, barre_metal: 2, couteau: 1, pierre: 1, volaille_crue: 2 }, (b, id) => poserFeu(b, id, { id: 1, niveau: 2, bois: 5 }));
-  t.agir("feu", 1, "ameliorer");
+  // Le repli demande Marteler 2 (plan 0.8 §3, chantier 5) : le marteau remmanché, pas la pierre.
+  const t = monter({ branche: 3, corde: 1, barre_metal: 2, couteau: 1, marteau: 1, volaille_crue: 2 }, (b, id) => poserFeu(b, id, { id: 1, niveau: 2, bois: 5 }));
+  t.agir("feu", 1, "ameliorer", 14);
   assert.equal(t.dernier("feu")!.feu.niveau, 3);
   assert.equal(t.inventaireActuel().barre_metal ?? 0, 0);
   const etat = t.base.chargerFeux(t.compte.id)[0]!;
@@ -230,7 +235,7 @@ test("le muret du foyer de pierres réchauffe l'abri voisin : sommeil ×1,15", (
   assert.ok(Math.abs(confort - 1.15) < 1e-9);
 });
 
-test("démonter une installation : le coffre doit être vide ; le récupérateur rend la moitié des branches et toute la bâche", () => {
+test("démonter une installation : le coffre doit être vide ; le récupérateur rend la moitié des branches, le bidon et les sacs", () => {
   const t = monter({}, (b, id) => {
     const c = b.ajouterInstallation(id, "coffre", 21, 20, 0);
     b.sauverEtatInstallation(id, c.id, { contenu: { pierre: 1 } });
@@ -241,7 +246,7 @@ test("démonter une installation : le coffre doit être vide ; le récupérateur
   const u = monter({}, (b, id) => b.ajouterInstallation(id, "recuperateur_pluie", 21, 20, 0));
   u.agir("installation", 1, "demonter_installation");
   assert.deepEqual(u.dernier("installation_retiree"), { t: "installation_retiree", id: 1 });
-  assert.deepEqual(u.inventaireActuel(), { sac_a_dos: 1, bache: 1, branche: 2, corde: 1 });
+  assert.deepEqual(u.inventaireActuel(), { sac_a_dos: 1, bidon_5l: 1, branche: 2, corde: 1, sac_plastique: 4 });
   // La décharge, jamais.
   const v = monter({});
   const d = v.joueur.bienvenue(0).installations.find((i) => i.type === "decharge")!;
@@ -271,20 +276,21 @@ test("l'abri garni absorbe le lit voisin sans rien payer ; il dort comme un lit,
   assert.equal(suivi.avancement(lit.objectifs[0]!.condition, { ...etat, installations: [{ ...abri, niveau: undefined }] }).fait, 0);
 });
 
-test("sans lit voisin, garnir l'abri coûte 6 branches ; le coffre cerclé garde 250 kg, la citerne 60 L", () => {
+test("sans lit voisin, garnir l'abri coûte 6 branches ; le coffre cerclé garde 250 kg, le récupérateur à seau 10 L", () => {
   const t = monter({ branche: 6, couteau: 1 }, (b, id) => b.ajouterInstallation(id, "abri", 21, 20, 0));
   t.agir("installation", 1, "ameliorer");
   assert.equal(t.dernier("installation")!.installation.niveau, 2);
   assert.equal(t.inventaireActuel().branche ?? 0, 0);
 
-  const u = monter({ barre_metal: 1, buche: 2, pierre: 80 }, (b, id) => b.ajouterInstallation(id, "coffre", 21, 20, 0));
+  // Plan 0.8 (chantier 6) : les feuillards du Moulin, une poignée de clous, et Marteler 2 (le marteau).
+  const u = monter({ feuillards: 1, poignee_clous: 1, buche: 2, marteau: 1, pierre: 80 }, (b, id) => b.ajouterInstallation(id, "coffre", 21, 20, 0));
   u.agir("installation", 1, "ameliorer");
   assert.equal(u.dernier("installation")!.installation.niveau, 2);
   // 80 pierres, 160 kg : plus que les 150 kg d'un coffre simple.
   u.joueur.recevoir({ t: "coffre", id: 1, sens: "deposer", objet: "pierre", quantite: 80 });
   assert.equal(u.dernier("installation")!.installation.etat.contenu?.pierre, 80);
   assert.equal(capaciteCoffre({ type: "coffre", niveau: 2 }), 250);
-  assert.equal(contenanceRecuperateur({ type: "recuperateur_pluie", niveau: 2 }), 60);
+  assert.equal(contenanceRecuperateur({ type: "recuperateur_pluie", niveau: 2 }), 10);
   // Redescendre un coffre trop plein pour sa taille d'avant : refusé.
   u.base.sauverEtatInstallation(u.compte.id, 1, {});
   const v = monter({}, (b, id) => {

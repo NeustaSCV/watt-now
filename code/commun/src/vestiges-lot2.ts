@@ -557,7 +557,7 @@ export const VESTIGES_LOT2 = {
   planche_roulettes: {
     nom: "planche à roulettes",
     pluriel: "planches à roulettes",
-    description: "Huit roulements qui tournent mieux que le monde.",
+    description: "Ses roues tournent encore mieux que le monde. Pour le reste : de l'aluminium et une planche.",
     poids: 2.5,
     valeur: 15,
     famille: "loisir",
@@ -780,13 +780,14 @@ export const VESTIGES_LOT2 = {
     rarete: "C",
     lieux: ["R", "P", "A"],
   },
+  // Plan 0.8 (I5) : un déchet de plastique, percé ; le vrai jerrican de 20 L sera la clé de L2B. L'identifiant reste.
   jerrican: {
-    nom: "jerrican vide",
-    pluriel: "jerricans vides",
-    description: "Il sent encore l'essence. C'est tout ce qui reste de l'essence.",
+    nom: "jerrican percé",
+    pluriel: "jerricans percés",
+    description: "Il sent encore l'essence, et il fuit par le fond. Il ne gardera plus rien : du plastique, rien d'autre.",
     poids: 1,
-    valeur: 3,
-    famille: "garage",
+    valeur: 1,
+    famille: "dechet",
     rarete: "C",
     lieux: ["P", "R", "F"],
   },
@@ -955,7 +956,7 @@ export const VESTIGES_LOT2 = {
   debroussailleuse: {
     nom: "débroussailleuse",
     pluriel: "débroussailleuses",
-    description: "Le moteur est grippé, mais sa bobine fait encore claquer l'étincelle.",
+    description: "Le moteur est grippé, la bobine noyée d'huile. Il en reste un tube d'acier et des capots de plastique.",
     poids: 7,
     valeur: 20,
     famille: "ferme",
@@ -980,7 +981,7 @@ const S1 = { serrer: 1 } as const;
 
 /**
  * Ce que donne chaque objet du lot 2 qu'on démonte : des composants et des matières qui existent déjà (Q5). Ce qui
- * n'est pas ici ne se démonte pas : une ordure, ou un objet qui garde son usage futur (jerrican, fût, couverture).
+ * n'est pas ici ne se démonte pas : une ordure, ou un objet qui garde son usage futur (fût, couverture).
  */
 export const DEMONTAGE_LOT2: Partial<Record<TypeObjet, Demontage>> = {
   // Emballages et ordures
@@ -993,6 +994,8 @@ export const DEMONTAGE_LOT2: Partial<Record<TypeObjet, Demontage>> = {
   bouteille_verre: { donne: { verre: 1 }, qualites: M1, duree: 2 },
   conserve_bombee: { donne: { boite_vide: 1 }, qualites: C1, duree: 3 },
   bidon_lave_glace: { donne: { plastique: 1 }, qualites: {}, duree: 2 },
+  // Le jerrican percé (plan 0.8, I5) : un déchet, du plastique.
+  jerrican: { donne: { plastique: 2 }, qualites: C1, duree: 3 },
   // Textile
   tshirt_promo: { donne: { chiffons: 1 }, qualites: C1, duree: 2 },
   jean_troue: { donne: { chiffons: 2 }, qualites: C1, duree: 3 },
@@ -1019,7 +1022,8 @@ export const DEMONTAGE_LOT2: Partial<Record<TypeObjet, Demontage>> = {
   balise_solaire: { donne: { led: 1, pile: 1, plastique: 1 }, qualites: {}, duree: 2 },
   ballon_foot: { donne: { caoutchouc: 1 }, qualites: C1, duree: 2 },
   peluche_parlante: { donne: { pile: 2, chiffons: 1 }, qualites: C1, duree: 3 },
-  planche_roulettes: { donne: { roulements: 1, aluminium: 2, branche: 2 }, qualites: S1, duree: 10 },
+  // Plan 0.8 (§9.2, chantier 10) : plus de roulement (la boîte de roulements est une clé de L2A).
+  planche_roulettes: { donne: { aluminium: 2, branche: 2 }, qualites: S1, duree: 10 },
   trottinette_enfant: { donne: { aluminium: 4, caoutchouc: 1 }, qualites: S1, duree: 8 },
   laisse_enrouleur: { donne: { ficelle: 2, petit_ressort: 1, plastique: 1 }, qualites: V1, duree: 3 },
   // Maison, bureau, gadgets
@@ -1052,9 +1056,11 @@ export const DEMONTAGE_LOT2: Partial<Record<TypeObjet, Demontage>> = {
   velo_libre_service: { donne: { cadre_velo: 1, chaine_velo: 1, roue_velo: 2, dynamo_velo: 1 }, qualites: { serrer: 1, visser: 1 }, duree: 45 },
   velo_enfant: { donne: { chaine_velo: 1, roue_velo: 1, barre_metal: 1 }, qualites: S1, duree: 20 },
   velo_appartement: { donne: { barre_metal: 3, aimant: 4, petit_moteur: 1, plastique: 4 }, qualites: S1, duree: 40 },
-  trottinette_electrique: { donne: { petite_batterie: 1, petit_moteur: 1, aimant: 4, roulements: 1 }, qualites: { visser: 1, serrer: 1 }, duree: 30 },
+  // Plan 0.8 (I9) : plus de roulement (la boîte de roulements est une clé de L2A).
+  trottinette_electrique: { donne: { petite_batterie: 1, petit_moteur: 1, aimant: 4 }, qualites: { visser: 1, serrer: 1 }, duree: 30 },
   onduleur: { donne: { petite_batterie: 1, fil_cuivre: 2, plastique: 2 }, qualites: V1, duree: 10 },
   appareils_mariage: { donne: { appareil_photo_jetable: 5 }, qualites: {}, duree: 3 },
   tondeuse_robot: { donne: { lame_ebrechee: 1, petit_moteur: 2, cellule_lithium: 4, plastique: 4 }, qualites: V1, duree: 15 },
-  debroussailleuse: { donne: { bobine_allumage: 1, barre_metal: 1, plastique: 2 }, qualites: S1, duree: 20 },
+  // Plan 0.8 (§9.2, chantier 10 ; I12) : plus de bobine d'allumage (elle attend H2A).
+  debroussailleuse: { donne: { barre_metal: 1, plastique: 2 }, qualites: S1, duree: 20 },
 };

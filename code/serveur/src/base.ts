@@ -1,7 +1,7 @@
 // Base de données SQLite (Book 17 §3) : comptes, jetons, personnages, inventaires, terrains, feux.
 // Serveur sans état caché : tout ce qui doit survivre à un redémarrage est ici.
 
-import type { Mesure } from "./mesures.ts";
+import { COMPTE_ANONYME, PREFIXE_ATTEINT, type Mesure } from "./mesures.ts";
 import type { SacVu } from "../../commun/src/messages.ts";
 import { apparenceAncienne, apparenceValide, type Apparence } from "../../commun/src/apparence.ts";
 import { DatabaseSync } from "node:sqlite";
@@ -19,6 +19,7 @@ import type { Wotts } from "../../commun/src/economie.ts";
 import { TUTORIEL_NEUF, type EtatTutoriel } from "../../commun/src/tutoriel.ts";
 import type { EtatQuetes } from "../../commun/src/quetes.ts";
 import { estArme } from "../../commun/src/combat.ts";
+import { soliditeDe } from "../../commun/src/evolution-armes.ts";
 import type { EtatInstallation, InstallationVue } from "../../commun/src/messages.ts";
 import type { TypeInstallation } from "../../commun/src/recettes.ts";
 import type { AccessoireFeu } from "../../commun/src/lignees.ts";
@@ -116,6 +117,57 @@ export class PseudoReserve extends PseudoPris {
   constructor() {
     super("Ce pseudo est réservé.");
   }
+}
+
+/** La page d'administration (P-014) ne supprime ni ne réinitialise un compte protégé (« god »). */
+export class CompteProtege extends Error {
+  constructor() {
+    super("Ce compte est protégé.");
+  }
+}
+
+/** Une ligne de la liste des comptes de la page d'administration. */
+export interface CompteAdmin {
+  id: number;
+  pseudo: string;
+  famille: Famille | null;
+  creeLe: string;
+  /** La dernière sauvegarde de sa position (ISO) ; null : pas de personnage. */
+  majLe: string | null;
+  admin: boolean;
+}
+
+/** Ce que la base sait d'un joueur (la fiche de la page d'administration) : rien qui ne soit déjà gardé. */
+export interface FicheCompte {
+  id: number;
+  pseudo: string;
+  creeLe: string;
+  admin: boolean;
+  protege: boolean;
+  /** Les sessions ouvertes (jetons gardés). */
+  sessions: number;
+  personnage: {
+    famille: Famille;
+    lieu: string;
+    x: number;
+    z: number;
+    majLe: string;
+    besoins: Besoins;
+    gourde: { contenu: string; litres: number };
+    arme: string | null;
+    sante: Sante;
+    endurance: number;
+    wotts: { poche: Wotts; compte: Wotts };
+    tutoriel: EtatTutoriel | null;
+    quetesFinies: string[];
+  } | null;
+  sac: Inventaire;
+  installations: InstallationVue[];
+  feux: FeuEnBase[];
+  /** Ses sacs perdus ou tas jetés encore au sol, où qu'ils soient. */
+  sacsAuSol: number;
+  /** Ses mesures (Book 17 §6), regroupées : combien de lignes, et leur somme. */
+  mesures: { genre: string; quoi: string; nombre: number; total: number }[];
 }
 
 const SCHEMA = `
@@ -274,7 +326,8 @@ const COLONNES_AJOUTEES: [table: string, colonne: string, definition: string][] 
   ["personnages", "savoir", "TEXT NOT NULL DEFAULT '{}'"],
   // L'arc pour tous (Book 25 §3.3) : les ébauches d'arc qui sèchent, et depuis quand, en JSON.
   ["personnages", "sechage", "TEXT NOT NULL DEFAULT '{}'"],
-  // L'arbre de progression (0.7) : recettes dévoilées et vues, objets vus, temps de jeu, en JSON ; vide : à migrer.
+  // L'arbre de progression (0.7) : recettes dévoilées et vues, objets vus, temps de jeu, idées gardées et indices des
+  // clés (0.8), en JSON ; vide : un personnage neuf (le feu et l'abri).
   ["personnages", "progression", "TEXT NOT NULL DEFAULT ''"],
 ];
 
@@ -350,9 +403,10 @@ export class Base {
     this.equiper(id, famille);
     if (tutoriel) this.sauverTutoriel(id, { ...TUTORIEL_NEUF });
     // L'arbre de progression (0.7) : le tutoriel commence au feu et à l'abri ; sans tutoriel (le vétéran, les comptes
-    // de test), les paliers 1 et 2 d'emblée (Q8).
+    // de test), les recettes communes à la main d'emblée (Q8, plan 0.8). Les idées gardées et les indices des clés
+    // (plan 0.8 §2.2) vivent dans le même état JSON : pas de colonne de plus.
     const devoilees = tutoriel ? devoileesAuDepart() : [...new Set([...devoileesAuDepart(), ...devoileesDEmblee(famille)])];
-    this.sauverProgression(id, { ...PROGRESSION_VIDE, devoilees, nonVues: [], vus: [] });
+    this.sauverProgression(id, { ...PROGRESSION_VIDE, devoilees, nonVues: [], vus: [], idees: [], indices: {} });
     if (apparence) this.db.prepare("UPDATE personnages SET apparence = ? WHERE compte_id = ?").run(JSON.stringify(apparenceValide(apparence, famille)), id);
   }
 
@@ -471,8 +525,8 @@ export class Base {
   }
 
   /**
-   * Les recettes dévoilées (l'arbre de progression, 0.7) ; null : un personnage d'avant la 0.7, à migrer (Q4).
-   * Illisible : comme un personnage d'avant (on réévalue sur son état, rien n'est détruit).
+   * Les recettes dévoilées, les idées gardées, les indices (l'arbre de progression) ; null : rien de gardé (la 0.8
+   * démarre sur une base neuve, §9.1 : le suivi repart du feu et de l'abri).
    */
   chargerProgression(compteId: number): EtatProgression | null {
     const l = this.db.prepare("SELECT progression FROM personnages WHERE compte_id = ?").get(compteId) as { progression: string } | undefined;
@@ -499,7 +553,8 @@ export class Base {
       const usure: Partial<Record<CleObjet, number>> = {};
       for (const [t, n] of Object.entries(brut)) {
         const cle = cleCanonique(t);
-        if (estCleObjet(cle) && estArme(cle) && typeof n === "number" && n >= 0) usure[cle] = n;
+        // Les armes de tir s'usent aussi (un tir, un coup) : leur usure se garde, pour les reprendre à l'établi (0.8, chantier 9).
+        if (estCleObjet(cle) && soliditeDe(cle) !== null && typeof n === "number" && n >= 0) usure[cle] = n;
       }
       return usure;
     } catch {
@@ -987,6 +1042,119 @@ export class Base {
 
   deplacerInstallation(compteId: number, id: number, x: number, z: number, o: number): void {
     this.db.prepare("UPDATE installations SET x = ?, z = ?, o = ? WHERE compte_id = ? AND id = ?").run(x, z, o, compteId, id);
+  }
+
+  // ---------- La page d'administration (P-014, serveur/src/admin-web.ts) ----------
+  // De la lecture seule de ce que la base sait déjà (aucun compteur nouveau), la suppression en cascade et la
+  // réinitialisation du mot de passe. Rien ici n'appelle `chargerPersonnage` ni `chargerRessources`, qui écrivent.
+
+  /** Tous les comptes, du plus ancien au plus récent : de quoi faire la liste de la page d'administration. */
+  listeComptes(): CompteAdmin[] {
+    const lignes = this.db
+      .prepare(
+        `SELECT c.id, c.pseudo, c.cree_le, p.famille, p.maj_le, (a.compte_id IS NOT NULL) AS admin
+         FROM comptes c LEFT JOIN personnages p ON p.compte_id = c.id LEFT JOIN admin a ON a.compte_id = c.id
+         ORDER BY c.id`,
+      )
+      .all() as { id: number; pseudo: string; cree_le: string; famille: Famille | null; maj_le: string | null; admin: number }[];
+    return lignes.map((l) => ({ id: l.id, pseudo: l.pseudo, famille: l.famille, creeLe: l.cree_le, majLe: l.maj_le, admin: l.admin === 1 }));
+  }
+
+  /** Un compte protégé de la page d'administration : l'admin désigné, et tout pseudo réservé (« god » et ses sosies). */
+  compteProtege(id: number): boolean {
+    const l = this.db.prepare("SELECT pseudo FROM comptes WHERE id = ?").get(id) as { pseudo: string } | undefined;
+    return this.estAdmin(id) || (l !== undefined && pseudoReserve(l.pseudo));
+  }
+
+  /** La fiche d'un joueur, telle que la base la garde ; null si le compte n'existe pas. */
+  ficheCompte(id: number): FicheCompte | null {
+    const c = this.db.prepare("SELECT id, pseudo, cree_le FROM comptes WHERE id = ?").get(id) as { id: number; pseudo: string; cree_le: string } | undefined;
+    if (!c) return null;
+    const p = this.db
+      .prepare("SELECT famille, lieu, x, z, maj_le, kcal, eau, repos, gourde_contenu, gourde_litres, arme FROM personnages WHERE compte_id = ?")
+      .get(id) as
+      | { famille: Famille; lieu: string; x: number; z: number; maj_le: string; kcal: number; eau: number; repos: number; gourde_contenu: string; gourde_litres: number; arme: string }
+      | undefined;
+    const jetons = (this.db.prepare("SELECT COUNT(*) AS n FROM jetons WHERE compte_id = ?").get(id) as { n: number }).n;
+    const sacs = (this.db.prepare("SELECT COUNT(*) AS n FROM sacs WHERE proprietaire = ?").get(id) as { n: number }).n;
+    const mesures = this.db
+      .prepare("SELECT genre, quoi, COUNT(*) AS nombre, SUM(valeur) AS total FROM mesures WHERE compte_id = ? GROUP BY genre, quoi ORDER BY genre, quoi")
+      .all(id) as { genre: string; quoi: string; nombre: number; total: number }[];
+    return {
+      id: c.id,
+      pseudo: c.pseudo,
+      creeLe: c.cree_le,
+      admin: this.estAdmin(id),
+      protege: this.compteProtege(id),
+      sessions: jetons,
+      personnage: p
+        ? {
+            famille: p.famille,
+            lieu: p.lieu,
+            x: p.x,
+            z: p.z,
+            majLe: p.maj_le,
+            besoins: { kcal: p.kcal, eau: p.eau, repos: p.repos },
+            gourde: { contenu: p.gourde_contenu, litres: p.gourde_litres },
+            arme: p.arme || null,
+            ...this.chargerSante(id),
+            wotts: this.chargerWotts(id),
+            tutoriel: this.chargerTutoriel(id),
+            quetesFinies: this.chargerQuetes(id).finies,
+          }
+        : null,
+      sac: this.chargerInventaire(id),
+      installations: this.chargerInstallations(id),
+      feux: this.chargerFeux(id),
+      sacsAuSol: sacs,
+      mesures,
+    };
+  }
+
+  /**
+   * Supprime un compte et tout ce qui en dépend : les tables liées en cascade (jetons, personnage, sac, terrain, feux,
+   * installations), et ce qui le nomme seulement par son numéro (ses sacs au sol, sa Coopérative, ses déchets, sa forge,
+   * ses mesures). SQLite peut redonner le numéro d'un compte supprimé : rien ne doit rester à son nom. Seules ses mesures
+   * de rythme (`atteint:<étape>`) restent, rendues anonymes (compte 0, sans détails).
+   * Refusé pour un compte protégé (« god »). Renvoie false si le compte n'existe pas.
+   */
+  supprimerCompte(id: number): boolean {
+    if (this.compteProtege(id)) throw new CompteProtege();
+    if (!this.db.prepare("SELECT 1 FROM comptes WHERE id = ?").get(id)) return false;
+    this.transaction(() => {
+      this.db.prepare("DELETE FROM comptes WHERE id = ?").run(id);
+      this.db.prepare("DELETE FROM sacs WHERE proprietaire = ? OR terrain_de = ?").run(id, id);
+      this.db.prepare("DELETE FROM instances WHERE cle = ?").run(`cooperative:${id}`);
+      this.db.prepare("DELETE FROM ressources_lieux WHERE lieu = ?").run(`cooperative:${id}`);
+      this.db.prepare("DELETE FROM dechets WHERE lieu IN (?, ?)").run(`cooperative:${id}`, `terrain:${id}`);
+      this.db.prepare("DELETE FROM monde WHERE cle IN (?, ?)").run(`forge:${id}`, `version_cooperative:${id}`);
+      // Son Moulin du Gué (plan 0.8, chantier 12) : ce qu'on en garde, son butin, son butin personnel, sa version.
+      this.db.prepare("DELETE FROM instances WHERE cle IN (?, ?)").run(`moulin:${id}`, `perso:moulin:${id}:${id}`);
+      this.db.prepare("DELETE FROM ressources_lieux WHERE lieu = ?").run(`moulin:${id}`);
+      this.db.prepare("DELETE FROM dechets WHERE lieu = ?").run(`moulin:${id}`);
+      this.db.prepare("DELETE FROM monde WHERE cle = ?").run(`version_moulin:${id}`);
+      this.db
+        .prepare("UPDATE mesures SET compte_id = ?, details = NULL WHERE compte_id = ? AND genre = 'progression' AND quoi LIKE ?")
+        .run(COMPTE_ANONYME, id, `${PREFIXE_ATTEINT}%`);
+      this.db.prepare("DELETE FROM mesures WHERE compte_id = ?").run(id);
+    });
+    return true;
+  }
+
+  /**
+   * Un nouveau mot de passe pour un compte (le provisoire de la page d'administration), et toutes ses sessions
+   * fermées : ses jetons sont effacés. Refusé pour un compte protégé. Renvoie le nombre de sessions fermées.
+   */
+  changerMotDePasse(id: number, motDePasse: string): number {
+    if (this.compteProtege(id)) throw new CompteProtege();
+    if (!this.db.prepare("SELECT 1 FROM comptes WHERE id = ?").get(id)) throw new Error(`Compte ${id} introuvable`);
+    let fermees = 0;
+    this.transaction(() => {
+      const { sel, empreinte } = empreinteMotDePasse(motDePasse);
+      this.db.prepare("UPDATE comptes SET sel = ?, empreinte = ? WHERE id = ?").run(sel, empreinte, id);
+      fermees = Number(this.db.prepare("DELETE FROM jetons WHERE compte_id = ?").run(id).changes);
+    });
+    return fermees;
   }
 
   fermer(): void {

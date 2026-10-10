@@ -616,13 +616,17 @@ export const DESSINS_DECHETS: Record<string, string> = {
       <rect x="3.5" y="15" width="41" height="17" rx="2" fill="none" ${T}/>
     </g>
     <path d="M38 10 l3 4" stroke-width="1.2" ${T}/>`,
+  // Le jerrican percé (plan 0.8, I5) : un trou déchiré au flanc, une coulure, le plastique fendu.
   jerrican: `
     <path d="M10 14 L16 8 H38 V42 H10 Z" fill="#5f7f45" ${T}/>
     <rect x="14" y="17" width="20" height="21" fill="none" stroke="#4a6a35" stroke-width="1.6"/>
     <path d="M15 18 L33 37 M33 18 L15 37" stroke="#4a6a35" stroke-width="3" stroke-linecap="round"/>
     <path d="M22 8 V3.5 H37 V8 M27 3.5 v4.5 M32 3.5 v4.5" stroke-width="2" fill="none" ${T}/>
     <rect x="9.5" y="7" width="6" height="5" rx="1" transform="rotate(-45 12.5 9.5)" fill="#55524d" ${T}/>
-    <path d="M36 12 v26" stroke="#8fa86a" stroke-width="1.4" stroke-linecap="round"/>`,
+    <path d="M36 12 v26" stroke="#8fa86a" stroke-width="1.4" stroke-linecap="round"/>
+    <path d="M23 28 L26 25 L28 28 L31 27 L29 31 L30 34 L26 32 L23 34 L24 31 Z" fill="#1f1c19" stroke="${ENCRE}" stroke-width="1.2" stroke-linejoin="round"/>
+    <path d="M28 33 Q29 38 28 42 M28 44.5 v.5" stroke="#c9a040" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+    <path d="M30 27 L34 23 M22 29 L18 27" stroke="${ENCRE}" stroke-width="1.1" stroke-linecap="round"/>`,
   panneau_routier: `
     ${trait("M24 30 Q22 38 29 45", "#8a8f96", 2.6)}
     <g transform="rotate(-12 24 18)">

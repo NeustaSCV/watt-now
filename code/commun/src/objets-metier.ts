@@ -7,6 +7,7 @@
 // les produit, c'est elle qui compte.
 
 import type { DefinitionObjet, TypeObjet } from "./objets.ts";
+import { ENERGIE_GRISE_NIVEAU1 } from "./objets-niveau1.ts";
 
 /** Les matières et les objets de la 0.6 (Book 25 §9.1 et §10.3). */
 export const OBJETS_METIER = {
@@ -335,6 +336,8 @@ export type TypeObjetMetier = keyof typeof OBJETS_METIER;
  * tant qu'aucune recette ne les produit. Les matières ont leur valeur de collecte dans ENERGIE_GRISE_BASE (recettes.ts).
  */
 export const ENERGIE_GRISE_PROVISOIRE: Partial<Record<TypeObjet, number>> = {
+  // Le niveau 1 (plan 0.8, chantier 3) : objets-niveau1.ts.
+  ...ENERGIE_GRISE_NIVEAU1,
   arc_fortune: 25,
   ebauche_arc: 45,
   ebauche_arc_seche: 45,

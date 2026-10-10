@@ -223,6 +223,8 @@ test("god voit et fabrique les recettes des quatre familles, sans dévoilement n
   const base = new Base(":memory:");
   const god = preparerGod(base, "olympe42", "charbonniers", 1000).compte;
   base.sauverInventaire(god.id, { sac_a_dos: 1, couteau: 1, cellule_lithium: 3, fil_cuivre: 1, ficelle: 1 });
+  // Le pack de cellules se monte au banc de recharge (son lieu, plan 0.8).
+  base.ajouterInstallation(god.id, "banc_recharge", 6, 45, 0);
   const t = ouvrir(base, god.id, "god", "charbonniers");
   const b = t.joueur.bienvenue(0);
   for (const r of RECETTES) assert.ok(b.progression!.devoilees.includes(r.id), `${r.id} dévoilée`);

@@ -45,7 +45,7 @@ export function toutesLesCartes(): string[] {
 
 /** La progression telle que god la voit : tout dévoilé, rien à découvrir, pas de pastille. */
 export function vueProgressionAdmin(v: VueProgression): VueProgression {
-  return { devoilees: [...new Set([...v.devoilees, ...toutesLesCartes()])], nonVues: [], prochain: null, autres: false, entrevues: [] };
+  return { ...v, devoilees: [...new Set([...v.devoilees, ...toutesLesCartes()])], nonVues: [], silhouettes: [], autres: false, entrevues: [] };
 }
 
 /** Le savoir tel que god le voit : les manuels des quatre familles (toutes les recettes s'ouvrent dans Fabriquer). */
@@ -80,7 +80,7 @@ export function contenuAdmin(): Inventaire {
   for (const r of RECETTES) for (const [t, n] of Object.entries(r.ingredients)) ajouter(inv, t, n ?? 0);
   // Et de quoi monter chaque niveau (le premier choix de coût de chaque étape jouable).
   const etapes: Etape[] = [...VOIE_SURFACE, ...VOIE_CREUSEE, ...Object.values(LIGNEES_INSTALLATIONS).flat()];
-  for (const e of etapes) if (e.phase !== "0b") for (const [t, n] of Object.entries(e.couts[0] ?? {})) ajouter(inv, t, n ?? 0);
+  for (const e of etapes) if (!e.aVenir) for (const [t, n] of Object.entries(e.couts[0] ?? {})) ajouter(inv, t, n ?? 0);
   // Quelques exemplaires de chaque objet du catalogue.
   for (const t of Object.keys(OBJETS) as TypeObjet[]) ajouter(inv, t, EXEMPLAIRES_CATALOGUE);
   return inv;
@@ -128,7 +128,7 @@ function chargesPleines(contenu: Inventaire): Charges {
 function niveauMax(etapes: readonly Etape[] | undefined): number {
   if (!etapes) return 1;
   let n = 1;
-  for (const e of etapes) if (e.phase !== "0b") n = Math.max(n, e.niveau);
+  for (const e of etapes) if (!e.aVenir) n = Math.max(n, e.niveau);
   return n;
 }
 
@@ -219,7 +219,7 @@ export function monterTerrain(base: Base, compteId: number, instant = Date.now()
       base.sauverEtatInstallation(compteId, d.id, { contenu: {}, majLe: instant });
     }
     // Les foyers d'abord : ils veulent plus de place autour d'eux.
-    const voulus = [...VOIE_SURFACE.filter((e) => e.phase !== "0b").map((e) => ({ dakota: false, niveau: e.niveau })), ...VOIE_CREUSEE.filter((e) => e.phase !== "0b").map((e) => ({ dakota: true, niveau: e.niveau }))];
+    const voulus = [...VOIE_SURFACE.filter((e) => !e.aVenir).map((e) => ({ dakota: false, niveau: e.niveau })), ...VOIE_CREUSEE.filter((e) => !e.aVenir).map((e) => ({ dakota: true, niveau: e.niveau }))];
     for (const v of voulus) {
       const deja = base.chargerFeux(compteId).some((f) => !!f.dakota === v.dakota && (f.niveau ?? 1) === v.niveau);
       if (deja) continue;

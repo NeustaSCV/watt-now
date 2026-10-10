@@ -48,7 +48,8 @@ function monter(famille: Famille, inventaire: Record<string, number>, base = new
 test("après le tutoriel, le carnet propose le métier et un objectif pour s'installer", () => {
   const t = monter("charbonniers", {});
   t.attendre(1);
-  assert.deepEqual(t.titres(), ["La charbonnière", "Un vrai repas", "Le Comptoir du Carrefour"]);
+  // Plan 0.8 (recettes-par-construction.md §6.3) : le foyer de pierres en tête de « S'installer ».
+  assert.deepEqual(t.titres(), ["La charbonnière", "Un foyer qui tient la nuit", "Le Comptoir du Carrefour"]);
   const q = t.carnet()!.quetes!.quetes[0]!;
   assert.equal(q.ligne, "metier");
   assert.match(q.recompense!, /10 wotts/);
@@ -67,21 +68,21 @@ test("pendant le tutoriel, pas de carnet de quêtes (le tutoriel a le sien)", ()
 });
 
 test("manger un plat cuisiné réussit « Un vrai repas » et donne une conserve", () => {
-  const t = monter("mecanistes", { pommes_cuites: 1 });
+  const t = monter("mecanistes", { pommes_cuites: 1 }, new Base(":memory:"), (base, id) => base.sauverQuetes(id, { faits: {}, finies: ["foyer_pierres"], primes: 0 }));
   t.attendre(1);
   t.joueur.recevoir({ t: "manger", objet: "pommes_cuites" });
   t.attendre(3);
   assert.ok(t.reussies().includes("Un vrai repas"));
   assert.equal(t.dernier("inventaire")!.inventaire.conserve, 1);
-  assert.equal(t.titres()[1], "Un vrai lit");
+  assert.equal(t.titres()[1], "L'eau du ciel");
 });
 
 test("ce qui est déjà fait compte : un ancien bien équipé enchaîne plusieurs objectifs d'un coup", () => {
   const t = monter("voltaiques", { gourdin: 1, pansement: 2, panneau_solaire: 1 });
   t.attendre(1);
-  // Le panneau est dans le sac : « Le panneau de la station » est réussi, on passe à son installation.
+  // Le panneau est dans le sac : « Le panneau de la station » est réussi, on passe au banc solaire.
   assert.ok(t.reussies().includes("Le panneau de la station"));
-  assert.equal(t.titres()[0], "Installer le panneau");
+  assert.equal(t.titres()[0], "Le banc solaire");
 });
 
 test("la prime en wotts est versée sur le compte, prise sur la trésorerie des Compteurs", () => {
@@ -128,10 +129,14 @@ test("la trésorerie vide fait attendre la prime, versée dès qu'elle se rempli
   assert.equal(t.dernier("wotts")!.wotts.compte, 10);
 });
 
-test("le panneau déjà installé compte comme rapporté : on n'est pas bloqué", () => {
-  const t = monter("voltaiques", {}, new Base(":memory:"), (base, id) => base.ajouterInstallation(id, "panneau_solaire", 20, 20, 0));
+test("le panneau déjà posé sur le banc solaire compte comme rapporté : on n'est pas bloqué", () => {
+  // Plan 0.8 (chantier 7) : le banc de recharge et son panneau ne font plus qu'un meuble.
+  const t = monter("voltaiques", {}, new Base(":memory:"), (base, id) => {
+    const banc = base.ajouterInstallation(id, "banc_recharge", 20, 20, 0);
+    base.sauverEtatInstallation(id, banc.id, { panneau: true });
+  });
   t.attendre(1);
   assert.ok(t.reussies().includes("Le panneau de la station"));
-  assert.ok(t.reussies().includes("Installer le panneau"));
+  assert.ok(t.reussies().includes("Le banc solaire"));
   assert.equal(t.titres()[0], "Faire le plein");
 });

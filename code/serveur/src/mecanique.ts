@@ -1,6 +1,7 @@
 // ⚙️ La mécanique des Mécanistes côté serveur (Book 25 §6, chantier 7 · 0.6) : les pièges (déclarés au moteur des
-// déclencheurs), leur réarmement, les accessoires du pédalier (soufflet à manivelle, meule fine) et le fil de rasoir
-// que donne la meule fine.
+// déclencheurs), leur réarmement, les accessoires du pédalier (ventilateur à manivelle, meule fine) et le fil de rasoir
+// que donne la meule fine ; depuis la 0.8 (chantier 7), le pédalier générateur : monter le petit alternateur de la
+// station, pédaler pour remplir la batterie posée dessus (ou celle du sac).
 //
 // Ce module ne connaît pas le joueur : il passe par un `ContexteMecanique` (ce que le joueur lui prête). joueur.ts
 // n'ajoute que des appels d'une ligne (Book 25 §10.4). L'arbalète, elle, est une arme de tir : sa table est dans
@@ -9,9 +10,11 @@
 import type { Arme } from "../../commun/src/combat.ts";
 import type { CleObjet } from "../../commun/src/etoiles.ts";
 import type { InstallationVue, Verbe } from "../../commun/src/messages.ts";
+import { DUREE_PEDALAGE, KCAL_PEDALAGE_EN_PLUS, capacite, stocker, whEDePedalage, type OrganePedalier, type TypeBatterie } from "../../commun/src/energie.ts";
 import { nommer, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
 import { niveauQualite } from "../../commun/src/recettes.ts";
-import { ACCESSOIRES_PEDALIER, BONUS_FIL_DE_RASOIR, REARMER_PIEGE, accessoireMonte, estPiegeMecanique, type AccessoirePedalier } from "../../commun/src/mecanique.ts";
+import type { Famille } from "../../commun/src/regles.ts";
+import { ACCESSOIRES_PEDALIER, BONUS_FIL_DE_RASOIR, MONTER_ALTERNATEUR, REARMER_PIEGE, accessoireMonte, estPiegeMecanique, type AccessoirePedalier } from "../../commun/src/mecanique.ts";
 import { declencheurNeuf, enregistrerDeclencheur, rearmer, type DefinitionDeclencheur } from "./declencheurs.ts";
 
 // ---------- Les pièges (Book 25 §6.3), déclarés au moteur des déclencheurs ----------
@@ -71,16 +74,22 @@ export interface ContexteMecanique {
   /** Retirer des objets du sac (tous présents : déjà vérifié). */
   retirer(objets: Inventaire): void;
   info(texte: string): void;
-  /** Un geste, en secondes réelles (il s'arrête si l'on bouge). */
-  commencer(libelle: string, secondes: number, appliquer: () => void, bruit: "outil" | "lourd"): void;
+  /** Un geste, en secondes réelles (il s'arrête si l'on bouge) ; `kcalParHeure` : l'effort en plus. */
+  commencer(libelle: string, secondes: number, appliquer: () => void, bruit: "outil" | "lourd", kcalParHeure?: number): void;
   /** L'installation a changé : la sauver, la montrer. */
   maj(): void;
   /** Un fait pour les quêtes et les mesures. */
   noter(fait: string): void;
+  /** Le pédalier générateur (plan 0.8) : la famille de celui qui pédale (un Mécaniste a de meilleures jambes). */
+  famille(): Famille;
+  /** Une batterie du sac qui a encore de la place (null : aucune). */
+  batterieDuSac(): TypeBatterie | null;
+  /** Ajoute des Wh à une batterie du sac ; rend ce qui est entré. */
+  chargerSac(b: TypeBatterie, wh: number): number;
 }
 
 /** Les gestes de la mécanique sur une installation. */
-const VERBES: ReadonlySet<Verbe> = new Set<Verbe>(["rearmer_piege", "monter_soufflet", "monter_meule_fine"]);
+const VERBES: ReadonlySet<Verbe> = new Set<Verbe>(["rearmer_piege", "monter_soufflet", "monter_meule_fine", "monter_alternateur", "pedaler"]);
 
 /**
  * A sur une installation : un piège mécanique à réarmer, un accessoire à monter sur le pédalier. Rend true si le geste
@@ -94,8 +103,75 @@ export function utiliserMecanique(ctx: ContexteMecanique, i: InstallationVue, ve
     return true;
   }
   if (i.type !== "pedalier") return true;
-  monterAccessoire(ctx, i, verbe === "monter_soufflet" ? "soufflet" : "meule_fine");
+  if (verbe === "monter_alternateur") monterAlternateur(ctx, i);
+  else if (verbe === "pedaler") pedaler(ctx, i);
+  else monterAccessoire(ctx, i, verbe === "monter_soufflet" ? "soufflet" : "meule_fine");
   return true;
+}
+
+// ---------- Le pédalier générateur (plan 0.8, chantier 7) ----------
+
+/** Ce que la roue entraîne : l'alternateur s'il est monté, sinon la dynamo du vélo (le repli), sinon rien. */
+export function organeDuPedalier(i: Pick<InstallationVue, "etat">): OrganePedalier | null {
+  return i.etat.alternateur ? "alternateur" : i.etat.dynamo ? "dynamo" : null;
+}
+
+/** La place qui reste dans les batteries posées sur le pédalier (Wh). */
+function placeSurLePedalier(i: InstallationVue): number {
+  let place = 0;
+  for (const [b, n] of Object.entries(i.etat.batteries ?? {}) as [TypeBatterie, number][]) place += Math.max(0, capacite(b, n ?? 0) - (i.etat.charges?.[b] ?? 0));
+  return place;
+}
+
+/** Monter le petit alternateur de la station sur le pédalier : la clé du pédalier générateur. */
+function monterAlternateur(ctx: ContexteMecanique, i: InstallationVue): void {
+  if (i.etat.alternateur) return ctx.info("L'alternateur est déjà monté.");
+  if ((ctx.inventaire().petit_alternateur ?? 0) < 1) return ctx.info("Il te faut un petit alternateur : le garage de la station en garde un pour toi, sur son établi.");
+  if (niveauQualite(ctx.inventaire(), "serrer") < MONTER_ALTERNATEUR.qualites.serrer) return ctx.info("Il faut une clé pour serrer les brides de l'alternateur.");
+  ctx.commencer("Monter l'alternateur sur le pédalier", MONTER_ALTERNATEUR.secondes, () => {
+    if (i.etat.alternateur || (ctx.inventaire().petit_alternateur ?? 0) < 1) return;
+    ctx.retirer({ petit_alternateur: 1 });
+    i.etat = { ...i.etat, alternateur: true };
+    ctx.maj();
+    ctx.noter("pedalier:alternateur");
+    ctx.info("L'alternateur est monté, la courroie tendue sur la roue. Pédale : la batterie se charge, environ 60 Wh par heure.");
+  }, "outil");
+}
+
+/**
+ * Pédaler une heure de jeu (une minute réelle) : la batterie posée sur le pédalier d'abord, sinon une batterie du sac.
+ * L'alternateur : ≈ 60 Wh pour un Mécaniste ; la dynamo du vélo : 5 Wh. Ça coûte des calories.
+ */
+function pedaler(ctx: ContexteMecanique, i: InstallationVue): void {
+  const organe = organeDuPedalier(i);
+  if (!organe) return ctx.info("Rien à entraîner : monte l'alternateur de la station (ou, à défaut, la dynamo du vélo).");
+  const surPedalier = placeSurLePedalier(i) > 0.5;
+  if (!surPedalier && !ctx.batterieDuSac()) return ctx.info("Aucune batterie à charger, ou elles sont pleines : pose la batterie de la ruine sur le pédalier.");
+  const libelle = organe === "alternateur" ? "Pédaler : l'alternateur charge la batterie" : "Pédaler pour charger la batterie";
+  ctx.commencer(
+    libelle,
+    DUREE_PEDALAGE,
+    () => {
+      const wh = whEDePedalage(ctx.famille(), 1, organe);
+      let mis = 0;
+      let ou = "la batterie du pédalier";
+      if (placeSurLePedalier(i) > 0.5) {
+        const r = stocker({ batteries: i.etat.batteries ?? {}, charges: i.etat.charges ?? {} }, wh);
+        i.etat = { ...i.etat, charges: r.stockage.charges };
+        mis = r.stocke;
+        ctx.maj();
+      } else {
+        const b = ctx.batterieDuSac();
+        if (!b) return;
+        mis = ctx.chargerSac(b, wh);
+        ou = nommer(b, 1);
+      }
+      ctx.noter("pedale");
+      ctx.info(`+${Math.round(mis)} Wh dans ${ou}.`);
+    },
+    "outil",
+    KCAL_PEDALAGE_EN_PLUS,
+  );
 }
 
 /** Réarmer un piège (Book 25 §6.3) : un geste, de l'endurance. Faussé, il ne se réarme plus : il faut le refaire. */
@@ -115,7 +191,7 @@ function rearmerPiege(ctx: ContexteMecanique, i: InstallationVue): void {
   }, i.type === "assommoir" || i.type === "fosse_pieux" ? "lourd" : "outil");
 }
 
-/** Monter un accessoire sur le pédalier (Book 25 §6.4) : le soufflet à manivelle, la meule fine. */
+/** Monter un accessoire sur le pédalier (Book 25 §6.4) : le ventilateur à manivelle, la meule fine. */
 function monterAccessoire(ctx: ContexteMecanique, i: InstallationVue, a: AccessoirePedalier): void {
   const def = ACCESSOIRES_PEDALIER[a];
   if (accessoireMonte(i.etat, a)) return ctx.info(`${majuscule(def.nom)} est déjà monté${a === "meule_fine" ? "e" : ""}.`);
@@ -129,7 +205,7 @@ function monterAccessoire(ctx: ContexteMecanique, i: InstallationVue, a: Accesso
     i.etat = { ...i.etat, ...(a === "soufflet" ? { soufflet: true } : { meuleFine: true }) };
     ctx.maj();
     ctx.noter(`pedalier:${a}`);
-    ctx.info(a === "soufflet" ? "Le soufflet est monté : près d'une forge, il souffle quand on pédale." : "La meule fine est montée : l'affûtage y donne un fil de rasoir.");
+    ctx.info(a === "soufflet" ? "Le ventilateur à manivelle est monté : près d'une forge, il souffle quand on pédale." : "La meule fine est montée : l'affûtage y donne un fil de rasoir.");
   }, "outil");
 }
 

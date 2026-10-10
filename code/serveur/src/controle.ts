@@ -121,6 +121,8 @@ export function messageValide(m: unknown): m is MessageClient {
       if (VERBES_AMENAGEMENT.has(m.verbe)) return (m.cible.genre === "feu" || m.cible.genre === "installation") && Number.isInteger(m.cible.id);
       // Les gestes de la mécanique (Book 25 §6, 0.6) : un piège à réarmer, un accessoire du pédalier, sur une installation.
       if (m.verbe === "rearmer_piege" || m.verbe === "monter_soufflet" || m.verbe === "monter_meule_fine") return m.cible.genre === "installation" && Number.isInteger(m.cible.id);
+      // La pièce de famille montée sur son meuble (plan 0.8, chantier 7) : le panneau, l'alternateur.
+      if (m.verbe === "poser_panneau" || m.verbe === "monter_alternateur") return m.cible.genre === "installation" && Number.isInteger(m.cible.id);
       // Prendre la radio (0.5.1) : seulement elle.
       if (m.verbe === "prendre_radio") return m.cible.genre === "leurre" && m.cible.id === "radio";
       return true;
@@ -142,6 +144,9 @@ export function messageValide(m: unknown): m is MessageClient {
       return booleen(m.oui);
     case "reparer":
       return estCleObjet(m.objet) && booleen(m.fortune);
+    // Reprendre une arme sur son meuble (plan 0.8, chantier 9).
+    case "reprendre_arme":
+      return estCleObjet(m.objet) && (m.geste === "reparer" || m.geste === "monter");
     case "comptoir":
       return operationComptoirValide(m.op);
     case "echange":
@@ -168,6 +173,9 @@ export function messageValide(m: unknown): m is MessageClient {
       return estObjet(m.objet);
     case "mesures":
       return nombre(m.ips) && nombre(m.ipsBas) && chaine(m.appareil, 200) && chaine(m.qualite);
+    // Les constats de l'interface (plan 0.8, chantier 14) : la fiche bloquée (un type court), l'aide « Je suis coincé ».
+    case "constat":
+      return (m.quoi === "fiche_bloquee" || m.quoi === "aide_coince") && (m.construction === undefined || chaine(m.construction, 40));
     // Le lancer et le tir (0.6) : une direction finie, une cible désignée par son numéro, une distance raisonnable.
     case "preparer":
       return m.objet === null || estCleObjet(m.objet);
@@ -175,6 +183,9 @@ export function messageValide(m: unknown): m is MessageClient {
       return nombre(m.dx) && nombre(m.dz) && (m.cible === undefined || Number.isInteger(m.cible)) && (m.distance === undefined || (nombre(m.distance) && m.distance >= 0 && m.distance <= 100));
     case "manivelle":
       return estCleObjet(m.objet);
+    // Le gué (plan 0.8, chantier 11) : haler le bac, sonner la cloche du passeur.
+    case "gue":
+      return m.op === "haler" || m.op === "cloche";
     case "bander":
     case "rearmer":
     case "boire":

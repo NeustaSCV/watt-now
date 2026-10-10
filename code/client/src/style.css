@@ -1839,9 +1839,14 @@ body {
   color: var(--creme);
 }
 #hud .panneau.comptoir .bandeau {
+  /* Le haut d'écran porte aussi la classe « bandeau » (#hud .bandeau : en absolu, en grille) : ici, l'en-tête reste
+     dans le flux du guichet, sinon « Tes bons » le recouvre (recette 0.8). */
+  position: static;
+  pointer-events: auto;
   flex: 1;
   display: flex;
   flex-direction: column;
+  gap: 0;
   padding: 8px 14px 6px;
 }
 #hud .panneau.comptoir .bandeau strong {
@@ -3214,15 +3219,6 @@ body {
   letter-spacing: 0.04em;
   opacity: 0.75;
 }
-#hud .panneau.fiche .fermer {
-  min-width: 40px;
-  min-height: 40px;
-  border: 0;
-  background: transparent;
-  font-size: 18px;
-  color: var(--encre);
-  cursor: pointer;
-}
 #hud .panneau.fiche .niveau {
   margin: 0;
   font-weight: 700;
@@ -3256,11 +3252,6 @@ body {
   background: var(--rouge);
   color: var(--creme);
   cursor: pointer;
-}
-#hud .panneau.fiche button.fermer {
-  border: 0;
-  background: transparent;
-  color: var(--encre);
 }
 #hud .panneau.fiche button.secondaire {
   background: transparent;
@@ -4426,6 +4417,8 @@ body.aide-ouverte #hud .tactile {
   border-radius: 0;
   border-left: 3px double var(--encre);
   padding: 14px 16px 12px;
+  /* La légende prend la hauteur du dessin, jamais plus (0.8) : son corps défile, la feuille n'est jamais rognée. */
+  contain: size;
 }
 .carte-fiche header {
   display: flex;
@@ -4497,6 +4490,7 @@ body.aide-ouverte #hud .tactile {
     align-self: start;
     border-left: 0;
     border-top: 3px double var(--encre);
+    contain: none;
     max-height: calc(100dvh - 28px - (100vw - 28px) * 0.7);
   }
 }
@@ -5297,4 +5291,467 @@ body:has(#hud .voile-pause:not([hidden])) #hud .tactile {
 }
 #hud .menu-admin .a-invincible[aria-pressed="true"] {
   box-shadow: inset 3px 0 0 #e8c25a;
+}
+
+/* ---------- « Tu y penses » et la clé d'un niveau (plan 0.8, chantier 2) ----------
+   Le bandeau de l'idée, dans la charte du carnet (papier crème, encre brune, un filet ocre) : en haut au centre, sous la
+   rangée de tuiles, il passe seul en 9 s ou se ferme d'un bouton (jamais de croix). Dans la fiche d'un meuble, la ligne
+   de la clé : son icône, son nom, puis « déjà en poche » ou l'indice « où chercher ». */
+#hud .bandeau-idee {
+  position: absolute;
+  top: calc(var(--haut-bandeau, 120px) + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  width: min(500px, calc(100vw - 32px));
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px 9px 12px;
+  border-radius: 10px;
+  border-left: 4px solid var(--ocre);
+  background: rgba(244, 236, 216, 0.96);
+  color: var(--encre);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  pointer-events: auto;
+  animation: idee-entre 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+#hud .bandeau-idee[hidden] {
+  display: none;
+}
+#hud .bandeau-idee.sortie {
+  opacity: 0;
+  transform: translate(-50%, -6px);
+  transition: opacity 0.3s, transform 0.3s;
+}
+@keyframes idee-entre {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -10px) scale(0.97);
+  }
+}
+#hud .bandeau-idee .trouvaille {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(201, 138, 46, 0.35), rgba(201, 138, 46, 0.08) 70%);
+  font-size: 24px;
+}
+#hud .bandeau-idee p {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.35;
+}
+#hud .bandeau-idee strong {
+  font-family: Georgia, "Times New Roman", serif;
+  font-style: italic;
+  font-size: 14.5px;
+  color: var(--charbonniers);
+}
+#hud .bandeau-idee em {
+  font-size: 12px;
+  opacity: 0.75;
+}
+#hud .bandeau-idee .texte {
+  display: block;
+}
+#hud .bandeau-idee .garder {
+  flex: none;
+  min-height: 40px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 8px;
+  background: var(--canard);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+/* Téléphone en vertical : le bouton passe sous le texte, à droite, pour garder deux lignes lisibles ; le bandeau
+   descend sous la colonne des messages, qui reste lisible au-dessus. */
+@media (max-width: 420px) {
+  #hud .bandeau-idee {
+    top: calc(var(--haut-bandeau, 120px) + 58px);
+    flex-wrap: wrap;
+    width: calc(100vw - 24px);
+  }
+  #hud .bandeau-idee p {
+    flex-basis: calc(100% - 56px);
+    font-size: 13px;
+  }
+  #hud .bandeau-idee .garder {
+    margin-left: auto;
+    min-height: 36px;
+  }
+}
+/* Téléphone en paysage : plus bas de plafond, le bandeau se fait plus mince. */
+@media (orientation: landscape) and (max-height: 520px) {
+  #hud .bandeau-idee {
+    /* Entre le joystick et la colonne des boutons d'action, sans mordre sur « Lancer ». */
+    width: min(430px, 52vw);
+    padding: 6px 8px 6px 10px;
+  }
+  #hud .bandeau-idee .trouvaille {
+    width: 34px;
+    height: 34px;
+  }
+  #hud .bandeau-idee p {
+    font-size: 12.5px;
+  }
+  #hud .bandeau-idee .garder {
+    min-height: 34px;
+  }
+}
+
+#hud .panneau.fiche .ligne-cle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: rgba(201, 138, 46, 0.12);
+  font-size: 13px;
+}
+#hud .panneau.fiche .ligne-cle .nom-cle {
+  font-weight: 600;
+}
+#hud .panneau.fiche .ligne-cle .nom-cle::before {
+  content: "Clé : ";
+  font-weight: 400;
+  opacity: 0.7;
+}
+#hud .panneau.fiche .ligne-cle .indice-cle {
+  flex-basis: 100%;
+}
+/* Plan 0.8, chantier 13 : l'indice replié sous la clé ; on le déplie d'un toucher (« Où chercher ? »). */
+#hud .panneau.fiche .ligne-cle .indice-cle summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--canard);
+}
+#hud .panneau.fiche .ligne-cle .indice-cle summary::-webkit-details-marker {
+  display: none;
+}
+#hud .panneau.fiche .ligne-cle .indice-cle summary::before {
+  content: "🔎";
+}
+#hud .panneau.fiche .ligne-cle .indice-cle summary::after {
+  content: "▸";
+  transition: transform 0.15s;
+}
+#hud .panneau.fiche .ligne-cle .indice-cle[open] summary::after {
+  transform: rotate(90deg);
+}
+#hud .panneau.fiche .ligne-cle .indice-cle .precis {
+  font-weight: 400;
+  font-style: italic;
+  opacity: 0.75;
+}
+#hud .panneau.fiche .ligne-cle .indice-cle small {
+  display: block;
+  padding: 2px 8px 2px 30px;
+  font-style: italic;
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+#hud .panneau.fiche .ligne-cle.poche {
+  background: rgba(31, 94, 102, 0.12);
+}
+#hud .panneau.fiche .ligne-cle .en-poche {
+  padding: 1px 7px;
+  border-radius: 10px;
+  background: var(--canard);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+}
+#hud .panneau.fiche .ligne-cle .plus-loin {
+  font-style: italic;
+  opacity: 0.75;
+}
+
+/* Plan 0.8, chantier 5 : la phrase d'un repli sous le coût d'un niveau (« Ou deux barres de métal… ») ; quand c'est
+   par lui que la montée se fera (on n'a pas la clé, mais de quoi faire le repli), elle passe en clair, cochée. */
+#hud .panneau.fiche .etape .repli {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  font-style: italic;
+  opacity: 0.8;
+}
+#hud .panneau.fiche .etape .repli.retenu {
+  font-style: normal;
+  opacity: 1;
+  color: var(--canard);
+}
+#hud .panneau.fiche .etape .repli.retenu::before {
+  content: "✓ ";
+}
+
+/* Reprendre une arme sur son meuble (plan 0.8, chantier 9) : les deux propositions du meuble, dépliées sous les actions
+   de la fiche (jamais une fenêtre à part), chacune avec ce qu'elle prend ou ce qui manque. */
+#hud .panneau.sac .reprise {
+  display: grid;
+  gap: 6px;
+  margin: 2px 0 6px;
+  padding: 7px 8px;
+  border: 1.5px dashed rgba(59, 42, 30, 0.35);
+  border-radius: 7px;
+  background: rgba(255, 236, 170, 0.28);
+}
+#hud .panneau.sac .reprise .proposition {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+#hud .panneau.sac .reprise button {
+  position: relative;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1.5px solid var(--rouge);
+  border-radius: 6px;
+  background: var(--rouge);
+  color: var(--creme);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+#hud .panneau.sac .reprise button::after { content: ""; position: absolute; inset: -6px -3px; }
+#hud .panneau.sac .reprise button .etoiles-nom { color: #ffe08a; }
+#hud .panneau.sac .reprise .impossible button { background: transparent; color: var(--encre); border-color: rgba(59, 42, 30, 0.45); opacity: 0.55; cursor: default; }
+#hud .panneau.sac .reprise .impossible button .etoiles-nom { color: #b07a00; }
+#hud .panneau.sac .reprise small { font-size: 11.5px; line-height: 1.3; }
+#hud .panneau.sac .reprise small svg { width: 16px; height: 16px; vertical-align: -3px; margin-right: 2px; }
+
+/* L'étoile qui s'ajoute (chantier 9) : sur la case, le « n★ » s'allume en or et pulse ; dans la fiche, la nouvelle étoile
+   tombe en tournant, avec un halo doré qui s'éteint. Court (1,6 s), une fois. */
+@keyframes etoile-gagnee-case {
+  0% { transform: scale(1); background: rgba(255, 236, 170, 0.92); box-shadow: 0 0 0 0 rgba(255, 196, 0, 0); }
+  25% { transform: scale(1.55); background: #ffd23f; box-shadow: 0 0 10px 4px rgba(255, 196, 0, 0.85); }
+  60% { transform: scale(1.15); background: #ffe58a; box-shadow: 0 0 6px 2px rgba(255, 196, 0, 0.5); }
+  100% { transform: scale(1); background: rgba(255, 236, 170, 0.92); box-shadow: 0 0 0 0 rgba(255, 196, 0, 0); }
+}
+@keyframes etoile-neuve {
+  0% { opacity: 0; transform: translateY(-14px) rotate(-200deg) scale(2.2); text-shadow: 0 0 0 rgba(255, 196, 0, 0); }
+  45% { opacity: 1; transform: translateY(0) rotate(0) scale(1.6); text-shadow: 0 0 10px rgba(255, 196, 0, 1), 0 0 3px #fff6c8; }
+  100% { opacity: 1; transform: none; text-shadow: 0 0 0 rgba(255, 196, 0, 0); }
+}
+#hud .sac .case .etoiles-case.etoile-gagnee {
+  z-index: 1;
+  transform-origin: 80% 20%;
+  animation: etoile-gagnee-case 1.6s ease-out 1;
+}
+#hud .fiche .etoiles-fiche .etoile-neuve {
+  display: inline-block;
+  color: #e0a100;
+  animation: etoile-neuve 1.6s cubic-bezier(0.2, 0.8, 0.3, 1.2) 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  #hud .sac .case .etoiles-case.etoile-gagnee,
+  #hud .fiche .etoiles-fiche .etoile-neuve { animation: none; }
+}
+
+/* Plan 0.8 §9.2 : la fiche Examiner n'a plus de croix. Elle se ferme par B (le bouton tactile B dit alors « Fermer »),
+   ou par ce bouton « Fermer » en bas. Sur un grand écran, il reste collé au bas de la fiche quand elle défile ; sur un
+   téléphone, il suit la fiche, pour ne pas manger sa hauteur (le bouton B est toujours là). */
+#hud .panneau.fiche .pied-fiche {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(28, 35, 51, 0.2);
+}
+#hud .panneau.fiche button.fermer-fiche {
+  min-width: 160px;
+  min-height: 44px;
+  background: transparent;
+  color: var(--encre);
+  border-color: var(--encre);
+}
+@media (min-height: 700px) {
+  #hud .panneau.fiche .pied-fiche {
+    position: sticky;
+    bottom: -14px;
+    margin: 10px -14px -14px;
+    padding: 8px 14px 10px;
+    background: var(--creme);
+  }
+}
+
+/* ---------- L'avertissement du carnet (plan 0.8, chantier 13 ; B14 : la bûche du terrain au feu) ----------
+   La charte du bandeau de l'idée (papier crème, encre brune), un filet rouge : c'est un avertissement. Il reste jusqu'à
+   son bouton « Compris » ; jamais de croix. */
+#hud .bandeau-avertissement {
+  position: absolute;
+  top: calc(var(--haut-bandeau, 120px) + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 31;
+  width: min(460px, calc(100vw - 32px));
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px 9px 12px;
+  border-radius: 10px;
+  border-left: 4px solid var(--rouge);
+  background: rgba(244, 236, 216, 0.97);
+  color: var(--encre);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  pointer-events: auto;
+  animation: idee-entre 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+#hud .bandeau-avertissement[hidden] {
+  display: none;
+}
+#hud .bandeau-avertissement .sujet {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(178, 58, 46, 0.22), rgba(178, 58, 46, 0.05) 70%);
+}
+#hud .bandeau-avertissement p {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.35;
+}
+#hud .bandeau-avertissement strong {
+  display: block;
+  font-family: Georgia, "Times New Roman", serif;
+  font-style: italic;
+  font-size: 14.5px;
+  color: var(--rouge);
+}
+#hud .bandeau-avertissement .texte {
+  display: block;
+}
+#hud .bandeau-avertissement .compris {
+  flex: none;
+  min-height: 40px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 8px;
+  background: var(--rouge);
+  color: var(--creme);
+  font: inherit;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+@media (max-width: 420px) {
+  #hud .bandeau-avertissement {
+    top: calc(var(--haut-bandeau, 120px) + 58px);
+    width: calc(100vw - 24px);
+  }
+  #hud .bandeau-avertissement p {
+    font-size: 13px;
+  }
+}
+@media (orientation: landscape) and (max-height: 520px) {
+  #hud .bandeau-avertissement {
+    width: min(400px, 49vw);
+    padding: 6px 8px 6px 10px;
+  }
+  #hud .bandeau-avertissement .sujet {
+    width: 34px;
+    height: 34px;
+  }
+  #hud .bandeau-avertissement .compris {
+    min-height: 36px;
+  }
+}
+
+/* ---------- La fiche Examiner sur téléphone (plan 0.8, chantier 13) ----------
+   En vertical, elle prend toute la largeur (12 px de marge), sous les jauges et les tuiles, jusqu'au-dessus du joystick
+   et du bouton B qui la referme ; en paysage, une colonne au centre, toute la hauteur, entre le joystick et les boutons. */
+@media (max-width: 560px) {
+  #hud .panneau.fiche {
+    left: 12px !important;
+    right: 12px !important;
+    width: auto !important;
+    transform: none;
+    z-index: 13;
+    top: max(172px, calc(env(safe-area-inset-top) + 160px)) !important;
+    /* Jusqu'au-dessus du joystick et du bouton B (≈ 160 px du bas), qui restent à portée du pouce. */
+    max-height: calc(100dvh - max(172px, calc(env(safe-area-inset-top) + 160px)) - 164px) !important;
+    padding: 8px 12px 10px;
+  }
+  #hud .panneau.fiche h2 {
+    font-size: 17px;
+  }
+  #hud .panneau.fiche .examen {
+    font-size: 13px;
+  }
+}
+@media (orientation: landscape) and (max-height: 520px) {
+  #hud .panneau.fiche {
+    top: max(8px, env(safe-area-inset-top)) !important;
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%);
+    width: min(460px, 56vw) !important;
+    max-height: calc(100dvh - 16px) !important;
+    z-index: 13;
+    padding: 6px 12px 8px;
+    font-size: 13px;
+  }
+  #hud .panneau.fiche h2 {
+    font-size: 16px;
+  }
+}
+/* Ce qui manque à une étape de la fiche : replié, une ligne par chose une fois déplié. */
+#hud .panneau.fiche details.ou-trouver summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--rouge);
+}
+#hud .panneau.fiche details.ou-trouver summary::-webkit-details-marker {
+  display: none;
+}
+#hud .panneau.fiche details.ou-trouver summary::after {
+  content: "▸";
+  transition: transform 0.15s;
+}
+#hud .panneau.fiche details.ou-trouver[open] summary::after {
+  transform: rotate(90deg);
+}
+#hud .panneau.fiche details.ou-trouver .nombre {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--rouge);
+  color: var(--creme);
+  font-size: 11px;
+  text-align: center;
+}
+#hud .panneau.fiche details.ou-trouver ul.manque li + li {
+  margin-top: 3px;
 }

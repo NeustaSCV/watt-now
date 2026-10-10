@@ -10,12 +10,13 @@ import { KLAXONS_PAR_BATTERIE, LEURRES, PORTES, chargeBatterieTracteur, distance
 import type { AutreVu, EtatCoopVu, InstallationVue, MessageClient, SacVu, Verbe } from "../../commun/src/messages.ts";
 import { nommer, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
 import { RECETTES } from "../../commun/src/recettes.ts";
-import { ENCLUMES, NIVEAU_FORGE_VENTILEE, enclumeDuSac } from "../../commun/src/forge.ts";
+import { COUT_BAC, ENCLUMES, ETOILES_PIERRE_PLATE, NIVEAU_FORGE_VENTILEE, enclumeDuSac } from "../../commun/src/forge.ts";
 import { NOMS_FAMILLES, type Famille } from "../../commun/src/regles.ts";
 import type { Gourde } from "../../commun/src/survie.ts";
 import { DISTANCE_INTERACTION, EMPRISE_RESSOURCE, PORTEE_ARBRE, distanceMare, RAYON_ESCABEAU, USAGES, estArbre, estFruitier, type TypeRessource } from "../../commun/src/terrain.ts";
 import type { FeuDeCamp } from "./rendu/feu.ts";
 import type { VueRessource } from "./rendu/ressources.ts";
+import { proposerMoulin } from "./moulin.ts";
 
 export type ActionProposee =
   | { libelle: string; message: MessageClient }
@@ -44,12 +45,12 @@ export const EXAMENS_INSTALLATIONS: Record<InstallationVue["type"], string> = {
   abri: "Un appentis de branches et de bâche. De quoi dormir au sec, près du feu.",
   coffre: "Un coffre de planches, ficelé de corde. Ce que tu y ranges ne pèse plus sur ton dos.",
   charbonniere: "Une meule de bois couverte de terre. Allumée, elle cuit trois jours en fumant beaucoup.",
-  forge: "Un foyer de pierres, un soufflet, une pierre plate pour enclume. Il faut du charbon de bois.",
-  pedalier: "Un vieux cadre de vélo sur un bâti de bois. Il entraîne ce qu'on y monte : une meule, une dynamo.",
-  banc_recharge: "Des pinces, des fils et un régulateur bricolé : on passe l'énergie d'une batterie à l'autre.",
+  forge: "Un foyer de pierres, une tuyère de fer, un billot et sa pierre plate pour enclume. Il faut du charbon de bois.",
+  pedalier: "Le vieux vélo de la ruine sur un bâti de bois. Sa roue entraîne ce qu'on y monte : l'alternateur, une meule.",
+  banc_recharge: "Un banc de planches, des pinces, un régulateur bricolé. Le panneau posé dessus remplit ses batteries au soleil.",
   panneau_solaire: "Le petit panneau de la station, plein sud. Il charge les batteries posées sur le banc, même quand tu n'es pas là.",
   escabeau: "Un escabeau de bois ligaturé de corde. Posé au pied d'un arbre fruitier, dans son cercle, il permet de cueillir en haut.",
-  recuperateur_pluie: "Une bâche tendue en entonnoir au-dessus d'une bassine. Quand il pleut, elle se remplit, même quand tu n'es pas là. L'eau du ciel se boit sans la faire bouillir.",
+  recuperateur_pluie: "Quatre sacs plastique tendus en entonnoir au-dessus d'un bidon de 5 L. Quand il pleut, il se remplit, même quand tu n'es pas là. L'eau du ciel se boit sans la faire bouillir.",
   alarme_boites: "Une ficelle tendue entre deux piquets, des boîtes de conserve qui pendent. Si un Éteint passe, tu l'entendras. Lui aussi.",
   lit_branchages: "Un cadre de branches couvert de rameaux. On y dort isolé du sol : à côté de l'abri, le sommeil répare mieux.",
   decharge: "Un tas d'ordures de l'Âge de l'Abondance, au bord du terrain. La pluie et le temps en font remonter des objets : surtout des trucs nuls, parfois une bonne surprise.",
@@ -65,6 +66,9 @@ export const EXAMENS_INSTALLATIONS: Record<InstallationVue["type"], string> = {
   piege_machoires: "Deux ressorts retrempés, armés en mâchoires, ancrés à la chaîne. L'Éteint pris ne repart plus que sur les mains.",
   fosse_pieux: "Une fosse creusée sur le passage, des pieux au fond. Celui qui tombe reste coincé.",
   tour_perche: "Une perche de frêne en ressort, une corde, une pédale : le bois tourne, et le ciseau le façonne.",
+  // Le niveau 1 (plan 0.8, chantier 6).
+  ratelier_outils: "Deux perches et des chevilles contre un piquet : chaque outil a sa place. Rangé ici, il sert à tout ce qu'on bâtit autour.",
+  torche_plantee: "Une branche plantée, un chiffon gras qui brûle au bout. Elle éclaire six mètres autour, une nuit durant.",
 };
 
 /** La famille qui sait se servir d'une installation (celle qui sait la construire). */
@@ -94,6 +98,11 @@ function actionsInstallation(
     }
     case "coffre":
       return [{ libelle: "Ouvrir le coffre", ouvrirCoffre: i.id }, examiner];
+    // Plan 0.8, chantier 6 : le râtelier s'ouvre comme un coffre (d'outils) ; la torche plantée s'allume une fois.
+    case "ratelier_outils":
+      return [{ libelle: "Ranger tes outils", ouvrirCoffre: i.id }, examiner];
+    case "torche_plantee":
+      return [i.etat.eteinteLe === undefined ? msg("Allumer la torche", "allumer") : null, examiner];
     case "escabeau":
       return [msg("Porter l'escabeau", "porter"), examiner];
     case "abri":
@@ -116,7 +125,7 @@ function actionsInstallation(
     case "forge": {
       // B : un accessoire à poser, s'il y a de quoi dans le sac (Book 25 §9.3) ; sinon, la fiche (améliorer la forge).
       const enclume = enclumeDuSac(inventaire);
-      const posee = i.etat.enclume ? ENCLUMES[i.etat.enclume].etoiles : 2;
+      const posee = i.etat.enclume ? ENCLUMES[i.etat.enclume].etoiles : ETOILES_PIERRE_PLATE;
       const accessoire =
         enclume && ENCLUMES[enclume].etoiles > posee
           ? msg(`Poser l'enclume (${ENCLUMES[enclume].nom.replace(/^l'|^la |^le /, "")})`, "poser_enclume")
@@ -124,8 +133,8 @@ function actionsInstallation(
             ? msg("Monter le ventilateur", "monter_ventilateur")
             : i.etat.bac && (inventaire.bidon_huile ?? 0) > 0
               ? msg("Verser l'huile dans le bac", "verser_huile")
-              : !i.etat.bac && (inventaire.casserole ?? 0) > 0 && ((inventaire.bidon_huile ?? 0) > 0 || (inventaire.graisse ?? 0) > 0)
-                ? msg("Poser le bac de trempe (casserole)", "poser_bac")
+              : !i.etat.bac && Object.entries(COUT_BAC).every(([t, n]) => (inventaire[t as TypeObjet] ?? 0) >= (n ?? 0))
+                ? msg("Poser le bac de trempe (auge de glaise)", "poser_bac")
                 : null;
       return [{ libelle: "Travailler à la forge", ouvrirFabrication: true }, accessoire ?? examiner];
     }
@@ -139,14 +148,22 @@ function actionsInstallation(
       return [msg("Défourner le charbon", "defourner"), examiner];
     }
     case "pedalier": {
-      if (!i.etat.dynamo && (inventaire.dynamo_velo ?? 0) > 0) return [msg("Installer la dynamo", "monter_dynamo"), examiner];
+      // Le pédalier générateur (plan 0.8) : l'alternateur de la station d'abord ; la dynamo du vélo, à défaut.
+      if (!i.etat.alternateur && (inventaire.petit_alternateur ?? 0) > 0) return [msg("Monter l'alternateur", "monter_alternateur"), examiner];
+      if (!i.etat.alternateur && !i.etat.dynamo && (inventaire.dynamo_velo ?? 0) > 0) return [msg("Installer la dynamo", "monter_dynamo"), examiner];
+      // La batterie de la ruine se pose sur le pédalier : on y pédale, on la reprend pleine.
+      const surPedalier = Object.values(i.etat.batteries ?? {}).some((n) => (n ?? 0) > 0);
+      const enPoche = (inventaire.petite_batterie ?? 0) > 0 || (inventaire.batterie_voiture ?? 0) > 0;
+      if ((i.etat.alternateur || i.etat.dynamo) && !surPedalier && enPoche) return [msg("Poser la batterie sur le pédalier", "poser_batteries"), examiner];
       if (!i.etat.meule && (inventaire.pierre ?? 0) >= 3) return [msg("Installer la meule (3 pierres)", "monter_meule"), examiner];
-      const pedaler = i.etat.dynamo ? msg("Pédaler : charger la batterie", "pedaler") : null;
+      const pedaler = i.etat.alternateur || i.etat.dynamo ? msg("Pédaler : charger la batterie", "pedaler") : null;
+      if (pedaler && surPedalier && partPleine(i) >= 0.99) return [msg("Reprendre la batterie", "reprendre_batteries"), examiner];
       const affuter = i.etat.meule && (inventaire.couteau ?? 0) > 0 ? msg("Affûter le couteau", "affuter") : null;
       // Les accessoires mécanistes (Book 25 §6.4) : proposés quand on a de quoi les monter, sans prendre la place du reste.
       const accessoire = accessoirePedalier(i, inventaire, msg);
       if (!pedaler && !affuter && accessoire) return [accessoire, examiner];
-      return [pedaler ?? affuter, pedaler && affuter ? affuter : (accessoire ?? examiner)];
+      const reprendre = surPedalier ? msg("Reprendre la batterie", "reprendre_batteries") : null;
+      return [pedaler ?? affuter, pedaler && affuter ? affuter : (accessoire ?? reprendre ?? examiner)];
     }
     case "plaque_choc": {
       // Book 25 §5.3 : une décharge, puis il faut la réarmer (0,5 Wh).
@@ -173,6 +190,8 @@ function actionsInstallation(
     case "tour_perche":
       return [{ libelle: "Travailler au tour", ouvrirFabrication: true }, examiner];
     case "banc_recharge": {
+      // Le banc solaire (plan 0.8) : le panneau de la station se pose sur le banc, d'abord.
+      if (!i.etat.panneau && (inventaire.panneau_solaire ?? 0) > 0) return [msg("Poser le panneau sur le banc", "poser_panneau"), examiner];
       // Sur le banc : les batteries posées, que le panneau charge, même hors ligne (É4).
       const posees = Object.values(i.etat.batteries ?? {}).some((n) => (n ?? 0) > 0);
       // Les armes électriques (Book 25 §5.4) : on les recharge aux batteries du banc.
@@ -193,11 +212,22 @@ function actionsInstallation(
   }
 }
 
-/** Le soufflet à manivelle, la meule fine (Book 25 §6.4) : à monter sur le pédalier, si l'on a de quoi. */
+/** La part de charge des batteries posées sur un meuble (0 à 1). */
+function partPleine(i: InstallationVue): number {
+  let cap = 0;
+  let wh = 0;
+  for (const [b, n] of Object.entries(i.etat.batteries ?? {})) {
+    cap += CAPACITES[b as keyof typeof CAPACITES] * (n ?? 0);
+    wh += i.etat.charges?.[b as keyof typeof CAPACITES] ?? 0;
+  }
+  return cap > 0 ? wh / cap : 0;
+}
+
+/** Le ventilateur à manivelle, la meule fine (Book 25 §6.4) : à monter sur le pédalier, si l'on a de quoi. */
 function accessoirePedalier(i: InstallationVue, inventaire: Inventaire, msg: (libelle: string, verbe: Verbe) => ActionProposee): ActionProposee | null {
   const a = (t: TypeObjet, n = 1) => (inventaire[t] ?? 0) >= n;
   if (i.etat.meule && !i.etat.meuleFine && a("pierre") && a("chiffons")) return msg("Monter la meule fine", "monter_meule_fine");
-  if (!i.etat.soufflet && a("roue_velo") && a("bache") && a("branche", 4)) return msg("Monter le soufflet à manivelle", "monter_soufflet");
+  if (!i.etat.soufflet && a("roue_velo") && a("bache") && a("branche", 4)) return msg("Monter le ventilateur à manivelle", "monter_soufflet");
   return null;
 }
 
@@ -330,7 +360,7 @@ export function proposer(
   }
 
   // À la Coopérative : ouvrir une porte, ou la refermer derrière soi (Book 23 §2.2 : c'est la meilleure retraite).
-  if (portes) {
+  if (portes && lieu === "cooperative") {
     for (const p of PORTES) {
       const ouverte = portes[p.id] ?? p.ouverte;
       garder(distancePorte(p, position.x, position.z) + 0.3, {
@@ -349,7 +379,7 @@ export function proposer(
   }
 
   // À la Coopérative : les leurres du décor (Book 23 §4.7). Un bruit qui attire les Éteints ailleurs que sur soi.
-  if (portes) {
+  if (portes && lieu === "cooperative") {
     // Le klaxon : tant que la batterie est dans le tracteur (0.5.1 : on peut la démonter et l'emporter).
     const klaxons = etatCoop?.klaxons ?? KLAXONS_PAR_BATTERIE;
     const batterie = ressourcesVues.find((r) => r.donnees.type === "coop_batterie");
@@ -390,6 +420,9 @@ export function proposer(
       });
     }
   }
+
+  // Au Moulin du Gué : la grande porte, les leurres du décor (plan 0.8, chantier 12 : client/src/moulin.ts).
+  if (portes && lieu === "moulin") proposerMoulin(position, portes, inventaire, garder);
 
   // Au Carrefour : le guichet des Compteurs, et leur pédalier.
   if (lieu === "comptoir") {
@@ -445,10 +478,12 @@ export function proposer(
         libelle: "Examiner",
         examiner:
           lieu === "terrain"
-            ? "Le chemin de terre rejoint la route de la Campagne, vers la station-service."
+            ? "Le chemin de terre rejoint la route de la Campagne : par le pont vers la station-service, ou en aval vers le gué."
             : lieu === "station" && sortie.vers === "cooperative"
               ? "Un chemin de terre file vers le nord, sous les arbres : la Coopérative du Plateau, à 2 km. Au bout, il faudra la carte."
-              : "La route continue. Au bout, il faudra la carte.",
+              : sortie.sansArrivee && lieu === "moulin"
+                ? "Le chemin de halage suit la levée vers le gué, à 2 km. On part par là ; on n'y revient jamais."
+                : "La route continue. Au bout, il faudra la carte.",
       },
       cible: null,
     });

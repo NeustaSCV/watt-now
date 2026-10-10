@@ -8,6 +8,7 @@ import type { Reglages } from "./reglages.ts";
 import type { AnimalVu } from "./faune.ts";
 import type { Apparence } from "./apparence.ts";
 import type { Position } from "./deplacement.ts";
+import type { MouvementRadeau } from "./gue.ts";
 import type { Charges, TypeBatterie } from "./energie.ts";
 import type { LieuId, LieuJouable } from "./lieux.ts";
 import type { Saignement, TypeBlessure } from "./combat.ts";
@@ -143,9 +144,14 @@ export type Verbe =
   | "monter_ventilateur"
   /** Au banc de recharge : recharger ses armes électriques (Voltaïques, chantier 6). */
   | "recharger_armes"
-  /** Le pédalier des Mécanistes (Book 25 §6.4, chantier 7) : monter le soufflet à manivelle, la meule fine. */
+  /** Le pédalier des Mécanistes (Book 25 §6.4, chantier 7) : monter le ventilateur à manivelle, la meule fine. */
   | "monter_soufflet"
-  | "monter_meule_fine";
+  | "monter_meule_fine"
+  // Les meubles de famille (plan 0.8, chantier 7) : la pièce de la station, montée sur son meuble.
+  /** Le banc solaire ⚡ : poser le panneau sur le banc. */
+  | "poser_panneau"
+  /** Le pédalier générateur ⚙️ : monter le petit alternateur, entraîné par la roue. */
+  | "monter_alternateur";
 
 /** État propre à certaines installations. */
 export interface EtatInstallation {
@@ -156,7 +162,7 @@ export interface EtatInstallation {
   dynamo?: boolean;
   /** Établi : le redresseur de fûts est monté (Book 25 §9.3). */
   redresseur?: boolean;
-  /** Pédalier, accessoires mécanistes (Book 25 §6.4) : le soufflet à manivelle, la meule fine. */
+  /** Pédalier, accessoires mécanistes (Book 25 §6.4) : le ventilateur à manivelle (`soufflet`), la meule fine. */
   soufflet?: boolean;
   meuleFine?: boolean;
   /** Coffre : ce qu'il contient (la charge des batteries rangées est dans `charges`). */
@@ -177,10 +183,18 @@ export interface EtatInstallation {
    * La forge (Book 25 §9.3, chantier 5) : l'enclume posée (absente : la pierre plate du foyer), le bac de trempe, l'huile
    * qu'il tient (en trempes), le ventilateur 12 V des Voltaïques (la forge ventilée souffle seule).
    */
-  enclume?: "etau" | "masse" | "rail";
+  enclume?: "depanneur" | "etau" | "masse" | "rail";
   bac?: boolean;
   huile?: number;
   ventilateur?: boolean;
+  /**
+   * Les meubles de famille (plan 0.8, chantier 7) : le panneau posé sur le banc solaire ⚡ ; le petit alternateur monté
+   * sur le pédalier générateur ⚙️ (le pédalier, comme le banc, porte aussi ses batteries : `batteries`, `charges`).
+   */
+  panneau?: boolean;
+  alternateur?: boolean;
+  /** La torche plantée (plan 0.8, chantier 6) : l'instant réel où elle s'éteint (absente : pas encore allumée ; passé : consumée). */
+  eteinteLe?: number;
 }
 
 /** L'état d'une installation à déclencheur. */
@@ -214,10 +228,16 @@ export type MessageClient =
   | { t: "ping"; envoye: number }
   // Le métier des familles (Book 25 §2.3, chantier 3) : voir le bloc « savoir » en fin de fichier.
   | MessageClientSavoir
+  // Le gué (plan 0.8, chantier 11) : voir le bloc « gué » en fin de fichier.
+  | MessageClientGue
   // L'arbre de progression (0.7) : voir le bloc « progression » en fin de fichier.
   | MessageClientProgression
   // La couche de déchets (0.7) : voir le bloc « déchets » en fin de fichier.
   | MessageClientDechets
+  // Reprendre une arme sur son meuble (plan 0.8, chantier 9) : voir le bloc « reprise » en fin de fichier.
+  | MessageClientReprise
+  // Les constats de l'interface (plan 0.8, chantier 14) : voir le bloc « constats » en fin de fichier.
+  | MessageClientConstat
   | { t: "interagir"; cible: Cible; verbe: Verbe }
   | { t: "manger"; objet: TypeObjet }
   | { t: "boire" }
@@ -467,14 +487,20 @@ export type MessageServeur =
   | { t: "pong"; envoye: number; serveur: number }
   // Le métier des familles (Book 25 §2.3, chantier 3) : voir le bloc « savoir » en fin de fichier.
   | MessageServeurSavoir
+  // Le gué (plan 0.8, chantier 11) : voir le bloc « gué » en fin de fichier.
+  | MessageServeurGue
+  // Un avertissement fermé par un bouton (plan 0.8, chantier 13) : voir le bloc en fin de fichier.
+  | MessageServeurAvertissement
   // L'arbre de progression (0.7) : voir le bloc « progression » en fin de fichier.
   | MessageServeurProgression
   // La couche de déchets (0.7) : voir le bloc « déchets » en fin de fichier.
   | MessageServeurDechets
+  // Reprendre une arme sur son meuble (plan 0.8, chantier 9) : voir le bloc « reprise » en fin de fichier.
+  | MessageServeurReprise
   | { t: "expulse"; raison: string }
   | { t: "inventaire"; inventaire: Inventaire }
   | { t: "besoins"; besoins: Besoins; gourde: Gourde }
-  | { t: "ressource"; id: number; disponible: boolean }
+  | { t: "ressource"; id: number; disponible: boolean; reste?: number }
   | { t: "feu"; feu: FeuVu }
   | { t: "installation"; installation: InstallationVue }
   | { t: "installation_retiree"; id: number }
@@ -562,6 +588,8 @@ export interface ProjectileVu {
   coup?: { id: number; resultat: ResultatCoup };
   /** Une flèche ou un carreau (tendu, presque à plat) plutôt qu'un objet lancé en cloche. */
   tir?: true;
+  /** Au gué (G8) : un galet bien lancé touche l'eau là, puis ricoche de point en point jusqu'à (x1, z1). */
+  ricochets?: { x: number; z: number }[];
 }
 
 /** Code de fermeture WebSocket quand le jeton est refusé : le client doit redemander la connexion. */
@@ -623,7 +651,13 @@ export type MessageServeurProgression =
    * Des recettes dévoilées (`nouvelles`), ou la liste qui change (les autres familles). `texte` : « Tu y penses : … »,
    * au plus un toutes les 10 s (les idées d'entre-temps sont regroupées).
    */
-  { t: "devoilement"; progression: VueProgression; nouvelles: string[]; texte?: string };
+  | { t: "devoilement"; progression: VueProgression; nouvelles: string[]; texte?: string }
+  /**
+   * « Tu y penses » (plan 0.8 §2.2) : la première fois qu'une clé entre dans le sac (ou l'outil clé en main), l'idée de
+   * l'étape qu'elle ouvre (`etape`), dans la voix du carnet ; `plusTard` : le niveau d'avant n'est pas posé (« un jour »).
+   * Jamais au deuxième ramassage.
+   */
+  | { t: "idee"; etape: string; texte: string; plusTard: boolean; objet?: TypeObjet };
 
 // ---------- La couche de déchets : ramasser, fouiller, démonter (0.7, commun/src/couche-dechets.ts) ----------
 
@@ -636,3 +670,47 @@ export type MessageServeurDechets =
   | { t: "dechets_point"; point: PointDechetsVu }
   /** La liste du conteneur qu'on fouille (null : refermé). */
   | { t: "fouille"; fouille: FouilleVue | null };
+
+// ---------- Reprendre une arme sur son meuble (plan 0.8, chantier 9 ; commun/src/evolution-armes.ts) ----------
+
+/** Réparer l'arme à son niveau, ou la monter d'une étoile. */
+export type GesteRepriseArme = "reparer" | "monter";
+
+export type MessageClientReprise =
+  /** « Reprendre l'arme » (R-ARMES-5), près de son meuble : la réparer, ou la monter d'une étoile. */
+  { t: "reprendre_arme"; objet: CleObjet; geste: GesteRepriseArme };
+
+export type MessageServeurReprise =
+  /**
+   * L'arme est reprise : réparée (`avant` = `apres`), ou montée d'une étoile (le même exemplaire, sa clé a changé
+   * d'étoile). Le client fait briller l'étoile qui s'ajoute dans le sac.
+   */
+  { t: "arme_reprise"; avant: CleObjet; apres: CleObjet; geste: GesteRepriseArme };
+
+// ---------- Le gué : le bac, la cloche (plan 0.8, chantier 11 ; commun/src/gue.ts, serveur/src/gue.ts) ----------
+
+export type MessageClientGue =
+  /** Haler le bac (à bord, ou le rappeler depuis la cale ou le ponton), sonner la cloche du passeur. */
+  { t: "gue"; op: "haler" | "cloche" };
+
+export type MessageServeurGue =
+  /** Le radeau du bac : sa place et où il va (le client le prolonge seul) ; `cloche` : la cloche du passeur sonne. */
+  { t: "gue"; radeau: MouvementRadeau; cloche?: true };
+
+// ---------- Un avertissement, fermé par un bouton (plan 0.8 §2.6, chantier 13 ; commun/src/tutoriel.ts) ----------
+
+export type MessageServeurAvertissement =
+  /**
+   * Un bandeau dans la charte du carnet, fermé par son bouton (`bouton` : « Compris »), jamais par une croix (règle du
+   * porteur). `id` : de quoi il parle (« buche » : une bûche du terrain mise au feu, B14).
+   */
+  { t: "avertissement"; id: "buche"; texte: string; bouton: string };
+
+// ---------- Les constats de l'interface (plan 0.8, chantier 14 ; serveur/src/mesures.ts) ----------
+
+export type MessageClientConstat =
+  /**
+   * Ce que le client signale pour les mesures du test (avis-game-designer.md §5.2) : la fiche d'une construction ouverte
+   * sans pouvoir l'améliorer (`construction` : son type), l'aide « Je suis coincé » ouverte. Le serveur en fait un fait.
+   */
+  { t: "constat"; quoi: "fiche_bloquee" | "aide_coince"; construction?: string };

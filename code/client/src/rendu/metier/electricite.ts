@@ -11,8 +11,11 @@
 // (serveur/src/declencheurs.ts : la ligne suit l'orientation de l'installation).
 
 import * as THREE from "three";
+import { CAPACITES, type TypeBatterie } from "../../../../commun/src/energie.ts";
+import type { EtatInstallation } from "../../../../commun/src/messages.ts";
 import { Assemblage, BOIS, CORDE, V3, Z, bosseler, placer, touffe } from "../assemblage.ts";
 import { PALETTE, aleatoire } from "../materiaux.ts";
+import { modulePanneau } from "../pieces.ts";
 import { enregistrerModele } from "./index.ts";
 
 const RUBAN = 0x8e8f8c;
@@ -274,6 +277,76 @@ function bainDerouillage(): THREE.Group {
   return groupe(c);
 }
 
+// ---------- Le banc solaire (plan 0.8, chantier 7) ----------
+
+/** La part de charge des batteries posées (0 à 1) : ce que montre la jauge. */
+export function partDeCharge(etat: Pick<EtatInstallation, "batteries" | "charges">): number {
+  let cap = 0;
+  let wh = 0;
+  for (const [b, n] of Object.entries(etat.batteries ?? {}) as [TypeBatterie, number][]) {
+    cap += CAPACITES[b] * (n ?? 0);
+    wh += etat.charges?.[b] ?? 0;
+  }
+  return cap > 0 ? Math.max(0, Math.min(1, wh / cap)) : 0;
+}
+
+/**
+ * Le panneau posé sur le banc (les coordonnées sont celles du banc, installations.ts) : le petit panneau de la station
+ * sur un cadre de branches dressé à l'arrière du plateau, incliné vers l'avant ; son câble descend au régulateur ; et
+ * la jauge, une réglette posée devant le régulateur, dont la barre lumineuse dit la charge des batteries du banc (verte
+ * pleine, ambre à mi-course, rouge presque vide).
+ */
+function bancPanneau(): THREE.Group {
+  const c = new Assemblage(650);
+  c.occlusion = 0.25;
+  const aleat = aleatoire(650);
+  // Le cadre : deux montants à l'arrière, deux jambes de force posées sur le plateau, des traverses ligaturées.
+  for (const x of [-0.52, 0.52]) {
+    c.perche(new V3(x, -0.03, -0.66), new V3(x, 1.3, -0.64), 0.03, BOIS.ecorce, "mat", 5, 0.025);
+    c.perche(new V3(x, 0.63, -0.24), new V3(x, 0.92, -0.14), 0.025, BOIS.ecorce, "mat", 5, 0.022);
+    c.ligature(new V3(x, 0.63, -0.24), Z, 0.03);
+    c.ligature(new V3(x, 1.27, -0.64), Z, 0.032);
+    c.ajouter(placer(bosseler(new THREE.DodecahedronGeometry(0.07, 0).scale(1, 0.6, 1), 0.015, aleat), x, 0.03, -0.66), PALETTE.pierreSombre, "mat", 0.06);
+  }
+  c.perche(new V3(-0.56, 1.28, -0.64), new V3(0.56, 1.28, -0.64), 0.022, BOIS.ecorce, "mat", 5);
+  c.perche(new V3(-0.56, 0.9, -0.14), new V3(0.56, 0.9, -0.14), 0.02, BOIS.ecorce, "mat", 5);
+  // Le câble : de la boîte de jonction, sous le panneau, jusqu'au régulateur jaune du banc.
+  for (const [p0, p1] of [
+    [new V3(0, 1.0, -0.42), new V3(-0.1, 0.8, -0.3)],
+    [new V3(-0.1, 0.8, -0.3), new V3(-0.3, 0.7, -0.12)],
+    [new V3(-0.3, 0.7, -0.12), new V3(-0.32, 0.7, -0.04)],
+  ] as const)
+    c.perche(p0, p1, 0.007, 0x1f1f1f, "mat", 4);
+  // La jauge : une réglette noire sur deux pieds, devant le régulateur ; son fond éteint.
+  c.boite(0x232323, "mat", 0.22, 0.06, 0.04, -0.02, 0.69, 0.2);
+  for (const x of [-0.1, 0.06]) c.boite(0x232323, "mat", 0.02, 0.05, 0.02, x, 0.645, 0.2);
+  c.boite(0x1f3324, "mat", 0.18, 0.026, 0.004, -0.02, 0.69, 0.222);
+  for (let k = 1; k < 5; k++) c.boite(0x0e0e0e, "mat", 0.003, 0.03, 0.006, -0.11 + k * 0.036, 0.69, 0.224);
+  const g = c.groupe();
+  // Le panneau, incliné de 35° vers l'avant (le haut en arrière).
+  const p = new Assemblage(651);
+  modulePanneau(p);
+  const panneau = p.groupe();
+  panneau.position.set(0, 1.1, -0.4);
+  panneau.rotation.x = 0.6;
+  g.add(panneau);
+  // La barre de la jauge : elle s'allonge avec la charge (l'origine à son bord gauche).
+  const materiau = new THREE.MeshBasicMaterial({ color: 0x5aff7a });
+  const barre = new THREE.Mesh(new THREE.BoxGeometry(0.176, 0.022, 0.004).translate(0.088, 0, 0), materiau);
+  barre.position.set(-0.108, 0.69, 0.225);
+  barre.userData.intact = true;
+  barre.userData.majEtat = (etat: EtatInstallation) => {
+    const f = partDeCharge(etat);
+    barre.visible = f > 0.005;
+    barre.scale.x = Math.max(0.03, f);
+    materiau.color.setHex(f > 0.5 ? 0x5aff7a : f > 0.2 ? 0xffb23a : 0xff4a2a);
+  };
+  g.add(barre);
+  g.userData.siEtat = "panneau";
+  g.userData.intact = true;
+  return g;
+}
+
 // ---------- L'enregistrement (Book 25 §10.4 : une ligne d'import dans metier/index.ts) ----------
 
 enregistrerModele("matraque_fortune", "main", matraqueFortune);
@@ -284,9 +357,10 @@ enregistrerModele("cloture_fortune", "sol", clotureFortune);
 enregistrerModele("cloture_electrique", "sol", clotureElectrique);
 enregistrerModele("plaque_choc", "sol", plaqueChoc);
 enregistrerModele("bain_derouillage", "sol", bainDerouillage);
+enregistrerModele("banc_panneau", "sol", bancPanneau);
 
 /** Pour la planche de contrôle (planche-objets.ts) et les tests : les modèles de ce fichier. */
 export const MODELES_ELECTRICITE = {
   main: { matraque_fortune: matraqueFortune, matraque_electrique: matraqueElectrique, aiguillon },
-  sol: { alarme_electrique: alarmeElectrique, cloture_fortune: clotureFortune, cloture_electrique: clotureElectrique, plaque_choc: plaqueChoc, bain_derouillage: bainDerouillage },
+  sol: { alarme_electrique: alarmeElectrique, cloture_fortune: clotureFortune, cloture_electrique: clotureElectrique, plaque_choc: plaqueChoc, bain_derouillage: bainDerouillage, banc_panneau: bancPanneau },
 } as const;

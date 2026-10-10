@@ -10,7 +10,7 @@ import { avecTouches } from "./touches.ts";
 import { sousTension, suivreElectrique } from "./electricite.ts";
 import * as THREE from "three";
 import { INTENTION_REPOS, avancer, type Position } from "../../commun/src/deplacement.ts";
-import { COMPTOIR, destinations, sortieIci, sortiesDe, zoneCoop, zoneDe, type LieuJouable, type Zone } from "../../commun/src/lieux.ts";
+import { COMPTOIR, destinations, sortieIci, sortiesDe, zoneCoop, zoneDe, zoneMoulin, type LieuJouable, type Zone } from "../../commun/src/lieux.ts";
 import type { EteintVu } from "../../commun/src/eteints.ts";
 import { cerclesSignature, type BruitAction } from "../../commun/src/signature.ts";
 import { ALLURES, GESTE_TENU_MAX_S, type Allure } from "../../commun/src/regles.ts";
@@ -19,13 +19,14 @@ import type { AutreVu, SacVu, SanteVue, VueComptoir } from "../../commun/src/mes
 import { PORTEE_CABLE_PANNEAU, type Charges } from "../../commun/src/energie.ts";
 import type { Bienvenue, EtatCoopVu, InstallationVue, MessageClient, MessageServeur } from "../../commun/src/messages.ts";
 import { OBJETS, lumierePortee, traineTravois, type Inventaire } from "../../commun/src/objets.ts";
-import { typeDe, type CleObjet } from "../../commun/src/etoiles.ts";
+import { compter, typeDe, type CleObjet } from "../../commun/src/etoiles.ts";
 import { aFaim, aSoif, allureAutorisee, fatigue, type Besoins, type Gourde } from "../../commun/src/survie.ts";
 import { estNuit, heureDeJeu, jourDeJeu } from "../../commun/src/temps.ts";
 import { demanderIdentite, presenterEcransAccueil } from "./accueil.ts";
 import { Carte } from "./carte.ts";
 import { Entrees, type Commande } from "./entrees.ts";
 import { Hud } from "./hud.ts";
+import { LIBELLE_FERMER_FICHE } from "./fiche-examiner.ts";
 import { proposer, type ActionProposee, type Propositions } from "./interaction.ts";
 import { Reseau } from "./reseau.ts";
 import { FeuDeCamp } from "./rendu/feu.ts";
@@ -34,6 +35,10 @@ import { FauneAmbiante, Volaille, type CriFaune } from "./rendu/faune.ts";
 import { RAYON_ESCABEAU, estFruitier } from "../../commun/src/terrain.ts";
 import { creerRuine } from "./rendu/ruine.ts";
 import { creerHalte, estomperToits } from "./rendu/halte.ts";
+import { animerMoulin, creerMoulin } from "./rendu/moulin.ts";
+import { pieceMoulin, sombreMoulin } from "../../commun/src/moulin.ts";
+// Le Gué-aux-Saules (plan 0.8, chantier 11) : son décor, son bac, sa crue, ses sons.
+import { RenduGue } from "./rendu/gue.ts";
 import { animerCooperative, creerCooperative, estomperCooperative, majPortes, ouverturesPortes, placerRadio, secouerPorte } from "./rendu/cooperative.ts";
 import { CarteVue, arcsParPiece, brouillerTout, clartesDe } from "./rendu/carte-vue.ts";
 import { Ondes } from "./rendu/ondes.ts";
@@ -55,6 +60,7 @@ import { ModePhoto } from "./photo.ts";
 import { attenuationMeteo, meteo, type Meteo, type Temps } from "../../commun/src/meteo.ts";
 import { Sang, creerSacTombe, creerTas } from "./rendu/sang.ts";
 import type { SourceLumiere } from "./rendu/lumieres.ts";
+import { outilsAPortee } from "../../commun/src/outils-a-portee.ts";
 import { Personnage, gesteDAction } from "./rendu/personnage.ts";
 import { chargerHumanoides } from "./rendu/humanoides.ts";
 import { qualiteActuelle } from "./rendu/qualite.ts";
@@ -75,6 +81,9 @@ import type { Mesureur } from "./mesure/mesure.ts";
 import type { ControleEnDirect } from "./mesure/obstacles.ts";
 // La couche de déchets (0.7) : un affichage provisoire, isolé (le vrai rendu en amas viendra au chantier 7).
 import { CoucheDechetsVue } from "./rendu/dechets/couche.ts";
+// « Tu y penses » au ramassage d'une clé (plan 0.8, chantier 2).
+import { BandeauIdee } from "./bandeau-idee.ts";
+import { BandeauAvertissement } from "./avertissement.ts";
 
 const CLE_JETON = "watt.jeton";
 /** En développement : `?heure=22` fige l'heure affichée, pour régler la nuit sans attendre. */
@@ -112,7 +121,8 @@ let portesCoop: Record<string, boolean> = portesInitiales();
 let etatCoop: EtatCoopVu = { radio: { ...RADIO_ETABLI }, klaxons: KLAXONS_PAR_BATTERIE };
 /** La zone où l'on se déplace : à la Coopérative, les portes fermées bouchent le passage. */
 function zoneIci(): Zone {
-  return lieu === "cooperative" ? zoneCoop(portesCoop) : zoneDe(lieu);
+  if (lieu === "gue") return gue.zone(Date.now() + decalage, debutMonde); // le radeau du bac, le radier noyé (chantier 11)
+  return lieu === "cooperative" ? zoneCoop(portesCoop) : lieu === "moulin" ? zoneMoulin(portesCoop) : zoneDe(lieu);
 }
 function montrerDecor(lieu: LieuJouable): void {
   if (!decors.has(lieu)) {
@@ -120,6 +130,8 @@ function montrerDecor(lieu: LieuJouable): void {
     if (lieu === "terrain") g.add(creerTerrain(), creerMare(), creerRuine());
     else if (lieu === "comptoir") g.add(creerComptoir());
     else if (lieu === "cooperative") g.add((decorCoop = creerCooperative()));
+    else if (lieu === "gue") g.add(gue.creer()); // 0.8, chantier 11 : le modèle du gué, retourné pour suivre la carte
+    else if (lieu === "moulin") g.add(creerMoulin()); // 0.8, chantier 12 : le Moulin du Gué
     else g.add(creerHalte());
     // Les lieux à murs (0.7.2) : ce que le personnage ne voit pas est dessiné « en souvenir » (rendu/carte-vue.ts).
     if (planVue(lieu)) brouillerTout([g]);
@@ -132,6 +144,7 @@ const entrees = new Entrees(document.getElementById("joystick")!, canvas);
 // Le son : la musique livrée par la session musique et les effets du catalogue (É5, lot 3).
 const son = new Sonorisation(tactile);
 const bruiteur = new Bruiteur(son);
+const gue = new RenduGue((id, ou) => son.jouer(id, ou ?? null));
 /** L'atelier de chaque famille : quand il est installé, son thème joue au complet (moment-vitrine 4). */
 const ATELIERS = { charbonniers: "forge", voltaiques: "banc_recharge", mecanistes: "pedalier" } as const;
 /** Les sons qu'on fabrique d'avance en entrant dans le monde. */
@@ -368,6 +381,9 @@ function afficherVoile(texte: string, bouton?: { libelle: string; action: () => 
   voile.hidden = false;
 }
 
+/** Le bandeau « Tu y penses », posé dans le HUD au premier usage (après que le HUD a dessiné son contenu). */
+let bandeauIdee: BandeauIdee | null = null;
+let bandeauAvertissement: BandeauAvertissement | null = null;
 const hud = new Hud(
   document.getElementById("hud")!,
   qualite.niveau,
@@ -399,8 +415,10 @@ const hud = new Hud(
     equiper: (objet) => envoyer({ t: "equiper", objet }),
     preparer: (objet) => envoyer({ t: "preparer", objet }),
     reparer: (objet, fortune) => envoyer({ t: "reparer", objet, fortune }),
+    reprendre: (objet, geste) => envoyer({ t: "reprendre_arme", objet, geste }),
     coffre: (id, sens, objet, quantite) => envoyer({ t: "coffre", id, sens, objet, quantite }),
     amenager: (genre, id, verbe) => envoyer({ t: "interagir", cible: { genre, id }, verbe }),
+    constat: (quoi, construction) => envoyer({ t: "constat", quoi, ...(construction ? { construction } : {}) }),
     fabriquer: (r) => {
       if (!position) return;
       // Le tas de matières : là où l'installation va se dresser, ou à nos pieds pour un objet.
@@ -447,7 +465,7 @@ function installer(message: Bienvenue): void {
   lieu = message.lieu;
   montrerDecor(lieu);
   // La pause : seulement là où l'on est seul (son terrain, sa Coopérative).
-  hud.pausePossible(lieu === "terrain" || lieu === "cooperative");
+  hud.pausePossible(lieu === "terrain" || lieu === "cooperative" || lieu === "moulin");
   hud.majPause(false);
   // Les portes de la Coopérative, dans l'état où on les a laissées ; la radio, si elle joue encore.
   if (message.portes) portesCoop = message.portes;
@@ -587,6 +605,8 @@ function montrerCoup(message: { id: number; x: number; z: number; resultat: Resu
   const vue = eteints.get(message.id);
   // La décharge (Book 25 §5.1) : ni sang ni impact ; il se raidit, ou il s'éteint (le rendu de l'Éteint le montre).
   if (message.electrique) {
+    // La courte porte : elle raidit, ou met à terre (ses dégâts au torse, plan 0.8 §2.4) ; un éclat d'arc plus vif.
+    if (message.resultat === "raidi" || message.resultat === "a_terre") vue?.eclatDecharge();
     bruiteur.coup(message.resultat, message);
     if (message.resultat === "a_terre") hud.message(avecTouches("Il est à terre : une décharge ({agir}) l'éteint pour de bon.", tactile));
     return;
@@ -677,12 +697,14 @@ function majViseeLancer(): void {
 
 /** Un projectile vole (le sien, ou celui d'un autre joueur) : on le dessine, puis l'impact. */
 function lancerProjectile(p: ProjectileVu): void {
+  // Au gué, un galet bien lancé ricoche jusqu'à l'autre rive (G8, chantier 11).
+  if (p.ricochets && lieu === "gue") return gue.ricocher(p, (q, arrivee) => projectiles.lancer(q, arrivee), () => son.jouer("geste_pierre", { x: p.x1, z: p.z1 }, { gain: 0.7 }));
   // Une flèche part : la corde de l'arc claque (Book 25 §3.4 : à 3 m, l'arme la plus silencieuse).
   if (p.tir && p.objet.startsWith("fleche")) son.jouer("corde_arc", { x: p.x0, z: p.z0 });
   projectiles.lancer(p, () => {
     const ou = { x: p.x1, z: p.z1 };
     if (p.coup) return montrerCoup({ id: p.coup.id, x: p.x1, z: p.z1, resultat: p.coup.resultat });
-    if (p.impact === "eau") return son.jouer("remplir_eau", ou, { gain: 0.6 });
+    if (p.impact === "eau") return son.jouer(lieu === "gue" ? "plouf" : "remplir_eau", ou, { gain: 0.6 });
     son.jouer(p.impact === "mur" ? "marteau_metal" : "geste_pierre", ou, { gain: 0.7 });
     // Le réveil sonne vingt secondes là où il est tombé : les Éteints l'entendent (le serveur), nous aussi.
     if (p.objet === "reveil") {
@@ -713,10 +735,15 @@ function recevoir(message: MessageServeur): void {
       decalage = message.serveur + (reseau?.latence ?? 0) / 2 - Date.now();
       return;
     case "inventaire":
-      // Ce qui vient d'entrer dans le sac s'affiche au-dessus du personnage.
+      // Ce qui vient d'entrer dans le sac s'affiche au-dessus du personnage. On compte par sorte, toutes étoiles
+      // confondues : une arme montée d'une étoile sur son meuble (chantier 9) change de clé, ce n'est pas un gain.
+      const vues = new Set<string>();
       for (const [type, n] of Object.entries(message.inventaire) as [keyof Inventaire, number][]) {
-        const avant = inventaire[type] ?? 0;
-        if (n > avant) hud.gain(type, n - avant);
+        const sorte = typeDe(type);
+        if (!(n > (inventaire[type] ?? 0)) || vues.has(sorte)) continue;
+        vues.add(sorte);
+        const gagne = compter(message.inventaire, sorte) - compter(inventaire, sorte);
+        if (gagne > 0) hud.gain(type, gagne);
       }
       inventaire = message.inventaire;
       hud.majInventaire(inventaire);
@@ -728,6 +755,8 @@ function recevoir(message: MessageServeur): void {
       return;
     case "ressource": {
       const r = ressources.get(message.id);
+      // Le tas de bois de la station baisse d'une bûche (plan 0.8, chantier 10 : le butin personnel).
+      r?.reste(message.reste);
       r?.disponible(message.disponible);
       // Le butin rare de la Coopérative (le coffre, la chambre froide) : un signal musical (session musique).
       if (!message.disponible && lieu === "cooperative" && (r?.donnees.type === "coop_coffre" || r?.donnees.type === "coop_caisse_froide")) son.butin();
@@ -850,14 +879,21 @@ function recevoir(message: MessageServeur): void {
     case "eteints":
       majEteints(message.eteints);
       return;
-    case "bruits":
+    case "bruits": {
       // Ce qu'on entend sans le voir (0.7.2) : le son, étouffé, et une onde au point de passage ; la porte qu'on pousse
-      // tremble. Jamais la silhouette.
-      bruiteur.entendre(message.bruits);
-      for (const b of message.bruits) {
+      // tremble. Jamais la silhouette. Sur le radier du gué, l'eau couvre tout au-delà de 3 m (chantier 11).
+      const ouie = lieu === "gue" ? gue.ouie(position) : Infinity;
+      const bruits = message.bruits.filter((b) => !position || Math.hypot(b.x - position.x, b.z - position.z) <= ouie);
+      bruiteur.entendre(bruits);
+      for (const b of bruits) {
         if (position) ondes.ajouter(b.x, b.z, position, b.f, bruitAlarmant(b.g));
         if (b.porte && decorCoop && lieu === "cooperative") secouerPorte(decorCoop, b.porte);
       }
+      return;
+    }
+    // Le gué (chantier 11) : le radeau du bac, la cloche du passeur.
+    case "gue":
+      gue.recevoir(message);
       return;
     case "animaux":
       volaille.maj(message.animaux);
@@ -909,9 +945,13 @@ function recevoir(message: MessageServeur): void {
         if (message.actif) leurresActifs.add("radio");
         else leurresActifs.delete("radio");
         son.radioCompagnie(message.actif, ou);
-      } else if (message.actif) son.jouer(message.id === "klaxon" ? "klaxon" : "sonnette", ou);
+      } else if (message.actif) son.jouer(message.id === "klaxon" ? "klaxon" : message.id === "monte_sacs" || message.id === "babillard" || message.id === "borne" ? message.id : "sonnette", ou);
       return;
     }
+    // Reprendre une arme sur son meuble (plan 0.8, chantier 9) : l'étoile qui s'ajoute brille dans le sac.
+    case "arme_reprise":
+      hud.armeReprise(message.avant, message.apres, message.geste);
+      return;
     case "usure":
       hud.majUsure(message.usure, message.evenement, message.charge);
       if (message.evenement?.etat === "cassee") son.jouer("chute_corps", null, { gain: 0.5 });
@@ -927,8 +967,9 @@ function recevoir(message: MessageServeur): void {
       return;
     case "portes":
       portesCoop = message.portes;
-      if (decorCoop) majPortes(decorCoop, portesCoop, true);
-      son.jouer("geste_bois");
+      if (decorCoop && lieu === "cooperative") majPortes(decorCoop, portesCoop, true);
+      // La grande porte du Moulin grince (M6).
+      son.jouer(lieu === "moulin" ? "grande_porte" : "geste_bois");
       return;
     case "wotts":
       hud.majWotts(message.wotts);
@@ -986,6 +1027,15 @@ function recevoir(message: MessageServeur): void {
       hud.majProgression(message.progression);
       if (message.texte) hud.message(message.texte, "aide");
       hud.majIdees(message.progression.devoilees, message.nouvelles);
+      return;
+    // L'idée au ramassage d'une clé (plan 0.8) : un bandeau qui passe, ou qui se ferme d'un bouton, et un son court.
+    case "idee":
+      (bandeauIdee ??= new BandeauIdee(document.getElementById("hud")!)).montrer({ texte: message.texte, plusTard: message.plusTard, ...(message.objet ? { objet: message.objet } : {}) });
+      son.jouer("idee");
+      return;
+    // Un avertissement du carnet (plan 0.8, chantier 13 ; B14) : un bandeau fermé par son bouton « Compris ».
+    case "avertissement":
+      (bandeauAvertissement ??= new BandeauAvertissement(document.getElementById("hud")!)).montrer({ texte: message.texte, bouton: message.bouton, objet: message.id });
       return;
     case "lecons_possibles":
       lecons.choisir(message.a, message.recettes);
@@ -1124,7 +1174,7 @@ function majCercles(dt: number, allure: Allure, bouge: boolean, nuit: boolean): 
   const c = cerclesSignature({ x: position.x, z: position.z, allure, bouge, action: bruitAction, lumiere: portee ? (OBJETS[portee].lumiere ?? null) : null, nuit });
   // La pluie couvre le bruit (Book 13 §4) : le cercle rétrécit.
   c.son *= attenuationMeteo(meteo(Date.now() + decalage, debutMonde), "son");
-  const plan = lieu === "cooperative" ? planVue(lieu) : null;
+  const plan = lieu === "cooperative" || lieu === "moulin" ? planVue(lieu) : null;
   for (const [ligne, pieces, rayon] of [
     [cercleSon, cercleSonPieces, c.son],
     [cercleLumiere, cercleLumierePieces, c.lumiere],
@@ -1256,6 +1306,9 @@ hud.sourceFiche = (genre, id) => {
   return installations.get(id)?.vue ?? null;
 };
 hud.voisinsFiche = () => ({ installations: [...installations.values()].map((i) => i.vue), feux: [...feux.values()].map((f) => f.vue) });
+// Reprendre une arme sur son meuble (chantier 9) : les installations du terrain autour de soi.
+hud.alentoursReprise = () => (position && lieu === "terrain" ? { x: position.x, z: position.z, feux: [], installations: [...installations.values()].map((i) => i.vue), inventaire } : null);
+hud.outilsAPortee = () => (position && lieu === "terrain" ? outilsAPortee({ x: position.x, z: position.z, installations: [...installations.values()].map((i) => i.vue), inventaire }) : inventaire);
 // Le dialogue de départ dit si l'on part à l'abri (une nuit complète) ou s'il vaut mieux y aller d'abord.
 hud.aLAbri = () =>
   lieu === "terrain" && position !== null && [...installations.values()].some((i) => i.vue.type === "abri" && Math.hypot(i.vue.x - position!.x, i.vue.z - position!.z) <= 3);
@@ -1489,13 +1542,18 @@ function lampeDansLeNoir(l: (typeof LUMIERES_PORTEES)[keyof typeof LUMIERES_PORT
 
 /** Dans une pièce noire de la Coopérative (Book 23 §4.5) : il y fait nuit, même de jour. */
 function dansLeNoir(): boolean {
-  return lieu === "cooperative" && position !== null && sombreIci(position.x, position.z);
+  return position !== null && ((lieu === "cooperative" && sombreIci(position.x, position.z)) || (lieu === "moulin" && sombreMoulin(position.x, position.z)));
 }
 
 function sourcesDeLumiere(): SourceLumiere[] {
   const sources: SourceLumiere[] = [];
   for (const f of feux.values()) {
     const s = f.source();
+    if (s) sources.push(s);
+  }
+  // Les torches plantées qui brûlent (plan 0.8, chantier 6).
+  for (const i of installations.values()) {
+    const s = i.source(Date.now() + decalage);
     if (s) sources.push(s);
   }
   // La lampe des autres, la nuit : chaque famille a la sienne (Book 18 §4.2).
@@ -1506,6 +1564,7 @@ function sourcesDeLumiere(): SourceLumiere[] {
   }
   // Au Carrefour, la lumière électrique ne s'éteint jamais.
   if (lieu === "comptoir") sources.push(...lumieresComptoir());
+  if (lieu === "gue") sources.push(...gue.lumieres(estNuit(Number.isFinite(HEURE_FORCEE) ? HEURE_FORCEE : heureDeJeu(Date.now() + decalage, debutMonde)), position));
   const portee = lumierePortee(inventaire);
   if (lumiere && portee && position) {
     const genre = OBJETS[portee].lumiere!;
@@ -1574,9 +1633,12 @@ function boucle(instant: number): void {
     const immobile = enVoyage || carte.ouverte || hud.enPause;
     let allure = allureAutorisee(entree.allure, besoins, porteEscabeau() || traineTravois(inventaire));
     if (allure === "course" && endurance < SEUIL_EPUISE) allure = "marche";
+    if (allure === "course" && lieu === "gue" && gue.surLeRadier(position)) allure = "marche"; // le radier : on n'y court pas
     // On voulait courir, mais on marche : on dit pourquoi, et comment y remédier.
     if (entree.allure === "course" && allure !== "course" && Math.hypot(dx, dz) > 0.05) {
-      const raison = porteEscabeau()
+      const raison = lieu === "gue" && gue.surLeRadier(position)
+        ? "Sur le radier, on marche : le béton glisse sous l'eau qui court."
+        : porteEscabeau()
         ? "Les bras chargés, on ne court pas : pose d'abord l'escabeau."
         : aFaim(besoins)
           ? "Trop faible pour courir : tu as faim. Mange (Sac)."
@@ -1604,6 +1666,8 @@ function boucle(instant: number): void {
       fauneAmbiante.animer(dt, enVoyage ? null : qui, crierFaune);
     }
 
+    // Au gué, le radeau du bac emporte qui est à bord (le serveur fait de même).
+    if (lieu === "gue") position = gue.porter(position, Date.now() + decalage);
     const avant = position;
     // Saisi : ralenti ou immobilisé (le serveur fait de même).
     const frein = freinSaisie(saisi);
@@ -1644,12 +1708,19 @@ function boucle(instant: number): void {
     const decor = decors.get(lieu);
     // Les toits qui cachent le personnage s'effacent (à la halte et au Comptoir), selon l'angle de la caméra.
     if ((lieu === "station" || lieu === "comptoir") && decor) estomperToits(decor, position.x, position.z, dt, scene.angleCamera);
+    if (lieu === "gue" && decor) gue.animer(position, dt, scene.angleCamera, Date.now() + decalage, debutMonde);
     if (lieu === "cooperative" && decorCoop) {
       estomperCooperative(decorCoop, position.x, position.z, dt, scene.angleCamera);
       animerCooperative(decorCoop, dt);
       // La musique suit la profondeur : dehors, dedans, chambre froide (seul un changement est transmis).
       const piece = pieceDe(position.x, position.z);
       son.zone(piece === "chambre_froide" ? "froid" : piece === "dehors" || piece === "libre_service" ? "dehors" : "dedans");
+    }
+    // Le Moulin du Gué (0.8, chantier 12) : ses toits, sa grande porte, ce qu'on y a pris, les Éteints de la fosse.
+    if (lieu === "moulin" && decor) {
+      animerMoulin(decor, position.x, position.z, dt, scene.angleCamera, portesCoop, ressources.values(), eteints.values());
+      const piece = pieceMoulin(position.x, position.z);
+      son.zone(piece === "dehors" || piece === "jardin" ? "dehors" : "dedans");
     }
 
     majMode(dt);
@@ -1664,6 +1735,8 @@ function boucle(instant: number): void {
     // L'arc en main pendant qu'on vise, bras levé : le personnage bande (Book 25 §3.4).
     const arcVise = viseeEnCours?.pret.genre === "tir" && !viseeEnCours.pret.arme.armeeDAvance ? typeDe(viseeEnCours.pret.cle) : null;
     personnage.tenir(arcVise ?? (modeCombat ? armeEnMain(inventaire, armeEquipee).objet : undefined));
+    // Hors du combat, la fourche à foin se porte dans le dos (plan 0.8 §2.4, chantier 8).
+    personnage.porterDansLeDos(!modeCombat && !arcVise && armeEnMain(inventaire, armeEquipee).objet === "fourche_foin" ? "fourche_foin" : null);
     // L'appui gardé pendant le coup précédent part à la fin du geste : on enchaîne sans marteler.
     if (coupEnAttente !== null && performance.now() >= coupFiniLe) {
       const appuye = coupEnAttente;
@@ -1698,10 +1771,12 @@ function boucle(instant: number): void {
       besoins.repos,
       lieu === "terrain" ? volaille.places() : [],
       jourAffiche,
-      lieu === "cooperative" ? portesCoop : null,
+      lieu === "cooperative" || lieu === "moulin" ? portesCoop : null,
       leurresActifs,
       etatCoop,
     );
+    // Au gué : la cloche, haler ou rappeler le bac, examiner une balise (chantier 11).
+    if (lieu === "gue") propositions = gue.proposer(position, propositions, Date.now() + decalage, debutMonde);
     // Les déchets à portée de main (0.7) : la cible la plus proche l'emporte.
     const dechet = dechetsVue.proposer(position);
     if (dechet) {
@@ -1719,6 +1794,8 @@ function boucle(instant: number): void {
     }
     // La pièce visée bat avec l'anneau (son liseré), seulement si c'est bien elle qu'on vise.
     dechetsVue.cibler(dechet !== null && propositions === dechet.propositions);
+    // La fiche Examiner ouverte (plan 0.8 §9.2) : B la referme, le bouton tactile et l'invite le disent.
+    if (!modeCombat && hud.ficheOuverte) propositions = { ...propositions, B: { libelle: LIBELLE_FERMER_FICHE, examiner: "" } };
     hud.propositions(propositions, occupe, maintien?.tenu && occupe ? actionEnCours : null);
     if (pose.actif) {
       const genre = pose.actif.genre;
@@ -1782,7 +1859,7 @@ function boucle(instant: number): void {
   // s'il est vu (le serveur ne l'envoie déjà que dans ce cas : c'est la double sécurité, pendant qu'une porte s'ouvre).
   if (carteVue.actif && position) {
     carteVue.souvenir(scene.ciel.nuit, scene.ciel.obscurite);
-    carteVue.maj(scene.rendu, position.x, position.z, lieu === "cooperative" && decorCoop ? ouverturesPortes(decorCoop) : {});
+    carteVue.maj(scene.rendu, position.x, position.z, lieu === "cooperative" && decorCoop ? ouverturesPortes(decorCoop) : lieu === "moulin" ? portesCoop : {});
     for (const e of eteints.values()) e.objet.visible = carteVue.voit(position, e.objet.position.x, e.objet.position.z);
     for (const a of autres.values()) a.objet.visible = carteVue.voit(position, a.objet.position.x, a.objet.position.z);
   }
@@ -1797,9 +1874,11 @@ function boucle(instant: number): void {
   if (lieu === "comptoir") animerComptoir(dt);
   sang.animer(dt);
   // Le son du monde : Éteints, autres joueurs, feux, installations, pluie ; la nuit pour la musique.
+  // Sur le radier du gué, on n'entend plus les Éteints au-delà de 3 m (chantier 11).
+  const ouie = lieu === "gue" ? gue.ouie(position) : Infinity;
   bruiteur.eteints(
     dt,
-    [...eteints.entries()].map(([id, e]) => ({ id, x: e.objet.position.x, z: e.objet.position.z, etat: e.etat })),
+    [...eteints.entries()].map(([id, e]) => ({ id, x: e.objet.position.x, z: e.objet.position.z, etat: e.etat })).filter((e) => !position || Math.hypot(e.x - position.x, e.z - position.z) <= ouie),
     position,
     saisi,
     lieu === "cooperative",
@@ -1810,6 +1889,7 @@ function boucle(instant: number): void {
     installations: [...installations.values()].map((i) => ({ id: i.vue.id, type: i.vue.type, x: i.vue.x, z: i.vue.z, batteries: Object.values(i.vue.etat.batteries ?? {}).some((n) => (n ?? 0) > 0), sousTension: sousTension(i.vue) })),
     pluie: enVoyage ? 0 : temps.pluie,
     dehors: !(lieu === "station" && position !== null && dansLaBoutique(position.x, position.z)),
+    lieu: lieu === "gue" && !enVoyage ? gue.sons(position, Date.now() + decalage, debutMonde) : undefined,
   });
   if (position && !photo.actif) son.moment(estNuit(heure));
   rodeurs.animer(dt, scene.ciel.nuit, lieu === "terrain" && !enVoyage);

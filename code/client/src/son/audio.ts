@@ -21,10 +21,25 @@ interface ManifesteEffets {
 }
 const CLE_SON = "watt.son";
 
-export type LieuMusique = "terrain" | "halte" | "comptoir" | "cooperative";
+export type LieuMusique = "terrain" | "halte" | "comptoir" | "cooperative" | "gue" | "moulin";
+
+/** Les lieux dont la musique est livrée (leurs pièces, et leur conduite par le directeur). */
+type LieuJoue = "terrain" | "halte" | "comptoir" | "cooperative";
+
+/**
+ * 0.8 : le gué et le Moulin ont leur nom, pas encore leur ambiance (l'eau courante, le bief et la roue arrêtée : à la
+ * session musique). En attendant, le gué joue la halte, le Moulin la Coopérative. Retirer la ligne quand les pièces
+ * du lieu sont livrées (et les ajouter à PIECES et au directeur).
+ */
+const EN_ATTENDANT: Record<Exclude<LieuMusique, LieuJoue>, LieuJoue> = { gue: "halte", moulin: "cooperative" };
+
+/** Le lieu dont on joue la musique. */
+function lieuJoue(lieu: LieuMusique): LieuJoue {
+  return lieu in EN_ATTENDANT ? EN_ATTENDANT[lieu as keyof typeof EN_ATTENDANT] : (lieu as LieuJoue);
+}
 
 /** Les pièces de chaque lieu (musique/LIVRAISON.md §3). */
-const PIECES: Record<LieuMusique, { bpm: number; fond?: string; vie: string; tension?: string; danger?: string }> = {
+const PIECES: Record<LieuJoue, { bpm: number; fond?: string; vie: string; tension?: string; danger?: string }> = {
   terrain: { bpm: 84, fond: "fond-jour", vie: "vie-jour", tension: "tension", danger: "danger" },
   halte: { bpm: 84, fond: "fond-halte", vie: "explo-halte", tension: "tension-halte", danger: "danger-halte" },
   comptoir: { bpm: 96, vie: "comptoir" },
@@ -194,11 +209,12 @@ export class Sonorisation {
     this.pret = false;
     // Le directeur part de « dehors » ; la boucle du jeu redonne la zone réelle dès que la musique joue.
     this.zoneActuelle = "dehors";
-    const p = PIECES[v.lieu];
+    const joue = lieuJoue(v.lieu);
+    const p = PIECES[joue];
     const m = new MoteurAudio(ctx, {
       bpm: p.bpm,
       voixMax: this.mobile ? 24 : 48,
-      directeur: { lieu: v.lieu, attendreFeu: v.attendreFeu && v.lieu === "terrain" },
+      directeur: { lieu: joue, attendreFeu: v.attendreFeu && v.lieu === "terrain" },
     });
     m.regler("general", this.coupe ? 0 : 1);
     // Les effets passent tout de suite par ce moteur, même si la musique n'est pas encore chargée.

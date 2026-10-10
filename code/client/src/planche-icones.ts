@@ -1,17 +1,23 @@
 // La planche des icônes (développement) : toutes les icônes du sac, à la taille du sac (48 px) et à celle des listes
 // (28 px), groupées par famille ; un objet resté à l'icône générique est en pointillés, une ordure (valeur 0, que le
 // Comptoir ne reprend pas) est grisée comme dans le sac. En tête, les pictogrammes des familles. Ouvrir /icones.html.
+// Les nouveautés de la 0.8 (le niveau 1) ont leur groupe, avec en plus une icône agrandie (96 px) pour juger le dessin :
+// /icones.html#niveau 1.
 
 import { OBJETS, type TypeObjet } from "../../commun/src/objets.ts";
 import { NOMS_FAMILLES_VESTIGES, definitionVestige, estOrdure, type FamilleVestige } from "../../commun/src/vestiges.ts";
 import { estDessinee, icone, iconeFamille, type Pictogramme } from "./icones.ts";
 import { NOMS_INSTALLATIONS, type TypeInstallation } from "../../commun/src/recettes.ts";
+import { NOUVEAUX_OBJETS_0_8 } from "../../commun/src/objets-niveau1.ts";
 
 // Toutes les installations, celles du métier des familles comprises (Book 25).
 const INSTALLATIONS: Pictogramme[] = ["feu_de_camp", "poches", ...(Object.keys(NOMS_INSTALLATIONS) as TypeInstallation[])];
 
-const groupes = new Map<string, Pictogramme[]>();
+/** Le groupe des nouveautés de la 0.8 : les objets créés, ceux dont le dessin a changé, les deux installations nouvelles. */
+const NIVEAU_1 = "Niveau 1 (0.8)";
+const groupes = new Map<string, Pictogramme[]>([[NIVEAU_1, [...NOUVEAUX_OBJETS_0_8, "baton_fouir", "jerrican", "ratelier_outils", "torche_plantee"]]]);
 for (const type of Object.keys(OBJETS) as TypeObjet[]) {
+  if (NOUVEAUX_OBJETS_0_8.includes(type)) continue;
   const v = definitionVestige(type);
   const cle = v ? `Vestiges : ${NOMS_FAMILLES_VESTIGES[v.famille as FamilleVestige] ?? v.famille}` : "Objets";
   groupes.set(cle, [...(groupes.get(cle) ?? []), type]);
@@ -55,8 +61,9 @@ for (const [titre, types] of groupes) {
     else generiques++;
     const d = document.createElement("div");
     d.className = `case${propre ? "" : " generique"}${estOrdure(type) && !enCouleurs ? " ordure" : ""}`;
-    const nom = type in OBJETS ? OBJETS[type as TypeObjet].nom : type;
-    d.innerHTML = `${v ? `<span class="rarete">${v.rarete}</span>` : ""}<span class="petite">${icone(type, 28)}</span>${icone(type, 48)}<small>${nom}</small>`;
+    const nom = type in OBJETS ? OBJETS[type as TypeObjet].nom : type in NOMS_INSTALLATIONS ? NOMS_INSTALLATIONS[type as TypeInstallation] : type;
+    const grande = titre === NIVEAU_1 ? `<span class="grande">${icone(type, 96)}</span>` : "";
+    d.innerHTML = `${v ? `<span class="rarete">${v.rarete}</span>` : ""}<span class="petite">${icone(type, 28)}</span>${grande}${icone(type, 48)}<small>${nom}</small>`;
     grille.append(d);
   }
   planche.append(h, grille);

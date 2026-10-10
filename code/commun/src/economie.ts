@@ -3,7 +3,8 @@
 // Valeurs de réglage, à caler pendant le test (Book 07 §3.6).
 
 import { REGLAGES } from "./reglages.ts";
-import type { Inventaire, TypeObjet } from "./objets.ts";
+import { LIEUX, minuscule, type LieuId } from "./lieux.ts";
+import { OBJETS, type Inventaire, type TypeObjet } from "./objets.ts";
 import { energieGrise } from "./recettes.ts";
 import { etoilesDe, facteurs, typeDe, type CleObjet } from "./etoiles.ts";
 
@@ -14,15 +15,66 @@ import { etoilesDe, facteurs, typeDe, type CleObjet } from "./etoiles.ts";
 /** Prix plancher des ressources de base : toujours rachetées à au moins 0,5× (Book 07 §4.3). */
 export const PLANCHER = 0.5;
 export const RESSOURCES_DE_BASE: TypeObjet[] = ["branche", "buche", "pierre", "baies", "conserve"];
-/** Ce que les Compteurs ne rachètent pas. */
-const INVENDABLES: TypeObjet[] = ["sac_a_dos"];
+/**
+ * Ce que les Compteurs ne rachètent pas. Plan 0.8 (§2.5, chantier 10) : les pièces de famille ne s'y vendent pas
+ * (chacun trouve la sienne à la station, et elle revient pour lui) ; elles n'entrent donc jamais dans son stock.
+ */
+const INVENDABLES: TypeObjet[] = ["sac_a_dos", "panneau_solaire", "enclume_depanneur", "petit_alternateur"];
+
+// ---------- Les clés de L1 au Comptoir (plan 0.8, chantier 10 ; avis du game designer, règle 6 et Q4 ; Q-0.8-12) ----------
+
+/**
+ * Le prix des clés de L1 : « une soupape, pas un raccourci ». Il vaut **deux allers-retours de travail** jusqu'à leur
+ * lieu. Un aller-retour à la Coopérative (ou au Moulin, à la même distance, B16) : 2 × 5 km, à 60 kcal/km à vide et
+ * ≈ 85 chargé, plus la visite, soit ≈ 720 kcal. Le Comptoir paie déjà la calorie 0,24 wott (la conserve : 400 kcal
+ * pour 96 wotts ; son pédalier : 60 wotts pour 250 kcal) : deux allers-retours ≈ 1 450 kcal ≈ **350 wotts**. Le
+ * temps et le risque de la route ne sont pas comptés : c'est ce que le joueur pressé achète. Le porteur l'a monté à
+ * **500 wotts** (2026-10-10 : « ça me semble encore abordable »). Il les **rachète 90
+ * wotts** (≈ un aller simple) : la chance d'un joueur devient un peu de richesse, sans faire de la Coopérative une
+ * mine de wotts (trois clés par jour, 270 wotts, pour ≈ 180 wotts de vivres et le combat).
+ */
+export const PRIX_CLES_L1 = { vente: 500, rachat: 90 } as const;
+
+/** Les clés de L1 et leur lieu : le Comptoir ne les vend qu'à qui y est déjà allé (le fait `visite:<lieu>`). */
+export const LIEU_DES_CLES: Partial<Record<TypeObjet, LieuId>> = {
+  grillage_rouleau: "cooperative",
+  cocotte_fonte: "cooperative",
+  seau_10l: "cooperative",
+  toile_jute: "moulin",
+  feuillards: "moulin",
+  etau: "moulin",
+};
+
+/**
+ * Le Comptoir refuse-t-il de vendre cet objet à ce joueur ? Une clé de L1 ne se vend qu'après une première visite de
+ * son lieu (plan 0.8 §2.2 : la quatrième source d'une clé). Renvoie la phrase du refus, ou null.
+ */
+export function refusVenteCle(type: TypeObjet, faits: Readonly<Record<string, number>>): string | null {
+  const lieu = LIEU_DES_CLES[type];
+  if (!lieu || (faits[`visite:${lieu}`] ?? 0) > 0) return null;
+  return `« ${OBJETS[type].nom.charAt(0).toUpperCase()}${OBJETS[type].nom.slice(1)} ? Va d'abord voir ${minuscule(LIEUX[lieu].nom)} : on en reparlera. » Les Compteurs ne vendent une clé qu'à qui connaît son lieu.`;
+}
+
+/**
+ * L'étal du Comptoir tel qu'un joueur le voit (plan 0.8 §9.2, chantier 13) : les clés de L1 dont il n'a pas visité le
+ * lieu en sont **absentes** (pas grisées) ; tout le reste, tel quel. Le serveur l'applique à chaque vue qu'il envoie.
+ */
+export function etalPour(stock: Inventaire, faits: Readonly<Record<string, number>>): Inventaire {
+  const etal: Inventaire = {};
+  for (const [cle, n] of Object.entries(stock) as [CleObjet, number][]) {
+    const lieu = LIEU_DES_CLES[typeDe(cle)];
+    if (!lieu || (faits[`visite:${lieu}`] ?? 0) > 0) etal[cle] = n;
+  }
+  return etal;
+}
 
 export function prixBase(type: TypeObjet): number {
   return energieGrise(type);
 }
 
-/** Ce que coûte un objet au comptoir. */
+/** Ce que coûte un objet au comptoir (une clé de L1 : PRIX_CLES_L1). */
 export function prixVente(type: TypeObjet): number {
+  if (LIEU_DES_CLES[type]) return PRIX_CLES_L1.vente;
   return Math.max(1, Math.round(prixBase(type) * (1 + REGLAGES.prix_fourchette)));
 }
 
@@ -32,6 +84,7 @@ export function prixVente(type: TypeObjet): number {
  */
 export function prixAchat(type: TypeObjet, tresorerieBasse: boolean): number | null {
   if (INVENDABLES.includes(type)) return null;
+  if (LIEU_DES_CLES[type]) return tresorerieBasse ? null : PRIX_CLES_L1.rachat;
   const base = prixBase(type);
   if (base <= 0) return null;
   if (tresorerieBasse) return RESSOURCES_DE_BASE.includes(type) ? Math.max(1, Math.round(base * PLANCHER * 10) / 10) : null;
@@ -127,6 +180,16 @@ export const STOCK_DE_BASE: Inventaire = {
   // L'arbrier et la brouette demandent de scier le bois, et seuls les Mécanistes partent avec une scie (0.7,
   // chantier 6) : sans elle, celui qui les apprend d'un Mécaniste ou d'un manuel ne pouvait jamais les faire.
   scie: 1,
+  // Plan 0.8 (B13) : le filet du bois et de la pierre, au prix de vente (19 et 7 wotts) : 190 wotts les 10 bûches.
+  buche: 10,
+  pierre: 10,
+  // Plan 0.8 (chantier 10) : une clé de L1 de chaque, en stock limité, vendue après une première visite de son lieu.
+  grillage_rouleau: 1,
+  cocotte_fonte: 1,
+  seau_10l: 1,
+  toile_jute: 1,
+  feuillards: 1,
+  etau: 1,
 };
 /** Un objet du stock de base revient toutes les deux heures réelles, jusqu'au niveau de départ. */
 export const REASSORT_MS = 2 * 3_600_000;

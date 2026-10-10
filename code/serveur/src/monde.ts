@@ -3,7 +3,7 @@
 
 import { monitorEventLoopDelay } from "node:perf_hooks";
 import type { WebSocket } from "ws";
-import { FERMETURE_INACTIF, FERMETURE_REMPLACE, type MessageClient, type MessageServeur } from "../../commun/src/messages.ts";
+import { FERMETURE_INACTIF, FERMETURE_JETON_REFUSE, FERMETURE_REMPLACE, type MessageClient, type MessageServeur } from "../../commun/src/messages.ts";
 import { TICK_HZ } from "../../commun/src/regles.ts";
 import { REGLAGES, reglagesChanges, type Reglages } from "../../commun/src/reglages.ts";
 import type { Base, Compte } from "./base.ts";
@@ -13,6 +13,8 @@ import { Echanges } from "./echange.ts";
 import { Lecons } from "./lecon.ts";
 import { Cooperatives } from "./cooperative.ts";
 import { Halte } from "./halte.ts";
+import { Gue } from "./gue.ts";
+import { Moulins } from "./moulin.ts";
 import { Joueur } from "./joueur.ts";
 import { diffuserPresences, type MemoirePresences } from "./presences.ts";
 import { messageValide } from "./controle.ts";
@@ -54,6 +56,9 @@ export class Monde {
   private readonly comptoir: Comptoir;
   /** Les Coopératives, une par joueur (Book 23), chargées à la demande. */
   private readonly cooperatives: Cooperatives;
+  /** 0.8, la route B : le Gué-aux-Saules, partagé comme la halte ; les Moulins du Gué, un par joueur. */
+  private readonly gue: Gue;
+  private readonly moulins: Moulins;
   /** Les échanges entre joueurs (É4, lot 3). */
   private readonly echanges = new Echanges((id) => this.connexions.get(id)?.joueur);
   /** Les leçons entre joueurs de familles différentes (Book 25 §2.3). */
@@ -77,6 +82,8 @@ export class Monde {
     this.halte = new Halte(base);
     this.comptoir = new Comptoir(base);
     this.cooperatives = new Cooperatives(base);
+    this.gue = new Gue(base);
+    this.moulins = new Moulins(base);
   }
 
   demarrer(): void {
@@ -132,7 +139,7 @@ export class Monde {
     try {
       // Un nouveau joueur apporte sa dotation à la trésorerie du comptoir (Book 07 §3.6).
       this.comptoir.doter();
-      joueur = new Joueur(compte, this.base, (m) => envoyer(socket, m), Date.now, this.halte, Math.random, this.comptoir, this.cooperatives);
+      joueur = new Joueur(compte, this.base, (m) => envoyer(socket, m), Date.now, this.halte, Math.random, this.comptoir, this.cooperatives, this.gue, this.moulins);
     } catch (erreur) {
       journal(`Impossible de charger ${compte.pseudo} : ${String(erreur)}`);
       socket.close(1011, "Personnage introuvable");
@@ -197,6 +204,8 @@ export class Monde {
     this.dernierTick = instant;
     this.halte.tick(Date.now(), dt);
     this.cooperatives.tick(Date.now(), dt);
+    this.gue.tick(Date.now(), dt);
+    this.moulins.tick(Date.now(), dt);
     this.echanges.verifier();
     this.lecons.verifier();
     if (instant - this.dernieresPresences >= INTERVALLE_PRESENCES) {
@@ -265,8 +274,8 @@ export class Monde {
         envoyer: (m: MessageServeur) => joueur.envoyer(m),
       })),
       this.memoirePresences,
-      // À la halte, les murs de la boutique arrêtent la vue (0.7.2).
-      (lieu, a, b) => lieu !== "station" || this.halte.voitEntre(a, b),
+      // À la halte, les murs de la boutique arrêtent la vue (0.7.2) ; au gué, ceux de son plan de vue s'il en a un (0.8).
+      (lieu, a, b) => (lieu === "station" ? this.halte.voitEntre(a, b) : lieu === "gue" ? this.gue.voitEntre(a, b) : true),
     );
   }
 
@@ -287,6 +296,30 @@ export class Monde {
     this.base.transaction(() => {
       for (const { joueur } of this.connexions.values()) joueur.sauvegarder();
     });
+  }
+
+  // ---------- La page d'administration (P-014, admin-web.ts) : la mémoire du serveur, en lecture, et la déconnexion ----------
+
+  /** Les joueurs connectés à l'instant (pas d'historique, pas de pic) : qui, de quelle famille, dans quel lieu. */
+  connectes(): { id: number; pseudo: string; famille: Compte["famille"]; lieu: string }[] {
+    return [...this.connexions.values()].map(({ joueur }) => ({ id: joueur.compte.id, pseudo: joueur.compte.pseudo, famille: joueur.compte.famille, lieu: joueur.lieu }));
+  }
+
+  /**
+   * Déconnecte un joueur depuis la page d'administration : son état est sauvegardé d'abord (comme à un départ), puis
+   * la connexion est fermée comme un jeton refusé (le client revient à l'écran de connexion). `oublier` : le compte
+   * va être supprimé, sa Coopérative chargée en mémoire est lâchée sans être réécrite. Renvoie true s'il était connecté.
+   */
+  deconnecter(compteId: number, oublier = false): boolean {
+    const connexion = this.connexions.get(compteId);
+    if (connexion) {
+      this.quitter(compteId);
+      connexion.socket.close(FERMETURE_JETON_REFUSE, "Session fermée");
+    }
+    this.aSauver = this.aSauver.filter((id) => id !== compteId);
+    if (oublier) this.cooperatives.oublier(compteId);
+    if (oublier) this.moulins.oublier(compteId);
+    return connexion !== undefined;
   }
 }
 

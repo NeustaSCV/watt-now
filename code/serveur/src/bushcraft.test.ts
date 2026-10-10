@@ -3,6 +3,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { toutDevoile } from "../../commun/src/progression.ts";
 import { armeEnMain } from "../../commun/src/combat.ts";
 import { nouvelEteint } from "../../commun/src/eteints.ts";
 import type { MessageServeur } from "../../commun/src/messages.ts";
@@ -15,6 +16,9 @@ import { Joueur } from "./joueur.ts";
 function monter(inventaire: Record<string, number>, avant?: (base: Base, id: number) => void, alea = () => 0.9) {
   const base = new Base(":memory:");
   const compte = base.creerCompte("Rose", "potager42", "mecanistes");
+  // Ces tests portent sur autre chose que l'arbre de progression : tout est dévoilé (plan 0.8 : le vétéran n'a plus
+  // d'emblée que les recettes à la main).
+  base.sauverProgression(compte.id, toutDevoile("mecanistes"));
   base.sauverInventaire(compte.id, { sac_a_dos: 1, ...inventaire });
   avant?.(base, compte.id);
   let instant = base.debutMonde() + 60_000;

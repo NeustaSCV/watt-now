@@ -11,7 +11,7 @@ import type { Famille } from "./regles.ts";
 import type { InstallationVue } from "./messages.ts";
 import { estOrdure, valeursVestiges } from "./vestiges.ts";
 import { compter, estObjetDeMetier, etoilesDeBase, maillonFaible, typeDe, type Etoiles } from "./etoiles.ts";
-import { SURCOUT_AUTRE_FAMILLE } from "./lignees.ts";
+import { SURCOUT_AUTRE_FAMILLE, type AVenir, type FormeFeu } from "./lignees.ts";
 import { RECETTES_COMMUNES } from "./recettes/communes.ts";
 import { RECETTES_CHARBONNIERS } from "./recettes/charbonniers.ts";
 import { RECETTES_MECANISTES } from "./recettes/mecanistes.ts";
@@ -31,7 +31,10 @@ export type Qualite =
   | "saisir_chaud"
   | "tailler_bois"
   | "trancher_metal"
-  | "elaguer";
+  | "elaguer"
+  // Le niveau 2 (plan 0.8, Q-0.8-21) : déclarées d'avance, sans usage en 0.8.
+  | "raboter"
+  | "souder";
 
 export const NOMS_QUALITES: Record<Qualite, string> = {
   couper: "Couper",
@@ -45,9 +48,14 @@ export const NOMS_QUALITES: Record<Qualite, string> = {
   tailler_bois: "Tailler le bois",
   trancher_metal: "Trancher le métal",
   elaguer: "Élaguer",
+  raboter: "Raboter",
+  souder: "Souder",
 };
 
-/** Qualités apportées par chaque objet, avec leur niveau (1 à 3). */
+/**
+ * Qualités apportées par chaque objet, avec leur niveau (1 à 3). Plan 0.8 §2.1 : les outils sont des portes dures, et
+ * les objets de fortune donnent le niveau 1 de leur qualité (le tableau `outils` de la v5).
+ */
 export const QUALITES_OBJETS: Partial<Record<TypeObjet, Partial<Record<Qualite, number>>>> = {
   couteau: { couper: 1, visser: 1 },
   couteau_aiguise: { couper: 2, visser: 1 },
@@ -56,7 +64,8 @@ export const QUALITES_OBJETS: Partial<Record<TypeObjet, Partial<Record<Qualite, 
   marteau: { marteler: 2 },
   hache: { fendre: 3, couper: 1 },
   tete_hache: { fendre: 1 },
-  cle_plate: { serrer: 2 },
+  // La clé de 13 serre, et sa tête frappe comme un marteau de fortune (plan 0.8 : Marteler 1).
+  cle_plate: { serrer: 2, marteler: 1 },
   tournevis: { visser: 2 },
   scie: { scier_bois: 2 },
   baton_fouir: { creuser: 1 },
@@ -75,34 +84,59 @@ export const QUALITES_OBJETS: Partial<Record<TypeObjet, Partial<Record<Qualite, 
   glaive: { couper: 2 },
   ciseau_bois: { tailler_bois: 2 },
   burin: { trancher_metal: 1 },
+  // Les objets de fortune (plan 0.8 §2.1, chantier 1) : ce qu'on trouve dans les déchets et les vestiges donne le
+  // niveau 1. Marteler : le cric, la ferraille tordue. Couper : le morceau de verre, la lame ébréchée, le couvercle
+  // d'une boîte de conserve, le sécateur. Visser : un fer plat (la lame ébréchée). Creuser : l'enjoliveur, la casserole.
+  // Trancher le métal : la lime usée.
+  cric: { marteler: 1 },
+  ferraille_tordue: { marteler: 1 },
+  verre: { couper: 1 },
+  lame_ebrechee: { couper: 1, visser: 1 },
+  boite_vide: { couper: 1 },
+  secateur: { couper: 1 },
+  enjoliveur: { creuser: 1 },
+  casserole: { creuser: 1 },
+  lime_usee: { trancher_metal: 1 },
+  // 0.8 : les objets nouveaux (plan 0.8, chantier 3 ; tableau `outils` de la v5). Les objets de fortune donnent le
+  // niveau 1 de leur qualité ; le marteau de fortune, une barre repliée, tape comme un marteau. La tête de marteau
+  // remmanchée (I10) est le `marteau` (Marteler 2), déjà plus haut. L'étau, lui, ne serre pas dans le sac (décision du
+  // porteur, 2026-10-10) : boulonné sur l'établi, il en fait l'établi à étau, qui serre fort (QUALITES_POSTES).
+  serre_joint_fortune: { serrer: 1 },
+  scie_fortune: { scier_bois: 1 },
+  marteau_fortune: { marteler: 2 },
+  coin_bois: { fendre: 1 },
+  baton_fouir_durci: { creuser: 1 },
 };
 
-/** Le meilleur niveau d'une qualité parmi les objets portés (0 si aucun). */
+/**
+ * Les postes de travail qui comptent comme un outil quand on est à côté (plan 0.8, chantier 6) : l'établi à étau serre
+ * fort (Serrer 3). Ils ne sont jamais dans le sac : `outilsAPortee` (outils-a-portee.ts) les ajoute aux outils portés,
+ * sous la clé `poste:<id>`, quand on est à 3 m.
+ */
+export const QUALITES_POSTES: Readonly<Record<string, { nom: string; qualites: Partial<Record<Qualite, number>> }>> = {
+  "poste:etabli_etau": { nom: "un établi à étau (à 3 m)", qualites: { serrer: 3 } },
+};
+
+/** Le meilleur niveau d'une qualité parmi les objets portés (0 si aucun), et les postes à portée s'il y en a. */
 export function niveauQualite(inventaire: Inventaire, qualite: Qualite): number {
   let meilleur = 0;
   for (const [type, n] of Object.entries(inventaire)) {
     if (!n) continue;
     // Un exemplaire étoilé (« lame_forgee#4 ») a les qualités de son objet.
-    meilleur = Math.max(meilleur, QUALITES_OBJETS[typeDe(type)]?.[qualite] ?? 0);
+    meilleur = Math.max(meilleur, (QUALITES_OBJETS[typeDe(type)] ?? QUALITES_POSTES[type]?.qualites)?.[qualite] ?? 0);
   }
   return meilleur;
 }
 
 /**
- * Règle du Book 03 §4 : un niveau en dessous, malus (temps ×1,5) ; deux niveaux en dessous ou aucun outil, impossible.
- * Renvoie le multiplicateur de durée, ou null si c'est impossible.
+ * Les outils sont des portes dures (plan 0.8 §2.1) : il faut le niveau demandé, dans le sac. Plus de malus d'un niveau
+ * en dessous (Book 03 §4, avant la 0.8). Renvoie le multiplicateur de durée (1), ou null si un outil manque.
  */
 export function multiplicateurQualites(inventaire: Inventaire, demandees: Partial<Record<Qualite, number>>): number | null {
-  let facteur = 1;
   for (const [q, niveau] of Object.entries(demandees)) {
-    const possede = niveauQualite(inventaire, q as Qualite);
-    // Sans aucun outil de cette qualité, impossible : ne rien avoir n'est pas un outil de fortune.
-    if (possede === 0) return null;
-    const ecart = (niveau ?? 0) - possede;
-    if (ecart >= 2) return null;
-    if (ecart === 1) facteur *= 1.5;
+    if (niveauQualite(inventaire, q as Qualite) < (niveau ?? 0)) return null;
   }
-  return facteur;
+  return 1;
 }
 
 // ---------- Recettes ----------
@@ -135,7 +169,10 @@ export type TypeInstallation =
   | "machoires_fortune"
   | "piege_machoires"
   | "fosse_pieux"
-  | "tour_perche";
+  | "tour_perche"
+  // Le niveau 1 (plan 0.8, chantier 6) : déclarés d'avance par le chantier 1.
+  | "ratelier_outils"
+  | "torche_plantee";
 
 export const NOMS_INSTALLATIONS: Record<TypeInstallation, string> = {
   etabli: "établi",
@@ -143,8 +180,8 @@ export const NOMS_INSTALLATIONS: Record<TypeInstallation, string> = {
   coffre: "coffre",
   charbonniere: "meule de charbonnière",
   forge: "foyer de forge",
-  pedalier: "pédalier universel",
-  banc_recharge: "banc de recharge",
+  pedalier: "pédalier générateur",
+  banc_recharge: "banc solaire",
   panneau_solaire: "petit panneau solaire",
   escabeau: "escabeau",
   recuperateur_pluie: "récupérateur de pluie",
@@ -162,10 +199,12 @@ export const NOMS_INSTALLATIONS: Record<TypeInstallation, string> = {
   piege_machoires: "piège à mâchoires",
   fosse_pieux: "fosse à pieux",
   tour_perche: "tour à perche",
+  ratelier_outils: "râtelier à outils",
+  torche_plantee: "torche plantée",
 };
 
 /** Les petites installations : on peut les poser plus près des autres (un lit à côté de l'abri, une alarme le long du chemin). */
-export const PETITES_INSTALLATIONS: readonly string[] = ["lit_branchages", "alarme_boites", "alarme_electrique", "collet", "plaque_choc", "machoires_fortune", "piege_machoires"];
+export const PETITES_INSTALLATIONS: readonly string[] = ["lit_branchages", "torche_plantee", "alarme_boites", "alarme_electrique", "collet", "plaque_choc", "machoires_fortune", "piege_machoires"];
 
 /** Intensité du travail (Book 02 §2), en kcal par heure de jeu. */
 export const INTENSITES = { legere: 150, moyenne: 250, lourde: 350, tres_lourde: 500 } as const;
@@ -185,8 +224,30 @@ export const CATEGORIES_RECETTES: readonly { id: CategorieRecette; nom: string; 
   { id: "ateliers", nom: "Ateliers", long: "Ateliers : fabriquer, produire" },
 ];
 
+/**
+ * Où se fait une recette (plan 0.8, chantier 1 ; `recettes-par-construction.md`) :
+ * - `main` : assis par terre, avec ce qu'on porte ;
+ * - `posee` : la construction elle-même, racine d'une lignée (elle se pose sur le terrain) ;
+ * - `construction` : à côté d'une construction qu'on possède au bon niveau (2,5 m pour un feu, 3 m pour le reste).
+ *   `construction` : le type d'installation, ou « feu » pour un foyer ; `niveau` : le niveau minimal dans sa lignée ;
+ *   `formes` : pour un feu, les formes qui conviennent (le foyer de pierres, le Dakota…) ; `accessoire` : un accessoire
+ *   monté sur la construction (le bac de trempe de la forge : « bac » ; « huile » : celle du bac, ou la graisse du sac ;
+ *   les noms sont dans `lieu-recette.ts`, `NOMS_ACCESSOIRES`).
+ * Il remplace `installation`, `feu`, `feuNiveau` et les listes cachées de `recettes/charbonniers.ts`
+ * (`FORGE_VENTILEE_REQUISE`, `HUILE_REQUISE`). Les données s'écrivent avec `recettes/lieux.ts` ; le serveur juge avec
+ * `refusLieu` (`lieu-recette.ts`).
+ */
+export type LieuRecette =
+  | { genre: "main" }
+  | { genre: "posee" }
+  | { genre: "construction"; construction: TypeInstallation | "feu"; niveau?: number; formes?: readonly FormeFeu[]; accessoire?: string };
+
 export interface Recette {
   id: string;
+  /** Où elle se fait (plan 0.8, chantier 1) : à la main, posée, ou à une construction. */
+  lieu: LieuRecette;
+  /** Pas encore jouable : grisée « plus tard », avec sa clé « à trouver plus loin » (plan 0.8 §1.3). */
+  aVenir?: AVenir;
   /** Son onglet dans le panneau Fabriquer. */
   categorie: CategorieRecette;
   nom: string;
@@ -196,12 +257,12 @@ export interface Recette {
   sousProduits?: Inventaire;
   ingredients: Inventaire;
   qualites: Partial<Record<Qualite, number>>;
-  /** Installation à proximité nécessaire. */
-  installation?: TypeInstallation;
-  /** Il faut un feu allumé tout près (la cuisine, 2026-10-08). */
-  feu?: true;
-  /** Le foyer doit savoir le cuire (Book 24 §3.1) : 3 pour les mijotés (la crémaillère du foyer de cuisine). Absent : 1. */
-  feuNiveau?: number;
+  /**
+   * L'installation à côté de laquelle elle se fait. **Dérivée de `lieu`** quand `RECETTES` est assemblée : on ne l'écrit
+   * jamais dans les données. Gardée pour ce qui la lit encore (progression.ts, rythme.ts, trouvables.ts) ; à retirer
+   * quand ils liront `lieu` (fonction `installationDuLieu`).
+   */
+  readonly installation?: TypeInstallation;
   /** De l'eau prise dans la gourde, en litres (elle bout : celle de la mare suffit). */
   eau?: number;
   /** Le bois que la cuisson prend au foyer, en kg (moitié moins avec la marmite norvégienne). */
@@ -219,6 +280,8 @@ export interface Recette {
    * fabriquer (Book 25 §4.2 : le maillon faible). Absent : les étoiles de base de l'objet. Rempli par les chantiers 4 à 7.
    */
   facteursEtoiles?: (inventaire: Inventaire, contexte?: ContexteFabrication) => number[];
+  /** Une phrase de plus sur la fiche de la recette (plan 0.8, chantier 8 : la petite batterie unique, Q-B6). */
+  note?: string;
 }
 
 /**
@@ -231,6 +294,18 @@ export interface ContexteFabrication {
 
 /** Toutes les recettes : les communes, puis celles de chaque famille (Book 25 §10.4). */
 export const RECETTES: Recette[] = [...RECETTES_COMMUNES, ...RECETTES_CHARBONNIERS, ...RECETTES_MECANISTES, ...RECETTES_VOLTAIQUES];
+for (const r of RECETTES) poserInstallation(r);
+
+/** L'installation d'à côté, lue dans le lieu (« feu » n'en est pas une : c'est un foyer). */
+export function installationDuLieu(lieu: LieuRecette): TypeInstallation | undefined {
+  return lieu.genre === "construction" && lieu.construction !== "feu" ? lieu.construction : undefined;
+}
+
+/** Le champ dérivé `installation` (voir `Recette.installation`), posé sur la recette elle-même. */
+function poserInstallation(r: Recette): void {
+  const installation = installationDuLieu(r.lieu);
+  if (installation) (r as { installation?: TypeInstallation }).installation = installation;
+}
 
 /**
  * Combien de secondes réelles dure une fabrication (décision du 2026-10-08) : le travail est condensé

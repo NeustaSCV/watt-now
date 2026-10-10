@@ -85,6 +85,9 @@ export const ZONES_DECHETS: Record<Exclude<LieuJouable, "terrain">, readonly Zon
     { ...rect(PIECES.bureaux.boite), type: "interieur", densite: 2.5 },
     { ...rect(PIECES.chambre_froide.boite), type: "interieur", densite: 2 },
   ],
+  // 0.8 : le gué et le Moulin, branchés vides (chantier 4) ; leurs chantiers (11, 12) y mettront leurs zones.
+  gue: [],
+  moulin: [],
 };
 
 // ---------- La disposition ----------
@@ -100,6 +103,8 @@ export interface EmplacementDechets {
   o: number;
   /** Combien de pièces dans l'amas (au sol). */
   n: number;
+  /** Ce qu'un conteneur contient à coup sûr, en plus de son tirage, à son premier remplissage (plan 0.8, I28). */
+  garanti?: Inventaire;
 }
 
 /** Une pièce : un objet du catalogue, posé dans un amas ou rangé dans un conteneur. */
@@ -120,9 +125,9 @@ export function cleCarreau(cx: number, cz: number): string {
   return `${cx},${cz}`;
 }
 
-/** La clé de la couche d'un lieu : partagée (« station »), ou à un joueur (« cooperative:12 », « terrain:12 »). */
+/** La clé de la couche d'un lieu : partagée (« station », « gue »), ou à un joueur (« cooperative:12 », « terrain:12 »). */
 export function cleCouche(lieu: LieuJouable, compteId: number): string {
-  return lieu === "station" || lieu === "comptoir" ? lieu : `${lieu}:${compteId}`;
+  return lieu === "station" || lieu === "comptoir" || lieu === "gue" ? lieu : `${lieu}:${compteId}`;
 }
 
 /** Le lieu d'une clé de couche. */
@@ -203,12 +208,19 @@ function dispositionZones(cle: string, lieu: Exclude<LieuJouable, "terrain">): M
 }
 
 /**
+ * Le premier sac-poubelle du chemin, sur le terrain (plan 0.8, I28) : 4 sacs plastique, en plus de son tirage. Le
+ * récupérateur de pluie de 5 L en demande 4, et les 12 déchets de départ n'en donnaient qu'≈ 1 en moyenne.
+ */
+export const GARANTI_PREMIER_SAC: Inventaire = { sac_plastique: 4 };
+
+/**
  * Les 12 déchets de départ du terrain personnel (Q4) : 4 près du chemin, 8 épars, dont 3 sacs-poubelle. Une pièce par
- * emplacement. Rien près de la ruine, de la mare, de la décharge, du point d'arrivée ni des arbres.
+ * emplacement. Rien près de la ruine, de la mare, de la décharge, du point d'arrivée ni des arbres. Le premier, au bord
+ * du chemin, est toujours un sac-poubelle, avec ses 4 sacs plastique garantis (I28).
  */
 function dispositionTerrain(cle: string): Map<string, EmplacementDechets[]> {
   const alea = aleaDe(graineDe("terrain", cle));
-  const places: { x: number; z: number; genre: "sol" | "sac_poubelle" }[] = [];
+  const places: { x: number; z: number; genre: "sol" | "sac_poubelle"; garanti?: Inventaire }[] = [];
   const libre = (x: number, z: number) =>
     placeLibre("terrain", x, z) &&
     !dansBoite(x, z, { x: RUINE.x, z: RUINE.z, l: RUINE.largeur, p: RUINE.profondeur }, 2.5) &&
@@ -218,11 +230,11 @@ function dispositionTerrain(cle: string): Map<string, EmplacementDechets[]> {
     Math.hypot(x - MARE.x, z - MARE.z) > MARE.rayon + 2 &&
     ARBRES_ISOLES.every(([ax, az]) => Math.hypot(x - ax, z - az) > 1.5) &&
     places.every((p) => Math.hypot(p.x - x, p.z - z) > 2.5);
-  const poser = (tirer: () => [number, number], genre: "sol" | "sac_poubelle") => {
-    for (let essai = 0; essai < 40; essai++) {
+  const poser = (tirer: () => [number, number], genre: "sol" | "sac_poubelle", garanti?: Inventaire, essais = 40) => {
+    for (let essai = 0; essai < essais; essai++) {
       const [x, z] = tirer();
       if (!libre(x, z)) continue;
-      places.push({ x: arrondi(x), z: arrondi(z), genre });
+      places.push({ x: arrondi(x), z: arrondi(z), genre, ...(garanti ? { garanti } : {}) });
       return;
     }
   };
@@ -232,13 +244,15 @@ function dispositionTerrain(cle: string): Map<string, EmplacementDechets[]> {
     return [TERRAIN_TAILLE / 2 + cote * (1.6 + alea() * 2), TERRAIN_TAILLE - 13 + alea() * 9];
   };
   const epars = (): [number, number] => [3 + alea() * (TERRAIN_TAILLE - 6), 3 + alea() * (TERRAIN_TAILLE - 6)];
-  for (let k = 0; k < 4; k++) poser(chemin, k === 0 ? "sac_poubelle" : "sol");
+  // Le premier sac du chemin a ses 4 sacs plastique (I28) : on insiste jusqu'à lui trouver sa place.
+  poser(chemin, "sac_poubelle", GARANTI_PREMIER_SAC, 400);
+  for (let k = 1; k < 4; k++) poser(chemin, "sol");
   for (let k = places.length; k < DECHETS_DU_TERRAIN; k++) poser(epars, k < 6 ? "sac_poubelle" : "sol");
   const carreaux = new Map<string, EmplacementDechets[]>();
   for (const p of places) {
     const k = cleCarreau(Math.floor(p.x / TAILLE_CARREAU), Math.floor(p.z / TAILLE_CARREAU));
     const liste = carreaux.get(k) ?? [];
-    liste.push({ e: liste.length, genre: p.genre, type: "champ", x: p.x, z: p.z, o: arrondi(alea() * Math.PI * 2), n: p.genre === "sol" ? 1 : 0 });
+    liste.push({ e: liste.length, genre: p.genre, type: "champ", x: p.x, z: p.z, o: arrondi(alea() * Math.PI * 2), n: p.genre === "sol" ? 1 : 0, ...(p.garanti ? { garanti: p.garanti } : {}) });
     carreaux.set(k, liste);
   }
   return carreaux;
@@ -283,7 +297,10 @@ export function piecesCarreau(cle: string, cx: number, cz: number, remplissage: 
         pieces.push({ i: pieces.length, e: em.e, objet, x: arrondi(em.x + Math.cos(a) * r), z: arrondi(em.z + Math.sin(a) * r), dedans: false });
       });
     } else {
-      for (const objet of deplier(contenuConteneur(g, em.type, em.genre))) pieces.push({ i: pieces.length, e: em.e, objet, x: em.x, z: em.z, dedans: true });
+      const contenu = contenuConteneur(g, em.type, em.genre);
+      // Ce qui y est à coup sûr (I28), à son premier remplissage seulement : après les pièces tirées, pour ne rien renuméroter.
+      const garanti = remplissage === 0 && em.garanti ? deplier(em.garanti) : [];
+      for (const objet of [...deplier(contenu), ...garanti]) pieces.push({ i: pieces.length, e: em.e, objet, x: em.x, z: em.z, dedans: true });
     }
   }
   return pieces;

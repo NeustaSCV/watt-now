@@ -31,6 +31,8 @@ const DU_MONDE: readonly { objet: TypeObjet; depuis: TypeObjet | "charbonniere" 
   // L'ébauche d'arc sèche d'elle-même dans le sac (Book 25 §3.3).
   { objet: "ebauche_arc_seche", depuis: "ebauche_arc" },
   { objet: "ebauche_if_seche", depuis: "ebauche_if" },
+  // La graisse qui coule sous la broche quand on rôtit la volaille (joueur.ts) : la torche plantée en brûle.
+  { objet: "graisse", depuis: "volaille_crue" },
 ];
 
 /** Ce qu'on peut se procurer, et d'où (la première source trouvée). */

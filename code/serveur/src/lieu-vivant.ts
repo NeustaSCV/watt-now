@@ -1,6 +1,44 @@
 // Un lieu vivant (Book 23 §7) : des ressources, des Éteints, des sacs tombés, les joueurs présents, et l'envoi filtré
 // de ce que chacun voit. La station-service en est un, partagé par tous les voyageurs (Book 01 §2 bis) ; chaque joueur a
 // sa Coopérative (Book 23), un lieu vivant à lui. Le jour où on la partage, on ne change que la clé.
+//
+// ---------- Le butin d'un lieu (plan 0.8, chantier 10) : à lire par les chantiers 11 (le gué) et 12 (le Moulin) ----------
+//
+// La définition d'un lieu porte un `butin` (ButinLieu, commun/src/terrain.ts), qui règle trois choses :
+//
+// 1. **La repousse par lieu** (B4) : `butin.repousse[type]` (ms, ou null : jamais) remplace REPOUSSE_MS pour ce lieu.
+//    REPOUSSE_MS est le délai du terrain : les bûches et les pierres n'y reviennent jamais (B1) ; une halte les fait
+//    revenir en 30 min (`{ buche: 30 * 60_000, pierre: 30 * 60_000 }`). Le réglage `repousse_rythme` s'applique partout.
+//    La repousse ne se calcule que quand quelqu'un est là : une halte vide ne coûte rien (rien ne tourne, rien ne
+//    s'écrit) ; la disponibilité d'une ressource se lit à l'instant (son `disponibleLe`), dès l'entrée.
+//
+// 2. **Le butin personnel** (R4 du game designer) : `butin.personnel[type] = n` fait de chaque point de ce type un butin
+//    à chacun : chaque joueur le voit plein, le prend pour lui, et il revient pour lui à son délai, sans que les autres
+//    voient rien bouger. `n` est le nombre de prises (1 : la pièce de famille ; 10 : le tas de bois, une bûche par
+//    prise ; 8 : le banc de galets du gué). Le délai court à partir de la première prise ; au bout, tout est revenu.
+//    L'état de chacun est gardé en base (instance « perso:<clé du lieu>:<compte> »), avec la version du lieu.
+//    Le filtre par famille (la pièce de famille : un Voltaïque ne voit pas l'enclume) est celui de `ressourceVisible`
+//    (FAMILLE_DE_RESSOURCE, commun/src/terrain.ts), comme l'if du fond du bois : il vaut partout, sur le serveur et
+//    dans le simulateur.
+//
+// 3. **Le vrac qui grandit avec les voyageurs** (B8) : `butin.vrac[type] = base` dit combien de points de ce type sont
+//    en jeu pour un voyageur seul ; le générateur du lieu en pose VRAC_MAX (3) fois plus, et seuls les premiers (par
+//    identifiant) sont en jeu : `vracEnJeu(base, présents)`, soit +50 % par voyageur en plus, jusqu'à ×3 (3 voyageurs :
+//    ×2 ; 5 : ×3). Un point hors jeu est vu « indisponible » ; quand le nombre de présents change, les points qui
+//    entrent en jeu ou en sortent sont annoncés à tous (au tic suivant).
+//
+// L'API, côté joueur (serveur/src/joueur.ts s'en sert pour tout lieu vivant) :
+//
+// - `vuePour(compteId, famille, instant)` : les ressources telles que ce joueur les voit (bienvenue) ;
+// - `disponiblePour(r, compteId, instant)` : ce joueur peut-il la prendre maintenant ?
+// - `prendrePar(r, compteId, instant)` : il la prend (le délai, l'écriture en base, les messages : à lui seul pour un
+//   butin personnel, à tous sinon) ;
+// - `delaiRepousse(type)` : le délai de ce lieu pour ce type (ms ; null : jamais).
+//
+// Exemple, le gué (chantier 11) : `butin: { repousse: { pierre: 30 * 60_000, joncs: 30 * 60_000 }, vrac: { pierre: 15 },
+// personnel: { banc_galets: 8 } }`, avec 45 pierres posées par le générateur et REPOUSSE_MS.banc_galets (6 h).
+// Le Moulin (chantier 12) est à un joueur : il n'a besoin que de `repousse` (et de son retour à 24 h, comme la
+// Coopérative, serveur/src/cooperative.ts : `reinitialiser`).
 
 import { FilDesBruits, PORTEES_BRUIT, type BruitVu } from "../../commun/src/bruits.ts";
 import { DUREE_CORPS } from "../../commun/src/combat.ts";
@@ -8,7 +46,9 @@ import { GEMISSEMENT, penser, vue, type Eteint, type Humain, type Milieu } from 
 import type { Zone } from "../../commun/src/lieux.ts";
 import type { MessageServeur, SacVu } from "../../commun/src/messages.ts";
 import type { Stimulus } from "../../commun/src/signature.ts";
-import type { RessourceSol } from "../../commun/src/terrain.ts";
+import { REGLAGES } from "../../commun/src/reglages.ts";
+import type { Famille } from "../../commun/src/regles.ts";
+import { REPOUSSE_MS, ressourceVisible, vracEnJeu, type ButinLieu, type RessourceSol, type TypeRessource } from "../../commun/src/terrain.ts";
 import { estNuit, heureDeJeu } from "../../commun/src/temps.ts";
 import { obstaclesVue, passageSon, voit, type ObstaclesVue, type PlanVue } from "../../commun/src/vue.ts";
 import { vueDuSac, type Base, type RessourceEnBase, type SacEnBase } from "./base.ts";
@@ -48,6 +88,17 @@ export interface DefinitionLieuVivant {
   /** Ses ressources à la première visite (et la version de ce contenu : la changer régénère). */
   ressources: () => RessourceDeLieu[];
   version: number;
+  /** La repousse du lieu, son butin personnel, son vrac qui grandit (plan 0.8, chantier 10 : voir en tête du fichier). */
+  butin?: ButinLieu;
+}
+
+/** Une ressource prise qui ne revient jamais. */
+export const JAMAIS = Number.MAX_SAFE_INTEGER;
+
+/** Ce qui reste à un joueur d'un butin personnel : combien de prises, et quand tout revient (0 : jamais entamé). */
+interface EtatPersonnel {
+  reste: number;
+  revientLe: number;
 }
 
 /** Un joueur présent dans le lieu, vu par lui. */
@@ -110,6 +161,13 @@ export class LieuVivant {
   /** L'état des portes (vide s'il n'y en a pas). Gardé tant que le lieu est en mémoire. */
   readonly portes: Record<string, boolean>;
 
+  /** Le rang de chaque point de vrac parmi ceux de son type (par identifiant) : les premiers sont en jeu (B8). */
+  private readonly rangsVrac = new Map<number, number>();
+  /** Combien de points de chaque vrac étaient en jeu au dernier envoi (pour n'annoncer que ce qui change). */
+  private readonly vracAnnonce = new Map<TypeRessource, number>();
+  /** Le butin personnel de chaque joueur passé ici : compte → point → ce qu'il lui en reste (chargé au premier besoin). */
+  private readonly personnels = new Map<number, Map<number, EtatPersonnel>>();
+
   constructor(base: Base, definition: DefinitionLieuVivant, alea: () => number = Math.random) {
     this.base = base;
     this.definition = definition;
@@ -119,6 +177,159 @@ export class LieuVivant {
     this.portes = definition.portes?.initiales() ?? {};
     for (const r of base.chargerRessourcesLieu(definition.cle, definition.ressources, definition.version)) this.ressources.set(r.id, r);
     this.sacs.push(...base.chargerSacs(definition.sacs.lieu, definition.sacs.terrainDe));
+    const vrac = definition.butin?.vrac ?? {};
+    const rangs = new Map<TypeRessource, number>();
+    for (const r of [...this.ressources.values()].sort((a, b) => a.id - b.id)) {
+      if (vrac[r.type] === undefined) continue;
+      const k = rangs.get(r.type) ?? 0;
+      this.rangsVrac.set(r.id, k);
+      rangs.set(r.type, k + 1);
+    }
+    for (const [type, n] of Object.entries(vrac) as [TypeRessource, number][]) this.vracAnnonce.set(type, vracEnJeu(n, 0));
+  }
+
+  // ---------- Le butin (plan 0.8, chantier 10 : voir en tête du fichier) ----------
+
+  /** Le délai de repousse de ce lieu pour ce type (ms, réglage compris) ; null : il ne revient jamais. */
+  delaiRepousse(type: TypeRessource): number | null {
+    const propre = this.definition.butin?.repousse;
+    const ms = propre && type in propre ? propre[type]! : REPOUSSE_MS[type];
+    return ms === null ? null : ms / REGLAGES.repousse_rythme;
+  }
+
+  /** Combien de prises tient ce butin personnel (undefined : la ressource est partagée). */
+  private prisesPersonnelles(type: TypeRessource): number | undefined {
+    return this.definition.butin?.personnel?.[type];
+  }
+
+  /** Un point de vrac est-il en jeu, avec les voyageurs présents ? (les autres ressources le sont toujours) */
+  enJeu(r: RessourceEnBase): boolean {
+    const base = this.definition.butin?.vrac?.[r.type];
+    if (base === undefined) return true;
+    return (this.rangsVrac.get(r.id) ?? 0) < vracEnJeu(base, this.presents.size);
+  }
+
+  /** L'état gardé du butin personnel d'un joueur (chargé de la base à la première demande). */
+  private personnelDe(compteId: number): Map<number, EtatPersonnel> {
+    let m = this.personnels.get(compteId);
+    if (m) return m;
+    m = new Map();
+    const brut = this.base.chargerInstance(`perso:${this.definition.cle}:${compteId}`) as { version?: number; etats?: Record<string, EtatPersonnel> } | null;
+    // Le contenu du lieu a changé (une autre version) : ses points aussi ; on repart plein.
+    if (brut && brut.version === this.definition.version && brut.etats) {
+      for (const [id, e] of Object.entries(brut.etats)) {
+        const r = this.ressources.get(Number(id));
+        if (r && this.prisesPersonnelles(r.type) !== undefined && Number.isFinite(e?.reste) && Number.isFinite(e?.revientLe)) m.set(r.id, { reste: e.reste, revientLe: e.revientLe });
+      }
+    }
+    this.personnels.set(compteId, m);
+    return m;
+  }
+
+  /** Ce qui reste à ce joueur d'un butin personnel, à cet instant (plein s'il ne l'a jamais entamé, ou si le délai est passé). */
+  private restePersonnel(r: RessourceEnBase, compteId: number, instant: number): number {
+    const prises = this.prisesPersonnelles(r.type) ?? 1;
+    const e = this.personnelDe(compteId).get(r.id);
+    return !e || instant >= e.revientLe ? prises : e.reste;
+  }
+
+  /** Ce joueur peut-il prendre cette ressource maintenant ? */
+  disponiblePour(r: RessourceEnBase, compteId: number, instant: number): boolean {
+    if (this.prisesPersonnelles(r.type) !== undefined) return this.restePersonnel(r, compteId, instant) > 0;
+    return this.enJeu(r) && r.disponibleLe <= instant;
+  }
+
+  /** Les ressources telles qu'un joueur les voit (à son arrivée) : sa famille, son butin personnel, le vrac en jeu. */
+  vuePour(compteId: number, famille: Famille, instant: number): RessourceSol[] {
+    const vues: RessourceSol[] = [];
+    for (const r of this.ressources.values()) {
+      if (!ressourceVisible(r.type, famille)) continue;
+      const prises = this.prisesPersonnelles(r.type);
+      const vue: RessourceSol = { id: r.id, type: r.type, x: r.x, z: r.z, disponible: this.disponiblePour(r, compteId, instant) };
+      if (prises !== undefined && prises > 1) vue.reste = this.restePersonnel(r, compteId, instant);
+      vues.push(vue);
+    }
+    return vues;
+  }
+
+  /**
+   * Ce joueur prend la ressource. Partagée : elle disparaît pour tous jusqu'à son délai. Personnelle : une prise de moins
+   * pour lui seul ; le délai court depuis sa première prise ; les autres ne voient rien bouger.
+   */
+  prendrePar(r: RessourceEnBase, compteId: number, instant: number): void {
+    const delai = this.delaiRepousse(r.type);
+    const prises = this.prisesPersonnelles(r.type);
+    if (prises === undefined) return this.prendre(r, delai === null ? JAMAIS : instant + delai);
+    const etats = this.personnelDe(compteId);
+    const avant = etats.get(r.id);
+    const e = !avant || instant >= avant.revientLe ? { reste: prises, revientLe: delai === null ? JAMAIS : instant + delai } : { ...avant };
+    e.reste = Math.max(0, e.reste - 1);
+    etats.set(r.id, e);
+    this.sauverPersonnel(compteId, instant);
+    const m: MessageServeur = { t: "ressource", id: r.id, disponible: e.reste > 0, ...(prises > 1 ? { reste: e.reste } : {}) };
+    for (const v of this.presents) if (v.humain().id === compteId) v.envoyer(m);
+  }
+
+  private sauverPersonnel(compteId: number, instant: number): void {
+    const etats = this.personnelDe(compteId);
+    this.base.sauverInstance(`perso:${this.definition.cle}:${compteId}`, { version: this.definition.version, etats: Object.fromEntries(etats) }, instant);
+  }
+
+  /** Le butin personnel revenu pendant qu'on était là : on le dit à son joueur (une fois), et on l'oublie. */
+  private rendrePersonnels(instant: number): void {
+    for (const v of this.presents) {
+      const id = v.humain().id;
+      const etats = this.personnels.get(id);
+      if (!etats) continue;
+      let change = false;
+      for (const [rid, e] of etats) {
+        if (instant < e.revientLe) continue;
+        etats.delete(rid);
+        change = true;
+        const r = this.ressources.get(rid);
+        const prises = r ? this.prisesPersonnelles(r.type) : undefined;
+        if (r && prises !== undefined) v.envoyer({ t: "ressource", id: rid, disponible: true, ...(prises > 1 ? { reste: prises } : {}) });
+      }
+      if (change) this.sauverPersonnel(id, instant);
+    }
+  }
+
+  /**
+   * Tout revient (plan 0.8 §9.1, N1 : la Coopérative et le Moulin, au bout de 24 h) : les Éteints de la définition, les
+   * portes à leur état d'origine, le butin (sauf ce qui ne se trouve qu'une fois : JAMAIS), le butin personnel de chacun.
+   * À appeler quand personne n'est là (à l'entrée) : rien n'est envoyé.
+   */
+  reinitialiser(): void {
+    this.eteints = this.definition.eteints();
+    Object.assign(this.portes, this.definition.portes?.initiales() ?? {});
+    for (const r of this.ressources.values()) {
+      if (r.disponibleLe === 0 || r.disponibleLe === JAMAIS) continue;
+      r.disponibleLe = 0;
+      this.base.sauverRessourceLieu(this.definition.cle, r.id, 0);
+    }
+    for (const id of this.personnels.keys()) {
+      this.personnels.set(id, new Map());
+      this.base.sauverInstance(`perso:${this.definition.cle}:${id}`, { version: this.definition.version, etats: {} }, 0);
+    }
+  }
+
+  /** Le nombre de présents a changé : les points de vrac qui entrent en jeu ou en sortent sont annoncés à tous. */
+  private annoncerVrac(instant: number): void {
+    const vrac = this.definition.butin?.vrac;
+    if (!vrac) return;
+    for (const [type, base] of Object.entries(vrac) as [TypeRessource, number][]) {
+      const avant = this.vracAnnonce.get(type) ?? 0;
+      const maintenant = vracEnJeu(base, this.presents.size);
+      if (avant === maintenant) continue;
+      this.vracAnnonce.set(type, maintenant);
+      const [de, a] = avant < maintenant ? [avant, maintenant] : [maintenant, avant];
+      for (const r of this.ressources.values()) {
+        if (r.type !== type) continue;
+        const rang = this.rangsVrac.get(r.id) ?? 0;
+        if (rang < de || rang >= a) continue;
+        this.diffuser({ t: "ressource", id: r.id, disponible: this.enJeu(r) && r.disponibleLe <= instant });
+      }
+    }
   }
 
   sacsVus(pour: number): SacVu[] {
@@ -287,13 +498,20 @@ export class LieuVivant {
   }
 
   tick(instant: number, dt: number): void {
-    if (instant - this.derniereRepousse >= INTERVALLE_REPOUSSE) {
-      this.derniereRepousse = instant;
-      for (const r of this.ressources.values()) {
-        if (r.disponibleLe === 0 || r.disponibleLe > instant) continue;
-        r.disponibleLe = 0;
-        this.base.sauverRessourceLieu(this.definition.cle, r.id, 0);
-        this.diffuser({ t: "ressource", id: r.id, disponible: true });
+    // La repousse ne se calcule que si quelqu'un est là (plan 0.8 §6 : une halte vide ne coûte rien) ; la disponibilité
+    // se lit de toute façon à l'instant (disponibleLe), dès l'entrée.
+    if (this.presents.size > 0) {
+      this.annoncerVrac(instant);
+      if (instant - this.derniereRepousse >= INTERVALLE_REPOUSSE) {
+        this.derniereRepousse = instant;
+        for (const r of this.ressources.values()) {
+          if (r.disponibleLe === 0 || r.disponibleLe > instant) continue;
+          r.disponibleLe = 0;
+          this.base.sauverRessourceLieu(this.definition.cle, r.id, 0);
+          // Un point de vrac hors jeu revient sans se montrer : il paraîtra quand les voyageurs seront assez nombreux.
+          if (this.enJeu(r)) this.diffuser({ t: "ressource", id: r.id, disponible: true });
+        }
+        this.rendrePersonnels(instant);
       }
     }
 

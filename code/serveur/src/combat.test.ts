@@ -37,13 +37,22 @@ function monter(inventaire: Record<string, number>, eteint: { x: number; z: numb
   return { base, halte, joueur, attendre, dernier, recus, z, compte };
 }
 
-test("au marteau : un coup rapide le fait vaciller, un coup appuyé à la tête le détruit", () => {
+test("au marteau : un coup rapide le fait vaciller ; l'appuyé ne le tue plus à la tête (Q-A3), il le met à terre", () => {
   const t = monter({ marteau: 1 });
   t.joueur.recevoir({ t: "frapper", appuye: false });
   assert.equal(t.dernier("coup")!.resultat, "vacille");
   t.attendre(1);
   t.joueur.position = { x: t.z().x, z: t.z().z - 1, o: 0 };
+  // 0,8 puis 1,6 : 2,4 points, il vacille encore ; l'appuyé suivant le met à terre ; à terre, un coup l'achève.
   t.joueur.recevoir({ t: "frapper", appuye: true });
+  assert.equal(t.dernier("coup")!.resultat, "vacille");
+  t.attendre(1);
+  t.joueur.position = { x: t.z().x, z: t.z().z - 1, o: 0 };
+  t.joueur.recevoir({ t: "frapper", appuye: true });
+  assert.equal(t.dernier("coup")!.resultat, "a_terre");
+  t.attendre(1);
+  t.joueur.position = { x: t.z().x, z: t.z().z - 1, o: 0 };
+  t.joueur.recevoir({ t: "frapper", appuye: false });
   assert.equal(t.dernier("coup")!.resultat, "detruit");
   assert.equal(t.z().etat, "detruit");
 });

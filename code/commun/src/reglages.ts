@@ -26,14 +26,14 @@ export const DEFINITIONS_REGLAGES = {
   decharge_wotts_semaine: { defaut: 0.02, min: 0, max: 0.5, aide: "Part des wotts qui se décharge chaque semaine réelle (0,02 = 2 %)." },
   poules_terrain: { defaut: 3, min: 0, max: 10, aide: "Nombre de poules ensauvagées autour de la ferme." },
   poule_retour_h: { defaut: 2, min: 0.1, max: 48, aide: "Heures réelles avant qu'une poule prise soit remplacée." },
-  coop_repeuplement_h: { defaut: 12, min: 1, max: 240, aide: "Coopérative : toutes les combien d'heures réelles des Éteints détruits reviennent (Book 23 §2.3)." },
-  coop_repeuplement_n: { defaut: 3, min: 0, max: 24, aide: "Coopérative : combien d'Éteints reviennent à chaque fois (la chambre froide d'abord, jusqu'à ses 6 dormants)." },
   inactivite_min: { defaut: 5, min: 1, max: 120, aide: "Minutes sans bouger ni agir avant d'être déconnecté d'office : hors ligne, la faim, la soif et la fatigue sont gelées." },
   panneau_wh_jour: { defaut: 80, min: 0, max: 500, aide: "Wh produits par le petit panneau solaire par jour de calendrier (1 h 50 réelle)." },
   // L'équilibre des armes de métier (Book 25 §8.4, chantier 9) : des multiplicateurs, à 1 par défaut. `npm run equilibre`
   // rejoue le tableau du §8.4 avec les réglages du fichier, et dit si le garde-fou tient encore.
   equilibre_lames_degats: { defaut: 1, min: 0.5, max: 2, aide: "Dégâts des lames de métier (machette, couteau de forge, glaive…) : 1,2 = 20 % de plus." },
   equilibre_electrique_raidi: { defaut: 1, min: 0.5, max: 2, aide: "Durée pendant laquelle une décharge courte raidit l'Éteint (2,5 s à ★★★) : 1,2 = 20 % de plus." },
+  // Plan 0.8 §2.4 (chantier 8) : la décharge courte ajoute ses dégâts au torse ; ce réglage les règle au test.
+  equilibre_electrique_degats: { defaut: 1, min: 0, max: 2, aide: "Dégâts au torse d'une décharge courte (1,1 pour la matraque ★★) et du coup d'une arme électrique au pack vide (la moitié) : 0 = rien au torse, comme avant la 0.8." },
   equilibre_electrique_longue: { defaut: 1, min: 0.5, max: 2, aide: "Durée à tenir la décharge longue pour éteindre (1 s à ★★★) : 0,8 = plus rapide." },
   equilibre_arbalete_rearmer: { defaut: 1, min: 0.5, max: 2, aide: "Temps pour réarmer une arbalète (3 s au pied, 4 à 6 s pour la lourde) : 0,8 = plus rapide." },
   equilibre_tir_portee_tete: { defaut: 1, min: 0.5, max: 2, aide: "Portée jusqu'où un tir plein détruit à la tête (arc 6 m, arbalète 12 m à ★★★) : 1,2 = 20 % plus loin." },

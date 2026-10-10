@@ -15,7 +15,7 @@ export type Condition =
   /** Un fait compté depuis l'arrivée (repas, échange, wotts gagnés…), au moins `but` fois. */
   | { a: "fait"; fait: string; but: number }
   /** Une installation de ce type sur son terrain (avec un équipement monté, ou un niveau minimal, si précisé ; Book 24). */
-  | { a: "installation"; type: string; avec?: "meule" | "dynamo"; niveau?: number }
+  | { a: "installation"; type: string; avec?: "meule" | "dynamo" | "alternateur" | "panneau"; niveau?: number }
   /** Plusieurs faits additionnés (vendus ou donnés, de plusieurs sortes), au moins `but` en tout (0.6). */
   | { a: "faits"; faits: string[]; but: number }
   /**
@@ -37,9 +37,19 @@ export interface Objectif {
   condition: Condition;
 }
 
+/**
+ * La route d'une porte du niveau 1 (plan 0.8 §2.6, Q-0.8-19) : A, la station puis la Coopérative ; B, le gué puis le
+ * Moulin. « S'installer » garde une porte ouverte par route : deux à la fois, le joueur choisit sa sortie.
+ */
+export type RouteQuete = "A" | "B";
+
 export interface Quete {
   id: string;
   ligne: LigneQuete;
+  /** Une porte du niveau 1, sur sa route (absente : un objectif qui se suit dans l'ordre de la ligne). */
+  route?: RouteQuete;
+  /** La porte nommée au départ d'une sortie (« il te faut une grille ») : sa clé, en quelques mots. */
+  besoin?: string;
   /** Réservée à une famille (le métier). */
   famille?: Famille;
   titre: string;
@@ -53,7 +63,9 @@ export interface Quete {
   recompense?: { wotts?: number; objets?: Inventaire };
 }
 
-// ---------- S'installer (Book 22 §3.1 : l'ordre de l'urgence de la proposition P-002, et sa gamme bushcraft) ----------
+// ---------- S'installer (Book 22 §3.1 ; plan 0.8 §2.6 : des portes successives) ----------
+// Le foyer de pierres en tête, puis un vrai repas, l'eau du ciel, le coffre (une à une) ; puis les portes du niveau 1,
+// une par meuble, deux ouvertes à la fois (une par route, Q-0.8-19) ; puis le reste de la gamme bushcraft (P-002).
 
 const fait = (f: string, but = 1): Condition => ({ a: "fait", fait: f, but });
 const installation = (type: string): Condition => ({ a: "installation", type });
@@ -69,30 +81,36 @@ const fabriqueOuObjet = (recettes: string[], types: TypeObjet[]): Condition => (
 const passeAuxAutres = (types: TypeObjet[], but = 1): Condition => ({ a: "faits", faits: types.flatMap((t) => [`vente:${t}`, `don_autre_famille:${t}`]), but });
 
 const INSTALLER: Quete[] = [
+  // Plan 0.8 (recettes-par-construction.md §6.3) : le foyer de pierres en tête ; il ouvre la poêlée, l'épieu, les flèches
+  // durcies et le bâton à fouir.
+  {
+    id: "foyer_pierres",
+    ligne: "installer",
+    titre: "Un foyer qui tient la nuit",
+    icone: "pierre",
+    texte: "Un feu de camp mange son bois et se voit de loin. Approche-toi du tien, examine-le, et maçonne-le en foyer de pierres (des pierres, deux bûches, une pierre pour marteler).",
+    objectifs: [{ libelle: "Foyer de pierres", condition: fait("foyer:foyer_pierres") }],
+    lecon: "Couvert, il tient la nuit et repart sans briquet. Son muret chauffe l'abri.",
+    recompense: { wotts: 10 },
+  },
   {
     id: "repas",
     ligne: "installer",
     titre: "Un vrai repas",
-    texte: "Les baies, ça va un moment. Cuisine un plat au feu (volaille aux cèpes, poêlée de cèpes, pommes cuites) et mange-le.",
+    icone: "pommes_cuites",
+    // Q-0.8-11 : les pommes cuites (feu de camp), ou la poêlée de cèpes (foyer de pierres, Dakota).
+    texte: "Les baies, ça va un moment. Cuisine un plat au feu et mange-le : des pommes cuites, ou une poêlée de cèpes.",
     objectifs: [{ libelle: "Plat cuisiné mangé", condition: fait("plat_mange") }],
     lecon: "Un plat chaud cale plus longtemps et remonte la santé. Le feu sert aussi à ça.",
-    recompense: { objets: { conserve: 1 } },
-  },
-  {
-    id: "lit",
-    ligne: "installer",
-    titre: "Un vrai lit",
-    texte: "Dormir à même le sol, c'est dormir à moitié. Fais un lit de branchages à côté de ton abri, ou garnis l'abri lui-même (examine-le : « Améliorer »).",
-    // Book 24 §7 : l'abri garni (niveau 2) vaut un lit posé à côté.
-    objectifs: [{ libelle: "Lit de branchages, ou abri garni", condition: { a: "un_de", conditions: [installation("lit_branchages"), { a: "installation", type: "abri", niveau: 2 }] } }],
-    lecon: "Isolé du sol, à côté de l'abri, on récupère un tiers plus vite.",
     recompense: { objets: { conserve: 1 } },
   },
   {
     id: "eau_du_ciel",
     ligne: "installer",
     titre: "L'eau du ciel",
-    texte: "Bouillir l'eau de la mare coûte du bois. Tends une bâche en entonnoir au-dessus d'une bassine : la pluie se boit telle quelle. Une bâche ? Dans la benne du camion, à la station.",
+    icone: "bidon_5l",
+    // Plan 0.8 §2.3 : le récupérateur de 5 L (le bidon de la ruine, les sacs plastique en entonnoir), sans bâche.
+    texte: "Bouillir l'eau de la mare coûte du bois. Le bidon de 5 L de la ruine, des sacs plastique ouverts en entonnoir, quatre branches et une corde : la pluie se boit telle quelle.",
     objectifs: [{ libelle: "Récupérateur de pluie", condition: installation("recuperateur_pluie") }],
     lecon: "Il se remplit quand il pleut, même quand tu n'es pas là.",
     recompense: { wotts: 10 },
@@ -101,15 +119,101 @@ const INSTALLER: Quete[] = [
     id: "coffre",
     ligne: "installer",
     titre: "Un coffre à soi",
+    icone: "coffre",
     texte: "Tout porter, c'est s'épuiser. Fabrique un coffre de rangement (bûches, branches, une corde de fibres de la mare).",
     objectifs: [{ libelle: "Coffre sur ton terrain", condition: installation("coffre") }],
     lecon: "Le coffre garde 150 kg pour toi. Ne pars en route qu'avec ce qu'il faut.",
+  },
+  // ---------- Les portes du niveau 1 (plan 0.8 §2.6) : une par meuble, deux ouvertes à la fois, une par route ----------
+  // Chacune demande la clé d'un lieu (sa fiche dit où chercher, en deux temps) ; l'ordre de la liste alterne les routes.
+  {
+    id: "foyer_cuisine",
+    ligne: "installer",
+    route: "A",
+    besoin: "il te faut une grille",
+    titre: "Une vraie cuisine",
+    icone: "grillage_rouleau",
+    texte: "Un trépied, une crémaillère, une grille : ton foyer de pierres devient une cuisine. Sa fiche dit où chercher la grille.",
+    objectifs: [{ libelle: "Foyer de cuisine", condition: fait("foyer:foyer_cuisine") }],
+    lecon: "Deux plats à la fois, des mijotés, l'eau bout plus vite. Un bon foyer vaut trois feux.",
+    recompense: { objets: { conserve: 1 } },
+  },
+  {
+    id: "abri_ferme",
+    ligne: "installer",
+    route: "B",
+    besoin: "il te faut de la grosse toile",
+    titre: "Un abri fermé",
+    icone: "toile_jute",
+    texte: "Garni, ton abri laisse encore passer le vent. Une grosse toile clouée côté vent, et c'est une chambre. Sa fiche dit où chercher.",
+    objectifs: [{ libelle: "Abri fermé", condition: { a: "un_de", conditions: [{ a: "installation", type: "abri", niveau: 3 }, fait("niveau:abri_ferme")] } }],
+    lecon: "Fermé au vent, on dort mieux et moins longtemps : la nuit passe plus vite.",
+    recompense: { wotts: 15 },
+  },
+  {
+    id: "marmite",
+    ligne: "installer",
+    route: "A",
+    besoin: "il te faut une cocotte en fonte",
+    titre: "La soupe qui cuit seule",
+    icone: "cocotte_fonte",
+    texte: "Une cocotte en fonte dans une caisse de chiffons, sur ton foyer de cuisine : la soupe cuit sans feu. Sa fiche dit où chercher.",
+    objectifs: [{ libelle: "Marmite norvégienne", condition: fait("accessoire:marmite") }],
+    lecon: "Moitié moins de bois pour un mijoté : le feu travaille, puis la caisse prend le relais.",
+    recompense: { wotts: 15 },
+  },
+  {
+    id: "coffre_cercle",
+    ligne: "installer",
+    route: "B",
+    besoin: "il te faut des cercles de fer",
+    titre: "Un coffre cerclé",
+    icone: "feuillards",
+    texte: "Cerclé de fer, cloué au marteau remmanché, ton coffre tiendrait bien plus lourd. Sa fiche dit où chercher les cercles.",
+    objectifs: [{ libelle: "Coffre cerclé", condition: { a: "un_de", conditions: [{ a: "installation", type: "coffre", niveau: 2 }, fait("niveau:coffre_cercle")] } }],
+    lecon: "250 kg à l'abri : de quoi garder la matière de tes sorties.",
+    recompense: { wotts: 15 },
+  },
+  {
+    id: "dix_litres",
+    ligne: "installer",
+    route: "A",
+    besoin: "il te faut un seau de 10 L",
+    titre: "Dix litres",
+    icone: "seau_10l",
+    texte: "Ton bidon de 5 L déborde à chaque averse. Un seau de 10 L sous l'entonnoir : deux fois plus d'eau. Sa fiche dit où chercher.",
+    objectifs: [{ libelle: "Récupérateur à seau", condition: { a: "un_de", conditions: [{ a: "installation", type: "recuperateur_pluie", niveau: 2 }, fait("niveau:recuperateur_seau")] } }],
+    lecon: "Dix litres d'eau potable qui t'attendent, même quand tu es sur la route.",
+    recompense: { wotts: 15 },
+  },
+  {
+    id: "etabli_etau",
+    ligne: "installer",
+    route: "B",
+    besoin: "il te faut un étau",
+    titre: "L'établi à étau",
+    icone: "etau",
+    texte: "Un étau boulonné sur ton établi serre ce que tes mains ne tiennent pas, et refait un manche sans forge. Sa fiche dit où chercher.",
+    objectifs: [{ libelle: "Établi à étau", condition: { a: "un_de", conditions: [{ a: "installation", type: "etabli", niveau: 2 }, fait("niveau:etabli_etau")] } }],
+    lecon: "Maillet, coins, planches fendues : l'étau ouvre le travail du bois, et répare le marteau.",
+    recompense: { wotts: 15 },
+  },
+  // ---------- Ensuite, l'ordre de l'urgence (P-002) : ce qui reste du bushcraft, après les portes ----------
+  {
+    id: "lit",
+    ligne: "installer",
+    titre: "Un vrai lit",
+    texte: "Dormir à même le sol, c'est dormir à moitié. Garnis ton abri d'un lit de branchages (examine-le : « Améliorer »).",
+    // Book 24 §7 : l'abri garni (niveau 2) vaut un lit posé à côté.
+    objectifs: [{ libelle: "Abri garni", condition: { a: "un_de", conditions: [installation("lit_branchages"), { a: "installation", type: "abri", niveau: 2 }] } }],
+    lecon: "Isolé du sol, à côté de l'abri, on récupère un tiers plus vite.",
+    recompense: { objets: { conserve: 1 } },
   },
   {
     id: "dakota",
     ligne: "installer",
     titre: "Un feu qui ne se voit pas",
-    texte: "La nuit, un feu se voit de loin. Durcis une branche au feu pour en faire un bâton à fouir, puis creuse un foyer Dakota : ton feu de camp lui-même (examine-le), ou un nouveau, depuis Fabriquer.",
+    texte: "La nuit, un feu se voit de loin. Durcis une branche au foyer de pierres pour en faire un bâton à fouir, puis creuse un foyer Dakota : un nouveau feu, depuis Fabriquer.",
     objectifs: [{ libelle: "Foyer Dakota creusé", condition: fait("foyer_dakota") }],
     lecon: "La flamme reste dans le sol : moins de lumière, moins de fumée, moins de bois.",
     recompense: { objets: { conserve: 1 } },
@@ -179,25 +283,6 @@ const INSTALLER: Quete[] = [
     objectifs: [{ libelle: "Travois", condition: { a: "objet", types: ["travois"], n: 1 } }],
     lecon: "50 kg de plus derrière toi. Chargé, on ne court plus : choisis bien quand tu sors avec.",
     recompense: { wotts: 15 },
-  },
-  // Améliorer sa base (Book 24 §7) : un seul bon foyer, plutôt que trois feux.
-  {
-    id: "foyer_pierres",
-    ligne: "installer",
-    titre: "Un foyer qui tient la nuit",
-    texte: "Un feu de camp mange son bois et se voit de loin. Approche-toi du tien, examine-le, et maçonne-le en foyer de pierres (des pierres, deux bûches, une pierre pour marteler).",
-    objectifs: [{ libelle: "Foyer de pierres", condition: fait("foyer:foyer_pierres") }],
-    lecon: "Couvert, il tient la nuit et repart sans briquet. Son muret chauffe l'abri.",
-    recompense: { wotts: 10 },
-  },
-  {
-    id: "foyer_cuisine",
-    ligne: "installer",
-    titre: "Une vraie cuisine",
-    texte: "Un trépied, une crémaillère, une grille (un rouleau de grillage, ou deux barres de métal) : ton foyer devient une cuisine.",
-    objectifs: [{ libelle: "Foyer de cuisine", condition: fait("foyer:foyer_cuisine") }],
-    lecon: "Deux plats à la fois, des mijotés, l'eau bout plus vite. Un bon foyer vaut trois feux.",
-    recompense: { objets: { conserve: 1 } },
   },
 ];
 
@@ -278,7 +363,8 @@ const METIER: Quete[] = [
     famille: "charbonniers",
     titre: "Forger une lame",
     icone: "lame_forgee",
-    texte: "Au foyer de forge, avec un charbon et le ressort à lames de la ruine : forge une lame.",
+    // Plan 0.8 (chantier 13) : le couteau au fer doux, au foyer de forge, sans bac (`lame_forgee_fer`).
+    texte: "Au foyer de forge, un charbon et la barre de la ruine : du fer doux. Forge un couteau.",
     objectifs: [{ libelle: "Lame forgée", condition: { a: "un_de", conditions: [{ a: "fait", fait: "fabrique:lame_forgee", but: 1 }, { a: "objet", types: ["lame_forgee"], n: 1 }] } }],
     lecon: "Une lame forgée se vend bien : tout le monde a besoin de couper.",
     recompense: { wotts: 20 },
@@ -321,11 +407,12 @@ const METIER: Quete[] = [
     id: "dynamo",
     ligne: "metier",
     famille: "mecanistes",
-    titre: "La dynamo",
-    icone: "pedalier",
-    texte: "Monte la dynamo du vélo sur le pédalier : tes jambes feront de l'électricité.",
-    objectifs: [{ libelle: "Dynamo sur le pédalier", condition: { a: "installation", type: "pedalier", avec: "dynamo" } }],
-    lecon: "Une heure de pédalage, quelques Wh. C'est peu, mais c'est à toi.",
+    titre: "Le pédalier générateur",
+    icone: "petit_alternateur",
+    // Plan 0.8 (chantiers 7 et 13) : le petit alternateur de la station ; la dynamo du vélo reste le repli, très lent.
+    texte: "Monte le petit alternateur de la station sur ton pédalier générateur ({agir} au pédalier) : tes jambes feront de l'électricité.",
+    objectifs: [{ libelle: "Alternateur sur le pédalier", condition: { a: "un_de", conditions: [{ a: "installation", type: "pedalier", avec: "alternateur" }, { a: "installation", type: "pedalier", avec: "dynamo" }] } }],
+    lecon: "Une heure de pédalage, environ 60 Wh dans la batterie. C'est à toi, et ça ne fume pas.",
     recompense: { wotts: 20 },
   },
   {
@@ -346,8 +433,9 @@ const METIER: Quete[] = [
     famille: "voltaiques",
     titre: "Le panneau de la station",
     icone: "panneau_solaire",
-    texte: "Un petit panneau solaire est appuyé contre un pilier de l'auvent, à la station-service. Rapporte-le.",
-    objectifs: [{ libelle: "Panneau solaire", condition: { a: "un_de", conditions: [{ a: "objet", types: ["panneau_solaire"], n: 1 }, { a: "installation", type: "panneau_solaire" }] } }],
+    // Q-0.8-15 : le vétéran sans tutoriel va le chercher ; l'élève du tutoriel l'a déjà posé (« La famille »).
+    texte: "Ta famille t'attend à la station-service : un petit panneau solaire, appuyé contre un pilier de l'auvent. Rapporte-le.",
+    objectifs: [{ libelle: "Panneau solaire", condition: { a: "un_de", conditions: [{ a: "objet", types: ["panneau_solaire"], n: 1 }, { a: "installation", type: "banc_recharge", avec: "panneau" }, { a: "installation", type: "panneau_solaire" }] } }],
     lecon: "Le soleil ne fait pas de bruit, ne fume pas, et ne se fatigue jamais.",
     recompense: { wotts: 10 },
   },
@@ -355,11 +443,12 @@ const METIER: Quete[] = [
     id: "panneau_pose",
     ligne: "metier",
     famille: "voltaiques",
-    titre: "Installer le panneau",
-    icone: "panneau_solaire",
-    texte: "Installe le panneau sur ton terrain (depuis Fabriquer), au soleil, près de ton banc de recharge.",
-    objectifs: [{ libelle: "Panneau installé", condition: { a: "installation", type: "panneau_solaire" } }],
-    lecon: "Il charge le jour, même quand tu n'es pas là.",
+    titre: "Le banc solaire",
+    icone: "banc_recharge",
+    // Plan 0.8 (chantiers 7 et 13) : le panneau se pose sur le banc solaire, plein sud.
+    texte: "Pose le panneau sur ton banc solaire ({agir} au banc), et la batterie de la ruine à côté : le soleil s'y met en réserve.",
+    objectifs: [{ libelle: "Panneau sur le banc", condition: { a: "un_de", conditions: [{ a: "installation", type: "banc_recharge", avec: "panneau" }, { a: "installation", type: "panneau_solaire" }] } }],
+    lecon: "Il charge le jour, même quand tu n'es pas là : 80 Wh par beau temps.",
     recompense: { wotts: 15 },
   },
   {
@@ -401,7 +490,7 @@ const METIER_06: Quete[] = [
     icone: "pinces_forge",
     texte: "Le premier outil du forgeron : forge des pinces de forge (une barre de métal, du charbon).",
     objectifs: [{ libelle: "Pinces de forge", condition: fabriqueOuObjet(["pinces_forge"], ["pinces_forge"]) }],
-    lecon: "Sans pinces, pas plus de ★★. Avec elles et une enclume, ★★★.",
+    lecon: "Les pinces tiennent le fer rouge. Avec elles, une forge ventilée montera un jour à ★★★.",
     recompense: { wotts: 20 },
   },
   {
@@ -410,7 +499,8 @@ const METIER_06: Quete[] = [
     famille: "charbonniers",
     titre: "La trempe",
     icone: "machette_forgee",
-    texte: "Forge une machette, l'arme de ton métier. Ressort ou fer doux, trempe à l'eau ou à l'huile : vise ★★ ou mieux.",
+    // Plan 0.8 : le bac de trempe est une auge de planches calfatée de glaise (H1B), sans clé.
+    texte: "Forge une machette, l'arme de ton métier. Le ressort se trempe au bac : une auge calfatée de glaise du gué. Vise ★★.",
     objectifs: [{ libelle: "Machette forgée ★★", condition: { a: "objet", types: ["machette_forgee"], n: 1, etoiles: 2 } }],
     lecon: "Une lame vaut sa moins bonne part : l'acier, la trempe ou la forge.",
     recompense: { wotts: 25 },
@@ -421,8 +511,9 @@ const METIER_06: Quete[] = [
     famille: "charbonniers",
     titre: "La mise d'acier",
     icone: "hachette",
-    texte: "Soude un tranchant de ressort sur un corps de fer : forge des hachettes, ou une hache.",
-    objectifs: [{ libelle: "Hachette ou hache forgée", condition: fabriqueOuObjet(["hachette", "hache_forgee", "hache_forgee_soc"], ["hachette", "hache_forgee"]) }],
+    // Q-0.8-2, Q-0.8-10 : la hachette au foyer de forge, à ★★ ; la hache attend la forge ventilée (plus tard).
+    texte: "Au foyer de forge, soude un tranchant de ressort sur un corps de fer, et trempe-le au bac : deux hachettes.",
+    objectifs: [{ libelle: "Hachette forgée", condition: fabriqueOuObjet(["hachette"], ["hachette"]) }],
     lecon: "La hachette se lance : va la reprendre là où elle tombe.",
     recompense: { wotts: 30 },
   },
@@ -549,9 +640,48 @@ export const QUETES: Quete[] = [...METIER, ...METIER_06, ...INSTALLER, ...AUTRES
 
 export const QUETE = new Map(QUETES.map((q) => [q.id, q]));
 
-/** Les quêtes d'une ligne, dans l'ordre, pour cette famille. */
+/** Au plus deux objectifs ouverts à la fois sur une ligne qui a des portes (une par route). */
+export const PORTES_OUVERTES_MAX = 2;
+
+/**
+ * Les quêtes ouvertes d'une ligne, pour cette famille (plan 0.8 §2.6, Q-0.8-19). Les objectifs sans route se suivent un à
+ * un, dans l'ordre ; arrivées aux portes, deux sont ouvertes à la fois, la première qui reste de chaque route. Quand une
+ * route est finie, sa place passe à l'objectif qui suit les portes. Une ligne sans portes n'en ouvre jamais qu'une.
+ */
+export function quetesOuvertes(ligne: LigneQuete, famille: Famille, finies: readonly string[]): Quete[] {
+  const ouvertes: Quete[] = [];
+  const routes = new Set<RouteQuete>();
+  let auxPortes = false;
+  for (const q of QUETES) {
+    if (q.ligne !== ligne || (q.famille && q.famille !== famille)) continue;
+    if (q.route) auxPortes = true;
+    if (finies.includes(q.id)) continue;
+    // Avant les portes : une à une.
+    if (!auxPortes) return [q];
+    if (q.route) {
+      if (!routes.has(q.route)) {
+        routes.add(q.route);
+        ouvertes.push(q);
+      }
+    } else if (!ouvertes.some((o) => !o.route)) ouvertes.push(q);
+    if (ouvertes.length >= PORTES_OUVERTES_MAX) break;
+  }
+  return ouvertes;
+}
+
+/** La première quête ouverte d'une ligne (le simulateur du rythme suit les lignes une à une). */
 export function queteSuivante(ligne: LigneQuete, famille: Famille, finies: readonly string[]): Quete | null {
-  return QUETES.find((q) => q.ligne === ligne && (!q.famille || q.famille === famille) && !finies.includes(q.id)) ?? null;
+  return quetesOuvertes(ligne, famille, finies)[0] ?? null;
+}
+
+/**
+ * Au départ d'une sortie, le carnet nomme les portes ouvertes (plan 0.8 §2.6, avis du game designer, règle 7) :
+ * « Une vraie cuisine : il te faut une grille. » null s'il n'y a pas de porte ouverte.
+ */
+export function phraseDuDepart(ouvertes: readonly Quete[]): string | null {
+  const portes = ouvertes.filter((q) => q.route && q.besoin);
+  if (portes.length === 0) return null;
+  return `${portes.map((q) => `${q.titre} : ${q.besoin}`).join(". ")}.`;
 }
 
 /** Ce que le serveur garde pour un joueur. */
@@ -570,6 +700,8 @@ export const QUETES_NEUVES: EtatQuetes = { faits: {}, finies: [], primes: 0 };
 export interface VueQuete {
   id: string;
   ligne: LigneQuete;
+  /** Une porte du niveau 1 : sa route (le carnet le dit : « vers la Coopérative », « vers le Moulin »). */
+  route?: RouteQuete;
   titre: string;
   icone?: string;
   texte: string;

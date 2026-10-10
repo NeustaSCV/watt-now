@@ -6,12 +6,12 @@ import { VERSION } from "../../commun/src/version.ts";
 import { REGLAGES } from "../../commun/src/reglages.ts";
 import { ceQuiManque } from "../../commun/src/aide-fabrication.ts";
 import type { VueProgression } from "../../commun/src/progression.ts";
-import { SILHOUETTES_DEPLIEES, enTete, nouveautesParOnglet, ongletsVides, planFabrication, recetteVisible, sousTitre, type PlanFabrication } from "./fabrication-arbre.ts";
+import { SILHOUETTES_DEPLIEES, enTete, etatCle, nouveautesParOnglet, ongletsVides, planFabrication, recetteVisible, sousTitre, type PlanFabrication } from "./fabrication-arbre.ts";
 import { ACTIONS, RESERVEES, assigner, avecTouches, nomDe, nomTouche, retablir, surChangement, type Action } from "./touches.ts";
 import { PanneauAide } from "./aide.ts";
 import { CAPACITES, type Charges } from "../../commun/src/energie.ts";
-import { ARMES, MATIERE_ARME, NOMS_BLESSURES, PLAFOND_FORTUNE, RESISTANCE_TORSE, SEUIL_ABIMEE, armeDeCle, capaciteChargeArme, caracteristiquesArme, estArme, etatArme } from "../../commun/src/combat.ts";
-import type { EchangeVu, FeuVu, InstallationVue, OffreEchange, OperationComptoir, OperationEchange, Personne, RapportBase, SanteVue, Verbe, VueComptoir, WottsVus } from "../../commun/src/messages.ts";
+import { ARMES, NOMS_BLESSURES, PLAFOND_FORTUNE, RESISTANCE_TORSE, SEUIL_ABIMEE, armeDeCle, capaciteChargeArme, caracteristiquesArme, estArme, etatArme } from "../../commun/src/combat.ts";
+import type { EchangeVu, FeuVu, GesteRepriseArme, InstallationVue, OffreEchange, OperationComptoir, OperationEchange, Personne, RapportBase, SanteVue, Verbe, VueComptoir, WottsVus } from "../../commun/src/messages.ts";
 import {
   ACCESSOIRES_FEU,
   COMBLER,
@@ -19,7 +19,6 @@ import {
   VOIE_CREUSEE,
   VOIE_SURFACE,
   capaciteCoffre,
-  choisirCout,
   contenanceRecuperateur,
   coutPour,
   effetsFeu,
@@ -30,16 +29,24 @@ import {
   formeFeu,
   lignee,
   niveauInstallation,
+  pieceAPoser,
   type AccessoireFeu,
+  type CleEvolution,
   type Etape,
 } from "../../commun/src/lignees.ts";
+import { texteAVenir } from "../../commun/src/lignees.ts";
+import { enteteFiche, piedFiche } from "./fiche-examiner.ts";
+import { choisirFacon } from "../../commun/src/replis.ts";
+import { texteLieu, type Alentours } from "../../commun/src/lieu-recette.ts";
+import { reprise, seReprend, type Reprise } from "../../commun/src/evolution-armes.ts";
 import { PRIX_RETRAIT, formaterWotts, prixAchatExemplaire, prixVenteCle } from "../../commun/src/economie.ts";
 import { detailEnergieGrise } from "../../commun/src/recettes.ts";
 import type { TypeBatterie } from "../../commun/src/energie.ts";
 import type { Inventaire, TypeObjet } from "../../commun/src/objets.ts";
-import { ETOILES, compter, etoilesDe, etoilesTexte, typeDe, type CleObjet } from "../../commun/src/etoiles.ts";
+import { ETOILES, compter, etoilesDe, etoilesTexte, typeDe, type CleObjet, type Etoiles } from "../../commun/src/etoiles.ts";
 import { MUNITIONS, armeTirDe, armeTirExemplaire, estLancable } from "../../commun/src/tir.ts";
 import { OBJETS, capaciteDe, estCleObjet, nomContenant, nommer, poidsInventaire } from "../../commun/src/objets.ts";
+import { estOutil } from "../../commun/src/outils-a-portee.ts";
 import {
   CATEGORIES_RECETTES,
   NOMS_INSTALLATIONS,
@@ -60,7 +67,7 @@ import { MANUELS, chezLaFamille, estManuel } from "../../commun/src/savoir.ts";
 import { NOMS_FAMILLES, type Famille } from "../../commun/src/regles.ts";
 import { RECETTE_DAKOTA, RECETTE_FEU, RESERVE_EAU_MAX, RESERVE_KCAL_MAX, aFaim, aSoif, fatigue, type Besoins, type Gourde } from "../../commun/src/survie.ts";
 import { NOMS_TEMPS, type Temps } from "../../commun/src/meteo.ts";
-import type { VueTutoriel } from "../../commun/src/tutoriel.ts";
+import { tutorielEnCours, type VueTutoriel } from "../../commun/src/tutoriel.ts";
 import type { VueQuetes } from "../../commun/src/quetes.ts";
 import { derniereIdee, ligneDerniereIdee, type DerniereIdee } from "./carnet-idees.ts";
 import { formaterHeure } from "../../commun/src/temps.ts";
@@ -121,18 +128,22 @@ export interface ActionsJoueur {
   preparer(objet: CleObjet | null): void;
   /** Réparer une arme (Book 23 §4.3) : de fortune, ou pour de bon à l'atelier. */
   reparer(objet: CleObjet, fortune: boolean): void;
+  /** Reprendre une arme sur son meuble : la réparer, ou la monter d'une étoile (plan 0.8, chantier 9). */
+  reprendre(objet: CleObjet, geste: GesteRepriseArme): void;
   /** Recharger une arme électrique à la manivelle de la lampe à dynamo (Book 25 §5.4). */
   manivelle(objet: CleObjet): void;
   /** Ranger dans le coffre, ou en sortir. */
   coffre(id: number, sens: "deposer" | "prendre", objet: CleObjet, quantite: number): void;
   /** Un geste sur un feu ou une installation, depuis sa fiche (Book 24 : améliorer, démonter, creuser…). */
   amenager(genre: "feu" | "installation", id: number, verbe: Verbe): void;
+  /** Un constat pour les mesures (plan 0.8, chantier 14) : la fiche d'un meuble qu'on ne peut pas améliorer, l'aide « Je suis coincé ». */
+  constat(quoi: "fiche_bloquee" | "aide_coince", construction?: string): void;
 }
 
 /** Le feu de camp, vu comme une recette, pour dire ce qui manque. */
-const RECETTE_FEU_AIDE: Recette = { id: "feu", categorie: "feu", nom: "Feu de camp", produit: { objet: "branche", quantite: 0 }, ingredients: RECETTE_FEU, qualites: {}, duree: 0, intensite: "legere", famille: "tous" };
+const RECETTE_FEU_AIDE: Recette = { id: "feu", lieu: { genre: "posee" }, categorie: "feu", nom: "Feu de camp", produit: { objet: "branche", quantite: 0 }, ingredients: RECETTE_FEU, qualites: {}, duree: 0, intensite: "legere", famille: "tous" };
 /** Le foyer Dakota (P-002), vu comme une recette, pour dire ce qui manque. */
-const RECETTE_DAKOTA_AIDE: Recette = { id: "dakota", categorie: "feu", nom: "Foyer Dakota", produit: { objet: "branche", quantite: 0 }, ingredients: RECETTE_DAKOTA, qualites: { creuser: 1 }, duree: 0, intensite: "legere", famille: "tous" };
+const RECETTE_DAKOTA_AIDE: Recette = { id: "dakota", lieu: { genre: "posee" }, categorie: "feu", nom: "Foyer Dakota", produit: { objet: "branche", quantite: 0 }, ingredients: RECETTE_DAKOTA, qualites: { creuser: 1 }, duree: 0, intensite: "legere", famille: "tous" };
 
 type NomJauge = "faim" | "eau" | "sommeil" | "sante" | "endurance";
 
@@ -196,8 +207,6 @@ const TYPES_DEGATS = {
   // « Maintenu… il l'éteint » est déjà dit par la ligne ☠ de la fiche : on ne le répète pas.
   electrique: "Électrique : il lâche et se raidit, casque ou pas.",
 } as const;
-/** Où remettre une arme à neuf (Book 23 §4.3). */
-const ATELIERS_REPARATION_NOMS = { bois: "à l'établi", lame: "à la meule ou à la forge", metal: "à la forge" } as const;
 
 export class Hud {
   /** Réassigner une touche : le jeu attend la prochaine touche frappée (null : annulé). */
@@ -486,6 +495,8 @@ export class Hud {
     for (const b of menu.querySelectorAll<HTMLButtonElement>(".r-commandes")) b.addEventListener("click", () => ouvrirMenu(false));
     // L'aide du jeu : tous les mécanismes, sans les secrets (2026-10-08).
     this.aide = new PanneauAide(element, tactile);
+    // Plan 0.8 (chantier 14) : l'aide « Je suis coincé » ouverte est un constat des mesures.
+    this.aide.surRubrique = (id) => id === "questions" && this.actions.constat("aide_coince");
     this.aide.surBascule = (ouvert) => this.surPanneau?.(ouvert);
     q(".r-aide").addEventListener("click", () => {
       ouvrirMenu(false);
@@ -1014,7 +1025,10 @@ export class Hud {
   private reussiJusqua = 0;
   private derniersProgres = "";
 
-  majTutoriel(v: VueTutoriel | null): void {
+  majTutoriel(recu: VueTutoriel | null): void {
+    // La dernière vue (`termine`) : sa leçon, puis le tutoriel est fini (le carnet passe aux objectifs).
+    if (recu?.termine && recu.lecon) this.message(`✓ ${recu.lecon}`, "lecon");
+    const v = tutorielEnCours(recu);
     const fini = this.tutoriel !== null && v === null;
     const nouvelleEtape = v !== null && this.tutoriel !== null && v.etape !== this.tutoriel.etape;
     // Le tout début : le carnet s'ouvre d'office (on n'a pas encore pu choisir).
@@ -1519,7 +1533,7 @@ export class Hud {
       // Un objet de métier montre ses étoiles sur sa case (Book 25 §4.2), et une arme électrique sa charge.
       const n = etoilesDe(cle);
       // Sur une case de 46 px, « 4★ » se lit mieux que cinq étoiles serrées ; la fiche les montre toutes.
-      const etoiles = n === null ? "" : `<span class="etoiles-case" title="${etoilesTexte(n)}">${n}★</span>`;
+      const etoiles = n === null ? "" : `<span class="etoiles-case ${this.etoileGagnee === cle ? "etoile-gagnee" : ""}" title="${etoilesTexte(n)}">${n}★</span>`;
       const charge = this.partCharge(cle);
       const barre = charge === null ? "" : `<span class="charge-case" aria-hidden="true"><span style="width:${Math.round(charge * 100)}%"></span></span>`;
       // Une arme de tir montre ce qui lui reste à tirer (Book 25 §8.6), en bas à gauche : « ➶7 ».
@@ -1589,13 +1603,20 @@ export class Hud {
       const arme = caracteristiquesArme(s);
       // Une arme de tir (Book 25 §8.6) : ses portées, sa cadence, ses munitions, à ses étoiles.
       const caracs = arme ? this.ficheArme(arme, s) : armeTirDe(t) ? this.ficheTir(s) : "";
-      if (arme) {
-        const etat = etatArme(s, this.usureArmes);
-        if (etat < 1) {
-          actions.push(`<button type="button" data-action="reparer" title="Remettre à neuf ${ATELIERS_REPARATION_NOMS[MATIERE_ARME[t] ?? "metal"]}">Réparer</button>`);
-          infos.push(`<p class="info-objet">Réparer : ${ATELIERS_REPARATION_NOMS[MATIERE_ARME[t] ?? "metal"]}, chez toi.${etat < PLAFOND_FORTUNE ? " Rafistoler : partout, avec une ficelle et des chiffons (elle reste abîmée)." : ""}</p>`);
-          if (etat < PLAFOND_FORTUNE) actions.push(`<button type="button" data-action="reparer-fortune" title="Une ficelle et des chiffons : elle tient, mais reste abîmée">Rafistoler</button>`);
+      // Reprendre l'arme sur son meuble (plan 0.8, chantier 9) : le bouton n'est là que tout près du meuble ; ailleurs, la
+      // fiche dit où, et le rafistolage de fortune reste possible partout.
+      let reprendre = "";
+      if (seReprend(s)) {
+        const r = this.repriseDe(s);
+        const montee = r.monter?.possible === true;
+        if (r.aPortee && (r.etat < 1 || r.monter)) {
+          const ouverte = this.repriseOuverte === s;
+          actions.push(`<button type="button" ${r.etat < 1 || montee ? `class="principal"` : ""} data-action="reprendre" aria-expanded="${ouverte}" title="Le réparer ou le monter d'une étoile, ici">Reprendre</button>`);
+          if (ouverte) reprendre = this.ficheReprise(r);
+        } else if (r.etat < 1) {
+          infos.push(`<p class="info-objet">Reprendre : ${r.ou}, chez toi.${arme && r.etat < PLAFOND_FORTUNE ? " Rafistoler : partout, avec une ficelle et des chiffons (elle reste abîmée)." : ""}</p>`);
         }
+        if (arme && r.etat < PLAFOND_FORTUNE) actions.push(`<button type="button" data-action="reparer-fortune" title="Une ficelle et des chiffons : elle tient, mais reste abîmée">Rafistoler</button>`);
       }
       // Vestiges, lot 1 : ce que donne le démontage, et l'outil qu'il demande.
       // Un exemplaire étoilé ne se démonte pas (il se reforge, Book 25 §4.4).
@@ -1603,7 +1624,7 @@ export class Hud {
       if (dem) {
         const donne = (Object.entries(dem.donne) as [TypeObjet, number][]).map(([t, k]) => nommer(t, k)).join(", ");
         const outils = (Object.entries(dem.qualites) as [Qualite, number][]).map(([q, niv]) => `${NOMS_QUALITES[q]} ${niv}`).join(", ");
-        const facteur = multiplicateurQualites(this.inventaire, dem.qualites);
+        const facteur = multiplicateurQualites(this.outils, dem.qualites);
         const etat = facteur === null ? "il te manque l'outil" : facteur > 1 ? "ton outil fera l'affaire, plus lentement" : outils ? "tu as l'outil" : "";
         actions.push(`<button type="button" data-action="demonter" ${facteur === null ? "disabled" : ""}>Démonter</button>`);
         infos.push(`<p class="info-objet">Démonter → ${donne}. Outil : ${outils || "aucun"}${etat ? ` (${etat})` : ""}.</p>`);
@@ -1623,12 +1644,16 @@ export class Hud {
       }
       // Les étoiles d'un objet de métier (Book 25 §4.2), en clair : « ★★★☆☆ ».
       const etoiles = etoilesDe(s);
-      const etoilesFiche = etoiles === null ? "" : ` <span class="etoiles-fiche" title="${etoiles} étoile${etoiles > 1 ? "s" : ""} sur 5">${etoilesTexte(etoiles)}<span class="etoiles-vides">${"☆".repeat(5 - etoiles)}</span></span>`;
+      // L'étoile qui vient de s'ajouter sur le meuble (chantier 9) brille un instant, en or.
+      const neuve = etoiles !== null && this.etoileGagnee === s;
+      const pleines = etoiles === null ? "" : neuve ? `${etoilesTexte((etoiles - 1) as Etoiles)}<span class="etoile-neuve">★</span>` : etoilesTexte(etoiles);
+      const etoilesFiche = etoiles === null ? "" : ` <span class="etoiles-fiche" title="${etoiles} étoile${etoiles > 1 ? "s" : ""} sur 5">${pleines}<span class="etoiles-vides">${"☆".repeat(5 - etoiles)}</span></span>`;
       const famille = d.famille ? ` · ${NOMS_FAMILLES_VESTIGES[d.famille]}` : "";
       fiche = `
         <div class="fiche-tete">${icone(t, 36)}<div><strong>${nommer(t, n)}${etoilesFiche}</strong>
           <small>${kg(d.poids * n + (s === "gourde" ? g.litres : 0))} kg · valeur ≈ ${formaterWotts(energieGrise(t))}${famille}${enMain}</small></div></div>
         ${actions.length ? `<div class="actions-objet">${actions.join("")}</div>` : ""}
+        ${reprendre}
         <p class="description">${detail}</p>
         ${caracs}
         ${infos.join("")}
@@ -1683,6 +1708,13 @@ export class Hud {
         if (action === "desequiper") this.actions.equiper(null);
         if (action === "preparer" && this.selection) this.actions.preparer(this.selection);
         if ((action === "reparer" || action === "reparer-fortune") && this.selection) this.actions.reparer(this.selection, action === "reparer-fortune");
+        if (action === "reprendre" && this.selection) {
+          this.repriseOuverte = this.repriseOuverte === this.selection ? null : this.selection;
+          this.dessinerSac();
+        }
+        if ((action === "reprendre-reparer" || action === "reprendre-monter") && this.selection) {
+          this.actions.reprendre(this.selection, action === "reprendre-monter" ? "monter" : "reparer");
+        }
         if (action === "demonter" && this.selection) this.actions.demonter(typeDe(this.selection));
         if (action === "lire" && this.selection) this.actions.lire(typeDe(this.selection));
         if (action === "manivelle" && this.selection) this.actions.manivelle(this.selection);
@@ -1691,6 +1723,64 @@ export class Hud {
         }
       });
     }
+  }
+
+  // ---------- Reprendre une arme sur son meuble (plan 0.8, chantier 9) ----------
+
+  /** Ce qu'il y a autour pour reprendre une arme (main.ts) : sa position, ses installations ; null ailleurs que chez soi. */
+  alentoursReprise: (() => Alentours | null) | null = null;
+  /** L'arme dont on a déplié les propositions du meuble (« Reprendre »). */
+  private repriseOuverte: CleObjet | null = null;
+  /** L'exemplaire qui vient de gagner une étoile : sa case et sa fiche brillent un instant. */
+  private etoileGagnee: CleObjet | null = null;
+  /** On s'approche ou on s'éloigne du meuble le sac ouvert : le bouton « Reprendre » suit (deux fois par seconde). */
+  private minuteurReprise: ReturnType<typeof setInterval> | null = null;
+
+  /** Ce que les meubles d'à côté proposent pour cet exemplaire. */
+  private repriseDe(cle: CleObjet): Reprise {
+    this.minuteurReprise ??= setInterval(() => {
+      if (!this.sac.hidden && this.selection && seReprend(this.selection)) this.dessinerSac();
+    }, 500);
+    const a = this.alentoursReprise?.() ?? { x: 0, z: 0, feux: [], installations: [], inventaire: this.inventaire };
+    return reprise(cle, a, this.usureArmes);
+  }
+
+  /**
+   * Les deux propositions du meuble, dépliées sous les actions (jamais une fenêtre à part) : remettre à neuf, monter
+   * d'une étoile ; chacune avec ce qu'elle prend, ou ce qui manque.
+   */
+  private ficheReprise(r: Reprise): string {
+    // « 1 kilo de charbon de bois », « 1 branche » : le compte, même pour un seul (recette finale 0.8).
+    const cout = (c: Inventaire) => (Object.entries(c) as [CleObjet, number][]).map(([t, n]) => `${icone(typeDe(t), 16)}${n > 1 ? nommer(t, n) : `1 ${nommer(t, 1)}`}`).join(" · ");
+    const ligne = (action: string, libelle: string, p: { possible: boolean; raison?: string; cout: Inventaire }) => `
+      <div class="proposition ${p.possible ? "" : "impossible"}">
+        <button type="button" data-action="${action}" ${p.possible ? "" : "disabled"}>${libelle}</button>
+        <small>${p.possible ? (Object.keys(p.cout).length ? cout(p.cout) : "Rien à fournir.") : (p.raison ?? "")}</small>
+      </div>`;
+    const lignes = [ligne("reprendre-reparer", r.etat < 1 ? `Remettre à neuf (${Math.round(r.etat * 100)} %)` : "Remettre à neuf", r.reparer)];
+    if (r.monter) {
+      const cible = r.monter.cible ?? (((r.etoiles ?? 0) + 1) as Etoiles);
+      lignes.push(ligne("reprendre-monter", `Monter à <span class="etoiles-nom">${etoilesTexte(Math.min(5, cible) as Etoiles)}</span>`, r.monter));
+    }
+    return `<div class="reprise" role="group" aria-label="Reprendre l'arme">${lignes.join("")}</div>`;
+  }
+
+  /** Le serveur a repris l'arme : montée d'une étoile, la nouvelle clé est choisie, et son étoile brille en or. */
+  armeReprise(avant: CleObjet, apres: CleObjet, geste: GesteRepriseArme): void {
+    this.repriseOuverte = null;
+    if (geste === "monter") {
+      // La pile d'avant a pu se vider à la mise à jour du sac (la sélection est tombée) : on choisit l'exemplaire monté.
+      if (this.selection === avant || this.selection === null) this.selection = apres;
+      this.etoileGagnee = apres;
+      setTimeout(() => {
+        if (this.etoileGagnee !== apres) return;
+        this.etoileGagnee = null;
+        this.dernierSac = "";
+        if (!this.sac.hidden) this.dessinerSac();
+      }, 2200);
+    }
+    this.dernierSac = "";
+    if (!this.sac.hidden) this.dessinerSac();
   }
 
   /** Les caractéristiques d'une arme, en barres (la meilleure arme du jeu remplit la barre). */
@@ -1759,11 +1849,13 @@ export class Hud {
     const coupsPourTomber = Math.ceil(RESISTANCE_TORSE / a.degats);
     const etat = etatArme(objet, this.usureArmes);
     const abimee = etat < SEUIL_ABIMEE;
-    // L'électrique ne fait rien au torse : on montre ce qu'il fait, le raidissement (Book 25 §8.2).
+    // L'électrique frappe aussi le torse depuis la 0.8 (plan §2.4) : ses dégâts, puis ce qu'il fait de plus, le
+    // raidissement (Book 25 §8.2).
+    const degats = barre("Dégâts", a.degats / maxDegats, virgule(a.degats), `${coupsPourTomber} coup${coupsPourTomber > 1 ? "s" : ""} au torse pour le faire tomber`);
     const premiere =
       a.type === "electrique"
-        ? barre("Raidit", (a.raidi ?? 0) / ETOILES[5].raidi, `${virgule(a.raidi ?? 0)} s`, "Une décharge courte : il lâche et ne bouge plus pendant ce temps")
-        : barre("Dégâts", a.degats / maxDegats, virgule(a.degats), `${coupsPourTomber} coup${coupsPourTomber > 1 ? "s" : ""} au torse pour le faire tomber`);
+        ? degats + barre("Raidit", (a.raidi ?? 0) / ETOILES[5].raidi, `${virgule(a.raidi ?? 0)} s`, "Une décharge courte : il lâche et ne bouge plus pendant ce temps")
+        : degats;
     const tete =
       a.type === "electrique"
         ? "☠ Maintenu sur un Éteint raidi ou à terre : il s'éteint."
@@ -1821,16 +1913,18 @@ export class Hud {
     const poidsCoffre = poidsInventaire(contenu);
     // La décharge (P-001) s'ouvre comme un coffre : on n'y fait que prendre, en choisissant (le sac ne suit pas).
     const estDecharge = c.type === "decharge";
+    // Le râtelier à outils (plan 0.8, chantier 6) : des outils seulement, sans limite de poids.
+    const estRatelier = c.type === "ratelier_outils";
     const poidsSac = poidsInventaire(this.inventaire, this.gourde.litres);
     const capSac = capaciteDe(this.inventaire);
-    const capCoffre = estDecharge ? Infinity : capaciteCoffre(c);
+    const capCoffre = estDecharge || estRatelier ? Infinity : capaciteCoffre(c);
     const placeSac = capSac - poidsSac;
     const placeCoffre = capCoffre - poidsCoffre;
     // Toucher une case la choisit : son nom s'affiche dans la bande, avec ses boutons (avis de Sally, 2026-10-09).
     const choix = this.choixCoffre;
     const cases = (inv: Inventaire, sens: "deposer" | "prendre") =>
       (Object.keys(inv) as CleObjet[])
-        .filter((t) => (inv[t] ?? 0) > 0 && !(sens === "deposer" && t === "sac_a_dos"))
+        .filter((t) => (inv[t] ?? 0) > 0 && !(sens === "deposer" && t === "sac_a_dos") && !(sens === "deposer" && estRatelier && !estOutil(t)))
         .map((t) => {
           const n = inv[t] ?? 0;
           const choisie = choix?.sens === sens && choix.objet === t;
@@ -1844,7 +1938,7 @@ export class Hud {
       const inv = choix.sens === "deposer" ? this.inventaire : contenu;
       const n = inv[choix.objet] ?? 0;
       const d = OBJETS[typeDe(choix.objet)];
-      const ou = choix.sens === "deposer" ? "sur toi" : estDecharge ? "dans la décharge" : "dans le coffre";
+      const ou = choix.sens === "deposer" ? "sur toi" : estDecharge ? "dans la décharge" : estRatelier ? "au râtelier" : "dans le coffre";
       if (n <= 0) classeBande = " absent";
       let boutons = "";
       if (n > 0) {
@@ -1864,10 +1958,10 @@ export class Hud {
     }
     const plein = (place: number, inv: Inventaire) => Object.keys(inv).length > 0 && place < Math.min(...(Object.keys(inv) as CleObjet[]).map((t) => OBJETS[typeDe(t)].poids));
     const html = `
-      <header><h2>${estDecharge ? "Décharge" : "Coffre"}</h2><button type="button" class="fermer" aria-label="Fermer">✕</button></header>
+      <header><h2>${estDecharge ? "Décharge" : estRatelier ? "Râtelier à outils" : "Coffre"}</h2><button type="button" class="fermer" aria-label="Fermer">✕</button></header>
       <div class="colonnes">
         <section><h3>Sur toi <small class="${plein(placeSac, contenu) ? "plein" : ""}">${kg(poidsSac)} / ${capSac} kg</small></h3><div class="grille">${cases(this.inventaire, "deposer")}</div></section>
-        <section><h3>${estDecharge ? `Remonté du tas <small>${kg(poidsCoffre)} kg</small>` : `Dans le coffre <small class="${plein(placeCoffre, this.inventaire) ? "plein" : ""}">${kg(poidsCoffre)} / ${capCoffre} kg</small>`}</h3><div class="grille">${cases(contenu, "prendre")}</div></section>
+        <section><h3>${estDecharge ? `Remonté du tas <small>${kg(poidsCoffre)} kg</small>` : estRatelier ? `Au râtelier <small>à 3 m, ils comptent</small>` : `Dans le coffre <small class="${plein(placeCoffre, this.inventaire) ? "plein" : ""}">${kg(poidsCoffre)} / ${capCoffre} kg</small>`}</h3><div class="grille">${cases(contenu, "prendre")}</div></section>
       </div>
       <div class="bande-objet${classeBande}" aria-live="polite">${bande}</div>`;
     // On ne redessine que si quelque chose a changé, et en gardant le défilement des grilles (sinon un toucher se perd).
@@ -1876,7 +1970,11 @@ export class Hud {
     const defil = [...p.querySelectorAll<HTMLElement>(".grille")].map((g) => g.scrollTop);
     p.innerHTML = html;
     p.querySelectorAll<HTMLElement>(".grille").forEach((g, i) => (g.scrollTop = defil[i] ?? 0));
-    p.querySelector(".fermer")!.addEventListener("click", () => this.ouvrir(p, false));
+    // Plus de croix (plan 0.8 §9.2) : le bouton « Fermer » du bas, ou B.
+    p.querySelector(".fermer-fiche")!.addEventListener("click", () => this.ouvrir(p, false));
+    for (const d of p.querySelectorAll<HTMLDetailsElement>("details.indice-cle")) {
+      d.addEventListener("toggle", () => (d.open ? this.indicesDeplies.add(d.dataset.etape!) : this.indicesDeplies.delete(d.dataset.etape!)));
+    }
     const deplacer = (sens: "deposer" | "prendre", objet: CleObjet, tout: boolean) => {
       if (estDecharge && sens === "deposer") return;
       const dispo = (sens === "deposer" ? this.inventaire[objet] : contenu[objet]) ?? 0;
@@ -1917,8 +2015,15 @@ export class Hud {
   sourceFiche: ((genre: "feu" | "installation", id: number) => FeuVu | InstallationVue | null) | null = null;
   /** Les installations et feux du terrain (le lit voisin que l'abri peut absorber). */
   voisinsFiche: (() => { installations: InstallationVue[]; feux: FeuVu[] }) | null = null;
+  /** Plan 0.8, chantier 6 : les outils à portée (le sac, le râtelier et l'établi à étau à 3 m), pour griser juste. */
+  outilsAPortee: (() => Inventaire) | null = null;
+  private get outils(): Inventaire {
+    return this.outilsAPortee?.() ?? this.inventaire;
+  }
   private fiche: { genre: "feu" | "installation"; id: number } | null = null;
   private derniereFiche = "";
+  /** Les indices « Où chercher ? » dépliés (par étape), le temps de la session. */
+  private readonly indicesDeplies = new Set<string>();
 
   private get panneauFiche(): HTMLElement {
     return this.element.querySelector<HTMLElement>(".panneau.fiche")!;
@@ -1936,6 +2041,12 @@ export class Hud {
     this.fiche = { genre, id };
     this.derniereFiche = "";
     this.dessinerFiche();
+    // Plan 0.8 (chantier 14) : la fiche ouverte sans pouvoir monter d'un niveau (il y en a un, il manque quelque chose).
+    const p = this.panneauFiche;
+    if (!p.hidden && p.querySelector('[data-verbe="ameliorer"]') && !p.querySelector('.etape.possible [data-verbe="ameliorer"]')) {
+      const v = this.sourceFiche?.(genre, id);
+      this.actions.constat("fiche_bloquee", genre === "feu" ? "feu" : (v as InstallationVue | null)?.type);
+    }
   }
 
   /** Le feu ou l'installation a changé (bois, niveau, démonté) : la fiche suit. */
@@ -1956,7 +2067,11 @@ export class Hud {
     if (html === this.derniereFiche) return;
     this.derniereFiche = html;
     p.innerHTML = html;
-    p.querySelector(".fermer")!.addEventListener("click", () => this.ouvrir(p, false));
+    // Plus de croix (plan 0.8 §9.2) : le bouton « Fermer » du bas, ou B.
+    p.querySelector(".fermer-fiche")!.addEventListener("click", () => this.ouvrir(p, false));
+    for (const d of p.querySelectorAll<HTMLDetailsElement>("details.indice-cle")) {
+      d.addEventListener("toggle", () => (d.open ? this.indicesDeplies.add(d.dataset.etape!) : this.indicesDeplies.delete(d.dataset.etape!)));
+    }
     for (const b of p.querySelectorAll<HTMLButtonElement>("[data-verbe]")) {
       b.addEventListener("click", () => {
         const verbe = b.dataset.verbe as Verbe;
@@ -1975,8 +2090,9 @@ export class Hud {
     );
     const outils = (Object.entries(qualites) as [Qualite, number][])
       .map(([q, n]) => {
-        const a = niveauQualite(this.inventaire, q);
-        const etat = a >= n ? "ok" : a >= 1 && a === n - 1 ? "lent" : "manque";
+        const a = niveauQualite(this.outils, q);
+        // Les outils sont des portes dures (plan 0.8 §2.1) : le niveau demandé, ou rien.
+        const etat = a >= n ? "ok" : "manque";
         return `<span class="outil ${etat}">${NOMS_QUALITES[q]} ${n}</span>`;
       })
       .join("");
@@ -1990,35 +2106,64 @@ export class Hud {
   private carteEtape(
     titre: string,
     texte: string,
-    e: { couts: readonly Inventaire[]; qualites: Partial<Record<Qualite, number>>; famille?: Famille },
+    e: { couts: readonly Inventaire[]; qualites: Partial<Record<Qualite, number>>; famille?: Famille; id?: string; cle?: CleEvolution },
     verbe: Verbe,
     bouton: string,
     bloque: string | null = null,
     gratuit = false,
   ): string {
-    const { cout, payable } = choisirCout(this.inventaire, e.couts, e, this.famille);
-    const outils = multiplicateurQualites(this.inventaire, e.qualites) !== null;
+    // Avec la clé, ou par un repli (plan 0.8 §2.2 ; commun/src/replis.ts) : la première façon possible.
+    const { facon, cout, payable, outils: facteur } = choisirFacon(this.inventaire, { duree: 0, ...e }, this.famille, (q) => multiplicateurQualites(this.outils, q));
+    const outils = facteur !== null;
     const possible = (gratuit || (payable && outils)) && !bloque;
     const badge = e.famille ? ` <span class="badge-famille ${e.famille}" title="Un niveau de métier">${NOMS_FAMILLES[e.famille]}${e.famille !== this.famille ? " · ×1,5" : ""}</span>` : "";
+    // Plan 0.8, chantier 13 : la clé a sa ligne et son indice en deux temps ; elle ne se répète pas dans ce qui manque
+    // (sinon la liste dirait d'emblée où la trouver). Le reste : une ligne par manque, repliée sous « Où trouver ? ».
+    const sansCle = e.cle?.objet ? (Object.fromEntries(Object.entries(cout).filter(([t]) => t !== e.cle!.objet)) as Inventaire) : cout;
     const manque =
       !possible && !bloque && !gratuit
-        ? this.listeManque({ id: "fiche", categorie: "batir", nom: titre, produit: { objet: "branche", quantite: 0 }, ingredients: cout, qualites: e.qualites, duree: 0, intensite: "legere", famille: "tous" })
+        ? this.listeManqueRepliee({ id: "fiche", lieu: { genre: "main" }, categorie: "batir", nom: titre, produit: { objet: "branche", quantite: 0 }, ingredients: sansCle, qualites: facon.qualites, duree: 0, intensite: "legere", famille: "tous" })
         : "";
     return `
       <article class="etape ${possible ? "possible" : ""}">
         <div class="corps"><strong>${titre}${badge}</strong>
           <small>${texte}</small>
+          ${this.ligneCle(e)}
           ${gratuit ? "" : this.pucesCout(e.couts, e.qualites, e.famille)}
+          ${gratuit ? "" : (e.cle?.replis ?? []).map((r) => `<small class="repli${facon.repli === r ? " retenu" : ""}">${r.note}</small>`).join("")}
           ${bloque ? `<small class="bloque">${bloque}</small>` : manque}
         </div>
         <button type="button" data-verbe="${verbe}" ${possible ? "" : "disabled"}>${bouton}</button>
       </article>`;
   }
 
-  /** « Et après ? » : le niveau d'ensuite, grisé (la recette pressentie, Book 03 §5.1). */
+  /** « Et après ? » : le niveau d'ensuite, grisé (la recette pressentie, Book 03 §5.1), avec sa clé. */
   private carteApres(e: Etape | null | undefined): string {
     if (!e) return "";
-    return `<article class="etape apres"><div class="corps"><strong>Et après ? ${e.nom}</strong><small>${e.apporte}${e.phase ? " Pas encore : il faudra de l'argile, et du temps." : ""}</small></div></article>`;
+    return `<article class="etape apres"><div class="corps"><strong>Et après ? ${e.nom}</strong>${this.ligneCle(e)}<small>${e.apporte}${e.aVenir ? ` ${texteAVenir(e.aVenir)}` : ""}</small></div></article>`;
+  }
+
+  /**
+   * La ligne de la clé d'un niveau (plan 0.8 §2.2, chantier 2) : l'icône et le nom de la clé ; « déjà en poche » si
+   * l'idée en est venue (ramassée une fois, même trop tôt) ; sinon l'indice « où chercher », au premier ou au second
+   * temps ; « à trouver plus loin » pour un niveau pas encore jouable. Jamais de flèche sur la carte.
+   */
+  private ligneCle(e: { id?: string; cle?: CleEvolution; aVenir?: string }): string {
+    const cle = e.cle;
+    if (!cle || !e.id) return "";
+    const nom = cle.objet ? OBJETS[cle.objet].nom : cle.qualite ? `${NOMS_QUALITES[cle.qualite.qualite]} ${cle.qualite.niveau}` : (cle.nom ?? "");
+    const image = cle.objet ? icone(cle.objet, 22) : "";
+    const etat = etatCle({ ...e, id: e.id, cle }, this.vueProgression);
+    // Plan 0.8, chantier 13 : l'indice est replié sous la clé (« Où chercher ? ») ; au second temps, le coin précis
+    // s'ajoute au genre de lieu. Le pli reste ouvert d'une mise à jour à l'autre de la fiche.
+    const indice = () => {
+      const t = etat as { indice: string; temps: 1 | 2 };
+      const lignes = t.temps === 2 ? [cle.indice[0], t.indice] : [t.indice];
+      const ouvert = this.indicesDeplies.has(e.id!) ? " open" : "";
+      return `<details class="indice-cle" data-etape="${e.id}"${ouvert}><summary>Où chercher ?${t.temps === 2 ? ` <span class="precis">plus précis</span>` : ""}</summary>${lignes.map((l) => `<small>${l}</small>`).join("")}</details>`;
+    };
+    const suite = "enPoche" in etat ? `<span class="en-poche">✓ déjà en poche</span>` : "plusLoin" in etat ? `<span class="plus-loin">à trouver plus loin</span>` : indice();
+    return `<span class="ligne-cle${"enPoche" in etat ? " poche" : ""}">${image}<span class="nom-cle">${nom}</span>${suite}</span>`;
   }
 
   private ficheFeu(v: FeuVu): string {
@@ -2051,7 +2196,7 @@ export class Hud {
     // Améliorer : le niveau suivant (jamais dans les flammes), et celui d'après, grisé.
     const bloqueFlammes = flammes ? "On ne maçonne pas dans les flammes : attends les braises, ou couvre le feu." : null;
     let ameliorer = "";
-    if (suivante && !suivante.phase) {
+    if (suivante && !suivante.aVenir) {
       ameliorer = this.carteEtape(`Améliorer : ${suivante.nom}`, suivante.apporte, suivante, "ameliorer", "Améliorer", bloqueFlammes) + this.carteApres(voie[niveau + 1]);
     } else if (suivante) {
       ameliorer = this.carteApres(suivante);
@@ -2062,7 +2207,7 @@ export class Hud {
     // L'autre voie, au premier niveau seulement : creuser le feu de camp, ou combler le Dakota.
     let voieAutre = "";
     if (!v.dakota && niveau === 1) {
-      voieAutre = this.carteEtape("Creuser en foyer Dakota", `${VOIE_CREUSEE[0]!.apporte} Tu récupères 3 pierres.`, { couts: [], qualites: CREUSER.qualites }, "creuser_dakota", "Creuser", bloqueFlammes);
+      voieAutre = this.carteEtape("Creuser en foyer Dakota", `${VOIE_CREUSEE[0]!.apporte} Tu récupères ${CREUSER.rend.pierre ?? 0} pierres.`, { couts: [], qualites: CREUSER.qualites }, "creuser_dakota", "Creuser", bloqueFlammes);
     } else if (v.dakota && niveau === 1) {
       voieAutre = this.carteEtape("Combler en feu de camp", "On rebouche le trou, on pose un cercle de pierres : un feu qui chauffe et éclaire, mais qui se voit.", { couts: [COMBLER.cout], qualites: COMBLER.qualites }, "combler", "Combler", bloqueFlammes);
     }
@@ -2085,7 +2230,7 @@ export class Hud {
     ].join("");
 
     return `
-      <header><h2>${etape.nom}</h2><button type="button" class="fermer" aria-label="Fermer">✕</button></header>
+      ${enteteFiche(etape.nom)}
       <p class="niveau">Niveau ${niveau} · ${aspect}</p>
       <p class="examen">${etape.examen}</p>
       <p class="proprietes">${proprietes.join(" · ")}</p>
@@ -2095,7 +2240,8 @@ export class Hud {
       ${voieAutre ? `<h3>L'autre voie</h3>${voieAutre}` : ""}
       ${accessoires ? `<h3>Accessoires</h3>${accessoires}` : ""}
       <div class="defaire">${defaire}</div>
-      <p class="indice">Un démontage rend la moitié des pierres, branches et bûches, et tout le reste. Un feu se démonte éteint.</p>`;
+      <p class="indice">Un démontage rend la moitié des pierres, branches et bûches, et tout le reste. Un feu se démonte éteint.</p>
+      ${piedFiche()}`;
   }
 
   private ficheInstallation(i: InstallationVue): string {
@@ -2114,7 +2260,7 @@ export class Hud {
           : "";
 
     let ameliorer = "";
-    if (l && suivante && !suivante.phase) {
+    if (l && suivante && !suivante.aVenir) {
       // L'abri garni peut absorber le lit de branchages voisin, sans rien payer : c'est proposé, jamais fait d'office.
       const lit = suivante.id === "abri_garni" && this.voisinsFiche?.().installations.some((x) => x.type === "lit_branchages" && Math.hypot(x.x - i.x, x.z - i.z) <= 3);
       ameliorer = lit
@@ -2127,6 +2273,12 @@ export class Hud {
       ameliorer = `<p class="indice">C'est le plus haut de sa lignée.</p>`;
     }
 
+    // Un meuble de famille sans sa pièce (plan 0.8 §9.2) : la clé de son niveau reste à trouver, ou à poser dessus.
+    const piece =
+      etape?.cle && pieceAPoser(i)
+        ? `<h3>Sa pièce, à poser dessus</h3><article class="etape apres"><div class="corps">${this.ligneCle(etape)}${(etape.cle.replis ?? []).map((r) => `<small class="repli">En attendant : ${r.note.charAt(0).toLowerCase()}${r.note.slice(1)}</small>`).join("")}</div></article>`
+        : "";
+
     const plein = i.type === "coffre" && Object.values(i.etat.contenu ?? {}).some((n) => (n ?? 0) > 0);
     const precedente = niveau > 1 && l ? l[niveau - 2]! : null;
     const defaire = [
@@ -2135,12 +2287,14 @@ export class Hud {
     ].join("");
 
     return `
-      <header><h2>${nom}</h2><button type="button" class="fermer" aria-label="Fermer">✕</button></header>
+      ${enteteFiche(nom)}
       ${l ? `<p class="niveau">Niveau ${niveau}${etat ? ` · ${etat}` : ""}</p>` : etat ? `<p class="niveau">${etat}</p>` : ""}
       <p class="examen">${examen}</p>
+      ${piece}
       ${ameliorer ? `<h3>Améliorer, sur place</h3>${ameliorer}` : ""}
       <div class="defaire">${defaire}</div>
-      <p class="indice">${plein ? "Vide d'abord le coffre pour le démonter. " : ""}Un démontage rend la moitié des pierres, branches et bûches, et tout le reste (la bâche, la corde, le métal).</p>`;
+      <p class="indice">${plein ? "Vide d'abord le coffre pour le démonter. " : ""}Un démontage rend la moitié des pierres, branches et bûches, et tout le reste (la bâche, la corde, le métal).</p>
+      ${piedFiche()}`;
   }
 
   // ---------- La fabrication ----------
@@ -2156,7 +2310,7 @@ export class Hud {
 
   // ---------- L'arbre de progression (0.7, chantier 5) : ce que Fabriquer dévoile ----------
 
-  /** Les recettes dévoilées, vues, et le prochain palier ; null : un serveur d'avant la 0.7 (on montre tout). */
+  /** Les recettes dévoilées, vues, les silhouettes, les idées gardées ; null : un serveur d'avant la 0.7 (on montre tout). */
   private vueProgression: VueProgression | null = null;
   /** Les nouveautés à l'ouverture du panneau : en tête de leur onglet, cette fois-ci seulement (§4.1). */
   private nouvellesOuverture = new Set<string>();
@@ -2166,7 +2320,7 @@ export class Hud {
   private ongletsVus = new Set<CategorieRecette | "tout">();
   /** Les familles dépliées (« Chez les Charbonniers · 6 ici »), le temps du panneau. */
   private famillesDepliees = new Set<Famille>();
-  /** « À découvrir » : toutes les silhouettes du palier, ou les trois premières. */
+  /** « À découvrir » : toutes les silhouettes, ou les trois premières. */
   private silhouettesToutes = false;
   /** « À découvrir » ouvert : dépliée la première fois, puis repliée par défaut sur téléphone (§4.2). */
   private decouvrirOuvert = true;
@@ -2176,6 +2330,8 @@ export class Hud {
     this.vueProgression = vue ? { ...vue, nonVues: vue.nonVues.filter((id) => !this.etiquetteNouveau.has(id)) } : null;
     this.majPastilleFabriquer();
     if (!this.fabrication.hidden) this.dessinerFabrication();
+    // La fiche ouverte suit : une clé « déjà en poche », un indice au second temps.
+    this.majFiche();
   }
 
   /** Ce que le joueur voit dans Fabriquer, à cet instant. */
@@ -2249,21 +2405,24 @@ export class Hud {
       const appris = !this.admin && estHorsFamille(modele, this.famille);
       const r = this.admin ? modele : recettePour(modele, this.famille);
       const pictogramme: Pictogramme = "objet" in r.produit ? r.produit.objet : r.produit.installation;
-      const outils = multiplicateurQualites(this.inventaire, r.qualites);
-      const possible = ingredientsPresents(this.inventaire, r) && outils !== null;
+      const outils = multiplicateurQualites(this.outils, r.qualites);
+      // Plus tard (plan 0.8 §1.3) : grisée, sans bouton.
+      const plusTard = r.aVenir;
+      const possible = !plusTard && ingredientsPresents(this.inventaire, r) && outils !== null;
       const qualites = Object.entries(r.qualites)
         .map(([q, n]) => {
-          const a = niveauQualite(this.inventaire, q as Qualite);
-          // Sans aucun outil de cette qualité, c'est impossible (rouge) ; un niveau en dessous, possible mais plus lent (jaune).
-          const etat = a >= (n ?? 0) ? "ok" : a >= 1 && a === (n ?? 0) - 1 ? "lent" : "manque";
-          const titre = etat === "lent" ? "Outil de fortune : plus lent" : etat === "manque" ? "Il te manque un outil pour ça" : "Qualité d'outil demandée";
+          const a = niveauQualite(this.outils, q as Qualite);
+          // Les outils sont des portes dures (plan 0.8 §2.1) : sans le niveau demandé, c'est impossible (rouge).
+          const etat = a >= (n ?? 0) ? "ok" : "manque";
+          const titre = etat === "manque" ? "Il te manque un outil pour ça" : "Qualité d'outil demandée";
           return `<span class="outil ${etat}" title="${titre}">${NOMS_QUALITES[q as Qualite]} ${n}</span>`;
         })
         .join("");
       const ou =
         ("installation" in r.produit ? `Se pose devant toi : ${NOMS_INSTALLATIONS[r.produit.installation]}. ` : "") +
-        (r.installation ? `Près d'un ${NOMS_INSTALLATIONS[r.installation]}. ` : "") +
-        (r.feu ? ((r.feuNiveau ?? 1) >= 3 ? "Sur un foyer de cuisine allumé (la crémaillère). " : "Près d'un feu allumé. ") : "") +
+        texteLieu(r) +
+        (r.note ? `${r.note} ` : "") +
+        (plusTard ? `${texteAVenir(plusTard)} ` : "") +
         (r.eau ? `${String(r.eau).replace(".", ",")} L d'eau de la gourde (celle de la mare suffit). ` : "");
       const secondes = Math.round(dureeReelle(r) * (outils ?? 1) * 10) / 10;
       const badge =
@@ -2279,7 +2438,9 @@ export class Hud {
             <span class="puces">${Object.entries(r.ingredients).map(([t, n]) => this.puce(t as TypeObjet, n ?? 0)).join("")}${qualites}</span>
             <small>${ou}${String(secondes).replace(".", ",")} s · ≈ ${Math.round(energieGriseRecette(r))} wotts</small>${this.pourquoi === r.id ? this.listeManque(r) : ""}</div>
           ${
-            possible
+            plusTard
+              ? `<button type="button" disabled>Plus tard</button>`
+              : possible
               ? `<button type="button" data-recette="${r.id}">${"installation" in r.produit ? "Construire" : "Fabriquer"}</button>`
               : `<button type="button" class="pourquoi" data-pourquoi="${r.id}" aria-expanded="${this.pourquoi === r.id}" aria-label="Voir ce qui manque">Il manque…</button>`
           }
@@ -2340,7 +2501,7 @@ export class Hud {
       }
     }
 
-    // « À découvrir » : les silhouettes du prochain palier (décision Q2), l'icône assombrie et le besoin, jamais le nom.
+    // « À découvrir » : ce que le niveau suivant d'une construction ouvrirait (plan 0.8), l'icône assombrie, et où.
     const silhouettes = plan.silhouettes.filter((s) => onglet === "tout" || s.categorie === onglet);
     if (silhouettes.length > 0 && !this.faisableSeulement) {
       const montrer = this.silhouettesToutes ? silhouettes : silhouettes.slice(0, SILHOUETTES_DEPLIEES);
@@ -2490,6 +2651,14 @@ export class Hud {
 
   /** La recette dont on montre ce qui manque (ou « feu »). */
   private pourquoi: string | null = null;
+
+  /** Dans la fiche d'un meuble : ce qui manque, une ligne chacun, replié (les puces du coût disent déjà combien). */
+  private listeManqueRepliee(r: Recette): string {
+    const liste = this.listeManque(r);
+    if (!liste) return "";
+    const n = (liste.match(/<li>/g) ?? []).length;
+    return `<details class="ou-trouver"><summary>Où trouver ce qui manque ? <span class="nombre">${n}</span></summary>${liste}</details>`;
+  }
 
   private listeManque(r: Recette): string {
     // Une recette encore cachée ne se cite pas : « ça se fabrique (tu y penseras) » (l'arbre de progression, 0.7).

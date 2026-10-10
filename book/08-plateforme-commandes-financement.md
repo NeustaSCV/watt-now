@@ -49,6 +49,10 @@ Le jeu est aussi **installable** comme une application (PWA : icône sur l'écra
 - **Toutes les commandes sont réassignables** (clavier comme manette), avec des préréglages.
 - **Accessibilité :** choix entre « maintenir » et « appuyer pour basculer », aide à la visée réglable, taille et position des boutons tactiles réglables.
 
+### 2.4 L'administration du test familial (0.8)
+
+Le porteur gère les comptes depuis **une page web de son réseau local**, sur le port 4321 du Pi : les joueurs connectés, la fiche de chaque joueur (ce que le serveur sait déjà, sans compteur nouveau), la **réinitialisation d'un mot de passe** (un provisoire, affiché une fois, à donner au joueur) et la **suppression d'un compte** (en retapant son pseudo ; ses mesures partent avec lui, sauf sa vitesse de progression, gardée sans son nom, Book 17 §6). Pas de mot de passe : la page n'est pas publiée sur Internet et n'accepte que le réseau de la maison (Book 17 §5.5). Le compte « god » y est protégé. Lisible sur téléphone comme sur ordinateur.
+
 ---
 
 ## 3. Les commandes

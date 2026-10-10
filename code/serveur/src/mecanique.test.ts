@@ -90,16 +90,17 @@ test("⚙️ arbalète : dans ARMES_TIR (bloc « arbalète »), armée d'avance 
   assert.equal(a.porteeTete, 12, "réglage accepté : 12 m à ★★★");
   assert.equal(a.rechargeMs, 3000);
   const l = armeTirDe("arbalete_lourde")!;
-  assert.equal(l.degatsPlein, 3);
+  assert.equal(l.degatsPlein, 4, "★★★★ au niveau 3 : 4,0 (K48)");
   assert.deepEqual(MUNITIONS.filter((m) => m.pour.includes("arbalete")).map((m) => [m.objet, m.casse]), [["carreau_acier", 1 / 5], ["carreau", 1 / 3]]);
   assert.ok(ARMES_TIR.every((x) => x.metier));
-  // Les étoiles règlent dégâts et portées (Book 25 §8.4) : ★ 1,2 et 8 m de tête, ★★ 1,35 et 10 m.
+  // Les étoiles règlent dégâts et portées (Book 25 §8.4 ; dégâts décidés, plan 0.8 §2.4) : ★ 1,1 et 8 m de tête,
+  // ★★ 1,2 et 10 m.
   const une = armeTirExemplaire("arbalete#1", a);
-  assert.ok(Math.abs(une.degatsPlein - 1.2) < 1e-9 && Math.abs(une.porteeTete - 8) < 1e-9 && Math.abs(une.porteeUtile - 10) < 1e-9);
+  assert.ok(Math.abs(une.degatsPlein - 1.1) < 1e-9 && Math.abs(une.porteeTete - 8) < 1e-9 && Math.abs(une.porteeUtile - 10) < 1e-9);
   const deux = armeTirExemplaire("arbalete#2", a);
-  assert.ok(Math.abs(deux.degatsPlein - 1.35) < 1e-9 && Math.abs(deux.porteeTete - 10) < 1e-9);
+  assert.ok(Math.abs(deux.degatsPlein - 1.2) < 1e-9 && Math.abs(deux.porteeTete - 10) < 1e-9);
   // La lourde est déclarée à ★★★★ : sa clé nue a ses valeurs telles quelles.
-  assert.equal(armeTirExemplaire("arbalete_lourde", l).degatsPlein, 3);
+  assert.equal(armeTirExemplaire("arbalete_lourde", l).degatsPlein, 4);
 });
 
 test("⚙️ arbalète armée : le tir part tout de suite et détruit à la tête à 11 m ; puis il faut la réarmer, 3 s, immobile", () => {
@@ -245,8 +246,9 @@ function monter(famille: Famille, depart: Record<string, number>) {
 }
 
 test("⚙️ un Mécaniste seul monte une arbalète ★ avec son kit et une perche de frêne (règle d'or du Book 25 §2.5)", () => {
-  // Le kit mécaniste (scie, clé plate, couteau), une pierre pour l'établi, ce qu'on trouve au terrain et dans une épave.
-  const t = monter("mecanistes", { scie: 1, cle_plate: 1, couteau: 1, corde: 1, pierre: 1, buche: 5, branche: 7, petit_ressort: 1, perche_frene: 1, ceinture_securite: 1 });
+  // Le kit mécaniste (scie, clé plate, couteau), une pierre et la tête de hache de la caisse pour l'établi (plan 0.8 :
+  // Fendre 1), ce qu'on trouve au terrain et dans une épave.
+  const t = monter("mecanistes", { scie: 1, cle_plate: 1, couteau: 1, tete_hache: 1, corde: 1, pierre: 1, buche: 5, branche: 7, petit_ressort: 1, perche_frene: 1, ceinture_securite: 1 });
   t.construire("etabli", 4.5);
   t.fabriquer("arbrier", 4.5);
   t.fabriquer("noix_bois", 2);
@@ -342,7 +344,7 @@ test("⚙️ le tour à perche se construit ; on y tourne un manche ; sans tour,
   assert.equal(t.inventaire().manche_tourne, 1);
 });
 
-test("⚙️ pédalier : le soufflet à manivelle et la meule fine se montent, se rendent au démontage ; le soufflet souffle sur une forge à 3 m", () => {
+test("⚙️ pédalier : le ventilateur à manivelle et la meule fine se montent, se rendent au démontage ; le ventilateur souffle sur une forge à 3 m", () => {
   const t = monter("mecanistes", { cle_plate: 1, couteau: 1, cadre_velo: 1, chaine_velo: 1, roue_velo: 2, buche: 2, pierre: 4, chiffons: 1, bache: 1, branche: 4, marteau: 1, tournevis: 1 });
   const p = t.construire("pedalier", 4.5);
   t.utiliser(p.id, "monter_meule_fine");

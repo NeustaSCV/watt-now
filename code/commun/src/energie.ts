@@ -39,15 +39,27 @@ export function decharger(charges: Charges, ms: number): Charges {
 /** Un humain qui pédale produit ≈ 100 Wh_m par heure de jeu (Book 01 §2) ; un Mécaniste 30 % de plus (Book 01 §4). */
 export const WH_M_PAR_HEURE = 100;
 export const BONUS_MECANISTE = 1.3;
-/** La dynamo de vélo convertit ≈ 60 % de l'énergie mécanique en électricité (Book 01 §2 : 50 à 70 %). */
-export const RENDEMENT_DYNAMO = 0.6;
+/**
+ * Ce que la roue du pédalier générateur entraîne (plan 0.8, chantier 7) : le petit alternateur de la station (la clé),
+ * ou la dynamo du vélo (le repli).
+ */
+export type OrganePedalier = "alternateur" | "dynamo";
+/**
+ * Le petit alternateur, entraîné par une courroie : ≈ 46 % de l'énergie des jambes, à ce petit régime (un alternateur de
+ * voiture tourne loin de son meilleur point). Un Mécaniste qui pédale une heure : ≈ 60 Wh dans la batterie.
+ */
+export const RENDEMENT_ALTERNATEUR = 0.46;
+/** La dynamo de vélo (le repli) : faite pour une lampe, elle plafonne à 3 à 6 W, quoi qu'on mette dans les jambes. */
+export const WATTS_DYNAMO_VELO = 5;
 /** Pédaler coûte ≈ 350 kcal par heure, soit ≈ 250 de plus qu'au repos. */
 export const KCAL_PEDALAGE_EN_PLUS = 250;
 /** Une séance de pédalage : une heure de jeu = une minute réelle. */
 export const DUREE_PEDALAGE = 60;
 
-export function whEDePedalage(famille: Famille, heures = 1): number {
-  return WH_M_PAR_HEURE * heures * (famille === "mecanistes" ? BONUS_MECANISTE : 1) * RENDEMENT_DYNAMO;
+/** Les Wh électriques d'une séance de pédalage : ≈ 60 par heure avec l'alternateur (Mécaniste), 5 avec la dynamo. */
+export function whEDePedalage(famille: Famille, heures = 1, organe: OrganePedalier = "alternateur"): number {
+  if (organe === "dynamo") return WATTS_DYNAMO_VELO * heures;
+  return WH_M_PAR_HEURE * heures * (famille === "mecanistes" ? BONUS_MECANISTE : 1) * RENDEMENT_ALTERNATEUR;
 }
 
 /** Le banc de recharge transfère ≈ 30 Wh par heure de jeu, avec 85 % de rendement (Book 02 §8). */
@@ -73,13 +85,23 @@ export const MS_JOUR_CALENDRIER = (28 * 24 * 3_600_000) / 365;
  * Le petit panneau de 20 W de la station-service. Book 01 §2 : un panneau de 100 W donne ≈ 400 Wh_é par jour de
  * calendrier en climat tempéré (≈ 100 l'hiver, ≈ 600 l'été). Au printemps (saison fixe de la 0a) : ≈ 80 Wh_é par jour.
  */
-// Réglable à chaud : REGLAGES.panneau_wh_jour (80 par défaut).
-/** Le panneau se branche tout seul sur un banc de recharge assez proche (le câble n'est pas long). */
+// Réglable à chaud : REGLAGES.panneau_wh_jour (80 par défaut). Depuis la 0.8, il se pose sur le banc solaire (un seul
+// meuble, `EtatInstallation.panneau`) et remplit les batteries posées dessus : la batterie de la ruine.
+/** Un panneau posé à part (avant la 0.8) se branchait tout seul sur un banc de recharge assez proche (le câble n'est pas long). */
 export const PORTEE_CABLE_PANNEAU = 6;
 
 /** Ce que produit un panneau pendant une durée réelle (au calendrier, connecté ou non). */
 export function productionPanneau(ms: number): number {
   return (REGLAGES.panneau_wh_jour * Math.max(0, ms)) / MS_JOUR_CALENDRIER;
+}
+
+/**
+ * Les meubles qui portent des batteries (plan 0.8, chantier 7) : le banc solaire ⚡, que le panneau remplit ; le pédalier
+ * générateur ⚙️, que l'on remplit en pédalant. On y pose la batterie de la ruine, on l'y reprend.
+ */
+export const MEUBLES_A_BATTERIES = ["banc_recharge", "pedalier"] as const;
+export function porteBatteries(type: string): boolean {
+  return (MEUBLES_A_BATTERIES as readonly string[]).includes(type);
 }
 
 /** Des batteries posées sur un banc : combien de chaque type, et leur charge. */

@@ -53,7 +53,55 @@ export type TypeRessource =
   // La batterie du tracteur rouge (Book 23 §4.7) : la prendre, c'est faire taire le klaxon.
   | "coop_batterie"
   // La haie d'ifs taillés en boules, devant les bureaux de la Coopérative (Book 25 §3.2) : un bâton d'if par visite.
-  | "coop_ifs";
+  | "coop_ifs"
+  | TypeRessourceNiveau1;
+
+/**
+ * Les ressources du niveau 1 (plan 0.8, chantier 3) : déclarées d'avance, pour que les chantiers des lieux n'aient qu'à
+ * les poser et à leur donner leur usage (USAGES_NIVEAU1, plus bas). Les joncs du gué sont les `joncs` de la mare : ils
+ * se coupent et repoussent pareil (B7). Les 15 pierres en vrac du gué et les bûches de la station sont des `pierre`
+ * et des `buche`.
+ */
+export type TypeRessourceNiveau1 =
+  // La maison (chantier 10) : le bidon de 5 L, dans la ruine (plan 0.8 §2.5).
+  | "ruine_bidon"
+  // H1A, la station (chantier 10) : la pièce de famille, une par joueur (⚡ le panneau est `panneau_auvent`) ; le tas
+  // de bois de chauffage personnel derrière l'atelier (B3).
+  | "piece_enclume"
+  | "piece_alternateur"
+  | "tas_bois"
+  // L1A, la Coopérative (chantier 10) : les clés à place fixe ; les seaux sont dans `coop_caisse_froide` (la laiterie).
+  | "coop_grillage"
+  | "coop_cocotte"
+  // H1B, le gué (chantier 11) : le gisement de glaise de la berge (B6), le banc de galets personnel (B5).
+  | "gisement_glaise"
+  | "banc_galets"
+  // H1B, les fouilles du gué (chantier 11) : « par chance », une bâche, des chiffons, une casserole, des cordes
+  // (commun/src/gue.ts, FOUILLES_GUE), et rarement une clé de L1.
+  | "gue_cabane"
+  | "gue_buvette"
+  | "gue_barques"
+  | "gue_camping_car"
+  | "gue_lavoir"
+  | "gue_garde_peche"
+  // L1B, le Moulin (chantier 12) : les clés du magasin et des meules, la fourche de l'étable, l'if du bief, les poutres
+  // de rechange (B11), la grosse clé au tableau de l'atelier (§10.1).
+  | "moulin_jute"
+  | "moulin_feuillards"
+  | "moulin_etau"
+  | "moulin_fourche"
+  | "if_bief"
+  | "poutres_chene"
+  | "moulin_cle"
+  // Le butin commun du Moulin (chantier 12) : l'étable, l'atelier, la cuisine et la malle du logis (le carnet du
+  // meunier), la boutique, le magasin, le camp du pont.
+  | "moulin_etable"
+  | "moulin_atelier"
+  | "moulin_logis"
+  | "moulin_malle"
+  | "moulin_boutique"
+  | "moulin_magasin"
+  | "moulin_camp";
 
 /** L'emprise au sol de ce qu'on vise (m) : le cercle de visée s'y ajuste (P-007). 0,5 m par défaut. */
 export const EMPRISE_RESSOURCE: Partial<Record<TypeRessource, number>> = {
@@ -83,6 +131,31 @@ export const EMPRISE_RESSOURCE: Partial<Record<TypeRessource, number>> = {
   frene: 0.9,
   if_bois: 1.1,
   coop_ifs: 1.2,
+  ruine_bidon: 0.35,
+  piece_enclume: 0.6,
+  piece_alternateur: 0.45,
+  tas_bois: 1.1,
+  coop_grillage: 0.7,
+  coop_cocotte: 0.4,
+  // Le Moulin (chantier 12).
+  moulin_cle: 0.3,
+  moulin_fourche: 0.5,
+  moulin_etau: 0.5,
+  poutres_chene: 1.2,
+  moulin_jute: 1.0,
+  moulin_feuillards: 0.9,
+  if_bief: 1.1,
+  moulin_etable: 0.8,
+  moulin_atelier: 0.8,
+  moulin_logis: 0.8,
+  moulin_malle: 0.6,
+  moulin_boutique: 0.9,
+  moulin_magasin: 0.8,
+  moulin_camp: 0.9,
+  // Le gué (chantier 11) : la berge de glaise, le banc de galets, les barques retournées.
+  gisement_glaise: 0.8,
+  banc_galets: 0.9,
+  gue_barques: 1.2,
 };
 
 export interface RessourceSol {
@@ -92,6 +165,8 @@ export interface RessourceSol {
   z: number;
   /** Faux tant que la ressource n'a pas repoussé (bois mort, baies). */
   disponible: boolean;
+  /** Un butin personnel à plusieurs prises (le tas de bois de la station) : ce qu'il en reste pour ce joueur (0.8). */
+  reste?: number;
 }
 
 /** La mare du terrain : de l'eau brute, à faire bouillir (Book 14 §4.2, étape 4). `rayon` : son rayon moyen. */
@@ -113,10 +188,14 @@ export function distanceMare(x: number, z: number): number {
 /** Distance maximale pour interagir avec un objet, en mètres. */
 export const DISTANCE_INTERACTION = 2;
 
-/** Délai réel avant qu'une ressource ramassée réapparaisse, en millisecondes (null : ne revient pas). */
+/**
+ * Délai réel avant qu'une ressource ramassée réapparaisse, en millisecondes (null : ne revient pas). C'est le délai du
+ * terrain, et celui de partout où un lieu ne dit pas autre chose (ButinLieu.repousse, plan 0.8 B4) : au terrain, les
+ * bûches et les pierres ne reviennent jamais (B1) ; dans les haltes, elles reviennent en 30 min.
+ */
 export const REPOUSSE_MS: Record<TypeRessource, number | null> = {
   branche: 40 * 60_000,
-  buche: 90 * 60_000,
+  buche: null,
   pierre: null,
   buisson: 20 * 60_000,
   joncs: 30 * 60_000,
@@ -147,16 +226,52 @@ export const REPOUSSE_MS: Record<TypeRessource, number | null> = {
   coop_palettes: 6 * 3_600_000,
   coop_etabli: 12 * 3_600_000,
   coop_rayonnage: 8 * 3_600_000,
-  coop_coffre: 4 * 24 * 3_600_000,
-  coop_caisse_froide: 4 * 24 * 3_600_000,
+  // Plan 0.8 (§9.1, N1) : à la Coopérative, tout revient à 24 h (serveur/src/cooperative.ts la réinitialise), le
+  // coffre du directeur, la laiterie et la batterie du tracteur aussi ; le klaxon revit avec elle.
+  coop_coffre: 24 * 3_600_000,
+  coop_caisse_froide: 24 * 3_600_000,
   coop_masse: 24 * 3_600_000,
-  // Une autre batterie se retrouve dans le tracteur en 4 jours, comme le butin rare : le klaxon revit avec elle.
-  coop_batterie: 4 * 24 * 3_600_000,
+  coop_batterie: 24 * 3_600_000,
   // Le frêne : une perche en 6 h réelles, même hors ligne (Book 25 §3.2). L'if du fond du bois : un bâton par jour de
   // calendrier (≈ 1 h 50 réelles) ; la haie de la Coopérative, un par visite (elle repousse en 12 h).
   frene: 6 * 3_600_000,
   if_bois: MS_JOUR_CALENDRIER,
   coop_ifs: 12 * 3_600_000,
+  // Le niveau 1 (plan 0.8, chantier 3) : les délais décidés. La pièce de famille revient pour son joueur en 24 h
+  // (Q-0.8-14) ; le tas de bois et le banc de galets en 6 h (B3, B5) ; le gisement de glaise ne s'épuise pas (B6) ; à
+  // la Coopérative et au Moulin, tout revient en 24 h (§9.1, N1), sauf la fourche : une fois par personnage. Le bidon
+  // de la ruine, comme les autres vestiges du terrain, une fois.
+  ruine_bidon: null,
+  piece_enclume: 24 * 3_600_000,
+  piece_alternateur: 24 * 3_600_000,
+  tas_bois: 6 * 3_600_000,
+  coop_grillage: 24 * 3_600_000,
+  coop_cocotte: 24 * 3_600_000,
+  gisement_glaise: 0,
+  banc_galets: 6 * 3_600_000,
+  moulin_jute: 24 * 3_600_000,
+  moulin_feuillards: 24 * 3_600_000,
+  moulin_etau: 24 * 3_600_000,
+  moulin_fourche: null,
+  if_bief: 24 * 3_600_000,
+  poutres_chene: 24 * 3_600_000,
+  moulin_cle: 24 * 3_600_000,
+  // Le butin commun du Moulin revient en 12 h (Book 23 §2.3, comme l'établi de la Coopérative) ; tout revient de toute
+  // façon à 24 h, avec le Moulin (serveur/src/moulin.ts).
+  moulin_etable: 12 * 3_600_000,
+  moulin_atelier: 12 * 3_600_000,
+  moulin_logis: 12 * 3_600_000,
+  moulin_malle: 12 * 3_600_000,
+  moulin_boutique: 12 * 3_600_000,
+  moulin_magasin: 12 * 3_600_000,
+  moulin_camp: 12 * 3_600_000,
+  // Les fouilles du gué (chantier 11) : comme celles de la station, elles reviennent en 12 h.
+  gue_cabane: 12 * 3_600_000,
+  gue_buvette: 12 * 3_600_000,
+  gue_barques: 12 * 3_600_000,
+  gue_camping_car: 12 * 3_600_000,
+  gue_lavoir: 12 * 3_600_000,
+  gue_garde_peche: 12 * 3_600_000,
 };
 
 /** Les ressources qui restent en place une fois fouillées (une épave ne disparaît pas). */
@@ -183,6 +298,77 @@ export const RESTE_EN_PLACE: Partial<Record<TypeRessource, true>> = {
   frene: true,
   if_bois: true,
   coop_ifs: true,
+  // Le tas de bois de la station reste là, plus bas à chaque bûche (rendu/ressources.ts).
+  tas_bois: true,
+  // La tête de gondole de la cocotte reste, vide, sa pancarte de promotion encore plantée.
+  coop_cocotte: true,
+  // Le Moulin (chantier 12) : le décor est le modèle, qui reste ; on fouille les piles de sacs, les barils, l'if…
+  poutres_chene: true,
+  moulin_jute: true,
+  moulin_feuillards: true,
+  if_bief: true,
+  moulin_etable: true,
+  moulin_atelier: true,
+  moulin_logis: true,
+  moulin_malle: true,
+  moulin_boutique: true,
+  moulin_magasin: true,
+  moulin_camp: true,
+  // Le gué (chantier 11) : la berge de glaise ne s'épuise pas ; le banc de galets et les fouilles restent là.
+  gisement_glaise: true,
+  banc_galets: true,
+  gue_cabane: true,
+  gue_buvette: true,
+  gue_barques: true,
+  gue_camping_car: true,
+  gue_lavoir: true,
+  gue_garde_peche: true,
+};
+
+// ---------- Le butin d'un lieu vivant (plan 0.8, chantier 10 ; le moteur est serveur/src/lieu-vivant.ts) ----------
+
+/**
+ * Ce qu'un lieu vivant fait de ses ressources, en plus de REPOUSSE_MS : sa repousse à lui (B4), son butin personnel
+ * (R4 du game designer, B3, B5) et son vrac qui grandit avec les voyageurs (B8). Un lieu sans `butin` se comporte comme
+ * avant la 0.8 : tout est partagé, au délai de REPOUSSE_MS.
+ */
+export interface ButinLieu {
+  /** Les délais du lieu (ms ; null : jamais), à la place de REPOUSSE_MS pour ces types (B4 : 30 min dans les haltes). */
+  repousse?: Partial<Record<TypeRessource, number | null>>;
+  /**
+   * Le butin personnel : chacun voit le sien et le prend pour lui ; il revient pour lui à son délai, sans rien changer
+   * pour les autres. La valeur dit combien de prises il tient (1 : une pièce de famille ; 10 : le tas de bois, une
+   * bûche par prise). Le délai court à partir de la première prise ; au bout, tout est de nouveau là.
+   */
+  personnel?: Partial<Record<TypeRessource, number>>;
+  /**
+   * Le vrac qui grandit avec les voyageurs (B8) : pour ces types, combien de points sont en jeu pour un voyageur seul.
+   * Le lieu en pose VRAC_MAX fois plus ; facteurVrac() dit combien sont en jeu selon le nombre de présents.
+   */
+  vrac?: Partial<Record<TypeRessource, number>>;
+}
+
+/** Le vrac ne dépasse jamais trois fois sa quantité de base (B8). */
+export const VRAC_MAX = 3;
+
+/** +50 % par voyageur présent en plus du premier, jusqu'à ×3 (B8) : 1 → ×1, 3 → ×2, 5 et plus → ×3. */
+export function facteurVrac(voyageurs: number): number {
+  return Math.min(VRAC_MAX, 1 + 0.5 * Math.max(0, voyageurs - 1));
+}
+
+/** Combien de points d'un vrac de base `base` sont en jeu avec ce nombre de voyageurs. */
+export function vracEnJeu(base: number, voyageurs: number): number {
+  return Math.round(base * facteurVrac(voyageurs));
+}
+
+/**
+ * Les pièces de famille (plan 0.8 §2.5) : seule leur famille les voit. Le panneau du Voltaïque (déjà à la station),
+ * l'enclume et le sac de charbon du Charbonnier, le petit alternateur du Mécaniste.
+ */
+export const FAMILLE_DE_RESSOURCE: Partial<Record<TypeRessource, Famille>> = {
+  panneau_auvent: "voltaiques",
+  piece_enclume: "charbonniers",
+  piece_alternateur: "mecanistes",
 };
 
 /** La ruine de ferme du terrain (Book 21 §3.2), dans le coin nord-est. */
@@ -201,6 +387,8 @@ export interface UsageRessource {
   examen: string;
   /** Il faut un escabeau posé au pied (dans le disque de l'arbre). */
   escabeau?: true;
+  /** Un geste sans bruit (la grosse clé du Moulin, qu'on décroche : M3) : les dormants voisins ne l'entendent pas. */
+  silencieux?: true;
 }
 
 /** Les arbres fruitiers : on y monte avec l'escabeau. */
@@ -210,14 +398,17 @@ export function estFruitier(type: TypeRessource): boolean {
 }
 /** Les arbres (fruitiers et essences du métier) : larges, on les touche d'un peu plus loin (PORTEE_ARBRE). */
 export function estArbre(type: TypeRessource): boolean {
-  return estFruitier(type) || type === "frene" || type === "if_bois" || type === "coop_ifs";
+  return estFruitier(type) || type === "frene" || type === "if_bois" || type === "coop_ifs" || type === "if_bief";
 }
 /**
  * Ce qu'une famille voit (Book 25 §3.2) : l'if du fond du bois ne se repère que si l'on reconnaît le bois par essence,
- * comme les Mécanistes (Book 03 §5.3). Pour les autres, c'est un arbre sombre du décor de la lisière.
+ * comme les Mécanistes (Book 03 §5.3). Pour les autres, c'est un arbre sombre du décor de la lisière. Une pièce de famille
+ * (FAMILLE_DE_RESSOURCE, 0.8) ne se voit que de sa famille.
  */
 export function ressourceVisible(type: TypeRessource, famille: Famille): boolean {
-  return type !== "if_bois" || famille === "mecanistes";
+  if (type === "if_bois") return famille === "mecanistes";
+  const de = FAMILLE_DE_RESSOURCE[type];
+  return de === undefined || de === famille;
 }
 /** L'escabeau sert s'il est posé dans ce disque autour du tronc (m). */
 export const RAYON_ESCABEAU = 2.4;
@@ -227,7 +418,7 @@ export const PORTEE_ARBRE = 0.8;
 export const ARBRES_ISOLES: readonly (readonly [number, number])[] = [[6, 8], [47.5, 3], [7, 43], [41, 40], [12, 30]];
 
 /** Ce qu'on fait de chaque ressource du sol, et ce qu'elle donne (Book 02 §5). */
-export const USAGES: Record<TypeRessource, UsageRessource> = {
+const USAGES_ETABLIS: Record<Exclude<TypeRessource, TypeRessourceNiveau1>, UsageRessource> = {
   branche: { verbe: "ramasser", libelle: "Ramasser la branche", donne: { branche: 1 }, qualites: {}, duree: 1.2, examen: "Du bois mort, bien sec." },
   buche: { verbe: "ramasser", libelle: "Ramasser la bûche", donne: { buche: 1 }, qualites: {}, duree: 2.5, examen: "Une bûche tombée d'un vieux tas. Sèche." },
   pierre: { verbe: "ramasser", libelle: "Ramasser la pierre", donne: { pierre: 1 }, qualites: {}, duree: 1.8, examen: "Une pierre plate, bonne pour un cercle de feu." },
@@ -309,12 +500,13 @@ export const USAGES: Record<TypeRessource, UsageRessource> = {
     duree: 1.5,
     examen: "Chapeau vert olive pâle, lames blanches, un anneau, et le pied pris dans un sac blanc (la volve) : une amanite phalloïde. Mortelle.",
   },
-  // Les essences du métier (Book 25 §3.2) : Couper 2 (couteau aiguisé, serpe, lame) ; le couteau du kit, ×1,5.
+  // Les essences du métier (Book 25 §3.2) : Couper 1, le couteau du kit suffit (plan 0.8 : les outils sont des portes
+  // dures, et le tableau `outils` met la perche de frêne et le bâton d'if à Couper 1).
   frene: {
     verbe: "ramasser",
     libelle: "Couper une perche de frêne",
     donne: { perche_frene: 1 },
-    qualites: { couper: 2 },
+    qualites: { couper: 1 },
     duree: 6,
     examen: "Un frêne : écorce grise et lisse, bourgeons noirs comme du velours. Ses rejets droits font de bons arcs.",
   },
@@ -322,7 +514,7 @@ export const USAGES: Record<TypeRessource, UsageRessource> = {
     verbe: "ramasser",
     libelle: "Tailler un bâton d'if",
     donne: { baton_if: 1 },
-    qualites: { couper: 2 },
+    qualites: { couper: 1 },
     duree: 8,
     examen: "Un if, sombre et lent, au fond du bois : le meilleur bois d'arc. Toxique : on n'en mange ni baies ni aiguilles.",
   },
@@ -330,7 +522,7 @@ export const USAGES: Record<TypeRessource, UsageRessource> = {
     verbe: "ramasser",
     libelle: "Tailler un bâton d'if",
     donne: { baton_if: 1 },
-    qualites: { couper: 2 },
+    qualites: { couper: 1 },
     duree: 8,
     examen: "La haie d'ifs taillés en boules : on la faisait tailler tous les mois. Une branche droite s'y cache encore.",
   },
@@ -345,10 +537,11 @@ export const USAGES: Record<TypeRessource, UsageRessource> = {
   caisse_outils: {
     verbe: "fouiller",
     libelle: "Fouiller la caisse à outils",
-    donne: { tete_hache: 1, cle_plate: 1, tournevis: 1 },
+    // Plan 0.8 (I10) : la tête de marteau, à remmancher sur une branche (le marteau, Marteler 2, pour toutes les familles).
+    donne: { tete_hache: 1, cle_plate: 1, tournevis: 1, tete_marteau: 1 },
     qualites: {},
     duree: 4,
-    examen: "Une caisse en fer, rouillée. Quelque chose cliquette dedans.",
+    examen: "Une caisse en fer, rouillée. Quelque chose cliquette dedans, et quelque chose de lourd roule au fond.",
   },
   batterie_voiture: {
     verbe: "ramasser",
@@ -404,10 +597,12 @@ export const USAGES: Record<TypeRessource, UsageRessource> = {
   caisse_atelier: {
     verbe: "fouiller",
     libelle: "Fouiller l'établi de l'atelier",
-    donne: { barre_metal: 1 },
+    // Plan 0.8 (I1, I2) : la caisse de l'atelier garantit un bocal de clous (5 poignées), un rouleau de fil de fer et
+    // un bidon d'huile ; ils reviennent avec elle.
+    donne: { barre_metal: 1, bocal_clous: 1, rouleau_fil_fer: 1, bidon_huile: 1 },
     qualites: {},
-    duree: 5,
-    examen: "L'atelier de la station : un établi, des chutes de métal, une odeur d'huile froide.",
+    duree: 6,
+    examen: "L'atelier de la station : un établi, des chutes de métal, une odeur d'huile froide. Dans la caisse, un bocal de clous, un rouleau de fil de fer, un bidon d'huile.",
   },
   grenier: {
     verbe: "fouiller",
@@ -477,11 +672,13 @@ export const USAGES: Record<TypeRessource, UsageRessource> = {
   },
   coop_caisse_froide: {
     verbe: "fouiller",
-    libelle: "Ouvrir les caisses de pièces",
-    donne: { roulements: 1, alternateur_tracteur: 1 },
+    libelle: "Prendre un seau de la laiterie",
+    // Plan 0.8 (I8) : les roulements et l'alternateur de tracteur en sont retirés (rien de propre à une famille en L1) ;
+    // la chambre froide devient la laiterie, et ses seaux de 10 L sont la clé du récupérateur à seau.
+    donne: { seau_10l: 1 },
     qualites: {},
-    duree: 10,
-    examen: "Des caisses plombées « PIÈCES DÉTACHÉES — STOCK DE RÉSERVE », alignées dans le froid. Personne n'y a touché.",
+    duree: 4,
+    examen: "La laiterie : des seaux de tôle galvanisée empilés sur une caisse, dans le froid. Ils ont attendu le lait du matin.",
   },
   // Book 23 §4.7 : la batterie du klaxon. Sa charge dépend des coups déjà donnés (le client la dit à l'examen).
   coop_batterie: {
@@ -494,6 +691,255 @@ export const USAGES: Record<TypeRessource, UsageRessource> = {
   },
 };
 
+/**
+ * Les usages des ressources du niveau 1 (TypeRessourceNiveau1) : chacun arrive avec son lieu, en fin de table (chantier
+ * 10 : la station et la Coopérative ; 11 : le gué ; 12 : le Moulin). Une ressource sans usage ne se pose pas.
+ */
+const USAGES_NIVEAU1: Partial<Record<TypeRessourceNiveau1, UsageRessource>> = {
+  // ---------- La maison (chantier 10) ----------
+  ruine_bidon: {
+    verbe: "ramasser",
+    libelle: "Prendre le bidon",
+    donne: { bidon_5l: 1 },
+    qualites: {},
+    duree: 1.5,
+    examen: "Un bidon de plastique blanc, coincé sous une poutre de la ruine. Cinq litres, le bouchon encore vissé.",
+  },
+  // ---------- H1A, la station (chantier 10) : la pièce de famille, chacun la sienne (Q-0.8-14 : elle revient en 24 h) ----------
+  piece_enclume: {
+    verbe: "ramasser",
+    libelle: "Prendre l'enclume et le sac de charbon",
+    // I23 : le sac de charbon donne 4 charbons.
+    donne: { enclume_depanneur: 1, charbon_bois: 4 },
+    qualites: {},
+    duree: 4,
+    examen: "Sous l'établi, une petite enclume de dépanneur, dix kilos d'acier, et à côté un sac de charbon de bois entamé. De quoi forger.",
+  },
+  piece_alternateur: {
+    verbe: "ramasser",
+    libelle: "Prendre le petit alternateur",
+    donne: { petit_alternateur: 1 },
+    qualites: {},
+    duree: 3,
+    examen: "Sur l'établi, à côté de la voiture éventrée : son alternateur, sorti du moteur avec sa poulie. Quelqu'un l'avait déjà déposé.",
+  },
+  tas_bois: {
+    verbe: "ramasser",
+    libelle: "Prendre une bûche au tas",
+    donne: { buche: 1 },
+    qualites: {},
+    duree: 2,
+    examen: "Le bois de chauffage de l'atelier, fendu et rangé contre le mur. Personne ne viendra plus s'y chauffer : prends-en.",
+  },
+  // ---------- L1A, la Coopérative (chantier 10) : les clés à place fixe ----------
+  coop_grillage: {
+    verbe: "ramasser",
+    libelle: "Prendre le rouleau de grillage",
+    donne: { grillage_rouleau: 1 },
+    qualites: {},
+    duree: 5,
+    examen: "Au parc à volailles, un rouleau de grillage neuf resté contre un piquet : de quoi faire une grille de cuisine.",
+  },
+  coop_cocotte: {
+    verbe: "ramasser",
+    libelle: "Prendre la cocotte en fonte",
+    donne: { cocotte_fonte: 1 },
+    qualites: {},
+    duree: 2,
+    examen: "En tête de gondole, sous une pancarte « −20 % », une cocotte en fonte rouge, son couvercle encore posé dessus. Cinq kilos et demi.",
+  },
+  // ---------- L1B, le Moulin du Gué (chantier 12) : la grosse clé, la fourche, les clés à place fixe, l'if ----------
+  moulin_cle: {
+    verbe: "ramasser",
+    libelle: "Décrocher la grosse clé",
+    donne: { cle_moulin: 1 },
+    qualites: {},
+    // M3 : un geste silencieux d'une seconde ; en allure discrète, les deux dormants de l'atelier ne se réveillent pas.
+    duree: 1,
+    silencieux: true,
+    examen: "Le tableau à clés de l'atelier : une planche à clous, de petites clés rouillées, et au quatrième clou une grosse clé de fer, son étiquette de bois : « GRANDE PORTE ».",
+  },
+  moulin_fourche: {
+    verbe: "ramasser",
+    libelle: "Prendre la fourche à foin",
+    donne: { fourche_foin: 1 },
+    qualites: {},
+    duree: 2,
+    examen: "Contre le mur de l'étable, une fourche à foin : trois dents d'acier au bout d'un long manche de frêne. Elle tient un Éteint à deux mètres, et passe un casque.",
+  },
+  moulin_etau: {
+    verbe: "demonter",
+    libelle: "Démonter l'étau de l'établi",
+    donne: { etau: 1 },
+    qualites: { serrer: 1 },
+    duree: 10,
+    examen: "L'établi du rhabilleur, contre le mur nord : un étau de forge boulonné au plateau, les marteaux à rhabiller, la pierre à aiguiser. Le meunier l'avait monté de l'atelier.",
+  },
+  poutres_chene: {
+    verbe: "ramasser",
+    libelle: "Prendre deux bouts de poutre (2 bûches)",
+    donne: { buche: 2 },
+    qualites: {},
+    duree: 4,
+    examen: "Les poutres de chêne de rechange du rouet, calées contre le mur. À côté, deux bouts sciés : deux bûches de bon chêne sec.",
+  },
+  moulin_jute: {
+    verbe: "fouiller",
+    libelle: "Découdre des sacs de jute",
+    donne: { toile_jute: 1 },
+    qualites: {},
+    duree: 5,
+    examen: "Les piles de sacs à farine du magasin. La farine a durci en pierre dans certains ; les autres se vident, se décousent et se mettent à plat : de la toile de jute.",
+  },
+  moulin_feuillards: {
+    verbe: "ramasser",
+    libelle: "Ramasser les feuillards tombés",
+    donne: { feuillards: 1 },
+    qualites: {},
+    duree: 3,
+    examen: "Les barils à farine cerclés de fer. Un baril s'est ouvert en tombant : ses cercles, les feuillards, gisent à côté, prêts à cercler autre chose.",
+  },
+  if_bief: {
+    verbe: "ramasser",
+    libelle: "Tailler un bâton d'if",
+    donne: { baton_if: 1 },
+    qualites: { couper: 1 },
+    duree: 8,
+    examen: "Un if penché sur le bief, au fond du jardin : le meilleur bois d'arc. Toxique : on n'en mange ni baies ni aiguilles.",
+  },
+  // Le butin commun du Moulin : un peu de matière, et le bric-à-brac de la fouille (LIEU_DE_FOUILLE, vestiges.ts).
+  moulin_etable: {
+    verbe: "fouiller",
+    libelle: "Fouiller l'étable",
+    donne: { corde: 1 },
+    qualites: {},
+    duree: 6,
+    examen: "Des harnais racornis pendus aux clous, un seau, un bloc de sel à lécher. Une longe de chanvre traîne dans la litière.",
+  },
+  moulin_atelier: {
+    verbe: "fouiller",
+    libelle: "Fouiller l'atelier du charpentier",
+    donne: { branche: 2 },
+    qualites: {},
+    duree: 6,
+    examen: "L'établi du charpentier de moulin : la caisse d'alluchons de rechange, des chevilles, des copeaux. Sur le plateau, la trace claire d'un étau et deux trous de vis : il n'est plus là.",
+  },
+  moulin_logis: {
+    verbe: "fouiller",
+    libelle: "Fouiller la cuisine",
+    donne: { conserve: 1 },
+    qualites: {},
+    duree: 6,
+    examen: "La cuisine du meunier : la cheminée froide, des bocaux sur le buffet, une boîte à sel, une bouteille d'huile.",
+  },
+  moulin_malle: {
+    verbe: "fouiller",
+    libelle: "Ouvrir la malle du meunier",
+    donne: { chiffons: 3 },
+    qualites: {},
+    duree: 5,
+    examen: "Au pied du lit, la malle du meunier : une couverture, des chemises, et un carnet relié de toile, écrit serré.",
+  },
+  moulin_boutique: {
+    verbe: "fouiller",
+    libelle: "Fouiller la boutique",
+    donne: { conserve: 1 },
+    qualites: {},
+    duree: 6,
+    examen: "« Expérience Farine Authentique » : des pains « artisanaux » sous plastique (conservateurs : toujours mous), de la « farine authentique » en sachets.",
+  },
+  moulin_magasin: {
+    verbe: "fouiller",
+    libelle: "Fouiller autour de la bascule",
+    donne: { ficelle: 2 },
+    qualites: {},
+    duree: 6,
+    examen: "La bascule décimale et ses poids de fonte, le blutoir, des sacs vides noués de ficelle.",
+  },
+  moulin_camp: {
+    verbe: "fouiller",
+    libelle: "Fouiller le camp du pont",
+    donne: { chiffons: 2 },
+    qualites: {},
+    duree: 6,
+    examen: "Le camp de survivants sur le pont : un brasero, une bâche déchirée, une couverture, une ligne de pêche sans hameçon. Ils sont partis vite.",
+  },
+  // ---------- H1B, le Gué-aux-Saules (chantier 11 ; commun/src/gue.ts) ----------
+  // B6 : la vase de la berge, sous le camping-car : inépuisable, une motte de 2 kg par geste de 6 s, avec Creuser 1.
+  gisement_glaise: {
+    verbe: "ramasser",
+    libelle: "Creuser une motte de glaise",
+    donne: { glaise: 1 },
+    qualites: { creuser: 1 },
+    duree: 6,
+    examen: "La berge de vase, sous le camping-car : une glaise grise et grasse, entamée à la bêche. Il en reste pour des années. Il faut de quoi creuser.",
+  },
+  // B5 : le banc de galets accroché au radier, 8 pierres à chacun (6 h).
+  banc_galets: {
+    verbe: "ramasser",
+    libelle: "Prendre un galet plat",
+    donne: { pierre: 1 },
+    qualites: {},
+    duree: 1.8,
+    examen: "Le banc de galets, au pied du radier : des pierres plates et rondes, polies par l'eau. Bonnes pour un foyer, et pour les ricochets.",
+  },
+  // Les fouilles du gué : rien de sûr, mais par chance une bâche, des chiffons, une casserole, une corde.
+  gue_cabane: {
+    verbe: "fouiller",
+    libelle: "Fouiller la cabane du passeur",
+    donne: {},
+    qualites: {},
+    duree: 4,
+    examen: "Le râtelier du passeur : des gaffes, des avirons, des cordes lovées. Le registre des passages est resté ouvert sur la table.",
+  },
+  gue_buvette: {
+    verbe: "fouiller",
+    libelle: "Fouiller la buvette",
+    donne: {},
+    qualites: {},
+    duree: 4,
+    examen: "Derrière le comptoir de Chez Lulu : la friteuse à l'huile figée, des paniers, une caisse et des jetons de bal.",
+  },
+  gue_barques: {
+    verbe: "fouiller",
+    libelle: "Regarder sous les barques",
+    donne: {},
+    qualites: {},
+    duree: 3,
+    examen: "Les barques de location, retournées sur la plage. Dessous, des rames, une écope, peut-être une corde d'amarrage.",
+  },
+  gue_camping_car: {
+    verbe: "fouiller",
+    libelle: "Fouiller le camping-car",
+    donne: {},
+    qualites: {},
+    duree: 5,
+    examen: "« Liberté Totale », embourbé jusqu'aux essieux. Dedans, des duvets, un réchaud, des placards qui claquent.",
+  },
+  gue_lavoir: {
+    verbe: "fouiller",
+    libelle: "Fouiller le lavoir",
+    donne: {},
+    qualites: {},
+    duree: 3,
+    examen: "Le lavoir de 1887 : des battoirs, un pain de savon, des draps oubliés sur la pierre. Le filet d'eau de la source coule encore.",
+  },
+  gue_garde_peche: {
+    verbe: "fouiller",
+    libelle: "Fouiller le cabanon du garde-pêche",
+    donne: {},
+    qualites: {},
+    duree: 4,
+    examen: "Le cabanon du garde-pêche : des cannes, des hameçons, des filets pendus, une paire de bottes.",
+  },
+};
+
+/**
+ * Tous les usages. Les ressources du niveau 1 qui n'ont pas encore le leur n'existent dans aucun lieu : le type les
+ * déclare d'avance, la table les reçoit avec leur lieu.
+ */
+export const USAGES = { ...USAGES_ETABLIS, ...USAGES_NIVEAU1 } as Record<TypeRessource, UsageRessource>;
+
 /** Les vestiges de la ruine, à leur place dans les décombres. */
 export function genererVestiges(premierId: number): Omit<RessourceSol, "disponible">[] {
   const places: [TypeRessource, number, number][] = [
@@ -503,6 +949,8 @@ export function genererVestiges(premierId: number): Omit<RessourceSol, "disponib
     ["ressort", -0.4, -1.9],
     ["bache", 0.6, 1.9],
     ["barre_metal", -2.6, -1.2],
+    // Plan 0.8 (§2.5) : le bidon de 5 L, pour le récupérateur de la maison.
+    ["ruine_bidon", -1.3, 0.2],
   ];
   return places.map(([type, dx, dz], i) => ({ id: premierId + i, type, x: RUINE.x + dx, z: RUINE.z + dz }));
 }
