@@ -1,5 +1,6 @@
 // Le rythme de l'arbre de progression (0.7, chantier 6 ; décision Q5) : les parcours types tiennent la cible, rien ne
 // bloque, le tutoriel et le carnet ne demandent jamais une recette invisible, chaque ingrédient se trouve.
+// Plan 0.8 (chantier 14) : les sorties, les portes du niveau 1 et le budget de bois et de pierre (§2.7, critères 6, 7, 11).
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -7,7 +8,24 @@ import { FAMILLES, type Famille } from "./regles.ts";
 import { RECETTES, estHorsFamille, recette } from "./recettes.ts";
 import { QUETES } from "./quetes.ts";
 import { ATELIER, aDevoiler, devoileesAuDepart, maillons, recettesDeLEtape, recettesDeLaQuete, silhouettes, type EtatPourDevoilement } from "./progression.ts";
-import { CIBLE, cibleDuProfil, ecartsALaCible, jouerParcours, quetesDeLaFamille, tousLesParcours } from "./rythme.ts";
+import {
+  CIBLE,
+  CLES_DE_LIEU,
+  HYPOTHESES_DECIDEES,
+  Haltes,
+  RAVITAILLEMENTS_MAX,
+  SERVEURS,
+  TERRAIN_VRAC,
+  budgetNiveau1,
+  cibleDuProfil,
+  ecartsALaCible,
+  ecartsAuNiveau1,
+  jouerParcours,
+  postesNiveau1,
+  quetesDeLaFamille,
+  simulerServeur,
+  tousLesParcours,
+} from "./rythme.ts";
 import { trouvables } from "./trouvables.ts";
 import { lieuPossede } from "./lieu-recette.ts";
 
@@ -17,8 +35,8 @@ function etat(famille: Famille, p: Partial<EtatPourDevoilement> = {}): EtatPourD
   return { famille, vus: new Set(), faits: {}, installations: new Map(), quetes: new Set(), tuto: null, minutes: 0, sansSac: false, devoilees: new Set(devoileesAuDepart()), ...p };
 }
 
-test("rythme : neuf parcours types (prudent, pressé, sans tutoriel × trois familles), et tous tiennent la cible", () => {
-  assert.equal(PARCOURS.length, 9);
+test("rythme : douze parcours types (prudent, pressé, sans tutoriel, malchanceux × trois familles), et tous tiennent la cible", () => {
+  assert.equal(PARCOURS.length, 12);
   const fautes = PARCOURS.flatMap(ecartsALaCible);
   assert.deepEqual(fautes, [], fautes.join("\n"));
 });
@@ -35,20 +53,22 @@ test("rythme : rapide au début — avec le tutoriel, une nouveauté toutes les 
   }
 });
 
-test("rythme : puis un bon rythme — un but nouveau au moins toutes les 20 min (au pas du joueur), jusqu'au bout du carnet", () => {
+test("rythme : puis un bon rythme — un but nouveau au moins toutes les 20 min (au pas du joueur), les trois premières heures", () => {
   for (const r of PARCOURS) {
     assert.ok(r.mesures.ecartButsEnsuite <= cibleDuProfil(r.profil).buts + 1e-9, `${r.profil} ${r.famille} : ${r.mesures.ecartButsEnsuite} min`);
-    // Toutes les quêtes qu'on peut finir seul le sont dans la première soirée (main_tendue attend un autre joueur).
+    // Le pressé et le vétéran finissent tout le carnet dans la soirée (main_tendue attend un autre joueur) ; le prudent,
+    // qui passe d'abord les portes du niveau 1, en finit une partie, et tout le niveau 1.
     const seul = quetesDeLaFamille(r.famille).filter((q) => q.id !== "main_tendue").length;
-    assert.equal(r.mesures.quetesFinies, seul, `${r.profil} ${r.famille}`);
+    if (r.profil === "presse" || r.profil === "sans_tuto") assert.equal(r.mesures.quetesFinies, seul, `${r.profil} ${r.famille}`);
+    else assert.ok(r.mesures.quetesFinies >= 8, `${r.profil} ${r.famille} : ${r.mesures.quetesFinies} quêtes`);
   }
   assert.equal(CIBLE.ecartButsMax, 20);
 });
 
-test("rythme : aucun parcours ne bloque, ni n'attend un dévoilement", () => {
+test("rythme : aucun parcours ne bloque, et aucune quête n'attend un dévoilement (une porte du niveau 1, si : on fait autre chose)", () => {
   for (const r of PARCOURS) {
     assert.deepEqual(r.blocages, [], `${r.profil} ${r.famille} : ${r.blocages.join(" ; ")}`);
-    assert.deepEqual(r.attentes, {}, `${r.profil} ${r.famille}`);
+    assert.deepEqual(Object.keys(r.attentes).filter((q) => !q.startsWith("porte:")), [], `${r.profil} ${r.famille}`);
   }
 });
 
@@ -128,5 +148,115 @@ test("seul, chaque famille fait tout ce que son carnet et son tutoriel demandent
     }
     // Ce qu'on apprend des Mécanistes demande parfois de scier (l'arbrier, la brouette) : les Compteurs vendent une scie.
     assert.ok(trouvables(famille, false).recettes.has("arbrier"), `${famille} : arbrier`);
+  }
+});
+
+// ---------- Plan 0.8, chantier 14 : les sorties, les portes, le budget ----------
+
+test("niveau 1 : chaque parcours a tout le niveau 1 à l'horizon, avec la première sortie avant 60 min et au plus une sortie de butin sur quatre sans porte dans les trois premières heures (critère 11)", () => {
+  for (const r of PARCOURS) {
+    assert.deepEqual(ecartsAuNiveau1(r), [], `${r.profil} ${r.famille}`);
+    assert.ok(r.mesures.premiereSortie !== null && r.mesures.premiereSortie < CIBLE.premiereSortieMax, `${r.profil} ${r.famille} : ${r.mesures.premiereSortie}`);
+    // Toutes les choses du niveau 1, bâties une à une.
+    assert.equal(r.postesFaits.length, postesNiveau1(r.famille, r.profil === "presse" ? "B" : "A", r.profil === "prudent" || r.profil === "malchanceux" ? "parcours" : "besoin").length);
+  }
+});
+
+test("niveau 1 : la première arrivée à chaque étape est notée (atteint) ; le prudent suit le parcours, station, gué, Coopérative, Moulin", () => {
+  for (const r of PARCOURS) {
+    for (const e of ["maison", "H1A", "H1B", "L1A", "L1B"] as const) assert.ok(r.atteint[e] !== undefined, `${r.profil} ${r.famille} : ${e}`);
+  }
+  for (const r of PARCOURS.filter((x) => x.profil === "prudent")) {
+    const a = r.atteint;
+    assert.ok(a.maison! < a.H1A! && a.H1A! < a.H1B! && a.H1B! < a.L1A! && a.L1A! < a.L1B!, `${r.famille} : ${JSON.stringify(a)}`);
+  }
+});
+
+test("niveau 1 : une clé de lieu ne se trouve qu'en y allant ; chaque porte à clé passe après la sortie qui a rapporté sa clé", () => {
+  // Les clés de lieu : les trois pièces de famille (station), le grillage, la cocotte, le seau (Coopérative), la toile,
+  // les feuillards, l'étau (Moulin), la glaise (gué).
+  assert.deepEqual([...CLES_DE_LIEU.entries()].sort(), [
+    ["cocotte_fonte", "cooperative"],
+    ["enclume_depanneur", "station"],
+    ["etau", "moulin"],
+    ["feuillards", "moulin"],
+    ["glaise", "gue"],
+    ["grillage_rouleau", "cooperative"],
+    ["panneau_solaire", "station"],
+    ["petit_alternateur", "station"],
+    ["seau_10l", "cooperative"],
+    ["toile_jute", "moulin"],
+  ]);
+  for (const r of PARCOURS) {
+    for (const p of r.portes) {
+      const s = r.sorties.find((x) => x.cles.includes(p.cle));
+      assert.ok(s, `${r.profil} ${r.famille} : ${p.id} sans sortie pour ${p.cle}`);
+      assert.ok(s.minute <= p.minute && s.porte, `${r.profil} ${r.famille} : ${p.id}`);
+    }
+    // Les six clés de L1 ouvrent leurs six portes, et le meuble de famille sa pièce.
+    for (const id of ["foyer_cuisine", "marmite", "recuperateur_seau", "abri_ferme", "coffre_cercle", "etabli_etau"]) assert.ok(r.portes.some((p) => p.id === id), `${r.profil} ${r.famille} : ${id}`);
+  }
+});
+
+test("budget (§2.7) : en plus de la visite du tutoriel, ⚡ 0, ⚙️ 0 à 1, 🔥 au plus 1 aller-retour de ravitaillement — seul, malchanceux, à trois, à cinq", () => {
+  assert.deepEqual(RAVITAILLEMENTS_MAX, { voltaiques: 0, mecanistes: 1, charbonniers: 1 });
+  for (const scenario of ["seul", "malchanceux", "trois", "cinq_en_file", "cinq_ensemble"] as const) {
+    for (const l of budgetNiveau1(scenario)) {
+      assert.ok(l.ravitaillements <= RAVITAILLEMENTS_MAX[l.famille], `${scenario}, ${l.famille} : ${l.ravitaillements} allers-retours`);
+      assert.ok(l.niveau1 !== null, `${scenario}, ${l.famille} : pas tout le niveau 1`);
+    }
+  }
+  // Seul, aucune famille n'a besoin de retourner à la station : le terrain, le tas de bois et le vrac suffisent.
+  for (const l of budgetNiveau1("seul")) assert.equal(l.ravitaillements + l.achats, 0, l.famille);
+});
+
+test("budget : ce que coûte tout le niveau 1 (le terrain, B1 : 16 bûches et 26 pierres ; le reste vient des sorties)", () => {
+  assert.deepEqual(TERRAIN_VRAC, { buche: 16, pierre: 26, branche: 34 });
+  const seul = new Map(budgetNiveau1("seul").map((l) => [l.famille, l]));
+  // Les pierres : le terrain suffit à chaque famille (§2.7 : « confortable pour toutes les familles »).
+  for (const [f, l] of seul) assert.ok((l.depense.pierre ?? 0) <= TERRAIN_VRAC.pierre, `${f} : ${l.depense.pierre} pierres`);
+  // Les bûches : plus que le terrain pour ⚙️ et 🔥 (le tas de bois et le vrac de la station font le reste).
+  assert.ok((seul.get("charbonniers")!.depense.buche ?? 0) > TERRAIN_VRAC.buche);
+  assert.ok((seul.get("mecanistes")!.depense.buche ?? 0) > TERRAIN_VRAC.buche);
+  // 🔥 : la glaise du bac de trempe vient du gué, et une meule de charbonnière (le sac de la station en donne 4).
+  assert.equal(seul.get("charbonniers")!.depense.glaise, 2);
+  assert.equal(seul.get("charbonniers")!.venu.sac_charbon?.charbon_bois, 4);
+});
+
+test("haltes partagées : le vrac grandit avec les présents (B8), chaque point revient en 30 min ; le tas de bois est à chacun (B3)", () => {
+  const seul = new Haltes(0, { passages: [], prises: [] }, HYPOTHESES_DECIDEES, false);
+  assert.equal(seul.vrac("station", "buche", 10), 12);
+  assert.equal(seul.prendreVrac("station", "buche", 10, 20), 12);
+  assert.equal(seul.vrac("station", "buche", 39), 0);
+  assert.equal(seul.vrac("station", "buche", 40.5), 12);
+  // Le tas de bois : 10 bûches, qui reviennent 6 h après la première prise.
+  assert.equal(seul.prendreTas("tas_bois", 10, 4), 4);
+  assert.equal(seul.prendreTas("tas_bois", 20, 20), 6);
+  assert.equal(seul.prendreTas("tas_bois", 300, 20), 0);
+  assert.equal(seul.prendreTas("tas_bois", 371, 20), 10);
+  // À cinq présents : ×3 (B8) ; un autre a pris 30 bûches juste avant : il en reste 6.
+  const autres = { passages: [1, 2, 3, 4].map((j) => ({ joueur: j, lieu: "station" as const, debut: 0, fin: 20 })), prises: [{ joueur: 1, lieu: "station" as const, type: "buche" as const, minute: 5, n: 30 }] };
+  const cinq = new Haltes(0, autres, HYPOTHESES_DECIDEES, false);
+  assert.equal(cinq.presents("station", 10), 5);
+  assert.equal(cinq.vrac("station", "buche", 10), 6);
+  // Le malchanceux : le vrac a toujours été vidé avant lui ; son tas, non.
+  const malchanceux = new Haltes(0, { passages: [], prises: [] }, HYPOTHESES_DECIDEES, true);
+  assert.equal(malchanceux.vrac("gue", "pierre", 10), 0);
+  assert.equal(malchanceux.prendreTas("banc_galets", 10, 20), 8);
+});
+
+test("à plusieurs (critère 7) : la station et le gué ne restent jamais vides de bois et de pierres plus de 30 min", () => {
+  for (const nom of Object.keys(SERVEURS) as (keyof typeof SERVEURS)[]) {
+    const s = simulerServeur(SERVEURS[nom]);
+    assert.ok(s.videStation <= 30 && s.videGue <= 30, `${nom} : station ${s.videStation}, gué ${s.videGue}`);
+    for (const r of s.joueurs) assert.deepEqual(r.blocages, [], `${nom}, ${r.famille}`);
+  }
+});
+
+test("tests de jeu : à trois (une famille chacun), chacun a tout le niveau 1 et sa pièce de famille à lui", () => {
+  const s = simulerServeur(SERVEURS.trois);
+  for (const r of s.joueurs) {
+    assert.ok(r.mesures.niveau1 !== null, r.famille);
+    assert.ok(r.sorties[0]!.cles.some((c) => CLES_DE_LIEU.get(c) === "station"), `${r.famille} : sa pièce à la station`);
   }
 });
