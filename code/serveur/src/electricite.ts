@@ -1,15 +1,16 @@
 // L'électricité des Voltaïques (Book 25 §5, chantier 6 · 0.6) : ce que coûte une décharge, le pack vide, l'alerte
 // « Plus de courant », la recharge au banc et à la manivelle ; la plaque de choc, les clôtures et l'alarme électrique,
-// par le moteur des déclencheurs (declencheurs.ts).
+// par le moteur des déclencheurs (declencheurs.ts) ; depuis la 0.8 (chantier 7), le banc solaire : le panneau de la
+// station posé sur le banc, qui remplit au soleil les batteries posées dessus (80 Wh par jour de calendrier).
 //
 // La règle de la décharge elle-même (raidir, mettre à terre, éteindre) est dans `encaisserCoup` (eteints.ts, chantier 2).
 // Ce module ne connaît pas le joueur : il passe par un `ContexteElectricite` (ce que le joueur lui prête), si bien que
 // joueur.ts n'ajoute que des appels d'une ligne (Book 25 §10.4).
 
 import { armeSansCharge, capaciteChargeArme, chargeArme, cleArme, armeDeCle, COUT_ENDURANCE, type Arme } from "../../commun/src/combat.ts";
-import { MS_JOUR_CALENDRIER, RENDEMENT_BANC, WH_RECHARGE_PAR_HEURE, type Charges, type TypeBatterie } from "../../commun/src/energie.ts";
+import { MS_JOUR_CALENDRIER, RENDEMENT_BANC, WH_RECHARGE_PAR_HEURE, productionPanneau, stocker, type Charges, type TypeBatterie } from "../../commun/src/energie.ts";
 import type { CleObjet } from "../../commun/src/etoiles.ts";
-import type { InstallationVue } from "../../commun/src/messages.ts";
+import type { InstallationVue, Verbe } from "../../commun/src/messages.ts";
 import { nommer, type Inventaire } from "../../commun/src/objets.ts";
 import { declencheurNeuf, enregistrerDeclencheur, rearmer as rearmerDeclencheur } from "./declencheurs.ts";
 
@@ -203,6 +204,28 @@ export function alimenterClotures(installations: Iterable<InstallationVue>, inst
   return changees;
 }
 
+// ---------- Le banc solaire (plan 0.8, chantier 7) ----------
+
+/**
+ * Le panneau posé sur le banc solaire produit au calendrier, connecté ou non (`productionPanneau` : 80 Wh par jour de
+ * calendrier), dans les batteries posées sur le banc ; sans batterie, ou pleines, l'énergie est perdue. À appeler avant
+ * la décharge spontanée, qui avance `majLe` : on part du même instant. Rend le bilan, comme le panneau posé à part.
+ */
+export function produireBancsSolaires(installations: Iterable<InstallationVue>, instant: number): { produit: number; stocke: number; perdu: number } {
+  const bilan = { produit: 0, stocke: 0, perdu: 0 };
+  for (const banc of installations) {
+    if (banc.type !== "banc_recharge" || !banc.etat.panneau) continue;
+    const wh = productionPanneau(instant - (banc.etat.majLe ?? instant));
+    if (wh <= 0) continue;
+    const r = stocker({ batteries: banc.etat.batteries ?? {}, charges: banc.etat.charges ?? {} }, wh);
+    banc.etat = { ...banc.etat, charges: r.stockage.charges };
+    bilan.produit += wh;
+    bilan.stocke += r.stocke;
+    bilan.perdu += r.perdu;
+  }
+  return bilan;
+}
+
 // ---------- Le module ----------
 
 /** Ce que le joueur prête au module de l'électricité. */
@@ -220,6 +243,10 @@ export interface ContexteElectricite {
   depenser(endurance: number): void;
   /** Sauver l'état d'une installation et le montrer. */
   sauverInstallation(i: InstallationVue): void;
+  /** Retirer des objets du sac (déjà vérifiés). */
+  retirer(objets: Inventaire): void;
+  /** Un fait pour les quêtes et les mesures. */
+  noter(fait: string): void;
   info(texte: string): void;
   indice(sorte: string, texte: string): void;
   /** Un geste, en secondes réelles ; `kcalParHeure` : l'effort en plus. */
@@ -235,6 +262,34 @@ export class Electricite {
 
   constructor(ctx: ContexteElectricite) {
     this.ctx = ctx;
+  }
+
+  /**
+   * Un geste du banc solaire (plan 0.8, chantier 7) : poser le panneau de la station sur le banc. Rend false si ce n'est
+   * pas un geste de ce module (joueur.ts continue alors comme avant).
+   */
+  utiliser(i: InstallationVue, verbe: Verbe): boolean {
+    if (verbe !== "poser_panneau") return false;
+    if (i.type !== "banc_recharge") return true;
+    if (i.etat.panneau) {
+      this.ctx.info("Le panneau est déjà sur le banc.");
+      return true;
+    }
+    if ((this.ctx.inventaire().panneau_solaire ?? 0) < 1) {
+      this.ctx.info("Il te faut le petit panneau solaire : celui de la station, contre le pilier de l'auvent.");
+      return true;
+    }
+    this.ctx.commencer("Poser le panneau sur le banc", 20, () => {
+      if (i.etat.panneau || (this.ctx.inventaire().panneau_solaire ?? 0) < 1) return;
+      this.ctx.retirer({ panneau_solaire: 1 });
+      // La production part de maintenant (pas de soleil rétroactif).
+      i.etat = { ...i.etat, panneau: true, majLe: this.ctx.maintenant() };
+      this.ctx.sauverInstallation(i);
+      this.ctx.noter("banc:panneau");
+      const posees = Object.values(i.etat.batteries ?? {}).some((n) => (n ?? 0) > 0);
+      this.ctx.info(posees ? "Le panneau est posé, plein sud : au soleil, il remplit les batteries du banc (80 Wh par jour)." : "Le panneau est posé, plein sud. Pose la batterie de la ruine sur le banc : le soleil s'y mettra en réserve.");
+    });
+    return true;
   }
 
   /** L'arme qui part vraiment (Book 25 §8.2) : un gourdin court si le pack est vide, une courte s'il est trop faible. */

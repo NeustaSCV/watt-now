@@ -10,7 +10,7 @@ import { KLAXONS_PAR_BATTERIE, LEURRES, PORTES, chargeBatterieTracteur, distance
 import type { AutreVu, EtatCoopVu, InstallationVue, MessageClient, SacVu, Verbe } from "../../commun/src/messages.ts";
 import { nommer, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
 import { RECETTES } from "../../commun/src/recettes.ts";
-import { ENCLUMES, NIVEAU_FORGE_VENTILEE, enclumeDuSac } from "../../commun/src/forge.ts";
+import { COUT_BAC, ENCLUMES, ETOILES_PIERRE_PLATE, NIVEAU_FORGE_VENTILEE, enclumeDuSac } from "../../commun/src/forge.ts";
 import { NOMS_FAMILLES, type Famille } from "../../commun/src/regles.ts";
 import type { Gourde } from "../../commun/src/survie.ts";
 import { DISTANCE_INTERACTION, EMPRISE_RESSOURCE, PORTEE_ARBRE, distanceMare, RAYON_ESCABEAU, USAGES, estArbre, estFruitier, type TypeRessource } from "../../commun/src/terrain.ts";
@@ -44,9 +44,9 @@ export const EXAMENS_INSTALLATIONS: Record<InstallationVue["type"], string> = {
   abri: "Un appentis de branches et de bâche. De quoi dormir au sec, près du feu.",
   coffre: "Un coffre de planches, ficelé de corde. Ce que tu y ranges ne pèse plus sur ton dos.",
   charbonniere: "Une meule de bois couverte de terre. Allumée, elle cuit trois jours en fumant beaucoup.",
-  forge: "Un foyer de pierres, un soufflet, une pierre plate pour enclume. Il faut du charbon de bois.",
-  pedalier: "Un vieux cadre de vélo sur un bâti de bois. Il entraîne ce qu'on y monte : une meule, une dynamo.",
-  banc_recharge: "Des pinces, des fils et un régulateur bricolé : on passe l'énergie d'une batterie à l'autre.",
+  forge: "Un foyer de pierres, une tuyère de fer, un billot et sa pierre plate pour enclume. Il faut du charbon de bois.",
+  pedalier: "Le vieux vélo de la ruine sur un bâti de bois. Sa roue entraîne ce qu'on y monte : l'alternateur, une meule.",
+  banc_recharge: "Un banc de planches, des pinces, un régulateur bricolé. Le panneau posé dessus remplit ses batteries au soleil.",
   panneau_solaire: "Le petit panneau de la station, plein sud. Il charge les batteries posées sur le banc, même quand tu n'es pas là.",
   escabeau: "Un escabeau de bois ligaturé de corde. Posé au pied d'un arbre fruitier, dans son cercle, il permet de cueillir en haut.",
   recuperateur_pluie: "Quatre sacs plastique tendus en entonnoir au-dessus d'un bidon de 5 L. Quand il pleut, il se remplit, même quand tu n'es pas là. L'eau du ciel se boit sans la faire bouillir.",
@@ -119,7 +119,7 @@ function actionsInstallation(
     case "forge": {
       // B : un accessoire à poser, s'il y a de quoi dans le sac (Book 25 §9.3) ; sinon, la fiche (améliorer la forge).
       const enclume = enclumeDuSac(inventaire);
-      const posee = i.etat.enclume ? ENCLUMES[i.etat.enclume].etoiles : 2;
+      const posee = i.etat.enclume ? ENCLUMES[i.etat.enclume].etoiles : ETOILES_PIERRE_PLATE;
       const accessoire =
         enclume && ENCLUMES[enclume].etoiles > posee
           ? msg(`Poser l'enclume (${ENCLUMES[enclume].nom.replace(/^l'|^la |^le /, "")})`, "poser_enclume")
@@ -127,8 +127,8 @@ function actionsInstallation(
             ? msg("Monter le ventilateur", "monter_ventilateur")
             : i.etat.bac && (inventaire.bidon_huile ?? 0) > 0
               ? msg("Verser l'huile dans le bac", "verser_huile")
-              : !i.etat.bac && (inventaire.casserole ?? 0) > 0 && ((inventaire.bidon_huile ?? 0) > 0 || (inventaire.graisse ?? 0) > 0)
-                ? msg("Poser le bac de trempe (casserole)", "poser_bac")
+              : !i.etat.bac && Object.entries(COUT_BAC).every(([t, n]) => (inventaire[t as TypeObjet] ?? 0) >= (n ?? 0))
+                ? msg("Poser le bac de trempe (auge de glaise)", "poser_bac")
                 : null;
       return [{ libelle: "Travailler à la forge", ouvrirFabrication: true }, accessoire ?? examiner];
     }
@@ -142,14 +142,22 @@ function actionsInstallation(
       return [msg("Défourner le charbon", "defourner"), examiner];
     }
     case "pedalier": {
-      if (!i.etat.dynamo && (inventaire.dynamo_velo ?? 0) > 0) return [msg("Installer la dynamo", "monter_dynamo"), examiner];
+      // Le pédalier générateur (plan 0.8) : l'alternateur de la station d'abord ; la dynamo du vélo, à défaut.
+      if (!i.etat.alternateur && (inventaire.petit_alternateur ?? 0) > 0) return [msg("Monter l'alternateur", "monter_alternateur"), examiner];
+      if (!i.etat.alternateur && !i.etat.dynamo && (inventaire.dynamo_velo ?? 0) > 0) return [msg("Installer la dynamo", "monter_dynamo"), examiner];
+      // La batterie de la ruine se pose sur le pédalier : on y pédale, on la reprend pleine.
+      const surPedalier = Object.values(i.etat.batteries ?? {}).some((n) => (n ?? 0) > 0);
+      const enPoche = (inventaire.petite_batterie ?? 0) > 0 || (inventaire.batterie_voiture ?? 0) > 0;
+      if ((i.etat.alternateur || i.etat.dynamo) && !surPedalier && enPoche) return [msg("Poser la batterie sur le pédalier", "poser_batteries"), examiner];
       if (!i.etat.meule && (inventaire.pierre ?? 0) >= 3) return [msg("Installer la meule (3 pierres)", "monter_meule"), examiner];
-      const pedaler = i.etat.dynamo ? msg("Pédaler : charger la batterie", "pedaler") : null;
+      const pedaler = i.etat.alternateur || i.etat.dynamo ? msg("Pédaler : charger la batterie", "pedaler") : null;
+      if (pedaler && surPedalier && partPleine(i) >= 0.99) return [msg("Reprendre la batterie", "reprendre_batteries"), examiner];
       const affuter = i.etat.meule && (inventaire.couteau ?? 0) > 0 ? msg("Affûter le couteau", "affuter") : null;
       // Les accessoires mécanistes (Book 25 §6.4) : proposés quand on a de quoi les monter, sans prendre la place du reste.
       const accessoire = accessoirePedalier(i, inventaire, msg);
       if (!pedaler && !affuter && accessoire) return [accessoire, examiner];
-      return [pedaler ?? affuter, pedaler && affuter ? affuter : (accessoire ?? examiner)];
+      const reprendre = surPedalier ? msg("Reprendre la batterie", "reprendre_batteries") : null;
+      return [pedaler ?? affuter, pedaler && affuter ? affuter : (accessoire ?? reprendre ?? examiner)];
     }
     case "plaque_choc": {
       // Book 25 §5.3 : une décharge, puis il faut la réarmer (0,5 Wh).
@@ -176,6 +184,8 @@ function actionsInstallation(
     case "tour_perche":
       return [{ libelle: "Travailler au tour", ouvrirFabrication: true }, examiner];
     case "banc_recharge": {
+      // Le banc solaire (plan 0.8) : le panneau de la station se pose sur le banc, d'abord.
+      if (!i.etat.panneau && (inventaire.panneau_solaire ?? 0) > 0) return [msg("Poser le panneau sur le banc", "poser_panneau"), examiner];
       // Sur le banc : les batteries posées, que le panneau charge, même hors ligne (É4).
       const posees = Object.values(i.etat.batteries ?? {}).some((n) => (n ?? 0) > 0);
       // Les armes électriques (Book 25 §5.4) : on les recharge aux batteries du banc.
@@ -194,6 +204,17 @@ function actionsInstallation(
     default:
       return [null, examiner];
   }
+}
+
+/** La part de charge des batteries posées sur un meuble (0 à 1). */
+function partPleine(i: InstallationVue): number {
+  let cap = 0;
+  let wh = 0;
+  for (const [b, n] of Object.entries(i.etat.batteries ?? {})) {
+    cap += CAPACITES[b as keyof typeof CAPACITES] * (n ?? 0);
+    wh += i.etat.charges?.[b as keyof typeof CAPACITES] ?? 0;
+  }
+  return cap > 0 ? wh / cap : 0;
 }
 
 /** Le ventilateur à manivelle, la meule fine (Book 25 §6.4) : à monter sur le pédalier, si l'on a de quoi. */

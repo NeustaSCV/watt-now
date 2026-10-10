@@ -7,11 +7,16 @@
 //
 // Les pièges ont deux visages : les morceaux marqués `userData.siArme = true` se voient quand le piège est armé, ceux
 // marqués `false` quand il a pris (installations.ts les montre selon l'état du déclencheur). Les accessoires du pédalier
-// portent `userData.siEtat` : le nom du drapeau de l'état qui les montre (« soufflet », « meuleFine »).
+// portent `userData.siEtat` : le nom du drapeau de l'état qui les montre (« soufflet », « meuleFine », « alternateur »).
+// Depuis la 0.8 (plan 0.8, chantier 7), le pédalier générateur : le petit alternateur de la station, monté contre la
+// roue, sa courroie et sa poulie qui tournent quand on pédale (`userData.animer`), et la batterie de la ruine posée au
+// pied du bâti, câblée à l'alternateur (`userData.majEtat` : elle se montre quand une batterie est posée).
 
 import * as THREE from "three";
+import type { EtatInstallation } from "../../../../commun/src/messages.ts";
 import { ACIER, Assemblage, BOIS, CORDE, NOIR, ROUILLE_SOMBRE, V3, Y, bosseler, placer, touffe } from "../assemblage.ts";
 import { PALETTE, aleatoire } from "../materiaux.ts";
+import { batterieVoiture } from "../pieces.ts";
 import type { FabriqueModele, UsageModele } from "./index.ts";
 
 const ROUILLE = PALETTE.rouille;
@@ -214,6 +219,122 @@ function soufflet(): THREE.Group {
   return marque(c.groupe(), "siEtat", "soufflet");
 }
 
+// ---------- Le pédalier générateur (plan 0.8, chantier 7) ----------
+
+/** Le moyeu de la roue-volant du pédalier (installations.ts), et l'axe prolongé où l'on cale la grande poulie. */
+const MOYEU = new V3(0.45, 0.95, 0);
+const Z_COURROIE = -0.14;
+/** Le petit alternateur, sur son support, en contrebas et en arrière de la roue. */
+const ALTERNATEUR = new V3(0.86, 0.5, -0.2);
+const R_GRANDE = 0.1;
+const R_PETITE = 0.034;
+const ALU = 0xb9bcbc;
+const CAOUTCHOUC = 0x1e1e1e;
+
+/** Une poulie d'axe z, centrée sur l'origine : la jante, la gorge sombre, trois rayons (on la voit tourner). */
+function poulie(c: Assemblage, r: number, metal: number): void {
+  c.ajouter(new THREE.CylinderGeometry(r, r, 0.03, 14).rotateX(Math.PI / 2), metal, "metal");
+  c.ajouter(new THREE.TorusGeometry(r * 0.96, 0.006, 3, 14).translate(0, 0, 0), 0x2a2826, "metal");
+  for (let k = 0; k < 3; k++) {
+    const a = (k / 3) * Math.PI * 2;
+    c.boite(0x3a3836, "metal", r * 1.4, 0.008, 0.034, Math.cos(a) * r * 0.35, Math.sin(a) * r * 0.35, 0, 0, 0, a);
+  }
+}
+
+/** Une pièce qui tourne quand on pédale (installations.ts appelle `userData.animer`). */
+function tournante(g: THREE.Group, vitesse: number): THREE.Group {
+  g.userData.intact = true;
+  g.userData.animer = (dt: number, enMarche: boolean) => {
+    if (enMarche) g.rotation.z -= dt * vitesse;
+  };
+  return g;
+}
+
+/**
+ * L'alternateur monté : le carter d'alu à ailettes d'une petite voiture, le ventilateur et la poulie devant, la borne
+ * rouge derrière ; un support de bois et une bride d'acier sur le patin ; la grande poulie calée sur l'axe de la roue,
+ * et la courroie qui les relie (le rapport fait tourner l'alternateur trois fois plus vite que la roue).
+ */
+function alternateur(): THREE.Group {
+  const c = new Assemblage(107);
+  c.occlusion = 0.25;
+  const a = ALTERNATEUR;
+  // Le support : un billot dressé sur le patin, la bride d'acier, deux tire-fond.
+  c.perche(new V3(a.x, 0.04, -0.26), new V3(a.x, a.y - 0.08, -0.24), 0.055, BOIS.ecorce, "mat", 6, 0.05);
+  c.boite(ACIER, "metal", 0.04, 0.13, 0.012, a.x - 0.075, a.y - 0.05, a.z - 0.01);
+  c.boite(ACIER, "metal", 0.04, 0.13, 0.012, a.x + 0.075, a.y - 0.05, a.z - 0.01);
+  for (const s of [-1, 1]) c.ajouter(placer(new THREE.CylinderGeometry(0.008, 0.008, 0.03, 6).rotateX(Math.PI / 2), a.x + s * 0.075, a.y - 0.1, a.z), 0x8a8780, "metal");
+  // Le carter : deux demi-coquilles d'alu, des ailettes sombres, quatre vis de serrage.
+  c.ajouter(placer(new THREE.CylinderGeometry(0.072, 0.072, 0.12, 12).rotateX(Math.PI / 2), a.x, a.y, a.z - 0.02), ALU, "metal");
+  for (let k = 0; k < 4; k++) c.ajouter(placer(new THREE.TorusGeometry(0.073, 0.004, 3, 12), a.x, a.y, a.z - 0.07 + k * 0.032), 0x6b6862, "metal");
+  for (let k = 0; k < 4; k++) {
+    const t = (k / 4) * Math.PI * 2 + 0.4;
+    c.perche(new V3(a.x + Math.cos(t) * 0.07, a.y + Math.sin(t) * 0.07, a.z - 0.085), new V3(a.x + Math.cos(t) * 0.07, a.y + Math.sin(t) * 0.07, a.z + 0.045), 0.006, 0x8a8780, "metal", 4);
+  }
+  // Derrière : la borne B+ sous son capuchon rouge, et le connecteur du régulateur.
+  c.ajouter(placer(new THREE.CylinderGeometry(0.012, 0.012, 0.03, 6).rotateX(Math.PI / 2), a.x + 0.03, a.y + 0.02, a.z - 0.1), 0xc8362b, "mat");
+  c.boite(0x2a2826, "mat", 0.03, 0.02, 0.02, a.x - 0.03, a.y - 0.01, a.z - 0.095);
+  // La courroie : deux brins tendus, tangents aux deux poulies (la grande sur l'axe de la roue, la petite devant).
+  const hub = new V3(MOYEU.x, MOYEU.y, Z_COURROIE);
+  const pt = new V3(a.x, a.y, Z_COURROIE);
+  const d = pt.clone().sub(hub).normalize();
+  const n = new V3(-d.y, d.x, 0);
+  for (const s of [-1, 1]) c.perche(hub.clone().addScaledVector(n, s * R_GRANDE), pt.clone().addScaledVector(n, s * R_PETITE), 0.006, CAOUTCHOUC, "mat", 4);
+  // Le prolongement de l'axe de la roue, jusqu'à la grande poulie.
+  c.perche(new V3(MOYEU.x, MOYEU.y, -0.05), new V3(MOYEU.x, MOYEU.y, Z_COURROIE - 0.02), 0.013, ACIER, "metal", 5);
+  const g = c.groupe();
+
+  // La grande poulie (sur l'axe de la roue) et la petite (l'alternateur, avec son ventilateur) : elles tournent.
+  let p = new Assemblage(108);
+  poulie(p, R_GRANDE, 0x55524d);
+  const grande = tournante(p.groupe(), 9);
+  grande.position.set(MOYEU.x, MOYEU.y, Z_COURROIE);
+  p = new Assemblage(109);
+  poulie(p, R_PETITE, ACIER);
+  for (let k = 0; k < 6; k++) {
+    const t = (k / 6) * Math.PI * 2;
+    p.boite(0x3a3836, "metal", 0.05, 0.014, 0.004, Math.cos(t) * 0.04, Math.sin(t) * 0.04, -0.03, 0, 0, t + 0.5);
+  }
+  const petite = tournante(p.groupe(), 9 * (R_GRANDE / R_PETITE));
+  petite.position.set(a.x, a.y, Z_COURROIE);
+  g.add(grande, petite);
+  return marque(g, "siEtat", "alternateur");
+}
+
+/**
+ * La batterie posée sur le pédalier : celle de la ruine, au pied du bâti, ses deux câbles (rouge, noir) jusqu'à
+ * l'alternateur. Elle se montre quand une batterie est posée (la petite batterie du kit : un boîtier bleu).
+ */
+function batteriePedalier(): THREE.Group {
+  const g = new THREE.Group();
+  g.userData.intact = true;
+  let c = new Assemblage(110);
+  batterieVoiture(c);
+  const voiture = c.groupe();
+  voiture.position.set(0.66, 0.0, -0.6);
+  voiture.rotation.y = 0.35;
+  c = new Assemblage(111);
+  c.boite(PALETTE.bleuTravail, "tole", 0.16, 0.1, 0.1, 0, 0.05, 0);
+  c.boite(0x2f4a74, "tole", 0.165, 0.02, 0.105, 0, 0.105, 0);
+  const petite = c.groupe();
+  petite.position.set(0.4, 0.0, -0.55);
+  c = new Assemblage(112);
+  for (const [dz, couleur] of [[0.0, 0xc8362b], [0.03, 0x2b2b2b]] as const) {
+    const pts = [new V3(ALTERNATEUR.x + 0.03, ALTERNATEUR.y + 0.02, ALTERNATEUR.z - 0.11), new V3(0.9, 0.3, -0.36 - dz), new V3(0.8, 0.08, -0.5 - dz), new V3(0.66, 0.25, -0.62 + dz)];
+    for (let k = 0; k < pts.length - 1; k++) c.perche(pts[k]!, pts[k + 1]!, 0.007, couleur, "mat", 4);
+  }
+  const cables = c.groupe();
+  g.add(voiture, petite, cables);
+  g.userData.majEtat = (etat: EtatInstallation) => {
+    const v = (etat.batteries?.batterie_voiture ?? 0) > 0;
+    const p = (etat.batteries?.petite_batterie ?? 0) > 0;
+    voiture.visible = v;
+    petite.visible = p && !v;
+    cables.visible = v || p;
+  };
+  return g;
+}
+
 /** Les modèles des Mécanistes, à enregistrer au registre (metier/index.ts). */
 export function modelesMecanique(): [objet: string, usage: UsageModele, fabrique: FabriqueModele][] {
   return [
@@ -229,5 +350,7 @@ export function modelesMecanique(): [objet: string, usage: UsageModele, fabrique
     // Les accessoires, posés sur le pédalier : leurs coordonnées sont celles du modèle du pédalier (installations.ts).
     ["pedalier_meule_fine", "sol", meuleFine],
     ["pedalier_soufflet", "sol", soufflet],
+    ["pedalier_alternateur", "sol", alternateur],
+    ["pedalier_batterie", "sol", batteriePedalier],
   ];
 }

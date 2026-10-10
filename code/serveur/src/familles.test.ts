@@ -70,8 +70,9 @@ test("🔥 charbonnière : allumer, attendre trois jours de jeu, défourner 4 kg
 });
 
 test("🔥 la lame se forge seulement près d'un foyer de forge et de son bac de trempe, avec charbon et marteau", () => {
-  // La graisse : une trempe à l'huile, sûre (à l'eau, une lame sur trois se fend : voir forge.test.ts).
-  const t = monter("charbonniers", { pierre: 8, barre_metal: 1, branche: 3, marteau: 1, ressort_lames: 1, charbon_bois: 2, graisse: 1, casserole: 1 });
+  // La graisse : une trempe à l'huile, sûre (à l'eau, une lame sur trois se fend : voir forge.test.ts). Le bac de
+  // trempe (plan 0.8) : 2 bûches, 2 glaises, le bâton à fouir ; l'enclume de dépanneur de la station sur le billot.
+  const t = monter("charbonniers", { pierre: 8, barre_metal: 1, branche: 3, marteau: 1, ressort_lames: 1, charbon_bois: 2, graisse: 1, buche: 2, glaise: 2, baton_fouir: 1, enclume_depanneur: 1 });
   t.joueur.recevoir({ t: "fabriquer", recette: "lame_forgee" });
   assert.match(t.infos().at(-1)!, /Il te faut un foyer de forge/);
   const id = t.construire("forge", 90);
@@ -79,18 +80,20 @@ test("🔥 la lame se forge seulement près d'un foyer de forge et de son bac de
   t.joueur.recevoir({ t: "fabriquer", recette: "lame_forgee" });
   assert.match(t.infos().at(-1)!, /Il te faut un bac de trempe/);
   t.utiliser(id, "poser_bac");
-  t.attendre(12);
+  t.attendre(21);
+  t.utiliser(id, "poser_enclume");
+  t.attendre(9);
   t.joueur.recevoir({ t: "fabriquer", recette: "lame_forgee" });
   t.attendre(91);
   const inv = t.dernier("inventaire")!.inventaire;
-  // Le foyer et le marteau, sans pinces : un couteau de forge ★★ (Book 25 §4.2).
+  // Le foyer, l'enclume de dépanneur et le marteau : un couteau de forge ★★ (Book 25 §4.2, plan 0.8).
   assert.equal(inv["lame_forgee#2"], 1);
   assert.equal(inv.charbon_bois, 1);
   assert.equal(inv.ressort_lames, undefined);
   assert.equal(inv.graisse, undefined, "la graisse a servi à la trempe");
 });
 
-test("⚙️ pédalier : dynamo montée, une heure de pédalage charge la batterie et coûte des calories", () => {
+test("⚙️ pédalier : la dynamo du vélo (le repli) ne donne que 5 Wh par heure de pédalage, et coûte des calories", () => {
   const t = monter("mecanistes", { cadre_velo: 1, chaine_velo: 1, roue_velo: 1, buche: 2, cle_plate: 1, couteau: 1, pierre: 4, dynamo_velo: 1, batterie_voiture: 1 });
   const id = t.construire("pedalier", 90);
   t.utiliser(id, "pedaler");
@@ -106,9 +109,9 @@ test("⚙️ pédalier : dynamo montée, une heure de pédalage charge la batter
   t.utiliser(id, "pedaler");
   t.attendre(61);
   const apres = t.dernier("charges")!.charges.batterie_voiture!;
-  // Mécaniste : 100 Wh_m × 1,3 × 60 % = 78 Wh
-  assert.equal(Math.round(apres - avant), 78);
-  assert.equal(whEDePedalage("mecanistes"), 78);
+  // La dynamo plafonne à 3 à 6 W, quelles que soient les jambes (plan 0.8) : 5 Wh, dans la batterie du sac.
+  assert.equal(Math.round(apres - avant), 5);
+  assert.equal(whEDePedalage("mecanistes", 1, "dynamo"), 5);
   // Repos (≈ 104 kcal/h) + 250 de plus pour l'effort
   assert.ok(kcalAvant - t.joueur.bienvenue(0).besoins.kcal > 300);
 });
@@ -127,7 +130,7 @@ test("⚙️ pédalier : la meule de pierre affûte le couteau (Couper 2)", () =
 });
 
 test("⚡ banc : la batterie de voiture recharge la petite batterie à 85 %", () => {
-  const t = monter("voltaiques", { buche: 2, barre_metal: 1, couteau: 1, cle_plate: 1, petite_batterie: 1, lampe_frontale: 1, batterie_voiture: 1 });
+  const t = monter("voltaiques", { buche: 2, barre_metal: 1, branche: 3, couteau: 1, cle_plate: 1, petite_batterie: 1, lampe_frontale: 1, batterie_voiture: 1 });
   const id = t.construire("banc_recharge", 60);
   t.utiliser(id, "recharger");
   t.attendre(30);

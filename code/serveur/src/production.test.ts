@@ -1,4 +1,5 @@
-// Tests du lot 2 de l'É4 : le panneau solaire produit au calendrier, même hors ligne ; le rapport de la base.
+// Tests du lot 2 de l'É4 : le panneau solaire produit au calendrier, même hors ligne ; le rapport de la base. Depuis la
+// 0.8 (chantier 7), le panneau se pose sur le banc solaire : un seul meuble.
 
 import { test } from "node:test";
 import { toutDevoile } from "../../commun/src/progression.ts";
@@ -11,7 +12,7 @@ import { Comptoir } from "./comptoir.ts";
 import { Halte } from "./halte.ts";
 import { Joueur } from "./joueur.ts";
 
-function monter(inventaire: Record<string, number>, avecBanc = true) {
+function monter(inventaire: Record<string, number>, avecPanneau = true) {
   const base = new Base(":memory:");
   const compte = base.creerCompte("Rose", "potager42", "voltaiques");
   // Ces tests portent sur le métier, pas sur l'arbre de progression : tout est dévoilé.
@@ -30,14 +31,14 @@ function monter(inventaire: Record<string, number>, avecBanc = true) {
     }
   };
   joueur.position = { x: 20, z: 20, o: 0 };
-  if (avecBanc) {
-    joueur.recevoir({ t: "fabriquer", recette: "banc_recharge", x: 20, z: 21.8, o: 0 });
-    attendre(61);
-  }
-  joueur.recevoir({ t: "fabriquer", recette: "panneau_solaire", x: 22.5, z: 20, o: 0 });
-  attendre(31);
-  const dernier = <T extends MessageServeur["t"]>(t: T) => recus.findLast((m) => m.t === t) as Extract<MessageServeur, { t: T }> | undefined;
+  joueur.recevoir({ t: "fabriquer", recette: "banc_recharge", x: 20, z: 21.8, o: 0 });
+  attendre(61);
   const banc = () => joueur.bienvenue(0).installations.find((i) => i.type === "banc_recharge");
+  if (avecPanneau) {
+    joueur.recevoir({ t: "interagir", cible: { genre: "installation", id: banc()!.id }, verbe: "poser_panneau" });
+    attendre(21);
+  }
+  const dernier = <T extends MessageServeur["t"]>(t: T) => recus.findLast((m) => m.t === t) as Extract<MessageServeur, { t: T }> | undefined;
   /** Se déconnecter, s'absenter, revenir. */
   const absence = (ms: number) => {
     joueur.sauvegarder();
@@ -60,6 +61,8 @@ test("le petit panneau produit ≈ 80 Wh par jour de calendrier (1 h 50 réelle)
 test("le panneau charge les batteries posées sur le banc, même hors ligne ; le surplus est perdu", () => {
   const t = monter({ ...kit, petite_batterie: 1 });
   const banc = t.banc()!;
+  assert.equal(banc.etat.panneau, true, "le panneau est sur le banc");
+  assert.equal(t.joueur().bienvenue(0).installations.filter((i) => i.type === "panneau_solaire").length, 0, "un seul meuble");
   t.joueur().position = { x: banc.x, z: banc.z - 1, o: 0 };
   t.joueur().recevoir({ t: "interagir", cible: { genre: "installation", id: banc.id }, verbe: "poser_batteries" });
   t.attendre(5);
@@ -81,12 +84,30 @@ test("le panneau charge les batteries posées sur le banc, même hors ligne ; le
   assert.equal(Math.round(t.dernier("charges")!.charges.petite_batterie!), 50);
 });
 
-test("sans banc, l'énergie du panneau est perdue", () => {
-  const t = monter({ panneau_solaire: 1, branche: 3, couteau: 1 }, false);
+test("sans batterie posée sur le banc, l'énergie du panneau est perdue ; sans panneau, rien ne vient", () => {
+  const t = monter(kit);
   const r = t.absence(MS_JOUR_CALENDRIER / 2).rapport!;
   assert.equal(r.produit, 40);
   assert.equal(r.perdu, 40);
   assert.equal(r.stocke, 0);
+  // Le repli (le banc sans panneau) : la manivelle de la lampe à dynamo, rien au soleil.
+  const sans = monter({ ...kit, panneau_solaire: 0 }, false);
+  assert.equal(sans.banc()!.etat.panneau, undefined);
+  assert.equal(sans.absence(MS_JOUR_CALENDRIER).rapport?.produit ?? 0, 0);
+});
+
+test("⚡ le banc solaire : la batterie de la ruine posée dessus prend ≈ 80 Wh par jour de soleil", () => {
+  const t = monter({ ...kit, batterie_voiture: 1 });
+  const banc = t.banc()!;
+  t.joueur().position = { x: banc.x, z: banc.z - 1, o: 0 };
+  t.joueur().recevoir({ t: "interagir", cible: { genre: "installation", id: banc.id }, verbe: "poser_batteries" });
+  t.attendre(5);
+  const avant = t.banc()!.etat.charges!.batterie_voiture!;
+  const j = t.absence(MS_JOUR_CALENDRIER);
+  assert.equal(j.rapport!.produit, 80);
+  const apres = t.banc()!.etat.charges!.batterie_voiture!;
+  // 80 Wh entrés, moins la décharge spontanée d'un jour (≈ 0,3 Wh).
+  assert.ok(Math.abs(apres - avant - 80) < 1, `${avant} → ${apres}`);
 });
 
 test("une absence courte ne donne pas de rapport", () => {

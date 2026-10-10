@@ -200,13 +200,14 @@ test("une recette d'une autre famille est grisée, s'ouvre par une leçon, coût
   const h = recetteHorsFamille(lame);
   assert.deepEqual(h.ingredients, { ressort_lames: 2, charbon_bois: 2, branche: 2 });
   assert.equal(h.duree, lame.duree * 1.5);
-  // ★★ au plus, même maîtrisée ; dans sa famille, à la forge ventilée avec pinces et graisse, ★★★★ (★★★★★ maîtrisée).
+  // ★★ au plus, même maîtrisée ; dans sa famille, à la forge ventilée avec pinces et graisse, ★★★ (★★★★ maîtrisée ;
+  // plan 0.8, Q-A2d : la forge ventilée donne ★★★).
   const sac = { pinces_forge: 1, graisse: 1 };
   const contexte = { installations: [{ type: "forge" as const, niveau: 2, etat: {} }] };
   assert.equal(etoilesDuProduit(lame, sac, { horsFamille: true, contexte }), 2);
   assert.equal(etoilesDuProduit(lame, sac, { horsFamille: true, maitrise: true, contexte }), 2);
-  assert.equal(etoilesDuProduit(lame, sac, { contexte }), 4);
-  assert.equal(etoilesDuProduit(lame, sac, { maitrise: true, contexte }), 5);
+  assert.equal(etoilesDuProduit(lame, sac, { contexte }), 3);
+  assert.equal(etoilesDuProduit(lame, sac, { maitrise: true, contexte }), 4);
   // Un objet sans étoiles n'en reçoit pas.
   assert.equal(etoilesDuProduit(recette("gourdin")!, {}), null);
 });
@@ -312,7 +313,7 @@ test("lire un manuel ouvre les recettes d'une famille ; dans la sienne, rien ; u
   assert.ok("refus" in lireManuel(vide, "charbonniers", "pierre" as TypeObjet));
 });
 
-test("un Mécaniste lit le Manuel du forgeron, monte une forge et forge une lame : ×1,5, et ★★", () => {
+test("un Mécaniste lit le Manuel du forgeron, monte une forge et forge une lame : ×1,5, et ★ sur la pierre plate", () => {
   const t = monter("mecanistes", { manuel_forgeron: 1, pierre: 12, barre_metal: 4, branche: 5, marteau: 1, charbon_bois: 2 });
   // Sans l'avoir lu : grisée.
   t.joueur.recevoir({ t: "fabriquer", recette: "forge", x: 20, z: 21.8, o: 0 });
@@ -329,7 +330,9 @@ test("un Mécaniste lit le Manuel du forgeron, monte une forge et forge une lame
   t.joueur.recevoir({ t: "fabriquer", recette: "lame_forgee_fer" });
   t.attendre(10);
   const inv = t.dernier("inventaire")!.inventaire;
-  assert.equal(inv["lame_forgee#2"], 1, t.infos().join(" | "));
+  // Sans enclume, la pierre plate du foyer ne donne que ★ (plan 0.8, Q-0.8-1) ; les accessoires de la forge (l'enclume
+  // comprise) restent le geste des Charbonniers.
+  assert.equal(inv["lame_forgee#1"], 1, t.infos().join(" | "));
   assert.equal(inv.lame_forgee, undefined);
   assert.equal(inv.barre_metal, undefined, "1 barre ×1,5 = 2");
   assert.equal(inv.charbon_bois, undefined);

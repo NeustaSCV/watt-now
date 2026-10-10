@@ -183,6 +183,11 @@ const NIVEAUX_INSTALLATIONS: [string, InstallationVue["type"], number, Installat
   ["forge + étau + bac", "forge", 1, { enclume: "etau", bac: true }],
   ["forge + masse + bac d'huile", "forge", 1, { enclume: "masse", bac: true, huile: 12 }],
   ["forge ventilée + rail + ventilateur", "forge", 2, { enclume: "rail", bac: true, huile: 20, ventilateur: true }],
+  // Les meubles de famille (plan 0.8, chantier 7) : le foyer et sa pierre plate ; l'enclume de dépanneur et l'auge.
+  ["foyer de forge, pierre plate", "forge", 1, {}],
+  ["foyer de forge + enclume de dépanneur + auge", "forge", 1, { enclume: "depanneur", bac: true }],
+  ["banc solaire, jauge pleine", "banc_recharge", 1, { panneau: true, batteries: { batterie_voiture: 1 }, charges: { batterie_voiture: 300 } }],
+  ["banc solaire, jauge basse", "banc_recharge", 1, { panneau: true, batteries: { batterie_voiture: 1 }, charges: { batterie_voiture: 50 } }],
 ];
 NIVEAUX_INSTALLATIONS.forEach(([nom, type, niveau, etat], i) => {
   const v = new VueInstallation({ id: 300 + i, type, x: i * 4, z: 21, o: 0, etat, niveau });
@@ -203,6 +208,8 @@ const MECANIQUE: [string, InstallationVue["type"], InstallationVue["etat"]][] = 
   ["fosse ouverte", "fosse_pieux", { declencheur: { arme: false, prises: 1 } }],
   ["tour à perche", "tour_perche", {}],
   ["pédalier + soufflet + meule fine", "pedalier", { meule: true, dynamo: true, soufflet: true, meuleFine: true }],
+  // Le pédalier générateur (plan 0.8, chantier 7) : l'alternateur, sa courroie, la batterie de la ruine posée.
+  ["pédalier générateur", "pedalier", { alternateur: true, batteries: { batterie_voiture: 1 }, charges: { batterie_voiture: 200 } }],
 ];
 MECANIQUE.forEach(([nom, type, etat], i) => {
   const v = new VueInstallation({ id: 400 + i, type, x: i * 3.5, z: 48, o: 0, etat });

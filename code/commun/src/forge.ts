@@ -5,8 +5,10 @@
 //   étoiles = min( acier, trempe, forge et outils ) + 1 si la sorte est maîtrisée   (★★ au plus hors famille)
 // - l'acier : la matière de la recette (fer doux ★★, lame ébréchée et soc ★★★, ressort ★★★★, lime ★★★★★) ;
 // - la trempe : à l'eau ★★★ (une lame sur trois se fend), à l'huile ★★★★ (graisse de volaille, ou l'huile du bac) ;
-// - la forge et ses outils : le foyer et le marteau ★★ ; avec les pinces et une enclume trouvée ★★★ ; la forge
-//   ventilée et les pinces ★★★★ ; ventilée, pinces et enclume de rail ★★★★★. Sans pinces, jamais plus de ★★.
+// - la forge et ses outils (plan 0.8, P1, Q-A6, Q-A2d) : le foyer de forge donne ★★ sur une enclume (l'enclume de
+//   dépanneur de la station, un étau, une tête de masse), ★ sur sa grosse pierre plate (Q-0.8-1) ; la forge ventilée
+//   et les pinces ★★★ (niveau 2, plus tard) ; ventilée, pinces et rail ★★★★★ (plus tard). Sans pinces, pas plus de ★★.
+//   Le foyer plafonne : la trempe à l'eau (★★★) ne dépasse plus le maillon de la forge, et la lame ne passe pas ★★.
 
 import type { EtatInstallation, InstallationVue } from "./messages.ts";
 import type { Inventaire, TypeObjet } from "./objets.ts";
@@ -18,19 +20,38 @@ export type ForgeVue = Pick<InstallationVue, "type" | "niveau" | "etat">;
 /** Le niveau de la forge ventilée dans la lignée de la forge (lignees.ts). */
 export const NIVEAU_FORGE_VENTILEE = 2;
 
-/** Les enclumes qu'on pose sur la forge (Book 25 §9.3). Sans elles, la pierre plate du foyer : ★★. */
+/**
+ * Les enclumes qu'on pose sur la forge (Book 25 §9.3). L'enclume de dépanneur est la clé du foyer de forge (la pièce de
+ * famille de la station) ; l'étau et la tête de masse ne valent pas mieux qu'elle (P1, Q-A6 : ★★, plus ★★★) ; le rail
+ * est pour plus tard. Sans enclume, la grosse pierre plate du foyer : ★ (`ETOILES_PIERRE_PLATE`, Q-0.8-1).
+ */
 export const ENCLUMES = {
-  etau: { objet: "etau", etoiles: 3, nom: "l'étau" },
-  masse: { objet: "masse", etoiles: 3, nom: "la tête de masse" },
+  depanneur: { objet: "enclume_depanneur", etoiles: 2, nom: "l'enclume de dépanneur" },
+  etau: { objet: "etau", etoiles: 2, nom: "l'étau" },
+  masse: { objet: "masse", etoiles: 2, nom: "la tête de masse" },
   rail: { objet: "troncon_rail", etoiles: 5, nom: "le tronçon de rail" },
 } as const satisfies Record<NonNullable<EtatInstallation["enclume"]>, { objet: TypeObjet; etoiles: number; nom: string }>;
 export type Enclume = keyof typeof ENCLUMES;
 
-/** Ce qu'on pose dans l'ordre de préférence quand on a plusieurs enclumes dans le sac : la meilleure d'abord. */
-export const ORDRE_ENCLUMES: readonly Enclume[] = ["rail", "etau", "masse"];
+/** La grosse pierre plate du foyer, le repli de l'enclume (Q-0.8-1 : un objet de fortune donne le niveau 1). */
+export const ETOILES_PIERRE_PLATE = 1;
+/** Le foyer de forge, au mieux (plan 0.8 §2.4 : ★★ jusqu'au niveau 1). */
+export const ETOILES_FOYER = 2;
+/** La forge ventilée et ses pinces (Q-A2d : ★★★, niveau 2). */
+export const ETOILES_VENTILEE = 3;
 
-/** Le bac de trempe : une casserole posée au pied de la forge. */
-export const COUT_BAC: Inventaire = { casserole: 1 };
+/**
+ * Ce qu'on pose dans l'ordre de préférence quand on a plusieurs enclumes dans le sac : la meilleure d'abord ; à étoiles
+ * égales, la pièce faite pour ça (l'étau sert aussi à l'établi, la masse au combat).
+ */
+export const ORDRE_ENCLUMES: readonly Enclume[] = ["rail", "depanneur", "etau", "masse"];
+
+/**
+ * Le bac de trempe (plan 0.8 §2.3) : une auge de planches calfatée de glaise, sans clé, au pied de la forge. Deux
+ * bûches refendues et deux mottes de glaise du gué ; il faut creuser son assise (Creuser 1). Plus de casserole (V4-4).
+ */
+export const COUT_BAC: Inventaire = { buche: 2, glaise: 2 };
+export const QUALITES_BAC = { creuser: 1 } as const;
 /** Un bidon d'huile moteur, versé dans le bac : vingt trempes (« cinq litres »). */
 export const TREMPES_PAR_BIDON = 20;
 /** La trempe à l'eau : une lame sur trois se fend (Book 25 §4.2). */
@@ -71,23 +92,23 @@ export function estVentilee(forge: ForgeVue | null): boolean {
   return (forge?.niveau ?? 1) >= NIVEAU_FORGE_VENTILEE;
 }
 
-/** Les étoiles de l'enclume posée (la pierre plate du foyer : ★★). */
+/** Les étoiles de l'enclume posée (sans enclume, la grosse pierre plate du foyer : ★). */
 export function etoilesEnclume(forge: ForgeVue | null): number {
   const e = forge?.etat?.enclume;
-  return e ? ENCLUMES[e].etoiles : 2;
+  return e ? ENCLUMES[e].etoiles : ETOILES_PIERRE_PLATE;
 }
 
 /**
- * Le maillon « forge et outils » (Book 25 §4.2) : sans forge, un feu et une pierre (★) ; le foyer et le marteau ★★ ;
- * avec les pinces et une enclume trouvée ★★★ ; ventilée et pinces ★★★★ ; ventilée, pinces et rail ★★★★★.
+ * Le maillon « forge et outils » (Book 25 §4.2, plan 0.8) : sans forge, un feu et une pierre (★) ; le foyer de forge ★★
+ * sur une enclume, ★ sur sa pierre plate ; la forge ventilée et les pinces ★★★ (le rail : ★★★★★). Sans pinces, ★★.
  */
 export function etoilesForge(inventaire: Inventaire, forge: ForgeVue | null): number {
   if (!forge) return 1;
-  const pinces = (inventaire.pinces_forge ?? 0) > 0;
-  if (!pinces) return 2;
   const enclume = etoilesEnclume(forge);
-  if (estVentilee(forge)) return enclume >= 5 ? 5 : 4;
-  return enclume >= 3 ? 3 : 2;
+  if (!estVentilee(forge)) return Math.min(ETOILES_FOYER, enclume);
+  const pinces = (inventaire.pinces_forge ?? 0) > 0;
+  if (!pinces) return ETOILES_FOYER;
+  return enclume >= 5 ? 5 : ETOILES_VENTILEE;
 }
 
 /** La trempe qu'on fera ici : à l'huile si le bac en tient ou si l'on a de la graisse, sinon à l'eau. */

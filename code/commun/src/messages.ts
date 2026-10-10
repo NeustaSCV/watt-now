@@ -143,9 +143,14 @@ export type Verbe =
   | "monter_ventilateur"
   /** Au banc de recharge : recharger ses armes électriques (Voltaïques, chantier 6). */
   | "recharger_armes"
-  /** Le pédalier des Mécanistes (Book 25 §6.4, chantier 7) : monter le soufflet à manivelle, la meule fine. */
+  /** Le pédalier des Mécanistes (Book 25 §6.4, chantier 7) : monter le ventilateur à manivelle, la meule fine. */
   | "monter_soufflet"
-  | "monter_meule_fine";
+  | "monter_meule_fine"
+  // Les meubles de famille (plan 0.8, chantier 7) : la pièce de la station, montée sur son meuble.
+  /** Le banc solaire ⚡ : poser le panneau sur le banc. */
+  | "poser_panneau"
+  /** Le pédalier générateur ⚙️ : monter le petit alternateur, entraîné par la roue. */
+  | "monter_alternateur";
 
 /** État propre à certaines installations. */
 export interface EtatInstallation {
@@ -156,7 +161,7 @@ export interface EtatInstallation {
   dynamo?: boolean;
   /** Établi : le redresseur de fûts est monté (Book 25 §9.3). */
   redresseur?: boolean;
-  /** Pédalier, accessoires mécanistes (Book 25 §6.4) : le soufflet à manivelle, la meule fine. */
+  /** Pédalier, accessoires mécanistes (Book 25 §6.4) : le ventilateur à manivelle (`soufflet`), la meule fine. */
   soufflet?: boolean;
   meuleFine?: boolean;
   /** Coffre : ce qu'il contient (la charge des batteries rangées est dans `charges`). */
@@ -177,10 +182,16 @@ export interface EtatInstallation {
    * La forge (Book 25 §9.3, chantier 5) : l'enclume posée (absente : la pierre plate du foyer), le bac de trempe, l'huile
    * qu'il tient (en trempes), le ventilateur 12 V des Voltaïques (la forge ventilée souffle seule).
    */
-  enclume?: "etau" | "masse" | "rail";
+  enclume?: "depanneur" | "etau" | "masse" | "rail";
   bac?: boolean;
   huile?: number;
   ventilateur?: boolean;
+  /**
+   * Les meubles de famille (plan 0.8, chantier 7) : le panneau posé sur le banc solaire ⚡ ; le petit alternateur monté
+   * sur le pédalier générateur ⚙️ (le pédalier, comme le banc, porte aussi ses batteries : `batteries`, `charges`).
+   */
+  panneau?: boolean;
+  alternateur?: boolean;
 }
 
 /** L'état d'une installation à déclencheur. */

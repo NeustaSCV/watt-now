@@ -5,12 +5,15 @@
 //   forgée, glaive de ressort, lance à pointe forgée. Repère du poing : le manche selon +z, le tranchant selon +y.
 //   L'acier forgé est sombre et martelé, le fil clair et brillant (la trempe) : on les distingue des lames trouvées.
 // - La forge ventilée (niveau 2) : la chemise d'argile, la tuyère, le grand soufflet double à bascule.
-// - Les accessoires posés : l'enclume (étau sur son billot, tête de masse, tronçon de rail), le bac de trempe et son
-//   huile ambrée, le ventilateur 12 V des Voltaïques sur la tuyère.
+// - Les accessoires posés : l'enclume (la grosse pierre plate du foyer tant qu'aucune n'est posée ; l'enclume de
+//   dépanneur de la station, la clé du foyer depuis la 0.8 ; l'étau sur son billot, la tête de masse, le tronçon de
+//   rail), le bac de trempe (une auge de planches calfatée de glaise, et sa vapeur) et son huile ambrée, le
+//   ventilateur 12 V des Voltaïques sur la tuyère.
 
 import * as THREE from "three";
 import type { Enclume } from "../../../../commun/src/forge.ts";
 import { PALETTE, aleatoire } from "../materiaux.ts";
+import { Panache } from "../panache.ts";
 import { ACIER, Assemblage, BOIS, CORDE, NOIR, V3, bosseler, placer } from "../assemblage.ts";
 import type { FabriqueModele, UsageModele } from "./index.ts";
 
@@ -163,13 +166,23 @@ export function piecesForgeVentilee(): THREE.Group {
 /** Les accessoires de la forge, chacun montré ou caché selon l'état. */
 export interface AccessoiresForge {
   groupe: THREE.Group;
+  /** La grosse pierre plate sur son billot : l'enclume du foyer tant qu'aucune autre n'est posée (★). */
+  pierrePlate: THREE.Object3D;
   enclumes: Record<Enclume, THREE.Object3D>;
   bac: THREE.Object3D;
   huile: THREE.Object3D;
   ventilateur: THREE.Object3D;
   /** L'hélice du ventilateur : elle tourne. */
   helice: THREE.Object3D;
+  /** La vapeur de l'auge (créée à la première image : le panache a besoin du navigateur). */
+  vapeur: { panache: Panache; ages: number[] } | null;
 }
+
+/** Où sont l'auge et le billot de l'enclume du foyer, dans le repère de la forge (installations.ts). */
+const AUGE = new V3(0.5, 0, -0.74);
+const BILLOT = new V3(1.3, 0, 0.1);
+const VAPEUR = new THREE.Color(0xe9ece8);
+const NB_VAPEUR = 7;
 
 function morceau(c: Assemblage, nom: string): THREE.Group {
   const g = new THREE.Group();
@@ -183,9 +196,41 @@ export function accessoiresForge(): AccessoiresForge {
   const groupe = new THREE.Group();
   groupe.userData.intact = true;
   const billot = (c: Assemblage, x: number, z: number, h: number) => c.perche(new V3(x, -0.02, z), new V3(x, h, z), 0.19, BOIS.ecorce, "mat", 8, 0.18, 0.06);
+  const aleat = aleatoire(530);
+  /** Le gros billot du foyer, ses outils autour : le marteau couché dessus, les pinces contre lui. */
+  const billotDuFoyer = (c: Assemblage, haut: number) => {
+    c.perche(new V3(BILLOT.x, -0.02, BILLOT.z), new V3(BILLOT.x, 0.5, BILLOT.z), 0.23, BOIS.ecorce, "mat", 9, 0.22, 0.06);
+    c.ajouter(placer(new THREE.CylinderGeometry(0.2, 0.2, 0.012, 9), BILLOT.x, 0.502, BILLOT.z), BOIS.coupe, "mat", 0.05);
+    c.perche(new V3(BILLOT.x - 0.1, haut + 0.02, BILLOT.z + 0.1), new V3(BILLOT.x + 0.12, haut + 0.02, BILLOT.z + 0.2), 0.012, BOIS.clair, "mat", 5);
+    c.boite(0x45423f, "metal", 0.03, 0.03, 0.09, BILLOT.x - 0.1, haut + 0.02, BILLOT.z + 0.1, 0, 0.42, 0);
+    for (const s of [-1, 1]) c.perche(new V3(BILLOT.x - 0.23, 0.02, BILLOT.z + 0.22 + s * 0.02), new V3(BILLOT.x - 0.15, 0.5, BILLOT.z + 0.1 + s * 0.01), 0.008, 0x45423f, "metal", 4);
+  };
+
+  // La grosse pierre plate (le repli, ★) : une dalle de grès dure, polie au milieu par les coups.
+  let c = new Assemblage(538);
+  billotDuFoyer(c, 0.61);
+  c.ajouter(placer(bosseler(new THREE.CylinderGeometry(0.2, 0.22, 0.1, 7, 1), 0.02, aleat).scale(1.2, 1, 0.85), BILLOT.x, 0.555, BILLOT.z), PALETTE.pierreSombre, "mat", 0.06);
+  c.ajouter(placer(new THREE.CylinderGeometry(0.11, 0.11, 0.006, 7).scale(1.3, 1, 0.8), BILLOT.x, 0.607, BILLOT.z), 0x9d988e, "mat", 0.03);
+  const pierrePlate = morceau(c, "pierre_plate");
+
+  // L'enclume de dépanneur (la clé du foyer) : une petite enclume de garage, table, bigorne et talon, boulonnée sur le
+  // billot ; la peinture verte d'atelier écaillée, la table polie.
+  c = new Assemblage(539);
+  billotDuFoyer(c, 0.69);
+  const vert = 0x3d5a46;
+  c.boite(vert, "metal", 0.22, 0.05, 0.16, BILLOT.x, 0.525, BILLOT.z);
+  c.boite(vert, "metal", 0.12, 0.08, 0.09, BILLOT.x, 0.59, BILLOT.z);
+  c.boite(0x45423f, "metal", 0.3, 0.06, 0.11, BILLOT.x, 0.66, BILLOT.z);
+  c.ajouter(placer(new THREE.ConeGeometry(0.045, 0.16, 6).rotateZ(Math.PI / 2), BILLOT.x + 0.23, 0.665, BILLOT.z), 0x45423f, "metal");
+  c.boite(0x45423f, "metal", 0.05, 0.05, 0.09, BILLOT.x - 0.17, 0.66, BILLOT.z);
+  c.boite(0xa9aaa6, "metal", 0.28, 0.005, 0.09, BILLOT.x, 0.692, BILLOT.z);
+  for (const [dx, dz] of [[-0.08, -0.06], [0.08, 0.06], [-0.08, 0.06], [0.08, -0.06]] as const) c.ajouter(placer(new THREE.CylinderGeometry(0.008, 0.008, 0.02, 5), BILLOT.x + dx, 0.555, BILLOT.z + dz), 0x8a8780, "metal");
+  // Les écailles de peinture : la rouille dessous.
+  for (const [dx, dy] of [[-0.05, 0.6], [0.04, 0.53], [0.09, 0.58]] as const) c.boite(PALETTE.rouille, "mat", 0.03, 0.02, 0.002, BILLOT.x + dx, dy, BILLOT.z + 0.081);
+  const depanneur = morceau(c, "depanneur");
 
   // L'étau d'établi, serré sur son billot : neuf kilos de fonte verte, la vis et sa poignée.
-  let c = new Assemblage(531);
+  c = new Assemblage(531);
   billot(c, 1.05, 0.78, 0.45);
   const fonte = 0x3f5a48;
   c.boite(fonte, "metal", 0.26, 0.08, 0.12, 1.05, 0.5, 0.78);
@@ -210,15 +255,36 @@ export function accessoiresForge(): AccessoiresForge {
   c.ajouterDegrade(rail, (p) => (p.y > 0.385 ? 0xa9aaa6 : Math.sin(p.x * 31) > 0.6 ? PALETTE.rouille : 0x55524d), "metal");
   const railObjet = morceau(c, "rail");
 
-  // Le bac de trempe : une casserole de l'Abondance, posée sur deux pierres ; l'huile ambrée qu'on y verse.
+  // Le bac de trempe (plan 0.8) : une auge de planches refendues, à demi enterrée dans son assise creusée, les joints
+  // et les coins calfatés de glaise grise du gué ; l'eau sombre dedans, une tenaille posée en travers.
   c = new Assemblage(534);
-  for (const dx of [-0.1, 0.1]) c.ajouter(placer(new THREE.DodecahedronGeometry(0.07, 0).scale(1, 0.6, 1), 0.45 + dx, 0.03, -0.72), PALETTE.pierre, "mat", 0.06);
-  c.ajouter(placer(new THREE.CylinderGeometry(0.15, 0.13, 0.13, 12, 1, true), 0.45, 0.14, -0.72), 0xb7b9b5, "metal");
-  c.ajouter(placer(new THREE.CircleGeometry(0.13, 12).rotateX(-Math.PI / 2), 0.45, 0.08, -0.72), 0x8f918d, "metal");
-  c.perche(new V3(0.6, 0.18, -0.72), new V3(0.85, 0.19, -0.72), 0.012, NOIR, "mat", 5);
+  c.occlusion = 0.3;
+  const glaise = 0x8d8778;
+  const glaiseSombre = 0x6f695c;
+  const [lx, lz, h] = [0.74, 0.34, 0.22];
+  // L'assise creusée : un anneau de terre retournée autour du pied de l'auge.
+  for (let k = 0; k < 9; k++) {
+    const a = (k / 9) * Math.PI * 2;
+    c.ajouter(placer(bosseler(new THREE.DodecahedronGeometry(0.07, 0).scale(1.4, 0.4, 1), 0.02, aleat), AUGE.x + Math.cos(a) * 0.46, 0.015, AUGE.z + Math.sin(a) * 0.25), 0x5e4a36, "mat", 0.08);
+  }
+  // Le fond et les quatre côtés : des planches de bûche refendue, de tons différents.
+  c.boite(BOIS.sombre, "mat", lx, 0.03, lz, AUGE.x, 0.03, AUGE.z);
+  for (const s of [-1, 1]) {
+    c.boite(s < 0 ? BOIS.moyen : BOIS.gris, "mat", lx + 0.04, h, 0.035, AUGE.x, h / 2 + 0.02, AUGE.z + s * (lz / 2));
+    c.boite(BOIS.clair, "mat", 0.035, h, lz, AUGE.x + s * (lx / 2), h / 2 + 0.02, AUGE.z);
+    // Les joints et les coins, beurrés de glaise (des bourrelets irréguliers).
+    for (const t of [-1, 1]) c.ajouter(placer(bosseler(new THREE.BoxGeometry(0.06, h + 0.02, 0.06, 1, 2, 1), 0.012, aleat), AUGE.x + s * (lx / 2), h / 2 + 0.02, AUGE.z + t * (lz / 2)), glaise, "mat", 0.08);
+    c.ajouter(placer(bosseler(new THREE.BoxGeometry(lx * 0.95, 0.03, 0.05, 4, 1, 1), 0.01, aleat), AUGE.x, h + 0.035, AUGE.z + s * (lz / 2)), glaiseSombre, "mat", 0.06);
+    c.ajouter(placer(bosseler(new THREE.BoxGeometry(lx * 0.9, 0.035, 0.05, 4, 1, 1), 0.01, aleat), AUGE.x, 0.04, AUGE.z + s * (lz / 2 + 0.02)), glaise, "mat", 0.06);
+  }
+  // L'eau de trempe, sombre, un peu irisée.
+  c.ajouter(placer(new THREE.PlaneGeometry(lx - 0.04, lz - 0.04).rotateX(-Math.PI / 2), AUGE.x, h - 0.02, AUGE.z), 0x2c3a40, "verre");
+  // Une tenaille de forge posée en travers.
+  c.perche(new V3(AUGE.x - 0.1, h + 0.05, AUGE.z - 0.18), new V3(AUGE.x + 0.12, h + 0.05, AUGE.z + 0.2), 0.009, NOIR, "metal", 4);
+  c.perche(new V3(AUGE.x - 0.08, h + 0.05, AUGE.z - 0.18), new V3(AUGE.x + 0.15, h + 0.05, AUGE.z + 0.18), 0.009, NOIR, "metal", 4);
   const bac = morceau(c, "bac");
   c = new Assemblage(535);
-  c.ajouter(placer(new THREE.CircleGeometry(0.142, 12).rotateX(-Math.PI / 2), 0.45, 0.18, -0.72), 0x8a5a14, "verre");
+  c.ajouter(placer(new THREE.PlaneGeometry(lx - 0.04, lz - 0.04).rotateX(-Math.PI / 2), AUGE.x, h - 0.012, AUGE.z), 0x8a5a14, "verre");
   const huile = morceau(c, "huile");
 
   // Le ventilateur 12 V sur la tuyère : un boîtier noir, une grille, un câble jusqu'au banc ; l'hélice tourne.
@@ -235,14 +301,43 @@ export function accessoiresForge(): AccessoiresForge {
   helice.position.set(-1.0, 0.42, 0.345);
   ventilateur.add(helice);
 
-  groupe.add(etau, masse, railObjet, bac, huile, ventilateur);
-  return { groupe, enclumes: { etau, masse, rail: railObjet }, bac, huile, ventilateur, helice };
+  groupe.add(pierrePlate, depanneur, etau, masse, railObjet, bac, huile, ventilateur);
+  return { groupe, pierrePlate, enclumes: { depanneur, etau, masse, rail: railObjet }, bac, huile, ventilateur, helice, vapeur: null };
 }
 
-/** Montre les accessoires posés (l'état de la forge). */
+/** Montre les accessoires posés (l'état de la forge). La pierre plate cède la place à l'enclume qu'on pose. */
 export function majAccessoiresForge(a: AccessoiresForge, etat: { enclume?: Enclume; bac?: boolean; huile?: number; ventilateur?: boolean }): void {
   for (const [nom, o] of Object.entries(a.enclumes)) o.visible = etat.enclume === nom;
+  // L'étau, la masse et le rail ont leur propre billot ; l'enclume de dépanneur prend celui de la pierre plate.
+  a.pierrePlate.visible = etat.enclume !== "depanneur";
   a.bac.visible = etat.bac === true;
   a.huile.visible = etat.bac === true && (etat.huile ?? 0) > 0;
   a.ventilateur.visible = etat.ventilateur === true;
+}
+
+/**
+ * Anime les accessoires : l'hélice du ventilateur tourne ; l'auge, tiède à côté du foyer, fume d'une vapeur légère
+ * (quelques bouffées en un appel de dessin, un peu plus visibles au froid de la nuit).
+ */
+export function animerAccessoiresForge(a: AccessoiresForge, dt: number, nuit: number): void {
+  if (a.ventilateur.visible) a.helice.rotation.z -= dt * 25;
+  if (!a.bac.visible) {
+    if (a.vapeur) a.vapeur.panache.objet.visible = false;
+    return;
+  }
+  if (!a.vapeur) {
+    const panache = new Panache(NB_VAPEUR);
+    a.groupe.add(panache.objet);
+    a.vapeur = { panache, ages: Array.from({ length: NB_VAPEUR }, (_, i) => (i / NB_VAPEUR) * 3.2) };
+  }
+  const { panache, ages } = a.vapeur;
+  panache.objet.visible = true;
+  ages.forEach((age0, i) => {
+    const age = (age0 + dt) % 3.2;
+    ages[i] = age;
+    const vie = age / 3.2;
+    const x = AUGE.x + Math.sin(i * 2.1) * 0.22 + Math.sin(age * 1.3 + i) * 0.05;
+    const z = AUGE.z + Math.cos(i * 1.7) * 0.08;
+    panache.regler(i, x, 0.24 + vie * 0.75, z, 0.14 + vie * 0.42, VAPEUR, (0.2 + nuit * 0.1) * Math.sin(vie * Math.PI) * (1 - vie * 0.4));
+  });
 }

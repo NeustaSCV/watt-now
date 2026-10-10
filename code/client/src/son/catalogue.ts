@@ -121,6 +121,9 @@ export const SONS = {
   trempe: quotidien(R.trempe, 0.6, 30, 2),
   chaine_velo: { ...quotidien(R.chaineVelo, 0.4, 15, 1), boucle: true },
   roue_libre: quotidien(R.roueLibre, 0.45, 15, 2),
+  // Le pédalier générateur (plan 0.8, chantier 7) : l'alternateur se lance, puis ronronne tant qu'on pédale.
+  alternateur_lance: quotidien(R.alternateurLance, 0.32, 15, 2),
+  alternateur: { ...quotidien(R.alternateur, 0.3, 15, 1), boucle: true },
   meule: { ...quotidien(R.meule, 0.45, 15, 1), boucle: true },
   pinces: quotidien(R.pinces, 0.45, PROCHE),
   bourdonnement: { recette: R.bourdonnement, bus: "environnement", priorite: 3, variantes: 1, gain: 0.18, portee: PROCHE, boucle: true },

@@ -8,7 +8,8 @@
 // - le manche tourné ⚙️ : une étoile de plus à la lame qu'on emmanche ;
 // - le reforgeage : la lame ébréchée redevient la même arme, une étoile de moins. La forge se souvient des lames
 //   cassées (gardé en base, `monde`, clé « forge:<compte> ») ; une lame ébréchée d'origine inconnue donne un couteau ;
-// - les accessoires de la forge : l'enclume (étau, tête de masse, rail), le bac de trempe et son huile, le ventilateur ⚡ ;
+// - les accessoires de la forge : l'enclume (l'enclume de dépanneur, clé du foyer ; un étau, une tête de masse, le
+//   rail), le bac de trempe (une auge de planches et de glaise, plan 0.8) et son huile, le ventilateur ⚡ ;
 // - la forge ventilée sans ventilateur : on pompe le soufflet double (des calories en plus).
 //
 // Ce module ne connaît pas le joueur : il passe par un `ContexteForge` (ce que le joueur lui prête). joueur.ts n'ajoute
@@ -18,6 +19,8 @@ import { cleExemplaire, estObjetDeMetier, lireCle, PLAFOND_HORS_FAMILLE, SEUIL_M
 import {
   COUT_BAC,
   ENCLUMES,
+  ETOILES_PIERRE_PLATE,
+  QUALITES_BAC,
   ETOILES_ACIER,
   KCAL_POMPER,
   RISQUE_TREMPE_EAU,
@@ -31,7 +34,7 @@ import {
 } from "../../commun/src/forge.ts";
 import type { InstallationVue } from "../../commun/src/messages.ts";
 import { nommer, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
-import type { ContexteFabrication, Recette } from "../../commun/src/recettes.ts";
+import { niveauQualite, type ContexteFabrication, type Recette } from "../../commun/src/recettes.ts";
 import { LAMES_EMMANCHEES, LAMES_TREMPEES, MAITRISE_REQUISE, RECETTE_REFORGER } from "../../commun/src/recettes/charbonniers.ts";
 
 /** Une recette qui ne se trempe qu'à l'huile (son lieu demande l'huile : le ressort retrempé). */
@@ -210,9 +213,9 @@ export class Forge {
     switch (verbe) {
       case "poser_enclume": {
         const e = enclumeDuSac(inv);
-        const actuelle = i.etat.enclume ? ENCLUMES[i.etat.enclume].etoiles : 2;
+        const actuelle = i.etat.enclume ? ENCLUMES[i.etat.enclume].etoiles : ETOILES_PIERRE_PLATE;
         if (!e) {
-          this.ctx.info("Il te faut une enclume : un étau, une masse (sa tête), ou un tronçon de rail.");
+          this.ctx.info("Il te faut une enclume : celle du dépanneur, sous l'établi du garage de la station (un étau, une tête de masse font aussi l'affaire).");
           return true;
         }
         if (ENCLUMES[e].etoiles <= actuelle && i.etat.enclume) {
@@ -226,28 +229,35 @@ export class Forge {
           if (i.etat.enclume) this.ctx.ajouter({ [ENCLUMES[i.etat.enclume].objet]: 1 });
           i.etat = { ...i.etat, enclume: e };
           this.ctx.majInstallation(i);
-          this.ctx.info(`${ENCLUMES[e].nom.charAt(0).toUpperCase()}${ENCLUMES[e].nom.slice(1)} sert d'enclume. Avec des pinces, les lames montent d'une étoile.`);
+          this.ctx.info(`${ENCLUMES[e].nom.charAt(0).toUpperCase()}${ENCLUMES[e].nom.slice(1)} sert d'enclume : tes lames montent à ${"★".repeat(Math.min(2, ENCLUMES[e].etoiles))}.`);
         });
         return true;
       }
       case "poser_bac": {
+        // Plan 0.8 : une auge de planches calfatée de glaise, sans clé (2 bûches, 2 glaises du gué ; Creuser 1).
         if (i.etat.bac) return true;
-        if ((inv.casserole ?? 0) < 1) {
-          this.ctx.info("Le bac de trempe, c'est une casserole posée au pied de la forge.");
+        const manque = Object.entries(COUT_BAC).filter(([t, n]) => (inv[t as TypeObjet] ?? 0) < (n ?? 0));
+        if (manque.length) {
+          this.ctx.info(`Le bac de trempe, c'est une auge de planches calfatée de glaise : il manque ${manque.map(([t, n]) => nommer(t as TypeObjet, n ?? 1)).join(", ")}. La glaise se creuse au gué.`);
           return true;
         }
-        this.ctx.commencer("Poser le bac de trempe", 4, () => {
-          if ((this.ctx.inventaire().casserole ?? 0) < 1) return;
-          this.ctx.retirer("casserole", 1);
+        if (niveauQualite(inv, "creuser") < QUALITES_BAC.creuser) {
+          this.ctx.info("Il faut de quoi creuser l'assise de l'auge : un bâton à fouir, une pelle.");
+          return true;
+        }
+        this.ctx.commencer("Poser le bac de trempe", 20, () => {
+          const sac = this.ctx.inventaire();
+          if (Object.entries(COUT_BAC).some(([t, n]) => (sac[t as TypeObjet] ?? 0) < (n ?? 0))) return;
+          for (const [t, n] of Object.entries(COUT_BAC)) this.ctx.retirer(t as TypeObjet, n ?? 0);
           i.etat = { ...i.etat, bac: true };
           this.ctx.majInstallation(i);
-          this.ctx.info("Le bac de trempe est posé : verse-y un bidon d'huile, vingt trempes sûres.");
+          this.ctx.info("L'auge est calfatée et pleine d'eau : l'acier s'y trempe. Une lame sur trois s'y fend encore.");
         });
         return true;
       }
       case "verser_huile": {
         if (!i.etat.bac) {
-          this.ctx.info("Il faut d'abord le bac de trempe (une casserole).");
+          this.ctx.info("Il faut d'abord le bac de trempe (une auge de planches et de glaise).");
           return true;
         }
         if ((inv.bidon_huile ?? 0) < 1) {

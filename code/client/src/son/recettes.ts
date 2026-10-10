@@ -642,6 +642,41 @@ export const pinces: Recette = (h) => {
   return p.donnees;
 };
 
+/**
+ * Le petit alternateur du pédalier générateur (plan 0.8, chantier 7) : le sifflement du rotor (une fondamentale et ses
+ * harmoniques, adoucies), le souffle de son ventilateur, le frottement des balais. `hauteur` : 0 à l'arrêt, 1 au régime
+ * de croisière ; la cadence des pédales (≈ 1 coup par seconde) fait respirer la hauteur et le volume.
+ */
+function rotor(d: number, h: Hasard, hauteur: (t: number) => number, volume: (t: number) => number): Piste {
+  const p = new Piste(d, h);
+  const cadence = (t: number) => 1 + 0.025 * Math.sin(t * 2 * Math.PI);
+  const f0 = (t: number) => (70 + 160 * hauteur(t)) * cadence(t);
+  for (const [k, a] of [
+    [1, 0.5],
+    [2, 0.28],
+    [3, 0.16],
+    [6, 0.05],
+  ] as const) {
+    const s = oscillateur(n(d), (t) => f0(t) * k, k === 1 ? "triangle" : "sinus");
+    p.ajouter(enveloppe(s, (t) => volume(t) * (0.85 + 0.15 * Math.sin(t * 2 * Math.PI))), 0, a * 0.5);
+  }
+  // Le ventilateur du carter : un souffle qui monte avec le régime.
+  p.ajouter(souffle(d, h, { bruit: "rose", filtre: "passe-bande", f: (t) => 900 + 1600 * hauteur(t), q: 1.2, env: (t) => volume(t) * hauteur(t) }), 0, 0.16);
+  // Les balais sur les bagues : un grésillement fin.
+  p.ajouter(souffle(d, h, { filtre: "passe-haut", f: 5000, env: (t) => volume(t) * 0.5 }), 0, 0.025);
+  return p;
+}
+
+/** L'alternateur qui se lance : en trois secondes, il monte du grave au sifflement de croisière (joué une fois). */
+export const alternateurLance: Recette = (h) => {
+  const d = 3;
+  const monte = (t: number) => Math.min(1, t / 2.6) ** 0.7;
+  return rotor(d, h, monte, (t) => 0.25 + 0.75 * monte(t)).fondre(0.01, 0.4).donnees;
+};
+
+/** L'alternateur au régime de croisière (en boucle, pendant qu'on pédale) : il ronronne avec les coups de pédale. */
+export const alternateur: Recette = (h) => rotor(3, h, () => 1, () => 1).boucler(0.5);
+
 /** Le bourdonnement du banc de recharge (en boucle) : on ne l'entend qu'à deux pas. */
 export const bourdonnement: Recette = (h) => {
   const d = 3;

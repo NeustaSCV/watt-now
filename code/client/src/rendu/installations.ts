@@ -9,7 +9,7 @@ import { Panache } from "./panache.ts";
 import { batterieVoiture, modulePanneau, roueVelo } from "./pieces.ts";
 import { decharge, majTrouvailles } from "./decharge.ts";
 import { modeleMetier } from "./metier/index.ts";
-import { accessoiresForge, majAccessoiresForge, piecesForgeVentilee, type AccessoiresForge } from "./metier/forge.ts";
+import { accessoiresForge, animerAccessoiresForge, majAccessoiresForge, piecesForgeVentilee, type AccessoiresForge } from "./metier/forge.ts";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import type { InstallationVue } from "../../../commun/src/messages.ts";
@@ -433,21 +433,8 @@ function forge(): THREE.Group {
   c.ajouter(placer(new THREE.ConeGeometry(0.035, 0.18, 6).rotateZ(-Math.PI / 2), -0.84, 0.28, 0), 0x4a4440, "metal");
   c.perche(new V3(-1.55, 0.28, 0), new V3(-1.72, 0.32, 0), 0.016, BOIS.clair, "mat", 4);
   rondin(c, new V3(-1.3, 0, 0), new V3(-1.3, 0.2, 0), 0.14);
-  // L'enclume sur son billot : table, bigorne, talon ; un marteau posé dessus, des pinces contre le billot.
-  rondin(c, new V3(1.3, -0.02, 0.1), new V3(1.3, 0.5, 0.1), 0.23, BOIS.ecorce, 9);
-  const fer = 0x45423f;
-  c.boite(fer, "metal", 0.36, 0.08, 0.13, 1.3, 0.62, 0.1);
-  c.boite(fer, "metal", 0.18, 0.1, 0.1, 1.3, 0.54, 0.1);
-  c.boite(fer, "metal", 0.26, 0.04, 0.17, 1.3, 0.51, 0.1);
-  c.ajouter(placer(new THREE.ConeGeometry(0.055, 0.18, 6).rotateZ(Math.PI / 2), 1.57, 0.625, 0.1), fer, "metal");
-  c.boite(0x8a8780, "metal", 0.34, 0.006, 0.11, 1.3, 0.663, 0.1);
-  c.perche(new V3(1.2, 0.68, 0.2), new V3(1.42, 0.68, 0.3), 0.012, BOIS.clair, "mat", 5);
-  c.boite(fer, "metal", 0.03, 0.03, 0.09, 1.2, 0.68, 0.2, 0, 0.42, 0);
-  for (const s of [-1, 1]) c.perche(new V3(1.07, 0.02, 0.32 + s * 0.02), new V3(1.15, 0.5, 0.2 + s * 0.01), 0.008, fer, "metal", 4);
-  // Le seau de trempe (douves de bois, cercles de fer, eau sombre) et un tas de charbon de bois.
-  c.ajouter(placer(new THREE.CylinderGeometry(0.17, 0.14, 0.32, 10), 0.9, 0.16, -0.62), BOIS.moyen, "mat", 0.08);
-  for (const y of [0.06, 0.26]) c.ajouter(placer(new THREE.TorusGeometry(0.15 + y * 0.09, 0.008, 3, 10).rotateX(Math.PI / 2), 0.9, y, -0.62), ACIER, "metal");
-  c.ajouter(placer(new THREE.CircleGeometry(0.155, 10).rotateX(-Math.PI / 2), 0.9, 0.29, -0.62), 0x2c3a40, "verre");
+  // L'enclume du foyer (la pierre plate, ou l'enclume de dépanneur) et le bac de trempe sont des accessoires posés à
+  // part (metier/forge.ts, plan 0.8) : ici, le tas de charbon de bois.
   for (let i = 0; i < 18; i++) {
     const r = 0.04 + aleat() * 0.03;
     c.ajouter(placer(bosseler(new THREE.OctahedronGeometry(r * 0.9, 0), r * 0.25, aleat), -0.7 + (aleat() - 0.5) * 0.35, 0.02 + aleat() * 0.08, -0.62 + (aleat() - 0.5) * 0.3, aleat() * 3, aleat() * 3, 0), CHARBON, "mat", 0.05);
@@ -996,6 +983,12 @@ function piecesNiveau(type: InstallationVue["type"], niveau: number): THREE.Grou
   return enGroupe(c);
 }
 
+/** Les pièces de métier (rendu/metier/) qu'on monte sur un meuble, par type : chacune se montre selon l'état. */
+const PIECES_MONTEES: Partial<Record<InstallationVue["type"], readonly string[]>> = {
+  pedalier: ["pedalier_meule_fine", "pedalier_soufflet", "pedalier_alternateur", "pedalier_batterie"],
+  banc_recharge: ["banc_panneau"],
+};
+
 /** Une installation affichée, avec son état (accessoires montés, meule qui fume). */
 export class VueInstallation {
   readonly objet: THREE.Group;
@@ -1019,6 +1012,9 @@ export class VueInstallation {
   private redresseur: THREE.Object3D | null = null;
   /** La forge : l'enclume posée, le bac de trempe, le ventilateur (Book 25 §9.3). */
   private forge: AccessoiresForge | null = null;
+  /** Les pièces de métier qui suivent l'état (`userData.majEtat`) ou qui bougent (`userData.animer`). */
+  private readonly suivis: THREE.Object3D[] = [];
+  private readonly animes: THREE.Object3D[] = [];
   private temps = 0;
 
   constructor(donnees: InstallationVue) {
@@ -1102,11 +1098,17 @@ export class VueInstallation {
         // Les installations du métier (Book 25) : leur modèle vient du registre des métiers, sinon un piquet provisoire.
         this.objet = enGroupeMetier(modeleMetier(donnees.type, "sol")) ?? piquetProvisoire();
     }
-    // Les accessoires mécanistes du pédalier (ventilateur à manivelle, meule fine), montrés selon son état.
-    if (donnees.type === "pedalier") for (const a of ["pedalier_meule_fine", "pedalier_soufflet"]) {
+    // Les pièces de métier montées sur un meuble (ventilateur à manivelle, meule fine, alternateur et batterie du
+    // pédalier, panneau et jauge du banc solaire), montrées selon son état (rendu/metier/).
+    for (const a of PIECES_MONTEES[donnees.type] ?? []) {
       const m = modeleMetier(a, "sol");
       if (m) this.objet.add(m);
     }
+    // Celles qui suivent l'état de près (une jauge) ou qui bougent (une poulie) : `userData.majEtat`, `userData.animer`.
+    this.objet.traverse((o) => {
+      if (typeof o.userData.majEtat === "function") this.suivis.push(o);
+      if (typeof o.userData.animer === "function") this.animes.push(o);
+    });
     // Le niveau (Book 24) : des pièces en plus.
     const pieces = piecesNiveau(donnees.type, donnees.niveau ?? 1);
     if (pieces) this.objet.add(pieces);
@@ -1143,6 +1145,7 @@ export class VueInstallation {
       if (typeof o.userData.siArme === "boolean") o.visible = o.userData.siArme === arme;
       if (typeof o.userData.siEtat === "string") o.visible = donnees.etat[o.userData.siEtat as keyof typeof donnees.etat] === true;
     });
+    for (const o of this.suivis) (o.userData.majEtat as (etat: InstallationVue["etat"]) => void)(donnees.etat);
     let chargees = 0;
     if (this.posees) {
       for (const b of this.posees.children) {
@@ -1186,7 +1189,8 @@ export class VueInstallation {
       });
       this.fumee.objet.visible = cuit;
     }
-    if (this.forge?.ventilateur.visible) this.forge.helice.rotation.z -= dt * 25;
+    if (this.forge) animerAccessoiresForge(this.forge, dt, nuit);
+    for (const o of this.animes) (o.userData.animer as (dt: number, enMarche: boolean) => void)(dt, enMarche);
     if (enMarche) {
       if (this.roue) this.roue.rotation.z -= dt * 9;
       // La meule est sur l'axe de la roue ; le plateau tourne moins vite (rapport de la chaîne).

@@ -1,6 +1,7 @@
 // ⚙️ La mécanique des Mécanistes (Book 25 §6, chantier 7 · 0.6) : les règles pures que le serveur et le client
 // partagent. L'arbalète et ses pièces (les étoiles de chaque facteur), le réarmement de l'arbalète lourde, les pièges
-// (ce qu'ils font, ce que coûte leur réarmement), les accessoires du pédalier (ventilateur à manivelle, meule fine).
+// (ce qu'ils font, ce que coûte leur réarmement), les accessoires du pédalier (ventilateur à manivelle, meule fine) ;
+// depuis la 0.8 (chantier 7), le pédalier générateur : le petit alternateur de la station, monté sur la roue.
 //
 // Rien ici ne connaît le joueur : `serveur/src/mecanique.ts` applique, `commun/src/recettes/mecanistes.ts` fabrique.
 
@@ -117,15 +118,25 @@ export function accessoireMonte(etat: EtatInstallation, a: AccessoirePedalier): 
   return a === "soufflet" ? etat.soufflet === true : etat.meuleFine === true;
 }
 
-/** Ce que rendent, au démontage du pédalier, les accessoires mécanistes montés dessus. */
+/**
+ * Ce que rendent, au démontage d'un meuble de famille, les pièces montées dessus : les accessoires mécanistes du
+ * pédalier, et la pièce de la station (plan 0.8, chantier 7) : le petit alternateur ⚙️, le panneau du banc solaire ⚡.
+ */
 export function rendDesAccessoires(etat: EtatInstallation): Inventaire {
   const r: Inventaire = {};
   for (const a of Object.keys(ACCESSOIRES_PEDALIER) as AccessoirePedalier[]) {
     if (!accessoireMonte(etat, a)) continue;
     for (const [t, n] of Object.entries(ACCESSOIRES_PEDALIER[a].cout)) r[t as TypeObjet] = (r[t as TypeObjet] ?? 0) + (n ?? 0);
   }
+  if (etat.alternateur) r.petit_alternateur = (r.petit_alternateur ?? 0) + 1;
+  if (etat.panneau) r.panneau_solaire = (r.panneau_solaire ?? 0) + 1;
   return r;
 }
+
+// ---------- Le pédalier générateur (plan 0.8, chantier 7) ----------
+
+/** Monter le petit alternateur : serrer ses brides (la clé plate du kit), tendre la courroie sur la roue. */
+export const MONTER_ALTERNATEUR = { secondes: 20, qualites: { serrer: 1 } } as const;
 
 /** Le ventilateur à manivelle souffle sur une forge à moins de 3 m (Book 25 §6.4). */
 export const PORTEE_SOUFFLET = 3;

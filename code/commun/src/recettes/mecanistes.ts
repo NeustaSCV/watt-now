@@ -1,4 +1,5 @@
-// ⚙️ Les recettes des Mécanistes : vieux vélo → pédalier → meule et dynamo ; et, depuis la 0.6 (Book 25 §6, chantier 7),
+// ⚙️ Les recettes des Mécanistes : le vélo de la ruine → pédalier générateur (le petit alternateur de la station, ou la
+// dynamo du vélo) → meule ; et, depuis la 0.6 (Book 25 §6, chantier 7),
 // l'arbalète et ses pièces, les carreaux, les pièges, le tour à perche, le cranequin, la brouette. Les accessoires du
 // pédalier (ventilateur à manivelle, meule fine) se montent sur place, comme la meule (serveur/src/mecanique.ts).
 // Les autres familles voient ces recettes grisées, « chez les Mécanistes » (savoir.ts).
@@ -8,9 +9,15 @@
 // Charbonniers (ressort retrempé, rivets, pointes d'acier, ciseau) ne font qu'améliorer : ★★★★, la lourde, le vrai
 // piège à mâchoires, des carreaux qui cassent moins.
 
+import type { AVenir } from "../lignees.ts";
 import type { LieuRecette, Recette } from "../recettes.ts";
 import { A_LA_MAIN, POSEE, aCote } from "./lieux.ts";
 import { ETOILES_ARC_ARBALETE, ETOILES_NOIX, etoilesArbrier, facteursArbalete, facteursArbaleteLourde } from "../mecanique.ts";
+
+/** Une recette qui attend un niveau absent de la 0.8 (plan 0.8 §1.3) : grisée « plus tard », refusée par le serveur. */
+function plusTard(r: Recette, a: AVenir): Recette {
+  return { ...r, aVenir: a };
+}
 
 /** Une recette de l'arc d'arbalète : la matière fait les étoiles (frêne ★, lame brute ★★, if ★★★, retrempé ★★★★). */
 function arcArbalete(id: string, nom: string, ingredients: Recette["ingredients"], etoiles: number, duree: number, couper: boolean, lieu: LieuRecette): Recette {
@@ -65,10 +72,12 @@ function carreaux(id: string, nom: string, ingredients: Recette["ingredients"], 
 
 export const RECETTES_MECANISTES: Recette[] = [
   {
+    // Le pédalier générateur (plan 0.8, chantier 7) : le vélo de la ruine sur un bâti. Le petit alternateur de la
+    // station s'y monte ensuite (« monter l'alternateur », serveur/src/mecanique.ts) ; sinon, la dynamo du vélo.
     id: "pedalier",
     lieu: POSEE,
     categorie: "ateliers",
-    nom: "Pédalier universel",
+    nom: "Pédalier générateur",
     produit: { installation: "pedalier" },
     ingredients: { cadre_velo: 1, chaine_velo: 1, roue_velo: 1, buche: 2 },
     qualites: { serrer: 1, visser: 1, marteler: 1 },
@@ -96,13 +105,15 @@ export const RECETTES_MECANISTES: Recette[] = [
   // La noix : une cheville de bois dur (★★), un os de poule (★★★), ou deux rivets forgés d'un Charbonnier (★★★★).
   noix("noix_bois", "Noix et détente (bois)", { petit_ressort: 1, branche: 1 }, ETOILES_NOIX.bois, false),
   noix("noix_os", "Noix et détente (os)", { petit_ressort: 1, os: 1 }, ETOILES_NOIX.os, false),
-  noix("noix_forgee", "Noix et détente (rivets forgés)", { petit_ressort: 1, rivet: 2 }, ETOILES_NOIX.forgee, true, aCote("etabli", { niveau: 2 })),
+  // Plan 0.8 §1.3 (I19) : la noix forgée, l'arc retrempé et l'arbalète lourde sont du niveau 3 ; l'arc en if (★★★), du
+  // niveau 2 (Q-0.8-3, Q-B1b : l'établi de menuisier) ; le cranequin attend les roulements montés (L2A). Grisés.
+  plusTard(noix("noix_forgee", "Noix et détente (rivets forgés)", { petit_ressort: 1, rivet: 2 }, ETOILES_NOIX.forgee, true, aCote("etabli", { niveau: 2 })), "niveau 3"),
   // L'arc : le bois s'use plus vite que l'acier ; la lame brute est fatiguée ; l'if est le meilleur bois ; le ressort
   // retrempé, le meilleur arc.
   arcArbalete("arc_arbalete_frene", "Arc d'arbalète (frêne)", { perche_frene: 1 }, ETOILES_ARC_ARBALETE.frene, 20, true, aCote("etabli")),
   arcArbalete("arc_arbalete_ressort", "Arc d'arbalète (lame de ressort)", { ressort_lames: 1 }, ETOILES_ARC_ARBALETE.ressort, 30, false, aCote("etabli")),
-  arcArbalete("arc_arbalete_if", "Arc d'arbalète (if)", { baton_if: 1 }, ETOILES_ARC_ARBALETE.if, 40, true, aCote("etabli", { niveau: 3 })),
-  arcArbalete("arc_arbalete_retrempe", "Arc d'arbalète (ressort retrempé)", { ressort_retrempe: 1 }, ETOILES_ARC_ARBALETE.retrempe, 30, false, aCote("etabli", { niveau: 2 })),
+  plusTard(arcArbalete("arc_arbalete_if", "Arc d'arbalète (if)", { baton_if: 1 }, ETOILES_ARC_ARBALETE.if, 40, true, aCote("etabli", { niveau: 3 })), "niveau 2"),
+  plusTard(arcArbalete("arc_arbalete_retrempe", "Arc d'arbalète (ressort retrempé)", { ressort_retrempe: 1 }, ETOILES_ARC_ARBALETE.retrempe, 30, false, aCote("etabli", { niveau: 2 })), "niveau 3"),
   {
     id: "corde_arbalete",
     lieu: A_LA_MAIN,
@@ -146,6 +157,7 @@ export const RECETTES_MECANISTES: Recette[] = [
     // La variante supérieure (Book 25 §7.3) : deux ressorts retrempés d'un Charbonnier, superposés. Une arme qui
     // n'existe qu'à deux familles.
     id: "arbalete_lourde",
+    aVenir: "niveau 3",
     lieu: aCote("etabli", { niveau: 2 }),
     categorie: "outils",
     nom: "Monter l'arbalète lourde",
@@ -161,6 +173,7 @@ export const RECETTES_MECANISTES: Recette[] = [
     // Un roulement, une chaîne de vélo, une barre : le pignon se taille à la meule du pédalier. Il réarme la lourde en
     // 4 s au lieu de 6.
     id: "cranequin",
+    aVenir: "niveau 2",
     lieu: aCote("pedalier", { accessoire: "roulements" }),
     categorie: "outils",
     nom: "Cranequin",

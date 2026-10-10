@@ -105,3 +105,12 @@ test("à la Coopérative, trois Éteints sur le joueur : la menace « nombre »"
   b.eteints(0.1, [trois[0]!], moi, 1, true);
   assert.equal(menaces.at(-1), "saisie");
 });
+
+test("⚙️ le pédalier générateur : l'alternateur se lance, puis ronronne sur la chaîne ; la dynamo, la chaîne seule", () => {
+  const g = gesteDe("Pédaler : l'alternateur charge la batterie", "outil");
+  assert.equal(g.id, "alternateur_lance");
+  assert.equal(g.continu, "chaine_velo");
+  assert.equal(g.continu2, "alternateur");
+  assert.ok((g.apres2 ?? 0) > 1, "le ronronnement prend la suite du lancement");
+  assert.equal(gesteDe("Pédaler pour charger la batterie", "outil").continu2, undefined);
+});
