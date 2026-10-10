@@ -21,7 +21,8 @@
     "rythme": "node --disable-warning=ExperimentalWarning scripts/rythme.ts",
     "reglages": "node --disable-warning=ExperimentalWarning scripts/reglages.ts",
     "admin": "node --disable-warning=ExperimentalWarning scripts/admin.ts",
-    "accueil:importer": "node scripts/importer-accueil.mjs"
+    "accueil:importer": "node scripts/importer-accueil.mjs",
+    "batiments:importer": "node scripts/importer-batiments.mjs"
   },
   "dependencies": {
     "three": "^0.186.1",
