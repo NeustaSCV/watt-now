@@ -214,7 +214,8 @@ function epaisseur(nature: string): number {
 /**
  * Les boîtes d'un segment, dans le repère du jeu. Un segment droit (selon x ou selon z) fait une boîte ; un segment de
  * biais (le puits, la charrette, l'if) une rangée de petits carrés. Les bords de la planche du bief sont reculés de
- * 15 cm vers l'eau : la planche fait 0,9 m, un personnage 0,7 m ; sans ce jeu, on n'y passerait qu'au centimètre.
+ * 25 cm vers l'eau : la planche fait 0,9 m, un personnage 0,7 m ; sans ce jeu, on n'y passerait qu'au centimètre (on
+ * déborde un peu au-dessus de l'eau, sans y tomber).
  * Les obstacles bas (berges, huche, établis…) sont déclarés tels (murs.ts) : on frappe et l'on lance par-dessus.
  */
 export function boitesDuSegment(segment: SegmentMoulin): Boite[] {
@@ -226,7 +227,7 @@ export function boitesDuSegment(segment: SegmentMoulin): Boite[] {
 function boitesBrutes([x1, z1, x2, z2, nature]: SegmentMoulin): Boite[] {
   const ep = epaisseur(nature);
   if (nature.startsWith("bord de la planche")) {
-    const recul = z1 < -21 ? -0.15 : 0.15;
+    const recul = z1 < -21 ? -0.25 : 0.25;
     z1 += recul;
     z2 += recul;
   }

@@ -193,8 +193,11 @@ function creerAlentours(modele: THREE.Object3D): THREE.Group {
   };
   const rect = (cible: typeof sol, x0: number, z0: number, x1: number, z1: number, couleur: number, y = 0) =>
     quad(cible, [[x0, y, z0], [x0, y, z1], [x1, y, z1], [x1, y, z0]], couleur);
-  /** Une berge : la paroi de terre, du pré (y 0) à l'eau, le long de x, de z0 à z1. */
-  const berge = (x: number, z0: number, z1: number, fond: number) => quad(sol, [[x, 0, z0], [x, fond, z0], [x, fond, z1], [x, 0, z1]], 0x6b5640);
+  /** Une berge : la paroi de terre, du pré (y 0) à l'eau, le long de x, de z0 à z1 ; ses deux faces (on la voit des deux rives). */
+  const berge = (x: number, z0: number, z1: number, fond: number) => {
+    quad(sol, [[x, 0, z0], [x, fond, z0], [x, fond, z1], [x, 0, z1]], 0x6b5640);
+    quad(sol, [[x, 0, z1], [x, fond, z1], [x, fond, z0], [x, 0, z0]], 0x6b5640);
+  };
   const herbe = 0x8a9a5c;
   const route = 0xb3aa94;
   const teinteEau = 0x8aa69a;
