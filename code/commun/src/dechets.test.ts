@@ -193,7 +193,8 @@ test("les points du monde (§3.8) : ce qu'ils donnent existe ; on fouille, on d�
     assert.ok(d.verbe !== "fouiller" || d.conteneur || d.chanceDechet, `${p} : on y trouve quelque chose`);
   }
   assert.deepEqual(POINTS_DECHETS.trampoline.donne, { petit_ressort: 12, barre_metal: 3, bache: 1 });
-  assert.equal(POINTS_DECHETS.machine_laver.donne.roulements, 1);
+  // Plan 0.8 (I9) : la machine à laver ne donne plus de roulement.
+  assert.equal(POINTS_DECHETS.machine_laver.donne.roulements, undefined);
   assert.equal(POINTS_DECHETS.carcasse_mouton.donne.os, 6);
   // Le tas de gravats : toujours deux pierres, parfois un déchet en plus.
   let avecDechet = 0;

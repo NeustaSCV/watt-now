@@ -53,7 +53,36 @@ export type TypeRessource =
   // La batterie du tracteur rouge (Book 23 §4.7) : la prendre, c'est faire taire le klaxon.
   | "coop_batterie"
   // La haie d'ifs taillés en boules, devant les bureaux de la Coopérative (Book 25 §3.2) : un bâton d'if par visite.
-  | "coop_ifs";
+  | "coop_ifs"
+  | TypeRessourceNiveau1;
+
+/**
+ * Les ressources du niveau 1 (plan 0.8, chantier 3) : déclarées d'avance, pour que les chantiers des lieux n'aient qu'à
+ * les poser et à leur donner leur usage (USAGES_NIVEAU1, plus bas). Les joncs du gué sont les `joncs` de la mare : ils
+ * se coupent et repoussent pareil (B7). Les 15 pierres en vrac du gué et les bûches de la station sont des `pierre`
+ * et des `buche`.
+ */
+export type TypeRessourceNiveau1 =
+  // H1A, la station (chantier 10) : la pièce de famille, une par joueur (⚡ le panneau est `panneau_auvent`) ; le tas
+  // de bois de chauffage personnel derrière l'atelier (B3).
+  | "piece_enclume"
+  | "piece_alternateur"
+  | "tas_bois"
+  // L1A, la Coopérative (chantier 10) : les clés à place fixe ; les seaux sont dans `coop_caisse_froide` (la laiterie).
+  | "coop_grillage"
+  | "coop_cocotte"
+  // H1B, le gué (chantier 11) : le gisement de glaise de la berge (B6), le banc de galets personnel (B5).
+  | "gisement_glaise"
+  | "banc_galets"
+  // L1B, le Moulin (chantier 12) : les clés du magasin et des meules, la fourche de l'étable, l'if du bief, les poutres
+  // de rechange (B11), la grosse clé au tableau de l'atelier (§10.1).
+  | "moulin_jute"
+  | "moulin_feuillards"
+  | "moulin_etau"
+  | "moulin_fourche"
+  | "if_bief"
+  | "poutres_chene"
+  | "moulin_cle";
 
 /** L'emprise au sol de ce qu'on vise (m) : le cercle de visée s'y ajuste (P-007). 0,5 m par défaut. */
 export const EMPRISE_RESSOURCE: Partial<Record<TypeRessource, number>> = {
@@ -157,6 +186,23 @@ export const REPOUSSE_MS: Record<TypeRessource, number | null> = {
   frene: 6 * 3_600_000,
   if_bois: MS_JOUR_CALENDRIER,
   coop_ifs: 12 * 3_600_000,
+  // Le niveau 1 (plan 0.8, chantier 3) : les délais décidés. La pièce de famille revient pour son joueur en 24 h
+  // (Q-0.8-14) ; le tas de bois et le banc de galets en 6 h (B3, B5) ; le gisement de glaise ne s'épuise pas (B6) ; à
+  // la Coopérative et au Moulin, tout revient en 24 h (§9.1, N1), sauf la fourche : une fois par personnage.
+  piece_enclume: 24 * 3_600_000,
+  piece_alternateur: 24 * 3_600_000,
+  tas_bois: 6 * 3_600_000,
+  coop_grillage: 24 * 3_600_000,
+  coop_cocotte: 24 * 3_600_000,
+  gisement_glaise: 0,
+  banc_galets: 6 * 3_600_000,
+  moulin_jute: 24 * 3_600_000,
+  moulin_feuillards: 24 * 3_600_000,
+  moulin_etau: 24 * 3_600_000,
+  moulin_fourche: null,
+  if_bief: 24 * 3_600_000,
+  poutres_chene: 24 * 3_600_000,
+  moulin_cle: 24 * 3_600_000,
 };
 
 /** Les ressources qui restent en place une fois fouillées (une épave ne disparaît pas). */
@@ -227,7 +273,7 @@ export const PORTEE_ARBRE = 0.8;
 export const ARBRES_ISOLES: readonly (readonly [number, number])[] = [[6, 8], [47.5, 3], [7, 43], [41, 40], [12, 30]];
 
 /** Ce qu'on fait de chaque ressource du sol, et ce qu'elle donne (Book 02 §5). */
-export const USAGES: Record<TypeRessource, UsageRessource> = {
+const USAGES_ETABLIS: Record<Exclude<TypeRessource, TypeRessourceNiveau1>, UsageRessource> = {
   branche: { verbe: "ramasser", libelle: "Ramasser la branche", donne: { branche: 1 }, qualites: {}, duree: 1.2, examen: "Du bois mort, bien sec." },
   buche: { verbe: "ramasser", libelle: "Ramasser la bûche", donne: { buche: 1 }, qualites: {}, duree: 2.5, examen: "Une bûche tombée d'un vieux tas. Sèche." },
   pierre: { verbe: "ramasser", libelle: "Ramasser la pierre", donne: { pierre: 1 }, qualites: {}, duree: 1.8, examen: "Une pierre plate, bonne pour un cercle de feu." },
@@ -478,7 +524,9 @@ export const USAGES: Record<TypeRessource, UsageRessource> = {
   coop_caisse_froide: {
     verbe: "fouiller",
     libelle: "Ouvrir les caisses de pièces",
-    donne: { roulements: 1, alternateur_tracteur: 1 },
+    // Plan 0.8 (I8) : les roulements et l'alternateur de tracteur en sont retirés (rien de propre à une famille en L1) ;
+    // la chambre froide devient la laiterie, et ses seaux de 10 L arrivent avec le chantier 10.
+    donne: {},
     qualites: {},
     duree: 10,
     examen: "Des caisses plombées « PIÈCES DÉTACHÉES — STOCK DE RÉSERVE », alignées dans le froid. Personne n'y a touché.",
@@ -493,6 +541,18 @@ export const USAGES: Record<TypeRessource, UsageRessource> = {
     examen: "La batterie du tracteur rouge, sanglée sur le garde-boue : c'est elle qui fait sonner le klaxon. Une 12 V de 18 kg, comme celle d'une voiture.",
   },
 };
+
+/**
+ * Les usages des ressources du niveau 1 (TypeRessourceNiveau1) : chacun arrive avec son lieu, en fin de table (chantier
+ * 10 : la station et la Coopérative ; 11 : le gué ; 12 : le Moulin). Une ressource sans usage ne se pose pas.
+ */
+const USAGES_NIVEAU1: Partial<Record<TypeRessourceNiveau1, UsageRessource>> = {};
+
+/**
+ * Tous les usages. Les ressources du niveau 1 qui n'ont pas encore le leur n'existent dans aucun lieu : le type les
+ * déclare d'avance, la table les reçoit avec leur lieu.
+ */
+export const USAGES = { ...USAGES_ETABLIS, ...USAGES_NIVEAU1 } as Record<TypeRessource, UsageRessource>;
 
 /** Les vestiges de la ruine, à leur place dans les décombres. */
 export function genererVestiges(premierId: number): Omit<RessourceSol, "disponible">[] {

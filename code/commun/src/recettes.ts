@@ -80,6 +80,16 @@ export const QUALITES_OBJETS: Partial<Record<TypeObjet, Partial<Record<Qualite, 
   glaive: { couper: 2 },
   ciseau_bois: { tailler_bois: 2 },
   burin: { trancher_metal: 1 },
+  // 0.8 : les objets nouveaux (plan 0.8, chantier 3 ; tableau `outils` de la v5). Les objets de fortune donnent le
+  // niveau 1 de leur qualité ; le marteau de fortune, une barre repliée, tape comme un marteau. La tête de marteau
+  // remmanchée (I10) est le `marteau` (Marteler 2), déjà plus haut. L'étau serre fort (Serrer 3) ; posé sur
+  // l'établi, il en fait l'établi à étau (chantier 6).
+  etau: { serrer: 3 },
+  serre_joint_fortune: { serrer: 1 },
+  scie_fortune: { scier_bois: 1 },
+  marteau_fortune: { marteler: 2 },
+  coin_bois: { fendre: 1 },
+  baton_fouir_durci: { creuser: 1 },
 };
 
 /** Le meilleur niveau d'une qualité parmi les objets portés (0 si aucun). */

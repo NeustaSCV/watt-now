@@ -92,7 +92,8 @@ test("la clé plate (Serrer 2) est dans le kit des Mécanistes", () => {
 });
 
 test("chaque vestige nouveau peut sortir au tirage de son lieu", () => {
-  const nouveaux: TypeVestige[] = ["fil_dentaire", "appareil_photo_jetable", "raquette_moustiques", "bobine_allumage", "lime_usee", "soc_charrue", "bidon_huile", "troncon_rail", "arc_sportif", "fleche_carbone", "manuel_forgeron", "manuel_electricien", "manuel_arbalete"];
+  // La bobine d'allumage n'y est plus : elle quitte les épaves de la station (plan 0.8, I12 ; catalogue-niveau1.test.ts).
+  const nouveaux: TypeVestige[] = ["fil_dentaire", "appareil_photo_jetable", "raquette_moustiques", "lime_usee", "soc_charrue", "bidon_huile", "troncon_rail", "arc_sportif", "fleche_carbone", "manuel_forgeron", "manuel_electricien", "manuel_arbalete"];
   const lieux = Object.keys(FAMILLES_PAR_LIEU) as LieuFouille[];
   for (const v of nouveaux) {
     const ou = lieux.filter((l) => tableDeFouille(l).some(([t, p]) => t === v && p > 0));

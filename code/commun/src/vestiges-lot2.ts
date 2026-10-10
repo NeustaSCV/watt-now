@@ -780,13 +780,14 @@ export const VESTIGES_LOT2 = {
     rarete: "C",
     lieux: ["R", "P", "A"],
   },
+  // Plan 0.8 (I5) : un déchet de plastique, percé ; le vrai jerrican de 20 L sera la clé de L2B. L'identifiant reste.
   jerrican: {
-    nom: "jerrican vide",
-    pluriel: "jerricans vides",
-    description: "Il sent encore l'essence. C'est tout ce qui reste de l'essence.",
+    nom: "jerrican percé",
+    pluriel: "jerricans percés",
+    description: "Il sent encore l'essence, et il fuit par le fond. Il ne gardera plus rien : du plastique, rien d'autre.",
     poids: 1,
-    valeur: 3,
-    famille: "garage",
+    valeur: 1,
+    famille: "dechet",
     rarete: "C",
     lieux: ["P", "R", "F"],
   },
@@ -980,7 +981,7 @@ const S1 = { serrer: 1 } as const;
 
 /**
  * Ce que donne chaque objet du lot 2 qu'on démonte : des composants et des matières qui existent déjà (Q5). Ce qui
- * n'est pas ici ne se démonte pas : une ordure, ou un objet qui garde son usage futur (jerrican, fût, couverture).
+ * n'est pas ici ne se démonte pas : une ordure, ou un objet qui garde son usage futur (fût, couverture).
  */
 export const DEMONTAGE_LOT2: Partial<Record<TypeObjet, Demontage>> = {
   // Emballages et ordures
@@ -993,6 +994,8 @@ export const DEMONTAGE_LOT2: Partial<Record<TypeObjet, Demontage>> = {
   bouteille_verre: { donne: { verre: 1 }, qualites: M1, duree: 2 },
   conserve_bombee: { donne: { boite_vide: 1 }, qualites: C1, duree: 3 },
   bidon_lave_glace: { donne: { plastique: 1 }, qualites: {}, duree: 2 },
+  // Le jerrican percé (plan 0.8, I5) : un déchet, du plastique.
+  jerrican: { donne: { plastique: 2 }, qualites: C1, duree: 3 },
   // Textile
   tshirt_promo: { donne: { chiffons: 1 }, qualites: C1, duree: 2 },
   jean_troue: { donne: { chiffons: 2 }, qualites: C1, duree: 3 },
@@ -1052,7 +1055,8 @@ export const DEMONTAGE_LOT2: Partial<Record<TypeObjet, Demontage>> = {
   velo_libre_service: { donne: { cadre_velo: 1, chaine_velo: 1, roue_velo: 2, dynamo_velo: 1 }, qualites: { serrer: 1, visser: 1 }, duree: 45 },
   velo_enfant: { donne: { chaine_velo: 1, roue_velo: 1, barre_metal: 1 }, qualites: S1, duree: 20 },
   velo_appartement: { donne: { barre_metal: 3, aimant: 4, petit_moteur: 1, plastique: 4 }, qualites: S1, duree: 40 },
-  trottinette_electrique: { donne: { petite_batterie: 1, petit_moteur: 1, aimant: 4, roulements: 1 }, qualites: { visser: 1, serrer: 1 }, duree: 30 },
+  // Plan 0.8 (I9) : plus de roulement (la boîte de roulements est une clé de L2A).
+  trottinette_electrique: { donne: { petite_batterie: 1, petit_moteur: 1, aimant: 4 }, qualites: { visser: 1, serrer: 1 }, duree: 30 },
   onduleur: { donne: { petite_batterie: 1, fil_cuivre: 2, plastique: 2 }, qualites: V1, duree: 10 },
   appareils_mariage: { donne: { appareil_photo_jetable: 5 }, qualites: {}, duree: 3 },
   tondeuse_robot: { donne: { lame_ebrechee: 1, petit_moteur: 2, cellule_lithium: 4, plastique: 4 }, qualites: V1, duree: 15 },

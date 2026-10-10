@@ -87,7 +87,11 @@ export function outilsManquantsBref(qualites: Partial<Record<Qualite, number>>, 
       return possede < requis && !(possede === requis - 1 && possede > 0);
     })
     .map(([q, requis]) => {
-      const types = outilsPour(q, requis);
+      // On propose d'abord les outils qu'on sait où trouver (plan 0.8 : l'étau, clé de L1B, serre à 3 mais ne se trouve
+      // qu'au Moulin ; on ne le cite pas à qui cherche Serrer 1).
+      const tous = outilsPour(q, requis);
+      const trouvables = tous.filter((t) => ouTrouver(t, visible).length > 0);
+      const types = trouvables.length > 0 ? trouvables : tous;
       const fortune = requis >= 2 ? outilsPour(q, requis - 1).filter((t) => (QUALITES_OBJETS[t]?.[q] ?? 0) === requis - 1).map((t) => OBJETS[t].nom) : [];
       const source = types.map((t) => ouTrouver(t, visible)).find((l) => l.length > 0)?.[0];
       return { q: NOMS_QUALITES[q].toLowerCase(), requis, bons: ou(types.slice(0, 2).map((t) => OBJETS[t].nom)), fortune: fortune[0], source };
