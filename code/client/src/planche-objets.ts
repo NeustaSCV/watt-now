@@ -222,7 +222,7 @@ MECANIQUE.forEach(([nom, type, etat], i) => {
 // ---------- Les armes en main ----------
 
 // Les armes de la 0.5 (Book 23 §4.6) : machette, masse et lance arrivent dans les types de `commun/`.
-const ARMES = ["hache", "marteau", "barre_metal", "couteau", "lame_forgee", "gourdin", "epieu", "pied_de_biche", "machette", "masse", "lance", "hachette", "serpe", "machette_forgee", "hache_forgee", "glaive", "lance_forgee", "matraque_fortune", "matraque_electrique", "aiguillon"] as TypeObjet[];
+const ARMES = ["hache", "marteau", "barre_metal", "couteau", "lame_forgee", "gourdin", "epieu", "pied_de_biche", "machette", "masse", "lance", "hachette", "serpe", "machette_forgee", "hache_forgee", "glaive", "lance_forgee", "matraque_fortune", "matraque_electrique", "aiguillon", "fourche_foin"] as TypeObjet[];
 const etatArmes = { pose: "repos" as "repos" | "garde" | "frappe", attente: 0 };
 const porteurs: Personnage[] = [];
 void chargerHumanoides().then(() => {
@@ -241,6 +241,16 @@ void chargerHumanoides().then(() => {
       scene.add(seule);
       articles.push({ nom: `arme ${arme}`, section: "armes", objet: seule, haut: 0.2, mesure: seule });
     }
+  });
+  // La fourche à foin dans le dos, hors du combat (plan 0.8 §2.4), une par famille : derrière la batterie, la hotte.
+  (["charbonniers", "voltaiques", "mecanistes"] as const).forEach((famille, i) => {
+    const p = new Personnage(famille);
+    p.objet.position.set((ARMES.length + i) * 1.6, 0, -14);
+    p.objet.rotation.y = Math.PI * 0.85;
+    p.porterDansLeDos("fourche_foin");
+    scene.add(p.objet);
+    porteurs.push(p);
+    articles.push({ nom: `fourche dans le dos (${famille})`, section: "armes", objet: p.objet, haut: 1.9, sansMesure: true });
   });
   const pose = parametres.get("pose");
   if (pose === "garde" || pose === "frappe") etatArmes.pose = pose;

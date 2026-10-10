@@ -272,6 +272,8 @@ export interface Recette {
    * fabriquer (Book 25 §4.2 : le maillon faible). Absent : les étoiles de base de l'objet. Rempli par les chantiers 4 à 7.
    */
   facteursEtoiles?: (inventaire: Inventaire, contexte?: ContexteFabrication) => number[];
+  /** Une phrase de plus sur la fiche de la recette (plan 0.8, chantier 8 : la petite batterie unique, Q-B6). */
+  note?: string;
 }
 
 /**

@@ -97,17 +97,20 @@ test("0.6 Voltaïques : la matraque, l'aiguillon et la matraque de fortune sont 
   const m = arme("matraque_electrique");
   assert.equal(m.type, "electrique");
   assert.equal(m.metier, true);
-  assert.deepEqual([m.coup, m.coupAppuye, m.allonge, m.solidite], [450, 1000, 1.3, 60]);
+  // ★★★ (plan 0.8 §2.4, K30) : 2,25 au torse, solidité 80.
+  assert.deepEqual([m.coup, m.coupAppuye, m.allonge, m.solidite, m.degatsTorse], [450, 1000, 1.3, 80, 2.25]);
   assert.equal(m.electrique?.saute, true);
   assert.equal(arme("aiguillon").allonge, 2.3);
-  assert.equal(arme("aiguillon").electrique?.saute, false, "au bout d'une perche, la courte ne saute pas");
-  // La matraque de fortune est une arme ★ : 1,5 s de raidissement, 1,4 s pour la longue, 30 coups, 50 Wh.
+  // C7 : à ★★★, la courte de l'aiguillon saute au voisin, comme la matraque.
+  assert.equal(arme("aiguillon").electrique?.saute, true);
+  // La matraque de fortune est une arme ★ : 1,5 s de raidissement, 1,4 s pour la longue, 60 coups (P5), 50 Wh.
   const f = arme("matraque_fortune");
-  assert.deepEqual([f.electrique?.raidi, f.coupAppuye, f.solidite], [1.5, 1400, 30]);
+  assert.deepEqual([f.electrique?.raidi, f.coupAppuye, f.solidite], [1.5, 1400, 60]);
   assert.equal(chargeArme("matraque_fortune", {}), 50);
-  // À ★★ (raquette) : 2 s, 1,2 s, 45 coups ; elle ne saute pas.
+  // À ★★ (raquette) : 2,5 s, 1,0 s (P6), 60 coups ; elle ne saute pas ; la petite batterie, 50 Wh (Q-A5).
   const deux = armeDeCle("matraque_electrique#2")!;
-  assert.deepEqual([deux.electrique?.raidi, deux.coupAppuye, deux.solidite, deux.electrique?.saute], [2, 1200, 45, false]);
+  assert.deepEqual([deux.electrique?.raidi, deux.coupAppuye, deux.solidite, deux.electrique?.saute], [2.5, 1000, 60, false]);
+  assert.equal(chargeArme("matraque_electrique#2", {}), 50);
   // Rangées entre la lance et le gourdin : sans arme équipée, la matraque passe avant le gourdin, après la masse.
   const rangs = ARMES.map((a) => a.objet);
   assert.ok(rangs.indexOf("matraque_electrique") < rangs.indexOf("gourdin"));
@@ -123,7 +126,8 @@ test("0.6 Voltaïques : l'endurance d'une décharge (5 la courte, 8 la longue) e
   const vide = armeAlimentee(m, true, { matraque_electrique: 0.1 });
   assert.equal(vide.vide, true);
   assert.equal(vide.arme.type, "contondant");
-  assert.equal(vide.arme.degatsTorse, 0.6);
+  // Pack vide : la moitié de ses dégâts (C11), 1,125 pour la ★★★.
+  assert.equal(vide.arme.degatsTorse, 1.125);
   assert.equal(vide.arme.tueALaTete, false);
   const faible = armeAlimentee(m, true, { matraque_electrique: 0.5 });
   assert.equal(faible.appuye, false, "maintenue sans assez de courant : elle part en courte");

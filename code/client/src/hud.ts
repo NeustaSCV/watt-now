@@ -1762,11 +1762,13 @@ export class Hud {
     const coupsPourTomber = Math.ceil(RESISTANCE_TORSE / a.degats);
     const etat = etatArme(objet, this.usureArmes);
     const abimee = etat < SEUIL_ABIMEE;
-    // L'électrique ne fait rien au torse : on montre ce qu'il fait, le raidissement (Book 25 §8.2).
+    // L'électrique frappe aussi le torse depuis la 0.8 (plan §2.4) : ses dégâts, puis ce qu'il fait de plus, le
+    // raidissement (Book 25 §8.2).
+    const degats = barre("Dégâts", a.degats / maxDegats, virgule(a.degats), `${coupsPourTomber} coup${coupsPourTomber > 1 ? "s" : ""} au torse pour le faire tomber`);
     const premiere =
       a.type === "electrique"
-        ? barre("Raidit", (a.raidi ?? 0) / ETOILES[5].raidi, `${virgule(a.raidi ?? 0)} s`, "Une décharge courte : il lâche et ne bouge plus pendant ce temps")
-        : barre("Dégâts", a.degats / maxDegats, virgule(a.degats), `${coupsPourTomber} coup${coupsPourTomber > 1 ? "s" : ""} au torse pour le faire tomber`);
+        ? degats + barre("Raidit", (a.raidi ?? 0) / ETOILES[5].raidi, `${virgule(a.raidi ?? 0)} s`, "Une décharge courte : il lâche et ne bouge plus pendant ce temps")
+        : degats;
     const tete =
       a.type === "electrique"
         ? "☠ Maintenu sur un Éteint raidi ou à terre : il s'éteint."
@@ -2294,6 +2296,7 @@ export class Hud {
       const ou =
         ("installation" in r.produit ? `Se pose devant toi : ${NOMS_INSTALLATIONS[r.produit.installation]}. ` : "") +
         texteLieu(r) +
+        (r.note ? `${r.note} ` : "") +
         (plusTard ? `${texteAVenir(plusTard)} ` : "") +
         (r.eau ? `${String(r.eau).replace(".", ",")} L d'eau de la gourde (celle de la mare suffit). ` : "");
       const secondes = Math.round(dureeReelle(r) * (outils ?? 1) * 10) / 10;

@@ -45,6 +45,14 @@ const MATIERE_ARCS = new THREE.LineBasicMaterial({ color: 0x9ad8ff, transparent:
  */
 const HALO_RAIDI = { interieur: 0.38, exterieur: 0.52, rampant: 0.7, opacite: 0.55, battement: 9 };
 const MATIERE_HALO = new THREE.MeshBasicMaterial({ color: 0x7cc8ff, transparent: true, opacity: HALO_RAIDI.opacite, depthWrite: false, blending: THREE.AdditiveBlending });
+/**
+ * L'éclat d'une courte qui porte (plan 0.8 §2.4 : la décharge ajoute ses dégâts au torse) : un instant, les arcs sont
+ * plus nombreux, plus clairs, et courent plus large ; l'anneau s'élargit. Sobre : un dixième de seconde de plus, pas un
+ * éclair.
+ */
+const ECLAT = { duree: 0.2, nombre: 7, rayon: 1.35, halo: 1.3 };
+const MATIERE_ARCS_ECLAT = new THREE.LineBasicMaterial({ color: 0xdff4ff, transparent: true, opacity: 1, depthWrite: false, blending: THREE.AdditiveBlending });
+const MATIERE_HALO_ECLAT = new THREE.MeshBasicMaterial({ color: 0x9fd8ff, transparent: true, opacity: 0.72, depthWrite: false, blending: THREE.AdditiveBlending });
 
 export class VueEteint {
   readonly objet = new THREE.Group();
@@ -68,6 +76,8 @@ export class VueEteint {
   private remue = 0;
   /** L'anneau bleu au sol d'un Éteint raidi (créé à la première décharge). */
   private halo: THREE.Mesh | null = null;
+  /** Ce qui reste de l'éclat d'une courte qui porte (s). */
+  private eclat = 0;
 
   constructor(e: EteintVu) {
     this.cible = e;
@@ -242,11 +252,19 @@ export class VueEteint {
     this.herbe?.animer(dt, inerte ? 0 : bouge ? Math.min(1, 0.45 + vitesse * 0.6) : 0.12);
   }
 
+  /** Une décharge courte vient de porter (ses dégâts au torse) : l'éclat d'arc bleu, plus vif, un instant. */
+  eclatDecharge(): void {
+    this.eclat = ECLAT.duree;
+    this.arcsMinuterie = 0;
+  }
+
   /** Raidi : le corps tremble, de petits arcs bleus courent sur le torse ; sinon, tout revient en place. */
   private electriser(dt: number, raidi: boolean): void {
     const c = this.corps;
     if (!c) return;
-    if (!raidi) {
+    const eclat = this.eclat > 0;
+    this.eclat = Math.max(0, this.eclat - dt);
+    if (!raidi && !eclat) {
       if (this.arcs) this.arcs.visible = false;
       if (this.halo) this.halo.visible = false;
       if (!this.rampant) c.objet.rotation.z = 0;
@@ -262,8 +280,11 @@ export class VueEteint {
     }
     this.halo.visible = true;
     MATIERE_HALO.opacity = HALO_RAIDI.opacite * (0.65 + 0.35 * Math.sin((performance.now() / 1000) * HALO_RAIDI.battement));
+    this.halo.material = eclat ? MATIERE_HALO_ECLAT : MATIERE_HALO;
+    this.halo.scale.setScalar(eclat ? ECLAT.halo : 1);
     if (!this.arcs) {
-      const n = ARCS.nombre * ARCS.segments * 2;
+      // Assez de place pour les arcs de l'éclat ; hors éclat, on n'en dessine que `ARCS.nombre`.
+      const n = ECLAT.nombre * ARCS.segments * 2;
       const geometrie = new THREE.BufferGeometry();
       geometrie.setAttribute("position", new THREE.BufferAttribute(new Float32Array(n * 3), 3));
       this.arcs = new THREE.LineSegments(geometrie, MATIERE_ARCS);
@@ -273,18 +294,23 @@ export class VueEteint {
       this.arcsMinuterie = 0;
     }
     this.arcs.visible = true;
+    this.arcs.material = eclat ? MATIERE_ARCS_ECLAT : MATIERE_ARCS;
     this.arcsMinuterie -= dt;
     if (this.arcsMinuterie > 0) return;
-    this.arcsMinuterie = ARCS.periode;
+    // Pendant l'éclat, les arcs se redessinent deux fois plus souvent.
+    this.arcsMinuterie = eclat ? ARCS.periode / 2 : ARCS.periode;
+    const nombre = eclat ? ECLAT.nombre : ARCS.nombre;
+    const rayon = ARCS.rayon * (eclat ? ECLAT.rayon : 1);
+    this.arcs.geometry.setDrawRange(0, nombre * ARCS.segments * 2);
     // Couché (le Rampant), les arcs courent au ras du sol, le long du dos.
     const bas = this.rampant ? 0.1 : ARCS.bas;
     const haut = this.rampant ? 0.35 : ARCS.haut;
     const pos = this.arcs.geometry.getAttribute("position") as THREE.BufferAttribute;
     let i = 0;
-    for (let a = 0; a < ARCS.nombre; a++) {
+    for (let a = 0; a < nombre; a++) {
       const angle = Math.random() * Math.PI * 2;
-      let x = Math.cos(angle) * ARCS.rayon;
-      let z = Math.sin(angle) * ARCS.rayon + (this.rampant ? RAMPANT.recul * 0.5 : 0);
+      let x = Math.cos(angle) * rayon;
+      let z = Math.sin(angle) * rayon + (this.rampant ? RAMPANT.recul * 0.5 : 0);
       let y = bas + Math.random() * (haut - bas);
       for (let s = 0; s < ARCS.segments; s++) {
         const nx = x + (Math.random() - 0.5) * 0.14;

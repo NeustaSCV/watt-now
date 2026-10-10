@@ -34,6 +34,8 @@ export const DEFINITIONS_REGLAGES = {
   // rejoue le tableau du §8.4 avec les réglages du fichier, et dit si le garde-fou tient encore.
   equilibre_lames_degats: { defaut: 1, min: 0.5, max: 2, aide: "Dégâts des lames de métier (machette, couteau de forge, glaive…) : 1,2 = 20 % de plus." },
   equilibre_electrique_raidi: { defaut: 1, min: 0.5, max: 2, aide: "Durée pendant laquelle une décharge courte raidit l'Éteint (2,5 s à ★★★) : 1,2 = 20 % de plus." },
+  // Plan 0.8 §2.4 (chantier 8) : la décharge courte ajoute ses dégâts au torse ; ce réglage les règle au test.
+  equilibre_electrique_degats: { defaut: 1, min: 0, max: 2, aide: "Dégâts au torse d'une décharge courte (1,1 pour la matraque ★★) et du coup d'une arme électrique au pack vide (la moitié) : 0 = rien au torse, comme avant la 0.8." },
   equilibre_electrique_longue: { defaut: 1, min: 0.5, max: 2, aide: "Durée à tenir la décharge longue pour éteindre (1 s à ★★★) : 0,8 = plus rapide." },
   equilibre_arbalete_rearmer: { defaut: 1, min: 0.5, max: 2, aide: "Temps pour réarmer une arbalète (3 s au pied, 4 à 6 s pour la lourde) : 0,8 = plus rapide." },
   equilibre_tir_portee_tete: { defaut: 1, min: 0.5, max: 2, aide: "Portée jusqu'où un tir plein détruit à la tête (arc 6 m, arbalète 12 m à ★★★) : 1,2 = 20 % plus loin." },

@@ -76,7 +76,8 @@ test("0.6 socle : un exemplaire étoilé frappe selon ses étoiles ; la clé nue
   assert.equal(armeDeCle("lame_forgee"), arme("lame_forgee"), "aux étoiles de base : l'arme déclarée, telle quelle");
   const l4 = armeDeCle("lame_forgee#4")!;
   assert.equal(l4.solidite, 90);
-  assert.ok(Math.abs(l4.degatsTorse - 1.1) < 1e-9);
+  // ★★★★ : les dégâts décidés de l'étoile (plan 0.8 §2.4, K23 : 3,0, la bande de L3).
+  assert.ok(Math.abs(l4.degatsTorse - 3) < 1e-9);
   assert.equal(l4.etoiles, 4);
   assert.equal(l4.cle, "lame_forgee#4");
   // La machette de fortune (★) dérouillée à ★★ : 1,35 et 60 (Book 25 §8.4).
@@ -262,9 +263,10 @@ test("0.6 socle : électrique — les étoiles règlent le raidissement et la lo
     ARMES[i] = avant;
     delete OBJETS_DE_METIER.gourdin;
   }
-  const vide = armeSansCharge(MATRAQUE);
+  // Pack vide : la moitié de ses dégâts (C11, plan 0.8 §2.4 ; avant : 0,6 fixes).
+  const vide = armeSansCharge({ ...MATRAQUE, degatsTorse: 1.1 });
   assert.equal(vide.type, "contondant");
-  assert.equal(vide.degatsTorse, 0.6);
+  assert.ok(Math.abs(vide.degatsTorse - 0.55) < 1e-9);
   assert.equal(vide.tueALaTete, false);
   assert.equal(vide.electrique, undefined);
 });

@@ -166,6 +166,8 @@ export const PROGRESSION: Readonly<Record<string, LigneProgression>> = {
   pack_cellules: { quand: [vu("cellule_lithium"), quete("pack")], indice: "Des petites piles ensemble font une vraie batterie." },
   module_raquette: { quand: [vu("raquette_moustiques"), quete("raquette")], indice: "Ce qui grillait les moustiques peut servir encore." },
   matraque_electrique: { quand: [fab("pack_cellules"), MODULES, quete("raquette")], indice: "Une décharge qui les éteint pour de bon." },
+  // La petite batterie du kit, source de la matraque ★★ (plan 0.8 §2.4, Q-A5 ; chantier 8).
+  matraque_petite_batterie: { quand: [et(fab("banc_recharge"), MODULES)], indice: "Ta petite batterie peut nourrir une vraie matraque." },
   pedalier: { quand: [SEUIL, vu("cadre_velo"), quete("meule"), quete("dynamo")], indice: "Ce qui tourne ne meurt pas." },
   arbalete: { quand: [SEUIL, fab("pedalier"), quete("arbalete")], indice: "Ton arme de métier : rien à bander, tout à viser." },
   arbrier: { quand: [devoilee("arbalete")], indice: "Le corps de l'arme, taillé dans une bûche." },
