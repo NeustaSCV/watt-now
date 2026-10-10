@@ -10,6 +10,7 @@ import { ARRIVEE_COOP, BRECHE, COOP, PORTAIL, PORTES, boitePorte, obstaclesCoop,
 import type { Position } from "./deplacement.ts";
 import { MARGE_GRILLE, boitesPres, creerGrille, type GrilleObstacles } from "./grille.ts";
 import { PORTES_MOULIN, boitePorteMoulin, obstaclesMoulin, portesInitialesMoulin } from "./moulin.ts";
+import { zoneGueFixe } from "./gue.ts";
 import type { EtapeMonde } from "./lignees.ts";
 import { MARGE_BORD, POINT_ARRIVEE, TERRAIN_TAILLE } from "./regles.ts";
 
@@ -450,39 +451,34 @@ export const SORTIES_COOP: Sortie[] = [
 // ---------- H1B, le Gué-aux-Saules (plan 0.8, chantier 11) : une halte partagée, comme la station ----------
 
 /**
- * Le gué fait 200 × 70 m, comme la station (le modèle `batiment/halte-gue/` : quatre tronçons de 50 × 70 m). Le repère
- * du jeu part du coin nord-ouest : x = x du modèle + 100, z = z du modèle + 35 (`origineModele`). La route descend de
- * la Campagne par l'ouest (l'entrée A du modèle, « ← Ton terrain »), passe la rivière à gué, et remonte à l'est (la
- * sortie B) vers le Moulin.
+ * Le gué fait 200 × 70 m, comme la station (le modèle `batiment/halte-gue/` : quatre tronçons de 50 × 70 m). Le modèle a
+ * le terrain à l'ouest ; la carte, à l'est : le jeu le **retourne** (chantier 11, comme la station, P-006) : x du jeu =
+ * 100 − x du modèle, z du jeu = z du modèle + 35 (commun/src/gue.ts, `auGue`). La route descend de la Campagne par
+ * l'est (l'entrée A du modèle, « ← Ton terrain »), passe la rivière à gué, et remonte à l'ouest (la sortie B) vers le
+ * Moulin.
  */
 export const GUE = { longueur: 200, largeur: 70, origineModele: { x: 100, z: 35 } } as const;
 
 /**
- * Le gué, vide (chantier 4) : le fond de la vallée, sans obstacles. Le chantier 11 y met ceux du modèle (bâtiments,
- * rivière creusée, `userData.obstacles`), depuis `commun/src/gue.ts`, en remplaçant `obstacles: []`.
+ * Le gué (chantier 11) : les obstacles du modèle (bâtiments, berges, talus, bords du radier), l'eau, le radeau du bac
+ * à la cale. Ce qui bouge (le radeau, le radier noyé par la crue) : `zoneGue` (commun/src/gue.ts).
  */
-export const ZONE_GUE: Zone = {
-  xMin: 0.5,
-  xMax: GUE.longueur - 0.5,
-  zMin: 0.5,
-  zMax: GUE.largeur - 0.5,
-  obstacles: [],
-};
+export const ZONE_GUE: Zone = zoneGueFixe();
 
-/** Les deux bouts de la route du gué (l'entrée A et la sortie B du modèle, dans le repère du jeu). */
-const ROUTE_GUE = { ouest: { x: 0, z: 7 + GUE.origineModele.z }, est: { x: GUE.longueur, z: -5 + GUE.origineModele.z } } as const;
+/** Les deux bouts de la route du gué (l'entrée A et la sortie B du modèle, dans le repère du jeu, retourné). */
+const ROUTE_GUE = { terrain: { x: GUE.longueur, z: 7 + GUE.origineModele.z }, moulin: { x: 0, z: -5 + GUE.origineModele.z } } as const;
 
 export const SORTIES_GUE: Sortie[] = [
   {
     vers: "terrain",
-    boite: { x: 2, z: ROUTE_GUE.ouest.z, l: 4, p: 10 },
-    arrivee: { x: 4.5, z: ROUTE_GUE.ouest.z, o: Math.PI / 2 },
+    boite: { x: GUE.longueur - 2, z: ROUTE_GUE.terrain.z, l: 4, p: 10 },
+    arrivee: { x: GUE.longueur - 4.5, z: ROUTE_GUE.terrain.z, o: -Math.PI / 2 },
     libelle: "Rentrer chez toi",
   },
   {
     vers: "moulin",
-    boite: { x: GUE.longueur - 2, z: ROUTE_GUE.est.z, l: 4, p: 10 },
-    arrivee: { x: GUE.longueur - 4.5, z: ROUTE_GUE.est.z, o: -Math.PI / 2 },
+    boite: { x: 2, z: ROUTE_GUE.moulin.z, l: 4, p: 10 },
+    arrivee: { x: 4.5, z: ROUTE_GUE.moulin.z, o: Math.PI / 2 },
     libelle: "Continuer vers le Moulin",
   },
 ];
@@ -590,7 +586,7 @@ export const LIEUX: Record<LieuId, LieuCarte> = {
     km: 3,
     ouvert: true,
     description:
-      "Une halte sur la route des Marais. Le pont suspendu est parti avec la crue du premier hiver : on passe sur le radier, les pieds dans l'eau qui court, ou par le bac du passeur. Des Éteints rôdent sur les berges.",
+      "Une halte sur la route du Moulin du Gué. Le pont suspendu est parti avec la crue du premier hiver : on passe sur le radier, les pieds dans l'eau qui court, ou par le bac du passeur. Des Éteints rôdent sur les berges.",
     promesse: "Le gué : la pierre, la glaise et la rive.",
   },
   moulin: {

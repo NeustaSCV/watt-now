@@ -149,6 +149,13 @@ export const SONS = {
   monte_sacs: { recette: R.monteSacs, bus: "environnement", priorite: 2, variantes: 1, gain: 0.75, portee: 30 },
   babillard: { recette: R.babillard, bus: "environnement", priorite: 2, variantes: 1, gain: 0.45, portee: 20 },
   borne: { recette: R.borneJingle, bus: "environnement", priorite: 2, variantes: 1, gain: 0.4, portee: 22 },
+
+  // Le gué (plan 0.8, chantier 11) : le clapot du radier, le câble du bac, la cloche du passeur (un leurre : 40 m), le
+  // galet dans l'eau (8 m, comme une pierre qui tombe).
+  clapot_radier: { recette: R.clapotRadier, bus: "environnement", priorite: 3, variantes: 1, gain: 0.45, portee: 14, boucle: true },
+  cable_bac: { recette: R.grincementCable, bus: "environnement", priorite: 3, variantes: 1, gain: 0.4, portee: 18, boucle: true },
+  cloche_bac: { recette: R.clocheBac, bus: "environnement", priorite: 2, variantes: 1, gain: 0.6, portee: 40 },
+  plouf: { recette: R.plouf, bus: "environnement", priorite: 3, variantes: 3, gain: 0.5, portee: 8 },
 } satisfies Record<string, DefSon>;
 
 export type IdSon = keyof typeof SONS;

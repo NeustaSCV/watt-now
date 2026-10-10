@@ -10,9 +10,10 @@
 // ouvre la grande porte de la salle des meules ; on passe le couloir du rouet, le long de la fosse ; au nord, les meules
 // nord, le magasin, le jardin clos ; on repart par la planche du bief et le chemin de halage (une sortie sans arrivée).
 //
-// Ce fichier n'importe aucune valeur des autres modules du jeu (lieux.ts l'importe pour sa zone) : seulement des types.
+// Ce fichier n'importe des autres modules du jeu que des types, et murs.ts (lieux.ts l'importe pour sa zone).
 
 import type { Boite } from "./lieux.ts";
+import { declarerObstaclesBas } from "./murs.ts";
 import type { TypeRessource } from "./terrain.ts";
 
 /** Le coin nord-ouest du lot, dans le repère du modèle (le même que MOULIN.origineModele, vérifié par moulin.test.ts). */
@@ -205,9 +206,6 @@ function arreteLaVue(nature: string): boolean {
   return nature === "mur" || nature.startsWith("porte condamnée");
 }
 
-/** Une boîte d'obstacle ; `bas` : on frappe et l'on lance par-dessus (commun/src/murs.ts). */
-export type BoiteMoulin = Boite & { bas?: true };
-
 /** L'épaisseur de la boîte d'un segment : les murs comptent leur maçonnerie, le reste est mince. */
 function epaisseur(nature: string): number {
   return nature === "mur" || nature.startsWith("grande porte") || nature.startsWith("porte ") ? 0.3 : 0.1;
@@ -217,24 +215,30 @@ function epaisseur(nature: string): number {
  * Les boîtes d'un segment, dans le repère du jeu. Un segment droit (selon x ou selon z) fait une boîte ; un segment de
  * biais (le puits, la charrette, l'if) une rangée de petits carrés. Les bords de la planche du bief sont reculés de
  * 15 cm vers l'eau : la planche fait 0,9 m, un personnage 0,7 m ; sans ce jeu, on n'y passerait qu'au centimètre.
+ * Les obstacles bas (berges, huche, établis…) sont déclarés tels (murs.ts) : on frappe et l'on lance par-dessus.
  */
-export function boitesDuSegment([x1, z1, x2, z2, nature]: SegmentMoulin): BoiteMoulin[] {
+export function boitesDuSegment(segment: SegmentMoulin): Boite[] {
+  const boites = boitesBrutes(segment);
+  if (!arreteLesCoupsMoulin(segment[4])) declarerObstaclesBas(boites);
+  return boites;
+}
+
+function boitesBrutes([x1, z1, x2, z2, nature]: SegmentMoulin): Boite[] {
   const ep = epaisseur(nature);
-  const bas = arreteLesCoupsMoulin(nature) ? {} : ({ bas: true } as const);
   if (nature.startsWith("bord de la planche")) {
     const recul = z1 < -21 ? -0.15 : 0.15;
     z1 += recul;
     z2 += recul;
   }
-  if (Math.abs(z2 - z1) < 1e-6) return [{ ...boiteJeu((x1 + x2) / 2, z1, Math.abs(x2 - x1), ep), ...bas }];
-  if (Math.abs(x2 - x1) < 1e-6) return [{ ...boiteJeu(x1, (z1 + z2) / 2, ep, Math.abs(z2 - z1)), ...bas }];
+  if (Math.abs(z2 - z1) < 1e-6) return [boiteJeu((x1 + x2) / 2, z1, Math.abs(x2 - x1), ep)];
+  if (Math.abs(x2 - x1) < 1e-6) return [boiteJeu(x1, (z1 + z2) / 2, ep, Math.abs(z2 - z1))];
   const longueur = Math.hypot(x2 - x1, z2 - z1);
   const n = Math.max(1, Math.ceil(longueur / 0.25));
   const cote = Math.max(0.2, longueur / n);
-  const res: BoiteMoulin[] = [];
+  const res: Boite[] = [];
   for (let i = 0; i < n; i++) {
     const t = (i + 0.5) / n;
-    res.push({ ...boiteJeu(x1 + (x2 - x1) * t, z1 + (z2 - z1) * t, cote, cote), ...bas });
+    res.push(boiteJeu(x1 + (x2 - x1) * t, z1 + (z2 - z1) * t, cote, cote));
   }
   return res;
 }
@@ -243,7 +247,7 @@ export function boitesDuSegment([x1, z1, x2, z2, nature]: SegmentMoulin): BoiteM
 const NATURE_GRANDE_PORTE = "grande porte (fermée à clé ; reste ouverte une fois déverrouillée)";
 
 /** Tous les obstacles fixes du Moulin (la grande porte, quand elle est fermée, s'y ajoute : boitePorteMoulin). */
-export function obstaclesMoulin(): BoiteMoulin[] {
+export function obstaclesMoulin(): Boite[] {
   return [...SEGMENTS_MODELE.map(corrige), ...SEGMENTS_EN_PLUS].filter((s) => s[4] !== NATURE_GRANDE_PORTE).flatMap(boitesDuSegment);
 }
 
@@ -406,7 +410,7 @@ export const FENETRES_MOULIN: readonly (OuvertureMoulin & { opaque?: true })[] =
 
 /** Les murs qui arrêtent la vue (repère du jeu), fenêtres non percées. */
 export function mursVueMoulin(): Boite[] {
-  return SEGMENTS_MODELE.filter((s) => arreteLaVue(s[4])).flatMap((s) => boitesDuSegment(s).map(({ x, z, l, p }) => ({ x, z, l, p })));
+  return SEGMENTS_MODELE.filter((s) => arreteLaVue(s[4])).flatMap(boitesBrutes);
 }
 
 /** L'état des portes à la première visite : la grande porte fermée. */

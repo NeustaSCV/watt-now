@@ -76,7 +76,8 @@ import {
 import { vueDuSac, type Base, type Compte, type FeuEnBase, type RessourceEnBase, type SacEnBase as SacPose } from "./base.ts";
 import { Cooperatives } from "./cooperative.ts";
 import { Halte, type Voyageur } from "./halte.ts";
-import { Gue } from "./gue.ts";
+import { Gue, type ContexteGue } from "./gue.ts";
+import { GESTE_RICOCHET_MS, ricochet } from "../../commun/src/gue.ts";
 import { Moulins } from "./moulin.ts";
 import type { LieuVivant } from "./lieu-vivant.ts";
 import { Comptoir } from "./comptoir.ts";
@@ -728,6 +729,10 @@ export class Joueur implements Voyageur, ParticipantLecon {
       case "admin":
         this.commandeAdmin(message.op);
         return;
+      // Le gué (plan 0.8, chantier 11) : haler le bac, sonner la cloche du passeur (serveur/src/gue.ts).
+      case "gue":
+        if (this.lieu === "gue" && !this.voyage) message.op === "haler" ? this.gue.haler(this.contexteGue()) : this.gue.sonnerCloche(this.contexteGue());
+        return;
     }
   }
 
@@ -1166,7 +1171,36 @@ export class Joueur implements Voyageur, ParticipantLecon {
       },
       commencer: (libelle, dureeS, appliquer) => j.commencer(libelle, dureeS, appliquer, 0, "outil"),
       noter: (fait) => j.noterFait(fait),
+      // Au gué, un objet tombe dans la rivière ; un galet bien lancé y ricoche (G8, plan 0.8 chantier 11).
+      surLEau: (de, ou, objet, tenuMs) => (j.lieu === "gue" ? ricochet(de, ou, objet === "pierre" && tenuMs >= GESTE_RICOCHET_MS) : null),
     };
+  }
+
+  /** Ce que le joueur prête au gué (serveur/src/gue.ts, plan 0.8 chantier 11) : rien que des accès, aucune règle. */
+  private ctxGue: ContexteGue | null = null;
+  private contexteGue(): ContexteGue {
+    const j = this;
+    return (this.ctxGue ??= {
+      id: j.compte.id,
+      maintenant: () => j.maintenant(),
+      position: () => j.position,
+      deplacer: (p) => {
+        j.position = p;
+        j.positionEnvoyee = false;
+      },
+      info: (t) => j.info(t),
+      endurance: () => j.endurance,
+      depenser: (n) => {
+        j.endurance = Math.max(0, j.endurance - n);
+      },
+      commencer: (libelle, dureeS, appliquer) => {
+        // Le radeau garde sa place : un geste repris repart de là, pas d'une progression gardée.
+        j.progressions.delete(libelle);
+        j.commencer(libelle, dureeS, appliquer, 0, "outil");
+      },
+      geste: () => j.action?.libelle ?? null,
+      annuler: () => j.annulerAction(),
+    });
   }
 
   /** Ce que le joueur prête à la forge (forge.ts) : rien que des accès, aucune règle. */
@@ -2221,7 +2255,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     const portee = this.lumiere ? lumierePortee(this.inventaire) : null;
     const porte = this.bruitPorte && this.maintenant() < this.bruitPorte.jusqua ? this.bruitPorte : null;
     const bruitPorte: Stimulus[] = porte ? [{ genre: "son", x: porte.x, z: porte.z, portee: porte.portee, intensite: 1 }] : [];
-    return this.sousLaPluie([...bruitPorte, ...this.tir.stimuli(), ...stimuliJoueur({
+    const emis = this.sousLaPluie([...bruitPorte, ...this.tir.stimuli(), ...stimuliJoueur({
       x: this.position.x,
       z: this.position.z,
       allure: this.allureEffective(),
@@ -2233,6 +2267,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
       nuit: nuit || (this.vivant?.obscur(this.position.x, this.position.z) ?? false),
       saigne: this.sante.saignement !== "aucun",
     })]);
+    // Sur le radier du gué, le bruit de l'eau couvre les pas (G1, plan 0.8 chantier 11).
+    return this.lieu === "gue" ? this.gue.assourdir(emis, this.position) : emis;
   }
 
   /**
@@ -2241,6 +2277,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
    */
   private allureEffective(): Allure {
     const allure = allureAutorisee(this.intention.allure, this.besoins, this.objetPorte() !== undefined || traineTravois(this.inventaire));
+    // Sur le radier du gué, on marche, on n'y court pas (plan 0.8, Q-0.8-22).
+    if (allure === "course" && this.lieu === "gue" && this.gue.pasDeCourse(this.position)) return "marche";
     return allure === "course" && this.endurance < SEUIL_EPUISE ? "marche" : allure;
   }
 
@@ -2425,6 +2463,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
       }
     }
     if (bouge && this.action) this.annulerAction();
+    // Au gué : le radeau emporte qui est à bord, la corde du bac coûte un peu d'endurance (plan 0.8, chantier 11).
+    if (this.lieu === "gue" && !this.voyage) this.gue.suivre(this.contexteGue(), dt);
     // Saisi : ralenti par un, immobilisé par deux (Book 06 §2.3). Épuisé : on ne court plus.
     const frein = freinSaisie(this.saisisseurs().length);
     const allure = this.allureEffective();
@@ -2771,6 +2811,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
       const lieuFouille = LIEU_DE_FOUILLE[r.type];
       // Au niveau 1, rarement, une clé de L1 (R-BUTIN, plan 0.8 chantier 10 : etapeButin, tirerCleRare).
       if (lieuFouille) this.recevoirBricABrac(tirerVestiges(lieuFouille, this.alea, etapeButin(lieu)));
+      // Au gué, « par chance » (plan 0.8, chantier 11) : une bâche, des chiffons, une casserole, une corde ; rarement une clé.
+      else if (lieu === "gue") this.gue.fouiller(r.type, this.alea, (t) => this.recevoirBricABrac(t), (t) => this.info(t));
       if (this.tuto) {
         this.tuto.branches += usage.donne.branche ?? 0;
         this.tuto.pierres += usage.donne.pierre ?? 0;

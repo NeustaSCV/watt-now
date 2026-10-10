@@ -28,11 +28,12 @@ const INVENDABLES: TypeObjet[] = ["sac_a_dos", "panneau_solaire", "enclume_depan
  * lieu. Un aller-retour à la Coopérative (ou au Moulin, à la même distance, B16) : 2 × 5 km, à 60 kcal/km à vide et
  * ≈ 85 chargé, plus la visite, soit ≈ 720 kcal. Le Comptoir paie déjà la calorie 0,24 wott (la conserve : 400 kcal
  * pour 96 wotts ; son pédalier : 60 wotts pour 250 kcal) : deux allers-retours ≈ 1 450 kcal ≈ **350 wotts**. Le
- * temps et le risque de la route ne sont pas comptés : c'est ce que le joueur pressé achète. Il les **rachète 90
+ * temps et le risque de la route ne sont pas comptés : c'est ce que le joueur pressé achète. Le porteur l'a monté à
+ * **500 wotts** (2026-10-10 : « ça me semble encore abordable »). Il les **rachète 90
  * wotts** (≈ un aller simple) : la chance d'un joueur devient un peu de richesse, sans faire de la Coopérative une
  * mine de wotts (trois clés par jour, 270 wotts, pour ≈ 180 wotts de vivres et le combat).
  */
-export const PRIX_CLES_L1 = { vente: 350, rachat: 90 } as const;
+export const PRIX_CLES_L1 = { vente: 500, rachat: 90 } as const;
 
 /** Les clés de L1 et leur lieu : le Comptoir ne les vend qu'à qui y est déjà allé (le fait `visite:<lieu>`). */
 export const LIEU_DES_CLES: Partial<Record<TypeObjet, LieuId>> = {

@@ -104,11 +104,11 @@ test("on voyage du terrain au gué, du gué au Moulin, et retour ; la route B co
   assert.ok(versGue.kcal >= 180);
   let b = rose.dernier("bienvenue")!;
   assert.equal(b.lieu, "gue");
-  // On arrive du terrain par le bout ouest de la route (l'entrée A du modèle).
+  // On arrive du terrain par le bout est de la route (l'entrée A du modèle, retourné pour suivre la carte).
   assert.deepEqual(b.position, SORTIES_GUE[0]!.arrivee);
-  // Vide : ni ressources, ni Éteints (le chantier 11 les pose).
-  assert.equal(b.ressources.length, 0);
-  assert.equal(b.eteints.length, 0);
+  assert.ok(b.position.x > 150, "le terrain est à l'est du gué, comme sur la carte");
+  // Rempli par le chantier 11 : des pierres, de la glaise, des joncs.
+  assert.ok(b.ressources.some((r) => r.type === "gisement_glaise"));
 
   // Gué → Moulin, et station → Coopérative : le même prix.
   const versMoulin = rose.voyager(sortieVers(SORTIES_GUE, "moulin"), "moulin");
@@ -119,7 +119,7 @@ test("on voyage du terrain au gué, du gué au Moulin, et retour ; la route B co
   assert.equal(b.lieu, "moulin");
   assert.deepEqual(b.position, SORTIES_MOULIN[0]!.arrivee, "on arrive au pont");
 
-  // Retour par la route : on arrive au gué par le bout est.
+  // Retour par la route : on arrive au gué par le bout ouest, côté Moulin.
   rose.voyager(sortieVers(SORTIES_MOULIN, "gue"), "gue");
   b = rose.dernier("bienvenue")!;
   assert.equal(b.lieu, "gue");

@@ -180,6 +180,9 @@ export function messageValide(m: unknown): m is MessageClient {
       return nombre(m.dx) && nombre(m.dz) && (m.cible === undefined || Number.isInteger(m.cible)) && (m.distance === undefined || (nombre(m.distance) && m.distance >= 0 && m.distance <= 100));
     case "manivelle":
       return estCleObjet(m.objet);
+    // Le gué (plan 0.8, chantier 11) : haler le bac, sonner la cloche du passeur.
+    case "gue":
+      return m.op === "haler" || m.op === "cloche";
     case "bander":
     case "rearmer":
     case "boire":
