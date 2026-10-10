@@ -28,9 +28,16 @@ export function heuresEcoulees(depuisMs: number, jusquaMs: number): number {
   return Math.max(0, (jusquaMs - depuisMs) / MS_PAR_HEURE_JEU);
 }
 
+/** La nuit tombe à 21 h… */
+export const HEURE_TOMBEE_NUIT = 21;
+/** … et finit à 5 h 30. */
+export const HEURE_FIN_NUIT = 5.5;
+/** La durée d'une nuit, en heures de jeu (8 h 30, soit 8 min 30 réelles). */
+export const HEURES_NUIT = 24 - HEURE_TOMBEE_NUIT + HEURE_FIN_NUIT;
+
 /** La nuit va de 21 h à 5 h 30 : on a besoin de lumière. */
 export function estNuit(heure: number): boolean {
-  return heure >= 21 || heure < 5.5;
+  return heure >= HEURE_TOMBEE_NUIT || heure < HEURE_FIN_NUIT;
 }
 
 export function formaterHeure(heure: number): string {

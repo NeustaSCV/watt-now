@@ -309,3 +309,47 @@ test("un joueur qui ramasse un grillage reçoit « Tu y penses » (message idee)
   attendre(1);
   assert.equal(tous("idee").length, 1);
 });
+
+// ---------- Les meubles de famille : montés au niveau de leur clé une fois leur pièce posée (plan 0.8 §9.2) ----------
+
+test("le banc posé sans son panneau : ramasser le panneau dit « Tu y penses » ; le panneau posé, plus rien à dire", () => {
+  const sans = suivi({ installations: [...feu("foyer_pierres", 2), { type: "banc_recharge", niveau: 1 }] });
+  sans.etat.inventaire = { panneau_solaire: 1 };
+  sans.attendre(1);
+  assert.deepEqual(sans.idees().map((m) => [m.etape, m.plusTard]), [["banc_recharge", false]]);
+  assert.match(sans.idees()[0]!.texte, /Ce panneau, posé sur un banc/);
+  // Un banc qui a déjà son panneau (un second panneau trouvé) : l'idée est gardée en silence.
+  const avec = suivi({ installations: [...feu("foyer_pierres", 2), { type: "banc_recharge", niveau: 1 }, { type: "banc_recharge+panneau", niveau: 1 }] });
+  avec.etat.inventaire = { panneau_solaire: 1 };
+  avec.attendre(1);
+  assert.equal(avec.idees().length, 0);
+  assert.deepEqual(avec.s.vue().idees, ["banc_recharge"]);
+});
+
+test("la forge et le pédalier : l'enclume et l'alternateur parlent tant qu'ils ne sont pas posés", () => {
+  const forge = suivi({ installations: [...feu("foyer_pierres", 2), { type: "forge", niveau: 1 }] });
+  forge.attendre(2);
+  assert.equal(forge.s.vue().indices.forge, 1, "le foyer posé sans enclume : l'indice reste ouvert");
+  forge.etat.inventaire = { enclume_depanneur: 1 };
+  forge.attendre(1);
+  assert.deepEqual(forge.idees().map((m) => m.etape), ["forge"]);
+  const pedalier = suivi({ installations: [...feu("foyer_pierres", 2), { type: "pedalier", niveau: 1 }] });
+  pedalier.etat.inventaire = { petit_alternateur: 1 };
+  pedalier.attendre(1);
+  assert.deepEqual(pedalier.idees().map((m) => m.etape), ["pedalier"]);
+});
+
+test("un Voltaïque pose son banc, puis ramasse le panneau : le message vient", () => {
+  const { tous, attendre, sac, joueur } = monter({
+    famille: "voltaiques",
+    inventaire: { sac_a_dos: 1 },
+    avant: (b, id) => b.ajouterInstallation(id, "banc_recharge", 21, 20, 0),
+  });
+  joueur.position = { x: 20, z: 20, o: 0 };
+  attendre(1);
+  assert.equal(tous("idee").length, 0);
+  sac({ sac_a_dos: 1, panneau_solaire: 1 });
+  attendre(1);
+  assert.deepEqual(tous("idee").map((m) => m.etape), ["banc_recharge"]);
+  assert.match(tous("idee")[0]!.texte, /panneau, posé sur un banc/);
+});

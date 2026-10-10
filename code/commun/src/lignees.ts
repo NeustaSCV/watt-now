@@ -434,7 +434,7 @@ export const LIGNEES_INSTALLATIONS: Partial<Record<TypeInstallation, readonly Et
       cle: {
         objet: "toile_jute",
         ou: "L1B",
-        replis: [{ couts: { chiffons: 4, sac_plastique: 2 }, note: "Ou 4 chiffons et 2 sacs plastique cousus : ça ferme, mais c'est moins chaud." }],
+        replis: [{ couts: { chiffons: 4, sac_plastique: 2 }, note: "Ou 4 chiffons et 2 sacs plastique cousus : ça ferme, mais c'est moins chaud (sommeil ×1,35)." }],
         idee: "Cette toile tendue côté vent, et ton abri devient une chambre.",
         ideePlusTard: "Cette toile pourra fermer ton abri, un jour.",
         indice: ["De quoi fermer ton abri ? De la grosse toile.", "Les sacs de jute du magasin, au Moulin du Gué."],
@@ -651,7 +651,7 @@ export const LIGNEES_INSTALLATIONS: Partial<Record<TypeInstallation, readonly Et
     },
   ],
   // ---------- La lumière (plan 0.8 §2.3, chantier 6 ; Book 24 §3.5) ----------
-  // La torche plantée brûle une heure, puis il faut en planter une autre (torche.ts).
+  // La torche plantée brûle une nuit entière, puis il faut en planter une autre (torche.ts).
   torche_plantee: [
     {
       id: "torche_plantee",
@@ -662,8 +662,8 @@ export const LIGNEES_INSTALLATIONS: Partial<Record<TypeInstallation, readonly Et
       duree: 10,
       intensite: "legere",
       etapeLieu: "maison",
-      apporte: "Éclaire 6 m autour pendant une heure, sans allumer de feu. La nuit, elle se voit de loin.",
-      examen: "Une branche plantée, un chiffon gras qui brûle au bout. Elle éclaire six mètres autour, une heure durant.",
+      apporte: "Éclaire 6 m autour une nuit entière, sans allumer de feu. La nuit, elle se voit de loin.",
+      examen: "Une branche plantée, un chiffon gras qui brûle au bout. Elle éclaire six mètres autour, une nuit durant.",
     },
     {
       id: "lanterne_fixe",
@@ -795,12 +795,31 @@ export const LIGNEES_INSTALLATIONS: Partial<Record<TypeInstallation, readonly Et
   ],
 };
 
+/**
+ * La pièce de chaque meuble de famille (plan 0.8 §9.2) : le champ de son état qui dit qu'elle est posée (l'enclume, le
+ * panneau, l'alternateur). Le meuble ne compte comme monté au niveau de sa clé qu'une fois sa pièce posée : sans elle,
+ * « Tu y penses » parle encore au ramassage de la pièce, et la fiche montre la clé à trouver.
+ */
+export const PIECES_DE_FAMILLE: Partial<Record<TypeInstallation, "enclume" | "panneau" | "alternateur">> = {
+  forge: "enclume",
+  banc_recharge: "panneau",
+  pedalier: "alternateur",
+};
+
+/** Ce meuble de famille attend-il encore sa pièce ? (false pour tout autre meuble.) */
+export function pieceAPoser(i: { type: string; etat?: Partial<Record<"enclume" | "panneau" | "alternateur", unknown>> }): boolean {
+  const piece = PIECES_DE_FAMILLE[i.type as TypeInstallation];
+  return piece !== undefined && !i.etat?.[piece];
+}
+
 /** Ce que tient un coffre selon son niveau (kg). */
 export const CAPACITES_COFFRE = [150, 250, 400] as const;
 /** Ce que tient le récupérateur selon son niveau (L) : le bidon, le seau, le jerrican (plus tard). */
 export const CONTENANCES_RECUPERATEUR = [5, 10, 20] as const;
 /** Le sommeil dans l'abri selon son niveau (multiplicateur, comme le lit de branchages). */
 export const SOMMEIL_ABRI = [1, 1.3, 1.45, 1.6, 1.6] as const;
+/** L'abri fermé par le repli (chiffons et sacs plastique cousus, sans la toile de jute) : moins chaud (plan 0.8 §9.2). */
+export const SOMMEIL_ABRI_FERME_REPLI = 1.35;
 
 export function lignee(type: string): readonly Etape[] | null {
   return LIGNEES_INSTALLATIONS[type as TypeInstallation] ?? null;
@@ -809,6 +828,19 @@ export function lignee(type: string): readonly Etape[] | null {
 export function niveauInstallation(i: { type: string; niveau?: number }): number {
   const l = lignee(i.type);
   return Math.max(1, Math.min(l?.length ?? 1, Math.floor(i.niveau ?? 1)));
+}
+
+/**
+ * Le sommeil dans un abri posé : celui de son niveau ; l'abri fermé sans la toile de jute (ce qu'on a payé pour le
+ * fermer, le dernier de `etat.payes`, n'en a pas : c'est le repli de sa clé) ne donne que ×1,35.
+ */
+export function sommeilAbri(i: { type: string; niveau?: number; etat?: { payes?: readonly Inventaire[] } }): number {
+  const niveau = niveauInstallation(i);
+  const s = SOMMEIL_ABRI[niveau - 1] ?? 1;
+  if (i.type !== "abri" || niveau !== 3) return s;
+  // Chaque montée ajoute ce qu'elle a coûté au bout de `payes`, chaque descente l'en retire : le dernier est le niveau 3.
+  const ferme = i.etat?.payes?.at(-1);
+  return ferme && !(ferme.toile_jute ?? 0) ? SOMMEIL_ABRI_FERME_REPLI : s;
 }
 
 export function etapeInstallation(i: { type: string; niveau?: number }): Etape | null {

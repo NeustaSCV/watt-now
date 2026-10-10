@@ -217,6 +217,7 @@ function forgeSeule(sac: Inventaire, forge: Partial<InstallationVue> | null = nu
     id: 1,
     alea,
     inventaire: () => sac,
+    outils: () => sac,
     retirer: (cle, n) => {
       sac[cle] = (sac[cle] ?? 0) - n;
       if (!sac[cle]) delete sac[cle];
@@ -265,7 +266,7 @@ test("🔥 une lame fendue à la trempe tombe en lame ébréchée, sur le joueur
   assert.match(t.infos().join(" "), /fendue à la trempe/);
 });
 
-test("🔥 le bac de trempe : une auge de 2 bûches et 2 glaises (Creuser 1), plus de casserole ; l'huile s'y verse", () => {
+test("🔥 le bac de trempe : une auge de 2 bûches et 2 glaises (Creuser 1, au sac ou au râtelier), plus de casserole ; l'huile s'y verse", () => {
   // La casserole ne fait plus le bac (V4-4).
   const casserole = monter("charbonniers", { marteau: 1, casserole: 1, bidon_huile: 1 });
   casserole.utiliser("poser_bac", 25);
@@ -288,6 +289,14 @@ test("🔥 le bac de trempe : une auge de 2 bûches et 2 glaises (Creuser 1), pl
   assert.equal(t.sac().baton_fouir, 1, "l'outil reste");
   t.utiliser("verser_huile");
   assert.equal(t.laForge().etat.huile, 20);
+  // Le bâton à fouir rangé au râtelier, à 3 m, compte comme les autres outils à portée (plan 0.8 §9.2).
+  const ratelier = monter("charbonniers", { buche: 2, glaise: 2 }, {}, () => 1, (b, id) => {
+    const r = b.ajouterInstallation(id, "ratelier_outils", 21.5, 20, 0);
+    b.sauverEtatInstallation(id, r.id, { contenu: { baton_fouir: 1 } });
+  });
+  ratelier.utiliser("poser_bac", 25);
+  assert.equal(ratelier.laForge().etat.bac, true, "le bâton du râtelier suffit");
+  assert.equal(ratelier.sac().glaise, undefined);
   // Le ressort retrempé (la trempe douce de l'arbalète lourde) est du niveau 3 : « plus tard ».
   assert.equal(recette("ressort_retrempe")!.aVenir, "niveau 3");
   t.fabriquer("ressort_retrempe");

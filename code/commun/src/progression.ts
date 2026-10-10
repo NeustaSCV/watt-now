@@ -16,7 +16,7 @@
 // affiche (client/src/fabrication-arbre.ts, la fiche d'installation de hud.ts, client/src/bandeau-idee.ts).
 
 import { RECETTES, estApprise, installationDuLieu, estHorsFamille, niveauQualite, recette, type LieuRecette, type Recette, type SavoirRecettes } from "./recettes.ts";
-import { ACCESSOIRES_FEU, LIGNEES_INSTALLATIONS, VOIE_CREUSEE, VOIE_SURFACE, etapeAccessoire, lignee, type AccessoireFeu, type CleEvolution, type Etape } from "./lignees.ts";
+import { ACCESSOIRES_FEU, LIGNEES_INSTALLATIONS, PIECES_DE_FAMILLE, VOIE_CREUSEE, VOIE_SURFACE, etapeAccessoire, lignee, type AccessoireFeu, type CleEvolution, type Etape } from "./lignees.ts";
 import type { Inventaire, TypeObjet } from "./objets.ts";
 import { QUETE, type Condition, type Quete } from "./quetes.ts";
 import type { Famille } from "./regles.ts";
@@ -739,6 +739,10 @@ export function niveauPossede(x: EtapeAvecCle, installations: ReadonlyMap<string
     if (installations.has(x.construction)) return 2;
     return def?.formes.some((f) => installations.has(`feu:${f}`)) ? 1 : 0;
   }
+  // Un meuble de famille ne compte au niveau de sa clé qu'une fois sa pièce posée (plan 0.8 §9.2) : `forge+enclume`,
+  // `banc_recharge+panneau`, `pedalier+alternateur` dans la carte des constructions.
+  const piece = PIECES_DE_FAMILLE[x.construction as keyof typeof PIECES_DE_FAMILLE];
+  if (piece && x.etape.niveau === 1) return installations.has(`${x.construction}+${piece}`) ? 1 : 0;
   if (x.construction !== "feu") return installations.get(x.construction) ?? 0;
   const voie = VOIE_SURFACE.some((v) => v.id === x.etape.id) ? VOIE_SURFACE : VOIE_CREUSEE;
   return Math.max(0, ...voie.filter((v) => installations.has(`feu:${v.id}`)).map((v) => v.niveau));

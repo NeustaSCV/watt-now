@@ -193,7 +193,8 @@ export function refusLieu(lieu: LieuRecette, a: Alentours): string | null {
 // ---------- La carte des installations (le dévoilement) ----------
 
 /** Les accessoires d'installation que la carte retient (« forge+bac »). */
-const ACCESSOIRES_CARTE = ["bac", "huile", "enclume", "ventilateur", "meule", "meuleFine", "dynamo", "soufflet", "redresseur", "poste_montage", "roulements"];
+// « panneau » et « alternateur » : les pièces du banc solaire et du pédalier générateur (le dévoilement les lit, §9.2).
+const ACCESSOIRES_CARTE = ["bac", "huile", "enclume", "ventilateur", "meule", "meuleFine", "dynamo", "soufflet", "redresseur", "poste_montage", "roulements", "panneau", "alternateur"];
 
 /**
  * La carte des installations d'un terrain, pour le dévoilement : chaque type à son niveau ; « feu » au meilleur niveau
