@@ -2,7 +2,12 @@
 // les données dont le jeu a besoin côté serveur, où le modèle (three.js, dessins au canvas) ne se charge pas : les
 // segments infranchissables de ses quatre tronçons, ceux du radeau, les points de la fiche (fouille, Éteints, entrées,
 // interactions), les couches qui s'effacent et les lumières. Le résultat est `commun/src/gue-modele.ts`, dans le repère
-// du modèle (halte entière, origine au centre) : `commun/src/gue.ts` le retourne pour suivre la carte.
+// de la fiche du modèle (FICHE, halte entière, origine au centre, le terrain à l'ouest) : `commun/src/gue.ts` le
+// retourne pour suivre la carte.
+//
+// Le jeu dessine le gué retourné par le modèle lui-même (`creer({ miroir: true })`, FICHE_MIROIR) : les obstacles, les
+// couches et les lumières sont donc tirés des tronçons retournés, puis ramenés au repère de FICHE (x → −x), pour que le
+// serveur bute exactement sur ce que l'écran dessine.
 //
 // À relancer après chaque import d'un nouveau modèle du gué : `node scripts/extraire-gue.mjs` (depuis code/). Le test
 // `serveur/src/gue.test.ts` vérifie que le fichier tiré est à jour.
@@ -36,30 +41,34 @@ const arr = (v) => Math.round(v * 100) / 100;
 /** Les données de jeu du modèle, dans le repère de la halte entière. */
 export async function extraire() {
   canvasMuet();
-  const { creer, FICHE } = await import("../client/src/batiments/halte-gue/modele.js");
+  const { creer, FICHE, FICHE_MIROIR } = await import("../client/src/batiments/halte-gue/modele.js");
   const segments = [];
   const vus = new Set();
   const couches = [];
   const lumieres = [];
   let radeau = null;
-  for (const carte of FICHE.cartes) {
+  // x d'un tronçon retourné → x de FICHE.
+  for (const carte of FICHE_MIROIR.cartes) {
     const x0 = carte.decalage.x;
-    const g = creer({ carte: carte.id });
+    const versFiche = (x) => arr(-(x + x0));
+    const g = creer({ carte: carte.id, miroir: true });
     for (const s of g.userData.obstacles) {
-      const seg = { x1: arr(s.x1 + x0), z1: s.z1, x2: arr(s.x2 + x0), z2: s.z2, nature: s.nature };
+      const seg = { x1: versFiche(s.x2), z1: s.z2, x2: versFiche(s.x1), z2: s.z1, nature: s.nature };
       const cle = JSON.stringify(seg);
       if (vus.has(cle)) continue;
       vus.add(cle);
       segments.push(seg);
     }
-    for (const t of g.userData.toits) couches.push({ nom: t.nom, troncon: carte.id, boite: { ...t.boite, x: arr(t.boite.x + x0) }, bas: t.bas, haut: t.haut });
-    for (const l of g.userData.lumieres) lumieres.push({ troncon: carte.id, x: arr(l.x + x0), y: l.y, z: l.z, couleur: l.couleur, intensite: l.intensite, portee: l.portee, nature: l.nature });
-    if (g.userData.radeau) radeau = { obstacles: g.userData.radeau.userData.obstacles };
+    for (const t of g.userData.toits) couches.push({ nom: t.nom, troncon: carte.id, boite: { ...t.boite, x: versFiche(t.boite.x) }, bas: t.bas, haut: t.haut });
+    for (const l of g.userData.lumieres) lumieres.push({ troncon: carte.id, x: versFiche(l.x), y: l.y, z: l.z, couleur: l.couleur, intensite: l.intensite, portee: l.portee, nature: l.nature });
+    // Les obstacles du radeau sont relatifs à son centre : seulement x → −x.
+    const relatif = (l) => (l ?? []).map((s) => ({ x1: arr(-s.x2), z1: s.z2, x2: arr(-s.x1), z2: s.z1, nature: s.nature }));
+    if (g.userData.radeau) radeau = { obstacles: relatif(g.userData.radeau.userData.obstacles), obstaclesTraversee: relatif(g.userData.radeau.userData.obstaclesTraversee) };
   }
   const points = (cle) => FICHE.cartes.flatMap((c) => c[cle].map((p) => ({ ...p, x: arr(p.x + c.decalage.x) })));
   return {
     segments,
-    radeau: { ...FICHE.bac, obstacles: radeau?.obstacles ?? [] },
+    radeau: { ...FICHE.bac, obstacles: radeau?.obstacles ?? [], obstaclesTraversee: radeau?.obstaclesTraversee ?? [] },
     nappeRadier: FICHE.nappeRadier,
     entrees: points("entrees"),
     fouille: points("fouille"),
@@ -121,7 +130,7 @@ export interface LumiereModele {
 }
 
 ${liste("SEGMENTS_MODELE", "SegmentModele", d.segments)}
-/** Le bac (FICHE.bac) ; ses obstacles sont relatifs au centre du radeau. */
+/** Le bac (FICHE.bac) ; ses obstacles sont relatifs au centre du radeau (les garde-corps, toujours ; les chaînes des deux bouts, pendant la traversée). */
 export const BAC_MODELE = ${JSON.stringify(d.radeau, null, 2)} as const;
 
 /** La nappe du radier (FICHE.nappeRadier) : la crue monte sa position.y. */

@@ -3,7 +3,7 @@
 
 import * as THREE from "three";
 import { PALETTE, matiere, matiereMonde, matiereVerre, matiereLueur, matiereTexture, MAT, dessiner } from "../commun/atelier.js";
-import { AL, AH, dessinerAtlas, dessinerEau, dessinerEcume, dessinerPlanches, dessinerTerrain, dessinerGalets } from "./atlas.js";
+import { AL, AH, dessinerAtlas, dessinerAtlasMiroir, dessinerEau, dessinerEcume, dessinerPlanches, dessinerTerrain, dessinerGalets } from "./atlas.js";
 
 export const PI = Math.PI;
 export const arr = (v) => Math.round(v * 100) / 100;
@@ -58,6 +58,7 @@ export function matieres() {
     lueur: matiereLueur(0xeef7c8, 0.08),
     panneaux,
     lumineux,
+    atlas,
     flammes,
     guirlande,
   };
@@ -458,5 +459,100 @@ export function recentrer(groupe, x0) {
   }
   ud.obstacles = ud.obstacles.map((s) => ({ ...s, x1: arr(s.x1 - x0), x2: arr(s.x2 - x0) }));
   ud.lumieres = ud.lumieres.map((l) => ({ ...l, x: arr(l.x - x0) }));
+  return groupe;
+}
+
+// ---------- Le gué retourné (option miroir) ----------
+
+let MIROIR = null;
+
+/** Les matières de l'atlas retourné (créées une fois). */
+function matieresMiroir() {
+  if (MIROIR) return MIROIR;
+  const atlas = dessiner("gue-atlas-miroir", AL, AH, dessinerAtlasMiroir, false);
+  atlas.anisotropy = 8;
+  const panneaux = M.panneaux.clone();
+  panneaux.map = atlas;
+  const lumineux = M.lumineux.clone();
+  lumineux.map = atlas;
+  lumineux.emissiveMap = atlas;
+  MIROIR = { atlas, remplace: new Map([[M.panneaux, panneaux], [M.lumineux, lumineux]]) };
+  return MIROIR;
+}
+
+/** Retourne une géométrie de gauche à droite (x → −x) en gardant ses faces dans le bon sens. */
+function retournerGeo(g) {
+  for (const nom of ["position", "normal"]) {
+    const a = g.attributes[nom];
+    if (!a) continue;
+    for (let i = 0; i < a.count; i++) a.setX(i, -a.getX(i));
+    a.needsUpdate = true;
+  }
+  if (g.index) {
+    const idx = g.index;
+    for (let i = 0; i + 2 < idx.count; i += 3) {
+      const t = idx.getX(i + 1);
+      idx.setX(i + 1, idx.getX(i + 2));
+      idx.setX(i + 2, t);
+    }
+    idx.needsUpdate = true;
+  } else {
+    for (const a of Object.values(g.attributes)) {
+      const n = a.itemSize;
+      const arr = a.array;
+      for (let i = 0; i + 2 < a.count; i += 3) {
+        for (let k = 0; k < n; k++) {
+          const p = (i + 1) * n + k;
+          const q = (i + 2) * n + k;
+          const t = arr[p];
+          arr[p] = arr[q];
+          arr[q] = t;
+        }
+      }
+      a.needsUpdate = true;
+    }
+  }
+  g.computeBoundingBox();
+  g.computeBoundingSphere();
+}
+
+/**
+ * Retourne un tronçon déjà construit et recentré (x → −x) : géométrie, positions des objets, couches, obstacles,
+ * lumières, obstacles du radeau. Les enseignes passent sur l'atlas retourné, pour se lire à l'endroit.
+ */
+export function miroiter(groupe) {
+  const { atlas, remplace } = matieresMiroir();
+  const vues = new Set();
+  groupe.traverse((o) => {
+    if (o !== groupe) o.position.x = -o.position.x;
+    if (!o.isMesh) return;
+    if (!vues.has(o.geometry)) {
+      vues.add(o.geometry);
+      retournerGeo(o.geometry);
+    }
+    const m = o.material;
+    if (remplace.has(m)) o.material = remplace.get(m);
+    else if (m.map === M.atlas) {
+      // une matière propre à une couche (clonée pour son fondu) : on lui donne l'atlas retourné
+      m.map = atlas;
+      if (m.emissiveMap === M.atlas) m.emissiveMap = atlas;
+    }
+  });
+  const nx = (v) => arr(-v);
+  const segments = (l) => (l ?? []).map((s) => ({ ...s, x1: nx(s.x2), x2: nx(s.x1), z1: s.z2, z2: s.z1 }));
+  const ud = groupe.userData;
+  for (const t of ud.toits ?? []) {
+    t.boite = { ...t.boite, x: nx(t.boite.x) };
+    if (t.horsDe) t.horsDe = { ...t.horsDe, x: nx(t.horsDe.x) };
+  }
+  ud.obstacles = segments(ud.obstacles);
+  ud.lumieres = (ud.lumieres ?? []).map((l) => ({ ...l, x: nx(l.x) }));
+  groupe.traverse((o) => {
+    if (o.name !== "radeau") return;
+    o.userData.obstacles = segments(o.userData.obstacles);
+    o.userData.obstaclesTraversee = segments(o.userData.obstaclesTraversee);
+    o.userData.accostages = (o.userData.accostages ?? []).map((a) => ({ ...a, x: nx(a.x), embarquement: a.embarquement && { ...a.embarquement, x: nx(a.embarquement.x) } }));
+  });
+  ud.miroir = true;
   return groupe;
 }
