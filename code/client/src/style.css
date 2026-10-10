@@ -4426,6 +4426,8 @@ body.aide-ouverte #hud .tactile {
   border-radius: 0;
   border-left: 3px double var(--encre);
   padding: 14px 16px 12px;
+  /* La légende prend la hauteur du dessin, jamais plus (0.8) : son corps défile, la feuille n'est jamais rognée. */
+  contain: size;
 }
 .carte-fiche header {
   display: flex;
@@ -4497,6 +4499,7 @@ body.aide-ouverte #hud .tactile {
     align-self: start;
     border-left: 0;
     border-top: 3px double var(--encre);
+    contain: none;
     max-height: calc(100dvh - 28px - (100vw - 28px) * 0.7);
   }
 }

@@ -178,14 +178,15 @@ export function dessinCarte(): string {
 
     <!-- Itinéraire au crayon -->
     <path d="M560 395 C520 410 460 420 410 418" class="pointilles"/>
-    <text x="438" y="436" class="crayon">1re sortie</text>
+    <text x="470" y="444" class="crayon">1re sortie</text>
 
     <!-- Les lieux -->
     <g class="lieu" data-lieu="terrain" transform="translate(560 382)" tabindex="0" role="button" aria-label="Ton terrain">
       <circle r="22" class="zone-clic"/>
       <rect x="-11" y="-11" width="22" height="22" class="enclos"/>
       <path d="M-5 4 l5 -9 l5 9 z" fill="#c8362b" stroke="${ENCRE}" stroke-width="1.2"/>
-      <text y="34" text-anchor="middle" class="nom-ouvert">Ton terrain</text>
+      <!-- 0.8 : le nom à droite, la route du gué descend sous l'enclos -->
+      <text x="17" y="6" class="nom-ouvert">Ton terrain</text>
       <text x="16" y="-14" class="crayon petit">chez moi</text>
     </g>
     <g class="lieu" data-lieu="station" transform="translate(402 404)" tabindex="0" role="button" aria-label="La station-service">
@@ -222,8 +223,9 @@ export function dessinCarte(): string {
     <g class="lieu" data-lieu="gue" transform="translate(462 481)" tabindex="0" role="button" aria-label="Le Gué-aux-Saules">
       <circle r="22" class="zone-clic"/>
       <g transform="rotate(34)">
-        <path d="M-7 -13 v6 M7 -13 v4" class="trait"/>
-        <path d="M-7 -13 q5 7 10 3" class="trait-fin"/>
+        <rect x="-8.5" y="-15" width="3" height="6" fill="${ENCRE}"/>
+        <rect x="5.5" y="-13" width="3" height="4" fill="${ENCRE}" transform="rotate(-18 7 -11)"/>
+        <path d="M-7 -15 q4 6 8 4" class="trait-fin"/>
         <rect x="-13" y="-3" width="26" height="6" fill="#ecdfbf" stroke="${ENCRE}" stroke-width="1.3"/>
         <path d="M-9 0 h4 M-2 0 h4 M5 0 h4" stroke="#5f8590" stroke-width="1.1" stroke-linecap="round"/>
         <rect x="-16" y="-4.5" width="3" height="9" fill="#c8362b" stroke="${ENCRE}" stroke-width="0.8"/>
