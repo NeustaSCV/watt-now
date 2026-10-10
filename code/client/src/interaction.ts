@@ -196,11 +196,11 @@ function actionsInstallation(
   }
 }
 
-/** Le soufflet à manivelle, la meule fine (Book 25 §6.4) : à monter sur le pédalier, si l'on a de quoi. */
+/** Le ventilateur à manivelle, la meule fine (Book 25 §6.4) : à monter sur le pédalier, si l'on a de quoi. */
 function accessoirePedalier(i: InstallationVue, inventaire: Inventaire, msg: (libelle: string, verbe: Verbe) => ActionProposee): ActionProposee | null {
   const a = (t: TypeObjet, n = 1) => (inventaire[t] ?? 0) >= n;
   if (i.etat.meule && !i.etat.meuleFine && a("pierre") && a("chiffons")) return msg("Monter la meule fine", "monter_meule_fine");
-  if (!i.etat.soufflet && a("roue_velo") && a("bache") && a("branche", 4)) return msg("Monter le soufflet à manivelle", "monter_soufflet");
+  if (!i.etat.soufflet && a("roue_velo") && a("bache") && a("branche", 4)) return msg("Monter le ventilateur à manivelle", "monter_soufflet");
   return null;
 }
 

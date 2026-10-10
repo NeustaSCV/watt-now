@@ -21,7 +21,7 @@ test("une matière qui manque : combien, et où la trouver", () => {
 });
 
 test("les outils d'une qualité, à un niveau donné", () => {
-  // La masse martèle aussi, et mieux (Marteler 3, Book 25 §11).
-  assert.deepEqual(outilsPour("marteler", 2), ["marteau", "masse"]);
+  // La masse martèle aussi, et mieux (Marteler 3, Book 25 §11) ; le marteau de fortune, une barre repliée (plan 0.8).
+  assert.deepEqual(outilsPour("marteler", 2), ["marteau", "masse", "marteau_fortune"]);
   assert.ok(outilsPour("marteler", 1).includes("pierre"));
 });

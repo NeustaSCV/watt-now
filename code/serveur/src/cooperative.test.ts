@@ -277,9 +277,11 @@ test("0.5d : le butin — un pied-de-biche garanti, le coffre à la clé du maga
   assert.equal(inv().cle_coffre, 1);
   fouiller("coop_coffre");
   assert.equal(inv().semences_f1, 1);
-  // Les caisses de la chambre froide : prises, elles ne reviennent pas avant 4 jours, même après rechargement.
+  // Les caisses de la chambre froide : prises, elles ne reviennent pas avant 4 jours, même après rechargement. Plan 0.8
+  // (I8) : ni roulements ni alternateur de tracteur (la laiterie et ses seaux viennent avec le chantier 10).
   fouiller("coop_caisse_froide");
-  assert.equal(inv().roulements, 1);
+  assert.equal(inv().roulements, undefined);
+  assert.equal(inv().alternateur_tracteur, undefined);
   const caisse = r("coop_caisse_froide");
   t.deconnecter(a.joueur);
   t.attendre(6 * 60, 5);

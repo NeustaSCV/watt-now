@@ -951,7 +951,7 @@ export class VueInstallation {
         // Les installations du métier (Book 25) : leur modèle vient du registre des métiers, sinon un piquet provisoire.
         this.objet = enGroupeMetier(modeleMetier(donnees.type, "sol")) ?? piquetProvisoire();
     }
-    // Les accessoires mécanistes du pédalier (soufflet à manivelle, meule fine), montrés selon son état.
+    // Les accessoires mécanistes du pédalier (ventilateur à manivelle, meule fine), montrés selon son état.
     if (donnees.type === "pedalier") for (const a of ["pedalier_meule_fine", "pedalier_soufflet"]) {
       const m = modeleMetier(a, "sol");
       if (m) this.objet.add(m);

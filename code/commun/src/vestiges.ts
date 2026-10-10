@@ -222,6 +222,8 @@ const VESTIGES_LOT1 = {
     valeur: 45,
     famille: "cuisine",
     rarete: "P",
+    // Plan 0.8 (I7) : une clé du niveau 1 (L1A, le libre-service) sort des tables de fouille courantes.
+    horsTirage: true,
   },
   autocuiseur: {
     nom: "autocuiseur",
@@ -561,6 +563,8 @@ const VESTIGES_LOT1 = {
     valeur: 35,
     famille: "garage",
     rarete: "P",
+    // Plan 0.8 (I7) : une clé du niveau 1 (L1B, l'établi du rhabilleur) sort des tables de fouille courantes.
+    horsTirage: true,
   },
   groupe_electrogene: {
     nom: "groupe électrogène",
@@ -716,6 +720,8 @@ const VESTIGES_LOT1 = {
     valeur: 20,
     famille: "ferme",
     rarete: "P",
+    // Plan 0.8 (I7) : une clé du niveau 1 (L1A, le parc à volailles) sort des tables de fouille courantes.
+    horsTirage: true,
   },
   // ---------- La Coopérative du Plateau (Book 23 §2.2) : on ne les trouve que là ----------
   roulements: {
@@ -865,6 +871,9 @@ const VESTIGES_LOT1 = {
     valeur: 35,
     famille: "voiture",
     rarete: "P",
+    // Plan 0.8 (I12) : elle quitte les épaves et la mobylette de la station ; elle ira à H2A, avec une épave de
+    // mobylette. Le module à bobine ★★★ ne s'obtient plus avant le niveau 2.
+    horsTirage: true,
   },
   lime_usee: {
     nom: "lime usée",
@@ -956,6 +965,126 @@ const VESTIGES_LOT1 = {
     rarete: "R",
     teinte: "#d8c43a",
   },
+  // ---------- Le niveau 1 (plan 0.8, chantier 3) : les objets qu'on trouve, tous à une place fixe ----------
+  // Hors des tirages : chacun a sa place (la ruine, la station, L1A, L1B), et le chantier 10 leur donne à la main une
+  // chance rare ailleurs (R-BUTIN, I7). Les objets fabriqués du niveau 1 sont dans objets-niveau1.ts.
+  // La maison : la ruine et sa caisse à outils.
+  bidon_5l: {
+    nom: "bidon de 5 L",
+    pluriel: "bidons de 5 L",
+    description: "Un bidon de plastique blanc, cinq litres, son bouchon encore vissé. Rincé, il gardera l'eau de pluie.",
+    poids: 0.3,
+    valeur: 4,
+    famille: "ferme",
+    rarete: "C",
+    teinte: "#e8e4d8",
+    horsTirage: true,
+  },
+  tete_marteau: {
+    nom: "tête de marteau",
+    pluriel: "têtes de marteau",
+    description: "Une tête de marteau de menuisier, le manche tombé en poussière. Une branche droite dans l'œil, et elle tape de nouveau.",
+    poids: 0.5,
+    valeur: 20,
+    famille: "garage",
+    rarete: "P",
+    teinte: "#55524d",
+    horsTirage: true,
+  },
+  // H1A : les pièces de famille, dans l'atelier du garage (chacun la sienne : chantier 10).
+  enclume_depanneur: {
+    nom: "enclume de dépanneur",
+    pluriel: "enclumes de dépanneur",
+    description: "Une petite enclume de garage, dix kilos d'acier, la table polie par trente ans de coups. Près d'un foyer, elle forge.",
+    poids: 10,
+    valeur: 120,
+    famille: "garage",
+    rarete: "R",
+    teinte: "#4a4844",
+    horsTirage: true,
+  },
+  petit_alternateur: {
+    nom: "petit alternateur",
+    pluriel: "petits alternateurs",
+    description: "L'alternateur d'une petite voiture, sorti du moteur avec sa poulie. Entraîné par une courroie, il charge une batterie.",
+    poids: 3.5,
+    valeur: 110,
+    famille: "voiture",
+    rarete: "R",
+    teinte: "#9aa3a8",
+    horsTirage: true,
+  },
+  // H1A : le bocal de clous de la caisse de l'atelier, vidé (I2).
+  poignee_clous: {
+    nom: "poignée de clous",
+    pluriel: "poignées de clous",
+    description: "Des clous triés dans le bocal, tous de la bonne longueur. De quoi clouer un abri, ou cercler un coffre.",
+    poids: 0.5,
+    valeur: 2,
+    famille: "garage",
+    rarete: "C",
+    teinte: "#8a8f96",
+    horsTirage: true,
+  },
+  // L1A : la laiterie de la Coopérative (I8).
+  seau_10l: {
+    nom: "seau galvanisé de 10 L",
+    pluriel: "seaux galvanisés de 10 L",
+    description: "Un seau de laiterie en tôle galvanisée, une anse de fil. Dix litres, sans une fuite.",
+    poids: 1.4,
+    valeur: 12,
+    famille: "ferme",
+    rarete: "P",
+    teinte: "#b8bcc0",
+    horsTirage: true,
+  },
+  // L1B : le magasin, l'étable et l'atelier du Moulin.
+  toile_jute: {
+    nom: "toile de jute",
+    pluriel: "toiles de jute",
+    description: "Des sacs à farine du Moulin, décousus et mis à plat. Une toile rêche et serrée, qui arrête le vent.",
+    poids: 1.2,
+    valeur: 10,
+    famille: "textile",
+    rarete: "P",
+    teinte: "#b89a64",
+    horsTirage: true,
+  },
+  feuillards: {
+    nom: "botte de feuillards",
+    pluriel: "bottes de feuillards",
+    description: "Les cercles de fer d'un baril à farine, chassés au marteau. Cloués autour d'un coffre, ils le tiennent pour vingt ans.",
+    poids: 3,
+    valeur: 15,
+    famille: "ferme",
+    rarete: "P",
+    teinte: "#6b6560",
+    horsTirage: true,
+  },
+  // L'arme trouvée de L1B (I22, I30) : ses valeurs d'arme sont au chantier 8. Elle ne sert pas d'outil.
+  fourche_foin: {
+    nom: "fourche à foin",
+    pluriel: "fourches à foin",
+    description: "Trois dents d'acier au bout d'un long manche de frêne. On la tient à deux mètres, et elle passe où un casque arrête un coup.",
+    poids: 1.8,
+    valeur: 60,
+    famille: "ferme",
+    rarete: "P",
+    teinte: "#8a6a48",
+    horsTirage: true,
+  },
+  // La clé de la grande porte du Moulin (plan 0.8 §10.1), au tableau de l'atelier, comme la clé du coffre de L1A.
+  cle_moulin: {
+    nom: "grosse clé du Moulin",
+    pluriel: "grosses clés du Moulin",
+    description: "Une clé de fer longue comme la main, une étiquette de bois au bout d'une ficelle : « GRANDE PORTE ».",
+    poids: 0.4,
+    valeur: 1,
+    famille: "salon",
+    rarete: "C",
+    teinte: "#5c5650",
+    horsTirage: true,
+  },
 } satisfies Record<string, DefinitionVestige>;
 
 /** Les vestiges : le lot 1 (0.3 et 0.6) et les déchets de l'Abondance (lot 2, 0.7 : vestiges-lot2.ts). */
@@ -1040,6 +1169,8 @@ export const DEMONTAGE: Partial<Record<TypeObjet, Demontage>> = {
   tuyau_arrosage: { donne: { caoutchouc: 4 }, qualites: { couper: 1 }, duree: 4 },
   // Les débris d'arme (Book 23 §4.3, 0.5.1) : un peu de matière, pas l'arme.
   manche_fendu: { donne: { branche: 1 }, qualites: {}, duree: 2 },
+  // Vider le bocal de clous (I2) : cinq poignées triées. Les flèches et les carreaux de clou prennent encore le bocal.
+  bocal_clous: { donne: { poignee_clous: 5 }, qualites: {}, duree: 6 },
   ferraille_tordue: { donne: { barre_metal: 1 }, qualites: { marteler: 1 }, duree: 8 },
   // Les déchets de l'Abondance (lot 2, 0.7) : vestiges-lot2.ts.
   ...DEMONTAGE_LOT2,

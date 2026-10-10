@@ -7,6 +7,7 @@ import type { TypeInstallation } from "../../commun/src/recettes.ts";
 import { definitionVestige, type FamilleVestige } from "../../commun/src/vestiges.ts";
 import { DESSINS_METIER } from "./icones-metier.ts";
 import { DESSINS_DECHETS } from "./icones-dechets.ts";
+import { DESSINS_NIVEAU1 } from "./icones-niveau1.ts";
 
 const ENCRE = "#3b2a1e";
 const T = `stroke="${ENCRE}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"`;
@@ -65,10 +66,12 @@ const DESSINS: Partial<Record<Pictogramme, string>> = {
     <path d="M10 30 C16 18 22 40 28 26 S38 16 40 22" fill="none" stroke="#c9b48a" stroke-width="3" stroke-linecap="round"/>
     <path d="M10 30 C16 18 22 40 28 26 S38 16 40 22" fill="none" ${T} stroke-width="1"/>
     <circle cx="24" cy="31" r="6" fill="#d8c69c" ${T}/><path d="M19 29 Q24 34 29 29 M20 33 Q24 28 28 33" fill="none" stroke-width="1" ${T}/>`,
+  // Taillé au couteau : la pointe claire, fraîchement biseautée (durci au feu, il noircit : icones-niveau1.ts).
   baton_fouir: `
     <path d="M12 40 L34 8" stroke="#6b4a32" stroke-width="5" stroke-linecap="round"/>
     <path d="M12 40 L34 8" fill="none" ${T} stroke-width="1.2"/>
-    <path d="M30 14 L38 4 L36 15 Z" fill="#3b2a1e" ${T}/>
+    <path d="M30 14 L38 4 L36 15 Z" fill="#d8bc8e" ${T}/>
+    <path d="M33 11 L37 6" stroke="#a08058" stroke-width="1" stroke-linecap="round"/>
     <path d="M17 33 l3 1 M21 27 l3 1" stroke-width="1.2" ${T}/>`,
   epieu: `
     <path d="M7 43 L38 9" stroke="#7a5a3c" stroke-width="4" stroke-linecap="round"/>
@@ -869,9 +872,15 @@ export function estDessinee(type: Pictogramme): boolean {
   return dessinPropre(type) !== undefined;
 }
 
-/** Le dessin propre d'un pictogramme, s'il en a un (lot 1, métier, lot 2 des déchets). */
+/** Le dessin propre d'un pictogramme, s'il en a un (lot 1, métier, niveau 1 de la 0.8, lot 2 des déchets). */
 function dessinPropre(type: Pictogramme): string | undefined {
-  return DESSINS[type] ?? DESSINS_VESTIGES[type] ?? DESSINS_METIER[type] ?? (Object.hasOwn(DESSINS_DECHETS, type) ? DESSINS_DECHETS[type] : undefined);
+  return (
+    DESSINS[type] ??
+    DESSINS_VESTIGES[type] ??
+    DESSINS_METIER[type] ??
+    (Object.hasOwn(DESSINS_NIVEAU1, type) ? DESSINS_NIVEAU1[type] : undefined) ??
+    (Object.hasOwn(DESSINS_DECHETS, type) ? DESSINS_DECHETS[type] : undefined)
+  );
 }
 
 /** Le pictogramme d'une famille de vestiges, dans sa première teinte (planche des icônes, repli des prochains lots). */

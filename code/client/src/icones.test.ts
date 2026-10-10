@@ -8,6 +8,8 @@ import { NOMS_INSTALLATIONS, type TypeInstallation } from "../../commun/src/rece
 import { NOMS_FAMILLES_VESTIGES, type FamilleVestige } from "../../commun/src/vestiges.ts";
 import { VESTIGES_LOT2 } from "../../commun/src/vestiges-lot2.ts";
 import { DESSINS_DECHETS } from "./icones-dechets.ts";
+import { DESSINS_NIVEAU1 } from "./icones-niveau1.ts";
+import { NOUVEAUX_OBJETS_0_8 } from "../../commun/src/objets-niveau1.ts";
 import { estDessinee, icone, iconeFamille, type Pictogramme } from "./icones.ts";
 
 const TOUS: Pictogramme[] = [
@@ -76,4 +78,20 @@ test("deux objets du lot 2 n'ont jamais le même dessin", () => {
     assert.equal(deja, undefined, `${type} et ${deja} ont le même dessin`);
     vus.set(dessin, type);
   }
+});
+
+test("chaque objet nouveau de la 0.8 a son propre dessin, et deux d'entre eux n'ont jamais le même (plan 0.8, chantier 3)", () => {
+  assert.ok(NOUVEAUX_OBJETS_0_8.length >= 18);
+  const vus = new Map<string, string>();
+  for (const type of NOUVEAUX_OBJETS_0_8) {
+    assert.ok(Object.hasOwn(DESSINS_NIVEAU1, type), `${type} sans dessin`);
+    assert.ok(estDessinee(type), type);
+    const dessin = DESSINS_NIVEAU1[type]!;
+    assert.equal(vus.get(dessin), undefined, `${type} et ${vus.get(dessin)} ont le même dessin`);
+    vus.set(dessin, type);
+  }
+  // Les deux installations nouvelles aussi ; et rien d'inconnu dans la table.
+  for (const type of ["ratelier_outils", "torche_plantee"] as Pictogramme[]) assert.ok(Object.hasOwn(DESSINS_NIVEAU1, type), type);
+  const connus = new Set<string>(TOUS);
+  for (const type of Object.keys(DESSINS_NIVEAU1)) assert.ok(connus.has(type), `${type} : dessin d'un objet inconnu`);
 });

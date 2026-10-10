@@ -86,7 +86,11 @@ export function outilsManquantsBref(qualites: Partial<Record<Qualite, number>>, 
     // Les outils sont des portes dures (plan 0.8 §2.1) : un niveau en dessous ne fait plus l'affaire.
     .filter(([q, requis]) => niveauQualite(inventaire, q) < requis)
     .map(([q, requis]) => {
-      const types = outilsPour(q, requis);
+      // On propose d'abord les outils qu'on sait où trouver (plan 0.8 : l'étau, clé de L1B, serre à 3 mais ne se trouve
+      // qu'au Moulin ; on ne le cite pas à qui cherche Serrer 1).
+      const tous = outilsPour(q, requis);
+      const trouvables = tous.filter((t) => ouTrouver(t, visible).length > 0);
+      const types = trouvables.length > 0 ? trouvables : tous;
       const source = types.map((t) => ouTrouver(t, visible)).find((l) => l.length > 0)?.[0];
       return { q: NOMS_QUALITES[q].toLowerCase(), requis, bons: ou(types.slice(0, 2).map((t) => OBJETS[t].nom)), source };
     });
