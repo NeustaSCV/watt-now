@@ -116,7 +116,7 @@ export function creerMoulin(): THREE.Group {
   groupe.userData.toits = toits;
   const battantsOuverts = creerBattantsOuverts();
   battantsOuverts.visible = false;
-  groupe.add(modele, creerAlentours(), battantsOuverts);
+  groupe.add(modele, creerAlentours(modele), battantsOuverts);
   nommer(groupe, ["moulin", "alentours", "grande-porte"]);
   const pris = new Map<TypeRessource, Morceau>();
   for (const [type, b] of Object.entries(PRIS) as [TypeRessource, Boite3][]) pris.set(type, morceau(modele, b));
@@ -155,52 +155,87 @@ function mergeGeometries(geos: THREE.BufferGeometry[]): THREE.BufferGeometry {
   return res;
 }
 
+/** Les matières du modèle qu'on reprend autour du lot : son sol texturé (tuile de 7 m) et son eau. */
+function matieresDuModele(modele: THREE.Object3D): { sol: THREE.Material | null; eau: THREE.Material | null } {
+  let sol: THREE.Material | null = null;
+  let eau: THREE.Material | null = null;
+  modele.traverse((o) => {
+    const m = (o as THREE.Mesh).material as THREE.MeshStandardMaterial | undefined;
+    if (!m || !(o as THREE.Mesh).isMesh) return;
+    if (!sol && m.map && m.userData.tuile === 7) sol = m;
+    if (!eau && m.map && m.transparent && m.metalness === 0.3 && m.roughness === 0.12) eau = m;
+  });
+  return { sol, eau };
+}
+
 /**
- * Autour du lot : la prairie, la rivière qui continue au nord et au sud, le bief qui descend du nord, la route de l'est.
- * Un seul maillage (couleurs aux sommets), un appel de dessin.
+ * Autour du lot : la prairie, la rivière qui continue au nord et au sud (et ses berges), le bief qui descend du nord, la
+ * route de l'est. Dans les matières du modèle, aux mêmes coordonnées de texture : le bord du lot ne se voit pas. Deux
+ * maillages (le sol, l'eau), deux appels de dessin.
  */
-function creerAlentours(): THREE.Mesh {
+function creerAlentours(modele: THREE.Object3D): THREE.Group {
   const L = 64;
   const P = 54;
   const M = 60;
-  const positions: number[] = [];
-  const couleurs: number[] = [];
+  const sol = { positions: [] as number[], couleurs: [] as number[], uv: [] as number[] };
+  const eau = { positions: [] as number[], couleurs: [] as number[], uv: [] as number[] };
   const c = new THREE.Color();
-  const rect = (x0: number, z0: number, x1: number, z1: number, couleur: number, y = -0.01) => {
+  /** Un quadrilatère (quatre coins, dans l'ordre), teinté ; la texture se projette d'en haut (ou de face pour les berges). */
+  const quad = (cible: typeof sol, coins: [number, number, number][], couleur: number) => {
     c.setHex(couleur);
-    for (const [x, z] of [[x0, z0], [x0, z1], [x1, z1], [x0, z0], [x1, z1], [x1, z0]] as const) {
-      positions.push(x, y, z);
-      couleurs.push(c.r, c.g, c.b);
+    for (const k of [0, 1, 2, 0, 2, 3]) {
+      const [x, y, z] = coins[k]!;
+      cible.positions.push(x, y, z);
+      cible.couleurs.push(c.r, c.g, c.b);
+      const vertical = Math.abs(coins[0]![1] - coins[2]![1]) > 0.01;
+      cible.uv.push((vertical ? z - OZ + x - OX : x - OX) / 7, (vertical ? y : z - OZ) / 7);
     }
   };
+  const rect = (cible: typeof sol, x0: number, z0: number, x1: number, z1: number, couleur: number, y = 0) =>
+    quad(cible, [[x0, y, z0], [x0, y, z1], [x1, y, z1], [x1, y, z0]], couleur);
+  /** Une berge : la paroi de terre, du pré (y 0) à l'eau, le long de x, de z0 à z1. */
+  const berge = (x: number, z0: number, z1: number, fond: number) => quad(sol, [[x, 0, z0], [x, fond, z0], [x, fond, z1], [x, 0, z1]], 0x6b5640);
   const herbe = 0x8a9a5c;
-  const eau = 0x6f8a80;
-  const route = 0xa48b6a;
-  // Repère du modèle : la rivière (x 17 → 25), le bief et la levée (x 9,5 → 17) au nord, la route de l'est (z 15 → 19).
+  const route = 0xb3aa94;
+  const teinteEau = 0x8aa69a;
+  // Repère du modèle : la rivière (x 17 → 25), le bief (x 9,5 → 13) et la levée au nord, la route de l'est (z 15 → 19).
   const riv = [17 + OX, 25 + OX] as const;
   const bief = [9.5 + OX, 13 + OX] as const;
   // Au nord : prairie, bief, levée, rivière, prairie.
-  rect(-M, -M, bief[0], 0, herbe);
-  rect(bief[0], -M, bief[1], 0, eau, -0.6);
-  rect(bief[1], -M, riv[0], 0, herbe);
-  rect(riv[0], -M, riv[1], 0, eau, -1.5);
-  rect(riv[1], -M, L + M, 0, herbe);
+  rect(sol, -M, -M, bief[0], 0, herbe);
+  rect(eau, bief[0], -M, bief[1], 0, teinteEau, -0.6);
+  rect(sol, bief[1], -M, riv[0], 0, herbe);
+  rect(eau, riv[0], -M, riv[1], 0, teinteEau, -1.5);
+  rect(sol, riv[1], -M, L + M, 0, herbe);
+  for (const x of bief) berge(x, -M, 0, -0.6);
+  for (const x of riv) berge(x, -M, 0, -1.5);
   // Au sud : prairie, rivière, prairie.
-  rect(-M, P, riv[0], P + M, herbe);
-  rect(riv[0], P, riv[1], P + M, eau, -1.5);
-  rect(riv[1], P, L + M, P + M, herbe);
+  rect(sol, -M, P, riv[0], P + M, herbe);
+  rect(eau, riv[0], P, riv[1], P + M, teinteEau, -1.5);
+  rect(sol, riv[1], P, L + M, P + M, herbe);
+  for (const x of riv) berge(x, P, P + M, -1.5);
   // À l'ouest et à l'est, la prairie ; la route qui file vers l'est (vers le gué).
-  rect(-M, 0, 0, P, herbe);
-  rect(L, 0, L + M, 15 + OZ, herbe);
-  rect(L, 15 + OZ, L + M, 19 + OZ, route);
-  rect(L, 19 + OZ, L + M, P, herbe);
-  const g = new THREE.BufferGeometry();
-  g.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
-  g.setAttribute("color", new THREE.Float32BufferAttribute(couleurs, 3));
-  g.computeVertexNormals();
-  const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, flatShading: true }));
-  m.receiveShadow = true;
-  return m;
+  rect(sol, -M, 0, 0, P, herbe);
+  rect(sol, L, 0, L + M, 15.4 + OZ, herbe);
+  rect(sol, L, 15.4 + OZ, L + M, 18.6 + OZ, route, 0.005);
+  rect(sol, L, 18.6 + OZ, L + M, P, herbe);
+  const { sol: matSol, eau: matEau } = matieresDuModele(modele);
+  const groupe = new THREE.Group();
+  for (const [g, mat] of [
+    [sol, matSol ?? new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 })],
+    [eau, matEau ?? new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.2, transparent: true, opacity: 0.8 })],
+  ] as const) {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.Float32BufferAttribute(g.positions, 3));
+    geo.setAttribute("color", new THREE.Float32BufferAttribute(g.couleurs, 3));
+    geo.setAttribute("uv", new THREE.Float32BufferAttribute(g.uv, 2));
+    geo.computeVertexNormals();
+    const m = new THREE.Mesh(geo, mat);
+    m.receiveShadow = true;
+    if (mat.transparent) m.renderOrder = 2;
+    groupe.add(m);
+  }
+  return groupe;
 }
 
 /**
