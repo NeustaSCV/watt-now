@@ -110,10 +110,14 @@ export const RECETTES_COMMUNES: Recette[] = [
     intensite: "legere",
     famille: "tous",
   },
-  // ---------- La cuisine au feu (2026-10-08) : les plats nourrissent mieux que les ingrédients crus ----------
+  // ---------- Le feu et la cuisine (2026-10-08 ; plan 0.8 §2.3, chantier 5) : les plats nourrissent mieux que les
+  // ingrédients crus. Feu de camp : les pommes cuites ; foyer de pierres : la poêlée (aussi au Dakota) et ce qui se durcit ;
+  // foyer de cuisine : la soupe ; le four (plus tard) : la volaille aux cèpes et le pot-au-feu, grisés en attendant. ----------
   {
     id: "volaille_cepes",
     lieu: AU_FOUR,
+    // Le four de terre attend sa porte de fonte (niveau 2) : grisée, dans la fiche du foyer de cuisine (V4-6).
+    aVenir: "niveau 2",
     categorie: "feu",
     nom: "Volaille aux cèpes",
     produit: { objet: "volaille_cepes", quantite: 1 },
@@ -165,6 +169,7 @@ export const RECETTES_COMMUNES: Recette[] = [
   {
     id: "pot_au_feu",
     lieu: AU_FOUR,
+    aVenir: "niveau 2",
     categorie: "feu",
     nom: "Pot-au-feu de volaille",
     produit: { objet: "pot_au_feu", quantite: 1 },
@@ -173,6 +178,19 @@ export const RECETTES_COMMUNES: Recette[] = [
     eau: 0.5,
     boisFeu: 0.8,
     duree: 60,
+    intensite: "legere",
+    famille: "tous",
+  },
+  {
+    // Le bâton à fouir taillé à la main, passé au feu du foyer de pierres (I24) : la pointe durcie ne s'émousse plus.
+    id: "baton_fouir_durci",
+    lieu: AU_FOYER_DE_PIERRES,
+    categorie: "outils",
+    nom: "Bâton à fouir durci au feu",
+    produit: { objet: "baton_fouir_durci", quantite: 1 },
+    ingredients: { baton_fouir: 1 },
+    qualites: {},
+    duree: 15,
     intensite: "legere",
     famille: "tous",
   },
@@ -281,7 +299,8 @@ export const RECETTES_COMMUNES: Recette[] = [
     categorie: "batir",
     nom: "Récupérateur de pluie",
     produit: { installation: "recuperateur_pluie" },
-    ingredients: { bache: 1, branche: 4, corde: 1 },
+    // Le bidon de la ruine sous les 4 sacs plastique du chemin (plan 0.8 §2.3, I28 ; chantier 5).
+    ingredients: { bidon_5l: 1, branche: 4, corde: 1, sac_plastique: 4 },
     qualites: { couper: 1 },
     duree: 30,
     intensite: "legere",
