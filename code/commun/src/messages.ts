@@ -8,6 +8,7 @@ import type { Reglages } from "./reglages.ts";
 import type { AnimalVu } from "./faune.ts";
 import type { Apparence } from "./apparence.ts";
 import type { Position } from "./deplacement.ts";
+import type { MouvementRadeau } from "./gue.ts";
 import type { Charges, TypeBatterie } from "./energie.ts";
 import type { LieuId, LieuJouable } from "./lieux.ts";
 import type { Saignement, TypeBlessure } from "./combat.ts";
@@ -227,6 +228,8 @@ export type MessageClient =
   | { t: "ping"; envoye: number }
   // Le métier des familles (Book 25 §2.3, chantier 3) : voir le bloc « savoir » en fin de fichier.
   | MessageClientSavoir
+  // Le gué (plan 0.8, chantier 11) : voir le bloc « gué » en fin de fichier.
+  | MessageClientGue
   // L'arbre de progression (0.7) : voir le bloc « progression » en fin de fichier.
   | MessageClientProgression
   // La couche de déchets (0.7) : voir le bloc « déchets » en fin de fichier.
@@ -482,6 +485,8 @@ export type MessageServeur =
   | { t: "pong"; envoye: number; serveur: number }
   // Le métier des familles (Book 25 §2.3, chantier 3) : voir le bloc « savoir » en fin de fichier.
   | MessageServeurSavoir
+  // Le gué (plan 0.8, chantier 11) : voir le bloc « gué » en fin de fichier.
+  | MessageServeurGue
   // L'arbre de progression (0.7) : voir le bloc « progression » en fin de fichier.
   | MessageServeurProgression
   // La couche de déchets (0.7) : voir le bloc « déchets » en fin de fichier.
@@ -579,6 +584,8 @@ export interface ProjectileVu {
   coup?: { id: number; resultat: ResultatCoup };
   /** Une flèche ou un carreau (tendu, presque à plat) plutôt qu'un objet lancé en cloche. */
   tir?: true;
+  /** Au gué (G8) : un galet bien lancé touche l'eau là, puis ricoche de point en point jusqu'à (x1, z1). */
+  ricochets?: { x: number; z: number }[];
 }
 
 /** Code de fermeture WebSocket quand le jeton est refusé : le client doit redemander la connexion. */
@@ -675,3 +682,13 @@ export type MessageServeurReprise =
    * d'étoile). Le client fait briller l'étoile qui s'ajoute dans le sac.
    */
   { t: "arme_reprise"; avant: CleObjet; apres: CleObjet; geste: GesteRepriseArme };
+
+// ---------- Le gué : le bac, la cloche (plan 0.8, chantier 11 ; commun/src/gue.ts, serveur/src/gue.ts) ----------
+
+export type MessageClientGue =
+  /** Haler le bac (à bord, ou le rappeler depuis la cale ou le ponton), sonner la cloche du passeur. */
+  { t: "gue"; op: "haler" | "cloche" };
+
+export type MessageServeurGue =
+  /** Le radeau du bac : sa place et où il va (le client le prolonge seul) ; `cloche` : la cloche du passeur sonne. */
+  { t: "gue"; radeau: MouvementRadeau; cloche?: true };

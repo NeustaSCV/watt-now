@@ -76,6 +76,14 @@ export type TypeRessourceNiveau1 =
   // H1B, le gué (chantier 11) : le gisement de glaise de la berge (B6), le banc de galets personnel (B5).
   | "gisement_glaise"
   | "banc_galets"
+  // H1B, les fouilles du gué (chantier 11) : « par chance », une bâche, des chiffons, une casserole, des cordes
+  // (commun/src/gue.ts, FOUILLES_GUE), et rarement une clé de L1.
+  | "gue_cabane"
+  | "gue_buvette"
+  | "gue_barques"
+  | "gue_camping_car"
+  | "gue_lavoir"
+  | "gue_garde_peche"
   // L1B, le Moulin (chantier 12) : les clés du magasin et des meules, la fourche de l'étable, l'if du bief, les poutres
   // de rechange (B11), la grosse clé au tableau de l'atelier (§10.1).
   | "moulin_jute"
@@ -120,6 +128,10 @@ export const EMPRISE_RESSOURCE: Partial<Record<TypeRessource, number>> = {
   tas_bois: 1.1,
   coop_grillage: 0.7,
   coop_cocotte: 0.4,
+  // Le gué (chantier 11) : la berge de glaise, le banc de galets, les barques retournées.
+  gisement_glaise: 0.8,
+  banc_galets: 0.9,
+  gue_barques: 1.2,
 };
 
 export interface RessourceSol {
@@ -220,6 +232,13 @@ export const REPOUSSE_MS: Record<TypeRessource, number | null> = {
   if_bief: 24 * 3_600_000,
   poutres_chene: 24 * 3_600_000,
   moulin_cle: 24 * 3_600_000,
+  // Les fouilles du gué (chantier 11) : comme celles de la station, elles reviennent en 12 h.
+  gue_cabane: 12 * 3_600_000,
+  gue_buvette: 12 * 3_600_000,
+  gue_barques: 12 * 3_600_000,
+  gue_camping_car: 12 * 3_600_000,
+  gue_lavoir: 12 * 3_600_000,
+  gue_garde_peche: 12 * 3_600_000,
 };
 
 /** Les ressources qui restent en place une fois fouillées (une épave ne disparaît pas). */
@@ -250,6 +269,15 @@ export const RESTE_EN_PLACE: Partial<Record<TypeRessource, true>> = {
   tas_bois: true,
   // La tête de gondole de la cocotte reste, vide, sa pancarte de promotion encore plantée.
   coop_cocotte: true,
+  // Le gué (chantier 11) : la berge de glaise ne s'épuise pas ; le banc de galets et les fouilles restent là.
+  gisement_glaise: true,
+  banc_galets: true,
+  gue_cabane: true,
+  gue_buvette: true,
+  gue_barques: true,
+  gue_camping_car: true,
+  gue_lavoir: true,
+  gue_garde_peche: true,
 };
 
 // ---------- Le butin d'un lieu vivant (plan 0.8, chantier 10 ; le moteur est serveur/src/lieu-vivant.ts) ----------
@@ -672,6 +700,74 @@ const USAGES_NIVEAU1: Partial<Record<TypeRessourceNiveau1, UsageRessource>> = {
     qualites: {},
     duree: 2,
     examen: "En tête de gondole, sous une pancarte « −20 % », une cocotte en fonte rouge, son couvercle encore posé dessus. Cinq kilos et demi.",
+  },
+  // ---------- H1B, le Gué-aux-Saules (chantier 11 ; commun/src/gue.ts) ----------
+  // B6 : la vase de la berge, sous le camping-car : inépuisable, une motte de 2 kg par geste de 6 s, avec Creuser 1.
+  gisement_glaise: {
+    verbe: "ramasser",
+    libelle: "Creuser une motte de glaise",
+    donne: { glaise: 1 },
+    qualites: { creuser: 1 },
+    duree: 6,
+    examen: "La berge de vase, sous le camping-car : une glaise grise et grasse, entamée à la bêche. Il en reste pour des années. Il faut de quoi creuser.",
+  },
+  // B5 : le banc de galets accroché au radier, 8 pierres à chacun (6 h).
+  banc_galets: {
+    verbe: "ramasser",
+    libelle: "Prendre un galet plat",
+    donne: { pierre: 1 },
+    qualites: {},
+    duree: 1.8,
+    examen: "Le banc de galets, au pied du radier : des pierres plates et rondes, polies par l'eau. Bonnes pour un foyer, et pour les ricochets.",
+  },
+  // Les fouilles du gué : rien de sûr, mais par chance une bâche, des chiffons, une casserole, une corde.
+  gue_cabane: {
+    verbe: "fouiller",
+    libelle: "Fouiller la cabane du passeur",
+    donne: {},
+    qualites: {},
+    duree: 4,
+    examen: "Le râtelier du passeur : des gaffes, des avirons, des cordes lovées. Le registre des passages est resté ouvert sur la table.",
+  },
+  gue_buvette: {
+    verbe: "fouiller",
+    libelle: "Fouiller la buvette",
+    donne: {},
+    qualites: {},
+    duree: 4,
+    examen: "Derrière le comptoir de Chez Lulu : la friteuse à l'huile figée, des paniers, une caisse et des jetons de bal.",
+  },
+  gue_barques: {
+    verbe: "fouiller",
+    libelle: "Regarder sous les barques",
+    donne: {},
+    qualites: {},
+    duree: 3,
+    examen: "Les barques de location, retournées sur la plage. Dessous, des rames, une écope, peut-être une corde d'amarrage.",
+  },
+  gue_camping_car: {
+    verbe: "fouiller",
+    libelle: "Fouiller le camping-car",
+    donne: {},
+    qualites: {},
+    duree: 5,
+    examen: "« Liberté Totale », embourbé jusqu'aux essieux. Dedans, des duvets, un réchaud, des placards qui claquent.",
+  },
+  gue_lavoir: {
+    verbe: "fouiller",
+    libelle: "Fouiller le lavoir",
+    donne: {},
+    qualites: {},
+    duree: 3,
+    examen: "Le lavoir de 1887 : des battoirs, un pain de savon, des draps oubliés sur la pierre. Le filet d'eau de la source coule encore.",
+  },
+  gue_garde_peche: {
+    verbe: "fouiller",
+    libelle: "Fouiller le cabanon du garde-pêche",
+    donne: {},
+    qualites: {},
+    duree: 4,
+    examen: "Le cabanon du garde-pêche : des cannes, des hameçons, des filets pendus, une paire de bottes.",
   },
 };
 
