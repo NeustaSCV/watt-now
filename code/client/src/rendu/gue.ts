@@ -177,7 +177,7 @@ function hauteurModele(x: number, z: number): number {
  * la rivière qui vient du nord et repart au sud. Sans cela, on verrait le vide aux deux bouts de la route et la coupe
  * du terrain sur les bords. Un seul relief (deux appels), de l'eau, des arbres instanciés.
  */
-function creerAlentours(eau: THREE.Material | undefined): THREE.Group {
+function creerAlentours(eau: THREE.Material | undefined, terre: THREE.Material | undefined): THREE.Group {
   const groupe = new THREE.Group();
   groupe.name = "gue:alentours";
   const PAS = 2.5;
@@ -190,6 +190,8 @@ function creerAlentours(eau: THREE.Material | undefined): THREE.Group {
   const h = (x: number, z: number) => hauteurModele(100 - x, z - 35);
   const pos: number[] = [];
   const couleurs: number[] = [];
+  // Les coordonnées de texture du modèle (une tuile de terre par 6 m, dans son repère) : la terre se raccorde au lot.
+  const uvs: number[] = [];
   const c = new THREE.Color();
   const dans = (x: number, z: number) => x > 0.01 && x < 199.99 && z > 0.01 && z < 69.99;
   const sommet = (x: number, z: number) => {
@@ -205,6 +207,7 @@ function creerAlentours(eau: THREE.Material | undefined): THREE.Group {
     else c.setHex(b > 0.6 ? 0x86a356 : 0x7c9a50);
     pos.push(x, y, z);
     couleurs.push(c.r, c.g, c.b);
+    uvs.push(mx / 6, mz / 6);
   };
   for (let j = 0; j < nz; j++) {
     for (let i = 0; i < nx; i++) {
@@ -218,8 +221,9 @@ function creerAlentours(eau: THREE.Material | undefined): THREE.Group {
   const g = new THREE.BufferGeometry();
   g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
   g.setAttribute("color", new THREE.Float32BufferAttribute(couleurs, 3));
+  g.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
   g.computeVertexNormals();
-  const sol = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, flatShading: true }));
+  const sol = new THREE.Mesh(g, terre ?? new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 }));
   sol.receiveShadow = true;
   groupe.add(sol);
 
@@ -308,7 +312,7 @@ export class RenduGue {
 
   /** Le décor : les alentours tout de suite ; les tronçons se construisent autour du joueur (animer). */
   creer(): THREE.Group {
-    if (this.groupe.children.length === 0) this.groupe.add(creerAlentours(outils.matieres().eau));
+    if (this.groupe.children.length === 0) this.groupe.add(creerAlentours(outils.matieres().eau, outils.matieres().terrain));
     return this.groupe;
   }
 
