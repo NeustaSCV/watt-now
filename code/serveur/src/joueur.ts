@@ -165,7 +165,7 @@ import {
   CREUSER,
   FEU_COUVERT,
   MAX_FOYERS,
-  SOMMEIL_ABRI,
+  sommeilAbri,
   VOIE_CREUSEE,
   VOIE_SURFACE,
   accessoiresIncompatibles,
@@ -3506,7 +3506,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     const pres = (type: string) => [...this.installations.values()].filter((x) => x.type === type && Math.hypot(x.x - i.x, x.z - i.z) <= 3);
     const abri = i.type === "abri" ? i : pres("abri")[0];
     const lit = i.type === "lit_branchages" || pres("lit_branchages").length > 0;
-    const couchage = Math.max(lit ? BONUS_LIT : 1, abri ? (SOMMEIL_ABRI[niveauInstallation(abri) - 1] ?? 1) : 1);
+    const couchage = Math.max(lit ? BONUS_LIT : 1, abri ? sommeilAbri(abri) : 1);
     const ici = abri ?? i;
     let chaleur = 1;
     for (const f of this.feux.values()) {

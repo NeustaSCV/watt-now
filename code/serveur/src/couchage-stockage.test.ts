@@ -5,9 +5,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { toutDevoile } from "../../commun/src/progression.ts";
 import type { MessageServeur } from "../../commun/src/messages.ts";
-import { SOMMEIL_ABRI, capaciteCoffre, lignee } from "../../commun/src/lignees.ts";
+import { SOMMEIL_ABRI, SOMMEIL_ABRI_FERME_REPLI, capaciteCoffre, lignee } from "../../commun/src/lignees.ts";
 import { POSTE_ETABLI_ETAU, etauMonte, outilsAPortee } from "../../commun/src/outils-a-portee.ts";
 import { QUALITES_OBJETS, niveauQualite, recette } from "../../commun/src/recettes.ts";
+import { MS_PAR_HEURE_JEU } from "../../commun/src/temps.ts";
 import { DUREE_TORCHE_MS, stimuliTorches, torcheAllumee, torcheConsumee } from "../../commun/src/torche.ts";
 import { outilsManquants } from "../../commun/src/aide-fabrication.ts";
 import { Base } from "./base.ts";
@@ -41,7 +42,7 @@ function monter(inventaire: Record<string, number>, avant?: (base: Base, id: num
   return { base, compte, joueur, attendre, dernier, infos, sac, agir, installation, confort, maintenant: () => instant };
 }
 
-test("l'abri fermé : la toile de jute du Moulin, des clous, Couper 1 et Marteler 1 ; sommeil ×1,45", () => {
+test("l'abri fermé : la toile de jute du Moulin, des clous, Couper 1 et Marteler 1 ; sommeil ×1,45 (×1,35 sans la toile)", () => {
   const t = monter({ toile_jute: 1, branche: 10, corde: 1, poignee_clous: 1, couteau: 1, pierre: 1 }, (b, id) => {
     b.ajouterInstallation(id, "abri", 21, 20, 0);
     b.sauverNiveauInstallation(id, 1, 2);
@@ -58,6 +59,14 @@ test("l'abri fermé : la toile de jute du Moulin, des clous, Couper 1 et Martele
   });
   u.agir(1, "ameliorer");
   assert.equal(u.installation(1).niveau, 3);
+  assert.deepEqual(u.installation(1).etat.payes?.at(-1), { branche: 10, corde: 1, poignee_clous: 1, chiffons: 4, sac_plastique: 2 }, "fermé par le repli");
+  // Plan 0.8 §9.2 : sans la toile de jute, l'abri fermé est moins chaud.
+  assert.ok(Math.abs(u.confort(1) - 1.35) < 1e-9, `repli : ×1,35 (et non ${u.confort(1)})`);
+  assert.equal(SOMMEIL_ABRI_FERME_REPLI, 1.35);
+  // Redescendu, c'est de nouveau l'abri garni (×1,3).
+  u.agir(1, "redescendre", 30);
+  assert.equal(u.installation(1).niveau, 2);
+  assert.ok(Math.abs(u.confort(1) - 1.3) < 1e-9);
   // La clé, avec son idée et son indice, écrits avec le nom du lieu.
   const ferme = lignee("abri")!.find((e) => e.id === "abri_ferme")!;
   assert.equal(ferme.cle?.objet, "toile_jute");
@@ -191,7 +200,7 @@ test("les outils de fortune se font à la main : serre-joint, scie, marteau, coi
   assert.equal(niveauQualite(sac, "marteler"), 2, "le marteau de fortune martèle à 2");
 });
 
-test("la torche plantée : on l'allume, elle éclaire une heure, se voit la nuit, puis s'éteint", () => {
+test("la torche plantée : on l'allume, elle éclaire une nuit entière, se voit la nuit, puis s'éteint", () => {
   const t = monter({ branche: 1, chiffons: 1, graisse: 1, couteau: 1, briquet: 1 });
   t.joueur.recevoir({ t: "fabriquer", recette: "torche_plantee", x: 20, z: 21.2, o: 0 });
   t.attendre(3);
@@ -203,8 +212,11 @@ test("la torche plantée : on l'allume, elle éclaire une heure, se voit la nuit
   assert.ok(torcheAllumee(allumee, t.maintenant()));
   assert.equal(stimuliTorches([allumee], t.maintenant(), true)[0]?.genre, "lumiere", "la nuit, elle compte dans la signature");
   assert.equal(stimuliTorches([allumee], t.maintenant(), false).length, 0, "le jour, non");
-  // Une heure de jeu (une minute réelle) plus tard : consumée.
-  t.attendre(DUREE_TORCHE_MS / 1000 + 1, 1);
+  // Plan 0.8 §9.2 : une nuit entière (de 21 h à 5 h 30, 8 h 30 de jeu), plus seulement une heure.
+  assert.equal(DUREE_TORCHE_MS, 8.5 * MS_PAR_HEURE_JEU, "la torche dure une nuit");
+  t.attendre(2 * MS_PAR_HEURE_JEU / 1000, 1);
+  assert.ok(torcheAllumee(t.installation(torche.id), t.maintenant()), "deux heures de jeu plus tard, elle brûle encore");
+  t.attendre(DUREE_TORCHE_MS / 1000 - 2 * MS_PAR_HEURE_JEU / 1000 + 1, 1);
   const apres = t.installation(torche.id);
   assert.ok(torcheConsumee(apres, t.maintenant()));
   assert.equal(stimuliTorches([apres], t.maintenant(), true).length, 0);
