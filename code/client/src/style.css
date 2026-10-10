@@ -5666,7 +5666,7 @@ body:has(#hud .voile-pause:not([hidden])) #hud .tactile {
 }
 @media (orientation: landscape) and (max-height: 520px) {
   #hud .bandeau-avertissement {
-    width: min(420px, 52vw);
+    width: min(400px, 49vw);
     padding: 6px 8px 6px 10px;
   }
   #hud .bandeau-avertissement .sujet {
