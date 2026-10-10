@@ -35,6 +35,7 @@ import {
   type Etape,
 } from "../../commun/src/lignees.ts";
 import { texteAVenir } from "../../commun/src/lignees.ts";
+import { enteteFiche, piedFiche } from "./fiche-examiner.ts";
 import { choisirFacon } from "../../commun/src/replis.ts";
 import { texteLieu } from "../../commun/src/lieu-recette.ts";
 import { PRIX_RETRAIT, formaterWotts, prixAchatExemplaire, prixVenteCle } from "../../commun/src/economie.ts";
@@ -1885,7 +1886,8 @@ export class Hud {
     const defil = [...p.querySelectorAll<HTMLElement>(".grille")].map((g) => g.scrollTop);
     p.innerHTML = html;
     p.querySelectorAll<HTMLElement>(".grille").forEach((g, i) => (g.scrollTop = defil[i] ?? 0));
-    p.querySelector(".fermer")!.addEventListener("click", () => this.ouvrir(p, false));
+    // Plus de croix (plan 0.8 §9.2) : le bouton « Fermer » du bas, ou B.
+    p.querySelector(".fermer-fiche")!.addEventListener("click", () => this.ouvrir(p, false));
     const deplacer = (sens: "deposer" | "prendre", objet: CleObjet, tout: boolean) => {
       if (estDecharge && sens === "deposer") return;
       const dispo = (sens === "deposer" ? this.inventaire[objet] : contenu[objet]) ?? 0;
@@ -1970,7 +1972,8 @@ export class Hud {
     if (html === this.derniereFiche) return;
     this.derniereFiche = html;
     p.innerHTML = html;
-    p.querySelector(".fermer")!.addEventListener("click", () => this.ouvrir(p, false));
+    // Plus de croix (plan 0.8 §9.2) : le bouton « Fermer » du bas, ou B.
+    p.querySelector(".fermer-fiche")!.addEventListener("click", () => this.ouvrir(p, false));
     for (const b of p.querySelectorAll<HTMLButtonElement>("[data-verbe]")) {
       b.addEventListener("click", () => {
         const verbe = b.dataset.verbe as Verbe;
@@ -2123,7 +2126,7 @@ export class Hud {
     ].join("");
 
     return `
-      <header><h2>${etape.nom}</h2><button type="button" class="fermer" aria-label="Fermer">✕</button></header>
+      ${enteteFiche(etape.nom)}
       <p class="niveau">Niveau ${niveau} · ${aspect}</p>
       <p class="examen">${etape.examen}</p>
       <p class="proprietes">${proprietes.join(" · ")}</p>
@@ -2133,7 +2136,8 @@ export class Hud {
       ${voieAutre ? `<h3>L'autre voie</h3>${voieAutre}` : ""}
       ${accessoires ? `<h3>Accessoires</h3>${accessoires}` : ""}
       <div class="defaire">${defaire}</div>
-      <p class="indice">Un démontage rend la moitié des pierres, branches et bûches, et tout le reste. Un feu se démonte éteint.</p>`;
+      <p class="indice">Un démontage rend la moitié des pierres, branches et bûches, et tout le reste. Un feu se démonte éteint.</p>
+      ${piedFiche()}`;
   }
 
   private ficheInstallation(i: InstallationVue): string {
@@ -2168,7 +2172,7 @@ export class Hud {
     // Un meuble de famille sans sa pièce (plan 0.8 §9.2) : la clé de son niveau reste à trouver, ou à poser dessus.
     const piece =
       etape?.cle && pieceAPoser(i)
-        ? `<h3>Sa pièce, à poser dessus</h3><article class="etape apres"><div class="corps">${this.ligneCle(etape)}${(etape.cle.replis ?? []).map((r) => `<small class="repli retenu">En attendant : ${r.note.charAt(0).toLowerCase()}${r.note.slice(1)}</small>`).join("")}</div></article>`
+        ? `<h3>Sa pièce, à poser dessus</h3><article class="etape apres"><div class="corps">${this.ligneCle(etape)}${(etape.cle.replis ?? []).map((r) => `<small class="repli">En attendant : ${r.note.charAt(0).toLowerCase()}${r.note.slice(1)}</small>`).join("")}</div></article>`
         : "";
 
     const plein = i.type === "coffre" && Object.values(i.etat.contenu ?? {}).some((n) => (n ?? 0) > 0);
@@ -2179,13 +2183,14 @@ export class Hud {
     ].join("");
 
     return `
-      <header><h2>${nom}</h2><button type="button" class="fermer" aria-label="Fermer">✕</button></header>
+      ${enteteFiche(nom)}
       ${l ? `<p class="niveau">Niveau ${niveau}${etat ? ` · ${etat}` : ""}</p>` : etat ? `<p class="niveau">${etat}</p>` : ""}
       <p class="examen">${examen}</p>
       ${piece}
       ${ameliorer ? `<h3>Améliorer, sur place</h3>${ameliorer}` : ""}
       <div class="defaire">${defaire}</div>
-      <p class="indice">${plein ? "Vide d'abord le coffre pour le démonter. " : ""}Un démontage rend la moitié des pierres, branches et bûches, et tout le reste (la bâche, la corde, le métal).</p>`;
+      <p class="indice">${plein ? "Vide d'abord le coffre pour le démonter. " : ""}Un démontage rend la moitié des pierres, branches et bûches, et tout le reste (la bâche, la corde, le métal).</p>
+      ${piedFiche()}`;
   }
 
   // ---------- La fabrication ----------

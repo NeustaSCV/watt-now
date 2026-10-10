@@ -26,6 +26,7 @@ import { demanderIdentite, presenterEcransAccueil } from "./accueil.ts";
 import { Carte } from "./carte.ts";
 import { Entrees, type Commande } from "./entrees.ts";
 import { Hud } from "./hud.ts";
+import { LIBELLE_FERMER_FICHE } from "./fiche-examiner.ts";
 import { proposer, type ActionProposee, type Propositions } from "./interaction.ts";
 import { Reseau } from "./reseau.ts";
 import { FeuDeCamp } from "./rendu/feu.ts";
@@ -1741,6 +1742,8 @@ function boucle(instant: number): void {
     }
     // La pièce visée bat avec l'anneau (son liseré), seulement si c'est bien elle qu'on vise.
     dechetsVue.cibler(dechet !== null && propositions === dechet.propositions);
+    // La fiche Examiner ouverte (plan 0.8 §9.2) : B la referme, le bouton tactile et l'invite le disent.
+    if (!modeCombat && hud.ficheOuverte) propositions = { ...propositions, B: { libelle: LIBELLE_FERMER_FICHE, examiner: "" } };
     hud.propositions(propositions, occupe, maintien?.tenu && occupe ? actionEnCours : null);
     if (pose.actif) {
       const genre = pose.actif.genre;
