@@ -36,6 +36,8 @@ import { RAYON_ESCABEAU, estFruitier } from "../../commun/src/terrain.ts";
 import { creerRuine } from "./rendu/ruine.ts";
 import { creerHalte, estomperToits } from "./rendu/halte.ts";
 import { creerLieuVide } from "./rendu/lieu-vide.ts";
+// Le Gué-aux-Saules (plan 0.8, chantier 11) : son décor, son bac, sa crue, ses sons.
+import { RenduGue } from "./rendu/gue.ts";
 import { animerCooperative, creerCooperative, estomperCooperative, majPortes, ouverturesPortes, placerRadio, secouerPorte } from "./rendu/cooperative.ts";
 import { CarteVue, arcsParPiece, brouillerTout, clartesDe } from "./rendu/carte-vue.ts";
 import { Ondes } from "./rendu/ondes.ts";
@@ -117,6 +119,7 @@ let portesCoop: Record<string, boolean> = portesInitiales();
 let etatCoop: EtatCoopVu = { radio: { ...RADIO_ETABLI }, klaxons: KLAXONS_PAR_BATTERIE };
 /** La zone où l'on se déplace : à la Coopérative, les portes fermées bouchent le passage. */
 function zoneIci(): Zone {
+  if (lieu === "gue") return gue.zone(Date.now() + decalage, debutMonde); // le radeau du bac, le radier noyé (chantier 11)
   return lieu === "cooperative" ? zoneCoop(portesCoop) : zoneDe(lieu);
 }
 function montrerDecor(lieu: LieuJouable): void {
@@ -125,7 +128,8 @@ function montrerDecor(lieu: LieuJouable): void {
     if (lieu === "terrain") g.add(creerTerrain(), creerMare(), creerRuine());
     else if (lieu === "comptoir") g.add(creerComptoir());
     else if (lieu === "cooperative") g.add((decorCoop = creerCooperative()));
-    else if (lieu === "gue" || lieu === "moulin") g.add(creerLieuVide(lieu)); // 0.8 : branchés vides (chantiers 11 et 12)
+    else if (lieu === "gue") g.add(gue.creer()); // 0.8, chantier 11 : le modèle du gué, retourné pour suivre la carte
+    else if (lieu === "moulin") g.add(creerLieuVide(lieu)); // 0.8 : branché vide (chantier 12)
     else g.add(creerHalte());
     // Les lieux à murs (0.7.2) : ce que le personnage ne voit pas est dessiné « en souvenir » (rendu/carte-vue.ts).
     if (planVue(lieu)) brouillerTout([g]);
@@ -138,6 +142,7 @@ const entrees = new Entrees(document.getElementById("joystick")!, canvas);
 // Le son : la musique livrée par la session musique et les effets du catalogue (É5, lot 3).
 const son = new Sonorisation(tactile);
 const bruiteur = new Bruiteur(son);
+const gue = new RenduGue((id, ou) => son.jouer(id, ou ?? null));
 /** L'atelier de chaque famille : quand il est installé, son thème joue au complet (moment-vitrine 4). */
 const ATELIERS = { charbonniers: "forge", voltaiques: "banc_recharge", mecanistes: "pedalier" } as const;
 /** Les sons qu'on fabrique d'avance en entrant dans le monde. */
@@ -688,12 +693,14 @@ function majViseeLancer(): void {
 
 /** Un projectile vole (le sien, ou celui d'un autre joueur) : on le dessine, puis l'impact. */
 function lancerProjectile(p: ProjectileVu): void {
+  // Au gué, un galet bien lancé ricoche jusqu'à l'autre rive (G8, chantier 11).
+  if (p.ricochets && lieu === "gue") return gue.ricocher(p, (q, arrivee) => projectiles.lancer(q, arrivee), () => son.jouer("geste_pierre", { x: p.x1, z: p.z1 }, { gain: 0.7 }));
   // Une flèche part : la corde de l'arc claque (Book 25 §3.4 : à 3 m, l'arme la plus silencieuse).
   if (p.tir && p.objet.startsWith("fleche")) son.jouer("corde_arc", { x: p.x0, z: p.z0 });
   projectiles.lancer(p, () => {
     const ou = { x: p.x1, z: p.z1 };
     if (p.coup) return montrerCoup({ id: p.coup.id, x: p.x1, z: p.z1, resultat: p.coup.resultat });
-    if (p.impact === "eau") return son.jouer("remplir_eau", ou, { gain: 0.6 });
+    if (p.impact === "eau") return son.jouer(lieu === "gue" ? "plouf" : "remplir_eau", ou, { gain: 0.6 });
     son.jouer(p.impact === "mur" ? "marteau_metal" : "geste_pierre", ou, { gain: 0.7 });
     // Le réveil sonne vingt secondes là où il est tombé : les Éteints l'entendent (le serveur), nous aussi.
     if (p.objet === "reveil") {
@@ -868,14 +875,21 @@ function recevoir(message: MessageServeur): void {
     case "eteints":
       majEteints(message.eteints);
       return;
-    case "bruits":
+    case "bruits": {
       // Ce qu'on entend sans le voir (0.7.2) : le son, étouffé, et une onde au point de passage ; la porte qu'on pousse
-      // tremble. Jamais la silhouette.
-      bruiteur.entendre(message.bruits);
-      for (const b of message.bruits) {
+      // tremble. Jamais la silhouette. Sur le radier du gué, l'eau couvre tout au-delà de 3 m (chantier 11).
+      const ouie = lieu === "gue" ? gue.ouie(position) : Infinity;
+      const bruits = message.bruits.filter((b) => !position || Math.hypot(b.x - position.x, b.z - position.z) <= ouie);
+      bruiteur.entendre(bruits);
+      for (const b of bruits) {
         if (position) ondes.ajouter(b.x, b.z, position, b.f, bruitAlarmant(b.g));
         if (b.porte && decorCoop && lieu === "cooperative") secouerPorte(decorCoop, b.porte);
       }
+      return;
+    }
+    // Le gué (chantier 11) : le radeau du bac, la cloche du passeur.
+    case "gue":
+      gue.recevoir(message);
       return;
     case "animaux":
       volaille.maj(message.animaux);
@@ -1541,6 +1555,7 @@ function sourcesDeLumiere(): SourceLumiere[] {
   }
   // Au Carrefour, la lumière électrique ne s'éteint jamais.
   if (lieu === "comptoir") sources.push(...lumieresComptoir());
+  if (lieu === "gue") sources.push(...gue.lumieres(estNuit(Number.isFinite(HEURE_FORCEE) ? HEURE_FORCEE : heureDeJeu(Date.now() + decalage, debutMonde)), position));
   const portee = lumierePortee(inventaire);
   if (lumiere && portee && position) {
     const genre = OBJETS[portee].lumiere!;
@@ -1609,9 +1624,12 @@ function boucle(instant: number): void {
     const immobile = enVoyage || carte.ouverte || hud.enPause;
     let allure = allureAutorisee(entree.allure, besoins, porteEscabeau() || traineTravois(inventaire));
     if (allure === "course" && endurance < SEUIL_EPUISE) allure = "marche";
+    if (allure === "course" && lieu === "gue" && gue.surLeRadier(position)) allure = "marche"; // le radier : on n'y court pas
     // On voulait courir, mais on marche : on dit pourquoi, et comment y remédier.
     if (entree.allure === "course" && allure !== "course" && Math.hypot(dx, dz) > 0.05) {
-      const raison = porteEscabeau()
+      const raison = lieu === "gue" && gue.surLeRadier(position)
+        ? "Sur le radier, on marche : le béton glisse sous l'eau qui court."
+        : porteEscabeau()
         ? "Les bras chargés, on ne court pas : pose d'abord l'escabeau."
         : aFaim(besoins)
           ? "Trop faible pour courir : tu as faim. Mange (Sac)."
@@ -1639,6 +1657,8 @@ function boucle(instant: number): void {
       fauneAmbiante.animer(dt, enVoyage ? null : qui, crierFaune);
     }
 
+    // Au gué, le radeau du bac emporte qui est à bord (le serveur fait de même).
+    if (lieu === "gue") position = gue.porter(position, Date.now() + decalage);
     const avant = position;
     // Saisi : ralenti ou immobilisé (le serveur fait de même).
     const frein = freinSaisie(saisi);
@@ -1679,6 +1699,7 @@ function boucle(instant: number): void {
     const decor = decors.get(lieu);
     // Les toits qui cachent le personnage s'effacent (à la halte et au Comptoir), selon l'angle de la caméra.
     if ((lieu === "station" || lieu === "comptoir") && decor) estomperToits(decor, position.x, position.z, dt, scene.angleCamera);
+    if (lieu === "gue" && decor) gue.animer(position, dt, scene.angleCamera, Date.now() + decalage, debutMonde);
     if (lieu === "cooperative" && decorCoop) {
       estomperCooperative(decorCoop, position.x, position.z, dt, scene.angleCamera);
       animerCooperative(decorCoop, dt);
@@ -1739,6 +1760,8 @@ function boucle(instant: number): void {
       leurresActifs,
       etatCoop,
     );
+    // Au gué : la cloche, haler ou rappeler le bac, examiner une balise (chantier 11).
+    if (lieu === "gue") propositions = gue.proposer(position, propositions, Date.now() + decalage, debutMonde);
     // Les déchets à portée de main (0.7) : la cible la plus proche l'emporte.
     const dechet = dechetsVue.proposer(position);
     if (dechet) {
@@ -1836,9 +1859,11 @@ function boucle(instant: number): void {
   if (lieu === "comptoir") animerComptoir(dt);
   sang.animer(dt);
   // Le son du monde : Éteints, autres joueurs, feux, installations, pluie ; la nuit pour la musique.
+  // Sur le radier du gué, on n'entend plus les Éteints au-delà de 3 m (chantier 11).
+  const ouie = lieu === "gue" ? gue.ouie(position) : Infinity;
   bruiteur.eteints(
     dt,
-    [...eteints.entries()].map(([id, e]) => ({ id, x: e.objet.position.x, z: e.objet.position.z, etat: e.etat })),
+    [...eteints.entries()].map(([id, e]) => ({ id, x: e.objet.position.x, z: e.objet.position.z, etat: e.etat })).filter((e) => !position || Math.hypot(e.x - position.x, e.z - position.z) <= ouie),
     position,
     saisi,
     lieu === "cooperative",
@@ -1849,6 +1874,7 @@ function boucle(instant: number): void {
     installations: [...installations.values()].map((i) => ({ id: i.vue.id, type: i.vue.type, x: i.vue.x, z: i.vue.z, batteries: Object.values(i.vue.etat.batteries ?? {}).some((n) => (n ?? 0) > 0), sousTension: sousTension(i.vue) })),
     pluie: enVoyage ? 0 : temps.pluie,
     dehors: !(lieu === "station" && position !== null && dansLaBoutique(position.x, position.z)),
+    lieu: lieu === "gue" && !enVoyage ? gue.sons(position, Date.now() + decalage, debutMonde) : undefined,
   });
   if (position && !photo.actif) son.moment(estNuit(heure));
   rodeurs.animer(dt, scene.ciel.nuit, lieu === "terrain" && !enVoyage);

@@ -951,3 +951,64 @@ export const idee: Recette = (h) => {
   p.ajouter(souffle(0.5, h, { bruit: "rose", filtre: "passe-bas", f: 900, env: percussive(0.03, 0.15) }), 0, 0.05);
   return p.normaliser(0.6).donnees;
 };
+
+// =====================================================================================
+// Le gué (plan 0.8, chantier 11) : le radier, le bac, la cloche du passeur, le galet dans l'eau. L'ambiance de l'eau
+// courante est à la session musique ; ces effets-là sont synthétisés ici.
+// =====================================================================================
+
+/** Le clapot du radier : une nappe d'eau qui court sur le béton, des remous, des gouttes qui sautent. En boucle. */
+export const clapotRadier: Recette = (h) => {
+  const d = 6;
+  const p = new Piste(d, h);
+  p.ajouter(souffle(d, h, { bruit: "rose", filtre: "passe-bande", f: (t) => 900 + 250 * Math.sin(t * 1.7) + 120 * Math.sin(t * 4.1), q: 0.7 }), 0, 0.55);
+  p.ajouter(souffle(d, h, { bruit: "brun", filtre: "passe-bas", f: 260 }), 0, 0.35);
+  p.ajouter(grains(d, h, 140, { f: [600, 2600], q: 7, longueur: [0.01, 0.035], amplitude: [0.1, 0.7] }), 0, 0.5);
+  return p.boucler(0.8);
+};
+
+/** Le câble du bac qui grince dans ses poulies, et la traille qui frotte : en boucle, tant que le radeau avance. */
+export const grincementCable: Recette = (h) => {
+  const d = 3.2;
+  const p = new Piste(d, h);
+  let t = 0;
+  while (t < d - 0.6) {
+    const long = entre(h, 0.25, 0.55);
+    const f = entre(h, 420, 640);
+    // Le grincement : une note qui frotte et glisse, un peu sale.
+    p.ajouter(saturer(enveloppe(oscillateur(n(long), (x) => f * (1 + 0.18 * Math.sin(x * 9)) * (1 - 0.12 * x)), points([0, 0], [0.08, 1], [long * 0.7, 0.6], [long, 0])), 1.6), t, entre(h, 0.15, 0.3));
+    t += long + entre(h, 0.35, 0.9);
+  }
+  p.ajouter(souffle(d, h, { filtre: "passe-bande", f: 1800, q: 1.2 }), 0, 0.05);
+  p.ajouter(grains(d, h, 18, { f: [150, 400], q: 3, longueur: [0.02, 0.05], amplitude: [0.2, 0.6] }), 0, 0.3);
+  return p.boucler(0.4);
+};
+
+/** La cloche du passeur : trois coups de bronze, une note grave qui tient, qu'on entend loin. */
+export const clocheBac: Recette = (h) => {
+  const p = new Piste(3.6, h);
+  const f = entre(h, 610, 650);
+  const partiels = [
+    { f: f * 0.5, a: 0.6, tau: 1.4 },
+    { f, a: 1, tau: 1.1 },
+    { f: f * 1.19, a: 0.45, tau: 0.7 },
+    { f: f * 1.5, a: 0.35, tau: 0.5 },
+    { f: f * 2.0, a: 0.3, tau: 0.35 },
+    { f: f * 2.74, a: 0.2, tau: 0.2 },
+  ];
+  for (const t of [0, 0.85, 1.7]) {
+    p.ajouter(modes(1.9, partiels), t, 0.55);
+    p.ajouter(metal(h, 2400, 0.01, 0.04), t, 0.25);
+  }
+  return p.donnees;
+};
+
+/** Un galet qui tombe dans l'eau : un « plouf » rond, une goutte qui remonte. */
+export const plouf: Recette = (h) => {
+  const p = new Piste(0.7, h);
+  const f = entre(h, 380, 520);
+  p.ajouter(enveloppe(oscillateur(n(0.12), (x) => f * (1 + 2.2 * x)), cloche(0.12)), 0.01, 0.7);
+  p.ajouter(souffle(0.45, h, { filtre: "passe-bande", f: (t) => 1600 - t * 1800, q: 0.9, env: points([0, 0], [0.01, 1], [0.45, 0]) }), 0, 0.5);
+  p.ajouter(sourd(140, 60, 0.03), 0, 0.5);
+  return p.donnees;
+};

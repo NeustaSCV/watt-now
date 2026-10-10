@@ -391,6 +391,8 @@ export class Bruiteur {
       installations: { id: number; type: TypeInstallation; x: number; z: number; batteries: boolean; sousTension?: boolean }[];
       pluie: number;
       dehors: boolean;
+      /** Les sons continus d'un lieu (plan 0.8, chantier 11 : au gué, le clapot du radier, le câble du bac). */
+      lieu?: { cle: string; id: IdSon; ou?: Ou; gain?: number }[];
   }): void {
     // Les gestes répétés de l'action en cours.
     const a = this.action;
@@ -423,6 +425,7 @@ export class Bruiteur {
       if (this.prochainTonnerre > 0) this.son.jouer("tonnerre", null, { gain: 0.6 + Math.random() * 0.4 });
       this.prochainTonnerre = this.t + 25 + Math.random() * 50;
     }
+    voulus.push(...(o.lieu ?? []));
     this.son.continus(voulus);
   }
 }
