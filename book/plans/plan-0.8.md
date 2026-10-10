@@ -30,9 +30,9 @@
   - **L1B**, le Moulin à eau (**à créer**, retenu) : le couchage, le stockage, l'établi.
 - **Le bois et la pierre ne manquent plus** : la station et le gué donnent du vrac qui revient en 30 min, et un tas personnel à chacun (§2.7).
 - **Les armes** suivent les étapes : bandes de dégâts, étoiles placées (K1 à K56), dégâts électriques, maîtrise sans plafond. Une arme **évolue** quand on la rapporte sur son meuble.
-- **15 chantiers**, en **4 vagues**. Effort : **7 L et 8 M**, soit environ **45 jours-agent** au milieu de la fourchette.
+- **16 chantiers**, en **4 vagues**. Effort : **7 L et 9 M**, soit environ **47 jours-agent** au milieu de la fourchette.
 - **Rien du niveau 2** n'est construit. Ce qui en existe déjà dans le code reste en place pour ceux qui l'ont, et devient **« plus tard »** pour les autres (§1.3).
-- **25 questions ouvertes** (§9 ; une autre est réglée par les décisions de la v0.2), dont 4 qui bloquaient un chantier, tranchées le 2026-10-10.
+- **Toutes les questions du §9 sont tranchées** (§9.1 au lancement, §9.2 pendant le codage).
 
 ---
 
@@ -98,7 +98,7 @@ Le code 0.7.3 a déjà des niveaux et des recettes que la grille place au niveau
 ### 2.1 Construire : la fin des paliers
 
 - **Construire** = le niveau d'avant posé + les matériaux + l'outil. Plus de palier.
-- **Les outils sont des portes dures**, mais **plusieurs outils sont compatibles**, et **les objets de fortune donnent le niveau 1** de leur qualité (tableau `outils` de la v5 : pierre et clé plate pour Marteler 1 ; éclat de verre, lame ébréchée, couvercle de conserve, sécateur pour Couper 1 ; coin de bois et pierre pour Fendre 1 ; un morceau de fer plat pour Visser 1 ; enjoliveur et casserole pour Creuser 1…). Aujourd'hui, un niveau d'outil en dessous rend le geste plus lent (Book 03 §4) : en 0.8, **il faut le niveau demandé**.
+- **Les outils sont des portes dures**, mais **plusieurs outils sont compatibles**, et **les objets de fortune donnent le niveau 1** de leur qualité (tableau `outils` de la v5 : pierre et clé plate pour Marteler 1 ; éclat de verre, lame ébréchée, couvercle de conserve, sécateur pour Couper 1 ; le coin de bois (frappé avec une pierre) et la tête de hache pour Fendre 1 — la pierre seule ne donne que Marteler 1 ; un morceau de fer plat pour Visser 1 ; enjoliveur et casserole pour Creuser 1…). Aujourd'hui, un niveau d'outil en dessous rend le geste plus lent (Book 03 §4) : en 0.8, **il faut le niveau demandé**.
 - **Les outils de fortune à fabriquer** (à la main) : le serre-joint de fortune (2 branches, 1 corde : Serrer 1), la scie de fortune (un disque ou 2 lames ébréchées : Scier 1), le marteau de fortune (une barre repliée : Marteler 2), le coin de bois (Fendre 1, avec une pierre).
 - **Le marteau remmanché** (I10) : la tête de marteau de la caisse de la ruine et une branche, à la main. Il donne **Marteler 2 à toutes les familles** (le coffre cerclé de L1B le demande).
 - **Une clé par niveau** (règle 2 du game designer) : un ingrédient **ou** un outil de dehors, jamais les deux.
