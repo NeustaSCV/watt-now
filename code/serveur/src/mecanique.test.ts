@@ -342,7 +342,7 @@ test("⚙️ le tour à perche se construit ; on y tourne un manche ; sans tour,
   assert.equal(t.inventaire().manche_tourne, 1);
 });
 
-test("⚙️ pédalier : le soufflet à manivelle et la meule fine se montent, se rendent au démontage ; le soufflet souffle sur une forge à 3 m", () => {
+test("⚙️ pédalier : le ventilateur à manivelle et la meule fine se montent, se rendent au démontage ; le ventilateur souffle sur une forge à 3 m", () => {
   const t = monter("mecanistes", { cle_plate: 1, couteau: 1, cadre_velo: 1, chaine_velo: 1, roue_velo: 2, buche: 2, pierre: 4, chiffons: 1, bache: 1, branche: 4, marteau: 1, tournevis: 1 });
   const p = t.construire("pedalier", 4.5);
   t.utiliser(p.id, "monter_meule_fine");

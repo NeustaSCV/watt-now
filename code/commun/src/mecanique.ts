@@ -1,6 +1,6 @@
 // ⚙️ La mécanique des Mécanistes (Book 25 §6, chantier 7 · 0.6) : les règles pures que le serveur et le client
 // partagent. L'arbalète et ses pièces (les étoiles de chaque facteur), le réarmement de l'arbalète lourde, les pièges
-// (ce qu'ils font, ce que coûte leur réarmement), les accessoires du pédalier (soufflet à manivelle, meule fine).
+// (ce qu'ils font, ce que coûte leur réarmement), les accessoires du pédalier (ventilateur à manivelle, meule fine).
 //
 // Rien ici ne connaît le joueur : `serveur/src/mecanique.ts` applique, `commun/src/recettes/mecanistes.ts` fabrique.
 
@@ -106,7 +106,8 @@ export interface DefinitionAccessoirePedalier {
 export const ACCESSOIRES_PEDALIER: Record<AccessoirePedalier, DefinitionAccessoirePedalier> = {
   // Une roue de vélo en volant, une bâche en poche d'air, quatre branches de bâti : posé à moins de 3 m d'une forge,
   // il souffle tant qu'on pédale (l'autre voie que le ventilateur des Voltaïques).
-  soufflet: { nom: "le soufflet à manivelle", cout: { roue_velo: 1, bache: 1, branche: 4 }, secondes: 30, serrer: true },
+  // Le ventilateur à manivelle (Q-0.8-13 : « soufflet » est réservé au soufflet de forge) ; l'identifiant ne change pas.
+  soufflet: { nom: "le ventilateur à manivelle", cout: { roue_velo: 1, bache: 1, branche: 4 }, secondes: 30, serrer: true },
   // Une pierre fine et un chiffon (le cuir de l'affûteur) : l'affûtage donne un fil de rasoir.
   meule_fine: { nom: "la meule fine", cout: { pierre: 1, chiffons: 1 }, secondes: 15, apresMeule: true },
 };
@@ -126,7 +127,7 @@ export function rendDesAccessoires(etat: EtatInstallation): Inventaire {
   return r;
 }
 
-/** Le soufflet à manivelle souffle sur une forge à moins de 3 m (Book 25 §6.4). */
+/** Le ventilateur à manivelle souffle sur une forge à moins de 3 m (Book 25 §6.4). */
 export const PORTEE_SOUFFLET = 3;
 
 /**

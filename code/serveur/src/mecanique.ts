@@ -1,5 +1,5 @@
 // ⚙️ La mécanique des Mécanistes côté serveur (Book 25 §6, chantier 7 · 0.6) : les pièges (déclarés au moteur des
-// déclencheurs), leur réarmement, les accessoires du pédalier (soufflet à manivelle, meule fine) et le fil de rasoir
+// déclencheurs), leur réarmement, les accessoires du pédalier (ventilateur à manivelle, meule fine) et le fil de rasoir
 // que donne la meule fine.
 //
 // Ce module ne connaît pas le joueur : il passe par un `ContexteMecanique` (ce que le joueur lui prête). joueur.ts
@@ -115,7 +115,7 @@ function rearmerPiege(ctx: ContexteMecanique, i: InstallationVue): void {
   }, i.type === "assommoir" || i.type === "fosse_pieux" ? "lourd" : "outil");
 }
 
-/** Monter un accessoire sur le pédalier (Book 25 §6.4) : le soufflet à manivelle, la meule fine. */
+/** Monter un accessoire sur le pédalier (Book 25 §6.4) : le ventilateur à manivelle, la meule fine. */
 function monterAccessoire(ctx: ContexteMecanique, i: InstallationVue, a: AccessoirePedalier): void {
   const def = ACCESSOIRES_PEDALIER[a];
   if (accessoireMonte(i.etat, a)) return ctx.info(`${majuscule(def.nom)} est déjà monté${a === "meule_fine" ? "e" : ""}.`);
@@ -129,7 +129,7 @@ function monterAccessoire(ctx: ContexteMecanique, i: InstallationVue, a: Accesso
     i.etat = { ...i.etat, ...(a === "soufflet" ? { soufflet: true } : { meuleFine: true }) };
     ctx.maj();
     ctx.noter(`pedalier:${a}`);
-    ctx.info(a === "soufflet" ? "Le soufflet est monté : près d'une forge, il souffle quand on pédale." : "La meule fine est montée : l'affûtage y donne un fil de rasoir.");
+    ctx.info(a === "soufflet" ? "Le ventilateur à manivelle est monté : près d'une forge, il souffle quand on pédale." : "La meule fine est montée : l'affûtage y donne un fil de rasoir.");
   }, "outil");
 }
 

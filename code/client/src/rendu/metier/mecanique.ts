@@ -194,7 +194,7 @@ function meuleFine(): THREE.Group {
   return marque(c.groupe(), "siEtat", "meuleFine");
 }
 
-/** Le soufflet à manivelle : une poche de bâche entre deux planches, sur un bâti de branches, entraînée par une courroie. */
+/** Le ventilateur à manivelle : une poche de bâche entre deux planches, sur un bâti de branches, entraînée par une courroie. */
 function soufflet(): THREE.Group {
   const c = new Assemblage(106);
   c.occlusion = 0.25;

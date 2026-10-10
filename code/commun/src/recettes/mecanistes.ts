@@ -1,6 +1,6 @@
 // ⚙️ Les recettes des Mécanistes : vieux vélo → pédalier → meule et dynamo ; et, depuis la 0.6 (Book 25 §6, chantier 7),
 // l'arbalète et ses pièces, les carreaux, les pièges, le tour à perche, le cranequin, la brouette. Les accessoires du
-// pédalier (soufflet à manivelle, meule fine) se montent sur place, comme la meule (serveur/src/mecanique.ts).
+// pédalier (ventilateur à manivelle, meule fine) se montent sur place, comme la meule (serveur/src/mecanique.ts).
 // Les autres familles voient ces recettes grisées, « chez les Mécanistes » (savoir.ts).
 //
 // La règle d'or (Book 25 §2.5) : un Mécaniste seul monte son arbalète ★ dès le premier jour (frêne, noix de bois, scie
