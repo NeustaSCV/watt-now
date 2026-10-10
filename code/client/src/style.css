@@ -1839,9 +1839,14 @@ body {
   color: var(--creme);
 }
 #hud .panneau.comptoir .bandeau {
+  /* Le haut d'écran porte aussi la classe « bandeau » (#hud .bandeau : en absolu, en grille) : ici, l'en-tête reste
+     dans le flux du guichet, sinon « Tes bons » le recouvre (recette 0.8). */
+  position: static;
+  pointer-events: auto;
   flex: 1;
   display: flex;
   flex-direction: column;
+  gap: 0;
   padding: 8px 14px 6px;
 }
 #hud .panneau.comptoir .bandeau strong {

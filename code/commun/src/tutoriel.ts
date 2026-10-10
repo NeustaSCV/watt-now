@@ -146,6 +146,14 @@ export interface VueTutoriel {
   progres?: { libelle: string; fait: number; but: number }[];
 }
 
+/**
+ * Le tutoriel que le carnet montre : celui en cours, ou rien. La dernière vue du serveur (`termine`) ne porte plus que
+ * la leçon de « La nuit » : le carnet passe alors aux objectifs (sans elle, il restait sur « étape 13 sur 12 »).
+ */
+export function tutorielEnCours(v: VueTutoriel | null): VueTutoriel | null {
+  return v && !v.termine ? v : null;
+}
+
 // ---------- La première nuit : l'avertissement de la bûche (plan 0.8 §2.6, B14) ----------
 
 /** Le texte du bandeau, dans la voix du carnet. */

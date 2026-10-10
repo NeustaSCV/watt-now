@@ -869,7 +869,8 @@ export interface VueProgression {
   indices: Record<string, 1 | 2>;
 }
 
-const NOM_ATELIER: Readonly<Record<Famille, string>> = { charbonniers: "le foyer de forge", voltaiques: "le banc de recharge", mecanistes: "le pédalier" };
+// Les noms de la 0.8 (un seul nom par meuble) : le banc solaire, le pédalier générateur.
+const NOM_ATELIER: Readonly<Record<Famille, string>> = { charbonniers: "le foyer de forge", voltaiques: "le banc solaire", mecanistes: "le pédalier générateur" };
 
 /** « Tu y penses : … » (Q10 : on y pense, on n'apprend pas). Une seule recette, plusieurs, ou le seuil du métier. */
 export function texteDevoilement(ids: readonly string[], famille: Famille): string | null {

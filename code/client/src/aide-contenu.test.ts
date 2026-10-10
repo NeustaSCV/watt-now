@@ -114,3 +114,8 @@ test("0.8 aide : « Faire évoluer une arme » remplace « Réparer (Sac → l'a
   assert.ok(!tout.includes("**Réparer** (Sac → l'arme)"), "l'ancien texte est parti");
   assert.match(rubrique("combat"), /Faire évoluer une arme/);
 });
+
+// Recette 0.8 : un nombre et son unité ne se séparent pas en fin de ligne (« 24 h » coupé sur téléphone).
+test("0.8 aide : dans les résumés, un nombre et son unité sont liés par une espace insécable", () => {
+  for (const r of RUBRIQUES_AIDE) assert.ok(!/\d (h|min|km|kg|m|s|L)\b/.test(r.resume), `${r.id} : ${r.resume}`);
+});

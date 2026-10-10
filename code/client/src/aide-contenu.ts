@@ -648,7 +648,7 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
     id: "moulin",
     icone: "🏚️",
     titre: "Le Moulin",
-    resume: "Le Moulin du Gué : la grosse clé, la grande porte, la fosse du rouet, le halage, et le retour à 24 h.",
+    resume: "Le Moulin du Gué : la grosse clé, la grande porte, la fosse du rouet, le halage, et le retour à 24\u00a0h.",
     blocs: [
       "Au bout de la seconde route, après le gué : un moulin à eau **à toi seul**, comme la Coopérative. Personne d'autre n'y entre ; ses Éteints, ce qu'il y a à prendre et les sacs que tu y laisses sont à toi. Il est bien gardé : beaucoup y dorment. Avance doucement.",
       { sous_titre: "La grosse clé et la grande porte" },

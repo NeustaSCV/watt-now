@@ -292,6 +292,9 @@ test("les messages tiennent sur deux lignes (110 caractères), sans « … » de
   assert.equal(texteDevoilement(["ficelle", "corde", "coffre"], "voltaiques"), "Tu y penses : 3 idées nouvelles dans Fabriquer.");
   assert.equal(texteDevoilement(["ficelle"], "voltaiques"), "Tu y penses : rouler une ficelle.");
   assert.equal(texteDevoilement(["forge", "machette_forgee_fer"], "charbonniers"), "Ton métier commence : le foyer de forge t'attend dans Fabriquer.");
+  // Les noms de la 0.8 (recette finale) : jamais « banc de recharge » ni « le pédalier » tout court.
+  assert.equal(texteDevoilement(["banc_recharge"], "voltaiques"), "Ton métier commence : le banc solaire t'attend dans Fabriquer.");
+  assert.equal(texteDevoilement(["pedalier"], "mecanistes"), "Ton métier commence : le pédalier générateur t'attend dans Fabriquer.");
 });
 
 test("un état illisible ou trafiqué est nettoyé (rien d'inconnu, rien de négatif), idées et indices compris", () => {
