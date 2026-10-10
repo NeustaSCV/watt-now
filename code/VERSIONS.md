@@ -12,7 +12,7 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
-## 0.8 · en préparation
+## 0.8 · prête à déployer
 
 - **La base grandit avec tes sorties** : plus de paliers. Chaque meuble monte d'un niveau avec le niveau d'avant, des matériaux de la maison et un outil ; au niveau 1, il lui faut en plus **une clé** qu'on trouve dehors : une grille, une grosse toile, un seau, un étau… Chaque sortie peut changer ta base.
 - **« Tu y penses »** : la première fois que tu ramasses la pièce qui ferait monter un de tes meubles, le carnet te souffle l'idée, dans un bandeau qui se ferme d'un bouton. Trop tôt ? L'idée est gardée « pour un jour » : la fiche du meuble dira « déjà en poche » quand tu y arriveras.
