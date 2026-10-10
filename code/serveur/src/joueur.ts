@@ -81,7 +81,7 @@ import { Comptoir } from "./comptoir.ts";
 import { Tir, type ContexteTir } from "./tir.ts";
 import { Sechage, accelerationFleches } from "./arc.ts";
 // L'arbre de progression (0.7) : les recettes dévoilées (serveur/src/devoilement.ts).
-import { SuiviDevoilement, constructionDuTerrain, feuDuTerrain, type Constat, type SourceDevoilement } from "./devoilement.ts";
+import { SuiviDevoilement, type Constat, type SourceDevoilement } from "./devoilement.ts";
 // La couche de déchets (0.7) : ramasser, fouiller, démonter (serveur/src/couche-dechets.ts).
 import { CoucheDechets } from "./couche-dechets.ts";
 import { REDRESSEUR } from "../../commun/src/arc.ts";
@@ -186,6 +186,8 @@ import {
   type AccessoireFeu,
   type Etape,
 } from "../../commun/src/lignees.ts";
+import { refusAVenir, type AVenir } from "../../commun/src/lignees.ts";
+import { carteInstallations, feuxDuLieu, refusLieu, type Alentours } from "../../commun/src/lieu-recette.ts";
 import { NOMBRE_ETAPES, etapesTutoriel, type EtatTutoriel, type VueTutoriel } from "../../commun/src/tutoriel.ts";
 // Le compte admin « god » (outil du porteur) : serveur/src/admin.ts.
 import { remplirCoffres, savoirAdmin, vueProgressionAdmin } from "./admin.ts";
@@ -2495,7 +2497,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
       savoir: () => this.savoir,
       inventaire: () => this.inventaire,
       faits: () => this.quetes.etat.faits,
-      installations: () => [...[...this.installations.values()].map(constructionDuTerrain), ...[...this.feux.values()].map(feuDuTerrain)],
+      // La carte des installations (plan 0.8) : chaque type à son niveau, chaque forme de feu, les accessoires montés.
+      installations: () => carteInstallations(this.installations.values(), this.feux.values()),
       quetes: () => (this.tuto ? [] : [...this.quetes.enCours(this.compte.famille).map((q) => q.id), ...this.quetes.etat.finies]),
       tuto: () => this.tuto?.etape ?? null,
       sansSac: () => capaciteDe(this.inventaire) < CAPACITE_SAC && !(this.inventaire.sac_fortune ?? 0),
@@ -2740,20 +2743,20 @@ export class Joueur implements Voyageur, ParticipantLecon {
     // Hors de sa famille (Book 25 §2.2) : ×1,5 en matières et en temps, et ★★ au plus.
     const horsFamille = !admin && estHorsFamille(modele, this.compte.famille);
     const r = admin ? modele : recettePour(modele, this.compte.famille);
-    if (this.lieu !== "terrain" && ("installation" in r.produit || r.installation)) return this.info("Ça se construit chez toi, sur ton terrain.");
+    // Plus tard (plan 0.8 §1.3) : le client la grise ; le serveur la refuse.
+    const plusTard = refusAVenir(r);
+    if (plusTard) return this.info(plusTard);
+    if (this.lieu !== "terrain" && r.lieu.genre !== "main") return this.info(r.lieu.genre === "posee" ? "Ça se construit chez toi, sur ton terrain." : "Ça se fait chez toi, à côté de ce que tu y as construit.");
     if (!ingredientsPresents(this.inventaire, r)) return this.info(ceQuiManqueBref(r, this.inventaire, undefined, this.recetteVisible));
     const facteur = multiplicateurQualites(this.inventaire, r.qualites);
     if (facteur === null) return this.infos(outilsManquantsBref(r.qualites, this.inventaire, undefined, this.recetteVisible));
-    if (r.feu && ![...this.feux.values()].some((f) => f.allume && f.bois > 0 && !f.couvert && this.proche(f.x, f.z, 2.5))) {
-      return this.info("Ça se cuisine près d'un feu allumé : approche-toi de ton feu (ou allumes-en un).");
-    }
-    // La cuisine selon le foyer (Book 24 §3.1) : les mijotés demandent la crémaillère, de l'eau et du bois ; deux plats à la fois.
-    const cuisine = r.feu ? this.cuisinePour(r) : { fois: 1, foyer: null, bois: 0, eau: 0 };
+    // Le lieu (plan 0.8, chantier 1) : la forme du foyer, la construction à son niveau, l'accessoire ; le refus nomme ce qui manque.
+    const refus = refusLieu(r.lieu, this.alentours());
+    if (refus) return this.info(refus);
+    // La cuisine selon le foyer (Book 24 §3.1) : les mijotés demandent de l'eau et du bois ; deux plats à la fois.
+    const cuisine = r.lieu.genre === "construction" && r.lieu.construction === "feu" ? this.cuisinePour(r) : { fois: 1, foyer: null, bois: 0, eau: 0 };
     if ("refus" in cuisine) return this.info(cuisine.refus);
-    if (r.installation && ![...this.installations.values()].some((i) => i.type === r.installation && this.proche(i.x, i.z, 2.5))) {
-      return this.info(`Il faut être près d'un ${NOMS_INSTALLATIONS[r.installation]}.`);
-    }
-    // La forge (Book 25 §4) : forge ventilée, maîtrise, huile ; le risque de la trempe à l'eau est dit ici.
+    // La forge (Book 25 §4) : la maîtrise ; le risque de la trempe à l'eau est dit ici.
     const refusForge = this.forge.refus(r);
     if (refusForge) return this.info(refusForge);
 
@@ -2823,6 +2826,11 @@ export class Joueur implements Voyageur, ParticipantLecon {
     this.inventaire = inventaire;
     this.base.sauverInventaire(this.compte.id, this.inventaire);
     this.envoyer({ t: "inventaire", inventaire: this.inventaire });
+  }
+
+  /** Ce qu'il y a autour de soi pour le lieu d'une recette (commun/src/lieu-recette.ts) : sa position, ses feux, ses installations. */
+  private alentours(): Alentours<FeuEnBase> {
+    return { x: this.position.x, z: this.position.z, feux: this.feux.values(), installations: this.installations.values(), inventaire: this.inventaire };
   }
 
   /** Raison pour laquelle on ne peut pas poser quelque chose ici, ou null. */
@@ -3206,7 +3214,13 @@ export class Joueur implements Voyageur, ParticipantLecon {
   // ---------- Améliorer sa base (Book 24) : sur place, au lieu de poser autre chose à côté ----------
 
   /** Ce qu'il faut pour une étape (montée de niveau, accessoire) : le coût choisi et la durée réelle, ou null (déjà dit). */
-  private preparerEtape(e: { couts: readonly Inventaire[]; qualites: Etape["qualites"]; duree: number; famille?: Etape["famille"] }): { cout: Inventaire; dureeS: number } | null {
+  private preparerEtape(e: { nom?: string; aVenir?: AVenir; couts: readonly Inventaire[]; qualites: Etape["qualites"]; duree: number; famille?: Etape["famille"] }): { cout: Inventaire; dureeS: number } | null {
+    // Plus tard (plan 0.8 §1.3) : le niveau se voit, grisé, mais ne se bâtit pas encore.
+    const plusTard = refusAVenir({ nom: e.nom ?? "Ce niveau", aVenir: e.aVenir });
+    if (plusTard) {
+      this.info(plusTard);
+      return null;
+    }
     const { cout, payable } = choisirCout(this.inventaire, e.couts, e, this.compte.famille);
     if (!payable) {
       const manque = (Object.entries(cout) as [TypeObjet, number][])
@@ -3280,7 +3294,6 @@ export class Joueur implements Voyageur, ParticipantLecon {
       case "ameliorer": {
         const suivante = etapeSuivanteFeu(feu);
         if (!suivante) return this.info(`${etapeFeu(feu).nom} : c'est le plus haut de sa lignée.`);
-        if (suivante.phase) return this.info(`${suivante.nom} : pas encore. Il faudra de l'argile, et du temps.`);
         if (dansLesFlammes()) return this.info(refusFlammes);
         const plan = this.preparerEtape(suivante);
         if (!plan) return;
@@ -3394,10 +3407,9 @@ export class Joueur implements Voyageur, ParticipantLecon {
    * cuit deux plats à la fois quand on a de quoi.
    */
   private cuisinePour(r: Recette): { fois: number; foyer: FeuEnBase | null; bois: number; eau: number } | { refus: string } {
-    const proches = [...this.feux.values()].filter((f) => f.allume && f.bois > 0 && !f.couvert && this.proche(f.x, f.z, 2.5));
-    const niveau = r.feuNiveau ?? 1;
-    const foyer = proches.filter((f) => effetsFeu(f).cuisine >= niveau).sort((a, b) => effetsFeu(b).plats - effetsFeu(a).plats)[0];
-    if (!foyer) return { refus: "Ça mijote à la crémaillère : il faut un foyer de cuisine. Améliore ton feu (« Améliorer »)." };
+    // Le foyer : un feu allumé tout près, de la forme que demande la recette (le lieu), celui qui cuit le plus de plats.
+    const foyer = feuxDuLieu(r.lieu, this.alentours()).sort((a, b) => effetsFeu(b).plats - effetsFeu(a).plats)[0];
+    if (!foyer) return { refus: refusLieu(r.lieu, this.alentours()) ?? "Il te faut un feu allumé, tout près." };
     const parPlat = { bois: (r.boisFeu ?? 0) * (foyer.accessoires?.marmite ? 0.5 : 1), eau: r.eau ?? 0 };
     if (parPlat.eau > 0 && this.gourde.litres < parPlat.eau - 1e-9) return { refus: `Il faut ${String(parPlat.eau).replace(".", ",")} L d'eau dans ta gourde (celle de la mare suffit : elle va bouillir).` };
     if (parPlat.bois > 0 && foyer.bois < parPlat.bois - 1e-9) return { refus: "Le feu n'a pas assez de bois pour une longue cuisson : ajoute une bûche." };
@@ -3474,7 +3486,6 @@ export class Joueur implements Voyageur, ParticipantLecon {
         const suivante = etapeSuivanteInstallation(i);
         if (!lignee(i.type)) return this.info("Cette installation ne s'améliore pas.");
         if (!suivante) return this.info(`${nom} : c'est le plus haut de sa lignée.`);
-        if (suivante.phase) return this.info(`${suivante.nom} : pas encore. Il faudra de l'argile, et du temps.`);
         // L'abri garni peut absorber le lit de branchages voisin, sans rien payer (Book 24 §3.3, proposé, jamais d'office).
         const lit = suivante.id === "abri_garni" ? [...this.installations.values()].find((x) => x.type === "lit_branchages" && Math.hypot(x.x - i.x, x.z - i.z) <= 3) : undefined;
         const plan = lit ? { cout: {}, dureeS: Math.max(2, suivante.duree / REGLAGES.fabrication_acceleration) } : this.preparerEtape(suivante);

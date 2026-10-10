@@ -3,7 +3,7 @@
 
 import { monitorEventLoopDelay } from "node:perf_hooks";
 import type { WebSocket } from "ws";
-import { FERMETURE_INACTIF, FERMETURE_REMPLACE, type MessageClient, type MessageServeur } from "../../commun/src/messages.ts";
+import { FERMETURE_INACTIF, FERMETURE_JETON_REFUSE, FERMETURE_REMPLACE, type MessageClient, type MessageServeur } from "../../commun/src/messages.ts";
 import { TICK_HZ } from "../../commun/src/regles.ts";
 import { REGLAGES, reglagesChanges, type Reglages } from "../../commun/src/reglages.ts";
 import type { Base, Compte } from "./base.ts";
@@ -287,6 +287,29 @@ export class Monde {
     this.base.transaction(() => {
       for (const { joueur } of this.connexions.values()) joueur.sauvegarder();
     });
+  }
+
+  // ---------- La page d'administration (P-014, admin-web.ts) : la mémoire du serveur, en lecture, et la déconnexion ----------
+
+  /** Les joueurs connectés à l'instant (pas d'historique, pas de pic) : qui, de quelle famille, dans quel lieu. */
+  connectes(): { id: number; pseudo: string; famille: Compte["famille"]; lieu: string }[] {
+    return [...this.connexions.values()].map(({ joueur }) => ({ id: joueur.compte.id, pseudo: joueur.compte.pseudo, famille: joueur.compte.famille, lieu: joueur.lieu }));
+  }
+
+  /**
+   * Déconnecte un joueur depuis la page d'administration : son état est sauvegardé d'abord (comme à un départ), puis
+   * la connexion est fermée comme un jeton refusé (le client revient à l'écran de connexion). `oublier` : le compte
+   * va être supprimé, sa Coopérative chargée en mémoire est lâchée sans être réécrite. Renvoie true s'il était connecté.
+   */
+  deconnecter(compteId: number, oublier = false): boolean {
+    const connexion = this.connexions.get(compteId);
+    if (connexion) {
+      this.quitter(compteId);
+      connexion.socket.close(FERMETURE_JETON_REFUSE, "Session fermée");
+    }
+    this.aSauver = this.aSauver.filter((id) => id !== compteId);
+    if (oublier) this.cooperatives.oublier(compteId);
+    return connexion !== undefined;
   }
 }
 

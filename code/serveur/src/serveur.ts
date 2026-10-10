@@ -38,6 +38,8 @@ export interface OptionsServeur {
 export interface ServeurDemarre {
   port: number;
   monde: Monde;
+  /** La base, pour la page d'administration (admin-web.ts), qui tourne dans le même programme sur son propre port. */
+  base: Base;
   fermer(): Promise<void>;
 }
 
@@ -278,6 +280,7 @@ export async function demarrerServeur(options: OptionsServeur): Promise<ServeurD
   return {
     port,
     monde,
+    base,
     async fermer() {
       monde.arreter();
       reglages?.arreter();

@@ -13,7 +13,7 @@ import type { Inventaire } from "../../commun/src/objets.ts";
 import { typeDe } from "../../commun/src/etoiles.ts";
 import type { Famille } from "../../commun/src/regles.ts";
 import type { SavoirRecettes } from "../../commun/src/recettes.ts";
-import { formeFeu, niveauFeu, type EtapeMonde, type FeuDansLignee } from "../../commun/src/lignees.ts";
+import type { EtapeMonde } from "../../commun/src/lignees.ts";
 import {
   ECHEANCES_TEMPS,
   INDICE_SECOND_TEMPS_MIN,
@@ -34,7 +34,7 @@ import {
   type EtatProgression,
   type VueProgression,
 } from "../../commun/src/progression.ts";
-import type { EtatInstallation, MessageServeur } from "../../commun/src/messages.ts";
+import type { MessageServeur } from "../../commun/src/messages.ts";
 
 /** Au plus un message « Tu y penses » toutes les 10 s : les idées d'une même fouille sont regroupées (§4.1). */
 export const INTERVALLE_MESSAGE_MS = 10_000;
@@ -53,14 +53,13 @@ export type Constat = (typeof CONSTATS)[number];
  */
 const LIEU_DE_L_ETAPE: Partial<Record<EtapeMonde, string>> = { maison: "terrain", H1A: "station", H1B: "gue", L1A: "cooperative", L1B: "moulin" };
 
-/** Une construction du terrain, telle que le dévoilement la regarde. */
+/**
+ * Une entrée de la carte des constructions (`carteInstallations` de lieu-recette.ts) : un type d'installation à son
+ * niveau, « feu » au niveau du foyer, `feu:<forme>` pour chaque forme, `<type>+<accessoire>` pour un accessoire monté.
+ */
 export interface ConstructionVue {
   type: string;
   niveau?: number;
-  /** Un feu : sa forme (`feu_camp`, `foyer_pierres`, `dakota`…). */
-  forme?: string;
-  /** Les accessoires montés (la broche, la marmite, la meule, le bac de trempe…). */
-  accessoires?: readonly string[];
 }
 
 /** Ce que le suivi regarde chez le joueur (le joueur le remplit ; les tests aussi). */
@@ -70,7 +69,7 @@ export interface SourceDevoilement {
   savoir(): SavoirRecettes;
   inventaire(): Inventaire;
   faits(): Readonly<Record<string, number>>;
-  /** Les constructions du terrain (type, niveau), et les feux sous le type « feu », avec leur forme. */
+  /** La carte des constructions du terrain (`carteInstallations`) : types, formes du feu, accessoires. */
   installations(): Iterable<ConstructionVue>;
   /** Les quêtes en cours ou finies (aucune pendant le tutoriel). */
   quetes(): Iterable<string>;
@@ -85,29 +84,10 @@ export interface SourceDevoilement {
   envoyer(m: MessageServeur): void;
 }
 
-/** Les accessoires d'une installation, lus dans son état (le pédalier, l'établi, la forge). */
-const ACCESSOIRES_ETAT = ["meule", "dynamo", "redresseur", "soufflet", "meuleFine", "bac", "ventilateur", "enclume", "huile"] as const;
-
-/** Une installation du terrain, pour le dévoilement : son type, son niveau, ses accessoires montés. */
-export function constructionDuTerrain(i: { type: string; niveau?: number; etat?: EtatInstallation }): ConstructionVue {
-  const etat = i.etat ?? {};
-  const accessoires = ACCESSOIRES_ETAT.filter((a) => Boolean(etat[a]));
-  return { type: i.type, niveau: i.niveau ?? 1, ...(accessoires.length ? { accessoires } : {}) };
-}
-
-/** Un feu du terrain : « feu », son niveau, sa forme (`feu:dakota`…) et ses accessoires (la broche, la marmite). */
-export function feuDuTerrain(f: FeuDansLignee & { accessoires?: object }): ConstructionVue {
-  return { type: "feu", niveau: niveauFeu(f), forme: formeFeu(f), accessoires: Object.keys(f.accessoires ?? {}) };
-}
-
-/** La carte des constructions du dévoilement : type → niveau, `feu:<forme>`, `<type>+<accessoire>` (`lieuAtteint`). */
+/** La carte des constructions du dévoilement : chaque clé à son meilleur niveau (`lieuPossede` la lit). */
 export function carteConstructions(liste: Iterable<ConstructionVue>): Map<string, number> {
   const carte = new Map<string, number>();
-  for (const i of liste) {
-    carte.set(i.type, Math.max(carte.get(i.type) ?? 0, i.niveau ?? 1));
-    if (i.forme) carte.set(`${i.type}:${i.forme}`, 1);
-    for (const a of i.accessoires ?? []) carte.set(`${i.type}+${a}`, 1);
-  }
+  for (const i of liste) carte.set(i.type, Math.max(carte.get(i.type) ?? 0, i.niveau ?? 1));
   return carte;
 }
 

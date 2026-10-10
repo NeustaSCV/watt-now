@@ -33,6 +33,18 @@ export type EtapeGrille = "maison" | "H1" | "L1" | "H2" | "L2" | "L3";
  */
 export type AVenir = "0b" | "niveau 2" | "niveau 3";
 
+/** Ce qu'on dit d'une étape ou d'une recette « plus tard » : pourquoi pas encore. */
+export function texteAVenir(a: AVenir): string {
+  return a === "0b" ? "Pas encore. Il faudra de l'argile, et du temps." : "Plus tard. Sa clé est à trouver plus loin.";
+}
+
+/** Le refus du serveur pour une étape ou une recette « plus tard », ou null si elle est jouable. */
+export function refusAVenir(x: { nom: string; aVenir?: AVenir }): string | null {
+  if (!x.aVenir) return null;
+  const texte = texteAVenir(x.aVenir);
+  return `${x.nom} : ${texte.charAt(0).toLowerCase()}${texte.slice(1)}`;
+}
+
 /** Un repli : une autre façon de franchir le niveau sans la clé, moins bonne (plus lent, moins chaud…). */
 export interface RepliCle {
   /** Ce que le repli coûte à la place de la clé (ou en plus des matériaux). */
@@ -77,9 +89,10 @@ export interface Etape {
   intensite: "legere" | "moyenne" | "lourde";
   /** Un niveau de métier : sa famille le bâtit au prix normal, les autres à ×1,5 (et tous s'en servent). */
   famille?: Famille;
-  /** Pas encore jouable : il attend la phase 0b (l'argile, la cabane). Montré grisé, comme une recette pressentie. */
-  phase?: "0b";
-  /** Plan 0.8 : remplace `phase` (le chantier 1 fait la bascule). */
+  /**
+   * Pas encore jouable (plan 0.8 §1.3) : « 0b » (l'argile, la cabane), « niveau 2 »… Montré grisé, comme une recette
+   * pressentie ; le serveur le refuse (`refusAVenir`). Il remplace le `phase: "0b"` d'avant la 0.8.
+   */
   aVenir?: AVenir;
   /** Plan 0.8 : l'étape de la grille où se place ce niveau. */
   etapeLieu?: EtapeGrille;
@@ -191,7 +204,7 @@ export const VOIE_SURFACE: readonly Etape[] = [
     qualites: { marteler: 1 },
     duree: 180,
     intensite: "lourde",
-    phase: "0b",
+    aVenir: "0b",
     apporte: "Un dôme d'argile : la cuisson continue seule, même quand tu n'es pas là ; deux fois moins de bois ; le pain.",
     examen: "Un dôme d'argile sur le foyer.",
   },
@@ -204,7 +217,7 @@ export const VOIE_SURFACE: readonly Etape[] = [
     duree: 240,
     intensite: "lourde",
     famille: "charbonniers",
-    phase: "0b",
+    aVenir: "0b",
     apporte: "Dans une cabane : il chauffe la pièce, et l'on cuisine sur sa plaque.",
     examen: "Un poêle, au cœur de la cabane.",
   },
@@ -365,7 +378,7 @@ export const LIGNEES_INSTALLATIONS: Partial<Record<TypeInstallation, readonly Et
       qualites: {},
       duree: 480,
       intensite: "lourde",
-      phase: "0b",
+      aVenir: "0b",
       apporte: "Des murs de torchis : elle se chauffe avec un foyer voisin, elle a une porte.",
       examen: "Une hutte de torchis.",
     },

@@ -34,6 +34,8 @@ import {
   type CleEvolution,
   type Etape,
 } from "../../commun/src/lignees.ts";
+import { texteAVenir } from "../../commun/src/lignees.ts";
+import { texteLieu } from "../../commun/src/lieu-recette.ts";
 import { PRIX_RETRAIT, formaterWotts, prixAchatExemplaire, prixVenteCle } from "../../commun/src/economie.ts";
 import { detailEnergieGrise } from "../../commun/src/recettes.ts";
 import type { TypeBatterie } from "../../commun/src/energie.ts";
@@ -131,9 +133,9 @@ export interface ActionsJoueur {
 }
 
 /** Le feu de camp, vu comme une recette, pour dire ce qui manque. */
-const RECETTE_FEU_AIDE: Recette = { id: "feu", categorie: "feu", nom: "Feu de camp", produit: { objet: "branche", quantite: 0 }, ingredients: RECETTE_FEU, qualites: {}, duree: 0, intensite: "legere", famille: "tous" };
+const RECETTE_FEU_AIDE: Recette = { id: "feu", lieu: { genre: "posee" }, categorie: "feu", nom: "Feu de camp", produit: { objet: "branche", quantite: 0 }, ingredients: RECETTE_FEU, qualites: {}, duree: 0, intensite: "legere", famille: "tous" };
 /** Le foyer Dakota (P-002), vu comme une recette, pour dire ce qui manque. */
-const RECETTE_DAKOTA_AIDE: Recette = { id: "dakota", categorie: "feu", nom: "Foyer Dakota", produit: { objet: "branche", quantite: 0 }, ingredients: RECETTE_DAKOTA, qualites: { creuser: 1 }, duree: 0, intensite: "legere", famille: "tous" };
+const RECETTE_DAKOTA_AIDE: Recette = { id: "dakota", lieu: { genre: "posee" }, categorie: "feu", nom: "Foyer Dakota", produit: { objet: "branche", quantite: 0 }, ingredients: RECETTE_DAKOTA, qualites: { creuser: 1 }, duree: 0, intensite: "legere", famille: "tous" };
 
 type NomJauge = "faim" | "eau" | "sommeil" | "sante" | "endurance";
 
@@ -1977,7 +1979,8 @@ export class Hud {
     const outils = (Object.entries(qualites) as [Qualite, number][])
       .map(([q, n]) => {
         const a = niveauQualite(this.inventaire, q);
-        const etat = a >= n ? "ok" : a >= 1 && a === n - 1 ? "lent" : "manque";
+        // Les outils sont des portes dures (plan 0.8 §2.1) : le niveau demandé, ou rien.
+        const etat = a >= n ? "ok" : "manque";
         return `<span class="outil ${etat}">${NOMS_QUALITES[q]} ${n}</span>`;
       })
       .join("");
@@ -2003,7 +2006,7 @@ export class Hud {
     const badge = e.famille ? ` <span class="badge-famille ${e.famille}" title="Un niveau de métier">${NOMS_FAMILLES[e.famille]}${e.famille !== this.famille ? " · ×1,5" : ""}</span>` : "";
     const manque =
       !possible && !bloque && !gratuit
-        ? this.listeManque({ id: "fiche", categorie: "batir", nom: titre, produit: { objet: "branche", quantite: 0 }, ingredients: cout, qualites: e.qualites, duree: 0, intensite: "legere", famille: "tous" })
+        ? this.listeManque({ id: "fiche", lieu: { genre: "main" }, categorie: "batir", nom: titre, produit: { objet: "branche", quantite: 0 }, ingredients: cout, qualites: e.qualites, duree: 0, intensite: "legere", famille: "tous" })
         : "";
     return `
       <article class="etape ${possible ? "possible" : ""}">
@@ -2020,7 +2023,7 @@ export class Hud {
   /** « Et après ? » : le niveau d'ensuite, grisé (la recette pressentie, Book 03 §5.1), avec sa clé. */
   private carteApres(e: Etape | null | undefined): string {
     if (!e) return "";
-    return `<article class="etape apres"><div class="corps"><strong>Et après ? ${e.nom}</strong>${this.ligneCle(e)}<small>${e.apporte}${e.phase ? " Pas encore : il faudra de l'argile, et du temps." : ""}</small></div></article>`;
+    return `<article class="etape apres"><div class="corps"><strong>Et après ? ${e.nom}</strong>${this.ligneCle(e)}<small>${e.apporte}${e.aVenir ? ` ${texteAVenir(e.aVenir)}` : ""}</small></div></article>`;
   }
 
   /**
@@ -2028,7 +2031,7 @@ export class Hud {
    * l'idée en est venue (ramassée une fois, même trop tôt) ; sinon l'indice « où chercher », au premier ou au second
    * temps ; « à trouver plus loin » pour un niveau pas encore jouable. Jamais de flèche sur la carte.
    */
-  private ligneCle(e: { id?: string; cle?: CleEvolution; aVenir?: string; phase?: string }): string {
+  private ligneCle(e: { id?: string; cle?: CleEvolution; aVenir?: string }): string {
     const cle = e.cle;
     if (!cle || !e.id) return "";
     const nom = cle.objet ? OBJETS[cle.objet].nom : cle.qualite ? `${NOMS_QUALITES[cle.qualite.qualite]} ${cle.qualite.niveau}` : "";
@@ -2073,7 +2076,7 @@ export class Hud {
     // Améliorer : le niveau suivant (jamais dans les flammes), et celui d'après, grisé.
     const bloqueFlammes = flammes ? "On ne maçonne pas dans les flammes : attends les braises, ou couvre le feu." : null;
     let ameliorer = "";
-    if (suivante && !suivante.phase) {
+    if (suivante && !suivante.aVenir) {
       ameliorer = this.carteEtape(`Améliorer : ${suivante.nom}`, suivante.apporte, suivante, "ameliorer", "Améliorer", bloqueFlammes) + this.carteApres(voie[niveau + 1]);
     } else if (suivante) {
       ameliorer = this.carteApres(suivante);
@@ -2136,7 +2139,7 @@ export class Hud {
           : "";
 
     let ameliorer = "";
-    if (l && suivante && !suivante.phase) {
+    if (l && suivante && !suivante.aVenir) {
       // L'abri garni peut absorber le lit de branchages voisin, sans rien payer : c'est proposé, jamais fait d'office.
       const lit = suivante.id === "abri_garni" && this.voisinsFiche?.().installations.some((x) => x.type === "lit_branchages" && Math.hypot(x.x - i.x, x.z - i.z) <= 3);
       ameliorer = lit
@@ -2274,20 +2277,22 @@ export class Hud {
       const r = this.admin ? modele : recettePour(modele, this.famille);
       const pictogramme: Pictogramme = "objet" in r.produit ? r.produit.objet : r.produit.installation;
       const outils = multiplicateurQualites(this.inventaire, r.qualites);
-      const possible = ingredientsPresents(this.inventaire, r) && outils !== null;
+      // Plus tard (plan 0.8 §1.3) : grisée, sans bouton.
+      const plusTard = r.aVenir;
+      const possible = !plusTard && ingredientsPresents(this.inventaire, r) && outils !== null;
       const qualites = Object.entries(r.qualites)
         .map(([q, n]) => {
           const a = niveauQualite(this.inventaire, q as Qualite);
-          // Sans aucun outil de cette qualité, c'est impossible (rouge) ; un niveau en dessous, possible mais plus lent (jaune).
-          const etat = a >= (n ?? 0) ? "ok" : a >= 1 && a === (n ?? 0) - 1 ? "lent" : "manque";
-          const titre = etat === "lent" ? "Outil de fortune : plus lent" : etat === "manque" ? "Il te manque un outil pour ça" : "Qualité d'outil demandée";
+          // Les outils sont des portes dures (plan 0.8 §2.1) : sans le niveau demandé, c'est impossible (rouge).
+          const etat = a >= (n ?? 0) ? "ok" : "manque";
+          const titre = etat === "manque" ? "Il te manque un outil pour ça" : "Qualité d'outil demandée";
           return `<span class="outil ${etat}" title="${titre}">${NOMS_QUALITES[q as Qualite]} ${n}</span>`;
         })
         .join("");
       const ou =
         ("installation" in r.produit ? `Se pose devant toi : ${NOMS_INSTALLATIONS[r.produit.installation]}. ` : "") +
-        (r.installation ? `Près d'un ${NOMS_INSTALLATIONS[r.installation]}. ` : "") +
-        (r.feu ? ((r.feuNiveau ?? 1) >= 3 ? "Sur un foyer de cuisine allumé (la crémaillère). " : "Près d'un feu allumé. ") : "") +
+        texteLieu(r) +
+        (plusTard ? `${texteAVenir(plusTard)} ` : "") +
         (r.eau ? `${String(r.eau).replace(".", ",")} L d'eau de la gourde (celle de la mare suffit). ` : "");
       const secondes = Math.round(dureeReelle(r) * (outils ?? 1) * 10) / 10;
       const badge =
@@ -2303,7 +2308,9 @@ export class Hud {
             <span class="puces">${Object.entries(r.ingredients).map(([t, n]) => this.puce(t as TypeObjet, n ?? 0)).join("")}${qualites}</span>
             <small>${ou}${String(secondes).replace(".", ",")} s · ≈ ${Math.round(energieGriseRecette(r))} wotts</small>${this.pourquoi === r.id ? this.listeManque(r) : ""}</div>
           ${
-            possible
+            plusTard
+              ? `<button type="button" disabled>Plus tard</button>`
+              : possible
               ? `<button type="button" data-recette="${r.id}">${"installation" in r.produit ? "Construire" : "Fabriquer"}</button>`
               : `<button type="button" class="pourquoi" data-pourquoi="${r.id}" aria-expanded="${this.pourquoi === r.id}" aria-label="Voir ce qui manque">Il manque…</button>`
           }

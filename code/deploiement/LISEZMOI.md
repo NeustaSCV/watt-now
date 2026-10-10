@@ -179,6 +179,34 @@ code/deploiement/admin-pi.sh            # crée god (ou l'écrase s'il existe) :
 code/deploiement/admin-pi.sh --remplir  # re-remplit seulement ses coffres
 ```
 
+## 8 ter. La page d'administration (0.8, port 4321)
+
+Une page web, **sans mot de passe**, pour gérer les comptes depuis le réseau de la maison (proposition P-014, Book 17 §5.5) :
+
+- combien de joueurs sont connectés en ce moment, et lesquels (pseudo, famille, lieu) ;
+- la liste des comptes, et la fiche de chacun : ce que le serveur sait déjà (compte, personnage, sac, coffres, installations, feux, mesures). Elle n'ajoute aucun compteur ;
+- **réinitialiser un mot de passe** : la page tire un mot de passe provisoire (`k7mp-2xqa-hn4d`) et l'affiche **une seule fois**, à donner au joueur ; ses sessions sont fermées (s'il joue, il revient à l'écran de connexion) ;
+- **supprimer un compte** : retaper son pseudo, puis « Supprimer définitivement ». S'il joue, il est déconnecté d'abord ; le compte et tout ce qui en dépend partent (personnage, sac, terrain, coffres, feux, Coopérative, sacs au sol, mesures). On ne revient pas en arrière, sauf par une sauvegarde (§7) ;
+- le compte **god** est protégé : ni suppression, ni réinitialisation (pour lui : `admin-pi.sh`, §8 bis).
+
+**L'ouvrir** : depuis un ordinateur ou un téléphone de la maison (réseau **192.168.1.x**), `http://192.168.254.99:4321`. Par l'adresse, pas par un nom : un nom (comme `preprod.example.org`) est refusé.
+
+**Ce qui la protège** (il n'y a pas de mot de passe) :
+- un serveur web à part, dans le même programme que le jeu, sur le seul port 4321 : rien de l'admin ne passe par le port 1234 du jeu ;
+- `compose.yaml` ne publie le 4321 que sur l'adresse du Pi, `192.168.254.99:4321:4321`, et la box ne publie que le port 1234 : le 4321 n'est pas joignable d'Internet ;
+- une **liste blanche** : le jeu n'accepte que **192.168.1.0/24** (la maison) et la machine elle-même ; il refuse la DMZ **192.168.254.0/24** (d'autres machines peuvent y être exposées) et tout le reste ;
+- chaque action est notée dans le journal du jeu, avec l'adresse du poste : `[14:02:11] Admin (192.168.1.20) : mot de passe réinitialisé pour « Nadia » (compte 12) ; 1 session(s) fermée(s), déconnecté`.
+- Attention : tout appareil branché sur le réseau de la maison (le Wi-Fi des invités compris, s'il est en 192.168.1.x) peut ouvrir la page.
+
+**Ce que le porteur a à faire au déploiement de la 0.8** :
+1. Déployer comme d'habitude (`code/deploiement/deployer.sh`, §3) : `compose.yaml` porte déjà la ligne du port 4321.
+2. **Ne rien ouvrir sur la box** : aucune redirection du 4321 (seul le 1234 reste publié).
+3. Vérifier que le Pi a toujours l'adresse **192.168.254.99** : Docker publie le port sur cette adresse précise ; si le Pi en changeait, le conteneur ne démarrerait plus (« cannot assign requested address »). Il faudrait alors corriger la ligne `192.168.254.99:4321:4321` de `compose.yaml`.
+4. Depuis le Mac (en 192.168.1.x), ouvrir `http://192.168.254.99:4321` : la liste des comptes s'affiche.
+5. Dans le journal, la ligne de démarrage : `docker compose logs jeu | grep "Page d'administration"`. Les refus : `docker compose logs jeu | grep "Admin"`. Si le Mac est refusé et que le journal parle d'une adresse en **172.x** (au lieu de 192.168.1.x), c'est Docker qui masque la vraie adresse : ne pas élargir la liste blanche, le signaler.
+
+Ouvrir la page **depuis le Pi lui-même** est refusé (Docker la voit venir de son pont, en 172.x) : c'est normal.
+
 ## 9. Jouer depuis l'extérieur
 
 À choisir (Book 17 §5.3) :

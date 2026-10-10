@@ -5,6 +5,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { RECETTES, recette } from "./recettes.ts";
+import { lieuPossede } from "./lieu-recette.ts";
 import { estObjet } from "./objets.ts";
 import { QUETE } from "./quetes.ts";
 import { FAMILLES, type Famille } from "./regles.ts";
@@ -24,8 +25,6 @@ import {
   etapeAvecCle,
   etapesAvecCle,
   indicesOuverts,
-  lieuAtteint,
-  lieuDe,
   nouvellesIdees,
   progressionValide,
   silhouettes,
@@ -95,22 +94,22 @@ test("plus de paliers : le filet ne porte que sur des recettes à la main (20 ou
   const filets = Object.entries(PROGRESSION).filter(([, l]) => l.filet !== undefined);
   assert.ok(filets.length >= 10);
   for (const [id, l] of filets) {
-    assert.equal(lieuDe(recette(id)!).genre, "main", id);
+    assert.equal(recette(id)!.lieu.genre, "main", id);
     assert.ok(l.filet === 20 || l.filet === 60, id);
   }
   assert.deepEqual(ECHEANCES_TEMPS, [20, 60, FILET_SEUIL_MIN]);
 });
 
-test("le lieu de chaque recette (adaptation provisoire du chantier 1) : à la main, posée, ou à sa construction", () => {
-  assert.deepEqual(lieuDe(recette("ficelle")!), { genre: "main" });
-  assert.deepEqual(lieuDe(recette("abri")!), { genre: "posee" });
-  assert.deepEqual(lieuDe(recette("lame_forgee_fer")!), { genre: "construction", construction: "forge" });
-  assert.deepEqual(lieuDe(recette("glaive")!), { genre: "construction", construction: "forge", niveau: 2 });
-  const poelee = lieuDe(recette("cepes_poeles")!);
+test("le lieu de chaque recette (chantier 1) : à la main, posée, ou à sa construction", () => {
+  assert.deepEqual(recette("ficelle")!.lieu, { genre: "main" });
+  assert.deepEqual(recette("abri")!.lieu, { genre: "posee" });
+  assert.deepEqual(recette("lame_forgee_fer")!.lieu, { genre: "construction", construction: "forge" });
+  assert.deepEqual(recette("glaive")!.lieu, { genre: "construction", construction: "forge", niveau: 2, accessoire: "bac" });
+  const poelee = recette("cepes_poeles")!.lieu;
   assert.ok(poelee.genre === "construction" && poelee.construction === "feu" && poelee.formes?.includes("dakota") && !poelee.formes.includes("feu_camp"));
   // Le lieu, une construction et son accessoire.
-  assert.ok(lieuAtteint({ genre: "construction", construction: "feu", formes: ["foyer_cuisine"], accessoire: "marmite" }, new Map([["feu:foyer_cuisine", 1], ["feu+marmite", 1]])));
-  assert.ok(!lieuAtteint({ genre: "construction", construction: "feu", formes: ["foyer_cuisine"], accessoire: "marmite" }, new Map([["feu:foyer_cuisine", 1]])));
+  assert.ok(lieuPossede({ genre: "construction", construction: "feu", formes: ["foyer_cuisine"], accessoire: "marmite" }, new Map([["feu:foyer_cuisine", 1], ["feu+marmite", 1]])));
+  assert.ok(!lieuPossede({ genre: "construction", construction: "feu", formes: ["foyer_cuisine"], accessoire: "marmite" }, new Map([["feu:foyer_cuisine", 1]])));
   assert.equal(aLaConstruction("Foyer de cuisine"), "Au foyer de cuisine");
   assert.equal(aLaConstruction("Forge ventilée"), "À la forge ventilée");
   assert.equal(aLaConstruction("Établi à étau"), "À l'établi à étau");
@@ -125,13 +124,17 @@ test("premier écran : le feu et l'abri, rien d'autre (Q3) ; sans construction, 
 test("les silhouettes : le niveau suivant des constructions qu'on a (« Au foyer de cuisine : soupe de cèpes »)", () => {
   const camp = silhouettes(etat({ installations: terrain("feu_camp") }));
   const auFoyer = camp.filter((s) => s.ou === "Au foyer de pierres").map((s) => s.id);
-  for (const id of ["cepes_poeles", "epieu", "fleches_durcies", "baton_fouir"]) assert.ok(auFoyer.includes(id), id);
+  for (const id of ["cepes_poeles", "epieu", "fleches_durcies", "arc_simple"]) assert.ok(auFoyer.includes(id), id);
   assert.ok(!camp.some((s) => s.id === "soupe_cepes"), "deux niveaux plus haut : pas encore");
   const pierres = silhouettes(etat({ installations: terrain("foyer_pierres") }));
   assert.deepEqual(pierres.find((s) => s.id === "soupe_cepes"), { id: "soupe_cepes", ou: "Au foyer de cuisine" });
-  // La forge posée : la forge ventilée ouvrira le glaive et la hache.
+  // La forge posée : le bac de trempe ouvrira les lames d'acier ; la forge ventilée, le glaive et la hache.
   const forge = silhouettes(etat({ installations: terrain(null, { forge: 1 }), devoilees: new Set([...devoileesAuDepart(), "forge"]) }));
-  assert.ok(forge.some((s) => s.id === "glaive" && s.ou === "À la forge ventilée"), JSON.stringify(forge));
+  assert.ok(forge.some((s) => s.id === "lame_forgee" && s.ou === "Au foyer de forge, avec un bac de trempe"), JSON.stringify(forge));
+  assert.ok(forge.some((s) => s.id === "glaive" && s.ou === "À la forge ventilée, avec un bac de trempe"), JSON.stringify(forge));
+  // Le poste de montage (niveau 2) n'existe pas encore : ses recettes ne sont pas des silhouettes.
+  const banc = silhouettes(etat({ famille: "voltaiques", installations: terrain(null, { banc_recharge: 1 }) }));
+  assert.ok(!banc.some((s) => s.id === "electrificateur"));
   // Une recette dévoilée n'est plus une silhouette ; une autre famille n'en a pas.
   const voltaique = silhouettes(etat({ famille: "voltaiques", installations: terrain(null, { forge: 1 }) }));
   assert.ok(!voltaique.some((s) => s.id === "glaive"));
@@ -155,14 +158,16 @@ test("une recette liée à une construction est dévoilée par la construction s
   assert.ok(camp.has("pommes_cuites"));
   // Le foyer de pierres : elle vient seule, sans cèpe ni quête, avec l'épieu et les flèches durcies.
   const pierres = apres(etat({ installations: terrain("foyer_pierres") }));
-  for (const id of ["cepes_poeles", "epieu", "fleches_durcies", "baton_fouir", "pommes_cuites"]) assert.ok(pierres.has(id), id);
+  for (const id of ["cepes_poeles", "epieu", "fleches_durcies", "arc_simple", "pommes_cuites"]) assert.ok(pierres.has(id), id);
   assert.ok(!pierres.has("soupe_cepes"));
   // Le Dakota fait la poêlée, pas l'épieu.
   const dakota = apres(etat({ installations: terrain("dakota") }));
   assert.ok(dakota.has("cepes_poeles") && !dakota.has("epieu"));
   // La forge posée dévoile tout ce qui s'y forge à son niveau, et seulement au Charbonnier.
   const forge = apres(etat({ installations: terrain(null, { forge: 1 }) }));
-  for (const id of ["lame_forgee_fer", "machette_forgee_fer", "pinces_forge", "reforger_lame"]) assert.ok(forge.has(id), id);
+  for (const id of ["lame_forgee_fer", "machette_forgee_fer", "pinces_forge"]) assert.ok(forge.has(id), id);
+  assert.ok(!forge.has("reforger_lame"), "la trempe attend le bac");
+  assert.ok(apres(etat({ installations: terrain(null, { forge: 1, "forge+bac": 1 }) })).has("reforger_lame"));
   assert.ok(!forge.has("glaive"), "le glaive attend la forge ventilée");
 });
 
@@ -200,12 +205,13 @@ test("le seuil S ouvre l'atelier de sa famille ; ses recettes viennent avec l'at
   assert.ok(mecaniste.has("pedalier") && !mecaniste.has("arbalete"));
   // L'établi posé : l'arbalète et ses pièces ; les variantes à matière rare attendent la trouvaille.
   const etabli = apres(etat({ famille: "mecanistes", devoilees: mecaniste, installations: new Map([["abri", 1], ["etabli", 1]]), faits: { nuit: 1 } }));
-  for (const id of ["arbalete", "arbrier", "noix_bois", "arc_arbalete_frene", "corde_arbalete"]) assert.ok(etabli.has(id), id);
-  assert.ok(!etabli.has("arc_arbalete_ressort"));
-  assert.ok(apres(etat({ famille: "mecanistes", devoilees: etabli, installations: new Map([["etabli", 1]]), vus: new Set(["ressort_lames"]) })).has("arc_arbalete_ressort"));
+  for (const id of ["arbalete", "arbrier", "noix_bois", "arc_arbalete_frene", "arc_arbalete_ressort", "corde_arbalete"]) assert.ok(etabli.has(id), id);
+  // La corde à la ceinture de sécurité (à la main) attend toujours sa trouvaille ; l'établi à étau, ses pièces.
+  assert.ok(!etabli.has("corde_arbalete_ceinture") && !etabli.has("arbalete_lourde"));
 
   const voltaique = apres(etat({ famille: "voltaiques", tuto: 9 }));
-  assert.ok(voltaique.has("banc_recharge") && voltaique.has("matraque_fortune"));
+  assert.ok(voltaique.has("banc_recharge") && !voltaique.has("matraque_fortune"), "la matraque se monte au banc");
+  assert.ok(apres(etat({ famille: "voltaiques", tuto: 9, installations: new Map([["banc_recharge", 1]]) })).has("matraque_fortune"));
 });
 
 test("pendant le tutoriel, le seuil S attend l'étape « La famille » (l'Éteint du script ne compte pas)", () => {
@@ -219,7 +225,7 @@ test("pendant le tutoriel, le seuil S attend l'étape « La famille » (l'Étein
 test("le métier commence à l'atelier : une matière rare trouvée avant ne dévoile rien de sa famille", () => {
   const avant = apres(etat({ vus: new Set(["lame_ebrechee"]) }));
   assert.ok(!avant.has("reforger_lame") && !avant.has("forge"));
-  assert.ok(apres(etat({ vus: new Set(["lame_ebrechee"]), installations: terrain(null, { forge: 1 }) })).has("reforger_lame"));
+  assert.ok(apres(etat({ vus: new Set(["lame_ebrechee"]), installations: terrain(null, { forge: 1, "forge+bac": 1 }) })).has("reforger_lame"));
 });
 
 test("le Mécaniste pense au pédalier dès qu'il tient le cadre du vélo (§3.1)", () => {
@@ -265,7 +271,7 @@ test("le vétéran (Q8, plan 0.8) : les recettes communes à la main, ni ce qui 
     const d = new Set(devoileesDEmblee(f as Famille));
     assert.ok(d.has("gourdin") && d.has("ficelle") && d.has("hache") && d.has("lance"), f);
     assert.ok(!d.has("lit_branchages") && !d.has("foyer_dakota") && !d.has("cepes_poeles") && !d.has("epieu"), f);
-    assert.ok(!d.has("forge") && !d.has("banc_recharge") && !d.has("pedalier") && !d.has("matraque_fortune"), f);
+    assert.ok(!d.has("forge") && !d.has("banc_recharge") && !d.has("pedalier") && !d.has("matraque_fortune") && !d.has("corde_arbalete"), f);
   }
   assert.match(TEXTE_VETERAN, /Ta famille t'attend à la station\.$/);
   assert.ok(TEXTE_VETERAN.length <= 110);

@@ -164,11 +164,11 @@ export function recetteVisible(plan: Pick<PlanFabrication, "recettes" | "entrevu
  * au temps que le serveur a fixé (1 : le type de lieu ; 2 : le coin). Le dessin est dans hud.ts.
  */
 export function etatCle(
-  e: { id: string; cle: CleEvolution; aVenir?: string; phase?: string },
+  e: { id: string; cle: CleEvolution; aVenir?: string },
   progression: Pick<VueProgression, "idees" | "indices"> | null,
 ): { enPoche: true } | { plusLoin: true } | { indice: string; temps: 1 | 2 } {
   if (progression?.idees.includes(e.id)) return { enPoche: true };
-  if (e.aVenir || e.phase) return { plusLoin: true };
+  if (e.aVenir) return { plusLoin: true };
   const temps = progression?.indices[e.id] ?? 1;
   return { indice: e.cle.indice[temps - 1]!, temps };
 }

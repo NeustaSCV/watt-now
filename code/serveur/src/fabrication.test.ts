@@ -66,9 +66,11 @@ test("sans clé, le vélo ne se démonte pas ; la caisse à outils en donne une"
   assert.deepEqual(dernier("ressource"), { t: "ressource", id: velo.id, disponible: false });
 });
 
-test("un outil d'un niveau en dessous ralentit, deux niveaux en dessous empêchent", () => {
+test("les outils sont des portes dures : il faut le niveau demandé (plan 0.8 §2.1)", () => {
   assert.equal(multiplicateurQualites({ couteau: 1 }, { couper: 1 }), 1);
-  assert.equal(multiplicateurQualites({ pierre: 1 }, { marteler: 2 }), 1.5);
+  // Avant la 0.8, un niveau en dessous ralentissait (×1,5) : Marteler 1 ne suffit plus pour Marteler 2.
+  assert.equal(multiplicateurQualites({ pierre: 1 }, { marteler: 2 }), null);
+  assert.equal(multiplicateurQualites({ marteau: 1 }, { marteler: 2 }), 1);
   assert.equal(multiplicateurQualites({}, { marteler: 2 }), null);
 });
 

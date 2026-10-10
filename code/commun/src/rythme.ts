@@ -19,8 +19,9 @@ import { tirerVestiges, type LieuFouille } from "./vestiges.ts";
 import { aleaDe, contenuConteneur, graineDe, piecesAmas, type TypeLieuDechets } from "./dechets.ts";
 import { tableDecharge } from "./decharge.ts";
 import type { TypeObjet } from "./objets.ts";
-import { ATELIER, aDevoiler, devoileesAuDepart, devoileesDEmblee, lieuAtteint, lieuDe, nomConstruction, recetteDeBase, recettesDeLEtape, type EtatPourDevoilement } from "./progression.ts";
+import { ATELIER, aDevoiler, devoileesAuDepart, devoileesDEmblee, nomDuLieu, recetteDeBase, recettesDeLEtape, type EtatPourDevoilement } from "./progression.ts";
 import type { LieuRecette } from "./recettes.ts";
+import { lieuPossede } from "./lieu-recette.ts";
 import { QUETES, queteSuivante, type Condition, type LigneQuete, type Quete } from "./quetes.ts";
 import { RECETTES, recette, type Recette } from "./recettes.ts";
 import type { Famille } from "./regles.ts";
@@ -421,8 +422,8 @@ class Simulation {
       return OK;
     }
     // Plan 0.8 (chantier 2, en attendant le chantier 14) : une recette liée à une construction attend sa construction.
-    const lieu = lieuDe(r);
-    if (lieu.genre === "construction" && !lieuAtteint(lieu, this.installations)) {
+    const lieu = r.lieu;
+    if (lieu.genre === "construction" && !lieuPossede(lieu, this.installations)) {
       const i = this.batirPour(lieu, profondeur);
       if (!i.ok) return i;
     }
@@ -467,16 +468,25 @@ class Simulation {
     if (lieu.genre !== "construction") return OK;
     if (lieu.construction === "feu") {
       const avec = new Map(this.installations).set("feu", Math.max(2, this.installations.get("feu") ?? 0)).set("feu:foyer_pierres", 1);
-      if (!lieuAtteint(lieu, avec)) return { ok: false, raison: `attend : ${nomConstruction(lieu)}` };
+      if (!lieuPossede(lieu, avec)) return { ok: false, raison: `attend : ${nomDuLieu(lieu)}` };
       this.voir(["pierre", "buche"]);
       this.poserFeu("foyer_pierres", 2);
       this.reevaluer();
       return OK;
     }
-    if ((lieu.niveau ?? 1) > 1 || lieu.accessoire) return { ok: false, raison: `attend : ${nomConstruction(lieu)}` };
-    const ri = RECETTES.find((x) => "installation" in x.produit && x.produit.installation === lieu.construction);
-    if (!ri) return { ok: false, raison: `installation ${lieu.construction} introuvable` };
-    return this.fabriquer(ri.id, profondeur + 1);
+    if (!this.installations.has(lieu.construction)) {
+      const ri = RECETTES.find((x) => "installation" in x.produit && x.produit.installation === lieu.construction);
+      if (!ri) return { ok: false, raison: `installation ${lieu.construction} introuvable` };
+      const i = this.fabriquer(ri.id, profondeur + 1);
+      if (!i.ok) return i;
+    }
+    // Le niveau et l'accessoire (le bac de trempe, la forge ventilée) : le simulateur ne les a jamais comptés ; il les
+    // suppose faits, comme avant la 0.8, jusqu'à ce que le chantier 14 lui apprenne leurs coûts.
+    const niveau = Math.max(lieu.niveau ?? 1, this.installations.get(lieu.construction) ?? 1);
+    this.installations.set(lieu.construction, niveau);
+    if (lieu.accessoire) this.installations.set(`${lieu.construction}+${lieu.accessoire}`, niveau);
+    this.reevaluer();
+    return OK;
   }
 
   /** Du charbon de bois : bâtir la meule s'il le faut, attendre qu'elle cuise, défourner. */

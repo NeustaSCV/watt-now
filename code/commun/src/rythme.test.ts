@@ -6,9 +6,10 @@ import assert from "node:assert/strict";
 import { FAMILLES, type Famille } from "./regles.ts";
 import { RECETTES, estHorsFamille, recette } from "./recettes.ts";
 import { QUETES } from "./quetes.ts";
-import { ATELIER, aDevoiler, devoileesAuDepart, lieuAtteint, lieuDe, maillons, recettesDeLEtape, recettesDeLaQuete, silhouettes, type EtatPourDevoilement } from "./progression.ts";
+import { ATELIER, aDevoiler, devoileesAuDepart, maillons, recettesDeLEtape, recettesDeLaQuete, silhouettes, type EtatPourDevoilement } from "./progression.ts";
 import { CIBLE, cibleDuProfil, ecartsALaCible, jouerParcours, quetesDeLaFamille, tousLesParcours } from "./rythme.ts";
 import { trouvables } from "./trouvables.ts";
+import { lieuPossede } from "./lieu-recette.ts";
 
 const PARCOURS = tousLesParcours();
 
@@ -27,8 +28,10 @@ test("rythme : rapide au début — avec le tutoriel, une nouveauté toutes les 
     const c = cibleDuProfil(r.profil);
     assert.ok(r.mesures.nouveautesDebut >= c.nouveautes!, `${r.profil} ${r.famille} : ${r.mesures.nouveautesDebut} nouveautés`);
     assert.ok(r.mesures.ecartNouveautesDebut <= c.trou! + 1e-9, `${r.profil} ${r.famille} : trou de ${r.mesures.ecartNouveautesDebut} min`);
-    // Une vraie ouverture : une quinzaine de recettes dans la première demi-heure, et pas tout d'un coup.
-    assert.ok(r.mesures.recettesDebut >= 12 && r.mesures.recettesDebut <= 40, `${r.profil} ${r.famille} : ${r.mesures.recettesDebut} recettes`);
+    // Une vraie ouverture : une dizaine de recettes au moins dans la première demi-heure, et pas tout d'un coup. Sans
+    // paliers (plan 0.8, chantier 2), ce qui se fait au foyer de pierres attend le foyer : 16 → 10 pour le prudent,
+    // comme l'étude l'annonçait (`recettes-par-construction.md` §6.4) ; le chantier 14 le remesure avec les sorties.
+    assert.ok(r.mesures.recettesDebut >= 10 && r.mesures.recettesDebut <= 40, `${r.profil} ${r.famille} : ${r.mesures.recettesDebut} recettes`);
   }
 });
 
@@ -84,11 +87,11 @@ test("la quête active dévoile sa recette et ses maillons, même avant l'atelie
       for (const id of recettesDeLaQuete(q)) {
         // Plan 0.8 : une recette liée à une construction qu'on n'a pas attend sa construction (en silhouette, en tête).
         const r0 = recette(id);
-        if (r0 && !lieuAtteint(lieuDe(r0), e.installations)) assert.ok(enSilhouette.has(id), `${famille}, quête ${q.id} : ${id} en silhouette`);
+        if (r0 && !lieuPossede(r0.lieu, e.installations)) assert.ok(enSilhouette.has(id), `${famille}, quête ${q.id} : ${id} en silhouette`);
         else assert.ok(d.has(id), `${famille}, quête ${q.id} : ${id}`);
         const r = recette(id);
         // Un maillon lié à une construction qu'on n'a pas l'attend, comme toute recette de ce genre (plan 0.8).
-        if (r) for (const m of maillons(r)) if (!estHorsFamille(m, famille) && lieuAtteint(lieuDe(m), e.installations)) assert.ok(d.has(m.id), `${famille}, quête ${q.id} : maillon ${m.id}`);
+        if (r) for (const m of maillons(r)) if (!estHorsFamille(m, famille) && lieuPossede(m.lieu, e.installations)) assert.ok(d.has(m.id), `${famille}, quête ${q.id} : maillon ${m.id}`);
       }
     }
   }

@@ -13,6 +13,9 @@ services:
     ports:
       # Le Pi a déjà d'autres services : le jeu est publié sur le port 1234 (réglable dans .env : WATT_PORT).
       - "${WATT_PORT:-1234}:8080"
+      # La page d'administration (P-014, LISEZMOI §8 ter) : publiée SEULEMENT sur l'adresse du Pi dans la DMZ, jamais
+      # sur toutes ses adresses, et jamais redirigée sur la box. Le jeu n'accepte de toute façon que 192.168.1.0/24.
+      - "192.168.254.99:4321:4321"
     volumes:
       - ./donnees:/app/serveur/donnees
       # La clé USB des sauvegardes (Book 17 §5.4, LISEZMOI §7), montée par le porteur dans /mnt/watt-cle (FAT).

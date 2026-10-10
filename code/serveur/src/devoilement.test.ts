@@ -39,6 +39,11 @@ function monter(options: { famille?: Famille; tutoriel?: boolean; inventaire?: R
   return { base, compte, joueur, attendre, tous, infos, sac, recus };
 }
 
+/** La carte d'un terrain qui n'a qu'un feu, de cette forme (comme `carteInstallations`). */
+function feu(forme: string, niveau: number): ConstructionVue[] {
+  return [{ type: "feu", niveau }, { type: `feu:${forme}`, niveau: 1 }];
+}
+
 /** Un suivi seul, sur une source qu'on règle à la main (le sac, les constructions, le lieu) : les clés et les indices. */
 function suivi(options: { installations?: ConstructionVue[]; lieu?: string | null; etat?: EtatProgression } = {}) {
   let instant = 1_000_000;
@@ -46,7 +51,7 @@ function suivi(options: { installations?: ConstructionVue[]; lieu?: string | nul
   const faits: Record<string, number> = {};
   const etat = {
     inventaire: {} as Inventaire,
-    installations: options.installations ?? [{ type: "feu", niveau: 1, forme: "feu_camp" }],
+    installations: options.installations ?? feu("feu_camp", 1),
     lieu: options.lieu === undefined ? "terrain" : options.lieu,
   };
   const source: SourceDevoilement = {
@@ -209,7 +214,7 @@ test("ramasser un grillage sans foyer de pierres : « un jour », l'idée gardé
   assert.deepEqual(s.etat.idees, ["foyer_cuisine"]);
   // Plus tard, le foyer de pierres maçonné : la fiche du foyer de cuisine montre la clé en poche, pas d'indice à chercher.
   etat.inventaire = {};
-  etat.installations = [{ type: "feu", niveau: 2, forme: "foyer_pierres" }];
+  etat.installations = feu("foyer_pierres", 2);
   s.aRevoir();
   attendre(2);
   const v = s.vue();
@@ -221,7 +226,7 @@ test("ramasser un grillage sans foyer de pierres : « un jour », l'idée gardé
 });
 
 test("le message ne revient pas au second ramassage (ni après l'avoir posé, ni d'une session à l'autre)", () => {
-  const { s, etat, attendre, idees } = suivi({ installations: [{ type: "feu", niveau: 2, forme: "foyer_pierres" }] });
+  const { s, etat, attendre, idees } = suivi({ installations: feu("foyer_pierres", 2) });
   etat.inventaire = { grillage_rouleau: 1 };
   attendre(1);
   assert.equal(idees().length, 1);
@@ -233,14 +238,14 @@ test("le message ne revient pas au second ramassage (ni après l'avoir posé, ni
   attendre(1);
   assert.equal(idees().length, 1, "jamais au deuxième ramassage");
   // L'état gardé en base le sait : un suivi neuf sur cet état ne redit rien.
-  const autre = suivi({ installations: [{ type: "feu", niveau: 2, forme: "foyer_pierres" }], etat: JSON.parse(JSON.stringify(s.etat)) as EtatProgression });
+  const autre = suivi({ installations: feu("foyer_pierres", 2), etat: JSON.parse(JSON.stringify(s.etat)) as EtatProgression });
   autre.etat.inventaire = { grillage_rouleau: 1 };
   autre.attendre(1);
   assert.equal(autre.idees().length, 0);
 });
 
 test("l'indice passe au second temps après une visite de L1A sans le grillage", () => {
-  const { s, etat, attendre, faits } = suivi({ installations: [{ type: "feu", niveau: 2, forme: "foyer_pierres" }] });
+  const { s, etat, attendre, faits } = suivi({ installations: feu("foyer_pierres", 2) });
   attendre(2);
   assert.equal(s.vue().indices.foyer_cuisine, 1, "le foyer de pierres posé : l'indice du foyer de cuisine s'ouvre, au premier temps");
   assert.equal(faits["indice:foyer_cuisine"], 1);
@@ -263,14 +268,14 @@ test("l'indice passe au second temps après une visite de L1A sans le grillage",
 });
 
 test("l'indice passe au second temps après 45 min de jeu ; une visite avec le grillage ne compte pas", () => {
-  const a = suivi({ installations: [{ type: "feu", niveau: 2, forme: "foyer_pierres" }] });
+  const a = suivi({ installations: feu("foyer_pierres", 2) });
   a.attendre(2);
   a.attendre(INDICE_SECOND_TEMPS_MIN * 60 - 10, 5);
   assert.equal(a.s.vue().indices.foyer_cuisine, 1);
   a.attendre(15, 1);
   assert.equal(a.s.vue().indices.foyer_cuisine, 2);
   // Le grillage trouvé à la Coopérative : l'idée vient, l'indice se ferme (la clé est en poche).
-  const b = suivi({ installations: [{ type: "feu", niveau: 2, forme: "foyer_pierres" }], lieu: "cooperative" });
+  const b = suivi({ installations: feu("foyer_pierres", 2), lieu: "cooperative" });
   b.attendre(2);
   b.etat.inventaire = { grillage_rouleau: 1 };
   b.attendre(1);
@@ -286,7 +291,7 @@ test("la poêlée reste grisée pour qui n'a qu'un feu de camp ; le foyer de pie
   attendre(2);
   assert.ok(!s.estDevoilee("cepes_poeles"));
   assert.ok(s.vue().silhouettes.some((x) => x.id === "cepes_poeles" && x.ou === "Au foyer de pierres"));
-  etat.installations = [{ type: "feu", niveau: 2, forme: "foyer_pierres" }];
+  etat.installations = feu("foyer_pierres", 2);
   s.aRevoir();
   attendre(1);
   assert.ok(s.estDevoilee("cepes_poeles"));

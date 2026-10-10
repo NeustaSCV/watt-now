@@ -52,7 +52,10 @@ export const NOMS_QUALITES: Record<Qualite, string> = {
   souder: "Souder",
 };
 
-/** Qualités apportées par chaque objet, avec leur niveau (1 à 3). */
+/**
+ * Qualités apportées par chaque objet, avec leur niveau (1 à 3). Plan 0.8 §2.1 : les outils sont des portes dures, et
+ * les objets de fortune donnent le niveau 1 de leur qualité (le tableau `outils` de la v5).
+ */
 export const QUALITES_OBJETS: Partial<Record<TypeObjet, Partial<Record<Qualite, number>>>> = {
   couteau: { couper: 1, visser: 1 },
   couteau_aiguise: { couper: 2, visser: 1 },
@@ -61,7 +64,8 @@ export const QUALITES_OBJETS: Partial<Record<TypeObjet, Partial<Record<Qualite, 
   marteau: { marteler: 2 },
   hache: { fendre: 3, couper: 1 },
   tete_hache: { fendre: 1 },
-  cle_plate: { serrer: 2 },
+  // La clé de 13 serre, et sa tête frappe comme un marteau de fortune (plan 0.8 : Marteler 1).
+  cle_plate: { serrer: 2, marteler: 1 },
   tournevis: { visser: 2 },
   scie: { scier_bois: 2 },
   baton_fouir: { creuser: 1 },
@@ -80,6 +84,20 @@ export const QUALITES_OBJETS: Partial<Record<TypeObjet, Partial<Record<Qualite, 
   glaive: { couper: 2 },
   ciseau_bois: { tailler_bois: 2 },
   burin: { trancher_metal: 1 },
+  // Les objets de fortune (plan 0.8 §2.1, chantier 1) : ce qu'on trouve dans les déchets et les vestiges donne le
+  // niveau 1. Marteler : le cric, la ferraille tordue. Couper : le morceau de verre, la lame ébréchée, le couvercle
+  // d'une boîte de conserve, le sécateur. Visser : un fer plat (la lame ébréchée). Creuser : l'enjoliveur, la casserole.
+  // Trancher le métal : la lime usée.
+  cric: { marteler: 1 },
+  ferraille_tordue: { marteler: 1 },
+  verre: { couper: 1 },
+  lame_ebrechee: { couper: 1, visser: 1 },
+  boite_vide: { couper: 1 },
+  secateur: { couper: 1 },
+  enjoliveur: { creuser: 1 },
+  casserole: { creuser: 1 },
+  lime_usee: { trancher_metal: 1 },
+  // Le chantier 3 ajoute ici, en fin de table, les qualités des objets nouveaux de la 0.8.
 };
 
 /** Le meilleur niveau d'une qualité parmi les objets portés (0 si aucun). */
@@ -94,20 +112,14 @@ export function niveauQualite(inventaire: Inventaire, qualite: Qualite): number 
 }
 
 /**
- * Règle du Book 03 §4 : un niveau en dessous, malus (temps ×1,5) ; deux niveaux en dessous ou aucun outil, impossible.
- * Renvoie le multiplicateur de durée, ou null si c'est impossible.
+ * Les outils sont des portes dures (plan 0.8 §2.1) : il faut le niveau demandé, dans le sac. Plus de malus d'un niveau
+ * en dessous (Book 03 §4, avant la 0.8). Renvoie le multiplicateur de durée (1), ou null si un outil manque.
  */
 export function multiplicateurQualites(inventaire: Inventaire, demandees: Partial<Record<Qualite, number>>): number | null {
-  let facteur = 1;
   for (const [q, niveau] of Object.entries(demandees)) {
-    const possede = niveauQualite(inventaire, q as Qualite);
-    // Sans aucun outil de cette qualité, impossible : ne rien avoir n'est pas un outil de fortune.
-    if (possede === 0) return null;
-    const ecart = (niveau ?? 0) - possede;
-    if (ecart >= 2) return null;
-    if (ecart === 1) facteur *= 1.5;
+    if (niveauQualite(inventaire, q as Qualite) < (niveau ?? 0)) return null;
   }
-  return facteur;
+  return 1;
 }
 
 // ---------- Recettes ----------
@@ -202,8 +214,11 @@ export const CATEGORIES_RECETTES: readonly { id: CategorieRecette; nom: string; 
  * - `construction` : à côté d'une construction qu'on possède au bon niveau (2,5 m pour un feu, 3 m pour le reste).
  *   `construction` : le type d'installation, ou « feu » pour un foyer ; `niveau` : le niveau minimal dans sa lignée ;
  *   `formes` : pour un feu, les formes qui conviennent (le foyer de pierres, le Dakota…) ; `accessoire` : un accessoire
- *   monté sur la construction (l'enclume sur le foyer de forge…).
- * Il remplace `installation`, `feu`, `feuNiveau` et les listes cachées de `forge.ts` (`FORGE_VENTILEE_REQUISE`, `HUILE_REQUISE`).
+ *   monté sur la construction (le bac de trempe de la forge : « bac » ; « huile » : celle du bac, ou la graisse du sac ;
+ *   les noms sont dans `lieu-recette.ts`, `NOMS_ACCESSOIRES`).
+ * Il remplace `installation`, `feu`, `feuNiveau` et les listes cachées de `recettes/charbonniers.ts`
+ * (`FORGE_VENTILEE_REQUISE`, `HUILE_REQUISE`). Les données s'écrivent avec `recettes/lieux.ts` ; le serveur juge avec
+ * `refusLieu` (`lieu-recette.ts`).
  */
 export type LieuRecette =
   | { genre: "main" }
@@ -212,8 +227,8 @@ export type LieuRecette =
 
 export interface Recette {
   id: string;
-  /** Où elle se fait (plan 0.8). Le chantier 1 le rend obligatoire et le remplit pour chaque recette. */
-  lieu?: LieuRecette;
+  /** Où elle se fait (plan 0.8, chantier 1) : à la main, posée, ou à une construction. */
+  lieu: LieuRecette;
   /** Pas encore jouable : grisée « plus tard », avec sa clé « à trouver plus loin » (plan 0.8 §1.3). */
   aVenir?: AVenir;
   /** Son onglet dans le panneau Fabriquer. */
@@ -225,12 +240,12 @@ export interface Recette {
   sousProduits?: Inventaire;
   ingredients: Inventaire;
   qualites: Partial<Record<Qualite, number>>;
-  /** Installation à proximité nécessaire. */
-  installation?: TypeInstallation;
-  /** Il faut un feu allumé tout près (la cuisine, 2026-10-08). */
-  feu?: true;
-  /** Le foyer doit savoir le cuire (Book 24 §3.1) : 3 pour les mijotés (la crémaillère du foyer de cuisine). Absent : 1. */
-  feuNiveau?: number;
+  /**
+   * L'installation à côté de laquelle elle se fait. **Dérivée de `lieu`** quand `RECETTES` est assemblée : on ne l'écrit
+   * jamais dans les données. Gardée pour ce qui la lit encore (progression.ts, rythme.ts, trouvables.ts) ; à retirer
+   * quand ils liront `lieu` (fonction `installationDuLieu`).
+   */
+  readonly installation?: TypeInstallation;
   /** De l'eau prise dans la gourde, en litres (elle bout : celle de la mare suffit). */
   eau?: number;
   /** Le bois que la cuisson prend au foyer, en kg (moitié moins avec la marmite norvégienne). */
@@ -260,6 +275,18 @@ export interface ContexteFabrication {
 
 /** Toutes les recettes : les communes, puis celles de chaque famille (Book 25 §10.4). */
 export const RECETTES: Recette[] = [...RECETTES_COMMUNES, ...RECETTES_CHARBONNIERS, ...RECETTES_MECANISTES, ...RECETTES_VOLTAIQUES];
+for (const r of RECETTES) poserInstallation(r);
+
+/** L'installation d'à côté, lue dans le lieu (« feu » n'en est pas une : c'est un foyer). */
+export function installationDuLieu(lieu: LieuRecette): TypeInstallation | undefined {
+  return lieu.genre === "construction" && lieu.construction !== "feu" ? lieu.construction : undefined;
+}
+
+/** Le champ dérivé `installation` (voir `Recette.installation`), posé sur la recette elle-même. */
+function poserInstallation(r: Recette): void {
+  const installation = installationDuLieu(r.lieu);
+  if (installation) (r as { installation?: TypeInstallation }).installation = installation;
+}
 
 /**
  * Combien de secondes réelles dure une fabrication (décision du 2026-10-08) : le travail est condensé

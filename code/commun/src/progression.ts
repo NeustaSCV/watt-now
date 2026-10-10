@@ -15,12 +15,12 @@
 // Ce fichier ne fait que des calculs purs. Le serveur constate les faits (serveur/src/devoilement.ts) ; le client
 // affiche (client/src/fabrication-arbre.ts, la fiche d'installation de hud.ts, client/src/bandeau-idee.ts).
 
-import { NOMS_INSTALLATIONS, RECETTES, estApprise, estHorsFamille, niveauQualite, recette, type LieuRecette, type Recette, type SavoirRecettes } from "./recettes.ts";
-import { LIGNEES_INSTALLATIONS, VOIE_CREUSEE, VOIE_SURFACE, lignee, type CleEvolution, type Etape, type FormeFeu } from "./lignees.ts";
+import { RECETTES, estApprise, installationDuLieu, estHorsFamille, niveauQualite, recette, type LieuRecette, type Recette, type SavoirRecettes } from "./recettes.ts";
+import { LIGNEES_INSTALLATIONS, VOIE_CREUSEE, VOIE_SURFACE, lignee, type CleEvolution, type Etape } from "./lignees.ts";
 import type { Inventaire, TypeObjet } from "./objets.ts";
 import { QUETE, type Condition, type Quete } from "./quetes.ts";
 import type { Famille } from "./regles.ts";
-import { FORGE_VENTILEE_REQUISE } from "./recettes/charbonniers.ts";
+import { NOMS_ACCESSOIRES, lieuPossede, nomConstruction, nomFormeFeu } from "./lieu-recette.ts";
 
 // ---------- Les déclencheurs ----------
 
@@ -109,7 +109,7 @@ export type CarteSpeciale = (typeof CARTES_SPECIALES)[number];
  * La table complète (§2.4 à §2.8 de la proposition). Chaque recette de `RECETTES` y a sa ligne (un test le vérifie).
  * Le rythme (décision Q5) : les gestes à la main de la première heure viennent vite ; leur filet du temps (`filet`) les
  * ouvre de toute façon. Les lignes des recettes liées à une construction gardent leurs déclencheurs pour mémoire : seule
- * la construction les dévoile (`lieuDe`).
+ * la construction les dévoile (`Recette.lieu`).
  */
 export const PROGRESSION: Readonly<Record<string, LigneProgression>> = {
   // ---------- Le corps (la grille de conception du Book 02 : plus un palier du code) ----------
@@ -245,53 +245,7 @@ export const ECHEANCES_TEMPS: readonly number[] = [
   ...new Set([...Object.values(PROGRESSION).flatMap((l) => (l.filet !== undefined ? [l.filet] : [])), FILET_SEUIL_MIN]),
 ].sort((a, b) => a - b);
 
-// ---------- Le lieu d'une recette (plan 0.8 §2.1) ----------
-
-/**
- * Les recettes du feu, décidées au plan 0.8 §2.3 (« Les recettes permises, pour le feu ») : les formes qui les cuisent.
- * Chaque niveau garde ce que faisaient ceux d'avant ; la poêlée se fait aussi au Dakota (et au poêle-fusée, §3.2).
- * Partie de l'adaptation provisoire ci-dessous : le chantier 1 porte ces formes dans le `lieu` de chaque recette.
- */
-const FORMES_PROVISOIRES: Readonly<Record<string, readonly FormeFeu[]>> = {
-  pommes_cuites: ["feu_camp", "foyer_pierres", "foyer_cuisine", "four_terre", "dakota"],
-  cepes_poeles: ["foyer_pierres", "foyer_cuisine", "four_terre", "poele", "dakota", "poele_fusee"],
-  epieu: ["foyer_pierres", "foyer_cuisine", "four_terre"],
-  fleches_durcies: ["foyer_pierres", "foyer_cuisine", "four_terre"],
-  baton_fouir: ["foyer_pierres", "foyer_cuisine", "four_terre"],
-  soupe_cepes: ["foyer_cuisine", "four_terre", "poele"],
-  pot_au_feu: ["four_terre", "poele"],
-  volaille_cepes: ["four_terre", "poele"],
-};
-
-/**
- * Où se fait une recette : à la main, posée, ou à une construction (et à quel niveau, sous quelle forme).
- *
- * **Adaptation provisoire, retirée à l'intégration du chantier 1** : elle renvoie `r.lieu` quand il est là ; sinon,
- * elle le déduit des anciens champs (`produit.installation`, `installation`, `feu`, `feuNiveau`, la forge ventilée de
- * `FORGE_VENTILEE_REQUISE`) et des formes du feu décidées (§2.3). Tout le dévoilement passe par elle.
- */
-export function lieuDe(r: Recette): LieuRecette {
-  if (r.lieu) return r.lieu;
-  if ("installation" in r.produit) return { genre: "posee" };
-  if (r.installation) return { genre: "construction", construction: r.installation, ...(FORGE_VENTILEE_REQUISE.has(r.id) ? { niveau: 2 } : {}) };
-  const formes = FORMES_PROVISOIRES[r.id];
-  if (formes) return { genre: "construction", construction: "feu", formes };
-  if (r.feu) return { genre: "construction", construction: "feu", niveau: r.feuNiveau ?? 1 };
-  return { genre: "main" };
-}
-
-/**
- * Le lieu est-il atteint avec ces constructions ? La carte des constructions (`EtatPourDevoilement.installations`) :
- * `type` → meilleur niveau ; « feu » → le meilleur foyer, et `feu:<forme>` pour chaque forme qu'on a ;
- * `<type>+<accessoire>` pour un accessoire monté (la broche, la marmite, la meule, le bac de trempe…).
- */
-export function lieuAtteint(lieu: LieuRecette, installations: ReadonlyMap<string, number>): boolean {
-  if (lieu.genre !== "construction") return true;
-  if (lieu.construction === "feu" && lieu.formes && lieu.formes.length > 0) {
-    if (!lieu.formes.some((f) => installations.has(`feu:${f}`))) return false;
-  } else if ((installations.get(lieu.construction) ?? 0) < (lieu.niveau ?? 1)) return false;
-  return !lieu.accessoire || installations.has(`${lieu.construction}+${lieu.accessoire}`);
-}
+// ---------- Le lieu d'une recette (plan 0.8 §2.1 ; le moteur : lieu-recette.ts, chantier 1) ----------
 
 /** Les deux voies du feu, avec leur forme. */
 function etapeDeForme(forme: string): { voie: readonly Etape[]; etape: Etape } | null {
@@ -302,14 +256,10 @@ function etapeDeForme(forme: string): { voie: readonly Etape[]; etape: Etape } |
   return null;
 }
 
-/** Le nom de la construction qu'un lieu demande (« Foyer de cuisine », « Forge ventilée »). */
-export function nomConstruction(lieu: LieuRecette): string | null {
+/** Le nom de la construction qu'un lieu demande, en tête de phrase (« Foyer de cuisine », « Forge ventilée »). */
+export function nomDuLieu(lieu: LieuRecette): string | null {
   if (lieu.genre !== "construction") return null;
-  if (lieu.construction === "feu") {
-    const premiere = lieu.formes?.[0];
-    return (premiere ? etapeDeForme(premiere)?.etape.nom : VOIE_SURFACE[(lieu.niveau ?? 1) - 1]?.nom) ?? "Feu de camp";
-  }
-  const nom = lignee(lieu.construction)?.[(lieu.niveau ?? 1) - 1]?.nom ?? NOMS_INSTALLATIONS[lieu.construction];
+  const nom = lieu.construction === "feu" ? (lieu.formes?.[0] ? nomFormeFeu(lieu.formes[0]) : (VOIE_SURFACE[(lieu.niveau ?? 1) - 1]?.nom ?? "feu de camp")) : nomConstruction(lieu.construction, lieu.niveau);
   return nom.charAt(0).toUpperCase() + nom.slice(1);
 }
 
@@ -361,9 +311,9 @@ export function maillons(r: Recette): Recette[] {
     const m = recetteDeBase(t);
     if (m && m.id !== r.id) liste.push(m);
   }
-  const lieu = lieuDe(r);
-  if (lieu.genre === "construction" && lieu.construction !== "feu") {
-    const m = RECETTES.find((x) => "installation" in x.produit && x.produit.installation === lieu.construction);
+  const installation = installationDuLieu(r.lieu);
+  if (installation) {
+    const m = RECETTES.find((x) => "installation" in x.produit && x.produit.installation === installation);
     if (m) liste.push(m);
   }
   return liste;
@@ -464,7 +414,7 @@ export interface EtatPourDevoilement {
   faits: Readonly<Record<string, number>>;
   /**
    * Les constructions du terrain : type → meilleur niveau (« feu » : le meilleur foyer) ; `feu:<forme>` pour chaque forme
-   * de feu qu'on a ; `<type>+<accessoire>` pour un accessoire monté (voir `lieuAtteint`).
+   * de feu qu'on a ; `<type>+<accessoire>` pour un accessoire monté (voir `lieuPossede`).
    */
   installations: ReadonlyMap<string, number>;
   /** Les quêtes en cours ou finies. */
@@ -560,9 +510,9 @@ function ligneVraie(id: string, ligne: LigneProgression, e: EtatPourDevoilement,
   const r = recette(id);
   // Ce qu'on a déjà fait (ou posé), on y a forcément pensé.
   if (r && aFabrique(e, id) > 0) return true;
-  const lieu = r ? lieuDe(r) : null;
+  const lieu = r ? r.lieu : null;
   // Liée à une construction : la construction seule la dévoile (plan 0.8 §2.1).
-  if (lieu?.genre === "construction") return lieuAtteint(lieu, e.installations);
+  if (lieu?.genre === "construction") return lieuPossede(lieu, e.installations);
   if ((e.faits[`vu_faire:${id}`] ?? 0) > 0) return true;
   // Le tutoriel et le carnet ne demandent jamais une recette invisible (règle 5), même avant l'atelier.
   if (demandees.has(id)) return true;
@@ -588,7 +538,7 @@ export function aDevoiler(e: EtatPourDevoilement): string[] {
     if (devoilees.has(id) || !accessible(id, e.famille, savoir)) return;
     const r = recette(id);
     // La chaîne ne tire pas une recette liée à une construction qu'on n'a pas : elle attend sa construction.
-    if (parLaChaine && r && !lieuAtteint(lieuDe(r), e.installations)) return;
+    if (parLaChaine && r && !lieuPossede(r.lieu, e.installations)) return;
     devoilees.add(id);
     nouvelles.push(id);
     // La chaîne tire ses maillons, de proche en proche.
@@ -601,7 +551,7 @@ export function aDevoiler(e: EtatPourDevoilement): string[] {
   // construction à poser, ses ingrédients) se dévoile : le carnet ne mène jamais à une impasse invisible (règle 5).
   for (const id of demandees) {
     const r = recette(id);
-    if (r && accessible(id, e.famille, savoir) && !lieuAtteint(lieuDe(r), e.installations)) for (const m of maillons(r)) ajouter(m.id, true);
+    if (r && accessible(id, e.famille, savoir) && !lieuPossede(r.lieu, e.installations)) for (const m of maillons(r)) ajouter(m.id, true);
   }
   // Un dévoilement peut en ouvrir un autre (« une fois l'arbalète dévoilée ») : on repasse tant que ça bouge.
   for (let passe = 0; passe < 8; passe++) {
@@ -623,7 +573,7 @@ export function aDevoiler(e: EtatPourDevoilement): string[] {
 export function devoileesDEmblee(famille: Famille): string[] {
   return Object.keys(PROGRESSION).filter((id) => {
     const r = recette(id);
-    return r !== undefined && r.famille === "tous" && accessible(id, famille) && lieuDe(r).genre === "main";
+    return r !== undefined && r.famille === "tous" && accessible(id, famille) && r.lieu.genre === "main";
   });
 }
 
@@ -681,25 +631,34 @@ export function silhouettes(e: EtatPourDevoilement): SilhouetteVue[] {
   for (const id of recettesDemandees(e)) {
     const r = recette(id);
     if (!r || !cachee(id)) continue;
-    const lieu = lieuDe(r);
-    const nom = nomConstruction(lieu);
-    if (!nom || lieuAtteint(lieu, e.installations)) continue;
-    liste.push({ id, ou: aLaConstruction(nom), quete: true });
+    const lieu = r.lieu;
+    const nom = nomDuLieu(lieu);
+    if (!nom || lieuPossede(lieu, e.installations)) continue;
+    const avec = lieu.genre === "construction" && lieu.accessoire ? `, avec ${NOMS_ACCESSOIRES[lieu.accessoire] ?? lieu.accessoire}` : "";
+    liste.push({ id, ou: `${aLaConstruction(nom)}${avec}`, quete: true });
     deja.add(id);
   }
   const suivants = niveauxSuivants(e.installations);
   for (const id of Object.keys(PROGRESSION)) {
     const r = recette(id);
-    if (!r || !cachee(id)) continue;
-    const lieu = lieuDe(r);
-    if (lieu.genre !== "construction" || lieuAtteint(lieu, e.installations)) continue;
-    const s = suivants.find((x) => lieuAtteint(lieu, x.avec));
-    if (!s) continue;
-    liste.push({ id, ou: aLaConstruction(s.nom) });
+    if (!r || r.aVenir || !cachee(id)) continue;
+    const lieu = r.lieu;
+    if (lieu.genre !== "construction" || lieuPossede(lieu, e.installations)) continue;
+    if (lieu.accessoire && ACCESSOIRES_PLUS_TARD.has(lieu.accessoire)) continue;
+    // La construction d'abord (sans son accessoire) : déjà là, ou au niveau suivant d'une qu'on a.
+    const sansAccessoire: LieuRecette = { ...lieu, accessoire: undefined };
+    const nom = lieuPossede(sansAccessoire, e.installations) ? nomDuLieu(lieu) : (suivants.find((x) => lieuPossede(sansAccessoire, x.avec))?.nom ?? null);
+    if (!nom) continue;
+    // Puis l'accessoire qui manque (« Au foyer de forge, avec un bac de trempe »).
+    const avec = lieu.accessoire ? `, avec ${NOMS_ACCESSOIRES[lieu.accessoire] ?? lieu.accessoire}` : "";
+    liste.push({ id, ou: `${aLaConstruction(nom)}${avec}` });
     deja.add(id);
   }
   return liste;
 }
+
+/** Les accessoires du niveau 2 (plan 0.8 §1.3) : rien ne les pose encore, leurs recettes ne sont pas des silhouettes. */
+const ACCESSOIRES_PLUS_TARD: ReadonlySet<string> = new Set(["poste_montage", "roulements"]);
 
 /**
  * Les recettes des autres familles dépliées une à une (§3.3, Q6) : on a vu quelqu'un la faire, on en tient le produit,
@@ -805,7 +764,7 @@ export function nouvellesIdees(e: Pick<EtatPourDevoilement, "vus" | "installatio
  */
 export function indicesOuverts(e: Pick<EtatPourDevoilement, "installations" | "devoilees"> & { idees: ReadonlySet<string> }): EtapeAvecCle[] {
   return etapesAvecCle().filter((x) => {
-    if (e.idees.has(x.etape.id) || x.etape.aVenir || x.etape.phase) return false;
+    if (e.idees.has(x.etape.id) || x.etape.aVenir) return false;
     const a = niveauPossede(x, e.installations);
     if (a >= x.etape.niveau) return false;
     if (x.etape.niveau === 1) return x.construction !== "feu" && RECETTES.some((r) => "installation" in r.produit && r.produit.installation === x.construction && e.devoilees.has(r.id));
