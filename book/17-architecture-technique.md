@@ -239,16 +239,15 @@ Mesurée sur le vrai serveur de la 0a (banc de charge : joueurs simulés qui bou
 
 ### 5.5 La page d'administration sur le réseau local (0.8, P-014)
 
-Une page web pour le porteur, **sans mot de passe**, ouverte seulement depuis le réseau de la maison (chantier 16 du plan 0.8) :
+Une page web pour le porteur, **sans mot de passe**, sur un port jamais publié à l'extérieur (chantier 16 du plan 0.8 ; sans liste d'adresses depuis la 0.8.1) :
 
 - **ce qu'elle montre** : le nombre de joueurs connectés à l'instant et lesquels (pseudo, famille, lieu), la liste des comptes, et la fiche de chacun avec **ce que la base sait déjà** (compte, personnage, sac, coffres, installations, feux, mesures). **Aucun compteur ni aucune mesure nouvelle** : elle lit, elle n'écrit rien ;
 - **ce qu'elle fait** : **réinitialiser un mot de passe** (un provisoire tiré au hasard, affiché une seule fois ; les jetons sont effacés et le joueur connecté renvoyé à l'écran de connexion) ; **supprimer un compte** (confirmé en retapant le pseudo ; le joueur est déconnecté d'abord, puis tout ce qui dépend du compte part : les tables liées en cascade, et ce qui ne le nomme que par son numéro — sacs au sol, Coopérative, Moulin, déchets, forge, mesures — car SQLite peut redonner ce numéro ; seules ses mesures de vitesse de progression `atteint:<étape>` restent, rendues anonymes, voir §6) ;
 - **le compte « god » est protégé** : ni suppression, ni réinitialisation (la base le refuse aussi) ;
 - **l'architecture** : un **second serveur HTTP** dans le même programme (`serveur/src/admin-web.ts`, démarré par `index.ts`), sur son seul port, **4321** (`WATT_ADMIN_PORT`) ; le port du jeu ne sert aucune de ses routes. Du HTML rendu par le serveur, sans script ; la confirmation est dans la page, avec un bouton ;
 - **les garde-fous**, puisqu'il n'y a pas de mot de passe :
-  - le port n'est publié par Docker **que sur l'adresse du Pi** (`192.168.254.99:4321:4321`), et la box ne publie que le 1234 ;
-  - une **liste blanche** : 192.168.1.0/24 (le réseau local du porteur ; la box route sans traduire les adresses, le Pi voit la vraie adresse) et la machine elle-même ; **la DMZ 192.168.254.0/24 est refusée**, comme tout le reste ;
-  - l'en-tête `Host` doit être une adresse (contre le *DNS rebinding*), et un formulaire venu d'une autre page est refusé ;
+  - **le port 4321 n'est jamais publié sur la box** (seul le 1234 l'est) : c'est la seule barrière. La liste blanche d'adresses et le contrôle du nom d'hôte de la 0.8 ont été **retirés en 0.8.1** (décision du porteur du 2026-10-11 : « elle ne sera jamais publiée à l'extérieur ») ; Docker publie le port sur le Pi (`"4321:4321"`) ;
+  - un formulaire venu d'une autre page est refusé ;
   - un **journal des actions** dans celui du serveur : quoi, quel compte, quand, depuis quelle adresse.
 - Mode d'emploi : `code/deploiement/LISEZMOI.md` §8 ter.
 

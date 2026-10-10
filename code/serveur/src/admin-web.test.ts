@@ -1,5 +1,5 @@
-// La page d'administration sur le réseau local (P-014, chantier 16 de la 0.8) : la liste blanche (la DMZ refusée), le
-// nom d'hôte, le port du jeu qui ne sert aucune route d'admin, la suppression en cascade (déconnexion d'abord), la
+// La page d'administration sur le réseau local (P-014, chantier 16 de la 0.8) : ouverte à toute adresse et à tout nom
+// d'hôte depuis la 0.8.1 (plus de liste blanche), le port du jeu qui ne sert aucune route d'admin, la suppression en cascade (déconnexion d'abord), la
 // réinitialisation (ancien mot de passe refusé, jetons effacés, provisoire affiché), « god » protégé, aucune mesure écrite.
 
 import { test } from "node:test";
@@ -11,46 +11,13 @@ import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import { WebSocket } from "ws";
 import { FERMETURE_JETON_REFUSE, type MessageServeur } from "../../commun/src/messages.ts";
-import { adresseAutorisee, demarrerAdminWeb, hoteAutorise, motDePasseProvisoire } from "./admin-web.ts";
+import { demarrerAdminWeb, motDePasseProvisoire } from "./admin-web.ts";
 import { CompteProtege } from "./base.ts";
 import { rendreSilencieux } from "./journal.ts";
 import { demarrerServeur } from "./serveur.ts";
 
 rendreSilencieux(true);
 const dossierTests = join(dirname(fileURLToPath(import.meta.url)), "..", "donnees", "tests-admin-web");
-
-test("La liste blanche : la machine et 192.168.1.0/24 seulement ; la DMZ 192.168.254.0/24 et le reste refusés", () => {
-  for (const a of ["127.0.0.1", "::1", "::ffff:127.0.0.1", "192.168.1.1", "192.168.1.20", "192.168.1.254", "::ffff:192.168.1.42", " 192.168.1.7 "]) {
-    assert.ok(adresseAutorisee(a), `${a} devrait passer`);
-  }
-  for (const a of [
-    "192.168.254.99",
-    "192.168.254.1",
-    "192.168.254.20",
-    "::ffff:192.168.254.5",
-    "192.168.0.10",
-    "192.168.10.1",
-    "192.168.100.1",
-    "10.0.0.2",
-    "172.17.0.1",
-    "8.8.8.8",
-    "127.0.0.2",
-    "fe80::1",
-    "2a01:cb00::1",
-    "192.168.1",
-    "192.168.1.300",
-    "",
-    "?",
-    undefined,
-  ]) {
-    assert.equal(adresseAutorisee(a), false, `${String(a)} devrait être refusée`);
-  }
-});
-
-test("Le nom d'hôte : une adresse ou localhost, jamais un nom (contre le DNS rebinding)", () => {
-  for (const h of ["192.168.254.99:4321", "127.0.0.1:4461", "localhost:4321", "[::1]:4321", "192.168.254.99"]) assert.ok(hoteAutorise(h), h);
-  for (const h of ["preprod.example.org:4321", "evil.example", "", undefined]) assert.equal(hoteAutorise(h), false, String(h));
-});
 
 test("Le mot de passe provisoire : trois groupes de quatre, sans caractères ambigus, jamais le même", () => {
   const vus = new Set<string>();
@@ -100,7 +67,7 @@ async function connecter(port: number, jeton: string) {
   return { socket, fermeture };
 }
 
-test("La page d'administration : liste blanche, port du jeu muet, réinitialisation, suppression en cascade, god protégé", async () => {
+test("La page d'administration : ouverte à toute adresse, port du jeu muet, réinitialisation, suppression en cascade, god protégé", async () => {
   mkdirSync(dossierTests, { recursive: true });
   const cheminBase = join(dossierTests, `admin-${process.pid}.sqlite`);
   const jeu = await demarrerServeur({ port: 0, hote: "127.0.0.1", cheminBase });
@@ -114,24 +81,19 @@ test("La page d'administration : liste blanche, port du jeu muet, réinitialisat
     const god = base.creerCompte("god", "toutpuissant", "voltaiques", false, null, true);
     base.designerAdmin(god.id);
 
-    // ---- La liste blanche, de bout en bout ----
-    for (const a of ["192.168.254.20", "::ffff:192.168.254.99", "10.0.0.5", "172.17.0.1", "8.8.8.8"]) {
+    // ---- Plus de liste blanche (0.8.1) : la DMZ, le pont Docker, un nom d'hôte, tout passe ----
+    for (const a of ["192.168.254.20", "::ffff:192.168.254.99", "10.0.0.5", "172.17.0.1", "::ffff:192.168.1.20"]) {
       adresse = a;
       const r = await requete(admin.port, "GET", "/");
-      assert.equal(r.statut, 403, a);
-      assert.doesNotMatch(r.html, /Nadia/);
-      assert.equal((await requete(admin.port, "POST", `/joueur/${nadia.id}/supprimer`, "pseudo=Nadia")).statut, 403, a);
+      assert.equal(r.statut, 200, a);
+      assert.match(r.html, /Nadia/);
     }
-    assert.ok(base.compteParPseudo("Nadia"), "rien n'est supprimé depuis la DMZ");
-    adresse = "::ffff:192.168.1.20";
+    adresse = "127.0.0.1";
     const accueil = await requete(admin.port, "GET", "/");
     assert.equal(accueil.statut, 200);
     assert.match(accueil.html, /Personne n'est connecté/);
-    assert.match(accueil.html, /Nadia/);
     assert.match(accueil.html, /Rose/);
-    adresse = "127.0.0.1";
-    // Un nom à la place d'une adresse : refusé (DNS rebinding).
-    assert.equal((await requete(admin.port, "GET", "/", undefined, { Host: "piege.example:4321" })).statut, 403);
+    assert.equal((await requete(admin.port, "GET", "/", undefined, { Host: "preprod.example.org:4321" })).statut, 200, "un nom d'hôte passe aussi");
 
     // ---- Le port du jeu ne sert aucune route d'admin ----
     for (const [methode, chemin] of [

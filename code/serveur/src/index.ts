@@ -42,13 +42,13 @@ if (production) {
 }
 
 // La page d'administration (P-014) : un second serveur web, sur son seul port (4321, réglable : WATT_ADMIN_PORT),
-// ouvert au seul réseau local du porteur (liste blanche dans admin-web.ts). Sur le Pi, compose.yaml ne publie ce port
-// que sur l'adresse du Pi, jamais sur la box. S'il ne peut pas s'ouvrir (port pris), le jeu tourne quand même.
+// sans mot de passe ni liste d'adresses (0.8.1) : ce port n'est jamais publié sur la box. S'il ne peut pas s'ouvrir
+// (port pris), le jeu tourne quand même.
 const portAdmin = Number(process.env.WATT_ADMIN_PORT ?? PORT_ADMIN);
 let admin: AdminWebDemarre | null = null;
 try {
   admin = await demarrerAdminWeb({ port: portAdmin, hote: process.env.WATT_ADMIN_HOTE, base: serveur.base, monde: serveur.monde });
-  journal(`Page d'administration sur le port ${admin.port} (réseau local seulement : 192.168.1.0/24 et la machine elle-même)`);
+  journal(`Page d'administration sur le port ${admin.port} (à ne jamais publier sur la box)`);
 } catch (erreur) {
   journal(`⚠ Page d'administration : impossible d'ouvrir le port ${portAdmin} (${String(erreur)}) ; le jeu tourne sans elle.`);
 }

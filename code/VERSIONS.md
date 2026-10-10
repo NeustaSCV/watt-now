@@ -12,6 +12,12 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
+## 0.8.1 · prête à déployer
+
+- **La page d'administration s'ouvre de partout dans la maison** : elle n'est plus réservée à une liste d'adresses, et on peut l'ouvrir par l'adresse du Pi ou par un nom. Elle reste sans mot de passe, sur un port qui n'est jamais publié sur Internet.
+
+---
+
 ## 0.8 · prête à déployer
 
 - **La base grandit avec tes sorties** : plus de paliers. Chaque meuble monte d'un niveau avec le niveau d'avant, des matériaux de la maison et un outil ; au niveau 1, il lui faut en plus **une clé** qu'on trouve dehors : une grille, une grosse toile, un seau, un étau… Chaque sortie peut changer ta base.

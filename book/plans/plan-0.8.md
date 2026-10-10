@@ -692,14 +692,14 @@ vague 4   [13 Tutoriel, quêtes, aide] ◄────────────�
 - **Le gué (chantier 11)** : haler le bac suit la règle des gestes longs (un appui pour commencer, un autre pour arrêter) ; qui se trouve sur le radier quand la crue le noie est ramené sur la rive, avec une ligne de message ; les abords du lot (relief, route, rivière, arbres) sont gardés ; les fouilles : 80 % de chances de trouver quelque chose, 20 % deux choses (à régler au test) ; quatre retouches du modèle sont demandées aux bâtiments (`demande-batiment-gue-3.md`).
 - **Carte (chantier 4)** : le gué est retourné au rendu pour suivre la carte (le terrain à l'est), comme la station (chantier 11) ; **aucun panneau vers plus loin que le Moulin** (« on ne sait pas encore ce qu'on mettra plus loin » : retouche du modèle demandée aux bâtiments) ; la carte du monde se ferme par **sa croix ✕ et par un clic en dehors de la carte** (chantier 13 ; décision revue le 2026-10-10).
 
-### 9.3 Les dernières décisions, et ce qui part en 0.8.1 (2026-10-10)
+### 9.3 Les dernières décisions, et ce qui part en 0.8.2 (2026-10-10, revu le 2026-10-11)
 
-*Le porteur a accepté toutes les recommandations de fin de codage ; ce qui demande un changement de code se fera en **0.8.1**.*
+*Le porteur a accepté toutes les recommandations de fin de codage ; ce qui demande un changement de code se fera en **0.8.2** (le 2026-10-11, le porteur a réservé la **0.8.1** à l'accès à la page d'administration : plus de liste d'adresses ni de contrôle du nom d'hôte, le port 4321 publié sur le Pi, jamais sur la box).*
 
 - **Décidé, sans changement de code** : au Moulin, le butin courant (corde, branches, conserve, chiffons, ficelle), l'étau démonté en 10 s avec Serrer 1, le gémissement de la fosse à 16 m, la grande porte qui s'ouvre et se ferme à volonté une fois déverrouillée ; le stock de bois reste tel quel (à remesurer au niveau 2) ; l'écart de 83 min entre deux portes pour ⚡ et ⚙️ et les branches tendues sont à surveiller au test familial ; les neuf objectifs ordinaires de « S'installer » restent après les portes.
 - **Le critère 6** devient : **toutes les portes à clé en ≈ 3 h 30** pour le prudent (mesuré : 209 à 212 min) ; tout le niveau 1, maison et métier compris, ≈ 4 h 40 (277 à 285 min), à caler au test familial.
 - **Le critère 12** se lit « aucune **arme de métier** au-dessus de ★★ sans la maîtrise » (l'arc simple ★★★ au fil dentaire est décidé, §2.4).
-- **En 0.8.1** :
+- **En 0.8.2** :
   - le feu prend **d'abord les branches**, puis les bûches (le conseil de la première nuit devient possible) ;
   - « Un vrai lit » remonte **en tête** de « S'installer », après le coffre (l'abri fermé suppose l'abri garni) ;
   - le tas de bois personnel et le stock du Comptoir deviennent des **réglages modifiables à chaud** ;

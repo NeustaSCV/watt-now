@@ -1,7 +1,7 @@
 // La page d'administration sur le réseau local (P-014, chantier 16 de la 0.8) : un second serveur web, dans le même
 // programme que le jeu, qui n'écoute que sur son port (4321 par défaut) ; rien de l'admin ne passe par le port du jeu.
-// Sans mot de passe : elle n'est protégée que par le port non publié sur la box et par la liste blanche d'adresses
-// (le réseau local du porteur, 192.168.1.0/24, et la machine elle-même). La DMZ du Pi (192.168.254.0/24) est refusée.
+// Sans mot de passe et sans liste d'adresses (0.8.1, décision du porteur du 2026-10-11) : elle n'est protégée que par
+// son port, qui n'est jamais publié à l'extérieur (la box ne publie que le port du jeu).
 //
 // Ce qu'elle fait : compter et nommer les joueurs connectés, lister les comptes, montrer ce que la base sait déjà de
 // chacun (aucun compteur nouveau, aucune mesure écrite), réinitialiser un mot de passe (le provisoire est affiché une
@@ -47,46 +47,12 @@ export interface AdminWebDemarre {
   fermer(): Promise<void>;
 }
 
-// ---------- La liste blanche ----------
+// ---------- L'adresse du poste (pour le journal) ----------
 
 /** « ::ffff:192.168.1.20 » (une adresse IPv4 vue par une prise IPv6) → « 192.168.1.20 ». */
 export function adresseNue(adresse: string): string {
   const a = adresse.trim().toLowerCase();
   return a.startsWith("::ffff:") && a.includes(".") ? a.slice(7) : a;
-}
-
-function octetsIPv4(a: string): number[] | null {
-  const parties = a.split(".");
-  if (parties.length !== 4 || !parties.every((p) => /^\d{1,3}$/.test(p))) return null;
-  const octets = parties.map(Number);
-  return octets.every((o) => o <= 255) ? octets : null;
-}
-
-/**
- * La liste blanche (P-014, réseau du porteur du 2026-10-10) : la machine elle-même (127.0.0.1, ::1) et le réseau local
- * du porteur, 192.168.1.0/24. Tout le reste est refusé, en particulier la DMZ du Pi (192.168.254.0/24), où d'autres
- * machines peuvent être exposées, et les adresses du pont Docker (172.x).
- */
-export function adresseAutorisee(adresse: string | undefined): boolean {
-  if (!adresse) return false;
-  const a = adresseNue(adresse);
-  if (a === "::1") return true;
-  const o = octetsIPv4(a);
-  if (!o) return false;
-  if (o[0] === 127 && o[1] === 0 && o[2] === 0 && o[3] === 1) return true;
-  return o[0] === 192 && o[1] === 168 && o[2] === 1;
-}
-
-/**
- * L'en-tête Host doit être une adresse (IPv4, [IPv6]) ou « localhost » : une page piégée sur Internet qui ferait
- * pointer son propre nom vers le Pi (le « DNS rebinding ») ne peut pas lire la page depuis le navigateur du porteur.
- */
-export function hoteAutorise(hote: string | undefined): boolean {
-  if (!hote) return false;
-  const h = hote.trim().toLowerCase();
-  if (/^\[[0-9a-f:.]+\](:\d+)?$/.test(h)) return true;
-  const nom = h.replace(/:\d+$/, "");
-  return nom === "localhost" || octetsIPv4(nom) !== null;
 }
 
 /** Un envoi de formulaire qui vient d'une autre page que la nôtre (un autre site ouvert sur le poste du porteur) : refusé. */
@@ -159,14 +125,6 @@ export async function demarrerAdminWeb(options: OptionsAdminWeb): Promise<AdminW
 
   const traiter = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     const adresse = adresseNue(adresseDe(req) ?? "?");
-    if (!adresseAutorisee(adresse)) {
-      noterRefus(adresse, "hors du réseau local");
-      return envoyer(res, 403, page("Accès refusé", `<p>Cette page n'est ouverte qu'au réseau local.</p>`));
-    }
-    if (!hoteAutorise(req.headers.host)) {
-      noterRefus(adresse, `nom d'hôte « ${String(req.headers.host ?? "")} »`);
-      return envoyer(res, 403, page("Accès refusé", `<p>Ouvre la page par l'adresse du serveur (par exemple <code>http://192.168.254.99:4321</code>).</p>`));
-    }
     const url = new URL(req.url ?? "/", "http://admin");
     const chemin = url.pathname;
     if (req.method === "GET" && chemin === "/") return envoyer(res, 200, pageAccueil(base, monde));
