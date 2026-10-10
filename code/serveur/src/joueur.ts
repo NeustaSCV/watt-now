@@ -29,7 +29,6 @@ import {
   WH_RECHARGE_PAR_HEURE,
   capacite,
   decharger,
-  whEDePedalage,
   type Charges,
   type TypeBatterie,
 } from "../../commun/src/energie.ts";
@@ -90,7 +89,7 @@ import { CoucheDechets } from "./couche-dechets.ts";
 import { REDRESSEUR } from "../../commun/src/arc.ts";
 import { Forge, type ContexteForge } from "./forge.ts";
 import { declencher, declencheurNeuf, definitionDeclencheur, estDeclencheur, type DeclencheurPose } from "./declencheurs.ts";
-import { Electricite, alimenterClotures, coutEnduranceCoup, type ContexteElectricite } from "./electricite.ts";
+import { Electricite, alimenterClotures, coutEnduranceCoup, produireBancsSolaires, type ContexteElectricite } from "./electricite.ts";
 import { FilsDeRasoir, utiliserMecanique, type ContexteMecanique } from "./mecanique.ts";
 import { rendDesAccessoires } from "../../commun/src/mecanique.ts";
 import {
@@ -103,7 +102,7 @@ import {
   valeurWotts,
   type Wotts,
 } from "../../commun/src/economie.ts";
-import { BONUS_MECANISTE, PORTEE_CABLE_PANNEAU, WH_M_PAR_HEURE, productionPanneau, stocker } from "../../commun/src/energie.ts";
+import { BONUS_MECANISTE, PORTEE_CABLE_PANNEAU, WH_M_PAR_HEURE, porteBatteries, productionPanneau, stocker } from "../../commun/src/energie.ts";
 import type { AutreVu, OffreEchange, OperationComptoir, RapportBase, WottsVus } from "../../commun/src/messages.ts";
 import { COMPTOIR, dansBoite, deLieu, destinations, etapeVers, minuscule, type Zone } from "../../commun/src/lieux.ts";
 import { LEURRES, PORTEE_PORTE, PORTES, boitePorte, distancePorte } from "../../commun/src/cooperative.ts";
@@ -1226,6 +1225,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
       info: (t) => j.info(t),
       indice: (sorte, t) => j.indice(sorte, t),
       commencer: (libelle, dureeS, appliquer, kcal) => j.commencer(libelle, dureeS, appliquer, kcal ?? 0, "outil"),
+      retirer: (objets) => j.retirerPlusieurs(objets),
+      noter: (fait) => j.noterFait(fait),
     };
   }
 
@@ -1239,9 +1240,12 @@ export class Joueur implements Voyageur, ParticipantLecon {
       },
       retirer: (objets) => this.retirerPlusieurs(objets),
       info: (t) => this.info(t),
-      commencer: (libelle, secondes, appliquer, bruit) => this.commencer(libelle, secondes, appliquer, 0, bruit),
+      commencer: (libelle, secondes, appliquer, bruit, kcal) => this.commencer(libelle, secondes, appliquer, kcal ?? 0, bruit),
       maj,
       noter: (fait) => this.noterFait(fait),
+      famille: () => this.compte.famille,
+      batterieDuSac: () => this.batterieAvecPlace(),
+      chargerSac: (b, wh) => this.ajouterCharge(b, wh),
     };
   }
 
@@ -2903,9 +2907,11 @@ export class Joueur implements Voyageur, ParticipantLecon {
   private mettreAJourBase(instant: number): { produit: number; stocke: number; perdu: number; decharge: number; remonte: number } {
     const bilan = { produit: 0, stocke: 0, perdu: 0, decharge: 0, remonte: 0 };
     const changes = new Set<InstallationVue>();
-    // Les batteries posées se déchargent, comme les autres.
+    // Le banc solaire (chantier 7) : son panneau remplit ses batteries (avant la décharge, qui avance `majLe`).
+    for (const [k, v] of Object.entries(produireBancsSolaires(this.installations.values(), instant)) as [keyof typeof bilan, number][]) bilan[k] += v;
+    // Les batteries posées (banc, pédalier) se déchargent, comme les autres.
     for (const banc of this.installations.values()) {
-      if (banc.type !== "banc_recharge") continue;
+      if (!porteBatteries(banc.type)) continue;
       const depuis = banc.etat.majLe ?? instant;
       const avant = banc.etat.charges ?? {};
       const apres = decharger(avant, instant - depuis);
@@ -3559,7 +3565,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       case "demonter_installation": {
         if (!laRecette) return this.info("Ça ne se démonte pas.");
         if (i.type === "coffre" && Object.values(i.etat.contenu ?? {}).some((n) => (n ?? 0) > 0)) return this.info("Vide d'abord le coffre.");
-        if (i.type === "banc_recharge" && Object.values(i.etat.batteries ?? {}).some((n) => (n ?? 0) > 0)) return this.info("Reprends d'abord les batteries posées sur le banc.");
+        if (porteBatteries(i.type) && Object.values(i.etat.batteries ?? {}).some((n) => (n ?? 0) > 0)) return this.info("Reprends d'abord les batteries posées dessus.");
         if (i.type === "charbonniere" && i.etat.pretLe) return this.info("La meule cuit : on ne l'ouvre qu'au défournement.");
         // Les accessoires du pédalier se démontent avec lui.
         const accessoires = somme(
@@ -3604,6 +3610,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (this.forge.utiliser(i, verbe)) return;
     // Les pièges et les accessoires du pédalier des Mécanistes (Book 25 §6, chantier 7) : serveur/src/mecanique.ts.
     if (utiliserMecanique(this.contexteMecanique(maj), i, verbe as Verbe)) return;
+    // Le banc solaire (plan 0.8, chantier 7) : poser le panneau sur le banc (serveur/src/electricite.ts).
+    if (this.electricite.utiliser(i, verbe as Verbe)) return;
 
     switch (verbe) {
       case "porter":
@@ -3693,22 +3701,6 @@ export class Joueur implements Voyageur, ParticipantLecon {
           maj();
         }, 0, "outil");
       }
-      case "pedaler": {
-        if (i.type !== "pedalier" || !i.etat.dynamo) return;
-        const cible = this.batterieAvecPlace();
-        if (!cible) return this.info("Aucune batterie à charger, ou elles sont pleines : il faut une batterie pas pleine dans ton sac.");
-        return this.commencer(
-          "Pédaler pour charger la batterie",
-          DUREE_PEDALAGE,
-          () => {
-            const wh = whEDePedalage(this.compte.famille);
-            const ajoute = this.ajouterCharge(cible, wh);
-            this.info(`+${Math.round(ajoute)} Wh dans ${nommer(cible, 1)}.`);
-          },
-          KCAL_PEDALAGE_EN_PLUS,
-          "outil",
-        );
-      }
       case "affuter": {
         if (i.type !== "pedalier" || !i.etat.meule) return;
         if (!this.inventaire.couteau) return this.info("Tu n'as pas de couteau abîmé à affûter (celui du kit de départ).");
@@ -3735,10 +3727,10 @@ export class Joueur implements Voyageur, ParticipantLecon {
         if (this.electricite.rearmer(i)) return;
         break;
       case "poser_batteries":
-        if (i.type !== "banc_recharge") return;
+        if (!porteBatteries(i.type)) return;
         return this.poserBatteries(i);
       case "reprendre_batteries":
-        if (i.type !== "banc_recharge") return;
+        if (!porteBatteries(i.type)) return;
         return this.reprendreBatteries(i);
       case "recharger": {
         if (i.type !== "banc_recharge") return;

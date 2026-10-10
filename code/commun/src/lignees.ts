@@ -442,8 +442,10 @@ export const LIGNEES_INSTALLATIONS: Partial<Record<TypeInstallation, readonly Et
       examen: "Le coffre cerclé, monté sur des pierres sous un auvent de bâche.",
     },
   ],
-  // 🔥 La lignée de la forge (Book 25 §4.1 et §9.3, chantier 5) : le foyer de forge, puis la forge ventilée. Ses
-  // accessoires (enclume, bac de trempe, ventilateur ⚡) se posent sur place : serveur/src/forge.ts.
+  // 🔥 La lignée de la forge (Book 25 §4.1 et §9.3 ; plan 0.8, chantier 7) : le foyer de forge, puis la forge ventilée
+  // (plus tard). Ses accessoires (enclume, bac de trempe, ventilateur ⚡) se posent sur place : serveur/src/forge.ts. La
+  // clé du foyer, l'enclume de dépanneur, se cale sur son billot (« poser l'enclume ») ; sans elle, sa grosse pierre
+  // plate ne donne que ★ (Q-0.8-1). Le mot « soufflet » est réservé à la clé de la forge ventilée (Q-0.8-13).
   forge: [
     {
       id: "forge",
@@ -454,24 +456,85 @@ export const LIGNEES_INSTALLATIONS: Partial<Record<TypeInstallation, readonly Et
       duree: 90,
       intensite: "lourde",
       famille: "charbonniers",
-      apporte: "Forger au charbon, vers 900 °C : couteau, hachette, machette, serpe, pointes. Les lames montent à ★★, ★★★ avec des pinces et une enclume.",
-      examen: "Un foyer de pierres, un soufflet, une pierre plate pour enclume. Il faut du charbon de bois.",
+      etapeLieu: "H1",
+      cle: {
+        objet: "enclume_depanneur",
+        ou: "H1A",
+        replis: [{ note: "Une grosse pierre plate pour enclume : les lames ne passent pas ★." }],
+        idee: "Une enclume ! Avec un foyer de pierres et du charbon, tu pourrais forger.",
+        ideePlusTard: "Cette enclume servira à une forge, un jour.",
+        indice: ["Une enclume ? Les dépanneurs redressaient les tôles.", "Sous l'établi du garage de la station."],
+      },
+      apporte: "Forger au charbon, vers 900 °C : pinces, rivets, pointes, couteau et machette au fer doux, hachette. Les lames montent à ★★ sur l'enclume de dépanneur, ★ sur la pierre plate.",
+      examen: "Un foyer de pierres, une tuyère de fer, un billot et sa pierre plate pour enclume. Il faut du charbon de bois.",
     },
     {
       id: "forge_ventilee",
       nom: "Forge ventilée",
       niveau: 2,
-      // La tuyère d'argile et le soufflet double : du cuir de bâche, ou des chiffons cousus.
-      couts: [
-        { bache: 1, pierre: 6, barre_metal: 1 },
-        { chiffons: 4, pierre: 6, barre_metal: 1 },
-      ],
-      qualites: { marteler: 1 },
+      // Le tableau maître : la tuyère chemisée de glaise du gué, le soufflet de forge de L2B (la clé, plus tard).
+      couts: [{ pierre: 6, glaise: 2, barre_metal: 1 }],
+      qualites: { marteler: 2 },
       duree: 60,
       intensite: "lourde",
       famille: "charbonniers",
-      apporte: "Un soufflet double et une tuyère : vers 1 300 °C. Les lames montent à ★★★★ ; la hache et le glaive s'y forgent. On pompe soi-même, sauf avec un ventilateur.",
-      examen: "Le foyer, chemisé d'argile, une tuyère de fer, et un grand soufflet double qu'on pompe d'une main. Le charbon y blanchit.",
+      aVenir: "niveau 2",
+      etapeLieu: "L2",
+      apporte: "Avec un soufflet de forge, vers 1 300 °C : souder. Les lames montent à ★★★ ; la hache et le glaive s'y forgent.",
+      examen: "Le foyer, chemisé de glaise, une tuyère de fer, et le grand soufflet de forge d'un maréchal. Le charbon y blanchit.",
+    },
+  ],
+  // ⚡ Le banc solaire (plan 0.8, chantier 7) : le banc de recharge et son panneau ne font plus qu'un meuble. La clé, le
+  // petit panneau de la station, se pose sur le banc (« poser le panneau ») : 80 Wh par jour au soleil dans les
+  // batteries posées dessus (la batterie de la ruine). Sans lui, le repli : la manivelle de la lampe à dynamo, lente.
+  banc_recharge: [
+    {
+      id: "banc_recharge",
+      nom: "Banc solaire",
+      niveau: 1,
+      couts: [{ buche: 2, barre_metal: 1, branche: 3 }],
+      qualites: { visser: 1, serrer: 1 },
+      duree: 60,
+      intensite: "moyenne",
+      famille: "voltaiques",
+      etapeLieu: "H1",
+      cle: {
+        objet: "panneau_solaire",
+        ou: "H1A",
+        replis: [{ note: "La manivelle de la lampe à dynamo : lente, à la force du bras." }],
+        idee: "Ce panneau, posé sur un banc de planches : ton courant à toi, chaque jour.",
+        ideePlusTard: "Ce panneau servira sur un banc, un jour.",
+        indice: ["Le soleil ? Les stations avaient des panneaux sur leurs auvents.", "Le pilier de l'auvent de la station."],
+      },
+      apporte: "Brancher et assembler : packs, modules, matraques, lampes. Le panneau posé dessus remplit ses batteries au soleil, 80 Wh par jour.",
+      examen: "Un banc de planches, des pinces, un régulateur bricolé ; le petit panneau de la station couché dessus, plein sud.",
+    },
+  ],
+  // ⚙️ Le pédalier générateur (plan 0.8, chantier 7) : le vélo de la ruine sur un bâti, la roue entraîne le petit
+  // alternateur de la station (la clé, « monter l'alternateur ») par une courroie : ≈ 60 Wh par heure de pédalage dans
+  // la batterie posée dessus (la batterie de la ruine). Le repli : la dynamo du vélo, 3 à 6 W. La meule et le
+  // ventilateur à manivelle s'y montent (serveur/src/mecanique.ts).
+  pedalier: [
+    {
+      id: "pedalier",
+      nom: "Pédalier générateur",
+      niveau: 1,
+      couts: [{ cadre_velo: 1, chaine_velo: 1, roue_velo: 1, buche: 2 }],
+      qualites: { serrer: 1, visser: 1, marteler: 1 },
+      duree: 90,
+      intensite: "moyenne",
+      famille: "mecanistes",
+      etapeLieu: "H1",
+      cle: {
+        objet: "petit_alternateur",
+        ou: "H1A",
+        replis: [{ note: "La dynamo du vélo : 3 à 6 W, très lent." }],
+        idee: "Un alternateur… Entraîné par le vélo de la ruine, il ferait du courant à chaque coup de pédale.",
+        ideePlusTard: "Cet alternateur servira sur un pédalier, un jour.",
+        indice: ["Faire du courant en pédalant ? Un petit alternateur.", "L'établi du garage de la station."],
+      },
+      apporte: "Pédaler : l'alternateur charge la batterie posée dessus, environ 60 Wh par heure. La meule et le ventilateur à manivelle s'y montent.",
+      examen: "Le vieux vélo de la ruine sur un bâti de bois ; sa roue entraîne, par une courroie, le petit alternateur d'une voiture.",
     },
   ],
 };

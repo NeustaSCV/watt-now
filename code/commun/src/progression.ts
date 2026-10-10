@@ -150,6 +150,8 @@ export const PROGRESSION: Readonly<Record<string, LigneProgression>> = {
   // ---------- Les tiens : l'atelier et l'arme de base, seul ----------
   forge: { quand: [SEUIL], indice: "Quand tu auras un toit et tenu tête une fois…" },
   charbonniere: { quand: [fab("forge"), quete("charbonniere")], indice: "Ta forge aura faim d'un feu plus chaud." },
+  // La charbonnette (plan 0.8, B9, chantier 7) : la même meule, de moitié moins de bûches.
+  charbonniere_charbonnette: { quand: [fab("forge"), quete("charbonniere")], indice: "Des branches refendues font aussi du charbon." },
   lame_forgee_fer: { quand: [CHARBON, quete("lame")], indice: "Ton premier charbon, ta première lame." },
   lame_forgee: { quand: [et(CHARBON, vu("ressort_lames"))], indice: "Un bon acier de ressort fait une bonne lame." },
   lame_forgee_lime: { quand: [et(CHARBON, vu("lime_usee"))], indice: "Le meilleur acier dort dans les vieux outils." },
@@ -160,7 +162,6 @@ export const PROGRESSION: Readonly<Record<string, LigneProgression>> = {
   banc_recharge: { quand: [SEUIL], indice: "Quand tu auras un toit et tenu tête une fois…" },
   matraque_fortune: { quand: [SEUIL, fab("banc_recharge"), vu("appareil_photo_jetable")], indice: "Ton arme de métier : le silence qui mord." },
   module_flash: { quand: [vu("appareil_photo_jetable")], indice: "Un flash garde une belle décharge en réserve." },
-  panneau_solaire: { quand: [vu("panneau_solaire"), quete("panneau_trouve"), quete("panneau_pose")], indice: "Le soleil donne, encore faut-il le recueillir." },
   pack_cellules: { quand: [vu("cellule_lithium"), quete("pack")], indice: "Des petites piles ensemble font une vraie batterie." },
   module_raquette: { quand: [vu("raquette_moustiques"), quete("raquette")], indice: "Ce qui grillait les moustiques peut servir encore." },
   matraque_electrique: { quand: [fab("pack_cellules"), MODULES, quete("raquette")], indice: "Une décharge qui les éteint pour de bon." },

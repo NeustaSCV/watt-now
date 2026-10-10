@@ -128,8 +128,12 @@ test("la trésorerie vide fait attendre la prime, versée dès qu'elle se rempli
   assert.equal(t.dernier("wotts")!.wotts.compte, 10);
 });
 
-test("le panneau déjà installé compte comme rapporté : on n'est pas bloqué", () => {
-  const t = monter("voltaiques", {}, new Base(":memory:"), (base, id) => base.ajouterInstallation(id, "panneau_solaire", 20, 20, 0));
+test("le panneau déjà posé sur le banc solaire compte comme rapporté : on n'est pas bloqué", () => {
+  // Plan 0.8 (chantier 7) : le banc de recharge et son panneau ne font plus qu'un meuble.
+  const t = monter("voltaiques", {}, new Base(":memory:"), (base, id) => {
+    const banc = base.ajouterInstallation(id, "banc_recharge", 20, 20, 0);
+    base.sauverEtatInstallation(id, banc.id, { panneau: true });
+  });
   t.attendre(1);
   assert.ok(t.reussies().includes("Le panneau de la station"));
   assert.ok(t.reussies().includes("Installer le panneau"));

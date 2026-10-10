@@ -1,4 +1,5 @@
-// ⚡ Les recettes des Voltaïques : batterie → banc de recharge → panneau ; et, depuis la 0.6 (Book 25 §5, chantier 6),
+// ⚡ Les recettes des Voltaïques : le banc solaire (le banc et le panneau de la station, un seul meuble depuis la 0.8) ;
+// et, depuis la 0.6 (Book 25 §5, chantier 6),
 // les packs et les modules, les matraques, l'aiguillon, la lampe bricolée, l'alarme, les clôtures, la plaque de choc,
 // le ventilateur de forge, l'électrificateur et le bain de dérouillage.
 // Les autres familles voient ces recettes grisées, « chez les Voltaïques » (savoir.ts).
@@ -16,6 +17,11 @@ import { POSEE, aCote } from "./lieux.ts";
 const AU_BANC = aCote("banc_recharge");
 /** Monter fin (la haute tension, les électrodes, un moteur) : le poste de montage du banc, au niveau 2 (plan 0.8 §1.3). */
 const AU_POSTE_DE_MONTAGE = aCote("banc_recharge", { accessoire: "poste_montage" });
+/**
+ * Ce qui attend le niveau 2 (plan 0.8 §1.3, `decisions-armes.json`) : le poste de montage (L2A, sa clé : le fer à souder)
+ * et ce qui s'y fait, l'aiguillon, la clôture électrique. Grisé « plus tard » ; le serveur le refuse.
+ */
+const NIVEAU_2 = { aVenir: "niveau 2" } as const;
 
 /**
  * Les étoiles du module de décharge que la recette prendra : le moins bon du sac (une recette prend toujours les
@@ -46,28 +52,18 @@ function derouille(type: TypeObjet): (inventaire: Inventaire) => number[] {
 
 export const RECETTES_VOLTAIQUES: Recette[] = [
   {
+    // Le banc solaire (plan 0.8, chantier 7) : un banc de planches, la barre de la ruine, le support du panneau. Le
+    // panneau de la station s'y pose ensuite (« poser le panneau », serveur/src/electricite.ts) : un seul meuble. La
+    // batterie de la ruine se branche dessus ; sans panneau, la manivelle de la lampe à dynamo (le repli).
     id: "banc_recharge",
     lieu: POSEE,
     categorie: "ateliers",
-    nom: "Banc de recharge",
+    nom: "Banc solaire",
     produit: { installation: "banc_recharge" },
-    ingredients: { buche: 2, barre_metal: 1 },
+    ingredients: { buche: 2, barre_metal: 1, branche: 3 },
     qualites: { visser: 1, serrer: 1 },
     duree: 60,
     intensite: "moyenne",
-    famille: "voltaiques",
-  },
-  {
-    // Le panneau de la station-service, posé sur un support de branches, plein sud, câblé au banc (É4).
-    id: "panneau_solaire",
-    lieu: POSEE,
-    categorie: "ateliers",
-    nom: "Poser le panneau solaire",
-    produit: { installation: "panneau_solaire" },
-    ingredients: { panneau_solaire: 1, branche: 3 },
-    qualites: { visser: 1 },
-    duree: 30,
-    intensite: "legere",
     famille: "voltaiques",
   },
 
@@ -116,6 +112,7 @@ export const RECETTES_VOLTAIQUES: Recette[] = [
   {
     // La bobine d'allumage, attaquée par le condensateur du flash : la vraie haute tension (★★★), qui saute au voisin.
     id: "module_bobine",
+    ...NIVEAU_2,
     lieu: AU_POSTE_DE_MONTAGE,
     categorie: "materiaux",
     nom: "Module de décharge (bobine)",
@@ -161,6 +158,7 @@ export const RECETTES_VOLTAIQUES: Recette[] = [
     // L'amélioration du Charbonnier : deux pointes d'acier forgées pour tenir contre une tempe, un pack trié (deux
     // packs, la moitié des cellules jetée). Une étoile de plus : ★★★★ avec une bobine.
     id: "matraque_electrodes",
+    ...NIVEAU_2,
     lieu: AU_POSTE_DE_MONTAGE,
     categorie: "outils",
     nom: "Matraque à électrodes forgées",
@@ -175,6 +173,7 @@ export const RECETTES_VOLTAIQUES: Recette[] = [
   {
     // Le haut de gamme passe par les trois métiers (Book 25 §7.3) : électrodes 🔥, manche tourné et isolé ⚙️, montage ⚡.
     id: "matraque_manche_tourne",
+    ...NIVEAU_2,
     lieu: AU_POSTE_DE_MONTAGE,
     categorie: "outils",
     nom: "Matraque à manche tourné",
@@ -189,6 +188,7 @@ export const RECETTES_VOLTAIQUES: Recette[] = [
   {
     // La même décharge au bout d'un épieu : deux fils de cuivre courent jusqu'aux électrodes.
     id: "aiguillon",
+    ...NIVEAU_2,
     lieu: AU_BANC,
     categorie: "outils",
     nom: "Aiguillon de défense",
@@ -244,6 +244,7 @@ export const RECETTES_VOLTAIQUES: Recette[] = [
   {
     // L'électrificateur : il envoie le courant du banc dans une clôture.
     id: "electrificateur",
+    ...NIVEAU_2,
     lieu: AU_POSTE_DE_MONTAGE,
     categorie: "materiaux",
     nom: "Électrificateur",
@@ -257,6 +258,7 @@ export const RECETTES_VOLTAIQUES: Recette[] = [
   {
     // La défense de la base : six mètres sur isolateurs de plastique ; à moins de 6 m du banc, qui la nourrit.
     id: "cloture_electrique",
+    ...NIVEAU_2,
     lieu: POSEE,
     categorie: "batir",
     nom: "Clôture électrique",
@@ -283,6 +285,7 @@ export const RECETTES_VOLTAIQUES: Recette[] = [
   {
     // Pour les Charbonniers : la forge ventilée sans pomper (Book 25 §9.3, accessoire de la forge).
     id: "ventilateur_forge",
+    ...NIVEAU_2,
     lieu: AU_POSTE_DE_MONTAGE,
     categorie: "ateliers",
     nom: "Ventilateur de forge 12 V",

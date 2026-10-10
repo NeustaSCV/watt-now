@@ -630,6 +630,8 @@ class Simulation {
     if (d.lieu) this.voyager(d.lieu);
     this.avancer(d.travail * this.def.facteur);
     if (q.id === "dynamo") this.pret.wh = this.minute;
+    // Le panneau posé sur le banc solaire (plan 0.8, chantier 7) : la batterie charge au soleil.
+    if (q.id === "panneau_pose") this.pret.wh = this.minute + ATTENTE.wh_panneau;
     this.finies.push(q.id);
     this.reevaluer();
     return OK;

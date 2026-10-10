@@ -15,7 +15,7 @@ export type Condition =
   /** Un fait compté depuis l'arrivée (repas, échange, wotts gagnés…), au moins `but` fois. */
   | { a: "fait"; fait: string; but: number }
   /** Une installation de ce type sur son terrain (avec un équipement monté, ou un niveau minimal, si précisé ; Book 24). */
-  | { a: "installation"; type: string; avec?: "meule" | "dynamo"; niveau?: number }
+  | { a: "installation"; type: string; avec?: "meule" | "dynamo" | "alternateur" | "panneau"; niveau?: number }
   /** Plusieurs faits additionnés (vendus ou donnés, de plusieurs sortes), au moins `but` en tout (0.6). */
   | { a: "faits"; faits: string[]; but: number }
   /**
@@ -324,7 +324,8 @@ const METIER: Quete[] = [
     titre: "La dynamo",
     icone: "pedalier",
     texte: "Monte la dynamo du vélo sur le pédalier : tes jambes feront de l'électricité.",
-    objectifs: [{ libelle: "Dynamo sur le pédalier", condition: { a: "installation", type: "pedalier", avec: "dynamo" } }],
+    // Plan 0.8 (chantier 7) : l'alternateur de la station vaut la dynamo (le texte est au chantier 13).
+    objectifs: [{ libelle: "Dynamo sur le pédalier", condition: { a: "un_de", conditions: [{ a: "installation", type: "pedalier", avec: "alternateur" }, { a: "installation", type: "pedalier", avec: "dynamo" }] } }],
     lecon: "Une heure de pédalage, quelques Wh. C'est peu, mais c'est à toi.",
     recompense: { wotts: 20 },
   },
@@ -347,7 +348,7 @@ const METIER: Quete[] = [
     titre: "Le panneau de la station",
     icone: "panneau_solaire",
     texte: "Un petit panneau solaire est appuyé contre un pilier de l'auvent, à la station-service. Rapporte-le.",
-    objectifs: [{ libelle: "Panneau solaire", condition: { a: "un_de", conditions: [{ a: "objet", types: ["panneau_solaire"], n: 1 }, { a: "installation", type: "panneau_solaire" }] } }],
+    objectifs: [{ libelle: "Panneau solaire", condition: { a: "un_de", conditions: [{ a: "objet", types: ["panneau_solaire"], n: 1 }, { a: "installation", type: "banc_recharge", avec: "panneau" }, { a: "installation", type: "panneau_solaire" }] } }],
     lecon: "Le soleil ne fait pas de bruit, ne fume pas, et ne se fatigue jamais.",
     recompense: { wotts: 10 },
   },
@@ -358,7 +359,8 @@ const METIER: Quete[] = [
     titre: "Installer le panneau",
     icone: "panneau_solaire",
     texte: "Installe le panneau sur ton terrain (depuis Fabriquer), au soleil, près de ton banc de recharge.",
-    objectifs: [{ libelle: "Panneau installé", condition: { a: "installation", type: "panneau_solaire" } }],
+    // Plan 0.8 (chantier 7) : le panneau se pose sur le banc solaire (le texte est au chantier 13).
+    objectifs: [{ libelle: "Panneau installé", condition: { a: "un_de", conditions: [{ a: "installation", type: "banc_recharge", avec: "panneau" }, { a: "installation", type: "panneau_solaire" }] } }],
     lecon: "Il charge le jour, même quand tu n'es pas là.",
     recompense: { wotts: 15 },
   },
