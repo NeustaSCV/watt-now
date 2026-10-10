@@ -5309,7 +5309,7 @@ body:has(#hud .voile-pause:not([hidden])) #hud .tactile {
   left: 50%;
   transform: translateX(-50%);
   z-index: 30;
-  width: min(440px, calc(100vw - 32px));
+  width: min(500px, calc(100vw - 32px));
   display: flex;
   align-items: center;
   gap: 10px;
@@ -5379,9 +5379,11 @@ body:has(#hud .voile-pause:not([hidden])) #hud .tactile {
   font-size: 13px;
   cursor: pointer;
 }
-/* Téléphone en vertical : le bouton passe sous le texte, à droite, pour garder deux lignes lisibles. */
+/* Téléphone en vertical : le bouton passe sous le texte, à droite, pour garder deux lignes lisibles ; le bandeau
+   descend sous la colonne des messages, qui reste lisible au-dessus. */
 @media (max-width: 420px) {
   #hud .bandeau-idee {
+    top: calc(var(--haut-bandeau, 120px) + 58px);
     flex-wrap: wrap;
     width: calc(100vw - 24px);
   }
@@ -5397,7 +5399,8 @@ body:has(#hud .voile-pause:not([hidden])) #hud .tactile {
 /* Téléphone en paysage : plus bas de plafond, le bandeau se fait plus mince. */
 @media (orientation: landscape) and (max-height: 520px) {
   #hud .bandeau-idee {
-    width: min(480px, 60vw);
+    /* Entre le joystick et la colonne des boutons d'action, sans mordre sur « Lancer ». */
+    width: min(430px, 52vw);
     padding: 6px 8px 6px 10px;
   }
   #hud .bandeau-idee .trouvaille {
