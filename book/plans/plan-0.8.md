@@ -664,6 +664,12 @@ vague 4   [13 Tutoriel, quêtes, aide] ◄────────────�
 
 ---
 
+### 10.1 La conception du gué et du Moulin (étude `h1b-l1b-conception.md`, décidée le 2026-10-10)
+
+- **Le gué (chantier 11)** : pour la 0.8, **le radier qui gronde** (le bruit de l'eau couvre les pas du joueur et ceux des Éteints ; l'Éteint qui dérive ; les balises rouge et blanc, échelle de crue), **la crue et le bac** (après deux tranches de pluie de suite, le radier est noyé pendant la pluie et 6 min après ; on passe par le **bac à câble**, en version simple — maintenir A ≈ 15 s, le radeau glisse —, qui **marche toujours** : la crue ralentit la route B, elle ne la ferme jamais ; la cloche du bac), et **les ricochets** (les galets lancés comme leurre). Propositions G1–G16 acceptées.
+- **Le Moulin (chantier 12)** : la **clé** pend au tableau de l'atelier, dans les **dépendances** juste après le pont, gardée par deux dormants ; la **fourche à foin** dans l'étable ; la clé ouvre la **grande porte**, qui reste ouverte une fois déverrouillée ; le **parcours** : meules sud (un groupe de trois), couloir du rouet (goulet le long de la fosse ; **on peut y repousser un Éteint dans la fosse** : petite règle nouvelle), meules nord (l'étau, les poutres : 2 bûches), magasin (5 dormants dont un Équipé ; la toile de jute, les feuillards), jardin (l'if) ; la **sortie à sens unique** par la planche du bief et le chemin de halage (on n'arrive jamais par là ; un mur de clôture et la planche à ajouter) ; **22 Éteints dont 9 dormants**. Propositions M1–M35 acceptées. Les changements du modèle (passages trop étroits de 0,58 m et 0,74 m, nord fermé, mur, planche) sont **transmis à la session des bâtiments**, seule à écrire dans `batiment/`.
+- **Réinitialisation** : **la Coopérative (L1A) et le Moulin (L1B) se réinitialisent au bout de 24 h** — Éteints, butin, clés garanties ; au Moulin, la clé d'accès revient et la grande porte se referme.
+
 ## 11. Le récapitulatif des chantiers
 
 | # | Chantier | Vague | Effort | Dépend de |

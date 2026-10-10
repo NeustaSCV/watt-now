@@ -31,7 +31,7 @@
 
 ## 1. Les règles à respecter
 
-*Chaque règle porte un numéro (R1…R50) et sa source. « Décidé » : une décision du porteur ; « repère » : une valeur d'étude, pas encore tranchée. Les identifiants entre parenthèses renvoient au champ `decisions` du tableau maître ou aux études citées.*
+*Chaque règle porte un numéro (R1…R51) et sa source. « Décidé » : une décision du porteur ; « repère » : une valeur d'étude, pas encore tranchée. Les identifiants entre parenthèses renvoient au champ `decisions` du tableau maître ou aux études citées.*
 
 ### 1.A Les meubles et la progression
 
@@ -131,6 +131,7 @@
 | **R47** | **Le Comptoir est un filet payant pour les matériaux de base** : un petit stock (10 bûches, 10 pierres), un réassort lent (1 toutes les 2 h), au prix de vente. Ni bloquant, ni gratuit. | B13 |
 | **R49** | **Un lieu L se mérite par un parcours.** L'accès au lieu personnel L#X passe par une **clé d'accès** trouvée dans un **bâtiment annexe** (isolé, devant le lieu) ; elle ouvre le bâtiment principal. Dedans, un **parcours imposé** mène à la **partie du fond**, où sont le butin intéressant et les **clés du niveau** ; on en ressort par un **chemin à sens unique** (visible et crédible : saut, trappe, échelle qu'on fait tomber, porte qui ne s'ouvre que d'un côté ; garanti par le serveur), pour qu'on ne puisse pas aller tout droit au butin. Les Éteints sont placés le long du parcours. Compatible avec la vision par pièce (0.7.2). | Le porteur, conception du Moulin (L1B), 2026-10-10 |
 | **R50** | **Une halte H a ses moments de jeu propres**, liés à son thème et à son lieu (au gué : traverser, la crue, le bac à câble, la roselière, les galets, la glaise…), pas seulement un stock de matières. On en retient deux ou trois par halte, choisis pour le plaisir de jeu et leur coût de développement. | Le porteur, conception du gué (H1B), 2026-10-10 ; étude `h1b-l1b-conception.md` (en cours) |
+| **R51** | **Un lieu personnel L se réinitialise au bout de 24 h** : ses Éteints, son butin, ses clés garanties, et sa clé d'accès (la porte principale se referme). | Le porteur, 2026-10-10 (L1A et L1B) |
 | **R48** | **Pas de dialogue à croix.** Un avertissement ou un conseil se ferme **avec un bouton**, jamais par une fenêtre de dialogue avec une croix : « les dialogues avec une croix cassent complètement la dynamique de jeu ». | B14 (condition du porteur) |
 
 ---
@@ -352,7 +353,7 @@ et dégâts(étoile) > dégâts(étoile − 1)
 3. **Le parcours** pièce par pièce jusqu'à la partie du fond : ses étapes (étages, passages, obstacles), ses Éteints (dormants, errants, leur place), ses fouilles secondaires (matériaux de base, butin opportuniste selon la règle du butin).
 4. **La partie du fond** : les **clés du niveau** garanties, l'arme trouvée éventuelle, le butin intéressant.
 5. **La sortie à sens unique** : comment elle s'impose (geste, objet du décor), comment le serveur la garantit (passage franchissable dans un seul sens), et où elle ramène (près de la sortie du lieu).
-6. **Le renouvellement** (lieu personnel) : ce qui revient, et en combien de temps ; la clé d'accès revient-elle ou la porte reste-t-elle ouverte ?
+6. **Le renouvellement** (lieu personnel, R51) : tout se réinitialise au bout de 24 h ; entre deux réinitialisations, la porte principale reste ouverte une fois déverrouillée.
 7. **Ce qu'il faut ajouter au modèle `batiment/`** (portes, obstacles, pièces, points de fouille et d'Éteints), compatible avec la vision par pièce.
 8. **La difficulté**, comparée à l'autre lieu L du niveau (nombre et placement des Éteints, longueur du parcours) : les deux routes restent équivalentes.
 
