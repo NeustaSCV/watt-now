@@ -70,7 +70,7 @@ Dimensions réalistes arrondies au mètre, en cases (largeur × profondeur). « 
 | | Poste de soudure | 1 × 1 | |
 | | Établi électrique | 2 × 1 | |
 | **Mécanique (⚙️)** | Établi | 2 × 1 | |
-| | Pédalier universel | 1 × 2 | |
+| | Pédalier générateur | 1 × 2 | |
 | | Tour à perche | 1 × 3 | La perche flexible est longue |
 | | Meule à bras | 1 × 1 | |
 | | Roue hydraulique | 2 × 3 | **Sur une rive** : une partie dans l'eau |

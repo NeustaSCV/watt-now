@@ -2,6 +2,7 @@
 
 > Document de conception · version 0.3 · 2026-10-08
 > Statut : **validé dans ses grandes lignes** par le porteur du projet (« tout ça est cohérent », 2026-10-08). Les six recommandations des questions ouvertes sont retenues. **Lots 0 et 1 codés, lot 2 en partie** (couchage, eau 1 à 2, coffre) : voir §11.
+> **0.8 (2026-10-10)** : les lignées vont jusqu'au **niveau 1**, chaque niveau au-delà de la maison avec sa **clé** trouvée dehors ; la citerne et le lit de branchages disparaissent ; l'établi, le râtelier et la torche plantée arrivent : voir **§12**, qui fait foi.
 > Demande du porteur : « faire évoluer les éléments existants (je pense au feu notamment, pour éviter d'avoir 50 places à feu dans la base) », et ajouter de nouveaux éléments à fabriquer pour la base.
 > S'appuie sur les books [02](02-crafting.md) (§8 installations, §10 démontage, §14 bis bushcraft), [03](03-bibliotheque-et-savoir.md) (§5 savoir), [04](04-siderurgie-et-chimie.md), [06](06-zombies.md) (signature), [10](10-construction.md) (abri, chauffage), [11](11-agriculture-elevage-alimentation.md) (§11 conservation), [19](19-modele-du-terrain.md) (emprises), [21](21-perimetre-phase-0.md) (0a, 0b), [22](22-quetes-et-objectifs.md) (carnet) et sur la proposition P-002 (`PROPOSITIONS.md`, gamme bushcraft et ses « évolutions »).
 
@@ -25,7 +26,7 @@
 | **Charbonnière** | 10 bûches, 4 branches | 4 kg de charbon en 3 jours de jeu, puis **disparaît** au défournement | 🔥 |
 | **Foyer de forge** | 8 pierres, 1 barre de métal, 2 branches | Forger une lame. Ne brûle rien, n'émet rien, ne compte pas comme un feu | 🔥 |
 | **Pédalier** (+ meule, + dynamo) | Vélo, 2 bûches | Affûter, charger une batterie. **Ses accessoires se montent sur place** (`etat.meule`, `etat.dynamo`) | ⚙️ |
-| **Banc de recharge**, **panneau solaire** | — | Électricité (É4) | ⚡ |
+| **Banc de recharge**, **panneau solaire** (un seul meuble en 0.8 : le banc solaire) | — | Électricité (É4) | ⚡ |
 | **Décharge** | Fixe | Fait remonter des objets | — |
 
 ### 1.2 Pourquoi la base devient un champ de foyers
@@ -131,6 +132,8 @@ La charbonnière en fût règle le « champ de meules ». Et une forge allumée 
 
 ### 3.2 L'eau
 
+> **0.8** : voir §12 (le niveau 1 tel qu'il est codé).
+
 | Niv. | Nom | Coût de l'amélioration | Ce qu'il permet de plus | Ce qu'il remplace |
 |---|---|---|---|---|
 | **1** | **Récupérateur de pluie** (existe) | 1 bâche, 4 branches, 1 corde | 5 L au plus, eau potable, hors ligne | — |
@@ -141,6 +144,8 @@ La charbonnière en fût règle le « champ de meules ». Et une forge allumée 
 Les évolutions de famille du P-002 s'y brancheront comme accessoires : **filtre à sable lent** (⚙️, potable sans bois), **jauge** (⚡). Le charbon du niveau 3, les autres familles l'**achètent** aux Charbonniers.
 
 ### 3.3 Le couchage
+
+> **0.8** : voir §12 (le niveau 1 tel qu'il est codé).
 
 C'est la deuxième lignée la plus urgente : aujourd'hui, le lit et l'abri sont deux installations qui ne valent rien l'une sans l'autre.
 
@@ -156,6 +161,8 @@ C'est la deuxième lignée la plus urgente : aujourd'hui, le lit et l'abri sont 
 
 ### 3.4 Le stockage
 
+> **0.8** : voir §12 (le niveau 1 tel qu'il est codé).
+
 | Niv. | Nom | Coût de l'amélioration | Ce qu'il permet de plus | Ce qu'il remplace |
 |---|---|---|---|---|
 | **1** | **Coffre** (existe) | 4 bûches, 4 branches, 1 corde | 150 kg | — |
@@ -166,13 +173,15 @@ On garde la possibilité d'avoir plusieurs coffres (on range près de l'atelier,
 
 ### 3.5 La lumière
 
+> **0.8** : voir §12 (le niveau 1 tel qu'il est codé).
+
 Il n'existe aujourd'hui **aucune lumière fixe** : la nuit, la base n'est éclairée que par le feu. Une lignée courte, qui se paie en signature :
 
 | Niv. | Nom | Coût | Ce qu'il permet de plus | Ce qu'il remplace |
 |---|---|---|---|---|
 | **1** | **Panier à feu** : un brasero de grillage sur une perche | 1 grillage (ou 2 barres de métal), 2 branches · Marteler 1 | Éclaire 8 m autour. Brûle **0,3 kg de bois par heure**, seulement quand on l'allume. Lumière 30 m, pas de cuisine | Le feu de camp allumé « pour y voir » |
 | **2** | **Lanterne à bocal** : une mèche dans la graisse, à l'abri du vent dans un bocal (vestige) | 1 bocal, 1 chiffon, graisse (sous-produit de la volaille, à ajouter) | Lumière douce, **14 m de signature** (comme la lanterne à dynamo) ; s'accroche à l'abri ou au coffre | — |
-| **3** | **Selon la famille** : guirlande de LED sur le banc de recharge (⚡ : 20 LED d'une guirlande, fil de cuivre, prend ses Wh au banc) ; lanterne de forge à huile (🔥) ; lanterne à dynamo à manivelle fixée (⚙️) | Composants des vestiges | Une base éclairée sans flamme. **La lumière blanche se voit** : les Voltaïques paient leur confort en signature, comme la frontale | — |
+| **3** | **Selon la famille** : guirlande de LED sur le banc solaire (⚡ : 20 LED d'une guirlande, fil de cuivre, prend ses Wh au banc) ; lanterne de forge à huile (🔥) ; lanterne à dynamo à manivelle fixée (⚙️) | Composants des vestiges | Une base éclairée sans flamme. **La lumière blanche se voit** : les Voltaïques paient leur confort en signature, comme la frontale | — |
 
 ---
 
@@ -336,3 +345,58 @@ Les six recommandations sont retenues par le porteur du projet (2026-10-08).
 - La contrainte d'emplacement d'un niveau plus grand (aucun niveau jouable ne grandit encore).
 - Lot 2 : citerne filtrante (eau « claire »), gouttière, lumière (panier à feu), bûcher, râtelier, établi utile, claie, fumoir, pieux, carillon ; la ligne « Ce qui t'attire des Éteints » ; la forge qui fait bouillir l'eau ; la charbonnière en fût.
 - Un message à la première connexion pour les joueurs qui ont un lit à côté de l'abri, ou trois feux (§6).
+
+---
+
+## 12. Le niveau 1 : la base grandit avec les sorties (0.8, 2026-10-10)
+
+*Plan 0.8 §2.1 à §2.3, §9.1 et §9.2 ; **codé en 0.8** (chantiers 1, 5, 6 et 7, `commun/src/lignees.ts`). Les tableaux des §3.1 à §3.5 restent l'histoire de la conception ; là où ils diffèrent, ce paragraphe fait foi.*
+
+### 12.1 La règle
+
+- **Construire** un niveau = **le niveau d'avant posé** + **les matériaux** + **l'outil** (une porte dure : il faut le niveau demandé, Book 03 §4.1). Plus de palier.
+- **Chaque niveau a son étape de lieu** : **maison** (ce que donnent le terrain, la ruine et sa caisse), **H1** (la pièce de famille, à la station), **L1** (la Coopérative ou le Moulin du Gué), puis **L2** et au-delà, « plus tard ».
+- **Une clé par niveau** au-delà de la maison : un ingrédient **ou** un outil trouvé dehors, jamais les deux. Chaque clé a sa place fixe, ses replis, son idée au ramassage (« Tu y penses ») et son indice en deux temps (Book 03 §5.8).
+- **« Plus tard »** : un niveau marqué `aVenir` est grisé dans la fiche, avec sa clé nommée, « à trouver plus loin » ; le serveur le refuse.
+- **Rien de propre à une famille en L1** : les clés de la Coopérative et du Moulin sont communes (V4-4).
+- **Pas de migration** : tous les joueurs repartent de zéro au déploiement de la 0.8 (plan §9.1). La citerne, la forge ventilée, la réserve couverte et le lit de branchages déjà posés n'ont pas eu à être gérés.
+
+### 12.2 Les lignées jusqu'au niveau 1
+
+| Meuble | Maison | H1 (station) | L1 (Coopérative ou Moulin) | Plus tard |
+|---|---|---|---|---|
+| **Feu** (voie de surface) | **Feu de camp** (5 pierres, 3 branches) → **foyer de pierres** (6 pierres, 2 bûches ; Marteler 1) | — | **Foyer de cuisine** · clé : **rouleau de grillage** (Coopérative) · 3 branches, 1 corde ; Couper 1, Marteler 1 · repli : 2 barres martelées en grille (Marteler 2, deux fois plus long) | Four de terre (clé : porte de four en fonte, L2B) ; poêle (0b) |
+| **Feu** (voie creusée) | **Dakota** (creuser un feu de camp : Creuser 1 ; **rend 5 pierres**, le combler en coûte 5) → **poêle-fusée** (4 boîtes vides, 4 pierres ; Marteler 1) | — | — | — |
+| **Accessoires du feu** | **Broche** (2 branches ; Couper 1) | — | **Marmite norvégienne** · clé : **cocotte en fonte** (Coopérative) · 4 branches, 4 chiffons ; bois des mijotés ×0,5 · repli : une casserole (×0,75 : la soupe refroidit plus vite) | — |
+| **Eau** | **Récupérateur de pluie, 5 L** (le **bidon de 5 L** de la ruine, 4 branches, 1 corde, **4 sacs plastique** ; Couper 1) | — | **Récupérateur à seau, 10 L** · clé : **seau de 10 L** (laiterie de la Coopérative) · 2 branches ; Couper 1 · repli : le bidon d'huile de la station, rincé, à côté du bidon de 5 L (10 L aussi) | Récupérateur à jerrican, **20 L** (clé : jerrican de 20 L, L2B) |
+| **Couchage** | **Abri** (8 branches, la bâche ; Couper 1) → **abri garni** (6 branches) : sommeil ×1,3 | — | **Abri fermé** · clé : **toile de jute** (Moulin) · 10 branches, 1 corde, 1 poignée de clous ; Couper 1, Marteler 1 ; sommeil **×1,45** · repli : 4 chiffons et 2 sacs plastique cousus, **×1,35** | Abri doublé (couvertures de laine, L2A) ; hutte (0b) |
+| **Stockage** | **Coffre** (4 bûches, 4 branches, 1 corde ; Couper 1, Fendre 1, Marteler 1) : 150 kg ; 🆕 **râtelier à outils** (2 bûches, 6 branches, 1 corde ; Couper 1) | — | **Coffre cerclé** · clé : **feuillards** (Moulin) · 2 bûches, 1 poignée de clous ; **Marteler 2** (le marteau remmanché suffit, la pierre non) : **250 kg** · repli : la barre de la ruine martelée en bandes (deux fois plus long) | Réserve couverte (tôles ondulées, L2A) : 400 kg |
+| **Établi** 🆕 | **Établi** (4 bûches, 6 branches ; Couper 1, Fendre 1, Marteler 1) | — | **Établi à étau** · clé : **étau** (Moulin) ; Serrer 1 : donne **Serrer 3** à 3 m · repli : un serre-joint de fortune (sans le serrage fort) | Établi de menuisier (clé : Raboter, le rabot, L2B) |
+| **Lumière** 🆕 | **Torche plantée** (1 branche, 1 chiffon, 1 graisse ; Couper 1) : éclaire **6 m**, **brûle jusqu'au matin** suivant quelle que soit l'heure où on l'allume ; une nuit, puis on en plante une autre | — | — | Lanterne fixe (lanterne-tempête, L2A) |
+| **Alarme, divers** | Alarme à boîtes ; escabeau | — | — | — |
+| 🔥 **Forge** | Charbonnière (10 bûches et 4 branches, **ou** la charbonnette : 5 bûches et 20 branches) ; **bac de trempe** sans clé : une auge de planches calfatée de **glaise** du gué (2 bûches, 2 glaises ; Creuser 1) | **Foyer de forge** · clé : **enclume de dépanneur** · 8 pierres, la barre de la ruine, 2 branches ; Marteler 1 ; lames **★★** · repli : une grosse pierre plate (★ seulement) | — | **Forge ventilée** (clé : soufflet de forge, L2B) : ★★★ |
+| ⚡ **Banc** | Clôture de fortune, alarme électrique | **Banc solaire** · clé : **panneau solaire** (le pilier de l'auvent de la station) · 2 bûches, la barre de la ruine, 3 branches ; Visser 1, Serrer 1 ; ≈ 80 Wh par jour de soleil · repli : la manivelle de la lampe à dynamo, lente | — | Poste de montage (L2A) : module à bobine, aiguillon, électrificateur |
+| ⚙️ **Pédalier** | Meule, **ventilateur à manivelle** ; tour à perche ; assommoir, mâchoires de fortune | **Pédalier générateur** · clé : **petit alternateur** (l'établi du garage, près d'une voiture éventrée) · le vélo de la ruine (cadre, chaîne, roue), 2 bûches ; Serrer 1, Visser 1, Marteler 1 ; ≈ 60 Wh par heure de pédalage · repli : la dynamo du vélo (3 à 6 W) | — | Cranequin, arbalète lourde |
+
+**Les clés de L1 sont à place fixe, à la première visite** (Book 23 §11 et §12) : à la Coopérative, le grillage, la cocotte, les seaux ; au Moulin du Gué, la toile de jute, les feuillards, l'étau. Elles reviennent à 24 h. **Les pièces de famille** sont à la station, **une par joueur** (Book 01 §2 bis) : chacun voit la sienne, la prend pour lui ; elle revient pour lui au bout de 24 h.
+
+### 12.3 Ce qui change, lignée par lignée
+
+- **L'eau : 5 → 10 → 20 L.** Le récupérateur de la maison tient **5 L** et demande le **bidon de 5 L** de la ruine et les **4 sacs plastique** du premier sac-poubelle du chemin (garantis). **La citerne de bâche de 60 L est retirée** de la lignée (V4-7) : le niveau 2 est le **récupérateur à seau, 10 L**, qui les tient même hors ligne. Le **20 L** (jerrican) est « plus tard ».
+- **Le couchage : la fin du lit de branchages.** Le lit n'est plus une installation à part : il est **fondu dans l'abri garni** (I25). La ligne « le lit de branchages seul reste posable » (§3.3) ne vaut plus. **L'abri fermé** prend la toile de jute du Moulin pour clé (plus les 4 chiffons du §3.3).
+- **Le stockage : le coffre cerclé** demande désormais une **clé** (les feuillards du Moulin) et **Marteler 2** : le **marteau remmanché** (la tête de marteau de la caisse de la ruine et une branche, à la main) le permet à toutes les familles. La réserve couverte passe « plus tard ».
+- **Le râtelier à outils** (nouveau) : les outils rangés dessus, **à 3 m**, comptent pour les qualités comme s'ils étaient dans le sac (une hache au râtelier donne Fendre au coffre ; le bac de trempe lit Creuser 1 au râtelier).
+- **L'établi : une lignée nouvelle.** L'établi d'avant devient le niveau 1 ; l'**établi à étau** (niveau 2) donne **Serrer 3** à qui travaille à 3 m (l'étau dans le sac ne donne rien), et ses recettes : **maillet** (1 bûche, 1 branche), **coins de bois** (1 bûche → 4), **planches fendues** (1 bûche, 1 coin, le maillet → 2 planches ; le maillet revient), et **réparer le manche** d'une arme sans forge (Book 25 §13.6). Il porte aussi l'arbalète ⚙️ et l'évolution des armes de bois.
+- **La lumière : la torche plantée** (nouvelle) remplace le panier à feu du §3.5 pour le niveau 1 : 6 m de lumière, une nuit entière, une source de lumière de nuit qui compte dans la signature (Book 06). Elle ne se regarnit pas : on en plante une autre.
+- **Le feu** : le **foyer de cuisine** prend le **grillage** de la Coopérative pour clé (le « rouleau de grillage de la ferme » du §3.1) ; la **marmite** prend la **cocotte** ; le **four de terre** passe « plus tard », et ses deux plats (pot-au-feu, volaille aux cèpes) restent grisés dans la fiche du foyer de cuisine. **Creuser un Dakota rend 5 pierres** (au lieu de 3, B12) : on ne perd plus de pierres en changeant de voie.
+- **Les meubles de famille** : le **banc de recharge** et le **panneau** ne font plus qu'un meuble, le **banc solaire** ; le **pédalier universel** devient le **pédalier générateur** ; on **pose le meuble**, puis on y **monte sa pièce** (poser le panneau, poser l'enclume, monter l'alternateur). Un meuble de famille ne compte comme monté au niveau de sa clé **qu'une fois sa pièce posée**. L'accessoire ⚙️ de ventilation s'appelle le **ventilateur à manivelle** (le mot « soufflet » est réservé à la clé « soufflet de forge » de la forge ventilée, Q-0.8-13).
+
+### 12.4 Les recettes liées aux meubles
+
+Une recette **liée à une construction** apparaît dès qu'on possède la construction au bon niveau, et se fait à côté d'elle (2,5 m pour un feu, 3 m pour le reste) : la liste est au Book 02 §14 quinquies. La **fiche du meuble** (Examiner) devient l'arbre : ce qu'on y fait, le niveau suivant (sa clé, ses matériaux, son outil, ce qui manque, l'indice), et celui d'après, grisé.
+
+### 12.5 Le rythme, et ce qui reste
+
+- **Le rythme, mesuré** (`npm run rythme`, chantier 14) : le joueur prudent atteint la station à 38 min, le gué à 85, la Coopérative vers 104 à 107, le Moulin vers 163 à 166 ; sa **dernière porte à clé** tombe à **209 à 212 min**, et **tout le niveau 1** (avec le reste de la maison et du métier) à **277 à 278 min**. Le joueur pressé : 110 à 125 min pour les portes, 141 à 179 min pour tout ; le malchanceux : 161 à 163 min, puis 219 à 254 min ; le vétéran sans tutoriel : 126 à 141 min, puis 191 à 196 min. Aucun aller-retour de ravitaillement à la station pour le joueur seul ; un pour le malchanceux ⚙️ ou 🔥 (Book 01 §2 bis). La cible « ≈ 3 h 20 pour le prudent » (critère 6 du plan) est en cours d'arbitrage par le porteur : les portes à clé la tiennent, tout le niveau 1 la dépasse.
+- **Le tutoriel et les quêtes** (chantier 13, codé) : « S'installer » en portes successives (Book 22 §3.1 bis) ; l'aide « Améliorer sa base » raconte la clé, l'indice, les replis, les outils de fortune et le râtelier.
+- **Hors de la 0.8** : le niveau 2 de chaque lignée (§12.2, colonne « plus tard ») ; la citerne filtrante, la gouttière, le bûcher, la claie, le fumoir, la charbonnière en fût (§11.5).

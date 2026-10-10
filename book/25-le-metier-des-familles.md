@@ -1,7 +1,7 @@
 # Book 25 — Le métier des familles
 
 > Document de conception · version 0.2 · 2026-10-09
-> Statut : **v0.2, validé par le porteur (2026-10-09)**. Rien n'est codé, sauf les deux corrections du §0.2.
+> Statut : **v0.2, validé par le porteur (2026-10-09)** ; codé en 0.6 et 0.7. **0.8 (2026-10-10)** : la grille des étoiles du niveau 1, les bandes, les enclumes ★★, la pièce de famille, les dégâts électriques, la maîtrise sans plafond et l'évolution d'une arme sur son meuble : **§13**, qui fait foi ; la règle d'or du §2.5 est réécrite avec la grille (Q-0.8-26).
 > Demande du porteur (v0.1) : « Aujourd'hui, on va développer le craft spécifique à chaque famille. Il faudra sans doute ajouter des objets et des matières de base. Fais-moi des propositions. Les charbonniers ont les lames. Les voltaïques peuvent avoir des armes électriques (taser ?) et les mécanistes peuvent avoir des arbalètes ? Arc pour tout le monde, c'est assez basique comme technologie. Fais-moi une proposition étoffée. »
 > Décisions du porteur (v0.2) : « Il ne faut pas qu'il y ait trop de dépendances. Elles doivent pouvoir permettre des améliorations, mais ne pas bloquer les choses de base de chaque famille. Au début du jeu il n'y a pas toutes les familles, alors il faut que chacun soit — un peu — autonome. Il aura besoin des autres pour faire évoluer ses armes évidemment. Il faut veiller à ce que l'arme de chaque famille soit équilibrée. La matraque électrique me semble un peu en dessous car elle ne permet pas de tuer les Éteints. 1. oui 2. oui 3. oui 4. oui 5. oui 6. oui 7. oui 8. les deux. La machette trouvée peut être une machette de fortune (un bout de métal avec un manche), rien à voir avec une lame forgée. Je comprends pas comment on obtient un ressort à partir d'une lame ébréchée ? C'est pas logique. Il faut sans doute rendre l'électricité plus dangereuse, sinon les Voltaïques sont désavantagés ? Je pense que les versions 0.6 à 0.8 peuvent faire l'objet d'une seule livraison. »
 > S'appuie sur les books [01](01-les-trois-feux.md) (§3 et §4 : familles, travail du métal, triangle de combat), [02](02-crafting.md) (§6 domaines, §9 maillon faible, §10 réparation, §12.1 la lame, §14 bis gamme bushcraft, §15 équilibrage), [03](03-bibliotheque-et-savoir.md) (§4 qualités d'outil, §5 savoir), [04](04-siderurgie-et-chimie.md) (§2 sidérurgie, §3.8 électrochimie), [06](06-zombies.md) (§2 corps, §3 signature, §8 et §9 combat et défense), [07](07-economie.md), [11](11-agriculture-elevage-alimentation.md) (§10 chasse), [15](15-univers.md), [21](21-perimetre-phase-0.md), [22](22-quetes-et-objectifs.md), [23](23-cooperative-et-combat.md) (§4 et §5) et [24](24-ameliorer-sa-base.md), sur le code de la version 0.5.3 et sur la proposition P-002 (`PROPOSITIONS.md`, lue sans être modifiée).
@@ -36,8 +36,8 @@ Aujourd'hui, une recette de famille est **réservée** à sa famille : les autre
 | Famille | Recettes propres | Installations | Ce qu'elle vend | Carnet « Le métier » (Book 22 §3.2) |
 |---|---|---|---|---|
 | 🔥 **Charbonniers** | Meule de charbonnière (10 bûches, 4 branches) ; foyer de forge (8 pierres, 1 barre de métal, 2 branches) ; **lame forgée** (1 lame de ressort + 1 kg de charbon, Marteler 2, 90 min de travail lourd, à la forge) | Charbonnière, forge | Lames forgées, charbon | Charbonnière → défourner → forger une lame → la vendre |
-| ⚙️ **Mécanistes** | Pédalier universel (cadre, chaîne, roue de vélo, 2 bûches) ; accessoires **meule** (couteau → couteau aiguisé) et **dynamo** | Pédalier | Électricité de pédalage, affûtage | Meule → affûter → dynamo → déposer l'électricité |
-| ⚡ **Voltaïques** | Banc de recharge (2 bûches, 1 barre de métal) ; poser le panneau solaire de la station | Banc, panneau | Électricité, composants | Panneau → l'installer → 20 Wh → déposer |
+| ⚙️ **Mécanistes** | Pédalier générateur (cadre, chaîne, roue de vélo, 2 bûches) ; accessoires **meule** (couteau → couteau aiguisé) et **dynamo** | Pédalier | Électricité de pédalage, affûtage | Meule → affûter → dynamo → déposer l'électricité |
+| ⚡ **Voltaïques** | Banc solaire (2 bûches, 1 barre de métal) ; poser le panneau solaire de la station | Banc, panneau | Électricité, composants | Panneau → l'installer → 20 Wh → déposer |
 
 Le kit de départ ajoute à chaque famille ses outils : marteau et pierre à feu (🔥), scie et corde (⚙️), lampe à dynamo, petite batterie (50 Wh) et frontale (⚡). Les **réparations** suivent le Book 23 §4.3 : le bois à l'établi, **les lames à la meule du pédalier**, le métal à la forge.
 
@@ -130,10 +130,12 @@ Au début d'un serveur, toutes les familles ne sont pas là. Un Voltaïque seul 
 
 > **Seul, on fait sa base. Ensemble, on la fait mieux.**
 
+> **Depuis la 0.8** : « sa base », c'est **le niveau 1** (Book 24 §12), et chaque famille le fait seule, avec la **pièce de sa famille** trouvée à la station (le panneau, l'enclume de dépanneur, le petit alternateur). Les étoiles suivent la **grille** du point 4.
+
 1. **Chaque famille fabrique seule son niveau de base**, avec ce qu'elle trouve et ce qu'elle sait faire : son **arme de métier ★ et ★★**, ses **outils de base**, ses **installations de base**.
-2. **Les dépendances entre familles n'ouvrent que les améliorations** : les niveaux **★★★ et plus** (plus tôt, moins cher), les **variantes supérieures** (arbalète lourde, glaive, matraque à électrodes forgées), les **accessoires** (ventilateur, soufflet à manivelle, manche tourné).
+2. **Les dépendances entre familles n'ouvrent que les améliorations** : les niveaux **★★★ et plus** (plus tôt, moins cher), les **variantes supérieures** (arbalète lourde, glaive, matraque à électrodes forgées), les **accessoires** (ventilateur 12 V, ventilateur à manivelle, manche tourné).
 3. **Elles ne bloquent jamais le cœur d'une famille.** Si une recette de base demandait une pièce d'une autre famille, elle reçoit une **voie autonome**, plus modeste : matière de récupération, qualité moindre, geste plus lent.
-4. **Le ★★★ reste possible seul**, par un chemin plus long : un outil maison, un vestige rare ou la **maîtrise** (10 exemplaires de la même sorte : +1 étoile, Book 03 §5.4). Avec une autre famille, on y arrive plus vite, et l'on va plus haut.
+4. **La grille des étoiles** (réécrite en 0.8 avec la grille du niveau 1, Q-0.8-26 ; §13) : **seul, ★ à la maison, ★★ à H1 et L1** (la station, le gué, la Coopérative, le Moulin du Gué) ; ★★★ par une recette attend le **niveau 2** (la forge ventilée, le poste de montage, l'établi de menuisier). **Avec une autre famille, une étoile de plus, pas deux** (Q-A2f). **La maîtrise** (10 exemplaires de la même sorte : +1 étoile, Book 03 §5.4) donne l'étoile du dessus **avec ses vrais dégâts**, même si cette étoile appartient à l'étape suivante : il n'y a **pas de plafond par étape** (K-Q1). Le ★★★ reste donc possible seul, dès le niveau 1, mais par la maîtrise, pas par la recette ; et **la bande de dégâts d'une étape compte plus que son plafond d'étoiles** (R-ARMES-1).
 
 **Les voies autonomes ajoutées en v0.2** (le détail est dans chaque chapitre) :
 
@@ -148,14 +150,14 @@ Au début d'un serveur, toutes les familles ne sont pas là. Un Voltaïque seul 
 | ⚙️ Le piège à mâchoires demandait **2 ressorts retrempés 🔥** | **Mâchoires de fortune** : 2 lames de ressort brutes (§6.3) | Tient 10 s au lieu de 20, se fausse en 5 prises |
 | 🔥 Réparer sa propre lame demandait la **meule ⚙️** | **Reprendre la lame à la forge** (§4.4) | ½ kg de charbon |
 | 🔥 La lame demandait une **lame de ressort** trouvée | Forger le **fer doux** (barre, clous, lame ébréchée) (§4.2) | Plafond ★★ |
-| 🔥 La forge ventilée demandait le **ventilateur ⚡** ou le **soufflet à manivelle ⚙️** | Le **soufflet double** en cuir ou en bâche, à pomper soi-même (§9.3) | On pompe : 2 d'endurance par minute de forge |
-| Tous : la **perche de frêne** demandait Couper 2 (couteau aiguisé ⚙️ ou lame 🔥) | Le **couteau du kit** (Couper 1) la coupe, avec le malus du Book 03 §4 | Temps ×1,5 |
+| 🔥 La forge ventilée demandait le **ventilateur ⚡** ou le **ventilateur à manivelle ⚙️** | Une **poche de bâche** entre deux planches, à pomper soi-même (§9.3) ; depuis la 0.8, la forge ventilée est « plus tard » (clé : le soufflet de forge, L2B) | On pompe : 2 d'endurance par minute de forge |
+| Tous : la **perche de frêne** demandait Couper 2 (couteau aiguisé ⚙️ ou lame 🔥) | Le **couteau du kit** (Couper 1) la coupe ; depuis la 0.8 (portes dures, Book 03 §4.1), la perche ne demande plus que Couper 1 | — (temps ×1,5 avant la 0.8) |
 | ⚡ La clôture demandait un module **★★★★** (bobine d'allumage) | **Clôture de fortune** au module de raquette (§5.3) | Raidit 1 s, ligne de 4 m |
 
 **La règle d'or s'applique aussi au dévoilement (0.7, arbre de progression, Book 02 §14 quater et annexe A)** :
 
 - **Toute la base d'une famille se dévoile seul**, par des déclencheurs qu'on vit seul : le **seuil du métier** (l'abri posé et un premier danger surmonté, ou l'étape « La famille » du tutoriel, ou 2 h de jeu), son propre premier charbon, sa propre arme, une matière ramassée. **Aucune recette des paliers « les tiens » et « le métier » ne demande une rencontre.**
-- **Au seuil, chaque famille voit son atelier et son arme de base** : une recette-but, pas une liste. 🔥 le foyer de forge, puis la meule de charbonnière, le couteau au fer doux dès le premier charbon, la machette ; ⚡ le banc de recharge et la matraque de fortune (l'appareil photo jetable y fait penser aussi) ; ⚙️ le pédalier (le cadre du vélo démonté y fait penser), puis l'arbalète, ses pièces par la chaîne. Rien du métier ne se dévoile avant l'atelier, sauf ce qu'une quête demande.
+- **Au seuil, chaque famille voit son atelier et son arme de base** : une recette-but, pas une liste. 🔥 le foyer de forge, puis la meule de charbonnière, le couteau au fer doux dès le premier charbon, la machette ; ⚡ le banc solaire et la matraque de fortune (l'appareil photo jetable y fait penser aussi) ; ⚙️ le pédalier générateur (le cadre du vélo démonté y fait penser), puis l'arbalète, ses pièces par la chaîne. Rien du métier ne se dévoile avant l'atelier, sauf ce qu'une quête demande.
 - **Les voies autonomes se dévoilent en même temps que la voie « avec les autres », jamais après** : le Mécaniste voit « Arc d'arbalète (frêne) » dès l'arbalète, et « (ressort retrempé) » seulement quand il en tient un.
 - **Au palier de l'œuvre, la rencontre est un raccourci, pas une porte** : le Charbonnier seul ouvre le ressort retrempé et les électrodes par la **pratique** (5 lames forgées, une fois passé au Comptoir). Il ne peut pas encore les vendre à personne, mais il le pourra le jour où quelqu'un arrive.
 - **Les matières de base existent dans le monde ordinaire** depuis la 0.7 : la couche de déchets de l'Abondance (Book 26) donne barres de métal, lames de ressort, appareils jetables, petites batteries, vélos, petits ressorts et plumes, sans dépendre d'un seul point de fouille.
@@ -226,7 +228,7 @@ Le tir **réutilise le lancer de la 0.6** (Book 23 §5) : même bouton, même ar
 | Étape | Ce qui existe | Ce qu'on ajoute |
 |---|---|---|
 | **1. Le charbon** | Meule de charbonnière : 10 bûches → 4 kg en 72 min réelles | Rien (la charbonnière en fût du Book 24 §3.1 viendra avec la lignée) |
-| **2. La forge** | Foyer de forge (≈ 900 °C, palier I) | **Une lignée de la forge** (Book 24) : niveau 2 **forge ventilée** (tuyère d'argile ; soufflet double en cuir ou en bâche, **seul** ; ou ventilateur 12 V ⚡, ou soufflet à manivelle ⚙️, pour ne plus pomper ; ≈ 1 300 °C) ; accessoire **enclume** (§9.3) |
+| **2. La forge** | Foyer de forge (≈ 900 °C, palier I) | **Une lignée de la forge** (Book 24) : niveau 2 **forge ventilée** (tuyère d'argile ; poche de bâche à pomper, **seul** ; ou ventilateur 12 V ⚡, ou ventilateur à manivelle ⚙️, pour ne plus pomper ; ≈ 1 300 °C) ; accessoire **enclume** (§9.3) |
 | **3. L'acier** | Lame de ressort, barre de métal, débris | **Une qualité par matière** (§4.2) et quatre vestiges nouveaux (lime usée, soc de charrue, bidon d'huile, rail) |
 | **4. Forger** | Lame forgée (1 ressort, 1 kg de charbon, 90 min) | Une **gamme** (§4.3) |
 | **5. Tremper et revenir** | Compris dans la lame forgée | **Un geste à part**, avec le choix du bain (§4.2) |
@@ -252,8 +254,8 @@ La qualité ★ est portée **par exemplaire**, pour les seuls **objets de méti
 
 **Ce que le Charbonnier fait seul, et ce que les autres lui apportent :**
 - **Seul, dès le premier jour** : le marteau du kit, le foyer, une lame de ressort trouvée ou du fer doux, une trempe à l'eau → **★★**. S'il n'a pas de ressort : du fer doux, ★★ aussi.
-- **Seul, en s'y mettant** : les pinces (sa propre recette) et un étau trouvé → **★★★** ; la graisse de volaille pour une trempe à l'huile ; la forge ventilée au soufflet double (on pompe) → **★★★★** ; la maîtrise → ★★★★★.
-- **Avec les autres** : le ventilateur ⚡ ou le soufflet à manivelle ⚙️ rendent la forge ventilée **sans effort** ; le manche tourné ⚙️ et le dérouillage ⚡ donnent **une étoile de plus** à une pièce.
+- **Seul, en s'y mettant** : les pinces (sa propre recette) et un étau trouvé → **★★★** ; la graisse de volaille pour une trempe à l'huile ; la forge ventilée au poche de bâche à pomper (on pompe) → **★★★★** ; la maîtrise → ★★★★★.
+- **Avec les autres** : le ventilateur ⚡ ou le ventilateur à manivelle ⚙️ rendent la forge ventilée **sans effort** ; le manche tourné ⚙️ et le dérouillage ⚡ donnent **une étoile de plus** à une pièce.
 - **La trempe à l'eau** est toujours possible, mais **une lame sur trois se fend** : elle redevient une lame ébréchée, à reforger (Book 02 §9 : jamais de disparition totale). Le risque est affiché avant le geste.
 - **La trempe à l'huile** est sûre ; il faut un **bidon d'huile** (vestige du garage, 5 L, vingt trempes : « Huile Turbo Max Énergie, pour moteurs de plus de 400 chevaux »), ou de la **graisse** de volaille (une trempe).
 - **La maîtrise** (Book 03 §5.4) : après **10 lames** forgées de même sorte, la forge est maîtrisée pour cette sorte : +1 étoile, plafond ★★★★★.
@@ -452,7 +454,7 @@ Ils ne consomment aucune énergie après la pose (Book 01 §4) et agissent sur c
 | Objet | Matières | Outil | Effet |
 |---|---|---|---|
 | **Tour à perche** (installation, ⚙️) | 1 perche de frêne, 1 corde, 4 bûches, 2 branches | Couper 1, Serrer 1 | Tourner le bois : **manches tournés** (+1 étoile à l'arme qui le reçoit, pour les 🔥 et les ⚡), fûts réguliers (+1 étoile aux flèches), bols |
-| **Accessoire « soufflet à manivelle » du pédalier** | 1 roue de vélo, 1 bâche, 4 branches | Serrer 1 | Posé à moins de 3 m d'une forge : **ventilation passive** pendant qu'on pédale (l'autre voie que le ventilateur ⚡) |
+| **Accessoire « ventilateur à manivelle » du pédalier** | 1 roue de vélo, 1 bâche, 4 branches | Serrer 1 | Posé à moins de 3 m d'une forge : **ventilation passive** pendant qu'on pédale (l'autre voie que le ventilateur ⚡) |
 | **Accessoire « meule fine »** | 1 pierre, 1 chiffon (le cuir de l'affûteur) | — | L'affûtage remonte à neuf **et** gagne +10 % de dégâts jusqu'à la prochaine casse (un fil de rasoir) |
 | **Recharge par pédalage** (existe : la dynamo) | — | — | Un pack de 12 Wh en ≈ 6 min réelles de pédalage : le service que les ⚡ achètent l'hiver |
 | **Brouette** | 1 roue de vélo, 4 branches, 2 bûches | Scier le bois 1 | +60 kg roulés, la course reste possible sur le chemin (le travois traîne, la brouette roule) |
@@ -466,7 +468,7 @@ Ils ne consomment aucune énergie après la pose (Book 01 §4) et agissent sur c
 
 | Famille | Seule, dès le premier jour (la base) | Seule, en s'y mettant (★★★) | Ce qu'elle gagne avec les autres (les améliorations) |
 |---|---|---|---|
-| 🔥 **Charbonniers** | **Arme** : machette forgée ou couteau de forge **★★** (ressort trouvé ou fer doux, trempe à l'eau, foyer, marteau du kit). **Outils** : pinces, hachette, serpe, rivets, pointes d'acier. **Installations** : charbonnière, foyer de forge. **Entretien** : reprendre et reforger ses lames à la forge. **À distance** : l'arc commun | Pinces et étau trouvé → **★★★** ; graisse de volaille → trempe à l'huile ; forge ventilée au **soufflet double** (on pompe) → ★★★★ ; maîtrise → ★★★★★ | ⚡ **ventilateur** ou ⚙️ **soufflet à manivelle** : forge ventilée sans pomper ; ⚙️ **manche tourné** et ⚡ **dérouillage** : +1 étoile ; ⚙️ **affûtage** : l'entretien le moins cher ; ⚡ **alarme** : forger sans être surpris ; ⚙️ **arbalète** ; ⚡ **matraque** contre l'Équipé |
+| 🔥 **Charbonniers** | **Arme** : machette forgée ou couteau de forge **★★** (ressort trouvé ou fer doux, trempe à l'eau, foyer, marteau du kit). **Outils** : pinces, hachette, serpe, rivets, pointes d'acier. **Installations** : charbonnière, foyer de forge. **Entretien** : reprendre et reforger ses lames à la forge. **À distance** : l'arc commun | Pinces et étau trouvé → **★★★** ; graisse de volaille → trempe à l'huile ; forge ventilée au **poche de bâche à pomper** (on pompe) → ★★★★ ; maîtrise → ★★★★★ | ⚡ **ventilateur** ou ⚙️ **ventilateur à manivelle** : forge ventilée sans pomper ; ⚙️ **manche tourné** et ⚡ **dérouillage** : +1 étoile ; ⚙️ **affûtage** : l'entretien le moins cher ; ⚡ **alarme** : forger sans être surpris ; ⚙️ **arbalète** ; ⚡ **matraque** contre l'Équipé |
 | ⚡ **Voltaïques** | **Arme** : matraque de fortune **★** (flash, petite batterie du kit), matraque **★★** (raquette, pack). Elle **détruit seule** (§5.1). **Outils** : packs, modules, lampe bricolée, alarme. **Installations** : banc, panneau, clôture de fortune. **Recharge** : banc au soleil, **manivelle** l'hiver. **À distance** : l'arc commun | Bobine d'allumage trouvée → **★★★** (la décharge saute au voisin) ; poste de montage, pack trié, maîtrise → ★★★★ ; clôture et plaque de choc | 🔥 **électrodes forgées** : ★★★★ tout de suite ; ⚙️ **manche tourné** : ★★★★★ ; ⚙️ **recharge par pédalage** l'hiver ; ⚙️ **brouette** pour les batteries de 18 kg ; 🔥 **lame** pour les jours sans courant ; ⚙️ **arbalète** |
 | ⚙️ **Mécanistes** | **Arme** : arbalète **★** (arc de frêne) et **★★** (lame de ressort brute), carreaux à pointe d'os ou de clou. **Outils** : scie et **clé plate** du kit, meule, dynamo. **Installations** : pédalier, tour à perche. **Pièges** : assommoir, mâchoires de fortune, fosse. **À distance comme au contact** : l'arc, la lance | Arc d'arbalète en **if** (ils voient l'if) → **★★★** ; arcs d'if ★★★★ ; maîtrise | 🔥 **ressort retrempé** : arbalète ★★★★ et **arbalète lourde** ; 🔥 **noix forgée**, **ciseau à bois** : +1 étoile ; 🔥 **pointes d'acier** : carreaux qui cassent une fois sur cinq ; 🔥 **ressorts** : vrai piège à mâchoires ; ⚡ **packs** et **lampe** ; ⚡ **matraque** contre l'Équipé |
 | **Tous** | L'arc de fortune et l'arc simple, les flèches d'os et de clou, la réparation de fortune, le lancer | L'arc d'if (haie de la Coopérative) | Lames et pointes 🔥, packs et lampes ⚡, arbalètes, carreaux et pièges ⚙️ |
@@ -477,7 +479,7 @@ Chaque case dit ce que l'autre famille **améliore**, jamais ce qu'elle **déblo
 
 | A envie de → | 🔥 Charbonniers | ⚡ Voltaïques | ⚙️ Mécanistes |
 |---|---|---|---|
-| **🔥 Charbonniers** | — | **Ventilateur de forge** (sinon : soufflet double, on pompe) ; **dérouillage** +1 étoile (sinon : reforger) ; **alarme** silencieuse (sinon : boîtes de conserve) | **Affûtage** (sinon : reprendre à la forge, ½ kg de charbon) ; **manches tournés** +1 étoile (sinon : une branche) ; **soufflet à manivelle** (sinon : soufflet double) |
+| **🔥 Charbonniers** | — | **Ventilateur de forge** (sinon : poche de bâche à pomper, on pompe) ; **dérouillage** +1 étoile (sinon : reforger) ; **alarme** silencieuse (sinon : boîtes de conserve) | **Affûtage** (sinon : reprendre à la forge, ½ kg de charbon) ; **manches tournés** +1 étoile (sinon : une branche) ; **ventilateur à manivelle** (sinon : poche de bâche à pomper) |
 | **⚡ Voltaïques** | **Électrodes forgées** ★★★★ (sinon : fil de cuivre, ★★★) ; **couteau** pour les jours sans courant (sinon : l'arc, le gourdin) | — | **Recharge par pédalage** (sinon : la manivelle, lente) ; **manche tourné** (sinon : caoutchouc) ; **brouette** (sinon : le travois) |
 | **⚙️ Mécanistes** | **Ressorts retrempés** : arbalète ★★★★, arbalète lourde, vrai piège à mâchoires (sinon : if ★★★, lame brute, mâchoires de fortune) ; **noix forgée**, **ciseau** (sinon : noix en os, scie) ; **pointes d'acier** (sinon : os, clou) | **Lampe bricolée** (sinon : la lanterne du kit) ; **packs** (sinon : la dynamo du pédalier) ; **clôture** (sinon : pièges) | — |
 
@@ -489,7 +491,7 @@ Chaque case dit ce que l'autre famille **améliore**, jamais ce qu'elle **déblo
 |---|---|---|
 | **L'arbalète lourde** | 🔥 deux ressorts retrempés et des pointes ; ⚙️ l'arbrier, la noix, le montage | Une arme qui n'existe qu'à deux familles : une **variante supérieure** |
 | **La matraque ★★★★★** | 🔥 les électrodes forgées ; ⚙️ le manche tourné ; ⚡ la bobine, le pack trié, le montage | Le haut de gamme électrique passe par les trois métiers |
-| **La forge silencieuse** | ⚡ l'alarme électrique ; ⚙️ le soufflet à manivelle ou ⚡ le ventilateur | Le Charbonnier forge plus longtemps sans être surpris |
+| **La forge silencieuse** | ⚡ l'alarme électrique ; ⚙️ le ventilateur à manivelle ou ⚡ le ventilateur | Le Charbonnier forge plus longtemps sans être surpris |
 
 ---
 
@@ -782,10 +784,10 @@ Et un changement de kit : la **clé plate** (Serrer 2) entre dans le kit des Mé
 
 | Lignée ou installation | Niveaux et accessoires | Famille | Chantier |
 |---|---|---|---|
-| **La forge** | 1 foyer de forge (existe) → **2 forge ventilée** (tuyère d'argile, **soufflet double** ; 1 chiffon de cuir ou de bâche, 6 pierres, 1 barre ; on pompe, 2 d'endurance par minute de forge). Accessoires : **enclume** (pierre plate ★★, étau ou tête de masse ★★★, rail ★★★★★), **ventilateur 12 V** (⚡) ou **soufflet à manivelle** (⚙️) qui suppriment le pompage, **bac de trempe** (1 casserole) | 🔥 | 5 |
+| **La forge** | 1 foyer de forge (existe) → **2 forge ventilée** (tuyère d'argile, **poche de bâche à pomper** ; 1 chiffon de cuir ou de bâche, 6 pierres, 1 barre ; on pompe, 2 d'endurance par minute de forge). Accessoires : **enclume** (pierre plate ★★, étau ou tête de masse ★★★, rail ★★★★★), **ventilateur 12 V** (⚡) ou **ventilateur à manivelle** (⚙️) qui suppriment le pompage, **bac de trempe** (1 casserole) | 🔥 | 5 |
 | **L'établi** | Book 24 §5 (établi utile, étau) ; accessoire **redresseur de fûts** (2 branches, 1 pierre chaude) : les flèches à l'établi vont 2 fois plus vite | Tous | 4 |
-| **Le banc de recharge** | Accessoire **électrificateur** (la clôture se branche dessus) ; **poste de montage** (pince, fer à souder bricolé avec une résistance) : +1 étoile aux modules | ⚡ | 6 |
-| **Le pédalier** | Accessoires existants (meule, dynamo) + **soufflet à manivelle**, **meule fine** | ⚙️ | 7 |
+| **Le banc solaire** | Accessoire **électrificateur** (la clôture se branche dessus) ; **poste de montage** (pince, fer à souder bricolé avec une résistance) : +1 étoile aux modules | ⚡ | 6 |
+| **Le pédalier** | Accessoires existants (meule, dynamo) + **ventilateur à manivelle**, **meule fine** | ⚙️ | 7 |
 | **Tour à perche** | Nouvelle installation, 1 × 2 cases | ⚙️ | 7 |
 | **Bas fourneau** | Nouvelle installation, 2 × 2 cases, palier III (Book 04 §2.3) | 🔥 | Après 0b |
 
@@ -881,11 +883,11 @@ vague 3   [8 Intégration] ◄────┴───────────�
 - **Graphismes** : trois arcs (fortune, frêne, if) en main et dans le dos, la pose « bander », la flèche en vol et plantée dans un corps ; son : la corde qui claque.
 
 **Chantier 5 · Les Charbonniers** (vague 2)
-- **Contenu** : toute la gamme du §4.3 (dont les électrodes forgées et le ressort retrempé, que les chantiers 6 et 7 utilisent comme améliorations) ; la qualité d'une lame (§4.2) ; la trempe à l'eau (une sur trois se fend) ou à l'huile ; reprendre une lame et reforger la lame ébréchée ; la forge ventilée, le soufflet double, l'enclume, le bac de trempe (lignée de la forge).
+- **Contenu** : toute la gamme du §4.3 (dont les électrodes forgées et le ressort retrempé, que les chantiers 6 et 7 utilisent comme améliorations) ; la qualité d'une lame (§4.2) ; la trempe à l'eau (une sur trois se fend) ou à l'huile ; reprendre une lame et reforger la lame ébréchée ; la forge ventilée, le poche de bâche à pomper, l'enclume, le bac de trempe (lignée de la forge).
 - **Fichiers** : `commun/src/armes/charbonniers.ts`, `commun/src/recettes/charbonniers.ts`, `commun/src/lignees.ts`, nouveaux `serveur/src/forge.ts`, `serveur/src/forge.test.ts`, `client/src/rendu/metier/forge.ts`.
 - **Dépendances** : chantiers **2** (étoiles, réparation en liste) et **3** (identifiants, recettes par famille).
 - **Tests** : ressort + eau + foyer + marteau donne ★★ ; avec les pinces et un étau, ★★★ ; hors famille, jamais plus de ★★ ; la trempe à l'eau fend une lame sur trois (graine fixe) ; une lame ébréchée reforgée redevient la même arme à une étoile de moins ; un Charbonnier seul répare sa lame à la forge.
-- **Graphismes** : la forge ventilée (tuyère, soufflet double), l'enclume en trois versions (pierre, étau, rail), le bac de trempe et sa vapeur, les lames en main (couteau, hachette, machette forgée, serpe, hache, glaive), les pinces ; son : le pschitt de la trempe.
+- **Graphismes** : la forge ventilée (tuyère, poche de bâche à pomper), l'enclume en trois versions (pierre, étau, rail), le bac de trempe et sa vapeur, les lames en main (couteau, hachette, machette forgée, serpe, hache, glaive), les pinces ; son : le pschitt de la trempe.
 
 **Chantier 6 · Les Voltaïques** (vague 2)
 - **Contenu** : packs et modules (★, ★★, ★★★), la matraque de fortune, la matraque, l'aiguillon ; la consommation en Wh, le pack vide, l'alerte « Plus de courant » ; la **recharge à la manivelle** ; la lampe bricolée, l'alarme électrique, la clôture de fortune et la clôture, la plaque de choc (par le moteur des déclencheurs) ; le ventilateur de forge, le bain de dérouillage, le poste de montage, l'électrificateur.
@@ -895,7 +897,7 @@ vague 3   [8 Intégration] ◄────┴───────────�
 - **Graphismes** : la matraque (fortune, raquette, bobine) et son arc bleu, l'aiguillon, la clôture et ses isolateurs en plastique, la LED de l'alarme, la plaque de choc, le ventilateur sur la forge ; sons : crépitement de la courte, claquement de la longue, bourdonnement de la clôture.
 
 **Chantier 7 · Les Mécanistes** (vague 2)
-- **Contenu** : l'arbalète (★ frêne, ★★ lame brute, ★★★ if, ★★★★ ressort retrempé), l'arbalète lourde et le cranequin, les carreaux ; la ligne de l'arbalète dans `ARMES_TIR` ; armée d'avance, réarmer immobile ; l'assommoir, les mâchoires de fortune, le piège à mâchoires, la fosse (par le moteur des déclencheurs) ; le tour à perche, le soufflet à manivelle, la meule fine, la recharge par pédalage vendue aux ⚡ ; la brouette.
+- **Contenu** : l'arbalète (★ frêne, ★★ lame brute, ★★★ if, ★★★★ ressort retrempé), l'arbalète lourde et le cranequin, les carreaux ; la ligne de l'arbalète dans `ARMES_TIR` ; armée d'avance, réarmer immobile ; l'assommoir, les mâchoires de fortune, le piège à mâchoires, la fosse (par le moteur des déclencheurs) ; le tour à perche, le ventilateur à manivelle, la meule fine, la recharge par pédalage vendue aux ⚡ ; la brouette.
 - **Fichiers** : `commun/src/armes/mecanistes.ts`, `commun/src/tir.ts` (le bloc « arbalète » seulement), `commun/src/recettes/mecanistes.ts`, nouveaux `serveur/src/mecanique.ts`, `serveur/src/mecanique.test.ts`, `client/src/rendu/metier/mecanique.ts` ; `serveur/src/joueur.ts` (une ligne d'appel).
 - **Dépendances** : chantiers **1** (tir), **2** (étoiles, déclencheurs), **3**. Le ressort retrempé du chantier 5 n'est **pas** un prérequis : il ouvre seulement ★★★★ et la lourde, testées en fin de vague.
 - **Tests** : un Mécaniste **seul** monte une arbalète ★ avec son kit et une perche ; armée, elle tire en 0,3 s ; réarmer immobilise 3 s ; saisi, pas de tir ; la lourde met à terre en un carreau ; les mâchoires font un Rampant, celles de fortune se faussent en 5 prises.
@@ -984,3 +986,78 @@ Les huit questions de la v0.1 sont tranchées par le porteur : toutes à « oui 
 - **L'électricité dangereuse** et **l'équilibre des trois armes de métier** : §5.1 et §8.4.
 - **La machette de fortune** et **la lame ébréchée qui ne donne plus de ressort** : réglées dans le code (§0.2).
 - **Une seule livraison** : la 0.6, en neuf chantiers (§10).
+
+---
+
+## 13. Le niveau 1 : la grille, les bandes et l'évolution des armes (0.8, 2026-10-10)
+
+*Plan 0.8 §2.4, §9.1 et §9.2 (`armes-par-niveau.md` : P, Q-A, Q-B, K1 à K56 ; `decisions-armes.json` ; `degats-electriques.md`) ; **codé en 0.8** (chantiers 7, 8 et 9 : `commun/src/armes/grille.ts`, `armes/*.ts`, `tir.ts`, `combat.ts`, `forge.ts`, `serveur/src/evolution-armes.ts`). Là où les chapitres 3 à 8 diffèrent (les étoiles ★★★ et plus atteintes seul, les valeurs de 0.6), ce paragraphe fait foi pour le niveau 1. La bible (`book/bible/progression-et-equilibrage.html`) a le détail arme par arme.*
+
+### 13.1 La grille des étoiles
+
+- **Seul : ★ à la maison, ★★ à H1 et L1.** Avec une autre famille, **une étoile de plus, pas deux** (Q-A2f). La grille tient **par les recettes** : le foyer de forge fait ★★ ; la corde d'arc fait l'étoile de l'arc (joncs ou ficelle ★★, fil dentaire ou boyau ★★★, I13) ; l'arc d'if se monte ★★ ; l'arc d'arbalète en if attend l'établi de menuisier (« plus tard », Q-0.8-3).
+- **La maîtrise sans plafond** (K-Q1, le plafond par étape est refusé) : 10 exemplaires de la même sorte donnent **l'étoile du dessus, avec ses vrais dégâts**, même quand cette étoile appartient à l'étape suivante. **Le niveau 1 se joue avec les armes de la station**, et « tant mieux s'il a la maîtrise » (K-Q2) : pas d'étoile intermédiaire pour L1. L'arc simple ★★★★ ne s'obtient que par la maîtrise (Q-0.8-4), comme la matraque de fortune ★★ et l'arc de fortune ★★.
+- **La bande de dégâts d'une étape compte plus que le plafond d'étoiles** (R-ARMES-1).
+
+### 13.2 Les bandes de dégâts
+
+Les dégâts au torse d'un coup simple, ou d'un tir plein ; un Errant tombe à 3, un Équipé à 4.
+
+| Étape | Bande |
+|---|---|
+| **Maison** | 0 – 1 |
+| **H1** (la station, le gué) | 0,8 – 1,5 |
+| **L1** (la Coopérative, le Moulin du Gué) | 1 – 2 |
+
+### 13.3 Les armes du niveau 1 (valeurs décidées et codées)
+
+| Arme | Étoiles | Étape | Dégâts | Ce qui change d'autre |
+|---|---|---|---|---|
+| **Marteau** (remmanché ; le marteau du kit 🔥) | — | maison | **0,8** | Solidité **40** ; **ne tue plus à la tête d'un coup** (Q-A3) ; la tête ne s'use pas, on répare le manche |
+| Lance · gourdin · épieu | — | maison | 0,7 · 0,7 · 0,6 | La lance commune et la lance forgée restent ainsi ; on mesure au test (Q-0.8-6) |
+| Hache (la tête trouvée, remmanchée) | — | maison | 1,0 | C'est aussi l'outil Fendre |
+| Arc de fortune | ★ · ★★ | maison | 0,7 · 0,75 | ★★ par la maîtrise seulement |
+| Arc simple | ★★ · ★★★ · ★★★★ | maison · H1 · L1 | 0,8 · 1,1 · 1,35 | ★★ : corde de joncs ; ★★★ : fil dentaire (boutique de la station) ou boyau ; ★★★★ : la maîtrise |
+| Arc d'if | ★★ | L1 | 1,35 | Plafonné à ★★ au niveau 1 ; le bâton d'if à la Coopérative (la haie) ou au Moulin du Gué (le bief) |
+| 🔥 Machette forgée | ★★ | H1 | 1,2 | Maîtrisée : ★★★ à **2,5** |
+| 🔥 Hachette · couteau de forge · serpe | ★★ | H1 | 1,1 · 0,9 · 1,0 | La **hachette au foyer de forge**, à ★★ (Q-0.8-2) ; lancée, elle fait les dégâts de l'exemplaire |
+| 🔥 Lance à pointe forgée | — | H1 | 1,15 | Pas d'étoiles |
+| ⚡ Matraque de fortune | ★ · ★★ | H1 | 0,9 · 1,0 | Solidité 60 ; ★★ par la maîtrise |
+| ⚡ Matraque électrique | ★ · ★★ | H1 | 1,0 · 1,1 | Solidité 60 ; à ★★ elle raidit 2,5 s, la longue dure 1,0 s ; **la petite batterie du kit** en est la source sûre (Q-A5) ; **50 Wh** quel que soit le pack ; la ★ reste (Q-0.8-20) |
+| ⚙️ Arbalète | ★ · ★★ | H1 | 1,1 · 1,2 | Solidité 60 · 80 ; maîtrisée ★★★ à 2,5 ; ★★★ par la recette (arc en if) : plus tard |
+| ⚙️ Couteau aiguisé | — | H1 | 0,85 | Un outil |
+| Masse · pied-de-biche · machette de fortune | trouvées | L1A | à part (usure) | La masse reste à la Coopérative (Q-0.8-5) ; le pied-de-biche ne s'y trouve qu'une fois par personnage |
+| 🆕 **Fourche à foin** | trouvée | L1B | **1,5**, perçante | Tue à la tête, **passe le casque** ; allonge 2,0 m ; coup 0,65 s, appuyé 0,9 s ; solidité 80 ; sans étoiles ; **pas un outil** (I30) ; **une fois par personnage**, dans l'étable du Moulin du Gué ; seule arme portée **dans le dos** |
+
+**Plus tard** (grisés « plus tard » dans la fiche, ou hors de la 0.8) : la forge ventilée et ce qu'elle forge (hache forgée, glaive, ★★★ 🔥 par la recette) ; le module à bobine, l'aiguillon, l'électrificateur et la clôture électrique (le poste de montage, L2A) ; l'arc d'arbalète en if (l'établi de menuisier, L2B) ; le cranequin (niveau 2) ; l'arbalète lourde, l'arc d'arbalète et le ressort retrempés (niveau 3) ; l'arc sportif. La bobine d'allumage **quitte la station** (I12) : la matraque ★★★ ne vient plus que de la maîtrise (dix modules de décharge donnent un module ★★★).
+
+### 13.4 La pièce de famille et les enclumes
+
+- **La pièce de famille** se trouve à la station, **une par joueur** (Book 01 §2 bis) ; **on pose le meuble, puis on y monte sa pièce** : ⚡ poser le **panneau** sur le **banc solaire** ; 🔥 poser l'**enclume de dépanneur** près du **foyer de forge** (avec le sac de **4 charbons**) ; ⚙️ monter le **petit alternateur** sur le **pédalier générateur** (le vélo de la ruine). Un meuble de famille ne compte comme monté au niveau de sa clé qu'une fois sa pièce posée.
+- **Les enclumes** (P1, Q-A6) : l'enclume de dépanneur, l'étau et la tête de masse sont des enclumes **★★** (plus ★★★) ; la grosse pierre plate, le repli, donne **★** (Q-0.8-1) ; la forge compte comme équipée avec n'importe quelle enclume ★★. **Un étau posé sur la forge ne donne plus ★★★** : le ★★★ 🔥 ne vient plus que de la forge ventilée (L2B). La trempe à l'eau ne dépasse plus le maillon de la forge.
+- **Le bac de trempe** n'a plus de clé : une **auge de planches calfatée de glaise** du gué (2 bûches, 2 glaises ; Creuser 1). La casserole ne le fait plus.
+
+### 13.5 Les dégâts électriques
+
+- Une décharge **courte** qui raidit **ajoute ses dégâts au torse** (une courte de matraque ★★ : +1,1). La décharge longue à la tête détruit toujours un Éteint raidi ou à terre (§5.1).
+- **Pack vide** : l'arme frappe à **la moitié** de ses dégâts décidés (la matraque ★★ : 0,55 ; remplace les 0,6 fixes, C11).
+- Un réglage, `equilibre_electrique_degats` (1 par défaut), règle ces dégâts à chaud. L'éclat d'arc sur le voisin raidi reste.
+
+### 13.6 Faire évoluer et réparer une arme sur son meuble (R-ARMES-5, R-ARMES-4)
+
+- **« Reprendre l'arme »** : près de **son meuble** (la forge pour une lame, le banc solaire pour une matraque, l'établi pour une arbalète ou un arc), on choisit l'arme qu'on porte ; le meuble propose de **la réparer** à son niveau, ou de **la monter d'une étoile** si le meuble et les pièces le permettent (une arbalète ★ rapportée à l'établi avec un arc d'arbalète en lame de ressort devient ★★). **L'exemplaire garde son identité** : son usure revient à neuf, sa clé change d'étoile. Le meuble ne monte pas au-delà de ce qu'il permet : une machette ★★ ne passe pas ★★★ sur le foyer de forge, seulement par la maîtrise.
+- **Réparer le manche** sans forge, à l'**établi à étau**, pour toutes les familles : **1 branche**, 15 s ; pour le **marteau**, la tête ne s'use pas, seul le manche ; **la masse** aussi se répare au manche. **Monter une lame** coûte 1 charbon, 30 s. La pièce remplacée est perdue.
+- **Fabriquer une seconde arme reste permis** ; sans arme en main, on frappe avec la meilleure arme du sac, **par dégâts décidés**.
+- **L'atelier de réparation** se lit dans les meubles : la lame à la meule ou à la forge ; le bois à l'établi ; le manche à l'établi à étau.
+
+### 13.7 Le garde-fou rejoué par étape (P11)
+
+`npm run equilibre -- --etape maison|H1|L1` rejoue les scénarios du §8.4 avec les armes **de l'étape** : à chaque étape, l'arme qui possède un terrain y est la meilleure ; les autres au plus 2 fois moins bonnes ; au coût, au plus 3 fois d'écart. **Rejoué avec les valeurs codées en 0.8** (chantier 14, `npm run equilibre -- --etape …`) :
+
+| Étape | Pire rapport hors terrain (au plus 2) | Écart de coût par Errant (au plus 3) | Verdict |
+|---|---|---|---|
+| Maison | 1,39 | 1,22 fois | OK |
+| H1 | 1,87 | 1,40 fois | OK |
+| L1 | 1,87 | 1,40 fois | OK |
+
+L1 donne les mêmes chiffres que H1 : le niveau 1 se joue avec les armes de la station (K-Q2).

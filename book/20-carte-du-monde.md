@@ -88,6 +88,29 @@ La carte du jeu n'ouvre encore que quatre lieux, reliés par des tronçons (`com
 - **L'étape** : on s'arrête à chaque lieu du plus court chemin. Du terrain au Carrefour ou à la Coopérative, il faut traverser la station à pied. La fiche du lieu donne la distance, les calories et l'eau de **l'étape**.
 - **Le pion** suit le tracé du tronçon pris : la route, ou l'un des deux chemins de terre.
 
+### 1 quater bis. Les deux routes du niveau 1 (0.8, 2026-10-10)
+
+*Plan 0.8 §1.1, B16, Q-0.8-25 et §9.2 ; **codé en 0.8** (chantier 4, `commun/src/lieux.ts`, `client/src/carte.ts`).*
+
+La 0.8 porte le **niveau 1** sur **deux routes**, qui passent la rivière chacune à sa façon. Chaque route a une **halte** (H1, partagée) puis un **lieu personnel** (L1, un par joueur). Le contenu du jeu (clés, quêtes, indices) cite **l'étape** (H1A, H1B, L1A, L1B) ; l'affichage met **le nom du lieu** (table `ETAPES_LIEUX`).
+
+| Étape | Lieu | Route | Distance | La promesse (fiche de la carte) |
+|---|---|---|---|---|
+| **H1A** | La station-service | A, par **le pont** | 3 km du terrain | « La station : le bois, le métal, et la pièce de ta famille. » |
+| **L1A** | La Coopérative du Plateau | A, chemin de terre derrière la station | 2 km de la station (5 km du terrain) | « La Coopérative : le feu et l'eau. » |
+| **H1B** | **Le Gué-aux-Saules** | B, **à gué**, en aval du pont | 3 km du terrain | « Le gué : la pierre, la glaise et la rive. » |
+| **L1B** | **Le Moulin du Gué** | B, le long de la rive ouest | 2 km du gué (5 km du terrain) | « Le Moulin : le couchage, le stockage, l'établi. » |
+
+- **La même distance sur les deux routes** (B16) : terrain → gué **3 km**, gué → Moulin **2 km**, comme terrain → station et station → Coopérative. Le coût du voyage (≈ 60 kcal et 0,08 L d'eau par km) et sa séquence de 10 s sont les mêmes.
+- **L'étape par la halte** : on passe par le gué pour aller au Moulin, comme par la station pour aller à la Coopérative.
+- **Le dessin** : la route B descend la rive est jusqu'au gué, passe l'eau sur le radier (« le pont est parti : à gué », au crayon), puis suit la rive ouest jusqu'au Moulin, sa roue à aubes arrêtée au bord de l'eau. Le **chemin de halage**, sur la rive est, est une **sortie** du Moulin vers le gué, jamais une arrivée.
+- **Les noms** (Q-0.8-25) : « Le Gué-aux-Saules » et « Le Moulin du Gué » ; le lien entre les deux se lit sur la carte (l'enseigne du modèle dit « Minoterie du Gué »). Le gué est une halte **sur la route du Moulin du Gué**.
+- **Pourquoi ces deux lieux** (étude `candidats-h1b-l1b-et-budget.md`, retenus le 2026-10-10, 25/27) : le gué oppose à la route A une autre sorte de danger, l'eau, la vase et le passage, au lieu des bâtiments ; le Moulin lui est déjà lié par le récit.
+- **La digue des Roselières** (24/27, dans les Marais), deuxième de l'étude, est **pressentie pour H2B** (le niveau 2, hors de la 0.8).
+- **Rien au-delà du Moulin** : **aucun panneau, aucune route annoncée** vers plus loin que le Moulin du Gué (décision du porteur, §9.2 du plan : « on ne sait pas encore ce qu'on mettra plus loin ») ; la retouche du panneau du modèle est demandée à la session « bâtiments ». Le panneau du gué qui annonce « 1 km » reste un décor : la carte donne les vraies distances.
+- **Le menu « Aller à… » de god** connaît le gué et le Moulin.
+- **La carte se ferme** par sa croix ✕ (un panneau ouvert au toucher garde sa croix) **et par un clic en dehors** de la carte (décision revue le 2026-10-10).
+
 ## 2. Les six environnements
 
 | Environnement | Ressources dominantes | Famille la plus concernée |
@@ -173,6 +196,8 @@ La carte du jeu n'ouvre encore que quatre lieux, reliés par des tronçons (`com
 | Marais | Moyen | **Minerai de fer des marais**, roseaux, fibres, tourbe | ●● |
 | Station d'épuration | Moyen | Pompes, tuyaux, bassins (et une rumeur sur la fièvre grise) | ●●● |
 | Moulin à eau | Moyen | Meules, engrenages, roue hydraulique à restaurer | ●● |
+
+> **0.8** : le Moulin à eau devient **le Moulin du Gué** (L1B), à 5 km par la route B (§1 quater bis) ; la roue à restaurer est gardée pour plus tard (niveau 3). Le gué de la ligne « Marais » ci-dessous devient **le Gué-aux-Saules** (H1B), et **la digue** est pressentie pour H2B.
 | Écluse et péniche | Lointain | Vannes, roue, péniche chargée, cordages | ●● |
 
 ---
@@ -197,7 +222,7 @@ La carte du jeu n'ouvre encore que quatre lieux, reliés par des tronçons (`com
 | Ville | Le passage à niveau, l'avenue barricadée |
 | Zone industrielle | Le péage, l'aire d'autoroute |
 | Littoral | La route du pont, la corniche |
-| Marais | La digue, le gué |
+| Marais | La digue (pressentie pour H2B), le gué (**le Gué-aux-Saules**, H1B en 0.8) |
 | Campagne | Le carrefour, la station-service |
 
 > Le nombre de haltes par trajet reste un **paramètre de réglage** (Book 01 §9).

@@ -252,3 +252,38 @@ Le leurre est l'arme reine de la coopérative ; il ne peut pas attendre la 0.6. 
 - [ ] La batterie de tracteur : bonne récompense pour ⚡ et ⚙️, ou trop forte ?
 - [ ] La liste exacte des pièces rares de la chambre froide.
 - [ ] L'étage des bureaux et le point haut des silos : quand ?
+
+---
+
+## 11. La Coopérative du niveau 1 (0.8, 2026-10-10)
+
+*Plan 0.8 §2.5, §9.1 (N1) et §9.2 ; **codé en 0.8** (chantier 10, `commun/src/cooperative.ts`, `serveur/src/cooperative.ts`).*
+
+Depuis la 0.8, la Coopérative est **L1A**, le lieu personnel de la **route A** du niveau 1 (Book 20 §1 quater bis). Sa promesse sur la carte : « La Coopérative : le feu et l'eau. » Elle porte **trois clés à place fixe**, communes à toutes les familles (« rien de propre à une famille en L1 ») :
+
+| Clé | Où | Pour quel meuble (Book 24 §12) |
+|---|---|---|
+| **Rouleau de grillage** | Contre un piquet du **parc à volailles**, dans la cour des silos (un enclos dont le grillage est tombé) | Le **foyer de cuisine** |
+| **Cocotte en fonte** | En tête de gondole, au **libre-service** | La **marmite norvégienne** |
+| **Seaux de 10 L** | La **laiterie** | Le **récupérateur à seau** (10 L) |
+
+- **La chambre froide devient la laiterie** (I8) : ses roulements et l'alternateur de tracteur sont **retirés** (ils ne débloquaient rien avant le niveau 2) ; ses seaux de 10 L sont une clé. La pièce reste noire, avec ses deux portes et ses dormants.
+- **Tout revient à 24 h** (décision N1 du porteur, R51) : 24 h après qu'on l'a trouvée pleine, la Coopérative revient **entière** — les Éteints, le butin, les clés à place fixe, les portes, la batterie du tracteur et la radio. **Le repeuplement partiel** (3 Éteints toutes les 12 h, §2.3 et en-tête) **n'existe plus** ; le grillage, qui revenait en 4 jours, revient à 24 h comme le reste.
+- **Une fois par personnage** : le **pied-de-biche** garanti sous la caisse ne se trouve qu'une fois (comme la fourche à foin du Moulin).
+- **Ce qui reste** : la masse (Q-0.8-5 : une arme trouvée, elle reste), la machette, la clé plate, la haie d'ifs, les bâches, la corde, les conserves, le coffre du directeur (semences, trois manuels), la batterie du tracteur.
+- **Ailleurs, rarement** : une clé de L1 sort d'une fouille à la station, au gué ou au Moulin avec 2 % de chances (R-BUTIN). **Le Comptoir** les vend 500 wotts, **une fois la Coopérative visitée** (avant, il les masque).
+- **À la première visite**, les trois clés sont à leur place : on bâtit au retour le foyer de cuisine, la marmite et le récupérateur à seau (critère de fin de la 0.8, Book 21 §3.10).
+
+## 12. Le Moulin du Gué, l'autre lieu du niveau 1 (0.8, 2026-10-10)
+
+*Plan 0.8 §10.1 (étude `h1b-l1b-conception.md`, propositions M1 à M35), B11, B17, N1 ; **codé en 0.8** (chantier 12, `commun/src/moulin.ts`, `serveur/src/moulin.ts`, `commun/src/eteints-moulin.ts`). Le modèle 3D est celui de la session « bâtiments » (`batiment/moulin/`).*
+
+**L1B**, le lieu personnel de la **route B** (Book 20 §1 quater bis), à 2 km du Gué-aux-Saules. Sa promesse : « Le Moulin : le couchage, le stockage, l'établi. » **Un par joueur**, comme la Coopérative, et le combat du niveau 1 y est du même rang.
+
+- **Le parcours** : on arrive par le **pont de pierre** ; la **grosse clé** pend au tableau de l'atelier, dans les **dépendances** juste après le pont, gardée par deux dormants ; elle ouvre la **grande porte** de la salle des meules, qui reste ouverte une fois déverrouillée. Puis le **couloir du rouet**, un goulet le long de la fosse (on peut **y repousser un Éteint**) ; les **meules nord** ; le **magasin** (cinq dormants dont un Équipé) ; le **jardin clos**. On repart par la **planche du bief** et le **chemin de halage**, une sortie à sens unique (on n'arrive jamais par là).
+- **Les clés à place fixe** : la **toile de jute** (les sacs à farine du magasin) pour l'**abri fermé** ; les **feuillards** (les cercles des barils à farine) pour le **coffre cerclé** ; l'**étau** (l'établi du rhabilleur, aux meules) pour l'**établi à étau**.
+- **Le reste** : la **fourche à foin**, dans l'étable, **une fois par personnage** (une arme trouvée, Book 25 §13.3) ; un **if** au bord du bief (un bâton d'if) ; les **poutres de chêne** de l'atelier : **2 bûches garanties**, de quoi cercler le coffre sur place (B11).
+- **Les Éteints** : **22, dont 9 dormants** (B17 demandait 18 à 24 ; le modèle n'en avait que 4), dans l'atelier, les meules, le magasin, l'étable, le logis et sur le pont. Les pièces sombres le sont vraiment ; la vue par pièce (§2.4) s'y applique, et les pièces jamais visitées sont assombries, jamais noires.
+- **Tout revient à 24 h**, comme à la Coopérative : Éteints, butin, clés garanties ; la grosse clé retourne au tableau et la grande porte se referme. La fourche, elle, ne revient pas.
+- **Gardé pour plus tard** : la **roue à restaurer** (« objectif des Mécanistes » dans le modèle), au niveau 3 : au niveau 1, rien n'est propre à une famille.
+- **Rien au-delà** : aucun panneau n'annonce de lieu plus loin que le Moulin (Book 20 §1 quater bis).

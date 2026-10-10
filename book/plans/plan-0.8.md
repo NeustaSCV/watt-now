@@ -30,9 +30,9 @@
   - **L1B**, le Moulin à eau (**à créer**, retenu) : le couchage, le stockage, l'établi.
 - **Le bois et la pierre ne manquent plus** : la station et le gué donnent du vrac qui revient en 30 min, et un tas personnel à chacun (§2.7).
 - **Les armes** suivent les étapes : bandes de dégâts, étoiles placées (K1 à K56), dégâts électriques, maîtrise sans plafond. Une arme **évolue** quand on la rapporte sur son meuble.
-- **15 chantiers**, en **4 vagues**. Effort : **7 L et 8 M**, soit environ **45 jours-agent** au milieu de la fourchette.
+- **16 chantiers**, en **4 vagues**. Effort : **7 L et 9 M**, soit environ **47 jours-agent** au milieu de la fourchette.
 - **Rien du niveau 2** n'est construit. Ce qui en existe déjà dans le code reste en place pour ceux qui l'ont, et devient **« plus tard »** pour les autres (§1.3).
-- **25 questions ouvertes** (§9 ; une autre est réglée par les décisions de la v0.2), dont 4 qui bloquaient un chantier, tranchées le 2026-10-10.
+- **Toutes les questions du §9 sont tranchées** (§9.1 au lancement, §9.2 pendant le codage).
 
 ---
 
@@ -98,7 +98,7 @@ Le code 0.7.3 a déjà des niveaux et des recettes que la grille place au niveau
 ### 2.1 Construire : la fin des paliers
 
 - **Construire** = le niveau d'avant posé + les matériaux + l'outil. Plus de palier.
-- **Les outils sont des portes dures**, mais **plusieurs outils sont compatibles**, et **les objets de fortune donnent le niveau 1** de leur qualité (tableau `outils` de la v5 : pierre et clé plate pour Marteler 1 ; éclat de verre, lame ébréchée, couvercle de conserve, sécateur pour Couper 1 ; coin de bois et pierre pour Fendre 1 ; un morceau de fer plat pour Visser 1 ; enjoliveur et casserole pour Creuser 1…). Aujourd'hui, un niveau d'outil en dessous rend le geste plus lent (Book 03 §4) : en 0.8, **il faut le niveau demandé**.
+- **Les outils sont des portes dures**, mais **plusieurs outils sont compatibles**, et **les objets de fortune donnent le niveau 1** de leur qualité (tableau `outils` de la v5 : pierre et clé plate pour Marteler 1 ; éclat de verre, lame ébréchée, couvercle de conserve, sécateur pour Couper 1 ; le coin de bois (frappé avec une pierre) et la tête de hache pour Fendre 1 — la pierre seule ne donne que Marteler 1 ; un morceau de fer plat pour Visser 1 ; enjoliveur et casserole pour Creuser 1…). Aujourd'hui, un niveau d'outil en dessous rend le geste plus lent (Book 03 §4) : en 0.8, **il faut le niveau demandé**.
 - **Les outils de fortune à fabriquer** (à la main) : le serre-joint de fortune (2 branches, 1 corde : Serrer 1), la scie de fortune (un disque ou 2 lames ébréchées : Scier 1), le marteau de fortune (une barre repliée : Marteler 2), le coin de bois (Fendre 1, avec une pierre).
 - **Le marteau remmanché** (I10) : la tête de marteau de la caisse de la ruine et une branche, à la main. Il donne **Marteler 2 à toutes les familles** (le coffre cerclé de L1B le demande).
 - **Une clé par niveau** (règle 2 du game designer) : un ingrédient **ou** un outil de dehors, jamais les deux.
@@ -691,6 +691,22 @@ vague 4   [13 Tutoriel, quêtes, aide] ◄────────────�
 - **Butin (chantier 10)** : les clés de L1 au Comptoir se vendent **500 wotts** (rachat 90), une de chaque en stock ; une clé de L1 sort rarement d'une fouille ailleurs (2 %) ; **avant la visite du lieu, le Comptoir masque ces clés** (pas grisées : absentes de l'étal, chantier 13) ; le pied-de-biche de la Coopérative, comme la fourche, ne se trouve qu'une fois par personnage ; le tas de bois reste derrière l'atelier.
 - **Le gué (chantier 11)** : haler le bac suit la règle des gestes longs (un appui pour commencer, un autre pour arrêter) ; qui se trouve sur le radier quand la crue le noie est ramené sur la rive, avec une ligne de message ; les abords du lot (relief, route, rivière, arbres) sont gardés ; les fouilles : 80 % de chances de trouver quelque chose, 20 % deux choses (à régler au test) ; quatre retouches du modèle sont demandées aux bâtiments (`demande-batiment-gue-3.md`).
 - **Carte (chantier 4)** : le gué est retourné au rendu pour suivre la carte (le terrain à l'est), comme la station (chantier 11) ; **aucun panneau vers plus loin que le Moulin** (« on ne sait pas encore ce qu'on mettra plus loin » : retouche du modèle demandée aux bâtiments) ; la carte du monde se ferme par **sa croix ✕ et par un clic en dehors de la carte** (chantier 13 ; décision revue le 2026-10-10).
+
+### 9.3 Les dernières décisions, et ce qui part en 0.8.1 (2026-10-10)
+
+*Le porteur a accepté toutes les recommandations de fin de codage ; ce qui demande un changement de code se fera en **0.8.1**.*
+
+- **Décidé, sans changement de code** : au Moulin, le butin courant (corde, branches, conserve, chiffons, ficelle), l'étau démonté en 10 s avec Serrer 1, le gémissement de la fosse à 16 m, la grande porte qui s'ouvre et se ferme à volonté une fois déverrouillée ; le stock de bois reste tel quel (à remesurer au niveau 2) ; l'écart de 83 min entre deux portes pour ⚡ et ⚙️ et les branches tendues sont à surveiller au test familial ; les neuf objectifs ordinaires de « S'installer » restent après les portes.
+- **Le critère 6** devient : **toutes les portes à clé en ≈ 3 h 30** pour le prudent (mesuré : 209 à 212 min) ; tout le niveau 1, maison et métier compris, ≈ 4 h 40 (277 à 285 min), à caler au test familial.
+- **Le critère 12** se lit « aucune **arme de métier** au-dessus de ★★ sans la maîtrise » (l'arc simple ★★★ au fil dentaire est décidé, §2.4).
+- **En 0.8.1** :
+  - le feu prend **d'abord les branches**, puis les bûches (le conseil de la première nuit devient possible) ;
+  - « Un vrai lit » remonte **en tête** de « S'installer », après le coffre (l'abri fermé suppose l'abri garni) ;
+  - le tas de bois personnel et le stock du Comptoir deviennent des **réglages modifiables à chaud** ;
+  - l'allure du meunier, du charpentier et du putréfié du Moulin (plus tard, à voir) ;
+  - les retouches du modèle du Moulin (`demande-batiment-moulin-2.md`) une fois livrées : réimport, `SEGMENTS_MODELE` ;
+  - la mesure du budget sur l'iPhone 13 mini au gué et au Moulin (`?mesure=1`) ;
+  - le son du foyer de forge garde l'identifiant interne `soufflet` : à renommer.
 
 **Une note sur les sources.** Le bloc `familles` de `progression-par-ingredients-page.json` (et le §4 du `.md` v5) dit encore que l'enclume donne ★★★ et que le sac donne « les 4 premiers charbons ». Les décisions plus récentes l'emportent : **★★** (P1, Q-A6) et **4 charbons** (I23). La question V5-3 est donc réglée.
 

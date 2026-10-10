@@ -139,6 +139,20 @@ Une recette ne demande **pas un outil précis**, mais une **qualité** d'un cert
 
 **Règle :** le niveau de la qualité remplace la règle « outil de fortune » du Book 02 §7. Un niveau inférieur à celui demandé est accepté avec un malus de temps et de qualité ; deux niveaux en dessous, la recette est impossible.
 
+### 4.1 Depuis la 0.8 : des portes dures (2026-10-10)
+
+Plan 0.8 §2.1, codé en 0.8. **La règle ci-dessus change** :
+
+- **Il faut le niveau demandé.** Un niveau en dessous ne rend plus le geste plus lent : il est **refusé**, et le refus nomme ce qui manque. Marteler 1 ne suffit plus pour Marteler 2.
+- **Plusieurs outils sont compatibles** pour une même qualité, et **les objets de fortune donnent le niveau 1** : on n'est jamais bloqué faute d'un outil précis, seulement faute du bon niveau.
+- **Ce que le code donne au niveau 1** (`QUALITES_OBJETS`) : Marteler, la pierre, la clé plate, le cric, la ferraille tordue, le pied-de-biche ; Couper, l'éclat de verre, la lame ébréchée, la boîte de conserve vide (le couvercle), le sécateur, la machette ; Visser, le couteau, la lame ébréchée (le fer plat) ; Fendre, la tête de hache sans manche et le coin de bois ; Creuser, le bâton à fouir, l'enjoliveur, la casserole ; Serrer, le serre-joint de fortune ; Scier le bois, la scie de fortune ; Trancher le métal, la lime usée.
+- **Le niveau 2 à la portée de tous** : le **marteau remmanché** (la tête de marteau de la caisse de la ruine et une branche, à la main) et le **marteau de fortune** (une barre repliée) donnent **Marteler 2** ; la clé plate, Serrer 2 ; la bêche, Creuser 2.
+- **Les postes et les outils à portée** : l'**établi à étau** donne **Serrer 3** à qui travaille à 3 m (l'étau dans le sac ne donne rien) ; un outil rangé au **râtelier à outils**, à 3 m, compte comme porté (Book 24 §12).
+- **Deux qualités nouvelles, déclarées sans usage** : **Raboter** et **Souder** (Q-0.8-21) ; elles serviront au niveau 2 (le rabot de l'établi de menuisier, le fer à souder).
+- **Les enclumes** (Servir d'enclume) : la grosse pierre plate donne ★, l'enclume de dépanneur, l'étau et la tête de masse ★★ (Book 25 §13.4).
+
+Les outils de fortune à fabriquer sont au Book 02 §14 quinquies.
+
 ---
 
 ## 5. Le savoir
@@ -243,6 +257,36 @@ Le détail, les règles et la table complète sont au Book 02 (§14 quater et an
 - **Le dévoilé est du savoir** : il est conservé à l'effondrement et effacé en fin de cycle, comme le carnet (§5.5).
 - **Les cinq paliers** suivent la pyramide de Maslow (le corps, l'abri du danger, les tiens puis les autres, le métier, l'œuvre) : ce sont des familles de déclencheurs, pas des niveaux à atteindre.
 - **Voir faire** est une cinquième façon, discrète, de penser à une recette : à moins de 5 m d'un joueur qui la fabrique. Pour une recette d'une autre famille, on ne l'apprend pas ainsi ; on la voit seulement, grisée, ce qui donne envie d'une leçon (§5.4).
+
+> **Depuis la 0.8** : les cinq paliers ne sont plus qu'une grille de conception (Book 02 §14 quater) ; une recette **pressentie** est désormais ce qu'ouvrirait le **niveau suivant** d'une construction qu'on possède (« Au foyer de cuisine : soupe de cèpes »), ou ce que demande une quête en cours.
+
+### 5.8 Penser au bon moment : l'idée au ramassage et l'indice en deux temps (0.8, 2026-10-10)
+
+Plan 0.8 §2.2, codé en 0.8 (chantier 2 ; les textes de chaque clé sont dans les lignées, `Etape.cle`). Chaque niveau d'un meuble au-delà de la maison demande **une clé** trouvée dehors (Book 24 §12). Le savoir n'en est pas changé : on sait déjà fermer un abri ou cercler un coffre ; on **y pense** quand on tient ce qu'il faut.
+
+**« Tu y penses » : l'idée au ramassage.**
+
+- La **première fois** qu'on ramasse une clé (le premier « vu » de l'objet), ou qu'on tient l'outil qui manque, un **bandeau** passe, dans la voix du carnet, avec l'icône de la trouvaille : « Ce grillage, posé sur ton foyer, ferait une grille. Tu y penses. » Un son court et chaleureux l'accompagne, distinct du ramassage.
+- **Jamais au deuxième ramassage** : l'idée ne revient pas.
+- **L'idée gardée** : si le niveau d'avant n'est pas encore posé, le message dit « un jour » (« Ce grillage pourra servir à ton feu, un jour. »), avec « gardé pour plus tard ». L'idée est notée dans le personnage ; quand on arrive au meuble, sa fiche montre la clé **« déjà en poche »**. Une trouvaille précoce n'est jamais perdue.
+- **Un meuble de famille** ne compte comme monté au niveau de sa clé **qu'une fois sa pièce posée** (le panneau sur le banc, l'enclume près du foyer, l'alternateur sur le pédalier) : avant, l'idée reste muette (plan 0.8 §9.2).
+- **Le bandeau passe seul**, ou se ferme **d'un bouton** (« Noté », « Je le garde ») : **jamais une fenêtre à croix** (règle du porteur). Plusieurs idées d'une même fouille passent l'une après l'autre, au plus un message toutes les 10 s.
+- **Les textes nomment le lieu par son nom affiché** (« la Coopérative », « la station », « le Gué-aux-Saules », « le Moulin du Gué »), jamais par le code de l'étape (« L1A »).
+
+**L'indice « où chercher », en deux temps.**
+
+| Temps | Ce qu'il dit | Exemple (le foyer de cuisine) |
+|---|---|---|
+| **1 · le type de lieu** | Où ce genre d'objet se trouve, sans nommer le lieu | « Une grille ? Les clôtures en sont faites. » |
+| **2 · le coin** | Le lieu et l'endroit précis | « Le parc à volailles de la Coopérative. » |
+
+- L'indice d'une clé s'ouvre quand son étape devient **le niveau suivant** d'une construction qu'on a.
+- Il passe au **second temps** après **une visite du bon lieu sans la clé**, ou après **45 min** de jeu (Q-0.8-16).
+- **Jamais de flèche sur la carte** : l'indice se lit dans la **fiche du meuble** (Examiner), une ligne par manque, l'indice replié.
+
+**La fiche du meuble devient l'arbre.** Ouverte par **Examiner** (bouton B), elle montre ce qu'on y fait, **le niveau suivant** (sa clé, ses matériaux, son outil, ce qui manque, l'indice) et celui d'après, **grisé** ; un niveau « plus tard » porte sa clé nommée, « à trouver plus loin ». Elle se ferme par **B**, ou par son bouton « Fermer » pour la souris et le toucher : pas de croix (plan 0.8 §9.2). La 0.8 n'y ajoute que les indices ; le panneau Examiner détaillé attend une version à part (Q-0.8-17).
+
+**Quatre sources par clé** : sa **place fixe** dans son lieu, la **chance** ailleurs (rare, 2 % par fouille), un **repli** fabricable (plus cher, plus lent ou moins bon), et le **Comptoir**, seulement **après une première visite** du lieu (500 wotts, Book 01 §2 bis).
 
 ---
 
