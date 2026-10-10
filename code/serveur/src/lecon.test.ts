@@ -133,8 +133,8 @@ test("chaque terrain a deux frênes à la lisière et un if au fond du bois", ()
   }
 });
 
-test("le couteau du kit coupe une perche de frêne, une fois et demie plus lentement ; le couteau aiguisé, normalement", () => {
-  assert.equal(multiplicateurQualites({ couteau: 1 }, USAGES.frene.qualites), 1.5);
+test("le couteau du kit coupe une perche de frêne (Couper 1, plan 0.8), comme le couteau aiguisé et la serpe", () => {
+  assert.equal(multiplicateurQualites({ couteau: 1 }, USAGES.frene.qualites), 1);
   assert.equal(multiplicateurQualites({ couteau_aiguise: 1 }, USAGES.frene.qualites), 1);
   assert.equal(multiplicateurQualites({ serpe: 1 }, USAGES.frene.qualites), 1);
   assert.equal(multiplicateurQualites({ pierre: 1 }, USAGES.frene.qualites), null);
@@ -145,7 +145,7 @@ test("un frêne coupé repousse en 6 h, même hors ligne", () => {
   const frene = t.joueur.bienvenue(0).ressources.find((r) => r.type === "frene")!;
   t.joueur.position = { x: frene.x + 0.5, z: frene.z, o: 0 };
   t.joueur.recevoir({ t: "interagir", cible: { genre: "ressource", id: frene.id }, verbe: "ramasser" });
-  // Couper 2 avec le couteau du kit (Couper 1) : 6 s × 1,5.
+  // Couper 1 avec le couteau du kit : 6 s.
   t.attendre(10);
   assert.equal(t.dernier("inventaire")!.inventaire.perche_frene, 1);
   assert.equal(t.joueur.bienvenue(0).ressources.find((r) => r.id === frene.id)!.disponible, false);
@@ -312,7 +312,7 @@ test("lire un manuel ouvre les recettes d'une famille ; dans la sienne, rien ; u
 });
 
 test("un Mécaniste lit le Manuel du forgeron, monte une forge et forge une lame : ×1,5, et ★★", () => {
-  const t = monter("mecanistes", { manuel_forgeron: 1, pierre: 12, barre_metal: 2, branche: 5, marteau: 1, ressort_lames: 2, charbon_bois: 2, graisse: 1 });
+  const t = monter("mecanistes", { manuel_forgeron: 1, pierre: 12, barre_metal: 4, branche: 5, marteau: 1, charbon_bois: 2 });
   // Sans l'avoir lu : grisée.
   t.joueur.recevoir({ t: "fabriquer", recette: "forge", x: 20, z: 21.8, o: 0 });
   assert.match(t.infos().at(-1)!, /chez les Charbonniers/);
@@ -324,12 +324,13 @@ test("un Mécaniste lit le Manuel du forgeron, monte une forge et forge une lame
   t.joueur.recevoir({ t: "fabriquer", recette: "forge", x: 20, z: 21.8, o: 0 });
   t.attendre(10);
   assert.ok(t.dernier("installation"));
-  t.joueur.recevoir({ t: "fabriquer", recette: "lame_forgee" });
+  // Le couteau de fer doux : il se forge au foyer, sans bac de trempe (plan 0.8 : l'acier, lui, demande le bac).
+  t.joueur.recevoir({ t: "fabriquer", recette: "lame_forgee_fer" });
   t.attendre(10);
   const inv = t.dernier("inventaire")!.inventaire;
-  assert.equal(inv["lame_forgee#2"], 1);
+  assert.equal(inv["lame_forgee#2"], 1, t.infos().join(" | "));
   assert.equal(inv.lame_forgee, undefined);
-  assert.equal(inv.ressort_lames, undefined);
+  assert.equal(inv.barre_metal, undefined, "1 barre ×1,5 = 2");
   assert.equal(inv.charbon_bois, undefined);
   // Le savoir est gardé avec le personnage.
   assert.deepEqual(t.base.chargerSavoir(t.compte.id).manuels, ["charbonniers"]);

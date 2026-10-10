@@ -133,8 +133,9 @@ test("0.6 Voltaïques : l'endurance d'une décharge (5 la courte, 8 la longue) e
 
 // ---------- Les recettes : seul, on fait sa base ----------
 
-test("0.6 Voltaïques : un Voltaïque seul monte une matraque de fortune avec son kit et un appareil photo", () => {
-  const t = surLeTerrain({ ...kitDeDepart("voltaiques"), appareil_photo_jetable: 1, buche: 1, fibres: 2 });
+test("0.6 Voltaïques : un Voltaïque seul monte une matraque de fortune avec son kit et un appareil photo, à son banc", () => {
+  // Plan 0.8 : le métier se fait à l'atelier ; la matraque se monte au banc de recharge (son lieu).
+  const t = surLeTerrain({ ...kitDeDepart("voltaiques"), appareil_photo_jetable: 1, buche: 1, fibres: 2 }, [{ type: "banc_recharge", x: 21, z: 20 }]);
   for (const r of ["gourdin", "ficelle", "matraque_fortune"]) {
     t.joueur.recevoir({ t: "fabriquer", recette: r });
     t.attendre(8);
