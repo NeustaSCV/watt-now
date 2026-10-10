@@ -1128,6 +1128,11 @@ export class Base {
       this.db.prepare("DELETE FROM ressources_lieux WHERE lieu = ?").run(`cooperative:${id}`);
       this.db.prepare("DELETE FROM dechets WHERE lieu IN (?, ?)").run(`cooperative:${id}`, `terrain:${id}`);
       this.db.prepare("DELETE FROM monde WHERE cle IN (?, ?)").run(`forge:${id}`, `version_cooperative:${id}`);
+      // Son Moulin du Gué (plan 0.8, chantier 12) : ce qu'on en garde, son butin, son butin personnel, sa version.
+      this.db.prepare("DELETE FROM instances WHERE cle IN (?, ?)").run(`moulin:${id}`, `perso:moulin:${id}:${id}`);
+      this.db.prepare("DELETE FROM ressources_lieux WHERE lieu = ?").run(`moulin:${id}`);
+      this.db.prepare("DELETE FROM dechets WHERE lieu = ?").run(`moulin:${id}`);
+      this.db.prepare("DELETE FROM monde WHERE cle = ?").run(`version_moulin:${id}`);
       this.db
         .prepare("UPDATE mesures SET compte_id = ?, details = NULL WHERE compte_id = ? AND genre = 'progression' AND quoi LIKE ?")
         .run(COMPTE_ANONYME, id, `${PREFIXE_ATTEINT}%`);

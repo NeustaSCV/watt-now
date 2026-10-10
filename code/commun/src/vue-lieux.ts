@@ -1,8 +1,9 @@
-// Les plans de vue des lieux à murs (0.7.2) : la Coopérative et la boutique de la halte. Tirés des plans en données
+// Les plans de vue des lieux à murs (0.7.2) : la Coopérative et la boutique de la halte ; le Moulin (0.8). Tirés des plans en données
 // (cooperative.ts, lieux.ts) : rien ne change dans le jeu, on dit seulement ce qui arrête la vue (commun/src/vue.ts).
 
 import { FENETRES_COOP, PIECES, PORTES, mursCoop, pieceDe as pieceCoop } from "./cooperative.ts";
 import { BOUTIQUE, STATION, dansBoite, type LieuId } from "./lieux.ts";
+import { CLAIRE_VOIE, FENETRES_MOULIN, PIECES_MOULIN, PORTES_MOULIN, mursVueMoulin, pieceMoulin } from "./moulin.ts";
 import { percer, type FenetreVue, type PlanVue, type PorteVue } from "./vue.ts";
 import { PLAN_GUE } from "./gue.ts";
 
@@ -41,6 +42,29 @@ export const PLAN_VUE_HALTE: PlanVue = (() => {
   };
 })();
 
+// ---------- L1B, le Moulin du Gué (plan 0.8, chantier 12 ; étude h1b-l1b-conception §2.11, M34) ----------
+
+/**
+ * Le Moulin : ses onze pièces, la grande porte (fermée à clé au départ), les portes toujours ouvertes (leur battant pend
+ * ou est tombé), les fenêtres, la claire-voie du beffroi (la vue et le son passent d'une moitié des meules à l'autre ;
+ * pour les Éteints, ce n'est pas un passage : milieu-moulin.ts), le mur du jardin (il arrête la vue, le son passe
+ * par-dessus, étouffé). Un Éteint derrière la grande porte fermée ne se voit pas : il s'entend.
+ */
+export const PLAN_VUE_MOULIN: PlanVue = (() => {
+  const fenetres: FenetreVue[] = FENETRES_MOULIN.map((f) => ({ ...f }));
+  const portes: PorteVue[] = [
+    ...PORTES_MOULIN.map((p) => ({ id: p.id, x: p.x, z: p.z, largeur: p.largeur, sens: p.sens, entre: p.entre, ...(p.fermable ? {} : { toujoursOuverte: true }) })),
+    { ...CLAIRE_VOIE, toujoursOuverte: true },
+  ];
+  return {
+    murs: percer(mursVueMoulin(), fenetres.filter((f) => !f.opaque)),
+    portes,
+    fenetres,
+    pieceDe: pieceMoulin,
+    pieces: Object.keys(PIECES_MOULIN),
+  };
+})();
+
 // ---------- Le gué (plan 0.8, chantier 11) ----------
 
 /**
@@ -52,5 +76,5 @@ export const PLAN_VUE_GUE: PlanVue = PLAN_GUE;
 /** Le plan de vue d'un lieu, s'il a des murs. */
 export function planVue(lieu: LieuId): PlanVue | null {
   if (lieu === "gue") return PLAN_VUE_GUE;
-  return lieu === "cooperative" ? PLAN_VUE_COOP : lieu === "station" ? PLAN_VUE_HALTE : null;
+  return lieu === "cooperative" ? PLAN_VUE_COOP : lieu === "station" ? PLAN_VUE_HALTE : lieu === "moulin" ? PLAN_VUE_MOULIN : null;
 }

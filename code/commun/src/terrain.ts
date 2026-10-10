@@ -92,7 +92,16 @@ export type TypeRessourceNiveau1 =
   | "moulin_fourche"
   | "if_bief"
   | "poutres_chene"
-  | "moulin_cle";
+  | "moulin_cle"
+  // Le butin commun du Moulin (chantier 12) : l'étable, l'atelier, la cuisine et la malle du logis (le carnet du
+  // meunier), la boutique, le magasin, le camp du pont.
+  | "moulin_etable"
+  | "moulin_atelier"
+  | "moulin_logis"
+  | "moulin_malle"
+  | "moulin_boutique"
+  | "moulin_magasin"
+  | "moulin_camp";
 
 /** L'emprise au sol de ce qu'on vise (m) : le cercle de visée s'y ajuste (P-007). 0,5 m par défaut. */
 export const EMPRISE_RESSOURCE: Partial<Record<TypeRessource, number>> = {
@@ -128,6 +137,21 @@ export const EMPRISE_RESSOURCE: Partial<Record<TypeRessource, number>> = {
   tas_bois: 1.1,
   coop_grillage: 0.7,
   coop_cocotte: 0.4,
+  // Le Moulin (chantier 12).
+  moulin_cle: 0.3,
+  moulin_fourche: 0.5,
+  moulin_etau: 0.5,
+  poutres_chene: 1.2,
+  moulin_jute: 1.0,
+  moulin_feuillards: 0.9,
+  if_bief: 1.1,
+  moulin_etable: 0.8,
+  moulin_atelier: 0.8,
+  moulin_logis: 0.8,
+  moulin_malle: 0.6,
+  moulin_boutique: 0.9,
+  moulin_magasin: 0.8,
+  moulin_camp: 0.9,
   // Le gué (chantier 11) : la berge de glaise, le banc de galets, les barques retournées.
   gisement_glaise: 0.8,
   banc_galets: 0.9,
@@ -232,6 +256,15 @@ export const REPOUSSE_MS: Record<TypeRessource, number | null> = {
   if_bief: 24 * 3_600_000,
   poutres_chene: 24 * 3_600_000,
   moulin_cle: 24 * 3_600_000,
+  // Le butin commun du Moulin revient en 12 h (Book 23 §2.3, comme l'établi de la Coopérative) ; tout revient de toute
+  // façon à 24 h, avec le Moulin (serveur/src/moulin.ts).
+  moulin_etable: 12 * 3_600_000,
+  moulin_atelier: 12 * 3_600_000,
+  moulin_logis: 12 * 3_600_000,
+  moulin_malle: 12 * 3_600_000,
+  moulin_boutique: 12 * 3_600_000,
+  moulin_magasin: 12 * 3_600_000,
+  moulin_camp: 12 * 3_600_000,
   // Les fouilles du gué (chantier 11) : comme celles de la station, elles reviennent en 12 h.
   gue_cabane: 12 * 3_600_000,
   gue_buvette: 12 * 3_600_000,
@@ -269,6 +302,18 @@ export const RESTE_EN_PLACE: Partial<Record<TypeRessource, true>> = {
   tas_bois: true,
   // La tête de gondole de la cocotte reste, vide, sa pancarte de promotion encore plantée.
   coop_cocotte: true,
+  // Le Moulin (chantier 12) : le décor est le modèle, qui reste ; on fouille les piles de sacs, les barils, l'if…
+  poutres_chene: true,
+  moulin_jute: true,
+  moulin_feuillards: true,
+  if_bief: true,
+  moulin_etable: true,
+  moulin_atelier: true,
+  moulin_logis: true,
+  moulin_malle: true,
+  moulin_boutique: true,
+  moulin_magasin: true,
+  moulin_camp: true,
   // Le gué (chantier 11) : la berge de glaise ne s'épuise pas ; le banc de galets et les fouilles restent là.
   gisement_glaise: true,
   banc_galets: true,
@@ -342,6 +387,8 @@ export interface UsageRessource {
   examen: string;
   /** Il faut un escabeau posé au pied (dans le disque de l'arbre). */
   escabeau?: true;
+  /** Un geste sans bruit (la grosse clé du Moulin, qu'on décroche : M3) : les dormants voisins ne l'entendent pas. */
+  silencieux?: true;
 }
 
 /** Les arbres fruitiers : on y monte avec l'escabeau. */
@@ -351,7 +398,7 @@ export function estFruitier(type: TypeRessource): boolean {
 }
 /** Les arbres (fruitiers et essences du métier) : larges, on les touche d'un peu plus loin (PORTEE_ARBRE). */
 export function estArbre(type: TypeRessource): boolean {
-  return estFruitier(type) || type === "frene" || type === "if_bois" || type === "coop_ifs";
+  return estFruitier(type) || type === "frene" || type === "if_bois" || type === "coop_ifs" || type === "if_bief";
 }
 /**
  * Ce qu'une famille voit (Book 25 §3.2) : l'if du fond du bois ne se repère que si l'on reconnaît le bois par essence,
@@ -700,6 +747,122 @@ const USAGES_NIVEAU1: Partial<Record<TypeRessourceNiveau1, UsageRessource>> = {
     qualites: {},
     duree: 2,
     examen: "En tête de gondole, sous une pancarte « −20 % », une cocotte en fonte rouge, son couvercle encore posé dessus. Cinq kilos et demi.",
+  },
+  // ---------- L1B, le Moulin du Gué (chantier 12) : la grosse clé, la fourche, les clés à place fixe, l'if ----------
+  moulin_cle: {
+    verbe: "ramasser",
+    libelle: "Décrocher la grosse clé",
+    donne: { cle_moulin: 1 },
+    qualites: {},
+    // M3 : un geste silencieux d'une seconde ; en allure discrète, les deux dormants de l'atelier ne se réveillent pas.
+    duree: 1,
+    silencieux: true,
+    examen: "Le tableau à clés de l'atelier : une planche à clous, de petites clés rouillées, et au quatrième clou une grosse clé de fer, son étiquette de bois : « GRANDE PORTE ».",
+  },
+  moulin_fourche: {
+    verbe: "ramasser",
+    libelle: "Prendre la fourche à foin",
+    donne: { fourche_foin: 1 },
+    qualites: {},
+    duree: 2,
+    examen: "Contre le mur de l'étable, une fourche à foin : trois dents d'acier au bout d'un long manche de frêne. Elle tient un Éteint à deux mètres, et passe un casque.",
+  },
+  moulin_etau: {
+    verbe: "demonter",
+    libelle: "Démonter l'étau de l'établi",
+    donne: { etau: 1 },
+    qualites: { serrer: 1 },
+    duree: 10,
+    examen: "L'établi du rhabilleur, contre le mur nord : un étau de forge boulonné au plateau, les marteaux à rhabiller, la pierre à aiguiser. Le meunier l'avait monté de l'atelier.",
+  },
+  poutres_chene: {
+    verbe: "ramasser",
+    libelle: "Prendre deux bouts de poutre (2 bûches)",
+    donne: { buche: 2 },
+    qualites: {},
+    duree: 4,
+    examen: "Les poutres de chêne de rechange du rouet, calées contre le mur. À côté, deux bouts sciés : deux bûches de bon chêne sec.",
+  },
+  moulin_jute: {
+    verbe: "fouiller",
+    libelle: "Découdre des sacs de jute",
+    donne: { toile_jute: 1 },
+    qualites: {},
+    duree: 5,
+    examen: "Les piles de sacs à farine du magasin. La farine a durci en pierre dans certains ; les autres se vident, se décousent et se mettent à plat : de la toile de jute.",
+  },
+  moulin_feuillards: {
+    verbe: "ramasser",
+    libelle: "Ramasser les feuillards tombés",
+    donne: { feuillards: 1 },
+    qualites: {},
+    duree: 3,
+    examen: "Les barils à farine cerclés de fer. Un baril s'est ouvert en tombant : ses cercles, les feuillards, gisent à côté, prêts à cercler autre chose.",
+  },
+  if_bief: {
+    verbe: "ramasser",
+    libelle: "Tailler un bâton d'if",
+    donne: { baton_if: 1 },
+    qualites: { couper: 1 },
+    duree: 8,
+    examen: "Un if penché sur le bief, au fond du jardin : le meilleur bois d'arc. Toxique : on n'en mange ni baies ni aiguilles.",
+  },
+  // Le butin commun du Moulin : un peu de matière, et le bric-à-brac de la fouille (LIEU_DE_FOUILLE, vestiges.ts).
+  moulin_etable: {
+    verbe: "fouiller",
+    libelle: "Fouiller l'étable",
+    donne: { corde: 1 },
+    qualites: {},
+    duree: 6,
+    examen: "Des harnais racornis pendus aux clous, un seau, un bloc de sel à lécher. Une longe de chanvre traîne dans la litière.",
+  },
+  moulin_atelier: {
+    verbe: "fouiller",
+    libelle: "Fouiller l'atelier du charpentier",
+    donne: { branche: 2 },
+    qualites: {},
+    duree: 6,
+    examen: "L'établi du charpentier de moulin : la caisse d'alluchons de rechange, des chevilles, des copeaux. Sur le plateau, la trace claire d'un étau et deux trous de vis : il n'est plus là.",
+  },
+  moulin_logis: {
+    verbe: "fouiller",
+    libelle: "Fouiller la cuisine",
+    donne: { conserve: 1 },
+    qualites: {},
+    duree: 6,
+    examen: "La cuisine du meunier : la cheminée froide, des bocaux sur le buffet, une boîte à sel, une bouteille d'huile.",
+  },
+  moulin_malle: {
+    verbe: "fouiller",
+    libelle: "Ouvrir la malle du meunier",
+    donne: { chiffons: 3 },
+    qualites: {},
+    duree: 5,
+    examen: "Au pied du lit, la malle du meunier : une couverture, des chemises, et un carnet relié de toile, écrit serré.",
+  },
+  moulin_boutique: {
+    verbe: "fouiller",
+    libelle: "Fouiller la boutique",
+    donne: { conserve: 1 },
+    qualites: {},
+    duree: 6,
+    examen: "« Expérience Farine Authentique » : des pains « artisanaux » sous plastique (conservateurs : toujours mous), de la « farine authentique » en sachets.",
+  },
+  moulin_magasin: {
+    verbe: "fouiller",
+    libelle: "Fouiller autour de la bascule",
+    donne: { ficelle: 2 },
+    qualites: {},
+    duree: 6,
+    examen: "La bascule décimale et ses poids de fonte, le blutoir, des sacs vides noués de ficelle.",
+  },
+  moulin_camp: {
+    verbe: "fouiller",
+    libelle: "Fouiller le camp du pont",
+    donne: { chiffons: 2 },
+    qualites: {},
+    duree: 6,
+    examen: "Le camp de survivants sur le pont : un brasero, une bâche déchirée, une couverture, une ligne de pêche sans hameçon. Ils sont partis vite.",
   },
   // ---------- H1B, le Gué-aux-Saules (chantier 11 ; commun/src/gue.ts) ----------
   // B6 : la vase de la berge, sous le camping-car : inépuisable, une motte de 2 kg par geste de 6 s, avec Creuser 1.

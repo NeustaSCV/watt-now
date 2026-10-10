@@ -318,6 +318,7 @@ export class Monde {
     }
     this.aSauver = this.aSauver.filter((id) => id !== compteId);
     if (oublier) this.cooperatives.oublier(compteId);
+    if (oublier) this.moulins.oublier(compteId);
     return connexion !== undefined;
   }
 }
