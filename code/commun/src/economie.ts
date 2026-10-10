@@ -55,6 +55,19 @@ export function refusVenteCle(type: TypeObjet, faits: Readonly<Record<string, nu
   return `« ${OBJETS[type].nom.charAt(0).toUpperCase()}${OBJETS[type].nom.slice(1)} ? Va d'abord voir ${minuscule(LIEUX[lieu].nom)} : on en reparlera. » Les Compteurs ne vendent une clé qu'à qui connaît son lieu.`;
 }
 
+/**
+ * L'étal du Comptoir tel qu'un joueur le voit (plan 0.8 §9.2, chantier 13) : les clés de L1 dont il n'a pas visité le
+ * lieu en sont **absentes** (pas grisées) ; tout le reste, tel quel. Le serveur l'applique à chaque vue qu'il envoie.
+ */
+export function etalPour(stock: Inventaire, faits: Readonly<Record<string, number>>): Inventaire {
+  const etal: Inventaire = {};
+  for (const [cle, n] of Object.entries(stock) as [CleObjet, number][]) {
+    const lieu = LIEU_DES_CLES[typeDe(cle)];
+    if (!lieu || (faits[`visite:${lieu}`] ?? 0) > 0) etal[cle] = n;
+  }
+  return etal;
+}
+
 export function prixBase(type: TypeObjet): number {
   return energieGrise(type);
 }

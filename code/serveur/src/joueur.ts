@@ -98,6 +98,7 @@ import {
   PRIX_RETRAIT,
   WOTTS_PAR_WH_M,
   ajouterWotts,
+  etalPour,
   formaterWotts,
   prixAchatCle,
   prixVenteCle,
@@ -445,7 +446,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     }
     if (this.lieu === "comptoir") {
       this.position = arriveeDans("comptoir", "station");
-      comptoir.entrer(this.envoyer);
+      comptoir.entrer(this.envoyer, () => this.quetes.etat.faits);
     }
     if (this.lieu === "cooperative") {
       // Reconnexion dans la Coopérative : on réapparaît au portail (Book 23 §3).
@@ -572,7 +573,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       ...(this.lieu === "cooperative"
         ? { leurres: this.cooperatives.leurresActifs(this.compte.id, this.maintenant()), etatCoop: this.cooperatives.vue(this.compte.id) }
         : {}),
-      ...(this.lieu === "comptoir" ? { comptoir: this.comptoir.vue(instant) } : {}),
+      ...(this.lieu === "comptoir" ? { comptoir: this.vueComptoir(instant) } : {}),
       ...((this.lieu === "cooperative" || this.lieu === "moulin") && this.vivant ? { portes: { ...this.vivant.portes } } : {}),
     };
   }
@@ -1009,6 +1010,12 @@ export class Joueur implements Voyageur, ParticipantLecon {
     }
     this.envoyerWotts();
     this.comptoir.publier(instant);
+  }
+
+  /** Le Comptoir tel que ce joueur le voit : les clés de L1 d'un lieu jamais visité sont absentes de l'étal (§9.2). */
+  private vueComptoir(instant: number): ReturnType<Comptoir["vue"]> {
+    const vue = this.comptoir.vue(instant);
+    return { ...vue, stock: etalPour(vue.stock, this.quetes.etat.faits) };
   }
 
   /** Pédaler pour les Compteurs : ils paient le Wh_m sur leur trésorerie, sans créer de wotts (Book 07 §3.1). */
@@ -2026,7 +2033,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     this.position = ou ?? arriveeDans(voyage.vers, voyage.de);
     this.vivant?.entrer(this);
     if (this.lieu === "cooperative") this.cooperatives.retrouverRadio(this.compte.id, (this.inventaire.radio_piles ?? 0) > 0);
-    if (this.lieu === "comptoir") this.comptoir.entrer(this.envoyer);
+    if (this.lieu === "comptoir") this.comptoir.entrer(this.envoyer, () => this.quetes.etat.faits);
     if (this.tuto && this.lieu === "station") this.tuto.visiteStation = true;
     this.noterFait(`visite:${this.lieu}`);
     this.envoyer(this.bienvenue(this.base.debutMonde()));
@@ -3722,7 +3729,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (utiliserMecanique(this.contexteMecanique(maj), i, verbe as Verbe)) return;
     // Le banc solaire (plan 0.8, chantier 7) : poser le panneau sur le banc (serveur/src/electricite.ts).
     if (this.electricite.utiliser(i, verbe as Verbe)) return;
-    if (utiliserNiveau1(this.contexteMecanique(maj), i, verbe as Verbe, () => this.maintenant())) return;
+    if (utiliserNiveau1(this.contexteMecanique(maj), i, verbe as Verbe, () => this.maintenant(), this.debutMonde)) return;
 
     switch (verbe) {
       case "porter":

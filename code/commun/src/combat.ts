@@ -214,7 +214,7 @@ export const MALUS_ABIMEE = 0.7;
  * La réparation de fortune (ficelle, chiffons), partout et pour toutes les familles, ne remonte pas au-delà d'« abîmée ».
  * Le geste lui-même (« Reprendre l'arme », R-ARMES-5) est dans `evolution-armes.ts`.
  */
-export type MatiereArme = "bois" | "lame" | "metal" | "manche" | "electrique";
+export type MatiereArme = "bois" | "lame" | "metal" | "manche" | "masse" | "electrique";
 export const MATIERE_ARME: Partial<Record<TypeObjet, MatiereArme>> = {
   gourdin: "bois",
   epieu: "bois",
@@ -226,7 +226,8 @@ export const MATIERE_ARME: Partial<Record<TypeObjet, MatiereArme>> = {
   lame_forgee: "lame",
   // Le marteau remmanché (R-ARMES-4) : la tête ne s'use pas, c'est le manche qu'on refait.
   marteau: "manche",
-  masse: "metal",
+  // La masse (plan 0.8 §9.2, chantier 13) : la tête à la forge, ou le manche à l'établi à étau, comme le marteau.
+  masse: "masse",
   barre_metal: "metal",
   pied_de_biche: "metal",
   // La fourche à foin (L1B, I30) : un manche de frêne, des dents d'acier ; c'est le manche qui lâche.
@@ -277,6 +278,10 @@ export const ATELIER_REPARATION: Record<MatiereArme, AtelierReparation[]> = {
   ],
   metal: [{ installation: "forge", nom: "la forge" }],
   manche: [{ installation: "etabli", niveau: 2, nom: "l'établi à étau", cout: { branche: 1 }, geste: "Refaire le manche" }],
+  masse: [
+    { installation: "forge", nom: "la forge" },
+    { installation: "etabli", niveau: 2, nom: "l'établi à étau", cout: { branche: 1 }, geste: "Refaire le manche" },
+  ],
   electrique: [
     { installation: "banc_recharge", nom: "le banc solaire" },
     { installation: "etabli", nom: "l'établi" },
