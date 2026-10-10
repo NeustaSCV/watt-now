@@ -10,7 +10,16 @@ import type { Boite, Zone } from "./lieux.ts";
 
 /** Le mobilier bas, par-dessus lequel on frappe et l'on lance (une caisse, un rayon bas, des palettes). */
 const GENRES_BAS = new Set(["caisse", "rayon_bas", "palettes", "transpalette", "bureau", "etabli", "coffre_fort"]);
-const BOITES_BASSES = new Set<Boite>(MOBILIER.filter((m) => GENRES_BAS.has(m.genre)).map((m) => m.boite));
+// Un ensemble faible : les obstacles bas d'un lieu qui bouge (le radeau du gué) s'en vont avec leur zone.
+const BOITES_BASSES = new WeakSet<Boite>(MOBILIER.filter((m) => GENRES_BAS.has(m.genre)).map((m) => m.boite));
+
+/**
+ * Des obstacles bas d'un autre lieu (plan 0.8, chantier 11 : au gué, l'eau, les berges, les bords du radier) : on ne
+ * les traverse pas à pied, mais on frappe, on saisit et l'on lance par-dessus.
+ */
+export function declarerObstaclesBas(boites: Iterable<Boite>): void {
+  for (const b of boites) BOITES_BASSES.add(b);
+}
 
 /** Cet obstacle arrête-t-il un coup ou un objet lancé ? (les murs, les rayonnages, les tracteurs ; pas le mobilier bas) */
 export function arreteLesCoups(b: Boite): boolean {

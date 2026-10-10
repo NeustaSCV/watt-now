@@ -40,6 +40,7 @@ import {
   type TablesTir,
 } from "../../commun/src/tir.ts";
 import { voieLibre } from "../../commun/src/murs.ts";
+import { BRUIT_PLOUF, BRUIT_REBOND, type Ricochet } from "../../commun/src/gue.ts";
 
 /** Ce que le joueur prête au moteur des projectiles. */
 export interface ContexteTir {
@@ -78,6 +79,11 @@ export interface ContexteTir {
   commencer(libelle: string, dureeS: number, appliquer: () => void): void;
   /** Un fait pour les quêtes (« tete:fleche », « tete:carreau » : un Éteint détruit d'un tir à la tête, Book 25 §9.4). */
   noter?(fait: string): void;
+  /**
+   * Au gué (plan 0.8, chantier 11, G8) : ce qui tombe dans la rivière, lancé de `de`, tenu `tenuMs` avant le lâcher :
+   * il coule (perdu), ou, galet bien lancé, il ricoche jusqu'à l'autre rive. null : il ne tombe pas dans l'eau.
+   */
+  surLEau?(de: { x: number; z: number }, ou: { x: number; z: number }, objet: string, tenuMs: number): Ricochet | null;
 }
 
 /** On accroche un Éteint jusqu'à 35° de la direction donnée (le client l'a visé ; une petite marge pour le réseau). */
@@ -391,7 +397,14 @@ export class Tir {
     }
 
     // Ce qui retombe : au sol, ramassable ; dans la mare, perdu ; une flèche qui touche casse parfois.
-    const dansLaMare = ctx.lieu() === "terrain" && distanceMare(ou.x, ou.z) < 0;
+    // Au gué (G8) : dans la rivière, il coule ; un galet bien lancé ricoche jusqu'à l'autre rive.
+    const riviere = !touche && p.genre === "lancer" ? (ctx.surLEau?.(pos, ou, typeDe(p.cle), bande === null ? 0 : instant - bande) ?? null) : null;
+    if (riviere) {
+      ou = riviere.fin;
+      impact = "sol";
+      for (const [i, r] of riviere.rebonds.entries()) this.bruit(r.x, r.z, i === 0 ? BRUIT_PLOUF.portee : BRUIT_REBOND.portee, i === 0 ? BRUIT_PLOUF.duree : BRUIT_REBOND.duree);
+    }
+    const dansLaMare = (ctx.lieu() === "terrain" && distanceMare(ou.x, ou.z) < 0) || riviere?.perdu === true;
     if (dansLaMare) impact = impact === "eteint" ? impact : "eau";
     const objet: CleObjet = tir && munition ? munition.objet : p.cle;
     let reste = !dansLaMare;
@@ -400,12 +413,13 @@ export class Tir {
       ctx.indice("casse", `Cassé au choc : ${nommer(munition.objet, 1)}.`);
     }
     if (reste) ctx.poserAuSol({ [objet]: 1 }, ou);
+    else if (riviere?.perdu) ctx.indice("riviere", "Plouf : il coule au fond de la rivière.");
     else if (dansLaMare) ctx.indice("mare", "Perdu dans la mare.");
 
     // Le bruit de l'impact ; le réveil, lui, sonne (s'il n'est pas dans l'eau).
     if (tir) this.bruit(ou.x, ou.z, BRUIT_IMPACT_TIR, DUREE_BRUIT_TIR);
     else if (p.genre === "lancer") {
-      this.bruit(ou.x, ou.z, p.def.bruitImpact.portee, p.def.bruitImpact.duree);
+      if (!riviere?.perdu) this.bruit(ou.x, ou.z, p.def.bruitImpact.portee, p.def.bruitImpact.duree);
       if (p.def.sonne && !dansLaMare) this.bruit(ou.x, ou.z, p.def.sonne.portee, p.def.sonne.duree, p.def.sonne.intensite);
     }
 
@@ -422,6 +436,7 @@ export class Tir {
       impact,
       ...(coup ? { coup } : {}),
       ...(tir ? { tir: true as const } : {}),
+      ...(riviere && !riviere.perdu ? { ricochets: riviere.rebonds.map((r) => ({ x: arrondi(r.x), z: arrondi(r.z) })) } : {}),
     };
     ctx.diffuser({ t: "projectile", projectile });
     if (tir?.armeeDAvance || p.genre === "lancer") this.envoyerPret();

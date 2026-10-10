@@ -4,6 +4,7 @@
 import { FENETRES_COOP, PIECES, PORTES, mursCoop, pieceDe as pieceCoop } from "./cooperative.ts";
 import { BOUTIQUE, STATION, dansBoite, type LieuId } from "./lieux.ts";
 import { percer, type FenetreVue, type PlanVue, type PorteVue } from "./vue.ts";
+import { PLAN_GUE } from "./gue.ts";
 
 /** La Coopérative : ses murs et cloisons, ses 8 portes, les vitrines du libre-service et les fenêtres des bureaux. */
 export const PLAN_VUE_COOP: PlanVue = (() => {
@@ -40,7 +41,16 @@ export const PLAN_VUE_HALTE: PlanVue = (() => {
   };
 })();
 
+// ---------- Le gué (plan 0.8, chantier 11) ----------
+
+/**
+ * Le Gué-aux-Saules : à ciel ouvert, sauf la cabane du passeur et la buvette de Chez Lulu, où l'on entre (le plan est
+ * tiré du modèle dans commun/src/gue.ts, `PLAN_GUE`).
+ */
+export const PLAN_VUE_GUE: PlanVue = PLAN_GUE;
+
 /** Le plan de vue d'un lieu, s'il a des murs. */
 export function planVue(lieu: LieuId): PlanVue | null {
+  if (lieu === "gue") return PLAN_VUE_GUE;
   return lieu === "cooperative" ? PLAN_VUE_COOP : lieu === "station" ? PLAN_VUE_HALTE : null;
 }
