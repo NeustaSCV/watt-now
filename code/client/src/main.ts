@@ -83,6 +83,7 @@ import type { ControleEnDirect } from "./mesure/obstacles.ts";
 import { CoucheDechetsVue } from "./rendu/dechets/couche.ts";
 // « Tu y penses » au ramassage d'une clé (plan 0.8, chantier 2).
 import { BandeauIdee } from "./bandeau-idee.ts";
+import { BandeauAvertissement } from "./avertissement.ts";
 
 const CLE_JETON = "watt.jeton";
 /** En développement : `?heure=22` fige l'heure affichée, pour régler la nuit sans attendre. */
@@ -382,6 +383,7 @@ function afficherVoile(texte: string, bouton?: { libelle: string; action: () => 
 
 /** Le bandeau « Tu y penses », posé dans le HUD au premier usage (après que le HUD a dessiné son contenu). */
 let bandeauIdee: BandeauIdee | null = null;
+let bandeauAvertissement: BandeauAvertissement | null = null;
 const hud = new Hud(
   document.getElementById("hud")!,
   qualite.niveau,
@@ -1029,6 +1031,10 @@ function recevoir(message: MessageServeur): void {
     case "idee":
       (bandeauIdee ??= new BandeauIdee(document.getElementById("hud")!)).montrer({ texte: message.texte, plusTard: message.plusTard, ...(message.objet ? { objet: message.objet } : {}) });
       son.jouer("idee");
+      return;
+    // Un avertissement du carnet (plan 0.8, chantier 13 ; B14) : un bandeau fermé par son bouton « Compris ».
+    case "avertissement":
+      (bandeauAvertissement ??= new BandeauAvertissement(document.getElementById("hud")!)).montrer({ texte: message.texte, bouton: message.bouton, objet: message.id });
       return;
     case "lecons_possibles":
       lecons.choisir(message.a, message.recettes);

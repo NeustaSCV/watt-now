@@ -5,13 +5,15 @@
 //   monté qu'avec elle). C'est le seuil du métier.
 //
 // Ce module ne connaît pas le joueur : joueur.ts lui passe ce qu'il faut regarder (une ligne par étape).
+// Il porte aussi l'avertissement de la bûche (B14) : la première nuit, le tutoriel conseille les branches au feu.
 
 import { PIECES_DE_FAMILLE } from "../../commun/src/lignees.ts";
-import { OBJETS, type Inventaire } from "../../commun/src/objets.ts";
+import type { MessageServeur } from "../../commun/src/messages.ts";
+import { OBJETS, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
 import { ATELIER } from "../../commun/src/progression.ts";
 import { NOMS_INSTALLATIONS, type TypeInstallation } from "../../commun/src/recettes.ts";
 import type { Famille } from "../../commun/src/regles.ts";
-import { PIECE_DE_FAMILLE } from "../../commun/src/tutoriel.ts";
+import { BOUTON_AVERTISSEMENT, PIECE_DE_FAMILLE, TEXTE_AVERTISSEMENT_BUCHE, avertirBuche, nuitDuJeu } from "../../commun/src/tutoriel.ts";
 
 /** Ce que les deux étapes regardent chez le joueur. */
 export interface PourFinDuTutoriel {
@@ -71,4 +73,42 @@ export function progresFamille(j: PourFinDuTutoriel): { libelle: string; fait: n
     { libelle: nom.charAt(0).toUpperCase() + nom.slice(1), fait: m.bati ? 1 : 0, but: 1 },
     { libelle: `${piece.charAt(0).toUpperCase() + piece.slice(1)} posé${j.famille === "voltaiques" || j.famille === "mecanistes" ? "" : "e"}`, fait: m.piecePosee ? 1 : 0, but: 1 },
   ];
+}
+
+// ---------- La première nuit : l'avertissement de la bûche (plan 0.8 §2.6, B14) ----------
+
+/** Ce que l'avertissement regarde, au moment où une bûche part au feu. */
+export interface BucheAuFeu {
+  lieu: string;
+  /** Ce qui vient d'être mis au feu (la bûche, ou une branche). */
+  bois: TypeObjet;
+  inventaire: Inventaire;
+  /** Les ressources du terrain (les bûches au sol, encore là). */
+  ressources: Iterable<{ type: string; disponibleLe: number }>;
+  /** Les installations du terrain (les bûches rangées dans les coffres). */
+  installations: Iterable<{ type: string; etat: { contenu?: Inventaire } }>;
+  instant: number;
+  debutMonde: number;
+}
+
+/** Les bûches qui restent au terrain : au sol, dans le sac, dans les coffres (celle qu'on vient de brûler retirée). */
+export function buchesRestantes(c: Pick<BucheAuFeu, "inventaire" | "ressources" | "installations" | "instant">): number {
+  let n = c.inventaire.buche ?? 0;
+  for (const r of c.ressources) if (r.type === "buche" && r.disponibleLe <= c.instant) n++;
+  for (const i of c.installations) if (i.type === "coffre") n += i.etat.contenu?.buche ?? 0;
+  return n;
+}
+
+/** L'avertissement d'un joueur : il ne revient pas à chaque bûche, une fois par nuit. */
+export class AvertissementBuche {
+  private nuit: number | null = null;
+
+  /** Une bûche (ou une branche) vient de partir au feu : avertir s'il le faut (rend vrai si l'avertissement part). */
+  verifier(c: BucheAuFeu, envoyer: (m: MessageServeur) => void): boolean {
+    const nuit = nuitDuJeu(c.instant, c.debutMonde);
+    if (!avertirBuche({ lieu: c.lieu, bois: c.bois, restantes: buchesRestantes(c), nuit, dejaAverti: this.nuit })) return false;
+    this.nuit = nuit;
+    envoyer({ t: "avertissement", id: "buche", texte: TEXTE_AVERTISSEMENT_BUCHE, bouton: BOUTON_AVERTISSEMENT });
+    return true;
+  }
 }

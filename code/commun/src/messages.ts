@@ -487,6 +487,8 @@ export type MessageServeur =
   | MessageServeurSavoir
   // Le gué (plan 0.8, chantier 11) : voir le bloc « gué » en fin de fichier.
   | MessageServeurGue
+  // Un avertissement fermé par un bouton (plan 0.8, chantier 13) : voir le bloc en fin de fichier.
+  | MessageServeurAvertissement
   // L'arbre de progression (0.7) : voir le bloc « progression » en fin de fichier.
   | MessageServeurProgression
   // La couche de déchets (0.7) : voir le bloc « déchets » en fin de fichier.
@@ -692,3 +694,12 @@ export type MessageClientGue =
 export type MessageServeurGue =
   /** Le radeau du bac : sa place et où il va (le client le prolonge seul) ; `cloche` : la cloche du passeur sonne. */
   { t: "gue"; radeau: MouvementRadeau; cloche?: true };
+
+// ---------- Un avertissement, fermé par un bouton (plan 0.8 §2.6, chantier 13 ; commun/src/tutoriel.ts) ----------
+
+export type MessageServeurAvertissement =
+  /**
+   * Un bandeau dans la charte du carnet, fermé par son bouton (`bouton` : « Compris »), jamais par une croix (règle du
+   * porteur). `id` : de quoi il parle (« buche » : une bûche du terrain mise au feu, B14).
+   */
+  { t: "avertissement"; id: "buche"; texte: string; bouton: string };

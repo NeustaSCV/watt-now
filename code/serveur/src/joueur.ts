@@ -194,7 +194,7 @@ import { utiliserNiveau1 } from "./niveau1-base.ts";
 import { choisirFacon } from "../../commun/src/replis.ts";
 import { carteInstallations, feuxDuLieu, refusLieu, type Alentours } from "../../commun/src/lieu-recette.ts";
 import { ETAPE_CARTE, ETAPE_FAMILLE, ETAPE_NUIT, ETAPE_PREMIER_ETEINT, ETAPE_SAISIE, NOMBRE_ETAPES, etapesTutoriel, type EtatTutoriel, type VueTutoriel } from "../../commun/src/tutoriel.ts";
-import { etapesReussies, progresCarte, progresFamille, type PourFinDuTutoriel } from "./tutoriel-fin.ts";
+import { AvertissementBuche, etapesReussies, progresCarte, progresFamille, type PourFinDuTutoriel } from "./tutoriel-fin.ts";
 // Le compte admin « god » (outil du porteur) : serveur/src/admin.ts.
 import { remplirCoffres, savoirAdmin, vueProgressionAdmin } from "./admin.ts";
 import { ARRIVEE_DEPART } from "../../commun/src/lieux.ts";
@@ -316,6 +316,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
   private derniereProduction = 0;
   /** Endormi (É5) : dans un abri ou par terre. Bouger, être saisi ou être reposé réveille. */
   private sommeil: { dansUnAbri: boolean; surUnLit: boolean; confort?: number } | null = null;
+  /** L'avertissement de la bûche (B14) : la dernière nuit où il est parti. */
+  private readonly avertissementBuche = new AvertissementBuche();
   /** Le tutoriel en cours (null : terminé ou passé). */
   private tuto: EtatTutoriel | null;
   private derniereVerifTuto = 0;
@@ -3165,6 +3167,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
     this.retirer(type, 1);
     feu.bois += combustibleDe(type);
     this.envoyer({ t: "feu", feu: vue(feu) });
+    // B14 : une bûche du terrain au feu, quand il en reste moins de 6 ; une fois par nuit (serveur/src/tutoriel-fin.ts).
+    this.avertissementBuche.verifier({ lieu: this.lieu, bois: type, inventaire: this.inventaire, ressources: this.ressources.values(), installations: this.installations.values(), instant: this.maintenant(), debutMonde: this.debutMonde }, this.envoyer);
   }
 
   private allumer(feu: FeuEnBase): void {
