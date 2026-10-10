@@ -744,7 +744,9 @@ export function mur(c, a, b, spec) {
   if (batiment && y0 < 0.5) {
     let debut = null;
     for (let i = 0; i <= n; i++) {
-      const plein = i < n && tranches[i].some(([y1, y2]) => y1 < 1 && y2 > 1);
+      // Bloque le passage : par défaut, une tranche pleine qui franchit 1 m. Avec `seuilObstacle` (option, ex. 0,8),
+      // une tranche qui part du sol et monte jusqu'au seuil suffit : un appui de fenêtre à 1 m bloque alors aussi.
+      const plein = i < n && tranches[i].some(([y1, y2]) => (spec.seuilObstacle ? y1 < 0.5 && y2 >= spec.seuilObstacle : y1 < 1 && y2 > 1));
       if (plein && debut === null) debut = i;
       if (!plein && debut !== null) {
         const t1 = (debut * du) / L;

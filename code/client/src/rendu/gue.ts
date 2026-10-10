@@ -39,13 +39,12 @@ import type { SourceLumiere } from "./lumieres.ts";
 import * as modeleJs from "../batiments/halte-gue/modele.js";
 // @ts-expect-error : idem (les matières partagées du modèle, dont la texture des enseignes).
 import * as outilsJs from "../batiments/halte-gue/outils.js";
-// @ts-expect-error : idem (les régions de l'atlas des enseignes).
-import * as atlasJs from "../batiments/halte-gue/atlas.js";
 
 /** Ce que le jeu prend du modèle. */
 interface ModeleGue {
-  creer(o: { usure?: number; carte: string }): THREE.Group;
-  FICHE: { cartes: { id: string; decalage: { x: number; z: number } }[] };
+  creer(o: { usure?: number; carte: string; miroir?: boolean }): THREE.Group;
+  /** La fiche du gué retourné : les décalages des tronçons (le chemin creux à +75, côté terrain, à l'est). */
+  FICHE_MIROIR: { cartes: { id: string; decalage: { x: number; z: number } }[] };
 }
 const modele = modeleJs as unknown as ModeleGue;
 const outils = outilsJs as unknown as {
@@ -53,7 +52,6 @@ const outils = outilsJs as unknown as {
   bruit(x: number, z: number): number;
   interp(table: readonly (readonly [number, number])[], x: number): number;
 };
-const atlas = atlasJs as unknown as { R: Record<string, [number, number, number, number]>; AL: number; AH: number };
 
 /** Un toit, une façade qui s'efface (le format de rendu/halte.ts : estomperToits), dans le repère du jeu. */
 interface ToitJeu {
@@ -68,7 +66,7 @@ interface ToitJeu {
 
 interface Troncon {
   id: string;
-  /** Le tronçon retourné et posé à sa place (miroir en x). */
+  /** Le tronçon (retourné par le modèle) posé à sa place. */
   groupe: THREE.Group;
   modele: THREE.Group;
 }
@@ -82,68 +80,6 @@ function tronconDe(x: number): (typeof ORDRE)[number] {
 
 /** Le tronçon du radeau du bac. */
 const TRONCON_RADEAU = "rive";
-
-/**
- * Le texte des enseignes, retourné avec le gué, se lirait à l'envers : on retourne chaque enseigne dans sa région de
- * l'atlas (les coordonnées de texture u d'un triangle, d'un bord à l'autre de sa région).
- */
-function remettreLesTextesALEndroit(g: THREE.Object3D, carte: THREE.Texture): void {
-  const regions = Object.values(atlas.R).map(([x, y, l, h]) => ({ u0: x / atlas.AL, u1: (x + l) / atlas.AL, v0: 1 - (y + h) / atlas.AH, v1: 1 - y / atlas.AH }));
-  g.traverse((o) => {
-    const m = o as THREE.Mesh;
-    if (!m.isMesh) return;
-    const mats = Array.isArray(m.material) ? m.material : [m.material];
-    if (!mats.some((x) => (x as THREE.MeshStandardMaterial).map === carte)) return;
-    const uv = m.geometry.getAttribute("uv") as THREE.BufferAttribute | undefined;
-    if (!uv) return;
-    const index = m.geometry.getIndex();
-    const nb = index ? index.count : uv.count;
-    const fait = new Uint8Array(uv.count);
-    for (let t = 0; t < nb; t += 3) {
-      const ids = [0, 1, 2].map((k) => (index ? index.getX(t + k) : t + k));
-      const cu = ids.reduce((s, i) => s + uv.getX(i), 0) / 3;
-      const cv = ids.reduce((s, i) => s + uv.getY(i), 0) / 3;
-      const r = regions.find((q) => cu > q.u0 && cu < q.u1 && cv > q.v0 && cv < q.v1);
-      if (!r) continue;
-      for (const i of ids) {
-        if (fait[i]) continue;
-        fait[i] = 1;
-        uv.setX(i, r.u0 + r.u1 - uv.getX(i));
-      }
-    }
-    uv.needsUpdate = true;
-  });
-}
-
-/**
- * Les panneaux de direction disaient « ← Ton terrain » : retourné, le terrain est à droite. On repeint leurs flèches
- * dans l'atlas (même fond, même police), en attendant que le modèle les donne pour le gué retourné.
- */
-function repeindreLesDirections(carte: THREE.Texture): void {
-  const canvas = carte.image as HTMLCanvasElement | undefined;
-  const g = canvas?.getContext?.("2d");
-  if (!g || carte.userData.directionsRepeintes) return;
-  carte.userData.directionsRepeintes = true;
-  const fonte = "'Avenir Next Condensed', 'Futura', 'Helvetica Neue', sans-serif";
-  const ligne = (r: [number, number, number, number], y: number, h: number, texte: string, taille: number, gras: boolean, fond: string) => {
-    const [x0, y0, l] = r;
-    g.save();
-    g.fillStyle = fond;
-    g.fillRect(x0 + 12, y0 + y - h / 2, l - 24, h);
-    g.font = `${gras ? "bold " : ""}${taille}px ${fonte}`;
-    g.fillStyle = "#2b2b29";
-    g.textAlign = "center";
-    g.textBaseline = "middle";
-    g.fillText(texte, x0 + l / 2, y0 + y, l - 30);
-    g.restore();
-  };
-  const R = atlas.R;
-  ligne(R.dirOuest!, 34, 36, "Ton terrain · La Campagne →", 30, true, "#f1ece0");
-  ligne(R.dirEst!, 34, 36, "← Le Moulin du Gué · 2 km", 30, true, "#f1ece0");
-  ligne(R.dirEst!, 70, 28, "Le Gué · Ton terrain →", 21, false, "#f1ece0");
-  ligne(R.deviation!, 104, 30, "←", 30, true, "#e8b04a");
-  carte.needsUpdate = true;
-}
 
 /** La guirlande de la guinguette, sur batterie solaire fatiguée : le même rythme que ses ampoules dans le modèle. */
 function eclatGuirlande(t: number): number {
@@ -464,8 +400,8 @@ export class RenduGue {
       const nappe = t.modele.userData.nappeRadier as THREE.Object3D | null;
       if (nappe) nappe.position.y = this.nappe;
       const radeau = t.modele.userData.radeau as THREE.Object3D | null;
-      // Dans le repère du tronçon (le modèle, recentré) : x = x du modèle − décalage du tronçon.
-      if (radeau) radeau.position.x = 100 - xr - this.decalage(t.id);
+      // Dans le repère du tronçon retourné (recentré) : x = x du jeu − 100 − décalage du tronçon.
+      if (radeau) radeau.position.x = xr - 100 - this.decalage(t.id);
     }
     estomperToits(this.groupe, p.x, p.z, dt, lacet);
     // L'eau qui court, la guirlande et les flammes (les matières du modèle sont partagées : une fois suffit).
@@ -479,25 +415,22 @@ export class RenduGue {
   }
 
   private decalage(id: string): number {
-    return modele.FICHE.cartes.find((c) => c.id === id)!.decalage.x;
+    return modele.FICHE_MIROIR.cartes.find((c) => c.id === id)!.decalage.x;
   }
 
-  /** Construit un tronçon : le modèle, retourné, posé à sa place ; ses toits dans le repère du jeu. */
+  /**
+   * Construit un tronçon : le modèle le retourne lui-même (`miroir: true` : le terrain à l'est, les textes et les
+   * flèches des enseignes à l'endroit) ; on le pose à sa place, ses toits dans le repère du jeu.
+   */
   private construire(id: string): void {
     const x0 = this.decalage(id);
-    const m = modele.creer({ carte: id });
-    const carte = outils.matieres().panneaux?.map ?? null;
-    if (carte) {
-      repeindreLesDirections(carte);
-      remettreLesTextesALEndroit(m, carte);
-    }
+    const m = modele.creer({ carte: id, miroir: true });
     const g = new THREE.Group();
     g.name = `gue:${id}`;
-    g.scale.x = -1;
-    g.position.set(100 - x0, 0, 35);
+    g.position.set(100 + x0, 0, 35);
     g.add(m);
-    // Les toits : du repère du tronçon (recentré, avant le miroir) au repère du jeu.
-    const versJeu = (b: Boite): Boite => ({ x: 100 - x0 - b.x, z: b.z + 35, l: b.l, p: b.p });
+    // Les toits : du repère du tronçon (recentré) au repère du jeu.
+    const versJeu = (b: Boite): Boite => ({ x: 100 + x0 + b.x, z: b.z + 35, l: b.l, p: b.p });
     const toits = ((m.userData.toits ?? []) as ToitJeu[]).map((t) => ({ ...t, boite: versJeu(t.boite), ...(t.horsDe ? { horsDe: versJeu(t.horsDe) } : {}) }));
     m.userData.toits = undefined;
     g.userData.toits = toits;

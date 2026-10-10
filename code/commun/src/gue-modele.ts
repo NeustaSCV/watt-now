@@ -98,14 +98,12 @@ export const SEGMENTS_MODELE: readonly SegmentModele[] = [
   {"x1":-100,"z1":10.09,"x2":-100,"z2":12.39,"nature":"talus (bout de la halte)"},
   {"x1":-68,"z1":-24,"x2":-80,"z2":-24,"nature":"mur"},
   {"x1":-80,"z1":-24,"x2":-80,"z2":-14,"nature":"mur"},
-  {"x1":-80,"z1":-14,"x2":-78.8,"z2":-14,"nature":"mur"},
-  {"x1":-78,"z1":-14,"x2":-76.8,"z2":-14,"nature":"mur"},
-  {"x1":-75.2,"z1":-14,"x2":-72.8,"z2":-14,"nature":"mur"},
-  {"x1":-71.2,"z1":-14,"x2":-68,"z2":-14,"nature":"mur"},
+  {"x1":-80,"z1":-14,"x2":-76.8,"z2":-14,"nature":"mur"},
+  {"x1":-75.2,"z1":-14,"x2":-72.4,"z2":-14,"nature":"mur"},
+  {"x1":-71.6,"z1":-14,"x2":-68,"z2":-14,"nature":"mur"},
   {"x1":-68,"z1":-14,"x2":-68,"z2":-18,"nature":"mur"},
   {"x1":-68,"z1":-18.8,"x2":-68,"z2":-24,"nature":"mur"},
-  {"x1":-72,"z1":-23.7,"x2":-72,"z2":-22.47,"nature":"mur"},
-  {"x1":-72,"z1":-22.07,"x2":-72,"z2":-19.2,"nature":"mur"},
+  {"x1":-72,"z1":-23.7,"x2":-72,"z2":-19.2,"nature":"mur"},
   {"x1":-72,"z1":-17.98,"x2":-72,"z2":-14.3,"nature":"mur"},
   {"x1":-65.3,"z1":10.6,"x2":-61.7,"z2":13,"nature":"épave"},
   {"x1":-50,"z1":-21.73,"x2":-48,"z2":-28.29,"nature":"talus boisé"},
@@ -243,19 +241,14 @@ export const SEGMENTS_MODELE: readonly SegmentModele[] = [
   {"x1":-15.3,"z1":-22,"x2":-14.7,"z2":-21.6,"nature":"borne"},
   {"x1":-21,"z1":-29.5,"x2":-27,"z2":-29.5,"nature":"mur"},
   {"x1":-27,"z1":-29.5,"x2":-27,"z2":-25,"nature":"mur"},
-  {"x1":-27,"z1":-25,"x2":-23.8,"z2":-25,"nature":"mur"},
-  {"x1":-23,"z1":-25,"x2":-21,"z2":-25,"nature":"mur"},
+  {"x1":-27,"z1":-25,"x2":-21,"z2":-25,"nature":"mur"},
   {"x1":-21,"z1":-25,"x2":-21,"z2":-26.64,"nature":"mur"},
   {"x1":-21,"z1":-27.45,"x2":-21,"z2":-29.5,"nature":"mur"},
   {"x1":-20.2,"z1":-24.6,"x2":-16.8,"z2":-24.6,"nature":"barque retournée"},
   {"x1":-29,"z1":23,"x2":-31,"z2":23,"nature":"mur"},
-  {"x1":-31.8,"z1":23,"x2":-34.2,"z2":23,"nature":"mur"},
-  {"x1":-35.4,"z1":23,"x2":-37,"z2":23,"nature":"mur"},
-  {"x1":-37,"z1":23,"x2":-37,"z2":26.16,"nature":"mur"},
-  {"x1":-37,"z1":27.34,"x2":-37,"z2":30.5,"nature":"mur"},
-  {"x1":-37,"z1":30.5,"x2":-35.4,"z2":30.5,"nature":"mur"},
-  {"x1":-34.2,"z1":30.5,"x2":-31.4,"z2":30.5,"nature":"mur"},
-  {"x1":-30.6,"z1":30.5,"x2":-29,"z2":30.5,"nature":"mur"},
+  {"x1":-31.8,"z1":23,"x2":-37,"z2":23,"nature":"mur"},
+  {"x1":-37,"z1":23,"x2":-37,"z2":30.5,"nature":"mur"},
+  {"x1":-37,"z1":30.5,"x2":-29,"z2":30.5,"nature":"mur"},
   {"x1":-29,"z1":30.5,"x2":-29,"z2":23,"nature":"mur"},
   {"x1":-33,"z1":23.1,"x2":-33,"z2":28.37,"nature":"mur"},
   {"x1":-33,"z1":29.18,"x2":-33,"z2":30.4,"nature":"mur"},
@@ -419,7 +412,6 @@ export const SEGMENTS_MODELE: readonly SegmentModele[] = [
   {"x1":17.15,"z1":-25,"x2":17.65,"z2":-25,"nature":"poteau du bac"},
   {"x1":9.4,"z1":-26,"x2":12.6,"z2":-26,"nature":"bord du ponton"},
   {"x1":9.4,"z1":-24,"x2":12.6,"z2":-24,"nature":"bord du ponton"},
-  {"x1":9.4,"z1":-26,"x2":9.4,"z2":-24,"nature":"bout du ponton"},
   {"x1":17.4,"z1":-17.9,"x2":21.6,"z2":-17.9,"nature":"râtelier à kayaks"},
   {"x1":17.4,"z1":-16.5,"x2":21.6,"z2":-16.5,"nature":"râtelier à kayaks"},
   {"x1":32,"z1":-30,"x2":24,"z2":-30,"nature":"mur"},
@@ -491,13 +483,12 @@ export const SEGMENTS_MODELE: readonly SegmentModele[] = [
   {"x1":70,"z1":-19.5,"x2":70,"z2":-15,"nature":"mur"},
   {"x1":70,"z1":-15,"x2":71.96,"z2":-15,"nature":"mur"},
   {"x1":73.14,"z1":-15,"x2":75.5,"z2":-15,"nature":"mur"},
-  {"x1":75.5,"z1":-15,"x2":75.5,"z2":-16.64,"nature":"mur"},
-  {"x1":75.5,"z1":-17.86,"x2":75.5,"z2":-19.5,"nature":"mur"},
+  {"x1":75.5,"z1":-15,"x2":75.5,"z2":-19.5,"nature":"mur"},
   {"x1":77.7,"z1":-17.85,"x2":80.3,"z2":-17.85,"nature":"casier"},
   {"x1":88.6,"z1":-8.9,"x2":88.6,"z2":-4.1,"nature":"barricade de troncs"},
 ];
 
-/** Le bac (FICHE.bac) ; ses obstacles sont relatifs au centre du radeau. */
+/** Le bac (FICHE.bac) ; ses obstacles sont relatifs au centre du radeau (les garde-corps, toujours ; les chaînes des deux bouts, pendant la traversée). */
 export const BAC_MODELE = {
   "troncon": "rive",
   "cable": {
@@ -527,7 +518,7 @@ export const BAC_MODELE = {
       }
     }
   ],
-  "note": "le jeu fait glisser userData.radeau le long du câble (position.x), d'un accostage à l'autre ; ses obstacles sont dans userData.radeau.userData.obstacles, relatifs au radeau",
+  "note": "le jeu fait glisser userData.radeau le long du câble (position.x), d'un accostage à l'autre. Ses obstacles sont relatifs au radeau : userData.radeau.userData.obstacles (les garde-corps, toujours) et obstaclesTraversee (les chaînes des deux bouts, à fermer pendant la traversée). Le bout de la cale et le bout du ponton sont ouverts : on monte et on descend par les bouts du radeau",
   "obstacles": [
     {
       "x1": -2.9,
@@ -542,13 +533,22 @@ export const BAC_MODELE = {
       "x2": 2.9,
       "z2": 2.1,
       "nature": "garde-corps du bac"
+    }
+  ],
+  "obstaclesTraversee": [
+    {
+      "x1": -2.9,
+      "z1": -2.2,
+      "x2": -2.9,
+      "z2": 2.2,
+      "nature": "chaîne du bac, bout ouest (fermée pendant la traversée)"
     },
     {
       "x1": 2.9,
       "z1": -2.2,
       "x2": 2.9,
       "z2": 2.2,
-      "nature": "chaîne du bac (côté rivière)"
+      "nature": "chaîne du bac, bout est (fermée pendant la traversée)"
     }
   ]
 } as const;
@@ -588,7 +588,7 @@ export const FOUILLE_MODELE: readonly PointModele[] = [
   {"x":-24.3,"z":26.6,"quoi":"kiosque à musique : accordéon (toile, métal), pupitres"},
   {"x":-12,"z":20,"quoi":"barques retournées : rames, écope, corde d'amarrage"},
   {"x":-28.2,"z":22.2,"quoi":"batterie solaire de la guirlande (et son petit panneau)"},
-  {"x":-4,"z":-4.6,"quoi":"tas de branches coincé contre la pile"},
+  {"x":-11.2,"z":-5.2,"quoi":"tas de branches (apportées par la crue, tirées sur la berge)"},
   {"x":-9.4,"z":14.5,"quoi":"touffe de joncs (cueillable, repousse en 30 min)"},
   {"x":-9.6,"z":18.2,"quoi":"touffe de joncs (cueillable, repousse en 30 min)"},
   {"x":-9.2,"z":21.6,"quoi":"touffe de joncs (cueillable, repousse en 30 min)"},

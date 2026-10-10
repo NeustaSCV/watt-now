@@ -124,6 +124,19 @@ test("les données tirées du modèle sont à jour (scripts/extraire-gue.mjs)", 
   assert.equal(readFileSync(new URL("../../commun/src/gue-modele.ts", import.meta.url), "utf8"), attendu, "relancer node scripts/extraire-gue.mjs");
   assert.equal(ETEINTS_MODELE.length, 11);
   assert.ok(SEGMENTS_MODELE.some((s) => s.nature === "berge (eau profonde)"));
+  // L'écran dessine le gué retourné par le modèle (FICHE_MIROIR, x du jeu = 100 + x) : le serveur place tout au même endroit.
+  // @ts-expect-error : le modèle est en JavaScript, sans types.
+  const { FICHE_MIROIR } = (await import("../../client/src/batiments/halte-gue/modele.js")) as { FICHE_MIROIR: Record<string, any> };
+  const auJeu = (p: { x: number; z: number }) => ({ x: Math.round((100 + p.x) * 100) / 100, z: Math.round((p.z + 35) * 100) / 100 });
+  assert.deepEqual(auJeu(FICHE_MIROIR.interactions[0]), { x: CLOCHE.x, z: CLOCHE.z }, "la cloche");
+  const points = FICHE_MIROIR.cartes.flatMap((c: any) => c.fouille.map((f: any) => ({ ...f, x: f.x + c.decalage.x })));
+  const glaise = points.find((f: any) => f.quoi.startsWith("gisement de glaise"));
+  assert.deepEqual(auJeu(glaise), parType(new Gue(new Base(":memory:")), "gisement_glaise").map((r) => ({ x: r.x, z: r.z }))[0], "la glaise");
+  const eteints = FICHE_MIROIR.cartes.flatMap((c: any) => c.eteints.map((e: any) => auJeu({ x: e.x + c.decalage.x, z: e.z })));
+  assert.deepEqual(eteints.map((e: any) => e.x).sort(), ETEINTS_MODELE.map((e) => auGue(e.x, e.z).x).sort(), "les Éteints");
+  assert.equal(auJeu({ x: FICHE_MIROIR.bac.accostages[0].x, z: 0 }).x, BAC.cale.x, "le radeau à la cale");
+  assert.equal(auJeu({ x: FICHE_MIROIR.nappeRadier.x1, z: 0 }).x, RADIER.x0, "le radier");
+  assert.ok(!SEGMENTS_MODELE.some((s) => s.nature === "bout du ponton" && s.x1 === 9.4), "le ponton du bac est ouvert au bout");
 });
 
 test("on ne marche pas dans la rivière ; on la passe au radier", () => {
@@ -325,7 +338,14 @@ test("le bac : on hale ≈ 15 s, le radeau emporte ses passagers, de nuit comme 
   malo.joueur.recevoir({ t: "gue", op: "haler" });
   assert.ok(malo.infos().some((t) => /un seul tire la corde/.test(t)));
   const x0 = malo.joueur.position.x;
-  m.attendre(DUREE_TRAVERSEE_S + 0.5);
+  m.attendre(3);
+  // En traversée, les chaînes des deux bouts sont fermées : on ne descend pas dans l'eau.
+  const xr = placeRadeau(m.gue.radeau, m.maintenant());
+  const zt = zoneGue({ radeau: xr, noye: false });
+  assert.ok(heurte(zt, xr + BAC.demiLongueur, BAC.z, 0.35) && heurte(zt, xr - BAC.demiLongueur, BAC.z, 0.35));
+  const za = zoneGue({ radeau: BAC.cale.x, noye: false });
+  assert.ok(!heurte(za, BAC.cale.x + BAC.demiLongueur, BAC.z, 0.35), "à quai, on descend sur la cale");
+  m.attendre(DUREE_TRAVERSEE_S - 2.5);
   assert.ok(Math.abs(placeRadeau(m.gue.radeau, m.maintenant()) - BAC.ponton.x) < 1e-6, "au ponton");
   assert.ok(Math.abs(malo.joueur.position.x - (x0 + BAC.ponton.x - BAC.cale.x)) < 0.05, `Malo a traversé avec le radeau (${malo.joueur.position.x})`);
   // Ils descendent sur le ponton (côté Moulin).

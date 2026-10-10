@@ -40,7 +40,12 @@ export const R = {
 const FONTE = "'Avenir Next Condensed', 'Futura', 'Helvetica Neue', sans-serif";
 const PEINTE = "'Georgia', 'Times New Roman', serif";
 
+// Pour le gué retourné (miroir), les flèches changent de sens : ce qui était à droite est à gauche.
+let INVERSER = false;
+const inverserFleches = (t) => (INVERSER ? t.replace(/[←→]/g, (f) => (f === "←" ? "→" : "←")) : t);
+
 function texte(g, t, x, y, taille, couleur, { police = "bold", fonte = FONTE, align = "center", max } = {}) {
+  t = inverserFleches(t);
   g.font = `${police} ${taille}px ${fonte}`;
   g.fillStyle = couleur;
   g.textAlign = align;
@@ -676,4 +681,28 @@ export function dessinerGalets(g) {
     }
   }
   taches(g, a, 12, "rgba(60, 70, 40, 0.2)", 10, 36, 256, 256);
+}
+
+/**
+ * L'atlas du gué retourné (option miroir) : les flèches changent de sens, et chaque région est retournée de gauche à
+ * droite. La géométrie retournée la retourne une seconde fois : les textes se lisent à l'endroit.
+ */
+export function dessinerAtlasMiroir(g) {
+  const tmp = document.createElement("canvas");
+  tmp.width = AL;
+  tmp.height = AH;
+  INVERSER = true;
+  try {
+    dessinerAtlas(tmp.getContext("2d"));
+  } finally {
+    INVERSER = false;
+  }
+  g.clearRect(0, 0, AL, AH);
+  for (const [x, y, l, h] of Object.values(R)) {
+    g.save();
+    g.translate(x + l, y);
+    g.scale(-1, 1);
+    g.drawImage(tmp, x, y, l, h, 0, 0, l, h);
+    g.restore();
+  }
 }
