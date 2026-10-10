@@ -572,7 +572,7 @@ export const LIEUX: Record<LieuId, LieuCarte> = {
     km: 3,
     ouvert: true,
     description:
-      "Une halte sur la route des Marais. Le pont suspendu est parti avec la crue du premier hiver : on passe sur le radier, les pieds dans l'eau qui court, ou par le bac du passeur. Des Éteints rôdent sur les berges.",
+      "Une halte sur la route du Moulin du Gué. Le pont suspendu est parti avec la crue du premier hiver : on passe sur le radier, les pieds dans l'eau qui court, ou par le bac du passeur. Des Éteints rôdent sur les berges.",
     promesse: "Le gué : la pierre, la glaise et la rive.",
   },
   moulin: {
