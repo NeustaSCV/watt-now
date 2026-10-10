@@ -13,7 +13,7 @@ import type { Inventaire } from "../../commun/src/objets.ts";
 import { typeDe } from "../../commun/src/etoiles.ts";
 import type { Famille } from "../../commun/src/regles.ts";
 import type { SavoirRecettes } from "../../commun/src/recettes.ts";
-import type { EtapeMonde } from "../../commun/src/lignees.ts";
+import { lieuDeLEtape } from "../../commun/src/lieux.ts";
 import {
   ECHEANCES_TEMPS,
   INDICE_SECOND_TEMPS_MIN,
@@ -46,12 +46,6 @@ const INTERVALLE_CONSTATS_MS = 1000;
 /** Les constats d'état que le serveur note une fois, la première fois qu'ils sont vrais (§2.3). */
 export const CONSTATS = ["sommeil_bas", "eteint_vu", "blessure", "saisi", "pluie", "sac_lourd"] as const;
 export type Constat = (typeof CONSTATS)[number];
-
-/**
- * Le lieu du jeu de chaque étape du monde, pour « une visite du bon lieu sans la clé ». Provisoire : la table
- * `ETAPES_LIEUX` de `lieux.ts` (chantier 4) la remplace à l'intégration ; le gué et le Moulin y entrent avec elle.
- */
-const LIEU_DE_L_ETAPE: Partial<Record<EtapeMonde, string>> = { maison: "terrain", H1A: "station", H1B: "gue", L1A: "cooperative", L1B: "moulin" };
 
 /**
  * Une entrée de la carte des constructions (`carteInstallations` de lieu-recette.ts) : un type d'installation à son
@@ -277,7 +271,7 @@ export class SuiviDevoilement {
     for (const [id, i] of Object.entries(this.etat.indices)) {
       if (i.temps !== 1 || this.idees.has(id)) continue;
       const cle = etapeAvecCle(id)?.etape.cle;
-      if (cle && LIEU_DE_L_ETAPE[cle.ou] === quitte && !(cle.objet && this.vus.has(cle.objet))) change = this.secondTemps(id) || change;
+      if (cle && lieuDeLEtape(cle.ou) === quitte && !(cle.objet && this.vus.has(cle.objet))) change = this.secondTemps(id) || change;
     }
     if (change) this.indicesChanges();
   }

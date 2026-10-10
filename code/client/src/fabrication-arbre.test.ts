@@ -120,6 +120,6 @@ test("la fiche du foyer de cuisine montre le grillage « déjà en poche » une 
   const e = { ...foyer, cle: foyer.cle! };
   assert.deepEqual(etatCle(e, vue([], { idees: ["foyer_cuisine"] })), { enPoche: true });
   assert.deepEqual(etatCle(e, vue([])), { indice: "Une grille ? Les clôtures en sont faites.", temps: 1 });
-  assert.deepEqual(etatCle(e, vue([], { indices: { foyer_cuisine: 2 } })), { indice: "Le parc à volailles de L1A.", temps: 2 });
+  assert.deepEqual(etatCle(e, vue([], { indices: { foyer_cuisine: 2 } })), { indice: "Le parc à volailles de la Coopérative.", temps: 2 });
   assert.deepEqual(etatCle({ ...e, aVenir: "niveau 2" }, vue([])), { plusLoin: true });
 });
