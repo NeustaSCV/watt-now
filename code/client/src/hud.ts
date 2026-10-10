@@ -1750,7 +1750,8 @@ export class Hud {
    * d'une étoile ; chacune avec ce qu'elle prend, ou ce qui manque.
    */
   private ficheReprise(r: Reprise): string {
-    const cout = (c: Inventaire) => (Object.entries(c) as [CleObjet, number][]).map(([t, n]) => `${icone(typeDe(t), 16)}${nommer(t, n)}`).join(" · ");
+    // « 1 kilo de charbon de bois », « 1 branche » : le compte, même pour un seul (recette finale 0.8).
+    const cout = (c: Inventaire) => (Object.entries(c) as [CleObjet, number][]).map(([t, n]) => `${icone(typeDe(t), 16)}${n > 1 ? nommer(t, n) : `1 ${nommer(t, 1)}`}`).join(" · ");
     const ligne = (action: string, libelle: string, p: { possible: boolean; raison?: string; cout: Inventaire }) => `
       <div class="proposition ${p.possible ? "" : "impossible"}">
         <button type="button" data-action="${action}" ${p.possible ? "" : "disabled"}>${libelle}</button>
