@@ -217,6 +217,8 @@ test("La page d'administration : liste blanche, port du jeu muet, réinitialisat
     assert.ok(base.compteParPseudo("Rose"));
     assert.equal(jeu.monde.connectes().length, 1, "une confirmation ratée ne déconnecte pas");
 
+    // Son rythme de progression (arrivée à L1A en 95 min de jeu) reste, sans son nom ; ses autres mesures partent.
+    base.mesurer({ instant: Date.now(), compteId: rose.id, famille: "voltaiques", genre: "progression", quoi: "atteint:L1A", valeur: 95, details: { pseudo: "Rose" } });
     const supprime = await requete(admin.port, "POST", `/joueur/${rose.id}/supprimer`, "pseudo=Rose");
     assert.equal(supprime.statut, 200);
     assert.match(supprime.html, /Compte supprimé/);
@@ -232,6 +234,8 @@ test("La page d'administration : liste blanche, port du jeu muet, réinitialisat
     assert.equal(reste("SELECT COUNT(*) AS n FROM ressources_lieux WHERE lieu = ?", `cooperative:${rose.id}`), 0);
     assert.equal(reste("SELECT COUNT(*) AS n FROM dechets WHERE lieu = ?", `terrain:${rose.id}`), 0, "ses déchets");
     assert.equal(reste("SELECT COUNT(*) AS n FROM monde WHERE cle = ?", `forge:${rose.id}`), 0, "sa forge");
+    const rythme = db.prepare("SELECT compte_id, famille, valeur, details FROM mesures WHERE quoi = 'atteint:L1A'").all() as { compte_id: number; famille: string; valeur: number; details: string | null }[];
+    assert.deepEqual(rythme.map((r) => ({ ...r })), [{ compte_id: 0, famille: "voltaiques", valeur: 95, details: null }], "le rythme reste, anonyme");
     // Les autres ne perdent rien.
     assert.ok(base.compteParPseudo("Nadia"));
     assert.ok(Object.keys(base.chargerInventaire(nadia.id)).length > 0, "le sac de Nadia est intact");

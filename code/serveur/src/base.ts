@@ -1,7 +1,7 @@
 // Base de données SQLite (Book 17 §3) : comptes, jetons, personnages, inventaires, terrains, feux.
 // Serveur sans état caché : tout ce qui doit survivre à un redémarrage est ici.
 
-import type { Mesure } from "./mesures.ts";
+import { COMPTE_ANONYME, PREFIXE_ATTEINT, type Mesure } from "./mesures.ts";
 import type { SacVu } from "../../commun/src/messages.ts";
 import { apparenceAncienne, apparenceValide, type Apparence } from "../../commun/src/apparence.ts";
 import { DatabaseSync } from "node:sqlite";
@@ -1112,7 +1112,8 @@ export class Base {
   /**
    * Supprime un compte et tout ce qui en dépend : les tables liées en cascade (jetons, personnage, sac, terrain, feux,
    * installations), et ce qui le nomme seulement par son numéro (ses sacs au sol, sa Coopérative, ses déchets, sa forge,
-   * ses mesures). SQLite peut redonner le numéro d'un compte supprimé : rien ne doit rester à son nom.
+   * ses mesures). SQLite peut redonner le numéro d'un compte supprimé : rien ne doit rester à son nom. Seules ses mesures
+   * de rythme (`atteint:<étape>`) restent, rendues anonymes (compte 0, sans détails).
    * Refusé pour un compte protégé (« god »). Renvoie false si le compte n'existe pas.
    */
   supprimerCompte(id: number): boolean {
@@ -1125,6 +1126,9 @@ export class Base {
       this.db.prepare("DELETE FROM ressources_lieux WHERE lieu = ?").run(`cooperative:${id}`);
       this.db.prepare("DELETE FROM dechets WHERE lieu IN (?, ?)").run(`cooperative:${id}`, `terrain:${id}`);
       this.db.prepare("DELETE FROM monde WHERE cle IN (?, ?)").run(`forge:${id}`, `version_cooperative:${id}`);
+      this.db
+        .prepare("UPDATE mesures SET compte_id = ?, details = NULL WHERE compte_id = ? AND genre = 'progression' AND quoi LIKE ?")
+        .run(COMPTE_ANONYME, id, `${PREFIXE_ATTEINT}%`);
       this.db.prepare("DELETE FROM mesures WHERE compte_id = ?").run(id);
     });
     return true;
