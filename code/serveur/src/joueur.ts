@@ -648,7 +648,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       case "lumiere":
         if (message.allumee && !lumierePortee(this.inventaire)) return this.info("Rien pour t'éclairer : torche, frontale ou lanterne sont dans le kit d'une famille : échange-la.");
         if (message.allumee && lumierePortee(this.inventaire) === "lampe_frontale" && (this.charges.petite_batterie ?? 0) <= 0.1) {
-          return this.info("La petite batterie est vide : recharge-la au banc de recharge.");
+          return this.info("La petite batterie est vide : recharge-la au banc solaire.");
         }
         this.lumiere = message.allumee === true;
         this.envoyer({ t: "lumiere", allumee: this.lumiere });
@@ -974,7 +974,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
         // Le seul geste qui crée des wotts : de l'électricité qui entre dans une cellule (Book 07 §3.1).
         if (!BATTERIES.includes(op.batterie)) return;
         const wh = Math.min(this.charges[op.batterie] ?? 0, this.comptoir.placeCellules());
-        if (wh < 1) return this.info(this.comptoir.placeCellules() < 1 ? "Les cellules des Compteurs sont pleines : reviens plus tard." : "Cette batterie est vide : charge-la chez toi (banc de recharge, panneau, pédalier).");
+        if (wh < 1) return this.info(this.comptoir.placeCellules() < 1 ? "Les cellules des Compteurs sont pleines : reviens plus tard." : "Cette batterie est vide : charge-la chez toi (banc solaire, pédalier générateur).");
         const wotts = wh * REGLAGES.depot_wotts_par_wh;
         this.charges = { ...this.charges, [op.batterie]: (this.charges[op.batterie] ?? 0) - wh };
         this.envoyerCharges();
