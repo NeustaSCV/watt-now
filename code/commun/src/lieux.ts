@@ -1,31 +1,60 @@
 // Les lieux de la phase 0a (Book 21 §3.2, Book 01 §2 bis) : le terrain du joueur, la halte de la
 // station-service et le Comptoir du Carrefour, sur la route de la Campagne (Book 20 §4).
 // On ne se promène pas d'un lieu à l'autre : on part d'une sortie, on voyage sur la carte, on arrive.
+//
+// 0.8 (plan §3, chantier 4) : la carte à deux routes. La route A passe la rivière par le pont (la station, puis la
+// Coopérative) ; la route B la passe à gué (le Gué-aux-Saules, puis le Moulin du Gué). Le gué et le Moulin sont
+// branchés ici vides : leur contenu (obstacles, butin, Éteints, rendu) est aux chantiers 11 et 12.
 
 import { ARRIVEE_COOP, BRECHE, COOP, PORTAIL, PORTES, boitePorte, obstaclesCoop, portesInitiales } from "./cooperative.ts";
 import type { Position } from "./deplacement.ts";
 import { MARGE_GRILLE, boitesPres, creerGrille, type GrilleObstacles } from "./grille.ts";
+import type { EtapeMonde } from "./lignees.ts";
 import { MARGE_BORD, POINT_ARRIVEE, TERRAIN_TAILLE } from "./regles.ts";
 
-export type LieuId = "terrain" | "station" | "comptoir" | "cooperative";
+export type LieuId = "terrain" | "station" | "comptoir" | "cooperative" | "gue" | "moulin";
 
-/** Lieux où l'on peut se trouver (le comptoir ouvre à l'É4, la Coopérative en 0.5). */
+/** Lieux où l'on peut se trouver (le comptoir ouvre à l'É4, la Coopérative en 0.5, le gué et le Moulin en 0.8). */
 export type LieuJouable = LieuId;
 
-/** Tous les lieux, dans l'ordre où on les découvre (Book 23 §7 : terrain → station → Carrefour → Coopérative). */
-export const ORDRE_ROUTE: readonly LieuId[] = ["terrain", "station", "comptoir", "cooperative"];
+/**
+ * Tous les lieux, dans l'ordre où on les découvre (Book 23 §7 : terrain → station → Carrefour → Coopérative ; plan 0.8
+ * §1.1, le parcours : la station à la 1re sortie, le gué à la 2e, puis l'un des deux L1).
+ */
+export const ORDRE_ROUTE: readonly LieuId[] = ["terrain", "station", "comptoir", "gue", "cooperative", "moulin"];
 
 /**
  * Les tronçons de la route, d'un lieu à son voisin, en km (Book 01 §2 bis : ≈ 60 kcal et 0,08 L d'eau par km).
  * 0.7.3 : la Coopérative est derrière la station-service, comme le Comptoir (un chemin de terre part de la halte) ;
  * le chemin agricole du Carrefour à la Coopérative reste (un deuxième accès).
+ * 0.8 (B16) : la route B à la même distance que la route A : terrain → gué 3 km, gué → Moulin 2 km. On passe par le gué
+ * pour aller au Moulin, comme par la station pour la Coopérative.
  */
 export const TRONCONS: readonly { a: LieuId; b: LieuId; km: number }[] = [
   { a: "terrain", b: "station", km: 3 },
   { a: "station", b: "comptoir", km: 2 },
   { a: "station", b: "cooperative", km: 2 },
   { a: "comptoir", b: "cooperative", km: 3 },
+  { a: "terrain", b: "gue", km: 3 },
+  { a: "gue", b: "moulin", km: 2 },
 ];
+
+/**
+ * Les étapes du monde et leur lieu (plan 0.8 §3, chantier 4) : le contenu du jeu (clés, quêtes, indices) cite l'étape
+ * (`EtapeMonde`, lignees.ts) ; l'affichage met le nom du lieu. Le niveau 2 complétera la même table.
+ */
+export const ETAPES_LIEUX = {
+  maison: "terrain",
+  H1A: "station",
+  H1B: "gue",
+  L1A: "cooperative",
+  L1B: "moulin",
+} as const satisfies Partial<Record<EtapeMonde, LieuId>>;
+
+/** Le lieu d'une étape du monde (undefined : une étape qui n'a pas encore de lieu, le niveau 2). */
+export function lieuDeLEtape(etape: EtapeMonde): LieuId | undefined {
+  return (ETAPES_LIEUX as Partial<Record<EtapeMonde, LieuId>>)[etape];
+}
 
 /** Une boîte au sol, alignée sur les axes : centre (x, z), largeur en x, profondeur en z. */
 export interface Boite {
@@ -60,9 +89,15 @@ export interface Sortie {
   aussi?: readonly LieuId[];
   /** Boîte où il faut se tenir. */
   boite: Boite;
-  /** Où l'on apparaît en revenant par cette sortie. */
+  /** Où l'on apparaît en revenant par cette sortie (sauf pour une sortie `sansArrivee`). */
   arrivee: Position;
   libelle: string;
+  /**
+   * Une sortie où l'on n'arrive jamais (0.8) : on peut repartir par là, jamais entrer. La brèche de la Coopérative ; le
+   * chemin de halage du Moulin, vers le gué (h1b-l1b-conception §2.6 : on arrive toujours au pont). `arrivee` ne sert
+   * alors qu'à dire où l'on se tient juste à l'intérieur.
+   */
+  sansArrivee?: boolean;
 }
 
 // ---------- Le terrain ----------
@@ -75,9 +110,13 @@ export const ZONE_TERRAIN: Zone = {
   obstacles: [],
 };
 
-/** Le chemin de terre qui part au sud du terrain (Book 19), vers la route de la Campagne. */
+/**
+ * Le chemin de terre qui part au sud du terrain (Book 19), vers la route de la Campagne. 0.8 : au bout du chemin, la
+ * route se partage, par le pont vers la station (la route A), à gué vers le Gué-aux-Saules (la route B).
+ */
 export const SORTIE_TERRAIN: Sortie = {
   vers: "station",
+  aussi: ["gue"],
   boite: { x: 25, z: TERRAIN_TAILLE - 1.5, l: 6, p: 3 },
   arrivee: { x: 25, z: TERRAIN_TAILLE - 3, o: Math.PI },
   libelle: "Prendre la route",
@@ -385,6 +424,91 @@ export const SORTIES_COOP: Sortie[] = [
     boite: { x: BRECHE.x + 1.2, z: BRECHE.z, l: 2.4, p: BRECHE.largeur },
     arrivee: { x: BRECHE.x + 2.5, z: BRECHE.z, o: Math.PI / 2 },
     libelle: "Se glisser dehors par la brèche",
+    sansArrivee: true,
+  },
+];
+
+// ---------- H1B, le Gué-aux-Saules (plan 0.8, chantier 11) : une halte partagée, comme la station ----------
+
+/**
+ * Le gué fait 200 × 70 m, comme la station (le modèle `batiment/halte-gue/` : quatre tronçons de 50 × 70 m). Le repère
+ * du jeu part du coin nord-ouest : x = x du modèle + 100, z = z du modèle + 35 (`origineModele`). La route descend de
+ * la Campagne par l'ouest (l'entrée A du modèle, « ← Ton terrain »), passe la rivière à gué, et remonte à l'est (la
+ * sortie B) vers le Moulin.
+ */
+export const GUE = { longueur: 200, largeur: 70, origineModele: { x: 100, z: 35 } } as const;
+
+/**
+ * Le gué, vide (chantier 4) : le fond de la vallée, sans obstacles. Le chantier 11 y met ceux du modèle (bâtiments,
+ * rivière creusée, `userData.obstacles`), depuis `commun/src/gue.ts`, en remplaçant `obstacles: []`.
+ */
+export const ZONE_GUE: Zone = {
+  xMin: 0.5,
+  xMax: GUE.longueur - 0.5,
+  zMin: 0.5,
+  zMax: GUE.largeur - 0.5,
+  obstacles: [],
+};
+
+/** Les deux bouts de la route du gué (l'entrée A et la sortie B du modèle, dans le repère du jeu). */
+const ROUTE_GUE = { ouest: { x: 0, z: 7 + GUE.origineModele.z }, est: { x: GUE.longueur, z: -5 + GUE.origineModele.z } } as const;
+
+export const SORTIES_GUE: Sortie[] = [
+  {
+    vers: "terrain",
+    boite: { x: 2, z: ROUTE_GUE.ouest.z, l: 4, p: 10 },
+    arrivee: { x: 4.5, z: ROUTE_GUE.ouest.z, o: Math.PI / 2 },
+    libelle: "Rentrer chez toi",
+  },
+  {
+    vers: "moulin",
+    boite: { x: GUE.longueur - 2, z: ROUTE_GUE.est.z, l: 4, p: 10 },
+    arrivee: { x: GUE.longueur - 4.5, z: ROUTE_GUE.est.z, o: -Math.PI / 2 },
+    libelle: "Continuer vers le Moulin",
+  },
+];
+
+// ---------- L1B, le Moulin du Gué (plan 0.8, chantier 12) : un lieu à soi, comme la Coopérative ----------
+
+/**
+ * Le Moulin fait 64 × 54 m (le modèle `batiment/moulin/` : `lot`). Le repère du jeu part du coin nord-ouest :
+ * x = x du modèle + 32, z = z du modèle + 27 (`origineModele`).
+ */
+export const MOULIN = { largeur: 64, profondeur: 54, origineModele: { x: 32, z: 27 } } as const;
+
+/** Le Moulin, vide (chantier 4). Le chantier 12 y met les obstacles du modèle, depuis `commun/src/moulin.ts`. */
+export const ZONE_MOULIN: Zone = {
+  xMin: 0.5,
+  xMax: MOULIN.largeur - 0.5,
+  zMin: 0.5,
+  zMax: MOULIN.profondeur - 0.5,
+  obstacles: [],
+};
+
+/** Un point du modèle du Moulin dans le repère du jeu. */
+const auMoulin = (x: number, z: number) => ({ x: x + MOULIN.origineModele.x, z: z + MOULIN.origineModele.z });
+/** La fiche du modèle : `arrivee` (la route, à l'est du pont de pierre) et `sorties` (la route ; le halage, au nord). */
+const PONT_MOULIN = auMoulin(28.5, 20.5);
+const HALAGE = auMoulin(15, -27);
+
+/**
+ * On arrive toujours au pont (la première sortie), d'où qu'on vienne ; une reconnexion dans le Moulin y ramène. Le
+ * chemin de halage, au bout de la levée, est une sortie sans arrivée : on part par là vers le gué, on n'y entre jamais
+ * (h1b-l1b-conception §2.6, M18, M19).
+ */
+export const SORTIES_MOULIN: Sortie[] = [
+  {
+    vers: "gue",
+    boite: { x: MOULIN.largeur - 1.5, z: PONT_MOULIN.z - 3, l: 3, p: 8 },
+    arrivee: { x: PONT_MOULIN.x, z: PONT_MOULIN.z, o: -Math.PI / 2 },
+    libelle: "Reprendre la route du gué",
+  },
+  {
+    vers: "gue",
+    boite: { x: HALAGE.x, z: 1.5, l: 4, p: 3 },
+    arrivee: { x: HALAGE.x, z: 3.5, o: Math.PI },
+    libelle: "Prendre le chemin de halage",
+    sansArrivee: true,
   },
 ];
 
@@ -397,6 +521,8 @@ export interface LieuCarte {
   km: number;
   ouvert: boolean;
   description: string;
+  /** Ce que le lieu promet, en une ligne (plan 0.8 §0 : ce qu'on y va chercher), pour la fiche de la carte. */
+  promesse?: string;
 }
 
 export const LIEUX: Record<LieuId, LieuCarte> = {
@@ -407,6 +533,7 @@ export const LIEUX: Record<LieuId, LieuCarte> = {
     km: 3,
     ouvert: true,
     description: "Une halte sur la route de la Campagne. La boutique a été pillée, pas l'atelier. Des Éteints dorment dans le coin.",
+    promesse: "La station : le bois, le métal, et la pièce de ta famille.",
   },
   comptoir: {
     id: "comptoir",
@@ -422,6 +549,26 @@ export const LIEUX: Record<LieuId, LieuCarte> = {
     ouvert: true,
     description:
       "Au bout d'un chemin de terre qui part de la station-service vers le nord (un chemin agricole y mène aussi depuis le Carrefour). Le hangar n'a jamais été vidé : on dit qu'il y reste de quoi tenir un hiver. Les Éteints y sont nombreux, et il fait noir à l'intérieur.",
+    promesse: "La Coopérative : le feu et l'eau.",
+  },
+  // 0.8 (Q-0.8-25) : « Le Gué-aux-Saules » et « Le Moulin du Gué » ; le lien entre les deux se lit sur la carte.
+  gue: {
+    id: "gue",
+    nom: "Le Gué-aux-Saules",
+    km: 3,
+    ouvert: true,
+    description:
+      "Une halte sur la route des Marais. Le pont suspendu est parti avec la crue du premier hiver : on passe sur le radier, les pieds dans l'eau qui court, ou par le bac du passeur. Des Éteints rôdent sur les berges.",
+    promesse: "Le gué : la pierre, la glaise et la rive.",
+  },
+  moulin: {
+    id: "moulin",
+    nom: "Le Moulin du Gué",
+    km: 5,
+    ouvert: true,
+    description:
+      "En aval du gué, la vieille minoterie et sa roue arrêtée sur le bief. On y entre par le pont de pierre ; le chemin de halage ramène au gué. Les Éteints dorment dans les pièces sombres.",
+    promesse: "Le Moulin : le couchage, le stockage, l'établi.",
   },
 };
 
@@ -466,8 +613,15 @@ export function distanceKm(de: LieuId, vers: LieuId): number {
 
 // ---------- Outils ----------
 
-const ZONES: Record<LieuId, Zone> = { terrain: ZONE_TERRAIN, station: ZONE_STATION, comptoir: ZONE_COMPTOIR, cooperative: ZONE_COOP };
-const SORTIES: Record<LieuId, Sortie[]> = { terrain: [SORTIE_TERRAIN], station: SORTIES_STATION, comptoir: SORTIES_COMPTOIR, cooperative: SORTIES_COOP };
+const ZONES: Record<LieuId, Zone> = { terrain: ZONE_TERRAIN, station: ZONE_STATION, comptoir: ZONE_COMPTOIR, cooperative: ZONE_COOP, gue: ZONE_GUE, moulin: ZONE_MOULIN };
+const SORTIES: Record<LieuId, Sortie[]> = {
+  terrain: [SORTIE_TERRAIN],
+  station: SORTIES_STATION,
+  comptoir: SORTIES_COMPTOIR,
+  cooperative: SORTIES_COOP,
+  gue: SORTIES_GUE,
+  moulin: SORTIES_MOULIN,
+};
 
 export function zoneDe(lieu: LieuJouable): Zone {
   return ZONES[lieu];
@@ -475,6 +629,11 @@ export function zoneDe(lieu: LieuJouable): Zone {
 
 export function sortiesDe(lieu: LieuJouable): Sortie[] {
   return SORTIES[lieu];
+}
+
+/** Les sorties par où l'on peut aussi arriver (toutes, sauf les sorties sans arrivée : la brèche, le halage). */
+export function entreesDe(lieu: LieuJouable): Sortie[] {
+  return SORTIES[lieu].filter((s) => !s.sansArrivee);
 }
 
 /**
@@ -562,9 +721,10 @@ export function sortieIci(lieu: LieuJouable, x: number, z: number): Sortie | nul
 
 /** Où l'on arrive dans un lieu, selon d'où l'on vient. */
 export function arriveeDans(lieu: LieuJouable, depuis: LieuId): Position {
-  const sorties = SORTIES[lieu];
+  const sorties = entreesDe(lieu);
   // On arrive par la sortie qui mène d'où l'on vient (au Carrefour, par l'est depuis la station, par le nord depuis la
-  // Coopérative ; à la Coopérative, toujours par le portail, la première de ses sorties).
+  // Coopérative ; à la Coopérative, toujours par le portail, la première de ses sorties ; au Moulin, toujours par le
+  // pont). Jamais par une sortie sans arrivée.
   const etape = etapeVers(lieu, depuis);
   const versDepuis = sorties.find((s) => destinations(s).includes(etape)) ?? sorties[0]!;
   return { ...versDepuis.arrivee };
