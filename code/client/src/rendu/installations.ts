@@ -383,11 +383,12 @@ function charbonniere(): { groupe: THREE.Group; braise: THREE.Mesh } {
 
 // ---------- La forge ----------
 
-function forge(): THREE.Group {
+/** Le foyer de forge (niveau 1) : le massif de pierres, la cuvette de charbon, la tuyère ; sans soufflet (plan 0.8 §9.2). */
+export function forge(): THREE.Group {
   const c = new Assemblage(57);
   c.occlusion = 0.35;
   const aleat = aleatoire(57);
-  // Le foyer : un massif de pierres sèches liées à l'argile, en fer à cheval ouvert vers le soufflet.
+  // Le foyer : un massif de pierres sèches liées à l'argile, en fer à cheval ouvert vers la tuyère.
   const argile = 0x9a7a5a;
   c.ajouter(placer(new THREE.BoxGeometry(1.3, 0.5, 0.75), 0, 0.25, 0), argile, "mat", 0.04);
   for (let rang = 0; rang < 3; rang++) {
@@ -412,31 +413,9 @@ function forge(): THREE.Group {
     const r = 0.03 + aleat() * 0.03;
     c.ajouter(placer(bosseler(new THREE.OctahedronGeometry(r * 0.9, 0), r * 0.25, aleat), (aleat() - 0.5) * 0.8, 0.54 + aleat() * 0.03, (aleat() - 0.5) * 0.3, aleat() * 3, aleat() * 3, 0), i % 5 === 0 ? 0x4a4440 : CHARBON, "mat", 0.05);
   }
-  // La tuyère : un tuyau de fer qui entre dans le foyer côté soufflet.
+  // La tuyère : un tuyau de fer qui entre dans le foyer, côté vent. Pas de soufflet au foyer de forge (plan 0.8 §9.2) :
+  // le mot et l'objet sont réservés au soufflet de forge, la clé de la forge ventilée (metier/forge.ts).
   c.perche(new V3(-0.78, 0.29, 0), new V3(-0.5, 0.4, 0), 0.03, 0x4a4440, "metal", 6);
-  // Le soufflet de cuir : deux planches en goutte d'eau, le cuir plissé entre elles, la buse, la poignée.
-  const goutte = new THREE.Shape();
-  goutte.moveTo(0, -0.04);
-  goutte.lineTo(0.32, -0.2);
-  goutte.absarc(0.42, 0, 0.2, -Math.PI / 2, Math.PI / 2, false);
-  goutte.lineTo(0, 0.04);
-  goutte.lineTo(0, -0.04);
-  const soufflet = new THREE.Matrix4()
-    .makeTranslation(-0.9, 0.27, 0)
-    .multiply(new THREE.Matrix4().makeRotationZ(0.08))
-    .multiply(new THREE.Matrix4().makeRotationY(Math.PI))
-    .multiply(new THREE.Matrix4().makeRotationX(-Math.PI / 2));
-  c.repere = soufflet;
-  for (const z of [-0.075, 0.075]) c.ajouter(new THREE.ExtrudeGeometry(goutte, { depth: 0.02, bevelEnabled: false, curveSegments: 4 }).translate(0, 0, z - 0.01), BOIS.moyen, "mat", 0.05);
-  for (let k = 0; k < 3; k++) {
-    const pli = new THREE.ExtrudeGeometry(goutte, { depth: 0.04, bevelEnabled: false, curveSegments: 4 });
-    const e = 0.93 - k * 0.04;
-    c.ajouter(pli.scale(e, e, 1).translate(0.02, 0, -0.06 + k * 0.04), PALETTE.cuir, "mat", 0.04);
-  }
-  c.repere = null;
-  c.ajouter(placer(new THREE.ConeGeometry(0.035, 0.18, 6).rotateZ(-Math.PI / 2), -0.84, 0.28, 0), 0x4a4440, "metal");
-  c.perche(new V3(-1.55, 0.28, 0), new V3(-1.72, 0.32, 0), 0.016, BOIS.clair, "mat", 4);
-  rondin(c, new V3(-1.3, 0, 0), new V3(-1.3, 0.2, 0), 0.14);
   // L'enclume du foyer (la pierre plate, ou l'enclume de dépanneur) et le bac de trempe sont des accessoires posés à
   // part (metier/forge.ts, plan 0.8) : ici, le tas de charbon de bois.
   for (let i = 0; i < 18; i++) {
