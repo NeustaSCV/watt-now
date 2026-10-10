@@ -20,7 +20,7 @@ import { DUREE_TRANCHE_MS, tempsDeLaTranche } from "./meteo.ts";
 import { declarerObstaclesBas } from "./murs.ts";
 import { VRAC_MAX, aleatoire, type ButinLieu, type RessourceSol, type TypeRessource } from "./terrain.ts";
 import { percer, type FenetreVue, type PlanVue, type PorteVue } from "./vue.ts";
-import { BAC_MODELE, ETEINTS_MODELE, NAPPE_MODELE, SEGMENTS_MODELE, type SegmentModele } from "./gue-modele.ts";
+import { BAC_MODELE, ETEINTS_MODELE, FOUILLE_MODELE, NAPPE_MODELE, SEGMENTS_MODELE, type SegmentModele } from "./gue-modele.ts";
 
 /** À augmenter quand le contenu du gué change : la base le régénère alors. */
 export const VERSION_GUE = 2;
@@ -253,20 +253,6 @@ export function aBord(x: number, z: number, xr: number, marge = 0): boolean {
 /** Les obstacles qui arrêtent un coup ou un objet lancé : les murs, les talus boisés, les épaves. Le reste est bas. */
 const NATURES_HAUTES = new Set(["mur", "paroi du camping-car", "cabine du camping-car", "casier", "épave", "barricade de troncs", "talus boisé", "talus (bout de la halte)", "poteau du bac"]);
 
-/**
- * Les fenêtres à 1 m du sol que le modèle laisse passer (son export ne compte plein qu'au-dessus d'un mètre) : on les
- * referme ici, en attendant la retouche du modèle (à demander à la session « bâtiments »).
- */
-const FENETRES_A_FERMER: readonly SegmentModele[] = [
-  { x1: -23.8, z1: -25, x2: -23, z2: -25, nature: "mur" }, // cabane du passeur, au sud
-  { x1: -34.2, z1: 23, x2: -35.4, z2: 23, nature: "mur" }, // buvette, au nord
-  { x1: -35.4, z1: 30.5, x2: -34.2, z2: 30.5, nature: "mur" }, // buvette, au sud
-  { x1: -31.4, z1: 30.5, x2: -30.6, z2: 30.5, nature: "mur" },
-  { x1: -37, z1: 26.16, x2: -37, z2: 27.34, nature: "mur" }, // buvette, à l'ouest
-  { x1: 75.5, z1: -16.64, x2: 75.5, z2: -17.86, nature: "mur" }, // cabanon du garde-pêche
-  { x1: -78.8, z1: -14, x2: -78, z2: -14, nature: "mur" }, // huilerie
-];
-
 /** Un segment du modèle, en boîtes du jeu (les segments en biais : en morceaux de 0,5 m). */
 function boitesDuSegment(s: SegmentModele): Boite[] {
   const ep = s.nature === "mur" ? 0.24 : s.nature.startsWith("berge") || s.nature.startsWith("talus") ? 0.3 : 0.2;
@@ -291,8 +277,6 @@ function boitesDuSegment(s: SegmentModele): Boite[] {
   return boites;
 }
 
-/** Le bout du ponton : ouvert quand le radeau y est accosté. */
-const BOUT_DU_PONTON = SEGMENTS_MODELE.find((s) => s.nature === "bout du ponton" && s.x1 === 9.4 && s.z1 === -26);
 
 /** Le couloir du bac sur l'eau, entre la cale et le ponton : l'eau y est, sauf là où flotte le radeau. */
 const COULOIR = (() => {
@@ -337,8 +321,7 @@ function boitesDEau(): Boite[] {
 const BOITES_FIXES: { hautes: Boite[]; basses: Boite[] } = (() => {
   const hautes: Boite[] = [];
   const basses: Boite[] = [];
-  for (const s of [...SEGMENTS_MODELE, ...FENETRES_A_FERMER]) {
-    if (s === BOUT_DU_PONTON) continue;
+  for (const s of SEGMENTS_MODELE) {
     (NATURES_HAUTES.has(s.nature) ? hautes : basses).push(...boitesDuSegment(s));
   }
   basses.push(...boitesDEau());
@@ -382,19 +365,19 @@ const RADIER_NOYE: readonly Boite[] = (() => {
   return [basse({ x: arrondi((xa + xb) / 2), z: zc, l: arrondi(xb - xa), p: arrondi(RADIER.z1 - RADIER.z0 + 0.3) })];
 })();
 
-/** Les obstacles du radeau à sa place `xr` : garde-corps, et ses deux bouts fermés sauf du côté où il est accosté. */
+/**
+ * Les obstacles du radeau à sa place `xr` (le modèle : ses garde-corps, toujours ; les chaînes de ses deux bouts,
+ * fermées pendant la traversée, ouvertes à quai), et l'eau du couloir de part et d'autre : à quai, on monte et on
+ * descend par le bout qui touche la cale ou le ponton ; l'autre bout donne sur l'eau.
+ */
 function obstaclesRadeau(xr: number): Boite[] {
-  const { demiLongueur: L, demiLargeur: P, z } = BAC;
   const ou = accostage(xr);
-  const boites: Boite[] = [
-    { x: xr, z: z - P + 0.1, l: 2 * L, p: 0.2 },
-    { x: xr, z: z + P - 0.1, l: 2 * L, p: 0.2 },
-  ];
-  // Le bout côté cale (x plus grand : la cale est côté terrain, à l'est du jeu), le bout côté ponton.
+  // Relatifs au centre du radeau, dans le repère de la fiche : retournés (x → −x) et posés à sa place.
+  const segments = [...BAC_MODELE.obstacles, ...(ou === null ? BAC_MODELE.obstaclesTraversee : [])];
+  const boites: Boite[] = segments.flatMap((s) => boitesDuSegment({ ...s, x1: auModele(xr, 0).x + s.x1, x2: auModele(xr, 0).x + s.x2, z1: BAC_MODELE.cable.z + s.z1, z2: BAC_MODELE.cable.z + s.z2 }));
+  const L = BAC.demiLongueur;
+  // L'eau du couloir, de part et d'autre du radeau (la cale est côté terrain, à l'est du jeu).
   const versCale = BAC.cale.x > BAC.ponton.x ? 1 : -1;
-  if (ou !== "cale") boites.push({ x: xr + versCale * L, z, l: 0.2, p: 2 * P });
-  if (ou !== "ponton") boites.push({ x: xr - versCale * L, z, l: 0.2, p: 2 * P });
-  // L'eau du couloir, de part et d'autre du radeau.
   const bordCale = xr + versCale * L;
   const bordPonton = xr - versCale * L;
   const [a0, a1] = versCale > 0 ? [COULOIR.x0, bordPonton] : [bordPonton, COULOIR.x1];
@@ -405,7 +388,6 @@ function obstaclesRadeau(xr: number): Boite[] {
   const [vide0, vide1] = versCale > 0 ? [ou === "ponton", ou === "cale"] : [ou === "cale", ou === "ponton"];
   if (!vide0 && a1 - a0 > 0.02) boites.push({ x: (a0 + a1) / 2, z: zc, l: a1 - a0, p: pc });
   if (!vide1 && b1 - b0 > 0.02) boites.push({ x: (b0 + b1) / 2, z: zc, l: b1 - b0, p: pc });
-  if (ou !== "ponton" && BOUT_DU_PONTON) boites.push(...boitesDuSegment(BOUT_DU_PONTON));
   return boites.map((b) => basse({ x: arrondi(b.x), z: arrondi(b.z), l: arrondi(b.l), p: arrondi(b.p) }));
 }
 
@@ -464,9 +446,10 @@ export function genererGue(): Omit<RessourceSol, "disponible">[] {
   poser("gisement_glaise", GLAISE);
   for (const [x, z] of JONCS_MODELE) poser("joncs", auGue(x, z));
   for (const f of FOUILLES_GUE) poser(f, auGue(...PLACES_FOUILLES[f]));
-  // Le « bois flotté » du modèle devient un tas de branches (I11) : il est contre la pile, dans l'eau ; la crue en a
-  // poussé une partie sur la berge, au pied de la culée côté terrain.
-  for (const [x, z] of [[-11.3, -5.2], [-11.9, -4.6], [-11.4, -3.9], [-12.2, -5.6], [-12.6, -4.2]] as const) poser("branche", auGue(x, z));
+  // Le « bois flotté » du modèle devient un tas de branches (I11) : tiré sur la berge par le modèle, au pied de la
+  // culée côté terrain. Cinq branches, autour de son point de fouille.
+  const tas = FOUILLE_MODELE.find((f) => f.quoi?.startsWith("tas de branches"))!;
+  for (const [dx, dz] of [[0, 0], [-0.6, 0.5], [-0.3, -0.6], [-0.9, -0.2], [0.4, 0.6]] as const) poser("branche", auGue(tas.x + dx, tas.z + dz));
 
   // Les pierres en vrac (B5, B8) : VRAC_MAX tournées de 15, dont seule la première est en jeu pour un voyageur seul.
   // La première sur le banc de galets ; les autres sur les pistes de gravier qui descendent au radier.
@@ -604,7 +587,7 @@ export function ricochet(de: { x: number; z: number }, vers: { x: number; z: num
 /** Les murs (hauts) d'un rectangle du modèle, en boîtes du jeu. */
 function mursDans(x1: number, z1: number, x2: number, z2: number): Boite[] {
   const dans = (s: SegmentModele) => Math.min(s.x1, s.x2) >= x1 - 0.05 && Math.max(s.x1, s.x2) <= x2 + 0.05 && Math.min(s.z1, s.z2) >= z1 - 0.05 && Math.max(s.z1, s.z2) <= z2 + 0.05;
-  return [...SEGMENTS_MODELE, ...FENETRES_A_FERMER].filter((s) => s.nature === "mur" && dans(s)).flatMap(boitesDuSegment);
+  return SEGMENTS_MODELE.filter((s) => s.nature === "mur" && dans(s)).flatMap(boitesDuSegment);
 }
 
 /** Les deux pièces où l'on entre (la vue par pièce) ; le reste du gué est à ciel ouvert. */

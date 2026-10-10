@@ -16,12 +16,15 @@
 // sont exacts.
 
 import * as THREE from "three";
-import { Batiment, Chantier, aleatoire, PALETTE, mur, touffes, gravats, debris, jonchee, mousse, lierre, arbuste } from "../commun/atelier.js";
+import { Batiment, Chantier, aleatoire, PALETTE, mur as murAtelier, touffes, gravats, debris, jonchee, mousse, lierre, arbuste } from "../commun/atelier.js";
 import { R } from "./atlas.js";
+
+// Au gué, un appui de fenêtre à 1 m bloque le passage (on ne passe pas par une fenêtre) : seuil d'obstacle à 0,8 m.
+const mur = (c, a, b, spec) => murAtelier(c, a, b, { seuilObstacle: 0.8, ...spec });
 import {
   PI, arr, matieres, animer, hache, bruit, interp, panneau, quad, lame, boiteEntre, planche, cylindre, geoCyl, cable, pointsCable,
   BOULE, ROCHE, OCTA, rocher, arbreBerge, roncier, joncs, fougere, bois, chaisePliante, tableBistrot, caisse, tonneau, bidon, corde,
-  gaffe, lanterne, barque, rame, feu, balise, recentrer,
+  gaffe, lanterne, barque, rame, feu, balise, recentrer, miroiter,
 } from "./outils.js";
 
 // ---------- Les tronçons ----------
@@ -170,7 +173,7 @@ const FOUILLE = [
   { x: 23.6, z: 14.2, quoi: "soute arrière du camping-car : outils, câbles, jerrican" },
   { x: 28, z: -26.4, quoi: "lavoir : battoirs, savon, seau, draps (tissu)" },
   { x: 19.5, z: -17, quoi: "station Kayak+ : pagaies, gilets, câble antivol (acier)" },
-  { x: -4, z: -4.6, quoi: "tas de branches coincé contre la pile" },
+  { x: -11.2, z: -5.2, quoi: "tas de branches (apportées par la crue, tirées sur la berge)" },
   { x: 16.0, z: 20.4, quoi: "gisement de glaise (inépuisable) : la motte entamée et la bêche plantée, sur la berge de vase" },
   ...JONCS.map(([x, z]) => ({ x, z, quoi: "touffe de joncs (cueillable, repousse en 30 min)" })),
   // La sortie
@@ -284,7 +287,7 @@ export const FICHE = {
     cable: { z: CABLE_Z, x1: -15.8, x2: 17.4 },
     radeau: { longueur: RADEAU.l, largeur: RADEAU.p },
     accostages: RADEAU.accostages,
-    note: "le jeu fait glisser userData.radeau le long du câble (position.x), d'un accostage à l'autre ; ses obstacles sont dans userData.radeau.userData.obstacles, relatifs au radeau",
+    note: "le jeu fait glisser userData.radeau le long du câble (position.x), d'un accostage à l'autre. Ses obstacles sont relatifs au radeau : userData.radeau.userData.obstacles (les garde-corps, toujours) et obstaclesTraversee (les chaînes des deux bouts, à fermer pendant la traversée). Le bout de la cale et le bout du ponton sont ouverts : on monte et on descend par les bouts du radeau",
   },
   // La crue (G4) : objet userData.nappeRadier des tronçons « rive » et « gue » ; le jeu monte sa position.y
   nappeRadier: { z1: RAD.z1, z2: RAD.z2, x1: RAD.x1, x2: RAD.x2, y: 0.035, note: "position.y = montée de l'eau au-dessus de la nappe ordinaire (0 au repos)" },
@@ -801,10 +804,15 @@ function murDouble(ctx, k, a, bb, spec) {
  */
 function quatreMurs(ctx, k, [x1, z1, x2, z2], spec, ouv = {}) {
   const { h } = spec;
+  // Les murs qui regardent la caméra (sud-est) sont coupés à hauteur d'allège. Pour le gué retourné (miroir), le mur
+  // ouest deviendra le mur est : c'est lui qu'on coupe.
+  const coupeOuest = !!ctx.miroir;
   mur(ctx.c, [x2, z1], [x1, z1], { ...spec, batiment: ctx.b, ouvertures: ouv.n ?? [] });
-  mur(ctx.c, [x1, z1], [x1, z2], { ...spec, batiment: ctx.b, ouvertures: ouv.o ?? [] });
+  if (coupeOuest) murDouble(ctx, k, [x1, z1], [x1, z2], { ...spec, h, ouvertures: ouv.o ?? [] });
+  else mur(ctx.c, [x1, z1], [x1, z2], { ...spec, batiment: ctx.b, ouvertures: ouv.o ?? [] });
   murDouble(ctx, k, [x1, z2], [x2, z2], { ...spec, h, ouvertures: ouv.s ?? [] });
-  murDouble(ctx, k, [x2, z2], [x2, z1], { ...spec, h, ouvertures: ouv.e ?? [] });
+  if (coupeOuest) mur(ctx.c, [x2, z2], [x2, z1], { ...spec, batiment: ctx.b, ouvertures: ouv.e ?? [] });
+  else murDouble(ctx, k, [x2, z2], [x2, z1], { ...spec, h, ouvertures: ouv.e ?? [] });
 }
 
 /** Un toit à un pan de tôle ondulée, du haut (yN, au nord) au bas (yS, au sud), en lés de 0,6 m. */
@@ -941,6 +949,17 @@ function pont(ctx) {
     [[-5.2, Y_AMONT + 0.12, -14.25], [0.2, Y_AMONT + 0.25, -14.5], 0.22],
   ];
   for (const [a, bb, r] of tr) if (ici((a[0] + bb[0]) / 2)) bois(c, a, bb, r);
+  // Le tas de branches, tiré de l'eau et posé sur la berge ouest, à portée de main
+  if (ici(-11.2)) {
+    const A = aleatoire(1103);
+    for (let k = 0; k < 9; k++) {
+      const a = A() * PI;
+      const lg = 1.4 + A() * 1.4;
+      const [cx, cz] = [-11.2 + (A() - 0.5) * 0.8, -5.2 + (A() - 0.5) * 0.6];
+      const y = 0.08 + Math.floor(k / 3) * 0.12;
+      bois(c, [cx - Math.cos(a) * lg / 2, y, cz - Math.sin(a) * lg / 2], [cx + Math.cos(a) * lg / 2, y + 0.05, cz + Math.sin(a) * lg / 2], 0.05 + A() * 0.05, A() < 0.5 ? 0x8f8676 : 0x7a6a56);
+    }
+  }
   // Des branchages pris dans les troncs
   for (let k = 0; k < 10; k++) {
     const x = -7 + k * 0.9;
@@ -1080,7 +1099,7 @@ function bac(ctx) {
     for (const [x, z] of [[9.6, Z - 0.9], [9.6, Z + 0.9], [11.4, Z - 0.9], [11.4, Z + 0.9]]) c.tube([x, -2.5, z], [x, 0.5, z], 0.12, 0x5a4a3a, M.mat, 6);
     b.obstacle(9.4, Z - 1, 12.6, Z - 1, "bord du ponton");
     b.obstacle(9.4, Z + 1, 12.6, Z + 1, "bord du ponton");
-    b.obstacle(9.4, Z - 1, 9.4, Z + 1, "bout du ponton");
+    // Le bout du ponton reste ouvert : c'est là qu'on monte sur le radeau et qu'on en descend
   }
   // Le radeau, accosté à la cale : plancher sur bidons, garde-corps, treuil, poulies sur le câble.
   // C'est un objet à part, « radeau » (userData.radeau), bâti autour de son centre : le jeu le fait glisser le long du
@@ -1106,10 +1125,15 @@ function bac(ctx) {
       r.boite(x2 - x1 - 0.3, 0.05, 0.05, 0x8a7458, { x: (x1 + x2) / 2, y: 0.55, z }, M.mat);
       obstacle(x1, z, x2, z, "garde-corps du bac");
     }
-    // La chaîne de fermeture côté rivière, et la rampe rabattue côté cale
-    for (let k = 0; k < 6; k++) r.boite(0.06, 0.06, 0.6, 0x4a4a46, { x: x2 - 0.05, y: 0.85 - Math.sin((k / 5) * PI) * 0.2, z: Z - 1.6 + k * 0.64 }, M.metal, { crasse: false });
-    obstacle(x2, Z - 2.2, x2, Z + 2.2, "chaîne du bac (côté rivière)");
-    r.boite(0.9, 0.08, 3.2, 0x7a6a52, { x: x1 - 0.35, y: 0.02, z: Z, rz: 0.03 }, M.planches);
+    // Aux deux bouts : une rampe rabattue et une chaîne décrochée qui pend à son poteau. On monte et on descend par
+    // les deux bouts ; pendant la traversée, le jeu ferme les chaînes (obstaclesTraversee).
+    const obstaclesTraversee = [];
+    for (const [xb, s] of [[x1, -1], [x2, 1]]) {
+      r.boite(0.9, 0.08, 3.2, 0x7a6a52, { x: xb + s * 0.35, y: 0.02, z: Z, rz: -s * 0.03 }, M.planches);
+      r.boite(0.1, 1.0, 0.1, 0x6a5a48, { x: xb - s * 0.05, y: 0.5, z: Z - 1.75 }, M.mat);
+      for (let k = 0; k < 5; k++) r.boite(0.06, 0.06, 0.32, 0x4a4a46, { x: xb - s * 0.12, y: 0.9 - k * 0.18, z: Z - 1.7, rx: PI / 2 + (k % 2) * 0.3 }, M.metal, { crasse: false });
+      obstaclesTraversee.push({ x1: arr(xb - RADEAU.x), z1: arr(-2.2), x2: arr(xb - RADEAU.x), z2: arr(2.2), nature: `chaîne du bac, bout ${s < 0 ? "ouest" : "est"} (fermée pendant la traversée)` });
+    }
     // Les deux mâts à poulies, reliés au câble par la traille
     for (const x of [x1 + 0.8, x2 - 0.8]) {
       r.tube([x, 0, Z - 1.9], [x, 2.4, Z - 1.9], 0.07, C.boisGris, M.mat, 5);
@@ -1131,6 +1155,7 @@ function bac(ctx) {
     g.name = "radeau";
     g.userData.deplacer = true; // recentrer() déplace l'objet, pas ses sommets
     g.userData.obstacles = obstacles;
+    g.userData.obstaclesTraversee = obstaclesTraversee;
     g.userData.accostages = RADEAU.accostages;
     b.ajouter(g);
   }
@@ -1911,12 +1936,16 @@ function glaiseEtJoncs(ctx) {
 
 // ---------- La construction d'un tronçon ----------
 
-export function creer({ usure = 0.7, carte = "chemin" } = {}) {
+/**
+ * Construit un tronçon. `miroir: true` : le gué retourné de gauche à droite (le terrain à l'est, comme sur la carte du
+ * jeu) ; les données sont alors celles de FICHE_MIROIR, et les textes des enseignes se lisent à l'endroit.
+ */
+export function creer({ usure = 0.7, carte = "chemin", miroir = false } = {}) {
   const def = FICHE.cartes.find((k) => k.id === carte) ?? FICHE.cartes[0];
   const x0 = def.decalage.x;
   const b = new Batiment(2203 + Math.round(x0), usure);
   const lum = [];
-  const ctx = { b, c: b.c, M: matieres(), u: usure, x0, xa: x0 - 25, xb: x0 + 25, ici: bande(x0), lum };
+  const ctx = { b, c: b.c, M: matieres(), u: usure, x0, xa: x0 - 25, xb: x0 + 25, ici: bande(x0), lum, miroir };
   terrain(ctx);
   eaux(ctx);
   route(ctx);
@@ -1943,5 +1972,25 @@ export function creer({ usure = 0.7, carte = "chemin" } = {}) {
   // Les objets que le jeu anime : le radeau du bac (tronçon « rive ») et la nappe du radier (tronçons « rive » et « gue »)
   groupe.userData.radeau = groupe.getObjectByName("radeau") ?? null;
   groupe.userData.nappeRadier = groupe.getObjectByName("nappeRadier") ?? null;
-  return groupe;
+  return miroir ? miroiter(groupe) : groupe;
 }
+
+// ---------- La fiche du gué retourné ----------
+
+/** Retourne les données de la fiche : x → −x (les paires x1/x2 s'échangent), les flèches des textes changent de sens. */
+function retournerDonnees(v, cle) {
+  if (Array.isArray(v)) return v.map((e) => retournerDonnees(e));
+  if (typeof v === "string") return v.replace(/[←→]/g, (f) => (f === "←" ? "→" : "←"));
+  if (!v || typeof v !== "object") return v;
+  const o = {};
+  for (const [k, e] of Object.entries(v)) o[k] = retournerDonnees(e, k);
+  if (typeof v.x === "number") o.x = arr(-v.x);
+  if (typeof v.x1 === "number" && typeof v.x2 === "number") {
+    o.x1 = arr(-v.x2);
+    o.x2 = arr(-v.x1);
+  }
+  return o;
+}
+
+/** La fiche du gué retourné (le terrain à l'est) : à utiliser avec creer({ miroir: true }). */
+export const FICHE_MIROIR = { ...retournerDonnees(FICHE), miroir: true };
