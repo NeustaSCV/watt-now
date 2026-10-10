@@ -149,7 +149,7 @@ Plan 0.8 §2.1, codé en 0.8. **La règle ci-dessus change** :
 - **Le niveau 2 à la portée de tous** : le **marteau remmanché** (la tête de marteau de la caisse de la ruine et une branche, à la main) et le **marteau de fortune** (une barre repliée) donnent **Marteler 2** ; la clé plate, Serrer 2 ; la bêche, Creuser 2.
 - **Les postes et les outils à portée** : l'**établi à étau** donne **Serrer 3** à qui travaille à 3 m (l'étau dans le sac ne donne rien) ; un outil rangé au **râtelier à outils**, à 3 m, compte comme porté (Book 24 §12).
 - **Deux qualités nouvelles, déclarées sans usage** : **Raboter** et **Souder** (Q-0.8-21) ; elles serviront au niveau 2 (le rabot de l'établi de menuisier, le fer à souder).
-- **Les enclumes** (Servir d'enclume) : la grosse pierre plate donne ★, l'enclume de dépanneur, l'étau et la tête de masse ★★ (Book 25 §12).
+- **Les enclumes** (Servir d'enclume) : la grosse pierre plate donne ★, l'enclume de dépanneur, l'étau et la tête de masse ★★ (Book 25 §13.4).
 
 Les outils de fortune à fabriquer sont au Book 02 §14 quinquies.
 

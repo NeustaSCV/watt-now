@@ -648,7 +648,7 @@ Chaque recette a un **lieu**, un seul champ (`Recette.lieu`), qui remplace les a
 | **Forge ventilée** 🔥 (plus tard) | Hache forgée, glaive ; le ressort retrempé (à l'huile, niveau 3) |
 | **Banc solaire** ⚡ | Pack de cellules, modules de décharge (flash, raquette), matraques de fortune et électrique (et à la petite batterie), lampe bricolée ; plus tard, au poste de montage : module à bobine, aiguillon, électrificateur, ventilateur de forge 12 V |
 | **Établi** | Ébauches d'arc (frêne, if) ; ⚙️ l'arbalète et ses pièces (arbrier, noix de bois ou d'os, arcs de frêne ou de lame de ressort, carreaux), brouette |
-| **Établi à étau** | **Maillet** (1 bûche, 1 branche) ; **coins de bois** (1 bûche → 4) ; **planches fendues** (1 bûche, 1 coin, le maillet → 2 planches ; le maillet revient) ; **réparer le manche** d'une arme (Book 25 §12) |
+| **Établi à étau** | **Maillet** (1 bûche, 1 branche) ; **coins de bois** (1 bûche → 4) ; **planches fendues** (1 bûche, 1 coin, le maillet → 2 planches ; le maillet revient) ; **réparer le manche** d'une arme (Book 25 §13.6) |
 | **Tour à perche** ⚙️ | Manche tourné |
 
 ### Les outils de fortune
