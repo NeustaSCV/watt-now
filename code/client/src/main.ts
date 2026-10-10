@@ -737,6 +737,8 @@ function recevoir(message: MessageServeur): void {
       return;
     case "ressource": {
       const r = ressources.get(message.id);
+      // Le tas de bois de la station baisse d'une bûche (plan 0.8, chantier 10 : le butin personnel).
+      r?.reste(message.reste);
       r?.disponible(message.disponible);
       // Le butin rare de la Coopérative (le coffre, la chambre froide) : un signal musical (session musique).
       if (!message.disponible && lieu === "cooperative" && (r?.donnees.type === "coop_coffre" || r?.donnees.type === "coop_caisse_froide")) son.butin();

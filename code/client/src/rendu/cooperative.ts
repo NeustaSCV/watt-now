@@ -21,6 +21,7 @@ import {
   HAUTEUR_HANGAR,
   MOBILIER,
   MUR,
+  PARC_VOLAILLES,
   PORTAIL,
   PORTES,
   RAYONNAGES,
@@ -1418,6 +1419,50 @@ function creerCloture(c: Chantier, grillage: THREE.Material): void {
   c.poser(new THREE.CylinderGeometry(0.035, 0.04, 2.1, 5), acier, GALVA, { x: BRECHE.x - 0.5, y: 0.8, z: BRECHE.z - 1.2, rz: 0.9 });
 }
 
+/**
+ * Le parc à volailles (plan 0.8, chantier 10 ; PARC_VOLAILLES) : dans la cour des silos, des piquets de châtaignier
+ * dont le grillage est tombé (un pan tient encore, affaissé), la cabane à poules et son toit de tôle, une mangeoire
+ * renversée, des plumes. Le rouleau neuf, contre un piquet de l'angle sud-ouest, est la clé du foyer de cuisine
+ * (rendu/ressources.ts). On enjambe : rien n'y fait obstacle.
+ */
+function creerParcVolailles(c: Chantier, cg: Chantier, grillage: THREE.Material): void {
+  const b = PARC_VOLAILLES;
+  const [x0, x1, z0, z1] = [b.x - b.l / 2, b.x + b.l / 2, b.z - b.p / 2, b.z + b.p / 2];
+  const bois = matiere(0.9);
+  // Les piquets, tous les 2 m, quelques-uns penchés.
+  const piquets: [number, number][] = [];
+  for (let x = x0; x <= x1 + 0.01; x += 2) piquets.push([x, z0], [x, z1]);
+  for (let z = z0 + 2.5; z < z1; z += 2.5) piquets.push([x0, z], [x1, z]);
+  for (const [x, z] of piquets) {
+    const penche = c.hasard() < 0.3 ? (c.hasard() - 0.5) * 0.4 : 0;
+    c.poser(new THREE.CylinderGeometry(0.045, 0.055, 1.25, 6), bois, 0x7a5c3e, { x, y: 0.62, z, rx: penche, rz: penche * 0.7 }, { nuance: 0.08 });
+  }
+  // Un pan tient encore, au nord, affaissé ; les autres sont à terre, couchés dans l'herbe.
+  const pan = (xa: number, xb: number, z: number, haut: number, couche: boolean) => {
+    const l = xb - xa;
+    const g = new THREE.PlaneGeometry(l, haut, 2, 1);
+    const uv = g.attributes.uv!;
+    for (let j = 0; j < uv.count; j++) uv.setXY(j, uv.getX(j) * (l / 0.2), uv.getY(j) * (haut / 0.2));
+    cg.poser(g, grillage, 0xffffff, couche ? { x: (xa + xb) / 2, y: 0.04, z: z + 0.5, rx: -Math.PI / 2 + 0.06 } : { x: (xa + xb) / 2, y: haut / 2, z }, { nuance: 0, crasse: false });
+  };
+  pan(x0, x0 + 4, z0, 1.0, false);
+  pan(x0 + 4, x1, z0, 0.7, false);
+  pan(x0 + 2, x0 + 6, z1 - 0.6, 1.0, true);
+  // La cabane à poules, à l'est du parc : planches, toit de tôle à une pente, la trappe et sa rampe.
+  c.repere({ x: x1 - 1.1, z: b.z - 0.6 }, () => {
+    c.boite(1.3, 0.9, 1.0, 0x8a6a48, { y: 0.65 }, bois, { nuance: 0.06 });
+    for (let k = 0; k < 5; k++) c.boite(0.012, 0.88, 1.02, 0x5e4430, { x: -0.6 + k * 0.3, y: 0.65 }, bois);
+    for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) c.boite(0.07, 0.2, 0.07, 0x6a4e34, { x: sx * 0.6, y: 0.1, z: sz * 0.45 }, bois);
+    c.poser(geoToleOndulee(1.6, 1.3, 0.12, 0.03), matiere(0.6, 0.35), 0x94573a, { y: 1.18, rx: -0.2 }, { nuance: 0.1 });
+    c.boite(0.3, 0.3, 0.02, 0x2a2420, { x: -0.2, y: 0.5, z: 0.51 });
+    c.boite(0.25, 0.02, 0.7, 0x7a5c3e, { x: -0.2, y: 0.25, z: 0.82, rx: 0.55 }, bois);
+  });
+  // La mangeoire renversée, l'abreuvoir de plastique rouge, des plumes, du grain.
+  c.poser(new THREE.CylinderGeometry(0.18, 0.22, 0.35, 10), matiere(0.6, 0.3), 0x8a8f94, { x: b.x + 0.6, y: 0.18, z: b.z + 1.2, rz: Math.PI / 2, ry: 0.7 });
+  c.poser(new THREE.CylinderGeometry(0.14, 0.17, 0.25, 10), matiere(0.7), 0xc8362b, { x: b.x - 0.8, y: 0.13, z: b.z - 1.4 });
+  for (let k = 0; k < 14; k++) c.boite(0.05, 0.004, 0.02, k % 3 ? 0xf2eee2 : 0x8a6a48, { x: x0 + 0.5 + c.hasard() * (b.l - 1), y: 0.03, z: z0 + 0.4 + c.hasard() * (b.p - 0.8), ry: c.hasard() * 3 }, matiere(), { crasse: false, nuance: 0.1 });
+}
+
 // ---------- Le grand bâtiment ----------
 
 interface Chantiers {
@@ -2003,6 +2048,7 @@ export function creerCooperative(): THREE.Group {
   creerAtelier(ch, mats);
   creerCloture(zones.grillage, mats.grillage);
   const c = zones.cour;
+  creerParcVolailles(c, zones.grillage, mats.grillage);
 
   // La bascule à camions : cadre de béton, tablier d'acier strié, bords jaunes
   c.pave(BASCULE.x - BASCULE.l / 2 - 0.35, 0, BASCULE.z - BASCULE.p / 2 - 0.35, BASCULE.x + BASCULE.l / 2 + 0.35, 0.05, BASCULE.z + BASCULE.p / 2 + 0.35, BETON);

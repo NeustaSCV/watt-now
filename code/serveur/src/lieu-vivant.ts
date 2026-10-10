@@ -294,6 +294,25 @@ export class LieuVivant {
     }
   }
 
+  /**
+   * Tout revient (plan 0.8 §9.1, N1 : la Coopérative et le Moulin, au bout de 24 h) : les Éteints de la définition, les
+   * portes à leur état d'origine, le butin (sauf ce qui ne se trouve qu'une fois : JAMAIS), le butin personnel de chacun.
+   * À appeler quand personne n'est là (à l'entrée) : rien n'est envoyé.
+   */
+  reinitialiser(): void {
+    this.eteints = this.definition.eteints();
+    Object.assign(this.portes, this.definition.portes?.initiales() ?? {});
+    for (const r of this.ressources.values()) {
+      if (r.disponibleLe === 0 || r.disponibleLe === JAMAIS) continue;
+      r.disponibleLe = 0;
+      this.base.sauverRessourceLieu(this.definition.cle, r.id, 0);
+    }
+    for (const id of this.personnels.keys()) {
+      this.personnels.set(id, new Map());
+      this.base.sauverInstance(`perso:${this.definition.cle}:${id}`, { version: this.definition.version, etats: {} }, 0);
+    }
+  }
+
   /** Le nombre de présents a changé : les points de vrac qui entrent en jeu ou en sortent sont annoncés à tous. */
   private annoncerVrac(instant: number): void {
     const vrac = this.definition.butin?.vrac;

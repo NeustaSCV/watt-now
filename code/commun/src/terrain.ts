@@ -63,6 +63,8 @@ export type TypeRessource =
  * et des `buche`.
  */
 export type TypeRessourceNiveau1 =
+  // La maison (chantier 10) : le bidon de 5 L, dans la ruine (plan 0.8 §2.5).
+  | "ruine_bidon"
   // H1A, la station (chantier 10) : la pièce de famille, une par joueur (⚡ le panneau est `panneau_auvent`) ; le tas
   // de bois de chauffage personnel derrière l'atelier (B3).
   | "piece_enclume"
@@ -112,6 +114,12 @@ export const EMPRISE_RESSOURCE: Partial<Record<TypeRessource, number>> = {
   frene: 0.9,
   if_bois: 1.1,
   coop_ifs: 1.2,
+  ruine_bidon: 0.35,
+  piece_enclume: 0.6,
+  piece_alternateur: 0.45,
+  tas_bois: 1.1,
+  coop_grillage: 0.7,
+  coop_cocotte: 0.4,
 };
 
 export interface RessourceSol {
@@ -182,11 +190,12 @@ export const REPOUSSE_MS: Record<TypeRessource, number | null> = {
   coop_palettes: 6 * 3_600_000,
   coop_etabli: 12 * 3_600_000,
   coop_rayonnage: 8 * 3_600_000,
-  coop_coffre: 4 * 24 * 3_600_000,
-  coop_caisse_froide: 4 * 24 * 3_600_000,
+  // Plan 0.8 (§9.1, N1) : à la Coopérative, tout revient à 24 h (serveur/src/cooperative.ts la réinitialise), le
+  // coffre du directeur, la laiterie et la batterie du tracteur aussi ; le klaxon revit avec elle.
+  coop_coffre: 24 * 3_600_000,
+  coop_caisse_froide: 24 * 3_600_000,
   coop_masse: 24 * 3_600_000,
-  // Une autre batterie se retrouve dans le tracteur en 4 jours, comme le butin rare : le klaxon revit avec elle.
-  coop_batterie: 4 * 24 * 3_600_000,
+  coop_batterie: 24 * 3_600_000,
   // Le frêne : une perche en 6 h réelles, même hors ligne (Book 25 §3.2). L'if du fond du bois : un bâton par jour de
   // calendrier (≈ 1 h 50 réelles) ; la haie de la Coopérative, un par visite (elle repousse en 12 h).
   frene: 6 * 3_600_000,
@@ -194,7 +203,9 @@ export const REPOUSSE_MS: Record<TypeRessource, number | null> = {
   coop_ifs: 12 * 3_600_000,
   // Le niveau 1 (plan 0.8, chantier 3) : les délais décidés. La pièce de famille revient pour son joueur en 24 h
   // (Q-0.8-14) ; le tas de bois et le banc de galets en 6 h (B3, B5) ; le gisement de glaise ne s'épuise pas (B6) ; à
-  // la Coopérative et au Moulin, tout revient en 24 h (§9.1, N1), sauf la fourche : une fois par personnage.
+  // la Coopérative et au Moulin, tout revient en 24 h (§9.1, N1), sauf la fourche : une fois par personnage. Le bidon
+  // de la ruine, comme les autres vestiges du terrain, une fois.
+  ruine_bidon: null,
   piece_enclume: 24 * 3_600_000,
   piece_alternateur: 24 * 3_600_000,
   tas_bois: 6 * 3_600_000,
@@ -235,6 +246,8 @@ export const RESTE_EN_PLACE: Partial<Record<TypeRessource, true>> = {
   frene: true,
   if_bois: true,
   coop_ifs: true,
+  // Le tas de bois de la station reste là, plus bas à chaque bûche (rendu/ressources.ts).
+  tas_bois: true,
 };
 
 // ---------- Le butin d'un lieu vivant (plan 0.8, chantier 10 ; le moteur est serveur/src/lieu-vivant.ts) ----------
@@ -447,10 +460,11 @@ const USAGES_ETABLIS: Record<Exclude<TypeRessource, TypeRessourceNiveau1>, Usage
   caisse_outils: {
     verbe: "fouiller",
     libelle: "Fouiller la caisse à outils",
-    donne: { tete_hache: 1, cle_plate: 1, tournevis: 1 },
+    // Plan 0.8 (I10) : la tête de marteau, à remmancher sur une branche (le marteau, Marteler 2, pour toutes les familles).
+    donne: { tete_hache: 1, cle_plate: 1, tournevis: 1, tete_marteau: 1 },
     qualites: {},
     duree: 4,
-    examen: "Une caisse en fer, rouillée. Quelque chose cliquette dedans.",
+    examen: "Une caisse en fer, rouillée. Quelque chose cliquette dedans, et quelque chose de lourd roule au fond.",
   },
   batterie_voiture: {
     verbe: "ramasser",
@@ -506,10 +520,12 @@ const USAGES_ETABLIS: Record<Exclude<TypeRessource, TypeRessourceNiveau1>, Usage
   caisse_atelier: {
     verbe: "fouiller",
     libelle: "Fouiller l'établi de l'atelier",
-    donne: { barre_metal: 1 },
+    // Plan 0.8 (I1, I2) : la caisse de l'atelier garantit un bocal de clous (5 poignées), un rouleau de fil de fer et
+    // un bidon d'huile ; ils reviennent avec elle.
+    donne: { barre_metal: 1, bocal_clous: 1, rouleau_fil_fer: 1, bidon_huile: 1 },
     qualites: {},
-    duree: 5,
-    examen: "L'atelier de la station : un établi, des chutes de métal, une odeur d'huile froide.",
+    duree: 6,
+    examen: "L'atelier de la station : un établi, des chutes de métal, une odeur d'huile froide. Dans la caisse, un bocal de clous, un rouleau de fil de fer, un bidon d'huile.",
   },
   grenier: {
     verbe: "fouiller",
@@ -579,13 +595,13 @@ const USAGES_ETABLIS: Record<Exclude<TypeRessource, TypeRessourceNiveau1>, Usage
   },
   coop_caisse_froide: {
     verbe: "fouiller",
-    libelle: "Ouvrir les caisses de pièces",
+    libelle: "Prendre un seau de la laiterie",
     // Plan 0.8 (I8) : les roulements et l'alternateur de tracteur en sont retirés (rien de propre à une famille en L1) ;
-    // la chambre froide devient la laiterie, et ses seaux de 10 L arrivent avec le chantier 10.
-    donne: {},
+    // la chambre froide devient la laiterie, et ses seaux de 10 L sont la clé du récupérateur à seau.
+    donne: { seau_10l: 1 },
     qualites: {},
-    duree: 10,
-    examen: "Des caisses plombées « PIÈCES DÉTACHÉES — STOCK DE RÉSERVE », alignées dans le froid. Personne n'y a touché.",
+    duree: 4,
+    examen: "La laiterie : des seaux de tôle galvanisée empilés sur une caisse, dans le froid. Ils ont attendu le lait du matin.",
   },
   // Book 23 §4.7 : la batterie du klaxon. Sa charge dépend des coups déjà donnés (le client la dit à l'examen).
   coop_batterie: {
@@ -602,7 +618,60 @@ const USAGES_ETABLIS: Record<Exclude<TypeRessource, TypeRessourceNiveau1>, Usage
  * Les usages des ressources du niveau 1 (TypeRessourceNiveau1) : chacun arrive avec son lieu, en fin de table (chantier
  * 10 : la station et la Coopérative ; 11 : le gué ; 12 : le Moulin). Une ressource sans usage ne se pose pas.
  */
-const USAGES_NIVEAU1: Partial<Record<TypeRessourceNiveau1, UsageRessource>> = {};
+const USAGES_NIVEAU1: Partial<Record<TypeRessourceNiveau1, UsageRessource>> = {
+  // ---------- La maison (chantier 10) ----------
+  ruine_bidon: {
+    verbe: "ramasser",
+    libelle: "Prendre le bidon",
+    donne: { bidon_5l: 1 },
+    qualites: {},
+    duree: 1.5,
+    examen: "Un bidon de plastique blanc, coincé sous une poutre de la ruine. Cinq litres, le bouchon encore vissé.",
+  },
+  // ---------- H1A, la station (chantier 10) : la pièce de famille, chacun la sienne (Q-0.8-14 : elle revient en 24 h) ----------
+  piece_enclume: {
+    verbe: "ramasser",
+    libelle: "Prendre l'enclume et le sac de charbon",
+    // I23 : le sac de charbon donne 4 charbons.
+    donne: { enclume_depanneur: 1, charbon_bois: 4 },
+    qualites: {},
+    duree: 4,
+    examen: "Sous l'établi, une petite enclume de dépanneur, dix kilos d'acier, et à côté un sac de charbon de bois entamé. De quoi forger.",
+  },
+  piece_alternateur: {
+    verbe: "ramasser",
+    libelle: "Prendre le petit alternateur",
+    donne: { petit_alternateur: 1 },
+    qualites: {},
+    duree: 3,
+    examen: "Sur l'établi, à côté de la voiture éventrée : son alternateur, sorti du moteur avec sa poulie. Quelqu'un l'avait déjà déposé.",
+  },
+  tas_bois: {
+    verbe: "ramasser",
+    libelle: "Prendre une bûche au tas",
+    donne: { buche: 1 },
+    qualites: {},
+    duree: 2,
+    examen: "Le bois de chauffage de l'atelier, fendu et rangé contre le mur. Personne ne viendra plus s'y chauffer : prends-en.",
+  },
+  // ---------- L1A, la Coopérative (chantier 10) : les clés à place fixe ----------
+  coop_grillage: {
+    verbe: "ramasser",
+    libelle: "Prendre le rouleau de grillage",
+    donne: { grillage_rouleau: 1 },
+    qualites: {},
+    duree: 5,
+    examen: "Au parc à volailles, un rouleau de grillage neuf resté contre un piquet : de quoi faire une grille de cuisine.",
+  },
+  coop_cocotte: {
+    verbe: "ramasser",
+    libelle: "Prendre la cocotte en fonte",
+    donne: { cocotte_fonte: 1 },
+    qualites: {},
+    duree: 2,
+    examen: "En rayon, une cocotte en fonte rouge, son couvercle encore posé dessus. Cinq kilos et demi.",
+  },
+};
 
 /**
  * Tous les usages. Les ressources du niveau 1 qui n'ont pas encore le leur n'existent dans aucun lieu : le type les
@@ -619,6 +688,8 @@ export function genererVestiges(premierId: number): Omit<RessourceSol, "disponib
     ["ressort", -0.4, -1.9],
     ["bache", 0.6, 1.9],
     ["barre_metal", -2.6, -1.2],
+    // Plan 0.8 (§2.5) : le bidon de 5 L, pour le récupérateur de la maison.
+    ["ruine_bidon", -1.3, 0.2],
   ];
   return places.map(([type, dx, dz], i) => ({ id: premierId + i, type, x: RUINE.x + dx, z: RUINE.z + dz }));
 }

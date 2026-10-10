@@ -140,6 +140,19 @@ export const STATION = {
 } as const;
 
 /**
+ * Le garage de la station (plan 0.8, chantier 10). Devant l'atelier, son établi de métal (la caisse de l'atelier, avec
+ * les clous, le fil de fer et l'huile) et, à sa droite, un établi de bois bas : dessous, l'enclume de dépanneur et le
+ * sac de charbon. À l'est, une voiture éventrée, capot ouvert, et l'établi où l'on a posé son petit alternateur.
+ * Derrière l'atelier, contre le mur, le bois de chauffage. Les boîtes servent aux collisions (ZONE_STATION) et au rendu (rendu/halte.ts).
+ */
+export const GARAGE = {
+  etabliBois: { x: 117.6, z: 18.05, l: 1.2, p: 0.5 },
+  voitureEventree: { x: 125.6, z: 13.9, l: 4.2, p: 1.9 },
+  etabliVoiture: { x: 123.9, z: 16.9, l: 1.6, p: 0.6 },
+  tasBois: { x: 119.1, z: 10.85, l: 2, p: 0.62 },
+} as const;
+
+/**
  * La boutique se visite (moment-vitrine n° 4, Book 21 §5.1.2) : des murs, une porte en façade, un comptoir de caisse.
  * Façade au sud (z = 17,5), porte de 1,6 m centrée en x = 104,1.
  */
@@ -174,6 +187,11 @@ export const ZONE_STATION: Zone = {
     ...BOUTIQUE.murs,
     BOUTIQUE.caisse,
     STATION.atelier,
+    // Le garage (plan 0.8, chantier 10) : l'établi de bois de l'enclume, la voiture éventrée et son établi, le tas de bois.
+    GARAGE.etabliBois,
+    GARAGE.voitureEventree,
+    GARAGE.etabliVoiture,
+    GARAGE.tasBois,
     // Les piliers de l'auvent
     { x: 95.5, z: STATION.auvent.z, l: 0.6, p: 0.6 },
     { x: 112.5, z: STATION.auvent.z, l: 0.6, p: 0.6 },

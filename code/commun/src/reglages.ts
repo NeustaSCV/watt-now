@@ -26,8 +26,6 @@ export const DEFINITIONS_REGLAGES = {
   decharge_wotts_semaine: { defaut: 0.02, min: 0, max: 0.5, aide: "Part des wotts qui se décharge chaque semaine réelle (0,02 = 2 %)." },
   poules_terrain: { defaut: 3, min: 0, max: 10, aide: "Nombre de poules ensauvagées autour de la ferme." },
   poule_retour_h: { defaut: 2, min: 0.1, max: 48, aide: "Heures réelles avant qu'une poule prise soit remplacée." },
-  coop_repeuplement_h: { defaut: 12, min: 1, max: 240, aide: "Coopérative : toutes les combien d'heures réelles des Éteints détruits reviennent (Book 23 §2.3)." },
-  coop_repeuplement_n: { defaut: 3, min: 0, max: 24, aide: "Coopérative : combien d'Éteints reviennent à chaque fois (la chambre froide d'abord, jusqu'à ses 6 dormants)." },
   inactivite_min: { defaut: 5, min: 1, max: 120, aide: "Minutes sans bouger ni agir avant d'être déconnecté d'office : hors ligne, la faim, la soif et la fatigue sont gelées." },
   panneau_wh_jour: { defaut: 80, min: 0, max: 500, aide: "Wh produits par le petit panneau solaire par jour de calendrier (1 h 50 réelle)." },
   // L'équilibre des armes de métier (Book 25 §8.4, chantier 9) : des multiplicateurs, à 1 par défaut. `npm run equilibre`

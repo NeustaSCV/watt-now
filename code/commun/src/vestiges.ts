@@ -10,6 +10,7 @@
 import type { Inventaire, TypeObjet } from "./objets.ts";
 import type { Qualite } from "./recettes.ts";
 import type { TypeRessource } from "./terrain.ts";
+import { ETAPES_LIEUX, type LieuId } from "./lieux.ts";
 import { DEMONTAGE_LOT2, VESTIGES_LOT2 } from "./vestiges-lot2.ts";
 
 /** Rareté (P-003 §1) : commun, peu commun, rare, légendaire. */
@@ -1264,8 +1265,11 @@ function tirer<T>(table: [T, number][], alea: () => number): T {
   return table[table.length - 1]![0];
 }
 
-/** Ce qu'une fouille rapporte en plus de l'objet habituel : 1 à 3 vestiges tirés dans la table du lieu. */
-export function tirerVestiges(lieu: LieuFouille, alea: () => number): Inventaire {
+/**
+ * Ce qu'une fouille rapporte en plus de l'objet habituel : 1 à 3 vestiges tirés dans la table du lieu. Fouillé à une
+ * étape du niveau 1 (`etape`), on peut y trouver, rarement, une clé de L1 (R-BUTIN : tirerCleRare).
+ */
+export function tirerVestiges(lieu: LieuFouille, alea: () => number, etape?: EtapeButin): Inventaire {
   const table = tableDeFouille(lieu);
   const { min, max } = VESTIGES_PAR_FOUILLE;
   const n = Math.min(max, min + Math.floor(Math.min(Math.max(alea(), 0), 0.999999) * (max - min + 1)));
@@ -1274,5 +1278,43 @@ export function tirerVestiges(lieu: LieuFouille, alea: () => number): Inventaire
     const t = tirer(table, alea);
     trouve[t] = (trouve[t] ?? 0) + 1;
   }
+  const cle = etape ? tirerCleRare(etape, alea) : null;
+  if (cle) trouve[cle] = (trouve[cle] ?? 0) + 1;
   return trouve;
+}
+
+// ---------- La règle du butin opportuniste (R-BUTIN, I7 ; plan 0.8 §2.5, chantier 10) ----------
+
+/** Les clés de L1 : celles de la Coopérative (L1A) et celles du Moulin (L1B). Chacune a sa place fixe dans son lieu. */
+export const CLES_L1A: readonly TypeObjet[] = ["grillage_rouleau", "cocotte_fonte", "seau_10l"];
+export const CLES_L1B: readonly TypeObjet[] = ["toile_jute", "feuillards", "etau"];
+
+/** Les étapes du niveau 1 où une fouille peut, rarement, donner une clé de L1. */
+export type EtapeButin = "H1A" | "H1B" | "L1A" | "L1B";
+
+/**
+ * R-BUTIN : une clé de L1 est **rare** à H1 et en L1 (plus courante à H2 et en L2, qui n'existent pas en 0.8). Hors de sa
+ * place fixe, elle ne sort donc que rarement, avec une chance fixée à la main, en plus du tirage de la fouille (elle
+ * n'est dans aucune table : catalogue-niveau1.test.ts). Aux haltes (H1A, H1B), une des six ; dans un L1, une des
+ * trois de l'autre L1 (les siennes y sont à leur place). La chance est par fouille (2 %) : la station a 7 points à
+ * fouiller, soit ≈ une clé toutes les 7 visites ; la Coopérative en a 12, ≈ une clé du Moulin toutes les 4 visites.
+ */
+export const CLES_RARES: Record<EtapeButin, { chance: number; cles: readonly TypeObjet[] }> = {
+  H1A: { chance: 0.02, cles: [...CLES_L1A, ...CLES_L1B] },
+  H1B: { chance: 0.02, cles: [...CLES_L1A, ...CLES_L1B] },
+  L1A: { chance: 0.02, cles: CLES_L1B },
+  L1B: { chance: 0.02, cles: CLES_L1A },
+};
+
+/** L'étape du niveau 1 d'un lieu, si une fouille peut y donner une clé rare (la maison et le Comptoir : non). */
+export function etapeButin(lieu: LieuId): EtapeButin | undefined {
+  for (const etape of Object.keys(CLES_RARES) as EtapeButin[]) if ((ETAPES_LIEUX as Partial<Record<string, LieuId>>)[etape] === lieu) return etape;
+  return undefined;
+}
+
+/** Le tirage rare d'une clé de L1 (R-BUTIN), à part du tirage de la fouille : null le plus souvent. */
+export function tirerCleRare(etape: EtapeButin, alea: () => number): TypeObjet | null {
+  const { chance, cles } = CLES_RARES[etape];
+  if (Math.min(Math.max(alea(), 0), 0.999999) >= chance) return null;
+  return cles[Math.min(cles.length - 1, Math.floor(Math.min(Math.max(alea(), 0), 0.999999) * cles.length))]!;
 }

@@ -109,11 +109,12 @@ test("les quêtes qui font fabriquer quelque chose le disent : l'arbre sait quoi
 test("aucun ingrédient introuvable : tout ce que l'arbre peut dévoiler se fabrique (sauf le boyau, qui attend le collet)", () => {
   for (const famille of FAMILLES) {
     const t = trouvables(famille, false);
-    const infaisables = RECETTES.filter((r) => !t.recettes.has(r.id)).map((r) => r.id);
+    // Les recettes « plus tard » (plan 0.8 §1.3) ne se dévoilent pas : le module à bobine et le cranequin attendent
+    // le niveau 2, où se trouveront la bobine et les roulements (I9, I12 ; leurs dernières sources sont retirées).
+    const infaisables = RECETTES.filter((r) => !r.aVenir && !t.recettes.has(r.id)).map((r) => r.id);
     // Le boyau séché vient du lapin, et le collet n'attrape encore rien : sa corde d'arc ne se dévoile jamais
     // (déclencheur « vu : boyaux »), elle ne trompe donc personne.
-    // Le marteau remmanché attend sa tête de marteau dans la caisse de la ruine (chantier 10, I10).
-    assert.deepEqual(infaisables.filter((id) => id !== "marteau"), ["corde_arc_boyau"], famille);
+    assert.deepEqual(infaisables, ["corde_arc_boyau"], famille);
   }
 });
 

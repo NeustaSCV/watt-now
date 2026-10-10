@@ -58,7 +58,7 @@ import {
 } from "../../commun/src/survie.ts";
 import { DISTANCE_INTERACTION, PORTEE_ARBRE, distanceMare, RAYON_ESCABEAU, REPOUSSE_MS, USAGES, estArbre, ressourceVisible } from "../../commun/src/terrain.ts";
 import { heuresEcoulees } from "../../commun/src/temps.ts";
-import { DEMONTAGE, LIEU_DE_FOUILLE, estOrdure, tirerVestiges } from "../../commun/src/vestiges.ts";
+import { DEMONTAGE, LIEU_DE_FOUILLE, estOrdure, etapeButin, tirerVestiges } from "../../commun/src/vestiges.ts";
 import {
   DUREE_VOYAGE_S,
   EAU_PAR_KM,
@@ -99,6 +99,7 @@ import {
   formaterWotts,
   prixAchatCle,
   prixVenteCle,
+  refusVenteCle,
   valeurWotts,
   type Wotts,
 } from "../../commun/src/economie.ts";
@@ -935,6 +936,9 @@ export class Joueur implements Voyageur, ParticipantLecon {
       case "acheter": {
         const n = Math.floor(op.quantite);
         if (!(n >= 1) || !estCleObjet(op.objet) || (this.comptoir.stock[op.objet] ?? 0) < n) return;
+        // Une clé de L1 : seulement après une première visite de son lieu (plan 0.8, chantier 10).
+        const refusCle = refusVenteCle(typeDe(op.objet), this.quetes.etat.faits);
+        if (refusCle) return this.info(refusCle);
         const total = prixVenteCle(op.objet) * n;
         if (total > enPoche + 1e-6) return this.info(`Il te faut ${formaterWotts(total)} en bons. Gagne-les : dépose de l'électricité, vends, ou pédale pour les Compteurs.`);
         if (poidsInventaire(this.inventaire, this.gourde.litres) + OBJETS[typeDe(op.objet)].poids * n > capaciteDe(this.inventaire)) return this.sacTropLourd();
@@ -2745,7 +2749,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
       } else for (const b of BATTERIES) if (usage.donne[b]) this.ajouterCharge(b, CHARGE_TROUVEE[b] * (usage.donne[b] ?? 0));
       // Vestiges, lot 1 : une fouille rapporte aussi du bric-à-brac, tiré dans la table du lieu.
       const lieuFouille = LIEU_DE_FOUILLE[r.type];
-      if (lieuFouille) this.recevoirBricABrac(tirerVestiges(lieuFouille, this.alea));
+      // Au niveau 1, rarement, une clé de L1 (R-BUTIN, plan 0.8 chantier 10 : etapeButin, tirerCleRare).
+      if (lieuFouille) this.recevoirBricABrac(tirerVestiges(lieuFouille, this.alea, etapeButin(lieu)));
       if (this.tuto) {
         this.tuto.branches += usage.donne.branche ?? 0;
         this.tuto.pierres += usage.donne.pierre ?? 0;

@@ -130,8 +130,9 @@ test("fouiller la caisse à outils donne les outils habituels plus du bric-à-br
 });
 
 test("le bric-à-brac qui ne rentre pas reste par terre, en petit tas ramassable", () => {
-  // Sans sac (10 kg de poches) et déjà 8,2 kg : les outils de la caisse passent, le bric-à-brac non.
-  const t = monter({ couteau: 1, pierre: 4 });
+  // Sans sac (10 kg de poches) et déjà 6,2 kg : les outils de la caisse (2 kg avec la tête de marteau, plan 0.8)
+  // passent, le bric-à-brac non.
+  const t = monter({ couteau: 1, pierre: 3 });
   const caisse = t.vestige("caisse_outils");
   t.allerA(caisse.x, caisse.z);
   t.joueur.recevoir({ t: "interagir", cible: { genre: "ressource", id: caisse.id }, verbe: "fouiller" });

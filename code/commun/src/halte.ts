@@ -2,12 +2,13 @@
 // des épaves sur la route, une grange effondrée à l'écart, du bois mort et des pierres en lisière.
 // Un seul jeu de ressources, partagé par tous les voyageurs (Book 01 §2 bis).
 
-import { FERME_HALTE, GOULET, ROUTE, STATION, ZONE_STATION, dansBoite } from "./lieux.ts";
+import { FERME_HALTE, GARAGE, GOULET, ROUTE, STATION, ZONE_STATION, dansBoite } from "./lieux.ts";
 import { nouvelEteint, type Eteint } from "./eteints.ts";
-import { aleatoire, type ButinLieu, type RessourceSol, type TypeRessource } from "./terrain.ts";
+import { VRAC_MAX, aleatoire, type ButinLieu, type RessourceSol, type TypeRessource } from "./terrain.ts";
 
 /** À augmenter quand le contenu de la halte change : la base le régénère alors. */
-export const VERSION_HALTE = 5;
+export const VERSION_HALTE = 6;
+
 
 /**
  * Le butin de la halte (plan 0.8, chantier 10 ; le moteur : serveur/src/lieu-vivant.ts). Les bûches et les pierres
@@ -15,6 +16,10 @@ export const VERSION_HALTE = 5;
  */
 export const BUTIN_HALTE: ButinLieu = {
   repousse: { buche: 30 * 60_000, pierre: 30 * 60_000 },
+  // B2, B4, B8 : 12 bûches et 13 pierres pour un voyageur seul ; jusqu'à trois fois plus quand ils sont nombreux.
+  vrac: { buche: 12, pierre: 13 },
+  // R4 : la pièce de famille, chacun la sienne (24 h, Q-0.8-14) ; le tas de bois, 10 bûches à chacun (6 h, B3).
+  personnel: { panneau_auvent: 1, piece_enclume: 1, piece_alternateur: 1, tas_bois: 10 },
 };
 
 export function genererHalte(): Omit<RessourceSol, "disponible">[] {
@@ -25,6 +30,11 @@ export function genererHalte(): Omit<RessourceSol, "disponible">[] {
     // Le petit panneau solaire, descendu de l'auvent et appuyé contre son pilier est (2026-10-08 : au sol, c'est clair).
     ["panneau_auvent", STATION.auvent.x + 9.6, STATION.auvent.z + 0.9],
     ["caisse_atelier", STATION.atelier.x, 18.1],
+    // La pièce de famille (plan 0.8, chantier 10) : chacun voit la sienne (FAMILLE_DE_RESSOURCE) et la prend pour lui.
+    ["piece_enclume", GARAGE.etabliBois.x, GARAGE.etabliBois.z + 0.3],
+    ["piece_alternateur", GARAGE.etabliVoiture.x - 0.3, GARAGE.etabliVoiture.z + 0.2],
+    // Le bois de chauffage derrière l'atelier : 10 bûches à chacun (B3).
+    ["tas_bois", GARAGE.tasBois.x, GARAGE.tasBois.z - 0.35],
     ["epave_voiture", 63, 33.2],
     ["epave_voiture", 139, 37],
     ["epave_camion", 170, 22],
@@ -48,9 +58,12 @@ export function genererHalte(): Omit<RessourceSol, "disponible">[] {
   };
   const lisiere = (): [number, number] => [6 + aleat() * 188, aleat() < 0.5 ? 10 + aleat() * 4 : 54.5 + aleat() * 4];
   placer("branche", 26, lisiere);
-  placer("buche", 6, lisiere);
-  placer("pierre", 8, () => [GOULET.x - 10 + aleat() * 20, 12 + aleat() * 46]);
-  placer("pierre", 5, () => [FERME_HALTE.x - 8 + aleat() * 16, 12 + aleat() * 14]);
+  // Le vrac (B8) : VRAC_MAX tournées, dont seule la première est en jeu pour un voyageur seul (BUTIN_HALTE.vrac).
+  for (let tour = 0; tour < VRAC_MAX; tour++) {
+    placer("buche", 12, lisiere);
+    placer("pierre", 8, () => [GOULET.x - 10 + aleat() * 20, 12 + aleat() * 46]);
+    placer("pierre", 5, () => [FERME_HALTE.x - 8 + aleat() * 16, 12 + aleat() * 14]);
+  }
   placer("buisson", 5, () => [20 + aleat() * 160, aleat() < 0.5 ? 15 + aleat() * 8 : 48 + aleat() * 7]);
   return ressources;
 }

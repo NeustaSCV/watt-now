@@ -21,7 +21,8 @@ export const PIECES: Record<PieceCoop, { boite: Boite; sombre: boolean; nom: str
   libre_service: { boite: { x: 46, z: 36, l: 24, p: 8 }, sombre: false, nom: "le libre-service" },
   bureaux: { boite: { x: 66, z: 36, l: 16, p: 8 }, sombre: true, nom: "les bureaux" },
   hangar: { boite: { x: 54, z: 24, l: 40, p: 16 }, sombre: true, nom: "le hangar" },
-  chambre_froide: { boite: { x: 63, z: 12, l: 22, p: 8 }, sombre: true, nom: "la chambre froide" },
+  // Plan 0.8 (I8) : la chambre froide est devenue la laiterie (ses seaux de 10 L sont une clé de L1) ; l'identifiant reste.
+  chambre_froide: { boite: { x: 63, z: 12, l: 22, p: 8 }, sombre: true, nom: "la laiterie" },
   atelier: { boite: { x: 17, z: 24, l: 22, p: 20 }, sombre: true, nom: "l'atelier des tracteurs" },
 };
 
@@ -330,13 +331,27 @@ export function radioSurEtabli(ou: { x: number; z: number }): boolean {
 }
 
 /** Version du contenu de la Coopérative (ressources, butin) : la changer régénère les instances. */
-export const VERSION_COOP = 2;
+export const VERSION_COOP = 3;
+
+/**
+ * Le parc à volailles (plan 0.8, chantier 10) : dans la cour des silos, au nord du grand bâtiment, un enclos de piquets
+ * dont le grillage est tombé. Un rouleau neuf est resté contre un piquet : la clé du foyer de cuisine. Sans collision
+ * (le grillage est à terre, on enjambe) ; le rendu le dessine (rendu/cooperative.ts).
+ */
+export const PARC_VOLAILLES: Boite = { x: 44, z: 4, l: 8, p: 5 };
+
+/**
+ * Toute la Coopérative revient au bout de 24 h (plan 0.8 §9.1, N1 ; R51) : les Éteints, le butin, les clés à place
+ * fixe, les portes à leur état d'origine. Le repeuplement partiel (3 Éteints toutes les 12 h) n'existe plus.
+ */
+export const REINITIALISATION_COOP_MS = 24 * 3_600_000;
 
 
 /**
  * Le butin de la Coopérative (Book 23 §2.2), posé sur le décor : commun dehors (libre-service, quai), utile à l'atelier
- * et au hangar, rare au fond (le coffre des bureaux, les caisses de la chambre froide). Un pied-de-biche est garanti
- * sous le comptoir de caisse.
+ * et au hangar, rare au fond (le coffre des bureaux). Un pied-de-biche est garanti sous le comptoir de caisse. Plan 0.8
+ * (chantier 10) : les trois clés de L1 à place fixe, le rouleau de grillage au parc à volailles, la cocotte en rayon
+ * au libre-service, les seaux de 10 L dans la laiterie (l'ancienne chambre froide : `coop_caisse_froide`).
  */
 export function butinCoop(): { id: number; type: TypeRessource; x: number; z: number }[] {
   const points: [TypeRessource, number, number][] = [
@@ -357,6 +372,9 @@ export function butinCoop(): { id: number; type: TypeRessource; x: number; z: nu
     ["coop_batterie", BATTERIE_TRACTEUR.x, BATTERIE_TRACTEUR.z],
     // 0.6 : la haie d'ifs taillés en boules, devant les bureaux (Book 25 §3.2), ajoutée de la même façon.
     ["coop_ifs", 67, 43.6],
+    // 0.8 (chantier 10) : le grillage contre un piquet du parc à volailles, la cocotte sur le rayon bas.
+    ["coop_grillage", PARC_VOLAILLES.x - 2.25, PARC_VOLAILLES.z + 2.2],
+    ["coop_cocotte", 44.2, 34.77],
   ];
   return points.map(([type, x, z], i) => ({ id: i + 1, type, x, z }));
 }
