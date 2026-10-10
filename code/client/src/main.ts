@@ -406,6 +406,7 @@ const hud = new Hud(
     equiper: (objet) => envoyer({ t: "equiper", objet }),
     preparer: (objet) => envoyer({ t: "preparer", objet }),
     reparer: (objet, fortune) => envoyer({ t: "reparer", objet, fortune }),
+    reprendre: (objet, geste) => envoyer({ t: "reprendre_arme", objet, geste }),
     coffre: (id, sens, objet, quantite) => envoyer({ t: "coffre", id, sens, objet, quantite }),
     amenager: (genre, id, verbe) => envoyer({ t: "interagir", cible: { genre, id }, verbe }),
     fabriquer: (r) => {
@@ -921,6 +922,10 @@ function recevoir(message: MessageServeur): void {
       } else if (message.actif) son.jouer(message.id === "klaxon" ? "klaxon" : "sonnette", ou);
       return;
     }
+    // Reprendre une arme sur son meuble (plan 0.8, chantier 9) : l'étoile qui s'ajoute brille dans le sac.
+    case "arme_reprise":
+      hud.armeReprise(message.avant, message.apres, message.geste);
+      return;
     case "usure":
       hud.majUsure(message.usure, message.evenement, message.charge);
       if (message.evenement?.etat === "cassee") son.jouer("chute_corps", null, { gain: 0.5 });
@@ -1270,6 +1275,8 @@ hud.sourceFiche = (genre, id) => {
   return installations.get(id)?.vue ?? null;
 };
 hud.voisinsFiche = () => ({ installations: [...installations.values()].map((i) => i.vue), feux: [...feux.values()].map((f) => f.vue) });
+// Reprendre une arme sur son meuble (chantier 9) : les installations du terrain autour de soi.
+hud.alentoursReprise = () => (position && lieu === "terrain" ? { x: position.x, z: position.z, feux: [], installations: [...installations.values()].map((i) => i.vue), inventaire } : null);
 hud.outilsAPortee = () => (position && lieu === "terrain" ? outilsAPortee({ x: position.x, z: position.z, installations: [...installations.values()].map((i) => i.vue), inventaire }) : inventaire);
 // Le dialogue de départ dit si l'on part à l'abri (une nuit complète) ou s'il vaut mieux y aller d'abord.
 hud.aLAbri = () =>

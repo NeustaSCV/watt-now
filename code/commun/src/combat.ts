@@ -9,6 +9,8 @@ import { ARMES_CHARBONNIERS, DEBRIS_ARMES_CHARBONNIERS, MATIERES_ARMES_CHARBONNI
 import { ARMES_VOLTAIQUES } from "./armes/voltaiques.ts";
 import { ARMES_MECANISTES } from "./armes/mecanistes.ts";
 import { REGLAGES } from "./reglages.ts";
+import type { LieuRecette } from "./recettes.ts";
+import { aCote } from "./recettes/lieux.ts";
 
 // ---------- Les armes ----------
 
@@ -207,10 +209,12 @@ export const SEUIL_ABIMEE = 0.3;
 export const MALUS_ABIMEE = 0.7;
 /**
  * La réparation (Book 23 §4.3, Book 25 §4.4) : à l'établi pour le bois, à la meule (pédalier) ou à la forge pour les
- * lames, à la forge pour le métal. La réparation de fortune (ficelle, chiffons), partout et pour toutes les familles,
- * ne remonte pas au-delà d'« abîmée ».
+ * lames, à la forge pour le métal ; depuis la 0.8 (chantier 9), au banc solaire pour une arme électrique, et le manche à
+ * l'établi à étau, sans forge, pour toutes les familles (R-ARMES-4 : la tête du marteau ne s'use pas, seul le manche).
+ * La réparation de fortune (ficelle, chiffons), partout et pour toutes les familles, ne remonte pas au-delà d'« abîmée ».
+ * Le geste lui-même (« Reprendre l'arme », R-ARMES-5) est dans `evolution-armes.ts`.
  */
-export type MatiereArme = "bois" | "lame" | "metal";
+export type MatiereArme = "bois" | "lame" | "metal" | "manche" | "electrique";
 export const MATIERE_ARME: Partial<Record<TypeObjet, MatiereArme>> = {
   gourdin: "bois",
   epieu: "bois",
@@ -220,7 +224,8 @@ export const MATIERE_ARME: Partial<Record<TypeObjet, MatiereArme>> = {
   couteau: "lame",
   couteau_aiguise: "lame",
   lame_forgee: "lame",
-  marteau: "metal",
+  // Le marteau remmanché (R-ARMES-4) : la tête ne s'use pas, c'est le manche qu'on refait.
+  marteau: "manche",
   masse: "metal",
   barre_metal: "metal",
   pied_de_biche: "metal",
@@ -228,26 +233,41 @@ export const MATIERE_ARME: Partial<Record<TypeObjet, MatiereArme>> = {
   fourche_foin: "bois",
   // 🔥 Les lames des Charbonniers (Book 25 §4.4, chantier 5).
   ...MATIERES_ARMES_CHARBONNIERS,
-  // ⚡ Les armes électriques (Book 25 §5.3) : un manche de bois (gourdin, épieu), qui se reprend à l'établi.
-  matraque_fortune: "bois",
-  matraque_electrique: "bois",
-  aiguillon: "bois",
+  // ⚡ Les armes électriques (Book 25 §5.3) : un manche de bois (gourdin, épieu) et leur câblage, qui se reprennent au
+  // banc solaire (plan 0.8 §2.4) ; à défaut, le manche à l'établi.
+  matraque_fortune: "electrique",
+  matraque_electrique: "electrique",
+  aiguillon: "electrique",
+  // Les arcs et l'arbalète (tir.ts) : du bois, à l'établi (plan 0.8, chantier 9).
+  arc_fortune: "bois",
+  arc_simple: "bois",
+  arc_if: "bois",
+  arc_sportif: "bois",
+  arbalete: "bois",
+  arbalete_lourde: "bois",
 };
-/** Un atelier où remettre une arme à neuf : l'installation, l'accessoire qu'il y faut, ce que le geste consomme. */
+/**
+ * Un atelier où remettre une arme à neuf, lu dans les meubles (plan 0.8, chantier 9) : la construction, le niveau de sa
+ * lignée qu'il y faut, l'accessoire monté dessus ; ce que le geste consomme. Le lieu se juge comme celui d'une recette
+ * (`lieuAtelier`, `refusLieu` de lieu-recette.ts) : à 3 m, au bon niveau.
+ */
 export interface AtelierReparation {
-  installation: "etabli" | "pedalier" | "forge";
+  installation: "etabli" | "pedalier" | "forge" | "banc_recharge";
+  /** Le niveau du meuble dans sa lignée (l'établi à étau : 2). Absent : 1. */
+  niveau?: number;
   nom: string;
   /** L'accessoire posé sur l'installation (la meule du pédalier). */
   accessoire?: "meule";
   /** Ce que coûte la remise à neuf ici (absent : rien). */
   cout?: Inventaire;
-  /** Le geste, s'il a un nom à lui : « Affûter », « Reprendre la lame ». */
+  /** Le geste, s'il a un nom à lui : « Affûter », « Reprendre la lame », « Refaire le manche ». */
   geste?: string;
 }
 /**
  * Où l'on remet une arme à neuf, dans l'ordre où on les cherche (décision 8 du Book 25 : les deux pour les lames). La
  * meule affûte, vite et sans rien consommer ; la forge reprend la lame (chauffer, redresser, limer) pour un kilo de
- * charbon (le Book 25 §4.4 dit ½ kg ; le sac compte le charbon au kilo).
+ * charbon (le Book 25 §4.4 dit ½ kg ; le sac compte le charbon au kilo). Le manche se refait à l'établi à étau
+ * (`LIEU_REPARER_MANCHE`, recettes/communes.ts) : l'étau tient la tête, une branche fait le manche neuf.
  */
 export const ATELIER_REPARATION: Record<MatiereArme, AtelierReparation[]> = {
   bois: [{ installation: "etabli", nom: "l'établi" }],
@@ -256,7 +276,16 @@ export const ATELIER_REPARATION: Record<MatiereArme, AtelierReparation[]> = {
     { installation: "forge", nom: "la forge", cout: { charbon_bois: 1 }, geste: "Reprendre la lame" },
   ],
   metal: [{ installation: "forge", nom: "la forge" }],
+  manche: [{ installation: "etabli", niveau: 2, nom: "l'établi à étau", cout: { branche: 1 }, geste: "Refaire le manche" }],
+  electrique: [
+    { installation: "banc_recharge", nom: "le banc solaire" },
+    { installation: "etabli", nom: "l'établi" },
+  ],
 };
+/** Le lieu d'un atelier, comme celui d'une recette : à côté du meuble, à son niveau, avec son accessoire. */
+export function lieuAtelier(a: AtelierReparation): LieuRecette {
+  return aCote(a.installation, { ...(a.niveau ? { niveau: a.niveau } : {}), ...(a.accessoire ? { accessoire: a.accessoire } : {}) });
+}
 /** Les ateliers d'une matière, en toutes lettres : « la meule du pédalier ou la forge ». */
 export function nomsAteliers(matiere: MatiereArme): string {
   const noms = ATELIER_REPARATION[matiere].map((a) => a.nom);
@@ -313,18 +342,23 @@ export function porteeBruitCoup(a: Arme, appuye: boolean): number {
 /** Ce que le serveur accepte d'avance sur la fin d'un geste (le réseau n'est pas régulier). */
 export const TOLERANCE_COUP_MS = 80;
 
-/** La meilleure arme du sac ; pour une arme de métier, son meilleur exemplaire. */
+/**
+ * La meilleure arme du sac ; pour une arme de métier, son meilleur exemplaire. « Meilleure » se juge aux **dégâts
+ * décidés** de l'exemplaire (plan 0.8 §2.4 : `parEtoiles`, `valeurDecidee`, lus par `armeDeCle`), pas au rang : sans
+ * cela, la hache (1,0) passait avant le pied-de-biche (1,5) et le marteau (0,8) avant la lance (0,7)… À dégâts égaux,
+ * le rang départage (la masse avant la fourche, l'allonge et le reste étant pesés quand on a rangé les armes).
+ */
 export function meilleureArme(inventaire: Inventaire): Arme {
+  let meilleure: Arme | null = null;
   for (const a of ARMES) {
     if (!a.objet) continue;
-    if (!a.metier) {
-      if ((inventaire[a.objet] ?? 0) > 0) return a;
-      continue;
-    }
-    const cle = meilleurExemplaire(inventaire, a.objet);
-    if (cle) return armeDeCle(cle) ?? a;
+    const cle = a.metier ? meilleurExemplaire(inventaire, a.objet) : (inventaire[a.objet] ?? 0) > 0 ? a.objet : null;
+    if (!cle) continue;
+    const exemplaire = armeDeCle(cle) ?? a;
+    // ARMES est trié par rang : à dégâts égaux, la première trouvée reste.
+    if (!meilleure || exemplaire.degatsTorse > meilleure.degatsTorse) meilleure = exemplaire;
   }
-  return POINGS;
+  return meilleure ?? POINGS;
 }
 
 /** Les caractéristiques d'une arme (ou d'un exemplaire étoilé), telles que le joueur les lit dans son sac (2026-10-08). */
