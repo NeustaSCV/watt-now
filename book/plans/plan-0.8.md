@@ -459,13 +459,31 @@ Le code 0.7.3 a déjà des niveaux et des recettes que la grille place au niveau
 
 ---
 
+**Chantier 16 · La page d'administration sur le réseau local (P-014)** (vague 1, indépendant, **M**)
+
+- **Contenu** (proposition P-014 de `PROPOSITIONS.md`, à lire en entier) : une page web d'administration servie par le serveur du jeu sur le **port 4321**, **sans authentification**, accessible seulement depuis le réseau local du porteur. Elle permet de **supprimer un compte** (confirmation en retapant le pseudo ; déconnexion d'abord), de **réinitialiser un mot de passe** (mot de passe provisoire affiché une seule fois ; sessions fermées), de voir **combien de joueurs sont connectés** et lesquels (pseudo, famille, lieu), et **ce que le serveur sait déjà** de chaque joueur (compte, personnage, sac, coffres, installations, feux, mesures). **Aucun nouveau compteur ni nouvelle mesure.** Le compte « god » est protégé (ni suppression, ni réinitialisation).
+- **Le réseau du porteur** (2026-10-10) : le **Pi est dans une DMZ en 192.168.254.0/24** (lui-même en 192.168.254.99) ; **le réseau local du porteur est en 192.168.1.0/24**.
+- **Garde-fous** :
+  - un **serveur web séparé** dans le même programme, qui n'écoute que sur 4321 : rien de l'admin par le port 1234 du jeu ;
+  - dans Docker (`deploiement/compose.yaml`), le port 4321 publié **seulement sur l'adresse du Pi** (`192.168.254.99:4321`), **jamais** redirigé sur la box ;
+  - **liste blanche d'adresses** : n'accepter **que 192.168.1.0/24** (le réseau local du porteur) et 127.0.0.1 ; **refuser 192.168.254.0/24** (la DMZ : d'autres machines peuvent y être exposées) et tout le reste ; vérifier quelle adresse source le Pi voit réellement pour un poste de 192.168.1.x (si la box fait de la traduction d'adresse entre les deux réseaux, la source peut apparaître comme la box : à mesurer avant de figer la règle, voir Q-0.8-27) ;
+  - ⚠ **une DMZ « hôte exposé »** sur certaines box ouvre **tous** les ports du Pi sur Internet : la liste blanche est alors la seule barrière d'une page sans mot de passe (voir Q-0.8-28) ;
+  - un **journal des actions** (quoi, quel compte, quand) dans le journal du serveur.
+- **Interface** : HTML simple, lisible sur téléphone et ordinateur, en français ; une confirmation **dans la page** avec un bouton (pas de fenêtre de dialogue à croix, règle R48).
+- **Fichiers** : `serveur/src/admin-web.ts` (nouveau), `serveur/src/index.ts` (démarrer le second serveur), `serveur/src/base.ts` (lecture, suppression en cascade, réinitialisation), `deploiement/compose.yaml`, `deploiement/LISEZMOI.md`.
+- **Dépendances** : aucune ; peut se faire dès la vague 1 et être livré à part.
+- **Tests** : refus d'une adresse hors liste blanche (dont 192.168.254.x) ; suppression en cascade ; réinitialisation (ancien mot de passe refusé, jetons effacés) ; « god » protégé ; le port 1234 ne sert aucune route d'admin ; aucune nouvelle mesure écrite.
+- **Books** : 17 (architecture), 08 (plateforme), `deploiement/LISEZMOI.md`.
+
+---
+
 ## 4. L'ordre et le parallélisme
 
 ### 4.1 Les vagues
 
 | Vague | Chantiers (en parallèle) | Doit être fini avant |
 |---|---|---|
-| **1 · Les fondations** | **1** Moteur des constructions · **2** Dévoilement et migration · **3** Catalogue des objets · **4** Carte à deux routes | La vague 2. Le chantier 1 livre d'abord ses types (une demi-journée) ; le chantier 2 s'appuie dessus |
+| **1 · Les fondations** | **1** Moteur des constructions · **2** Dévoilement et migration · **3** Catalogue des objets · **4** Carte à deux routes · **16** Page d'administration (indépendante) | La vague 2. Le chantier 1 livre d'abord ses types (une demi-journée) ; le chantier 2 s'appuie dessus |
 | **2 · La base et les armes** | **5** Feu et eau · **6** Couchage, stockage, établi, lumière · **7** Meubles de famille · **8** Armes · **9** Évolution des armes | La vague 3 (le 9 peut déborder sur la vague 3) |
 | **3 · Les lieux et le butin** | **10** Butin maison, H1A, L1A · **11** Le gué · **12** Le Moulin | La vague 4. La préparation graphique de 11 et 12 commence dès la vague 1 |
 | **4 · L'intégration** | **13** Tutoriel, quêtes, aide, fiche · **14** Équilibrage et rythme · **15** Books et bible | La livraison |
@@ -627,6 +645,8 @@ vague 4   [13 Tutoriel, quêtes, aide] ◄────────────�
 | **Q-0.8-24** | La vue par pièce du Moulin : on attend l'export des portes par la session « bâtiments », ou on les relève dans le jeu ? | Demander l'export tout de suite ; relever à la main si elle n'a pas répondu à la vague 3 | 12 |
 | **Q-0.8-25** | Les noms affichés : « Le Gué-aux-Saules » et « Le Moulin à eau » (ou « La Minoterie du Gué », l'enseigne du modèle) ? | « Le Gué-aux-Saules » et « Le Moulin du Gué » : le lien entre les deux se lit sur la carte | 4 |
 | **Q-0.8-26** | Le Book 25 §2.5 (« ★★★ seul, en s'y mettant ») contredit la grille (★★ jusqu'au niveau 1, ★★★ à L2). On réécrit la règle d'or avec la grille ? | Oui (chantier 15) | 15 |
+| **Q-0.8-27** | La page d'administration (chantier 16) : quelle adresse source le Pi voit-il pour un poste du réseau 192.168.1.0/24 (la vraie adresse, ou celle de la box si elle traduit les adresses entre le réseau local et la DMZ) ? | La mesurer au premier déploiement (le journal de la page l'affiche) avant de figer la liste blanche |
+| **Q-0.8-28** | La DMZ de la box est-elle une DMZ « hôte exposé » (tous les ports du Pi ouverts sur Internet) ? Si oui, une page sans mot de passe n'est protégée que par la liste blanche | Ajouter tout de même un mot de passe simple ou un jeton dans l'adresse, saisi une fois sur le poste du porteur ; sinon, vérifier sur la box que seul le port 1234 est ouvert |
 
 **Une note sur les sources.** Le bloc `familles` de `progression-par-ingredients-page.json` (et le §4 du `.md` v5) dit encore que l'enclume donne ★★★ et que le sac donne « les 4 premiers charbons ». Les décisions plus récentes l'emportent : **★★** (P1, Q-A6) et **4 charbons** (I23). La question V5-3 est donc réglée.
 
@@ -663,5 +683,6 @@ vague 4   [13 Tutoriel, quêtes, aide] ◄────────────�
 | 13 | Le tutoriel, les quêtes, l'aide et la fiche | 4 | L | 5 à 12 |
 | 14 | L'équilibrage, le rythme, les tests de jeu | 4 | M | 5 à 12 |
 | 15 | Les books et la bible | 4 | M | les décisions |
+| 16 | La page d'administration sur le réseau local (P-014) | 1 | M | — |
 
-**Total : 7 L et 8 M**, soit environ **45 jours-agent** au milieu de la fourchette (S ≈ ½ à 1 jour, M ≈ 1 à 3, L ≈ 3 à 5).
+**Total : 7 L et 9 M**, soit environ **47 jours-agent** au milieu de la fourchette (S ≈ ½ à 1 jour, M ≈ 1 à 3, L ≈ 3 à 5).
