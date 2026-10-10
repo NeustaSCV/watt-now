@@ -139,6 +139,11 @@ export class Cooperatives {
     return this.instances.size;
   }
 
+  /** Le compte est supprimé (page d'administration) : sa Coopérative quitte la mémoire sans être réécrite. */
+  oublier(compteId: number): void {
+    this.instances.delete(compteId);
+  }
+
   /**
    * Un leurre du décor (Book 23 §4.7). Le klaxon vide la batterie du tracteur (quatre coups) ; la sonnette sonne
    * toujours ; la radio s'allume et s'éteint, et joue tant que les piles tiennent. Renvoie ce qu'on en dit au joueur.

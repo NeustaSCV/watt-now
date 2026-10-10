@@ -118,6 +118,57 @@ export class PseudoReserve extends PseudoPris {
   }
 }
 
+/** La page d'administration (P-014) ne supprime ni ne réinitialise un compte protégé (« god »). */
+export class CompteProtege extends Error {
+  constructor() {
+    super("Ce compte est protégé.");
+  }
+}
+
+/** Une ligne de la liste des comptes de la page d'administration. */
+export interface CompteAdmin {
+  id: number;
+  pseudo: string;
+  famille: Famille | null;
+  creeLe: string;
+  /** La dernière sauvegarde de sa position (ISO) ; null : pas de personnage. */
+  majLe: string | null;
+  admin: boolean;
+}
+
+/** Ce que la base sait d'un joueur (la fiche de la page d'administration) : rien qui ne soit déjà gardé. */
+export interface FicheCompte {
+  id: number;
+  pseudo: string;
+  creeLe: string;
+  admin: boolean;
+  protege: boolean;
+  /** Les sessions ouvertes (jetons gardés). */
+  sessions: number;
+  personnage: {
+    famille: Famille;
+    lieu: string;
+    x: number;
+    z: number;
+    majLe: string;
+    besoins: Besoins;
+    gourde: { contenu: string; litres: number };
+    arme: string | null;
+    sante: Sante;
+    endurance: number;
+    wotts: { poche: Wotts; compte: Wotts };
+    tutoriel: EtatTutoriel | null;
+    quetesFinies: string[];
+  } | null;
+  sac: Inventaire;
+  installations: InstallationVue[];
+  feux: FeuEnBase[];
+  /** Ses sacs perdus ou tas jetés encore au sol, où qu'ils soient. */
+  sacsAuSol: number;
+  /** Ses mesures (Book 17 §6), regroupées : combien de lignes, et leur somme. */
+  mesures: { genre: string; quoi: string; nombre: number; total: number }[];
+}
+
 const SCHEMA = `
   CREATE TABLE IF NOT EXISTS comptes (
     id         INTEGER PRIMARY KEY,
@@ -987,6 +1038,110 @@ export class Base {
 
   deplacerInstallation(compteId: number, id: number, x: number, z: number, o: number): void {
     this.db.prepare("UPDATE installations SET x = ?, z = ?, o = ? WHERE compte_id = ? AND id = ?").run(x, z, o, compteId, id);
+  }
+
+  // ---------- La page d'administration (P-014, serveur/src/admin-web.ts) ----------
+  // De la lecture seule de ce que la base sait déjà (aucun compteur nouveau), la suppression en cascade et la
+  // réinitialisation du mot de passe. Rien ici n'appelle `chargerPersonnage` ni `chargerRessources`, qui écrivent.
+
+  /** Tous les comptes, du plus ancien au plus récent : de quoi faire la liste de la page d'administration. */
+  listeComptes(): CompteAdmin[] {
+    const lignes = this.db
+      .prepare(
+        `SELECT c.id, c.pseudo, c.cree_le, p.famille, p.maj_le, (a.compte_id IS NOT NULL) AS admin
+         FROM comptes c LEFT JOIN personnages p ON p.compte_id = c.id LEFT JOIN admin a ON a.compte_id = c.id
+         ORDER BY c.id`,
+      )
+      .all() as { id: number; pseudo: string; cree_le: string; famille: Famille | null; maj_le: string | null; admin: number }[];
+    return lignes.map((l) => ({ id: l.id, pseudo: l.pseudo, famille: l.famille, creeLe: l.cree_le, majLe: l.maj_le, admin: l.admin === 1 }));
+  }
+
+  /** Un compte protégé de la page d'administration : l'admin désigné, et tout pseudo réservé (« god » et ses sosies). */
+  compteProtege(id: number): boolean {
+    const l = this.db.prepare("SELECT pseudo FROM comptes WHERE id = ?").get(id) as { pseudo: string } | undefined;
+    return this.estAdmin(id) || (l !== undefined && pseudoReserve(l.pseudo));
+  }
+
+  /** La fiche d'un joueur, telle que la base la garde ; null si le compte n'existe pas. */
+  ficheCompte(id: number): FicheCompte | null {
+    const c = this.db.prepare("SELECT id, pseudo, cree_le FROM comptes WHERE id = ?").get(id) as { id: number; pseudo: string; cree_le: string } | undefined;
+    if (!c) return null;
+    const p = this.db
+      .prepare("SELECT famille, lieu, x, z, maj_le, kcal, eau, repos, gourde_contenu, gourde_litres, arme FROM personnages WHERE compte_id = ?")
+      .get(id) as
+      | { famille: Famille; lieu: string; x: number; z: number; maj_le: string; kcal: number; eau: number; repos: number; gourde_contenu: string; gourde_litres: number; arme: string }
+      | undefined;
+    const jetons = (this.db.prepare("SELECT COUNT(*) AS n FROM jetons WHERE compte_id = ?").get(id) as { n: number }).n;
+    const sacs = (this.db.prepare("SELECT COUNT(*) AS n FROM sacs WHERE proprietaire = ?").get(id) as { n: number }).n;
+    const mesures = this.db
+      .prepare("SELECT genre, quoi, COUNT(*) AS nombre, SUM(valeur) AS total FROM mesures WHERE compte_id = ? GROUP BY genre, quoi ORDER BY genre, quoi")
+      .all(id) as { genre: string; quoi: string; nombre: number; total: number }[];
+    return {
+      id: c.id,
+      pseudo: c.pseudo,
+      creeLe: c.cree_le,
+      admin: this.estAdmin(id),
+      protege: this.compteProtege(id),
+      sessions: jetons,
+      personnage: p
+        ? {
+            famille: p.famille,
+            lieu: p.lieu,
+            x: p.x,
+            z: p.z,
+            majLe: p.maj_le,
+            besoins: { kcal: p.kcal, eau: p.eau, repos: p.repos },
+            gourde: { contenu: p.gourde_contenu, litres: p.gourde_litres },
+            arme: p.arme || null,
+            ...this.chargerSante(id),
+            wotts: this.chargerWotts(id),
+            tutoriel: this.chargerTutoriel(id),
+            quetesFinies: this.chargerQuetes(id).finies,
+          }
+        : null,
+      sac: this.chargerInventaire(id),
+      installations: this.chargerInstallations(id),
+      feux: this.chargerFeux(id),
+      sacsAuSol: sacs,
+      mesures,
+    };
+  }
+
+  /**
+   * Supprime un compte et tout ce qui en dépend : les tables liées en cascade (jetons, personnage, sac, terrain, feux,
+   * installations), et ce qui le nomme seulement par son numéro (ses sacs au sol, sa Coopérative, ses déchets, sa forge,
+   * ses mesures). SQLite peut redonner le numéro d'un compte supprimé : rien ne doit rester à son nom.
+   * Refusé pour un compte protégé (« god »). Renvoie false si le compte n'existe pas.
+   */
+  supprimerCompte(id: number): boolean {
+    if (this.compteProtege(id)) throw new CompteProtege();
+    if (!this.db.prepare("SELECT 1 FROM comptes WHERE id = ?").get(id)) return false;
+    this.transaction(() => {
+      this.db.prepare("DELETE FROM comptes WHERE id = ?").run(id);
+      this.db.prepare("DELETE FROM sacs WHERE proprietaire = ? OR terrain_de = ?").run(id, id);
+      this.db.prepare("DELETE FROM instances WHERE cle = ?").run(`cooperative:${id}`);
+      this.db.prepare("DELETE FROM ressources_lieux WHERE lieu = ?").run(`cooperative:${id}`);
+      this.db.prepare("DELETE FROM dechets WHERE lieu IN (?, ?)").run(`cooperative:${id}`, `terrain:${id}`);
+      this.db.prepare("DELETE FROM monde WHERE cle IN (?, ?)").run(`forge:${id}`, `version_cooperative:${id}`);
+      this.db.prepare("DELETE FROM mesures WHERE compte_id = ?").run(id);
+    });
+    return true;
+  }
+
+  /**
+   * Un nouveau mot de passe pour un compte (le provisoire de la page d'administration), et toutes ses sessions
+   * fermées : ses jetons sont effacés. Refusé pour un compte protégé. Renvoie le nombre de sessions fermées.
+   */
+  changerMotDePasse(id: number, motDePasse: string): number {
+    if (this.compteProtege(id)) throw new CompteProtege();
+    if (!this.db.prepare("SELECT 1 FROM comptes WHERE id = ?").get(id)) throw new Error(`Compte ${id} introuvable`);
+    let fermees = 0;
+    this.transaction(() => {
+      const { sel, empreinte } = empreinteMotDePasse(motDePasse);
+      this.db.prepare("UPDATE comptes SET sel = ?, empreinte = ? WHERE id = ?").run(sel, empreinte, id);
+      fermees = Number(this.db.prepare("DELETE FROM jetons WHERE compte_id = ?").run(id).changes);
+    });
+    return fermees;
   }
 
   fermer(): void {
