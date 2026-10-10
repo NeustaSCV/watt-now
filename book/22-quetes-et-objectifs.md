@@ -46,6 +46,31 @@ L'ordre suit celui de la proposition **P-002** (`PROPOSITIONS.md` : ranger par u
 
 Les conserves données en récompense laissent leurs boîtes vides : l'alarme se prépare toute seule. Les lots bushcraft suivants ajouteront leurs objectifs ici, sans rien changer au système.
 
+### 3.1 bis S'installer en portes successives (0.8, 2026-10-10)
+
+*Plan 0.8 §2.6 et chantier 13 (décisions Q-0.8-10, Q-0.8-11, Q-0.8-19). **Décidé ; en cours de codage** (chantier 13) : ce paragraphe dit ce que le plan décide, il sera relu sur le jeu livré (textes, récompenses, ordre exact).*
+
+Depuis la 0.8, la base grandit avec les sorties (Book 24 §12). « S'installer » suit : **chaque objectif du carnet est une porte**, la suivante d'un meuble, avec sa **clé** et son **indice** (Book 03 §5.8).
+
+- **Le foyer de pierres passe en tête** : c'est la porte de la maison qui ouvre le plus de recettes (la poêlée, l'épieu et les flèches durcis, le bâton à fouir durci, monter l'arc) ; sa silhouette paraît dès le feu de camp.
+- **Puis les portes de la maison** : un vrai repas (« pommes cuites, ou une poêlée », Q-0.8-11 : la volaille aux cèpes attend le four), l'eau du ciel (le **récupérateur de 5 L** : le bidon de la ruine, les 4 sacs plastique du chemin), le coffre. **Un vrai lit** disparaît avec le lit de branchages : l'**abri garni** le remplace.
+- **Puis les portes du niveau 1, une par meuble** : « **Une vraie cuisine** » (le foyer de cuisine : il te faut une grille), « **La soupe qui cuit seule** » (la marmite norvégienne : une cocotte), « **Dix litres** » (le récupérateur à seau : un seau de 10 L), « **Un abri fermé** » (la toile de jute), « **Un coffre cerclé** » (les feuillards), « **L'établi à étau** » (l'étau).
+- **Deux portes ouvertes à la fois, une par route** (Q-0.8-19) : celle de la Coopérative (le feu et l'eau) et celle du Moulin du Gué (le couchage, le stockage, l'établi). Le joueur choisit sa route.
+- **Le carnet nomme la porte suivante au départ de chaque sortie** : « Une vraie cuisine : il te faut une grille. »
+- **Aucune quête ne demande un niveau « plus tard »** ; le carnet ne demande jamais une recette invisible (§1).
+
+**Le métier (§3.2) à revoir avec la 0.8** (chantier 13) :
+
+| Quête d'aujourd'hui | En 0.8 |
+|---|---|
+| « Le panneau » (trouvé, posé) ⚡ | Le **banc solaire** : le panneau de la station posé sur son banc |
+| « La dynamo » ⚙️ | Le **pédalier générateur** : le petit alternateur de la station monté sur le vélo de la ruine |
+| « La trempe » 🔥 | Le **bac de trempe** en auge de planches, calfatée de **glaise** du gué |
+| « La mise d'acier » 🔥 | Réécrite pour la **hachette au foyer de forge** (Q-0.8-10) |
+| « Forger une lame » 🔥 | Le **couteau au fer doux** |
+
+Le premier meuble de famille se bâtit à l'étape « La famille » du tutoriel, **au retour de la station** (Book 14 §4.5).
+
 ### 3.2 Le métier (la chaîne-vitrine de chaque famille, Book 21 §3.3)
 
 Le tutoriel fait déjà bâtir l'installation de famille (étape 10). Le métier prend la suite :
