@@ -201,6 +201,8 @@ Chaque étape produit quelque chose de **jouable** et de **testable**. Elles ava
 
 **Ce qui n'entre pas** : le niveau 2 tout entier (H2A, H2B, L2A, L2B et leurs clés, Raboter et Souder en usage, le mélange des routes) ; les Éteints évolués ; le relais d'armes, les munitions, les caractéristiques selon les ennemis ; le niveau 3 (trempe à l'huile, arbalète lourde…) ; Fendre et le bois vert ; le panneau Examiner détaillé. Ce que le code avait déjà au-delà du niveau 1 (forge ventilée, réserve couverte, four de terre, aiguillon, électrificateur…) devient **« plus tard »** : grisé dans la fiche, avec sa clé nommée, « à trouver plus loin ».
 
+**La ligne de la version 0.8** (`code/VERSIONS.md`, « en préparation », dans la voix des versions précédentes) dit au joueur : la base grandit avec tes sorties ; « Tu y penses » ; la fiche d'un meuble devient son arbre ; ta famille t'attend à la station ; deux routes, à la même distance ; le Gué-aux-Saules ; le Moulin du Gué ; les armes évoluent sur leur meuble ; la fourche à foin ; le bois et la pierre reviennent ; le Comptoir et les clés du niveau 1 ; de nouveaux meubles ; les outils sont des portes ; les armes du niveau 1 ; l'aide suit ; tout le monde repart de zéro. Le jeu affiche « 0.8 » (`commun/src/version.ts`).
+
 **Remise à zéro** (plan §9.1) : **tous les joueurs repartent de zéro** au déploiement de la 0.8. Pas de migration des personnages 0.7.3 ; le serveur démarre sur une base neuve.
 
 **Le critère de fin de la 0.8** (plan §5, en bref) : seul, sur un serveur neuf, pour chaque famille :
