@@ -28,6 +28,10 @@ import {
 } from "./rythme.ts";
 import { trouvables } from "./trouvables.ts";
 import { lieuPossede } from "./lieu-recette.ts";
+import { PLAFONDS_NIVEAU_1 } from "./armes/grille.ts";
+import { armeDeCle } from "./combat.ts";
+import { ETAPES_EQUILIBRE, gardeFouEtape } from "./equilibre.ts";
+import { armeTirDe, armeTirExemplaire } from "./tir.ts";
 
 const PARCOURS = tousLesParcours();
 
@@ -258,5 +262,30 @@ test("tests de jeu : à trois (une famille chacun), chacun a tout le niveau 1 et
   for (const r of s.joueurs) {
     assert.ok(r.mesures.niveau1 !== null, r.famille);
     assert.ok(r.sorties[0]!.cles.some((c) => CLES_DE_LIEU.get(c) === "station"), `${r.famille} : sa pièce à la station`);
+  }
+});
+
+test("critère 12 : au niveau 1, aucune arme de métier fabriquée au-dessus de ★★ sans la maîtrise ; la maîtrise donne l'étoile du dessus avec ses vrais dégâts", () => {
+  const metier = ["machette_forgee", "hachette", "serpe", "lame_forgee", "matraque_fortune", "matraque_electrique", "arbalete", "arc_fortune", "arc_if"] as const;
+  for (const objet of metier) {
+    const p = PLAFONDS_NIVEAU_1[objet]!;
+    assert.ok(p.recette !== null && p.recette <= 2, `${objet} : ★${p.recette} par une recette`);
+    assert.equal(p.maitrise, p.recette! + 1, objet);
+  }
+  // L'exception décidée (§2.4, I13) : l'arc simple, pour tous, monte ★★★ par sa corde de fil dentaire (la boutique de la
+  // station) ; ★★★★ par la maîtrise seulement (Q-0.8-4).
+  assert.deepEqual([PLAFONDS_NIVEAU_1.arc_simple!.recette, PLAFONDS_NIVEAU_1.arc_simple!.maitrise], [3, 4]);
+  // Les vrais dégâts de l'étoile maîtrisée (§2.4) : la machette ★★★ à 2,5, l'arbalète ★★★ à 2,5, l'arc d'if ★★★ à 2,25.
+  assert.equal(armeDeCle("machette_forgee#3")!.degatsTorse, 2.5);
+  assert.equal(armeTirExemplaire("arbalete#3", armeTirDe("arbalete")!).degatsPlein, 2.5);
+  assert.equal(armeTirExemplaire("arc_if#3", armeTirDe("arc_if")!).degatsPlein, 2.25);
+  assert.equal(armeDeCle("matraque_fortune#2")!.degatsTorse, 1);
+});
+
+test("critère 13 : le garde-fou des armes, rejoué à chaque étape (maison, H1, L1) avec les valeurs du jeu", () => {
+  for (const etape of ETAPES_EQUILIBRE) {
+    const v = gardeFouEtape(etape);
+    assert.deepEqual(v.fautes, [], etape);
+    assert.ok(v.pireRapport <= 2 && v.ecartCout <= 3, `${etape} : ${v.pireRapport}, ${v.ecartCout}`);
   }
 });
