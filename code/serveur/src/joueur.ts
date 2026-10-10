@@ -108,6 +108,7 @@ import { BONUS_MECANISTE, PORTEE_CABLE_PANNEAU, WH_M_PAR_HEURE, porteBatteries, 
 import type { AutreVu, OffreEchange, OperationComptoir, RapportBase, WottsVus } from "../../commun/src/messages.ts";
 import { COMPTOIR, dansBoite, deLieu, destinations, etapeVers, minuscule, type Zone } from "../../commun/src/lieux.ts";
 import { LEURRES, PORTEE_PORTE, PORTES, boitePorte, distancePorte } from "../../commun/src/cooperative.ts";
+import { atteintDansLaFosse, pousserDansLaFosse } from "../../commun/src/moulin.ts";
 import { DECHARGE, remonter } from "../../commun/src/decharge.ts";
 import type { Quete, VueQuetes } from "../../commun/src/quetes.ts";
 import { SuiviQuetes, type EtatJoueurPourQuetes } from "./quetes.ts";
@@ -568,7 +569,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
         ? { leurres: this.cooperatives.leurresActifs(this.compte.id, this.maintenant()), etatCoop: this.cooperatives.vue(this.compte.id) }
         : {}),
       ...(this.lieu === "comptoir" ? { comptoir: this.comptoir.vue(instant) } : {}),
-      ...(this.lieu === "cooperative" && this.vivant ? { portes: { ...this.vivant.portes } } : {}),
+      ...((this.lieu === "cooperative" || this.lieu === "moulin") && this.vivant ? { portes: { ...this.vivant.portes } } : {}),
     };
   }
 
@@ -1058,7 +1059,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
       const ecart = Math.abs(Math.atan2(Math.sin(Math.atan2(dx, dz) - this.position.o), Math.cos(Math.atan2(dx, dz) - this.position.o)));
       // Celui qui nous tient se frappe toujours, même dans le dos.
       if (ecart > ANGLE_CIBLAGE && e.saisit !== this.compte.id) continue;
-      if (d >= meilleureDistance || !voieLibre(zone, this.position, e)) continue;
+      // Au fond de la fosse du rouet (le Moulin, M14) : on l'atteint d'en haut avec une arme de 2 m d'allonge.
+      if (d >= meilleureDistance || !(voieLibre(zone, this.position, e) || (this.lieu === "moulin" && atteintDansLaFosse(e, allonge)))) continue;
       meilleur = e;
       meilleureDistance = d;
     }
@@ -1450,7 +1452,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (proches.length === 0) return;
     this.annulerAction();
     this.endurance -= REPOUSSER.cout;
-    for (const { e } of proches) repousser(e, this.position, REPOUSSER.recul, REPOUSSER.etourdi, this.zoneIci());
+    // Au Moulin, par le garde-corps brisé, il tombe dans la fosse du rouet (M14) ; ailleurs, il recule.
+    for (const { e } of proches) if (!(this.lieu === "moulin" && pousserDansLaFosse(e, this.position, REPOUSSER.recul))) repousser(e, this.position, REPOUSSER.recul, REPOUSSER.etourdi, this.zoneIci());
     this.appuisDegagement = 0;
     this.bruitCoupJusqua = this.maintenant() + 400;
     this.porteeDuCoup = undefined;
@@ -1458,6 +1461,12 @@ export class Joueur implements Voyageur, ParticipantLecon {
 
   /** Un leurre du décor de la Coopérative : klaxon, sonnette, radio (Book 23 §4.7). */
   private actionnerLeurre(id: string): void {
+    // Les leurres du Moulin du Gué : le monte-sacs, le babillard, la borne (plan 0.8, chantier 12).
+    if (this.lieu === "moulin" && !this.voyage) {
+      const texte = this.moulins.actionner(this.compte.id, id, this.position, this.maintenant());
+      if (texte) this.info(texte);
+      return;
+    }
     const l = LEURRES.find((x) => x.id === id);
     if (this.lieu !== "cooperative" || !l || this.voyage) return;
     // La radio est là où on l'a posée (0.5.1) ; dans le sac, on la pose d'abord.
@@ -2245,6 +2254,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
    * retraite : un Éteint ne la traverse pas. Ça fait un peu de bruit (beaucoup, pour une porte qui grince).
    */
   private actionnerPorte(id: string, ouvrir: boolean): void {
+    // La grande porte du Moulin du Gué (plan 0.8, chantier 12 : serveur/src/moulin.ts).
+    if (this.lieu === "moulin" && !this.voyage && !this.action) return this.porteDuMoulin(id, ouvrir);
     const vivant = this.vivant;
     const p = PORTES.find((q) => q.id === id);
     if (this.lieu !== "cooperative" || !vivant || !p || this.action) return;
@@ -2257,6 +2268,13 @@ export class Joueur implements Voyageur, ParticipantLecon {
     }
     if (!vivant.basculerPorte(id, ouvrir)) return;
     this.bruitPorte = { x: p.x, z: p.z, portee: p.bruyante ? 18 : 6, jusqua: this.maintenant() + 1500 };
+  }
+
+  /** La grande porte du Moulin : fermée à clé, elle le dit ; avec la grosse clé, elle s'ouvre, et la clé y reste. */
+  private porteDuMoulin(id: string, ouvrir: boolean): void {
+    const qui = { x: this.position.x, z: this.position.z, aLaCle: (this.inventaire.cle_moulin ?? 0) > 0, laisserLaCle: () => this.retirer("cle_moulin", 1) };
+    const texte = this.moulins.actionnerPorte(this.compte.id, id, ouvrir, qui, this.maintenant());
+    if (texte) this.info(texte);
   }
 
   /** La pluie est une alliée : bruits −30 %, odeurs −50 % (Book 06 §3.2, Book 13 §4). */
@@ -2757,7 +2775,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
         this.tuto.branches += usage.donne.branche ?? 0;
         this.tuto.pierres += usage.donne.pierre ?? 0;
       }
-    }, 0, usage.verbe === "demonter" ? "outil" : "leger");
+    }, 0, usage.silencieux ? "aucun" : usage.verbe === "demonter" ? "outil" : "leger");
   }
 
   /** Cette ressource est-elle là pour moi ? (dans un lieu vivant : mon butin personnel, le vrac en jeu) */

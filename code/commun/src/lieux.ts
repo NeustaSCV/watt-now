@@ -9,6 +9,7 @@
 import { ARRIVEE_COOP, BRECHE, COOP, PORTAIL, PORTES, boitePorte, obstaclesCoop, portesInitiales } from "./cooperative.ts";
 import type { Position } from "./deplacement.ts";
 import { MARGE_GRILLE, boitesPres, creerGrille, type GrilleObstacles } from "./grille.ts";
+import { PORTES_MOULIN, boitePorteMoulin, obstaclesMoulin, portesInitialesMoulin } from "./moulin.ts";
 import type { EtapeMonde } from "./lignees.ts";
 import { MARGE_BORD, POINT_ARRIVEE, TERRAIN_TAILLE } from "./regles.ts";
 
@@ -494,14 +495,27 @@ export const SORTIES_GUE: Sortie[] = [
  */
 export const MOULIN = { largeur: 64, profondeur: 54, origineModele: { x: 32, z: 27 } } as const;
 
-/** Le Moulin, vide (chantier 4). Le chantier 12 y met les obstacles du modèle, depuis `commun/src/moulin.ts`. */
-export const ZONE_MOULIN: Zone = {
-  xMin: 0.5,
-  xMax: MOULIN.largeur - 0.5,
-  zMin: 0.5,
-  zMax: MOULIN.profondeur - 0.5,
-  obstacles: [],
-};
+const FIXES_MOULIN = obstaclesMoulin();
+const zonesMoulin = new Map<string, Zone>();
+
+/**
+ * Le Moulin selon l'état de sa grande porte (chantier 12) : les obstacles du modèle (murs, berges de la rivière et du
+ * bief, beffroi, fosse du rouet, mobilier…), et la grande porte quand elle est fermée. Une zone par état, gardée.
+ */
+export function zoneMoulin(portes: Readonly<Record<string, boolean>>): Zone {
+  const fermees = PORTES_MOULIN.filter((p) => p.fermable && !(portes[p.id] ?? p.ouverte));
+  const cle = fermees.map((p) => p.id).join(",");
+  let z = zonesMoulin.get(cle);
+  if (!z) {
+    const obstacles = [...FIXES_MOULIN, ...fermees.map(boitePorteMoulin)];
+    z = { xMin: 0.5, xMax: MOULIN.largeur - 0.5, zMin: 0.5, zMax: MOULIN.profondeur - 0.5, obstacles, grille: creerGrille(obstacles) };
+    zonesMoulin.set(cle, z);
+  }
+  return z;
+}
+
+/** Le Moulin tel qu'on le trouve : la grande porte fermée à clé. */
+export const ZONE_MOULIN: Zone = zoneMoulin(portesInitialesMoulin());
 
 /** Un point du modèle du Moulin dans le repère du jeu. */
 const auMoulin = (x: number, z: number) => ({ x: x + MOULIN.origineModele.x, z: z + MOULIN.origineModele.z });

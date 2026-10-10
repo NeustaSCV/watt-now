@@ -12,9 +12,12 @@ import type { Boite, Zone } from "./lieux.ts";
 const GENRES_BAS = new Set(["caisse", "rayon_bas", "palettes", "transpalette", "bureau", "etabli", "coffre_fort"]);
 const BOITES_BASSES = new Set<Boite>(MOBILIER.filter((m) => GENRES_BAS.has(m.genre)).map((m) => m.boite));
 
-/** Cet obstacle arrête-t-il un coup ou un objet lancé ? (les murs, les rayonnages, les tracteurs ; pas le mobilier bas) */
+/**
+ * Cet obstacle arrête-t-il un coup ou un objet lancé ? (les murs, les rayonnages, les tracteurs ; pas le mobilier bas)
+ * Une boîte marquée `bas` (le Moulin du Gué, 0.8 : berges, huche, établis…) se franchit aussi.
+ */
 export function arreteLesCoups(b: Boite): boolean {
-  return !BOITES_BASSES.has(b);
+  return !BOITES_BASSES.has(b) && (b as Boite & { bas?: true }).bas !== true;
 }
 
 /**

@@ -1197,6 +1197,15 @@ export const LIEU_DE_FOUILLE: Partial<Record<TypeRessource, LieuFouille>> = {
   coop_rayonnage: "hangar",
   coop_coffre: "bureaux",
   coop_caisse_froide: "chambre_froide",
+  // Le Moulin du Gué (plan 0.8, chantier 12) : son butin commun suit les tables qui lui ressemblent ; une fouille y
+  // donne aussi, rarement, une clé de la Coopérative (R-BUTIN : etapeButin("moulin") = L1B).
+  moulin_etable: "grange",
+  moulin_atelier: "atelier",
+  moulin_logis: "libre_service",
+  moulin_malle: "bureaux",
+  moulin_boutique: "libre_service",
+  moulin_magasin: "grange",
+  moulin_camp: "quai",
 };
 
 /**
