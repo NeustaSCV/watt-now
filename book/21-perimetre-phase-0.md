@@ -102,7 +102,7 @@ Les trois familles, avec leurs stats (Book 01 §4). Les traits sont gardés quan
 | **Kits de famille** (6) | 🔥 pierre à feu, marteau · ⚡ lampe à dynamo, petite batterie · ⚙️ scie à bois, corde | Départ |
 | **Lumières portées** (3) | 🔥 torche, ⚡ lampe frontale, ⚙️ lanterne à dynamo | Kit de famille : elles font la nuit et la silhouette des personnages (§5.2.1, Book 18 §4.2) |
 | **Outils fabriqués** (2) | Hache remmanchée, lame de couteau forgée (🔥) | Tutoriel, forge |
-| **Installations** (8) | Feu de camp, établi, abri de branches et bâche, **coffre de rangement**, **foyer de forge** (🔥), **charbonnière** (🔥), **pédalier universel + meule + dynamo** (⚙️), **banc de recharge + lampe** (⚡) | Construites sur le terrain |
+| **Installations** (8) | Feu de camp, établi, abri de branches et bâche, **coffre de rangement**, **foyer de forge** (🔥), **charbonnière** (🔥), **pédalier générateur + meule + dynamo** (⚙️), **banc solaire + lampe** (⚡) | Construites sur le terrain |
 | **Produits** (2) | Charbon de bois, batterie chargée | Charbonnière, recharge |
 | **Nourriture et soins** (3) | Conserve (vestige), baies (cueillette sur le terrain), pansement | Fouille, cueillette, fabrication |
 | **Monnaie** (1) | Bons de wotts | Comptoir |
@@ -113,7 +113,7 @@ Les trois familles, avec leurs stats (Book 01 §4). Les traits sont gardés quan
 
 > **Décision (2026-10-08) : la corde se tresse.** Des **joncs et des massettes** poussent au bord de la mare (ils repoussent en 30 min) : on y coupe des **fibres** au couteau, et **4 fibres** se tressent à la main en **une corde** (recette commune, 20 min, sans outil). C'est le geste de base du bushcraft ; le rouissage du Book 02 §4 viendra avec le lin et l'ortie. Toutes les familles peuvent donc fabriquer leur coffre dès le début.
 
-> Chaque famille a **une chaîne-vitrine** complète : 🔥 bois → charbonnière → forge → lame vendue au comptoir ; ⚙️ vieux vélo → pédalier → meule et dynamo → batterie chargée ; ⚡ panneau de la halte → banc de recharge → lampe la nuit, et batterie déposée au comptoir.
+> Chaque famille a **une chaîne-vitrine** complète : 🔥 bois → charbonnière → forge → lame vendue au comptoir ; ⚙️ vieux vélo → pédalier → meule et dynamo → batterie chargée ; ⚡ panneau de la halte → banc solaire → lampe la nuit, et batterie déposée au comptoir.
 
 **Règles simplifiées en 0a :** les recettes de la famille sont **connues d'emblée** (pas de livres ni d'expérimentation) ; **pas de qualité ★** (tout est ★★★) ; les qualités d'outil du Book 03 §4 s'appliquent.
 
@@ -182,6 +182,40 @@ Chaque étape produit quelque chose de **jouable** et de **testable**. Elles ava
 > - **Divers** : poules, panneau solaire.
 >
 > Chaque réglage a des bornes : une valeur hors bornes est ramenée dedans, un fichier illisible est ignoré. `npm run reglages` donne la liste. **Le calendrier des récoltes tourne** (Book 13 §3 bis) alors que la saison reste fixée : seules les récoltes suivent la date.
+
+### 3.10 La 0.8 : le niveau 1 (2026-10-10)
+
+*Le détail est dans le plan `book/plans/plan-0.8.md` (v0.3, décidé), §1, §5 et §9 ; les chantiers 1 à 12 sont codés et fusionnés, le tutoriel et les quêtes (13) et le rythme (14) sont en cours.*
+
+**Ce que livre la 0.8** : la base grandit **avec les sorties**, de la maison jusqu'au **niveau 1**. Plus de paliers : chaque meuble monte d'un niveau avec **le niveau d'avant, des matériaux et un outil** ; les niveaux du niveau 1 demandent **une clé** trouvée dehors (Book 24 §12).
+
+| Étape | Lieu | Ce que la 0.8 y met |
+|---|---|---|
+| **Maison** | Le terrain | Le niveau 1 de chaque meuble avec ce que donne le terrain ; la ruine complétée (bidon de 5 L, tête de marteau) ; 4 sacs plastique dans le premier sac-poubelle du chemin |
+| **H1A** | La station-service | **La pièce de sa famille**, garantie et personnelle (⚡ panneau, 🔥 enclume de dépanneur et sac de charbon, ⚙️ petit alternateur) ; clous, fil de fer, huile ; le bois en vrac et le tas personnel |
+| **H1B** | **Le Gué-aux-Saules** (nouveau) | La pierre en vrac et le banc de galets personnel, la glaise, les joncs ; le radier, la crue et le bac |
+| **L1A** | La Coopérative du Plateau | Trois clés à place fixe : grillage, cocotte, seau de 10 L |
+| **L1B** | **Le Moulin du Gué** (nouveau) | Trois clés à place fixe : toile de jute, feuillards, étau ; la fourche à foin, un if, 2 bûches ; 22 Éteints |
+
+**Le parcours visé** : la maison (0 à 25 min, le tutoriel) ; la station dans le tutoriel (« La carte », puis « La famille » au retour) ; le gué ; puis la Coopérative ou le Moulin, au choix, et l'autre : **tout le niveau 1 en ≈ 3 h 20** pour un joueur prudent.
+
+**Ce qui n'entre pas** : le niveau 2 tout entier (H2A, H2B, L2A, L2B et leurs clés, Raboter et Souder en usage, le mélange des routes) ; les Éteints évolués ; le relais d'armes, les munitions, les caractéristiques selon les ennemis ; le niveau 3 (trempe à l'huile, arbalète lourde…) ; Fendre et le bois vert ; le panneau Examiner détaillé. Ce que le code avait déjà au-delà du niveau 1 (forge ventilée, réserve couverte, four de terre, aiguillon, électrificateur…) devient **« plus tard »** : grisé dans la fiche, avec sa clé nommée, « à trouver plus loin ».
+
+**Remise à zéro** (plan §9.1) : **tous les joueurs repartent de zéro** au déploiement de la 0.8. Pas de migration des personnages 0.7.3 ; le serveur démarre sur une base neuve.
+
+**Le critère de fin de la 0.8** (plan §5, en bref) : seul, sur un serveur neuf, pour chaque famille :
+
+1. finir le tutoriel en passant par la station, y trouver **sa** pièce, bâtir au retour son premier meuble de famille ;
+2. bâtir **tout le niveau 1 de la maison** avec le seul terrain ;
+3. au gué, creuser de la glaise, ramasser pierres et joncs ;
+4. à la Coopérative et au Moulin, trouver les clés **à la première visite**, et bâtir au retour foyer de cuisine, marmite, récupérateur à seau, abri fermé, coffre cerclé, établi à étau ;
+5. le niveau 1 en ≈ 3 h 20 (`npm run rythme`), avec 0 (⚡), 0 à 1 (⚙️) et 1 (🔥) aller-retour de ravitaillement à la station en plus du tutoriel ;
+6. ne jamais trouver la station ni le gué vides de bois et de pierres plus de 30 min ;
+7. au premier ramassage d'une clé, « Tu y penses » ; l'indice passe du type de lieu au coin ;
+8. aucune arme fabriquée au-dessus de ★★ sans la maîtrise ; `npm run equilibre` OK à la maison et à H1/L1 ;
+9. sur iPhone 13 mini, le gué et le Moulin tiennent le budget (≤ 60 000 triangles, ≤ 40 appels de dessin).
+
+**La priorité au soin visuel** (§5) vaut pour tout ce que la 0.8 ajoute : les icônes des objets nouveaux, la carte à deux routes, les meubles du niveau 1, le gué et le Moulin tirés des modèles de la session « bâtiments », le bandeau « Tu y penses » ; tout est lisible sur l'iPhone 13 mini (375 × 630 en vertical, 812 × 320 en paysage). **Une règle d'interface du porteur** : un message ou un avertissement en jeu **se ferme d'un bouton**, jamais une fenêtre à croix ; ce qu'on ouvre au bouton B (Examiner) se ferme par B ; les panneaux qu'on ouvre au toucher ou à la souris (sac, Fabriquer, carnet, carte) gardent leur croix ✕.
 
 ---
 
@@ -299,13 +333,13 @@ Chaque étape produit quelque chose de **jouable** et de **testable**. Elles ava
 | **Abri de branches et bâche** | Étapes de construction + fantôme de placement | **V** | Mesure (moment 1) |
 | **Foyer de forge** 🔥 | Froid / chaud (braise, étincelles) | **V** | Mesure |
 | **Pédalier + meule** ⚙️ | Au repos / en marche (meule qui tourne, étincelles) | **V** | Mesure (cadre de vélo récupéré : lien visuel avec le vestige) |
-| **Banc de recharge + lampe** ⚡ | Éteint / en charge (voyant) / lampe allumée | **V** | Mesure |
+| **Banc solaire + lampe** ⚡ | Éteint / en charge (voyant) / lampe allumée | **V** | Mesure |
 
 > Chaque objet a **un seul modèle** pour le sol, la main et l'icône (§5.2.7). Toutes les installations sont **réutilisées telles quelles** dans les phases suivantes.
 
 > **Passe de finition des objets (2026-10-08).** Ce qui est fait, et comment, pour que les prochains objets suivent la même règle :
 > - **Un atelier commun** (`client/src/rendu/assemblage.ts`) : chaque objet est monté pièce par pièce (planches, perches ligaturées, pierres bosselées, toile tendue), **la couleur passe par les sommets**, et tout est fondu en **un maillage par finition** (mat, tôle, métal, verre, toile). Deux touches gratuites : la **nuance** (chaque facette varie un peu de ton : bois, pierre, toile ne sont jamais d'un aplat) et l'**occlusion cuite** (le bas des objets s'assombrit près du sol, §5.3.5). Les pièces communes (roue de vélo, batterie de voiture, panneau solaire) sont dans `pieces.ts` : **le même modèle** sur le pédalier et sur le vieux vélo, sur le banc et dans l'herbe.
-> - **Installations** : établi (3 planches, étau, marteau, égoïne, boîte de clous, copeaux), abri (perches fourchues ligaturées, bâche qui creuse et ondule, bord crotté, tendeurs, pierres, lit de fougères, couverture roulée), coffre (planches, couvercle bombé, feuillards, cadenas), charbonnière (dôme de terre nuancé, évents qui rougeoient la nuit, cheminée, pelle), forge (pierres sèches, cuvette de charbon, soufflet de cuir, enclume sur billot, seau de trempe), pédalier (vrai cadre de vélo rouillé, roue à rayons, **plateau et pédales qui tournent** avec la roue, meule de grès, dynamo et son fil), banc (tréteaux, régulateur à cadran, **voyant vert seulement si une batterie est posée**, lampe de chantier), panneau (cellules en damier, chevalet ligaturé), récupérateur (bâche en entonnoir mouillée au centre, gouttes, bassine galvanisée où **l'eau monte et s'élargit**), alarme (ficelle qui pend, cinq boîtes aux étiquettes délavées), lit de branchages (cadre de rondins, rameaux de sapin en écailles, couverture). **1 à 4 appels de dessin** par installation (avant : 3 à 26), **≈ 450 à 1 800 triangles** (avant : 100 à 730), dans le budget §5.3.4.
+> - **Installations** : établi (3 planches, étau, marteau, égoïne, boîte de clous, copeaux), abri (perches fourchues ligaturées, bâche qui creuse et ondule, bord crotté, tendeurs, pierres, lit de fougères, couverture roulée), coffre (planches, couvercle bombé, feuillards, cadenas), charbonnière (dôme de terre nuancé, évents qui rougeoient la nuit, cheminée, pelle), forge (pierres sèches, cuvette de charbon, soufflet de cuir — retiré du dessin en 0.8 —, enclume sur billot, seau de trempe), pédalier (vrai cadre de vélo rouillé, roue à rayons, **plateau et pédales qui tournent** avec la roue, meule de grès, dynamo et son fil), banc (tréteaux, régulateur à cadran, **voyant vert seulement si une batterie est posée**, lampe de chantier), panneau (cellules en damier, chevalet ligaturé), récupérateur (bâche en entonnoir mouillée au centre, gouttes, bassine galvanisée où **l'eau monte et s'élargit**), alarme (ficelle qui pend, cinq boîtes aux étiquettes délavées), lit de branchages (cadre de rondins, rameaux de sapin en écailles, couverture). **1 à 4 appels de dessin** par installation (avant : 3 à 26), **≈ 450 à 1 800 triangles** (avant : 100 à 730), dans le budget §5.3.4.
 > - **Feu de camp et foyer Dakota** : pierres noircies de suie côté feu, bûches **fraîches quand le bois est empilé, calcinées au bout une fois le feu pris**, langues de flamme vrillées, lit de cendres et de tisons. Le Dakota : un trou dans un bourrelet de terre remuée et son évent, flamme et fumée basses. **La fumée tient en un seul appel de dessin** (`panache.ts`, bouffées instanciées et triées) au lieu de 18 (22 pour la charbonnière) : un feu qui flambe passe de 38 à 14 appels. Le **fantôme de pose** du feu est le même foyer et les mêmes bûches (un seul modèle).
 > - **Armes en main** : hache (fer à joue, tranchant clair), marteau (table et arrache-clou), barre à mine, couteaux (rivets ; fil brillant une fois aiguisé), lame forgée (fer sombre, soie ligaturée), gourdin noueux, épieu (pointe durcie, noircie au feu). +15 à 20 % (§5.3.2), 1 ou 2 appels. **L'arme est tenue dans le poing, plus au poignet** : l'os de la main a son origine au poignet ; dans son repère, +y va vers les doigts, +z de l'auriculaire vers l'index, les doigts se referment vers −x. L'arme est accrochée au creux des premières phalanges, manche selon +z, tête ou tranchant selon +y : juste au repos et pendant les coups.
 > - **Ressources** : branche, bûche et pierre restent **en lots** (une géométrie partagée par type, désormais **un seul appel** par type au lieu de deux) ; ronce à mûres en lobes, joncs en feuilles et massettes, vieux vélo couché complet (herbe à travers les rayons), caisse à outils (clé et tournevis tombés), ressort à lames, ballot de bâche ficelé, barre à mine ; à la halte, rayonnage (cartons, étiquettes de prix, boîtes), panneau tombé (même module, verre étoilé), établi métallique (tiroirs, étau bleu), potence de la grange (poulie, corde et son rouleau). La décharge (P-001) suit la même règle.
@@ -522,7 +556,7 @@ On polit **ces cinq moments en priorité**. S'ils sont réussis, la 0a est réus
 | 1 | **Le réveil** | Écran titre puis 1. Arrivée | Un jingle publicitaire de la Compagnie (Watty) sur une radio qui grésille… coupure de courant, silence. Puis le **thème principal** naît de sons trouvés. Fondu vers le petit matin sur le terrain : oiseaux, vent, **Fond** seul. | Le ton du jeu en 30 secondes : ironie, puis beauté |
 | 2 | **Le premier feu** | 3. Le feu | Le craquement du feu, proche et chaud. **La couche Vie entre pour la première fois**, un instrument à la fois, sur 16 mesures. | « La musique est née de mon feu » |
 | 3 | **Le premier Éteint** | 8. et 9. | Un râle au loin **qui s'interrompt** (Attiré), puis des pas qui viennent. La Vie s'amincit, la **Tension** prend. Saisie : **Danger**. Dégagement, coup, chute. Puis **Silence** de 6 s. | Le joueur comprend qu'il faut **écouter** |
-| 4 | **L'installation de famille** | 10. La famille | Le marteau sur le foyer de forge, la chaîne du pédalier, le bourdonnement du banc de recharge. **Le thème de famille au complet**, dont la percussion est faite de ce même son. | « Ma famille a sa musique » |
+| 4 | **L'installation de famille** | 10. La famille | Le marteau sur le foyer de forge, la chaîne du pédalier, le bourdonnement du banc solaire. **Le thème de famille au complet**, dont la percussion est faite de ce même son. | « Ma famille a sa musique » |
 | 5 | **La première nuit** | 11. La nuit | Signal du crépuscule, Vie nuit autour du feu, puis de longues plages de silence. Un râle d'Errant, loin, à gauche. Endormissement : motif court, puis silence. Aube au réveil. | La peur douce, la beauté de la nuit (Book 18 §2) |
 
 > **Bonus, hors tutoriel : l'arrivée au Comptoir.** Le groove sort d'abord d'une **radio** posée sur le comptoir (filtrée, spatialisée), puis s'ouvre en pleine musique quand on entre. Proposition, à garder si le temps le permet.
@@ -624,7 +658,7 @@ Pour que toutes les couches se superposent sans heurt, **une seule grille** sert
 | **Feu de camp** | Allumage au briquet, craquements, bûche qui tombe, extinction | **3** | ≈ 5 m (sa signature est olfactive et lumineuse) |
 | **🔥 Foyer de forge** | Soufflet, ronflement des braises, marteau, trempe | **3** | **30 m** |
 | **⚙️ Pédalier + meule** | Chaîne, roue libre, meule sur le fer, étincelles | **3** | **15 m** |
-| **⚡ Banc de recharge + lampe** | Clic des pinces, bourdonnement léger, interrupteur | **3** | **≤ 2 m** (aucune signature sonore) |
+| **⚡ Banc solaire + lampe** | Clic des pinces, bourdonnement léger, interrupteur | **3** | **≤ 2 m** (aucune signature sonore) |
 | **Établi, abri, crafting** | Gestes génériques (bois, métal, tissu), montage de l'abri, bâche | **3** | Selon l'outil utilisé |
 | **Ambiance jour** | Vent, oiseaux, insectes, feuillage, tôles qui bougent à la halte | 3 | Lit d'ambiance non spatialisé + 6 à 8 sources ponctuelles |
 | **Ambiance nuit** | Grillons, hibou, vent froid, craquements lointains | 3 | Idem |
@@ -645,7 +679,7 @@ Volume : **≈ 90 sons, ≈ 250 fichiers** avec les variantes. La variation (hau
 | Vestige | À enregistrer | Usage |
 |---|---|---|
 | **Vieux vélo** | Chaîne, roue libre, rayons pincés, sonnette, garde-boue frappé | Pédalier ; rythmique ⚙️ |
-| **Batterie de voiture** | Bornes frappées, coffre en plastique, pinces | Banc de recharge ; percussions ⚡ |
+| **Batterie de voiture** | Bornes frappées, coffre en plastique, pinces | Banc solaire ; percussions ⚡ |
 | **Ressort à lames** | Frappé (métal grave, résonant), **frotté à l'archet** | Enclume ; bourdon du Fond |
 | **Station-service** | Pompe et compteur à rouleaux, tuyau, bidons, auvent dans le vent, néon | Halte ; Exploration |
 | **Tôle, tuyaux, bouteilles** | Frappés, soufflés, frottés | Percussions, nappes |
