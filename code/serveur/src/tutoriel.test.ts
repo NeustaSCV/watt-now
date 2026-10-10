@@ -8,7 +8,7 @@ import { kitDeDepart } from "../../commun/src/objets.ts";
 import { ATELIER, toutDevoile } from "../../commun/src/progression.ts";
 import { recette } from "../../commun/src/recettes.ts";
 import { FAMILLES, type Famille } from "../../commun/src/regles.ts";
-import { ETAPE_CARTE, ETAPE_FAMILLE, ETAPE_SAISIE, NOMBRE_ETAPES, PIECE_DE_FAMILLE, TUTORIEL_NEUF, etapesTutoriel } from "../../commun/src/tutoriel.ts";
+import { ETAPE_CARTE, ETAPE_FAMILLE, ETAPE_SAISIE, NOMBRE_ETAPES, PIECE_DE_FAMILLE, TUTORIEL_NEUF, etapesTutoriel, tutorielEnCours } from "../../commun/src/tutoriel.ts";
 import { Base } from "./base.ts";
 import { Comptoir } from "./comptoir.ts";
 import { Halte } from "./halte.ts";
@@ -186,6 +186,7 @@ for (const famille of FAMILLES) {
     t.joueur.recevoir({ t: "interagir", cible: { genre: "installation", id: abri.id }, verbe: "dormir" });
     t.attendre(2);
     assert.equal(t.carnet()!.termine, true, "le tutoriel est fini");
+    assert.equal(tutorielEnCours(t.carnet()), null, "le carnet passe aux objectifs (plus d'« étape 13 sur 12 »)");
     assert.equal(t.base.chargerTutoriel(t.compte.id), null);
   });
 }

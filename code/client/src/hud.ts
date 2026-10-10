@@ -67,7 +67,7 @@ import { MANUELS, chezLaFamille, estManuel } from "../../commun/src/savoir.ts";
 import { NOMS_FAMILLES, type Famille } from "../../commun/src/regles.ts";
 import { RECETTE_DAKOTA, RECETTE_FEU, RESERVE_EAU_MAX, RESERVE_KCAL_MAX, aFaim, aSoif, fatigue, type Besoins, type Gourde } from "../../commun/src/survie.ts";
 import { NOMS_TEMPS, type Temps } from "../../commun/src/meteo.ts";
-import type { VueTutoriel } from "../../commun/src/tutoriel.ts";
+import { tutorielEnCours, type VueTutoriel } from "../../commun/src/tutoriel.ts";
 import type { VueQuetes } from "../../commun/src/quetes.ts";
 import { derniereIdee, ligneDerniereIdee, type DerniereIdee } from "./carnet-idees.ts";
 import { formaterHeure } from "../../commun/src/temps.ts";
@@ -1025,7 +1025,10 @@ export class Hud {
   private reussiJusqua = 0;
   private derniersProgres = "";
 
-  majTutoriel(v: VueTutoriel | null): void {
+  majTutoriel(recu: VueTutoriel | null): void {
+    // La dernière vue (`termine`) : sa leçon, puis le tutoriel est fini (le carnet passe aux objectifs).
+    if (recu?.termine && recu.lecon) this.message(`✓ ${recu.lecon}`, "lecon");
+    const v = tutorielEnCours(recu);
     const fini = this.tutoriel !== null && v === null;
     const nouvelleEtape = v !== null && this.tutoriel !== null && v.etape !== this.tutoriel.etape;
     // Le tout début : le carnet s'ouvre d'office (on n'a pas encore pu choisir).
