@@ -677,6 +677,12 @@ vague 4   [13 Tutoriel, quêtes, aide] ◄────────────�
 - **N1 (R51 et les délais)** : à la Coopérative et au Moulin, **tout revient à 24 h** (Éteints, butin, clés garanties, grande porte refermée) ; le grillage et l'étau passent de 4 jours à 24 h, l'if de 12 h à 24 h ; le repeuplement partiel de 3 Éteints toutes les 12 h disparaît. **La fourche à foin ne se trouve qu'une fois par personnage.**
 - **N2** : le bac marche la nuit (voir Q-0.8-22).
 
+### 9.2 Les décisions prises pendant le codage (2026-10-10)
+
+- **Recettes et outils (chantier 1)** : « monter l'arc » (arc simple, arc d'if) se fait au foyer de pierres ; la boîte de conserve vide donne Couper 1 (le couvercle) ; la lame ébréchée donne Visser 1 (le fer plat).
+- **Catalogue (chantier 3)** : la planche à roulettes ne donne plus de roulement, la débroussailleuse plus de bobine (chantier 10) ; le maillet n'a pas de qualité d'outil ; **l'étau porté dans le sac ne donne aucune qualité** : il ne donne Serrer 3 que monté sur l'établi (l'établi à étau) ; les objets fabriqués n'ont pas de famille de vestige.
+- **Carte (chantier 4)** : le gué est retourné au rendu pour suivre la carte (le terrain à l'est), comme la station (chantier 11) ; **aucun panneau vers plus loin que le Moulin** (« on ne sait pas encore ce qu'on mettra plus loin » : retouche du modèle demandée aux bâtiments) ; la fiche de la carte se ferme par **un bouton « Fermer »** et par un clic en dehors de la carte, plus de croix (chantier 13).
+
 **Une note sur les sources.** Le bloc `familles` de `progression-par-ingredients-page.json` (et le §4 du `.md` v5) dit encore que l'enclume donne ★★★ et que le sac donne « les 4 premiers charbons ». Les décisions plus récentes l'emportent : **★★** (P1, Q-A6) et **4 charbons** (I23). La question V5-3 est donc réglée.
 
 ---
