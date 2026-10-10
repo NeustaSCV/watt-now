@@ -1,8 +1,8 @@
 // La forge des Charbonniers, côté serveur (Book 25 §4, chantier 5 de la 0.6).
 //
 // Ce que la fabrication ordinaire (joueur.ts, `fabriquer`) ne sait pas faire, et que la forge ajoute :
-// - refuser ce qui ne se forge pas ici : la hache et le glaive demandent la forge ventilée, le glaive la maîtrise du
-//   couteau, le ressort retrempé de l'huile ;
+// - refuser ce qui ne se forge pas encore : le glaive demande la maîtrise du couteau (la forge ventilée, le bac de
+//   trempe et l'huile sont dans le lieu de chaque recette, que joueur.ts vérifie : commun/src/lieu-recette.ts) ;
 // - la trempe : à l'huile (la graisse du sac, ou l'huile du bac), sûre ; à l'eau, une lame sur trois se fend et devient
 //   une lame ébréchée (Book 02 §9 : jamais de disparition totale) ; le risque est dit avant le geste ;
 // - le manche tourné ⚙️ : une étoile de plus à la lame qu'on emmanche ;
@@ -32,7 +32,12 @@ import {
 import type { InstallationVue } from "../../commun/src/messages.ts";
 import { nommer, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
 import type { ContexteFabrication, Recette } from "../../commun/src/recettes.ts";
-import { FORGE_VENTILEE_REQUISE, HUILE_REQUISE, LAMES_EMMANCHEES, LAMES_TREMPEES, MAITRISE_REQUISE, RECETTE_REFORGER } from "../../commun/src/recettes/charbonniers.ts";
+import { LAMES_EMMANCHEES, LAMES_TREMPEES, MAITRISE_REQUISE, RECETTE_REFORGER } from "../../commun/src/recettes/charbonniers.ts";
+
+/** Une recette qui ne se trempe qu'à l'huile (son lieu demande l'huile : le ressort retrempé). */
+function trempeALHuile(r: Recette): boolean {
+  return r.lieu.genre === "construction" && r.lieu.accessoire === "huile";
+}
 
 /** Ce que le joueur prête à la forge. */
 export interface ContexteForge {
@@ -87,14 +92,12 @@ export class Forge {
     if (r.installation !== "forge") return null;
     const id = r.id;
     const forge = this.forge();
-    if (FORGE_VENTILEE_REQUISE.has(id) && !estVentilee(forge)) return "Il faut une forge ventilée : améliore ton foyer de forge (Examiner).";
     const maitrise = MAITRISE_REQUISE[id];
     if (maitrise) {
       const faits = maitrise.recettes.reduce((s, x) => s + this.ctx.faits(`fabrique:${x}`), 0);
       if (faits < SEUIL_MAITRISE) return `Il faut d'abord maîtriser ${maitrise.nom} : ${SEUIL_MAITRISE} forgés (tu en es à ${faits}).`;
     }
     const trempe = trempeDisponible(this.ctx.inventaire(), forge);
-    if (HUILE_REQUISE.has(id) && trempe.genre !== "huile") return "Ça se trempe à l'huile : de la graisse dans ton sac, ou de l'huile dans le bac de trempe.";
     if (LAMES_TREMPEES.has(id) && trempe.genre === "eau") this.ctx.info("Trempe à l'eau : une lame sur trois se fend. À l'huile (graisse, bac), aucune.");
     return null;
   }
@@ -122,7 +125,7 @@ export class Forge {
     let fendues = 0;
     const trempe = trempeDisponible(this.ctx.inventaire(), forge);
     const acier = Math.max(0, ...Object.keys(r.ingredients).map((t) => ETOILES_ACIER[t as TypeObjet] ?? 0));
-    if ((LAMES_TREMPEES.has(r.id) || HUILE_REQUISE.has(r.id)) && prendLaTrempe(acier)) {
+    if ((LAMES_TREMPEES.has(r.id) || trempeALHuile(r)) && prendLaTrempe(acier)) {
       if (trempe.genre === "huile") this.consommerHuile(trempe.source, forge);
       else if (estObjetDeMetier(objet)) for (let k = 0; k < quantite; k++) if (this.ctx.alea() < RISQUE_TREMPE_EAU) fendues++;
     }

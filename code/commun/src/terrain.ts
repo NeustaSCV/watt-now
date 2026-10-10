@@ -309,12 +309,13 @@ export const USAGES: Record<TypeRessource, UsageRessource> = {
     duree: 1.5,
     examen: "Chapeau vert olive pâle, lames blanches, un anneau, et le pied pris dans un sac blanc (la volve) : une amanite phalloïde. Mortelle.",
   },
-  // Les essences du métier (Book 25 §3.2) : Couper 2 (couteau aiguisé, serpe, lame) ; le couteau du kit, ×1,5.
+  // Les essences du métier (Book 25 §3.2) : Couper 1, le couteau du kit suffit (plan 0.8 : les outils sont des portes
+  // dures, et le tableau `outils` met la perche de frêne et le bâton d'if à Couper 1).
   frene: {
     verbe: "ramasser",
     libelle: "Couper une perche de frêne",
     donne: { perche_frene: 1 },
-    qualites: { couper: 2 },
+    qualites: { couper: 1 },
     duree: 6,
     examen: "Un frêne : écorce grise et lisse, bourgeons noirs comme du velours. Ses rejets droits font de bons arcs.",
   },
@@ -322,7 +323,7 @@ export const USAGES: Record<TypeRessource, UsageRessource> = {
     verbe: "ramasser",
     libelle: "Tailler un bâton d'if",
     donne: { baton_if: 1 },
-    qualites: { couper: 2 },
+    qualites: { couper: 1 },
     duree: 8,
     examen: "Un if, sombre et lent, au fond du bois : le meilleur bois d'arc. Toxique : on n'en mange ni baies ni aiguilles.",
   },
@@ -330,7 +331,7 @@ export const USAGES: Record<TypeRessource, UsageRessource> = {
     verbe: "ramasser",
     libelle: "Tailler un bâton d'if",
     donne: { baton_if: 1 },
-    qualites: { couper: 2 },
+    qualites: { couper: 1 },
     duree: 8,
     examen: "La haie d'ifs taillés en boules : on la faisait tailler tous les mois. Une branche droite s'y cache encore.",
   },

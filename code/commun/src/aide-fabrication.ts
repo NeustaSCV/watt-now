@@ -4,7 +4,8 @@
 import { STOCK_DE_BASE } from "./economie.ts";
 import { OBJETS, kitDeDepart, nommer, type Inventaire, type TypeObjet } from "./objets.ts";
 import { FAMILLES, NOMS_FAMILLES } from "./regles.ts";
-import { NOMS_INSTALLATIONS, NOMS_QUALITES, QUALITES_OBJETS, RECETTES, niveauQualite, type Qualite, type Recette } from "./recettes.ts";
+import { ouSeFait } from "./lieu-recette.ts";
+import { NOMS_QUALITES, QUALITES_OBJETS, RECETTES, niveauQualite, type Qualite, type Recette } from "./recettes.ts";
 import { USAGES, type TypeRessource } from "./terrain.ts";
 
 /** Les vestiges de la station-service (le reste se trouve sur son terrain). */
@@ -82,19 +83,16 @@ const tenir = (candidates: string[], max: number) => candidates.find((c) => c.le
  */
 export function outilsManquantsBref(qualites: Partial<Record<Qualite, number>>, inventaire: Inventaire, max = MESSAGE_MAX, visible: RecetteVisible = TOUTES): string[] {
   const manques = (Object.entries(qualites) as [Qualite, number][])
-    .filter(([q, requis]) => {
-      const possede = niveauQualite(inventaire, q);
-      return possede < requis && !(possede === requis - 1 && possede > 0);
-    })
+    // Les outils sont des portes dures (plan 0.8 §2.1) : un niveau en dessous ne fait plus l'affaire.
+    .filter(([q, requis]) => niveauQualite(inventaire, q) < requis)
     .map(([q, requis]) => {
       const types = outilsPour(q, requis);
-      const fortune = requis >= 2 ? outilsPour(q, requis - 1).filter((t) => (QUALITES_OBJETS[t]?.[q] ?? 0) === requis - 1).map((t) => OBJETS[t].nom) : [];
       const source = types.map((t) => ouTrouver(t, visible)).find((l) => l.length > 0)?.[0];
-      return { q: NOMS_QUALITES[q].toLowerCase(), requis, bons: ou(types.slice(0, 2).map((t) => OBJETS[t].nom)), fortune: fortune[0], source };
+      return { q: NOMS_QUALITES[q].toLowerCase(), requis, bons: ou(types.slice(0, 2).map((t) => OBJETS[t].nom)), source };
     });
   if (manques.length === 0) return ["Il te manque un outil."];
   const phrase = (m: (typeof manques)[number], details: boolean) =>
-    `Pour ${m.q} (niveau ${m.requis}), il te faut ${m.bons}${details && m.fortune ? ` (ou ${m.fortune}, plus lent)` : ""}.` +
+    `Pour ${m.q} (niveau ${m.requis}), il te faut ${m.bons}.` +
     (details && m.source ? ` Où : ${m.source}.` : "");
   const sansSource = (m: (typeof manques)[number]) => phrase({ ...m, source: undefined }, true);
   const ensemble = manques.map((m) => phrase(m, true)).join(" ");
@@ -120,7 +118,7 @@ export function ceQuiManqueBref(r: Recette, inventaire: Inventaire, max = MESSAG
   });
   const outils = outilsManquantsBref(r.qualites, inventaire, max, visible).join(" ");
   const outilsVides = Object.entries(r.qualites).every(([q, n]) => niveauQualite(inventaire, q as Qualite) >= (n ?? 0));
-  const reste = [outilsVides ? "" : outils, r.feu ? "Elle se cuisine près d'un feu allumé." : "", r.installation ? `Elle se fait près d'un ${NOMS_INSTALLATIONS[r.installation]}.` : ""].filter(Boolean);
+  const reste = [outilsVides ? "" : outils, ouSeFait(r.lieu) ? `Elle se fait ${ouSeFait(r.lieu)}.` : ""].filter(Boolean);
   if (noms.length === 0) return tenir([reste.join(" ")], max);
   const manque = `Il te manque ${et(noms)}.`;
   const unSeul = manquants.length === 1 ? manquants[0]! : null;
@@ -141,14 +139,8 @@ export function outilsManquants(qualites: Partial<Record<Qualite, number>>, inve
     // Où trouver le plus simple d'entre eux (le premier qui a une source connue).
     const source = types.map((t) => ouTrouver(t, visible)).find((l) => l.length > 0);
     const ouLeTrouver = source ? ` Où en trouver : ${ou(source)}.` : "";
-    if (possede === requis - 1 && possede > 0) {
-      lignes.push(`${NOMS_QUALITES[q]} ${requis} : ton outil fera l'affaire, mais plus lentement. Plus rapide avec : ${ou(bons)}.`);
-      continue;
-    }
-    const fortune = requis >= 2 ? outilsPour(q, requis - 1).filter((t) => (QUALITES_OBJETS[t]?.[q] ?? 0) === requis - 1).map((t) => OBJETS[t].nom) : [];
-    lignes.push(
-      `Pour ${NOMS_QUALITES[q].toLowerCase()} (niveau ${requis}), il te faut ${ou(bons)}.` + (fortune.length ? ` À défaut, ${ou(fortune)} marche aussi, plus lentement.` : "") + ouLeTrouver,
-    );
+    // Les outils sont des portes dures (plan 0.8 §2.1) : il faut le niveau demandé.
+    lignes.push(`Pour ${NOMS_QUALITES[q].toLowerCase()} (niveau ${requis}), il te faut ${ou(bons)}.${ouLeTrouver}`);
   }
   return lignes;
 }
@@ -165,7 +157,6 @@ export function ceQuiManque(r: Recette, inventaire: Inventaire, visible: Recette
     );
   }
   lignes.push(...outilsManquants(r.qualites, inventaire, visible));
-  if (r.feu) lignes.push("Elle se cuisine près d'un feu allumé.");
-  if (r.installation) lignes.push(`Elle se fait près d'un ${NOMS_INSTALLATIONS[r.installation]}.`);
+  if (ouSeFait(r.lieu)) lignes.push(`Elle se fait ${ouSeFait(r.lieu)}.`);
   return lignes;
 }

@@ -132,8 +132,12 @@ test("🔥 hors famille, jamais plus de ★★, même avec la meilleure forge du
   assert.equal(etoilesDuProduit(r, { pinces_forge: 1 }, { contexte: meilleure, horsFamille: true, maitrise: true }), 2);
 });
 
-test("🔥 un Charbonnier seul, dès le premier jour : ressort, eau, foyer, marteau → un couteau ★★", () => {
-  const t = monter("charbonniers", { marteau: 1, ressort_lames: 1, charbon_bois: 1, branche: 1 });
+test("🔥 un Charbonnier seul : ressort, eau, foyer et bac de trempe, marteau → un couteau ★★", () => {
+  // Plan 0.8 : l'acier se trempe au bac de trempe (le lieu de la recette) ; sans lui, la recette est refusée.
+  const sans = monter("charbonniers", { marteau: 1, ressort_lames: 1, charbon_bois: 1, branche: 1 });
+  sans.fabriquer("lame_forgee");
+  assert.match(sans.infos().at(-1)!, /Il te faut un bac de trempe/);
+  const t = monter("charbonniers", { marteau: 1, ressort_lames: 1, charbon_bois: 1, branche: 1 }, { etat: { bac: true } });
   t.fabriquer("lame_forgee");
   assert.match(t.infos().join(" "), /Trempe à l'eau : une lame sur trois se fend/, "le risque est dit avant le geste");
   assert.equal(t.sac()["lame_forgee#2"], 1);
@@ -141,7 +145,7 @@ test("🔥 un Charbonnier seul, dès le premier jour : ressort, eau, foyer, mart
 });
 
 test("🔥 avec les pinces et un étau posé en enclume, la machette forgée monte à ★★★", () => {
-  const t = monter("charbonniers", { marteau: 1, pinces_forge: 1, etau: 1, ressort_lames: 2, charbon_bois: 2, branche: 1, ficelle: 1 });
+  const t = monter("charbonniers", { marteau: 1, pinces_forge: 1, etau: 1, ressort_lames: 2, charbon_bois: 2, branche: 1, ficelle: 1 }, { etat: { bac: true } });
   t.utiliser("poser_enclume");
   assert.equal(t.laForge().etat.enclume, "etau");
   assert.equal(t.sac().etau, undefined, "l'étau est sur la forge");
@@ -209,7 +213,7 @@ test("🔥 la trempe à l'eau fend une lame sur trois (graine fixe) ; à l'huile
 
 test("🔥 une lame fendue à la trempe tombe en lame ébréchée, sur le joueur aussi (jamais de disparition totale)", () => {
   // alea à 0 : la trempe fend toujours (et les Éteints restent loin : le terrain n'en fait venir que s'ils entendent).
-  const t = monter("charbonniers", { marteau: 1, ressort_lames: 1, charbon_bois: 1, branche: 1 }, {}, () => 0);
+  const t = monter("charbonniers", { marteau: 1, ressort_lames: 1, charbon_bois: 1, branche: 1 }, { etat: { bac: true } }, () => 0);
   t.fabriquer("lame_forgee");
   const inv = t.sac();
   assert.equal(inv.lame_ebrechee, 1);
@@ -236,7 +240,7 @@ test("🔥 le ressort retrempé ne se fait qu'à l'huile ; le bac de trempe et l
 // ---------- La forge ventilée ----------
 
 test("🔥 la hache forgée attend la forge ventilée ; le Charbonnier la bâtit seul, puis pompe (sauf ventilateur ⚡)", () => {
-  const t = monter("charbonniers", { marteau: 1, pinces_forge: 1, barre_metal: 2, ressort_lames: 1, charbon_bois: 2, buche: 1, bache: 1, pierre: 6, graisse: 1, ventilateur_forge: 1 });
+  const t = monter("charbonniers", { marteau: 1, pinces_forge: 1, barre_metal: 2, ressort_lames: 1, charbon_bois: 2, buche: 1, bache: 1, pierre: 6, graisse: 1, ventilateur_forge: 1 }, { etat: { bac: true } });
   t.fabriquer("hache_forgee");
   assert.match(t.infos().at(-1)!, /forge ventilée/);
   t.utiliser("ameliorer", 10);
@@ -249,7 +253,7 @@ test("🔥 la hache forgée attend la forge ventilée ; le Charbonnier la bâtit
 });
 
 test("🔥 le glaive : la forge ventilée et la maîtrise du couteau (dix forgés)", () => {
-  const t = monter("charbonniers", { marteau: 1, ressort_lames: 3, charbon_bois: 3, branche: 1, rivet: 2 }, { niveau: 2 });
+  const t = monter("charbonniers", { marteau: 1, ressort_lames: 3, charbon_bois: 3, branche: 1, rivet: 2 }, { niveau: 2, etat: { bac: true } });
   t.fabriquer("glaive");
   assert.match(t.infos().at(-1)!, /maîtriser le couteau/);
   assert.equal(t.sac().ressort_lames, 3);
@@ -274,7 +278,7 @@ test("🔥 un Charbonnier seul répare sa machette forgée à la forge, pour un 
 
 test("🔥 la lame ébréchée se reforge en la même arme, une étoile de moins ; d'origine inconnue, un couteau", () => {
   // La forge se souvient d'une machette ★★★★ cassée.
-  const t = monter("charbonniers", { marteau: 1, lame_ebrechee: 2, charbon_bois: 2 }, {}, () => 1, (base, id) => base.ecrireMonde(`forge:${id}`, { ebrechees: ["machette_forgee#4"] }));
+  const t = monter("charbonniers", { marteau: 1, lame_ebrechee: 2, charbon_bois: 2 }, { etat: { bac: true } }, () => 1, (base, id) => base.ecrireMonde(`forge:${id}`, { ebrechees: ["machette_forgee#4"] }));
   t.fabriquer(RECETTE_REFORGER);
   assert.equal(t.sac().machette_forgee, 1, "★★★★ − 1 = ★★★");
   assert.match(t.infos().join(" "), /redevient machette forgée/);

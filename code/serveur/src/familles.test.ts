@@ -69,12 +69,17 @@ test("🔥 charbonnière : allumer, attendre trois jours de jeu, défourner 4 kg
   assert.equal(t.joueur.bienvenue(0).installations.filter((x) => x.type !== "decharge").length, 0);
 });
 
-test("🔥 la lame se forge seulement près d'un foyer de forge, avec charbon et marteau", () => {
+test("🔥 la lame se forge seulement près d'un foyer de forge et de son bac de trempe, avec charbon et marteau", () => {
   // La graisse : une trempe à l'huile, sûre (à l'eau, une lame sur trois se fend : voir forge.test.ts).
-  const t = monter("charbonniers", { pierre: 8, barre_metal: 1, branche: 3, marteau: 1, ressort_lames: 1, charbon_bois: 2, graisse: 1 });
+  const t = monter("charbonniers", { pierre: 8, barre_metal: 1, branche: 3, marteau: 1, ressort_lames: 1, charbon_bois: 2, graisse: 1, casserole: 1 });
   t.joueur.recevoir({ t: "fabriquer", recette: "lame_forgee" });
-  assert.match(t.infos().at(-1)!, /foyer de forge/);
-  t.construire("forge", 90);
+  assert.match(t.infos().at(-1)!, /Il te faut un foyer de forge/);
+  const id = t.construire("forge", 90);
+  // Plan 0.8 : l'acier se trempe au bac (le lieu de la recette).
+  t.joueur.recevoir({ t: "fabriquer", recette: "lame_forgee" });
+  assert.match(t.infos().at(-1)!, /Il te faut un bac de trempe/);
+  t.utiliser(id, "poser_bac");
+  t.attendre(12);
   t.joueur.recevoir({ t: "fabriquer", recette: "lame_forgee" });
   t.attendre(91);
   const inv = t.dernier("inventaire")!.inventaire;
