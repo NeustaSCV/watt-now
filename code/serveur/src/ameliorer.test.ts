@@ -3,6 +3,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { toutDevoile } from "../../commun/src/progression.ts";
 import { mkdirSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -21,6 +22,9 @@ const dossierTests = join(dirname(fileURLToPath(import.meta.url)), "..", "donnee
 function monter(inventaire: Record<string, number>, avant?: (base: Base, id: number) => void, famille: "mecanistes" | "charbonniers" | "voltaiques" = "mecanistes") {
   const base = new Base(":memory:");
   const compte = base.creerCompte("Rose", "potager42", famille);
+  // Ces tests portent sur autre chose que l'arbre de progression : tout est dévoilé (plan 0.8 : le vétéran
+  // n'a plus d'emblée que les recettes à la main).
+  base.sauverProgression(compte.id, toutDevoile(famille));
   base.sauverInventaire(compte.id, { sac_a_dos: 1, ...inventaire });
   avant?.(base, compte.id);
   let instant = base.debutMonde() + 60_000;

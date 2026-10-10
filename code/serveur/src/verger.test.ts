@@ -3,6 +3,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { toutDevoile } from "../../commun/src/progression.ts";
 import type { MessageServeur } from "../../commun/src/messages.ts";
 import { ARBRES_FRUITIERS, RAYON_ESCABEAU, genererRessources } from "../../commun/src/terrain.ts";
 import { instantDuJour } from "../../commun/src/calendrier.ts";
@@ -14,6 +15,9 @@ import { Joueur } from "./joueur.ts";
 function monter(inventaire: Record<string, number>) {
   const base = new Base(":memory:");
   const compte = base.creerCompte("Rose", "potager42", "mecanistes");
+  // Ces tests portent sur autre chose que l'arbre de progression : tout est dévoilé (plan 0.8 : le vétéran
+  // n'a plus d'emblée que les recettes à la main).
+  base.sauverProgression(compte.id, toutDevoile("mecanistes"));
   // Le 28 août : les pommes sont mûres.
   let instant = instantDuJour(240, base.debutMonde()) + 1000;
   const halte = new Halte(base);

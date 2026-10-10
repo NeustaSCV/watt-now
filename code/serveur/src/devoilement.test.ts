@@ -1,10 +1,14 @@
-// L'arbre de progression côté serveur (0.7) : l'état par personnage, les déclencheurs aux bons moments, le refus,
-// la migration des personnages d'avant, le message « Tu y penses », les rencontres et le « voir faire ».
+// L'arbre de progression côté serveur (0.7, réécrit pour la 0.8, chantier 2) : l'état par personnage, les déclencheurs
+// aux bons moments, le refus, le message « Tu y penses », l'idée au ramassage d'une clé (gardée, jamais redite),
+// l'indice en deux temps, le vétéran, les rencontres et le « voir faire ». Plus de migration : la 0.8 démarre sur une
+// base neuve (plan 0.8 §9.1).
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { MessageServeur } from "../../commun/src/messages.ts";
-import { devoileesDEmblee } from "../../commun/src/progression.ts";
+import { INDICE_SECOND_TEMPS_MIN, PROGRESSION_VIDE, TEXTE_VETERAN, devoileesAuDepart, devoileesDEmblee, type EtatProgression } from "../../commun/src/progression.ts";
+import type { Inventaire } from "../../commun/src/objets.ts";
+import { SuiviDevoilement, type ConstructionVue, type SourceDevoilement } from "./devoilement.ts";
 import { Base } from "./base.ts";
 import { Halte } from "./halte.ts";
 import { Joueur } from "./joueur.ts";
@@ -35,16 +39,53 @@ function monter(options: { famille?: Famille; tutoriel?: boolean; inventaire?: R
   return { base, compte, joueur, attendre, tous, infos, sac, recus };
 }
 
-/** Un personnage d'avant la 0.7 : sa colonne « progression » est vide. */
-function avantLa07(base: Base, id: number): void {
-  (base as unknown as { db: { prepare(s: string): { run(...a: unknown[]): void } } }).db.prepare("UPDATE personnages SET progression = '' WHERE compte_id = ?").run(id);
+/** La carte d'un terrain qui n'a qu'un feu, de cette forme (comme `carteInstallations`). */
+function feu(forme: string, niveau: number): ConstructionVue[] {
+  return [{ type: "feu", niveau }, { type: `feu:${forme}`, niveau: 1 }];
+}
+
+/** Un suivi seul, sur une source qu'on règle à la main (le sac, les constructions, le lieu) : les clés et les indices. */
+function suivi(options: { installations?: ConstructionVue[]; lieu?: string | null; etat?: EtatProgression } = {}) {
+  let instant = 1_000_000;
+  const recus: MessageServeur[] = [];
+  const faits: Record<string, number> = {};
+  const etat = {
+    inventaire: {} as Inventaire,
+    installations: options.installations ?? feu("feu_camp", 1),
+    lieu: options.lieu === undefined ? "terrain" : options.lieu,
+  };
+  const source: SourceDevoilement = {
+    famille: "charbonniers",
+    maintenant: () => instant,
+    savoir: () => ({}),
+    inventaire: () => etat.inventaire,
+    faits: () => faits,
+    installations: () => etat.installations,
+    quetes: () => [],
+    tuto: () => null,
+    sansSac: () => false,
+    lieu: () => etat.lieu,
+    constats: () => [],
+    noter: (f) => (faits[f] = (faits[f] ?? 0) + 1),
+    envoyer: (m) => recus.push(m),
+  };
+  const s = new SuiviDevoilement(options.etat ?? { ...PROGRESSION_VIDE, devoilees: devoileesAuDepart() }, source);
+  const attendre = (secondes: number, pas = 0.5) => {
+    for (let t = 0; t < secondes; t += pas) {
+      instant += pas * 1000;
+      s.tick(pas);
+    }
+  };
+  const idees = () => recus.filter((m) => m.t === "idee") as Extract<MessageServeur, { t: "idee" }>[];
+  return { s, etat, faits, attendre, idees, recus };
 }
 
 test("un nouveau joueur (tutoriel) ne pense qu'au feu et à l'abri ; le serveur refuse le reste (Q1)", () => {
   const { joueur, infos } = monter({ tutoriel: true, inventaire: { buche: 2, branche: 3 } });
   const v = joueur.bienvenue(0).progression!;
   assert.deepEqual([...v.devoilees].sort(), ["abri", "feu_de_camp"]);
-  assert.equal(v.prochain?.palier, 1);
+  assert.deepEqual(v.silhouettes, []);
+  assert.deepEqual(v.idees, []);
   joueur.recevoir({ t: "fabriquer", recette: "gourdin" });
   assert.equal(infos().at(-1), "Tu n'y as pas encore pensé.");
 });
@@ -89,21 +130,23 @@ test("allumer son premier feu fait penser au gourdin (« la fumée se sent de lo
   assert.ok(joueur.bienvenue(0).progression!.devoilees.includes("gourdin"));
 });
 
-test("le compte créé sans tutoriel est un vétéran (Q8) : paliers 1 et 2, mais pas l'atelier", () => {
+test("le compte créé sans tutoriel est un vétéran (Q8) : les recettes communes à la main, mais pas l'atelier", () => {
   const { joueur, infos } = monter({ inventaire: { buche: 2, pierre: 8, barre_metal: 1, branche: 2, couteau: 1 } });
   const d = joueur.bienvenue(0).progression!.devoilees;
   for (const id of devoileesDEmblee("charbonniers")) assert.ok(d.includes(id), id);
+  assert.ok(!d.includes("cepes_poeles") && !d.includes("lit_branchages"));
   assert.deepEqual(joueur.bienvenue(0).progression!.nonVues, []);
   joueur.recevoir({ t: "fabriquer", recette: "forge", x: 20, z: 20 });
   assert.equal(infos().at(-1), "Tu n'y as pas encore pensé.");
 });
 
-test("passer le tutoriel dévoile d'un coup les paliers 1 et 2", () => {
+test("passer le tutoriel dévoile d'un coup les gestes à la main, et le carnet dit : « Ta famille t'attend à la station »", () => {
   const { joueur, tous } = monter({ tutoriel: true });
   joueur.recevoir({ t: "tutoriel_passer" });
   const m = tous("devoilement").at(-1)!;
   assert.ok(m.progression.devoilees.includes("gourdin"));
-  assert.equal(m.texte, "Tu y penses : les gestes de base te reviennent tous.");
+  assert.ok(!m.progression.devoilees.includes("epieu"), "l'épieu attend le foyer de pierres");
+  assert.equal(m.texte, TEXTE_VETERAN);
 });
 
 test("le seuil S : un toit et une nuit, et le métier commence", () => {
@@ -117,46 +160,21 @@ test("le seuil S : un toit et une nuit, et le métier commence", () => {
   assert.equal(m.texte, "Ton métier commence : le foyer de forge t'attend dans Fabriquer.");
 });
 
-test("le filet du temps : après 20 min de jeu, tout le palier 1", () => {
+test("le filet du temps, par recette à la main : après 20 min de jeu, la ficelle, la corde, plumer la poule", () => {
   const { joueur, attendre } = monter({ tutoriel: true });
   attendre(20 * 60 + 1, 1);
   const d = joueur.bienvenue(0).progression!.devoilees;
-  assert.ok(d.includes("lit_branchages") && d.includes("escabeau"));
-  assert.ok(!d.includes("gourdin"));
-});
-
-test("migration (Q4) : un personnage d'avant ne voit plus ce qu'il n'a pas validé, mais ne perd rien", () => {
-  const { base, compte, joueur } = monter({
-    famille: "charbonniers",
-    inventaire: { tete_hache: 1, fibres: 3, machette_forgee: 1 },
-    avant: (b, id) => {
-      b.ajouterInstallation(id, "forge", 30, 30, 0);
-      b.sauverQuetes(id, { faits: { "fabrique:lame_forgee_fer": 2 }, finies: [], primes: 0 });
-      avantLa07(b, id);
-    },
-  });
-  const v = joueur.bienvenue(0).progression!;
-  // Ce qu'il a validé : la tête de hache, les joncs, sa forge posée, ses couteaux forgés.
-  for (const id of ["hache", "ficelle", "corde", "forge", "machette_forgee_fer", "pinces_forge"]) assert.ok(v.devoilees.includes(id), id);
-  // Ce qu'il n'a pas encore vécu reste à découvrir.
-  assert.ok(!v.devoilees.includes("glaive"));
-  assert.ok(!v.devoilees.includes("escabeau"));
-  // Pas de pastille « 40 nouveautés ».
-  assert.deepEqual(v.nonVues, []);
-  // Rien n'est détruit : la forge et la machette sont toujours là.
-  assert.ok(base.chargerInstallations(compte.id).some((i) => i.type === "forge"));
-  assert.equal(base.chargerInventaire(compte.id).machette_forgee, 1);
-  // La migration est gardée : on ne la rejoue pas.
-  assert.ok(base.chargerProgression(compte.id)!.devoilees.includes("forge"));
+  assert.ok(d.includes("ficelle") && d.includes("corde") && d.includes("volaille"));
+  assert.ok(!d.includes("gourdin") && !d.includes("escabeau"), "le gourdin attend son heure, et ce qui se pose, son besoin");
 });
 
 test("voir faire et la rencontre : le déclencheur A, et la recette vue", () => {
   const { joueur, attendre } = monter({ tutoriel: true });
-  joueur.vuFaire("epieu");
+  joueur.vuFaire("gourdin");
   joueur.noterRencontre("voltaiques");
   attendre(1);
   const v = joueur.bienvenue(0).progression!;
-  assert.ok(v.devoilees.includes("epieu"));
+  assert.ok(v.devoilees.includes("gourdin"));
   assert.equal(v.autres, true);
 });
 
@@ -183,4 +201,111 @@ test("le contrôle des messages : « recettes_vues » n'accepte qu'une liste cou
   assert.ok(!messageValide({ t: "recettes_vues", recettes: "ficelle" }));
   assert.ok(!messageValide({ t: "recettes_vues", recettes: [3] }));
   assert.ok(!messageValide({ t: "recettes_vues", recettes: Array.from({ length: 500 }, () => "x") }));
+});
+
+// ---------- Les clés (plan 0.8 §2.2) ----------
+
+test("ramasser un grillage sans foyer de pierres : « un jour », l'idée gardée ; la fiche du foyer de cuisine la montre déjà en poche", () => {
+  const { s, etat, attendre, idees, recus } = suivi();
+  etat.inventaire = { grillage_rouleau: 1 };
+  attendre(1);
+  assert.deepEqual(idees().map((m) => [m.etape, m.plusTard, m.texte]), [["foyer_cuisine", true, "Ce grillage pourra servir à ton feu, un jour."]]);
+  assert.deepEqual(s.vue().idees, ["foyer_cuisine"]);
+  assert.deepEqual(s.etat.idees, ["foyer_cuisine"]);
+  // Plus tard, le foyer de pierres maçonné : la fiche du foyer de cuisine montre la clé en poche, pas d'indice à chercher.
+  etat.inventaire = {};
+  etat.installations = feu("foyer_pierres", 2);
+  s.aRevoir();
+  attendre(2);
+  const v = s.vue();
+  assert.ok(v.idees.includes("foyer_cuisine"));
+  assert.equal(v.indices.foyer_cuisine, undefined);
+  assert.ok(v.silhouettes.some((x) => x.id === "soupe_cepes" && x.ou === "Au foyer de cuisine"));
+  // La vue est repartie au client avec l'idée.
+  assert.ok(recus.some((m) => m.t === "devoilement" && m.progression.idees.includes("foyer_cuisine")));
+});
+
+test("le message ne revient pas au second ramassage (ni après l'avoir posé, ni d'une session à l'autre)", () => {
+  const { s, etat, attendre, idees } = suivi({ installations: feu("foyer_pierres", 2) });
+  etat.inventaire = { grillage_rouleau: 1 };
+  attendre(1);
+  assert.equal(idees().length, 1);
+  assert.equal(idees()[0]!.plusTard, false);
+  assert.match(idees()[0]!.texte, /Tu y penses\.$/);
+  etat.inventaire = {};
+  attendre(1);
+  etat.inventaire = { grillage_rouleau: 1 };
+  attendre(1);
+  assert.equal(idees().length, 1, "jamais au deuxième ramassage");
+  // L'état gardé en base le sait : un suivi neuf sur cet état ne redit rien.
+  const autre = suivi({ installations: feu("foyer_pierres", 2), etat: JSON.parse(JSON.stringify(s.etat)) as EtatProgression });
+  autre.etat.inventaire = { grillage_rouleau: 1 };
+  autre.attendre(1);
+  assert.equal(autre.idees().length, 0);
+});
+
+test("l'indice passe au second temps après une visite de L1A sans le grillage", () => {
+  const { s, etat, attendre, faits } = suivi({ installations: feu("foyer_pierres", 2) });
+  attendre(2);
+  assert.equal(s.vue().indices.foyer_cuisine, 1, "le foyer de pierres posé : l'indice du foyer de cuisine s'ouvre, au premier temps");
+  assert.equal(faits["indice:foyer_cuisine"], 1);
+  // Une visite à la station ne change rien.
+  etat.lieu = null;
+  attendre(2);
+  etat.lieu = "station";
+  attendre(2);
+  etat.lieu = null;
+  attendre(2);
+  assert.equal(s.vue().indices.foyer_cuisine, 1);
+  // La Coopérative (L1A), quittée sans le grillage : le second temps, le coin.
+  etat.lieu = "cooperative";
+  attendre(2);
+  assert.equal(s.vue().indices.foyer_cuisine, 1, "on y est encore");
+  etat.lieu = null;
+  attendre(2);
+  assert.equal(s.vue().indices.foyer_cuisine, 2);
+  assert.equal(faits["indice:foyer_cuisine"], 2);
+});
+
+test("l'indice passe au second temps après 45 min de jeu ; une visite avec le grillage ne compte pas", () => {
+  const a = suivi({ installations: feu("foyer_pierres", 2) });
+  a.attendre(2);
+  a.attendre(INDICE_SECOND_TEMPS_MIN * 60 - 10, 5);
+  assert.equal(a.s.vue().indices.foyer_cuisine, 1);
+  a.attendre(15, 1);
+  assert.equal(a.s.vue().indices.foyer_cuisine, 2);
+  // Le grillage trouvé à la Coopérative : l'idée vient, l'indice se ferme (la clé est en poche).
+  const b = suivi({ installations: feu("foyer_pierres", 2), lieu: "cooperative" });
+  b.attendre(2);
+  b.etat.inventaire = { grillage_rouleau: 1 };
+  b.attendre(1);
+  b.etat.lieu = null;
+  b.attendre(2);
+  assert.equal(b.s.vue().indices.foyer_cuisine, undefined);
+  assert.equal(b.idees().length, 1);
+});
+
+test("la poêlée reste grisée pour qui n'a qu'un feu de camp ; le foyer de pierres la dévoile seul", () => {
+  const { s, etat, attendre } = suivi();
+  etat.inventaire = { cepe: 3 };
+  attendre(2);
+  assert.ok(!s.estDevoilee("cepes_poeles"));
+  assert.ok(s.vue().silhouettes.some((x) => x.id === "cepes_poeles" && x.ou === "Au foyer de pierres"));
+  etat.installations = feu("foyer_pierres", 2);
+  s.aRevoir();
+  attendre(1);
+  assert.ok(s.estDevoilee("cepes_poeles"));
+});
+
+test("un joueur qui ramasse un grillage reçoit « Tu y penses » (message idee), une seule fois", () => {
+  const { tous, attendre, sac } = monter({ tutoriel: true });
+  sac({ sac_a_dos: 1, grillage_rouleau: 1 });
+  attendre(1);
+  assert.equal(tous("idee").length, 1);
+  assert.equal(tous("idee")[0]!.etape, "foyer_cuisine");
+  sac({ sac_a_dos: 1 });
+  attendre(1);
+  sac({ sac_a_dos: 1, grillage_rouleau: 1 });
+  attendre(1);
+  assert.equal(tous("idee").length, 1);
 });

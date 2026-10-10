@@ -139,6 +139,8 @@ export const SONS = {
   tonnerre: { recette: R.tonnerre, bus: "environnement", priorite: 3, variantes: 3, gain: 0.6, portee: 0 },
 
   ...interfaceFamilles,
+  // « Tu y penses » (plan 0.8, chantier 2) : l'idée au ramassage d'une clé, pour soi seul.
+  idee: { recette: R.idee, bus: "interface", priorite: 2, variantes: 2, gain: 0.32, portee: 0 },
 } satisfies Record<string, DefSon>;
 
 export type IdSon = keyof typeof SONS;

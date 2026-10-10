@@ -887,3 +887,32 @@ export const dechargeLongue: Recette = (h) => {
   p.ajouter(enveloppe(oscillateur(n(d), (t) => 100 + 20 * Math.sin(Math.PI * Math.min(1, t / d)), "scie"), cloche(d)), 0.01, 0.3);
   return saturer(p.donnees, 1.6);
 };
+
+// =====================================================================================
+// « Tu y penses » (plan 0.8 §2.2, chantier 2) : l'idée au ramassage d'une clé
+// =====================================================================================
+
+/**
+ * Une idée qui vient : deux notes boisées qui montent d'une tierce majeure, douces, comme un petit carillon de bois.
+ * Court (moins d'une seconde) et chaleureux ; rien du froissement de la fouille ni du choc d'un ramassage.
+ */
+export const idee: Recette = (h) => {
+  const p = new Piste(1.1, h);
+  const fondamentale = entre(h, 510, 535);
+  const note = (f: number) =>
+    enveloppe(
+      modes(0.9, [
+        { f, a: 1, tau: 0.32 },
+        { f: f * 2, a: 0.28, tau: 0.16 },
+        { f: f * 3.98, a: 0.07, tau: 0.06 },
+        { f: f / 2, a: 0.18, tau: 0.22 },
+      ]),
+      // Une attaque de 12 ms : on effleure, on ne frappe pas.
+      (t) => Math.min(1, t / 0.012),
+    );
+  p.ajouter(note(fondamentale), 0, 0.8);
+  p.ajouter(note(fondamentale * 1.26), entre(h, 0.11, 0.14), 0.9);
+  // Un souffle très léger dessous, pour la chaleur.
+  p.ajouter(souffle(0.5, h, { bruit: "rose", filtre: "passe-bas", f: 900, env: percussive(0.03, 0.15) }), 0, 0.05);
+  return p.normaliser(0.6).donnees;
+};

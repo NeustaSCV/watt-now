@@ -1,34 +1,28 @@
-// 0.7, chantier 5 : l'arbre de progression dans le panneau Fabriquer (client/src/fabrication-arbre.ts).
+// 0.7, chantier 5 : l'arbre de progression dans le panneau Fabriquer (client/src/fabrication-arbre.ts) ; plan 0.8,
+// chantier 2 : les silhouettes du niveau suivant des constructions qu'on a.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { ceQuiManque, ouTrouver, SE_FABRIQUE_CACHE } from "../../commun/src/aide-fabrication.ts";
-import { PROGRESSION, devoileesAuDepart, prochainPalier, recettesDuPalier, type VueProgression } from "../../commun/src/progression.ts";
+import { devoileesAuDepart, type SilhouetteVue, type VueProgression } from "../../commun/src/progression.ts";
 import { recette, recettesConnues } from "../../commun/src/recettes.ts";
-import { SEUIL_ONGLETS, categorieDe, enTete, nouveautesParOnglet, ongletsVides, planFabrication, recetteVisible, sousTitre } from "./fabrication-arbre.ts";
+import { VOIE_SURFACE } from "../../commun/src/lignees.ts";
+import { SEUIL_ONGLETS, categorieDe, etatCle, enTete, nouveautesParOnglet, ongletsVides, planFabrication, recetteVisible, sousTitre } from "./fabrication-arbre.ts";
 
 /** Une vue de progression, comme le serveur l'envoie. */
 function vue(devoilees: string[], plus: Partial<VueProgression> = {}): VueProgression {
-  return { devoilees, nonVues: [], prochain: prochainPalier("charbonniers", new Set(devoilees)), autres: false, entrevues: [], ...plus };
+  return { devoilees, nonVues: [], silhouettes: [], autres: false, entrevues: [], idees: [], indices: {}, ...plus };
 }
 
-test("premier écran : le feu et l'abri, sans barre d'onglets, et les silhouettes du palier 1", () => {
+test("premier écran : le feu et l'abri, sans barre d'onglets, sans silhouette tant qu'on n'a rien construit", () => {
   const plan = planFabrication("charbonniers", {}, vue(devoileesAuDepart()));
   assert.deepEqual(plan.recettes.map((r) => r.id), ["abri"]);
   assert.equal(plan.feu, true);
   assert.equal(plan.dakota, false, "le foyer Dakota attend de quoi creuser");
   assert.equal(plan.nombre, 2);
   assert.equal(plan.avecOnglets, false);
-  assert.equal(plan.palier, 1);
-  const attendues = recettesDuPalier(1, "charbonniers").filter((id) => !devoileesAuDepart().includes(id));
-  assert.deepEqual(new Set(plan.silhouettes.map((s) => s.id)), new Set(attendues));
-  // Une silhouette ne dit que le besoin : l'indice de la table, jamais le nom de la recette.
-  for (const s of plan.silhouettes) {
-    assert.equal(s.indice, PROGRESSION[s.id]!.indice);
-    const nom = recette(s.id)?.nom;
-    if (nom) assert.ok(!s.indice.toLowerCase().includes(nom.toLowerCase()), `${s.id} : l'indice donne le nom`);
-  }
-  assert.equal(sousTitre(plan), `2 recettes · ${attendues.length} à découvrir`);
+  assert.deepEqual(plan.silhouettes, []);
+  assert.equal(sousTitre(plan), "2 recettes");
   // Les autres familles : rien tant que le Comptoir ou la rencontre ne les a pas montrées (Q6).
   assert.deepEqual(plan.repliees, []);
   assert.deepEqual(plan.entrevues, []);
@@ -46,13 +40,19 @@ test("la barre d'onglets apparaît à 8 recettes, en entier ; les onglets vides 
   assert.ok(vides.has("ateliers"), "aucun atelier encore : l'onglet reste, atténué");
 });
 
-test("les silhouettes sont celles du prochain palier (décision Q2), celles de la quête en cours d'abord", () => {
-  const p1 = recettesDuPalier(1, "voltaiques");
-  const prochain = prochainPalier("voltaiques", new Set(p1), new Set(["coffre"]));
-  const plan = planFabrication("voltaiques", {}, { devoilees: p1, nonVues: [], prochain, autres: false, entrevues: [] });
-  assert.equal(plan.palier, 2);
-  assert.equal(plan.silhouettes[0]!.id, "coffre", "la quête « Un coffre à soi » passe en tête");
-  assert.ok(plan.silhouettes.every((s) => PROGRESSION[s.id]!.palier === 2));
+test("les silhouettes disent où et quoi (« Au foyer de pierres : poêlée de cèpes »), celles de la quête d'abord", () => {
+  const silhouettes: SilhouetteVue[] = [
+    { id: "lame_forgee", ou: "Au foyer de forge", quete: true },
+    { id: "cepes_poeles", ou: "Au foyer de pierres" },
+    { id: "epieu", ou: "Au foyer de pierres" },
+    { id: "abri", ou: "Au foyer de pierres" },
+  ];
+  const plan = planFabrication("charbonniers", {}, vue(["feu_de_camp", "abri"], { silhouettes }));
+  assert.deepEqual(plan.silhouettes.map((s) => s.indice), ["Au foyer de forge : forger un couteau", "Au foyer de pierres : poêlée de cèpes", "Au foyer de pierres : épieu durci au feu"]);
+  assert.equal(plan.silhouettes.length, 3, "une recette déjà dévoilée n'est pas une silhouette");
+  assert.equal(plan.silhouettes[0]!.quete, true);
+  assert.equal(plan.silhouettes[1]!.categorie, "feu");
+  assert.equal(sousTitre(plan), "2 recettes · 3 à découvrir");
 });
 
 test("Fabriquer ne montre que les recettes dévoilées, même connues (Q4 : on cache, on ne détruit rien)", () => {
@@ -113,4 +113,13 @@ test("sans état de progression (serveur d'avant la 0.7), on montre tout comme a
   assert.equal(plan.dakota, true);
   assert.deepEqual(plan.silhouettes, []);
   assert.ok(plan.repliees.length === 2);
+});
+
+test("la fiche du foyer de cuisine montre le grillage « déjà en poche » une fois l'idée venue, sinon l'indice en deux temps", () => {
+  const foyer = VOIE_SURFACE.find((e) => e.id === "foyer_cuisine")!;
+  const e = { ...foyer, cle: foyer.cle! };
+  assert.deepEqual(etatCle(e, vue([], { idees: ["foyer_cuisine"] })), { enPoche: true });
+  assert.deepEqual(etatCle(e, vue([])), { indice: "Une grille ? Les clôtures en sont faites.", temps: 1 });
+  assert.deepEqual(etatCle(e, vue([], { indices: { foyer_cuisine: 2 } })), { indice: "Le parc à volailles de L1A.", temps: 2 });
+  assert.deepEqual(etatCle({ ...e, aVenir: "niveau 2" }, vue([])), { plusLoin: true });
 });

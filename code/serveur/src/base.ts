@@ -325,7 +325,8 @@ const COLONNES_AJOUTEES: [table: string, colonne: string, definition: string][] 
   ["personnages", "savoir", "TEXT NOT NULL DEFAULT '{}'"],
   // L'arc pour tous (Book 25 §3.3) : les ébauches d'arc qui sèchent, et depuis quand, en JSON.
   ["personnages", "sechage", "TEXT NOT NULL DEFAULT '{}'"],
-  // L'arbre de progression (0.7) : recettes dévoilées et vues, objets vus, temps de jeu, en JSON ; vide : à migrer.
+  // L'arbre de progression (0.7) : recettes dévoilées et vues, objets vus, temps de jeu, idées gardées et indices des
+  // clés (0.8), en JSON ; vide : un personnage neuf (le feu et l'abri).
   ["personnages", "progression", "TEXT NOT NULL DEFAULT ''"],
 ];
 
@@ -401,9 +402,10 @@ export class Base {
     this.equiper(id, famille);
     if (tutoriel) this.sauverTutoriel(id, { ...TUTORIEL_NEUF });
     // L'arbre de progression (0.7) : le tutoriel commence au feu et à l'abri ; sans tutoriel (le vétéran, les comptes
-    // de test), les paliers 1 et 2 d'emblée (Q8).
+    // de test), les recettes communes à la main d'emblée (Q8, plan 0.8). Les idées gardées et les indices des clés
+    // (plan 0.8 §2.2) vivent dans le même état JSON : pas de colonne de plus.
     const devoilees = tutoriel ? devoileesAuDepart() : [...new Set([...devoileesAuDepart(), ...devoileesDEmblee(famille)])];
-    this.sauverProgression(id, { ...PROGRESSION_VIDE, devoilees, nonVues: [], vus: [] });
+    this.sauverProgression(id, { ...PROGRESSION_VIDE, devoilees, nonVues: [], vus: [], idees: [], indices: {} });
     if (apparence) this.db.prepare("UPDATE personnages SET apparence = ? WHERE compte_id = ?").run(JSON.stringify(apparenceValide(apparence, famille)), id);
   }
 
@@ -522,8 +524,8 @@ export class Base {
   }
 
   /**
-   * Les recettes dévoilées (l'arbre de progression, 0.7) ; null : un personnage d'avant la 0.7, à migrer (Q4).
-   * Illisible : comme un personnage d'avant (on réévalue sur son état, rien n'est détruit).
+   * Les recettes dévoilées, les idées gardées, les indices (l'arbre de progression) ; null : rien de gardé (la 0.8
+   * démarre sur une base neuve, §9.1 : le suivi repart du feu et de l'abri).
    */
   chargerProgression(compteId: number): EtatProgression | null {
     const l = this.db.prepare("SELECT progression FROM personnages WHERE compte_id = ?").get(compteId) as { progression: string } | undefined;

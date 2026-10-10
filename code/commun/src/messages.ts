@@ -623,7 +623,13 @@ export type MessageServeurProgression =
    * Des recettes dévoilées (`nouvelles`), ou la liste qui change (les autres familles). `texte` : « Tu y penses : … »,
    * au plus un toutes les 10 s (les idées d'entre-temps sont regroupées).
    */
-  { t: "devoilement"; progression: VueProgression; nouvelles: string[]; texte?: string };
+  | { t: "devoilement"; progression: VueProgression; nouvelles: string[]; texte?: string }
+  /**
+   * « Tu y penses » (plan 0.8 §2.2) : la première fois qu'une clé entre dans le sac (ou l'outil clé en main), l'idée de
+   * l'étape qu'elle ouvre (`etape`), dans la voix du carnet ; `plusTard` : le niveau d'avant n'est pas posé (« un jour »).
+   * Jamais au deuxième ramassage.
+   */
+  | { t: "idee"; etape: string; texte: string; plusTard: boolean; objet?: TypeObjet };
 
 // ---------- La couche de déchets : ramasser, fouiller, démonter (0.7, commun/src/couche-dechets.ts) ----------
 

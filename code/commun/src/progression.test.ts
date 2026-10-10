@@ -1,24 +1,33 @@
-// L'arbre de progression des recettes (0.7) : la table, les déclencheurs, la chaîne, le filet du temps.
+// L'arbre de progression des recettes (0.7, réécrit pour la 0.8, chantier 2) : la table, les déclencheurs, la chaîne,
+// le lieu de chaque recette (la construction seule), le filet par recette à la main, les silhouettes du niveau
+// suivant, l'idée au ramassage d'une clé et l'indice en deux temps.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { RECETTES, recette } from "./recettes.ts";
+import { lieuPossede } from "./lieu-recette.ts";
 import { estObjet } from "./objets.ts";
 import { QUETE } from "./quetes.ts";
 import { FAMILLES, type Famille } from "./regles.ts";
 import {
   CARTES_SPECIALES,
-  FILET_MINUTES,
+  ECHEANCES_TEMPS,
   FILET_SEUIL_MIN,
   PROGRESSION,
+  TEXTE_VETERAN,
   aDevoiler,
+  aLaConstruction,
   devoileesAuDepart,
   devoileesDEmblee,
   entrevues,
   autresAtteints,
-  prochainPalier,
+  declencheurVrai,
+  etapeAvecCle,
+  etapesAvecCle,
+  indicesOuverts,
+  nouvellesIdees,
   progressionValide,
-  recettesDuPalier,
+  silhouettes,
   texteDevoilement,
   toutDevoile,
   type Declencheur,
@@ -45,6 +54,17 @@ function apres(e: EtatPourDevoilement): Set<string> {
   return new Set([...e.devoilees, ...aDevoiler(e)]);
 }
 
+/** Les constructions : un feu de cette forme (et son niveau), plus d'autres installations. */
+function terrain(forme: "feu_camp" | "foyer_pierres" | "foyer_cuisine" | "dakota" | null, autres: Record<string, number> = {}): Map<string, number> {
+  const niveaux = { feu_camp: 1, foyer_pierres: 2, foyer_cuisine: 3, dakota: 1 } as const;
+  const m = new Map<string, number>(Object.entries(autres));
+  if (forme) {
+    m.set("feu", niveaux[forme]);
+    m.set(`feu:${forme}`, 1);
+  }
+  return m;
+}
+
 function* declencheurs(d: Declencheur): Generator<Declencheur> {
   yield d;
   if (d.a === "et") for (const x of d.tous) yield* declencheurs(x);
@@ -65,17 +85,90 @@ test("les déclencheurs ne citent que des objets, recettes et quêtes qui existe
       if (d.a === "fabrique") for (const r of d.recettes) assert.ok(recette(r), `${id} : recette ${r}`);
       if (d.a === "devoilee") assert.ok(PROGRESSION[d.recette], `${id} : ${d.recette}`);
       if (d.a === "quete") assert.ok(QUETE.has(d.quete), `${id} : quête ${d.quete}`);
+      if (d.a === "cle") assert.ok(etapeAvecCle(d.etape), `${id} : étape à clé ${d.etape}`);
     }
   }
 });
 
-test("premier écran : le feu et l'abri, rien d'autre (Q3) ; les silhouettes sont celles du palier 1 (Q2)", () => {
+test("plus de paliers : le filet ne porte que sur des recettes à la main (20 ou 60 min), et rythme les échéances", () => {
+  const filets = Object.entries(PROGRESSION).filter(([, l]) => l.filet !== undefined);
+  assert.ok(filets.length >= 10);
+  for (const [id, l] of filets) {
+    assert.equal(recette(id)!.lieu.genre, "main", id);
+    assert.ok(l.filet === 20 || l.filet === 60, id);
+  }
+  assert.deepEqual(ECHEANCES_TEMPS, [20, 60, FILET_SEUIL_MIN]);
+});
+
+test("le lieu de chaque recette (chantier 1) : à la main, posée, ou à sa construction", () => {
+  assert.deepEqual(recette("ficelle")!.lieu, { genre: "main" });
+  assert.deepEqual(recette("abri")!.lieu, { genre: "posee" });
+  assert.deepEqual(recette("lame_forgee_fer")!.lieu, { genre: "construction", construction: "forge" });
+  assert.deepEqual(recette("glaive")!.lieu, { genre: "construction", construction: "forge", niveau: 2, accessoire: "bac" });
+  const poelee = recette("cepes_poeles")!.lieu;
+  assert.ok(poelee.genre === "construction" && poelee.construction === "feu" && poelee.formes?.includes("dakota") && !poelee.formes.includes("feu_camp"));
+  // Le lieu, une construction et son accessoire.
+  assert.ok(lieuPossede({ genre: "construction", construction: "feu", formes: ["foyer_cuisine"], accessoire: "marmite" }, new Map([["feu:foyer_cuisine", 1], ["feu+marmite", 1]])));
+  assert.ok(!lieuPossede({ genre: "construction", construction: "feu", formes: ["foyer_cuisine"], accessoire: "marmite" }, new Map([["feu:foyer_cuisine", 1]])));
+  assert.equal(aLaConstruction("Foyer de cuisine"), "Au foyer de cuisine");
+  assert.equal(aLaConstruction("Forge ventilée"), "À la forge ventilée");
+  assert.equal(aLaConstruction("Établi à étau"), "À l'établi à étau");
+});
+
+test("premier écran : le feu et l'abri, rien d'autre (Q3) ; sans construction, pas de silhouette", () => {
   assert.deepEqual(devoileesAuDepart().sort(), ["abri", "feu_de_camp"]);
   assert.deepEqual(aDevoiler(etat()), []);
-  const p = prochainPalier("charbonniers", new Set(devoileesAuDepart()));
-  assert.equal(p?.palier, 1);
-  assert.ok(p!.recettes.includes("lit_branchages"));
-  assert.ok(!p!.recettes.includes("forge"));
+  assert.deepEqual(silhouettes(etat()), []);
+});
+
+test("les silhouettes : le niveau suivant des constructions qu'on a (« Au foyer de cuisine : soupe de cèpes »)", () => {
+  const camp = silhouettes(etat({ installations: terrain("feu_camp") }));
+  const auFoyer = camp.filter((s) => s.ou === "Au foyer de pierres").map((s) => s.id);
+  for (const id of ["cepes_poeles", "epieu", "fleches_durcies", "arc_simple"]) assert.ok(auFoyer.includes(id), id);
+  assert.ok(!camp.some((s) => s.id === "soupe_cepes"), "deux niveaux plus haut : pas encore");
+  const pierres = silhouettes(etat({ installations: terrain("foyer_pierres") }));
+  assert.deepEqual(pierres.find((s) => s.id === "soupe_cepes"), { id: "soupe_cepes", ou: "Au foyer de cuisine" });
+  // La forge posée : le bac de trempe ouvrira les lames d'acier ; la forge ventilée, le glaive et la hache.
+  const forge = silhouettes(etat({ installations: terrain(null, { forge: 1 }), devoilees: new Set([...devoileesAuDepart(), "forge"]) }));
+  assert.ok(forge.some((s) => s.id === "lame_forgee" && s.ou === "Au foyer de forge, avec un bac de trempe"), JSON.stringify(forge));
+  assert.ok(forge.some((s) => s.id === "glaive" && s.ou === "À la forge ventilée, avec un bac de trempe"), JSON.stringify(forge));
+  // Le poste de montage (niveau 2) n'existe pas encore : ses recettes ne sont pas des silhouettes.
+  const banc = silhouettes(etat({ famille: "voltaiques", installations: terrain(null, { banc_recharge: 1 }) }));
+  assert.ok(!banc.some((s) => s.id === "electrificateur"));
+  // Une recette dévoilée n'est plus une silhouette ; une autre famille n'en a pas.
+  const voltaique = silhouettes(etat({ famille: "voltaiques", installations: terrain(null, { forge: 1 }) }));
+  assert.ok(!voltaique.some((s) => s.id === "glaive"));
+});
+
+test("la silhouette de ce qu'une quête demande passe en tête, et sa construction se dévoile", () => {
+  // « Forger une lame » demande la lame de ressort : elle attend la forge, qui se dévoile pour qu'on la pose.
+  const e = etat({ quetes: new Set(["lame"]) });
+  const d = apres(e);
+  assert.ok(d.has("forge"));
+  assert.ok(!d.has("lame_forgee"));
+  const s = silhouettes({ ...e, devoilees: d });
+  assert.equal(s[0]!.id, "lame_forgee");
+  assert.equal(s[0]!.quete, true);
+});
+
+test("une recette liée à une construction est dévoilée par la construction seule ; la poêlée reste grisée au feu de camp", () => {
+  // Les cèpes en main, la quête du repas : au feu de camp, la poêlée ne se dévoile pas (et les pommes, si).
+  const camp = apres(etat({ installations: terrain("feu_camp"), vus: new Set(["cepe", "pomme"]), quetes: new Set(["repas"]) }));
+  assert.ok(!camp.has("cepes_poeles"));
+  assert.ok(camp.has("pommes_cuites"));
+  // Le foyer de pierres : elle vient seule, sans cèpe ni quête, avec l'épieu et les flèches durcies.
+  const pierres = apres(etat({ installations: terrain("foyer_pierres") }));
+  for (const id of ["cepes_poeles", "epieu", "fleches_durcies", "arc_simple", "pommes_cuites"]) assert.ok(pierres.has(id), id);
+  assert.ok(!pierres.has("soupe_cepes"));
+  // Le Dakota fait la poêlée, pas l'épieu.
+  const dakota = apres(etat({ installations: terrain("dakota") }));
+  assert.ok(dakota.has("cepes_poeles") && !dakota.has("epieu"));
+  // La forge posée dévoile tout ce qui s'y forge à son niveau, et seulement au Charbonnier.
+  const forge = apres(etat({ installations: terrain(null, { forge: 1 }) }));
+  for (const id of ["lame_forgee_fer", "machette_forgee_fer", "pinces_forge"]) assert.ok(forge.has(id), id);
+  assert.ok(!forge.has("reforger_lame"), "la trempe attend le bac");
+  assert.ok(apres(etat({ installations: terrain(null, { forge: 1, "forge+bac": 1 }) })).has("reforger_lame"));
+  assert.ok(!forge.has("glaive"), "le glaive attend la forge ventilée");
 });
 
 test("on y pense en tenant l'ingrédient : les joncs font penser à la ficelle et à la corde", () => {
@@ -95,71 +188,66 @@ test("la quête active dévoile ce qu'elle demande (règle 5)", () => {
   assert.ok(d.has("coffre") && d.has("corde"));
 });
 
-test("le premier feu allumé fait penser au gourdin ; un Éteint vu, à l'épieu", () => {
+test("le premier feu allumé fait penser au gourdin ; un Éteint vu, à l'épieu, qui attend le foyer de pierres", () => {
   assert.ok(apres(etat({ faits: { feu_allume: 1 } })).has("gourdin"));
-  assert.ok(apres(etat({ faits: { eteint_vu: 1 } })).has("epieu"));
+  assert.ok(!apres(etat({ faits: { eteint_vu: 1 } })).has("epieu"));
+  assert.ok(apres(etat({ faits: { eteint_vu: 1 }, installations: terrain("foyer_pierres") })).has("epieu"));
 });
 
-test("le seuil S ouvre l'atelier et l'arme de base de sa famille, avec leurs maillons (Q9)", () => {
+test("le seuil S ouvre l'atelier de sa famille ; ses recettes viennent avec l'atelier posé (Q9)", () => {
   // Un toit seul ne suffit pas : il faut aussi avoir surmonté un premier danger.
   assert.ok(!apres(etat({ installations: new Map([["abri", 1]]) })).has("forge"));
   const charbonnier = apres(etat({ installations: new Map([["abri", 1]]), faits: { "detruit:gourdin": 1 } }));
-  for (const id of ["forge", "machette_forgee_fer", "charbonniere", "ficelle"]) assert.ok(charbonnier.has(id), id);
-  assert.ok(!charbonnier.has("hachette"));
+  assert.ok(charbonnier.has("forge"));
+  assert.ok(!charbonnier.has("machette_forgee_fer"), "l'arme de métier attend la forge posée");
 
   const mecaniste = apres(etat({ famille: "mecanistes", installations: new Map([["abri", 1]]), faits: { nuit: 1 } }));
-  for (const id of ["pedalier", "arbalete", "arbrier", "noix_bois", "arc_arbalete_frene", "corde_arbalete", "corde_arc_ficelle", "etabli"]) assert.ok(mecaniste.has(id), id);
-  // Les variantes à matière rare attendent la trouvaille.
-  assert.ok(!mecaniste.has("arc_arbalete_ressort"));
-  assert.ok(apres(etat({ famille: "mecanistes", devoilees: mecaniste, vus: new Set(["ressort_lames"]) })).has("arc_arbalete_ressort"));
+  assert.ok(mecaniste.has("pedalier") && !mecaniste.has("arbalete"));
+  // L'établi posé : l'arbalète et ses pièces ; les variantes à matière rare attendent la trouvaille.
+  const etabli = apres(etat({ famille: "mecanistes", devoilees: mecaniste, installations: new Map([["abri", 1], ["etabli", 1]]), faits: { nuit: 1 } }));
+  for (const id of ["arbalete", "arbrier", "noix_bois", "arc_arbalete_frene", "arc_arbalete_ressort", "corde_arbalete"]) assert.ok(etabli.has(id), id);
+  // La corde à la ceinture de sécurité (à la main) attend toujours sa trouvaille ; l'établi à étau, ses pièces.
+  assert.ok(!etabli.has("corde_arbalete_ceinture") && !etabli.has("arbalete_lourde"));
 
   const voltaique = apres(etat({ famille: "voltaiques", tuto: 9 }));
-  assert.ok(voltaique.has("banc_recharge") && voltaique.has("matraque_fortune"));
+  assert.ok(voltaique.has("banc_recharge") && !voltaique.has("matraque_fortune"), "la matraque se monte au banc");
+  assert.ok(apres(etat({ famille: "voltaiques", tuto: 9, installations: new Map([["banc_recharge", 1]]) })).has("matraque_fortune"));
 });
 
-test("chantier 6 : pendant le tutoriel, le seuil S attend l'étape « La famille » (l'Éteint du script ne compte pas)", () => {
+test("pendant le tutoriel, le seuil S attend l'étape « La famille » (l'Éteint du script ne compte pas)", () => {
   const abriEtEteint = { installations: new Map([["abri", 1]]), faits: { "detruit:hache": 1 } };
-  // Étape 8 (« Le premier Éteint ») : l'abri est posé, l'Éteint détruit, mais le métier attend encore.
   assert.ok(!apres(etat({ ...abriEtEteint, tuto: 7 })).has("forge"));
   assert.ok(apres(etat({ ...abriEtEteint, tuto: 9 })).has("forge"));
-  // Une nuit dormie hors du script compte toujours ; et sans tutoriel, l'Éteint suffit.
   assert.ok(apres(etat({ installations: new Map([["abri", 1]]), faits: { nuit: 1 }, tuto: 3 })).has("forge"));
   assert.ok(apres(etat(abriEtEteint)).has("forge"));
-});
-
-test("chantier 6 : la quête en cours dévoile ce qu'elle fait fabriquer, même ce que sa ligne de l'arbre ne dit pas", () => {
-  // « Forger une lame » demande la lame de ressort : elle se dévoile avec la quête, et sa forge avec elle.
-  const d = apres(etat({ quetes: new Set(["lame"]) }));
-  assert.ok(d.has("lame_forgee") && d.has("forge"));
 });
 
 test("le métier commence à l'atelier : une matière rare trouvée avant ne dévoile rien de sa famille", () => {
   const avant = apres(etat({ vus: new Set(["lame_ebrechee"]) }));
   assert.ok(!avant.has("reforger_lame") && !avant.has("forge"));
-  const ensuite = apres(etat({ vus: new Set(["lame_ebrechee"]), devoilees: new Set([...devoileesAuDepart(), "forge"]) }));
-  assert.ok(ensuite.has("reforger_lame"));
+  assert.ok(apres(etat({ vus: new Set(["lame_ebrechee"]), installations: terrain(null, { forge: 1, "forge+bac": 1 }) })).has("reforger_lame"));
 });
 
 test("le Mécaniste pense au pédalier dès qu'il tient le cadre du vélo (§3.1)", () => {
   assert.ok(apres(etat({ famille: "mecanistes", vus: new Set(["cadre_velo"]) })).has("pedalier"));
 });
 
-test("le filet du temps : palier 1, puis palier 2, puis le métier ; rien de plus", () => {
-  const p1 = apres(etat({ minutes: FILET_MINUTES[1]! }));
-  for (const id of recettesDuPalier(1, "charbonniers")) assert.ok(p1.has(id), id);
-  assert.ok(!p1.has("gourdin"));
-  const p2 = apres(etat({ minutes: FILET_MINUTES[2]! }));
-  for (const id of recettesDuPalier(2, "charbonniers")) assert.ok(p2.has(id), id);
-  assert.ok(!p2.has("forge"));
+test("le filet du temps, par recette à la main : 20 min, puis 60 min, puis le métier ; jamais ce qui se pose ni ce qui se fait à une construction", () => {
+  const vingt = apres(etat({ minutes: 20 }));
+  for (const id of ["ficelle", "corde", "volaille"]) assert.ok(vingt.has(id), id);
+  assert.ok(!vingt.has("gourdin") && !vingt.has("lit_branchages") && !vingt.has("cepes_poeles"));
+  const soixante = apres(etat({ minutes: 60 }));
+  for (const id of ["gourdin", "hache", "lance", "arc_fortune", "pansement", "travois"]) assert.ok(soixante.has(id), id);
+  assert.ok(!soixante.has("forge") && !soixante.has("epieu") && !soixante.has("coffre"));
   const seuil = apres(etat({ minutes: FILET_SEUIL_MIN }));
   assert.ok(seuil.has("forge"));
   assert.ok(!seuil.has("glaive") && !seuil.has("pinces_forge"));
 });
 
-test("le rythme (Q5) : un quart d'heure de premiers gestes dévoile déjà sept cartes ou plus", () => {
+test("le rythme : un quart d'heure de premiers gestes dévoile déjà six cartes ou plus", () => {
   // Ramassé, feu allumé, la caisse à outils fouillée (tête de hache), des joncs, la hache remmanchée.
-  const d = apres(etat({ vus: new Set(["branche", "pierre", "fibres", "tete_hache", "chiffons", "hache"]), faits: { feu_allume: 1, "fabrique:hache": 1 }, tuto: 5 }));
-  assert.ok(d.size >= 7, `${d.size} cartes : ${[...d].join(", ")}`);
+  const d = apres(etat({ vus: new Set(["branche", "pierre", "fibres", "tete_hache", "chiffons", "hache"]), faits: { feu_allume: 1, "fabrique:hache": 1 }, tuto: 5, installations: terrain("feu_camp") }));
+  assert.ok(d.size >= 6, `${d.size} cartes : ${[...d].join(", ")}`);
 });
 
 test("les autres familles : jamais dévoilées sans leçon ni manuel ; vues grisées après le Comptoir", () => {
@@ -170,22 +258,23 @@ test("les autres familles : jamais dévoilées sans leçon ni manuel ; vues gris
   assert.ok(autresAtteints({ famille: "charbonniers", faits: { "rencontre:voltaiques": 1 } }));
   assert.ok(!autresAtteints({ famille: "charbonniers", faits: { "rencontre:charbonniers": 1 } }));
   // Une leçon dévoile ce qu'elle apprend ; tenir le produit d'une autre famille déplie sa recette.
-  const appris = apres(etat({ savoir: { apprises: ["arbalete"] } }));
-  assert.ok(appris.has("arbalete"));
-  const vues = entrevues(etat({ vus: new Set(["module_decharge"]) }));
-  assert.ok(vues.includes("module_flash"));
+  assert.ok(apres(etat({ savoir: { apprises: ["arbalete"] } })).has("arbalete"));
+  assert.ok(entrevues(etat({ vus: new Set(["module_decharge"]) })).includes("module_flash"));
 });
 
 test("voir faire (Q7) dévoile une recette de sa famille ou commune", () => {
-  assert.ok(apres(etat({ faits: { "vu_faire:epieu": 1, vu_faire: 1 } })).has("epieu"));
+  assert.ok(apres(etat({ faits: { "vu_faire:gourdin": 1, vu_faire: 1 } })).has("gourdin"));
 });
 
-test("le vétéran (Q8) : les paliers 1 et 2 de sa famille, pas l'atelier", () => {
+test("le vétéran (Q8, plan 0.8) : les recettes communes à la main, ni ce qui se pose, ni ce qui se fait à une construction", () => {
   for (const f of FAMILLES) {
     const d = new Set(devoileesDEmblee(f as Famille));
-    assert.ok(d.has("gourdin") && d.has("lit_branchages") && d.has("foyer_dakota"), f);
-    assert.ok(!d.has("forge") && !d.has("banc_recharge") && !d.has("pedalier"), f);
+    assert.ok(d.has("gourdin") && d.has("ficelle") && d.has("hache") && d.has("lance"), f);
+    assert.ok(!d.has("lit_branchages") && !d.has("foyer_dakota") && !d.has("cepes_poeles") && !d.has("epieu"), f);
+    assert.ok(!d.has("forge") && !d.has("banc_recharge") && !d.has("pedalier") && !d.has("matraque_fortune") && !d.has("corde_arbalete"), f);
   }
+  assert.match(TEXTE_VETERAN, /Ta famille t'attend à la station\.$/);
+  assert.ok(TEXTE_VETERAN.length <= 110);
 });
 
 test("les messages tiennent sur deux lignes (110 caractères), sans « … » de coupure", () => {
@@ -201,16 +290,59 @@ test("les messages tiennent sur deux lignes (110 caractères), sans « … » de
   assert.equal(texteDevoilement(["forge", "machette_forgee_fer"], "charbonniers"), "Ton métier commence : le foyer de forge t'attend dans Fabriquer.");
 });
 
-test("un état illisible ou trafiqué est nettoyé (rien d'inconnu, rien de négatif)", () => {
-  const e = progressionValide({ devoilees: ["abri", "abri", "inconnue", 3], nonVues: ["abri", "gourdin"], vus: ["fibres"], secondes: -5 });
+test("un état illisible ou trafiqué est nettoyé (rien d'inconnu, rien de négatif), idées et indices compris", () => {
+  const e = progressionValide({
+    devoilees: ["abri", "abri", "inconnue", 3],
+    nonVues: ["abri", "gourdin"],
+    vus: ["fibres"],
+    secondes: -5,
+    idees: ["foyer_cuisine", "foyer_cuisine", 4],
+    indices: { foyer_cuisine: { depuis: 30, temps: 2 }, faux: { depuis: "x", temps: 1 }, autre: { depuis: 1, temps: 3 } },
+  });
   assert.deepEqual(e.devoilees, ["abri"]);
   assert.deepEqual(e.nonVues, ["abri"]);
   assert.equal(e.secondes, 0);
+  assert.deepEqual(e.idees, ["foyer_cuisine"]);
+  assert.deepEqual(e.indices, { foyer_cuisine: { depuis: 30, temps: 2 } });
   assert.deepEqual(progressionValide(null).devoilees, []);
+  assert.deepEqual(progressionValide({ devoilees: [] }).idees, []);
 });
 
-test("le prochain palier met en tête ce que demande la quête en cours", () => {
-  const p = prochainPalier("charbonniers", new Set(devoileesAuDepart()), new Set(["eau_du_ciel"]));
-  assert.equal(p!.recettes[0], "recuperateur_pluie");
-  assert.equal(prochainPalier("charbonniers", new Set(toutDevoile("charbonniers").devoilees)), null);
+// ---------- Les clés : l'idée au ramassage, l'indice en deux temps ----------
+
+test("chaque clé posée a ses textes : l'idée, « un jour », et deux temps d'indice courts", () => {
+  const cles = etapesAvecCle();
+  assert.ok(cles.some((x) => x.etape.id === "foyer_cuisine"), "la clé du foyer de cuisine (posée pour les tests)");
+  for (const { etape } of cles) {
+    const c = etape.cle;
+    assert.ok((c.objet === undefined) !== (c.qualite === undefined), `${etape.id} : un ingrédient ou un outil, jamais les deux`);
+    if (c.objet) assert.ok(estObjet(c.objet), `${etape.id} : ${c.objet}`);
+    assert.ok(c.idee.length > 10 && c.idee.length <= 110, etape.id);
+    assert.ok(c.indice.every((t) => t.length > 5 && t.length <= 70), etape.id);
+  }
+});
+
+test("le grillage ramassé sans foyer de pierres : l'idée gardée « un jour » ; avec le foyer, « tu y penses » ; jamais deux fois", () => {
+  const vus = new Set(["grillage_rouleau"]);
+  const tot = nouvellesIdees({ vus, installations: terrain("feu_camp"), idees: new Set(), inventaire: { grillage_rouleau: 1 } });
+  assert.deepEqual(tot, [{ etape: "foyer_cuisine", plusTard: true, texte: "Ce grillage pourra servir à ton feu, un jour.", objet: "grillage_rouleau" }]);
+  const aPoint = nouvellesIdees({ vus, installations: terrain("foyer_pierres"), idees: new Set(), inventaire: {} });
+  assert.equal(aPoint[0]!.plusTard, false);
+  assert.equal(aPoint[0]!.texte, "Ce grillage, posé sur ton foyer, ferait une grille. Tu y penses.");
+  // L'idée est gardée : au second ramassage, rien.
+  assert.deepEqual(nouvellesIdees({ vus, installations: terrain("foyer_pierres"), idees: new Set(["foyer_cuisine"]), inventaire: { grillage_rouleau: 1 } }), []);
+  // Sans le grillage, aucune idée.
+  assert.deepEqual(nouvellesIdees({ vus: new Set(["pierre"]), installations: terrain("foyer_pierres"), idees: new Set(), inventaire: {} }), []);
+  // Le déclencheur « cle » suit l'idée gardée.
+  assert.ok(declencheurVrai({ a: "cle", etape: "foyer_cuisine" }, etat({ idees: new Set(["foyer_cuisine"]) })));
+  assert.ok(!declencheurVrai({ a: "cle", etape: "foyer_cuisine" }, etat()));
+});
+
+test("l'indice s'ouvre quand l'étape devient le niveau suivant d'une construction qu'on a, et se ferme avec l'idée", () => {
+  const ouverts = (installations: Map<string, number>, idees: string[] = []) =>
+    indicesOuverts({ installations, devoilees: new Set(devoileesAuDepart()), idees: new Set(idees) }).map((x) => x.etape.id);
+  assert.ok(!ouverts(terrain("feu_camp")).includes("foyer_cuisine"), "deux niveaux plus haut : pas encore");
+  assert.ok(ouverts(terrain("foyer_pierres")).includes("foyer_cuisine"));
+  assert.ok(!ouverts(terrain("foyer_pierres"), ["foyer_cuisine"]).includes("foyer_cuisine"), "la clé déjà en poche");
+  assert.ok(!ouverts(terrain("foyer_cuisine")).includes("foyer_cuisine"), "déjà bâti");
 });

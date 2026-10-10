@@ -76,6 +76,8 @@ import type { Mesureur } from "./mesure/mesure.ts";
 import type { ControleEnDirect } from "./mesure/obstacles.ts";
 // La couche de déchets (0.7) : un affichage provisoire, isolé (le vrai rendu en amas viendra au chantier 7).
 import { CoucheDechetsVue } from "./rendu/dechets/couche.ts";
+// « Tu y penses » au ramassage d'une clé (plan 0.8, chantier 2).
+import { BandeauIdee } from "./bandeau-idee.ts";
 
 const CLE_JETON = "watt.jeton";
 /** En développement : `?heure=22` fige l'heure affichée, pour régler la nuit sans attendre. */
@@ -370,6 +372,8 @@ function afficherVoile(texte: string, bouton?: { libelle: string; action: () => 
   voile.hidden = false;
 }
 
+/** Le bandeau « Tu y penses », posé dans le HUD au premier usage (après que le HUD a dessiné son contenu). */
+let bandeauIdee: BandeauIdee | null = null;
 const hud = new Hud(
   document.getElementById("hud")!,
   qualite.niveau,
@@ -988,6 +992,11 @@ function recevoir(message: MessageServeur): void {
       hud.majProgression(message.progression);
       if (message.texte) hud.message(message.texte, "aide");
       hud.majIdees(message.progression.devoilees, message.nouvelles);
+      return;
+    // L'idée au ramassage d'une clé (plan 0.8) : un bandeau qui passe, ou qui se ferme d'un bouton, et un son court.
+    case "idee":
+      (bandeauIdee ??= new BandeauIdee(document.getElementById("hud")!)).montrer({ texte: message.texte, plusTard: message.plusTard, ...(message.objet ? { objet: message.objet } : {}) });
+      son.jouer("idee");
       return;
     case "lecons_possibles":
       lecons.choisir(message.a, message.recettes);

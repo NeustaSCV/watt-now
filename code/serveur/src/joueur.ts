@@ -710,7 +710,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
         this.tuto = null;
         this.base.sauverTutoriel(this.compte.id, null);
         this.envoyer({ t: "tutoriel", tutoriel: null });
-        // Le vétéran qui saute le tutoriel connaît le début (Q8) : les paliers 1 et 2 d'emblée.
+        // Le vétéran qui saute le tutoriel connaît le début (Q8) : les recettes communes à la main d'emblée (plan 0.8).
         this.devoilement.devoilerDEmblee();
         return;
       case "recettes_vues":
@@ -2515,7 +2515,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
 
   // ---------- L'arbre de progression (0.7) : ce que le suivi des dévoilements regarde ----------
 
-  /** Le suivi des recettes dévoilées ; un personnage d'avant la 0.7 est migré ici (Q4 : on cache, on ne détruit rien). */
+  /** Le suivi des recettes dévoilées, des idées gardées et des indices (serveur/src/devoilement.ts). */
   private creerDevoilement(): SuiviDevoilement {
     const source: SourceDevoilement = {
       famille: this.compte.famille,
@@ -2528,18 +2528,14 @@ export class Joueur implements Voyageur, ParticipantLecon {
       quetes: () => (this.tuto ? [] : [...this.quetes.enCours(this.compte.famille).map((q) => q.id), ...this.quetes.etat.finies]),
       tuto: () => this.tuto?.etape ?? null,
       sansSac: () => capaciteDe(this.inventaire) < CAPACITE_SAC && !(this.inventaire.sac_fortune ?? 0),
+      lieu: () => (this.voyage ? null : this.lieu),
       constats: (quels) => quels.filter((c) => this.constat(c)),
       noter: (fait) => this.noterFait(fait),
       // L'admin voit toujours tout dévoilé : ses messages de dévoilement le gardent.
       envoyer: (m) => this.envoyer(m.t === "devoilement" ? { ...m, progression: this.vueProgression(m.progression) } : m),
     };
-    let etat = this.base.chargerProgression(this.compte.id);
-    if (!etat) {
-      const coffres = [...this.installations.values()].filter((i) => i.type === "coffre").map((i) => i.etat.contenu ?? {});
-      etat = SuiviDevoilement.migrer(source, coffres);
-      this.base.sauverProgression(this.compte.id, etat);
-    }
-    return new SuiviDevoilement(etat, source);
+    // La 0.8 démarre sur une base neuve (plan 0.8 §9.1) : pas de migration ; un état absent repart du feu et de l'abri.
+    return new SuiviDevoilement(this.base.chargerProgression(this.compte.id), source);
   }
 
   /** Un constat d'état, regardé une fois par seconde tant qu'il n'a jamais été vrai (§2.3). */
