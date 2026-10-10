@@ -111,7 +111,7 @@ import { COMPTOIR, dansBoite, deLieu, destinations, etapeVers, minuscule, type Z
 import { LEURRES, PORTEE_PORTE, PORTES, boitePorte, distancePorte } from "../../commun/src/cooperative.ts";
 import { atteintDansLaFosse, pousserDansLaFosse } from "../../commun/src/moulin.ts";
 import { DECHARGE, remonter } from "../../commun/src/decharge.ts";
-import type { Quete, VueQuetes } from "../../commun/src/quetes.ts";
+import { phraseDuDepart, type Quete, type VueQuetes } from "../../commun/src/quetes.ts";
 import { SuiviQuetes, type EtatJoueurPourQuetes } from "./quetes.ts";
 import { debout, encaisserCoup, lacher, nouvelEteint, penser, repousser, vue as vueEteint, type Eteint, type Humain } from "../../commun/src/eteints.ts";
 import {
@@ -193,7 +193,8 @@ import { stimuliTorches } from "../../commun/src/torche.ts";
 import { utiliserNiveau1 } from "./niveau1-base.ts";
 import { choisirFacon } from "../../commun/src/replis.ts";
 import { carteInstallations, feuxDuLieu, refusLieu, type Alentours } from "../../commun/src/lieu-recette.ts";
-import { NOMBRE_ETAPES, etapesTutoriel, type EtatTutoriel, type VueTutoriel } from "../../commun/src/tutoriel.ts";
+import { ETAPE_CARTE, ETAPE_FAMILLE, ETAPE_NUIT, ETAPE_PREMIER_ETEINT, ETAPE_SAISIE, NOMBRE_ETAPES, etapesTutoriel, type EtatTutoriel, type VueTutoriel } from "../../commun/src/tutoriel.ts";
+import { etapesReussies, progresCarte, progresFamille, type PourFinDuTutoriel } from "./tutoriel-fin.ts";
 // Le compte admin « god » (outil du porteur) : serveur/src/admin.ts.
 import { remplirCoffres, savoirAdmin, vueProgressionAdmin } from "./admin.ts";
 import { ARRIVEE_DEPART } from "../../commun/src/lieux.ts";
@@ -1998,6 +1999,9 @@ export class Joueur implements Voyageur, ParticipantLecon {
     this.besoins = { ...this.besoins, kcal: Math.max(0, this.besoins.kcal - km * KCAL_PAR_KM), eau: Math.max(0, this.besoins.eau - km * EAU_PAR_KM) };
     this.intention = INTENTION_REPOS;
     const de = this.lieu;
+    // Plan 0.8 §2.6 : au départ de chez soi, le carnet nomme les portes ouvertes (« Une vraie cuisine : il te faut une grille »).
+    const portes = de === "terrain" && !this.tuto ? phraseDuDepart(this.quetes.enCours(this.compte.famille)) : null;
+    if (portes) this.info(portes);
     this.voyage = { de, vers, arrivee: this.maintenant() + DUREE_VOYAGE_S * 1000 };
     this.mesurer("activite", "expédition", DUREE_VOYAGE_S, { vers });
     if (de === "station") this.halte.sortir(this);
@@ -2107,6 +2111,11 @@ export class Joueur implements Voyageur, ParticipantLecon {
     return { etape: this.tuto.etape, total: NOMBRE_ETAPES, titre: e.titre, consigne: e.consigne, lecon, termine: this.tuto.etape >= NOMBRE_ETAPES, ...(progres.length ? { progres } : {}) };
   }
 
+  /** Ce que regarde la fin du tutoriel (serveur/src/tutoriel-fin.ts). */
+  private pourFinDuTutoriel(): PourFinDuTutoriel {
+    return { famille: this.compte.famille, lieu: this.lieu, inventaire: this.inventaire, installations: this.installations.values(), visiteStation: this.tuto?.visiteStation ?? false };
+  }
+
   /** Les compteurs de l'étape en cours (2026-10-08) : on voit où on en est sans compter soi-même. */
   private progresTutoriel(): { libelle: string; fait: number; but: number }[] {
     const t = this.tuto!;
@@ -2121,6 +2130,10 @@ export class Joueur implements Voyageur, ParticipantLecon {
           { libelle: "Branches", fait: Math.min(3, t.branches), but: 3 },
           { libelle: "Pierres", fait: Math.min(5, t.pierres), but: 5 },
         ];
+      case ETAPE_CARTE:
+        return progresCarte(this.pourFinDuTutoriel());
+      case ETAPE_FAMILLE:
+        return progresFamille(this.pourFinDuTutoriel());
       default:
         return [];
     }
@@ -2129,7 +2142,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
   /** L'étape en cours est-elle réussie ? (d'après ce que le joueur a vraiment fait) */
   private etapeReussie(etape: number): boolean {
     const t = this.tuto!;
-    const familiale = { charbonniers: "forge", voltaiques: "banc_recharge", mecanistes: "pedalier" }[this.compte.famille];
+    // Plan 0.8, chantier 13 : la carte (la station, sa pièce rapportée), puis la famille (le meuble, la pièce posée dessus).
+    const etapes = etapesReussies(this.pourFinDuTutoriel());
     switch (etape) {
       case 0:
         return t.marche >= 12 && t.allures.includes("course") && t.allures.includes("discrete");
@@ -2149,12 +2163,12 @@ export class Joueur implements Voyageur, ParticipantLecon {
         return t.premierEteintDetruit;
       case 8:
         return t.degage;
-      case 9:
-        return [...this.installations.values()].some((i) => i.type === familiale);
-      case 10:
+      case ETAPE_CARTE:
+        return etapes.carte;
+      case ETAPE_FAMILLE:
+        return etapes.famille;
+      case ETAPE_NUIT:
         return t.dormiAbri;
-      case 11:
-        return t.visiteStation && this.lieu === "terrain";
       default:
         return false;
     }
@@ -2191,8 +2205,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
     // Les deux Éteints mis en scène arrivent au bon moment (Book 14 §4.2, étapes 8 et 9).
     if (this.lieu === "terrain" && !this.voyage) {
       const enScene = this.eteints.some((e) => e.tuto && e.etat !== "detruit");
-      if (this.tuto.etape === 7 && !enScene) this.amenerEteintDuTutoriel(false);
-      if (this.tuto.etape === 8 && !this.tuto.degage && !this.eteints.some((e) => e.tuto && e.saisit !== null)) this.amenerEteintDuTutoriel(true);
+      if (this.tuto.etape === ETAPE_PREMIER_ETEINT && !enScene) this.amenerEteintDuTutoriel(false);
+      if (this.tuto.etape === ETAPE_SAISIE && !this.tuto.degage && !this.eteints.some((e) => e.tuto && e.saisit !== null)) this.amenerEteintDuTutoriel(true);
     }
   }
 
@@ -2424,7 +2438,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
    */
   private tirerApparition(instant: number, nuit: boolean, sources: Stimulus[]): void {
     // Pendant le tutoriel, pas d'Éteint imprévu avant d'avoir appris à se battre et à se dégager.
-    if (this.tuto && this.tuto.etape < 9) return;
+    if (this.tuto && this.tuto.etape < ETAPE_CARTE) return;
     if (this.eteints.filter(debout).length >= REGLAGES.eteints_terrain_max || instant - this.derniereApparition < REGLAGES.eteints_repit_min * 60_000) return;
     const attirants = [...sources, ...this.stimuli(nuit).filter((s) => s.genre === "lumiere" || s.portee >= 18)];
     const attrait = attirants.reduce((somme, s) => somme + (s.intensite * s.portee) / 10, 0);
@@ -3516,6 +3530,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
           if (!this.feux.has(feu.id) || feu.accessoires?.[a] || !Object.entries(plan.cout).every(([t, n]) => (this.inventaire[t as TypeObjet] ?? 0) >= (n ?? 0))) return;
           this.retirerPlusieurs(plan.cout);
           feu.accessoires = { ...feu.accessoires, [a]: plan.cout };
+          this.noterFait(`accessoire:${a}`);
           this.majFeu(feu);
           this.info(`${def.nom}. ${def.apporte}`);
         }, 0, "outil");

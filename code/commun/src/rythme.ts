@@ -69,7 +69,8 @@ export const CIBLE = {
 } as const;
 
 /** Le tutoriel, pour un joueur moyen : la durée de chaque étape (≈ 45 min en tout, proposition §2.9). */
-const DUREES_TUTO = [3, 3, 4, 4, 5, 2, 4, 3, 1, 6, 3, 7];
+// Plan 0.8 (chantier 13, Q-0.8-18) : la fin du tutoriel est la saisie, la carte, la famille, la nuit.
+const DUREES_TUTO = [3, 3, 4, 4, 5, 2, 4, 3, 1, 6, 6, 3];
 
 /**
  * Les quêtes, pour un joueur moyen : le travail (minutes de jeu), et le lieu s'il faut voyager (avec ses fouilles).
@@ -90,6 +91,13 @@ const DUREES_QUETES: Readonly<Record<string, { travail: number; lieu?: "station"
   travois: { travail: 6 },
   foyer_pierres: { travail: 5 },
   foyer_cuisine: { travail: 8 },
+  // Les portes du niveau 1 (plan 0.8, chantier 13) : le travail à la maison, la clé en poche. La sortie qui la rapporte
+  // reste à apprendre au simulateur (chantier 14).
+  abri_ferme: { travail: 5 },
+  marmite: { travail: 4 },
+  coffre_cercle: { travail: 4 },
+  dix_litres: { travail: 3 },
+  etabli_etau: { travail: 4 },
   comptoir: { travail: 10, lieu: "comptoir" },
   premiers_wotts: { travail: 8, lieu: "comptoir" },
   main_tendue: { travail: 10, lieu: "comptoir" },
@@ -192,12 +200,12 @@ const GESTES_TUTO: readonly (readonly [number, Geste][])[] = [
     [0.8, { noter: "detruit:hache" }],
   ],
   [[0.2, { noter: "saisi" }]],
+  [[0.5, { voyager: "station" }]],
   [
     [0.4, { voir: ["barre_metal", "ressort_lames", "batterie_voiture"] }],
     [0.9, { atelier: true }],
   ],
   [[0.9, { noter: "nuit" }]],
-  [[0.5, { voyager: "station" }]],
 ];
 
 /** Le vétéran qui saute le tutoriel s'installe seul, entre deux objectifs du carnet (minutes de jeu). */

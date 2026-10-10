@@ -210,15 +210,18 @@ test("le seuil S ouvre l'atelier de sa famille ; ses recettes viennent avec l'at
   // La corde à la ceinture de sécurité (à la main) attend toujours sa trouvaille ; l'établi à étau, ses pièces.
   assert.ok(!etabli.has("corde_arbalete_ceinture") && !etabli.has("arbalete_lourde"));
 
-  const voltaique = apres(etat({ famille: "voltaiques", tuto: 9 }));
+  // Plan 0.8 (chantier 13) : « La famille » est l'étape 11 (index 10), après « La carte ».
+  const voltaique = apres(etat({ famille: "voltaiques", tuto: 10 }));
   assert.ok(voltaique.has("banc_recharge") && !voltaique.has("matraque_fortune"), "la matraque se monte au banc");
-  assert.ok(apres(etat({ famille: "voltaiques", tuto: 9, installations: new Map([["banc_recharge", 1]]) })).has("matraque_fortune"));
+  assert.ok(apres(etat({ famille: "voltaiques", tuto: 10, installations: new Map([["banc_recharge", 1]]) })).has("matraque_fortune"));
 });
 
 test("pendant le tutoriel, le seuil S attend l'étape « La famille » (l'Éteint du script ne compte pas)", () => {
   const abriEtEteint = { installations: new Map([["abri", 1]]), faits: { "detruit:hache": 1 } };
   assert.ok(!apres(etat({ ...abriEtEteint, tuto: 7 })).has("forge"));
-  assert.ok(apres(etat({ ...abriEtEteint, tuto: 9 })).has("forge"));
+  // « La carte » (index 9) passe avant « La famille » (index 10) : le seuil attend le retour de la station.
+  assert.ok(!apres(etat({ ...abriEtEteint, tuto: 9 })).has("forge"));
+  assert.ok(apres(etat({ ...abriEtEteint, tuto: 10 })).has("forge"));
   assert.ok(apres(etat({ installations: new Map([["abri", 1]]), faits: { nuit: 1 }, tuto: 3 })).has("forge"));
   assert.ok(apres(etat(abriEtEteint)).has("forge"));
 });

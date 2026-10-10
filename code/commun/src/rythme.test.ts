@@ -74,7 +74,7 @@ test("le tutoriel ne demande que ce qui est dévoilé : chaque étape dévoile c
       const d = new Set([...e.devoilees, ...aDevoiler(e)]);
       for (const id of recettesDeLEtape(etape, famille)) assert.ok(d.has(id), `${famille}, étape ${etape + 1} : ${id}`);
     }
-    assert.deepEqual(recettesDeLEtape(9, famille), [ATELIER[famille]]);
+    assert.deepEqual(recettesDeLEtape(10, famille), [ATELIER[famille]]);
   }
 });
 
@@ -100,7 +100,7 @@ test("la quête active dévoile sa recette et ses maillons, même avant l'atelie
 test("les quêtes qui font fabriquer quelque chose le disent : l'arbre sait quoi dévoiler pour chacune", () => {
   const sansRecette = QUETES.filter((q) => recettesDeLaQuete(q).length === 0).map((q) => q.id).sort();
   // Voyager, vendre, échanger, tirer, attendre la charge, monter un équipement, améliorer un foyer.
-  assert.deepEqual(sansRecette, ["affuter", "carquois", "charge", "comptoir", "courant_autres", "depot_meca", "depot_volt", "fournisseur", "foyer_cuisine", "foyer_pierres", "main_tendue", "premiers_wotts", "vendre_lame"]);
+  assert.deepEqual(sansRecette, ["affuter", "carquois", "charge", "comptoir", "courant_autres", "depot_meca", "depot_volt", "fournisseur", "foyer_cuisine", "foyer_pierres", "main_tendue", "marmite", "premiers_wotts", "vendre_lame"]);
   // « Forger une lame » demande la lame de ressort (son texte le dit), et l'arc de la quête est l'arc de fortune.
   assert.deepEqual(recettesDeLaQuete(QUETES.find((q) => q.id === "lame")!), ["lame_forgee"]);
   assert.deepEqual(recettesDeLaQuete(QUETES.find((q) => q.id === "premier_arc")!), ["arc_fortune"]);
