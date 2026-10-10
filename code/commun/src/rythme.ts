@@ -998,7 +998,7 @@ class Simulation {
 
   /** Ramasser chez soi ce qui y reste (les bûches et les pierres du terrain, une fois). */
   private prendreChezSoi(type: "buche" | "pierre", k: number): void {
-    const t = Math.min(k, this.terrain[type]);
+    const t = Math.max(0, Math.min(k, this.terrain[type]));
     this.terrain[type] -= t;
     this.stock[type] += t;
     this.venu("terrain", type, t);
@@ -1162,7 +1162,7 @@ class Simulation {
       arriver("gue", dureeLa);
       if (!this.def.malchance) this.cleRare("H1B");
       // La glaise du bac (B6), les pierres : son banc de galets, puis le vrac ; les joncs repoussent comme à la maison.
-      const glaise = Math.max(0, (COUT_BAC.glaise ?? 0) - this.stock.glaise);
+      const glaise = this.installations.has("forge+bac") ? 0 : Math.max(0, (COUT_BAC.glaise ?? 0) - this.stock.glaise);
       if (this.famille === "charbonniers" && glaise > 0) {
         porter("glaise", Math.min(glaise, place(2)), "gue");
         this.obtenirCle("glaise", s);
