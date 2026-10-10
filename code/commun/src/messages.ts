@@ -192,6 +192,8 @@ export interface EtatInstallation {
    */
   panneau?: boolean;
   alternateur?: boolean;
+  /** La torche plantée (plan 0.8, chantier 6) : l'instant réel où elle s'éteint (absente : pas encore allumée ; passé : consumée). */
+  eteinteLe?: number;
 }
 
 /** L'état d'une installation à déclencheur. */

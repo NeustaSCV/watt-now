@@ -42,7 +42,8 @@ function monter(inventaire: Record<string, number>, charges: Record<string, numb
   return { base, attendre, dernier, joueur: () => joueur, reouvrir };
 }
 
-const KIT_COFFRE = { buche: 4, branche: 4, corde: 1, couteau: 1, marteau: 1 };
+// Plan 0.8 : le coffre demande Fendre 1 (la tête de hache de la caisse suffit).
+const KIT_COFFRE = { buche: 4, branche: 4, corde: 1, couteau: 1, marteau: 1, tete_hache: 1 };
 
 test("on fabrique un coffre, on y range, on en sort ; il garde tout, même après déconnexion", () => {
   const t = monter({ ...KIT_COFFRE, pierre: 12, conserve: 2 });

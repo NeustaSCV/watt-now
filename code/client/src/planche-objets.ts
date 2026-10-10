@@ -174,10 +174,19 @@ for (const [nom, i, dx, dz] of [["marmite norvégienne (de près)", 3, -0.95, 0.
 }
 const NIVEAUX_INSTALLATIONS: [string, InstallationVue["type"], number, InstallationVue["etat"]][] = [
   ["abri garni", "abri", 2, {}],
-  ["abri fermé", "abri", 3, {}],
+  ["abri fermé (jute)", "abri", 3, { payes: [{ branche: 6 }, { toile_jute: 1 }] }],
+  ["abri fermé (chiffons, plastique)", "abri", 3, { payes: [{ branche: 6 }, { chiffons: 4, sac_plastique: 2 }] }],
   ["récupérateur à seau, 10 L (6 L)", "recuperateur_pluie", 2, { litres: 6, payes: [{ seau_10l: 1, branche: 2 }] }],
   ["récupérateur à seau, repli (6 L)", "recuperateur_pluie", 2, { litres: 6, payes: [{ branche: 2, bidon_huile: 1 }] }],
-  ["coffre cerclé", "coffre", 2, {}],
+  ["coffre cerclé (feuillards)", "coffre", 2, { payes: [{ feuillards: 1 }] }],
+  ["coffre cerclé (barre martelée)", "coffre", 2, { payes: [{ barre_metal: 1 }] }],
+  ["établi à étau", "etabli", 2, { payes: [{ etau: 1 }] }],
+  ["établi au serre-joint", "etabli", 2, { payes: [{ serre_joint_fortune: 1 }] }],
+  ["râtelier vide", "ratelier_outils", 1, {}],
+  ["râtelier garni", "ratelier_outils", 1, { contenu: { hache: 1, marteau: 1, scie: 1, cle_plate: 1, masse: 1 } }],
+  ["torche neuve", "torche_plantee", 1, {}],
+  ["torche allumée", "torche_plantee", 1, { eteinteLe: Date.now() + 1e9 }],
+  ["torche consumée", "torche_plantee", 1, { eteinteLe: 1 }],
   ["réserve couverte", "coffre", 3, {}],
   // 🔥 La forge (Book 25 §9.3) : les trois enclumes, le bac de trempe et son huile, la forge ventilée et son ventilateur.
   ["forge + étau + bac", "forge", 1, { enclume: "etau", bac: true }],
@@ -193,6 +202,7 @@ NIVEAUX_INSTALLATIONS.forEach(([nom, type, niveau, etat], i) => {
   const v = new VueInstallation({ id: 300 + i, type, x: i * 4, z: 21, o: 0, etat, niveau });
   scene.add(v.objet);
   animations.push((dt, nuit) => v.animer(dt, Date.now(), nuit, false));
+  sources.push(() => v.source(Date.now()));
   articles.push({ nom, section: "installations", objet: v.objet, haut: 1.7 });
 });
 

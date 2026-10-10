@@ -97,6 +97,11 @@ function actionsInstallation(
     }
     case "coffre":
       return [{ libelle: "Ouvrir le coffre", ouvrirCoffre: i.id }, examiner];
+    // Plan 0.8, chantier 6 : le râtelier s'ouvre comme un coffre (d'outils) ; la torche plantée s'allume une fois.
+    case "ratelier_outils":
+      return [{ libelle: "Ranger tes outils", ouvrirCoffre: i.id }, examiner];
+    case "torche_plantee":
+      return [i.etat.eteinteLe === undefined ? msg("Allumer la torche", "allumer") : null, examiner];
     case "escabeau":
       return [msg("Porter l'escabeau", "porter"), examiner];
     case "abri":

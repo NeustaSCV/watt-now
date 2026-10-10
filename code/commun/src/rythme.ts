@@ -22,6 +22,7 @@ import type { TypeObjet } from "./objets.ts";
 import { ATELIER, aDevoiler, devoileesAuDepart, devoileesDEmblee, nomDuLieu, recetteDeBase, recettesDeLEtape, type EtatPourDevoilement } from "./progression.ts";
 import type { LieuRecette } from "./recettes.ts";
 import { lieuPossede } from "./lieu-recette.ts";
+import { lignee } from "./lignees.ts";
 import { QUETES, queteSuivante, type Condition, type LigneQuete, type Quete } from "./quetes.ts";
 import { RECETTES, recette, type Recette } from "./recettes.ts";
 import type { Famille } from "./regles.ts";
@@ -489,6 +490,24 @@ class Simulation {
     return OK;
   }
 
+  /**
+   * Monter une installation à un niveau de la maison (plan 0.8, chantier 6 : l'abri garni remplace le lit posé à part) :
+   * sans clé ni « plus tard », avec ce que donne le terrain. Au-delà (une clé de dehors), elle attend le chantier 14.
+   */
+  monterALaMaison(type: string, niveau: number): Issue {
+    const etapes = lignee(type)?.slice(1, niveau) ?? [];
+    if (etapes.length !== niveau - 1 || !etapes.every((e) => !e.cle && !e.aVenir && e.etapeLieu === "maison")) return { ok: false, raison: `${type} niveau ${niveau}` };
+    if (!this.installations.has(type)) {
+      const r = RECETTES.find((x) => "installation" in x.produit && x.produit.installation === type);
+      const i = r ? this.fabriquer(r.id) : { ok: false, raison: `installation ${type}` };
+      if (!i.ok) return i;
+    }
+    for (const e of etapes) this.voir(Object.keys(e.couts[0] ?? {}));
+    this.installations.set(type, Math.max(niveau, this.installations.get(type) ?? 1));
+    this.reevaluer();
+    return OK;
+  }
+
   /** Du charbon de bois : bâtir la meule s'il le faut, attendre qu'elle cuise, défourner. */
   charbon(): Issue {
     if ((this.faits.defourne ?? 0) > 0) return OK;
@@ -541,7 +560,7 @@ class Simulation {
           if (c.avec) this.noter(`monte:${c.avec}`);
           return OK;
         }
-        if ((c.niveau ?? 1) > 1) return { ok: false, raison: `${c.type} niveau ${c.niveau}` };
+        if ((c.niveau ?? 1) > 1) return this.monterALaMaison(c.type, c.niveau!);
         const r = RECETTES.find((x) => "installation" in x.produit && x.produit.installation === c.type);
         if (!r) return { ok: false, raison: `installation ${c.type}` };
         const i = this.fabriquer(r.id);

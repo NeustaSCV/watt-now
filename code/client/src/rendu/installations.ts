@@ -10,6 +10,10 @@ import { batterieVoiture, modulePanneau, roueVelo } from "./pieces.ts";
 import { decharge, majTrouvailles } from "./decharge.ts";
 import { modeleMetier } from "./metier/index.ts";
 import { accessoiresForge, animerAccessoiresForge, majAccessoiresForge, piecesForgeVentilee, type AccessoiresForge } from "./metier/forge.ts";
+import { creerArme } from "./personnage.ts";
+import type { SourceLumiere } from "./lumieres.ts";
+import { PORTEE_TORCHE, torcheAllumee, torcheConsumee } from "../../../commun/src/torche.ts";
+import type { TypeObjet } from "../../../commun/src/objets.ts";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import type { InstallationVue } from "../../../commun/src/messages.ts";
@@ -919,25 +923,252 @@ function lit(): THREE.Group {
 
 // ---------- Les niveaux (Book 24 §2.5) : des pièces en plus sur le modèle de base, lisibles de loin ----------
 
-/** Un panneau de branches tressées (clayonnage) entre deux points au sol, d'une hauteur donnée. */
-function clayonnage(c: Assemblage, a: THREE.Vector3, b: THREE.Vector3, h: number, aleat: () => number): void {
-  const d = b.clone().sub(a);
-  const n = Math.max(3, Math.round(d.length() / 0.32));
-  for (let k = 0; k <= n; k++) {
-    const p = a.clone().addScaledVector(d, k / n);
-    c.perche(p.clone().add(new V3(0, -0.04, 0)), p.clone().add(new V3((aleat() - 0.5) * 0.03, h + aleat() * 0.08, 0)), 0.02, BOIS.ecorce, "mat", 5, 0.015);
+// ---------- Le niveau 1 (plan 0.8, chantier 6) : abri fermé, établi à étau, râtelier, torche plantée ----------
+
+const JUTE = 0xb8a47c;
+const JUTE_SOMBRE = 0x9c8862;
+const JUTE_CLAIR = 0xcdbb94;
+const TAMPON = 0x3f5c94;
+const TAMPON_ROUGE = 0xa8402e;
+
+/**
+ * L'abri fermé : une toile de jute (des sacs à farine décousus, recousus en grand) tendue côté vent, clouée à une perche
+ * et lestée de pierres ; de l'autre côté, un rideau de jute relevé et noué (l'entrée). Le repli : un patchwork de
+ * chiffons et de sacs plastique cousus, plus mince. Sous l'abri, la couverture de chiffons.
+ */
+function abriFerme(c: Assemblage, aleat: () => number, repli: boolean): void {
+  // Le toit de l'appentis : de la faîtière (z = -0,5 ; y = 1,45) au sol (z = 0,95).
+  const toit = (z: number) => Math.max(0, 1.47 * (1 - (z + 0.5) / 1.45));
+  // Le repli : des sacs plastique blancs et bleus, des chiffons passés, cousus en carrés.
+  const tonRepli = [0xdedbd2, 0x4d74a8, 0x9a5a48, PALETTE.toileEcrue, 0xc9c6bd, 0x6a7f96];
+  // La jute : une trame claire, des lés plus sombres d'un sac à l'autre, quelques fils tirés.
+  const ton = (i: number, j: number) => (repli ? tonRepli[(Math.floor(i / 3) * 3 + Math.floor(j / 2)) % 6]! : Math.floor(i / 4) % 2 === 1 && Math.floor(j / 3) % 2 === 0 ? JUTE_SOMBRE : (i * 7 + j * 3) % 11 === 0 ? JUTE_CLAIR : JUTE);
+  // Côté vent : la toile ferme tout le pignon, un peu creusée par le vent, le bas replié au sol.
+  const x = -1.36;
+  toile(c, 16, 9, (u, v) => {
+    const z = -0.52 + u * 1.5;
+    const h = toit(z) * 0.985 + 0.02;
+    return new V3(x + 0.05 * Math.sin(Math.PI * u) * Math.sin(Math.PI * v) + 0.01 * Math.sin(u * 13 + v * 7), v * h - 0.01, z);
+  }, ton);
+  // Les coutures des sacs (des lignes plus sombres) et deux tampons de meunier délavés.
+  if (!repli) {
+    // Les coutures entre les sacs : un gros fil sombre, en long et en travers.
+    for (const z of [-0.15, 0.22]) c.perche(new V3(x - 0.004, 0.01, z), new V3(x - 0.004, toit(z) - 0.03, z), 0.007, 0x5a4630, "mat", 3);
+    for (const y of [0.33, 0.7]) c.perche(new V3(x - 0.004, y, -0.5), new V3(x - 0.004, y, 0.95 - (y / 1.47) * 1.45), 0.007, 0x5a4630, "mat", 3);
+    // Les tampons du meunier, des deux faces : un ovale bleu barré d'une bande rouge.
+    for (const [z, y] of [[-0.32, 0.82], [0.02, 0.45]] as const) {
+      // La toile se creuse : le tampon suit le creux, à quelques millimètres de chaque face.
+      const creux = 0.05 * Math.sin(Math.PI * ((z + 0.52) / 1.5)) * Math.sin(Math.PI * (y / (toit(z) * 0.985 + 0.02)));
+      for (const sens of [1, -1]) {
+        const pignon = surface(new V3(x + creux, 0, 0), new V3(0, 0, sens), Y, new V3(sens, 0, 0));
+        c.plaque(tache(z * sens, y, 0.13, 0.08, aleat, 10), pignon, TAMPON, "toile", 0.008);
+        c.plaque(rect(z * sens, y, 0.1, 0.015), pignon, TAMPON_ROUGE, "toile", 0.011);
+      }
+    }
   }
-  // Les brins souples passés devant, derrière, devant…
-  const cote = new V3(-d.z, 0, d.x).normalize().multiplyScalar(0.018);
-  for (let r = 0; r < Math.floor(h / 0.09); r++) {
-    const y = 0.08 + r * 0.09;
-    const sens = r % 2 ? 1 : -1;
-    c.perche(a.clone().add(new V3(0, y, 0)).addScaledVector(cote, sens), b.clone().add(new V3(0, y + 0.01, 0)).addScaledVector(cote, -sens), 0.014, r % 3 === 0 ? 0x6b5a3a : BOIS.moyen, "mat", 4);
+  // La perche de bord, clouée, et les pierres qui lestent le bas.
+  c.perche(new V3(x - 0.03, toit(-0.5) + 0.02, -0.5), new V3(x - 0.03, 0.02, 0.97), 0.022, BOIS.ecorce, "mat", 5);
+  for (let k = 0; k < 6; k++) {
+    const z = -0.45 + k * 0.26;
+    c.ajouter(placer(new THREE.CylinderGeometry(0.008, 0.008, 0.012, 6).rotateZ(Math.PI / 2), x - 0.055, toit(z) * 0.5 + 0.05, z), 0x3a3836, "metal");
+    caillou(c, x + 0.08, 0.05, z, 0.08 + aleat() * 0.03, aleat, aleat() < 0.5 ? PALETTE.pierre : PALETTE.pierreSombre, 0.5);
+  }
+  // L'entrée : un rideau relevé, roulé et noué à la perche, qui pend sur un tiers.
+  const xe = 1.36;
+  toile(c, 3, 5, (u, v) => {
+    const z = -0.5 + u * 0.55;
+    return new V3(xe + 0.03 * Math.sin(v * 9), toit(z) - 0.02 - v * toit(z) * 0.8, z + 0.04 * Math.sin(Math.PI * v));
+  }, ton);
+  c.perche(new V3(xe + 0.02, 0.5, 0.06), new V3(xe + 0.02, 0.62, 0.06), 0.06, repli ? 0x3e6db0 : JUTE_SOMBRE, "toile", 6);
+  c.ligature(new V3(xe + 0.02, 0.56, 0.06), Y, 0.065);
+  // La couverture de chiffons cousus sur le lit.
+  const tons = [0x8f3a22, PALETTE.toileEcrue, 0x5a6f8a, PALETTE.vertLaine];
+  for (let k = 0; k < 6; k++) c.boite(tons[k % 4]!, "toile", 0.3, 0.03, 0.3, -0.45 + (k % 3) * 0.3, 0.2, -0.02 + Math.floor(k / 3) * 0.3);
+}
+
+/** L'étau d'établi : un corps de fonte peint (vert d'atelier écaillé), deux mors d'acier striés, la vis et sa barre. */
+function etau(c: Assemblage): void {
+  const y = 0.89;
+  const x = 0.55;
+  const z = 0.27;
+  const FONTE = 0x3d5a4e;
+  const ECAILLE = 0x5c5953;
+  // La semelle boulonnée au plateau, et ses quatre boulons.
+  c.boite(FONTE, "metal", 0.2, 0.025, 0.16, x, y + 0.012, z - 0.04);
+  for (const [dx, dz] of [[-0.08, -0.1], [0.08, -0.1], [-0.08, 0.02], [0.08, 0.02]] as const) c.ajouter(placer(new THREE.CylinderGeometry(0.011, 0.011, 0.02, 6), x + dx, y + 0.033, z + dz), 0x2a2826, "metal");
+  // Le mors fixe (le corps), haut, et le mors mobile qui avance sur sa glissière.
+  c.boite(FONTE, "metal", 0.17, 0.11, 0.07, x, y + 0.08, z - 0.06);
+  c.boite(ECAILLE, "metal", 0.06, 0.04, 0.05, x - 0.05, y + 0.1, z - 0.05);
+  c.boite(0x2e3a35, "metal", 0.07, 0.05, 0.18, x, y + 0.055, z + 0.04);
+  c.boite(FONTE, "metal", 0.17, 0.11, 0.06, x, y + 0.08, z + 0.07);
+  // Les mors d'acier, rapportés, striés.
+  for (const dz of [-0.022, 0.037]) {
+    c.boite(0x8a8780, "metal", 0.17, 0.035, 0.012, x, y + 0.122, z + dz);
+    for (let k = 0; k < 6; k++) c.boite(0x5a5853, "metal", 0.004, 0.034, 0.013, x - 0.07 + k * 0.028, y + 0.122, z + dz);
+  }
+  // Une chute de bois serrée entre les mors : on voit à quoi il sert.
+  planche(c, BOIS.coupe, 0.28, 0.08, 0.045, x + 0.04, y + 0.15, z + 0.008, 0, 0.05, 0);
+  // La vis, son écrou, la barre de serrage qui pend en biais.
+  c.perche(new V3(x, y + 0.07, z + 0.1), new V3(x, y + 0.07, z + 0.2), 0.012, 0x8a8780, "metal", 6);
+  c.ajouter(placer(new THREE.SphereGeometry(0.022, 6, 4), x, y + 0.07, z + 0.2), 0x55524d, "metal");
+  c.perche(new V3(x - 0.02, y + 0.15, z + 0.2), new V3(x + 0.02, y - 0.03, z + 0.2), 0.008, 0xa9aba8, "metal", 5);
+  for (const t of [0, 1]) c.ajouter(placer(new THREE.SphereGeometry(0.014, 5, 3), x - 0.02 + t * 0.04, y + 0.15 - t * 0.18, z + 0.2), 0x55524d, "metal");
+}
+
+/** Le serre-joint de fortune (le repli) : deux branches serrées d'une corde qu'un bâton tord, à l'angle du plateau. */
+function serreJoint(c: Assemblage, aleat: () => number): void {
+  const y = 0.89;
+  const x = 0.55;
+  const z = 0.27;
+  for (const dy of [0.07, -0.09]) c.perche(new V3(x - 0.18, y + dy, z), new V3(x + 0.2, y + dy + (aleat() - 0.5) * 0.02, z), 0.02, BOIS.ecorce, "mat", 5);
+  for (const dx of [-0.12, 0.14]) {
+    corde(c, [new V3(x + dx, y + 0.09, z - 0.015), new V3(x + dx + 0.01, y, z - 0.03), new V3(x + dx, y - 0.11, z - 0.015), new V3(x + dx, y - 0.11, z + 0.02), new V3(x + dx, y + 0.09, z + 0.02)], 0.009, CORDE, 10);
+    c.perche(new V3(x + dx - 0.07, y - 0.01, z + 0.03), new V3(x + dx + 0.08, y + 0.01, z + 0.03), 0.008, BOIS.moyen, "mat", 4);
   }
 }
 
+/** Les silhouettes de rechange au râtelier (un outil qui ne se tient pas comme une arme : la scie, la clé…). */
+function outilRange(objet: TypeObjet): THREE.Group {
+  const c = new Assemblage(objet.length * 7);
+  const tete = 0x6b6862;
+  if (/scie/.test(objet)) {
+    // Une égoïne : la lame et sa poignée de bois.
+    c.boite(0xa9aba8, "metal", 0.002, 0.11, 0.42, 0, 0.03, 0.3);
+    c.boite(BOIS.clair, "mat", 0.025, 0.09, 0.11, 0, 0.0, 0.04);
+  } else if (/cle|tournevis|lime/.test(objet)) {
+    c.boite(tete, "metal", 0.008, 0.025, 0.24, 0, 0, 0.1);
+    c.boite(tete, "metal", 0.01, 0.05, 0.04, 0, 0, 0.23);
+  } else if (/serre_joint/.test(objet)) {
+    for (const y of [-0.04, 0.04]) c.perche(new V3(0, y, 0), new V3(0, y, 0.4), 0.014, BOIS.ecorce, "mat", 5);
+    c.ligature(new V3(0, 0, 0.3), Z, 0.05);
+  } else {
+    // Un manche et une tête : un outil quelconque.
+    c.perche(new V3(0, 0, -0.05), new V3(0, 0, 0.42), 0.014, BOIS.clair, "mat", 5);
+    c.boite(tete, "metal", 0.03, 0.09, 0.05, 0, 0.02, 0.42);
+  }
+  return c.groupe();
+}
+
+/** Le râtelier à outils : deux piquets fourchus, deux traverses, des chevilles, un petit auvent de planches. */
+function ratelier(): { groupe: THREE.Group; outils: THREE.Group } {
+  const c = new Assemblage(61);
+  c.occlusion = 0.3;
+  const aleat = aleatoire(61);
+  for (const x of [-0.62, 0.62]) piquetFourchu(c, x, 0, 1.45, 0.045, aleat, x * -0.015);
+  for (const [y, r] of [[1.32, 0.035], [0.42, 0.03]] as const) {
+    rondin(c, new V3(-0.78, y, 0), new V3(0.78, y + (aleat() - 0.5) * 0.02, 0), r);
+    for (const x of [-0.62, 0.62]) c.ligature(new V3(x, y, 0), X, r + 0.012);
+  }
+  // Les chevilles où pendent les outils, plantées dans la traverse haute.
+  for (let k = 0; k < 5; k++) c.perche(new V3(-0.48 + k * 0.24, 1.3, 0.02), new V3(-0.48 + k * 0.24, 1.33, 0.13), 0.011, BOIS.coupe, "mat", 4);
+  // Un fond de planches de récupération, clouées aux traverses : les outils s'y détachent, chacun à sa place.
+  // Du bois gris de pluie, clair : les outils sombres s'y lisent de loin.
+  const tons = [0xb0a48e, 0xa2927a, 0xbcae96, 0x9f9584, 0xb4a38a];
+  for (let k = 0; k < 5; k++) planche(c, tons[k]!, 0.22, 0.86 + (k % 2) * 0.05, 0.02, -0.48 + k * 0.24, 0.9, -0.05, 0, 0, (aleat() - 0.5) * 0.03);
+  // Le nom de chaque outil, à la craie, sous sa cheville : des traits pâles.
+  for (let k = 0; k < 5; k++) c.boite(0xf0ece2, "mat", 0.07, 0.01, 0.004, -0.48 + k * 0.24, 1.22, -0.038);
+  touffe(c, -0.62, 0.1, aleat, 3, 0.25);
+  touffe(c, 0.7, -0.05, aleat, 2, 0.2);
+  const groupe = enGroupe(c);
+  const outils = new THREE.Group();
+  outils.userData.intact = true;
+  groupe.add(outils);
+  return { groupe, outils };
+}
+
+/** Les outils rangés au râtelier, pendus tête en haut aux chevilles (au plus cinq se voient). */
+function rangerOutils(outils: THREE.Group, contenu: Partial<Record<string, number>>): void {
+  outils.clear();
+  const types = Object.keys(contenu).filter((t) => (contenu[t] ?? 0) > 0).slice(0, 5);
+  types.forEach((t, k) => {
+    const type = t.split("#")[0] as TypeObjet;
+    const o = creerArme(type) ?? outilRange(type);
+    // Le manche vers le bas, la tête accrochée à la cheville (repère de la main : manche selon +z, tête selon +y).
+    o.rotation.set(-Math.PI / 2, 0, 0);
+    const pivot = new THREE.Group();
+    pivot.add(o);
+    // On suspend chaque outil par sa tête : le haut de l'objet à la cheville.
+    const boite = new THREE.Box3().setFromObject(pivot);
+    pivot.position.set(-0.48 + k * 0.24, 1.36 - boite.max.y, 0.09);
+    pivot.rotation.z = (k % 2 ? 1 : -1) * 0.04;
+    outils.add(pivot);
+  });
+}
+
+/** Une flamme de torche : un fuseau vrillé (repère : base à l'origine). */
+function flammeTorche(hauteur: number, largeur: number, vrille: number): THREE.BufferGeometry {
+  const profil = [V(0, 0), V(largeur * 0.85, hauteur * 0.08), V(largeur, hauteur * 0.25), V(largeur * 0.7, hauteur * 0.5), V(largeur * 0.3, hauteur * 0.8), V(0, hauteur)];
+  const g = new THREE.LatheGeometry(profil, 6);
+  const p = g.getAttribute("position");
+  for (let i = 0; i < p.count; i++) {
+    const h = p.getY(i) / hauteur;
+    const a = vrille * h;
+    const x = p.getX(i);
+    const z = p.getZ(i);
+    p.setXYZ(i, x * Math.cos(a) - z * Math.sin(a) + 0.04 * h * h * hauteur, p.getY(i), x * Math.sin(a) + z * Math.cos(a));
+  }
+  g.computeVertexNormals();
+  return g;
+}
+
+/** La hauteur de la tête de la torche (la flamme en part). */
+const TETE_TORCHE = 1.42;
+
+/**
+ * La torche plantée : une branche droite plantée un peu de biais, un collier de pierres au pied, la tête entourée d'un
+ * chiffon gras ligaturé de fil de fer. Deux têtes, montrées selon l'état : le chiffon jauni de graisse (neuve, puis
+ * allumée sous sa flamme), ou le moignon calciné (consumée). La flamme : trois langues en mélange additif.
+ */
+function torche(): { groupe: THREE.Group; neuve: THREE.Group; consumee: THREE.Group; flammes: THREE.Group; matFlamme: THREE.MeshBasicMaterial } {
+  const c = new Assemblage(81);
+  c.occlusion = 0.25;
+  const aleat = aleatoire(81);
+  const tete = new V3(0.05, TETE_TORCHE - 0.12, 0.02);
+  c.perche(new V3(0, -0.08, 0), tete, 0.028, BOIS.ecorce, "mat", 6, 0.024, 0.07);
+  // Un nœud et un rameau coupé, pour que la branche reste une branche.
+  c.perche(new V3(0.02, 0.62, 0.008), new V3(0.09, 0.7, 0.03), 0.01, BOIS.ecorce, "mat", 4, 0.006);
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2 + aleat() * 0.4;
+    caillou(c, Math.cos(a) * 0.13, 0.03, Math.sin(a) * 0.13, 0.055 + aleat() * 0.02, aleat, i % 2 ? PALETTE.pierre : PALETTE.pierreSombre, 0.55);
+  }
+  c.plaque(tache(0, 0, 0.16, 0.14, aleat, 7), surface(new V3(0, 0, 0), X, Z, Y), TERRE_REMUEE, "mat", 0.006);
+  const groupe = enGroupe(c);
+
+  // Le chiffon gras : un manchon renflé, enroulé en spirale, ligaturé de fil de fer, une coulure de graisse figée.
+  const n = new Assemblage(82);
+  const manchon = new THREE.CylinderGeometry(0.052, 0.042, 0.2, 8, 4).translate(0, 0.1, 0);
+  n.ajouterDegrade(placer(bosseler(manchon, 0.006, aleat), tete.x, tete.y - 0.02, tete.z, 0, 0, -0.035), (p) => (Math.sin(p.y * 70 + Math.atan2(p.z - tete.z, p.x - tete.x) * 2) > 0.3 ? 0x9a8150 : 0xc9b483), "toile");
+  for (const dy of [0.02, 0.15]) n.ligature(new V3(tete.x + dy * 0.035, tete.y + dy, tete.z), Y, 0.05, 0x6b6862);
+  n.perche(new V3(tete.x + 0.03, tete.y - 0.02, tete.z + 0.035), new V3(tete.x + 0.025, tete.y - 0.1, tete.z + 0.04), 0.006, 0xd8c890, "mat", 4, 0.002);
+  const neuve = enGroupe(n);
+
+  // Le moignon calciné : le bout charbonneux, des cendres au pied.
+  const k = new Assemblage(83);
+  k.ajouterDegrade(placer(bosseler(new THREE.CylinderGeometry(0.036, 0.03, 0.14, 7, 3).translate(0, 0.07, 0), 0.008, aleat), tete.x, tete.y - 0.02, tete.z, 0, 0, -0.035), (p) => (p.y > tete.y + 0.04 ? 0x1c1916 : 0x2c2622));
+  for (let i = 0; i < 4; i++) k.plaque(tache((aleat() - 0.5) * 0.3, (aleat() - 0.5) * 0.3, 0.035, 0.02, aleat, 5), surface(new V3(0, 0.004, 0), X, Z, Y), 0x8a8580, "mat", 0.01);
+  const consumee = enGroupe(k);
+
+  // La flamme : un cœur jaune pâle, deux langues orangées, une lueur rouge autour.
+  const matFlamme = new THREE.MeshBasicMaterial({ color: 0xff9a3c, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false });
+  const coeur = new THREE.MeshBasicMaterial({ color: 0xffe08a, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false });
+  const rouge = new THREE.MeshBasicMaterial({ color: 0xc8401a, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false });
+  const flammes = new THREE.Group();
+  for (const [h, l, v, mat, a] of [[0.32, 0.045, 1.3, coeur, 0], [0.42, 0.06, -1.5, matFlamme, 0.5], [0.36, 0.055, 1.7, matFlamme, 3.1], [0.5, 0.09, 0.8, rouge, 0]] as const) {
+    const m = new THREE.Mesh(flammeTorche(h, l, v), mat);
+    m.position.set(Math.cos(a) * 0.012, 0, Math.sin(a) * 0.012);
+    m.renderOrder = 3;
+    flammes.add(m);
+  }
+  flammes.position.set(tete.x + 0.006, tete.y + 0.16, tete.z);
+  for (const o of [neuve, consumee, flammes]) {
+    o.userData.intact = true;
+    groupe.add(o);
+  }
+  return { groupe, neuve, consumee, flammes, matFlamme };
+}
+
 /** Ce qu'un niveau ajoute au modèle de base. Null : rien à ajouter. */
-function piecesNiveau(type: InstallationVue["type"], niveau: number): THREE.Group | null {
+function piecesNiveau(type: InstallationVue["type"], niveau: number, etat: InstallationVue["etat"] = {}): THREE.Group | null {
   if (niveau <= 1) return null;
   // La forge ventilée (Book 25 §9.3) : ses pièces sont dessinées avec les autres modèles des Charbonniers.
   if (type === "forge") return piecesForgeVentilee();
@@ -956,18 +1187,32 @@ function piecesNiveau(type: InstallationVue["type"], niveau: number): THREE.Grou
       c.plaque(fronde(0.3, 0.09), s, verts[i % 4]!, "mat", 0);
     }
     c.ajouter(placer(bosseler(new THREE.BoxGeometry(0.9, 0.04, 0.6, 3, 1, 2), 0.015, aleat), 0.35, 0.17, 0.12, 0, 0.1, 0), 0x8f3a22, "toile", 0.06);
-    if (niveau >= 3) {
-      // Abri fermé : un coupe-vent tressé sur le côté au vent, et une couverture de chiffons cousus.
-      clayonnage(c, new V3(-1.3, 0, -0.5), new V3(-1.3, 0, 0.9), 1.15, aleat);
-      clayonnage(c, new V3(1.3, 0, -0.5), new V3(1.3, 0, 0.6), 0.9, aleat);
-      const tons = [0x8f3a22, PALETTE.toileEcrue, 0x5a6f8a, PALETTE.vertLaine];
-      for (let k = 0; k < 6; k++) c.boite(tons[k % 4]!, "toile", 0.3, 0.03, 0.3, -0.45 + (k % 3) * 0.3, 0.2, -0.02 + Math.floor(k / 3) * 0.3);
-    }
+    if (niveau >= 3) abriFerme(c, aleat, (etat.payes?.[1]?.toile_jute ?? 0) === 0 && (etat.payes?.[1]?.chiffons ?? 0) > 0);
+  } else if (type === "etabli") {
+    // Établi à étau : l'étau du rhabilleur boulonné à l'angle ; ou le serre-joint de fortune (le repli).
+    if ((etat.payes?.[0]?.etau ?? 0) > 0) etau(c);
+    else serreJoint(c, aleat);
   } else if (type === "coffre") {
-    // Coffre cerclé : de larges feuillards martelés aux deux bouts, des coins de fer, le fond doublé.
-    for (const x of [-0.4, 0.4]) {
-      for (const s of [-1, 1]) c.boite(ACIER, "metal", 0.06, 0.42, 0.008, x, 0.23, s * 0.28);
-      c.boite(ROUILLE_SOMBRE, "metal", 0.06, 0.008, 0.57, x, 0.445, 0);
+    // Coffre cerclé : les feuillards des barils du Moulin (ou la barre martelée en bandes), cloués tout autour du
+    // coffre aux deux bouts et au milieu, des coins de fer, le fond doublé. Les têtes de clous accrochent la lumière.
+    const barre = (etat.payes?.[0]?.barre_metal ?? 0) > 0;
+    const fer = barre ? 0x4a4744 : 0x5f5b55;
+    for (const x of [-0.4, 0, 0.4]) {
+      const large = x === 0 ? 0.045 : 0.06;
+      for (const s of [-1, 1]) {
+        c.boite(fer, "metal", large, 0.42, 0.008, x, 0.23, s * 0.281);
+        c.boite(fer, "metal", 0.008, 0.42, large, s * 0.436, 0.23, x * 0.6);
+        for (const y of [0.08, 0.23, 0.38]) c.ajouter(placer(new THREE.SphereGeometry(0.013, 6, 3, 0, Math.PI * 2, 0, Math.PI / 2).rotateX((s * Math.PI) / 2), x, y, s * 0.285), 0x2a2826, "metal");
+      }
+      // Sur le couvercle bombé, le feuillard suit l'arrondi (comme ceux du coffre simple).
+      const R = 0.34;
+      const yc = 0.43 - R * Math.cos(0.9);
+      for (let k = 0; k < 5; k++) {
+        const a = (k - 2) * 0.36;
+        c.boite(k === 2 && x !== 0 ? ROUILLE_SOMBRE : fer, "metal", large, 0.007, 0.13, x, yc + Math.cos(a) * (R + 0.016), Math.sin(a) * (R + 0.016), a, 0, 0);
+      }
+      // Un peu de rouille où le feuillard a été plié.
+      if (!barre) for (const s of [-1, 1]) c.boite(ROUILLE_SOMBRE, "metal", large * 1.02, 0.03, 0.009, x, 0.44, s * 0.282);
     }
     for (const [x, z] of [[-0.43, -0.26], [0.43, -0.26], [-0.43, 0.26], [0.43, 0.26]] as const) c.boite(NOIR, "metal", 0.07, 0.07, 0.07, x, 0.05, z);
     c.boite(BOIS.sombre, "mat", 0.9, 0.03, 0.58, 0, 0.015, 0);
@@ -1015,6 +1260,11 @@ export class VueInstallation {
   /** Les pièces de métier qui suivent l'état (`userData.majEtat`) ou qui bougent (`userData.animer`). */
   private readonly suivis: THREE.Object3D[] = [];
   private readonly animes: THREE.Object3D[] = [];
+  /** Plan 0.8, chantier 6 : les outils pendus au râtelier, et ce qu'ils étaient (pour ne refaire qu'au changement). */
+  private outils: THREE.Group | null = null;
+  private outilsVus = "";
+  /** La torche plantée : ses deux têtes, sa flamme. */
+  private torche: ReturnType<typeof torche> | null = null;
   private temps = 0;
 
   constructor(donnees: InstallationVue) {
@@ -1087,6 +1337,16 @@ export class VueInstallation {
       case "lit_branchages":
         this.objet = lit();
         break;
+      case "ratelier_outils": {
+        const r = ratelier();
+        this.objet = r.groupe;
+        this.outils = r.outils;
+        break;
+      }
+      case "torche_plantee":
+        this.torche = torche();
+        this.objet = this.torche.groupe;
+        break;
       case "decharge": {
         // La décharge (P-001) : son modèle est à part (rendu/decharge.ts).
         const d = decharge();
@@ -1110,7 +1370,7 @@ export class VueInstallation {
       if (typeof o.userData.animer === "function") this.animes.push(o);
     });
     // Le niveau (Book 24) : des pièces en plus.
-    const pieces = piecesNiveau(donnees.type, donnees.niveau ?? 1);
+    const pieces = piecesNiveau(donnees.type, donnees.niveau ?? 1, donnees.etat);
     if (pieces) this.objet.add(pieces);
     this.objet.position.set(donnees.x, 0, donnees.z);
     // Le panneau regarde toujours le sud, quelle que soit la façon dont on l'a posé.
@@ -1156,6 +1416,11 @@ export class VueInstallation {
     if (this.voyant) (this.voyant.material as THREE.MeshBasicMaterial).color.setHex(chargees > 0 ? 0x5aff7a : 0x1f3324);
     if (this.forge) majAccessoiresForge(this.forge, donnees.etat);
     if (this.trouvailles) majTrouvailles(this.trouvailles, Object.values(donnees.etat.contenu ?? {}).reduce((s, n) => s + (n ?? 0), 0));
+    if (this.outils) {
+      const vus = JSON.stringify(donnees.etat.contenu ?? {});
+      if (vus !== this.outilsVus) rangerOutils(this.outils, donnees.etat.contenu ?? {});
+      this.outilsVus = vus;
+    }
     // Le récupérateur se remplit avec la pluie : l'eau monte dans le bidon (derrière le plastique), ou dans le seau (sa
     // surface s'élargit en montant). Deux bidons (le repli) se remplissent ensemble.
     if (this.eaux.length) {
@@ -1170,6 +1435,12 @@ export class VueInstallation {
         }
       }
     }
+  }
+
+  /** La lumière de la torche plantée qui brûle (plan 0.8) : dans la réserve fixe de lumières de nuit (Book 21 §5.3.3). */
+  source(maintenantServeur: number): SourceLumiere | null {
+    if (!this.torche || !torcheAllumee(this.donnees, maintenantServeur)) return null;
+    return { x: this.donnees.x, y: TETE_TORCHE + 0.15, z: this.donnees.z, couleur: 0xff8a3d, intensite: 4, portee: PORTEE_TORCHE + 2, vacillement: 0.9 };
   }
 
   /** `maintenantServeur` : heure du serveur, pour savoir si la meule cuit encore. */
@@ -1191,6 +1462,21 @@ export class VueInstallation {
     }
     if (this.forge) animerAccessoiresForge(this.forge, dt, nuit);
     for (const o of this.animes) (o.userData.animer as (dt: number, enMarche: boolean) => void)(dt, enMarche);
+    if (this.torche) {
+      // La torche (plan 0.8) : la flamme tant qu'elle brûle, qui vacille ; consumée, le moignon noir.
+      const brule = torcheAllumee(this.donnees, maintenantServeur);
+      const finie = torcheConsumee(this.donnees, maintenantServeur);
+      this.torche.flammes.visible = brule;
+      this.torche.neuve.visible = !finie;
+      this.torche.consumee.visible = finie;
+      if (brule) {
+        this.torche.flammes.children.forEach((f, i) => {
+          f.scale.set(1, 0.85 + Math.sin(this.temps * (11 + i * 3) + i) * 0.12 + Math.sin(this.temps * 23 + i * 2) * 0.05, 1);
+          f.rotation.y += dt * (i % 2 ? 2.4 : -1.9);
+        });
+        this.torche.matFlamme.opacity = 0.75 + Math.sin(this.temps * 19) * 0.12;
+      }
+    }
     if (enMarche) {
       if (this.roue) this.roue.rotation.z -= dt * 9;
       // La meule est sur l'axe de la roue ; le plateau tourne moins vite (rapport de la chaîne).

@@ -282,7 +282,8 @@ test("sans lit voisin, garnir l'abri coûte 6 branches ; le coffre cerclé garde
   assert.equal(t.dernier("installation")!.installation.niveau, 2);
   assert.equal(t.inventaireActuel().branche ?? 0, 0);
 
-  const u = monter({ barre_metal: 1, buche: 2, pierre: 80 }, (b, id) => b.ajouterInstallation(id, "coffre", 21, 20, 0));
+  // Plan 0.8 (chantier 6) : les feuillards du Moulin, une poignée de clous, et Marteler 2 (le marteau).
+  const u = monter({ feuillards: 1, poignee_clous: 1, buche: 2, marteau: 1, pierre: 80 }, (b, id) => b.ajouterInstallation(id, "coffre", 21, 20, 0));
   u.agir("installation", 1, "ameliorer");
   assert.equal(u.dernier("installation")!.installation.niveau, 2);
   // 80 pierres, 160 kg : plus que les 150 kg d'un coffre simple.

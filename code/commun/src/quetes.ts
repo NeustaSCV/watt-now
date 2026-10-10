@@ -82,9 +82,9 @@ const INSTALLER: Quete[] = [
     id: "lit",
     ligne: "installer",
     titre: "Un vrai lit",
-    texte: "Dormir à même le sol, c'est dormir à moitié. Fais un lit de branchages à côté de ton abri, ou garnis l'abri lui-même (examine-le : « Améliorer »).",
+    texte: "Dormir à même le sol, c'est dormir à moitié. Garnis ton abri d'un lit de branchages (examine-le : « Améliorer »).",
     // Book 24 §7 : l'abri garni (niveau 2) vaut un lit posé à côté.
-    objectifs: [{ libelle: "Lit de branchages, ou abri garni", condition: { a: "un_de", conditions: [installation("lit_branchages"), { a: "installation", type: "abri", niveau: 2 }] } }],
+    objectifs: [{ libelle: "Abri garni", condition: { a: "un_de", conditions: [installation("lit_branchages"), { a: "installation", type: "abri", niveau: 2 }] } }],
     lecon: "Isolé du sol, à côté de l'abri, on récupère un tiers plus vite.",
     recompense: { objets: { conserve: 1 } },
   },

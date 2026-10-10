@@ -6,6 +6,11 @@ import { facteursArc } from "../arc.ts";
 import { PLAFOND_ARC_IF_NIVEAU_1 } from "../armes/grille.ts";
 import { A_LA_CREMAILLERE, A_LA_MAIN, A_LA_POELE, AU_FOUR, AU_FOYER_DE_PIERRES, POSEE, SOUS_LA_CENDRE, aCote } from "./lieux.ts";
 
+/** L'établi à étau (niveau 2 de l'établi) : ses recettes, et réparer un manche sans forge (le geste : chantier 9). */
+export const A_L_ETABLI_A_ETAU = aCote("etabli", { niveau: 2 });
+/** Où l'on répare le manche d'une arme ou d'un outil, sans forge, pour toutes les familles (R-ARMES-4, I19). */
+export const LIEU_REPARER_MANCHE = A_L_ETABLI_A_ETAU;
+
 export const RECETTES_COMMUNES: Recette[] = [
   {
     id: "hache",
@@ -26,7 +31,8 @@ export const RECETTES_COMMUNES: Recette[] = [
     nom: "Établi",
     produit: { installation: "etabli" },
     ingredients: { buche: 4, branche: 6 },
-    qualites: { marteler: 1, couper: 1 },
+    // Plan 0.8 (tableau maître) : Couper 1, Fendre 1 (la tête de hache de la caisse suffit), Marteler 1.
+    qualites: { marteler: 1, couper: 1, fendre: 1 },
     duree: 90,
     intensite: "moyenne",
     famille: "tous",
@@ -51,7 +57,8 @@ export const RECETTES_COMMUNES: Recette[] = [
     nom: "Coffre de rangement",
     produit: { installation: "coffre" },
     ingredients: { buche: 4, branche: 4, corde: 1 },
-    qualites: { couper: 1, marteler: 1 },
+    // Plan 0.8 (tableau maître) : les planches se fendent dans les bûches (Fendre 1).
+    qualites: { couper: 1, fendre: 1, marteler: 1 },
     duree: 60,
     intensite: "moyenne",
     famille: "tous",
@@ -319,16 +326,147 @@ export const RECETTES_COMMUNES: Recette[] = [
     intensite: "legere",
     famille: "tous",
   },
+  // ---------- Outils et bâtir (plan 0.8 §2.1 et §2.3, chantier 6) ----------
+  // Le lit de branchages ne se pose plus à part : c'est l'abri garni (I25, lignees.ts). Le râtelier et la torche se
+  // posent ; les outils de fortune et le marteau remmanché se font à la main ; l'établi à étau a ses recettes.
   {
-    id: "lit_branchages",
+    // Les outils rangés ici comptent pour ce qu'on bâtit à 3 m (outils-a-portee.ts).
+    id: "ratelier_outils",
     lieu: POSEE,
     categorie: "batir",
-    nom: "Lit de branchages",
-    produit: { installation: "lit_branchages" },
-    ingredients: { branche: 6 },
+    nom: "Râtelier à outils",
+    produit: { installation: "ratelier_outils" },
+    ingredients: { buche: 2, branche: 6, corde: 1 },
+    qualites: { couper: 1 },
+    duree: 40,
+    intensite: "moyenne",
+    famille: "tous",
+  },
+  {
+    // Elle brûle une heure de jeu une fois allumée (torche.ts).
+    id: "torche_plantee",
+    lieu: POSEE,
+    categorie: "batir",
+    nom: "Torche plantée",
+    produit: { installation: "torche_plantee" },
+    ingredients: { branche: 1, chiffons: 1, graisse: 1 },
+    qualites: { couper: 1 },
+    duree: 10,
+    intensite: "legere",
+    famille: "tous",
+  },
+  {
+    // I10 : la tête de marteau de la caisse de la ruine et une branche. Marteler 2 pour toutes les familles.
+    id: "marteau",
+    lieu: A_LA_MAIN,
+    categorie: "outils",
+    nom: "Remmancher le marteau",
+    produit: { objet: "marteau", quantite: 1 },
+    ingredients: { tete_marteau: 1, branche: 1 },
+    qualites: { couper: 1, marteler: 1 },
+    duree: 30,
+    intensite: "moyenne",
+    famille: "tous",
+  },
+  {
+    id: "serre_joint_fortune",
+    lieu: A_LA_MAIN,
+    categorie: "outils",
+    nom: "Serre-joint de fortune",
+    produit: { objet: "serre_joint_fortune", quantite: 1 },
+    ingredients: { branche: 2, corde: 1 },
+    qualites: { couper: 1 },
+    duree: 15,
+    intensite: "legere",
+    famille: "tous",
+  },
+  {
+    id: "scie_fortune",
+    lieu: A_LA_MAIN,
+    categorie: "outils",
+    nom: "Scie de fortune (un disque)",
+    produit: { objet: "scie_fortune", quantite: 1 },
+    ingredients: { disque_scie: 1 },
     qualites: { couper: 1 },
     duree: 20,
     intensite: "legere",
+    famille: "tous",
+  },
+  {
+    id: "scie_fortune_lames",
+    lieu: A_LA_MAIN,
+    categorie: "outils",
+    nom: "Scie de fortune (deux lames ébréchées)",
+    produit: { objet: "scie_fortune", quantite: 1 },
+    ingredients: { lame_ebrechee: 2 },
+    qualites: { couper: 1 },
+    duree: 20,
+    intensite: "legere",
+    famille: "tous",
+  },
+  {
+    // Une barre repliée sur elle-même, à coups de pierre : Marteler 2 (de quoi cercler un coffre).
+    id: "marteau_fortune",
+    lieu: A_LA_MAIN,
+    categorie: "outils",
+    nom: "Marteau de fortune (une barre repliée)",
+    produit: { objet: "marteau_fortune", quantite: 1 },
+    ingredients: { barre_metal: 1 },
+    qualites: { marteler: 1 },
+    duree: 30,
+    intensite: "lourde",
+    famille: "tous",
+  },
+  {
+    // Un coin taillé dans une branche dure, qu'on enfonce à coups de pierre : Fendre 1.
+    id: "coin_bois",
+    lieu: A_LA_MAIN,
+    categorie: "outils",
+    nom: "Coin de bois",
+    produit: { objet: "coin_bois", quantite: 1 },
+    ingredients: { branche: 1 },
+    qualites: { couper: 1 },
+    duree: 10,
+    intensite: "legere",
+    famille: "tous",
+  },
+  // À l'établi à étau (I19) : l'étau tient la pièce, Serrer 3. Monté au serre-joint de fortune, il ne serre pas assez.
+  {
+    id: "maillet",
+    lieu: A_L_ETABLI_A_ETAU,
+    categorie: "outils",
+    nom: "Maillet de bois",
+    produit: { objet: "maillet", quantite: 1 },
+    ingredients: { buche: 1, branche: 1 },
+    qualites: { couper: 1, serrer: 3 },
+    duree: 25,
+    intensite: "moyenne",
+    famille: "tous",
+  },
+  {
+    id: "coins_bois",
+    lieu: A_L_ETABLI_A_ETAU,
+    categorie: "outils",
+    nom: "Coins de bois dur (quatre)",
+    produit: { objet: "coin_bois", quantite: 4 },
+    ingredients: { buche: 1 },
+    qualites: { fendre: 1, serrer: 3 },
+    duree: 20,
+    intensite: "moyenne",
+    famille: "tous",
+  },
+  {
+    // Fendue au coin et au maillet, dressée à l'étau : le coin y reste, le maillet revient.
+    id: "planches_fendues",
+    lieu: A_L_ETABLI_A_ETAU,
+    categorie: "materiaux",
+    nom: "Planches fendues (deux)",
+    produit: { objet: "planche_fendue", quantite: 2 },
+    sousProduits: { maillet: 1 },
+    ingredients: { buche: 1, coin_bois: 1, maillet: 1 },
+    qualites: { serrer: 3 },
+    duree: 40,
+    intensite: "moyenne",
     famille: "tous",
   },
   // ---------- L'arc pour tous (Book 25 §3.3, chantier 4 · 0.6) : tout se fait seul, quelle que soit la famille ----------

@@ -43,6 +43,7 @@ import type { Inventaire, TypeObjet } from "../../commun/src/objets.ts";
 import { ETOILES, compter, etoilesDe, etoilesTexte, typeDe, type CleObjet } from "../../commun/src/etoiles.ts";
 import { MUNITIONS, armeTirDe, armeTirExemplaire, estLancable } from "../../commun/src/tir.ts";
 import { OBJETS, capaciteDe, estCleObjet, nomContenant, nommer, poidsInventaire } from "../../commun/src/objets.ts";
+import { estOutil } from "../../commun/src/outils-a-portee.ts";
 import {
   CATEGORIES_RECETTES,
   NOMS_INSTALLATIONS,
@@ -1606,7 +1607,7 @@ export class Hud {
       if (dem) {
         const donne = (Object.entries(dem.donne) as [TypeObjet, number][]).map(([t, k]) => nommer(t, k)).join(", ");
         const outils = (Object.entries(dem.qualites) as [Qualite, number][]).map(([q, niv]) => `${NOMS_QUALITES[q]} ${niv}`).join(", ");
-        const facteur = multiplicateurQualites(this.inventaire, dem.qualites);
+        const facteur = multiplicateurQualites(this.outils, dem.qualites);
         const etat = facteur === null ? "il te manque l'outil" : facteur > 1 ? "ton outil fera l'affaire, plus lentement" : outils ? "tu as l'outil" : "";
         actions.push(`<button type="button" data-action="demonter" ${facteur === null ? "disabled" : ""}>Démonter</button>`);
         infos.push(`<p class="info-objet">Démonter → ${donne}. Outil : ${outils || "aucun"}${etat ? ` (${etat})` : ""}.</p>`);
@@ -1826,16 +1827,18 @@ export class Hud {
     const poidsCoffre = poidsInventaire(contenu);
     // La décharge (P-001) s'ouvre comme un coffre : on n'y fait que prendre, en choisissant (le sac ne suit pas).
     const estDecharge = c.type === "decharge";
+    // Le râtelier à outils (plan 0.8, chantier 6) : des outils seulement, sans limite de poids.
+    const estRatelier = c.type === "ratelier_outils";
     const poidsSac = poidsInventaire(this.inventaire, this.gourde.litres);
     const capSac = capaciteDe(this.inventaire);
-    const capCoffre = estDecharge ? Infinity : capaciteCoffre(c);
+    const capCoffre = estDecharge || estRatelier ? Infinity : capaciteCoffre(c);
     const placeSac = capSac - poidsSac;
     const placeCoffre = capCoffre - poidsCoffre;
     // Toucher une case la choisit : son nom s'affiche dans la bande, avec ses boutons (avis de Sally, 2026-10-09).
     const choix = this.choixCoffre;
     const cases = (inv: Inventaire, sens: "deposer" | "prendre") =>
       (Object.keys(inv) as CleObjet[])
-        .filter((t) => (inv[t] ?? 0) > 0 && !(sens === "deposer" && t === "sac_a_dos"))
+        .filter((t) => (inv[t] ?? 0) > 0 && !(sens === "deposer" && t === "sac_a_dos") && !(sens === "deposer" && estRatelier && !estOutil(t)))
         .map((t) => {
           const n = inv[t] ?? 0;
           const choisie = choix?.sens === sens && choix.objet === t;
@@ -1849,7 +1852,7 @@ export class Hud {
       const inv = choix.sens === "deposer" ? this.inventaire : contenu;
       const n = inv[choix.objet] ?? 0;
       const d = OBJETS[typeDe(choix.objet)];
-      const ou = choix.sens === "deposer" ? "sur toi" : estDecharge ? "dans la décharge" : "dans le coffre";
+      const ou = choix.sens === "deposer" ? "sur toi" : estDecharge ? "dans la décharge" : estRatelier ? "au râtelier" : "dans le coffre";
       if (n <= 0) classeBande = " absent";
       let boutons = "";
       if (n > 0) {
@@ -1869,10 +1872,10 @@ export class Hud {
     }
     const plein = (place: number, inv: Inventaire) => Object.keys(inv).length > 0 && place < Math.min(...(Object.keys(inv) as CleObjet[]).map((t) => OBJETS[typeDe(t)].poids));
     const html = `
-      <header><h2>${estDecharge ? "Décharge" : "Coffre"}</h2><button type="button" class="fermer" aria-label="Fermer">✕</button></header>
+      <header><h2>${estDecharge ? "Décharge" : estRatelier ? "Râtelier à outils" : "Coffre"}</h2><button type="button" class="fermer" aria-label="Fermer">✕</button></header>
       <div class="colonnes">
         <section><h3>Sur toi <small class="${plein(placeSac, contenu) ? "plein" : ""}">${kg(poidsSac)} / ${capSac} kg</small></h3><div class="grille">${cases(this.inventaire, "deposer")}</div></section>
-        <section><h3>${estDecharge ? `Remonté du tas <small>${kg(poidsCoffre)} kg</small>` : `Dans le coffre <small class="${plein(placeCoffre, this.inventaire) ? "plein" : ""}">${kg(poidsCoffre)} / ${capCoffre} kg</small>`}</h3><div class="grille">${cases(contenu, "prendre")}</div></section>
+        <section><h3>${estDecharge ? `Remonté du tas <small>${kg(poidsCoffre)} kg</small>` : estRatelier ? `Au râtelier <small>à 3 m, ils comptent</small>` : `Dans le coffre <small class="${plein(placeCoffre, this.inventaire) ? "plein" : ""}">${kg(poidsCoffre)} / ${capCoffre} kg</small>`}</h3><div class="grille">${cases(contenu, "prendre")}</div></section>
       </div>
       <div class="bande-objet${classeBande}" aria-live="polite">${bande}</div>`;
     // On ne redessine que si quelque chose a changé, et en gardant le défilement des grilles (sinon un toucher se perd).
@@ -1922,6 +1925,11 @@ export class Hud {
   sourceFiche: ((genre: "feu" | "installation", id: number) => FeuVu | InstallationVue | null) | null = null;
   /** Les installations et feux du terrain (le lit voisin que l'abri peut absorber). */
   voisinsFiche: (() => { installations: InstallationVue[]; feux: FeuVu[] }) | null = null;
+  /** Plan 0.8, chantier 6 : les outils à portée (le sac, le râtelier et l'établi à étau à 3 m), pour griser juste. */
+  outilsAPortee: (() => Inventaire) | null = null;
+  private get outils(): Inventaire {
+    return this.outilsAPortee?.() ?? this.inventaire;
+  }
   private fiche: { genre: "feu" | "installation"; id: number } | null = null;
   private derniereFiche = "";
 
@@ -1980,7 +1988,7 @@ export class Hud {
     );
     const outils = (Object.entries(qualites) as [Qualite, number][])
       .map(([q, n]) => {
-        const a = niveauQualite(this.inventaire, q);
+        const a = niveauQualite(this.outils, q);
         // Les outils sont des portes dures (plan 0.8 §2.1) : le niveau demandé, ou rien.
         const etat = a >= n ? "ok" : "manque";
         return `<span class="outil ${etat}">${NOMS_QUALITES[q]} ${n}</span>`;
@@ -2003,7 +2011,7 @@ export class Hud {
     gratuit = false,
   ): string {
     // Avec la clé, ou par un repli (plan 0.8 §2.2 ; commun/src/replis.ts) : la première façon possible.
-    const { facon, cout, payable, outils: facteur } = choisirFacon(this.inventaire, { duree: 0, ...e }, this.famille);
+    const { facon, cout, payable, outils: facteur } = choisirFacon(this.inventaire, { duree: 0, ...e }, this.famille, (q) => multiplicateurQualites(this.outils, q));
     const outils = facteur !== null;
     const possible = (gratuit || (payable && outils)) && !bloque;
     const badge = e.famille ? ` <span class="badge-famille ${e.famille}" title="Un niveau de métier">${NOMS_FAMILLES[e.famille]}${e.famille !== this.famille ? " · ×1,5" : ""}</span>` : "";
@@ -2280,13 +2288,13 @@ export class Hud {
       const appris = !this.admin && estHorsFamille(modele, this.famille);
       const r = this.admin ? modele : recettePour(modele, this.famille);
       const pictogramme: Pictogramme = "objet" in r.produit ? r.produit.objet : r.produit.installation;
-      const outils = multiplicateurQualites(this.inventaire, r.qualites);
+      const outils = multiplicateurQualites(this.outils, r.qualites);
       // Plus tard (plan 0.8 §1.3) : grisée, sans bouton.
       const plusTard = r.aVenir;
       const possible = !plusTard && ingredientsPresents(this.inventaire, r) && outils !== null;
       const qualites = Object.entries(r.qualites)
         .map(([q, n]) => {
-          const a = niveauQualite(this.inventaire, q as Qualite);
+          const a = niveauQualite(this.outils, q as Qualite);
           // Les outils sont des portes dures (plan 0.8 §2.1) : sans le niveau demandé, c'est impossible (rouge).
           const etat = a >= (n ?? 0) ? "ok" : "manque";
           const titre = etat === "manque" ? "Il te manque un outil pour ça" : "Qualité d'outil demandée";
