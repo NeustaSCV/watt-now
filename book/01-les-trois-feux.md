@@ -163,6 +163,32 @@ Un trajet long passe obligatoirement par une ou plusieurs **haltes**. Une halte 
 | **Butin** | Modeste et **régénéré lentement**, comme les ruines proches. Plus on s'écarte de la route, plus il y a de butin… et d'Éteints. |
 | **Population** | Éteints dispersés, plus nombreux près du butin ; marchand itinérant parfois ; jusqu'à 10 joueurs par instance |
 
+### Le bois, la pierre et les clés du niveau 1 (0.8, 2026-10-10)
+
+*Plan 0.8 §2.5 et §2.7 (décisions B1 à B17 du porteur, étude `candidats-h1b-l1b-et-budget.md`), §9.1 et §9.2 ; **codé en 0.8** (chantiers 5, 7, 10, 11 et 12). Les chiffres marqués « à régler » sont des réglages, vérifiés au test de jeu (chantier 14).*
+
+**Le constat** : le poids ne bloquait pas, **le stock** bloquait (6 bûches à la station pour tout le serveur, 13 pierres qui ne revenaient jamais). La 0.8 fait revenir le bois et la pierre **dans les haltes**, et les garde rares **sur le terrain**.
+
+| Règle | Ce que dit le jeu (0.8) |
+|---|---|
+| **Le terrain** (B1) | **16 bûches et 26 pierres qui ne reviennent jamais** ; 34 branches qui repoussent. Creuser un Dakota **rend 5 pierres** (B12), le combler en coûte 5 |
+| **La repousse par lieu** (B4) | Chaque lieu a son tableau de repousse : au terrain, les bûches et les pierres jamais ; **dans les haltes, en 30 min**. Elle ne se calcule que quand quelqu'un est là : une halte vide ne coûte rien au serveur |
+| **La station** (B2, B3) | **12 bûches en vrac**, qui reviennent toutes les 30 min ; ses pierres aussi ; un **tas de bois de chauffage personnel** derrière l'atelier : **10 bûches par joueur**, qui revient en **6 h** réelles (à régler) |
+| **Le gué** (B5 à B7) | **15 pierres en vrac** (30 min) ; un **banc de galets personnel** de **8 pierres par joueur** (6 h, à régler) ; le **gisement de glaise**, inépuisable : **1 glaise (2 kg) par geste de 6 s**, avec Creuser 1 ; **6 touffes de joncs** qui repoussent en 30 min |
+| **Le vrac qui grandit** (B8) | Dans une halte, le vrac fait **+50 % par voyageur présent en plus**, jusqu'à **×3** (×2 à trois voyageurs, ×3 à cinq) |
+| **Le butin personnel** | Dans un lieu partagé, un **tas personnel** se voit plein pour chacun, se prend **pour soi**, et revient pour soi, sans que les autres voient rien bouger : le tas de bois, le banc de galets, et **la pièce de famille** de la station (revient au bout de **24 h** pour son joueur, Q-0.8-14 ; un Voltaïque ne voit pas l'enclume) |
+| **La charbonnette** (B9) | La meule de charbonnière se charge de **10 bûches, ou de 5 bûches et 20 branches**, pour 4 charbons |
+| **Le Moulin** (B11) | Les **poutres de chêne** de l'atelier du charpentier donnent **2 bûches garanties** (24 h) : de quoi cercler le coffre sur place |
+| **Le Comptoir** (B13) | Il garde en stock **10 bûches et 10 pierres**, réassort d'une unité toutes les **2 h**, au prix de vente (19 et 7 wotts) : un filet, pas une carrière |
+| **La première nuit** (B14) | Le tutoriel conseille les branches au feu ; une bûche mise au feu du terrain quand il en reste moins de 6 fait paraître un avertissement fermé d'un bouton (Book 14 §4.5 ; chantier 13, en cours) |
+| **Refusée, ou plus tard** | B10 (le gourdin garde sa bûche) ; B15 (le tas de bois de H2B, au niveau 2) |
+
+**Ce que cela donne** (calcul de l'étude) : en plus de la visite du tutoriel, ⚡ n'a besoin d'**aucun** aller-retour de ravitaillement à la station, ⚙️ de 0 à 1, 🔥 d'un seul pour tout le niveau 1 ; une visite typique rapporte ≈ 14 bûches et 10 pierres, soit **48 kg** : le sac est plein, le travois devient utile. Confortable sans être gratuit. À vérifier au simulateur (`npm run rythme`, chantier 14), seul puis à cinq.
+
+**Les clés du niveau 1 et le butin opportuniste (R-BUTIN).** Les lieux personnels (L1A, L1B) donnent les **clés** des meubles, chacune à sa **place fixe** (Book 23 §11, Book 24 §12). Ailleurs, une clé de L1 ne sort que **rarement** d'une fouille (2 %), à la station, au gué et dans l'autre L1. **Le Comptoir** les vend **500 wotts** (il les rachète 90), une de chaque en stock, mais **seulement après une première visite du lieu** où elles se trouvent : avant, il les **masque** (absentes de l'étal, pas grisées). Les pièces de famille ne s'y vendent pas.
+
+**Les lieux à un joueur reviennent à 24 h** (décision N1) : à la Coopérative et au Moulin, tout revient au bout de 24 h (Éteints, butin, clés garanties ; au Moulin, la clé d'accès et la grande porte refermée). La fourche à foin du Moulin et le pied-de-biche de la Coopérative ne se trouvent **qu'une fois par personnage**.
+
 ### Instances : combien de joueurs par map
 
 - **Capacité :** 10 joueurs maximum par instance.
@@ -331,7 +357,7 @@ On ne fond pas de l'acier sur un feu de camp, même avec une montagne de bois. C
 | Installation | Température max | Rendement thermique | Palier |
 |---|---|---|---|
 | Feu de camp | ≈ 600 °C | ≈ 5 % | I |
-| Foyer de forge (petit soufflet à main) (bois ou charbon de bois ; en jeu, 1 kg de charbon pour un couteau) | ≈ 900 °C | ≈ 8 % | I |
+| Foyer de forge (on y souffle à la main) (bois ou charbon de bois ; en jeu, 1 kg de charbon pour un couteau) | ≈ 900 °C | ≈ 8 % | I |
 | Forge au charbon de bois avec ventilation | ≈ 1 300 °C | ≈ 10 % | II |
 | Creuset isolé (four de fonderie) | ≈ 1 200 °C | ≈ 15 % | II |
 | Four à arc ou à induction (électrique) | ≈ 1 600 °C et plus | ≈ 60 % | III, très énergivore |
