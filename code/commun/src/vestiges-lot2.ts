@@ -557,7 +557,7 @@ export const VESTIGES_LOT2 = {
   planche_roulettes: {
     nom: "planche à roulettes",
     pluriel: "planches à roulettes",
-    description: "Huit roulements qui tournent mieux que le monde.",
+    description: "Ses roues tournent encore mieux que le monde. Pour le reste : de l'aluminium et une planche.",
     poids: 2.5,
     valeur: 15,
     famille: "loisir",
@@ -956,7 +956,7 @@ export const VESTIGES_LOT2 = {
   debroussailleuse: {
     nom: "débroussailleuse",
     pluriel: "débroussailleuses",
-    description: "Le moteur est grippé, mais sa bobine fait encore claquer l'étincelle.",
+    description: "Le moteur est grippé, la bobine noyée d'huile. Il en reste un tube d'acier et des capots de plastique.",
     poids: 7,
     valeur: 20,
     famille: "ferme",
@@ -1022,7 +1022,8 @@ export const DEMONTAGE_LOT2: Partial<Record<TypeObjet, Demontage>> = {
   balise_solaire: { donne: { led: 1, pile: 1, plastique: 1 }, qualites: {}, duree: 2 },
   ballon_foot: { donne: { caoutchouc: 1 }, qualites: C1, duree: 2 },
   peluche_parlante: { donne: { pile: 2, chiffons: 1 }, qualites: C1, duree: 3 },
-  planche_roulettes: { donne: { roulements: 1, aluminium: 2, branche: 2 }, qualites: S1, duree: 10 },
+  // Plan 0.8 (§9.2, chantier 10) : plus de roulement (la boîte de roulements est une clé de L2A).
+  planche_roulettes: { donne: { aluminium: 2, branche: 2 }, qualites: S1, duree: 10 },
   trottinette_enfant: { donne: { aluminium: 4, caoutchouc: 1 }, qualites: S1, duree: 8 },
   laisse_enrouleur: { donne: { ficelle: 2, petit_ressort: 1, plastique: 1 }, qualites: V1, duree: 3 },
   // Maison, bureau, gadgets
@@ -1060,5 +1061,6 @@ export const DEMONTAGE_LOT2: Partial<Record<TypeObjet, Demontage>> = {
   onduleur: { donne: { petite_batterie: 1, fil_cuivre: 2, plastique: 2 }, qualites: V1, duree: 10 },
   appareils_mariage: { donne: { appareil_photo_jetable: 5 }, qualites: {}, duree: 3 },
   tondeuse_robot: { donne: { lame_ebrechee: 1, petit_moteur: 2, cellule_lithium: 4, plastique: 4 }, qualites: V1, duree: 15 },
-  debroussailleuse: { donne: { bobine_allumage: 1, barre_metal: 1, plastique: 2 }, qualites: S1, duree: 20 },
+  // Plan 0.8 (§9.2, chantier 10 ; I12) : plus de bobine d'allumage (elle attend H2A).
+  debroussailleuse: { donne: { barre_metal: 1, plastique: 2 }, qualites: S1, duree: 20 },
 };

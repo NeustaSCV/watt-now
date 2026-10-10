@@ -58,7 +58,7 @@ import {
 } from "../../commun/src/survie.ts";
 import { DISTANCE_INTERACTION, PORTEE_ARBRE, distanceMare, RAYON_ESCABEAU, REPOUSSE_MS, USAGES, estArbre, ressourceVisible } from "../../commun/src/terrain.ts";
 import { heuresEcoulees } from "../../commun/src/temps.ts";
-import { DEMONTAGE, LIEU_DE_FOUILLE, estOrdure, tirerVestiges } from "../../commun/src/vestiges.ts";
+import { DEMONTAGE, LIEU_DE_FOUILLE, estOrdure, etapeButin, tirerVestiges } from "../../commun/src/vestiges.ts";
 import {
   DUREE_VOYAGE_S,
   EAU_PAR_KM,
@@ -100,6 +100,7 @@ import {
   formaterWotts,
   prixAchatCle,
   prixVenteCle,
+  refusVenteCle,
   valeurWotts,
   type Wotts,
 } from "../../commun/src/economie.ts";
@@ -537,10 +538,13 @@ export class Joueur implements Voyageur, ParticipantLecon {
       inventaire: this.inventaire,
       besoins: this.besoins,
       gourde: this.gourde,
-      // L'if du fond du bois ne se voit que si l'on reconnaît les essences (Book 25 §3.2).
-      ressources: [...this.ressourcesIci().values()]
-        .filter((r) => ressourceVisible(r.type, this.compte.famille))
-        .map((r) => ({ id: r.id, type: r.type, x: r.x, z: r.z, disponible: r.disponibleLe <= instant })),
+      // L'if du fond du bois ne se voit que si l'on reconnaît les essences (Book 25 §3.2) ; dans un lieu vivant, le butin
+      // personnel et le vrac qui grandit (plan 0.8, chantier 10 : serveur/src/lieu-vivant.ts).
+      ressources: this.vivant
+        ? this.vivant.vuePour(this.compte.id, this.compte.famille, instant)
+        : [...this.ressourcesIci().values()]
+            .filter((r) => ressourceVisible(r.type, this.compte.famille))
+            .map((r) => ({ id: r.id, type: r.type, x: r.x, z: r.z, disponible: r.disponibleLe <= instant })),
       feux: this.lieu === "terrain" ? [...this.feux.values()].map(vue) : [],
       installations: this.lieu === "terrain" ? [...this.installations.values()] : [],
       charges: this.chargesArrondies(),
@@ -933,6 +937,9 @@ export class Joueur implements Voyageur, ParticipantLecon {
       case "acheter": {
         const n = Math.floor(op.quantite);
         if (!(n >= 1) || !estCleObjet(op.objet) || (this.comptoir.stock[op.objet] ?? 0) < n) return;
+        // Une clé de L1 : seulement après une première visite de son lieu (plan 0.8, chantier 10).
+        const refusCle = refusVenteCle(typeDe(op.objet), this.quetes.etat.faits);
+        if (refusCle) return this.info(refusCle);
         const total = prixVenteCle(op.objet) * n;
         if (total > enPoche + 1e-6) return this.info(`Il te faut ${formaterWotts(total)} en bons. Gagne-les : dépose de l'électricité, vends, ou pédale pour les Compteurs.`);
         if (poidsInventaire(this.inventaire, this.gourde.litres) + OBJETS[typeDe(op.objet)].poids * n > capaciteDe(this.inventaire)) return this.sacTropLourd();
@@ -2704,7 +2711,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     const lieu = this.lieu;
     const r = this.ressourcesIci().get(id);
     // L'if du fond du bois : qui ne reconnaît pas les essences ne le voit pas (Book 25 §3.2).
-    if (!r || r.disponibleLe > this.maintenant() || !ressourceVisible(r.type, this.compte.famille)) return;
+    if (!r || !this.ressourceLibre(r, this.maintenant()) || !ressourceVisible(r.type, this.compte.famille)) return;
     if (!this.proche(r.x, r.z, DISTANCE_INTERACTION + (estArbre(r.type) ? PORTEE_ARBRE : 0))) return this.info("C'est trop loin : approche-toi encore un peu.");
     const usage = USAGES[r.type];
     // Le coffre du directeur ne s'ouvre qu'avec la clé du magasinier (Book 23 §2.2).
@@ -2722,13 +2729,13 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (poidsInventaire(this.inventaire, this.gourde.litres) + poidsDe(usage.donne) > capaciteDe(this.inventaire)) return this.sacTropLourd();
     this.commencer(usage.libelle, (usage.duree * facteur) / REGLAGES.gestes_vitesse, () => {
       const instant = this.maintenant();
-      if (r.disponibleLe > instant || this.lieu !== lieu) return;
-      const repousse = REPOUSSE_MS[r.type] === null ? null : REPOUSSE_MS[r.type]! / REGLAGES.repousse_rythme;
-      const disponibleLe = repousse === null ? JAMAIS : instant + repousse;
+      if (this.lieu !== lieu || !this.ressourceLibre(r, instant)) return;
       const vivant = this.vivant;
-      if (vivant) vivant.prendre(r, disponibleLe);
+      // Un lieu vivant a sa repousse, son butin personnel et son vrac (plan 0.8, chantier 10 : serveur/src/lieu-vivant.ts).
+      if (vivant) vivant.prendrePar(r, this.compte.id, instant);
       else {
-        r.disponibleLe = disponibleLe;
+        const repousse = REPOUSSE_MS[r.type] === null ? null : REPOUSSE_MS[r.type]! / REGLAGES.repousse_rythme;
+        r.disponibleLe = repousse === null ? JAMAIS : instant + repousse;
         this.base.sauverRessource(this.compte.id, r.id, r.disponibleLe);
         this.envoyer({ t: "ressource", id: r.id, disponible: false });
       }
@@ -2744,12 +2751,19 @@ export class Joueur implements Voyageur, ParticipantLecon {
       } else for (const b of BATTERIES) if (usage.donne[b]) this.ajouterCharge(b, CHARGE_TROUVEE[b] * (usage.donne[b] ?? 0));
       // Vestiges, lot 1 : une fouille rapporte aussi du bric-à-brac, tiré dans la table du lieu.
       const lieuFouille = LIEU_DE_FOUILLE[r.type];
-      if (lieuFouille) this.recevoirBricABrac(tirerVestiges(lieuFouille, this.alea));
+      // Au niveau 1, rarement, une clé de L1 (R-BUTIN, plan 0.8 chantier 10 : etapeButin, tirerCleRare).
+      if (lieuFouille) this.recevoirBricABrac(tirerVestiges(lieuFouille, this.alea, etapeButin(lieu)));
       if (this.tuto) {
         this.tuto.branches += usage.donne.branche ?? 0;
         this.tuto.pierres += usage.donne.pierre ?? 0;
       }
     }, 0, usage.verbe === "demonter" ? "outil" : "leger");
+  }
+
+  /** Cette ressource est-elle là pour moi ? (dans un lieu vivant : mon butin personnel, le vrac en jeu) */
+  private ressourceLibre(r: RessourceEnBase, instant: number): boolean {
+    const vivant = this.vivant;
+    return vivant ? vivant.disponiblePour(r, this.compte.id, instant) : r.disponibleLe <= instant;
   }
 
   /** Un indice, au plus une fois par période pour chaque sorte : on aide sans rabâcher. */

@@ -9,7 +9,7 @@ import { DUREE_VOYAGE_S, SORTIES_COMPTOIR, SORTIES_COOP, arriveeDans, dansBoite,
 import type { MessageServeur } from "../../commun/src/messages.ts";
 import { Base } from "./base.ts";
 import { Comptoir } from "./comptoir.ts";
-import { Cooperatives, repeupler } from "./cooperative.ts";
+import { Cooperatives, aReinitialiser } from "./cooperative.ts";
 import { Halte } from "./halte.ts";
 import { Joueur } from "./joueur.ts";
 
@@ -220,7 +220,7 @@ test("0.5d : un Éteint détruit le reste, d'une visite à l'autre ; les portes 
   t.deconnecter(a.joueur);
   t.attendre(6 * 60, 5);
   assert.equal(t.cooperatives.nombre, 0);
-  // Une heure plus tard (moins que le délai de repeuplement), elle est rechargée telle quelle.
+  // Une heure plus tard (bien avant ses 24 h), elle est rechargée telle quelle.
   t.sauter(3_600_000);
   const autre = new Cooperatives(t.base, () => 0.5, t.maintenant).de(a.compte.id);
   assert.ok(!autre.eteints.some((e) => e.id === 1 && e.etat !== "detruit"));
@@ -228,19 +228,33 @@ test("0.5d : un Éteint détruit le reste, d'une visite à l'autre ; les portes 
   assert.equal(autre.portes.bureaux, true);
 });
 
-test("0.5d : le repeuplement — quelques Éteints reviennent toutes les 12 h, la chambre froide d'abord", () => {
+test("plan 0.8 (N1) : plus de repeuplement partiel ; au bout de 24 h, tous les Éteints et les portes reviennent", () => {
   const debut = 5_000_000;
-  const froide = [19, 20, 21, 22, 23, 24];
-  const etat = { detruits: [1, 2, 5, ...froide], portes: portesInitiales(), repeupleLe: debut, klaxons: 4, piles: 600, radio: null };
-  assert.deepEqual(repeupler(etat, debut + 11 * 3_600_000), etat, "rien avant 12 h");
-  const apres12 = repeupler(etat, debut + 12.5 * 3_600_000);
-  assert.equal(apres12.detruits.length, etat.detruits.length - 3);
-  assert.ok([1, 2, 5].every((id) => apres12.detruits.includes(id)), "la chambre froide revient d'abord");
-  const apres4j = repeupler(etat, debut + 4 * 24 * 3_600_000);
-  assert.equal(apres4j.detruits.length, 0);
+  const etat = { detruits: [1, 2, 5, 19, 20], portes: portesInitiales(), pleineLe: debut, klaxons: 4, piles: 600, radio: null };
+  assert.equal(aReinitialiser(etat, debut + 23.9 * 3_600_000), false, "rien avant 24 h");
+  assert.equal(aReinitialiser(etat, debut + 24 * 3_600_000), true);
+  const t = monter();
+  const a = t.nouveau("Rose");
+  t.allerALaCoop(a.joueur);
+  t.attendre(DUREE_VOYAGE_S + 1);
+  const coop = t.cooperatives.de(a.compte.id);
+  for (const e of coop.eteints.slice(0, 5)) e.etat = "detruit";
+  coop.basculerPorte("bureaux", true);
+  t.attendre(1);
+  t.deconnecter(a.joueur);
+  t.attendre(6 * 60, 5);
+  // 12 h après : rien n'est revenu (le repeuplement de 3 Éteints toutes les 12 h n'existe plus).
+  t.sauter(12 * 3_600_000);
+  const a12 = new Cooperatives(t.base, () => 0.5, t.maintenant).de(a.compte.id);
+  assert.equal(a12.eteints.filter((e) => e.etat !== "detruit").length, 19);
+  // 24 h après l'arrivée : tout est revenu, portes refermées.
+  t.sauter(12 * 3_600_000);
+  const a24 = new Cooperatives(t.base, () => 0.5, t.maintenant).de(a.compte.id);
+  assert.equal(a24.eteints.filter((e) => e.etat !== "detruit").length, 24);
+  assert.equal(a24.portes.bureaux, false);
 });
 
-test("0.5d : le butin — un pied-de-biche garanti, le coffre à la clé du magasinier, le rare ne revient pas avant 4 jours", () => {
+test("0.5d : le butin — un pied-de-biche garanti, le coffre à la clé du magasinier ; la laiterie revient avec la Coopérative, à 24 h", () => {
   const t = monter();
   const a = t.nouveau("Rose");
   t.allerALaCoop(a.joueur);
@@ -277,17 +291,21 @@ test("0.5d : le butin — un pied-de-biche garanti, le coffre à la clé du maga
   assert.equal(inv().cle_coffre, 1);
   fouiller("coop_coffre");
   assert.equal(inv().semences_f1, 1);
-  // Les caisses de la chambre froide : prises, elles ne reviennent pas avant 4 jours, même après rechargement. Plan 0.8
-  // (I8) : ni roulements ni alternateur de tracteur (la laiterie et ses seaux viennent avec le chantier 10).
+  // La laiterie (l'ancienne chambre froide, plan 0.8 I8) : un seau de 10 L, ni roulements ni alternateur de tracteur.
+  // Pris, il ne revient pas avant les 24 h de la Coopérative, même après rechargement ; le pied-de-biche, jamais.
   fouiller("coop_caisse_froide");
+  assert.equal(inv().seau_10l, 1);
   assert.equal(inv().roulements, undefined);
   assert.equal(inv().alternateur_tracteur, undefined);
   const caisse = r("coop_caisse_froide");
+  const pied = r("coop_caisse");
   t.deconnecter(a.joueur);
   t.attendre(6 * 60, 5);
-  t.sauter(3 * 24 * 3_600_000);
+  t.sauter(20 * 3_600_000);
   const plusTard = new Cooperatives(t.base, () => 0.5, t.maintenant).de(a.compte.id);
   assert.ok(plusTard.ressources.get(caisse.id)!.disponibleLe > t.maintenant());
-  t.sauter(1.1 * 24 * 3_600_000);
-  assert.ok(plusTard.ressources.get(caisse.id)!.disponibleLe <= t.maintenant());
+  t.sauter(4.1 * 3_600_000);
+  const encorePlusTard = new Cooperatives(t.base, () => 0.5, t.maintenant).de(a.compte.id);
+  assert.ok(encorePlusTard.ressources.get(caisse.id)!.disponibleLe <= t.maintenant());
+  assert.ok(encorePlusTard.ressources.get(pied.id)!.disponibleLe > t.maintenant(), "le pied-de-biche : une fois");
 });

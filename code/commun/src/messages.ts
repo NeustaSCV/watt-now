@@ -491,7 +491,7 @@ export type MessageServeur =
   | { t: "expulse"; raison: string }
   | { t: "inventaire"; inventaire: Inventaire }
   | { t: "besoins"; besoins: Besoins; gourde: Gourde }
-  | { t: "ressource"; id: number; disponible: boolean }
+  | { t: "ressource"; id: number; disponible: boolean; reste?: number }
   | { t: "feu"; feu: FeuVu }
   | { t: "installation"; installation: InstallationVue }
   | { t: "installation_retiree"; id: number }

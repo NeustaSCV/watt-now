@@ -12,7 +12,7 @@ import { OBJETS, nommer, type TypeObjet } from "../../commun/src/objets.ts";
 import { NOUVEAUX_OBJETS_0_8, OBJETS_NIVEAU1 } from "../../commun/src/objets-niveau1.ts";
 import { QUALITES_OBJETS, energieGrise, niveauQualite } from "../../commun/src/recettes.ts";
 import { REPOUSSE_MS, USAGES, type TypeRessourceNiveau1 } from "../../commun/src/terrain.ts";
-import { DEMONTAGE, FAMILLES_PAR_LIEU, definitionVestige, tableDeFouille, type LieuFouille } from "../../commun/src/vestiges.ts";
+import { CLES_RARES, DEMONTAGE, FAMILLES_PAR_LIEU, definitionVestige, tableDeFouille, type LieuFouille } from "../../commun/src/vestiges.ts";
 import { DEMONTAGE_LOT2, VESTIGES_LOT2 } from "../../commun/src/vestiges-lot2.ts";
 import { Base } from "./base.ts";
 import { Halte } from "./halte.ts";
@@ -103,6 +103,9 @@ test("la machine à laver et la trottinette ne donnent plus de roulement ; la mo
   assert.equal(POINTS_DECHETS.machine_laver.donne.roulements, undefined);
   assert.equal(DEMONTAGE.trottinette_electrique?.donne.roulements, undefined);
   assert.equal(POINTS_DECHETS.epave_mobylette.donne.bobine_allumage, undefined);
+  // Décision du porteur (§9.2, chantier 10) : la planche à roulettes et la débroussailleuse non plus.
+  assert.equal(DEMONTAGE.planche_roulettes?.donne.roulements, undefined);
+  assert.equal(DEMONTAGE.debroussailleuse?.donne.bobine_allumage, undefined);
   assert.doesNotMatch(POINTS_DECHETS.machine_laver.examen, /un roulement,/);
 });
 
@@ -127,8 +130,9 @@ function toutesLesTables(): [string, TypeObjet[]][] {
   return tables;
 }
 
-// La chance rare d'une clé de L1 ailleurs que chez elle (R-BUTIN, I7) est fixée à la main par le chantier 10 : s'il la
-// met dans une de ces tables, il y ajoute son exception ici, avec sa chance.
+// La chance rare d'une clé de L1 ailleurs que chez elle (R-BUTIN, I7) est fixée à la main par le chantier 10 : elle
+// n'est dans aucune de ces tables, c'est un tirage à part (CLES_RARES, tirerCleRare), après celui de la fouille, aux
+// étapes H1 et L1 seulement. L'exception est là, avec sa chance (butin-niveau1.test.ts la mesure).
 test("aucune table de fouille courante ne tire l'étau, le grillage ni la cocotte (I7), ni la bobine d'allumage (I12)", () => {
   const tables = toutesLesTables();
   assert.ok(tables.length > 20);
@@ -139,6 +143,16 @@ test("aucune table de fouille courante ne tire l'étau, le grillage ni la cocott
   }
   // Les tables gardent leurs autres trouvailles d'atelier.
   assert.ok(tableDeFouille("atelier").some(([t]) => t === "bocal_clous"));
+  // L'exception R-BUTIN : 2 % par fouille, à H1 (les six clés) et dans l'autre L1 (les trois de l'autre).
+  assert.deepEqual(
+    Object.fromEntries(Object.entries(CLES_RARES).map(([e, { chance, cles }]) => [e, { chance, cles: [...cles].sort() }])),
+    {
+      H1A: { chance: 0.02, cles: ["cocotte_fonte", "etau", "feuillards", "grillage_rouleau", "seau_10l", "toile_jute"] },
+      H1B: { chance: 0.02, cles: ["cocotte_fonte", "etau", "feuillards", "grillage_rouleau", "seau_10l", "toile_jute"] },
+      L1A: { chance: 0.02, cles: ["etau", "feuillards", "toile_jute"] },
+      L1B: { chance: 0.02, cles: ["cocotte_fonte", "grillage_rouleau", "seau_10l"] },
+    },
+  );
 });
 
 // ---------- Vider un bocal de clous ----------

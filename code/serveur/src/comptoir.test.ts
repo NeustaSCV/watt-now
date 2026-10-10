@@ -4,7 +4,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { CHARGE_TROUVEE } from "../../commun/src/energie.ts";
 import { REGLAGES } from "../../commun/src/reglages.ts";
-import { ajouterWotts, prixAchat, prixVente, valeurWotts } from "../../commun/src/economie.ts";
+import { STOCK_DE_BASE, ajouterWotts, prixAchat, prixVente, valeurWotts } from "../../commun/src/economie.ts";
 import { COMPTOIR, DUREE_VOYAGE_S, SORTIES_STATION, SORTIE_TERRAIN } from "../../commun/src/lieux.ts";
 import type { MessageServeur, OperationComptoir } from "../../commun/src/messages.ts";
 import type { Famille } from "../../commun/src/regles.ts";
@@ -73,7 +73,8 @@ test("vendre des bûches remplit la poche et vide la trésorerie ; acheter fait 
   const gain = prixAchat("buche", false)! * 4;
   assert.equal(t.dernier("wotts")!.wotts.poche, gain);
   assert.equal(t.comptoir.tresorerie, avant - gain);
-  assert.equal(t.comptoir.stock.buche, 4);
+  // Le filet du bois (plan 0.8, B13) : 10 bûches en stock de base, plus les 4 vendues.
+  assert.equal(t.comptoir.stock.buche, STOCK_DE_BASE.buche! + 4);
 
   // Pas assez de bons pour une petite batterie…
   t.operer({ genre: "acheter", objet: "petite_batterie", quantite: 1 });

@@ -7,7 +7,7 @@
 // s'effacer complètement quand on passe dessous ou derrière (voir estomperToits).
 
 import * as THREE from "three";
-import { BOUTIQUE, CHEMIN_COOP_HALTE, FERME_HALTE, GOULET, HALTE, ROUTE, STATION, ZONE_STATION, dansBoite, type Boite } from "../../../commun/src/lieux.ts";
+import { BOUTIQUE, CHEMIN_COOP_HALTE, FERME_HALTE, GARAGE, GOULET, HALTE, ROUTE, STATION, ZONE_STATION, dansBoite, type Boite } from "../../../commun/src/lieux.ts";
 import { PALETTE, aleatoire, materiau, nommer } from "./materiaux.ts";
 import { trierParInstance } from "./lots.ts";
 import {
@@ -740,6 +740,8 @@ function creerStation(aleat: () => number): THREE.Group {
   const poubelle = new THREE.CylinderGeometry(0.28, 0.24, 0.85, 8);
   c.poser(poubelle, matiere(0.7, 0.2), 0x3e6b4a, { x: 95.5, y: 0.47, z: 25.3 });
   c.poser(poubelle, matiere(0.7, 0.2), 0x3e6b4a, { x: 112.9, y: 0.32, z: 23.5, rz: Math.PI / 2, ry: 0.8 });
+  // Le garage du niveau 1 (plan 0.8, chantier 10) : l'établi de bois de l'enclume, la voiture éventrée et son établi.
+  creerGarage(c);
   // La borne à air et à eau, bleue, contre la façade de l'atelier
   c.repere({ x: 111.9, z: 18.2 }, () => {
     c.boite(0.5, 1.3, 0.35, 0x2f6fa4, { y: 0.7 }, matiere(0.6, 0.2));
@@ -760,6 +762,81 @@ function creerStation(aleat: () => number): THREE.Group {
   g.add(c.construire());
   g.userData.toits = toits;
   return g;
+}
+
+/**
+ * Le garage du niveau 1 (plan 0.8, chantier 10 ; GARAGE, commun/src/lieux.ts). Devant l'atelier, à droite de son établi
+ * de métal, un établi de bois bas : dessous, l'enclume de dépanneur et le sac de charbon (rendu/ressources.ts, le
+ * Charbonnier seul les voit). À l'est, une voiture éventrée sur des parpaings, capot levé sur un moteur à moitié
+ * démonté, et l'établi de métal où l'on a posé son petit alternateur (le Mécanicien seul le voit).
+ */
+function creerGarage(c: Chantier): void {
+  const acier = matiere(0.55, 0.45);
+  const bois = matiere(0.9);
+  // L'établi de bois : plateau de madriers, quatre pieds, une traverse basse ; des outils pendus, de la sciure.
+  const eb = GARAGE.etabliBois;
+  c.repere({ x: eb.x, z: eb.z }, () => {
+    for (let k = 0; k < 3; k++) c.boite(eb.l, 0.05, eb.p / 3 - 0.01, k === 1 ? 0x8a6a48 : 0x7a5c3e, { y: 0.6, z: -eb.p / 3 + k * (eb.p / 3) }, bois, { nuance: 0.06 });
+    for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) c.boite(0.07, 0.58, 0.07, 0x6a4e34, { x: sx * (eb.l / 2 - 0.08), y: 0.29, z: sz * (eb.p / 2 - 0.06) }, bois);
+    c.boite(eb.l - 0.16, 0.05, 0.05, 0x6a4e34, { y: 0.12, z: -eb.p / 2 + 0.06 }, bois);
+    c.boite(0.25, 0.04, 0.05, 0x2a2826, { x: 0.3, y: 0.645, z: 0.05, ry: 0.4 }, acier);
+    c.boite(0.04, 0.03, 0.18, 0x8a6a48, { x: 0.38, y: 0.64, z: -0.05, ry: 0.4 }, bois);
+  });
+  // La voiture éventrée : sur quatre parpaings, sans roues ; capot levé sur sa béquille, la baie moteur vidée (il reste
+  // le radiateur, des durites coupées, le support de batterie vide) ; une portière arrachée posée contre la caisse.
+  const v = GARAGE.voitureEventree;
+  const peinture = 0x7f8c66;
+  const tole = matiere(0.62, 0.3);
+  c.repere({ x: v.x, z: v.z }, () => {
+    for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) c.boite(0.4, 0.38, 0.22, 0x9a958a, { x: sx * 1.35, y: 0.19, z: sz * 0.62 }, matiere(), { nuance: 0.05 });
+    // La caisse, le bas de caisse plus sombre, les passages de roues vides (noirs).
+    c.boite(4.0, 0.5, 1.7, peinture, { y: 0.65 }, tole, { nuance: 0.04 });
+    c.boite(4.02, 0.12, 1.72, 0x3a3a34, { y: 0.44 }, tole);
+    for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) c.boite(0.7, 0.32, 0.04, 0x161616, { x: sx * 1.35, y: 0.55, z: sz * 0.86 });
+    // L'habitacle (à l'arrière, côté est), les vitres sombres, une étoile blanche sur le pare-brise.
+    c.boite(1.9, 0.5, 1.5, peinture, { x: 0.45, y: 1.15 }, tole);
+    c.boite(1.92, 0.34, 1.52, 0x1f262c, { x: 0.45, y: 1.17 }, matiere(0.2, 0.3));
+    c.boite(0.03, 0.4, 1.3, 0x2a3540, { x: -0.52, y: 1.15, rz: -0.35 }, matiere(0.2, 0.3));
+    c.boite(1.95, 0.05, 1.55, peinture, { x: 0.45, y: 1.42 }, tole);
+    // La baie moteur (à l'ouest) : le noir du vide, le radiateur au fond, le support de batterie, des durites.
+    c.boite(1.15, 0.03, 1.45, 0x141414, { x: -1.35, y: 0.91 });
+    // Ce qui reste du moteur : le bloc de fonte, sans culasse ni alternateur (sur l'établi), la boîte au fond.
+    c.boite(0.5, 0.22, 0.6, 0x55524d, { x: -1.35, y: 1.0, z: -0.15 }, acier, { nuance: 0.06 });
+    c.boite(0.36, 0.06, 0.5, 0x3a3836, { x: -1.35, y: 1.14, z: -0.15 }, acier);
+    c.boite(0.12, 0.1, 0.12, 0x8a8f94, { x: -1.62, y: 1.0, z: -0.5 }, acier);
+    c.boite(0.08, 0.36, 1.2, 0x55524d, { x: -1.88, y: 0.75 }, acier);
+    for (let k = 0; k < 8; k++) c.boite(0.085, 0.3, 0.012, 0x3a3836, { x: -1.88, y: 0.75, z: -0.5 + k * 0.14 }, acier);
+    c.boite(0.3, 0.05, 0.22, 0x2a2826, { x: -1.1, y: 0.92, z: 0.45 }, acier);
+    c.poutre(new THREE.Vector3(-1.82, 0.82, -0.3), new THREE.Vector3(-1.3, 0.95, -0.1), 0.05, 0x1f1f1f);
+    c.poutre(new THREE.Vector3(-1.82, 0.7, 0.35), new THREE.Vector3(-1.5, 0.98, 0.2), 0.04, 0x1f1f1f);
+    // Le capot, levé sur sa charnière (au pied du pare-brise), et sa béquille ; la face intérieure grise, sa mousse.
+    c.repere({ x: -0.78, y: 0.92 }, () => {
+      c.boite(1.2, 0.04, 1.6, peinture, { x: -0.6 * Math.cos(1.05), y: 0.6 * Math.sin(1.05), rz: -1.05 }, tole);
+      // La face intérieure (côté avant : la normale du dessous pointe vers l'ouest et le bas), sa mousse grise.
+      c.boite(1.1, 0.02, 1.4, 0xa8a89e, { x: -0.6 * Math.cos(1.05) - 0.026, y: 0.6 * Math.sin(1.05) - 0.015, rz: -1.05 }, matiere());
+    });
+    c.poutre(new THREE.Vector3(-1.85, 0.92, 0.6), new THREE.Vector3(-1.25, 1.85, 0.6), 0.015, 0x8a8f94, acier);
+    // Les phares crevés, la calandre, une plaque.
+    for (const s of [-1, 1]) c.boite(0.04, 0.12, 0.28, 0x2a2e30, { x: -2.01, y: 0.75, z: s * 0.55 }, matiere(0.2, 0.3));
+    c.boite(0.03, 0.1, 0.5, 0xe9dfc6, { x: -2.02, y: 0.5 });
+    // La portière arrachée, appuyée contre le flanc sud ; une roue couchée dans l'herbe.
+    c.boite(1.0, 0.75, 0.05, peinture, { x: 0.6, y: 0.4, z: 1.0, rx: -0.25 }, tole);
+    c.poser(new THREE.TorusGeometry(0.3, 0.12, 5, 10).rotateX(Math.PI / 2), matiere(), 0x1f1f1f, { x: 1.9, y: 0.12, z: 1.25 });
+    c.poser(new THREE.CylinderGeometry(0.2, 0.2, 0.18, 8), acier, 0x6e6a63, { x: 1.9, y: 0.12, z: 1.25 });
+    // La rouille sur le bas des portes et le bord du coffre.
+    for (const [x, z] of [[1.4, 0.86], [-0.2, 0.86], [1.9, -0.6], [0.8, -0.86]] as const) c.boite(0.35, 0.18, 0.02, PALETTE.rouille, { x, y: 0.5, z: z + Math.sign(z) * 0.01 });
+  });
+  // L'établi de métal de la voiture : plateau, pieds en cornière, étagère basse, une caisse à outils rouge ; dessus, le
+  // petit alternateur du Mécaniste (rendu/ressources.ts). Son plateau est à 0,93 m.
+  const em = GARAGE.etabliVoiture;
+  c.repere({ x: em.x, z: em.z }, () => {
+    c.boite(em.l, 0.04, em.p, 0x5c5953, { y: 0.91 }, acier);
+    for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) c.boite(0.05, 0.89, 0.05, 0x6e6a63, { x: sx * (em.l / 2 - 0.05), y: 0.445, z: sz * (em.p / 2 - 0.05) }, acier);
+    c.boite(em.l - 0.1, 0.02, em.p - 0.1, 0x77746c, { y: 0.2 }, acier);
+    c.boite(0.5, 0.22, 0.24, ROUGE, { x: 0.45, y: 0.32, z: 0.02 }, acier);
+    c.boite(0.52, 0.03, 0.26, 0xa8362b, { x: 0.45, y: 0.44, z: 0.02 }, acier);
+    c.boite(0.4, 0.2, 0.25, 0x2f6fa4, { x: -0.4, y: 0.31 }, acier);
+  });
 }
 
 /** L'auvent : un toit plat sur deux piliers, son fronton rouge et crème, ses panneaux solaires. */

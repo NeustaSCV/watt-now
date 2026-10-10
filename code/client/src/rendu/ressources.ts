@@ -61,6 +61,23 @@ function buche(c: Assemblage, aleat: () => number): void {
   c.perche(new V3(0.05, 0.2, 0.05), new V3(0.12, 0.27, 0.12), 0.022, PALETTE.boisSombre, "mat", 5, 0.016);
 }
 
+/** Le tas de bois de chauffage de la station : 10 bûches à chacun (plan 0.8, B3 ; BUTIN_HALTE). */
+const TAS_BOIS = 10;
+
+/**
+ * Un seau de laiterie en tôle galvanisée (10 L, plan 0.8) : le fût évasé, ses deux nervures, l'anse de fil. Renversé
+ * (`renverse`), on le voit par le fond, empilé sur les autres.
+ */
+function seauGalvanise(c: Assemblage, x: number, y: number, z: number, renverse: boolean): void {
+  const zinc = 0xb8bcc0;
+  const g = new THREE.CylinderGeometry(0.15, 0.12, 0.26, 14, 1, true);
+  if (renverse) g.rotateX(Math.PI);
+  c.ajouterDegrade(placer(g, x, y + 0.13, z), (q) => (Math.sin(q.x * 20 + q.z * 13) > 0.7 ? 0xd2d5d6 : zinc), "metal");
+  for (const k of [0.06, 0.2]) c.ajouter(placer(new THREE.TorusGeometry(renverse ? 0.123 + k * 0.105 : 0.147 - k * 0.105, 0.006, 3, 14).rotateX(Math.PI / 2), x, y + k, z), 0x9a9ea2, "metal");
+  c.ajouter(placer(new THREE.CircleGeometry(0.12, 14).rotateX(renverse ? -Math.PI / 2 : -Math.PI / 2), x, renverse ? y + 0.26 : y + 0.005, z), renverse ? 0xa8acb0 : 0x6e7276, "metal");
+  if (!renverse) c.ajouter(placer(new THREE.TorusGeometry(0.15, 0.005, 3, 12, Math.PI).rotateX(-0.3), x, y + 0.26, z), 0x6b6862, "metal");
+}
+
 /** Une pierre des champs : bosselée, le dessus plus clair, une tache de lichen. */
 function pierre(c: Assemblage, aleat: () => number, sombre: boolean): void {
   const g = bosseler(new THREE.IcosahedronGeometry(0.2, 1), 0.035, aleat).scale(1.2, 0.62, 1).translate(0, 0.09, 0);
@@ -433,14 +450,36 @@ export class VueRessource {
           c.boite(0xd8cfb4, "mat", 0.5, 0.2, 0.75, 0, 0.1, 0);
           c.boite(0x2e5c8a, "mat", 0.42, 0.14, 0.42, 0.05, 0.27, 0);
         } else if (t === "coop_caisse_froide") {
-          c.boite(0xb89a68, "mat", 0.8, 0.55, 0.55, 0, 0.275, 0);
-          c.boite(0x8a6a40, "mat", 0.82, 0.06, 0.57, 0, 0.42, 0);
+          // La laiterie (plan 0.8, I8) : sur une caisse de bois, une pile de seaux galvanisés renversés, et un autre
+          // debout à côté, son anse couchée. Pris, il ne reste que la caisse (laiterie(), toujours là).
+          for (let k = 0; k < 3; k++) seauGalvanise(c, -0.12, 0.42 + k * 0.07, 0, true);
+          seauGalvanise(c, 0.26, 0.42, 0.04, false);
         }
         const g = c.groupe(ombre);
+        if (t === "coop_caisse_froide") this.laiterie(ombre);
         this.objet.add(g);
         this.contenu = g;
         break;
       }
+      // ---------- Le niveau 1 (plan 0.8, chantier 10) : la ruine, la station, la Coopérative ----------
+      case "ruine_bidon":
+        this.bidonRuine(aleat, ombre);
+        break;
+      case "piece_enclume":
+        this.enclumeEtCharbon(aleat, ombre);
+        break;
+      case "piece_alternateur":
+        this.alternateurSurEtabli(ombre);
+        break;
+      case "tas_bois":
+        this.tasDeBois(aleat, ombre);
+        break;
+      case "coop_grillage":
+        this.rouleauGrillage(aleat, ombre);
+        break;
+      case "coop_cocotte":
+        this.cocotte(ombre);
+        break;
       case "coop_batterie": {
         // La batterie du tracteur rouge (Book 23 §4.7), sanglée sur son garde-boue droit (le tracteur est tourné de
         // 0,15 rad, son repère est à 8 cm du sol) : prise, il ne reste que le berceau vide (rendu/cooperative.ts).
@@ -467,6 +506,19 @@ export class VueRessource {
     this.majVisibilite();
   }
 
+  /** Un butin personnel à plusieurs prises (le tas de bois) : ce qu'il en reste pour moi (plan 0.8, chantier 10). */
+  reste(n: number | undefined): void {
+    if (n === undefined) return;
+    this.donnees.reste = n;
+    this.majVisibilite();
+  }
+
+  /**
+   * Les bûches du tas de bois, en un seul appel de dessin : une instance par bûche, de la première posée (en bas) à la
+   * dernière (en haut, la première qu'on prend) ; on n'en dessine que ce qu'il reste.
+   */
+  private buchesDuTas: THREE.InstancedMesh | null = null;
+
   /** Le calendrier avance : fleurs, fruits verts, fruits mûrs, champignons de saison. */
   saison(jour: number): void {
     if (jour === this.jour) return;
@@ -483,6 +535,8 @@ export class VueRessource {
     // Un buisson cueilli, une épave fouillée restent là, vidés ; le reste disparaît jusqu'à sa repousse.
     if (RESTE_EN_PLACE[t]) {
       if (this.contenu) this.contenu.visible = oui && (phase === null || phase === "murs");
+      // Le tas de bois : autant de bûches qu'il m'en reste.
+      if (this.buchesDuTas) this.buchesDuTas.count = oui ? Math.min(TAS_BOIS, this.donnees.reste ?? TAS_BOIS) : 0;
     } else this.objet.visible = oui && (this.jour === 0 || visibleEnSaison(t, this.jour));
     this.surVisibilite?.(this.objet.visible);
   }
@@ -629,6 +683,192 @@ export class VueRessource {
   }
 
   /** La caisse à outils de la ferme : tôle rouge passée, couvercle à charnière, poignée, fermoirs ; une clé et un tournevis à côté. */
+  // ---------- Le niveau 1 (plan 0.8, chantier 10) ----------
+
+  /** Le bidon de 5 L de la ruine : plastique blanc jauni, bouchon rouge, couché à moitié sous une poutre tombée. */
+  private bidonRuine(aleat: () => number, ombre: (m: THREE.Mesh) => THREE.Mesh): void {
+    this.objet.rotation.y = 0.5;
+    const c = new Assemblage(this.donnees.id);
+    c.occlusion = 0.3;
+    // Le corps : une boîte arrondie (bosselée), couché sur le flanc ; la poignée moulée, le goulot et son bouchon.
+    c.ajouter(placer(bosseler(new THREE.BoxGeometry(0.19, 0.27, 0.13, 2, 3, 2), 0.006, aleat), 0, 0.068, 0, 0, 0, Math.PI / 2 - 0.08), 0xe6e0cf, "mat", 0.04);
+    c.ajouter(placer(new THREE.TorusGeometry(0.035, 0.012, 4, 8, Math.PI), -0.07, 0.15, 0, 0, 0, -Math.PI / 2 + 0.1), 0xe6e0cf, "mat");
+    c.ajouter(placer(new THREE.CylinderGeometry(0.022, 0.022, 0.03, 8).rotateZ(Math.PI / 2), 0.15, 0.11, 0), 0xd8d2c0, "mat");
+    c.ajouter(placer(new THREE.CylinderGeometry(0.026, 0.026, 0.025, 8).rotateZ(Math.PI / 2), 0.175, 0.11, 0), 0xc8362b, "mat");
+    // Une étiquette délavée, de la terre sur le flanc.
+    c.boite(0xb9c4cf, "mat", 0.004, 0.08, 0.1, -0.01, 0.07, 0.066, Math.PI / 2, 0, 0);
+    c.plaque(tache(0.02, 0.03, 0.14, 0.09, aleat, 7), SOL_PLAT, 0x5a4a38, "sol", 0.01);
+    // La poutre tombée qui le coince.
+    c.perche(new V3(-0.45, 0.16, -0.18), new V3(0.4, 0.05, -0.12), 0.06, BOIS.sombre, "mat", 5, 0.055);
+    touffe(c, 0.22, -0.1, aleat, 3, 0.22);
+    for (const m of c.maillages(ombre)) this.objet.add(m);
+  }
+
+  /**
+   * La pièce du Charbonnier (plan 0.8 §2.5) : sous l'établi de bois du garage (dessiné par la halte), l'enclume de
+   * dépanneur posée sur un billot bas (le vert d'atelier écaillé, la table polie), et le sac de charbon entamé à côté,
+   * quelques morceaux tombés.
+   */
+  private enclumeEtCharbon(aleat: () => number, ombre: (m: THREE.Mesh) => THREE.Mesh): void {
+    this.objet.rotation.y = 0;
+    const c = new Assemblage(this.donnees.id);
+    c.occlusion = 0.4;
+    const [x, z] = [-0.2, -0.22];
+    // Le billot.
+    c.ajouter(placer(bosseler(new THREE.CylinderGeometry(0.15, 0.16, 0.16, 8), 0.006, aleat), x, 0.08, z), BOIS.ecorce, "mat", 0.05);
+    c.ajouter(placer(new THREE.CircleGeometry(0.145, 8).rotateX(-Math.PI / 2), x, 0.161, z), BOIS.coupe, "mat");
+    // L'enclume : pied, taille, table, bigorne, talon (comme sur le foyer de forge, metier/forge.ts).
+    const vert = 0x3d5a46;
+    c.boite(vert, "metal", 0.22, 0.05, 0.16, x, 0.185, z);
+    c.boite(vert, "metal", 0.12, 0.08, 0.09, x, 0.25, z);
+    c.boite(0x45423f, "metal", 0.3, 0.06, 0.11, x, 0.32, z);
+    c.ajouter(placer(new THREE.ConeGeometry(0.045, 0.16, 6).rotateZ(Math.PI / 2), x + 0.23, 0.325, z), 0x45423f, "metal");
+    c.boite(0x45423f, "metal", 0.05, 0.05, 0.09, x - 0.17, 0.32, z);
+    c.boite(0xa9aaa6, "metal", 0.28, 0.005, 0.09, x, 0.352, z);
+    for (const [dx, dy] of [[-0.05, 0.26], [0.04, 0.19], [0.09, 0.24]] as const) c.boite(PALETTE.rouille, "mat", 0.03, 0.02, 0.002, x + dx, dy, z + 0.081);
+    // Le sac de charbon : un sac de papier kraft affaissé, ouvert, le haut roulé ; du charbon noir qui dépasse.
+    const [sx, sz] = [0.3, -0.12];
+    c.ajouter(placer(bosseler(new THREE.BoxGeometry(0.26, 0.3, 0.16, 2, 3, 2), 0.02, aleat), sx, 0.15, sz, 0.12, 0.3, -0.08), 0xa98a5c, "toile", 0.05);
+    c.boite(0xc8362b, "mat", 0.2, 0.06, 0.002, sx + 0.02, 0.17, sz + 0.075, 0, 0.3, -0.08);
+    for (let k = 0; k < 6; k++) c.ajouter(placer(bosseler(new THREE.DodecahedronGeometry(0.03, 0), 0.008, aleat), sx - 0.06 + aleat() * 0.12, 0.3 + aleat() * 0.03, sz - 0.03 + aleat() * 0.06), 0x1c1b1a, "mat", 0.04);
+    for (let k = 0; k < 4; k++) c.ajouter(placer(bosseler(new THREE.DodecahedronGeometry(0.025, 0), 0.008, aleat), sx + 0.18 + aleat() * 0.15, 0.02, sz + 0.05 + aleat() * 0.12), 0x1c1b1a, "mat", 0.04);
+    c.plaque(tache(sx + 0.15, sz + 0.12, 0.16, 0.1, aleat, 7), SOL_PLAT, 0x2b2a28, "sol", 0.006);
+    for (const m of c.maillages(ombre)) this.objet.add(m);
+  }
+
+  /**
+   * La pièce du Mécaniste (plan 0.8 §2.5) : sur l'établi de la voiture éventrée (dessinés par la halte), le petit
+   * alternateur sorti du moteur, couché sur un chiffon gras, sa poulie vers nous ; une clé de 13 et deux écrous à côté.
+   */
+  private alternateurSurEtabli(ombre: (m: THREE.Mesh) => THREE.Mesh): void {
+    this.objet.rotation.y = 0;
+    const c = new Assemblage(this.donnees.id);
+    c.occlusion = 0.25;
+    const y = 0.93;
+    const alu = 0xb9bcbc;
+    c.boite(0x6a5a44, "toile", 0.32, 0.006, 0.24, 0.02, y, -0.06, 0, 0.3, 0);
+    // Le carter à ailettes, couché (l'axe vers nous), ses pattes de fixation.
+    c.ajouter(placer(new THREE.CylinderGeometry(0.075, 0.075, 0.13, 12).rotateX(Math.PI / 2), 0, y + 0.078, -0.07), alu, "metal");
+    for (let k = 0; k < 4; k++) c.ajouter(placer(new THREE.TorusGeometry(0.076, 0.004, 3, 12), 0, y + 0.078, -0.12 + k * 0.033), 0x6b6862, "metal");
+    for (const s of [-1, 1]) c.boite(alu, "metal", 0.03, 0.03, 0.05, s * 0.07, y + 0.14, -0.07);
+    // La poulie et son ventilateur, devant.
+    c.ajouter(placer(new THREE.CylinderGeometry(0.035, 0.035, 0.03, 10).rotateX(Math.PI / 2), 0, y + 0.078, 0.01), ACIER, "metal");
+    for (let k = 0; k < 6; k++) {
+      const t = (k / 6) * Math.PI * 2;
+      c.boite(0x3a3836, "metal", 0.05, 0.014, 0.004, Math.cos(t) * 0.04, y + 0.078 + Math.sin(t) * 0.04, 0.0, 0, 0, t + 0.5);
+    }
+    // La borne rouge, derrière ; un bout de fil coupé.
+    c.ajouter(placer(new THREE.CylinderGeometry(0.012, 0.012, 0.03, 6).rotateX(Math.PI / 2), 0.03, y + 0.1, -0.15), 0xc8362b, "mat");
+    c.perche(new V3(0.03, y + 0.1, -0.16), new V3(0.12, y + 0.01, -0.2), 0.005, 0xc8362b, "mat", 4);
+    // La clé et deux écrous.
+    c.boite(ACIER, "metal", 0.16, 0.006, 0.02, -0.2, y + 0.003, 0.03, 0, 0.6, 0);
+    for (const dx of [0.17, 0.2]) c.ajouter(placer(new THREE.CylinderGeometry(0.01, 0.01, 0.008, 6), dx, y + 0.004, 0.04), 0x8a8780, "metal");
+    for (const m of c.maillages(ombre)) this.objet.add(m);
+  }
+
+  /**
+   * Le bois de chauffage de la station (B3), derrière l'atelier : dix bûches rangées en pyramide sur deux perches, entre
+   * deux piquets. Chacun voit son tas ; il baisse d'une bûche à chaque prise (le haut d'abord), et se refait en 6 h.
+   */
+  private tasDeBois(aleat: () => number, ombre: (m: THREE.Mesh) => THREE.Mesh): void {
+    this.objet.rotation.y = 0;
+    const c = new Assemblage(this.donnees.id);
+    c.occlusion = 0.3;
+    // Les deux perches au sol (les bûches ne touchent pas la terre), les piquets aux bouts, des copeaux.
+    for (const z of [0.18, 0.55]) c.perche(new V3(-0.62, 0.04, z), new V3(0.62, 0.04, z), 0.035, BOIS.ecorce, "mat", 5);
+    for (const x of [-0.6, 0.6]) c.perche(new V3(x, 0, 0.36), new V3(x * 1.04, 0.95, 0.38), 0.03, BOIS.gris, "mat", 5, 0.025);
+    for (let k = 0; k < 10; k++) c.boite(BOIS.coupe, "mat", 0.05, 0.008, 0.03, -0.7 + aleat() * 1.4, 0.004, -0.2 + aleat() * 0.25, 0, aleat() * 3, 0);
+    c.plaque(tache(0, 0, 0.75, 0.22, aleat, 9), SOL_PLAT, 0x5a4632, "sol", 0.006);
+    for (const m of c.maillages(ombre)) this.objet.add(m);
+    // Les bûches : 4, puis 3, 2 et 1, couchées vers le mur (l'axe selon z).
+    const modele = modelePartage("buche", buche);
+    const tas = new THREE.InstancedMesh(modele.geometry, modele.material, TAS_BOIS);
+    tas.castShadow = true;
+    tas.receiveShadow = true;
+    const m = new THREE.Matrix4();
+    let k = 0;
+    [4, 3, 2, 1].forEach((n, r) => {
+      for (let i = 0; i < n; i++) {
+        m.makeRotationY(Math.PI / 2 + (aleat() - 0.5) * 0.12).setPosition((i - (n - 1) / 2) * 0.25, 0.06 + r * 0.205, 0.36 + (aleat() - 0.5) * 0.06);
+        tas.setMatrixAt(k++, m);
+      }
+    });
+    tas.computeBoundingSphere();
+    tas.userData.garder = true;
+    this.objet.add(tas);
+    this.buchesDuTas = tas;
+  }
+
+  /** La clé du foyer de cuisine (L1A) : un rouleau de grillage à poules neuf, debout contre un piquet du parc. */
+  private rouleauGrillage(aleat: () => number, ombre: (m: THREE.Mesh) => THREE.Mesh): void {
+    this.objet.rotation.y = 0.4;
+    const c = new Assemblage(this.donnees.id);
+    c.occlusion = 0.2;
+    // Le rouleau : 1 m de haut, ses spires de maille galvanisée (des bandes claires et sombres), les bords torsadés.
+    const g = new THREE.CylinderGeometry(0.17, 0.17, 1.0, 14, 8, true).translate(0, 0.5, 0);
+    c.ajouterDegrade(g, (q) => (Math.sin(Math.atan2(q.z, q.x) * 14 + q.y * 30) > 0.35 ? 0xc9ccc8 : Math.sin(q.y * 61) > 0.6 ? 0x8d918e : 0xa9ada9), "metal");
+    for (const yy of [0.01, 0.99]) c.ajouter(placer(new THREE.TorusGeometry(0.17, 0.012, 4, 14).rotateX(Math.PI / 2), 0, yy, 0), 0xb4b8b4, "metal");
+    // Le cœur sombre (on voit dedans par le haut), le fil de ligature, l'étiquette de la coopérative.
+    c.ajouter(placer(new THREE.CircleGeometry(0.16, 12).rotateX(-Math.PI / 2), 0, 0.97, 0), 0x3a3c3a, "mat");
+    for (const yy of [0.3, 0.7]) c.ajouter(placer(new THREE.TorusGeometry(0.175, 0.005, 3, 14).rotateX(Math.PI / 2), 0, yy, 0), 0x6b6862, "metal");
+    c.boite(0xd8c43a, "mat", 0.12, 0.09, 0.004, 0, 0.55, 0.172);
+    // Une boucle de grillage déroulée qui traîne au pied.
+    c.ajouterDegrade(placer(new THREE.PlaneGeometry(0.5, 0.35, 4, 3).rotateX(-Math.PI / 2 + 0.1), 0.3, 0.03, 0.15, 0, 0.5, 0), (q) => (Math.sin(q.x * 40) * Math.sin(q.z * 40) > 0.2 ? 0xb9bdb9 : 0x7a7e7a), "toile");
+    touffe(c, -0.2, 0.15, aleat, 4, 0.35);
+    const groupe = c.groupe(ombre);
+    groupe.rotation.z = 0.12;
+    this.objet.add(groupe);
+  }
+
+  /**
+   * La clé de la marmite norvégienne (L1A) : la cocotte en fonte émaillée rouge, en tête de gondole au bout du premier
+   * rayon, sous sa pancarte de promotion. Prise, la tête de gondole reste, vide.
+   */
+  private cocotte(ombre: (m: THREE.Mesh) => THREE.Mesh): void {
+    this.objet.rotation.y = 0;
+    const socle = new Assemblage(this.donnees.id + 3);
+    socle.occlusion = 0.3;
+    // La tête de gondole : un présentoir bas, une pancarte jaune sur sa tige (« −20 % »).
+    socle.boite(0xd2cdc2, "metal", 0.6, 0.62, 0.55, 0, 0.37, 0);
+    socle.boite(0x2f5d3a, "mat", 0.62, 0.05, 0.57, 0, 0.68, 0);
+    socle.boite(0xe9dfc6, "mat", 0.003, 0.1, 0.5, -0.301, 0.5, 0);
+    socle.perche(new V3(0.22, 0.7, -0.2), new V3(0.22, 1.35, -0.2), 0.008, ACIER, "metal", 4);
+    socle.boite(0xf2d23a, "mat", 0.34, 0.24, 0.01, 0.22, 1.42, -0.2, 0, -0.5, 0);
+    socle.boite(0xc8362b, "mat", 0.2, 0.08, 0.004, 0.24, 1.42, -0.192, 0, -0.5, 0);
+    for (const m of socle.maillages(ombre)) this.objet.add(m);
+    const c = new Assemblage(this.donnees.id);
+    c.occlusion = 0.2;
+    const y = 0.705;
+    const rouge = 0xb8322a;
+    c.ajouter(placer(new THREE.CylinderGeometry(0.13, 0.12, 0.13, 14), 0, y + 0.065, 0), rouge, "metal");
+    c.ajouter(placer(new THREE.CylinderGeometry(0.115, 0.115, 0.004, 14), 0, y + 0.002, 0), 0x2a2826, "metal");
+    // Le couvercle bombé et son bouton, les deux poignées.
+    c.ajouter(placer(new THREE.SphereGeometry(0.135, 14, 4, 0, Math.PI * 2, 0, 0.5), 0, y + 0.07, 0), rouge, "metal");
+    c.ajouter(placer(new THREE.CylinderGeometry(0.022, 0.026, 0.025, 8), 0, y + 0.205, 0), 0x2a2826, "metal");
+    for (const s of [-1, 1]) c.boite(rouge, "metal", 0.05, 0.025, 0.07, s * 0.15, y + 0.1, 0);
+    // L'étiquette de prix, pendue à une poignée.
+    c.boite(0xf2eee2, "mat", 0.04, 0.025, 0.002, 0.18, y + 0.07, 0.03, 0, 0, 0.3);
+    const g = c.groupe(ombre);
+    this.objet.add(g);
+    this.contenu = g;
+  }
+
+  /** La laiterie (plan 0.8, I8) : la caisse qui porte les seaux, et deux bidons à lait de 20 L contre elle. */
+  private laiterie(ombre: (m: THREE.Mesh) => THREE.Mesh): void {
+    const c = new Assemblage(this.donnees.id + 7);
+    c.occlusion = 0.4;
+    c.boite(0x8a6a40, "mat", 0.8, 0.4, 0.55, 0, 0.2, 0);
+    for (const y of [0.12, 0.3]) c.boite(0x6e5434, "mat", 0.82, 0.03, 0.57, 0, y, 0);
+    c.boite(0x2f5d8a, "mat", 0.3, 0.12, 0.003, -0.1, 0.25, 0.277);
+    for (const dx of [-0.6, -0.95]) {
+      c.ajouter(placer(new THREE.CylinderGeometry(0.15, 0.17, 0.45, 12), dx, 0.225, 0.08), 0xb8bcc0, "metal");
+      c.ajouter(placer(new THREE.CylinderGeometry(0.07, 0.13, 0.12, 12), dx, 0.51, 0.08), 0xb8bcc0, "metal");
+      c.ajouter(placer(new THREE.CylinderGeometry(0.08, 0.08, 0.05, 12), dx, 0.59, 0.08), 0x9a9ea2, "metal");
+      for (const s of [-1, 1]) c.boite(0x8a8f94, "metal", 0.02, 0.08, 0.05, dx + s * 0.16, 0.42, 0.08);
+    }
+    for (const m of c.maillages(ombre)) this.objet.add(m);
+  }
+
   private caisseOutils(aleat: () => number, ombre: (m: THREE.Mesh) => THREE.Mesh): void {
     const c = new Assemblage(this.donnees.id);
     c.occlusion = 0.15;
