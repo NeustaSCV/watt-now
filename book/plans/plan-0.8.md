@@ -30,7 +30,7 @@
 - **Les armes** suivent les étapes : bandes de dégâts, étoiles placées (K1 à K56), dégâts électriques, maîtrise sans plafond. Une arme **évolue** quand on la rapporte sur son meuble.
 - **15 chantiers**, en **4 vagues**. Effort : **7 L et 8 M**, soit environ **45 jours-agent** au milieu de la fourchette.
 - **Rien du niveau 2** n'est construit. Ce qui en existe déjà dans le code reste en place pour ceux qui l'ont, et devient **« plus tard »** pour les autres (§1.3).
-- **25 questions ouvertes** (§9 ; une autre est réglée par les décisions de la v0.2), dont 4 qui bloquent un chantier.
+- **25 questions ouvertes** (§9 ; une autre est réglée par les décisions de la v0.2), dont 4 qui bloquaient un chantier, tranchées le 2026-10-10.
 
 ---
 
@@ -601,11 +601,11 @@ vague 4   [13 Tutoriel, quêtes, aide] ◄────────────�
 
 | # | Question | Rec. | Chantier |
 |---|---|---|---|
-| **Q-0.8-1** ⛔ | L'enclume de dépanneur donne ★★ (P1) ; son repli, « une grosse pierre plate », donne aussi ★★. Que gagne-t-on à aller chercher l'enclume ? | La pierre plate donne **★** (un objet de fortune donne le niveau 1) ; l'enclume, ★★ | 7 |
-| **Q-0.8-2** ⛔ | La hachette : au **foyer de forge** (★★ à H1, K13, et la ligne d'armes du tableau) ou à la **forge ventilée** (le tableau des meubles, `recettes-par-construction.md` Q7) ? | Au foyer de forge, à ★★ : la grille et les bandes la placent à H1 ; la hache et le glaive restent à la forge ventilée | 7, 13 |
-| **Q-0.8-3** ⛔ | L'arbalète ★★★ (arc d'if) : la grille la renvoie au niveau 2, avec quel moyen ? (Q-B1b : l'établi de menuisier, L2B.) En 0.8, elle ne s'obtiendrait que par la maîtrise | Oui, Q-B1b : l'arc d'arbalète en if demande l'établi de menuisier ; en 0.8, grisé « plus tard » | 7, 8 |
+| **Q-0.8-1** ✅ | L'enclume de dépanneur donne ★★ (P1) ; son repli, « une grosse pierre plate », donne aussi ★★. Que gagne-t-on à aller chercher l'enclume ? | La pierre plate donne **★** (un objet de fortune donne le niveau 1) ; l'enclume, ★★ **Décidé (2026-10-10) : oui — la pierre plate donne ★, l'enclume ★★.** | 7  |
+| **Q-0.8-2** ✅ | La hachette : au **foyer de forge** (★★ à H1, K13, et la ligne d'armes du tableau) ou à la **forge ventilée** (le tableau des meubles, `recettes-par-construction.md` Q7) ? | Au foyer de forge, à ★★ : la grille et les bandes la placent à H1 ; la hache et le glaive restent à la forge ventilée **Décidé (2026-10-10) : oui — la hachette au foyer de forge, à ★★.** | 7, 13  |
+| **Q-0.8-3** ✅ | L'arbalète ★★★ (arc d'if) : la grille la renvoie au niveau 2, avec quel moyen ? (Q-B1b : l'établi de menuisier, L2B.) En 0.8, elle ne s'obtiendrait que par la maîtrise | Oui, Q-B1b : l'arc d'arbalète en if demande l'établi de menuisier ; en 0.8, grisé « plus tard » **Décidé (2026-10-10) : oui — à voir plus tard ; en 0.8, l'arbalète ★★★ est grisée « plus tard ».** | 7, 8  |
 | **Q-0.8-4** | L'arc simple ★★★★ placé à L1 (K54) : par quel moyen l'obtient-on seul, sans la maîtrise ? | Par la maîtrise seulement, comme la matraque de fortune ★★ ; corriger K54 en « maîtrise » | 8 |
-| **Q-0.8-5** ⛔ | La masse (L1A, sans étoiles, 2,5, passe le casque) bat la matraque ★★ sur le terrain de l'électrique : la passer au niveau 2 (Q-B4) ? En 0.8, il n'y a pas de niveau 2 | Oui : la retirer de la Coopérative en 0.8 ; on la remettra dans un lieu du niveau 2. Celle qu'on a reste | 10 |
+| **Q-0.8-5** ✅ | La masse (L1A, sans étoiles, 2,5, passe le casque) bat la matraque ★★ sur le terrain de l'électrique : la passer au niveau 2 (Q-B4) ? En 0.8, il n'y a pas de niveau 2 | Oui : la retirer de la Coopérative en 0.8 ; on la remettra dans un lieu du niveau 2. Celle qu'on a reste **Décidé (2026-10-10) : pas grave, c'est une arme trouvée — la masse reste à la Coopérative.** | 10  |
 | **Q-0.8-6** | La lance commune (0,7 décidé, Q-B5) et la lance forgée (sans étoiles, K25) : on les garde ainsi et on mesure au test de jeu ? | Oui, mesurer d'abord | 8, 14 |
 | **Q-0.8-7** | Les incohérences qui restent dans les valeurs « proposées » des armes hors de la 0.8 (aiguillon ★★★★, matraque ★★★★★, arbalète lourde, §10.2 d'`armes-par-niveau.md`) : on les laisse au plan du niveau 2 ? | Oui | — |
 | **Q-0.8-8** | La citerne de 60 L déjà posée chez un joueur : on la garde telle quelle (« héritée », non rebâtissable), ou on la convertit en récupérateur à seau de 10 L en rendant la différence ? | La garder telle quelle : rien n'est détruit | 5 |
