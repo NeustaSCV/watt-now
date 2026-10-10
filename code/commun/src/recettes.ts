@@ -11,7 +11,7 @@ import type { Famille } from "./regles.ts";
 import type { InstallationVue } from "./messages.ts";
 import { estOrdure, valeursVestiges } from "./vestiges.ts";
 import { compter, estObjetDeMetier, etoilesDeBase, maillonFaible, typeDe, type Etoiles } from "./etoiles.ts";
-import { SURCOUT_AUTRE_FAMILLE } from "./lignees.ts";
+import { SURCOUT_AUTRE_FAMILLE, type AVenir, type FormeFeu } from "./lignees.ts";
 import { RECETTES_COMMUNES } from "./recettes/communes.ts";
 import { RECETTES_CHARBONNIERS } from "./recettes/charbonniers.ts";
 import { RECETTES_MECANISTES } from "./recettes/mecanistes.ts";
@@ -31,7 +31,10 @@ export type Qualite =
   | "saisir_chaud"
   | "tailler_bois"
   | "trancher_metal"
-  | "elaguer";
+  | "elaguer"
+  // Le niveau 2 (plan 0.8, Q-0.8-21) : déclarées d'avance, sans usage en 0.8.
+  | "raboter"
+  | "souder";
 
 export const NOMS_QUALITES: Record<Qualite, string> = {
   couper: "Couper",
@@ -45,6 +48,8 @@ export const NOMS_QUALITES: Record<Qualite, string> = {
   tailler_bois: "Tailler le bois",
   trancher_metal: "Trancher le métal",
   elaguer: "Élaguer",
+  raboter: "Raboter",
+  souder: "Souder",
 };
 
 /** Qualités apportées par chaque objet, avec leur niveau (1 à 3). */
@@ -135,7 +140,10 @@ export type TypeInstallation =
   | "machoires_fortune"
   | "piege_machoires"
   | "fosse_pieux"
-  | "tour_perche";
+  | "tour_perche"
+  // Le niveau 1 (plan 0.8, chantier 6) : déclarés d'avance par le chantier 1.
+  | "ratelier_outils"
+  | "torche_plantee";
 
 export const NOMS_INSTALLATIONS: Record<TypeInstallation, string> = {
   etabli: "établi",
@@ -162,6 +170,8 @@ export const NOMS_INSTALLATIONS: Record<TypeInstallation, string> = {
   piege_machoires: "piège à mâchoires",
   fosse_pieux: "fosse à pieux",
   tour_perche: "tour à perche",
+  ratelier_outils: "râtelier à outils",
+  torche_plantee: "torche plantée",
 };
 
 /** Les petites installations : on peut les poser plus près des autres (un lit à côté de l'abri, une alarme le long du chemin). */
@@ -185,8 +195,27 @@ export const CATEGORIES_RECETTES: readonly { id: CategorieRecette; nom: string; 
   { id: "ateliers", nom: "Ateliers", long: "Ateliers : fabriquer, produire" },
 ];
 
+/**
+ * Où se fait une recette (plan 0.8, chantier 1 ; `recettes-par-construction.md`) :
+ * - `main` : assis par terre, avec ce qu'on porte ;
+ * - `posee` : la construction elle-même, racine d'une lignée (elle se pose sur le terrain) ;
+ * - `construction` : à côté d'une construction qu'on possède au bon niveau (2,5 m pour un feu, 3 m pour le reste).
+ *   `construction` : le type d'installation, ou « feu » pour un foyer ; `niveau` : le niveau minimal dans sa lignée ;
+ *   `formes` : pour un feu, les formes qui conviennent (le foyer de pierres, le Dakota…) ; `accessoire` : un accessoire
+ *   monté sur la construction (l'enclume sur le foyer de forge…).
+ * Il remplace `installation`, `feu`, `feuNiveau` et les listes cachées de `forge.ts` (`FORGE_VENTILEE_REQUISE`, `HUILE_REQUISE`).
+ */
+export type LieuRecette =
+  | { genre: "main" }
+  | { genre: "posee" }
+  | { genre: "construction"; construction: TypeInstallation | "feu"; niveau?: number; formes?: readonly FormeFeu[]; accessoire?: string };
+
 export interface Recette {
   id: string;
+  /** Où elle se fait (plan 0.8). Le chantier 1 le rend obligatoire et le remplit pour chaque recette. */
+  lieu?: LieuRecette;
+  /** Pas encore jouable : grisée « plus tard », avec sa clé « à trouver plus loin » (plan 0.8 §1.3). */
+  aVenir?: AVenir;
   /** Son onglet dans le panneau Fabriquer. */
   categorie: CategorieRecette;
   nom: string;

@@ -18,6 +18,52 @@ export const MAX_FOYERS = 3;
 /** Le surcoût d'un niveau propre à une autre famille (Book 01 §5, Book 24 §2.3). */
 export const SURCOUT_AUTRE_FAMILLE = 1.5;
 
+/**
+ * Les étapes du monde (plan 0.8 §1.1) : la maison, puis les haltes (H) et les lieux (L) de chaque niveau. Le contenu du jeu
+ * (clés, quêtes, indices) cite l'étape ; l'affichage met le nom du lieu (`ETAPES_LIEUX` dans `lieux.ts`, chantier 4).
+ */
+export type EtapeMonde = "maison" | "H1A" | "H1B" | "L1A" | "L1B" | "H2A" | "H2B" | "L2A" | "L2B";
+
+/** L'étape de la grille où se place un niveau ou une arme (plan 0.8 §2.4) : la maison, H1, L1, H2, L2, L3. */
+export type EtapeGrille = "maison" | "H1" | "L1" | "H2" | "L2" | "L3";
+
+/**
+ * Pas encore jouable (plan 0.8 §1.3) : grisé « plus tard », avec sa clé nommée « à trouver plus loin ». Le serveur refuse,
+ * le client grise. « 0b » : la phase 0b (l'argile, la cabane) ; « niveau 2 », « niveau 3 » : la grille.
+ */
+export type AVenir = "0b" | "niveau 2" | "niveau 3";
+
+/** Un repli : une autre façon de franchir le niveau sans la clé, moins bonne (plus lent, moins chaud…). */
+export interface RepliCle {
+  /** Ce que le repli coûte à la place de la clé (ou en plus des matériaux). */
+  couts?: Inventaire;
+  /** Les outils qu'il demande à la place. */
+  qualites?: Partial<Record<Qualite, number>>;
+  /** Ce qu'on y perd, en une phrase (« deux fois plus long », « la soupe refroidit plus vite »). */
+  note: string;
+}
+
+/**
+ * La clé d'un niveau (plan 0.8 §2.1 et §2.2 ; règle 2 du game designer) : un ingrédient **ou** un outil de dehors, jamais
+ * les deux. Ses textes viennent du tableau maître (`progression-par-ingredients-page.json`).
+ */
+export interface CleEvolution {
+  /** L'objet clé (un ingrédient de la montée). */
+  objet?: TypeObjet;
+  /** Ou l'outil clé : une qualité et son niveau. */
+  qualite?: { qualite: Qualite; niveau: number };
+  /** Où on la trouve à place fixe. */
+  ou: EtapeMonde;
+  /** Les replis (fabricables) : ils franchissent le niveau sans la clé, en moins bien. */
+  replis?: readonly RepliCle[];
+  /** « Tu y penses » : le message au premier ramassage, dans la voix du carnet. */
+  idee: string;
+  /** Le même, quand le niveau d'avant n'est pas encore posé (« un jour… »). */
+  ideePlusTard: string;
+  /** L'indice « où chercher », en deux temps : le type de lieu, puis le coin. */
+  indice: readonly [string, string];
+}
+
 /** Une étape d'une lignée : un niveau, avec ce que coûte d'y monter depuis le niveau d'avant. */
 export interface Etape {
   id: string;
@@ -33,6 +79,12 @@ export interface Etape {
   famille?: Famille;
   /** Pas encore jouable : il attend la phase 0b (l'argile, la cabane). Montré grisé, comme une recette pressentie. */
   phase?: "0b";
+  /** Plan 0.8 : remplace `phase` (le chantier 1 fait la bascule). */
+  aVenir?: AVenir;
+  /** Plan 0.8 : l'étape de la grille où se place ce niveau. */
+  etapeLieu?: EtapeGrille;
+  /** Plan 0.8 : la clé du niveau, s'il en a une (les niveaux du niveau 1 en ont). */
+  cle?: CleEvolution;
   /** Ce qu'il apporte, en une phrase, pour la fiche. */
   apporte: string;
   /** Ce qu'on en dit quand on l'examine. */
