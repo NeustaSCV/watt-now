@@ -185,7 +185,7 @@ Chaque étape produit quelque chose de **jouable** et de **testable**. Elles ava
 
 ### 3.10 La 0.8 : le niveau 1 (2026-10-10)
 
-*Le détail est dans le plan `book/plans/plan-0.8.md` (v0.3, décidé), §1, §5 et §9 ; les chantiers 1 à 12 sont codés et fusionnés, le tutoriel et les quêtes (13) et le rythme (14) sont en cours.*
+*Le détail est dans le plan `book/plans/plan-0.8.md` (v0.3, décidé), §1, §5 et §9 ; les chantiers 1 à 14 et 16 sont codés et fusionnés (branche `integration-0-8`) ; la version s'appelle 0.8 dans le jeu, sa ligne de `VERSIONS.md` est « en préparation ».*
 
 **Ce que livre la 0.8** : la base grandit **avec les sorties**, de la maison jusqu'au **niveau 1**. Plus de paliers : chaque meuble monte d'un niveau avec **le niveau d'avant, des matériaux et un outil** ; les niveaux du niveau 1 demandent **une clé** trouvée dehors (Book 24 §12).
 
@@ -197,7 +197,7 @@ Chaque étape produit quelque chose de **jouable** et de **testable**. Elles ava
 | **L1A** | La Coopérative du Plateau | Trois clés à place fixe : grillage, cocotte, seau de 10 L |
 | **L1B** | **Le Moulin du Gué** (nouveau) | Trois clés à place fixe : toile de jute, feuillards, étau ; la fourche à foin, un if, 2 bûches ; 22 Éteints |
 
-**Le parcours visé** : la maison (0 à 25 min, le tutoriel) ; la station dans le tutoriel (« La carte », puis « La famille » au retour) ; le gué ; puis la Coopérative ou le Moulin, au choix, et l'autre : **tout le niveau 1 en ≈ 3 h 20** pour un joueur prudent.
+**Le parcours visé** : la maison (0 à 25 min, le tutoriel) ; la station dans le tutoriel (« La carte », puis « La famille » au retour) ; le gué ; puis la Coopérative ou le Moulin, au choix, et l'autre : **tout le niveau 1 en ≈ 3 h 20** pour un joueur prudent (la cible du plan, en cours d'arbitrage par le porteur). **Mesuré** (`npm run rythme`, chantier 14) : le joueur prudent atteint la station à 38 min, le gué à 85, la Coopérative vers 104 à 107, le Moulin vers 163 à 166 ; sa **dernière porte à clé** tombe à **209 à 212 min**, et **tout le niveau 1** (avec le reste de la maison et du métier) à **277 à 278 min**. Le joueur pressé : 110 à 125 min pour les portes, 141 à 179 min pour tout ; le malchanceux : 161 à 163 min, puis 219 à 254 min ; le vétéran sans tutoriel : 126 à 141 min, puis 191 à 196 min.
 
 **Ce qui n'entre pas** : le niveau 2 tout entier (H2A, H2B, L2A, L2B et leurs clés, Raboter et Souder en usage, le mélange des routes) ; les Éteints évolués ; le relais d'armes, les munitions, les caractéristiques selon les ennemis ; le niveau 3 (trempe à l'huile, arbalète lourde…) ; Fendre et le bois vert ; le panneau Examiner détaillé. Ce que le code avait déjà au-delà du niveau 1 (forge ventilée, réserve couverte, four de terre, aiguillon, électrificateur…) devient **« plus tard »** : grisé dans la fiche, avec sa clé nommée, « à trouver plus loin ».
 
@@ -209,13 +209,13 @@ Chaque étape produit quelque chose de **jouable** et de **testable**. Elles ava
 2. bâtir **tout le niveau 1 de la maison** avec le seul terrain ;
 3. au gué, creuser de la glaise, ramasser pierres et joncs ;
 4. à la Coopérative et au Moulin, trouver les clés **à la première visite**, et bâtir au retour foyer de cuisine, marmite, récupérateur à seau, abri fermé, coffre cerclé, établi à étau ;
-5. le niveau 1 en ≈ 3 h 20 (`npm run rythme`), avec 0 (⚡), 0 à 1 (⚙️) et 1 (🔥) aller-retour de ravitaillement à la station en plus du tutoriel ;
+5. le niveau 1 en ≈ 3 h 20 (`npm run rythme`, cible en cours d'arbitrage ; mesuré : les portes à clé en 209 à 212 min, tout le niveau 1 en 277 à 278 min pour le prudent), avec 0 (⚡), 0 à 1 (⚙️) et 1 (🔥) aller-retour de ravitaillement à la station en plus du tutoriel (mesuré : 0 seul, 1 pour le malchanceux ⚙️ ou 🔥) ;
 6. ne jamais trouver la station ni le gué vides de bois et de pierres plus de 30 min ;
 7. au premier ramassage d'une clé, « Tu y penses » ; l'indice passe du type de lieu au coin ;
 8. aucune arme fabriquée au-dessus de ★★ sans la maîtrise ; `npm run equilibre` OK à la maison et à H1/L1 ;
 9. sur iPhone 13 mini, le gué et le Moulin tiennent le budget (≤ 60 000 triangles, ≤ 40 appels de dessin).
 
-**La priorité au soin visuel** (§5) vaut pour tout ce que la 0.8 ajoute : les icônes des objets nouveaux, la carte à deux routes, les meubles du niveau 1, le gué et le Moulin tirés des modèles de la session « bâtiments », le bandeau « Tu y penses » ; tout est lisible sur l'iPhone 13 mini (375 × 630 en vertical, 812 × 320 en paysage). **Une règle d'interface du porteur** : un message ou un avertissement en jeu **se ferme d'un bouton**, jamais une fenêtre à croix ; ce qu'on ouvre au bouton B (Examiner) se ferme par B ; les panneaux qu'on ouvre au toucher ou à la souris (sac, Fabriquer, carnet, carte) gardent leur croix ✕.
+**La priorité au soin visuel** (§5) vaut pour tout ce que la 0.8 ajoute : les icônes des objets nouveaux, la carte à deux routes, les meubles du niveau 1, le gué et le Moulin tirés des modèles de la session « bâtiments », le bandeau « Tu y penses », l'avertissement de la bûche ; tout est lisible sur l'iPhone 13 mini (375 × 630 en vertical, 812 × 320 en paysage). **Une règle d'interface du porteur** : un message ou un avertissement en jeu **se ferme d'un bouton**, jamais une fenêtre à croix ; ce qu'on ouvre au bouton B (Examiner) se ferme par B ; les panneaux qu'on ouvre au toucher ou à la souris (sac, Fabriquer, carnet, carte) gardent leur croix ✕.
 
 ---
 
@@ -643,7 +643,7 @@ Pour que toutes les couches se superposent sans heurt, **une seule grille** sert
 
 **Règle de réglage :** la distance à laquelle un son devient inaudible est **la portée de signature** de la donnée de jeu. Un objet sans signature sonore ne s'entend qu'**à moins de 2 m**.
 
-> **Décision (2026-10-08, version 0.3) : les effets enregistrés remplacent les recettes synthétisées.** La session « son » a livré les 82 effets du catalogue (237 fichiers CC0, `son/LIVRAISON.md`). `code/scripts/copier-effets.mjs` les copie dans le client (Opus, AAC en secours, 5,9 Mo) ; le jeu les charge **à la demande** (mémoire mobile), et garde la **recette synthétisée en secours** tant qu'un fichier n'est pas décodé, s'il manque, ou si on la préfère (liste `RECETTE_PREFEREE` de `client/src/son/audio.ts`). **Les 82 effets ont été écoutés et validés par le porteur le 2026-10-08** : la liste reste vide. Les six sons livrés mais jamais joués le sont maintenant : soufflet et trempe à la forge, scie (coffre, escabeau), hache (travois, lit, épieu, bâton, gourdin, sac de fortune), aiguiser à la fin de l'affûtage, braises sous le feu qui couve.
+> **Décision (2026-10-08, version 0.3) : les effets enregistrés remplacent les recettes synthétisées.** La session « son » a livré les 82 effets du catalogue (237 fichiers CC0, `son/LIVRAISON.md`). `code/scripts/copier-effets.mjs` les copie dans le client (Opus, AAC en secours, 5,9 Mo) ; le jeu les charge **à la demande** (mémoire mobile), et garde la **recette synthétisée en secours** tant qu'un fichier n'est pas décodé, s'il manque, ou si on la préfère (liste `RECETTE_PREFEREE` de `client/src/son/audio.ts`). **Les 82 effets ont été écoutés et validés par le porteur le 2026-10-08** : la liste reste vide. Les six sons livrés mais jamais joués le sont maintenant : le souffle de cuir et la trempe à la forge (l'effet s'appelle encore `soufflet` dans le code), scie (coffre, escabeau), hache (travois, lit, épieu, bâton, gourdin, sac de fortune), aiguiser à la fin de l'affûtage, braises sous le feu qui couve.
 
 | Famille de sons | Sons | Priorité (Book 16 §3.2) | Portée audible |
 |---|---|---|---|
@@ -656,7 +656,7 @@ Pour que toutes les couches se superposent sans heurt, **une seule grille** sert
 | **Pas du joueur** | 3 allures × 4 sols (terre, herbe, béton, gravats et verre), ≥ 4 variantes chacun | **3** (voir la décision ci-dessous) | Selon l'allure (Book 08 §3) : valeurs à caler sur le cercle de signature |
 | **Outils** | Couteau et pierre à aiguiser, scie, **hache** (coupe, fendage), marteau | **3** | 5 m, 15 m, **25 m**, 40 m sur enclume (Book 02 §7) |
 | **Feu de camp** | Allumage au briquet, craquements, bûche qui tombe, extinction | **3** | ≈ 5 m (sa signature est olfactive et lumineuse) |
-| **🔥 Foyer de forge** | Soufflet, ronflement des braises, marteau, trempe | **3** | **30 m** |
+| **🔥 Foyer de forge** | Souffle de cuir (une grande respiration, puis les braises qui ronflent), ronflement des braises, enclume, trempe | **3** | **30 m** |
 | **⚙️ Pédalier + meule** | Chaîne, roue libre, meule sur le fer, étincelles | **3** | **15 m** |
 | **⚡ Banc solaire + lampe** | Clic des pinces, bourdonnement léger, interrupteur | **3** | **≤ 2 m** (aucune signature sonore) |
 | **Établi, abri, crafting** | Gestes génériques (bois, métal, tissu), montage de l'abri, bâche | **3** | Selon l'outil utilisé |
