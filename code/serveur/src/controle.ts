@@ -173,6 +173,9 @@ export function messageValide(m: unknown): m is MessageClient {
       return estObjet(m.objet);
     case "mesures":
       return nombre(m.ips) && nombre(m.ipsBas) && chaine(m.appareil, 200) && chaine(m.qualite);
+    // Les constats de l'interface (plan 0.8, chantier 14) : la fiche bloquée (un type court), l'aide « Je suis coincé ».
+    case "constat":
+      return (m.quoi === "fiche_bloquee" || m.quoi === "aide_coince") && (m.construction === undefined || chaine(m.construction, 40));
     // Le lancer et le tir (0.6) : une direction finie, une cible désignée par son numéro, une distance raisonnable.
     case "preparer":
       return m.objet === null || estCleObjet(m.objet);

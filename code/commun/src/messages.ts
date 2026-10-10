@@ -236,6 +236,8 @@ export type MessageClient =
   | MessageClientDechets
   // Reprendre une arme sur son meuble (plan 0.8, chantier 9) : voir le bloc « reprise » en fin de fichier.
   | MessageClientReprise
+  // Les constats de l'interface (plan 0.8, chantier 14) : voir le bloc « constats » en fin de fichier.
+  | MessageClientConstat
   | { t: "interagir"; cible: Cible; verbe: Verbe }
   | { t: "manger"; objet: TypeObjet }
   | { t: "boire" }
@@ -692,3 +694,12 @@ export type MessageClientGue =
 export type MessageServeurGue =
   /** Le radeau du bac : sa place et où il va (le client le prolonge seul) ; `cloche` : la cloche du passeur sonne. */
   { t: "gue"; radeau: MouvementRadeau; cloche?: true };
+
+// ---------- Les constats de l'interface (plan 0.8, chantier 14 ; serveur/src/mesures.ts) ----------
+
+export type MessageClientConstat =
+  /**
+   * Ce que le client signale pour les mesures du test (avis-game-designer.md §5.2) : la fiche d'une construction ouverte
+   * sans pouvoir l'améliorer (`construction` : son type), l'aide « Je suis coincé » ouverte. Le serveur en fait un fait.
+   */
+  { t: "constat"; quoi: "fiche_bloquee" | "aide_coince"; construction?: string };
