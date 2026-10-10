@@ -56,6 +56,7 @@ import { ModePhoto } from "./photo.ts";
 import { attenuationMeteo, meteo, type Meteo, type Temps } from "../../commun/src/meteo.ts";
 import { Sang, creerSacTombe, creerTas } from "./rendu/sang.ts";
 import type { SourceLumiere } from "./rendu/lumieres.ts";
+import { outilsAPortee } from "../../commun/src/outils-a-portee.ts";
 import { Personnage, gesteDAction } from "./rendu/personnage.ts";
 import { chargerHumanoides } from "./rendu/humanoides.ts";
 import { qualiteActuelle } from "./rendu/qualite.ts";
@@ -1267,6 +1268,7 @@ hud.sourceFiche = (genre, id) => {
   return installations.get(id)?.vue ?? null;
 };
 hud.voisinsFiche = () => ({ installations: [...installations.values()].map((i) => i.vue), feux: [...feux.values()].map((f) => f.vue) });
+hud.outilsAPortee = () => (position && lieu === "terrain" ? outilsAPortee({ x: position.x, z: position.z, installations: [...installations.values()].map((i) => i.vue), inventaire }) : inventaire);
 // Le dialogue de départ dit si l'on part à l'abri (une nuit complète) ou s'il vaut mieux y aller d'abord.
 hud.aLAbri = () =>
   lieu === "terrain" && position !== null && [...installations.values()].some((i) => i.vue.type === "abri" && Math.hypot(i.vue.x - position!.x, i.vue.z - position!.z) <= 3);
@@ -1507,6 +1509,11 @@ function sourcesDeLumiere(): SourceLumiere[] {
   const sources: SourceLumiere[] = [];
   for (const f of feux.values()) {
     const s = f.source();
+    if (s) sources.push(s);
+  }
+  // Les torches plantées qui brûlent (plan 0.8, chantier 6).
+  for (const i of installations.values()) {
+    const s = i.source(Date.now() + decalage);
     if (s) sources.push(s);
   }
   // La lampe des autres, la nuit : chaque famille a la sienne (Book 18 §4.2).

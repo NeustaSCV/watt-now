@@ -9,8 +9,8 @@ import type { TypeObjet } from "../../../commun/src/objets.ts";
 import type { Famille } from "../../../commun/src/regles.ts";
 import { Humanoide, chargerHumanoides, humanoidesPrets, type Coiffure, type Tenue } from "./humanoides.ts";
 import { APPARENCES_DE_REFERENCE, CARNATIONS, COULEURS_CHEVEUX, hauteurDe, type Apparence, type Coiffure as CoiffureChoisie } from "../../../commun/src/apparence.ts";
-import { PALETTE, materiau } from "./materiaux.ts";
-import { Assemblage, V3, placer } from "./assemblage.ts";
+import { PALETTE, aleatoire, materiau } from "./materiaux.ts";
+import { Assemblage, V3, bosseler, placer } from "./assemblage.ts";
 import { Mesure, bandeau, bandouliere, pan } from "./accessoires.ts";
 import { modeleMetier } from "./metier/index.ts";
 import { TENUE_TOGE, habillerToge } from "./toge.ts";
@@ -91,6 +91,9 @@ function manche(c: Assemblage, z0: number, z1: number, r: number, bois: number =
  * nature (+15 à 20 %, Book 21 §5.3.2) pour rester lisibles. Couleurs par sommet : un ou deux appels de dessin.
  * Null si l'objet ne se tient pas comme une arme.
  */
+/** Le coin de bois enfoncé dans l'œil d'un outil remmanché. */
+const BOIS_COIN = 0xc9a77a;
+
 export function creerArme(objet: TypeObjet): THREE.Group | null {
   const c = new Assemblage(objet.length * 13);
   const boisClair = 0x9a7650;
@@ -102,13 +105,24 @@ export function creerArme(objet: TypeObjet): THREE.Group | null {
       fer(c, [[0.46, -0.05], [0.56, -0.05], [0.565, 0.03], [0.63, 0.16], [0.6, 0.2], [0.5, 0.19], [0.43, 0.165], [0.47, 0.035]], 0.026, 0.155);
       c.ajouter(placer(new THREE.CylinderGeometry(0.018, 0.018, 0.04, 6).rotateX(Math.PI / 2), 0, -0.01, 0.51), 0x4a4744, "metal");
       break;
-    case "marteau":
-      // Un marteau de charpentier : la table de frappe ronde devant les doigts, l'arrache-clou fendu de l'autre côté.
-      manche(c, -0.1, 0.34, 0.014, boisClair, 0x3a2c22);
-      c.boite(0x4a4744, "metal", 0.034, 0.075, 0.04, 0, 0.0, 0.32);
-      c.ajouter(placer(new THREE.CylinderGeometry(0.022, 0.019, 0.045, 8), 0, 0.058, 0.32), 0x8a8780, "metal");
-      for (const x of [-0.009, 0.009]) fer(c, [[0.3, -0.03], [0.34, -0.03], [0.31, -0.08], [0.27, -0.105], [0.29, -0.07]], 0.008, 1, 0x4a4744, 0x4a4744, x);
+    case "marteau": {
+      // Le marteau remmanché (plan 0.8, I10) : la vieille tête de la caisse de la ruine, piquée de rouille, sur un
+      // manche taillé dans une branche (l'écorce gardée au bout, la poignée blanchie au couteau), un coin de bois
+      // enfoncé dans l'œil, une ligature de fil de fer sous la tête.
+      const ecorce = 0x5e4632;
+      const branche = new THREE.CylinderGeometry(0.017, 0.015, 0.46, 6, 6).rotateX(Math.PI / 2).translate(0, 0, 0.12);
+      c.ajouterDegrade(bosseler(branche, 0.0015, aleatoire(7)), (p) => (p.z < 0.07 ? (Math.sin(p.z * 90) > 0.6 ? 0xa88a62 : 0xb89a70) : Math.sin(p.z * 40 + p.x * 200) > 0.5 ? 0x4a3828 : ecorce));
+      // Un nœud de la branche.
+      c.perche(new V3(0, 0.012, 0.2), new V3(0, 0.026, 0.215), 0.007, ecorce, "mat", 4, 0.004);
+      const rouille = (p: THREE.Vector3) => (Math.sin(p.y * 90 + p.x * 140) + Math.sin(p.z * 120) > 0.9 ? PALETTE.rouille : 0x4a4744);
+      c.ajouterDegrade(placer(new THREE.BoxGeometry(0.036, 0.08, 0.042), 0, 0.0, 0.33), rouille, "metal");
+      c.ajouter(placer(new THREE.CylinderGeometry(0.023, 0.02, 0.045, 8), 0, 0.06, 0.33), 0x7a7770, "metal");
+      for (const x of [-0.009, 0.009]) fer(c, [[0.31, -0.03], [0.35, -0.03], [0.32, -0.085], [0.28, -0.11], [0.3, -0.07]], 0.008, 1, 0x5a3a28, 0x5a3a28, x);
+      // Le coin dans l'œil, et la ligature de fil de fer.
+      c.boite(BOIS_COIN, "mat", 0.012, 0.03, 0.01, 0, 0.0, 0.354);
+      c.ligature(new V3(0, 0, 0.285), new V3(0, 0, 1), 0.019, 0x6b6862);
       break;
+    }
     case "barre_metal": {
       // Une barre à mine (pied-de-biche) : tige à six pans piquée de rouille, le bout recourbé et fendu, l'autre en biseau.
       const tige = new THREE.CylinderGeometry(0.015, 0.015, 0.84, 6, 6).rotateX(Math.PI / 2).translate(0, 0, 0.18);
