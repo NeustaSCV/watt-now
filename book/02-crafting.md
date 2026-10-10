@@ -241,7 +241,7 @@ Les installations sont construites sur le terrain du joueur. Elles définissent 
 | Feu de camp | I | Tous | 600 °C | 5 % | Olfactive 30 m, lumière | Actif |
 | Établi | I | Tous | — | — | — | Actif |
 | Séchoir à bois (abri ventilé) | I | Tous | — | — | — | **Passif** |
-| Foyer de forge à soufflet | I | 🔥 | 900 °C | 8 % | Sonore 30 m, olfactive 40 m | Actif |
+| Foyer de forge | I | 🔥 | 900 °C | 8 % | Sonore 30 m, olfactive 40 m | Actif |
 | Pédalier universel (entraîne une meule, une scie, une dynamo) | I | ⚙️ | — | 100 Wh_m/h | Sonore 15 m | Actif |
 | Banc de recharge (batteries + régulateur) | I | ⚡ | — | 85 % | — | **Passif** |
 | Charbonnière (meule couverte ; le fût est une amélioration de palier III, §12.2) | II | 🔥 | — | 20 à 30 % en masse | **Olfactive 150 m pendant toute la combustion** | **Passif** (3 jours) |
@@ -724,8 +724,8 @@ Tirée de `code/commun/src/progression.ts` (2026-10-09) : 107 recettes et les de
 
 | Recette | Famille | Déclencheurs (l'un ou l'autre) | Indice « À découvrir » |
 |---|---|---|---|
-| Foyer de forge à soufflet | 🔥 | **seuil S** | Quand tu auras un toit et tenu tête une fois… |
-| Meule de charbonnière | 🔥 | fait : Foyer de forge à soufflet · quête « La charbonnière » | Ta forge aura faim d'un feu plus chaud. |
+| Foyer de forge | 🔥 | **seuil S** | Quand tu auras un toit et tenu tête une fois… |
+| Meule de charbonnière | 🔥 | fait : Foyer de forge · quête « La charbonnière » | Ta forge aura faim d'un feu plus chaud. |
 | Forger un couteau (fer doux) | 🔥 | (premier charbon défourné ou vu : kilo de charbon de bois) · quête « Forger une lame » | Ton premier charbon, ta première lame. |
 | Forger un couteau | 🔥 | (premier charbon défourné ou vu : kilo de charbon de bois) **et** vu : lame de ressort | Un bon acier de ressort fait une bonne lame. |
 | Forger un couteau (lime usée) | 🔥 | (premier charbon défourné ou vu : kilo de charbon de bois) **et** vu : lime usée | Le meilleur acier dort dans les vieux outils. |

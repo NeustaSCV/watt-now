@@ -102,7 +102,7 @@ Les trois familles, avec leurs stats (Book 01 §4). Les traits sont gardés quan
 | **Kits de famille** (6) | 🔥 pierre à feu, marteau · ⚡ lampe à dynamo, petite batterie · ⚙️ scie à bois, corde | Départ |
 | **Lumières portées** (3) | 🔥 torche, ⚡ lampe frontale, ⚙️ lanterne à dynamo | Kit de famille : elles font la nuit et la silhouette des personnages (§5.2.1, Book 18 §4.2) |
 | **Outils fabriqués** (2) | Hache remmanchée, lame de couteau forgée (🔥) | Tutoriel, forge |
-| **Installations** (8) | Feu de camp, établi, abri de branches et bâche, **coffre de rangement**, **foyer de forge à soufflet** (🔥), **charbonnière** (🔥), **pédalier universel + meule + dynamo** (⚙️), **banc de recharge + lampe** (⚡) | Construites sur le terrain |
+| **Installations** (8) | Feu de camp, établi, abri de branches et bâche, **coffre de rangement**, **foyer de forge** (🔥), **charbonnière** (🔥), **pédalier universel + meule + dynamo** (⚙️), **banc de recharge + lampe** (⚡) | Construites sur le terrain |
 | **Produits** (2) | Charbon de bois, batterie chargée | Charbonnière, recharge |
 | **Nourriture et soins** (3) | Conserve (vestige), baies (cueillette sur le terrain), pansement | Fouille, cueillette, fabrication |
 | **Monnaie** (1) | Bons de wotts | Comptoir |

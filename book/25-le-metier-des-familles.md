@@ -35,7 +35,7 @@ Aujourd'hui, une recette de famille est **réservée** à sa famille : les autre
 
 | Famille | Recettes propres | Installations | Ce qu'elle vend | Carnet « Le métier » (Book 22 §3.2) |
 |---|---|---|---|---|
-| 🔥 **Charbonniers** | Meule de charbonnière (10 bûches, 4 branches) ; foyer de forge à soufflet (8 pierres, 1 barre de métal, 2 branches) ; **lame forgée** (1 lame de ressort + 1 kg de charbon, Marteler 2, 90 min de travail lourd, à la forge) | Charbonnière, forge | Lames forgées, charbon | Charbonnière → défourner → forger une lame → la vendre |
+| 🔥 **Charbonniers** | Meule de charbonnière (10 bûches, 4 branches) ; foyer de forge (8 pierres, 1 barre de métal, 2 branches) ; **lame forgée** (1 lame de ressort + 1 kg de charbon, Marteler 2, 90 min de travail lourd, à la forge) | Charbonnière, forge | Lames forgées, charbon | Charbonnière → défourner → forger une lame → la vendre |
 | ⚙️ **Mécanistes** | Pédalier universel (cadre, chaîne, roue de vélo, 2 bûches) ; accessoires **meule** (couteau → couteau aiguisé) et **dynamo** | Pédalier | Électricité de pédalage, affûtage | Meule → affûter → dynamo → déposer l'électricité |
 | ⚡ **Voltaïques** | Banc de recharge (2 bûches, 1 barre de métal) ; poser le panneau solaire de la station | Banc, panneau | Électricité, composants | Panneau → l'installer → 20 Wh → déposer |
 
@@ -226,7 +226,7 @@ Le tir **réutilise le lancer de la 0.6** (Book 23 §5) : même bouton, même ar
 | Étape | Ce qui existe | Ce qu'on ajoute |
 |---|---|---|
 | **1. Le charbon** | Meule de charbonnière : 10 bûches → 4 kg en 72 min réelles | Rien (la charbonnière en fût du Book 24 §3.1 viendra avec la lignée) |
-| **2. La forge** | Foyer de forge à soufflet (≈ 900 °C, palier I) | **Une lignée de la forge** (Book 24) : niveau 2 **forge ventilée** (tuyère d'argile ; soufflet double en cuir ou en bâche, **seul** ; ou ventilateur 12 V ⚡, ou soufflet à manivelle ⚙️, pour ne plus pomper ; ≈ 1 300 °C) ; accessoire **enclume** (§9.3) |
+| **2. La forge** | Foyer de forge (≈ 900 °C, palier I) | **Une lignée de la forge** (Book 24) : niveau 2 **forge ventilée** (tuyère d'argile ; soufflet double en cuir ou en bâche, **seul** ; ou ventilateur 12 V ⚡, ou soufflet à manivelle ⚙️, pour ne plus pomper ; ≈ 1 300 °C) ; accessoire **enclume** (§9.3) |
 | **3. L'acier** | Lame de ressort, barre de métal, débris | **Une qualité par matière** (§4.2) et quatre vestiges nouveaux (lime usée, soc de charrue, bidon d'huile, rail) |
 | **4. Forger** | Lame forgée (1 ressort, 1 kg de charbon, 90 min) | Une **gamme** (§4.3) |
 | **5. Tremper et revenir** | Compris dans la lame forgée | **Un geste à part**, avec le choix du bain (§4.2) |
@@ -248,7 +248,7 @@ La qualité ★ est portée **par exemplaire**, pour les seuls **objets de méti
 |---|---|---|---|---|---|
 | **Acier** | Tôle, ferraille rouillée | Fer doux : barre de métal, clous, ferraille (il ne prend pas la trempe) | Soc de charrue, lame de scie, **lame ébréchée** reforgée | Lame de ressort (camionnette) | Lime usée (acier à outils) |
 | **Trempe** | Aucune | Sans revenu (la lame est cassante) | Trempe à l'eau (risque) | Trempe à l'huile | Trempe à l'huile, maîtrisée |
-| **Forge et outils** | Un feu de camp, une pierre | Foyer à soufflet, marteau | Foyer à soufflet, marteau, **pinces de forge**, une enclume trouvée (étau, tête de masse) | Forge ventilée, pinces | Forge ventilée, enclume de rail |
+| **Forge et outils** | Un feu de camp, une pierre | Foyer de forge, marteau | Foyer de forge, marteau, **pinces de forge**, une enclume trouvée (étau, tête de masse) | Forge ventilée, pinces | Forge ventilée, enclume de rail |
 
 **Ce que le Charbonnier fait seul, et ce que les autres lui apportent :**
 - **Seul, dès le premier jour** : le marteau du kit, le foyer, une lame de ressort trouvée ou du fer doux, une trempe à l'eau → **★★**. S'il n'a pas de ressort : du fer doux, ★★ aussi.
@@ -782,7 +782,7 @@ Et un changement de kit : la **clé plate** (Serrer 2) entre dans le kit des Mé
 
 | Lignée ou installation | Niveaux et accessoires | Famille | Chantier |
 |---|---|---|---|
-| **La forge** | 1 foyer à soufflet (existe) → **2 forge ventilée** (tuyère d'argile, **soufflet double** ; 1 chiffon de cuir ou de bâche, 6 pierres, 1 barre ; on pompe, 2 d'endurance par minute de forge). Accessoires : **enclume** (pierre plate ★★, étau ou tête de masse ★★★, rail ★★★★★), **ventilateur 12 V** (⚡) ou **soufflet à manivelle** (⚙️) qui suppriment le pompage, **bac de trempe** (1 casserole) | 🔥 | 5 |
+| **La forge** | 1 foyer de forge (existe) → **2 forge ventilée** (tuyère d'argile, **soufflet double** ; 1 chiffon de cuir ou de bâche, 6 pierres, 1 barre ; on pompe, 2 d'endurance par minute de forge). Accessoires : **enclume** (pierre plate ★★, étau ou tête de masse ★★★, rail ★★★★★), **ventilateur 12 V** (⚡) ou **soufflet à manivelle** (⚙️) qui suppriment le pompage, **bac de trempe** (1 casserole) | 🔥 | 5 |
 | **L'établi** | Book 24 §5 (établi utile, étau) ; accessoire **redresseur de fûts** (2 branches, 1 pierre chaude) : les flèches à l'établi vont 2 fois plus vite | Tous | 4 |
 | **Le banc de recharge** | Accessoire **électrificateur** (la clôture se branche dessus) ; **poste de montage** (pince, fer à souder bricolé avec une résistance) : +1 étoile aux modules | ⚡ | 6 |
 | **Le pédalier** | Accessoires existants (meule, dynamo) + **soufflet à manivelle**, **meule fine** | ⚙️ | 7 |
@@ -944,7 +944,7 @@ vague 3   [8 Intégration] ◄────┴───────────�
 | **Recettes des autres familles** | `recettesConnues` : invisibles, impossibles | Book 01 §5 : apprentissage, puis ×1,5 ; Book 24 l'applique aux lignées seulement | Grisées, ouvertes par la leçon ou un manuel, ×1,5, plafond ★★ (§2.3) | **Décidé** (décision 3) ; chantier 3 |
 | **Réparer une lame** | `ATELIER_REPARATION.lame` = la meule du **pédalier**, recette mécaniste | Book 23 §4.3 | Un **Charbonnier ne peut pas réparer sa propre lame** : la meule **et** la forge (§4.4) | **Décidé** (décision 8) ; chantier 2 |
 | **La qualité ★** | Absente ; l'inventaire compte des types | Book 02 §9 : maillon faible ; Book 23 §4.3 : l'usure par type | Qualité par exemplaire pour les seuls objets de métier (§9.6) | **Décidé** (décision 2) ; chantier 2 |
-| **La forge de la lame** | « Foyer de forge à soufflet », 1 kg de charbon | Book 01 §3 : ce foyer chauffe **au bois** à 900 °C (palier I) ; un couteau, c'est 1,25 à 2,5 kg de charbon ; Book 02 §12.1 : forge **ventilée** (palier II) | Garder 1 kg pour le couteau ; la forge ventilée devient le niveau 2 (§9.3) ; corriger le Book 01 (le foyer à soufflet brûle aussi du charbon) | À faire (chantier 5, Book 01) |
+| **La forge de la lame** | « Foyer de forge », 1 kg de charbon | Book 01 §3 : ce foyer chauffe **au bois** à 900 °C (palier I) ; un couteau, c'est 1,25 à 2,5 kg de charbon ; Book 02 §12.1 : forge **ventilée** (palier II) | Garder 1 kg pour le couteau ; la forge ventilée devient le niveau 2 (§9.3) ; corriger le Book 01 (le foyer de forge brûle aussi du charbon) | À faire (chantier 5, Book 01) |
 | **La lame forgée** | Une lame **sans manche** qui sert d'arme | Book 02 §12.1 : une lame de couteau | La renommer « couteau de forge » (même identifiant), emmanchée | À faire (chantier 5) |
 | **La machette trouvée** | Était une « machette » à 1,5 de dégâts et 50 de solidité, valeur 30 wotts, bien plus forte que la lame forgée (≈ 215 wotts) | Book 01 §6 : un vestige vaut ce qu'il coûterait à refaire | **Machette de fortune** (une tôle découpée, un manche ficelé) : dégâts 1,2, solidité 40 ; une lame ★. À 30 wotts, sa valeur est cohérente avec ce qu'elle est. La machette **forgée** est un autre objet (§4.3) | **Réglé** (code, 2026-10-09) |
 | **La lame ébréchée** | Se démontait en une **lame de ressort** à 50 wotts, pour un débris à 4 wotts | Book 02 §15 règle 4 : pas de boucle qui crée de la valeur ; et un éclat de lame n'est pas un ressort | Elle **ne se démonte plus** ; « un Charbonnier saura le reforger » (§4.4). Sa valeur (4 wotts) pourra monter vers ≈ 40 quand le reforgeage existera | **Réglé** (code, 2026-10-09) ; reforgeage au chantier 5 |

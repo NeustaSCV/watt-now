@@ -368,12 +368,12 @@ export const LIGNEES_INSTALLATIONS: Partial<Record<TypeInstallation, readonly Et
       examen: "Le coffre cerclé, monté sur des pierres sous un auvent de bâche.",
     },
   ],
-  // 🔥 La lignée de la forge (Book 25 §4.1 et §9.3, chantier 5) : le foyer à soufflet, puis la forge ventilée. Ses
+  // 🔥 La lignée de la forge (Book 25 §4.1 et §9.3, chantier 5) : le foyer de forge, puis la forge ventilée. Ses
   // accessoires (enclume, bac de trempe, ventilateur ⚡) se posent sur place : serveur/src/forge.ts.
   forge: [
     {
       id: "forge",
-      nom: "Foyer de forge à soufflet",
+      nom: "Foyer de forge",
       niveau: 1,
       couts: [{ pierre: 8, barre_metal: 1, branche: 2 }],
       qualites: { marteler: 1 },

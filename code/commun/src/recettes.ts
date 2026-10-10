@@ -142,7 +142,7 @@ export const NOMS_INSTALLATIONS: Record<TypeInstallation, string> = {
   abri: "abri de branches et de bâche",
   coffre: "coffre",
   charbonniere: "meule de charbonnière",
-  forge: "foyer de forge à soufflet",
+  forge: "foyer de forge",
   pedalier: "pédalier universel",
   banc_recharge: "banc de recharge",
   panneau_solaire: "petit panneau solaire",

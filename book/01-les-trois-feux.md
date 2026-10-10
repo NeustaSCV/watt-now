@@ -331,7 +331,7 @@ On ne fond pas de l'acier sur un feu de camp, même avec une montagne de bois. C
 | Installation | Température max | Rendement thermique | Palier |
 |---|---|---|---|
 | Feu de camp | ≈ 600 °C | ≈ 5 % | I |
-| Foyer de forge à soufflet manuel (bois ou charbon de bois ; en jeu, 1 kg de charbon pour un couteau) | ≈ 900 °C | ≈ 8 % | I |
+| Foyer de forge (petit soufflet à main) (bois ou charbon de bois ; en jeu, 1 kg de charbon pour un couteau) | ≈ 900 °C | ≈ 8 % | I |
 | Forge au charbon de bois avec ventilation | ≈ 1 300 °C | ≈ 10 % | II |
 | Creuset isolé (four de fonderie) | ≈ 1 200 °C | ≈ 15 % | II |
 | Four à arc ou à induction (électrique) | ≈ 1 600 °C et plus | ≈ 60 % | III, très énergivore |
@@ -414,7 +414,7 @@ Les Charbonniers forgent de l'acier récupéré (lames de ressort, socs, limes) 
 
 | Palier | Technologies |
 |---|---|
-| I | Feu ouvert, foyer de pierres, foyer de forge à soufflet, fumage, fonte du plomb, couteau et machette forgés |
+| I | Feu ouvert, foyer de pierres, foyer de forge, fumage, fonte du plomb, couteau et machette forgés |
 | II | Poêle-fusée, four à pain, charbonnière, forge ventilée, enclume, creuset, glaive |
 | III | Bas fourneau, gazogène, distillerie, petite machine à vapeur (avec un alternateur : électricité) |
 | Après la 1.0 (idée) | Nitrière, poudre noire, mousquet à silex, rechargement de cartouches, amorces |

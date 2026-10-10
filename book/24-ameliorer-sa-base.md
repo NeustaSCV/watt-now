@@ -124,7 +124,7 @@ Chaque niveau a **son modèle**, monté avec l'atelier commun (`client/src/rendu
 
 | Lignée | Niv. 1 | Niv. 2 | Niv. 3 |
 |---|---|---|---|
-| **Forge** 🔥 | Foyer de forge à soufflet (existe) | Forge ventilée au charbon (1 300 °C, Book 02 §8) | + creuset (cuivre, aluminium, Book 04 §2.6) |
+| **Forge** 🔥 | Foyer de forge (existe) | Forge ventilée au charbon (1 300 °C, Book 02 §8) | + creuset (cuivre, aluminium, Book 04 §2.6) |
 | **Charbonnière** 🔥 | Meule de terre (existe, consommée au défournement) | **Charbonnière en fût** (Book 02 §12.2) : **permanente**, 1 case au lieu de 3 × 3, odeur moindre, donne du goudron | — |
 
 La charbonnière en fût règle le « champ de meules ». Et une forge allumée devrait **compter comme un feu** pour bouillir l'eau : un forgeron n'allume pas un feu de camp à côté de sa forge (§8).

@@ -53,7 +53,7 @@ Dimensions réalistes arrondies au mètre, en cases (largeur × profondeur). « 
 | **Chaleur** | Feu de camp | 1 × 1 | + recul 1 case |
 | | Poêle en fonte | 1 × 1 | Conduit à travers le toit |
 | | Poêle de masse | 1 × 2 | |
-| **Forge et fours (🔥)** | Foyer de forge à soufflet | 1 × 1 | + recul |
+| **Forge et fours (🔥)** | Foyer de forge | 1 × 1 | + recul |
 | | Forge ventilée | 2 × 2 | + recul |
 | | Enclume (rail, bloc) | 1 × 1 | |
 | | Creuset, four de fonderie | 1 × 1 | + recul |

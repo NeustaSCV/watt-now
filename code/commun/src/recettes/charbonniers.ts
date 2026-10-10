@@ -65,7 +65,7 @@ export const RECETTES_CHARBONNIERS: Recette[] = [
   {
     id: "forge",
     categorie: "ateliers",
-    nom: "Foyer de forge à soufflet",
+    nom: "Foyer de forge",
     produit: { installation: "forge" },
     ingredients: { pierre: 8, barre_metal: 1, branche: 2 },
     qualites: { marteler: 1 },
