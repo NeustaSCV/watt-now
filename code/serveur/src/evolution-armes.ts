@@ -31,7 +31,8 @@ export interface ContexteEvolution {
   /** En voyage, ou déjà à un geste : on ne reprend pas une arme. */
   occupe(): boolean;
   retirerPlusieurs(objets: Inventaire): void;
-  ajouter(objets: Inventaire): void;
+  /** Retirer et ajouter d'un coup (une seule mise à jour du sac). */
+  echanger(retire: Inventaire, ajoute: Inventaire): void;
   /** Un geste qui prend du temps, avec sa pose (« outil » ou « lourd »). */
   commencer(libelle: string, dureeS: number, appliquer: () => void, pose: "leger" | "outil" | "lourd"): void;
   info(texte: string): void;
@@ -130,8 +131,7 @@ export class EvolutionArmes {
   private appliquerMontee(avant: CleObjet, r: Reprise): void {
     const m = r.monter!;
     const apres = m.apres!;
-    this.ctx.retirerPlusieurs({ ...m.cout, [avant]: (m.cout[avant] ?? 0) + 1 });
-    this.ctx.ajouter({ [apres]: 1 });
+    this.ctx.echanger({ ...m.cout, [avant]: (m.cout[avant] ?? 0) + 1 }, { [apres]: 1 });
     const reste = this.ctx.inventaire()[avant] ?? 0;
     const usure = this.ctx.usure();
     // L'usure d'une pile est celle de son premier exemplaire : c'est lui qu'on a repris, ceux qui restent sont neufs.

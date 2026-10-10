@@ -1382,7 +1382,19 @@ export class Joueur implements Voyageur, ParticipantLecon {
       alentours: () => (j.lieu === "terrain" && !j.voyage ? j.alentours() : null),
       occupe: () => j.voyage !== null || j.action !== null,
       retirerPlusieurs: (objets) => j.retirerPlusieurs(objets),
-      ajouter: (objets) => j.ajouterPlusieurs(objets),
+      // En un seul envoi : le client ne doit pas voir l'arme quitter le sac puis y revenir (« +1 arbalète »).
+      echanger: (retire, ajoute) => {
+        const inventaire = { ...j.inventaire };
+        for (const [t, n] of Object.entries(retire) as [CleObjet, number][]) {
+          const reste = (inventaire[t] ?? 0) - n;
+          if (reste > 0) inventaire[t] = reste;
+          else delete inventaire[t];
+        }
+        for (const [t, n] of Object.entries(ajoute) as [CleObjet, number][]) inventaire[t] = (inventaire[t] ?? 0) + n;
+        j.inventaire = inventaire;
+        j.base.sauverInventaire(j.compte.id, j.inventaire);
+        j.envoyer({ t: "inventaire", inventaire: j.inventaire });
+      },
       commencer: (libelle, dureeS, appliquer, pose) => j.commencer(libelle, dureeS, appliquer, 0, pose),
       info: (t) => j.info(t),
       envoyer: (m) => j.envoyer(m),

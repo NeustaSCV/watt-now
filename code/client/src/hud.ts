@@ -1759,7 +1759,8 @@ export class Hud {
   armeReprise(avant: CleObjet, apres: CleObjet, geste: GesteRepriseArme): void {
     this.repriseOuverte = null;
     if (geste === "monter") {
-      if (this.selection === avant) this.selection = apres;
+      // La pile d'avant a pu se vider à la mise à jour du sac (la sélection est tombée) : on choisit l'exemplaire monté.
+      if (this.selection === avant || this.selection === null) this.selection = apres;
       this.etoileGagnee = apres;
       setTimeout(() => {
         if (this.etoileGagnee !== apres) return;
