@@ -709,6 +709,39 @@ vague 4   [13 Tutoriel, quêtes, aide] ◄────────────�
   - le son du foyer de forge garde l'identifiant interne `soufflet` : à renommer.
   - **après la recette finale** (validé par le porteur) : la caisse de l'atelier de la station (clous, fil de fer, huile) devient **personnelle**, comme le tas de bois ; l'aide-mémoire des touches des Voltaïques ne recouvre plus la barre d'action sur téléphone ; le guichet du Comptoir plus haut sur téléphone ; le dormant couché à 0,85 m de l'établi de la pièce de famille éloigné ; au gué, l'arbre qui cache le joueur à la glaise, l'Éteint coincé dans la chicane de l'entrée, le camping-car qui bloque depuis le nord ; le message « trop lourd » dit le poids de l'objet visé (le sac est plein dès le Moulin) ; les textes d'Examiner coupés à deux lignes sur téléphone ; la fiche de la forge qui parle de « pierre plate » une fois l'enclume posée ; la note de la carte « panneau solaire sur l'auvent ! » pour toutes les familles ; l'illustration manquante de l'écran d'accueil en paysage ; un objet jeté qui cache la porte de la laiterie (détail : `.claude-travail/wt/c18-recette/`).
 
+### 9.4 Les remarques du porteur après avoir joué la 0.8 (2026-10-11), pour la 0.8.2
+
+*À noter, **pas à corriger tout de suite** : elles entrent dans la 0.8.2 avec la liste du §9.3. Celles marquées « à décider » attendent une décision du porteur.*
+
+**Le gué**
+- R1 · Pas assez à ramasser à la halte : il faut du **bois**, des **pierres** et **quelques déchets** au sol.
+- R2 · La **glaise** est trop cachée (derrière un arbre : on ne voit même pas l'éclat de l'objet à saisir) : la placer **en plein milieu de la berge**, bien visible.
+- R3 · La **zone pour haler le bac** n'est pas fiable : il faut revenir plusieurs fois sur le radeau pour que l'action apparaisse.
+
+**L'arrivée dans un lieu**
+- R4 · En arrivant sur une nouvelle carte : la vue **dézoomée et le jeu en pause**, pour voir tout le lieu de loin (avec les toits, l'artwork) ; à l'appui d'une touche, la vue **zoome sur le personnage** et la pause s'arrête.
+
+**L'interface**
+- R5 · **Le coffre du terrain est bloqué sur téléphone** (pas essayé sur ordinateur) : une fois ouvert, on ne peut ni choisir un objet, ni le déplacer, ni fermer la fenêtre. **Pareil à la décharge.** (Défaut à corriger en priorité dans la 0.8.2.)
+- R6 · Le sac : l'**arme équipée** a sa petite marque même quand elle a été équipée automatiquement ; le **sac à dos porté** est marqué de la même façon.
+- R7 · Sur ordinateur, l'aide des touches en bas : dans **un petit rectangle en bas à gauche**, avec **des icônes de touches** au lieu des lettres, et des séparateurs clairs (aujourd'hui on ne sait pas si « R » va avec la carte ou la lumière : le séparateur se confond avec les « : »).
+- R8 · Le choix du personnage : un **« + »** dans les couleurs de cheveux pour choisir une couleur personnalisée.
+
+**Les textes**
+- R9 · Ne jamais écrire **« clé »** dans les textes du jeu (descriptions, fiche, indices, aide) : c'est un mot de conception ; les joueurs croiraient à de vraies clés (la grosse clé du Moulin reste, c'en est une vraie).
+- R10 · **Les indices sont trop précis** : dire le **lieu** (« à la Coopérative ») mais pas l'endroit exact (« les palettes du quai »), et ne pas dévoiler ce qu'il y a dans les kits de départ. Des textes plus courts, plus digestes : on n'est plus dans le tutoriel.
+- R11 · L'abri parle encore du **lit construit à côté**, alors que le lit n'existe plus.
+
+**La base et le corps**
+- R12 · Dormir dans l'abri : le personnage **rampe jusqu'à sa couche** et dort **exactement dedans**, pas au hasard autour.
+- R13 · **Remmancher** une hache ou un marteau se fait **près d'un établi** (plus à la main).
+
+**Les recettes**
+- R14 · ⚡ **Un seul module de décharge** : on obtient un **condensateur** en démontant le flash ou la raquette à moustiques, et c'est le condensateur qui fait le module (au lieu de deux modules, au flash et à la raquette).
+- R15 · **La corde d'arc** : une seule recette, avec 3 ficelles **ou** une corde (le même objet ; ça allège le menu Fabriquer).
+- R16 · *À décider* : la recette **« Matraque électrique (petite batterie) »**. Ce n'est pas une amélioration : c'est **une seconde façon de fabriquer la même matraque électrique**, au banc, avec la **petite batterie du kit** comme source au lieu d'un pack de cellules (gourdin, module de décharge, petite batterie, caoutchouc). Elle existe pour qu'un Voltaïque sans pack atteigne ★★ dès la station (décision Q-A5). Pistes : la fondre dans la recette de la matraque (« un pack **ou** la petite batterie », comme R15), ou la garder séparée avec un nom plus clair.
+- R17 · *À décider* : **la recharge**. Aujourd'hui, la lampe frontale tire sur la **petite batterie** ; au banc solaire, « Recharger » remplit la petite batterie du sac à partir de la batterie de voiture qu'on porte, et « Recharger ses armes » remplit les armes électriques. On ne choisit pas quelle batterie recharger. Faut-il pouvoir choisir (la petite batterie, une arme, une autre batterie) ?
+
 **Une note sur les sources.** Le bloc `familles` de `progression-par-ingredients-page.json` (et le §4 du `.md` v5) dit encore que l'enclume donne ★★★ et que le sac donne « les 4 premiers charbons ». Les décisions plus récentes l'emportent : **★★** (P1, Q-A6) et **4 charbons** (I23). La question V5-3 est donc réglée.
 
 ---
