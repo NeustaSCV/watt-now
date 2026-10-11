@@ -733,6 +733,14 @@ vague 4   [13 Tutoriel, quêtes, aide] ◄────────────�
 - R10 · **Les indices sont trop précis** : dire le **lieu** (« à la Coopérative ») mais pas l'endroit exact (« les palettes du quai »), et ne pas dévoiler ce qu'il y a dans les kits de départ. Des textes plus courts, plus digestes : on n'est plus dans le tutoriel.
 - R11 · L'abri parle encore du **lit construit à côté**, alors que le lit n'existe plus.
 - R18 · **La carte ne divulgâche pas** : la fiche d'un lieu ne dit plus ce qu'on y trouve (« le couchage, le stockage, l'établi », « la pierre, la glaise et la rive »…) : le joueur s'en rendra compte tout seul (ou pas). On retire les « promesses » des lieux (`LIEUX[…].promesse`, chantier 4) ; la fiche garde sa description d'ambiance, la distance et le coût du trajet.
+- R22 · **« Tu y penses » devient un message d'information**, pas une fenêtre qui appelle une action : **sans bouton**, **plus transparent**, il **ne bloque pas la vue** du jeu et **disparaît tout seul** (remplace la décision du §2.2 : « un bandeau qui se ferme d'un bouton »). L'idée gardée et « déjà en poche » ne changent pas.
+
+**Les gestes et les fouilles**
+- R20 · **Ramasser deux fois plus vite** : les baies, les branches, les pierres, les bûches.
+- R21 · **Remplir la gourde au milieu de la mare**, pas au bord : au bord, le geste entre en conflit avec la coupe des joncs.
+- R23 · **Le cercle de fouille** ne se voit pas bien se remplir, surtout en basse qualité : une barre de remplissage d'une **couleur bien visible** (bleue, par exemple).
+- R24 · **Un contenant vide au sol** (sac-poubelle vidé, etc.) ne propose plus d'interaction (aujourd'hui « Examiner »).
+- R25 · **Les canettes écrasées se démontent en aluminium** (écrasées, elles ne servent plus) ; **les boîtes de conserve vides se gardent telles quelles**, pour servir comme boîtes.
 
 **La base et le corps**
 - R12 · Dormir dans l'abri : le personnage **rampe jusqu'à sa couche** et dort **exactement dedans**, pas au hasard autour.
