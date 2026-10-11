@@ -717,6 +717,7 @@ vague 4   [13 Tutoriel, quêtes, aide] ◄────────────�
 - R1 · Pas assez à ramasser à la halte : il faut du **bois**, des **pierres** et **quelques déchets** au sol.
 - R2 · La **glaise** est trop cachée (derrière un arbre : on ne voit même pas l'éclat de l'objet à saisir) : la placer **en plein milieu de la berge**, bien visible.
 - R3 · La **zone pour haler le bac** n'est pas fiable : il faut revenir plusieurs fois sur le radeau pour que l'action apparaisse.
+- R19 · **La crue se dit** : quand le radier est noyé et que le joueur essaie de le franchir (il bute au bord de l'eau), une ligne de message le lui dit (« La rivière est en crue : le radier est sous l'eau. Le bac passe toujours. »), une fois par tentative, jamais une fenêtre.
 
 **L'arrivée dans un lieu**
 - R4 · En arrivant sur une nouvelle carte : la vue **dézoomée et le jeu en pause**, pour voir tout le lieu de loin (avec les toits, l'artwork) ; à l'appui d'une touche, la vue **zoome sur le personnage** et la pause s'arrête.
