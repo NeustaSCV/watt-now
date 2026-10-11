@@ -731,6 +731,7 @@ vague 4   [13 Tutoriel, quêtes, aide] ◄────────────�
 - R9 · Ne jamais écrire **« clé »** dans les textes du jeu (descriptions, fiche, indices, aide) : c'est un mot de conception ; les joueurs croiraient à de vraies clés (la grosse clé du Moulin reste, c'en est une vraie).
 - R10 · **Les indices sont trop précis** : dire le **lieu** (« à la Coopérative ») mais pas l'endroit exact (« les palettes du quai »), et ne pas dévoiler ce qu'il y a dans les kits de départ. Des textes plus courts, plus digestes : on n'est plus dans le tutoriel.
 - R11 · L'abri parle encore du **lit construit à côté**, alors que le lit n'existe plus.
+- R18 · **La carte ne divulgâche pas** : la fiche d'un lieu ne dit plus ce qu'on y trouve (« le couchage, le stockage, l'établi », « la pierre, la glaise et la rive »…) : le joueur s'en rendra compte tout seul (ou pas). On retire les « promesses » des lieux (`LIEUX[…].promesse`, chantier 4) ; la fiche garde sa description d'ambiance, la distance et le coût du trajet.
 
 **La base et le corps**
 - R12 · Dormir dans l'abri : le personnage **rampe jusqu'à sa couche** et dort **exactement dedans**, pas au hasard autour.
