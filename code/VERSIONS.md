@@ -12,13 +12,13 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
-## 0.8.1 · prête à déployer
+## 0.8.1 · déployée le 2026-10-11
 
 - **La page d'administration s'ouvre de partout dans la maison** : elle n'est plus réservée à une liste d'adresses, et on peut l'ouvrir par l'adresse du Pi ou par un nom. Elle reste sans mot de passe, sur un port qui n'est jamais publié sur Internet.
 
 ---
 
-## 0.8 · prête à déployer
+## 0.8 · déployée le 2026-10-11
 
 - **La base grandit avec tes sorties** : plus de paliers. Chaque meuble monte d'un niveau avec le niveau d'avant, des matériaux de la maison et un outil ; au niveau 1, il lui faut en plus **une clé** qu'on trouve dehors : une grille, une grosse toile, un seau, un étau… Chaque sortie peut changer ta base.
 - **« Tu y penses »** : la première fois que tu ramasses la pièce qui ferait monter un de tes meubles, le carnet te souffle l'idée, dans un bandeau qui se ferme d'un bouton. Trop tôt ? L'idée est gardée « pour un jour » : la fiche du meuble dira « déjà en poche » quand tu y arriveras.
