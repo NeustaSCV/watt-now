@@ -12,6 +12,28 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
+## 0.8.2 · prête à déployer
+
+- **Le coffre et la décharge répondent de nouveau** : depuis la 0.8, leur panneau s'ouvrait mais restait sourd, au doigt comme à la souris (ni choisir un objet, ni le déplacer, ni fermer). Corrigé, pour le coffre, le coffre cerclé, le râtelier et la décharge.
+- **La vue d'ensemble à l'arrivée** : en arrivant à la station, au gué, à la Coopérative, au Moulin ou chez toi au retour d'une sortie, tu vois tout le lieu de loin, toits compris, le jeu en pause. Une touche ou un toucher, et la vue descend sur ton personnage. Pas de vue d'ensemble quand tu te reconnectes sur place.
+- **Le banc se comprend enfin** : il fait passer le courant de sa batterie, la batterie de voiture de la ruine, dans ce que tu portes. Sa fiche a une ligne par chose qui se charge, avec son niveau et un bouton « Charger ». Le panneau la remplit au soleil, un pédalier à moins de 3 m quand on pédale, la manivelle de la lampe à dynamo lentement. Et tu peux l'échanger contre une batterie de ton sac.
+- **Le gué plus riche** : des branches, quelques bûches, des pierres sur les pistes et des déchets le long des berges, qui reviennent en 30 min. La glaise est au milieu de la berge, bien en vue. Le bac se hale dès qu'on pose le pied dessus. Et quand le radier est noyé, une ligne te le dit : le bac passe toujours.
+- **Fabriquer s'allège** : une seule corde d'arc (3 ficelles ou une corde) et une seule matraque électrique (un pack de cellules ou la petite batterie). Le flash jetable donne un petit condensateur, la raquette à moustiques un condensateur moyen : l'un ou l'autre fait le module de décharge, qui prend son étoile. La matraque de fortune prend le petit condensateur.
+- **Les canettes écrasées** se démontent par trois en une chute d'aluminium ; les boîtes de conserve vides restent des boîtes. **Remmancher** une hache ou un marteau se fait près d'un établi.
+- **Les armes de métier se découvrent avec le meuble complet** : rien dans Fabriquer, pas même une silhouette, tant que ton banc n'a pas son panneau, ta forge son enclume ou ton pédalier son alternateur. Un meuble d'une autre famille appris (leçon, manuel) te sert aussi.
+- **« Un vrai lit »** vient juste après le coffre dans « S'installer » : l'abri garni avant l'abri fermé.
+- **Le sac et l'écran** : l'arme en main et le sac à dos porté ont leur marque. « Tu y penses » ne cache plus rien et part seul. Le cercle de fouille se remplit en bleu, même en basse qualité. Sur ordinateur, l'aide des touches tient dans un cadre en bas à gauche, avec ses touches dessinées. Examiner montre tout le texte. « Trop lourd » dit le poids de l'objet.
+- **Le guichet du Comptoir** montre enfin toute une liste sur téléphone, et devant une porte, A ouvre la porte et B ramasse ce qui traîne au sol.
+- **Des gestes plus doux** : on ramasse deux fois plus vite les baies, les branches, les pierres et les bûches. On entre dans la mare pour remplir sa gourde au milieu ; le bord reste aux joncs. Un sac-poubelle vidé ne propose plus rien. Le feu prend d'abord les branches, puis les bûches.
+- **Dormir dans l'abri** : ton personnage va jusqu'à sa couche et dort dedans. Endormi, A dit « Se réveiller ».
+- **La station** : la caisse de l'atelier est à chacun la sienne, comme le tas de bois, et l'Éteint qui dormait contre l'établi de ta pièce de famille dort maintenant contre la voiture éventrée.
+- **L'accueil** : un « + » dans les couleurs de cheveux, pour choisir la tienne. L'écran des lieux lointains a son image en paysage.
+- **Des textes qui ne divulgâchent plus** : plus de mots de conception à l'écran, des indices qui nomment le lieu sans l'endroit exact, une carte qui ne dit plus ce qu'on trouve dans un lieu.
+- **Le tutoriel nourrit** : toutes les deux étapes, un repas un peu meilleur arrive dans ton sac, des pommes au départ jusqu'au pot-au-feu de ta première vraie nuit. Une ligne du carnet le dit.
+- **Rien n'est perdu** : ta partie de la 0.8.1 se relit telle quelle, ce que tu as construit et ce que tu portes.
+
+---
+
 ## 0.8.1 · déployée le 2026-10-11
 
 - **La page d'administration s'ouvre de partout dans la maison** : elle n'est plus réservée à une liste d'adresses, et on peut l'ouvrir par l'adresse du Pi ou par un nom. Elle reste sans mot de passe, sur un port qui n'est jamais publié sur Internet.
