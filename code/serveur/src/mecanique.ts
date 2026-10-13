@@ -159,7 +159,7 @@ function pedaler(ctx: ContexteMecanique, i: InstallationVue): void {
   const organe = organeDuPedalier(i);
   if (!organe) return ctx.info("Rien à entraîner : monte l'alternateur de la station (ou, à défaut, la dynamo du vélo).");
   const surPedalier = placeSurLePedalier(i) > 0.5;
-  if (!bancACharger(ctx, i) && !surPedalier && !ctx.batterieDuSac()) return ctx.info("Rien à charger, ou tout est plein : le pédalier remplit la batterie d'un banc à moins de 3 m, ou celle posée dessus.");
+  if (!bancACharger(ctx, i) && !surPedalier && !ctx.batterieDuSac()) return ctx.info("Rien à charger : approche le pédalier à moins de 3 m du banc, ou pose une batterie dessus.");
   const libelle = organe === "alternateur" ? "Pédaler : l'alternateur charge la batterie" : "Pédaler pour charger la batterie";
   ctx.commencer(
     libelle,
