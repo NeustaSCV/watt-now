@@ -38,3 +38,25 @@ test("partout : un sac perdu devant une porte ne la cache pas non plus (la grand
   const A = boutonA("moulin", porte.x + 0.6, porte.z + 0.6, [sac], { [porte.id]: false });
   assert.match(A?.libelle ?? "", /grande porte|grosse clé/);
 });
+
+/** Ce que proposent A et B, debout en (x, z). */
+function boutons(x: number, z: number, sacs: SacVu[], portes: Record<string, boolean>) {
+  return proposer({ x, z, o: Math.PI }, "cooperative", "voltaiques", [], [], [], {}, GOURDE, {}, 0, sacs, [], 1, [], 0, portes);
+}
+
+test("une porte et un objet au sol à portée : A garde la porte, B ramasse l'objet (0.8.2, chantier H)", () => {
+  const porte = PORTES.find((p) => p.id === "froide_hangar")!;
+  const joueur = { x: porte.x, z: porte.z + 1.4 };
+  const tas: SacVu = { id: 7, x: porte.x, z: porte.z + 0.8, aMoi: true, jete: true, contenu: { seau_10l: 1 } };
+  const { A, B } = boutons(joueur.x, joueur.z, [tas], { froide_hangar: false });
+  assert.equal(A?.libelle, "Ouvrir la porte");
+  assert.match(B?.libelle ?? "", /^Ramasser : /);
+  assert.ok(B && "message" in B && B.message.t === "interagir" && B.message.cible.genre === "sac" && B.message.cible.id === 7 && B.message.verbe === "reprendre");
+  // Son propre sac perdu devant la porte : B le reprend.
+  const sac: SacVu = { id: 9, x: porte.x, z: porte.z + 0.8, aMoi: true };
+  assert.equal(boutons(joueur.x, joueur.z, [sac], { froide_hangar: false }).B?.libelle, "Reprendre ton sac");
+  // Le sac de quelqu'un d'autre ne se prend pas : B reste « Examiner » la porte.
+  assert.equal(boutons(joueur.x, joueur.z, [{ ...sac, aMoi: false }], { froide_hangar: false }).B?.libelle, "Examiner");
+  // Sans objet au sol, B examine la porte, comme avant.
+  assert.equal(boutons(joueur.x, joueur.z, [], { froide_hangar: false }).B?.libelle, "Examiner");
+});

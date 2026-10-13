@@ -460,6 +460,24 @@ export function proposer(
     return !!A && "message" in A && A.message.t === "interagir" && A.message.cible.genre === "porte";
   };
 
+  // Plan 0.8.2 (chantier H, proposition de D validée par le porteur) : la porte garde A, et B ramasse l'objet au sol
+  // le plus proche à portée (un tas jeté, son propre sac), au lieu d'« Examiner » la porte : plus besoin de s'écarter.
+  if (porteVisee()) {
+    let proche: { s: SacVu; d: number } | null = null;
+    for (const s of sacs) {
+      const d = Math.hypot(s.x - position.x, s.z - position.z);
+      if ((s.jete || s.aMoi) && d <= DISTANCE_INTERACTION && (!proche || d < proche.d)) proche = { s, d };
+    }
+    if (proche && meilleure.propositions) {
+      const s = proche.s;
+      const liste = Object.entries(s.contenu ?? {}).map(([t, n]) => nommer(t as TypeObjet, n ?? 0));
+      const B: ActionProposee = s.jete
+        ? { libelle: `Ramasser : ${liste.join(", ")}`, message: { t: "interagir", cible: { genre: "sac", id: s.id }, verbe: "reprendre" } }
+        : { libelle: "Reprendre ton sac", message: { t: "interagir", cible: { genre: "sac", id: s.id }, verbe: "reprendre" } };
+      meilleure.propositions = { ...meilleure.propositions, B };
+    }
+  }
+
   // Un sac tombé là après un effondrement (Book 05 §10.3), ou des objets jetés par terre.
   for (const s of sacs) {
     if (porteVisee()) break;
