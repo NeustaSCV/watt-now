@@ -18,12 +18,15 @@ import { Joueur } from "./joueur.ts";
 type Recu<T extends MessageServeur["t"]> = Extract<MessageServeur, { t: T }>;
 
 /** Un Voltaïque sur son terrain, ce qu'on veut dans le sac et autour ; la progression : tout, sauf si on la donne. */
-function surLeTerrain(inventaire: Inventaire, installations: { type: InstallationVue["type"]; x: number; z: number }[] = [], progression?: EtatProgression) {
+function surLeTerrain(inventaire: Inventaire, installations: { type: InstallationVue["type"]; x: number; z: number; etat?: InstallationVue["etat"] }[] = [], progression?: EtatProgression) {
   const base = new Base(":memory:");
   const compte = base.creerCompte("Ampère", "volts1234", "voltaiques");
   base.sauverProgression(compte.id, progression ?? toutDevoile("voltaiques"));
   base.sauverInventaire(compte.id, { sac_a_dos: 1, ...inventaire });
-  for (const i of installations) base.ajouterInstallation(compte.id, i.type, i.x, i.z, 0);
+  for (const i of installations) {
+    const v = base.ajouterInstallation(compte.id, i.type, i.x, i.z, 0);
+    if (i.etat) base.sauverEtatInstallation(compte.id, v.id, i.etat);
+  }
   let instant = base.debutMonde() + 60_000;
   const recus: MessageServeur[] = [];
   const joueur = new Joueur(compte, base, (m) => recus.push(m), () => instant, new Halte(base), () => 1);
@@ -47,7 +50,8 @@ function surLeTerrain(inventaire: Inventaire, installations: { type: Installatio
   return { base, compte, joueur, attendre, inventaireFinal, infos, fabriquer, demonter };
 }
 
-const BANC = [{ type: "banc_recharge" as const, x: 21, z: 20 }];
+// Le banc solaire et son panneau : les armes de métier attendent le meuble complet (R26, 0.8.2).
+const BANC = [{ type: "banc_recharge" as const, x: 21, z: 20, etat: { panneau: true } }];
 
 // ---------- Le moteur : des ingrédients au choix ----------
 
