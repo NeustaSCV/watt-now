@@ -268,3 +268,33 @@ Ce qui peut l'allonger : une cause du bogue du coffre plus profonde que prévu (
 
 - **Toutes les recommandations du §7 sont acceptées** (Q-0.8.2-1 à 3 et 5 à 10).
 - **Q-0.8.2-4** : **deux condensateurs** : le **petit condensateur** (★) et le **condensateur moyen** (★★) ; le module de décharge unique prend l'étoile de son condensateur (maillon faible, maîtrise inchangée). Le petit vient du flash jetable, le moyen de la raquette à moustiques (comme les étoiles des modules d'aujourd'hui).
+
+### 7.2 Les décisions prises pendant la vague 1 (2026-10-13)
+
+- **Le coffre** : le défaut (aussi sur ordinateur, venu des correctifs de la 0.8) est corrigé dans la 0.8.2 ; **pas de version de correctif à part**, on attend la 0.8.2.
+- **Recettes (B)** : les cordes d'arc au fil dentaire et au boyau restent sur leurs lignes ; le condensateur moyen passe d'abord ; **3 canettes écrasées donnent 1 aluminium** ; **la matraque de fortune prend le petit condensateur** au lieu de l'appareil photo.
+- **Le banc (C)** : un pack de cellules en vrac reste « plein » (pas de ligne au banc) ; après un échange, la batterie s'appelle « la batterie de voiture » ; l'échange ne prend qu'une batterie de voiture.
+- **Les portes (D)** : quand une porte et un objet au sol sont à portée, A ouvre la porte et **B propose « Ramasser »** (chantier H).
+- **Le pédalier à 3 m du banc** : voir §7.3.
+
+### 7.3 Les décisions de la vague 2 (2026-10-13)
+
+- **Se servir du meuble d'une autre famille** : **qui a appris la recette d'un meuble** (leçon, manuel) **peut s'en servir et y poser sa pièce** (aujourd'hui, le jeu refuse : « C'est le savoir d'une autre famille »). Le Book 24 le disait déjà (« utilisables par tous »). Un Voltaïque qui a appris le pédalier peut donc pédaler près de son banc pour remplir sa batterie.
+- **Une arme de métier apprise d'une autre famille** attend **le meuble complet de son métier** (le couteau forgé : la forge et son enclume, même pour un Mécaniste qui a lu le manuel), et non celui de la famille de l'apprenti.
+- **R26, confirmé** : le repli ne compte pas comme meuble complet (la pierre plate, la manivelle, la dynamo du vélo) ; l'étau et la tête de masse posés en enclume comptent ; la pointe de lance est une arme forgée ; le pack de cellules et la lampe bricolée restent visibles sans le panneau. Les quêtes qui demandent une arme n'en montrent pas la silhouette tant que le meuble est incomplet.
+- **La vue d'ensemble** : le budget de l'iPhone sera mesuré à la recette ; les bords du décor visibles de loin, gardés pour l'instant (à revoir à la recette du porteur) ; la protection de 15 s à l'arrivée dans une halte, gardée.
+
+### 7.4 Les décisions de fin de vague 2 (2026-10-13)
+
+- **Les repas du tutoriel** (nouveau, décidé) : un repas toutes les deux étapes, de qualité croissante : 2 pommes (étape 2), une poignée de noix (4), une conserve (6), une volaille rôtie et une pomme (8), une volaille rôtie aux cèpes (10), deux pots-au-feu à la fin (12). Une ligne du carnet, jamais une fenêtre ; rien pour le vétéran. À vérifier au rythme (chantier K).
+- **Le gué, ses déchets** (décidé) : une couche de déchets **« berge »** propre au gué, plus nature : ≈ 50 % de nature (bois flotté, fibres de roseaux, plumes, os), ≈ 35 % de ce que la crue charrie (plastique, canettes, chiffons, bouts de corde), ≈ 15 % de pêche et de guinguette ; environ moitié de la densité de la station, ≈ 10 % de contenants ; aucun objet nouveau. La station garde le fabriqué, le gué devient le lieu des matériaux naturels de la route B.
+- **Les branches du gué : 8 au total** (le tas de bois flotté compris).
+- **« Plus de lit dans l'abri »** (R11) : les textes qui parlent encore d'un lit construit à côté de l'abri parlent de garnir l'abri (chantier K).
+
+### 7.5 Les décisions sur les textes (2026-10-13)
+
+- **Les repas du tutoriel, réduits** : après l'étape 10, une pomme cuite (au lieu de la volaille rôtie aux cèpes) ; à la fin, un seul pot-au-feu (≈ 2 140 kcal en tout au lieu de 2 960 : la faim des débuts compte encore).
+- **Les vraies clés** restent dans les textes : la grosse clé du Moulin, la clé du coffre de la Coopérative, la clé plate (l'outil).
+- **Le tutoriel « La carte »** garde l'endroit exact de la pièce de famille (c'est le tutoriel).
+- **L'aide** ne nomme plus les armes de métier de chaque famille ni la glaise du gué.
+- Les descriptions du ressort retrempé et des électrodes (vues seulement en les fabriquant) restent.

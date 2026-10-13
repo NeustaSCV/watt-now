@@ -197,6 +197,23 @@ Un trajet long passe obligatoirement par une ou plusieurs **haltes**. Une halte 
 - **Les haltes à plusieurs** (critère 7) : la station n'est jamais vide de bûches en vrac plus de **4 min** à trois, **14 min** à cinq ; le gué n'est jamais vide de pierres. On reste sous les 30 min.
 - **Les chiffres « à régler »** : avec un tas de 8 ou de 6 bûches, sans tas, avec un retour en 3 h, ou un Comptoir sans stock, aucun joueur seul n'a besoin d'un aller-retour de plus ; seuls 6 bûches brûlées la première nuit (l'avertissement pas suivi) coûtent un aller-retour au Mécaniste, à cinq en file. Les valeurs décidées sont gardées.
 
+**Ce que la 0.8.2 change (2026-10-13)** *(plan 0.8 §9.3, plan 0.8.2 §7.1 à §7.4 ; chantiers D, F et I, codés : `commun/src/reglages.ts`, `commun/src/halte.ts`, `commun/src/gue.ts`)* :
+
+- **Les chiffres « à régler » deviennent des réglages à chaud** (Book 21 §3.9 : relus sans redéployer, bornés, `npm run reglages`) :
+
+  | Réglage | Par défaut | Bornes | Ce qu'il règle |
+  |---|---|---|---|
+  | `tas_bois_buches` | 10 | 2 à 40 | Les bûches du **tas de bois personnel** de la station, pour chaque joueur ; changé, il vaut à la visite suivante de qui n'a pas entamé son tas (ou dont le tas est revenu) |
+  | `tas_bois_retour_h` | 6 h | 0,1 à 48 h | Le temps réel avant que le tas revienne, compté depuis la première bûche prise |
+  | `comptoir_buches` · `comptoir_pierres` | 10 · 10 | 0 à 50 | Le **stock du Comptoir** : le réassort remonte jusque-là, sans rien retirer au-dessus |
+  | `comptoir_reassort_h` | 2 h | 0,1 à 24 h | Le temps réel entre deux réassorts (une unité de plus pour chaque objet sous son stock) |
+
+- **La caisse de l'atelier** de la station (clous, fil de fer, huile) devient un **butin personnel**, comme le tas de bois : à chacun la sienne, qui revient pour lui en **12 h** (le deuxième voyageur ne la trouve plus vide).
+- **Le gué donne du bois** (R1) : **8 branches** (les 5 du tas de bois flotté et 3 éparses), **4 bûches en vrac** qui grandissent avec les voyageurs, et **6 pierres de plus** sur les pistes (21 en vrac pour un voyageur seul) ; tout revient en 30 min (Book 20 §1 quater ter). Le banc de galets personnel ne change pas.
+- **Ramasser va deux fois plus vite** (R20) : les branches (0,6 s), les bûches, les baies (1,25 s), les pierres et les galets (0,9 s), le tas de bois (1 s), les poutres de chêne du Moulin (2 s).
+- **Le feu prend d'abord les branches**, puis les bûches : le conseil de la première nuit (« Nourris-le de branches ») se suit sans y penser.
+- **Le budget mesuré plus haut** est celui de la 0.8 ; le simulateur (`npm run rythme`) le refait à la recette de la 0.8.2.
+
 **Les clés du niveau 1 et le butin opportuniste (R-BUTIN).** Les lieux personnels (L1A, L1B) donnent les **clés** des meubles, chacune à sa **place fixe** (Book 23 §11, Book 24 §12). Ailleurs, une clé de L1 ne sort que **rarement** d'une fouille (2 %), à la station, au gué et dans l'autre L1. **Le Comptoir** les vend **500 wotts** (il les rachète 90), une de chaque en stock, mais **seulement après une première visite du lieu** où elles se trouvent : avant, il les **masque** (absentes de l'étal, pas grisées). Les pièces de famille ne s'y vendent pas.
 
 **Les lieux à un joueur reviennent à 24 h** (décision N1) : à la Coopérative et au Moulin, tout revient au bout de 24 h (Éteints, butin, clés garanties ; au Moulin, la clé d'accès et la grande porte refermée). La fourche à foin du Moulin et le pied-de-biche de la Coopérative ne se trouvent **qu'une fois par personnage**.

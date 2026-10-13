@@ -130,6 +130,41 @@ Depuis la 0.8, la base grandit **avec les sorties** (Book 24 §12), et chaque fa
 - **Le carnet prend le relais** avec « S'installer » en **portes successives** (Book 22 §3.1 bis).
 - **L'aide du jeu en 0.8** : **29 rubriques**. Trois nouvelles : « **Le gué** » (le radier, la crue, le bac, la cloche, les ricochets, la glaise), « **Le Moulin** » (la grosse clé et la grande porte, la fosse du rouet, repartir par le halage, tout revient en 24 h), « **Faire évoluer une arme** » (remettre à neuf, monter d'une étoile, le manche à l'établi à étau). « Fabriquer et construire » raconte les recettes à la main ou à un meuble et « Tu y penses » ; « **Améliorer sa base** » la clé de dehors, l'indice « où chercher », les replis, les outils de fortune, le râtelier ; « Voyager », les deux routes ; « **Je suis coincé** » gagne « Un meuble ne monte pas », qui renvoie à la fiche du meuble et à son indice.
 
+### 4.6 Ce que la 0.8.2 change : la vue d'ensemble, les repas, l'établi avant la hache (2026-10-13)
+
+*Plan 0.8 §9.3 et §9.4 (R4, R8, R13), plan 0.8.2 §7.1 à §7.4 (Q-0.8.2-2, les repas), chantiers E, G, B, J et K ; **codé en 0.8.2** (`client/src/arrivee.ts`, `serveur/src/arrivee.ts`, `commun/src/tutoriel.ts`, `commun/src/quetes.ts`).*
+
+**La vue d'ensemble à l'arrivée** (R4, la seule mécanique neuve de la 0.8.2) :
+
+- **À chaque arrivée d'un voyage** dans un lieu, **terrain compris** au retour d'une sortie, la vue est **dézoomée sur tout le lieu**, **toits visibles** : on découvre le lieu de loin, son dessin et ses bâtiments, avant d'y entrer. Le manche et les boutons tactiles s'effacent ; une **invite discrète** attend : « Touche l'écran pour commencer » (téléphone), « Appuie sur une touche » (ordinateur).
+- **Au premier geste** (une touche, ou un toucher n'importe où), la vue **zoome doucement vers le personnage** (≈ 1,5 s) et l'on joue. Ce premier geste ne fait rien d'autre : ni action, ni bouton.
+- **Seul** (le terrain, la Coopérative, le Moulin du Gué) : **le jeu est en pause** tant qu'on n'a pas touché, comme la pause habituelle.
+- **Dans une halte** (la station, le gué), à plusieurs : **pas de pause** (elle ne s'impose pas aux autres), mais le joueur reste **immobile et insaisissable** jusqu'à son premier geste, **15 s au plus** ; passé ce délai, le zoom part tout seul.
+- **Jamais à une reconnexion sur place** : on retrouve son personnage là où il était.
+- Au gué, la vue cadre le tronçon d'arrivée et son voisin (≈ 100 × 70 m) ; les bords du décor visibles de loin sont gardés pour l'instant (§7.3 du plan : à revoir à la recette du porteur). Le budget de l'iPhone 13 mini dans cette vue est **à mesurer** (`?mesure=1`, chantier L).
+
+**Les repas du tutoriel** (décidé le 2026-10-13, plan 0.8.2 §7.4) : le tutoriel nourrit l'élève, **un repas toutes les deux étapes**, de qualité croissante. Chacun tombe dans le sac avec la leçon de l'étape et s'écrit en **une ligne du carnet**, une seule fois, **jamais une fenêtre** :
+
+| À la fin de l'étape | Le repas | La ligne du carnet |
+|---|---|---|
+| 2 · Ramasser | 2 pommes | « Pour la route : deux pommes. » |
+| 4 · L'eau | une poignée de noix | « Pour la route : une poignée de noix. » |
+| 6 · L'outil | une conserve | « Pour la route : une conserve. » |
+| 8 · Le premier Éteint | une volaille rôtie et une pomme | « Pour te remettre : une volaille rôtie et une pomme. » |
+| 10 · La carte | une volaille aux cèpes | « Pour la route : une volaille aux cèpes. » |
+| 12 · La nuit | deux pots-au-feu | « Le repas de ta première vraie nuit : deux pots-au-feu. » |
+
+- **Rien pour le vétéran** qui saute le tutoriel.
+- **À vérifier au rythme** (`npm run rythme`, recette de la 0.8.2) : ces repas ne doivent ni rendre la cueillette inutile, ni retarder le métier.
+
+**L'établi avant la hache** (R13) : remmancher une hache ou un marteau se fait **à côté d'un établi** (Book 24 §13). L'étape 6, « L'outil », fait donc **bâtir l'établi d'abord** : « Bâtis un établi (4 bûches, 6 branches), puis remmanche à côté la tête de hache de la caisse : une branche, ton couteau, une pierre pour marteler. »
+
+**Après le tutoriel** : « **Un vrai lit** » (l'abri garni) vient **juste après le coffre**, en tête de « S'installer » (Book 22 §3.1 bis).
+
+**L'apparence** (R8, §3) : un **« + »** au bout des couleurs de cheveux déplie trois curseurs (teinte, éclat, clarté), sans fenêtre qui surgit ; la couleur personnelle est gardée avec l'apparence et vue des autres joueurs.
+
+**L'aide du jeu en 0.8.2** : **30 rubriques** ; une nouvelle, « **Le banc** » (la batterie du banc, la remplir, l'échanger, charger ce qu'on porte : Book 24 §13). Ses textes suivent les règles du Book 03 §5.9 : pas de « clé », aucun lieu d'objet.
+
 ---
 
 ## 5. Questions ouvertes

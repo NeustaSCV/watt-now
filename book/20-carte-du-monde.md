@@ -94,7 +94,7 @@ La carte du jeu n'ouvre encore que quatre lieux, reliés par des tronçons (`com
 
 La 0.8 porte le **niveau 1** sur **deux routes**, qui passent la rivière chacune à sa façon. Chaque route a une **halte** (H1, partagée) puis un **lieu personnel** (L1, un par joueur). Le contenu du jeu (clés, quêtes, indices) cite **l'étape** (H1A, H1B, L1A, L1B) ; l'affichage met **le nom du lieu** (table `ETAPES_LIEUX`).
 
-| Étape | Lieu | Route | Distance | La promesse (fiche de la carte) |
+| Étape | Lieu | Route | Distance | La promesse (fiche de la carte ; **retirée en 0.8.2**, §1 quater ter) |
 |---|---|---|---|---|
 | **H1A** | La station-service | A, par **le pont** | 3 km du terrain | « La station : le bois, le métal, et la pièce de ta famille. » |
 | **L1A** | La Coopérative du Plateau | A, chemin de terre derrière la station | 2 km de la station (5 km du terrain) | « La Coopérative : le feu et l'eau. » |
@@ -110,6 +110,28 @@ La 0.8 porte le **niveau 1** sur **deux routes**, qui passent la rivière chacun
 - **Rien au-delà du Moulin** : **aucun panneau, aucune route annoncée** vers plus loin que le Moulin du Gué (décision du porteur, §9.2 du plan : « on ne sait pas encore ce qu'on mettra plus loin ») ; la retouche du panneau du modèle est demandée à la session « bâtiments ». Le panneau du gué qui annonce « 1 km » reste un décor : la carte donne les vraies distances.
 - **Le menu « Aller à… » de god** connaît le gué et le Moulin.
 - **La carte se ferme** par sa croix ✕ (un panneau ouvert au toucher garde sa croix) **et par un clic en dehors** de la carte (décision revue le 2026-10-10).
+
+### 1 quater ter. La carte sans promesse, et le gué plus lisible (0.8.2, 2026-10-13)
+
+*Plan 0.8 §9.4 (R1, R2, R3, R18, R19) et §9.3, plan 0.8.2 §7.1 à §7.4 (Q-0.8.2-1, Q-0.8.2-5, Q-0.8.2-8, la couche « berge », les 8 branches), chantiers F et K ; **codé en 0.8.2** (`commun/src/lieux.ts`, `client/src/carte.ts`, `commun/src/gue.ts`, `serveur/src/gue.ts`, `client/src/rendu/gue.ts`, `commun/src/dechets.ts`). Là où le §1 quater bis diffère, ce paragraphe fait foi.*
+
+**La carte ne promet plus rien** (R18). La fiche d'un lieu ne dit plus ce qu'on y trouve : les **promesses** du tableau du §1 quater bis (« la pierre, la glaise et la rive », « le couchage, le stockage, l'établi »…) sont **retirées** (`LIEUX[…].promesse` n'existe plus). La fiche garde **le nom, la description d'ambiance, la distance et le coût de l'étape** ; le joueur découvre seul ce que donne un lieu (ou pas). Exemple, le gué : « Une halte sur la route du Moulin du Gué. Le pont suspendu est parti avec la crue du premier hiver : on passe sur le radier, les pieds dans l'eau qui court, ou par le bac du passeur. Des Éteints rôdent sur les berges. » **La note de la carte** « panneau solaire sur l'auvent ! », la même pour toutes les familles, est **retirée** elle aussi (Q-0.8.2-8 : elle divulgâchait). Un test vérifie qu'aucune fiche de la carte ne promet rien (`client/src/textes-du-jeu.test.ts`).
+
+**Le Gué-aux-Saules en 0.8.2** (ce que le porteur a relevé en y jouant) :
+
+| Quoi | Ce que dit le jeu (0.8.2) |
+|---|---|
+| **Le bois** (R1, Q-0.8.2-1) | **8 branches** en tout : les **5 du tas de bois flotté** (le « bois flotté » du modèle, au pied de la culée côté terrain) et **3 éparses** au bord de l'eau, apportées par les crues ; **4 bûches en vrac** au pied des talus (tombées des frênes et des aulnes), qui **grandissent avec les voyageurs** comme à la station. Branches et bûches reviennent en **30 min** |
+| **Les pierres** (R1) | **6 pierres de plus** sur les pistes qui descendent au radier : **21 en vrac** pour un voyageur seul (15 sur le banc de galets, 6 sur les pistes), en plus du banc de galets personnel (8 par joueur, 6 h) |
+| **Les déchets** (R1, §7.4) | La **couche « berge »**, propre au gué et plus nature que celle des routes (Book 26 §11 ter) |
+| **La glaise** (R2, Q-0.8.2-5) | Le gisement est **au milieu de la berge**, à découvert, au nord du camping-car : on le voit dès qu'on approche. L'aulne qui le cachait s'efface comme un toit. En attendant que la session « bâtiments » déplace la motte et la bêche du modèle (`demande-batiment-gue-4.md`), l'écran les porte à leur nouvelle place |
+| **Le bac** (R3) | « **Haler le bac** » passe **avant tout autre geste à bord**, dès le pied posé sur le radeau, partout sur le radeau : on hale du premier coup |
+| **La crue se dit** (R19) | Qui bute au bord du radier noyé lit **une ligne de message**, une fois par tentative, jamais une fenêtre : « La rivière est en crue : le radier est sous l'eau. Le bac passe toujours. » |
+| **Les passages** (recette de la 0.8) | L'Éteint de l'entrée passe par le bout de la **chicane de bûches** (il ne reste plus coincé) ; le **camping-car** ne bloque plus l'accès depuis le nord ; les bords du radier et de la cale ne barrent plus la terre ferme. Un test (`obstacles-visibles.test.ts`) couvre le gué |
+
+- **À l'arrivée au gué**, comme partout, la **vue d'ensemble** : le lieu de loin, toits compris, avant le premier geste (Book 14 §4.6) ; au gué, elle cadre le tronçon d'arrivée et son voisin.
+- **Rien ne change de la carte elle-même** : les deux routes, les distances, le dessin, le chemin de halage en sortie seule.
+- **Le budget de l'iPhone 13 mini** au gué et au Moulin (`?mesure=1`, banc de 90 s) est **à mesurer par le porteur** à la recette de la 0.8.2.
 
 ## 2. Les six environnements
 
