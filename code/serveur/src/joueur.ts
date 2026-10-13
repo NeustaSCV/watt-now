@@ -663,6 +663,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
         this.envoyer({ t: "lumiere", allumee: this.lumiere });
         return;
       case "annuler":
+        // Endormi, A « Se réveiller » envoie « annuler » : on se réveille, comme en bougeant (0.8.2, chantier K).
+        if (this.sommeil) return this.reveiller("");
         this.annulerAction();
         return;
       case "voyager":
