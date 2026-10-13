@@ -1,7 +1,8 @@
 /* Watt Now? — intro 3D : les écrans d'accueil, après la cinématique (direction « tableaux 3D », validée par le porteur).
    Chaque écran est un tableau vivant (src3d/accueil.js) rendu par le moteur de la cinématique ; par-dessus : le titre,
    le texte, et des étiquettes accrochées à des points du monde (elles suivent la caméra). Le joueur clique sur « Suivant ».
-   Image trop petite (téléphone tenu droit) : le texte passe sous l'image, les étiquettes restent dessus, plus courtes. */
+   Image trop petite : le texte sort de l'image, dessous (téléphone tenu droit) ou à côté (téléphone couché) ;
+   les étiquettes restent sur l'image, plus courtes. */
 
 import { THREE } from '../vendor/rendu-jeu.js';
 import { ACCUEIL } from '../src/temps.js';
@@ -74,12 +75,16 @@ export function afficherEcrans(o) {
   const voile = couche.querySelector('.wi-ecran-voile');
   const bouton = couche.querySelector('.wi-suivant');
 
-  // l'échelle : tout est dessiné pour un cadre de 1600 px de large ; texte sous l'image si le cadre est trop bas
+  // l'échelle : tout est dessiné pour un cadre de 1600 px de large. Si l'image pleine taille ferait moins de 380 px de
+  // haut, le texte sort de l'image : dessous sur un téléphone tenu droit, à côté sur un écran bas et large (téléphone couché)
   function ajuster() {
+    const l = window.innerWidth, h = window.innerHeight;
+    const compact = Math.min(l * 9 / 16, h) < 380;
+    const cote = compact && l > h;
+    couche.classList.toggle('wi-compact', compact);
+    cine.cinema.classList.toggle('wi-cote', cote);
     const r = cadre.getBoundingClientRect();
     couche.style.setProperty('--u', (r.width / 1600).toFixed(4));
-    const compact = r.height < 380;
-    couche.classList.toggle('wi-compact', compact);
     if (compact && bas.parentNode !== cine.cinema) cine.cinema.append(bas);
     if (!compact && bas.parentNode !== couche) couche.insertBefore(bas, voile);
   }
@@ -148,6 +153,7 @@ export function afficherEcrans(o) {
     function image() {
       if (fin) {
         window.removeEventListener('resize', ajuster);
+        cine.cinema.classList.remove('wi-cote');
         couche.remove(); if (bas.parentNode) bas.remove();
         fini();
         return;

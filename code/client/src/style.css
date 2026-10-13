@@ -2990,52 +2990,6 @@ body {
   }
 }
 
-/* ---------- Les trois écrans d'accueil en paysage sur téléphone (0.8.2, défaut de la recette de la 0.8) ----------
-   Le module de la session intro (client/public/intro/, servi tel quel) passe le texte SOUS l'image dès que l'image fait
-   moins de 380 px de haut. Sur un téléphone couché (812 × 320), l'image et le texte ne tiennent pas l'un sous l'autre :
-   l'image, écrasée par la colonne, disparaît (fond noir). Ici, quand le texte est sorti de l'image (`.wi-cinema >
-   .wi-ecran-bas`), on les met côte à côte : l'image à gauche, entière, le texte à droite. Le jeu n'affiche jamais la
-   cinématique, seulement l'accueil (`.wi-racine`) : le cadre des cartons de la cinématique, vide ici, est retiré. */
-@media (orientation: landscape) and (max-height: 520px) {
-  .wi-racine .wi-cinema:has(> .wi-ecran-bas) {
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    padding: 0 env(safe-area-inset-right) 0 env(safe-area-inset-left);
-  }
-  .wi-racine .wi-cinema:has(> .wi-ecran-bas) > .wi-cartons-dessous {
-    display: none !important;
-  }
-  .wi-racine .wi-cinema:has(> .wi-ecran-bas) > .wi-cadre {
-    flex: 0 0 auto;
-    width: min(60vw, calc(100dvh * 16 / 9));
-  }
-  .wi-racine .wi-cinema > .wi-ecran-bas {
-    flex: 1 1 0;
-    min-width: 0;
-    width: auto;
-    max-height: 100dvh;
-    overflow-y: auto;
-    padding: 10px 14px;
-  }
-  .wi-racine .wi-cinema > .wi-ecran-bas .wi-ecran-titre {
-    font-size: 22px;
-    margin-bottom: 6px;
-  }
-  .wi-racine .wi-cinema > .wi-ecran-bas .wi-ecran-texte {
-    font-size: 14px;
-    line-height: 1.4;
-  }
-  .wi-racine .wi-cinema > .wi-ecran-bas .wi-ecran-pied {
-    margin-top: 12px;
-  }
-  .wi-racine .wi-cinema > .wi-ecran-bas .wi-suivant {
-    min-height: 44px;
-    font-size: 14px;
-    padding: 10px 16px;
-  }
-}
-
 /* ---------- Le panneau « Commandes » : rappel et réassignation des touches (Book 08 §3) ---------- */
 
 #hud .panneau.commandes {

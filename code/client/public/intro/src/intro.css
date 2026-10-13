@@ -626,6 +626,20 @@
 .wi-cinema > .wi-ecran-bas .wi-ecran-titre { font-size: 30px; }
 .wi-cinema > .wi-ecran-bas .wi-ecran-texte { font-size: 16px; }
 .wi-cinema > .wi-ecran-bas .wi-suivant { font-size: 16px; padding: 12px 22px; }
+/* écran bas et large (téléphone couché, 812 × 320) : l'image à gauche, entière, le texte à droite */
+.wi-cinema.wi-cote {
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  padding: 0 env(safe-area-inset-right) 0 env(safe-area-inset-left);
+}
+.wi-cinema.wi-cote > .wi-cartons-dessous { display: none !important; }
+.wi-cinema.wi-cote > .wi-cadre { flex: 0 0 auto; width: min(60vw, calc(100dvh * 16 / 9)); }
+.wi-cinema.wi-cote > .wi-ecran-bas { flex: 1 1 0; min-width: 0; width: auto; max-height: 100dvh; overflow-y: auto; padding: 10px 14px; }
+.wi-cinema.wi-cote > .wi-ecran-bas .wi-ecran-titre { font-size: 22px; margin-bottom: 6px; }
+.wi-cinema.wi-cote > .wi-ecran-bas .wi-ecran-texte { font-size: 14px; line-height: 1.4; }
+.wi-cinema.wi-cote > .wi-ecran-bas .wi-ecran-pied { margin-top: 12px; }
+.wi-cinema.wi-cote > .wi-ecran-bas .wi-suivant { min-height: 44px; font-size: 14px; padding: 10px 16px; }
 @media (prefers-reduced-motion: reduce) {
   .wi-entre .wi-ecran-titre, .wi-entre .wi-ecran-texte, .wi-entre .wi-ecran-note, .wi-entre .wi-etiquette, .wi-entre .wi-fils { animation: none; }
   .wi-ecran-voile { transition: none; }

@@ -8,8 +8,11 @@ import { chargerKenney, adresse } from './kenney.js';
 /** Les personnages du jeu, plus les gestes que le jeu n'utilise pas encore (mêmes packs Quaternius,
  *  préparés par outils/preparer-animations.mjs) : téléphone, rambarde, arrosoir, semis, sort, frappe… */
 let chargement = null;
-export const pret = () => chargement || (chargement = (async () => {
+/** o.gestes (vrai par défaut) : charger aussi les gestes de la cinématique (animations_intro_*.glb) ;
+ *  l'accueil seul n'en a pas besoin, et le jeu ne sert pas ces fichiers. */
+export const pret = (o = {}) => chargement || (chargement = (async () => {
   const [b] = await Promise.all([chargerHumanoides(), chargerKenney()]);
+  if (o.gestes === false) return b;
   const loader = new GLTFLoader();
   loader.setMeshoptDecoder(MeshoptDecoder);
   const extras = await Promise.all([1, 2].map((i) => loader.loadAsync(adresse(`assets/personnages/animations_intro_${i}.glb`)).catch(() => null)));
