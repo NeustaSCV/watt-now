@@ -36,6 +36,7 @@ import {
 } from "../../commun/src/lignees.ts";
 import { texteAVenir } from "../../commun/src/lignees.ts";
 import { enteteFiche, piedFiche } from "./fiche-examiner.ts";
+import { brancherFicheBanc, htmlFicheBanc, type GesteBanc } from "./fiche-banc.ts";
 import { brancherCoffre, enteteCoffre } from "./panneau-coffre.ts";
 import { choisirFacon } from "../../commun/src/replis.ts";
 import { texteLieu, type Alentours } from "../../commun/src/lieu-recette.ts";
@@ -139,6 +140,8 @@ export interface ActionsJoueur {
   amenager(genre: "feu" | "installation", id: number, verbe: Verbe): void;
   /** Un constat pour les mesures (plan 0.8, chantier 14) : la fiche d'un meuble qu'on ne peut pas améliorer, l'aide « Je suis coincé ». */
   constat(quoi: "fiche_bloquee" | "aide_coince", construction?: string): void;
+  /** Depuis la fiche du banc (0.8.2, chantier C) : charger une chose qu'on porte, échanger la batterie du banc. */
+  banc(id: number, geste: GesteBanc): void;
 }
 
 /** Le feu de camp, vu comme une recette, pour dire ce qui manque. */
@@ -666,6 +669,8 @@ export class Hud {
   majCharges(charges: Charges): void {
     this.charges = charges;
     this.redessiner();
+    // La fiche du banc montre le niveau de ce qu'on porte (0.8.2).
+    this.majFiche();
   }
 
   majLumiere(allumee: boolean): void {
@@ -1805,6 +1810,7 @@ export class Hud {
     if (charge) this.chargeArmes = charge;
     this.dernierSac = "";
     if (!this.sac.hidden) this.dessinerSac();
+    if (charge) this.majFiche();
     // « Remise à neuf : … » plutôt que « … : réparée » : pas de minuscule en tête, et juste pour un arc comme une lame.
     if (evenement?.etat === "reparee") this.message(`Remise à neuf : ${nommer(evenement.objet, 1)}.`);
   }
@@ -2076,6 +2082,8 @@ export class Hud {
         if (verbe !== "ajouter_bois") this.ouvrir(this.panneauFiche, false);
       });
     }
+    // La fiche du banc (0.8.2, chantier C) : « Charger » et « Échanger » laissent la fiche ouverte, pour voir le niveau monter.
+    if (f.genre === "installation") brancherFicheBanc(p, (geste) => this.actions.banc(f.id, geste));
   }
 
   /** Les puces d'un coût (avec ses choix : « ou »), et les qualités d'outil demandées. */
@@ -2285,6 +2293,7 @@ export class Hud {
       ${enteteFiche(nom)}
       ${l ? `<p class="niveau">Niveau ${niveau}${etat ? ` · ${etat}` : ""}</p>` : etat ? `<p class="niveau">${etat}</p>` : ""}
       <p class="examen">${examen}</p>
+      ${i.type === "banc_recharge" ? htmlFicheBanc(i, this.inventaire, this.charges, this.chargeArmes) : ""}
       ${piece}
       ${ameliorer ? `<h3>Améliorer, sur place</h3>${ameliorer}` : ""}
       <div class="defaire">${defaire}</div>

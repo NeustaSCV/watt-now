@@ -127,3 +127,79 @@ export function stocker(s: Stockage, wh: number): { stockage: Stockage; stocke: 
   }
   return { stockage: { ...s, charges }, stocke: wh - reste, perdu: reste };
 }
+
+// ---------- Le banc de recharge (0.8.2, chantier C : R17) ----------
+//
+// Le banc fait passer l'énergie de la batterie posée dedans vers ce qu'on porte. Une seule batterie, à demeure : au
+// départ, la batterie de voiture de la ruine. On la remplit (le panneau posé sur le banc, un pédalier générateur tout
+// près, la manivelle en secours), on l'échange contre une batterie du sac, et l'on charge ce qu'on porte, une chose à
+// la fois, depuis la fiche du banc. Chaque batterie se nomme par son nom (jamais « grosse batterie »).
+
+/**
+ * Les batteries qui se posent dans le banc, de la préférée à la moins bonne. Une batterie de plus forte capacité, plus
+ * tard, s'ajoutera ici (avec son type, sa capacité, sa décharge et son nom) ; la petite batterie reste à la frontale.
+ */
+export const BATTERIES_DE_BANC: readonly TypeBatterie[] = ["batterie_voiture"];
+export function estBatterieDeBanc(b: string): b is TypeBatterie {
+  return (BATTERIES_DE_BANC as readonly string[]).includes(b);
+}
+
+/** Le nom de chaque batterie dans les textes. */
+export const NOMS_BATTERIES: Record<TypeBatterie, string> = {
+  petite_batterie: "la petite batterie de la frontale",
+  batterie_voiture: "la batterie de voiture",
+};
+/** Celle que le banc reçoit au départ. */
+export const NOM_BATTERIE_DE_LA_RUINE = "la batterie de voiture de la ruine";
+
+/** La batterie posée dans un banc : son type, sa charge, sa capacité (null : aucune). */
+export interface BatterieDuBanc {
+  type: TypeBatterie;
+  wh: number;
+  capacite: number;
+  nom: string;
+}
+
+/**
+ * La batterie du banc. Une partie d'avant la 0.8.2 a pu en poser plusieurs : on lit alors la préférée (la batterie de
+ * voiture) ; les autres reviennent au sac à la connexion (`batteriesEnTrop`).
+ */
+export function batterieDuBanc(etat: { batteries?: Partial<Record<TypeBatterie, number>>; charges?: Charges; batterieEchangee?: boolean }): BatterieDuBanc | null {
+  const ordre = [...BATTERIES_DE_BANC, ...(Object.keys(CAPACITES) as TypeBatterie[]).filter((b) => !estBatterieDeBanc(b))];
+  for (const type of ordre) {
+    const n = etat.batteries?.[type] ?? 0;
+    if (n <= 0) continue;
+    const nom = type === "batterie_voiture" && !etat.batterieEchangee ? NOM_BATTERIE_DE_LA_RUINE : NOMS_BATTERIES[type];
+    return { type, wh: Math.max(0, etat.charges?.[type] ?? 0), capacite: capacite(type, n), nom };
+  }
+  return null;
+}
+
+/** Un pédalier générateur posé à moins de 3 m du banc charge directement sa batterie (décidé le 2026-10-11). */
+export const PORTEE_PEDALIER_BANC = 3;
+
+/** Le banc qu'un pédalier charge : le plus proche à moins de 3 m (null : aucun). */
+export function bancDuPedalier<T extends { type: string; x: number; z: number }>(pedalier: { x: number; z: number }, installations: Iterable<T>): T | null {
+  let meilleur: T | null = null;
+  let d = PORTEE_PEDALIER_BANC + 1e-9;
+  for (const i of installations) {
+    if (i.type !== "banc_recharge") continue;
+    const di = Math.hypot(i.x - pedalier.x, i.z - pedalier.z);
+    if (di <= d) {
+      d = di;
+      meilleur = i;
+    }
+  }
+  return meilleur;
+}
+
+/** Une charge au banc ne dure jamais plus de 2 minutes réelles (≈ 60 Wh) : au-delà, on recommence. */
+export const DUREE_CHARGE_MAX_S = 120;
+
+/** La durée d'une charge au banc, en secondes réelles : 30 Wh par heure de jeu (une minute réelle), 3 s au moins. */
+export function dureeCharge(wh: number): number {
+  return Math.max(3, Math.min(DUREE_CHARGE_MAX_S, (wh / WH_RECHARGE_PAR_HEURE) * 60));
+}
+
+/** Ce qu'une charge fait entrer au plus, en Wh (le débit sur la durée maximale). */
+export const WH_CHARGE_MAX = (WH_RECHARGE_PAR_HEURE * DUREE_CHARGE_MAX_S) / 60;

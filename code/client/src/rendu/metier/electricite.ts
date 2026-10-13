@@ -11,7 +11,7 @@
 // (serveur/src/declencheurs.ts : la ligne suit l'orientation de l'installation).
 
 import * as THREE from "three";
-import { CAPACITES, type TypeBatterie } from "../../../../commun/src/energie.ts";
+import { batterieDuBanc } from "../../../../commun/src/energie.ts";
 import type { EtatInstallation } from "../../../../commun/src/messages.ts";
 import { Assemblage, BOIS, CORDE, V3, Z, bosseler, placer, touffe } from "../assemblage.ts";
 import { PALETTE, aleatoire } from "../materiaux.ts";
@@ -279,21 +279,16 @@ function bainDerouillage(): THREE.Group {
 
 // ---------- Le banc solaire (plan 0.8, chantier 7) ----------
 
-/** La part de charge des batteries posées (0 à 1) : ce que montre la jauge. */
+/** La part de charge de la batterie du banc (0 à 1) : ce que montre la jauge (0.8.2, R17 : une seule batterie, à demeure). */
 export function partDeCharge(etat: Pick<EtatInstallation, "batteries" | "charges">): number {
-  let cap = 0;
-  let wh = 0;
-  for (const [b, n] of Object.entries(etat.batteries ?? {}) as [TypeBatterie, number][]) {
-    cap += CAPACITES[b] * (n ?? 0);
-    wh += etat.charges?.[b] ?? 0;
-  }
-  return cap > 0 ? Math.max(0, Math.min(1, wh / cap)) : 0;
+  const bat = batterieDuBanc(etat);
+  return bat && bat.capacite > 0 ? Math.max(0, Math.min(1, bat.wh / bat.capacite)) : 0;
 }
 
 /**
  * Le panneau posé sur le banc (les coordonnées sont celles du banc, installations.ts) : le petit panneau de la station
  * sur un cadre de branches dressé à l'arrière du plateau, incliné vers l'avant ; son câble descend au régulateur ; et
- * la jauge, une réglette posée devant le régulateur, dont la barre lumineuse dit la charge des batteries du banc (verte
+ * la jauge, une réglette posée devant le régulateur, dont la barre lumineuse dit la charge de la batterie du banc (verte
  * pleine, ambre à mi-course, rouge presque vide).
  */
 function bancPanneau(): THREE.Group {

@@ -3,8 +3,7 @@
 
 import { PERIODES_FRUITIERS, enSaison, etatDuFruitier, phaseFruitier, visibleEnSaison } from "../../commun/src/calendrier.ts";
 import type { Position } from "../../commun/src/deplacement.ts";
-import { armeDeCle } from "../../commun/src/combat.ts";
-import { CAPACITES, type Charges } from "../../commun/src/energie.ts";
+import { BATTERIES_DE_BANC, CAPACITES, bancDuPedalier, batterieDuBanc, type Charges } from "../../commun/src/energie.ts";
 import { COMPTOIR, destinations, sortieIci, type LieuId, type LieuJouable } from "../../commun/src/lieux.ts";
 import { KLAXONS_PAR_BATTERIE, LEURRES, PORTES, chargeBatterieTracteur, distancePorte } from "../../commun/src/cooperative.ts";
 import type { AutreVu, EtatCoopVu, InstallationVue, MessageClient, SacVu, Verbe } from "../../commun/src/messages.ts";
@@ -47,8 +46,8 @@ export const EXAMENS_INSTALLATIONS: Record<InstallationVue["type"], string> = {
   charbonniere: "Une meule de bois couverte de terre. Allumée, elle cuit trois jours en fumant beaucoup.",
   forge: "Un foyer de pierres, une tuyère de fer, un billot et sa pierre plate pour enclume. Il faut du charbon de bois.",
   pedalier: "Le vieux vélo de la ruine sur un bâti de bois. Sa roue entraîne ce qu'on y monte : l'alternateur, une meule.",
-  banc_recharge: "Un banc de planches, des pinces, un régulateur bricolé. Le panneau posé dessus remplit ses batteries au soleil.",
-  panneau_solaire: "Le petit panneau de la station, plein sud. Il charge les batteries posées sur le banc, même quand tu n'es pas là.",
+  banc_recharge: "Un banc de planches, des pinces, un régulateur bricolé. Il fait passer le courant de sa batterie dans ce que tu portes ; le panneau posé dessus la remplit au soleil.",
+  panneau_solaire: "Le petit panneau de la station, plein sud. Il charge la batterie du banc, même quand tu n'es pas là.",
   escabeau: "Un escabeau de bois ligaturé de corde. Posé au pied d'un arbre fruitier, dans son cercle, il permet de cueillir en haut.",
   recuperateur_pluie: "Quatre sacs plastique tendus en entonnoir au-dessus d'un bidon de 5 L. Quand il pleut, il se remplit, même quand tu n'es pas là. L'eau du ciel se boit sans la faire bouillir.",
   alarme_boites: "Une ficelle tendue entre deux piquets, des boîtes de conserve qui pendent. Si un Éteint passe, tu l'entendras. Lui aussi.",
@@ -84,6 +83,8 @@ function actionsInstallation(
   inventaire: Inventaire,
   charges: Charges,
   maintenantServeur: number,
+  /** Un pédalier à moins de 3 m d'un banc dont la batterie a de la place (0.8.2, R17). */
+  bancARemplir = false,
 ): [ActionProposee | null, ActionProposee | null] {
   const msg = (libelle: string, verbe: Verbe): ActionProposee => ({ libelle, message: { t: "interagir", cible: { genre: "installation", id: i.id }, verbe } });
   // Examiner ouvre la fiche : ce qu'elle fait, l'améliorer, la démonter (Book 24). La décharge, elle, se regarde.
@@ -151,6 +152,8 @@ function actionsInstallation(
       // Le pédalier générateur (plan 0.8) : l'alternateur de la station d'abord ; la dynamo du vélo, à défaut.
       if (!i.etat.alternateur && (inventaire.petit_alternateur ?? 0) > 0) return [msg("Monter l'alternateur", "monter_alternateur"), examiner];
       if (!i.etat.alternateur && !i.etat.dynamo && (inventaire.dynamo_velo ?? 0) > 0) return [msg("Installer la dynamo", "monter_dynamo"), examiner];
+      // 0.8.2 (R17) : à moins de 3 m du banc, le pédalier remplit directement la batterie du banc.
+      if (bancARemplir && (i.etat.alternateur || i.etat.dynamo)) return [msg("Pédaler : charger la batterie du banc", "pedaler"), examiner];
       // La batterie de la ruine se pose sur le pédalier : on y pédale, on la reprend pleine.
       const surPedalier = Object.values(i.etat.batteries ?? {}).some((n) => (n ?? 0) > 0);
       const enPoche = (inventaire.petite_batterie ?? 0) > 0 || (inventaire.batterie_voiture ?? 0) > 0;
@@ -192,24 +195,22 @@ function actionsInstallation(
     case "banc_recharge": {
       // Le banc solaire (plan 0.8) : le panneau de la station se pose sur le banc, d'abord.
       if (!i.etat.panneau && (inventaire.panneau_solaire ?? 0) > 0) return [msg("Poser le panneau sur le banc", "poser_panneau"), examiner];
-      // Sur le banc : les batteries posées, que le panneau charge, même hors ligne (É4).
-      const posees = Object.values(i.etat.batteries ?? {}).some((n) => (n ?? 0) > 0);
-      // Les armes électriques (Book 25 §5.4) : on les recharge aux batteries du banc.
-      const armes = Object.keys(inventaire).some((cle) => (inventaire[cle as keyof typeof inventaire] ?? 0) > 0 && armeDeCle(cle)?.electrique);
-      if (armes && posees) return [msg("Recharger tes armes électriques", "recharger_armes"), msg("Reprendre les batteries", "reprendre_batteries")];
-      const portees = (inventaire.petite_batterie ?? 0) > 0 || (inventaire.batterie_voiture ?? 0) > 0;
-      const surBanc = Object.entries(i.etat.charges ?? {})
-        .map(([b, wh]) => `${b === "petite_batterie" ? "petite batterie" : "batterie de voiture"} ${Math.round(wh ?? 0)} Wh`)
-        .join(", ");
-      const examen: ActionProposee = posees ? { libelle: "Examiner", examiner: `Sur le banc : ${surBanc}.` } : examiner;
-      if (posees) return [msg("Reprendre les batteries", "reprendre_batteries"), examen];
-      const place = CAPACITES.petite_batterie * (inventaire.petite_batterie ?? 0) - (charges.petite_batterie ?? 0);
-      if ((charges.batterie_voiture ?? 0) > 1 && place > 0.5) return [msg("Recharger la petite batterie", "recharger"), portees ? msg("Poser les batteries sur le banc", "poser_batteries") : examen];
-      return [portees ? msg("Poser les batteries sur le banc", "poser_batteries") : null, examen];
+      // 0.8.2 (R17) : une seule batterie, à demeure. On la branche une fois ; charger ce qu'on porte et l'échanger se font
+      // depuis la fiche du banc, une ligne par chose qui se charge.
+      const batterie = batterieDuBanc(i.etat);
+      if (!batterie && BATTERIES_DE_BANC.some((b) => (inventaire[b] ?? 0) > 0)) return [msg("Brancher la batterie dans le banc", "poser_batteries"), examiner];
+      return [batterie ? { libelle: "Charger au banc", ouvrirFiche: { genre: "installation", id: i.id } } : null, examiner];
     }
     default:
       return [null, examiner];
   }
+}
+
+/** Le pédalier est à moins de 3 m d'un banc dont la batterie a encore de la place (0.8.2, R17). */
+function bancARemplir(pedalier: InstallationVue, installations: readonly InstallationVue[]): boolean {
+  const banc = bancDuPedalier(pedalier, installations);
+  const bat = banc ? batterieDuBanc(banc.etat) : null;
+  return !!bat && bat.capacite - bat.wh > 0.5;
 }
 
 /** La part de charge des batteries posées sur un meuble (0 à 1). */
@@ -313,10 +314,11 @@ export function proposer(
     });
   }
 
-  for (const i of installations) {
+  const toutes = [...installations];
+  for (const i of toutes) {
     // La décharge est un grand tas : on la vise depuis son bord (P-001).
     const d = Math.max(0, Math.hypot(i.x - position.x, i.z - position.z) - (i.type === "decharge" ? 1.9 : 0.6));
-    const [A, B] = actionsInstallation(i, repos, famille, inventaire, charges, maintenantServeur);
+    const [A, B] = actionsInstallation(i, repos, famille, inventaire, charges, maintenantServeur, i.type === "pedalier" && bancARemplir(i, toutes));
     garder(d, { A, B, cible: { x: i.x, z: i.z, rayon: i.type === "decharge" ? 2.1 : i.type === "escabeau" || i.type === "alarme_boites" ? 0.7 : 1.1 } });
   }
 

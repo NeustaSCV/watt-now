@@ -262,26 +262,27 @@ test("0.6 Voltaïques : la manivelle de la lampe à dynamo recharge 1 Wh par min
   assert.match(u.infos().at(-1)!, /lampe à dynamo/);
 });
 
-test("0.6 Voltaïques : au banc, un pack vide se recharge en ≈ 25 s, pris aux batteries posées (85 %)", () => {
+test("0.6 Voltaïques : au banc, un pack vide se recharge en ≈ 25 s, pris à la batterie du banc (85 %)", () => {
   const t = surLeTerrain(
     { matraque_electrique: 1, sac_a_dos: 1 },
-    [{ type: "banc_recharge", x: 20.5, z: 20, etat: { batteries: { petite_batterie: 1 }, charges: { petite_batterie: 40 } } }],
+    [{ type: "banc_recharge", x: 20.5, z: 20, etat: { batteries: { batterie_voiture: 1 }, charges: { batterie_voiture: 40 } } }],
     { matraque_electrique: 0 },
   );
   const banc = t.joueur.bienvenue(0).installations.find((i) => i.type === "banc_recharge")!;
-  t.joueur.recevoir({ t: "interagir", cible: { genre: "installation", id: banc.id }, verbe: "recharger_armes" });
+  // 0.8.2 (R17) : depuis la fiche du banc, la ligne de la matraque et son bouton « Charger ».
+  t.joueur.recevoir({ t: "banc", id: banc.id, op: "charger", cible: "matraque_electrique" });
   t.attendre(20);
   assert.equal(t.dernier("usure")?.charge?.matraque_electrique ?? 0, 0, "pas encore");
   t.attendre(6);
   assert.equal(t.dernier("usure")?.charge?.matraque_electrique, undefined, "pleine (absente : pleine)");
   assert.ok(t.infos().some((x) => x.startsWith("+12 Wh")), t.infos().join(" | "));
   const apres = t.base.chargerInstallations(t.compte.id).find((i) => i.type === "banc_recharge")!;
-  assert.ok(Math.abs((apres.etat.charges?.petite_batterie ?? 0) - (40 - 12 / 0.85)) < 0.5);
-  // Sans courant sur le banc : on le dit.
+  assert.ok(Math.abs((apres.etat.charges?.batterie_voiture ?? 0) - (40 - 12 / 0.85)) < 0.5);
+  // Sans batterie dans le banc : on le dit.
   const u = surLeTerrain({ matraque_electrique: 1 }, [{ type: "banc_recharge", x: 20.5, z: 20 }], { matraque_electrique: 0 });
   const b2 = u.joueur.bienvenue(0).installations.find((i) => i.type === "banc_recharge")!;
-  u.joueur.recevoir({ t: "interagir", cible: { genre: "installation", id: b2.id }, verbe: "recharger_armes" });
-  assert.match(u.infos().at(-1)!, /Pas de courant/);
+  u.joueur.recevoir({ t: "banc", id: b2.id, op: "charger", cible: "matraque_electrique" });
+  assert.match(u.infos().at(-1)!, /pas de batterie/);
 });
 
 // ---------- Les clôtures, la plaque, l'alarme ----------

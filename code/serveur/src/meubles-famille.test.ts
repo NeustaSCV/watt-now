@@ -156,18 +156,20 @@ test("⚡ un Voltaïque seul : le banc solaire, le panneau posé dessus, la batt
   assert.equal(t.sac().panneau_solaire, undefined);
   t.utiliser(id, "poser_batteries", 5);
   assert.equal(t.meuble(id).etat.batteries?.batterie_voiture, 1);
-  assert.equal(t.meuble(id).etat.batteries?.petite_batterie, 1, "la petite batterie du kit aussi");
+  // 0.8.2 (R17) : le banc ne garde qu'une batterie ; la petite reste à la frontale.
+  assert.equal(t.meuble(id).etat.batteries?.petite_batterie, undefined, "la petite batterie du kit reste au sac");
+  assert.equal(t.sac().petite_batterie, 1);
   const total = () => Object.values(t.meuble(id).etat.charges ?? {}).reduce((a, b) => a + (b ?? 0), 0);
   const avant = total();
   assert.equal(Math.round(t.meuble(id).etat.charges!.batterie_voiture!), CHARGE_TROUVEE.batterie_voiture);
   t.absence(MS_JOUR_CALENDRIER);
-  // 80 Wh entrés (la petite batterie d'abord), moins la décharge spontanée d'un jour (≈ 0,3 Wh).
+  // 80 Wh entrés, moins la décharge spontanée d'un jour (≈ 0,3 Wh).
   const apres = total();
   assert.ok(Math.abs(apres - avant - 80) < 1, `${avant} → ${apres}`);
-  // Démonté, le banc rend son panneau entier.
-  t.utiliser(id, "reprendre_batteries", 5);
+  // Démonté, le banc rend son panneau entier, et sa batterie (à demeure : elle ne se reprend pas avant).
   t.utiliser(id, "demonter_installation", 40);
   assert.equal(t.sac().panneau_solaire, 1);
+  assert.equal(t.sac().batterie_voiture, 1, t.infos().slice(-3).join(" | "));
 });
 
 // ---------- ⚙️ Le pédalier générateur ----------
