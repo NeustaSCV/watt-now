@@ -33,6 +33,12 @@ export interface Apparence {
   coiffure: Coiffure;
   /** Indice dans COULEURS_CHEVEUX. */
   cheveux: number;
+  /**
+   * La couleur de cheveux personnalisée (le « + » du choix, R8, 0.8.2), en « #rrggbb » minuscules. Quand elle est là,
+   * elle remplace la teinte de `cheveux` (qui reste gardé : un client d'avant la 0.8.2 le lit toujours). Absente
+   * d'une apparence d'avant la 0.8.2.
+   */
+  teinteCheveux?: string;
   barbe: boolean;
   /**
    * La toge blanche du compte admin (commun/src/admin.ts) : posée par le serveur seul, jamais lue du client
@@ -59,16 +65,33 @@ export const APPARENCES_DE_REFERENCE: Record<Famille, Apparence> = {
   mecanistes: { silhouette: "feminine", taille: 0.4, corpulence: 0.5, peau: 1, coiffure: "longs", cheveux: 5, barbe: false },
 };
 
+/** Une couleur personnalisée lisible : « #rrggbb » (six chiffres hexadécimaux, rien d'autre). */
+const COULEUR_HEX = /^#[0-9a-f]{6}$/i;
+
+/** La couleur personnalisée rendue sûre (en minuscules), ou `null` si elle n'en est pas une : elle est alors refusée. */
+export function teinteValide(x: unknown): string | null {
+  return typeof x === "string" && COULEUR_HEX.test(x) ? x.toLowerCase() : null;
+}
+
+/** La couleur des cheveux à peindre : la couleur personnalisée si le joueur en a choisi une, sinon celle de la palette. */
+export function couleurCheveuxDe(a: Apparence): number {
+  const teinte = teinteValide(a.teinteCheveux);
+  if (teinte) return Number.parseInt(teinte.slice(1), 16);
+  return COULEURS_CHEVEUX[a.cheveux] ?? COULEURS_CHEVEUX[0];
+}
+
 const entre = (x: unknown, min: number, max: number, defaut: number): number => (typeof x === "number" && Number.isFinite(x) ? Math.min(max, Math.max(min, x)) : defaut);
 
 /**
  * Une apparence reçue du client, rendue sûre : chaque champ est borné, ce qui manque prend la valeur de la famille.
  * Les curseurs sont arrondis au vingtième (le client n'a rien de plus fin, et les apparences se mettent en cache).
+ * Une couleur de cheveux personnalisée invalide est refusée : le champ disparaît, et la palette (`cheveux`) reprend.
  */
 export function apparenceValide(x: unknown, famille: Famille): Apparence {
   const d = APPARENCES_DE_REFERENCE[famille];
   const o = (typeof x === "object" && x !== null ? x : {}) as Record<string, unknown>;
   const vingtieme = (v: number) => Math.round(v * 20) / 20;
+  const teinte = teinteValide(o.teinteCheveux);
   return {
     silhouette: o.silhouette === "feminine" || o.silhouette === "masculine" ? o.silhouette : d.silhouette,
     taille: vingtieme(entre(o.taille, 0, 1, d.taille)),
@@ -77,6 +100,7 @@ export function apparenceValide(x: unknown, famille: Famille): Apparence {
     coiffure: COIFFURES.includes(o.coiffure as Coiffure) ? (o.coiffure as Coiffure) : d.coiffure,
     cheveux: Math.round(entre(o.cheveux, 0, COULEURS_CHEVEUX.length - 1, d.cheveux)),
     barbe: o.barbe === true,
+    ...(teinte ? { teinteCheveux: teinte } : {}),
   };
 }
 

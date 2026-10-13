@@ -20,6 +20,47 @@ import { Personnage } from "./rendu/personnage.ts";
 
 const hex = (c: number) => `#${c.toString(16).padStart(6, "0")}`;
 
+// ---------- La couleur de cheveux personnalisée (R8, 0.8.2) ----------
+// Le « + » au bout des couleurs de cheveux déplie, sous les pastilles, trois curseurs (teinte, éclat, clarté) : pas de
+// fenêtre qui surgit, pas de sélecteur du système. La couleur est gardée en « #rrggbb » (`Apparence.teinteCheveux`).
+
+/** Une couleur en teinte (0 à 360), éclat (saturation, 0 à 100) et clarté (0 à 100). */
+interface Tsl {
+  t: number;
+  s: number;
+  l: number;
+}
+
+/** « #rrggbb » depuis teinte, éclat, clarté. */
+function tslVersHex({ t, s, l }: Tsl): string {
+  const sat = s / 100;
+  const cla = l / 100;
+  const k = (n: number) => (n + t / 30) % 12;
+  const a = sat * Math.min(cla, 1 - cla);
+  const f = (n: number) => Math.round(255 * (cla - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1))));
+  return `#${[f(0), f(8), f(4)].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
+}
+
+/** Teinte, éclat, clarté d'une couleur « #rrggbb » (arrondis : les curseurs vont d'un en un). */
+function hexVersTsl(c: string): Tsl {
+  const n = Number.parseInt(c.slice(1), 16);
+  const r = ((n >> 16) & 255) / 255;
+  const v = ((n >> 8) & 255) / 255;
+  const b = (n & 255) / 255;
+  const max = Math.max(r, v, b);
+  const min = Math.min(r, v, b);
+  const l = (max + min) / 2;
+  const d = max - min;
+  let t = 0;
+  let s = 0;
+  if (d > 0) {
+    s = d / (1 - Math.abs(2 * l - 1));
+    t = max === r ? ((v - b) / d) % 6 : max === v ? (b - r) / d + 2 : (r - v) / d + 4;
+    t = (t * 60 + 360) % 360;
+  }
+  return { t: Math.round(t), s: Math.round(s * 100), l: Math.round(l * 100) };
+}
+
 /** Le choix du joueur : son apparence, ou le retour à l'étape précédente. */
 export type ChoixApparence = { apparence: Apparence } | { retour: true; apparence: Apparence };
 
@@ -84,6 +125,12 @@ export function choisirApparence(conteneur: HTMLElement, famille: Famille, depar
               <legend>Cheveux</legend>
               <div class="pastilles" data-champ="cheveux">
                 ${COULEURS_CHEVEUX.map((c, i) => `<button type="button" data-valeur="${i}" style="background:${hex(c)}" aria-label="${NOMS_COULEURS_CHEVEUX[i]}"></button>`).join("")}
+                <button type="button" data-valeur="perso" class="plus" aria-label="Une autre couleur" aria-expanded="false">+</button>
+              </div>
+              <div class="cheveux-perso" hidden>
+                <label>Teinte <input type="range" min="0" max="360" step="1" data-tsl="t" /></label>
+                <label>Éclat <input type="range" min="0" max="100" step="1" data-tsl="s" /></label>
+                <label>Clarté <input type="range" min="4" max="92" step="1" data-tsl="l" /></label>
               </div>
             </fieldset>
             <fieldset>
@@ -190,17 +237,39 @@ export function choisirApparence(conteneur: HTMLElement, famille: Famille, depar
     function afficher(): void {
       for (const groupe of racine.querySelectorAll<HTMLElement>("[data-champ]")) {
         const champ = groupe.dataset.champ as keyof Apparence;
-        const valeur = champ === "barbe" ? (a.barbe ? "oui" : "non") : String(a[champ]);
+        const valeur = champ === "barbe" ? (a.barbe ? "oui" : "non") : champ === "cheveux" && a.teinteCheveux ? "perso" : String(a[champ]);
         for (const b of groupe.querySelectorAll<HTMLButtonElement>("button")) b.setAttribute("aria-pressed", String(b.dataset.valeur === valeur));
       }
       for (const c of racine.querySelectorAll<HTMLInputElement>("[data-curseur]")) c.value = String(a[c.dataset.curseur as "taille" | "corpulence"]);
       sortie("taille").textContent = `${hauteurDe(a).toFixed(2).replace(".", ",")} m`;
       sortie("corpulence").textContent = a.corpulence < 0.3 ? "mince" : a.corpulence < 0.7 ? "moyenne" : "forte";
+      afficherPerso();
+    }
+
+    // ---------- La couleur de cheveux personnalisée ----------
+    const plus = racine.querySelector<HTMLButtonElement>(".pastilles .plus")!;
+    const perso = racine.querySelector<HTMLElement>(".cheveux-perso")!;
+    const curseursTsl = [...perso.querySelectorAll<HTMLInputElement>("[data-tsl]")];
+    let tsl: Tsl = hexVersTsl(a.teinteCheveux ?? hex(COULEURS_CHEVEUX[a.cheveux] ?? COULEURS_CHEVEUX[0]));
+    function afficherPerso(): void {
+      // Le « + » prend la couleur choisie ; les pistes des curseurs montrent où l'on va.
+      plus.style.background = a.teinteCheveux ?? "";
+      plus.classList.toggle("choisie", !!a.teinteCheveux);
+      plus.setAttribute("aria-expanded", String(!perso.hidden));
+      for (const c of curseursTsl) c.value = String(tsl[c.dataset.tsl as keyof Tsl]);
+      const pistes: Record<keyof Tsl, string> = {
+        t: `linear-gradient(90deg, ${[0, 60, 120, 180, 240, 300, 360].map((t) => `hsl(${t} ${tsl.s}% ${tsl.l}%)`).join(", ")})`,
+        s: `linear-gradient(90deg, hsl(${tsl.t} 0% ${tsl.l}%), hsl(${tsl.t} 100% ${tsl.l}%))`,
+        l: `linear-gradient(90deg, hsl(${tsl.t} ${tsl.s}% 4%), hsl(${tsl.t} ${tsl.s}% 48%), hsl(${tsl.t} ${tsl.s}% 92%))`,
+      };
+      for (const c of curseursTsl) c.style.setProperty("--piste", pistes[c.dataset.tsl as keyof Tsl]);
     }
 
     let minuteur = 0;
     function changer(maj: Partial<Apparence>, attendre = false): void {
       a = { ...a, ...maj };
+      // Une pastille (ou « Au hasard ») retire la couleur personnalisée.
+      if (a.teinteCheveux === undefined) delete a.teinteCheveux;
       afficher();
       window.clearTimeout(minuteur);
       if (attendre) minuteur = window.setTimeout(reconstruire, 140);
@@ -217,7 +286,21 @@ export function choisirApparence(conteneur: HTMLElement, famille: Famille, depar
         else if (champ === "coiffure") changer({ coiffure: v as Coiffure });
         else if (champ === "barbe") changer({ barbe: v === "oui" });
         else if (champ === "peau") changer({ peau: Number(v) });
-        else if (champ === "cheveux") changer({ cheveux: Number(v) });
+        else if (champ === "cheveux" && v === "perso") {
+          // Le « + » : déplie les curseurs, en partant de la couleur portée ; le retouche les replie (la couleur reste).
+          if (perso.hidden && !a.teinteCheveux) tsl = hexVersTsl(hex(COULEURS_CHEVEUX[a.cheveux] ?? COULEURS_CHEVEUX[0]));
+          perso.hidden = !perso.hidden;
+          changer({ teinteCheveux: tslVersHex(tsl) });
+        } else if (champ === "cheveux") {
+          perso.hidden = true;
+          changer({ cheveux: Number(v), teinteCheveux: undefined });
+        }
+      });
+    }
+    for (const c of curseursTsl) {
+      c.addEventListener("input", () => {
+        tsl = { ...tsl, [c.dataset.tsl!]: Number(c.value) };
+        changer({ teinteCheveux: tslVersHex(tsl) }, true);
       });
     }
     for (const c of racine.querySelectorAll<HTMLInputElement>("[data-curseur]")) {
@@ -234,7 +317,10 @@ export function choisirApparence(conteneur: HTMLElement, famille: Famille, depar
       resolve(choix);
     }
     racine.querySelector('[data-action="retour"]')!.addEventListener("click", () => finir({ retour: true, apparence: a }));
-    racine.querySelector('[data-action="hasard"]')!.addEventListener("click", () => changer(auHasard()));
+    racine.querySelector('[data-action="hasard"]')!.addEventListener("click", () => {
+      perso.hidden = true;
+      changer({ ...auHasard(), teinteCheveux: undefined });
+    });
     racine.querySelector('[data-action="valider"]')!.addEventListener("click", () => finir({ apparence: a }));
   });
 }
