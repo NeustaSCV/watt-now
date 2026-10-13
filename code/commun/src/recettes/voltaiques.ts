@@ -5,7 +5,7 @@
 // Les autres familles voient ces recettes grisées, « chez les Voltaïques » (savoir.ts).
 //
 // La règle d'or (Book 25 §2.5) : un Voltaïque seul fait sa base. La matraque de fortune ne demande que son kit (la
-// petite batterie, le couteau pour le gourdin) et un appareil photo jetable ; la matraque ★★ le condensateur d'une
+// petite batterie, le couteau pour le gourdin) et le petit condensateur d'un appareil photo jetable ; la matraque ★★ le condensateur d'une
 // raquette et trois cellules (ou la petite batterie). Les électrodes forgées (🔥) et le manche tourné (⚙️) ne sont que
 // des améliorations.
 
@@ -128,13 +128,14 @@ export const RECETTES_VOLTAIQUES: Recette[] = [
 
   // ---------- Les armes (Book 25 §5.3) ----------
   {
-    // La voie autonome : le kit suffit (la petite batterie, le couteau qui taille le gourdin), plus un appareil jetable.
+    // La voie autonome : le kit suffit (la petite batterie, le couteau qui taille le gourdin), plus le petit condensateur
+    // démonté d'un appareil photo jetable (0.8.2 : plus l'appareil entier). Une matraque déjà faite reste ce qu'elle est.
     id: "matraque_fortune",
     lieu: AU_BANC,
     categorie: "outils",
     nom: "Matraque de fortune",
     produit: { objet: "matraque_fortune", quantite: 1 },
-    ingredients: { gourdin: 1, appareil_photo_jetable: 1, petite_batterie: 1, ficelle: 1 },
+    ingredients: { gourdin: 1, petit_condensateur: 1, petite_batterie: 1, ficelle: 1 },
     qualites: { visser: 1 },
     duree: 20,
     intensite: "legere",

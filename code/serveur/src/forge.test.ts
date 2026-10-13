@@ -160,8 +160,9 @@ test("🔥 hors famille, jamais plus de ★★, même avec la meilleure forge du
 });
 
 test("🔥 un Charbonnier seul : ressort, eau, foyer et bac de trempe, marteau → un couteau ★★", () => {
-  // Plan 0.8 : l'acier se trempe au bac de trempe (le lieu de la recette) ; sans lui, la recette est refusée.
-  const sans = monter("charbonniers", { marteau: 1, ressort_lames: 1, charbon_bois: 1, branche: 1 });
+  // Plan 0.8 : l'acier se trempe au bac de trempe (le lieu de la recette) ; sans lui, la recette est refusée. L'enclume
+  // est posée : sans elle, la lame n'existe pas encore pour le joueur (R26, 0.8.2).
+  const sans = monter("charbonniers", { marteau: 1, ressort_lames: 1, charbon_bois: 1, branche: 1 }, { etat: { enclume: "depanneur" } });
   sans.fabriquer("lame_forgee");
   assert.match(sans.infos().at(-1)!, /Il te faut un bac de trempe/);
   const t = monter("charbonniers", { marteau: 1, ressort_lames: 1, charbon_bois: 1, branche: 1 }, { etat: { bac: true, enclume: "depanneur" } });
@@ -257,7 +258,7 @@ test("🔥 la trempe à l'eau fend une lame sur trois (graine fixe) ; à l'huile
 
 test("🔥 une lame fendue à la trempe tombe en lame ébréchée, sur le joueur aussi (jamais de disparition totale)", () => {
   // alea à 0 : la trempe fend toujours (et les Éteints restent loin : le terrain n'en fait venir que s'ils entendent).
-  const t = monter("charbonniers", { marteau: 1, ressort_lames: 1, charbon_bois: 1, branche: 1 }, { etat: { bac: true } }, () => 0);
+  const t = monter("charbonniers", { marteau: 1, ressort_lames: 1, charbon_bois: 1, branche: 1 }, { etat: { bac: true, enclume: "depanneur" } }, () => 0);
   t.fabriquer("lame_forgee");
   const inv = t.sac();
   assert.equal(inv.lame_ebrechee, 1);
