@@ -102,6 +102,12 @@ function cacheLePersonnage(t: Toit, x: number, z: number, lacet: number): boolea
   return false;
 }
 
+/** La vue d'ensemble à l'arrivée (0.8.2, chantier G) : tant qu'elle dure, tous les toits restent (on voit le lieu de loin). */
+let tousLesToits = false;
+export function montrerTousLesToits(oui: boolean): void {
+  tousLesToits = oui;
+}
+
 /**
  * Les toits (et façades) qui cachent le personnage disparaissent : fondu rapide jusqu'à rien, puis invisibles ;
  * ils reviennent en fondu quand on en sort. Leur ombre reste au sol (un maillage d'ombre seule, voir Chantier).
@@ -114,7 +120,7 @@ export function estomperToits(halte: THREE.Object3D, x: number, z: number, dt: n
     const toits = o.userData.toits as Toit[] | undefined;
     if (!toits) return;
     for (const t of toits) {
-      const efface = cacheLePersonnage(t, x, z, lacet);
+      const efface = !tousLesToits && cacheLePersonnage(t, x, z, lacet);
       t.efface = efface;
       const garde = efface ? (t.fantome ?? 0) : 1;
       for (const m of t.materiaux) voulu.set(m, Math.min(voulu.get(m) ?? 1, garde));

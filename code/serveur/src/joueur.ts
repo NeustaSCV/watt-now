@@ -11,6 +11,7 @@ import { enSaison, etatDuFruitier, jourDuCalendrier, prochaineRecolte } from "..
 import { nouvellePoule, penserPoule, vuePoule, type Poule } from "../../commun/src/faune.ts";
 import type { Apparence } from "../../commun/src/apparence.ts";
 import { INTENTION_REPOS, avancer, nettoyerIntention, type Intention, type Position } from "../../commun/src/deplacement.ts";
+import { AttenteArrivee } from "./arrivee.ts";
 import type { Bienvenue, Cible, FeuVu, InstallationVue, MessageClient, MessageServeur } from "../../commun/src/messages.ts";
 import { CAPACITE_SAC, CONTENANTS, OBJETS, capaciteDe, estCleObjet, estObjet, lumierePortee, nommer, poidsInventaire, traineTravois, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
 import { compter, estMaitrisee, estObjetDeMetier, retirerExemplaires, typeDe, type CleObjet } from "../../commun/src/etoiles.ts";
@@ -586,6 +587,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
 
   /** En pause (2026-10-09) : sur son terrain ou dans sa Coopérative seulement, là où l'on est seul. */
   private pause = false;
+  /** La vue d'ensemble à l'arrivée (0.8.2, chantier G) : seul, la pause jusqu'au premier geste ; dans une halte, à l'abri. */
+  private readonly arrivee = new AttenteArrivee(() => (this.pause = false));
 
   enPause(): boolean {
     return this.pause;
@@ -616,6 +619,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
   }
 
   recevoir(message: MessageClient): void {
+    // Le premier geste après l'arrivée met fin à la vue d'ensemble (0.8.2, chantier G).
+    if (this.arrivee.recevoir(message)) return;
     if (message.t === "pause") return this.basculerPause(message.oui === true);
     // En pause, le monde attend : on n'agit pas (le client le sait aussi).
     if (this.pause && message.t !== "ping" && message.t !== "mesures") return;
@@ -2074,7 +2079,10 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (this.lieu === "comptoir") this.comptoir.entrer(this.envoyer, () => this.quetes.etat.faits);
     if (this.tuto && this.lieu === "station") this.tuto.visiteStation = true;
     this.noterFait(`visite:${this.lieu}`);
-    this.envoyer(this.bienvenue(this.base.debutMonde()));
+    // 0.8.2, chantier G : la vue d'ensemble ; seul, le monde attend le premier geste (serveur/src/arrivee.ts).
+    const arrivee = this.arrivee.commencer(this.lieu, this.maintenant());
+    if (arrivee.mode === "pause") this.pause = true;
+    this.envoyer({ ...this.bienvenue(this.base.debutMonde()), arrivee });
   }
 
   /** Le joueur se déconnecte : il quitte la halte (hors ligne, il est sur la carte, Book 01 §2 bis). */
@@ -2399,7 +2407,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       z: this.position.z,
       discret: !this.bouge || this.intention.allure === "discrete",
       eclaire: this.lumiere && (this.nuit() || (this.vivant?.obscur(this.position.x, this.position.z) ?? false)),
-      intouchable: this.maintenant() < this.esquiveJusqua,
+      intouchable: this.maintenant() < this.esquiveJusqua || this.arrivee.protege(this.maintenant()),
     };
   }
 

@@ -10,6 +10,7 @@ import type { Apparence } from "./apparence.ts";
 import type { Position } from "./deplacement.ts";
 import type { MouvementRadeau } from "./gue.ts";
 import type { CibleCharge } from "./banc.ts";
+import type { ModeArrivee } from "./arrivee.ts";
 import type { Charges, TypeBatterie } from "./energie.ts";
 import type { LieuId, LieuJouable } from "./lieux.ts";
 import type { Saignement, TypeBlessure } from "./combat.ts";
@@ -243,6 +244,8 @@ export type MessageClient =
   | MessageClientConstat
   // Le banc de recharge (0.8.2, chantier C) : voir le bloc « banc » en fin de fichier.
   | MessageClientBanc
+  // La vue d'ensemble à l'arrivée (0.8.2, chantier G) : voir le bloc « arrivée » en fin de fichier.
+  | MessageClientArrivee
   | { t: "interagir"; cible: Cible; verbe: Verbe }
   | { t: "manger"; objet: TypeObjet }
   | { t: "boire" }
@@ -727,3 +730,17 @@ export type MessageClientBanc =
   | { t: "banc"; id: number; op: "charger"; cible: CibleCharge }
   /** Échanger la batterie du banc contre une batterie du sac : l'ancienne revient au sac. */
   | { t: "banc"; id: number; op: "echanger" };
+
+// ---------- La vue d'ensemble à l'arrivée (0.8.2, chantier G : R4 ; commun/src/arrivee.ts, serveur/src/arrivee.ts) ----------
+
+export type MessageClientArrivee =
+  /** Le premier geste après l'arrivée : la vue zoome vers le personnage, la pause (ou la protection) prend fin. */
+  { t: "arrivee" };
+
+export interface Bienvenue {
+  /**
+   * Présent seulement à l'arrivée d'un voyage (jamais à une connexion) : la vue d'ensemble, et comment le serveur attend
+   * le premier geste (`mode`) ; `protection` : dans une halte, combien de millisecondes on reste à l'abri au plus.
+   */
+  arrivee?: { mode: ModeArrivee; protection: number };
+}
