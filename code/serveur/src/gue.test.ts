@@ -661,3 +661,17 @@ test("0.8.2 §7.6 : au bord du radeau à quai, « Haler » se propose ; on monte
   assert.equal(placeRadeau(m.gue.radeau, m.maintenant()), BAC.cale.x);
   assert.ok(aBord(malo.joueur.position.x, malo.joueur.position.z, BAC.cale.x, 0), "emporté jusqu'à la cale");
 });
+
+test("0.8.2 §7.6 : la glaise se creuse depuis le bord de sa plaque (2 m de son bord), pas au-delà", () => {
+  const m = monde();
+  const rose = m.nouveau("Rose", { baton_fouir: 1 });
+  const glaise = parType(m.gue, "gisement_glaise")[0]!;
+  const creuser = (d: number) => {
+    rose.joueur.position = { x: glaise.x, z: glaise.z - d, o: 0 };
+    rose.joueur.recevoir({ t: "interagir", cible: { genre: "ressource", id: glaise.id }, verbe: USAGES.gisement_glaise.verbe });
+    m.attendre(6.5);
+    return rose.inv().glaise ?? 0;
+  };
+  assert.equal(creuser(2.6), 1, "à 2,6 m du point, au bord de la plaque : creusé");
+  assert.equal(creuser(3.2), 1, "à 3,2 m : trop loin");
+});

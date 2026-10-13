@@ -270,9 +270,9 @@ const BONUS_REGARD_GLAISE = 0.6;
  * quand on la regarde, elle passe avant la touffe de joncs voisine (venu du nord, on passe la touffe avant d'y arriver).
  */
 function avanceGlaise(position: Position, g: { x: number; z: number }): number {
-  // La portée reste celle du serveur (DISTANCE_INTERACTION du point) : l'avance ne fait que passer la glaise devant.
-  if (Math.hypot(g.x - position.x, g.z - position.z) > DISTANCE_INTERACTION) return 0;
+  // La portée reste celle du serveur (DISTANCE_INTERACTION du bord de la plaque) : au-delà, l'avance ne compte pas.
   const emprise = EMPRISE_RESSOURCE.gisement_glaise ?? 0;
+  if (Math.hypot(g.x - position.x, g.z - position.z) > DISTANCE_INTERACTION + emprise) return 0;
   const vers = Math.atan2(g.x - position.x, g.z - position.z);
   const ecart = Math.abs(Math.atan2(Math.sin(vers - position.o), Math.cos(vers - position.o)));
   return emprise + (ecart <= REGARD_GLAISE ? BONUS_REGARD_GLAISE : 0);
@@ -332,6 +332,7 @@ export function proposer(
     const arbre = estArbre(r.donnees.type);
     const fruitier = estFruitier(r.donnees.type);
     const d = Math.max(0, Math.hypot(r.donnees.x - position.x, r.donnees.z - position.z) - (arbre ? PORTEE_ARBRE : r.donnees.type === "gisement_glaise" ? avanceGlaise(position, r.donnees) : 0));
+    // (La glaise vue de plus loin que sa plaque n'entre pas : garder() s'en tient à DISTANCE_INTERACTION.)
     // Un fruitier sans escabeau dans son cercle : on le dit tout de suite (rien ne se lance pour rien).
     const escabeau = !usage.escabeau || installationsVues.some((i) => i.type === "escabeau" && Math.hypot(i.x - r.donnees.x, i.z - r.donnees.z) <= RAYON_ESCABEAU);
     garder(d, {

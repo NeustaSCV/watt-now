@@ -29,6 +29,8 @@ test("0.8.2 §7.6 : venu du nord, la touffe passée, A creuse la glaise qu'on re
   assert.equal(libelleA(x, z, 0), creuser);
   // Tourné vers la touffe (le nord), elle reste à couper.
   assert.equal(libelleA(joncs.x, joncs.z + 0.6, Math.PI), "Couper des joncs");
+  // Le cas de la recette au téléphone : 2 m du point de la glaise, la touffe à 0,75 m, tourné vers le sud.
+  assert.equal(libelleA(83.35, 43.2, 0), creuser);
   // Tout contre la glaise, quel que soit le regard : creuser.
   assert.equal(libelleA(GLAISE.x, GLAISE.z - 0.9, Math.PI), creuser);
 });
