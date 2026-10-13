@@ -129,6 +129,22 @@ test("0.8.2 §7.6 : le message reste à sa place s'il ne touche aucun panneau, p
   assert.equal(placerIdee(idee, [carnet, boite(380, 60)], 630), 440 + ECART_PANNEAU);
 });
 
+test("0.8.2 §7.6 : le placement lit aussi un DOMRect (ses côtés sont des accesseurs)", () => {
+  class Rect {
+    private readonly t: number;
+    private readonly h: number;
+    constructor(t: number, h: number) {
+      this.t = t;
+      this.h = h;
+    }
+    get top() { return this.t; }
+    get bottom() { return this.t + this.h; }
+    get left() { return 16; }
+    get right() { return 359; }
+  }
+  assert.equal(placerIdee(new Rect(230, 56), [new Rect(180, 195)], 630), 375 + ECART_PANNEAU);
+});
+
 test("0.8.2 §7.6 : derrière un panneau, l'idée attend (sans se perdre) puis vient quand on le ferme", () => {
   const { horloge, avancer } = fausseHorloge();
   const { parent, element } = fauxParent();

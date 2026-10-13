@@ -10,6 +10,14 @@ function tient(t: string): boolean {
   return t.length <= LONGUEUR_MAX_B && t.split(/\s+/).every((m) => m.length <= MOT_MAX_B);
 }
 
+/** Au-delà de ce nombre de lettres, un mot du bouton B prend un corps plus petit (la classe `mot-long`). */
+export const MOT_LONG_B = 7;
+
+/** Le libellé du bouton B a-t-il un mot long ? */
+export function motLongB(court: string): boolean {
+  return court.split(/\s+/).some((m) => m.length > MOT_LONG_B);
+}
+
 /** Ce qu'on écrit sur le bouton B : le libellé s'il tient, sinon sans son détail, sinon le verbe seul. */
 export function libelleBoutonB(libelle: string): string {
   if (tient(libelle)) return libelle;

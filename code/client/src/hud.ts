@@ -2,7 +2,7 @@
 // sous elles les raccourcis Sac et Fabriquer (on s'en sert moins souvent), invite d'action en bas,
 // barre de progression, messages, et les boutons tactiles près du pouce (Book 08 §3.4).
 
-import { libelleBoutonB } from "./libelle-bouton.ts";
+import { libelleBoutonB, motLongB } from "./libelle-bouton.ts";
 import { VERSION } from "../../commun/src/version.ts";
 import { REGLAGES } from "../../commun/src/reglages.ts";
 import { ceQuiManque } from "../../commun/src/aide-fabrication.ts";
@@ -723,7 +723,9 @@ export class Hud {
     if (this.boutonB) {
       // Plan 0.8.2 §7.6 : un libellé qui tient dans le rond ; le libellé entier dans son nom accessible.
       const entier = p.B && !occupe ? p.B.libelle : "B";
-      this.boutonB.textContent = libelleBoutonB(entier);
+      const court = libelleBoutonB(entier);
+      this.boutonB.textContent = court;
+      this.boutonB.classList.toggle("mot-long", motLongB(court));
       this.boutonB.title = entier;
       this.boutonB.setAttribute("aria-label", entier);
       this.boutonB.disabled = !p.B || occupe;

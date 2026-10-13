@@ -60,7 +60,8 @@ export function placerIdee(idee: Boite, obstacles: readonly Boite[], hauteurEcra
   let haut = idee.top;
   // Sous le plus bas des panneaux qu'il croise, puis encore dessous si la nouvelle place en croise un autre.
   for (let essai = 0; essai < obstacles.length + 1; essai++) {
-    const boite = { ...idee, top: haut, bottom: haut + hauteur };
+    // (Pas de `...idee` : les côtés d'un DOMRect sont des accesseurs, que la décomposition ne copie pas.)
+    const boite = { left: idee.left, right: idee.right, top: haut, bottom: haut + hauteur };
     const croises = obstacles.filter((o) => chevauche(boite, o));
     if (croises.length === 0) return haut + hauteur <= hauteurEcran - ECART_PANNEAU ? haut : "attendre";
     haut = Math.max(...croises.map((o) => o.bottom)) + ECART_PANNEAU;
