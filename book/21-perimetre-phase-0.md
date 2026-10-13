@@ -219,6 +219,37 @@ Chaque étape produit quelque chose de **jouable** et de **testable**. Elles ava
 
 **La priorité au soin visuel** (§5) vaut pour tout ce que la 0.8 ajoute : les icônes des objets nouveaux, la carte à deux routes, les meubles du niveau 1, le gué et le Moulin tirés des modèles de la session « bâtiments », le bandeau « Tu y penses », l'avertissement de la bûche ; tout est lisible sur l'iPhone 13 mini (375 × 630 en vertical, 812 × 320 en paysage). **Une règle d'interface du porteur** : un message ou un avertissement en jeu **se ferme d'un bouton**, jamais une fenêtre à croix ; ce qu'on ouvre au bouton B (Examiner) se ferme par B ; les panneaux qu'on ouvre au toucher ou à la souris (sac, Fabriquer, carnet, carte) gardent leur croix ✕.
 
+### 3.11 La 0.8.2 : les retours de jeu du niveau 1 (2026-10-13)
+
+*Le détail est dans le plan `book/plans/plan-0.8.2.md` (v0.2, décidé), §3 et §7 ; ses sources : les remarques **R1 à R26** du porteur après avoir joué la 0.8 (plan 0.8 §9.4) et ce que la 0.8 avait repoussé (§9.3). Les chantiers A à K sont codés et fusionnés (branche `integration-0-8-2`) ; **la recette, les mesures et la version (chantier L) sont en cours** : le jeu affiche encore « 0.8.1 » et `VERSIONS.md` n'a pas encore sa section 0.8.2.*
+
+**Ce que livre la 0.8.2** : **pas de contenu nouveau** (ni lieu, ni niveau, ni arme), mais **le niveau 1 plus agréable à jouer**. Une seule mécanique neuve, décidée par le porteur : **la vue d'ensemble à l'arrivée** (R4).
+
+| Domaine | Ce que la 0.8.2 change | Book |
+|---|---|---|
+| **Le bloquant** | Le coffre, le coffre cerclé, le râtelier et la décharge répondent de nouveau, au toucher comme à la souris (R5) | — |
+| **Le gué** | 8 branches, 4 bûches, 6 pierres de plus, la couche de déchets « berge » ; la glaise au milieu de la berge ; le bac halé du premier coup ; la crue qui se dit (R1 à R3, R19) | 20 §1 quater ter, 26 §11 ter |
+| **L'arrivée** | La vue d'ensemble, en pause (seul) ou immobile et protégé 15 s au plus (halte) ; un geste, et l'on joue (R4) | 14 §4.6 |
+| **L'écran** | « Tu y penses » sans bouton, qui part seul (R22) ; le sac marque l'arme équipée et le sac porté (R6) ; l'anneau de fouille bleu (R23) ; l'aide des touches dans un rectangle, avec des touches dessinées (R7) ; le guichet du Comptoir plus haut ; Examiner en entier ; « trop lourd » dit le poids | 03 §5.9 |
+| **Les textes** | Jamais « clé » (R9) ; l'indice nomme le lieu, jamais l'endroit (R10) ; l'abri garni, plus de lit à côté (R11) ; la carte sans promesse (R18) | 03 §5.9, 20 §1 quater ter |
+| **Les gestes** | Ramasser deux fois plus vite (R20) ; la gourde au milieu de la mare (R21) ; un contenant vidé muet (R24) ; dormir dans sa couche (R12) ; le feu prend d'abord les branches ; devant une porte, A ouvre et B ramasse | 01 §2 bis, 24 §13 |
+| **Les recettes** | Des ingrédients au choix ; une corde d'arc (R15) et une matraque électrique (R16) ; les condensateurs et le module unique (R14) ; trois canettes pour un aluminium (R25) ; remmancher à l'établi (R13) | 25 §14, 26 §11 ter, 24 §13 |
+| **Le banc** | La batterie de voiture de la ruine à demeure ; le pédalier à 3 m la remplit ; l'échange ; « Charger » ce qu'on porte, une ligne par chose (R17) | 24 §13.1 |
+| **Le dévoilement** | Les armes de métier attendent le meuble de famille complet (R26) ; le meuble appris d'une autre famille sert | 25 §14.5, 24 §13.4 |
+| **Le tutoriel et le carnet** | Un repas toutes les deux étapes ; l'établi avant la hache ; « Un vrai lit » juste après le coffre | 14 §4.6, 22 §3.1 bis |
+| **La station et les réglages** | La caisse de l'atelier personnelle ; le tas de bois et le stock du Comptoir en réglages à chaud ; le dormant loin des établis | 01 §2 bis |
+| **L'accueil** | Un « + » pour une couleur de cheveux personnelle (R8) ; l'illustration de l'écran 2 en paysage | 14 §4.6 |
+
+**Pas de remise à zéro** (plan 0.8.2 §0) : la 0.8.2 **relit les personnages de la 0.8.1**. Ce qui a changé de forme se convertit à la lecture : les faits des anciennes recettes comptent pour les nouvelles (la maîtrise reste), les batteries en trop sur le banc reviennent au sac avec leur charge, une arme de métier déjà dévoilée revient avec la pièce, la caisse de l'atelier devenue personnelle oublie son ancien délai partagé.
+
+**Les règles d'interface, revues** (elles remplacent la phrase de la fin du §3.10) : un **message d'information** n'a **pas de bouton**, ne bloque pas la vue et **part seul** (« Tu y penses », la crue, les repas) ; un **avertissement** garde **son bouton** (la bûche : « Compris ») ; les panneaux ouverts au toucher ou à la souris gardent leur croix ✕ ; ce qu'on ouvre au bouton B se ferme par B ; **jamais une fenêtre à croix** pour un message.
+
+**Le critère de fin de la 0.8.2** (plan 0.8.2 §5, en bref) : sur téléphone, les coffres et la décharge s'ouvrent, déplacent un objet et se ferment ; au gué, un joueur seul trouve du bois, des pierres et des déchets hors du banc de galets, voit la glaise, hale le bac du premier coup, lit la crue ; la vue d'ensemble à chaque arrivée ; « Tu y penses » ne cache rien ; au banc, on voit sa batterie et l'on charge d'un bouton ; Fabriquer n'a plus qu'une corde d'arc et une matraque électrique ; aucune arme de métier avant le meuble complet ; aucun texte ne dit « clé » (hors les vraies clés) ; une partie 0.8.1 se relit ; `verif`, `test`, `build`, `equilibre` et `rythme` passent.
+
+**Ce qui reste à mesurer** (chantier L, et le porteur sur son iPhone) : le **rythme** (les ramassages plus rapides, les repas du tutoriel, « Un vrai lit » plus tôt le changent : les chiffres du §3.10 sont ceux de la 0.8) ; le **budget de l'iPhone 13 mini** au gué, au Moulin et dans la vue d'ensemble (`?mesure=1`, banc de 90 s).
+
+**Ce qui n'entre pas** : l'allure du meunier, du charpentier et du putréfié du Moulin (plus tard) ; les retouches du modèle du Moulin et du gué tant que la session « bâtiments » ne les a pas livrées (le jeu les corrige de son côté) ; le niveau 2, les Éteints évolués, le relais d'armes.
+
 ---
 
 ## 4. Phase 0a : ce qui attend
