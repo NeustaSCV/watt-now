@@ -1,7 +1,8 @@
 // ⚙️ La mécanique des Mécanistes côté serveur (Book 25 §6, chantier 7 · 0.6) : les pièges (déclarés au moteur des
 // déclencheurs), leur réarmement, les accessoires du pédalier (ventilateur à manivelle, meule fine) et le fil de rasoir
 // que donne la meule fine ; depuis la 0.8 (chantier 7), le pédalier générateur : monter le petit alternateur de la
-// station, pédaler pour remplir la batterie posée dessus (ou celle du sac).
+// station, pédaler pour remplir la batterie posée dessus (ou celle du sac) ; depuis la 0.8.2 (chantier C, R17), posé à
+// moins de 3 m du banc, il remplit d'abord la batterie du banc, directement.
 //
 // Ce module ne connaît pas le joueur : il passe par un `ContexteMecanique` (ce que le joueur lui prête). joueur.ts
 // n'ajoute que des appels d'une ligne (Book 25 §10.4). L'arbalète, elle, est une arme de tir : sa table est dans
@@ -10,7 +11,7 @@
 import type { Arme } from "../../commun/src/combat.ts";
 import type { CleObjet } from "../../commun/src/etoiles.ts";
 import type { InstallationVue, Verbe } from "../../commun/src/messages.ts";
-import { DUREE_PEDALAGE, KCAL_PEDALAGE_EN_PLUS, capacite, stocker, whEDePedalage, type OrganePedalier, type TypeBatterie } from "../../commun/src/energie.ts";
+import { DUREE_PEDALAGE, KCAL_PEDALAGE_EN_PLUS, bancDuPedalier, batterieDuBanc, capacite, stocker, whEDePedalage, type OrganePedalier, type TypeBatterie } from "../../commun/src/energie.ts";
 import { nommer, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
 import { niveauQualite } from "../../commun/src/recettes.ts";
 import type { Famille } from "../../commun/src/regles.ts";
@@ -86,6 +87,10 @@ export interface ContexteMecanique {
   batterieDuSac(): TypeBatterie | null;
   /** Ajoute des Wh à une batterie du sac ; rend ce qui est entré. */
   chargerSac(b: TypeBatterie, wh: number): number;
+  /** Les installations du terrain (0.8.2 : le banc tout près du pédalier). */
+  installations(): Iterable<InstallationVue>;
+  /** Sauver et montrer une autre installation que celle du geste (le banc que le pédalier charge). */
+  sauverInstallation(i: InstallationVue): void;
 }
 
 /** Les gestes de la mécanique sur une installation. */
@@ -127,7 +132,7 @@ function placeSurLePedalier(i: InstallationVue): number {
 function monterAlternateur(ctx: ContexteMecanique, i: InstallationVue): void {
   if (i.etat.alternateur) return ctx.info("L'alternateur est déjà monté.");
   if ((ctx.inventaire().petit_alternateur ?? 0) < 1) return ctx.info("Il te faut un petit alternateur : le garage de la station en garde un pour toi, sur son établi.");
-  if (niveauQualite(ctx.inventaire(), "serrer") < MONTER_ALTERNATEUR.qualites.serrer) return ctx.info("Il faut une clé pour serrer les brides de l'alternateur.");
+  if (niveauQualite(ctx.inventaire(), "serrer") < MONTER_ALTERNATEUR.qualites.serrer) return ctx.info("Il te faut de quoi serrer les brides de l'alternateur : une clé plate, un serre-joint.");
   ctx.commencer("Monter l'alternateur sur le pédalier", MONTER_ALTERNATEUR.secondes, () => {
     if (i.etat.alternateur || (ctx.inventaire().petit_alternateur ?? 0) < 1) return;
     ctx.retirer({ petit_alternateur: 1 });
@@ -138,15 +143,23 @@ function monterAlternateur(ctx: ContexteMecanique, i: InstallationVue): void {
   }, "outil");
 }
 
+/** La place qui reste dans la batterie du banc qu'un pédalier charge (à moins de 3 m) : le banc et sa place, ou null. */
+function bancACharger(ctx: ContexteMecanique, i: InstallationVue): InstallationVue | null {
+  const banc = bancDuPedalier(i, ctx.installations());
+  const bat = banc ? batterieDuBanc(banc.etat) : null;
+  return banc && bat && bat.capacite - bat.wh > 0.5 ? banc : null;
+}
+
 /**
- * Pédaler une heure de jeu (une minute réelle) : la batterie posée sur le pédalier d'abord, sinon une batterie du sac.
- * L'alternateur : ≈ 60 Wh pour un Mécaniste ; la dynamo du vélo : 5 Wh. Ça coûte des calories.
+ * Pédaler une heure de jeu (une minute réelle) : la batterie du banc s'il est à moins de 3 m (0.8.2, R17), sinon la
+ * batterie posée sur le pédalier, sinon une batterie du sac. L'alternateur : ≈ 60 Wh pour un Mécaniste ; la dynamo du
+ * vélo : 5 Wh. Ça coûte des calories.
  */
 function pedaler(ctx: ContexteMecanique, i: InstallationVue): void {
   const organe = organeDuPedalier(i);
   if (!organe) return ctx.info("Rien à entraîner : monte l'alternateur de la station (ou, à défaut, la dynamo du vélo).");
   const surPedalier = placeSurLePedalier(i) > 0.5;
-  if (!surPedalier && !ctx.batterieDuSac()) return ctx.info("Aucune batterie à charger, ou elles sont pleines : pose la batterie de la ruine sur le pédalier.");
+  if (!bancACharger(ctx, i) && !surPedalier && !ctx.batterieDuSac()) return ctx.info("Rien à charger : approche le pédalier à moins de 3 m du banc, ou pose une batterie dessus.");
   const libelle = organe === "alternateur" ? "Pédaler : l'alternateur charge la batterie" : "Pédaler pour charger la batterie";
   ctx.commencer(
     libelle,
@@ -155,7 +168,14 @@ function pedaler(ctx: ContexteMecanique, i: InstallationVue): void {
       const wh = whEDePedalage(ctx.famille(), 1, organe);
       let mis = 0;
       let ou = "la batterie du pédalier";
-      if (placeSurLePedalier(i) > 0.5) {
+      const banc = bancACharger(ctx, i);
+      if (banc) {
+        const r = stocker({ batteries: banc.etat.batteries ?? {}, charges: banc.etat.charges ?? {} }, wh);
+        banc.etat = { ...banc.etat, charges: r.stockage.charges };
+        mis = r.stocke;
+        ou = `${batterieDuBanc(banc.etat)?.nom ?? "la batterie"}, dans le banc`;
+        ctx.sauverInstallation(banc);
+      } else if (placeSurLePedalier(i) > 0.5) {
         const r = stocker({ batteries: i.etat.batteries ?? {}, charges: i.etat.charges ?? {} }, wh);
         i.etat = { ...i.etat, charges: r.stockage.charges };
         mis = r.stocke;
@@ -196,7 +216,7 @@ function monterAccessoire(ctx: ContexteMecanique, i: InstallationVue, a: Accesso
   const def = ACCESSOIRES_PEDALIER[a];
   if (accessoireMonte(i.etat, a)) return ctx.info(`${majuscule(def.nom)} est déjà monté${a === "meule_fine" ? "e" : ""}.`);
   if (def.apresMeule && !i.etat.meule) return ctx.info("Monte d'abord la meule (3 pierres) : la meule fine se pose dessus.");
-  if (def.serrer && niveauQualite(ctx.inventaire(), "serrer") < 1) return ctx.info("Il faut une clé pour serrer les brides.");
+  if (def.serrer && niveauQualite(ctx.inventaire(), "serrer") < 1) return ctx.info("Il te faut de quoi serrer les brides : une clé plate, un serre-joint.");
   const manque = manquant(ctx.inventaire(), def.cout);
   if (manque) return ctx.info(`Pour ${def.nom}, il manque : ${manque}.`);
   ctx.commencer(`Monter ${def.nom}`, def.secondes, () => {

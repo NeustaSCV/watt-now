@@ -5,8 +5,9 @@
 // Les autres familles voient ces recettes grisées, « chez les Voltaïques » (savoir.ts).
 //
 // La règle d'or (Book 25 §2.5) : un Voltaïque seul fait sa base. La matraque de fortune ne demande que son kit (la
-// petite batterie, le couteau pour le gourdin) et un appareil photo jetable ; la matraque ★★ une raquette et trois
-// cellules. Les électrodes forgées (🔥) et le manche tourné (⚙️) ne sont que des améliorations.
+// petite batterie, le couteau pour le gourdin) et le petit condensateur d'un appareil photo jetable ; la matraque ★★ le condensateur d'une
+// raquette et trois cellules (ou la petite batterie). Les électrodes forgées (🔥) et le manche tourné (⚙️) ne sont que
+// des améliorations.
 
 import type { Inventaire, TypeObjet } from "../objets.ts";
 import { exemplaires } from "../etoiles.ts";
@@ -25,11 +26,14 @@ const NIVEAU_2 = { aVenir: "niveau 2" } as const;
 
 /**
  * La petite batterie du kit est unique (Q-B6) : la même phrase sur les deux fiches qui la prennent (la matraque de
- * fortune et la matraque ★★, chantier 8).
+ * fortune et la matraque électrique, chantier 8 ; une seule recette depuis la 0.8.2, R16).
  */
-const NOTE_PETITE_BATTERIE = "La petite batterie du kit est unique : elle va à la matraque de fortune ou à la matraque ★★, pas aux deux.";
+const NOTE_PETITE_BATTERIE = "La petite batterie de la frontale est unique : elle va à la matraque de fortune ou à la matraque électrique, pas aux deux.";
 /** La petite batterie, source d'une matraque électrique : une source ★★ (Q-A5). */
 const SOURCE_PETITE_BATTERIE = 2;
+
+/** L'étoile de chaque condensateur (Q-0.8.2-4) : le module de décharge la prend (maillon faible). */
+export const ETOILES_CONDENSATEUR = { petit_condensateur: 1, condensateur_moyen: 2 } as const;
 
 /**
  * Les étoiles du module de décharge que la recette prendra : le moins bon du sac (une recette prend toujours les
@@ -90,42 +94,31 @@ export const RECETTES_VOLTAIQUES: Recette[] = [
     famille: "voltaiques",
   },
   {
-    // Le condensateur du flash, déssoudé et recâblé : une haute tension de fortune (★).
-    id: "module_flash",
+    // Un seul module (0.8.2, R14 et Q-0.8.2-4) : un condensateur recâblé, le petit (démonté d'un flash jetable, ★) ou le
+    // moyen (d'une raquette à moustiques, ★★). Le module prend l'étoile de son condensateur ; le moyen passe d'abord. Il
+    // remplace les modules « au flash » et « à la raquette » de la 0.8 : un module déjà fait reste un module_decharge.
+    id: "module_decharge",
     lieu: AU_BANC,
     categorie: "materiaux",
-    nom: "Module de décharge (flash)",
+    nom: "Module de décharge",
     produit: { objet: "module_decharge", quantite: 1 },
-    ingredients: { appareil_photo_jetable: 1, fil_cuivre: 1 },
+    ingredients: { fil_cuivre: 1 },
+    auChoix: [{ condensateur_moyen: 1 }, { petit_condensateur: 1 }],
     qualites: { visser: 1 },
     duree: 30,
     intensite: "legere",
     famille: "voltaiques",
-    facteursEtoiles: () => [1],
+    facteursEtoiles: (_inventaire, _contexte, facon) => [ETOILES_CONDENSATEUR[facon?.condensateur_moyen ? "condensateur_moyen" : "petit_condensateur"]],
   },
   {
-    // L'étage haute tension de la raquette, tout fait (★★).
-    id: "module_raquette",
-    lieu: AU_BANC,
-    categorie: "materiaux",
-    nom: "Module de décharge (raquette)",
-    produit: { objet: "module_decharge", quantite: 1 },
-    ingredients: { raquette_moustiques: 1, fil_cuivre: 1 },
-    qualites: { visser: 1 },
-    duree: 30,
-    intensite: "legere",
-    famille: "voltaiques",
-    facteursEtoiles: () => [2],
-  },
-  {
-    // La bobine d'allumage, attaquée par le condensateur du flash : la vraie haute tension (★★★), qui saute au voisin.
+    // La bobine d'allumage, attaquée par le petit condensateur (celui du flash) : la vraie haute tension (★★★), qui saute au voisin.
     id: "module_bobine",
     ...NIVEAU_2,
     lieu: AU_POSTE_DE_MONTAGE,
     categorie: "materiaux",
     nom: "Module de décharge (bobine)",
     produit: { objet: "module_decharge", quantite: 1 },
-    ingredients: { bobine_allumage: 1, appareil_photo_jetable: 1, fil_cuivre: 1 },
+    ingredients: { bobine_allumage: 1, petit_condensateur: 1, fil_cuivre: 1 },
     qualites: { visser: 1 },
     duree: 30,
     intensite: "legere",
@@ -135,13 +128,14 @@ export const RECETTES_VOLTAIQUES: Recette[] = [
 
   // ---------- Les armes (Book 25 §5.3) ----------
   {
-    // La voie autonome : le kit suffit (la petite batterie, le couteau qui taille le gourdin), plus un appareil jetable.
+    // La voie autonome : le kit suffit (la petite batterie, le couteau qui taille le gourdin), plus le petit condensateur
+    // démonté d'un appareil photo jetable (0.8.2 : plus l'appareil entier). Une matraque déjà faite reste ce qu'elle est.
     id: "matraque_fortune",
     lieu: AU_BANC,
     categorie: "outils",
     nom: "Matraque de fortune",
     produit: { objet: "matraque_fortune", quantite: 1 },
-    ingredients: { gourdin: 1, appareil_photo_jetable: 1, petite_batterie: 1, ficelle: 1 },
+    ingredients: { gourdin: 1, petit_condensateur: 1, petite_batterie: 1, ficelle: 1 },
     qualites: { visser: 1 },
     duree: 20,
     intensite: "legere",
@@ -150,18 +144,23 @@ export const RECETTES_VOLTAIQUES: Recette[] = [
     note: NOTE_PETITE_BATTERIE,
   },
   {
-    // « La Raquette » : l'arme de métier. ★★ au module de raquette, ★★★ au module à bobine.
+    // « La Raquette » : l'arme de métier. ★★ au module du condensateur moyen, ★★★ au module à bobine. Sa source : un
+    // pack de cellules, ou la petite batterie du kit (R16, 0.8.2 : l'ancienne « Matraque électrique (petite batterie) »
+    // de Q-A5, fondue ici) ; le pack passe d'abord. La petite batterie vaut ★★ : avec elle, la matraque ne passe pas ★★,
+    // même au module à bobine.
     id: "matraque_electrique",
     lieu: AU_BANC,
     categorie: "outils",
     nom: "Matraque électrique",
     produit: { objet: "matraque_electrique", quantite: 1 },
-    ingredients: { gourdin: 1, module_decharge: 1, pack_cellules: 1, caoutchouc: 1 },
+    ingredients: { gourdin: 1, module_decharge: 1, caoutchouc: 1 },
+    auChoix: [{ pack_cellules: 1 }, { petite_batterie: 1 }],
     qualites: { visser: 1, couper: 1 },
     duree: 40,
     intensite: "legere",
     famille: "voltaiques",
-    facteursEtoiles: facteursArme(3, 0),
+    facteursEtoiles: (inventaire, _contexte, facon) => [etoilesModule(inventaire), facon?.petite_batterie ? SOURCE_PETITE_BATTERIE : 3, 3],
+    note: `Avec la petite batterie, ★★ au plus. ${NOTE_PETITE_BATTERIE}`,
   },
   {
     // L'amélioration du Charbonnier : deux pointes d'acier forgées pour tenir contre une tempe, un pack trié (deux
@@ -331,23 +330,5 @@ export const RECETTES_VOLTAIQUES: Recette[] = [
     intensite: "legere",
     famille: "voltaiques",
     facteursEtoiles: derouille("machette"),
-  },
-
-  // ---------- Chantier 8 (plan 0.8 §2.4) : la petite batterie, source de la matraque ★★ (Q-A5) ----------
-  {
-    // Le module de raquette sur la petite batterie du kit : la ★★ sûre dès le retour de la station, sans cellules
-    // (50 Wh, environ 40 Errants). La batterie vaut ★★ : même au module à bobine, elle ne fait pas une ★★★.
-    id: "matraque_petite_batterie",
-    lieu: AU_BANC,
-    categorie: "outils",
-    nom: "Matraque électrique (petite batterie)",
-    produit: { objet: "matraque_electrique", quantite: 1 },
-    ingredients: { gourdin: 1, module_decharge: 1, petite_batterie: 1, caoutchouc: 1 },
-    qualites: { visser: 1, couper: 1 },
-    duree: 40,
-    intensite: "legere",
-    famille: "voltaiques",
-    facteursEtoiles: (inventaire) => [etoilesModule(inventaire), SOURCE_PETITE_BATTERIE, 3],
-    note: NOTE_PETITE_BATTERIE,
   },
 ];

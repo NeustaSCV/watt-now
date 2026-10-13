@@ -52,7 +52,7 @@ export const LIEU_DES_CLES: Partial<Record<TypeObjet, LieuId>> = {
 export function refusVenteCle(type: TypeObjet, faits: Readonly<Record<string, number>>): string | null {
   const lieu = LIEU_DES_CLES[type];
   if (!lieu || (faits[`visite:${lieu}`] ?? 0) > 0) return null;
-  return `« ${OBJETS[type].nom.charAt(0).toUpperCase()}${OBJETS[type].nom.slice(1)} ? Va d'abord voir ${minuscule(LIEUX[lieu].nom)} : on en reparlera. » Les Compteurs ne vendent une clé qu'à qui connaît son lieu.`;
+  return `« ${OBJETS[type].nom.charAt(0).toUpperCase()}${OBJETS[type].nom.slice(1)} ? Va d'abord voir ${minuscule(LIEUX[lieu].nom)} : on en reparlera. » Les Compteurs ne le vendent qu'à qui connaît déjà son lieu.`;
 }
 
 /**
@@ -181,8 +181,13 @@ export const STOCK_DE_BASE: Inventaire = {
   // chantier 6) : sans elle, celui qui les apprend d'un Mécaniste ou d'un manuel ne pouvait jamais les faire.
   scie: 1,
   // Plan 0.8 (B13) : le filet du bois et de la pierre, au prix de vente (19 et 7 wotts) : 190 wotts les 10 bûches.
-  buche: 10,
-  pierre: 10,
+  // Plan 0.8.2 (chantier D) : des réglages à chaud (10 et 10 par défaut), lus à chaque réassort.
+  get buche() {
+    return REGLAGES.comptoir_buches;
+  },
+  get pierre() {
+    return REGLAGES.comptoir_pierres;
+  },
   // Plan 0.8 (chantier 10) : une clé de L1 de chaque, en stock limité, vendue après une première visite de son lieu.
   grillage_rouleau: 1,
   cocotte_fonte: 1,
@@ -191,8 +196,12 @@ export const STOCK_DE_BASE: Inventaire = {
   feuillards: 1,
   etau: 1,
 };
-/** Un objet du stock de base revient toutes les deux heures réelles, jusqu'au niveau de départ. */
+/** Un objet du stock de base revient toutes les deux heures réelles, jusqu'au niveau de départ (le défaut du réglage). */
 export const REASSORT_MS = 2 * 3_600_000;
+/** Le délai du réassort en vigueur (le réglage `comptoir_reassort_h`, plan 0.8.2). */
+export function delaiReassort(): number {
+  return REGLAGES.comptoir_reassort_h * 3_600_000;
+}
 
 export interface EtatComptoir {
   tresorerie: number;
@@ -207,13 +216,14 @@ export function tresorerieBasse(e: EtatComptoir, dotationTotale: number): boolea
   return e.tresorerie < dotationTotale * RESERVE_PLANCHER;
 }
 
-/** Le stock revient peu à peu (une unité par objet manquant toutes les REASSORT_MS). */
+/** Le stock revient peu à peu (une unité par objet manquant à chaque réassort, `delaiReassort()`). */
 export function reassortir(e: EtatComptoir, instant: number): EtatComptoir {
-  const n = Math.floor((instant - e.reassortLe) / REASSORT_MS);
+  const delai = delaiReassort();
+  const n = Math.floor((instant - e.reassortLe) / delai);
   if (n <= 0) return e;
   const stock = { ...e.stock };
   for (const [type, cible] of Object.entries(STOCK_DE_BASE) as [TypeObjet, number][]) {
     stock[type] = Math.min(Math.max(stock[type] ?? 0, cible), (stock[type] ?? 0) + n);
   }
-  return { ...e, stock, reassortLe: e.reassortLe + n * REASSORT_MS };
+  return { ...e, stock, reassortLe: e.reassortLe + n * delai };
 }

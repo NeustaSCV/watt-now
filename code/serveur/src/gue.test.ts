@@ -6,7 +6,14 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
   BAC,
+  BRANCHES_EPARSES,
   BUTIN_GUE,
+  GLAISE,
+  GLAISE_DU_DESSIN,
+  LIGNE_RADIER_NOYE,
+  PIERRES_DU_BANC,
+  VERSION_GUE,
+  surLeBanc,
   CLOCHE,
   DUREE_TRAVERSEE_S,
   ID_DERIVE,
@@ -20,8 +27,12 @@ import {
   ricochet,
   surLeRadier,
   zoneGue,
+  aBord,
+  auBordDuRadeau,
 } from "../../commun/src/gue.ts";
-import { ETEINTS_MODELE, SEGMENTS_MODELE } from "../../commun/src/gue-modele.ts";
+import { avancer } from "../../commun/src/deplacement.ts";
+import { ETEINTS_MODELE, FOUILLE_MODELE, SEGMENTS_MODELE } from "../../commun/src/gue-modele.ts";
+import { cleCouche, dispositionLieu } from "../../commun/src/couche-dechets.ts";
 import { DUREE_VOYAGE_S, SORTIES_GUE, SORTIE_TERRAIN, ZONE_GUE, bordsLibres, heurte } from "../../commun/src/lieux.ts";
 import type { MessageServeur, ProjectileVu } from "../../commun/src/messages.ts";
 import { DUREE_TRANCHE_MS, tempsDeLaTranche } from "../../commun/src/meteo.ts";
@@ -74,6 +85,8 @@ function monde(decalage = 1_000_000, sansEteints = true) {
     joueur.recevoir({ t: "voyager", vers: "gue" });
     attendre(DUREE_VOYAGE_S + 0.5);
     assert.equal(joueur.lieu, "gue");
+    // 0.8.2 (chantier G) : la vue d'ensemble à l'arrivée ; le premier geste la lève.
+    joueur.recevoir({ t: "arrivee" });
     const dernier = <T extends MessageServeur["t"]>(t: T) => recus.findLast((m) => m.t === t) as Extract<MessageServeur, { t: T }> | undefined;
     const inv = () => dernier("inventaire")?.inventaire ?? {};
     const infos = () => recus.filter((m) => m.t === "info").map((m) => (m as { texte: string }).texte);
@@ -130,8 +143,11 @@ test("les données tirées du modèle sont à jour (scripts/extraire-gue.mjs)", 
   const auJeu = (p: { x: number; z: number }) => ({ x: Math.round((100 + p.x) * 100) / 100, z: Math.round((p.z + 35) * 100) / 100 });
   assert.deepEqual(auJeu(FICHE_MIROIR.interactions[0]), { x: CLOCHE.x, z: CLOCHE.z }, "la cloche");
   const points = FICHE_MIROIR.cartes.flatMap((c: any) => c.fouille.map((f: any) => ({ ...f, x: f.x + c.decalage.x })));
+  // Plan 0.8.2 (R2) : le jeu a déplacé la glaise au milieu de la berge, en attendant le modèle (demande-batiment-gue-4) ;
+  // le point du modèle est celui où l'écran prend sa motte pour la porter là. Quand le modèle aura suivi, ils se rejoindront.
   const glaise = points.find((f: any) => f.quoi.startsWith("gisement de glaise"));
-  assert.deepEqual(auJeu(glaise), parType(new Gue(new Base(":memory:")), "gisement_glaise").map((r) => ({ x: r.x, z: r.z }))[0], "la glaise");
+  assert.deepEqual(auJeu(glaise), GLAISE_DU_DESSIN, "la motte du modèle");
+  assert.deepEqual(parType(new Gue(new Base(":memory:")), "gisement_glaise").map((r) => ({ x: r.x, z: r.z }))[0], GLAISE, "la glaise du jeu");
   const eteints = FICHE_MIROIR.cartes.flatMap((c: any) => c.eteints.map((e: any) => auJeu({ x: e.x + c.decalage.x, z: e.z })));
   assert.deepEqual(eteints.map((e: any) => e.x).sort(), ETEINTS_MODELE.map((e) => auGue(e.x, e.z).x).sort(), "les Éteints");
   assert.equal(auJeu({ x: FICHE_MIROIR.bac.accostages[0].x, z: 0 }).x, BAC.cale.x, "le radeau à la cale");
@@ -176,12 +192,12 @@ test("creuser la berge avec le bâton à fouir donne une glaise de 2 kg par gest
   assert.ok(sans.infos().some((t) => /Creuser/i.test(t)), sans.infos().join(" | "));
 });
 
-test("les 15 pierres en vrac reviennent en 30 min ; deux joueurs voient les mêmes", () => {
+test("les 21 pierres en vrac (15 sur le banc, 6 sur les pistes) reviennent en 30 min ; deux joueurs voient les mêmes", () => {
   const m = monde();
   const rose = m.nouveau("Rose");
   const vrac = parType(m.gue, "pierre");
-  assert.equal(vrac.length, 45);
-  assert.equal(rose.vues().filter((r) => r.type === "pierre" && r.disponible).length, 15);
+  assert.equal(vrac.length, 63);
+  assert.equal(rose.vues().filter((r) => r.type === "pierre" && r.disponible).length, 21);
   const malo = m.nouveau("Malo");
   // À deux, +50 % (B8) : les deux voient les mêmes.
   const vuesRose = rose.vues().filter((r) => r.type === "pierre" && r.disponible).map((r) => r.id);
@@ -421,4 +437,241 @@ test("un galet lancé sur l'eau fait « plouf » ; bien lancé, il ricoche jusqu
   assert.ok(p.x1 < 92, "le galet arrive sur l'autre rive");
   // Le galet se ramasse là-bas ; le bruit attire de l'autre côté.
   assert.ok(rose.joueur.stimuli(false).some((s) => s.genre === "son" && s.x < 92));
+});
+
+// ---------- Plan 0.8.2, chantier F ----------
+
+test("0.8.2 (recette) : l'Éteint de la chicane de l'entrée atteint le joueur de l'autre côté des troncs", () => {
+  for (const [ex, ez, px, pz] of [[14, 28.5, 8, 28.5], [14, 27, 7, 27.5], [9.5, 28, 14, 28.5], [12.5, 29.5, 8, 27]] as const) {
+    const m = monde(1_000_000, false);
+    const e = m.gue.eteints.find((x) => x.id === 1)!;
+    m.gue.eteints = [e];
+    e.x = ex;
+    e.z = ez;
+    e.maison = { x: ex, z: ez };
+    const rose = m.nouveau("Rose");
+    rose.joueur.position = { x: px, z: pz, o: 0 };
+    // Il l'a vu : il la poursuit (on regarde son chemin, pas sa vue).
+    e.etat = "poursuivant";
+    e.but = { x: px, z: pz };
+    e.attention = 1;
+    let atteint = false;
+    for (let t = 0; t < 60 && !atteint; t += 0.5) {
+      m.attendre(0.5);
+      rose.joueur.position = { x: px, z: pz, o: 0 };
+      atteint = Math.hypot(e.x - px, e.z - pz) < 1.2;
+    }
+    assert.ok(atteint, `de (${ex}, ${ez}) vers (${px}, ${pz}) : resté en (${e.x.toFixed(2)}, ${e.z.toFixed(2)}), ${e.etat}`);
+  }
+});
+
+/** La longueur du plus court chemin à pied (grille de 0,25 m, le rayon du joueur) entre deux points du gué. */
+function cheminAPied(a: { x: number; z: number }, b: { x: number; z: number }): number {
+  const P = 0.25;
+  const W = Math.ceil(200 / P);
+  const H = Math.ceil(70 / P);
+  const d = new Float64Array(W * H).fill(Infinity);
+  const i0 = Math.round(a.x / P);
+  const j0 = Math.round(a.z / P);
+  d[j0 * W + i0] = 0;
+  const file: [number, number][] = [[i0, j0]];
+  const pas = [[1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1], [1, 1, Math.SQRT2], [1, -1, Math.SQRT2], [-1, 1, Math.SQRT2], [-1, -1, Math.SQRT2]] as const;
+  for (let k = 0; k < file.length; k++) {
+    const [i, j] = file[k]!;
+    for (const [di, dj, c] of pas) {
+      const x = i + di;
+      const z = j + dj;
+      if (x < 0 || z < 0 || x >= W || z >= H) continue;
+      const nd = d[j * W + i]! + c * P;
+      if (nd < d[z * W + x]! && !heurte(ZONE_GUE, x * P, z * P, 0.35)) {
+        d[z * W + x] = nd;
+        file.push([x, z]);
+      }
+    }
+  }
+  return d[Math.round(b.z / P) * W + Math.round(b.x / P)]!;
+}
+
+test("0.8.2 (R1) : seul au gué, 8 branches en tout (le tas compris), 4 bûches, 6 pierres hors du banc, toutes à pied sec ; 30 min pour revenir", () => {
+  const m = monde();
+  const rose = m.nouveau("Rose");
+  const vues = rose.vues().filter((r) => r.disponible);
+  const tas = FOUILLE_MODELE_TAS();
+  const branches = vues.filter((r) => r.type === "branche" && Math.hypot(r.x - tas.x, r.z - tas.z) > 3);
+  assert.equal(branches.length, BRANCHES_EPARSES);
+  assert.equal(vues.filter((r) => r.type === "branche").length, 8, "8 branches en tout, le tas compris");
+  assert.equal(vues.filter((r) => r.type === "buche").length, 4);
+  const pierres = vues.filter((r) => r.type === "pierre");
+  assert.equal(pierres.filter((r) => !surLeBanc(r.x, r.z, 0.3)).length, 6, "6 pierres sur les pistes");
+  assert.equal(pierres.filter((r) => surLeBanc(r.x, r.z, 0.3)).length, PIERRES_DU_BANC);
+  // À trois voyageurs, les bûches en vrac grandissent comme à la station (×2).
+  m.nouveau("Malo");
+  const lou = m.nouveau("Lou");
+  assert.equal(lou.vues().filter((r) => r.type === "buche" && r.disponible).length, vracEnJeu(4, 3));
+  // Tout se ramasse à pied, depuis l'arrivée.
+  const arrivee = SORTIES_GUE.find((s) => s.vers === "terrain")!.arrivee;
+  for (const r of [...branches, ...vues.filter((v) => v.type === "buche"), ...pierres.filter((p) => !surLeBanc(p.x, p.z, 0.3))]) {
+    const proche = [[0, 0], [0.5, 0], [-0.5, 0], [0, 0.5], [0, -0.5]].some(([dx, dz]) => cheminAPied(arrivee, { x: r.x + dx!, z: r.z + dz! }) < Infinity);
+    assert.ok(proche, `${r.type} en (${r.x}, ${r.z}) se ramasse à pied`);
+  }
+  // Une branche et une bûche reviennent en 30 min.
+  m.prendre(rose.joueur, branches[0]!.id, 4);
+  const buche = vues.find((r) => r.type === "buche")!;
+  m.prendre(rose.joueur, buche.id, 6);
+  assert.ok((rose.inv().branche ?? 0) >= 1 && (rose.inv().buche ?? 0) >= 1, JSON.stringify(rose.inv()));
+  m.sauter(30 * MIN);
+  m.attendre(6);
+  assert.ok(m.gue.disponiblePour(m.gue.ressources.get(branches[0]!.id)!, rose.compte.id, m.maintenant()));
+  assert.ok(m.gue.disponiblePour(m.gue.ressources.get(buche.id)!, rose.compte.id, m.maintenant()));
+});
+
+/** Le tas de bois flotté du modèle (le point de sa fiche, dans le repère du jeu). */
+function FOUILLE_MODELE_TAS(): { x: number; z: number } {
+  const t = FOUILLE_MODELE.find((f) => f.quoi?.startsWith("tas de branches"))!;
+  return auGue(t.x, t.z);
+}
+
+test("0.8.2 (R1) : quelques déchets sur les berges et les bas-côtés du gué, partagés, à pied sec, loin du bac, de la cloche, de la glaise et des sorties", () => {
+  const emplacements = [...dispositionLieu(cleCouche("gue", 1)).values()].flat();
+  assert.ok(emplacements.length >= 5 && emplacements.length <= 20, `${emplacements.length} emplacements`);
+  assert.ok(emplacements.filter((e) => e.type === "berge").length > emplacements.length / 2, "surtout sur les berges");
+  for (const e of emplacements) {
+    for (const q of [BAC.cale.embarquement, BAC.ponton.embarquement, CLOCHE, GLAISE]) assert.ok(Math.hypot(q.x - e.x, q.z - e.z) > 3, `(${e.x}, ${e.z}) trop près de (${q.x}, ${q.z})`);
+    for (const s of SORTIES_GUE) assert.ok(Math.hypot(s.arrivee.x - e.x, s.arrivee.z - e.z) > 3, `(${e.x}, ${e.z}) au ras d'une sortie`);
+  }
+  assert.equal(cleCouche("gue", 1), cleCouche("gue", 2), "la même couche pour tous");
+  const arrivee = SORTIES_GUE.find((s) => s.vers === "terrain")!.arrivee;
+  for (const e of emplacements) {
+    assert.ok(!dansLaRiviere(e.x, e.z), `(${e.x}, ${e.z}) hors de l'eau`);
+    assert.ok([[0, 0], [0.6, 0], [-0.6, 0], [0, 0.6], [0, -0.6]].some(([dx, dz]) => cheminAPied(arrivee, { x: e.x + dx!, z: e.z + dz! }) < Infinity), `(${e.x}, ${e.z}) à pied`);
+  }
+});
+
+test("0.8.2 (R2) : la glaise au milieu de la berge, à pied sec, au nord du camping-car ; le passage depuis la route est direct", () => {
+  assert.ok(!dansLaRiviere(GLAISE.x, GLAISE.z) && !heurte(ZONE_GUE, GLAISE.x + 0.6, GLAISE.z, 0.35));
+  // Depuis la route (au nord), on y va presque en ligne droite : le camping-car n'est plus entre deux.
+  for (const route of [{ x: 80, z: 34 }, { x: 76, z: 34 }]) {
+    const d = cheminAPied(route, GLAISE);
+    assert.ok(d < Math.hypot(GLAISE.x - route.x, GLAISE.z - route.z) * 1.25, `de (${route.x}, ${route.z}) : ${d.toFixed(1)} m`);
+  }
+  // Et la berge au sud du camping-car reste accessible par l'est, sans faire le tour par (72 ; 56).
+  const sud = { x: 84, z: 53 };
+  const d = cheminAPied({ x: 80, z: 34 }, sud);
+  assert.ok(d < Math.hypot(sud.x - 80, sud.z - 34) * 1.2, `vers la berge sud : ${d.toFixed(1)} m`);
+});
+
+test("0.8.2 (R19) : au bord du radier noyé, une ligne le dit, une fois par tentative", () => {
+  const k = tranchePluvieuse(3, 40);
+  const m = monde((k + 0.5) * DUREE_TRANCHE_MS);
+  const rose = m.nouveau("Rose");
+  m.attendre(1);
+  assert.equal(m.gue.niveauEau, "noye");
+  const dites = () => rose.infos().filter((t) => t === LIGNE_RADIER_NOYE).length;
+  const zc = (RADIER.z0 + RADIER.z1) / 2;
+  // Elle marche vers l'ouest, droit sur le radier, et bute au bord de l'eau.
+  rose.joueur.position = { x: RADIER.x1 + 3, z: zc, o: -Math.PI / 2 };
+  rose.joueur.recevoir({ t: "intention", dx: -1, dz: 0, allure: "marche", seq: 1 });
+  m.attendre(5);
+  assert.ok(heurte(zoneGue({ radeau: BAC.cale.x, noye: true }), rose.joueur.position.x - 0.1, zc, 0.35), `elle bute sur l'eau (${rose.joueur.position.x.toFixed(2)})`);
+  assert.equal(dites(), 1, rose.infos().join(" | "));
+  // Elle insiste : rien de plus.
+  m.attendre(5);
+  assert.equal(dites(), 1);
+  // Elle s'éloigne, puis revient essayer : la ligne revient, une fois.
+  rose.joueur.recevoir({ t: "intention", dx: 1, dz: 0, allure: "marche", seq: 2 });
+  m.attendre(4);
+  rose.joueur.recevoir({ t: "intention", dx: -1, dz: 0, allure: "marche", seq: 3 });
+  m.attendre(5);
+  assert.equal(dites(), 2);
+  // Jamais une fenêtre : c'est une ligne d'information.
+  assert.ok(rose.recus.some((r) => r.t === "info" && (r as { texte: string }).texte === LIGNE_RADIER_NOYE));
+  // L'eau basse : rien.
+  const sec = monde();
+  const malo = sec.nouveau("Malo");
+  malo.joueur.position = { x: RADIER.x1 + 3, z: zc, o: -Math.PI / 2 };
+  malo.joueur.recevoir({ t: "intention", dx: -1, dz: 0, allure: "marche", seq: 1 });
+  sec.attendre(3);
+  assert.ok(!malo.infos().includes(LIGNE_RADIER_NOYE));
+});
+
+test("0.8.2 : une partie 0.8.1 se relit (le contenu du gué se régénère, rien de ce qu'on porte ne se perd)", () => {
+  const base = new Base(":memory:");
+  // Le gué d'une 0.8.1 : son contenu en version 2 (ici réduit à quelques pierres, dont une prise), le banc entamé.
+  const ancien = genererGue().filter((r) => r.type !== "buche" && r.id <= 60).map((r) => (r.type === "branche" && r.id > 20 ? { ...r, type: "pierre" as const } : r));
+  const lignes = base.chargerRessourcesLieu("gue", () => ancien, 2);
+  assert.equal(lignes.filter((r) => r.type === "buche").length, 0);
+  const compte = base.creerCompte("Rose", "potager42", "charbonniers");
+  base.sauverInventaire(compte.id, { pierre: 3, glaise: 2, sac_a_dos: 1 });
+  base.sauverInstance(`perso:gue:${compte.id}`, { version: 2, etats: { "1": { prises: 5, depuis: base.debutMonde() } } }, base.debutMonde());
+  // La 0.8.2 relit la même base : le gué a son nouveau contenu (VERSION_GUE), le sac de Rose est intact, son banc plein.
+  const gue = new Gue(base, () => 0.5);
+  assert.equal(VERSION_GUE, 4);
+  assert.equal(parType(gue, "buche").length, 12);
+  assert.equal(parType(gue, "branche").length, 8);
+  assert.equal(parType(gue, "pierre").length, 63);
+  assert.deepEqual(base.chargerInventaire(compte.id), { pierre: 3, glaise: 2, sac_a_dos: 1 });
+  const banc = parType(gue, "banc_galets")[0]!;
+  assert.ok(gue.disponiblePour(banc, compte.id, base.debutMonde() + 1000), "le banc de galets repart plein");
+});
+
+// ---------- Plan 0.8.2 §7.6 : monter sur le radeau depuis le ponton ----------
+
+test("0.8.2 §7.6 : au ponton, on monte sur le radeau sur toute sa largeur, même venu en biais", () => {
+  const zone = zoneGue({ radeau: BAC.ponton.x, noye: false });
+  // Du ponton (son milieu), vers un coin du plancher, en biais : on arrive à bord sans buter.
+  for (const cible of [{ x: BAC.ponton.x - 1, z: BAC.z - 1.5 }, { x: BAC.ponton.x - 1, z: BAC.z + 1.5 }]) {
+    let p = { x: BAC.ponton.embarquement.x + 0.8, z: BAC.z, o: 0 };
+    for (let i = 0; i < 200 && Math.hypot(cible.x - p.x, cible.z - p.z) > 0.1; i++) {
+      const d = Math.hypot(cible.x - p.x, cible.z - p.z);
+      p = avancer(p, { dx: (cible.x - p.x) / d, dz: (cible.z - p.z) / d, allure: "marche" }, 0.05, zone);
+    }
+    assert.ok(Math.hypot(cible.x - p.x, cible.z - p.z) <= 0.1, `arrivé à bord (${p.x.toFixed(2)}, ${p.z.toFixed(2)})`);
+  }
+  // Juste au bout du plancher, sur toute la largeur entre les garde-corps : rien n'arrête.
+  for (const dz of [-1.6, -1, 0, 1, 1.6]) assert.ok(!heurte(zone, BAC.ponton.x - BAC.demiLongueur + 0.05, BAC.z + dz, 0.35), `bout du plancher, ${dz}`);
+  // Le radeau parti, l'eau revient au bout du ponton : on n'y marche pas.
+  const vide = zoneGue({ radeau: BAC.cale.x, noye: false });
+  assert.ok(heurte(vide, BAC.ponton.x - BAC.demiLongueur + 0.2, BAC.z, 0.35));
+});
+
+test("0.8.2 §7.6 : au bord du radeau à quai, « Haler » se propose ; on monte à bord d'un pas et le radeau nous emporte", () => {
+  const m = monde();
+  const rose = m.nouveau("Rose");
+  // Le radeau au ponton.
+  rose.joueur.position = { x: BAC.cale.x, z: BAC.z, o: 0 };
+  rose.joueur.recevoir({ t: "gue", op: "haler" });
+  m.attendre(DUREE_TRAVERSEE_S + 0.5);
+  assert.equal(placeRadeau(m.gue.radeau, m.maintenant()), BAC.ponton.x);
+  rose.joueur.position = { x: BAC.ponton.x, z: BAC.z, o: 0 };
+  rose.joueur.recevoir({ t: "intention", dx: -1, dz: 0, allure: "marche", seq: 1 });
+  m.attendre(3);
+  rose.joueur.recevoir({ t: "intention", dx: 0, dz: 0, allure: "marche", seq: 2 });
+  m.attendre(0.5);
+  const malo = m.nouveau("Malo");
+  // Sur le ponton, à un mètre du bout du radeau : pas à bord, mais au bord.
+  const bord = { x: BAC.ponton.x - BAC.demiLongueur - 0.9, z: BAC.z + 0.3, o: 0 };
+  assert.ok(!aBord(bord.x, bord.z, BAC.ponton.x, 0.45) && auBordDuRadeau(bord.x, bord.z, BAC.ponton.x));
+  assert.ok(!auBordDuRadeau(bord.x - 1, bord.z, BAC.ponton.x), "plus loin sur le ponton : non");
+  assert.ok(!auBordDuRadeau(bord.x, bord.z, BAC.cale.x), "le radeau ailleurs : non");
+  malo.joueur.position = bord;
+  malo.joueur.recevoir({ t: "gue", op: "haler" });
+  assert.equal((malo.dernier("action") as { libelle?: string } | undefined)?.libelle, LIBELLE_HALER);
+  assert.ok(aBord(malo.joueur.position.x, malo.joueur.position.z, BAC.ponton.x, 0), "monté à bord");
+  m.attendre(DUREE_TRAVERSEE_S + 0.5);
+  assert.equal(placeRadeau(m.gue.radeau, m.maintenant()), BAC.cale.x);
+  assert.ok(aBord(malo.joueur.position.x, malo.joueur.position.z, BAC.cale.x, 0), "emporté jusqu'à la cale");
+});
+
+test("0.8.2 §7.6 : la glaise se creuse depuis le bord de sa plaque (2 m de son bord), pas au-delà", () => {
+  const m = monde();
+  const rose = m.nouveau("Rose", { baton_fouir: 1 });
+  const glaise = parType(m.gue, "gisement_glaise")[0]!;
+  const creuser = (d: number) => {
+    rose.joueur.position = { x: glaise.x, z: glaise.z - d, o: 0 };
+    rose.joueur.recevoir({ t: "interagir", cible: { genre: "ressource", id: glaise.id }, verbe: USAGES.gisement_glaise.verbe });
+    m.attendre(6.5);
+    return rose.inv().glaise ?? 0;
+  };
+  assert.equal(creuser(2.6), 1, "à 2,6 m du point, au bord de la plaque : creusé");
+  assert.equal(creuser(3.2), 1, "à 3,2 m : trop loin");
 });

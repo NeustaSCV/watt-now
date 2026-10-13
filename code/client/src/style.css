@@ -797,6 +797,14 @@ body {
   line-height: 1.1;
   font-size: 11px;
   align-self: center;
+  /* Plan 0.8.2 §7.6 : jamais de texte hors du rond (le libellé est raccourci, libelle-bouton.ts). */
+  overflow: hidden;
+}
+/* Un mot long (« Ramasser », « Enseigner ») : un corps plus petit, plutôt qu'un mot coupé en deux. */
+#hud .tactile .b-B.mot-long {
+  font-size: 11px;
+  padding: 4px;
+  letter-spacing: -0.2px;
 }
 
 #hud .tactile {
@@ -1210,6 +1218,13 @@ body {
 
 #hud .fabrication .ingredient.ok {
   color: var(--canard);
+}
+
+/* Des ingrédients au choix (0.8.2) : « 3 ficelles ou 1 corde », sur la même ligne. */
+#hud .fabrication .puces .ou {
+  font-size: 11px;
+  font-style: italic;
+  color: #7a6a58;
 }
 
 #hud .fabrication .outil {
@@ -2049,6 +2064,20 @@ body {
 #hud .rapport[hidden] {
   display: none;
 }
+/* Plan 0.8.2 §7.6 : téléphone en paysage, le rapport se pose sous le bandeau du haut (au centre de l'écran, la carte
+   d'état le recouvrait). Le carnet, lui, s'efface tant qu'on le lit (hud.ts). */
+@media (orientation: landscape) and (max-height: 520px) {
+  #hud .rapport {
+    top: calc(var(--haut-bandeau, 80px) + 6px);
+    transform: translateX(-50%);
+    max-height: calc(100dvh - var(--haut-bandeau, 80px) - 12px);
+    padding: 10px 16px 10px;
+  }
+  #hud .rapport h2 {
+    font-size: 19px;
+    margin-bottom: 4px;
+  }
+}
 #hud .rapport h2 {
   margin: 0 0 8px;
   font-family: Georgia, serif;
@@ -2313,7 +2342,8 @@ body {
 #hud .dodo {
   position: absolute;
   left: 50%;
-  top: 34%;
+  /* Au-dessus du dormeur, pas sur lui : on le voit à sa couche (0.8.2, R12). En paysage sur téléphone, dessous. */
+  bottom: calc(50% + 36px);
   transform: translateX(-50%);
   display: flex;
   flex-direction: column;
@@ -2327,6 +2357,12 @@ body {
 }
 #hud .dodo[hidden] {
   display: none;
+}
+@media (max-height: 480px) {
+  #hud .dodo {
+    bottom: auto;
+    top: calc(50% + 28px);
+  }
 }
 #hud .dodo p {
   margin: 0;
@@ -2857,6 +2893,68 @@ body {
   min-height: 44px;
   accent-color: var(--rouge);
 }
+/* La couleur de cheveux personnalisée (R8, 0.8.2) : le « + » au bout des pastilles, puis trois curseurs dépliés dessous. */
+.apparence .pastilles .plus {
+  background: #fffaf0;
+  color: var(--encre);
+  padding: 0;
+  font: 700 24px/1 "Futura", "Avenir Next", sans-serif;
+  box-shadow: inset 0 0 0 2px rgba(59, 42, 30, 0.5);
+}
+.apparence .pastilles .plus.choisie {
+  color: #fff;
+  text-shadow: 0 0 3px rgba(0, 0, 0, 0.7);
+}
+.apparence .cheveux-perso {
+  display: grid;
+  gap: 2px;
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: rgba(255, 250, 240, 0.7);
+  box-shadow: inset 0 0 0 2px rgba(59, 42, 30, 0.2);
+}
+.apparence .cheveux-perso[hidden] {
+  display: none;
+}
+.apparence .cheveux-perso label {
+  display: grid;
+  grid-template-columns: 4.2em 1fr;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+/* La piste montre la couleur où mène le curseur (--piste, posée par apparence-ecran.ts). */
+.apparence .cheveux-perso input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  min-height: 0;
+  height: 26px;
+  margin: 9px 0;
+  border-radius: 13px;
+  background: var(--piste, #ccc);
+  box-shadow: inset 0 0 0 1px rgba(59, 42, 30, 0.35);
+}
+.apparence .cheveux-perso input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  background: transparent;
+  box-shadow: 0 0 0 2px var(--encre), 0 1px 4px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+}
+.apparence .cheveux-perso input[type="range"]::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  background: transparent;
+  box-shadow: 0 0 0 2px var(--encre), 0 1px 4px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+}
 .actions-apparence {
   display: flex;
   flex-wrap: wrap;
@@ -2889,6 +2987,52 @@ body {
   .apparence .reglages {
     max-height: none;
     overflow: visible;
+  }
+}
+
+/* ---------- Les trois écrans d'accueil en paysage sur téléphone (0.8.2, défaut de la recette de la 0.8) ----------
+   Le module de la session intro (client/public/intro/, servi tel quel) passe le texte SOUS l'image dès que l'image fait
+   moins de 380 px de haut. Sur un téléphone couché (812 × 320), l'image et le texte ne tiennent pas l'un sous l'autre :
+   l'image, écrasée par la colonne, disparaît (fond noir). Ici, quand le texte est sorti de l'image (`.wi-cinema >
+   .wi-ecran-bas`), on les met côte à côte : l'image à gauche, entière, le texte à droite. Le jeu n'affiche jamais la
+   cinématique, seulement l'accueil (`.wi-racine`) : le cadre des cartons de la cinématique, vide ici, est retiré. */
+@media (orientation: landscape) and (max-height: 520px) {
+  .wi-racine .wi-cinema:has(> .wi-ecran-bas) {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    padding: 0 env(safe-area-inset-right) 0 env(safe-area-inset-left);
+  }
+  .wi-racine .wi-cinema:has(> .wi-ecran-bas) > .wi-cartons-dessous {
+    display: none !important;
+  }
+  .wi-racine .wi-cinema:has(> .wi-ecran-bas) > .wi-cadre {
+    flex: 0 0 auto;
+    width: min(60vw, calc(100dvh * 16 / 9));
+  }
+  .wi-racine .wi-cinema > .wi-ecran-bas {
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto;
+    max-height: 100dvh;
+    overflow-y: auto;
+    padding: 10px 14px;
+  }
+  .wi-racine .wi-cinema > .wi-ecran-bas .wi-ecran-titre {
+    font-size: 22px;
+    margin-bottom: 6px;
+  }
+  .wi-racine .wi-cinema > .wi-ecran-bas .wi-ecran-texte {
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  .wi-racine .wi-cinema > .wi-ecran-bas .wi-ecran-pied {
+    margin-top: 12px;
+  }
+  .wi-racine .wi-cinema > .wi-ecran-bas .wi-suivant {
+    min-height: 44px;
+    font-size: 14px;
+    padding: 10px 16px;
   }
 }
 
@@ -5293,27 +5437,30 @@ body:has(#hud .voile-pause:not([hidden])) #hud .tactile {
   box-shadow: inset 3px 0 0 #e8c25a;
 }
 
-/* ---------- « Tu y penses » et la clé d'un niveau (plan 0.8, chantier 2) ----------
-   Le bandeau de l'idée, dans la charte du carnet (papier crème, encre brune, un filet ocre) : en haut au centre, sous la
-   rangée de tuiles, il passe seul en 9 s ou se ferme d'un bouton (jamais de croix). Dans la fiche d'un meuble, la ligne
-   de la clé : son icône, son nom, puis « déjà en poche » ou l'indice « où chercher ». */
+/* ---------- « Tu y penses » et la clé d'un niveau (plan 0.8, chantier 2 ; plan 0.8.2, chantier H, R22) ----------
+   Le message de l'idée, dans la charte du carnet (papier crème, encre brune, un filet ocre) : en haut au centre, sous la
+   rangée de tuiles. Un message d'information : pas de bouton, un papier assez transparent pour voir le jeu au travers,
+   aucun toucher ni clic pris (on joue à travers), et il part seul. Dans la fiche d'un meuble, la ligne de la clé : son
+   icône, son nom, puis « déjà en poche » ou l'indice « où chercher ». */
 #hud .bandeau-idee {
   position: absolute;
   top: calc(var(--haut-bandeau, 120px) + 8px);
   left: 50%;
   transform: translateX(-50%);
   z-index: 30;
-  width: min(500px, calc(100vw - 32px));
+  width: min(440px, calc(100vw - 32px));
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 9px 10px 9px 12px;
+  gap: 9px;
+  padding: 6px 12px 6px 9px;
   border-radius: 10px;
-  border-left: 4px solid var(--ocre);
-  background: rgba(244, 236, 216, 0.96);
+  border-left: 4px solid rgba(201, 138, 46, 0.85);
+  background: rgba(244, 236, 216, 0.55);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
   color: var(--encre);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-  pointer-events: auto;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  pointer-events: none;
   animation: idee-entre 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2);
 }
 #hud .bandeau-idee[hidden] {
@@ -5334,78 +5481,63 @@ body:has(#hud .voile-pause:not([hidden])) #hud .tactile {
   flex: none;
   display: grid;
   place-items: center;
-  width: 42px;
-  height: 42px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(201, 138, 46, 0.35), rgba(201, 138, 46, 0.08) 70%);
-  font-size: 24px;
+  background: radial-gradient(circle, rgba(201, 138, 46, 0.3), rgba(201, 138, 46, 0.05) 70%);
+  font-size: 21px;
 }
 #hud .bandeau-idee p {
   flex: 1;
   min-width: 0;
   margin: 0;
-  font-size: 13.5px;
-  line-height: 1.35;
+  font-size: 13px;
+  line-height: 1.32;
+  /* Sur le papier clair et transparent, une encre un peu plus soutenue reste lisible devant l'herbe ou le béton. */
+  text-shadow: 0 0 6px rgba(244, 236, 216, 0.9);
 }
 #hud .bandeau-idee strong {
   font-family: Georgia, "Times New Roman", serif;
   font-style: italic;
-  font-size: 14.5px;
+  font-size: 14px;
   color: var(--charbonniers);
 }
 #hud .bandeau-idee em {
   font-size: 12px;
-  opacity: 0.75;
+  opacity: 0.8;
 }
 #hud .bandeau-idee .texte {
   display: block;
 }
-#hud .bandeau-idee .garder {
-  flex: none;
-  min-height: 40px;
-  padding: 0 14px;
-  border: none;
-  border-radius: 8px;
-  background: var(--canard);
-  color: #fff;
-  font: inherit;
-  font-weight: 600;
-  font-size: 13px;
-  cursor: pointer;
-}
-/* Téléphone en vertical : le bouton passe sous le texte, à droite, pour garder deux lignes lisibles ; le bandeau
-   descend sous la colonne des messages, qui reste lisible au-dessus. */
+/* Téléphone en vertical : le message descend sous la colonne des messages, qui reste lisible au-dessus. */
 @media (max-width: 420px) {
   #hud .bandeau-idee {
     top: calc(var(--haut-bandeau, 120px) + 58px);
-    flex-wrap: wrap;
     width: calc(100vw - 24px);
-  }
-  #hud .bandeau-idee p {
-    flex-basis: calc(100% - 56px);
-    font-size: 13px;
-  }
-  #hud .bandeau-idee .garder {
-    margin-left: auto;
-    min-height: 36px;
-  }
-}
-/* Téléphone en paysage : plus bas de plafond, le bandeau se fait plus mince. */
-@media (orientation: landscape) and (max-height: 520px) {
-  #hud .bandeau-idee {
-    /* Entre le joystick et la colonne des boutons d'action, sans mordre sur « Lancer ». */
-    width: min(430px, 52vw);
-    padding: 6px 8px 6px 10px;
-  }
-  #hud .bandeau-idee .trouvaille {
-    width: 34px;
-    height: 34px;
   }
   #hud .bandeau-idee p {
     font-size: 12.5px;
   }
-  #hud .bandeau-idee .garder {
-    min-height: 34px;
+}
+/* Téléphone en paysage : plus bas de plafond, le personnage est au milieu ; le message passe en bas, entre le
+   joystick et les boutons, là où rien ne se joue. */
+@media (orientation: landscape) and (max-height: 520px) {
+  #hud .bandeau-idee {
+    top: auto;
+    bottom: max(10px, env(safe-area-inset-bottom));
+    width: min(400px, 50vw);
+    padding: 4px 10px 4px 8px;
+  }
+  #hud .bandeau-idee.sortie {
+    transform: translate(-50%, 6px);
+  }
+  #hud .bandeau-idee .trouvaille {
+    width: 30px;
+    height: 30px;
+    font-size: 18px;
+  }
+  #hud .bandeau-idee p {
+    font-size: 12px;
   }
 }
 
@@ -5423,7 +5555,8 @@ body:has(#hud .voile-pause:not([hidden])) #hud .tactile {
   font-weight: 600;
 }
 #hud .panneau.fiche .ligne-cle .nom-cle::before {
-  content: "Clé : ";
+  /* 0.8.2 (R9) : jamais « clé » à l'écran ; la pièce qui manque. */
+  content: "Il te faut : ";
   font-weight: 400;
   opacity: 0.7;
 }
@@ -5754,4 +5887,406 @@ body:has(#hud .voile-pause:not([hidden])) #hud .tactile {
 }
 #hud .panneau.fiche details.ou-trouver ul.manque li + li {
   margin-top: 3px;
+}
+
+/* La fiche du banc (0.8.2, chantier C) : une ligne par chose qui se charge, le bouton « Charger » à droite, même sur
+   téléphone (plus de lignes visibles à 375 × 630). */
+#hud .panneau.fiche .etape.banc-chose,
+#hud .panneau.fiche .etape.banc-batterie {
+  flex-direction: row;
+  align-items: center;
+  opacity: 1;
+}
+#hud .panneau.fiche .etape.banc-chose > button,
+#hud .panneau.fiche .etape.banc-batterie > button {
+  flex: 0 0 auto;
+  min-width: 92px;
+}
+/* « Échanger » et « Manivelle », l'un sous l'autre : le texte de la batterie garde sa largeur sur téléphone. */
+#hud .panneau.fiche .etape.banc-batterie > .boutons-banc {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+#hud .panneau.fiche .etape.banc-batterie > .boutons-banc button {
+  min-width: 92px;
+}
+#hud .panneau.fiche .etape.banc-chose .corps strong {
+  overflow-wrap: anywhere;
+}
+
+/* ---------- La vue d'ensemble à l'arrivée (0.8.2, chantier G) : l'invite du premier geste ---------- */
+
+/* Discrète : une ligne sur le fond du HUD, à la place de l'invite des actions (vide pendant la vue d'ensemble), qui
+   respire doucement ; ni fenêtre, ni croix. */
+#hud .invite-arrivee {
+  position: absolute;
+  left: 50%;
+  bottom: max(70px, calc(env(safe-area-inset-bottom) + 58px));
+  transform: translateX(-50%);
+  background: var(--hud-fond);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border-radius: 999px;
+  padding: 8px 18px;
+  color: var(--hud-texte);
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: respirer-arrivee 2.4s ease-in-out infinite;
+}
+
+#hud .invite-arrivee[hidden] {
+  display: none;
+}
+
+@keyframes respirer-arrivee {
+  0%,
+  100% {
+    opacity: 0.92;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* Pendant qu'on regarde le lieu, le manche et les boutons tactiles s'effacent (le premier toucher ne sert qu'à commencer). */
+body.vue-ensemble #joystick,
+body.vue-ensemble #hud .tactile {
+  visibility: hidden;
+}
+
+/* Paysage bas (812 × 320) : tout en bas, entre le manche et les boutons. */
+@media (max-height: 420px) {
+  #hud .invite-arrivee {
+    bottom: max(14px, env(safe-area-inset-bottom));
+    font-size: 13px;
+    padding: 6px 14px;
+  }
+}
+
+/* ---------- Le sac et l'écran (0.8.2, chantier H) ---------- */
+
+/* Le sac (R6) : l'arme en main au combat (choisie ou prise d'office) et le sac sur le dos ont la même marque, une
+   pastille sombre en coin (⚔ l'arme, ✓ le sac), lisible sur la case crème comme sur une ordure grisée. */
+#hud .sac .case.equipee::after,
+#hud .sac .case.portee::after {
+  content: "";
+  position: absolute;
+  /* Dans la case : la grille défile, un débord serait coupé. */
+  left: 1px;
+  top: 1px;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  border: 1.5px solid #fffaf0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  /* Deux épées croisées, dessinées (le caractère ⚔ sort trop fin à 11 px). */
+  background: var(--canard) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23fffaf0' stroke-width='1.8' stroke-linecap='round'%3E%3Cpath d='M3 3l9.5 9.5M13 3l-9.5 9.5M9.5 13.5l4-4M2.5 9.5l4 4'/%3E%3C/svg%3E") center / 11px no-repeat;
+}
+#hud .sac .case.portee::after {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23fffaf0' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.5l3 3 6-7'/%3E%3C/svg%3E");
+}
+
+/* L'aide des touches sur ordinateur (R7), le temps du tutoriel : un petit rectangle en bas à gauche, une case par
+   action, des touches dessinées (en relief, claires sur tous les habits) et une souris dont le bouton utile est plein.
+   Un filet sépare chaque case : plus de doute sur ce qui va avec quoi. */
+#hud .bloc.aide {
+  left: max(12px, env(safe-area-inset-left));
+  right: auto;
+  bottom: max(12px, env(safe-area-inset-bottom));
+  width: 372px;
+  padding: 6px 8px 5px;
+  font-size: 12px;
+  line-height: 1.2;
+  opacity: 0.94;
+  pointer-events: none;
+}
+#hud .bloc.aide[hidden] {
+  display: none;
+}
+/* Pendant la vue d'ensemble à l'arrivée (chantier G), l'aide s'efface avec le manche : on regarde le lieu, et
+   l'invite du premier geste passe seule en bas. */
+body.vue-ensemble #hud .bloc.aide {
+  visibility: hidden;
+}
+#hud .aide-touches {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+#hud .aide-touches li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  min-height: 25px;
+  padding: 3px 6px;
+  border-top: 1px solid rgba(242, 239, 230, 0.2);
+}
+#hud .aide-touches li:nth-child(-n + 2) {
+  border-top: none;
+}
+#hud .aide-touches li:nth-child(odd) {
+  border-right: 1px solid rgba(242, 239, 230, 0.2);
+}
+#hud .aide-touches .touches {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+  min-width: 52px;
+}
+#hud .aide-touches .quoi {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#hud .aide-touches .ou {
+  font-size: 10px;
+  opacity: 0.7;
+}
+/* Les quatre touches de marche, en croix comme sur le clavier. */
+#hud .aide-touches .croix {
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  gap: 2px;
+}
+#hud .aide-touches .croix kbd:first-child {
+  grid-column: 2;
+}
+#hud .aide-touches .croix kbd:nth-child(2) {
+  grid-column: 1;
+}
+#hud kbd.touche {
+  display: inline-grid;
+  place-items: center;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 3px;
+  border-radius: 4px;
+  border: 1px solid rgba(20, 16, 12, 0.6);
+  background: linear-gradient(#fbf7ec, #ddd5c0);
+  box-shadow: 0 2px 0 rgba(20, 16, 12, 0.55);
+  color: #1c2333;
+  font: 700 10.5px/1 -apple-system, "Segoe UI", Roboto, sans-serif;
+  text-shadow: none;
+  margin-bottom: 2px;
+}
+#hud kbd.touche.large {
+  padding: 0 5px;
+}
+#hud .aide-touches .souris {
+  display: inline-grid;
+  place-items: center;
+  line-height: 0;
+}
+#hud .bloc.aide .changer {
+  margin: 4px 0 0;
+  padding: 4px 6px 0;
+  border-top: 1px solid rgba(242, 239, 230, 0.2);
+  font-size: 10.5px;
+  opacity: 0.75;
+}
+#hud.habit-mecanistes .aide-touches li,
+#hud.habit-mecanistes .bloc.aide .changer {
+  border-color: rgba(35, 64, 138, 0.25);
+}
+/* Ordinateur à l'écran moyen : l'invite (E · F), l'allure et la progression se décalent à droite de l'aide, pour ne
+   jamais passer dessous. */
+@media (min-width: 561px) and (max-width: 1300px) and (min-height: 521px) {
+  #hud:has(.bloc.aide:not([hidden])) .invite,
+  #hud:has(.bloc.aide:not([hidden])) .progression,
+  #hud:has(.bloc.aide:not([hidden])) .mode-clavier {
+    left: calc(50% + 192px);
+  }
+}
+/* Petit écran sans toucher (une fenêtre étroite, une tablette au clavier ; recette 0.8 : l'aide des Voltaïques, en
+   Courier sur six lignes, recouvrait l'invite) : l'aide devient une bande en bas, aux lignes fixes, et l'invite,
+   l'allure et la progression montent au-dessus d'elle. */
+@media (max-width: 560px), (max-height: 520px) {
+  #hud .bloc.aide {
+    right: max(12px, env(safe-area-inset-right));
+    width: auto;
+    max-width: 560px;
+    padding: 4px 6px;
+    font-size: 11px;
+  }
+  #hud .aide-touches {
+    grid-auto-rows: 21px;
+  }
+  #hud .aide-touches li {
+    min-height: 0;
+    padding: 0 5px;
+    gap: 5px;
+  }
+  #hud .aide-touches .croix {
+    display: inline-flex;
+  }
+  #hud kbd.touche {
+    min-width: 15px;
+    height: 15px;
+    font-size: 9.5px;
+  }
+  #hud .aide-touches .souris svg {
+    width: 11px;
+    height: 16px;
+  }
+  #hud .aide-touches .touches {
+    min-width: 0;
+  }
+  #hud .bloc.aide .changer {
+    display: none;
+  }
+  #hud:has(.bloc.aide:not([hidden])) .invite {
+    bottom: calc(var(--haut-aide) + 18px);
+    /* « Fouiller : sac-poubelle crevé », en Courier, débordait de l'écran : il passe à la ligne. */
+    max-width: calc(100vw - 24px);
+    white-space: normal;
+    text-align: center;
+  }
+  #hud:has(.bloc.aide:not([hidden])) .mode-clavier {
+    bottom: calc(var(--haut-aide) + 66px);
+  }
+  #hud:has(.bloc.aide:not([hidden])) .progression {
+    bottom: calc(var(--haut-aide) + 104px);
+  }
+}
+@media (max-width: 560px) {
+  #hud {
+    /* Six lignes de 21 px et le bord (mesuré). */
+    --haut-aide: 136px;
+  }
+}
+@media (max-height: 520px) and (min-width: 561px) {
+  #hud {
+    --haut-aide: 73px;
+  }
+  /* En paysage bas de plafond : quatre colonnes sur trois lignes. */
+  #hud .aide-touches {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  #hud .aide-touches li:nth-child(-n + 4) {
+    border-top: none;
+  }
+  #hud .aide-touches li:nth-child(odd) {
+    border-right: none;
+  }
+  #hud .aide-touches li:not(:nth-child(4n)) {
+    border-right: 1px solid rgba(242, 239, 230, 0.2);
+  }
+}
+
+/* Le guichet du Comptoir sur téléphone (recette 0.8 : une seule ligne d'étal visible, la règle `max-height` de
+   `#hud .panneau` gardait 290 px pour les commandes du bas). Comme le sac et le coffre, il devient un volet qui descend
+   jusqu'en bas (le joystick, Explorer, Lumière, A et B se cachent tant qu'il est ouvert ; sa croix le ferme) ; son en-tête se fait
+   plus mince et reste en place, seule la liste défile : au moins quatre lignes à 375 × 630. */
+@media (max-width: 560px) and (orientation: portrait), (orientation: landscape) and (max-height: 520px) {
+  #hud .panneau.comptoir {
+    bottom: max(8px, env(safe-area-inset-bottom)) !important;
+    max-height: none !important;
+    z-index: 13;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding-bottom: 4px;
+  }
+  #hud .panneau.comptoir[hidden] {
+    display: none;
+  }
+  body:has(#hud .panneau.comptoir:not([hidden])) #hud .tactile,
+  body:has(#hud .panneau.comptoir:not([hidden])) #joystick {
+    display: none !important;
+  }
+  #hud .panneau.comptoir header,
+  #hud .panneau.comptoir .bons,
+  #hud .panneau.comptoir nav {
+    flex: none;
+  }
+  #hud .panneau.comptoir .bandeau {
+    padding: 4px 12px 3px;
+  }
+  #hud .panneau.comptoir .bandeau strong {
+    font-size: 17px;
+  }
+  #hud .panneau.comptoir .bandeau span {
+    font-size: 11px;
+  }
+  #hud .panneau.comptoir .bons {
+    padding: 5px 12px 1px;
+  }
+  #hud .panneau.comptoir .bons strong {
+    font-size: 16px;
+  }
+  #hud .panneau.comptoir nav {
+    padding: 3px 12px 0;
+  }
+  #hud .panneau.comptoir nav button {
+    padding: 5px 8px;
+    font-size: 12.5px;
+  }
+  #hud .panneau.comptoir .contenu {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 4px 12px 0;
+  }
+  #hud .panneau.comptoir .lignes li {
+    gap: 6px;
+    padding: 3px 0;
+  }
+  #hud .panneau.comptoir .lignes li svg {
+    flex: none;
+    width: 28px;
+    height: 28px;
+  }
+  #hud .panneau.comptoir .lignes .nom {
+    min-width: 0;
+    font-size: 12.5px;
+    line-height: 1.15;
+  }
+  #hud .panneau.comptoir .prix {
+    font-size: 12px;
+  }
+  #hud .panneau.comptoir .contenu button {
+    min-height: 32px;
+    padding: 3px 7px;
+    font-size: 11.5px;
+  }
+  #hud .panneau.comptoir .tampon-guichet {
+    display: none;
+  }
+}
+
+/* Le texte d'Examiner (Q9) : en entier, jamais coupé à deux lignes comme les autres messages ; la colonne des messages
+   s'allonge le temps qu'il est là. */
+#hud .messages p.examen {
+  display: block;
+  -webkit-line-clamp: unset;
+  line-clamp: none;
+  overflow: visible;
+}
+#hud .messages:has(p.examen) {
+  max-height: none;
+  overflow: visible;
+}
+@media (orientation: landscape) and (max-height: 520px) {
+  #hud .messages p.examen:not(:last-child) {
+    -webkit-line-clamp: unset;
+    line-clamp: none;
+  }
+}
+/* En paysage sur téléphone, la colonne des messages s'arrêtait sous Explorer et Lumière (un texte entier y passait
+   dessous) : elle s'arrête avant la colonne des boutons. */
+@media (orientation: landscape) and (max-height: 520px) and (pointer: coarse) {
+  #hud .messages {
+    right: calc(max(16px, env(safe-area-inset-right)) + 196px) !important;
+  }
 }

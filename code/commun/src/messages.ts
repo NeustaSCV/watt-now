@@ -9,6 +9,8 @@ import type { AnimalVu } from "./faune.ts";
 import type { Apparence } from "./apparence.ts";
 import type { Position } from "./deplacement.ts";
 import type { MouvementRadeau } from "./gue.ts";
+import type { CibleCharge } from "./banc.ts";
+import type { ModeArrivee } from "./arrivee.ts";
 import type { Charges, TypeBatterie } from "./energie.ts";
 import type { LieuId, LieuJouable } from "./lieux.ts";
 import type { Saignement, TypeBlessure } from "./combat.ts";
@@ -171,6 +173,8 @@ export interface EtatInstallation {
   batteries?: Partial<Record<TypeBatterie, number>>;
   charges?: Charges;
   majLe?: number;
+  /** Banc (0.8.2, R17) : sa batterie a été échangée contre une du sac (ce n'est plus celle de la ruine). */
+  batterieEchangee?: boolean;
   /** Escabeau (objet lourd) : dans les bras du joueur, en cours de déplacement. */
   portee?: boolean;
   /** Récupérateur de pluie : l'eau recueillie, en litres (le calcul se fait jusqu'à `majLe`). */
@@ -238,6 +242,10 @@ export type MessageClient =
   | MessageClientReprise
   // Les constats de l'interface (plan 0.8, chantier 14) : voir le bloc « constats » en fin de fichier.
   | MessageClientConstat
+  // Le banc de recharge (0.8.2, chantier C) : voir le bloc « banc » en fin de fichier.
+  | MessageClientBanc
+  // La vue d'ensemble à l'arrivée (0.8.2, chantier G) : voir le bloc « arrivée » en fin de fichier.
+  | MessageClientArrivee
   | { t: "interagir"; cible: Cible; verbe: Verbe }
   | { t: "manger"; objet: TypeObjet }
   | { t: "boire" }
@@ -291,9 +299,7 @@ export type MessageClient =
    */
   | { t: "lancer"; dx: number; dz: number; cible?: number; distance?: number }
   /** Réarmer l'arbalète : un geste, immobile (chantier 7). */
-  | { t: "rearmer" }
-  /** Recharger un pack à la manivelle de la lampe à dynamo (Voltaïques, chantier 6). */
-  | { t: "manivelle"; objet: CleObjet };
+  | { t: "rearmer" };
 
 export type OperationEchange =
   /** Proposer un échange à un joueur proche. */
@@ -497,6 +503,8 @@ export type MessageServeur =
   | MessageServeurDechets
   // Reprendre une arme sur son meuble (plan 0.8, chantier 9) : voir le bloc « reprise » en fin de fichier.
   | MessageServeurReprise
+  // Dormir dans l'abri (0.8.2, chantier I) : voir le bloc « la couche » en fin de fichier.
+  | MessageServeurCouche
   | { t: "expulse"; raison: string }
   | { t: "inventaire"; inventaire: Inventaire }
   | { t: "besoins"; besoins: Besoins; gourde: Gourde }
@@ -714,3 +722,36 @@ export type MessageClientConstat =
    * sans pouvoir l'améliorer (`construction` : son type), l'aide « Je suis coincé » ouverte. Le serveur en fait un fait.
    */
   { t: "constat"; quoi: "fiche_bloquee" | "aide_coince"; construction?: string };
+
+// ---------- Le banc de recharge (0.8.2, chantier C : R17 ; commun/src/banc.ts, serveur/src/electricite.ts) ----------
+
+export type MessageClientBanc =
+  /** Depuis la fiche du banc : charger une chose qu'on porte (une batterie, une arme électrique) depuis la batterie du banc. */
+  | { t: "banc"; id: number; op: "charger"; cible: CibleCharge }
+  /** Échanger la batterie du banc contre une batterie du sac : l'ancienne revient au sac. */
+  | { t: "banc"; id: number; op: "echanger" }
+  /** Tourner la manivelle de la lampe à dynamo : elle remplit lentement la batterie du banc (R17, le secours lent). */
+  | { t: "banc"; id: number; op: "manivelle" };
+
+// ---------- Dormir dans l'abri : le trajet jusqu'à la couche (0.8.2, chantier I : R12 ; commun/src/sommeil-abri.ts) ----------
+
+export type MessageServeurCouche =
+  /**
+   * Le personnage se rend accroupi jusqu'à sa couche, par ce trajet (le client le prédit, comme le serveur) ; `o` :
+   * l'orientation du dormeur. `chemin: null` : le trajet est interrompu (on a bougé, on est saisi).
+   */
+  { t: "vers_couche"; chemin: { x: number; z: number }[] | null; o: number };
+
+// ---------- La vue d'ensemble à l'arrivée (0.8.2, chantier G : R4 ; commun/src/arrivee.ts, serveur/src/arrivee.ts) ----------
+
+export type MessageClientArrivee =
+  /** Le premier geste après l'arrivée : la vue zoome vers le personnage, la pause (ou la protection) prend fin. */
+  { t: "arrivee" };
+
+export interface Bienvenue {
+  /**
+   * Présent seulement à l'arrivée d'un voyage (jamais à une connexion) : la vue d'ensemble, et comment le serveur attend
+   * le premier geste (`mode`) ; `protection` : dans une halte, combien de millisecondes on reste à l'abri au plus.
+   */
+  arrivee?: { mode: ModeArrivee; protection: number };
+}

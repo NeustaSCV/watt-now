@@ -127,6 +127,8 @@ test("les fouilles existantes donnent aussi le couteau, l'onduleur, la trottinet
 
 test("chaque table : ≈ 70 % de déchets, ≈ 25 % de petites trouvailles, ≈ 5 % de bonnes", () => {
   for (const lieu of LIEUX) {
+    // La berge du gué tire par groupes, pas par paliers (dechets-berge.test.ts).
+    if (PROFILS_DECHETS[lieu].groupes) continue;
     const table = tableDechets(lieu);
     assert.ok(table.dechet.length >= 5, `${lieu} : des déchets`);
     const compte: Record<Palier, number> = { dechet: 0, petite: 0, bonne: 0 };
@@ -292,4 +294,12 @@ test("chaque matière qui manquait (§2.2) se trouve désormais, au débit visé
   assert.ok((POINTS_DECHETS.tas_gravats.donne.pierre ?? 0) > 0);
   // Le couteau et la conserve restent rares ; les matières de base, communes.
   assert.equal(EXISTANTS_DANS_LES_DECHETS.couteau?.rarete, "R");
+});
+
+test("0.8.2 §7.6 : chaque profil de déchets a sa propre lettre ; le Comptoir garde les déchets d'un parking", () => {
+  const lettres = Object.values(PROFILS_DECHETS).map((p) => p.code);
+  assert.equal(new Set(lettres).size, lettres.length, `lettres en double : ${lettres.join(" ")}`);
+  assert.notEqual(PROFILS_DECHETS.comptoir.code, PROFILS_DECHETS.parking.code);
+  const parking = new Set(tableDechets("parking").dechet.map(([t]) => t));
+  for (const [t] of tableDechets("comptoir").dechet) assert.ok(parking.has(t), `${t} : un déchet du parking`);
 });

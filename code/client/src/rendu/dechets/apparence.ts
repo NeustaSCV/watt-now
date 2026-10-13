@@ -237,6 +237,12 @@ export const APPARENCES: Partial<Record<TypeObjet, ApparenceObjet>> = {
   stylo_ressort: { s: "barre", e: [0.14, 0.5, 0.5], t: BLEU },
   // ---- Le lot 1 (salle de bain, salon) ----
   plumeau: { s: "barre", e: [0.6, 2, 2], t: 0xd8a8c8 },
+  // ---- La berge du gué (plan 0.8.2, chantier F) : ce que la rivière laisse, et le bout de ficelle ----
+  branche: { s: "barre", e: [1.3, 2.2, 2.2], t: 0x8a7a64 },
+  fibres: { s: "chiffon", e: [0.6, 0.5, 0.5], t: 0xb8a878 },
+  plumes: { s: "plaque", e: [0.35, 1, 0.35], t: 0xf0ece0 },
+  os: { s: "barre", e: [0.3, 1.4, 1.4], t: 0xe8dcc0 },
+  ficelle: { s: "bobine", e: [0.5, 0.6, 0.5], t: 0xc8b088 },
 };
 
 /** Au sol, faute d'entrée : une boîte grise de la taille de son poids (un objet ajouté plus tard sans apparence). */

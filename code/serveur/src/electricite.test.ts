@@ -1,6 +1,6 @@
 // 0.6, chantier 6 (Book 25 §5 et §10.3) : les Voltaïques. Un Voltaïque seul monte sa matraque de fortune ; la courte
 // puis la longue éteignent un Errant comme un Équipé ; une courte libère une prise ; chaque décharge prend ses Wh et le
-// pack vide fait un gourdin court ; la manivelle recharge 1 Wh par minute, le banc bien plus vite ; la clôture tient un
+// pack vide fait un gourdin court ; la manivelle remplit la batterie du banc de 1 Wh par minute, le banc charge bien plus vite ; la clôture tient un
 // Éteint, trois qui poussent la couchent, elle ne détruit jamais ; la plaque se réarme pour 0,5 Wh.
 
 import { test } from "node:test";
@@ -138,8 +138,12 @@ test("0.6 Voltaïques : l'endurance d'une décharge (5 la courte, 8 la longue) e
 // ---------- Les recettes : seul, on fait sa base ----------
 
 test("0.6 Voltaïques : un Voltaïque seul monte une matraque de fortune avec son kit et un appareil photo, à son banc", () => {
-  // Plan 0.8 : le métier se fait à l'atelier ; la matraque se monte au banc de recharge (son lieu).
-  const t = surLeTerrain({ ...kitDeDepart("voltaiques"), appareil_photo_jetable: 1, buche: 1, fibres: 2 }, [{ type: "banc_recharge", x: 21, z: 20 }]);
+  // Plan 0.8 : le métier se fait à l'atelier ; la matraque se monte au banc de recharge (son lieu), son panneau posé
+  // (R26, 0.8.2 : les armes de métier attendent le meuble complet).
+  const t = surLeTerrain({ ...kitDeDepart("voltaiques"), appareil_photo_jetable: 1, buche: 1, fibres: 2 }, [{ type: "banc_recharge", x: 21, z: 20, etat: { panneau: true } }]);
+  // 0.8.2 : l'appareil se démonte d'abord ; c'est son petit condensateur qui va dans le manche.
+  t.joueur.recevoir({ t: "demonter", objet: "appareil_photo_jetable" });
+  t.attendre(8);
   for (const r of ["gourdin", "ficelle", "matraque_fortune"]) {
     t.joueur.recevoir({ t: "fabriquer", recette: r });
     t.attendre(8);
@@ -148,8 +152,9 @@ test("0.6 Voltaïques : un Voltaïque seul monte une matraque de fortune avec so
   assert.equal(inv.matraque_fortune, 1, t.infos().join(" | "));
   assert.equal(inv.petite_batterie, undefined, "la petite batterie du kit est dans le manche");
   assert.equal(inv.appareil_photo_jetable, undefined);
+  assert.equal(inv.petit_condensateur, undefined, "le petit condensateur est dans le manche");
   // Rien d'une autre famille dans la recette.
-  for (const id of ["matraque_fortune", "matraque_electrique", "aiguillon", "pack_cellules", "module_raquette", "cloture_fortune"]) {
+  for (const id of ["matraque_fortune", "matraque_electrique", "aiguillon", "pack_cellules", "module_decharge", "cloture_fortune"]) {
     assert.ok(recettesConnues("voltaiques").some((r) => r.id === id), id);
     for (const t2 of Object.keys(recette(id)!.ingredients)) assert.ok(!["electrodes_forgees", "manche_tourne", "ressort_retrempe"].includes(t2), `${id} : ${t2}`);
   }
@@ -158,9 +163,12 @@ test("0.6 Voltaïques : un Voltaïque seul monte une matraque de fortune avec so
 test("0.6 Voltaïques : seul, une matraque ★★ (raquette, pack) dès le premier jour, au banc", () => {
   const t = surLeTerrain(
     { couteau: 1, sac_a_dos: 1, raquette_moustiques: 1, fil_cuivre: 2, cellule_lithium: 3, ficelle: 1, gourdin: 1, caoutchouc: 1 },
-    [{ type: "banc_recharge", x: 21, z: 20 }],
+    [{ type: "banc_recharge", x: 21, z: 20, etat: { panneau: true } }],
   );
-  for (const r of ["module_raquette", "pack_cellules", "matraque_electrique"]) {
+  // 0.8.2 (R14) : la raquette se démonte en condensateur moyen, qui fait le module ★★.
+  t.joueur.recevoir({ t: "demonter", objet: "raquette_moustiques" });
+  t.attendre(8);
+  for (const r of ["module_decharge", "pack_cellules", "matraque_electrique"]) {
     t.joueur.recevoir({ t: "fabriquer", recette: r });
     t.attendre(8);
   }
@@ -181,16 +189,16 @@ test("0.6 Voltaïques : les étoiles de l'arme suivent le module ; électrodes �
   // La maîtrise : une de plus ; hors famille : ★★ au plus, et ×1,5.
   assert.equal(etoilesDuProduit(matraque, { ...base, module_decharge: 1 }, { maitrise: true }), 4);
   assert.equal(etoilesDuProduit(matraque, { ...base, module_decharge: 1 }, { horsFamille: true }), 2);
-  assert.equal(recetteHorsFamille(matraque).ingredients.pack_cellules, 2);
-  // Les modules : ★ flash, ★★ raquette, ★★★ bobine.
-  assert.equal(etoilesDuProduit(recette("module_flash")!, {}), 1);
-  assert.equal(etoilesDuProduit(recette("module_raquette")!, {}), 2);
+  assert.equal(recetteHorsFamille(matraque).auChoix?.[0]?.pack_cellules, 2);
+  // Les modules (0.8.2, R14) : ★ au petit condensateur (le flash), ★★ au moyen (la raquette), ★★★ à la bobine.
+  assert.equal(etoilesDuProduit(recette("module_decharge")!, { petit_condensateur: 1 }), 1);
+  assert.equal(etoilesDuProduit(recette("module_decharge")!, { condensateur_moyen: 1 }), 2);
   assert.equal(etoilesDuProduit(recette("module_bobine")!, {}), 3);
   // Le bain dérouille une machette de fortune : ★ → ★★, pas au-delà.
   assert.equal(etoilesDuProduit(recette("derouiller_machette")!, { machette: 1 }), 2);
   assert.equal(etoilesDuProduit(recette("derouiller_machette")!, { "machette#2": 1 }), 2);
   // Toutes les recettes ont une catégorie, et leurs produits une énergie grise.
-  for (const id of ["pack_cellules", "module_flash", "matraque_fortune", "matraque_electrique", "aiguillon", "lampe_bricolee", "electrificateur", "ventilateur_forge"]) {
+  for (const id of ["pack_cellules", "module_decharge", "matraque_fortune", "matraque_electrique", "aiguillon", "lampe_bricolee", "electrificateur", "ventilateur_forge"]) {
     const r = recette(id)!;
     assert.ok(r.categorie, id);
     if ("objet" in r.produit) assert.ok(energieGrise(r.produit.objet) > 0, id);
@@ -246,39 +254,49 @@ test("0.6 Voltaïques : pack vide, un gourdin court qui ne tue pas ; « Plus de 
 
 // ---------- La recharge ----------
 
-test("0.6 Voltaïques : la manivelle de la lampe à dynamo recharge 1 Wh par minute réelle", () => {
-  const t = surLeTerrain({ lampe_dynamo: 1, matraque_electrique: 1, sac_a_dos: 1 }, [], { matraque_electrique: 5 });
-  t.joueur.recevoir({ t: "manivelle", objet: "matraque_electrique" });
+test("0.8.2 Voltaïques (R17) : au banc, la manivelle de la lampe à dynamo remplit lentement la batterie du banc", () => {
+  const banc = { type: "banc_recharge" as const, x: 20.5, z: 20, etat: { batteries: { batterie_voiture: 1 }, charges: { batterie_voiture: 40 } } };
+  const t = surLeTerrain({ lampe_dynamo: 1, matraque_electrique: 1, sac_a_dos: 1 }, [banc], { matraque_electrique: 5 });
+  const id = t.base.chargerInstallations(t.compte.id).find((i) => i.type === "banc_recharge")!.id;
+  t.joueur.recevoir({ t: "banc", id, op: "manivelle" });
   t.attendre(60);
-  assert.equal(t.dernier("usure")?.charge?.matraque_electrique, undefined, "pas avant la fin du geste");
+  assert.ok((t.base.chargerInstallations(t.compte.id).find((i) => i.id === id)!.etat.charges?.batterie_voiture ?? 0) < 40.5, "pas avant la fin du geste");
   t.attendre(121);
-  assert.equal(t.dernier("usure")?.charge?.matraque_electrique, 8, "trois minutes, trois Wh");
-  // Sans la lampe à dynamo, pas de manivelle.
-  const u = surLeTerrain({ matraque_electrique: 1 }, [], { matraque_electrique: 5 });
-  u.joueur.recevoir({ t: "manivelle", objet: "matraque_electrique" });
+  const wh = t.base.chargerInstallations(t.compte.id).find((i) => i.id === id)!.etat.charges?.batterie_voiture ?? 0;
+  assert.ok(Math.abs(wh - 43) < 0.2, `trois minutes, trois Wh dans la batterie du banc (${wh})`);
+  assert.match(t.infos().at(-1)!, /dans la batterie de voiture de la ruine, à la force du bras/);
+  // L'arme, elle, ne bouge pas : elle se charge ensuite depuis la fiche du banc.
+  assert.equal(t.dernier("usure")?.charge?.matraque_electrique, undefined);
+  // Sans la lampe à dynamo, pas de manivelle ; sans batterie dans le banc, rien à remplir.
+  const u = surLeTerrain({ matraque_electrique: 1 }, [banc]);
+  u.joueur.recevoir({ t: "banc", id: u.base.chargerInstallations(u.compte.id)[0]!.id, op: "manivelle" });
   assert.match(u.infos().at(-1)!, /lampe à dynamo/);
+  const v = surLeTerrain({ lampe_dynamo: 1 }, [{ type: "banc_recharge", x: 20.5, z: 20 }]);
+  v.joueur.recevoir({ t: "banc", id: v.base.chargerInstallations(v.compte.id)[0]!.id, op: "manivelle" });
+  assert.match(v.infos().at(-1)!, /pas de batterie/);
 });
 
-test("0.6 Voltaïques : au banc, un pack vide se recharge en ≈ 25 s, pris aux batteries posées (85 %)", () => {
+test("0.6 Voltaïques : au banc, un pack vide se recharge en ≈ 25 s, pris à la batterie du banc (85 %)", () => {
   const t = surLeTerrain(
     { matraque_electrique: 1, sac_a_dos: 1 },
-    [{ type: "banc_recharge", x: 20.5, z: 20, etat: { batteries: { petite_batterie: 1 }, charges: { petite_batterie: 40 } } }],
+    [{ type: "banc_recharge", x: 20.5, z: 20, etat: { batteries: { batterie_voiture: 1 }, charges: { batterie_voiture: 40 } } }],
     { matraque_electrique: 0 },
   );
   const banc = t.joueur.bienvenue(0).installations.find((i) => i.type === "banc_recharge")!;
-  t.joueur.recevoir({ t: "interagir", cible: { genre: "installation", id: banc.id }, verbe: "recharger_armes" });
+  // 0.8.2 (R17) : depuis la fiche du banc, la ligne de la matraque et son bouton « Charger ».
+  t.joueur.recevoir({ t: "banc", id: banc.id, op: "charger", cible: "matraque_electrique" });
   t.attendre(20);
   assert.equal(t.dernier("usure")?.charge?.matraque_electrique ?? 0, 0, "pas encore");
   t.attendre(6);
   assert.equal(t.dernier("usure")?.charge?.matraque_electrique, undefined, "pleine (absente : pleine)");
   assert.ok(t.infos().some((x) => x.startsWith("+12 Wh")), t.infos().join(" | "));
   const apres = t.base.chargerInstallations(t.compte.id).find((i) => i.type === "banc_recharge")!;
-  assert.ok(Math.abs((apres.etat.charges?.petite_batterie ?? 0) - (40 - 12 / 0.85)) < 0.5);
-  // Sans courant sur le banc : on le dit.
+  assert.ok(Math.abs((apres.etat.charges?.batterie_voiture ?? 0) - (40 - 12 / 0.85)) < 0.5);
+  // Sans batterie dans le banc : on le dit.
   const u = surLeTerrain({ matraque_electrique: 1 }, [{ type: "banc_recharge", x: 20.5, z: 20 }], { matraque_electrique: 0 });
   const b2 = u.joueur.bienvenue(0).installations.find((i) => i.type === "banc_recharge")!;
-  u.joueur.recevoir({ t: "interagir", cible: { genre: "installation", id: b2.id }, verbe: "recharger_armes" });
-  assert.match(u.infos().at(-1)!, /Pas de courant/);
+  u.joueur.recevoir({ t: "banc", id: b2.id, op: "charger", cible: "matraque_electrique" });
+  assert.match(u.infos().at(-1)!, /pas de batterie/);
 });
 
 // ---------- Les clôtures, la plaque, l'alarme ----------
@@ -363,8 +381,10 @@ test("0.6 Voltaïques : l'alarme électrique prévient sans rien faire à l'Éte
   assert.ok(definitionDeclencheur("alarme_electrique")!.message!.length <= 110);
 });
 
-test("0.6 Voltaïques : le contrôle accepte la manivelle et la recharge au banc, pas n'importe quoi", () => {
-  assert.ok(messageValide({ t: "manivelle", objet: "matraque_electrique#2" }));
-  assert.ok(!messageValide({ t: "manivelle", objet: "toString" }));
+test("0.6 Voltaïques : le contrôle accepte la manivelle au banc et la recharge au banc, pas n'importe quoi", () => {
+  assert.ok(messageValide({ t: "banc", id: 3, op: "manivelle" }));
+  assert.ok(!messageValide({ t: "banc", id: "3", op: "manivelle" }));
+  // La manivelle ne charge plus une arme directement (0.8.2, R17) : elle remplit la batterie du banc.
+  assert.ok(!messageValide({ t: "manivelle", objet: "matraque_electrique#2" }));
   assert.ok(messageValide({ t: "interagir", cible: { genre: "installation", id: 3 }, verbe: "recharger_armes" }));
 });

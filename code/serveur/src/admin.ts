@@ -15,7 +15,7 @@ import { LIGNEES_INSTALLATIONS, VOIE_CREUSEE, VOIE_SURFACE, capaciteCoffre, effe
 import type { InstallationVue } from "../../commun/src/messages.ts";
 import { OBJETS, poidsInventaire, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
 import type { VueProgression } from "../../commun/src/progression.ts";
-import { RECETTES, type TypeInstallation } from "../../commun/src/recettes.ts";
+import { RECETTES, faconsRecette, type TypeInstallation } from "../../commun/src/recettes.ts";
 import { FAMILLES, POINT_ARRIVEE, TERRAIN_TAILLE, type Famille } from "../../commun/src/regles.ts";
 import { ARMES_TIR, MUNITIONS } from "../../commun/src/tir.ts";
 
@@ -77,7 +77,8 @@ export function contenuAdmin(): Inventaire {
   }
   for (const m of MUNITIONS) ajouter(inv, m.objet, MUNITIONS_PAR_SORTE);
   // De quoi fabriquer chaque recette une fois (au prix de sa famille : god n'a pas de surcoût).
-  for (const r of RECETTES) for (const [t, n] of Object.entries(r.ingredients)) ajouter(inv, t, n ?? 0);
+  // Une recette à choix (0.8.2) : de quoi la faire de chaque façon.
+  for (const r of RECETTES) for (const f of faconsRecette(r)) for (const [t, n] of Object.entries(f)) ajouter(inv, t, n ?? 0);
   // Et de quoi monter chaque niveau (le premier choix de coût de chaque étape jouable).
   const etapes: Etape[] = [...VOIE_SURFACE, ...VOIE_CREUSEE, ...Object.values(LIGNEES_INSTALLATIONS).flat()];
   for (const e of etapes) if (!e.aVenir) for (const [t, n] of Object.entries(e.couts[0] ?? {})) ajouter(inv, t, n ?? 0);

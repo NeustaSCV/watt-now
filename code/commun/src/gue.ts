@@ -23,7 +23,7 @@ import { percer, type FenetreVue, type PlanVue, type PorteVue } from "./vue.ts";
 import { BAC_MODELE, ETEINTS_MODELE, FOUILLE_MODELE, NAPPE_MODELE, SEGMENTS_MODELE, type SegmentModele } from "./gue-modele.ts";
 
 /** À augmenter quand le contenu du gué change : la base le régénère alors. */
-export const VERSION_GUE = 2;
+export const VERSION_GUE = 4;
 
 // ---------- Le repère : le gué retourné ----------
 
@@ -83,8 +83,45 @@ export const BAC = (() => {
 /** La cloche du passeur, à la cale (G7). */
 export const CLOCHE = { ...auGue(-12.8, -22.4), portee: 40, dureeS: 3 } as const;
 
-/** Le gisement de glaise, sur la berge de vase sous le camping-car (B6). */
-export const GLAISE = auGue(16.0, 20.4);
+/**
+ * Le gisement de glaise (B6). Le modèle le pose en (16 ; 20,4), au bout sud de la berge de vase, sous un arbre qui le
+ * cache (R2). Plan 0.8.2 (chantier F, Q-0.8.2-5) : en attendant la retouche du modèle demandée à la session « bâtiments »
+ * (`demande-batiment-gue-4.md`), le jeu le place lui-même **au milieu de la berge**, à découvert, entre la touffe de
+ * joncs et le camping-car ; l'écran y porte la motte et la bêche du modèle (client/src/rendu/gue.ts).
+ */
+export const GLAISE = auGue(17.0, 10.2);
+/** Où le modèle dessine la motte et la bêche (sa fiche) : l'écran les déplace jusqu'à GLAISE. */
+export const GLAISE_DU_DESSIN = auGue(16.0, 20.4);
+
+// ---------- Le fond de vallée (repris du modèle : ZR, VN, VS, HL) ----------
+
+/** L'axe de la route (repère du modèle : z selon x). */
+export const ZR_MODELE: readonly (readonly [number, number])[] = [[-101, 7], [-85, 6.5], [-65, 4], [-48, 1], [-36, 0], [30, 0], [50, -1], [70, -3], [101, -5]];
+/** Le pied du talus nord, puis du talus sud (repère du modèle : z selon x) : au-delà, la pente boisée. */
+export const VN_MODELE: readonly (readonly [number, number])[] = [[-101, 1.8], [-86, 1.4], [-84, -26], [-65, -26], [-62, -1.2], [-56, -2.6], [-46, -31], [44, -31], [54, -7.5], [66, -7.5], [68, -21.5], [86, -21.5], [88, -8.8], [101, -9.2]];
+export const VS_MODELE: readonly (readonly [number, number])[] = [[-101, 11.2], [-72, 10.4], [-69.5, 14], [-59, 14], [-56.5, 8.2], [-47, 33], [44, 33], [54, 4], [101, 0.6]];
+
+/** Une table (x croissants) lue en x, linéaire entre ses points. */
+export function interpoler(table: readonly (readonly [number, number])[], x: number): number {
+  if (x <= table[0]![0]) return table[0]![1];
+  for (let i = 1; i < table.length; i++) {
+    const [xb, yb] = table[i]!;
+    if (x <= xb) {
+      const [xa, ya] = table[i - 1]!;
+      return ya + ((yb - ya) * (x - xa)) / (xb - xa);
+    }
+  }
+  return table[table.length - 1]![1];
+}
+
+/** L'axe de la route au gué (z du jeu) pour un x du jeu. */
+export function zRoute(x: number): number {
+  return interpoler(ZR_MODELE, Math.max(-101, Math.min(101, 100 - x))) + 35;
+}
+/** Demi-largeur de la route (le modèle : HL). */
+export const DEMI_ROUTE = 2.8;
+/** Le trou du pont emporté (x du jeu) : entre les deux culées, plus de route, la rivière. */
+export const TROU_DU_PONT = { x0: auGue(13.6, 0).x, x1: auGue(-9.3, 0).x } as const;
 
 /** Les six touffes de joncs du modèle (B7). */
 const JONCS_MODELE: readonly (readonly [number, number])[] = [[-9.4, 14.5], [-9.6, 18.2], [-9.2, 21.6], [-11.6, -19.5], [14.4, -5.2], [16.2, 7.6]];
@@ -168,6 +205,14 @@ export function crue(instant: number, debutMonde: number): Crue {
   return longueur >= 2 ? { niveau: "noye", montee: NAPPE_ROUGE } : { niveau: "bas", montee: 0 };
 }
 
+/**
+ * R19 (plan 0.8.2, chantier F) : la ligne dite à qui bute au bord du radier noyé, une fois par tentative (on la redit
+ * quand il s'est éloigné puis revient essayer).
+ */
+export const LIGNE_RADIER_NOYE = "La rivière est en crue : le radier est sous l'eau. Le bac passe toujours.";
+/** On bute au bord du radier noyé à moins de `pres` mètres de l'eau ; on s'en est éloigné au-delà de `eloigne`. */
+export const BORD_RADIER = { pres: 0.9, eloigne: 3 } as const;
+
 /** L'examen d'une balise (G3) : le niveau de l'eau, en une ligne. */
 export function texteBalise(niveau: NiveauCrue): string {
   if (niveau === "noye") return "L'eau est à la bande rouge : le radier est noyé. Reste le bac, ou attendre la décrue.";
@@ -243,15 +288,68 @@ export function accostage(x: number): "cale" | "ponton" | null {
   return null;
 }
 
+/**
+ * Plan 0.8.2 (chantier F, R3) : on est « à bord » pour haler dès qu'on pose le pied sur le plancher, bouts compris :
+ * le rayon du personnage (0,35 m) et un peu de jeu. L'écran et le serveur prennent la même marge.
+ */
+export const MARGE_A_BORD = 0.45;
+
 /** Ce point est-il sur le plancher du radeau (à sa place `xr`) ? */
 export function aBord(x: number, z: number, xr: number, marge = 0): boolean {
   return Math.abs(x - xr) <= BAC.demiLongueur + marge && Math.abs(z - BAC.z) <= BAC.demiLargeur + marge;
+}
+
+/**
+ * Plan 0.8.2 §7.6 : au bord du radeau à quai, sur la cale ou le ponton, « Haler le bac » se propose déjà : jusqu'à
+ * cette distance (m) du bout du plancher qui touche le quai, sur toute sa largeur. On monte à bord d'un pas en halant.
+ */
+export const BORD_DU_RADEAU = 1.2;
+
+/** Le côté du quai où le radeau est accosté (+1 : vers +x, −1 : vers −x), ou 0 s'il est au milieu de l'eau. */
+function coteDuQuai(xr: number): -1 | 0 | 1 {
+  const ou = accostage(xr);
+  if (!ou) return 0;
+  return BAC[ou].embarquement.x > xr ? 1 : -1;
+}
+
+/** Est-on au bord du radeau à quai (sur le quai, contre son bout), ou déjà à bord ? */
+export function auBordDuRadeau(x: number, z: number, xr: number): boolean {
+  if (aBord(x, z, xr, MARGE_A_BORD)) return true;
+  const sens = coteDuQuai(xr);
+  if (sens === 0 || Math.abs(z - BAC.z) > BAC.demiLargeur) return false;
+  const hors = sens * (x - (xr + sens * BAC.demiLongueur));
+  return hors >= 0 && hors <= BORD_DU_RADEAU;
+}
+
+/** La place sur le plancher la plus proche (entre les garde-corps, à un pas des bouts) : où l'on monte pour haler. */
+export function surLePlancher(x: number, z: number, xr: number): { x: number; z: number } {
+  const bord = (v: number, c: number, demi: number) => Math.min(c + demi, Math.max(c - demi, v));
+  return { x: bord(x, xr, BAC.demiLongueur - 0.5), z: bord(z, BAC.z, BAC.demiLargeur - 0.6) };
 }
 
 // ---------- La zone : le modèle, l'eau, et ce qui bouge ----------
 
 /** Les obstacles qui arrêtent un coup ou un objet lancé : les murs, les talus boisés, les épaves. Le reste est bas. */
 const NATURES_HAUTES = new Set(["mur", "paroi du camping-car", "cabine du camping-car", "casier", "épave", "barricade de troncs", "talus boisé", "talus (bout de la halte)", "poteau du bac"]);
+
+/** Les bords qui tombent dans l'eau : ils n'arrêtent qu'au-dessus de l'eau (plan 0.8.2). */
+const NATURES_AU_BORD_DE_LEAU = new Set(["bord amont du radier", "bord aval du radier (chute)", "bord de la cale"]);
+
+/** Là où la barrière de chantier est tombée (z du jeu) : plus rien ne s'y dresse. */
+const BARRIERE_TOMBEE = { z0: 33.3, z1: 35.0 } as const;
+
+/** Une boîte longue en morceaux de 0,5 m au plus, le long de sa grande dimension. */
+function enMorceaux(b: Boite): Boite[] {
+  const selonX = b.l >= b.p;
+  const long = selonX ? b.l : b.p;
+  const n = Math.max(1, Math.ceil(long / 0.5 - 1e-9));
+  const morceaux: Boite[] = [];
+  for (let i = 0; i < n; i++) {
+    const d = -long / 2 + (long * (i + 0.5)) / n;
+    morceaux.push(selonX ? { x: arrondi(b.x + d), z: b.z, l: arrondi(long / n), p: b.p } : { x: b.x, z: arrondi(b.z + d), l: b.l, p: arrondi(long / n) });
+  }
+  return morceaux;
+}
 
 /** Un segment du modèle, en boîtes du jeu (les segments en biais : en morceaux de 0,5 m). */
 function boitesDuSegment(s: SegmentModele): Boite[] {
@@ -285,6 +383,13 @@ const COULOIR = (() => {
   return { x0: xa, x1: xb, z0: BAC.z - BAC.demiLargeur - 0.1, z1: BAC.z + BAC.demiLargeur + 0.1 } as const;
 })();
 
+/**
+ * Plan 0.8.2 §7.6 : au bout du ponton (et de la cale), l'eau et les bords s'arrêtent à un rayon de personnage du
+ * radeau à quai. On y monte alors sur toute la largeur du plancher, et non plus par le seul mètre du ponton : venu en
+ * biais, on ne bute plus sur le coin.
+ */
+const RAYON_ABORD = 0.35;
+
 /** Les pontons de bois avancent sur l'eau : on y marche (celui du bac, celui des barques de la guinguette). */
 const PONTONS = ([[12.6, -26, 9.4, -24], [-3.6, 22.6, -9, 24.2]] as const).map(([xa, za, xb, zb]) => {
   const a = auGue(xa, za);
@@ -308,7 +413,7 @@ function boitesDEau(): Boite[] {
       const eau =
         dansLaRiviere(x + pas / 2, z) &&
         !surLeBanc(x + pas / 2, z, 0.2) &&
-        !(x + pas > COULOIR.x0 && x < COULOIR.x1 && z + 0.25 > COULOIR.z0 && z - 0.25 < COULOIR.z1) &&
+        !(x + pas > COULOIR.x0 - RAYON_ABORD && x < COULOIR.x1 + RAYON_ABORD && z + 0.25 > COULOIR.z0 && z - 0.25 < COULOIR.z1) &&
         !PONTONS.some((p) => x + pas > p.x0 && x < p.x1 && z + 0.25 > p.z0 && z - 0.25 < p.z1);
       if (eau && debut === null) debut = x;
       if (!eau) fermer(x);
@@ -322,7 +427,17 @@ const BOITES_FIXES: { hautes: Boite[]; basses: Boite[] } = (() => {
   const hautes: Boite[] = [];
   const basses: Boite[] = [];
   for (const s of SEGMENTS_MODELE) {
-    (NATURES_HAUTES.has(s.nature) ? hautes : basses).push(...boitesDuSegment(s));
+    let boites = boitesDuSegment(s);
+    // Plan 0.8.2 (chantier F) : les bords qui tombent dans l'eau (radier, cale) ne s'arrêtent qu'au-dessus de l'eau.
+    // Le modèle les prolonge d'un mètre sur la terre ferme, où rien ne se voit : une barrière invisible au pied des
+    // têtes du radier et le long de la cale (obstacles-visibles.test.ts).
+    if (NATURES_AU_BORD_DE_LEAU.has(s.nature)) boites = boites.flatMap(enMorceaux).filter((b) => dansLaRiviere(b.x, b.z, -0.3));
+    // La barrière tombée (le modèle en couche une sur quatre, au hasard de l'usure) laisse un passage vers la culée :
+    // on y passe, comme on le voit (l'eau arrête au bord).
+    // Le bout des bords du ponton du bac, contre le radeau à quai : ôté (RAYON_ABORD).
+    if (s.nature === "bord du ponton") boites = boites.flatMap(enMorceaux).filter((b) => Math.abs(b.z - BAC.z) > 3 || b.x + b.l / 2 <= COULOIR.x0 - RAYON_ABORD + 0.01);
+    if (s.nature.startsWith("barrières de chantier")) boites = boites.flatMap(enMorceaux).filter((b) => b.z < BARRIERE_TOMBEE.z0 || b.z > BARRIERE_TOMBEE.z1);
+    (NATURES_HAUTES.has(s.nature) ? hautes : basses).push(...boites);
   }
   basses.push(...boitesDEau());
   // Au-delà des talus, au nord et au sud, la pente boisée : le modèle ne ferme pas le pied du talus au bord de la
@@ -364,6 +479,28 @@ const RADIER_NOYE: readonly Boite[] = (() => {
   const xb = auGue(axeRiviere(-11.25) - DEMI_RIVIERE + 0.4, 0).x;
   return [basse({ x: arrondi((xa + xb) / 2), z: zc, l: arrondi(xb - xa), p: arrondi(RADIER.z1 - RADIER.z0 + 0.3) })];
 })();
+
+/**
+ * Bute-t-on au bord du radier noyé (R19) ? Sur la rive, face à l'eau, à moins de BORD_RADIER.pres de la nappe qui
+ * couvre le radier. `o` : l'orientation du joueur (atan2(dx, dz)) ; null : on ne la regarde pas.
+ */
+export function auBordDuRadierNoye(x: number, z: number, o: number | null = null): boolean {
+  const b = RADIER_NOYE[0]!;
+  if (z < b.z - b.p / 2 || z > b.z + b.p / 2) return false;
+  const ouest = b.x - b.l / 2;
+  const est = b.x + b.l / 2;
+  if (x >= est && x - est <= BORD_RADIER.pres) return o === null || Math.sin(o) < -0.3;
+  if (x <= ouest && ouest - x <= BORD_RADIER.pres) return o === null || Math.sin(o) > 0.3;
+  return false;
+}
+
+/** S'est-on assez éloigné du radier noyé pour qu'une nouvelle tentative se dise à nouveau ? */
+export function loinDuRadierNoye(x: number, z: number): boolean {
+  const b = RADIER_NOYE[0]!;
+  const dx = Math.max(0, b.x - b.l / 2 - x, x - (b.x + b.l / 2));
+  const dz = Math.max(0, b.z - b.p / 2 - z, z - (b.z + b.p / 2));
+  return Math.hypot(dx, dz) > BORD_RADIER.eloigne;
+}
 
 /**
  * Les obstacles du radeau à sa place `xr` (le modèle : ses garde-corps, toujours ; les chaînes de ses deux bouts,
@@ -414,14 +551,25 @@ export function zoneGue(etat: EtatZoneGue): Zone {
 
 /**
  * Le butin du gué (le moteur : serveur/src/lieu-vivant.ts) : les pierres reviennent en 30 min (B4) et grandissent avec
- * les voyageurs (B8, 15 pour un voyageur seul : B5) ; le banc de galets personnel, 8 pierres à chacun, revient en 6 h
- * (REPOUSSE_MS.banc_galets). Le gisement de glaise est inépuisable (B6), les joncs repoussent en 30 min (B7).
+ * les voyageurs (B8, 15 sur le banc pour un voyageur seul : B5) ; le banc de galets personnel, 8 pierres à chacun,
+ * revient en 6 h (REPOUSSE_MS.banc_galets). Le gisement de glaise est inépuisable (B6), les joncs repoussent en 30 min (B7).
+ *
+ * Plan 0.8.2 (chantier F, R1, Q-0.8.2-1) : plus à ramasser hors du banc de galets. Pour un voyageur seul : 6 pierres de
+ * plus sur les pistes qui descendent au radier (21 en vrac : 15 sur le banc, 6 sur les pistes) ; 4 bûches en vrac au
+ * pied des talus, qui grandissent avec les voyageurs comme à la station ; 8 branches en tout (décision du porteur) : les
+ * 5 du tas de bois flotté et 3 sur les berges. Les branches et les bûches reviennent en 30 min, comme les pierres.
  */
 export const BUTIN_GUE: ButinLieu = {
-  repousse: { pierre: 30 * 60_000 },
-  vrac: { pierre: 15 },
+  repousse: { pierre: 30 * 60_000, buche: 30 * 60_000, branche: 30 * 60_000 },
+  vrac: { pierre: 21, buche: 4 },
   personnel: { banc_galets: 8 },
 };
+/** Les pierres en vrac sur le banc de galets (pour un voyageur seul) ; le reste du vrac est sur les pistes. */
+export const PIERRES_DU_BANC = 15;
+/** Les branches du gué : 8 en tout, dont celles du tas de bois flotté ; les autres, éparses sur les berges. */
+export const BRANCHES_DU_GUE = 8;
+const BRANCHES_DU_TAS = 5;
+export const BRANCHES_EPARSES = BRANCHES_DU_GUE - BRANCHES_DU_TAS;
 
 /** Les fouilles du gué (« par chance » : bâche, chiffons, casserole, cordes ; rarement une clé de L1). */
 export const FOUILLES_GUE = ["gue_cabane", "gue_buvette", "gue_barques", "gue_camping_car", "gue_lavoir", "gue_garde_peche"] as const;
@@ -449,7 +597,7 @@ export function genererGue(): Omit<RessourceSol, "disponible">[] {
   // Le « bois flotté » du modèle devient un tas de branches (I11) : tiré sur la berge par le modèle, au pied de la
   // culée côté terrain. Cinq branches, autour de son point de fouille.
   const tas = FOUILLE_MODELE.find((f) => f.quoi?.startsWith("tas de branches"))!;
-  for (const [dx, dz] of [[0, 0], [-0.6, 0.5], [-0.3, -0.6], [-0.9, -0.2], [0.4, 0.6]] as const) poser("branche", auGue(tas.x + dx, tas.z + dz));
+  for (const [dx, dz] of ([[0, 0], [-0.6, 0.5], [-0.3, -0.6], [-0.9, -0.2], [0.4, 0.6]] as const).slice(0, BRANCHES_DU_TAS)) poser("branche", auGue(tas.x + dx, tas.z + dz));
 
   // Les pierres en vrac (B5, B8) : VRAC_MAX tournées de 15, dont seule la première est en jeu pour un voyageur seul.
   // La première sur le banc de galets ; les autres sur les pistes de gravier qui descendent au radier.
@@ -483,10 +631,70 @@ export function genererGue(): Omit<RessourceSol, "disponible">[] {
     const [a, b] = [piste[i]!, piste[i + 1]!];
     return auGue(a[0] + (b[0] - a[0]) * t + (aleat() - 0.5) * 3.2, a[1] + (b[1] - a[1]) * t + (aleat() - 0.5) * 3.2);
   };
-  placer(BUTIN_GUE.vrac!.pierre!, surLeBancAuHasard, 0.5);
-  for (let tour = 1; tour < VRAC_MAX; tour++) placer(BUTIN_GUE.vrac!.pierre!, surLesPistes, 0.9);
+  // Le vrac est en jeu par rang (l'ordre de pose) : la première tournée d'abord, le banc puis les pistes (R1).
+  const parTournee = BUTIN_GUE.vrac!.pierre!;
+  placer(PIERRES_DU_BANC, surLeBancAuHasard, 0.5);
+  placer(parTournee - PIERRES_DU_BANC, surLesPistes, 0.9);
+  for (let tour = 1; tour < VRAC_MAX; tour++) placer(parTournee, surLesPistes, 0.9);
+
+  // Plan 0.8.2 (R1) : le bois. Dans le fond de vallée, à pied sec, hors de la route et des pistes, à l'écart des
+  // fouilles : les branches au bord de l'eau (apportées par les crues), les bûches au pied des talus (tombées des
+  // frênes et des aulnes). Le tirage est fixe : tous les voyageurs voient les mêmes.
+  const bois = aleatoire(4409);
+  const surLeSec = (x: number, z: number, ecart: number) => {
+    const m = auModele(x, z);
+    return (
+      Math.abs(m.x - axeRiviere(m.z)) > DEMI_RIVIERE + 0.6 &&
+      Math.abs(z - zRoute(x)) > DEMI_ROUTE + 1.2 &&
+      distPistes(m.x, m.z) > 2.2 &&
+      !zone.obstacles.some((b) => Math.abs(x - b.x) <= b.l / 2 + 0.6 && Math.abs(z - b.z) <= b.p / 2 + 0.6) &&
+      ressources.every((r) => Math.hypot(r.x - x, r.z - z) > ecart) &&
+      SORTIES_A_EVITER.every((s) => Math.hypot(s.x - x, s.z - z) > 6) &&
+      // Rien au pied du bac ni de la cloche : on y hale et on y sonne sans viser une branche.
+      [BAC.cale.embarquement, BAC.ponton.embarquement, CLOCHE, GLAISE].every((q) => Math.hypot(q.x - x, q.z - z) > 4.5) &&
+      !(Math.abs(z - BAC.z) < BAC.demiLargeur + 3 && x > Math.min(...BAC.poteaux) - 2 && x < Math.max(...BAC.poteaux) + 2)
+    );
+  };
+  const poserBois = (type: TypeRessource, n: number, tirer: () => { x: number; z: number }, ecart: number) => {
+    for (let i = 0; i < n; i++) {
+      for (let essai = 0; essai < 400; essai++) {
+        const p = tirer();
+        if (!surLeSec(p.x, p.z, ecart)) continue;
+        poser(type, p);
+        break;
+      }
+    }
+  };
+  // Les branches : à moins de 4 m de la crête de berge, de part et d'autre de la rivière, du nord au sud du lot.
+  const auBordDeLEau = () => {
+    const zm = -28 + bois() * 56;
+    const cote = bois() < 0.5 ? -1 : 1;
+    return auGue(axeRiviere(zm) + cote * (DEMI_RIVIERE + 0.8 + bois() * 3.2), zm);
+  };
+  poserBois("branche", BRANCHES_EPARSES, auBordDeLEau, 3);
+  // Les bûches (vrac, B8) : au pied des talus nord et sud, dans le fond de vallée (x du modèle entre −44 et 42).
+  const auPiedDuTalus = () => {
+    const xm = -44 + bois() * 86;
+    const nord = bois() < 0.5;
+    const zm = nord ? interpoler(VN_MODELE, xm) + 0.8 + bois() * 2.5 : interpoler(VS_MODELE, xm) - 0.8 - bois() * 2.5;
+    return auGue(xm, zm);
+  };
+  for (let tour = 0; tour < VRAC_MAX; tour++) poserBois("buche", BUTIN_GUE.vrac!.buche!, auPiedDuTalus, 4);
   return ressources;
 }
+
+/** Les pistes de gravier qui descendent au radier (repère du modèle), de chaque côté. */
+const PISTES_MODELE = [
+  [[-34, -0.6], [-27, -3], [-20, -7], [-15, -10.2], [-11.6, -11.25]],
+  [[13.7, -11.25], [17, -10.4], [22, -7.6], [28, -3.6], [35, -0.8]],
+] as const;
+function distPistes(xm: number, zm: number): number {
+  let d = Infinity;
+  for (const piste of PISTES_MODELE) for (let i = 0; i < piste.length - 1; i++) d = Math.min(d, distSegment(xm, zm, piste[i]!, piste[i + 1]!));
+  return d;
+}
+/** Les arrivées des deux sorties : on n'y pose rien (on arrive libre). */
+const SORTIES_A_EVITER = [auGue(-100, 7), auGue(100, -5)];
 
 /** Le feu des survivants, au milieu du banc (le modèle) : on n'y pose pas de pierres. */
 const FEU_DU_BANC = auGue(6.3, -7.4);
@@ -537,6 +745,56 @@ export function eteintsGue(): Eteint[] {
     return e;
   });
 }
+
+// ---------- Le chemin des Éteints : la chicane de l'entrée (plan 0.8.2, recette de la 0.8) ----------
+
+/**
+ * Les barricades de troncs du modèle (la chicane de l'entrée, côté Moulin), en segments du jeu, droits selon z. Un
+ * Éteint « ne contourne rien » (Book 06 §2.1) : face aux troncs, il restait collé, à deux pas du joueur, de l'autre
+ * côté. Le gué lui donne un milieu (comme la Coopérative pour ses portes) dont le seul effet est le passage par le
+ * bout ouvert de la chicane ; la vue, le son et la nuit restent ceux du plein air.
+ */
+const BARRICADES: readonly { x: number; z0: number; z1: number }[] = SEGMENTS_MODELE.filter((s) => s.nature === "barricade de troncs").map((s) => {
+  const a = auGue(s.x1, s.z1);
+  const b = auGue(s.x2, s.z2);
+  return { x: (a.x + b.x) / 2, z0: Math.min(a.z, b.z), z1: Math.max(a.z, b.z) };
+});
+
+/** Un point touche-t-il un obstacle fixe du gué (rayon compris) ? */
+function heurteFixe(x: number, z: number, rayon: number): boolean {
+  return OBSTACLES_FIXES.some((b) => Math.abs(x - b.x) < b.l / 2 + rayon && Math.abs(z - b.z) < b.p / 2 + rayon);
+}
+
+/** Le prochain point où aller de a vers b : le bout libre de la barricade qui barre la ligne droite, sinon b. */
+export function passageGue(ax: number, az: number, bx: number, bz: number): { x: number; z: number } {
+  for (const k of BARRICADES) {
+    if ((ax - k.x) * (bx - k.x) >= 0) continue;
+    const t = (k.x - ax) / (bx - ax);
+    const z = az + (bz - az) * t;
+    if (z < k.z0 - 0.45 || z > k.z1 + 0.45) continue;
+    // Les deux bouts, un peu au-delà ; celui qui est libre et fait le moins long détour.
+    const bouts = [{ x: k.x, z: k.z0 - 0.75 }, { x: k.x, z: k.z1 + 0.75 }].filter((p) => !heurteFixe(p.x, p.z, 0.32));
+    if (bouts.length === 0) return { x: bx, z: bz };
+    const detour = (p: { x: number; z: number }) => Math.hypot(p.x - ax, p.z - az) + Math.hypot(bx - p.x, bz - p.z);
+    const bout = bouts.reduce((m, p) => (detour(p) < detour(m) ? p : m));
+    // On vise un point juste de son côté de la barricade : il glisse le long des troncs sans buter sur leur bout.
+    const cote = Math.sign(ax - k.x);
+    const avant = { x: k.x + cote * 0.45, z: bout.z };
+    // Arrivé au bout : on passe de l'autre côté, sans redescendre vers les troncs.
+    if (Math.hypot(avant.x - ax, avant.z - az) < 0.3) return { x: k.x - cote * 0.6, z: bout.z };
+    return avant;
+  }
+  return { x: bx, z: bz };
+}
+
+/** Le milieu des Éteints du gué : le plein air, sauf le chemin autour de la chicane. */
+export const MILIEU_GUE = {
+  son: () => 1,
+  vue: () => true,
+  obscur: () => false,
+  passage: passageGue,
+  cascade: false,
+} as const;
 
 // ---------- Les ricochets (G8) ----------
 

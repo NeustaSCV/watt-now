@@ -116,7 +116,7 @@ export const SONS = {
   feu_crepite: { recette: R.feuCrepite, bus: "environnement", priorite: 3, variantes: 1, gain: 0.45, portee: 5, boucle: true },
 
   // Les installations de famille
-  soufflet: quotidien(R.soufflet, 0.55, 30),
+  forge_attisee: quotidien(R.forgeAttisee, 0.55, 30),
   braises: { recette: R.braises, bus: "environnement", priorite: 3, variantes: 1, gain: 0.35, portee: 6, boucle: true },
   trempe: quotidien(R.trempe, 0.6, 30, 2),
   chaine_velo: { ...quotidien(R.chaineVelo, 0.4, 15, 1), boucle: true },

@@ -45,7 +45,7 @@ import type { LieuRecette } from "./recettes.ts";
 import { lieuPossede } from "./lieu-recette.ts";
 import { ACCESSOIRES_FEU, PIECES_DE_FAMILLE, VOIE_CREUSEE, VOIE_SURFACE, lignee, type AccessoireFeu, type EtapeMonde, type FormeFeu } from "./lignees.ts";
 import { QUETES, queteSuivante, type Condition, type LigneQuete, type Quete } from "./quetes.ts";
-import { RECETTES, recette, type Recette } from "./recettes.ts";
+import { RECETTES, faconsRecette, recette, type Recette } from "./recettes.ts";
 import type { Famille } from "./regles.ts";
 import { REPOUSSE_MS, USAGES, genererRessources, vracEnJeu } from "./terrain.ts";
 import { trouvables, type Source } from "./trouvables.ts";
@@ -127,7 +127,8 @@ const DUREES_TUTO: Readonly<Record<string, number>> = {
   "Le feu": 4,
   "L'eau": 4,
   "Le vestige": 5,
-  "L'outil": 2,
+  // R13 (0.8.2) : bâtir un établi avant de remmancher la hache.
+  "L'outil": 4,
   "L'abri": 4,
   "Le premier Éteint": 3,
   "La saisie": 1,
@@ -144,10 +145,12 @@ const DUREES_TUTO: Readonly<Record<string, number>> = {
  * station pendant le tutoriel (« La carte », §2.6).
  */
 const DUREES_QUETES: Readonly<Record<string, { travail: number; lieu?: "station" | "comptoir" }>> = {
+  // Dans l'ordre du carnet : « Un vrai lit » juste après le coffre, avant les portes (0.8.2, chantier J).
+  foyer_pierres: { travail: 5 },
   repas: { travail: 6 },
-  lit: { travail: 4 },
   eau_du_ciel: { travail: 6 },
   coffre: { travail: 6 },
+  lit: { travail: 4 },
   dakota: { travail: 5 },
   defense: { travail: 3 },
   premier_arc: { travail: 6 },
@@ -156,7 +159,6 @@ const DUREES_QUETES: Readonly<Record<string, { travail: number; lieu?: "station"
   soins: { travail: 5 },
   protege_bras: { travail: 4 },
   travois: { travail: 6 },
-  foyer_pierres: { travail: 5 },
   foyer_cuisine: { travail: 8 },
   // Les portes du niveau 1 (plan 0.8, chantier 13) : le travail à la maison, la clé en poche. La sortie qui la rapporte
   // reste à apprendre au simulateur (chantier 14).
@@ -313,11 +315,12 @@ const INSTALLATION_DU_VETERAN: readonly [number, Geste][] = [
   [5, { voir: ["tete_hache", "cle_plate", "tournevis", "tete_marteau", "bache", "barre_metal", "ressort_lames", "bidon_5l", "sac_plastique"] }],
   [5.1, { fouiller: "atelier" }],
   [6, { voir: ["cadre_velo", "chaine_velo", "roue_velo", "dynamo_velo"] }],
-  [7, { fabriquer: "hache" }],
   [9, { fabriquer: "abri" }],
   // « Ta famille t'attend à la station » (Q-0.8-15) : il y va tout de suite après s'être installé.
   [10, { sortie: "station" }],
   [16, { atelier: true }],
+  // R13 (0.8.2) : la hache se remmanche à l'établi ; il le bâtit au retour de la station, avec les bûches rapportées.
+  [17, { fabriquer: "hache" }],
 ];
 
 // ---------- Le niveau 1 : les portes, et ce qu'il faut bâtir (plan 0.8 §1.1, §2.3, §5 critères 2 à 5) ----------
@@ -471,7 +474,8 @@ export interface Hypotheses {
 
 export const HYPOTHESES_DECIDEES: Hypotheses = {
   tasBois: BUTIN_HALTE.personnel!.tas_bois!,
-  retourTasMin: REPOUSSE_MS.tas_bois! / 60_000,
+  // Plan 0.8.2 (chantier D) : le retour du tas de bois est un réglage à chaud, lu par la halte (6 h par défaut).
+  retourTasMin: BUTIN_HALTE.repousse!.tas_bois! / 60_000,
   bancGalets: BUTIN_GUE.personnel!.banc_galets!,
   retourBancMin: REPOUSSE_MS.banc_galets! / 60_000,
   vracStation: { buche: BUTIN_HALTE.vrac!.buche!, pierre: BUTIN_HALTE.vrac!.pierre! },
@@ -1349,15 +1353,25 @@ class Simulation {
       const i = this.batirPour(lieu, profondeur);
       if (!i.ok) return i;
     }
-    const b = this.attendreBranches(r.ingredients);
+    const ingredients = this.facon(r);
+    const b = this.attendreBranches(ingredients);
     if (b) return b;
-    const f = this.fournir(r.ingredients, id, profondeur);
+    const f = this.fournir(ingredients, id, profondeur);
     if (!f.ok) return f;
     if (!this.devoilees.has(id)) return { ok: false, raison: `${id} pas dévoilé` };
-    const p = this.payer(r.ingredients);
+    const p = this.payer(ingredients);
     if (!p.ok) return p;
     this.produire(r);
     return OK;
+  }
+
+  /**
+   * La façon d'une recette à choix (0.8.2, `Recette.auChoix`) : la première dont chaque ingrédient se procure (compté, clé
+   * de lieu, ou trouvable par cette famille seule), sinon la première ; une recette sans choix : ses ingrédients.
+   */
+  facon(r: Recette): Inventaire {
+    const facons = faconsRecette(r);
+    return facons.find((f) => (Object.keys(f) as TypeObjet[]).every((t) => estCompte(t) || CLES_DE_LIEU.has(t) || this.sources.has(t))) ?? facons[0]!;
   }
 
   /** Les foyers dans la carte des constructions : « feu » au meilleur niveau, chaque forme, les accessoires montés. */

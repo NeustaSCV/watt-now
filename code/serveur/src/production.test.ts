@@ -58,30 +58,30 @@ test("le petit panneau produit ≈ 80 Wh par jour de calendrier (1 h 50 réelle)
   assert.ok(Math.abs(MS_JOUR_CALENDRIER / 60_000 - 110) < 1);
 });
 
-test("le panneau charge les batteries posées sur le banc, même hors ligne ; le surplus est perdu", () => {
-  const t = monter({ ...kit, petite_batterie: 1 });
+test("le panneau charge la batterie du banc, même hors ligne ; le surplus est perdu", () => {
+  const t = monter({ ...kit, batterie_voiture: 1, sac_a_dos: 1 });
   const banc = t.banc()!;
   assert.equal(banc.etat.panneau, true, "le panneau est sur le banc");
   assert.equal(t.joueur().bienvenue(0).installations.filter((i) => i.type === "panneau_solaire").length, 0, "un seul meuble");
   t.joueur().position = { x: banc.x, z: banc.z - 1, o: 0 };
   t.joueur().recevoir({ t: "interagir", cible: { genre: "installation", id: banc.id }, verbe: "poser_batteries" });
   t.attendre(5);
-  assert.equal(t.banc()!.etat.batteries?.petite_batterie, 1);
-  // Un jour de calendrier d'absence : 80 Wh produits, mais la petite batterie (50 Wh) était presque pleine.
-  const j = t.absence(MS_JOUR_CALENDRIER);
+  assert.equal(t.banc()!.etat.batteries?.batterie_voiture, 1);
+  // Trois jours de calendrier d'absence : 240 Wh produits, mais la batterie de la ruine (360 Wh) était à moitié pleine.
+  const j = t.absence(3 * MS_JOUR_CALENDRIER);
   const r = j.rapport!;
   assert.ok(r, "un rapport attend le joueur");
-  assert.equal(r.produit, 80);
-  assert.ok(r.stocke >= 9 && r.stocke <= 11, `stocké : ${r.stocke}`);
-  assert.ok(r.perdu >= 69, `perdu : ${r.perdu}`);
-  assert.equal(r.surLeBanc.petite_batterie, 50);
+  assert.equal(r.produit, 240);
+  assert.ok(r.stocke >= 179 && r.stocke <= 181, `stocké : ${r.stocke}`);
+  assert.ok(r.perdu >= 59, `perdu : ${r.perdu}`);
+  assert.ok(r.surLeBanc.batterie_voiture! >= 359, `sur le banc : ${r.surLeBanc.batterie_voiture}`);
 
-  // On reprend les batteries : la charge revient dans le sac.
+  // Le banc démonté rend sa batterie, et ce qu'elle contient.
   const b = t.banc()!;
   j.position = { x: b.x, z: b.z - 1, o: 0 };
-  j.recevoir({ t: "interagir", cible: { genre: "installation", id: b.id }, verbe: "reprendre_batteries" });
-  t.attendre(5);
-  assert.equal(Math.round(t.dernier("charges")!.charges.petite_batterie!), 50);
+  j.recevoir({ t: "interagir", cible: { genre: "installation", id: b.id }, verbe: "demonter_installation" });
+  t.attendre(40);
+  assert.ok(Math.round(t.dernier("charges")?.charges.batterie_voiture ?? 0) >= 359, JSON.stringify(t.dernier("info")));
 });
 
 test("sans batterie posée sur le banc, l'énergie du panneau est perdue ; sans panneau, rien ne vient", () => {

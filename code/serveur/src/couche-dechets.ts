@@ -240,7 +240,8 @@ export interface ContexteDechets {
   commencer(libelle: string, dureeS: number, appliquer: () => void, bruit: BruitAction): void;
   info(texte: string): void;
   envoyer(m: MessageServeur): void;
-  sacTropLourd(): void;
+  /** Le sac est trop lourd : `vise`, ce qu'on voulait prendre (son poids est dit, 0.8.2). */
+  sacTropLourd(vise?: Inventaire): void;
   /** Le lieu vivant (la halte, sa Coopérative) : ses Éteints voient les balises, ses ordures jetées s'effacent. */
   vivant(): LieuVivant | null;
   noterFait(fait: string): void;
@@ -326,11 +327,11 @@ export class CoucheDechets {
     const piece = c.pieces(cx, cz)[i];
     if (!piece || piece.dedans || c.carreau(cx, cz).pris.includes(i)) return;
     if (!this.proche(piece.x, piece.z, DISTANCE_INTERACTION + 0.3)) return this.ctx.info("C'est trop loin : approche-toi encore un peu.");
-    if (!this.peutPorter({ [piece.objet]: 1 })) return this.ctx.sacTropLourd();
+    if (!this.peutPorter({ [piece.objet]: 1 })) return this.ctx.sacTropLourd({ [piece.objet]: 1 });
     this.ctx.commencer(`Ramasser : ${OBJETS[piece.objet].nom}`, DUREE_RAMASSER_S / REGLAGES.gestes_vitesse, () => {
       const e = c.carreau(cx, cz);
       if (this.cle() !== c.cle || e.r !== r || e.pris.includes(i)) return;
-      if (!this.peutPorter({ [piece.objet]: 1 })) return this.ctx.sacTropLourd();
+      if (!this.peutPorter({ [piece.objet]: 1 })) return this.ctx.sacTropLourd({ [piece.objet]: 1 });
       this.prendrePiece(c, cx, cz, i);
       this.ctx.ajouter({ [piece.objet]: 1 });
       this.ctx.noterFait("dechet_ramasse");
@@ -432,7 +433,7 @@ export class CoucheDechets {
     if (!this.proche(k.x, k.z, PORTEE_FOUILLE)) return this.ctx.info("Approche-toi pour fouiller.");
     const o = k.objets.find((x) => x.i === i);
     if (!o) return this.envoyerFouille(c, ref);
-    if (!this.peutPorter({ [o.objet]: 1 })) return this.ctx.sacTropLourd();
+    if (!this.peutPorter({ [o.objet]: 1 })) return this.ctx.sacTropLourd({ [o.objet]: 1 });
     this.retirerDuConteneur(c, ref, i);
     this.ctx.ajouter({ [o.objet]: 1 });
     this.envoyerFouille(c, ref);
@@ -457,11 +458,11 @@ export class CoucheDechets {
     }
     const donne: Inventaire = {};
     for (const t of contenuPointCycle(c.cle, p, e.r)) donne[t] = (donne[t] ?? 0) + 1;
-    if (!this.peutPorter(donne)) return this.ctx.sacTropLourd();
+    if (!this.peutPorter(donne)) return this.ctx.sacTropLourd(donne);
     this.ctx.commencer(d.libelle, (d.duree * facteur) / REGLAGES.gestes_vitesse, () => {
       const avant = c.point(p.id);
       if (this.cle() !== c.cle || avant.r !== e.r || avant.renouvLe !== 0) return;
-      if (!this.peutPorter(donne)) return this.ctx.sacTropLourd();
+      if (!this.peutPorter(donne)) return this.ctx.sacTropLourd(donne);
       // Sur le terrain, il n'y a pas de point ; ailleurs, il revient (un événement, au bout de 7 jours, ailleurs).
       const fini: EtatCase = { r: avant.r, pris: Object.keys(contenuPointCycle(c.cle, p, e.r)).map(Number), renouvLe: this.ctx.maintenant() + delaiPoint(c.cle, p, e.r) };
       this.registre.sauverPoint(c, p.id, fini);

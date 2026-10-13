@@ -6,10 +6,12 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { RECETTES, recette } from "./recettes.ts";
 import { lieuPossede } from "./lieu-recette.ts";
-import { estObjet } from "./objets.ts";
-import { QUETE } from "./quetes.ts";
+import { OBJETS, estObjet, type TypeObjet } from "./objets.ts";
+import { QUETE, QUETES } from "./quetes.ts";
 import { FAMILLES, type Famille } from "./regles.ts";
 import {
+  ARMES_DE_METIER,
+  ATELIER,
   CARTES_SPECIALES,
   ECHEANCES_TEMPS,
   FILET_SEUIL_MIN,
@@ -17,6 +19,8 @@ import {
   TEXTE_VETERAN,
   aDevoiler,
   aLaConstruction,
+  armeEnAttente,
+  meubleComplet,
   devoileesAuDepart,
   devoileesDEmblee,
   entrevues,
@@ -128,10 +132,13 @@ test("les silhouettes : le niveau suivant des constructions qu'on a (« Au foyer
   assert.ok(!camp.some((s) => s.id === "soupe_cepes"), "deux niveaux plus haut : pas encore");
   const pierres = silhouettes(etat({ installations: terrain("foyer_pierres") }));
   assert.deepEqual(pierres.find((s) => s.id === "soupe_cepes"), { id: "soupe_cepes", ou: "Au foyer de cuisine" });
-  // La forge posée : le bac de trempe ouvrira les lames d'acier. La forge ventilée (le glaive, la hache) est « plus
-  // tard » depuis la 0.8 (chantier 7) : ses recettes ne sont pas des silhouettes.
-  const forge = silhouettes(etat({ installations: terrain(null, { forge: 1 }), devoilees: new Set([...devoileesAuDepart(), "forge"]) }));
+  // La forge posée, son enclume dessus : le bac de trempe ouvrira les lames d'acier. La forge ventilée (le glaive, la
+  // hache) est « plus tard » depuis la 0.8 (chantier 7) : ses recettes ne sont pas des silhouettes.
+  const forge = silhouettes(etat({ installations: terrain(null, { forge: 1, "forge+enclume": 1 }), devoilees: new Set([...devoileesAuDepart(), "forge"]) }));
   assert.ok(forge.some((s) => s.id === "lame_forgee" && s.ou === "Au foyer de forge, avec un bac de trempe"), JSON.stringify(forge));
+  // R26 (0.8.2) : sans l'enclume, aucune lame, pas même en silhouette ; le ciseau à bois, si.
+  const pierrePlate = silhouettes(etat({ installations: terrain(null, { forge: 1 }), devoilees: new Set([...devoileesAuDepart(), "forge"]) }));
+  assert.ok(!pierrePlate.some((s) => s.id === "lame_forgee") && pierrePlate.some((s) => s.id === "ciseau_bois"), JSON.stringify(pierrePlate));
   assert.ok(!forge.some((s) => s.id === "glaive"), JSON.stringify(forge));
   // Le poste de montage (niveau 2) n'existe pas encore : ses recettes ne sont pas des silhouettes.
   const banc = silhouettes(etat({ famille: "voltaiques", installations: terrain(null, { banc_recharge: 1 }) }));
@@ -142,12 +149,16 @@ test("les silhouettes : le niveau suivant des constructions qu'on a (« Au foyer
 });
 
 test("la silhouette de ce qu'une quête demande passe en tête, et sa construction se dévoile", () => {
-  // « Forger une lame » demande la lame de ressort : elle attend la forge, qui se dévoile pour qu'on la pose.
+  // « Forger une lame » demande la lame de ressort : elle attend la forge, qui se dévoile pour qu'on la pose. R26
+  // (0.8.2) : tant que la forge n'a pas son enclume, la lame n'est pas même une silhouette.
   const e = etat({ quetes: new Set(["lame"]) });
   const d = apres(e);
   assert.ok(d.has("forge"));
   assert.ok(!d.has("lame_forgee"));
-  const s = silhouettes({ ...e, devoilees: d });
+  assert.ok(!silhouettes({ ...e, devoilees: d }).some((s) => s.id === "lame_forgee"));
+  // Le foyer de forge et son enclume, sans bac : la lame de ressort passe en tête des silhouettes.
+  const complet = { ...e, installations: terrain(null, { forge: 1, "forge+enclume": 1 }) };
+  const s = silhouettes({ ...complet, devoilees: apres(complet) });
   assert.equal(s[0]!.id, "lame_forgee");
   assert.equal(s[0]!.quete, true);
 });
@@ -164,11 +175,14 @@ test("une recette liée à une construction est dévoilée par la construction s
   // Le Dakota fait la poêlée, pas l'épieu.
   const dakota = apres(etat({ installations: terrain("dakota") }));
   assert.ok(dakota.has("cepes_poeles") && !dakota.has("epieu"));
-  // La forge posée dévoile tout ce qui s'y forge à son niveau, et seulement au Charbonnier.
-  const forge = apres(etat({ installations: terrain(null, { forge: 1 }) }));
+  // La forge posée, son enclume dessus, dévoile tout ce qui s'y forge à son niveau, et seulement au Charbonnier.
+  const forge = apres(etat({ installations: terrain(null, { forge: 1, "forge+enclume": 1 }) }));
   for (const id of ["lame_forgee_fer", "machette_forgee_fer", "pinces_forge"]) assert.ok(forge.has(id), id);
   assert.ok(!forge.has("reforger_lame"), "la trempe attend le bac");
-  assert.ok(apres(etat({ installations: terrain(null, { forge: 1, "forge+bac": 1 }) })).has("reforger_lame"));
+  assert.ok(apres(etat({ installations: terrain(null, { forge: 1, "forge+enclume": 1, "forge+bac": 1 }) })).has("reforger_lame"));
+  // R26 (0.8.2) : sur la pierre plate, les pinces, pas les lames.
+  const pierrePlate = apres(etat({ installations: terrain(null, { forge: 1, "forge+bac": 1 }) }));
+  assert.ok(pierrePlate.has("pinces_forge") && !pierrePlate.has("lame_forgee_fer") && !pierrePlate.has("reforger_lame"));
   assert.ok(!forge.has("glaive"), "le glaive attend la forge ventilée");
 });
 
@@ -204,8 +218,11 @@ test("le seuil S ouvre l'atelier de sa famille ; ses recettes viennent avec l'at
 
   const mecaniste = apres(etat({ famille: "mecanistes", installations: new Map([["abri", 1]]), faits: { nuit: 1 } }));
   assert.ok(mecaniste.has("pedalier") && !mecaniste.has("arbalete"));
-  // L'établi posé : l'arbalète et ses pièces ; les variantes à matière rare attendent la trouvaille.
-  const etabli = apres(etat({ famille: "mecanistes", devoilees: mecaniste, installations: new Map([["abri", 1], ["etabli", 1]]), faits: { nuit: 1 } }));
+  // R26 (0.8.2) : l'établi seul n'ouvre pas l'arbalète ; il faut le pédalier et son petit alternateur.
+  const sansAlternateur = apres(etat({ famille: "mecanistes", devoilees: mecaniste, installations: new Map([["abri", 1], ["etabli", 1], ["pedalier", 1]]), faits: { nuit: 1 } }));
+  assert.ok(!sansAlternateur.has("arbalete") && !sansAlternateur.has("arbrier"));
+  // L'établi posé, le pédalier complet : l'arbalète et ses pièces ; les variantes à matière rare attendent la trouvaille.
+  const etabli = apres(etat({ famille: "mecanistes", devoilees: mecaniste, installations: new Map([["abri", 1], ["etabli", 1], ["pedalier", 1], ["pedalier+alternateur", 1]]), faits: { nuit: 1 } }));
   for (const id of ["arbalete", "arbrier", "noix_bois", "arc_arbalete_frene", "arc_arbalete_ressort", "corde_arbalete"]) assert.ok(etabli.has(id), id);
   // La corde à la ceinture de sécurité (à la main) attend toujours sa trouvaille ; l'établi à étau, ses pièces.
   assert.ok(!etabli.has("corde_arbalete_ceinture") && !etabli.has("arbalete_lourde"));
@@ -213,7 +230,8 @@ test("le seuil S ouvre l'atelier de sa famille ; ses recettes viennent avec l'at
   // Plan 0.8 (chantier 13) : « La famille » est l'étape 11 (index 10), après « La carte ».
   const voltaique = apres(etat({ famille: "voltaiques", tuto: 10 }));
   assert.ok(voltaique.has("banc_recharge") && !voltaique.has("matraque_fortune"), "la matraque se monte au banc");
-  assert.ok(apres(etat({ famille: "voltaiques", tuto: 10, installations: new Map([["banc_recharge", 1]]) })).has("matraque_fortune"));
+  assert.ok(!apres(etat({ famille: "voltaiques", tuto: 10, installations: new Map([["banc_recharge", 1]]) })).has("matraque_fortune"), "R26 : le banc attend son panneau");
+  assert.ok(apres(etat({ famille: "voltaiques", tuto: 10, installations: new Map([["banc_recharge", 1], ["banc_recharge+panneau", 1]]) })).has("matraque_fortune"));
 });
 
 test("pendant le tutoriel, le seuil S attend l'étape « La famille » (l'Éteint du script ne compte pas)", () => {
@@ -229,7 +247,7 @@ test("pendant le tutoriel, le seuil S attend l'étape « La famille » (l'Étein
 test("le métier commence à l'atelier : une matière rare trouvée avant ne dévoile rien de sa famille", () => {
   const avant = apres(etat({ vus: new Set(["lame_ebrechee"]) }));
   assert.ok(!avant.has("reforger_lame") && !avant.has("forge"));
-  assert.ok(apres(etat({ vus: new Set(["lame_ebrechee"]), installations: terrain(null, { forge: 1, "forge+bac": 1 }) })).has("reforger_lame"));
+  assert.ok(apres(etat({ vus: new Set(["lame_ebrechee"]), installations: terrain(null, { forge: 1, "forge+bac": 1, "forge+enclume": 1 }) })).has("reforger_lame"));
 });
 
 test("le Mécaniste pense au pédalier dès qu'il tient le cadre du vélo (§3.1)", () => {
@@ -241,8 +259,9 @@ test("le filet du temps, par recette à la main : 20 min, puis 60 min, puis le m
   for (const id of ["ficelle", "corde", "volaille"]) assert.ok(vingt.has(id), id);
   assert.ok(!vingt.has("gourdin") && !vingt.has("lit_branchages") && !vingt.has("cepes_poeles"));
   const soixante = apres(etat({ minutes: 60 }));
-  for (const id of ["gourdin", "hache", "lance", "arc_fortune", "pansement", "travois"]) assert.ok(soixante.has(id), id);
-  assert.ok(!soixante.has("forge") && !soixante.has("epieu") && !soixante.has("coffre"));
+  for (const id of ["gourdin", "lance", "arc_fortune", "pansement", "travois"]) assert.ok(soixante.has(id), id);
+  // R13 (0.8.2) : la hache se remmanche à l'établi ; c'est lui qui la dévoile.
+  assert.ok(!soixante.has("forge") && !soixante.has("epieu") && !soixante.has("coffre") && !soixante.has("hache"));
   const seuil = apres(etat({ minutes: FILET_SEUIL_MIN }));
   assert.ok(seuil.has("forge"));
   assert.ok(!seuil.has("glaive") && !seuil.has("pinces_forge"));
@@ -254,6 +273,50 @@ test("le rythme : un quart d'heure de premiers gestes dévoile déjà six cartes
   assert.ok(d.size >= 6, `${d.size} cartes : ${[...d].join(", ")}`);
 });
 
+test("R26 (0.8.2) : les armes de métier attendent le meuble de famille bâti ET équipé de sa pièce, même en silhouette", () => {
+  const pieces = { charbonniers: "forge+enclume", voltaiques: "banc_recharge+panneau", mecanistes: "pedalier+alternateur" } as const;
+  // Ce qu'on voit apparaître avec la pièce posée (le reste attend sa trouvaille, son bac ou le niveau 2).
+  const attendues = {
+    charbonniers: ["lame_forgee_fer", "machette_forgee_fer", "hachette", "serpe", "lame_forgee"],
+    voltaiques: ["matraque_fortune", "module_decharge", "matraque_electrique"],
+    mecanistes: ["arbalete", "arbrier", "noix_bois", "arc_arbalete_frene", "corde_arbalete", "carreaux_os"],
+  } as const;
+  // Tout ce qui fait penser : tous les objets vus, le temps, les quêtes du métier en cours, les faits du métier.
+  const vus = new Set(Object.keys(OBJETS) as TypeObjet[]);
+  for (const famille of FAMILLES) {
+    const quetes = new Set(QUETES.filter((q) => q.ligne === "metier" && q.famille === famille).map((q) => q.id));
+    const faits = { nuit: 3, "detruit:gourdin": 5, defourne: 1, "fabrique:pack_cellules": 1, "fabrique:pinces_forge": 1, "tete:fleche": 1 };
+    // Le meuble bâti (et l'établi, le bac, la meule), mais sans sa pièce : la pierre plate, la manivelle, la dynamo.
+    const sans = new Map<string, number>([["abri", 1], ["etabli", 1], ["feu", 2], ["feu:foyer_pierres", 1], [ATELIER[famille], 1], ["forge+bac", 1], ["pedalier+meule", 1], ["pedalier+dynamo", 1]]);
+    const e = etat({ famille, vus, faits, quetes, minutes: 10_000, installations: sans });
+    assert.ok(!meubleComplet(famille, sans), famille);
+    const d = apres(e);
+    const s = silhouettes({ ...e, devoilees: d }).map((x) => x.id);
+    for (const id of ARMES_DE_METIER[famille]) {
+      assert.ok(!d.has(id), `${famille} : ${id} dévoilée sans la pièce`);
+      assert.ok(!s.includes(id), `${famille} : ${id} en silhouette sans la pièce`);
+    }
+    // La pièce posée : elles apparaissent.
+    const avec = new Map(sans).set(pieces[famille], 1);
+    const d2 = apres({ ...e, installations: avec, devoilees: d });
+    for (const id of attendues[famille]) assert.ok(d2.has(id), `${famille} : ${id} avec la pièce`);
+    // Une recette commune ou d'un autre meuble n'attend pas la pièce.
+    assert.ok(!armeEnAttente("gourdin", sans) && !armeEnAttente("pinces_forge", sans) && !armeEnAttente("pack_cellules", sans));
+  }
+});
+
+test("R26 : un Mécaniste à l'établi, sans le petit alternateur, ne voit pas l'arbalète ; la dynamo du vélo ne suffit pas", () => {
+  const base = { famille: "mecanistes" as const, vus: new Set<string>(["cadre_velo", "perche_frene", "os"]), faits: { nuit: 1 }, quetes: new Set(["arbalete"]), minutes: 300 };
+  for (const installations of [new Map([["abri", 1], ["etabli", 1]]), new Map([["abri", 1], ["etabli", 1], ["pedalier", 1], ["pedalier+dynamo", 1]])]) {
+    const e = etat({ ...base, installations });
+    const d = apres(e);
+    assert.ok(!d.has("arbalete") && !d.has("arbrier") && !d.has("carreaux_os"));
+    assert.ok(!silhouettes({ ...e, devoilees: d }).some((x) => x.id === "arbalete" || x.id === "arbrier"));
+  }
+  const complet = etat({ ...base, installations: new Map([["abri", 1], ["etabli", 1], ["pedalier", 1], ["pedalier+alternateur", 1]]) });
+  assert.ok(apres(complet).has("arbalete"));
+});
+
 test("les autres familles : jamais dévoilées sans leçon ni manuel ; vues grisées après le Comptoir", () => {
   const sans = apres(etat({ minutes: 10_000, vus: new Set(["ressort_retrempe", "rivet", "pointe_acier"]), faits: { "visite:comptoir": 1 } }));
   for (const id of sans) assert.ok(recette(id)?.famille !== "mecanistes" && recette(id)?.famille !== "voltaiques", id);
@@ -261,9 +324,17 @@ test("les autres familles : jamais dévoilées sans leçon ni manuel ; vues gris
   assert.ok(autresAtteints({ famille: "charbonniers", faits: { "visite:comptoir": 1 } }));
   assert.ok(autresAtteints({ famille: "charbonniers", faits: { "rencontre:voltaiques": 1 } }));
   assert.ok(!autresAtteints({ famille: "charbonniers", faits: { "rencontre:charbonniers": 1 } }));
-  // Une leçon dévoile ce qu'elle apprend ; tenir le produit d'une autre famille déplie sa recette.
-  assert.ok(apres(etat({ savoir: { apprises: ["arbalete"] } })).has("arbalete"));
-  assert.ok(entrevues(etat({ vus: new Set(["module_decharge"]) })).includes("module_flash"));
+  // Une leçon dévoile ce qu'elle apprend ; tenir le produit d'une autre famille déplie sa recette. Une arme de métier
+  // apprise attend le meuble complet de son métier, pas celui de l'apprenti (R26 ; plan 0.8.2 §7.3).
+  assert.ok(apres(etat({ savoir: { apprises: ["pedalier"] } })).has("pedalier"));
+  assert.ok(!apres(etat({ savoir: { apprises: ["arbalete"] } })).has("arbalete"));
+  assert.ok(!apres(etat({ savoir: { apprises: ["arbalete"] }, installations: new Map([["forge", 1], ["forge+enclume", 1]]) })).has("arbalete"), "la forge complète du Charbonnier ne suffit pas");
+  assert.ok(apres(etat({ savoir: { apprises: ["arbalete"] }, installations: new Map([["pedalier", 1], ["pedalier+alternateur", 1]]) })).has("arbalete"));
+  // Le Mécaniste qui a lu le manuel du forgeron : le couteau forgé attend la forge et son enclume.
+  const lecteur = { famille: "mecanistes" as const, savoir: { manuels: ["charbonniers" as const] } };
+  assert.ok(!apres(etat({ ...lecteur, installations: new Map([["forge", 1], ["pedalier", 1], ["pedalier+alternateur", 1]]) })).has("lame_forgee_fer"));
+  assert.ok(apres(etat({ ...lecteur, installations: new Map([["forge", 1], ["forge+enclume", 1]]) })).has("lame_forgee_fer"));
+  assert.ok(entrevues(etat({ vus: new Set(["module_decharge"]) })).includes("module_decharge"));
 });
 
 test("voir faire (Q7) dévoile une recette de sa famille ou commune", () => {
@@ -273,7 +344,9 @@ test("voir faire (Q7) dévoile une recette de sa famille ou commune", () => {
 test("le vétéran (Q8, plan 0.8) : les recettes communes à la main, ni ce qui se pose, ni ce qui se fait à une construction", () => {
   for (const f of FAMILLES) {
     const d = new Set(devoileesDEmblee(f as Famille));
-    assert.ok(d.has("gourdin") && d.has("ficelle") && d.has("hache") && d.has("lance"), f);
+    assert.ok(d.has("gourdin") && d.has("ficelle") && d.has("lance"), f);
+    // R13 (0.8.2) : la hache se remmanche à l'établi, elle vient avec lui.
+    assert.ok(!d.has("hache") && !d.has("marteau"), f);
     assert.ok(!d.has("lit_branchages") && !d.has("foyer_dakota") && !d.has("cepes_poeles") && !d.has("epieu"), f);
     assert.ok(!d.has("forge") && !d.has("banc_recharge") && !d.has("pedalier") && !d.has("matraque_fortune") && !d.has("corde_arbalete"), f);
   }

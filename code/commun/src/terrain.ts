@@ -185,6 +185,51 @@ export function distanceMare(x: number, z: number): number {
   return Math.hypot(x - MARE.x, z - MARE.z) - rayonMare(Math.atan2(z - MARE.z, x - MARE.x));
 }
 
+/*
+ * On entre dans la mare (0.8.2, R21 ; Q-0.8.2-3) : une eau peu profonde, aux genoux au milieu, où l'on marche lentement.
+ * La gourde se remplit au milieu, où l'eau est claire ; le bord reste aux joncs (les deux gestes ne se gênent plus).
+ */
+
+/** L'eau monte aux genoux au milieu de la mare (m) : le personnage s'y enfonce d'autant. */
+export const PROFONDEUR_MARE = 0.4;
+/** Depuis le bord, l'eau atteint sa pleine profondeur à cette distance (m). */
+const PENTE_MARE = 1.1;
+/** Dans l'eau profonde, on avance à cette part de son allure (la marche devient un pas lent). */
+export const FREIN_MARE = 0.5;
+/** Le milieu de la mare : à moins de ce rayon de son centre, on remplit la gourde (m). */
+export const RAYON_MILIEU_MARE = 1.1;
+
+/** De combien le personnage s'enfonce dans l'eau, ici (0 hors de la mare, PROFONDEUR_MARE au milieu). */
+export function profondeurMare(x: number, z: number): number {
+  const dedans = -distanceMare(x, z);
+  if (dedans <= 0) return 0;
+  const t = Math.min(1, dedans / PENTE_MARE);
+  return PROFONDEUR_MARE * t * t * (3 - 2 * t);
+}
+
+/**
+ * Plan 0.8.2 §7.6 : le frein ne suit plus la pente de l'eau (1,1 m) mais se fait sentir dès le premier pas : à cette
+ * distance du bord (m), on marche déjà à FREIN_MARE de son allure. Autrefois, du bord au milieu, la marche ne perdait
+ * qu'un tiers (≈ 3 m en 2 s) : on ne le sentait pas.
+ */
+const PENTE_FREIN_MARE = 0.4;
+
+/** Ce que l'eau laisse de l'allure, ici (1 hors de la mare, FREIN_MARE passé le premier pas dans l'eau). */
+export function freinMare(x: number, z: number): number {
+  const dedans = -distanceMare(x, z);
+  if (dedans <= 0) return 1;
+  const t = Math.min(1, dedans / PENTE_FREIN_MARE);
+  return 1 - (1 - FREIN_MARE) * t;
+}
+
+/** Ce que dit le jeu à qui veut remplir sa gourde depuis le bord. */
+export const TEXTE_GOURDE_AU_MILIEU = "Au bord, l'eau est trouble : entre dans la mare, jusqu'au milieu.";
+
+/** Est-on au milieu de la mare, là où l'on remplit sa gourde ? */
+export function auMilieuDeLaMare(x: number, z: number): boolean {
+  return Math.hypot(x - MARE.x, z - MARE.z) <= RAYON_MILIEU_MARE;
+}
+
 /** Distance maximale pour interagir avec un objet, en mètres. */
 export const DISTANCE_INTERACTION = 2;
 
@@ -417,12 +462,15 @@ export const PORTEE_ARBRE = 0.8;
 /** Les arbres isolés du terrain (décor, sans fruits) : les champignons poussent dessous. */
 export const ARBRES_ISOLES: readonly (readonly [number, number])[] = [[6, 8], [47.5, 3], [7, 43], [41, 40], [12, 30]];
 
-/** Ce qu'on fait de chaque ressource du sol, et ce qu'elle donne (Book 02 §5). */
+/**
+ * Ce qu'on fait de chaque ressource du sol, et ce qu'elle donne (Book 02 §5). 0.8.2 (R20) : les baies, les branches, les
+ * pierres et les bûches se ramassent deux fois plus vite qu'en 0.8.1 (ici, au tas de bois, aux poutres, aux galets).
+ */
 const USAGES_ETABLIS: Record<Exclude<TypeRessource, TypeRessourceNiveau1>, UsageRessource> = {
-  branche: { verbe: "ramasser", libelle: "Ramasser la branche", donne: { branche: 1 }, qualites: {}, duree: 1.2, examen: "Du bois mort, bien sec." },
-  buche: { verbe: "ramasser", libelle: "Ramasser la bûche", donne: { buche: 1 }, qualites: {}, duree: 2.5, examen: "Une bûche tombée d'un vieux tas. Sèche." },
-  pierre: { verbe: "ramasser", libelle: "Ramasser la pierre", donne: { pierre: 1 }, qualites: {}, duree: 1.8, examen: "Une pierre plate, bonne pour un cercle de feu." },
-  buisson: { verbe: "ramasser", libelle: "Cueillir des baies", donne: { baies: 1 }, qualites: {}, duree: 2.5, examen: "Des baies sauvages. Elles repoussent." },
+  branche: { verbe: "ramasser", libelle: "Ramasser la branche", donne: { branche: 1 }, qualites: {}, duree: 0.6, examen: "Du bois mort, bien sec." },
+  buche: { verbe: "ramasser", libelle: "Ramasser la bûche", donne: { buche: 1 }, qualites: {}, duree: 1.25, examen: "Une bûche tombée d'un vieux tas. Sèche." },
+  pierre: { verbe: "ramasser", libelle: "Ramasser la pierre", donne: { pierre: 1 }, qualites: {}, duree: 0.9, examen: "Une pierre plate, bonne pour un cercle de feu." },
+  buisson: { verbe: "ramasser", libelle: "Cueillir des baies", donne: { baies: 1 }, qualites: {}, duree: 1.25, examen: "Des baies sauvages. Elles repoussent." },
   joncs: {
     verbe: "ramasser",
     libelle: "Couper des joncs",
@@ -728,7 +776,7 @@ const USAGES_NIVEAU1: Partial<Record<TypeRessourceNiveau1, UsageRessource>> = {
     libelle: "Prendre une bûche au tas",
     donne: { buche: 1 },
     qualites: {},
-    duree: 2,
+    duree: 1,
     examen: "Le bois de chauffage de l'atelier, fendu et rangé contre le mur. Personne ne viendra plus s'y chauffer : prends-en.",
   },
   // ---------- L1A, la Coopérative (chantier 10) : les clés à place fixe ----------
@@ -780,7 +828,7 @@ const USAGES_NIVEAU1: Partial<Record<TypeRessourceNiveau1, UsageRessource>> = {
     libelle: "Prendre deux bouts de poutre (2 bûches)",
     donne: { buche: 2 },
     qualites: {},
-    duree: 4,
+    duree: 2,
     examen: "Les poutres de chêne de rechange du rouet, calées contre le mur. À côté, deux bouts sciés : deux bûches de bon chêne sec.",
   },
   moulin_jute: {
@@ -865,14 +913,14 @@ const USAGES_NIVEAU1: Partial<Record<TypeRessourceNiveau1, UsageRessource>> = {
     examen: "Le camp de survivants sur le pont : un brasero, une bâche déchirée, une couverture, une ligne de pêche sans hameçon. Ils sont partis vite.",
   },
   // ---------- H1B, le Gué-aux-Saules (chantier 11 ; commun/src/gue.ts) ----------
-  // B6 : la vase de la berge, sous le camping-car : inépuisable, une motte de 2 kg par geste de 6 s, avec Creuser 1.
+  // B6 : la vase de la berge, au milieu (0.8.2, R2) : inépuisable, une motte de 2 kg par geste de 6 s, avec Creuser 1.
   gisement_glaise: {
     verbe: "ramasser",
     libelle: "Creuser une motte de glaise",
     donne: { glaise: 1 },
     qualites: { creuser: 1 },
     duree: 6,
-    examen: "La berge de vase, sous le camping-car : une glaise grise et grasse, entamée à la bêche. Il en reste pour des années. Il faut de quoi creuser.",
+    examen: "La berge de vase, à découvert : une glaise grise et grasse, entamée à la bêche. Il en reste pour des années. Il faut de quoi creuser.",
   },
   // B5 : le banc de galets accroché au radier, 8 pierres à chacun (6 h).
   banc_galets: {
@@ -880,7 +928,7 @@ const USAGES_NIVEAU1: Partial<Record<TypeRessourceNiveau1, UsageRessource>> = {
     libelle: "Prendre un galet plat",
     donne: { pierre: 1 },
     qualites: {},
-    duree: 1.8,
+    duree: 0.9,
     examen: "Le banc de galets, au pied du radier : des pierres plates et rondes, polies par l'eau. Bonnes pour un foyer, et pour les ricochets.",
   },
   // Les fouilles du gué : rien de sûr, mais par chance une bâche, des chiffons, une casserole, une corde.

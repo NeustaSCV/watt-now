@@ -5,7 +5,9 @@ import { recette } from "./recettes.ts";
 
 test("la hache sans pierre ni marteau : on dit ce qui martèle", () => {
   const lignes = ceQuiManque(recette("hache")!, { tete_hache: 1, branche: 2, couteau: 1 });
-  assert.equal(lignes.length, 1);
+  // R13 (0.8.2) : et où elle se fait, près d'un établi.
+  assert.equal(lignes.length, 2);
+  assert.match(lignes[1]!, /établi/);
   assert.match(lignes[0]!, /marteler/);
   assert.match(lignes[0]!, /pierre/);
   assert.match(lignes[0]!, /marteau/);

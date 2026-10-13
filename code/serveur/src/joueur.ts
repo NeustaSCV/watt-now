@@ -11,11 +11,13 @@ import { enSaison, etatDuFruitier, jourDuCalendrier, prochaineRecolte } from "..
 import { nouvellePoule, penserPoule, vuePoule, type Poule } from "../../commun/src/faune.ts";
 import type { Apparence } from "../../commun/src/apparence.ts";
 import { INTENTION_REPOS, avancer, nettoyerIntention, type Intention, type Position } from "../../commun/src/deplacement.ts";
+import { AttenteArrivee } from "./arrivee.ts";
 import type { Bienvenue, Cible, FeuVu, InstallationVue, MessageClient, MessageServeur } from "../../commun/src/messages.ts";
 import { CAPACITE_SAC, CONTENANTS, OBJETS, capaciteDe, estCleObjet, estObjet, lumierePortee, nommer, poidsInventaire, traineTravois, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
 import { compter, estMaitrisee, estObjetDeMetier, retirerExemplaires, typeDe, type CleObjet } from "../../commun/src/etoiles.ts";
 import { NOMS_INSTALLATIONS, RECETTES, dureeReelle, ingredientsPresents, multiplicateurQualites, niveauQualite, recette, recettesConnues, type Recette, type TypeInstallation } from "../../commun/src/recettes.ts";
-import { estHorsFamille, etoilesDuProduit, recettePour } from "../../commun/src/recettes.ts";
+import { estHorsFamille, etoilesDuProduit, recetteAvecFacon, recettePour } from "../../commun/src/recettes.ts";
+import { texteTropLourd } from "./trop-lourd.ts";
 import { chezLaFamille, estManuel, type Savoir } from "../../commun/src/savoir.ts";
 import { lireManuel, type ParticipantLecon } from "./lecon.ts";
 import {
@@ -25,8 +27,6 @@ import {
   DUREE_CHARBONNIERE_MS,
   DUREE_PEDALAGE,
   KCAL_PEDALAGE_EN_PLUS,
-  RENDEMENT_BANC,
-  WH_RECHARGE_PAR_HEURE,
   capacite,
   decharger,
   type Charges,
@@ -56,7 +56,7 @@ import {
   type Besoins,
   type Gourde,
 } from "../../commun/src/survie.ts";
-import { DISTANCE_INTERACTION, PORTEE_ARBRE, distanceMare, RAYON_ESCABEAU, REPOUSSE_MS, USAGES, estArbre, ressourceVisible } from "../../commun/src/terrain.ts";
+import { DISTANCE_INTERACTION, EMPRISE_RESSOURCE, PORTEE_ARBRE, TEXTE_GOURDE_AU_MILIEU, auMilieuDeLaMare, distanceMare, RAYON_ESCABEAU, REPOUSSE_MS, USAGES, estArbre, ressourceVisible } from "../../commun/src/terrain.ts";
 import { heuresEcoulees } from "../../commun/src/temps.ts";
 import { DEMONTAGE, LIEU_DE_FOUILLE, estOrdure, etapeButin, tirerVestiges } from "../../commun/src/vestiges.ts";
 import {
@@ -91,7 +91,7 @@ import { REDRESSEUR } from "../../commun/src/arc.ts";
 import { Forge, type ContexteForge } from "./forge.ts";
 import { EvolutionArmes, type ContexteEvolution } from "./evolution-armes.ts";
 import { declencher, declencheurNeuf, definitionDeclencheur, estDeclencheur, type DeclencheurPose } from "./declencheurs.ts";
-import { Electricite, alimenterClotures, coutEnduranceCoup, produireBancsSolaires, type ContexteElectricite } from "./electricite.ts";
+import { Electricite, alimenterClotures, batteriesEnTrop, coutEnduranceCoup, produireBancsSolaires, type ContexteElectricite } from "./electricite.ts";
 import { FilsDeRasoir, utiliserMecanique, type ContexteMecanique } from "./mecanique.ts";
 import { rendDesAccessoires } from "../../commun/src/mecanique.ts";
 import {
@@ -191,17 +191,20 @@ import {
 import { refusAVenir, type AVenir } from "../../commun/src/lignees.ts";
 import { outilsAPortee, refusRatelier } from "../../commun/src/outils-a-portee.ts";
 import { stimuliTorches } from "../../commun/src/torche.ts";
+// Se servir du meuble d'une autre famille, une fois sa recette apprise (plan 0.8.2 §7.3, chantier J).
+import { saitSeServir } from "../../commun/src/savoir-meuble.ts";
 import { utiliserNiveau1 } from "./niveau1-base.ts";
 import { choisirFacon } from "../../commun/src/replis.ts";
 import { carteInstallations, feuxDuLieu, refusLieu, type Alentours } from "../../commun/src/lieu-recette.ts";
-import { ETAPE_CARTE, ETAPE_FAMILLE, ETAPE_NUIT, ETAPE_PREMIER_ETEINT, ETAPE_SAISIE, NOMBRE_ETAPES, etapesTutoriel, type EtatTutoriel, type VueTutoriel } from "../../commun/src/tutoriel.ts";
+import { ETAPE_CARTE, ETAPE_FAMILLE, ETAPE_NUIT, ETAPE_PREMIER_ETEINT, ETAPE_SAISIE, NOMBRE_ETAPES, REPAS_DU_TUTORIEL, etapesTutoriel, type EtatTutoriel, type VueTutoriel } from "../../commun/src/tutoriel.ts";
 import { AvertissementBuche, etapesReussies, progresCarte, progresFamille, type PourFinDuTutoriel } from "./tutoriel-fin.ts";
 // Le compte admin « god » (outil du porteur) : serveur/src/admin.ts.
 import { remplirCoffres, savoirAdmin, vueProgressionAdmin } from "./admin.ts";
 import { ARRIVEE_DEPART } from "../../commun/src/lieux.ts";
+import { pasVersLaCouche, trajetCouche, type AbriPose, type TrajetCouche } from "./sommeil-abri.ts";
 import { SANTE_DEPART } from "../../commun/src/combat.ts";
 import type { OperationAdmin, VueAdmin } from "../../commun/src/admin.ts";
-import type { VueProgression } from "../../commun/src/progression.ts";
+import { nombreFabriques, type VueProgression } from "../../commun/src/progression.ts";
 
 const JAMAIS = Number.MAX_SAFE_INTEGER;
 const INTERVALLE_BESOINS = 1000;
@@ -529,6 +532,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
       const n = this.inventaire[b] ?? 0;
       if (n > 0 && this.charges[b] === undefined) this.charges[b] = Math.min(CHARGE_TROUVEE[b] * n, capacite(b, n));
     }
+    // Une partie d'avant la 0.8.2 (R17) : le banc ne garde qu'une batterie ; les autres reviennent au sac, avec leur charge.
+    for (const banc of this.installations.values()) this.rendreBatteriesEnTrop(banc);
     this.devoilement = this.creerDevoilement();
     this.dechets = this.creerDechets();
     // Plan 0.8 (chantier 14) : la naissance du personnage, `atteint:maison` (une fois).
@@ -586,6 +591,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
 
   /** En pause (2026-10-09) : sur son terrain ou dans sa Coopérative seulement, là où l'on est seul. */
   private pause = false;
+  /** La vue d'ensemble à l'arrivée (0.8.2, chantier G) : seul, la pause jusqu'au premier geste ; dans une halte, à l'abri. */
+  private readonly arrivee = new AttenteArrivee(() => (this.pause = false));
 
   enPause(): boolean {
     return this.pause;
@@ -616,6 +623,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
   }
 
   recevoir(message: MessageClient): void {
+    // Le premier geste après l'arrivée met fin à la vue d'ensemble (0.8.2, chantier G).
+    if (this.arrivee.recevoir(message)) return;
     if (message.t === "pause") return this.basculerPause(message.oui === true);
     // En pause, le monde attend : on n'agit pas (le client le sait aussi).
     if (this.pause && message.t !== "ping" && message.t !== "mesures") return;
@@ -646,14 +655,16 @@ export class Joueur implements Voyageur, ParticipantLecon {
         this.fabriquer(message.recette, message.x, message.z, message.o);
         return;
       case "lumiere":
-        if (message.allumee && !lumierePortee(this.inventaire)) return this.info("Rien pour t'éclairer : torche, frontale ou lanterne sont dans le kit d'une famille : échange-la.");
+        if (message.allumee && !lumierePortee(this.inventaire)) return this.info("Rien pour t'éclairer : chaque famille a sa lumière, échanges-en une.");
         if (message.allumee && lumierePortee(this.inventaire) === "lampe_frontale" && (this.charges.petite_batterie ?? 0) <= 0.1) {
-          return this.info("La petite batterie est vide : recharge-la au banc solaire.");
+          return this.info("La petite batterie de la frontale est vide : charge-la au banc, depuis sa fiche.");
         }
         this.lumiere = message.allumee === true;
         this.envoyer({ t: "lumiere", allumee: this.lumiere });
         return;
       case "annuler":
+        // Endormi, A « Se réveiller » envoie « annuler » : on se réveille, comme en bougeant (0.8.2, chantier K).
+        if (this.sommeil) return this.reveiller("");
         this.annulerAction();
         return;
       case "voyager":
@@ -721,8 +732,9 @@ export class Joueur implements Voyageur, ParticipantLecon {
         return this.tir.lancer(message.dx, message.dz, message.cible, message.distance);
       case "rearmer":
         return this.tir.rearmer();
-      case "manivelle":
-        return this.electricite.manivelle(message.objet);
+      // Le banc de recharge (0.8.2, chantier C) : charger ce qu'on porte, échanger la batterie, la remplir à la manivelle (serveur/src/electricite.ts).
+      case "banc":
+        return this.auBanc(message.id, (banc) => (message.op === "charger" ? this.electricite.charger(banc, message.cible) : message.op === "manivelle" ? this.electricite.manivelle(banc) : this.electricite.echanger(banc)));
       case "lire":
         this.lire(message.objet);
         return;
@@ -962,7 +974,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
         if (refusCle) return this.info(refusCle);
         const total = prixVenteCle(op.objet) * n;
         if (total > enPoche + 1e-6) return this.info(`Il te faut ${formaterWotts(total)} en bons. Gagne-les : dépose de l'électricité, vends, ou pédale pour les Compteurs.`);
-        if (poidsInventaire(this.inventaire, this.gourde.litres) + OBJETS[typeDe(op.objet)].poids * n > capaciteDe(this.inventaire)) return this.sacTropLourd();
+        if (poidsInventaire(this.inventaire, this.gourde.litres) + OBJETS[typeDe(op.objet)].poids * n > capaciteDe(this.inventaire)) return this.sacTropLourd({ [op.objet]: n });
         if (!this.comptoir.sortirDuStock(op.objet, n)) return;
         this.poche = ajouterWotts(this.poche, -total, instant);
         this.mesurer("wotts", "achat", -total, { objet: op.objet, n });
@@ -1239,7 +1251,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       commencer: (libelle, duree, appliquer, bruit) => j.commencer(libelle, duree, appliquer, 0, bruit),
       info: (t) => j.info(t),
       envoyer: (m) => j.envoyer(m),
-      sacTropLourd: () => j.sacTropLourd(),
+      sacTropLourd: (vise) => j.sacTropLourd(vise),
       vivant: () => j.vivant,
       noterFait: (f) => j.noterFait(f),
       recetteVisible: (id) => j.recetteVisible(id),
@@ -1296,7 +1308,24 @@ export class Joueur implements Voyageur, ParticipantLecon {
       commencer: (libelle, dureeS, appliquer, kcal) => j.commencer(libelle, dureeS, appliquer, kcal ?? 0, "outil"),
       retirer: (objets) => j.retirerPlusieurs(objets),
       noter: (fait) => j.noterFait(fait),
+      // Le banc de recharge (0.8.2, chantier C).
+      prendreBatterie: (b) => j.sortirBatterie(b),
+      rendreBatterie: (b, wh) => {
+        j.ajouterPlusieurs({ [b]: 1 });
+        j.ajouterCharge(b, wh);
+      },
+      chargerBatterie: (b, wh) => j.ajouterCharge(b, wh),
+      majBase: () => j.mettreAJourBase(j.maintenant()),
     };
+  }
+
+  /** Une batterie sort du sac (posée dans le banc, échangée) : sa part de charge part avec elle ; rend cette charge. */
+  private sortirBatterie(b: TypeBatterie): number {
+    const wh = this.chargesQuiPartent({ [b]: 1 })[b] ?? 0;
+    this.charges = { ...this.charges, [b]: Math.max(0, (this.charges[b] ?? 0) - wh) };
+    this.retirerPlusieurs({ [b]: 1 });
+    this.envoyerCharges();
+    return wh;
   }
 
   /** Ce que le joueur prête à la mécanique des Mécanistes (mecanique.ts) : des accès, aucune règle. */
@@ -1315,6 +1344,11 @@ export class Joueur implements Voyageur, ParticipantLecon {
       famille: () => this.compte.famille,
       batterieDuSac: () => this.batterieAvecPlace(),
       chargerSac: (b, wh) => this.ajouterCharge(b, wh),
+      installations: () => this.installations.values(),
+      sauverInstallation: (i) => {
+        this.base.sauverEtatInstallation(this.compte.id, i.id, i.etat);
+        this.envoyer({ t: "installation", installation: i });
+      },
     };
   }
 
@@ -1537,7 +1571,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     const ou = this.cooperatives.radio(this.compte.id);
     if (!ou) return;
     if (!this.proche(ou.x, ou.z, DISTANCE_INTERACTION + 0.5)) return this.info("Approche-toi.");
-    if (poidsInventaire(this.inventaire, this.gourde.litres) + poidsDe({ radio_piles: 1 }) > capaciteDe(this.inventaire)) return this.sacTropLourd();
+    if (poidsInventaire(this.inventaire, this.gourde.litres) + poidsDe({ radio_piles: 1 }) > capaciteDe(this.inventaire)) return this.sacTropLourd({ radio_piles: 1 });
     if (!this.cooperatives.prendreRadio(this.compte.id, this.maintenant())) return;
     this.ajouterPlusieurs({ radio_piles: 1 });
     this.info("Tu glisses la radio dans ton sac. Pose-la où tu veux attirer les Éteints, puis allume-la.");
@@ -1739,7 +1773,11 @@ export class Joueur implements Voyageur, ParticipantLecon {
         poids += unite * k;
       }
     }
-    if (Object.keys(pris).length === 0) return this.sacTropLourd();
+    // Rien n'y entre, pas même le plus léger : c'est de lui qu'on dit le poids.
+    if (Object.keys(pris).length === 0) {
+      const plusLeger = entrees.map(([t]) => t).sort((a, b) => OBJETS[typeDe(a)].poids - OBJETS[typeDe(b)].poids)[0];
+      return this.sacTropLourd(plusLeger ? { [plusLeger]: 1 } : undefined);
+    }
     this.commencer("Ramasser", 1.5, () => {
       const encore = this.sacsIci().find((s) => s.id === tas.id);
       if (!encore) return;
@@ -1853,20 +1891,23 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (this.voyage || !estObjet(objet) || (this.inventaire[objet] ?? 0) < 1) return;
     const d = DEMONTAGE[objet];
     if (!d) return this.info(`${OBJETS[objet].nom[0]!.toUpperCase()}${OBJETS[objet].nom.slice(1)} : rien à en tirer en le démontant, pour l'instant.`);
+    // Certains se démontent par lots (0.8.2 : trois canettes pour une chute d'aluminium).
+    const par = d.par ?? 1;
+    if ((this.inventaire[objet] ?? 0) < par) return this.info(`Il en faut ${par} pour en tirer quelque chose : ${nommer(objet, par)}.`);
     const facteur = multiplicateurQualites(this.outils(), d.qualites);
     if (facteur === null) return this.infos(outilsManquantsBref(d.qualites, this.outils(), undefined, this.recetteVisible));
     // Le poids d'après : le démontage laisse le rebut sur place, mais une pyramide de rouleaux pèse toujours son poids.
-    const apres: Inventaire = { ...this.inventaire, [objet]: (this.inventaire[objet] ?? 0) - 1 };
+    const apres: Inventaire = { ...this.inventaire, [objet]: (this.inventaire[objet] ?? 0) - par };
     for (const [t, k] of Object.entries(d.donne) as [TypeObjet, number][]) apres[t] = (apres[t] ?? 0) + k;
     if (poidsInventaire(apres) > capaciteDe(apres) + 1e-9) return this.sacTropLourd();
     this.commencer(`Démonter : ${OBJETS[objet].nom}`, (d.duree * facteur) / REGLAGES.gestes_vitesse, () => {
-      if ((this.inventaire[objet] ?? 0) < 1) return;
-      this.retirerPlusieurs({ [objet]: 1 });
+      if ((this.inventaire[objet] ?? 0) < par) return;
+      this.retirerPlusieurs({ [objet]: par });
       this.ajouterPlusieurs(d.donne);
       this.verifierLumiere();
       this.noterFait(`demonte:${objet}`);
       this.mesurer("progression", `demontage:${objet}`, 1);
-      this.info(`Démonté : ${OBJETS[objet].nom}. Tu en tires ${(Object.entries(d.donne) as [TypeObjet, number][]).map(([t, k]) => nommer(t, k)).join(", ")}.`);
+      this.info(`Démonté : ${par > 1 ? nommer(objet, par) : OBJETS[objet].nom}. Tu en tires ${(Object.entries(d.donne) as [TypeObjet, number][]).map(([t, k]) => nommer(t, k)).join(", ")}.`);
     }, 0, d.qualites.marteler ? "lourd" : "outil");
   }
 
@@ -1942,7 +1983,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     } else {
       const dispo = contenu[objet] ?? 0;
       if (dispo < n) return;
-      if (poidsInventaire(this.inventaire, this.gourde.litres) + OBJETS[typeDe(objet)].poids * n > capaciteDe(this.inventaire) + 1e-9) return this.sacTropLourd();
+      if (poidsInventaire(this.inventaire, this.gourde.litres) + OBJETS[typeDe(objet)].poids * n > capaciteDe(this.inventaire) + 1e-9) return this.sacTropLourd({ [objet]: n });
       let part = 0;
       if (batterie) {
         part = ((charges[b] ?? 0) * n) / dispo;
@@ -2046,7 +2087,10 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (this.lieu === "comptoir") this.comptoir.entrer(this.envoyer, () => this.quetes.etat.faits);
     if (this.tuto && this.lieu === "station") this.tuto.visiteStation = true;
     this.noterFait(`visite:${this.lieu}`);
-    this.envoyer(this.bienvenue(this.base.debutMonde()));
+    // 0.8.2, chantier G : la vue d'ensemble ; seul, le monde attend le premier geste (serveur/src/arrivee.ts).
+    const arrivee = this.arrivee.commencer(this.lieu, this.maintenant());
+    if (arrivee.mode === "pause") this.pause = true;
+    this.envoyer({ ...this.bienvenue(this.base.debutMonde()), arrivee });
   }
 
   /** Le joueur se déconnecte : il quitte la halte (hors ligne, il est sur la carte, Book 01 §2 bis). */
@@ -2130,12 +2174,36 @@ export class Joueur implements Voyageur, ParticipantLecon {
 
   // ---------- Le tutoriel (É5, Book 14 §4.2) ----------
 
-  private vueTutoriel(lecon?: string): VueTutoriel | null {
+  private vueTutoriel(lecon?: string, repas: string[] = []): VueTutoriel | null {
     if (!this.tuto) return null;
     const etapes = etapesTutoriel(this.compte.famille);
     const e = etapes[Math.min(this.tuto.etape, NOMBRE_ETAPES - 1)]!;
     const progres = this.progresTutoriel();
-    return { etape: this.tuto.etape, total: NOMBRE_ETAPES, titre: e.titre, consigne: e.consigne, lecon, termine: this.tuto.etape >= NOMBRE_ETAPES, ...(progres.length ? { progres } : {}) };
+    return { etape: this.tuto.etape, total: NOMBRE_ETAPES, titre: e.titre, consigne: e.consigne, lecon, ...(repas.length ? { repas } : {}), termine: this.tuto.etape >= NOMBRE_ETAPES, ...(progres.length ? { progres } : {}) };
+  }
+
+  /**
+   * Le repas du tutoriel (0.8.2) : au sac ce qui y tient, comme le bric-à-brac d'une fouille ; le reste tombe par terre,
+   * à ses pieds (les récompenses de quête, elles, entrent au sac quoi qu'il pèse).
+   */
+  private recevoirRepasDuTutoriel(objets: Inventaire): void {
+    const pris: Inventaire = {};
+    const laisse: Inventaire = {};
+    let poids = poidsInventaire(this.inventaire, this.gourde.litres);
+    const capacite = capaciteDe(this.inventaire);
+    for (const [t, k] of Object.entries(objets) as [TypeObjet, number][]) {
+      for (let i = 0; i < k; i++) {
+        if (poids + OBJETS[t].poids <= capacite + 1e-9) {
+          pris[t] = (pris[t] ?? 0) + 1;
+          poids += OBJETS[t].poids;
+        } else laisse[t] = (laisse[t] ?? 0) + 1;
+      }
+    }
+    if (Object.keys(pris).length) this.ajouterPlusieurs(pris);
+    if (Object.keys(laisse).length) {
+      this.poserAuSol(laisse);
+      this.info(`Ton sac est plein : ${(Object.entries(laisse) as [TypeObjet, number][]).map(([t, k]) => nommer(t, k)).join(", ")}, posé par terre.`);
+    }
   }
 
   /** Ce que regarde la fin du tutoriel (serveur/src/tutoriel-fin.ts). */
@@ -2206,8 +2274,15 @@ export class Joueur implements Voyageur, ParticipantLecon {
     this.derniereVerifTuto = instant;
     const etapes = etapesTutoriel(this.compte.famille);
     let lecon: string | undefined;
+    const repas: string[] = [];
     while (this.tuto.etape < NOMBRE_ETAPES && this.etapeReussie(this.tuto.etape)) {
       lecon = etapes[this.tuto.etape]!.lecon;
+      // 0.8.2 : le repas du tutoriel, une fois, à l'étape réussie (l'étape avance et se sauve dans le même tour).
+      const r = REPAS_DU_TUTORIEL[this.tuto.etape];
+      if (r) {
+        this.recevoirRepasDuTutoriel(r.objets);
+        repas.push(r.texte);
+      }
       this.tuto.etape++;
       this.mesurer("progression", `tutoriel:${this.tuto.etape}`, 1);
     }
@@ -2220,7 +2295,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (lecon !== undefined) {
       const fini = this.tuto.etape >= NOMBRE_ETAPES;
       this.base.sauverTutoriel(this.compte.id, fini ? null : this.tuto);
-      this.envoyer({ t: "tutoriel", tutoriel: this.vueTutoriel(lecon) });
+      this.envoyer({ t: "tutoriel", tutoriel: this.vueTutoriel(lecon, repas) });
       // Les compteurs de la nouvelle étape partent avec la leçon : pas besoin de les renvoyer tout de suite.
       if (!fini) this.dernierProgresTuto = JSON.stringify(this.progresTutoriel());
       if (fini) {
@@ -2272,6 +2347,35 @@ export class Joueur implements Voyageur, ParticipantLecon {
     this.lumiere = false;
     this.envoyer({ t: "lumiere", allumee: false });
     this.envoyer({ t: "sommeil", dort: true, dansUnAbri });
+  }
+
+  /** Le trajet jusqu'à la couche de l'abri, en cours (0.8.2, R12) : on y dormira à l'arrivée. */
+  private versLaCouche: TrajetCouche | null = null;
+
+  /** Dormir dans l'abri : d'abord se rendre accroupi jusqu'à sa couche (commun/src/sommeil-abri.ts). */
+  private allerALaCouche(abri: AbriPose, surUnLit: boolean, confort: number): void {
+    if (this.sommeil || this.voyage || this.versLaCouche) return;
+    if (this.besoins.repos >= 0.97) return this.info("Tu n'as pas sommeil : reviens quand la jauge de sommeil aura baissé.");
+    if (this.saisisseurs().length > 0) return;
+    this.annulerAction();
+    this.intention = INTENTION_REPOS;
+    this.versLaCouche = trajetCouche(abri, this.position, surUnLit, confort);
+    this.envoyer({ t: "vers_couche", chemin: this.versLaCouche.chemin, o: this.versLaCouche.o });
+  }
+
+  private suivreVersLaCouche(dt: number, bouge: boolean): void {
+    const t = this.versLaCouche!;
+    if (bouge || this.voyage || this.saisisseurs().length > 0) {
+      this.versLaCouche = null;
+      this.envoyer({ t: "vers_couche", chemin: null, o: t.o });
+      return;
+    }
+    const pas = pasVersLaCouche(t, this.position, dt);
+    this.position = pas.position;
+    this.positionEnvoyee = false;
+    if (!pas.arrive) return;
+    this.versLaCouche = null;
+    this.endormir(true, t.surUnLit, t.confort);
   }
 
   private reveiller(message: string): void {
@@ -2371,7 +2475,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       z: this.position.z,
       discret: !this.bouge || this.intention.allure === "discrete",
       eclaire: this.lumiere && (this.nuit() || (this.vivant?.obscur(this.position.x, this.position.z) ?? false)),
-      intouchable: this.maintenant() < this.esquiveJusqua,
+      intouchable: this.maintenant() < this.esquiveJusqua || this.arrivee.protege(this.maintenant()),
     };
   }
 
@@ -2496,6 +2600,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     // Déplacement : bouger interrompt l'action en cours. En route, on ne bouge pas : on est sur la carte.
     if (this.voyage) this.intention = INTENTION_REPOS;
     const bouge = Math.hypot(this.intention.dx, this.intention.dz) > 0.01;
+    if (this.versLaCouche) this.suivreVersLaCouche(dt, bouge);
     if (this.sommeil) {
       if (bouge || this.saisisseurs().length > 0) this.reveiller(bouge ? "" : "Réveillé en sursaut !");
       else {
@@ -2552,7 +2657,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       if (reste <= 0) {
         this.lumiere = false;
         this.envoyer({ t: "lumiere", allumee: false });
-        this.info("La petite batterie est vide : la lampe s'éteint.");
+        this.info("La petite batterie de la frontale est vide : la lampe s'éteint. Charge-la au banc.");
       }
     }
     if (instant - this.dernierEnvoiBesoins >= INTERVALLE_BESOINS) {
@@ -2811,7 +2916,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
     const r = this.ressourcesIci().get(id);
     // L'if du fond du bois : qui ne reconnaît pas les essences ne le voit pas (Book 25 §3.2).
     if (!r || !this.ressourceLibre(r, this.maintenant()) || !ressourceVisible(r.type, this.compte.famille)) return;
-    if (!this.proche(r.x, r.z, DISTANCE_INTERACTION + (estArbre(r.type) ? PORTEE_ARBRE : 0))) return this.info("C'est trop loin : approche-toi encore un peu.");
+    // Plan 0.8.2 §7.6 : la berge de glaise se creuse depuis son bord (son emprise), comme l'écran la propose.
+    if (!this.proche(r.x, r.z, DISTANCE_INTERACTION + (estArbre(r.type) ? PORTEE_ARBRE : r.type === "gisement_glaise" ? (EMPRISE_RESSOURCE.gisement_glaise ?? 0) : 0))) return this.info("C'est trop loin : approche-toi encore un peu.");
     const usage = USAGES[r.type];
     // Le coffre du directeur ne s'ouvre qu'avec la clé du magasinier (Book 23 §2.2).
     if (r.type === "coop_coffre" && !(this.inventaire.cle_coffre ?? 0)) return this.info("Fermé à clé. Le magasinier la portait toujours sur lui…");
@@ -2825,7 +2931,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     }
     const facteur = multiplicateurQualites(this.outils(), usage.qualites);
     if (facteur === null) return this.infos(outilsManquantsBref(usage.qualites, this.outils(), undefined, this.recetteVisible));
-    if (poidsInventaire(this.inventaire, this.gourde.litres) + poidsDe(usage.donne) > capaciteDe(this.inventaire)) return this.sacTropLourd();
+    if (poidsInventaire(this.inventaire, this.gourde.litres) + poidsDe(usage.donne) > capaciteDe(this.inventaire)) return this.sacTropLourd(usage.donne);
     this.commencer(usage.libelle, (usage.duree * facteur) / REGLAGES.gestes_vitesse, () => {
       const instant = this.maintenant();
       if (this.lieu !== lieu || !this.ressourceLibre(r, instant)) return;
@@ -2876,13 +2982,10 @@ export class Joueur implements Voyageur, ParticipantLecon {
   }
   private readonly derniersIndices = new Map<string, number>();
 
-  /** Le sac est trop lourd : on dit de combien, et comment s'en sortir. */
-  private sacTropLourd(): void {
+  /** Le sac est trop lourd : on dit ce que pèse ce qu'on voulait prendre (`vise`), où en est le sac, et comment s'en sortir. */
+  private sacTropLourd(vise?: Inventaire): void {
     this.noterFait("trop_lourd");
-    const capacite = capaciteDe(this.inventaire);
-    const sansSac = capacite < CAPACITE_SAC && !(this.inventaire.sac_fortune ?? 0);
-    this.info(`${sansSac ? "Tes poches sont pleines" : "Ton sac est trop lourd"} (${Math.round(poidsInventaire(this.inventaire, this.gourde.litres))} kg sur ${capacite}) : jette (Sac → Jeter) ou range dans un coffre.`);
-    if (sansSac) this.info("Sans sac, tu ne portes que 10 kg : reprends le tien, ou fabrique un sac de fortune (4 branches, 2 cordes).");
+    for (const ligne of texteTropLourd(this.inventaire, this.gourde.litres, vise)) this.info(ligne);
   }
 
   /** Fabriquer un objet ou poser une installation (Book 02 §2). */
@@ -2897,12 +3000,13 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (!admin && !this.devoilement.estDevoilee(modele.id)) return this.info("Tu n'y as pas encore pensé.");
     // Hors de sa famille (Book 25 §2.2) : ×1,5 en matières et en temps, et ★★ au plus.
     const horsFamille = !admin && estHorsFamille(modele, this.compte.famille);
-    const r = admin ? modele : recettePour(modele, this.compte.famille);
+    // Des ingrédients au choix (0.8.2, chantier B) : on prend la façon qu'on a dans le sac, et c'est elle qu'on consomme.
+    const r = recetteAvecFacon(admin ? modele : recettePour(modele, this.compte.famille), this.inventaire);
     // Plus tard (plan 0.8 §1.3) : le client la grise ; le serveur la refuse.
     const plusTard = refusAVenir(r);
     if (plusTard) return this.info(plusTard);
     if (this.lieu !== "terrain" && r.lieu.genre !== "main") return this.info(r.lieu.genre === "posee" ? "Ça se construit chez toi, sur ton terrain." : "Ça se fait chez toi, à côté de ce que tu y as construit.");
-    if (!ingredientsPresents(this.inventaire, r)) return this.info(ceQuiManqueBref(r, this.inventaire, undefined, this.recetteVisible));
+    if (!ingredientsPresents(this.inventaire, r)) return this.info(ceQuiManqueBref(admin ? modele : recettePour(modele, this.compte.famille), this.inventaire, undefined, this.recetteVisible));
     const facteur = multiplicateurQualites(this.outils(), r.qualites);
     if (facteur === null) return this.infos(outilsManquantsBref(r.qualites, this.outils(), undefined, this.recetteVisible));
     // Le lieu (plan 0.8, chantier 1) : la forme du foyer, la construction à son niveau, l'accessoire ; le refus nomme ce qui manque.
@@ -2962,7 +3066,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
         }
       }
       // Les étoiles d'un objet de métier (Book 25 §4.2) : le maillon faible, la maîtrise (10 faits), ★★ hors famille.
-      const etoiles = etoilesDuProduit(r, this.inventaire, { horsFamille, maitrise: estMaitrisee(this.quetes.etat.faits[`fabrique:${r.id}`] ?? 0), contexte: this.forge.contexte() });
+      const etoiles = etoilesDuProduit(r, this.inventaire, { horsFamille, maitrise: estMaitrisee(nombreFabriques(this.quetes.etat.faits, r.id)), contexte: this.forge.contexte() });
       this.retirerIngredients(ingredients);
       // Ce qui sort de la forge (trempe, reforgeage, manche tourné : forge.ts) ; ailleurs, le produit à ses étoiles.
       const sortie = this.forge.sortie(r, produit.objet, etoiles, quantite, horsFamille);
@@ -3098,6 +3202,21 @@ export class Joueur implements Voyageur, ParticipantLecon {
     return bilan;
   }
 
+  /** Relire un banc d'avant la 0.8.2 (electricite.ts, `batteriesEnTrop`) : ce qu'il ne garde pas revient au sac, sans rien perdre. */
+  private rendreBatteriesEnTrop(banc: InstallationVue): void {
+    const r = batteriesEnTrop(banc);
+    if (!r) return;
+    const inventaire = { ...this.inventaire };
+    for (const [b, n] of Object.entries(r.batteries) as [TypeBatterie, number][]) {
+      inventaire[b] = (inventaire[b] ?? 0) + n;
+      this.charges = { ...this.charges, [b]: Math.min(capacite(b, inventaire[b]!), (this.charges[b] ?? 0) + (r.charges[b] ?? 0)) };
+    }
+    this.inventaire = inventaire;
+    this.base.sauverInventaire(this.compte.id, this.inventaire);
+    this.base.sauverCharges(this.compte.id, this.charges, this.maintenant());
+    this.base.sauverEtatInstallation(this.compte.id, banc.id, banc.etat);
+  }
+
   private chargesDuBanc(): Charges {
     const total: Charges = {};
     for (const i of this.installations.values()) {
@@ -3184,7 +3303,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
   }
 
   private ajouterBois(feu: FeuEnBase): void {
-    const type: TypeObjet | null = (this.inventaire.buche ?? 0) > 0 ? "buche" : (this.inventaire.branche ?? 0) > 0 ? "branche" : null;
+    // Les branches d'abord, puis les bûches (plan 0.8 §9.3) : le conseil de la première nuit devient possible.
+    const type: TypeObjet | null = (this.inventaire.branche ?? 0) > 0 ? "branche" : (this.inventaire.buche ?? 0) > 0 ? "buche" : null;
     if (!type) return this.info("Tu n'as pas de bois : ramasse des branches ou des bûches de bois mort sur ton terrain.");
     if (feu.bois + combustibleDe(type) > effetsFeu(feu).boisMax + 1e-9) return this.info(`Le feu a déjà assez de bois (${effetsFeu(feu).boisMax} kg au plus).`);
     // Immédiat (Book 08 §3, 2026-10-08) : une action sans jauge se fait sur-le-champ, un clic = un morceau de bois.
@@ -3269,7 +3389,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
           : "Raté : elle s'enfuit en caquetant. Approche en allure discrète, sans geste brusque.",
       );
     }
-    if (poidsInventaire(this.inventaire, this.gourde.litres) + OBJETS.poule.poids > capaciteDe(this.inventaire)) return this.sacTropLourd();
+    if (poidsInventaire(this.inventaire, this.gourde.litres) + OBJETS.poule.poids > capaciteDe(this.inventaire)) return this.sacTropLourd({ poule: 1 });
     this.poules = this.poules.filter((x) => x !== p);
     this.faune.prises.push(this.maintenant());
     this.base.sauverFaune(this.compte.id, this.faune);
@@ -3317,7 +3437,9 @@ export class Joueur implements Voyageur, ParticipantLecon {
 
   private remplirGourde(): void {
     if ((this.inventaire.gourde ?? 0) < 1) return this.info(`Tu n'as pas de gourde. ${ouTrouverPhrase("gourde", this.recetteVisible)}`);
+    // Au milieu de la mare, pas au bord (0.8.2, R21) : au bord, on coupe les joncs.
     if (distanceMare(this.position.x, this.position.z) > 1.5) return this.info("Approche-toi de la mare.");
+    if (!auMilieuDeLaMare(this.position.x, this.position.z)) return this.info(TEXTE_GOURDE_AU_MILIEU);
     if (this.gourde.litres >= CONTENANCE_GOURDE && this.gourde.contenu === "brute") return this.info("Ta gourde est déjà pleine.");
     this.commencer("Remplir la gourde à la mare", DUREES.remplirGourde, () => {
       // L'eau de la mare n'est pas potable : mélangée, toute la gourde devient de l'eau brute.
@@ -3406,7 +3528,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
   /** Rendre des objets au sac : refusé (et dit) si le sac ne peut pas les porter. */
   private peutReprendre(objets: Inventaire, enMoins: Inventaire = {}): boolean {
     if (poidsInventaire(this.inventaire, this.gourde.litres) - poidsInventaire(enMoins) + poidsInventaire(objets) <= capaciteDe(this.inventaire) + 1e-9) return true;
-    this.sacTropLourd();
+    this.sacTropLourd(objets);
     return false;
   }
 
@@ -3699,7 +3821,9 @@ export class Joueur implements Voyageur, ParticipantLecon {
       case "demonter_installation": {
         if (!laRecette) return this.info("Ça ne se démonte pas.");
         if (i.type === "coffre" && Object.values(i.etat.contenu ?? {}).some((n) => (n ?? 0) > 0)) return this.info("Vide d'abord le coffre.");
-        if (porteBatteries(i.type) && Object.values(i.etat.batteries ?? {}).some((n) => (n ?? 0) > 0)) return this.info("Reprends d'abord les batteries posées dessus.");
+        // La batterie du banc (0.8.2) est à demeure : elle revient au sac avec le reste ; celle du pédalier se reprend d'abord.
+        const batterieDuBanc = i.type === "banc_recharge" ? (i.etat.batteries ?? {}) : {};
+        if (i.type !== "banc_recharge" && porteBatteries(i.type) && Object.values(i.etat.batteries ?? {}).some((n) => (n ?? 0) > 0)) return this.info("Reprends d'abord les batteries posées dessus.");
         if (i.type === "ratelier_outils" && Object.values(i.etat.contenu ?? {}).some((n) => (n ?? 0) > 0)) return this.info("Reprends d'abord les outils du râtelier.");
         if (i.type === "charbonniere" && i.etat.pretLe) return this.info("La meule cuit : on ne l'ouvre qu'au défournement.");
         // Les accessoires du pédalier se démontent avec lui.
@@ -3709,6 +3833,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
           i.etat.redresseur ? REDRESSEUR.cout : {},
           Forge.accessoiresRendus(i),
           rendDesAccessoires(i.etat),
+          batterieDuBanc,
         );
         const rend = rendDuDemontage(somme(laRecette.ingredients, ...(i.etat.payes ?? []), accessoires));
         if (!this.peutReprendre(rend)) return;
@@ -3718,6 +3843,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
           this.base.retirerInstallation(this.compte.id, i.id);
           this.envoyer({ t: "installation_retiree", id: i.id });
           if (Object.keys(rend).length) this.ajouterPlusieurs(rend);
+          for (const [b, wh] of Object.entries(i.type === "banc_recharge" ? (i.etat.charges ?? {}) : {}) as [TypeBatterie, number][]) this.ajouterCharge(b, wh);
           this.info(`${nom} démonté${i.type === "recuperateur_pluie" && (i.etat.litres ?? 0) > 0.05 ? " (eau perdue)" : ""}. Dans ton sac : la moitié des matériaux naturels, tout le reste.`);
         }, 0, "outil");
       }
@@ -3726,17 +3852,16 @@ export class Joueur implements Voyageur, ParticipantLecon {
 
   // ---------- Installations des familles (É2, lot 2) ----------
 
-  /** La famille qui sait se servir de chaque installation (celle de sa recette). */
-  private famillePour(type: TypeInstallation): string {
-    return RECETTES.find((r) => "installation" in r.produit && r.produit.installation === type)?.famille ?? "tous";
+  /** Sait-on se servir de cette installation : sa famille, ou sa recette apprise (plan 0.8.2 §7.3 : savoir-meuble.ts). */
+  private saitSeServir(type: TypeInstallation): boolean {
+    return saitSeServir(type, this.compte.famille, this.savoir);
   }
 
   private utiliserInstallation(id: number, verbe: string): void {
     const i = this.installations.get(id);
     if (!i) return;
     if (!this.proche(i.x, i.z, DISTANCE_INTERACTION + 0.6)) return this.info("Approche-toi.");
-    const famille = this.famillePour(i.type);
-    if (famille !== "tous" && famille !== this.compte.famille) return this.info("C'est le savoir d'une autre famille : échange avec l'un des siens, à la halte ou au Carrefour.");
+    if (!this.saitSeServir(i.type)) return this.info("C'est le savoir d'une autre famille : échange avec l'un des siens, à la halte ou au Carrefour.");
     const maj = () => {
       this.base.sauverEtatInstallation(this.compte.id, i.id, i.etat);
       this.envoyer({ t: "installation", installation: i });
@@ -3760,7 +3885,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
       case "dormir": {
         // Un lit de branchages à côté de l'abri (ou l'abri à côté du lit) : on dort mieux (P-002).
         const pres = (type: string) => [...this.installations.values()].some((x) => x.type === type && Math.hypot(x.x - i.x, x.z - i.z) <= 3);
-        if (i.type === "abri") return this.endormir(true, pres("lit_branchages"), this.confortDuSommeil(i));
+        // Dans l'abri : on se rend accroupi jusqu'à sa couche, puis on y dort (0.8.2, R12 : serveur/src/sommeil-abri.ts).
+        if (i.type === "abri") return this.allerALaCouche(i, pres("lit_branchages"), this.confortDuSommeil(i));
         if (i.type === "lit_branchages") return this.endormir(pres("abri"), true, this.confortDuSommeil(i));
         return;
       }
@@ -3854,41 +3980,31 @@ export class Joueur implements Voyageur, ParticipantLecon {
           "outil",
         );
       }
-      // L'électricité (Book 25 §5) : recharger ses armes au banc ; réarmer la plaque, relever une clôture.
-      case "recharger_armes":
-        if (i.type !== "banc_recharge") return;
-        this.mettreAJourBase(this.maintenant());
-        return this.electricite.rechargerAuBanc(i);
+      // L'électricité (Book 25 §5) : réarmer la plaque, relever une clôture. La recharge se fait depuis la fiche du banc.
       case "rearmer_piege":
         if (this.electricite.rearmer(i)) return;
         break;
       case "poser_batteries":
         if (!porteBatteries(i.type)) return;
+        // Le banc (0.8.2, R17) : une seule batterie, à demeure (serveur/src/electricite.ts).
+        if (i.type === "banc_recharge") return this.electricite.poserBatterie(i);
         return this.poserBatteries(i);
       case "reprendre_batteries":
         if (!porteBatteries(i.type)) return;
+        // La batterie du banc ne se reprend plus : elle s'échange.
+        if (i.type === "banc_recharge") return this.electricite.echanger(i);
         return this.reprendreBatteries(i);
-      case "recharger": {
-        if (i.type !== "banc_recharge") return;
-        const n = this.inventaire.petite_batterie ?? 0;
-        const place = capacite("petite_batterie", n) - (this.charges.petite_batterie ?? 0);
-        const source = this.charges.batterie_voiture ?? 0;
-        if (n === 0) return this.info("Tu n'as pas de petite batterie.");
-        if (!this.inventaire.batterie_voiture || source <= 1) return this.info("Il faut une batterie de voiture chargée sur le banc.");
-        if (place <= 0.5) return this.info("La petite batterie est déjà pleine.");
-        const transfert = Math.min(place, source * RENDEMENT_BANC);
-        const duree = Math.min(120, (transfert / WH_RECHARGE_PAR_HEURE) * 60);
-        return this.commencer("Recharger la petite batterie", duree, () => {
-          this.charges = {
-            ...this.charges,
-            batterie_voiture: Math.max(0, (this.charges.batterie_voiture ?? 0) - transfert / RENDEMENT_BANC),
-            petite_batterie: (this.charges.petite_batterie ?? 0) + transfert,
-          };
-          this.envoyerCharges();
-          this.info(`+${Math.round(transfert)} Wh dans la petite batterie.`);
-        });
-      }
     }
+  }
+
+  /** Un geste depuis la fiche du banc (0.8.2, chantier C) : le banc à soi, à portée, de sa famille ; la base à jour. */
+  private auBanc(id: number, faire: (banc: InstallationVue) => void): void {
+    const banc = this.installations.get(id);
+    if (!banc || banc.type !== "banc_recharge" || this.lieu !== "terrain" || this.voyage) return;
+    if (!this.proche(banc.x, banc.z, DISTANCE_INTERACTION + 0.6)) return this.info("Approche-toi.");
+    if (!this.saitSeServir(banc.type)) return this.info("C'est le savoir d'une autre famille : échange avec l'un des siens, à la halte ou au Carrefour.");
+    this.mettreAJourBase(this.maintenant());
+    faire(banc);
   }
 
   /** La batterie à charger en priorité : la petite, puis celle de voiture. */

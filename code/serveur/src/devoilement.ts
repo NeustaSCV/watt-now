@@ -11,7 +11,7 @@
 
 import type { Inventaire } from "../../commun/src/objets.ts";
 import { typeDe } from "../../commun/src/etoiles.ts";
-import type { Famille } from "../../commun/src/regles.ts";
+import { FAMILLES, type Famille } from "../../commun/src/regles.ts";
 import type { SavoirRecettes } from "../../commun/src/recettes.ts";
 import { lieuDeLEtape } from "../../commun/src/lieux.ts";
 import {
@@ -20,12 +20,14 @@ import {
   PROGRESSION_VIDE,
   TEXTE_VETERAN,
   aDevoiler,
+  armeEnAttente,
   autresAtteints,
   devoileesAuDepart,
   devoileesDEmblee,
   entrevues,
   etapeAvecCle,
   indicesOuverts,
+  meubleComplet,
   nouvellesIdees,
   progressionValide,
   silhouettes,
@@ -106,6 +108,8 @@ export class SuiviDevoilement {
   private lieuVu: string | null;
   /** Ce qu'on a envoyé des autres familles (pour ne renvoyer la liste que si elle change). */
   private cleAutres = "";
+  /** Les meubles de famille complets au dernier regard (R26 : la pièce posée ouvre les armes de son métier). */
+  private meubleVu: string | null = null;
   private secondesSauvees = 0;
 
   /** `etat` null : un personnage neuf (la base démarre neuve en 0.8, §9.1) : le feu et l'abri. */
@@ -133,8 +137,9 @@ export class SuiviDevoilement {
     return this.etat;
   }
 
+  /** Dévoilée, et pas en attente du meuble complet (R26 : une arme de métier gardée d'une partie 0.8.1 attend sa pièce). */
   estDevoilee(id: string): boolean {
-    return this.devoilees.has(id);
+    return this.devoilees.has(id) && !armeEnAttente(id, this.constructions());
   }
 
   /** Quelque chose a changé (un fait, une quête, le savoir, une construction) : on réévaluera au prochain passage. */
@@ -174,6 +179,7 @@ export class SuiviDevoilement {
     if (instant - this.derniersConstats >= INTERVALLE_CONSTATS_MS) {
       this.derniersConstats = instant;
       this.constater();
+      this.suivreMeuble();
       this.suivreLieu();
       this.suivreIndices();
     }
@@ -258,6 +264,20 @@ export class SuiviDevoilement {
       } else if (i.temps === 1 && this.etat.secondes - i.depuis >= INDICE_SECOND_TEMPS_MIN * 60) change = this.secondTemps(id) || change;
     }
     if (change) this.indicesChanges();
+  }
+
+  /**
+   * R26 : la pièce posée sur un meuble de famille (l'enclume, le panneau, l'alternateur) ne note pas toujours de fait ;
+   * on regarde les trois meubles une fois par seconde (un meuble appris compte, §7.3), et une pièce posée fait
+   * réévaluer (les armes de son métier se dévoilent alors).
+   */
+  private suivreMeuble(): void {
+    const carte = this.constructions();
+    const complet = FAMILLES.filter((f) => meubleComplet(f, carte)).join(",");
+    if (complet !== this.meubleVu) {
+      if (this.meubleVu !== null) this.sale = true;
+      this.meubleVu = complet;
+    }
   }
 
   /** On quitte un lieu : un indice ouvert de ce lieu, dont on n'a pas trouvé la clé, passe au second temps. */
@@ -363,16 +383,19 @@ export class SuiviDevoilement {
     const e = this.etatPour();
     const indices: Record<string, 1 | 2> = {};
     for (const [id, i] of Object.entries(this.etat.indices)) if (!this.idees.has(id)) indices[id] = i.temps;
+    // R26 : ce qui attend le meuble complet ne part pas (gardé en base, il revient avec la pièce posée).
+    const attend = (id: string) => armeEnAttente(id, e.installations);
     const v: VueProgression = {
-      devoilees: [...this.etat.devoilees],
-      nonVues: [...this.etat.nonVues],
+      devoilees: this.etat.devoilees.filter((id) => !attend(id)),
+      nonVues: this.etat.nonVues.filter((id) => !attend(id)),
       silhouettes: silhouettes(e),
       autres: autresAtteints(e),
       entrevues: entrevues(e),
       idees: [...this.etat.idees],
       indices,
     };
-    this.cleAutres = `${v.autres}|${v.entrevues.join(",")}|${v.silhouettes.map((s) => s.id).join(",")}`;
+    // Les cartes gardées qui attendaient le meuble complet (R26) reviennent sans rien dévoiler de neuf : la liste compte.
+    this.cleAutres = `${v.autres}|${v.entrevues.join(",")}|${v.silhouettes.map((s) => s.id).join(",")}|${v.devoilees.length}`;
     return v;
   }
 }

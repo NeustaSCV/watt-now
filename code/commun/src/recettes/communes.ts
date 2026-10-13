@@ -10,11 +10,13 @@ import { A_LA_CREMAILLERE, A_LA_MAIN, A_LA_POELE, AU_FOUR, AU_FOYER_DE_PIERRES, 
 export const A_L_ETABLI_A_ETAU = aCote("etabli", { niveau: 2 });
 /** Où l'on répare le manche d'une arme ou d'un outil, sans forge, pour toutes les familles (R-ARMES-4, I19). */
 export const LIEU_REPARER_MANCHE = A_L_ETABLI_A_ETAU;
+/** Remmancher une hache ou un marteau (0.8.2, R13) : près d'un établi, au niveau 1, plus à la main. */
+export const A_COTE_DE_L_ETABLI = aCote("etabli");
 
 export const RECETTES_COMMUNES: Recette[] = [
   {
     id: "hache",
-    lieu: A_LA_MAIN,
+    lieu: A_COTE_DE_L_ETABLI,
     categorie: "outils",
     nom: "Remmancher la hache",
     produit: { objet: "hache", quantite: 1 },
@@ -328,7 +330,8 @@ export const RECETTES_COMMUNES: Recette[] = [
   },
   // ---------- Outils et bâtir (plan 0.8 §2.1 et §2.3, chantier 6) ----------
   // Le lit de branchages ne se pose plus à part : c'est l'abri garni (I25, lignees.ts). Le râtelier et la torche se
-  // posent ; les outils de fortune et le marteau remmanché se font à la main ; l'établi à étau a ses recettes.
+  // posent ; les outils de fortune se font à la main, le marteau se remmanche à l'établi (R13) ; l'établi à étau a ses
+  // recettes.
   {
     // Les outils rangés ici comptent pour ce qu'on bâtit à 3 m (outils-a-portee.ts).
     id: "ratelier_outils",
@@ -358,7 +361,7 @@ export const RECETTES_COMMUNES: Recette[] = [
   {
     // I10 : la tête de marteau de la caisse de la ruine et une branche. Marteler 2 pour toutes les familles.
     id: "marteau",
-    lieu: A_LA_MAIN,
+    lieu: A_COTE_DE_L_ETABLI,
     categorie: "outils",
     nom: "Remmancher le marteau",
     produit: { objet: "marteau", quantite: 1 },
@@ -523,25 +526,16 @@ export const RECETTES_COMMUNES: Recette[] = [
   // La corde d'arc porte la qualité de ses brins (plan 0.8 §2.4, I13) : ficelle ou corde de joncs ★★ ; fil dentaire (la
   // boutique de la station) ou boyau ★★★. L'arc simple ★★★★ ne vient que de la maîtrise (Q-0.8-4).
   {
+    // Une seule recette (0.8.2, R15) : 3 ficelles retordues, ou une corde défaite et retordue (★★ l'une et l'autre). Les
+    // ficelles passent d'abord : la corde sert à bien d'autres choses. L'identifiant reste celui de la 0.8 (dévoilement,
+    // maîtrise) ; la recette « une corde retordue » n'existe plus.
     id: "corde_arc_ficelle",
     lieu: A_LA_MAIN,
     categorie: "materiaux",
-    nom: "Corde d'arc (3 ficelles retordues)",
+    nom: "Corde d'arc",
     produit: { objet: "corde_arc", quantite: 1 },
-    ingredients: { ficelle: 3 },
-    qualites: {},
-    duree: 10,
-    intensite: "legere",
-    famille: "tous",
-    facteursEtoiles: () => [2],
-  },
-  {
-    id: "corde_arc_corde",
-    lieu: A_LA_MAIN,
-    categorie: "materiaux",
-    nom: "Corde d'arc (une corde retordue)",
-    produit: { objet: "corde_arc", quantite: 1 },
-    ingredients: { corde: 1 },
+    ingredients: {},
+    auChoix: [{ ficelle: 3 }, { corde: 1 }],
     qualites: {},
     duree: 10,
     intensite: "legere",

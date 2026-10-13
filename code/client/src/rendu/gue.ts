@@ -12,14 +12,19 @@ import {
   BAC,
   BALISES,
   CLOCHE,
+  GLAISE,
+  GLAISE_DU_DESSIN,
+  ID_DERIVE,
   OUIE_RADIER,
   PORTEE_EMBARCADERE,
   RADEAU_AU_REPOS,
   RADIER,
   aBord,
+  auBordDuRadeau,
   accostage,
   auGue,
   crue,
+  dansLaRiviere,
   placeRadeau,
   surLeRadier,
   texteBalise,
@@ -62,6 +67,8 @@ interface ToitJeu {
   haut?: number;
   horsDe?: Boite;
   efface?: boolean;
+  /** Ce qui reste d'une couche effacée (0 : rien ; l'arbre de la vase garde une ombre de lui-même). */
+  fantome?: number;
 }
 
 interface Troncon {
@@ -228,6 +235,132 @@ function creerAlentours(eau: THREE.Material | undefined, terre: THREE.Material |
   return groupe;
 }
 
+// ---------- Les retouches du jeu, en attendant le modèle (plan 0.8.2, chantier F, R2) ----------
+
+/**
+ * Tire d'un décor les triangles que `prendre` retient (sommets en coordonnées du monde) : ils quittent leur maillage
+ * (son index ne les garde plus) et forment de nouveaux maillages, un par matière, dans le repère du monde. Sert à
+ * déplacer la motte de glaise du modèle et à mettre à part l'arbre de la vase, sans toucher au modèle (client/src/
+ * batiments/ ne se modifie pas).
+ */
+function extraireTriangles(racine: THREE.Object3D, prendre: (a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3) => boolean): THREE.Mesh[] {
+  racine.updateMatrixWorld(true);
+  const sortis: THREE.Mesh[] = [];
+  const maillages: THREE.Mesh[] = [];
+  racine.traverse((o) => {
+    if ((o as THREE.Mesh).isMesh && !(o as THREE.InstancedMesh).isInstancedMesh && !(o as THREE.BatchedMesh).isBatchedMesh && !Array.isArray((o as THREE.Mesh).material)) maillages.push(o as THREE.Mesh);
+  });
+  const [a, b, c] = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+  const normale = new THREE.Matrix3();
+  for (const m of maillages) {
+    const geo = m.geometry;
+    const pos = geo.getAttribute("position");
+    if (!pos) continue;
+    const index = geo.getIndex();
+    const n = index ? index.count : pos.count;
+    const sommet = (k: number) => (index ? index.getX(k) : k);
+    const pris: number[] = [];
+    const reste: number[] = [];
+    for (let k = 0; k + 2 < n; k += 3) {
+      const [i, j, l] = [sommet(k), sommet(k + 1), sommet(k + 2)];
+      a.fromBufferAttribute(pos, i).applyMatrix4(m.matrixWorld);
+      b.fromBufferAttribute(pos, j).applyMatrix4(m.matrixWorld);
+      c.fromBufferAttribute(pos, l).applyMatrix4(m.matrixWorld);
+      (prendre(a, b, c) ? pris : reste).push(i, j, l);
+    }
+    if (pris.length === 0) continue;
+    geo.setIndex(reste);
+    geo.computeBoundingSphere();
+    geo.computeBoundingBox();
+    // Les triangles pris, à plat (sans index), sommets et normales ramenés au repère du monde.
+    const neuve = new THREE.BufferGeometry();
+    normale.getNormalMatrix(m.matrixWorld);
+    for (const [nom, attr] of Object.entries(geo.attributes) as [string, THREE.BufferAttribute][]) {
+      const t = attr.itemSize;
+      const valeurs = new Float32Array(pris.length * t);
+      const v = new THREE.Vector3();
+      pris.forEach((s, q) => {
+        if (nom === "position" || nom === "normal") {
+          v.fromBufferAttribute(attr, s);
+          if (nom === "position") v.applyMatrix4(m.matrixWorld);
+          else v.applyMatrix3(normale).normalize();
+          valeurs.set([v.x, v.y, v.z], q * 3);
+        } else for (let e = 0; e < t; e++) valeurs[q * t + e] = attr.getComponent(s, e);
+      });
+      neuve.setAttribute(nom, new THREE.BufferAttribute(valeurs, t, attr.normalized));
+    }
+    const sorti = new THREE.Mesh(neuve, m.material);
+    sorti.castShadow = m.castShadow;
+    sorti.receiveShadow = m.receiveShadow;
+    sorti.renderOrder = m.renderOrder;
+    sortis.push(sorti);
+  }
+  return sortis;
+}
+
+/** Les trois sommets d'un triangle dans une boîte (x, z) et entre deux hauteurs. */
+const dansLaBoite = (x0: number, x1: number, z0: number, z1: number, yMin: number, yMax: number) => (a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3) =>
+  [a, b, c].every((v) => v.x >= x0 && v.x <= x1 && v.z >= z0 && v.z <= z1) && Math.max(a.y, b.y, c.y) > 0.004 && Math.max(a.y, b.y, c.y) < yMax && Math.min(a.y, b.y, c.y) >= yMin;
+
+/** La motte de glaise du modèle (la motte entamée, les mottes découpées, la bêche, les traces), autour de son point. */
+const MOTTE_DU_DESSIN = { x0: GLAISE_DU_DESSIN.x - 1.6, x1: GLAISE_DU_DESSIN.x + 1.6, z0: GLAISE_DU_DESSIN.z - 0.9, z1: GLAISE_DU_DESSIN.z + 2.0 } as const;
+/** L'aulne de la vase, au sud de l'ancienne motte : il cachait le joueur qui creusait (recette de la 0.8). */
+export const ARBRE_DE_LA_VASE: Boite = { x: 84.5, z: 60.1, l: 8, p: 6.6 };
+
+/**
+ * R2 : le tronçon du milieu porte la glaise. Sa motte et sa bêche vont là où le jeu place le gisement (GLAISE, au milieu
+ * de la berge, à découvert) ; l'aulne qui couvrait l'ancienne place devient une couche qui s'efface comme les toits.
+ */
+function retoucherLaVase(g: THREE.Group, toits: ToitJeu[]): void {
+  const motte = extraireTriangles(g, dansLaBoite(MOTTE_DU_DESSIN.x0, MOTTE_DU_DESSIN.x1, MOTTE_DU_DESSIN.z0, MOTTE_DU_DESSIN.z1, -0.4, 1.6));
+  for (const m of motte) {
+    m.geometry.translate(GLAISE.x - GLAISE_DU_DESSIN.x - g.position.x, 0, GLAISE.z - GLAISE_DU_DESSIN.z - g.position.z);
+    m.name = "gue:glaise";
+    g.add(m);
+  }
+  const b = ARBRE_DE_LA_VASE;
+  const arbre = extraireTriangles(g, (p, q, r) => {
+    const x = (p.x + q.x + r.x) / 3;
+    const z = (p.z + q.z + r.z) / 3;
+    // Le houppier, le tronc et les rameaux qui retombent : tout ce qui monte au-dessus d'un mètre (le sol est plat ici).
+    return Math.abs(x - b.x) <= b.l / 2 && Math.abs(z - b.z) <= b.p / 2 && Math.max(p.y, q.y, r.y) > 1;
+  });
+  if (arbre.length === 0) return;
+  const materiaux: THREE.Material[] = [];
+  for (const m of arbre) {
+    const fondu = (m.material as THREE.Material).clone();
+    fondu.transparent = true;
+    fondu.userData = { ...fondu.userData, opacite: (m.material as THREE.Material).opacity };
+    m.material = fondu;
+    materiaux.push(fondu);
+    m.geometry.translate(-g.position.x, 0, -g.position.z);
+    m.name = "gue:arbre-vase";
+    g.add(m);
+  }
+  toits.push({ nom: "arbre de la vase", boite: b, materiaux, bas: 0.5, haut: 12, fantome: 0.12 });
+}
+
+/**
+ * Plan 0.8.2 (obstacles-visibles.test.ts) : au bout ouest, le pied du talus touche la route vers le Moulin sans rien qui
+ * se voie sur un mètre ; quelques pierres éboulées le marquent.
+ */
+function creerEboulis(): THREE.Group {
+  const g = new THREE.Group();
+  g.name = "gue:eboulis";
+  const geo = new THREE.IcosahedronGeometry(1, 0);
+  const mat = new THREE.MeshStandardMaterial({ color: 0x7d7768, roughness: 1, flatShading: true });
+  for (const [x, z, e] of [[0.35, 33.3, 0.34], [0.7, 33.9, 0.26], [0.25, 34.5, 0.4], [0.9, 33.45, 0.18]] as const) {
+    const m = new THREE.Mesh(geo, mat);
+    m.position.set(x, e * 0.45, z);
+    m.scale.set(e, e * 0.7, e * 1.1);
+    m.rotation.y = x * 7 + z;
+    m.castShadow = true;
+    m.receiveShadow = true;
+    g.add(m);
+  }
+  return g;
+}
+
 /** Les lumières du modèle, dans le repère du jeu. */
 const LUMIERES = LUMIERES_MODELE.map((l) => ({ ...l, ...auGue(l.x, l.z) }));
 
@@ -244,11 +377,16 @@ export class RenduGue {
   constructor(jouer: (id: IdSon, ou?: { x: number; z: number }) => void) {
     this.jouer = jouer;
     this.groupe.name = "gue";
+    // En développement seulement : de quoi lire, depuis la console, où l'on est et ce que le gué propose.
+    if (import.meta.env?.DEV) (globalThis as { __gue?: RenduGue }).__gue = this;
   }
+
+  /** En développement : la dernière place vue et la dernière proposition (pour les essais). */
+  dernier: { p?: { x: number; z: number }; prop?: Propositions; base?: Propositions } = {};
 
   /** Le décor : les alentours tout de suite ; les tronçons se construisent autour du joueur (animer). */
   creer(): THREE.Group {
-    if (this.groupe.children.length === 0) this.groupe.add(creerAlentours(outils.matieres().eau, outils.matieres().terrain));
+    if (this.groupe.children.length === 0) this.groupe.add(creerAlentours(outils.matieres().eau, outils.matieres().terrain), creerEboulis());
     return this.groupe;
   }
 
@@ -285,6 +423,16 @@ export class RenduGue {
     return surLeRadier(p.x, p.z);
   }
 
+  /**
+   * Plan 0.8.2 (R3) : cet Éteint fait-il entrer (ou rester) en mode Combat ? Celui qui dérive dans l'eau, contre le
+   * radier, ne menace que qui marche sur le radier au-dessus de l'eau (pas sur sa tête, encore sur la berge) : sans
+   * cela, sa ronde à moins de 10 m du bac gardait le joueur en mode Combat (A : « Frapper ») et « Haler le bac » ne
+   * paraissait pas avant qu'on s'éloigne et revienne ; au bord du radier noyé, il couvrait la ligne de la crue (R19).
+   */
+  menace(id: number, p: { x: number; z: number }): boolean {
+    return id !== ID_DERIVE || (surLeRadier(p.x, p.z) && dansLaRiviere(p.x, p.z));
+  }
+
   /** Jusqu'où l'on entend les Éteints : sur le radier, l'eau couvre tout au-delà de 3 m (G1). */
   ouie(p: { x: number; z: number } | null): number {
     return p && surLeRadier(p.x, p.z) ? OUIE_RADIER : Infinity;
@@ -303,7 +451,14 @@ export class RenduGue {
     const ou = accostage(xr);
     const haler: ActionProposee = { libelle: "Haler le bac", message: { t: "gue", op: "haler" } };
     const examenBac = "Le radeau du passeur, sur ses bidons, glisse le long du câble. On tire la corde : un quart de minute jusqu'à l'autre rive, de jour comme de nuit. On peut lâcher pour se battre.";
-    if (aBord(p.x, p.z, xr, 0.1)) garder(0, { A: haler, B: { libelle: "Examiner", examiner: examenBac }, cible: null });
+    // Plan 0.8.2 (R3) : à bord, haler passe avant tout, partout sur le plancher et dès qu'on y pose le pied (autrefois
+    // à égalité avec ce qu'on visait autour, il pouvait ne pas paraître).
+    // Plan 0.8.2 §7.6 : et dès le bord du radeau à quai (on monte à bord d'un pas en halant).
+    if (auBordDuRadeau(p.x, p.z, xr)) {
+      const prop: Propositions = { A: haler, B: { libelle: "Examiner", examiner: examenBac }, cible: null };
+      this.dernier = { p: { x: p.x, z: p.z }, prop, base };
+      return prop;
+    }
     for (const quai of [{ nom: "cale" as const, ...BAC.cale }, { nom: "ponton" as const, ...BAC.ponton }]) {
       const d = Math.hypot(quai.embarquement.x - p.x, quai.embarquement.z - p.z);
       if (d > PORTEE_EMBARCADERE || ou === quai.nom) continue;
@@ -325,7 +480,9 @@ export class RenduGue {
       if (d < dBalise) [balise, dBalise] = [b, d];
     }
     if (balise && dBalise < 1.6) garder(Math.max(0, dBalise - 0.4), { A: null, B: { libelle: "Examiner la balise", examiner: texteBalise(crue(instant, debutMonde).niveau) }, cible: { x: balise.x, z: balise.z, rayon: 0.3 } });
-    return meilleure ? (meilleure as { prop: Propositions }).prop : base;
+    const choisie = meilleure ? (meilleure as { prop: Propositions }).prop : base;
+    this.dernier = { p: { x: p.x, z: p.z }, prop: choisie, base };
+    return choisie;
   }
 
   // ---------- Les ricochets (G8) ----------
@@ -434,6 +591,7 @@ export class RenduGue {
     const toits = ((m.userData.toits ?? []) as ToitJeu[]).map((t) => ({ ...t, boite: versJeu(t.boite), ...(t.horsDe ? { horsDe: versJeu(t.horsDe) } : {}) }));
     m.userData.toits = undefined;
     g.userData.toits = toits;
+    if (id === "gue") retoucherLaVase(g, toits);
     // La vue par pièce (0.7.2) : ce que le personnage ne voit pas est dessiné « en souvenir ».
     brouillerTout([g]);
     this.groupe.add(g);
@@ -445,6 +603,12 @@ export class RenduGue {
     this.groupe.remove(t.groupe);
     t.groupe.traverse((o) => (o as THREE.Mesh).geometry?.dispose());
     this.troncons.delete(id);
+  }
+
+  /** Les quatre tronçons à la fois (pour les tests : le contrôle des obstacles voit tout le gué). */
+  toutConstruire(): THREE.Group {
+    for (const id of ORDRE) if (!this.troncons.has(id)) this.construire(id);
+    return this.groupe;
   }
 
   /** Les tronçons construits (pour les mesures). */

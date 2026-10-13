@@ -548,9 +548,11 @@ export interface LieuCarte {
   /** Distance depuis le terrain, en km, par la route. */
   km: number;
   ouvert: boolean;
+  /**
+   * L'ambiance du lieu, pour la fiche de la carte. 0.8.2 (R18) : plus de « promesse » ; la carte ne dit jamais ce qu'on
+   * trouve dans un lieu, le joueur s'en rend compte tout seul.
+   */
   description: string;
-  /** Ce que le lieu promet, en une ligne (plan 0.8 §0 : ce qu'on y va chercher), pour la fiche de la carte. */
-  promesse?: string;
 }
 
 export const LIEUX: Record<LieuId, LieuCarte> = {
@@ -560,8 +562,7 @@ export const LIEUX: Record<LieuId, LieuCarte> = {
     nom: "La station-service",
     km: 3,
     ouvert: true,
-    description: "Une halte sur la route de la Campagne. La boutique a été pillée, pas l'atelier. Des Éteints dorment dans le coin.",
-    promesse: "La station : le bois, le métal, et la pièce de ta famille.",
+    description: "Une halte sur la route de la Campagne. Des Éteints dorment dans le coin.",
   },
   comptoir: {
     id: "comptoir",
@@ -577,7 +578,6 @@ export const LIEUX: Record<LieuId, LieuCarte> = {
     ouvert: true,
     description:
       "Au bout d'un chemin de terre qui part de la station-service vers le nord (un chemin agricole y mène aussi depuis le Carrefour). Le hangar n'a jamais été vidé : on dit qu'il y reste de quoi tenir un hiver. Les Éteints y sont nombreux, et il fait noir à l'intérieur.",
-    promesse: "La Coopérative : le feu et l'eau.",
   },
   // 0.8 (Q-0.8-25) : « Le Gué-aux-Saules » et « Le Moulin du Gué » ; le lien entre les deux se lit sur la carte.
   gue: {
@@ -587,7 +587,6 @@ export const LIEUX: Record<LieuId, LieuCarte> = {
     ouvert: true,
     description:
       "Une halte sur la route du Moulin du Gué. Le pont suspendu est parti avec la crue du premier hiver : on passe sur le radier, les pieds dans l'eau qui court, ou par le bac du passeur. Des Éteints rôdent sur les berges.",
-    promesse: "Le gué : la pierre, la glaise et la rive.",
   },
   moulin: {
     id: "moulin",
@@ -596,7 +595,6 @@ export const LIEUX: Record<LieuId, LieuCarte> = {
     ouvert: true,
     description:
       "En aval du gué, la vieille minoterie et sa roue arrêtée sur le bief. On y entre par le pont de pierre ; le chemin de halage ramène au gué. Les Éteints dorment dans les pièces sombres.",
-    promesse: "Le Moulin : le couchage, le stockage, l'établi.",
   },
 };
 

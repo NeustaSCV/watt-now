@@ -3,17 +3,17 @@
 
 import { PERIODES_FRUITIERS, enSaison, etatDuFruitier, phaseFruitier, visibleEnSaison } from "../../commun/src/calendrier.ts";
 import type { Position } from "../../commun/src/deplacement.ts";
-import { armeDeCle } from "../../commun/src/combat.ts";
-import { CAPACITES, type Charges } from "../../commun/src/energie.ts";
+import { BATTERIES_DE_BANC, CAPACITES, bancDuPedalier, batterieDuBanc, type Charges } from "../../commun/src/energie.ts";
 import { COMPTOIR, destinations, sortieIci, type LieuId, type LieuJouable } from "../../commun/src/lieux.ts";
 import { KLAXONS_PAR_BATTERIE, LEURRES, PORTES, chargeBatterieTracteur, distancePorte } from "../../commun/src/cooperative.ts";
 import type { AutreVu, EtatCoopVu, InstallationVue, MessageClient, SacVu, Verbe } from "../../commun/src/messages.ts";
 import { nommer, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
-import { RECETTES } from "../../commun/src/recettes.ts";
+import type { SavoirRecettes } from "../../commun/src/recettes.ts";
+import { saitSeServir } from "../../commun/src/savoir-meuble.ts";
 import { COUT_BAC, ENCLUMES, ETOILES_PIERRE_PLATE, NIVEAU_FORGE_VENTILEE, enclumeDuSac } from "../../commun/src/forge.ts";
 import { NOMS_FAMILLES, type Famille } from "../../commun/src/regles.ts";
 import type { Gourde } from "../../commun/src/survie.ts";
-import { DISTANCE_INTERACTION, EMPRISE_RESSOURCE, PORTEE_ARBRE, distanceMare, RAYON_ESCABEAU, USAGES, estArbre, estFruitier, type TypeRessource } from "../../commun/src/terrain.ts";
+import { DISTANCE_INTERACTION, EMPRISE_RESSOURCE, PORTEE_ARBRE, TEXTE_GOURDE_AU_MILIEU, auMilieuDeLaMare, distanceMare, RAYON_ESCABEAU, USAGES, estArbre, estFruitier, type TypeRessource } from "../../commun/src/terrain.ts";
 import type { FeuDeCamp } from "./rendu/feu.ts";
 import type { VueRessource } from "./rendu/ressources.ts";
 import { proposerMoulin } from "./moulin.ts";
@@ -47,12 +47,12 @@ export const EXAMENS_INSTALLATIONS: Record<InstallationVue["type"], string> = {
   charbonniere: "Une meule de bois couverte de terre. Allumée, elle cuit trois jours en fumant beaucoup.",
   forge: "Un foyer de pierres, une tuyère de fer, un billot et sa pierre plate pour enclume. Il faut du charbon de bois.",
   pedalier: "Le vieux vélo de la ruine sur un bâti de bois. Sa roue entraîne ce qu'on y monte : l'alternateur, une meule.",
-  banc_recharge: "Un banc de planches, des pinces, un régulateur bricolé. Le panneau posé dessus remplit ses batteries au soleil.",
-  panneau_solaire: "Le petit panneau de la station, plein sud. Il charge les batteries posées sur le banc, même quand tu n'es pas là.",
+  banc_recharge: "Un banc de planches, des pinces, un régulateur bricolé. Il fait passer le courant de sa batterie dans ce que tu portes ; le panneau posé dessus la remplit au soleil.",
+  panneau_solaire: "Le petit panneau de la station, plein sud. Il charge la batterie du banc, même quand tu n'es pas là.",
   escabeau: "Un escabeau de bois ligaturé de corde. Posé au pied d'un arbre fruitier, dans son cercle, il permet de cueillir en haut.",
   recuperateur_pluie: "Quatre sacs plastique tendus en entonnoir au-dessus d'un bidon de 5 L. Quand il pleut, il se remplit, même quand tu n'es pas là. L'eau du ciel se boit sans la faire bouillir.",
   alarme_boites: "Une ficelle tendue entre deux piquets, des boîtes de conserve qui pendent. Si un Éteint passe, tu l'entendras. Lui aussi.",
-  lit_branchages: "Un cadre de branches couvert de rameaux. On y dort isolé du sol : à côté de l'abri, le sommeil répare mieux.",
+  lit_branchages: "Un cadre de branches couvert de rameaux. On y dort isolé du sol ; glissé sous ton abri (Améliorer), il le garnit.",
   decharge: "Un tas d'ordures de l'Âge de l'Abondance, au bord du terrain. La pluie et le temps en font remonter des objets : surtout des trucs nuls, parfois une bonne surprise.",
   // Le métier des familles (Book 25, 0.6) : les chantiers 6 et 7 les font vivre.
   alarme_electrique: "Un fil de fer tendu bas, une pile, une LED. Si un Éteint passe, la LED s'allume et ton alerte vibre, sans un bruit.",
@@ -71,9 +71,30 @@ export const EXAMENS_INSTALLATIONS: Record<InstallationVue["type"], string> = {
   torche_plantee: "Une branche plantée, un chiffon gras qui brûle au bout. Elle éclaire six mètres autour, une nuit durant.",
 };
 
-/** La famille qui sait se servir d'une installation (celle qui sait la construire). */
-function familleDe(type: InstallationVue["type"]): Famille | "tous" {
-  return RECETTES.find((r) => "installation" in r.produit && r.produit.installation === type)?.famille ?? "tous";
+/**
+ * Ce qu'on dit d'une installation qu'on examine, selon son état (0.8.2, chantier K) : le foyer de forge parle de
+ * l'enclume posée sur son billot, et non plus de sa pierre plate.
+ */
+export function examenInstallation(i: Pick<InstallationVue, "type" | "etat">): string {
+  const enclume = i.type === "forge" ? i.etat.enclume : undefined;
+  if (enclume) return `Un foyer de pierres, une tuyère de fer, un billot et ${ENCLUMES[enclume].nom} calé${enclume === "depanneur" || enclume === "masse" ? "e" : ""} dessus. Il faut du charbon de bois.`;
+  return EXAMENS_INSTALLATIONS[i.type];
+}
+
+/** Endormi, le bouton A réveille (0.8.2, chantier K) : comme bouger, sans avoir à bouger. */
+export const LIBELLE_REVEIL = "Se réveiller";
+
+/** Les propositions pendant le sommeil : A réveille ; B reste ce qu'il était. */
+export function propositionsEndormi(p: Propositions): Propositions {
+  return { ...p, A: { libelle: LIBELLE_REVEIL, message: { t: "annuler" } } };
+}
+
+// ---------- Le meuble d'une autre famille, appris (plan 0.8.2 §7.3, chantier J) ----------
+
+/** Ce que le joueur a appris hors de sa famille (leçons, manuels) : main.ts le tient à jour à chaque message « savoir ». */
+let savoirAppris: SavoirRecettes = {};
+export function retenirSavoir(savoir: SavoirRecettes): void {
+  savoirAppris = savoir;
 }
 
 /** Ce que propose une installation de famille selon son état (le serveur vérifie tout). */
@@ -84,12 +105,13 @@ function actionsInstallation(
   inventaire: Inventaire,
   charges: Charges,
   maintenantServeur: number,
+  /** Un pédalier à moins de 3 m d'un banc dont la batterie a de la place (0.8.2, R17). */
+  bancARemplir = false,
 ): [ActionProposee | null, ActionProposee | null] {
   const msg = (libelle: string, verbe: Verbe): ActionProposee => ({ libelle, message: { t: "interagir", cible: { genre: "installation", id: i.id }, verbe } });
   // Examiner ouvre la fiche : ce qu'elle fait, l'améliorer, la démonter (Book 24). La décharge, elle, se regarde.
   const examiner: ActionProposee = i.type === "decharge" ? { libelle: "Examiner", examiner: EXAMENS_INSTALLATIONS[i.type] } : { libelle: "Examiner", ouvrirFiche: { genre: "installation", id: i.id } };
-  const sienne = familleDe(i.type);
-  if (sienne !== "tous" && sienne !== famille) return [null, { libelle: "Examiner", examiner: `${EXAMENS_INSTALLATIONS[i.type]} Tu ne sais pas t'en servir.` }];
+  if (!saitSeServir(i.type, famille, savoirAppris)) return [null, { libelle: "Examiner", examiner: `${examenInstallation(i)} Tu ne sais pas t'en servir.` }];
   switch (i.type) {
     case "etabli": {
       // Le redresseur de fûts (Book 25 §9.3) : proposé tant qu'il manque, si l'on a de quoi le monter.
@@ -151,6 +173,8 @@ function actionsInstallation(
       // Le pédalier générateur (plan 0.8) : l'alternateur de la station d'abord ; la dynamo du vélo, à défaut.
       if (!i.etat.alternateur && (inventaire.petit_alternateur ?? 0) > 0) return [msg("Monter l'alternateur", "monter_alternateur"), examiner];
       if (!i.etat.alternateur && !i.etat.dynamo && (inventaire.dynamo_velo ?? 0) > 0) return [msg("Installer la dynamo", "monter_dynamo"), examiner];
+      // 0.8.2 (R17) : à moins de 3 m du banc, le pédalier remplit directement la batterie du banc.
+      if (bancARemplir && (i.etat.alternateur || i.etat.dynamo)) return [msg("Pédaler : charger la batterie du banc", "pedaler"), examiner];
       // La batterie de la ruine se pose sur le pédalier : on y pédale, on la reprend pleine.
       const surPedalier = Object.values(i.etat.batteries ?? {}).some((n) => (n ?? 0) > 0);
       const enPoche = (inventaire.petite_batterie ?? 0) > 0 || (inventaire.batterie_voiture ?? 0) > 0;
@@ -192,24 +216,22 @@ function actionsInstallation(
     case "banc_recharge": {
       // Le banc solaire (plan 0.8) : le panneau de la station se pose sur le banc, d'abord.
       if (!i.etat.panneau && (inventaire.panneau_solaire ?? 0) > 0) return [msg("Poser le panneau sur le banc", "poser_panneau"), examiner];
-      // Sur le banc : les batteries posées, que le panneau charge, même hors ligne (É4).
-      const posees = Object.values(i.etat.batteries ?? {}).some((n) => (n ?? 0) > 0);
-      // Les armes électriques (Book 25 §5.4) : on les recharge aux batteries du banc.
-      const armes = Object.keys(inventaire).some((cle) => (inventaire[cle as keyof typeof inventaire] ?? 0) > 0 && armeDeCle(cle)?.electrique);
-      if (armes && posees) return [msg("Recharger tes armes électriques", "recharger_armes"), msg("Reprendre les batteries", "reprendre_batteries")];
-      const portees = (inventaire.petite_batterie ?? 0) > 0 || (inventaire.batterie_voiture ?? 0) > 0;
-      const surBanc = Object.entries(i.etat.charges ?? {})
-        .map(([b, wh]) => `${b === "petite_batterie" ? "petite batterie" : "batterie de voiture"} ${Math.round(wh ?? 0)} Wh`)
-        .join(", ");
-      const examen: ActionProposee = posees ? { libelle: "Examiner", examiner: `Sur le banc : ${surBanc}.` } : examiner;
-      if (posees) return [msg("Reprendre les batteries", "reprendre_batteries"), examen];
-      const place = CAPACITES.petite_batterie * (inventaire.petite_batterie ?? 0) - (charges.petite_batterie ?? 0);
-      if ((charges.batterie_voiture ?? 0) > 1 && place > 0.5) return [msg("Recharger la petite batterie", "recharger"), portees ? msg("Poser les batteries sur le banc", "poser_batteries") : examen];
-      return [portees ? msg("Poser les batteries sur le banc", "poser_batteries") : null, examen];
+      // 0.8.2 (R17) : une seule batterie, à demeure. On la branche une fois ; charger ce qu'on porte et l'échanger se font
+      // depuis la fiche du banc, une ligne par chose qui se charge.
+      const batterie = batterieDuBanc(i.etat);
+      if (!batterie && BATTERIES_DE_BANC.some((b) => (inventaire[b] ?? 0) > 0)) return [msg("Brancher la batterie dans le banc", "poser_batteries"), examiner];
+      return [batterie ? { libelle: "Charger au banc", ouvrirFiche: { genre: "installation", id: i.id } } : null, examiner];
     }
     default:
       return [null, examiner];
   }
+}
+
+/** Le pédalier est à moins de 3 m d'un banc dont la batterie a encore de la place (0.8.2, R17). */
+function bancARemplir(pedalier: InstallationVue, installations: readonly InstallationVue[]): boolean {
+  const banc = bancDuPedalier(pedalier, installations);
+  const bat = banc ? batterieDuBanc(banc.etat) : null;
+  return !!bat && bat.capacite - bat.wh > 0.5;
 }
 
 /** La part de charge des batteries posées sur un meuble (0 à 1). */
@@ -236,6 +258,24 @@ function libelleHorsSaison(type: TypeRessource, jour: number): string {
   if (!(type in PERIODES_FRUITIERS)) return "Pas la saison";
   const phase = phaseFruitier(type as keyof typeof PERIODES_FRUITIERS, jour);
   return phase === "fleurs" ? "En fleurs" : phase === "verts" ? "Fruits encore verts" : "Plus de fruits cette année";
+}
+
+/** Le cône du regard (rad, de part et d'autre) où la glaise passe avant ce qui l'entoure. */
+const REGARD_GLAISE = Math.PI / 3;
+/** Ce qu'on retranche de la distance à la glaise dans le sens du regard (m), en plus de son emprise. */
+const BONUS_REGARD_GLAISE = 0.6;
+
+/**
+ * Plan 0.8.2 §7.6 : la berge de glaise est une plaque, pas un point ; on la creuse depuis son bord (son emprise). Et
+ * quand on la regarde, elle passe avant la touffe de joncs voisine (venu du nord, on passe la touffe avant d'y arriver).
+ */
+function avanceGlaise(position: Position, g: { x: number; z: number }): number {
+  // La portée reste celle du serveur (DISTANCE_INTERACTION du bord de la plaque) : au-delà, l'avance ne compte pas.
+  const emprise = EMPRISE_RESSOURCE.gisement_glaise ?? 0;
+  if (Math.hypot(g.x - position.x, g.z - position.z) > DISTANCE_INTERACTION + emprise) return 0;
+  const vers = Math.atan2(g.x - position.x, g.z - position.z);
+  const ecart = Math.abs(Math.atan2(Math.sin(vers - position.o), Math.cos(vers - position.o)));
+  return emprise + (ecart <= REGARD_GLAISE ? BONUS_REGARD_GLAISE : 0);
 }
 
 export function proposer(
@@ -291,7 +331,8 @@ export function proposer(
     const horsSaison = jour > 0 && !enSaison(r.donnees.type, jour);
     const arbre = estArbre(r.donnees.type);
     const fruitier = estFruitier(r.donnees.type);
-    const d = Math.max(0, Math.hypot(r.donnees.x - position.x, r.donnees.z - position.z) - (arbre ? PORTEE_ARBRE : 0));
+    const d = Math.max(0, Math.hypot(r.donnees.x - position.x, r.donnees.z - position.z) - (arbre ? PORTEE_ARBRE : r.donnees.type === "gisement_glaise" ? avanceGlaise(position, r.donnees) : 0));
+    // (La glaise vue de plus loin que sa plaque n'entre pas : garder() s'en tient à DISTANCE_INTERACTION.)
     // Un fruitier sans escabeau dans son cercle : on le dit tout de suite (rien ne se lance pour rien).
     const escabeau = !usage.escabeau || installationsVues.some((i) => i.type === "escabeau" && Math.hypot(i.x - r.donnees.x, i.z - r.donnees.z) <= RAYON_ESCABEAU);
     garder(d, {
@@ -313,10 +354,11 @@ export function proposer(
     });
   }
 
-  for (const i of installations) {
+  const toutes = [...installations];
+  for (const i of toutes) {
     // La décharge est un grand tas : on la vise depuis son bord (P-001).
     const d = Math.max(0, Math.hypot(i.x - position.x, i.z - position.z) - (i.type === "decharge" ? 1.9 : 0.6));
-    const [A, B] = actionsInstallation(i, repos, famille, inventaire, charges, maintenantServeur);
+    const [A, B] = actionsInstallation(i, repos, famille, inventaire, charges, maintenantServeur, i.type === "pedalier" && bancARemplir(i, toutes));
     garder(d, { A, B, cible: { x: i.x, z: i.z, rayon: i.type === "decharge" ? 2.1 : i.type === "escabeau" || i.type === "alarme_boites" ? 0.7 : 1.1 } });
   }
 
@@ -451,8 +493,34 @@ export function proposer(
     });
   }
 
+  // Plan 0.8.2 (chantier D) : une porte à portée de main passe avant un objet au sol (à la laiterie, un objet jeté
+  // devant la porte cachait « Ouvrir la porte »). Pour le ramasser, on s'écarte d'un pas de la porte.
+  const porteVisee = (): boolean => {
+    const A = meilleure.propositions?.A;
+    return !!A && "message" in A && A.message.t === "interagir" && A.message.cible.genre === "porte";
+  };
+
+  // Plan 0.8.2 (chantier H, proposition de D validée par le porteur) : la porte garde A, et B ramasse l'objet au sol
+  // le plus proche à portée (un tas jeté, son propre sac), au lieu d'« Examiner » la porte : plus besoin de s'écarter.
+  if (porteVisee()) {
+    let proche: { s: SacVu; d: number } | null = null;
+    for (const s of sacs) {
+      const d = Math.hypot(s.x - position.x, s.z - position.z);
+      if ((s.jete || s.aMoi) && d <= DISTANCE_INTERACTION && (!proche || d < proche.d)) proche = { s, d };
+    }
+    if (proche && meilleure.propositions) {
+      const s = proche.s;
+      const liste = Object.entries(s.contenu ?? {}).map(([t, n]) => nommer(t as TypeObjet, n ?? 0));
+      const B: ActionProposee = s.jete
+        ? { libelle: `Ramasser : ${liste.join(", ")}`, message: { t: "interagir", cible: { genre: "sac", id: s.id }, verbe: "reprendre" } }
+        : { libelle: "Reprendre ton sac", message: { t: "interagir", cible: { genre: "sac", id: s.id }, verbe: "reprendre" } };
+      meilleure.propositions = { ...meilleure.propositions, B };
+    }
+  }
+
   // Un sac tombé là après un effondrement (Book 05 §10.3), ou des objets jetés par terre.
   for (const s of sacs) {
+    if (porteVisee()) break;
     if (s.jete) {
       const liste = Object.entries(s.contenu ?? {}).map(([t, n]) => nommer(t as TypeObjet, n ?? 0));
       garder(Math.hypot(s.x - position.x, s.z - position.z), {
@@ -489,13 +557,15 @@ export function proposer(
     });
   }
 
-  const dMare = Math.max(0, distanceMare(position.x, position.z) - 0.5);
+  // La gourde se remplit au milieu de la mare (0.8.2, chantier I : R21). Au bord, les joncs passent avant : la mare ne
+  // s'y propose que si rien d'autre n'est à portée, et dit d'entrer dans l'eau.
   if (lieu === "terrain" && (inventaire.gourde ?? 0) > 0) {
-    garder(dMare, {
-      A: { libelle: "Remplir la gourde", message: { t: "interagir", cible: { genre: "mare" }, verbe: "remplir" } },
-      B: { libelle: "Examiner", examiner: "Une mare d'eau dormante. L'eau n'est pas potable : il faut la faire bouillir." },
-      cible: null,
-    });
+    const examen: ActionProposee = { libelle: "Examiner", examiner: "Une mare d'eau dormante, peu profonde. L'eau n'est pas potable : il faut la faire bouillir." };
+    if (auMilieuDeLaMare(position.x, position.z)) {
+      garder(0, { A: { libelle: "Remplir la gourde", message: { t: "interagir", cible: { genre: "mare" }, verbe: "remplir" } }, B: examen, cible: null });
+    } else if (distanceMare(position.x, position.z) <= 1.5) {
+      garder(DISTANCE_INTERACTION, { A: { libelle: "Remplir la gourde (au milieu)", examiner: TEXTE_GOURDE_AU_MILIEU }, B: examen, cible: null });
+    }
   }
 
   // La radio dans le sac, à la Coopérative : rien à portée de main, A la pose ici (0.5.1).

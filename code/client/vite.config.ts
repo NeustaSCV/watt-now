@@ -45,6 +45,25 @@ extensions.push({
   },
 });
 
+// Les écrans d'accueil (client/public/intro/, copie de la session intro) sont servis tels quels, sans compilation.
+// En développement, Vite ajoute « ?import » à l'adresse de l'import dynamique (accueil.ts), puis refuse (erreur 500)
+// d'importer un fichier de public/ ainsi marqué : on retire la marque, et Vite sert le fichier comme un fichier public.
+// (Avec la version construite, rien à faire : dist/intro/ est servi comme le reste.)
+extensions.push({
+  name: "watt-accueil-tel-quel",
+  configureServer(serveur) {
+    serveur.middlewares.use((req, _res, suite) => {
+      const url = req.url ?? "";
+      if (url.startsWith("/intro/") && url.includes("?")) {
+        const [chemin, requete] = url.split("?", 2);
+        const reste = requete.split("&").filter((p) => p !== "import");
+        req.url = reste.length ? `${chemin}?${reste.join("&")}` : chemin;
+      }
+      suite();
+    });
+  },
+});
+
 export default defineConfig({
   root: fileURLToPath(new URL(".", import.meta.url)),
   // Les fichiers de travail de Vite restent dans le projet (règle du CLAUDE.md).

@@ -8,7 +8,7 @@ import * as THREE from "three";
 import type { TypeObjet } from "../../../commun/src/objets.ts";
 import type { Famille } from "../../../commun/src/regles.ts";
 import { Humanoide, chargerHumanoides, humanoidesPrets, type Coiffure, type Tenue } from "./humanoides.ts";
-import { APPARENCES_DE_REFERENCE, CARNATIONS, COULEURS_CHEVEUX, hauteurDe, type Apparence, type Coiffure as CoiffureChoisie } from "../../../commun/src/apparence.ts";
+import { APPARENCES_DE_REFERENCE, CARNATIONS, couleurCheveuxDe, hauteurDe, type Apparence, type Coiffure as CoiffureChoisie } from "../../../commun/src/apparence.ts";
 import { PALETTE, aleatoire, materiau } from "./materiaux.ts";
 import { Assemblage, V3, bosseler, placer } from "./assemblage.ts";
 import { Mesure, bandeau, bandouliere, pan } from "./accessoires.ts";
@@ -281,6 +281,9 @@ export class Personnage {
   private unique = 0;
   private charge = 0;
   private lumiere = false;
+  /** Le remous de l'eau autour des jambes, dans la mare (créé à la première entrée). */
+  private remous: THREE.Group | null = null;
+  private tempsRemous = 0;
 
   /** `apparence` : celle choisie à la création (Book 14 §3) ; sinon, celle du personnage de référence de la famille. */
   constructor(famille: Famille, apparence: Apparence = APPARENCES_DE_REFERENCE[famille]) {
@@ -297,7 +300,7 @@ export class Personnage {
       peau: CARNATIONS[a.peau] ?? CARNATIONS[2],
       tenue: a.toge ? TENUE_TOGE : TENUES[this.famille],
       coiffure: FICHIERS_COIFFURE[a.coiffure],
-      couleurCheveux: COULEURS_CHEVEUX[a.cheveux] ?? COULEURS_CHEVEUX[0],
+      couleurCheveux: couleurCheveuxDe(a),
       barbe: a.barbe,
       tete: 1.32,
       hauteur: hauteurDe(a),
@@ -569,6 +572,39 @@ export class Personnage {
     this.couche = oui;
   }
 
+  /** Dans la mare, l'eau au-dessus des chevilles (patauger). */
+  private dansLEau = false;
+
+  /**
+   * Dans la mare (0.8.2, R21) : le personnage s'enfonce de `profondeur` (l'eau aux genoux au milieu), et l'eau fait un
+   * remous autour des jambes, qui s'élargit quand il avance. `vitesse` : sa vitesse réelle (m/s).
+   */
+  patauger(profondeur: number, dt: number, vitesse: number): void {
+    this.objet.position.y = -profondeur;
+    this.dansLEau = profondeur >= 0.1;
+    if (profondeur < 0.03) {
+      if (this.remous) this.remous.visible = false;
+      return;
+    }
+    if (!this.remous) {
+      const anneau = new THREE.RingGeometry(0.2, 0.3, 28).rotateX(-Math.PI / 2);
+      const mat = (o: number) => new THREE.MeshBasicMaterial({ color: 0xcfe2e4, transparent: true, opacity: o, depthWrite: false });
+      this.remous = new THREE.Group();
+      this.remous.add(new THREE.Mesh(anneau, mat(0.38)), new THREE.Mesh(new THREE.RingGeometry(0.3, 0.36, 28).rotateX(-Math.PI / 2), mat(0.25)));
+      this.objet.add(this.remous);
+    }
+    this.tempsRemous += dt * (vitesse > 0.15 ? 2.2 : 0.8);
+    const [proche, loin] = this.remous.children as THREE.Mesh[];
+    // Le remous est à la surface de l'eau (0,025 m) : au-dessus du personnage enfoncé.
+    this.remous.position.y = profondeur + 0.035;
+    this.remous.visible = true;
+    proche!.scale.setScalar(1 + 0.08 * Math.sin(this.tempsRemous * 4));
+    // L'onde : elle part des jambes et s'efface en s'élargissant.
+    const t = this.tempsRemous % 1;
+    loin!.scale.setScalar(1 + t * (vitesse > 0.15 ? 1.6 : 0.8));
+    (loin!.material as THREE.MeshBasicMaterial).opacity = 0.28 * (1 - t);
+  }
+
   /** L'effondrement : il tombe et reste au sol jusqu'à son retour chez lui. */
   effondrer(oui = true): void {
     this.effondre = oui;
@@ -590,7 +626,9 @@ export class Personnage {
     else if (this.unique > 0) {
       // On laisse finir la frappe ou la roulade.
     } else if (vitesse > 0.15) {
-      if (vitesse < 1.7) c.jouer("Crouch_Fwd_Loop", { vitesse: Math.min(1.8, vitesse / VITESSE_ANIM.accroupi) });
+      // Plan 0.8.2 §7.6 : dans l'eau, la marche freinée reste une marche (au pas lent), pas une marche accroupie.
+      if (this.dansLEau && vitesse >= 0.9 && vitesse < 3.4) c.jouer("Walk_Loop", { vitesse: Math.min(2.2, vitesse / VITESSE_ANIM.marche) });
+      else if (vitesse < 1.7) c.jouer("Crouch_Fwd_Loop", { vitesse: Math.min(1.8, vitesse / VITESSE_ANIM.accroupi) });
       else if (vitesse < 3.4) c.jouer("Walk_Loop", { vitesse: Math.min(2.2, vitesse / VITESSE_ANIM.marche) });
       else c.jouer("Jog_Fwd_Loop", { vitesse: Math.max(0.7, vitesse / VITESSE_ANIM.trot) });
     } else if (this.geste) c.jouer(ANIMATION_GESTE[this.geste], { fondu: 0.3, vitesse: 1 });

@@ -90,9 +90,10 @@ test("0.8 aide : « Fabriquer » — les recettes liées aux meubles, « Tu y pe
   assert.doesNotMatch(t, /plus lentement \(« outil de fortune »\)/);
 });
 
-test("0.8 aide : « Améliorer sa base » — la clé, l'indice, les replis, les outils de fortune, le râtelier", () => {
+test("0.8 aide : « Améliorer sa base » — la pièce de dehors, l'indice, les replis, les outils de fortune, le râtelier", () => {
   const t = rubrique("ameliorer");
-  for (const m of [/une clé/i, /indice/, /Où chercher/, /repli/, /outils de fortune/, /râtelier/]) assert.match(t, m);
+  // 0.8.2 (R9) : plus de « clé » ; la pièce de dehors.
+  for (const m of [/une pièce de dehors/i, /indice/, /Où chercher/, /repli/, /outils de fortune/, /râtelier/]) assert.match(t, m);
   // « Je suis coincé » renvoie à la fiche du meuble et à ses indices.
   const q = rubrique("questions");
   assert.match(q, /Un meuble ne monte pas/);
@@ -102,7 +103,9 @@ test("0.8 aide : « Améliorer sa base » — la clé, l'indice, les replis, les
 
 test("0.8 aide : « Le gué » et « Le Moulin » disent leurs mécanismes", () => {
   const g = rubrique("gue");
-  for (const m of [/radier/, /crue/, /bac/, /cloche/, /ricoche/, /glaise/]) assert.match(g, m);
+  for (const m of [/radier/, /crue/, /bac/, /cloche/, /ricoche/, /se creuse/]) assert.match(g, m);
+  // 0.8.2 (chantier K, décision du porteur) : l'aide ne nomme pas la glaise du gué.
+  assert.doesNotMatch(g, /glaise/i);
   const m = rubrique("moulin");
   for (const x of [/grosse clé/, /grande porte/, /fosse/, /halage/, /24 h/]) assert.match(m, x);
 });
@@ -118,4 +121,12 @@ test("0.8 aide : « Faire évoluer une arme » remplace « Réparer (Sac → l'a
 // Recette 0.8 : un nombre et son unité ne se séparent pas en fin de ligne (« 24 h » coupé sur téléphone).
 test("0.8 aide : dans les résumés, un nombre et son unité sont liés par une espace insécable", () => {
   for (const r of RUBRIQUES_AIDE) assert.ok(!/\d (h|min|km|kg|m|s|L)\b/.test(r.resume), `${r.id} : ${r.resume}`);
+});
+
+test("0.8.2 §7.6 : l'aide ne dit plus de maintenir {agir} pour ramasser ; un appui suffit, un second l'arrête", () => {
+  const tout = JSON.stringify(RUBRIQUES_AIDE);
+  assert.ok(!/Vise une ressource et maintiens/.test(tout));
+  assert.match(tout, /appuie sur \{agir\} : un appui suffit, le geste va jusqu'au bout ; un second appui l'arrête/);
+  // Le combat garde sa règle : maintenir pour le coup appuyé.
+  assert.match(tout, /Coup appuyé\*\* : maintiens \{agir\}/);
 });

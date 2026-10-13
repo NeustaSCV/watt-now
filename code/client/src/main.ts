@@ -13,7 +13,7 @@ import { INTENTION_REPOS, avancer, type Position } from "../../commun/src/deplac
 import { COMPTOIR, destinations, sortieIci, sortiesDe, zoneCoop, zoneDe, zoneMoulin, type LieuJouable, type Zone } from "../../commun/src/lieux.ts";
 import type { EteintVu } from "../../commun/src/eteints.ts";
 import { cerclesSignature, type BruitAction } from "../../commun/src/signature.ts";
-import { ALLURES, GESTE_TENU_MAX_S, type Allure } from "../../commun/src/regles.ts";
+import { ALLURES, type Allure } from "../../commun/src/regles.ts";
 import { APPUIS_DEGAGEMENT, ESQUIVE, REPOUSSER, SEUIL_EPUISE, armeEnMain, freinSaisie } from "../../commun/src/combat.ts";
 import type { AutreVu, SacVu, SanteVue, VueComptoir } from "../../commun/src/messages.ts";
 import { PORTEE_CABLE_PANNEAU, type Charges } from "../../commun/src/energie.ts";
@@ -27,14 +27,17 @@ import { Carte } from "./carte.ts";
 import { Entrees, type Commande } from "./entrees.ts";
 import { Hud } from "./hud.ts";
 import { LIBELLE_FERMER_FICHE } from "./fiche-examiner.ts";
-import { proposer, type ActionProposee, type Propositions } from "./interaction.ts";
+import { propositionsEndormi, proposer, retenirSavoir, type ActionProposee, type Propositions } from "./interaction.ts";
 import { Reseau } from "./reseau.ts";
 import { FeuDeCamp } from "./rendu/feu.ts";
 import { VueInstallation, creerEscabeau } from "./rendu/installations.ts";
 import { FauneAmbiante, Volaille, type CriFaune } from "./rendu/faune.ts";
-import { RAYON_ESCABEAU, estFruitier } from "../../commun/src/terrain.ts";
+import { RAYON_ESCABEAU, estFruitier, profondeurMare } from "../../commun/src/terrain.ts";
+import { avancerVersLaCouche } from "../../commun/src/sommeil-abri.ts";
+import { estomperAbri } from "./rendu/abri-dormeur.ts";
 import { creerRuine } from "./rendu/ruine.ts";
-import { creerHalte, estomperToits } from "./rendu/halte.ts";
+import { creerHalte, estomperToits, montrerTousLesToits } from "./rendu/halte.ts";
+import { ArriveeDansUnLieu } from "./arrivee.ts";
 import { animerMoulin, creerMoulin } from "./rendu/moulin.ts";
 import { pieceMoulin, sombreMoulin } from "../../commun/src/moulin.ts";
 // Le Gué-aux-Saules (plan 0.8, chantier 11) : son décor, son bac, sa crue, ses sons.
@@ -71,7 +74,7 @@ import { ecrire, lire } from "./stockage.ts";
 import { Sonorisation } from "./son/audio.ts";
 import { Bruiteur, dansLaBoutique } from "./son/bruiteur.ts";
 import type { IdSon } from "./son/catalogue.ts";
-import { RECETTES, type Recette } from "../../commun/src/recettes.ts";
+import { RECETTES, recetteAvecFacon, type Recette } from "../../commun/src/recettes.ts";
 import { pretALancer, type Pret } from "../../commun/src/tir.ts";
 import type { ResultatCoup } from "../../commun/src/eteints.ts";
 import type { ProjectileVu } from "../../commun/src/messages.ts";
@@ -83,6 +86,8 @@ import type { ControleEnDirect } from "./mesure/obstacles.ts";
 import { CoucheDechetsVue } from "./rendu/dechets/couche.ts";
 // « Tu y penses » au ramassage d'une clé (plan 0.8, chantier 2).
 import { BandeauIdee } from "./bandeau-idee.ts";
+import { seFaitEnTenantA } from "./geste-tenu.ts";
+import { AnneauProgres } from "./rendu/anneau-progres.ts";
 import { BandeauAvertissement } from "./avertissement.ts";
 
 const CLE_JETON = "watt.jeton";
@@ -195,6 +200,8 @@ const sacs = new Map<number, { vue: THREE.Group; donnees: SacVu }>();
 const autres = new Map<number, VueAutre>();
 const pluie = new Pluie(scene.scene, qualite.niveau === "bas" ? 500 : qualite.niveau === "moyen" ? 900 : 1500);
 let endormi = false;
+/** Le trajet jusqu'à la couche de l'abri, en cours (0.8.2, R12). */
+let versLaCouche: { chemin: { x: number; z: number }[]; o: number } | null = null;
 const rodeurs = new Rodeurs();
 scene.scene.add(rodeurs.objet);
 const brume = new Brume(scene.scene);
@@ -264,13 +271,6 @@ function majVisee(rayon: number, instant: number): void {
  */
 /** Les gestes sur une cible qui se font sur-le-champ : un appui, un effet (pas d'anneau, pas de maintien). */
 const VERBES_IMMEDIATS = new Set(["ajouter_bois", "porter", "assommer"]);
-/** Le dernier rappel « garde A enfoncé » (pour ne pas le répéter à chaque clic). */
-let rappelMaintien = 0;
-function rappelerMaintien(): void {
-  if (performance.now() - rappelMaintien < 8000) return;
-  rappelMaintien = performance.now();
-  hud.message(tactile ? "Garde le bouton enfoncé : l'anneau doit se remplir." : avecTouches("Garde {agir} enfoncé : l'anneau doit se remplir.", false));
-}
 /** La faune du terrain (2026-10-08) : la volaille (serveur), les lapins, le renard et les oiseaux de la mare (ici). */
 const volaille = new Volaille();
 const fauneAmbiante = new FauneAmbiante();
@@ -335,21 +335,9 @@ let maintien: {
 } | null = null;
 /** La fabrication demandée, en attendant que le serveur la commence (pour poser le tas de matières). */
 let fabricationDemandee: { nom: string; ingredients: Inventaire; x: number; z: number } | null = null;
-const MATIERE_PROGRES = new THREE.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: 0.95, depthWrite: false, side: THREE.DoubleSide });
-const anneauProgres = new THREE.Mesh(new THREE.BufferGeometry(), MATIERE_PROGRES);
-anneauProgres.position.y = 0.035;
-anneauProgres.visible = false;
+/** L'anneau de progression du geste : bleu vif, par-dessus le décor (0.8.2, R23 ; rendu/anneau-progres.ts). */
+const anneauProgres = new AnneauProgres();
 scene.scene.add(anneauProgres);
-let progresDessine = -1;
-/** Remplit l'anneau de progression (0 à 1), dans le sens des aiguilles d'une montre depuis le haut de l'écran. */
-function dessinerProgres(progres: number): void {
-  const p = Math.min(1, Math.max(0, progres));
-  const pas = Math.round(p * 60) / 60;
-  if (pas === progresDessine) return;
-  progresDessine = pas;
-  anneauProgres.geometry.dispose();
-  anneauProgres.geometry = new THREE.RingGeometry(0.4, 0.52, 48, 1, Math.PI / 2, -Math.PI * 2 * Math.max(0.001, pas)).rotateX(-Math.PI / 2);
-}
 
 function envoyer(message: MessageClient): void {
   reseau?.envoyer(message);
@@ -383,6 +371,15 @@ function afficherVoile(texte: string, bouton?: { libelle: string; action: () => 
 
 /** Le bandeau « Tu y penses », posé dans le HUD au premier usage (après que le HUD a dessiné son contenu). */
 let bandeauIdee: BandeauIdee | null = null;
+/** Plan 0.8.2 §7.6 : le message ne recouvre jamais un panneau ouvert du HUD (le carnet du tutoriel, le sac, une fiche…). */
+const PANNEAUX_OUVERTS = [".carnet", ".rapport", ".panneau", ".aide-jeu", ".demande-echange", ".bandeau-avertissement"].map((c) => `:scope > ${c}:not([hidden])`).join(", ");
+function nouveauBandeauIdee(): BandeauIdee {
+  const el = document.getElementById("hud")!;
+  return new BandeauIdee(el, window, {
+    obstacles: () => [...el.querySelectorAll<HTMLElement>(PANNEAUX_OUVERTS)].map((p) => p.getBoundingClientRect()).filter((r) => r.width > 0 && r.height > 0),
+    hauteur: () => window.innerHeight,
+  });
+}
 let bandeauAvertissement: BandeauAvertissement | null = null;
 const hud = new Hud(
   document.getElementById("hud")!,
@@ -411,7 +408,6 @@ const hud = new Hud(
     demonter: (objet) => envoyer({ t: "demonter", objet }),
     lire: (objet) => envoyer({ t: "lire", objet }),
     recettesVues: (recettes) => envoyer({ t: "recettes_vues", recettes }),
-    manivelle: (objet) => envoyer({ t: "manivelle", objet }),
     equiper: (objet) => envoyer({ t: "equiper", objet }),
     preparer: (objet) => envoyer({ t: "preparer", objet }),
     reparer: (objet, fortune) => envoyer({ t: "reparer", objet, fortune }),
@@ -419,6 +415,7 @@ const hud = new Hud(
     coffre: (id, sens, objet, quantite) => envoyer({ t: "coffre", id, sens, objet, quantite }),
     amenager: (genre, id, verbe) => envoyer({ t: "interagir", cible: { genre, id }, verbe }),
     constat: (quoi, construction) => envoyer({ t: "constat", quoi, ...(construction ? { construction } : {}) }),
+    banc: (id, g) => envoyer(g.op === "charger" ? { t: "banc", id, op: "charger", cible: g.cible } : { t: "banc", id, op: g.op }),
     fabriquer: (r) => {
       if (!position) return;
       // Le tas de matières : là où l'installation va se dresser, ou à nos pieds pour un objet.
@@ -432,7 +429,7 @@ const hud = new Hud(
         return;
       }
       // Un objet : à nos pieds.
-      fabricationDemandee = { nom: r.nom, ingredients: r.ingredients, x: position.x + Math.sin(position.o) * 0.75, z: position.z + Math.cos(position.o) * 0.75 };
+      fabricationDemandee = { nom: r.nom, ingredients: recetteAvecFacon(r, inventaire).ingredients, x: position.x + Math.sin(position.o) * 0.75, z: position.z + Math.cos(position.o) * 0.75 };
       envoyer({ t: "fabriquer", recette: r.id });
     },
   },
@@ -453,6 +450,8 @@ const menuAdmin = new MenuAdmin(
 );
 // Après le HUD (il remplit #hud à sa construction) : la flèche des Éteints hors champ.
 const horsChamp = new IndicateurHorsChamp(document.getElementById("hud")!);
+/** La vue d'ensemble à l'arrivée dans un lieu (0.8.2, chantier G ; arrivee.ts) : son invite se pose dans le HUD. */
+const vueArrivee = new ArriveeDansUnLieu(document.getElementById("hud")!, tactile, () => envoyer({ t: "arrivee" }));
 
 const carte = new Carte(document.getElementById("carte")!, (vers) => envoyer({ t: "voyager", vers }));
 hud.surPanneau = (ouvert) => uiSon(ouvert ? "ouvrir" : "fermer");
@@ -500,6 +499,8 @@ function installer(message: Bienvenue): void {
   debutMonde = message.temps.debutMonde;
   decalage = message.temps.serveur - Date.now();
   scene.suivre(position.x, position.z, 0, true);
+  // Arrivé d'un voyage : tout le lieu de loin, jusqu'au premier geste (0.8.2, chantier G).
+  vueArrivee.arriver(message.arrivee, lieu, zoneIci(), position);
 
   contenu.clear();
   ressources.clear();
@@ -579,6 +580,8 @@ function installer(message: Bienvenue): void {
   menuAdmin.maj(message.moi.admin);
   hud.admin = message.moi.admin !== undefined;
   hud.majSavoir(message.savoir ?? { apprises: [], manuels: [] });
+  // Plan 0.8.2 §7.3 : un meuble appris d'une autre famille propose ses gestes.
+  retenirSavoir(message.savoir ?? {});
   hud.majProgression(message.progression ?? null);
   lecons.maj(null);
   son.entrer({
@@ -829,16 +832,13 @@ function recevoir(message: MessageServeur): void {
         const sansCible = !maintien;
         if (!maintien) maintien = { cible: null, relache: true, tenu: false, debut: 0, duree: 0 };
         {
-          maintien.tenu = !sansCible && !maintien.tas && message.duree <= GESTE_TENU_MAX_S;
-          // Geste court, A déjà lâché avant qu'il commence : on s'arrête tout de suite, et on dit pourquoi.
-          if (maintien.tenu && maintien.relache) {
-            envoyer({ t: "annuler" });
-            rappelerMaintien();
-          }
+          // Plan 0.8.2 §7.6 : un appui bref suffit, au toucher comme au clavier (geste-tenu.ts) ; un nouvel appui ou
+          // un pas l'arrête.
+          maintien.tenu = seFaitEnTenantA({ tactile, sansCible, fabrication: !!maintien.tas, duree: message.duree });
           // Un geste long repris : l'anneau repart de la part déjà faite.
           maintien.debut = performance.now() - (message.deja ?? 0) * message.duree * 1000;
           maintien.duree = message.duree * 1000;
-          progresDessine = -1;
+          anneauProgres.repartir();
         }
         // Un geste court se lit sur l'anneau seul ; un geste long et une fabrication ont aussi le pourcentage à côté.
         if (!maintien.tenu) hud.debutAction(message.libelle, message.duree, message.deja ?? 0);
@@ -997,6 +997,10 @@ function recevoir(message: MessageServeur): void {
     case "tutoriel":
       hud.majTutoriel(message.tutoriel);
       return;
+    // Dormir dans l'abri (0.8.2, R12) : le trajet accroupi jusqu'à la couche, que l'on prédit comme le serveur.
+    case "vers_couche":
+      versLaCouche = message.chemin ? { chemin: message.chemin, o: message.o } : null;
+      return;
     case "sommeil":
       if (message.dort !== endormi) son.dormir(message.dort);
       endormi = message.dort;
@@ -1008,6 +1012,7 @@ function recevoir(message: MessageServeur): void {
     // Le savoir des autres familles (Book 25 §2.3) : leçons et manuels.
     case "savoir":
       hud.majSavoir(message.savoir);
+      retenirSavoir(message.savoir);
       return;
     case "admin":
       menuAdmin.maj(message.admin);
@@ -1028,9 +1033,9 @@ function recevoir(message: MessageServeur): void {
       if (message.texte) hud.message(message.texte, "aide");
       hud.majIdees(message.progression.devoilees, message.nouvelles);
       return;
-    // L'idée au ramassage d'une clé (plan 0.8) : un bandeau qui passe, ou qui se ferme d'un bouton, et un son court.
+    // L'idée au ramassage d'une clé (plan 0.8 ; 0.8.2, R22) : un message sans bouton, qui passe tout seul, et un son court.
     case "idee":
-      (bandeauIdee ??= new BandeauIdee(document.getElementById("hud")!)).montrer({ texte: message.texte, plusTard: message.plusTard, ...(message.objet ? { objet: message.objet } : {}) });
+      (bandeauIdee ??= nouveauBandeauIdee()).montrer({ texte: message.texte, plusTard: message.plusTard, ...(message.objet ? { objet: message.objet } : {}) });
       son.jouer("idee");
       return;
     // Un avertissement du carnet (plan 0.8, chantier 13 ; B14) : un bandeau fermé par son bouton « Compris ».
@@ -1256,7 +1261,7 @@ function agir(a: ActionProposee | null): void {
   // Rien à portée : on dit comment trouver quelque chose à faire, plutôt que de ne rien faire.
   if (!a) return indice("rien", "Rien à portée : approche-toi jusqu'à voir un cercle au sol.");
   if ("message" in a) envoyer(a.message);
-  else if ("examiner" in a) hud.message(a.examiner);
+  else if ("examiner" in a) hud.message(a.examiner, "examen");
   else if ("ouvrirCoffre" in a) {
     const c = installations.get(a.ouvrirCoffre);
     if (c) hud.ouvrirCoffre(c.vue);
@@ -1293,7 +1298,7 @@ function finirPose(choix: "tourner" | "annuler" | "poser"): void {
   if (genre === "feu") envoyer({ t: "construire_feu", x: pose.x, z: pose.z, ...(dakota ? { dakota } : {}) });
   else if (recette) {
     // Le tas de matières, là où l'installation va se dresser.
-    fabricationDemandee = { nom: recette.nom, ingredients: recette.ingredients, x: pose.x, z: pose.z };
+    fabricationDemandee = { nom: recette.nom, ingredients: recetteAvecFacon(recette, inventaire).ingredients, x: pose.x, z: pose.z };
     envoyer({ t: "fabriquer", recette: recette.id, x: pose.x, z: pose.z, o: pose.o });
   }
   pose.arreter();
@@ -1346,15 +1351,9 @@ function executer(c: Commande): void {
       return;
     case "A_court":
     case "A_long":
-      // Hors combat : lâcher A arrête le geste en cours.
+      // Hors combat : lâcher A ne fait rien (0.8.2 §7.6) ; le geste va jusqu'au bout, un nouvel appui l'arrête.
       if (!modeCombat && maintien) {
         maintien.relache = true;
-        // Seul un geste court s'arrête quand on lâche ; un geste long continue jusqu'au prochain appui.
-        if (occupe && maintien.tenu && maintien.duree > 0) {
-          envoyer({ t: "annuler" });
-          // Lâché bien avant la fin : on dit qu'il fallait tenir.
-          if (performance.now() - maintien.debut < maintien.duree * 0.9) rappelerMaintien();
-        }
         return;
       }
       if (!modeCombat || enVoyage || carte.ouverte) return;
@@ -1406,7 +1405,7 @@ function executer(c: Commande): void {
       return;
     }
     case "lumiere":
-      if (!lumierePortee(inventaire)) return hud.message("Rien pour t'éclairer : torche, frontale ou lanterne sont dans le kit d'une famille : échange-la.");
+      if (!lumierePortee(inventaire)) return hud.message("Rien pour t'éclairer : chaque famille a sa lumière, échanges-en une.");
       envoyer({ t: "lumiere", allumee: !lumiere });
       return;
     case "tourner+":
@@ -1475,8 +1474,9 @@ function combatB(): void {
 function majMode(dt: number): void {
   if (!position) return;
   let plusProche = Infinity;
-  for (const e of eteints.values()) {
+  for (const [id, e] of eteints) {
     if (e.etat === "dormant" || e.etat === "detruit" || e.etat === "a_terre") continue;
+    if (lieu === "gue" && !gue.menace(id, position)) continue; // 0.8.2 (R3) : l'Éteint qui dérive, hors du radier
     plusProche = Math.min(plusProche, Math.hypot(e.objet.position.x - position.x, e.objet.position.z - position.z));
   }
   if (plusProche < 6 && !modeCombat && calmeDepuis >= 0) {
@@ -1630,7 +1630,7 @@ function boucle(instant: number): void {
     const entree = entrees.lire();
     const { dx, dz } = scene.versMonde(entree.x, entree.y);
     // Carte ouverte ou en route : le personnage s'arrête.
-    const immobile = enVoyage || carte.ouverte || hud.enPause;
+    const immobile = enVoyage || carte.ouverte || hud.enPause || vueArrivee.attend;
     let allure = allureAutorisee(entree.allure, besoins, porteEscabeau() || traineTravois(inventaire));
     if (allure === "course" && endurance < SEUIL_EPUISE) allure = "marche";
     if (allure === "course" && lieu === "gue" && gue.surLeRadier(position)) allure = "marche"; // le radier : on n'y court pas
@@ -1678,6 +1678,15 @@ function boucle(instant: number): void {
       elan.restant -= dt;
       if (elan.restant <= 0) elan = null;
     }
+    // En route vers la couche de l'abri (0.8.2, R12) : accroupi, pas à pas ; bouger l'interrompt (le serveur aussi).
+    if (versLaCouche && !immobile) {
+      if (Math.hypot(intention.dx, intention.dz) > 0.01) versLaCouche = null;
+      else {
+        const pas = avancerVersLaCouche(position, versLaCouche.chemin, dt, versLaCouche.o);
+        position = pas.position;
+        versLaCouche = pas.chemin.length > 0 ? { ...versLaCouche, chemin: pas.chemin } : null;
+      }
+    }
     const enMouvement = position !== avant;
     // Dans une pièce noire de la Coopérative, la lampe porte comme la nuit : le serveur le compte, le cercle ambre aussi.
     majCercles(dt, intention.allure, enMouvement, estNuit(Number.isFinite(HEURE_FORCEE) ? HEURE_FORCEE : heureDeJeu(Date.now() + decalage, debutMonde)) || dansLeNoir());
@@ -1697,13 +1706,21 @@ function boucle(instant: number): void {
     // Au Comptoir, la musique sort d'un petit poste ; elle s'ouvre en grand près du guichet (LIVRAISON §3).
     if (lieu === "comptoir") son.radio(Math.hypot(position.x - COMPTOIR.guichet.x, position.z - COMPTOIR.guichet.z) > 7);
     personnage.objet.position.set(position.x, 0, position.z);
+    // Dans la mare, l'eau aux genoux (0.8.2, R21).
+    personnage.patauger(lieu === "terrain" ? profondeurMare(position.x, position.z) : 0, dt, vitesse);
     // Rotation du personnage : on prend le plus court chemin angulaire.
     const ecartAngle = Math.atan2(Math.sin(position.o - personnage.objet.rotation.y), Math.cos(position.o - personnage.objet.rotation.y));
     personnage.objet.rotation.y += ecartAngle * Math.min(1, dt * 14);
     personnage.animer(dt, vitesse);
     // Endormi : couché au sol, près du feu ou sous l'abri.
     personnage.coucher(endormi);
+    // Sous l'abri, à sa couche (0.8.2, R12) : la bâche s'efface en partie, pour qu'on voie le dormeur.
+    if (lieu === "terrain") for (const i of installations.values()) if (i.vue.type === "abri") estomperAbri(i.objet, (endormi || versLaCouche !== null) && Math.hypot(i.vue.x - position.x, i.vue.z - position.z) < 2.5, dt);
     personnage.porterLumiere(lumiere && (dansLeNoir() || estNuit(Number.isFinite(HEURE_FORCEE) ? HEURE_FORCEE : heureDeJeu(Date.now() + decalage, debutMonde))));
+    // La vue d'ensemble à l'arrivée impose son cadrage, puis zoome vers le personnage ; les toits restent jusque-là.
+    scene.cadrage = vueArrivee.cadrage(position, scene.angleCamera, scene.niveauZoom);
+    montrerTousLesToits(vueArrivee.toitsVisibles);
+    carteVue.toutMontrer(vueArrivee.toitsVisibles);
     scene.suivre(position.x, position.z, dt);
     const decor = decors.get(lieu);
     // Les toits qui cachent le personnage s'effacent (à la halte et au Comptoir), selon l'angle de la caméra.
@@ -1796,6 +1813,10 @@ function boucle(instant: number): void {
     dechetsVue.cibler(dechet !== null && propositions === dechet.propositions);
     // La fiche Examiner ouverte (plan 0.8 §9.2) : B la referme, le bouton tactile et l'invite le disent.
     if (!modeCombat && hud.ficheOuverte) propositions = { ...propositions, B: { libelle: LIBELLE_FERMER_FICHE, examiner: "" } };
+    // Endormi : A réveille (0.8.2, chantier K), au lieu de « Dormir dans l'abri ».
+    if (endormi && !modeCombat) propositions = propositionsEndormi(propositions);
+    // Pendant la vue d'ensemble, rien ne se propose : le premier geste ne sert qu'à commencer.
+    if (vueArrivee.attend) propositions = { A: null, B: null, cible: null };
     hud.propositions(propositions, occupe, maintien?.tenu && occupe ? actionEnCours : null);
     if (pose.actif) {
       const genre = pose.actif.genre;
@@ -1815,7 +1836,7 @@ function boucle(instant: number): void {
       majVisee(0.5, instant);
       anneauProgres.visible = true;
       anneauProgres.position.set(centre.x, 0.035, centre.z);
-      dessinerProgres((performance.now() - tenu!.debut) / tenu!.duree);
+      anneauProgres.remplir((performance.now() - tenu!.debut) / tenu!.duree);
       // Le pourcentage, juste sous l'anneau.
       const p = new THREE.Vector3(centre.x, 0, centre.z).project(scene.camera);
       hud.placerProgression(((p.x + 1) / 2) * window.innerWidth, ((1 - p.y) / 2) * window.innerHeight);

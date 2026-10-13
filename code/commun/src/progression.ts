@@ -15,7 +15,7 @@
 // Ce fichier ne fait que des calculs purs. Le serveur constate les faits (serveur/src/devoilement.ts) ; le client
 // affiche (client/src/fabrication-arbre.ts, la fiche d'installation de hud.ts, client/src/bandeau-idee.ts).
 
-import { RECETTES, estApprise, installationDuLieu, estHorsFamille, niveauQualite, recette, type LieuRecette, type Recette, type SavoirRecettes } from "./recettes.ts";
+import { RECETTES, estApprise, faconsRecette, installationDuLieu, estHorsFamille, niveauQualite, recette, type LieuRecette, type Recette, type SavoirRecettes } from "./recettes.ts";
 import { ACCESSOIRES_FEU, LIGNEES_INSTALLATIONS, PIECES_DE_FAMILLE, VOIE_CREUSEE, VOIE_SURFACE, etapeAccessoire, lignee, type AccessoireFeu, type CleEvolution, type Etape } from "./lignees.ts";
 import type { Inventaire, TypeObjet } from "./objets.ts";
 import { QUETE, type Condition, type Quete } from "./quetes.ts";
@@ -91,7 +91,9 @@ const ARC = vu("arc_fortune", "arc_simple", "arc_if", "arc_sportif");
 const ARCS_FORTUNE = fab("arc_fortune", "arc_fortune_branche");
 const COUTEAUX_FORGES = fab("lame_forgee", "lame_forgee_fer", "lame_forgee_lime");
 const MACHETTES_FORGEES = fab("machette_forgee", "machette_forgee_fer", "machette_forgee_ebrechee");
-const MODULES = fab("module_flash", "module_raquette", "module_bobine");
+// Le module de décharge unique (0.8.2, R14) : les modules « au flash » et « à la raquette » d'une partie 0.8.1 comptent
+// pour lui (ANCIENNES_RECETTES).
+const MODULES = fab("module_decharge", "module_bobine");
 const CHARBON = ou(fait("defourne"), vu("charbon_bois"));
 const FLECHES_OU_CARREAUX = vu("fleche_durcie", "fleche_os", "fleche_clou", "fleche_acier", "carreau", "carreau_acier");
 /** Cinq lames forgées : la pratique ouvre seule ce que la rencontre ouvre plus vite (Book 25 §2.5). */
@@ -129,8 +131,10 @@ export const PROGRESSION: Readonly<Record<string, LigneProgression>> = {
   foyer_dakota: { quand: [vu("baton_fouir", "beche"), quete("dakota")], indice: "Un feu qui ne se voit pas de loin." },
 
   // ---------- À l'abri du danger ----------
-  hache: { filet: 60, quand: [vu("tete_hache"), tuto(5)], indice: "Une tête d'outil sans manche ne sert à rien." },
-  etabli: { quand: [fab("hache"), vu("hache", "perche_frene")], indice: "Les gestes fins demandent un plan de travail." },
+  // R13 (0.8.2) : remmancher se fait à l'établi ; c'est l'établi qui le dévoile (plus de filet du temps).
+  hache: { quand: [vu("tete_hache"), tuto(5)], indice: "Une tête d'outil sans manche ne sert à rien." },
+  // R13 (0.8.2) : la hache et le marteau se remmanchent à l'établi ; leur tête trouvée y fait penser.
+  etabli: { quand: [fab("hache"), vu("hache", "perche_frene", "tete_hache", "tete_marteau")], indice: "Les gestes fins demandent un plan de travail." },
   gourdin: { filet: 60, quand: [fait("feu_allume"), fait("eteint_vu"), quete("defense")], indice: "Les poings, c'est pour les films." },
   epieu: { quand: [fait("eteint_vu"), fab("gourdin"), quete("defense")], indice: "Mieux vaut les tenir à distance." },
   lance: { filet: 60, quand: [fab("epieu")], indice: "Une pointe d'acier au bout du bois." },
@@ -162,13 +166,13 @@ export const PROGRESSION: Readonly<Record<string, LigneProgression>> = {
   machette_forgee_ebrechee: { quand: [et(COUTEAUX_FORGES, vu("lame_ebrechee"))], indice: "Deux lames cassées en font une neuve." },
   reforger_lame: { quand: [vu("lame_ebrechee")], indice: "Une lame cassée n'est pas perdue." },
   banc_recharge: { quand: [SEUIL], indice: "Quand tu auras un toit et tenu tête une fois…" },
-  matraque_fortune: { quand: [SEUIL, fab("banc_recharge"), vu("appareil_photo_jetable")], indice: "Ton arme de métier : le silence qui mord." },
-  module_flash: { quand: [vu("appareil_photo_jetable")], indice: "Un flash garde une belle décharge en réserve." },
+  matraque_fortune: { quand: [SEUIL, fab("banc_recharge"), vu("appareil_photo_jetable", "petit_condensateur")], indice: "Ton arme de métier : le silence qui mord." },
+  // R14 (0.8.2) : un condensateur, celui du flash ou celui de la raquette.
+  module_decharge: { quand: [vu("petit_condensateur", "condensateur_moyen", "appareil_photo_jetable", "raquette_moustiques"), quete("raquette")], indice: "Un flash garde une belle décharge en réserve." },
   pack_cellules: { quand: [vu("cellule_lithium"), quete("pack")], indice: "Des petites piles ensemble font une vraie batterie." },
-  module_raquette: { quand: [vu("raquette_moustiques"), quete("raquette")], indice: "Ce qui grillait les moustiques peut servir encore." },
+  // Un pack de cellules ou la petite batterie du kit (R16, 0.8.2 : l'ancienne « matraque à la petite batterie » y est
+  // fondue).
   matraque_electrique: { quand: [fab("pack_cellules"), MODULES, quete("raquette")], indice: "Une décharge qui les éteint pour de bon." },
-  // La petite batterie du kit, source de la matraque ★★ (plan 0.8 §2.4, Q-A5 ; chantier 8).
-  matraque_petite_batterie: { quand: [et(fab("banc_recharge"), MODULES)], indice: "Ta petite batterie peut nourrir une vraie matraque." },
   pedalier: { quand: [SEUIL, vu("cadre_velo"), quete("meule"), quete("dynamo")], indice: "Ce qui tourne ne meurt pas." },
   arbalete: { quand: [SEUIL, fab("pedalier"), quete("arbalete")], indice: "Ton arme de métier : rien à bander, tout à viser." },
   arbrier: { quand: [devoilee("arbalete")], indice: "Le corps de l'arme, taillé dans une bûche." },
@@ -193,9 +197,9 @@ export const PROGRESSION: Readonly<Record<string, LigneProgression>> = {
 
   // ---------- Le métier ----------
   ebauche_arc: { quand: [ARCS_FORTUNE, fait("tete:fleche")], indice: "Le bois vert fatigue vite : il faut un bois sec." },
-  corde_arc_ficelle: { quand: [ARCS_FORTUNE, fait("tete:fleche")], indice: "Un arc ne vaut pas mieux que sa corde." },
+  // 3 ficelles ou une corde (R15, 0.8.2) : la corde vue y fait penser aussi.
+  corde_arc_ficelle: { quand: [ARCS_FORTUNE, fait("tete:fleche"), et(vu("corde"), devoilee("arc_simple"))], indice: "Un arc ne vaut pas mieux que sa corde." },
   arc_simple: { quand: [ARCS_FORTUNE, fait("tete:fleche")], indice: "Un arc qui dure, et qui porte plus loin." },
-  corde_arc_corde: { quand: [et(vu("corde"), devoilee("arc_simple"))], indice: "Une corde défaite fait une meilleure corde d'arc." },
   corde_arc_dentaire: { quand: [et(vu("fil_dentaire"), devoilee("arc_simple"))], indice: "Le fil le plus solide est dans la salle de bains." },
   corde_arc_boyau: { quand: [et(vu("boyaux"), devoilee("arc_simple"))], indice: "Les anciens tendaient leurs arcs autrement." },
   ebauche_if: { quand: [vu("baton_if")], indice: "Le meilleur bois d'arc pousse au fond du bois." },
@@ -210,7 +214,7 @@ export const PROGRESSION: Readonly<Record<string, LigneProgression>> = {
   module_bobine: { quand: [vu("bobine_allumage")], indice: "Ce qui allumait un moteur claque plus fort." },
   aiguillon: { quand: [et(fab("matraque_electrique", "matraque_electrodes", "matraque_manche_tourne"), fab("epieu"))], indice: "La décharge au bout d'une longue hampe." },
   alarme_electrique: { quand: [et(ou(vu("rouleau_fil_fer"), fab("alarme_boites")), fab("banc_recharge")), quete("alarme_electrique")], indice: "Une alarme qui ne fait pas de bruit." },
-  cloture_fortune: { quand: [fab("module_raquette"), fab("alarme_electrique")], indice: "Un fil qui mord ceux qui passent." },
+  cloture_fortune: { quand: [et(vu("condensateur_moyen", "raquette_moustiques"), MODULES), fab("alarme_electrique")], indice: "Un fil qui mord ceux qui passent." },
   electrificateur: { quand: [vu("resistance")], indice: "Une décharge qui revient sans cesse." },
   cloture_electrique: { quand: [fab("electrificateur")], indice: "Un vrai enclos qui se défend seul." },
   plaque_choc: { quand: [et(vu("casserole"), MODULES)], indice: "Le sol lui-même peut mordre." },
@@ -241,7 +245,7 @@ export const PROGRESSION: Readonly<Record<string, LigneProgression>> = {
   // ---------- Le niveau 1 : le stockage, l'établi, la lumière, les outils de fortune (plan 0.8, chantier 6) ----------
   ratelier_outils: { quand: [fab("coffre"), fait("trop_lourd")], indice: "Tes outils pèsent : chacun pourrait avoir sa place." },
   torche_plantee: { quand: [et(vu("graisse"), fait("nuit"))], indice: "Voir autour de l'abri, la nuit, sans allumer un feu." },
-  marteau: { filet: 60, quand: [vu("tete_marteau")], indice: "Une tête d'outil sans manche ne sert à rien." },
+  marteau: { quand: [vu("tete_marteau")], indice: "Une tête d'outil sans manche ne sert à rien." },
   serre_joint_fortune: { filet: 60, quand: [fab("etabli"), vu("etau")], indice: "Tenir une pièce quand deux mains ne suffisent pas." },
   scie_fortune: { quand: [vu("disque_scie")], indice: "Des dents d'acier mordent le bois sans bruit." },
   scie_fortune_lames: { quand: [et(vu("lame_ebrechee"), fab("etabli"))], indice: "Des dents d'acier mordent le bois sans bruit." },
@@ -254,6 +258,77 @@ export const PROGRESSION: Readonly<Record<string, LigneProgression>> = {
 
 /** L'atelier de chaque famille : rien de son métier ne se dévoile avant lui (sauf ce qu'une quête demande). */
 export const ATELIER: Readonly<Record<Famille, string>> = { charbonniers: "forge", voltaiques: "banc_recharge", mecanistes: "pedalier" };
+
+// ---------- Les armes de métier attendent le meuble complet (R26, plan 0.8.2, chantier J) ----------
+
+/**
+ * Les armes de métier de chaque famille, leurs pièces comprises : ⚡ les matraques et le module de décharge, 🔥 les
+ * lames forgées (et la lance à pointe forgée), ⚙️ l'arbalète, ses pièces et ses carreaux. Les niveaux « plus tard » y
+ * sont aussi, pour le jour où ils viendront.
+ */
+export const ARMES_DE_METIER: Readonly<Record<Famille, readonly string[]>> = {
+  voltaiques: ["matraque_fortune", "matraque_electrique", "matraque_electrodes", "matraque_manche_tourne", "module_decharge", "module_bobine", "aiguillon"],
+  charbonniers: [
+    "lame_forgee",
+    "lame_forgee_fer",
+    "lame_forgee_lime",
+    "reforger_lame",
+    "machette_forgee",
+    "machette_forgee_fer",
+    "machette_forgee_ebrechee",
+    "hachette",
+    "hache_forgee",
+    "hache_forgee_soc",
+    "serpe",
+    "serpe_soc",
+    "glaive",
+    "pointe_lance",
+    "lance_forgee",
+  ],
+  mecanistes: [
+    "arbalete",
+    "arbalete_lourde",
+    "arbrier",
+    "noix_bois",
+    "noix_os",
+    "noix_forgee",
+    "arc_arbalete_frene",
+    "arc_arbalete_ressort",
+    "arc_arbalete_if",
+    "arc_arbalete_retrempe",
+    "corde_arbalete",
+    "corde_arbalete_ceinture",
+    "carreaux_os",
+    "carreaux_clou",
+    "carreaux_papier",
+    "carreaux_acier",
+    "cranequin",
+  ],
+};
+
+/** Le métier de chaque arme de métier (la famille dont le meuble l'ouvre). */
+const METIER_DE_L_ARME: ReadonlyMap<string, Famille> = new Map(
+  (Object.entries(ARMES_DE_METIER) as [Famille, readonly string[]][]).flatMap(([f, ids]) => ids.map((id) => [id, f] as const)),
+);
+
+/** Le meuble de famille est-il complet : bâti, et équipé de sa pièce (l'enclume, le panneau, l'alternateur) ? */
+export function meubleComplet(famille: Famille, installations: ReadonlyMap<string, number>): boolean {
+  const type = ATELIER[famille];
+  const piece = PIECES_DE_FAMILLE[type as keyof typeof PIECES_DE_FAMILLE];
+  return installations.has(piece ? `${type}+${piece}` : type);
+}
+
+/**
+ * R26 : une arme de métier n'existe pas pour le joueur (ni dévoilée, ni en silhouette, ni annoncée) tant que le meuble
+ * de **son métier** n'est pas complet ; le repli (la pierre plate, la manivelle, la dynamo) ne suffit pas, et l'établi
+ * non plus. Une arme apprise d'une autre famille (leçon, manuel) attend le meuble de son métier, et non celui de
+ * l'apprenti (plan 0.8.2 §7.3 : le couteau forgé d'un Mécaniste attend la forge et son enclume, qu'il peut poser une
+ * fois la forge apprise). Ce qui est déjà gardé (une partie 0.8.1) n'est pas oublié : la carte revient avec la pièce.
+ */
+export function armeEnAttente(id: string, installations: ReadonlyMap<string, number>): boolean {
+  const metier = METIER_DE_L_ARME.get(id);
+  return metier !== undefined && !meubleComplet(metier, installations);
+}
 
 /** Le seuil du métier tombe de lui-même après ces minutes de jeu (l'étape « La famille » le fait plus tôt). */
 export const FILET_SEUIL_MIN = 120;
@@ -301,7 +376,7 @@ const VOIE_DE_BASE: Partial<Record<TypeObjet, string>> = {
   arc_arbalete: "arc_arbalete_frene",
   lame_forgee: "lame_forgee_fer",
   machette_forgee: "machette_forgee_fer",
-  module_decharge: "module_flash",
+  module_decharge: "module_decharge",
   pointe_acier: "pointe_acier",
   arc_fortune: "arc_fortune_branche",
   matraque_electrique: "matraque_electrique",
@@ -325,7 +400,8 @@ export function recetteDeBase(objet: TypeObjet): Recette | undefined {
 /** Les maillons d'une recette : la recette de chaque ingrédient fabricable, et celle de l'installation requise. */
 export function maillons(r: Recette): Recette[] {
   const liste: Recette[] = [];
-  for (const t of Object.keys(r.ingredients) as TypeObjet[]) {
+  // Une recette à choix (0.8.2) : les maillons de sa première façon, la plus simple.
+  for (const t of Object.keys(faconsRecette(r)[0]!) as TypeObjet[]) {
     const m = recetteDeBase(t);
     if (m && m.id !== r.id) liste.push(m);
   }
@@ -349,7 +425,8 @@ export function recettesDeLEtape(etape: number, famille: Famille): string[] {
     case ETAPE_FEU:
       return ["feu_de_camp"];
     case ETAPE_OUTIL:
-      return ["hache"];
+      // R13 (0.8.2) : on remmanche à l'établi ; l'étape le fait bâtir, et l'établi dévoile la hache.
+      return ["etabli"];
     case ETAPE_ABRI:
       return ["abri"];
     case ETAPE_FAMILLE:
@@ -461,8 +538,25 @@ function somme(faits: Readonly<Record<string, number>>, prefixe: string): number
   return n;
 }
 
+/**
+ * Les recettes de la 0.8 fondues en une seule par la 0.8.2 (chantier B) : leurs faits, dans une partie 0.8.1, comptent
+ * pour la recette qui les remplace (le module de décharge, la matraque électrique, la corde d'arc).
+ */
+export const ANCIENNES_RECETTES: Readonly<Record<string, readonly string[]>> = {
+  module_decharge: ["module_flash", "module_raquette"],
+  matraque_electrique: ["matraque_petite_batterie"],
+  corde_arc_ficelle: ["corde_arc_corde"],
+};
+
+/** Combien de fois on a fait cette recette, ses anciennes formes comprises (la maîtrise, les déclencheurs). */
+export function nombreFabriques(faits: Readonly<Record<string, number>>, id: string): number {
+  let n = faits[`fabrique:${id}`] ?? 0;
+  for (const ancienne of ANCIENNES_RECETTES[id] ?? []) n += faits[`fabrique:${ancienne}`] ?? 0;
+  return n;
+}
+
 function aFabrique(e: EtatPourDevoilement, id: string): number {
-  let n = e.faits[`fabrique:${id}`] ?? 0;
+  let n = nombreFabriques(e.faits, id);
   const r = recette(id);
   // Une installation déjà posée compte, même sans le fait.
   if (n === 0 && r && "installation" in r.produit && e.installations.has(r.produit.installation)) n = 1;
@@ -555,6 +649,8 @@ export function aDevoiler(e: EtatPourDevoilement): string[] {
   const savoir = e.savoir ?? {};
   const ajouter = (id: string, parLaChaine: boolean) => {
     if (devoilees.has(id) || !accessible(id, e.famille, savoir)) return;
+    // R26 : une arme de métier attend le meuble de famille complet, même tirée par la chaîne ou demandée.
+    if (armeEnAttente(id, e.installations)) return;
     const r = recette(id);
     // La chaîne ne tire pas une recette liée à une construction qu'on n'a pas : elle attend sa construction.
     if (parLaChaine && r && !lieuPossede(r.lieu, e.installations)) return;
@@ -646,7 +742,8 @@ export function silhouettes(e: EtatPourDevoilement): SilhouetteVue[] {
   const savoir = e.savoir ?? {};
   const liste: SilhouetteVue[] = [];
   const deja = new Set<string>();
-  const cachee = (id: string) => !e.devoilees.has(id) && !deja.has(id) && accessible(id, e.famille, savoir);
+  // R26 : pas de silhouette d'arme de métier avant le meuble complet (pas même celle qu'une quête demande).
+  const cachee = (id: string) => !e.devoilees.has(id) && !deja.has(id) && accessible(id, e.famille, savoir) && !armeEnAttente(id, e.installations);
   for (const id of recettesDemandees(e)) {
     const r = recette(id);
     if (!r || !cachee(id)) continue;

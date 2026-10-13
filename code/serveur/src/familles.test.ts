@@ -73,16 +73,19 @@ test("🔥 la lame se forge seulement près d'un foyer de forge et de son bac de
   // La graisse : une trempe à l'huile, sûre (à l'eau, une lame sur trois se fend : voir forge.test.ts). Le bac de
   // trempe (plan 0.8) : 2 bûches, 2 glaises, le bâton à fouir ; l'enclume de dépanneur de la station sur le billot.
   const t = monter("charbonniers", { pierre: 8, barre_metal: 1, branche: 3, marteau: 1, ressort_lames: 1, charbon_bois: 2, graisse: 1, buche: 2, glaise: 2, baton_fouir: 1, enclume_depanneur: 1 });
+  // R26 (0.8.2) : sans le foyer de forge et son enclume, on n'y pense pas encore (les lames attendent le meuble complet).
   t.joueur.recevoir({ t: "fabriquer", recette: "lame_forgee" });
-  assert.match(t.infos().at(-1)!, /Il te faut un foyer de forge/);
+  assert.match(t.infos().at(-1)!, /pas encore pensé/);
   const id = t.construire("forge", 90);
+  t.joueur.recevoir({ t: "fabriquer", recette: "lame_forgee" });
+  assert.match(t.infos().at(-1)!, /pas encore pensé/);
+  t.utiliser(id, "poser_enclume");
+  t.attendre(9);
   // Plan 0.8 : l'acier se trempe au bac (le lieu de la recette).
   t.joueur.recevoir({ t: "fabriquer", recette: "lame_forgee" });
   assert.match(t.infos().at(-1)!, /Il te faut un bac de trempe/);
   t.utiliser(id, "poser_bac");
   t.attendre(21);
-  t.utiliser(id, "poser_enclume");
-  t.attendre(9);
   t.joueur.recevoir({ t: "fabriquer", recette: "lame_forgee" });
   t.attendre(91);
   const inv = t.dernier("inventaire")!.inventaire;
@@ -129,15 +132,18 @@ test("⚙️ pédalier : la meule de pierre affûte le couteau (Couper 2)", () =
   assert.equal(inv.couteau, undefined);
 });
 
-test("⚡ banc : la batterie de voiture recharge la petite batterie à 85 %", () => {
+test("⚡ banc : la batterie du banc recharge la petite batterie de la frontale à 85 %", () => {
   const t = monter("voltaiques", { buche: 2, barre_metal: 1, branche: 3, couteau: 1, cle_plate: 1, petite_batterie: 1, lampe_frontale: 1, batterie_voiture: 1 });
   const id = t.construire("banc_recharge", 60);
-  t.utiliser(id, "recharger");
+  // 0.8.2 (R17) : la batterie de la ruine se branche dans le banc, puis la fiche du banc charge ce qu'on porte.
+  t.utiliser(id, "poser_batteries");
+  t.attendre(5);
+  t.joueur.recevoir({ t: "banc", id, op: "charger", cible: "petite_batterie" });
   t.attendre(30);
-  const c = t.dernier("charges")!.charges;
-  assert.equal(Math.round(c.petite_batterie!), 50);
-  // 10 Wh entrés dans la petite batterie → ≈ 11,8 Wh pris à la batterie de voiture
-  assert.equal(Math.round(c.batterie_voiture!), 168);
+  assert.equal(Math.round(t.dernier("charges")!.charges.petite_batterie!), 50);
+  // 10 Wh entrés dans la petite batterie → ≈ 11,8 Wh pris à la batterie du banc
+  const banc = t.dernier("installation")!.installation;
+  assert.equal(Math.round(banc.etat.charges!.batterie_voiture!), 168);
 });
 
 test("⚡ la lampe frontale vide la petite batterie, puis s'éteint", () => {
@@ -149,9 +155,9 @@ test("⚡ la lampe frontale vide la petite batterie, puis s'éteint", () => {
   assert.equal(t.dernier("lumiere")!.allumee, true);
   t.attendre(60, 2);
   assert.equal(t.dernier("lumiere")!.allumee, false);
-  assert.match(t.infos().join(" "), /batterie est vide/);
+  assert.match(t.infos().join(" "), /batterie de la frontale est vide/);
   t.joueur.recevoir({ t: "lumiere", allumee: true });
-  assert.match(t.infos().at(-1)!, /recharge-la/);
+  assert.match(t.infos().at(-1)!, /charge-la au banc/);
 });
 
 test("les recettes d'une autre famille sont inconnues, tant qu'on ne les a pas apprises (Book 25 §2.3)", () => {

@@ -8,16 +8,17 @@ import { OBJETS, type TypeObjet } from "../../commun/src/objets.ts";
 import { NOMS_FAMILLES_VESTIGES, definitionVestige, estOrdure, type FamilleVestige } from "../../commun/src/vestiges.ts";
 import { estDessinee, icone, iconeFamille, type Pictogramme } from "./icones.ts";
 import { NOMS_INSTALLATIONS, type TypeInstallation } from "../../commun/src/recettes.ts";
-import { NOUVEAUX_OBJETS_0_8 } from "../../commun/src/objets-niveau1.ts";
+import { NOUVEAUX_OBJETS_0_8, NOUVEAUX_OBJETS_0_8_2 } from "../../commun/src/objets-niveau1.ts";
 
 // Toutes les installations, celles du métier des familles comprises (Book 25).
 const INSTALLATIONS: Pictogramme[] = ["feu_de_camp", "poches", ...(Object.keys(NOMS_INSTALLATIONS) as TypeInstallation[])];
 
 /** Le groupe des nouveautés de la 0.8 : les objets créés, ceux dont le dessin a changé, les deux installations nouvelles. */
 const NIVEAU_1 = "Niveau 1 (0.8)";
-const groupes = new Map<string, Pictogramme[]>([[NIVEAU_1, [...NOUVEAUX_OBJETS_0_8, "baton_fouir", "jerrican", "ratelier_outils", "torche_plantee"]]]);
+// Les deux condensateurs de la 0.8.2 (R14) les rejoignent, agrandis eux aussi.
+const groupes = new Map<string, Pictogramme[]>([[NIVEAU_1, [...NOUVEAUX_OBJETS_0_8, ...NOUVEAUX_OBJETS_0_8_2, "baton_fouir", "jerrican", "ratelier_outils", "torche_plantee"]]]);
 for (const type of Object.keys(OBJETS) as TypeObjet[]) {
-  if (NOUVEAUX_OBJETS_0_8.includes(type)) continue;
+  if (NOUVEAUX_OBJETS_0_8.includes(type) || NOUVEAUX_OBJETS_0_8_2.includes(type)) continue;
   const v = definitionVestige(type);
   const cle = v ? `Vestiges : ${NOMS_FAMILLES_VESTIGES[v.famille as FamilleVestige] ?? v.famille}` : "Objets";
   groupes.set(cle, [...(groupes.get(cle) ?? []), type]);

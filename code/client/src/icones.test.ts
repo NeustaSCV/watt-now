@@ -9,7 +9,7 @@ import { NOMS_FAMILLES_VESTIGES, type FamilleVestige } from "../../commun/src/ve
 import { VESTIGES_LOT2 } from "../../commun/src/vestiges-lot2.ts";
 import { DESSINS_DECHETS } from "./icones-dechets.ts";
 import { DESSINS_NIVEAU1 } from "./icones-niveau1.ts";
-import { NOUVEAUX_OBJETS_0_8 } from "../../commun/src/objets-niveau1.ts";
+import { NOUVEAUX_OBJETS_0_8, NOUVEAUX_OBJETS_0_8_2 } from "../../commun/src/objets-niveau1.ts";
 import { estDessinee, icone, iconeFamille, type Pictogramme } from "./icones.ts";
 
 const TOUS: Pictogramme[] = [
@@ -94,4 +94,14 @@ test("chaque objet nouveau de la 0.8 a son propre dessin, et deux d'entre eux n'
   for (const type of ["ratelier_outils", "torche_plantee"] as Pictogramme[]) assert.ok(Object.hasOwn(DESSINS_NIVEAU1, type), type);
   const connus = new Set<string>(TOUS);
   for (const type of Object.keys(DESSINS_NIVEAU1)) assert.ok(connus.has(type), `${type} : dessin d'un objet inconnu`);
+});
+
+test("les deux condensateurs de la 0.8.2 ont chacun leur dessin, distinct de tous les autres (R14)", () => {
+  const tous = new Set(Object.values(DESSINS_NIVEAU1));
+  assert.equal(tous.size, Object.keys(DESSINS_NIVEAU1).length, "deux dessins du niveau 1 identiques");
+  for (const type of NOUVEAUX_OBJETS_0_8_2) {
+    assert.ok(Object.hasOwn(DESSINS_NIVEAU1, type), `${type} sans dessin`);
+    assert.ok(estDessinee(type), type);
+    verifierSvg(type, icone(type, 48));
+  }
 });

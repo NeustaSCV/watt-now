@@ -1,24 +1,27 @@
 // L'électricité des Voltaïques (Book 25 §5, chantier 6 · 0.6) : ce que coûte une décharge, le pack vide, l'alerte
 // « Plus de courant », la recharge au banc et à la manivelle ; la plaque de choc, les clôtures et l'alarme électrique,
 // par le moteur des déclencheurs (declencheurs.ts) ; depuis la 0.8 (chantier 7), le banc solaire : le panneau de la
-// station posé sur le banc, qui remplit au soleil les batteries posées dessus (80 Wh par jour de calendrier).
+// station posé sur le banc, qui remplit au soleil les batteries posées dessus (80 Wh par jour de calendrier) ; depuis la
+// 0.8.2 (chantier C, R17), le banc fait passer l'énergie de sa batterie (une seule, à demeure) vers ce qu'on porte :
+// poser la batterie, l'échanger contre une du sac, charger une chose à la fois depuis la fiche du banc.
 //
 // La règle de la décharge elle-même (raidir, mettre à terre, éteindre) est dans `encaisserCoup` (eteints.ts, chantier 2).
 // Ce module ne connaît pas le joueur : il passe par un `ContexteElectricite` (ce que le joueur lui prête), si bien que
 // joueur.ts n'ajoute que des appels d'une ligne (Book 25 §10.4).
 
-import { armeSansCharge, capaciteChargeArme, chargeArme, cleArme, armeDeCle, COUT_ENDURANCE, type Arme } from "../../commun/src/combat.ts";
-import { MS_JOUR_CALENDRIER, RENDEMENT_BANC, WH_RECHARGE_PAR_HEURE, productionPanneau, stocker, type Charges, type TypeBatterie } from "../../commun/src/energie.ts";
+import { armeSansCharge, chargeArme, cleArme, armeDeCle, COUT_ENDURANCE, type Arme } from "../../commun/src/combat.ts";
+import { chosesACharger, estBatterie, manque, pleine, type CibleCharge } from "../../commun/src/banc.ts";
+import { BATTERIES_DE_BANC, MS_JOUR_CALENDRIER, RENDEMENT_BANC, WH_CHARGE_MAX, batterieDuBanc, dureeCharge, estBatterieDeBanc, productionPanneau, stocker, type Charges, type TypeBatterie } from "../../commun/src/energie.ts";
 import type { CleObjet } from "../../commun/src/etoiles.ts";
 import type { InstallationVue, Verbe } from "../../commun/src/messages.ts";
-import { nommer, type Inventaire } from "../../commun/src/objets.ts";
+import type { Inventaire } from "../../commun/src/objets.ts";
 import { declencheurNeuf, enregistrerDeclencheur, rearmer as rearmerDeclencheur } from "./declencheurs.ts";
 
 // ---------- Les chiffres (Book 25 §5.4 et §8.2) ----------
 
 /** L'endurance d'une décharge : on tient, on ne frappe pas (5 la courte, 8 la longue). */
 export const ENDURANCE_DECHARGE = { courte: 5, longue: 8 } as const;
-/** La manivelle de la lampe à dynamo (voie autonome) : 1 Wh par minute réelle, 10 d'endurance par minute. */
+/** La manivelle de la lampe à dynamo (voie autonome), au banc : 1 Wh par minute réelle dans sa batterie, 10 d'endurance par minute. */
 export const MANIVELLE = { whParMinute: 1, enduranceParMinute: 10, minutesMax: 3, kcalParHeure: 150 } as const;
 /** Réarmer la plaque de choc : une décharge à recharger dans son condensateur. */
 export const WH_REARMER_PLAQUE = 0.5;
@@ -27,7 +30,7 @@ export const WATTS_CLOTURE: Record<"cloture_fortune" | "cloture_electrique", num
 /** Une clôture se branche sur un banc à moins de 6 m (le fil n'est pas long). */
 export const PORTEE_CLOTURE_BANC = 6;
 /** On ne dit « Plus de courant » qu'une fois, jusqu'à la prochaine recharge (Book 25 §5.4). */
-const TEXTE_PLUS_DE_COURANT = "Plus de courant : ce n'est plus qu'un gourdin court. Recharge-la au banc, ou à la manivelle.";
+const TEXTE_PLUS_DE_COURANT = "Plus de courant : ce n'est plus qu'un gourdin court. Recharge-la au banc.";
 
 const BATTERIES: TypeBatterie[] = ["petite_batterie", "batterie_voiture"];
 
@@ -112,21 +115,6 @@ export function coutEnduranceCoup(arme: Arme, appuye: boolean): number {
 export function whDecharge(arme: Arme, appuye: boolean): number {
   if (arme.type !== "electrique" || !arme.electrique) return 0;
   return appuye ? arme.electrique.whLongue : arme.electrique.whCourte;
-}
-
-// ---------- La recharge ----------
-
-/** Les armes électriques du sac qui ne sont pas pleines : leur clé, ce qu'il leur manque. */
-export function armesARecharger(inventaire: Inventaire, charges: Partial<Record<string, number>>): { cle: CleObjet; manque: number }[] {
-  const r: { cle: CleObjet; manque: number }[] = [];
-  for (const [cle, n] of Object.entries(inventaire)) {
-    if (!n || n <= 0) continue;
-    const a = armeDeCle(cle);
-    if (!a?.electrique) continue;
-    const manque = capaciteChargeArme(a) - chargeArme(cle, charges);
-    if (manque > 0.05) r.push({ cle: cle as CleObjet, manque });
-  }
-  return r;
 }
 
 /** Le total d'une réserve de batteries. */
@@ -226,6 +214,41 @@ export function produireBancsSolaires(installations: Iterable<InstallationVue>, 
   return bilan;
 }
 
+// ---------- Le banc de recharge (0.8.2, chantier C : R17) ----------
+
+/**
+ * Le banc ne garde qu'une batterie, à demeure. Une partie d'avant la 0.8.2 a pu en poser plusieurs (la petite batterie
+ * du kit avec celle de la ruine) : on garde la préférée (une batterie de voiture), le reste revient au sac avec sa
+ * charge, rien ne se perd. Rend ce qui revient (null : rien à rendre) ; l'état du banc est changé.
+ */
+export function batteriesEnTrop(banc: InstallationVue): { batteries: Partial<Record<TypeBatterie, number>>; charges: Charges } | null {
+  if (banc.type !== "banc_recharge") return null;
+  const garde = batterieDuBanc(banc.etat);
+  const posees = banc.etat.batteries ?? {};
+  const charges = banc.etat.charges ?? {};
+  const rendues: Partial<Record<TypeBatterie, number>> = {};
+  const chargesRendues: Charges = {};
+  const reste: Partial<Record<TypeBatterie, number>> = {};
+  const chargesReste: Charges = {};
+  for (const [b, n] of Object.entries(posees) as [TypeBatterie, number][]) {
+    if (!n || n <= 0) continue;
+    const wh = charges[b] ?? 0;
+    // On garde une batterie de banc ; une petite batterie retourne toujours à la frontale.
+    const gardees = garde && garde.type === b && estBatterieDeBanc(b) ? 1 : 0;
+    if (gardees) {
+      reste[b] = 1;
+      chargesReste[b] = wh / n;
+    }
+    if (n - gardees > 0) {
+      rendues[b] = n - gardees;
+      chargesRendues[b] = (wh * (n - gardees)) / n;
+    }
+  }
+  if (!Object.keys(rendues).length) return null;
+  banc.etat = { ...banc.etat, batteries: reste, charges: chargesReste };
+  return { batteries: rendues, charges: chargesRendues };
+}
+
 // ---------- Le module ----------
 
 /** Ce que le joueur prête au module de l'électricité. */
@@ -251,6 +274,14 @@ export interface ContexteElectricite {
   indice(sorte: string, texte: string): void;
   /** Un geste, en secondes réelles ; `kcalParHeure` : l'effort en plus. */
   commencer(libelle: string, dureeS: number, appliquer: () => void, kcalParHeure?: number): void;
+  /** Le banc (0.8.2, R17) : sortir une batterie du sac ; rend la charge qui part avec elle (au prorata). */
+  prendreBatterie(b: TypeBatterie): number;
+  /** Mettre une batterie dans le sac, avec sa charge. */
+  rendreBatterie(b: TypeBatterie, wh: number): void;
+  /** Ajoute des Wh aux batteries d'un type qu'on porte (sans dépasser) ; rend ce qui est entré. */
+  chargerBatterie(b: TypeBatterie, wh: number): number;
+  /** Faire avancer la base jusqu'à maintenant (le soleil, la décharge) avant de lire une batterie posée. */
+  majBase(): void;
 }
 
 /** L'électricité d'un joueur : ses décharges, ses recharges, ses pièges électriques. */
@@ -276,7 +307,7 @@ export class Electricite {
       return true;
     }
     if ((this.ctx.inventaire().panneau_solaire ?? 0) < 1) {
-      this.ctx.info("Il te faut le petit panneau solaire : celui de la station, contre le pilier de l'auvent.");
+      this.ctx.info("Il te faut le petit panneau solaire : celui de la station.");
       return true;
     }
     this.ctx.commencer("Poser le panneau sur le banc", 20, () => {
@@ -286,8 +317,8 @@ export class Electricite {
       i.etat = { ...i.etat, panneau: true, majLe: this.ctx.maintenant() };
       this.ctx.sauverInstallation(i);
       this.ctx.noter("banc:panneau");
-      const posees = Object.values(i.etat.batteries ?? {}).some((n) => (n ?? 0) > 0);
-      this.ctx.info(posees ? "Le panneau est posé, plein sud : au soleil, il remplit les batteries du banc (80 Wh par jour)." : "Le panneau est posé, plein sud. Pose la batterie de la ruine sur le banc : le soleil s'y mettra en réserve.");
+      const bat = batterieDuBanc(i.etat);
+      this.ctx.info(bat ? `Le panneau est posé, plein sud : au soleil, il remplit ${bat.nom} (80 Wh par jour).` : "Le panneau est posé, plein sud. Branche la batterie de voiture de la ruine dans le banc : le soleil s'y mettra en réserve.");
     });
     return true;
   }
@@ -315,74 +346,119 @@ export class Electricite {
     }
   }
 
-  /** Ajoute des Wh aux armes du sac qui en manquent, les plus vides d'abord ; rend ce qui a été mis. */
-  private remplir(wh: number): number {
-    let reste = wh;
-    const charges = this.ctx.chargeArmes();
-    for (const { cle, manque } of armesARecharger(this.ctx.inventaire(), charges).sort((a, b) => b.manque - a.manque)) {
-      if (reste <= 0) break;
-      const k = Math.min(manque, reste);
-      this.ctx.majChargeArme(cle, chargeArme(cle, this.ctx.chargeArmes()) + k);
-      reste -= k;
-    }
-    if (wh - reste > 0) this.alerteDonnee = false;
-    return wh - reste;
+  // ---------- Le banc de recharge (0.8.2, chantier C : R17) ----------
+
+  /** La batterie de banc qu'on porte (la préférée), ou null. */
+  private batterieDeBancDuSac(): TypeBatterie | null {
+    return BATTERIES_DE_BANC.find((b) => (this.ctx.inventaire()[b] ?? 0) > 0) ?? null;
   }
 
   /**
-   * Recharger ses armes au banc (Book 25 §5.4) : le courant vient des batteries posées sur le banc, puis de celles qu'on
-   * porte ; 30 Wh par heure de jeu (une minute réelle), 85 % de rendement. Un pack vide : ≈ 25 s.
+   * Poser la batterie dans le banc, à demeure : une batterie de voiture (celle de la ruine, au départ), avec sa charge.
+   * Le banc n'en tient qu'une ; pour en mettre une autre, on l'échange.
    */
-  rechargerAuBanc(banc: InstallationVue): void {
-    const besoin = armesARecharger(this.ctx.inventaire(), this.ctx.chargeArmes()).reduce((s, a) => s + a.manque, 0);
-    if (besoin <= 0) return this.ctx.info("Tes armes électriques sont pleines.");
-    const dispo = (total(banc.etat.charges ?? {}) + total(this.ctx.charges())) * RENDEMENT_BANC;
-    if (dispo < 0.25) return this.ctx.info("Pas de courant : pose des batteries chargées sur le banc (le panneau les charge).");
-    const transfert = Math.min(besoin, dispo);
-    const duree = Math.max(3, (transfert / WH_RECHARGE_PAR_HEURE) * 60);
-    this.ctx.commencer("Recharger au banc", duree, () => {
-      const encore = armesARecharger(this.ctx.inventaire(), this.ctx.chargeArmes()).reduce((s, a) => s + a.manque, 0);
-      const voulu = Math.min(transfert, encore);
-      if (voulu <= 0) return;
-      // Au banc d'abord, puis dans le sac.
-      const auBanc = puiser(banc.etat.charges ?? {}, voulu / RENDEMENT_BANC);
-      banc.etat = { ...banc.etat, charges: auBanc.reste };
+  poserBatterie(banc: InstallationVue): void {
+    const deja = batterieDuBanc(banc.etat);
+    if (deja) return this.ctx.info(`Le banc a déjà sa batterie : ${deja.nom}. Pour en mettre une autre, échange-la.`);
+    const b = this.batterieDeBancDuSac();
+    if (!b) return this.ctx.info("Il faut une batterie de voiture : celle de la ruine fait l'affaire.");
+    this.ctx.commencer("Brancher la batterie dans le banc", 4, () => {
+      if (batterieDuBanc(banc.etat) || (this.ctx.inventaire()[b] ?? 0) < 1) return;
+      const wh = this.ctx.prendreBatterie(b);
+      const { batterieEchangee: _ancienne, ...etat } = banc.etat;
+      banc.etat = { ...etat, batteries: { [b]: 1 }, charges: { [b]: wh }, majLe: this.ctx.maintenant() };
       this.ctx.sauverInstallation(banc);
-      let pris = auBanc.pris;
-      if (pris < voulu / RENDEMENT_BANC - 1e-9) {
-        const porte = puiser(this.ctx.charges(), voulu / RENDEMENT_BANC - pris);
-        this.ctx.majCharges(porte.reste);
-        pris += porte.pris;
-      }
-      const mis = this.remplir(pris * RENDEMENT_BANC);
-      this.ctx.info(`+${arrondi(mis)} Wh dans ${nomsArmes(this.ctx.inventaire())}.`);
+      this.ctx.noter("banc:batterie");
+      const pose = batterieDuBanc(banc.etat)!;
+      const soleil = banc.etat.panneau ? "Le panneau la remplit au soleil." : "Pose le panneau sur le banc : le soleil la remplira.";
+      this.ctx.info(`${majuscule(pose.nom)} est dans le banc, à demeure (${arrondi(pose.wh)} Wh sur ${pose.capacite}). ${soleil}`);
+    });
+  }
+
+  /** Échanger la batterie du banc contre une batterie du sac (pour emporter une batterie pleine) : l'ancienne revient au sac. */
+  echanger(banc: InstallationVue): void {
+    const ancienne = batterieDuBanc(banc.etat);
+    if (!ancienne) return this.poserBatterie(banc);
+    const b = this.batterieDeBancDuSac();
+    if (!b) return this.ctx.info("Pour échanger la batterie du banc, il t'en faut une autre dans ton sac : une batterie de voiture.");
+    this.ctx.commencer("Échanger la batterie du banc", 6, () => {
+      this.ctx.majBase();
+      const avant = batterieDuBanc(banc.etat);
+      if (!avant || (this.ctx.inventaire()[b] ?? 0) < 1) return;
+      // D'abord sortir celle du sac (sa charge part avec elle), puis y mettre celle du banc.
+      const wh = this.ctx.prendreBatterie(b);
+      this.ctx.rendreBatterie(avant.type, avant.wh);
+      banc.etat = { ...banc.etat, batteries: { [b]: 1 }, charges: { [b]: wh }, batterieEchangee: true, majLe: this.ctx.maintenant() };
+      this.ctx.sauverInstallation(banc);
+      this.ctx.noter("banc:echange");
+      const nouvelle = batterieDuBanc(banc.etat)!;
+      this.ctx.info(`Échangée : ${avant.nom} revient dans ton sac (${arrondi(avant.wh)} Wh) ; ${nouvelle.nom} est dans le banc (${arrondi(nouvelle.wh)} Wh).`);
     });
   }
 
   /**
-   * La manivelle de la lampe à dynamo (voie autonome, Book 25 §5.4) : 1 Wh par minute réelle, 10 d'endurance par
-   * minute. Lent, mais un Voltaïque n'est jamais désarmé, même l'hiver gris.
+   * Charger une chose qu'on porte depuis la batterie du banc (R17) : la petite batterie de la frontale, une arme
+   * électrique, une batterie du sac. 30 Wh par heure de jeu (une minute réelle), 85 % de rendement ; deux minutes au
+   * plus par geste. Si la batterie du banc est vide, on le dit et rien ne se charge.
    */
-  manivelle(cle: CleObjet): void {
-    const inv = this.ctx.inventaire();
-    if (!(inv.lampe_dynamo ?? 0)) return this.ctx.info("Il faut la lampe à dynamo du kit : sa manivelle recharge une arme.");
-    const a = armeDeCle(cle);
-    if (!a?.electrique || !(inv[cle] ?? 0)) return;
-    const manque = capaciteChargeArme(a) - chargeArme(cle, this.ctx.chargeArmes());
-    if (manque <= 0.05) return this.ctx.info(`${majuscule(a.nom)} est pleine.`);
-    const minutes = Math.min(MANIVELLE.minutesMax, Math.ceil(manque / MANIVELLE.whParMinute));
+  charger(banc: InstallationVue, cible: CibleCharge): void {
+    const bat = batterieDuBanc(banc.etat);
+    if (!bat) return this.ctx.info("Le banc n'a pas de batterie : pose d'abord la batterie de voiture de la ruine.");
+    const chose = chosesACharger(this.ctx.inventaire(), this.ctx.charges(), this.ctx.chargeArmes()).find((c) => c.cible === cible);
+    if (!chose) return;
+    const plusieurs = chose.nom.startsWith("Tes ");
+    if (pleine(chose)) return this.ctx.info(`${chose.nom} ${plusieurs ? "sont déjà pleines" : "est déjà pleine"}.`);
+    const dispo = bat.wh * RENDEMENT_BANC;
+    if (dispo < 0.25) return this.ctx.info(`${majuscule(bat.nom)}, dans le banc, est vide : rien à charger. ${banc.etat.panneau ? "Le panneau la remplit au soleil." : "Le soleil ne la remplira qu'avec le panneau posé dessus."}`);
+    const transfert = Math.min(manque(chose), dispo, WH_CHARGE_MAX);
+    const nom = plusieurs ? chose.nom.replace(/^Tes /, "tes ") : chose.nom.charAt(0).toLowerCase() + chose.nom.slice(1);
+    this.ctx.commencer(`Charger ${nom}`, dureeCharge(transfert), () => {
+      this.ctx.majBase();
+      const source = batterieDuBanc(banc.etat);
+      const encore = chosesACharger(this.ctx.inventaire(), this.ctx.charges(), this.ctx.chargeArmes()).find((c) => c.cible === cible);
+      if (!source || !encore) return;
+      const voulu = Math.min(transfert, manque(encore), source.wh * RENDEMENT_BANC);
+      if (voulu <= 0) return;
+      const { reste, pris } = puiser(banc.etat.charges ?? {}, voulu / RENDEMENT_BANC);
+      banc.etat = { ...banc.etat, charges: reste };
+      this.ctx.sauverInstallation(banc);
+      const mis = pris * RENDEMENT_BANC;
+      if (estBatterie(cible)) this.ctx.chargerBatterie(cible, mis);
+      else {
+        this.ctx.majChargeArme(cible, chargeArme(cible, this.ctx.chargeArmes()) + mis);
+        this.alerteDonnee = false;
+      }
+      this.ctx.noter("banc:charge");
+      this.ctx.info(`+${arrondi(mis)} Wh dans ${nom}. Il reste ${arrondi(batterieDuBanc(banc.etat)?.wh ?? 0)} Wh dans ${source.nom}.`);
+    });
+  }
+
+  /**
+   * La manivelle de la lampe à dynamo (voie autonome, Book 25 §5.4 ; 0.8.2, R17) : au banc, elle remplit lentement la
+   * batterie du banc, 1 Wh par minute réelle, 10 d'endurance par minute ; on charge ensuite ce qu'on porte, depuis la
+   * fiche. Le secours lent, sans soleil et sans pédalier : un Voltaïque n'est jamais désarmé, même l'hiver gris.
+   */
+  manivelle(banc: InstallationVue): void {
+    if (!(this.ctx.inventaire().lampe_dynamo ?? 0)) return this.ctx.info("Il faut la lampe à dynamo du kit : sa manivelle remplit la batterie du banc.");
+    const bat = batterieDuBanc(banc.etat);
+    if (!bat) return this.ctx.info("Le banc n'a pas de batterie : pose d'abord la batterie de voiture de la ruine.");
+    const place = bat.capacite - bat.wh;
+    if (place <= 0.05) return this.ctx.info(`${majuscule(bat.nom)} est pleine.`);
+    const minutes = Math.min(MANIVELLE.minutesMax, Math.ceil(place / MANIVELLE.whParMinute));
     if (this.ctx.endurance() < MANIVELLE.enduranceParMinute) return this.ctx.info("Trop essoufflé pour tourner la manivelle : souffle un peu.");
     this.ctx.commencer(
       "Tourner la manivelle",
       minutes * 60,
       () => {
-        const encore = capaciteChargeArme(a) - chargeArme(cle, this.ctx.chargeArmes());
-        const wh = Math.min(encore, minutes * MANIVELLE.whParMinute);
-        if (wh <= 0) return;
-        this.ctx.majChargeArme(cle, chargeArme(cle, this.ctx.chargeArmes()) + wh);
+        this.ctx.majBase();
+        const source = batterieDuBanc(banc.etat);
+        if (!source) return;
+        const r = stocker({ batteries: banc.etat.batteries ?? {}, charges: banc.etat.charges ?? {} }, minutes * MANIVELLE.whParMinute);
+        if (r.stocke <= 0) return;
+        banc.etat = { ...banc.etat, charges: r.stockage.charges };
+        this.ctx.sauverInstallation(banc);
         this.ctx.depenser(minutes * MANIVELLE.enduranceParMinute);
-        this.alerteDonnee = false;
-        this.ctx.info(`+${arrondi(wh)} Wh dans ${a.nom}, à la force du bras.`);
+        this.ctx.info(`+${arrondi(r.stocke)} Wh dans ${source.nom}, à la force du bras.`);
       },
       MANIVELLE.kcalParHeure,
     );
@@ -459,11 +535,4 @@ function arrondi(wh: number): string {
 
 function majuscule(t: string): string {
   return t.charAt(0).toUpperCase() + t.slice(1);
-}
-
-/** « la matraque électrique », ou « tes armes électriques » s'il y en a plusieurs. */
-function nomsArmes(inventaire: Inventaire): string {
-  const armes = Object.keys(inventaire).filter((cle) => (inventaire[cle as CleObjet] ?? 0) > 0 && armeDeCle(cle)?.electrique);
-  if (armes.length === 1) return armeDeCle(armes[0]!)?.nom ?? nommer(armes[0] as CleObjet, 1);
-  return "tes armes électriques";
 }

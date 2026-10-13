@@ -2,6 +2,8 @@
 // sous elles les raccourcis Sac et Fabriquer (on s'en sert moins souvent), invite d'action en bas,
 // barre de progression, messages, et les boutons tactiles près du pouce (Book 08 §3.4).
 
+import { libelleBoutonB, motLongB } from "./libelle-bouton.ts";
+import { inviteArreter } from "./geste-tenu.ts";
 import { VERSION } from "../../commun/src/version.ts";
 import { REGLAGES } from "../../commun/src/reglages.ts";
 import { ceQuiManque } from "../../commun/src/aide-fabrication.ts";
@@ -9,7 +11,7 @@ import type { VueProgression } from "../../commun/src/progression.ts";
 import { SILHOUETTES_DEPLIEES, enTete, etatCle, nouveautesParOnglet, ongletsVides, planFabrication, recetteVisible, sousTitre, type PlanFabrication } from "./fabrication-arbre.ts";
 import { ACTIONS, RESERVEES, assigner, avecTouches, nomDe, nomTouche, retablir, surChangement, type Action } from "./touches.ts";
 import { PanneauAide } from "./aide.ts";
-import { CAPACITES, type Charges } from "../../commun/src/energie.ts";
+import { CAPACITES, NOMS_BATTERIES, type Charges } from "../../commun/src/energie.ts";
 import { ARMES, NOMS_BLESSURES, PLAFOND_FORTUNE, RESISTANCE_TORSE, SEUIL_ABIMEE, armeDeCle, capaciteChargeArme, caracteristiquesArme, estArme, etatArme } from "../../commun/src/combat.ts";
 import type { EchangeVu, FeuVu, GesteRepriseArme, InstallationVue, OffreEchange, OperationComptoir, OperationEchange, Personne, RapportBase, SanteVue, Verbe, VueComptoir, WottsVus } from "../../commun/src/messages.ts";
 import {
@@ -36,6 +38,8 @@ import {
 } from "../../commun/src/lignees.ts";
 import { texteAVenir } from "../../commun/src/lignees.ts";
 import { enteteFiche, piedFiche } from "./fiche-examiner.ts";
+import { brancherFicheBanc, htmlFicheBanc, type GesteBanc } from "./fiche-banc.ts";
+import { brancherCoffre, enteteCoffre } from "./panneau-coffre.ts";
 import { choisirFacon } from "../../commun/src/replis.ts";
 import { texteLieu, type Alentours } from "../../commun/src/lieu-recette.ts";
 import { reprise, seReprend, type Reprise } from "../../commun/src/evolution-armes.ts";
@@ -47,6 +51,9 @@ import { ETOILES, compter, etoilesDe, etoilesTexte, typeDe, type CleObjet, type 
 import { MUNITIONS, armeTirDe, armeTirExemplaire, estLancable } from "../../commun/src/tir.ts";
 import { OBJETS, capaciteDe, estCleObjet, nomContenant, nommer, poidsInventaire } from "../../commun/src/objets.ts";
 import { estOutil } from "../../commun/src/outils-a-portee.ts";
+import { armeMarquee, sacPorte } from "./marques-sac.ts";
+import { dureeExamen } from "./texte-examen.ts";
+import { htmlAideTouches } from "./aide-touches.ts";
 import {
   CATEGORIES_RECETTES,
   NOMS_INSTALLATIONS,
@@ -75,7 +82,7 @@ import { COULEURS_FAMILLES } from "./accueil.ts";
 import { ecrire, lire } from "./stockage.ts";
 import type { Commande } from "./entrees.ts";
 import { icone, type Pictogramme } from "./icones.ts";
-import { EXAMENS_INSTALLATIONS, type Propositions } from "./interaction.ts";
+import { examenInstallation, type Propositions } from "./interaction.ts";
 import { ORDRE_NIVEAUX, changerQualite, type NiveauQualite } from "./rendu/qualite.ts";
 import { COMPOSANTS, DEMONTAGE, NOMS_FAMILLES_VESTIGES, VESTIGES, estOrdure, type FamilleVestige } from "../../commun/src/vestiges.ts";
 
@@ -130,14 +137,14 @@ export interface ActionsJoueur {
   reparer(objet: CleObjet, fortune: boolean): void;
   /** Reprendre une arme sur son meuble : la réparer, ou la monter d'une étoile (plan 0.8, chantier 9). */
   reprendre(objet: CleObjet, geste: GesteRepriseArme): void;
-  /** Recharger une arme électrique à la manivelle de la lampe à dynamo (Book 25 §5.4). */
-  manivelle(objet: CleObjet): void;
   /** Ranger dans le coffre, ou en sortir. */
   coffre(id: number, sens: "deposer" | "prendre", objet: CleObjet, quantite: number): void;
   /** Un geste sur un feu ou une installation, depuis sa fiche (Book 24 : améliorer, démonter, creuser…). */
   amenager(genre: "feu" | "installation", id: number, verbe: Verbe): void;
   /** Un constat pour les mesures (plan 0.8, chantier 14) : la fiche d'un meuble qu'on ne peut pas améliorer, l'aide « Je suis coincé ». */
   constat(quoi: "fiche_bloquee" | "aide_coince", construction?: string): void;
+  /** Depuis la fiche du banc (0.8.2, chantier C) : charger une chose qu'on porte, échanger la batterie du banc. */
+  banc(id: number, geste: GesteBanc): void;
 }
 
 /** Le feu de camp, vu comme une recette, pour dire ce qui manque. */
@@ -158,6 +165,11 @@ function nomEtoile(cle: CleObjet, n = 1): string {
   const e = etoilesDe(cle);
   const nom = n > 1 ? `${n} ${OBJETS[t].pluriel}` : OBJETS[t].nom;
   return e === null ? nom : `${nom} <span class="etoiles-nom">${etoilesTexte(e)}</span>`;
+}
+
+/** Un nom en tête de fiche ou de bande, avec sa majuscule (« Briquet », 0.8.2, chantier H). */
+function titreObjet(nom: string): string {
+  return nom.charAt(0).toUpperCase() + nom.slice(1);
 }
 
 /** Des Wh lisibles : « 11,5 ». */
@@ -197,7 +209,8 @@ function lireCarnetOuvert(): boolean {
 }
 
 /** L'importance d'un message : quand la pile est pleine, le moins important part en premier. */
-const RANG_MESSAGE = { indice: 0, "": 1, aide: 2, lecon: 3 } as const;
+// « examen » : le texte d'Examiner (0.8.2, Q9), montré en entier ; aussi important qu'une aide.
+const RANG_MESSAGE = { indice: 0, "": 1, aide: 2, examen: 2, lecon: 3 } as const;
 
 /** Le type de dégât, en une phrase (Book 23 §4.2). */
 const TYPES_DEGATS = {
@@ -665,6 +678,8 @@ export class Hud {
   majCharges(charges: Charges): void {
     this.charges = charges;
     this.redessiner();
+    // La fiche du banc montre le niveau de ce qu'on porte (0.8.2).
+    this.majFiche();
   }
 
   majLumiere(allumee: boolean): void {
@@ -693,7 +708,10 @@ export class Hud {
   /** `tenu` : le geste en cours se fait en tenant A (son libellé, pour le bouton tactile). */
   propositions(p: Propositions, occupe: boolean, tenu: string | null = null): void {
     const texte = occupe
-      ? ""
+      ? // Plan 0.8.2 §7.6 : pendant un geste, la touche d'action l'arrête (comme le bouton A au toucher).
+        this.boutonA
+        ? ""
+        : inviteArreter(nomDe("agir"))
       : // Au clavier, on montre les vraies touches (E ou clic gauche, F ou clic droit).
         [p.A ? `<kbd>${nomDe("agir")}</kbd> ${p.A.libelle}` : "", p.B ? `<kbd>${nomDe("examiner")}</kbd> ${p.B.libelle}` : "", this.inviteTir()].filter(Boolean).join("<span class='sep'>·</span>");
     const cle = `${occupe}|${tenu}|${p.A?.libelle ?? ""}|${p.B?.libelle ?? ""}|${nomDe("agir")}|${nomDe("examiner")}|${this.inviteTir()}`;
@@ -707,7 +725,13 @@ export class Hud {
       this.boutonA.disabled = !p.A && !occupe;
     }
     if (this.boutonB) {
-      this.boutonB.textContent = p.B && !occupe ? p.B.libelle : "B";
+      // Plan 0.8.2 §7.6 : un libellé qui tient dans le rond ; le libellé entier dans son nom accessible.
+      const entier = p.B && !occupe ? p.B.libelle : "B";
+      const court = libelleBoutonB(entier);
+      this.boutonB.textContent = court;
+      this.boutonB.classList.toggle("mot-long", motLongB(court));
+      this.boutonB.title = entier;
+      this.boutonB.setAttribute("aria-label", entier);
       this.boutonB.disabled = !p.B || occupe;
     }
   }
@@ -871,10 +895,11 @@ export class Hud {
     const duree = h > 0 ? `${h} h ${String(min).padStart(2, "0")}` : `${min} min`;
     const lignes: string[] = [];
     if (r.produit > 0) {
-      lignes.push(`<li><b>Panneau solaire</b> : ${r.produit} Wh produits, ${r.stocke} Wh dans les batteries du banc${r.perdu > 0 ? `, <span class="perdu">${r.perdu} Wh perdus</span> (${r.stocke === 0 ? "pas de batterie sur le banc" : "batteries pleines"})` : ""}.</li>`);
+      lignes.push(`<li><b>Panneau solaire</b> : ${r.produit} Wh produits, ${r.stocke} Wh dans la batterie du banc${r.perdu > 0 ? `, <span class="perdu">${r.perdu} Wh perdus</span> (${r.stocke === 0 ? "pas de batterie dans le banc" : "batterie pleine"})` : ""}.</li>`);
     }
     const banc = Object.entries(r.surLeBanc).filter(([, wh]) => (wh ?? 0) > 0);
-    if (banc.length) lignes.push(`<li><b>Sur le banc</b> : ${banc.map(([b, wh]) => `${b === "petite_batterie" ? "petite batterie" : "batterie de voiture"} ${wh} Wh`).join(", ")}.</li>`);
+    // 0.8.2 (R17) : chaque batterie par son nom (une seule reste dans le banc).
+    if (banc.length) lignes.push(`<li><b>Dans le banc</b> : ${banc.map(([b, wh]) => `${NOMS_BATTERIES[b as TypeBatterie]}, ${wh} Wh`).join(" ; ")}.</li>`);
     if (r.charbonniere === "prete") lignes.push(`<li><b>La charbonnière</b> a fini de cuire : le charbon est prêt.</li>`);
     else if (typeof r.charbonniere === "number") lignes.push(`<li><b>La charbonnière</b> fume encore : prête dans ${r.charbonniere} min.</li>`);
     if (r.feuxEteints > 0) lignes.push(`<li><b>${r.feuxEteints > 1 ? `${r.feuxEteints} feux se sont éteints` : "Le feu s'est éteint"}</b> faute de bois.</li>`);
@@ -888,7 +913,13 @@ export class Hud {
       <ul>${lignes.join("")}</ul>
       <button type="button">Compris</button>`;
     el.hidden = false;
-    el.querySelector("button")!.addEventListener("click", () => (el.hidden = true));
+    // Plan 0.8.2 §7.6 : jamais deux panneaux l'un sur l'autre. Le carnet (le tutoriel, ouvert d'office) s'efface pendant
+    // qu'on lit le rapport, et revient tel quel après « Compris ».
+    this.dessinerCarnet();
+    el.querySelector("button")!.addEventListener("click", () => {
+      el.hidden = true;
+      this.dessinerCarnet();
+    });
   }
 
   // ---------- Le comptoir et les wotts (É4) ----------
@@ -1038,6 +1069,8 @@ export class Hud {
     const aide = this.element.querySelector<HTMLElement>(".bloc.aide");
     if (aide) aide.hidden = !v;
     if (v?.lecon) this.message(`✓ ${v.lecon}`, "lecon");
+    // 0.8.2 : le repas du tutoriel, une ligne par repas, après la leçon (les pastilles « + objet » suivent le sac).
+    for (const r of recu?.repas ?? []) this.message(r, "lecon");
     // Une nouvelle étape : sa consigne passe aussi dans les messages, carnet ouvert ou non.
     if (nouvelleEtape && v) {
       this.message(`📓 ${v.titre} : ${avecTouches(v.consigne, this.tactile)}`, "lecon");
@@ -1148,7 +1181,7 @@ export class Hud {
     pastille.hidden = !reussi && (this.nonLus === 0 || this.carnetOuvert);
     pastille.classList.toggle("reussi", reussi);
     pastille.textContent = reussi ? "✓" : String(Math.min(9, this.nonLus));
-    el.hidden = bouton.hidden || !this.carnetOuvert;
+    el.hidden = bouton.hidden || !this.carnetOuvert || !this.element.querySelector<HTMLElement>(".rapport")!.hidden;
     if (el.hidden) return;
     const titre = v ? "Tutoriel" : `Carnet · ${q!.quetes.length === 1 ? "1 objectif" : `${q!.quetes.length} objectifs`}`;
     const html = `
@@ -1284,14 +1317,15 @@ export class Hud {
    * doublon (un message déjà affiché est relancé, avec « ×2 »), et quand la pile est pleine on retire d'abord le moins
    * important (leçon > aide > info > indice). Une même phrase d'indice ne revient pas avant 90 s.
    */
-  message(texte: string, genre: "" | "aide" | "lecon" | "indice" = ""): void {
+  message(texte: string, genre: "" | "aide" | "lecon" | "indice" | "examen" = ""): void {
     const maintenant = performance.now();
     if (genre === "indice") {
       const vu = this.indicesVus.get(texte);
       if (vu !== undefined && maintenant - vu < 90_000) return;
       this.indicesVus.set(texte, maintenant);
     }
-    const duree = { "": 4000, indice: 5000, aide: 8000, lecon: 9000 }[genre];
+    // Le texte d'Examiner, en entier (0.8.2, Q9) : le temps de le lire, ≈ 15 caractères par seconde.
+    const duree = genre === "examen" ? dureeExamen(texte) : { "": 4000, indice: 5000, aide: 8000, lecon: 9000 }[genre];
     const present = [...this.messages.children].find((e) => (e as HTMLElement).dataset.texte === texte) as HTMLElement | undefined;
     if (present) {
       const n = Number(present.dataset.fois ?? "1") + 1;
@@ -1364,14 +1398,9 @@ export class Hud {
     if (saisie) saisie.textContent = avecTouches("Tape {examiner} vite pour te dégager", t);
     const kbd = this.element.querySelector<HTMLElement>(".mode-clavier kbd");
     if (kbd) kbd.textContent = nomDe("combat");
+    // L'aide des touches (0.8.2, R7) : des touches dessinées, une case par action (aide-touches.ts).
     const aide = this.element.querySelector<HTMLElement>(".bloc.aide");
-    if (aide) {
-      const m = `${nomDe("avancer")}${nomDe("gauche")}${nomDe("reculer")}${nomDe("droite")}`;
-      aide.textContent = avecTouches(
-        `${m} : marcher · {courir} : courir · {discret} : discret · {agir} / clic : agir · {examiner} / clic droit : examiner · {sac} : sac · {fabriquer} : fabriquer · {combat} : combat · {carte} : carte · {lumiere} : lumière · {tourner} : tourner la vue · molette : zoom · « Commandes » pour les changer`,
-        t,
-      );
-    }
+    if (aide) aide.innerHTML = htmlAideTouches(nomDe);
     for (const [classe, action, nom] of [
       [".r-sac", "sac", "Sac"],
       [".r-fabriquer", "fabriquer", "Fabriquer"],
@@ -1543,11 +1572,15 @@ export class Hud {
       const nom = nommer(cle, 1);
       // Une ordure (valeur 0, 0.7) a son icône grisée : le sac se lit d'un regard, « ça, c'est à jeter ».
       return `<button type="button" class="case ${classe} ${estOrdure(typeDe(cle)) ? "ordure" : ""} ${this.selection === cle ? "choisie" : ""}" data-objet="${cle}"
-        title="${nom} (${kg(pile)} kg) — ${d.description}" aria-label="${nom}">${icone(typeDe(cle))}${etoiles}${barre}${munitions}${badge ? `<span class="badge">${badge}</span>` : ""}</button>`;
+        title="${nom} (${kg(pile)} kg) — ${d.description}" aria-label="${nom}${classe === "equipee" ? ", en main au combat" : classe === "portee" ? ", sur ton dos" : ""}">${icone(typeDe(cle))}${etoiles}${barre}${munitions}${badge ? `<span class="badge">${badge}</span>` : ""}</button>`;
     };
+    // Ce qu'on a sur soi (0.8.2, R6) : l'arme en main au combat, choisie ou prise d'office (la meilleure du sac), et le
+    // sac sur le dos ont la même marque en coin.
+    const armeEnMainCombat = armeMarquee(this.inventaire, this.armeEquipee);
+    const surLeDos = sacPorte(this.inventaire);
     const cases = [
       (this.inventaire.gourde ?? 0) > 0 ? case_("gourde", g.litres > 0 ? `${kg(g.litres)} L` : "vide", g.contenu === "brute" && g.litres > 0 ? "brute" : "") : "",
-      ...presents.map((t) => case_(t, (this.inventaire[t] ?? 0) > 1 ? `×${this.inventaire[t]}` : "", t === this.armeEquipee ? "equipee" : "")),
+      ...presents.map((t) => case_(t, (this.inventaire[t] ?? 0) > 1 ? `×${this.inventaire[t]}` : "", t === armeEnMainCombat ? "equipee" : t === surLeDos ? "portee" : "")),
     ].join("");
 
     let fiche = `<p class="indice">Touche un objet pour le voir.</p>`;
@@ -1576,7 +1609,12 @@ export class Hud {
         if (s === this.armeEquipee) {
           enMain = " · ⚔ en main au combat";
           actions.push(`<button type="button" data-action="desequiper" title="En mode Combat, tu prendras la meilleure arme du sac.">Retirer</button>`);
-        } else actions.push(`<button type="button" class="principal" data-action="equiper" title="L'arme que tu prends en mode Combat">Équiper</button>`);
+        } else {
+          // Prise d'office (la meilleure du sac, 0.8.2, R6) : elle est en main, et « Équiper » la garde même si une
+          // meilleure arrive.
+          if (s === armeEnMainCombat) enMain = " · ⚔ en main au combat (la meilleure du sac)";
+          actions.push(`<button type="button" class="principal" data-action="equiper" title="L'arme que tu prends en mode Combat">Équiper</button>`);
+        }
       } else if (estManuel(s)) {
         // Un manuel (Book 25 §2.3) : le lire ouvre les recettes d'une autre famille ; le livre reste dans le sac.
         const de = MANUELS[s]!;
@@ -1626,8 +1664,10 @@ export class Hud {
         const outils = (Object.entries(dem.qualites) as [Qualite, number][]).map(([q, niv]) => `${NOMS_QUALITES[q]} ${niv}`).join(", ");
         const facteur = multiplicateurQualites(this.outils, dem.qualites);
         const etat = facteur === null ? "il te manque l'outil" : facteur > 1 ? "ton outil fera l'affaire, plus lentement" : outils ? "tu as l'outil" : "";
-        actions.push(`<button type="button" data-action="demonter" ${facteur === null ? "disabled" : ""}>Démonter</button>`);
-        infos.push(`<p class="info-objet">Démonter → ${donne}. Outil : ${outils || "aucun"}${etat ? ` (${etat})` : ""}.</p>`);
+        // Par lots (0.8.2) : trois canettes pour une chute d'aluminium.
+        const par = dem.par ?? 1;
+        actions.push(`<button type="button" data-action="demonter" ${facteur === null || n < par ? "disabled" : ""}>Démonter${par > 1 ? ` ${par}` : ""}</button>`);
+        infos.push(`<p class="info-objet">Démonter${par > 1 ? ` ${nommer(t, par)}` : ""} → ${donne}. Outil : ${outils || "aucun"}${etat ? ` (${etat})` : ""}.</p>`);
       }
       // Jeter par terre, quand le sac est trop lourd (on garde son sac sur le dos).
       if (s !== "sac_a_dos" && s !== "sac_fortune") {
@@ -1639,9 +1679,8 @@ export class Hud {
       if (charge !== null) {
         const wh = this.chargeArmes[s];
         infos.push(`<span class="charge-batterie charge-arme"><span class="charge-barre"><span style="width:${Math.round(charge * 100)}%"></span></span> ${charge <= 0 ? "Plus de courant : un gourdin court." : wh === undefined ? "Pleine" : `${virguleWh(wh)} Wh`}</span>`);
-        // La voie autonome (Book 25 §5.4) : la manivelle de la lampe à dynamo, 1 Wh par minute.
-        if (charge < 1 && (this.inventaire.lampe_dynamo ?? 0) > 0) actions.push(`<button type="button" data-action="manivelle" title="La lampe à dynamo : 1 Wh par minute, à la force du bras">Manivelle</button>`);
       }
+      if (s === surLeDos) enMain += " · 🎒 sur ton dos";
       // Les étoiles d'un objet de métier (Book 25 §4.2), en clair : « ★★★☆☆ ».
       const etoiles = etoilesDe(s);
       // L'étoile qui vient de s'ajouter sur le meuble (chantier 9) brille un instant, en or.
@@ -1650,7 +1689,7 @@ export class Hud {
       const etoilesFiche = etoiles === null ? "" : ` <span class="etoiles-fiche" title="${etoiles} étoile${etoiles > 1 ? "s" : ""} sur 5">${pleines}<span class="etoiles-vides">${"☆".repeat(5 - etoiles)}</span></span>`;
       const famille = d.famille ? ` · ${NOMS_FAMILLES_VESTIGES[d.famille]}` : "";
       fiche = `
-        <div class="fiche-tete">${icone(t, 36)}<div><strong>${nommer(t, n)}${etoilesFiche}</strong>
+        <div class="fiche-tete">${icone(t, 36)}<div><strong>${titreObjet(nommer(t, n))}${etoilesFiche}</strong>
           <small>${kg(d.poids * n + (s === "gourde" ? g.litres : 0))} kg · valeur ≈ ${formaterWotts(energieGrise(t))}${famille}${enMain}</small></div></div>
         ${actions.length ? `<div class="actions-objet">${actions.join("")}</div>` : ""}
         ${reprendre}
@@ -1717,7 +1756,6 @@ export class Hud {
         }
         if (action === "demonter" && this.selection) this.actions.demonter(typeDe(this.selection));
         if (action === "lire" && this.selection) this.actions.lire(typeDe(this.selection));
-        if (action === "manivelle" && this.selection) this.actions.manivelle(this.selection);
         if ((action === "jeter1" || action === "jeterTout") && this.selection) {
           this.actions.jeter(this.selection, action === "jeter1" ? 1 : (this.inventaire[this.selection] ?? 1));
         }
@@ -1804,6 +1842,7 @@ export class Hud {
     if (charge) this.chargeArmes = charge;
     this.dernierSac = "";
     if (!this.sac.hidden) this.dessinerSac();
+    if (charge) this.majFiche();
     // « Remise à neuf : … » plutôt que « … : réparée » : pas de minuscule en tête, et juste pour un arc comme une lame.
     if (evenement?.etat === "reparee") this.message(`Remise à neuf : ${nommer(evenement.objet, 1)}.`);
   }
@@ -1954,11 +1993,11 @@ export class Hud {
       }
       const note =
         estDecharge && choix.sens === "deposer" ? " · la décharge ne reprend rien" : n > 0 && !boutons.includes("disabled") ? "" : n > 0 ? ` · ${choix.sens === "deposer" ? "coffre plein" : "sac plein"}` : "";
-      bande = `${icone(typeDe(choix.objet), 32)}<span class="nom"><strong>${nommer(choix.objet, 1)}</strong><small>${n > 1 ? `×${n} · ` : ""}${kg(d.poids * Math.max(1, n))} kg · ${ou}${note}</small></span><span class="boutons">${boutons}</span>`;
+      bande = `${icone(typeDe(choix.objet), 32)}<span class="nom"><strong>${titreObjet(nommer(choix.objet, 1))}</strong><small>${n > 1 ? `×${n} · ` : ""}${kg(d.poids * Math.max(1, n))} kg · ${ou}${note}</small></span><span class="boutons">${boutons}</span>`;
     }
     const plein = (place: number, inv: Inventaire) => Object.keys(inv).length > 0 && place < Math.min(...(Object.keys(inv) as CleObjet[]).map((t) => OBJETS[typeDe(t)].poids));
     const html = `
-      <header><h2>${estDecharge ? "Décharge" : estRatelier ? "Râtelier à outils" : "Coffre"}</h2><button type="button" class="fermer" aria-label="Fermer">✕</button></header>
+      ${enteteCoffre(estDecharge ? "Décharge" : estRatelier ? "Râtelier à outils" : "Coffre")}
       <div class="colonnes">
         <section><h3>Sur toi <small class="${plein(placeSac, contenu) ? "plein" : ""}">${kg(poidsSac)} / ${capSac} kg</small></h3><div class="grille">${cases(this.inventaire, "deposer")}</div></section>
         <section><h3>${estDecharge ? `Remonté du tas <small>${kg(poidsCoffre)} kg</small>` : estRatelier ? `Au râtelier <small>à 3 m, ils comptent</small>` : `Dans le coffre <small class="${plein(placeCoffre, this.inventaire) ? "plein" : ""}">${kg(poidsCoffre)} / ${capCoffre} kg</small>`}</h3><div class="grille">${cases(contenu, "prendre")}</div></section>
@@ -1970,11 +2009,6 @@ export class Hud {
     const defil = [...p.querySelectorAll<HTMLElement>(".grille")].map((g) => g.scrollTop);
     p.innerHTML = html;
     p.querySelectorAll<HTMLElement>(".grille").forEach((g, i) => (g.scrollTop = defil[i] ?? 0));
-    // Plus de croix (plan 0.8 §9.2) : le bouton « Fermer » du bas, ou B.
-    p.querySelector(".fermer-fiche")!.addEventListener("click", () => this.ouvrir(p, false));
-    for (const d of p.querySelectorAll<HTMLDetailsElement>("details.indice-cle")) {
-      d.addEventListener("toggle", () => (d.open ? this.indicesDeplies.add(d.dataset.etape!) : this.indicesDeplies.delete(d.dataset.etape!)));
-    }
     const deplacer = (sens: "deposer" | "prendre", objet: CleObjet, tout: boolean) => {
       if (estDecharge && sens === "deposer") return;
       const dispo = (sens === "deposer" ? this.inventaire[objet] : contenu[objet]) ?? 0;
@@ -1983,10 +2017,11 @@ export class Hud {
       // Le choix suit l'objet : on le retrouve de l'autre côté (et l'on peut défaire d'un toucher).
       this.choixCoffre = { sens: sens === "deposer" ? "prendre" : "deposer", objet };
     };
-    for (const b of p.querySelectorAll<HTMLButtonElement>(".case[data-sens]")) {
-      b.addEventListener("click", () => {
-        const sens = b.dataset.sens as "deposer" | "prendre";
-        const objet = b.dataset.objet as CleObjet;
+    // La croix, les cases, « Ranger » / « Prendre » (plan 0.8.2, chantier A : panneau-coffre.ts dit pourquoi ici).
+    brancherCoffre(p, {
+      fermer: () => this.ouvrir(p, false),
+      toucherCase: (sens, o) => {
+        const objet = o as CleObjet;
         const cle = `${sens}:${objet}`;
         const maintenant = performance.now();
         // Deux touchers rapides : toute la pile, d'un coup (le raccourci de l'habitué).
@@ -1998,15 +2033,13 @@ export class Hud {
           this.choixCoffre = { sens, objet };
         }
         this.dessinerCoffre();
-      });
-    }
-    for (const b of p.querySelectorAll<HTMLButtonElement>("[data-deplacer]")) {
-      b.addEventListener("click", () => {
+      },
+      deplacer: (tout) => {
         if (!this.choixCoffre) return;
-        deplacer(this.choixCoffre.sens, this.choixCoffre.objet, b.dataset.deplacer === "tout");
+        deplacer(this.choixCoffre.sens, this.choixCoffre.objet, tout);
         this.dessinerCoffre();
-      });
-    }
+      },
+    });
   }
 
   // ---------- La fiche d'un feu ou d'une installation (Book 24 : améliorer sa base, sur place) ----------
@@ -2081,6 +2114,8 @@ export class Hud {
         if (verbe !== "ajouter_bois") this.ouvrir(this.panneauFiche, false);
       });
     }
+    // La fiche du banc (0.8.2, chantier C) : « Charger » et « Échanger » laissent la fiche ouverte, pour voir le niveau monter.
+    if (f.genre === "installation") brancherFicheBanc(p, (geste) => this.actions.banc(f.id, geste));
   }
 
   /** Les puces d'un coût (avec ses choix : « ou »), et les qualités d'outil demandées. */
@@ -2137,10 +2172,13 @@ export class Hud {
       </article>`;
   }
 
-  /** « Et après ? » : le niveau d'ensuite, grisé (la recette pressentie, Book 03 §5.1), avec sa clé. */
+  /**
+   * « Et après ? » : le niveau d'ensuite, grisé (la recette pressentie, Book 03 §5.1), avec sa clé. Sa ligne dit déjà
+   * « à trouver plus loin » : le texte n'ajoute que « Plus tard. » (0.8.2, chantier K).
+   */
   private carteApres(e: Etape | null | undefined): string {
     if (!e) return "";
-    return `<article class="etape apres"><div class="corps"><strong>Et après ? ${e.nom}</strong>${this.ligneCle(e)}<small>${e.apporte}${e.aVenir ? ` ${texteAVenir(e.aVenir)}` : ""}</small></div></article>`;
+    return `<article class="etape apres"><div class="corps"><strong>Et après ? ${e.nom}</strong>${this.ligneCle(e)}<small>${e.apporte}${e.aVenir ? ` ${e.cle && e.aVenir !== "0b" ? "Plus tard." : texteAVenir(e.aVenir)}` : ""}</small></div></article>`;
   }
 
   /**
@@ -2250,7 +2288,7 @@ export class Hud {
     const l = lignee(i.type);
     const suivante = etapeSuivanteInstallation(i);
     const nom = etape?.nom ?? NOMS_INSTALLATIONS[i.type].charAt(0).toUpperCase() + NOMS_INSTALLATIONS[i.type].slice(1);
-    const examen = niveau > 1 && etape ? etape.examen : EXAMENS_INSTALLATIONS[i.type];
+    const examen = niveau > 1 && etape ? etape.examen : examenInstallation(i);
     const nb = (x: number) => String(Math.round(x * 10) / 10).replace(".", ",");
     const etat =
       i.type === "coffre"
@@ -2290,6 +2328,7 @@ export class Hud {
       ${enteteFiche(nom)}
       ${l ? `<p class="niveau">Niveau ${niveau}${etat ? ` · ${etat}` : ""}</p>` : etat ? `<p class="niveau">${etat}</p>` : ""}
       <p class="examen">${examen}</p>
+      ${i.type === "banc_recharge" ? htmlFicheBanc(i, this.inventaire, this.charges, this.chargeArmes) : ""}
       ${piece}
       ${ameliorer ? `<h3>Améliorer, sur place</h3>${ameliorer}` : ""}
       <div class="defaire">${defaire}</div>
@@ -2300,8 +2339,19 @@ export class Hud {
   // ---------- La fabrication ----------
 
   private puce(type: TypeObjet, besoin: number): string {
-    const a = this.inventaire[type] ?? 0;
+    // Un objet de métier compte toutes étoiles confondues (un module ★★ est un module), comme le serveur.
+    const a = compter(this.inventaire, type);
     return `<span class="ingredient ${a >= besoin ? "ok" : ""}" title="${OBJETS[type].nom}">${icone(type, 22)}${Math.min(a, besoin)}/${besoin}</span>`;
+  }
+
+  /**
+   * Les puces d'une recette : ses ingrédients, puis ses ingrédients au choix sur la même ligne, séparés par « ou »
+   * (« 3 ficelles ou 1 corde » : 0.8.2, chantier B, `Recette.auChoix`).
+   */
+  private pucesRecette(r: Recette): string {
+    const puces = (inv: Inventaire) => (Object.entries(inv) as [TypeObjet, number][]).map(([t, n]) => this.puce(t, n ?? 0)).join("");
+    const choix = (r.auChoix ?? []).map(puces).join(`<span class="ou">ou</span>`);
+    return puces(r.ingredients) + choix;
   }
 
   /** L'onglet du panneau Fabriquer : le dernier choisi, gardé sur l'appareil (« Tout » si rien). */
@@ -2435,7 +2485,7 @@ export class Hud {
         <article class="recette ${possible ? "possible" : ""} ${nouveau(r.id) ? "nouvelle" : ""}">
           ${icone(pictogramme, 40)}
           <div class="corps"><strong>${r.nom}${badge}${etiquette(r.id)}</strong>
-            <span class="puces">${Object.entries(r.ingredients).map(([t, n]) => this.puce(t as TypeObjet, n ?? 0)).join("")}${qualites}</span>
+            <span class="puces">${this.pucesRecette(r)}${qualites}</span>
             <small>${ou}${String(secondes).replace(".", ",")} s · ≈ ${Math.round(energieGriseRecette(r))} wotts</small>${this.pourquoi === r.id ? this.listeManque(r) : ""}</div>
           ${
             plusTard
