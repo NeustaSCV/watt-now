@@ -384,7 +384,7 @@ Les six recommandations sont retenues par le porteur du projet (2026-10-08).
 
 - **L'eau : 5 → 10 → 20 L.** Le récupérateur de la maison tient **5 L** et demande le **bidon de 5 L** de la ruine et les **4 sacs plastique** du premier sac-poubelle du chemin (garantis). **La citerne de bâche de 60 L est retirée** de la lignée (V4-7) : le niveau 2 est le **récupérateur à seau, 10 L**, qui les tient même hors ligne. Le **20 L** (jerrican) est « plus tard ».
 - **Le couchage : la fin du lit de branchages.** Le lit n'est plus une installation à part : il est **fondu dans l'abri garni** (I25). La ligne « le lit de branchages seul reste posable » (§3.3) ne vaut plus. **L'abri fermé** prend la toile de jute du Moulin pour clé (plus les 4 chiffons du §3.3).
-- **Le stockage : le coffre cerclé** demande désormais une **clé** (les feuillards du Moulin) et **Marteler 2** : le **marteau remmanché** (la tête de marteau de la caisse de la ruine et une branche, à la main) le permet à toutes les familles. La réserve couverte passe « plus tard ».
+- **Le stockage : le coffre cerclé** demande désormais une **clé** (les feuillards du Moulin) et **Marteler 2** : le **marteau remmanché** (la tête de marteau de la caisse de la ruine et une branche, à la main ; **à côté de l'établi** depuis la 0.8.2, §13) le permet à toutes les familles. La réserve couverte passe « plus tard ».
 - **Le râtelier à outils** (nouveau) : les outils rangés dessus, **à 3 m**, comptent pour les qualités comme s'ils étaient dans le sac (une hache au râtelier donne Fendre au coffre ; le bac de trempe lit Creuser 1 au râtelier).
 - **L'établi : une lignée nouvelle.** L'établi d'avant devient le niveau 1 ; l'**établi à étau** (niveau 2) donne **Serrer 3** à qui travaille à 3 m (l'étau dans le sac ne donne rien), et ses recettes : **maillet** (1 bûche, 1 branche), **coins de bois** (1 bûche → 4), **planches fendues** (1 bûche, 1 coin, le maillet → 2 planches ; le maillet revient), et **réparer le manche** d'une arme sans forge (Book 25 §13.6). Il porte aussi l'arbalète ⚙️ et l'évolution des armes de bois.
 - **La lumière : la torche plantée** (nouvelle) remplace le panier à feu du §3.5 pour le niveau 1 : 6 m de lumière, une nuit entière, une source de lumière de nuit qui compte dans la signature (Book 06). Elle ne se regarnit pas : on en plante une autre.
@@ -400,3 +400,45 @@ Une recette **liée à une construction** apparaît dès qu'on possède la const
 - **Le rythme, mesuré** (`npm run rythme`, chantier 14) : le joueur prudent atteint la station à 38 min, le gué à 85, la Coopérative vers 104 à 107, le Moulin vers 163 à 166 ; sa **dernière porte à clé** tombe à **209 à 212 min**, et **tout le niveau 1** (avec le reste de la maison et du métier) à **277 à 278 min**. Le joueur pressé : 110 à 125 min pour les portes, 141 à 179 min pour tout ; le malchanceux : 161 à 163 min, puis 219 à 254 min ; le vétéran sans tutoriel : 126 à 141 min, puis 191 à 196 min. Aucun aller-retour de ravitaillement à la station pour le joueur seul ; un pour le malchanceux ⚙️ ou 🔥 (Book 01 §2 bis). La cible « ≈ 3 h 20 pour le prudent » (critère 6 du plan) est en cours d'arbitrage par le porteur : les portes à clé la tiennent, tout le niveau 1 la dépasse.
 - **Le tutoriel et les quêtes** (chantier 13, codé) : « S'installer » en portes successives (Book 22 §3.1 bis) ; l'aide « Améliorer sa base » raconte la clé, l'indice, les replis, les outils de fortune et le râtelier.
 - **Hors de la 0.8** : le niveau 2 de chaque lignée (§12.2, colonne « plus tard ») ; la citerne filtrante, la gouttière, le bûcher, la claie, le fumoir, la charbonnière en fût (§11.5).
+
+## 13. Ce que la 0.8.2 change : le banc et sa batterie, l'établi, le meuble appris (2026-10-13)
+
+*Plan 0.8 §9.4 (R12, R13, R17, R21) et §9.3, plan 0.8.2 §7.2 et §7.3, chantiers C, B, I et J ; **codé en 0.8.2** (`commun/src/banc.ts`, `commun/src/energie.ts`, `serveur/src/electricite.ts`, `serveur/src/mecanique.ts`, `client/src/fiche-banc.ts`, `commun/src/recettes/communes.ts`, `commun/src/savoir-meuble.ts`). Là où le §12 diffère, ce paragraphe fait foi.*
+
+### 13.1 Le banc solaire et sa batterie (R17)
+
+**Le banc fait passer l'énergie de la batterie posée dedans vers ce qu'on porte.** On ne parle plus de « grosse batterie » : chaque batterie a son nom.
+
+- **Une seule batterie dans le banc, à demeure** : **la batterie de voiture de la ruine** (360 Wh de capacité, trouvée à moitié pleine), posée par le geste qui existait déjà ; elle y reste. Plus tard, une batterie de plus forte capacité pourra la remplacer (à définir : la liste des batteries de banc n'a aujourd'hui que la batterie de voiture).
+- **Remplir la batterie du banc** :
+  - **le panneau solaire** posé sur le banc : ≈ **80 Wh par jour** de soleil (inchangé, réglage `panneau_wh_jour`), même joueur absent ;
+  - **le pédalier générateur posé à moins de 3 m du banc** la charge **directement** quand on pédale, sans qu'on la porte : ≈ 46 Wh par heure de jeu avec le petit alternateur (≈ 60 pour un Mécaniste), 5 avec la dynamo du vélo. Le pédalier remplit d'abord la batterie du banc, puis une batterie posée sur lui, puis une du sac ; sans rien de tout cela : « Rien à charger : approche le pédalier à moins de 3 m du banc, ou pose une batterie dessus. » À 4 m, il ne charge plus le banc ;
+  - **la manivelle** de la lampe à dynamo reste **le secours lent** (1 Wh par minute réelle) ; dans le code, elle charge **une arme électrique**, pas la batterie du banc.
+- **Échanger la batterie du banc** contre une **batterie de voiture** du sac (6 s) : l'ancienne revient au sac **avec sa charge** ; on emporte une batterie pleine au Comptoir, par exemple. Après un échange, la batterie du banc s'appelle « la batterie de voiture » (elle n'est plus celle de la ruine). Sans batterie de voiture dans le sac, la fiche le dit : « Pour l'échanger, il te faut une autre batterie de voiture dans ton sac. »
+- **Charger ce qu'on porte** : **dans la fiche du banc**, jamais une fenêtre à part, **une ligne par chose qui se charge**, nommée, avec son niveau et un bouton « **Charger** » :
+  - **la petite batterie de la frontale** ;
+  - **chaque arme électrique**, une ligne par exemplaire, avec ses étoiles (« Le courant va dans son pack de cellules », ou « dans sa petite batterie ») ;
+  - une **batterie de voiture** qu'on porte.
+- **Un pack de cellules en vrac n'a pas de ligne** : il reste « plein » (§7.2 du plan) ; c'est dans une arme qu'il se charge.
+- **La charge** : **85 %** du courant arrive (« au bout des pinces »), **30 Wh par heure de jeu**, deux minutes au plus à la fois, sans bouger. **Rien ne se charge si la batterie du banc est vide**, et le refus le dit : « La batterie de voiture de la ruine, dans le banc, est vide : rien à charger. Le panneau la remplit au soleil. »
+- **Ces lignes remplacent** les gestes « Recharger » et « Recharger ses armes ». **Une partie 0.8.1 se relit** : les batteries en trop posées sur le banc reviennent au sac, avec leur charge.
+- **L'aide** a une rubrique « **Le banc** » (Book 14 §4.6) ; les textes du banc, de la frontale et des armes électriques sont réécrits, sans jargon.
+
+### 13.2 Remmancher à l'établi (R13)
+
+- **Remmancher la hache** (la tête de hache et une branche) et **remmancher le marteau** (la tête de marteau et une branche) se font **à côté de l'établi** (le niveau 1 de la lignée, §12.2), plus à la main ; Couper 1, Marteler 1, 30 s, toutes familles. Le tutoriel fait donc bâtir l'établi avant la hache (Book 14 §4.6).
+- **Réparer le manche** d'une arme reste à l'**établi à étau** (le niveau 2, Book 25 §13.6).
+
+### 13.3 La torche, l'abri, la mare
+
+- **La torche plantée et l'abri ne changent pas** de lignée : mêmes niveaux, mêmes coûts, mêmes clés. Seuls leurs textes changent : l'abri ne parle plus d'un lit construit à côté (R11 : on **garnit** l'abri), et le message de lumière ne dresse plus la liste des lumières des familles.
+- **Dormir dans l'abri** (R12, Q-0.8.2-7) : le personnage **va, accroupi, jusqu'à sa couche**, par une ouverture de l'abri, et dort **à sa place fixe**, dedans ; la bâche s'efface en partie tant qu'on dort dessous. Endormi, le bouton A dit « **Se réveiller** ».
+- **« Un vrai lit »** (l'abri garni) vient **juste après le coffre** dans « S'installer » (Book 22 §3.1 bis) : l'abri fermé suppose l'abri garni.
+- **La gourde au milieu de la mare** (R21, Q-0.8.2-3) : on **entre dans la mare**, l'eau aux genoux, à mi-allure, et l'on remplit la gourde **au milieu** ; au bord, l'eau est trouble, et **le bord reste aux joncs**.
+
+### 13.4 Se servir du meuble d'une autre famille (plan 0.8.2 §7.3)
+
+- **Qui a appris la recette d'un meuble de famille** (une leçon, un manuel) **peut s'en servir et y poser sa pièce** (l'enclume, le panneau, le petit alternateur). Avant la 0.8.2, le jeu refusait : « C'est le savoir d'une autre famille » ; le refus reste pour qui ne l'a pas appris. C'est ce que disait déjà ce book (les installations de métier « utilisables par tous », Q5) : la 0.8.2 le fait pour les meubles appris.
+- **Le malus ×1,5** reste sur **ce qu'on y fabrique** (Book 25 §2.3), **pas sur les gestes** : pédaler, charger, poser sa pièce coûtent le même prix à tous.
+- **Exemple** : un Voltaïque qui a appris le pédalier générateur peut pédaler à moins de 3 m de son banc pour remplir sa batterie.
+- **Les armes de métier** n'apparaissent qu'avec **le meuble complet de leur métier**, bâti et équipé de sa pièce, même pour un apprenti d'une autre famille (Book 25 §14).
