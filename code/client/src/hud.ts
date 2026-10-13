@@ -1632,8 +1632,10 @@ export class Hud {
         const outils = (Object.entries(dem.qualites) as [Qualite, number][]).map(([q, niv]) => `${NOMS_QUALITES[q]} ${niv}`).join(", ");
         const facteur = multiplicateurQualites(this.outils, dem.qualites);
         const etat = facteur === null ? "il te manque l'outil" : facteur > 1 ? "ton outil fera l'affaire, plus lentement" : outils ? "tu as l'outil" : "";
-        actions.push(`<button type="button" data-action="demonter" ${facteur === null ? "disabled" : ""}>Démonter</button>`);
-        infos.push(`<p class="info-objet">Démonter → ${donne}. Outil : ${outils || "aucun"}${etat ? ` (${etat})` : ""}.</p>`);
+        // Par lots (0.8.2) : trois canettes pour une chute d'aluminium.
+        const par = dem.par ?? 1;
+        actions.push(`<button type="button" data-action="demonter" ${facteur === null || n < par ? "disabled" : ""}>Démonter${par > 1 ? ` ${par}` : ""}</button>`);
+        infos.push(`<p class="info-objet">Démonter${par > 1 ? ` ${nommer(t, par)}` : ""} → ${donne}. Outil : ${outils || "aucun"}${etat ? ` (${etat})` : ""}.</p>`);
       }
       // Jeter par terre, quand le sac est trop lourd (on garde son sac sur le dos).
       if (s !== "sac_a_dos" && s !== "sac_fortune") {

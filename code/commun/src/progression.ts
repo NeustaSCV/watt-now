@@ -166,7 +166,7 @@ export const PROGRESSION: Readonly<Record<string, LigneProgression>> = {
   machette_forgee_ebrechee: { quand: [et(COUTEAUX_FORGES, vu("lame_ebrechee"))], indice: "Deux lames cassées en font une neuve." },
   reforger_lame: { quand: [vu("lame_ebrechee")], indice: "Une lame cassée n'est pas perdue." },
   banc_recharge: { quand: [SEUIL], indice: "Quand tu auras un toit et tenu tête une fois…" },
-  matraque_fortune: { quand: [SEUIL, fab("banc_recharge"), vu("appareil_photo_jetable")], indice: "Ton arme de métier : le silence qui mord." },
+  matraque_fortune: { quand: [SEUIL, fab("banc_recharge"), vu("appareil_photo_jetable", "petit_condensateur")], indice: "Ton arme de métier : le silence qui mord." },
   // R14 (0.8.2) : un condensateur, celui du flash ou celui de la raquette.
   module_decharge: { quand: [vu("petit_condensateur", "condensateur_moyen", "appareil_photo_jetable", "raquette_moustiques"), quete("raquette")], indice: "Un flash garde une belle décharge en réserve." },
   pack_cellules: { quand: [vu("cellule_lithium"), quete("pack")], indice: "Des petites piles ensemble font une vraie batterie." },

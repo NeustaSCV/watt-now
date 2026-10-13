@@ -986,9 +986,10 @@ const S1 = { serrer: 1 } as const;
 export const DEMONTAGE_LOT2: Partial<Record<TypeObjet, Demontage>> = {
   // Emballages et ordures
   sac_canettes: { donne: { aluminium: 2 }, qualites: M1, duree: 6 },
-  // R25 (0.8.2) : écrasée, une canette ne sert plus à rien d'autre ; aplatie au marteau, une chute d'aluminium. La boîte de
-  // conserve vide, elle, ne se démonte pas : on la garde telle quelle, pour s'en servir comme boîte.
-  canette: { donne: { aluminium: 1 }, qualites: M1, duree: 1 },
+  // R25 (0.8.2) : écrasée, une canette ne sert plus à rien d'autre ; trois, aplaties au marteau, font une chute
+  // d'aluminium (décision du porteur, 2026-10-13). La boîte de conserve vide, elle, ne se démonte pas : on la garde telle
+  // quelle, pour s'en servir comme boîte.
+  canette: { donne: { aluminium: 1 }, qualites: M1, duree: 2, par: 3 },
   prospectus: { donne: { papier: 2 }, qualites: {}, duree: 1 },
   carton: { donne: { papier: 3 }, qualites: {}, duree: 2 },
   ticket_caisse: { donne: { papier: 1 }, qualites: {}, duree: 1 },
