@@ -8,7 +8,7 @@ import * as THREE from "three";
 import type { TypeObjet } from "../../../commun/src/objets.ts";
 import type { Famille } from "../../../commun/src/regles.ts";
 import { Humanoide, chargerHumanoides, humanoidesPrets, type Coiffure, type Tenue } from "./humanoides.ts";
-import { APPARENCES_DE_REFERENCE, CARNATIONS, COULEURS_CHEVEUX, hauteurDe, type Apparence, type Coiffure as CoiffureChoisie } from "../../../commun/src/apparence.ts";
+import { APPARENCES_DE_REFERENCE, CARNATIONS, couleurCheveuxDe, hauteurDe, type Apparence, type Coiffure as CoiffureChoisie } from "../../../commun/src/apparence.ts";
 import { PALETTE, aleatoire, materiau } from "./materiaux.ts";
 import { Assemblage, V3, bosseler, placer } from "./assemblage.ts";
 import { Mesure, bandeau, bandouliere, pan } from "./accessoires.ts";
@@ -297,7 +297,7 @@ export class Personnage {
       peau: CARNATIONS[a.peau] ?? CARNATIONS[2],
       tenue: a.toge ? TENUE_TOGE : TENUES[this.famille],
       coiffure: FICHIERS_COIFFURE[a.coiffure],
-      couleurCheveux: COULEURS_CHEVEUX[a.cheveux] ?? COULEURS_CHEVEUX[0],
+      couleurCheveux: couleurCheveuxDe(a),
       barbe: a.barbe,
       tete: 1.32,
       hauteur: hauteurDe(a),

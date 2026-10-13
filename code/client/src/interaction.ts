@@ -453,8 +453,16 @@ export function proposer(
     });
   }
 
+  // Plan 0.8.2 (chantier D) : une porte à portée de main passe avant un objet au sol (à la laiterie, un objet jeté
+  // devant la porte cachait « Ouvrir la porte »). Pour le ramasser, on s'écarte d'un pas de la porte.
+  const porteVisee = (): boolean => {
+    const A = meilleure.propositions?.A;
+    return !!A && "message" in A && A.message.t === "interagir" && A.message.cible.genre === "porte";
+  };
+
   // Un sac tombé là après un effondrement (Book 05 §10.3), ou des objets jetés par terre.
   for (const s of sacs) {
+    if (porteVisee()) break;
     if (s.jete) {
       const liste = Object.entries(s.contenu ?? {}).map(([t, n]) => nommer(t as TypeObjet, n ?? 0));
       garder(Math.hypot(s.x - position.x, s.z - position.z), {

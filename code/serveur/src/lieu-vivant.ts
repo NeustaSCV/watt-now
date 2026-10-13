@@ -14,8 +14,9 @@
 //
 // 2. **Le butin personnel** (R4 du game designer) : `butin.personnel[type] = n` fait de chaque point de ce type un butin
 //    à chacun : chaque joueur le voit plein, le prend pour lui, et il revient pour lui à son délai, sans que les autres
-//    voient rien bouger. `n` est le nombre de prises (1 : la pièce de famille ; 10 : le tas de bois, une bûche par
-//    prise ; 8 : le banc de galets du gué). Le délai court à partir de la première prise ; au bout, tout est revenu.
+//    voient rien bouger. `n` est le nombre de prises (1 : la pièce de famille, la caisse de l'atelier ; 10 : le tas de
+//    bois, une bûche par prise ; 8 : le banc de galets du gué). `n` et le délai se lisent à chaque usage : un getter
+//    peut les lier à un réglage à chaud (le tas de bois de la station, `tas_bois_buches`, `tas_bois_retour_h`). Le délai court à partir de la première prise ; au bout, tout est revenu.
 //    L'état de chacun est gardé en base (instance « perso:<clé du lieu>:<compte> »), avec la version du lieu.
 //    Le filtre par famille (la pièce de famille : un Voltaïque ne voit pas l'enclume) est celui de `ressourceVisible`
 //    (FAMILLE_DE_RESSOURCE, commun/src/terrain.ts), comme l'if du fond du bois : il vaut partout, sur le serveur et
@@ -508,6 +509,9 @@ export class LieuVivant {
           if (r.disponibleLe === 0 || r.disponibleLe > instant) continue;
           r.disponibleLe = 0;
           this.base.sauverRessourceLieu(this.definition.cle, r.id, 0);
+          // Un butin devenu personnel (la caisse de l'atelier, 0.8.2) qu'une partie d'avant avait pris en commun : son
+          // délai partagé s'efface sans rien annoncer ; chacun le voit selon son propre état.
+          if (this.prisesPersonnelles(r.type) !== undefined) continue;
           // Un point de vrac hors jeu revient sans se montrer : il paraîtra quand les voyageurs seront assez nombreux.
           if (this.enJeu(r)) this.diffuser({ t: "ressource", id: r.id, disponible: true });
         }
