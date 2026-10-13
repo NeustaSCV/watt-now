@@ -227,6 +227,15 @@ export class CarteVue {
   }
 
   /**
+   * La vue d'ensemble à l'arrivée (0.8.2, chantier G) : vu de loin, le lieu se montre en entier, sans « souvenir » (la
+   * carte ne couvre que 96 m autour du personnage : le reste du lieu serait gris). Ce qui bouge reste réglé par `voit`.
+   * Un réglage de nuanceur : rien ne recompile.
+   */
+  toutMontrer(oui: boolean): void {
+    UNIFORMES.uVueActif.value = this.plan && !oui ? 1 : 0;
+  }
+
+  /**
    * La clarté du souvenir : de jour, 0,42 ; la nuit, 0,16. Dans une pièce noire (`obscurite`), bien moins : le souvenir
    * ne doit jamais être plus clair que ce qu'on voit (sinon la pièce d'à côté semblerait éclairée).
    */

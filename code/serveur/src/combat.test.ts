@@ -30,6 +30,8 @@ function monter(inventaire: Record<string, number>, eteint: { x: number; z: numb
   joueur.position = { x: SORTIE_TERRAIN.boite.x, z: SORTIE_TERRAIN.boite.z, o: 0 };
   joueur.recevoir({ t: "voyager", vers: "station" });
   attendre(DUREE_VOYAGE_S + 0.1, 0.5);
+  // Le premier geste après l'arrivée (0.8.2, chantier G) : sans lui, on resterait à l'abri des coups.
+  joueur.recevoir({ t: "arrivee" });
   halte.eteints = eteint ? [nouvelEteint(99, eteint.x, eteint.z, eteint.etat ?? "poursuivant")] : [];
   joueur.position = { x: 40, z: 34.6, o: 0 };
   const dernier = <T extends MessageServeur["t"]>(t: T) => recus.findLast((m) => m.t === t) as Extract<MessageServeur, { t: T }> | undefined;

@@ -142,6 +142,9 @@ export function messageValide(m: unknown): m is MessageClient {
       return nombre(m.dx) && nombre(m.dz);
     case "pause":
       return booleen(m.oui);
+    // Le premier geste après l'arrivée (0.8.2, chantier G) : rien à vérifier.
+    case "arrivee":
+      return true;
     case "reparer":
       return estCleObjet(m.objet) && booleen(m.fortune);
     // Reprendre une arme sur son meuble (plan 0.8, chantier 9).
