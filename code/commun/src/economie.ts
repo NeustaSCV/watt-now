@@ -52,7 +52,7 @@ export const LIEU_DES_CLES: Partial<Record<TypeObjet, LieuId>> = {
 export function refusVenteCle(type: TypeObjet, faits: Readonly<Record<string, number>>): string | null {
   const lieu = LIEU_DES_CLES[type];
   if (!lieu || (faits[`visite:${lieu}`] ?? 0) > 0) return null;
-  return `« ${OBJETS[type].nom.charAt(0).toUpperCase()}${OBJETS[type].nom.slice(1)} ? Va d'abord voir ${minuscule(LIEUX[lieu].nom)} : on en reparlera. » Les Compteurs ne vendent une clé qu'à qui connaît son lieu.`;
+  return `« ${OBJETS[type].nom.charAt(0).toUpperCase()}${OBJETS[type].nom.slice(1)} ? Va d'abord voir ${minuscule(LIEUX[lieu].nom)} : on en reparlera. » Les Compteurs ne le vendent qu'à qui connaît déjà son lieu.`;
 }
 
 /**

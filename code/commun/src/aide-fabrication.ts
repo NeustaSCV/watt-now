@@ -3,14 +3,25 @@
 
 import { STOCK_DE_BASE } from "./economie.ts";
 import { OBJETS, kitDeDepart, nommer, type Inventaire, type TypeObjet } from "./objets.ts";
-import { FAMILLES, NOMS_FAMILLES } from "./regles.ts";
+import { FAMILLES } from "./regles.ts";
 import { ouSeFait } from "./lieu-recette.ts";
 import { NOMS_QUALITES, QUALITES_OBJETS, QUALITES_POSTES, RECETTES, niveauQualite, type Qualite, type Recette } from "./recettes.ts";
 import { USAGES, type TypeRessource } from "./terrain.ts";
 import { compter } from "./etoiles.ts";
 
-/** Les vestiges de la station-service (le reste se trouve sur son terrain). */
-const A_LA_HALTE = new Set<TypeRessource>(["rayonnage", "panneau_auvent", "epave_voiture", "epave_camion", "caisse_atelier", "grenier"]);
+/** Les vestiges de la station-service (le reste se trouve sur son terrain, ou dans un lieu dit par son préfixe). */
+const A_LA_HALTE = new Set<TypeRessource>(["rayonnage", "panneau_auvent", "epave_voiture", "epave_camion", "caisse_atelier", "grenier", "piece_enclume", "piece_alternateur", "tas_bois"]);
+const AU_GUE = new Set<TypeRessource>(["gisement_glaise", "banc_galets"]);
+const AU_MOULIN = new Set<TypeRessource>(["if_bief", "poutres_chene"]);
+
+/** Où se trouve une ressource : sur son terrain, ou le nom du lieu (« à la Coopérative »). */
+function lieuDeLaRessource(r: TypeRessource): string | null {
+  if (A_LA_HALTE.has(r)) return "à la station-service";
+  if (r.startsWith("coop_")) return "à la Coopérative";
+  if (AU_GUE.has(r) || r.startsWith("gue_")) return "au Gué-aux-Saules";
+  if (AU_MOULIN.has(r) || r.startsWith("moulin_")) return "au Moulin du Gué";
+  return null;
+}
 
 const minuscule = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
 
@@ -30,8 +41,11 @@ export function ouTrouver(type: TypeObjet, visible: RecetteVisible = TOUTES): st
   for (const [r, u] of Object.entries(USAGES) as [TypeRessource, (typeof USAGES)[TypeRessource]][]) {
     // L'if du fond du bois ne se dit pas : l'aide explique comment, jamais où est le rare (Book 25 §9.5).
     if (r === "if_bois") continue;
-    const ici = A_LA_HALTE.has(r) ? "à la station-service" : r.startsWith("coop_") ? "à la Coopérative" : "sur ton terrain";
-    if ((u.donne[type] ?? 0) > 0) ou.push(`${minuscule(u.libelle)} (${ici})`);
+    // Hors du terrain, le lieu seul, jamais l'endroit exact (0.8.2, R10 : « à la Coopérative », pas « les palettes du quai »).
+    const lieu = lieuDeLaRessource(r);
+    if ((u.donne[type] ?? 0) <= 0) continue;
+    const phrase = lieu ?? `${minuscule(u.libelle)} (sur ton terrain)`;
+    if (!ou.includes(phrase)) ou.push(phrase);
   }
   // Une recette encore cachée ne se nomme pas (l'arbre de progression) : « ça se fabrique (tu y penseras) », une fois.
   let cachee = false;
@@ -44,10 +58,11 @@ export function ouTrouver(type: TypeObjet, visible: RecetteVisible = TOUTES): st
   for (const r of RECETTES) if ((r.sousProduits?.[type] ?? 0) > 0 && visible(r.id)) ou.push(`ce qui reste quand on fait « ${r.nom} »`);
   if (cachee && !ou.some((s) => s.startsWith("le fabriquer"))) ou.push(SE_FABRIQUE_CACHE);
   if ((STOCK_DE_BASE[type] ?? 0) > 0) ou.push("l'acheter au Comptoir");
-  // Le kit de départ : celui de tout le monde, ou celui d'une famille (on peut alors l'échanger avec elle).
+  // Le kit de départ : celui de tout le monde, ou celui d'une famille (on peut alors l'échanger avec elle). 0.8.2
+  // (chantier K) : on ne dit pas ce qu'il y a dans le kit des autres familles.
   const familles = FAMILLES.filter((f) => (kitDeDepart(f)[type] ?? 0) > 0);
   if (familles.length === FAMILLES.length) ou.unshift("dans le kit de départ");
-  else if (familles.length > 0) ou.push(`l'échanger avec un joueur ${familles.map((f) => `des ${NOMS_FAMILLES[f]}`).join(" ou ")} (il est dans leur kit de départ)`);
+  else if (familles.length > 0) ou.push("l'échanger avec un joueur d'une autre famille");
   return ou;
 }
 

@@ -141,10 +141,10 @@ test("« plus tard » remplace la phase 0b : le four de terre et le poêle atten
   const four = VOIE_SURFACE.find((e) => e.id === "four_terre")!;
   // Plan 0.8 (chantier 5) : le four attend sa porte de fonte, au niveau 2 ; le poêle et la hutte, la phase 0b.
   assert.equal(four.aVenir, "niveau 2");
-  assert.equal(refusAVenir(four), "Four de terre : plus tard. Sa clé est à trouver plus loin.");
+  assert.equal(refusAVenir(four), "Four de terre : plus tard. Ce qui lui manque est à trouver plus loin.");
   assert.equal(VOIE_SURFACE.find((e) => e.id === "poele")!.aVenir, "0b");
   assert.equal(lignee("abri")!.find((e) => e.id === "hutte")!.aVenir, "0b");
-  assert.equal(refusAVenir({ nom: "Coffre cerclé", aVenir: "niveau 2" }), "Coffre cerclé : plus tard. Sa clé est à trouver plus loin.");
+  assert.equal(refusAVenir({ nom: "Coffre cerclé", aVenir: "niveau 2" }), "Coffre cerclé : plus tard. Ce qui lui manque est à trouver plus loin.");
   assert.equal(refusAVenir(VOIE_SURFACE[1]!), null);
   for (const e of [...VOIE_SURFACE, ...VOIE_CREUSEE]) assert.equal("phase" in e, false, e.id);
 });

@@ -307,7 +307,7 @@ export class Electricite {
       return true;
     }
     if ((this.ctx.inventaire().panneau_solaire ?? 0) < 1) {
-      this.ctx.info("Il te faut le petit panneau solaire : celui de la station, contre le pilier de l'auvent.");
+      this.ctx.info("Il te faut le petit panneau solaire : celui de la station.");
       return true;
     }
     this.ctx.commencer("Poser le panneau sur le banc", 20, () => {

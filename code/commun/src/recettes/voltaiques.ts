@@ -28,7 +28,7 @@ const NIVEAU_2 = { aVenir: "niveau 2" } as const;
  * La petite batterie du kit est unique (Q-B6) : la même phrase sur les deux fiches qui la prennent (la matraque de
  * fortune et la matraque électrique, chantier 8 ; une seule recette depuis la 0.8.2, R16).
  */
-const NOTE_PETITE_BATTERIE = "La petite batterie du kit est unique : elle va à la matraque de fortune ou à la matraque électrique, pas aux deux.";
+const NOTE_PETITE_BATTERIE = "La petite batterie de la frontale est unique : elle va à la matraque de fortune ou à la matraque électrique, pas aux deux.";
 /** La petite batterie, source d'une matraque électrique : une source ★★ (Q-A5). */
 const SOURCE_PETITE_BATTERIE = 2;
 

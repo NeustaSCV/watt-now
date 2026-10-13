@@ -9,7 +9,7 @@ import type { VueProgression } from "../../commun/src/progression.ts";
 import { SILHOUETTES_DEPLIEES, enTete, etatCle, nouveautesParOnglet, ongletsVides, planFabrication, recetteVisible, sousTitre, type PlanFabrication } from "./fabrication-arbre.ts";
 import { ACTIONS, RESERVEES, assigner, avecTouches, nomDe, nomTouche, retablir, surChangement, type Action } from "./touches.ts";
 import { PanneauAide } from "./aide.ts";
-import { CAPACITES, type Charges } from "../../commun/src/energie.ts";
+import { CAPACITES, NOMS_BATTERIES, type Charges } from "../../commun/src/energie.ts";
 import { ARMES, NOMS_BLESSURES, PLAFOND_FORTUNE, RESISTANCE_TORSE, SEUIL_ABIMEE, armeDeCle, capaciteChargeArme, caracteristiquesArme, estArme, etatArme } from "../../commun/src/combat.ts";
 import type { EchangeVu, FeuVu, GesteRepriseArme, InstallationVue, OffreEchange, OperationComptoir, OperationEchange, Personne, RapportBase, SanteVue, Verbe, VueComptoir, WottsVus } from "../../commun/src/messages.ts";
 import {
@@ -80,7 +80,7 @@ import { COULEURS_FAMILLES } from "./accueil.ts";
 import { ecrire, lire } from "./stockage.ts";
 import type { Commande } from "./entrees.ts";
 import { icone, type Pictogramme } from "./icones.ts";
-import { EXAMENS_INSTALLATIONS, type Propositions } from "./interaction.ts";
+import { examenInstallation, type Propositions } from "./interaction.ts";
 import { ORDRE_NIVEAUX, changerQualite, type NiveauQualite } from "./rendu/qualite.ts";
 import { COMPOSANTS, DEMONTAGE, NOMS_FAMILLES_VESTIGES, VESTIGES, estOrdure, type FamilleVestige } from "../../commun/src/vestiges.ts";
 
@@ -886,10 +886,11 @@ export class Hud {
     const duree = h > 0 ? `${h} h ${String(min).padStart(2, "0")}` : `${min} min`;
     const lignes: string[] = [];
     if (r.produit > 0) {
-      lignes.push(`<li><b>Panneau solaire</b> : ${r.produit} Wh produits, ${r.stocke} Wh dans les batteries du banc${r.perdu > 0 ? `, <span class="perdu">${r.perdu} Wh perdus</span> (${r.stocke === 0 ? "pas de batterie sur le banc" : "batteries pleines"})` : ""}.</li>`);
+      lignes.push(`<li><b>Panneau solaire</b> : ${r.produit} Wh produits, ${r.stocke} Wh dans la batterie du banc${r.perdu > 0 ? `, <span class="perdu">${r.perdu} Wh perdus</span> (${r.stocke === 0 ? "pas de batterie dans le banc" : "batterie pleine"})` : ""}.</li>`);
     }
     const banc = Object.entries(r.surLeBanc).filter(([, wh]) => (wh ?? 0) > 0);
-    if (banc.length) lignes.push(`<li><b>Sur le banc</b> : ${banc.map(([b, wh]) => `${b === "petite_batterie" ? "petite batterie" : "batterie de voiture"} ${wh} Wh`).join(", ")}.</li>`);
+    // 0.8.2 (R17) : chaque batterie par son nom (une seule reste dans le banc).
+    if (banc.length) lignes.push(`<li><b>Dans le banc</b> : ${banc.map(([b, wh]) => `${NOMS_BATTERIES[b as TypeBatterie]}, ${wh} Wh`).join(" ; ")}.</li>`);
     if (r.charbonniere === "prete") lignes.push(`<li><b>La charbonnière</b> a fini de cuire : le charbon est prêt.</li>`);
     else if (typeof r.charbonniere === "number") lignes.push(`<li><b>La charbonnière</b> fume encore : prête dans ${r.charbonniere} min.</li>`);
     if (r.feuxEteints > 0) lignes.push(`<li><b>${r.feuxEteints > 1 ? `${r.feuxEteints} feux se sont éteints` : "Le feu s'est éteint"}</b> faute de bois.</li>`);
@@ -2272,7 +2273,7 @@ export class Hud {
     const l = lignee(i.type);
     const suivante = etapeSuivanteInstallation(i);
     const nom = etape?.nom ?? NOMS_INSTALLATIONS[i.type].charAt(0).toUpperCase() + NOMS_INSTALLATIONS[i.type].slice(1);
-    const examen = niveau > 1 && etape ? etape.examen : EXAMENS_INSTALLATIONS[i.type];
+    const examen = niveau > 1 && etape ? etape.examen : examenInstallation(i);
     const nb = (x: number) => String(Math.round(x * 10) / 10).replace(".", ",");
     const etat =
       i.type === "coffre"

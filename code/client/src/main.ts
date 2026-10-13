@@ -1412,7 +1412,7 @@ function executer(c: Commande): void {
       return;
     }
     case "lumiere":
-      if (!lumierePortee(inventaire)) return hud.message("Rien pour t'éclairer : torche, frontale ou lanterne sont dans le kit d'une famille : échange-la.");
+      if (!lumierePortee(inventaire)) return hud.message("Rien pour t'éclairer : chaque famille a sa lumière, échanges-en une.");
       envoyer({ t: "lumiere", allumee: !lumiere });
       return;
     case "tourner+":

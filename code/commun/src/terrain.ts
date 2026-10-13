@@ -903,14 +903,14 @@ const USAGES_NIVEAU1: Partial<Record<TypeRessourceNiveau1, UsageRessource>> = {
     examen: "Le camp de survivants sur le pont : un brasero, une bâche déchirée, une couverture, une ligne de pêche sans hameçon. Ils sont partis vite.",
   },
   // ---------- H1B, le Gué-aux-Saules (chantier 11 ; commun/src/gue.ts) ----------
-  // B6 : la vase de la berge, sous le camping-car : inépuisable, une motte de 2 kg par geste de 6 s, avec Creuser 1.
+  // B6 : la vase de la berge, au milieu (0.8.2, R2) : inépuisable, une motte de 2 kg par geste de 6 s, avec Creuser 1.
   gisement_glaise: {
     verbe: "ramasser",
     libelle: "Creuser une motte de glaise",
     donne: { glaise: 1 },
     qualites: { creuser: 1 },
     duree: 6,
-    examen: "La berge de vase, sous le camping-car : une glaise grise et grasse, entamée à la bêche. Il en reste pour des années. Il faut de quoi creuser.",
+    examen: "La berge de vase, à découvert : une glaise grise et grasse, entamée à la bêche. Il en reste pour des années. Il faut de quoi creuser.",
   },
   // B5 : le banc de galets accroché au radier, 8 pierres à chacun (6 h).
   banc_galets: {

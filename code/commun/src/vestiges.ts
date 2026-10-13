@@ -781,7 +781,7 @@ const VESTIGES_LOT1 = {
   cle_coffre: {
     nom: "clé du coffre",
     pluriel: "clés du coffre",
-    description: "Une clé plate, à double panneton, au bout d'une chaînette « MAGASIN ». Elle ouvre quelque chose d'important.",
+    description: "Une petite clé à double panneton, au bout d'une chaînette « MAGASIN ». Elle ouvre quelque chose d'important.",
     poids: 0.05,
     valeur: 1,
     famille: "salon",

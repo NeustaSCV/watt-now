@@ -655,7 +655,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
         this.fabriquer(message.recette, message.x, message.z, message.o);
         return;
       case "lumiere":
-        if (message.allumee && !lumierePortee(this.inventaire)) return this.info("Rien pour t'éclairer : torche, frontale ou lanterne sont dans le kit d'une famille : échange-la.");
+        if (message.allumee && !lumierePortee(this.inventaire)) return this.info("Rien pour t'éclairer : chaque famille a sa lumière, échanges-en une.");
         if (message.allumee && lumierePortee(this.inventaire) === "lampe_frontale" && (this.charges.petite_batterie ?? 0) <= 0.1) {
           return this.info("La petite batterie de la frontale est vide : charge-la au banc, depuis sa fiche.");
         }

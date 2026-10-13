@@ -90,9 +90,10 @@ test("0.8 aide : « Fabriquer » — les recettes liées aux meubles, « Tu y pe
   assert.doesNotMatch(t, /plus lentement \(« outil de fortune »\)/);
 });
 
-test("0.8 aide : « Améliorer sa base » — la clé, l'indice, les replis, les outils de fortune, le râtelier", () => {
+test("0.8 aide : « Améliorer sa base » — la pièce de dehors, l'indice, les replis, les outils de fortune, le râtelier", () => {
   const t = rubrique("ameliorer");
-  for (const m of [/une clé/i, /indice/, /Où chercher/, /repli/, /outils de fortune/, /râtelier/]) assert.match(t, m);
+  // 0.8.2 (R9) : plus de « clé » ; la pièce de dehors.
+  for (const m of [/une pièce de dehors/i, /indice/, /Où chercher/, /repli/, /outils de fortune/, /râtelier/]) assert.match(t, m);
   // « Je suis coincé » renvoie à la fiche du meuble et à ses indices.
   const q = rubrique("questions");
   assert.match(q, /Un meuble ne monte pas/);
