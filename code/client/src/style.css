@@ -6106,6 +6106,10 @@ body.vue-ensemble #hud .bloc.aide {
   }
   #hud:has(.bloc.aide:not([hidden])) .invite {
     bottom: calc(var(--haut-aide) + 18px);
+    /* « Fouiller : sac-poubelle crevé », en Courier, débordait de l'écran : il passe à la ligne. */
+    max-width: calc(100vw - 24px);
+    white-space: normal;
+    text-align: center;
   }
   #hud:has(.bloc.aide:not([hidden])) .mode-clavier {
     bottom: calc(var(--haut-aide) + 66px);
