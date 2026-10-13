@@ -112,12 +112,12 @@ test("la quête active dévoile sa recette et ses maillons, même avant l'atelie
         // Plan 0.8 : une recette liée à une construction qu'on n'a pas attend sa construction (en silhouette, en tête).
         const r0 = recette(id);
         // R26 (0.8.2) : une arme de métier attend le meuble complet, pas même en silhouette (le carnet la nomme).
-        if (armeEnAttente(id, famille, e.installations)) assert.ok(!enSilhouette.has(id) && !d.has(id), `${famille}, quête ${q.id} : ${id} attend le meuble`);
+        if (armeEnAttente(id, e.installations)) assert.ok(!enSilhouette.has(id) && !d.has(id), `${famille}, quête ${q.id} : ${id} attend le meuble`);
         else if (r0 && !lieuPossede(r0.lieu, e.installations)) assert.ok(enSilhouette.has(id), `${famille}, quête ${q.id} : ${id} en silhouette`);
         else assert.ok(d.has(id), `${famille}, quête ${q.id} : ${id}`);
         const r = recette(id);
         // Un maillon lié à une construction qu'on n'a pas l'attend, comme toute recette de ce genre (plan 0.8).
-        if (r) for (const m of maillons(r)) if (!estHorsFamille(m, famille) && lieuPossede(m.lieu, e.installations) && !armeEnAttente(m.id, famille, e.installations)) assert.ok(d.has(m.id), `${famille}, quête ${q.id} : maillon ${m.id}`);
+        if (r) for (const m of maillons(r)) if (!estHorsFamille(m, famille) && lieuPossede(m.lieu, e.installations) && !armeEnAttente(m.id, e.installations)) assert.ok(d.has(m.id), `${famille}, quête ${q.id} : maillon ${m.id}`);
       }
     }
   }

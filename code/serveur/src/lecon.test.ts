@@ -315,11 +315,8 @@ test("lire un manuel ouvre les recettes d'une famille ; dans la sienne, rien ; u
   assert.ok("refus" in lireManuel(vide, "charbonniers", "pierre" as TypeObjet));
 });
 
-test("un Mécaniste lit le Manuel du forgeron, monte une forge et forge une lame : ×1,5, et ★ sur la pierre plate", () => {
-  // R26 (0.8.2) : une lame apprise attend, elle aussi, le meuble de famille complet de celui qui l'apprend (ici, le
-  // pédalier générateur et son petit alternateur, posés plus loin).
-  const pedalier = [{ type: "pedalier" as const, x: 30, z: 30, etat: { alternateur: true } }];
-  const t = monter("mecanistes", { manuel_forgeron: 1, pierre: 12, barre_metal: 4, branche: 5, marteau: 1, charbon_bois: 2 }, undefined, undefined, pedalier);
+test("un Mécaniste lit le Manuel du forgeron, monte une forge, y pose l'enclume et forge une lame : ×1,5, ★★ au plus", () => {
+  const t = monter("mecanistes", { manuel_forgeron: 1, pierre: 12, barre_metal: 4, branche: 5, marteau: 1, charbon_bois: 2, enclume_depanneur: 1 });
   // Sans l'avoir lu : grisée.
   t.joueur.recevoir({ t: "fabriquer", recette: "forge", x: 20, z: 21.8, o: 0 });
   assert.match(t.infos().at(-1)!, /chez les Charbonniers/);
@@ -330,14 +327,20 @@ test("un Mécaniste lit le Manuel du forgeron, monte une forge et forge une lame
   // La forge : 8 pierres ×1,5 = 12, 1 barre → 2, 2 branches → 3.
   t.joueur.recevoir({ t: "fabriquer", recette: "forge", x: 20, z: 21.8, o: 0 });
   t.attendre(10);
-  assert.ok(t.dernier("installation"));
+  const forge = t.dernier("installation")!.installation;
+  // R26 et plan 0.8.2 §7.3 : le couteau forgé attend la forge et son enclume, même pour le Mécaniste qui a lu le manuel.
+  t.joueur.recevoir({ t: "fabriquer", recette: "lame_forgee_fer" });
+  assert.equal(t.infos().at(-1), "Tu n'y as pas encore pensé.");
+  // Qui a appris la forge y pose sa pièce (§7.3) : un geste, pas une recette, sans malus.
+  t.joueur.recevoir({ t: "interagir", cible: { genre: "installation", id: forge.id }, verbe: "poser_enclume" });
+  t.attendre(10);
+  assert.equal(t.dernier("installation")!.installation.etat.enclume, "depanneur", t.infos().join(" | "));
   // Le couteau de fer doux : il se forge au foyer, sans bac de trempe (plan 0.8 : l'acier, lui, demande le bac).
   t.joueur.recevoir({ t: "fabriquer", recette: "lame_forgee_fer" });
   t.attendre(10);
   const inv = t.dernier("inventaire")!.inventaire;
-  // Sans enclume, la pierre plate du foyer ne donne que ★ (plan 0.8, Q-0.8-1) ; les accessoires de la forge (l'enclume
-  // comprise) restent le geste des Charbonniers.
-  assert.equal(inv["lame_forgee#1"], 1, t.infos().join(" | "));
+  // Hors famille, ★★ au plus (l'enclume de dépanneur donne ★★) ; ×1,5 en matières, arrondi au-dessus.
+  assert.equal(inv["lame_forgee#2"], 1, t.infos().join(" | "));
   assert.equal(inv.lame_forgee, undefined);
   assert.equal(inv.barre_metal, undefined, "1 barre ×1,5 = 2");
   assert.equal(inv.charbon_bois, undefined);

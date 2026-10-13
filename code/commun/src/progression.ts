@@ -306,7 +306,10 @@ export const ARMES_DE_METIER: Readonly<Record<Famille, readonly string[]>> = {
   ],
 };
 
-const RECETTES_ARMES_DE_METIER: ReadonlySet<string> = new Set(Object.values(ARMES_DE_METIER).flat());
+/** Le métier de chaque arme de métier (la famille dont le meuble l'ouvre). */
+const METIER_DE_L_ARME: ReadonlyMap<string, Famille> = new Map(
+  (Object.entries(ARMES_DE_METIER) as [Famille, readonly string[]][]).flatMap(([f, ids]) => ids.map((id) => [id, f] as const)),
+);
 
 /** Le meuble de famille est-il complet : bâti, et équipé de sa pièce (l'enclume, le panneau, l'alternateur) ? */
 export function meubleComplet(famille: Famille, installations: ReadonlyMap<string, number>): boolean {
@@ -316,14 +319,15 @@ export function meubleComplet(famille: Famille, installations: ReadonlyMap<strin
 }
 
 /**
- * R26 : une arme de métier n'existe pas pour le joueur (ni dévoilée, ni en silhouette, ni annoncée) tant que **son**
- * meuble de famille n'est pas complet ; le repli (la pierre plate, la manivelle, la dynamo) ne suffit pas, et l'établi
- * non plus. La règle vaut pour une arme d'une autre famille apprise en leçon ou au manuel : elle attend, elle aussi, le
- * meuble complet de celui qui l'a apprise. Ce qui est déjà gardé (une partie 0.8.1) n'est pas oublié : la carte revient
- * avec la pièce posée.
+ * R26 : une arme de métier n'existe pas pour le joueur (ni dévoilée, ni en silhouette, ni annoncée) tant que le meuble
+ * de **son métier** n'est pas complet ; le repli (la pierre plate, la manivelle, la dynamo) ne suffit pas, et l'établi
+ * non plus. Une arme apprise d'une autre famille (leçon, manuel) attend le meuble de son métier, et non celui de
+ * l'apprenti (plan 0.8.2 §7.3 : le couteau forgé d'un Mécaniste attend la forge et son enclume, qu'il peut poser une
+ * fois la forge apprise). Ce qui est déjà gardé (une partie 0.8.1) n'est pas oublié : la carte revient avec la pièce.
  */
-export function armeEnAttente(id: string, famille: Famille, installations: ReadonlyMap<string, number>): boolean {
-  return RECETTES_ARMES_DE_METIER.has(id) && !meubleComplet(famille, installations);
+export function armeEnAttente(id: string, installations: ReadonlyMap<string, number>): boolean {
+  const metier = METIER_DE_L_ARME.get(id);
+  return metier !== undefined && !meubleComplet(metier, installations);
 }
 
 /** Le seuil du métier tombe de lui-même après ces minutes de jeu (l'étape « La famille » le fait plus tôt). */
@@ -646,7 +650,7 @@ export function aDevoiler(e: EtatPourDevoilement): string[] {
   const ajouter = (id: string, parLaChaine: boolean) => {
     if (devoilees.has(id) || !accessible(id, e.famille, savoir)) return;
     // R26 : une arme de métier attend le meuble de famille complet, même tirée par la chaîne ou demandée.
-    if (armeEnAttente(id, e.famille, e.installations)) return;
+    if (armeEnAttente(id, e.installations)) return;
     const r = recette(id);
     // La chaîne ne tire pas une recette liée à une construction qu'on n'a pas : elle attend sa construction.
     if (parLaChaine && r && !lieuPossede(r.lieu, e.installations)) return;
@@ -739,7 +743,7 @@ export function silhouettes(e: EtatPourDevoilement): SilhouetteVue[] {
   const liste: SilhouetteVue[] = [];
   const deja = new Set<string>();
   // R26 : pas de silhouette d'arme de métier avant le meuble complet (pas même celle qu'une quête demande).
-  const cachee = (id: string) => !e.devoilees.has(id) && !deja.has(id) && accessible(id, e.famille, savoir) && !armeEnAttente(id, e.famille, e.installations);
+  const cachee = (id: string) => !e.devoilees.has(id) && !deja.has(id) && accessible(id, e.famille, savoir) && !armeEnAttente(id, e.installations);
   for (const id of recettesDemandees(e)) {
     const r = recette(id);
     if (!r || !cachee(id)) continue;

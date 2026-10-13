@@ -301,7 +301,7 @@ test("R26 (0.8.2) : les armes de métier attendent le meuble de famille bâti ET
     const d2 = apres({ ...e, installations: avec, devoilees: d });
     for (const id of attendues[famille]) assert.ok(d2.has(id), `${famille} : ${id} avec la pièce`);
     // Une recette commune ou d'un autre meuble n'attend pas la pièce.
-    assert.ok(!armeEnAttente("gourdin", famille, sans) && !armeEnAttente("pinces_forge", famille, sans) && !armeEnAttente("pack_cellules", famille, sans));
+    assert.ok(!armeEnAttente("gourdin", sans) && !armeEnAttente("pinces_forge", sans) && !armeEnAttente("pack_cellules", sans));
   }
 });
 
@@ -325,10 +325,15 @@ test("les autres familles : jamais dévoilées sans leçon ni manuel ; vues gris
   assert.ok(autresAtteints({ famille: "charbonniers", faits: { "rencontre:voltaiques": 1 } }));
   assert.ok(!autresAtteints({ famille: "charbonniers", faits: { "rencontre:charbonniers": 1 } }));
   // Une leçon dévoile ce qu'elle apprend ; tenir le produit d'une autre famille déplie sa recette. Une arme de métier
-  // apprise attend, elle aussi, le meuble de famille complet de celui qui l'apprend (R26, 0.8.2).
+  // apprise attend le meuble complet de son métier, pas celui de l'apprenti (R26 ; plan 0.8.2 §7.3).
   assert.ok(apres(etat({ savoir: { apprises: ["pedalier"] } })).has("pedalier"));
   assert.ok(!apres(etat({ savoir: { apprises: ["arbalete"] } })).has("arbalete"));
-  assert.ok(apres(etat({ savoir: { apprises: ["arbalete"] }, installations: new Map([["forge", 1], ["forge+enclume", 1]]) })).has("arbalete"));
+  assert.ok(!apres(etat({ savoir: { apprises: ["arbalete"] }, installations: new Map([["forge", 1], ["forge+enclume", 1]]) })).has("arbalete"), "la forge complète du Charbonnier ne suffit pas");
+  assert.ok(apres(etat({ savoir: { apprises: ["arbalete"] }, installations: new Map([["pedalier", 1], ["pedalier+alternateur", 1]]) })).has("arbalete"));
+  // Le Mécaniste qui a lu le manuel du forgeron : le couteau forgé attend la forge et son enclume.
+  const lecteur = { famille: "mecanistes" as const, savoir: { manuels: ["charbonniers" as const] } };
+  assert.ok(!apres(etat({ ...lecteur, installations: new Map([["forge", 1], ["pedalier", 1], ["pedalier+alternateur", 1]]) })).has("lame_forgee_fer"));
+  assert.ok(apres(etat({ ...lecteur, installations: new Map([["forge", 1], ["forge+enclume", 1]]) })).has("lame_forgee_fer"));
   assert.ok(entrevues(etat({ vus: new Set(["module_decharge"]) })).includes("module_decharge"));
 });
 
