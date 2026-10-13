@@ -2300,7 +2300,8 @@ export class Hud {
   // ---------- La fabrication ----------
 
   private puce(type: TypeObjet, besoin: number): string {
-    const a = this.inventaire[type] ?? 0;
+    // Un objet de métier compte toutes étoiles confondues (un module ★★ est un module), comme le serveur.
+    const a = compter(this.inventaire, type);
     return `<span class="ingredient ${a >= besoin ? "ok" : ""}" title="${OBJETS[type].nom}">${icone(type, 22)}${Math.min(a, besoin)}/${besoin}</span>`;
   }
 
