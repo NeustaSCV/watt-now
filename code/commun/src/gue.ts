@@ -23,7 +23,7 @@ import { percer, type FenetreVue, type PlanVue, type PorteVue } from "./vue.ts";
 import { BAC_MODELE, ETEINTS_MODELE, FOUILLE_MODELE, NAPPE_MODELE, SEGMENTS_MODELE, type SegmentModele } from "./gue-modele.ts";
 
 /** À augmenter quand le contenu du gué change : la base le régénère alors. */
-export const VERSION_GUE = 4;
+export const VERSION_GUE = 5;
 
 // ---------- Le repère : le gué retourné ----------
 
@@ -84,14 +84,14 @@ export const BAC = (() => {
 export const CLOCHE = { ...auGue(-12.8, -22.4), portee: 40, dureeS: 3 } as const;
 
 /**
- * Le gisement de glaise (B6). Le modèle le pose en (16 ; 20,4), au bout sud de la berge de vase, sous un arbre qui le
- * cache (R2). Plan 0.8.2 (chantier F, Q-0.8.2-5) : en attendant la retouche du modèle demandée à la session « bâtiments »
- * (`demande-batiment-gue-4.md`), le jeu le place lui-même **au milieu de la berge**, à découvert, entre la touffe de
- * joncs et le camping-car ; l'écran y porte la motte et la bêche du modèle (client/src/rendu/gue.ts).
+ * Le gisement de glaise (B6), au point de la fiche du modèle : au milieu de la berge de vase, à découvert, au sud du
+ * coin repas du camping-car. Le modèle y dessine la motte entamée et la bêche, et rien ne pousse autour ni entre lui et
+ * la caméra (R2 : la retouche demandée par le plan 0.8.2, livrée pour la 0.8.3 ; le jeu n'a plus rien à déplacer).
  */
-export const GLAISE = auGue(17.0, 10.2);
-/** Où le modèle dessine la motte et la bêche (sa fiche) : l'écran les déplace jusqu'à GLAISE. */
-export const GLAISE_DU_DESSIN = auGue(16.0, 20.4);
+export const GLAISE = (() => {
+  const p = FOUILLE_MODELE.find((f) => f.quoi?.startsWith("gisement de glaise"))!;
+  return auGue(p.x, p.z);
+})();
 
 // ---------- Le fond de vallée (repris du modèle : ZR, VN, VS, HL) ----------
 

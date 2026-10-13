@@ -1,5 +1,5 @@
-// Plan 0.8.2 (chantier F) : le gué à l'écran. La motte de glaise suit le gisement (R2) ; l'aulne qui couvrait l'ancienne
-// place s'efface ; « Haler le bac » est proposé partout sur le radeau, dès qu'on y monte (R3) ; l'Éteint qui dérive
+// Plan 0.8.2 (chantier F) : le gué à l'écran. La motte de glaise est là où le jeu place le gisement, à découvert (R2,
+// le modèle de la 0.8.3) ; « Haler le bac » est proposé partout sur le radeau, dès qu'on y monte (R3) ; l'Éteint qui dérive
 // ne met en mode Combat que qui marche sur le radier.
 
 import { test } from "node:test";
@@ -21,9 +21,8 @@ const contexte2d: unknown = new Proxy(
 );
 Object.assign(globalThis, { document: { createElement: () => ({ width: 1, height: 1, style: {}, getContext: () => contexte2d }) } });
 
-const { RenduGue, ARBRE_DE_LA_VASE } = await import("./gue.ts");
-const { BAC, GLAISE, GLAISE_DU_DESSIN, ID_DERIVE, RADIER, RADEAU_AU_REPOS } = await import("../../../commun/src/gue.ts");
-const { estomperToits } = await import("./halte.ts");
+const { RenduGue } = await import("./gue.ts");
+const { BAC, GLAISE, ID_DERIVE, RADIER, RADEAU_AU_REPOS } = await import("../../../commun/src/gue.ts");
 
 /** Les sommets visibles (au-dessus du sol) à moins de `r` m de (x, z), dans tout le décor. */
 function sommetsAutour(racine: THREE.Object3D, x: number, z: number, r: number, yMin = 0.05): number {
@@ -44,25 +43,24 @@ function sommetsAutour(racine: THREE.Object3D, x: number, z: number, r: number, 
   return n;
 }
 
-test("R2 : la motte et la bêche du modèle sont là où le jeu place la glaise ; plus rien à l'ancienne place", () => {
+test("R2 : la motte et la bêche du modèle sont là où le jeu place la glaise, et rien ne la couvre", () => {
   const gue = new RenduGue(() => {});
   const g = gue.toutConstruire();
   assert.ok(sommetsAutour(g, GLAISE.x, GLAISE.z, 1.2) > 50, "la motte au milieu de la berge");
-  assert.equal(sommetsAutour(g, GLAISE_DU_DESSIN.x, GLAISE_DU_DESSIN.z, 0.9, 0.1), 0, "plus de motte sous l'arbre");
-});
-
-test("R2 : l'aulne de la vase s'efface quand il cache le joueur, et revient ensuite", () => {
-  const gue = new RenduGue(() => {});
-  const g = gue.toutConstruire();
-  const arbre: THREE.Mesh[] = [];
-  g.traverse((o) => o.name === "gue:arbre-vase" && arbre.push(o as THREE.Mesh));
-  assert.ok(arbre.length > 0, "l'arbre est une couche à part");
-  const opacite = () => Math.min(...arbre.map((m) => (m.material as THREE.Material).opacity));
-  // Le joueur au pied de l'arbre (là où il creusait) : l'arbre s'efface.
-  for (let i = 0; i < 30; i++) estomperToits(g, ARBRE_DE_LA_VASE.x - 0.5, ARBRE_DE_LA_VASE.z - 2, 0.05);
-  assert.ok(opacite() < 0.3, `effacé (${opacite()})`);
-  for (let i = 0; i < 30; i++) estomperToits(g, 120, 30, 0.05);
-  assert.ok(opacite() > 0.95, "revenu");
+  // À découvert : aucun houppier au-dessus d'elle ni entre elle et la caméra (au sud, de part et d'autre).
+  g.updateMatrixWorld(true);
+  let haut = 0;
+  const v = new THREE.Vector3();
+  g.traverse((o) => {
+    const m = o as THREE.Mesh;
+    if (!m.isMesh || (m as unknown as THREE.InstancedMesh).isInstancedMesh) return;
+    const pos = m.geometry.getAttribute("position");
+    for (let i = 0; i < pos.count; i++) {
+      v.fromBufferAttribute(pos, i).applyMatrix4(m.matrixWorld);
+      if (v.y > 2.5 && Math.abs(v.x - GLAISE.x) < 3 && v.z > GLAISE.z - 2 && v.z < GLAISE.z + 8) haut++;
+    }
+  });
+  assert.equal(haut, 0, "rien de haut autour de la glaise");
 });
 
 test("R3 : « Haler le bac » est proposé partout sur le plancher du radeau, dès qu'on y monte, à quai comme au milieu", () => {

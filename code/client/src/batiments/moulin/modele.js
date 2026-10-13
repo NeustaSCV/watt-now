@@ -18,7 +18,7 @@
 
 import * as THREE from "three";
 import {
-  Batiment, PALETTE, matiere, matiereMonde, matiereTexture, matiereVerre, matiereLueur, mur, lierre as lierreA, touffes,
+  Batiment, Chantier, PALETTE, matiere, matiereMonde, matiereTexture, matiereVerre, matiereLueur, mur, lierre as lierreA, touffes,
   semerTouffes as semerA, gravats, debris as debrisA, jonchee as joncheeA, arbuste, arbre, raiDeLumiere as raiA, flaque,
   dessiner, taches, aleatoire,
 } from "../commun/atelier.js";
@@ -132,6 +132,12 @@ export const FICHE = {
   ],
   // Les pièces sombres (une lampe y est utile) : la salle de la roue, les meules nord, le magasin.
   piecesSombres: ["salle de la roue", "meules nord", "magasin"],
+  // Les objets à part, nommés : creer() les range dans groupe.userData.objets (le jeu les efface quand on les prend, ou
+  // quand on ouvre la grande porte : il cache « porteFermee » et montre « porteOuverte », cachée au départ).
+  objets: { porteFermee: "grande porte fermée", porteOuverte: "grande porte ouverte", cle: "grosse clé", fourche: "fourche", etau: "étau" },
+  // Les bords du lot (à pied) : une haie au nord et à l'ouest, un muret au sud et à l'est ; ouverts sur la rivière,
+  // le halage (nord) et la route (est, au pont).
+  bords: "haie au nord et à l'ouest, muret de pierre au sud et à l'est ; ouverts sur la rivière, le halage et la route",
 };
 
 // ---------- Mesures du lieu ----------
@@ -142,7 +148,7 @@ const RIV = { x1: 17, x2: 25 }; // la rivière
 const BIEF = { x1: 9.5, x2: 13 }; // le bief
 const Z_VANNE = -7; // la vanne motrice (fermée)
 const BRECHE = { z1: -16, z2: -14 }; // la vanne de décharge, dans la levée
-const PLANCHE = { z1: -21.45, z2: -20.55 }; // la planche sur le bief, du jardin à la levée
+const PLANCHE = { z1: -21.6, z2: -20.4 }; // la planche sur le bief (1,2 m), du jardin à la levée
 const JONC = { z1: 4, z2: 8 }; // le canal de fuite rejoint la rivière
 const Y_HAUT = -0.6; // l'eau du bief, en amont de la vanne
 const Y_BAS = -1.5; // l'eau de la rivière et du canal de fuite
@@ -261,7 +267,9 @@ export function creer({ usure = 0.7 } = {}) {
   const b = new Batiment(1789, usure);
   // Les couches qui s'effacent : le haut des murs, les étages et les toits de chaque bâtiment ; la roue.
   const T = b.couche("moulin et minoterie", { x: -5, z: -5, l: 26.8, p: 16.8 }, CUT, 19.5);
-  const Ro = b.couche("roue", { x: 11.25, z: -3, l: 2.4, p: 6 }, 0, 3.9);
+  // La couche « roue » couvre la roue ET le rouet et sa lanterne (dans la salle de la roue) : ils s'effacent quand ils
+  // cachent le personnage, dans le couloir du rouet comme sur le bief.
+  const Ro = b.couche("roue", { x: 8.78, z: -3, l: 7.75, p: 6 }, 0, 3.9);
   const L = b.couche("logis du meunier", { x: -25.5, z: -1, l: 10, p: 11 }, CUT, 7.2);
   const D = b.couche("dépendances", { x: -15, z: 12.5, l: 18.9, p: 7.9 }, CUT, 5.6);
   const J = b.couche("mur du jardin", { x: -25, z: -6, l: 14.4, p: 1.0 }, CUT, 2.2);
@@ -287,6 +295,7 @@ export function creer({ usure = 0.7 } = {}) {
   atelier(k);
   cour(k);
   jardin(k);
+  limites(k);
   abords(k);
   camp(k);
 
@@ -305,7 +314,24 @@ export function creer({ usure = 0.7 } = {}) {
     M.lumineux.emissiveIntensity = 0.95 + 0.22 * Math.sin(t * 13.1) * Math.sin(t * 7.3);
   };
   b.ajouter(anime);
-  return b.construire();
+  const groupe = b.construire();
+  // Les objets que le jeu efface ou montre (FICHE.objets) : la grande porte fermée, puis ouverte (cachée au départ),
+  // la grosse clé du tableau, la fourche de l'étable, l'étau de l'établi du rhabilleur.
+  const objets = {};
+  for (const [cle, nom] of Object.entries(FICHE.objets)) objets[cle] = groupe.getObjectByName(nom) ?? null;
+  if (objets.porteOuverte) objets.porteOuverte.visible = false;
+  groupe.userData.objets = objets;
+  return groupe;
+}
+
+/** Un objet à part, nommé (un seul matériau : un seul appel de dessin) : on le bâtit, puis on l'ajoute au lieu. */
+function objetNomme(k, nom, graine, bâtir) {
+  const ch = new Chantier(graine);
+  bâtir(ch);
+  const g = ch.construire();
+  g.name = nom;
+  k.b.ajouter(g);
+  return g;
 }
 
 // ---------- Outils de géométrie ----------
@@ -944,16 +970,20 @@ function moulin(k) {
   }
   // La grande porte, à deux battants, FERMÉE À CLÉ (la grosse clé est au tableau de l'atelier) : le bas des battants
   // reste visible, le haut s'efface avec la façade. Ferrures, grosse serrure, heurtoir.
+  // Deux couches nommées, que le jeu échange à l'ouverture : « grande porte fermée » et « grande porte ouverte » (cachée
+  // au départ). Elles s'effacent comme la façade quand elles cachent le personnage. Un seul matériau chacune.
+  const PF = k.b.couche("grande porte fermée", { x: 1, z: 1.05, l: 2.0, p: 0.4 }, 0, 2.7);
   for (const [x1, x2] of [[0.1, 0.98], [1.02, 1.9]]) {
-    c.pave(x1, 0.03, 0.94, x2, CUT, 1.06, COUL.boisGris, M.planches, { nuance: 0.04 });
-    T.pave(x1, CUT, 0.94, x2, 2.58, 1.06, COUL.boisGris, M.planches, { nuance: 0.04 });
-    c.pave(x1 + 0.04, 0.4, 1.06, x2 - 0.04, 0.52, 1.1, COUL.boisSombre, M.planches, { nuance: 0.06 });
-    T.pave(x1 + 0.04, 2.0, 1.06, x2 - 0.04, 2.12, 1.1, COUL.boisSombre, M.planches, { nuance: 0.06 });
-    for (const y of [0.5, 2.1]) (y < CUT ? c : T).pave(x1 < 1 ? x1 : x2 - 0.55, y - 0.04, 1.1, x1 < 1 ? x1 + 0.55 : x2, y + 0.04, 1.12, COUL.fer, M.tole, { crasse: false });
+    PF.pave(x1, 0.03, 0.94, x2, 2.58, 1.06, COUL.boisGris, M.planches, { nuance: 0.04 });
+    for (const y of [0.46, 2.06]) PF.pave(x1 + 0.04, y - 0.06, 1.06, x2 - 0.04, y + 0.06, 1.1, COUL.boisSombre, M.planches, { nuance: 0.06 });
+    for (const y of [0.5, 2.1]) PF.pave(x1 < 1 ? x1 : x2 - 0.55, y - 0.04, 1.1, x1 < 1 ? x1 + 0.55 : x2, y + 0.04, 1.12, COUL.fer, M.planches, { crasse: false, nuance: 0 });
   }
-  T.pave(0.86, 1.02, 1.08, 1.14, 1.3, 1.16, COUL.fer, M.tole, { crasse: false }); // la serrure
-  T.pave(0.97, 1.08, 1.16, 1.03, 1.18, 1.17, 0x101010, M.mat, { crasse: false }); // le trou de la clé
-  T.poser(new THREE.TorusGeometry(0.09, 0.018, 4, 10), M.tole, COUL.fer, { x: 1.35, y: 1.55, z: 1.13 }, { crasse: false });
+  PF.pave(0.86, 1.02, 1.08, 1.14, 1.3, 1.16, COUL.fer, M.planches, { crasse: false, nuance: 0 }); // la serrure
+  PF.pave(0.97, 1.08, 1.16, 1.03, 1.18, 1.17, 0x101010, M.planches, { crasse: false, nuance: 0 }); // le trou de la serrure
+  PF.poser(new THREE.TorusGeometry(0.09, 0.018, 4, 10), M.planches, COUL.fer, { x: 1.35, y: 1.55, z: 1.13 }, { crasse: false, nuance: 0 });
+  const PO = k.b.couche("grande porte ouverte", { x: 1, z: 1.6, l: 3.6, p: 1.6 }, 0, 2.7);
+  vantail(PO, 0.1, 1.33, 0, 0.88, 2.55, -1.75, COUL.boisGris);
+  vantail(PO, 1.9, 1.33, PI, 0.88, 2.55, 1.6, COUL.boisGris);
   k.b.obstacle(0.1, 1.0, 1.9, 1.0, "grande porte (fermée à clé ; reste ouverte une fois déverrouillée)");
   // La porte de la roue, BOUCHÉE par l'éboulis du plancher de l'étage : on voit par-dessus, on ne passe pas
   c.boite(1.15, 0.07, 2.2, COUL.boisGris, { x: 6.2, y: 0.05, z: 2.6, ry: 0.15 }, M.planches, { nuance: 0.05 });
@@ -1103,11 +1133,14 @@ function salleDesMeules(k) {
   c.pave(1.2, 0.82, -10.68, 3.0, 0.95, -10.12, chene, M.planches);
   for (const x of [1.3, 2.9]) for (const z of [-10.6, -10.2]) c.pave(x - 0.06, 0.05, z - 0.06, x + 0.06, 0.82, z + 0.06, 0x5a4230, M.mat);
   c.pave(1.25, 0.3, -10.62, 2.95, 0.35, -10.18, chene, M.planches);
-  c.pave(2.45, 0.95, -10.35, 2.85, 1.05, -10.12, COUL.fer, M.tole); // l'étau : la semelle
-  c.pave(2.5, 1.05, -10.3, 2.62, 1.3, -10.12, COUL.fer, M.tole); // le mors fixe
-  c.pave(2.68, 1.05, -10.3, 2.8, 1.3, -10.12, COUL.fer, M.tole); // le mors mobile
-  c.tube([2.65, 1.2, -10.05], [2.65, 1.2, -9.75], 0.025, COUL.fer, M.tole, 5); // la vis
-  c.tube([2.5, 1.2, -9.75], [2.8, 1.2, -9.75], 0.018, COUL.fer, M.tole, 4); // la barre
+  // L'étau : un objet à part (« étau »), que le jeu efface quand on le prend
+  objetNomme(k, "étau", 77, (e) => {
+    e.pave(2.45, 0.95, -10.35, 2.85, 1.05, -10.12, COUL.fer, M.tole); // la semelle
+    e.pave(2.5, 1.05, -10.3, 2.62, 1.3, -10.12, COUL.fer, M.tole); // le mors fixe
+    e.pave(2.68, 1.05, -10.3, 2.8, 1.3, -10.12, COUL.fer, M.tole); // le mors mobile
+    e.tube([2.65, 1.2, -10.05], [2.65, 1.2, -9.75], 0.025, COUL.fer, M.tole, 5); // la vis
+    e.tube([2.5, 1.2, -9.75], [2.8, 1.2, -9.75], 0.018, COUL.fer, M.tole, 4); // la barre
+  });
   // Les marteaux et les pics à rhabiller, la règle à rhabiller, la pierre à aiguiser
   for (let i = 0; i < 3; i++) {
     c.boite(0.06, 0.05, 0.4, chene, { x: 1.45 + i * 0.22, y: 0.98, z: -10.4, ry: 0.2 * i }, M.mat, { crasse: false });
@@ -1173,7 +1206,7 @@ function diable(ch, x, z, ry) {
 // ---------- La salle de la roue ----------
 
 function salleDeLaRoue(k) {
-  const { c, T, b, usure } = k;
+  const { c, T, Ro, b, usure } = k;
   // La cloison de planches entre les deux salles (coupée)
   murBandes(k, T, [4.2, 0.7], [4.2, -10.7], { h: 3.6, cut: CUTI, ep: 0.12, bandes: [{ y1: 0, y2: 3.6, mat: M.planches, couleur: COUL.boisGris }], ouvertures: [{ u: 2.4, l: 1.5, bas: 0, haut: 2.3, type: "vide" }, { u: 10.4, l: 1.4, bas: 0, haut: 2.2, type: "vide" }] });
   for (const z of [0.6, -1.7 + 0.8, -1.7 - 0.8, -5.5, -8.9, -10.6]) c.pave(4.1, 0, z - 0.1, 4.3, CUTI + 0.15, z + 0.1, COUL.boisSombre, M.mat);
@@ -1199,37 +1232,46 @@ function salleDeLaRoue(k) {
   b.obstacle(fx1 - 0.1, -2.5, fx1 - 0.1, fz2 + 0.1, "fosse du rouet");
   b.obstacle(fx1 - 0.1, fz2 + 0.1, fx2 + 0.1, fz2 + 0.1, "fosse du rouet");
   b.obstacle(fx1 - 0.1, fz1 - 0.1, fx2 + 0.1, fz1 - 0.1, "fosse du rouet");
+  // Côté est (vers le palier de l'arbre) : une lisse, coupée au passage de l'arbre, et l'obstacle
+  c.pave(fx2 + 0.06, 0.95, fz1 - 0.12, fx2 + 0.14, 1.02, ROUE.z - 0.3, COUL.boisGris, M.mat);
+  c.pave(fx2 + 0.06, 0.95, ROUE.z + 0.3, fx2 + 0.14, 1.02, fz2 + 0.12, COUL.boisGris, M.mat);
+  b.obstacle(fx2 + 0.1, fz1 - 0.1, fx2 + 0.1, fz2 + 0.1, "fosse du rouet");
   // Le rouet : l'engrenage maître, jante de chêne, bras en croix, alluchons sur sa face ouest (quelques-uns manquent)
   const { y, z } = ROUE;
   const xr = 6.4;
   const r = 1.6;
   const n = 14;
+  // (dans la couche « roue » : il s'efface quand il cache le personnage dans le couloir du rouet)
   for (let i = 0; i < n; i++) {
     const a = ((i + 0.5) / n) * PI * 2;
-    c.repere({ x: xr, y, z, rx: a }, () => c.boite(0.26, 0.3, 2 * r * Math.sin(PI / n) + 0.04, 0x765a40, { y: r - 0.15 }, M.mat, { nuance: 0.05, crasse: false }));
+    Ro.repere({ x: xr, y, z, rx: a }, () => Ro.boite(0.26, 0.3, 2 * r * Math.sin(PI / n) + 0.04, 0x765a40, { y: r - 0.15 }, M.mat, { nuance: 0.05, crasse: false }));
   }
-  for (let i = 0; i < 4; i++) c.repere({ x: xr, y, z, rx: (i * PI) / 4 }, () => c.boite(0.2, 2 * r - 0.25, 0.22, COUL.boisSombre, {}, M.mat, { crasse: false }));
-  c.tube([xr - 0.3, y, z], [xr + 0.3, y, z], 0.32, COUL.boisSombre, M.mat, 8);
+  for (let i = 0; i < 4; i++) Ro.repere({ x: xr, y, z, rx: (i * PI) / 4 }, () => Ro.boite(0.2, 2 * r - 0.25, 0.22, COUL.boisSombre, {}, M.mat, { crasse: false }));
+  Ro.tube([xr - 0.3, y, z], [xr + 0.3, y, z], 0.32, COUL.boisSombre, M.mat, 8);
   for (let i = 0; i < 36; i++) {
-    if (c.hasard() < 0.1 + usure * 0.12) continue;
+    if (Ro.hasard() < 0.1 + usure * 0.12) continue;
     const a = (i / 36) * PI * 2;
-    c.repere({ x: xr, y, z, rx: a }, () => c.boite(0.22, 0.12, 0.1, 0x9a7e5c, { x: -0.24, y: r - 0.14 }, M.mat, { crasse: false, nuance: 0.06 }));
+    Ro.repere({ x: xr, y, z, rx: a }, () => Ro.boite(0.22, 0.12, 0.1, 0x9a7e5c, { x: -0.24, y: r - 0.14 }, M.mat, { crasse: false, nuance: 0.06 }));
   }
   // Des alluchons tombés au fond de la fosse et sur le sol
   for (let i = 0; i < 5; i++) c.boite(0.1, 0.1, 0.24, 0x9a7e5c, { x: c.entre(fx1 + 0.2, fx2 + 0.8), y: i < 3 ? -0.8 : 0.1, z: c.entre(fz1 + 0.3, fz2 - 0.3), ry: c.hasard() * 3, rx: c.hasard() }, M.mat, { crasse: false });
   // Le palier de l'arbre, contre le mur
   c.pave(7.0, 0, z - 0.35, 7.65, 0.78, z + 0.35, COUL.pierre, M.pierre);
   c.pave(7.05, 0.78, z - 0.25, 7.6, 0.86, z + 0.25, COUL.boisSombre, M.mat);
-  b.obstacle(7.0, z - 0.35, 7.0, z + 0.35, "palier");
+  // Le palier est un bloc : ses quatre côtés
+  b.obstacle(7.0, z - 0.35, 7.0, z + 0.35, "palier de l'arbre");
+  b.obstacle(7.0, z - 0.35, 7.7, z - 0.35, "palier de l'arbre");
+  b.obstacle(7.0, z + 0.35, 7.7, z + 0.35, "palier de l'arbre");
   // La lanterne et le gros fer (arbre vertical), la couronne sous le plafond
   const xl = 5.62;
-  c.tube([xl, 0.05, z], [xl, 3.55, z], 0.11, COUL.boisSombre, M.mat, 6);
-  c.poser(geoCyl(0.2, 0.2, 0.08, 6), M.tole, COUL.fer, { x: xl, y: 0.06, z }, { crasse: false });
-  lanterne(c, xl, 2.2, z, 0.34, 0.5);
-  c.poser(geoCyl(0.85, 0.85, 0.14, 12), M.mat, 0x765a40, { x: xl, y: 3.0, z }, { crasse: false });
+  // (dans la couche « roue », comme le rouet)
+  Ro.tube([xl, 0.05, z], [xl, 3.55, z], 0.11, COUL.boisSombre, M.mat, 6);
+  Ro.poser(geoCyl(0.2, 0.2, 0.08, 6), M.tole, COUL.fer, { x: xl, y: 0.06, z }, { crasse: false });
+  lanterne(Ro, xl, 2.2, z, 0.34, 0.5);
+  Ro.poser(geoCyl(0.85, 0.85, 0.14, 12), M.mat, 0x765a40, { x: xl, y: 3.0, z }, { crasse: false });
   for (let i = 0; i < 16; i++) {
     const a = (i / 16) * PI * 2;
-    c.boite(0.08, 0.16, 0.12, 0x9a7e5c, { x: xl + Math.cos(a) * 0.75, y: 3.15, z: z + Math.sin(a) * 0.75, ry: -a }, M.mat, { crasse: false });
+    Ro.boite(0.08, 0.16, 0.12, 0x9a7e5c, { x: xl + Math.cos(a) * 0.75, y: 3.15, z: z + Math.sin(a) * 0.75, ry: -a }, M.mat, { crasse: false });
   }
   // Le levier de la vanne, des chaînes, un seau
   c.poutre([7.4, 0.05, -8.8], [7.5, 2.4, -8.6], 0.1, COUL.boisGris, M.mat);
@@ -1390,12 +1432,12 @@ function magasin(k) {
   const { c, b, usure } = k;
   c.pave(-17.78, 0, -12.78, -4.22, 0.05, -3.15, 0x9a8264, M.planches, { crasse: false, nuance: 0 });
   // Les piles de sacs, certains pétrifiés, d'autres crevés
-  pileSacs(c, -16.5, -11.4, 0, 3, 2, 4, 0.35 + usure * 0.2);
+  pileSacs(c, -16.9, -11.4, 0, 2, 2, 4, 0.35 + usure * 0.2); // reculée contre le mur ouest : la porte de derrière est libre
   pileSacs(c, -16.5, -7.4, 0, 2, 2, 3, 0.4);
   pileSacs(c, -13.6, -12.0, PI / 2, 2, 2, 2, 0.5);
   pileSacs(c, -5.6, -5.0, 0.1, 1, 2, 2, 0.6);
-  b.obstacle(-17.6, -9.9, -15.2, -9.9, "sacs");
-  b.obstacle(-15.2, -12.7, -15.2, -9.9, "sacs");
+  b.obstacle(-17.6, -9.9, -16.2, -9.9, "sacs");
+  b.obstacle(-16.2, -12.7, -16.2, -9.9, "sacs");
   b.obstacle(-15.6, -6.2, -15.6, -8.6, "sacs");
   // Sacs crevés : la farine répandue, durcie en croûte grise
   for (const [x, z] of [[-14.2, -9.4], [-9.6, -11.8], [-6.5, -7.2]]) {
@@ -1566,7 +1608,7 @@ function logis(k) {
   murBandes(k, L, [-30, 4], [-21, 4], { h: 2.9, ep: 0.5, bandes: enduit, ouvertures: [{ u: 2.5, l: 0.9, bas: 0.95, haut: 2.15, ...fen, volet: "pendu" }, { u: 6.5, l: 0.9, bas: 0.95, haut: 2.15, ...fen, volet: "ouvert" }] });
   murBandes(k, L, [-30, -6], [-30, 4], { h: 2.9, cut: 2.9, ep: 0.5, bandes: enduit });
   murBandes(k, L, [-21, -6], [-30, -6], { h: 2.9, cut: 2.9, ep: 0.5, bandes: enduit, ouvertures: [{ u: 4.5, l: 0.8, bas: 1.15, haut: 2.05, ...fen }] });
-  murBandes(k, L, [-30, -1], [-21, -1], { h: 2.9, cut: CUTI, ep: 0.15, bandes: [{ y1: 0, y2: 2.9, mat: M.enduit, couleur: 0xe0d6be }], ouvertures: [{ u: 4, l: 0.9, bas: 0, haut: 2.1, type: "vide" }] });
+  murBandes(k, L, [-30, -1], [-21, -1], { h: 2.9, cut: CUTI, ep: 0.15, bandes: [{ y1: 0, y2: 2.9, mat: M.enduit, couleur: 0xe0d6be }], ouvertures: [{ u: 4, l: 1.2, bas: 0, haut: 2.1, type: "vide" }] });
   // Linteau de bois de la porte, la porte entrouverte, le seuil
   L.pave(-21.3, 2.2, 1.4, -20.7, 2.4, 2.6, COUL.boisSombre, M.mat);
   vantail(L, -21.0, 1.5, -PI / 2, 0.95, 2.15, -1.3, 0x6f7f74);
@@ -1712,7 +1754,7 @@ function dependances(k) {
   murBandes(k, D, [-24, 16], [-6, 16], { h: 3.0, ep: 0.45, bandes: pierre, ouvertures: [{ u: 4, l: 1.0, bas: 1.0, haut: 2.2, type: "vide" }, { u: 12, l: 0.6, bas: 1.6, haut: 2.2, type: "vide" }, { u: 16, l: 0.6, bas: 1.6, haut: 2.2, type: "vide" }], breches: usure > 0.5 ? [{ u: 8.5, l: 2.4, profondeur: 1.3 * usure }] : [] });
   murBandes(k, D, [-6, 16], [-6, 9], { h: 3.0, ep: 0.45, bandes: pierre, ouvertures: [{ u: 3.5, l: 2.4, bas: 0, haut: 2.6, type: "vide" }] });
   murBandes(k, D, [-24, 9], [-24, 16], { h: 3.0, cut: 3.0, ep: 0.45, bandes: pierre });
-  murBandes(k, D, [-15, 16], [-15, 9], { h: 3.0, cut: CUTI, ep: 0.4, bandes: [{ y1: 0, y2: 3.0, mat: M.pierre, couleur: 0xb2aa9a }], ouvertures: [{ u: 5.5, l: 1.0, bas: 0, haut: 2.2, type: "vide" }] });
+  murBandes(k, D, [-15, 16], [-15, 9], { h: 3.0, cut: CUTI, ep: 0.4, bandes: [{ y1: 0, y2: 3.0, mat: M.pierre, couleur: 0xb2aa9a }], ouvertures: [{ u: 5.5, l: 1.2, bas: 0, haut: 2.2, type: "vide" }] });
   // Les portes : celles de la cour (ouvertes), le grand portail de l'étable (un battant arraché)
   vantail(c, -9.3, 8.77, PI, 1.35, 2.35, -1.2, COUL.boisGris);
   vantail(c, -18.8, 8.77, PI, 1.35, 2.35, -0.6, 0x6f7f74);
@@ -1764,8 +1806,11 @@ function etable(k) {
   for (const [x, z, ry] of [[-13.6, 11.6, 0.2], [-13.1, 12.3, 1.5]]) c.boite(0.9, 0.45, 0.45, 0xc4ae62, { x, y: 0.26, z, ry }, M.mat, { nuance: 0.05 });
   cylindre(c, M.metal, 0x9aa0a2, -7.0, 0.03, 9.8, 0.17, 0.55, 8);
   c.poser(geoCyl(0.18, 0.15, 0.3, 8), M.tole, 0x6a6560, { x: -7.6, y: 0.18, z: 10.3, rz: PI / 2 - 0.2 }, { crasse: false });
-  c.poutre([-6.5, 0.03, 10.6], [-6.45, 1.6, 10.2], 0.035, COUL.boisGris, M.mat);
-  for (let i = 0; i < 4; i++) c.boite(0.02, 0.32, 0.02, COUL.fer, { x: -6.5 + (i - 1.5) * 0.06, y: 1.7, z: 10.15 }, M.tole, { crasse: false });
+  // La fourche à foin, dressée contre le mur : un objet à part (« fourche »), que le jeu efface quand on la prend
+  objetNomme(k, "fourche", 79, (e) => {
+    e.poutre([-6.5, 0.03, 10.6], [-6.45, 1.6, 10.2], 0.035, COUL.boisGris, M.tole);
+    for (let i = 0; i < 4; i++) e.boite(0.02, 0.32, 0.02, COUL.fer, { x: -6.5 + (i - 1.5) * 0.06, y: 1.7, z: 10.15 }, M.tole, { crasse: false });
+  });
   for (const x of [-12.5, -11.8]) c.poser(new THREE.TorusGeometry(0.28, 0.04, 3, 10), M.mat, 0x3a2e24, { x, y: 1.9, z: 9.27 }, { crasse: false });
   c.poser(new THREE.TorusGeometry(0.62, 0.06, 4, 14), M.mat, 0x6a5038, { x: -14.7, y: 0.66, z: 12.0, ry: PI / 2, rz: 0.15 }, { crasse: false });
   for (let i = 0; i < 6; i++) c.repere({ x: -14.7, y: 0.66, z: 12.0, ry: PI / 2, rz: 0.15 }, () => c.boite(1.2, 0.05, 0.05, 0x6a5038, { rz: (i * PI) / 6 }, M.mat, { crasse: false }));
@@ -1822,10 +1867,13 @@ function atelier(k) {
     if (i === 3) continue; // la grosse clé pend au quatrième clou
     if (i !== 1) c.boite(0.02, 0.09, 0.012, 0x8a8478, { x, y: 1.55, z: 9.3 }, M.metal, { crasse: false });
   }
-  c.poser(new THREE.TorusGeometry(0.04, 0.012, 4, 8), M.metal, 0x6a6058, { x: -16.85, y: 1.58, z: 9.31 }, { crasse: false });
-  c.boite(0.025, 0.16, 0.02, 0x6a6058, { x: -16.85, y: 1.46, z: 9.31 }, M.metal, { crasse: false });
-  c.boite(0.05, 0.04, 0.02, 0x6a6058, { x: -16.83, y: 1.39, z: 9.31 }, M.metal, { crasse: false });
-  c.boite(0.09, 0.055, 0.012, 0xc8b48c, { x: -16.74, y: 1.52, z: 9.32, rz: 0.2 }, M.mat, { crasse: false }); // l'étiquette de bois
+  // La grosse clé : un objet à part (« grosse clé »), que le jeu efface quand on la décroche
+  objetNomme(k, "grosse clé", 78, (e) => {
+    e.poser(new THREE.TorusGeometry(0.04, 0.012, 4, 8), M.metal, 0x6a6058, { x: -16.85, y: 1.58, z: 9.31 }, { crasse: false });
+    e.boite(0.025, 0.16, 0.02, 0x6a6058, { x: -16.85, y: 1.46, z: 9.31 }, M.metal, { crasse: false });
+    e.boite(0.05, 0.04, 0.02, 0x6a6058, { x: -16.83, y: 1.39, z: 9.31 }, M.metal, { crasse: false });
+    e.boite(0.09, 0.055, 0.012, 0xc8b48c, { x: -16.74, y: 1.52, z: 9.32, rz: 0.2 }, M.metal, { crasse: false }); // l'étiquette de bois
+  });
   // La meule à aiguiser, le billot et sa hache
   c.poser(geoCyl(0.42, 0.42, 0.12, 12), M.pierre, 0xb0a898, { x: -16.6, y: 0.8, z: 10.3, rz: PI / 2 }, { crasse: false });
   c.pave(-16.95, 0.03, 10.0, -16.25, 0.45, 10.6, chene, M.mat);
@@ -1908,10 +1956,10 @@ function jardin(k) {
   for (const [x1, x2] of [[-32, -30.25], [-20.75, -18.22]]) {
     murBandes(k, J, [x1, -6], [x2, -6], { h: 2.0, ep: 0.4, bandes: pierre });
     J.pave(x1 - 0.05, 2.0, -6.28, x2 + 0.05, 2.1, -5.72, 0xb8ad96, M.pierre, { crasse: false });
-    for (const s of [-1, 1]) J.boite(x2 - x1 + 0.1, 0.05, 0.4, COUL.tuile, { x: (x1 + x2) / 2, y: 2.16, z: -6 + s * 0.15, rx: s * 0.5 }, M.mat, { crasse: false, nuance: 0.05 });
+    for (const s of [-1, 1]) J.boite(x2 - x1 + 0.1, 0.05, 0.4, COUL.tuile, { x: (x1 + x2) / 2, y: 2.16, z: -6 + s * 0.15, rx: s * 0.5 }, M.pierre, { crasse: false, nuance: 0.05 });
   }
   lierre(c, -19.5, 0, -5.78, 0, 2.2, 0.85, Math.round(30 * usure));
-  lierre(J, -19.5, CUT, -5.78, 0, 2.0, 1.1, Math.round(30 * usure));
+  lierre(c, -19.5, CUT, -5.78, 0, 2.0, 1.1, Math.round(30 * usure));
 
   // L'if, penché sur le bief : tronc rouge brun, ramure sombre et dense, quelques baies
   c.tube([8.3, 0, -16.5], [8.8, 1.3, -16.55], 0.2, 0x7a4a36, M.mat, 7);
@@ -1923,9 +1971,9 @@ function jardin(k) {
   for (let i = 0; i < 8; i++) c.boite(0.05, 0.05, 0.05, 0xa8322a, { x: 8.3 + c.entre(0.2, 1.8), y: c.entre(1.7, 2.6), z: -16.5 + c.entre(-0.9, 0.9) }, M.satin, { crasse: false });
   b.obstacle(8.1, -16.7, 8.5, -16.3, "if");
 
-  // La planche sur le bief : deux madriers posés d'une margelle à l'autre, un piquet et une corde de chaque côté
+  // La planche sur le bief : trois madriers posés d'une margelle à l'autre (1,2 m), un piquet et une corde de chaque côté
   const { z1, z2 } = PLANCHE;
-  for (const [za, zb] of [[z1 + 0.02, z1 + 0.43], [z2 - 0.43, z2 - 0.02]]) c.pave(BIEF.x1 - 0.3, 0.1, za, BIEF.x2 + 0.3, 0.18, zb, COUL.boisGris, M.planches, { nuance: 0.06 });
+  for (const [za, zb] of [[z1 + 0.02, z1 + 0.4], [z1 + 0.41, z1 + 0.79], [z1 + 0.8, z2 - 0.02]]) c.pave(BIEF.x1 - 0.3, 0.1, za, BIEF.x2 + 0.3, 0.18, zb, COUL.boisGris, M.planches, { nuance: 0.06 });
   c.pave(BIEF.x1 + 1.5, 0.18, z1, BIEF.x1 + 1.7, 0.21, z2, COUL.boisSombre, M.planches); // une traverse clouée
   for (const x of [BIEF.x1 - 0.35, BIEF.x2 + 0.35]) for (const z of [z1 - 0.08, z2 + 0.08]) c.pave(x - 0.05, 0, z - 0.05, x + 0.05, 1.0, z + 0.05, COUL.boisGris, M.mat);
   for (const z of [z1 - 0.08, z2 + 0.08]) c.boite(BIEF.x2 - BIEF.x1 + 0.7, 0.025, 0.025, 0xb09a72, { x: (BIEF.x1 + BIEF.x2) / 2, y: 0.8, z }, M.mat, { crasse: false });
@@ -1940,6 +1988,56 @@ function jardin(k) {
   });
   // Les traces du halage : un chemin d'herbe rase sur la levée
   c.pave(13.6, 0.0, -27, 16.4, 0.012, -15.8, 0xa49a7a, M.terrain, { crasse: false });
+}
+
+// ---------- Les bords du lot : on y bute, il faut les voir ----------
+
+function limites(k) {
+  const { c, b } = k;
+  const A = aleatoire(4242);
+  // Une haie bocagère (nord, ouest) : derrière le joueur vu de la caméra, elle peut être haute
+  const haie = (x1, z1, x2, z2) => {
+    const L = Math.hypot(x2 - x1, z2 - z1);
+    const n = Math.max(1, Math.round(L / 1.6));
+    for (let i = 0; i < n; i++) {
+      const t = (i + 0.5) / n;
+      const x = x1 + (x2 - x1) * t;
+      const z = z1 + (z2 - z1) * t;
+      const h = 1.3 + A() * 0.6;
+      const lx = x1 === x2 ? 1.0 : L / n + 0.2;
+      const lz = x1 === x2 ? L / n + 0.2 : 1.0;
+      c.boite(lx, h, lz, [COUL.herbeSombre, 0x557a40, 0x4f6e3a][i % 3], { x, y: h / 2, z, ry: (A() - 0.5) * 0.08 }, M.mat, { nuance: 0.07 });
+    }
+    b.obstacle(x1, z1, x2, z2, "limite du lot (haie)");
+  };
+  // Un muret de pierres sèches (sud, est) : du côté de la caméra, il reste bas
+  const muret = (x1, z1, x2, z2) => {
+    const L = Math.hypot(x2 - x1, z2 - z1);
+    const n = Math.max(1, Math.round(L / 1.2));
+    for (let i = 0; i < n; i++) {
+      const t = (i + 0.5) / n;
+      const x = x1 + (x2 - x1) * t;
+      const z = z1 + (z2 - z1) * t;
+      const h = 0.55 + A() * 0.15;
+      const lx = x1 === x2 ? 0.5 : L / n + 0.02;
+      const lz = x1 === x2 ? L / n + 0.02 : 0.5;
+      c.boite(lx, h, lz, A() < 0.5 ? COUL.pierreGrise : 0x9c958a, { x, y: h / 2, z }, M.pierre, { nuance: 0.05 });
+    }
+    const pts = [];
+    for (let i = 0; i < L / 7; i++) {
+      const t = A();
+      pts.push([x1 + (x2 - x1) * t + (x1 === x2 ? (A() - 0.5) * 0.8 : 0), z1 + (z2 - z1) * t + (z1 === z2 ? (A() - 0.5) * 0.8 : 0)]);
+    }
+    touffes(c, pts, COUL.herbeSeche);
+    b.obstacle(x1, z1, x2, z2, "limite du lot (muret)");
+  };
+  haie(-31.5, -26.5, 9, -26.5); // nord, jusqu'au bief (le halage reste ouvert)
+  haie(25.5, -26.5, 31.5, -26.5); // nord, au-delà de la rivière
+  haie(-31.5, -26.5, -31.5, -6.7); // ouest, jusqu'au mur du jardin
+  haie(-31.5, -5.2, -31.5, 26.5); // ouest, au sud du mur du jardin
+  muret(31.5, -26.5, 31.5, 13.3); // est, jusqu'à la route
+  muret(-31.5, 26.5, 16.5, 26.5); // sud, jusqu'à la rivière
+  muret(25.5, 26.5, 31.5, 26.5); // sud, au-delà de la rivière
 }
 
 // ---------- Les abords : saules, roseaux, nénuphars, la cabane à canards, le grand panneau ----------

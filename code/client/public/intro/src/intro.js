@@ -174,7 +174,7 @@ export async function jouerAccueil(conteneur, o = {}) {
     const [m, k, acteurs] = await Promise.all([import('../src3d/cinematique3d.js'), import('../src3d/kenney.js'), import('../src3d/acteurs.js')]);
     k.definirBase(new URL(base, location.href).pathname);
     att.avancer(0.2);
-    await acteurs.pret();
+    await acteurs.pret({ gestes: false });   // les écrans d'accueil n'utilisent que les gestes du jeu
     att.avancer(0.6);
     const qualite = o.qualite || (matchMedia('(pointer: coarse)').matches ? 'basse' : 'haute');
     const cine = m.monterCinematique3D(racine, { famille, apparence: o.apparence, accueilSeul: true, qualite });
