@@ -16,6 +16,7 @@ import { CAPACITE_SAC, CONTENANTS, OBJETS, capaciteDe, estCleObjet, estObjet, lu
 import { compter, estMaitrisee, estObjetDeMetier, retirerExemplaires, typeDe, type CleObjet } from "../../commun/src/etoiles.ts";
 import { NOMS_INSTALLATIONS, RECETTES, dureeReelle, ingredientsPresents, multiplicateurQualites, niveauQualite, recette, recettesConnues, type Recette, type TypeInstallation } from "../../commun/src/recettes.ts";
 import { estHorsFamille, etoilesDuProduit, recetteAvecFacon, recettePour } from "../../commun/src/recettes.ts";
+import { texteTropLourd } from "./trop-lourd.ts";
 import { chezLaFamille, estManuel, type Savoir } from "../../commun/src/savoir.ts";
 import { lireManuel, type ParticipantLecon } from "./lecon.ts";
 import {
@@ -965,7 +966,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
         if (refusCle) return this.info(refusCle);
         const total = prixVenteCle(op.objet) * n;
         if (total > enPoche + 1e-6) return this.info(`Il te faut ${formaterWotts(total)} en bons. Gagne-les : dépose de l'électricité, vends, ou pédale pour les Compteurs.`);
-        if (poidsInventaire(this.inventaire, this.gourde.litres) + OBJETS[typeDe(op.objet)].poids * n > capaciteDe(this.inventaire)) return this.sacTropLourd();
+        if (poidsInventaire(this.inventaire, this.gourde.litres) + OBJETS[typeDe(op.objet)].poids * n > capaciteDe(this.inventaire)) return this.sacTropLourd({ [op.objet]: n });
         if (!this.comptoir.sortirDuStock(op.objet, n)) return;
         this.poche = ajouterWotts(this.poche, -total, instant);
         this.mesurer("wotts", "achat", -total, { objet: op.objet, n });
@@ -1242,7 +1243,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       commencer: (libelle, duree, appliquer, bruit) => j.commencer(libelle, duree, appliquer, 0, bruit),
       info: (t) => j.info(t),
       envoyer: (m) => j.envoyer(m),
-      sacTropLourd: () => j.sacTropLourd(),
+      sacTropLourd: (vise) => j.sacTropLourd(vise),
       vivant: () => j.vivant,
       noterFait: (f) => j.noterFait(f),
       recetteVisible: (id) => j.recetteVisible(id),
@@ -1562,7 +1563,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     const ou = this.cooperatives.radio(this.compte.id);
     if (!ou) return;
     if (!this.proche(ou.x, ou.z, DISTANCE_INTERACTION + 0.5)) return this.info("Approche-toi.");
-    if (poidsInventaire(this.inventaire, this.gourde.litres) + poidsDe({ radio_piles: 1 }) > capaciteDe(this.inventaire)) return this.sacTropLourd();
+    if (poidsInventaire(this.inventaire, this.gourde.litres) + poidsDe({ radio_piles: 1 }) > capaciteDe(this.inventaire)) return this.sacTropLourd({ radio_piles: 1 });
     if (!this.cooperatives.prendreRadio(this.compte.id, this.maintenant())) return;
     this.ajouterPlusieurs({ radio_piles: 1 });
     this.info("Tu glisses la radio dans ton sac. Pose-la où tu veux attirer les Éteints, puis allume-la.");
@@ -1764,7 +1765,11 @@ export class Joueur implements Voyageur, ParticipantLecon {
         poids += unite * k;
       }
     }
-    if (Object.keys(pris).length === 0) return this.sacTropLourd();
+    // Rien n'y entre, pas même le plus léger : c'est de lui qu'on dit le poids.
+    if (Object.keys(pris).length === 0) {
+      const plusLeger = entrees.map(([t]) => t).sort((a, b) => OBJETS[typeDe(a)].poids - OBJETS[typeDe(b)].poids)[0];
+      return this.sacTropLourd(plusLeger ? { [plusLeger]: 1 } : undefined);
+    }
     this.commencer("Ramasser", 1.5, () => {
       const encore = this.sacsIci().find((s) => s.id === tas.id);
       if (!encore) return;
@@ -1967,7 +1972,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     } else {
       const dispo = contenu[objet] ?? 0;
       if (dispo < n) return;
-      if (poidsInventaire(this.inventaire, this.gourde.litres) + OBJETS[typeDe(objet)].poids * n > capaciteDe(this.inventaire) + 1e-9) return this.sacTropLourd();
+      if (poidsInventaire(this.inventaire, this.gourde.litres) + OBJETS[typeDe(objet)].poids * n > capaciteDe(this.inventaire) + 1e-9) return this.sacTropLourd({ [objet]: n });
       let part = 0;
       if (batterie) {
         part = ((charges[b] ?? 0) * n) / dispo;
@@ -2850,7 +2855,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     }
     const facteur = multiplicateurQualites(this.outils(), usage.qualites);
     if (facteur === null) return this.infos(outilsManquantsBref(usage.qualites, this.outils(), undefined, this.recetteVisible));
-    if (poidsInventaire(this.inventaire, this.gourde.litres) + poidsDe(usage.donne) > capaciteDe(this.inventaire)) return this.sacTropLourd();
+    if (poidsInventaire(this.inventaire, this.gourde.litres) + poidsDe(usage.donne) > capaciteDe(this.inventaire)) return this.sacTropLourd(usage.donne);
     this.commencer(usage.libelle, (usage.duree * facteur) / REGLAGES.gestes_vitesse, () => {
       const instant = this.maintenant();
       if (this.lieu !== lieu || !this.ressourceLibre(r, instant)) return;
@@ -2901,13 +2906,10 @@ export class Joueur implements Voyageur, ParticipantLecon {
   }
   private readonly derniersIndices = new Map<string, number>();
 
-  /** Le sac est trop lourd : on dit de combien, et comment s'en sortir. */
-  private sacTropLourd(): void {
+  /** Le sac est trop lourd : on dit ce que pèse ce qu'on voulait prendre (`vise`), où en est le sac, et comment s'en sortir. */
+  private sacTropLourd(vise?: Inventaire): void {
     this.noterFait("trop_lourd");
-    const capacite = capaciteDe(this.inventaire);
-    const sansSac = capacite < CAPACITE_SAC && !(this.inventaire.sac_fortune ?? 0);
-    this.info(`${sansSac ? "Tes poches sont pleines" : "Ton sac est trop lourd"} (${Math.round(poidsInventaire(this.inventaire, this.gourde.litres))} kg sur ${capacite}) : jette (Sac → Jeter) ou range dans un coffre.`);
-    if (sansSac) this.info("Sans sac, tu ne portes que 10 kg : reprends le tien, ou fabrique un sac de fortune (4 branches, 2 cordes).");
+    for (const ligne of texteTropLourd(this.inventaire, this.gourde.litres, vise)) this.info(ligne);
   }
 
   /** Fabriquer un objet ou poser une installation (Book 02 §2). */
@@ -3310,7 +3312,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
           : "Raté : elle s'enfuit en caquetant. Approche en allure discrète, sans geste brusque.",
       );
     }
-    if (poidsInventaire(this.inventaire, this.gourde.litres) + OBJETS.poule.poids > capaciteDe(this.inventaire)) return this.sacTropLourd();
+    if (poidsInventaire(this.inventaire, this.gourde.litres) + OBJETS.poule.poids > capaciteDe(this.inventaire)) return this.sacTropLourd({ poule: 1 });
     this.poules = this.poules.filter((x) => x !== p);
     this.faune.prises.push(this.maintenant());
     this.base.sauverFaune(this.compte.id, this.faune);
@@ -3447,7 +3449,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
   /** Rendre des objets au sac : refusé (et dit) si le sac ne peut pas les porter. */
   private peutReprendre(objets: Inventaire, enMoins: Inventaire = {}): boolean {
     if (poidsInventaire(this.inventaire, this.gourde.litres) - poidsInventaire(enMoins) + poidsInventaire(objets) <= capaciteDe(this.inventaire) + 1e-9) return true;
-    this.sacTropLourd();
+    this.sacTropLourd(objets);
     return false;
   }
 

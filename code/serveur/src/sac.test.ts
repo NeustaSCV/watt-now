@@ -36,8 +36,8 @@ test("effondré, on n'a plus que ses poches ; on fabrique un sac de fortune ; un
   const pierre = j.bienvenue(0).ressources.find((r) => r.type === "pierre")!;
   j.position = { x: pierre.x, z: pierre.z, o: 0 };
   j.recevoir({ t: "interagir", cible: { genre: "ressource", id: pierre.id }, verbe: "ramasser" });
-  // Deux messages courts : les poches pleines, puis comment s'en sortir sans sac.
-  assert.match(infos().slice(-2).join(" "), /poches sont pleines/);
+  // Deux messages courts : la pierre et ses 2 kg, les poches à 8,2 kg sur 10 (0.8.2), puis comment s'en sortir sans sac.
+  assert.match(infos().slice(-2).join(" "), /^Pierre, 2 kg : trop lourd, tes poches sont à 8,2 kg sur 10\..*sac de fortune/);
 
   j.recevoir({ t: "fabriquer", recette: "sac_fortune" });
   attendre(3);
