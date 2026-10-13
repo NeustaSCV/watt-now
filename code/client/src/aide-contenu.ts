@@ -67,7 +67,7 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
         liste: [
           "Sac : {sac} · Fabriquer : {fabriquer} · Carte : {carte} · Carnet : {carnet}.",
           "Lumière portée : {lumiere} (si tu as une torche, une lampe ou une lanterne).",
-          "Lancer, tirer : {lancer} (maintenir pour viser). Voir « Lancer, tirer à l'arc et à l'arbalète ».",
+          "Lancer, tirer : {lancer} (maintenir pour viser). Voir « Lancer et tirer ».",
           "Tourner la vue d'un quart de tour : {tourner}. Sur ordinateur, Maj + {tourner} tourne dans l'autre sens, et la molette zoome.",
           "Échap ferme la fenêtre ouverte.",
           "Sur ordinateur, le menu ⚙ → Commandes permet de changer chaque touche. Le jeu part d'un clavier AZERTY.",
@@ -414,9 +414,9 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
       { sous_titre: "Les armes" },
       "En Combat, tu frappes avec l'arme **équipée** (Sac → l'arme → Équiper pour le combat), sinon avec la meilleure de ton sac. Chaque arme montre dans le sac ses **dégâts**, sa **vitesse** et son **allonge**, comparés aux autres, et si elle tue d'un coup appuyé à la tête. Une longue arme garde l'Éteint à distance ; une lourde frappe fort mais lentement. À mains nues, ça ne suffit pas.",
       { sous_titre: "Contondant, tranchant, perçant, électrique" },
-      "Une seule règle : **le casque**. Certains Éteints en portent un. Le **tranchant** (hache, machette, couteaux) glisse dessus ; le **contondant** (marteau, masse, gourdin…) passe, et étourdit plus longtemps ; le **perçant** (épieu, lance) vaut par son allonge, et la flèche passe par la visière, de face ; l'**électrique** passe le casque (voir « L'électricité contre les Éteints »). Le sac indique le type de chaque arme.",
+      "Une seule règle : **le casque**. Certains Éteints en portent un. Le **tranchant** (hache, couteaux) glisse dessus ; le **contondant** (marteau, masse, gourdin…) passe, et étourdit plus longtemps ; le **perçant** (épieu, lance) vaut par son allonge, et la flèche passe par la visière, de face ; l'**électrique** passe le casque (voir « L'électricité contre les Éteints »). Le sac indique le type de chaque arme.",
       { sous_titre: "Les armes de métier" },
-      "Chaque famille a la sienne : les **lames** forgées des Charbonniers, solides et rapides ; les **armes électriques** des Voltaïques, qui raidissent avant d'éteindre ; l'**arbalète** des Mécanistes, qui frappe de loin. Chacune a son terrain ; aucune ne fait tout. Et l'**arc** est à tout le monde.",
+      "Chaque famille a la sienne, qu'elle découvre avec son métier, quand le meuble de sa famille est complet. Chacune a son terrain ; aucune ne fait tout. Et l'**arc** est à tout le monde.",
       { sous_titre: "L'usure" },
       "Chaque coup qui touche use l'arme en main. Sous 30 %, elle est **abîmée** (le jeu te prévient) : ses coups portent moins. À zéro, elle **casse** et laisse un débris, qui se démonte (Sac → Démonter) pour en tirer un peu de matière. La solidité se lit dans le sac.",
       "**Rafistoler** (Sac → l'arme) : partout, avec une ficelle et des chiffons, elle tient, sans redevenir neuve. Pour de bon, rapporte-la **sur son meuble**, chez toi, et **Reprends**-la : voir « Faire évoluer une arme ». Une lame cassée laisse une lame ébréchée : un forgeron la reforge.",
@@ -425,10 +425,10 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
   {
     id: "tirer",
     icone: "🏹",
-    titre: "Lancer, tirer à l'arc et à l'arbalète",
-    resume: "Le bouton Lancer, la visée, le tir plein, réarmer l'arbalète, ramasser ses flèches.",
+    titre: "Lancer et tirer",
+    resume: "Le bouton Lancer, la visée, le tir plein, réarmer, ramasser ses flèches.",
     blocs: [
-      "Le bouton **Lancer** ({lancer}, ou le clic du milieu ; sur téléphone, le bouton rond « Lancer », quand tu as de quoi lancer) sert à tout ce qui part de ta main : une pierre, un réveil, une hachette, une flèche, un carreau.",
+      "Le bouton **Lancer** ({lancer}, ou le clic du milieu ; sur téléphone, le bouton rond « Lancer », quand tu as de quoi lancer) sert à tout ce qui part de ta main : une pierre, un réveil, une flèche…",
       { sous_titre: "Choisir ce qui part" },
       "Sac → l'objet → « **Prêt à lancer** » ou « **Prêt à tirer** ». Sans choix, c'est une pierre. Ton arme de contact reste en main : tu as les deux à la fois.",
       { sous_titre: "Viser" },
@@ -443,13 +443,13 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
       { sous_titre: "L'arc" },
       "Tout le monde sait faire un arc : une perche ou une branche droite, une corde. Bande-le en maintenant {lancer} : relâché trop tôt, c'est un **tir rapide**, au corps ; quand le cercle s'est refermé, c'est un **tir plein**. Il faut ensuite encocher la flèche suivante. Tenir l'arc bandé trop longtemps fait trembler le bras et use ton souffle.",
       "La pointe compte : une flèche simplement durcie au feu blesse, mais ne perce pas un crâne. L'arc est l'arme la plus discrète du jeu.",
-      { sous_titre: "L'arbalète (les Mécanistes)" },
-      "Elle se porte **armée** : le carreau part dès que tu relâches, sans rien bander, et porte loin. Ensuite, {lancer} la **réarme** : quelques secondes **sans bouger**. La plus lourde demande un outil pour la réarmer.",
+      { sous_titre: "Une arme qui se réarme" },
+      "Certaines armes de tir se portent **armées** : le trait part dès que tu relâches, sans rien bander, et porte loin. Ensuite, {lancer} la **réarme** : quelques secondes **sans bouger**. La plus lourde demande un outil.",
       { sous_titre: "Ce qu'il faut savoir" },
       {
         liste: [
           "**Saisi, on ne tire pas** : dégage-toi d'abord ({examiner}).",
-          "Un Éteint **casqué** ne meurt d'une flèche ou d'un carreau que **de face**, par la visière, et de plus près.",
+          "Un Éteint **casqué** ne meurt d'une flèche ou d'un trait que **de face**, par la visière, et de plus près.",
           "**Ramasse tes munitions** : ce qui manque tombe au sol, ce qui touche reste sur le corps. Elles cassent parfois ; dans la mare, elles sont perdues.",
           "Le tir éclaircit **avant** le contact. Contre trois Éteints sur toi, il te faut une arme de contact.",
         ],
@@ -462,7 +462,7 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
     titre: "Les étoiles d'un objet",
     resume: "La qualité des armes de métier, de ★ à ★★★★★ : d'où elle vient, ce qu'elle change.",
     blocs: [
-      "Les **objets de métier** (lames, arcs, arbalètes, armes électriques) ont une qualité, de ★ à ★★★★★. Un caillou n'en a pas. La case du sac montre « 3★ », la fiche les cinq étoiles.",
+      "Les **objets de métier** (les armes de ton métier, les arcs) ont une qualité, de ★ à ★★★★★. Un caillou n'en a pas. La case du sac montre « 3★ », la fiche les cinq étoiles.",
       { sous_titre: "D'où viennent les étoiles" },
       "**La moins bonne des trois choses fixe la qualité** : la matière, le geste, les outils. Une lame d'un excellent acier, trempée à la va-vite, reste une lame moyenne. Fabriquer dix fois le même objet fait de toi un maître : une étoile de plus.",
       { sous_titre: "Ce qu'elles changent" },
@@ -470,7 +470,7 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
         liste: [
           "Plus d'étoiles : plus de **dégâts**, et une arme qui **dure** plus longtemps (une ★★★★★ dure deux fois plus qu'une ★★★).",
           "Une arme électrique raidit plus longtemps, et éteint plus vite.",
-          "Un arc ou une arbalète arrête un Éteint à la tête de plus loin.",
+          "Une arme de tir arrête un Éteint à la tête de plus loin.",
           "Deux exemplaires d'étoiles différentes ne s'empilent pas. Au Comptoir, ils se vendent selon leurs étoiles.",
         ],
       },
@@ -487,7 +487,7 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
       "Une arme ne se jette pas quand elle s'use : on la **reprend**. Rapporte celle que tu portes **près de son meuble**, chez toi, puis Sac → l'arme → **Reprendre**. Loin du meuble, le sac te dit où aller.",
       {
         liste: [
-          "Le bois et les arcs, à l'**établi** ; les lames, à la **meule** du pédalier ou à la **forge** ; le métal, à la forge ; les armes électriques, au **banc solaire**.",
+          "Le bois et les arcs, à l'**établi** ; les lames, à la **meule** du pédalier ou à la **forge** ; le métal, à la forge ; une arme de métier, au meuble de sa famille.",
           "Ce que ta famille ne sait pas reprendre, une autre le sait : échangez.",
         ],
       },
@@ -523,7 +523,7 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
     id: "electricite",
     icone: "🔌",
     titre: "L'électricité contre les Éteints",
-    resume: "Raidir, faire lâcher, éteindre : les armes des Voltaïques, leur charge et leur recharge.",
+    resume: "Raidir, faire lâcher, éteindre : ce que fait le courant, la charge et la recharge.",
     blocs: [
       "**Une décharge courte le fait lâcher et le raidit. Maintenue sur un Éteint debout, elle le met à terre ; maintenue sur un Éteint raidi ou à terre, elle l'éteint pour de bon. Le casque n'y change rien.**",
       { sous_titre: "Au combat" },
@@ -640,7 +640,7 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
     id: "gue",
     icone: "🌊",
     titre: "Le gué",
-    resume: "Le Gué-aux-Saules : le radier qui gronde, la crue et le bac, la cloche, les ricochets, la glaise.",
+    resume: "Le Gué-aux-Saules : le radier qui gronde, la crue et le bac, la cloche, les ricochets, la rive.",
     blocs: [
       "Sur la seconde route, à la même distance que la station : une halte au bord de la rivière, **partagée** comme la station. Des Éteints y rôdent.",
       { sous_titre: "Le radier" },
@@ -653,8 +653,8 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
       "La cloche du passeur sonne fort, et loin : les Éteints l'entendent aussi. Sonnée au bon moment, elle les attire **ailleurs que là où tu vas**.",
       { sous_titre: "Les ricochets" },
       "Une pierre lancée sur l'eau ({lancer}, tenu un instant) ricoche et claque plus loin : de quoi détourner un Éteint, sans te montrer. Lâchée trop vite, elle coule.",
-      { sous_titre: "La glaise" },
-      "Le long de la rive, la **glaise** se creuse (il faut de quoi creuser), à volonté. Elle sert à calfater et à maçonner : tes meubles te diront où.",
+      { sous_titre: "Ce qu'on creuse au bord de l'eau" },
+      "Le long de la rive, une matière se creuse (il faut de quoi creuser), à volonté. Tes meubles te diront à quoi elle sert.",
     ],
   },
   {
@@ -730,9 +730,9 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
       "Tu as choisi ta famille en créant ton personnage. Elle décide de ton kit de départ, de ta lumière, des recettes que tu connais en plus de celles de tout le monde, et de ton métier.",
       {
         liste: [
-          "🔥 **Charbonniers** : ceux qui savaient entretenir un feu quand tout s'est éteint. Leur affaire : le charbon de bois, la forge et les lames.",
-          "⚡ **Voltaïques** : les anciens de la Compagnie d'électricité. Leur affaire : stocker, recharger, capter l'énergie, et les armes électriques.",
-          "⚙️ **Mécanistes** : ceux qui n'avaient jamais vraiment eu besoin du réseau. Leur affaire : ce qui tourne, le pédalier, l'arbalète et les pièges.",
+          "🔥 **Charbonniers** : ceux qui savaient entretenir un feu quand tout s'est éteint. Leur affaire : le charbon de bois, le feu et la forge.",
+          "⚡ **Voltaïques** : les anciens de la Compagnie d'électricité. Leur affaire : stocker, recharger, capter l'énergie.",
+          "⚙️ **Mécanistes** : ceux qui n'avaient jamais vraiment eu besoin du réseau. Leur affaire : ce qui tourne, le pédalier et les pièges.",
         ],
       },
       "Chaque famille se débrouille **seule** pour l'essentiel : son arme, ses outils, ses installations. Mais **les autres ont ce qui te manque**, et inversement : une pièce, un service, une étoile de plus. Leurs recettes, tu peux les apprendre (voir « Le métier des autres ») ; souvent, il vaut mieux échanger.",

@@ -34,18 +34,22 @@ function monter(tuto: Partial<EtatTutoriel>, inventaire: Inventaire = { sac_a_do
   return { base, compte, connecter };
 }
 
-test("repas du tutoriel : six paliers, un toutes les deux étapes, de plus en plus nourrissants", () => {
+test("repas du tutoriel : six paliers, un toutes les deux étapes ; les quatre premiers de plus en plus nourrissants, les deux derniers réduits", () => {
   const titres = etapesTutoriel("charbonniers").map((e) => e.titre);
   const paliers = Object.keys(REPAS_DU_TUTORIEL).map(Number);
   assert.deepEqual(paliers.map((i) => titres[i]), ["Ramasser", "L'eau", "L'outil", "Le premier Éteint", "La carte", "La nuit"]);
   assert.equal(paliers.at(-1), NOMBRE_ETAPES - 1, "le dernier repas vient avec la fin");
   const kcal = paliers.map((i) => Object.entries(REPAS_DU_TUTORIEL[i]!.objets).reduce((s, [t, n]) => s + (OBJETS[t as keyof typeof OBJETS].kcal ?? 0) * (n ?? 0), 0));
-  for (let i = 1; i < kcal.length; i++) assert.ok(kcal[i]! >= kcal[i - 1]!, `le repas ${i + 1} cale au moins autant que le précédent (${kcal.join(", ")})`);
+  for (let i = 1; i < 4; i++) assert.ok(kcal[i]! >= kcal[i - 1]!, `le repas ${i + 1} cale au moins autant que le précédent (${kcal.join(", ")})`);
   for (const i of paliers) {
     const r = REPAS_DU_TUTORIEL[i]!;
     assert.ok(r.texte.length <= 60, `une ligne courte : ${r.texte}`);
     assert.doesNotMatch(r.texte, /cl[ée]/i);
   }
+  // Décision du porteur (2026-10-13) : les deux derniers réduits ; ≈ 2 140 kcal en tout, au lieu de ≈ 2 960.
+  assert.deepEqual(REPAS_DU_TUTORIEL[9]!.objets, { pommes_cuites: 1 });
+  assert.deepEqual(REPAS_DU_TUTORIEL[11]!.objets, { pot_au_feu: 1 });
+  assert.ok(kcal.reduce((a, b) => a + b, 0) < 2_200, `${kcal.reduce((a, b) => a + b, 0)} kcal en tout`);
 });
 
 test("repas du tutoriel : « Ramasser » réussi donne deux pommes, une fois, et le carnet le dit ; pas de nouveau à la reconnexion", () => {
@@ -64,15 +68,15 @@ test("repas du tutoriel : « Ramasser » réussi donne deux pommes, une fois, et
   assert.ok(!b.recus.some((m) => m.t === "tutoriel" && m.tutoriel?.repas), "aucune ligne de repas à la reconnexion");
 });
 
-test("repas du tutoriel : « L'eau » donne la poignée de noix ; « La nuit » finit le tutoriel avec deux pots-au-feu", () => {
+test("repas du tutoriel : « L'eau » donne la poignée de noix ; « La nuit » finit le tutoriel avec un pot-au-feu", () => {
   const eau = monter({ etape: 3, bouilli: true }).connecter();
   eau.attendre(1);
   assert.equal(eau.sac().noix, 1);
   const nuit = monter({ etape: 11, dormiAbri: true }).connecter();
   nuit.attendre(1);
-  assert.equal(nuit.sac().pot_au_feu, 2);
+  assert.equal(nuit.sac().pot_au_feu, 1);
   const fin = nuit.recus.findLast((m) => m.t === "tutoriel" && m.tutoriel?.termine) as Extract<MessageServeur, { t: "tutoriel" }>;
-  assert.deepEqual(fin.tutoriel!.repas, ["Le repas de ta première vraie nuit : deux pots-au-feu."]);
+  assert.deepEqual(fin.tutoriel!.repas, ["Le repas de ta première vraie nuit : un pot-au-feu."]);
 });
 
 test("repas du tutoriel : le sac plein, ce qui n'y tient pas tombe à ses pieds", () => {

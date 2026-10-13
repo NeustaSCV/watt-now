@@ -103,7 +103,9 @@ test("0.8 aide : « Améliorer sa base » — la pièce de dehors, l'indice, les
 
 test("0.8 aide : « Le gué » et « Le Moulin » disent leurs mécanismes", () => {
   const g = rubrique("gue");
-  for (const m of [/radier/, /crue/, /bac/, /cloche/, /ricoche/, /glaise/]) assert.match(g, m);
+  for (const m of [/radier/, /crue/, /bac/, /cloche/, /ricoche/, /se creuse/]) assert.match(g, m);
+  // 0.8.2 (chantier K, décision du porteur) : l'aide ne nomme pas la glaise du gué.
+  assert.doesNotMatch(g, /glaise/i);
   const m = rubrique("moulin");
   for (const x of [/grosse clé/, /grande porte/, /fosse/, /halage/, /24 h/]) assert.match(m, x);
 });
