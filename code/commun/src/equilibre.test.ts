@@ -258,16 +258,17 @@ test("0.8 : les valeurs décidées (§2.4) — marteau 40 qui ne tue plus à la 
 
 test("0.8 : les plafonds de la grille par les recettes (I13, Q-A5, Q-0.8-3) ; les dégâts montent avec les étoiles", () => {
   // La corde de joncs ★★, le fil dentaire et le boyau ★★★ ; l'arc d'if se monte ★★.
-  assert.equal(etoilesDuProduit(recette("corde_arc_corde")!, { corde: 1 }), 2);
+  assert.equal(etoilesDuProduit(recette("corde_arc_ficelle")!, { corde: 1 }), 2);
   assert.equal(etoilesDuProduit(recette("corde_arc_boyau")!, { boyaux: 1 }), 3);
   assert.equal(etoilesDuProduit(recette("arc_if")!, { ebauche_if_seche: 1, "corde_arc#4": 1 }), PLAFOND_ARC_IF_NIVEAU_1);
-  // La petite batterie, source de la matraque ★★ : même au module à bobine, ★★ ; au flash, ★.
-  const batterie = recette("matraque_petite_batterie")!;
+  // La petite batterie, source de la matraque ★★ : même au module à bobine, ★★ ; au flash, ★. Depuis la 0.8.2 (R16), c'est
+  // la matraque électrique elle-même, faite avec la petite batterie au lieu d'un pack.
+  const batterie = recette("matraque_electrique")!;
   assert.equal(etoilesDuProduit(batterie, { gourdin: 1, "module_decharge#2": 1, petite_batterie: 1, caoutchouc: 1 }), 2);
   assert.equal(etoilesDuProduit(batterie, { gourdin: 1, module_decharge: 1, petite_batterie: 1, caoutchouc: 1 }), 2);
   assert.equal(etoilesDuProduit(batterie, { gourdin: 1, "module_decharge#1": 1, petite_batterie: 1, caoutchouc: 1 }), 1);
   // Le même texte sur les deux fiches qui prennent la petite batterie (Q-B6).
-  assert.ok(batterie.note && batterie.note === recette("matraque_fortune")!.note);
+  assert.ok(batterie.note && batterie.note.endsWith(recette("matraque_fortune")!.note!));
   // Chaque plafond : la maîtrise donne une étoile de plus ; et les dégâts ne baissent jamais quand les étoiles montent.
   for (const [objet, p] of Object.entries(PLAFONDS_NIVEAU_1)) {
     if (p!.recette !== null) assert.equal(p!.maitrise, p!.recette + 1, objet);

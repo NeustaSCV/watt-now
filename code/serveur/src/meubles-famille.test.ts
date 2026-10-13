@@ -113,7 +113,7 @@ test("ce qui attend le niveau 2 ou 3 est grisé « plus tard » ; la clôture de
     glaive: "niveau 2",
   } as const;
   for (const [id, a] of Object.entries(plusTard)) assert.equal(recette(id)?.aVenir, a, id);
-  for (const id of ["banc_recharge", "pack_cellules", "module_flash", "module_raquette", "matraque_fortune", "matraque_electrique", "lampe_bricolee", "cloture_fortune", "alarme_electrique", "pedalier", "arbalete", "arc_arbalete_frene", "arc_arbalete_ressort", "forge", "pinces_forge", "rivet", "pointe_acier", "lame_forgee_fer", "machette_forgee_fer", "hachette", "charbonniere", "charbonniere_charbonnette"]) {
+  for (const id of ["banc_recharge", "pack_cellules", "module_decharge", "matraque_fortune", "matraque_electrique", "lampe_bricolee", "cloture_fortune", "alarme_electrique", "pedalier", "arbalete", "arc_arbalete_frene", "arc_arbalete_ressort", "forge", "pinces_forge", "rivet", "pointe_acier", "lame_forgee_fer", "machette_forgee_fer", "hachette", "charbonniere", "charbonniere_charbonnette"]) {
     assert.equal(recette(id)?.aVenir, undefined, id);
   }
 });

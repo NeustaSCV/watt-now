@@ -1212,6 +1212,13 @@ body {
   color: var(--canard);
 }
 
+/* Des ingrédients au choix (0.8.2) : « 3 ficelles ou 1 corde », sur la même ligne. */
+#hud .fabrication .puces .ou {
+  font-size: 11px;
+  font-style: italic;
+  color: #7a6a58;
+}
+
 #hud .fabrication .outil {
   font-size: 11px;
   font-weight: 700;

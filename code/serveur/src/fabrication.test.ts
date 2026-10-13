@@ -12,9 +12,11 @@ import { Joueur } from "./joueur.ts";
 /** Ces tests ne portent pas sur les Éteints : aucun ne vient de la lisière. */
 const JAMAIS_D_ETEINT = () => 1;
 
-function monter(inventaire?: Record<string, number>) {
+function monter(inventaire?: Record<string, number>, etabliEn?: { x: number; z: number }) {
   const base = new Base(":memory:");
   const compte = base.creerCompte("Rose", "potager42", "mecanistes");
+  // Un établi déjà posé (R13, 0.8.2 : on remmanche à côté).
+  if (etabliEn) base.ajouterInstallation(compte.id, "etabli", etabliEn.x, etabliEn.z, 0);
   // Ces tests portent sur autre chose que l'arbre de progression : tout est dévoilé (plan 0.8 : le vétéran
   // n'a plus d'emblée que les recettes à la main).
   base.sauverProgression(compte.id, toutDevoile("mecanistes"));
@@ -74,12 +76,18 @@ test("les outils sont des portes dures : il faut le niveau demandé (plan 0.8 §
   assert.equal(multiplicateurQualites({}, { marteler: 2 }), null);
 });
 
-test("remmancher la hache : la tête, une branche, de quoi couper et de quoi marteler (une pierre suffit)", () => {
+test("remmancher la hache : la tête, une branche, de quoi couper et de quoi marteler (une pierre suffit), près d'un établi", () => {
   const sansPierre = monter({ tete_hache: 1, branche: 1, couteau: 1 });
   sansPierre.joueur.recevoir({ t: "fabriquer", recette: "hache" });
   assert.match(sansPierre.infos().at(-1)!, /marteler \(niveau 1\), il te faut pierre ou marteau/);
 
-  const t = monter({ tete_hache: 1, branche: 1, couteau: 1, pierre: 1 });
+  // R13 (0.8.2) : loin d'un établi, non.
+  const loin = monter({ tete_hache: 1, branche: 1, couteau: 1, pierre: 1 });
+  loin.joueur.recevoir({ t: "fabriquer", recette: "hache" });
+  assert.match(loin.infos().at(-1)!, /établi/);
+
+  const t = monter({ tete_hache: 1, branche: 1, couteau: 1, pierre: 1 }, { x: 20, z: 21.5 });
+  t.joueur.position = { x: 20, z: 20, o: 0 };
   t.joueur.recevoir({ t: "fabriquer", recette: "hache" });
   t.attendre(5);
   assert.equal(t.dernier("inventaire")!.inventaire.hache, 1);

@@ -1086,6 +1086,30 @@ const VESTIGES_LOT1 = {
     teinte: "#5c5650",
     horsTirage: true,
   },
+  // 0.8.2 (R14, Q-0.8.2-4) : les deux condensateurs, qu'on ne trouve qu'en démontant un appareil (le flash jetable, la
+  // raquette à moustiques). Chacun fait le module de décharge, qui prend son étoile : le petit ★, le moyen ★★.
+  petit_condensateur: {
+    nom: "petit condensateur",
+    pluriel: "petits condensateurs",
+    description: "Le condensateur d'un flash, dessoudé, ses deux pattes encore tordues. Il garde une petite décharge en réserve.",
+    poids: 0.02,
+    valeur: 4,
+    famille: "composant",
+    rarete: "C",
+    teinte: "#3a6fb0",
+    horsTirage: true,
+  },
+  condensateur_moyen: {
+    nom: "condensateur moyen",
+    pluriel: "condensateurs moyens",
+    description: "Le condensateur d'une raquette à moustiques, avec son petit étage haute tension. Il claque plus fort que celui d'un flash.",
+    poids: 0.05,
+    valeur: 8,
+    famille: "composant",
+    rarete: "C",
+    teinte: "#2f7a5a",
+    horsTirage: true,
+  },
 } satisfies Record<string, DefinitionVestige>;
 
 /** Les vestiges : le lot 1 (0.3 et 0.6) et les déchets de l'Abondance (lot 2, 0.7 : vestiges-lot2.ts). */
@@ -1173,6 +1197,9 @@ export const DEMONTAGE: Partial<Record<TypeObjet, Demontage>> = {
   // Vider le bocal de clous (I2) : cinq poignées triées. Les flèches et les carreaux de clou prennent encore le bocal.
   bocal_clous: { donne: { poignee_clous: 5 }, qualites: {}, duree: 6 },
   ferraille_tordue: { donne: { barre_metal: 1 }, qualites: { marteler: 1 }, duree: 8 },
+  // ⚡ Les condensateurs (0.8.2, R14) : le flash jetable donne le petit, la raquette à moustiques le moyen.
+  appareil_photo_jetable: { donne: { petit_condensateur: 1 }, qualites: { visser: 1 }, duree: 3 },
+  raquette_moustiques: { donne: { condensateur_moyen: 1 }, qualites: { visser: 1 }, duree: 3 },
   // Les déchets de l'Abondance (lot 2, 0.7) : vestiges-lot2.ts.
   ...DEMONTAGE_LOT2,
 };

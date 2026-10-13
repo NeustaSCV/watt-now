@@ -109,3 +109,6 @@ export const NOUVEAUX_OBJETS_0_8: readonly TypeObjet[] = [
   "maillet",
   "planche_fendue",
 ];
+
+/** Les objets nouveaux de la 0.8.2 (chantier B, R14) : les deux condensateurs, des vestiges (vestiges.ts, bloc « 0.8.2 »). */
+export const NOUVEAUX_OBJETS_0_8_2: readonly TypeObjet[] = ["petit_condensateur", "condensateur_moyen"];

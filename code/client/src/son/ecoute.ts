@@ -7,7 +7,7 @@ const GROUPES: [string, (id: string) => boolean][] = [
   ["Éteints", (id) => id.startsWith("eteint_")],
   ["Contact et combat", (id) => ["saisie", "morsure", "morsure_manquee", "impact", "impact_appuye", "coup_tete", "chute_corps", "sifflement", "sifflement_lourd", "esquive", "degagement", "coeur", "effondrement"].includes(id)],
   ["Pas du joueur", (id) => id.startsWith("pas_")],
-  ["Feu et installations", (id) => ["buche_tombe", "extinction", "feu_crepite", "soufflet", "braises", "trempe", "chaine_velo", "roue_libre", "meule", "pinces", "bourdonnement", "interrupteur", "briquet", "pierre_a_feu"].includes(id)],
+  ["Feu et installations", (id) => ["buche_tombe", "extinction", "feu_crepite", "forge_attisee", "braises", "trempe", "chaine_velo", "roue_libre", "meule", "pinces", "bourdonnement", "interrupteur", "briquet", "pierre_a_feu"].includes(id)],
   ["Météo", (id) => id === "pluie" || id === "tonnerre"],
   ["Interface", (id) => id.startsWith("ui_")],
   ["Gestes et outils", () => true],

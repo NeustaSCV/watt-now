@@ -571,8 +571,11 @@ export const feuCrepite: Recette = (h) => {
   return p.boucler(0.6);
 };
 
-/** Le soufflet de forge : une grande respiration de cuir, puis les braises qui ronflent. */
-export const soufflet: Recette = (h) => {
+/**
+ * Le feu de forge qu'on attise : une grande bouffée d'air, puis les braises qui ronflent. (Avant la 0.8.2 : « soufflet » ;
+ * le mot est réservé au soufflet de forge, la clé de la forge ventilée.)
+ */
+export const forgeAttisee: Recette = (h) => {
   const p = new Piste(1.4, h);
   const d = entre(h, 0.7, 0.9);
   p.ajouter(souffle(d, h, { bruit: "rose", filtre: "passe-bas", f: (t) => 400 + 600 * Math.sin((Math.PI * t) / d), env: cloche(d) }), 0, 1);

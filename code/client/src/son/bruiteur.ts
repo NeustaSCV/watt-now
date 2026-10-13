@@ -113,8 +113,9 @@ export function gesteDe(libelle: string, bruit: BruitAction): Geste {
   if (l.startsWith("monter la meule") || l.startsWith("monter la dynamo") || l.startsWith("monter l'alternateur") || l.includes("panneau")) return { id: "visser", periode: 1.1 };
   if (l.startsWith("démonter") || l.startsWith("prendre la batterie") || l.startsWith("prendre les lames")) return { id: "demonter", periode: 1.2 };
   if (l.startsWith("remmancher")) return { id: "marteau_bois", periode: 0.9 };
-  // La forge : le soufflet sous les coups d'enclume, la trempe à la fin (son/LIVRAISON.md : sons livrés, enfin joués).
-  if (l.startsWith("forger")) return { id: "enclume", periode: 0.85, continu: "soufflet", fin: "trempe" };
+  // La forge : le feu attisé sous les coups d'enclume, la trempe à la fin (son/LIVRAISON.md : sons livrés, enfin joués).
+  // L'identifiant n'est plus « soufflet » (0.8.2) : le mot est réservé au soufflet de forge, la clé de la forge ventilée.
+  if (l.startsWith("forger")) return { id: "enclume", periode: 0.85, continu: "forge_attisee", fin: "trempe" };
   // Débiter du bois : la scie pour les planches, la hache pour les perches et les branches.
   if (l.includes("coffre") || l.includes("escabeau")) return { id: "scie", periode: 1.4 };
   if (l.includes("travois") || l.includes("lit de branchages") || l.includes("épieu") || l.includes("bâton") || l.includes("gourdin") || l.includes("sac de fortune"))

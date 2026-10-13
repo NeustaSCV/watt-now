@@ -205,9 +205,10 @@ test("arc : toutes les recettes de l'arc sont communes ; un arc monté vaut sa c
   }
   // L'arc de fortune : ★, quoi qu'on fasse.
   assert.equal(etoilesDuProduit(recette("arc_fortune")!, { perche_frene: 1, ficelle: 1 }), 1);
-  // Les cordes (plan 0.8 §2.4, I13) : ficelle et corde de joncs ★★, fil dentaire et boyau ★★★.
+  // Les cordes (plan 0.8 §2.4, I13) : ficelle et corde de joncs ★★ (une seule recette depuis la 0.8.2, R15), fil
+  // dentaire et boyau ★★★.
   assert.equal(etoilesDuProduit(recette("corde_arc_ficelle")!, { ficelle: 3 }), 2);
-  assert.equal(etoilesDuProduit(recette("corde_arc_corde")!, { corde: 1 }), 2);
+  assert.equal(etoilesDuProduit(recette("corde_arc_ficelle")!, { corde: 1 }), 2);
   assert.equal(etoilesDuProduit(recette("corde_arc_dentaire")!, { fil_dentaire: 1 }), 3);
   assert.equal(etoilesDuProduit(recette("corde_arc_boyau")!, { boyaux: 1 }), 3);
   // Le frêne fait ★★★ ; avec une corde de ficelle, ★★. L'if se monte ★★ au niveau 1 (Q-A2b), quelle que soit la corde.

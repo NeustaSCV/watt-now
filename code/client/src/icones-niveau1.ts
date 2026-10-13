@@ -200,6 +200,33 @@ export const DESSINS_NIVEAU1: Record<string, string> = {
     <path d="M35 9 L37 6 L39 9 L41 7 L42 11 L44 11 L43 15" fill="#a08058" stroke-width="1.4" ${T}/>
     <path d="M5 33 L3 36 L7 37 L6 39 L8 38" fill="none" stroke-width="1.4" ${T}/>
     <path d="M20 26 l4 -3" stroke="${ENCRE}" stroke-width="1" opacity="0.5"/>`,
+  // ---------- ⚡ Les condensateurs (0.8.2, R14) ----------
+  // Le petit condensateur (celui d'un flash) : un petit cylindre bleu debout, sa bande claire marquée « − », le dessus
+  // d'aluminium et sa croix, deux pattes tordues.
+  petit_condensateur: `
+    <ellipse cx="24" cy="41" rx="12" ry="3" fill="#3b2a1e" opacity="0.16"/>
+    <path d="M20.5 32 Q20 36 17 37.5 Q14.5 39 14 42" fill="none" stroke="${ACIER_SOMBRE}" stroke-width="1.8" stroke-linecap="round"/>
+    <path d="M27.5 32 Q28.5 37 32 38 Q35 39 35.5 42" fill="none" stroke="${ACIER_SOMBRE}" stroke-width="1.8" stroke-linecap="round"/>
+    <path d="M16 12 Q16 9 24 9 Q32 9 32 12 V30 Q32 33 24 33 Q16 33 16 30 Z" fill="#3a6fb0" ${T}/>
+    <path d="M27 10.5 Q30.5 11 31 12.5 V30 Q30.5 31.5 27 32 Z" fill="#c9d8ea" stroke="none"/>
+    <path d="M29 16 V18 M29 21 V23 M29 26 V28" stroke="#3a6fb0" stroke-width="1.6" stroke-linecap="round"/>
+    <ellipse cx="24" cy="12" rx="8" ry="3" fill="${ACIER}" ${T}/>
+    <path d="M21.5 11 L26.5 13 M26.5 11 L21.5 13" stroke="${ENCRE}" stroke-width="0.9" stroke-linecap="round"/>
+    <path d="M18.5 15 V29" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round" opacity="0.55"/>`,
+  // Le condensateur moyen (celui d'une raquette à moustiques) : un gros cylindre vert couché sur sa petite carte, la
+  // bobine cuivrée de l'étage haute tension à côté, deux fils qui en sortent.
+  condensateur_moyen: `
+    <ellipse cx="24" cy="42" rx="19" ry="3" fill="#3b2a1e" opacity="0.16"/>
+    <path d="M4 30 H44 V39 H4 Z" fill="#3f7a4a" ${T}/>
+    <circle cx="8" cy="36" r="1" fill="${ACIER}"/><circle cx="40" cy="36" r="1" fill="${ACIER}"/>
+    <path d="M10 37 H18 M30 37 H38" stroke="#c9b25a" stroke-width="1" opacity="0.8"/>
+    <path d="M7 15 Q7 11 11 11 H31 Q35 11 35 15 V25 Q35 29 31 29 H11 Q7 29 7 25 Z" fill="#2f7a5a" ${T}/>
+    <path d="M9 12.5 H31 Q33 12.5 33.5 14.5 H8.5 Q8.5 12.5 9 12.5 Z" fill="#cfe3d6" stroke="none"/>
+    <path d="M13 13.5 H15 M18 13.5 H20 M23 13.5 H25" stroke="#2f7a5a" stroke-width="1.4" stroke-linecap="round"/>
+    <ellipse cx="35" cy="20" rx="2.6" ry="9" fill="${ACIER}" ${T}/>
+    <path d="M10 19 H32" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round" opacity="0.5"/>
+    <path d="M37 22 H41 V24 H37 Z M37 25.5 H41 V27.5 H37 Z" fill="#c8743a" stroke-width="1" ${T}/>
+    <path d="M37.5 17 L40 17 L42 11 M37.5 19 L42 19 L45 14" fill="none" stroke="#b3243a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>`,
   // ---------- Les installations nouvelles (plan 0.8, chantier 6) ----------
   // Le râtelier à outils : deux montants, une traverse à chevilles, une hache, un marteau et une scie pendus.
   ratelier_outils: `

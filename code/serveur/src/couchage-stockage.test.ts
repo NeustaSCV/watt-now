@@ -94,8 +94,11 @@ test("le coffre cerclé tient 250 kg et demande Marteler 2 : le marteau remmanch
   assert.equal(pierre.installation(1).niveau ?? 1, 1, "la pierre ne martèle qu'à 1");
   assert.match(pierre.infos().at(-1)!, /marteler \(niveau 2\)/);
 
-  // Le marteau remmanché, à la main : la tête de marteau de la caisse et une branche.
-  const t = monter({ ...cout, tete_marteau: 1, branche: 1, couteau: 1, pierre: 1 }, (b, id) => b.ajouterInstallation(id, "coffre", 21, 20, 0));
+  // Le marteau remmanché, près d'un établi (R13, 0.8.2) : la tête de marteau de la caisse et une branche.
+  const t = monter({ ...cout, tete_marteau: 1, branche: 1, couteau: 1, pierre: 1 }, (b, id) => {
+    b.ajouterInstallation(id, "coffre", 21, 20, 0);
+    b.ajouterInstallation(id, "etabli", 19, 20, 0);
+  });
   t.joueur.recevoir({ t: "fabriquer", recette: "marteau" });
   t.attendre(4);
   assert.equal(t.sac().marteau, 1);

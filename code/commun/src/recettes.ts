@@ -256,6 +256,13 @@ export interface Recette {
   /** Ce qui reste en plus (Book 25 §9.6) : plumer une poule laisse des plumes et un os. */
   sousProduits?: Inventaire;
   ingredients: Inventaire;
+  /**
+   * Des ingrédients au choix (0.8.2, chantier B : R14, R15, R16) : en plus de `ingredients`, **l'une** de ces façons
+   * (« 3 ficelles ou 1 corde »), comme les `couts` d'une étape de lignée. On fait la recette avec la première façon qu'on
+   * a dans le sac, dans l'ordre de la liste (`faconDisponible`), et c'est elle qu'on consomme ; Fabriquer et la fiche les
+   * montrent sur une seule ligne, séparées par « ou ». Absent : `ingredients` seuls.
+   */
+  auChoix?: readonly Inventaire[];
   qualites: Partial<Record<Qualite, number>>;
   /**
    * L'installation à côté de laquelle elle se fait. **Dérivée de `lieu`** quand `RECETTES` est assemblée : on ne l'écrit
@@ -278,8 +285,9 @@ export interface Recette {
   /**
    * Pour un objet de métier : les étoiles de chaque facteur (matière, geste, outils), d'après le sac au moment de
    * fabriquer (Book 25 §4.2 : le maillon faible). Absent : les étoiles de base de l'objet. Rempli par les chantiers 4 à 7.
+   * `facon` : les ingrédients que la recette prend vraiment (sa façon au choix, `auChoix` ; 0.8.2).
    */
-  facteursEtoiles?: (inventaire: Inventaire, contexte?: ContexteFabrication) => number[];
+  facteursEtoiles?: (inventaire: Inventaire, contexte?: ContexteFabrication, facon?: Inventaire) => number[];
   /** Une phrase de plus sur la fiche de la recette (plan 0.8, chantier 8 : la petite batterie unique, Q-B6). */
   note?: string;
 }
@@ -367,9 +375,13 @@ const horsFamille = new Map<string, Recette>();
 export function recetteHorsFamille(r: Recette): Recette {
   let h = horsFamille.get(r.id);
   if (!h) {
-    const ingredients: Inventaire = {};
-    for (const [t, n] of Object.entries(r.ingredients)) ingredients[t as TypeObjet] = Math.ceil((n ?? 0) * SURCOUT_AUTRE_FAMILLE);
-    h = { ...r, ingredients, duree: r.duree * SURCOUT_AUTRE_FAMILLE };
+    const fois = (inv: Inventaire): Inventaire => {
+      const x: Inventaire = {};
+      for (const [t, n] of Object.entries(inv)) x[t as TypeObjet] = Math.ceil((n ?? 0) * SURCOUT_AUTRE_FAMILLE);
+      return x;
+    };
+    // Les ingrédients au choix aussi (0.8.2) : chaque façon coûte ×1,5.
+    h = { ...r, ingredients: fois(r.ingredients), ...(r.auChoix ? { auChoix: r.auChoix.map(fois) } : {}), duree: r.duree * SURCOUT_AUTRE_FAMILLE };
     horsFamille.set(r.id, h);
   }
   return h;
@@ -386,13 +398,47 @@ export function recettePour(r: Recette, famille: Famille): Recette {
  */
 export function etoilesDuProduit(r: Recette, inventaire: Inventaire, conditions: { horsFamille?: boolean; maitrise?: boolean; contexte?: ContexteFabrication } = {}): Etoiles | null {
   if (!("objet" in r.produit) || !estObjetDeMetier(r.produit.objet)) return null;
-  const facteurs = r.facteursEtoiles?.(inventaire, conditions.contexte) ?? [etoilesDeBase(r.produit.objet)];
+  // La façon que la recette prendra ; sans tout le sac (une fiche, un calcul), celle dont on a le choix, sinon la première.
+  const facon = faconDisponible(inventaire, r) ?? faconDisponible(inventaire, { ingredients: {}, auChoix: r.auChoix }) ?? faconsRecette(r)[0]!;
+  const facteurs = r.facteursEtoiles?.(inventaire, conditions.contexte, facon) ?? [etoilesDeBase(r.produit.objet)];
   return maillonFaible(facteurs, conditions);
 }
 
-/** Les ingrédients sont-ils dans le sac ? Un objet de métier compte toutes étoiles confondues. */
-export function ingredientsPresents(inventaire: Inventaire, r: Recette): boolean {
-  return Object.entries(r.ingredients).every(([t, n]) => compter(inventaire, t as TypeObjet) >= (n ?? 0));
+// ---------- Les ingrédients au choix (0.8.2, chantier B) ----------
+
+/** Les façons de faire la recette, ingrédients complets : `ingredients` plus chaque choix de `auChoix`, dans l'ordre. */
+export function faconsRecette(r: Pick<Recette, "ingredients" | "auChoix">): Inventaire[] {
+  if (!r.auChoix?.length) return [r.ingredients];
+  return r.auChoix.map((choix) => {
+    const f: Inventaire = { ...r.ingredients };
+    for (const [t, n] of Object.entries(choix) as [TypeObjet, number][]) f[t] = (f[t] ?? 0) + n;
+    return f;
+  });
+}
+
+/** Tout cela est-il dans le sac ? Un objet de métier compte toutes étoiles confondues. */
+function aTout(inventaire: Inventaire, ingredients: Inventaire): boolean {
+  return Object.entries(ingredients).every(([t, n]) => compter(inventaire, t as TypeObjet) >= (n ?? 0));
+}
+
+/** La première façon qu'on a dans le sac (ingrédients complets), sinon null. */
+export function faconDisponible(inventaire: Inventaire, r: Pick<Recette, "ingredients" | "auChoix">): Inventaire | null {
+  return faconsRecette(r).find((f) => aTout(inventaire, f)) ?? null;
+}
+
+/** Les ingrédients sont-ils dans le sac (l'une des façons, s'il y a un choix) ? */
+export function ingredientsPresents(inventaire: Inventaire, r: Pick<Recette, "ingredients" | "auChoix">): boolean {
+  return faconDisponible(inventaire, r) !== null;
+}
+
+/**
+ * La recette telle qu'on la fait avec ce sac : ses ingrédients sont ceux de la façon disponible (sinon la première), sans
+ * plus de choix. C'est elle que le serveur consomme ; une recette sans choix revient telle quelle.
+ */
+export function recetteAvecFacon(r: Recette, inventaire: Inventaire): Recette {
+  if (!r.auChoix?.length) return r;
+  const { auChoix: _, ...reste } = r;
+  return { ...reste, ingredients: faconDisponible(inventaire, r) ?? faconsRecette(r)[0]! };
 }
 
 // ---------- Énergie grise (Book 01 §6, Book 02 §3) ----------
@@ -470,7 +516,8 @@ const ENERGIE_GRISE_BASE: Partial<Record<TypeObjet, number>> = {
 /** Énergie grise d'une recette : matières + travail humain (procédé de référence, sans malus). */
 export function energieGriseRecette(r: Recette): number {
   let total = 0;
-  for (const [t, n] of Object.entries(r.ingredients)) total += energieGrise(t as TypeObjet) * (n ?? 0);
+  // Une recette à choix : la première façon (le procédé de référence).
+  for (const [t, n] of Object.entries(faconsRecette(r)[0]!)) total += energieGrise(t as TypeObjet) * (n ?? 0);
   const heures = r.duree / 60;
   total += heures * INTENSITES[r.intensite] * WOTTS_PAR_KCAL;
   return total;
@@ -531,7 +578,7 @@ export function detailEnergieGrise(type: TypeObjet): DetailEnergieGrise {
   if (r && "objet" in r.produit && ENERGIE_GRISE_BASE[type] === undefined) {
     const n = r.produit.quantite;
     let matieres = 0;
-    for (const [t, q] of Object.entries(r.ingredients)) matieres += energieGrise(t as TypeObjet) * (q ?? 0);
+    for (const [t, q] of Object.entries(faconsRecette(r)[0]!)) matieres += energieGrise(t as TypeObjet) * (q ?? 0);
     const kcal = (r.duree / 60) * INTENSITES[r.intensite];
     return { total, nature: "fabrique", matieres: matieres / n, minutes: r.duree / n, kcal: kcal / n, travail: (kcal * WOTTS_PAR_KCAL) / n };
   }
