@@ -1,14 +1,16 @@
-# Plan de développement — la prochaine version : les autres joueurs fluides, un combat moins facile
+# Plan de développement — version 0.9 : les autres joueurs fluides, un combat moins facile
 
-*Version du plan : v0.1 · 2026-10-13 · **Statut : à relire par le porteur** (rien n'est codé).*
+*Version du plan : v0.2 · 2026-10-13 · **Statut : décidé, pas encore codé**.*
 
-*Numéro de version à fixer (après la 0.8.3, en cours de codage dans une autre session). Code de départ : **0.8.2** (déployée), lu sans rien modifier. Source : les remarques du porteur du 2026-10-13 après avoir joué à plusieurs.*
+*v0.2 (2026-10-13) : le porteur tranche les six questions du §8 en suivant toutes les recommandations ; la version s'appellera **0.9**.*
+
+*Elle vient après la 0.8.3 (en cours de codage dans une autre session). Code de départ : **0.8.2** (déployée), lu sans rien modifier. Source : les remarques du porteur du 2026-10-13 après avoir joué à plusieurs.*
 
 ---
 
 ## 0. En bref
 
-- **Ce que livre cette version** :
+- **Ce que livre la 0.9** :
   - on voit les autres joueurs **marcher et courir de façon fluide**, avec la bonne animation ;
   - on les voit **frapper, esquiver et faire leurs gestes** ;
   - **quand un Éteint nous tient, on ne peut plus frapper** : on se dégage ;
@@ -71,7 +73,7 @@
 
 ---
 
-## 3. Les règles de jeu que cette version met en œuvre
+## 3. Les règles de jeu que la 0.9 met en œuvre
 
 ### 3.1 Voir les autres joueurs (M1)
 
@@ -89,7 +91,7 @@
 - **Le bouton A affiche « Se dégager »** pendant la saisie, comme B. La jauge de dégagement existante (`hud.saisie`) compte les appuis des deux boutons.
 - **Le coup appuyé** chargé avant la saisie est perdu : le relâchement ne frappe pas.
 - **Cas particuliers inchangés** :
-  - la décharge d'une arme électrique **tenue au contact** n'entre pas dans cette règle sans décision (Q-4) ;
+  - la décharge d'une arme électrique ne libère pas non plus : on se dégage d'abord (Q-4) ;
   - l'Éteint du tutoriel lâche toujours tout seul.
 
 ### 3.3 L'Équipé : étourdi un coup sur deux (M2)
@@ -148,7 +150,7 @@
 
 ## 7. Pour plus tard : le combat entre joueurs
 
-*Décision du porteur (2026-10-13) : pas de combat entre joueurs dans cette version, à prévoir pour une version ultérieure. Le Book 21 le garde « désactivé partout » ; le Book 01 (§6 bis) dit où il sera permis : haltes, ruines et lieux de flux, jamais sur le Terrain ni au Comptoir, ni sur le terrain d'un ami.*
+*Décision du porteur (2026-10-13) : pas de combat entre joueurs dans la 0.9, à prévoir pour une version ultérieure. Le Book 21 le garde « désactivé partout » ; le Book 01 (§6 bis) dit où il sera permis : haltes, ruines et lieux de flux, jamais sur le Terrain ni au Comptoir, ni sur le terrain d'un ami.*
 
 ### 7.1 Ce qu'on a trouvé
 
@@ -184,13 +186,13 @@
 
 ---
 
-## 8. Les questions encore ouvertes (pour cette version)
+## 8. Les questions tranchées (2026-10-13)
 
-| N° | Question | Recommandation |
+| N° | Question | Décision du porteur |
 |---|---|---|
-| Q-1 | Le **numéro** de cette version (0.8.4 ? 0.9 ?) | À fixer quand la 0.8.3 sera déployée |
-| Q-2 | Le **retard d'affichage** des autres : 150 ms convient-il ? | Oui. C'est 1,5 paquet ; on le règlera au chantier 5 si un réseau mobile fait sauter des paquets |
-| Q-3 | Appliquer aussi **l'affichage différé aux Éteints** (paquets toutes les 200 ms) ? | Non pour l'instant : ils paraissent déjà fluides. À revoir si le porteur voit des à-coups |
-| Q-4 | Saisi, **la décharge électrique au contact** (Voltaïques) peut-elle encore libérer ? | Non : même règle que pour les autres, on se dégage d'abord. La décharge n'est pas un geste ample, mais une exception rendrait la règle moins lisible |
-| Q-5 | Saisi, **A compte comme un appui de dégagement**, ou A ne fait rien du tout (avec un message « Il te tient : tape {examiner} ») ? | A compte comme un appui : marteler est le bon réflexe, il faut juste que ça coûte |
-| Q-6 | **Le couteau**, arme courte, permet-il de frapper quand on est tenu ? | Non pour cette version. Ce serait une mécanique nouvelle, à décider à part |
+| Q-1 | Le **numéro** de cette version (0.8.4 ou 0.9) | **0.9** |
+| Q-2 | Le **retard d'affichage** des autres : 150 ms convient-il ? | **Oui.** C'est 1,5 paquet ; on le règlera au chantier 5 si un réseau mobile fait sauter des paquets |
+| Q-3 | Appliquer aussi **l'affichage différé aux Éteints** (paquets toutes les 200 ms) ? | **Non pour l'instant** : ils paraissent déjà fluides. À revoir si le porteur voit des à-coups |
+| Q-4 | Saisi, **la décharge électrique au contact** (Voltaïques) peut-elle encore libérer ? | **Non** : même règle que pour les autres, on se dégage d'abord. La décharge n'est pas un geste ample, mais une exception rendrait la règle moins lisible |
+| Q-5 | Saisi, **A compte comme un appui de dégagement**, ou A ne fait rien du tout (avec un message « Il te tient : tape {examiner} ») ? | **A compte comme un appui** : marteler est le bon réflexe, il faut juste que ça coûte |
+| Q-6 | **Le couteau**, arme courte, permet-il de frapper quand on est tenu ? | **Non pour la 0.9.** Ce serait une mécanique nouvelle, à décider à part |

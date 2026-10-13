@@ -34,13 +34,13 @@
 - Vérifier les **noms des autres meubles** (établi, banc de recharge, pédalier…) comme pour la forge (un seul nom partout).
 - La **halte de cueillette et de chasse** (gibier, boyaux, corde d'arc en boyau) : Book 99.
 - La **bibliothèque de bâtiments** `batiment/` : à valider par le porteur ; Book 99.
-- Le **combat entre joueurs** (décidé le 2026-10-13 : pas dans la prochaine version) : mode choisi qui persiste, halo rouge ou vert visible de loin, frappe sur un joueur ; analyse et 5 questions dans `plan-fluidite-et-combat.md` §7.
+- Le **combat entre joueurs** (décidé le 2026-10-13 : pas dans la 0.9) : mode choisi qui persiste, halo rouge ou vert visible de loin, frappe sur un joueur ; analyse et 5 questions dans `plan-0.9.md` §7.
 
 ## 5. Où sont les choses
 
 - Le plan de la 0.8 : `book/plans/plan-0.8.md` (prompt de lancement donné au porteur le 2026-10-10).
 - La bible : `book/bible/progression-et-equilibrage.html`, régénérée par `python3 .claude-travail/propositions/outils/construire-page.py` ; publiée en https://claude.ai/artifact/4FF8F1SQ1LSVmbfPyLzhFH.
-- Le plan multijoueur et combat (après la 0.8.3) : `book/plans/plan-fluidite-et-combat.md`.
+- Le plan de la 0.9 (après la 0.8.3) : `book/plans/plan-0.9.md`.
 - La notice d'un nouveau niveau : `book/plans/notice-nouveau-niveau.md`.
 - Les études et données : `.claude-travail/propositions/` (non versionné : à ne pas supprimer).
 - Versions : 0.7.3 déployée le 2026-10-10 (étiquette v0.7.3).
