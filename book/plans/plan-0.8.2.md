@@ -290,3 +290,11 @@ Ce qui peut l'allonger : une cause du bogue du coffre plus profonde que prévu (
 - **Le gué, ses déchets** (décidé) : une couche de déchets **« berge »** propre au gué, plus nature : ≈ 50 % de nature (bois flotté, fibres de roseaux, plumes, os), ≈ 35 % de ce que la crue charrie (plastique, canettes, chiffons, bouts de corde), ≈ 15 % de pêche et de guinguette ; environ moitié de la densité de la station, ≈ 10 % de contenants ; aucun objet nouveau. La station garde le fabriqué, le gué devient le lieu des matériaux naturels de la route B.
 - **Les branches du gué : 8 au total** (le tas de bois flotté compris).
 - **« Plus de lit dans l'abri »** (R11) : les textes qui parlent encore d'un lit construit à côté de l'abri parlent de garnir l'abri (chantier K).
+
+### 7.5 Les décisions sur les textes (2026-10-13)
+
+- **Les repas du tutoriel, réduits** : après l'étape 10, une pomme cuite (au lieu de la volaille rôtie aux cèpes) ; à la fin, un seul pot-au-feu (≈ 2 140 kcal en tout au lieu de 2 960 : la faim des débuts compte encore).
+- **Les vraies clés** restent dans les textes : la grosse clé du Moulin, la clé du coffre de la Coopérative, la clé plate (l'outil).
+- **Le tutoriel « La carte »** garde l'endroit exact de la pièce de famille (c'est le tutoriel).
+- **L'aide** ne nomme plus les armes de métier de chaque famille ni la glaise du gué.
+- Les descriptions du ressort retrempé et des électrodes (vues seulement en les fabriquant) restent.
