@@ -15,8 +15,13 @@ import {
   FOUILLES_GUE,
   ID_DERIVE,
   LIGNES_CRUE,
+  LIGNE_RADIER_NOYE,
+  MARGE_A_BORD,
+  auBordDuRadierNoye,
+  loinDuRadierNoye,
   LIGNE_DERIVE,
   BORD_DANGEREUX,
+  MILIEU_GUE,
   PLAN_GUE,
   PORTEE_EMBARCADERE,
   RADEAU_AU_REPOS,
@@ -57,6 +62,8 @@ export function definitionGue(): DefinitionLieuVivant {
     // La cabane du passeur et la buvette de Chez Lulu arrêtent la vue ; le reste est à ciel ouvert.
     plan: PLAN_GUE,
     eteints: eteintsGue,
+    // Plan 0.8.2 (recette de la 0.8) : le plein air, mais les Éteints passent par le bout de la chicane de l'entrée.
+    milieu: () => MILIEU_GUE,
     ressources: genererGue,
     version: VERSION_GUE,
     butin: BUTIN_GUE,
@@ -137,6 +144,8 @@ export class Gue extends LieuVivant {
   private readonly passagers = new Map<number, { ctx: ContexteGue; radeau: number }>();
   /** La place du radeau au tic d'avant (pour emporter les Éteints montés à bord). */
   private radeauAvant: number = RADEAU_AU_REPOS.x;
+  /** R19 : ceux à qui l'on a dit que le radier est noyé, pour cette tentative (on le redit après qu'ils se sont éloignés). */
+  private readonly crueDite = new Set<number>();
   /** Où dérive l'Éteint du radier (G2) : vers l'aval ou vers l'amont du bord (+1, −1). */
   private sensDerive: 1 | -1 = 1;
 
@@ -171,6 +180,7 @@ export class Gue extends LieuVivant {
     super.sortir(v);
     const id = v.humain().id;
     this.passagers.delete(id);
+    this.crueDite.delete(id);
     if (this.haleur?.id === id) this.arreterRadeau(this.instant);
   }
 
@@ -190,7 +200,7 @@ export class Gue extends LieuVivant {
     const p = ctx.position();
     if (this.haleur && this.haleur.id !== ctx.id && this.haleur.geste() === LIBELLE_HALER) return ctx.info("Quelqu'un hale déjà le bac : un seul tire la corde.");
     let vers: number;
-    if (aBord(p.x, p.z, xr, 0.2)) {
+    if (aBord(p.x, p.z, xr, MARGE_A_BORD)) {
       const ou = accostage(xr);
       vers = ou === "cale" ? BAC.ponton.x : ou === "ponton" ? BAC.cale.x : (this.mouvement.vers ?? this.dernierVers);
     } else {
@@ -232,6 +242,7 @@ export class Gue extends LieuVivant {
     const p = ctx.position();
     if (avant && avant.radeau !== xr && aBord(p.x, p.z, avant.radeau, 0.05)) ctx.deplacer({ ...p, x: p.x + (xr - avant.radeau) });
     this.passagers.set(ctx.id, { ctx, radeau: xr });
+    this.direLaCrue(ctx);
     if (this.haleur?.id === ctx.id && this.mouvement.sens !== 0 && ctx.geste() === LIBELLE_HALER) {
       ctx.depenser(ENDURANCE_HALAGE * dt);
       if (ctx.endurance() < 3) {
@@ -239,6 +250,25 @@ export class Gue extends LieuVivant {
         ctx.info("À bout de souffle : tu lâches la corde. Le radeau s'arrête là où il est.");
       }
     }
+  }
+
+  /**
+   * R19 (plan 0.8.2, chantier F) : qui bute au bord du radier noyé l'apprend d'une ligne, une fois par tentative ; la
+   * tentative finit quand il s'est éloigné du radier.
+   */
+  private direLaCrue(ctx: ContexteGue): void {
+    const p = ctx.position();
+    if (this.niveauEau !== "noye") {
+      this.crueDite.delete(ctx.id);
+      return;
+    }
+    if (this.crueDite.has(ctx.id)) {
+      if (loinDuRadierNoye(p.x, p.z)) this.crueDite.delete(ctx.id);
+      return;
+    }
+    if (!auBordDuRadierNoye(p.x, p.z, p.o)) return;
+    this.crueDite.add(ctx.id);
+    ctx.info(LIGNE_RADIER_NOYE);
   }
 
   /** Une fouille du gué, « par chance » : ce qu'on trouve, ou rien cette fois. */
