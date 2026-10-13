@@ -138,8 +138,12 @@ test("0.6 Voltaïques : l'endurance d'une décharge (5 la courte, 8 la longue) e
 // ---------- Les recettes : seul, on fait sa base ----------
 
 test("0.6 Voltaïques : un Voltaïque seul monte une matraque de fortune avec son kit et un appareil photo, à son banc", () => {
-  // Plan 0.8 : le métier se fait à l'atelier ; la matraque se monte au banc de recharge (son lieu).
-  const t = surLeTerrain({ ...kitDeDepart("voltaiques"), appareil_photo_jetable: 1, buche: 1, fibres: 2 }, [{ type: "banc_recharge", x: 21, z: 20 }]);
+  // Plan 0.8 : le métier se fait à l'atelier ; la matraque se monte au banc de recharge (son lieu), son panneau posé
+  // (R26, 0.8.2 : les armes de métier attendent le meuble complet).
+  const t = surLeTerrain({ ...kitDeDepart("voltaiques"), appareil_photo_jetable: 1, buche: 1, fibres: 2 }, [{ type: "banc_recharge", x: 21, z: 20, etat: { panneau: true } }]);
+  // 0.8.2 : l'appareil se démonte d'abord ; c'est son petit condensateur qui va dans le manche.
+  t.joueur.recevoir({ t: "demonter", objet: "appareil_photo_jetable" });
+  t.attendre(8);
   for (const r of ["gourdin", "ficelle", "matraque_fortune"]) {
     t.joueur.recevoir({ t: "fabriquer", recette: r });
     t.attendre(8);
@@ -148,6 +152,7 @@ test("0.6 Voltaïques : un Voltaïque seul monte une matraque de fortune avec so
   assert.equal(inv.matraque_fortune, 1, t.infos().join(" | "));
   assert.equal(inv.petite_batterie, undefined, "la petite batterie du kit est dans le manche");
   assert.equal(inv.appareil_photo_jetable, undefined);
+  assert.equal(inv.petit_condensateur, undefined, "le petit condensateur est dans le manche");
   // Rien d'une autre famille dans la recette.
   for (const id of ["matraque_fortune", "matraque_electrique", "aiguillon", "pack_cellules", "module_decharge", "cloture_fortune"]) {
     assert.ok(recettesConnues("voltaiques").some((r) => r.id === id), id);
@@ -158,7 +163,7 @@ test("0.6 Voltaïques : un Voltaïque seul monte une matraque de fortune avec so
 test("0.6 Voltaïques : seul, une matraque ★★ (raquette, pack) dès le premier jour, au banc", () => {
   const t = surLeTerrain(
     { couteau: 1, sac_a_dos: 1, raquette_moustiques: 1, fil_cuivre: 2, cellule_lithium: 3, ficelle: 1, gourdin: 1, caoutchouc: 1 },
-    [{ type: "banc_recharge", x: 21, z: 20 }],
+    [{ type: "banc_recharge", x: 21, z: 20, etat: { panneau: true } }],
   );
   // 0.8.2 (R14) : la raquette se démonte en condensateur moyen, qui fait le module ★★.
   t.joueur.recevoir({ t: "demonter", objet: "raquette_moustiques" });

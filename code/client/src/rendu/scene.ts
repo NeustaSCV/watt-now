@@ -9,12 +9,31 @@ import { FrustumOmbre } from "./ombres.ts";
 import type { Qualite } from "./qualite.ts";
 
 /** Élévation isométrique « vraie » : arctan(1/√2) ≈ 35,26°. */
-const ELEVATION = Math.atan(1 / Math.SQRT2);
+export const ELEVATION = Math.atan(1 / Math.SQRT2);
 const DISTANCE_CAMERA = 60;
 /** Demi-largeur visible au zoom par défaut, en mètres (≈ 20 m de large en paysage). */
 const DEMI_LARGEUR = 10;
 const ZOOM_MIN = 0.6;
 const ZOOM_MAX = 1.7;
+/** La carte d'ombre du soleil couvre ± 24 m autour du point regardé (agrandie seulement pour la vue d'ensemble). */
+const OMBRE_DEMI = 24;
+const OMBRE_PRES = 1;
+const OMBRE_LOIN = 90;
+
+/**
+ * La demi-largeur visible (en mètres) au zoom 1, selon le rapport largeur / hauteur de l'écran : en paysage, ≈ 20 m de
+ * large ; en portrait, on garde de quoi voir autour de soi.
+ */
+export function demiLargeurDeBase(rapport: number): number {
+  return rapport >= 1 ? DEMI_LARGEUR : Math.max(6.5, DEMI_LARGEUR * rapport * 1.35);
+}
+
+/** Le cadrage imposé par la vue d'ensemble à l'arrivée (rendu/vue-ensemble.ts). */
+export interface Cadrage {
+  x: number;
+  z: number;
+  zoom: number;
+}
 
 export class Scene {
   readonly rendu: THREE.WebGLRenderer;
@@ -38,6 +57,16 @@ export class Scene {
   zoomMax = ZOOM_MAX;
   /** Le mode `?obstacles=ensemble` : la caméra regarde ce point (le centre du lieu) au lieu du personnage. */
   cibleForcee: { x: number; z: number } | null = null;
+  /**
+   * La vue d'ensemble à l'arrivée (0.8.2, chantier G ; rendu/vue-ensemble.ts) : le point regardé et le zoom imposés, sans
+   * lissage et au-delà des bornes de la molette ; null : la caméra suit le personnage, au zoom du joueur.
+   */
+  cadrage: Cadrage | null = null;
+  /** Le zoom de la projection en place (pour ne la refaire que s'il change). */
+  private zoomApplique = 1;
+  /** La vue d'ensemble immobile : le cadrage de l'image d'avant, et depuis combien d'images il n'a pas bougé. */
+  private cadrageAvant: Cadrage | null = null;
+  private imagesImmobiles = 0;
 
   constructor(canvas: HTMLCanvasElement, qualite: Qualite) {
     this.rendu = new THREE.WebGLRenderer({ canvas, antialias: qualite.anticrenelage, powerPreference: "high-performance" });
@@ -112,16 +141,24 @@ export class Scene {
 
   suivre(x: number, z: number, dt: number, immediat = false): void {
     if (this.cibleForcee) ({ x, z } = this.cibleForcee);
+    if (this.cadrage) {
+      ({ x, z } = this.cadrage);
+      immediat = true;
+    }
+    if (this.zoomEffectif !== this.zoomApplique) this.projeter();
+    // La vue d'ensemble : la caméra recule d'autant qu'on dézoome (rien ne change à l'image, orthographique), pour que
+    // tout le lieu tienne entre ses plans proche et lointain.
+    const distance = DISTANCE_CAMERA * this.echelleEnsemble;
     const lacetVise = this.lacetLibre ?? Math.PI / 4 + (this.quartDeTour * Math.PI) / 2;
     const lissage = immediat ? 1 : Math.min(1, dt * 6);
     this.lacet += (lacetVise - this.lacet) * (immediat ? 1 : Math.min(1, dt * 8));
     this.cible.x += (x - this.cible.x) * lissage;
     this.cible.z += (z - this.cible.z) * lissage;
 
-    const horizontal = Math.cos(ELEVATION) * DISTANCE_CAMERA;
+    const horizontal = Math.cos(ELEVATION) * distance;
     this.camera.position.set(
       this.cible.x + Math.cos(this.lacet) * horizontal,
-      Math.sin(ELEVATION) * DISTANCE_CAMERA,
+      Math.sin(ELEVATION) * distance,
       this.cible.z + Math.sin(this.lacet) * horizontal,
     );
     this.camera.lookAt(this.cible);
@@ -142,6 +179,7 @@ export class Scene {
     c.obscurite = Math.min(1, Math.max(0, c.obscurite + (this.pieceNoireVisee ? 1 : -1) * (dt / 0.6)));
     // Le ciel place aussi le soleil (ou la lune) : une seule carte d'ombre, centrée sur ce qu'on voit.
     c.appliquer(heure, this.cible, nuages);
+    this.etendreEnsemble();
     this.lumieres.mettreAJour(sources, this.cible, dt, c.obscurite > 0.5 || c.nuit > 0.5);
   }
 
@@ -155,6 +193,40 @@ export class Scene {
     return this.zoom;
   }
 
+  /** Le zoom de l'image : celui de la vue d'ensemble pendant qu'elle dure, sinon celui du joueur. */
+  get zoomEffectif(): number {
+    return this.cadrage?.zoom ?? this.zoom;
+  }
+
+  /** De combien la vue d'ensemble agrandit la profondeur, la brume et l'ombre (1 : pas du tout, et jamais au zoom du jeu). */
+  private get echelleEnsemble(): number {
+    return this.cadrage ? Math.max(1, this.cadrage.zoom / 1.5) : 1;
+  }
+
+  /**
+   * La vue d'ensemble (0.8.2, chantier G) : la brume recule avec la caméra, et la carte d'ombre couvre ce qu'on voit
+   * (même taille de carte : l'ombre est moins fine, mais de loin, c'est la finesse de l'écran). Sinon, les réglages
+   * d'origine, une seule fois au retour.
+   */
+  private etendreEnsemble(): void {
+    const k = this.echelleEnsemble;
+    if (k > 1 && this.scene.fog instanceof THREE.Fog) {
+      const recul = DISTANCE_CAMERA * (k - 1);
+      this.scene.fog.near += recul;
+      this.scene.fog.far += recul;
+    }
+    const c = this.soleil.shadow.camera;
+    if (c.right === OMBRE_DEMI * k) return;
+    c.left = -OMBRE_DEMI * k;
+    c.right = OMBRE_DEMI * k;
+    c.top = OMBRE_DEMI * k;
+    c.bottom = -OMBRE_DEMI * k;
+    // Le soleil est à ≈ 46 m du point regardé : la boîte de l'ombre s'allonge des deux côtés.
+    c.near = OMBRE_PRES - OMBRE_DEMI * 1.5 * (k - 1);
+    c.far = OMBRE_LOIN + OMBRE_DEMI * 1.5 * (k - 1);
+    c.updateProjectionMatrix();
+  }
+
   /** Point regardé par la caméra (au sol). */
   get centre(): THREE.Vector3 {
     return this.cible;
@@ -162,21 +234,35 @@ export class Scene {
 
   dessiner(): void {
     if (this.frustumOmbre && this.soleil.castShadow) this.frustumOmbre.preparer(this.camera, this.soleil);
+    // La vue d'ensemble immobile (0.8.2, chantier G) : tout le lieu est dans la passe d'ombre, mais rien ne bouge ou
+    // presque (le monde est en pause, ou l'on regarde de loin) : on ne refait les ombres qu'une image sur 20.
+    const c = this.cadrage;
+    const a = this.cadrageAvant;
+    const immobile = c !== null && a !== null && c.x === a.x && c.z === a.z && c.zoom === a.zoom;
+    this.cadrageAvant = c ? { ...c } : null;
+    this.imagesImmobiles = immobile ? this.imagesImmobiles + 1 : 0;
+    this.rendu.shadowMap.autoUpdate = !immobile;
+    if (immobile) this.rendu.shadowMap.needsUpdate = this.imagesImmobiles % 20 === 0;
     this.rendu.render(this.scene, this.camera);
   }
 
   private redimensionner(): void {
-    const largeur = window.innerWidth;
-    const hauteur = window.innerHeight;
-    const rapport = largeur / hauteur;
+    this.projeter();
+    this.rendu.setSize(window.innerWidth, window.innerHeight, false);
+  }
+
+  /** La projection de la caméra, au zoom de l'image (sans toucher à la taille du dessin : la vue d'ensemble l'appelle à chaque image). */
+  private projeter(): void {
+    const rapport = window.innerWidth / window.innerHeight;
     // En paysage, ≈ 20 m de large ; en portrait, on garde de quoi voir autour de soi.
-    const demiLargeur = (rapport >= 1 ? DEMI_LARGEUR : Math.max(6.5, DEMI_LARGEUR * rapport * 1.35)) * this.zoom;
+    this.zoomApplique = this.zoomEffectif;
+    const demiLargeur = demiLargeurDeBase(rapport) * this.zoomApplique;
     const demiHauteur = demiLargeur / rapport;
     this.camera.left = -demiLargeur;
     this.camera.right = demiLargeur;
     this.camera.top = demiHauteur;
     this.camera.bottom = -demiHauteur;
+    this.camera.far = 200 * this.echelleEnsemble;
     this.camera.updateProjectionMatrix();
-    this.rendu.setSize(largeur, hauteur, false);
   }
 }

@@ -5887,3 +5887,54 @@ body:has(#hud .voile-pause:not([hidden])) #hud .tactile {
 #hud .panneau.fiche .etape.banc-chose .corps strong {
   overflow-wrap: anywhere;
 }
+
+/* ---------- La vue d'ensemble à l'arrivée (0.8.2, chantier G) : l'invite du premier geste ---------- */
+
+/* Discrète : une ligne sur le fond du HUD, à la place de l'invite des actions (vide pendant la vue d'ensemble), qui
+   respire doucement ; ni fenêtre, ni croix. */
+#hud .invite-arrivee {
+  position: absolute;
+  left: 50%;
+  bottom: max(70px, calc(env(safe-area-inset-bottom) + 58px));
+  transform: translateX(-50%);
+  background: var(--hud-fond);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border-radius: 999px;
+  padding: 8px 18px;
+  color: var(--hud-texte);
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: respirer-arrivee 2.4s ease-in-out infinite;
+}
+
+#hud .invite-arrivee[hidden] {
+  display: none;
+}
+
+@keyframes respirer-arrivee {
+  0%,
+  100% {
+    opacity: 0.92;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* Pendant qu'on regarde le lieu, le manche et les boutons tactiles s'effacent (le premier toucher ne sert qu'à commencer). */
+body.vue-ensemble #joystick,
+body.vue-ensemble #hud .tactile {
+  visibility: hidden;
+}
+
+/* Paysage bas (812 × 320) : tout en bas, entre le manche et les boutons. */
+@media (max-height: 420px) {
+  #hud .invite-arrivee {
+    bottom: max(14px, env(safe-area-inset-bottom));
+    font-size: 13px;
+    padding: 6px 14px;
+  }
+}
