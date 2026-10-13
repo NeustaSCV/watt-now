@@ -1,11 +1,13 @@
 # Plan de développement — version 0.9 : les autres joueurs fluides, un combat moins facile
 
-*Version du plan : v0.3 · 2026-10-13 · **Statut : décidé, prêt à lancer après la 0.8.3** (rien n'est codé).*
+*Version du plan : v0.4 · 2026-10-13 · **Statut : décidé, prêt à lancer après la 0.8.3** (rien n'est codé).*
+
+*v0.4 (2026-10-13) : les questions Q-7 à Q-10 tranchées (§9.1). Une arme encombrante portée dans le dos, comme la fourche, se voit en permanence, et tous les gestes sont montrés.*
 
 *v0.3 (2026-10-13) : le plan rédigé en entier :
 - les chantiers détaillés (contenu, fichiers, tests) et le format des messages, fixé d'avance pour que deux chantiers avancent en même temps ;
 - les vagues, les fichiers partagés, les critères de réussite, l'estimation du temps ;
-- quatre questions de détail (§9) ;
+- quatre questions de détail (§9.2 de la v0.3, tranchées en v0.4) ;
 - un texte de leçon qui contredit la décision Q-4 (§3.2).*
 
 *v0.2 (2026-10-13) : les six questions du §8 tranchées en suivant toutes les recommandations ; la version s'appelle **0.9**.*
@@ -101,7 +103,8 @@
 
   | Geste | Ce qu'on voit | Animation existante |
   |---|---|---|
-  | Frappe (rapide ou appuyée, avec l'arme et la durée du coup) | Le coup, **l'arme en main** pendant le geste et 3 s après | `frapper(appuye, duree)`, `tenir(objet)` |
+  | Frappe (rapide ou appuyée, avec l'arme et la durée du coup) | Le coup, **l'arme en main** pendant le geste et 3 s après (Q-7) | `frapper(appuye, duree)`, `tenir(objet)` |
+  | Arme encombrante équipée (la fourche) | **Dans le dos, en permanence**, et en main pendant le coup (Q-7) | `porterDansLeDos(objet)` |
   | Poussée | Le geste court des deux bras | `frapper(false, 0.45)` |
   | Esquive | La roulade | `esquiver()` |
   | Dégagement | Des secousses (le geste du coup reçu) | `toucher()` |
@@ -109,6 +112,7 @@
   | Début et fin d'une action de travail | Le geste de l'action (couper, ramasser, puiser…) | `agir(gesteDAction(libellé))` |
   | Effondrement, réveil, couché | Tomber, se relever, dormir | `effondrer()`, `coucher()` |
 
+- **Tout est montré** (Q-10) : les gestes du combat comme ceux du travail.
 - **Rien ne change pour soi** : son propre personnage reste prédit, sans retard.
 
 ### 3.2 Saisi, on ne frappe plus (M3)
@@ -122,7 +126,7 @@
   - **le couteau non plus** (Q-6).
 - **Le serveur fait foi** : un message `frapper` reçu pendant une saisie compte comme un appui de dégagement. Un client ancien ou trafiqué ne peut pas se libérer d'un coup.
 - **Les textes à corriger** :
-  - la leçon des Voltaïques (`quetes.ts:557`) dit encore « une courte fait lâcher qui te tient » : à réécrire (§9, Q-9) ;
+  - la leçon des Voltaïques (`quetes.ts:557`) dit encore « une courte fait lâcher qui te tient ». Elle devient : « Casque ou pas, le courant passe. Mais s'il te tient, dégage-toi d'abord. » (Q-9) ;
   - l'aide sur la saisie (`aide-contenu.ts`) ;
   - le premier message de saisie dit de marteler A **ou** B.
 - **L'Éteint du tutoriel** lâche toujours tout seul, sans mordre.
@@ -152,7 +156,7 @@ Ce format est le contrat entre les chantiers A (serveur) et B (client) : il perm
 - **`gestes`** (nouveau) : `{ t: "gestes", g: GesteVu[] }`, avec `GesteVu = { id: number; h: number; geste: GesteAutre; appuye?: boolean; objet?: CleObjet; duree?: number; action?: string }`.
   - `GesteAutre` vaut `"frappe" | "poussee" | "esquive" | "degagement" | "touche" | "action" | "fin_action" | "effondre" | "releve" | "couche"`.
   - Les gestes s'accumulent chez le joueur entre deux envois, et partent avec les présences du même tour, aux mêmes observateurs (même rayon, même vue à travers les murs).
-- **`autres`** : inchangé. Il porte déjà les positions d'entrée dans le champ ; l'allure y vaut 0 jusqu'au premier `positions`.
+- **`autres`** : `AutreVu` prend un champ **`dos?: CleObjet`**, l'arme encombrante équipée portée dans le dos (aujourd'hui la seule est la fourche, `fourche_foin`). Il fait partie de l'identité : il n'est envoyé que quand il change (`cleIdentite`, `presences.ts`). Le message porte déjà les positions d'entrée dans le champ ; l'allure y vaut 0 jusqu'au premier `positions`.
 
 ---
 
@@ -172,6 +176,7 @@ Ce format est le contrat entre les chantiers A (serveur) et B (client) : il perm
     - la morsure (`tickCombat`) ;
     - le début et la fin d'une action (`commencer`, `annulerAction`) ;
     - `effondrer`, le réveil, le sommeil.
+  - **l'arme dans le dos** : `get vu` prend `dos`, l'arme équipée si elle est encombrante. La liste des armes encombrantes est une seule constante dans `commun/`, reprise par le client local (`main.ts:1756`, qui teste aujourd'hui `fourche_foin` en dur) ;
   - **la diffusion des gestes** dans `diffuserPresences`, aux voisins qui voient le joueur. La file est vidée après chaque envoi ;
   - **le débit** : `scripts/banc-charge.ts` rejoué avant et après, à la halte avec 100 joueurs.
 - **Fichiers** : `serveur/src/monde.ts`, `serveur/src/presences.ts`, `serveur/src/joueur.ts` (appels d'une ligne), `commun/src/messages.ts` (bloc en fin).
@@ -179,6 +184,7 @@ Ce format est le contrat entre les chantiers A (serveur) et B (client) : il perm
   - deux envois de suite sont espacés de 100 ms exactement ;
   - l'allure part avec la position, et l'arrêt part une fois ;
   - un geste n'est reçu que par ceux qui voient le joueur, et une seule fois ;
+  - équiper la fourche renvoie l'identité avec `dos`, et une arme non encombrante ne l'y met pas ;
   - un joueur immobile ne coûte toujours rien.
 
 **Chantier B · L'affichage des autres** (vague 1, **M**, en parallèle de A grâce au §3.4)
@@ -191,6 +197,7 @@ Ce format est le contrat entre les chantiers A (serveur) et B (client) : il perm
   - **`VueAutre`** (`rendu/autres.ts`) : `deplacer` alimente le tampon, et `animer` lit l'échantillon ;
   - **`Personnage.animer`** (`rendu/personnage.ts`) prend, pour les autres, l'allure reçue plutôt que la vitesse mesurée. Le chemin du joueur local ne change pas ;
   - **les gestes** : `VueAutre.geste(g)` les met en file et les joue à leur heure, retard compris, avec les méthodes existantes (§3.1). Pendant une frappe, l'arme est en main (`tenir`) pendant le geste puis 3 s ;
+  - **l'arme dans le dos** : `VueAutre.maj` appelle `porterDansLeDos(dos)`. Pendant une frappe avec cette arme, elle passe en main, puis revient dans le dos ;
   - **la réception** dans `main.ts` : `positions` lit les quintuplets et `h`, et `gestes` est nouveau.
 - **Fichiers** : `client/src/rendu/interpolation.ts` (nouveau), `client/src/rendu/autres.ts`, `client/src/rendu/personnage.ts`, `client/src/main.ts` (la réception, deux cas).
 - **Tests** (`interpolation.test.ts`) :
@@ -282,7 +289,7 @@ Ce format est le contrat entre les chantiers A (serveur) et B (client) : il perm
 ## 6. Les critères de réussite (ce qu'on doit pouvoir faire en jeu)
 
 1. **Deux joueurs dans la même halte.** L'un marche en rond : l'autre le voit **marcher**, avec le cycle de pas, sans à-coups. Il court : on le voit courir. Il s'accroupit : on le voit avancer accroupi. Il s'arrête : il reste debout, au repos.
-2. **On voit un autre joueur frapper un Éteint**, avec son arme en main. On le voit esquiver, repousser, ramasser, couper du bois, s'effondrer et se relever.
+2. **On voit un autre joueur frapper un Éteint**, avec son arme en main. **Sa fourche équipée se voit dans son dos**, même quand il ne se bat pas. On le voit esquiver, repousser, ramasser, couper du bois, s'effondrer et se relever.
 3. **Saisi par un Errant, marteler A ne libère pas au premier coup** : il faut 6 appuis. Marteler B fait pareil, et mélanger les deux aussi. Le bouton A affiche « Se dégager ».
 4. **Une matraque électrique ne libère pas** d'une saisie.
 5. **Face à un Équipé, marteler A ne suffit plus** : il finit par saisir. Le repousser (B), puis frapper, fonctionne. On entend et on voit la différence entre « il vacille » et « il encaisse ».
@@ -337,7 +344,7 @@ Ce format est le contrat entre les chantiers A (serveur) et B (client) : il perm
 
 ## 9. Les questions
 
-### 9.1 Tranchées (2026-10-13)
+### 9.1 Toutes tranchées (2026-10-13)
 
 | N° | Question | Décision du porteur |
 |---|---|---|
@@ -348,11 +355,7 @@ Ce format est le contrat entre les chantiers A (serveur) et B (client) : il perm
 | Q-5 | Saisi, **A compte comme un appui de dégagement**, ou A ne fait rien du tout ? | **A compte comme un appui** : marteler est le bon réflexe, il faut juste que ça coûte |
 | Q-6 | **Le couteau**, arme courte, permet-il de frapper quand on est tenu ? | **Non pour la 0.9.** Ce serait une mécanique nouvelle, à décider à part |
 
-### 9.2 Encore ouvertes (petites, avec une recommandation)
-
-| N° | Question | Recommandation |
-|---|---|---|
-| Q-7 | Voir **l'arme en main** d'un autre joueur seulement pendant ses coups (et 3 s après), ou tout le temps ? | Pendant ses coups seulement. Le serveur ne connaît pas le mode Combat, et une arme toujours en main ferait croire à une menace. Le halo du duel s'en chargera plus tard |
-| Q-8 | L'Équipé : **le premier coup** fait-il vaciller, ou encaisse-t-il le premier ? | Le premier fait vaciller : le joueur voit d'abord la règle habituelle, puis découvre que celui-là tient |
-| Q-9 | La nouvelle **leçon des Voltaïques** (au lieu de « une courte fait lâcher qui te tient ») | « Casque ou pas, le courant passe. Mais s'il te tient, dégage-toi d'abord. » |
-| Q-10 | **Montrer les gestes de travail** des autres (couper, ramasser, puiser), ou seulement ceux du combat ? | Tous : c'est ce qui rend la halte vivante, et le coût est faible (deux messages par action) |
+| Q-7 | Voir **l'arme en main** d'un autre joueur seulement pendant ses coups (et 3 s après), ou tout le temps ? | **Pendant ses coups seulement**, sauf **les armes encombrantes équipées portées dans le dos (la fourche)**, qui se voient dans le dos en permanence |
+| Q-8 | L'Équipé : **le premier coup** fait-il vaciller, ou encaisse-t-il le premier ? | **Le premier fait vaciller** : le joueur voit d'abord la règle habituelle, puis découvre que celui-là tient |
+| Q-9 | La nouvelle **leçon des Voltaïques** (au lieu de « une courte fait lâcher qui te tient ») | **« Casque ou pas, le courant passe. Mais s'il te tient, dégage-toi d'abord. »** |
+| Q-10 | **Montrer les gestes de travail** des autres (couper, ramasser, puiser), ou seulement ceux du combat ? | **Tout montrer** |
