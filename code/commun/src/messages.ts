@@ -9,6 +9,7 @@ import type { AnimalVu } from "./faune.ts";
 import type { Apparence } from "./apparence.ts";
 import type { Position } from "./deplacement.ts";
 import type { MouvementRadeau } from "./gue.ts";
+import type { CibleCharge } from "./banc.ts";
 import type { Charges, TypeBatterie } from "./energie.ts";
 import type { LieuId, LieuJouable } from "./lieux.ts";
 import type { Saignement, TypeBlessure } from "./combat.ts";
@@ -171,6 +172,8 @@ export interface EtatInstallation {
   batteries?: Partial<Record<TypeBatterie, number>>;
   charges?: Charges;
   majLe?: number;
+  /** Banc (0.8.2, R17) : sa batterie a été échangée contre une du sac (ce n'est plus celle de la ruine). */
+  batterieEchangee?: boolean;
   /** Escabeau (objet lourd) : dans les bras du joueur, en cours de déplacement. */
   portee?: boolean;
   /** Récupérateur de pluie : l'eau recueillie, en litres (le calcul se fait jusqu'à `majLe`). */
@@ -238,6 +241,8 @@ export type MessageClient =
   | MessageClientReprise
   // Les constats de l'interface (plan 0.8, chantier 14) : voir le bloc « constats » en fin de fichier.
   | MessageClientConstat
+  // Le banc de recharge (0.8.2, chantier C) : voir le bloc « banc » en fin de fichier.
+  | MessageClientBanc
   | { t: "interagir"; cible: Cible; verbe: Verbe }
   | { t: "manger"; objet: TypeObjet }
   | { t: "boire" }
@@ -714,3 +719,11 @@ export type MessageClientConstat =
    * sans pouvoir l'améliorer (`construction` : son type), l'aide « Je suis coincé » ouverte. Le serveur en fait un fait.
    */
   { t: "constat"; quoi: "fiche_bloquee" | "aide_coince"; construction?: string };
+
+// ---------- Le banc de recharge (0.8.2, chantier C : R17 ; commun/src/banc.ts, serveur/src/electricite.ts) ----------
+
+export type MessageClientBanc =
+  /** Depuis la fiche du banc : charger une chose qu'on porte (une batterie, une arme électrique) depuis la batterie du banc. */
+  | { t: "banc"; id: number; op: "charger"; cible: CibleCharge }
+  /** Échanger la batterie du banc contre une batterie du sac : l'ancienne revient au sac. */
+  | { t: "banc"; id: number; op: "echanger" };

@@ -25,8 +25,6 @@ import {
   DUREE_CHARBONNIERE_MS,
   DUREE_PEDALAGE,
   KCAL_PEDALAGE_EN_PLUS,
-  RENDEMENT_BANC,
-  WH_RECHARGE_PAR_HEURE,
   capacite,
   decharger,
   type Charges,
@@ -91,7 +89,7 @@ import { REDRESSEUR } from "../../commun/src/arc.ts";
 import { Forge, type ContexteForge } from "./forge.ts";
 import { EvolutionArmes, type ContexteEvolution } from "./evolution-armes.ts";
 import { declencher, declencheurNeuf, definitionDeclencheur, estDeclencheur, type DeclencheurPose } from "./declencheurs.ts";
-import { Electricite, alimenterClotures, coutEnduranceCoup, produireBancsSolaires, type ContexteElectricite } from "./electricite.ts";
+import { Electricite, alimenterClotures, batteriesEnTrop, coutEnduranceCoup, produireBancsSolaires, type ContexteElectricite } from "./electricite.ts";
 import { FilsDeRasoir, utiliserMecanique, type ContexteMecanique } from "./mecanique.ts";
 import { rendDesAccessoires } from "../../commun/src/mecanique.ts";
 import {
@@ -529,6 +527,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
       const n = this.inventaire[b] ?? 0;
       if (n > 0 && this.charges[b] === undefined) this.charges[b] = Math.min(CHARGE_TROUVEE[b] * n, capacite(b, n));
     }
+    // Une partie d'avant la 0.8.2 (R17) : le banc ne garde qu'une batterie ; les autres reviennent au sac, avec leur charge.
+    for (const banc of this.installations.values()) this.rendreBatteriesEnTrop(banc);
     this.devoilement = this.creerDevoilement();
     this.dechets = this.creerDechets();
     // Plan 0.8 (chantier 14) : la naissance du personnage, `atteint:maison` (une fois).
@@ -648,7 +648,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       case "lumiere":
         if (message.allumee && !lumierePortee(this.inventaire)) return this.info("Rien pour t'éclairer : torche, frontale ou lanterne sont dans le kit d'une famille : échange-la.");
         if (message.allumee && lumierePortee(this.inventaire) === "lampe_frontale" && (this.charges.petite_batterie ?? 0) <= 0.1) {
-          return this.info("La petite batterie est vide : recharge-la au banc solaire.");
+          return this.info("La petite batterie de la frontale est vide : charge-la au banc, depuis sa fiche.");
         }
         this.lumiere = message.allumee === true;
         this.envoyer({ t: "lumiere", allumee: this.lumiere });
@@ -723,6 +723,9 @@ export class Joueur implements Voyageur, ParticipantLecon {
         return this.tir.rearmer();
       case "manivelle":
         return this.electricite.manivelle(message.objet);
+      // Le banc de recharge (0.8.2, chantier C) : charger ce qu'on porte, échanger la batterie (serveur/src/electricite.ts).
+      case "banc":
+        return this.auBanc(message.id, (banc) => (message.op === "charger" ? this.electricite.charger(banc, message.cible) : this.electricite.echanger(banc)));
       case "lire":
         this.lire(message.objet);
         return;
@@ -1296,7 +1299,24 @@ export class Joueur implements Voyageur, ParticipantLecon {
       commencer: (libelle, dureeS, appliquer, kcal) => j.commencer(libelle, dureeS, appliquer, kcal ?? 0, "outil"),
       retirer: (objets) => j.retirerPlusieurs(objets),
       noter: (fait) => j.noterFait(fait),
+      // Le banc de recharge (0.8.2, chantier C).
+      prendreBatterie: (b) => j.sortirBatterie(b),
+      rendreBatterie: (b, wh) => {
+        j.ajouterPlusieurs({ [b]: 1 });
+        j.ajouterCharge(b, wh);
+      },
+      chargerBatterie: (b, wh) => j.ajouterCharge(b, wh),
+      majBase: () => j.mettreAJourBase(j.maintenant()),
     };
+  }
+
+  /** Une batterie sort du sac (posée dans le banc, échangée) : sa part de charge part avec elle ; rend cette charge. */
+  private sortirBatterie(b: TypeBatterie): number {
+    const wh = this.chargesQuiPartent({ [b]: 1 })[b] ?? 0;
+    this.charges = { ...this.charges, [b]: Math.max(0, (this.charges[b] ?? 0) - wh) };
+    this.retirerPlusieurs({ [b]: 1 });
+    this.envoyerCharges();
+    return wh;
   }
 
   /** Ce que le joueur prête à la mécanique des Mécanistes (mecanique.ts) : des accès, aucune règle. */
@@ -1315,6 +1335,11 @@ export class Joueur implements Voyageur, ParticipantLecon {
       famille: () => this.compte.famille,
       batterieDuSac: () => this.batterieAvecPlace(),
       chargerSac: (b, wh) => this.ajouterCharge(b, wh),
+      installations: () => this.installations.values(),
+      sauverInstallation: (i) => {
+        this.base.sauverEtatInstallation(this.compte.id, i.id, i.etat);
+        this.envoyer({ t: "installation", installation: i });
+      },
     };
   }
 
@@ -2552,7 +2577,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       if (reste <= 0) {
         this.lumiere = false;
         this.envoyer({ t: "lumiere", allumee: false });
-        this.info("La petite batterie est vide : la lampe s'éteint.");
+        this.info("La petite batterie de la frontale est vide : la lampe s'éteint. Charge-la au banc.");
       }
     }
     if (instant - this.dernierEnvoiBesoins >= INTERVALLE_BESOINS) {
@@ -3096,6 +3121,21 @@ export class Joueur implements Voyageur, ParticipantLecon {
     }
     for (const i of changes) this.base.sauverEtatInstallation(this.compte.id, i.id, i.etat);
     return bilan;
+  }
+
+  /** Relire un banc d'avant la 0.8.2 (electricite.ts, `batteriesEnTrop`) : ce qu'il ne garde pas revient au sac, sans rien perdre. */
+  private rendreBatteriesEnTrop(banc: InstallationVue): void {
+    const r = batteriesEnTrop(banc);
+    if (!r) return;
+    const inventaire = { ...this.inventaire };
+    for (const [b, n] of Object.entries(r.batteries) as [TypeBatterie, number][]) {
+      inventaire[b] = (inventaire[b] ?? 0) + n;
+      this.charges = { ...this.charges, [b]: Math.min(capacite(b, inventaire[b]!), (this.charges[b] ?? 0) + (r.charges[b] ?? 0)) };
+    }
+    this.inventaire = inventaire;
+    this.base.sauverInventaire(this.compte.id, this.inventaire);
+    this.base.sauverCharges(this.compte.id, this.charges, this.maintenant());
+    this.base.sauverEtatInstallation(this.compte.id, banc.id, banc.etat);
   }
 
   private chargesDuBanc(): Charges {
@@ -3699,7 +3739,9 @@ export class Joueur implements Voyageur, ParticipantLecon {
       case "demonter_installation": {
         if (!laRecette) return this.info("Ça ne se démonte pas.");
         if (i.type === "coffre" && Object.values(i.etat.contenu ?? {}).some((n) => (n ?? 0) > 0)) return this.info("Vide d'abord le coffre.");
-        if (porteBatteries(i.type) && Object.values(i.etat.batteries ?? {}).some((n) => (n ?? 0) > 0)) return this.info("Reprends d'abord les batteries posées dessus.");
+        // La batterie du banc (0.8.2) est à demeure : elle revient au sac avec le reste ; celle du pédalier se reprend d'abord.
+        const batterieDuBanc = i.type === "banc_recharge" ? (i.etat.batteries ?? {}) : {};
+        if (i.type !== "banc_recharge" && porteBatteries(i.type) && Object.values(i.etat.batteries ?? {}).some((n) => (n ?? 0) > 0)) return this.info("Reprends d'abord les batteries posées dessus.");
         if (i.type === "ratelier_outils" && Object.values(i.etat.contenu ?? {}).some((n) => (n ?? 0) > 0)) return this.info("Reprends d'abord les outils du râtelier.");
         if (i.type === "charbonniere" && i.etat.pretLe) return this.info("La meule cuit : on ne l'ouvre qu'au défournement.");
         // Les accessoires du pédalier se démontent avec lui.
@@ -3709,6 +3751,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
           i.etat.redresseur ? REDRESSEUR.cout : {},
           Forge.accessoiresRendus(i),
           rendDesAccessoires(i.etat),
+          batterieDuBanc,
         );
         const rend = rendDuDemontage(somme(laRecette.ingredients, ...(i.etat.payes ?? []), accessoires));
         if (!this.peutReprendre(rend)) return;
@@ -3718,6 +3761,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
           this.base.retirerInstallation(this.compte.id, i.id);
           this.envoyer({ t: "installation_retiree", id: i.id });
           if (Object.keys(rend).length) this.ajouterPlusieurs(rend);
+          for (const [b, wh] of Object.entries(i.type === "banc_recharge" ? (i.etat.charges ?? {}) : {}) as [TypeBatterie, number][]) this.ajouterCharge(b, wh);
           this.info(`${nom} démonté${i.type === "recuperateur_pluie" && (i.etat.litres ?? 0) > 0.05 ? " (eau perdue)" : ""}. Dans ton sac : la moitié des matériaux naturels, tout le reste.`);
         }, 0, "outil");
       }
@@ -3854,41 +3898,31 @@ export class Joueur implements Voyageur, ParticipantLecon {
           "outil",
         );
       }
-      // L'électricité (Book 25 §5) : recharger ses armes au banc ; réarmer la plaque, relever une clôture.
-      case "recharger_armes":
-        if (i.type !== "banc_recharge") return;
-        this.mettreAJourBase(this.maintenant());
-        return this.electricite.rechargerAuBanc(i);
+      // L'électricité (Book 25 §5) : réarmer la plaque, relever une clôture. La recharge se fait depuis la fiche du banc.
       case "rearmer_piege":
         if (this.electricite.rearmer(i)) return;
         break;
       case "poser_batteries":
         if (!porteBatteries(i.type)) return;
+        // Le banc (0.8.2, R17) : une seule batterie, à demeure (serveur/src/electricite.ts).
+        if (i.type === "banc_recharge") return this.electricite.poserBatterie(i);
         return this.poserBatteries(i);
       case "reprendre_batteries":
         if (!porteBatteries(i.type)) return;
+        // La batterie du banc ne se reprend plus : elle s'échange.
+        if (i.type === "banc_recharge") return this.electricite.echanger(i);
         return this.reprendreBatteries(i);
-      case "recharger": {
-        if (i.type !== "banc_recharge") return;
-        const n = this.inventaire.petite_batterie ?? 0;
-        const place = capacite("petite_batterie", n) - (this.charges.petite_batterie ?? 0);
-        const source = this.charges.batterie_voiture ?? 0;
-        if (n === 0) return this.info("Tu n'as pas de petite batterie.");
-        if (!this.inventaire.batterie_voiture || source <= 1) return this.info("Il faut une batterie de voiture chargée sur le banc.");
-        if (place <= 0.5) return this.info("La petite batterie est déjà pleine.");
-        const transfert = Math.min(place, source * RENDEMENT_BANC);
-        const duree = Math.min(120, (transfert / WH_RECHARGE_PAR_HEURE) * 60);
-        return this.commencer("Recharger la petite batterie", duree, () => {
-          this.charges = {
-            ...this.charges,
-            batterie_voiture: Math.max(0, (this.charges.batterie_voiture ?? 0) - transfert / RENDEMENT_BANC),
-            petite_batterie: (this.charges.petite_batterie ?? 0) + transfert,
-          };
-          this.envoyerCharges();
-          this.info(`+${Math.round(transfert)} Wh dans la petite batterie.`);
-        });
-      }
     }
+  }
+
+  /** Un geste depuis la fiche du banc (0.8.2, chantier C) : le banc à soi, à portée, de sa famille ; la base à jour. */
+  private auBanc(id: number, faire: (banc: InstallationVue) => void): void {
+    const banc = this.installations.get(id);
+    if (!banc || banc.type !== "banc_recharge" || this.lieu !== "terrain" || this.voyage) return;
+    if (!this.proche(banc.x, banc.z, DISTANCE_INTERACTION + 0.6)) return this.info("Approche-toi.");
+    if (this.famillePour(banc.type) !== this.compte.famille) return this.info("C'est le savoir d'une autre famille : échange avec l'un des siens, à la halte ou au Carrefour.");
+    this.mettreAJourBase(this.maintenant());
+    faire(banc);
   }
 
   /** La batterie à charger en priorité : la petite, puis celle de voiture. */

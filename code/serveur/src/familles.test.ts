@@ -129,15 +129,18 @@ test("⚙️ pédalier : la meule de pierre affûte le couteau (Couper 2)", () =
   assert.equal(inv.couteau, undefined);
 });
 
-test("⚡ banc : la batterie de voiture recharge la petite batterie à 85 %", () => {
+test("⚡ banc : la batterie du banc recharge la petite batterie de la frontale à 85 %", () => {
   const t = monter("voltaiques", { buche: 2, barre_metal: 1, branche: 3, couteau: 1, cle_plate: 1, petite_batterie: 1, lampe_frontale: 1, batterie_voiture: 1 });
   const id = t.construire("banc_recharge", 60);
-  t.utiliser(id, "recharger");
+  // 0.8.2 (R17) : la batterie de la ruine se branche dans le banc, puis la fiche du banc charge ce qu'on porte.
+  t.utiliser(id, "poser_batteries");
+  t.attendre(5);
+  t.joueur.recevoir({ t: "banc", id, op: "charger", cible: "petite_batterie" });
   t.attendre(30);
-  const c = t.dernier("charges")!.charges;
-  assert.equal(Math.round(c.petite_batterie!), 50);
-  // 10 Wh entrés dans la petite batterie → ≈ 11,8 Wh pris à la batterie de voiture
-  assert.equal(Math.round(c.batterie_voiture!), 168);
+  assert.equal(Math.round(t.dernier("charges")!.charges.petite_batterie!), 50);
+  // 10 Wh entrés dans la petite batterie → ≈ 11,8 Wh pris à la batterie du banc
+  const banc = t.dernier("installation")!.installation;
+  assert.equal(Math.round(banc.etat.charges!.batterie_voiture!), 168);
 });
 
 test("⚡ la lampe frontale vide la petite batterie, puis s'éteint", () => {
@@ -149,9 +152,9 @@ test("⚡ la lampe frontale vide la petite batterie, puis s'éteint", () => {
   assert.equal(t.dernier("lumiere")!.allumee, true);
   t.attendre(60, 2);
   assert.equal(t.dernier("lumiere")!.allumee, false);
-  assert.match(t.infos().join(" "), /batterie est vide/);
+  assert.match(t.infos().join(" "), /batterie de la frontale est vide/);
   t.joueur.recevoir({ t: "lumiere", allumee: true });
-  assert.match(t.infos().at(-1)!, /recharge-la/);
+  assert.match(t.infos().at(-1)!, /charge-la au banc/);
 });
 
 test("les recettes d'une autre famille sont inconnues, tant qu'on ne les a pas apprises (Book 25 §2.3)", () => {

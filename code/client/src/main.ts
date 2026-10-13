@@ -419,6 +419,7 @@ const hud = new Hud(
     coffre: (id, sens, objet, quantite) => envoyer({ t: "coffre", id, sens, objet, quantite }),
     amenager: (genre, id, verbe) => envoyer({ t: "interagir", cible: { genre, id }, verbe }),
     constat: (quoi, construction) => envoyer({ t: "constat", quoi, ...(construction ? { construction } : {}) }),
+    banc: (id, g) => envoyer(g.op === "charger" ? { t: "banc", id, op: "charger", cible: g.cible } : { t: "banc", id, op: "echanger" }),
     fabriquer: (r) => {
       if (!position) return;
       // Le tas de matières : là où l'installation va se dresser, ou à nos pieds pour un objet.

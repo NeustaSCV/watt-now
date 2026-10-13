@@ -339,7 +339,7 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
       {
         liste: [
           "**Torche** (Charbonniers) : flamme orangée, bonne portée, se voit de loin.",
-          "**Lampe frontale** (Voltaïques) : lumière blanche, mains libres ; elle use la petite batterie, qu'il faut recharger.",
+          "**Lampe frontale** (Voltaïques) : lumière blanche, mains libres ; elle use la petite batterie, qui se charge au banc.",
           "**Lanterne à dynamo** (Mécanistes) : douce et discrète, mais éclaire peu.",
         ],
       },
@@ -547,11 +547,31 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
       { sous_titre: "Recharger" },
       {
         liste: [
-          "**Au banc solaire**, chez toi : il prend le courant de ses batteries, que le panneau remplit au soleil. Encore faut-il qu'elles en aient.",
+          "**Au banc solaire**, chez toi : sa fiche a une ligne par arme, avec un bouton « Charger ». Le courant vient de la batterie du banc (voir « Le banc »).",
           "**À la manivelle** : Sac → l'arme → « Manivelle », avec la lampe à dynamo. Lent, fatigant, mais possible même sans soleil.",
-          "**Au pédalier** d'un Mécaniste, contre un service.",
         ],
       },
+    ],
+  },
+  {
+    id: "banc",
+    icone: "🔋",
+    titre: "Le banc",
+    resume: "La batterie du banc : la remplir, l'échanger, et charger ce que tu portes.",
+    blocs: [
+      "**Le banc fait passer le courant de sa batterie dans ce que tu portes.** Il garde une seule batterie, à demeure : au départ, la batterie de voiture de la ruine. On la branche une fois.",
+      { sous_titre: "Remplir la batterie du banc" },
+      {
+        liste: [
+          "**Le panneau** posé sur le banc la remplit au soleil, même quand tu n'es pas là.",
+          "**Un pédalier générateur** posé à moins de 3 m du banc la remplit quand on pédale.",
+          "**La manivelle** de la lampe à dynamo reste le secours, lent, pour une arme.",
+        ],
+      },
+      { sous_titre: "Charger ce que tu portes" },
+      "Examine le banc : sa fiche a **une ligne par chose qui se charge** (la petite batterie de la frontale, chaque arme électrique, une batterie de voiture du sac), avec son niveau et un bouton **« Charger »**. Ne bouge pas pendant la charge. Une partie du courant se perd en route ; si la batterie du banc est vide, rien ne se charge.",
+      { sous_titre: "Échanger la batterie" },
+      "Avec une autre batterie de voiture dans ton sac, « Échanger » la met dans le banc, et l'ancienne revient dans ton sac, avec ce qu'elle contient : de quoi emporter une batterie pleine.",
     ],
   },
   {
