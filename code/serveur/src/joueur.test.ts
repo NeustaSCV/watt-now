@@ -142,7 +142,12 @@ test("le feu brûle pendant l'absence du joueur (processus passif)", () => {
 
 test("l'eau de la mare se remplit brute, et devient potable une fois bouillie", () => {
   const { joueur, attendre, dernier, infos } = monter({ pierre: 5, branche: 3, buche: 2, briquet: 1, gourde: 1 });
+  // Au bord, on ne remplit pas (0.8.2, R21) : on entre dans la mare, jusqu'au milieu.
   joueur.position = { x: MARE.x - MARE.rayon - 0.5, z: MARE.z, o: 0 };
+  joueur.recevoir({ t: "interagir", cible: { genre: "mare" }, verbe: "remplir" });
+  attendre(2.1);
+  assert.match(infos().at(-1)!, /jusqu'au milieu/);
+  joueur.position = { x: MARE.x, z: MARE.z, o: 0 };
   joueur.recevoir({ t: "interagir", cible: { genre: "mare" }, verbe: "remplir" });
   attendre(2.1);
   assert.deepEqual(dernier("besoins")?.gourde, { contenu: "brute", litres: 1 });

@@ -502,6 +502,8 @@ export type MessageServeur =
   | MessageServeurDechets
   // Reprendre une arme sur son meuble (plan 0.8, chantier 9) : voir le bloc « reprise » en fin de fichier.
   | MessageServeurReprise
+  // Dormir dans l'abri (0.8.2, chantier I) : voir le bloc « la couche » en fin de fichier.
+  | MessageServeurCouche
   | { t: "expulse"; raison: string }
   | { t: "inventaire"; inventaire: Inventaire }
   | { t: "besoins"; besoins: Besoins; gourde: Gourde }
@@ -727,3 +729,12 @@ export type MessageClientBanc =
   | { t: "banc"; id: number; op: "charger"; cible: CibleCharge }
   /** Échanger la batterie du banc contre une batterie du sac : l'ancienne revient au sac. */
   | { t: "banc"; id: number; op: "echanger" };
+
+// ---------- Dormir dans l'abri : le trajet jusqu'à la couche (0.8.2, chantier I : R12 ; commun/src/sommeil-abri.ts) ----------
+
+export type MessageServeurCouche =
+  /**
+   * Le personnage se rend accroupi jusqu'à sa couche, par ce trajet (le client le prédit, comme le serveur) ; `o` :
+   * l'orientation du dormeur. `chemin: null` : le trajet est interrompu (on a bougé, on est saisi).
+   */
+  { t: "vers_couche"; chemin: { x: number; z: number }[] | null; o: number };

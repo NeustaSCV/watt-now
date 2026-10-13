@@ -32,7 +32,9 @@ import { Reseau } from "./reseau.ts";
 import { FeuDeCamp } from "./rendu/feu.ts";
 import { VueInstallation, creerEscabeau } from "./rendu/installations.ts";
 import { FauneAmbiante, Volaille, type CriFaune } from "./rendu/faune.ts";
-import { RAYON_ESCABEAU, estFruitier } from "../../commun/src/terrain.ts";
+import { RAYON_ESCABEAU, estFruitier, profondeurMare } from "../../commun/src/terrain.ts";
+import { avancerVersLaCouche } from "../../commun/src/sommeil-abri.ts";
+import { estomperAbri } from "./rendu/abri-dormeur.ts";
 import { creerRuine } from "./rendu/ruine.ts";
 import { creerHalte, estomperToits } from "./rendu/halte.ts";
 import { animerMoulin, creerMoulin } from "./rendu/moulin.ts";
@@ -195,6 +197,8 @@ const sacs = new Map<number, { vue: THREE.Group; donnees: SacVu }>();
 const autres = new Map<number, VueAutre>();
 const pluie = new Pluie(scene.scene, qualite.niveau === "bas" ? 500 : qualite.niveau === "moyen" ? 900 : 1500);
 let endormi = false;
+/** Le trajet jusqu'à la couche de l'abri, en cours (0.8.2, R12). */
+let versLaCouche: { chemin: { x: number; z: number }[]; o: number } | null = null;
 const rodeurs = new Rodeurs();
 scene.scene.add(rodeurs.objet);
 const brume = new Brume(scene.scene);
@@ -998,6 +1002,10 @@ function recevoir(message: MessageServeur): void {
     case "tutoriel":
       hud.majTutoriel(message.tutoriel);
       return;
+    // Dormir dans l'abri (0.8.2, R12) : le trajet accroupi jusqu'à la couche, que l'on prédit comme le serveur.
+    case "vers_couche":
+      versLaCouche = message.chemin ? { chemin: message.chemin, o: message.o } : null;
+      return;
     case "sommeil":
       if (message.dort !== endormi) son.dormir(message.dort);
       endormi = message.dort;
@@ -1679,6 +1687,15 @@ function boucle(instant: number): void {
       elan.restant -= dt;
       if (elan.restant <= 0) elan = null;
     }
+    // En route vers la couche de l'abri (0.8.2, R12) : accroupi, pas à pas ; bouger l'interrompt (le serveur aussi).
+    if (versLaCouche) {
+      if (Math.hypot(intention.dx, intention.dz) > 0.01) versLaCouche = null;
+      else {
+        const pas = avancerVersLaCouche(position, versLaCouche.chemin, dt, versLaCouche.o);
+        position = pas.position;
+        versLaCouche = pas.chemin.length > 0 ? { ...versLaCouche, chemin: pas.chemin } : null;
+      }
+    }
     const enMouvement = position !== avant;
     // Dans une pièce noire de la Coopérative, la lampe porte comme la nuit : le serveur le compte, le cercle ambre aussi.
     majCercles(dt, intention.allure, enMouvement, estNuit(Number.isFinite(HEURE_FORCEE) ? HEURE_FORCEE : heureDeJeu(Date.now() + decalage, debutMonde)) || dansLeNoir());
@@ -1698,12 +1715,16 @@ function boucle(instant: number): void {
     // Au Comptoir, la musique sort d'un petit poste ; elle s'ouvre en grand près du guichet (LIVRAISON §3).
     if (lieu === "comptoir") son.radio(Math.hypot(position.x - COMPTOIR.guichet.x, position.z - COMPTOIR.guichet.z) > 7);
     personnage.objet.position.set(position.x, 0, position.z);
+    // Dans la mare, l'eau aux genoux (0.8.2, R21).
+    personnage.patauger(lieu === "terrain" ? profondeurMare(position.x, position.z) : 0, dt, vitesse);
     // Rotation du personnage : on prend le plus court chemin angulaire.
     const ecartAngle = Math.atan2(Math.sin(position.o - personnage.objet.rotation.y), Math.cos(position.o - personnage.objet.rotation.y));
     personnage.objet.rotation.y += ecartAngle * Math.min(1, dt * 14);
     personnage.animer(dt, vitesse);
     // Endormi : couché au sol, près du feu ou sous l'abri.
     personnage.coucher(endormi);
+    // Sous l'abri, à sa couche (0.8.2, R12) : la bâche s'efface en partie, pour qu'on voie le dormeur.
+    if (lieu === "terrain") for (const i of installations.values()) if (i.vue.type === "abri") estomperAbri(i.objet, (endormi || versLaCouche !== null) && Math.hypot(i.vue.x - position.x, i.vue.z - position.z) < 2.5, dt);
     personnage.porterLumiere(lumiere && (dansLeNoir() || estNuit(Number.isFinite(HEURE_FORCEE) ? HEURE_FORCEE : heureDeJeu(Date.now() + decalage, debutMonde))));
     scene.suivre(position.x, position.z, dt);
     const decor = decors.get(lieu);

@@ -57,6 +57,8 @@ test("dormir dans l'abri : on récupère en 8 heures ; bouger réveille", () => 
   t.attendre(6 * 60, 5);
   const avant = t.joueur().bienvenue(0).besoins.repos;
   t.joueur().recevoir({ t: "interagir", cible: { genre: "installation", id: abri.id }, verbe: "dormir" });
+  // 0.8.2 (R12) : on se rend d'abord accroupi jusqu'à sa couche (2 m à peine), puis on s'endort.
+  t.attendre(3, 0.25);
   assert.deepEqual(t.dernier("sommeil"), { t: "sommeil", dort: true, dansUnAbri: true });
   t.attendre(60, 1);
   assert.ok(t.joueur().bienvenue(0).besoins.repos > avant + 0.1, "une heure dans l'abri rend 1/8");

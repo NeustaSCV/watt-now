@@ -281,6 +281,9 @@ export class Personnage {
   private unique = 0;
   private charge = 0;
   private lumiere = false;
+  /** Le remous de l'eau autour des jambes, dans la mare (créé à la première entrée). */
+  private remous: THREE.Group | null = null;
+  private tempsRemous = 0;
 
   /** `apparence` : celle choisie à la création (Book 14 §3) ; sinon, celle du personnage de référence de la famille. */
   constructor(famille: Famille, apparence: Apparence = APPARENCES_DE_REFERENCE[famille]) {
@@ -567,6 +570,35 @@ export class Personnage {
   /** Endormi : couché au sol. */
   coucher(oui: boolean): void {
     this.couche = oui;
+  }
+
+  /**
+   * Dans la mare (0.8.2, R21) : le personnage s'enfonce de `profondeur` (l'eau aux genoux au milieu), et l'eau fait un
+   * remous autour des jambes, qui s'élargit quand il avance. `vitesse` : sa vitesse réelle (m/s).
+   */
+  patauger(profondeur: number, dt: number, vitesse: number): void {
+    this.objet.position.y = -profondeur;
+    if (profondeur < 0.03) {
+      if (this.remous) this.remous.visible = false;
+      return;
+    }
+    if (!this.remous) {
+      const anneau = new THREE.RingGeometry(0.2, 0.3, 28).rotateX(-Math.PI / 2);
+      const mat = (o: number) => new THREE.MeshBasicMaterial({ color: 0xcfe2e4, transparent: true, opacity: o, depthWrite: false });
+      this.remous = new THREE.Group();
+      this.remous.add(new THREE.Mesh(anneau, mat(0.38)), new THREE.Mesh(new THREE.RingGeometry(0.3, 0.36, 28).rotateX(-Math.PI / 2), mat(0.25)));
+      this.objet.add(this.remous);
+    }
+    this.tempsRemous += dt * (vitesse > 0.15 ? 2.2 : 0.8);
+    const [proche, loin] = this.remous.children as THREE.Mesh[];
+    // Le remous est à la surface de l'eau (0,025 m) : au-dessus du personnage enfoncé.
+    this.remous.position.y = profondeur + 0.035;
+    this.remous.visible = true;
+    proche!.scale.setScalar(1 + 0.08 * Math.sin(this.tempsRemous * 4));
+    // L'onde : elle part des jambes et s'efface en s'élargissant.
+    const t = this.tempsRemous % 1;
+    loin!.scale.setScalar(1 + t * (vitesse > 0.15 ? 1.6 : 0.8));
+    (loin!.material as THREE.MeshBasicMaterial).opacity = 0.28 * (1 - t);
   }
 
   /** L'effondrement : il tombe et reste au sol jusqu'à son retour chez lui. */

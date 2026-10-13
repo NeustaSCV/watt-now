@@ -12,7 +12,7 @@ import { RECETTES } from "../../commun/src/recettes.ts";
 import { COUT_BAC, ENCLUMES, ETOILES_PIERRE_PLATE, NIVEAU_FORGE_VENTILEE, enclumeDuSac } from "../../commun/src/forge.ts";
 import { NOMS_FAMILLES, type Famille } from "../../commun/src/regles.ts";
 import type { Gourde } from "../../commun/src/survie.ts";
-import { DISTANCE_INTERACTION, EMPRISE_RESSOURCE, PORTEE_ARBRE, distanceMare, RAYON_ESCABEAU, USAGES, estArbre, estFruitier, type TypeRessource } from "../../commun/src/terrain.ts";
+import { DISTANCE_INTERACTION, EMPRISE_RESSOURCE, PORTEE_ARBRE, TEXTE_GOURDE_AU_MILIEU, auMilieuDeLaMare, distanceMare, RAYON_ESCABEAU, USAGES, estArbre, estFruitier, type TypeRessource } from "../../commun/src/terrain.ts";
 import type { FeuDeCamp } from "./rendu/feu.ts";
 import type { VueRessource } from "./rendu/ressources.ts";
 import { proposerMoulin } from "./moulin.ts";
@@ -499,13 +499,15 @@ export function proposer(
     });
   }
 
-  const dMare = Math.max(0, distanceMare(position.x, position.z) - 0.5);
+  // La gourde se remplit au milieu de la mare (0.8.2, chantier I : R21). Au bord, les joncs passent avant : la mare ne
+  // s'y propose que si rien d'autre n'est à portée, et dit d'entrer dans l'eau.
   if (lieu === "terrain" && (inventaire.gourde ?? 0) > 0) {
-    garder(dMare, {
-      A: { libelle: "Remplir la gourde", message: { t: "interagir", cible: { genre: "mare" }, verbe: "remplir" } },
-      B: { libelle: "Examiner", examiner: "Une mare d'eau dormante. L'eau n'est pas potable : il faut la faire bouillir." },
-      cible: null,
-    });
+    const examen: ActionProposee = { libelle: "Examiner", examiner: "Une mare d'eau dormante, peu profonde. L'eau n'est pas potable : il faut la faire bouillir." };
+    if (auMilieuDeLaMare(position.x, position.z)) {
+      garder(0, { A: { libelle: "Remplir la gourde", message: { t: "interagir", cible: { genre: "mare" }, verbe: "remplir" } }, B: examen, cible: null });
+    } else if (distanceMare(position.x, position.z) <= 1.5) {
+      garder(DISTANCE_INTERACTION, { A: { libelle: "Remplir la gourde (au milieu)", examiner: TEXTE_GOURDE_AU_MILIEU }, B: examen, cible: null });
+    }
   }
 
   // La radio dans le sac, à la Coopérative : rien à portée de main, A la pose ici (0.5.1).

@@ -18,10 +18,11 @@
 
 import * as THREE from "three";
 import {
+  contenantsCarreau,
   dispositionLieu,
-  lieuDeCle,
   nomConteneur,
   piecesCarreau,
+  pointPropose,
   refConteneur,
   type EmplacementDechets,
   type FouilleVue,
@@ -111,7 +112,6 @@ function formeTache(): THREE.BufferGeometry {
 export class CoucheDechetsVue {
   readonly objet = new THREE.Group();
   private cle: string | null = null;
-  private terrain = false;
   private readonly carreaux = new Map<string, EtatCarreauVu>();
   private points: PointDechetsVu[] = [];
   private readonly envoyer: (m: MessageClient) => void;
@@ -178,7 +178,6 @@ export class CoucheDechetsVue {
   installer(vue: VueDechets | undefined): void {
     const t0 = performance.now();
     this.cle = vue?.cle ?? null;
-    this.terrain = vue ? lieuDeCle(vue.cle) === "terrain" : false;
     this.carreaux.clear();
     this.points = vue?.points ?? [];
     this.fouille(null);
@@ -240,17 +239,12 @@ export class CoucheDechetsVue {
     const poses = new Map<string, Pose>();
     const e = this.carreaux.get(k);
     if (!e || !this.cle) return poses;
-    const emplacements = dispositionLieu(this.cle).get(k) ?? [];
-    const restes = new Map<number, number>();
+    const [cx, cz] = k.split(",").map(Number) as [number, number];
     const q = new THREE.Quaternion();
     const eul = new THREE.Euler();
     const un = new THREE.Vector3(1, 1, 1);
     for (const p of e.pieces) {
-      if (p.dedans) {
-        restes.set(p.e, (restes.get(p.e) ?? 0) + (e.pris.has(p.i) ? 0 : 1));
-        continue;
-      }
-      if (e.pris.has(p.i)) continue;
+      if (p.dedans || e.pris.has(p.i)) continue;
       const geometrie = `o:${p.objet}`;
       const al = aleatoire(graineDe("pose", k, p.i, p.objet));
       const s = apparenceDe(p.objet, OBJETS[p.objet].poids).s;
@@ -258,11 +252,9 @@ export class CoucheDechetsVue {
       eul.set((al() - 0.5) * penche, al() * Math.PI * 2, (al() - 0.5) * penche);
       poses.set(`p${p.i}`, { geometrie, matrice: new THREE.Matrix4().compose(new THREE.Vector3(p.x, -0.006, p.z), q.setFromEuler(eul), un) });
     }
-    // Les conteneurs : pleins, ou vidés (et alors effacés du terrain personnel, qui ne se renouvelle pas).
-    for (const em of emplacements) {
+    // Les conteneurs : pleins, ou vidés ; vidés, ils restent au sol en décor muet, terrain compris (0.8.2, R24).
+    for (const { em, reste: n } of contenantsCarreau(this.cle, cx, cz, e.pieces, e.pris)) {
       if (em.genre === "sol" || em.genre === "coffre_voiture") continue;
-      const n = restes.get(em.e) ?? 0;
-      if (n === 0 && this.terrain) continue;
       const variante = em.genre === "sac_poubelle" ? graineDe("sac", k, em.e) % 3 === 0 ? 1 : 0 : 0;
       const geometrie = `c:${em.genre}:${n > 0 ? "plein" : "vide"}:${variante}`;
       poses.set(`c${em.e}:${n > 0 ? 1 : 0}`, { geometrie, matrice: new THREE.Matrix4().compose(new THREE.Vector3(em.x, -0.005, em.z), q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), em.o), un) });
@@ -560,15 +552,8 @@ export class CoucheDechetsVue {
     const op = (o: Extract<MessageClient, { t: "dechets" }>["op"]): MessageClient => ({ t: "dechets", op: o });
     for (const [k, e] of this.carreaux) {
       const [cx, cz] = k.split(",").map(Number) as [number, number];
-      const restes = new Map<number, { x: number; z: number; n: number }>();
       for (const p of e.pieces) {
-        if (p.dedans) {
-          const c = restes.get(p.e) ?? { x: p.x, z: p.z, n: 0 };
-          if (!e.pris.has(p.i)) c.n++;
-          restes.set(p.e, c);
-          continue;
-        }
-        if (e.pris.has(p.i)) continue;
+        if (p.dedans || e.pris.has(p.i)) continue;
         const nom = OBJETS[p.objet].nom;
         garder(
           p.x,
@@ -579,21 +564,14 @@ export class CoucheDechetsVue {
           { k, pose: `p${p.i}` },
         );
       }
-      const emplacements = dispositionLieu(this.cle).get(k) ?? [];
-      for (const [em, c] of restes) {
-        const genre = emplacements[em]?.genre;
-        if (!genre || genre === "sol") continue;
-        if (c.n > 0) {
-          garder(c.x, c.z, 0.4, { libelle: `Fouiller : ${nomConteneur(genre)}`, message: op({ genre: "fouiller", ref: refConteneur(cx, cz, em) }) }, { libelle: "Examiner", examiner: POINTS_DECHETS[genre].examen }, null);
-        } else if (!this.terrain) {
-          // Vidé, il reste là jusqu'à ce que le carreau se remplisse : on peut seulement le regarder.
-          const f = genre === "poubelle_renversee";
-          garder(c.x, c.z, 0.4, null, { libelle: "Examiner", examiner: `${f ? "Une" : "Un"} ${nomConteneur(genre)}, déjà fouillé${f ? "e" : ""}. Plus rien dedans… pour l'instant.` }, null);
-        }
+      // Un contenant vidé reste au sol, en décor muet : il ne propose plus rien (0.8.2, R24).
+      for (const { em, propose } of contenantsCarreau(this.cle, cx, cz, e.pieces, e.pris)) {
+        if (!propose || em.genre === "sol") continue;
+        garder(em.x, em.z, 0.4, { libelle: `Fouiller : ${nomConteneur(em.genre)}`, message: op({ genre: "fouiller", ref: refConteneur(cx, cz, em.e) }) }, { libelle: "Examiner", examiner: POINTS_DECHETS[em.genre].examen }, null);
       }
     }
     for (const p of this.points) {
-      if (!p.dispo) continue;
+      if (!pointPropose(p)) continue;
       const d = POINTS_DECHETS[p.type];
       const ref = `p:${p.id}`;
       const A: ActionProposee = { libelle: d.verbe === "fouiller" ? `${d.libelle} (${p.reste ?? 0})` : d.libelle, message: op(d.verbe === "fouiller" ? { genre: "fouiller", ref } : { genre: "demonter", ref }) };

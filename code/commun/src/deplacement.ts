@@ -3,6 +3,7 @@
 
 import { ZONE_TERRAIN, heurte, type Zone } from "./lieux.ts";
 import { ALLURES, estAllure, type Allure } from "./regles.ts";
+import { freinMare } from "./terrain.ts";
 
 export interface Position {
   x: number;
@@ -56,7 +57,8 @@ export function avancer(position: Position, intention: Intention, dt: number, zo
   const facteur = longueur > 1 ? 1 / longueur : 1;
   const dx = intention.dx * facteur;
   const dz = intention.dz * facteur;
-  const vitesse = ALLURES[intention.allure];
+  // Dans la mare du terrain, l'eau freine le pas (0.8.2, R21 : on y entre pour remplir la gourde au milieu).
+  const vitesse = ALLURES[intention.allure] * (zone === ZONE_TERRAIN ? freinMare(position.x, position.z) : 1);
 
   let x = borner(position.x + dx * vitesse * dt, zone.xMin, zone.xMax);
   let z = borner(position.z + dz * vitesse * dt, zone.zMin, zone.zMax);
