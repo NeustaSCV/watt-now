@@ -1,6 +1,8 @@
 # Plan de développement — version 0.8.2 : les retours de jeu du niveau 1
 
-*Version du plan : v0.1 · 2026-10-13 · **Statut : brouillon, à valider par le porteur.** Rien n'est codé.*
+*Version du plan : v0.2 · 2026-10-13 · **Statut : décidé, en cours de codage** (branche `integration-0-8-2`).*
+
+*v0.2 (2026-10-13) : le porteur accepte toutes les recommandations du §7 ; Q-0.8.2-4 tranchée autrement (§7.1).*
 
 *Code de départ : **0.8.1** (déployée le 2026-10-11). Sources : `plan-0.8.md` §9.3 (ce qui était prévu en « 0.8.1 », repoussé en 0.8.2) et **§9.4** (les remarques du porteur après avoir joué : R1 à R26), et le compte rendu de la recette finale de la 0.8 (`.claude-travail/wt/c18-recette/`).*
 
@@ -63,7 +65,7 @@
   - **des ingrédients au choix dans une recette** (petit changement du moteur : `Recette.ingredients` accepte des façons alternatives, comme les `couts` des étapes) ; la fiche et Fabriquer montrent « 3 ficelles **ou** 1 corde » sur une seule ligne ;
   - **la corde d'arc** : une seule recette, 3 ficelles **ou** une corde (R15) ;
   - **la matraque électrique** : une seule recette, un pack de cellules **ou** la petite batterie (R16 ; la recette « (petite batterie) » disparaît) ;
-  - ⚡ **le condensateur** (R14) : un objet nouveau, qu'on obtient en démontant le flash jetable ou la raquette à moustiques ; il fait **le module de décharge** (un seul module, au lieu des modules au flash et à la raquette ; étoiles : Q-0.8.2-4) ;
+  - ⚡ **les condensateurs** (R14, Q-0.8.2-4) : deux objets nouveaux, le **petit condensateur** (★, en démontant le flash jetable) et le **condensateur moyen** (★★, en démontant la raquette à moustiques) ; l'un ou l'autre fait **le module de décharge** (un seul module, qui prend l'étoile de son condensateur, au lieu des modules au flash et à la raquette) ;
   - **les canettes écrasées** se démontent en aluminium ; **les boîtes de conserve vides** restent telles quelles (R25) ;
   - **remmancher** une hache ou un marteau se fait **près d'un établi** (R13 : le `lieu` de ces recettes passe de « à la main » à « à côté de l'établi ») ;
   - le son du foyer de forge : l'identifiant interne `soufflet` renommé (§9.3).
@@ -261,3 +263,8 @@ Ce qui peut l'allonger : une cause du bogue du coffre plus profonde que prévu (
 | **Q-0.8.2-8** | La note de la carte « panneau solaire sur l'auvent ! » : propre à chaque famille, ou retirée pour ne pas divulgâcher ? | **Retirée** (même règle que R18) | K |
 | **Q-0.8.2-9** | Les textes d'Examiner coupés à deux lignes : le texte entier, ou « Lire la suite » ? | **Le texte entier** (avec R10, les textes seront plus courts) | H |
 | **Q-0.8.2-10** | L'allure du meunier, du charpentier et du putréfié (§9.3) : dans la 0.8.2 ? | **Non**, plus tard | — |
+
+### 7.1 Les décisions du porteur (2026-10-13)
+
+- **Toutes les recommandations du §7 sont acceptées** (Q-0.8.2-1 à 3 et 5 à 10).
+- **Q-0.8.2-4** : **deux condensateurs** : le **petit condensateur** (★) et le **condensateur moyen** (★★) ; le module de décharge unique prend l'étoile de son condensateur (maillon faible, maîtrise inchangée). Le petit vient du flash jetable, le moyen de la raquette à moustiques (comme les étoiles des modules d'aujourd'hui).
