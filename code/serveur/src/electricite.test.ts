@@ -149,7 +149,7 @@ test("0.6 Voltaïques : un Voltaïque seul monte une matraque de fortune avec so
   assert.equal(inv.petite_batterie, undefined, "la petite batterie du kit est dans le manche");
   assert.equal(inv.appareil_photo_jetable, undefined);
   // Rien d'une autre famille dans la recette.
-  for (const id of ["matraque_fortune", "matraque_electrique", "aiguillon", "pack_cellules", "module_raquette", "cloture_fortune"]) {
+  for (const id of ["matraque_fortune", "matraque_electrique", "aiguillon", "pack_cellules", "module_decharge", "cloture_fortune"]) {
     assert.ok(recettesConnues("voltaiques").some((r) => r.id === id), id);
     for (const t2 of Object.keys(recette(id)!.ingredients)) assert.ok(!["electrodes_forgees", "manche_tourne", "ressort_retrempe"].includes(t2), `${id} : ${t2}`);
   }
@@ -160,7 +160,10 @@ test("0.6 Voltaïques : seul, une matraque ★★ (raquette, pack) dès le premi
     { couteau: 1, sac_a_dos: 1, raquette_moustiques: 1, fil_cuivre: 2, cellule_lithium: 3, ficelle: 1, gourdin: 1, caoutchouc: 1 },
     [{ type: "banc_recharge", x: 21, z: 20 }],
   );
-  for (const r of ["module_raquette", "pack_cellules", "matraque_electrique"]) {
+  // 0.8.2 (R14) : la raquette se démonte en condensateur moyen, qui fait le module ★★.
+  t.joueur.recevoir({ t: "demonter", objet: "raquette_moustiques" });
+  t.attendre(8);
+  for (const r of ["module_decharge", "pack_cellules", "matraque_electrique"]) {
     t.joueur.recevoir({ t: "fabriquer", recette: r });
     t.attendre(8);
   }
@@ -181,16 +184,16 @@ test("0.6 Voltaïques : les étoiles de l'arme suivent le module ; électrodes �
   // La maîtrise : une de plus ; hors famille : ★★ au plus, et ×1,5.
   assert.equal(etoilesDuProduit(matraque, { ...base, module_decharge: 1 }, { maitrise: true }), 4);
   assert.equal(etoilesDuProduit(matraque, { ...base, module_decharge: 1 }, { horsFamille: true }), 2);
-  assert.equal(recetteHorsFamille(matraque).ingredients.pack_cellules, 2);
-  // Les modules : ★ flash, ★★ raquette, ★★★ bobine.
-  assert.equal(etoilesDuProduit(recette("module_flash")!, {}), 1);
-  assert.equal(etoilesDuProduit(recette("module_raquette")!, {}), 2);
+  assert.equal(recetteHorsFamille(matraque).auChoix?.[0]?.pack_cellules, 2);
+  // Les modules (0.8.2, R14) : ★ au petit condensateur (le flash), ★★ au moyen (la raquette), ★★★ à la bobine.
+  assert.equal(etoilesDuProduit(recette("module_decharge")!, { petit_condensateur: 1 }), 1);
+  assert.equal(etoilesDuProduit(recette("module_decharge")!, { condensateur_moyen: 1 }), 2);
   assert.equal(etoilesDuProduit(recette("module_bobine")!, {}), 3);
   // Le bain dérouille une machette de fortune : ★ → ★★, pas au-delà.
   assert.equal(etoilesDuProduit(recette("derouiller_machette")!, { machette: 1 }), 2);
   assert.equal(etoilesDuProduit(recette("derouiller_machette")!, { "machette#2": 1 }), 2);
   // Toutes les recettes ont une catégorie, et leurs produits une énergie grise.
-  for (const id of ["pack_cellules", "module_flash", "matraque_fortune", "matraque_electrique", "aiguillon", "lampe_bricolee", "electrificateur", "ventilateur_forge"]) {
+  for (const id of ["pack_cellules", "module_decharge", "matraque_fortune", "matraque_electrique", "aiguillon", "lampe_bricolee", "electrificateur", "ventilateur_forge"]) {
     const r = recette(id)!;
     assert.ok(r.categorie, id);
     if ("objet" in r.produit) assert.ok(energieGrise(r.produit.objet) > 0, id);

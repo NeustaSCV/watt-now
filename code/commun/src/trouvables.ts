@@ -118,6 +118,8 @@ export function trouvables(famille: Famille, seul = true): Trouvables {
 export function recetteFaisable(r: Recette, objets: ReadonlyMap<TypeObjet, Source>, installations: ReadonlySet<string>): boolean {
   if (r.installation && !installations.has(r.installation)) return false;
   for (const t of Object.keys(r.ingredients) as TypeObjet[]) if (!objets.has(t)) return false;
+  // Les ingrédients au choix (0.8.2) : l'une des façons suffit.
+  if (r.auChoix?.length && !r.auChoix.some((c) => (Object.keys(c) as TypeObjet[]).every((t) => objets.has(t)))) return false;
   return qualitesAPortee(objets, r.qualites);
 }
 
@@ -126,6 +128,7 @@ export function manquesDe(r: Recette, t: Trouvables): string[] {
   const manques: string[] = [];
   if (r.installation && !t.installations.has(r.installation)) manques.push(`installation ${r.installation}`);
   for (const o of Object.keys(r.ingredients) as TypeObjet[]) if (!t.objets.has(o)) manques.push(o);
+  if (r.auChoix?.length && !r.auChoix.some((c) => (Object.keys(c) as TypeObjet[]).every((o) => t.objets.has(o)))) manques.push(r.auChoix.map((c) => Object.keys(c).join("+")).join(" ou "));
   if (!qualitesAPortee(t.objets, r.qualites)) manques.push(`outils ${JSON.stringify(r.qualites)}`);
   return manques;
 }

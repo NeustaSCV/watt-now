@@ -75,7 +75,8 @@ export function etapesTutoriel(famille: Famille): EtapeTutoriel[] {
       consigne: "Examine le vieux vélo ({examiner}), fouille la caisse à outils, puis démonte le vélo.",
       lecon: "Un vestige s'utilise tel quel ou se démonte en pièces. L'énergie de l'ancien monde est dedans.",
     },
-    { titre: "L'outil", consigne: "Remmanche la tête de hache de la caisse : une branche, ton couteau, une pierre pour marteler.", lecon: "Un bon outil va plus vite, et frappe plus fort." },
+    // R13 (0.8.2) : on remmanche près d'un établi, plus à la main.
+    { titre: "L'outil", consigne: "Bâtis un établi (4 bûches, 6 branches), puis remmanche à côté la tête de hache de la caisse : une branche, ton couteau, une pierre pour marteler.", lecon: "Un bon outil va plus vite, et frappe plus fort." },
     { titre: "L'abri", consigne: "Monte un abri de branches et de bâche (la bâche est dans la ruine).", lecon: "Un toit pour dormir : on y récupère deux fois plus vite." },
     {
       titre: "Le premier Éteint",

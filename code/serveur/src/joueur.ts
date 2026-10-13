@@ -15,7 +15,7 @@ import type { Bienvenue, Cible, FeuVu, InstallationVue, MessageClient, MessageSe
 import { CAPACITE_SAC, CONTENANTS, OBJETS, capaciteDe, estCleObjet, estObjet, lumierePortee, nommer, poidsInventaire, traineTravois, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
 import { compter, estMaitrisee, estObjetDeMetier, retirerExemplaires, typeDe, type CleObjet } from "../../commun/src/etoiles.ts";
 import { NOMS_INSTALLATIONS, RECETTES, dureeReelle, ingredientsPresents, multiplicateurQualites, niveauQualite, recette, recettesConnues, type Recette, type TypeInstallation } from "../../commun/src/recettes.ts";
-import { estHorsFamille, etoilesDuProduit, recettePour } from "../../commun/src/recettes.ts";
+import { estHorsFamille, etoilesDuProduit, recetteAvecFacon, recettePour } from "../../commun/src/recettes.ts";
 import { chezLaFamille, estManuel, type Savoir } from "../../commun/src/savoir.ts";
 import { lireManuel, type ParticipantLecon } from "./lecon.ts";
 import {
@@ -201,7 +201,7 @@ import { remplirCoffres, savoirAdmin, vueProgressionAdmin } from "./admin.ts";
 import { ARRIVEE_DEPART } from "../../commun/src/lieux.ts";
 import { SANTE_DEPART } from "../../commun/src/combat.ts";
 import type { OperationAdmin, VueAdmin } from "../../commun/src/admin.ts";
-import type { VueProgression } from "../../commun/src/progression.ts";
+import { nombreFabriques, type VueProgression } from "../../commun/src/progression.ts";
 
 const JAMAIS = Number.MAX_SAFE_INTEGER;
 const INTERVALLE_BESOINS = 1000;
@@ -2897,12 +2897,13 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (!admin && !this.devoilement.estDevoilee(modele.id)) return this.info("Tu n'y as pas encore pensé.");
     // Hors de sa famille (Book 25 §2.2) : ×1,5 en matières et en temps, et ★★ au plus.
     const horsFamille = !admin && estHorsFamille(modele, this.compte.famille);
-    const r = admin ? modele : recettePour(modele, this.compte.famille);
+    // Des ingrédients au choix (0.8.2, chantier B) : on prend la façon qu'on a dans le sac, et c'est elle qu'on consomme.
+    const r = recetteAvecFacon(admin ? modele : recettePour(modele, this.compte.famille), this.inventaire);
     // Plus tard (plan 0.8 §1.3) : le client la grise ; le serveur la refuse.
     const plusTard = refusAVenir(r);
     if (plusTard) return this.info(plusTard);
     if (this.lieu !== "terrain" && r.lieu.genre !== "main") return this.info(r.lieu.genre === "posee" ? "Ça se construit chez toi, sur ton terrain." : "Ça se fait chez toi, à côté de ce que tu y as construit.");
-    if (!ingredientsPresents(this.inventaire, r)) return this.info(ceQuiManqueBref(r, this.inventaire, undefined, this.recetteVisible));
+    if (!ingredientsPresents(this.inventaire, r)) return this.info(ceQuiManqueBref(admin ? modele : recettePour(modele, this.compte.famille), this.inventaire, undefined, this.recetteVisible));
     const facteur = multiplicateurQualites(this.outils(), r.qualites);
     if (facteur === null) return this.infos(outilsManquantsBref(r.qualites, this.outils(), undefined, this.recetteVisible));
     // Le lieu (plan 0.8, chantier 1) : la forme du foyer, la construction à son niveau, l'accessoire ; le refus nomme ce qui manque.
@@ -2962,7 +2963,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
         }
       }
       // Les étoiles d'un objet de métier (Book 25 §4.2) : le maillon faible, la maîtrise (10 faits), ★★ hors famille.
-      const etoiles = etoilesDuProduit(r, this.inventaire, { horsFamille, maitrise: estMaitrisee(this.quetes.etat.faits[`fabrique:${r.id}`] ?? 0), contexte: this.forge.contexte() });
+      const etoiles = etoilesDuProduit(r, this.inventaire, { horsFamille, maitrise: estMaitrisee(nombreFabriques(this.quetes.etat.faits, r.id)), contexte: this.forge.contexte() });
       this.retirerIngredients(ingredients);
       // Ce qui sort de la forge (trempe, reforgeage, manche tourné : forge.ts) ; ailleurs, le produit à ses étoiles.
       const sortie = this.forge.sortie(r, produit.objet, etoiles, quantite, horsFamille);

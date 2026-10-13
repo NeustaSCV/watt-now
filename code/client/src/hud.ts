@@ -2295,8 +2295,19 @@ export class Hud {
   // ---------- La fabrication ----------
 
   private puce(type: TypeObjet, besoin: number): string {
-    const a = this.inventaire[type] ?? 0;
+    // Un objet de métier compte toutes étoiles confondues (un module ★★ est un module), comme le serveur.
+    const a = compter(this.inventaire, type);
     return `<span class="ingredient ${a >= besoin ? "ok" : ""}" title="${OBJETS[type].nom}">${icone(type, 22)}${Math.min(a, besoin)}/${besoin}</span>`;
+  }
+
+  /**
+   * Les puces d'une recette : ses ingrédients, puis ses ingrédients au choix sur la même ligne, séparés par « ou »
+   * (« 3 ficelles ou 1 corde » : 0.8.2, chantier B, `Recette.auChoix`).
+   */
+  private pucesRecette(r: Recette): string {
+    const puces = (inv: Inventaire) => (Object.entries(inv) as [TypeObjet, number][]).map(([t, n]) => this.puce(t, n ?? 0)).join("");
+    const choix = (r.auChoix ?? []).map(puces).join(`<span class="ou">ou</span>`);
+    return puces(r.ingredients) + choix;
   }
 
   /** L'onglet du panneau Fabriquer : le dernier choisi, gardé sur l'appareil (« Tout » si rien). */
@@ -2430,7 +2441,7 @@ export class Hud {
         <article class="recette ${possible ? "possible" : ""} ${nouveau(r.id) ? "nouvelle" : ""}">
           ${icone(pictogramme, 40)}
           <div class="corps"><strong>${r.nom}${badge}${etiquette(r.id)}</strong>
-            <span class="puces">${Object.entries(r.ingredients).map(([t, n]) => this.puce(t as TypeObjet, n ?? 0)).join("")}${qualites}</span>
+            <span class="puces">${this.pucesRecette(r)}${qualites}</span>
             <small>${ou}${String(secondes).replace(".", ",")} s · ≈ ${Math.round(energieGriseRecette(r))} wotts</small>${this.pourquoi === r.id ? this.listeManque(r) : ""}</div>
           ${
             plusTard

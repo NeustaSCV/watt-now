@@ -799,12 +799,12 @@
     6.0
    ]
   },
-  "soufflet": {
+  "forge_attisee": {
    "boucle": false,
    "variantes": [
-    "soufflet/soufflet_0",
-    "soufflet/soufflet_1",
-    "soufflet/soufflet_2"
+    "forge_attisee/forge_attisee_0",
+    "forge_attisee/forge_attisee_1",
+    "forge_attisee/forge_attisee_2"
    ],
    "durees": [
     1.4,

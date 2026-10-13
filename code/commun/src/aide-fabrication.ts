@@ -7,6 +7,7 @@ import { FAMILLES, NOMS_FAMILLES } from "./regles.ts";
 import { ouSeFait } from "./lieu-recette.ts";
 import { NOMS_QUALITES, QUALITES_OBJETS, QUALITES_POSTES, RECETTES, niveauQualite, type Qualite, type Recette } from "./recettes.ts";
 import { USAGES, type TypeRessource } from "./terrain.ts";
+import { compter } from "./etoiles.ts";
 
 /** Les vestiges de la station-service (le reste se trouve sur son terrain). */
 const A_LA_HALTE = new Set<TypeRessource>(["rayonnage", "panneau_auvent", "epave_voiture", "epave_camion", "caisse_atelier", "grenier"]);
@@ -122,6 +123,22 @@ export function outilsManquantsBref(qualites: Partial<Record<Qualite, number>>, 
   )];
 }
 
+/**
+ * Le choix d'une recette qui manque (0.8.2, `Recette.auChoix`) : null si l'une des façons est dans le sac ; sinon ce qui
+ * manque de chacune, sur une ligne (« 3 ficelles ou 1 corde »).
+ */
+export function choixManquant(r: Pick<Recette, "auChoix">, inventaire: Inventaire): string | null {
+  if (!r.auChoix?.length) return null;
+  const manques = r.auChoix.map((c) =>
+    (Object.entries(c) as [TypeObjet, number][]).filter(([t, n]) => compter(inventaire, t) < n).map(([t, n]) => {
+      const reste = n - compter(inventaire, t);
+      return reste > 1 ? nommer(t, reste) : `1 ${minuscule(OBJETS[t].nom)}`;
+    }),
+  );
+  if (manques.some((m) => m.length === 0)) return null;
+  return ou(manques.map(et));
+}
+
 /** Ce qui manque pour une recette, en un message court (deux lignes au plus) ; le détail est dans Fabriquer. */
 export function ceQuiManqueBref(r: Recette, inventaire: Inventaire, max = MESSAGE_MAX, visible: RecetteVisible = TOUTES): string {
   const manquants = (Object.entries(r.ingredients) as [TypeObjet, number][]).filter(([t, besoin]) => (inventaire[t] ?? 0) < besoin);
@@ -129,12 +146,15 @@ export function ceQuiManqueBref(r: Recette, inventaire: Inventaire, max = MESSAG
     const a = inventaire[t] ?? 0;
     return besoin - a > 1 ? nommer(t, besoin - a) : `1 ${minuscule(OBJETS[t].nom)}`;
   });
+  // Les ingrédients au choix (0.8.2) : « 3 ficelles ou 1 corde », comme un seul manque.
+  const choix = choixManquant(r, inventaire);
+  if (choix) noms.push(choix);
   const outils = outilsManquantsBref(r.qualites, inventaire, max, visible).join(" ");
   const outilsVides = Object.entries(r.qualites).every(([q, n]) => niveauQualite(inventaire, q as Qualite) >= (n ?? 0));
   const reste = [outilsVides ? "" : outils, ouSeFait(r.lieu) ? `Elle se fait ${ouSeFait(r.lieu)}.` : ""].filter(Boolean);
   if (noms.length === 0) return tenir([reste.join(" ")], max);
   const manque = `Il te manque ${et(noms)}.`;
-  const unSeul = manquants.length === 1 ? manquants[0]! : null;
+  const unSeul = manquants.length === 1 && !choix ? manquants[0]! : null;
   const source = unSeul ? ouTrouver(unSeul[0], visible)[0] : undefined;
   const a = unSeul ? (inventaire[unSeul[0]] ?? 0) : 0;
   const detail = `Il te manque ${noms[0]}${a > 0 ? ` (tu en as ${a})` : ""}.${source ? ` Pour en avoir : ${source}.` : ""}`;
@@ -169,6 +189,8 @@ export function ceQuiManque(r: Recette, inventaire: Inventaire, visible: Recette
       `Il te manque ${besoin - a > 1 ? nommer(t, besoin - a) : `1 ${minuscule(OBJETS[t].nom)}`}${a > 0 ? ` (tu en as ${a})` : ""}.` + (sources.length ? ` Pour en avoir : ${ou(sources)}.` : ""),
     );
   }
+  const choix = choixManquant(r, inventaire);
+  if (choix) lignes.push(`Il te manque ${choix}.`);
   lignes.push(...outilsManquants(r.qualites, inventaire, visible));
   if (ouSeFait(r.lieu)) lignes.push(`Elle se fait ${ouSeFait(r.lieu)}.`);
   return lignes;

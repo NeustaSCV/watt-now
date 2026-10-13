@@ -241,8 +241,9 @@ test("le filet du temps, par recette à la main : 20 min, puis 60 min, puis le m
   for (const id of ["ficelle", "corde", "volaille"]) assert.ok(vingt.has(id), id);
   assert.ok(!vingt.has("gourdin") && !vingt.has("lit_branchages") && !vingt.has("cepes_poeles"));
   const soixante = apres(etat({ minutes: 60 }));
-  for (const id of ["gourdin", "hache", "lance", "arc_fortune", "pansement", "travois"]) assert.ok(soixante.has(id), id);
-  assert.ok(!soixante.has("forge") && !soixante.has("epieu") && !soixante.has("coffre"));
+  for (const id of ["gourdin", "lance", "arc_fortune", "pansement", "travois"]) assert.ok(soixante.has(id), id);
+  // R13 (0.8.2) : la hache se remmanche à l'établi ; c'est lui qui la dévoile.
+  assert.ok(!soixante.has("forge") && !soixante.has("epieu") && !soixante.has("coffre") && !soixante.has("hache"));
   const seuil = apres(etat({ minutes: FILET_SEUIL_MIN }));
   assert.ok(seuil.has("forge"));
   assert.ok(!seuil.has("glaive") && !seuil.has("pinces_forge"));
@@ -263,7 +264,7 @@ test("les autres familles : jamais dévoilées sans leçon ni manuel ; vues gris
   assert.ok(!autresAtteints({ famille: "charbonniers", faits: { "rencontre:charbonniers": 1 } }));
   // Une leçon dévoile ce qu'elle apprend ; tenir le produit d'une autre famille déplie sa recette.
   assert.ok(apres(etat({ savoir: { apprises: ["arbalete"] } })).has("arbalete"));
-  assert.ok(entrevues(etat({ vus: new Set(["module_decharge"]) })).includes("module_flash"));
+  assert.ok(entrevues(etat({ vus: new Set(["module_decharge"]) })).includes("module_decharge"));
 });
 
 test("voir faire (Q7) dévoile une recette de sa famille ou commune", () => {
@@ -273,7 +274,9 @@ test("voir faire (Q7) dévoile une recette de sa famille ou commune", () => {
 test("le vétéran (Q8, plan 0.8) : les recettes communes à la main, ni ce qui se pose, ni ce qui se fait à une construction", () => {
   for (const f of FAMILLES) {
     const d = new Set(devoileesDEmblee(f as Famille));
-    assert.ok(d.has("gourdin") && d.has("ficelle") && d.has("hache") && d.has("lance"), f);
+    assert.ok(d.has("gourdin") && d.has("ficelle") && d.has("lance"), f);
+    // R13 (0.8.2) : la hache se remmanche à l'établi, elle vient avec lui.
+    assert.ok(!d.has("hache") && !d.has("marteau"), f);
     assert.ok(!d.has("lit_branchages") && !d.has("foyer_dakota") && !d.has("cepes_poeles") && !d.has("epieu"), f);
     assert.ok(!d.has("forge") && !d.has("banc_recharge") && !d.has("pedalier") && !d.has("matraque_fortune") && !d.has("corde_arbalete"), f);
   }

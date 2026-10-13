@@ -71,7 +71,7 @@ import { ecrire, lire } from "./stockage.ts";
 import { Sonorisation } from "./son/audio.ts";
 import { Bruiteur, dansLaBoutique } from "./son/bruiteur.ts";
 import type { IdSon } from "./son/catalogue.ts";
-import { RECETTES, type Recette } from "../../commun/src/recettes.ts";
+import { RECETTES, recetteAvecFacon, type Recette } from "../../commun/src/recettes.ts";
 import { pretALancer, type Pret } from "../../commun/src/tir.ts";
 import type { ResultatCoup } from "../../commun/src/eteints.ts";
 import type { ProjectileVu } from "../../commun/src/messages.ts";
@@ -432,7 +432,7 @@ const hud = new Hud(
         return;
       }
       // Un objet : à nos pieds.
-      fabricationDemandee = { nom: r.nom, ingredients: r.ingredients, x: position.x + Math.sin(position.o) * 0.75, z: position.z + Math.cos(position.o) * 0.75 };
+      fabricationDemandee = { nom: r.nom, ingredients: recetteAvecFacon(r, inventaire).ingredients, x: position.x + Math.sin(position.o) * 0.75, z: position.z + Math.cos(position.o) * 0.75 };
       envoyer({ t: "fabriquer", recette: r.id });
     },
   },
@@ -1293,7 +1293,7 @@ function finirPose(choix: "tourner" | "annuler" | "poser"): void {
   if (genre === "feu") envoyer({ t: "construire_feu", x: pose.x, z: pose.z, ...(dakota ? { dakota } : {}) });
   else if (recette) {
     // Le tas de matières, là où l'installation va se dresser.
-    fabricationDemandee = { nom: recette.nom, ingredients: recette.ingredients, x: pose.x, z: pose.z };
+    fabricationDemandee = { nom: recette.nom, ingredients: recetteAvecFacon(recette, inventaire).ingredients, x: pose.x, z: pose.z };
     envoyer({ t: "fabriquer", recette: recette.id, x: pose.x, z: pose.z, o: pose.o });
   }
   pose.arreter();
