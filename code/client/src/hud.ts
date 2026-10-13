@@ -2160,10 +2160,13 @@ export class Hud {
       </article>`;
   }
 
-  /** « Et après ? » : le niveau d'ensuite, grisé (la recette pressentie, Book 03 §5.1), avec sa clé. */
+  /**
+   * « Et après ? » : le niveau d'ensuite, grisé (la recette pressentie, Book 03 §5.1), avec sa clé. Sa ligne dit déjà
+   * « à trouver plus loin » : le texte n'ajoute que « Plus tard. » (0.8.2, chantier K).
+   */
   private carteApres(e: Etape | null | undefined): string {
     if (!e) return "";
-    return `<article class="etape apres"><div class="corps"><strong>Et après ? ${e.nom}</strong>${this.ligneCle(e)}<small>${e.apporte}${e.aVenir ? ` ${texteAVenir(e.aVenir)}` : ""}</small></div></article>`;
+    return `<article class="etape apres"><div class="corps"><strong>Et après ? ${e.nom}</strong>${this.ligneCle(e)}<small>${e.apporte}${e.aVenir ? ` ${e.cle && e.aVenir !== "0b" ? "Plus tard." : texteAVenir(e.aVenir)}` : ""}</small></div></article>`;
   }
 
   /**

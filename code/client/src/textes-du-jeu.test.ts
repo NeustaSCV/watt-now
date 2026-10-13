@@ -25,7 +25,7 @@ import { USAGES } from "../../commun/src/terrain.ts";
 import { REPAS_DU_TUTORIEL, etapesTutoriel } from "../../commun/src/tutoriel.ts";
 import { RUBRIQUES_AIDE } from "./aide-contenu.ts";
 import { dessinCarte } from "./carte.ts";
-import { EXAMENS_INSTALLATIONS } from "./interaction.ts";
+import { EXAMENS_INSTALLATIONS, examenInstallation } from "./interaction.ts";
 
 // ---------- « Clé » ----------
 
@@ -99,7 +99,7 @@ test("0.8.2 textes : aucune donnée du jeu ne dit « clé », hors les vraies cl
   assert.deepEqual(fautes, [], `« clé » dans :\n${fautes.join("\n")}`);
 });
 
-// Les sources : toutes les chaînes du code du jeu (guillemets et gabarits), commentaires exclus.
+// Les sources : toutes les chaînes du code du jeu (guillemets et gabarits) et du style, commentaires exclus.
 
 const RACINE = join(fileURLToPath(new URL(".", import.meta.url)), "..", "..");
 
@@ -114,7 +114,8 @@ function fichiers(dossier: string): string[] {
   for (const nom of readdirSync(dossier)) {
     const chemin = join(dossier, nom);
     if (statSync(chemin).isDirectory()) r.push(...fichiers(chemin));
-    else if (chemin.endsWith(".ts")) r.push(chemin);
+    // Le style aussi : un `content: "…"` s'affiche (la fiche disait « Clé : » par là).
+    else if (chemin.endsWith(".ts") || chemin.endsWith(".css")) r.push(chemin);
   }
   return r;
 }
@@ -295,4 +296,13 @@ test("0.8.2 indices : la liste des endroits précis attrape les indices d'avant 
   for (const avant of ["Le parc à volailles de la Coopérative.", "Sous l'établi du garage de la station.", "Le pilier de l'auvent de la station.", "Les sacs de jute du magasin, au Moulin du Gué.", "La laiterie de la Coopérative.", "Le quai d'un lieu plus loin.", "L'établi du rhabilleur, aux meules du Moulin du Gué."])
     assert.ok(trop(avant), avant);
   for (const apres of ["À la Coopérative.", "Au Moulin du Gué.", "De la vraie laine ? Une auberge, un hôtel."]) assert.ok(!trop(apres), apres);
+});
+
+test("0.8.2 textes : la fiche du foyer de forge parle de l'enclume posée, plus de la pierre plate", () => {
+  assert.match(examenInstallation({ type: "forge", etat: {} }), /pierre plate/);
+  for (const [enclume, nom] of [["depanneur", "l'enclume de dépanneur calée"], ["etau", "l'étau calé"], ["masse", "la tête de masse calée"]] as const) {
+    const t = examenInstallation({ type: "forge", etat: { enclume } });
+    assert.doesNotMatch(t, /pierre plate/);
+    assert.ok(t.includes(nom), t);
+  }
 });
