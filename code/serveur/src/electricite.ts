@@ -9,7 +9,7 @@
 // Ce module ne connaît pas le joueur : il passe par un `ContexteElectricite` (ce que le joueur lui prête), si bien que
 // joueur.ts n'ajoute que des appels d'une ligne (Book 25 §10.4).
 
-import { armeSansCharge, capaciteChargeArme, chargeArme, cleArme, armeDeCle, COUT_ENDURANCE, type Arme } from "../../commun/src/combat.ts";
+import { armeSansCharge, chargeArme, cleArme, armeDeCle, COUT_ENDURANCE, type Arme } from "../../commun/src/combat.ts";
 import { chosesACharger, estBatterie, manque, pleine, type CibleCharge } from "../../commun/src/banc.ts";
 import { BATTERIES_DE_BANC, MS_JOUR_CALENDRIER, RENDEMENT_BANC, WH_CHARGE_MAX, batterieDuBanc, dureeCharge, estBatterieDeBanc, productionPanneau, stocker, type Charges, type TypeBatterie } from "../../commun/src/energie.ts";
 import type { CleObjet } from "../../commun/src/etoiles.ts";
@@ -21,7 +21,7 @@ import { declencheurNeuf, enregistrerDeclencheur, rearmer as rearmerDeclencheur 
 
 /** L'endurance d'une décharge : on tient, on ne frappe pas (5 la courte, 8 la longue). */
 export const ENDURANCE_DECHARGE = { courte: 5, longue: 8 } as const;
-/** La manivelle de la lampe à dynamo (voie autonome) : 1 Wh par minute réelle, 10 d'endurance par minute. */
+/** La manivelle de la lampe à dynamo (voie autonome), au banc : 1 Wh par minute réelle dans sa batterie, 10 d'endurance par minute. */
 export const MANIVELLE = { whParMinute: 1, enduranceParMinute: 10, minutesMax: 3, kcalParHeure: 150 } as const;
 /** Réarmer la plaque de choc : une décharge à recharger dans son condensateur. */
 export const WH_REARMER_PLAQUE = 0.5;
@@ -30,7 +30,7 @@ export const WATTS_CLOTURE: Record<"cloture_fortune" | "cloture_electrique", num
 /** Une clôture se branche sur un banc à moins de 6 m (le fil n'est pas long). */
 export const PORTEE_CLOTURE_BANC = 6;
 /** On ne dit « Plus de courant » qu'une fois, jusqu'à la prochaine recharge (Book 25 §5.4). */
-const TEXTE_PLUS_DE_COURANT = "Plus de courant : ce n'est plus qu'un gourdin court. Recharge-la au banc, ou à la manivelle.";
+const TEXTE_PLUS_DE_COURANT = "Plus de courant : ce n'est plus qu'un gourdin court. Recharge-la au banc.";
 
 const BATTERIES: TypeBatterie[] = ["petite_batterie", "batterie_voiture"];
 
@@ -412,7 +412,7 @@ export class Electricite {
     if (dispo < 0.25) return this.ctx.info(`${majuscule(bat.nom)}, dans le banc, est vide : rien à charger. ${banc.etat.panneau ? "Le panneau la remplit au soleil." : "Le soleil ne la remplira qu'avec le panneau posé dessus."}`);
     const transfert = Math.min(manque(chose), dispo, WH_CHARGE_MAX);
     const nom = plusieurs ? chose.nom.replace(/^Tes /, "tes ") : chose.nom.charAt(0).toLowerCase() + chose.nom.slice(1);
-    this.ctx.commencer(`Recharger ${nom}`, dureeCharge(transfert), () => {
+    this.ctx.commencer(`Charger ${nom}`, dureeCharge(transfert), () => {
       this.ctx.majBase();
       const source = batterieDuBanc(banc.etat);
       const encore = chosesACharger(this.ctx.inventaire(), this.ctx.charges(), this.ctx.chargeArmes()).find((c) => c.cible === cible);
@@ -434,29 +434,31 @@ export class Electricite {
   }
 
   /**
-   * La manivelle de la lampe à dynamo (voie autonome, Book 25 §5.4) : 1 Wh par minute réelle, 10 d'endurance par
-   * minute. Lent, mais un Voltaïque n'est jamais désarmé, même l'hiver gris.
+   * La manivelle de la lampe à dynamo (voie autonome, Book 25 §5.4 ; 0.8.2, R17) : au banc, elle remplit lentement la
+   * batterie du banc, 1 Wh par minute réelle, 10 d'endurance par minute ; on charge ensuite ce qu'on porte, depuis la
+   * fiche. Le secours lent, sans soleil et sans pédalier : un Voltaïque n'est jamais désarmé, même l'hiver gris.
    */
-  manivelle(cle: CleObjet): void {
-    const inv = this.ctx.inventaire();
-    if (!(inv.lampe_dynamo ?? 0)) return this.ctx.info("Il faut la lampe à dynamo du kit : sa manivelle recharge une arme.");
-    const a = armeDeCle(cle);
-    if (!a?.electrique || !(inv[cle] ?? 0)) return;
-    const manque = capaciteChargeArme(a) - chargeArme(cle, this.ctx.chargeArmes());
-    if (manque <= 0.05) return this.ctx.info(`${majuscule(a.nom)} est pleine.`);
-    const minutes = Math.min(MANIVELLE.minutesMax, Math.ceil(manque / MANIVELLE.whParMinute));
+  manivelle(banc: InstallationVue): void {
+    if (!(this.ctx.inventaire().lampe_dynamo ?? 0)) return this.ctx.info("Il faut la lampe à dynamo du kit : sa manivelle remplit la batterie du banc.");
+    const bat = batterieDuBanc(banc.etat);
+    if (!bat) return this.ctx.info("Le banc n'a pas de batterie : pose d'abord la batterie de voiture de la ruine.");
+    const place = bat.capacite - bat.wh;
+    if (place <= 0.05) return this.ctx.info(`${majuscule(bat.nom)} est pleine.`);
+    const minutes = Math.min(MANIVELLE.minutesMax, Math.ceil(place / MANIVELLE.whParMinute));
     if (this.ctx.endurance() < MANIVELLE.enduranceParMinute) return this.ctx.info("Trop essoufflé pour tourner la manivelle : souffle un peu.");
     this.ctx.commencer(
       "Tourner la manivelle",
       minutes * 60,
       () => {
-        const encore = capaciteChargeArme(a) - chargeArme(cle, this.ctx.chargeArmes());
-        const wh = Math.min(encore, minutes * MANIVELLE.whParMinute);
-        if (wh <= 0) return;
-        this.ctx.majChargeArme(cle, chargeArme(cle, this.ctx.chargeArmes()) + wh);
+        this.ctx.majBase();
+        const source = batterieDuBanc(banc.etat);
+        if (!source) return;
+        const r = stocker({ batteries: banc.etat.batteries ?? {}, charges: banc.etat.charges ?? {} }, minutes * MANIVELLE.whParMinute);
+        if (r.stocke <= 0) return;
+        banc.etat = { ...banc.etat, charges: r.stockage.charges };
+        this.ctx.sauverInstallation(banc);
         this.ctx.depenser(minutes * MANIVELLE.enduranceParMinute);
-        this.alerteDonnee = false;
-        this.ctx.info(`+${arrondi(wh)} Wh dans ${a.nom}, à la force du bras.`);
+        this.ctx.info(`+${arrondi(r.stocke)} Wh dans ${source.nom}, à la force du bras.`);
       },
       MANIVELLE.kcalParHeure,
     );

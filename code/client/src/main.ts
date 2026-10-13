@@ -405,7 +405,6 @@ const hud = new Hud(
     demonter: (objet) => envoyer({ t: "demonter", objet }),
     lire: (objet) => envoyer({ t: "lire", objet }),
     recettesVues: (recettes) => envoyer({ t: "recettes_vues", recettes }),
-    manivelle: (objet) => envoyer({ t: "manivelle", objet }),
     equiper: (objet) => envoyer({ t: "equiper", objet }),
     preparer: (objet) => envoyer({ t: "preparer", objet }),
     reparer: (objet, fortune) => envoyer({ t: "reparer", objet, fortune }),
@@ -413,7 +412,7 @@ const hud = new Hud(
     coffre: (id, sens, objet, quantite) => envoyer({ t: "coffre", id, sens, objet, quantite }),
     amenager: (genre, id, verbe) => envoyer({ t: "interagir", cible: { genre, id }, verbe }),
     constat: (quoi, construction) => envoyer({ t: "constat", quoi, ...(construction ? { construction } : {}) }),
-    banc: (id, g) => envoyer(g.op === "charger" ? { t: "banc", id, op: "charger", cible: g.cible } : { t: "banc", id, op: "echanger" }),
+    banc: (id, g) => envoyer(g.op === "charger" ? { t: "banc", id, op: "charger", cible: g.cible } : { t: "banc", id, op: g.op }),
     fabriquer: (r) => {
       if (!position) return;
       // Le tas de matières : là où l'installation va se dresser, ou à nos pieds pour un objet.

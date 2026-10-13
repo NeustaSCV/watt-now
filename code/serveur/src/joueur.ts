@@ -732,11 +732,9 @@ export class Joueur implements Voyageur, ParticipantLecon {
         return this.tir.lancer(message.dx, message.dz, message.cible, message.distance);
       case "rearmer":
         return this.tir.rearmer();
-      case "manivelle":
-        return this.electricite.manivelle(message.objet);
-      // Le banc de recharge (0.8.2, chantier C) : charger ce qu'on porte, échanger la batterie (serveur/src/electricite.ts).
+      // Le banc de recharge (0.8.2, chantier C) : charger ce qu'on porte, échanger la batterie, la remplir à la manivelle (serveur/src/electricite.ts).
       case "banc":
-        return this.auBanc(message.id, (banc) => (message.op === "charger" ? this.electricite.charger(banc, message.cible) : this.electricite.echanger(banc)));
+        return this.auBanc(message.id, (banc) => (message.op === "charger" ? this.electricite.charger(banc, message.cible) : message.op === "manivelle" ? this.electricite.manivelle(banc) : this.electricite.echanger(banc)));
       case "lire":
         this.lire(message.objet);
         return;

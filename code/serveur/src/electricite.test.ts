@@ -1,6 +1,6 @@
 // 0.6, chantier 6 (Book 25 §5 et §10.3) : les Voltaïques. Un Voltaïque seul monte sa matraque de fortune ; la courte
 // puis la longue éteignent un Errant comme un Équipé ; une courte libère une prise ; chaque décharge prend ses Wh et le
-// pack vide fait un gourdin court ; la manivelle recharge 1 Wh par minute, le banc bien plus vite ; la clôture tient un
+// pack vide fait un gourdin court ; la manivelle remplit la batterie du banc de 1 Wh par minute, le banc charge bien plus vite ; la clôture tient un
 // Éteint, trois qui poussent la couchent, elle ne détruit jamais ; la plaque se réarme pour 0,5 Wh.
 
 import { test } from "node:test";
@@ -254,17 +254,26 @@ test("0.6 Voltaïques : pack vide, un gourdin court qui ne tue pas ; « Plus de 
 
 // ---------- La recharge ----------
 
-test("0.6 Voltaïques : la manivelle de la lampe à dynamo recharge 1 Wh par minute réelle", () => {
-  const t = surLeTerrain({ lampe_dynamo: 1, matraque_electrique: 1, sac_a_dos: 1 }, [], { matraque_electrique: 5 });
-  t.joueur.recevoir({ t: "manivelle", objet: "matraque_electrique" });
+test("0.8.2 Voltaïques (R17) : au banc, la manivelle de la lampe à dynamo remplit lentement la batterie du banc", () => {
+  const banc = { type: "banc_recharge" as const, x: 20.5, z: 20, etat: { batteries: { batterie_voiture: 1 }, charges: { batterie_voiture: 40 } } };
+  const t = surLeTerrain({ lampe_dynamo: 1, matraque_electrique: 1, sac_a_dos: 1 }, [banc], { matraque_electrique: 5 });
+  const id = t.base.chargerInstallations(t.compte.id).find((i) => i.type === "banc_recharge")!.id;
+  t.joueur.recevoir({ t: "banc", id, op: "manivelle" });
   t.attendre(60);
-  assert.equal(t.dernier("usure")?.charge?.matraque_electrique, undefined, "pas avant la fin du geste");
+  assert.ok((t.base.chargerInstallations(t.compte.id).find((i) => i.id === id)!.etat.charges?.batterie_voiture ?? 0) < 40.5, "pas avant la fin du geste");
   t.attendre(121);
-  assert.equal(t.dernier("usure")?.charge?.matraque_electrique, 8, "trois minutes, trois Wh");
-  // Sans la lampe à dynamo, pas de manivelle.
-  const u = surLeTerrain({ matraque_electrique: 1 }, [], { matraque_electrique: 5 });
-  u.joueur.recevoir({ t: "manivelle", objet: "matraque_electrique" });
+  const wh = t.base.chargerInstallations(t.compte.id).find((i) => i.id === id)!.etat.charges?.batterie_voiture ?? 0;
+  assert.ok(Math.abs(wh - 43) < 0.2, `trois minutes, trois Wh dans la batterie du banc (${wh})`);
+  assert.match(t.infos().at(-1)!, /dans la batterie de voiture de la ruine, à la force du bras/);
+  // L'arme, elle, ne bouge pas : elle se charge ensuite depuis la fiche du banc.
+  assert.equal(t.dernier("usure")?.charge?.matraque_electrique, undefined);
+  // Sans la lampe à dynamo, pas de manivelle ; sans batterie dans le banc, rien à remplir.
+  const u = surLeTerrain({ matraque_electrique: 1 }, [banc]);
+  u.joueur.recevoir({ t: "banc", id: u.base.chargerInstallations(u.compte.id)[0]!.id, op: "manivelle" });
   assert.match(u.infos().at(-1)!, /lampe à dynamo/);
+  const v = surLeTerrain({ lampe_dynamo: 1 }, [{ type: "banc_recharge", x: 20.5, z: 20 }]);
+  v.joueur.recevoir({ t: "banc", id: v.base.chargerInstallations(v.compte.id)[0]!.id, op: "manivelle" });
+  assert.match(v.infos().at(-1)!, /pas de batterie/);
 });
 
 test("0.6 Voltaïques : au banc, un pack vide se recharge en ≈ 25 s, pris à la batterie du banc (85 %)", () => {
@@ -372,8 +381,10 @@ test("0.6 Voltaïques : l'alarme électrique prévient sans rien faire à l'Éte
   assert.ok(definitionDeclencheur("alarme_electrique")!.message!.length <= 110);
 });
 
-test("0.6 Voltaïques : le contrôle accepte la manivelle et la recharge au banc, pas n'importe quoi", () => {
-  assert.ok(messageValide({ t: "manivelle", objet: "matraque_electrique#2" }));
-  assert.ok(!messageValide({ t: "manivelle", objet: "toString" }));
+test("0.6 Voltaïques : le contrôle accepte la manivelle au banc et la recharge au banc, pas n'importe quoi", () => {
+  assert.ok(messageValide({ t: "banc", id: 3, op: "manivelle" }));
+  assert.ok(!messageValide({ t: "banc", id: "3", op: "manivelle" }));
+  // La manivelle ne charge plus une arme directement (0.8.2, R17) : elle remplit la batterie du banc.
+  assert.ok(!messageValide({ t: "manivelle", objet: "matraque_electrique#2" }));
   assert.ok(messageValide({ t: "interagir", cible: { genre: "installation", id: 3 }, verbe: "recharger_armes" }));
 });

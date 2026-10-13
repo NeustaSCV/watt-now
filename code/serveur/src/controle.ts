@@ -184,11 +184,10 @@ export function messageValide(m: unknown): m is MessageClient {
       return m.objet === null || estCleObjet(m.objet);
     case "lancer":
       return nombre(m.dx) && nombre(m.dz) && (m.cible === undefined || Number.isInteger(m.cible)) && (m.distance === undefined || (nombre(m.distance) && m.distance >= 0 && m.distance <= 100));
-    case "manivelle":
-      return estCleObjet(m.objet);
-    // Le banc de recharge (0.8.2, chantier C) : un banc par son numéro ; charger une batterie ou une arme (sa clé), échanger.
+    // Le banc de recharge (0.8.2, chantier C) : un banc par son numéro ; charger une batterie ou une arme (sa clé),
+    // échanger, tourner la manivelle (elle remplit la batterie du banc).
     case "banc":
-      return Number.isInteger(m.id) && (m.op === "echanger" || (m.op === "charger" && estCleObjet(m.cible)));
+      return Number.isInteger(m.id) && (m.op === "echanger" || m.op === "manivelle" || (m.op === "charger" && estCleObjet(m.cible)));
     // Le gué (plan 0.8, chantier 11) : haler le bac, sonner la cloche du passeur.
     case "gue":
       return m.op === "haler" || m.op === "cloche";

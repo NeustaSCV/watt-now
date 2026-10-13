@@ -109,7 +109,8 @@ export const PROFILS_DECHETS: Record<TypeLieuDechets, ProfilLieuDechets> = {
   // elle-même, un tiers de ce que la crue charrie (abîmé, mouillé), le reste de la pêche et de la guinguette (un objet
   // de loisir, rarement une bonne trouvaille). Aucun objet propre à la berge : que des objets du catalogue.
   berge: {
-    code: "R",
+    // Sa propre lettre (« G », le gué) : « R » est celle de la route. Le tirage par groupes ne la lit pas.
+    code: "G",
     densite: 1,
     partConteneurs: 0.1,
     familles: {},
