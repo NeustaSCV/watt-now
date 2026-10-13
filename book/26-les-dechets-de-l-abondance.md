@@ -484,7 +484,30 @@ Dans l'ordre, du moins coûteux pour le jeu au plus coûteux : qualité basse mo
 - **Le bois et la pierre** (la ligne 10 du §2.1) : le terrain ne les fait toujours pas revenir, mais **les haltes, si** (30 min), avec des **tas personnels** (le tas de bois de la station, le banc de galets du gué), un **vrac qui grandit avec les voyageurs**, la **charbonnette** et un **stock au Comptoir** : le budget est au Book 01 §2 bis.
 - **Ce qu'on a ne disparaît pas** : on retire des **sources**, pas des objets (et tous les joueurs repartent de zéro au déploiement de la 0.8).
 - **Les ingrédients orphelins** (I31) ne sont pas créés : sable, bois flotté (le « bois flotté » du modèle du gué devient un tas de branches), planches comme matériau, mèche, chablis.
-- **La couche de déchets n'est pas encore posée** au **gué** ni au **Moulin du Gué** : leurs zones typées sont vides dans le code (`couche-dechets.ts`) ; c'est la question du §12 sur les lieux nouveaux.
+- **La couche de déchets n'est pas encore posée** au **gué** ni au **Moulin du Gué** : leurs zones typées sont vides dans le code (`couche-dechets.ts`) ; c'est la question du §12 sur les lieux nouveaux. *(0.8.2 : le gué a la sienne, la couche « berge », §11 ter.)*
+
+## 11 ter. Ce que la 0.8.2 change (2026-10-13)
+
+*Plan 0.8 §9.4 (R1, R24, R25) et §9.3, plan 0.8.2 §7.2 et §7.4 (trois canettes, la couche « berge »), chantiers B, D, F et I ; **codé en 0.8.2** (`vestiges-lot2.ts`, `dechets.ts`, `couche-dechets.ts`, `halte.ts`).*
+
+**La canette écrasée se démonte en aluminium** (R25) : écrasée, elle ne sert plus à rien d'autre ; **trois canettes**, aplaties au marteau, font **une chute d'aluminium** (Marteler 1, 2 s). Un démontage peut désormais se faire **par lots** : la fiche du sac dit « Démonter 3 canettes écrasées », le bouton reste grisé sans les trois, et le serveur le refuse (« Il en faut 3… »). La ligne du catalogue (§3.2) devient : canette écrasée · 0,015 kg · 0 W · C · partout · **chute d'aluminium 1 pour 3 (M)**.
+
+**La boîte de conserve vide se garde telle quelle** (R25) : elle **ne se démonte pas**, pour servir comme boîte (la lampe bricolée, le poêle-fusée, l'alarme à boîtes). La conserve bombée démontée en donne toujours une.
+
+**Un contenant vidé reste au sol, muet** (R24, Q-0.8.2-6) : le sac-poubelle, la poubelle renversée ou le coffre de voiture qu'on a fouillés jusqu'au bout **restent en décor**, terrain compris, et **ne proposent plus rien** (plus d'« Examiner »).
+
+**La couche « berge » du gué** (R1, décidée le 2026-10-13). Le gué a sa propre couche, **plus nature** que celle des routes : la station garde le fabriqué, **le gué devient le lieu des matériaux naturels de la route B**. **Aucun objet nouveau** : que des objets du catalogue.
+
+| Type de lieu | Emplacements / 100 m² | Part de conteneurs | Ce qu'on y tire, par groupes (et non par familles et paliers) |
+|---|---|---|---|
+| **Berge** (8 m de chaque côté de la rivière, depuis la crête) | 1 (la moitié de la route de la station) | ≈ 10 % (des sacs échoués) | **≈ 50 % la rivière** : branches, fibres, plumes, os · **≈ 35 % ce que la crue charrie** : sacs et bouteilles en plastique, canettes, chiffons, ficelle, rarement une corde · **≈ 15 % la pêche et la guinguette** : ballon, flamant rose, volants de badminton, attrape-rêves, parasol, barbecue, rarement une tente ou un sac de charbon |
+
+- **Au gué**, la « route » se réduit aux **bas-côtés immédiats** (1,5 m) ; **rien** au pied du bac, de la cloche, de la glaise, à la tête du pont ni au ras des sorties : on y hale, on y sonne et l'on y creuse sans viser un déchet.
+- La couche du gué est **partagée**, comme celle de la station (tous les voyageurs voient les mêmes amas).
+- **Les paliers** du §1.2 (70 / 25 / 5) ne s'appliquent pas à un profil tiré par groupes ; un test mesure la berge à part (`dechets-berge.test.ts`).
+- **Le Moulin du Gué** n'a toujours **pas de couche** (ses zones restent vides) : la question du §12 reste ouverte pour lui.
+
+**La caisse de l'atelier de la station devient personnelle** (recette de la 0.8) : ses clous, son fil de fer et son huile sont, comme le tas de bois, **à chacun les siens**, et reviennent pour lui en **12 h** ; le deuxième voyageur ne la trouve plus vide (Book 01 §2 bis).
 
 ## 12. Questions ouvertes
 
