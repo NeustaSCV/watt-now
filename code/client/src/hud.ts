@@ -1053,6 +1053,8 @@ export class Hud {
     const aide = this.element.querySelector<HTMLElement>(".bloc.aide");
     if (aide) aide.hidden = !v;
     if (v?.lecon) this.message(`✓ ${v.lecon}`, "lecon");
+    // 0.8.2 : le repas du tutoriel, une ligne par repas, après la leçon (les pastilles « + objet » suivent le sac).
+    for (const r of recu?.repas ?? []) this.message(r, "lecon");
     // Une nouvelle étape : sa consigne passe aussi dans les messages, carnet ouvert ou non.
     if (nouvelleEtape && v) {
       this.message(`📓 ${v.titre} : ${avecTouches(v.consigne, this.tactile)}`, "lecon");

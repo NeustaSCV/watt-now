@@ -196,7 +196,7 @@ import { saitSeServir } from "../../commun/src/savoir-meuble.ts";
 import { utiliserNiveau1 } from "./niveau1-base.ts";
 import { choisirFacon } from "../../commun/src/replis.ts";
 import { carteInstallations, feuxDuLieu, refusLieu, type Alentours } from "../../commun/src/lieu-recette.ts";
-import { ETAPE_CARTE, ETAPE_FAMILLE, ETAPE_NUIT, ETAPE_PREMIER_ETEINT, ETAPE_SAISIE, NOMBRE_ETAPES, etapesTutoriel, type EtatTutoriel, type VueTutoriel } from "../../commun/src/tutoriel.ts";
+import { ETAPE_CARTE, ETAPE_FAMILLE, ETAPE_NUIT, ETAPE_PREMIER_ETEINT, ETAPE_SAISIE, NOMBRE_ETAPES, REPAS_DU_TUTORIEL, etapesTutoriel, type EtatTutoriel, type VueTutoriel } from "../../commun/src/tutoriel.ts";
 import { AvertissementBuche, etapesReussies, progresCarte, progresFamille, type PourFinDuTutoriel } from "./tutoriel-fin.ts";
 // Le compte admin « god » (outil du porteur) : serveur/src/admin.ts.
 import { remplirCoffres, savoirAdmin, vueProgressionAdmin } from "./admin.ts";
@@ -2174,12 +2174,36 @@ export class Joueur implements Voyageur, ParticipantLecon {
 
   // ---------- Le tutoriel (É5, Book 14 §4.2) ----------
 
-  private vueTutoriel(lecon?: string): VueTutoriel | null {
+  private vueTutoriel(lecon?: string, repas: string[] = []): VueTutoriel | null {
     if (!this.tuto) return null;
     const etapes = etapesTutoriel(this.compte.famille);
     const e = etapes[Math.min(this.tuto.etape, NOMBRE_ETAPES - 1)]!;
     const progres = this.progresTutoriel();
-    return { etape: this.tuto.etape, total: NOMBRE_ETAPES, titre: e.titre, consigne: e.consigne, lecon, termine: this.tuto.etape >= NOMBRE_ETAPES, ...(progres.length ? { progres } : {}) };
+    return { etape: this.tuto.etape, total: NOMBRE_ETAPES, titre: e.titre, consigne: e.consigne, lecon, ...(repas.length ? { repas } : {}), termine: this.tuto.etape >= NOMBRE_ETAPES, ...(progres.length ? { progres } : {}) };
+  }
+
+  /**
+   * Le repas du tutoriel (0.8.2) : au sac ce qui y tient, comme le bric-à-brac d'une fouille ; le reste tombe par terre,
+   * à ses pieds (les récompenses de quête, elles, entrent au sac quoi qu'il pèse).
+   */
+  private recevoirRepasDuTutoriel(objets: Inventaire): void {
+    const pris: Inventaire = {};
+    const laisse: Inventaire = {};
+    let poids = poidsInventaire(this.inventaire, this.gourde.litres);
+    const capacite = capaciteDe(this.inventaire);
+    for (const [t, k] of Object.entries(objets) as [TypeObjet, number][]) {
+      for (let i = 0; i < k; i++) {
+        if (poids + OBJETS[t].poids <= capacite + 1e-9) {
+          pris[t] = (pris[t] ?? 0) + 1;
+          poids += OBJETS[t].poids;
+        } else laisse[t] = (laisse[t] ?? 0) + 1;
+      }
+    }
+    if (Object.keys(pris).length) this.ajouterPlusieurs(pris);
+    if (Object.keys(laisse).length) {
+      this.poserAuSol(laisse);
+      this.info(`Ton sac est plein : ${(Object.entries(laisse) as [TypeObjet, number][]).map(([t, k]) => nommer(t, k)).join(", ")}, posé par terre.`);
+    }
   }
 
   /** Ce que regarde la fin du tutoriel (serveur/src/tutoriel-fin.ts). */
@@ -2250,8 +2274,15 @@ export class Joueur implements Voyageur, ParticipantLecon {
     this.derniereVerifTuto = instant;
     const etapes = etapesTutoriel(this.compte.famille);
     let lecon: string | undefined;
+    const repas: string[] = [];
     while (this.tuto.etape < NOMBRE_ETAPES && this.etapeReussie(this.tuto.etape)) {
       lecon = etapes[this.tuto.etape]!.lecon;
+      // 0.8.2 : le repas du tutoriel, une fois, à l'étape réussie (l'étape avance et se sauve dans le même tour).
+      const r = REPAS_DU_TUTORIEL[this.tuto.etape];
+      if (r) {
+        this.recevoirRepasDuTutoriel(r.objets);
+        repas.push(r.texte);
+      }
       this.tuto.etape++;
       this.mesurer("progression", `tutoriel:${this.tuto.etape}`, 1);
     }
@@ -2264,7 +2295,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (lecon !== undefined) {
       const fini = this.tuto.etape >= NOMBRE_ETAPES;
       this.base.sauverTutoriel(this.compte.id, fini ? null : this.tuto);
-      this.envoyer({ t: "tutoriel", tutoriel: this.vueTutoriel(lecon) });
+      this.envoyer({ t: "tutoriel", tutoriel: this.vueTutoriel(lecon, repas) });
       // Les compteurs de la nouvelle étape partent avec la leçon : pas besoin de les renvoyer tout de suite.
       if (!fini) this.dernierProgresTuto = JSON.stringify(this.progresTutoriel());
       if (fini) {
