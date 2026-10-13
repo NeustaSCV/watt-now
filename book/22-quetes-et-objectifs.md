@@ -60,6 +60,9 @@ Depuis la 0.8, la base grandit avec les sorties (Book 24 §12). « S'installer �
 | 2 | **Un vrai repas** | Un plat cuisiné mangé : « des pommes cuites, ou une poêlée de cèpes » (Q-0.8-11) | 1 conserve |
 | 3 | **L'eau du ciel** | Le **récupérateur de 5 L** : le bidon de la ruine, les sacs plastique en entonnoir, 4 branches, une corde | 10 wotts |
 | 4 | **Un coffre à soi** | Un coffre de rangement | — (le coffre lui-même) |
+| 5 | **Un vrai lit** *(0.8.2)* | L'**abri garni** (examiner l'abri : « Améliorer ») ; « Dormir à même le sol, c'est dormir à moitié » | 1 conserve |
+
+> **0.8.2 (plan 0.8 §9.3, chantier J ; codé, `commun/src/quetes.ts`)** : « **Un vrai lit** » remonte **juste après le coffre**, en tête de « S'installer », avant les portes du niveau 1 : **l'abri fermé suppose l'abri garni**, et le carnet ne doit pas envoyer chercher la toile de jute d'un abri qu'on n'a pas encore garni. Il quitte la liste du point 3. Le simulateur du rythme suit l'ordre du carnet (`DUREES_QUETES`) ; les chiffres mesurés plus bas sont ceux de la 0.8, à remesurer à la recette de la 0.8.2.
 
 **2 · Puis les portes du niveau 1, une par meuble, deux ouvertes à la fois, une par route** (Q-0.8-19) :
 
@@ -71,7 +74,7 @@ Depuis la 0.8, la base grandit avec les sorties (Book 24 §12). « S'installer �
 
 Chaque texte finit par « Sa fiche dit où chercher » : le carnet nomme la porte, la fiche donne l'indice. Au départ de chaque sortie, le carnet rappelle ce qu'il te faut. Un niveau déjà monté (par une clé trouvée tôt) compte tout de suite.
 
-**3 · Ensuite, les neuf autres objectifs**, dans l'ordre de l'urgence (P-002) : **Un vrai lit** (gardé : il se valide avec l'**abri garni**, puisque le lit de branchages est fondu dans l'abri), Un feu qui ne se voit pas (Dakota), De quoi se défendre, Le premier arc, Tir plein, Être prévenu, Se soigner, Là où ils mordent, Traîner plus lourd.
+**3 · Ensuite, les neuf autres objectifs** (huit depuis la 0.8.2 : « Un vrai lit » est passé en tête), dans l'ordre de l'urgence (P-002) : ~~**Un vrai lit** (gardé : il se valide avec l'**abri garni**, puisque le lit de branchages est fondu dans l'abri)~~, Un feu qui ne se voit pas (Dakota), De quoi se défendre, Le premier arc, Tir plein, Être prévenu, Se soigner, Là où ils mordent, Traîner plus lourd.
 
 - **Aucune quête ne demande un niveau « plus tard »** ; le carnet ne demande jamais une recette invisible (§1).
 - **Mesuré** (`npm run rythme`, chantier 14) : avec le carnet qui nomme les portes, le joueur prudent passe sa dernière porte à clé vers **209 à 212 min** ; sans ce carnet (la ligne de la 0.7, portes alternées avec le reste), il n'y arrive pas avant **341 à 358 min**. Écart le plus long entre deux portes : 47 à 87 min pour le prudent, 27 à 55 min pour le pressé ; au plus une sortie sur quatre sans porte.
