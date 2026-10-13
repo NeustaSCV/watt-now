@@ -23,7 +23,7 @@ import { percer, type FenetreVue, type PlanVue, type PorteVue } from "./vue.ts";
 import { BAC_MODELE, ETEINTS_MODELE, FOUILLE_MODELE, NAPPE_MODELE, SEGMENTS_MODELE, type SegmentModele } from "./gue-modele.ts";
 
 /** À augmenter quand le contenu du gué change : la base le régénère alors. */
-export const VERSION_GUE = 3;
+export const VERSION_GUE = 4;
 
 // ---------- Le repère : le gué retourné ----------
 
@@ -519,8 +519,8 @@ export function zoneGue(etat: EtatZoneGue): Zone {
  *
  * Plan 0.8.2 (chantier F, R1, Q-0.8.2-1) : plus à ramasser hors du banc de galets. Pour un voyageur seul : 6 pierres de
  * plus sur les pistes qui descendent au radier (21 en vrac : 15 sur le banc, 6 sur les pistes) ; 4 bûches en vrac au
- * pied des talus, qui grandissent avec les voyageurs comme à la station ; 8 branches sur les berges, en plus du tas de
- * bois flotté. Les branches et les bûches reviennent en 30 min, comme les pierres.
+ * pied des talus, qui grandissent avec les voyageurs comme à la station ; 8 branches en tout (décision du porteur) : les
+ * 5 du tas de bois flotté et 3 sur les berges. Les branches et les bûches reviennent en 30 min, comme les pierres.
  */
 export const BUTIN_GUE: ButinLieu = {
   repousse: { pierre: 30 * 60_000, buche: 30 * 60_000, branche: 30 * 60_000 },
@@ -529,8 +529,10 @@ export const BUTIN_GUE: ButinLieu = {
 };
 /** Les pierres en vrac sur le banc de galets (pour un voyageur seul) ; le reste du vrac est sur les pistes. */
 export const PIERRES_DU_BANC = 15;
-/** Les branches éparses sur les berges (hors du tas de bois flotté). */
-export const BRANCHES_EPARSES = 8;
+/** Les branches du gué : 8 en tout, dont celles du tas de bois flotté ; les autres, éparses sur les berges. */
+export const BRANCHES_DU_GUE = 8;
+const BRANCHES_DU_TAS = 5;
+export const BRANCHES_EPARSES = BRANCHES_DU_GUE - BRANCHES_DU_TAS;
 
 /** Les fouilles du gué (« par chance » : bâche, chiffons, casserole, cordes ; rarement une clé de L1). */
 export const FOUILLES_GUE = ["gue_cabane", "gue_buvette", "gue_barques", "gue_camping_car", "gue_lavoir", "gue_garde_peche"] as const;
@@ -558,7 +560,7 @@ export function genererGue(): Omit<RessourceSol, "disponible">[] {
   // Le « bois flotté » du modèle devient un tas de branches (I11) : tiré sur la berge par le modèle, au pied de la
   // culée côté terrain. Cinq branches, autour de son point de fouille.
   const tas = FOUILLE_MODELE.find((f) => f.quoi?.startsWith("tas de branches"))!;
-  for (const [dx, dz] of [[0, 0], [-0.6, 0.5], [-0.3, -0.6], [-0.9, -0.2], [0.4, 0.6]] as const) poser("branche", auGue(tas.x + dx, tas.z + dz));
+  for (const [dx, dz] of ([[0, 0], [-0.6, 0.5], [-0.3, -0.6], [-0.9, -0.2], [0.4, 0.6]] as const).slice(0, BRANCHES_DU_TAS)) poser("branche", auGue(tas.x + dx, tas.z + dz));
 
   // Les pierres en vrac (B5, B8) : VRAC_MAX tournées de 15, dont seule la première est en jeu pour un voyageur seul.
   // La première sur le banc de galets ; les autres sur les pistes de gravier qui descendent au radier.

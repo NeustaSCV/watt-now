@@ -168,7 +168,7 @@ test("chaque type de conteneur, dans chaque type de lieu, contient au moins un o
         if (n > 0) pleins++;
       }
       assert.ok(pleins / N >= 0.75, `${lieu}/${conteneur} : ${pleins} sur ${N}`);
-      if (PROFILS_DECHETS[lieu].seulementDechets) continue;
+      if (PROFILS_DECHETS[lieu].seulementDechets || PROFILS_DECHETS[lieu].groupes) continue;
       // ≈ 70 % de déchets, ≈ 25 % de petites trouvailles, ≈ 5 % de bonnes (à quelques points près).
       assert.ok(Math.abs(parts.dechet! / objets - 0.7) < 0.05, `${lieu}/${conteneur} déchets ${parts.dechet! / objets}`);
       assert.ok(Math.abs(parts.petite! / objets - 0.25) < 0.05, `${lieu}/${conteneur} petites ${parts.petite! / objets}`);

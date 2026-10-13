@@ -17,7 +17,17 @@ import { TOUS_LES_CODES_LIEU, VESTIGES_LOT2, estVestigeLot2, type CodeLieu } fro
 
 // ---------- Les types de lieu (§4.1) ----------
 
-export type TypeLieuDechets = "route" | "parking" | "village" | "interieur" | "jardin" | "ferme" | "champ" | "bois" | "atelier" | "decharge" | "comptoir";
+export type TypeLieuDechets = "route" | "parking" | "village" | "interieur" | "jardin" | "ferme" | "champ" | "bois" | "atelier" | "decharge" | "comptoir" | "berge";
+
+/**
+ * Un groupe de tirage (plan 0.8.2, la berge du gué) : une part des pièces, et ses objets avec leur poids. Un profil qui
+ * a des groupes ne tire pas par familles et par paliers (§1.2) : il tire d'abord le groupe, puis l'objet.
+ */
+export interface GroupeDechets {
+  nom: string;
+  part: number;
+  objets: Partial<Record<TypeObjet, number>>;
+}
 
 export interface ProfilLieuDechets {
   /** Le code de lieu des objets qu'on y trouve (vestiges-lot2.ts). */
@@ -32,6 +42,8 @@ export interface ProfilLieuDechets {
   seulementDechets?: true;
   /** Les trouvailles typiques du lieu (§4.1, dernière colonne) : leur poids est multiplié d'autant. */
   vedettes?: Partial<Record<TypeObjet, number>>;
+  /** Un tirage par groupes, à la place des familles et des paliers (la berge du gué). */
+  groupes?: readonly GroupeDechets[];
 }
 
 const TOUTES_LES_FAMILLES: Record<FamilleVestige, number> = {
@@ -92,6 +104,25 @@ export const PROFILS_DECHETS: Record<TypeLieuDechets, ProfilLieuDechets> = {
   },
   decharge: { code: "D", densite: 15, partConteneurs: 0.8, familles: TOUTES_LES_FAMILLES },
   comptoir: { code: "P", densite: 1, partConteneurs: 0, familles: { dechet: 1 }, seulementDechets: true },
+  // Plan 0.8.2 (chantier F, décision du porteur) : les berges du gué, plus nature que la route. La moitié de la densité
+  // des bas-côtés de la station, un sac échoué de temps en temps. La moitié de ce qu'on y trouve vient de la rivière
+  // elle-même, un tiers de ce que la crue charrie (abîmé, mouillé), le reste de la pêche et de la guinguette (un objet
+  // de loisir, rarement une bonne trouvaille). Aucun objet propre à la berge : que des objets du catalogue.
+  berge: {
+    code: "R",
+    densite: 1,
+    partConteneurs: 0.1,
+    familles: {},
+    groupes: [
+      { nom: "la rivière", part: 0.5, objets: { branche: 4, fibres: 3, plumes: 2, os: 2 } },
+      { nom: "ce que la crue charrie", part: 0.35, objets: { sac_plastique: 3, bouteille_plastique: 3, canette: 2, chiffons: 2, ficelle: 2, corde: 0.3 } },
+      {
+        nom: "la pêche et la guinguette",
+        part: 0.15,
+        objets: { ballon_foot: 3, flamant_rose: 2, volants_badminton: 2, attrape_reves: 1, parasol: 1, barbecue: 1, tente_popup: 0.5, sac_charbon_bbq: 0.3 },
+      },
+    ],
+  },
 };
 
 /** Le sous-bois est plus propre que sa lisière (§4.1) : 0,4 emplacement pour 100 m². */
@@ -206,6 +237,16 @@ export function tableDechets(lieu: TypeLieuDechets, genre: GenreEmplacement = "s
   const deja = CACHE.get(cle);
   if (deja) return deja;
   const profil = PROFILS_DECHETS[lieu];
+  if (profil.groupes) {
+    // Un tirage par groupes : la table liste ce qu'on peut trouver, chaque objet au poids de son espérance.
+    const table: TableDechets = { dechet: [], petite: [], bonne: [] };
+    for (const [groupe, objets] of groupesPour(profil.groupes, genre)) {
+      const total = objets.reduce((t, [, w]) => t + w, 0);
+      for (const [type, w] of objets) table[palierDe(type)].push([type, (groupe.part * w) / total]);
+    }
+    CACHE.set(cle, table);
+    return table;
+  }
   const familles: Partial<Record<FamilleVestige, number>> = { ...profil.familles };
   if (genre !== "sol") for (const [f, p] of Object.entries(CONTENEURS[genre].biais) as [FamilleVestige, number][]) familles[f] = (familles[f] ?? 0) + p;
   const table: TableDechets = { dechet: [], petite: [], bonne: [] };
@@ -227,6 +268,30 @@ export function tableDechets(lieu: TypeLieuDechets, genre: GenreEmplacement = "s
   }
   CACHE.set(cle, table);
   return table;
+}
+
+/** Les groupes d'un profil, pour un genre d'emplacement : au sol, rien de petit ; dans un sac, rien de trop lourd. */
+function groupesPour(groupes: readonly GroupeDechets[], genre: GenreEmplacement): [GroupeDechets, [TypeObjet, number][]][] {
+  const petit = (t: TypeObjet) => PETITS_DU_LOT1.has(t) || (estVestigeLot2(t as TypeVestige) && "petit" in VESTIGES_LOT2[t as keyof typeof VESTIGES_LOT2]);
+  return groupes
+    .map((g): [GroupeDechets, [TypeObjet, number][]] => [
+      g,
+      (Object.entries(g.objets) as [TypeObjet, number][]).filter(([t]) => (genre === "sol" ? !petit(t) : OBJETS[t].poids <= POIDS_MAX_CONTENEUR)),
+    ])
+    .filter(([, objets]) => objets.length > 0);
+}
+
+/** Un objet tiré par groupes : le groupe d'abord (à sa part), puis l'objet dans le groupe. */
+function tirerParGroupes(groupes: readonly GroupeDechets[], genre: GenreEmplacement, alea: () => number): TypeObjet {
+  const liste = groupesPour(groupes, genre);
+  const [, objets] = tirerPondere(liste.map((x): [[GroupeDechets, [TypeObjet, number][]], number] => [x, x[0].part]), alea);
+  return tirerPondere(objets, alea);
+}
+
+/** Un objet tiré pour un type de lieu et un genre d'emplacement : par groupes si le lieu en a, sinon par paliers. */
+export function tirerDansLeLieu(lieu: TypeLieuDechets, genre: GenreEmplacement, alea: () => number): TypeObjet {
+  const groupes = PROFILS_DECHETS[lieu].groupes;
+  return groupes ? tirerParGroupes(groupes, genre, alea) : tirerDechet(tableDechets(lieu, genre), alea);
 }
 
 /** Le seuil d'un aléa dans [0, 1[ (1 est ramené juste en dessous). */
@@ -323,7 +388,7 @@ export function graineCarreau(lieu: string, cx: number, cz: number, remplissage:
 
 /** Une pièce au sol, tirée dans la table du lieu. */
 export function tirerPiece(lieu: TypeLieuDechets, alea: () => number): TypeObjet {
-  return tirerDechet(tableDechets(lieu, "sol"), alea);
+  return tirerDansLeLieu(lieu, "sol", alea);
 }
 
 /** Les pièces d'un amas : n objets du catalogue, toujours les mêmes pour une graine. */
@@ -339,10 +404,9 @@ export function contenuConteneur(graine: number, lieu: TypeLieuDechets, conteneu
   const alea = aleaDe(graine);
   const { min, max } = CONTENEURS[conteneur];
   const n = Math.min(max, min + Math.floor(borne(alea()) * (max - min + 1)));
-  const table = tableDechets(lieu, conteneur);
   const contenu: Inventaire = {};
   for (let i = 0; i < n; i++) {
-    const t = tirerDechet(table, alea);
+    const t = tirerDansLeLieu(lieu, conteneur, alea);
     contenu[t] = (contenu[t] ?? 0) + 1;
   }
   return contenu;
