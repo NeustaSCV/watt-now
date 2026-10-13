@@ -40,10 +40,10 @@ export type SegmentMoulin = readonly [number, number, number, number, string];
  * modèle importé ; s'il change (`npm run batiments:importer`), on recopie la liste.
  */
 export const SEGMENTS_MODELE: readonly SegmentMoulin[] = [
-  [9.5, -27, 9.5, -21.45, "berge"],
-  [9.5, -20.55, 9.5, 8, "berge"],
-  [13, -27, 13, -21.45, "berge"],
-  [13, -20.55, 13, -16, "berge"],
+  [9.5, -27, 9.5, -21.6, "berge"],
+  [9.5, -20.4, 9.5, 8, "berge"],
+  [13, -27, 13, -21.6, "berge"],
+  [13, -20.4, 13, -16, "berge"],
   [13, -14, 13, 4, "berge"],
   [13, -16, 14.4, -16, "berge"],
   [15.6, -16, 17, -16, "berge"],
@@ -89,7 +89,10 @@ export const SEGMENTS_MODELE: readonly SegmentMoulin[] = [
   [5.85, -2.5, 5.85, -1.15, "fosse du rouet"],
   [5.85, -1.15, 6.95, -1.15, "fosse du rouet"],
   [5.85, -4.85, 6.95, -4.85, "fosse du rouet"],
-  [7, -3.35, 7, -2.65, "palier"],
+  [6.95, -4.85, 6.95, -1.15, "fosse du rouet"],
+  [7, -3.35, 7, -2.65, "palier de l'arbre"],
+  [7, -3.35, 7.7, -3.35, "palier de l'arbre"],
+  [7, -2.65, 7.7, -2.65, "palier de l'arbre"],
   [4.5, -10.08, 7.45, -10.08, "poutres de rechange"],
   [-18, 3, -10.4, 3, "mur"],
   [-8.8, 3, -4, 3, "mur"],
@@ -101,8 +104,8 @@ export const SEGMENTS_MODELE: readonly SegmentMoulin[] = [
   [-18, -3, -11.8, -3, "mur"],
   [-10.2, -3, -4, -3, "mur"],
   [-11.8, -3, -10.2, -3, "porte condamnée (boutique – magasin)"],
-  [-17.6, -9.9, -15.2, -9.9, "sacs"],
-  [-15.2, -12.7, -15.2, -9.9, "sacs"],
+  [-17.6, -9.9, -16.2, -9.9, "sacs"],
+  [-16.2, -12.7, -16.2, -9.9, "sacs"],
   [-15.6, -6.2, -15.6, -8.6, "sacs"],
   [-9, -9.6, -8, -9.6, "bascule"],
   [-16.9, -5.22, -13.1, -5.22, "blutoir"],
@@ -118,8 +121,8 @@ export const SEGMENTS_MODELE: readonly SegmentMoulin[] = [
   [-30, 4, -21, 4, "mur"],
   [-30, -6, -30, 4, "mur"],
   [-21, -6, -30, -6, "mur"],
-  [-30, -1, -26.45, -1, "mur"],
-  [-25.55, -1, -21, -1, "mur"],
+  [-30, -1, -26.6, -1, "mur"],
+  [-25.4, -1, -21, -1, "mur"],
   [-20.7, -5.6, -20.7, -1.9, "tas de bois"],
   [-27, 1.35, -25, 1.35, "table"],
   [-27, 2.25, -25, 2.25, "table"],
@@ -134,8 +137,8 @@ export const SEGMENTS_MODELE: readonly SegmentMoulin[] = [
   [-6, 16, -6, 13.7, "mur"],
   [-6, 11.3, -6, 9, "mur"],
   [-24, 9, -24, 16, "mur"],
-  [-15, 16, -15, 11, "mur"],
-  [-15, 10, -15, 9, "mur"],
+  [-15, 16, -15, 11.1, "mur"],
+  [-15, 9.9, -15, 9, "mur"],
   [-12.6, 13, -12.6, 15.05, "stalle"],
   [-8.3, 13, -8.3, 15.05, "stalle"],
   [-14.6, 15.05, -6.45, 15.05, "auge"],
@@ -153,38 +156,16 @@ export const SEGMENTS_MODELE: readonly SegmentMoulin[] = [
   [-32, -6, -30.25, -6, "mur"],
   [-20.75, -6, -18.22, -6, "mur"],
   [8.1, -16.7, 8.5, -16.3, "if"],
-  [9.5, -21.45, 13, -21.45, "bord de la planche (le bief)"],
-  [9.5, -20.55, 13, -20.55, "bord de la planche (le bief)"],
+  [9.5, -21.6, 13, -21.6, "bord de la planche (le bief)"],
+  [9.5, -20.4, 13, -20.4, "bord de la planche (le bief)"],
+  [-31.5, -26.5, 9, -26.5, "limite du lot (haie)"],
+  [25.5, -26.5, 31.5, -26.5, "limite du lot (haie)"],
+  [-31.5, -26.5, -31.5, -6.7, "limite du lot (haie)"],
+  [-31.5, -5.2, -31.5, 26.5, "limite du lot (haie)"],
+  [31.5, -26.5, 31.5, 13.3, "limite du lot (muret)"],
+  [-31.5, 26.5, 16.5, 26.5, "limite du lot (muret)"],
+  [25.5, 26.5, 31.5, 26.5, "limite du lot (muret)"],
 ];
-
-/**
- * Ce que le jeu ajoute aux segments du modèle. La fosse du rouet n'a pas de garde-corps à l'est : le rouet la remplit
- * (sa jante descend dans la fosse) et le palier de l'arbre la ferme ; sans ce bord, on entrerait dans la fosse par là,
- * et le rampant du fond en sortirait. À demander aussi à la session « bâtiments » (compte rendu du chantier 12).
- */
-export const SEGMENTS_EN_PLUS: readonly SegmentMoulin[] = [[6.95, -4.85, 6.95, -1.15, "fosse du rouet (bord est, sous le rouet)"]];
-
-/**
- * Les segments du modèle que le jeu corrige, en attendant une retouche demandée à la session « bâtiments » (compte rendu
- * du chantier 12). La porte de derrière du magasin (x −16,15 → −14,85) donne contre la grande pile de sacs (x −17,4 →
- * −15,5) : il reste 0,65 m de passage pour un personnage de 0,7 m, et le jardin n'est plus accessible. On recule
- * l'obstacle de la pile de 0,7 m vers l'ouest : on frôle les sacs en passant.
- */
-const CORRECTIONS: readonly (readonly [SegmentMoulin, SegmentMoulin])[] = [
-  [
-    [-15.2, -12.7, -15.2, -9.9, "sacs"],
-    [-15.9, -12.3, -15.9, -9.9, "sacs"],
-  ],
-  [
-    [-17.6, -9.9, -15.2, -9.9, "sacs"],
-    [-17.6, -9.9, -15.9, -9.9, "sacs"],
-  ],
-];
-
-/** Un segment du modèle, corrigé s'il le faut. */
-function corrige(s: SegmentMoulin): SegmentMoulin {
-  return CORRECTIONS.find(([a]) => a.every((v, i) => v === s[i]))?.[1] ?? s;
-}
 
 /** Les obstacles qui arrêtent les coups et les objets lancés (murs, portes, piles de sacs) ; les autres sont bas. */
 function arreteLesCoupsMoulin(nature: string): boolean {
@@ -213,9 +194,7 @@ function epaisseur(nature: string): number {
 
 /**
  * Les boîtes d'un segment, dans le repère du jeu. Un segment droit (selon x ou selon z) fait une boîte ; un segment de
- * biais (le puits, la charrette, l'if) une rangée de petits carrés. Les bords de la planche du bief sont reculés de
- * 25 cm vers l'eau : la planche fait 0,9 m, un personnage 0,7 m ; sans ce jeu, on n'y passerait qu'au centimètre (on
- * déborde un peu au-dessus de l'eau, sans y tomber).
+ * biais (le puits, la charrette, l'if) une rangée de petits carrés.
  * Les obstacles bas (berges, huche, établis…) sont déclarés tels (murs.ts) : on frappe et l'on lance par-dessus.
  */
 export function boitesDuSegment(segment: SegmentMoulin): Boite[] {
@@ -226,11 +205,6 @@ export function boitesDuSegment(segment: SegmentMoulin): Boite[] {
 
 function boitesBrutes([x1, z1, x2, z2, nature]: SegmentMoulin): Boite[] {
   const ep = epaisseur(nature);
-  if (nature.startsWith("bord de la planche")) {
-    const recul = z1 < -21 ? -0.25 : 0.25;
-    z1 += recul;
-    z2 += recul;
-  }
   if (Math.abs(z2 - z1) < 1e-6) return [boiteJeu((x1 + x2) / 2, z1, Math.abs(x2 - x1), ep)];
   if (Math.abs(x2 - x1) < 1e-6) return [boiteJeu(x1, (z1 + z2) / 2, ep, Math.abs(z2 - z1))];
   const longueur = Math.hypot(x2 - x1, z2 - z1);
@@ -249,7 +223,7 @@ const NATURE_GRANDE_PORTE = "grande porte (fermée à clé ; reste ouverte une f
 
 /** Tous les obstacles fixes du Moulin (la grande porte, quand elle est fermée, s'y ajoute : boitePorteMoulin). */
 export function obstaclesMoulin(): Boite[] {
-  return [...SEGMENTS_MODELE.map(corrige), ...SEGMENTS_EN_PLUS].filter((s) => s[4] !== NATURE_GRANDE_PORTE).flatMap(boitesDuSegment);
+  return SEGMENTS_MODELE.filter((s) => s[4] !== NATURE_GRANDE_PORTE).flatMap(boitesDuSegment);
 }
 
 // ---------- Les pièces (la vue par pièce, le son, l'obscurité) ----------
@@ -363,11 +337,11 @@ export const PORTES_MOULIN: readonly PorteMoulin[] = [
   { ...ouverture("porte_vitree", -9.6, 3, 1.6, "x", ["dehors", "boutique"]), ouverte: true },
   // Le logis du meunier.
   { ...ouverture("logis", -21, 2, 1, "z", ["dehors", "cuisine"]), ouverte: true },
-  { ...ouverture("logis_chambre", -26, -1, 0.9, "x", ["cuisine", "chambre"]), ouverte: true },
+  { ...ouverture("logis_chambre", -26, -1, 1.2, "x", ["cuisine", "chambre"]), ouverte: true },
   // Les dépendances : l'étable et l'atelier sur la cour, la porte entre les deux, le grand portail de l'étable.
   { ...ouverture("etable", -10, 9, 1.4, "x", ["dehors", "etable"]), ouverte: true },
   { ...ouverture("atelier", -19.5, 9, 1.4, "x", ["dehors", "atelier"]), ouverte: true },
-  { ...ouverture("dependances", -15, 10.5, 1, "z", ["atelier", "etable"]), ouverte: true },
+  { ...ouverture("dependances", -15, 10.5, 1.2, "z", ["atelier", "etable"]), ouverte: true },
   { ...ouverture("portail_etable", -6, 12.5, 2.4, "z", ["dehors", "etable"]), ouverte: true },
 ];
 

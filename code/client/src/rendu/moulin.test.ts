@@ -79,35 +79,45 @@ test("budget iPhone : le décor du Moulin tient sous 60 000 triangles et 40 appe
   assert.ok(appels <= 40, `${appels} appels`);
 });
 
-test("la grande porte ouverte : les battants fermés s'effacent, les battants ouverts paraissent ; la clé prise s'efface", () => {
+test("la grande porte ouverte : la porte fermée du modèle se cache, la porte ouverte paraît ; la clé, la fourche, l'étau pris se cachent", () => {
   const decor = creerMoulin();
-  /** Une empreinte des sommets du modèle (sommes pondérées) : elle change dès qu'un triangle est aplati. */
-  const positions = () => {
-    let somme = 0;
-    let k = 0;
-    decor.traverse((o) => {
-      const m = o as THREE.Mesh;
-      if (!m.isMesh || m.name === "grande-porte") return;
-      for (const v of m.geometry.getAttribute("position").array as Float32Array) somme += v * ((k++ % 7) + 1);
-    });
-    return Math.round(somme * 1000) / 1000;
-  };
-  const avant = positions();
-  const ressources = [{ donnees: { type: "moulin_cle" as const, disponible: true } }];
+  const objet = (nom: string) => decor.getObjectByName(nom)!;
+  const [fermee, ouverte, cle, fourche, etau] = ["grande porte fermée", "grande porte ouverte", "grosse clé", "fourche", "étau"].map(objet);
+  for (const o of [fermee, ouverte, cle, fourche, etau]) assert.ok(o, "un objet nommé du modèle");
+  // Au départ, la porte est fermée, tout est au clou, contre le mur, sur l'établi.
+  assert.ok(fermee!.visible && !ouverte!.visible && cle!.visible && fourche!.visible && etau!.visible);
+  const ressources = (["moulin_cle", "moulin_fourche", "moulin_etau"] as const).map((type) => ({ donnees: { type, disponible: true } }));
   animerMoulin(decor, 10, 10, 0.016, Math.PI / 4, { grande_porte: true }, ressources, []);
-  const ouverte = positions();
-  assert.notEqual(ouverte, avant, "des triangles ont été aplatis");
-  assert.ok(decor.getObjectByName("grande-porte")!.visible);
-  ressources[0]!.donnees.disponible = false;
+  assert.ok(!fermee!.visible && ouverte!.visible, "la porte ouverte");
+  for (const r of ressources) r.donnees.disponible = false;
+  animerMoulin(decor, 10, 10, 0.016, Math.PI / 4, { grande_porte: true }, ressources, []);
+  assert.ok(!cle!.visible && !fourche!.visible && !etau!.visible, "pris");
+  // Au retour à 24 h : tout revient, la porte refermée.
+  for (const r of ressources) r.donnees.disponible = true;
   animerMoulin(decor, 10, 10, 0.016, Math.PI / 4, { grande_porte: false }, ressources, []);
-  ressources[0]!.donnees.disponible = true;
-  animerMoulin(decor, 10, 10, 0.016, Math.PI / 4, { grande_porte: false }, ressources, []);
-  assert.equal(positions(), avant, "tout revient tel quel");
-  assert.ok(!decor.getObjectByName("grande-porte")!.visible);
+  assert.ok(fermee!.visible && !ouverte!.visible && cle!.visible && fourche!.visible && etau!.visible, "tout revient");
   // Un Éteint au fond de la fosse est dessiné au fond.
   const eteint = { objet: new THREE.Object3D() };
   const f = jeu(6.4, -3);
   eteint.objet.position.set(f.x, 0, f.z);
   animerMoulin(decor, 10, 10, 0.016, Math.PI / 4, { grande_porte: false }, [], [eteint]);
   assert.ok(eteint.objet.position.y < -0.5);
+});
+
+test("0.8.3 : dans le couloir du rouet, le rouet et la lanterne (la couche « roue ») s'effacent, et reviennent ensuite", () => {
+  const decor = creerMoulin();
+  const roue = decor.getObjectByName("roue")!;
+  const materiaux = new Set<THREE.Material>();
+  // Ce qui se dessine (pas le maillage d'ombre seule, qui reste : l'ombre de la roue au sol).
+  roue.traverse((o) => {
+    const m = (o as THREE.Mesh).material as THREE.Material | undefined;
+    if ((o as THREE.Mesh).isMesh && m && m.colorWrite !== false) materiaux.add(m);
+  });
+  assert.ok(materiaux.size > 0);
+  const couloir = jeu(5.1, -3);
+  for (let i = 0; i < 30; i++) animerMoulin(decor, couloir.x, couloir.z, 0.05, Math.PI / 4, {}, [], []);
+  for (const m of materiaux) assert.ok(!m.visible || m.opacity < 0.05, "effacé dans le couloir");
+  const cour = jeu(0, 12);
+  for (let i = 0; i < 30; i++) animerMoulin(decor, cour.x, cour.z, 0.05, Math.PI / 4, {}, [], []);
+  for (const m of materiaux) assert.ok(m.visible && m.opacity > 0.95, "revenu");
 });

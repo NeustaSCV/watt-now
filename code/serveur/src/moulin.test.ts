@@ -340,6 +340,32 @@ test("le parcours (M1 à M20) : du pont, la grande porte fermée, le nord est in
   assert.ok(sortieIci("moulin", halage.x, halage.z)?.sansArrivee);
 });
 
+/** On marche droit de a vers b (repère du modèle) : arrive-t-on, sans rien contourner ? */
+function toutDroit(zone: Zone, a: readonly [number, number], b: readonly [number, number]): boolean {
+  let p = ici(a[0], a[1]);
+  const cible = jeu(b[0], b[1]);
+  for (let i = 0; i < 600 && Math.hypot(cible.x - p.x, cible.z - p.z) > 0.1; i++) {
+    const d = Math.hypot(cible.x - p.x, cible.z - p.z);
+    p = avancer(p, { dx: (cible.x - p.x) / d, dz: (cible.z - p.z) / d, allure: "marche" }, Math.min(0.05, d / 1.4), zone);
+  }
+  return Math.hypot(cible.x - p.x, cible.z - p.z) <= 0.1;
+}
+
+test("0.8.3 : les retouches du modèle — la porte de derrière du magasin, la planche de 1,2 m, les passages de 1,2 m se passent tout droit", () => {
+  const zone = zoneMoulin({ grande_porte: true });
+  // La porte de derrière du magasin (x −16,15 → −14,85) : la pile de sacs est reculée contre le mur ouest.
+  assert.ok(toutDroit(zone, [-15.5, -11], [-15.5, -15]), "du magasin au jardin");
+  // Tout le battant de la porte se passe, du côté des sacs (on les frôle) comme de l'autre.
+  for (const x of [-15.75, -15.25]) assert.ok(toutDroit(zone, [x, -11.5], [x, -14.5]), `contre la porte, x ${x}`);
+  // La planche du bief (z −21,6 → −20,4), du jardin à la levée, sur toute sa largeur utile.
+  for (const z of [-21.15, -21, -20.85]) assert.ok(toutDroit(zone, [8.5, z], [14, z]), `la planche à z ${z}`);
+  // La cloison des dépendances (à x −15) et celle du logis (à z −1).
+  for (const z of [10.3, 10.5, 10.7]) assert.ok(toutDroit(zone, [-13.5, z], [-16.5, z]), `de l'étable à l'atelier (z ${z})`);
+  for (const x of [-26.2, -26, -25.8]) assert.ok(toutDroit(zone, [x, 0.5], [x, -2.5]), `de la cuisine à la chambre (x ${x})`);
+  // La fosse du rouet est fermée à l'est (sous le rouet) : on n'y entre pas depuis le palier.
+  assert.ok(!toutDroit(zone, [7.4, -4.2], [6.4, -4.2]), "pas d'entrée dans la fosse par l'est");
+});
+
 test("on ne marche pas dans le bief ni dans la rivière", () => {
   const zone = ZONE_MOULIN;
   // Du jardin vers l'est, droit sur le bief : on bute sur la berge.

@@ -99,19 +99,14 @@ test("0.7.1 halte, Coopérative, terrain : pas de barrière invisible", () => {
   for (const lieu of ["station", "cooperative", "terrain"] as const) assert.deepEqual(decrire(lieu, 0.05), [], lieu);
 });
 
-// Plan 0.8.2 (chantier F) : le gué et le Moulin. Au gué, l'eau (la rivière, le couloir du bac, le radier noyé) arrête le
+// Plan 0.8.2 (chantier F) : le gué et le Moulin (sans exception depuis la 0.8.3). Au gué, l'eau (la rivière, le couloir du bac, le radier noyé) arrête le
 // pas sans rien de dressé : elle se voit, c'est l'eau ; on ne contrôle que les obstacles posés sur la terre ferme.
-/** Les bords du Moulin sans rien de visible relevés par la 0.8.2 (sept bords du lot), à corriger par la session « bâtiments ». */
-const MOULIN_DEFAUTS_CONNUS = 7;
 const surLaTerre = (b: { x: number; z: number; l: number; p: number }) => !dansLaRiviere(b.x, b.z, -0.6);
 
 test("0.8.2 gué : hors de l'eau, pas de barrière invisible", () => {
   assert.deepEqual(decrire("gue", 0.05, surLaTerre), []);
 });
 
-test("0.8.2 Moulin : les obstacles sans rien de visible sont relevés (à corriger dans le modèle, pas ici)", () => {
-  const fautes = decrire("moulin", 0.05);
-  // La liste est donnée au porteur dans le compte rendu du chantier F ; ce test dit seulement combien il en reste.
-  if (fautes.length) console.log(`Moulin : ${fautes.length} défaut(s)\n` + fautes.join("\n"));
-  assert.ok(fautes.length <= MOULIN_DEFAUTS_CONNUS, `de nouveaux défauts au Moulin :\n${fautes.join("\n")}`);
+test("0.8.3 Moulin : pas de barrière invisible (les sept bords du lot ont leur haie ou leur muret)", () => {
+  assert.deepEqual(decrire("moulin", 0.05), []);
 });
