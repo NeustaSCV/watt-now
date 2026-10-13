@@ -742,6 +742,9 @@ vague 4   [13 Tutoriel, quêtes, aide] ◄────────────�
 - R24 · **Un contenant vide au sol** (sac-poubelle vidé, etc.) ne propose plus d'interaction (aujourd'hui « Examiner »).
 - R25 · **Les canettes écrasées se démontent en aluminium** (écrasées, elles ne servent plus) ; **les boîtes de conserve vides se gardent telles quelles**, pour servir comme boîtes.
 
+**Le dévoilement**
+- R26 · ⚡ **Les armes électriques des Voltaïques** (matraques, modules de décharge) ne sont **ni disponibles ni affichées** (pas même en silhouette dans Fabriquer) tant que **le banc solaire n'est pas bâti ET équipé de son panneau**. Ne pas divulgâcher : le joueur les découvre avec son banc complet.
+
 **La base et le corps**
 - R12 · Dormir dans l'abri : le personnage **rampe jusqu'à sa couche** et dort **exactement dedans**, pas au hasard autour.
 - R13 · **Remmancher** une hache ou un marteau se fait **près d'un établi** (plus à la main).
