@@ -3,7 +3,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import type { MessageServeur } from "../../commun/src/messages.ts";
+import type { InstallationVue, MessageServeur } from "../../commun/src/messages.ts";
 import { OBJETS, kitDeDepart, type TypeObjet } from "../../commun/src/objets.ts";
 import { OBJETS_METIER } from "../../commun/src/objets-metier.ts";
 import {
@@ -16,6 +16,7 @@ import {
   recetteHorsFamille,
   recettesAutresFamilles,
   recettesConnues,
+  type TypeInstallation,
 } from "../../commun/src/recettes.ts";
 import { RECETTES_CHARBONNIERS } from "../../commun/src/recettes/charbonniers.ts";
 import { RECETTES_COMMUNES } from "../../commun/src/recettes/communes.ts";
@@ -35,9 +36,10 @@ import { messageValide } from "./controle.ts";
 
 const JAMAIS_D_ETEINT = () => 1;
 
-function monter(famille: Famille, inventaire: Record<string, number>, base = new Base(":memory:"), pseudo = "Rose") {
+function monter(famille: Famille, inventaire: Record<string, number>, base = new Base(":memory:"), pseudo = "Rose", installations: { type: TypeInstallation; x: number; z: number; etat: InstallationVue["etat"] }[] = []) {
   const compte = base.creerCompte(pseudo, "potager42", famille);
   base.sauverInventaire(compte.id, { sac_a_dos: 1, ...inventaire });
+  for (const i of installations) base.sauverEtatInstallation(compte.id, base.ajouterInstallation(compte.id, i.type, i.x, i.z, 0).id, i.etat);
   let instant = 1_000_000;
   const recus: MessageServeur[] = [];
   const nouveau = () => new Joueur(compte, base, (m) => recus.push(m), () => instant, new Halte(base), JAMAIS_D_ETEINT);
@@ -314,7 +316,10 @@ test("lire un manuel ouvre les recettes d'une famille ; dans la sienne, rien ; u
 });
 
 test("un Mécaniste lit le Manuel du forgeron, monte une forge et forge une lame : ×1,5, et ★ sur la pierre plate", () => {
-  const t = monter("mecanistes", { manuel_forgeron: 1, pierre: 12, barre_metal: 4, branche: 5, marteau: 1, charbon_bois: 2 });
+  // R26 (0.8.2) : une lame apprise attend, elle aussi, le meuble de famille complet de celui qui l'apprend (ici, le
+  // pédalier générateur et son petit alternateur, posés plus loin).
+  const pedalier = [{ type: "pedalier" as const, x: 30, z: 30, etat: { alternateur: true } }];
+  const t = monter("mecanistes", { manuel_forgeron: 1, pierre: 12, barre_metal: 4, branche: 5, marteau: 1, charbon_bois: 2 }, undefined, undefined, pedalier);
   // Sans l'avoir lu : grisée.
   t.joueur.recevoir({ t: "fabriquer", recette: "forge", x: 20, z: 21.8, o: 0 });
   assert.match(t.infos().at(-1)!, /chez les Charbonniers/);
