@@ -18,7 +18,8 @@ import type { DefinitionVestige, Demontage } from "./vestiges.ts";
  * A atelier et casse.
  */
 // « G » : les berges du gué (0.8.2), qui tirent par groupes, sans objet listé par lettre (hors TOUS_LES_CODES_LIEU).
-export type CodeLieu = "R" | "P" | "V" | "F" | "J" | "C" | "B" | "D" | "I" | "A" | "G";
+// « K » : le Comptoir (0.8.2 §7.6), qui lit les objets du parking (`objetsDe`), hors TOUS_LES_CODES_LIEU lui aussi.
+export type CodeLieu = "R" | "P" | "V" | "F" | "J" | "C" | "B" | "D" | "I" | "A" | "G" | "K";
 
 export const TOUS_LES_CODES_LIEU: readonly CodeLieu[] = ["R", "P", "V", "F", "J", "C", "B", "D", "I", "A"];
 

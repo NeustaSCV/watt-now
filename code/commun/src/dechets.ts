@@ -40,6 +40,8 @@ export interface ProfilLieuDechets {
   familles: Partial<Record<FamilleVestige, number>>;
   /** Rien que des déchets (le Comptoir : les Compteurs ne laissent rien traîner de valeur). */
   seulementDechets?: true;
+  /** Les objets d'un autre code de lieu, quand le lieu a sa propre lettre (le Comptoir lit ceux du parking). */
+  objetsDe?: CodeLieu;
   /** Les trouvailles typiques du lieu (§4.1, dernière colonne) : leur poids est multiplié d'autant. */
   vedettes?: Partial<Record<TypeObjet, number>>;
   /** Un tirage par groupes, à la place des familles et des paliers (la berge du gué). */
@@ -103,7 +105,8 @@ export const PROFILS_DECHETS: Record<TypeLieuDechets, ProfilLieuDechets> = {
     vedettes: { ressort_suspension: 3, ressort_garage: 3, disque_scie: 2 },
   },
   decharge: { code: "D", densite: 15, partConteneurs: 0.8, familles: TOUTES_LES_FAMILLES },
-  comptoir: { code: "P", densite: 1, partConteneurs: 0, familles: { dechet: 1 }, seulementDechets: true },
+  // Plan 0.8.2 §7.6 : sa propre lettre (« K », le Comptoir ; « C » est le champ), ses déchets sont ceux d'un parking.
+  comptoir: { code: "K", objetsDe: "P", densite: 1, partConteneurs: 0, familles: { dechet: 1 }, seulementDechets: true },
   // Plan 0.8.2 (chantier F, décision du porteur) : les berges du gué, plus nature que la route. La moitié de la densité
   // des bas-côtés de la station, un sac échoué de temps en temps. La moitié de ce qu'on y trouve vient de la rivière
   // elle-même, un tiers de ce que la crue charrie (abîmé, mouillé), le reste de la pêche et de la guinguette (un objet
@@ -256,7 +259,7 @@ export function tableDechets(lieu: TypeLieuDechets, genre: GenreEmplacement = "s
     if (genre !== "sol" && t.poids > POIDS_MAX_CONTENEUR) continue;
     let f: number;
     if (t.lieux === undefined) f = familles[t.famille] ?? 0;
-    else if (t.lieux === "partout" || t.lieux.includes(profil.code)) f = familles[t.famille] ?? 1;
+    else if (t.lieux === "partout" || t.lieux.includes(profil.objetsDe ?? profil.code)) f = familles[t.famille] ?? 1;
     else f = 0;
     if (f <= 0) continue;
     f *= profil.vedettes?.[type] ?? 1;
