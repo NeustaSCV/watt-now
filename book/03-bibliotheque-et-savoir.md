@@ -270,7 +270,7 @@ Plan 0.8 §2.2, codé en 0.8 (chantier 2 ; les textes de chaque clé sont dans l
 - **Jamais au deuxième ramassage** : l'idée ne revient pas.
 - **L'idée gardée** : si le niveau d'avant n'est pas encore posé, le message dit « un jour » (« Ce grillage pourra servir à ton feu, un jour. »), avec « gardé pour plus tard ». L'idée est notée dans le personnage ; quand on arrive au meuble, sa fiche montre la clé **« déjà en poche »**. Une trouvaille précoce n'est jamais perdue.
 - **Un meuble de famille** ne compte comme monté au niveau de sa clé **qu'une fois sa pièce posée** (le panneau sur le banc, l'enclume près du foyer, l'alternateur sur le pédalier) : avant, l'idée reste muette (plan 0.8 §9.2).
-- **Le bandeau passe seul**, ou se ferme **d'un bouton** (« Noté », « Je le garde ») : **jamais une fenêtre à croix** (règle du porteur). Plusieurs idées d'une même fouille passent l'une après l'autre, au plus un message toutes les 10 s.
+- **Le bandeau passe seul**, ou se ferme **d'un bouton** (« Noté », « Je le garde ») : **jamais une fenêtre à croix** (règle du porteur). Plusieurs idées d'une même fouille passent l'une après l'autre, au plus un message toutes les 10 s. *(0.8.2 : plus de bouton, voir plus bas.)*
 - **Les textes nomment le lieu par son nom affiché** (« la Coopérative », « la station », « le Gué-aux-Saules », « le Moulin du Gué »), jamais par le code de l'étape (« L1A »).
 
 **L'indice « où chercher », en deux temps.**
@@ -278,7 +278,7 @@ Plan 0.8 §2.2, codé en 0.8 (chantier 2 ; les textes de chaque clé sont dans l
 | Temps | Ce qu'il dit | Exemple (le foyer de cuisine) |
 |---|---|---|
 | **1 · le type de lieu** | Où ce genre d'objet se trouve, sans nommer le lieu | « Une grille ? Les clôtures en sont faites. » |
-| **2 · le coin** | Le lieu et l'endroit précis | « Le parc à volailles de la Coopérative. » |
+| **2 · le coin** | Le lieu et l'endroit précis *(0.8.2 : le lieu seul, voir plus bas)* | « Le parc à volailles de la Coopérative. » *(0.8.2 : « À la Coopérative. »)* |
 
 - L'indice d'une clé s'ouvre quand son étape devient **le niveau suivant** d'une construction qu'on a.
 - Il passe au **second temps** après **une visite du bon lieu sans la clé**, ou après **45 min** de jeu (Q-0.8-16).
@@ -287,6 +287,34 @@ Plan 0.8 §2.2, codé en 0.8 (chantier 2 ; les textes de chaque clé sont dans l
 **La fiche du meuble devient l'arbre.** Ouverte par **Examiner** (bouton B), elle montre ce qu'on y fait, **le niveau suivant** (sa clé, ses matériaux, son outil, ce qui manque, l'indice) et celui d'après, **grisé** ; un niveau « plus tard » porte sa clé nommée, « à trouver plus loin ». Elle se ferme par **B**, ou par son bouton « Fermer » pour la souris et le toucher : pas de croix (plan 0.8 §9.2). La 0.8 n'y ajoute que les indices ; le panneau Examiner détaillé attend une version à part (Q-0.8-17).
 
 **Quatre sources par clé** : sa **place fixe** dans son lieu, la **chance** ailleurs (rare, 2 % par fouille), un **repli** fabricable (plus cher, plus lent ou moins bon), et le **Comptoir**, seulement **après une première visite** du lieu (500 wotts, Book 01 §2 bis).
+
+### 5.9 Ce que la 0.8.2 change : un message qui part seul, des indices qui ne disent que le lieu (2026-10-13)
+
+*Plan 0.8 §9.4 (R9, R10, R22) et plan 0.8.2 §2, chantiers H et K ; **codé en 0.8.2** (`client/src/bandeau-idee.ts`, les textes de `commun/src/lignees.ts`, le test `client/src/textes-du-jeu.test.ts`). Là où le §5.8 diffère, ce paragraphe fait foi.*
+
+Le porteur a joué la 0.8 : « Tu y penses » appelait une action qu'il n'y avait pas à faire, et les indices en disaient trop.
+
+**« Tu y penses » devient un message d'information** (R22, qui remplace le bandeau « fermé d'un bouton » du §5.8) :
+
+- **Sans bouton** : il n'appelle aucune action. Son fond est **plus transparent**, il **ne cache pas le jeu** et ne prend ni le toucher ni la souris : on joue à travers.
+- **Il part seul**, le temps de le lire : entre **5 et 9 s** selon la longueur de l'idée, puis un fondu court. Plusieurs idées d'une même fouille passent toujours l'une après l'autre.
+- **Ce qui ne change pas** : l'icône de la trouvaille, le son court et chaleureux, « gardé pour plus tard » quand le niveau d'avant n'est pas posé, et la fiche du meuble qui montre la trouvaille **« déjà en poche »**.
+- **La règle qui en sort**, pour tout le jeu : un **message d'information** n'a pas de bouton et part seul ; un **avertissement** garde son bouton (la bûche au feu : « Compris », Book 14 §4.5) ; les panneaux ouverts au toucher ou à la souris gardent leur croix ; ce qu'on ouvre au bouton B se ferme par B.
+
+**L'indice nomme le lieu, jamais l'endroit exact** (R10) :
+
+| Temps | Ce qu'il dit (0.8.2) | Exemple (le foyer de cuisine) |
+|---|---|---|
+| **1 · le genre de lieu** | Où ce genre d'objet se trouve, sans nommer le lieu | « Une grille ? Les fermes ont des clôtures. » |
+| **2 · le lieu** | **Le nom du lieu, et rien de plus** | « À la Coopérative. » |
+
+- Plus de « parc à volailles », de « pilier de l'auvent », de « palettes du quai » : **le joueur cherche dans le lieu**. Un niveau « plus tard » dit seulement : « Plus loin, pas encore sur ta carte. »
+- **Rien sur les kits de départ** : un indice ne dévoile pas ce qu'une autre famille a dans son sac.
+- **Des textes courts** : on n'est plus dans le tutoriel.
+- Le second temps s'ouvre toujours après une visite du bon lieu sans la trouvaille, ou après 45 min (§5.8) ; il ne fait que nommer ce lieu.
+- **Un test garde la règle** : une liste de mots d'endroit interdits dans les indices (l'auvent, le garage, le quai, la berge, le magasin, le bief…, et les tournures « sous le », « au fond »…).
+
+**Le mot « clé » est banni des textes du jeu** (R9). C'est un **mot de conception** : il reste dans les books, les plans et le code (`Etape.cle`), mais le joueur croirait à de vraies clés. La fiche du meuble dit **« Il te faut : »** là où elle disait « Clé : » ; les descriptions, les idées, les indices, l'aide, le carnet et les messages disent ce qu'on cherche par son nom (« une grille », « de la grosse toile »). **Seules les vraies clés gardent leur mot** : la **grosse clé** du Moulin du Gué (sa serrure, la grande porte « fermée à clé »), la clé du coffre du magasinier de la Coopérative, et l'outil **clé plate**. Le même test lit tous les textes affichés, données et messages du code, et refuse le mot ailleurs.
 
 ---
 
