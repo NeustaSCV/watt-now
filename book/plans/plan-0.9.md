@@ -2,6 +2,8 @@
 
 *Version du plan : v0.4 · 2026-10-13 · **Statut : décidé, prêt à lancer après la 0.8.3** (rien n'est codé).*
 
+*v0.8 (2026-10-13) : M7 précisé par le porteur : **pas de poules pour l'instant** ; la nourriture dans **les deux haltes** seulement (la station et le gué). M5 : **la station est déjà assez garnie en bois**, on n'y en ajoute pas. Le chantier I redevient petit (S).*
+
 *v0.7 (2026-10-13) : un ajout du porteur (M7) : **de quoi manger dans les haltes** (champignons, baies, et 1 ou 2 poules). Chantier I.*
 
 *v0.6 (2026-10-13) : deux ajouts du porteur. M5 : **des bûches, des pierres et des branches éparses sur toutes les pelouses**, surtout dans les haltes, placées au hasard (chantier G). M6 : **au gué, la barque retournée devant la cabane du passeur en bloque l'entrée** (chantier H).*
@@ -32,9 +34,9 @@
   - **un Éteint à terre ne ressemble plus à un Éteint détruit** : à terre, il remue ; détruit, il est inerte (M4).
   - **du bois et des pierres sur toutes les pelouses**, au hasard, surtout dans les haltes (M5) ;
   - **au gué, on entre dans la cabane du passeur** (M6) ;
-  - **de quoi manger dans les haltes** : champignons, baies, 1 ou 2 poules (M7).
+  - **de quoi manger à la station et au gué** : champignons, baies (M7 ; pas de poules pour l'instant).
 - **9 chantiers en 2 vagues** (A à D, F à I, puis E), sans contenu nouveau dans le monde : ni lieu, ni arme, ni Éteint, ni objet nouveau.
-- **Effort : 3 M et 6 S, environ 9,5 jours-agent. En pratique, une grosse journée**, recette comprise (§7). Le chantier C (la saisie) est déjà fait en 0.8.4.
+- **Effort : 2 M et 7 S, environ 8,75 jours-agent. En pratique, une journée environ**, recette comprise (§7). Le chantier C (la saisie) est déjà fait en 0.8.4.
 - **Pas de remise à zéro** des joueurs : rien ne change dans les sauvegardes.
 - **Le combat entre joueurs n'entre pas.** Il viendra bien après la 0.9, une fois la fluidité validée en jeu (§8, [`duel-entre-joueurs.md`](duel-entre-joueurs.md)).
 
@@ -52,7 +54,7 @@
 | M4 | « Quand ils sont au sol, on ne voit pas qu'ils ne sont pas morts. » (2026-10-13 ; une barre de vie au-dessus des Éteints proposée, puis écartée par le porteur) | Le corps le dit : à terre, il remue et gémit ; détruit, il est inerte, les yeux éteints, la peau pâlie | F |
 | M5 | « Les pelouses sont bien propres au gué et au Moulin pour un monde post-apo. Il faudrait des bûches, des pierres, des branches, éparses, sur toutes les pelouses : c'est la ressource de base, les joueurs en ont besoin tout le temps. Surtout dans les haltes. Pas besoin de les placer de façon fixe, ça peut être aléatoire. » | Un semis de bois et de pierres sur les pelouses de chaque lieu, au hasard, qui revient après la prise | G |
 | M6 | « Au gué, le canoë retourné devant le bac, à l'est, empêche d'entrer dans la maison (pourtant un zombie arrive à sortir). » | L'obstacle de la barque ne ferme plus l'accès ; on vérifie pourquoi l'Éteint passe | H |
-| M7 | « On peut également ajouter des champignons, des baies et d'autres ressources de nourriture dans les haltes. 1 ou 2 poules. » | Des cèpes (et des amanites, pour se méfier), des buissons à baies, et 1 ou 2 poules dans chaque halte | I |
+| M7 | « On peut également ajouter des champignons, des baies et d'autres ressources de nourriture dans les haltes. 1 ou 2 poules. » | Des cèpes (et des amanites, pour se méfier) et des buissons à baies, à la station et au gué. **Pas de poules pour l'instant** (porteur, 2026-10-13) | I |
 
 ### 1.2 Ce qui n'entre pas
 
@@ -214,7 +216,7 @@
 ### 3.3 ter Le bois et les pierres, partout (M5)
 
 - **Sur toutes les pelouses de tous les lieux** (station, Carrefour, Coopérative, gué, Moulin), et sur son terrain s'il en manque : des **branches**, des **pierres** et des **bûches**, éparses, posées dans l'herbe.
-- **Plus dans les haltes** (la station, le gué) que dans les lieux personnels : c'est là qu'on passe et qu'on se ravitaille.
+- **Plus dans les haltes que dans les lieux personnels** : c'est là qu'on passe et qu'on se ravitaille. **Sauf la station, déjà assez garnie en bois** (porteur, 2026-10-13) : on n'y ajoute ni bûches ni branches. L'effort porte sur le gué et le Moulin, puis les autres lieux.
 - **Au hasard** : pas de place fixe. Les positions sont tirées sur les pelouses, jamais dans l'eau, dans un bâtiment, sur une route, un chemin ou un obstacle. Quand un point revient après la prise, il revient ailleurs.
 - **Le vrac s'en charge** (B8) : on garde sa règle (plus de voyageurs, plus de points en jeu, jusqu'à ×3), et on lui ajoute les branches et le placement au hasard.
 - **Les quantités** sont à proposer au porteur avant de coder, avec ce que le banc de rythme en dit (`npm run rythme`). Le bois de base ne doit plus jamais manquer, sans rendre inutile le tas de bois de son terrain.
@@ -228,11 +230,11 @@
 
 ### 3.3 quinquies De quoi manger dans les haltes (M7)
 
-- **Dans chaque halte** (la station, le gué ; le Carrefour et la Coopérative si on le veut, à trancher) :
+- **Dans les deux haltes, la station et le gué** (tranché le 2026-10-13 ; ni le Carrefour, ni la Coopérative, ni le Moulin) :
   - **des champignons** au pied des arbres et des haies : surtout des cèpes, et quelques amanites, comme chez soi, pour qu'on apprenne à se méfier ;
   - **des buissons à baies** en lisière ;
   - **d'autres ressources de nourriture déjà connues du jeu**, si le lieu s'y prête (un fruitier, des noix) ; rien de nouveau à inventer ;
-  - **1 ou 2 poules**, partagées : le premier qui l'attrape la prend ; une autre revient plus tard.
+  - **pas de poules pour l'instant** (2026-10-13) : la faune partagée entre joueurs viendra plus tard.
 - **Au hasard, comme le bois et les pierres** (M5) : placés là où le lieu s'y prête (sous un arbre, en lisière, sur l'herbe), et un point cueilli revient ailleurs.
 - **Les quantités** : une proposition au porteur, passée au banc de rythme (la faim, les calories du trajet), avant de coder. Manger en route doit aider, sans rendre inutile ce qu'on cultive et cuisine chez soi.
 
@@ -366,14 +368,13 @@ Ce format est le contrat entre les chantiers A (serveur) et B (client) : il perm
 - **Fichiers** : la copie importée `client/src/batiments/halte-gue/`, et ce qui gère les obstacles des Éteints au gué.
 - **Tests** : depuis le ponton, un joueur atteint la porte de la cabane du passeur (chemin libre dans la zone du gué) ; un Éteint suit les mêmes obstacles.
 
-**Chantier I · De quoi manger dans les haltes** (vague 1, **S** pour la cueillette, **M** avec les poules)
+**Chantier I · De quoi manger dans les haltes** (vague 1, **S**)
 
 - **Contenu** :
   - **la cueillette** : les champignons, les buissons et les autres ressources de nourriture ajoutés au butin des haltes, placés au hasard comme au chantier G (la même fonction « pelouse libre », plus « sous un arbre » et « en lisière ») ;
-  - **les poules partagées** : la faune passe dans le lieu partagé (`lieu-vivant.ts`) : 1 ou 2 poules par halte, vues de tous, la prise attribuée au premier ; le retour d'une poule prise ; la diffusion de leurs positions comme pour les Éteints (seulement à ceux qui les voient) ;
   - **les quantités** : proposées au porteur avec le banc de rythme, puis codées.
-- **Fichiers** : `commun/src/faune.ts`, `serveur/src/lieu-vivant.ts`, `commun/src/halte.ts`, `commun/src/gue.ts`, le client de la faune (`client/src/rendu/faune.ts`).
-- **Tests** : aucun champignon ni buisson dans l'eau ou un bâtiment ; deux joueurs, une poule : un seul l'attrape ; une poule prise revient ; `npm run rythme` tient.
+- **Fichiers** : `serveur/src/lieu-vivant.ts`, `commun/src/halte.ts`, `commun/src/gue.ts`.
+- **Tests** : aucun champignon ni buisson dans l'eau ou un bâtiment ; un point cueilli revient ailleurs ; `npm run rythme` tient.
 - **Ordre** : après le chantier G (il réutilise ses tirages au hasard).
 
 ### Vague 2 · La recette
@@ -430,7 +431,7 @@ Ce format est le contrat entre les chantiers A (serveur) et B (client) : il perm
 9. **De jour, à 5 m, on voit tout de suite** si un Éteint au sol est à terre (il remue) ou détruit (inerte, pâli). On voit aussi quand il va se relever.
 10. **Au gué et au Moulin, les pelouses ont du bois mort et des cailloux**, ailleurs à chaque passage ; on y ramasse des branches. Les haltes en ont plus que les lieux personnels.
 11. **Au gué, on entre dans la cabane du passeur** par sa porte.
-12. **À la station et au gué, on trouve de quoi manger** : des cèpes (et des amanites), des baies, une ou deux poules qu'on peut chasser à plusieurs.
+12. **À la station et au gué, on trouve de quoi manger** : des cèpes (et des amanites), des baies.
 13. `npm run verif`, `npm test`, `npm run build` passent. `npm run equilibre` et `npm run rythme` tiennent.
 
 ---
@@ -449,8 +450,8 @@ Ce format est le contrat entre les chantiers A (serveur) et B (client) : il perm
 | F · À terre ou détruit, au corps | S | 0,75 |
 | G · Le bois et les pierres, partout | S | 1 |
 | H · L'entrée de la cabane du passeur | S | 0,25 (plus la livraison de la session « bâtiments ») |
-| I · De quoi manger dans les haltes | M | 1,5 |
-| **Total** | **3 M, 6 S** | **≈ 9,5 jours-agent** (fourchette 6,5 à 14) |
+| I · De quoi manger dans les haltes | S | 0,75 |
+| **Total** | **2 M, 7 S** | **≈ 8,75 jours-agent** (fourchette 6 à 13) |
 
 **En temps réel**, d'après la 0.8 et la 0.8.2 (agents en parallèle) :
 - vague 1 : 1 h à 1 h 30 (le plus long, l'affichage) ;
