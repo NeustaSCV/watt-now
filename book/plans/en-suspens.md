@@ -56,6 +56,7 @@
 - Les **munitions** (flèches, carreaux) : une règle cohérente sans tout déséquilibrer.
 - ~~Les **réparations** (la tête du marteau ne s'use pas ; on répare le manche sans forge) : au-delà de ce que la 0.8 code.~~ *Fait en 0.8 (le manche à l'établi à étau) et 0.8.2 (la masse aussi).*
 - ~~Vérifier les **noms des autres meubles** (établi, banc de recharge, pédalier…) comme pour la forge (un seul nom partout).~~ *Fait en 0.8 : « banc solaire », « pédalier générateur », « ventilateur à manivelle » partout (jeu, books, bible).*
+- Les **poules dans les haltes** (1 ou 2 par halte, partagées entre joueurs) : écartées « pour l'instant » de la 0.9 (2026-10-13) ; il faut d'abord une faune partagée dans les lieux à plusieurs (`plan-0.9.md` §2.7).
 - La **halte de cueillette et de chasse** (gibier, boyaux, corde d'arc en boyau) : Book 99.
 - La **bibliothèque de bâtiments** `batiment/` : à valider par le porteur ; Book 99.
 - Le **combat entre joueurs** : règles du duel décidées le 2026-10-13 (`duel-entre-joueurs.md`), à coder **bien après la 0.9**, une fois la fluidité validée , toutes les questions tranchées.
