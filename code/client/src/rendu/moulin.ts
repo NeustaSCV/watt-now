@@ -173,7 +173,10 @@ export function animerMoulin(
   eteints: Iterable<{ objet: THREE.Object3D }>,
 ): void {
   estomperToits(decor, x, z, dt, lacet);
-  const e = etats.get(decor);
+  // Le jeu pose le Moulin dans un groupe à lui (main.ts, montrerDecor) : on cherche le décor du Moulin dedans. Avant la
+  // 0.8.3, seul le groupe donné était lu : en jeu, la grande porte et ce qu'on prenait ne changeaient pas à l'écran.
+  let e = etats.get(decor);
+  if (!e) decor.traverse((o) => (e ??= etats.get(o)));
   if (!e) return;
   const ouverte = portes.grande_porte === true;
   if (e.porteFermee) e.porteFermee.visible = !ouverte;

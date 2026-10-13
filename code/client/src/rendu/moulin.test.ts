@@ -80,7 +80,8 @@ test("budget iPhone : le décor du Moulin tient sous 60 000 triangles et 40 appe
 });
 
 test("la grande porte ouverte : la porte fermée du modèle se cache, la porte ouverte paraît ; la clé, la fourche, l'étau pris se cachent", () => {
-  const decor = creerMoulin();
+  // Comme en jeu : le Moulin posé dans le groupe du lieu (main.ts, montrerDecor), et c'est ce groupe qu'on anime.
+  const decor = new THREE.Group().add(creerMoulin());
   const objet = (nom: string) => decor.getObjectByName(nom)!;
   const [fermee, ouverte, cle, fourche, etau] = ["grande porte fermée", "grande porte ouverte", "grosse clé", "fourche", "étau"].map(objet);
   for (const o of [fermee, ouverte, cle, fourche, etau]) assert.ok(o, "un objet nommé du modèle");
