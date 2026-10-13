@@ -28,6 +28,12 @@ export const DEFINITIONS_REGLAGES = {
   poule_retour_h: { defaut: 2, min: 0.1, max: 48, aide: "Heures réelles avant qu'une poule prise soit remplacée." },
   inactivite_min: { defaut: 5, min: 1, max: 120, aide: "Minutes sans bouger ni agir avant d'être déconnecté d'office : hors ligne, la faim, la soif et la fatigue sont gelées." },
   panneau_wh_jour: { defaut: 80, min: 0, max: 500, aide: "Wh produits par le petit panneau solaire par jour de calendrier (1 h 50 réelle)." },
+  // Plan 0.8.2 (chantier D, plan 0.8 §9.3) : les chiffres du bois « à vérifier » au test familial (B3, B13).
+  tas_bois_buches: { defaut: 10, min: 2, max: 40, aide: "Bûches du tas de bois personnel de la station, pour chaque joueur. Changé, il vaut à la visite suivante de qui n'a pas entamé son tas (ou dont le tas est revenu)." },
+  tas_bois_retour_h: { defaut: 6, min: 0.1, max: 48, aide: "Heures réelles avant que le tas de bois personnel revienne, comptées depuis la première bûche prise." },
+  comptoir_buches: { defaut: 10, min: 0, max: 50, aide: "Bûches que le Comptoir garde en stock : le réassort remonte jusque-là (il ne retire rien au-dessus)." },
+  comptoir_pierres: { defaut: 10, min: 0, max: 50, aide: "Pierres que le Comptoir garde en stock : le réassort remonte jusque-là (il ne retire rien au-dessus)." },
+  comptoir_reassort_h: { defaut: 2, min: 0.1, max: 24, aide: "Heures réelles entre deux réassorts du Comptoir : à chacun, une unité de plus pour chaque objet sous son niveau de stock." },
   // L'équilibre des armes de métier (Book 25 §8.4, chantier 9) : des multiplicateurs, à 1 par défaut. `npm run equilibre`
   // rejoue le tableau du §8.4 avec les réglages du fichier, et dit si le garde-fou tient encore.
   equilibre_lames_degats: { defaut: 1, min: 0.5, max: 2, aide: "Dégâts des lames de métier (machette, couteau de forge, glaive…) : 1,2 = 20 % de plus." },

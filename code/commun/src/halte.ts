@@ -4,6 +4,7 @@
 
 import { FERME_HALTE, GARAGE, GOULET, ROUTE, STATION, ZONE_STATION, dansBoite } from "./lieux.ts";
 import { nouvelEteint, type Eteint } from "./eteints.ts";
+import { REGLAGES } from "./reglages.ts";
 import { VRAC_MAX, aleatoire, type ButinLieu, type RessourceSol, type TypeRessource } from "./terrain.ts";
 
 /** À augmenter quand le contenu de la halte change : la base le régénère alors. */
@@ -15,11 +16,29 @@ export const VERSION_HALTE = 6;
  * reviennent en 30 min (B2, B4), alors qu'au terrain elles ne reviennent jamais (B1).
  */
 export const BUTIN_HALTE: ButinLieu = {
-  repousse: { buche: 30 * 60_000, pierre: 30 * 60_000 },
+  repousse: {
+    buche: 30 * 60_000,
+    pierre: 30 * 60_000,
+    // Plan 0.8.2 (chantier D) : le retour du tas de bois est un réglage à chaud (6 h par défaut, B3), lu à chaque prise.
+    get tas_bois() {
+      return REGLAGES.tas_bois_retour_h * 3_600_000;
+    },
+  },
   // B2, B4, B8 : 12 bûches et 13 pierres pour un voyageur seul ; jusqu'à trois fois plus quand ils sont nombreux.
   vrac: { buche: 12, pierre: 13 },
-  // R4 : la pièce de famille, chacun la sienne (24 h, Q-0.8-14) ; le tas de bois, 10 bûches à chacun (6 h, B3).
-  personnel: { panneau_auvent: 1, piece_enclume: 1, piece_alternateur: 1, tas_bois: 10 },
+  personnel: {
+    // R4 : la pièce de famille, chacune la sienne (24 h, Q-0.8-14).
+    panneau_auvent: 1,
+    piece_enclume: 1,
+    piece_alternateur: 1,
+    // Plan 0.8.2 (chantier D, recette de la 0.8) : la caisse de l'atelier aussi (clous, fil de fer, huile), à chacun la
+    // sienne, qui revient pour lui en 12 h (REPOUSSE_MS) : le deuxième voyageur ne la trouve plus vide.
+    caisse_atelier: 1,
+    // Le tas de bois, 10 bûches à chacun (B3) : un réglage à chaud, lu à chaque visite.
+    get tas_bois() {
+      return REGLAGES.tas_bois_buches;
+    },
+  },
 };
 
 export function genererHalte(): Omit<RessourceSol, "disponible">[] {
@@ -77,7 +96,9 @@ export function eteintsHalte(): Eteint[] {
     // Le Dormant de la boutique, affalé derrière le comptoir de caisse (moment-vitrine n° 4).
     [100.4, 12.6, "dormant", 0.3],
     [STATION.boutique.x - 5.5, 19.2, "dormant", -0.8],
-    [STATION.atelier.x + 2.5, 18.9, "dormant", 2.6],
+    // Plan 0.8.2 (chantier D) : couché à 0,85 m de l'établi de l'enclume, il gênait la pièce de famille ; il dort
+    // désormais contre le flanc est de la voiture éventrée, hors du chemin des deux établis (à plus de 6 m de chacun).
+    [GARAGE.voitureEventree.x + 4, GARAGE.voitureEventree.z + 0.3, "dormant", -1.6],
     [FERME_HALTE.x - 2.5, FERME_HALTE.z - 1, "dormant", 1.2],
     [FERME_HALTE.x + 3.5, FERME_HALTE.z + 1.5, "dormant", -2],
     [166.5, 25, "dormant", 0.2],
