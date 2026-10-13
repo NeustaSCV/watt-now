@@ -110,6 +110,11 @@ function hauteur(x, z) {
 }
 
 // Les emprises bâties et les lieux dégagés : pas d'arbre, pas de roncier.
+// Le gisement de glaise : au milieu de la berge de vase, à découvert (au sud du coin repas du camping-car). Rien ne
+// pousse autour ni entre lui et la caméra (sud-est, et en miroir) : voir nature().
+const GLAISE = { x: 20.2, z: 19.9 };
+const autourDeLaGlaise = (x, z) => x > 13.5 && x < 30 && z > 17.6 && z < 31;
+
 const EMPRISES = [
   [-81.5, -66.5, -25.5, -12.5], // huilerie
   [-66.5, -60.5, 9.5, 14], // épave
@@ -174,7 +179,7 @@ const FOUILLE = [
   { x: 28, z: -26.4, quoi: "lavoir : battoirs, savon, seau, draps (tissu)" },
   { x: 19.5, z: -17, quoi: "station Kayak+ : pagaies, gilets, câble antivol (acier)" },
   { x: -11.2, z: -5.2, quoi: "tas de branches (apportées par la crue, tirées sur la berge)" },
-  { x: 16.0, z: 20.4, quoi: "gisement de glaise (inépuisable) : la motte entamée et la bêche plantée, sur la berge de vase" },
+  { x: GLAISE.x, z: GLAISE.z, quoi: "gisement de glaise (inépuisable) : la motte entamée et la bêche plantée, au milieu de la berge de vase" },
   ...JONCS.map(([x, z]) => ({ x, z, quoi: "touffe de joncs (cueillable, repousse en 30 min)" })),
   // La sortie
   { x: 73, z: -18.6, quoi: "cabanon du garde-pêche : cannes, hameçons, filets, bottes" },
@@ -756,11 +761,11 @@ const PLACES = (() => {
 function nature(ctx) {
   const { c, u } = ctx;
   for (const a of PLACES.arbres) {
-    if (!ctx.ici(a.x)) continue;
+    if (!ctx.ici(a.x) || autourDeLaGlaise(a.x, a.z)) continue;
     arbreBerge(c, a.x, a.z, a.h, hauteur(a.x, a.z), a.essence, a.vers ?? [0, 0]);
   }
   for (const r of PLACES.ronces) {
-    if (!ctx.ici(r.x)) continue;
+    if (!ctx.ici(r.x) || autourDeLaGlaise(r.x, r.z)) continue;
     roncier(c, r.x, r.z, r.s * (0.8 + u * 0.3), hauteur(r.x, r.z) - 0.05);
   }
   for (const f of PLACES.fougeres) {
@@ -1914,7 +1919,7 @@ function glaiseEtJoncs(ctx) {
   const { c, M } = ctx;
   // Le gisement de glaise, sur la berge de vase sous le camping-car : une motte entamée à la bêche, des mottes
   // découpées, des traces de pas et de bêche
-  const [gx, gz] = [16.0, 20.4];
+  const [gx, gz] = [GLAISE.x, GLAISE.z];
   if (ctx.ici(gx)) {
     c.poser(BOULE, M.mat, 0x8f8068, { x: gx, y: 0.05, z: gz, ry: 0.4, e: [1.15, 0.38, 0.85] }, { nuance: 0.04 });
     c.boite(0.75, 0.32, 0.05, 0xa89a7c, { x: gx + 0.45, y: 0.17, z: gz + 0.35, ry: 0.4, rx: -0.25 }, M.mat, { crasse: false }); // la face fraîchement coupée

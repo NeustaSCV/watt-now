@@ -598,7 +598,7 @@ export const FOUILLE_MODELE: readonly PointModele[] = [
   {"x":23.6,"z":14.2,"quoi":"soute arrière du camping-car : outils, câbles, jerrican"},
   {"x":28,"z":-26.4,"quoi":"lavoir : battoirs, savon, seau, draps (tissu)"},
   {"x":19.5,"z":-17,"quoi":"station Kayak+ : pagaies, gilets, câble antivol (acier)"},
-  {"x":16,"z":20.4,"quoi":"gisement de glaise (inépuisable) : la motte entamée et la bêche plantée, sur la berge de vase"},
+  {"x":20.2,"z":19.9,"quoi":"gisement de glaise (inépuisable) : la motte entamée et la bêche plantée, au milieu de la berge de vase"},
   {"x":14.4,"z":-5.2,"quoi":"touffe de joncs (cueillable, repousse en 30 min)"},
   {"x":16.2,"z":7.6,"quoi":"touffe de joncs (cueillable, repousse en 30 min)"},
   {"x":73,"z":-18.6,"quoi":"cabanon du garde-pêche : cannes, hameçons, filets, bottes"},

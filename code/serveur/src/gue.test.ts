@@ -9,7 +9,6 @@ import {
   BRANCHES_EPARSES,
   BUTIN_GUE,
   GLAISE,
-  GLAISE_DU_DESSIN,
   LIGNE_RADIER_NOYE,
   PIERRES_DU_BANC,
   VERSION_GUE,
@@ -143,10 +142,10 @@ test("les données tirées du modèle sont à jour (scripts/extraire-gue.mjs)", 
   const auJeu = (p: { x: number; z: number }) => ({ x: Math.round((100 + p.x) * 100) / 100, z: Math.round((p.z + 35) * 100) / 100 });
   assert.deepEqual(auJeu(FICHE_MIROIR.interactions[0]), { x: CLOCHE.x, z: CLOCHE.z }, "la cloche");
   const points = FICHE_MIROIR.cartes.flatMap((c: any) => c.fouille.map((f: any) => ({ ...f, x: f.x + c.decalage.x })));
-  // Plan 0.8.2 (R2) : le jeu a déplacé la glaise au milieu de la berge, en attendant le modèle (demande-batiment-gue-4) ;
-  // le point du modèle est celui où l'écran prend sa motte pour la porter là. Quand le modèle aura suivi, ils se rejoindront.
+  // R2 : la glaise est au milieu de la berge, à découvert, au point du modèle (0.8.3) : le serveur la creuse là où
+  // l'écran dessine la motte et la bêche.
   const glaise = points.find((f: any) => f.quoi.startsWith("gisement de glaise"));
-  assert.deepEqual(auJeu(glaise), GLAISE_DU_DESSIN, "la motte du modèle");
+  assert.deepEqual(auJeu(glaise), GLAISE, "la motte du modèle");
   assert.deepEqual(parType(new Gue(new Base(":memory:")), "gisement_glaise").map((r) => ({ x: r.x, z: r.z }))[0], GLAISE, "la glaise du jeu");
   const eteints = FICHE_MIROIR.cartes.flatMap((c: any) => c.eteints.map((e: any) => auJeu({ x: e.x + c.decalage.x, z: e.z })));
   assert.deepEqual(eteints.map((e: any) => e.x).sort(), ETEINTS_MODELE.map((e) => auGue(e.x, e.z).x).sort(), "les Éteints");
@@ -605,13 +604,25 @@ test("0.8.2 : une partie 0.8.1 se relit (le contenu du gué se régénère, rien
   base.sauverInstance(`perso:gue:${compte.id}`, { version: 2, etats: { "1": { prises: 5, depuis: base.debutMonde() } } }, base.debutMonde());
   // La 0.8.2 relit la même base : le gué a son nouveau contenu (VERSION_GUE), le sac de Rose est intact, son banc plein.
   const gue = new Gue(base, () => 0.5);
-  assert.equal(VERSION_GUE, 4);
+  assert.equal(VERSION_GUE, 5);
   assert.equal(parType(gue, "buche").length, 12);
   assert.equal(parType(gue, "branche").length, 8);
   assert.equal(parType(gue, "pierre").length, 63);
   assert.deepEqual(base.chargerInventaire(compte.id), { pierre: 3, glaise: 2, sac_a_dos: 1 });
   const banc = parType(gue, "banc_galets")[0]!;
   assert.ok(gue.disponiblePour(banc, compte.id, base.debutMonde() + 1000), "le banc de galets repart plein");
+});
+
+test("0.8.3 : une partie 0.8.2 se relit, la glaise passe au point du modèle", () => {
+  const base = new Base(":memory:");
+  // Le gué d'une 0.8.2 (version 4) : la glaise là où le jeu l'avait placée en attendant le modèle.
+  const ancien = genererGue().map((r) => (r.type === "gisement_glaise" ? { ...r, x: 83, z: 45.2 } : r));
+  base.chargerRessourcesLieu("gue", () => ancien, 4);
+  const compte = base.creerCompte("Rose", "potager42", "charbonniers");
+  base.sauverInventaire(compte.id, { glaise: 2, sac_a_dos: 1 });
+  const gue = new Gue(base, () => 0.5);
+  assert.deepEqual(parType(gue, "gisement_glaise").map((r) => ({ x: r.x, z: r.z })), [{ x: GLAISE.x, z: GLAISE.z }]);
+  assert.deepEqual(base.chargerInventaire(compte.id), { glaise: 2, sac_a_dos: 1 });
 });
 
 // ---------- Plan 0.8.2 §7.6 : monter sur le radeau depuis le ponton ----------
