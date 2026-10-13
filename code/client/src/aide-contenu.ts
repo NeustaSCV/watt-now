@@ -182,7 +182,7 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
     resume: "Ramasser, fouiller, démonter, et choisir quoi porter : tout pèse.",
     blocs: [
       { sous_titre: "Ramasser et fouiller" },
-      "Vise une ressource et maintiens {agir}. Le bois mort, les baies, les joncs, les fruits et les champignons **repoussent** avec le temps ; les pierres et les vestiges uniques, non. À la station-service, les rayonnages, les épaves et les établis se fouillent : ils se regarnissent lentement, en heures réelles.",
+      "Vise une ressource et appuie sur {agir} : un appui suffit, le geste va jusqu'au bout ; un second appui l'arrête. Le bois mort, les baies, les joncs, les fruits et les champignons **repoussent** avec le temps ; les pierres et les vestiges uniques, non. À la station-service, les rayonnages, les épaves et les établis se fouillent : ils se regarnissent lentement, en heures réelles.",
       "Fouiller rapporte souvent du **bric-à-brac** de l'Âge de l'Abondance, tiré au hasard selon le lieu : des choses utiles, et beaucoup d'absurdités.",
       { sous_titre: "Le poids" },
       "Tout a son vrai poids. Ton sac à dos porte **55 kg**. Trop chargé, tu ne peux plus rien ramasser : il faut choisir.",
