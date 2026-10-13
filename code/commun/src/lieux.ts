@@ -562,7 +562,7 @@ export const LIEUX: Record<LieuId, LieuCarte> = {
     nom: "La station-service",
     km: 3,
     ouvert: true,
-    description: "Une halte sur la route de la Campagne. La boutique a été pillée, pas l'atelier. Des Éteints dorment dans le coin.",
+    description: "Une halte sur la route de la Campagne. Des Éteints dorment dans le coin.",
   },
   comptoir: {
     id: "comptoir",
