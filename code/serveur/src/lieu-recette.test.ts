@@ -68,7 +68,7 @@ test("une étape « plus tard » est refusée : le foyer de cuisine ne monte pas
   const t = monter({ pierre: 6, branche: 4 }, { niveau: 3, allume: false });
   t.joueur.recevoir({ t: "interagir", cible: { genre: "feu", id: 1 }, verbe: "ameliorer" });
   t.attendre(30);
-  assert.equal(t.infos().at(-1), "Four de terre : plus tard. Sa clé est à trouver plus loin.");
+  assert.equal(t.infos().at(-1), "Four de terre : plus tard. Ce qui lui manque est à trouver plus loin.");
   assert.equal(t.base.chargerFeux(t.compte.id)[0]!.niveau, 3);
   assert.equal(t.sac().pierre, 6);
 });
@@ -80,7 +80,7 @@ test("une recette « plus tard » est refusée par le serveur", () => {
   try {
     const t = monter({ fibres: 6 });
     t.fabriquer("corde");
-    assert.equal(t.infos().at(-1), `${r.nom} : plus tard. Sa clé est à trouver plus loin.`);
+    assert.equal(t.infos().at(-1), `${r.nom} : plus tard. Ce qui lui manque est à trouver plus loin.`);
     assert.equal(t.sac().corde, undefined);
   } finally {
     if (avant === undefined) delete r.aVenir;

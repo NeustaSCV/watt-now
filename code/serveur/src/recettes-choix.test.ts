@@ -208,7 +208,7 @@ test("0.8.2 : la matraque de fortune prend le petit condensateur, plus l'apparei
   const r = recette("matraque_fortune")!;
   assert.deepEqual(r.ingredients, { gourdin: 1, petit_condensateur: 1, petite_batterie: 1, ficelle: 1 });
   assert.equal(etoilesDuProduit(r, r.ingredients), 1);
-  assert.match(r.note ?? "", /petite batterie du kit est unique/);
+  assert.match(r.note ?? "", /petite batterie de la frontale est unique/);
   const t = surLeTerrain({ couteau: 1, tournevis: 1, gourdin: 1, petite_batterie: 1, ficelle: 1, appareil_photo_jetable: 1 }, BANC);
   t.fabriquer("matraque_fortune");
   assert.equal(t.inventaireFinal().matraque_fortune, undefined, "l'appareil entier ne suffit plus");

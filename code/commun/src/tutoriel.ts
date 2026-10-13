@@ -7,7 +7,7 @@
 // première nuit se passe avec ce premier meuble ; le tutoriel y conseille les branches au feu (B14).
 
 import type { Famille } from "./regles.ts";
-import type { TypeObjet } from "./objets.ts";
+import type { Inventaire, TypeObjet } from "./objets.ts";
 import { HEURE_FIN_NUIT, MS_PAR_HEURE_JEU, jourDeJeu } from "./temps.ts";
 
 export interface EtapeTutoriel {
@@ -105,6 +105,21 @@ export function etapesTutoriel(famille: Famille): EtapeTutoriel[] {
 
 export const NOMBRE_ETAPES = 12;
 
+/**
+ * Le repas du tutoriel (0.8.2, décision du porteur) : toutes les deux étapes, un repas de plus en plus bon, donné une
+ * fois, quand l'étape est réussie (la clé de la table : le rang de l'étape réussie, de 0 à 11). Il arrive au sac, comme
+ * une récompense de quête ; le carnet le dit en une ligne (`VueTutoriel.repas`). Le vétéran qui saute le tutoriel ne
+ * reçoit rien. Après « Ramasser », « L'eau », « L'outil », « Le premier Éteint », « La carte », « La nuit ».
+ */
+export const REPAS_DU_TUTORIEL: Readonly<Partial<Record<number, { objets: Inventaire; texte: string }>>> = {
+  1: { objets: { pomme: 2 }, texte: "Pour la route : deux pommes." },
+  3: { objets: { noix: 1 }, texte: "Pour la route : une poignée de noix." },
+  5: { objets: { conserve: 1 }, texte: "Pour la route : une conserve." },
+  7: { objets: { volaille_cuite: 1, pomme: 1 }, texte: "Pour te remettre : une volaille rôtie et une pomme." },
+  9: { objets: { volaille_cepes: 1 }, texte: "Pour la route : une volaille aux cèpes." },
+  11: { objets: { pot_au_feu: 2 }, texte: "Le repas de ta première vraie nuit : deux pots-au-feu." },
+};
+
 /** L'état du tutoriel d'un joueur, gardé en base. */
 export interface EtatTutoriel {
   /** Étape en cours, de 0 à 11 ; 12 : terminé. */
@@ -142,6 +157,8 @@ export interface VueTutoriel {
   consigne: string;
   /** La leçon de l'étape qui vient d'être réussie, à montrer un moment. */
   lecon?: string;
+  /** Le repas reçu avec cette leçon (`REPAS_DU_TUTORIEL`), une ligne du carnet par repas. */
+  repas?: string[];
   termine: boolean;
   /** Ce qu'il reste à faire, compté (« Branches 2/3 », « Pierres 1/5 ») : pour suivre l'étape en cours. */
   progres?: { libelle: string; fait: number; but: number }[];

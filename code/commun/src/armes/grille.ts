@@ -39,10 +39,10 @@ export const PLAFONDS_NIVEAU_1: Partial<Record<TypeObjet, PlafondArme>> = {
   lame_forgee: { recette: 2, maitrise: 3, pourquoi: "Au foyer de forge, à ★★." },
   hache_forgee: { recette: null, maitrise: null, pourquoi: "La forge ventilée (L2B) : plus tard." },
   glaive: { recette: null, maitrise: null, pourquoi: "La forge ventilée (L2B) : plus tard." },
-  // ⚡ La matraque de fortune ★, sa ★★ par la maîtrise ; la matraque électrique ★★ au module de raquette, avec la petite
+  // ⚡ La matraque de fortune ★, sa ★★ par la maîtrise ; la matraque électrique ★★ au module de décharge (celui du condensateur moyen), avec la petite
   // batterie du kit pour source sûre (Q-A5). Le module à bobine (★★★) et l'aiguillon attendent le poste de montage (L2A).
   matraque_fortune: { recette: 1, maitrise: 2, pourquoi: "Le flash et la petite batterie : ★ ; ★★ par la maîtrise seulement (K27)." },
-  matraque_electrique: { recette: 2, maitrise: 3, pourquoi: "Le module de raquette : ★★ ; le module à bobine attend le poste de montage (L2A)." },
+  matraque_electrique: { recette: 2, maitrise: 3, pourquoi: "Le module de décharge du condensateur moyen : ★★ ; le module à bobine attend le poste de montage (L2A)." },
   aiguillon: { recette: null, maitrise: null, pourquoi: "Le poste de montage (L2A) : plus tard." },
   // ⚙️ L'arbalète ★★ (la lame de ressort) ; l'arc d'arbalète en if attend l'établi de menuisier (Q-0.8-3).
   arbalete: { recette: 2, maitrise: 3, pourquoi: "★★ au ressort ; l'arc d'arbalète en if est grisé « plus tard » (Q-0.8-3)." },

@@ -134,7 +134,7 @@ const INSTALLER: Quete[] = [
     texte: "Dormir à même le sol, c'est dormir à moitié. Garnis ton abri d'un lit de branchages (examine-le : « Améliorer »).",
     // Book 24 §7 : l'abri garni (niveau 2) vaut un lit posé à côté.
     objectifs: [{ libelle: "Abri garni", condition: { a: "un_de", conditions: [installation("lit_branchages"), { a: "installation", type: "abri", niveau: 2 }] } }],
-    lecon: "Isolé du sol, à côté de l'abri, on récupère un tiers plus vite.",
+    lecon: "Isolé du sol, sous la bâche, on récupère un tiers plus vite.",
     recompense: { objets: { conserve: 1 } },
   },
   // ---------- Les portes du niveau 1 (plan 0.8 §2.6) : une par meuble, deux ouvertes à la fois, une par route ----------

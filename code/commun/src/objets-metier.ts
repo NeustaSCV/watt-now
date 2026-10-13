@@ -34,7 +34,7 @@ export const OBJETS_METIER = {
     nom: "os de poule",
     pluriel: "os de poule",
     poids: 0.03,
-    description: "Un os de poule, gratté et séché. Taillé en pointe, il arme une flèche ; en noix, une arbalète.",
+    description: "Un os de poule, gratté et séché. Taillé en pointe, il arme une flèche.",
   },
   graisse: {
     nom: "noix de graisse",
@@ -182,7 +182,7 @@ export const OBJETS_METIER = {
     nom: "rivet forgé",
     pluriel: "rivets forgés",
     poids: 0.01,
-    description: "Un rivet de fer doux, frappé à chaud. Pour un manche qui ne bouge plus, un coffre cerclé, une arbalète.",
+    description: "Un rivet de fer doux, frappé à chaud. Pour un manche qui ne bouge plus, un coffre cerclé.",
   },
   ciseau_bois: {
     nom: "ciseau à bois",
@@ -220,13 +220,13 @@ export const OBJETS_METIER = {
     nom: "module de décharge",
     pluriel: "modules de décharge",
     poids: 0.15,
-    description: "La haute tension, en bricolage : un étage de flash ou de raquette, ou une bobine d'allumage. Ne pas toucher.",
+    description: "La haute tension, en bricolage : un condensateur et son étage de charge, ou une bobine d'allumage. Ne pas toucher.",
   },
   matraque_fortune: {
     nom: "matraque de fortune",
     pluriel: "matraques de fortune",
     poids: 1.4,
-    description: "Un gourdin, le flash d'un appareil jetable, la petite batterie du kit : elle raidit, et elle éteint.",
+    description: "Un gourdin, un petit condensateur, la petite batterie de la frontale : elle raidit, et elle éteint.",
   },
   matraque_electrique: {
     nom: "matraque électrique",

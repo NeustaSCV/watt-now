@@ -52,7 +52,7 @@ export const EXAMENS_INSTALLATIONS: Record<InstallationVue["type"], string> = {
   escabeau: "Un escabeau de bois ligaturé de corde. Posé au pied d'un arbre fruitier, dans son cercle, il permet de cueillir en haut.",
   recuperateur_pluie: "Quatre sacs plastique tendus en entonnoir au-dessus d'un bidon de 5 L. Quand il pleut, il se remplit, même quand tu n'es pas là. L'eau du ciel se boit sans la faire bouillir.",
   alarme_boites: "Une ficelle tendue entre deux piquets, des boîtes de conserve qui pendent. Si un Éteint passe, tu l'entendras. Lui aussi.",
-  lit_branchages: "Un cadre de branches couvert de rameaux. On y dort isolé du sol : à côté de l'abri, le sommeil répare mieux.",
+  lit_branchages: "Un cadre de branches couvert de rameaux. On y dort isolé du sol ; glissé sous ton abri (Améliorer), il le garnit.",
   decharge: "Un tas d'ordures de l'Âge de l'Abondance, au bord du terrain. La pluie et le temps en font remonter des objets : surtout des trucs nuls, parfois une bonne surprise.",
   // Le métier des familles (Book 25, 0.6) : les chantiers 6 et 7 les font vivre.
   alarme_electrique: "Un fil de fer tendu bas, une pile, une LED. Si un Éteint passe, la LED s'allume et ton alerte vibre, sans un bruit.",
@@ -70,6 +70,24 @@ export const EXAMENS_INSTALLATIONS: Record<InstallationVue["type"], string> = {
   ratelier_outils: "Deux perches et des chevilles contre un piquet : chaque outil a sa place. Rangé ici, il sert à tout ce qu'on bâtit autour.",
   torche_plantee: "Une branche plantée, un chiffon gras qui brûle au bout. Elle éclaire six mètres autour, une nuit durant.",
 };
+
+/**
+ * Ce qu'on dit d'une installation qu'on examine, selon son état (0.8.2, chantier K) : le foyer de forge parle de
+ * l'enclume posée sur son billot, et non plus de sa pierre plate.
+ */
+export function examenInstallation(i: Pick<InstallationVue, "type" | "etat">): string {
+  const enclume = i.type === "forge" ? i.etat.enclume : undefined;
+  if (enclume) return `Un foyer de pierres, une tuyère de fer, un billot et ${ENCLUMES[enclume].nom} calé${enclume === "depanneur" || enclume === "masse" ? "e" : ""} dessus. Il faut du charbon de bois.`;
+  return EXAMENS_INSTALLATIONS[i.type];
+}
+
+/** Endormi, le bouton A réveille (0.8.2, chantier K) : comme bouger, sans avoir à bouger. */
+export const LIBELLE_REVEIL = "Se réveiller";
+
+/** Les propositions pendant le sommeil : A réveille ; B reste ce qu'il était. */
+export function propositionsEndormi(p: Propositions): Propositions {
+  return { ...p, A: { libelle: LIBELLE_REVEIL, message: { t: "annuler" } } };
+}
 
 // ---------- Le meuble d'une autre famille, appris (plan 0.8.2 §7.3, chantier J) ----------
 
@@ -93,7 +111,7 @@ function actionsInstallation(
   const msg = (libelle: string, verbe: Verbe): ActionProposee => ({ libelle, message: { t: "interagir", cible: { genre: "installation", id: i.id }, verbe } });
   // Examiner ouvre la fiche : ce qu'elle fait, l'améliorer, la démonter (Book 24). La décharge, elle, se regarde.
   const examiner: ActionProposee = i.type === "decharge" ? { libelle: "Examiner", examiner: EXAMENS_INSTALLATIONS[i.type] } : { libelle: "Examiner", ouvrirFiche: { genre: "installation", id: i.id } };
-  if (!saitSeServir(i.type, famille, savoirAppris)) return [null, { libelle: "Examiner", examiner: `${EXAMENS_INSTALLATIONS[i.type]} Tu ne sais pas t'en servir.` }];
+  if (!saitSeServir(i.type, famille, savoirAppris)) return [null, { libelle: "Examiner", examiner: `${examenInstallation(i)} Tu ne sais pas t'en servir.` }];
   switch (i.type) {
     case "etabli": {
       // Le redresseur de fûts (Book 25 §9.3) : proposé tant qu'il manque, si l'on a de quoi le monter.

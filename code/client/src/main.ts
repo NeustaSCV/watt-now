@@ -27,7 +27,7 @@ import { Carte } from "./carte.ts";
 import { Entrees, type Commande } from "./entrees.ts";
 import { Hud } from "./hud.ts";
 import { LIBELLE_FERMER_FICHE } from "./fiche-examiner.ts";
-import { proposer, retenirSavoir, type ActionProposee, type Propositions } from "./interaction.ts";
+import { propositionsEndormi, proposer, retenirSavoir, type ActionProposee, type Propositions } from "./interaction.ts";
 import { Reseau } from "./reseau.ts";
 import { FeuDeCamp } from "./rendu/feu.ts";
 import { VueInstallation, creerEscabeau } from "./rendu/installations.ts";
@@ -1412,7 +1412,7 @@ function executer(c: Commande): void {
       return;
     }
     case "lumiere":
-      if (!lumierePortee(inventaire)) return hud.message("Rien pour t'éclairer : torche, frontale ou lanterne sont dans le kit d'une famille : échange-la.");
+      if (!lumierePortee(inventaire)) return hud.message("Rien pour t'éclairer : chaque famille a sa lumière, échanges-en une.");
       envoyer({ t: "lumiere", allumee: !lumiere });
       return;
     case "tourner+":
@@ -1820,6 +1820,8 @@ function boucle(instant: number): void {
     dechetsVue.cibler(dechet !== null && propositions === dechet.propositions);
     // La fiche Examiner ouverte (plan 0.8 §9.2) : B la referme, le bouton tactile et l'invite le disent.
     if (!modeCombat && hud.ficheOuverte) propositions = { ...propositions, B: { libelle: LIBELLE_FERMER_FICHE, examiner: "" } };
+    // Endormi : A réveille (0.8.2, chantier K), au lieu de « Dormir dans l'abri ».
+    if (endormi && !modeCombat) propositions = propositionsEndormi(propositions);
     // Pendant la vue d'ensemble, rien ne se propose : le premier geste ne sert qu'à commencer.
     if (vueArrivee.attend) propositions = { A: null, B: null, cible: null };
     hud.propositions(propositions, occupe, maintien?.tenu && occupe ? actionEnCours : null);

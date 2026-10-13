@@ -132,7 +132,7 @@ function placeSurLePedalier(i: InstallationVue): number {
 function monterAlternateur(ctx: ContexteMecanique, i: InstallationVue): void {
   if (i.etat.alternateur) return ctx.info("L'alternateur est déjà monté.");
   if ((ctx.inventaire().petit_alternateur ?? 0) < 1) return ctx.info("Il te faut un petit alternateur : le garage de la station en garde un pour toi, sur son établi.");
-  if (niveauQualite(ctx.inventaire(), "serrer") < MONTER_ALTERNATEUR.qualites.serrer) return ctx.info("Il faut une clé pour serrer les brides de l'alternateur.");
+  if (niveauQualite(ctx.inventaire(), "serrer") < MONTER_ALTERNATEUR.qualites.serrer) return ctx.info("Il te faut de quoi serrer les brides de l'alternateur : une clé plate, un serre-joint.");
   ctx.commencer("Monter l'alternateur sur le pédalier", MONTER_ALTERNATEUR.secondes, () => {
     if (i.etat.alternateur || (ctx.inventaire().petit_alternateur ?? 0) < 1) return;
     ctx.retirer({ petit_alternateur: 1 });
@@ -159,7 +159,7 @@ function pedaler(ctx: ContexteMecanique, i: InstallationVue): void {
   const organe = organeDuPedalier(i);
   if (!organe) return ctx.info("Rien à entraîner : monte l'alternateur de la station (ou, à défaut, la dynamo du vélo).");
   const surPedalier = placeSurLePedalier(i) > 0.5;
-  if (!bancACharger(ctx, i) && !surPedalier && !ctx.batterieDuSac()) return ctx.info("Aucune batterie à charger, ou elles sont pleines : pose la batterie de la ruine sur le pédalier, ou le pédalier à moins de 3 m du banc.");
+  if (!bancACharger(ctx, i) && !surPedalier && !ctx.batterieDuSac()) return ctx.info("Rien à charger : approche le pédalier à moins de 3 m du banc, ou pose une batterie dessus.");
   const libelle = organe === "alternateur" ? "Pédaler : l'alternateur charge la batterie" : "Pédaler pour charger la batterie";
   ctx.commencer(
     libelle,
@@ -216,7 +216,7 @@ function monterAccessoire(ctx: ContexteMecanique, i: InstallationVue, a: Accesso
   const def = ACCESSOIRES_PEDALIER[a];
   if (accessoireMonte(i.etat, a)) return ctx.info(`${majuscule(def.nom)} est déjà monté${a === "meule_fine" ? "e" : ""}.`);
   if (def.apresMeule && !i.etat.meule) return ctx.info("Monte d'abord la meule (3 pierres) : la meule fine se pose dessus.");
-  if (def.serrer && niveauQualite(ctx.inventaire(), "serrer") < 1) return ctx.info("Il faut une clé pour serrer les brides.");
+  if (def.serrer && niveauQualite(ctx.inventaire(), "serrer") < 1) return ctx.info("Il te faut de quoi serrer les brides : une clé plate, un serre-joint.");
   const manque = manquant(ctx.inventaire(), def.cout);
   if (manque) return ctx.info(`Pour ${def.nom}, il manque : ${manque}.`);
   ctx.commencer(`Monter ${def.nom}`, def.secondes, () => {

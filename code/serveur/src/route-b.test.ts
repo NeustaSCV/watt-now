@@ -87,8 +87,8 @@ test("les étapes du monde ont leur lieu, et l'affichage leur nom (Q-0.8-25)", (
   assert.equal(lieuDeLEtape("H2A"), undefined);
   assert.equal(LIEUX[lieuDeLEtape("H1B")!].nom, "Le Gué-aux-Saules");
   assert.equal(LIEUX[lieuDeLEtape("L1B")!].nom, "Le Moulin du Gué");
-  assert.equal(LIEUX.gue.promesse, "Le gué : la pierre, la glaise et la rive.");
-  assert.ok(LIEUX.moulin.promesse?.includes("le couchage, le stockage, l'établi"));
+  // 0.8.2 (R18) : la carte ne promet plus rien (chantier K, client/src/textes-du-jeu.test.ts).
+  assert.ok(Object.values(LIEUX).every((l) => !("promesse" in l)));
   assert.deepEqual(ORDRE_ROUTE.slice(-3), ["gue", "cooperative", "moulin"]);
 });
 

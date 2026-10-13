@@ -195,8 +195,7 @@ export function dessinCarte(): string {
       <path d="M-9 -3 v10 M9 -3 v10" class="trait"/>
       <rect x="-4" y="1" width="8" height="7" fill="#c8362b" stroke="${ENCRE}" stroke-width="1"/>
       <text y="30" text-anchor="middle" class="nom-ouvert">Station-service</text>
-      <text x="-112" y="52" class="crayon petit">panneau solaire sur l'auvent !</text>
-      <text x="-98" y="68" class="crayon petit">ça dort, dans le coin…</text>
+      <text x="-98" y="52" class="crayon petit">ça dort, dans le coin…</text>
     </g>
     <g class="lieu" data-lieu="comptoir" transform="translate(300 380)" tabindex="0" role="button" aria-label="Le Comptoir du Carrefour">
       <circle r="22" class="zone-clic"/>
@@ -467,9 +466,8 @@ export class Carte {
           parHalte ? `<p class="note">La route passe par ${minuscule(LIEUX[etape].nom)} : il faudra y passer à pied.</p>` : ""
         }`;
     // En-tête (titre, ✕), corps qui défile, pied fixe : le bouton Partir ne passe jamais sous le bord de l'écran.
-    // La promesse du lieu, en une ligne, avant sa description (plan 0.8 : ce qu'on va y chercher).
-    const promesse = l.promesse ? `<p><strong>${l.promesse}</strong></p>` : "";
-    const corps = this.enRoute ? `<p class="trajet"><span>${DUREE_VOYAGE_S} min de route</span></p>` : `${promesse}<p>${l.description}</p>${trajet}`;
+    // 0.8.2 (R18) : la fiche ne dit pas ce qu'on trouve dans le lieu ; son ambiance, la distance, le coût du trajet.
+    const corps = this.enRoute ? `<p class="trajet"><span>${DUREE_VOYAGE_S} min de route</span></p>` : `<p>${l.description}</p>${trajet}`;
     const pied = this.enRoute
       ? `${etat}<div class="progression" aria-hidden="true"><span></span></div>`
       : ici || !peutPartir

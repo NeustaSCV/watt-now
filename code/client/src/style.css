@@ -5533,7 +5533,8 @@ body:has(#hud .voile-pause:not([hidden])) #hud .tactile {
   font-weight: 600;
 }
 #hud .panneau.fiche .ligne-cle .nom-cle::before {
-  content: "Clé : ";
+  /* 0.8.2 (R9) : jamais « clé » à l'écran ; la pièce qui manque. */
+  content: "Il te faut : ";
   font-weight: 400;
   opacity: 0.7;
 }

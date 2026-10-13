@@ -35,7 +35,7 @@ export function suivreElectrique(avant: InstallationVue | undefined, apres: Inst
   }
   if (apres.type === "plaque_choc") return null;
   if (b.couche && !a?.couche) return "Ta clôture est couchée : trois Éteints ont poussé. Relève-la ({agir}).";
-  if (!b.couche && a?.arme && !b.arme) return "Ta clôture n'a plus de courant : les batteries du banc sont vides.";
+  if (!b.couche && a?.arme && !b.arme) return "Ta clôture n'a plus de courant : la batterie du banc est vide.";
   if (!b.couche && a && !a.arme && !a.couche && b.arme) return "Le courant repasse dans ta clôture.";
   return null;
 }
