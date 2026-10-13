@@ -67,7 +67,7 @@ import {
   arriveeDans,
   entreesDe,
   distanceKm,
-  sortieIci,
+  sortiePourPartir,
   sortiesDe,
   zoneDe,
   type LieuId,
@@ -2040,7 +2040,9 @@ export class Joueur implements Voyageur, ParticipantLecon {
   /** Prendre la route depuis une sortie : le trajet coûte des calories et de l'eau (Book 01 §2 bis). */
   private voyager(vers: LieuId): void {
     if (this.voyage) return;
-    const sortie = sortieIci(this.lieu, this.position.x, this.position.z);
+    // Chez soi, on part de n'importe où sur le terrain (0.8.4) ; ailleurs, depuis une sortie. Jamais quand on est tenu.
+    const sortie = sortiePourPartir(this.lieu, this.position.x, this.position.z);
+    if (this.saisisseurs().length > 0) return this.info("Il te tient : dégage-toi d'abord.");
     // Du terrain au Carrefour, la route passe par la halte : on s'y arrête, il faut la traverser (Book 01 §2 bis).
     const etape = etapeVers(this.lieu, vers);
     if (!sortie || !destinations(sortie).includes(etape)) return this.info("Pour prendre la route, va jusqu'à la sortie.");

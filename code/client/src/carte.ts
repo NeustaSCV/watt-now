@@ -448,7 +448,7 @@ export class Carte {
     else if (!this.sorties.includes(etape)) {
       etat = `<p class="note">${
         this.lieu === "terrain"
-          ? "Pour partir, rejoins le chemin, au sud de ton terrain."
+          ? "D'ici, la route ne mène pas là."
           : this.lieu === "cooperative"
             ? etape === "comptoir"
               ? "Pour partir, repasse le portail, au sud (ou glisse-toi par la brèche, à l'ouest)."

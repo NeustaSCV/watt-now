@@ -40,9 +40,9 @@ export const PIECE_DE_FAMILLE: Readonly<Record<Famille, TypeObjet>> = {
 
 /** « La carte » : où trouver sa pièce, à la station (les `familles` de la v5). */
 const CARTE: Record<Famille, string> = {
-  charbonniers: "Ouvre la carte ({carte}) au bout du chemin et va à la station-service. Sous l'établi du garage, une enclume de dépanneur et un sac de charbon t'attendent : rapporte-les.",
-  voltaiques: "Ouvre la carte ({carte}) au bout du chemin et va à la station-service. Un petit panneau solaire est appuyé contre un pilier de l'auvent : rapporte-le.",
-  mecanistes: "Ouvre la carte ({carte}) au bout du chemin et va à la station-service. Sur l'établi du garage, près de la voiture éventrée, un petit alternateur t'attend : rapporte-le.",
+  charbonniers: "Ouvre la carte ({carte}), d'où tu veux sur ton terrain, et va à la station-service. Sous l'établi du garage, une enclume de dépanneur et un sac de charbon t'attendent : rapporte-les.",
+  voltaiques: "Ouvre la carte ({carte}), d'où tu veux sur ton terrain, et va à la station-service. Un petit panneau solaire est appuyé contre un pilier de l'auvent : rapporte-le.",
+  mecanistes: "Ouvre la carte ({carte}), d'où tu veux sur ton terrain, et va à la station-service. Sur l'établi du garage, près de la voiture éventrée, un petit alternateur t'attend : rapporte-le.",
 };
 
 /** « La famille » : le premier meuble, et le premier geste avec sa pièce (les `familles` de la v5, les gestes du chantier 7). */

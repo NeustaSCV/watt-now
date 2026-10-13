@@ -36,13 +36,11 @@ function monter(base = new Base(":memory:"), halte = new Halte(base), pseudo = "
   return { base, halte, compte, joueur, attendre, dernier, infos, allerA, partirVersStation, recus };
 }
 
-test("on ne prend la route que depuis la sortie, et le trajet coûte des calories", () => {
+test("0.8.4 · sur son terrain, on part par la carte de n'importe où ; le trajet coûte des calories", () => {
   const t = monter();
-  t.joueur.recevoir({ t: "voyager", vers: "station" });
-  assert.match(t.infos().at(-1)!, /sortie/);
-
   const avant = t.joueur.bienvenue(0).besoins.kcal;
-  t.allerA(SORTIE_TERRAIN.boite.x, SORTIE_TERRAIN.boite.z);
+  // Loin de la sortie, au milieu du terrain.
+  t.allerA(SORTIE_TERRAIN.boite.x, 10);
   t.joueur.recevoir({ t: "voyager", vers: "station" });
   assert.deepEqual(t.dernier("voyage"), { t: "voyage", de: "terrain", vers: "station", duree: DUREE_VOYAGE_S });
   // 3 km à pied ≈ 180 kcal
@@ -53,6 +51,15 @@ test("on ne prend la route que depuis la sortie, et le trajet coûte des calorie
   assert.deepEqual({ x: b.position.x, z: b.position.z }, { x: SORTIES_STATION[0]!.arrivee.x, z: SORTIES_STATION[0]!.arrivee.z });
   assert.ok(b.ressources.some((r) => r.type === "panneau_auvent"));
   assert.equal(b.feux.length, 0);
+});
+
+test("0.8.4 · ailleurs que sur son terrain, on ne prend la route que depuis la sortie", () => {
+  const t = monter();
+  t.partirVersStation();
+  t.allerA(STATION.auvent.x, STATION.auvent.z);
+  t.joueur.recevoir({ t: "voyager", vers: "terrain" });
+  assert.match(t.infos().at(-1)!, /sortie/);
+  assert.equal(t.dernier("bienvenue")!.lieu, "station");
 });
 
 test("à la halte : on démonte le panneau solaire, mais on ne construit rien", () => {

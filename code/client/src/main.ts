@@ -10,7 +10,7 @@ import { avecTouches } from "./touches.ts";
 import { sousTension, suivreElectrique } from "./electricite.ts";
 import * as THREE from "three";
 import { INTENTION_REPOS, avancer, type Position } from "../../commun/src/deplacement.ts";
-import { COMPTOIR, destinations, sortieIci, sortiesDe, zoneCoop, zoneDe, zoneMoulin, type LieuJouable, type Zone } from "../../commun/src/lieux.ts";
+import { COMPTOIR, destinations, sortiePourPartir, sortiesDe, zoneCoop, zoneDe, zoneMoulin, type LieuJouable, type Zone } from "../../commun/src/lieux.ts";
 import type { EteintVu } from "../../commun/src/eteints.ts";
 import { cerclesSignature, type BruitAction } from "../../commun/src/signature.ts";
 import { ALLURES, type Allure } from "../../commun/src/regles.ts";
@@ -1404,7 +1404,7 @@ function executer(c: Commande): void {
       return;
     case "carte": {
       hud.fermerPanneaux();
-      const sortie = position ? sortieIci(lieu, position.x, position.z) : null;
+      const sortie = position ? sortiePourPartir(lieu, position.x, position.z) : null;
       carte.basculer(lieu, sortie ? destinations(sortie) : []);
       return;
     }

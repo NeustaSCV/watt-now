@@ -745,6 +745,14 @@ export function sortieIci(lieu: LieuJouable, x: number, z: number): Sortie | nul
   return sortiesDe(lieu).find((s) => dansBoite(x, z, s.boite)) ?? null;
 }
 
+/**
+ * La sortie par où l'on peut partir d'ici (0.8.4) : chez soi, sur son terrain, on part par la carte de n'importe où ;
+ * ailleurs, il faut se tenir à une sortie.
+ */
+export function sortiePourPartir(lieu: LieuJouable, x: number, z: number): Sortie | null {
+  return lieu === "terrain" ? SORTIE_TERRAIN : sortieIci(lieu, x, z);
+}
+
 /** Où l'on arrive dans un lieu, selon d'où l'on vient. */
 export function arriveeDans(lieu: LieuJouable, depuis: LieuId): Position {
   const sorties = entreesDe(lieu);

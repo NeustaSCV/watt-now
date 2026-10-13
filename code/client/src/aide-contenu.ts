@@ -625,7 +625,7 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
     titre: "Voyager",
     resume: "La carte, les deux routes, la station-service et le Carrefour.",
     blocs: [
-      "On ne se promène pas d'un lieu à l'autre : on prend la route. Va jusqu'à la **sortie** (sur ton terrain, le chemin de terre au sud ; ailleurs, le bout de la route), puis {agir} : la carte s'ouvre, choisis ta destination. Le trajet coûte un peu de nourriture et d'eau. Tu peux aussi ouvrir la carte ({carte}) n'importe où pour regarder.",
+      "On ne se promène pas d'un lieu à l'autre : on prend la route. Sur ton terrain, ouvre la carte ({carte}) de n'importe où et choisis ta destination. Ailleurs, va jusqu'à la **sortie** (le bout de la route), puis {agir} : la carte s'ouvre. Le trajet coûte un peu de nourriture et d'eau. Loin de chez toi, la carte s'ouvre aussi n'importe où, mais seulement pour regarder.",
       "Tu ne peux pas partir avec un escabeau dans les bras : il reste chez toi.",
       { sous_titre: "La station-service" },
       "Une halte sur la route de la Campagne. La boutique a été pillée, pas tout le reste. Elle est **partagée** : tu y croises les autres joueurs, et ce que l'un fouille, l'autre ne le trouvera pas avant que ça se regarnisse. Des Éteints y dorment et y errent : avance prudemment. Elle se traverse à pied : pour aller plus loin, il faut aller jusqu'à l'autre bout.",
