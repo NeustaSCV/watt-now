@@ -268,3 +268,11 @@ Ce qui peut l'allonger : une cause du bogue du coffre plus profonde que prévu (
 
 - **Toutes les recommandations du §7 sont acceptées** (Q-0.8.2-1 à 3 et 5 à 10).
 - **Q-0.8.2-4** : **deux condensateurs** : le **petit condensateur** (★) et le **condensateur moyen** (★★) ; le module de décharge unique prend l'étoile de son condensateur (maillon faible, maîtrise inchangée). Le petit vient du flash jetable, le moyen de la raquette à moustiques (comme les étoiles des modules d'aujourd'hui).
+
+### 7.2 Les décisions prises pendant la vague 1 (2026-10-13)
+
+- **Le coffre** : le défaut (aussi sur ordinateur, venu des correctifs de la 0.8) est corrigé dans la 0.8.2 ; **pas de version de correctif à part**, on attend la 0.8.2.
+- **Recettes (B)** : les cordes d'arc au fil dentaire et au boyau restent sur leurs lignes ; le condensateur moyen passe d'abord ; **3 canettes écrasées donnent 1 aluminium** ; **la matraque de fortune prend le petit condensateur** au lieu de l'appareil photo.
+- **Le banc (C)** : un pack de cellules en vrac reste « plein » (pas de ligne au banc) ; après un échange, la batterie s'appelle « la batterie de voiture » ; l'échange ne prend qu'une batterie de voiture.
+- **Les portes (D)** : quand une porte et un objet au sol sont à portée, A ouvre la porte et **B propose « Ramasser »** (chantier H).
+- **Le pédalier à 3 m du banc** : *à décider* (se servir du meuble d'une autre famille, §7.3).
