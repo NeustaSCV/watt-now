@@ -743,7 +743,7 @@ vague 4   [13 Tutoriel, quêtes, aide] ◄────────────�
 - R25 · **Les canettes écrasées se démontent en aluminium** (écrasées, elles ne servent plus) ; **les boîtes de conserve vides se gardent telles quelles**, pour servir comme boîtes.
 
 **Le dévoilement**
-- R26 · ⚡ **Les armes électriques des Voltaïques** (matraques, modules de décharge) ne sont **ni disponibles ni affichées** (pas même en silhouette dans Fabriquer) tant que **le banc solaire n'est pas bâti ET équipé de son panneau**. Ne pas divulgâcher : le joueur les découvre avec son banc complet.
+- R26 · **Les armes de métier n'apparaissent qu'avec le meuble de famille complet**, pour les trois familles : ni disponibles ni affichées (pas même en silhouette dans Fabriquer) tant que le meuble n'est pas **bâti ET équipé de sa pièce** — ⚡ les armes électriques (matraques, modules de décharge) : le banc solaire avec son panneau ; 🔥 les lames forgées (machette, hachette, serpe, couteau de forge…) : le foyer de forge avec son enclume ; ⚙️ l'arbalète et ses pièces : le pédalier générateur avec son petit alternateur. Ne pas divulgâcher : le joueur les découvre avec son meuble complet. (Décidé le 2026-10-13.)
 
 **La base et le corps**
 - R12 · Dormir dans l'abri : le personnage **rampe jusqu'à sa couche** et dort **exactement dedans**, pas au hasard autour.
