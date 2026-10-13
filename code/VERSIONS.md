@@ -18,6 +18,7 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 - **La saisie du tutoriel** : frapper pendant la saisie ne fait plus surgir un autre Éteint dans ton dos à chaque coup. Avant, ils s'accumulaient jusqu'à trois, et l'on s'effondrait.
 - **Partir de chez soi** : sur ton terrain, tu ouvres la carte de n'importe où et tu pars, sans chercher le bout du chemin. Ailleurs, il faut toujours aller jusqu'à la sortie. On ne part pas quand un Éteint te tient.
 - **L'image sur téléphone** : si tu tournes le téléphone pendant l'accueil, l'image n'arrive plus déformée sur le terrain.
+- **La barre de métal moins forte** : ses dégâts passent de 1,5 à 1. Elle dépassait l'épieu et la plupart des armes fabriquées.
 
 ## 0.8.3 · déployée le 2026-10-13
 

@@ -23,7 +23,9 @@ export const ARMES_COMMUNES: Arme[] = [
   // Le marteau remmanché (D1, Q-A3) : 0,8, et il ne tue plus à la tête d'un coup ; il assomme et met à terre. Solidité
   // 40 : c'est le manche qui lâche, la tête ne s'use pas (R-ARMES-4).
   { rang: 50, objet: "marteau", nom: "le marteau", type: "contondant", solidite: 40, degatsTorse: 0.8, tueALaTete: false, allonge: 1.5, coup: 600, coupAppuye: 850 },
-  { rang: 60, objet: "barre_metal", nom: "la barre de métal", type: "contondant", solidite: 100, degatsTorse: 1.5, tueALaTete: true, allonge: 1.9, coup: 650, coupAppuye: 900 },
+  // La barre de métal (0.8.4) : 1,0, le haut de la bande de la maison, comme la hache ; à 1,5, elle dépassait l'épieu et
+  // la plupart des armes fabriquées.
+  { rang: 60, objet: "barre_metal", nom: "la barre de métal", type: "contondant", solidite: 100, degatsTorse: 1, tueALaTete: true, allonge: 1.9, coup: 650, coupAppuye: 900 },
   // La lance (épieu + couteau, évolution P-002) : l'allonge, et cette fois la pointe tue à la tête. 0,7 (D2), mesurée
   // au test de jeu avant d'y toucher encore (Q-0.8-6).
   { rang: 70, objet: "lance", nom: "la lance", type: "percant", solidite: 40, degatsTorse: 0.7, tueALaTete: true, allonge: 2.6, coup: 650, coupAppuye: 900 },
