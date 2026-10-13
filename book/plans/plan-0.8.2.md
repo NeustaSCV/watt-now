@@ -283,3 +283,8 @@ Ce qui peut l'allonger : une cause du bogue du coffre plus profonde que prévu (
 - **Une arme de métier apprise d'une autre famille** attend **le meuble complet de son métier** (le couteau forgé : la forge et son enclume, même pour un Mécaniste qui a lu le manuel), et non celui de la famille de l'apprenti.
 - **R26, confirmé** : le repli ne compte pas comme meuble complet (la pierre plate, la manivelle, la dynamo du vélo) ; l'étau et la tête de masse posés en enclume comptent ; la pointe de lance est une arme forgée ; le pack de cellules et la lampe bricolée restent visibles sans le panneau. Les quêtes qui demandent une arme n'en montrent pas la silhouette tant que le meuble est incomplet.
 - **La vue d'ensemble** : le budget de l'iPhone sera mesuré à la recette ; les bords du décor visibles de loin, gardés pour l'instant (à revoir à la recette du porteur) ; la protection de 15 s à l'arrivée dans une halte, gardée.
+
+### 7.4 Les décisions de fin de vague 2 (2026-10-13)
+
+- **Les repas du tutoriel** (nouveau, décidé) : un repas toutes les deux étapes, de qualité croissante : 2 pommes (étape 2), une poignée de noix (4), une conserve (6), une volaille rôtie et une pomme (8), une volaille rôtie aux cèpes (10), deux pots-au-feu à la fin (12). Une ligne du carnet, jamais une fenêtre ; rien pour le vétéran. À vérifier au rythme (chantier K).
+- **Le gué, ses déchets** : à décider (proposition d'une couche « berge » plus nature, §7.5).
