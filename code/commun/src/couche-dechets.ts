@@ -32,6 +32,10 @@ import type { Inventaire, TypeObjet } from "./objets.ts";
 import { POINT_ARRIVEE, TERRAIN_TAILLE } from "./regles.ts";
 import { ARBRES_ISOLES, MARE, RUINE, distanceMare } from "./terrain.ts";
 import { DECHARGE } from "./decharge.ts";
+import { DEMI_ROUTE, TROU_DU_PONT, VN_MODELE, VS_MODELE, interpoler, zRoute } from "./gue.ts";
+
+/** Emplacements pour 100 m² sur les bas-côtés du gué (la route de la station : 2). */
+const DENSITE_GUE = 1;
 
 // ---------- Les zones typées de chaque lieu (§4.1, §4.3) ----------
 
@@ -85,10 +89,39 @@ export const ZONES_DECHETS: Record<Exclude<LieuJouable, "terrain">, readonly Zon
     { ...rect(PIECES.bureaux.boite), type: "interieur", densite: 2.5 },
     { ...rect(PIECES.chambre_froide.boite), type: "interieur", densite: 2 },
   ],
-  // 0.8 : le gué et le Moulin, branchés vides (chantier 4) ; leurs chantiers (11, 12) y mettront leurs zones.
-  gue: [],
+  // Plan 0.8.2 (chantier F, R1, Q-0.8.2-1) : au gué, quelques déchets au bord de la route, comme sur les routes
+  // (ZONES_GUE, plus bas). Le Moulin reste vide.
+  get gue() {
+    return ZONES_GUE;
+  },
   moulin: [],
 };
+
+// ---------- Le gué (plan 0.8.2, chantier F) ----------
+
+/**
+ * Les bas-côtés de la route du gué, 4 m de chaque côté, morceau par morceau (la route ondule) ; rien dans le trou du
+ * pont emporté, entre les deux culées. Une densité plus faible que sur la route de la station : « quelques déchets ».
+ */
+const ZONES_GUE: readonly ZoneDechets[] = (() => {
+  const zones: ZoneDechets[] = [];
+  const PAS = 10;
+  for (let x = 0; x < 200; x += PAS) {
+    const x1 = Math.min(200, x + PAS);
+    if (x1 > TROU_DU_PONT.x0 - 3 && x < TROU_DU_PONT.x1 + 3) continue;
+    const zc = (zRoute(x) + zRoute(x1)) / 2;
+    const ecart = Math.abs(zRoute(x) - zRoute(x1)) / 2;
+    // Le fond plat seulement : au-delà du pied des talus, la pente boisée (on n'y marche pas).
+    const nord = Math.max(...[x, x1].map((v) => interpoler(VN_MODELE, 100 - v) + 35)) + 0.8;
+    const sud = Math.min(...[x, x1].map((v) => interpoler(VS_MODELE, 100 - v) + 35)) - 0.8;
+    const bandes = [
+      [Math.max(nord, zc - DEMI_ROUTE - ecart - 4), zc - DEMI_ROUTE - ecart],
+      [zc + DEMI_ROUTE + ecart, Math.min(sud, zc + DEMI_ROUTE + ecart + 4)],
+    ] as const;
+    for (const [z0, z1] of bandes) if (z1 - z0 > 0.8) zones.push({ x0: Math.max(0.5, x), x1: Math.min(199.5, x1), z0, z1, type: "route", densite: DENSITE_GUE });
+  }
+  return zones;
+})();
 
 // ---------- La disposition ----------
 
