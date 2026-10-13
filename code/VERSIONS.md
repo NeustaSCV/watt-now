@@ -12,7 +12,7 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
-## 0.8.4 · prête à déployer
+## 0.8.4 · déployée le 2026-10-13
 
 - **Se dégager, enfin faisable** : quand un Éteint te tient, tu ne frappes plus. A sert à se dégager, comme B, et **deux appuis suffisent**, même essoufflé (avant : six sur B, neuf essoufflé). Aucune arme ne libère d'un coup, la matraque non plus.
 - **La saisie du tutoriel** : frapper pendant la saisie ne fait plus surgir un autre Éteint dans ton dos à chaque coup. Avant, ils s'accumulaient jusqu'à trois, et l'on s'effondrait.

@@ -12,7 +12,7 @@
 
 ## 1 bis. À corriger en 0.8.4 (relevé sur la 0.8.3 déployée, 2026-10-13)
 
-> *Fait : les trois points sont codés en 0.8.4 (étiquette v0.8.4, 2026-10-13), prête à déployer. Reste à les essayer sur l'iPhone, surtout le point 1.*
+> *Fait : les trois points sont codés en 0.8.4 (étiquette v0.8.4), déployée le 2026-10-13. Reste à les essayer sur l'iPhone, surtout le point 1.*
 
 1. ~~**Image déformée à l'arrivée sur le terrain (premier lancement).** Juste après les 3 écrans d'accueil, en arrivant sur le terrain, l'image est étirée, comme si l'image verticale avait été mise à l'échelle pour remplir l'horizontale. Passer le téléphone en vertical puis le remettre en horizontal remet tout d'aplomb. À faire : relire l'orientation et la taille réelles de l'écran au moment où l'on entre sur le terrain (taille du rendu et proportions de la caméra), sans jamais déformer : soit vertical, soit horizontal.~~ *Fait en 0.8.4 : la scène revérifie la taille de la fenêtre à chaque image (`rendu/scene.ts`, `dessiner()`). Cause probable : sur iPhone, « resize » arrive avant la nouvelle taille. À confirmer sur le téléphone.*
 2. **Tutoriel : « le chemin » pour sortir du terrain n'est pas clair.** *Tranché le 2026-10-13 : piste B. Fait en 0.8.4 (`sortiePourPartir`, `commun/src/lieux.ts`) ; on ne part pas quand un Éteint nous tient ; textes réécrits sans « au sud ».* Sur le **terrain seulement**, on peut partir par la carte **depuis n'importe où** ; sur les autres lieux, rien ne change (il faut toujours aller jusqu'à la sortie). Les textes du tutoriel, de l'aide (`code/client/src/aide-contenu.ts:628`) et de la carte (`code/client/src/carte.ts:451`, « Pour partir, rejoins le chemin, au sud de ton terrain ») sont à réécrire en conséquence.
@@ -67,4 +67,4 @@
 - Le plan de la 0.9 (après la 0.8.3) : `book/plans/plan-0.9.md`.
 - La notice d'un nouveau niveau : `book/plans/notice-nouveau-niveau.md`.
 - Les études et données : `.claude-travail/propositions/` (non versionné : à ne pas supprimer).
-- ~~Versions : 0.7.3 déployée le 2026-10-10 (étiquette v0.7.3).~~ Versions : 0.8 et 0.8.1 déployées le 2026-10-11, 0.8.2 le 2026-10-13 ; 0.8.3 le 2026-10-13 (étiquette v0.8.3) ; **0.8.4 à faire** (corrections, section 1 bis). Le plan de la 0.8.2 : `book/plans/plan-0.8.2.md`.
+- ~~Versions : 0.7.3 déployée le 2026-10-10 (étiquette v0.7.3).~~ Versions : 0.8 et 0.8.1 déployées le 2026-10-11, 0.8.2 le 2026-10-13 ; 0.8.3 le 2026-10-13 (étiquette v0.8.3) ; 0.8.4 le 2026-10-13 (étiquette v0.8.4, avec la barre de métal à 1 de dégâts). Le plan de la 0.8.2 : `book/plans/plan-0.8.2.md`.
