@@ -1,7 +1,7 @@
 # Book 25 — Le métier des familles
 
 > Document de conception · version 0.2 · 2026-10-09
-> Statut : **v0.2, validé par le porteur (2026-10-09)** ; codé en 0.6 et 0.7. **0.8 (2026-10-10)** : la grille des étoiles du niveau 1, les bandes, les enclumes ★★, la pièce de famille, les dégâts électriques, la maîtrise sans plafond et l'évolution d'une arme sur son meuble : **§13**, qui fait foi ; la règle d'or du §2.5 est réécrite avec la grille (Q-0.8-26).
+> Statut : **v0.2, validé par le porteur (2026-10-09)** ; codé en 0.6 et 0.7. **0.8 (2026-10-10)** : la grille des étoiles du niveau 1, les bandes, les enclumes ★★, la pièce de famille, les dégâts électriques, la maîtrise sans plafond et l'évolution d'une arme sur son meuble : **§13**, qui fait foi ; la règle d'or du §2.5 est réécrite avec la grille (Q-0.8-26). **0.8.2 (2026-10-13)** : les condensateurs, le module de décharge unique, la matraque et la corde d'arc en une recette, les armes de métier qui attendent le meuble complet de leur métier : **§14**, qui fait foi.
 > Demande du porteur (v0.1) : « Aujourd'hui, on va développer le craft spécifique à chaque famille. Il faudra sans doute ajouter des objets et des matières de base. Fais-moi des propositions. Les charbonniers ont les lames. Les voltaïques peuvent avoir des armes électriques (taser ?) et les mécanistes peuvent avoir des arbalètes ? Arc pour tout le monde, c'est assez basique comme technologie. Fais-moi une proposition étoffée. »
 > Décisions du porteur (v0.2) : « Il ne faut pas qu'il y ait trop de dépendances. Elles doivent pouvoir permettre des améliorations, mais ne pas bloquer les choses de base de chaque famille. Au début du jeu il n'y a pas toutes les familles, alors il faut que chacun soit — un peu — autonome. Il aura besoin des autres pour faire évoluer ses armes évidemment. Il faut veiller à ce que l'arme de chaque famille soit équilibrée. La matraque électrique me semble un peu en dessous car elle ne permet pas de tuer les Éteints. 1. oui 2. oui 3. oui 4. oui 5. oui 6. oui 7. oui 8. les deux. La machette trouvée peut être une machette de fortune (un bout de métal avec un manche), rien à voir avec une lame forgée. Je comprends pas comment on obtient un ressort à partir d'une lame ébréchée ? C'est pas logique. Il faut sans doute rendre l'électricité plus dangereuse, sinon les Voltaïques sont désavantagés ? Je pense que les versions 0.6 à 0.8 peuvent faire l'objet d'une seule livraison. »
 > S'appuie sur les books [01](01-les-trois-feux.md) (§3 et §4 : familles, travail du métal, triangle de combat), [02](02-crafting.md) (§6 domaines, §9 maillon faible, §10 réparation, §12.1 la lame, §14 bis gamme bushcraft, §15 équilibrage), [03](03-bibliotheque-et-savoir.md) (§4 qualités d'outil, §5 savoir), [04](04-siderurgie-et-chimie.md) (§2 sidérurgie, §3.8 électrochimie), [06](06-zombies.md) (§2 corps, §3 signature, §8 et §9 combat et défense), [07](07-economie.md), [11](11-agriculture-elevage-alimentation.md) (§10 chasse), [15](15-univers.md), [21](21-perimetre-phase-0.md), [22](22-quetes-et-objectifs.md), [23](23-cooperative-et-combat.md) (§4 et §5) et [24](24-ameliorer-sa-base.md), sur le code de la version 0.5.3 et sur la proposition P-002 (`PROPOSITIONS.md`, lue sans être modifiée).
@@ -1061,3 +1061,55 @@ Les dégâts au torse d'un coup simple, ou d'un tir plein ; un Errant tombe à 3
 | L1 | 1,87 | 1,40 fois | OK |
 
 L1 donne les mêmes chiffres que H1 : le niveau 1 se joue avec les armes de la station (K-Q2).
+
+## 14. Ce que la 0.8.2 change : les condensateurs, une recette au lieu de deux, le meuble complet (2026-10-13)
+
+*Plan 0.8 §9.4 (R14, R15, R16, R26), plan 0.8.2 §7.1 à §7.3 (Q-0.8.2-4, les décisions des vagues 1 et 2), chantiers B et J ; **codé en 0.8.2** (`commun/src/recettes.ts`, `recettes/voltaiques.ts`, `recettes/communes.ts`, `vestiges.ts`, `progression.ts`, `savoir-meuble.ts`). Là où les §3, §5 et §13 diffèrent, ce paragraphe fait foi.*
+
+### 14.1 Des ingrédients au choix
+
+Une recette peut désormais se faire **de plusieurs façons** : des ingrédients communs, et **un ingrédient au choix** parmi d'autres (`Recette.auChoix`). Fabriquer la montre **sur une seule ligne**, « 3 ficelles **ou** 1 rouleau de corde » ; le serveur prend la première façon qu'on a et ne consomme qu'elle ; **les étoiles suivent la façon prise** (maillon faible) ; le **×1,5** d'une autre famille s'applique à chaque façon. Le menu Fabriquer s'allège : plus de deux lignes pour le même objet.
+
+### 14.2 ⚡ Les condensateurs et le module de décharge unique (R14, Q-0.8.2-4)
+
+- **Deux objets nouveaux**, qu'on obtient **en démontant** (Visser 1, 3 s), jamais en fouillant :
+
+  | Condensateur | Étoiles | Démonté de | Poids · valeur |
+  |---|---|---|---|
+  | **Petit condensateur** | ★ | l'**appareil photo jetable** (le flash) | 0,02 kg · 4 wotts |
+  | **Condensateur moyen** | ★★ | la **raquette anti-moustiques** | 0,05 kg · 8 wotts |
+
+- **Un seul module de décharge**, au **banc solaire** : **1 fil de cuivre et un condensateur, petit ou moyen** (Visser 1). Le module **prend l'étoile de son condensateur** : ★ au petit, ★★ au moyen. Il remplace les deux modules du §5.2 (« au flash » et « à la raquette ») ; **le maillon faible et la maîtrise ne changent pas** (dix modules d'une étoile donnent celle du dessus). Le condensateur moyen passe d'abord quand on a les deux.
+- **Le module à bobine** (niveau 2, « plus tard ») prend un petit condensateur à la place de l'appareil entier.
+- **Une partie 0.8.1 se relit** : les modules déjà faits restent valables, et ce qu'on avait fabriqué des anciennes recettes compte pour la nouvelle (la maîtrise n'est pas perdue).
+
+### 14.3 ⚡ La matraque électrique en une recette, la matraque de fortune au petit condensateur (R16)
+
+- **La matraque électrique** : une seule recette, au banc, **un gourdin, un module de décharge, un caoutchouc, et un pack de cellules ou la petite batterie** (Visser 1, Couper 1). La recette « Matraque électrique (petite batterie) » disparaît : ce n'était pas une amélioration, mais une seconde façon de faire la même arme, pour qu'un Voltaïque sans pack ait sa ★★ dès la station (Q-A5). **Avec la petite batterie, elle plafonne à ★★.**
+- **La matraque de fortune** prend **le petit condensateur** (démonté du flash) **au lieu de l'appareil photo entier**, avec la petite batterie, le gourdin et une ficelle ; ses étoiles (★, ★★ par la maîtrise) et sa note ne changent pas ; une matraque déjà faite reste valable. Le flash vu, ou le condensateur vu, y font penser.
+- Les tableaux du §5.2 et du §5.3 se lisent donc : **Module** ★ = petit condensateur, ★★ = condensateur moyen ; **Matraque de fortune** = gourdin, **petit condensateur**, petite batterie, ficelle.
+
+### 14.4 La corde d'arc en une recette (R15)
+
+- **« Corde d'arc »** : une seule recette, à la main, **3 ficelles ou 1 corde**, **★★** l'une et l'autre (les ficelles passent d'abord : la corde sert à bien d'autres choses). La recette « une corde retordue » n'existe plus.
+- **Les cordes au fil dentaire et au boyau gardent leurs lignes** : elles donnent ★★★ (§13.1), ce n'est pas la même corde.
+
+### 14.5 Les armes de métier attendent le meuble complet de leur métier (R26)
+
+- **Ni disponibles, ni affichées**, pas même en silhouette « À découvrir », ni annoncées par une quête, tant que **le meuble de famille de leur métier n'est pas bâti ET équipé de sa pièce** :
+
+  | Métier | Les armes | Le meuble complet |
+  |---|---|---|
+  | ⚡ | Matraques (de fortune, électrique, aux électrodes, au manche tourné), modules de décharge et à bobine, aiguillon | Le **banc solaire** avec son **panneau** |
+  | 🔥 | Lames forgées (couteau, machette, hachette, hache, serpe, glaive), pointe de lance et lance forgée, reforger une lame | Le **foyer de forge** avec son **enclume** |
+  | ⚙️ | L'arbalète et ses pièces (arbrier, noix, arcs, cordes…), l'arbalète lourde | Le **pédalier générateur** avec son **petit alternateur**, même si l'établi est déjà là |
+
+- **Le repli ne compte pas** comme meuble complet (la pierre plate, la manivelle, la dynamo du vélo) ; **l'étau et la tête de masse posés en enclume comptent**. **La pointe de lance** est une arme forgée. **Le pack de cellules et la lampe bricolée** restent visibles sans le panneau : ce ne sont pas des armes.
+- **Une arme apprise d'une autre famille** (leçon, manuel) attend **le meuble complet de son métier**, et non celui de l'apprenti : le couteau forgé d'un Mécaniste qui a lu le manuel attend la forge et son enclume. **Qui a appris le meuble peut le bâtir, s'en servir et y poser sa pièce** (Book 24 §13.4).
+- **Une partie 0.8.1 se relit** : ce qui était dévoilé reste gardé, caché tant que la pièce manque, et revient avec elle.
+
+### 14.6 Le ×1,5 et le meuble appris
+
+- **Le ×1,5 du §2.3 ne change pas** : une recette d'une autre famille coûte une fois et demie ses matières (arrondies au-dessus, **ingrédients au choix compris**) et son temps, et plafonne à ★★. Il vaut aussi pour le coût d'un niveau de meuble d'une autre famille.
+- **Il ne touche que ce qu'on fabrique**, jamais les gestes : pédaler, charger au banc, poser sa pièce coûtent le même prix à tous.
+- **Le §2.3 se corrige** : les machines de métier qui demandent le savoir (la forge, le banc) ne sont plus fermées à qui **a appris** leur recette ; elles le restent à qui ne l'a pas apprise (« C'est le savoir d'une autre famille : échange avec l'un des siens, à la halte ou au Carrefour. »).
