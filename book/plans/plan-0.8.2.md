@@ -298,3 +298,8 @@ Ce qui peut l'allonger : une cause du bogue du coffre plus profonde que prévu (
 - **Le tutoriel « La carte »** garde l'endroit exact de la pièce de famille (c'est le tutoriel).
 - **L'aide** ne nomme plus les armes de métier de chaque famille ni la glaise du gué.
 - Les descriptions du ressort retrempé et des électrodes (vues seulement en les fabriquant) restent.
+
+### 7.6 Après la recette (2026-10-13)
+
+- Aucun défaut bloquant. Le porteur valide un **dernier chantier de correctifs avant la livraison** : « Tu y penses » ne cache plus le carnet du tutoriel ; « Pendant ton absence » ne s'empile plus sous le carnet ; monter sur le radeau depuis le ponton ouest sans buter ; à la glaise, A propose de creuser (pas les joncs) ; le bouton B ne déborde plus avec un texte long ; la quête du banc dit que la batterie se pose dedans ; la fiche de la station sur la carte ne divulgâche plus (« pas l'atelier ») ; la marche plus lente dans la mare se sent ; le code du Comptoir distinct de celui du parking ; le pack de cellules sans « se recharge au banc » ; **au toucher, un appui bref suffit à lancer un geste jusqu'au bout** (comme une touche du clavier).
+- Gardé pour plus tard : le guichet en paysage (3 lignes).
