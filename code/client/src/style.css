@@ -5755,3 +5755,20 @@ body:has(#hud .voile-pause:not([hidden])) #hud .tactile {
 #hud .panneau.fiche details.ou-trouver ul.manque li + li {
   margin-top: 3px;
 }
+
+/* La fiche du banc (0.8.2, chantier C) : une ligne par chose qui se charge, le bouton « Charger » à droite, même sur
+   téléphone (plus de lignes visibles à 375 × 630). */
+#hud .panneau.fiche .etape.banc-chose,
+#hud .panneau.fiche .etape.banc-batterie {
+  flex-direction: row;
+  align-items: center;
+  opacity: 1;
+}
+#hud .panneau.fiche .etape.banc-chose > button,
+#hud .panneau.fiche .etape.banc-batterie > button {
+  flex: 0 0 auto;
+  min-width: 92px;
+}
+#hud .panneau.fiche .etape.banc-chose .corps strong {
+  overflow-wrap: anywhere;
+}
