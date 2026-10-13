@@ -489,14 +489,14 @@ function cheminAPied(a: { x: number; z: number }, b: { x: number; z: number }): 
   return d[Math.round(b.z / P) * W + Math.round(b.x / P)]!;
 }
 
-test("0.8.2 (R1) : seul au gué, 8 branches sur les berges, 4 bûches, 6 pierres hors du banc, toutes à pied sec ; 30 min pour revenir", () => {
+test("0.8.2 (R1) : seul au gué, 8 branches en tout (le tas compris), 4 bûches, 6 pierres hors du banc, toutes à pied sec ; 30 min pour revenir", () => {
   const m = monde();
   const rose = m.nouveau("Rose");
   const vues = rose.vues().filter((r) => r.disponible);
   const tas = FOUILLE_MODELE_TAS();
   const branches = vues.filter((r) => r.type === "branche" && Math.hypot(r.x - tas.x, r.z - tas.z) > 3);
   assert.equal(branches.length, BRANCHES_EPARSES);
-  assert.equal(BRANCHES_EPARSES, 8);
+  assert.equal(vues.filter((r) => r.type === "branche").length, 8, "8 branches en tout, le tas compris");
   assert.equal(vues.filter((r) => r.type === "buche").length, 4);
   const pierres = vues.filter((r) => r.type === "pierre");
   assert.equal(pierres.filter((r) => !surLeBanc(r.x, r.z, 0.3)).length, 6, "6 pierres sur les pistes");
@@ -528,9 +528,14 @@ function FOUILLE_MODELE_TAS(): { x: number; z: number } {
   return auGue(t.x, t.z);
 }
 
-test("0.8.2 (R1) : quelques déchets au bord de la route du gué, partagés, à pied sec", () => {
+test("0.8.2 (R1) : quelques déchets sur les berges et les bas-côtés du gué, partagés, à pied sec, loin du bac, de la cloche, de la glaise et des sorties", () => {
   const emplacements = [...dispositionLieu(cleCouche("gue", 1)).values()].flat();
-  assert.ok(emplacements.length >= 6 && emplacements.length <= 20, `${emplacements.length} emplacements`);
+  assert.ok(emplacements.length >= 5 && emplacements.length <= 20, `${emplacements.length} emplacements`);
+  assert.ok(emplacements.filter((e) => e.type === "berge").length > emplacements.length / 2, "surtout sur les berges");
+  for (const e of emplacements) {
+    for (const q of [BAC.cale.embarquement, BAC.ponton.embarquement, CLOCHE, GLAISE]) assert.ok(Math.hypot(q.x - e.x, q.z - e.z) > 3, `(${e.x}, ${e.z}) trop près de (${q.x}, ${q.z})`);
+    for (const s of SORTIES_GUE) assert.ok(Math.hypot(s.arrivee.x - e.x, s.arrivee.z - e.z) > 3, `(${e.x}, ${e.z}) au ras d'une sortie`);
+  }
   assert.equal(cleCouche("gue", 1), cleCouche("gue", 2), "la même couche pour tous");
   const arrivee = SORTIES_GUE.find((s) => s.vers === "terrain")!.arrivee;
   for (const e of emplacements) {
@@ -597,8 +602,9 @@ test("0.8.2 : une partie 0.8.1 se relit (le contenu du gué se régénère, rien
   base.sauverInstance(`perso:gue:${compte.id}`, { version: 2, etats: { "1": { prises: 5, depuis: base.debutMonde() } } }, base.debutMonde());
   // La 0.8.2 relit la même base : le gué a son nouveau contenu (VERSION_GUE), le sac de Rose est intact, son banc plein.
   const gue = new Gue(base, () => 0.5);
-  assert.equal(VERSION_GUE, 3);
+  assert.equal(VERSION_GUE, 4);
   assert.equal(parType(gue, "buche").length, 12);
+  assert.equal(parType(gue, "branche").length, 8);
   assert.equal(parType(gue, "pierre").length, 63);
   assert.deepEqual(base.chargerInventaire(compte.id), { pierre: 3, glaise: 2, sac_a_dos: 1 });
   const banc = parType(gue, "banc_galets")[0]!;

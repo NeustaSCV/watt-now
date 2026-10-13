@@ -127,6 +127,8 @@ test("les fouilles existantes donnent aussi le couteau, l'onduleur, la trottinet
 
 test("chaque table : ≈ 70 % de déchets, ≈ 25 % de petites trouvailles, ≈ 5 % de bonnes", () => {
   for (const lieu of LIEUX) {
+    // La berge du gué tire par groupes, pas par paliers (dechets-berge.test.ts).
+    if (PROFILS_DECHETS[lieu].groupes) continue;
     const table = tableDechets(lieu);
     assert.ok(table.dechet.length >= 5, `${lieu} : des déchets`);
     const compte: Record<Palier, number> = { dechet: 0, petite: 0, bonne: 0 };
