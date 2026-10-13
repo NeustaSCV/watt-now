@@ -12,7 +12,7 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
-## 0.8.2 · prête à déployer
+## 0.8.2 · déployée le 2026-10-13
 
 - **Le coffre et la décharge répondent de nouveau** : depuis la 0.8, leur panneau s'ouvrait mais restait sourd, au doigt comme à la souris (ni choisir un objet, ni le déplacer, ni fermer). Corrigé, pour le coffre, le coffre cerclé, le râtelier et la décharge.
 - **La vue d'ensemble à l'arrivée** : en arrivant à la station, au gué, à la Coopérative, au Moulin ou chez toi au retour d'une sortie, tu vois tout le lieu de loin, toits compris, le jeu en pause. Une touche ou un toucher, et la vue descend sur ton personnage. Pas de vue d'ensemble quand tu te reconnectes sur place.
