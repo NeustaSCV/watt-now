@@ -306,3 +306,9 @@ test("0.8.2 textes : la fiche du foyer de forge parle de l'enclume posée, plus 
     assert.ok(t.includes(nom), t);
   }
 });
+
+test("0.8.2 aide : elle ne nomme ni les armes de métier ni la glaise du gué (décision du porteur)", () => {
+  const aide = RUBRIQUES_AIDE.map((r) => JSON.stringify(r)).join(" ");
+  for (const r of [/arbalète/i, /matraque/i, /machette/i, /hachette/i, /glaive/i, /aiguillon/i, /carreau/i, /lames? forgées?/i, /module de décharge/i, /armes? électriques? des/i, /glaise/i])
+    assert.doesNotMatch(aide, r);
+});

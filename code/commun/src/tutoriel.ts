@@ -109,15 +109,16 @@ export const NOMBRE_ETAPES = 12;
  * Le repas du tutoriel (0.8.2, décision du porteur) : toutes les deux étapes, un repas de plus en plus bon, donné une
  * fois, quand l'étape est réussie (la clé de la table : le rang de l'étape réussie, de 0 à 11). Il arrive au sac, comme
  * une récompense de quête ; le carnet le dit en une ligne (`VueTutoriel.repas`). Le vétéran qui saute le tutoriel ne
- * reçoit rien. Après « Ramasser », « L'eau », « L'outil », « Le premier Éteint », « La carte », « La nuit ».
+ * reçoit rien. Après « Ramasser », « L'eau », « L'outil », « Le premier Éteint », « La carte », « La nuit ». Les deux
+ * derniers réduits par le porteur (2026-10-13) : sinon la faim ne comptait plus du tout pendant le tutoriel.
  */
 export const REPAS_DU_TUTORIEL: Readonly<Partial<Record<number, { objets: Inventaire; texte: string }>>> = {
   1: { objets: { pomme: 2 }, texte: "Pour la route : deux pommes." },
   3: { objets: { noix: 1 }, texte: "Pour la route : une poignée de noix." },
   5: { objets: { conserve: 1 }, texte: "Pour la route : une conserve." },
   7: { objets: { volaille_cuite: 1, pomme: 1 }, texte: "Pour te remettre : une volaille rôtie et une pomme." },
-  9: { objets: { volaille_cepes: 1 }, texte: "Pour la route : une volaille aux cèpes." },
-  11: { objets: { pot_au_feu: 2 }, texte: "Le repas de ta première vraie nuit : deux pots-au-feu." },
+  9: { objets: { pommes_cuites: 1 }, texte: "Pour la route : des pommes cuites." },
+  11: { objets: { pot_au_feu: 1 }, texte: "Le repas de ta première vraie nuit : un pot-au-feu." },
 };
 
 /** L'état du tutoriel d'un joueur, gardé en base. */
