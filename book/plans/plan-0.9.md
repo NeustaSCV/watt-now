@@ -166,10 +166,17 @@
   - **il gémit**, de loin en loin ;
   - **ses yeux** restent ouverts, et luisent dans le noir comme debout ;
   - **juste avant de se relever** (les dernières secondes de `aTerre`), il prend appui : le geste annonce le danger.
-- **Détruit** :
+- **Détruit** : **on doit bien voir qu'il est mort**, et qu'il fait désormais partie du décor (porteur, 2026-10-13). On ne l'enfonce pas dans le sol (« risque de faire moche »).
   - **inerte** : plus un mouvement, plus un son ;
   - **les yeux éteints**, mi-clos ;
-  - **la peau pâlit** en une ou deux secondes : le gris-vert vire au gris cendre.
+  - **la peau vire au gris cendre** en une ou deux secondes (validé) ;
+  - **il devient du décor** :
+    - les vêtements se ternissent avec la peau : tout le corps perd ses couleurs, vers les teintes du sol du lieu (terre, poussière, vase au gué) ;
+    - la matière devient mate, sans reflet, comme une pierre ou une souche ;
+    - le corps se relâche : les membres s'affaissent à plat dans la seconde qui suit la chute, plus de pose crispée ;
+    - en tombant, il soulève un peu de poussière ; quelques brins d'herbe ou feuilles le recouvrent à moitié (là où le sol en a) ;
+  - **sa disparition** : aujourd'hui, le corps est retiré au bout de 2 min (`DUREE_CORPS`, `serveur/src/joueur.ts` et `lieu-vivant.ts`). Il ne doit pas disparaître d'un coup : il s'efface doucement dans les dernières secondes, loin du regard si possible ;
+  - **à montrer au porteur avant de figer** : deux ou trois réglages (teinte, matité, herbe), en captures côte à côte, de jour et de nuit.
 - **Le Rampant** : à terre, ses bras tirent encore un peu, sans avancer ; détruit, inerte et pâli comme les autres.
 - **Rien ne change aux règles** : ni la durée au sol, ni la façon de l'achever. Seul l'affichage (et un son) change.
 
@@ -277,7 +284,7 @@ Ce format est le contrat entre les chantiers A (serveur) et B (client) : il perm
 
 - **Contenu** :
   - **le message** : l'Éteint vu porte, à terre, s'il va bientôt se relever (un booléen `seReleve`, envoyé seulement dans ses dernières secondes au sol) ; c'est le seul ajout côté serveur (`commun/src/eteints.ts`, la vue) ;
-  - **`rendu/eteint.ts`** : après `Death01`, à terre, une boucle de soubresauts (os de la tête, d'un bras et du buste animés par-dessus la pose finale, ou un clip existant s'il convient) ; détruit, aucune boucle, et un fondu de la teinte de la peau vers le gris cendre ; les yeux du détruit mi-clos (`fermerLesYeux`) ;
+  - **`rendu/eteint.ts`** : après `Death01`, à terre, une boucle de soubresauts (os de la tête, d'un bras et du buste animés par-dessus la pose finale, ou un clip existant s'il convient) ; détruit, aucune boucle, un fondu de tout le corps (peau et vêtements) vers le gris cendre et les teintes du sol, une matière mate, les membres relâchés à plat, un peu de poussière à la chute et quelques brins d'herbe ou feuilles posés dessus ; les yeux du détruit mi-clos (`fermerLesYeux`) ; l'effacement doux à la fin de `DUREE_CORPS` ;
   - **le Rampant** (`ramper()`) : à terre, `rampement.animer` à faible amplitude sur place ;
   - **le son** : un gémissement étouffé, à terre, de loin en loin, par le bruiteur existant (effet synthétisé côté code, comme les autres effets ; la session musique n'est pas sollicitée) ;
   - **les textes** : l'aide sur le combat (« À terre, il remue encore : achève-le. Détruit, il ne bouge plus, et pâlit. »).
