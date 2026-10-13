@@ -1,6 +1,8 @@
 # Le combat entre joueurs : le duel
 
-*Version : v0.1 · 2026-10-13 · **Statut : règles décidées par le porteur, pas encore planifiées ni codées**.*
+*Version : v0.2 · 2026-10-13 · **Statut : règles décidées par le porteur, pas encore planifiées ni codées**.*
+
+*v0.2 (2026-10-13) : le porteur accepte les six propositions du §9 ; il n'y a plus de question ouverte.*
 
 *Quand : **bien après la 0.9**, une fois validé en jeu que les interactions entre joueurs sont fluides (`plan-0.9.md`). Ce document remplace, pour le combat entre joueurs, la règle du Book 21 (« désactivé partout ») au moment où il sera codé. Il remplace aussi, pour le duel, l'effondrement avec perte de l'inventaire prévu par le Book 01.*
 
@@ -20,7 +22,7 @@
 - **L'Exploration est le mode par défaut.** Le joueur bascule lui-même en mode Combat, et **ce choix tient** jusqu'à ce qu'il le change.
 - **La bascule automatique face à un Éteint reste.** Elle ne vise que les Éteints, et revient seule en Exploration quand la menace est passée (règle actuelle de `majMode`, `client/src/main.ts`).
 - **Le halo suit le mode choisi** : **rouge** en mode Combat, **vert** en mode Exploration. Le mode choisi est connu du serveur et diffusé à tous ceux qui voient le joueur.
-- *Proposition, à confirmer* : la bascule automatique ne change pas le halo. Celui qui se défend contre un Éteint reste vert : il n'est pas hostile.
+- **La bascule automatique ne change pas le halo** (D-1). Celui qui se défend contre un Éteint reste vert : il n'est pas hostile.
 
 ## 2. Lancer un duel
 
@@ -31,7 +33,8 @@
 
 ## 3. Les coups pendant le duel
 
-- **Des coups presque égaux.** Chaque coup qui touche retire une part fixe de la jauge. **Une bonne arme donne un avantage, mais amoindri** : écart modéré entre la plus faible et la plus forte, par exemple au plus 1,5 fois (valeur à régler).
+- **Des coups presque égaux.** Chaque coup qui touche retire une part fixe de la jauge. **Une bonne arme donne un avantage, mais amoindri** : la plus forte frappe **au plus 1,5 fois** plus que la plus faible (D-6).
+- **La jauge** est réglée pour qu'un duel entre deux joueurs de même force dure **de 20 à 40 secondes** (D-5).
 - **Pas d'étourdissement entre joueurs.** Un coup reçu fait tressaillir, sans étourdir ni faire reculer. On peut toujours riposter, esquiver ou repousser. Personne ne gagne en martelant.
 - **Les deux jauges se voient**, au-dessus des deux duellistes, et **les témoins les voient aussi**.
 
@@ -40,9 +43,8 @@
 - **Les coups des duellistes ne font rien aux Éteints** tant que le duel dure.
 - **Les coups des Éteints touchent les duellistes**, et c'est leur **jauge de duel** qui encaisse.
 - **Dès qu'une jauge est vide, le duel s'arrête et se résout** (§5). Il reste les Éteints, et chaque joueur retrouve sa santé normale, qui encaisse à nouveau.
-- *Proposition, à confirmer* :
-  - si c'est un Éteint qui vide la jauge d'un duelliste, ce dernier perd le duel, comme s'il avait été touché par l'autre joueur ;
-  - la saisie par trois Éteints, qui aujourd'hui fait s'effondrer, vide la jauge de duel d'un coup.
+- **Si c'est un Éteint qui vide la jauge d'un duelliste, ce dernier perd le duel**, comme s'il avait été touché par l'autre joueur (D-2).
+- **La saisie par trois Éteints**, qui aujourd'hui fait s'effondrer, **vide la jauge de duel d'un coup** (D-3).
 
 ## 5. La fin du duel
 
@@ -58,7 +60,7 @@
 - **On ne peut pas quitter la halte pendant un duel.**
 - **Une déconnexion laisse le joueur dans la halte.** Il perd le duel, et il reste exposé aux Éteints : c'est pire que de perdre le duel.
 - **La fuite.** Tout le monde court à la même vitesse. Si un joueur fuit et que l'autre ne le poursuit pas, **le duel est annulé**, sans gagnant ni objet gagné.
-  - *Proposition, à confirmer* : le duel est annulé quand les deux joueurs sont à plus de 25 m l'un de l'autre pendant 10 secondes.
+  - Le duel est annulé quand les deux joueurs sont **à plus de 25 m l'un de l'autre pendant 10 secondes** (D-4).
 
 ## 7. Où
 
@@ -77,9 +79,9 @@
   Il faudra donc le mode choisi diffusé, la frappe sur un joueur, l'état du duel et les deux jauges.
 - **Les textes** : expliquer le halo et le duel en jeu (tutoriel ou indice à la première rencontre), sans jargon.
 
-## 9. Les questions encore ouvertes
+## 9. Les questions tranchées (2026-10-13)
 
-| N° | Question | Proposition |
+| N° | Question | Décision du porteur |
 |---|---|---|
 | D-1 | La bascule automatique face à un Éteint change-t-elle le halo ? | Non : il reste vert (§1) |
 | D-2 | Un Éteint qui vide la jauge d'un duelliste : ce dernier perd-il le duel, donc un objet ? | Oui, comme un coup de l'autre joueur (§4) |
