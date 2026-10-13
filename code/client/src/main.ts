@@ -83,6 +83,7 @@ import type { ControleEnDirect } from "./mesure/obstacles.ts";
 import { CoucheDechetsVue } from "./rendu/dechets/couche.ts";
 // « Tu y penses » au ramassage d'une clé (plan 0.8, chantier 2).
 import { BandeauIdee } from "./bandeau-idee.ts";
+import { AnneauProgres } from "./rendu/anneau-progres.ts";
 import { BandeauAvertissement } from "./avertissement.ts";
 
 const CLE_JETON = "watt.jeton";
@@ -335,21 +336,9 @@ let maintien: {
 } | null = null;
 /** La fabrication demandée, en attendant que le serveur la commence (pour poser le tas de matières). */
 let fabricationDemandee: { nom: string; ingredients: Inventaire; x: number; z: number } | null = null;
-const MATIERE_PROGRES = new THREE.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: 0.95, depthWrite: false, side: THREE.DoubleSide });
-const anneauProgres = new THREE.Mesh(new THREE.BufferGeometry(), MATIERE_PROGRES);
-anneauProgres.position.y = 0.035;
-anneauProgres.visible = false;
+/** L'anneau de progression du geste : bleu vif, par-dessus le décor (0.8.2, R23 ; rendu/anneau-progres.ts). */
+const anneauProgres = new AnneauProgres();
 scene.scene.add(anneauProgres);
-let progresDessine = -1;
-/** Remplit l'anneau de progression (0 à 1), dans le sens des aiguilles d'une montre depuis le haut de l'écran. */
-function dessinerProgres(progres: number): void {
-  const p = Math.min(1, Math.max(0, progres));
-  const pas = Math.round(p * 60) / 60;
-  if (pas === progresDessine) return;
-  progresDessine = pas;
-  anneauProgres.geometry.dispose();
-  anneauProgres.geometry = new THREE.RingGeometry(0.4, 0.52, 48, 1, Math.PI / 2, -Math.PI * 2 * Math.max(0.001, pas)).rotateX(-Math.PI / 2);
-}
 
 function envoyer(message: MessageClient): void {
   reseau?.envoyer(message);
@@ -839,7 +828,7 @@ function recevoir(message: MessageServeur): void {
           // Un geste long repris : l'anneau repart de la part déjà faite.
           maintien.debut = performance.now() - (message.deja ?? 0) * message.duree * 1000;
           maintien.duree = message.duree * 1000;
-          progresDessine = -1;
+          anneauProgres.repartir();
         }
         // Un geste court se lit sur l'anneau seul ; un geste long et une fabrication ont aussi le pourcentage à côté.
         if (!maintien.tenu) hud.debutAction(message.libelle, message.duree, message.deja ?? 0);
@@ -1029,7 +1018,7 @@ function recevoir(message: MessageServeur): void {
       if (message.texte) hud.message(message.texte, "aide");
       hud.majIdees(message.progression.devoilees, message.nouvelles);
       return;
-    // L'idée au ramassage d'une clé (plan 0.8) : un bandeau qui passe, ou qui se ferme d'un bouton, et un son court.
+    // L'idée au ramassage d'une clé (plan 0.8 ; 0.8.2, R22) : un message sans bouton, qui passe tout seul, et un son court.
     case "idee":
       (bandeauIdee ??= new BandeauIdee(document.getElementById("hud")!)).montrer({ texte: message.texte, plusTard: message.plusTard, ...(message.objet ? { objet: message.objet } : {}) });
       son.jouer("idee");
@@ -1257,7 +1246,7 @@ function agir(a: ActionProposee | null): void {
   // Rien à portée : on dit comment trouver quelque chose à faire, plutôt que de ne rien faire.
   if (!a) return indice("rien", "Rien à portée : approche-toi jusqu'à voir un cercle au sol.");
   if ("message" in a) envoyer(a.message);
-  else if ("examiner" in a) hud.message(a.examiner);
+  else if ("examiner" in a) hud.message(a.examiner, "examen");
   else if ("ouvrirCoffre" in a) {
     const c = installations.get(a.ouvrirCoffre);
     if (c) hud.ouvrirCoffre(c.vue);
@@ -1816,7 +1805,7 @@ function boucle(instant: number): void {
       majVisee(0.5, instant);
       anneauProgres.visible = true;
       anneauProgres.position.set(centre.x, 0.035, centre.z);
-      dessinerProgres((performance.now() - tenu!.debut) / tenu!.duree);
+      anneauProgres.remplir((performance.now() - tenu!.debut) / tenu!.duree);
       // Le pourcentage, juste sous l'anneau.
       const p = new THREE.Vector3(centre.x, 0, centre.z).project(scene.camera);
       hud.placerProgression(((p.x + 1) / 2) * window.innerWidth, ((1 - p.y) / 2) * window.innerHeight);
