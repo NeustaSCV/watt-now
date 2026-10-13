@@ -32,10 +32,15 @@ import type { Inventaire, TypeObjet } from "./objets.ts";
 import { POINT_ARRIVEE, TERRAIN_TAILLE } from "./regles.ts";
 import { ARBRES_ISOLES, MARE, RUINE, distanceMare } from "./terrain.ts";
 import { DECHARGE } from "./decharge.ts";
-import { DEMI_ROUTE, TROU_DU_PONT, VN_MODELE, VS_MODELE, interpoler, zRoute } from "./gue.ts";
+import { BAC, CLOCHE, DEMI_ROUTE, GLAISE, TROU_DU_PONT, VN_MODELE, VS_MODELE, axeRiviere, interpoler, zRoute } from "./gue.ts";
 
-/** Emplacements pour 100 m² sur les bas-côtés du gué (la route de la station : 2). */
-const DENSITE_GUE = 1;
+/** Emplacements pour 100 m² sur les bas-côtés de la route du gué (la route de la station : 2), et leur largeur (m). */
+const DENSITE_ROUTE_GUE = 1;
+const BAS_COTE_GUE = 1.5;
+/** La demi-largeur de la rivière du gué, d'une crête de berge à l'autre (le modèle : W2). */
+const DEMI_RIVIERE_GUE = 11.5;
+/** La largeur des berges où traînent les déchets, depuis la crête (m). */
+const LARGEUR_BERGE = 8;
 
 // ---------- Les zones typées de chaque lieu (§4.1, §4.3) ----------
 
@@ -100,12 +105,14 @@ export const ZONES_DECHETS: Record<Exclude<LieuJouable, "terrain">, readonly Zon
 // ---------- Le gué (plan 0.8.2, chantier F) ----------
 
 /**
- * Les bas-côtés de la route du gué, 4 m de chaque côté, morceau par morceau (la route ondule) ; rien dans le trou du
- * pont emporté, entre les deux culées. Une densité plus faible que sur la route de la station : « quelques déchets ».
+ * Les déchets du gué (décision du porteur, 2026-10-13) : surtout sur les berges, le long de l'eau (la couche « berge »,
+ * plus nature), et un peu de « route » sur les bas-côtés immédiats de la chaussée. Rien dans l'eau (les obstacles de
+ * l'eau l'empêchent), rien au pied du bac, de la cloche ni de la glaise, rien au ras des sorties (placeLibre).
  */
 const ZONES_GUE: readonly ZoneDechets[] = (() => {
   const zones: ZoneDechets[] = [];
   const PAS = 10;
+  // Les bas-côtés immédiats de la route (1,5 m), hors du trou du pont emporté.
   for (let x = 0; x < 200; x += PAS) {
     const x1 = Math.min(200, x + PAS);
     if (x1 > TROU_DU_PONT.x0 - 3 && x < TROU_DU_PONT.x1 + 3) continue;
@@ -115,10 +122,28 @@ const ZONES_GUE: readonly ZoneDechets[] = (() => {
     const nord = Math.max(...[x, x1].map((v) => interpoler(VN_MODELE, 100 - v) + 35)) + 0.8;
     const sud = Math.min(...[x, x1].map((v) => interpoler(VS_MODELE, 100 - v) + 35)) - 0.8;
     const bandes = [
-      [Math.max(nord, zc - DEMI_ROUTE - ecart - 4), zc - DEMI_ROUTE - ecart],
-      [zc + DEMI_ROUTE + ecart, Math.min(sud, zc + DEMI_ROUTE + ecart + 4)],
+      [Math.max(nord, zc - DEMI_ROUTE - ecart - BAS_COTE_GUE), zc - DEMI_ROUTE - ecart],
+      [zc + DEMI_ROUTE + ecart, Math.min(sud, zc + DEMI_ROUTE + ecart + BAS_COTE_GUE)],
     ] as const;
-    for (const [z0, z1] of bandes) if (z1 - z0 > 0.8) zones.push({ x0: Math.max(0.5, x), x1: Math.min(199.5, x1), z0, z1, type: "route", densite: DENSITE_GUE });
+    for (const [z0, z1] of bandes) if (z1 - z0 > 0.8) zones.push({ x0: Math.max(0.5, x), x1: Math.min(199.5, x1), z0, z1, type: "route", densite: DENSITE_ROUTE_GUE });
+  }
+  // Les berges : une bande de 8 m de chaque côté de la rivière, de la crête vers la terre, tranche par tranche (la
+  // rivière ondule), entre les bas-côtés de la route (x de 80 à 120), sauf la tête du pont emporté et le bac.
+  const ecartees: Boite[] = [
+    boite(TROU_DU_PONT.x0 - 6, TROU_DU_PONT.x1 + 6, zRoute(100) - DEMI_ROUTE - 4, zRoute(100) + DEMI_ROUTE + 4),
+    boite(BAC.ponton.embarquement.x - 4.5, BAC.cale.embarquement.x + 4.5, BAC.z - BAC.demiLargeur - 3, BAC.z + BAC.demiLargeur + 3),
+    ...[CLOCHE, GLAISE].map((p) => boite(p.x - 3, p.x + 3, p.z - 3, p.z + 3)),
+  ];
+  for (let z = 0; z < 70; z += PAS) {
+    const z1 = Math.min(70, z + PAS);
+    const axes = [z, (z + z1) / 2, z1].map((v) => 100 - axeRiviere(v - 35));
+    const ouest = Math.min(...axes) - DEMI_RIVIERE_GUE - 0.4;
+    const est = Math.max(...axes) + DEMI_RIVIERE_GUE + 0.4;
+    for (const [x0, x1] of [[Math.max(80, ouest - LARGEUR_BERGE), ouest], [est, Math.min(120, est + LARGEUR_BERGE)]] as const) {
+      if (x1 - x0 < 0.8) continue;
+      const exclure = ecartees.filter((b) => intersection(rect(b), { x0, x1, z0: z, z1 }) > 0);
+      zones.push({ x0, x1, z0: Math.max(0.5, z), z1: Math.min(69.5, z1), type: "berge", ...(exclure.length ? { exclure } : {}) });
+    }
   }
   return zones;
 })();
