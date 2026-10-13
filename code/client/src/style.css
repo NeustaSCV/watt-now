@@ -797,6 +797,14 @@ body {
   line-height: 1.1;
   font-size: 11px;
   align-self: center;
+  /* Plan 0.8.2 §7.6 : jamais de texte hors du rond (le libellé est raccourci, libelle-bouton.ts). */
+  overflow: hidden;
+}
+/* Un mot long (« Ramasser », « Enseigner ») : un corps plus petit, plutôt qu'un mot coupé en deux. */
+#hud .tactile .b-B.mot-long {
+  font-size: 11px;
+  padding: 4px;
+  letter-spacing: -0.2px;
 }
 
 #hud .tactile {
@@ -2055,6 +2063,20 @@ body {
 }
 #hud .rapport[hidden] {
   display: none;
+}
+/* Plan 0.8.2 §7.6 : téléphone en paysage, le rapport se pose sous le bandeau du haut (au centre de l'écran, la carte
+   d'état le recouvrait). Le carnet, lui, s'efface tant qu'on le lit (hud.ts). */
+@media (orientation: landscape) and (max-height: 520px) {
+  #hud .rapport {
+    top: calc(var(--haut-bandeau, 80px) + 6px);
+    transform: translateX(-50%);
+    max-height: calc(100dvh - var(--haut-bandeau, 80px) - 12px);
+    padding: 10px 16px 10px;
+  }
+  #hud .rapport h2 {
+    font-size: 19px;
+    margin-bottom: 4px;
+  }
 }
 #hud .rapport h2 {
   margin: 0 0 8px;

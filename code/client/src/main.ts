@@ -13,7 +13,7 @@ import { INTENTION_REPOS, avancer, type Position } from "../../commun/src/deplac
 import { COMPTOIR, destinations, sortieIci, sortiesDe, zoneCoop, zoneDe, zoneMoulin, type LieuJouable, type Zone } from "../../commun/src/lieux.ts";
 import type { EteintVu } from "../../commun/src/eteints.ts";
 import { cerclesSignature, type BruitAction } from "../../commun/src/signature.ts";
-import { ALLURES, GESTE_TENU_MAX_S, type Allure } from "../../commun/src/regles.ts";
+import { ALLURES, type Allure } from "../../commun/src/regles.ts";
 import { APPUIS_DEGAGEMENT, ESQUIVE, REPOUSSER, SEUIL_EPUISE, armeEnMain, freinSaisie } from "../../commun/src/combat.ts";
 import type { AutreVu, SacVu, SanteVue, VueComptoir } from "../../commun/src/messages.ts";
 import { PORTEE_CABLE_PANNEAU, type Charges } from "../../commun/src/energie.ts";
@@ -86,6 +86,7 @@ import type { ControleEnDirect } from "./mesure/obstacles.ts";
 import { CoucheDechetsVue } from "./rendu/dechets/couche.ts";
 // « Tu y penses » au ramassage d'une clé (plan 0.8, chantier 2).
 import { BandeauIdee } from "./bandeau-idee.ts";
+import { seFaitEnTenantA } from "./geste-tenu.ts";
 import { AnneauProgres } from "./rendu/anneau-progres.ts";
 import { BandeauAvertissement } from "./avertissement.ts";
 
@@ -377,6 +378,15 @@ function afficherVoile(texte: string, bouton?: { libelle: string; action: () => 
 
 /** Le bandeau « Tu y penses », posé dans le HUD au premier usage (après que le HUD a dessiné son contenu). */
 let bandeauIdee: BandeauIdee | null = null;
+/** Plan 0.8.2 §7.6 : le message ne recouvre jamais un panneau ouvert du HUD (le carnet du tutoriel, le sac, une fiche…). */
+const PANNEAUX_OUVERTS = [".carnet", ".rapport", ".panneau", ".aide-jeu", ".demande-echange", ".bandeau-avertissement"].map((c) => `:scope > ${c}:not([hidden])`).join(", ");
+function nouveauBandeauIdee(): BandeauIdee {
+  const el = document.getElementById("hud")!;
+  return new BandeauIdee(el, window, {
+    obstacles: () => [...el.querySelectorAll<HTMLElement>(PANNEAUX_OUVERTS)].map((p) => p.getBoundingClientRect()).filter((r) => r.width > 0 && r.height > 0),
+    hauteur: () => window.innerHeight,
+  });
+}
 let bandeauAvertissement: BandeauAvertissement | null = null;
 const hud = new Hud(
   document.getElementById("hud")!,
@@ -829,7 +839,8 @@ function recevoir(message: MessageServeur): void {
         const sansCible = !maintien;
         if (!maintien) maintien = { cible: null, relache: true, tenu: false, debut: 0, duree: 0 };
         {
-          maintien.tenu = !sansCible && !maintien.tas && message.duree <= GESTE_TENU_MAX_S;
+          // Plan 0.8.2 §7.6 : au toucher, un appui bref suffit (geste-tenu.ts) ; un nouvel appui ou un pas l'arrête.
+          maintien.tenu = seFaitEnTenantA({ tactile, sansCible, fabrication: !!maintien.tas, duree: message.duree });
           // Geste court, A déjà lâché avant qu'il commence : on s'arrête tout de suite, et on dit pourquoi.
           if (maintien.tenu && maintien.relache) {
             envoyer({ t: "annuler" });
@@ -1035,7 +1046,7 @@ function recevoir(message: MessageServeur): void {
       return;
     // L'idée au ramassage d'une clé (plan 0.8 ; 0.8.2, R22) : un message sans bouton, qui passe tout seul, et un son court.
     case "idee":
-      (bandeauIdee ??= new BandeauIdee(document.getElementById("hud")!)).montrer({ texte: message.texte, plusTard: message.plusTard, ...(message.objet ? { objet: message.objet } : {}) });
+      (bandeauIdee ??= nouveauBandeauIdee()).montrer({ texte: message.texte, plusTard: message.plusTard, ...(message.objet ? { objet: message.objet } : {}) });
       son.jouer("idee");
       return;
     // Un avertissement du carnet (plan 0.8, chantier 13 ; B14) : un bandeau fermé par son bouton « Compris ».

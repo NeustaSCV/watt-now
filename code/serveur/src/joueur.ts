@@ -56,7 +56,7 @@ import {
   type Besoins,
   type Gourde,
 } from "../../commun/src/survie.ts";
-import { DISTANCE_INTERACTION, PORTEE_ARBRE, TEXTE_GOURDE_AU_MILIEU, auMilieuDeLaMare, distanceMare, RAYON_ESCABEAU, REPOUSSE_MS, USAGES, estArbre, ressourceVisible } from "../../commun/src/terrain.ts";
+import { DISTANCE_INTERACTION, EMPRISE_RESSOURCE, PORTEE_ARBRE, TEXTE_GOURDE_AU_MILIEU, auMilieuDeLaMare, distanceMare, RAYON_ESCABEAU, REPOUSSE_MS, USAGES, estArbre, ressourceVisible } from "../../commun/src/terrain.ts";
 import { heuresEcoulees } from "../../commun/src/temps.ts";
 import { DEMONTAGE, LIEU_DE_FOUILLE, estOrdure, etapeButin, tirerVestiges } from "../../commun/src/vestiges.ts";
 import {
@@ -2916,7 +2916,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
     const r = this.ressourcesIci().get(id);
     // L'if du fond du bois : qui ne reconnaît pas les essences ne le voit pas (Book 25 §3.2).
     if (!r || !this.ressourceLibre(r, this.maintenant()) || !ressourceVisible(r.type, this.compte.famille)) return;
-    if (!this.proche(r.x, r.z, DISTANCE_INTERACTION + (estArbre(r.type) ? PORTEE_ARBRE : 0))) return this.info("C'est trop loin : approche-toi encore un peu.");
+    // Plan 0.8.2 §7.6 : la berge de glaise se creuse depuis son bord (son emprise), comme l'écran la propose.
+    if (!this.proche(r.x, r.z, DISTANCE_INTERACTION + (estArbre(r.type) ? PORTEE_ARBRE : r.type === "gisement_glaise" ? (EMPRISE_RESSOURCE.gisement_glaise ?? 0) : 0))) return this.info("C'est trop loin : approche-toi encore un peu.");
     const usage = USAGES[r.type];
     // Le coffre du directeur ne s'ouvre qu'avec la clé du magasinier (Book 23 §2.2).
     if (r.type === "coop_coffre" && !(this.inventaire.cle_coffre ?? 0)) return this.info("Fermé à clé. Le magasinier la portait toujours sur lui…");

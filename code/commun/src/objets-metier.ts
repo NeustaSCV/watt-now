@@ -214,7 +214,7 @@ export const OBJETS_METIER = {
     nom: "pack de cellules",
     pluriel: "packs de cellules",
     poids: 0.2,
-    description: "Trois cellules lithium câblées et scotchées : 12 Wh portables. Se recharge au banc.",
+    description: "Trois cellules lithium câblées et scotchées : 12 Wh qui tiennent dans la main.",
   },
   module_decharge: {
     nom: "module de décharge",

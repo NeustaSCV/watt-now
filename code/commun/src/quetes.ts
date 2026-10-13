@@ -449,7 +449,7 @@ const METIER: Quete[] = [
     titre: "Le banc solaire",
     icone: "banc_recharge",
     // Plan 0.8 (chantiers 7 et 13) : le panneau se pose sur le banc solaire, plein sud.
-    texte: "Pose le panneau sur ton banc solaire ({agir} au banc), et la batterie de la ruine à côté : le soleil s'y met en réserve.",
+    texte: "Pose le panneau sur ton banc solaire ({agir} au banc), puis la batterie de la ruine dedans : le soleil s'y met en réserve.",
     objectifs: [{ libelle: "Panneau sur le banc", condition: { a: "un_de", conditions: [{ a: "installation", type: "banc_recharge", avec: "panneau" }, { a: "installation", type: "panneau_solaire" }] } }],
     lecon: "Il charge le jour, même quand tu n'es pas là : 80 Wh par beau temps.",
     recompense: { wotts: 15 },

@@ -260,6 +260,24 @@ function libelleHorsSaison(type: TypeRessource, jour: number): string {
   return phase === "fleurs" ? "En fleurs" : phase === "verts" ? "Fruits encore verts" : "Plus de fruits cette année";
 }
 
+/** Le cône du regard (rad, de part et d'autre) où la glaise passe avant ce qui l'entoure. */
+const REGARD_GLAISE = Math.PI / 3;
+/** Ce qu'on retranche de la distance à la glaise dans le sens du regard (m), en plus de son emprise. */
+const BONUS_REGARD_GLAISE = 0.6;
+
+/**
+ * Plan 0.8.2 §7.6 : la berge de glaise est une plaque, pas un point ; on la creuse depuis son bord (son emprise). Et
+ * quand on la regarde, elle passe avant la touffe de joncs voisine (venu du nord, on passe la touffe avant d'y arriver).
+ */
+function avanceGlaise(position: Position, g: { x: number; z: number }): number {
+  // La portée reste celle du serveur (DISTANCE_INTERACTION du bord de la plaque) : au-delà, l'avance ne compte pas.
+  const emprise = EMPRISE_RESSOURCE.gisement_glaise ?? 0;
+  if (Math.hypot(g.x - position.x, g.z - position.z) > DISTANCE_INTERACTION + emprise) return 0;
+  const vers = Math.atan2(g.x - position.x, g.z - position.z);
+  const ecart = Math.abs(Math.atan2(Math.sin(vers - position.o), Math.cos(vers - position.o)));
+  return emprise + (ecart <= REGARD_GLAISE ? BONUS_REGARD_GLAISE : 0);
+}
+
 export function proposer(
   position: Position,
   lieu: LieuJouable,
@@ -313,7 +331,8 @@ export function proposer(
     const horsSaison = jour > 0 && !enSaison(r.donnees.type, jour);
     const arbre = estArbre(r.donnees.type);
     const fruitier = estFruitier(r.donnees.type);
-    const d = Math.max(0, Math.hypot(r.donnees.x - position.x, r.donnees.z - position.z) - (arbre ? PORTEE_ARBRE : 0));
+    const d = Math.max(0, Math.hypot(r.donnees.x - position.x, r.donnees.z - position.z) - (arbre ? PORTEE_ARBRE : r.donnees.type === "gisement_glaise" ? avanceGlaise(position, r.donnees) : 0));
+    // (La glaise vue de plus loin que sa plaque n'entre pas : garder() s'en tient à DISTANCE_INTERACTION.)
     // Un fruitier sans escabeau dans son cercle : on le dit tout de suite (rien ne se lance pour rien).
     const escabeau = !usage.escabeau || installationsVues.some((i) => i.type === "escabeau" && Math.hypot(i.x - r.donnees.x, i.z - r.donnees.z) <= RAYON_ESCABEAU);
     garder(d, {

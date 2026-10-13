@@ -207,9 +207,19 @@ export function profondeurMare(x: number, z: number): number {
   return PROFONDEUR_MARE * t * t * (3 - 2 * t);
 }
 
-/** Ce que l'eau laisse de l'allure, ici (1 hors de la mare, FREIN_MARE dans l'eau aux genoux). */
+/**
+ * Plan 0.8.2 §7.6 : le frein ne suit plus la pente de l'eau (1,1 m) mais se fait sentir dès le premier pas : à cette
+ * distance du bord (m), on marche déjà à FREIN_MARE de son allure. Autrefois, du bord au milieu, la marche ne perdait
+ * qu'un tiers (≈ 3 m en 2 s) : on ne le sentait pas.
+ */
+const PENTE_FREIN_MARE = 0.4;
+
+/** Ce que l'eau laisse de l'allure, ici (1 hors de la mare, FREIN_MARE passé le premier pas dans l'eau). */
 export function freinMare(x: number, z: number): number {
-  return 1 - (1 - FREIN_MARE) * (profondeurMare(x, z) / PROFONDEUR_MARE);
+  const dedans = -distanceMare(x, z);
+  if (dedans <= 0) return 1;
+  const t = Math.min(1, dedans / PENTE_FREIN_MARE);
+  return 1 - (1 - FREIN_MARE) * t;
 }
 
 /** Ce que dit le jeu à qui veut remplir sa gourde depuis le bord. */

@@ -7,7 +7,8 @@ import { avancer, type Position } from "../../commun/src/deplacement.ts";
 import type { MessageServeur } from "../../commun/src/messages.ts";
 import { ALLURES } from "../../commun/src/regles.ts";
 import { cheminVersLaCouche, placeDeLaCouche } from "../../commun/src/sommeil-abri.ts";
-import { FREIN_MARE, MARE, USAGES, auMilieuDeLaMare, distanceMare, profondeurMare, type TypeRessource } from "../../commun/src/terrain.ts";
+import { FREIN_MARE, MARE, USAGES, auMilieuDeLaMare, distanceMare, freinMare, profondeurMare, type TypeRessource } from "../../commun/src/terrain.ts";
+import { ZONE_TERRAIN, zoneDe } from "../../commun/src/lieux.ts";
 import { appliquerReglages } from "../../commun/src/reglages.ts";
 import { Base } from "./base.ts";
 import { Halte } from "./halte.ts";
@@ -71,6 +72,26 @@ test("R21 : on entre dans la mare, lentement ; l'eau monte aux genoux au milieu"
   let p: Position = { x: MARE.x - MARE.rayon - 1, z: MARE.z, o: 0 };
   for (let i = 0; i < 60 && !auMilieuDeLaMare(p.x, p.z); i++) p = avancer(p, marche, 0.1);
   assert.ok(auMilieuDeLaMare(p.x, p.z), "on atteint le milieu à pied");
+});
+
+test("0.8.2 §7.6 : le frein de la mare se sent (serveur et prédiction) : mi-allure dès le premier pas, jusqu'au milieu", () => {
+  // La prédiction du client et le serveur avancent tous deux par avancer(), dans la zone du terrain : la même.
+  assert.equal(zoneDe("terrain"), ZONE_TERRAIN, "la zone du terrain porte le frein");
+  // Un pas dans l'eau (0,4 m du bord) : déjà mi-allure ; sur tout le chemin jusqu'au milieu.
+  for (const d of [0.4, 0.8, 1.5]) assert.equal(freinMare(MARE.x - MARE.rayon + d, MARE.z), FREIN_MARE, `${d} m du bord`);
+  assert.equal(freinMare(MARE.x - MARE.rayon - 0.1, MARE.z), 1, "hors de l'eau, aucun frein");
+  // Le serveur : du bord au milieu en marchant, au moins 1,8 fois le temps qu'il faut au sec.
+  const t = monter();
+  const bord = { x: MARE.x - MARE.rayon, z: MARE.z, o: Math.PI / 2 };
+  t.joueur.position = { ...bord };
+  t.joueur.recevoir({ t: "intention", dx: 1, dz: 0, allure: "marche", seq: 1 });
+  let s = 0;
+  while (t.joueur.position.x < MARE.x && s < 10) {
+    t.attendre(0.05);
+    s += 0.05;
+  }
+  const auSec = MARE.rayon / ALLURES.marche;
+  assert.ok(s >= auSec * 1.8, `du bord au milieu : ${s.toFixed(2)} s (au sec : ${auSec.toFixed(2)} s)`);
 });
 
 test("R21 : la gourde se remplit au milieu de la mare, pas au bord", () => {

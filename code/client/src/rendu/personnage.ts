@@ -572,12 +572,16 @@ export class Personnage {
     this.couche = oui;
   }
 
+  /** Dans la mare, l'eau au-dessus des chevilles (patauger). */
+  private dansLEau = false;
+
   /**
    * Dans la mare (0.8.2, R21) : le personnage s'enfonce de `profondeur` (l'eau aux genoux au milieu), et l'eau fait un
    * remous autour des jambes, qui s'élargit quand il avance. `vitesse` : sa vitesse réelle (m/s).
    */
   patauger(profondeur: number, dt: number, vitesse: number): void {
     this.objet.position.y = -profondeur;
+    this.dansLEau = profondeur >= 0.1;
     if (profondeur < 0.03) {
       if (this.remous) this.remous.visible = false;
       return;
@@ -622,7 +626,9 @@ export class Personnage {
     else if (this.unique > 0) {
       // On laisse finir la frappe ou la roulade.
     } else if (vitesse > 0.15) {
-      if (vitesse < 1.7) c.jouer("Crouch_Fwd_Loop", { vitesse: Math.min(1.8, vitesse / VITESSE_ANIM.accroupi) });
+      // Plan 0.8.2 §7.6 : dans l'eau, la marche freinée reste une marche (au pas lent), pas une marche accroupie.
+      if (this.dansLEau && vitesse >= 0.9 && vitesse < 3.4) c.jouer("Walk_Loop", { vitesse: Math.min(2.2, vitesse / VITESSE_ANIM.marche) });
+      else if (vitesse < 1.7) c.jouer("Crouch_Fwd_Loop", { vitesse: Math.min(1.8, vitesse / VITESSE_ANIM.accroupi) });
       else if (vitesse < 3.4) c.jouer("Walk_Loop", { vitesse: Math.min(2.2, vitesse / VITESSE_ANIM.marche) });
       else c.jouer("Jog_Fwd_Loop", { vitesse: Math.max(0.7, vitesse / VITESSE_ANIM.trot) });
     } else if (this.geste) c.jouer(ANIMATION_GESTE[this.geste], { fondu: 0.3, vitesse: 1 });

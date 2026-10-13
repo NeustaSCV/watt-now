@@ -295,3 +295,11 @@ test("chaque matière qui manquait (§2.2) se trouve désormais, au débit visé
   // Le couteau et la conserve restent rares ; les matières de base, communes.
   assert.equal(EXISTANTS_DANS_LES_DECHETS.couteau?.rarete, "R");
 });
+
+test("0.8.2 §7.6 : chaque profil de déchets a sa propre lettre ; le Comptoir garde les déchets d'un parking", () => {
+  const lettres = Object.values(PROFILS_DECHETS).map((p) => p.code);
+  assert.equal(new Set(lettres).size, lettres.length, `lettres en double : ${lettres.join(" ")}`);
+  assert.notEqual(PROFILS_DECHETS.comptoir.code, PROFILS_DECHETS.parking.code);
+  const parking = new Set(tableDechets("parking").dechet.map(([t]) => t));
+  for (const [t] of tableDechets("comptoir").dechet) assert.ok(parking.has(t), `${t} : un déchet du parking`);
+});
