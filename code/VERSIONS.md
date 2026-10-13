@@ -12,6 +12,15 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
+## 0.8.3 · prête à déployer
+
+- **La glaise du gué, bien en vue** : la berge de glaise est maintenant au milieu de la vase, à découvert. Plus d'arbre au-dessus pour te cacher pendant que tu creuses.
+- **Le Moulin retouché** : le chemin du jardin est dégagé derrière le magasin, la planche du bief est plus large, et les portes intérieures du logis et des dépendances aussi. Le bord du lot se voit enfin : une haie au nord et à l'ouest, un muret de pierres au sud et à l'est, plus de mur invisible. Dans le couloir du rouet, le rouet et sa lanterne s'effacent pour te laisser voir où tu marches.
+- **L'accueil sur téléphone couché** : l'image et le texte se mettent côte à côte, l'image entière. Ton personnage porte dès le premier écran la couleur de cheveux que tu as choisie, et l'accueil charge moins de choses.
+- **Rien n'est perdu** : ta partie de la 0.8.2 se relit telle quelle, ce que tu as construit et ce que tu portes.
+
+---
+
 ## 0.8.2 · déployée le 2026-10-13
 
 - **Le coffre et la décharge répondent de nouveau** : depuis la 0.8, leur panneau s'ouvrait mais restait sourd, au doigt comme à la souris (ni choisir un objet, ni le déplacer, ni fermer). Corrigé, pour le coffre, le coffre cerclé, le râtelier et la décharge.
