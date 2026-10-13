@@ -461,8 +461,8 @@ export const ESQUIVE = { distance: 1.9, duree: 0.25, invulnerable: 0.45 } as con
 export const DELAI_SAISIE = 0.6;
 /** Saisi depuis ce temps : il mord. */
 export const DELAI_MORSURE = 3;
-/** Appuis rapides pour se dégager, par Éteint qui tient. Épuisé : il en faut plus. */
-export const APPUIS_DEGAGEMENT = 6;
+/** Appuis rapides pour se dégager (A ou B), par Éteint qui tient, même épuisé (0.8.4 : 2 au lieu de 6). */
+export const APPUIS_DEGAGEMENT = 2;
 /** Vitesse quand on est saisi : ralenti par un, immobilisé par deux. */
 export function freinSaisie(nombre: number): number {
   return nombre === 0 ? 1 : nombre === 1 ? 0.35 : 0;

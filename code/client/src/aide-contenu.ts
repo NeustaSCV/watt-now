@@ -410,7 +410,7 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
         ],
       },
       { sous_titre: "La saisie" },
-      "Reste trop longtemps à son contact et il **t'attrape**. Saisi, tu ralentis ; à deux, ils t'immobilisent ; à trois, c'est fini. Quelques secondes après la saisie, il mord. **Tape {examiner} très vite** pour te dégager. Ne te laisse jamais encercler.",
+      "Reste trop longtemps à son contact et il **t'attrape**. Saisi, tu ralentis ; à deux, ils t'immobilisent ; à trois, c'est fini. Quelques secondes après la saisie, il mord. **Tape deux fois {agir} ou {examiner}** pour te dégager : saisi, on ne frappe plus. Ne te laisse jamais encercler.",
       { sous_titre: "Les armes" },
       "En Combat, tu frappes avec l'arme **équipée** (Sac → l'arme → Équiper pour le combat), sinon avec la meilleure de ton sac. Chaque arme montre dans le sac ses **dégâts**, sa **vitesse** et son **allonge**, comparés aux autres, et si elle tue d'un coup appuyé à la tête. Une longue arme garde l'Éteint à distance ; une lourde frappe fort mais lentement. À mains nues, ça ne suffit pas.",
       { sous_titre: "Contondant, tranchant, perçant, électrique" },
@@ -448,7 +448,7 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
       { sous_titre: "Ce qu'il faut savoir" },
       {
         liste: [
-          "**Saisi, on ne tire pas** : dégage-toi d'abord ({examiner}).",
+          "**Saisi, on ne tire pas** : dégage-toi d'abord ({agir} ou {examiner}).",
           "Un Éteint **casqué** ne meurt d'une flèche ou d'un carreau que **de face**, par la visière, et de plus près.",
           "**Ramasse tes munitions** : ce qui manque tombe au sol, ce qui touche reste sur le corps. Elles cassent parfois ; dans la mare, elles sont perdues.",
           "Le tir éclaircit **avant** le contact. Contre trois Éteints sur toi, il te faut une arme de contact.",
@@ -525,7 +525,7 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
     titre: "L'électricité contre les Éteints",
     resume: "Raidir, faire lâcher, éteindre : ce que fait le courant, la charge et la recharge.",
     blocs: [
-      "**Une décharge courte le fait lâcher et le raidit. Maintenue sur un Éteint debout, elle le met à terre ; maintenue sur un Éteint raidi ou à terre, elle l'éteint pour de bon. Le casque n'y change rien.**",
+      "**Une décharge courte le raidit. Maintenue sur un Éteint debout, elle le met à terre ; maintenue sur un Éteint raidi ou à terre, elle l'éteint pour de bon. Le casque n'y change rien.**",
       { sous_titre: "Au combat" },
       {
         liste: [

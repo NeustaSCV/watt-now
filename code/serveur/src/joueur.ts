@@ -1094,8 +1094,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       const d = Math.hypot(dx, dz);
       if (d > allonge + 0.35) continue;
       const ecart = Math.abs(Math.atan2(Math.sin(Math.atan2(dx, dz) - this.position.o), Math.cos(Math.atan2(dx, dz) - this.position.o)));
-      // Celui qui nous tient se frappe toujours, même dans le dos.
-      if (ecart > ANGLE_CIBLAGE && e.saisit !== this.compte.id) continue;
+      if (ecart > ANGLE_CIBLAGE) continue;
       // Au fond de la fosse du rouet (le Moulin, M14) : on l'atteint d'en haut avec une arme de 2 m d'allonge.
       if (d >= meilleureDistance || !(voieLibre(zone, this.position, e) || (this.lieu === "moulin" && atteintDansLaFosse(e, allonge)))) continue;
       meilleur = e;
@@ -1110,6 +1109,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
     const instant = this.maintenant();
     // Un coup va jusqu'au bout (P-004) : on ne refrappe pas avant la fin du geste.
     if (this.voyage || instant < this.prochaineFrappe) return;
+    // Tenu, on n'a pas l'amplitude pour frapper (0.8.4) : A compte comme un appui pour se dégager, quelle que soit l'arme.
+    if (this.saisisseurs().length > 0) return this.degager();
     // L'arme électrique sans courant n'est qu'un gourdin court ; trop faible, la longue part en courte (Book 25 §8.2).
     ({ arme: enMain, appuye } = this.electricite.pourFrapper(this.armeDuCombat(), appuye));
     const cout = coutEnduranceCoup(enMain, appuye);
@@ -1585,13 +1586,13 @@ export class Joueur implements Voyageur, ParticipantLecon {
     this.cooperatives.poserRadio(this.compte.id, this.position.x, this.position.z);
   }
 
-  /** Taper vite pour se dégager (Book 08 §3.3) : il en faut plus quand plusieurs tiennent, et quand on est épuisé. */
+  /** Taper vite pour se dégager (Book 08 §3.3), avec A ou B : il en faut plus quand plusieurs tiennent (pas quand on est épuisé, 0.8.4). */
   private degager(): void {
     const tiennent = this.saisisseurs();
     if (tiennent.length === 0) return;
     this.endurance = Math.max(0, this.endurance - COUT_ENDURANCE.degagement);
     this.appuisDegagement++;
-    const besoin = APPUIS_DEGAGEMENT * tiennent.length * (this.endurance < SEUIL_EPUISE ? 1.5 : 1);
+    const besoin = APPUIS_DEGAGEMENT * tiennent.length;
     if (this.appuisDegagement < besoin) return;
     this.appuisDegagement = 0;
     for (const e of tiennent) lacher(e, this.position, this.zoneIci());
@@ -1644,7 +1645,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
         if (e.tenue >= 6) {
           lacher(e, this.position, this.zoneIci());
           if (this.tuto) this.tuto.degage = true;
-          this.info("Il te lâche… La prochaine fois, tape {examiner} très vite !");
+          this.info("Il te lâche… La prochaine fois, tape deux fois {agir} ou {examiner} !");
         }
         continue;
       }
@@ -2308,7 +2309,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (this.lieu === "terrain" && !this.voyage) {
       const enScene = this.eteints.some((e) => e.tuto && e.etat !== "detruit");
       if (this.tuto.etape === ETAPE_PREMIER_ETEINT && !enScene) this.amenerEteintDuTutoriel(false);
-      if (this.tuto.etape === ETAPE_SAISIE && !this.tuto.degage && !this.eteints.some((e) => e.tuto && e.saisit !== null)) this.amenerEteintDuTutoriel(true);
+      // Un seul à la fois (0.8.4) : s'il a lâché sans qu'on se dégage, il revient saisir ; on n'en fait pas surgir un autre.
+      if (this.tuto.etape === ETAPE_SAISIE && !this.tuto.degage && !enScene) this.amenerEteintDuTutoriel(true);
     }
   }
 

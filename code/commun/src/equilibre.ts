@@ -11,11 +11,11 @@
 //   poursuite, et viennent à lui à leur vitesse réelle (`VITESSES.poursuivant`) ;
 // - un geste compte **à la fin** de sa durée (`coup`, `coupAppuye` ; pour la décharge longue, sa durée à tenir ; pour
 //   l'arc, bander 1,5 s ; pour l'arbalète armée, viser 0,3 s) : c'est la convention du §8.4 ;
-// - le joueur suit une conduite simple, la même pour tous : frapper d'abord celui qui le tient, achever celui qui est à
+// - le joueur suit une conduite simple, la même pour tous : se dégager d'abord de celui qui le tient, achever celui qui est à
 //   terre, viser la tête ; à l'arme électrique, raidir avant d'éteindre ; au tir, tirer dès que la tête est à portée
 //   (la moitié contre un casqué, de face), et ne réarmer que s'il en a le temps ;
-// - saisi, il ne tire pas : il frappe celui qui le tient (arme de contact) ou se dégage (6 appuis rapides par Éteint
-//   qui le tient, ≈ 0,12 s l'appui) ; une morsure arrive après 3 s de prise ; trois qui le tiennent : il s'effondre.
+// - saisi, il ne frappe ni ne tire (0.8.4) : il se dégage (2 appuis rapides par Éteint qui le tient, même épuisé,
+//   ≈ 0,12 s l'appui) ; une morsure arrive après 3 s de prise ; trois qui le tiennent : il s'effondre.
 //
 // Ce que vaut une rencontre : le **temps équivalent**, c'est-à-dire le temps jusqu'au dernier Éteint détruit, plus le
 // temps de se panser après chaque morsure (6 s, le geste « Faire un pansement »). Une rencontre perdue (effondrement,
@@ -294,12 +294,12 @@ export function simuler(arme: ArmeComparee, scenario: Scenario, options: { secon
       const approche = debout(e) && e.etourdi <= 0 && (e.raidi ?? 0) <= 0 ? vitesse * duree : 0;
       return dist(e) - approche <= x.allonge + 0.35;
     };
-    const tiennent = tenu();
+    // Saisi, on ne frappe plus, quelle que soit l'arme (0.8.4) : on se dégage.
+    if (tenu().length) return { genre: "degager" };
     const proches = vivants().sort((x, y) => dist(x) - dist(y));
     if (a.electrique) {
       const courte = a.coup / 1000;
       const longue = a.coupAppuye / 1000;
-      if (tiennent[0]) return { genre: "frappe", arme: a, cible: tiennent[0], appuye: false };
       const auSol = proches.find((e) => e.etat === "a_terre" && aPortee(e, a, courte));
       if (auSol) return { genre: "frappe", arme: a, cible: auSol, appuye: false };
       const libre = proches.find((e) => debout(e) && e.etourdi <= 0 && aPortee(e, a, courte));
@@ -313,10 +313,6 @@ export function simuler(arme: ArmeComparee, scenario: Scenario, options: { secon
     // L'arme qui le détruit d'un appuyé à la tête, la plus vive ; sinon l'arme de métier, pour le mettre à terre.
     const tueuse = (e: Eteint) => armes.filter((x) => x.tueALaTete && finissable(x, e)).sort((x, y) => x.coupAppuye - y.coupAppuye)[0] ?? null;
     const achevable = (e: Eteint) => armes.filter((x) => finissable(x, e)).sort((x, y) => x.coup - y.coup)[0] ?? null;
-    if (tiennent.length) {
-      const cible = tiennent.find((e) => tueuse(e)) ?? tiennent[0]!;
-      return { genre: "frappe", arme: tueuse(cible) ?? a, cible, appuye: true };
-    }
     for (const e of proches) {
       if (e.etat !== "a_terre") continue;
       const x = achevable(e);
@@ -334,7 +330,7 @@ export function simuler(arme: ArmeComparee, scenario: Scenario, options: { secon
   /** Ce que fait un tireur. */
   const choisirTir = (w: ArmeTir): Geste | null => {
     const tiennent = tenu();
-    if (tiennent.length) return seconde ? choisirFrappe([seconde]) : { genre: "degager" };
+    if (tiennent.length) return { genre: "degager" };
     const viser = w.pleinMs / 1000;
     const recharge = dureeRecharge(w);
     const proches = vivants().sort((x, y) => dist(x) - dist(y));
@@ -391,7 +387,7 @@ export function simuler(arme: ArmeComparee, scenario: Scenario, options: { secon
     } else if (g.genre === "degager") {
       const tiennent = tenu();
       appuis++;
-      if (tiennent.length && appuis >= APPUIS_DEGAGEMENT * tiennent.length * (endurance < SEUIL_EPUISE ? 1.5 : 1)) {
+      if (tiennent.length && appuis >= APPUIS_DEGAGEMENT * tiennent.length) {
         appuis = 0;
         for (const e of tiennent) lacher(e, joueur, ZONE_VIDE);
       }

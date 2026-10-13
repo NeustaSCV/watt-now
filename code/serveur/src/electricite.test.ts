@@ -225,14 +225,17 @@ test("0.6 Voltaïques : la courte puis la longue éteignent un Errant, puis un �
   }
 });
 
-test("0.6 Voltaïques : une courte libère celui qui est saisi", () => {
+test("0.8.4 · Voltaïques : tenu, la courte ne part pas, elle compte pour se dégager (pas d'exception électrique)", () => {
   const t = aLaHalte({ matraque_electrique: 1 });
   const e = devant();
   e.saisit = t.compte.id;
   t.placer(e);
-  t.frapper(false);
-  assert.equal(e.saisit, null, "il lâche");
-  assert.ok((e.raidi ?? 0) > 0);
+  t.joueur.recevoir({ t: "frapper", appuye: false });
+  assert.equal(e.saisit, t.compte.id, "un appui ne libère pas");
+  assert.equal(e.raidi ?? 0, 0, "aucune décharge");
+  assert.equal(t.coups().length, 0);
+  t.joueur.recevoir({ t: "frapper", appuye: false });
+  assert.equal(e.saisit, null, "le second appui libère");
 });
 
 test("0.6 Voltaïques : pack vide, un gourdin court qui ne tue pas ; « Plus de courant » une seule fois", () => {

@@ -91,14 +91,44 @@ test("taper vite pour se dégager ; l'esquive libère aussi", () => {
   const t = monter({});
   t.attendre(0.8);
   assert.equal(t.z().saisit, t.compte.id);
-  for (let i = 0; i < 6; i++) t.joueur.recevoir({ t: "degager" });
-  assert.equal(t.z().saisit, null);
+  t.joueur.recevoir({ t: "degager" });
+  assert.equal(t.z().saisit, t.compte.id, "un appui ne suffit pas");
+  t.joueur.recevoir({ t: "degager" });
+  assert.equal(t.z().saisit, null, "deux appuis libèrent (0.8.4)");
   t.attendre(2.5);
   assert.equal(t.z().saisit, t.compte.id, "il est revenu à la charge");
   t.joueur.recevoir({ t: "esquiver", dx: 0, dz: -1 });
   assert.equal(t.z().saisit, null);
   t.attendre(0.3);
   assert.ok(t.joueur.position.z < 34.6 - 1, "l'esquive fait faire un bond");
+});
+
+test("0.8.4 · tenu, frapper ne frappe pas : A compte comme un appui pour se dégager, même épuisé", () => {
+  const t = monter({ marteau: 1 });
+  t.attendre(0.8);
+  assert.equal(t.z().saisit, t.compte.id);
+  // Épuisé : il n'en faut pas plus (2 appuis, A ou B).
+  (t.joueur as unknown as { endurance: number }).endurance = 1;
+  t.joueur.recevoir({ t: "frapper", appuye: true });
+  assert.ok(!t.recus.some((m) => m.t === "coup"), "aucun coup ne part");
+  assert.equal(t.z().saisit, t.compte.id, "un coup ne libère pas");
+  t.joueur.recevoir({ t: "degager" });
+  assert.equal(t.z().saisit, null, "un A et un B libèrent");
+  // Non tenu, A frappe comme avant.
+  t.attendre(0.1);
+  t.joueur.recevoir({ t: "frapper", appuye: false });
+  assert.ok(t.recus.some((m) => m.t === "coup"));
+});
+
+test("0.8.4 · tenu par deux, il faut 4 appuis", () => {
+  const t = monter({});
+  t.halte.eteints.push(nouvelEteint(98, 40.4, 35.4, "poursuivant"));
+  t.attendre(0.8);
+  assert.equal(t.halte.eteints.filter((e) => e.saisit === t.compte.id).length, 2);
+  for (let i = 0; i < 3; i++) t.joueur.recevoir({ t: i % 2 ? "degager" : "frapper", appuye: false } as never);
+  assert.equal(t.halte.eteints.filter((e) => e.saisit === t.compte.id).length, 2, "3 appuis ne suffisent pas");
+  t.joueur.recevoir({ t: "degager" });
+  assert.equal(t.halte.eteints.filter((e) => e.saisit === t.compte.id).length, 0);
 });
 
 test("un saignement fort mène à l'effondrement : le sac reste là, on se réveille chez soi, et on peut le reprendre", () => {

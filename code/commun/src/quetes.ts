@@ -554,7 +554,7 @@ const METIER_06: Quete[] = [
       { libelle: "Matraque électrique", condition: fabriqueOuObjet(["matraque_electrique", "matraque_electrodes", "matraque_manche_tourne"], ["matraque_electrique"]) },
       { libelle: "Éteint éteint à la décharge", condition: fait("detruit:electrique") },
     ],
-    lecon: "Casque ou pas, le courant passe. Et une courte fait lâcher qui te tient.",
+    lecon: "Casque ou pas, le courant passe. Mais s'il te tient, dégage-toi d'abord.",
     recompense: { wotts: 25 },
   },
   {

@@ -85,7 +85,7 @@ export function etapesTutoriel(famille: Famille): EtapeTutoriel[] {
     },
     {
       titre: "La saisie",
-      consigne: "Il t'a attrapé ! Tape {examiner} très vite pour te dégager.",
+      consigne: "Il t'a attrapé ! Tape deux fois {agir} ou {examiner} pour te dégager.",
       lecon: "Saisi, tu ralentis ; à deux, ils t'immobilisent ; à trois, c'est fini. Ne te laisse jamais encercler.",
     },
     {

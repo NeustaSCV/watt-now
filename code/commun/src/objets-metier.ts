@@ -232,7 +232,7 @@ export const OBJETS_METIER = {
     nom: "matraque électrique",
     pluriel: "matraques électriques",
     poids: 0.9,
-    description: "« La Raquette » : une décharge courte le fait lâcher, maintenue à la tête elle l'éteint. Casque ou pas.",
+    description: "« La Raquette » : une décharge courte le raidit, maintenue à la tête elle l'éteint. Casque ou pas.",
   },
   aiguillon: {
     nom: "aiguillon de défense",

@@ -74,6 +74,21 @@ test("étape 9 : la saisie scénarisée ne mord jamais, et lâche toute seule ; 
   assert.equal(t.dernier("tutoriel")!.tutoriel!.titre, "La carte");
 });
 
+test("0.8.4 · étape 9 : frapper pendant la saisie ne fait pas surgir d'autres Éteints ; deux appuis libèrent", () => {
+  const t = monter(8, { hache: 1 });
+  t.attendre(1);
+  assert.equal(t.dernier("sante")?.saisi, 1);
+  for (let i = 0; i < 5; i++) {
+    t.joueur.recevoir({ t: "frapper", appuye: false });
+    t.attendre(0.3);
+    if (i === 0) assert.equal(t.dernier("sante")?.saisi, 1, "un appui ne libère pas");
+  }
+  const eteints = t.dernier("eteints")?.eteints ?? [];
+  assert.equal(eteints.filter((e) => e.etat !== "detruit").length, 1, "un seul Éteint en scène");
+  assert.equal(t.dernier("tutoriel")!.tutoriel!.titre, "La carte", "dégagé : l'étape est validée");
+  assert.ok(!t.recus.some((m) => m.t === "effondrement"));
+});
+
 test("on peut passer le tutoriel", () => {
   const t = monter();
   t.joueur.recevoir({ t: "tutoriel_passer" });

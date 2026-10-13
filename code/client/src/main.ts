@@ -664,7 +664,7 @@ function commencerVisee(): void {
   if (enVoyage || carte.ouverte || pose.actif || !position) return;
   const v = verbeLancer();
   if (!v) return hud.message(avecTouches("Rien à lancer : une pierre, ou Sac → « Prêt à lancer ».", tactile));
-  if (saisi > 0) return hud.message(avecTouches("Il te tient : dégage-toi d'abord ({examiner}).", tactile));
+  if (saisi > 0) return hud.message(avecTouches("Il te tient : dégage-toi d'abord ({agir} ou {examiner}).", tactile));
   envoyer({ t: "bander" });
   // L'arbalète désarmée : l'appui la réarme (le serveur lance le geste) ; pas de visée.
   if (v.verbe === "Réarmer") return;
@@ -1333,6 +1333,8 @@ function executer(c: Commande): void {
   }
   switch (c) {
     case "A":
+      // Tenu, A sert à se dégager comme B (0.8.4), dès l'appui : on n'a pas l'amplitude pour frapper.
+      if (saisi > 0) return degagerUnCoup();
       // En combat, A se juge au relâchement (coup rapide ou appuyé).
       if (modeCombat) return;
       if (occupe) return envoyer({ t: "annuler" });
@@ -1357,6 +1359,8 @@ function executer(c: Commande): void {
         return;
       }
       if (!modeCombat || enVoyage || carte.ouverte) return;
+      // Tenu, le coup chargé est perdu : le relâchement ne frappe pas (l'appui a déjà compté pour se dégager).
+      if (saisi > 0) return;
       // Un coup va jusqu'au bout (P-004) : pendant le geste, on garde un seul appui, joué à la fin.
       if (performance.now() < coupFiniLe) {
         coupEnAttente = c === "A_long";
@@ -1365,7 +1369,7 @@ function executer(c: Commande): void {
       frapper(c === "A_long");
       return;
     case "B":
-      if (modeCombat) return combatB();
+      if (modeCombat || saisi > 0) return combatB();
       // Pendant une action, n'importe quelle touche d'action l'arrête.
       if (occupe) return envoyer({ t: "annuler" });
       // B (F au clavier) ouvre la fiche Examiner, et la referme.
@@ -1435,15 +1439,19 @@ function aRepousser(): boolean {
   return false;
 }
 
+/** Un appui pour se dégager, avec A ou B (0.8.4) : compté tout de suite pour la jauge, le serveur fait foi. */
+function degagerUnCoup(): void {
+  if (!position || enVoyage) return;
+  appuisLocaux++;
+  coupEnAttente = null;
+  envoyer({ t: "degager" });
+  bruiteur.degagement();
+}
+
 /** B en combat, selon la situation (Book 23 §4.4) : saisi, se dégager ; un Éteint au contact devant, le repousser ; sinon, esquiver. */
 function combatB(): void {
   if (!position || enVoyage) return;
-  if (saisi > 0) {
-    appuisLocaux++;
-    envoyer({ t: "degager" });
-    bruiteur.degagement();
-    return;
-  }
+  if (saisi > 0) return degagerUnCoup();
   if (aRepousser()) {
     if (endurance < REPOUSSER.cout) return hud.message("Trop essoufflé pour repousser.");
     envoyer({ t: "repousser" });
@@ -1758,14 +1766,14 @@ function boucle(instant: number): void {
     if (coupEnAttente !== null && performance.now() >= coupFiniLe) {
       const appuye = coupEnAttente;
       coupEnAttente = null;
-      if (modeCombat && !enVoyage) frapper(appuye);
+      if (modeCombat && !enVoyage && saisi === 0) frapper(appuye);
     }
     personnage.preparer(arcVise ? 1 : modeCombat ? entrees.chargeA : viseeEnCours ? 1 : 0);
     // Le lancer (0.6) : la visée suit l'Éteint accroché ; le bouton dit ce qu'il fera (Lancer, Tirer, Réarmer).
     majViseeLancer();
     projectiles.animer(dt);
     hud.majPret(pretChoisi, verbeLancer()?.verbe ?? null);
-    hud.saisie(saisi, appuisLocaux / (APPUIS_DEGAGEMENT * Math.max(1, saisi) * (endurance < SEUIL_EPUISE ? 1.5 : 1)));
+    hud.saisie(saisi, appuisLocaux / (APPUIS_DEGAGEMENT * Math.max(1, saisi)));
     // Un blessé qui saigne laisse des gouttes derrière lui.
     if (sante.saignement !== "aucun" && instant > prochaineGoutte) {
       prochaineGoutte = instant + (sante.saignement === "fort" ? 350 : 1200);
@@ -1801,10 +1809,10 @@ function boucle(instant: number): void {
       // Une sortie ou la mare (sans cible au sol) passent avant : on s'y tient exprès.
       if (!propositions.A || (c && dechet.distance < Math.max(0, Math.hypot(c.x - position.x, c.z - position.z) - (c.rayon ?? 0.5)))) propositions = dechet.propositions;
     }
-    if (modeCombat) {
-      // En combat, A frappe et B esquive ; saisi, B sert à se dégager.
+    if (modeCombat || saisi > 0) {
+      // En combat, A frappe et B esquive ; saisi, A et B servent à se dégager.
       propositions = {
-        A: { libelle: "Frapper (maintenir : à la tête)", examiner: "" },
+        A: { libelle: saisi > 0 ? "Se dégager" : "Frapper (maintenir : à la tête)", examiner: "" },
         B: { libelle: saisi > 0 ? "Se dégager" : aRepousser() ? "Repousser" : "Esquiver", examiner: "" },
         cible: null,
       };
