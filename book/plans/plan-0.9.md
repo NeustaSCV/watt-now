@@ -2,6 +2,8 @@
 
 *Version du plan : v0.4 · 2026-10-13 · **Statut : décidé, prêt à lancer après la 0.8.3** (rien n'est codé).*
 
+*v0.5 (2026-10-13) : un ajout du porteur (M4) : **à terre ou détruit, ça se voit au corps de l'Éteint**, sans barre de vie (piste 2 retenue, la barre écartée par le principe du Book 05). Chantier F, vague 1.*
+
 *v0.4 (2026-10-13) : les questions Q-7 à Q-10 tranchées (§9.1). Une arme encombrante portée dans le dos, comme la fourche, se voit en permanence, et tous les gestes sont montrés.*
 
 *v0.3 (2026-10-13) : le plan rédigé en entier :
@@ -22,7 +24,8 @@
   - on voit les autres joueurs **marcher, courir et s'arrêter de façon fluide**, avec la bonne animation ;
   - on les voit **frapper, esquiver, repousser, travailler**, et l'arme en main pendant le coup ;
   - **quand un Éteint nous tient, on ne frappe plus** : A et B servent tous deux à se dégager ;
-  - **l'Équipé (le casqué) ne se laisse plus bloquer** en martelant : il n'est étourdi qu'un coup sur deux.
+  - **l'Équipé (le casqué) ne se laisse plus bloquer** en martelant : il n'est étourdi qu'un coup sur deux ;
+  - **un Éteint à terre ne ressemble plus à un Éteint détruit** : à terre, il remue ; détruit, il est inerte (M4).
 - **5 chantiers en 2 vagues**, sans contenu nouveau dans le monde : ni lieu, ni arme, ni Éteint, ni objet.
 - **Effort : 2 M et 3 S, environ 6 jours-agent. En pratique, une demi-journée à une journée**, recette comprise (§6).
 - **Pas de remise à zéro** des joueurs : rien ne change dans les sauvegardes.
@@ -39,6 +42,7 @@
 | M1 | « Un autre joueur dans une halte se déplace par à-coups, et je ne le vois pas marcher. » | Envoi régulier, affichage différé et interpolé ; l'allure et les gestes transmis | A, B |
 | M2 | « En martelant la touche d'attaque, l'Éteint ne nous touche jamais. Pour l'Éteint de base, ça peut aller (le danger, c'est la masse) ; pas pour le casqué. » | L'Équipé n'est étourdi qu'un coup sur deux | D |
 | M3 | « Saisi, appuyer sur Frapper nous libère, alors qu'on n'a pas l'amplitude pour taper. Marteler la frappe sort de toutes les situations. » | Saisi, on ne frappe plus ; seul le dégagement libère | C |
+| M4 | « Quand ils sont au sol, on ne voit pas qu'ils ne sont pas morts. » (2026-10-13 ; une barre de vie au-dessus des Éteints proposée, puis écartée par le porteur) | Le corps le dit : à terre, il remue et gémit ; détruit, il est inerte, les yeux éteints, la peau pâlie | F |
 
 ### 1.2 Ce qui n'entre pas
 
@@ -83,6 +87,13 @@
 - **L'Équipé** (`variante: "equipe"`) encaisse un coup de plus au torse, et le tranchant ne le tue pas à la tête. Mais il est **étourdi exactement comme les autres**.
 
 ---
+
+### 2.4 Au sol, à terre ou détruit (M4)
+
+- **À l'écran, rien ne les distingue.** `rendu/eteint.ts` joue la même animation `Death01` pour `a_terre` et pour `detruit`, puis le corps reste figé dans sa dernière pose (vers la ligne 222).
+- **Les yeux** restent ouverts dans les deux cas. La lueur s'éteint chez le détruit, mais elle ne se voit que dans le noir (`luire()`) : de jour, aucune différence.
+- **Le Rampant** est inerte à terre comme détruit (`ramper()`, `inerte`).
+- **Le serveur sait déjà tout** : `etat` (`a_terre` ou `detruit`) et `aTerre` (le temps avant de se relever) sont dans l'Éteint ; `etat` est déjà envoyé au client. Le gémissement existe (`gemit`, `GEMISSEMENT`).
 
 ## 3. Les règles de jeu que la 0.9 met en œuvre
 
@@ -146,6 +157,21 @@
 - **Ce qui fait toujours vaciller** : la poussée (B au contact) et la décharge électrique. Avec le coup appuyé au contondant une fois à terre, ce sont les vraies réponses à l'Équipé.
 - **Le signe à l'écran** : le coup « encaisse » a un **son plus mat** (le casque, le blouson), **peu de sang**, et un **léger sursaut** de l'Éteint, sans recul. Le joueur doit comprendre « celui-là encaisse ».
 - **Un réglage à chaud** : la fréquence (« étourdi un coup sur N », 2 par défaut) se change sans redéployer, comme les autres réglages d'équilibre.
+
+### 3.3 bis À terre ou détruit, au corps de l'Éteint (M4)
+
+- **Pas de barre de vie** ni de signe flottant (Book 05, principe 1 : « Pas de barre de vie magique »). On lit l'Éteint lui-même.
+- **À terre (pas fini)** :
+  - **il remue** : après la chute, une boucle de soubresauts, une main qui griffe le sol, la tête qui se soulève, comme s'il cherchait à se relever. De jour comme de nuit ;
+  - **il gémit**, de loin en loin ;
+  - **ses yeux** restent ouverts, et luisent dans le noir comme debout ;
+  - **juste avant de se relever** (les dernières secondes de `aTerre`), il prend appui : le geste annonce le danger.
+- **Détruit** :
+  - **inerte** : plus un mouvement, plus un son ;
+  - **les yeux éteints**, mi-clos ;
+  - **la peau pâlit** en une ou deux secondes : le gris-vert vire au gris cendre.
+- **Le Rampant** : à terre, ses bras tirent encore un peu, sans avancer ; détruit, inerte et pâli comme les autres.
+- **Rien ne change aux règles** : ni la durée au sol, ni la façon de l'achever. Seul l'affichage (et un son) change.
 
 ### 3.4 Le format des messages (fixé d'avance)
 
@@ -247,6 +273,17 @@ Ce format est le contrat entre les chantiers A (serveur) et B (client) : il perm
   - l'Errant ne change pas ;
   - au banc, le martèlement face à un Équipé donne au moins une saisie, et face à un Errant, aucune (comme aujourd'hui).
 
+**Chantier F · À terre ou détruit, au corps** (vague 1, **S**, client seulement)
+
+- **Contenu** :
+  - **le message** : l'Éteint vu porte, à terre, s'il va bientôt se relever (un booléen `serelève`, envoyé seulement dans ses dernières secondes au sol) ; c'est le seul ajout côté serveur (`commun/src/eteints.ts`, la vue) ;
+  - **`rendu/eteint.ts`** : après `Death01`, à terre, une boucle de soubresauts (os de la tête, d'un bras et du buste animés par-dessus la pose finale, ou un clip existant s'il convient) ; détruit, aucune boucle, et un fondu de la teinte de la peau vers le gris cendre ; les yeux du détruit mi-clos (`fermerLesYeux`) ;
+  - **le Rampant** (`ramper()`) : à terre, `rampement.animer` à faible amplitude sur place ;
+  - **le son** : un gémissement étouffé, à terre, de loin en loin, par le bruiteur existant (effet synthétisé côté code, comme les autres effets ; la session musique n'est pas sollicitée) ;
+  - **les textes** : l'aide sur le combat (« À terre, il remue encore : achève-le. Détruit, il ne bouge plus, et pâlit. »).
+- **Fichiers** : `client/src/rendu/eteint.ts`, `client/src/rendu/humanoides.ts` (la teinte, si elle n'est pas déjà réglable), `commun/src/eteints.ts` (la vue), le bruiteur, `client/src/aide-contenu.ts`.
+- **Tests** : la vue d'un Éteint à terre porte `serelève` dans ses dernières secondes seulement ; un détruit ne remue pas (l'état d'animation) ; `textes-du-jeu.test.ts`. **Contrôle à l'œil**, de jour : à 5 m, on distingue un Éteint à terre d'un Éteint détruit sans hésiter (capture des deux côte à côte).
+
 ### Vague 2 · La recette
 
 **Chantier E · Recette, mesures, books et version** (vague 2, **S**)
@@ -272,7 +309,7 @@ Ce format est le contrat entre les chantiers A (serveur) et B (client) : il perm
 
 | Vague | Chantiers (en parallèle) | Avant la vague suivante |
 |---|---|---|
-| **1** | **A** présences · **B** affichage · **C** saisie · **D** Équipé | A et B fusionnés ensemble (le format du §3.4), puis C et D |
+| **1** | **A** présences · **B** affichage · **C** saisie · **D** Équipé · **F** au sol | A et B fusionnés ensemble (le format du §3.4), puis C et D |
 | **2** | **E** recette, mesures, books, version | La livraison |
 
 **Les fichiers partagés** (même principe que la 0.8 : un module par chantier, des appels d'une ligne, des blocs séparés) :
@@ -298,7 +335,8 @@ Ce format est le contrat entre les chantiers A (serveur) et B (client) : il perm
 6. **Face à un Errant seul, rien ne change** par rapport à la 0.8.3.
 7. **Le débit réseau à la halte** reste sous 8 Ko/s par joueur (7,4 Ko/s mesurés jusqu'ici), et l'iPhone 13 mini reste à 60 images par seconde.
 8. **Une partie 0.8.3 se relit** sans rien perdre.
-9. `npm run verif`, `npm test`, `npm run build` passent. `npm run equilibre` et `npm run rythme` tiennent.
+9. **De jour, à 5 m, on voit tout de suite** si un Éteint au sol est à terre (il remue) ou détruit (inerte, pâli). On voit aussi quand il va se relever.
+10. `npm run verif`, `npm test`, `npm run build` passent. `npm run equilibre` et `npm run rythme` tiennent.
 
 ---
 
@@ -313,7 +351,8 @@ Ce format est le contrat entre les chantiers A (serveur) et B (client) : il perm
 | C · Saisie | S | 0,75 |
 | D · Équipé | S | 0,75 |
 | E · Recette, mesures, books, version | S | 1 |
-| **Total** | **2 M, 3 S** | **≈ 6 jours-agent** (fourchette 4 à 9) |
+| F · À terre ou détruit, au corps | S | 0,75 |
+| **Total** | **2 M, 4 S** | **≈ 6,75 jours-agent** (fourchette 4,5 à 10) |
 
 **En temps réel**, d'après la 0.8 et la 0.8.2 (agents en parallèle) :
 - vague 1 : 1 h à 1 h 30 (le plus long, l'affichage) ;
