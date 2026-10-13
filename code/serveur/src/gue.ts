@@ -16,7 +16,6 @@ import {
   ID_DERIVE,
   LIGNES_CRUE,
   LIGNE_RADIER_NOYE,
-  MARGE_A_BORD,
   auBordDuRadierNoye,
   loinDuRadierNoye,
   LIGNE_DERIVE,
@@ -30,6 +29,8 @@ import {
   VERSION_GUE,
   VITESSE_RADEAU,
   aBord,
+  auBordDuRadeau,
+  surLePlancher,
   accostage,
   crue,
   eteintsGue,
@@ -200,7 +201,10 @@ export class Gue extends LieuVivant {
     const p = ctx.position();
     if (this.haleur && this.haleur.id !== ctx.id && this.haleur.geste() === LIBELLE_HALER) return ctx.info("Quelqu'un hale déjà le bac : un seul tire la corde.");
     let vers: number;
-    if (aBord(p.x, p.z, xr, MARGE_A_BORD)) {
+    if (auBordDuRadeau(p.x, p.z, xr)) {
+      // Plan 0.8.2 §7.6 : du bord du radeau à quai (ou d'un pied sur le plancher), on monte à bord d'un pas : le radeau
+      // emporte ses passagers, pas qui reste sur le quai.
+      if (!aBord(p.x, p.z, xr, 0)) ctx.deplacer({ ...surLePlancher(p.x, p.z, xr), o: p.o });
       const ou = accostage(xr);
       vers = ou === "cale" ? BAC.ponton.x : ou === "ponton" ? BAC.cale.x : (this.mouvement.vers ?? this.dernierVers);
     } else {

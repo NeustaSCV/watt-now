@@ -27,7 +27,10 @@ import {
   ricochet,
   surLeRadier,
   zoneGue,
+  aBord,
+  auBordDuRadeau,
 } from "../../commun/src/gue.ts";
+import { avancer } from "../../commun/src/deplacement.ts";
 import { ETEINTS_MODELE, FOUILLE_MODELE, SEGMENTS_MODELE } from "../../commun/src/gue-modele.ts";
 import { cleCouche, dispositionLieu } from "../../commun/src/couche-dechets.ts";
 import { DUREE_VOYAGE_S, SORTIES_GUE, SORTIE_TERRAIN, ZONE_GUE, bordsLibres, heurte } from "../../commun/src/lieux.ts";
@@ -609,4 +612,52 @@ test("0.8.2 : une partie 0.8.1 se relit (le contenu du gué se régénère, rien
   assert.deepEqual(base.chargerInventaire(compte.id), { pierre: 3, glaise: 2, sac_a_dos: 1 });
   const banc = parType(gue, "banc_galets")[0]!;
   assert.ok(gue.disponiblePour(banc, compte.id, base.debutMonde() + 1000), "le banc de galets repart plein");
+});
+
+// ---------- Plan 0.8.2 §7.6 : monter sur le radeau depuis le ponton ----------
+
+test("0.8.2 §7.6 : au ponton, on monte sur le radeau sur toute sa largeur, même venu en biais", () => {
+  const zone = zoneGue({ radeau: BAC.ponton.x, noye: false });
+  // Du ponton (son milieu), vers un coin du plancher, en biais : on arrive à bord sans buter.
+  for (const cible of [{ x: BAC.ponton.x - 1, z: BAC.z - 1.5 }, { x: BAC.ponton.x - 1, z: BAC.z + 1.5 }]) {
+    let p = { x: BAC.ponton.embarquement.x + 0.8, z: BAC.z, o: 0 };
+    for (let i = 0; i < 200 && Math.hypot(cible.x - p.x, cible.z - p.z) > 0.1; i++) {
+      const d = Math.hypot(cible.x - p.x, cible.z - p.z);
+      p = avancer(p, { dx: (cible.x - p.x) / d, dz: (cible.z - p.z) / d, allure: "marche" }, 0.05, zone);
+    }
+    assert.ok(Math.hypot(cible.x - p.x, cible.z - p.z) <= 0.1, `arrivé à bord (${p.x.toFixed(2)}, ${p.z.toFixed(2)})`);
+  }
+  // Juste au bout du plancher, sur toute la largeur entre les garde-corps : rien n'arrête.
+  for (const dz of [-1.6, -1, 0, 1, 1.6]) assert.ok(!heurte(zone, BAC.ponton.x - BAC.demiLongueur + 0.05, BAC.z + dz, 0.35), `bout du plancher, ${dz}`);
+  // Le radeau parti, l'eau revient au bout du ponton : on n'y marche pas.
+  const vide = zoneGue({ radeau: BAC.cale.x, noye: false });
+  assert.ok(heurte(vide, BAC.ponton.x - BAC.demiLongueur + 0.2, BAC.z, 0.35));
+});
+
+test("0.8.2 §7.6 : au bord du radeau à quai, « Haler » se propose ; on monte à bord d'un pas et le radeau nous emporte", () => {
+  const m = monde();
+  const rose = m.nouveau("Rose");
+  // Le radeau au ponton.
+  rose.joueur.position = { x: BAC.cale.x, z: BAC.z, o: 0 };
+  rose.joueur.recevoir({ t: "gue", op: "haler" });
+  m.attendre(DUREE_TRAVERSEE_S + 0.5);
+  assert.equal(placeRadeau(m.gue.radeau, m.maintenant()), BAC.ponton.x);
+  rose.joueur.position = { x: BAC.ponton.x, z: BAC.z, o: 0 };
+  rose.joueur.recevoir({ t: "intention", dx: -1, dz: 0, allure: "marche", seq: 1 });
+  m.attendre(3);
+  rose.joueur.recevoir({ t: "intention", dx: 0, dz: 0, allure: "marche", seq: 2 });
+  m.attendre(0.5);
+  const malo = m.nouveau("Malo");
+  // Sur le ponton, à un mètre du bout du radeau : pas à bord, mais au bord.
+  const bord = { x: BAC.ponton.x - BAC.demiLongueur - 0.9, z: BAC.z + 0.3, o: 0 };
+  assert.ok(!aBord(bord.x, bord.z, BAC.ponton.x, 0.45) && auBordDuRadeau(bord.x, bord.z, BAC.ponton.x));
+  assert.ok(!auBordDuRadeau(bord.x - 1, bord.z, BAC.ponton.x), "plus loin sur le ponton : non");
+  assert.ok(!auBordDuRadeau(bord.x, bord.z, BAC.cale.x), "le radeau ailleurs : non");
+  malo.joueur.position = bord;
+  malo.joueur.recevoir({ t: "gue", op: "haler" });
+  assert.equal((malo.dernier("action") as { libelle?: string } | undefined)?.libelle, LIBELLE_HALER);
+  assert.ok(aBord(malo.joueur.position.x, malo.joueur.position.z, BAC.ponton.x, 0), "monté à bord");
+  m.attendre(DUREE_TRAVERSEE_S + 0.5);
+  assert.equal(placeRadeau(m.gue.radeau, m.maintenant()), BAC.cale.x);
+  assert.ok(aBord(malo.joueur.position.x, malo.joueur.position.z, BAC.cale.x, 0), "emporté jusqu'à la cale");
 });

@@ -299,6 +299,34 @@ export function aBord(x: number, z: number, xr: number, marge = 0): boolean {
   return Math.abs(x - xr) <= BAC.demiLongueur + marge && Math.abs(z - BAC.z) <= BAC.demiLargeur + marge;
 }
 
+/**
+ * Plan 0.8.2 §7.6 : au bord du radeau à quai, sur la cale ou le ponton, « Haler le bac » se propose déjà : jusqu'à
+ * cette distance (m) du bout du plancher qui touche le quai, sur toute sa largeur. On monte à bord d'un pas en halant.
+ */
+export const BORD_DU_RADEAU = 1.2;
+
+/** Le côté du quai où le radeau est accosté (+1 : vers +x, −1 : vers −x), ou 0 s'il est au milieu de l'eau. */
+function coteDuQuai(xr: number): -1 | 0 | 1 {
+  const ou = accostage(xr);
+  if (!ou) return 0;
+  return BAC[ou].embarquement.x > xr ? 1 : -1;
+}
+
+/** Est-on au bord du radeau à quai (sur le quai, contre son bout), ou déjà à bord ? */
+export function auBordDuRadeau(x: number, z: number, xr: number): boolean {
+  if (aBord(x, z, xr, MARGE_A_BORD)) return true;
+  const sens = coteDuQuai(xr);
+  if (sens === 0 || Math.abs(z - BAC.z) > BAC.demiLargeur) return false;
+  const hors = sens * (x - (xr + sens * BAC.demiLongueur));
+  return hors >= 0 && hors <= BORD_DU_RADEAU;
+}
+
+/** La place sur le plancher la plus proche (entre les garde-corps, à un pas des bouts) : où l'on monte pour haler. */
+export function surLePlancher(x: number, z: number, xr: number): { x: number; z: number } {
+  const bord = (v: number, c: number, demi: number) => Math.min(c + demi, Math.max(c - demi, v));
+  return { x: bord(x, xr, BAC.demiLongueur - 0.5), z: bord(z, BAC.z, BAC.demiLargeur - 0.6) };
+}
+
 // ---------- La zone : le modèle, l'eau, et ce qui bouge ----------
 
 /** Les obstacles qui arrêtent un coup ou un objet lancé : les murs, les talus boisés, les épaves. Le reste est bas. */
@@ -355,6 +383,13 @@ const COULOIR = (() => {
   return { x0: xa, x1: xb, z0: BAC.z - BAC.demiLargeur - 0.1, z1: BAC.z + BAC.demiLargeur + 0.1 } as const;
 })();
 
+/**
+ * Plan 0.8.2 §7.6 : au bout du ponton (et de la cale), l'eau et les bords s'arrêtent à un rayon de personnage du
+ * radeau à quai. On y monte alors sur toute la largeur du plancher, et non plus par le seul mètre du ponton : venu en
+ * biais, on ne bute plus sur le coin.
+ */
+const RAYON_ABORD = 0.35;
+
 /** Les pontons de bois avancent sur l'eau : on y marche (celui du bac, celui des barques de la guinguette). */
 const PONTONS = ([[12.6, -26, 9.4, -24], [-3.6, 22.6, -9, 24.2]] as const).map(([xa, za, xb, zb]) => {
   const a = auGue(xa, za);
@@ -378,7 +413,7 @@ function boitesDEau(): Boite[] {
       const eau =
         dansLaRiviere(x + pas / 2, z) &&
         !surLeBanc(x + pas / 2, z, 0.2) &&
-        !(x + pas > COULOIR.x0 && x < COULOIR.x1 && z + 0.25 > COULOIR.z0 && z - 0.25 < COULOIR.z1) &&
+        !(x + pas > COULOIR.x0 - RAYON_ABORD && x < COULOIR.x1 + RAYON_ABORD && z + 0.25 > COULOIR.z0 && z - 0.25 < COULOIR.z1) &&
         !PONTONS.some((p) => x + pas > p.x0 && x < p.x1 && z + 0.25 > p.z0 && z - 0.25 < p.z1);
       if (eau && debut === null) debut = x;
       if (!eau) fermer(x);
@@ -399,6 +434,8 @@ const BOITES_FIXES: { hautes: Boite[]; basses: Boite[] } = (() => {
     if (NATURES_AU_BORD_DE_LEAU.has(s.nature)) boites = boites.flatMap(enMorceaux).filter((b) => dansLaRiviere(b.x, b.z, -0.3));
     // La barrière tombée (le modèle en couche une sur quatre, au hasard de l'usure) laisse un passage vers la culée :
     // on y passe, comme on le voit (l'eau arrête au bord).
+    // Le bout des bords du ponton du bac, contre le radeau à quai : ôté (RAYON_ABORD).
+    if (s.nature === "bord du ponton") boites = boites.flatMap(enMorceaux).filter((b) => Math.abs(b.z - BAC.z) > 3 || b.x + b.l / 2 <= COULOIR.x0 - RAYON_ABORD + 0.01);
     if (s.nature.startsWith("barrières de chantier")) boites = boites.flatMap(enMorceaux).filter((b) => b.z < BARRIERE_TOMBEE.z0 || b.z > BARRIERE_TOMBEE.z1);
     (NATURES_HAUTES.has(s.nature) ? hautes : basses).push(...boites);
   }

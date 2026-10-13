@@ -15,12 +15,12 @@ import {
   GLAISE,
   GLAISE_DU_DESSIN,
   ID_DERIVE,
-  MARGE_A_BORD,
   OUIE_RADIER,
   PORTEE_EMBARCADERE,
   RADEAU_AU_REPOS,
   RADIER,
   aBord,
+  auBordDuRadeau,
   accostage,
   auGue,
   crue,
@@ -453,7 +453,8 @@ export class RenduGue {
     const examenBac = "Le radeau du passeur, sur ses bidons, glisse le long du câble. On tire la corde : un quart de minute jusqu'à l'autre rive, de jour comme de nuit. On peut lâcher pour se battre.";
     // Plan 0.8.2 (R3) : à bord, haler passe avant tout, partout sur le plancher et dès qu'on y pose le pied (autrefois
     // à égalité avec ce qu'on visait autour, il pouvait ne pas paraître).
-    if (aBord(p.x, p.z, xr, MARGE_A_BORD)) {
+    // Plan 0.8.2 §7.6 : et dès le bord du radeau à quai (on monte à bord d'un pas en halant).
+    if (auBordDuRadeau(p.x, p.z, xr)) {
       const prop: Propositions = { A: haler, B: { libelle: "Examiner", examiner: examenBac }, cible: null };
       this.dernier = { p: { x: p.x, z: p.z }, prop, base };
       return prop;
