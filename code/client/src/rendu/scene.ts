@@ -233,6 +233,9 @@ export class Scene {
   }
 
   dessiner(): void {
+    // 0.8.4 : sur iPhone, après un quart de tour (pendant l'accueil surtout), « resize » arrive avant que la fenêtre ait
+    // sa nouvelle taille ; l'image restait alors à l'ancien format, étirée. On revérifie à chaque image (deux lectures).
+    if (window.innerWidth !== this.largeurDessin || window.innerHeight !== this.hauteurDessin) this.redimensionner();
     if (this.frustumOmbre && this.soleil.castShadow) this.frustumOmbre.preparer(this.camera, this.soleil);
     // La vue d'ensemble immobile (0.8.2, chantier G) : tout le lieu est dans la passe d'ombre, mais rien ne bouge ou
     // presque (le monde est en pause, ou l'on regarde de loin) : on ne refait les ombres qu'une image sur 20.
@@ -246,9 +249,15 @@ export class Scene {
     this.rendu.render(this.scene, this.camera);
   }
 
+  /** La taille de fenêtre du dernier redimensionnement : l'image est dessinée pour elle. */
+  private largeurDessin = 0;
+  private hauteurDessin = 0;
+
   private redimensionner(): void {
+    this.largeurDessin = window.innerWidth;
+    this.hauteurDessin = window.innerHeight;
     this.projeter();
-    this.rendu.setSize(window.innerWidth, window.innerHeight, false);
+    this.rendu.setSize(this.largeurDessin, this.hauteurDessin, false);
   }
 
   /** La projection de la caméra, au zoom de l'image (sans toucher à la taille du dessin : la vue d'ensemble l'appelle à chaque image). */

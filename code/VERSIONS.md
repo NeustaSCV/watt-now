@@ -12,7 +12,14 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
-## 0.8.3 · prête à déployer
+## 0.8.4 · prête à déployer
+
+- **Se dégager, enfin faisable** : quand un Éteint te tient, tu ne frappes plus. A sert à se dégager, comme B, et **deux appuis suffisent**, même essoufflé (avant : six sur B, neuf essoufflé). Aucune arme ne libère d'un coup, la matraque non plus.
+- **La saisie du tutoriel** : frapper pendant la saisie ne fait plus surgir un autre Éteint dans ton dos à chaque coup. Avant, ils s'accumulaient jusqu'à trois, et l'on s'effondrait.
+- **Partir de chez soi** : sur ton terrain, tu ouvres la carte de n'importe où et tu pars, sans chercher le bout du chemin. Ailleurs, il faut toujours aller jusqu'à la sortie. On ne part pas quand un Éteint te tient.
+- **L'image sur téléphone** : si tu tournes le téléphone pendant l'accueil, l'image n'arrive plus déformée sur le terrain.
+
+## 0.8.3 · déployée le 2026-10-13
 
 - **La glaise du gué, bien en vue** : la berge de glaise est maintenant au milieu de la vase, à découvert. Plus d'arbre au-dessus pour te cacher pendant que tu creuses.
 - **Le Moulin retouché** : le chemin du jardin est dégagé derrière le magasin, la planche du bief est plus large, et les portes intérieures du logis et des dépendances aussi. Le bord du lot se voit enfin : une haie au nord et à l'ouest, un muret de pierres au sud et à l'est, plus de mur invisible. Dans le couloir du rouet, le rouet et sa lanterne s'effacent pour te laisser voir où tu marches.
