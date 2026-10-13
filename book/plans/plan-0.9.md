@@ -119,6 +119,8 @@
 
 - **Tant qu'un Éteint nous tient, A ne frappe pas** : on n'a pas l'amplitude.
 - **A compte alors comme un appui de dégagement**, exactement comme B (Q-5). Il faut 6 appuis par Éteint qui tient, chacun coûte de l'endurance (3), et la morsure approche.
+  > *Changé le 2026-10-13 : ce point est avancé en **0.8.4**, avec **2 appuis** par Éteint qui tient au lieu de 6, partout (voir `en-suspens.md` §1 bis, point 3). Le chantier C et ses tests sont à ajuster avant de lancer la 0.9.*
+  > *Fait en 0.8.4 (v0.8.4) : tout le chantier C est codé (serveur, bouton A « Se dégager », textes, banc d'équilibre, tests à 2 et 4 appuis), sans le multiplicateur « épuisé ». À retirer de la 0.9.*
 - **Le bouton A affiche « Se dégager »** pendant la saisie, comme B. La jauge de dégagement (`hud.saisie`) compte les appuis des deux boutons.
 - **Le coup appuyé** chargé avant la saisie est perdu : le relâchement ne frappe pas.
 - **Aucune arme ne fait exception** :
