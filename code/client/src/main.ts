@@ -271,13 +271,6 @@ function majVisee(rayon: number, instant: number): void {
  */
 /** Les gestes sur une cible qui se font sur-le-champ : un appui, un effet (pas d'anneau, pas de maintien). */
 const VERBES_IMMEDIATS = new Set(["ajouter_bois", "porter", "assommer"]);
-/** Le dernier rappel « garde A enfoncé » (pour ne pas le répéter à chaque clic). */
-let rappelMaintien = 0;
-function rappelerMaintien(): void {
-  if (performance.now() - rappelMaintien < 8000) return;
-  rappelMaintien = performance.now();
-  hud.message(tactile ? "Garde le bouton enfoncé : l'anneau doit se remplir." : avecTouches("Garde {agir} enfoncé : l'anneau doit se remplir.", false));
-}
 /** La faune du terrain (2026-10-08) : la volaille (serveur), les lapins, le renard et les oiseaux de la mare (ici). */
 const volaille = new Volaille();
 const fauneAmbiante = new FauneAmbiante();
@@ -839,13 +832,9 @@ function recevoir(message: MessageServeur): void {
         const sansCible = !maintien;
         if (!maintien) maintien = { cible: null, relache: true, tenu: false, debut: 0, duree: 0 };
         {
-          // Plan 0.8.2 §7.6 : au toucher, un appui bref suffit (geste-tenu.ts) ; un nouvel appui ou un pas l'arrête.
+          // Plan 0.8.2 §7.6 : un appui bref suffit, au toucher comme au clavier (geste-tenu.ts) ; un nouvel appui ou
+          // un pas l'arrête.
           maintien.tenu = seFaitEnTenantA({ tactile, sansCible, fabrication: !!maintien.tas, duree: message.duree });
-          // Geste court, A déjà lâché avant qu'il commence : on s'arrête tout de suite, et on dit pourquoi.
-          if (maintien.tenu && maintien.relache) {
-            envoyer({ t: "annuler" });
-            rappelerMaintien();
-          }
           // Un geste long repris : l'anneau repart de la part déjà faite.
           maintien.debut = performance.now() - (message.deja ?? 0) * message.duree * 1000;
           maintien.duree = message.duree * 1000;
@@ -1362,15 +1351,9 @@ function executer(c: Commande): void {
       return;
     case "A_court":
     case "A_long":
-      // Hors combat : lâcher A arrête le geste en cours.
+      // Hors combat : lâcher A ne fait rien (0.8.2 §7.6) ; le geste va jusqu'au bout, un nouvel appui l'arrête.
       if (!modeCombat && maintien) {
         maintien.relache = true;
-        // Seul un geste court s'arrête quand on lâche ; un geste long continue jusqu'au prochain appui.
-        if (occupe && maintien.tenu && maintien.duree > 0) {
-          envoyer({ t: "annuler" });
-          // Lâché bien avant la fin : on dit qu'il fallait tenir.
-          if (performance.now() - maintien.debut < maintien.duree * 0.9) rappelerMaintien();
-        }
         return;
       }
       if (!modeCombat || enVoyage || carte.ouverte) return;

@@ -3,6 +3,7 @@
 // barre de progression, messages, et les boutons tactiles près du pouce (Book 08 §3.4).
 
 import { libelleBoutonB, motLongB } from "./libelle-bouton.ts";
+import { inviteArreter } from "./geste-tenu.ts";
 import { VERSION } from "../../commun/src/version.ts";
 import { REGLAGES } from "../../commun/src/reglages.ts";
 import { ceQuiManque } from "../../commun/src/aide-fabrication.ts";
@@ -707,7 +708,10 @@ export class Hud {
   /** `tenu` : le geste en cours se fait en tenant A (son libellé, pour le bouton tactile). */
   propositions(p: Propositions, occupe: boolean, tenu: string | null = null): void {
     const texte = occupe
-      ? ""
+      ? // Plan 0.8.2 §7.6 : pendant un geste, la touche d'action l'arrête (comme le bouton A au toucher).
+        this.boutonA
+        ? ""
+        : inviteArreter(nomDe("agir"))
       : // Au clavier, on montre les vraies touches (E ou clic gauche, F ou clic droit).
         [p.A ? `<kbd>${nomDe("agir")}</kbd> ${p.A.libelle}` : "", p.B ? `<kbd>${nomDe("examiner")}</kbd> ${p.B.libelle}` : "", this.inviteTir()].filter(Boolean).join("<span class='sep'>·</span>");
     const cle = `${occupe}|${tenu}|${p.A?.libelle ?? ""}|${p.B?.libelle ?? ""}|${nomDe("agir")}|${nomDe("examiner")}|${this.inviteTir()}`;

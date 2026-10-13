@@ -122,3 +122,11 @@ test("0.8 aide : « Faire évoluer une arme » remplace « Réparer (Sac → l'a
 test("0.8 aide : dans les résumés, un nombre et son unité sont liés par une espace insécable", () => {
   for (const r of RUBRIQUES_AIDE) assert.ok(!/\d (h|min|km|kg|m|s|L)\b/.test(r.resume), `${r.id} : ${r.resume}`);
 });
+
+test("0.8.2 §7.6 : l'aide ne dit plus de maintenir {agir} pour ramasser ; un appui suffit, un second l'arrête", () => {
+  const tout = JSON.stringify(RUBRIQUES_AIDE);
+  assert.ok(!/Vise une ressource et maintiens/.test(tout));
+  assert.match(tout, /appuie sur \{agir\} : un appui suffit, le geste va jusqu'au bout ; un second appui l'arrête/);
+  // Le combat garde sa règle : maintenir pour le coup appuyé.
+  assert.match(tout, /Coup appuyé\*\* : maintiens \{agir\}/);
+});
