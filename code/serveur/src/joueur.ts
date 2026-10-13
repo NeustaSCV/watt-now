@@ -55,7 +55,7 @@ import {
   type Besoins,
   type Gourde,
 } from "../../commun/src/survie.ts";
-import { DISTANCE_INTERACTION, PORTEE_ARBRE, distanceMare, RAYON_ESCABEAU, REPOUSSE_MS, USAGES, estArbre, ressourceVisible } from "../../commun/src/terrain.ts";
+import { DISTANCE_INTERACTION, PORTEE_ARBRE, TEXTE_GOURDE_AU_MILIEU, auMilieuDeLaMare, distanceMare, RAYON_ESCABEAU, REPOUSSE_MS, USAGES, estArbre, ressourceVisible } from "../../commun/src/terrain.ts";
 import { heuresEcoulees } from "../../commun/src/temps.ts";
 import { DEMONTAGE, LIEU_DE_FOUILLE, estOrdure, etapeButin, tirerVestiges } from "../../commun/src/vestiges.ts";
 import {
@@ -198,6 +198,7 @@ import { AvertissementBuche, etapesReussies, progresCarte, progresFamille, type 
 // Le compte admin « god » (outil du porteur) : serveur/src/admin.ts.
 import { remplirCoffres, savoirAdmin, vueProgressionAdmin } from "./admin.ts";
 import { ARRIVEE_DEPART } from "../../commun/src/lieux.ts";
+import { pasVersLaCouche, trajetCouche, type AbriPose, type TrajetCouche } from "./sommeil-abri.ts";
 import { SANTE_DEPART } from "../../commun/src/combat.ts";
 import type { OperationAdmin, VueAdmin } from "../../commun/src/admin.ts";
 import { nombreFabriques, type VueProgression } from "../../commun/src/progression.ts";
@@ -2310,6 +2311,35 @@ export class Joueur implements Voyageur, ParticipantLecon {
     this.envoyer({ t: "sommeil", dort: true, dansUnAbri });
   }
 
+  /** Le trajet jusqu'à la couche de l'abri, en cours (0.8.2, R12) : on y dormira à l'arrivée. */
+  private versLaCouche: TrajetCouche | null = null;
+
+  /** Dormir dans l'abri : d'abord se rendre accroupi jusqu'à sa couche (commun/src/sommeil-abri.ts). */
+  private allerALaCouche(abri: AbriPose, surUnLit: boolean, confort: number): void {
+    if (this.sommeil || this.voyage || this.versLaCouche) return;
+    if (this.besoins.repos >= 0.97) return this.info("Tu n'as pas sommeil : reviens quand la jauge de sommeil aura baissé.");
+    if (this.saisisseurs().length > 0) return;
+    this.annulerAction();
+    this.intention = INTENTION_REPOS;
+    this.versLaCouche = trajetCouche(abri, this.position, surUnLit, confort);
+    this.envoyer({ t: "vers_couche", chemin: this.versLaCouche.chemin, o: this.versLaCouche.o });
+  }
+
+  private suivreVersLaCouche(dt: number, bouge: boolean): void {
+    const t = this.versLaCouche!;
+    if (bouge || this.voyage || this.saisisseurs().length > 0) {
+      this.versLaCouche = null;
+      this.envoyer({ t: "vers_couche", chemin: null, o: t.o });
+      return;
+    }
+    const pas = pasVersLaCouche(t, this.position, dt);
+    this.position = pas.position;
+    this.positionEnvoyee = false;
+    if (!pas.arrive) return;
+    this.versLaCouche = null;
+    this.endormir(true, t.surUnLit, t.confort);
+  }
+
   private reveiller(message: string): void {
     if (!this.sommeil) return;
     // Une vraie nuit (abri ou lit, une demi-minute au moins) : elle fait penser au bâton à fouir, au coffre…
@@ -2532,6 +2562,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     // Déplacement : bouger interrompt l'action en cours. En route, on ne bouge pas : on est sur la carte.
     if (this.voyage) this.intention = INTENTION_REPOS;
     const bouge = Math.hypot(this.intention.dx, this.intention.dz) > 0.01;
+    if (this.versLaCouche) this.suivreVersLaCouche(dt, bouge);
     if (this.sommeil) {
       if (bouge || this.saisisseurs().length > 0) this.reveiller(bouge ? "" : "Réveillé en sursaut !");
       else {
@@ -3236,7 +3267,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
   }
 
   private ajouterBois(feu: FeuEnBase): void {
-    const type: TypeObjet | null = (this.inventaire.buche ?? 0) > 0 ? "buche" : (this.inventaire.branche ?? 0) > 0 ? "branche" : null;
+    // Les branches d'abord, puis les bûches (plan 0.8 §9.3) : le conseil de la première nuit devient possible.
+    const type: TypeObjet | null = (this.inventaire.branche ?? 0) > 0 ? "branche" : (this.inventaire.buche ?? 0) > 0 ? "buche" : null;
     if (!type) return this.info("Tu n'as pas de bois : ramasse des branches ou des bûches de bois mort sur ton terrain.");
     if (feu.bois + combustibleDe(type) > effetsFeu(feu).boisMax + 1e-9) return this.info(`Le feu a déjà assez de bois (${effetsFeu(feu).boisMax} kg au plus).`);
     // Immédiat (Book 08 §3, 2026-10-08) : une action sans jauge se fait sur-le-champ, un clic = un morceau de bois.
@@ -3369,7 +3401,9 @@ export class Joueur implements Voyageur, ParticipantLecon {
 
   private remplirGourde(): void {
     if ((this.inventaire.gourde ?? 0) < 1) return this.info(`Tu n'as pas de gourde. ${ouTrouverPhrase("gourde", this.recetteVisible)}`);
+    // Au milieu de la mare, pas au bord (0.8.2, R21) : au bord, on coupe les joncs.
     if (distanceMare(this.position.x, this.position.z) > 1.5) return this.info("Approche-toi de la mare.");
+    if (!auMilieuDeLaMare(this.position.x, this.position.z)) return this.info(TEXTE_GOURDE_AU_MILIEU);
     if (this.gourde.litres >= CONTENANCE_GOURDE && this.gourde.contenu === "brute") return this.info("Ta gourde est déjà pleine.");
     this.commencer("Remplir la gourde à la mare", DUREES.remplirGourde, () => {
       // L'eau de la mare n'est pas potable : mélangée, toute la gourde devient de l'eau brute.
@@ -3816,7 +3850,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
       case "dormir": {
         // Un lit de branchages à côté de l'abri (ou l'abri à côté du lit) : on dort mieux (P-002).
         const pres = (type: string) => [...this.installations.values()].some((x) => x.type === type && Math.hypot(x.x - i.x, x.z - i.z) <= 3);
-        if (i.type === "abri") return this.endormir(true, pres("lit_branchages"), this.confortDuSommeil(i));
+        // Dans l'abri : on se rend accroupi jusqu'à sa couche, puis on y dort (0.8.2, R12 : serveur/src/sommeil-abri.ts).
+        if (i.type === "abri") return this.allerALaCouche(i, pres("lit_branchages"), this.confortDuSommeil(i));
         if (i.type === "lit_branchages") return this.endormir(pres("abri"), true, this.confortDuSommeil(i));
         return;
       }

@@ -18,7 +18,7 @@ import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import type { InstallationVue } from "../../../commun/src/messages.ts";
 import { PALETTE, aleatoire } from "./materiaux.ts";
-import { ACIER, Assemblage, BOIS, type Finition, CORDE, NOIR, ROUILLE_SOMBRE, V, V3, X, Y, Z, bosseler, placer, rect, surface, tache, touffe } from "./assemblage.ts";
+import { ACIER, Assemblage, BOIS, type Finition, CORDE, NOIR, ROUILLE_SOMBRE, V, V3, X, Y, Z, bosseler, materiauSommets, placer, rect, surface, tache, touffe } from "./assemblage.ts";
 
 const BACHE = 0x2f6fa4;
 const BACHE_PASSEE = 0x4a7fa8;
@@ -297,7 +297,10 @@ function abri(): THREE.Group {
   }
   const couverture = new THREE.CylinderGeometry(0.1, 0.1, 0.62, 8).rotateZ(Math.PI / 2);
   c.ajouterDegrade(placer(couverture, -0.55, 0.15, -0.28, 0, 0.15, 0), (p) => (Math.abs(p.x + 0.55) > 0.22 ? 0x8f3a22 : PALETTE.vertLaine));
-  return enGroupe(c);
+  const g = enGroupe(c);
+  // La bâche, à part (non fondue) : elle s'efface quand on dort dessous (0.8.2, R12 : rendu/abri-dormeur.ts).
+  for (const m of g.children) if ((m as THREE.Mesh).material === materiauSommets("toile")) Object.assign(m.userData, { intact: true, bache: true });
+  return g;
 }
 
 /** Une fronde de fougère ou de sapin : une nervure et des folioles en dents de scie (polygone plat, u le long). */

@@ -430,3 +430,35 @@ export function nomConteneur(genre: TypeConteneur): string {
   return genre === "poubelle_renversee" ? "poubelle renversée" : genre === "coffre_voiture" ? "coffre de voiture" : "sac-poubelle crevé";
 }
 
+
+// ---------- Un contenant vidé (0.8.2, chantier I : R24 ; Q-0.8.2-6) ----------
+
+/** Un contenant d'un carreau (un sac-poubelle, une poubelle renversée), tel qu'on le voit. */
+export interface ContenantVu {
+  em: EmplacementDechets;
+  /** Ce qu'il garde encore. */
+  reste: number;
+  /** Plein, il se fouille ; vidé, il ne propose plus rien (ni « Fouiller », ni « Examiner »). */
+  propose: boolean;
+}
+
+/**
+ * Les contenants d'un carreau, pleins ou vidés. Un contenant vidé reste au sol, en décor muet (un sac-poubelle crevé, une
+ * poubelle renversée), partout, terrain compris : il ne disparaît pas, il ne propose plus rien.
+ */
+export function contenantsCarreau(cle: string, cx: number, cz: number, pieces: readonly PieceDechets[], pris: ReadonlySet<number>): ContenantVu[] {
+  const restes = new Map<number, number>();
+  for (const p of pieces) if (p.dedans) restes.set(p.e, (restes.get(p.e) ?? 0) + (pris.has(p.i) ? 0 : 1));
+  const liste: ContenantVu[] = [];
+  for (const em of dispositionLieu(cle).get(cleCarreau(cx, cz)) ?? []) {
+    if (em.genre === "sol") continue;
+    const reste = restes.get(em.e) ?? 0;
+    liste.push({ em, reste, propose: reste > 0 });
+  }
+  return liste;
+}
+
+/** Un point du monde propose-t-il encore quelque chose ? Parti, non ; un point qui se fouille, vidé, reste en décor muet. */
+export function pointPropose(p: PointDechetsVu): boolean {
+  return p.dispo && (!seFouille(p.type) || (p.reste ?? 0) > 0);
+}
