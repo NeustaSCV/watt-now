@@ -2,6 +2,8 @@
 
 *Version du plan : v0.4 · 2026-10-13 · **Statut : décidé, prêt à lancer après la 0.8.3** (rien n'est codé).*
 
+*v0.6 (2026-10-13) : deux ajouts du porteur. M5 : **des bûches, des pierres et des branches éparses sur toutes les pelouses**, surtout dans les haltes, placées au hasard (chantier G). M6 : **au gué, la barque retournée devant la cabane du passeur en bloque l'entrée** (chantier H).*
+
 *v0.5 (2026-10-13) : un ajout du porteur (M4) : **à terre ou détruit, ça se voit au corps de l'Éteint**, sans barre de vie (piste 2 retenue, la barre écartée par le principe du Book 05). Chantier F, vague 1.*
 
 *v0.4 (2026-10-13) : les questions Q-7 à Q-10 tranchées (§9.1). Une arme encombrante portée dans le dos, comme la fourche, se voit en permanence, et tous les gestes sont montrés.*
@@ -43,6 +45,8 @@
 | M2 | « En martelant la touche d'attaque, l'Éteint ne nous touche jamais. Pour l'Éteint de base, ça peut aller (le danger, c'est la masse) ; pas pour le casqué. » | L'Équipé n'est étourdi qu'un coup sur deux | D |
 | M3 | « Saisi, appuyer sur Frapper nous libère, alors qu'on n'a pas l'amplitude pour taper. Marteler la frappe sort de toutes les situations. » | Saisi, on ne frappe plus ; seul le dégagement libère | C |
 | M4 | « Quand ils sont au sol, on ne voit pas qu'ils ne sont pas morts. » (2026-10-13 ; une barre de vie au-dessus des Éteints proposée, puis écartée par le porteur) | Le corps le dit : à terre, il remue et gémit ; détruit, il est inerte, les yeux éteints, la peau pâlie | F |
+| M5 | « Les pelouses sont bien propres au gué et au Moulin pour un monde post-apo. Il faudrait des bûches, des pierres, des branches, éparses, sur toutes les pelouses : c'est la ressource de base, les joueurs en ont besoin tout le temps. Surtout dans les haltes. Pas besoin de les placer de façon fixe, ça peut être aléatoire. » | Un semis de bois et de pierres sur les pelouses de chaque lieu, au hasard, qui revient après la prise | G |
+| M6 | « Au gué, le canoë retourné devant le bac, à l'est, empêche d'entrer dans la maison (pourtant un zombie arrive à sortir). » | L'obstacle de la barque ne ferme plus l'accès ; on vérifie pourquoi l'Éteint passe | H |
 
 ### 1.2 Ce qui n'entre pas
 
@@ -94,6 +98,22 @@
 - **Les yeux** restent ouverts dans les deux cas. La lueur s'éteint chez le détruit, mais elle ne se voit que dans le noir (`luire()`) : de jour, aucune différence.
 - **Le Rampant** est inerte à terre comme détruit (`ramper()`, `inerte`).
 - **Le serveur sait déjà tout** : `etat` (`a_terre` ou `detruit`) et `aTerre` (le temps avant de se relever) sont dans l'Éteint ; `etat` est déjà envoyé au client. Le gémissement existe (`gemit`, `GEMISSEMENT`).
+
+### 2.5 Le bois et les pierres des lieux (M5)
+
+- **Le vrac** (B8) existe déjà : des points de ressources posés par le lieu, dont le nombre en jeu grandit avec les voyageurs présents (`vrac`, `vracEnJeu`, `commun/src/terrain.ts` ; `serveur/src/lieu-vivant.ts`).
+- **Aujourd'hui** :
+  - la station : bûches 12, pierres 13 (`commun/src/halte.ts`) ;
+  - le gué : pierres 21, bûches 4 (`commun/src/gue.ts`) ;
+  - le Moulin : rien en vrac ;
+  - **aucune halte n'a de branches** ; on n'en trouve que sur son terrain.
+- **Le rythme** compte sur ces quantités (`commun/src/rythme.ts`, `TERRAIN_VRAC`, `npm run rythme`), et la bible aussi.
+
+### 2.6 La barque retournée du gué (M6)
+
+- Dans le modèle du gué (`client/src/batiments/halte-gue/modele.js`, vers la ligne 1252, importé de `batiment/` par la session « bâtiments »), la barque retournée posée dehors, près de la cabane du passeur, porte un obstacle en ligne : `b.obstacle(-20.2, -24.6, -16.8, -24.6, "barque retournée")`. Le gué est retourné en miroir dans le jeu : elle se trouve donc à l'est, devant le bac.
+- Cette ligne longe le bord de la cabane (x −27 à −21, z −29,5 à −25) et de son porche, à l'est. Elle ferme sans doute le seul passage vers la porte.
+- **L'Éteint passe** : soit il ne tient pas compte de cet obstacle, soit il passe par un trou que le joueur ne voit pas. À comprendre (les collisions des Éteints au gué), pour ne pas laisser un passage dans un sens seulement.
 
 ## 3. Les règles de jeu que la 0.9 met en œuvre
 
@@ -179,6 +199,21 @@
   - **à montrer au porteur avant de figer** : deux ou trois réglages (teinte, matité, herbe), en captures côte à côte, de jour et de nuit.
 - **Le Rampant** : à terre, ses bras tirent encore un peu, sans avancer ; détruit, inerte et pâli comme les autres.
 - **Rien ne change aux règles** : ni la durée au sol, ni la façon de l'achever. Seul l'affichage (et un son) change.
+
+### 3.3 ter Le bois et les pierres, partout (M5)
+
+- **Sur toutes les pelouses de tous les lieux** (station, Carrefour, Coopérative, gué, Moulin), et sur son terrain s'il en manque : des **branches**, des **pierres** et des **bûches**, éparses, posées dans l'herbe.
+- **Plus dans les haltes** (la station, le gué) que dans les lieux personnels : c'est là qu'on passe et qu'on se ravitaille.
+- **Au hasard** : pas de place fixe. Les positions sont tirées sur les pelouses, jamais dans l'eau, dans un bâtiment, sur une route, un chemin ou un obstacle. Quand un point revient après la prise, il revient ailleurs.
+- **Le vrac s'en charge** (B8) : on garde sa règle (plus de voyageurs, plus de points en jeu, jusqu'à ×3), et on lui ajoute les branches et le placement au hasard.
+- **Les quantités** sont à proposer au porteur avant de coder, avec ce que le banc de rythme en dit (`npm run rythme`). Le bois de base ne doit plus jamais manquer, sans rendre inutile le tas de bois de son terrain.
+- **À l'œil** : les pelouses ne sont plus « propres », mais on ne trébuche pas sur une pierre tous les mètres. Le bois mort et les cailloux font partie du décor.
+
+### 3.3 quater L'entrée de la cabane du passeur (M6)
+
+- **Le joueur entre dans la cabane** par sa porte, sans contourner l'impossible.
+- **La barque reste** à sa place, mais son obstacle épouse la barque au lieu de fermer le passage. Sinon, on la déplace un peu.
+- **Un Éteint ne passe pas là où le joueur ne passe pas**, et inversement.
 
 ### 3.4 Le format des messages (fixé d'avance)
 
@@ -291,6 +326,25 @@ Ce format est le contrat entre les chantiers A (serveur) et B (client) : il perm
 - **Fichiers** : `client/src/rendu/eteint.ts`, `client/src/rendu/humanoides.ts` (la teinte, si elle n'est pas déjà réglable), `commun/src/eteints.ts` (la vue), le bruiteur, `client/src/aide-contenu.ts`.
 - **Tests** : la vue d'un Éteint à terre porte `seReleve` dans ses dernières secondes seulement ; un détruit ne remue pas (l'état d'animation) ; `textes-du-jeu.test.ts`. **Contrôle à l'œil**, de jour : à 5 m, on distingue un Éteint à terre d'un Éteint détruit sans hésiter (capture des deux côte à côte).
 
+**Chantier G · Le bois et les pierres, partout** (vague 1, **S**)
+
+- **Contenu** :
+  - **les pelouses de chaque lieu** : une fonction qui dit si un point est sur une pelouse libre (ni eau, ni bâtiment, ni route ou chemin, ni obstacle), à partir des zones déjà connues (`zoneDe`, les modèles des lieux) ;
+  - **le vrac** : les branches ajoutées ; les points du vrac placés au hasard sur ces pelouses ; un point pris revient ailleurs (`serveur/src/lieu-vivant.ts`, et `butin` dans `halte.ts`, `gue.ts`, `moulin.ts`, `cooperative.ts`, le Carrefour) ;
+  - **les quantités** : une proposition chiffrée par lieu, passée au banc de rythme, **validée par le porteur avant d'être codée** ;
+  - **la bible** et `TERRAIN_VRAC` (`rythme.ts`) suivent.
+- **Fichiers** : `commun/src/terrain.ts`, `serveur/src/lieu-vivant.ts`, les fichiers de chaque lieu (`halte.ts`, `gue.ts`, `moulin.ts`, `cooperative.ts`…), `commun/src/rythme.ts`.
+- **Tests** : aucun point posé dans l'eau, un bâtiment ou sur un obstacle (pour chaque lieu, sur 1 000 tirages) ; un point pris revient ailleurs ; le nombre en jeu suit toujours `vracEnJeu` ; `npm run rythme` tient. **Contrôle à l'œil** : une capture des pelouses du gué et du Moulin, avant et après.
+
+**Chantier H · L'entrée de la cabane du passeur, au gué** (vague 1, **S**)
+
+- **Contenu** :
+  - **la demande à la session « bâtiments »** (`.claude-travail/propositions/`, comme pour les retouches du Moulin) : l'obstacle de la barque retournée près de la cabane du passeur épouse la barque, ou la barque est déplacée, pour que la porte soit accessible ; puis on réimporte le modèle (`npm run batiments:importer`) ;
+  - **les Éteints** : comprendre comment un Éteint sort de la cabane quand le joueur ne peut pas y entrer (obstacles du gué côté Éteints), et le corriger si c'est un trou ;
+  - **en attendant la livraison**, si elle tarde : rien n'est retouché à la main dans la copie importée (elle serait écrasée au prochain import).
+- **Fichiers** : la copie importée `client/src/batiments/halte-gue/`, et ce qui gère les obstacles des Éteints au gué.
+- **Tests** : depuis le ponton, un joueur atteint la porte de la cabane du passeur (chemin libre dans la zone du gué) ; un Éteint suit les mêmes obstacles.
+
 ### Vague 2 · La recette
 
 **Chantier E · Recette, mesures, books et version** (vague 2, **S**)
@@ -316,7 +370,7 @@ Ce format est le contrat entre les chantiers A (serveur) et B (client) : il perm
 
 | Vague | Chantiers (en parallèle) | Avant la vague suivante |
 |---|---|---|
-| **1** | **A** présences · **B** affichage · **C** saisie · **D** Équipé · **F** au sol | A et B fusionnés ensemble (le format du §3.4), puis C et D |
+| **1** | **A** présences · **B** affichage · **C** saisie · **D** Équipé · **F** au sol · **G** bois et pierres · **H** cabane du passeur | A et B fusionnés ensemble (le format du §3.4), puis C et D |
 | **2** | **E** recette, mesures, books, version | La livraison |
 
 **Les fichiers partagés** (même principe que la 0.8 : un module par chantier, des appels d'une ligne, des blocs séparés) :
@@ -343,7 +397,9 @@ Ce format est le contrat entre les chantiers A (serveur) et B (client) : il perm
 7. **Le débit réseau à la halte** reste sous 8 Ko/s par joueur (7,4 Ko/s mesurés jusqu'ici), et l'iPhone 13 mini reste à 60 images par seconde.
 8. **Une partie 0.8.3 se relit** sans rien perdre.
 9. **De jour, à 5 m, on voit tout de suite** si un Éteint au sol est à terre (il remue) ou détruit (inerte, pâli). On voit aussi quand il va se relever.
-10. `npm run verif`, `npm test`, `npm run build` passent. `npm run equilibre` et `npm run rythme` tiennent.
+10. **Au gué et au Moulin, les pelouses ont du bois mort et des cailloux**, ailleurs à chaque passage ; on y ramasse des branches. Les haltes en ont plus que les lieux personnels.
+11. **Au gué, on entre dans la cabane du passeur** par sa porte.
+12. `npm run verif`, `npm test`, `npm run build` passent. `npm run equilibre` et `npm run rythme` tiennent.
 
 ---
 
@@ -359,7 +415,9 @@ Ce format est le contrat entre les chantiers A (serveur) et B (client) : il perm
 | D · Équipé | S | 0,75 |
 | E · Recette, mesures, books, version | S | 1 |
 | F · À terre ou détruit, au corps | S | 0,75 |
-| **Total** | **2 M, 4 S** | **≈ 6,75 jours-agent** (fourchette 4,5 à 10) |
+| G · Le bois et les pierres, partout | S | 1 |
+| H · L'entrée de la cabane du passeur | S | 0,25 (plus la livraison de la session « bâtiments ») |
+| **Total** | **2 M, 6 S** | **≈ 8 jours-agent** (fourchette 5,5 à 12) |
 
 **En temps réel**, d'après la 0.8 et la 0.8.2 (agents en parallèle) :
 - vague 1 : 1 h à 1 h 30 (le plus long, l'affichage) ;
