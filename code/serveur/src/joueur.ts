@@ -190,6 +190,8 @@ import {
 import { refusAVenir, type AVenir } from "../../commun/src/lignees.ts";
 import { outilsAPortee, refusRatelier } from "../../commun/src/outils-a-portee.ts";
 import { stimuliTorches } from "../../commun/src/torche.ts";
+// Se servir du meuble d'une autre famille, une fois sa recette apprise (plan 0.8.2 §7.3, chantier J).
+import { saitSeServir } from "../../commun/src/savoir-meuble.ts";
 import { utiliserNiveau1 } from "./niveau1-base.ts";
 import { choisirFacon } from "../../commun/src/replis.ts";
 import { carteInstallations, feuxDuLieu, refusLieu, type Alentours } from "../../commun/src/lieu-recette.ts";
@@ -3816,17 +3818,16 @@ export class Joueur implements Voyageur, ParticipantLecon {
 
   // ---------- Installations des familles (É2, lot 2) ----------
 
-  /** La famille qui sait se servir de chaque installation (celle de sa recette). */
-  private famillePour(type: TypeInstallation): string {
-    return RECETTES.find((r) => "installation" in r.produit && r.produit.installation === type)?.famille ?? "tous";
+  /** Sait-on se servir de cette installation : sa famille, ou sa recette apprise (plan 0.8.2 §7.3 : savoir-meuble.ts). */
+  private saitSeServir(type: TypeInstallation): boolean {
+    return saitSeServir(type, this.compte.famille, this.savoir);
   }
 
   private utiliserInstallation(id: number, verbe: string): void {
     const i = this.installations.get(id);
     if (!i) return;
     if (!this.proche(i.x, i.z, DISTANCE_INTERACTION + 0.6)) return this.info("Approche-toi.");
-    const famille = this.famillePour(i.type);
-    if (famille !== "tous" && famille !== this.compte.famille) return this.info("C'est le savoir d'une autre famille : échange avec l'un des siens, à la halte ou au Carrefour.");
+    if (!this.saitSeServir(i.type)) return this.info("C'est le savoir d'une autre famille : échange avec l'un des siens, à la halte ou au Carrefour.");
     const maj = () => {
       this.base.sauverEtatInstallation(this.compte.id, i.id, i.etat);
       this.envoyer({ t: "installation", installation: i });
@@ -3967,7 +3968,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     const banc = this.installations.get(id);
     if (!banc || banc.type !== "banc_recharge" || this.lieu !== "terrain" || this.voyage) return;
     if (!this.proche(banc.x, banc.z, DISTANCE_INTERACTION + 0.6)) return this.info("Approche-toi.");
-    if (this.famillePour(banc.type) !== this.compte.famille) return this.info("C'est le savoir d'une autre famille : échange avec l'un des siens, à la halte ou au Carrefour.");
+    if (!this.saitSeServir(banc.type)) return this.info("C'est le savoir d'une autre famille : échange avec l'un des siens, à la halte ou au Carrefour.");
     this.mettreAJourBase(this.maintenant());
     faire(banc);
   }

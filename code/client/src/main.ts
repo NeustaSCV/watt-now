@@ -27,7 +27,7 @@ import { Carte } from "./carte.ts";
 import { Entrees, type Commande } from "./entrees.ts";
 import { Hud } from "./hud.ts";
 import { LIBELLE_FERMER_FICHE } from "./fiche-examiner.ts";
-import { proposer, type ActionProposee, type Propositions } from "./interaction.ts";
+import { proposer, retenirSavoir, type ActionProposee, type Propositions } from "./interaction.ts";
 import { Reseau } from "./reseau.ts";
 import { FeuDeCamp } from "./rendu/feu.ts";
 import { VueInstallation, creerEscabeau } from "./rendu/installations.ts";
@@ -589,6 +589,8 @@ function installer(message: Bienvenue): void {
   menuAdmin.maj(message.moi.admin);
   hud.admin = message.moi.admin !== undefined;
   hud.majSavoir(message.savoir ?? { apprises: [], manuels: [] });
+  // Plan 0.8.2 §7.3 : un meuble appris d'une autre famille propose ses gestes.
+  retenirSavoir(message.savoir ?? {});
   hud.majProgression(message.progression ?? null);
   lecons.maj(null);
   son.entrer({
@@ -1022,6 +1024,7 @@ function recevoir(message: MessageServeur): void {
     // Le savoir des autres familles (Book 25 §2.3) : leçons et manuels.
     case "savoir":
       hud.majSavoir(message.savoir);
+      retenirSavoir(message.savoir);
       return;
     case "admin":
       menuAdmin.maj(message.admin);

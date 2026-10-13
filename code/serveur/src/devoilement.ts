@@ -11,7 +11,7 @@
 
 import type { Inventaire } from "../../commun/src/objets.ts";
 import { typeDe } from "../../commun/src/etoiles.ts";
-import type { Famille } from "../../commun/src/regles.ts";
+import { FAMILLES, type Famille } from "../../commun/src/regles.ts";
 import type { SavoirRecettes } from "../../commun/src/recettes.ts";
 import { lieuDeLEtape } from "../../commun/src/lieux.ts";
 import {
@@ -108,8 +108,8 @@ export class SuiviDevoilement {
   private lieuVu: string | null;
   /** Ce qu'on a envoyé des autres familles (pour ne renvoyer la liste que si elle change). */
   private cleAutres = "";
-  /** Le meuble de famille était-il complet au dernier regard (R26 : la pièce posée ouvre les armes de métier) ? */
-  private meubleVu: boolean | null = null;
+  /** Les meubles de famille complets au dernier regard (R26 : la pièce posée ouvre les armes de son métier). */
+  private meubleVu: string | null = null;
   private secondesSauvees = 0;
 
   /** `etat` null : un personnage neuf (la base démarre neuve en 0.8, §9.1) : le feu et l'abri. */
@@ -139,7 +139,7 @@ export class SuiviDevoilement {
 
   /** Dévoilée, et pas en attente du meuble complet (R26 : une arme de métier gardée d'une partie 0.8.1 attend sa pièce). */
   estDevoilee(id: string): boolean {
-    return this.devoilees.has(id) && !armeEnAttente(id, this.source.famille, this.constructions());
+    return this.devoilees.has(id) && !armeEnAttente(id, this.constructions());
   }
 
   /** Quelque chose a changé (un fait, une quête, le savoir, une construction) : on réévaluera au prochain passage. */
@@ -267,11 +267,13 @@ export class SuiviDevoilement {
   }
 
   /**
-   * R26 : la pièce posée sur le meuble de famille (l'enclume, le panneau, l'alternateur) ne note pas toujours de fait ;
-   * on la regarde une fois par seconde, et elle fait réévaluer (les armes de métier se dévoilent alors).
+   * R26 : la pièce posée sur un meuble de famille (l'enclume, le panneau, l'alternateur) ne note pas toujours de fait ;
+   * on regarde les trois meubles une fois par seconde (un meuble appris compte, §7.3), et une pièce posée fait
+   * réévaluer (les armes de son métier se dévoilent alors).
    */
   private suivreMeuble(): void {
-    const complet = meubleComplet(this.source.famille, this.constructions());
+    const carte = this.constructions();
+    const complet = FAMILLES.filter((f) => meubleComplet(f, carte)).join(",");
     if (complet !== this.meubleVu) {
       if (this.meubleVu !== null) this.sale = true;
       this.meubleVu = complet;
@@ -382,7 +384,7 @@ export class SuiviDevoilement {
     const indices: Record<string, 1 | 2> = {};
     for (const [id, i] of Object.entries(this.etat.indices)) if (!this.idees.has(id)) indices[id] = i.temps;
     // R26 : ce qui attend le meuble complet ne part pas (gardé en base, il revient avec la pièce posée).
-    const attend = (id: string) => armeEnAttente(id, e.famille, e.installations);
+    const attend = (id: string) => armeEnAttente(id, e.installations);
     const v: VueProgression = {
       devoilees: this.etat.devoilees.filter((id) => !attend(id)),
       nonVues: this.etat.nonVues.filter((id) => !attend(id)),

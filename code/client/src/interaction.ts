@@ -8,7 +8,8 @@ import { COMPTOIR, destinations, sortieIci, type LieuId, type LieuJouable } from
 import { KLAXONS_PAR_BATTERIE, LEURRES, PORTES, chargeBatterieTracteur, distancePorte } from "../../commun/src/cooperative.ts";
 import type { AutreVu, EtatCoopVu, InstallationVue, MessageClient, SacVu, Verbe } from "../../commun/src/messages.ts";
 import { nommer, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
-import { RECETTES } from "../../commun/src/recettes.ts";
+import type { SavoirRecettes } from "../../commun/src/recettes.ts";
+import { saitSeServir } from "../../commun/src/savoir-meuble.ts";
 import { COUT_BAC, ENCLUMES, ETOILES_PIERRE_PLATE, NIVEAU_FORGE_VENTILEE, enclumeDuSac } from "../../commun/src/forge.ts";
 import { NOMS_FAMILLES, type Famille } from "../../commun/src/regles.ts";
 import type { Gourde } from "../../commun/src/survie.ts";
@@ -70,9 +71,12 @@ export const EXAMENS_INSTALLATIONS: Record<InstallationVue["type"], string> = {
   torche_plantee: "Une branche plantée, un chiffon gras qui brûle au bout. Elle éclaire six mètres autour, une nuit durant.",
 };
 
-/** La famille qui sait se servir d'une installation (celle qui sait la construire). */
-function familleDe(type: InstallationVue["type"]): Famille | "tous" {
-  return RECETTES.find((r) => "installation" in r.produit && r.produit.installation === type)?.famille ?? "tous";
+// ---------- Le meuble d'une autre famille, appris (plan 0.8.2 §7.3, chantier J) ----------
+
+/** Ce que le joueur a appris hors de sa famille (leçons, manuels) : main.ts le tient à jour à chaque message « savoir ». */
+let savoirAppris: SavoirRecettes = {};
+export function retenirSavoir(savoir: SavoirRecettes): void {
+  savoirAppris = savoir;
 }
 
 /** Ce que propose une installation de famille selon son état (le serveur vérifie tout). */
@@ -89,8 +93,7 @@ function actionsInstallation(
   const msg = (libelle: string, verbe: Verbe): ActionProposee => ({ libelle, message: { t: "interagir", cible: { genre: "installation", id: i.id }, verbe } });
   // Examiner ouvre la fiche : ce qu'elle fait, l'améliorer, la démonter (Book 24). La décharge, elle, se regarde.
   const examiner: ActionProposee = i.type === "decharge" ? { libelle: "Examiner", examiner: EXAMENS_INSTALLATIONS[i.type] } : { libelle: "Examiner", ouvrirFiche: { genre: "installation", id: i.id } };
-  const sienne = familleDe(i.type);
-  if (sienne !== "tous" && sienne !== famille) return [null, { libelle: "Examiner", examiner: `${EXAMENS_INSTALLATIONS[i.type]} Tu ne sais pas t'en servir.` }];
+  if (!saitSeServir(i.type, famille, savoirAppris)) return [null, { libelle: "Examiner", examiner: `${EXAMENS_INSTALLATIONS[i.type]} Tu ne sais pas t'en servir.` }];
   switch (i.type) {
     case "etabli": {
       // Le redresseur de fûts (Book 25 §9.3) : proposé tant qu'il manque, si l'on a de quoi le monter.

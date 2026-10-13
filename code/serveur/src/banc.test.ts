@@ -12,6 +12,7 @@ import type { InstallationVue, MessageServeur } from "../../commun/src/messages.
 import type { Inventaire } from "../../commun/src/objets.ts";
 import { toutDevoile } from "../../commun/src/progression.ts";
 import type { Famille } from "../../commun/src/regles.ts";
+import { SAVOIR_VIDE, type Savoir } from "../../commun/src/savoir.ts";
 import { Base } from "./base.ts";
 import { messageValide } from "./controle.ts";
 import { Halte } from "./halte.ts";
@@ -26,9 +27,11 @@ function surLeTerrain(
   installations: { type: InstallationVue["type"]; x: number; z: number; etat?: InstallationVue["etat"] }[] = [],
   charges?: Record<string, number>,
   armes?: Record<string, number>,
+  savoir?: Savoir,
 ) {
   const base = new Base(":memory:");
   const compte = base.creerCompte("Ampère", "volts1234", famille);
+  if (savoir) base.sauverSavoir(compte.id, savoir);
   base.sauverProgression(compte.id, toutDevoile(famille));
   base.sauverInventaire(compte.id, { sac_a_dos: 1, ...inventaire });
   if (armes) base.sauverChargeArmes(compte.id, armes);
@@ -89,6 +92,26 @@ test("0.8.2 banc : un pédalier générateur à 3 m charge directement la batter
   u.attendre(61);
   assert.ok(Math.abs(batterieDuBanc(u.installation(u.ids[0]!).etat)!.wh - 100) < 0.01, "rien n'est entré (la décharge spontanée seule)");
   assert.match(u.infos().at(-1)!, /moins de 3 m du banc/);
+});
+
+test("0.8.2 §7.3 : un Voltaïque qui a lu le manuel des Mécanistes pédale et remplit son banc à 3 m, sans le bonus ; sans l'avoir lu, refusé", () => {
+  const pedalier = { type: "pedalier" as const, x: 23.5, z: 20, etat: { alternateur: true } };
+  const t = surLeTerrain("voltaiques", {}, [banc(100), pedalier], undefined, undefined, { ...SAVOIR_VIDE, manuels: ["mecanistes"] });
+  const [idBanc, idPedalier] = t.ids as [number, number];
+  t.joueur.position = { x: 23.5, z: 21, o: 0 };
+  t.joueur.recevoir({ t: "interagir", cible: { genre: "installation", id: idPedalier }, verbe: "pedaler" });
+  t.attendre(61);
+  const wh = batterieDuBanc(t.installation(idBanc).etat)!.wh;
+  // La production d'un Voltaïque : sans le bonus des jambes de Mécaniste (×1,3).
+  assert.ok(whEDePedalage("voltaiques") < whEDePedalage("mecanistes"));
+  assert.ok(Math.abs(wh - 100 - whEDePedalage("voltaiques")) < 0.5, `${wh} ; ${t.infos().join(" | ")}`);
+  // Sans rien avoir appris : le pédalier reste le savoir d'une autre famille.
+  const u = surLeTerrain("voltaiques", {}, [banc(100), pedalier]);
+  u.joueur.position = { x: 23.5, z: 21, o: 0 };
+  u.joueur.recevoir({ t: "interagir", cible: { genre: "installation", id: u.ids[1]! }, verbe: "pedaler" });
+  u.attendre(61);
+  assert.match(u.infos().at(-1)!, /savoir d'une autre famille/);
+  assert.ok(Math.abs(batterieDuBanc(u.installation(u.ids[0]!).etat)!.wh - 100) < 0.01);
 });
 
 // ---------- Échanger la batterie ----------
