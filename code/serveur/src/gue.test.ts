@@ -82,6 +82,8 @@ function monde(decalage = 1_000_000, sansEteints = true) {
     joueur.recevoir({ t: "voyager", vers: "gue" });
     attendre(DUREE_VOYAGE_S + 0.5);
     assert.equal(joueur.lieu, "gue");
+    // 0.8.2 (chantier G) : la vue d'ensemble à l'arrivée ; le premier geste la lève.
+    joueur.recevoir({ t: "arrivee" });
     const dernier = <T extends MessageServeur["t"]>(t: T) => recus.findLast((m) => m.t === t) as Extract<MessageServeur, { t: T }> | undefined;
     const inv = () => dernier("inventaire")?.inventaire ?? {};
     const infos = () => recus.filter((m) => m.t === "info").map((m) => (m as { texte: string }).texte);

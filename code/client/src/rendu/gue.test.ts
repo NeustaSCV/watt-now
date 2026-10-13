@@ -85,5 +85,6 @@ test("R3 : l'Éteint qui dérive ne met en mode Combat que qui marche sur le rad
   const gue = new RenduGue(() => {});
   assert.equal(gue.menace(ID_DERIVE, { x: BAC.cale.x, z: BAC.z }), false, "à bord du bac");
   assert.equal(gue.menace(ID_DERIVE, { x: 100, z: (RADIER.z0 + RADIER.z1) / 2 }), true, "sur le radier");
+  assert.equal(gue.menace(ID_DERIVE, { x: RADIER.x1 - 0.5, z: (RADIER.z0 + RADIER.z1) / 2 }), false, "sur la tête du radier, encore à pied sec");
   assert.equal(gue.menace(5, { x: BAC.cale.x, z: BAC.z }), true, "les autres, toujours");
 });

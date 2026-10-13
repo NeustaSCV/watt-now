@@ -24,6 +24,7 @@ import {
   accostage,
   auGue,
   crue,
+  dansLaRiviere,
   placeRadeau,
   surLeRadier,
   texteBalise,
@@ -321,7 +322,8 @@ function retoucherLaVase(g: THREE.Group, toits: ToitJeu[]): void {
   const arbre = extraireTriangles(g, (p, q, r) => {
     const x = (p.x + q.x + r.x) / 3;
     const z = (p.z + q.z + r.z) / 3;
-    return Math.abs(x - b.x) <= b.l / 2 && Math.abs(z - b.z) <= b.p / 2 && Math.min(p.y, q.y, r.y) > 1;
+    // Le houppier, le tronc et les rameaux qui retombent : tout ce qui monte au-dessus d'un mètre (le sol est plat ici).
+    return Math.abs(x - b.x) <= b.l / 2 && Math.abs(z - b.z) <= b.p / 2 && Math.max(p.y, q.y, r.y) > 1;
   });
   if (arbre.length === 0) return;
   const materiaux: THREE.Material[] = [];
@@ -335,7 +337,7 @@ function retoucherLaVase(g: THREE.Group, toits: ToitJeu[]): void {
     m.name = "gue:arbre-vase";
     g.add(m);
   }
-  toits.push({ nom: "arbre de la vase", boite: b, materiaux, bas: 1.2, haut: 12, fantome: 0.2 });
+  toits.push({ nom: "arbre de la vase", boite: b, materiaux, bas: 0.5, haut: 12, fantome: 0.12 });
 }
 
 /**
@@ -423,11 +425,12 @@ export class RenduGue {
 
   /**
    * Plan 0.8.2 (R3) : cet Éteint fait-il entrer (ou rester) en mode Combat ? Celui qui dérive dans l'eau, contre le
-   * radier, ne menace que qui marche sur le radier : sans cela, sa ronde à moins de 10 m du bac gardait le joueur en
-   * mode Combat (A : « Frapper ») et « Haler le bac » ne paraissait pas avant qu'on s'éloigne et revienne.
+   * radier, ne menace que qui marche sur le radier au-dessus de l'eau (pas sur sa tête, encore sur la berge) : sans
+   * cela, sa ronde à moins de 10 m du bac gardait le joueur en mode Combat (A : « Frapper ») et « Haler le bac » ne
+   * paraissait pas avant qu'on s'éloigne et revienne ; au bord du radier noyé, il couvrait la ligne de la crue (R19).
    */
   menace(id: number, p: { x: number; z: number }): boolean {
-    return id !== ID_DERIVE || surLeRadier(p.x, p.z);
+    return id !== ID_DERIVE || (surLeRadier(p.x, p.z) && dansLaRiviere(p.x, p.z));
   }
 
   /** Jusqu'où l'on entend les Éteints : sur le radier, l'eau couvre tout au-delà de 3 m (G1). */
