@@ -11,26 +11,31 @@ import { FAMILLES } from "./regles.ts";
 
 const ids = (qs: { id: string }[]) => qs.map((q) => q.id);
 
-test("« S'installer » : le foyer de pierres en tête, puis un vrai repas, l'eau du ciel, le coffre, une à une", () => {
+test("« S'installer » : le foyer de pierres en tête, puis un vrai repas, l'eau du ciel, le coffre, un vrai lit, une à une", () => {
   const finies: string[] = [];
-  for (const attendu of ["foyer_pierres", "repas", "eau_du_ciel", "coffre"]) {
+  // Plan 0.8 §9.3 (0.8.2, chantier J) : « Un vrai lit » juste après le coffre, avant les portes.
+  for (const attendu of ["foyer_pierres", "repas", "eau_du_ciel", "coffre", "lit"]) {
     assert.deepEqual(ids(quetesOuvertes("installer", "charbonniers", finies)), [attendu]);
     finies.push(attendu);
   }
 });
 
 test("puis les portes du niveau 1 : deux ouvertes à la fois, une par route (Q-0.8-19)", () => {
-  const tete = ["foyer_pierres", "repas", "eau_du_ciel", "coffre"];
+  const tete = ["foyer_pierres", "repas", "eau_du_ciel", "coffre", "lit"];
   assert.deepEqual(ids(quetesOuvertes("installer", "voltaiques", tete)), ["foyer_cuisine", "abri_ferme"]);
   // Finir une porte de la route A ouvre la suivante de la même route ; l'autre route ne bouge pas.
   assert.deepEqual(ids(quetesOuvertes("installer", "voltaiques", [...tete, "foyer_cuisine"])), ["abri_ferme", "marmite"]);
   assert.deepEqual(ids(quetesOuvertes("installer", "voltaiques", [...tete, "abri_ferme", "coffre_cercle"])), ["foyer_cuisine", "etabli_etau"]);
   // Une route finie : sa place passe à ce qui suit les portes.
   const routeA = ["foyer_cuisine", "marmite", "dix_litres"];
-  assert.deepEqual(ids(quetesOuvertes("installer", "voltaiques", [...tete, ...routeA])), ["abri_ferme", "lit"]);
+  assert.deepEqual(ids(quetesOuvertes("installer", "voltaiques", [...tete, ...routeA])), ["abri_ferme", "dakota"]);
   // Les deux routes finies : la gamme bushcraft reprend, une à une.
   const routeB = ["abri_ferme", "coffre_cercle", "etabli_etau"];
-  assert.deepEqual(ids(quetesOuvertes("installer", "voltaiques", [...tete, ...routeA, ...routeB])), ["lit"]);
+  assert.deepEqual(ids(quetesOuvertes("installer", "voltaiques", [...tete, ...routeA, ...routeB])), ["dakota"]);
+  // Le lit vient juste après le coffre, avant la première porte.
+  const installer = ids(QUETES.filter((q) => q.ligne === "installer"));
+  assert.equal(installer.indexOf("lit"), installer.indexOf("coffre") + 1);
+  assert.ok(installer.indexOf("lit") < installer.indexOf("foyer_cuisine"));
   // Les portes : une par meuble, trois par route, dans l'ordre décidé.
   const portes = QUETES.filter((q) => q.route);
   assert.deepEqual(portes.filter((q) => q.route === "A").map((q) => q.titre), ["Une vraie cuisine", "La soupe qui cuit seule", "Dix litres"]);
@@ -46,7 +51,7 @@ test("puis les portes du niveau 1 : deux ouvertes à la fois, une par route (Q-0
 });
 
 test("au départ d'une sortie, le carnet nomme les portes ouvertes", () => {
-  const tete = ["foyer_pierres", "repas", "eau_du_ciel", "coffre"];
+  const tete = ["foyer_pierres", "repas", "eau_du_ciel", "coffre", "lit"];
   const phrase = phraseDuDepart(quetesOuvertes("installer", "charbonniers", tete))!;
   assert.equal(phrase, "Une vraie cuisine : il te faut une grille. Un abri fermé : il te faut de la grosse toile.");
   assert.equal(phraseDuDepart(quetesOuvertes("installer", "charbonniers", [])), null, "pas de porte ouverte : rien à dire");

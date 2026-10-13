@@ -15,7 +15,8 @@ import { Halte } from "./halte.ts";
 import { Joueur } from "./joueur.ts";
 
 /** La tête de « S'installer », déjà faite : les portes sont ouvertes. */
-const TETE = ["foyer_pierres", "repas", "eau_du_ciel", "coffre"];
+// « Un vrai lit » juste après le coffre, avant les portes (0.8.2, chantier J).
+const TETE = ["foyer_pierres", "repas", "eau_du_ciel", "coffre", "lit"];
 const PORTES = QUETES.filter((q) => q.route).map((q) => q.id);
 
 function monter(avant?: (base: Base, id: number) => void, finies: string[] = TETE, inventaire: Record<string, number> = {}) {
