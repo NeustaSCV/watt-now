@@ -28,8 +28,10 @@
   - **quand un Éteint nous tient, on ne frappe plus** : A et B servent tous deux à se dégager ;
   - **l'Équipé (le casqué) ne se laisse plus bloquer** en martelant : il n'est étourdi qu'un coup sur deux ;
   - **un Éteint à terre ne ressemble plus à un Éteint détruit** : à terre, il remue ; détruit, il est inerte (M4).
-- **5 chantiers en 2 vagues**, sans contenu nouveau dans le monde : ni lieu, ni arme, ni Éteint, ni objet.
-- **Effort : 2 M et 3 S, environ 6 jours-agent. En pratique, une demi-journée à une journée**, recette comprise (§6).
+  - **du bois et des pierres sur toutes les pelouses**, au hasard, surtout dans les haltes (M5) ;
+  - **au gué, on entre dans la cabane du passeur** (M6).
+- **8 chantiers en 2 vagues** (A à D, F à H, puis E), sans contenu nouveau dans le monde : ni lieu, ni arme, ni Éteint, ni objet nouveau.
+- **Effort : 2 M et 6 S, environ 8 jours-agent. En pratique, une journée environ**, recette comprise (§7). Le chantier C (la saisie) est déjà fait en 0.8.4.
 - **Pas de remise à zéro** des joueurs : rien ne change dans les sauvegardes.
 - **Le combat entre joueurs n'entre pas.** Il viendra bien après la 0.9, une fois la fluidité validée en jeu (§8, [`duel-entre-joueurs.md`](duel-entre-joueurs.md)).
 
