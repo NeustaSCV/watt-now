@@ -49,6 +49,9 @@ import { ETOILES, compter, etoilesDe, etoilesTexte, typeDe, type CleObjet, type 
 import { MUNITIONS, armeTirDe, armeTirExemplaire, estLancable } from "../../commun/src/tir.ts";
 import { OBJETS, capaciteDe, estCleObjet, nomContenant, nommer, poidsInventaire } from "../../commun/src/objets.ts";
 import { estOutil } from "../../commun/src/outils-a-portee.ts";
+import { armeMarquee, sacPorte } from "./marques-sac.ts";
+import { dureeExamen } from "./texte-examen.ts";
+import { htmlAideTouches } from "./aide-touches.ts";
 import {
   CATEGORIES_RECETTES,
   NOMS_INSTALLATIONS,
@@ -164,6 +167,11 @@ function nomEtoile(cle: CleObjet, n = 1): string {
   return e === null ? nom : `${nom} <span class="etoiles-nom">${etoilesTexte(e)}</span>`;
 }
 
+/** Un nom en tête de fiche ou de bande, avec sa majuscule (« Briquet », 0.8.2, chantier H). */
+function titreObjet(nom: string): string {
+  return nom.charAt(0).toUpperCase() + nom.slice(1);
+}
+
 /** Des Wh lisibles : « 11,5 ». */
 function virguleWh(wh: number): string {
   return (Math.round(wh * 10) / 10).toString().replace(".", ",");
@@ -201,7 +209,8 @@ function lireCarnetOuvert(): boolean {
 }
 
 /** L'importance d'un message : quand la pile est pleine, le moins important part en premier. */
-const RANG_MESSAGE = { indice: 0, "": 1, aide: 2, lecon: 3 } as const;
+// « examen » : le texte d'Examiner (0.8.2, Q9), montré en entier ; aussi important qu'une aide.
+const RANG_MESSAGE = { indice: 0, "": 1, aide: 2, examen: 2, lecon: 3 } as const;
 
 /** Le type de dégât, en une phrase (Book 23 §4.2). */
 const TYPES_DEGATS = {
@@ -1290,14 +1299,15 @@ export class Hud {
    * doublon (un message déjà affiché est relancé, avec « ×2 »), et quand la pile est pleine on retire d'abord le moins
    * important (leçon > aide > info > indice). Une même phrase d'indice ne revient pas avant 90 s.
    */
-  message(texte: string, genre: "" | "aide" | "lecon" | "indice" = ""): void {
+  message(texte: string, genre: "" | "aide" | "lecon" | "indice" | "examen" = ""): void {
     const maintenant = performance.now();
     if (genre === "indice") {
       const vu = this.indicesVus.get(texte);
       if (vu !== undefined && maintenant - vu < 90_000) return;
       this.indicesVus.set(texte, maintenant);
     }
-    const duree = { "": 4000, indice: 5000, aide: 8000, lecon: 9000 }[genre];
+    // Le texte d'Examiner, en entier (0.8.2, Q9) : le temps de le lire, ≈ 15 caractères par seconde.
+    const duree = genre === "examen" ? dureeExamen(texte) : { "": 4000, indice: 5000, aide: 8000, lecon: 9000 }[genre];
     const present = [...this.messages.children].find((e) => (e as HTMLElement).dataset.texte === texte) as HTMLElement | undefined;
     if (present) {
       const n = Number(present.dataset.fois ?? "1") + 1;
@@ -1370,14 +1380,9 @@ export class Hud {
     if (saisie) saisie.textContent = avecTouches("Tape {examiner} vite pour te dégager", t);
     const kbd = this.element.querySelector<HTMLElement>(".mode-clavier kbd");
     if (kbd) kbd.textContent = nomDe("combat");
+    // L'aide des touches (0.8.2, R7) : des touches dessinées, une case par action (aide-touches.ts).
     const aide = this.element.querySelector<HTMLElement>(".bloc.aide");
-    if (aide) {
-      const m = `${nomDe("avancer")}${nomDe("gauche")}${nomDe("reculer")}${nomDe("droite")}`;
-      aide.textContent = avecTouches(
-        `${m} : marcher · {courir} : courir · {discret} : discret · {agir} / clic : agir · {examiner} / clic droit : examiner · {sac} : sac · {fabriquer} : fabriquer · {combat} : combat · {carte} : carte · {lumiere} : lumière · {tourner} : tourner la vue · molette : zoom · « Commandes » pour les changer`,
-        t,
-      );
-    }
+    if (aide) aide.innerHTML = htmlAideTouches(nomDe);
     for (const [classe, action, nom] of [
       [".r-sac", "sac", "Sac"],
       [".r-fabriquer", "fabriquer", "Fabriquer"],
@@ -1549,11 +1554,15 @@ export class Hud {
       const nom = nommer(cle, 1);
       // Une ordure (valeur 0, 0.7) a son icône grisée : le sac se lit d'un regard, « ça, c'est à jeter ».
       return `<button type="button" class="case ${classe} ${estOrdure(typeDe(cle)) ? "ordure" : ""} ${this.selection === cle ? "choisie" : ""}" data-objet="${cle}"
-        title="${nom} (${kg(pile)} kg) — ${d.description}" aria-label="${nom}">${icone(typeDe(cle))}${etoiles}${barre}${munitions}${badge ? `<span class="badge">${badge}</span>` : ""}</button>`;
+        title="${nom} (${kg(pile)} kg) — ${d.description}" aria-label="${nom}${classe === "equipee" ? ", en main au combat" : classe === "portee" ? ", sur ton dos" : ""}">${icone(typeDe(cle))}${etoiles}${barre}${munitions}${badge ? `<span class="badge">${badge}</span>` : ""}</button>`;
     };
+    // Ce qu'on a sur soi (0.8.2, R6) : l'arme en main au combat, choisie ou prise d'office (la meilleure du sac), et le
+    // sac sur le dos ont la même marque en coin.
+    const armeEnMainCombat = armeMarquee(this.inventaire, this.armeEquipee);
+    const surLeDos = sacPorte(this.inventaire);
     const cases = [
       (this.inventaire.gourde ?? 0) > 0 ? case_("gourde", g.litres > 0 ? `${kg(g.litres)} L` : "vide", g.contenu === "brute" && g.litres > 0 ? "brute" : "") : "",
-      ...presents.map((t) => case_(t, (this.inventaire[t] ?? 0) > 1 ? `×${this.inventaire[t]}` : "", t === this.armeEquipee ? "equipee" : "")),
+      ...presents.map((t) => case_(t, (this.inventaire[t] ?? 0) > 1 ? `×${this.inventaire[t]}` : "", t === armeEnMainCombat ? "equipee" : t === surLeDos ? "portee" : "")),
     ].join("");
 
     let fiche = `<p class="indice">Touche un objet pour le voir.</p>`;
@@ -1582,7 +1591,12 @@ export class Hud {
         if (s === this.armeEquipee) {
           enMain = " · ⚔ en main au combat";
           actions.push(`<button type="button" data-action="desequiper" title="En mode Combat, tu prendras la meilleure arme du sac.">Retirer</button>`);
-        } else actions.push(`<button type="button" class="principal" data-action="equiper" title="L'arme que tu prends en mode Combat">Équiper</button>`);
+        } else {
+          // Prise d'office (la meilleure du sac, 0.8.2, R6) : elle est en main, et « Équiper » la garde même si une
+          // meilleure arrive.
+          if (s === armeEnMainCombat) enMain = " · ⚔ en main au combat (la meilleure du sac)";
+          actions.push(`<button type="button" class="principal" data-action="equiper" title="L'arme que tu prends en mode Combat">Équiper</button>`);
+        }
       } else if (estManuel(s)) {
         // Un manuel (Book 25 §2.3) : le lire ouvre les recettes d'une autre famille ; le livre reste dans le sac.
         const de = MANUELS[s]!;
@@ -1650,6 +1664,7 @@ export class Hud {
         // La voie autonome (Book 25 §5.4) : la manivelle de la lampe à dynamo, 1 Wh par minute.
         if (charge < 1 && (this.inventaire.lampe_dynamo ?? 0) > 0) actions.push(`<button type="button" data-action="manivelle" title="La lampe à dynamo : 1 Wh par minute, à la force du bras">Manivelle</button>`);
       }
+      if (s === surLeDos) enMain += " · 🎒 sur ton dos";
       // Les étoiles d'un objet de métier (Book 25 §4.2), en clair : « ★★★☆☆ ».
       const etoiles = etoilesDe(s);
       // L'étoile qui vient de s'ajouter sur le meuble (chantier 9) brille un instant, en or.
@@ -1658,7 +1673,7 @@ export class Hud {
       const etoilesFiche = etoiles === null ? "" : ` <span class="etoiles-fiche" title="${etoiles} étoile${etoiles > 1 ? "s" : ""} sur 5">${pleines}<span class="etoiles-vides">${"☆".repeat(5 - etoiles)}</span></span>`;
       const famille = d.famille ? ` · ${NOMS_FAMILLES_VESTIGES[d.famille]}` : "";
       fiche = `
-        <div class="fiche-tete">${icone(t, 36)}<div><strong>${nommer(t, n)}${etoilesFiche}</strong>
+        <div class="fiche-tete">${icone(t, 36)}<div><strong>${titreObjet(nommer(t, n))}${etoilesFiche}</strong>
           <small>${kg(d.poids * n + (s === "gourde" ? g.litres : 0))} kg · valeur ≈ ${formaterWotts(energieGrise(t))}${famille}${enMain}</small></div></div>
         ${actions.length ? `<div class="actions-objet">${actions.join("")}</div>` : ""}
         ${reprendre}
@@ -1963,7 +1978,7 @@ export class Hud {
       }
       const note =
         estDecharge && choix.sens === "deposer" ? " · la décharge ne reprend rien" : n > 0 && !boutons.includes("disabled") ? "" : n > 0 ? ` · ${choix.sens === "deposer" ? "coffre plein" : "sac plein"}` : "";
-      bande = `${icone(typeDe(choix.objet), 32)}<span class="nom"><strong>${nommer(choix.objet, 1)}</strong><small>${n > 1 ? `×${n} · ` : ""}${kg(d.poids * Math.max(1, n))} kg · ${ou}${note}</small></span><span class="boutons">${boutons}</span>`;
+      bande = `${icone(typeDe(choix.objet), 32)}<span class="nom"><strong>${titreObjet(nommer(choix.objet, 1))}</strong><small>${n > 1 ? `×${n} · ` : ""}${kg(d.poids * Math.max(1, n))} kg · ${ou}${note}</small></span><span class="boutons">${boutons}</span>`;
     }
     const plein = (place: number, inv: Inventaire) => Object.keys(inv).length > 0 && place < Math.min(...(Object.keys(inv) as CleObjet[]).map((t) => OBJETS[typeDe(t)].poids));
     const html = `
