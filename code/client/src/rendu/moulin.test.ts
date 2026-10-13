@@ -122,3 +122,23 @@ test("0.8.3 : dans le couloir du rouet, le rouet et la lanterne (la couche « ro
   for (let i = 0; i < 30; i++) animerMoulin(decor, cour.x, cour.z, 0.05, Math.PI / 4, {}, [], []);
   for (const m of materiaux) assert.ok(m.visible && m.opacity > 0.95, "revenu");
 });
+
+test("0.8.3 : la grande porte ouverte ne s'efface jamais, même tout près ; fermée, elle s'efface avec la façade", () => {
+  const decor = creerMoulin();
+  const toits = decor.userData.toits as { nom?: string }[];
+  assert.ok(!toits.some((t) => t.nom === "grande porte ouverte"), "la porte ouverte n'est pas une couche qui s'efface");
+  assert.ok(toits.some((t) => t.nom === "grande porte fermée"), "la porte fermée s'efface avec la façade");
+  let ouverte: THREE.Object3D | undefined;
+  decor.traverse((o) => (ouverte ??= (o.userData.objets as Record<string, THREE.Object3D> | undefined)?.porteOuverte));
+  assert.ok(ouverte, "la porte ouverte du modèle");
+  const materiaux = new Set<THREE.Material>();
+  ouverte!.traverse((o) => {
+    const m = (o as THREE.Mesh).material as THREE.Material | undefined;
+    if ((o as THREE.Mesh).isMesh && m) materiaux.add(m);
+  });
+  // Tout près de la porte, côté cour, la porte ouverte : ses matières restent pleines.
+  const seuil = jeu(1, 2.2);
+  for (let i = 0; i < 30; i++) animerMoulin(decor, seuil.x, seuil.z, 0.05, Math.PI / 4, { grande_porte: true }, [], []);
+  assert.ok(materiaux.size > 0);
+  for (const m of materiaux) assert.ok(m.visible && m.opacity > 0.95, "la porte ouverte reste visible");
+});

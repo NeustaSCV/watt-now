@@ -53,7 +53,9 @@ export function creerMoulin(): THREE.Group {
   const modele = creerModele({ usure: USURE }) as THREE.Group;
   modele.position.set(OX, 0, OZ);
   // Les couches qui s'effacent, dans le repère du jeu ; le modèle ne garde pas les siennes (on les lirait deux fois).
-  const toits = (modele.userData.toits as { boite: Boite; horsDe?: Boite }[]).map((t) => ({ ...t, boite: auJeu(t.boite), ...(t.horsDe ? { horsDe: auJeu(t.horsDe) } : {}) }));
+  // La grande porte ouverte ne s'efface jamais (décision du porteur, 2026-10-13) : ses battants s'ouvrent vers la cour et
+  // disparaissaient dès qu'on s'en approchait. Fermée, elle s'efface avec la façade, comme le mur autour.
+  const toits = (modele.userData.toits as { nom?: string; boite: Boite; horsDe?: Boite }[]).filter((t) => t.nom !== "grande porte ouverte").map((t) => ({ ...t, boite: auJeu(t.boite), ...(t.horsDe ? { horsDe: auJeu(t.horsDe) } : {}) }));
   delete modele.userData.toits;
   groupe.userData.toits = toits;
   groupe.add(modele, creerAlentours(modele));
