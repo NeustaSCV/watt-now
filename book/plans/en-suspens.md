@@ -4,10 +4,10 @@
 
 ## 1. À transmettre à d'autres sessions
 
-- **Session « bâtiments »** : les changements du modèle du Moulin (et du gué) pour la 0.8 — demande complète dans `.claude-travail/propositions/demande-batiment-moulin.md` (passages trop étroits de 0,58 m et 0,74 m, nord fermé, mur de clôture, planche du bief, if, tableau à clés, étau et poutres au nord, 22 Éteints, pièces et portes pour la vision par pièce). Le chantier 12 de la 0.8 en dépend.
+- ~~**Session « bâtiments »** : les changements du modèle du Moulin (et du gué) pour la 0.8 — demande complète dans `.claude-travail/propositions/demande-batiment-moulin.md` (passages trop étroits de 0,58 m et 0,74 m, nord fermé, mur de clôture, planche du bief, if, tableau à clés, étau et poutres au nord, 22 Éteints, pièces et portes pour la vision par pièce). Le chantier 12 de la 0.8 en dépend.~~ *Fait : livré (2026-10-10, puis les retouches du 2026-10-13), importé en 0.8 et en 0.8.3.*
 - **Session « intro »** (écrans d'accueil, branchés en 0.7.1 ; copie dans `code/client/public/intro/`, `npm run accueil:importer` pour la refaire) :
-  1. en paysage sur iPhone 13 mini (812 × 320), l'image 3D tombe à 0 px : garder l'image à gauche et le texte à droite (`src3d/ecrans.js`, `ajuster()`, et `intro.css`) ;
-  2. `src3d/acteurs.js` demande `assets/personnages/animations_intro_1.glb` et `_2.glb`, que la notice dit de ne pas servir (deux 404 sans conséquence) ;
+  1. ~~en paysage sur iPhone 13 mini (812 × 320), l'image 3D tombe à 0 px : garder l'image à gauche et le texte à droite (`src3d/ecrans.js`, `ajuster()`, et `intro.css`) ;~~ *Fait : livré par l'intro, importé en 0.8.3.*
+  2. ~~`src3d/acteurs.js` demande `assets/personnages/animations_intro_1.glb` et `_2.glb`, que la notice dit de ne pas servir (deux 404 sans conséquence) ;~~ *Fait : livré par l'intro, importé en 0.8.3.*
   3. en vertical (375 × 630), une grande bande noire entre l'image et le texte.
 
 ## 2. Questions anciennes jamais tranchées (avant la 0.6)
@@ -22,7 +22,7 @@
 
 - **L'Examiner détaillé** (`.claude-travail/propositions/examiner-detaille.md`, maquette `maquettes/examiner/`) : la 0.8 n'en prend que les indices (question Q-0.8-17 du plan).
 - **Les lots de l'inventaire des constructions** (`.claude-travail/propositions/plan-lots-constructions.md`, 9 questions) : en grande partie remplacés par le nouveau système (bible, plan 0.8) ; à relire pour ce qui n'y est pas (pédalier complet, lampe qui consomme, tour à perche…).
-- **Les dégâts électriques E1–E8** (`degats-electriques.md`) : remplacés par les décisions V, C, D et K ; rien à reprendre.
+- ~~**Les dégâts électriques E1–E8** (`degats-electriques.md`) : remplacés par les décisions V, C, D et K ; rien à reprendre.~~ *Plus d'actualité : codés en 0.8.*
 
 ## 4. Sujets mis de côté, à traiter après la 0.8
 
@@ -30,8 +30,8 @@
 - Le **relais d'armes** (« une super machette ★★ aussi forte qu'une machette ★★★★★ »).
 - Les **caractéristiques des armes** en bonus/malus selon les ennemis ; les **ennemis évolués** (casque et autres) qui accompagnent la montée des dégâts.
 - Les **munitions** (flèches, carreaux) : une règle cohérente sans tout déséquilibrer.
-- Les **réparations** (la tête du marteau ne s'use pas ; on répare le manche sans forge) : au-delà de ce que la 0.8 code.
-- Vérifier les **noms des autres meubles** (établi, banc de recharge, pédalier…) comme pour la forge (un seul nom partout).
+- ~~Les **réparations** (la tête du marteau ne s'use pas ; on répare le manche sans forge) : au-delà de ce que la 0.8 code.~~ *Fait en 0.8 (le manche à l'établi à étau) et 0.8.2 (la masse aussi).*
+- ~~Vérifier les **noms des autres meubles** (établi, banc de recharge, pédalier…) comme pour la forge (un seul nom partout).~~ *Fait en 0.8 : « banc solaire », « pédalier générateur », « ventilateur à manivelle » partout (jeu, books, bible).*
 - La **halte de cueillette et de chasse** (gibier, boyaux, corde d'arc en boyau) : Book 99.
 - La **bibliothèque de bâtiments** `batiment/` : à valider par le porteur ; Book 99.
 - Le **combat entre joueurs** : règles du duel décidées le 2026-10-13 (`duel-entre-joueurs.md`), à coder **bien après la 0.9**, une fois la fluidité validée , toutes les questions tranchées.
@@ -43,4 +43,4 @@
 - Le plan de la 0.9 (après la 0.8.3) : `book/plans/plan-0.9.md`.
 - La notice d'un nouveau niveau : `book/plans/notice-nouveau-niveau.md`.
 - Les études et données : `.claude-travail/propositions/` (non versionné : à ne pas supprimer).
-- Versions : 0.7.3 déployée le 2026-10-10 (étiquette v0.7.3).
+- ~~Versions : 0.7.3 déployée le 2026-10-10 (étiquette v0.7.3).~~ Versions : 0.8 et 0.8.1 déployées le 2026-10-11, 0.8.2 le 2026-10-13 ; **0.8.3 prête à déployer** (étiquette v0.8.3). Le plan de la 0.8.2 : `book/plans/plan-0.8.2.md`.
