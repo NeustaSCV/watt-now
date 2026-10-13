@@ -287,4 +287,6 @@ Ce qui peut l'allonger : une cause du bogue du coffre plus profonde que prévu (
 ### 7.4 Les décisions de fin de vague 2 (2026-10-13)
 
 - **Les repas du tutoriel** (nouveau, décidé) : un repas toutes les deux étapes, de qualité croissante : 2 pommes (étape 2), une poignée de noix (4), une conserve (6), une volaille rôtie et une pomme (8), une volaille rôtie aux cèpes (10), deux pots-au-feu à la fin (12). Une ligne du carnet, jamais une fenêtre ; rien pour le vétéran. À vérifier au rythme (chantier K).
-- **Le gué, ses déchets** : à décider (proposition d'une couche « berge » plus nature, §7.5).
+- **Le gué, ses déchets** (décidé) : une couche de déchets **« berge »** propre au gué, plus nature : ≈ 50 % de nature (bois flotté, fibres de roseaux, plumes, os), ≈ 35 % de ce que la crue charrie (plastique, canettes, chiffons, bouts de corde), ≈ 15 % de pêche et de guinguette ; environ moitié de la densité de la station, ≈ 10 % de contenants ; aucun objet nouveau. La station garde le fabriqué, le gué devient le lieu des matériaux naturels de la route B.
+- **Les branches du gué : 8 au total** (le tas de bois flotté compris).
+- **« Plus de lit dans l'abri »** (R11) : les textes qui parlent encore d'un lit construit à côté de l'abri parlent de garnir l'abri (chantier K).
