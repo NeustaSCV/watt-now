@@ -17,7 +17,8 @@ import type { DefinitionVestige, Demontage } from "./vestiges.ts";
  * F cour de ferme, J jardin, C champ et prairie, B bois et lisière, D décharge, I intérieur (boutique, bureaux),
  * A atelier et casse.
  */
-export type CodeLieu = "R" | "P" | "V" | "F" | "J" | "C" | "B" | "D" | "I" | "A";
+// « G » : les berges du gué (0.8.2), qui tirent par groupes, sans objet listé par lettre (hors TOUS_LES_CODES_LIEU).
+export type CodeLieu = "R" | "P" | "V" | "F" | "J" | "C" | "B" | "D" | "I" | "A" | "G";
 
 export const TOUS_LES_CODES_LIEU: readonly CodeLieu[] = ["R", "P", "V", "F", "J", "C", "B", "D", "I", "A"];
 

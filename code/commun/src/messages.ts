@@ -299,9 +299,7 @@ export type MessageClient =
    */
   | { t: "lancer"; dx: number; dz: number; cible?: number; distance?: number }
   /** Réarmer l'arbalète : un geste, immobile (chantier 7). */
-  | { t: "rearmer" }
-  /** Recharger un pack à la manivelle de la lampe à dynamo (Voltaïques, chantier 6). */
-  | { t: "manivelle"; objet: CleObjet };
+  | { t: "rearmer" };
 
 export type OperationEchange =
   /** Proposer un échange à un joueur proche. */
@@ -731,7 +729,9 @@ export type MessageClientBanc =
   /** Depuis la fiche du banc : charger une chose qu'on porte (une batterie, une arme électrique) depuis la batterie du banc. */
   | { t: "banc"; id: number; op: "charger"; cible: CibleCharge }
   /** Échanger la batterie du banc contre une batterie du sac : l'ancienne revient au sac. */
-  | { t: "banc"; id: number; op: "echanger" };
+  | { t: "banc"; id: number; op: "echanger" }
+  /** Tourner la manivelle de la lampe à dynamo : elle remplit lentement la batterie du banc (R17, le secours lent). */
+  | { t: "banc"; id: number; op: "manivelle" };
 
 // ---------- Dormir dans l'abri : le trajet jusqu'à la couche (0.8.2, chantier I : R12 ; commun/src/sommeil-abri.ts) ----------
 

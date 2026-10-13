@@ -51,3 +51,12 @@ test("0.8.2 fiche du banc : sans batterie, on propose de brancher celle de la ru
   assert.match(html, /Pas de batterie dans le banc/);
   assert.match(html, /data-verbe="poser_batteries" >Brancher/);
 });
+
+test("0.8.2 fiche du banc (R17) : avec la lampe à dynamo, la manivelle remplit la batterie du banc ; sans elle, pas de bouton", () => {
+  const avec = htmlFicheBanc(banc(180), { lampe_dynamo: 1 }, {}, {});
+  assert.match(avec, /data-banc="manivelle"(?![^>]*disabled)/);
+  assert.match(avec, /la manivelle de la lampe à dynamo/);
+  assert.doesNotMatch(htmlFicheBanc(banc(180), {}, {}, {}), /data-banc="manivelle"/);
+  // Pleine, la batterie du banc n'a plus rien à prendre.
+  assert.match(htmlFicheBanc(banc(360), { lampe_dynamo: 1 }, {}, {}), /data-banc="manivelle" disabled/);
+});

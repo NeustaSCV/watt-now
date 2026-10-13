@@ -10,8 +10,8 @@ import type { InstallationVue } from "../../commun/src/messages.ts";
 import type { Inventaire } from "../../commun/src/objets.ts";
 import { REGLAGES } from "../../commun/src/reglages.ts";
 
-/** Ce que la fiche du banc envoie : charger une chose, échanger la batterie, la brancher. */
-export type GesteBanc = { op: "charger"; cible: CibleCharge } | { op: "echanger" };
+/** Ce que la fiche du banc envoie : charger une chose, échanger la batterie, la remplir à la manivelle. */
+export type GesteBanc = { op: "charger"; cible: CibleCharge } | { op: "echanger" } | { op: "manivelle" };
 
 function nb(x: number): string {
   return String(Math.round(x * 10) / 10).replace(".", ",");
@@ -34,7 +34,10 @@ export function htmlFicheBanc(i: InstallationVue, inventaire: Inventaire, charge
   const remplir = [
     i.etat.panneau ? `le panneau, au soleil (${REGLAGES.panneau_wh_jour} Wh par jour)` : "le panneau, une fois posé dessus",
     `un pédalier générateur à moins de ${PORTEE_PEDALIER_BANC} m, quand on pédale`,
+    "la manivelle de la lampe à dynamo, lentement",
   ].join(" ; ");
+  // La manivelle (le secours lent, R17) : avec la lampe à dynamo du kit, tant que la batterie du banc n'est pas pleine.
+  const manivelle = (inventaire.lampe_dynamo ?? 0) > 0;
 
   // La batterie du banc, à demeure.
   const batterie = bat
@@ -44,7 +47,10 @@ export function htmlFicheBanc(i: InstallationVue, inventaire: Inventaire, charge
           <small>La remplissent : ${remplir}.</small>
           ${aEchanger ? "" : `<small>Pour l'échanger, il te faut une autre batterie de voiture dans ton sac.</small>`}
         </div>
-        <button type="button" class="secondaire" data-banc="echanger" ${aEchanger ? "" : "disabled"}>Échanger</button>
+        <span class="boutons-banc">
+          <button type="button" class="secondaire" data-banc="echanger" ${aEchanger ? "" : "disabled"}>Échanger</button>
+          ${manivelle ? `<button type="button" class="secondaire" data-banc="manivelle" ${bat.wh >= bat.capacite - 0.05 ? "disabled" : ""} title="1 Wh par minute, à la force du bras">Manivelle</button>` : ""}
+        </span>
       </article>`
     : `<article class="etape banc-batterie">
         <div class="corps"><strong>Pas de batterie dans le banc</strong>
@@ -85,4 +91,5 @@ export function htmlFicheBanc(i: InstallationVue, inventaire: Inventaire, charge
 export function brancherFicheBanc(p: HTMLElement, envoyer: (geste: GesteBanc) => void): void {
   for (const b of p.querySelectorAll<HTMLButtonElement>("[data-charger]")) b.addEventListener("click", () => envoyer({ op: "charger", cible: b.dataset.charger as CibleCharge }));
   for (const b of p.querySelectorAll<HTMLButtonElement>('[data-banc="echanger"]')) b.addEventListener("click", () => envoyer({ op: "echanger" }));
+  for (const b of p.querySelectorAll<HTMLButtonElement>('[data-banc="manivelle"]')) b.addEventListener("click", () => envoyer({ op: "manivelle" }));
 }

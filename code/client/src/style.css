@@ -5880,6 +5880,16 @@ body:has(#hud .voile-pause:not([hidden])) #hud .tactile {
   flex: 0 0 auto;
   min-width: 92px;
 }
+/* « Échanger » et « Manivelle », l'un sous l'autre : le texte de la batterie garde sa largeur sur téléphone. */
+#hud .panneau.fiche .etape.banc-batterie > .boutons-banc {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+#hud .panneau.fiche .etape.banc-batterie > .boutons-banc button {
+  min-width: 92px;
+}
 #hud .panneau.fiche .etape.banc-chose .corps strong {
   overflow-wrap: anywhere;
 }

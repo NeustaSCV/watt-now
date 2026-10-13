@@ -444,12 +444,12 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
       "Tout le monde sait faire un arc : une perche ou une branche droite, une corde. Bande-le en maintenant {lancer} : relâché trop tôt, c'est un **tir rapide**, au corps ; quand le cercle s'est refermé, c'est un **tir plein**. Il faut ensuite encocher la flèche suivante. Tenir l'arc bandé trop longtemps fait trembler le bras et use ton souffle.",
       "La pointe compte : une flèche simplement durcie au feu blesse, mais ne perce pas un crâne. L'arc est l'arme la plus discrète du jeu.",
       { sous_titre: "Une arme qui se réarme" },
-      "Certaines armes de tir se portent **armées** : le trait part dès que tu relâches, sans rien bander, et porte loin. Ensuite, {lancer} la **réarme** : quelques secondes **sans bouger**. La plus lourde demande un outil.",
+      "Certaines armes de tir se portent **armées** : le carreau part dès que tu relâches, sans rien bander, et porte loin. Ensuite, {lancer} la **réarme** : quelques secondes **sans bouger**. La plus lourde demande un outil.",
       { sous_titre: "Ce qu'il faut savoir" },
       {
         liste: [
           "**Saisi, on ne tire pas** : dégage-toi d'abord ({examiner}).",
-          "Un Éteint **casqué** ne meurt d'une flèche ou d'un trait que **de face**, par la visière, et de plus près.",
+          "Un Éteint **casqué** ne meurt d'une flèche ou d'un carreau que **de face**, par la visière, et de plus près.",
           "**Ramasse tes munitions** : ce qui manque tombe au sol, ce qui touche reste sur le corps. Elles cassent parfois ; dans la mare, elles sont perdues.",
           "Le tir éclaircit **avant** le contact. Contre trois Éteints sur toi, il te faut une arme de contact.",
         ],
@@ -541,7 +541,7 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
       {
         liste: [
           "**Au banc solaire**, chez toi : sa fiche a une ligne par arme, avec un bouton « Charger ». Le courant vient de la batterie du banc (voir « Le banc »).",
-          "**À la manivelle** : Sac → l'arme → « Manivelle », avec la lampe à dynamo. Lent, fatigant, mais possible même sans soleil.",
+          "**Sans soleil** : au banc, la manivelle de la lampe à dynamo remplit sa batterie (« Manivelle », dans sa fiche). Lent, fatigant, mais possible même l'hiver gris.",
         ],
       },
     ],
@@ -558,7 +558,7 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
         liste: [
           "**Le panneau** posé sur le banc la remplit au soleil, même quand tu n'es pas là.",
           "**Un pédalier générateur** posé à moins de 3 m du banc la remplit quand on pédale.",
-          "**La manivelle** de la lampe à dynamo reste le secours, lent, pour une arme.",
+          "**La manivelle** de la lampe à dynamo la remplit aussi, lentement : le secours quand il n'y a ni soleil ni pédalier.",
         ],
       },
       { sous_titre: "Charger ce que tu portes" },
