@@ -183,14 +183,41 @@ test("0.8.2 R14 : le module de décharge se fait de l'un ou l'autre condensateur
 
 // ---------- La canette et la boîte de conserve (R25) ----------
 
-test("0.8.2 R25 : une canette écrasée se démonte en aluminium ; une boîte de conserve vide ne se démonte pas", () => {
+test("0.8.2 R25 : trois canettes écrasées se démontent en une chute d'aluminium ; une boîte de conserve vide ne se démonte pas", () => {
   assert.deepEqual(DEMONTAGE.canette?.donne, { aluminium: 1 });
+  assert.equal(DEMONTAGE.canette?.par, 3, "trois canettes pour une chute (décision du porteur)");
   assert.equal(DEMONTAGE.boite_vide, undefined);
-  const t = surLeTerrain({ pierre: 1, canette: 2 });
+  // Deux canettes : pas assez, rien ne bouge, et on dit combien il en faut.
+  const deux = surLeTerrain({ pierre: 1, canette: 2 });
+  deux.demonter("canette");
+  assert.equal(deux.inventaireFinal().aluminium, undefined);
+  assert.ok(deux.infos().some((x) => x.includes("Il en faut 3")), deux.infos().join(" | "));
+  // Quatre : trois partent, une chute vient, une canette reste.
+  const t = surLeTerrain({ pierre: 1, canette: 4 });
   t.demonter("canette");
   const inv = t.inventaireFinal();
   assert.equal(inv.aluminium, 1, t.infos().join(" | "));
   assert.equal(inv.canette, 1);
+});
+
+test("0.8.2 : la matraque de fortune prend le petit condensateur, plus l'appareil photo ; ses étoiles et sa note ne changent pas", () => {
+  const r = recette("matraque_fortune")!;
+  assert.deepEqual(r.ingredients, { gourdin: 1, petit_condensateur: 1, petite_batterie: 1, ficelle: 1 });
+  assert.equal(etoilesDuProduit(r, r.ingredients), 1);
+  assert.match(r.note ?? "", /petite batterie du kit est unique/);
+  const t = surLeTerrain({ couteau: 1, tournevis: 1, gourdin: 1, petite_batterie: 1, ficelle: 1, appareil_photo_jetable: 1 }, BANC);
+  t.fabriquer("matraque_fortune");
+  assert.equal(t.inventaireFinal().matraque_fortune, undefined, "l'appareil entier ne suffit plus");
+  t.demonter("appareil_photo_jetable");
+  t.fabriquer("matraque_fortune");
+  const inv = t.inventaireFinal();
+  assert.equal(inv.matraque_fortune, 1, t.infos().join(" | "));
+  assert.equal(inv.petit_condensateur, undefined);
+  // Une matraque de fortune d'une partie 0.8.1 reste une matraque de fortune.
+  const ancienne = surLeTerrain({ matraque_fortune: 1, "matraque_fortune#2": 1 });
+  ancienne.attendre(1);
+  assert.equal(ancienne.joueur.bienvenue(0).inventaire.matraque_fortune, 1);
+  assert.equal(ancienne.joueur.bienvenue(0).inventaire["matraque_fortune#2"], 1);
 });
 
 // ---------- Remmancher près d'un établi (R13) ----------

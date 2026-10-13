@@ -1878,20 +1878,23 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (this.voyage || !estObjet(objet) || (this.inventaire[objet] ?? 0) < 1) return;
     const d = DEMONTAGE[objet];
     if (!d) return this.info(`${OBJETS[objet].nom[0]!.toUpperCase()}${OBJETS[objet].nom.slice(1)} : rien à en tirer en le démontant, pour l'instant.`);
+    // Certains se démontent par lots (0.8.2 : trois canettes pour une chute d'aluminium).
+    const par = d.par ?? 1;
+    if ((this.inventaire[objet] ?? 0) < par) return this.info(`Il en faut ${par} pour en tirer quelque chose : ${nommer(objet, par)}.`);
     const facteur = multiplicateurQualites(this.outils(), d.qualites);
     if (facteur === null) return this.infos(outilsManquantsBref(d.qualites, this.outils(), undefined, this.recetteVisible));
     // Le poids d'après : le démontage laisse le rebut sur place, mais une pyramide de rouleaux pèse toujours son poids.
-    const apres: Inventaire = { ...this.inventaire, [objet]: (this.inventaire[objet] ?? 0) - 1 };
+    const apres: Inventaire = { ...this.inventaire, [objet]: (this.inventaire[objet] ?? 0) - par };
     for (const [t, k] of Object.entries(d.donne) as [TypeObjet, number][]) apres[t] = (apres[t] ?? 0) + k;
     if (poidsInventaire(apres) > capaciteDe(apres) + 1e-9) return this.sacTropLourd();
     this.commencer(`Démonter : ${OBJETS[objet].nom}`, (d.duree * facteur) / REGLAGES.gestes_vitesse, () => {
-      if ((this.inventaire[objet] ?? 0) < 1) return;
-      this.retirerPlusieurs({ [objet]: 1 });
+      if ((this.inventaire[objet] ?? 0) < par) return;
+      this.retirerPlusieurs({ [objet]: par });
       this.ajouterPlusieurs(d.donne);
       this.verifierLumiere();
       this.noterFait(`demonte:${objet}`);
       this.mesurer("progression", `demontage:${objet}`, 1);
-      this.info(`Démonté : ${OBJETS[objet].nom}. Tu en tires ${(Object.entries(d.donne) as [TypeObjet, number][]).map(([t, k]) => nommer(t, k)).join(", ")}.`);
+      this.info(`Démonté : ${par > 1 ? nommer(objet, par) : OBJETS[objet].nom}. Tu en tires ${(Object.entries(d.donne) as [TypeObjet, number][]).map(([t, k]) => nommer(t, k)).join(", ")}.`);
     }, 0, d.qualites.marteler ? "lourd" : "outil");
   }
 
