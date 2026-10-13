@@ -166,7 +166,7 @@ export const PROGRESSION: Readonly<Record<string, LigneProgression>> = {
   machette_forgee_ebrechee: { quand: [et(COUTEAUX_FORGES, vu("lame_ebrechee"))], indice: "Deux lames cassées en font une neuve." },
   reforger_lame: { quand: [vu("lame_ebrechee")], indice: "Une lame cassée n'est pas perdue." },
   banc_recharge: { quand: [SEUIL], indice: "Quand tu auras un toit et tenu tête une fois…" },
-  matraque_fortune: { quand: [SEUIL, fab("banc_recharge"), vu("appareil_photo_jetable")], indice: "Ton arme de métier : le silence qui mord." },
+  matraque_fortune: { quand: [SEUIL, fab("banc_recharge"), vu("appareil_photo_jetable", "petit_condensateur")], indice: "Ton arme de métier : le silence qui mord." },
   // R14 (0.8.2) : un condensateur, celui du flash ou celui de la raquette.
   module_decharge: { quand: [vu("petit_condensateur", "condensateur_moyen", "appareil_photo_jetable", "raquette_moustiques"), quete("raquette")], indice: "Un flash garde une belle décharge en réserve." },
   pack_cellules: { quand: [vu("cellule_lithium"), quete("pack")], indice: "Des petites piles ensemble font une vraie batterie." },
@@ -258,6 +258,73 @@ export const PROGRESSION: Readonly<Record<string, LigneProgression>> = {
 
 /** L'atelier de chaque famille : rien de son métier ne se dévoile avant lui (sauf ce qu'une quête demande). */
 export const ATELIER: Readonly<Record<Famille, string>> = { charbonniers: "forge", voltaiques: "banc_recharge", mecanistes: "pedalier" };
+
+// ---------- Les armes de métier attendent le meuble complet (R26, plan 0.8.2, chantier J) ----------
+
+/**
+ * Les armes de métier de chaque famille, leurs pièces comprises : ⚡ les matraques et le module de décharge, 🔥 les
+ * lames forgées (et la lance à pointe forgée), ⚙️ l'arbalète, ses pièces et ses carreaux. Les niveaux « plus tard » y
+ * sont aussi, pour le jour où ils viendront.
+ */
+export const ARMES_DE_METIER: Readonly<Record<Famille, readonly string[]>> = {
+  voltaiques: ["matraque_fortune", "matraque_electrique", "matraque_electrodes", "matraque_manche_tourne", "module_decharge", "module_bobine", "aiguillon"],
+  charbonniers: [
+    "lame_forgee",
+    "lame_forgee_fer",
+    "lame_forgee_lime",
+    "reforger_lame",
+    "machette_forgee",
+    "machette_forgee_fer",
+    "machette_forgee_ebrechee",
+    "hachette",
+    "hache_forgee",
+    "hache_forgee_soc",
+    "serpe",
+    "serpe_soc",
+    "glaive",
+    "pointe_lance",
+    "lance_forgee",
+  ],
+  mecanistes: [
+    "arbalete",
+    "arbalete_lourde",
+    "arbrier",
+    "noix_bois",
+    "noix_os",
+    "noix_forgee",
+    "arc_arbalete_frene",
+    "arc_arbalete_ressort",
+    "arc_arbalete_if",
+    "arc_arbalete_retrempe",
+    "corde_arbalete",
+    "corde_arbalete_ceinture",
+    "carreaux_os",
+    "carreaux_clou",
+    "carreaux_papier",
+    "carreaux_acier",
+    "cranequin",
+  ],
+};
+
+const RECETTES_ARMES_DE_METIER: ReadonlySet<string> = new Set(Object.values(ARMES_DE_METIER).flat());
+
+/** Le meuble de famille est-il complet : bâti, et équipé de sa pièce (l'enclume, le panneau, l'alternateur) ? */
+export function meubleComplet(famille: Famille, installations: ReadonlyMap<string, number>): boolean {
+  const type = ATELIER[famille];
+  const piece = PIECES_DE_FAMILLE[type as keyof typeof PIECES_DE_FAMILLE];
+  return installations.has(piece ? `${type}+${piece}` : type);
+}
+
+/**
+ * R26 : une arme de métier n'existe pas pour le joueur (ni dévoilée, ni en silhouette, ni annoncée) tant que **son**
+ * meuble de famille n'est pas complet ; le repli (la pierre plate, la manivelle, la dynamo) ne suffit pas, et l'établi
+ * non plus. La règle vaut pour une arme d'une autre famille apprise en leçon ou au manuel : elle attend, elle aussi, le
+ * meuble complet de celui qui l'a apprise. Ce qui est déjà gardé (une partie 0.8.1) n'est pas oublié : la carte revient
+ * avec la pièce posée.
+ */
+export function armeEnAttente(id: string, famille: Famille, installations: ReadonlyMap<string, number>): boolean {
+  return RECETTES_ARMES_DE_METIER.has(id) && !meubleComplet(famille, installations);
+}
 
 /** Le seuil du métier tombe de lui-même après ces minutes de jeu (l'étape « La famille » le fait plus tôt). */
 export const FILET_SEUIL_MIN = 120;
@@ -578,6 +645,8 @@ export function aDevoiler(e: EtatPourDevoilement): string[] {
   const savoir = e.savoir ?? {};
   const ajouter = (id: string, parLaChaine: boolean) => {
     if (devoilees.has(id) || !accessible(id, e.famille, savoir)) return;
+    // R26 : une arme de métier attend le meuble de famille complet, même tirée par la chaîne ou demandée.
+    if (armeEnAttente(id, e.famille, e.installations)) return;
     const r = recette(id);
     // La chaîne ne tire pas une recette liée à une construction qu'on n'a pas : elle attend sa construction.
     if (parLaChaine && r && !lieuPossede(r.lieu, e.installations)) return;
@@ -669,7 +738,8 @@ export function silhouettes(e: EtatPourDevoilement): SilhouetteVue[] {
   const savoir = e.savoir ?? {};
   const liste: SilhouetteVue[] = [];
   const deja = new Set<string>();
-  const cachee = (id: string) => !e.devoilees.has(id) && !deja.has(id) && accessible(id, e.famille, savoir);
+  // R26 : pas de silhouette d'arme de métier avant le meuble complet (pas même celle qu'une quête demande).
+  const cachee = (id: string) => !e.devoilees.has(id) && !deja.has(id) && accessible(id, e.famille, savoir) && !armeEnAttente(id, e.famille, e.installations);
   for (const id of recettesDemandees(e)) {
     const r = recette(id);
     if (!r || !cachee(id)) continue;

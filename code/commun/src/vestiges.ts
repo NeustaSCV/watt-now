@@ -1147,6 +1147,8 @@ export interface Demontage {
   qualites: Partial<Record<Qualite, number>>;
   /** Durée réelle, en secondes (avant le réglage gestes_vitesse). */
   duree: number;
+  /** Combien d'exemplaires on démonte d'un coup (0.8.2 : trois canettes pour une chute d'aluminium) ; absent : un. */
+  par?: number;
 }
 
 /**

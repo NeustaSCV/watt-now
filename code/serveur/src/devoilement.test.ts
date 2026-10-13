@@ -6,7 +6,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { MessageServeur } from "../../commun/src/messages.ts";
-import { INDICE_SECOND_TEMPS_MIN, PROGRESSION_VIDE, TEXTE_VETERAN, devoileesAuDepart, devoileesDEmblee, type EtatProgression } from "../../commun/src/progression.ts";
+import { INDICE_SECOND_TEMPS_MIN, PROGRESSION_VIDE, TEXTE_VETERAN, devoileesAuDepart, devoileesDEmblee, progressionValide, type EtatProgression } from "../../commun/src/progression.ts";
 import type { Inventaire } from "../../commun/src/objets.ts";
 import { SuiviDevoilement, type ConstructionVue, type SourceDevoilement } from "./devoilement.ts";
 import { Base } from "./base.ts";
@@ -352,4 +352,71 @@ test("un Voltaïque pose son banc, puis ramasse le panneau : le message vient", 
   attendre(1);
   assert.deepEqual(tous("idee").map((m) => m.etape), ["banc_recharge"]);
   assert.match(tous("idee")[0]!.texte, /panneau, posé sur un banc/);
+});
+
+// ---------- R26 (0.8.2, chantier J) : les armes de métier attendent le meuble de famille complet ----------
+
+test("R26 : le foyer de forge sans enclume ne fait penser à aucune lame ; l'enclume posée, elles viennent avec « Tu y penses »", () => {
+  const t = suivi({ installations: [...feu("foyer_pierres", 2), { type: "forge", niveau: 1 }], etat: { ...PROGRESSION_VIDE, devoilees: [...devoileesAuDepart(), "forge"] } });
+  t.attendre(2);
+  const avant = t.s.vue();
+  for (const id of ["lame_forgee_fer", "machette_forgee_fer", "hachette", "lame_forgee"]) {
+    assert.ok(!avant.devoilees.includes(id), id);
+    assert.ok(!avant.silhouettes.some((x) => x.id === id), `${id} en silhouette`);
+  }
+  assert.ok(avant.devoilees.includes("pinces_forge"), "les pinces n'attendent pas l'enclume");
+  assert.ok(!t.recus.some((m) => m.t === "devoilement" && m.texte && /lame|couteau|machette|hachette/i.test(m.texte)), "rien ne les nomme");
+  // L'enclume posée (aucun fait noté : le suivi regarde le meuble chaque seconde).
+  t.etat.installations = [...t.etat.installations, { type: "forge+enclume", niveau: 1 }];
+  t.attendre(2);
+  const apres = t.s.vue();
+  for (const id of ["lame_forgee_fer", "machette_forgee_fer"]) assert.ok(apres.devoilees.includes(id) && t.s.estDevoilee(id), id);
+  const dernier = t.recus.filter((m) => m.t === "devoilement").at(-1) as Extract<MessageServeur, { t: "devoilement" }>;
+  assert.ok(dernier.nouvelles.includes("lame_forgee_fer"));
+});
+
+test("R26 : une partie 0.8.1 où l'on a forgé sur la pierre plate se relit : la lame reste au sac, sa carte attend l'enclume", () => {
+  // L'état gardé d'une partie 0.8.1 : les lames dévoilées (et une encore « Nouveau »), un couteau ★ forgé, pas d'enclume.
+  const ancienne: EtatProgression = { ...PROGRESSION_VIDE, devoilees: [...devoileesAuDepart(), "forge", "pinces_forge", "lame_forgee_fer", "machette_forgee_fer"], nonVues: ["machette_forgee_fer"] };
+  const t = suivi({ installations: [...feu("foyer_pierres", 2), { type: "forge", niveau: 1 }], etat: progressionValide(JSON.parse(JSON.stringify(ancienne))) });
+  t.etat.inventaire = { "lame_forgee#1": 1 };
+  t.attendre(2);
+  const v = t.s.vue();
+  assert.ok(!v.devoilees.includes("lame_forgee_fer") && !v.devoilees.includes("machette_forgee_fer"));
+  assert.ok(!v.nonVues.includes("machette_forgee_fer"), "pas de pastille pour une carte qui attend");
+  assert.ok(v.devoilees.includes("pinces_forge"));
+  assert.ok(!t.s.estDevoilee("lame_forgee_fer"), "le serveur refuse de la forger");
+  // Rien n'est perdu : l'état gardé les a toujours ; l'enclume posée, elles reviennent (sans redire « Tu y penses »).
+  assert.ok(t.s.etat.devoilees.includes("lame_forgee_fer"));
+  t.etat.installations = [...t.etat.installations, { type: "forge+enclume", niveau: 1 }];
+  t.attendre(2);
+  const dernier = t.recus.filter((m) => m.t === "devoilement").at(-1) as Extract<MessageServeur, { t: "devoilement" }>;
+  assert.ok(dernier.progression.devoilees.includes("lame_forgee_fer") && dernier.progression.devoilees.includes("machette_forgee_fer"));
+  assert.ok(dernier.progression.nonVues.includes("machette_forgee_fer"), "la pastille « Nouveau » revient avec elle");
+  assert.ok(t.s.estDevoilee("machette_forgee_fer"));
+});
+
+test("R26 : un Voltaïque 0.8.1 au banc sans panneau garde sa matraque, mais n'en fabrique pas d'autre avant le panneau", () => {
+  const ancienne: EtatProgression = { ...PROGRESSION_VIDE, devoilees: [...devoileesAuDepart(), "banc_recharge", "matraque_fortune", "pack_cellules"] };
+  const { joueur, infos, attendre, base, compte } = monter({
+    famille: "voltaiques",
+    inventaire: { sac_a_dos: 1, matraque_fortune: 1, appareil_photo_jetable: 1, gourdin: 1, ficelle: 1, petite_batterie: 1, couteau: 1, tournevis: 1 },
+    avant: (b, id) => {
+      b.sauverProgression(id, ancienne);
+      b.ajouterInstallation(id, "banc_recharge", 21, 20, 0);
+    },
+  });
+  joueur.position = { x: 20, z: 20, o: 0 };
+  const v = joueur.bienvenue(0).progression!;
+  assert.ok(!v.devoilees.includes("matraque_fortune") && v.devoilees.includes("pack_cellules") && v.devoilees.includes("banc_recharge"));
+  assert.ok(!v.silhouettes.some((x) => x.id === "matraque_fortune" || x.id === "module_decharge" || x.id === "matraque_electrique"));
+  joueur.recevoir({ t: "fabriquer", recette: "matraque_fortune" });
+  assert.equal(infos().at(-1), "Tu n'y as pas encore pensé.");
+  attendre(1);
+  assert.equal((joueur as unknown as { inventaire: Record<string, number> }).inventaire.matraque_fortune, 1, "la matraque reste au sac");
+  // Le panneau posé sur le banc : la carte revient.
+  const banc = base.chargerInstallations(compte.id).find((i) => i.type === "banc_recharge")!;
+  (joueur as unknown as { installations: Map<number, { etat: object }> }).installations.get(banc.id)!.etat = { ...banc.etat, panneau: true };
+  attendre(2);
+  assert.ok(joueur.bienvenue(0).progression!.devoilees.includes("matraque_fortune"));
 });

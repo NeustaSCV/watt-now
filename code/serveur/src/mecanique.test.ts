@@ -8,7 +8,7 @@ import { toutDevoile } from "../../commun/src/progression.ts";
 import assert from "node:assert/strict";
 import { nouvelEteint, type Eteint } from "../../commun/src/eteints.ts";
 import type { Zone } from "../../commun/src/lieux.ts";
-import type { MessageServeur, ProjectileVu, Verbe } from "../../commun/src/messages.ts";
+import type { InstallationVue, MessageServeur, ProjectileVu, Verbe } from "../../commun/src/messages.ts";
 import { capaciteDe, traineTravois, type Inventaire } from "../../commun/src/objets.ts";
 import { etoilesDuProduit, recette, recettePour } from "../../commun/src/recettes.ts";
 import { ARMES_TIR, MUNITIONS, armeTirDe, armeTirExemplaire } from "../../commun/src/tir.ts";
@@ -213,12 +213,13 @@ test("⚙️ étoiles de l'arbalète : frêne et noix de bois ★ ; lame brute �
 /** Ces tests ne portent pas sur les Éteints de la lisière : aucun n'en vient. */
 const JAMAIS_D_ETEINT = () => 1;
 
-function monter(famille: Famille, depart: Record<string, number>) {
+function monter(famille: Famille, depart: Record<string, number>, poses: { type: InstallationVue["type"]; x: number; z: number; etat: InstallationVue["etat"] }[] = []) {
   const base = new Base(":memory:");
   const compte = base.creerCompte("Lucien", "manivelle7", famille);
   // Ces tests portent sur le métier, pas sur l'arbre de progression : tout est dévoilé.
   base.sauverProgression(compte.id, toutDevoile(famille));
   base.sauverInventaire(compte.id, { sac_a_dos: 1, ...depart });
+  for (const i of poses) base.sauverEtatInstallation(compte.id, base.ajouterInstallation(compte.id, i.type, i.x, i.z, 0).id, i.etat);
   let instant = 1_000_000;
   const recus: MessageServeur[] = [];
   const joueur = new Joueur(compte, base, (m) => recus.push(m), () => instant, new Halte(base), JAMAIS_D_ETEINT);
@@ -247,8 +248,10 @@ function monter(famille: Famille, depart: Record<string, number>) {
 
 test("⚙️ un Mécaniste seul monte une arbalète ★ avec son kit et une perche de frêne (règle d'or du Book 25 §2.5)", () => {
   // Le kit mécaniste (scie, clé plate, couteau), une pierre et la tête de hache de la caisse pour l'établi (plan 0.8 :
-  // Fendre 1), ce qu'on trouve au terrain et dans une épave.
-  const t = monter("mecanistes", { scie: 1, cle_plate: 1, couteau: 1, tete_hache: 1, corde: 1, pierre: 1, buche: 5, branche: 7, petit_ressort: 1, perche_frene: 1, ceinture_securite: 1 });
+  // Fendre 1), ce qu'on trouve au terrain et dans une épave. R26 (0.8.2) : le pédalier générateur et son petit
+  // alternateur sont posés plus loin (l'arbalète attend le meuble de famille complet, même avec l'établi).
+  const pedalier = [{ type: "pedalier" as const, x: 30, z: 30, etat: { alternateur: true } }];
+  const t = monter("mecanistes", { scie: 1, cle_plate: 1, couteau: 1, tete_hache: 1, corde: 1, pierre: 1, buche: 5, branche: 7, petit_ressort: 1, perche_frene: 1, ceinture_securite: 1 }, pedalier);
   t.construire("etabli", 4.5);
   t.fabriquer("arbrier", 4.5);
   t.fabriquer("noix_bois", 2);

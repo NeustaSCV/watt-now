@@ -11,6 +11,7 @@ import { enSaison, etatDuFruitier, jourDuCalendrier, prochaineRecolte } from "..
 import { nouvellePoule, penserPoule, vuePoule, type Poule } from "../../commun/src/faune.ts";
 import type { Apparence } from "../../commun/src/apparence.ts";
 import { INTENTION_REPOS, avancer, nettoyerIntention, type Intention, type Position } from "../../commun/src/deplacement.ts";
+import { AttenteArrivee } from "./arrivee.ts";
 import type { Bienvenue, Cible, FeuVu, InstallationVue, MessageClient, MessageServeur } from "../../commun/src/messages.ts";
 import { CAPACITE_SAC, CONTENANTS, OBJETS, capaciteDe, estCleObjet, estObjet, lumierePortee, nommer, poidsInventaire, traineTravois, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
 import { compter, estMaitrisee, estObjetDeMetier, retirerExemplaires, typeDe, type CleObjet } from "../../commun/src/etoiles.ts";
@@ -587,6 +588,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
 
   /** En pause (2026-10-09) : sur son terrain ou dans sa Coopérative seulement, là où l'on est seul. */
   private pause = false;
+  /** La vue d'ensemble à l'arrivée (0.8.2, chantier G) : seul, la pause jusqu'au premier geste ; dans une halte, à l'abri. */
+  private readonly arrivee = new AttenteArrivee(() => (this.pause = false));
 
   enPause(): boolean {
     return this.pause;
@@ -617,6 +620,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
   }
 
   recevoir(message: MessageClient): void {
+    // Le premier geste après l'arrivée met fin à la vue d'ensemble (0.8.2, chantier G).
+    if (this.arrivee.recevoir(message)) return;
     if (message.t === "pause") return this.basculerPause(message.oui === true);
     // En pause, le monde attend : on n'agit pas (le client le sait aussi).
     if (this.pause && message.t !== "ping" && message.t !== "mesures") return;
@@ -1879,20 +1884,23 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (this.voyage || !estObjet(objet) || (this.inventaire[objet] ?? 0) < 1) return;
     const d = DEMONTAGE[objet];
     if (!d) return this.info(`${OBJETS[objet].nom[0]!.toUpperCase()}${OBJETS[objet].nom.slice(1)} : rien à en tirer en le démontant, pour l'instant.`);
+    // Certains se démontent par lots (0.8.2 : trois canettes pour une chute d'aluminium).
+    const par = d.par ?? 1;
+    if ((this.inventaire[objet] ?? 0) < par) return this.info(`Il en faut ${par} pour en tirer quelque chose : ${nommer(objet, par)}.`);
     const facteur = multiplicateurQualites(this.outils(), d.qualites);
     if (facteur === null) return this.infos(outilsManquantsBref(d.qualites, this.outils(), undefined, this.recetteVisible));
     // Le poids d'après : le démontage laisse le rebut sur place, mais une pyramide de rouleaux pèse toujours son poids.
-    const apres: Inventaire = { ...this.inventaire, [objet]: (this.inventaire[objet] ?? 0) - 1 };
+    const apres: Inventaire = { ...this.inventaire, [objet]: (this.inventaire[objet] ?? 0) - par };
     for (const [t, k] of Object.entries(d.donne) as [TypeObjet, number][]) apres[t] = (apres[t] ?? 0) + k;
     if (poidsInventaire(apres) > capaciteDe(apres) + 1e-9) return this.sacTropLourd();
     this.commencer(`Démonter : ${OBJETS[objet].nom}`, (d.duree * facteur) / REGLAGES.gestes_vitesse, () => {
-      if ((this.inventaire[objet] ?? 0) < 1) return;
-      this.retirerPlusieurs({ [objet]: 1 });
+      if ((this.inventaire[objet] ?? 0) < par) return;
+      this.retirerPlusieurs({ [objet]: par });
       this.ajouterPlusieurs(d.donne);
       this.verifierLumiere();
       this.noterFait(`demonte:${objet}`);
       this.mesurer("progression", `demontage:${objet}`, 1);
-      this.info(`Démonté : ${OBJETS[objet].nom}. Tu en tires ${(Object.entries(d.donne) as [TypeObjet, number][]).map(([t, k]) => nommer(t, k)).join(", ")}.`);
+      this.info(`Démonté : ${par > 1 ? nommer(objet, par) : OBJETS[objet].nom}. Tu en tires ${(Object.entries(d.donne) as [TypeObjet, number][]).map(([t, k]) => nommer(t, k)).join(", ")}.`);
     }, 0, d.qualites.marteler ? "lourd" : "outil");
   }
 
@@ -2072,7 +2080,10 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (this.lieu === "comptoir") this.comptoir.entrer(this.envoyer, () => this.quetes.etat.faits);
     if (this.tuto && this.lieu === "station") this.tuto.visiteStation = true;
     this.noterFait(`visite:${this.lieu}`);
-    this.envoyer(this.bienvenue(this.base.debutMonde()));
+    // 0.8.2, chantier G : la vue d'ensemble ; seul, le monde attend le premier geste (serveur/src/arrivee.ts).
+    const arrivee = this.arrivee.commencer(this.lieu, this.maintenant());
+    if (arrivee.mode === "pause") this.pause = true;
+    this.envoyer({ ...this.bienvenue(this.base.debutMonde()), arrivee });
   }
 
   /** Le joueur se déconnecte : il quitte la halte (hors ligne, il est sur la carte, Book 01 §2 bis). */
@@ -2426,7 +2437,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       z: this.position.z,
       discret: !this.bouge || this.intention.allure === "discrete",
       eclaire: this.lumiere && (this.nuit() || (this.vivant?.obscur(this.position.x, this.position.z) ?? false)),
-      intouchable: this.maintenant() < this.esquiveJusqua,
+      intouchable: this.maintenant() < this.esquiveJusqua || this.arrivee.protege(this.maintenant()),
     };
   }
 

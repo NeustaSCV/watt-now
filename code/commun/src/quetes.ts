@@ -64,8 +64,9 @@ export interface Quete {
 }
 
 // ---------- S'installer (Book 22 §3.1 ; plan 0.8 §2.6 : des portes successives) ----------
-// Le foyer de pierres en tête, puis un vrai repas, l'eau du ciel, le coffre (une à une) ; puis les portes du niveau 1,
-// une par meuble, deux ouvertes à la fois (une par route, Q-0.8-19) ; puis le reste de la gamme bushcraft (P-002).
+// Le foyer de pierres en tête, puis un vrai repas, l'eau du ciel, le coffre, un vrai lit (une à une) ; puis les portes
+// du niveau 1, une par meuble, deux ouvertes à la fois (une par route, Q-0.8-19) ; puis le reste de la gamme bushcraft
+// (P-002).
 
 const fait = (f: string, but = 1): Condition => ({ a: "fait", fait: f, but });
 const installation = (type: string): Condition => ({ a: "installation", type });
@@ -123,6 +124,18 @@ const INSTALLER: Quete[] = [
     texte: "Tout porter, c'est s'épuiser. Fabrique un coffre de rangement (bûches, branches, une corde de fibres de la mare).",
     objectifs: [{ libelle: "Coffre sur ton terrain", condition: installation("coffre") }],
     lecon: "Le coffre garde 150 kg pour toi. Ne pars en route qu'avec ce qu'il faut.",
+  },
+  // Plan 0.8 §9.3 (0.8.2, chantier J) : le lit juste après le coffre, avant les portes (l'abri fermé suppose l'abri
+  // garni).
+  {
+    id: "lit",
+    ligne: "installer",
+    titre: "Un vrai lit",
+    texte: "Dormir à même le sol, c'est dormir à moitié. Garnis ton abri d'un lit de branchages (examine-le : « Améliorer »).",
+    // Book 24 §7 : l'abri garni (niveau 2) vaut un lit posé à côté.
+    objectifs: [{ libelle: "Abri garni", condition: { a: "un_de", conditions: [installation("lit_branchages"), { a: "installation", type: "abri", niveau: 2 }] } }],
+    lecon: "Isolé du sol, à côté de l'abri, on récupère un tiers plus vite.",
+    recompense: { objets: { conserve: 1 } },
   },
   // ---------- Les portes du niveau 1 (plan 0.8 §2.6) : une par meuble, deux ouvertes à la fois, une par route ----------
   // Chacune demande la clé d'un lieu (sa fiche dit où chercher, en deux temps) ; l'ordre de la liste alterne les routes.
@@ -199,16 +212,6 @@ const INSTALLER: Quete[] = [
     recompense: { wotts: 15 },
   },
   // ---------- Ensuite, l'ordre de l'urgence (P-002) : ce qui reste du bushcraft, après les portes ----------
-  {
-    id: "lit",
-    ligne: "installer",
-    titre: "Un vrai lit",
-    texte: "Dormir à même le sol, c'est dormir à moitié. Garnis ton abri d'un lit de branchages (examine-le : « Améliorer »).",
-    // Book 24 §7 : l'abri garni (niveau 2) vaut un lit posé à côté.
-    objectifs: [{ libelle: "Abri garni", condition: { a: "un_de", conditions: [installation("lit_branchages"), { a: "installation", type: "abri", niveau: 2 }] } }],
-    lecon: "Isolé du sol, à côté de l'abri, on récupère un tiers plus vite.",
-    recompense: { objets: { conserve: 1 } },
-  },
   {
     id: "dakota",
     ligne: "installer",

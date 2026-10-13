@@ -145,10 +145,12 @@ const DUREES_TUTO: Readonly<Record<string, number>> = {
  * station pendant le tutoriel (« La carte », §2.6).
  */
 const DUREES_QUETES: Readonly<Record<string, { travail: number; lieu?: "station" | "comptoir" }>> = {
+  // Dans l'ordre du carnet : « Un vrai lit » juste après le coffre, avant les portes (0.8.2, chantier J).
+  foyer_pierres: { travail: 5 },
   repas: { travail: 6 },
-  lit: { travail: 4 },
   eau_du_ciel: { travail: 6 },
   coffre: { travail: 6 },
+  lit: { travail: 4 },
   dakota: { travail: 5 },
   defense: { travail: 3 },
   premier_arc: { travail: 6 },
@@ -157,7 +159,6 @@ const DUREES_QUETES: Readonly<Record<string, { travail: number; lieu?: "station"
   soins: { travail: 5 },
   protege_bras: { travail: 4 },
   travois: { travail: 6 },
-  foyer_pierres: { travail: 5 },
   foyer_cuisine: { travail: 8 },
   // Les portes du niveau 1 (plan 0.8, chantier 13) : le travail à la maison, la clé en poche. La sortie qui la rapporte
   // reste à apprendre au simulateur (chantier 14).
@@ -473,7 +474,8 @@ export interface Hypotheses {
 
 export const HYPOTHESES_DECIDEES: Hypotheses = {
   tasBois: BUTIN_HALTE.personnel!.tas_bois!,
-  retourTasMin: REPOUSSE_MS.tas_bois! / 60_000,
+  // Plan 0.8.2 (chantier D) : le retour du tas de bois est un réglage à chaud, lu par la halte (6 h par défaut).
+  retourTasMin: BUTIN_HALTE.repousse!.tas_bois! / 60_000,
   bancGalets: BUTIN_GUE.personnel!.banc_galets!,
   retourBancMin: REPOUSSE_MS.banc_galets! / 60_000,
   vracStation: { buche: BUTIN_HALTE.vrac!.buche!, pierre: BUTIN_HALTE.vrac!.pierre! },

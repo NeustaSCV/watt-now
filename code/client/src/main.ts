@@ -36,7 +36,8 @@ import { RAYON_ESCABEAU, estFruitier, profondeurMare } from "../../commun/src/te
 import { avancerVersLaCouche } from "../../commun/src/sommeil-abri.ts";
 import { estomperAbri } from "./rendu/abri-dormeur.ts";
 import { creerRuine } from "./rendu/ruine.ts";
-import { creerHalte, estomperToits } from "./rendu/halte.ts";
+import { creerHalte, estomperToits, montrerTousLesToits } from "./rendu/halte.ts";
+import { ArriveeDansUnLieu } from "./arrivee.ts";
 import { animerMoulin, creerMoulin } from "./rendu/moulin.ts";
 import { pieceMoulin, sombreMoulin } from "../../commun/src/moulin.ts";
 // Le Gué-aux-Saules (plan 0.8, chantier 11) : son décor, son bac, sa crue, ses sons.
@@ -458,6 +459,8 @@ const menuAdmin = new MenuAdmin(
 );
 // Après le HUD (il remplit #hud à sa construction) : la flèche des Éteints hors champ.
 const horsChamp = new IndicateurHorsChamp(document.getElementById("hud")!);
+/** La vue d'ensemble à l'arrivée dans un lieu (0.8.2, chantier G ; arrivee.ts) : son invite se pose dans le HUD. */
+const vueArrivee = new ArriveeDansUnLieu(document.getElementById("hud")!, tactile, () => envoyer({ t: "arrivee" }));
 
 const carte = new Carte(document.getElementById("carte")!, (vers) => envoyer({ t: "voyager", vers }));
 hud.surPanneau = (ouvert) => uiSon(ouvert ? "ouvrir" : "fermer");
@@ -505,6 +508,8 @@ function installer(message: Bienvenue): void {
   debutMonde = message.temps.debutMonde;
   decalage = message.temps.serveur - Date.now();
   scene.suivre(position.x, position.z, 0, true);
+  // Arrivé d'un voyage : tout le lieu de loin, jusqu'au premier geste (0.8.2, chantier G).
+  vueArrivee.arriver(message.arrivee, lieu, zoneIci(), position);
 
   contenu.clear();
   ressources.clear();
@@ -1639,7 +1644,7 @@ function boucle(instant: number): void {
     const entree = entrees.lire();
     const { dx, dz } = scene.versMonde(entree.x, entree.y);
     // Carte ouverte ou en route : le personnage s'arrête.
-    const immobile = enVoyage || carte.ouverte || hud.enPause;
+    const immobile = enVoyage || carte.ouverte || hud.enPause || vueArrivee.attend;
     let allure = allureAutorisee(entree.allure, besoins, porteEscabeau() || traineTravois(inventaire));
     if (allure === "course" && endurance < SEUIL_EPUISE) allure = "marche";
     if (allure === "course" && lieu === "gue" && gue.surLeRadier(position)) allure = "marche"; // le radier : on n'y court pas
@@ -1688,7 +1693,7 @@ function boucle(instant: number): void {
       if (elan.restant <= 0) elan = null;
     }
     // En route vers la couche de l'abri (0.8.2, R12) : accroupi, pas à pas ; bouger l'interrompt (le serveur aussi).
-    if (versLaCouche) {
+    if (versLaCouche && !immobile) {
       if (Math.hypot(intention.dx, intention.dz) > 0.01) versLaCouche = null;
       else {
         const pas = avancerVersLaCouche(position, versLaCouche.chemin, dt, versLaCouche.o);
@@ -1726,6 +1731,10 @@ function boucle(instant: number): void {
     // Sous l'abri, à sa couche (0.8.2, R12) : la bâche s'efface en partie, pour qu'on voie le dormeur.
     if (lieu === "terrain") for (const i of installations.values()) if (i.vue.type === "abri") estomperAbri(i.objet, (endormi || versLaCouche !== null) && Math.hypot(i.vue.x - position.x, i.vue.z - position.z) < 2.5, dt);
     personnage.porterLumiere(lumiere && (dansLeNoir() || estNuit(Number.isFinite(HEURE_FORCEE) ? HEURE_FORCEE : heureDeJeu(Date.now() + decalage, debutMonde))));
+    // La vue d'ensemble à l'arrivée impose son cadrage, puis zoome vers le personnage ; les toits restent jusque-là.
+    scene.cadrage = vueArrivee.cadrage(position, scene.angleCamera, scene.niveauZoom);
+    montrerTousLesToits(vueArrivee.toitsVisibles);
+    carteVue.toutMontrer(vueArrivee.toitsVisibles);
     scene.suivre(position.x, position.z, dt);
     const decor = decors.get(lieu);
     // Les toits qui cachent le personnage s'effacent (à la halte et au Comptoir), selon l'angle de la caméra.
@@ -1818,6 +1827,8 @@ function boucle(instant: number): void {
     dechetsVue.cibler(dechet !== null && propositions === dechet.propositions);
     // La fiche Examiner ouverte (plan 0.8 §9.2) : B la referme, le bouton tactile et l'invite le disent.
     if (!modeCombat && hud.ficheOuverte) propositions = { ...propositions, B: { libelle: LIBELLE_FERMER_FICHE, examiner: "" } };
+    // Pendant la vue d'ensemble, rien ne se propose : le premier geste ne sert qu'à commencer.
+    if (vueArrivee.attend) propositions = { A: null, B: null, cible: null };
     hud.propositions(propositions, occupe, maintien?.tenu && occupe ? actionEnCours : null);
     if (pose.actif) {
       const genre = pose.actif.genre;
