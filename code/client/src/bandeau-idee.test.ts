@@ -3,7 +3,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { BandeauIdee, DUREE_BANDEAU_MIN_MS, DUREE_BANDEAU_MS, FONDU_BANDEAU_MS, dureeIdee, htmlBandeau, type Horloge } from "./bandeau-idee.ts";
+import { BandeauIdee, DUREE_BANDEAU_MIN_MS, DUREE_BANDEAU_MS, ECART_PANNEAU, FONDU_BANDEAU_MS, VEILLE_PANNEAUX_MS, dureeIdee, htmlBandeau, placerIdee, type Boite, type Horloge } from "./bandeau-idee.ts";
 
 test("le message : l'icône de la trouvaille, « Tu y penses », l'idée ; ni bouton ni croix", () => {
   const html = htmlBandeau({ texte: "Ce grillage, posé sur ton foyer, ferait une grille. Tu y penses.", plusTard: false, objet: "grillage_rouleau" });
@@ -59,7 +59,7 @@ function fausseHorloge() {
 
 /** Un faux élément, juste ce que le message touche. */
 function fauxParent() {
-  const enfants: { hidden: boolean; innerHTML: string; classes: Set<string> }[] = [];
+  const enfants: { hidden: boolean; innerHTML: string; classes: Set<string>; style: { top: string; bottom: string } }[] = [];
   const document = {
     createElement: () => {
       const classes = new Set<string>();
@@ -68,8 +68,14 @@ function fauxParent() {
         innerHTML: "",
         classes,
         className: "",
-        classList: { add: (c: string) => classes.add(c), remove: (c: string) => classes.delete(c) },
+        classList: { add: (c: string) => classes.add(c), remove: (c: string) => classes.delete(c), contains: (c: string) => classes.has(c) },
         setAttribute: () => {},
+        style: { top: "", bottom: "" },
+        // Sous les tuiles, 56 px de haut ; un `top` posé le déplace.
+        getBoundingClientRect(): Boite {
+          const t = this.style.top ? Number.parseFloat(this.style.top) : 230;
+          return { top: t, bottom: t + 56, left: 16, right: 359 };
+        },
       };
       return e;
     },
@@ -103,4 +109,43 @@ test("il se retire tout seul, et les idées d'une même fouille passent l'une ap
   // Une idée plus tard repart tout de suite.
   assert.equal(bandeau.montrer(a), true);
   assert.equal(element().hidden, false);
+});
+
+// Plan 0.8.2 §7.6 : « Tu y penses » ne recouvre jamais le carnet du tutoriel (ouvert d'office sur téléphone) ni un panneau.
+const boite = (top: number, hauteur: number, left = 16, right = 359): Boite => ({ top, bottom: top + hauteur, left, right });
+
+test("0.8.2 §7.6 : le message reste à sa place s'il ne touche aucun panneau, passe dessous sinon, attend s'il n'y tient pas", () => {
+  // 375 × 630 : le message sous les tuiles (≈ 180 px), le carnet du tutoriel de 180 à 375 px.
+  const idee = boite(230, 56);
+  assert.equal(placerIdee(idee, [], 630), null);
+  assert.equal(placerIdee(idee, [boite(400, 100)], 630), null, "un panneau plus bas ne le gêne pas");
+  const carnet = boite(180, 195, 18, 357);
+  assert.equal(placerIdee(idee, [carnet], 630), 375 + ECART_PANNEAU, "juste sous le carnet");
+  // Le sac, presque toute la hauteur : il attend qu'on le ferme.
+  assert.equal(placerIdee(idee, [boite(150, 470, 0, 375)], 630), "attendre");
+  // 812 × 320 : le message en bas, le carnet qui descend jusqu'à 300 px ; pas la place dessous.
+  assert.equal(placerIdee(boite(256, 50, 206, 606), [boite(112, 192, 236, 576)], 320), "attendre");
+  // Deux panneaux l'un sous l'autre : sous le second.
+  assert.equal(placerIdee(idee, [carnet, boite(380, 60)], 630), 440 + ECART_PANNEAU);
+});
+
+test("0.8.2 §7.6 : derrière un panneau, l'idée attend (sans se perdre) puis vient quand on le ferme", () => {
+  const { horloge, avancer } = fausseHorloge();
+  const { parent, element } = fauxParent();
+  let obstacles: Boite[] = [boite(150, 470, 0, 375)];
+  const bandeau = new BandeauIdee(parent, horloge, { obstacles: () => obstacles, hauteur: () => 630 });
+  const a = { texte: "Cette toile pourra fermer ton abri, un jour.", plusTard: true };
+  bandeau.montrer(a);
+  assert.equal(element().hidden, true, "pas par-dessus le sac");
+  avancer(VEILLE_PANNEAUX_MS * 20);
+  assert.equal(element().hidden, true, "toujours en attente, le sac ouvert");
+  // Le sac se ferme, le carnet du tutoriel reste : l'idée vient, sous le carnet.
+  obstacles = [boite(180, 195, 18, 357)];
+  avancer(VEILLE_PANNEAUX_MS);
+  assert.equal(element().hidden, false);
+  assert.match(element().innerHTML, /fermer ton abri/);
+  assert.equal(element().style.top, `${375 + ECART_PANNEAU}px`);
+  // Puis elle part seule, le temps venu.
+  avancer(dureeIdee(a) + FONDU_BANDEAU_MS);
+  assert.equal(element().hidden, true);
 });

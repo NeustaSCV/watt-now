@@ -2,6 +2,7 @@
 // sous elles les raccourcis Sac et Fabriquer (on s'en sert moins souvent), invite d'action en bas,
 // barre de progression, messages, et les boutons tactiles près du pouce (Book 08 §3.4).
 
+import { libelleBoutonB } from "./libelle-bouton.ts";
 import { VERSION } from "../../commun/src/version.ts";
 import { REGLAGES } from "../../commun/src/reglages.ts";
 import { ceQuiManque } from "../../commun/src/aide-fabrication.ts";
@@ -720,7 +721,11 @@ export class Hud {
       this.boutonA.disabled = !p.A && !occupe;
     }
     if (this.boutonB) {
-      this.boutonB.textContent = p.B && !occupe ? p.B.libelle : "B";
+      // Plan 0.8.2 §7.6 : un libellé qui tient dans le rond ; le libellé entier dans son nom accessible.
+      const entier = p.B && !occupe ? p.B.libelle : "B";
+      this.boutonB.textContent = libelleBoutonB(entier);
+      this.boutonB.title = entier;
+      this.boutonB.setAttribute("aria-label", entier);
       this.boutonB.disabled = !p.B || occupe;
     }
   }
@@ -902,7 +907,13 @@ export class Hud {
       <ul>${lignes.join("")}</ul>
       <button type="button">Compris</button>`;
     el.hidden = false;
-    el.querySelector("button")!.addEventListener("click", () => (el.hidden = true));
+    // Plan 0.8.2 §7.6 : jamais deux panneaux l'un sur l'autre. Le carnet (le tutoriel, ouvert d'office) s'efface pendant
+    // qu'on lit le rapport, et revient tel quel après « Compris ».
+    this.dessinerCarnet();
+    el.querySelector("button")!.addEventListener("click", () => {
+      el.hidden = true;
+      this.dessinerCarnet();
+    });
   }
 
   // ---------- Le comptoir et les wotts (É4) ----------
@@ -1164,7 +1175,7 @@ export class Hud {
     pastille.hidden = !reussi && (this.nonLus === 0 || this.carnetOuvert);
     pastille.classList.toggle("reussi", reussi);
     pastille.textContent = reussi ? "✓" : String(Math.min(9, this.nonLus));
-    el.hidden = bouton.hidden || !this.carnetOuvert;
+    el.hidden = bouton.hidden || !this.carnetOuvert || !this.element.querySelector<HTMLElement>(".rapport")!.hidden;
     if (el.hidden) return;
     const titre = v ? "Tutoriel" : `Carnet · ${q!.quetes.length === 1 ? "1 objectif" : `${q!.quetes.length} objectifs`}`;
     const html = `

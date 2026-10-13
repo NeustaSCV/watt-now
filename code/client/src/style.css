@@ -797,6 +797,9 @@ body {
   line-height: 1.1;
   font-size: 11px;
   align-self: center;
+  /* Plan 0.8.2 §7.6 : jamais de texte hors du rond (le libellé est raccourci, libelle-bouton.ts). */
+  overflow: hidden;
+  overflow-wrap: anywhere;
 }
 
 #hud .tactile {
