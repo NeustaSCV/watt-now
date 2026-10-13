@@ -275,4 +275,11 @@ Ce qui peut l'allonger : une cause du bogue du coffre plus profonde que prévu (
 - **Recettes (B)** : les cordes d'arc au fil dentaire et au boyau restent sur leurs lignes ; le condensateur moyen passe d'abord ; **3 canettes écrasées donnent 1 aluminium** ; **la matraque de fortune prend le petit condensateur** au lieu de l'appareil photo.
 - **Le banc (C)** : un pack de cellules en vrac reste « plein » (pas de ligne au banc) ; après un échange, la batterie s'appelle « la batterie de voiture » ; l'échange ne prend qu'une batterie de voiture.
 - **Les portes (D)** : quand une porte et un objet au sol sont à portée, A ouvre la porte et **B propose « Ramasser »** (chantier H).
-- **Le pédalier à 3 m du banc** : *à décider* (se servir du meuble d'une autre famille, §7.3).
+- **Le pédalier à 3 m du banc** : voir §7.3.
+
+### 7.3 Les décisions de la vague 2 (2026-10-13)
+
+- **Se servir du meuble d'une autre famille** : **qui a appris la recette d'un meuble** (leçon, manuel) **peut s'en servir et y poser sa pièce** (aujourd'hui, le jeu refuse : « C'est le savoir d'une autre famille »). Le Book 24 le disait déjà (« utilisables par tous »). Un Voltaïque qui a appris le pédalier peut donc pédaler près de son banc pour remplir sa batterie.
+- **Une arme de métier apprise d'une autre famille** attend **le meuble complet de son métier** (le couteau forgé : la forge et son enclume, même pour un Mécanicien qui a lu le manuel), et non celui de la famille de l'apprenti.
+- **R26, confirmé** : le repli ne compte pas comme meuble complet (la pierre plate, la manivelle, la dynamo du vélo) ; l'étau et la tête de masse posés en enclume comptent ; la pointe de lance est une arme forgée ; le pack de cellules et la lampe bricolée restent visibles sans le panneau. Les quêtes qui demandent une arme n'en montrent pas la silhouette tant que le meuble est incomplet.
+- **La vue d'ensemble** : le budget de l'iPhone sera mesuré à la recette ; les bords du décor visibles de loin, gardés pour l'instant (à revoir à la recette du porteur) ; la protection de 15 s à l'arrivée dans une halte, gardée.
