@@ -34,7 +34,7 @@
 - Vérifier les **noms des autres meubles** (établi, banc de recharge, pédalier…) comme pour la forge (un seul nom partout).
 - La **halte de cueillette et de chasse** (gibier, boyaux, corde d'arc en boyau) : Book 99.
 - La **bibliothèque de bâtiments** `batiment/` : à valider par le porteur ; Book 99.
-- Le **combat entre joueurs** (décidé le 2026-10-13 : pas dans la 0.9) : mode choisi qui persiste, halo rouge ou vert visible de loin, frappe sur un joueur ; analyse et 5 questions dans `plan-0.9.md` §7.
+- Le **combat entre joueurs** : règles du duel décidées le 2026-10-13 (`duel-entre-joueurs.md`), à coder **bien après la 0.9**, une fois la fluidité validée ; 6 petites questions encore ouvertes (§9).
 
 ## 5. Où sont les choses
 

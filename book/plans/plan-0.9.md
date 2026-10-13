@@ -158,31 +158,9 @@
 - **Le mode choisi se perd** : quand aucun Éteint n'est à moins de 10 m pendant 3 s, `majMode` (`main.ts:1487`) repasse en Exploration, **même si le joueur a choisi le mode Combat lui-même**. Une fois en Exploration, le jeu propose l'échange et la leçon. C'est ce que le porteur a vu près d'un autre joueur.
 - **Le serveur ne sait frapper que des Éteints** : `cibleDevant` ne parcourt que les Éteints du lieu (`joueur.ts:1086`).
 
-### 7.2 Ce que le porteur a demandé (2026-10-13)
+### 7.2 Les règles du duel
 
-- **Le mode choisi persiste.** L'Exploration est le mode par défaut ; le joueur bascule en Combat, et ce choix tient jusqu'à ce qu'il le change.
-- **La bascule automatique face à un Éteint reste.**
-- **Le mode de chacun se voit de loin** : **halo rouge** en Combat, **halo vert** en Exploration. On sait ainsi dans quel état d'esprit est celui qu'on croise.
-
-### 7.3 La proposition (à reprendre le moment venu)
-
-- **Deux bascules distinctes :**
-  - **le mode choisi** décide du halo et seul lui permet de frapper un joueur ;
-  - **la bascule automatique** ne vise que les Éteints, et revient seule en Exploration quand la menace est passée.
-- **Ainsi, celui qui se défend contre un Éteint ne paraît pas hostile** : son halo reste vert.
-- **Côté serveur**, il faudra :
-  - connaître et diffuser le mode choisi ;
-  - permettre de viser un joueur et de le blesser ;
-  - n'autoriser le combat qu'aux endroits du Book 01.
-- **Le retard d'affichage** du §3.1 devra être compensé pour les coups entre joueurs, en jugeant le coup d'après ce que voyait le frappeur.
-
-### 7.4 Les questions à trancher
-
-1. **Qui peut être frappé ?** Un joueur au halo vert, ou seulement si les deux sont en rouge ? Le halo n'a de sens comme avertissement que si l'on peut attaquer un joueur en vert.
-2. **Que fait un coup sur un joueur ?** Combien de dégâts ? Est-il étourdi, peut-il être saisi ?
-3. **Que se passe-t-il quand il tombe ?** Mort, butin perdu ou laissé au sol, réveil quelque part ?
-4. **Où est-ce permis ?** Exactement la répartition du Book 01 ?
-5. **Repasser au vert** : à tout moment, ou après un délai, pour ne pas fuir trop facilement un combat qu'on a commencé ?
+*Décidées par le porteur le 2026-10-13, pour une version **bien après la 0.9** (une fois validé que les interactions entre joueurs sont fluides) : voir [`duel-entre-joueurs.md`](duel-entre-joueurs.md). Le halo rouge ou vert, le duel avec sa jauge à part, l'objet gagné, la protection de 45 s, les Éteints pendant le duel, la fuite, les haltes seulement.*
 
 ---
 
