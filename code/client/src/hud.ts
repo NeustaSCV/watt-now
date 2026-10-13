@@ -36,6 +36,7 @@ import {
 } from "../../commun/src/lignees.ts";
 import { texteAVenir } from "../../commun/src/lignees.ts";
 import { enteteFiche, piedFiche } from "./fiche-examiner.ts";
+import { brancherCoffre, enteteCoffre } from "./panneau-coffre.ts";
 import { choisirFacon } from "../../commun/src/replis.ts";
 import { texteLieu, type Alentours } from "../../commun/src/lieu-recette.ts";
 import { reprise, seReprend, type Reprise } from "../../commun/src/evolution-armes.ts";
@@ -1958,7 +1959,7 @@ export class Hud {
     }
     const plein = (place: number, inv: Inventaire) => Object.keys(inv).length > 0 && place < Math.min(...(Object.keys(inv) as CleObjet[]).map((t) => OBJETS[typeDe(t)].poids));
     const html = `
-      <header><h2>${estDecharge ? "Décharge" : estRatelier ? "Râtelier à outils" : "Coffre"}</h2><button type="button" class="fermer" aria-label="Fermer">✕</button></header>
+      ${enteteCoffre(estDecharge ? "Décharge" : estRatelier ? "Râtelier à outils" : "Coffre")}
       <div class="colonnes">
         <section><h3>Sur toi <small class="${plein(placeSac, contenu) ? "plein" : ""}">${kg(poidsSac)} / ${capSac} kg</small></h3><div class="grille">${cases(this.inventaire, "deposer")}</div></section>
         <section><h3>${estDecharge ? `Remonté du tas <small>${kg(poidsCoffre)} kg</small>` : estRatelier ? `Au râtelier <small>à 3 m, ils comptent</small>` : `Dans le coffre <small class="${plein(placeCoffre, this.inventaire) ? "plein" : ""}">${kg(poidsCoffre)} / ${capCoffre} kg</small>`}</h3><div class="grille">${cases(contenu, "prendre")}</div></section>
@@ -1970,11 +1971,6 @@ export class Hud {
     const defil = [...p.querySelectorAll<HTMLElement>(".grille")].map((g) => g.scrollTop);
     p.innerHTML = html;
     p.querySelectorAll<HTMLElement>(".grille").forEach((g, i) => (g.scrollTop = defil[i] ?? 0));
-    // Plus de croix (plan 0.8 §9.2) : le bouton « Fermer » du bas, ou B.
-    p.querySelector(".fermer-fiche")!.addEventListener("click", () => this.ouvrir(p, false));
-    for (const d of p.querySelectorAll<HTMLDetailsElement>("details.indice-cle")) {
-      d.addEventListener("toggle", () => (d.open ? this.indicesDeplies.add(d.dataset.etape!) : this.indicesDeplies.delete(d.dataset.etape!)));
-    }
     const deplacer = (sens: "deposer" | "prendre", objet: CleObjet, tout: boolean) => {
       if (estDecharge && sens === "deposer") return;
       const dispo = (sens === "deposer" ? this.inventaire[objet] : contenu[objet]) ?? 0;
@@ -1983,10 +1979,11 @@ export class Hud {
       // Le choix suit l'objet : on le retrouve de l'autre côté (et l'on peut défaire d'un toucher).
       this.choixCoffre = { sens: sens === "deposer" ? "prendre" : "deposer", objet };
     };
-    for (const b of p.querySelectorAll<HTMLButtonElement>(".case[data-sens]")) {
-      b.addEventListener("click", () => {
-        const sens = b.dataset.sens as "deposer" | "prendre";
-        const objet = b.dataset.objet as CleObjet;
+    // La croix, les cases, « Ranger » / « Prendre » (plan 0.8.2, chantier A : panneau-coffre.ts dit pourquoi ici).
+    brancherCoffre(p, {
+      fermer: () => this.ouvrir(p, false),
+      toucherCase: (sens, o) => {
+        const objet = o as CleObjet;
         const cle = `${sens}:${objet}`;
         const maintenant = performance.now();
         // Deux touchers rapides : toute la pile, d'un coup (le raccourci de l'habitué).
@@ -1998,15 +1995,13 @@ export class Hud {
           this.choixCoffre = { sens, objet };
         }
         this.dessinerCoffre();
-      });
-    }
-    for (const b of p.querySelectorAll<HTMLButtonElement>("[data-deplacer]")) {
-      b.addEventListener("click", () => {
+      },
+      deplacer: (tout) => {
         if (!this.choixCoffre) return;
-        deplacer(this.choixCoffre.sens, this.choixCoffre.objet, b.dataset.deplacer === "tout");
+        deplacer(this.choixCoffre.sens, this.choixCoffre.objet, tout);
         this.dessinerCoffre();
-      });
-    }
+      },
+    });
   }
 
   // ---------- La fiche d'un feu ou d'une installation (Book 24 : améliorer sa base, sur place) ----------
