@@ -276,13 +276,13 @@ Ce format est le contrat entre les chantiers A (serveur) et B (client) : il perm
 **Chantier F · À terre ou détruit, au corps** (vague 1, **S**, client seulement)
 
 - **Contenu** :
-  - **le message** : l'Éteint vu porte, à terre, s'il va bientôt se relever (un booléen `serelève`, envoyé seulement dans ses dernières secondes au sol) ; c'est le seul ajout côté serveur (`commun/src/eteints.ts`, la vue) ;
+  - **le message** : l'Éteint vu porte, à terre, s'il va bientôt se relever (un booléen `seReleve`, envoyé seulement dans ses dernières secondes au sol) ; c'est le seul ajout côté serveur (`commun/src/eteints.ts`, la vue) ;
   - **`rendu/eteint.ts`** : après `Death01`, à terre, une boucle de soubresauts (os de la tête, d'un bras et du buste animés par-dessus la pose finale, ou un clip existant s'il convient) ; détruit, aucune boucle, et un fondu de la teinte de la peau vers le gris cendre ; les yeux du détruit mi-clos (`fermerLesYeux`) ;
   - **le Rampant** (`ramper()`) : à terre, `rampement.animer` à faible amplitude sur place ;
   - **le son** : un gémissement étouffé, à terre, de loin en loin, par le bruiteur existant (effet synthétisé côté code, comme les autres effets ; la session musique n'est pas sollicitée) ;
   - **les textes** : l'aide sur le combat (« À terre, il remue encore : achève-le. Détruit, il ne bouge plus, et pâlit. »).
 - **Fichiers** : `client/src/rendu/eteint.ts`, `client/src/rendu/humanoides.ts` (la teinte, si elle n'est pas déjà réglable), `commun/src/eteints.ts` (la vue), le bruiteur, `client/src/aide-contenu.ts`.
-- **Tests** : la vue d'un Éteint à terre porte `serelève` dans ses dernières secondes seulement ; un détruit ne remue pas (l'état d'animation) ; `textes-du-jeu.test.ts`. **Contrôle à l'œil**, de jour : à 5 m, on distingue un Éteint à terre d'un Éteint détruit sans hésiter (capture des deux côte à côte).
+- **Tests** : la vue d'un Éteint à terre porte `seReleve` dans ses dernières secondes seulement ; un détruit ne remue pas (l'état d'animation) ; `textes-du-jeu.test.ts`. **Contrôle à l'œil**, de jour : à 5 m, on distingue un Éteint à terre d'un Éteint détruit sans hésiter (capture des deux côte à côte).
 
 ### Vague 2 · La recette
 
