@@ -1395,7 +1395,7 @@ export class Hud {
   private majTouches(): void {
     const t = this.tactile;
     const saisie = this.element.querySelector<HTMLElement>(".texte-saisie");
-    if (saisie) saisie.textContent = avecTouches("Tape {examiner} vite pour te dégager", t);
+    if (saisie) saisie.textContent = avecTouches("Tape deux fois {agir} ou {examiner}", t);
     const kbd = this.element.querySelector<HTMLElement>(".mode-clavier kbd");
     if (kbd) kbd.textContent = nomDe("combat");
     // L'aide des touches (0.8.2, R7) : des touches dessinées, une case par action (aide-touches.ts).
