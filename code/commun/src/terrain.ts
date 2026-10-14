@@ -1,6 +1,7 @@
 // Contenu du terrain de départ (Book 21 §3.2 : une seule topologie en 0a — prairie, bois mort, une mare).
 // La génération est déterministe : le même terrain pour un même compte.
 
+import { EMPRISE_PONT, REPOUSSE_PONT, RESTE_EN_PLACE_PONT, USAGES_PONT, type TypeRessourcePont } from "./ressources-pont.ts";
 import type { Inventaire } from "./objets.ts";
 import type { Qualite } from "./recettes.ts";
 import { TERRAIN_TAILLE, type Famille } from "./regles.ts";
@@ -59,7 +60,10 @@ export type TypeRessource =
   // 0.10, chantier J : le Grand Hôtel des Flots (ressources-hotel.ts).
   | TypeRessourceHotel
 
-  | TypeRessourceCorniche;
+  | TypeRessourceCorniche
+
+  // 0.10, chantier H : la route du pont (commun/src/ressources-pont.ts).
+  | TypeRessourcePont;
 
 /**
  * Les ressources du niveau 1 (plan 0.8, chantier 3) : déclarées d'avance, pour que les chantiers des lieux n'aient qu'à
@@ -180,6 +184,8 @@ export const EMPRISE_RESSOURCE: Partial<Record<TypeRessource, number>> = {
   // La corniche (0.10, chantier I) : le pin tombé est long ; on le débite depuis son flanc.
   pin_tombe: 1.6,
   corniche_epave: 1.6,
+  // 0.10, chantier H : la route du pont.
+  ...EMPRISE_PONT,
 };
 
 export interface RessourceSol {
@@ -354,6 +360,8 @@ export const REPOUSSE_MS: Record<TypeRessource, number | null> = {
   corniche_cuisine: 12 * 3_600_000,
   corniche_villa: 12 * 3_600_000,
   corniche_cabanon: 12 * 3_600_000,
+  // 0.10, chantier H : la route du pont (commun/src/ressources-pont.ts).
+  ...REPOUSSE_PONT,
 };
 
 /** Les ressources qui restent en place une fois fouillées (une épave ne disparaît pas). */
@@ -417,6 +425,8 @@ export const RESTE_EN_PLACE: Partial<Record<TypeRessource, true>> = {
   corniche_cuisine: true,
   corniche_villa: true,
   corniche_cabanon: true,
+  // 0.10, chantier H : la route du pont.
+  ...RESTE_EN_PLACE_PONT,
 };
 
 // ---------- Le butin d'un lieu vivant (plan 0.8, chantier 10 ; le moteur est serveur/src/lieu-vivant.ts) ----------
@@ -515,7 +525,7 @@ export const ARBRES_ISOLES: readonly (readonly [number, number])[] = [[6, 8], [4
  * Ce qu'on fait de chaque ressource du sol, et ce qu'elle donne (Book 02 §5). 0.8.2 (R20) : les baies, les branches, les
  * pierres et les bûches se ramassent deux fois plus vite qu'en 0.8.1 (ici, au tas de bois, aux poutres, aux galets).
  */
-const USAGES_ETABLIS: Record<Exclude<TypeRessource, TypeRessourceNiveau1 | TypeRessourceHotel | TypeRessourceCorniche>, UsageRessource> = {
+const USAGES_ETABLIS: Record<Exclude<TypeRessource, TypeRessourceNiveau1 | TypeRessourceHotel | TypeRessourceCorniche | TypeRessourcePont>, UsageRessource> = {
   branche: { verbe: "ramasser", libelle: "Ramasser la branche", donne: { branche: 1 }, qualites: {}, duree: 0.6, examen: "Du bois mort, bien sec." },
   buche: { verbe: "ramasser", libelle: "Ramasser la bûche", donne: { buche: 1 }, qualites: {}, duree: 1.25, examen: "Une bûche tombée d'un vieux tas. Sèche." },
   pierre: { verbe: "ramasser", libelle: "Ramasser la pierre", donne: { pierre: 1 }, qualites: {}, duree: 0.9, examen: "Une pierre plate, bonne pour un cercle de feu." },
@@ -1117,7 +1127,7 @@ const USAGES_CORNICHE: Record<TypeRessourceCorniche, UsageRessource> = {
  * Tous les usages. Les ressources du niveau 1 qui n'ont pas encore le leur n'existent dans aucun lieu : le type les
  * déclare d'avance, la table les reçoit avec leur lieu.
  */
-export const USAGES = { ...USAGES_ETABLIS, ...USAGES_NIVEAU1, ...USAGES_HOTEL, ...USAGES_CORNICHE } as Record<TypeRessource, UsageRessource>;
+export const USAGES = { ...USAGES_ETABLIS, ...USAGES_NIVEAU1, ...USAGES_HOTEL, ...USAGES_CORNICHE, ...USAGES_PONT } as Record<TypeRessource, UsageRessource>;
 
 /** Les vestiges de la ruine, à leur place dans les décombres. */
 export function genererVestiges(premierId: number): Omit<RessourceSol, "disponible">[] {

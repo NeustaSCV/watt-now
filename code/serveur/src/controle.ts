@@ -191,6 +191,9 @@ export function messageValide(m: unknown): m is MessageClient {
     // Le gué (plan 0.8, chantier 11) : haler le bac, sonner la cloche du passeur.
     case "gue":
       return m.op === "haler" || m.op === "cloche";
+    // Le péage des survivants (plan 0.10 §3.6, chantier H) : le passage, et des objets comme dans une offre d'échange.
+    case "payer_passage":
+      return (m.passage === "pont" || m.passage === "tunnel") && estTable(m.objets) && Object.entries(m.objets).length <= 200 && Object.entries(m.objets).every(([cle, n]) => estCleObjet(cle) && Number.isInteger(n) && (n as number) >= 0 && (n as number) <= 1e6);
     case "bander":
     case "rearmer":
     case "boire":

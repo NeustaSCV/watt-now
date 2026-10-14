@@ -18,6 +18,8 @@ import { milieuHotel } from "./milieu-hotel.ts";
 import type { LieuId } from "./lieux.ts";
 import type { SemisVivant } from "./semis.ts";
 import type { ButinLieu, RessourceSol } from "./terrain.ts";
+import { eteintsRoutePont } from "./eteints-route-pont.ts";
+import { BUTIN_ROUTE_PONT, SEMIS_VIVANT_ROUTE_PONT, VERSION_ROUTE_PONT, ressourcesRoutePont } from "./route-pont.ts";
 
 /** Une ressource d'un lieu, telle qu'on la génère (sa disponibilité vient de la base). */
 export type RessourceDuLieu = Omit<RessourceSol, "disponible">;
@@ -45,7 +47,8 @@ export const CONTENU_VIDE: ContenuLieu = { eteints: () => [], ressources: () => 
 export const CONTENU_LIEUX: Partial<Record<LieuId, () => ContenuLieu>> = {
   // ---------- 0.10 : le niveau 2, vide (chantier A) ; à remplir par les chantiers H (le pont), I (la corniche), J
   // (l'hôtel), K (le phare) ----------
-  route_pont: () => CONTENU_VIDE,
+  // H2A (chantier H) : commun/src/route-pont.ts et eteints-route-pont.ts.
+  route_pont: () => ({ eteints: eteintsRoutePont, ressources: ressourcesRoutePont, version: VERSION_ROUTE_PONT, butin: BUTIN_ROUTE_PONT, semis: SEMIS_VIVANT_ROUTE_PONT }),
   // 0.10, chantier J : le Grand Hôtel des Flots (hotel.ts, eteints-hotel.ts, milieu-hotel.ts ; « le check-in » :
   // serveur/src/hotel.ts).
   grand_hotel: () => ({ eteints: eteintsHotel, ressources: butinHotel, version: VERSION_HOTEL, milieu: milieuHotel }),

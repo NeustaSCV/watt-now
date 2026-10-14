@@ -33,6 +33,7 @@ import { TOUS_LES_LIEUX, zoneCoop, zoneDe, zoneMoulin, type LieuId, type Sortie,
 import { REINITIALISATION_MOULIN_MS, portesInitialesMoulin, sombreMoulin } from "./moulin.ts";
 import { PLAN_VUE_COOP, PLAN_VUE_GUE, PLAN_VUE_HALTE, PLAN_VUE_MOULIN } from "./vue-lieux.ts";
 import type { PlanVue } from "./vue.ts";
+import { PLAN_ROUTE_PONT } from "./route-pont.ts";
 
 /**
  * La nature d'un lieu :
@@ -129,7 +130,8 @@ export const REGISTRE_LIEUX: Readonly<Record<LieuId, FicheLieu>> = {
     pourPartir: () => "Pour partir, repasse le pont de pierre (ou prends le chemin de halage, au bout de la levée).",
   },
   // ---------- 0.10 : le niveau 2, branché vide (chantier A) ; leur contenu aux chantiers H à K ----------
-  route_pont: { id: "route_pont", nature: "halte", niveau: 2, etape: "H2A", plan: null, traverser: "la traverser", musique: "route_pont" },
+  // H2A (chantier H) : les murs du modèle arrêtent la vue (commun/src/route-pont.ts).
+  route_pont: { id: "route_pont", nature: "halte", niveau: 2, etape: "H2A", plan: PLAN_ROUTE_PONT, traverser: "la traverser", musique: "route_pont" },
   grand_hotel: {
     id: "grand_hotel",
     nature: "personnel",

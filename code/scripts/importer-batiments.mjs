@@ -19,6 +19,8 @@ const A_COPIER = [
   "grand-hotel/modele.js", "grand-hotel/mobilier.js", "grand-hotel/textures.js",
   // 0.10, chantier I : la corniche du Cap Rouge (H2B ; son modèle n'importe que l'atelier commun).
   "halte-corniche/modele.js",
+  // 0.10, chantier H : la route du pont (H2A).
+  "halte-route-pont/modele.js", "halte-route-pont/objets.js",
 ];
 
 for (const chemin of A_COPIER) {

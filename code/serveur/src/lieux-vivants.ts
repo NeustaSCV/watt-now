@@ -22,6 +22,7 @@ import { LieuVivant, type Voyageur } from "./lieu-vivant.ts";
 import { LieuxPersonnels, definitionDuRegistre } from "./lieux-personnels.ts";
 import { Moulins } from "./moulin.ts";
 import { gardienHotel } from "./hotel.ts";
+import { RoutePont } from "./route-pont.ts";
 
 /** Ce qui garde un lieu : le lieu vivant d'un joueur (le même pour tous dans une halte), sa vie à chaque tic. */
 export interface GardienLieu {
@@ -52,6 +53,8 @@ export const FABRIQUES: Partial<Record<LieuId, Fabrique>> = {
   grand_hotel: (b, a, m) => gardienHotel(b, a, m),
   // 0.10, chantier I : la corniche du Cap Rouge (le péage du tunnel s'y branchera : serveur/src/corniche.ts).
   corniche: (b, a) => gardienPartage(new LieuCorniche(b, a)),
+  // 0.10, chantier H : la route du pont, son péage et sa marée (serveur/src/route-pont.ts).
+  route_pont: (b, a) => gardienPartage(new RoutePont(b, a)),
 };
 
 /** Un lieu du registre sans fabrique : une halte partagée, ou un lieu à soi qui revient à 24 h. */

@@ -1400,7 +1400,7 @@ export const DEMONTAGE: Partial<Record<TypeObjet, Demontage>> = {
 // ---------- La fouille rapporte du bric-à-brac ----------
 
 /** Les lieux de fouille : chacun a sa table de vestiges. */
-export type LieuFouille = "boutique" | "atelier" | "epave" | "grange" | "libre_service" | "quai" | "atelier_coop" | "hangar" | "bureaux" | "chambre_froide" | "caisse_ruine" | "salle_de_bains" | LieuFouilleCorniche;
+export type LieuFouille = "boutique" | "atelier" | "epave" | "grange" | "libre_service" | "quai" | "atelier_coop" | "hangar" | "bureaux" | "chambre_froide" | "caisse_ruine" | "salle_de_bains" | "epicerie" | LieuFouilleCorniche;
 
 /** 0.10, chantier I : les chambres du Panoramique, à la corniche (le fil dentaire courant, N2-61). */
 export type LieuFouilleCorniche = "chambre_panoramique";
@@ -1463,6 +1463,16 @@ export const LIEU_DE_FOUILLE: Partial<Record<TypeRessource, LieuFouille>> = {
   corniche_cuisine: "libre_service",
   corniche_villa: "bureaux",
   corniche_cabanon: "quai",
+  // La route du pont (plan 0.10, chantier H) : ses fouilles suivent les tables qui leur ressemblent ; une fouille y donne
+  // aussi, rarement, un objet-clé (R-BUTIN : etapeButin("route_pont") = H2A).
+  pont_pontier: "bureaux",
+  pont_epicerie: "epicerie",
+  pont_bar: "libre_service",
+  pont_voiture: "epave",
+  pont_camionnette: "bureaux",
+  pont_peniche: "libre_service",
+  pont_hangar: "quai",
+  pont_chapelle: "bureaux",
 };
 
 /**
@@ -1487,6 +1497,8 @@ export const FAMILLES_PAR_LIEU: Record<LieuFouille, Partial<Record<FamilleVestig
   salle_de_bains: { salle_de_bain: 6, gadget: 1 },
   // 0.10, chantier I : les chambres du Panoramique (le lavabo et sa trousse de toilette, la literie, la lampe de chevet).
   chambre_panoramique: { salle_de_bain: 4, salon: 2 },
+  // L'épicerie du bar de la route du pont (plan 0.10, chantier H) : la cuisine, la salle de bain, un peu de gadgets.
+  epicerie: { cuisine: 3, salle_de_bain: 3, gadget: 1 },
 };
 
 /**
@@ -1512,6 +1524,8 @@ export const EN_PLUS_PAR_LIEU: Partial<Record<LieuFouille, Partial<Record<TypeOb
   get chambre_panoramique() {
     return { ...COURANTS_AU_NIVEAU_2 };
   },
+  // 0.10, chantier H : l'épicerie de la route du pont, où le fil dentaire est courant (N2-61 : COURANTS_AU_NIVEAU_2).
+  epicerie: { fil_dentaire: "C" },
 };
 
 /**

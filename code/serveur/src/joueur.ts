@@ -768,6 +768,10 @@ export class Joueur implements Voyageur, ParticipantLecon {
       case "gue":
         if (this.lieu === "gue" && !this.voyage) message.op === "haler" ? this.gue.haler(this.contexteGue()) : this.gue.sonnerCloche(this.contexteGue());
         return;
+      // Le péage des survivants (plan 0.10 §3.6, chantier H) : le lieu où l'on est le prend (serveur/src/route-pont.ts).
+      case "payer_passage":
+        if (!this.voyage) this.vivant?.payerPassage(this.contexteLieu(), message.passage, message.objets);
+        return;
     }
   }
 
@@ -1294,6 +1298,11 @@ export class Joueur implements Voyageur, ParticipantLecon {
       },
       commencer: (libelle, dureeS, appliquer) => j.commencer(libelle, dureeS, appliquer),
       annuler: () => j.annulerAction(),
+      // 0.10, chantier H : ce qu'on met dans la caisse du péage quitte le sac (et la charge des batteries suit).
+      donner: (objets) => {
+        j.retirerPlusieurs(objets);
+        j.bornerCharges();
+      },
     });
   }
 
@@ -2534,7 +2543,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
 
   /** La zone où l'on se déplace ici : celle du lieu vivant (avec ses portes fermées), ou celle du lieu. */
   private zoneIci(): Zone {
-    return this.vivant?.zone ?? zoneDe(this.lieu);
+    // 0.10, chantier H : la zone de ce joueur (au pont, la porte du péage ouverte pour qui a payé).
+    return this.vivant?.zonePour(this.compte.id) ?? zoneDe(this.lieu);
   }
 
   /**
