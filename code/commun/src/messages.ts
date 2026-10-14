@@ -9,6 +9,7 @@ import type { AnimalVu } from "./faune.ts";
 import type { Apparence } from "./apparence.ts";
 import type { Position } from "./deplacement.ts";
 import type { MouvementRadeau } from "./gue.ts";
+import type { Passage } from "./peage.ts";
 import type { CibleCharge } from "./banc.ts";
 import type { ModeArrivee } from "./arrivee.ts";
 import type { Charges, TypeBatterie } from "./energie.ts";
@@ -260,6 +261,8 @@ export type MessageClient =
   | MessageClientBanc
   // La vue d'ensemble à l'arrivée (0.8.2, chantier G) : voir le bloc « arrivée » en fin de fichier.
   | MessageClientArrivee
+  // Le péage des survivants (plan 0.10 §3.6, chantier H) : voir le bloc « péage » en fin de fichier.
+  | MessageClientPeage
   | { t: "interagir"; cible: Cible; verbe: Verbe }
   | { t: "manger"; objet: TypeObjet }
   | { t: "boire" }
@@ -525,6 +528,8 @@ export type MessageServeur =
   | MessageServeurReprise
   // Dormir dans l'abri (0.8.2, chantier I) : voir le bloc « la couche » en fin de fichier.
   | MessageServeurCouche
+  // Le péage et la marée de la route du pont (plan 0.10 §3.6, chantier H) : voir le bloc « péage » en fin de fichier.
+  | MessageServeurPeage
   | { t: "expulse"; raison: string }
   | { t: "inventaire"; inventaire: Inventaire }
   | { t: "besoins"; besoins: Besoins; gourde: Gourde }
@@ -811,3 +816,21 @@ export type MessageServeurPresences =
   | { t: "positions"; h: number; p: number[] }
   /** Leurs gestes depuis l'envoi précédent, aux mêmes observateurs que les positions, chacun une fois. */
   | { t: "gestes"; g: GesteVu[] };
+
+// ---------- Le péage des survivants, la marée (plan 0.10 §3.4, §3.6, chantier H ; commun/src/peage.ts, route-pont.ts) ----------
+
+export type MessageClientPeage =
+  /**
+   * « Payer » à la caisse du péage (le sac ouvert en mode « donner ») : ces objets, au moins 12 wotts au prix du
+   * Comptoir. Refusé si la valeur est en dessous, ou si l'on a déjà payé (le passage est libre une heure).
+   */
+  { t: "payer_passage"; passage: Passage; objets: Inventaire };
+
+export type MessageServeurPeage =
+  /** Le passage pour ce joueur : ouvert (payé, pour une heure) ou fermé ; `du` : ce qu'il reste à payer (wotts). */
+  | { t: "passage"; passage: Passage; ouvert: boolean; du: number }
+  /**
+   * La mer monte (S-20, complément K1) : le joueur resté sur la cale basse est remis en haut de l'accès, sur le quai
+   * (sa position suit) ; l'écran fait un fondu et montre `texte`, fermé par son bouton (jamais une croix).
+   */
+  | { t: "maree_remonte"; texte: string; bouton: string };
