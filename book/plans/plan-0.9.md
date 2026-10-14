@@ -1,6 +1,8 @@
 # Plan de développement — version 0.9 : les autres joueurs fluides, un combat moins facile
 
-*Version du plan : v0.4 · 2026-10-13 · **Statut : décidé, prêt à lancer après la 0.8.3** (rien n'est codé).*
+*Version du plan : v0.9 · 2026-10-14 · **Statut : codé, fusionné dans main (étiquette v0.9), prêt à déployer.***
+
+*v0.9 (2026-10-14) : les décisions prises pendant le codage. D : l'Équipé vacille **un coup sur 3** (à 2, marteler ne menait jamais à une saisie) ; un coup encaissé ne fait pas lâcher, même porté par un autre joueur ; à terre, une lame ne le fait plus vaciller ni reculer. B : un joueur endormi se voit endormi même pour qui arrive après (état `couche` dans l'identité ; on ne dort aujourd'hui que chez soi) ; les autres tiennent leur lampe levée ; un joueur qui s'effondre reste visible le temps de sa chute ; les positions partent en centimètres entiers (positions 6,75 Ko/s par joueur au banc, critère 7 tenu pour les positions ; total 9,6 avec l'état et les Éteints). F : le réglage **A · Cendre** du détruit. G+I : les quantités proposées validées telles quelles (`commun/src/semis.ts`), versions des lieux montées (station 7, gué 6, Moulin 3, Coopérative 4 : contenu régénéré une fois au déploiement). H : le modèle du gué retouché par la session bâtiments (barque déplacée d'un mètre, accès au bac vérifié, portes de la cabane et de la buvette à 1,2 m), importé. Restent pour plus tard : aligner le rayon des Éteints (0,30 m) sur celui du joueur (0,35 m) ; le Carrefour sans ressources (il faudrait en faire un lieu vivant).*
 
 *v0.8 (2026-10-13) : M7 précisé par le porteur : **pas de poules pour l'instant** ; la nourriture dans **les deux haltes** seulement (la station et le gué). M5 : **la station est déjà assez garnie en bois**, on n'y en ajoute pas. Le chantier I redevient petit (S).*
 

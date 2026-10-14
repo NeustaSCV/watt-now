@@ -133,6 +133,7 @@ Dégâts, vitesse (durée du geste), allonge, coup appuyé à la tête (0.3, aff
 - **Tranchant** (hache, machette, couteaux, lame forgée) : le casque l'arrête à la tête (le coup appuyé ne tue pas un Équipé).
 - **Perçant** (épieu, fourche, lance) : sa force, c'est l'**allonge**.
 - Pas de « lame coincée », pas de règles cachées de plus : sur un téléphone, ce serait vécu comme une injustice.
+- **L'Équipé encaisse (0.9)** : un coup sur trois seulement le fait vaciller (le premier, puis le 4e, le 7e…) ; les autres, il les **encaisse** : les dégâts au torse comptent, mais il n'est ni étourdi ni repoussé, et il garde sa prise et son élan. Un son mat, peu de sang, un léger sursaut : « celui-là tient ». Marteler ne suffit donc plus contre lui ; **repousser (B) et la décharge le font toujours vaciller**. Le décompte repart à zéro quand il tombe. À terre, une lame ajoute ses dégâts sans le faire reculer ; seuls le contondant et le perçant l'achèvent. Réglable à chaud (`equipe_vacille_un_sur`, 3 par défaut).
 
 ### 4.3 L'usure
 
@@ -146,7 +147,7 @@ Dégâts, vitesse (durée du geste), allonge, coup appuyé à la tête (0.3, aff
 
 - **Un Éteint à 1,2 m ou moins devant soi** : B **repousse** (12 d'endurance ; recul de 1,5 m ; étourdi 0,8 s ; jusqu'à **2 Éteints** dans un cône de 90°). C'est l'**outil contre l'encerclement**.
 - **Sinon** : B **esquive**.
-- **Saisi** : taper B vite **se dégage**.
+- **Saisi** : on ne frappe plus (pas d'amplitude). **A et B se dégagent** : **deux appuis** par Éteint qui tient, même essoufflé (0.8.4). Aucune arme ne libère d'un coup, la décharge non plus.
 - (Pas de « B maintenu » : il faudrait attendre pour savoir, et l'esquive arriverait en retard.)
 
 ### 4.5 Ce qui rend le combat juste
@@ -154,6 +155,7 @@ Dégâts, vitesse (durée du geste), allonge, coup appuyé à la tête (0.3, aff
 - **La fenêtre de frappe** (≈ 1,1 s entre l'allonge d'une hache et la saisie d'un poursuivant) est à **mesurer** ; si elle est trop courte, la saisie passe à 0,8 s face à une arme levée.
 - **Un indicateur au bord de l'écran** pour les Éteints qui approchent hors champ (première cause probable de mort injuste en vue isométrique sur iPhone).
 - **Les yeux blancs se voient dans le noir** à ≈ 6 m, sans lumière.
+- **À terre ou détruit, ça se lit au corps (0.9)**, sans barre de vie : à terre, l'Éteint remue, gémit et prend appui juste avant de se relever ; détruit, il est inerte, les yeux éteints, la peau gris cendre, et se fond dans le décor avant de s'effacer doucement.
 
 ### 4.6 Nouvelles armes (0.5)
 

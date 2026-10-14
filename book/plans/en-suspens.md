@@ -56,6 +56,8 @@
 - Les **munitions** (flèches, carreaux) : une règle cohérente sans tout déséquilibrer.
 - ~~Les **réparations** (la tête du marteau ne s'use pas ; on répare le manche sans forge) : au-delà de ce que la 0.8 code.~~ *Fait en 0.8 (le manche à l'établi à étau) et 0.8.2 (la masse aussi).*
 - ~~Vérifier les **noms des autres meubles** (établi, banc de recharge, pédalier…) comme pour la forge (un seul nom partout).~~ *Fait en 0.8 : « banc solaire », « pédalier générateur », « ventilateur à manivelle » partout (jeu, books, bible).*
+- Le **rayon des Éteints** (0,30 m) plus mince que celui du joueur (0,35 m) : ils se glissent dans des fentes de 0,6 à 0,7 m où le joueur bute. Les aligner demande de déplacer les Éteints 2 et 7 du Moulin (proposition du chantier H de la 0.9).
+- Le **Carrefour sans ressources au sol** : il faudrait en faire un lieu vivant (chantier G de la 0.9).
 - Les **poules dans les haltes** (1 ou 2 par halte, partagées entre joueurs) : écartées « pour l'instant » de la 0.9 (2026-10-13) ; il faut d'abord une faune partagée dans les lieux à plusieurs (`plan-0.9.md` §2.7).
 - La **halte de cueillette et de chasse** (gibier, boyaux, corde d'arc en boyau) : Book 99.
 - La **bibliothèque de bâtiments** `batiment/` : à valider par le porteur ; Book 99.
@@ -68,4 +70,4 @@
 - Le plan de la 0.9 (après la 0.8.3) : `book/plans/plan-0.9.md`.
 - La notice d'un nouveau niveau : `book/plans/notice-nouveau-niveau.md`.
 - Les études et données : `.claude-travail/propositions/` (non versionné : à ne pas supprimer).
-- ~~Versions : 0.7.3 déployée le 2026-10-10 (étiquette v0.7.3).~~ Versions : 0.8 et 0.8.1 déployées le 2026-10-11, 0.8.2 le 2026-10-13 ; 0.8.3 le 2026-10-13 (étiquette v0.8.3) ; 0.8.4 le 2026-10-13 (étiquette v0.8.4, avec la barre de métal à 1 de dégâts). Le plan de la 0.8.2 : `book/plans/plan-0.8.2.md`.
+- ~~Versions : 0.7.3 déployée le 2026-10-10 (étiquette v0.7.3).~~ Versions : 0.8 et 0.8.1 déployées le 2026-10-11, 0.8.2 le 2026-10-13 ; 0.8.3 le 2026-10-13 (étiquette v0.8.3) ; 0.8.4 le 2026-10-13 (étiquette v0.8.4, avec la barre de métal à 1 de dégâts) ; **0.9 prête à déployer** (étiquette v0.9, 2026-10-14). Le plan de la 0.8.2 : `book/plans/plan-0.8.2.md`.

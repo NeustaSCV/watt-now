@@ -87,7 +87,7 @@ Garder les commandes **très simples** : un déplacement, **deux boutons d'actio
 | Mode | Bouton A | Bouton B |
 |---|---|---|
 | 🔎 **Exploration** | **Interagir** : ramasser, fouiller, ouvrir, parler, utiliser une installation. **Maintenir** : action longue (démonter, récolter, abattre). | **Examiner** : informations sur l'objet visé, tests d'expérimentation (Book 03 §6). |
-| ⚔️ **Combat** | **Frapper ou tirer.** Appui court : coup rapide. **Maintenir puis relâcher** : coup appuyé visé à la tête. | **Esquiver.** Pendant une saisie (Book 06 §2.3) : **appuyer vite et plusieurs fois** pour se dégager. |
+| ⚔️ **Combat** | **Frapper ou tirer.** Appui court : coup rapide. **Maintenir puis relâcher** : coup appuyé visé à la tête. | **Esquiver.** Pendant une saisie (Book 06 §2.3) : **A et B se dégagent**, deux appuis par Éteint qui tient (0.8.4) ; A ne frappe plus et affiche « Se dégager ». |
 | 🔨 **Construction** | **Placer** | **Pivoter.** Maintenir : démonter l'élément visé. |
 
 **Aides :**
