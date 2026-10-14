@@ -141,7 +141,8 @@ test("aucun ingrédient introuvable : tout ce que l'arbre peut dévoiler se fabr
     // d'aluminium, le pack soudé) viennent des lieux du niveau 2 (chantiers B, C, H à K), que ce calcul ne connaît pas encore.
     // Plan 0.10 (chantier D) : de même, les meubles nouveaux des familles demandent les roulements (la charrette, le moulin)
     // ou le fer à souder du poste de montage (la rampe de LED, la batterie de cellules).
-    const niveau2 = new Set(["cranequin_leger", "module_bobine", "matraque_contacts_soudes", "charrette_bras", "moulin_jerricans", "rampe_led", "batterie_cellules"]);
+    // Plan 0.10 (V1-04) : les étagères demandent l'établi de menuisier, donc le rabot de L2B.
+    const niveau2 = new Set(["cranequin_leger", "module_bobine", "matraque_contacts_soudes", "charrette_bras", "moulin_jerricans", "rampe_led", "batterie_cellules", "etageres"]);
     const infaisables = RECETTES.filter((r) => !r.aVenir && !t.recettes.has(r.id) && !niveau2.has(r.id)).map((r) => r.id);
     // Le boyau séché vient du lapin, et le collet n'attrape encore rien : sa corde d'arc ne se dévoile jamais
     // (déclencheur « vu : boyaux »), elle ne trompe donc personne. Le pack soudé (plan 0.10, chantier C) demande le

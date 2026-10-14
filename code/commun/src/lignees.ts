@@ -8,6 +8,7 @@
 import type { Inventaire, TypeObjet } from "./objets.ts";
 import type { Qualite, TypeInstallation } from "./recettes.ts";
 import type { Famille } from "./regles.ts";
+import { ETAGERES_KG } from "./meubles-niveau2.ts";
 
 /** Les matériaux naturels : on n'en récupère que la moitié au démontage (le reste casse, se perd, part en cendre). */
 export const MATERIAUX_NATURELS: readonly TypeObjet[] = ["pierre", "branche", "buche", "fibres"];
@@ -623,7 +624,9 @@ export const LIGNEES_INSTALLATIONS: Partial<Record<TypeInstallation, readonly Et
         ideePlusTard: "Ce rabot servira sur un établi, un jour.",
         indice: ["Un rabot ? Une caisse d'outils de menuisier, venue de loin.", "Au phare du cap."],
       },
-      apporte: "Un rabot : des planches lisses, des manches d'outils plus solides.",
+      // Plan 0.10 (V1-04) : on y rabote les étagères du coffre ; les manches + 25 % sont reportés, la porte de planches
+      // attend les murs (0.10.1).
+      apporte: "Un rabot : des planches lisses, pour des étagères dans ton coffre (50 kg de plus).",
       examen: "Un établi de menuisier, son rabot et ses planches lisses.",
     },
   ],
@@ -735,7 +738,7 @@ export const LIGNEES_INSTALLATIONS: Partial<Record<TypeInstallation, readonly Et
         ideePlusTard: "Ce panneau servira sur un banc, un jour.",
         indice: ["Un panneau solaire ? Les stations-service en avaient.", "À la station."],
       },
-      apporte: "Brancher et assembler ce qui marche au courant. Le panneau posé dessus remplit sa batterie au soleil, 80 Wh par beau jour (rien la nuit).",
+      apporte: "Brancher et assembler ce qui marche au courant. Le panneau posé dessus remplit sa batterie au soleil, ≈ 160 Wh par beau jour (rien la nuit).",
       examen: "Un banc de planches, des pinces, un régulateur bricolé ; le petit panneau de la station couché dessus, plein sud.",
     },
     {
@@ -788,13 +791,13 @@ export const LIGNEES_INSTALLATIONS: Partial<Record<TypeInstallation, readonly Et
       examen: "Le vieux vélo de la ruine sur un bâti de bois ; sa roue entraîne, par une courroie, le petit alternateur d'une voiture.",
     },
     {
-      // ⚙️ Les roulements montés (plan 0.10 §3.1, N2-12) : la boîte de roulements de L2A, sans autre matériau, serrée
-      // fort (Serrer 2). Pédaler coûte 30 % d'effort en moins et donne 30 % de Wh en plus (meubles-niveau2.ts) ; les
+      // ⚙️ Les roulements montés (plan 0.10 §3.1, N2-12) : un roulement de la boîte de L2A (elle en contient trois, qu'on
+      // en tire en l'ouvrant : V1-01), sans autre matériau, serré fort (Serrer 2). Pédaler coûte 30 % d'effort en moins et donne 30 % de Wh en plus (meubles-niveau2.ts) ; les
       // recettes qui demandent l'accessoire « roulements » se font au pédalier de ce niveau.
       id: "roulements_montes",
       nom: "Roulements montés",
       niveau: 2,
-      couts: [{ roulements: 1 }],
+      couts: [{ roulement: 1 }],
       qualites: { serrer: 2 },
       duree: 30,
       intensite: "moyenne",
@@ -910,8 +913,9 @@ export function etapeSuivanteInstallation(i: { type: string; niveau?: number }):
   return lignee(i.type)?.[niveauInstallation(i)] ?? null;
 }
 
-export function capaciteCoffre(i: { type: string; niveau?: number }): number {
-  return CAPACITES_COFFRE[niveauInstallation(i) - 1] ?? CAPACITES_COFFRE[0];
+/** Ce que tient un coffre, selon son niveau ; ses étagères posées ajoutent 50 kg (plan 0.10, V1-04). */
+export function capaciteCoffre(i: { type: string; niveau?: number; etat?: { etageres?: boolean } }): number {
+  return (CAPACITES_COFFRE[niveauInstallation(i) - 1] ?? CAPACITES_COFFRE[0]) + (i.etat?.etageres ? ETAGERES_KG : 0);
 }
 
 export function contenanceRecuperateur(i: { type: string; niveau?: number }): number {

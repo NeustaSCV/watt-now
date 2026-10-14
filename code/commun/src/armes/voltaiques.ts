@@ -17,6 +17,14 @@ export const WH_LONGUE = 1;
  * (`CAPACITES.petite_batterie`, energie.ts). Elle est unique : elle va à l'une **ou** à l'autre (Q-B6).
  */
 export const CAPACITE_MATRAQUE_FORTUNE_WH = 50;
+/**
+ * La matraque ★★★ (plan 0.10, V1-14 ; Q-C10) : sa source est le pack soudé du poste de montage, 24 Wh, le double d'un
+ * pack de cellules. Comme la ★★ et sa petite batterie, la capacité suit les étoiles de l'exemplaire : la ★★★ est l'arme
+ * déclarée (ses étoiles de base) ; les autres étoiles gardent le pack de cellules.
+ */
+export const CAPACITE_PACK_SOUDE_WH = 24;
+/** Le pack de cellules, 12 Wh (`CAPACITE_PACK_WH`, combat.ts, qu'on n'importe pas ici : combat.ts lit ce fichier). */
+export const CAPACITE_PACK_CELLULES_WH = 12;
 
 export const ARMES_VOLTAIQUES: Arme[] = [
   // La Raquette (§5.3), l'arme de métier : ★ au flash, ★★ à la raquette (H1), ★★★ au module à bobine (L2). Juste sous
@@ -34,14 +42,14 @@ export const ARMES_VOLTAIQUES: Arme[] = [
     coup: 450,
     coupAppuye: 1000,
     metier: true,
-    electrique: { raidi: 2.5, whCourte: WH_COURTE, whLongue: WH_LONGUE, saute: true },
+    electrique: { raidi: 2.5, whCourte: WH_COURTE, whLongue: WH_LONGUE, saute: true, capaciteWh: CAPACITE_PACK_SOUDE_WH },
     parEtoiles: {
-      1: { degats: 1, solidite: 60, etape: "H1" },
+      1: { degats: 1, solidite: 60, etape: "H1", capaciteWh: CAPACITE_PACK_CELLULES_WH },
       2: { degats: 1.1, solidite: 60, etape: "H1", capaciteWh: CAPACITE_MATRAQUE_FORTUNE_WH },
       3: { degats: 2.25, solidite: 80, etape: "L2" },
-      4: { degats: 3.15, solidite: 110, etape: "L3" },
+      4: { degats: 3.15, solidite: 110, etape: "L3", capaciteWh: CAPACITE_PACK_CELLULES_WH },
       // C3 : la solidité de la ★★★★★ est retenue, à revoir plus tard.
-      5: { degats: 4.05, solidite: 150, etape: "plus_tard" },
+      5: { degats: 4.05, solidite: 150, etape: "plus_tard", capaciteWh: CAPACITE_PACK_CELLULES_WH },
     },
   },
   // L'aiguillon (§5.3) : la même décharge au bout d'un épieu, à 2,3 m. Au niveau 2 (grisé en 0.8) : 2,0 à 3,0 (K33 à

@@ -1,9 +1,9 @@
 // L'énergie stockée et produite de l'É2 (lot 2) : batteries, pédalier, charbonnière, lumière électrique.
 // Valeurs réalistes (Book 01 §2), rapportées à l'horloge d'action. Réglages à caler en test.
 
-import { REGLAGES } from "./reglages.ts";
+import { DEFINITIONS_REGLAGES, REGLAGES } from "./reglages.ts";
 import type { Famille } from "./regles.ts";
-import { DUREE_TRANCHE_MS, tempsDeLaTranche, vent, type Temps, type Vent } from "./meteo.ts";
+import { DUREE_TRANCHE_MS, PARTS_DU_TEMPS, tempsDeLaTranche, vent, type Temps, type Vent } from "./meteo.ts";
 import { HEURE_DEPART, HEURE_FIN_NUIT, HEURE_TOMBEE_NUIT, MS_PAR_HEURE_JEU } from "./temps.ts";
 
 // ---------- Batteries ----------
@@ -105,9 +105,25 @@ export const PORTEE_CABLE_PANNEAU = 6;
 // d'heure est une cloche (un sinus) du lever (5 h 30) au coucher (21 h), réglée pour valoir 1 en moyenne sur 24 h : un
 // jour de calendrier tout au soleil donne donc les mêmes 80 Wh qu'avant (≈ 17 Wh par jour de jeu de 24 min ; au plus haut,
 // ≈ 8 W au lieu de 3,3 W en continu). Par temps voilé, 0,6 ; couvert, 0,3 ; sous la pluie, rien.
+//
+// La compensation (plan 0.10, V1-02, décision du porteur) : sur la vraie météo (PARTS_DU_TEMPS), ces facteurs ne
+// laissaient que 49 % du soleil d'avant (le revenu des ⚡ baissait de moitié). Le panneau est donc calé pour que **la
+// moyenne sur la météo réelle reste celle d'avant** (80 Wh par jour de calendrier) : tout est multiplié par
+// COMPENSATION_METEO (≈ 2,03) ; un jour de calendrier tout au soleil donne alors ≈ 162 Wh (`whParBeauJour`), au plus haut
+// ≈ 16 W.
 
 /** Le facteur de temps du panneau (S-30). */
 export const SOLEIL_PAR_TEMPS: Record<Temps, number> = { soleil: 1, voile: 0.6, couvert: 0.3, pluie: 0 };
+
+/** Ce que les facteurs de temps laissent en moyenne sur la vraie météo (≈ 0,49). */
+export const PART_METEO_PANNEAU = (Object.keys(SOLEIL_PAR_TEMPS) as Temps[]).reduce((s, t) => s + PARTS_DU_TEMPS[t] * SOLEIL_PAR_TEMPS[t], 0);
+/** La compensation du panneau (V1-02) : sa moyenne sur la vraie météo égale celle d'avant le soleil (≈ × 2,03). */
+export const COMPENSATION_METEO = 1 / PART_METEO_PANNEAU;
+
+/** Ce que donne le panneau sur un jour de calendrier tout au soleil (Wh) : la moyenne × la compensation (≈ 162). */
+export function whParBeauJour(): number {
+  return REGLAGES.panneau_wh_jour * COMPENSATION_METEO;
+}
 
 /** La durée du jour, en heures de jeu (15 h 30). */
 const HEURES_JOUR = HEURE_TOMBEE_NUIT - HEURE_FIN_NUIT;
@@ -159,16 +175,17 @@ function integrerMeteo(depuis: number, jusqua: number, debutMonde: number, parTe
 
 /**
  * Ce que produit le panneau entre deux instants réels (au calendrier, connecté ou non) : 80 Wh par jour de calendrier
- * en moyenne au soleil, rien la nuit ni sous la pluie (S-30). `tempsDe` : le temps de chaque tranche (celui du monde).
+ * en moyenne sur la vraie météo (≈ 162 un jour tout au soleil, V1-02), rien la nuit ni sous la pluie (S-30). `tempsDe` :
+ * le temps de chaque tranche (celui du monde).
  */
 export function productionPanneau(depuis: number, jusqua: number, debutMonde: number, tempsDe: TempsDeLaTranche = tempsDeLaTranche): number {
-  return (REGLAGES.panneau_wh_jour * integrerMeteo(depuis, jusqua, debutMonde, (t) => SOLEIL_PAR_TEMPS[t], true, tempsDe)) / MS_JOUR_CALENDRIER;
+  return (whParBeauJour() * integrerMeteo(depuis, jusqua, debutMonde, (t) => SOLEIL_PAR_TEMPS[t], true, tempsDe)) / MS_JOUR_CALENDRIER;
 }
 
 /** La puissance du panneau à un instant (W, au calendrier), pour la fiche du banc. */
 export function puissancePanneau(instant: number, debutMonde: number, tempsDe: TempsDeLaTranche = tempsDeLaTranche): number {
   const tranche = Math.floor(Math.max(0, instant - debutMonde) / DUREE_TRANCHE_MS);
-  return ((REGLAGES.panneau_wh_jour / 24) * facteurHeureSoleil(heuresAbsolues(instant, debutMonde)) * SOLEIL_PAR_TEMPS[tempsDe(tranche)]);
+  return ((whParBeauJour() / 24) * facteurHeureSoleil(heuresAbsolues(instant, debutMonde)) * SOLEIL_PAR_TEMPS[tempsDe(tranche)]);
 }
 
 /** Des watts tenus pendant une durée réelle, en Wh, au calendrier (comme les clôtures : 3 W font 72 Wh par jour). */
@@ -178,8 +195,17 @@ export function whDePuissance(watts: number, ms: number): number {
 
 // ---------- Le moulin de jerricans ⚙️ (plan 0.10, chantier D ; N2-47, S-28) ----------
 
-/** Ce que donne le moulin selon le vent (W) : 15 quand il vente (couvert, pluie), 5 par temps voilé, rien au calme. */
-export const WATTS_MOULIN: Record<Vent, number> = { fort: 15, faible: 5, calme: 0 };
+/**
+ * Ce que donne le moulin selon le vent (W) : ≈ 5,9 quand il vente (couvert, pluie), ≈ 2 par temps voilé, rien au calme.
+ * Plan 0.10 (V1-03, décision du porteur) : 15 et 5 W (S-28) faisaient ≈ 4,5 fois le banc ; il est ramené à **la même
+ * moyenne que le banc** sur la vraie météo (80 Wh par jour de calendrier, soit ≈ 3,3 W), en gardant le rapport de 3 à 1
+ * entre le vent fort et le vent faible. La poulie garde ses + 50 %.
+ */
+export const WATTS_MOULIN: Record<Vent, number> = (() => {
+  const moyenneBanc = DEFINITIONS_REGLAGES.panneau_wh_jour.defaut / 24;
+  const faible = moyenneBanc / (3 * (PARTS_DU_TEMPS.couvert + PARTS_DU_TEMPS.pluie) + PARTS_DU_TEMPS.voile);
+  return { fort: 3 * faible, faible, calme: 0 };
+})();
 /** La poulie d'aluminium 🔥 posée sur son axe : 50 % de production en plus (au lieu d'entraîner la meule, S-28). */
 export const BONUS_POULIE = 1.5;
 
@@ -210,12 +236,18 @@ export function msDeNuit(depuis: number, jusqua: number, debutMonde: number): nu
 export const MEUBLES_A_BATTERIES = ["banc_recharge", "pedalier"] as const;
 
 /**
+ * Jusqu'où le moulin de jerricans et la rampe de LED vont chercher la batterie de la base (m) : 15 m au plus, comme le
+ * reste de la base (plan 0.10, V1-17). Au-delà, le moulin ne charge rien et la rampe reste éteinte.
+ */
+export const PORTEE_BATTERIE_BASE = 15;
+
+/**
  * La batterie de la base (plan 0.10, chantier D) : celle que remplit le moulin de jerricans et que vide la rampe de LED.
- * Le meuble à batteries le plus proche qui en porte une (le banc solaire, ou le pédalier), sinon null.
+ * Le meuble à batteries le plus proche qui en porte une (le banc solaire, ou le pédalier), à 15 m au plus, sinon null.
  */
 export function meubleABatterieProche<T extends { type: string; x: number; z: number; etat: { batteries?: Partial<Record<TypeBatterie, number>> } }>(de: { x: number; z: number }, installations: Iterable<T>): T | null {
   let meilleur: T | null = null;
-  let d = Infinity;
+  let d = PORTEE_BATTERIE_BASE + 1e-9;
   for (const i of installations) {
     if (!porteBatteries(i.type) || !Object.values(i.etat.batteries ?? {}).some((n) => (n ?? 0) > 0)) continue;
     const di = Math.hypot(i.x - de.x, i.z - de.z);

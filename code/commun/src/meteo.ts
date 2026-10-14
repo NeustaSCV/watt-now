@@ -21,6 +21,21 @@ const TRANSITIONS: Record<Temps, [number, number, number, number]> = {
 };
 const ORDRE: Temps[] = ["soleil", "voile", "couvert", "pluie"];
 
+/**
+ * La part de chaque temps sur la durée (plan 0.10, V1-02) : la distribution stationnaire de la chaîne ci-dessus (≈ 27 %
+ * de soleil, 24 % de voilé, 26 % de couvert, 23 % de pluie). Le banc solaire et le moulin de jerricans s'y calent, pour
+ * donner en moyenne ce qu'on a voulu.
+ */
+export const PARTS_DU_TEMPS: Readonly<Record<Temps, number>> = (() => {
+  let p = [1, 0, 0, 0];
+  for (let k = 0; k < 500; k++) {
+    const q = [0, 0, 0, 0];
+    for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) q[j] = q[j]! + p[i]! * TRANSITIONS[ORDRE[i]!][j]!;
+    p = q;
+  }
+  return { soleil: p[0]!, voile: p[1]!, couvert: p[2]!, pluie: p[3]! };
+})();
+
 /** Un tirage stable pour une tranche donnée. */
 function tirage(tranche: number): number {
   let x = (tranche * 2654435761) >>> 0;

@@ -263,6 +263,8 @@ export const PROGRESSION: Readonly<Record<string, LigneProgression>> = {
   maillet: { quand: [{ a: "installation", type: "etabli", niveau: 2 }], indice: "Frapper un coin sans le fendre." },
   coins_bois: { quand: [{ a: "installation", type: "etabli", niveau: 2 }], indice: "Un coin bien enfoncé ouvre une bûche en deux." },
   planches_fendues: { quand: [{ a: "installation", type: "etabli", niveau: 2 }], indice: "Une bûche fendue droit donne de vraies planches." },
+  // Plan 0.10 (V1-04) : les étagères, avec l'établi de menuisier.
+  etageres: { quand: [{ a: "installation", type: "etabli", niveau: 3 }], indice: "Des planches lisses font des étagères : le coffre tient plus." },
 
   // ---------- Les meubles nouveaux du niveau 2 (plan 0.10, chantier D) ----------
   // Les deux meubles communs apparaissent après la première visite d'un lieu du niveau 2 (N2-Q3) ; ceux des familles,

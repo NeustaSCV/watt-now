@@ -176,13 +176,14 @@ export const RECETTES_CHARBONNIERS: Recette[] = [
   },  // ---------- Le creuset de la forge ventilée, chantier D (plan 0.10 ; N2-43, S-24) ----------
   // La forge ventilée fond l'aluminium (660 °C) : quatre chutes, coulées dans un moule de terre. La poulie va aux
   // Mécanistes (le moulin de jerricans : + 50 %), le lingot se vend au Comptoir. Enfin un débouché pour les chutes.
+  // Un charbon chacune, comme les autres recettes de forge (plan 0.10, V1-16).
   {
     id: "poulie_aluminium",
     lieu: AU_CREUSET,
     categorie: "materiaux",
     nom: "Couler une poulie d'aluminium",
     produit: { objet: "poulie_aluminium", quantite: 1 },
-    ingredients: { aluminium: 4 },
+    ingredients: { aluminium: 4, charbon_bois: 1 },
     qualites: {},
     duree: 40,
     intensite: "moyenne",
@@ -194,7 +195,7 @@ export const RECETTES_CHARBONNIERS: Recette[] = [
     categorie: "materiaux",
     nom: "Couler un lingot d'aluminium",
     produit: { objet: "lingot_aluminium", quantite: 1 },
-    ingredients: { aluminium: 4 },
+    ingredients: { aluminium: 4, charbon_bois: 1 },
     qualites: {},
     duree: 30,
     intensite: "moyenne",

@@ -2,6 +2,7 @@
 // Le serveur s'en sert pour charger (serveur/src/electricite.ts), le client pour dessiner la fiche du banc
 // (client/src/fiche-banc.ts). Les chiffres du banc (débit, rendement, portée du pédalier) sont dans energie.ts.
 
+import { CAPACITE_MATRAQUE_FORTUNE_WH, CAPACITE_PACK_SOUDE_WH } from "./armes/voltaiques.ts";
 import { armeDeCle, capaciteChargeArme, chargeArme } from "./combat.ts";
 import { CAPACITES, NOMS_BATTERIES, TYPES_BATTERIES, capacite, type Charges, type TypeBatterie } from "./energie.ts";
 import type { CleObjet } from "./etoiles.ts";
@@ -48,7 +49,8 @@ export function chosesACharger(inventaire: Inventaire, charges: Charges, chargeA
     r.push({
       cible: cle as CleObjet,
       nom: majuscule(nommer(cle as CleObjet, 1)),
-      source: a.electrique.capaciteWh ? "sa petite batterie" : "son pack de cellules",
+      // La ★★★ tient son pack soudé (V1-14) ; la ★★ et la matraque de fortune, la petite batterie du kit.
+      source: a.electrique.capaciteWh === CAPACITE_PACK_SOUDE_WH ? "son pack soudé" : a.electrique.capaciteWh === CAPACITE_MATRAQUE_FORTUNE_WH ? "sa petite batterie" : "son pack de cellules",
       wh: chargeArme(cle, chargeArmes),
       capacite: capaciteChargeArme(a),
     });

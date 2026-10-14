@@ -372,6 +372,13 @@ export const OBJETS_METIER = {
     poids: 1,
     description: "Quatre chutes fondues en un lingot propre, mat et léger : il se vend au Comptoir.",
   },
+  // L'établi de menuisier (plan 0.10, V1-04) : les étagères, posées dans le coffre ou la réserve couverte (+ 50 kg).
+  etageres: {
+    nom: "jeu d'étagères",
+    pluriel: "jeux d'étagères",
+    poids: 6,
+    description: "Deux planches rabotées, leurs tasseaux cloués : posées dans ton coffre, elles y font de la place pour cinquante kilos de plus.",
+  },
 } satisfies Record<string, DefinitionObjet>;
 
 export type TypeObjetMetier = keyof typeof OBJETS_METIER;

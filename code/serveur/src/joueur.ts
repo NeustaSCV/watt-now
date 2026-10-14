@@ -3947,7 +3947,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
         if (niveau <= 1) return this.info("C'est déjà le premier niveau : pour l'enlever, démonte-le.");
         const payes = i.etat.payes ?? [];
         const rend = rendDuDemontage(payes.at(-1) ?? {});
-        const apres = { type: i.type, niveau: niveau - 1 };
+        const apres = { type: i.type, niveau: niveau - 1, etat: i.etat };
         if (i.type === "coffre" && poidsInventaire(i.etat.contenu ?? {}) > capaciteCoffre(apres) + 1e-9) return this.info(`Il y a trop dans le coffre pour qu'il redevienne plus petit : vide-le jusqu'à ${capaciteCoffre(apres)} kg.`);
         if (!this.peutReprendre(rend)) return;
         return this.commencer(`Défaire : ${nom}`, Math.max(2, (etape?.duree ?? 20) / 2 / REGLAGES.fabrication_acceleration), () => {

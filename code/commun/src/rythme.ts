@@ -204,8 +204,9 @@ const QUETES_SOCIALES = new Set(["main_tendue"]);
 
 /**
  * Le panneau suit le soleil (plan 0.10, chantier D ; S-30) : rien la nuit ni sous la pluie, moins sous les nuages. Sur
- * un mois de calendrier du monde, il ne donne qu'une part de ses 80 Wh par jour (≈ 53 % : la nuit est déjà dans la
- * moyenne, pas la pluie ni les nuages) ; l'attente des 20 Wh de la quête « La charge » s'allonge d'autant.
+ * un mois de calendrier du monde, il ne donnait qu'une part de ses 80 Wh par jour (≈ 53 % : la nuit est déjà dans la
+ * moyenne, pas la pluie ni les nuages). Depuis la compensation (V1-02), sa moyenne sur la vraie météo est celle d'avant :
+ * ce mois-ci, un peu plus (≈ 107 %, le hasard du ciel) ; l'attente des 20 Wh de la quête « La charge » suit.
  */
 export const PART_DU_SOLEIL = productionPanneau(0, 30 * MS_JOUR_CALENDRIER, 0) / (30 * REGLAGES.panneau_wh_jour);
 
@@ -297,7 +298,7 @@ const GESTES_TUTO: Readonly<Record<string, readonly (readonly [number, Geste])[]
   "Le vestige": [
     // La caisse à outils de la ruine : la tête de hache, la clé plate, le tournevis, la tête de marteau (I10).
     [0.4, { voir: ["tete_hache", "cle_plate", "tournevis", "tete_marteau"] }],
-    [0.45, { fouiller: "atelier" }],
+    [0.45, { fouiller: "caisse_ruine" }],
     [0.9, { voir: ["cadre_velo", "chaine_velo", "roue_velo", "dynamo_velo"] }],
   ],
   "L'outil": [[0.9, { fabriquer: "hache" }]],
@@ -326,7 +327,7 @@ const INSTALLATION_DU_VETERAN: readonly [number, Geste][] = [
   [2.5, { fabriquer: "feu_de_camp" }],
   [2.6, { noter: "feu_allume" }],
   [5, { voir: ["tete_hache", "cle_plate", "tournevis", "tete_marteau", "bache", "barre_metal", "ressort_lames", "bidon_5l", "sac_plastique"] }],
-  [5.1, { fouiller: "atelier" }],
+  [5.1, { fouiller: "caisse_ruine" }],
   [6, { voir: ["cadre_velo", "chaine_velo", "roue_velo", "dynamo_velo"] }],
   [9, { fabriquer: "abri" }],
   // « Ta famille t'attend à la station » (Q-0.8-15) : il y va tout de suite après s'être installé.

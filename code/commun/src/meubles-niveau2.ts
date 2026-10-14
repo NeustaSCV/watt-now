@@ -80,3 +80,13 @@ export function accessoireDeNiveau(i: MeublePose, accessoire: string): boolean {
   const a = ACCESSOIRES_DE_NIVEAU[accessoire];
   return a !== undefined && i.type === a.type && (i.niveau ?? 1) >= a.niveau;
 }
+
+// ---------- Les étagères de l'établi de menuisier (plan 0.10, V1-04) ----------
+
+/**
+ * Les étagères (2 planches rabotées, une poignée de clous, à l'établi de menuisier) se posent dans le coffre ou dans la
+ * réserve couverte : 50 kg de plus. Une fois par coffre ; il les rend quand on le démonte.
+ */
+export const ETAGERES_KG = 50;
+/** Le geste qui les pose (s). */
+export const POSER_ETAGERES_S = 10;

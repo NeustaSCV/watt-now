@@ -60,13 +60,16 @@ function endormir(j: Joueur): void {
   x.endormir(false);
 }
 
-/** Les dix évolutions : leur lignée, le niveau d'avant, les matériaux, l'objet-clé (ou l'outil-clé), l'outil. */
-const DIX: readonly { id: string; type: TypeInstallation | "feu"; avant: number; famille: Famille; couts: Record<string, number>; cle: string; outil: Record<string, number> }[] = [
+/**
+ * Les dix évolutions : leur lignée, le niveau d'avant, les matériaux, l'objet-clé (ou l'outil-clé), l'outil. `piece` : ce
+ * que la recette prend de l'objet-clé, quand ce n'est pas lui (un roulement de la boîte, plan 0.10 V1-01).
+ */
+const DIX: readonly { id: string; type: TypeInstallation | "feu"; avant: number; famille: Famille; couts: Record<string, number>; cle: string; piece?: string; outil: Record<string, number> }[] = [
   { id: "reserve_couverte", type: "coffre", avant: 2, famille: "mecanistes", couts: { tube_aluminium: 4, rouleau_fil_fer: 1, poignee_clous: 1, toles_ondulees: 1 }, cle: "toles_ondulees", outil: { marteau: 1, couteau: 1 } },
   { id: "abri_double", type: "abri", avant: 3, famille: "mecanistes", couts: { bache: 1, chiffons: 4, couvertures_laine: 1 }, cle: "couvertures_laine", outil: { couteau: 1 } },
   { id: "lanterne_fixe", type: "torche_plantee", avant: 1, famille: "mecanistes", couts: { tube_aluminium: 1, aluminium: 2, bidon_huile: 1, lanterne_tempete: 1 }, cle: "lanterne_tempete", outil: { couteau: 1 } },
   { id: "poste_montage", type: "banc_recharge", avant: 1, famille: "voltaiques", couts: { fil_cuivre: 1, resistance: 1, aimant: 1, plastique: 2 }, cle: "fer_souder", outil: { fer_souder: 1 } },
-  { id: "roulements_montes", type: "pedalier", avant: 1, famille: "mecanistes", couts: { roulements: 1 }, cle: "roulements", outil: { cle_plate: 1 } },
+  { id: "roulements_montes", type: "pedalier", avant: 1, famille: "mecanistes", couts: { roulement: 1 }, cle: "roulements", piece: "roulement", outil: { cle_plate: 1 } },
   { id: "four_terre", type: "feu", avant: 3, famille: "mecanistes", couts: { glaise: 4, pierre: 2, bouteille_verre: 6, porte_four: 1 }, cle: "porte_four", outil: { marteau: 1 } },
   { id: "recuperateur_jerrican", type: "recuperateur_pluie", avant: 2, famille: "mecanistes", couts: { caoutchouc: 2, plastique: 1, jerrican_20l: 1 }, cle: "jerrican_20l", outil: { couteau: 1 } },
   { id: "etabli_menuisier", type: "etabli", avant: 2, famille: "mecanistes", couts: { buche: 2, barre_metal: 1, poignee_clous: 1 }, cle: "rabot", outil: { rabot: 1 } },
@@ -107,10 +110,10 @@ test("chaque évolution se bâtit avec son objet-clé, le niveau d'avant posé e
     const t = monter(d.famille, { ...d.couts, ...d.outil }, { type: d.type, niveau: d.avant });
     t.agir("ameliorer");
     assert.equal(t.niveau(), cible, `${d.id} : ${t.infos().slice(-2).join(" | ")}`);
-    if (!(d.cle in d.outil)) assert.equal(t.sac()[d.cle as never] ?? 0, 0, `${d.id} : l'objet-clé est posé`);
+    if (!(d.cle in d.outil)) assert.equal(t.sac()[(d.piece ?? d.cle) as never] ?? 0, 0, `${d.id} : l'objet-clé est posé`);
     // Sans l'objet-clé (ou l'outil-clé) : refusée, ce qui manque est dit, aucun repli n'est proposé.
     const sansCle: Record<string, number> = { ...d.couts, ...d.outil };
-    delete sansCle[d.cle];
+    delete sansCle[d.piece ?? d.cle];
     const u = monter(d.famille, sansCle, { type: d.type, niveau: d.avant });
     u.agir("ameliorer");
     assert.equal(u.niveau(), d.avant, `${d.id} : sans objet-clé`);
@@ -120,14 +123,14 @@ test("chaque évolution se bâtit avec son objet-clé, le niveau d'avant posé e
       const v = monter(d.famille, { ...d.couts }, { type: d.type, niveau: d.avant });
       v.agir("ameliorer");
       assert.equal(v.niveau(), d.avant, `${d.id} : sans outil`);
-      assert.ok((v.sac()[d.cle as never] ?? 0) > 0, `${d.id} : l'objet-clé reste dans le sac`);
+      assert.ok((v.sac()[(d.piece ?? d.cle) as never] ?? 0) > 0, `${d.id} : l'objet-clé reste dans le sac`);
     }
     // Sans le niveau d'avant (un cran plus bas) : on ne saute pas d'étape, l'objet-clé reste dans le sac.
     if (d.avant > 1) {
       const w = monter(d.famille, { ...d.couts, ...d.outil }, { type: d.type, niveau: d.avant - 1 });
       w.agir("ameliorer");
       assert.ok(w.niveau() < cible, `${d.id} : sans le niveau d'avant`);
-      if (!(d.cle in d.outil)) assert.ok((w.sac()[d.cle as never] ?? 0) > 0, `${d.id} : l'objet-clé reste dans le sac`);
+      if (!(d.cle in d.outil)) assert.ok((w.sac()[(d.piece ?? d.cle) as never] ?? 0) > 0, `${d.id} : l'objet-clé reste dans le sac`);
     }
   }
 });

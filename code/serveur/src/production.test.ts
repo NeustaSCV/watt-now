@@ -1,13 +1,12 @@
 // Tests du lot 2 de l'É4 : le panneau solaire produit au calendrier, même hors ligne ; le rapport de la base. Depuis la
 // 0.8 (chantier 7), le panneau se pose sur le banc solaire : un seul meuble. Depuis la 0.10 (chantier D, S-30), il suit
-// le soleil : rien la nuit ni sous la pluie, 80 Wh par beau jour de calendrier ; les tests comparent au soleil du monde.
+// le soleil : rien la nuit ni sous la pluie, ≈ 162 Wh par beau jour de calendrier (80 en moyenne, V1-02) ; les tests comparent au soleil du monde.
 
 import { test } from "node:test";
 import { toutDevoile } from "../../commun/src/progression.ts";
 import assert from "node:assert/strict";
-import { MS_JOUR_CALENDRIER, productionPanneau } from "../../commun/src/energie.ts";
+import { MS_JOUR_CALENDRIER, productionPanneau, whParBeauJour } from "../../commun/src/energie.ts";
 import { MS_PAR_JOUR_JEU } from "../../commun/src/temps.ts";
-import { REGLAGES } from "../../commun/src/reglages.ts";
 import type { MessageServeur } from "../../commun/src/messages.ts";
 import { Base } from "./base.ts";
 import { Comptoir } from "./comptoir.ts";
@@ -59,16 +58,17 @@ function monter(inventaire: Record<string, number>, avecPanneau = true) {
 
 const kit = { buche: 2, barre_metal: 1, couteau: 1, cle_plate: 1, panneau_solaire: 1, branche: 3 };
 
-test("le petit panneau produit 80 Wh par beau jour de calendrier (1 h 50 réelle) au printemps (S-30)", () => {
+// Plan 0.10 (V1-02) : compensé pour la vraie météo, un beau jour donne ≈ 162 Wh (80 en moyenne sur le temps qu'il fait).
+test("le petit panneau produit ≈ 162 Wh par beau jour de calendrier (1 h 50 réelle) au printemps (S-30, V1-02)", () => {
   assert.ok(Math.abs(MS_JOUR_CALENDRIER / 60_000 - 110) < 1);
   const soleil = () => "soleil" as const;
-  // 73 jours de calendrier font juste 336 jours de jeu : tout au soleil, 80 Wh par jour, exactement.
+  // 73 jours de calendrier font juste 336 jours de jeu : tout au soleil, ≈ 162 Wh par jour, exactement.
   assert.ok(Math.abs((73 * MS_JOUR_CALENDRIER) / MS_PAR_JOUR_JEU - 336) < 1e-9);
-  assert.ok(Math.abs(productionPanneau(0, 73 * MS_JOUR_CALENDRIER, 0, soleil) - 73 * REGLAGES.panneau_wh_jour) < 1e-6);
-  // Un seul jour de calendrier commence à n'importe quelle heure : ≈ 80 Wh, à la nuit près.
+  assert.ok(Math.abs(productionPanneau(0, 73 * MS_JOUR_CALENDRIER, 0, soleil) - 73 * whParBeauJour()) < 1e-6);
+  // Un seul jour de calendrier commence à n'importe quelle heure : ≈ 162 Wh, à la nuit près.
   for (const depart of [0, 7 * 60_000, 15 * 60_000]) {
     const wh = productionPanneau(depart, depart + MS_JOUR_CALENDRIER, 0, soleil);
-    assert.ok(Math.abs(wh - REGLAGES.panneau_wh_jour) < 10, `${wh}`);
+    assert.ok(Math.abs(wh - whParBeauJour()) < 20, `${wh}`);
   }
 });
 

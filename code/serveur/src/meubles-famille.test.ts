@@ -163,7 +163,7 @@ test("⚡ un Voltaïque seul : le banc solaire, le panneau posé dessus, la batt
   const avant = total();
   assert.equal(Math.round(t.meuble(id).etat.charges!.batterie_voiture!), CHARGE_TROUVEE.batterie_voiture);
   t.absence(MS_JOUR_CALENDRIER);
-  // Le soleil du jour entré (80 Wh par beau jour, rien la nuit ni sous la pluie), moins la décharge spontanée (≈ 0,3 Wh).
+  // Le soleil du jour entré (≈ 160 Wh par beau jour, rien la nuit ni sous la pluie), moins la décharge spontanée (≈ 0,3 Wh).
   const apres = total();
   assert.ok(t.soleil() > 0, `soleil : ${t.soleil()}`);
   assert.ok(Math.abs(apres - avant - t.soleil()) < 1.5, `${avant} → ${apres} pour ${t.soleil()}`);

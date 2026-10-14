@@ -186,7 +186,7 @@ export const RECETTES_MECANISTES: Recette[] = [
     categorie: "outils",
     nom: "Cranequin",
     produit: { objet: "cranequin", quantite: 1 },
-    ingredients: { roulements: 1, chaine_velo: 1, barre_metal: 1 },
+    ingredients: { roulement: 1, chaine_velo: 1, barre_metal: 1 },
     qualites: { serrer: 2 },
     duree: 120,
     intensite: "moyenne",
@@ -194,15 +194,15 @@ export const RECETTES_MECANISTES: Recette[] = [
   },
   // ---------- Le niveau 2 (plan 0.10, chantier F) ----------
   {
-    // Le cranequin léger (N2-33, P9) : un roulement, une chaîne de vélo, une barre, au pédalier équipé des roulements
-    // montés (la boîte de roulements de L2A). L'arbalète à arc d'if en a besoin ; il réarme toute arbalète légère en 2 s
+    // Le cranequin léger (N2-33, P9) : un roulement (des trois d'une boîte, plan 0.10 V1-01), une chaîne de vélo, une
+    // barre, au pédalier équipé des roulements montés (la boîte de roulements de L2A). L'arbalète à arc d'if en a besoin ; il réarme toute arbalète légère en 2 s
     // au lieu de 3 (`plusViteAvec`, tir.ts).
     id: "cranequin_leger",
     lieu: aCote("pedalier", { accessoire: "roulements" }),
     categorie: "outils",
     nom: "Cranequin léger",
     produit: { objet: "cranequin_leger", quantite: 1 },
-    ingredients: { roulements: 1, chaine_velo: 1, barre_metal: 1 },
+    ingredients: { roulement: 1, chaine_velo: 1, barre_metal: 1 },
     qualites: { serrer: 2 },
     duree: 90,
     intensite: "moyenne",
@@ -310,27 +310,29 @@ export const RECETTES_MECANISTES: Recette[] = [
 
   // ---------- Les meubles nouveaux du niveau 2, chantier D (plan 0.10 ; N2-46 à N2-48) : avec les roulements montés ----------
   {
-    // La charrette à bras (S-27) : la brouette, avec 100 kg roulés au lieu de 60. Deux roulements neufs sur les moyeux.
+    // La charrette à bras (S-27) : la brouette, avec 100 kg roulés au lieu de 60. Deux roulements neufs sur les moyeux
+    // (deux des trois d'une boîte, plan 0.10 V1-01).
     id: "charrette_bras",
     lieu: aCote("pedalier", { accessoire: "roulements" }),
     categorie: "sur_soi",
     nom: "Charrette à bras",
     produit: { objet: "charrette_bras", quantite: 1 },
-    ingredients: { roue_velo: 2, roulements: 2, tube_aluminium: 4, buche: 2 },
+    ingredients: { roue_velo: 2, roulement: 2, tube_aluminium: 4, buche: 2 },
     qualites: { serrer: 2 },
     duree: 120,
     intensite: "moyenne",
     famille: "mecanistes",
   },
   {
-    // Le moulin de jerricans (S-28), une éolienne Savonius : 15 W quand il vente, 5 W par temps voilé, rien au calme, au
-    // calendrier, même hors ligne, vers la batterie de la base. La poulie d'aluminium des Charbonniers : + 50 %.
+    // Le moulin de jerricans (S-28), une éolienne Savonius : ≈ 6 W quand il vente, 2 W par temps voilé, rien au calme
+    // (la moyenne du banc, V1-03), au calendrier, même hors ligne, vers une batterie de la base à 15 m au plus (V1-17).
+    // La poulie d'aluminium des Charbonniers : + 50 %.
     id: "moulin_jerricans",
     lieu: POSEE,
     categorie: "ateliers",
     nom: "Moulin de jerricans",
     produit: { installation: "moulin_jerricans" },
-    ingredients: { jerrican: 2, tube_aluminium: 3, roulements: 1, petit_moteur: 1 },
+    ingredients: { jerrican: 2, tube_aluminium: 3, roulement: 1, petit_moteur: 1 },
     qualites: { serrer: 2 },
     duree: 120,
     intensite: "moyenne",

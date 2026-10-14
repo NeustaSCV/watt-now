@@ -123,8 +123,8 @@ test("fouiller la caisse à outils donne les outils habituels plus du bric-à-br
   const inv = t.dernier("inventaire")!.inventaire;
   assert.equal(inv.cle_plate, 1);
   assert.equal(inv.tete_hache, 1);
-  // Aléa 0,99 : trois fois le dernier vestige de la table de l'atelier.
-  const dernierAtelier = tableDeFouille("atelier").at(-1)![0];
+  // Aléa 0,99 : trois fois le dernier vestige de la table de la caisse (celle de l'atelier, sans l'échelle : V1-10).
+  const dernierAtelier = tableDeFouille("caisse_ruine").at(-1)![0];
   assert.equal(inv[dernierAtelier], 3);
   assert.match(t.infos().join(" "), /Dans le fatras, tu trouves aussi/);
 });
@@ -137,7 +137,7 @@ test("le bric-à-brac qui ne rentre pas reste par terre, en petit tas ramassable
   t.allerA(caisse.x, caisse.z);
   t.joueur.recevoir({ t: "interagir", cible: { genre: "ressource", id: caisse.id }, verbe: "fouiller" });
   t.attendre(5);
-  const dernierAtelier = tableDeFouille("atelier").at(-1)![0];
+  const dernierAtelier = tableDeFouille("caisse_ruine").at(-1)![0];
   const inv = t.dernier("inventaire")!.inventaire;
   assert.equal(inv.cle_plate, 1);
   assert.equal(inv[dernierAtelier], undefined);

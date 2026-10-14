@@ -49,6 +49,28 @@ export const DESSINS_NIVEAU2: Record<string, string> = {
     <circle cx="13.3" cy="11" r="1.1" fill="${ENCRE}"/><circle cx="34.7" cy="11" r="1.1" fill="${ENCRE}"/>
     <circle cx="11" cy="33.5" r="1.1" fill="${ENCRE}"/><circle cx="37" cy="33.5" r="1.1" fill="${ENCRE}"/>
     <path d="M15 8 L13 20" stroke="#ffffff" stroke-width="1.2" stroke-linecap="round" opacity="0.85"/>`,
+  // Un roulement à billes (V1-01), tiré de sa boîte : la bague extérieure, la bague intérieure, les billes entre les deux.
+  roulement: `
+    <ellipse cx="24" cy="41" rx="15" ry="3" fill="${ENCRE}" opacity="0.14"/>
+    <circle cx="24" cy="23" r="16" fill="${ALU}" ${T}/>
+    <circle cx="24" cy="23" r="11.5" fill="${FONTE}" ${T}/>
+    <circle cx="24" cy="12.8" r="2.2" fill="${ALU}"/><circle cx="31.2" cy="15.8" r="2.2" fill="${ALU}"/>
+    <circle cx="34.2" cy="23" r="2.2" fill="${ALU}"/><circle cx="31.2" cy="30.2" r="2.2" fill="${ALU}"/>
+    <circle cx="24" cy="33.2" r="2.2" fill="${ALU}"/><circle cx="16.8" cy="30.2" r="2.2" fill="${ALU}"/>
+    <circle cx="13.8" cy="23" r="2.2" fill="${ALU}"/><circle cx="16.8" cy="15.8" r="2.2" fill="${ALU}"/>
+    <circle cx="24" cy="23" r="7.5" fill="${ALU_SOMBRE}" ${T}/>
+    <circle cx="24" cy="23" r="3.6" fill="#f4ecd8" ${T}/>
+    <path d="M13 13 Q17 9 22 8" stroke="#ffffff" stroke-width="1.6" fill="none" stroke-linecap="round" opacity="0.8"/>`,
+  // Le jeu d'étagères (V1-04) : deux planches lisses, claires, sur leurs tasseaux, quelques têtes de clous.
+  etageres: `
+    <ellipse cx="24" cy="42" rx="18" ry="3" fill="${ENCRE}" opacity="0.14"/>
+    <path d="M9 10 V40 M39 10 V40" ${T} stroke-width="3.4" stroke="${BOIS}"/>
+    <path d="M9 10 V40 M39 10 V40" fill="none" stroke="${ENCRE}" stroke-width="1" opacity="0.35"/>
+    <path d="M5 16 H43 V21 H5 Z" fill="${BOIS_CLAIR}" ${T}/>
+    <path d="M5 30 H43 V35 H5 Z" fill="${BOIS_CLAIR}" ${T}/>
+    <path d="M8 17.5 H40 M8 31.5 H40" stroke="#ffffff" stroke-width="1.2" stroke-linecap="round" opacity="0.7"/>
+    <circle cx="9" cy="18.5" r="0.9" fill="${ENCRE}"/><circle cx="39" cy="18.5" r="0.9" fill="${ENCRE}"/>
+    <circle cx="9" cy="32.5" r="0.9" fill="${ENCRE}"/><circle cx="39" cy="32.5" r="0.9" fill="${ENCRE}"/>`,
   // ---------- L2A : le Grand Hôtel ----------
   // Les tôles ondulées : trois tôles empilées, de biais, leurs ondes ; quelques trous de clous.
   toles_ondulees: `

@@ -10,6 +10,8 @@ import { A_LA_CREMAILLERE, A_LA_MAIN, A_LA_POELE, AU_FOUR, AU_FOYER_DE_PIERRES, 
 export const A_L_ETABLI_A_ETAU = aCote("etabli", { niveau: 2 });
 /** Où l'on répare le manche d'une arme ou d'un outil, sans forge, pour toutes les familles (R-ARMES-4, I19). */
 export const LIEU_REPARER_MANCHE = A_L_ETABLI_A_ETAU;
+/** L'établi de menuisier (niveau 3 de l'établi, le rabot de L2B) : les étagères (plan 0.10, V1-04). */
+export const A_L_ETABLI_DE_MENUISIER = aCote("etabli", { niveau: 3 });
 /** Remmancher une hache ou un marteau (0.8.2, R13) : près d'un établi, au niveau 1, plus à la main. */
 export const A_COTE_DE_L_ETABLI = aCote("etabli");
 
@@ -468,6 +470,21 @@ export const RECETTES_COMMUNES: Recette[] = [
     sousProduits: { maillet: 1 },
     ingredients: { buche: 1, coin_bois: 1, maillet: 1 },
     qualites: { serrer: 3 },
+    duree: 40,
+    intensite: "moyenne",
+    famille: "tous",
+  },
+  {
+    // Les étagères de l'établi de menuisier (plan 0.10, V1-04) : deux planches fendues, rabotées sur place, et une
+    // poignée de clous. Posées dans le coffre ou la réserve couverte : 50 kg de plus (meubles-niveau2.ts, ETAGERES_KG).
+    // Les manches + 25 % sont reportés ; la porte de planches attend les murs (0.10.1).
+    id: "etageres",
+    lieu: A_L_ETABLI_DE_MENUISIER,
+    categorie: "batir",
+    nom: "Étagères (planches rabotées)",
+    produit: { objet: "etageres", quantite: 1 },
+    ingredients: { planche_fendue: 2, poignee_clous: 1 },
+    qualites: { raboter: 1 },
     duree: 40,
     intensite: "moyenne",
     famille: "tous",
