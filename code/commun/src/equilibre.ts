@@ -726,3 +726,94 @@ export function tableauTexte(lignes: Ligne[] = tableau(), avecSeconde = false): 
   });
   return [`| ${entetes.join(" | ")} |`, `|${entetes.map(() => "---").join("|")}|`, ...rangs.map((r) => `| ${r.join(" | ")} |`)].join("\n");
 }
+
+// ---------- Le martèlement face à un Équipé (plan 0.9 §3.3, chantier D) ----------
+
+/**
+ * Le joueur qui martèle A (M2) : un seul Éteint surgit à 5 m ; dès qu'il est à portée, le joueur enchaîne les coups
+ * rapides, sans esquiver, sans repousser, sans coup appuyé ; saisi, il se dégage (la règle de la 0.8.4). Les Éteints
+ * pensent par `penser`, les coups passent par `encaisser` : c'est la vraie règle, réglage `equipe_vacille_un_sur` compris.
+ */
+export interface Martelement {
+  /** Détruit, effondré (trois qui tiennent : impossible ici), ou toujours debout au bout d'une minute. */
+  issue: "detruit" | "debout";
+  /** Secondes jusqu'à la destruction (l'infini s'il est toujours debout). */
+  duree: number;
+  coups: number;
+  /** Les coups que l'Équipé a pris sans vaciller. */
+  encaisses: number;
+  saisies: number;
+  morsures: number;
+}
+
+/** Les armes du martèlement : les armes communes de contact, du couteau à la masse. */
+export const ARMES_MARTELEMENT: readonly TypeObjet[] = ["couteau", "gourdin", "marteau", "machette", "pied_de_biche", "barre_metal", "lance", "masse"];
+
+export function marteler(arme: Arme, equipe: boolean): Martelement {
+  const alea = aleaFixe();
+  const joueur: Humain = { id: 1, x: 0, z: 0, discret: false, eclaire: false };
+  const e = nouvelEteint(1, 0, 5, "poursuivant", Math.PI);
+  if (equipe) e.variante = "equipe";
+  e.attention = 5;
+  e.but = { x: 0, z: 0 };
+  const dist = () => Math.hypot(e.x - joueur.x, e.z - joueur.z);
+  let t = 0;
+  let geste: "frappe" | "degager" | null = null;
+  let finGeste = 0;
+  let endurance = ENDURANCE_MAX;
+  let appuis = 0;
+  let tenait = false;
+  const r: Martelement = { issue: "debout", duree: Infinity, coups: 0, encaisses: 0, saisies: 0, morsures: 0 };
+  const detruit = () => e.etat === "detruit";
+  while (t < DUREE_MAX && !detruit()) {
+    if (geste && t >= finGeste - 1e-9) {
+      if (geste === "frappe" && dist() <= arme.allonge + 0.35) {
+        const resultat = encaisser(e, arme, false, endurance < SEUIL_EPUISE ? 0.5 : 1, joueur, ZONE_VIDE);
+        if (resultat === "encaisse") r.encaisses++;
+        if (resultat === "detruit") r.duree = t;
+      } else if (geste === "degager" && e.saisit === joueur.id && ++appuis >= APPUIS_DEGAGEMENT) {
+        appuis = 0;
+        lacher(e, joueur, ZONE_VIDE);
+      }
+      geste = null;
+    }
+    if (detruit()) break;
+    if (!geste) {
+      // Saisi, A dégage (0.8.4) ; sinon, A frappe dès qu'il sera à portée à la fin du geste.
+      if (e.saisit === joueur.id) {
+        geste = "degager";
+        finGeste = t + DUREE_APPUI_DEGAGEMENT;
+        endurance = Math.max(0, endurance - COUT_ENDURANCE.degagement);
+      } else if (dist() - (debout(e) && e.etourdi <= 0 ? VITESSES.poursuivant * (arme.coup / 1000) : 0) <= arme.allonge + 0.35) {
+        geste = "frappe";
+        finGeste = t + arme.coup / 1000;
+        endurance = Math.max(0, endurance - COUT_ENDURANCE.coup);
+        r.coups++;
+      }
+    }
+    if (!geste) endurance = Math.min(ENDURANCE_MAX, endurance + ENDURANCE_RECUPERATION * PAS);
+    penser(e, PAS, [], [joueur], [e], false, ZONE_VIDE, alea);
+    const tient = e.saisit === joueur.id;
+    if (tient && !tenait) r.saisies++;
+    tenait = tient;
+    if (tient && e.tenue >= DELAI_MORSURE) {
+      e.tenue = 0;
+      r.morsures++;
+    }
+    t += PAS;
+  }
+  if (e.etat === "detruit") r.issue = "detruit";
+  return r;
+}
+
+/** Le martèlement en Markdown : chaque arme commune, face à un Errant puis à un Équipé (`npm run equilibre`). */
+export function martelementTexte(): string {
+  const caseM = (m: Martelement) =>
+    `${m.issue === "detruit" ? `détruit en ${virgule(m.duree, 1)} s` : "toujours debout"}, ${m.saisies} saisie${m.saisies > 1 ? "s" : ""}${m.morsures ? `, ${m.morsures} morsure${m.morsures > 1 ? "s" : ""}` : ""}`;
+  const lignes = ARMES_MARTELEMENT.map((o) => {
+    const a = armeDeContact(o);
+    const equipe = marteler(a, true);
+    return `| ${a.nom} | ${caseM(marteler(a, false))} | ${caseM(equipe)} (${equipe.encaisses} coup${equipe.encaisses > 1 ? "s" : ""} encaissé${equipe.encaisses > 1 ? "s" : ""} sur ${equipe.coups}) |`;
+  });
+  return ["| Arme | Face à un Errant | Face à un Équipé |", "|---|---|---|", ...lignes].join("\n");
+}
