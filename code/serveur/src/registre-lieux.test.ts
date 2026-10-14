@@ -69,8 +69,8 @@ test("on voyage du terrain au Grand Hôtel par la route du pont, et au phare par
   const malo = m.nouveau("Malo");
   const coutA: { kcal: number; eau: number }[] = [];
   const coutB: { kcal: number; eau: number }[] = [];
-  const routeA: LieuId[] = ["station", "cooperative", "route_pont", "grand_hotel"];
-  const routeB: LieuId[] = ["gue", "moulin", "corniche", "phare"];
+  const routeA: LieuId[] = ["route_pont", "grand_hotel"];
+  const routeB: LieuId[] = ["corniche", "phare"];
   let de: LieuId = "terrain";
   for (const vers of routeA) {
     coutA.push(rose.voyager(vers));
@@ -98,17 +98,15 @@ test("on voyage du terrain au Grand Hôtel par la route du pont, et au phare par
   }
 
   // Et l'on rentre, par les mêmes routes.
-  for (const vers of ["route_pont", "cooperative", "station", "terrain"] as const) rose.voyager(vers);
-  for (const vers of ["corniche", "moulin", "gue", "terrain"] as const) malo.voyager(vers);
+  for (const vers of ["route_pont", "terrain"] as const) rose.voyager(vers);
+  for (const vers of ["corniche", "terrain"] as const) malo.voyager(vers);
   assert.equal(rose.joueur.lieu, "terrain");
   assert.equal(malo.joueur.lieu, "terrain");
 });
 
-test("de la Coopérative, la route de l'hôtel passe par la route du pont : on s'y arrête, il faut la traverser", () => {
+test("du terrain, la route de l'hôtel passe par la route du pont : on s'y arrête, il faut la traverser", () => {
   const m = monde();
   const rose = m.nouveau("Rose");
-  rose.voyager("station");
-  rose.voyager("cooperative");
   rose.voyager("grand_hotel");
   assert.equal(rose.joueur.lieu, "route_pont");
   assert.ok(rose.infos().some((t) => /La route du Grand Hôtel des Flots passe par la route du pont : il faudra la traverser à pied/.test(t)));
@@ -118,7 +116,7 @@ test("les haltes du niveau 2 sont partagées, comme la station ; l'hôtel et le 
   const m = monde();
   const rose = m.nouveau("Rose");
   const malo = m.nouveau("Malo");
-  for (const j of [rose, malo]) for (const vers of ["gue", "moulin", "corniche"] as const) j.voyager(vers);
+  for (const j of [rose, malo]) j.voyager("corniche");
   assert.equal(m.lieux.vivant("corniche", 0)!.nombrePresents, 2);
   assert.equal(m.lieux.vivant("corniche", rose.joueur.compte.id), m.lieux.vivant("corniche", malo.joueur.compte.id));
   assert.ok(rose.joueur.enLieuPublic);
@@ -138,7 +136,7 @@ test("les haltes du niveau 2 sont partagées, comme la station ; l'hôtel et le 
 test("une reconnexion à l'hôtel ramène à son entrée ; dans une halte du niveau 2, à l'entrée la plus proche", () => {
   const m = monde();
   const rose = m.nouveau("Rose");
-  for (const vers of ["station", "cooperative", "route_pont", "grand_hotel"] as const) rose.voyager(vers);
+  for (const vers of ["route_pont", "grand_hotel"] as const) rose.voyager(vers);
   rose.joueur.position = { x: 20, z: 20, o: 0 };
   rose.joueur.sauvegarder();
   rose.joueur.partir();

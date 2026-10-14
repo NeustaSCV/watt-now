@@ -9,8 +9,10 @@ import {
   LIEUX,
   LIEUX_NIVEAU_2,
   TOUS_LES_LIEUX,
+  SORTIE_TERRAIN,
+  TRONCONS,
   arriveeDans,
-  dansBoite,
+  destinations,
   distanceKm,
   entreesDe,
   etapeVers,
@@ -95,14 +97,19 @@ test("les quatre lieux du niveau 2 sont branchés vides : ni Éteints ni butin ;
   for (const halte of ["route_pont", "corniche"] as const) assert.equal(zoneDe(halte).xMax + zoneDe(halte).xMin, 200, `${halte} : 200 m de long`);
 });
 
-test("B16 : les mêmes distances sur les deux routes du niveau 2 (3 km puis 2 km), les mêmes étapes", () => {
-  assert.equal(distanceKm("cooperative", "route_pont"), 3);
+test("B16 : les deux routes du niveau 2 partent du terrain, aux mêmes distances (3 km puis 2 km)", () => {
+  assert.equal(distanceKm("terrain", "route_pont"), 3);
   assert.equal(distanceKm("route_pont", "grand_hotel"), 2);
-  assert.equal(distanceKm("moulin", "corniche"), 3);
+  assert.equal(distanceKm("terrain", "corniche"), 3);
   assert.equal(distanceKm("corniche", "phare"), 2);
-  assert.equal(distanceKm("terrain", "route_pont"), distanceKm("terrain", "corniche"));
   assert.equal(distanceKm("terrain", "grand_hotel"), distanceKm("terrain", "phare"));
-  assert.equal(distanceKm("terrain", "phare"), 10);
+  assert.equal(distanceKm("terrain", "phare"), 5);
+  // Aucune route de la Coopérative ni du Moulin vers la côte : on y passe par chez soi.
+  for (const t of TRONCONS.filter((t) => LIEUX_NIVEAU_2.includes(t.a) || LIEUX_NIVEAU_2.includes(t.b))) {
+    assert.ok([t.a, t.b].every((l) => l === "terrain" || LIEUX_NIVEAU_2.includes(l)), `${t.a} – ${t.b}`);
+  }
+  assert.equal(etapeVers("cooperative", "route_pont"), "station");
+  assert.equal(etapeVers("moulin", "corniche"), "gue");
   // Les fiches de la carte disent la distance depuis le terrain.
   for (const lieu of LIEUX_NIVEAU_2) assert.equal(LIEUX[lieu].km, distanceKm("terrain", lieu), lieu);
   // On s'arrête à chaque lieu de la route, à l'aller comme au retour.
@@ -111,25 +118,23 @@ test("B16 : les mêmes distances sur les deux routes du niveau 2 (3 km puis 2 km
     for (let ici = de; ici !== vers; ) etapes.push((ici = etapeVers(ici, vers)));
     return etapes;
   };
-  assert.deepEqual(chemin("terrain", "grand_hotel"), ["station", "cooperative", "route_pont", "grand_hotel"]);
-  assert.deepEqual(chemin("terrain", "phare"), ["gue", "moulin", "corniche", "phare"]);
-  assert.deepEqual(chemin("phare", "terrain"), ["corniche", "moulin", "gue", "terrain"]);
-  assert.deepEqual(chemin("grand_hotel", "terrain"), ["route_pont", "cooperative", "station", "terrain"]);
+  assert.deepEqual(chemin("terrain", "grand_hotel"), ["route_pont", "grand_hotel"]);
+  assert.deepEqual(chemin("terrain", "phare"), ["corniche", "phare"]);
+  assert.deepEqual(chemin("phare", "terrain"), ["corniche", "terrain"]);
+  assert.deepEqual(chemin("grand_hotel", "terrain"), ["route_pont", "terrain"]);
+  assert.deepEqual(chemin("grand_hotel", "phare"), ["route_pont", "terrain", "corniche", "phare"]);
   // Les deux routes, étape par étape : la même longueur.
   const a = chemin("terrain", "grand_hotel");
   const b = chemin("terrain", "phare");
   a.forEach((l, i) => assert.equal(distanceKm("terrain", l), distanceKm("terrain", b[i]!), `${l} et ${b[i]}`));
 });
 
-test("on arrive à la Coopérative et au Moulin par leur entrée, d'où qu'on vienne ; la route de la côte part de là", () => {
-  assert.deepEqual(arriveeDans("cooperative", "route_pont"), entreesDe("cooperative")[0]!.arrivee);
-  assert.deepEqual(arriveeDans("moulin", "corniche"), entreesDe("moulin")[0]!.arrivee);
-  const portail = sortiesDe("cooperative")[0]!;
-  const versCote = sortiesDe("cooperative").find((s) => s.vers === "route_pont")!;
-  assert.ok(dansBoite(portail.boite.x, portail.boite.z, versCote.boite), "la route de la côte part du portail");
+test("le terrain a ses deux départs vers la côte, comme vers la station et le gué ; la Coopérative et le Moulin, aucun", () => {
+  assert.deepEqual(destinations(SORTIE_TERRAIN), ["station", "gue", "route_pont", "corniche"]);
+  for (const lieu of ["cooperative", "moulin"] as const) for (const s of sortiesDe(lieu)) for (const d of destinations(s)) assert.ok(!LIEUX_NIVEAU_2.includes(d), `${lieu} → ${d}`);
   // On arrive dans les lieux du niveau 2 du côté d'où l'on vient.
-  assert.deepEqual(sortiesDe("route_pont").find((s) => s.vers === "cooperative")!.arrivee, arriveeDans("route_pont", "cooperative"));
-  assert.notDeepEqual(arriveeDans("route_pont", "grand_hotel"), arriveeDans("route_pont", "cooperative"));
+  assert.deepEqual(sortiesDe("route_pont").find((s) => s.vers === "terrain")!.arrivee, arriveeDans("route_pont", "terrain"));
+  assert.notDeepEqual(arriveeDans("route_pont", "grand_hotel"), arriveeDans("route_pont", "terrain"));
   assert.deepEqual(arriveeDans("corniche", "phare"), sortiesDe("corniche").find((s) => s.vers === "phare")!.arrivee);
 });
 

@@ -15,16 +15,19 @@ test("les dix lieux ont leur pictogramme sur la feuille, nommé, dans le cadre",
     assert.match(svg, new RegExp(`data-lieu="${id}" transform="translate\\(${x} ${y}\\)"`), `${id} a son pictogramme`);
     assert.ok(svg.includes(`aria-label="${LIEUX[id].nom}"`), `${id} porte son nom`);
   }
-  for (const nom of ["Route du pont", "Grand Hôtel des Flots", "Corniche du Cap Rouge", "Phare du cap"]) assert.ok(svg.includes(`>${nom}<`), nom);
+  for (const nom of ["Route du pont", "Grand Hôtel des Flots", "Corniche", "du Cap Rouge", "Phare du cap"]) assert.ok(svg.includes(`>${nom}<`), nom);
   // Le seul phare de la feuille est celui du cap (l'ancien dessin pâli, à l'est, est retiré).
   assert.ok(!svg.includes("M880 600 l-5 -22 h10 z"));
 });
 
-test("chaque tronçon du niveau 2 a son tracé, d'un lieu à l'autre", () => {
+test("chaque tronçon du niveau 2 a son tracé, d'un lieu à l'autre, à l'échelle de la carte (53 unités par km, à 15 % près)", () => {
+  const longueur = (pts: readonly [number, number][]) => pts.slice(1).reduce((s, p, i) => s + Math.hypot(p[0] - pts[i]![0], p[1] - pts[i]![1]), 0);
   for (const t of TRONCONS.filter((t) => LIEUX_NIVEAU_2.includes(t.a) || LIEUX_NIVEAU_2.includes(t.b))) {
     const tr = TRACES.find((x) => (x.a === t.a && x.b === t.b) || (x.a === t.b && x.b === t.a));
     assert.ok(tr, `${t.a} – ${t.b} est tracé`);
     assert.deepEqual(tr.points[0], POINTS[tr.a]);
     assert.deepEqual(tr.points.at(-1), POINTS[tr.b]);
+    const km = longueur(tr.points) / 53;
+    assert.ok(Math.abs(km - t.km) / t.km < 0.15, `${t.a} – ${t.b} : ${km.toFixed(2)} km dessinés pour ${t.km}`);
   }
 });

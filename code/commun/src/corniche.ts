@@ -1,8 +1,8 @@
 // H2B, la corniche du Cap Rouge (plan 0.10, chantier A ; le contenu est au chantier I) : une halte partagée, comme la
-// station et le gué, sur la route B du niveau 2, entre le Moulin du Gué et le phare du cap.
+// station et le gué, sur la route B du niveau 2, entre le terrain et le phare du cap.
 //
 // Branchée vide en 0.10 (chantier A) : une zone de 200 × 70 m (le lot du modèle `batiment/halte-corniche/`, FICHE.lot),
-// la route d'ouest en est au milieu, une sortie à chaque bout. Comme sur la carte, le Moulin est à l'ouest (à gauche de
+// la route d'ouest en est au milieu, une sortie à chaque bout. Comme sur la carte, le terrain est à l'ouest (à gauche de
 // l'écran), le phare à l'est. Le modèle, les obstacles, les Éteints, le butin, le pin tombé et le tunnel viendront ici.
 //
 // Ce fichier n'importe des autres modules du jeu que des types (lieux.ts l'importe pour sa zone et ses sorties).
@@ -26,10 +26,10 @@ export const ZONE_CORNICHE: Zone = {
 
 export const SORTIES_CORNICHE: Sortie[] = [
   {
-    vers: "moulin",
+    vers: "terrain",
     boite: { x: 2, z: ROUTE_Z, l: 4, p: 10 },
     arrivee: { x: 4.5, z: ROUTE_Z, o: Math.PI / 2 },
-    libelle: "Reprendre la route du Moulin",
+    libelle: "Rentrer chez toi",
   },
   {
     vers: "phare",

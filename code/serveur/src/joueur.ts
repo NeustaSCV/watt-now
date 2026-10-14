@@ -68,7 +68,6 @@ import {
   entreesDe,
   distanceKm,
   sortiePourPartir,
-  destinationsIci,
   zoneDe,
   type LieuId,
   type LieuJouable,
@@ -110,7 +109,7 @@ import {
 } from "../../commun/src/economie.ts";
 import { BONUS_MECANISTE, PORTEE_CABLE_PANNEAU, WH_M_PAR_HEURE, porteBatteries, productionPanneau, stocker } from "../../commun/src/energie.ts";
 import type { AutreVu, OffreEchange, OperationComptoir, RapportBase, WottsVus } from "../../commun/src/messages.ts";
-import { COMPTOIR, dansBoite, deLieu, etapeVers, minuscule, type Zone } from "../../commun/src/lieux.ts";
+import { COMPTOIR, dansBoite, deLieu, destinations, etapeVers, minuscule, type Zone } from "../../commun/src/lieux.ts";
 import { LEURRES, PORTEE_PORTE, PORTES, boitePorte, distancePorte } from "../../commun/src/cooperative.ts";
 import { atteintDansLaFosse, pousserDansLaFosse } from "../../commun/src/moulin.ts";
 import { DECHARGE, remonter } from "../../commun/src/decharge.ts";
@@ -2096,7 +2095,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (this.saisisseurs().length > 0) return this.info("Il te tient : dégage-toi d'abord.");
     // Du terrain au Carrefour, la route passe par la halte : on s'y arrête, il faut la traverser (Book 01 §2 bis).
     const etape = etapeVers(this.lieu, vers);
-    if (!sortie || !destinationsIci(this.lieu, this.position.x, this.position.z).includes(etape)) return this.info("Pour prendre la route, va jusqu'à la sortie.");
+    if (!sortie || !destinations(sortie).includes(etape)) return this.info("Pour prendre la route, va jusqu'à la sortie.");
     if (this.objetPorte()) return this.info("Pose d'abord l'escabeau : il reste sur ton terrain.");
     if (!LIEUX[etape].ouvert) return this.info(`${LIEUX[etape].nom} n'a pas encore ouvert ses portes.`);
     if (etape !== vers) this.info(`La route ${deLieu(vers)} passe par ${minuscule(LIEUX[etape].nom)} : il faudra ${traverserLieu(etape)} à pied.`);

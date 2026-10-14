@@ -192,7 +192,8 @@ test("le gué est partagé, comme la station ; le Moulin est à chacun, comme la
 test("god va au gué et au Moulin d'un coup (menu « Aller à… »)", () => {
   assert.deepEqual(
     lieuxAdmin().map((l) => l.id),
-    ["terrain", "station", "comptoir", "gue", "cooperative", "moulin"],
+    // 0.10 (chantier A, décision du porteur) : et les quatre lieux du niveau 2.
+    ["terrain", "station", "comptoir", "gue", "cooperative", "moulin", "route_pont", "grand_hotel", "corniche", "phare"],
   );
   const m = monde();
   const god = preparerGod(m.base, "olympe42", undefined, 1000).compte;

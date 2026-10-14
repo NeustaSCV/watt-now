@@ -124,9 +124,7 @@ export const REGISTRE_LIEUX: Readonly<Record<LieuId, FicheLieu>> = {
     sombre: sombreMoulin,
     reinitialisationMs: REINITIALISATION_MOULIN_MS,
     musique: "moulin",
-    // Le chemin de halage ne mène qu'au gué ; vers la corniche, la route repart du pont.
-    pourPartir: (etape) =>
-      etape === "gue" ? "Pour partir, repasse le pont de pierre (ou prends le chemin de halage, au bout de la levée)." : "Pour partir, repasse le pont de pierre.",
+    pourPartir: () => "Pour partir, repasse le pont de pierre (ou prends le chemin de halage, au bout de la levée).",
   },
   // ---------- 0.10 : le niveau 2, branché vide (chantier A) ; leur contenu aux chantiers H à K ----------
   route_pont: { id: "route_pont", nature: "halte", niveau: 2, etape: "H2A", plan: null, traverser: "la traverser", musique: "route_pont" },

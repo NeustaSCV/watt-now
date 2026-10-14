@@ -10,7 +10,7 @@ import { avecTouches } from "./touches.ts";
 import { sousTension, suivreElectrique } from "./electricite.ts";
 import * as THREE from "three";
 import { INTENTION_REPOS, avancer, type Position } from "../../commun/src/deplacement.ts";
-import { COMPTOIR, destinationsIci, sortiePourPartir, sortiesDe, type LieuJouable, type Zone } from "../../commun/src/lieux.ts";
+import { COMPTOIR, destinations, sortiePourPartir, sortiesDe, type LieuJouable, type Zone } from "../../commun/src/lieux.ts";
 import { estPersonnel, ficheLieu, pausePossibleIci, planDe, sombreDans, zoneSelonPortes } from "../../commun/src/registre-lieux.ts";
 import type { EteintVu } from "../../commun/src/eteints.ts";
 import { cerclesSignature, type BruitAction } from "../../commun/src/signature.ts";
@@ -1441,7 +1441,7 @@ function executer(c: Commande): void {
     case "carte": {
       hud.fermerPanneaux();
       const sortie = position ? sortiePourPartir(lieu, position.x, position.z) : null;
-      carte.basculer(lieu, sortie ? destinationsIci(lieu, position!.x, position!.z) : []);
+      carte.basculer(lieu, sortie ? destinations(sortie) : []);
       return;
     }
     case "lumiere":

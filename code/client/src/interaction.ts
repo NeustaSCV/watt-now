@@ -5,7 +5,7 @@ import { PERIODES_FRUITIERS, enSaison, etatDuFruitier, phaseFruitier, visibleEnS
 import { examenSortie } from "../../commun/src/registre-lieux.ts";
 import type { Position } from "../../commun/src/deplacement.ts";
 import { BATTERIES_DE_BANC, CAPACITES, bancDuPedalier, batterieDuBanc, type Charges } from "../../commun/src/energie.ts";
-import { COMPTOIR, destinationsIci, sortieIci, type LieuId, type LieuJouable } from "../../commun/src/lieux.ts";
+import { COMPTOIR, destinations, sortieIci, type LieuId, type LieuJouable } from "../../commun/src/lieux.ts";
 import { KLAXONS_PAR_BATTERIE, LEURRES, PORTES, chargeBatterieTracteur, distancePorte } from "../../commun/src/cooperative.ts";
 import type { AutreVu, EtatCoopVu, InstallationVue, MessageClient, SacVu, Verbe } from "../../commun/src/messages.ts";
 import { nommer, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
@@ -542,7 +542,7 @@ export function proposer(
   const sortie = sortieIci(lieu, position.x, position.z);
   if (sortie) {
     garder(0, {
-      A: { libelle: sortie.libelle, ouvrirCarte: destinationsIci(lieu, position.x, position.z) },
+      A: { libelle: sortie.libelle, ouvrirCarte: destinations(sortie) },
       // Ce qu'on en dit : la sortie le porte (commun/src/lieux.ts, `examen`), sinon la phrase commune.
       B: { libelle: "Examiner", examiner: examenSortie(sortie) },
       cible: null,

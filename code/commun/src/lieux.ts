@@ -6,9 +6,9 @@
 // Coopérative) ; la route B la passe à gué (le Gué-aux-Saules, puis le Moulin du Gué). Le gué et le Moulin sont
 // branchés ici vides : leur contenu (obstacles, butin, Éteints, rendu) est aux chantiers 11 et 12.
 //
-// 0.10 (plan §4, chantier A) : le niveau 2, sur la côte. La route A continue de la Coopérative à la route du pont (H2A),
-// puis au Grand Hôtel des Flots (L2A) ; la route B, du Moulin à la corniche du Cap Rouge (H2B), puis au phare du cap
-// (L2B). Ce que le serveur et le client savent de chaque lieu (sa nature, son plan de vue, ses portes…) est rassemblé
+// 0.10 (plan §4, chantier A) : le niveau 2, sur la côte. Deux routes de plus partent du terrain : la route A par la
+// route du pont (H2A), puis au Grand Hôtel des Flots (L2A) ; la route B par la corniche du Cap Rouge (H2B), puis au
+// phare du cap (L2B). Ce que le serveur et le client savent de chaque lieu (sa nature, son plan de vue, ses portes…) est rassemblé
 // dans le registre des lieux (registre-lieux.ts) ; ici, la géographie : les routes, les zones, les sorties, la carte.
 
 import { ARRIVEE_COOP, BRECHE, COOP, PORTAIL, PORTES, boitePorte, obstaclesCoop, portesInitiales } from "./cooperative.ts";
@@ -60,11 +60,12 @@ export const TRONCONS: readonly { a: LieuId; b: LieuId; km: number }[] = [
   { a: "comptoir", b: "cooperative", km: 3 },
   { a: "terrain", b: "gue", km: 3 },
   { a: "gue", b: "moulin", km: 2 },
-  // 0.10 (B16, chantier A) : le niveau 2, aux mêmes distances sur les deux routes. La Coopérative → la route du pont
-  // 3 km, → le Grand Hôtel 2 km ; le Moulin → la corniche 3 km, → le phare 2 km.
-  { a: "cooperative", b: "route_pont", km: 3 },
+  // 0.10 (B16, chantier A) : le niveau 2, aux mêmes distances sur les deux routes, et depuis le terrain (décision du
+  // porteur : toutes les routes partent de chez soi). Le terrain → la route du pont 3 km, → le Grand Hôtel 2 km ; le
+  // terrain → la corniche 3 km, → le phare 2 km.
+  { a: "terrain", b: "route_pont", km: 3 },
   { a: "route_pont", b: "grand_hotel", km: 2 },
-  { a: "moulin", b: "corniche", km: 3 },
+  { a: "terrain", b: "corniche", km: 3 },
   { a: "corniche", b: "phare", km: 2 },
 ];
 
@@ -151,11 +152,12 @@ export const ZONE_TERRAIN: Zone = {
  */
 export const SORTIE_TERRAIN: Sortie = {
   vers: "station",
-  aussi: ["gue"],
+  // 0.10 (chantier A) : la route se partage encore vers la côte, la route du pont (route A) et la corniche (route B).
+  aussi: ["gue", "route_pont", "corniche"],
   boite: { x: 25, z: TERRAIN_TAILLE - 1.5, l: 6, p: 3 },
   arrivee: { x: 25, z: TERRAIN_TAILLE - 3, o: Math.PI },
   libelle: "Prendre la route",
-  examen: "Le chemin de terre rejoint la route de la Campagne : par le pont vers la station-service, ou en aval vers le gué.",
+  examen: "Le chemin de terre rejoint la route de la Campagne : par le pont vers la station-service, en aval vers le gué, ou plus au sud vers la côte.",
 };
 
 // ---------- La halte : la station-service (≈ 200 × 70 m, Book 01 §2 bis) ----------
@@ -481,17 +483,6 @@ export const SORTIES_COOP: Sortie[] = [
     libelle: "Se glisser dehors par la brèche",
     sansArrivee: true,
   },
-  // 0.10 (chantier A) : la route de la côte part aussi du portail (le niveau 2, vers la route du pont). La même boîte
-  // que le chemin : on y choisit sa destination sur la carte (destinationsIci). On en revient par le portail, la
-  // première sortie (d'où `sansArrivee`).
-  {
-    vers: "route_pont",
-    boite: { x: PORTAIL.x, z: COOP.profondeur - 1.4, l: PORTAIL.largeur, p: 2.8 },
-    arrivee: { ...ARRIVEE_COOP },
-    libelle: "Prendre la route de la côte",
-    sansArrivee: true,
-    examen: "Au bout du chemin, une route descend vers la côte : la route du pont, à 3 km. Au bout, il faudra la carte.",
-  },
 ];
 
 // ---------- H1B, le Gué-aux-Saules (plan 0.8, chantier 11) : une halte partagée, comme la station ----------
@@ -585,17 +576,6 @@ export const SORTIES_MOULIN: Sortie[] = [
     sansArrivee: true,
     examen: "Le chemin de halage suit la levée vers le gué, à 2 km. On part par là ; on n'y revient jamais.",
   },
-  // 0.10 (chantier A) : la route de la côte repart aussi du pont (le niveau 2, vers la corniche). La même boîte que la
-  // route du gué : on y choisit sa destination sur la carte (destinationsIci). On en revient par le pont, la première
-  // sortie (d'où `sansArrivee` : on arrive toujours au pont, M19).
-  {
-    vers: "corniche",
-    boite: { x: MOULIN.largeur - 1.5, z: PONT_MOULIN.z - 3, l: 3, p: 8 },
-    arrivee: { x: PONT_MOULIN.x, z: PONT_MOULIN.z, o: -Math.PI / 2 },
-    libelle: "Prendre la route de la côte",
-    sansArrivee: true,
-    examen: "Passé le pont, une route file vers la côte : la corniche du Cap Rouge, à 3 km. Au bout, il faudra la carte.",
-  },
 ];
 
 // ---------- La carte du monde (Book 20, réduite à la route de la Campagne) ----------
@@ -658,28 +638,28 @@ export const LIEUX: Record<LieuId, LieuCarte> = {
   route_pont: {
     id: "route_pont",
     nom: "La route du pont",
-    km: 8,
+    km: 3,
     ouvert: true,
     description: "Une halte sur la route de la côte, au vieux pont de l'estuaire. Le vent de la mer y souffle fort.",
   },
   grand_hotel: {
     id: "grand_hotel",
     nom: "Le Grand Hôtel des Flots",
-    km: 10,
+    km: 5,
     ouvert: true,
     description: "Passé le pont, un palace de bord de mer fermé depuis la Grande Panne. Sa longue façade pèle face aux vagues.",
   },
   corniche: {
     id: "corniche",
     nom: "La corniche du Cap Rouge",
-    km: 8,
+    km: 3,
     ouvert: true,
     description: "Une halte sur la route du cap : la route file au flanc de la falaise rouge, entre les pins et la mer.",
   },
   phare: {
     id: "phare",
     nom: "Le phare du cap",
-    km: 10,
+    km: 5,
     ouvert: true,
     description: "Tout au bout du cap, la tour blanche et rouge du phare, éteinte depuis la Grande Panne. La mer bat les rochers en contrebas.",
   },
@@ -846,16 +826,6 @@ export function bordsLibres(zone: Zone, sorties: readonly Sortie[], rayon = 0.35
 /** La sortie où se tient le personnage, s'il y en a une. */
 export function sortieIci(lieu: LieuJouable, x: number, z: number): Sortie | null {
   return sortiesDe(lieu).find((s) => dansBoite(x, z, s.boite)) ?? null;
-}
-
-/**
- * Tous les lieux où l'on peut partir d'ici (0.10) : ceux de toutes les sorties où l'on se tient (au portail de la
- * Coopérative, le chemin et la route de la côte partagent la même boîte), dans l'ordre des sorties. Chez soi, ceux de
- * la sortie du terrain, de n'importe où.
- */
-export function destinationsIci(lieu: LieuJouable, x: number, z: number): LieuId[] {
-  if (lieu === "terrain") return destinations(SORTIE_TERRAIN);
-  return [...new Set(sortiesDe(lieu).filter((s) => dansBoite(x, z, s.boite)).flatMap(destinations))];
 }
 
 /**
