@@ -70,4 +70,4 @@
 - Le plan de la 0.9 (après la 0.8.3) : `book/plans/plan-0.9.md`.
 - La notice d'un nouveau niveau : `book/plans/notice-nouveau-niveau.md`.
 - Les études et données : `.claude-travail/propositions/` (non versionné : à ne pas supprimer).
-- ~~Versions : 0.7.3 déployée le 2026-10-10 (étiquette v0.7.3).~~ Versions : 0.8 et 0.8.1 déployées le 2026-10-11, 0.8.2 le 2026-10-13 ; 0.8.3 le 2026-10-13 (étiquette v0.8.3) ; 0.8.4 le 2026-10-13 (étiquette v0.8.4, avec la barre de métal à 1 de dégâts) ; **0.9 prête à déployer** (étiquette v0.9, 2026-10-14). Le plan de la 0.8.2 : `book/plans/plan-0.8.2.md`.
+- ~~Versions : 0.7.3 déployée le 2026-10-10 (étiquette v0.7.3).~~ Versions : 0.8 et 0.8.1 déployées le 2026-10-11, 0.8.2 le 2026-10-13 ; 0.8.3 le 2026-10-13 (étiquette v0.8.3) ; 0.8.4 le 2026-10-13 (étiquette v0.8.4, avec la barre de métal à 1 de dégâts) ; 0.9 le 2026-10-14 (étiquette v0.9). Le plan de la 0.8.2 : `book/plans/plan-0.8.2.md`.

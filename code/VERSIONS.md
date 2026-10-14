@@ -12,7 +12,7 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
-## 0.9.0 · prête à déployer
+## 0.9.0 · déployée le 2026-10-14
 
 - **Les autres joueurs, fluides** : on les voit marcher, courir, avancer accroupis et s'arrêter sans à-coups, avec la bonne allure. On les voit frapper (l'arme en main), esquiver, repousser, ramasser, couper, s'effondrer. La fourche équipée se voit dans leur dos, et la nuit, ils tiennent leur lampe levée.
 - **L'Équipé (le casqué) ne se laisse plus bloquer** : un coup sur trois seulement le fait vaciller ; les autres, il les encaisse (un son mat, peu de sang) et continue d'avancer. Le repousser, ou une décharge, le font toujours vaciller. À terre, une lame ne le fait plus reculer.
