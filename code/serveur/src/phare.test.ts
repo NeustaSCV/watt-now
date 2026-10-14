@@ -314,6 +314,23 @@ test("essai sur l'iPhone : les dormeurs tués de jour ne reviennent pas avant le
   assert.ok(dormeurs.every((e) => e.etat === "dormant"));
 });
 
+test("K2 : le client sait dans combien de temps le cargo s'échoue ; l'épave là, il ne le sait plus (rien ne se rejoue)", () => {
+  const p = phare();
+  p.preparer();
+  assert.equal(p.lieu.vue(p.instant()).cargoDans, undefined, "lanterne éteinte");
+  p.nuit();
+  p.aller(ENDROITS_PHARE.marque);
+  p.recus.length = 0;
+  p.faire("escalier", "allumer");
+  const allumage = p.recus.find((m) => m.t === "phare") as Extract<MessageServeur, { t: "phare" }>;
+  assert.equal(allumage.etat.cargoDans, CARGO_MS);
+  p.passer(30_000);
+  assert.equal(p.lieu.vue(p.instant()).cargoDans, CARGO_MS - 30_000);
+  p.passer(CARGO_MS);
+  assert.equal(p.lieu.portes.epave, true);
+  assert.equal(p.lieu.vue(p.instant()).cargoDans, undefined);
+});
+
 test("la corne de brume détourne un Errant vers la falaise, une fois par nuit ; il faut d'abord réparer le compresseur", () => {
   const p = phare();
   p.preparer();

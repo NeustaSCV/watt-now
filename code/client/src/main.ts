@@ -1818,6 +1818,7 @@ function boucle(instant: number): void {
     personnage.porterLumiere(lumiere && (dansLeNoir() || estNuit(Number.isFinite(HEURE_FORCEE) ? HEURE_FORCEE : heureDeJeu(Date.now() + decalage, debutMonde))));
     // La vue d'ensemble à l'arrivée impose son cadrage, puis zoome vers le personnage ; les toits restent jusque-là.
     scene.cadrage = vueArrivee.cadrage(position, scene.angleCamera, scene.niveauZoom);
+    if (lieu === "phare" && !scene.cadrage) scene.cadrage = phare.cadrage(position, scene.niveauZoom, eteints.values()); // 0.10, K2
     montrerTousLesToits(vueArrivee.toitsVisibles);
     carteVue.toutMontrer(vueArrivee.toitsVisibles);
     scene.suivre(position.x, position.z, dt);

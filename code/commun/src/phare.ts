@@ -376,6 +376,11 @@ export interface EtatPhareVu {
   compresseur: boolean;
   /** La corne a déjà sonné cette nuit. */
   corneSonnee: boolean;
+  /**
+   * Dans combien de ms le cargo s'échoue (la lanterne allumée, l'épave pas encore là) : le client en tire ses feux qui
+   * approchent, la corne grave au large et le cadrage de la crique (K2). Absent sinon (une partie plus ancienne aussi).
+   */
+  cargoDans?: number;
 }
 
 /** Les gestes du phare (`interagir`, cible `{ genre: "phare", id }`) : en plus de porter, remplir, ramasser, allumer. */

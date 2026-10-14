@@ -86,6 +86,8 @@ export class LieuPhare extends LieuVivant {
       lanterne: e.allumeLe !== null,
       compresseur: e.compresseur,
       corneSonnee: e.corneNuit === nuitDe(instant, this.debutDuMonde),
+      // K2 : l'arrivée du cargo, pour que le client la mette en scène (ses feux, sa corne, le cadrage de la crique).
+      ...(e.allumeLe !== null && this.portes.epave !== true ? { cargoDans: Math.max(0, CARGO_MS - (instant - e.allumeLe)) } : {}),
     };
   }
 
