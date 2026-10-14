@@ -22,6 +22,7 @@ import {
   VOIE_SURFACE,
   capaciteCoffre,
   contenanceRecuperateur,
+  choisirCout,
   coutPour,
   effetsFeu,
   etapeFeu,
@@ -40,10 +41,9 @@ import { texteAVenir } from "../../commun/src/lignees.ts";
 import { enteteFiche, piedFiche } from "./fiche-examiner.ts";
 import { brancherFicheBanc, htmlFicheBanc, type GesteBanc } from "./fiche-banc.ts";
 import { brancherCoffre, enteteCoffre } from "./panneau-coffre.ts";
-import { choisirFacon } from "../../commun/src/replis.ts";
 import { texteLieu, type Alentours } from "../../commun/src/lieu-recette.ts";
 import { reprise, seReprend, type Reprise } from "../../commun/src/evolution-armes.ts";
-import { PRIX_RETRAIT, formaterWotts, prixAchatExemplaire, prixVenteCle } from "../../commun/src/economie.ts";
+import { PRIX_RETRAIT, estObjetCle, formaterWotts, prixAchatExemplaire, prixVenteCle } from "../../commun/src/economie.ts";
 import { detailEnergieGrise } from "../../commun/src/recettes.ts";
 import type { TypeBatterie } from "../../commun/src/energie.ts";
 import type { Inventaire, TypeObjet } from "../../commun/src/objets.ts";
@@ -971,7 +971,8 @@ export class Hud {
         .filter(([t, n]) => n > 0 && estCleObjet(t))
         .map(([type, n]) => {
           const prix = prixVenteCle(type);
-          return ligne(type, `<span class="prix">${formaterWotts(prix)}</span><button type="button" data-op="acheter" data-objet="${type}" data-n="1" ${w.poche + 1e-6 >= prix ? "" : "disabled"}>Acheter</button>`, `en stock : ${n}`);
+          // Un objet-clé ne manque jamais (plan 0.10, chantier B) : pas de stock à montrer.
+          return ligne(type, `<span class="prix">${formaterWotts(prix)}</span><button type="button" data-op="acheter" data-objet="${type}" data-n="1" ${w.poche + 1e-6 >= prix ? "" : "disabled"}>Acheter</button>`, estObjetCle(typeDe(type)) ? "toujours disponible" : `en stock : ${n}`);
         });
       corps = `<ul class="lignes">${lignes.join("") || "<li class=\"vide\">Rien en stock.</li>"}</ul>`;
     } else if (this.onglet === "energie") {
@@ -2147,9 +2148,9 @@ export class Hud {
     bloque: string | null = null,
     gratuit = false,
   ): string {
-    // Avec la clé, ou par un repli (plan 0.8 §2.2 ; commun/src/replis.ts) : la première façon possible.
-    const { facon, cout, payable, outils: facteur } = choisirFacon(this.inventaire, { duree: 0, ...e }, this.famille, (q) => multiplicateurQualites(this.outils, q));
-    const outils = facteur !== null;
+    // Avec sa clé, et rien d'autre (plan 0.10, chantier B : plus de repli, à aucun niveau).
+    const { cout, payable } = choisirCout(this.inventaire, e.couts, e, this.famille);
+    const outils = multiplicateurQualites(this.outils, e.qualites) !== null;
     const possible = (gratuit || (payable && outils)) && !bloque;
     const badge = e.famille ? ` <span class="badge-famille ${e.famille}" title="Un niveau de métier">${NOMS_FAMILLES[e.famille]}${e.famille !== this.famille ? " · ×1,5" : ""}</span>` : "";
     // Plan 0.8, chantier 13 : la clé a sa ligne et son indice en deux temps ; elle ne se répète pas dans ce qui manque
@@ -2157,7 +2158,7 @@ export class Hud {
     const sansCle = e.cle?.objet ? (Object.fromEntries(Object.entries(cout).filter(([t]) => t !== e.cle!.objet)) as Inventaire) : cout;
     const manque =
       !possible && !bloque && !gratuit
-        ? this.listeManqueRepliee({ id: "fiche", lieu: { genre: "main" }, categorie: "batir", nom: titre, produit: { objet: "branche", quantite: 0 }, ingredients: sansCle, qualites: facon.qualites, duree: 0, intensite: "legere", famille: "tous" })
+        ? this.listeManqueRepliee({ id: "fiche", lieu: { genre: "main" }, categorie: "batir", nom: titre, produit: { objet: "branche", quantite: 0 }, ingredients: sansCle, qualites: e.qualites, duree: 0, intensite: "legere", famille: "tous" })
         : "";
     return `
       <article class="etape ${possible ? "possible" : ""}">
@@ -2165,7 +2166,6 @@ export class Hud {
           <small>${texte}</small>
           ${this.ligneCle(e)}
           ${gratuit ? "" : this.pucesCout(e.couts, e.qualites, e.famille)}
-          ${gratuit ? "" : (e.cle?.replis ?? []).map((r) => `<small class="repli${facon.repli === r ? " retenu" : ""}">${r.note}</small>`).join("")}
           ${bloque ? `<small class="bloque">${bloque}</small>` : manque}
         </div>
         <button type="button" data-verbe="${verbe}" ${possible ? "" : "disabled"}>${bouton}</button>
@@ -2314,7 +2314,7 @@ export class Hud {
     // Un meuble de famille sans sa pièce (plan 0.8 §9.2) : la clé de son niveau reste à trouver, ou à poser dessus.
     const piece =
       etape?.cle && pieceAPoser(i)
-        ? `<h3>Sa pièce, à poser dessus</h3><article class="etape apres"><div class="corps">${this.ligneCle(etape)}${(etape.cle.replis ?? []).map((r) => `<small class="repli">En attendant : ${r.note.charAt(0).toLowerCase()}${r.note.slice(1)}</small>`).join("")}</div></article>`
+        ? `<h3>Sa pièce, à poser dessus</h3><article class="etape apres"><div class="corps">${this.ligneCle(etape)}</div></article>`
         : "";
 
     const plein = i.type === "coffre" && Object.values(i.etat.contenu ?? {}).some((n) => (n ?? 0) > 0);

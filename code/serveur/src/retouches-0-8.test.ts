@@ -51,8 +51,10 @@ test("la masse se répare à la forge, et aussi au manche à l'établi à étau,
 
 test("le Comptoir masque les clés de L1 tant qu'on n'a pas visité leur lieu (absentes de l'étal, pas grisées)", () => {
   const stock: Inventaire = { buche: 10, pierre: 10, grillage_rouleau: 1, cocotte_fonte: 1, seau_10l: 1, toile_jute: 1, feuillards: 1, etau: 1 };
-  const cles = Object.keys(LIEU_DES_CLES).sort();
+  // Plan 0.10 : les six clés de L1, et les dix objets-clés du niveau 2.
+  const cles = Object.keys(LIEU_DES_CLES).filter((t) => ["cooperative", "moulin"].includes(LIEU_DES_CLES[t as keyof typeof LIEU_DES_CLES]!)).sort();
   assert.deepEqual(cles, ["cocotte_fonte", "etau", "feuillards", "grillage_rouleau", "seau_10l", "toile_jute"]);
+  assert.equal(Object.keys(LIEU_DES_CLES).length, 16);
   // Personne n'y est allé : seules les bûches et les pierres.
   assert.deepEqual(Object.keys(etalPour(stock, {})).sort(), ["buche", "pierre"]);
   // La Coopérative visitée : ses trois clés reviennent à l'étal ; celles du Moulin restent cachées.

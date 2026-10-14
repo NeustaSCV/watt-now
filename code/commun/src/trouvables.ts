@@ -14,9 +14,7 @@ import { QUETES } from "./quetes.ts";
 import { QUALITES_OBJETS, RECETTES, estHorsFamille, type Qualite, type Recette } from "./recettes.ts";
 import type { Famille } from "./regles.ts";
 import { USAGES, ressourceVisible, type TypeRessource } from "./terrain.ts";
-import { DEMONTAGE, FAMILLES_PAR_LIEU, tableDeFouille, type LieuFouille } from "./vestiges.ts";
-// PROVISOIRE, CHANTIER B (0.10) : à retirer à l'intégration.
-import { VESTIGES_PROVISOIRES_B } from "./provisoire-chantier-b.ts";
+import { CLES_L1A, CLES_L1B, DEMONTAGE, FAMILLES_PAR_LIEU, tableDeFouille, type LieuFouille } from "./vestiges.ts";
 
 /** D'où vient un objet (pour le rapport). */
 export type Source = "kit" | "sol" | "fouille" | "dechets" | "decharge" | "comptoir" | "quete" | "monde" | "demontage" | "fabrication" | "autres";
@@ -66,8 +64,9 @@ export function sourcesDuMonde(famille: Famille): Map<TypeObjet, Source> {
   for (const p of Object.values(POINTS_DECHETS)) ajouterInventaire(objets, p.donne, "dechets");
   for (const [t] of tableDecharge()) if (!objets.has(t)) objets.set(t, "decharge");
   ajouterInventaire(objets, STOCK_DE_BASE, "comptoir");
-  // PROVISOIRE, CHANTIER B (0.10) : les objets-clés du niveau 2 au Comptoir (B les y met pour de bon) ; à retirer.
-  ajouterInventaire(objets, Object.fromEntries(Object.keys(VESTIGES_PROVISOIRES_B).map((t) => [t, 1])), "comptoir");
+  // Les objets-clés du niveau 1, toujours au Comptoir après la visite de leur lieu (plan 0.10, chantier B). Ceux du
+  // niveau 2 viendront avec leurs lieux (chantiers H à K, M) : le simulateur ne joue encore que le niveau 1.
+  for (const t of [...CLES_L1A, ...CLES_L1B]) if (!objets.has(t)) objets.set(t, "comptoir");
   for (const q of QUETES) if ((!q.famille || q.famille === famille) && q.recompense?.objets) ajouterInventaire(objets, q.recompense.objets, "quete");
   for (const m of DU_MONDE) if (m.depuis === null && !objets.has(m.objet)) objets.set(m.objet, "monde");
   return objets;

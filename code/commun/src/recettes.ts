@@ -10,8 +10,6 @@ import { ENERGIE_GRISE_PROVISOIRE } from "./objets-metier.ts";
 import type { Famille } from "./regles.ts";
 import type { InstallationVue } from "./messages.ts";
 import { estOrdure, valeursVestiges } from "./vestiges.ts";
-// PROVISOIRE, CHANTIER B (0.10) : à retirer à l'intégration.
-import { QUALITES_PROVISOIRES_B } from "./provisoire-chantier-b.ts";
 import { compter, estObjetDeMetier, etoilesDeBase, maillonFaible, typeDe, type Etoiles } from "./etoiles.ts";
 import { SURCOUT_AUTRE_FAMILLE, type AVenir, type FormeFeu } from "./lignees.ts";
 import { RECETTES_COMMUNES } from "./recettes/communes.ts";
@@ -108,8 +106,10 @@ export const QUALITES_OBJETS: Partial<Record<TypeObjet, Partial<Record<Qualite, 
   marteau_fortune: { marteler: 2 },
   coin_bois: { fendre: 1 },
   baton_fouir_durci: { creuser: 1 },
-  // PROVISOIRE, CHANTIER B (0.10) : le rabot et le fer à souder ; à retirer à l'intégration (provisoire-chantier-b.ts).
-  ...QUALITES_PROVISOIRES_B,
+  // 0.10 (chantier B) : les deux outils-clés du niveau 2, qui donnent Raboter et Souder (les qualités sont plus haut,
+  // déclarées dès la 0.8). Le fer à souder n'a pas de version pauvre (exception à R23).
+  rabot: { raboter: 1 },
+  fer_souder: { souder: 1 },
 };
 
 /**

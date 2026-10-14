@@ -89,7 +89,7 @@ test("les dix évolutions du niveau 2 sont jouables, aux coûts du plan (§3.1),
     const outilCle = e.cle?.qualite !== undefined;
     assert.deepEqual(e.couts[0], d.couts, d.id);
     assert.ok(e.cle, `${d.id} : un objet-clé`);
-    assert.equal(e.cle!.replis, undefined, `${d.id} : aucun repli`);
+    assert.equal("replis" in e.cle!, false, `${d.id} : aucun repli`);
     if (!outilCle) assert.equal(e.cle!.objet, d.cle, d.id);
     // Les textes : jamais « clé » ; l'indice dit le type de lieu, puis le lieu (jamais « pas encore sur ta carte »).
     for (const t of [e.apporte, e.examen, e.cle!.idee, e.cle!.ideePlusTard, ...e.cle!.indice]) assert.ok(!/\bclés?\b/i.test(t), `${d.id} : ${t}`);

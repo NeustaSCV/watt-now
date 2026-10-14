@@ -478,7 +478,7 @@ export const VESTIGES_LOT2 = {
   parasol: {
     nom: "parasol de terrasse",
     pluriel: "parasols de terrasse",
-    description: "« Résiste aux vents jusqu'à 30 km/h. » Le 31 a eu raison de lui. Un mât d'acier, une toile.",
+    description: "« Résiste aux vents jusqu'à 30 km/h. » Le 31 a eu raison de lui. Un mât en tube d'aluminium, une toile.",
     poids: 8,
     valeur: 3,
     famille: "loisir",
@@ -958,12 +958,24 @@ export const VESTIGES_LOT2 = {
   debroussailleuse: {
     nom: "débroussailleuse",
     pluriel: "débroussailleuses",
-    description: "Le moteur est grippé, la bobine noyée d'huile. Il en reste un tube d'acier et des capots de plastique.",
+    description: "Le moteur est grippé, la bobine noyée d'huile. Il en reste un tube d'aluminium et des capots de plastique.",
     poids: 7,
     valeur: 20,
     famille: "ferme",
     rarete: "P",
     lieux: ["F", "J", "A"],
+  },
+  // 0.10 (chantier B, N2-05) : la chaise de camping, deux tubes et sa toile. Au jardin de la ferme de la station ; sur les
+  // berges du gué, elle est dans le groupe de la pêche (dechets.ts).
+  chaise_camping: {
+    nom: "chaise de camping",
+    pluriel: "chaises de camping",
+    description: "« Pliable, ultra-légère. » On s'y est assis pour regarder la fin du monde. Deux tubes et une toile.",
+    poids: 2.5,
+    valeur: 10,
+    famille: "loisir",
+    rarete: "P",
+    lieux: ["J"],
   },
 } satisfies Record<string, DefinitionVestigeLot2>;
 
@@ -1021,23 +1033,25 @@ export const DEMONTAGE_LOT2: Partial<Record<TypeObjet, Demontage>> = {
   hamac: { donne: { corde: 2 }, qualites: C1, duree: 5 },
   tente_popup: { donne: { bache: 1, ficelle: 2 }, qualites: C1, duree: 8 },
   piscine_gonflable: { donne: { bache: 1 }, qualites: C1, duree: 5 },
-  parasol: { donne: { barre_metal: 1, bache: 1 }, qualites: S1, duree: 10 },
+  // 0.10 (N2-04) : le parasol, la débroussailleuse, la trottinette d'enfant et la perche à selfie donnent des tubes.
+  parasol: { donne: { tube_aluminium: 1, bache: 1 }, qualites: S1, duree: 10 },
   barbecue: { donne: { barre_metal: 1 }, qualites: S1, duree: 12 },
   sac_charbon_bbq: { donne: { charbon_bois: 2 }, qualites: {}, duree: 1 },
   flamant_rose: { donne: { plastique: 2 }, qualites: {}, duree: 2 },
   balise_solaire: { donne: { led: 1, pile: 1, plastique: 1 }, qualites: {}, duree: 2 },
   ballon_foot: { donne: { caoutchouc: 1 }, qualites: C1, duree: 2 },
   peluche_parlante: { donne: { pile: 2, chiffons: 1 }, qualites: C1, duree: 3 },
+  chaise_camping: { donne: { tube_aluminium: 2, chiffons: 1 }, qualites: V1, duree: 5 },
   // Plan 0.8 (§9.2, chantier 10) : plus de roulement (la boîte de roulements est une clé de L2A).
   planche_roulettes: { donne: { aluminium: 2, branche: 2 }, qualites: S1, duree: 10 },
-  trottinette_enfant: { donne: { aluminium: 4, caoutchouc: 1 }, qualites: S1, duree: 8 },
+  trottinette_enfant: { donne: { tube_aluminium: 1, aluminium: 3, caoutchouc: 1 }, qualites: S1, duree: 8 },
   laisse_enrouleur: { donne: { ficelle: 2, petit_ressort: 1, plastique: 1 }, qualites: V1, duree: 3 },
   // Maison, bureau, gadgets
   stylo_ressort: { donne: { petit_ressort: 1 }, qualites: {}, duree: 1 },
   pot_stylos: { donne: { petit_ressort: 4, plastique: 1 }, qualites: {}, duree: 5 },
   agrafeuse: { donne: { petit_ressort: 1 }, qualites: V1, duree: 2 },
   chargeur_sans_fil: { donne: { fil_cuivre: 1 }, qualites: V1, duree: 3 },
-  perche_selfie: { donne: { aluminium: 1 }, qualites: {}, duree: 2 },
+  perche_selfie: { donne: { tube_aluminium: 1 }, qualites: {}, duree: 2 },
   casque_vr: { donne: { verre: 1, cellule_lithium: 1, plastique: 1 }, qualites: V1, duree: 4 },
   box_internet: { donne: { led: 4, plastique: 2 }, qualites: V1, duree: 4 },
   imprimante: { donne: { petit_moteur: 2, petit_ressort: 2, plastique: 5 }, qualites: V1, duree: 10 },
@@ -1068,5 +1082,5 @@ export const DEMONTAGE_LOT2: Partial<Record<TypeObjet, Demontage>> = {
   appareils_mariage: { donne: { appareil_photo_jetable: 5 }, qualites: {}, duree: 3 },
   tondeuse_robot: { donne: { lame_ebrechee: 1, petit_moteur: 2, cellule_lithium: 4, plastique: 4 }, qualites: V1, duree: 15 },
   // Plan 0.8 (§9.2, chantier 10 ; I12) : plus de bobine d'allumage (elle attend H2A).
-  debroussailleuse: { donne: { barre_metal: 1, plastique: 2 }, qualites: S1, duree: 20 },
+  debroussailleuse: { donne: { tube_aluminium: 1, plastique: 2 }, qualites: S1, duree: 20 },
 };

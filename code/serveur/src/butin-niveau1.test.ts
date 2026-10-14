@@ -256,7 +256,8 @@ test("le Comptoir refuse de vendre un seau avant la première visite de L1A, pui
   // Des bons en poche (un dépôt fictif : on les verse directement).
   (a.joueur as unknown as { poche: { valeur: number; majLe: number } }).poche = { valeur: 2000, majLe: t.maintenant() };
   const operer = (op: OperationComptoir) => a.joueur.recevoir({ t: "comptoir", op });
-  assert.equal(t.comptoir.stock.seau_10l, 1, "en stock limité");
+  // Plan 0.10 : plus de stock pour un objet-clé, il est toujours disponible (après la visite de son lieu).
+  assert.equal(t.comptoir.stock.seau_10l, undefined, "pas en stock");
   operer({ genre: "acheter", objet: "seau_10l", quantite: 1 });
   assert.match(a.infos().at(-1)!, /Va d'abord voir la Coopérative du Plateau/);
   assert.equal(a.inv().seau_10l, undefined);
@@ -266,14 +267,15 @@ test("le Comptoir refuse de vendre un seau avant la première visite de L1A, pui
   (a.joueur as unknown as { quetes: { etat: { faits: Record<string, number> } } }).quetes.etat.faits["visite:cooperative"] = 1;
   operer({ genre: "acheter", objet: "seau_10l", quantite: 1 });
   assert.equal(a.inv().seau_10l, 1);
-  assert.equal(t.comptoir.stock.seau_10l ?? 0, 0);
+  assert.equal(t.comptoir.stock.seau_10l, undefined);
   // Le prix : deux allers-retours de travail ; il les rachète bien moins cher. Les pièces de famille ne s'y vendent pas.
   assert.equal(prixVente("seau_10l"), PRIX_CLES_L1.vente);
   assert.equal(prixAchat("seau_10l", false), PRIX_CLES_L1.rachat);
   for (const cle of [...CLES_L1A, ...CLES_L1B]) assert.ok(LIEU_DES_CLES[cle], cle);
   for (const piece of ["enclume_depanneur", "petit_alternateur", "panneau_solaire"] as const) assert.equal(prixAchat(piece, false), null, piece);
   operer({ genre: "vendre", objet: "seau_10l", quantite: 1 });
-  assert.equal(t.comptoir.stock.seau_10l, 1, "il le rachète");
+  assert.equal(a.inv().seau_10l, undefined, "il le rachète");
+  assert.equal(t.comptoir.stock.seau_10l, undefined, "sans le mettre en stock : il en a toujours");
 });
 
 test("le Comptoir a 10 bûches et 10 pierres au démarrage, au prix de vente ; une de plus 2 h après en avoir vendu", () => {
