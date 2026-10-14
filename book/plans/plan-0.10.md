@@ -593,3 +593,12 @@ Décidés (MS-01 à MS-09, MS-Q1 à MS-Q8, §3.2), sortis de la 0.10 pour la gar
 | V3-06 ✅ | Pour information : 34 kg d'objets-clés au phare, péage léger, énergie par jour | **Noté** |
 
 **Une fausse manœuvre réparée** : une fusion du chantier L partie par erreur dans `main` (702c402) a été annulée (`git reset --keep a6cc3cb`, avec l'accord du porteur) ; rien n'était poussé.
+
+**Après l'essai sur l'iPhone (2026-10-14, soir)** : V3 (plus généreux : ≈ 15 tubes et 8 bouteilles par tour de la côte, 2 boîtes de roulements, 6 fouilles de plus au phare, l'Errant de la porte du péage endormi) et les correctifs du phare (l'épave qui s'effaçait, la rampe où le combat cachait « Sauter ») fusionnés (1 135 tests). Le relevé du péage (11 Éteints à l'écran) tient 60 i/s. Décisions du porteur :
+
+| # | Décision |
+|---|---|
+| V4-01 ✅ | **Le guidage** : G-1 (pensées et voix à l'approche, une fois par visite) et G-2 (les écriteaux lisibles par « Lire ») ; les 27 phrases et les 11 écriteaux validés mot pour mot (`.claude-travail/guidage-0.10.md`). G-3 (une pastille) et G-4 (le carnet du lieu) non retenus pour la 0.10 |
+| V4-02 ✅ | **L'écran tremble** quand le cargo s'échoue (0,8 s ; rien si l'appareil demande de réduire les mouvements) |
+| V4-03 ✅ | **La lanterne allumée se voit** : le faisceau balaie le sol (A) et la caméra recule quelques secondes sur la tour à l'allumage (C) |
+| V4-04 ✅ | **L'arrivée du cargo se voit** : ses feux approchent dans les dernières secondes, sa corne au large (A), puis la caméra cadre la crique pour l'échouage (C) ; S-17 (un son et un fondu seulement) est remplacée |
