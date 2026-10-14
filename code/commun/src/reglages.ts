@@ -43,6 +43,8 @@ export const DEFINITIONS_REGLAGES = {
   equilibre_electrique_longue: { defaut: 1, min: 0.5, max: 2, aide: "Durée à tenir la décharge longue pour éteindre (1 s à ★★★) : 0,8 = plus rapide." },
   equilibre_arbalete_rearmer: { defaut: 1, min: 0.5, max: 2, aide: "Temps pour réarmer une arbalète (3 s au pied, 4 à 6 s pour la lourde) : 0,8 = plus rapide." },
   equilibre_tir_portee_tete: { defaut: 1, min: 0.5, max: 2, aide: "Portée jusqu'où un tir plein détruit à la tête (arc 6 m, arbalète 12 m à ★★★) : 1,2 = 20 % plus loin." },
+  // Plan 0.9 §3.3 (chantier D) : l'Équipé ne se laisse plus bloquer en martelant.
+  equipe_vacille_un_sur: { defaut: 2, min: 1, max: 6, aide: "L'Équipé (le casqué) ne vacille qu'un coup sur ce nombre, le premier compris ; les autres, il les encaisse sans reculer et continue de saisir (1 = il vacille à chaque coup, comme avant la 0.9)." },
 } satisfies Record<string, DefinitionReglage>;
 
 export type NomReglage = keyof typeof DEFINITIONS_REGLAGES;
