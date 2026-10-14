@@ -580,3 +580,16 @@ Décidés (MS-01 à MS-09, MS-Q1 à MS-Q8, §3.2), sortis de la 0.10 pour la gar
 | V2-13 ✅ | Les bâtiments du pont vus de dehors, tout noirs | **À regarder à la recette** (N, sur l'iPhone) |
 | V2-14 ✅ | Pour la session bâtiments : le pin parasol qui cache la barricade, les bords invisibles du phare, la réserve des guetteurs inaccessible, l'eau du pont pas fermée | **À transmettre** (`en-suspens.md`) |
 | V2-15 ✅ | La fenêtre de la caisse du péage a une croix (✕), comme le sac et le coffre | **Gardée** (ce n'est pas un message) |
+
+**Après la vague 3, L et M (2026-10-14)** : L (le butin, les indices, les textes, R38, V2-01, V2-02, V2-12) et M (le rythme et le budget du niveau 2, le banc de charge ouvert aux lieux de la côte) fusionnés dans `integration-0-10` (1 126 tests). Les questions du chantier M, tranchées :
+
+| # | Question | Décision |
+|---|---|---|
+| V3-01 ✅ | Les boîtes de roulements de la machinerie de l'hôtel | **2 boîtes** (6 roulements) |
+| V3-02 ✅ | Le tube d'aluminium trop rare (≈ 3,3 par tour de la côte ; besoin ⚙️ 16) | **Plus généreux** : ≈ 14 tubes par tour (transats et parasols de l'hôtel, échelle au hangar du phare, bancs du pont, corniche) |
+| V3-03 ✅ | Les bouteilles en verre (6 au four, 1 sur la côte) | **Plus généreux** : ≈ 8 par tour (hôtel, phare, pont) |
+| V3-04 ✅ | Le bois du 🔥 (14 bûches au niveau 2) | **Tel quel** (il servira aux murs de la 0.10.1) |
+| V3-05 ✅ | Des buts de carnet pour le niveau 2 | **Plus tard** (`en-suspens.md`) |
+| V3-06 ✅ | Pour information : 34 kg d'objets-clés au phare, péage léger, énergie par jour | **Noté** |
+
+**Une fausse manœuvre réparée** : une fusion du chantier L partie par erreur dans `main` (702c402) a été annulée (`git reset --keep a6cc3cb`, avec l'accord du porteur) ; rien n'était poussé.
