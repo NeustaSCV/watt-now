@@ -2,7 +2,7 @@
 
 *Version du plan : v0.7 · 2026-10-14 · **Statut : en cours de codage ; vagues 0 et 1 fusionnées dans `integration-0-10` ; pause.***
 
-*v0.7 (2026-10-14) : la vague 1 finie (A, B, C, D, F, G fusionnés, 1 023 tests) ; les 18 questions remontées par les chantiers au §12.*
+*v0.7 (2026-10-14) : les questions V1-01 à V1-18 tranchées (toutes les recommandations, V1-17 à réexpliquer) ; le Noyé redessiné (taille normale, tronc en boule) ; la vague 1 finie (A, B, C, D, F, G fusionnés, 1 023 tests) ; les 18 questions remontées par les chantiers au §12.*
 
 *v0.6 (2026-10-14) : après la vague 0, deux décisions du porteur : **toutes les routes partent du terrain** (terrain → H2A → L2A, terrain → H2B → L2B ; plus de route de la Coopérative ou du Moulin vers la côte) ; le **menu de téléportation de l'administrateur** propose le niveau 2.*
 
@@ -521,25 +521,25 @@ Décidés (MS-01 à MS-09, MS-Q1 à MS-Q8, §3.2), sortis de la 0.10 pour la gar
 
 **Fait et fusionné dans `integration-0-10`** (1 023 tests, verif et build passent) : A (le registre des lieux, la carte, les routes depuis le terrain, le menu de l'administrateur), B (les matières, les objets-clés, le Comptoir toujours servi, plus aucun repli), C (les dix meubles du niveau 2, le pack soudé), D (les huit meubles nouveaux, le banc qui suit le soleil), F (les armes ★★★, le cranequin léger, le pied de guéridon, le harpon, la fourche à 2,3), G (le Noyé, très gonflé à la demande du porteur, et l'Ensablé). **Pause demandée par le porteur.** Reste : la vague 2 (les quatre lieux, H à K), puis L, M, N.
 
-**Les questions remontées par les chantiers** (rien n'est codé sans décision ; recommandations entre parenthèses) :
+**Les questions remontées par les chantiers.** **Décision du porteur (2026-10-14) : toutes les recommandations acceptées (✅), sauf V1-17, à réexpliquer.**
 
 | # | Question | Recommandation |
 |---|---|---|
-| V1-01 | **Les roulements** : B dit « la boîte contient 3 roulements », C consomme une boîte entière aux roulements montés, F et D comptent 1 boîte = 1 roulement (la charrette en prend 2) : un Mécaniste aurait besoin de 5 boîtes | **Une boîte = 3 roulements** (des objets) ; chaque recette compte ses roulements : roulements montés 1, cranequin léger 1, moulin 1, charrette 2 → 5 roulements = **2 boîtes**, comme prévu au plan |
-| V1-02 | **Le banc qui suit le soleil** : 80 Wh par beau jour **de calendrier** (≈ 17 Wh par jour de jeu) ; avec la vraie météo, le revenu des ⚡ baisse de moitié (le Voltaïque prudent finit le niveau 1 en 298 min au lieu de 276) | **Compenser** : 80 Wh par **beau jour** comme voulu, mais calé pour que la moyenne sur la météo réelle reste celle d'avant (≈ × 1,9 au soleil) |
-| V1-03 | **Le moulin de jerricans** : 15 W continus ≈ 190 Wh par jour de calendrier, ≈ 4,5 fois le banc | **Le ramener à la même moyenne que le banc** (≈ 6 W par vent, 2 W par temps voilé), pour qu'il complète sans écraser |
-| V1-04 | **Les recettes de l'établi de menuisier** (étagères, manches + 25 %) n'ont pas de chiffres ; la porte de planches attend les murs (0.10.1) | Étagères : **2 planches rabotées, 4 clous** → + 50 kg au coffre ou à la réserve à côté ; manches + 25 % : **reporter** (il faut une solidité par exemplaire, gros changement) ; la porte en 0.10.1 |
-| V1-05 | **Le pack soudé** : 6 cellules, 1 LED, 1 fil de cuivre, Souder 1, 30 min (choisi par C) | **Oui** |
-| V1-06 | **L'huile de la lanterne fixe** : un bidon consommé une seule fois, à la construction | **Oui** (la lanterne ne se rallume pas : simple) |
-| V1-07 | **La chance « courante »** des objets-clés du niveau 1 au niveau 2 : 6 % par fouille (≈ 1,5 par visite de l'hôtel) | **4 %** (≈ 1 par visite) : trouver reste une surprise |
-| V1-08 | **Les meubles de famille sans leur pièce** (la pierre plate en enclume, la manivelle de la lampe, la dynamo du vélo) : ce ne sont pas des replis de clé, mais des voies de secours | **Les garder** : c'est la règle d'or du Book 25 (chaque famille autonome dès le premier jour) |
-| V1-09 | **Le serre-joint de fortune** reste (Serrer 1) | **Le garder** (un outil, pas un repli) |
-| V1-10 | **L'échelle en aluminium** sort aussi de la caisse à outils de la ruine (même table « atelier ») | **Non** : la retirer de la ruine (elle reste aux ateliers) |
-| V1-11 | **La machette à manche ficelé** plafonnée à ★★ (le ★★★ demande le manche de caoutchouc) | **Oui** |
-| V1-12 | **La hache forgée** : 2 caoutchoucs **à la place** de la bûche du manche | **Oui** (la récupération au niveau 2) |
-| V1-13 | **L'empennage de plastique** : un choix sur les trois carreaux à plumes | **Oui** |
-| V1-14 | **La matraque ★★★ avec le pack soudé** : 24 Wh (Q-C10) au lieu de 12 ? | **Oui, 24 Wh** (C10 décidée) ; surveiller l'électrique à 15 m (1,92, sous la limite de 2) |
-| V1-15 | **Le Noyé** : 0,4 m/s même en poursuite ? Vacille-t-il sous les coups au torse ? | **0,4 m/s partout** (on le fuit en marchant) ; **il ne vacille pas** (sa masse, comme l'Équipé qui encaisse) |
-| V1-16 | **La poulie et le lingot** : sans charbon (« 4 chutes ») | **1 charbon** chacun, comme les autres recettes de forge |
-| V1-17 | **La batterie de la base** remplie par le moulin, la rampe : la plus proche, **sans limite de distance** | **15 m au plus** (comme le reste de la base), et la fiche du banc cite le moulin |
-| V1-18 | **R38** : quelques anciens textes écrivent encore « aluminium » seul (casserole, canette, planche à roulettes) | **Corriger** au chantier L |
+| V1-01 ✅ | **Les roulements** : B dit « la boîte contient 3 roulements », C consomme une boîte entière aux roulements montés, F et D comptent 1 boîte = 1 roulement (la charrette en prend 2) : un Mécaniste aurait besoin de 5 boîtes | **Une boîte = 3 roulements** (des objets) ; chaque recette compte ses roulements : roulements montés 1, cranequin léger 1, moulin 1, charrette 2 → 5 roulements = **2 boîtes**, comme prévu au plan |
+| V1-02 ✅ | **Le banc qui suit le soleil** : 80 Wh par beau jour **de calendrier** (≈ 17 Wh par jour de jeu) ; avec la vraie météo, le revenu des ⚡ baisse de moitié (le Voltaïque prudent finit le niveau 1 en 298 min au lieu de 276) | **Compenser** : 80 Wh par **beau jour** comme voulu, mais calé pour que la moyenne sur la météo réelle reste celle d'avant (≈ × 1,9 au soleil) |
+| V1-03 ✅ | **Le moulin de jerricans** : 15 W continus ≈ 190 Wh par jour de calendrier, ≈ 4,5 fois le banc | **Le ramener à la même moyenne que le banc** (≈ 6 W par vent, 2 W par temps voilé), pour qu'il complète sans écraser |
+| V1-04 ✅ | **Les recettes de l'établi de menuisier** (étagères, manches + 25 %) n'ont pas de chiffres ; la porte de planches attend les murs (0.10.1) | Étagères : **2 planches rabotées, 4 clous** → + 50 kg au coffre ou à la réserve à côté ; manches + 25 % : **reporter** (il faut une solidité par exemplaire, gros changement) ; la porte en 0.10.1 |
+| V1-05 ✅ | **Le pack soudé** : 6 cellules, 1 LED, 1 fil de cuivre, Souder 1, 30 min (choisi par C) | **Oui** |
+| V1-06 ✅ | **L'huile de la lanterne fixe** : un bidon consommé une seule fois, à la construction | **Oui** (la lanterne ne se rallume pas : simple) |
+| V1-07 ✅ | **La chance « courante »** des objets-clés du niveau 1 au niveau 2 : 6 % par fouille (≈ 1,5 par visite de l'hôtel) | **4 %** (≈ 1 par visite) : trouver reste une surprise |
+| V1-08 ✅ | **Les meubles de famille sans leur pièce** (la pierre plate en enclume, la manivelle de la lampe, la dynamo du vélo) : ce ne sont pas des replis de clé, mais des voies de secours | **Les garder** : c'est la règle d'or du Book 25 (chaque famille autonome dès le premier jour) |
+| V1-09 ✅ | **Le serre-joint de fortune** reste (Serrer 1) | **Le garder** (un outil, pas un repli) |
+| V1-10 ✅ | **L'échelle en aluminium** sort aussi de la caisse à outils de la ruine (même table « atelier ») | **Non** : la retirer de la ruine (elle reste aux ateliers) |
+| V1-11 ✅ | **La machette à manche ficelé** plafonnée à ★★ (le ★★★ demande le manche de caoutchouc) | **Oui** |
+| V1-12 ✅ | **La hache forgée** : 2 caoutchoucs **à la place** de la bûche du manche | **Oui** (la récupération au niveau 2) |
+| V1-13 ✅ | **L'empennage de plastique** : un choix sur les trois carreaux à plumes | **Oui** |
+| V1-14 ✅ | **La matraque ★★★ avec le pack soudé** : 24 Wh (Q-C10) au lieu de 12 ? | **Oui, 24 Wh** (C10 décidée) ; surveiller l'électrique à 15 m (1,92, sous la limite de 2) |
+| V1-15 ✅ | **Le Noyé** : 0,4 m/s même en poursuite ? Vacille-t-il sous les coups au torse ? | **0,4 m/s partout** (on le fuit en marchant) ; **il ne vacille pas** (sa masse, comme l'Équipé qui encaisse) |
+| V1-16 ✅ | **La poulie et le lingot** : sans charbon (« 4 chutes ») | **1 charbon** chacun, comme les autres recettes de forge |
+| V1-17 ❓ (à réexpliquer) | **La batterie de la base** remplie par le moulin, la rampe : la plus proche, **sans limite de distance** | **15 m au plus** (comme le reste de la base), et la fiche du banc cite le moulin |
+| V1-18 ✅ | **R38** : quelques anciens textes écrivent encore « aluminium » seul (casserole, canette, planche à roulettes) | **Corriger** au chantier L |
