@@ -1,6 +1,8 @@
 # Plan de développement — version 0.10 : le niveau 2, sur la côte
 
-*Version du plan : v0.4 · 2026-10-14 · **Statut : décidé, pas encore codé ; les quatre modèles livrés.***
+*Version du plan : v0.5 · 2026-10-14 · **Statut : décidé, pas encore codé ; les quatre modèles livrés, complément compris : prêt à lancer.***
+
+*v0.5 (2026-10-14) : **le complément est livré** (§11) : au pont, le banc devient une **cale basse** à y = − 0,5 (traitée à plat) avec son point de retour `FICHE.maree.retour` ; au phare, **`hauteurSol(x, z, { epave })` est exportée** par le modèle, à importer telle quelle.*
 
 *v0.4 (2026-10-14) : **la session « bâtiments » a livré les quatre modèles** (réponse : `.claude-travail/propositions/reponse-batiments-niveau-2.md` ; format : `batiment/CONSIGNE-NIVEAU-2.md`). Trois points tranchés (§11) : le banc de vase du pont ramené au niveau d'une cale basse ; le relief du phare gardé, avec une fonction de hauteur du sol fournie par le modèle ; l'étage de l'hôtel caché par le jeu. Un complément de demande (§6 de la demande). Le chantier K passe à 6,5 jours-agent.*
 
@@ -59,7 +61,7 @@ Tout ce qui est décidé dans `niveau-2.md` (✅), c'est-à-dire :
 
 ### 1.3 Ce qui doit être livré avant (la session « bâtiments »)
 
-La demande est écrite : [`demande-batiments-niveau-2.md`](demande-batiments-niveau-2.md) (2026-10-14) (les chantiers H à K en dépendent). **Livrés le 2026-10-14** (§11) ; il reste le complément du §6 de la demande (le banc du pont, la hauteur du sol du phare). Ce qui était demandé :
+La demande est écrite : [`demande-batiments-niveau-2.md`](demande-batiments-niveau-2.md) (2026-10-14) (les chantiers H à K en dépendent). **Livrés le 2026-10-14**, complément compris (§11). Ce qui était demandé :
 
 | Modèle | Ce qu'il faut ajouter ou changer |
 |---|---|
@@ -240,7 +242,7 @@ Dans le code, `client/src/rendu/lieu-vide.ts` permet de brancher un lieu **avant
 
 - **Contenu** : le modèle importé (plan, milieu, vue, Éteints dont des Noyés dans la vase) ; le vrac du thème « électrique et atelier » (cuivre, résistances, cellules, lames de ressort, barres, huile) et la **bobine** sur le moteur hors-bord (et la mobylette) ; les fouilles (le fil dentaire de l'épicerie, couvertures **polaires**) ; les goulets (la brèche : un par un) ; **le péage** (§3.4, `payer_passage`) ; **la marée** (Q-0.10-7) : basse la moitié du temps, sur un cycle de 12 h de jeu (12 min réelles), au calendrier ; l'heure se lit sur l'échelle peinte du quai ; les bancs de vase fouillables à marée basse ; **la caisse du péage** au pied du poste de guet, et la voix d'en haut (Q-0.10-5) ; le semis.
 - **Fichiers** : un nouveau `commun/src/route-pont.ts` (+ milieu, Éteints), son entrée au registre, `serveur/src/route-pont.ts` ou une halte générique, `client/src/rendu/route-pont.ts`, un module partagé `commun/src/peage.ts` (repris par I).
-- **Les objets nommés du modèle** : `maree_basse` / `maree_haute` (et `obstaclesMareeHaute`), `chicane_fermee` / `chicane_ouverte` (et `obstaclesChicane`), `caisse_peage` ; **le banc ramené au niveau d'une cale basse** (complément de demande) : quand la mer monte, un joueur resté sur le banc est remis **en haut de l'escalier du quai**, avec un fondu et un message fermé par un bouton (« La mer monte : tu remontes sur le quai. »).
+- **Les objets nommés du modèle** : `maree_basse` / `maree_haute` (et `obstaclesMareeHaute`), `chicane_fermee` / `chicane_ouverte` (et `obstaclesChicane`), `caisse_peage` ; **la cale basse** (y = − 0,5, traitée à plat ; `FICHE.maree.cale`, tronçon « bourg ») : quand la mer monte, un joueur resté sur la cale est remis **au point `FICHE.maree.retour`** (en haut de l'accès, sur le quai), avec un fondu et un message fermé par un bouton (« La mer monte : tu remontes sur le quai. »).
 - **Tests** : le péage refuse 11 wotts, accepte 12, ne redemande pas pendant 1 h ; à marée haute, les bancs ne se fouillent pas, et un joueur resté sur le banc se retrouve sur le quai.
 
 **Chantier I · H2B, la corniche** (**M à L**)
@@ -260,7 +262,7 @@ Dans le code, `client/src/rendu/lieu-vide.ts` permet de brancher un lieu **avant
 
 - **Contenu** : le modèle (la tour, la crique, **l'épave en deux états**) ; la montée (l'escabeau sous l'escalier coupé, ou la colonne des poids) ; remplir la lanterne (pétrole de la cuve) et remettre le prisme ; **allumer, la nuit seulement** (`estNuit`) ; de jour, on prépare la montée, le pétrole, le prisme et le compresseur, et un message (fermé par un bouton) dit « Le feu ne sert qu'à la nuit tombée. » (Q-0.10-9) ; un stimulus de lumière qui fait monter les Éteints du chemin des douaniers ; **la corne de brume** (réparer le compresseur, sonner : un leurre vers la falaise) ; **la scène du cargo** (`scene: "cargo"`, 2 à 3 min réelles après l'allumage) qui ouvre la zone de l'épave (un état, comme les portes du Moulin) ; les **objets-clés** dans les conteneurs (Q-0.10-2) ; le **harpon** (la cuisine du gardien) ; la **sortie à sens unique** par la rampe du canot ; les Noyés de la crique ; la réinitialisation à 24 h.
 - **Fichiers** : `commun/src/phare.ts` (+ milieu, Éteints, vue), registre, `serveur/src/phare.ts`, `client/src/rendu/phare.ts` (l'animation du cargo), `client/src/phare.ts`.
-- **Le relief** (gardé, §11) : la grève (y ≈ − 8,8), le pont de l'épave (y ≈ − 4,1) et la rampe du canot (≈ 37°). **Le serveur reste en 2D** ; le client pose les personnages, les Éteints et les objets sur **la hauteur du sol** que le modèle fournit (complément de demande) ; la caméra suit.
+- **Le relief** (gardé, §11) : la grève (y ≈ − 8,8), le pont de l'épave (y ≈ − 4,1) et la rampe du canot (≈ 37°). **Le serveur reste en 2D** ; le client pose les personnages, les Éteints et les objets sur **la hauteur du sol** : la fonction **`hauteurSol(x, z, { epave })` exportée par le modèle** (repère du lot ; `epave: true` quand l'épave est là), importée telle quelle ; la caméra suit.
 - **Le modèle livré** : `epave_apres` et `obstaclesEpave` (31 segments), les conteneurs marqués `apresEpave`, `FICHE.escabeau` (la marque à la craie), `sensUnique` « rampe_canot ».
 - **Tests** : un personnage descend la rampe et marche sur la grève à la bonne hauteur ; la lanterne ne s'allume pas de jour ; sans lanterne allumée, pas de cargo ; la corne détourne un Errant ; l'épave s'ouvre une fois par 24 h ; on ne remonte pas la rampe.
 
@@ -503,3 +505,7 @@ Décidés (MS-01 à MS-09, MS-Q1 à MS-Q8, §3.2), sortis de la 0.10 pour la gar
 | L-1 | **Le relief** : le banc de vase du pont (8 m sous le quai), la grève et le pont de l'épave du phare, la rampe du canot (≈ 37°) | **Au pont, aplatir** : le banc ramené au niveau d'une cale basse ; quand la mer monte, le joueur resté sur le banc est remis en haut de l'escalier. **Au phare, garder le relief** : le modèle fournit une fonction de **hauteur du sol** ; le client s'en sert, le serveur reste en 2D (+ 1 jour-agent au chantier K) |
 | L-2 | **L'étage de l'hôtel se voit** du rez-de-chaussée | Le jeu **cache le groupe** où le joueur n'est pas (chantier J) |
 | L-3 | **Les deux caisses de péage** se ressemblent sans être identiques | **On les garde** : même comportement |
+
+**Le complément, livré le 2026-10-14** (réponse, section « Complément ») :
+- **K1, le pont** : le banc 8 m plus bas et son escalier sont supprimés ; **une cale de pierre à y = − 0,5** (x − 58 → − 51, z 14,6 → 34,4, tronçon « bourg ») ; l'accès de 2 m à deux marches basses, **traité à plat** ; `maree_haute` noie la cale et `obstaclesMareeHaute` ferme l'accès ; **le point de retour** : `FICHE.maree.retour` (− 59,2 ; 17) dans le repère de la halte, `retourMaree` (15,8 ; 17) dans la carte « bourg » ; budget du bourg 38,8 k / 39.
+- **K2, le phare** : `export function hauteurSol(x, z, { epave = false } = {})`, pure, dans le repère du lot (décrite dans `FICHE.hauteurSol`) : le plateau à 0, la rampe (0 → − 5,15 puis − 6,65 → − 8,95), les galets (− 8,7 à − 9), et avec l'épave l'échelle de coupée, le pont (≈ − 4) et les conteneurs ; écart contrôlé ≤ 0,09 m ; l'échelle de coupée remise à l'endroit ; budget inchangé.
