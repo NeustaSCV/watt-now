@@ -14,8 +14,8 @@
 // Le choix du porteur (2026-10-14) : la barque déplacée d'un mètre environ, sans bloquer l'accès au bac. Le dernier test
 // le garde, dès aujourd'hui et après l'import.
 //
-// Les deux premiers tests attendent la livraison de la session « bâtiments » (.claude-travail/propositions/
-// demande-batiment-gue-5.md) : après `npm run batiments:importer` et `node scripts/extraire-gue.mjs`, ôter les `todo`.
+// Le modèle retouché par la session « bâtiments » (reponse-batiment-gue.md, 2026-10-14) est importé : les trois tests
+// passent.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -89,12 +89,11 @@ function chemins(zone: Zone, depart: { x: number; z: number }, rayon: number, ca
 
 test(
   "cabane du passeur : depuis le chemin, un joueur entre par la porte, à l'aise (un passage de 0,9 m) et sans détour",
-  { todo: "en attente de la session « bâtiments » (demande-batiment-gue-5.md)" },
   () => {
     assert.ok(!heurte(ZONE_GUE, DEVANT.x, DEVANT.z, RAYON_A_L_AISE), "le point de départ, devant la cabane, est libre");
     const longueur = chemins(ZONE_GUE, DEVANT, RAYON_A_L_AISE).get(caseDe(DEDANS));
     assert.ok(longueur !== undefined, "le joueur atteint l'intérieur de la cabane");
-    // Aujourd'hui, même la porte élargie, il faudrait faire le tour par derrière la cabane : 31 m au lieu de 11.
+    // Avant la retouche (0.8.4), il fallait faire le tour par derrière la cabane : 31 m au lieu de 11.
     const enCroix = Math.abs(DEDANS.x - DEVANT.x) + Math.abs(DEDANS.z - DEVANT.z);
     assert.ok(longueur <= 1.3 * enCroix, `${longueur.toFixed(1)} m de chemin pour ${enCroix.toFixed(1)} m en croix : un détour`);
   },
@@ -102,7 +101,6 @@ test(
 
 test(
   "cabane du passeur : un Éteint ne prend aucun raccourci que le joueur n'a pas (mêmes obstacles, pas de fente)",
-  { todo: "en attente de la session « bâtiments » (demande-batiment-gue-5.md)" },
   () => {
     const joueur = chemins(ZONE_GUE, DEVANT, RAYON_A_L_AISE);
     const eteint = chemins(ZONE_GUE, DEVANT, RAYON_ETEINT);
