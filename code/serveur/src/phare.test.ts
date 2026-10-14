@@ -287,6 +287,33 @@ test("la lanterne réveille les dormeurs du chemin des douaniers, et les fait mo
   assert.ok(debout.length >= 8, `${debout.length} dormeurs debout`);
 });
 
+test("essai sur l'iPhone : les dormeurs tués de jour ne reviennent pas avant le retour du phare ; la lanterne n'en fait pas venir d'autres", () => {
+  // Ce qu'a vu le porteur (2026-10-14) : son phare gardait les Éteints 1 à 11 détruits (le gardien, le rampant et les neuf
+  // dormeurs, tués le matin) ; la nuit, la lanterne allumée n'avait plus personne à réveiller. Ce n'est pas la lumière.
+  const p = phare();
+  p.preparer();
+  for (const e of p.lieu.eteints) if (e.dormeur) e.etat = "detruit";
+  p.passer(1000);
+  p.lieu.sortir(p.voyageur);
+  p.passer(1000);
+  p.phares.oublier(COMPTE);
+  p.recharger();
+  assert.equal(p.lieu.eteints.filter((e) => e.dormeur).length, 0, "les dormeurs tués restent morts");
+  p.nuit();
+  p.aller(ENDROITS_PHARE.marque);
+  p.faire("escalier", "allumer");
+  assert.notEqual(p.lieu.etat.allumeLe, null);
+  p.passer(15_000, 100);
+  assert.equal(p.lieu.eteints.filter((e) => e.dormeur).length, 0, "pas de vague : aucun Éteint n'apparaît (S-15)");
+  // Au retour du phare (24 h), ils sont de nouveau couchés sur le chemin.
+  p.lieu.sortir(p.voyageur);
+  p.avancerHorloge(REINITIALISATION_LIEU_MS);
+  p.recharger();
+  const dormeurs = p.lieu.eteints.filter((e) => e.dormeur);
+  assert.equal(dormeurs.length, 9);
+  assert.ok(dormeurs.every((e) => e.etat === "dormant"));
+});
+
 test("la corne de brume détourne un Errant vers la falaise, une fois par nuit ; il faut d'abord réparer le compresseur", () => {
   const p = phare();
   p.preparer();

@@ -14,6 +14,7 @@ import type { MessageServeurPhare } from "../../commun/src/messages.ts";
 import { BandeauAvertissement } from "./avertissement.ts";
 import type { ActionProposee, Propositions } from "./interaction.ts";
 import { lumieresPhare, solPhare, type ScenePhare } from "./rendu/phare.ts";
+import { Secousse, type Decalage } from "./rendu/secousse.ts";
 import type { SourceLumiere } from "./rendu/lumieres.ts";
 import type { IdSon } from "./son/catalogue.ts";
 
@@ -29,6 +30,18 @@ const EXAMEN_RAMPE = "Le tronçon effondré de la rampe du canot : un mètre et 
 
 type Joueur = (id: IdSon, ou?: { x: number; z: number }) => void;
 
+/** Sous cette hauteur (sans l'épave), on est en bas : la partie basse de la rampe, la grève, le pont de l'épave. */
+const LIMITE_ETAGES = -6;
+
+/**
+ * Les deux étages du phare (L-1) : en haut, le plateau et la partie haute de la rampe ; en bas, la partie basse de la
+ * rampe, la grève et l'épave. À pied, rien ne les relie, ni pour le joueur (on saute, on ne remonte pas) ni pour un
+ * Éteint (la falaise, le trou de la rampe) : un Éteint d'en bas ne menace pas qui est en haut, et l'inverse.
+ */
+export function etagePhare(x: number, z: number): "haut" | "bas" {
+  return solPhare(x, z, false) > LIMITE_ETAGES ? "haut" : "bas";
+}
+
 export class PhareClient {
   /** L'état du phare, tel que le serveur l'a dit (null : pas encore reçu). */
   etat: EtatPhareVu | null = null;
@@ -39,13 +52,16 @@ export class PhareClient {
   private bandeau: BandeauAvertissement | null = null;
   /** La hauteur où le personnage est posé (lissée : on descend la rampe, on saute, sans à-coups). */
   private yPerso: number | null = null;
+  /** L'écran tremble quand le cargo s'échoue (au choc), pour qui est au phare à ce moment (rendu/secousse.ts). */
+  readonly secousse: Secousse;
 
   private readonly jouer: Joueur;
   private readonly hud: () => HTMLElement;
 
-  constructor(jouer: Joueur, hud: () => HTMLElement) {
+  constructor(jouer: Joueur, hud: () => HTMLElement, secousse: Secousse = new Secousse()) {
     this.jouer = jouer;
     this.hud = hud;
+    this.secousse = secousse;
   }
 
   /** Le message `phare` du serveur. */
@@ -59,6 +75,15 @@ export class PhareClient {
     if (m.corne) this.jouer("corne_brume", ENDROITS_PHARE.pavillons);
     // Un message fermé par un bouton (S-14), jamais une fenêtre à croix.
     if (m.avertissement) (this.bandeau ??= new BandeauAvertissement(this.hud())).montrer({ texte: m.avertissement, bouton: "Compris" });
+  }
+
+  /**
+   * Cet Éteint menace-t-il le joueur (le mode Combat qui se met tout seul : main.ts, majMode) ? Pas s'il est à l'autre
+   * étage : les Noyés de la grève ne mettent pas en garde qui est au bord du tronçon effondré (le geste « Sauter » y
+   * restait caché derrière « Frapper » : essai sur l'iPhone, 2026-10-14), ni qui longe le haut de la falaise.
+   */
+  menace(e: { x: number; z: number }, position: { x: number; z: number }): boolean {
+    return etagePhare(e.x, e.z) === etagePhare(position.x, position.z);
   }
 
   /** L'escabeau du gardien est dans les bras (on marche, on ne court pas ; l'escabeau se voit dans les bras). */
@@ -89,6 +114,7 @@ export class PhareClient {
     if (t >= SCENE_CARGO.choc && !this.sonsJoues.has("choc")) {
       this.sonsJoues.add("choc");
       this.jouer("choc_cargo");
+      this.secousse.lancer();
     }
     const noir = t < SCENE_CARGO.noir ? 0 : t < SCENE_CARGO.epave ? (t - SCENE_CARGO.noir) / (SCENE_CARGO.epave - SCENE_CARGO.noir) : t < SCENE_CARGO.fin ? 1 - (t - SCENE_CARGO.epave) / (SCENE_CARGO.fin - SCENE_CARGO.epave) : 0;
     this.fondu(noir);
@@ -121,14 +147,18 @@ export class PhareClient {
       personnage: THREE.Object3D | null;
       eteints: Iterable<{ objet: THREE.Object3D }>;
       cercles: readonly THREE.Object3D[];
-      scene: { hauteurSuivie: number };
+      scene: { hauteurSuivie: number; decalageCamera?: Decalage };
     },
   ): void {
     if (!auPhare) {
       this.yPerso = null;
       cible.scene.hauteurSuivie = 0;
+      // Parti pendant la secousse : elle s'arrête net (son décalage, que la scène lit, revient à zéro).
+      if (this.secousse.enCours) this.secousse.arreter();
       return;
     }
+    // La secousse du choc : la scène lit son décalage (remis à zéro, exactement, quand elle finit).
+    if (this.secousse.enCours && cible.scene.decalageCamera) cible.scene.decalageCamera = this.secousse.avancer(dt);
     const epave = portes.epave === true;
     const sol = (o: THREE.Object3D) => solPhare(o.position.x, o.position.z, epave);
     if (cible.personnage) {

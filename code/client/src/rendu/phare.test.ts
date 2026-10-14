@@ -173,3 +173,76 @@ test("le client propose les gestes du phare : prendre l'escabeau au hangar ; les
   client.recevoir({ t: "phare", etat });
   assert.match(libelle(client.proposer(ENDROITS_PHARE.cuve, rien)), /Remplir le bidon/);
 });
+
+// ---------- Correctifs après l'essai sur l'iPhone (2026-10-14) ----------
+
+test("la coque de l'épave ne s'efface pas devant qui longe le haut de la falaise ; de la grève, derrière elle, si", () => {
+  const decor = creerPhare();
+  const coque = (decor.userData.toits as { nom?: string; efface?: boolean }[]).find((t) => t.nom?.startsWith("coque de l'épave"))!;
+  assert.ok(coque, "la couche de la coque");
+  const vu = { etat: { escabeau: "marque" as const, bidon: "verse" as const, prisme: "remis" as const, lanterne: true, compresseur: true, corneSonnee: false }, epave: true };
+  // Le long du bord de la falaise, neuf mètres au-dessus de l'épave, dans les quatre quarts de tour de la caméra.
+  for (let quart = 0; quart < 4; quart++) {
+    const lacet = Math.PI / 4 + (quart * Math.PI) / 2;
+    for (let x = -14; x <= 2; x += 1) {
+      const p = jeu(x, 11);
+      assert.ok(Math.abs(solPhare(p.x, p.z, true)) < 0.05, "sur le plateau");
+      animerPhare(decor, p.x, p.z, 0.016, lacet, vu, []);
+      assert.ok(!coque.efface, `la coque reste, vue de x ${x} (quart ${quart})`);
+    }
+  }
+  // Sur la grève, au nord-ouest de l'épave, la caméra au sud-est : la coque cache le personnage, elle s'efface.
+  const greve = jeu(-13, 16);
+  assert.ok(solPhare(greve.x, greve.z, true) < -8, "sur la grève");
+  animerPhare(decor, greve.x, greve.z, 0.016, Math.PI / 4, vu, []);
+  assert.ok(coque.efface, "derrière la coque, elle s'efface");
+});
+
+test("les Noyés de la grève ne mettent pas en garde au bord du tronçon effondré : le geste « Sauter » reste proposé", () => {
+  const client = new PhareClient(() => {}, () => ({}) as HTMLElement);
+  const noye = jeu(-19.8, 22.1);
+  const dormeur = jeu(-20.5, 2.6);
+  // En haut (le bord du trou, le haut de la falaise), les Noyés d'en bas ne menacent pas ; un dormeur du chemin, si.
+  assert.ok(!client.menace(noye, ENDROITS_PHARE.sautDe));
+  assert.ok(!client.menace(noye, jeu(-12, 11)));
+  assert.ok(client.menace(dormeur, ENDROITS_PHARE.sautDe));
+  // Sauté sur la partie basse, on est à leur étage : ils menacent, le dormeur d'en haut plus.
+  assert.ok(client.menace(noye, ENDROITS_PHARE.sautVers));
+  assert.ok(!client.menace(dormeur, ENDROITS_PHARE.sautVers));
+  // Sur le pont de l'épave aussi, on est en bas.
+  assert.ok(client.menace(noye, jeu(-5, 20)));
+});
+
+test("l'écran tremble au choc du cargo, pour qui est au phare ; rien si les mouvements sont réduits", async () => {
+  const { Secousse } = await import("./secousse.ts");
+  const vraiMaintenant = performance.now.bind(performance);
+  let t = 1000;
+  Object.defineProperty(performance, "now", { value: () => t, configurable: true, writable: true });
+  try {
+    for (const reduit of [false, true]) {
+      const client = new PhareClient(() => {}, () => ({}) as HTMLElement, new Secousse(() => reduit));
+      const scene = { hauteurSuivie: 0, decalageCamera: { x: 0, y: 0, z: 0 } };
+      const poser = (dt: number) => client.poser(true, { epave: true }, dt, { personnage: null, eteints: [], cercles: [], scene });
+      client.recevoir({ t: "phare", etat: { escabeau: "marque", bidon: "verse", prisme: "remis", lanterne: true, compresseur: false, corneSonnee: false }, cargo: true });
+      // Avant le choc, rien ; au choc, la caméra bouge (sauf mouvements réduits) ; 0,8 s plus tard, elle est revenue.
+      t += 3000;
+      client.animer();
+      poser(0.016);
+      assert.deepEqual(scene.decalageCamera, { x: 0, y: 0, z: 0 });
+      t += 1000;
+      client.animer();
+      let max = 0;
+      for (let i = 0; i < 30; i++) {
+        poser(0.016);
+        max = Math.max(max, Math.hypot(scene.decalageCamera.x, scene.decalageCamera.z));
+      }
+      if (reduit) assert.equal(max, 0, "rien avec la réduction des mouvements");
+      else assert.ok(max > 0.1, `la secousse se voit (${max.toFixed(2)} m)`);
+      for (let i = 0; i < 40; i++) poser(0.016);
+      assert.deepEqual(scene.decalageCamera, { x: 0, y: 0, z: 0 });
+      assert.ok(!client.secousse.enCours);
+    }
+  } finally {
+    Object.defineProperty(performance, "now", { value: vraiMaintenant, configurable: true, writable: true });
+  }
+});
