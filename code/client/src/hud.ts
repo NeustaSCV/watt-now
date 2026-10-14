@@ -212,7 +212,8 @@ function lireCarnetOuvert(): boolean {
 
 /** L'importance d'un message : quand la pile est pleine, le moins important part en premier. */
 // « examen » : le texte d'Examiner (0.8.2, Q9), montré en entier ; aussi important qu'une aide.
-const RANG_MESSAGE = { indice: 0, "": 1, aide: 2, examen: 2, lecon: 3 } as const;
+// Le guidage 0.10 (client/src/guidage.ts) : une pensée compte comme une information, un écriteau lu comme un examen.
+const RANG_MESSAGE = { indice: 0, "": 1, pensee: 1, aide: 2, examen: 2, ecriteau: 2, lecon: 3 } as const;
 
 /** Le type de dégât, en une phrase (Book 23 §4.2). */
 const TYPES_DEGATS = {
@@ -1325,7 +1326,7 @@ export class Hud {
    * doublon (un message déjà affiché est relancé, avec « ×2 »), et quand la pile est pleine on retire d'abord le moins
    * important (leçon > aide > info > indice). Une même phrase d'indice ne revient pas avant 90 s.
    */
-  message(texte: string, genre: "" | "aide" | "lecon" | "indice" | "examen" = ""): void {
+  message(texte: string, genre: "" | "aide" | "lecon" | "indice" | "examen" | "pensee" | "ecriteau" = ""): void {
     const maintenant = performance.now();
     if (genre === "indice") {
       const vu = this.indicesVus.get(texte);
@@ -1333,7 +1334,8 @@ export class Hud {
       this.indicesVus.set(texte, maintenant);
     }
     // Le texte d'Examiner, en entier (0.8.2, Q9) : le temps de le lire, ≈ 15 caractères par seconde.
-    const duree = genre === "examen" ? dureeExamen(texte) : { "": 4000, indice: 5000, aide: 8000, lecon: 9000 }[genre];
+    // Une pensée, un écriteau (le guidage 0.10) : le temps de les lire, comme Examiner.
+    const duree = genre === "examen" || genre === "pensee" || genre === "ecriteau" ? dureeExamen(texte) : { "": 4000, indice: 5000, aide: 8000, lecon: 9000 }[genre];
     const present = [...this.messages.children].find((e) => (e as HTMLElement).dataset.texte === texte) as HTMLElement | undefined;
     if (present) {
       const n = Number(present.dataset.fois ?? "1") + 1;
