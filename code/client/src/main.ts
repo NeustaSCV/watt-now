@@ -42,6 +42,8 @@ import { creerHalte, estomperToits, montrerTousLesToits } from "./rendu/halte.ts
 import { creerLieuVide } from "./rendu/lieu-vide.ts";
 import { ArriveeDansUnLieu } from "./arrivee.ts";
 import { animerMoulin, creerMoulin } from "./rendu/moulin.ts";
+import { animerPhare, creerPhare } from "./rendu/phare.ts";
+import { PhareClient } from "./phare.ts";
 import { pieceMoulin } from "../../commun/src/moulin.ts";
 // Le Gué-aux-Saules (plan 0.8, chantier 11) : son décor, son bac, sa crue, ses sons.
 import { RenduGue } from "./rendu/gue.ts";
@@ -148,7 +150,7 @@ const DECORS: Record<LieuJouable, () => THREE.Object3D[]> = {
   route_pont: () => [creerLieuVide("route_pont")],
   grand_hotel: () => [creerLieuVide("grand_hotel")],
   corniche: () => [creerLieuVide("corniche")],
-  phare: () => [creerLieuVide("phare")],
+  phare: () => [creerPhare()], // 0.10, chantier K : le phare du cap
 };
 function montrerDecor(lieu: LieuJouable): void {
   if (!decors.has(lieu)) {
@@ -166,6 +168,8 @@ const entrees = new Entrees(document.getElementById("joystick")!, canvas);
 const son = new Sonorisation(tactile);
 const bruiteur = new Bruiteur(son);
 const gue = new RenduGue((id, ou) => son.jouer(id, ou ?? null));
+// 0.10, chantier K : le phare du cap, « le feu et le cargo » (client/src/phare.ts).
+const phare = new PhareClient((id, ou) => son.jouer(id, ou ?? null), () => document.getElementById("hud")!);
 /** L'atelier de chaque famille : quand il est installé, son thème joue au complet (moment-vitrine 4). */
 const ATELIERS = { charbonniers: "forge", voltaiques: "banc_recharge", mecanistes: "pedalier" } as const;
 /** Les sons qu'on fabrique d'avance en entrant dans le monde. */
@@ -311,7 +315,8 @@ const DISQUE_ESCABEAU = new THREE.RingGeometry(RAYON_ESCABEAU - 0.08, RAYON_ESCA
 const disquesArbres = new Map<number, THREE.Mesh>();
 function porteEscabeau(): boolean {
   for (const i of installations.values()) if (i.vue.etat.portee) return true;
-  return false;
+  // 0.10, chantier K : l'escabeau du gardien du phare, dans les bras.
+  return lieu === "phare" && phare.dansLesBras;
 }
 /**
  * Les grands disques des fruitiers : seulement quand on porte l'escabeau (porteur du projet, 2026-10-08). Sinon,
@@ -924,6 +929,10 @@ function recevoir(message: MessageServeur): void {
     case "gue":
       gue.recevoir(message);
       return;
+    // 0.10, chantier K : l'état du phare, l'arrivée du cargo, la corne de brume.
+    case "phare":
+      phare.recevoir(message);
+      return;
     case "animaux":
       volaille.maj(message.animaux);
       return;
@@ -998,7 +1007,8 @@ function recevoir(message: MessageServeur): void {
       portesCoop = message.portes;
       if (decorCoop && lieu === "cooperative") majPortes(decorCoop, portesCoop, true);
       // La grande porte du Moulin grince (M6).
-      son.jouer(lieu === "moulin" ? "grande_porte" : "geste_bois");
+      // Au phare, c'est l'épave qui s'échoue : la scène du cargo a ses sons (client/src/phare.ts).
+      if (lieu !== "phare") son.jouer(lieu === "moulin" ? "grande_porte" : "geste_bois");
       return;
     case "wotts":
       hud.majWotts(message.wotts);
@@ -1610,6 +1620,8 @@ function sourcesDeLumiere(): SourceLumiere[] {
   // Au Carrefour, la lumière électrique ne s'éteint jamais.
   if (lieu === "comptoir") sources.push(...lumieresComptoir());
   if (lieu === "gue") sources.push(...gue.lumieres(estNuit(Number.isFinite(HEURE_FORCEE) ? HEURE_FORCEE : heureDeJeu(Date.now() + decalage, debutMonde)), position));
+  // 0.10, chantier K : la lanterne du phare allumée, le feu de détresse de l'épave.
+  if (lieu === "phare") sources.push(...phare.lumieres(portesCoop, estNuit(Number.isFinite(HEURE_FORCEE) ? HEURE_FORCEE : heureDeJeu(Date.now() + decalage, debutMonde))));
   const portee = lumierePortee(inventaire);
   if (lumiere && portee && position) {
     const genre = OBJETS[portee].lumiere!;
@@ -1839,6 +1851,8 @@ function boucle(instant: number): void {
     );
     // Au gué : la cloche, haler ou rappeler le bac, examiner une balise (chantier 11).
     if (lieu === "gue") propositions = gue.proposer(position, propositions, Date.now() + decalage, debutMonde);
+    // Au phare : l'escabeau, la cuve, le prisme, l'escalier et la lanterne, la corne, la rampe (chantier K).
+    if (lieu === "phare") propositions = phare.proposer(position, propositions);
     // Les déchets à portée de main (0.7) : la cible la plus proche l'emporte.
     const dechet = dechetsVue.proposer(position);
     if (dechet) {
@@ -1892,6 +1906,10 @@ function boucle(instant: number): void {
         majVisee(propositions.cible.rayon ?? 0.5, instant);
       }
     }
+    // Le phare du cap (0.10, chantier K) : son décor suit son état ; le relief (personnage, Éteints, cercles, caméra).
+    if (lieu === "phare" && decors.get(lieu)) animerPhare(decors.get(lieu)!, position.x, position.z, dt, scene.angleCamera, phare.scene(portesCoop), ressources.values());
+    phare.poser(lieu === "phare", portesCoop, dt, { personnage: personnage.objet, eteints: eteints.values(), cercles: [visee, anneauProgres], scene });
+    phare.animer();
   } else {
     scene.suivre(25, 25, dt);
   }

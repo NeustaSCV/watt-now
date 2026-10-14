@@ -1,0 +1,223 @@
+// Le phare du cap à l'écran (plan 0.10, chantier K) : le modèle de la session « bâtiments » (batiments/phare/, copié par
+// `npm run batiments:importer`, jamais modifié ici), posé dans le repère du jeu, et ce que le jeu y change.
+//
+// - Le relief (L-1) : la fonction `hauteurSol` du modèle, importée telle quelle, donne la hauteur du sol où l'on marche
+//   (le plateau à 0, la rampe du canot, la grève à − 8,8, le pont de l'épave à − 4) ; `solPhare` la lit dans le repère du
+//   jeu. Le serveur reste en 2D ; client/src/phare.ts pose les personnages, les Éteints et le cercle de visée dessus.
+// - Le modèle fournit son sol sur ses 60 × 50 m (`solPropre` : la falaise et la mer sont creusées) ; autour, on étend la
+//   lande au nord, à l'ouest et à l'est, la mer au sud, pour que le bord du lot ne se voie pas (dans les matières du
+//   modèle : aucun appel de dessin de plus).
+// - Ses couches (le fût de la tour, les toits, la coque de l'épave) s'effacent quand le personnage passe dessous ou
+//   derrière, comme les toits de la halte (estomperToits).
+// - Ses objets nommés (`userData.objets`) suivent l'état du phare : la lanterne éteinte ou allumée, le prisme tombé ou
+//   remis, le bidon à côté de la cuve, l'escabeau (au hangar, sous l'escalier, posé ailleurs, ou dans les bras), la
+//   courroie du compresseur, le harpon, l'épave et ses objets-clés.
+
+import * as THREE from "three";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+// @ts-ignore — le modèle est en JavaScript (session « bâtiments »), sans déclaration de types.
+import { creer as creerModele, hauteurSol } from "../batiments/phare/modele.js";
+import type { Boite } from "../../../commun/src/lieux.ts";
+import { ENDROITS_PHARE, PHARE, auModele, type EtatPhareVu } from "../../../commun/src/phare.ts";
+import { LUMIERES_MODELE, PLACES_OBJETS } from "../../../commun/src/phare-modele.ts";
+import type { TypeRessource } from "../../../commun/src/terrain.ts";
+import { estomperToits } from "./halte.ts";
+import type { SourceLumiere } from "./lumieres.ts";
+import { nommer } from "./materiaux.ts";
+
+const OX = PHARE.origineModele.x;
+const OZ = PHARE.origineModele.z;
+
+/** L'usure du modèle (0 à 1) : celle par défaut, abandonné depuis quelques hivers. */
+const USURE = 0.7;
+
+/**
+ * La hauteur du sol où l'on marche, à un point du jeu (L-1, K2) : celle du modèle (`hauteurSol`, repère du lot), avec
+ * l'épave (`epave` : elle est échouée et montrée) ou sans (la grève, le fond de l'eau).
+ */
+export function solPhare(x: number, z: number, epave: boolean): number {
+  const m = auModele(x, z);
+  return (hauteurSol as (x: number, z: number, o: { epave: boolean }) => number)(m.x, m.z, { epave });
+}
+
+/** Les objets nommés du modèle (FICHE.objets) que le jeu montre, cache ou déplace. */
+type ObjetNomme = keyof typeof PLACES_OBJETS;
+
+/** Ce qui se cache quand on l'a pris : la ressource, et l'objet nommé du modèle qui la dessine. */
+const PRIS: Partial<Record<TypeRessource, ObjetNomme>> = {
+  phare_harpon: "harpon",
+  phare_cloche: "cloche_cargo",
+  phare_porte_four: "porte_four",
+  phare_soufflet: "soufflet",
+  phare_rabot: "rabot",
+  phare_jerrican: "jerrican",
+};
+
+const etats = new WeakMap<THREE.Object3D, Partial<Record<ObjetNomme, THREE.Object3D | null>>>();
+
+/** Une boîte du modèle, ramenée dans le repère du jeu. */
+const auJeu = (b: Boite): Boite => ({ x: b.x + OX, z: b.z + OZ, l: b.l, p: b.p });
+
+export function creerPhare(): THREE.Group {
+  const groupe = new THREE.Group();
+  const modele = creerModele({ usure: USURE }) as THREE.Group;
+  modele.position.set(OX, 0, OZ);
+  // Les couches qui s'effacent, dans le repère du jeu ; le modèle ne garde pas les siennes (on les lirait deux fois).
+  const toits = (modele.userData.toits as { boite: Boite; horsDe?: Boite }[]).map((t) => ({ ...t, boite: auJeu(t.boite), ...(t.horsDe ? { horsDe: auJeu(t.horsDe) } : {}) }));
+  delete modele.userData.toits;
+  groupe.userData.toits = toits;
+  etendreAlentours(modele);
+  groupe.add(modele);
+  nommer(groupe, ["phare"]);
+  etats.set(groupe, (modele.userData.objets ?? {}) as Partial<Record<ObjetNomme, THREE.Object3D | null>>);
+  return groupe;
+}
+
+/**
+ * Autour du lot : la lande au nord, à l'ouest et à l'est (au niveau du plateau), et la mer au sud, neuf mètres plus bas,
+ * avec la tranche de la falaise qui continue de part et d'autre. Dans les maillages du modèle qui ont la même matière (le
+ * sol, la mer), ramenés dans leur repère : aucun appel de dessin de plus (le budget du phare est à 39).
+ */
+function etendreAlentours(modele: THREE.Group): void {
+  const M = 70;
+  const L = PHARE.largeur / 2;
+  const P = PHARE.profondeur / 2;
+  const BORD = 11.5; // le bord de la falaise, au bout du plateau (repère du modèle)
+  const MER = -9;
+  const sol = { p: [] as number[], c: [] as number[] };
+  const eau = { p: [] as number[], c: [] as number[] };
+  const c = new THREE.Color();
+  const quad = (cible: typeof sol, coins: [number, number, number][], couleur: number) => {
+    c.setHex(couleur);
+    for (const k of [0, 1, 2, 0, 2, 3]) {
+      cible.p.push(...coins[k]!);
+      cible.c.push(c.r, c.g, c.b);
+    }
+  };
+  const rect = (cible: typeof sol, x0: number, z0: number, x1: number, z1: number, couleur: number, y: number) => quad(cible, [[x0, y, z0], [x0, y, z1], [x1, y, z1], [x1, y, z0]], couleur);
+  const lande = 0x8a9658;
+  const roc = 0x5a554c;
+  // La lande : au nord, sur toute la largeur ; à l'ouest et à l'est, jusqu'au bord de la falaise (légèrement sous le
+  // plateau du modèle, pour ne pas le doubler).
+  rect(sol, -L - M, -P - M, L + M, -P, lande, -0.02);
+  rect(sol, -L - M, -P, -L, BORD, lande, -0.02);
+  rect(sol, L, -P, L + M, BORD, lande, -0.02);
+  // La tranche de la falaise, de part et d'autre du lot, et la mer au sud.
+  quad(sol, [[-L - M, -0.02, BORD], [-L - M, MER - 1, BORD], [-L, MER - 1, BORD], [-L, -0.02, BORD]], roc);
+  quad(sol, [[L, -0.02, BORD], [L, MER - 1, BORD], [L + M, MER - 1, BORD], [L + M, -0.02, BORD]], roc);
+  rect(eau, -L - M, BORD, -L, P, 0x3e6c74, MER);
+  rect(eau, L, BORD, L + M, P, 0x3e6c74, MER);
+  rect(eau, -L - M, P, L + M, P + M, 0x3e6c74, MER);
+  // Les maillages du modèle : le sol mat (le plateau, la roche) et la mer.
+  let auSol: THREE.Mesh | null = null;
+  let aLaMer: THREE.Mesh | null = null;
+  modele.traverse((o) => {
+    const m = o as THREE.Mesh;
+    if (!m.isMesh || (o as unknown as THREE.InstancedMesh).isInstancedMesh || m.geometry.index) return;
+    const mat = m.material as THREE.MeshStandardMaterial;
+    if (!auSol && !mat.map && !mat.transparent && mat.roughness === 0.95 && mat.metalness === 0) auSol = m;
+    if (!aLaMer && mat.transparent && mat.roughness === 0.15 && mat.metalness === 0.25) aLaMer = m;
+  });
+  modele.updateMatrixWorld(true);
+  for (const [g, cible] of [
+    [sol, auSol],
+    [eau, aLaMer],
+  ] as [typeof sol, THREE.Mesh | null][]) {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.Float32BufferAttribute(g.p, 3));
+    geo.setAttribute("color", new THREE.Float32BufferAttribute(g.c, 3));
+    geo.setAttribute("uv", new THREE.Float32BufferAttribute(new Array((g.p.length / 3) * 2).fill(0), 2));
+    geo.computeVertexNormals();
+    if (cible) {
+      // Le modèle est posé en (OX, 0, OZ) : la géométrie ajoutée est dans le repère du lot, comme la sienne.
+      const memes = ["position", "normal", "uv", "color"].every((n) => cible.geometry.getAttribute(n)?.itemSize === geo.getAttribute(n).itemSize);
+      const fondu = memes && mergeGeometries([cible.geometry, geo]);
+      if (fondu) {
+        cible.geometry.dispose();
+        cible.geometry = fondu;
+        continue;
+      }
+    }
+    const m = new THREE.Mesh(geo, cible ? cible.material : new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 }));
+    m.receiveShadow = true;
+    modele.add(m);
+  }
+}
+
+/** Le décor du phare d'un groupe (le jeu le pose dans un groupe à lui : main.ts, montrerDecor). */
+function objetsDe(decor: THREE.Object3D): Partial<Record<ObjetNomme, THREE.Object3D | null>> | undefined {
+  let e = etats.get(decor);
+  if (!e) decor.traverse((o) => (e ??= etats.get(o)));
+  return e;
+}
+
+/** Ce que le décor montre de l'état du phare. */
+export interface ScenePhare {
+  etat: EtatPhareVu | null;
+  /** L'épave se voit (échouée, et le fondu du cargo passé). */
+  epave: boolean;
+}
+
+/**
+ * À chaque image : les couches qui cachent le personnage s'effacent ; les objets nommés suivent l'état du phare ; ce qu'on
+ * a pris se cache.
+ */
+export function animerPhare(
+  decor: THREE.Object3D,
+  x: number,
+  z: number,
+  dt: number,
+  lacet: number,
+  vu: ScenePhare,
+  ressources: Iterable<{ donnees: { type: TypeRessource; disponible: boolean } }>,
+): void {
+  estomperToits(decor, x, z, dt, lacet);
+  const o = objetsDe(decor);
+  if (!o) return;
+  const montrer = (id: ObjetNomme, oui: boolean) => {
+    const objet = o[id];
+    if (objet) objet.visible = oui;
+  };
+  const e = vu.etat;
+  montrer("lanterne_eteinte", !e?.lanterne);
+  montrer("lanterne_allumee", e?.lanterne === true);
+  montrer("prisme_tombe", !e || e.prisme === "tombe");
+  montrer("prisme_manquant", e?.prisme === "remis");
+  montrer("bidon_petrole", !e || e.bidon === "cuve");
+  montrer("courroie_compresseur", !e?.compresseur);
+  montrer("epave_apres", vu.epave);
+  placerEscabeau(o.escabeau_phare ?? null, e?.escabeau ?? "hangar", vu.epave);
+  for (const r of ressources) {
+    const nom = PRIS[r.donnees.type];
+    if (nom) montrer(nom, r.donnees.disponible);
+  }
+}
+
+/** L'escabeau du gardien : au hangar (sa place dans le modèle), sous l'escalier coupé, posé ailleurs, ou dans les bras. */
+function placerEscabeau(objet: THREE.Object3D | null, ou: EtatPhareVu["escabeau"], epave: boolean): void {
+  if (!objet) return;
+  objet.visible = ou !== "bras";
+  const depart = PLACES_OBJETS.escabeau_phare;
+  // Sous l'escalier, debout contre le mur de la tour, à la marque ; ailleurs, là où on l'a posé (repère du jeu).
+  const cible = ou === "marque" ? ENDROITS_PHARE.marque : typeof ou === "object" ? ou : null;
+  if (!cible) {
+    objet.position.set(0, 0, 0);
+    return;
+  }
+  const m = auModele(cible.x, cible.z);
+  objet.position.set(m.x - depart.x, solPhare(cible.x, cible.z, epave) - depart.y, m.z - depart.z);
+}
+
+/** Les lumières du phare, la nuit (Book 18) : la lanterne allumée, le feu de détresse du cargo échoué. */
+export function lumieresPhare(vu: ScenePhare, nuit: boolean): SourceLumiere[] {
+  if (!nuit) return [];
+  const sources: SourceLumiere[] = [];
+  for (const l of LUMIERES_MODELE) {
+    const lanterne = l.nature.startsWith("lanterne");
+    const detresse = l.nature.startsWith("feu de détresse");
+    if ((lanterne && vu.etat?.lanterne !== true) || (detresse && !vu.epave)) continue;
+    if (!lanterne && !detresse) continue;
+    sources.push({ x: l.x + OX, y: l.y, z: l.z + OZ, couleur: l.couleur, intensite: l.intensite, portee: l.portee, vacillement: lanterne ? 0.05 : 0.3 });
+  }
+  return sources;
+}

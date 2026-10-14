@@ -17,6 +17,12 @@ const booleen = (v: unknown): v is boolean => typeof v === "boolean";
 /** Une quantité : un nombre fini, raisonnable (les règles du jeu vérifient le reste). */
 const quantite = (v: unknown) => nombre(v) && v >= 0 && v <= 1e6;
 
+/**
+ * Les cibles qui se désignent par leur nom (le reste, par un numéro) : une porte, un leurre ; 0.10, chantier K : ce qu'on
+ * touche au phare (l'escabeau, l'escalier, la cuve…).
+ */
+const CIBLES_NOMMEES = new Set(["porte", "leurre", "phare"]);
+
 /** Les gestes d'aménagement du Book 24 (améliorer, démonter, creuser, accessoires, couvrir). */
 const VERBES_AMENAGEMENT = new Set(["ameliorer", "redescendre", "demonter_installation", "creuser_dakota", "combler", "monter_broche", "monter_marmite", "couvrir", "ranimer"]);
 
@@ -112,7 +118,7 @@ export function messageValide(m: unknown): m is MessageClient {
           estTable(m.cible) &&
           chaine(m.cible.genre) &&
           // Une porte se désigne par son nom dans le plan ; tout le reste, par un numéro.
-          (m.cible.genre === "porte" || m.cible.genre === "leurre" ? chaine(m.cible.id) && m.cible.id.length <= 40 : nombreOuRien(m.cible.id)) &&
+          (CIBLES_NOMMEES.has(m.cible.genre) ? chaine(m.cible.id) && m.cible.id.length <= 40 : nombreOuRien(m.cible.id)) &&
           chaine(m.verbe)
         )
       )

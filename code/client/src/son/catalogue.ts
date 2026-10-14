@@ -8,6 +8,7 @@ import type { BusEffet } from "../audio/moteur-couches.js";
 import { alea, graine, niveler } from "./dsp.ts";
 import * as R from "./recettes.ts";
 import type { AllurePas, Recette, Sol } from "./recettes.ts";
+import { SONS_PHARE } from "./phare.ts";
 
 export interface DefSon {
   recette: Recette;
@@ -164,6 +165,8 @@ export const SONS = {
   cable_bac: { recette: R.grincementCable, bus: "environnement", priorite: 3, variantes: 1, gain: 0.4, portee: 18, boucle: true },
   cloche_bac: { recette: R.clocheBac, bus: "environnement", priorite: 2, variantes: 1, gain: 0.6, portee: 40 },
   plouf: { recette: R.plouf, bus: "environnement", priorite: 3, variantes: 3, gain: 0.5, portee: 8 },
+  // 0.10, chantier K : le phare du cap, la corne de brume et l'arrivée du cargo (son/phare.ts).
+  ...SONS_PHARE,
 } satisfies Record<string, DefSon>;
 
 export type IdSon = keyof typeof SONS;

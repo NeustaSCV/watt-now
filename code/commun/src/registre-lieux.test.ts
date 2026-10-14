@@ -85,6 +85,8 @@ test("la zone d'un lieu à portes suit ses portes ; sans portes, c'est sa zone",
 test("les quatre lieux du niveau 2 sont branchés vides : ni Éteints ni butin ; leur zone est le lot du modèle", () => {
   for (const lieu of LIEUX_NIVEAU_2) {
     assert.ok(CONTENU_LIEUX[lieu], `${lieu} a son contenu`);
+    // 0.10, chantier K : le phare a le sien (serveur/src/phare.test.ts).
+    if (lieu === "phare") continue;
     assert.deepEqual(contenuDe(lieu).eteints(), []);
     assert.deepEqual(contenuDe(lieu).ressources(), []);
   }

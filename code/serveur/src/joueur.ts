@@ -696,6 +696,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
       case "frapper":
         // On ne frappe pas avec un escabeau dans les bras : on le lâche d'abord.
         if (this.objetPorte()) this.poserObjetLourd();
+        // 0.10, chantier K : ni avec un objet du lieu dans les bras (l'escabeau du phare).
+        if (this.vivant?.dansLesBras(this.compte.id)) this.vivant.lacher(this.contexteLieu());
         this.frapper(message.appuye === true);
         return;
       case "esquiver":
@@ -2520,7 +2522,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
    * dessine (il fait le même calcul) : à bout de souffle, on ne fait pas le bruit d'une course.
    */
   private allureEffective(): Allure {
-    const allure = allureAutorisee(this.intention.allure, this.besoins, this.objetPorte() !== undefined || traineTravois(this.inventaire));
+    const allure = allureAutorisee(this.intention.allure, this.besoins, this.objetPorte() !== undefined || traineTravois(this.inventaire) || this.vivant?.dansLesBras(this.compte.id) === true);
     // Sur le radier du gué, on marche, on n'y court pas (plan 0.8, Q-0.8-22).
     if (allure === "course" && this.lieu === "gue" && this.gue.pasDeCourse(this.position)) return "marche";
     return allure === "course" && this.endurance < SEUIL_EPUISE ? "marche" : allure;

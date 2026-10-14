@@ -181,6 +181,17 @@ export class LieuVivant {
   /** À chaque tic, pour chaque joueur présent (hors voyage) : ce que le lieu fait de lui (la marée qui monte…). */
   accompagner(_ctx: ContexteLieu, _dt: number): void {}
 
+  /**
+   * 0.10, chantier K : ce joueur porte-t-il dans les bras un objet du lieu (l'escabeau du phare ; S-08, S-12) ? On ne court
+   * pas, on ne frappe pas.
+   */
+  dansLesBras(_compteId: number): boolean {
+    return false;
+  }
+
+  /** 0.10, chantier K : il frappe les bras chargés : ce qu'il portait tombe là où il est. */
+  lacher(_ctx: ContexteLieu): void {}
+
   ajouterBruit(id: string, stimulus: Stimulus, jusqua: number): void {
     this.bruits.set(id, { stimulus, jusqua });
   }

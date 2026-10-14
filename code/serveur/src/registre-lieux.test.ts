@@ -90,8 +90,8 @@ test("on voyage du terrain au Grand Hôtel par la route du pont, et au phare par
   // Étape par étape, les deux routes coûtent la même chose (B16).
   assert.deepEqual(coutA, coutB);
   assert.equal(distanceKm("terrain", "grand_hotel"), distanceKm("terrain", "phare"));
-  // Les lieux vides : rien à prendre, aucun Éteint.
-  for (const j of [rose, malo]) {
+  // Les lieux vides : rien à prendre, aucun Éteint (0.10, chantier K : le phare a son contenu, serveur/src/phare.test.ts).
+  for (const j of [rose]) {
     const b = j.dernier("bienvenue")!;
     assert.deepEqual(b.ressources, []);
     assert.deepEqual(b.eteints, []);

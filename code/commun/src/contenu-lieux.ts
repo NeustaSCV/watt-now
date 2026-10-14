@@ -12,6 +12,7 @@
 import type { Eteint, Milieu } from "./eteints.ts";
 import type { LieuId } from "./lieux.ts";
 import type { SemisVivant } from "./semis.ts";
+import { MILIEU_PHARE, VERSION_PHARE, butinPhare, eteintsPhare } from "./phare-vivant.ts";
 import type { ButinLieu, RessourceSol } from "./terrain.ts";
 
 /** Une ressource d'un lieu, telle qu'on la génère (sa disponibilité vient de la base). */
@@ -43,7 +44,8 @@ export const CONTENU_LIEUX: Partial<Record<LieuId, () => ContenuLieu>> = {
   route_pont: () => CONTENU_VIDE,
   grand_hotel: () => CONTENU_VIDE,
   corniche: () => CONTENU_VIDE,
-  phare: () => CONTENU_VIDE,
+  // 0.10, chantier K : le phare du cap (commun/src/phare-vivant.ts) ; ses règles : serveur/src/phare.ts.
+  phare: () => ({ eteints: eteintsPhare, ressources: butinPhare, version: VERSION_PHARE, milieu: () => MILIEU_PHARE }),
 };
 
 /** Le contenu d'un lieu (vide s'il n'en déclare pas). */

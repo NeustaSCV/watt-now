@@ -12,6 +12,7 @@ import type { Qualite } from "./recettes.ts";
 import type { TypeRessource } from "./terrain.ts";
 import { ETAPES_LIEUX, type LieuId } from "./lieux.ts";
 import { DEMONTAGE_LOT2, VESTIGES_LOT2 } from "./vestiges-lot2.ts";
+import { LIEU_DE_FOUILLE_PHARE } from "./ressources-phare.ts";
 
 /** Rareté (P-003 §1) : commun, peu commun, rare, légendaire. */
 export type Rarete = "C" | "P" | "R" | "L";
@@ -1395,6 +1396,8 @@ export const LIEU_DE_FOUILLE: Partial<Record<TypeRessource, LieuFouille>> = {
   moulin_boutique: "libre_service",
   moulin_magasin: "grange",
   moulin_camp: "quai",
+  // 0.10, chantier K : le butin commun du phare du cap (commun/src/ressources-phare.ts).
+  ...LIEU_DE_FOUILLE_PHARE,
 };
 
 /**

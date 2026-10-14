@@ -106,14 +106,15 @@ export class Ciel {
       this.astre.intensity *= 1 - OBSCURITE.astre * o;
     }
 
-    // Le soleil se lève à l'est (−x) et se couche à l'ouest (+x). La nuit, la lune est haute.
+    // Le soleil se lève à l'est (−x) et se couche à l'ouest (+x). La nuit, la lune est haute. Au-dessus du point regardé
+    // (0.10 : sur la grève du phare, il est 9 m plus bas ; la carte d'ombre le suit).
     const jour = heure >= 5.5 && heure <= 20.8;
     if (jour) {
       const f = Math.min(1, Math.max(0, (heure - 5.5) / 15.3));
       const angle = Math.PI * f;
-      this.astre.position.set(cible.x - Math.cos(angle) * 32, 6 + Math.sin(angle) * 30, cible.z - 14);
+      this.astre.position.set(cible.x - Math.cos(angle) * 32, cible.y + 6 + Math.sin(angle) * 30, cible.z - 14);
     } else {
-      this.astre.position.set(cible.x + 12, 30, cible.z - 18);
+      this.astre.position.set(cible.x + 12, cible.y + 30, cible.z - 18);
     }
     this.astre.target.position.copy(cible);
 

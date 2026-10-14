@@ -62,6 +62,11 @@ export class Scene {
    * lissage et au-delà des bornes de la molette ; null : la caméra suit le personnage, au zoom du joueur.
    */
   cadrage: Cadrage | null = null;
+  /**
+   * 0.10, chantier K : la hauteur du sol sous le personnage (le phare : la grève à − 8,8, le pont de l'épave) ; la caméra
+   * la suit, en douceur. 0 partout ailleurs.
+   */
+  hauteurSuivie = 0;
   /** Le zoom de la projection en place (pour ne la refaire que s'il change). */
   private zoomApplique = 1;
   /** La vue d'ensemble immobile : le cadrage de l'image d'avant, et depuis combien d'images il n'a pas bougé. */
@@ -154,11 +159,12 @@ export class Scene {
     this.lacet += (lacetVise - this.lacet) * (immediat ? 1 : Math.min(1, dt * 8));
     this.cible.x += (x - this.cible.x) * lissage;
     this.cible.z += (z - this.cible.z) * lissage;
+    this.cible.y += ((this.cadrage ? 0 : this.hauteurSuivie) - this.cible.y) * lissage;
 
     const horizontal = Math.cos(ELEVATION) * distance;
     this.camera.position.set(
       this.cible.x + Math.cos(this.lacet) * horizontal,
-      Math.sin(ELEVATION) * distance,
+      this.cible.y + Math.sin(ELEVATION) * distance,
       this.cible.z + Math.sin(this.lacet) * horizontal,
     );
     this.camera.lookAt(this.cible);
