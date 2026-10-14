@@ -9,7 +9,10 @@
 // - Les objets-clés du niveau 2 du phare (Q-0.10-2, R49 : tous au fond), dans l'épave : la cloche du cargo sur la proue, et
 //   dans les conteneurs la porte de four, le soufflet, le rabot et le jerrican. Chacun revient selon son délai (S-03 :
 //   4 jours, le jerrican 24 h), et ne se prend que l'épave échouée (serveur/src/phare.ts).
-// - Le butin commun : la cuisine, la chambre, la salle des machines, le hangar, la grève (leurs tables : vestiges.ts).
+// - Le butin commun : la cuisine, la chambre, la salle des machines, le hangar, la grève (leurs tables : vestiges.ts) ;
+//   chantier V3 (décision du porteur, « soyons généreux ») : une fouille aussi dans chaque bâtiment qui n'en avait pas
+//   (le pied de la tour, la salle de la corne, l'abri du douanier), et une dans chacun des trois conteneurs de l'épave
+//   (seulement l'épave échouée, comme les objets-clés : FOUILLES_DE_L_EPAVE).
 //
 // Ce fichier n'importe que des types.
 
@@ -29,12 +32,22 @@ export type TypeRessourcePhare =
   | "phare_chambre"
   | "phare_machines"
   | "phare_hangar"
-  | "phare_greve";
+  | "phare_greve"
+  // Chantier V3 : les bâtiments qui n'avaient pas de fouille, et les conteneurs ouverts de l'épave.
+  | "phare_tour"
+  | "phare_corne"
+  | "phare_abri"
+  | "phare_livraison"
+  | "phare_provisions"
+  | "phare_outillage";
 
 const HEURE = 3_600_000;
 
 /** Les objets-clés de l'épave : ils ne se prennent que l'épave échouée. */
 export const OBJETS_DE_L_EPAVE: readonly TypeRessourcePhare[] = ["phare_cloche", "phare_porte_four", "phare_soufflet", "phare_rabot", "phare_jerrican"];
+
+/** Les fouilles des conteneurs de l'épave (chantier V3) : comme ses objets-clés, elles ne se font que l'épave échouée. */
+export const FOUILLES_DE_L_EPAVE: readonly TypeRessourcePhare[] = ["phare_livraison", "phare_provisions", "phare_outillage"];
 
 /** Leur repousse (ms réelles) ; null : jamais (le harpon, une fois par personnage). */
 export const REPOUSSE_PHARE: Record<TypeRessourcePhare, number | null> = {
@@ -53,6 +66,12 @@ export const REPOUSSE_PHARE: Record<TypeRessourcePhare, number | null> = {
   phare_machines: 12 * HEURE,
   phare_hangar: 12 * HEURE,
   phare_greve: 12 * HEURE,
+  phare_tour: 12 * HEURE,
+  phare_corne: 12 * HEURE,
+  phare_abri: 12 * HEURE,
+  phare_livraison: 12 * HEURE,
+  phare_provisions: 12 * HEURE,
+  phare_outillage: 12 * HEURE,
 };
 
 const prendre = (libelle: string, donne: Inventaire, duree: number, examen: string): UsageRessource => ({ verbe: "ramasser", libelle, donne, qualites: {}, duree, examen });
@@ -100,6 +119,14 @@ export const USAGES_PHARE: Record<TypeRessourcePhare, UsageRessource> = {
   // V3-02 (chantier V3) : l'échelle en aluminium du hangar (quatre tubes, au démontage), à chaque visite.
   phare_hangar: fouiller("Fouiller l'établi du hangar", { echelle_aluminium: 1 }, "L'établi du hangar : des filets, des bouées couronnes, des outils rouillés, un photophore « Watty Glow », une échelle pliante en aluminium contre le mur."),
   phare_greve: fouiller("Fouiller la laisse de mer", { corde: 1 }, "La laisse de mer, sur les galets : bois flotté, bouées, cordages, bouteilles. Ce que la mer rapporte."),
+  // Chantier V3 : une fouille dans chaque bâtiment qui n'en avait pas.
+  phare_tour: fouiller("Fouiller la réserve du gardien", {}, "Au pied de l'escalier en colimaçon, la réserve du gardien : des mèches de rechange, des burettes, une caisse d'outils, des chiffons gras."),
+  phare_corne: fouiller("Fouiller l'armoire de la corne", {}, "L'armoire de la salle de la corne : des chiffons, des joints, des outils de serrage, une boîte de graisse."),
+  phare_abri: fouiller("Fouiller l'abri du douanier", {}, "L'abri du douanier : un banc, une paire de jumelles sans verre, un carnet de rondes, une lampe de poche rouillée."),
+  // Les conteneurs ouverts de l'épave (l'épave échouée seulement : FOUILLES_DE_L_EPAVE).
+  phare_livraison: fouiller("Fouiller les colis", {}, "Au fond du conteneur, des colis de la Livraison du Jour, éventrés par la mer : des gadgets, des coussins, des lampes « connectées »."),
+  phare_provisions: fouiller("Fouiller les provisions du bord", {}, "Des caisses de provisions du bord, sanglées : des conserves, des sacs de riz trempés, du savon, des bidons."),
+  phare_outillage: fouiller("Fouiller les caisses d'outillage", {}, "Les caisses d'outillage du cargo : des manilles, des câbles, des outils piqués de rouille."),
 };
 
 /** Les tables de fouille du butin commun (vestiges.ts, LIEU_DE_FOUILLE) : celles qui lui ressemblent. */
@@ -109,4 +136,12 @@ export const LIEU_DE_FOUILLE_PHARE: Partial<Record<TypeRessourcePhare, LieuFouil
   phare_machines: "atelier",
   phare_hangar: "hangar",
   phare_greve: "quai",
+  // Chantier V3 : le pied de la tour et la corne (des outils, des pièces), l'abri du douanier (un poste de garde) ; les
+  // conteneurs de l'épave : les colis, les provisions du bord, l'outillage.
+  phare_tour: "atelier",
+  phare_corne: "hangar",
+  phare_abri: "bureaux",
+  phare_livraison: "bureaux",
+  phare_provisions: "libre_service",
+  phare_outillage: "atelier_coop",
 };

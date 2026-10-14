@@ -123,7 +123,7 @@ export const VERSION_PHARE = 1;
  * Les points de butin, posés sur le décor du modèle (sa fiche : `fouille`) : le harpon sur la cuisinière, le compresseur de
  * la corne ; dans l'épave (seulement l'épave échouée), la cloche sur la proue, la porte de four et le soufflet dans le
  * conteneur de la Livraison du Jour, le jerrican dans celui des provisions du bord, le rabot dans celui d'outillage, sur le
- * pont ; puis le butin commun.
+ * pont ; puis le butin commun, et les fouilles ajoutées par le chantier V3.
  */
 export function butinPhare(): Omit<RessourceSol, "disponible">[] {
   const points: [TypeRessourcePhare, number, number][] = [
@@ -139,6 +139,14 @@ export function butinPhare(): Omit<RessourceSol, "disponible">[] {
     ["phare_machines", 9.8, -7.4],
     ["phare_hangar", -26.8, 6],
     ["phare_greve", -27.6, 18.6],
+    // Chantier V3 : une fouille dans chaque bâtiment qui n'en avait pas, et dans chaque conteneur de l'épave (à l'écart de
+    // l'objet-clé qu'il garde). À la fin : la base ajoute les points nouveaux sans toucher au butin déjà pris.
+    ["phare_tour", -12, -8.2],
+    ["phare_corne", 16.2, 5.2],
+    ["phare_abri", -24, -7],
+    ["phare_livraison", -21.2, 17.8],
+    ["phare_provisions", -12.4, 17.9],
+    ["phare_outillage", -3.2, 20.6],
   ];
   return points.map(([type, x, z], i) => ({ id: i + 1, type, ...jeu(x, z) }));
 }

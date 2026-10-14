@@ -29,12 +29,13 @@ import {
   type EtatPhare,
   type EtatPhareVu,
 } from "../../commun/src/phare.ts";
-import { OBJETS_DE_L_EPAVE, type TypeRessourcePhare } from "../../commun/src/ressources-phare.ts";
+import { FOUILLES_DE_L_EPAVE, OBJETS_DE_L_EPAVE, type TypeRessourcePhare } from "../../commun/src/ressources-phare.ts";
 import type { Base, RessourceEnBase } from "./base.ts";
 import { JAMAIS, LieuVivant, type ContexteLieu, type DefinitionLieuVivant, type Voyageur } from "./lieu-vivant.ts";
 import { LieuxPersonnels } from "./lieux-personnels.ts";
 
-const DE_L_EPAVE = new Set<string>(OBJETS_DE_L_EPAVE);
+// Chantier V3 : les fouilles des conteneurs de l'épave aussi.
+const DE_L_EPAVE = new Set<string>([...OBJETS_DE_L_EPAVE, ...FOUILLES_DE_L_EPAVE]);
 /** Les objets-clés dont le délai dépasse les 24 h du retour du phare : ce retour ne les fait pas revenir avant l'heure. */
 const DELAI_LONG = new Set<TypeRessourcePhare>(["phare_cloche", "phare_porte_four", "phare_soufflet", "phare_rabot"]);
 
@@ -128,7 +129,7 @@ export class LieuPhare extends LieuVivant {
 
   // ---------- Le butin : les objets-clés de l'épave, le compresseur ----------
 
-  /** Les objets-clés de l'épave ne se prennent que l'épave échouée (et à leur délai, S-03). */
+  /** Les objets-clés de l'épave (et ses fouilles) ne se prennent que l'épave échouée (et à leur délai, S-03). */
   override disponiblePour(r: RessourceEnBase, compteId: number, instant: number): boolean {
     if (DE_L_EPAVE.has(r.type) && this.portes.epave !== true) return false;
     return super.disponiblePour(r, compteId, instant);
