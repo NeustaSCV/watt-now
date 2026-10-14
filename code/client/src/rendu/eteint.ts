@@ -9,6 +9,7 @@ import { Humanoide, chargerHumanoides, humanoidesPrets, type Coiffure, type Tenu
 import { AMBIANCE } from "./ciel.ts";
 import { aleatoire } from "./materiaux.ts";
 import { Rampement, habillerVariante, herbeDuRampant, tenueDeVariante } from "./variantes-eteints.ts";
+import { CorpsAuSol } from "./eteint-au-sol.ts";
 
 const HAUTEUR = 1.72;
 const PEAUX = [0x8a9a7a, 0x7f8f74, 0x95a088, 0x86907c];
@@ -29,7 +30,7 @@ const REMUE_S = 0.5;
 /** Vitesse propre de la marche d'Éteint (m/s, ramenée à sa taille). */
 const VITESSE_MARCHE = 1.0;
 /** Le Rampant, couché sur le ventre : le corps est basculé vers l'avant, relevé de l'épaisseur du torse, recentré. */
-const RAMPANT = { levee: 0.14, recul: -0.8 };
+const RAMPANT = { levee: 0.14, recul: -0.8, remue: 0.25 };
 
 /**
  * L'Éteint raidi par une décharge (Book 25 §5.1) : la pose se fige, le corps tremble, et de petits arcs bleus courent
@@ -53,6 +54,9 @@ const MATIERE_HALO = new THREE.MeshBasicMaterial({ color: 0x7cc8ff, transparent:
 const ECLAT = { duree: 0.2, nombre: 7, rayon: 1.35, halo: 1.3 };
 const MATIERE_ARCS_ECLAT = new THREE.LineBasicMaterial({ color: 0xdff4ff, transparent: true, opacity: 1, depthWrite: false, blending: THREE.AdditiveBlending });
 const MATIERE_HALO_ECLAT = new THREE.MeshBasicMaterial({ color: 0x9fd8ff, transparent: true, opacity: 0.72, depthWrite: false, blending: THREE.AdditiveBlending });
+
+/** Le sursaut d'un coup encaissé (plan 0.9 §3.3) : 0,25 s, ≈ 5° en arrière, une petite secousse des épaules. */
+const SURSAUT = { duree: 0.25, bascule: 0.09, secousse: 0.035 };
 
 export class VueEteint {
   readonly objet = new THREE.Group();
@@ -78,6 +82,8 @@ export class VueEteint {
   private halo: THREE.Mesh | null = null;
   /** Ce qui reste de l'éclat d'une courte qui porte (s). */
   private eclat = 0;
+  /** À terre ou détruit, au corps (chantier F) : créé à sa première chute. */
+  private sol: CorpsAuSol | null = null;
 
   constructor(e: EteintVu) {
     this.cible = e;
@@ -172,6 +178,30 @@ export class VueEteint {
     }
   }
 
+  // ---------- L'Équipé encaisse (plan 0.9 §3.3, chantier D) ----------
+
+  /** Ce qui reste du sursaut d'un coup encaissé (s). */
+  private sursaut = 0;
+
+  /**
+   * Il encaisse sans vaciller (l'Équipé, deux coups sur trois) : un léger sursaut du corps, sans recul ni geste de coup
+   * reçu. Il continue d'avancer, de griffer : le joueur doit lire « celui-là encaisse ». Pas de tache de plus.
+   */
+  encaisser(): void {
+    const debout = this.cible.etat !== "a_terre" && this.cible.etat !== "detruit" && this.cible.etat !== "dormant";
+    if (this.corps && !this.rampant && debout) this.sursaut = SURSAUT.duree;
+  }
+
+  /** Le sursaut : le corps bascule un instant en arrière depuis les pieds, les épaules secouées, puis revient. */
+  private sursauter(dt: number): void {
+    if (this.sursaut <= 0 || !this.corps) return;
+    this.sursaut = Math.max(0, this.sursaut - dt);
+    const t = 1 - this.sursaut / SURSAUT.duree;
+    const o = this.corps.objet.rotation;
+    o.x = -SURSAUT.bascule * Math.sin(Math.PI * t);
+    o.z = SURSAUT.secousse * Math.sin(t * Math.PI * 6) * (1 - t);
+  }
+
   get hauteurTete(): number {
     const e = this.cible.etat;
     return this.rampant || e === "a_terre" || e === "detruit" || e === "dormant" ? 0.25 : HAUTEUR * 0.92;
@@ -200,9 +230,11 @@ export class VueEteint {
 
     const raidi = !!this.cible.raidi && etat !== "a_terre" && etat !== "detruit";
     this.electriser(dt, raidi);
+    this.sursauter(dt);
 
     if (this.rampant) {
       this.ramper(dt, raidi ? 0 : vitesse);
+      this.auSol(dt);
       return;
     }
 
@@ -237,6 +269,15 @@ export class VueEteint {
       c.jouer("Zombie_Walk_Fwd_Loop", { fondu: 0.3, vitesse: Math.min(presse ? 2 : 1.5, Math.max(0.5, vitesse / VITESSE_MARCHE)) });
     } else c.jouer("Zombie_Idle_Loop", { fondu: 0.4 });
     c.mettreAJour(dt);
+    this.auSol(dt);
+  }
+
+  /**
+   * À terre ou détruit, au corps (plan 0.9 §3.3 bis, chantier F) : à terre, il remue et prend appui avant de se
+   * relever ; détruit, il se relâche, pâlit, se couvre un peu, et s'efface à la fin (eteint-au-sol.ts).
+   */
+  private auSol(dt: number): void {
+    if (this.corps) (this.sol ??= new CorpsAuSol(this.cible.id)).animer(dt, this.corps, this.objet, this.cible, this.rampant);
   }
 
   /**
@@ -248,8 +289,10 @@ export class VueEteint {
     const etat = this.cible.etat;
     const inerte = etat === "dormant" || etat === "a_terre" || etat === "detruit";
     const bouge = !inerte && vitesse > 0.05;
-    this.rampement?.animer(dt, bouge ? Math.min(1.6, 0.4 + vitesse) : 0, !inerte && !!this.cible.saisit);
-    this.herbe?.animer(dt, inerte ? 0 : bouge ? Math.min(1, 0.45 + vitesse * 0.6) : 0.12);
+    // À terre (chantier F), ses bras tirent encore un peu, sans avancer ; détruit, plus rien.
+    const remue = etat === "a_terre" ? RAMPANT.remue : 0;
+    this.rampement?.animer(dt, bouge ? Math.min(1.6, 0.4 + vitesse) : remue, !inerte && !!this.cible.saisit);
+    this.herbe?.animer(dt, inerte ? remue * 0.3 : bouge ? Math.min(1, 0.45 + vitesse * 0.6) : 0.12);
   }
 
   /** Une décharge courte vient de porter (ses dégâts au torse) : l'éclat d'arc bleu, plus vif, un instant. */

@@ -65,6 +65,8 @@ export const SONS = {
   eteint_pas_presse: menace(R.eteintPasPresse, 0.55, 30),
   eteint_rale_rapide: menace(R.eteintRaleRapide, 0.8, 30, 6),
   eteint_halete: menace(R.eteintHalete, 0.5, 30, 3),
+  // À terre, il n'est pas fini : un gémissement étouffé, de loin en loin (plan 0.9, chantier F).
+  eteint_gemit_sol: menace(R.eteintGemitAuSol, 0.5, 10, 4),
 
   // Le contact et le combat
   saisie: menace(R.saisie, 0.9, 6, 3),
@@ -72,6 +74,8 @@ export const SONS = {
   morsure: menace(R.morsure, 1, 6, 3),
   impact: joueur(R.impact(1), 0.85, BRUIT_ACTION.coup.portee, 4),
   impact_appuye: joueur(R.impact(1.6), 0.95, BRUIT_ACTION.coup.portee, 3),
+  // L'Équipé encaisse sans vaciller (plan 0.9 §3.3) : un choc plus mat, synthétisé (pas de fichier livré).
+  impact_mat: joueur(R.impactMat, 0.9, BRUIT_ACTION.coup.portee, 3),
   coup_tete: joueur(R.coupTete, 1, BRUIT_ACTION.coup.portee, 3),
   chute_corps: joueur(R.chuteCorps, 0.75, 10, 3),
   sifflement: joueur(R.sifflement(false), 0.4, PROCHE, 4),

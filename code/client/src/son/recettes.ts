@@ -130,6 +130,27 @@ export const eteintRale: Recette = (h) => {
   return saturer(p.donnees, 1.6);
 };
 
+/**
+ * À terre (plan 0.9, chantier F) : un gémissement étouffé, la bouche contre le sol. Plus grave et plus court que le
+ * râle, sans attaque, la hauteur qui retombe ; un passe-bas l'assourdit. Il n'est pas fini : on l'entend.
+ */
+export const eteintGemitAuSol: Recette = (h) => {
+  const d = entre(h, 0.8, 1.3);
+  const f0 = entre(h, 46, 58);
+  const p = new Piste(d + 0.25, h);
+  p.ajouter(
+    rale(d, h, {
+      f0: (t) => f0 * (1 + 0.08 * Math.sin(Math.PI * Math.min(1, t / (d * 0.5)))) * (1 - 0.3 * (t / d)),
+      formants: VOYELLES[Math.floor(h() * VOYELLES.length)]!,
+      rauque: entre(h, 0.45, 0.7),
+      env: points([0, 0], [0.25, 0.9], [d * 0.55, 1], [d, 0]),
+    }),
+    0,
+  );
+  p.ajouter(souffle(d, h, { bruit: "brun", filtre: "passe-bas", f: 500, env: cloche(d) }), 0, 0.15);
+  return filtrer(saturer(p.donnees, 1.4), "passe-bas", 750, 0.6);
+};
+
 /** L'Attiré : le râle se coupe net. Puis plus rien… le pire. */
 export const eteintRaleCoupe: Recette = (h) => {
   const d = entre(h, 0.35, 0.55);
@@ -259,6 +280,19 @@ export function impact(force: number): Recette {
     return saturer(p.donnees, 1.4 + force * 0.3);
   };
 }
+
+/**
+ * Le coup que l'Équipé encaisse (plan 0.9 §3.3) : plus mat, étouffé par le blouson et le casque. Un choc bas et court,
+ * sans grain de chair, un toc sourd de coque, et le cuir qui froisse : « celui-là encaisse ».
+ */
+export const impactMat: Recette = (h) => {
+  const p = new Piste(0.4, h);
+  p.ajouter(sourd(entre(h, 85, 100), 45, 0.025), 0, 1);
+  p.ajouter(bois(h, entre(h, 260, 340), 0.08, 2.5), 0.002, 0.45);
+  p.ajouter(souffle(0.18, h, { bruit: "brun", filtre: "passe-bas", f: 600, env: percussive(0.002, 0.04) }), 0, 0.6);
+  p.ajouter(froissement(h, 0.14, 1400, 300), 0.01, 0.25);
+  return filtrer(saturer(p.donnees, 1.3), "passe-bas", 1600);
+};
 
 export const coupTete: Recette = (h) => {
   // Le coup qui détruit : l'os qui cède. Un craquement bref et un choc.

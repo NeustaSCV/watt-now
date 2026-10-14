@@ -8,7 +8,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { appliquerReglages, reglagesChanges } from "../commun/src/reglages.ts";
-import { ETAPES_EQUILIBRE, NOMS_FAMILLES_ARMES, SCENARIOS, gardeFou, gardeFouEtape, tableau, tableauEtape, tableauTexte, type EtapeEquilibre, type Verdict } from "../commun/src/equilibre.ts";
+import { ETAPES_EQUILIBRE, NOMS_FAMILLES_ARMES, SCENARIOS, gardeFou, gardeFouEtape, martelementTexte, tableau, tableauEtape, tableauTexte, type EtapeEquilibre, type Verdict } from "../commun/src/equilibre.ts";
+import { REGLAGES } from "../commun/src/reglages.ts";
 
 const args = process.argv.slice(2);
 const i = args.indexOf("--reglages");
@@ -22,7 +23,7 @@ if (etape !== undefined && !ETAPES_EQUILIBRE.includes(etape as EtapeEquilibre)) 
   console.error(`Étape inconnue « ${etape} » : ${ETAPES_EQUILIBRE.join(", ")}.`);
   process.exit(2);
 }
-const changes = Object.entries(reglagesChanges()).filter(([n]) => n.startsWith("equilibre_"));
+const changes = Object.entries(reglagesChanges()).filter(([n]) => n.startsWith("equilibre_") || n === "equipe_vacille_un_sur");
 
 const virgule = (x: number) => (Number.isFinite(x) ? x.toFixed(2).replace(".", ",") : "—");
 const lignes = etape ? tableauEtape(etape as EtapeEquilibre) : tableau();
@@ -37,6 +38,8 @@ for (const r of rapports) {
   sortie.push(`| ${SCENARIOS[r.scenario].titre} | ${NOMS_FAMILLES_ARMES[r.famille]}${r.avecSeconde ? " (avec sa seconde arme)" : ""} | ${virgule(r.rapport)} |`);
 }
 sortie.push("", `Pire rapport hors terrain : ${virgule(verdict.pireRapport)} (au plus 2) ; écart de coût par Errant : ${virgule(verdict.ecartCout)} fois (au plus 3).`);
+// Le martèlement (plan 0.9 §3.3) : A sans arrêt, sans esquiver ni repousser, face à un Errant puis à un Équipé.
+sortie.push("", `## Le martèlement (plan 0.9 §3.3) : l'Équipé vacille un coup sur ${REGLAGES.equipe_vacille_un_sur}`, "", martelementTexte());
 sortie.push("", fautes.length ? `**Faute : le garde-fou ne tient pas.**\n${fautes.map((f) => `- ${f}`).join("\n")}` : "**OK : le garde-fou tient.**");
 console.log(sortie.join("\n"));
 process.exitCode = fautes.length ? 1 : 0;
