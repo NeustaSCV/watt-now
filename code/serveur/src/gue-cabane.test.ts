@@ -11,12 +11,15 @@
 // rejoint le porche qu'en faisant le tour (par la cale du bac, ou par derrière la cabane), et la porte reste un chas
 // d'aiguille.
 //
-// Ces deux tests attendent la livraison de la session « bâtiments » (.claude-travail/propositions/
+// Le choix du porteur (2026-10-14) : la barque déplacée d'un mètre environ, sans bloquer l'accès au bac. Le dernier test
+// le garde, dès aujourd'hui et après l'import.
+//
+// Les deux premiers tests attendent la livraison de la session « bâtiments » (.claude-travail/propositions/
 // demande-batiment-gue-5.md) : après `npm run batiments:importer` et `node scripts/extraire-gue.mjs`, ôter les `todo`.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { auGue } from "../../commun/src/gue.ts";
+import { BAC, auGue } from "../../commun/src/gue.ts";
 import { ZONE_GUE, heurte, type Zone } from "../../commun/src/lieux.ts";
 
 /** Le pas de la grille des chemins, en mètres. */
@@ -41,14 +44,23 @@ const DEVANT = auGue(-18.6, -21.6);
 /** Au milieu de la cabane. */
 const DEDANS = auGue(-24, -27.2);
 
+/** Les abords du bac, côté cabane (repère du modèle) : la cour, la cale et le chemin jusqu'au sud de la borne. */
+const ABORDS_DU_BAC = (() => {
+  const a = auGue(-30, -32);
+  const b = auGue(-9, -17);
+  return { x0: Math.min(a.x, b.x), x1: Math.max(a.x, b.x), z0: Math.min(a.z, b.z), z1: Math.max(a.z, b.z) };
+})();
+
+type Cadre = typeof COUR;
+
 const cle = (i: number, j: number) => `${i},${j}`;
 const caseDe = (p: { x: number; z: number }) => cle(Math.round(p.x / PAS), Math.round(p.z / PAS));
 
 /**
  * La longueur du plus court chemin (pas de 5 cm, en croix) depuis `depart` jusqu'à chaque case qu'atteint, sans sortir
- * de la cour, un corps de ce rayon.
+ * du cadre (la cour, par défaut), un corps de ce rayon.
  */
-function chemins(zone: Zone, depart: { x: number; z: number }, rayon: number): Map<string, number> {
+function chemins(zone: Zone, depart: { x: number; z: number }, rayon: number, cadre: Cadre = COUR): Map<string, number> {
   const longueurs = new Map<string, number>();
   const i0 = Math.round(depart.x / PAS);
   const j0 = Math.round(depart.z / PAS);
@@ -65,7 +77,7 @@ function chemins(zone: Zone, depart: { x: number; z: number }, rayon: number): M
         if (longueurs.has(k)) continue;
         const x = ni * PAS;
         const z = nj * PAS;
-        if (x < COUR.x0 || x > COUR.x1 || z < COUR.z0 || z > COUR.z1 || heurte(zone, x, z, rayon)) continue;
+        if (x < cadre.x0 || x > cadre.x1 || z < cadre.z0 || z > cadre.z1 || heurte(zone, x, z, rayon)) continue;
         longueurs.set(k, n * PAS);
         suivant.push([ni, nj]);
       }
@@ -105,3 +117,15 @@ test(
     assert.equal(raccourcis.length, 0, `${raccourcis.length} cases où l'Éteint arrive par un raccourci, par exemple ${raccourcis[0]}`);
   },
 );
+
+test("cabane du passeur : depuis le chemin, on rejoint à l'aise et sans détour le point d'embarquement du bac, à la cale", () => {
+  const embarquement = BAC.cale.embarquement;
+  assert.ok(!heurte(ZONE_GUE, embarquement.x, embarquement.z, RAYON_A_L_AISE), "le point d'embarquement est libre");
+  // Devant la cabane, sur le chemin plus au sud, et de l'autre côté de la cabane : la barque ne doit gêner aucun d'eux.
+  for (const depart of [DEVANT, auGue(-18, -18.5), auGue(-22, -19)]) {
+    const longueur = chemins(ZONE_GUE, depart, RAYON_A_L_AISE, ABORDS_DU_BAC).get(caseDe(embarquement));
+    assert.ok(longueur !== undefined, `depuis (${depart.x} ; ${depart.z}), on atteint l'embarquement`);
+    const enCroix = Math.abs(embarquement.x - depart.x) + Math.abs(embarquement.z - depart.z);
+    assert.ok(longueur <= 1.1 * enCroix, `depuis (${depart.x} ; ${depart.z}) : ${longueur.toFixed(1)} m pour ${enCroix.toFixed(1)} m en croix`);
+  }
+});
