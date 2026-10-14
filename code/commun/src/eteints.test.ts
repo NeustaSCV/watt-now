@@ -2,7 +2,8 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { VITESSES, encaisser, nouvelEteint, penser, type Eteint, type Humain } from "./eteints.ts";
+import { VITESSES, encaisser, encaisserCoup, nouvelEteint, penser, repousser, type Eteint, type Humain } from "./eteints.ts";
+import { appliquerReglages } from "./reglages.ts";
 import { ARMES, DUREE_A_TERRE, POINGS } from "./combat.ts";
 import { ZONE_STATION } from "./lieux.ts";
 import { ALLURES } from "./regles.ts";
@@ -84,4 +85,102 @@ test("debout, un coup appuyé à la tête avec une arme solide le détruit ; au 
   const couteau = ARMES.find((a) => a.objet === "couteau")!;
   assert.equal(encaisser(nouvelEteint(1, 10, 10, "poursuivant"), hache, true, 1, { x: 9, z: 10 }, ZONE_STATION), "detruit");
   assert.notEqual(encaisser(nouvelEteint(2, 10, 10, "poursuivant"), couteau, true, 1, { x: 9, z: 10 }, ZONE_STATION), "detruit");
+});
+
+// ---------- L'Équipé encaisse un coup sur deux (plan 0.9 §3.3, chantier D) ----------
+
+const equipe = (x = 10, z = 10): Eteint => Object.assign(nouvelEteint(1, x, z, "poursuivant"), { variante: "equipe" as const });
+
+test("l'Équipé : les coups 1 et 3 le font vaciller, les coups 2 et 4 il les encaisse, sans recul ni étourdissement", () => {
+  const marteau = ARMES.find((a) => a.objet === "marteau")!;
+  const e = equipe();
+  const de = { x: 9, z: 10 };
+  assert.equal(encaisser(e, marteau, false, 1, de, ZONE_STATION), "vacille");
+  e.etourdi = 0;
+  const avant = { x: e.x, z: e.z };
+  e.contact = 0.3;
+  assert.equal(encaisser(e, marteau, false, 1, de, ZONE_STATION), "encaisse");
+  assert.deepEqual({ x: e.x, z: e.z }, avant, "il ne recule pas");
+  assert.equal(e.etourdi, 0, "il n'est pas étourdi");
+  assert.equal(e.contact, 0.3, "il garde son contact");
+  assert.ok(Math.abs(e.degats - 1.6) < 1e-9, "les dégâts au torse comptent");
+  assert.equal(encaisser(e, marteau, false, 1, de, ZONE_STATION), "vacille");
+  assert.equal(e.contact, 0);
+  e.etourdi = 0;
+  // 3,2 points : il tient encore debout (4 pour l'Équipé).
+  assert.equal(encaisser(e, marteau, false, 1, de, ZONE_STATION), "encaisse");
+  // Le cinquième coup le met à terre, encaissé ou non.
+  assert.equal(encaisser(e, marteau, false, 1, de, ZONE_STATION), "a_terre");
+});
+
+test("l'Équipé qui encaisse garde sa prise ; après « encaisse », il saisit si l'on reste au contact 0,6 s", () => {
+  const gourdin = ARMES.find((a) => a.objet === "gourdin")!;
+  const e = equipe();
+  const h: Humain = { id: 7, x: 10, z: 10.85, discret: false, eclaire: false };
+  e.o = 0;
+  e.attention = 5;
+  e.but = { x: h.x, z: h.z };
+  e.coupsRecus = 1;
+  assert.equal(encaisser(e, gourdin, false, 1, h, ZONE_STATION), "encaisse");
+  for (let t = 0; t < 0.65; t += 0.05) penser(e, 0.05, [], [h], [e], false, ZONE_STATION, fixe);
+  assert.equal(e.saisit, h.id);
+  // Le coup suivant le fait vaciller : il lâche. Celui d'après, il l'encaisse sans lâcher.
+  assert.equal(encaisser(e, gourdin, false, 1, h, ZONE_STATION), "vacille");
+  assert.equal(e.saisit, null);
+  e.saisit = h.id;
+  assert.equal(encaisser(e, gourdin, false, 1, h, ZONE_STATION), "encaisse");
+  assert.equal(e.saisit, h.id);
+});
+
+test("la poussée et la décharge font toujours vaciller l'Équipé, sans toucher au décompte", () => {
+  const matraque = ARMES.find((a) => a.objet === "matraque_electrique")!;
+  const e = equipe();
+  e.coupsRecus = 1;
+  e.contact = 0.4;
+  repousser(e, { x: 9, z: 10 }, 1.5, 0.8, ZONE_STATION);
+  assert.ok(e.etourdi > 0);
+  assert.equal(e.contact, 0);
+  assert.equal(e.coupsRecus, 1);
+  e.etourdi = 0;
+  assert.equal(encaisserCoup(e, matraque, false, 1, { x: 9, z: 10 }, ZONE_STATION).resultat, "raidi");
+  assert.equal(e.coupsRecus, 1);
+});
+
+test("à terre, le décompte de l'Équipé repart de zéro : relevé, le premier coup le fait vaciller", () => {
+  const marteau = ARMES.find((a) => a.objet === "marteau")!;
+  const e = equipe();
+  const de = { x: 9, z: 10 };
+  encaisser(e, marteau, false, 1, de, ZONE_STATION);
+  assert.equal(e.coupsRecus, 1);
+  // Mis à terre autrement que par un coup (un piège, la fosse du rouet) : le décompte repart aussi.
+  e.etat = "a_terre";
+  e.aTerre = 1;
+  for (let t = 0; t < 1.2; t += 0.1) penser(e, 0.1, [], [], [e], false, ZONE_STATION, fixe);
+  assert.notEqual(e.etat, "a_terre");
+  e.etourdi = 0;
+  assert.equal(encaisser(e, marteau, false, 1, de, ZONE_STATION), "vacille");
+  assert.equal(encaisser(e, marteau, false, 1, de, ZONE_STATION), "encaisse");
+});
+
+test("l'Errant ne change pas : il vacille à chaque coup", () => {
+  const gourdin = ARMES.find((a) => a.objet === "gourdin")!;
+  const e = nouvelEteint(1, 10, 10, "poursuivant");
+  for (let i = 0; i < 4; i++) assert.equal(encaisser(e, gourdin, false, 1, { x: 9, z: 10 }, ZONE_STATION), "vacille");
+  assert.equal(e.coupsRecus, undefined);
+});
+
+test("le réglage à chaud : l'Équipé vacille un coup sur N (1 : à chaque coup, comme avant la 0.9)", () => {
+  const couteau = ARMES.find((a) => a.objet === "couteau")!;
+  const suite = (n: number) => {
+    appliquerReglages({ equipe_vacille_un_sur: n });
+    const e = equipe();
+    return Array.from({ length: 4 }, () => encaisser(e, couteau, false, 1, { x: 9, z: 10 }, ZONE_STATION));
+  };
+  try {
+    assert.deepEqual(suite(1), ["vacille", "vacille", "vacille", "vacille"]);
+    assert.deepEqual(suite(3), ["vacille", "encaisse", "encaisse", "vacille"]);
+  } finally {
+    appliquerReglages({});
+  }
+  assert.deepEqual(suite(2), ["vacille", "encaisse", "vacille", "encaisse"]);
 });

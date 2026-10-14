@@ -615,6 +615,13 @@ function montrerCoup(message: { id: number; x: number; z: number; resultat: Resu
     if (message.resultat === "a_terre") hud.message(avecTouches("Il est à terre : une décharge ({agir}) l'éteint pour de bon.", tactile));
     return;
   }
+  // L'Équipé encaisse sans vaciller (plan 0.9 §3.3) : un sursaut, un son mat, à peine de sang, pas de message.
+  if (message.resultat === "encaisse") {
+    vue?.encaisser();
+    bruiteur.coup(message.resultat, message);
+    sang.eclabousser(message.x, message.z, 1.25, 0.3);
+    return;
+  }
   vue?.toucher();
   bruiteur.coup(message.resultat, message);
   if (message.resultat === "a_terre") hud.message(avecTouches("Il est à terre : frappe encore ({agir}) pour l'achever, avant qu'il se relève !", tactile));

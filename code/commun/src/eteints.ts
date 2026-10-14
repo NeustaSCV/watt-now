@@ -4,6 +4,7 @@
 
 import { BONUS_ETOURDI_CONTONDANT, DELAI_SAISIE, DUREE_A_TERRE, DUREE_A_TERRE_ELECTRIQUE, DUREE_ETOURDI, PORTEE_SAUT_DECHARGE, RESISTANCE_TORSE, type Arme } from "./combat.ts";
 import { heurte, type Zone } from "./lieux.ts";
+import { REGLAGES } from "./reglages.ts";
 import { voieLibre } from "./murs.ts";
 import type { Stimulus } from "./signature.ts";
 
@@ -60,6 +61,9 @@ export interface Eteint {
   eteintParLeCourant?: boolean;
   /** Secondes pendant lesquelles un piège le tient sur place (mâchoires, Book 25 §6.3) : il ne peut plus avancer. */
   retenu?: number;
+  // ---------- L'Équipé encaisse (plan 0.9 §3.3) ----------
+  /** Coups reçus depuis qu'il est debout : l'Équipé ne vacille qu'un coup sur N (`tientLeCoup`). Remis à zéro à terre. */
+  coupsRecus?: number;
 }
 
 /** Les variantes de la Coopérative : le Rampant, l'Équipé (casque de moto), les anciens habitants. */
@@ -173,8 +177,11 @@ export function vue(e: Eteint): EteintVu {
   return v;
 }
 
-/** Le résultat d'un coup porté à un Éteint. « raidi » : une décharge courte l'a tétanisé (Book 25 §5.1). */
-export type ResultatCoup = "detruit" | "a_terre" | "vacille" | "raidi";
+/**
+ * Le résultat d'un coup porté à un Éteint. « raidi » : une décharge courte l'a tétanisé (Book 25 §5.1). « encaisse » :
+ * l'Équipé a pris le coup sans vaciller (plan 0.9 §3.3).
+ */
+export type ResultatCoup = "detruit" | "a_terre" | "vacille" | "raidi" | "encaisse";
 
 /** Ce que fait un coup, et à qui : l'électricité peut raidir un second Éteint (★★★, la décharge saute). */
 export interface EffetCoup {
@@ -211,6 +218,7 @@ export function mettreATerre(e: Eteint, secondes: number): void {
   e.aTerre = Math.max(e.aTerre, secondes);
   e.degats = 0;
   e.raidi = 0;
+  e.coupsRecus = 0;
 }
 
 /**
@@ -278,6 +286,8 @@ export function encaisserCoup(e: Eteint, arme: Arme, appuye: boolean, force: num
 export function encaisser(e: Eteint, arme: Arme, appuye: boolean, force: number, de: { x: number; z: number }, zone: Zone, voisins: readonly Eteint[] = []): ResultatCoup {
   // L'électricité a sa règle à elle (Book 25 §5.1) : le casque n'y fait rien.
   if (arme.type === "electrique") return encaisserCoup(e, arme, appuye, force, de, zone, voisins).resultat;
+  // Ce qu'il tenait, si l'Équipé encaisse sans vaciller.
+  const prise = { saisit: e.saisit, tenue: e.tenue, contact: e.contact };
   e.saisit = null;
   e.tenue = 0;
   e.contact = 0;
@@ -297,7 +307,13 @@ export function encaisser(e: Eteint, arme: Arme, appuye: boolean, force: number,
     e.aTerre = DUREE_A_TERRE;
     e.degats = 0;
     e.raidi = 0;
+    e.coupsRecus = 0;
     return "a_terre";
+  }
+  // Un coup sur deux, l'Équipé ne vacille pas (plan 0.9 §3.3) : ni étourdi, ni recul, il garde sa prise et son contact.
+  if (!auSol && tientLeCoup(e)) {
+    Object.assign(e, prise);
+    return "encaisse";
   }
   const vacille = DUREE_ETOURDI * (arme.type === "contondant" && arme.objet !== null ? BONUS_ETOURDI_CONTONDANT : 1);
   // Raidi par une décharge, un coup ne raccourcit pas la tétanie.
@@ -306,6 +322,18 @@ export function encaisser(e: Eteint, arme: Arme, appuye: boolean, force: number,
   const d = Math.hypot(e.x - de.x, e.z - de.z) || 1;
   deplacer(e, ((e.x - de.x) / d) * 0.6, ((e.z - de.z) / d) * 0.6, zone);
   return "vacille";
+}
+
+/**
+ * L'Équipé encaisse (plan 0.9 §3.3) : un coup reçu de plus, et ne vacille-t-il pas ? Le premier coup le fait vaciller
+ * (Q-8), puis un coup sur N (`REGLAGES.equipe_vacille_un_sur`, 2 par défaut) ; les autres, il les prend sans broncher.
+ * Les autres Éteints vacillent à chaque coup. La poussée et la décharge ne passent pas par ici : elles font toujours vaciller.
+ */
+export function tientLeCoup(e: Eteint): boolean {
+  if (e.variante !== "equipe") return false;
+  const n = (e.coupsRecus ?? 0) + 1;
+  e.coupsRecus = n;
+  return (n - 1) % Math.max(1, Math.round(REGLAGES.equipe_vacille_un_sur)) !== 0;
 }
 
 /** Repoussé (Book 23 §4.4) : il lâche, recule de `recul` mètres (sans traverser les murs) et reste étourdi un instant. */
@@ -362,6 +390,8 @@ export function penser(
   }
   if ((e.gemit ?? 0) > 0) e.gemit = Math.max(0, e.gemit! - dt);
   if (e.etat === "a_terre") {
+    // Tombé, l'Équipé repart de zéro (plan 0.9 §3.3), par quelque chemin qu'il soit tombé (la fosse du rouet comprise).
+    if (e.coupsRecus) e.coupsRecus = 0;
     e.aTerre -= dt;
     if (e.aTerre <= 0) e.etat = "poursuivant";
     return;

@@ -212,3 +212,25 @@ test("la gourde pleine pèse son litre d'eau en plus", async () => {
   assert.equal(poidsInventaire({ gourde: 1 }, 1), 1.3);
   assert.equal(poidsInventaire({ couteau: 1 }, 1), poidsInventaire({ couteau: 1 }), "sans gourde, pas d'eau");
 });
+
+test("0.9 : l'Équipé martelé — le serveur dit « vacille » puis « encaisse » ; la poussée le fait toujours vaciller", () => {
+  const t = monter({ gourdin: 1 });
+  const e = equipe(40, 35.5);
+  t.halte.eteints = [e];
+  const coups = () => t.recus.filter((m) => m.t === "coup").map((m) => (m as Extract<MessageServeur, { t: "coup" }>).resultat);
+  const frapper = () => {
+    t.joueur.position = { x: e.x, z: e.z - 0.9, o: 0 };
+    t.joueur.recevoir({ t: "frapper", appuye: false });
+    t.attendre(0.6);
+  };
+  frapper();
+  frapper();
+  assert.deepEqual(coups(), ["vacille", "encaisse"]);
+  // De retour au contact, sa saisie en route : la poussée le fait vaciller quand même.
+  e.etourdi = 0;
+  e.contact = 0.3;
+  t.joueur.position = { x: e.x, z: e.z - 0.9, o: 0 };
+  t.joueur.recevoir({ t: "repousser" });
+  assert.ok(e.etourdi > 0);
+  assert.equal(e.contact, 0);
+});
