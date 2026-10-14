@@ -18,6 +18,7 @@ import { DISTANCE_INTERACTION, EMPRISE_RESSOURCE, PORTEE_ARBRE, TEXTE_GOURDE_AU_
 import type { FeuDeCamp } from "./rendu/feu.ts";
 import type { VueRessource } from "./rendu/ressources.ts";
 import { proposerMoulin } from "./moulin.ts";
+import { estLanterneFixe } from "../../commun/src/meubles-niveau2.ts";
 
 export type ActionProposee =
   | { libelle: string; message: MessageClient }
@@ -125,7 +126,8 @@ function actionsInstallation(
     case "ratelier_outils":
       return [{ libelle: "Ranger tes outils", ouvrirCoffre: i.id }, examiner];
     case "torche_plantee":
-      return [i.etat.eteinteLe === undefined ? msg("Allumer la torche", "allumer") : null, examiner];
+      // La lanterne fixe (plan 0.10, chantier C) s'allume seule à la nuit : rien à faire.
+      return [i.etat.eteinteLe === undefined && !estLanterneFixe(i) ? msg("Allumer la torche", "allumer") : null, examiner];
     case "escabeau":
       return [msg("Porter l'escabeau", "porter"), examiner];
     case "abri":

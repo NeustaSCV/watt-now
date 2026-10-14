@@ -350,4 +350,20 @@ export const RECETTES_VOLTAIQUES: Recette[] = [
     famille: "voltaiques",
     facteursEtoiles: derouille("machette"),
   },
+
+  // ---------- Le niveau 2, chantier C (plan 0.10 §4) : au poste de montage ----------
+  {
+    // Le pack soudé (Q-C10) : six cellules soudées en barrette au fer, leur LED de charge, un fil de cuivre ; 24 Wh, le
+    // double du pack de cellules, qui ne se décroche pas. Il fait la source des contacts soudés (chantier F).
+    id: "pack_soude",
+    lieu: AU_POSTE_DE_MONTAGE,
+    categorie: "materiaux",
+    nom: "Souder un pack de 24 Wh",
+    produit: { objet: "pack_soude", quantite: 1 },
+    ingredients: { cellule_lithium: 6, led: 1, fil_cuivre: 1 },
+    qualites: { souder: 1 },
+    duree: 30,
+    intensite: "legere",
+    famille: "voltaiques",
+  },
 ];

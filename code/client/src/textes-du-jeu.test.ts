@@ -216,6 +216,9 @@ const LIEU_DE_L_INDICE: Readonly<Record<string, string>> = {
   cooperative: "À la Coopérative.",
   gue: "Au Gué-aux-Saules.",
   moulin: "Au Moulin du Gué.",
+  // Plan 0.10 (chantier C) : les deux lieux du niveau 2 où sont les objets-clés.
+  grand_hotel: "Au Grand Hôtel des Flots.",
+  phare: "Au phare du cap.",
 };
 const PLUS_LOIN = "Plus loin, pas encore sur ta carte.";
 

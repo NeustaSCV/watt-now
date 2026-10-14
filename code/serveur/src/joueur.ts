@@ -196,6 +196,7 @@ import {
 import { refusAVenir, type AVenir } from "../../commun/src/lignees.ts";
 import { outilsAPortee, refusRatelier } from "../../commun/src/outils-a-portee.ts";
 import { stimuliTorches } from "../../commun/src/torche.ts";
+import { estClocheAlarme, sonAlarme } from "../../commun/src/meubles-niveau2.ts";
 // Se servir du meuble d'une autre famille, une fois sa recette apprise (plan 0.8.2 §7.3, chantier J).
 import { saitSeServir } from "../../commun/src/savoir-meuble.ts";
 import { utiliserNiveau1 } from "./niveau1-base.ts";
@@ -2562,7 +2563,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     for (const [id, jusqua] of this.alarmesSonnent) {
       const a = this.installations.get(id);
       if (!a || instant >= jusqua) this.alarmesSonnent.delete(id);
-      else s.push({ genre: "son", x: a.x, z: a.z, portee: 14, intensite: 0.5 });
+      else s.push({ genre: "son", x: a.x, z: a.z, ...sonAlarme(a) });
     }
     for (const i of this.installations.values()) {
       if (i.type === "charbonniere" && i.etat.pretLe && instant < i.etat.pretLe) s.push({ genre: "odeur", x: i.x, z: i.z, ...CHARBONNIERE_ODEUR });
@@ -2578,8 +2579,11 @@ export class Joueur implements Voyageur, ParticipantLecon {
       const passe = this.eteints.some((e) => debout(e) && Math.hypot(e.x - a.x, e.z - a.z) < 2.5);
       if (!passe) continue;
       this.alarmesSonnent.set(a.id, instant + 3000);
-      this.envoyer({ t: "alarme", x: a.x, z: a.z });
-      this.info("Les boîtes de conserve tintent ! Quelque chose passe près de ton alarme.");
+      // La cloche d'alarme (plan 0.10, chantier C) : elle s'entend à 40 m, et elle réveille le dormeur.
+      const cloche = estClocheAlarme(a);
+      this.envoyer({ t: "alarme", x: a.x, z: a.z, ...(cloche ? { cloche: true as const } : {}) });
+      if (cloche && this.sommeil) this.reveiller("La cloche sonne ! Quelque chose passe près de ton fil.");
+      else this.info(cloche ? "La cloche sonne ! Quelque chose passe près de ton fil." : "Les boîtes de conserve tintent ! Quelque chose passe près de ton alarme.");
     }
   }
 

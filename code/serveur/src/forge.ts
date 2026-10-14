@@ -29,6 +29,7 @@ import {
   estVentilee,
   forgeProche,
   prendLaTrempe,
+  souffletDeForge,
   trempeDisponible,
   type ForgeVue,
 } from "../../commun/src/forge.ts";
@@ -107,11 +108,14 @@ export class Forge {
     return null;
   }
 
-  /** La forge ventilée sans ventilateur : on pompe le soufflet double (kcal par heure de jeu en plus). */
+  /**
+   * La forge ventilée sans ventilateur, ni le soufflet de forge (une partie d'avant la 0.10) : on pompe (kcal par heure
+   * de jeu en plus). Plan 0.10 (chantier C) : le soufflet de forge, monté avec la forge ventilée, souffle seul.
+   */
   kcalEnPlus(r: Recette): number {
     if (r.installation !== "forge") return 0;
     const forge = this.forge();
-    return estVentilee(forge) && !forge?.etat.ventilateur ? KCAL_POMPER : 0;
+    return estVentilee(forge) && !forge?.etat.ventilateur && !souffletDeForge(forge) ? KCAL_POMPER : 0;
   }
 
   /**

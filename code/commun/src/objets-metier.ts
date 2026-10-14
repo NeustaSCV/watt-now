@@ -335,15 +335,13 @@ export const OBJETS_METIER = {
     poids: 12,
     description: "Une roue de vélo, deux bras, une caisse de planches : soixante kilos roulés, et l'on court encore sur le chemin.",
   },
-  // ---------- PROVISOIRE (plan 0.10, chantier F) : à retirer à l'intégration du chantier C ----------
-  // Le pack soudé est du chantier C : déclaré ici au plus court pour que la matraque à contacts soudés compile. À
-  // l'intégration, garder sa vraie définition (C) et supprimer ce bloc, sa valeur et son icône (client/src/icones-niveau1.ts,
-  // bloc « PROVISOIRE »).
+
+  // ---------- ⚡ Le niveau 2 (plan 0.10, chantier C) : ce qui se fait au poste de montage ----------
   pack_soude: {
     nom: "pack soudé",
     pluriel: "packs soudés",
-    poids: 0.4,
-    description: "Des cellules soudées, 24 Wh, et une LED qui dit ce qui reste. (Provisoire.)",
+    poids: 0.35,
+    description: "Six cellules lithium soudées en barrette, leur LED de charge sur le côté : 24 Wh qui ne se décrochent pas.",
   },
 } satisfies Record<string, DefinitionObjet>;
 
@@ -398,8 +396,6 @@ export const ENERGIE_GRISE_PROVISOIRE: Partial<Record<TypeObjet, number>> = {
   arbalete_lourde: 520,
   cranequin: 260,
   cranequin_leger: 200,
-  // PROVISOIRE (plan 0.10, chantier F) : la valeur du pack soudé du chantier C, à retirer à l'intégration de C.
-  pack_soude: 90,
   carreau: 8,
   carreau_acier: 15,
   manche_tourne: 25,

@@ -567,8 +567,8 @@ export type MessageServeur =
   | { t: "quetes"; quetes: VueQuetes | null }
   /** L'arme équipée a changé (P-005). */
   | { t: "arme"; arme: CleObjet | null }
-  /** Une alarme à boîtes de conserve tinte sur le terrain (P-002). */
-  | { t: "alarme"; x: number; z: number }
+  /** Une alarme à boîtes de conserve tinte sur le terrain (P-002) ; `cloche` : la cloche d'alarme sonne (plan 0.10). */
+  | { t: "alarme"; x: number; z: number; cloche?: true }
   /** On s'endort (dans l'abri ou par terre) ou on se réveille (É5). */
   | { t: "sommeil"; dort: boolean; dansUnAbri: boolean }
   /** Les autres joueurs du lieu, plusieurs fois par seconde (É4, lot 3). */

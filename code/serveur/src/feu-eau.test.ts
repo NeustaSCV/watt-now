@@ -113,14 +113,16 @@ test("le bâton à fouir se durcit au foyer de pierres, pas au feu de camp", () 
   assert.equal(u.inventaireActuel().baton_fouir ?? 0, 0);
 });
 
-test("le four de terre attend « plus tard », avec sa clé nommée ; ses deux plats aussi, grisés", () => {
+test("le four de terre (0.10) se bâtit avec sa porte de fonte, sans repli ; ses deux plats attendent la 0b, grisés", () => {
   const four = VOIE_SURFACE.find((e) => e.id === "four_terre")!;
-  assert.equal(four.aVenir, "niveau 2");
-  assert.equal(four.cle?.nom, "porte de four en fonte");
-  for (const id of ["pot_au_feu", "volaille_cepes"]) assert.equal(recette(id)!.aVenir, "niveau 2", id);
-  const t = monter({ pierre: 6, branche: 4, glaise: 4 }, (b, id) => poserFeu(b, id, { id: 1, niveau: 3 }));
+  assert.equal(four.aVenir, undefined);
+  assert.equal(four.cle?.objet, "porte_four");
+  assert.equal("replis" in four.cle!, false);
+  for (const id of ["pot_au_feu", "volaille_cepes"]) assert.equal(recette(id)!.aVenir, "0b", id);
+  // Les anciens matériaux ne suffisent plus : il manque la porte (et les bouteilles), rien ne se bâtit.
+  const t = monter({ pierre: 6, branche: 4, glaise: 4, marteau: 1 }, (b, id) => poserFeu(b, id, { id: 1, niveau: 3 }));
   t.agir("feu", 1, "ameliorer");
-  assert.match(t.infos().at(-1)!, /plus tard/);
+  assert.match(t.infos().at(-1)!, /porte de four en fonte/);
   assert.equal(t.dernier("feu")?.feu.niveau ?? 3, 3);
 });
 
@@ -215,8 +217,9 @@ test("la lignée de l'eau : 5 L, le seau de 10 L (clé : le seau, sans repli), 2
   assert.equal(seau.cle?.objet, "seau_10l");
   assert.deepEqual(seau.couts, [{ seau_10l: 1, branche: 2 }]);
   assert.deepEqual(seau.qualites, { couper: 1 });
-  assert.equal(l[2]!.aVenir, "niveau 2");
-  assert.equal(l[2]!.cle?.nom, "jerrican de 20 L");
+  // Plan 0.10 (chantier C) : le jerrican de 20 L, sans repli.
+  assert.equal(l[2]!.aVenir, undefined);
+  assert.equal(l[2]!.cle?.objet, "jerrican_20l");
   // Aucune recette ne pose plus de citerne.
   assert.ok(!RECETTES.some((r) => r.id === "citerne"));
 });

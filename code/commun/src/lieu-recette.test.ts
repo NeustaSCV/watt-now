@@ -137,11 +137,11 @@ test("la carte des installations distingue les formes du feu et les accessoires 
   assert.equal(lieuPossede(recette("corde")!.lieu, m), true);
 });
 
-test("« plus tard » remplace la phase 0b : le four de terre et le poêle attendent, la hutte aussi", () => {
+test("« plus tard » remplace la phase 0b : le poêle et la hutte attendent ; le four de terre se bâtit (0.10)", () => {
   const four = VOIE_SURFACE.find((e) => e.id === "four_terre")!;
-  // Plan 0.8 (chantier 5) : le four attend sa porte de fonte, au niveau 2 ; le poêle et la hutte, la phase 0b.
-  assert.equal(four.aVenir, "niveau 2");
-  assert.equal(refusAVenir(four), "Four de terre : plus tard. Ce qui lui manque est à trouver plus loin.");
+  // Plan 0.10 (chantier C) : le four de terre se bâtit avec sa porte de fonte ; le poêle et la hutte attendent la 0b.
+  assert.equal(four.aVenir, undefined);
+  assert.equal(refusAVenir(four), null);
   assert.equal(VOIE_SURFACE.find((e) => e.id === "poele")!.aVenir, "0b");
   assert.equal(lignee("abri")!.find((e) => e.id === "hutte")!.aVenir, "0b");
   assert.equal(refusAVenir({ nom: "Coffre cerclé", aVenir: "niveau 2" }), "Coffre cerclé : plus tard. Ce qui lui manque est à trouver plus loin.");

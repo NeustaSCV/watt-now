@@ -7,7 +7,7 @@
 // - la trempe : à l'eau ★★★ (une lame sur trois se fend), à l'huile ★★★★ (graisse de volaille, ou l'huile du bac) ;
 // - la forge et ses outils (plan 0.8, P1, Q-A6, Q-A2d) : le foyer de forge donne ★★ sur une enclume (l'enclume de
 //   dépanneur de la station, un étau, une tête de masse), ★ sur sa grosse pierre plate (Q-0.8-1) ; la forge ventilée
-//   et les pinces ★★★ (niveau 2, plus tard) ; ventilée, pinces et rail ★★★★★ (plus tard). Sans pinces, pas plus de ★★.
+//   et les pinces ★★★ (niveau 2, plan 0.10) ; ventilée, pinces et rail ★★★★★ (plus tard). Sans pinces, pas plus de ★★.
 //   Le foyer plafonne : la trempe à l'eau (★★★) ne dépasse plus le maillon de la forge, et la lame ne passe pas ★★.
 
 import type { EtatInstallation, InstallationVue } from "./messages.ts";
@@ -90,6 +90,14 @@ export function forgeProche(contexte: ContexteFabrication | undefined): ForgeVue
 /** La forge est-elle ventilée (niveau 2 et plus) ? */
 export function estVentilee(forge: ForgeVue | null): boolean {
   return (forge?.niveau ?? 1) >= NIVEAU_FORGE_VENTILEE;
+}
+
+/**
+ * La forge ventilée a-t-elle son soufflet de forge (plan 0.10, chantier C) ? Il est payé à la montée de niveau (dans
+ * `etat.payes`) : avec lui, on ne pompe pas.
+ */
+export function souffletDeForge(forge: ForgeVue | null): boolean {
+  return estVentilee(forge) && (forge?.etat?.payes ?? []).some((p) => (p.soufflet_forge ?? 0) > 0);
 }
 
 /** Les étoiles de l'enclume posée (sans enclume, la grosse pierre plate du foyer : ★). */

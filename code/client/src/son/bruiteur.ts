@@ -343,8 +343,15 @@ export class Bruiteur {
 
   // ---------- Le combat ----------
 
-  /** L'alarme à boîtes de conserve (P-002) : du métal qui s'entrechoque, plusieurs fois. */
-  alarme(ou: Ou): void {
+  /**
+   * L'alarme à boîtes de conserve (P-002) : du métal qui s'entrechoque, plusieurs fois. La cloche d'alarme (plan 0.10,
+   * chantier C) : la cloche de bronze, celle du passeur du gué (un effet déjà livré, entendu à 40 m).
+   */
+  alarme(ou: Ou, cloche = false): void {
+    if (cloche) {
+      this.son.jouer("cloche_bac", ou);
+      return;
+    }
     this.son.jouer("marteau_metal", ou);
     setTimeout(() => this.son.jouer("marteau_metal", ou), 160);
     setTimeout(() => this.son.jouer("marteau_metal", ou), 420);

@@ -122,12 +122,12 @@ export const RECETTES_COMMUNES: Recette[] = [
   },
   // ---------- Le feu et la cuisine (2026-10-08 ; plan 0.8 §2.3, chantier 5) : les plats nourrissent mieux que les
   // ingrédients crus. Feu de camp : les pommes cuites ; foyer de pierres : la poêlée (aussi au Dakota) et ce qui se durcit ;
-  // foyer de cuisine : la soupe ; le four (plus tard) : la volaille aux cèpes et le pot-au-feu, grisés en attendant. ----------
+  // foyer de cuisine : la soupe ; le four (niveau 2) : la volaille aux cèpes et le pot-au-feu, grisés jusqu'à la 0b. ----------
   {
     id: "volaille_cepes",
     lieu: AU_FOUR,
-    // Le four de terre attend sa porte de fonte (niveau 2) : grisée, dans la fiche du foyer de cuisine (V4-6).
-    aVenir: "niveau 2",
+    // Le four de terre se bâtit au niveau 2 (plan 0.10, chantier C) ; ses plats attendent la 0b, grisés (V4-6).
+    aVenir: "0b",
     categorie: "feu",
     nom: "Volaille aux cèpes",
     produit: { objet: "volaille_cepes", quantite: 1 },
@@ -179,7 +179,7 @@ export const RECETTES_COMMUNES: Recette[] = [
   {
     id: "pot_au_feu",
     lieu: AU_FOUR,
-    aVenir: "niveau 2",
+    aVenir: "0b",
     categorie: "feu",
     nom: "Pot-au-feu de volaille",
     produit: { objet: "pot_au_feu", quantite: 1 },

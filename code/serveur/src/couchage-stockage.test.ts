@@ -116,11 +116,11 @@ test("le coffre cerclé tient 250 kg et demande Marteler 2 : le marteau remmanch
   u.agir(1, "ameliorer");
   assert.equal(u.installation(1).niveau ?? 1, 1);
   assert.match(u.infos().at(-1)!, /feuillards/);
-  // La réserve couverte attend le niveau 2 (les tôles ondulées).
+  // La réserve couverte (plan 0.10, chantier C) : sans les tôles ondulées, il manque l'objet, et aucun repli.
   const reserve = lignee("coffre")![2]!;
-  assert.equal(reserve.aVenir, "niveau 2");
+  assert.equal(reserve.aVenir, undefined);
   t.agir(1, "ameliorer");
-  assert.match(t.infos().at(-1)!, /plus tard/i);
+  assert.match(t.infos().at(-1)!, /tôles ondulées/i);
 });
 
 test("une hache rangée au râtelier, à 3 m, donne Fendre au coffre ; plus loin, non", () => {

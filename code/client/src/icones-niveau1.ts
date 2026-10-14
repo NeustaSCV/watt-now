@@ -277,8 +277,4 @@ export const DESSINS_NIVEAU1: Record<string, string> = {
     <path d="M18 28 L32 16 L38 18" stroke="#55524d" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
     <path d="M28 36 h14 v4 h-14 Z" fill="${ACIER}" ${T}/>
     <path d="M30 36 v4 M33.5 36 v4 M37 36 v4 M40.5 36 v4" stroke="${ENCRE}" stroke-width="1" opacity="0.7"/>`,
-  // ---------- PROVISOIRE (plan 0.10, chantier F) : l'icône du pack soudé du chantier C, à retirer à l'intégration de C ----------
-  pack_soude: `
-    <path d="M8 16 H40 V34 H8 Z" fill="#2f7a5a" ${T}/>
-    <circle cx="34" cy="21" r="2.2" fill="#7fe07a" ${T} stroke-width="1"/>`,
 };
