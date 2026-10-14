@@ -317,27 +317,25 @@ export const PEAU_NOYE = 0xd4e2e6;
 export const PEAU_ENSABLE = 0x939a86;
 /**
  * Le Noyé gonflé (porteur, 2026-10-14) : un Éteint de taille normale (même hauteur, mêmes jambes, une petite tête)
- * dont le tronc est devenu une boule, plus large que haute, d'où sortent la tête, des bras courts et les jambes. Tout
- * passe par l'échelle des os (`ENFLURE`) : le corps entier n'est pas agrandi (`large`, `epais` : 1). Il se dégonfle en
- * crevant (`apres`), en `crevaison` secondes, après un dernier gonflement.
+ * dont le tronc est devenu une boule. La boule est une sphère à part (`bouleDuNoye`), posée sur son ventre et toujours
+ * droite, quelle que soit l'animation : un gonflement des os du dos suivait leur flexion, et s'aplatissait en disque vu
+ * de la caméra du jeu. Le corps n'est pas agrandi (`large`, `epais` : 1) ; il marche droit (eteint.ts, `redresser`).
+ * En crevant, la boule se vide en `crevaison` secondes, après un dernier gonflement.
  */
-export const GONFLE = { large: 1, epais: 1, apres: { large: 1, epais: 0.96 }, crevaison: 0.45, gonflement: 0.08 };
+export const GONFLE = { large: 1, epais: 1, apres: { large: 1, epais: 1 }, crevaison: 0.45, gonflement: 0.12 };
+/** La boule : son rayon (≈ 1,5 fois la largeur des épaules d'un Errant), et sa hauteur au-dessus du bas du dos. */
+export const BOULE = { rayon: 0.37, hausse: 0.12 };
 /**
- * L'enflure, os par os : la largeur voulue en travers de l'os (1 + facteur), et sa longueur (1 + allonge). Ses enfants
- * nommés retrouvent la largeur qu'on leur veut (la leur, ou 1) : seule la boule du tronc enfle.
+ * Le reste du corps, os par os : la largeur voulue en travers de l'os (1 + facteur), et sa longueur (1 + allonge). Ses
+ * enfants nommés retrouvent la largeur qu'on leur veut (la leur, ou 1). Une petite tête, des bras courts.
  */
 const ENFLURE: [os: string, facteur: number, enfants: string[], allonge?: number][] = [
-  // La boule : le bas du ventre, le ventre, la poitrine (un peu allongés : ronde, pas plate).
-  ["spine_01", 1.75, ["spine_02"], 0.25],
-  ["spine_02", 1.45, ["spine_03"], 0.2],
-  ["spine_03", 0.6, ["neck_01", "clavicle_l", "clavicle_r"], 0.1],
-  // La tête, petite, posée sur le haut de la boule ; les bras courts, à peine enflés.
-  ["neck_01", 0.15, ["Head"], 0.3],
-  ["Head", -0.08, []],
-  ["upperarm_l", 0.15, ["lowerarm_l"], -0.3],
-  ["upperarm_r", 0.15, ["lowerarm_r"], -0.3],
-  ["hand_l", 0.15, []],
-  ["hand_r", 0.15, []],
+  ["neck_01", 0.1, ["Head"], 0.1],
+  ["Head", -0.1, []],
+  ["upperarm_l", 0.2, ["lowerarm_l"], -0.35],
+  ["upperarm_r", 0.2, ["lowerarm_r"], -0.35],
+  ["hand_l", 0.2, []],
+  ["hand_r", 0.2, []],
 ];
 
 /**
@@ -373,6 +371,39 @@ export function gonfler(corps: Humanoide, k: number): void {
  * 0 : la matière d'origine. Détruit, le corps redevient mat avec les autres (eteint-au-sol.ts).
  */
 export const LUISANCE_NOYE = 0.5;
+let boule: THREE.BufferGeometry | null = null;
+/**
+ * La boule du Noyé : une sphère de chair blême et bleuâtre, tendue, où restent des lambeaux de chemise délavée et la
+ * ceinture du pantalon, craquée. Une géométrie et un matériau partagés par tous les Noyés (les couleurs sont dans les
+ * sommets) : un appel de dessin de plus par Noyé, rien d'autre.
+ */
+export function bouleDuNoye(): THREE.Mesh {
+  if (!boule) {
+    const a = new Assemblage(17);
+    const r = BOULE.rayon;
+    const peau = new THREE.Color(0xeef4f1);
+    const veine = new THREE.Color(0xa9bfd0);
+    const chemise = new THREE.Color(0x8e9a88);
+    const pantalon = new THREE.Color(0x5f6a5c);
+    a.ajouterDegrade(new THREE.IcosahedronGeometry(r, 4), (q) => {
+      const y = q.y / r;
+      const ang = Math.atan2(q.x, q.z);
+      // Le bas : la ceinture du pantalon, tendue, craquée devant.
+      if (y < -0.62 && !(y > -0.8 && Math.abs(ang) < 0.35)) return pantalon.getHex();
+      // Des lambeaux de chemise sur les épaules et le dos, déchirés en pointes.
+      const lambeau = y > 0.15 && Math.sin(ang * 3 + 1.3) + Math.sin(ang * 7) * 0.5 + (y - 0.15) * 1.2 > 0.9;
+      if (lambeau) return chemise.getHex();
+      // La chair : blême, marbrée de veines bleues.
+      const marbre = 0.5 + 0.5 * Math.sin(q.x * 31 + q.y * 17) * Math.sin(q.z * 23 - q.y * 11);
+      return _c.copy(peau).lerp(veine, marbre * 0.3).getHex();
+    }, "mat");
+    boule = a.maillages()[0]!.geometry;
+  }
+  const m = new THREE.Mesh(boule, materiauSommets("mat"));
+  m.castShadow = true;
+  return m;
+}
+
 /** L'Ensablé qui dort : le corps enfoncé de tant (m) sous le sol ; la butte de sable couvre les jambes et les reins. */
 export const ENFOUI = 0.15;
 
