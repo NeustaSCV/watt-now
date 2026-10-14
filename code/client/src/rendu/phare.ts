@@ -8,7 +8,9 @@
 //   lande au nord, à l'ouest et à l'est, la mer au sud, pour que le bord du lot ne se voie pas (dans les matières du
 //   modèle : aucun appel de dessin de plus).
 // - Ses couches (le fût de la tour, les toits, la coque de l'épave) s'effacent quand le personnage passe dessous ou
-//   derrière, comme les toits de la halte (estomperToits).
+//   derrière, comme les toits de la halte (estomperToits). Leurs hauteurs sont comptées depuis leur sol (le plateau ; la
+//   grève pour la coque) : on les recompte depuis le sol du personnage (`hauteursDepuis`), sinon la coque, neuf mètres
+//   plus bas, s'effaçait devant qui marche au bord de la falaise (essai sur l'iPhone, 2026-10-14).
 // - Ses objets nommés (`userData.objets`) suivent l'état du phare : la lanterne éteinte ou allumée, le prisme tombé ou
 //   remis, le bidon à côté de la cuve, l'escabeau (au hangar, sous l'escalier, posé ailleurs, ou dans les bras), la
 //   courroie du compresseur, le harpon, l'épave et ses objets-clés.
@@ -55,6 +57,35 @@ const PRIS: Partial<Record<TypeRessource, ObjetNomme>> = {
 
 const etats = new WeakMap<THREE.Object3D, Partial<Record<ObjetNomme, THREE.Object3D | null>>>();
 
+/** Une couche qui s'efface (le format de halte.ts : `Toit`), avec ses hauteurs comptées depuis son sol à elle. */
+interface CoucheEnRelief {
+  nom?: string;
+  bas?: number;
+  haut?: number;
+  /** Les hauteurs du modèle, depuis le sol de la couche (`solCouche`). */
+  basModele?: number;
+  hautModele?: number;
+  /** La hauteur du sol d'où le modèle compte ses hauteurs : la grève pour la coque de l'épave, le plateau sinon. */
+  solCouche?: number;
+}
+
+/** La grève de la crique, d'où le modèle compte les hauteurs de la coque de l'épave (y ≈ − 8,8). */
+const SOL_GREVE = -8.8;
+const couchesEnRelief = new WeakMap<THREE.Object3D, CoucheEnRelief[]>();
+
+/**
+ * Les hauteurs d'une couche vues du sol du personnage (`ySol`) : celles du modèle, décalées de la différence entre son
+ * sol à elle et celui du personnage. Du plateau, la coque de l'épave est tout entière sous ses pieds : elle ne le cache
+ * jamais ; de la grève, on la compte comme le modèle.
+ */
+export function hauteursDepuis(c: CoucheEnRelief, ySol: number): { bas?: number; haut?: number } {
+  const ecart = (c.solCouche ?? 0) - ySol;
+  return {
+    ...(c.basModele !== undefined ? { bas: c.basModele + ecart } : {}),
+    ...(c.hautModele !== undefined ? { haut: c.hautModele + ecart } : {}),
+  };
+}
+
 /** Une boîte du modèle, ramenée dans le repère du jeu. */
 const auJeu = (b: Boite): Boite => ({ x: b.x + OX, z: b.z + OZ, l: b.l, p: b.p });
 
@@ -66,6 +97,12 @@ export function creerPhare(): THREE.Group {
   const toits = (modele.userData.toits as { boite: Boite; horsDe?: Boite }[]).map((t) => ({ ...t, boite: auJeu(t.boite), ...(t.horsDe ? { horsDe: auJeu(t.horsDe) } : {}) }));
   delete modele.userData.toits;
   groupe.userData.toits = toits;
+  for (const t of toits as CoucheEnRelief[]) {
+    t.basModele = t.bas;
+    t.hautModele = t.haut;
+    t.solCouche = t.nom?.startsWith("coque de l'épave") ? SOL_GREVE : 0;
+  }
+  couchesEnRelief.set(groupe, toits as CoucheEnRelief[]);
   etendreAlentours(modele);
   groupe.add(modele);
   nommer(groupe, ["phare"]);
@@ -152,6 +189,13 @@ function objetsDe(decor: THREE.Object3D): Partial<Record<ObjetNomme, THREE.Objec
   return e;
 }
 
+/** Les couches du phare d'un groupe (comme `objetsDe`). */
+function couchesDe(decor: THREE.Object3D): CoucheEnRelief[] | undefined {
+  let c = couchesEnRelief.get(decor);
+  if (!c) decor.traverse((o) => (c ??= couchesEnRelief.get(o)));
+  return c;
+}
+
 /** Ce que le décor montre de l'état du phare. */
 export interface ScenePhare {
   etat: EtatPhareVu | null;
@@ -172,6 +216,11 @@ export function animerPhare(
   vu: ScenePhare,
   ressources: Iterable<{ donnees: { type: TypeRessource; disponible: boolean } }>,
 ): void {
+  const couches = couchesDe(decor);
+  if (couches) {
+    const ySol = solPhare(x, z, vu.epave);
+    for (const c of couches) Object.assign(c, hauteursDepuis(c, ySol));
+  }
   estomperToits(decor, x, z, dt, lacet);
   const o = objetsDe(decor);
   if (!o) return;

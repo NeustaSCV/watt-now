@@ -1567,6 +1567,7 @@ function majMode(dt: number): void {
   for (const [id, e] of eteints) {
     if (e.etat === "dormant" || e.etat === "detruit" || e.etat === "a_terre") continue;
     if (lieu === "gue" && !gue.menace(id, position)) continue; // 0.8.2 (R3) : l'Éteint qui dérive, hors du radier
+    if (lieu === "phare" && !phare.menace(e.objet.position, position)) continue; // 0.10 (K2) : l'autre étage du phare
     plusProche = Math.min(plusProche, Math.hypot(e.objet.position.x - position.x, e.objet.position.z - position.z));
   }
   if (plusProche < 6 && !modeCombat && calmeDepuis >= 0) {
