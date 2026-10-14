@@ -251,6 +251,20 @@ export class LotsDeRessources {
     }
   }
 
+  /** Une ressource a changé de place (plan 0.9 : un point semé revient ailleurs) : ses morceaux la suivent dans leurs lots. */
+  deplacer(vue: object, de: { dx: number; dz: number }): void {
+    if (de.dx === 0 && de.dz === 0) return;
+    const pas = new THREE.Matrix4().makeTranslation(de.dx, 0, de.dz);
+    const touches = new Set<LotTrie>();
+    for (const x of this.morceaux.get(vue) ?? []) {
+      x.matrice.premultiply(pas);
+      if (x.lot === undefined || x.id === undefined) continue;
+      x.lot.setMatrixAt(x.id, x.matrice);
+      touches.add(x.lot);
+    }
+    for (const lot of touches) lot.computeBoundingSphere();
+  }
+
   /** Mode mesure : les maillages d'origine reprennent leur place (false), ou le lot dessine (true). */
   private basculer(fondu: boolean): void {
     if (fondu === this.fondu) return;

@@ -36,8 +36,8 @@ import { aleaDe, contenuConteneur, graineDe, piecesAmas, type TypeLieuDechets } 
 import { tableDecharge } from "./decharge.ts";
 import { REASSORT_MS, STOCK_DE_BASE } from "./economie.ts";
 import { COUT_BAC } from "./forge.ts";
-import { BUTIN_GUE, genererGue } from "./gue.ts";
-import { BUTIN_HALTE, genererHalte } from "./halte.ts";
+import { BUTIN_GUE } from "./gue.ts";
+import { BUTIN_HALTE } from "./halte.ts";
 import { ETAPES_LIEUX, lieuDeLEtape, type LieuId } from "./lieux.ts";
 import { CAPACITE_BROUETTE, CAPACITE_SAC, CAPACITE_TRAVOIS, OBJETS, type Inventaire, type TypeObjet } from "./objets.ts";
 import { ATELIER, aDevoiler, devoileesAuDepart, devoileesDEmblee, etapesAvecCle, nomDuLieu, recetteDeBase, recettesDeLEtape, type EtatPourDevoilement } from "./progression.ts";
@@ -47,6 +47,7 @@ import { ACCESSOIRES_FEU, PIECES_DE_FAMILLE, VOIE_CREUSEE, VOIE_SURFACE, lignee,
 import { QUETES, queteSuivante, type Condition, type LigneQuete, type Quete } from "./quetes.ts";
 import { RECETTES, faconsRecette, recette, type Recette } from "./recettes.ts";
 import type { Famille } from "./regles.ts";
+import { SEMIS, semisDe, type LieuSemis } from "./semis.ts";
 import { REPOUSSE_MS, USAGES, genererRessources, vracEnJeu } from "./terrain.ts";
 import { trouvables, type Source } from "./trouvables.ts";
 import { etapesTutoriel } from "./tutoriel.ts";
@@ -445,8 +446,11 @@ export const TERRAIN_VRAC: Readonly<Record<"buche" | "pierre" | "branche", numbe
   return c;
 })();
 const RETOUR_BRANCHE_MIN = REPOUSSE_MS.branche! / 60_000;
-/** Les branches de la lisière de la station et du gué (elles repoussent en 40 min, partagées, sans grandir). */
-const BRANCHES_HALTES = { station: genererHalte().filter((x) => x.type === "branche").length, gue: genererGue().filter((x) => x.type === "branche").length };
+/** Les lieux semés (plan 0.9, semis.ts) : les haltes, partagées, et les lieux à un joueur (le Moulin, la Coopérative). */
+type LieuSeme = LieuSemis;
+const A_UN_JOUEUR: ReadonlySet<LieuSeme> = new Set(["moulin", "cooperative"]);
+/** Ce qui se ramasse dans un lieu semé : le bois et les pierres (la cueillette ne se simule pas : pas de faim ici). */
+type TypeRamasse = "buche" | "pierre" | "branche";
 
 /**
  * Les hypothèses du budget : les chiffres décidés (§2.7), dont les trois « à vérifier en test » (le tas de bois et son
@@ -498,7 +502,7 @@ export interface Passage {
 /** Une prise dans un vrac partagé (station, gué) ou un achat au Comptoir. */
 export interface Prise {
   joueur: number;
-  lieu: "station" | "gue" | "comptoir";
+  lieu: LieuSeme | "comptoir";
   type: "buche" | "pierre" | "branche";
   minute: number;
   n: number;
@@ -545,30 +549,44 @@ export class Haltes {
     return qui.size;
   }
 
-  private base(lieu: "station" | "gue", type: "buche" | "pierre"): number {
-    return lieu === "station" ? this.h.vracStation[type] : type === "pierre" ? this.h.vracGue : 0;
+  /** Combien de points de ce type le lieu a pour un voyageur seul (le vrac de la station et du gué : les hypothèses). */
+  private base(lieu: LieuSeme, type: TypeRamasse): number {
+    if (type !== "branche" && lieu === "station") return this.h.vracStation[type];
+    if (type === "pierre" && lieu === "gue") return this.h.vracGue;
+    return semisDe(lieu, type);
   }
 
-  /** Ce qu'il y a de ce vrac à prendre à cet instant. */
-  vrac(lieu: "station" | "gue", type: "buche" | "pierre", t: number): number {
-    if (this.videAvant) return 0;
-    const pris = [...this.prises, ...this.autres.prises].filter((p) => p.lieu === lieu && p.type === type && p.minute <= t && p.minute > t - this.h.retourVracMin).reduce((s, p) => s + p.n, 0);
-    return Math.max(0, vracEnJeu(this.base(lieu, type), this.presents(lieu, t)) - pris);
+  /** Le délai de retour (minutes) : celui du lieu (semis.ts), sinon REPOUSSE_MS ; le vrac des haltes : l'hypothèse. */
+  private retour(lieu: LieuSeme, type: TypeRamasse): number {
+    if (type !== "branche" && SEMIS[lieu].vrac[type]) return this.h.retourVracMin;
+    const ms = SEMIS[lieu].repousse[type] !== undefined ? SEMIS[lieu].repousse[type]! : REPOUSSE_MS[type];
+    return ms === null ? Infinity : ms / 60_000;
   }
 
-  /** Les branches de la lisière (partagées, 40 min). */
-  branches(lieu: "station" | "gue", t: number): number {
-    const prises = [...this.prises, ...this.autres.prises].filter((p) => p.lieu === lieu && p.type === "branche" && p.minute <= t && p.minute > t - RETOUR_BRANCHE_MIN).reduce((s, p) => s + p.n, 0);
-    return Math.max(0, BRANCHES_HALTES[lieu] - prises);
+  /**
+   * Ce qu'il y a de ce bois ou de ces pierres à prendre à cet instant (plan 0.9 : tout le semis du lieu). Un type en vrac
+   * grandit avec les présents (B8) ; un lieu à un joueur ne voit que ses propres prises.
+   */
+  vrac(lieu: LieuSeme, type: TypeRamasse, t: number): number {
+    const seul = A_UN_JOUEUR.has(lieu);
+    const enVrac = SEMIS[lieu].vrac[type] === true;
+    if (this.videAvant && enVrac && !seul) return 0;
+    const retour = this.retour(lieu, type);
+    const pris = [...this.prises, ...(seul ? [] : this.autres.prises)].filter((p) => p.lieu === lieu && p.type === type && p.minute <= t && p.minute > t - retour).reduce((s, p) => s + p.n, 0);
+    const base = this.base(lieu, type);
+    return Math.max(0, (enVrac ? vracEnJeu(base, seul ? 1 : this.presents(lieu, t)) : base) - pris);
   }
 
-  prendreBranches(lieu: "station" | "gue", t: number, max: number): number {
-    const k = Math.max(0, Math.min(Math.floor(max), this.branches(lieu, t)));
-    if (k > 0) this.prises.push({ joueur: this.joueur, lieu, type: "branche", minute: t, n: k });
-    return k;
+  /** Les branches d'un lieu (partagées dans une halte ; à la station, 40 min ; au gué, 30). */
+  branches(lieu: LieuSeme, t: number): number {
+    return this.vrac(lieu, "branche", t);
   }
 
-  prendreVrac(lieu: "station" | "gue", type: "buche" | "pierre", t: number, max: number): number {
+  prendreBranches(lieu: LieuSeme, t: number, max: number): number {
+    return this.prendreVrac(lieu, "branche", t, max);
+  }
+
+  prendreVrac(lieu: LieuSeme, type: TypeRamasse, t: number, max: number): number {
     const k = Math.max(0, Math.min(Math.floor(max), this.vrac(lieu, type, t)));
     if (k > 0) this.prises.push({ joueur: this.joueur, lieu, type, minute: t, n: k });
     return k;
@@ -618,7 +636,7 @@ export class Haltes {
 }
 
 /** Le plus long moment (minutes) où un voyageur qui arrive trouverait ce vrac vide, à plusieurs (critère 7). */
-export function plusLongVide(tous: Autres, lieu: "station" | "gue", type: "buche" | "pierre", fin: number, h: Hypotheses = HYPOTHESES_DECIDEES): number {
+export function plusLongVide(tous: Autres, lieu: LieuSeme, type: TypeRamasse, fin: number, h: Hypotheses = HYPOTHESES_DECIDEES): number {
   const vue = new Haltes(-1, tous, h, false);
   let max = 0;
   let debut: number | null = null;
@@ -726,7 +744,7 @@ export interface Budget {
   /** Ce que les constructions ont consommé. */
   depense: Partial<Record<Vrac, number>>;
   /** D'où vient ce qu'on a eu : le terrain, chaque lieu, le Comptoir. */
-  venu: Partial<Record<"terrain" | "station" | "tas_bois" | "gue" | "banc_galets" | "moulin" | "comptoir" | "sac_charbon" | "meule", Partial<Record<Vrac, number>>>>;
+  venu: Partial<Record<"terrain" | "station" | "tas_bois" | "gue" | "banc_galets" | "moulin" | "cooperative" | "comptoir" | "sac_charbon" | "meule", Partial<Record<Vrac, number>>>>;
   /** Les bûches et les pierres achetées au Comptoir (wotts). */
   achats: number;
   /** Les meules de charbonnière (🔥), et combien en charbonnette. */
@@ -1183,7 +1201,15 @@ class Simulation {
       const veut = this.aRapporter("pierre");
       porter("pierre", this.haltes.prendreTas("banc_galets", this.absolu, Math.min(veut, place(2))), "banc_galets");
       porter("pierre", this.haltes.prendreVrac("gue", "pierre", this.absolu, Math.min(Math.max(0, veut - (s.rapporte.pierre ?? 0)), place(2))), "gue");
+      // Plan 0.9 : les bûches en vrac du gué (au pied des talus, et sur les pelouses quand la table en sème).
+      porter("buche", this.haltes.prendreVrac("gue", "buche", this.absolu, Math.min(Math.max(0, this.aRapporter("buche") - (s.rapporte.buche ?? 0)), place(2))), "gue");
       porter("branche", this.haltes.prendreBranches("gue", this.absolu, Math.min(this.branchesARapporter(), place(0.5))), "gue");
+    };
+    // Plan 0.9 (M5) : le bois et les pierres semés dans un lieu à un joueur (le Moulin, la Coopérative), en repartant.
+    const semis = (l: "moulin" | "cooperative") => {
+      porter("buche", this.haltes.prendreVrac(l, "buche", this.absolu, Math.min(Math.max(0, this.aRapporter("buche") - (s.rapporte.buche ?? 0)), place(2))), l);
+      porter("pierre", this.haltes.prendreVrac(l, "pierre", this.absolu, Math.min(Math.max(0, this.aRapporter("pierre") - (s.rapporte.pierre ?? 0)), place(2))), l);
+      porter("branche", this.haltes.prendreBranches(l, this.absolu, Math.min(this.branchesARapporter(), place(0.5))), l);
     };
 
     switch (lieu) {
@@ -1211,6 +1237,7 @@ class Simulation {
         }
         this.avancerEnSortie(duree(lieu === "cooperative" ? DUREES_SORTIES.cooperative : DUREES_SORTIES.comptoir));
         for (const t of s.cles) charge += OBJETS[t]?.poids ?? 0;
+        if (lieu === "cooperative") semis("cooperative");
         // Le retour passe par la station : on y prend du bois s'il en manque.
         s.enPassant.push("station");
         station(duree(DUREES_SORTIES.enPassant), true);
@@ -1231,6 +1258,7 @@ class Simulation {
         for (const t of s.cles) charge += OBJETS[t]?.poids ?? 0;
         // Les 2 bûches des poutres de chêne (B11), en repartant.
         porter("buche", Math.min(this.haltes.prendrePoutres(this.absolu), place(2)), "moulin");
+        semis("moulin");
         break;
       }
       default:

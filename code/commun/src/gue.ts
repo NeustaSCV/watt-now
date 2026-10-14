@@ -18,6 +18,7 @@ import type { Boite, Zone } from "./lieux.ts";
 import type { Eteint } from "./eteints.ts";
 import { DUREE_TRANCHE_MS, tempsDeLaTranche } from "./meteo.ts";
 import { declarerObstaclesBas } from "./murs.ts";
+import { SEMIS, vracDuSemis, type Etendue, type Semes } from "./semis.ts";
 import { VRAC_MAX, aleatoire, type ButinLieu, type RessourceSol, type TypeRessource } from "./terrain.ts";
 import { percer, type FenetreVue, type PlanVue, type PorteVue } from "./vue.ts";
 import { BAC_MODELE, ETEINTS_MODELE, FOUILLE_MODELE, NAPPE_MODELE, SEGMENTS_MODELE, type SegmentModele } from "./gue-modele.ts";
@@ -560,16 +561,17 @@ export function zoneGue(etat: EtatZoneGue): Zone {
  * 5 du tas de bois flotté et 3 sur les berges. Les branches et les bûches reviennent en 30 min, comme les pierres.
  */
 export const BUTIN_GUE: ButinLieu = {
-  repousse: { pierre: 30 * 60_000, buche: 30 * 60_000, branche: 30 * 60_000 },
-  vrac: { pierre: 21, buche: 4 },
+  // Les nombres et les délais sont dans la table du semis (plan 0.9, semis.ts).
+  repousse: { ...SEMIS.gue.repousse },
+  vrac: vracDuSemis("gue"),
   personnel: { banc_galets: 8 },
 };
 /** Les pierres en vrac sur le banc de galets (pour un voyageur seul) ; le reste du vrac est sur les pistes. */
-export const PIERRES_DU_BANC = 15;
-/** Les branches du gué : 8 en tout, dont celles du tas de bois flotté ; les autres, éparses sur les berges. */
-export const BRANCHES_DU_GUE = 8;
-const BRANCHES_DU_TAS = 5;
-export const BRANCHES_EPARSES = BRANCHES_DU_GUE - BRANCHES_DU_TAS;
+export const PIERRES_DU_BANC = SEMIS.gue.lignes.pierres_banc!.n;
+/** Les branches du gué d'avant la 0.9 : 8 en tout, dont celles du tas de bois flotté ; les autres, éparses sur les berges. */
+const BRANCHES_DU_TAS = SEMIS.gue.lignes.branches_tas!.n;
+export const BRANCHES_EPARSES = SEMIS.gue.lignes.branches_berges!.n;
+export const BRANCHES_DU_GUE = BRANCHES_DU_TAS + BRANCHES_EPARSES;
 
 /** Les fouilles du gué (« par chance » : bâche, chiffons, casserole, cordes ; rarement une clé de L1). */
 export const FOUILLES_GUE = ["gue_cabane", "gue_buvette", "gue_barques", "gue_camping_car", "gue_lavoir", "gue_garde_peche"] as const;
@@ -587,8 +589,92 @@ const PLACES_FOUILLES: Record<FouilleGue, readonly [number, number]> = {
 
 /** Les quatre-vingt-dix (au plus) ressources du gué, à la première visite (les mêmes pour tous). */
 export function genererGue(): Omit<RessourceSol, "disponible">[] {
+  return semerGue().ressources;
+}
+
+/** Les pistes de gravier du radier, sans leur dernier tronçon (où l'on pose des pierres). */
+const PISTES_PIERRES = [
+  [[-34, -0.6], [-27, -3], [-20, -7], [-15, -10.2]],
+  [[17, -10.4], [22, -7.6], [28, -3.6], [35, -0.8]],
+] as const;
+
+/** Libre pour une pierre : hors des obstacles (et de l'eau), loin du feu du banc. */
+function librePierre(x: number, z: number): boolean {
+  return !zoneGueFixe().obstacles.some((b) => Math.abs(x - b.x) <= b.l / 2 + 0.45 && Math.abs(z - b.z) <= b.p / 2 + 0.45) && Math.hypot(x - FEU_DU_BANC.x, z - FEU_DU_BANC.z) > 1.1;
+}
+
+/**
+ * Le fond de vallée à pied sec (plan 0.8.2, R1) : hors de l'eau, de la route et des pistes, des obstacles, des sorties,
+ * du pied du bac, de la cloche et de la glaise. Le bois du gué s'y pose ; la pelouse du semis 0.9 aussi (semis-lieux.ts).
+ */
+export function auSecGue(x: number, z: number): boolean {
+  const m = auModele(x, z);
+  return (
+    Math.abs(m.x - axeRiviere(m.z)) > DEMI_RIVIERE + 0.6 &&
+    Math.abs(z - zRoute(x)) > DEMI_ROUTE + 1.2 &&
+    distPistes(m.x, m.z) > 2.2 &&
+    !zoneGueFixe().obstacles.some((b) => Math.abs(x - b.x) <= b.l / 2 + 0.6 && Math.abs(z - b.z) <= b.p / 2 + 0.6) &&
+    SORTIES_A_EVITER.every((s) => Math.hypot(s.x - x, s.z - z) > 6) &&
+    // Rien au pied du bac ni de la cloche : on y hale et on y sonne sans viser une branche.
+    [BAC.cale.embarquement, BAC.ponton.embarquement, CLOCHE, GLAISE].every((q) => Math.hypot(q.x - x, q.z - z) > 4.5) &&
+    !(Math.abs(z - BAC.z) < BAC.demiLargeur + 3 && x > Math.min(...BAC.poteaux) - 2 && x < Math.max(...BAC.poteaux) + 2)
+  );
+}
+
+/**
+ * Les étendues du semis d'avant (plan 0.9 : un point pris y revient ailleurs) : le banc de galets et les pistes du radier
+ * (les pierres), les berges (les branches), le pied des talus (les bûches). Les tirages sont ceux de la 0.8.2.
+ */
+export const ETENDUES_GUE: Readonly<Record<"banc" | "pistes" | "berges" | "talus", Etendue>> = {
+  banc: {
+    tirer: (a) => {
+      const t = a();
+      const angle = a() * Math.PI * 2;
+      const r = Math.sqrt(a()) * (BANC_MODELE.r - 0.35);
+      return auGue(BANC_MODELE.a[0] + (BANC_MODELE.b[0] - BANC_MODELE.a[0]) * t + Math.cos(angle) * r, BANC_MODELE.a[1] + (BANC_MODELE.b[1] - BANC_MODELE.a[1]) * t + Math.sin(angle) * r);
+    },
+    libre: librePierre,
+  },
+  pistes: {
+    tirer: (a) => {
+      const piste = PISTES_PIERRES[a() < 0.5 ? 0 : 1];
+      const i = Math.floor(a() * (piste.length - 1));
+      const t = a();
+      const [p, q] = [piste[i]!, piste[i + 1]!];
+      return auGue(p[0] + (q[0] - p[0]) * t + (a() - 0.5) * 3.2, p[1] + (q[1] - p[1]) * t + (a() - 0.5) * 3.2);
+    },
+    libre: librePierre,
+  },
+  // Les branches : à moins de 4 m de la crête de berge, de part et d'autre de la rivière, du nord au sud du lot.
+  berges: {
+    tirer: (a) => {
+      const zm = -28 + a() * 56;
+      const cote = a() < 0.5 ? -1 : 1;
+      return auGue(axeRiviere(zm) + cote * (DEMI_RIVIERE + 0.8 + a() * 3.2), zm);
+    },
+    libre: auSecGue,
+  },
+  // Les bûches : au pied des talus nord et sud, dans le fond de vallée (x du modèle entre −44 et 42).
+  talus: {
+    tirer: (a) => {
+      const xm = -44 + a() * 86;
+      const nord = a() < 0.5;
+      const zm = nord ? interpoler(VN_MODELE, xm) + 0.8 + a() * 2.5 : interpoler(VS_MODELE, xm) - 0.8 - a() * 2.5;
+      return auGue(xm, zm);
+    },
+    libre: auSecGue,
+  },
+};
+
+/** Le contenu du gué, et la ligne du semis de chaque point semé (plan 0.9 : semis.ts). */
+export function semerGue(): { ressources: Omit<RessourceSol, "disponible">[]; semes: Semes } {
   const ressources: Omit<RessourceSol, "disponible">[] = [];
-  const poser = (type: TypeRessource, p: { x: number; z: number }) => ressources.push({ id: ressources.length + 1, type, x: arrondi(p.x), z: arrondi(p.z) });
+  const semes: Semes = new Map();
+  const poser = (type: TypeRessource, p: { x: number; z: number }, ligne?: string, tour = 0) => {
+    const id = ressources.length + 1;
+    ressources.push({ id, type, x: arrondi(p.x), z: arrondi(p.z) });
+    if (ligne) semes.set(id, { ligne, tour });
+  };
   // Le banc de galets personnel, au bord du banc, côté radier ; le gisement de glaise ; les joncs.
   poser("banc_galets", auGue(5.7, -8.6));
   poser("gisement_glaise", GLAISE);
@@ -597,90 +683,48 @@ export function genererGue(): Omit<RessourceSol, "disponible">[] {
   // Le « bois flotté » du modèle devient un tas de branches (I11) : tiré sur la berge par le modèle, au pied de la
   // culée côté terrain. Cinq branches, autour de son point de fouille.
   const tas = FOUILLE_MODELE.find((f) => f.quoi?.startsWith("tas de branches"))!;
-  for (const [dx, dz] of ([[0, 0], [-0.6, 0.5], [-0.3, -0.6], [-0.9, -0.2], [0.4, 0.6]] as const).slice(0, BRANCHES_DU_TAS)) poser("branche", auGue(tas.x + dx, tas.z + dz));
+  for (const [dx, dz] of ([[0, 0], [-0.6, 0.5], [-0.3, -0.6], [-0.9, -0.2], [0.4, 0.6]] as const).slice(0, BRANCHES_DU_TAS)) poser("branche", auGue(tas.x + dx, tas.z + dz), "branches_tas");
 
-  // Les pierres en vrac (B5, B8) : VRAC_MAX tournées de 15, dont seule la première est en jeu pour un voyageur seul.
+  // Les pierres en vrac (B5, B8) : VRAC_MAX tournées, dont seule la première est en jeu pour un voyageur seul.
   // La première sur le banc de galets ; les autres sur les pistes de gravier qui descendent au radier.
+  const L = SEMIS.gue.lignes;
   const aleat = aleatoire(1187);
-  const zone = zoneGueFixe();
-  const libre = (x: number, z: number, ecart: number) =>
-    !zone.obstacles.some((b) => Math.abs(x - b.x) <= b.l / 2 + 0.45 && Math.abs(z - b.z) <= b.p / 2 + 0.45) &&
-    ressources.every((r) => Math.hypot(r.x - x, r.z - z) > ecart) &&
-    Math.hypot(x - FEU_DU_BANC.x, z - FEU_DU_BANC.z) > 1.1;
-  const placer = (n: number, tirer: () => { x: number; z: number }, ecart: number) => {
+  const placer = (nom: string, n: number, tour: number) => {
+    const ligne = L[nom]!;
+    const e = ETENDUES_GUE[ligne.ou as keyof typeof ETENDUES_GUE];
+    const libre = (p: { x: number; z: number }) => e.libre(p.x, p.z) && ressources.every((r) => Math.hypot(r.x - p.x, r.z - p.z) > ligne.ecart);
     for (let i = 0; i < n; i++) {
-      let p = tirer();
-      for (let essai = 0; essai < 80 && !libre(p.x, p.z, ecart); essai++) p = tirer();
-      poser("pierre", p);
+      let p = e.tirer(aleat);
+      for (let essai = 0; essai < 80 && !libre(p); essai++) p = e.tirer(aleat);
+      poser("pierre", p, nom, tour);
     }
   };
-  const surLeBancAuHasard = () => {
-    const t = aleat();
-    const a = aleat() * Math.PI * 2;
-    const r = Math.sqrt(aleat()) * (BANC_MODELE.r - 0.35);
-    return auGue(BANC_MODELE.a[0] + (BANC_MODELE.b[0] - BANC_MODELE.a[0]) * t + Math.cos(a) * r, BANC_MODELE.a[1] + (BANC_MODELE.b[1] - BANC_MODELE.a[1]) * t + Math.sin(a) * r);
-  };
-  const pistes = [
-    [[-34, -0.6], [-27, -3], [-20, -7], [-15, -10.2]],
-    [[17, -10.4], [22, -7.6], [28, -3.6], [35, -0.8]],
-  ] as const;
-  const surLesPistes = () => {
-    const piste = pistes[aleat() < 0.5 ? 0 : 1];
-    const i = Math.floor(aleat() * (piste.length - 1));
-    const t = aleat();
-    const [a, b] = [piste[i]!, piste[i + 1]!];
-    return auGue(a[0] + (b[0] - a[0]) * t + (aleat() - 0.5) * 3.2, a[1] + (b[1] - a[1]) * t + (aleat() - 0.5) * 3.2);
-  };
   // Le vrac est en jeu par rang (l'ordre de pose) : la première tournée d'abord, le banc puis les pistes (R1).
-  const parTournee = BUTIN_GUE.vrac!.pierre!;
-  placer(PIERRES_DU_BANC, surLeBancAuHasard, 0.5);
-  placer(parTournee - PIERRES_DU_BANC, surLesPistes, 0.9);
-  for (let tour = 1; tour < VRAC_MAX; tour++) placer(parTournee, surLesPistes, 0.9);
+  const parTournee = L.pierres_banc!.n + L.pierres_pistes!.n;
+  placer("pierres_banc", L.pierres_banc!.n, 0);
+  placer("pierres_pistes", L.pierres_pistes!.n, 0);
+  for (let tour = 1; tour < VRAC_MAX; tour++) placer("pierres_pistes", parTournee, tour);
 
   // Plan 0.8.2 (R1) : le bois. Dans le fond de vallée, à pied sec, hors de la route et des pistes, à l'écart des
   // fouilles : les branches au bord de l'eau (apportées par les crues), les bûches au pied des talus (tombées des
   // frênes et des aulnes). Le tirage est fixe : tous les voyageurs voient les mêmes.
   const bois = aleatoire(4409);
-  const surLeSec = (x: number, z: number, ecart: number) => {
-    const m = auModele(x, z);
-    return (
-      Math.abs(m.x - axeRiviere(m.z)) > DEMI_RIVIERE + 0.6 &&
-      Math.abs(z - zRoute(x)) > DEMI_ROUTE + 1.2 &&
-      distPistes(m.x, m.z) > 2.2 &&
-      !zone.obstacles.some((b) => Math.abs(x - b.x) <= b.l / 2 + 0.6 && Math.abs(z - b.z) <= b.p / 2 + 0.6) &&
-      ressources.every((r) => Math.hypot(r.x - x, r.z - z) > ecart) &&
-      SORTIES_A_EVITER.every((s) => Math.hypot(s.x - x, s.z - z) > 6) &&
-      // Rien au pied du bac ni de la cloche : on y hale et on y sonne sans viser une branche.
-      [BAC.cale.embarquement, BAC.ponton.embarquement, CLOCHE, GLAISE].every((q) => Math.hypot(q.x - x, q.z - z) > 4.5) &&
-      !(Math.abs(z - BAC.z) < BAC.demiLargeur + 3 && x > Math.min(...BAC.poteaux) - 2 && x < Math.max(...BAC.poteaux) + 2)
-    );
-  };
-  const poserBois = (type: TypeRessource, n: number, tirer: () => { x: number; z: number }, ecart: number) => {
-    for (let i = 0; i < n; i++) {
+  const poserBois = (nom: string, tour: number) => {
+    const ligne = L[nom]!;
+    const e = ETENDUES_GUE[ligne.ou as keyof typeof ETENDUES_GUE];
+    for (let i = 0; i < ligne.n; i++) {
       for (let essai = 0; essai < 400; essai++) {
-        const p = tirer();
-        if (!surLeSec(p.x, p.z, ecart)) continue;
-        poser(type, p);
+        const p = e.tirer(bois);
+        if (!e.libre(p.x, p.z) || !ressources.every((r) => Math.hypot(r.x - p.x, r.z - p.z) > ligne.ecart)) continue;
+        poser(ligne.type, p, nom, tour);
         break;
       }
     }
   };
-  // Les branches : à moins de 4 m de la crête de berge, de part et d'autre de la rivière, du nord au sud du lot.
-  const auBordDeLEau = () => {
-    const zm = -28 + bois() * 56;
-    const cote = bois() < 0.5 ? -1 : 1;
-    return auGue(axeRiviere(zm) + cote * (DEMI_RIVIERE + 0.8 + bois() * 3.2), zm);
-  };
-  poserBois("branche", BRANCHES_EPARSES, auBordDeLEau, 3);
-  // Les bûches (vrac, B8) : au pied des talus nord et sud, dans le fond de vallée (x du modèle entre −44 et 42).
-  const auPiedDuTalus = () => {
-    const xm = -44 + bois() * 86;
-    const nord = bois() < 0.5;
-    const zm = nord ? interpoler(VN_MODELE, xm) + 0.8 + bois() * 2.5 : interpoler(VS_MODELE, xm) - 0.8 - bois() * 2.5;
-    return auGue(xm, zm);
-  };
-  for (let tour = 0; tour < VRAC_MAX; tour++) poserBois("buche", BUTIN_GUE.vrac!.buche!, auPiedDuTalus, 4);
-  return ressources;
+  poserBois("branches_berges", 0);
+  // Les bûches (vrac, B8).
+  for (let tour = 0; tour < VRAC_MAX; tour++) poserBois("buches_talus", tour);
+  return { ressources, semes };
 }
 
 /** Les pistes de gravier qui descendent au radier (repère du modèle), de chaque côté. */

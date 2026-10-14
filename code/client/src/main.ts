@@ -758,6 +758,8 @@ function recevoir(message: MessageServeur): void {
       return;
     case "ressource": {
       const r = ressources.get(message.id);
+      // Un point semé au hasard reparaît ailleurs (plan 0.9) : la ressource et ses morceaux en lot le suivent.
+      if (r && message.x !== undefined && message.z !== undefined) lots.deplacer(r, r.deplacer(message.x, message.z));
       // Le tas de bois de la station baisse d'une bûche (plan 0.8, chantier 10 : le butin personnel).
       r?.reste(message.reste);
       r?.disponible(message.disponible);

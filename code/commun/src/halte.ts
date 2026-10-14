@@ -5,6 +5,7 @@
 import { FERME_HALTE, GARAGE, GOULET, ROUTE, STATION, ZONE_STATION, dansBoite } from "./lieux.ts";
 import { nouvelEteint, type Eteint } from "./eteints.ts";
 import { REGLAGES } from "./reglages.ts";
+import { SEMIS, vracDuSemis, type Etendue, type Semes } from "./semis.ts";
 import { VRAC_MAX, aleatoire, type ButinLieu, type RessourceSol, type TypeRessource } from "./terrain.ts";
 
 /** À augmenter quand le contenu de la halte change : la base le régénère alors. */
@@ -17,15 +18,16 @@ export const VERSION_HALTE = 6;
  */
 export const BUTIN_HALTE: ButinLieu = {
   repousse: {
-    buche: 30 * 60_000,
-    pierre: 30 * 60_000,
+    // Les délais du semis (plan 0.9, semis.ts : bûches et pierres en 30 min).
+    ...SEMIS.station.repousse,
     // Plan 0.8.2 (chantier D) : le retour du tas de bois est un réglage à chaud (6 h par défaut, B3), lu à chaque prise.
     get tas_bois() {
       return REGLAGES.tas_bois_retour_h * 3_600_000;
     },
   },
-  // B2, B4, B8 : 12 bûches et 13 pierres pour un voyageur seul ; jusqu'à trois fois plus quand ils sont nombreux.
-  vrac: { buche: 12, pierre: 13 },
+  // B2, B4, B8 : 12 bûches et 13 pierres pour un voyageur seul ; jusqu'à trois fois plus quand ils sont nombreux. Les
+  // nombres sont dans la table du semis (plan 0.9, semis.ts).
+  vrac: vracDuSemis("station"),
   personnel: {
     // R4 : la pièce de famille, chacune la sienne (24 h, Q-0.8-14).
     panneau_auvent: 1,
@@ -42,6 +44,27 @@ export const BUTIN_HALTE: ButinLieu = {
 };
 
 export function genererHalte(): Omit<RessourceSol, "disponible">[] {
+  return semerHalte().ressources;
+}
+
+/** Ce qui est libre pour le semis d'avant (0.8) : hors de la route, des obstacles et de la cour de la station. */
+function libreHalte(x: number, z: number): boolean {
+  return Math.abs(z - ROUTE.z) > ROUTE.demiLargeur + 1 && !ZONE_STATION.obstacles.some((b) => dansBoite(x, z, b, 1)) && !dansBoite(x, z, { x: STATION.auvent.x, z: 20, l: 36, p: 16 });
+}
+
+/**
+ * Les étendues du semis d'avant (plan 0.9 : un point pris y revient ailleurs) : le bois mort en lisière, les pierres
+ * vers le goulet et la ferme, les buissons sur les bords. Les tirages sont ceux de la 0.8 (même ordre, même graine).
+ */
+export const ETENDUES_HALTE: Readonly<Record<"lisiere" | "goulet" | "ferme" | "bords", Etendue>> = {
+  lisiere: { tirer: (a) => ({ x: 6 + a() * 188, z: a() < 0.5 ? 10 + a() * 4 : 54.5 + a() * 4 }), libre: libreHalte },
+  goulet: { tirer: (a) => ({ x: GOULET.x - 10 + a() * 20, z: 12 + a() * 46 }), libre: libreHalte },
+  ferme: { tirer: (a) => ({ x: FERME_HALTE.x - 8 + a() * 16, z: 12 + a() * 14 }), libre: libreHalte },
+  bords: { tirer: (a) => ({ x: 20 + a() * 160, z: a() < 0.5 ? 15 + a() * 8 : 48 + a() * 7 }), libre: libreHalte },
+};
+
+/** Le contenu de la halte, et la ligne du semis de chaque point semé (plan 0.9 : semis.ts). */
+export function semerHalte(): { ressources: Omit<RessourceSol, "disponible">[]; semes: Semes } {
   const fixes: [TypeRessource, number, number][] = [
     ["rayonnage", STATION.boutique.x - 3, 18.3],
     // L'autre est à l'intérieur, au fond de la boutique : il faut entrer (et passer devant le Dormant).
@@ -60,31 +83,33 @@ export function genererHalte(): Omit<RessourceSol, "disponible">[] {
     ["grenier", FERME_HALTE.x + 2, FERME_HALTE.z],
   ];
   const ressources: Omit<RessourceSol, "disponible">[] = fixes.map(([type, x, z], i) => ({ id: i + 1, type, x, z }));
+  const semes: Semes = new Map();
 
-  // Ressources naturelles : bois mort en lisière, pierres vers le goulet et la ferme, quelques buissons.
+  // Ressources naturelles : bois mort en lisière, pierres vers le goulet et la ferme, quelques buissons. Les nombres sont
+  // ceux de la table du semis (semis.ts) ; 40 essais, puis le dernier tirage (comme en 0.8 : les points d'avant restent).
   const aleat = aleatoire(2027);
-  const libre = (x: number, z: number) =>
-    Math.abs(z - ROUTE.z) > ROUTE.demiLargeur + 1 &&
-    !ZONE_STATION.obstacles.some((b) => dansBoite(x, z, b, 1)) &&
-    !dansBoite(x, z, { x: STATION.auvent.x, z: 20, l: 36, p: 16 }) &&
-    ressources.every((r) => Math.hypot(r.x - x, r.z - z) > 1.5);
-  const placer = (type: TypeRessource, n: number, tirer: () => [number, number]) => {
-    for (let i = 0; i < n; i++) {
-      let p = tirer();
-      for (let essai = 0; essai < 40 && !libre(p[0], p[1]); essai++) p = tirer();
-      ressources.push({ id: ressources.length + 1, type, x: Math.round(p[0] * 100) / 100, z: Math.round(p[1] * 100) / 100 });
+  const L = SEMIS.station.lignes;
+  const placer = (nom: keyof typeof L, tour = 0) => {
+    const ligne = L[nom]!;
+    const e = ETENDUES_HALTE[ligne.ou as keyof typeof ETENDUES_HALTE];
+    const libre = (p: { x: number; z: number }) => e.libre(p.x, p.z) && ressources.every((r) => Math.hypot(r.x - p.x, r.z - p.z) > ligne.ecart);
+    for (let i = 0; i < ligne.n; i++) {
+      let p = e.tirer(aleat);
+      for (let essai = 0; essai < 40 && !libre(p); essai++) p = e.tirer(aleat);
+      const id = ressources.length + 1;
+      ressources.push({ id, type: ligne.type, x: Math.round(p.x * 100) / 100, z: Math.round(p.z * 100) / 100 });
+      semes.set(id, { ligne: nom, tour });
     }
   };
-  const lisiere = (): [number, number] => [6 + aleat() * 188, aleat() < 0.5 ? 10 + aleat() * 4 : 54.5 + aleat() * 4];
-  placer("branche", 26, lisiere);
+  placer("branches_lisiere");
   // Le vrac (B8) : VRAC_MAX tournées, dont seule la première est en jeu pour un voyageur seul (BUTIN_HALTE.vrac).
   for (let tour = 0; tour < VRAC_MAX; tour++) {
-    placer("buche", 12, lisiere);
-    placer("pierre", 8, () => [GOULET.x - 10 + aleat() * 20, 12 + aleat() * 46]);
-    placer("pierre", 5, () => [FERME_HALTE.x - 8 + aleat() * 16, 12 + aleat() * 14]);
+    placer("buches_lisiere", tour);
+    placer("pierres_goulet", tour);
+    placer("pierres_ferme", tour);
   }
-  placer("buisson", 5, () => [20 + aleat() * 160, aleat() < 0.5 ? 15 + aleat() * 8 : 48 + aleat() * 7]);
-  return ressources;
+  placer("buissons");
+  return { ressources, semes };
 }
 
 /**

@@ -28,13 +28,13 @@ import {
   TEXTE_GRANDE_PORTE_FERMEE,
   VERSION_MOULIN,
   boitePorteMoulin,
-  butinMoulin,
   dansLaFosse,
   distancePorteMoulin,
   portesInitialesMoulin,
 } from "../../commun/src/moulin.ts";
 import { DISTANCE_INTERACTION } from "../../commun/src/terrain.ts";
 import { PLAN_VUE_MOULIN } from "../../commun/src/vue-lieux.ts";
+import { butinDuSemis, ressourcesSemees, semisVivant } from "../../commun/src/semis-lieux.ts";
 import type { Base, RessourceEnBase } from "./base.ts";
 import { JAMAIS, LieuVivant, type DefinitionLieuVivant, type Voyageur } from "./lieu-vivant.ts";
 
@@ -114,8 +114,11 @@ export function definitionMoulin(compteId: number, etat: () => EtatMoulin = () =
     econome: true,
     // Quand le lieu se rendort, les Éteints détruits ne reviennent pas, et ceux de la fosse y restent.
     eteints: () => eteintsSelon(etat()),
-    ressources: butinMoulin,
+    // Son butin, puis le bois et les pierres semés au hasard (plan 0.9, M5 : commun/src/semis.ts).
+    ressources: ressourcesSemees("moulin"),
     version: VERSION_MOULIN,
+    butin: butinDuSemis("moulin"),
+    semis: semisVivant("moulin"),
   };
 }
 

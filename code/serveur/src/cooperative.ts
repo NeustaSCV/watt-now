@@ -16,7 +16,6 @@ import {
   RADIO_ETABLI,
   REINITIALISATION_COOP_MS,
   VERSION_COOP,
-  butinCoop,
   chargeBatterieTracteur,
   portesInitiales,
 } from "../../commun/src/cooperative.ts";
@@ -25,6 +24,7 @@ import { eteintsCoop } from "../../commun/src/eteints-coop.ts";
 import { ZONE_COOP, zoneCoop } from "../../commun/src/lieux.ts";
 import { milieuCoop } from "../../commun/src/milieu-coop.ts";
 import { PLAN_VUE_COOP } from "../../commun/src/vue-lieux.ts";
+import { butinDuSemis, ressourcesSemees, semisVivant } from "../../commun/src/semis-lieux.ts";
 import type { Base } from "./base.ts";
 import { LieuVivant, type DefinitionLieuVivant } from "./lieu-vivant.ts";
 
@@ -53,8 +53,11 @@ export function definitionCoop(compteId: number, detruits: () => readonly number
     econome: true,
     // Quand le lieu se rendort, les Éteints détruits ne reviennent pas pour autant.
     eteints: () => eteintsCoop().filter((e) => !detruits().includes(e.id)),
-    ressources: butinCoop,
+    // Son butin, puis le bois et les pierres semés au hasard (plan 0.9, M5 : commun/src/semis.ts).
+    ressources: ressourcesSemees("cooperative"),
     version: VERSION_COOP,
+    butin: butinDuSemis("cooperative"),
+    semis: semisVivant("cooperative"),
   };
 }
 

@@ -790,6 +790,11 @@ export class Base {
     this.db.prepare("UPDATE ressources_lieux SET disponible_le = ? WHERE lieu = ? AND id = ?").run(disponibleLe, lieu, id);
   }
 
+  /** Un point semé au hasard change de place (plan 0.9 : un point pris revient ailleurs). */
+  deplacerRessourceLieu(lieu: string, id: number, x: number, z: number): void {
+    this.db.prepare("UPDATE ressources_lieux SET x = ?, z = ? WHERE lieu = ? AND id = ?").run(x, z, lieu, id);
+  }
+
   sauverEtat(compteId: number, besoins: Besoins, gourde: Gourde): void {
     this.db
       .prepare("UPDATE personnages SET kcal = ?, eau = ?, repos = ?, gourde_contenu = ?, gourde_litres = ? WHERE compte_id = ?")
