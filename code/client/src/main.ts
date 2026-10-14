@@ -1025,8 +1025,8 @@ function recevoir(message: MessageServeur): void {
       hud.majArme(armeEquipee);
       break;
     case "alarme":
-      // Les boîtes de conserve tintent (P-002) : le serveur le dit aussi par écrit.
-      bruiteur.alarme({ x: message.x, z: message.z });
+      // Les boîtes de conserve tintent (P-002), ou la cloche d'alarme sonne (plan 0.10) : le serveur le dit aussi par écrit.
+      bruiteur.alarme({ x: message.x, z: message.z }, message.cloche === true);
       break;
     case "tutoriel":
       hud.majTutoriel(message.tutoriel);

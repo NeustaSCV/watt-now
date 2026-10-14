@@ -327,6 +327,14 @@ export const OBJETS_METIER = {
     poids: 12,
     description: "Une roue de vélo, deux bras, une caisse de planches : soixante kilos roulés, et l'on court encore sur le chemin.",
   },
+
+  // ---------- ⚡ Le niveau 2 (plan 0.10, chantier C) : ce qui se fait au poste de montage ----------
+  pack_soude: {
+    nom: "pack soudé",
+    pluriel: "packs soudés",
+    poids: 0.35,
+    description: "Six cellules lithium soudées en barrette, leur LED de charge sur le côté : 24 Wh qui ne se décrochent pas.",
+  },
 } satisfies Record<string, DefinitionObjet>;
 
 export type TypeObjetMetier = keyof typeof OBJETS_METIER;

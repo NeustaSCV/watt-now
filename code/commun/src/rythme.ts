@@ -419,7 +419,8 @@ export const CLES_DE_LIEU: ReadonlyMap<TypeObjet, LieuId> = (() => {
   const m = new Map<TypeObjet, LieuId>();
   for (const x of etapesAvecCle()) {
     const c = x.etape.cle;
-    if (x.etape.aVenir || !c.objet || c.ou === "maison") continue;
+    // Le niveau 2 (plan 0.10) se joue dans les parcours du chantier M : ici, les clés du niveau 1.
+    if (x.etape.aVenir || !c.objet || c.ou === "maison" || x.etape.etapeLieu === "L2" || x.etape.etapeLieu === "H2") continue;
     const lieu = lieuDeLEtape(c.ou);
     if (lieu) m.set(c.objet, lieu);
   }

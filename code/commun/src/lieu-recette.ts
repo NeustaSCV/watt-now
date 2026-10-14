@@ -11,6 +11,7 @@ import type { EtatInstallation } from "./messages.ts";
 import type { Inventaire } from "./objets.ts";
 import { NOMS_INSTALLATIONS, type LieuRecette, type Recette, type TypeInstallation } from "./recettes.ts";
 import { VOIE_CREUSEE, VOIE_SURFACE, formeFeu, lignee, niveauFeu, niveauInstallation, type FeuDansLignee, type FormeFeu } from "./lignees.ts";
+import { accessoireDeNiveau } from "./meubles-niveau2.ts";
 
 /** À quelle distance d'un feu on cuisine, on durcit (m). */
 export const PORTEE_FEU = 2.5;
@@ -31,7 +32,7 @@ export const NOMS_ACCESSOIRES: Readonly<Record<string, string>> = {
   soufflet: "un ventilateur à manivelle",
   // L'établi.
   redresseur: "un redresseur de fûts",
-  // Le niveau 2 (plan 0.8 §1.3) : ils n'existent pas encore, les recettes qui les demandent attendent.
+  // Le niveau 2 (plan 0.10, chantier C) : les niveaux 2 du banc solaire et du pédalier (meubles-niveau2.ts).
   poste_montage: "un poste de montage",
   roulements: "des roulements montés",
   // Le feu.
@@ -183,7 +184,7 @@ export function refusLieu(lieu: LieuRecette, a: Alentours): string | null {
   if (auNiveau.length === 0) return `Il te faut ${unNom(nom)} : améliore ${tonNom(NOMS_INSTALLATIONS[type])} (Examiner).`;
   const proches = auNiveau.filter((i) => pres(i, a, PORTEE_CONSTRUCTION));
   if (proches.length === 0) return `Approche-toi de ${tonNom(nom)}.`;
-  if (lieu.accessoire && !proches.some((i) => accessoireMonte(i.etat, lieu.accessoire!, a.inventaire))) {
+  if (lieu.accessoire && !proches.some((i) => accessoireDeNiveau(i, lieu.accessoire!) || accessoireMonte(i.etat, lieu.accessoire!, a.inventaire))) {
     if (lieu.accessoire === "huile") return "Ça se trempe à l'huile : de la graisse dans ton sac, ou de l'huile dans le bac de trempe.";
     return `Il te faut ${NOMS_ACCESSOIRES[lieu.accessoire] ?? lieu.accessoire} à ${tonNom(nom)}.`;
   }
@@ -206,7 +207,7 @@ export function carteInstallations(installations: Iterable<{ type: string; nivea
   for (const i of installations) {
     const niveau = i.niveau ?? 1;
     carte.push({ type: i.type, niveau });
-    for (const acc of ACCESSOIRES_CARTE) if (accessoireMonte(i.etat, acc)) carte.push({ type: `${i.type}+${acc}`, niveau });
+    for (const acc of ACCESSOIRES_CARTE) if (accessoireDeNiveau(i, acc) || accessoireMonte(i.etat, acc)) carte.push({ type: `${i.type}+${acc}`, niveau });
   }
   for (const f of feux) {
     carte.push({ type: "feu", niveau: niveauFeu(f) }, { type: `feu:${formeFeu(f)}`, niveau: 1 });

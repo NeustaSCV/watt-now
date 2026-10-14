@@ -13,6 +13,7 @@ import { accessoiresForge, animerAccessoiresForge, majAccessoiresForge, piecesFo
 import { creerArme } from "./personnage.ts";
 import type { SourceLumiere } from "./lumieres.ts";
 import { PORTEE_TORCHE, torcheAllumee, torcheConsumee } from "../../../commun/src/torche.ts";
+import { PORTEE_LANTERNE, estClocheAlarme, estLanterneFixe } from "../../../commun/src/meubles-niveau2.ts";
 import type { TypeObjet } from "../../../commun/src/objets.ts";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
@@ -848,6 +849,93 @@ function alarme(): THREE.Group {
   return enGroupe(c);
 }
 
+// ---------- Le niveau 2 (plan 0.10, chantier C) : la lanterne fixe, la cloche d'alarme ----------
+
+/** L'aluminium des tubes de récupération (potences), et le bronze de la cloche. */
+const ALU = 0xc4c9ce;
+const BRONZE = 0xa8783a;
+/** La hauteur du verre de la lanterne fixe (la lumière en part). */
+const VERRE_LANTERNE = 1.5;
+
+/**
+ * La lanterne fixe : une potence de tube d'aluminium plantée dans un collier de pierres, la lanterne-tempête pendue au
+ * bout de son bras, un réflecteur d'aluminium au-dessus qui renvoie la lumière vers le sol. Le verre s'allume la nuit.
+ */
+function lanterneFixe(): { groupe: THREE.Group; verre: THREE.MeshBasicMaterial } {
+  const c = new Assemblage(91);
+  c.occlusion = 0.25;
+  const aleat = aleatoire(91);
+  // La potence : le montant, le bras, une jambe de force ligaturée.
+  c.perche(new V3(0, -0.1, 0), new V3(0, 1.95, 0), 0.022, ALU, "metal", 8);
+  c.perche(new V3(0, 1.92, 0), new V3(0.42, 1.92, 0), 0.016, ALU, "metal", 8);
+  c.perche(new V3(0, 1.55, 0), new V3(0.26, 1.91, 0), 0.01, ALU, "metal", 6);
+  for (const y of [1.55, 1.9]) c.ligature(new V3(0, y, 0), Y, 0.026, 0x6b6862);
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2 + aleat() * 0.3;
+    caillou(c, Math.cos(a) * 0.15, 0.03, Math.sin(a) * 0.15, 0.06 + aleat() * 0.02, aleat, i % 2 ? PALETTE.pierre : PALETTE.pierreSombre, 0.55);
+  }
+  c.plaque(tache(0, 0, 0.18, 0.16, aleat, 7), surface(new V3(0, 0, 0), X, Z, Y), TERRE_REMUEE, "mat", 0.006);
+  // Le réflecteur : deux chutes d'aluminium martelées en cône, au-dessus de la lanterne.
+  c.ajouter(placer(bosseler(new THREE.ConeGeometry(0.17, 0.08, 10, 1, true), 0.006, aleat), 0.42, 1.78, 0), ALU, "metal", 0.06);
+  // La lanterne-tempête : le réservoir rouge, la cage de fil, le chapeau, l'anse accrochée au bras.
+  const x = 0.42;
+  c.ajouter(placer(new THREE.CylinderGeometry(0.075, 0.085, 0.07, 12), x, VERRE_LANTERNE - 0.13, 0), 0xb5442e, "tole");
+  for (let k = 0; k < 4; k++) {
+    const a = (k / 4) * Math.PI * 2 + 0.4;
+    c.perche(new V3(x + Math.cos(a) * 0.06, VERRE_LANTERNE - 0.1, Math.sin(a) * 0.06), new V3(x + Math.cos(a) * 0.05, VERRE_LANTERNE + 0.1, Math.sin(a) * 0.05), 0.004, 0x3a3836, "metal", 3);
+  }
+  c.ajouter(placer(new THREE.ConeGeometry(0.07, 0.06, 12), x, VERRE_LANTERNE + 0.13, 0), 0xb5442e, "tole");
+  c.perche(new V3(x - 0.06, VERRE_LANTERNE + 0.08, 0), new V3(x, 1.86, 0), 0.004, 0x3a3836, "metal", 3);
+  c.perche(new V3(x + 0.06, VERRE_LANTERNE + 0.08, 0), new V3(x, 1.86, 0), 0.004, 0x3a3836, "metal", 3);
+  c.perche(new V3(x, 1.86, 0), new V3(x, 1.92, 0), 0.005, 0x3a3836, "metal", 3);
+  const groupe = enGroupe(c);
+  // Le verre : un globe qui garde sa teinte de jour et s'allume la nuit (un matériau à part, que l'on règle).
+  const verre = new THREE.MeshBasicMaterial({ color: 0x4a4436, transparent: true, opacity: 0.85 });
+  const globe = new THREE.Mesh(new THREE.SphereGeometry(0.06, 12, 8).scale(1, 1.4, 1), verre);
+  globe.position.set(x, VERRE_LANTERNE, 0);
+  globe.userData.intact = true;
+  groupe.add(globe);
+  return { groupe, verre };
+}
+
+/**
+ * La cloche d'alarme : une potence de deux tubes d'aluminium en A, la cloche de bronze pendue au milieu, son battant
+ * rappelé par un petit ressort ; le fil de fer part du battant et file à hauteur de cheville vers un piquet.
+ */
+function clocheAlarme(): THREE.Group {
+  const c = new Assemblage(92);
+  c.occlusion = 0.25;
+  const aleat = aleatoire(92);
+  for (const x of [-0.42, 0.42]) {
+    c.perche(new V3(x * 1.25, -0.05, -0.18), new V3(x, 1.3, 0), 0.018, ALU, "metal", 8);
+    c.perche(new V3(x * 1.25, -0.05, 0.18), new V3(x, 1.3, 0), 0.018, ALU, "metal", 8);
+    c.ligature(new V3(x, 1.27, 0), Y, 0.024, 0x6b6862);
+    touffe(c, x * 1.25, -0.2, aleat, 3, 0.25);
+  }
+  c.perche(new V3(-0.46, 1.3, 0), new V3(0.46, 1.3, 0), 0.016, ALU, "metal", 8);
+  // La cloche : un profil de cloche tourné, la lèvre plus épaisse ; le joug, la bélière.
+  const profil = [
+    new THREE.Vector2(0.001, 0.26),
+    new THREE.Vector2(0.07, 0.25),
+    new THREE.Vector2(0.095, 0.2),
+    new THREE.Vector2(0.105, 0.12),
+    new THREE.Vector2(0.125, 0.05),
+    new THREE.Vector2(0.16, 0.01),
+    new THREE.Vector2(0.165, 0),
+    new THREE.Vector2(0.15, 0.005),
+  ];
+  c.ajouter(placer(new THREE.LatheGeometry(profil, 16), 0, 0.98, 0), BRONZE, "metal", 0.08);
+  c.ajouter(placer(new THREE.TorusGeometry(0.03, 0.008, 5, 10), 0, 1.27, 0), 0x6a5434, "metal");
+  // Le battant, son petit ressort de rappel, et le fil de fer tendu vers le piquet.
+  c.perche(new V3(0, 1.2, 0), new V3(0, 0.96, 0), 0.006, 0x3a3836, "metal", 4);
+  c.ajouter(placer(new THREE.SphereGeometry(0.025, 8, 6), 0, 0.95, 0), 0x3a3836, "metal");
+  c.ajouter(placer(new THREE.TorusGeometry(0.012, 0.003, 4, 8).rotateY(Math.PI / 2), 0, 0.9, 0), 0x8a8f96, "metal");
+  cordePendante(c, new V3(0, 0.88, 0), new V3(0.9, 0.16, 0.04), 0.02, 0.003, 0x8a8f96);
+  c.perche(new V3(0.92, -0.05, 0.04), new V3(0.9, 0.24, 0.04), 0.014, BOIS.ecorce, "mat", 5);
+  c.ligature(new V3(0.9, 0.16, 0.04), Y, 0.018, 0x6b6862);
+  return enGroupe(c);
+}
+
 /** Le lit de branchages : un cadre de rondins, une épaisse couche de rameaux de sapin, une couverture roulée. */
 /**
  * Les installations du métier (Book 25 : pièges, clôtures, tour à perche) arrivent avec leur modèle, aux chantiers 6
@@ -1093,6 +1181,9 @@ function flammeTorche(hauteur: number, largeur: number, vrille: number): THREE.B
   return g;
 }
 
+/** La nuit (0 à 1, celle du ciel) au-delà de laquelle la lanterne fixe s'allume (le serveur : 21 h – 5 h 30). */
+const SEUIL_NUIT_LANTERNE = 0.5;
+
 /** La hauteur de la tête de la torche (la flamme en part). */
 const TETE_TORCHE = 1.42;
 
@@ -1247,6 +1338,9 @@ export class VueInstallation {
   private outilsVus = "";
   /** La torche plantée : ses deux têtes, sa flamme. */
   private torche: ReturnType<typeof torche> | null = null;
+  /** La lanterne fixe (plan 0.10) : son verre, qui s'allume la nuit ; la nuit vue au dernier pas d'animation. */
+  private lanterne: ReturnType<typeof lanterneFixe> | null = null;
+  private nuitVue = 0;
   private temps = 0;
 
   constructor(donnees: InstallationVue) {
@@ -1314,7 +1408,8 @@ export class VueInstallation {
         break;
       }
       case "alarme_boites":
-        this.objet = alarme();
+        // Au niveau 2, la cloche d'alarme (plan 0.10, chantier C) : un autre meuble, qui garde le fil.
+        this.objet = estClocheAlarme(donnees) ? clocheAlarme() : alarme();
         break;
       case "lit_branchages":
         this.objet = lit();
@@ -1326,6 +1421,12 @@ export class VueInstallation {
         break;
       }
       case "torche_plantee":
+        // Au niveau 2, la lanterne fixe (plan 0.10, chantier C) : elle s'allume seule à la nuit.
+        if (estLanterneFixe(donnees)) {
+          this.lanterne = lanterneFixe();
+          this.objet = this.lanterne.groupe;
+          break;
+        }
         this.torche = torche();
         this.objet = this.torche.groupe;
         break;
@@ -1421,6 +1522,8 @@ export class VueInstallation {
 
   /** La lumière de la torche plantée qui brûle (plan 0.8) : dans la réserve fixe de lumières de nuit (Book 21 §5.3.3). */
   source(maintenantServeur: number): SourceLumiere | null {
+    // La lanterne fixe : 14 m, une lumière plus douce et plus stable qu'une flamme nue, dès que la nuit tombe.
+    if (this.lanterne) return this.nuitVue > SEUIL_NUIT_LANTERNE ? { x: this.donnees.x, y: VERRE_LANTERNE, z: this.donnees.z, couleur: 0xffc070, intensite: 4, portee: PORTEE_LANTERNE + 2, vacillement: 0.2 } : null;
     if (!this.torche || !torcheAllumee(this.donnees, maintenantServeur)) return null;
     return { x: this.donnees.x, y: TETE_TORCHE + 0.15, z: this.donnees.z, couleur: 0xff8a3d, intensite: 4, portee: PORTEE_TORCHE + 2, vacillement: 0.9 };
   }
@@ -1443,6 +1546,12 @@ export class VueInstallation {
       this.fumee.objet.visible = cuit;
     }
     if (this.forge) animerAccessoiresForge(this.forge, dt, nuit);
+    this.nuitVue = nuit;
+    if (this.lanterne) {
+      const allumee = nuit > SEUIL_NUIT_LANTERNE;
+      this.lanterne.verre.color.setHex(allumee ? 0xffd890 : 0x4a4436);
+      this.lanterne.verre.opacity = allumee ? 0.95 : 0.85;
+    }
     for (const o of this.animes) (o.userData.animer as (dt: number, enMarche: boolean) => void)(dt, enMarche);
     if (this.torche) {
       // La torche (plan 0.8) : la flamme tant qu'elle brûle, qui vacille ; consumée, le moignon noir.

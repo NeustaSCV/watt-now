@@ -100,7 +100,7 @@ test("🔥 toutes les recettes de la forge sont des Charbonniers, ont une catég
   assert.ok(!LAMES_TREMPEES.has("machette_forgee_fer"));
 });
 
-test("🔥 la lignée de la forge : le foyer (clé : l'enclume de dépanneur), puis la forge ventilée, plus tard", () => {
+test("🔥 la lignée de la forge : le foyer (clé : l'enclume de dépanneur), puis la forge ventilée (0.10)", () => {
   const l = LIGNEES_INSTALLATIONS.forge!;
   assert.equal(l.length, 2);
   assert.deepEqual(l[0]!.couts[0], recette("forge")!.ingredients, "le niveau 1 coûte ce que coûte sa recette");
@@ -111,9 +111,11 @@ test("🔥 la lignée de la forge : le foyer (clé : l'enclume de dépanneur), p
   for (const t of [l[0]!.nom, l[0]!.apporte, l[0]!.examen]) assert.ok(!/soufflet/i.test(t), t);
   assert.equal(l[1]!.id, "forge_ventilee");
   assert.equal(l[1]!.famille, "charbonniers");
-  assert.equal(l[1]!.aVenir, "niveau 2");
+  // Plan 0.10 (chantier C) : jouable, avec le soufflet de forge (la récupération, N2-17), sans repli.
+  assert.equal(l[1]!.aVenir, undefined);
   assert.ok(/soufflet de forge/.test(l[1]!.apporte));
-  assert.deepEqual(l[1]!.couts, [{ pierre: 6, glaise: 2, barre_metal: 1 }]);
+  assert.deepEqual(l[1]!.couts, [{ pierre: 3, glaise: 2, barre_metal: 1, soufflet_forge: 1 }]);
+  assert.equal(l[1]!.cle?.objet, "soufflet_forge");
 });
 
 // ---------- La qualité : le maillon faible ----------

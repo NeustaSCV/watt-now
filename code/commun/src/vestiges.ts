@@ -12,6 +12,8 @@ import type { Qualite } from "./recettes.ts";
 import type { TypeRessource } from "./terrain.ts";
 import { ETAPES_LIEUX, type LieuId } from "./lieux.ts";
 import { DEMONTAGE_LOT2, VESTIGES_LOT2 } from "./vestiges-lot2.ts";
+// PROVISOIRE, CHANTIER B (0.10) : à retirer à l'intégration.
+import { VESTIGES_PROVISOIRES_B } from "./provisoire-chantier-b.ts";
 
 /** Rareté (P-003 §1) : commun, peu commun, rare, légendaire. */
 export type Rarete = "C" | "P" | "R" | "L";
@@ -1113,7 +1115,8 @@ const VESTIGES_LOT1 = {
 } satisfies Record<string, DefinitionVestige>;
 
 /** Les vestiges : le lot 1 (0.3 et 0.6) et les déchets de l'Abondance (lot 2, 0.7 : vestiges-lot2.ts). */
-export const VESTIGES = { ...VESTIGES_LOT1, ...VESTIGES_LOT2 };
+// PROVISOIRE, CHANTIER B (0.10) : `VESTIGES_PROVISOIRES_B` est à retirer à l'intégration (provisoire-chantier-b.ts).
+export const VESTIGES = { ...VESTIGES_LOT1, ...VESTIGES_LOT2, ...VESTIGES_PROVISOIRES_B };
 
 export type TypeVestige = keyof typeof VESTIGES;
 

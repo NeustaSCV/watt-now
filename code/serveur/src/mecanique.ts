@@ -17,6 +17,7 @@ import { niveauQualite } from "../../commun/src/recettes.ts";
 import type { Famille } from "../../commun/src/regles.ts";
 import { ACCESSOIRES_PEDALIER, BONUS_FIL_DE_RASOIR, MONTER_ALTERNATEUR, REARMER_PIEGE, accessoireMonte, estPiegeMecanique, type AccessoirePedalier } from "../../commun/src/mecanique.ts";
 import { declencheurNeuf, enregistrerDeclencheur, rearmer, type DefinitionDeclencheur } from "./declencheurs.ts";
+import { ROULEMENTS, aDesRoulements } from "../../commun/src/meubles-niveau2.ts";
 
 // ---------- Les pièges (Book 25 §6.3), déclarés au moteur des déclencheurs ----------
 
@@ -165,7 +166,8 @@ function pedaler(ctx: ContexteMecanique, i: InstallationVue): void {
     libelle,
     DUREE_PEDALAGE,
     () => {
-      const wh = whEDePedalage(ctx.famille(), 1, organe);
+      // Les roulements montés ⚙️ (plan 0.10, chantier C) : 30 % de Wh en plus (et 30 % d'effort en moins, plus bas).
+      const wh = whEDePedalage(ctx.famille(), 1, organe) * (aDesRoulements(i) ? ROULEMENTS.wh : 1);
       let mis = 0;
       let ou = "la batterie du pédalier";
       const banc = bancACharger(ctx, i);
@@ -190,7 +192,7 @@ function pedaler(ctx: ContexteMecanique, i: InstallationVue): void {
       ctx.info(`+${Math.round(mis)} Wh dans ${ou}.`);
     },
     "outil",
-    KCAL_PEDALAGE_EN_PLUS,
+    KCAL_PEDALAGE_EN_PLUS * (aDesRoulements(i) ? ROULEMENTS.effort : 1),
   );
 }
 

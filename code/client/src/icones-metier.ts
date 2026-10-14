@@ -214,6 +214,13 @@ export const DESSINS_METIER: Partial<Record<string, string>> = {
     <circle cx="16" cy="25" r="5" fill="#3f8f6a" ${T} stroke-width="1"/><circle cx="24" cy="25" r="5" fill="#3f8f6a" ${T} stroke-width="1"/><circle cx="32" cy="25" r="5" fill="#3f8f6a" ${T} stroke-width="1"/>
     <path d="M8 20 h32" stroke="#c9ccd0" stroke-width="3" opacity="0.8"/>
     <path d="M40 22 h4 M42 20 v4" stroke="#c8362b" stroke-width="1.6"/>`,
+  // Le pack soudé (plan 0.10, chantier C) : six cellules en barrette, la LED de charge allumée sur le côté.
+  pack_soude: `
+    <rect x="6" y="15" width="34" height="20" rx="3" fill="#5f7f9a" ${T}/>
+    <circle cx="12" cy="25" r="3.6" fill="#3f8f6a" ${T} stroke-width="1"/><circle cx="19" cy="25" r="3.6" fill="#3f8f6a" ${T} stroke-width="1"/><circle cx="26" cy="25" r="3.6" fill="#3f8f6a" ${T} stroke-width="1"/><circle cx="33" cy="25" r="3.6" fill="#3f8f6a" ${T} stroke-width="1"/>
+    <path d="M9 19 h28 M9 31 h28" stroke="#c9ccd0" stroke-width="2" opacity="0.9"/>
+    <circle cx="42" cy="20" r="2.6" fill="#7dff8a" ${T} stroke-width="1"/>
+    <path d="M42 27 v6" stroke="#c8362b" stroke-width="1.6"/>`,
   module_decharge: `
     <rect x="10" y="12" width="28" height="24" rx="2" fill="#2f5f3a" ${T}/>
     <rect x="15" y="17" width="8" height="12" rx="2" fill="#2b2b2b"/><circle cx="31" cy="22" r="4" fill="#d8a83a" ${T} stroke-width="1"/>

@@ -216,6 +216,8 @@ export const PROGRESSION: Readonly<Record<string, LigneProgression>> = {
   alarme_electrique: { quand: [et(ou(vu("rouleau_fil_fer"), fab("alarme_boites")), fab("banc_recharge")), quete("alarme_electrique")], indice: "Une alarme qui ne fait pas de bruit." },
   cloture_fortune: { quand: [et(vu("condensateur_moyen", "raquette_moustiques"), MODULES), fab("alarme_electrique")], indice: "Un fil qui mord ceux qui passent." },
   electrificateur: { quand: [vu("resistance")], indice: "Une décharge qui revient sans cesse." },
+  // Plan 0.10 (chantier C) : le poste de montage monté, des cellules en main.
+  pack_soude: { quand: [et(fait("niveau:poste_montage"), vu("cellule_lithium"))], indice: "Des cellules soudées tiennent mieux que du scotch." },
   cloture_electrique: { quand: [fab("electrificateur")], indice: "Un vrai enclos qui se défend seul." },
   plaque_choc: { quand: [et(vu("casserole"), MODULES)], indice: "Le sol lui-même peut mordre." },
   bain_derouillage: { quand: [et(vu("casserole"), vu("machette"))], indice: "La rouille se défait, avec un peu de courant." },
@@ -760,7 +762,6 @@ export function silhouettes(e: EtatPourDevoilement): SilhouetteVue[] {
     if (!r || r.aVenir || !cachee(id)) continue;
     const lieu = r.lieu;
     if (lieu.genre !== "construction" || lieuPossede(lieu, e.installations)) continue;
-    if (lieu.accessoire && ACCESSOIRES_PLUS_TARD.has(lieu.accessoire)) continue;
     // La construction d'abord (sans son accessoire) : déjà là, ou au niveau suivant d'une qu'on a.
     const sansAccessoire: LieuRecette = { ...lieu, accessoire: undefined };
     const nom = lieuPossede(sansAccessoire, e.installations) ? nomDuLieu(lieu) : (suivants.find((x) => lieuPossede(sansAccessoire, x.avec))?.nom ?? null);
@@ -772,9 +773,6 @@ export function silhouettes(e: EtatPourDevoilement): SilhouetteVue[] {
   }
   return liste;
 }
-
-/** Les accessoires du niveau 2 (plan 0.8 §1.3) : rien ne les pose encore, leurs recettes ne sont pas des silhouettes. */
-const ACCESSOIRES_PLUS_TARD: ReadonlySet<string> = new Set(["poste_montage", "roulements"]);
 
 /**
  * Les recettes des autres familles dépliées une à une (§3.3, Q6) : on a vu quelqu'un la faire, on en tient le produit,
