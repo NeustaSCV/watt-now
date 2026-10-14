@@ -303,6 +303,14 @@ export const OBJETS_METIER = {
     poids: 1.5,
     description: "Une manivelle, un pignon, une crémaillère : il réarme l'arbalète lourde sans y laisser le dos.",
   },
+  // Le cranequin léger (plan 0.10, chantier F ; N2-33) : un roulement, une chaîne de vélo, une barre. L'arbalète à arc
+  // d'if ne se bande pas à la main : il la réarme, et toute arbalète légère, en 2 s au lieu de 3.
+  cranequin_leger: {
+    nom: "cranequin léger",
+    pluriel: "cranequins légers",
+    poids: 0.9,
+    description: "Un pignon sur son roulement, une crémaillère de chaîne de vélo : trois tours de manivelle, et l'arbalète est bandée.",
+  },
   carreau: {
     nom: "carreau",
     pluriel: "carreaux",
@@ -387,6 +395,7 @@ export const ENERGIE_GRISE_PROVISOIRE: Partial<Record<TypeObjet, number>> = {
   arbalete: 220,
   arbalete_lourde: 520,
   cranequin: 260,
+  cranequin_leger: 200,
   carreau: 8,
   carreau_acier: 15,
   manche_tourne: 25,

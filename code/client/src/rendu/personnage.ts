@@ -244,6 +244,42 @@ export function creerArme(objet: TypeObjet): THREE.Group | null {
       }
       break;
     }
+    case "pied_gueridon": {
+      // Le pied de guéridon de la terrasse du Grand Hôtel (plan 0.10, chantier F, N2-49) : une colonne de fonte moulée
+      // en balustre (≈ 80 cm), tenue par son col étroit ; au bout, le renflement et la volute du pied, qui frappent. La
+      // peinture noire écaillée laisse voir la rouille.
+      const profil = [
+        [0, -0.12], [0.022, -0.12], [0.024, 0.08], [0.03, 0.1], [0.022, 0.13], [0.024, 0.3], [0.036, 0.4], [0.05, 0.47], [0.054, 0.53],
+        [0.04, 0.58], [0.03, 0.6], [0.042, 0.62], [0.046, 0.66], [0, 0.67],
+      ].map(([r, z]) => new THREE.Vector2(r!, z!));
+      const colonne = new THREE.LatheGeometry(profil, 8).rotateX(Math.PI / 2);
+      const ecaille = (p: THREE.Vector3) => (Math.sin(p.z * 37 + p.x * 90) + Math.sin(p.z * 71 + p.y * 110) > 1.2 ? 0x6b3e26 : 0x2a2826);
+      c.ajouterDegrade(colonne, ecaille, "metal");
+      // La volute du pied : une crosse de fonte qui s'enroule vers l'avant des doigts (+y), plus épaisse que nature (Book 21 §5.3.2).
+      const volute = new THREE.CatmullRomCurve3([new V3(0, 0, 0.64), new V3(0, 0.05, 0.71), new V3(0, 0.12, 0.72), new V3(0, 0.15, 0.67), new V3(0, 0.12, 0.63), new V3(0, 0.09, 0.65)]);
+      c.ajouterDegrade(new THREE.TubeGeometry(volute, 10, 0.017, 6), ecaille, "metal");
+      // Les deux bagues moulées du col, et l'arrachement de la tige, en haut, là où le plateau tenait.
+      for (const z of [0.1, 0.6]) c.ajouter(placer(new THREE.TorusGeometry(0.03, 0.007, 4, 8), 0, 0, z), 0x3a3633, "metal");
+      c.perche(new V3(0, 0, -0.14), new V3(0, 0, -0.11), 0.012, 0x8a8f96, "metal", 5, 0.016);
+      break;
+    }
+    case "harpon": {
+      // Le harpon du gardien du phare (plan 0.10, chantier F, N2-62) : un vieux harpon de baleinier, trophée de cuisine.
+      // Une hampe de bois brunie (≈ 2,2 m en tout), la longue tige de fer, le fer barbelé à une oreille ; une corde de chanvre
+      // nouée sous la douille. Tenu comme la lance, à une main.
+      const hampe = new THREE.CylinderGeometry(0.018, 0.022, 1.6, 6, 8).rotateX(Math.PI / 2).translate(0, 0, 0.42);
+      c.ajouterDegrade(hampe, (p) => (p.z < 0.15 || p.z > 1.05 ? 0x4e3a28 : Math.sin(p.z * 8) > 0.7 ? 0x6e5236 : 0x7d5e3e));
+      // La douille, puis la tige de fer forgé, longue et fine (rouillée).
+      c.perche(new V3(0, 0, 1.2), new V3(0, 0, 1.3), 0.022, 0x3c3a37, "metal", 6, 0.015);
+      c.perche(new V3(0, 0, 1.3), new V3(0, 0, 1.66), 0.009, 0x5a4636, "metal", 5, 0.008);
+      // Le fer : une pointe en flèche, et l'oreille barbelée qui revient vers les doigts.
+      c.ajouter(placer(new THREE.ConeGeometry(0.022, 0.12, 4).rotateX(Math.PI / 2), 0, 0, 1.72), 0x6f716f, "metal");
+      c.perche(new V3(0, 0.004, 1.68), new V3(0, 0.05, 1.62), 0.008, 0x5e5c58, "metal", 4, 0.003);
+      // La corde : deux tours sous la douille, et un brin qui pend.
+      for (const z of [1.14, 1.17]) c.ligature(new V3(0, 0, z), new V3(0, 0, 1), 0.026, 0xb59a6a);
+      c.perche(new V3(0, 0.02, 1.15), new V3(0, 0.05, 0.98), 0.006, 0xb59a6a, "mat", 4);
+      break;
+    }
     default: {
       // Les armes de métier de la 0.6 (Book 25 §10.4) : leur modèle vient du registre (rendu/metier/).
       const modele = modeleMetier(objet, "main");

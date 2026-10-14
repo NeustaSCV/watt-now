@@ -1,5 +1,5 @@
 // Le tableau d'équilibre des armes de métier (Book 25 §8.4, chantier 9), rejoué par le simulateur, en Markdown.
-// Usage : npm run equilibre [-- --etape maison|H1|L1] [-- --reglages chemin/vers/reglages.json]
+// Usage : npm run equilibre [-- --etape maison|H1|L1|L2] [-- --reglages chemin/vers/reglages.json]
 // Sans `--etape`, le tableau du §8.4 (★, ★★, ★★★) et son garde-fou à ★★★. Avec `--etape`, le garde-fou rejoué avec
 // les armes que chaque famille fait seule à cette étape (la grille, plan 0.8 §2.4) : OK, ou les fautes.
 // Par défaut, il lit les réglages du serveur (`serveur/donnees/reglages.json`, s'il existe) : on essaie une valeur

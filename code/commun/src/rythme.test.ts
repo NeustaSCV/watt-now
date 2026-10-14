@@ -137,7 +137,10 @@ test("aucun ingrédient introuvable : tout ce que l'arbre peut dévoiler se fabr
     const t = trouvables(famille, false);
     // Les recettes « plus tard » (plan 0.8 §1.3) ne se dévoilent pas : le module à bobine et le cranequin attendent
     // le niveau 2, où se trouveront la bobine et les roulements (I9, I12 ; leurs dernières sources sont retirées).
-    const infaisables = RECETTES.filter((r) => !r.aVenir && !t.recettes.has(r.id)).map((r) => r.id);
+    // Plan 0.10 (chantier F) : les armes du niveau 2 sont jouables, mais leurs matières (les roulements, la bobine, le tube
+    // d'aluminium, le pack soudé) viennent des lieux du niveau 2 (chantiers B, C, H à K), que ce calcul ne connaît pas encore.
+    const niveau2 = new Set(["cranequin_leger", "module_bobine", "matraque_contacts_soudes"]);
+    const infaisables = RECETTES.filter((r) => !r.aVenir && !t.recettes.has(r.id) && !niveau2.has(r.id)).map((r) => r.id);
     // Le boyau séché vient du lapin, et le collet n'attrape encore rien : sa corde d'arc ne se dévoile jamais
     // (déclencheur « vu : boyaux »), elle ne trompe donc personne. Le pack soudé (plan 0.10, chantier C) demande le
     // fer à souder, un objet-clé du niveau 2 : le simulateur ne le trouvera qu'avec les lieux du niveau 2 (chantier M).

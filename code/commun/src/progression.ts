@@ -90,7 +90,7 @@ const A: Declencheur = { a: "autres" };
 const ARC = vu("arc_fortune", "arc_simple", "arc_if", "arc_sportif");
 const ARCS_FORTUNE = fab("arc_fortune", "arc_fortune_branche");
 const COUTEAUX_FORGES = fab("lame_forgee", "lame_forgee_fer", "lame_forgee_lime");
-const MACHETTES_FORGEES = fab("machette_forgee", "machette_forgee_fer", "machette_forgee_ebrechee");
+const MACHETTES_FORGEES = fab("machette_forgee", "machette_forgee_fer", "machette_forgee_ebrechee", "machette_forgee_caoutchouc");
 // Le module de décharge unique (0.8.2, R14) : les modules « au flash » et « à la raquette » d'une partie 0.8.1 comptent
 // pour lui (ANCIENNES_RECETTES).
 const MODULES = fab("module_decharge", "module_bobine");
@@ -99,7 +99,7 @@ const FLECHES_OU_CARREAUX = vu("fleche_durcie", "fleche_os", "fleche_clou", "fle
 /** Cinq lames forgées : la pratique ouvre seule ce que la rencontre ouvre plus vite (Book 25 §2.5). */
 const CINQ_LAMES: Declencheur = {
   a: "fabrique",
-  recettes: ["lame_forgee", "lame_forgee_fer", "lame_forgee_lime", "machette_forgee", "machette_forgee_fer", "machette_forgee_ebrechee", "serpe", "serpe_soc", "hachette", "hache_forgee", "hache_forgee_soc", "reforger_lame"],
+  recettes: ["lame_forgee", "lame_forgee_fer", "lame_forgee_lime", "machette_forgee", "machette_forgee_fer", "machette_forgee_ebrechee", "machette_forgee_caoutchouc", "serpe", "serpe_soc", "hachette", "hache_forgee", "hache_forgee_soc", "reforger_lame"],
   but: 5,
 };
 const FOYER_CUISINE = ou(fait("foyer:foyer_cuisine"), { a: "installation", type: "feu", niveau: 3 });
@@ -242,6 +242,10 @@ export const PROGRESSION: Readonly<Record<string, LigneProgression>> = {
   arbalete_lourde: { quand: [vu("ressort_retrempe")], indice: "Deux ressorts retrempés, une arme lourde." },
   piege_machoires: { quand: [vu("ressort_retrempe")], indice: "Des mâchoires qui ne lâchent jamais." },
   cranequin: { quand: [et(fab("arbalete_lourde"), vu("roulements"))], indice: "Une manivelle pour bander l'arme lourde." },
+  // Le niveau 2 (plan 0.10, chantier F) : liées à une construction, la construction seule les dévoile.
+  cranequin_leger: { quand: [vu("roulements")], indice: "Un arc d'if ne se bande pas à la main." },
+  machette_forgee_caoutchouc: { quand: [vu("caoutchouc")], indice: "Une poignée qui ne glisse plus." },
+  matraque_contacts_soudes: { quand: [vu("tube_aluminium")], indice: "Un tube creux, des contacts soudés : une vraie matraque." },
   carreaux_acier: { quand: [vu("pointe_acier")], indice: "Une pointe d'acier perce mieux que l'os." },
 
   // ---------- Le niveau 1 : le stockage, l'établi, la lumière, les outils de fortune (plan 0.8, chantier 6) ----------
@@ -269,7 +273,7 @@ export const ATELIER: Readonly<Record<Famille, string>> = { charbonniers: "forge
  * sont aussi, pour le jour où ils viendront.
  */
 export const ARMES_DE_METIER: Readonly<Record<Famille, readonly string[]>> = {
-  voltaiques: ["matraque_fortune", "matraque_electrique", "matraque_electrodes", "matraque_manche_tourne", "module_decharge", "module_bobine", "aiguillon"],
+  voltaiques: ["matraque_fortune", "matraque_electrique", "matraque_electrodes", "matraque_manche_tourne", "matraque_contacts_soudes", "module_decharge", "module_bobine", "aiguillon"],
   charbonniers: [
     "lame_forgee",
     "lame_forgee_fer",
@@ -278,6 +282,7 @@ export const ARMES_DE_METIER: Readonly<Record<Famille, readonly string[]>> = {
     "machette_forgee",
     "machette_forgee_fer",
     "machette_forgee_ebrechee",
+    "machette_forgee_caoutchouc",
     "hachette",
     "hache_forgee",
     "hache_forgee_soc",
@@ -305,6 +310,7 @@ export const ARMES_DE_METIER: Readonly<Record<Famille, readonly string[]>> = {
     "carreaux_papier",
     "carreaux_acier",
     "cranequin",
+    "cranequin_leger",
   ],
 };
 

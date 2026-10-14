@@ -221,12 +221,17 @@ function aleaFixe(graine = 7): () => number {
 
 /**
  * Réarmer (l'arbalète, au pied ; la lourde, au cranequin) ou encocher (l'arc), en secondes : la règle du serveur
- * (`rearmement`, mecanique.ts), réglage d'équilibre compris.
+ * (`rearmement`, mecanique.ts), réglage d'équilibre compris. L'arbalète ★★★ et plus a son cranequin léger dans le sac :
+ * sans lui, son arc d'if ne se monte pas (plan 0.10, N2-32) ; il la réarme en 2 s au lieu de 3.
  */
-function dureeRecharge(w: ArmeTir): number {
+function dureeRecharge(w: ArmeTir & { etoiles?: Etoiles | null }): number {
   if (!w.armeeDAvance) return w.rechargeMs / 1000;
-  return (rearmement(w, { cranequin: 1, pied_de_biche: 1 })?.ms ?? w.rechargeMs) / 1000;
+  const sac = { cranequin: 1, pied_de_biche: 1, ...((w.etoiles ?? 0) >= ETOILES_CRANEQUIN_LEGER ? { cranequin_leger: 1 } : {}) };
+  return (rearmement(w, sac)?.ms ?? w.rechargeMs) / 1000;
 }
+
+/** À partir de ces étoiles, l'arbalète comparée a son cranequin léger (l'arc d'if, ★★★ : N2-32). */
+export const ETOILES_CRANEQUIN_LEGER = 3;
 
 /** Cette arme peut-elle l'achever (le tranchant n'achève pas un casqué, Book 23 §4.2) ? */
 function finissable(a: Arme, e: Eteint): boolean {
@@ -653,9 +658,12 @@ function juger(arme: (f: ArmeDeMetier) => Ligne): Verdict {
 
 // ---------- Le garde-fou rejoué par étape (plan 0.8 §2.4, P11 ; chantier 8) ----------
 
-/** Les étapes que la 0.8 met en jeu : la maison, puis H1 (la station, le gué) et L1 (la Coopérative, le Moulin). */
-export type EtapeEquilibre = "maison" | "H1" | "L1";
-export const ETAPES_EQUILIBRE: readonly EtapeEquilibre[] = ["maison", "H1", "L1"];
+/**
+ * Les étapes que la 0.8 met en jeu : la maison, puis H1 (la station, le gué) et L1 (la Coopérative, le Moulin) ; et
+ * depuis la 0.10 (chantier F), L2 (l'hôtel et le phare, au bout des deux routes de la côte).
+ */
+export type EtapeEquilibre = "maison" | "H1" | "L1" | "L2";
+export const ETAPES_EQUILIBRE: readonly EtapeEquilibre[] = ["maison", "H1", "L1", "L2"];
 
 /**
  * Les armes de chaque famille à chaque étape, **seul**, selon la grille (plan 0.8 §2.4 ; `armes-par-niveau.md` §6.2 et
@@ -664,13 +672,17 @@ export const ETAPES_EQUILIBRE: readonly EtapeEquilibre[] = ["maison", "H1", "L1"
  *   de ficelle) et la lance pour qui tient la distance ; l'arc de fortune pour repère ;
  * - à H1 : la machette forgée ★★ (l'enclume de dépanneur), la matraque ★★ (la petite batterie, Q-A5), l'arbalète ★★
  *   (le ressort) ; l'arc simple ★★★ (fil dentaire) pour repère ;
- * - à L1 : les armes de la station (K-Q2, pas d'étoile intermédiaire) ; l'arc d'if ★★ pour repère.
+ * - à L1 : les armes de la station (K-Q2, pas d'étoile intermédiaire) ; l'arc d'if ★★ pour repère ;
+ * - à L2 (0.10) : les ★★★ de chaque clé du niveau 2 — la machette au manche de caoutchouc (la forge ventilée, L2B), la
+ *   matraque à bobine ou à contacts soudés (le poste de montage, L2A), l'arbalète à arc d'if et son cranequin léger (les
+ *   roulements montés, L2A) ; l'arc d'if ★★★ (2,25) pour repère.
  * La seconde arme reste celle du §8.4 (`SECONDE_ARME`) : le marteau pour la lame, la lance pour le tireur.
  */
 export const ARMES_DES_ETAPES: Record<EtapeEquilibre, Record<FamilleArme, string>> = {
   maison: { lame: "marteau", electrique: "marteau", arbalete: "arc_simple#2", arc: "arc_fortune" },
   H1: { lame: "machette_forgee#2", electrique: "matraque_electrique#2", arbalete: "arbalete#2", arc: "arc_simple" },
   L1: { lame: "machette_forgee#2", electrique: "matraque_electrique#2", arbalete: "arbalete#2", arc: "arc_if#2" },
+  L2: { lame: "machette_forgee", electrique: "matraque_electrique", arbalete: "arbalete", arc: "arc_if#3" },
 };
 
 /** Les étoiles d'une clé, pour la colonne « Niv. » (1 pour une arme sans étoiles). */
