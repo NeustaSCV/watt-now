@@ -554,3 +554,29 @@ Décidés (MS-01 à MS-09, MS-Q1 à MS-Q8, §3.2), sortis de la 0.10 pour la gar
 | V1-22 ✅ | La matraque ★★★ obtenue par la maîtrise dès le niveau 1 a aussi 24 Wh | **Accepté** (la capacité suit les étoiles) |
 
 **Le Noyé** : la boule refusée ; le corps lui-même gonflé (« patate »), **variante moyenne** choisie par le porteur, fusionnée.
+
+---
+
+## 13. Après la vague 2 (2026-10-14) : l'état et les décisions
+
+**Fait et fusionné dans `integration-0-10`** (1 102 tests, verif et build passent) : H (la route du pont : le péage, la marée de 6 min, la cale basse), I (la corniche : le pin tombé, l'éboulement, le péage du tunnel), J (le Grand Hôtel : le check-in, l'étage caché, le balcon), K (le phare : l'escabeau, la lanterne la nuit, la corne, le cargo, l'épave, le relief par `hauteurSol`). Les objets portés dans les bras suivent une seule règle (S-08) : on ne frappe pas, on pose.
+
+**Les questions des chantiers, tranchées par le porteur (2026-10-14)** :
+
+| # | Question | Décision |
+|---|---|---|
+| V2-01 ✅ | Repayer le péage au retour, l'heure passée ? | **Non** : dans le sens lieu → terrain, on passe toujours librement (N2-60, « à l'aller seulement ») |
+| V2-02 ✅ | La valeur d'un objet au péage | **Le prix de rachat du Comptoir** ; **les ordures comptent si elles valent déjà quelque chose** au Comptoir (celles à 0 ne comptent pas) — « soyons sympa » |
+| V2-03 ✅ | Le semis des haltes : pont 10 pierres, 8 branches, 4 bûches (+ le vrac électrique) ; corniche 20 pierres, 8 bûches, 18 branches (+ le pin) | **Validé** |
+| V2-04 ✅ | La caisse du pont est derrière la porte | **Demander aux bâtiments de la déplacer** devant la porte ; en attendant, on paie aussi contre la porte |
+| V2-05 ✅ | L'Équipé derrière la porte du péage devenu dormeur | **Oui** |
+| V2-06 ✅ | Les couvertures polaires : seulement dans les textes | **Oui** (pas d'objet nouveau) |
+| V2-07 ✅ | Le fil dentaire « courant » (≈ 1 chance sur 3 par visite des chambres) | **Oui** |
+| V2-08 ✅ | Le nombre d'Éteints du phare (14 au modèle, 20 visés) | **Après la mesure sur l'iPhone** |
+| V2-09 ✅ | La lanterne du phare : 45 m, allumée jusqu'au retour à 24 h, n'attire que la nuit | **Oui** |
+| V2-10 ✅ | Le bidon et le prisme : des états du lieu, pas des objets du sac | **Oui** |
+| V2-11 ✅ | L'écran de la borne s'allume dès la batterie branchée | **Oui** |
+| V2-12 ✅ | Les bras pris, le bouton A dit « Frapper » | **Corriger** (chantier L : il dit « Poser ») |
+| V2-13 ✅ | Les bâtiments du pont vus de dehors, tout noirs | **À regarder à la recette** (N, sur l'iPhone) |
+| V2-14 ✅ | Pour la session bâtiments : le pin parasol qui cache la barricade, les bords invisibles du phare, la réserve des guetteurs inaccessible, l'eau du pont pas fermée | **À transmettre** (`en-suspens.md`) |
+| V2-15 ✅ | La fenêtre de la caisse du péage a une croix (✕), comme le sac et le coffre | **Gardée** (ce n'est pas un message) |
