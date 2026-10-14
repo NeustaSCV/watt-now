@@ -128,7 +128,7 @@ test("améliorer le feu en foyer de pierres : sur place, même identifiant, le b
   assert.equal(u.faits()["foyer:foyer_pierres"], 1);
 });
 
-test("un feu en braises s'améliore ; il manque des matériaux : on dit lesquels, et l'autre façon de faire", () => {
+test("un feu en braises s'améliore ; il manque des matériaux : on dit lesquels, sans autre façon de faire (plan 0.10)", () => {
   const t = monter({ pierre: 6, buche: 2 }, (b, id) => poserFeu(b, id, { id: 1, bois: 0.2, allume: true }));
   t.agir("feu", 1, "ameliorer");
   assert.equal(t.dernier("feu")!.feu.niveau, 2);
@@ -137,19 +137,16 @@ test("un feu en braises s'améliore ; il manque des matériaux : on dit lesquels
   u.agir("feu", 1, "ameliorer");
   const dit = u.infos().at(-1)!;
   assert.match(dit, /rouleau de grillage/);
-  assert.match(dit, /deux barres de métal.*Marteler 2/);
+  assert.doesNotMatch(dit, /deux barres de métal/);
 });
 
-test("le foyer de cuisine se monte avec deux barres de métal au lieu du grillage ; il rôtit deux fois plus vite", () => {
-  // Le repli demande Marteler 2 (plan 0.8 §3, chantier 5) : le marteau remmanché, pas la pierre.
+test("le foyer de cuisine ne se monte plus avec deux barres de métal (plan 0.10) ; il rôtit deux fois plus vite", () => {
+  // L'ancien repli (deux barres, Marteler 2) ne fait plus rien : il faut le grillage.
   const t = monter({ branche: 3, corde: 1, barre_metal: 2, couteau: 1, marteau: 1, volaille_crue: 2 }, (b, id) => poserFeu(b, id, { id: 1, niveau: 2, bois: 5 }));
   t.agir("feu", 1, "ameliorer", 14);
-  assert.equal(t.dernier("feu")!.feu.niveau, 3);
-  assert.equal(t.inventaireActuel().barre_metal ?? 0, 0);
-  const etat = t.base.chargerFeux(t.compte.id)[0]!;
-  assert.deepEqual(etat.payes?.at(-1), { branche: 3, corde: 1, barre_metal: 2 });
-  // Rôtir 2 portions : 6 s sur un feu de camp, 3 s ici.
-  t.base.sauverFeu(t.compte.id, { ...etat, allume: true });
+  assert.notEqual(t.dernier("feu")?.feu.niveau, 3);
+  assert.equal(t.inventaireActuel().barre_metal, 2);
+  // Rôtir 2 portions : 6 s sur un feu de camp, 3 s sur un foyer de cuisine.
   const u = monter({ volaille_crue: 2, briquet: 1 }, (b, id) => poserFeu(b, id, { id: 1, niveau: 3, bois: 5, allume: true }));
   u.joueur.recevoir({ t: "interagir", cible: { genre: "feu", id: 1 }, verbe: "rotir" });
   const debut = u.dernier("action")!;

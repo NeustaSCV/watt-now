@@ -303,6 +303,14 @@ export const OBJETS_METIER = {
     poids: 1.5,
     description: "Une manivelle, un pignon, une crémaillère : il réarme l'arbalète lourde sans y laisser le dos.",
   },
+  // Le cranequin léger (plan 0.10, chantier F ; N2-33) : un roulement, une chaîne de vélo, une barre. L'arbalète à arc
+  // d'if ne se bande pas à la main : il la réarme, et toute arbalète légère, en 2 s au lieu de 3.
+  cranequin_leger: {
+    nom: "cranequin léger",
+    pluriel: "cranequins légers",
+    poids: 0.9,
+    description: "Un pignon sur son roulement, une crémaillère de chaîne de vélo : trois tours de manivelle, et l'arbalète est bandée.",
+  },
   carreau: {
     nom: "carreau",
     pluriel: "carreaux",
@@ -326,6 +334,16 @@ export const OBJETS_METIER = {
     pluriel: "brouettes",
     poids: 12,
     description: "Une roue de vélo, deux bras, une caisse de planches : soixante kilos roulés, et l'on court encore sur le chemin.",
+  },
+  // ---------- PROVISOIRE (plan 0.10, chantier F) : à retirer à l'intégration du chantier C ----------
+  // Le pack soudé est du chantier C : déclaré ici au plus court pour que la matraque à contacts soudés compile. À
+  // l'intégration, garder sa vraie définition (C) et supprimer ce bloc, sa valeur et son icône (client/src/icones-niveau1.ts,
+  // bloc « PROVISOIRE »).
+  pack_soude: {
+    nom: "pack soudé",
+    pluriel: "packs soudés",
+    poids: 0.4,
+    description: "Des cellules soudées, 24 Wh, et une LED qui dit ce qui reste. (Provisoire.)",
   },
 } satisfies Record<string, DefinitionObjet>;
 
@@ -379,6 +397,9 @@ export const ENERGIE_GRISE_PROVISOIRE: Partial<Record<TypeObjet, number>> = {
   arbalete: 220,
   arbalete_lourde: 520,
   cranequin: 260,
+  cranequin_leger: 200,
+  // PROVISOIRE (plan 0.10, chantier F) : la valeur du pack soudé du chantier C, à retirer à l'intégration de C.
+  pack_soude: 90,
   carreau: 8,
   carreau_acier: 15,
   manche_tourne: 25,

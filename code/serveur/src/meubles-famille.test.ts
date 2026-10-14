@@ -73,7 +73,7 @@ function seul(famille: Famille, piece: Inventaire, laisses: readonly (keyof Inve
 
 // ---------- Les lignées et leurs clés ----------
 
-test("chaque meuble de famille a sa lignée, sa clé de la station et son repli, avec des textes au nom affiché du lieu", () => {
+test("chaque meuble de famille a sa lignée et sa clé de la station, sans repli (plan 0.10), avec des textes au nom affiché du lieu", () => {
   const attendu = { forge: ["enclume_depanneur", "charbonniers"], banc_recharge: ["panneau_solaire", "voltaiques"], pedalier: ["petit_alternateur", "mecanistes"] } as const;
   for (const [type, [cle, famille]] of Object.entries(attendu)) {
     const premier = LIGNEES_INSTALLATIONS[type as keyof typeof attendu]![0]!;
@@ -81,7 +81,7 @@ test("chaque meuble de famille a sa lignée, sa clé de la station et son repli,
     assert.equal(premier.cle?.ou, "H1A", type);
     assert.equal(premier.etapeLieu, "H1", type);
     assert.equal(premier.famille, famille, type);
-    assert.ok(premier.cle?.replis?.length, `${type} : un repli`);
+    assert.equal("replis" in premier.cle!, false, `${type} : pas de repli`);
     // Le niveau 1 coûte ce que coûte sa recette (la pièce se monte ensuite, sur le meuble posé).
     assert.deepEqual(premier.couts[0], recette(type)!.ingredients, type);
     // On écrit le nom du lieu (« la station »), jamais le code de l'étape.
@@ -95,24 +95,21 @@ test("chaque meuble de famille a sa lignée, sa clé de la station et son repli,
 });
 
 test("ce qui attend le niveau 2 ou 3 est grisé « plus tard » ; la clôture de fortune et l'alarme électrique restent", () => {
+  // Plan 0.10 (chantier F) : les armes du niveau 2 sont jouables ; le cranequin suit l'arbalète lourde au niveau 3.
   const plusTard = {
-    module_bobine: "niveau 2",
-    matraque_electrodes: "niveau 2",
-    matraque_manche_tourne: "niveau 2",
-    aiguillon: "niveau 2",
     electrificateur: "niveau 2",
     cloture_electrique: "niveau 2",
     ventilateur_forge: "niveau 2",
-    cranequin: "niveau 2",
-    arc_arbalete_if: "niveau 2",
+    cranequin: "niveau 3",
     arbalete_lourde: "niveau 3",
     arc_arbalete_retrempe: "niveau 3",
     noix_forgee: "niveau 3",
     ressort_retrempe: "niveau 3",
-    hache_forgee: "niveau 2",
-    glaive: "niveau 2",
   } as const;
   for (const [id, a] of Object.entries(plusTard)) assert.equal(recette(id)?.aVenir, a, id);
+  for (const id of ["module_bobine", "matraque_electrodes", "matraque_manche_tourne", "matraque_contacts_soudes", "aiguillon", "cranequin_leger", "arc_arbalete_if", "hache_forgee", "glaive", "machette_forgee_caoutchouc"]) {
+    assert.equal(recette(id)?.aVenir, undefined, id);
+  }
   for (const id of ["banc_recharge", "pack_cellules", "module_decharge", "matraque_fortune", "matraque_electrique", "lampe_bricolee", "cloture_fortune", "alarme_electrique", "pedalier", "arbalete", "arc_arbalete_frene", "arc_arbalete_ressort", "forge", "pinces_forge", "rivet", "pointe_acier", "lame_forgee_fer", "machette_forgee_fer", "hachette", "charbonniere", "charbonniere_charbonnette"]) {
     assert.equal(recette(id)?.aVenir, undefined, id);
   }

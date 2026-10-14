@@ -90,12 +90,15 @@ test("0.8.2 : Fabriquer n'a plus qu'une ligne de corde d'arc (ficelles ou corde)
   const cordes = RECETTES.filter((r) => faconsRecette(r).some((f) => f.ficelle === 3 || f.corde === 1) && "objet" in r.produit && r.produit.objet === "corde_arc");
   assert.deepEqual(cordes.map((r) => r.id), ["corde_arc_ficelle"]);
   assert.equal(recette("corde_arc_corde"), undefined);
+  // Une seule matraque électrique au banc solaire ; les autres (niveau 2, plan 0.10) se montent au poste de montage.
   const matraques = RECETTES.filter((r) => !r.aVenir && "objet" in r.produit && r.produit.objet === "matraque_electrique");
-  assert.deepEqual(matraques.map((r) => r.id), ["matraque_electrique"]);
+  assert.deepEqual(matraques.filter((r) => r.lieu.genre === "construction" && !r.lieu.accessoire).map((r) => r.id), ["matraque_electrique"]);
+  assert.deepEqual(matraques.filter((r) => r.lieu.genre === "construction" && r.lieu.accessoire === "poste_montage").map((r) => r.id), ["matraque_electrodes", "matraque_manche_tourne", "matraque_contacts_soudes"]);
   assert.equal(recette("matraque_petite_batterie"), undefined);
-  // Un seul module de décharge jouable au niveau 1 (la bobine attend le niveau 2).
+  // Un seul module de décharge au banc solaire (la bobine se monte au poste de montage, niveau 2).
   const modules = RECETTES.filter((r) => !r.aVenir && "objet" in r.produit && r.produit.objet === "module_decharge");
-  assert.deepEqual(modules.map((r) => r.id), ["module_decharge"]);
+  assert.deepEqual(modules.map((r) => r.id), ["module_decharge", "module_bobine"]);
+  assert.deepEqual(recette("module_bobine")!.lieu, { genre: "construction", construction: "banc_recharge", accessoire: "poste_montage" });
   assert.equal(recette("module_flash"), undefined);
   assert.equal(recette("module_raquette"), undefined);
 });

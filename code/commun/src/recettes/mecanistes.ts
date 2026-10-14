@@ -54,8 +54,11 @@ function noix(id: string, nom: string, ingredients: Recette["ingredients"], etoi
   };
 }
 
-/** Une recette de carreaux : des fûts courts de bois dur, un empennage, une pointe (Book 25 §6.1). */
-function carreaux(id: string, nom: string, ingredients: Recette["ingredients"], objet: "carreau" | "carreau_acier", quantite: number): Recette {
+/**
+ * Une recette de carreaux : des fûts courts de bois dur, un empennage, une pointe (Book 25 §6.1). `auChoix` : l'empennage,
+ * de plumes ou, depuis la 0.10 (N2-39), de plastique découpé dans une bouteille.
+ */
+function carreaux(id: string, nom: string, ingredients: Recette["ingredients"], objet: "carreau" | "carreau_acier", quantite: number, auChoix?: Recette["auChoix"]): Recette {
   return {
     id,
     lieu: aCote("etabli"),
@@ -63,6 +66,7 @@ function carreaux(id: string, nom: string, ingredients: Recette["ingredients"], 
     nom,
     produit: { objet, quantite },
     ingredients,
+    ...(auChoix ? { auChoix } : {}),
     qualites: { couper: 1 },
     duree: 20 * (quantite / 4),
     intensite: "legere",
@@ -89,13 +93,15 @@ export const RECETTES_MECANISTES: Recette[] = [
   // ---------- L'arbalète (Book 25 §6.1) ----------
   {
     // Le fût : la rainure du carreau, le logement de la noix. La scie du kit suffit ; le ciseau d'un Charbonnier y
-    // taille une vraie mortaise (une étoile de plus).
+    // taille une vraie mortaise (une étoile de plus). Depuis la 0.10 (N2-38), un tube d'aluminium, plus léger que le
+    // bois, fait aussi l'affaire : la bûche passe d'abord.
     id: "arbrier",
     lieu: aCote("etabli"),
     categorie: "materiaux",
     nom: "Arbrier d'arbalète",
     produit: { objet: "arbrier", quantite: 1 },
-    ingredients: { buche: 1 },
+    ingredients: {},
+    auChoix: [{ buche: 1 }, { tube_aluminium: 1 }],
     qualites: { scier_bois: 2 },
     duree: 90,
     intensite: "moyenne",
@@ -105,14 +111,14 @@ export const RECETTES_MECANISTES: Recette[] = [
   // La noix : une cheville de bois dur (★★), un os de poule (★★★), ou deux rivets forgés d'un Charbonnier (★★★★).
   noix("noix_bois", "Noix et détente (bois)", { petit_ressort: 1, branche: 1 }, ETOILES_NOIX.bois, false),
   noix("noix_os", "Noix et détente (os)", { petit_ressort: 1, os: 1 }, ETOILES_NOIX.os, false),
-  // Plan 0.8 §1.3 (I19) : la noix forgée, l'arc retrempé et l'arbalète lourde sont du niveau 3 ; l'arc en if (★★★), du
-  // niveau 2 (Q-0.8-3, Q-B1b : l'établi de menuisier) ; le cranequin attend les roulements montés (L2A). Grisés.
+  // Plan 0.8 §1.3 (I19) : la noix forgée, l'arc retrempé et l'arbalète lourde sont du niveau 3, grisés. L'arc en if
+  // (★★★) se façonne à l'établi à étau depuis la 0.10 (N2-31) : c'est le cranequin léger qui ouvre l'arbalète ★★★.
   plusTard(noix("noix_forgee", "Noix et détente (rivets forgés)", { petit_ressort: 1, rivet: 2 }, ETOILES_NOIX.forgee, true, aCote("etabli", { niveau: 2 })), "niveau 3"),
   // L'arc : le bois s'use plus vite que l'acier ; la lame brute est fatiguée ; l'if est le meilleur bois ; le ressort
   // retrempé, le meilleur arc.
   arcArbalete("arc_arbalete_frene", "Arc d'arbalète (frêne)", { perche_frene: 1 }, ETOILES_ARC_ARBALETE.frene, 20, true, aCote("etabli")),
   arcArbalete("arc_arbalete_ressort", "Arc d'arbalète (lame de ressort)", { ressort_lames: 1 }, ETOILES_ARC_ARBALETE.ressort, 30, false, aCote("etabli")),
-  plusTard(arcArbalete("arc_arbalete_if", "Arc d'arbalète (if)", { baton_if: 1 }, ETOILES_ARC_ARBALETE.if, 40, true, aCote("etabli", { niveau: 3 })), "niveau 2"),
+  arcArbalete("arc_arbalete_if", "Arc d'arbalète (if)", { baton_if: 1 }, ETOILES_ARC_ARBALETE.if, 40, true, aCote("etabli", { niveau: 2 })),
   plusTard(arcArbalete("arc_arbalete_retrempe", "Arc d'arbalète (ressort retrempé)", { ressort_retrempe: 1 }, ETOILES_ARC_ARBALETE.retrempe, 30, false, aCote("etabli", { niveau: 2 })), "niveau 3"),
   {
     id: "corde_arbalete",
@@ -140,7 +146,8 @@ export const RECETTES_MECANISTES: Recette[] = [
     famille: "mecanistes",
   },
   {
-    // Le maillon faible de l'arbrier, de la noix et de l'arc : la moins bonne des trois fixe les étoiles.
+    // Le maillon faible de l'arbrier, de la noix et de l'arc : la moins bonne des trois fixe les étoiles. Un arc d'if ne se
+    // bande pas à la main : le monter demande un cranequin léger dans le sac (N2-32, `refusMontageArbalete`).
     id: "arbalete",
     lieu: aCote("etabli"),
     categorie: "outils",
@@ -152,6 +159,7 @@ export const RECETTES_MECANISTES: Recette[] = [
     intensite: "moyenne",
     famille: "mecanistes",
     facteursEtoiles: facteursArbalete,
+    note: "Avec un arc d'if, il faut aussi un cranequin léger dans le sac : un tel arc ne se bande pas à la main.",
   },
   {
     // La variante supérieure (Book 25 §7.3) : deux ressorts retrempés d'un Charbonnier, superposés. Une arme qui
@@ -171,9 +179,9 @@ export const RECETTES_MECANISTES: Recette[] = [
   },
   {
     // Un roulement, une chaîne de vélo, une barre : le pignon se taille à la meule du pédalier. Il réarme la lourde en
-    // 4 s au lieu de 6.
+    // 4 s au lieu de 6. Il la suit au niveau 3 (plan 0.10, N2-Q1) : au niveau 2, c'est le cranequin léger.
     id: "cranequin",
-    aVenir: "niveau 2",
+    aVenir: "niveau 3",
     lieu: aCote("pedalier", { accessoire: "roulements" }),
     categorie: "outils",
     nom: "Cranequin",
@@ -184,11 +192,28 @@ export const RECETTES_MECANISTES: Recette[] = [
     intensite: "moyenne",
     famille: "mecanistes",
   },
+  // ---------- Le niveau 2 (plan 0.10, chantier F) ----------
+  {
+    // Le cranequin léger (N2-33, P9) : un roulement, une chaîne de vélo, une barre, au pédalier équipé des roulements
+    // montés (la boîte de roulements de L2A). L'arbalète à arc d'if en a besoin ; il réarme toute arbalète légère en 2 s
+    // au lieu de 3 (`plusViteAvec`, tir.ts).
+    id: "cranequin_leger",
+    lieu: aCote("pedalier", { accessoire: "roulements" }),
+    categorie: "outils",
+    nom: "Cranequin léger",
+    produit: { objet: "cranequin_leger", quantite: 1 },
+    ingredients: { roulements: 1, chaine_velo: 1, barre_metal: 1 },
+    qualites: { serrer: 2 },
+    duree: 90,
+    intensite: "moyenne",
+    famille: "mecanistes",
+  },
   // Les carreaux : quatre par recette ; un bocal de clous arme douze pointes.
-  carreaux("carreaux_os", "Carreaux à pointe d'os", { branche: 1, plumes: 1, os: 2 }, "carreau", 4),
+  // L'empennage : des plumes, ou du plastique découpé dans une bouteille (plan 0.10, N2-39) ; les plumes passent d'abord.
+  carreaux("carreaux_os", "Carreaux à pointe d'os", { branche: 1, os: 2 }, "carreau", 4, [{ plumes: 1 }, { plastique: 1 }]),
   carreaux("carreaux_papier", "Carreaux empennés de papier", { branche: 1, papier: 2, os: 2 }, "carreau", 4),
-  carreaux("carreaux_clou", "Carreaux à pointe de clou", { branche: 3, plumes: 3, bocal_clous: 1 }, "carreau", 12),
-  carreaux("carreaux_acier", "Carreaux à pointe d'acier", { branche: 1, plumes: 1, pointe_acier: 4 }, "carreau_acier", 4),
+  carreaux("carreaux_clou", "Carreaux à pointe de clou", { branche: 3, bocal_clous: 1 }, "carreau", 12, [{ plumes: 3 }, { plastique: 3 }]),
+  carreaux("carreaux_acier", "Carreaux à pointe d'acier", { branche: 1, pointe_acier: 4 }, "carreau_acier", 4, [{ plumes: 1 }, { plastique: 1 }]),
 
   // ---------- Les pièges (Book 25 §6.3) : posés sur place, ils prennent le premier Éteint qui passe ----------
   {

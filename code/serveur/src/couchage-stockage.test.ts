@@ -42,7 +42,7 @@ function monter(inventaire: Record<string, number>, avant?: (base: Base, id: num
   return { base, compte, joueur, attendre, dernier, infos, sac, agir, installation, confort, maintenant: () => instant };
 }
 
-test("l'abri fermé : la toile de jute du Moulin, des clous, Couper 1 et Marteler 1 ; sommeil ×1,45 (×1,35 sans la toile)", () => {
+test("l'abri fermé : la toile de jute du Moulin, des clous, Couper 1 et Marteler 1 ; sommeil ×1,45 ; sans la toile, rien (plan 0.10)", () => {
   const t = monter({ toile_jute: 1, branche: 10, corde: 1, poignee_clous: 1, couteau: 1, pierre: 1 }, (b, id) => {
     b.ajouterInstallation(id, "abri", 21, 20, 0);
     b.sauverNiveauInstallation(id, 1, 2);
@@ -52,16 +52,21 @@ test("l'abri fermé : la toile de jute du Moulin, des clous, Couper 1 et Martele
   assert.deepEqual(t.sac(), { sac_a_dos: 1, couteau: 1, pierre: 1 }, "la toile, les branches, la corde et les clous sont posés");
   assert.ok(Math.abs(t.confort(1) - 1.45) < 1e-9);
   assert.equal(SOMMEIL_ABRI[2], 1.45);
-  // Le repli : 4 chiffons et 2 sacs plastique cousus.
-  const u = monter({ chiffons: 4, sac_plastique: 2, branche: 10, corde: 1, poignee_clous: 1, couteau: 1, pierre: 1 }, (b, id) => {
+  // L'ancien repli (4 chiffons et 2 sacs plastique cousus) ne ferme plus l'abri (plan 0.10 : pas de repli).
+  const r = monter({ chiffons: 4, sac_plastique: 2, branche: 10, corde: 1, poignee_clous: 1, couteau: 1, pierre: 1 }, (b, id) => {
     b.ajouterInstallation(id, "abri", 21, 20, 0);
     b.sauverNiveauInstallation(id, 1, 2);
   });
-  u.agir(1, "ameliorer");
-  assert.equal(u.installation(1).niveau, 3);
-  assert.deepEqual(u.installation(1).etat.payes?.at(-1), { branche: 10, corde: 1, poignee_clous: 1, chiffons: 4, sac_plastique: 2 }, "fermé par le repli");
-  // Plan 0.8 §9.2 : sans la toile de jute, l'abri fermé est moins chaud.
-  assert.ok(Math.abs(u.confort(1) - 1.35) < 1e-9, `repli : ×1,35 (et non ${u.confort(1)})`);
+  r.agir(1, "ameliorer");
+  assert.equal(r.installation(1).niveau, 2);
+  assert.match(r.infos().join(" "), /toile de jute/);
+  // Un abri fermé ainsi dans une partie de la 0.9 se relit : moins chaud (×1,35), comme avant.
+  const u = monter({}, (b, id) => {
+    b.ajouterInstallation(id, "abri", 21, 20, 0);
+    b.sauverNiveauInstallation(id, 1, 3);
+    b.sauverEtatInstallation(id, 1, { payes: [{ branche: 6 }, { branche: 10, corde: 1, poignee_clous: 1, chiffons: 4, sac_plastique: 2 }] });
+  });
+  assert.ok(Math.abs(u.confort(1) - 1.35) < 1e-9, `abri de la 0.9 : ×1,35 (et non ${u.confort(1)})`);
   assert.equal(SOMMEIL_ABRI_FERME_REPLI, 1.35);
   // Redescendu, c'est de nouveau l'abri garni (×1,3).
   u.agir(1, "redescendre", 30);
@@ -106,15 +111,16 @@ test("le coffre cerclé tient 250 kg et demande Marteler 2 : le marteau remmanch
   t.agir(1, "ameliorer");
   assert.equal(t.installation(1).niveau, 2);
   assert.equal(capaciteCoffre(t.installation(1)), 250);
-  // Le repli : la barre de la ruine, martelée en bandes.
+  // L'ancien repli (la barre de la ruine, martelée en bandes) ne cercle plus le coffre (plan 0.10).
   const u = monter({ barre_metal: 1, poignee_clous: 1, buche: 2, marteau: 1 }, (b, id) => b.ajouterInstallation(id, "coffre", 21, 20, 0));
   u.agir(1, "ameliorer");
-  assert.equal(u.installation(1).niveau, 2);
+  assert.equal(u.installation(1).niveau ?? 1, 1);
+  assert.match(u.infos().at(-1)!, /feuillards/);
   // La réserve couverte attend le niveau 2 (les tôles ondulées).
   const reserve = lignee("coffre")![2]!;
   assert.equal(reserve.aVenir, "niveau 2");
-  u.agir(1, "ameliorer");
-  assert.match(u.infos().at(-1)!, /plus tard/i);
+  t.agir(1, "ameliorer");
+  assert.match(t.infos().at(-1)!, /plus tard/i);
 });
 
 test("une hache rangée au râtelier, à 3 m, donne Fendre au coffre ; plus loin, non", () => {
@@ -143,7 +149,7 @@ test("une hache rangée au râtelier, à 3 m, donne Fendre au coffre ; plus loin
   assert.match(t.infos().at(-1)!, /outils du râtelier/);
 });
 
-test("l'établi à étau donne Serrer 3 à 3 m ; l'étau dans le sac ne serre pas ; monté au serre-joint, pas de serrage fort", () => {
+test("l'établi à étau donne Serrer 3 à 3 m ; l'étau dans le sac ne serre pas ; le serre-joint ne le monte plus (plan 0.10)", () => {
   // L'étau porté : rien (décision du porteur, 2026-10-10).
   assert.equal(niveauQualite({ etau: 1 }, "serrer"), 0);
   const t = monter({ etau: 1, cle_plate: 1 }, (b, id) => b.ajouterInstallation(id, "etabli", 21, 20, 0));
@@ -167,10 +173,16 @@ test("l'établi à étau donne Serrer 3 à 3 m ; l'étau dans le sac ne serre pa
   u.joueur.recevoir({ t: "fabriquer", recette: "maillet" });
   u.attendre(4);
   assert.equal(u.sac().maillet, 1);
-  // Le repli : le serre-joint de fortune. L'établi monte, mais ne serre pas fort : pas de maillet.
-  const v = monter({ serre_joint_fortune: 1, cle_plate: 1, buche: 1, branche: 1, couteau: 1 }, (b, id) => b.ajouterInstallation(id, "etabli", 21, 20, 0));
-  v.agir(1, "ameliorer");
-  assert.equal(v.installation(1).niveau, 2);
+  // L'ancien repli : le serre-joint de fortune ne monte plus l'établi à étau (plan 0.10).
+  const r = monter({ serre_joint_fortune: 1, cle_plate: 1, buche: 1, branche: 1, couteau: 1 }, (b, id) => b.ajouterInstallation(id, "etabli", 21, 20, 0));
+  r.agir(1, "ameliorer");
+  assert.equal(r.installation(1).niveau ?? 1, 1);
+  // Un établi monté au serre-joint dans une partie de la 0.9 se relit : il ne serre pas fort, pas de maillet.
+  const v = monter({ buche: 1, branche: 1, couteau: 1 }, (b, id) => {
+    b.ajouterInstallation(id, "etabli", 21, 20, 0);
+    b.sauverNiveauInstallation(id, 1, 2);
+    b.sauverEtatInstallation(id, 1, { payes: [{ serre_joint_fortune: 1 }] });
+  });
   assert.equal(etauMonte(v.installation(1)), false);
   v.joueur.recevoir({ t: "fabriquer", recette: "maillet" });
   assert.match(v.infos().at(-1)!, /serrer \(niveau 3\).*établi à étau/);

@@ -5,7 +5,7 @@
 //
 // Rien ici ne connaît le joueur : `serveur/src/mecanique.ts` applique, `commun/src/recettes/mecanistes.ts` fabrique.
 
-import { exemplaires, etoilesDeBase, type Etoiles } from "./etoiles.ts";
+import { compter, exemplaires, etoilesDeBase, type Etoiles } from "./etoiles.ts";
 import type { Inventaire, TypeObjet } from "./objets.ts";
 import type { EtatInstallation } from "./messages.ts";
 import type { ArmeTir } from "./tir.ts";
@@ -46,6 +46,18 @@ export function facteursArbaleteLourde(inventaire: Inventaire): number[] {
   return [etoilesDuMoinsBon(inventaire, "arbrier"), etoilesDuMoinsBon(inventaire, "noix_detente"), ETOILES_ARC_ARBALETE.retrempe];
 }
 
+/**
+ * Monter l'arbalète à arc d'if (★★★) ou plus raide : un tel arc ne se bande pas à la main, il faut un cranequin léger
+ * dans le sac (plan 0.10, chantier F ; N2-32). Ce qui empêche la recette (une phrase), ou null. La recette prend l'arc
+ * le moins bon du sac : avec un arc de frêne ou de ressort à côté, c'est lui qu'elle monte, et rien ne manque.
+ */
+export function refusMontageArbalete(recetteId: string, inventaire: Inventaire): string | null {
+  if (recetteId !== "arbalete" || (inventaire.cranequin_leger ?? 0) > 0) return null;
+  if (compter(inventaire, "arc_arbalete") === 0) return null;
+  if (etoilesDuMoinsBon(inventaire, "arc_arbalete") < ETOILES_ARC_ARBALETE.if) return null;
+  return "Un arc d'if ne se bande pas à la main : il te faut un cranequin léger.";
+}
+
 // ---------- Réarmer une arbalète (Book 25 §6.1 et §8.3) ----------
 
 /** Comment on réarme : en combien de temps, et avec quel outil (null : à la main ou au pied, dans l'étrier). */
@@ -55,13 +67,17 @@ export interface Rearmement {
 }
 
 /**
- * Comment réarmer cette arme avec ce qu'on a dans le sac : la légère, au pied ; la lourde, trop raide pour le pied,
- * au meilleur outil qu'on ait (le cranequin 4 s, le pied-de-biche 6 s). null : il manque l'outil.
+ * Comment réarmer cette arme avec ce qu'on a dans le sac : la légère, au pied, ou plus vite au cranequin léger (2 s,
+ * plan 0.10) ; la lourde, trop raide pour le pied, au meilleur outil qu'on ait (le cranequin 4 s, le pied-de-biche 6 s).
+ * null : il manque l'outil.
  */
-export function rearmement(arme: Pick<ArmeTir, "rechargeMs" | "rearmerAvec">, inventaire: Inventaire): Rearmement | null {
+export function rearmement(arme: Pick<ArmeTir, "rechargeMs" | "rearmerAvec" | "plusViteAvec">, inventaire: Inventaire): Rearmement | null {
   // Le réglage d'équilibre du test (Book 25 §8.4, chantier 9) : à 1 par défaut.
   const k = REGLAGES.equilibre_arbalete_rearmer;
-  if (!arme.rearmerAvec?.length) return { ms: Math.round(arme.rechargeMs * k), outil: null };
+  if (!arme.rearmerAvec?.length) {
+    const outil = (arme.plusViteAvec ?? []).filter((o) => (inventaire[o.objet] ?? 0) > 0 && o.ms < arme.rechargeMs).sort((a, b) => a.ms - b.ms)[0];
+    return outil ? { ms: Math.round(outil.ms * k), outil: outil.objet } : { ms: Math.round(arme.rechargeMs * k), outil: null };
+  }
   let meilleur: Rearmement | null = null;
   for (const o of arme.rearmerAvec) {
     if ((inventaire[o.objet] ?? 0) > 0 && (!meilleur || o.ms < meilleur.ms)) meilleur = { ms: o.ms, outil: o.objet };

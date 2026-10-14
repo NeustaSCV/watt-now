@@ -106,6 +106,10 @@ export const QUALITES_OBJETS: Partial<Record<TypeObjet, Partial<Record<Qualite, 
   marteau_fortune: { marteler: 2 },
   coin_bois: { fendre: 1 },
   baton_fouir_durci: { creuser: 1 },
+  // 0.10 (chantier B) : les deux outils-clés du niveau 2, qui donnent Raboter et Souder (les qualités sont plus haut,
+  // déclarées dès la 0.8). Le fer à souder n'a pas de version pauvre (exception à R23).
+  rabot: { raboter: 1 },
+  fer_souder: { souder: 1 },
 };
 
 /**

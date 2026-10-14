@@ -123,7 +123,7 @@ export const PROFILS_DECHETS: Record<TypeLieuDechets, ProfilLieuDechets> = {
       {
         nom: "la pêche et la guinguette",
         part: 0.15,
-        objets: { ballon_foot: 3, flamant_rose: 2, volants_badminton: 2, attrape_reves: 1, parasol: 1, barbecue: 1, tente_popup: 0.5, sac_charbon_bbq: 0.3 },
+        objets: { ballon_foot: 3, flamant_rose: 2, volants_badminton: 2, attrape_reves: 1, parasol: 1, barbecue: 1, tente_popup: 0.5, sac_charbon_bbq: 0.3, chaise_camping: 1 },
       },
     ],
   },
