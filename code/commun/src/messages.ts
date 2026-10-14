@@ -341,6 +341,8 @@ export interface AutreVu extends Personne {
   apparence: Apparence;
   /** 0.9 (Q-7) : l'arme encombrante équipée, portée dans le dos (la fourche) ; absente : rien dans le dos. */
   dos?: CleObjet;
+  /** Il dort (0.9) : un état, pas un geste, pour qu'un joueur arrivé après le voie couché ; absent : debout. */
+  couche?: true;
 }
 
 export type OperationComptoir =
@@ -785,7 +787,8 @@ export interface GesteVu {
 export type MessageServeurPresences =
   /**
    * Les positions des autres en vue, 10 fois par seconde (un tour de serveur sur deux) : `h`, l'heure du serveur de
-   * l'envoi (ms) ; `p`, des quintuplets id, x, z, orientation, allure, à la suite. Seuls partent ceux dont la position
+   * l'envoi (ms) ; `p`, des quintuplets id, x, z, orientation, allure, à la suite, en entiers : x, z en centimètres,
+   * l'orientation en centièmes de radian. Seuls partent ceux dont la position
    * ou l'allure a changé (l'arrêt part donc une fois, allure 0).
    */
   | { t: "positions"; h: number; p: number[] }

@@ -864,6 +864,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       apparence: this.apparence,
       // L'arme encombrante équipée se voit dans le dos (0.9, Q-7).
       ...(this.dos ? { dos: this.dos } : {}),
+      ...(this.sommeil ? { couche: true as const } : {}),
     };
   }
 

@@ -59,6 +59,7 @@ export class VueAutre {
   /** L'arme du dernier coup, en main jusqu'à `armeJusqua` (heure du serveur, ms). */
   private armeJusqua = 0;
   private armeEnMain: TypeObjet | null | undefined = undefined;
+  private chute = false;
 
   constructor(a: AutreVu) {
     this.cible = a;
@@ -68,6 +69,7 @@ export class VueAutre {
     this.personnage.objet.position.set(a.x, 0, a.z);
     this.personnage.objet.rotation.y = a.o;
     this.equiper();
+    this.etat();
   }
 
   get objet(): THREE.Group {
@@ -82,6 +84,18 @@ export class VueAutre {
     // L'identité arrive sans changer la dernière position connue (elle vient du message « positions »).
     this.cible = { ...a, x: this.cible.x, z: this.cible.z, o: this.cible.o };
     this.equiper();
+    this.etat();
+  }
+
+  /** Ce que dit son identité : endormi (même couché avant notre arrivée), la lampe levée. */
+  private etat(): void {
+    this.personnage.coucher(this.cible.couche === true);
+    this.personnage.porterLumiere(this.cible.lumiere);
+  }
+
+  /** Il s'effondre : sa vue est gardée le temps de la chute après son départ du lieu (`Partants`). */
+  get tombe(): boolean {
+    return this.chute;
   }
 
   /** Sa nouvelle position (message « positions », toutes les 100 ms), à l'heure du serveur `h`. */
@@ -92,6 +106,7 @@ export class VueAutre {
 
   /** Un de ses gestes (message « gestes ») : joué à son heure, avec le même retard que sa position. */
   geste(g: GesteVu): void {
+    if (g.geste === "effondre") this.chute = true;
     this.gestes.mettre(g);
   }
 
@@ -158,5 +173,33 @@ export class VueAutre {
         p.coucher(true);
         return;
     }
+  }
+}
+
+/** Le temps de la chute (ms) : un joueur qui s'effondre quitte le lieu, on le voit encore tomber (0.9). */
+const DUREE_CHUTE = 2500;
+
+/** Ceux qui ont quitté le champ en tombant : leur vue est gardée le temps de la chute (retard compris), puis retirée. */
+export class Partants {
+  private liste: { vue: VueAutre; jusqua: number }[] = [];
+
+  garder(vue: VueAutre, maintenant = performance.now()): void {
+    this.liste.push({ vue, jusqua: maintenant + RETARD_AFFICHAGE + DUREE_CHUTE });
+  }
+
+  animer(dt: number, retirer: (vue: VueAutre) => void, maintenant = performance.now()): void {
+    this.liste = this.liste.filter((p) => {
+      if (maintenant < p.jusqua) {
+        p.vue.animer(dt, maintenant);
+        return true;
+      }
+      retirer(p.vue);
+      return false;
+    });
+  }
+
+  vider(retirer: (vue: VueAutre) => void): void {
+    for (const p of this.liste) retirer(p.vue);
+    this.liste = [];
   }
 }
