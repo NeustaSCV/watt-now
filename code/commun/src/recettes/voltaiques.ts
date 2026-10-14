@@ -366,4 +366,36 @@ export const RECETTES_VOLTAIQUES: Recette[] = [
     intensite: "legere",
     famille: "voltaiques",
   },
+
+  // ---------- Les meubles nouveaux du niveau 2, chantier D (plan 0.10 ; N2-44, N2-45) : avec le poste de montage ----------
+  {
+    // La rampe de LED (S-25) : une lumière posée, comme la lanterne fixe, 20 m ; elle tire 3 W sur la batterie de la base,
+    // la nuit seulement (≈ 25 Wh par nuit de calendrier) ; batterie vide, elle s'éteint. Elle apparaît avec le poste de
+    // montage (progression.ts).
+    id: "rampe_led",
+    lieu: POSEE,
+    categorie: "batir",
+    nom: "Rampe de LED",
+    produit: { installation: "rampe_led" },
+    ingredients: { led: 10, fil_cuivre: 2, tube_aluminium: 1 },
+    auChoix: [{ pack_cellules: 1 }, { pack_soude: 1 }],
+    qualites: { souder: 1 },
+    duree: 45,
+    intensite: "legere",
+    famille: "voltaiques",
+  },
+  {
+    // La batterie de cellules (S-26) : douze cellules d'environ 10 Wh soudées en bloc, 120 Wh ; elle se pose dans le banc
+    // comme la batterie de voiture (energie.ts, BATTERIES_DE_BANC). Elle sort vide du poste.
+    id: "batterie_cellules",
+    lieu: AU_POSTE_DE_MONTAGE,
+    categorie: "materiaux",
+    nom: "Batterie de cellules (120 Wh)",
+    produit: { objet: "batterie_cellules", quantite: 1 },
+    ingredients: { cellule_lithium: 12, fil_cuivre: 4, plastique: 1 },
+    qualites: { souder: 1 },
+    duree: 60,
+    intensite: "legere",
+    famille: "voltaiques",
+  },
 ];

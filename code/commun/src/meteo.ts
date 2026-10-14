@@ -100,3 +100,15 @@ export function attenuationMeteo(m: Meteo, genre: GenreStimulus): number {
 }
 
 export const NOMS_TEMPS: Record<Temps, string> = { soleil: "Ensoleillé", voile: "Voilé", couvert: "Couvert", pluie: "Pluie" };
+
+// ---------- Le vent (plan 0.10, chantier D ; N2-Q4) ----------
+// Il n'est pas dans la météo : on le déduit du temps. Couvert et pluie : il vente ; voilé : un peu ; soleil : calme.
+
+export type Vent = "calme" | "faible" | "fort";
+
+const VENTS: Record<Temps, Vent> = { soleil: "calme", voile: "faible", couvert: "fort", pluie: "fort" };
+
+/** Le vent qu'il fait, déduit du temps (la météo d'un instant, ou un temps). */
+export function vent(m: Meteo | Temps): Vent {
+  return VENTS[typeof m === "string" ? m : m.temps];
+}

@@ -25,6 +25,8 @@ export const NOMS_ACCESSOIRES: Readonly<Record<string, string>> = {
   huile: "de l'huile",
   enclume: "une enclume",
   ventilateur: "un ventilateur",
+  // La forge ventilée (plan 0.10, chantier D) : le creuset et ses moules, pour fondre l'aluminium.
+  creuset: "un creuset",
   // Le pédalier : ses accessoires montés.
   meule: "une meule",
   meuleFine: "une meule fine",
@@ -195,7 +197,7 @@ export function refusLieu(lieu: LieuRecette, a: Alentours): string | null {
 
 /** Les accessoires d'installation que la carte retient (« forge+bac »). */
 // « panneau » et « alternateur » : les pièces du banc solaire et du pédalier générateur (le dévoilement les lit, §9.2).
-const ACCESSOIRES_CARTE = ["bac", "huile", "enclume", "ventilateur", "meule", "meuleFine", "dynamo", "soufflet", "redresseur", "poste_montage", "roulements", "panneau", "alternateur"];
+const ACCESSOIRES_CARTE = ["bac", "huile", "enclume", "ventilateur", "meule", "meuleFine", "dynamo", "soufflet", "redresseur", "poste_montage", "roulements", "panneau", "alternateur", "creuset"];
 
 /**
  * La carte des installations d'un terrain, pour le dévoilement : chaque type à son niveau ; « feu » au meilleur niveau

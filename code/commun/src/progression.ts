@@ -22,6 +22,7 @@ import { QUETE, type Condition, type Quete } from "./quetes.ts";
 import type { Famille } from "./regles.ts";
 import { NOMS_ACCESSOIRES, lieuPossede, nomConstruction, nomFormeFeu } from "./lieu-recette.ts";
 import { ETAPE_ABRI, ETAPE_FAMILLE, ETAPE_FEU, ETAPE_OUTIL } from "./tutoriel.ts";
+import { LIEUX_NIVEAU_2 } from "./meubles-neufs.ts";
 
 // ---------- Les déclencheurs ----------
 
@@ -103,6 +104,8 @@ const CINQ_LAMES: Declencheur = {
   but: 5,
 };
 const FOYER_CUISINE = ou(fait("foyer:foyer_cuisine"), { a: "installation", type: "feu", niveau: 3 });
+/** Une première visite d'un lieu du niveau 2 (plan 0.10, chantier D ; N2-Q3 : meubles-neufs.ts, LIEUX_NIVEAU_2). */
+const VISITE_NIVEAU_2 = ou(...LIEUX_NIVEAU_2.map((l) => fait(`visite:${l}`)));
 
 /** Les deux cartes qui ne sont pas des recettes : le feu de camp et le foyer Dakota (dessinées à part, hud.ts). */
 export const CARTES_SPECIALES = ["feu_de_camp", "foyer_dakota"] as const;
@@ -260,6 +263,19 @@ export const PROGRESSION: Readonly<Record<string, LigneProgression>> = {
   maillet: { quand: [{ a: "installation", type: "etabli", niveau: 2 }], indice: "Frapper un coin sans le fendre." },
   coins_bois: { quand: [{ a: "installation", type: "etabli", niveau: 2 }], indice: "Un coin bien enfoncé ouvre une bûche en deux." },
   planches_fendues: { quand: [{ a: "installation", type: "etabli", niveau: 2 }], indice: "Une bûche fendue droit donne de vraies planches." },
+
+  // ---------- Les meubles nouveaux du niveau 2 (plan 0.10, chantier D) ----------
+  // Les deux meubles communs apparaissent après la première visite d'un lieu du niveau 2 (N2-Q3) ; ceux des familles,
+  // avec leur installation du niveau 2 (le poste de montage, les roulements montés, le creuset de la forge ventilée).
+  cuiseur_solaire: { quand: [VISITE_NIVEAU_2], indice: "Le soleil chauffe assez pour cuire, sans un bout de bois." },
+  bacs_tri: { quand: [VISITE_NIVEAU_2], indice: "Ce qu'on démonte se trie : rien ne se perd." },
+  rampe_led: { quand: [{ a: "installation", type: "banc_recharge", niveau: 2 }], indice: "De la lumière toute la nuit, sans flamme." },
+  batterie_cellules: { quand: [vu("cellule_lithium")], indice: "Garder le soleil du jour pour la nuit." },
+  charrette_bras: { quand: [vu("roulements")], indice: "Ce qui roule bien porte plus que la brouette." },
+  moulin_jerricans: { quand: [{ a: "installation", type: "pedalier", niveau: 2 }], indice: "Quand le soleil manque, le vent tourne encore." },
+  arbalete_garde: { quand: [{ a: "installation", type: "pedalier", niveau: 2 }], indice: "Une arme qui veille quand tu dors." },
+  poulie_aluminium: { quand: [vu("aluminium")], indice: "Des chutes fondues font une pièce qui tourne." },
+  lingot_aluminium: { quand: [vu("aluminium")], indice: "Des chutes fondues valent plus que des chutes." },
 };
 
 /** L'atelier de chaque famille : rien de son métier ne se dévoile avant lui (sauf ce qu'une quête demande). */

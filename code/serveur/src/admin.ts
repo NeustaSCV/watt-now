@@ -9,7 +9,7 @@ import { APPARENCES_DE_REFERENCE, type Apparence } from "../../commun/src/appare
 import { ARMES } from "../../commun/src/combat.ts";
 import { DECHARGE } from "../../commun/src/decharge.ts";
 import { raisonEmplacement } from "../../commun/src/emplacement.ts";
-import { capacite, type Charges, type TypeBatterie } from "../../commun/src/energie.ts";
+import { TYPES_BATTERIES, capacite, type Charges, type TypeBatterie } from "../../commun/src/energie.ts";
 import { cleExemplaire, estObjetDeMetier, typeDe } from "../../commun/src/etoiles.ts";
 import { LIGNEES_INSTALLATIONS, VOIE_CREUSEE, VOIE_SURFACE, capaciteCoffre, effetsFeu, type Etape } from "../../commun/src/lignees.ts";
 import type { InstallationVue } from "../../commun/src/messages.ts";
@@ -34,7 +34,7 @@ const ETOILES_ARMES = [1, 2, 3] as const;
 /** Le pas de la grille de pose (m) : les constructions s'alignent en rangs, avec de quoi passer entre elles. */
 const PAS_GRILLE = 4;
 
-const BATTERIES: readonly TypeBatterie[] = ["petite_batterie", "batterie_voiture"];
+const BATTERIES: readonly TypeBatterie[] = TYPES_BATTERIES;
 
 // ---------- Ce que god voit ----------
 

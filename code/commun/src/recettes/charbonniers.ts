@@ -25,6 +25,8 @@ const AU_BAC = aCote("forge", { accessoire: "bac" });
 const A_L_HUILE = aCote("forge", { accessoire: "huile" });
 /** La forge ventilée (niveau 2) : souder la mise d'acier ; la trempe toujours au bac. */
 const FORGE_VENTILEE = aCote("forge", { niveau: 2, accessoire: "bac" });
+/** Le creuset et ses moules, posés sur la forge ventilée (plan 0.10, chantier D ; N2-43) : fondre l'aluminium. */
+const AU_CREUSET = aCote("forge", { niveau: 2, accessoire: "creuset" });
 
 /** Une recette qui attend un niveau absent de la 0.8 (plan 0.8 §1.3) : grisée « plus tard », refusée par le serveur. */
 function plusTard(r: Recette, a: AVenir): Recette {
@@ -170,6 +172,32 @@ export const RECETTES_CHARBONNIERS: Recette[] = [
     qualites: { couper: 1 },
     duree: 15,
     intensite: "legere",
+    famille: "charbonniers",
+  },  // ---------- Le creuset de la forge ventilée, chantier D (plan 0.10 ; N2-43, S-24) ----------
+  // La forge ventilée fond l'aluminium (660 °C) : quatre chutes, coulées dans un moule de terre. La poulie va aux
+  // Mécanistes (le moulin de jerricans : + 50 %), le lingot se vend au Comptoir. Enfin un débouché pour les chutes.
+  {
+    id: "poulie_aluminium",
+    lieu: AU_CREUSET,
+    categorie: "materiaux",
+    nom: "Couler une poulie d'aluminium",
+    produit: { objet: "poulie_aluminium", quantite: 1 },
+    ingredients: { aluminium: 4 },
+    qualites: {},
+    duree: 40,
+    intensite: "moyenne",
+    famille: "charbonniers",
+  },
+  {
+    id: "lingot_aluminium",
+    lieu: AU_CREUSET,
+    categorie: "materiaux",
+    nom: "Couler un lingot d'aluminium",
+    produit: { objet: "lingot_aluminium", quantite: 1 },
+    ingredients: { aluminium: 4 },
+    qualites: {},
+    duree: 30,
+    intensite: "moyenne",
     famille: "charbonniers",
   },
 ];

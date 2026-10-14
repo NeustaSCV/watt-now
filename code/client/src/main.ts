@@ -63,7 +63,8 @@ import { Brume } from "./rendu/brume.ts";
 import { Aides, type Aide } from "./aides.ts";
 import { CONSEILS, watty } from "./watty.ts";
 import { ModePhoto } from "./photo.ts";
-import { attenuationMeteo, meteo, type Meteo, type Temps } from "../../commun/src/meteo.ts";
+import { attenuationMeteo, meteo, vent, type Meteo, type Temps } from "../../commun/src/meteo.ts";
+import { regleVentDesMoulins } from "./rendu/metier/meubles-neufs.ts";
 import { Sang, creerSacTombe, creerTas } from "./rendu/sang.ts";
 import type { SourceLumiere } from "./rendu/lumieres.ts";
 import { outilsAPortee } from "../../commun/src/outils-a-portee.ts";
@@ -1908,6 +1909,8 @@ function boucle(instant: number): void {
   const forcee = photo.actif && photo.reglages.temps ? photo.reglages.temps : METEO_FORCEE;
   const temps: Meteo = forcee ? { temps: forcee, pluie: forcee === "pluie" ? 1 : 0, nuages: { soleil: 0, voile: 0.3, couvert: 0.65, pluie: 0.85 }[forcee] } : meteo(maintenant, debutMonde);
   hud.temps(temps.temps);
+  // Les moulins de jerricans tournent au vent, déduit du temps (plan 0.10, chantier D).
+  regleVentDesMoulins(vent(temps));
   if (temps.temps === "pluie" && position) aider("pluie");
   if (position) {
     if (aFaim(besoins)) aider("faim");

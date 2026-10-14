@@ -7,7 +7,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { chosesACharger } from "../../commun/src/banc.ts";
-import { MS_JOUR_CALENDRIER, NOM_BATTERIE_DE_LA_RUINE, RENDEMENT_BANC, batterieDuBanc, dureeCharge, whEDePedalage } from "../../commun/src/energie.ts";
+import { MS_JOUR_CALENDRIER, NOM_BATTERIE_DE_LA_RUINE, RENDEMENT_BANC, batterieDuBanc, dureeCharge, productionPanneau, whEDePedalage } from "../../commun/src/energie.ts";
 import type { InstallationVue, MessageServeur } from "../../commun/src/messages.ts";
 import type { Inventaire } from "../../commun/src/objets.ts";
 import { toutDevoile } from "../../commun/src/progression.ts";
@@ -64,14 +64,19 @@ const banc = (wh: number, x = 20.5, etat: InstallationVue["etat"] = {}) => ({ ty
 
 // ---------- Remplir la batterie du banc ----------
 
-test("0.8.2 banc : le panneau posé dessus remplit la batterie du banc au soleil (≈ 80 Wh par jour)", () => {
+test("0.8.2 banc : le panneau posé dessus remplit la batterie du banc au soleil (le soleil du monde, plan 0.10 S-30)", () => {
   const t = surLeTerrain("voltaiques", {}, [banc(100, 20.5, { panneau: true })]);
   const id = t.ids[0]!;
-  t.attendre(Math.round(MS_JOUR_CALENDRIER / 1000), 30);
-  // On repasse par le banc (la base se met à jour au geste) : un jour de soleil, moins la décharge spontanée.
+  // Un jour de calendrier (≈ 1 h 50 réelle), par pas de 30 s ; le panneau suit le soleil et le temps du monde.
+  const debut = t.base.debutMonde();
+  const secondes = 30 * Math.ceil(MS_JOUR_CALENDRIER / 30_000);
+  t.attendre(secondes, 30);
+  // On repasse par le banc (la base se met à jour au geste) : le soleil de ce jour-là, moins la décharge spontanée.
   t.joueur.recevoir({ t: "banc", id, op: "echanger" });
   const wh = batterieDuBanc(t.installation(id).etat)!.wh;
-  assert.ok(Math.abs(wh - 180) < 1.5, `${wh}`);
+  const soleil = productionPanneau(debut + 60_000, debut + 60_000 + secondes * 1000, debut);
+  assert.ok(soleil > 10 && soleil < 90, `${soleil}`);
+  assert.ok(Math.abs(wh - 100 - soleil) < 1.5, `${wh} pour ${soleil}`);
 });
 
 test("0.8.2 banc : un pédalier générateur à 3 m charge directement la batterie du banc ; à 4 m, non", () => {

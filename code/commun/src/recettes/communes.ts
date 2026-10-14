@@ -648,4 +648,35 @@ export const RECETTES_COMMUNES: Recette[] = [
     intensite: "legere",
     famille: "tous",
   },
+
+  // ---------- Les meubles nouveaux du niveau 2, pour tous (plan 0.10, chantier D ; N2-40, N2-41, N2-Q3) ----------
+  // Ils apparaissent après la première visite d'un lieu du niveau 2 (progression.ts). Leurs effets : meubles-neufs.ts.
+  {
+    // Une boîte à réflecteurs (S-22) : un foyer qui ne brûle rien. L'eau bout et les plats du foyer de pierres cuisent au
+    // soleil, deux fois plus lentement ; à moitié par temps voilé ; rien sous un ciel couvert, sous la pluie, la nuit.
+    id: "cuiseur_solaire",
+    lieu: POSEE,
+    categorie: "feu",
+    nom: "Cuiseur solaire",
+    produit: { installation: "cuiseur_solaire" },
+    ingredients: { aluminium: 4, verre: 1, papier: 4, boite_vide: 1 },
+    qualites: { couper: 1 },
+    duree: 40,
+    intensite: "legere",
+    famille: "tous",
+  },
+  {
+    // Le tri sélectif de l'Abondance, enfin utile (S-23) : à 3 m, démonter va deux fois plus vite, et un démontage sur
+    // trois rend une matière de plus. L'aimant sépare le fer de l'aluminium.
+    id: "bacs_tri",
+    lieu: POSEE,
+    categorie: "ateliers",
+    nom: "Bacs de tri",
+    produit: { installation: "bacs_tri" },
+    ingredients: { jerrican: 3, aimant: 1, tube_aluminium: 1 },
+    qualites: { couper: 1 },
+    duree: 30,
+    intensite: "legere",
+    famille: "tous",
+  },
 ];

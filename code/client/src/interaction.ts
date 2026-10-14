@@ -19,6 +19,7 @@ import type { FeuDeCamp } from "./rendu/feu.ts";
 import type { VueRessource } from "./rendu/ressources.ts";
 import { proposerMoulin } from "./moulin.ts";
 import { estLanterneFixe } from "../../commun/src/meubles-niveau2.ts";
+import { COUT_CREUSET, NIVEAU_FORGE_CREUSET } from "../../commun/src/meubles-neufs.ts";
 
 export type ActionProposee =
   | { libelle: string; message: MessageClient }
@@ -71,6 +72,12 @@ export const EXAMENS_INSTALLATIONS: Record<InstallationVue["type"], string> = {
   // Le niveau 1 (plan 0.8, chantier 6).
   ratelier_outils: "Deux perches et des chevilles contre un piquet : chaque outil a sa place. Rangé ici, il sert à tout ce qu'on bâtit autour.",
   torche_plantee: "Une branche plantée, un chiffon gras qui brûle au bout. Elle éclaire six mètres autour, une nuit durant.",
+  // Les meubles nouveaux du niveau 2 (plan 0.10, chantier D).
+  cuiseur_solaire: "Une boîte à réflecteurs d'aluminium, sa vitre, son isolant de papier. Au soleil, elle fait bouillir l'eau et cuit les plats du foyer de pierres, sans bois, deux fois plus lentement. Par temps voilé, à moitié ; rien sous un ciel couvert, ni la nuit.",
+  bacs_tri: "Trois jerricans coupés, un aimant pendu au-dessus. Ce qu'on démonte à côté se trie : deux fois plus vite, et parfois une matière de plus.",
+  rampe_led: "Dix LED sur un tube d'aluminium : vingt mètres de lumière la nuit, sans flamme, sur la batterie de la base.",
+  moulin_jerricans: "Deux jerricans coupés en godets, sur un mât de tubes. Quand il vente, son petit moteur fait du courant pour la batterie de la base, même en ton absence.",
+  arbalete_garde: "Une arbalète bridée sur un tube, un fil de fer tendu à un mètre devant. Le premier Éteint qui le passe reçoit un carreau.",
 };
 
 /**
@@ -109,6 +116,8 @@ function actionsInstallation(
   maintenantServeur: number,
   /** Un pédalier à moins de 3 m d'un banc dont la batterie a de la place (0.8.2, R17). */
   bancARemplir = false,
+  /** La gourde : au cuiseur solaire, A fait bouillir l'eau brute (plan 0.10, chantier D). */
+  gourde?: Gourde,
 ): [ActionProposee | null, ActionProposee | null] {
   const msg = (libelle: string, verbe: Verbe): ActionProposee => ({ libelle, message: { t: "interagir", cible: { genre: "installation", id: i.id }, verbe } });
   // Examiner ouvre la fiche : ce qu'elle fait, l'améliorer, la démonter (Book 24). La décharge, elle, se regarde.
@@ -160,7 +169,9 @@ function actionsInstallation(
               ? msg("Verser l'huile dans le bac", "verser_huile")
               : !i.etat.bac && Object.entries(COUT_BAC).every(([t, n]) => (inventaire[t as TypeObjet] ?? 0) >= (n ?? 0))
                 ? msg("Poser le bac de trempe (auge de glaise)", "poser_bac")
-                : null;
+                : !i.etat.creuset && (i.niveau ?? 1) >= NIVEAU_FORGE_CREUSET && Object.entries(COUT_CREUSET).every(([t, n]) => (inventaire[t as TypeObjet] ?? 0) >= (n ?? 0))
+                  ? msg("Poser le creuset (4 glaises, 2 pierres)", "poser_creuset")
+                  : null;
       return [{ libelle: "Travailler à la forge", ouvrirFabrication: true }, accessoire ?? examiner];
     }
     case "charbonniere": {
@@ -216,6 +227,20 @@ function actionsInstallation(
     }
     case "tour_perche":
       return [{ libelle: "Travailler au tour", ouvrirFabrication: true }, examiner];
+    // Les meubles nouveaux du niveau 2 (plan 0.10, chantier D) : le serveur juge le soleil, le vent, la batterie.
+    case "cuiseur_solaire":
+      return [
+        gourde?.contenu === "brute" && gourde.litres > 0 ? msg("Faire bouillir l'eau au soleil", "bouillir") : { libelle: "Cuisiner au soleil", ouvrirFabrication: true },
+        examiner,
+      ];
+    case "moulin_jerricans":
+      return [!i.etat.poulie && (inventaire.poulie_aluminium ?? 0) > 0 ? msg("Poser la poulie d'aluminium", "poser_poulie") : null, examiner];
+    case "rampe_led":
+      return [null, { libelle: "Examiner", examiner: `${EXAMENS_INSTALLATIONS.rampe_led} ${i.etat.courant === false ? "La batterie de la base est vide : elle reste éteinte." : "Elle s'allume à la nuit tombée."}` }];
+    case "arbalete_garde": {
+      const d = i.etat.declencheur;
+      return [d && !d.arme ? msg((inventaire.cranequin_leger ?? 0) > 0 ? "Réarmer l'arbalète (cranequin léger)" : "Réarmer l'arbalète", "rearmer_piege") : null, examiner];
+    }
     case "banc_recharge": {
       // Le banc solaire (plan 0.8) : le panneau de la station se pose sur le banc, d'abord.
       if (!i.etat.panneau && (inventaire.panneau_solaire ?? 0) > 0) return [msg("Poser le panneau sur le banc", "poser_panneau"), examiner];
@@ -361,7 +386,7 @@ export function proposer(
   for (const i of toutes) {
     // La décharge est un grand tas : on la vise depuis son bord (P-001).
     const d = Math.max(0, Math.hypot(i.x - position.x, i.z - position.z) - (i.type === "decharge" ? 1.9 : 0.6));
-    const [A, B] = actionsInstallation(i, repos, famille, inventaire, charges, maintenantServeur, i.type === "pedalier" && bancARemplir(i, toutes));
+    const [A, B] = actionsInstallation(i, repos, famille, inventaire, charges, maintenantServeur, i.type === "pedalier" && bancARemplir(i, toutes), gourde);
     garder(d, { A, B, cible: { x: i.x, z: i.z, rayon: i.type === "decharge" ? 2.1 : i.type === "escabeau" || i.type === "alarme_boites" ? 0.7 : 1.1 } });
   }
 

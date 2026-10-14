@@ -14,6 +14,7 @@ import { creerArme } from "./personnage.ts";
 import type { SourceLumiere } from "./lumieres.ts";
 import { PORTEE_TORCHE, torcheAllumee, torcheConsumee } from "../../../commun/src/torche.ts";
 import { PORTEE_LANTERNE, estClocheAlarme, estLanterneFixe } from "../../../commun/src/meubles-niveau2.ts";
+import { RAMPE_LED, rampeAllumee } from "../../../commun/src/meubles-neufs.ts";
 import type { TypeObjet } from "../../../commun/src/objets.ts";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
@@ -1341,6 +1342,8 @@ export class VueInstallation {
   /** La lanterne fixe (plan 0.10) : son verre, qui s'allume la nuit ; la nuit vue au dernier pas d'animation. */
   private lanterne: ReturnType<typeof lanterneFixe> | null = null;
   private nuitVue = 0;
+  /** La rampe de LED (plan 0.10, chantier D) : ses LED, qui s'allument la nuit si la batterie de la base a du courant. */
+  private readonly lumineux: THREE.Object3D[] = [];
   private temps = 0;
 
   constructor(donnees: InstallationVue) {
@@ -1451,6 +1454,7 @@ export class VueInstallation {
     this.objet.traverse((o) => {
       if (typeof o.userData.majEtat === "function") this.suivis.push(o);
       if (typeof o.userData.animer === "function") this.animes.push(o);
+      if (typeof o.userData.allumer === "function") this.lumineux.push(o);
     });
     // Le niveau (Book 24) : des pièces en plus.
     const pieces = piecesNiveau(donnees.type, donnees.niveau ?? 1, donnees.etat);
@@ -1524,6 +1528,8 @@ export class VueInstallation {
   source(maintenantServeur: number): SourceLumiere | null {
     // La lanterne fixe : 14 m, une lumière plus douce et plus stable qu'une flamme nue, dès que la nuit tombe.
     if (this.lanterne) return this.nuitVue > SEUIL_NUIT_LANTERNE ? { x: this.donnees.x, y: VERRE_LANTERNE, z: this.donnees.z, couleur: 0xffc070, intensite: 4, portee: PORTEE_LANTERNE + 2, vacillement: 0.2 } : null;
+    // La rampe de LED (plan 0.10, chantier D) : 20 m d'une lumière blanche et fixe, la nuit, tant que la batterie tient.
+    if (this.donnees.type === "rampe_led") return rampeAllumee(this.donnees, this.nuitVue > SEUIL_NUIT_LANTERNE) ? { x: this.donnees.x, y: 1.85, z: this.donnees.z, couleur: 0xeef2ff, intensite: 4.5, portee: RAMPE_LED.portee + 2, vacillement: 0 } : null;
     if (!this.torche || !torcheAllumee(this.donnees, maintenantServeur)) return null;
     return { x: this.donnees.x, y: TETE_TORCHE + 0.15, z: this.donnees.z, couleur: 0xff8a3d, intensite: 4, portee: PORTEE_TORCHE + 2, vacillement: 0.9 };
   }
@@ -1547,6 +1553,7 @@ export class VueInstallation {
     }
     if (this.forge) animerAccessoiresForge(this.forge, dt, nuit);
     this.nuitVue = nuit;
+    for (const o of this.lumineux) (o.userData.allumer as (allumee: boolean) => void)(rampeAllumee(this.donnees, nuit > SEUIL_NUIT_LANTERNE));
     if (this.lanterne) {
       const allumee = nuit > SEUIL_NUIT_LANTERNE;
       this.lanterne.verre.color.setHex(allumee ? 0xffd890 : 0x4a4436);

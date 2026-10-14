@@ -343,6 +343,35 @@ export const OBJETS_METIER = {
     poids: 0.35,
     description: "Six cellules lithium soudées en barrette, leur LED de charge sur le côté : 24 Wh qui ne se décrochent pas.",
   },
+
+  // ---------- Les meubles nouveaux du niveau 2 (plan 0.10, chantier D ; meubles-neufs.ts) ----------
+  // ⚡ La batterie de cellules (N2-45, S-26) : un type de batterie de 120 Wh, posé à la base (energie.ts).
+  batterie_cellules: {
+    nom: "batterie de cellules",
+    pluriel: "batteries de cellules",
+    poids: 0.9,
+    description: "Douze cellules lithium soudées en bloc, dans un boîtier de plastique : 120 Wh, pour le banc de la base.",
+  },
+  // ⚙️ La charrette à bras (N2-46, S-27) : la brouette avec 100 kg roulés au lieu de 60 (objets.ts, `capaciteDe`).
+  charrette_bras: {
+    nom: "charrette à bras",
+    pluriel: "charrettes à bras",
+    poids: 16,
+    description: "Deux roues de vélo sur roulements neufs, un châssis de tubes, un plateau de bûches : cent kilos roulés, et l'on court encore.",
+  },
+  // 🔥 Ce que coule le creuset de la forge ventilée (N2-43, S-24) : la poulie (pour le moulin de jerricans), le lingot.
+  poulie_aluminium: {
+    nom: "poulie d'aluminium",
+    pluriel: "poulies d'aluminium",
+    poids: 0.6,
+    description: "Une poulie coulée dans un moule de terre, sa gorge reprise à la lime. Sur l'axe d'un moulin, elle fait tourner plus vite.",
+  },
+  lingot_aluminium: {
+    nom: "lingot d'aluminium",
+    pluriel: "lingots d'aluminium",
+    poids: 1,
+    description: "Quatre chutes fondues en un lingot propre, mat et léger : il se vend au Comptoir.",
+  },
 } satisfies Record<string, DefinitionObjet>;
 
 export type TypeObjetMetier = keyof typeof OBJETS_METIER;

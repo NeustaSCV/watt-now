@@ -153,7 +153,12 @@ export type Verbe =
   /** Le banc solaire ⚡ : poser le panneau sur le banc. */
   | "poser_panneau"
   /** Le pédalier générateur ⚙️ : monter le petit alternateur, entraîné par la roue. */
-  | "monter_alternateur";
+  | "monter_alternateur"
+  // Les meubles nouveaux du niveau 2 (plan 0.10, chantier D ; serveur/src/meubles-neufs.ts).
+  /** La forge ventilée 🔥 : y poser le creuset et ses moules. */
+  | "poser_creuset"
+  /** Le moulin de jerricans ⚙️ : poser la poulie d'aluminium sur son axe. */
+  | "poser_poulie";
 
 /** État propre à certaines installations. */
 export interface EtatInstallation {
@@ -199,6 +204,15 @@ export interface EtatInstallation {
   alternateur?: boolean;
   /** La torche plantée (plan 0.8, chantier 6) : l'instant réel où elle s'éteint (absente : pas encore allumée ; passé : consumée). */
   eteinteLe?: number;
+  /**
+   * Les meubles nouveaux du niveau 2 (plan 0.10, chantier D) : le creuset posé sur la forge ventilée 🔥 ; la poulie
+   * d'aluminium posée sur le moulin de jerricans ⚙️ ; la rampe de LED ⚡ a du courant (la batterie de la base n'est pas
+   * vide : elle éclaire la nuit) ; l'arbalète de garde ⚙️ garde les étoiles de l'arbalète posée (ses dégâts).
+   */
+  creuset?: boolean;
+  poulie?: boolean;
+  courant?: boolean;
+  etoiles?: number;
 }
 
 /** L'état d'une installation à déclencheur. */

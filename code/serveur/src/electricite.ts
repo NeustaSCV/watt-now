@@ -11,7 +11,7 @@
 
 import { armeSansCharge, chargeArme, cleArme, armeDeCle, COUT_ENDURANCE, type Arme } from "../../commun/src/combat.ts";
 import { chosesACharger, estBatterie, manque, pleine, type CibleCharge } from "../../commun/src/banc.ts";
-import { BATTERIES_DE_BANC, MS_JOUR_CALENDRIER, RENDEMENT_BANC, WH_CHARGE_MAX, batterieDuBanc, dureeCharge, estBatterieDeBanc, productionPanneau, stocker, type Charges, type TypeBatterie } from "../../commun/src/energie.ts";
+import { BATTERIES_DE_BANC, MS_JOUR_CALENDRIER, RENDEMENT_BANC, TYPES_BATTERIES, WH_CHARGE_MAX, batterieDuBanc, dureeCharge, estBatterieDeBanc, productionPanneau, stocker, type Charges, type TypeBatterie } from "../../commun/src/energie.ts";
 import type { CleObjet } from "../../commun/src/etoiles.ts";
 import type { InstallationVue, Verbe } from "../../commun/src/messages.ts";
 import type { Inventaire } from "../../commun/src/objets.ts";
@@ -32,7 +32,7 @@ export const PORTEE_CLOTURE_BANC = 6;
 /** On ne dit « Plus de courant » qu'une fois, jusqu'à la prochaine recharge (Book 25 §5.4). */
 const TEXTE_PLUS_DE_COURANT = "Plus de courant : ce n'est plus qu'un gourdin court. Recharge-la au banc.";
 
-const BATTERIES: TypeBatterie[] = ["petite_batterie", "batterie_voiture"];
+const BATTERIES: readonly TypeBatterie[] = TYPES_BATTERIES;
 
 // ---------- Les pièges électriques (Book 25 §5.3), au moteur des déclencheurs ----------
 
@@ -195,15 +195,16 @@ export function alimenterClotures(installations: Iterable<InstallationVue>, inst
 // ---------- Le banc solaire (plan 0.8, chantier 7) ----------
 
 /**
- * Le panneau posé sur le banc solaire produit au calendrier, connecté ou non (`productionPanneau` : 80 Wh par jour de
- * calendrier), dans les batteries posées sur le banc ; sans batterie, ou pleines, l'énergie est perdue. À appeler avant
- * la décharge spontanée, qui avance `majLe` : on part du même instant. Rend le bilan, comme le panneau posé à part.
+ * Le panneau posé sur le banc solaire produit au calendrier, connecté ou non, en suivant le soleil (`productionPanneau` :
+ * 80 Wh par beau jour de calendrier, rien la nuit ni sous la pluie ; plan 0.10, S-30), dans les batteries posées sur le
+ * banc ; sans batterie, ou pleines, l'énergie est perdue. À appeler avant la décharge spontanée, qui avance `majLe` : on
+ * part du même instant. Rend le bilan, comme le panneau posé à part.
  */
-export function produireBancsSolaires(installations: Iterable<InstallationVue>, instant: number): { produit: number; stocke: number; perdu: number } {
+export function produireBancsSolaires(installations: Iterable<InstallationVue>, instant: number, debutMonde: number): { produit: number; stocke: number; perdu: number } {
   const bilan = { produit: 0, stocke: 0, perdu: 0 };
   for (const banc of installations) {
     if (banc.type !== "banc_recharge" || !banc.etat.panneau) continue;
-    const wh = productionPanneau(instant - (banc.etat.majLe ?? instant));
+    const wh = productionPanneau(banc.etat.majLe ?? instant, instant, debutMonde);
     if (wh <= 0) continue;
     const r = stocker({ batteries: banc.etat.batteries ?? {}, charges: banc.etat.charges ?? {} }, wh);
     banc.etat = { ...banc.etat, charges: r.stockage.charges };
@@ -318,7 +319,7 @@ export class Electricite {
       this.ctx.sauverInstallation(i);
       this.ctx.noter("banc:panneau");
       const bat = batterieDuBanc(i.etat);
-      this.ctx.info(bat ? `Le panneau est posé, plein sud : au soleil, il remplit ${bat.nom} (80 Wh par jour).` : "Le panneau est posé, plein sud. Branche la batterie de voiture de la ruine dans le banc : le soleil s'y mettra en réserve.");
+      this.ctx.info(bat ? `Le panneau est posé, plein sud : au soleil, il remplit ${bat.nom} (80 Wh par beau jour, rien la nuit).` : "Le panneau est posé, plein sud. Branche la batterie de voiture de la ruine dans le banc : le soleil s'y mettra en réserve.");
     });
     return true;
   }
@@ -361,7 +362,7 @@ export class Electricite {
     const deja = batterieDuBanc(banc.etat);
     if (deja) return this.ctx.info(`Le banc a déjà sa batterie : ${deja.nom}. Pour en mettre une autre, échange-la.`);
     const b = this.batterieDeBancDuSac();
-    if (!b) return this.ctx.info("Il faut une batterie de voiture : celle de la ruine fait l'affaire.");
+    if (!b) return this.ctx.info("Il faut une batterie de voiture (celle de la ruine fait l'affaire), ou une batterie de cellules.");
     this.ctx.commencer("Brancher la batterie dans le banc", 4, () => {
       if (batterieDuBanc(banc.etat) || (this.ctx.inventaire()[b] ?? 0) < 1) return;
       const wh = this.ctx.prendreBatterie(b);
@@ -380,7 +381,7 @@ export class Electricite {
     const ancienne = batterieDuBanc(banc.etat);
     if (!ancienne) return this.poserBatterie(banc);
     const b = this.batterieDeBancDuSac();
-    if (!b) return this.ctx.info("Pour échanger la batterie du banc, il t'en faut une autre dans ton sac : une batterie de voiture.");
+    if (!b) return this.ctx.info("Pour échanger la batterie du banc, il t'en faut une autre dans ton sac : une batterie de voiture, ou de cellules.");
     this.ctx.commencer("Échanger la batterie du banc", 6, () => {
       this.ctx.majBase();
       const avant = batterieDuBanc(banc.etat);
