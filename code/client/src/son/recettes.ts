@@ -260,6 +260,19 @@ export function impact(force: number): Recette {
   };
 }
 
+/**
+ * Le coup que l'Équipé encaisse (plan 0.9 §3.3) : plus mat, étouffé par le blouson et le casque. Un choc bas et court,
+ * sans grain de chair, un toc sourd de coque, et le cuir qui froisse : « celui-là encaisse ».
+ */
+export const impactMat: Recette = (h) => {
+  const p = new Piste(0.4, h);
+  p.ajouter(sourd(entre(h, 85, 100), 45, 0.025), 0, 1);
+  p.ajouter(bois(h, entre(h, 260, 340), 0.08, 2.5), 0.002, 0.45);
+  p.ajouter(souffle(0.18, h, { bruit: "brun", filtre: "passe-bas", f: 600, env: percussive(0.002, 0.04) }), 0, 0.6);
+  p.ajouter(froissement(h, 0.14, 1400, 300), 0.01, 0.25);
+  return filtrer(saturer(p.donnees, 1.3), "passe-bas", 1600);
+};
+
 export const coupTete: Recette = (h) => {
   // Le coup qui détruit : l'os qui cède. Un craquement bref et un choc.
   const p = new Piste(0.6, h);

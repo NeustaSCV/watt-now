@@ -72,6 +72,8 @@ export const SONS = {
   morsure: menace(R.morsure, 1, 6, 3),
   impact: joueur(R.impact(1), 0.85, BRUIT_ACTION.coup.portee, 4),
   impact_appuye: joueur(R.impact(1.6), 0.95, BRUIT_ACTION.coup.portee, 3),
+  // L'Équipé encaisse sans vaciller (plan 0.9 §3.3) : un choc plus mat, synthétisé (pas de fichier livré).
+  impact_mat: joueur(R.impactMat, 0.9, BRUIT_ACTION.coup.portee, 3),
   coup_tete: joueur(R.coupTete, 1, BRUIT_ACTION.coup.portee, 3),
   chute_corps: joueur(R.chuteCorps, 0.75, 10, 3),
   sifflement: joueur(R.sifflement(false), 0.4, PROCHE, 4),

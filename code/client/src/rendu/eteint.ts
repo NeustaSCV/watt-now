@@ -54,6 +54,9 @@ const ECLAT = { duree: 0.2, nombre: 7, rayon: 1.35, halo: 1.3 };
 const MATIERE_ARCS_ECLAT = new THREE.LineBasicMaterial({ color: 0xdff4ff, transparent: true, opacity: 1, depthWrite: false, blending: THREE.AdditiveBlending });
 const MATIERE_HALO_ECLAT = new THREE.MeshBasicMaterial({ color: 0x9fd8ff, transparent: true, opacity: 0.72, depthWrite: false, blending: THREE.AdditiveBlending });
 
+/** Le sursaut d'un coup encaissé (plan 0.9 §3.3) : 0,25 s, ≈ 5° en arrière, une petite secousse des épaules. */
+const SURSAUT = { duree: 0.25, bascule: 0.09, secousse: 0.035 };
+
 export class VueEteint {
   readonly objet = new THREE.Group();
   private corps: Humanoide | null = null;
@@ -172,6 +175,29 @@ export class VueEteint {
     }
   }
 
+  // ---------- L'Équipé encaisse (plan 0.9 §3.3, chantier D) ----------
+
+  /** Ce qui reste du sursaut d'un coup encaissé (s). */
+  private sursaut = 0;
+
+  /**
+   * Il encaisse sans vaciller (l'Équipé, un coup sur deux) : un léger sursaut du corps, sans recul ni geste de coup
+   * reçu. Il continue d'avancer, de griffer : le joueur doit lire « celui-là encaisse ». Pas de tache de plus.
+   */
+  encaisser(): void {
+    if (this.corps && !this.rampant) this.sursaut = SURSAUT.duree;
+  }
+
+  /** Le sursaut : le corps bascule un instant en arrière depuis les pieds, les épaules secouées, puis revient. */
+  private sursauter(dt: number): void {
+    if (this.sursaut <= 0 || !this.corps) return;
+    this.sursaut = Math.max(0, this.sursaut - dt);
+    const t = 1 - this.sursaut / SURSAUT.duree;
+    const o = this.corps.objet.rotation;
+    o.x = -SURSAUT.bascule * Math.sin(Math.PI * t);
+    o.z = SURSAUT.secousse * Math.sin(t * Math.PI * 6) * (1 - t);
+  }
+
   get hauteurTete(): number {
     const e = this.cible.etat;
     return this.rampant || e === "a_terre" || e === "detruit" || e === "dormant" ? 0.25 : HAUTEUR * 0.92;
@@ -200,6 +226,7 @@ export class VueEteint {
 
     const raidi = !!this.cible.raidi && etat !== "a_terre" && etat !== "detruit";
     this.electriser(dt, raidi);
+    this.sursauter(dt);
 
     if (this.rampant) {
       this.ramper(dt, raidi ? 0 : vitesse);
