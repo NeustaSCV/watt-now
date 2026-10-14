@@ -13,7 +13,7 @@
 //   les trois chambres du Panoramique, sa cuisine, la villa, le cabanon du pêcheur), chacune avec la table qui lui
 //   ressemble (vestiges.ts, LIEU_DE_FOUILLE) ; les chambres : des chiffons, et le fil dentaire courant (N2-61).
 // - **Les Éteints** : ceux de la fiche du modèle (S-06 : ≈ 12 pour une halte), sauf l'Errant posé à la sortie vers le
-//   phare (on y arrive : il serait à un mètre de l'arrivée).
+//   phare (on y arrive : il serait à un mètre de l'arrivée) ; celui de l'entrée, reculé de 12 m sur la route.
 
 import { aLaCorniche, accessibleCorniche, dansUnePiece, surLaChaussee, PIN_TOMBE, SORTIES_CORNICHE } from "./corniche.ts";
 import { ETEINTS_CORNICHE, FOUILLE_CORNICHE } from "./corniche-modele.ts";
@@ -178,6 +178,11 @@ export const BUTIN_CORNICHE: ButinLieu = {
 
 /** L'Errant que la fiche pose à la sortie vers le phare (x = 95 du modèle) : on arrive là, il n'y est pas. */
 const A_LA_SORTIE = (p: { x: number }) => p.x > 93;
+/**
+ * L'Errant de l'entrée (x = −90 du modèle) serait à 6 m de l'arrivée depuis le terrain : il saisissait le voyageur à
+ * peine arrivé. On le recule de 12 m sur la route (on arrive libre, comme ailleurs).
+ */
+const A_L_ENTREE = (p: { x: number; z: number }) => (p.x < -85 ? { x: p.x + 12, z: p.z - 0.8 } : p);
 
 /**
  * Les Éteints de la corniche, d'après la fiche du modèle : les Errants errent ; les anciens habitants (le pompiste, le
@@ -186,7 +191,7 @@ const A_LA_SORTIE = (p: { x: number }) => p.x > 93;
 export function eteintsCorniche(): Eteint[] {
   const places: PlaceEteint[] = ETEINTS_CORNICHE.filter((p) => !A_LA_SORTIE(p)).map((p, i) => {
     const type = p.type ?? "errant";
-    const base = { n: i + 1, x: p.x, z: p.z, o: (i * 1.7) % (Math.PI * 2) };
+    const base = { n: i + 1, ...A_L_ENTREE(p), o: (i * 1.7) % (Math.PI * 2) };
     if (type.startsWith("rampant")) return { ...base, etat: "dormant", variante: "rampant" };
     if (type.startsWith("errant")) return { ...base, etat: "errant" };
     return { ...base, etat: "dormant" };

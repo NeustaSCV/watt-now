@@ -215,7 +215,9 @@ test("les Éteints de la fiche (≈ 12, S-06) ; aucun au pied d'une arrivée", (
   assert.ok(e.length >= 10 && e.length <= 14);
   for (const x of e) {
     assert.ok(accessibleCorniche(x.x, x.z), `l'Éteint ${x.id} est là où l'on marche`);
-    for (const s of SORTIES_CORNICHE) assert.ok(Math.hypot(x.x - s.arrivee.x, x.z - s.arrivee.z) > 5, `l'Éteint ${x.id} loin de l'arrivée ${s.vers}`);
+    // Un Errant à plus de 12 m (il erre), un dormeur à plus de 5 m.
+    const loin = x.etat === "errant" ? 12 : 5;
+    for (const s of SORTIES_CORNICHE) assert.ok(Math.hypot(x.x - s.arrivee.x, x.z - s.arrivee.z) > loin, `l'Éteint ${x.id} loin de l'arrivée ${s.vers}`);
   }
   assert.ok(e.some((x) => x.variante === "rampant" && pieceCorniche(x.x, x.z) === "tunnel"), "le Rampant dans le noir du tunnel");
   assert.ok(e.some((x) => x.etat === "errant" && x.x > RUBAN.x0 && x.x < RUBAN.x1), "l'Errant sur le ruban de l'éboulement");
