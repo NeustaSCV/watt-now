@@ -1,6 +1,8 @@
 # Plan de développement — version 0.10 : le niveau 2, sur la côte
 
-*Version du plan : v0.5 · 2026-10-14 · **Statut : décidé, pas encore codé ; les quatre modèles livrés, complément compris : prêt à lancer.***
+*Version du plan : v0.6 · 2026-10-14 · **Statut : en cours de codage (vague 0 fusionnée dans `integration-0-10`, reprise demandée).***
+
+*v0.6 (2026-10-14) : après la vague 0, deux décisions du porteur : **toutes les routes partent du terrain** (terrain → H2A → L2A, terrain → H2B → L2B ; plus de route de la Coopérative ou du Moulin vers la côte) ; le **menu de téléportation de l'administrateur** propose le niveau 2.*
 
 *v0.5 (2026-10-14) : **le complément est livré** (§11) : au pont, le banc devient une **cale basse** à y = − 0,5 (traitée à plat) avec son point de retour `FICHE.maree.retour` ; au phare, **`hauteurSol(x, z, { epave })` est exportée** par le modèle, à importer telle quelle.*
 
@@ -189,8 +191,9 @@ Dans le code, `client/src/rendu/lieu-vide.ts` permet de brancher un lieu **avant
 - **Contenu** :
   - un **registre** dans `commun/` : chaque lieu y déclare sa nature (halte partagée ou lieu personnel), sa zone, ses sorties, son plan, son milieu, ses Éteints, son butin, son semis, sa réinitialisation ; côté serveur, une fabrique de `LieuVivant` par lieu ;
   - **les branchements en dur sur `"moulin"`** de `joueur.ts`, `main.ts`, `carte.ts`, `interaction.ts`, `audio.ts`, `bruiteur.ts` passent par le registre, **sans changer le comportement** du gué, du Moulin, de la station et de la Coopérative ;
-  - **les quatre lieux** (`route_pont`, `corniche`, `grand_hotel`, `phare`) déclarés avec `lieu-vide.ts` comme rendu provisoire ; `ETAPES_LIEUX` complétée (H2A, H2B, L2A, L2B) ; `TRONCONS` : **L1A → H2A 3 km, H2A → L2A 2 km ; L1B → H2B 3 km, H2B → L2B 2 km** (mêmes distances, B16) ;
-  - la carte : quatre lieux de plus, dévoilés comme ceux du niveau 1 ; aucune fiche de lieu qui divulgue son contenu.
+  - **les quatre lieux** (`route_pont`, `corniche`, `grand_hotel`, `phare`) déclarés avec `lieu-vide.ts` comme rendu provisoire ; `ETAPES_LIEUX` complétée (H2A, H2B, L2A, L2B) ; `TRONCONS` : **toutes les routes partent du terrain** (décision du porteur, 2026-10-14 : « sinon c'est trop complexe ») : **terrain → H2A 3 km, H2A → L2A 2 km ; terrain → H2B 3 km, H2B → L2B 2 km** (mêmes distances, B16) ; aucune sortie de la Coopérative ou du Moulin vers la côte ;
+  - la carte : quatre lieux de plus, dévoilés comme ceux du niveau 1, **les deux routes de la côte partant du terrain** ; aucune fiche de lieu qui divulgue son contenu ;
+  - **le menu de téléportation de l'administrateur** (« Aller à… ») propose aussi les quatre lieux du niveau 2 (décision du porteur, 2026-10-14).
 - **Fichiers** : `commun/src/lieux.ts`, un nouveau `commun/src/registre-lieux.ts`, `serveur/src/joueur.ts`, `serveur/src/monde.ts`, `client/src/main.ts`, `client/src/carte.ts`, `client/src/rendu/carte-vue.ts`, `client/src/interaction.ts`, `client/src/son/audio.ts`, `client/src/son/bruiteur.ts`.
 - **Tests** : tous les tests actuels passent **sans modification** (la non-régression est le critère) ; on voyage du terrain au phare et à l'hôtel (lieux vides) ; `etapeVers` donne les mêmes temps de trajet sur A et B.
 

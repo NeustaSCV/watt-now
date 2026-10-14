@@ -435,3 +435,5 @@ Décidé aussi : **le phare ne se joue que la nuit** (de jour, on prépare la mo
 | Q-0.10-9 | Au phare de jour, **on prépare** (la montée, le pétrole, le prisme, le compresseur) | §9.1 précisé |
 
 | S-07, S-12, S-19, S-28 | Validées avec le plan de la 0.10 (§10) : à la borne, seulement la batterie du panneau de la promenade (pas de pack) ; au phare, on monte seulement par l'escabeau (pas de colonne des poids) ; le péage payé vaut **1 h réelle** de passage libre ; la poulie donne **+ 50 %** au moulin de jerricans (pas d'entraînement direct) | N2-47, N2-60, §9.1, §9.2 précisés |
+
+| Vague 0 de la 0.10 | **Toutes les routes partent du terrain** : terrain → la route du pont → le Grand Hôtel ; terrain → la corniche → le phare (3 km puis 2 km sur chaque route) ; la Coopérative et le Moulin ne mènent pas à la côte | N2-Q10 précisée (les mêmes distances, à partir du terrain) |
