@@ -132,14 +132,14 @@ test("les silhouettes : le niveau suivant des constructions qu'on a (« Au foyer
   assert.ok(!camp.some((s) => s.id === "soupe_cepes"), "deux niveaux plus haut : pas encore");
   const pierres = silhouettes(etat({ installations: terrain("foyer_pierres") }));
   assert.deepEqual(pierres.find((s) => s.id === "soupe_cepes"), { id: "soupe_cepes", ou: "Au foyer de cuisine" });
-  // La forge posée, son enclume dessus : le bac de trempe ouvrira les lames d'acier. La forge ventilée (le glaive, la
-  // hache) est « plus tard » depuis la 0.8 (chantier 7) : ses recettes ne sont pas des silhouettes.
+  // La forge posée, son enclume dessus : le bac de trempe ouvrira les lames d'acier. Depuis la 0.10 (chantier F), le
+  // glaive et la hache sont jouables : ce sont les silhouettes du niveau suivant, la forge ventilée.
   const forge = silhouettes(etat({ installations: terrain(null, { forge: 1, "forge+enclume": 1 }), devoilees: new Set([...devoileesAuDepart(), "forge"]) }));
   assert.ok(forge.some((s) => s.id === "lame_forgee" && s.ou === "Au foyer de forge, avec un bac de trempe"), JSON.stringify(forge));
   // R26 (0.8.2) : sans l'enclume, aucune lame, pas même en silhouette ; le ciseau à bois, si.
   const pierrePlate = silhouettes(etat({ installations: terrain(null, { forge: 1 }), devoilees: new Set([...devoileesAuDepart(), "forge"]) }));
   assert.ok(!pierrePlate.some((s) => s.id === "lame_forgee") && pierrePlate.some((s) => s.id === "ciseau_bois"), JSON.stringify(pierrePlate));
-  assert.ok(!forge.some((s) => s.id === "glaive"), JSON.stringify(forge));
+  assert.ok(forge.some((s) => s.id === "glaive" && s.ou === "À la forge ventilée, avec un bac de trempe"), JSON.stringify(forge));
   // Le poste de montage (niveau 2) n'existe pas encore : ses recettes ne sont pas des silhouettes.
   const banc = silhouettes(etat({ famille: "voltaiques", installations: terrain(null, { banc_recharge: 1 }) }));
   assert.ok(!banc.some((s) => s.id === "electrificateur"));

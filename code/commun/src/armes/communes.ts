@@ -9,6 +9,14 @@
 import type { Arme } from "../combat.ts";
 
 export const ARMES_COMMUNES: Arme[] = [
+  // ---- Les armes trouvées du niveau 2 (plan 0.10, chantier F ; N2-49, N2-62) ----
+  // Au-dessus de la masse (2,5), une seule fois par personnage, sans étoiles ; elles ne se refont pas. Leur contrepartie
+  // est l'usure (R31) : solidité 50. Les chantiers J et K les posent dans leur lieu (la terrasse de l'hôtel, la cuisine du
+  // gardien du phare), comme la fourche au Moulin.
+  // Le pied de guéridon en fonte (L2A) : lourd et lent (un coup ≈ 1 s) ; il passe le casque. La fonte casse net.
+  { rang: 6, objet: "pied_gueridon", nom: "le pied de guéridon", type: "contondant", solidite: 50, degatsTorse: 3.2, tueALaTete: true, allonge: 1.5, coup: 1000, coupAppuye: 1300 },
+  // Le harpon du gardien (L2B) : un fer barbelé au bout d'une hampe, tenu à 2,4 m, qui passe le casque comme la fourche.
+  { rang: 8, objet: "harpon", nom: "le harpon du gardien", type: "percant", solidite: 50, degatsTorse: 3.2, tueALaTete: true, allonge: 2.4, coup: 700, coupAppuye: 950 },
   // La masse (Book 23 §4.6) : très forte, lente ; le casque n'y résiste pas.
   { rang: 10, objet: "masse", nom: "la masse", type: "contondant", solidite: 70, degatsTorse: 2.5, tueALaTete: true, allonge: 1.6, coup: 950, coupAppuye: 1250 },
   // La hache (tête trouvée, manche taillé) : 1,0, le haut de la bande de la maison (K39). C'est aussi l'outil Fendre.
@@ -16,8 +24,9 @@ export const ARMES_COMMUNES: Arme[] = [
   // Le pied-de-biche : le vestige devient une arme, la plus solide de toutes (Book 23 §4.6).
   { rang: 30, objet: "pied_de_biche", nom: "le pied-de-biche", type: "contondant", solidite: 120, degatsTorse: 1.5, tueALaTete: true, allonge: 1.5, coup: 600, coupAppuye: 880 },
   // La fourche à foin de l'étable du Moulin (L1B, I30) : trouvée, une fois par personnage. Ses dents percent, et passent
-  // le casque ; l'allonge tient l'Éteint au bout. Pas d'étoiles, et ce n'est pas un outil.
-  { rang: 35, objet: "fourche_foin", nom: "la fourche à foin", type: "percant", solidite: 80, degatsTorse: 1.5, tueALaTete: true, allonge: 2, coup: 650, coupAppuye: 900 },
+  // le casque ; l'allonge tient l'Éteint au bout. Pas d'étoiles, et ce n'est pas un outil. 2,3 depuis la 0.10 (N2-66) :
+  // elle approche la masse de la route A (2,5).
+  { rang: 35, objet: "fourche_foin", nom: "la fourche à foin", type: "percant", solidite: 80, degatsTorse: 2.3, tueALaTete: true, allonge: 2, coup: 650, coupAppuye: 900 },
   // La machette de fortune (Book 25 §0.2) : une tôle découpée, un manche ficelé. Une lame ★ : ses valeurs sont à ★.
   { rang: 40, objet: "machette", nom: "la machette de fortune", type: "tranchant", solidite: 40, degatsTorse: 1.2, tueALaTete: true, allonge: 1.6, coup: 500, coupAppuye: 750, metier: true },
   // Le marteau remmanché (D1, Q-A3) : 0,8, et il ne tue plus à la tête d'un coup ; il assomme et met à terre. Solidité

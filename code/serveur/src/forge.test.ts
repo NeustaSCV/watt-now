@@ -307,18 +307,38 @@ test("🔥 le bac de trempe : une auge de 2 bûches et 2 glaises (Creuser 1, au 
 
 // ---------- La forge ventilée ----------
 
-test("🔥 la forge ventilée, la hache et le glaive sont « plus tard » (niveau 2) ; la hachette se forge au foyer, à ★★", () => {
-  const t = monter("charbonniers", { marteau: 2, pinces_forge: 1, barre_metal: 2, ressort_lames: 4, charbon_bois: 4, buche: 1, glaise: 2, pierre: 6, graisse: 1, branche: 3, rivet: 2 }, { etat: { bac: true, enclume: "depanneur" } });
+test("🔥 0.10 : la hache et le glaive se forgent à la forge ventilée ; au foyer, refusés ; la hachette se forge au foyer, à ★★", () => {
+  const t = monter("charbonniers", { marteau: 2, pinces_forge: 1, barre_metal: 2, ressort_lames: 4, charbon_bois: 4, caoutchouc: 4, glaise: 2, pierre: 6, graisse: 1, branche: 3, rivet: 2 }, { etat: { bac: true, enclume: "depanneur" } });
   t.fabriquer("hache_forgee");
-  assert.match(t.infos().at(-1)!, /plus tard/i);
-  t.utiliser("ameliorer", 10);
-  assert.equal(t.laForge().niveau ?? 1, 1, "pas de forge ventilée en 0.8");
-  // Même devant une forge ventilée (posée à la main), le glaive attend.
-  for (const id of ["hache_forgee", "hache_forgee_soc", "glaive"]) assert.equal(recette(id)!.aVenir, "niveau 2", id);
+  assert.match(t.infos().at(-1)!, /forge ventilée/i);
+  assert.equal(t.sac().hache_forgee, undefined);
+  // Le niveau 2 est là (plan 0.10, chantier F) : plus rien de « plus tard » pour les lames de la forge ventilée.
+  for (const id of ["hache_forgee", "hache_forgee_soc", "glaive", "machette_forgee_caoutchouc"]) assert.equal(recette(id)!.aVenir, undefined, id);
   // La hachette (Q-0.8-2) : au foyer de forge et à son bac, à ★★.
   assert.equal(recette("hachette")!.aVenir, undefined);
   t.fabriquer("hachette", 160);
   assert.equal(t.sac()["hachette#2"], 2);
+});
+
+test("🔥 0.10 (N2-35) : à la forge ventilée, le manche de caoutchouc fait la machette ★★★ ; le manche ficelé reste ★★", () => {
+  // Le manche n'est plus une branche et de la ficelle : il est tourné de caoutchouc (une chambre à air).
+  for (const id of ["hache_forgee", "hache_forgee_soc", "glaive", "machette_forgee_caoutchouc"]) {
+    const r = recette(id)!;
+    assert.equal(r.ingredients.caoutchouc, 2, id);
+    assert.equal(r.ingredients.branche ?? r.ingredients.ficelle ?? r.ingredients.buche, undefined, id);
+  }
+  const ventilee = contexte(2, { bac: true, enclume: "depanneur" });
+  const sac = { ressort_lames: 2, charbon_bois: 2, caoutchouc: 2, branche: 1, ficelle: 1, pinces_forge: 1 };
+  assert.equal(etoilesDuProduit(recette("machette_forgee_caoutchouc")!, sac, { contexte: ventilee }), 3);
+  assert.equal(etoilesDuProduit(recette("machette_forgee")!, sac, { contexte: ventilee }), 2);
+  // La maîtrise donne toujours l'étoile du dessus (K-Q1), même au manche ficelé.
+  assert.equal(etoilesDuProduit(recette("machette_forgee")!, sac, { contexte: ventilee, maitrise: true }), 3);
+  // En jeu : devant une forge ventilée, avec les pinces, la machette au manche de caoutchouc sort ★★★.
+  const t = monter("charbonniers", { marteau: 2, ...sac }, { niveau: 2, etat: { bac: true, enclume: "depanneur" } });
+  t.fabriquer("machette_forgee_caoutchouc", 160);
+  assert.equal(t.sac()["machette_forgee#3"] ?? t.sac().machette_forgee, 1, JSON.stringify(t.sac()));
+  assert.equal(t.sac().caoutchouc, undefined);
+  assert.equal(t.sac().ficelle, 1, "le manche ficelé n'est pas pris");
 });
 
 test("🔥 démonter la forge rend ses accessoires entiers (l'auge : ses bûches et sa glaise)", () => {

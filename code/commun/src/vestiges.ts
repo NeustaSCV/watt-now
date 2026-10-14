@@ -1110,6 +1110,31 @@ const VESTIGES_LOT1 = {
     teinte: "#2f7a5a",
     horsTirage: true,
   },
+  // ---------- Les armes trouvées du niveau 2 (plan 0.10, chantier F ; N2-49, N2-62) ----------
+  // Une seule fois par personnage, à une place fixe (les chantiers J et K les posent) ; leurs valeurs d'arme sont dans
+  // armes/communes.ts. Elles ne servent pas d'outil.
+  pied_gueridon: {
+    nom: "pied de guéridon",
+    pluriel: "pieds de guéridon",
+    description: "La colonne de fonte d'une table de terrasse, arrachée à son plateau. Lourde au bout, elle cogne comme une masse, mais la fonte casse net.",
+    poids: 3.5,
+    valeur: 60,
+    famille: "salon",
+    rarete: "P",
+    teinte: "#2a2826",
+    horsTirage: true,
+  },
+  harpon: {
+    nom: "harpon du gardien",
+    pluriel: "harpons du gardien",
+    description: "Un vieux harpon de baleinier, longtemps pendu en trophée : une hampe brunie, un fer barbelé. On le tient à plus de deux mètres.",
+    poids: 2.2,
+    valeur: 60,
+    famille: "garage",
+    rarete: "P",
+    teinte: "#5a4636",
+    horsTirage: true,
+  },
 } satisfies Record<string, DefinitionVestige>;
 
 /** Les vestiges : le lot 1 (0.3 et 0.6) et les déchets de l'Abondance (lot 2, 0.7 : vestiges-lot2.ts). */

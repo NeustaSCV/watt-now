@@ -94,7 +94,7 @@ import { EvolutionArmes, type ContexteEvolution } from "./evolution-armes.ts";
 import { declencher, declencheurNeuf, definitionDeclencheur, estDeclencheur, type DeclencheurPose } from "./declencheurs.ts";
 import { Electricite, alimenterClotures, batteriesEnTrop, coutEnduranceCoup, produireBancsSolaires, type ContexteElectricite } from "./electricite.ts";
 import { FilsDeRasoir, utiliserMecanique, type ContexteMecanique } from "./mecanique.ts";
-import { rendDesAccessoires } from "../../commun/src/mecanique.ts";
+import { refusMontageArbalete, rendDesAccessoires } from "../../commun/src/mecanique.ts";
 import {
   PRIX_RETRAIT,
   WOTTS_PAR_WH_M,
@@ -3077,6 +3077,9 @@ export class Joueur implements Voyageur, ParticipantLecon {
     // La forge (Book 25 §4) : la maîtrise ; le risque de la trempe à l'eau est dit ici.
     const refusForge = this.forge.refus(r);
     if (refusForge) return this.info(refusForge);
+    // L'arbalète à arc d'if demande le cranequin léger (plan 0.10, chantier F).
+    const refusArbalete = refusMontageArbalete(r.id, this.inventaire);
+    if (refusArbalete) return this.info(refusArbalete);
 
     if ("installation" in r.produit) {
       const type = r.produit.installation;

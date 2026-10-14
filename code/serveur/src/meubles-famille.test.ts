@@ -95,24 +95,21 @@ test("chaque meuble de famille a sa lignée, sa clé de la station et son repli,
 });
 
 test("ce qui attend le niveau 2 ou 3 est grisé « plus tard » ; la clôture de fortune et l'alarme électrique restent", () => {
+  // Plan 0.10 (chantier F) : les armes du niveau 2 sont jouables ; le cranequin suit l'arbalète lourde au niveau 3.
   const plusTard = {
-    module_bobine: "niveau 2",
-    matraque_electrodes: "niveau 2",
-    matraque_manche_tourne: "niveau 2",
-    aiguillon: "niveau 2",
     electrificateur: "niveau 2",
     cloture_electrique: "niveau 2",
     ventilateur_forge: "niveau 2",
-    cranequin: "niveau 2",
-    arc_arbalete_if: "niveau 2",
+    cranequin: "niveau 3",
     arbalete_lourde: "niveau 3",
     arc_arbalete_retrempe: "niveau 3",
     noix_forgee: "niveau 3",
     ressort_retrempe: "niveau 3",
-    hache_forgee: "niveau 2",
-    glaive: "niveau 2",
   } as const;
   for (const [id, a] of Object.entries(plusTard)) assert.equal(recette(id)?.aVenir, a, id);
+  for (const id of ["module_bobine", "matraque_electrodes", "matraque_manche_tourne", "matraque_contacts_soudes", "aiguillon", "cranequin_leger", "arc_arbalete_if", "hache_forgee", "glaive", "machette_forgee_caoutchouc"]) {
+    assert.equal(recette(id)?.aVenir, undefined, id);
+  }
   for (const id of ["banc_recharge", "pack_cellules", "module_decharge", "matraque_fortune", "matraque_electrique", "lampe_bricolee", "cloture_fortune", "alarme_electrique", "pedalier", "arbalete", "arc_arbalete_frene", "arc_arbalete_ressort", "forge", "pinces_forge", "rivet", "pointe_acier", "lame_forgee_fer", "machette_forgee_fer", "hachette", "charbonniere", "charbonniere_charbonnette"]) {
     assert.equal(recette(id)?.aVenir, undefined, id);
   }
