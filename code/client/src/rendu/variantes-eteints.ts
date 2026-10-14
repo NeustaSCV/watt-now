@@ -34,9 +34,9 @@ export function tenueDeVariante(v: VarianteEteint, base: Tenue): Tenue {
       // Il a traîné sur le sol : plus déchiré, pieds nus.
       return { ...base, pieds: 0x6b6a5a, dechirures: 0.55 };
     case "noye":
-      // Trempé depuis des semaines : les couleurs noircies par l'eau, passées au vert de vase ; les manches parties, les
-      // habits craqués sur la peau tendue (on voit la chair blême), pieds nus.
-      return { ...base, haut: detrempe(base.haut), manche: null, bas: detrempe(base.bas), pieds: PEAU_NOYE, dechirures: 0.6 };
+      // Trempé depuis des semaines : les couleurs délavées, passées au gris-vert de vase ; les manches parties, les
+      // habits craqués de partout sur la peau tendue (la chair blême déborde), pieds nus.
+      return { ...base, haut: detrempe(base.haut), manche: null, bas: detrempe(base.bas), pieds: PEAU_NOYE, dechirures: 0.8 };
     case "ensable":
       // Le sable s'est collé partout : les couleurs ternies, tirées vers le sable ; pieds nus.
       return { ...base, haut: ensable(base.haut), manche: base.manche === null ? null : ensable(base.manche), bas: ensable(base.bas), pieds: 0x9c8f72, dechirures: 0.55 };
@@ -312,32 +312,42 @@ export class Rampement {
 // géométrie et un matériau partagés par tous, comme la poussière de la chute (eteint-au-sol.ts).
 
 /** La peau du Noyé : blême, tirant sur le bleu-vert (la lumière du jour la fait luire, `LUISANCE_NOYE`). */
-export const PEAU_NOYE = 0xb3c2bd;
+export const PEAU_NOYE = 0xd4e2e6;
 /** La peau de l'Ensablé : grise, poudrée de sable. */
 export const PEAU_ENSABLE = 0x939a86;
 /**
  * Le Noyé gonflé : un peu plus large en tout (`large`, `epais`), et surtout le ventre, les cuisses et les bras enflés
  * (`ENFLURE`, os par os). Il se dégonfle en crevant (`apres`), en `crevaison` secondes, après un dernier gonflement.
  */
-export const GONFLE = { large: 1.1, epais: 1.12, apres: { large: 1, epais: 0.96 }, crevaison: 0.35, gonflement: 0.07 };
+export const GONFLE = { large: 1.4, epais: 1.38, apres: { large: 1, epais: 0.95 }, crevaison: 0.45, gonflement: 0.1 };
 /**
  * L'enflure, os par os : l'os s'élargit en travers (pas en longueur) de ce facteur. Ses enfants nommés retrouvent la
  * largeur qu'on leur veut (la leur, ou 1) : sans ça, tout le haut du corps suivrait le ventre, et il aurait l'air
  * costaud, pas gonflé.
  */
 const ENFLURE: [os: string, facteur: number, enfants: string[]][] = [
-  ["spine_01", 0.42, ["spine_02"]],
-  ["spine_02", 0.3, ["spine_03"]],
-  ["spine_03", 0.1, ["neck_01", "clavicle_l", "clavicle_r"]],
-  ["neck_01", 0.22, ["Head"]],
-  ["thigh_l", 0.3, ["calf_l"]],
-  ["thigh_r", 0.3, ["calf_r"]],
-  ["calf_l", 0.12, ["foot_l"]],
-  ["calf_r", 0.12, ["foot_r"]],
-  ["upperarm_l", 0.22, ["lowerarm_l"]],
-  ["upperarm_r", 0.22, ["lowerarm_r"]],
-  ["lowerarm_l", 0.12, ["hand_l"]],
-  ["lowerarm_r", 0.12, ["hand_r"]],
+  // Le ventre en tonneau, la poitrine et les épaules bouffies.
+  ["spine_01", 1.05, ["spine_02"]],
+  ["spine_02", 0.85, ["spine_03"]],
+  ["spine_03", 0.5, ["neck_01", "clavicle_l", "clavicle_r"]],
+  ["clavicle_l", 0.3, ["upperarm_l"]],
+  ["clavicle_r", 0.3, ["upperarm_r"]],
+  // Le cou et le visage bouffis.
+  ["neck_01", 0.8, ["Head"]],
+  ["Head", 0.32, []],
+  // Les cuisses et les bras boudinés, les mains enflées.
+  ["thigh_l", 0.7, ["calf_l"]],
+  ["thigh_r", 0.7, ["calf_r"]],
+  ["calf_l", 0.45, ["foot_l"]],
+  ["calf_r", 0.45, ["foot_r"]],
+  ["foot_l", 0.2, []],
+  ["foot_r", 0.2, []],
+  ["upperarm_l", 0.65, ["lowerarm_l"]],
+  ["upperarm_r", 0.65, ["lowerarm_r"]],
+  ["lowerarm_l", 0.5, ["hand_l"]],
+  ["lowerarm_r", 0.5, ["hand_r"]],
+  ["hand_l", 0.45, []],
+  ["hand_r", 0.45, []],
 ];
 
 /**
@@ -376,12 +386,15 @@ export const LUISANCE_NOYE = 0.5;
 export const ENFOUI = 0.15;
 
 const SABLE = new THREE.Color(0xc9b68c);
-const VASE = new THREE.Color(0x3f4a3c);
+const VASE = new THREE.Color(0x8e9a88);
 const _c = new THREE.Color();
 
-/** Une couleur de vêtement trempée : plus sombre, passée au vert de vase. */
+/**
+ * Une couleur de vêtement restée des semaines dans l'eau : délavée, passée au gris-vert de vase claire (plus claire
+ * que sombre : la forme gonflée doit se lire de haut, sur un petit écran).
+ */
 function detrempe(c: number): number {
-  return _c.setHex(c).multiplyScalar(0.75).lerp(VASE, 0.3).getHex();
+  return _c.setHex(c).lerp(VASE, 0.6).getHex();
 }
 
 /** Une couleur de vêtement couverte de sable. */

@@ -136,8 +136,8 @@ export class VueEteint {
       peau,
       // Les variantes gardent le même tirage (même corps, même taille) et changent seulement d'habits.
       tenue: v ? tenueDeVariante(v, tenueTiree) : tenueTiree,
-      // Sous le casque de l'Équipé, pas de cheveux.
-      coiffure: v === "equipe" ? null : coiffure === "buns" && genre === "homme" ? "buzzed" : coiffure,
+      // Sous le casque de l'Équipé, pas de cheveux ; le Noyé les a perdus dans l'eau (son crâne blême se voit de haut).
+      coiffure: v === "equipe" || v === "noye" ? null : coiffure === "buns" && genre === "homme" ? "buzzed" : coiffure,
       couleurCheveux: choisir(CHEVEUX),
       tete: 1.25,
       hauteur: HAUTEUR * (0.95 + a() * 0.08),
