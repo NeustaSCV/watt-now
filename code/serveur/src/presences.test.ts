@@ -110,7 +110,7 @@ test("0.9 : l'allure part avec la position ; l'arrêt part une fois, avec l'allu
   assert.deepEqual(de(a, "positions").at(-1)!.p, [2, 21.5, 35, 0, 1]);
 });
 
-test("0.9 : à l'entrée dans le champ, l'allure vaut 0 dans « autres » et part au même tour si elle diffère", () => {
+test("0.9 : à l'entrée dans le champ, l'allure vaut 0 dans « autres » ; elle part au tour suivant si elle diffère", () => {
   const a = joueur(1, 0);
   const b = joueur(2, RAYON_INTERET + 5);
   const memoire: MemoirePresences = new Map();
@@ -118,8 +118,12 @@ test("0.9 : à l'entrée dans le champ, l'allure vaut 0 dans « autres » et par
   b.vu = { ...b.vu, x: RAYON_INTERET - 1 };
   b.allure = 2;
   diffuserPresences([a, b], memoire, undefined, 5000);
+  assert.deepEqual(a.recus.map((m) => m.t), ["autres"]);
+  // Il marche : au tour suivant, sa position et son allure.
+  b.vu = { ...b.vu, x: RAYON_INTERET - 1.24 };
+  diffuserPresences([a, b], memoire, undefined, 5100);
   assert.deepEqual(a.recus.map((m) => m.t), ["autres", "positions"], "l'identité, puis l'allure qu'il a vraiment");
-  assert.deepEqual(de(a, "positions")[0]!.p, [2, RAYON_INTERET - 1, 35, 0, 2]);
+  assert.deepEqual(de(a, "positions")[0]!.p, [2, RAYON_INTERET - 1.24, 35, 0, 2]);
   // Immobile à l'entrée : rien de plus que l'identité (b s'est arrêté entre-temps).
   b.allure = 0;
   diffuserPresences([a, b], memoire);

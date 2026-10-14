@@ -101,19 +101,21 @@ export function diffuserPresences(observateurs: Observateur[], memoire: MemoireP
     if (change) {
       moi.envoyer({ t: "autres", joueurs: voisins.map((o) => o.vu) });
       memoire.set(moi.id, maintenant);
-      // « autres » porte déjà les positions : on repart de là, l'allure à 0 tant qu'un « positions » ne l'a pas dite.
+      // « autres » porte déjà les positions : on repart de là, l'allure à 0 tant qu'un « positions » ne l'a pas dite
+      // (celui qui marche bouge : sa position et son allure partent au tour suivant).
       dejaVues.clear();
       for (const o of voisins) dejaVues.set(o.id, clePosition(o, 0));
+    } else {
+      // Les positions : id, x, z, orientation, allure, à la suite ; seulement celles qui ont changé.
+      const p: number[] = [];
+      for (const o of voisins) {
+        const cle = clePosition(o);
+        if (dejaVues.get(o.id) === cle) continue;
+        dejaVues.set(o.id, cle);
+        p.push(o.id, o.vu.x, o.vu.z, o.vu.o, o.allure ?? 0);
+      }
+      if (p.length > 0) moi.envoyer({ t: "positions", h: heure, p });
     }
-    // Les positions : id, x, z, orientation, allure, à la suite ; seulement celles qui ont changé.
-    const p: number[] = [];
-    for (const o of voisins) {
-      const cle = clePosition(o);
-      if (dejaVues.get(o.id) === cle) continue;
-      dejaVues.set(o.id, cle);
-      p.push(o.id, o.vu.x, o.vu.z, o.vu.o, o.allure ?? 0);
-    }
-    if (p.length > 0) moi.envoyer({ t: "positions", h: heure, p });
     // Les gestes de ceux qu'il voit, après leurs positions (et leur identité s'ils entrent dans le champ).
     const g: GesteVu[] = [];
     for (const o of voisins) if (o.gestes?.length) g.push(...o.gestes);
