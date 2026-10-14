@@ -108,8 +108,8 @@ test("R-BUTIN (R15) : aucun objet-clé dans les tables de fouille, ni dans ce qu
   }
 });
 
-test("la boîte de roulements de l'hôtel : une boîte, de trois roulements (V1-01), comme au Comptoir et par chance", () => {
-  assert.deepEqual(USAGES.hotel_roulements.donne, { roulements: 1 });
+test("les boîtes de roulements de l'hôtel : deux boîtes (V3-01), de trois roulements chacune (V1-01)", () => {
+  assert.deepEqual(USAGES.hotel_roulements.donne, { roulements: 2 });
   assert.deepEqual(DEMONTAGE.roulements!.donne, { roulement: 3 });
 });
 

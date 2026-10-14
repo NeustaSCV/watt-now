@@ -325,7 +325,7 @@ for (const f of FAMILLES) {
   for (const l of bilanNiveau2(f, offre.total).filter((x) => x.passages > 1)) sortie.push(`| ${NOMS_FAMILLES[f]} | ${nomObjet(l.objet)} | ${deuxChiffres(l.demande)} | ${deuxChiffres(l.offre)} | ${Number.isFinite(l.passages) ? l.passages : "aucune"} | ${l.source ?? "—"} |`);
 }
 const tubes = rendementParFouille("tube_aluminium");
-sortie.push("", `**Le tube d'aluminium** (N2-02 à N2-05) : par fouille, ${tubes.map((t) => `${deuxChiffres(t.parFouille)} à la table « ${t.table} »`).join(", ") || "aucune table"} ; sur la côte, les bancs de la cale du pont (5 à marée basse : 2 caddies, 2 trottinettes, la débroussailleuse).`);
+sortie.push("", `**Le tube d'aluminium** (N2-02 à N2-05) : par fouille, ${tubes.map((t) => `${deuxChiffres(t.parFouille)} à la table « ${t.table} »`).join(", ") || "aucune table"} ; sur la côte (V3-02), ${deuxChiffres(offre.total.tube_aluminium ?? 0)} par tournée : les transats de l'hôtel (deux chaises de camping), l'échelle du hangar du phare, la chaise du camp de la corniche, les bancs de la cale du pont (7 à marée basse : 2 caddies de 2 tubes, 2 trottinettes, la débroussailleuse). **Les bouteilles en verre** (V3-03) : ${deuxChiffres(offre.total.bouteille_verre ?? 0)} par tournée (le bar et les cuisines de l'hôtel, le vaisselier du phare, l'épicerie et le bar du pont).`);
 const e = budgetEnergie();
 sortie.push(
   "",

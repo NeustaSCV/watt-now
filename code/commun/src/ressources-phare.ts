@@ -93,10 +93,12 @@ export const USAGES_PHARE: Record<TypeRessourcePhare, UsageRessource> = {
   ),
   phare_rabot: prendre("Prendre le rabot", { rabot: 1 }, 2, "Dans une caisse à outils du conteneur : un rabot de menuisier, la lame encore huilée."),
   phare_jerrican: prendre("Prendre le jerrican de 20 L", { jerrican_20l: 1 }, 2, "Parmi les bidons du bord, un jerrican de 20 L, vide, son bouchon vissé. Solide, étanche."),
-  phare_vaisselier: fouiller("Fouiller le vaisselier", {}, "Le vaisselier du gardien : des assiettes ébréchées, des conserves, des bougies, des allumettes humides."),
+  // V3-03 (chantier V3) : deux bouteilles vides dans le vaisselier de la cuisine du gardien.
+  phare_vaisselier: fouiller("Fouiller le vaisselier", { bouteille_verre: 2 }, "Le vaisselier du gardien : des assiettes ébréchées, des bouteilles vides, des conserves, des bougies, des allumettes humides."),
   phare_chambre: fouiller("Fouiller le coffre de marin", {}, "Un coffre de marin au pied du lit : des vêtements de mer pliés, une lampe à huile, une couverture polaire."),
   phare_machines: fouiller("Fouiller la salle des machines", {}, "Le groupe électrogène, ses courroies, ses filtres ; le tableau à couteaux et ses fusibles."),
-  phare_hangar: fouiller("Fouiller l'établi du hangar", {}, "L'établi du hangar : des filets, des bouées couronnes, des outils rouillés, un photophore « Watty Glow »."),
+  // V3-02 (chantier V3) : l'échelle en aluminium du hangar (quatre tubes, au démontage), à chaque visite.
+  phare_hangar: fouiller("Fouiller l'établi du hangar", { echelle_aluminium: 1 }, "L'établi du hangar : des filets, des bouées couronnes, des outils rouillés, un photophore « Watty Glow », une échelle pliante en aluminium contre le mur."),
   phare_greve: fouiller("Fouiller la laisse de mer", { corde: 1 }, "La laisse de mer, sur les galets : bois flotté, bouées, cordages, bouteilles. Ce que la mer rapporte."),
 };
 

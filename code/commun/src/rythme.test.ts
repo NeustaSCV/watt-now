@@ -40,7 +40,7 @@ import {
   tousLesParcoursN2,
   wottsDePeage,
 } from "./rythme.ts";
-import { SAC_LIBRE_KG, budgetEnergie, demandeNiveau2, offreDeLaCote, poidsDesCles } from "./rythme-niveau2.ts";
+import { SAC_LIBRE_KG, bilanNiveau2, budgetEnergie, demandeNiveau2, offreDeLaCote, poidsDesCles } from "./rythme-niveau2.ts";
 import { trouvables } from "./trouvables.ts";
 import { lieuPossede } from "./lieu-recette.ts";
 import { PLAFONDS_NIVEAU_1 } from "./armes/grille.ts";
@@ -401,6 +401,15 @@ test("niveau 2, budget des matières : une charge de sac par route (les matéria
   const parLieu = new Map(o.parLieu.map((x) => [x.lieu, x]));
   assert.ok(parLieu.get("grand_hotel")!.wotts > 12 && parLieu.get("phare")!.wotts > 12, "une visite paie le péage");
   assert.ok((parLieu.get("route_pont")!.matieres.tube_aluminium ?? 0) >= 2);
+  // V3-02, V3-03 (chantier V3, « plus généreux ») : une tournée de la côte rapporte ≈ 14 tubes d'aluminium (le
+  // Mécaniste en use 16, le Voltaïque 10, le Charbonnier 8) et ≈ 8 bouteilles en verre (le four de terre en demande 6).
+  assert.ok((o.total.tube_aluminium ?? 0) >= 12, `${o.total.tube_aluminium} tubes par tournée`);
+  assert.ok((o.total.bouteille_verre ?? 0) >= 7, `${o.total.bouteille_verre} bouteilles par tournée`);
+  for (const f of ["voltaiques", "charbonniers"] as const) {
+    const b = bilanNiveau2(f, o.total);
+    for (const t of ["tube_aluminium", "bouteille_verre"] as const) assert.ok((b.find((l) => l.objet === t)?.passages ?? 1) <= 1, `${f} : ${t} en une tournée`);
+  }
+  assert.ok((bilanNiveau2("mecanistes", o.total).find((l) => l.objet === "tube_aluminium")?.passages ?? 1) <= 2, "le Mécaniste : un peu plus d'une tournée");
   assert.deepEqual(parLieu.get("grand_hotel")!.cles.sort(), ["couvertures_laine", "fer_souder", "lanterne_tempete", "roulements", "toles_ondulees"]);
   // Le banc qui suit le soleil, compensé (V1-19) : la rampe de LED ne prend qu'une part de ce qu'il donne.
   const e = budgetEnergie();
