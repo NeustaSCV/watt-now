@@ -126,7 +126,6 @@ import {
   ENDURANCE_CONVALESCENCE,
   ENDURANCE_COURSE,
   ENDURANCE_MAX,
-  ENDURANCE_RECUPERATION,
   ESQUIVE,
   NIVEAU_APRES_EFFONDREMENT,
   SEUIL_EPUISE,
@@ -134,6 +133,9 @@ import {
   evoluer,
   freinSaisie,
   intoxiquer,
+  nauseeux,
+  prendreLaNausee,
+  recuperationEndurance,
   MALUS_ABIMEE,
   DEBRIS_ARME,
   REPOUSSER,
@@ -1666,6 +1668,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       blessures: this.sante.blessures.map((b) => b.type),
       convalescence: this.maintenant() < this.sante.convalescenceJusqua,
       intoxique: symptomes(this.sante, this.maintenant()) !== null,
+      ...(nauseeux(this.sante, this.maintenant()) ? { nauseeux: true } : {}),
     };
   }
 
@@ -1723,7 +1726,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
     // Endurance : la course fatigue, le reste du temps on souffle.
     const court = this.bouge && this.intention.allure === "course";
     if (court) this.endurance -= ENDURANCE_COURSE * dt;
-    else if (instant > this.prochaineFrappe + 600) this.endurance += ENDURANCE_RECUPERATION * dt;
+    // La nausée d'un Noyé crevé (0.10) : deux fois moins vite.
+    else if (instant > this.prochaineFrappe + 600) this.endurance += recuperationEndurance(this.sante, instant) * dt;
     this.endurance = Math.max(0, Math.min(this.enduranceMax(), this.endurance));
 
     this.sante = evoluer(this.sante, dt, instant, this.besoins.kcal > 0 && this.besoins.eau > 0);
@@ -2529,6 +2533,13 @@ export class Joueur implements Voyageur, ParticipantLecon {
       eclaire: this.lumiere && (this.nuit() || (this.vivant?.obscur(this.position.x, this.position.z) ?? false)),
       intouchable: this.maintenant() < this.esquiveJusqua || this.arrivee.protege(this.maintenant()),
     };
+  }
+
+  /** Un Noyé crève tout près (0.10, chantier G) : ses fluides, la nausée (30 s, l'endurance revient deux fois moins vite). */
+  eclabousser(instant: number): void {
+    this.sante = prendreLaNausee(this.sante, instant);
+    this.info("Il crève, et ses fluides t'éclaboussent : la nausée te coupe le souffle.");
+    this.envoyerSante(true);
   }
 
   /** Les sources fixes du terrain : feux allumés, charbonnière qui fume. */

@@ -7,11 +7,13 @@
 // - le mécanicien : la combinaison bleue tachée d'huile, un chiffon rouge à la poche.
 // Les accessoires sont moulés sur le corps au repos (Mesure) et fondus par os (Assemblage) : un ou deux appels de
 // dessin par os, quelques centaines de triangles par variante. Sans variante, c'est l'Errant, inchangé.
+// Ceux de la côte (0.10, chantier G), plus bas : le Noyé, gonflé, pâle et luisant ; l'Ensablé, à moitié sous le sable.
 
 import * as THREE from "three";
 import type { VarianteEteint } from "../../../commun/src/eteints.ts";
 import { Mesure, pan } from "./accessoires.ts";
 import { Assemblage, V3, materiauSommets, placer } from "./assemblage.ts";
+import { aleatoire } from "./materiaux.ts";
 import type { Humanoide, Tenue } from "./humanoides.ts";
 
 /** Le gris de la blouse du magasinier (la veste ; ses pans sont un peu plus clairs, ils n'ont pas le grain du tissu). */
@@ -31,6 +33,13 @@ export function tenueDeVariante(v: VarianteEteint, base: Tenue): Tenue {
     case "rampant":
       // Il a traîné sur le sol : plus déchiré, pieds nus.
       return { ...base, pieds: 0x6b6a5a, dechirures: 0.55 };
+    case "noye":
+      // Trempé depuis des semaines : les couleurs noircies par l'eau, passées au vert de vase ; les manches parties, les
+      // habits craqués sur la peau tendue (on voit la chair blême), pieds nus.
+      return { ...base, haut: detrempe(base.haut), manche: null, bas: detrempe(base.bas), pieds: PEAU_NOYE, dechirures: 0.6 };
+    case "ensable":
+      // Le sable s'est collé partout : les couleurs ternies, tirées vers le sable ; pieds nus.
+      return { ...base, haut: ensable(base.haut), manche: base.manche === null ? null : ensable(base.manche), bas: ensable(base.bas), pieds: 0x9c8f72, dechirures: 0.55 };
   }
 }
 
@@ -41,7 +50,8 @@ function mesurer(corps: Humanoide): Mesure {
 
 /** Les accessoires d'une variante, accrochés aux os du corps. */
 export function habillerVariante(corps: Humanoide, v: VarianteEteint, graine: number): void {
-  if (v === "rampant") return;
+  // Le Noyé et l'Ensablé n'ont pas d'accessoire : leur corps suffit (eteint.ts : la carrure, la peau, la butte).
+  if (v === "rampant" || v === "noye" || v === "ensable") return;
   const m = mesurer(corps);
   const coller = (a: Assemblage, os: string) => corps.accrocher(a.groupe(), os);
   const bassin = corps.repere("pelvis");
@@ -294,4 +304,219 @@ export class Rampement {
     this.tourner("neck_01", this.r.setFromAxisAngle(X, -0.6));
     this.tourner("Head", this.r.setFromAxisAngle(X, -0.5));
   }
+}
+
+// ---------- Le Noyé et l'Ensablé (0.10, chantier G ; S-31 à S-33) ----------
+// Rien que des réglages du corps (sa peau, sa carrure, ses valeurs de matériau) et, pour l'Ensablé, une butte de sable :
+// ni matériau ni lumière de plus par Éteint. Les petits effets (les fluides, la flaque, la bouffée de sable) ont une
+// géométrie et un matériau partagés par tous, comme la poussière de la chute (eteint-au-sol.ts).
+
+/** La peau du Noyé : blême, tirant sur le bleu-vert (la lumière du jour la fait luire, `LUISANCE_NOYE`). */
+export const PEAU_NOYE = 0xb3c2bd;
+/** La peau de l'Ensablé : grise, poudrée de sable. */
+export const PEAU_ENSABLE = 0x939a86;
+/**
+ * Le Noyé gonflé : un peu plus large en tout (`large`, `epais`), et surtout le ventre, les cuisses et les bras enflés
+ * (`ENFLURE`, os par os). Il se dégonfle en crevant (`apres`), en `crevaison` secondes, après un dernier gonflement.
+ */
+export const GONFLE = { large: 1.1, epais: 1.12, apres: { large: 1, epais: 0.96 }, crevaison: 0.35, gonflement: 0.07 };
+/**
+ * L'enflure, os par os : l'os s'élargit en travers (pas en longueur) de ce facteur. Ses enfants nommés retrouvent la
+ * largeur qu'on leur veut (la leur, ou 1) : sans ça, tout le haut du corps suivrait le ventre, et il aurait l'air
+ * costaud, pas gonflé.
+ */
+const ENFLURE: [os: string, facteur: number, enfants: string[]][] = [
+  ["spine_01", 0.42, ["spine_02"]],
+  ["spine_02", 0.3, ["spine_03"]],
+  ["spine_03", 0.1, ["neck_01", "clavicle_l", "clavicle_r"]],
+  ["neck_01", 0.22, ["Head"]],
+  ["thigh_l", 0.3, ["calf_l"]],
+  ["thigh_r", 0.3, ["calf_r"]],
+  ["calf_l", 0.12, ["foot_l"]],
+  ["calf_r", 0.12, ["foot_r"]],
+  ["upperarm_l", 0.22, ["lowerarm_l"]],
+  ["upperarm_r", 0.22, ["lowerarm_r"]],
+  ["lowerarm_l", 0.12, ["hand_l"]],
+  ["lowerarm_r", 0.12, ["hand_r"]],
+];
+
+/**
+ * Gonfle le corps du Noyé (`k` : 1 gonflé, 0 dégonflé) : chaque os d'ENFLURE s'élargit en travers de son axe (celui qui
+ * mène à son enfant), et ses enfants compensent ce qu'ils en héritent. Rien que l'échelle des os : ni matériau ni
+ * maillage en plus. La tête garde son agrandissement (les proportions du jeu, Humanoide).
+ */
+export function gonfler(corps: Humanoide, k: number): void {
+  const voulu = (nom: string) => 1 + (ENFLURE.find(([n]) => n === nom)?.[1] ?? 0) * k;
+  const parent = new Map<string, string>();
+  for (const [nom, , enfants] of ENFLURE) for (const e of enfants) parent.set(e, nom);
+  for (const nom of new Set([...ENFLURE.map(([n]) => n), ...parent.keys()])) {
+    const os = corps.osNomme(nom);
+    if (!os) continue;
+    // L'axe de l'os : vers son premier enfant (sa longueur ne change pas).
+    const enfant = os.children.find((c) => (c as THREE.Bone).isBone);
+    const a = enfant?.position ?? new THREE.Vector3(0, 1, 0);
+    const ax = Math.abs(a.x);
+    const ay = Math.abs(a.y);
+    const az = Math.abs(a.z);
+    const axe = ax >= ay && ax >= az ? 0 : ay >= az ? 1 : 2;
+    const p = parent.get(nom);
+    const f = voulu(nom) / (p ? voulu(p) : 1);
+    const base = (os.userData.echelleRepos as number | undefined) ?? (os.userData.echelleRepos = os.scale.y);
+    os.scale.setScalar(base);
+    for (const i of [0, 1, 2]) if (i !== axe) os.scale.setComponent(i, base * f);
+  }
+}
+
+/**
+ * Le Noyé luit (peau mouillée, vêtements trempés) : une matité négative, passée au matériau du corps (Humanoide.ternir) ;
+ * 0 : la matière d'origine. Détruit, le corps redevient mat avec les autres (eteint-au-sol.ts).
+ */
+export const LUISANCE_NOYE = 0.5;
+/** L'Ensablé qui dort : le corps enfoncé de tant (m) sous le sol ; la butte de sable couvre les jambes et les reins. */
+export const ENFOUI = 0.15;
+
+const SABLE = new THREE.Color(0xc9b68c);
+const VASE = new THREE.Color(0x3f4a3c);
+const _c = new THREE.Color();
+
+/** Une couleur de vêtement trempée : plus sombre, passée au vert de vase. */
+function detrempe(c: number): number {
+  return _c.setHex(c).multiplyScalar(0.75).lerp(VASE, 0.3).getHex();
+}
+
+/** Une couleur de vêtement couverte de sable. */
+function ensable(c: number): number {
+  return _c.setHex(c).multiplyScalar(0.6).lerp(SABLE, 0.25).getHex();
+}
+
+let butte: THREE.BufferGeometry | null = null;
+/**
+ * La butte de l'Ensablé (son repère : z vers sa tête, le sol à y = 0) : des mottes de sable aplaties, sur les jambes et
+ * les reins ; la tête, les épaules et les bras restent dehors. Une géométrie pour tous.
+ */
+export function butteDeSable(graine: number): THREE.Mesh {
+  if (!butte) {
+    const a = new Assemblage(91);
+    const h = aleatoire(4111);
+    const TONS = [0xcdb98f, 0xbfa97c, 0xd6c49b];
+    for (let i = 0; i < 14; i++) {
+      const t = i / 13;
+      // De ses pieds (z ≈ − 0,9) à ses reins (z ≈ 0,35) : plus haute sur le dos, plus étalée aux pieds.
+      const z = -0.95 + t * 1.3;
+      const x = (h() - 0.5) * 0.5;
+      const r = 0.22 + h() * 0.14;
+      const haut = 0.12 + 0.12 * Math.sin(Math.PI * Math.min(1, t * 1.2)) + h() * 0.04;
+      a.ajouter(placer(new THREE.IcosahedronGeometry(1, 1).scale(r * 1.3, haut, r * 1.5), x, 0, z, 0, h() * 3, 0), TONS[i % 3]!, "sol", 0.05);
+    }
+    // Un bourrelet de chaque côté, et le sable qui recouvre un peu une épaule.
+    for (const [x, z, r] of [[0.32, -0.3, 0.24], [-0.34, -0.1, 0.22], [0.28, 0.45, 0.16]] as const) {
+      a.ajouter(placer(new THREE.IcosahedronGeometry(1, 1).scale(r, 0.09, r * 1.4), x, 0, z), TONS[1]!, "sol", 0.05);
+    }
+    butte = a.maillages()[0]!.geometry;
+  }
+  const m = new THREE.Mesh(butte, materiauSommets("sol"));
+  m.rotation.y = ((graine % 7) - 3) * 0.04;
+  m.castShadow = false;
+  m.receiveShadow = true;
+  return m;
+}
+
+/** Les petits effets partagés : une géométrie et un matériau chacun, créés au premier besoin. */
+let effets: { gouttes: THREE.BufferGeometry; flaque: THREE.BufferGeometry; bouffee: THREE.BufferGeometry; fluide: THREE.Material; mare: THREE.Material; sable: THREE.Material } | null = null;
+function effetsPartages(): NonNullable<typeof effets> {
+  if (effets) return effets;
+  const h = aleatoire(733);
+  // Les fluides : une gerbe de gouttes, qui partent du ventre (y ≈ 1) dans toutes les directions.
+  const gouttes: THREE.BufferGeometry[] = [];
+  for (let i = 0; i < 16; i++) {
+    const ang = (i / 16) * Math.PI * 2 + h() * 0.4;
+    const r = 0.2 + h() * 0.35;
+    gouttes.push(new THREE.IcosahedronGeometry(0.02 + h() * 0.025, 0).translate(Math.cos(ang) * r, (h() - 0.3) * 0.35, Math.sin(ang) * r));
+  }
+  const g = new Assemblage(3);
+  for (const x of gouttes) g.ajouter(x, 0x4f5c26, "verre", 0.08);
+  // La flaque, au sol : une tache irrégulière (un disque aux bords tirés au hasard).
+  const n = 18;
+  const pos: number[] = [];
+  const bord = Array.from({ length: n }, (_, i) => {
+    const ang = (i / n) * Math.PI * 2;
+    const k = 0.7 + h() * 0.45;
+    return [Math.cos(ang) * k, Math.sin(ang) * k] as const;
+  });
+  for (let i = 0; i < n; i++) {
+    const [x1, z1] = bord[i]!;
+    const [x2, z2] = bord[(i + 1) % n]!;
+    pos.push(0, 0, 0, x2, 0, z2, x1, 0, z1);
+  }
+  const flaque = new THREE.BufferGeometry();
+  flaque.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  flaque.computeVertexNormals();
+  // La bouffée de sable quand l'Ensablé surgit : des mottes claires qui s'écartent, comme la poussière de la chute.
+  const s = new Assemblage(7);
+  for (let i = 0; i < 9; i++) {
+    const ang = (i / 9) * Math.PI * 2 + h() * 0.5;
+    s.ajouter(new THREE.IcosahedronGeometry(0.08 + h() * 0.05, 0).scale(1.4, 0.6, 1.4).translate(Math.cos(ang) * 0.5, 0.08, Math.sin(ang) * 0.5), 0xd2c29c, "mat", 0.06);
+  }
+  effets = {
+    gouttes: g.maillages()[0]!.geometry,
+    flaque,
+    bouffee: s.maillages()[0]!.geometry,
+    fluide: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.25, metalness: 0.1, transparent: true, opacity: 0.85, depthWrite: false }),
+    mare: new THREE.MeshStandardMaterial({ color: 0x2f3524, roughness: 0.2, metalness: 0.1, transparent: true, opacity: 0.6, depthWrite: false }),
+    sable: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, transparent: true, opacity: 0.55, depthWrite: false }),
+  };
+  return effets;
+}
+
+/**
+ * Le Noyé crève (S-32) : une gerbe de fluides qui part du ventre et retombe, puis une flaque sombre qui s'étale sous lui
+ * et reste avec le corps (elle part avec lui). Pas de feu, pas d'éclair : les gaz crèvent la peau. `animer(dt)` à
+ * chaque image.
+ */
+export function crevaison(parent: THREE.Object3D, x: number, z: number): { animer: (dt: number) => void } {
+  const e = effetsPartages();
+  const gerbe = new THREE.Mesh(e.gouttes, e.fluide);
+  gerbe.position.set(x, 0.95, z);
+  gerbe.renderOrder = 2;
+  gerbe.castShadow = false;
+  const mare = new THREE.Mesh(e.flaque, e.mare);
+  mare.position.set(x, 0.025, z);
+  mare.renderOrder = 1;
+  mare.scale.setScalar(0.01);
+  parent.add(gerbe, mare);
+  let t = 0;
+  return {
+    animer: (dt) => {
+      t += dt;
+      // La gerbe s'ouvre vite et retombe en 0,7 s ; la flaque s'étale en 1,5 s, jusqu'à ≈ 1,6 m de large.
+      if (gerbe.parent) {
+        const k = Math.min(1, t / 0.7);
+        const ecart = 1 + 3 * (1 - Math.pow(1 - k, 3));
+        gerbe.scale.set(ecart, Math.max(0.01, 1 + 2 * k - 3.2 * k * k), ecart);
+        gerbe.position.y = Math.max(0.05, 0.95 + 0.6 * k - 1.6 * k * k);
+        if (k >= 1) parent.remove(gerbe);
+      }
+      mare.scale.setScalar(Math.max(0.01, 0.8 * (1 - Math.pow(1 - Math.min(1, t / 1.5), 2))));
+    },
+  };
+}
+
+/** L'Ensablé surgit : une bouffée de sable qui s'écarte et retombe ; rend false une fois finie (et s'est retirée). */
+export function bouffeeDeSable(parent: THREE.Object3D, x: number, z: number): (dt: number) => boolean {
+  const e = effetsPartages();
+  const m = new THREE.Mesh(e.bouffee, e.sable);
+  m.position.set(x, 0, z);
+  m.renderOrder = 1;
+  m.castShadow = false;
+  parent.add(m);
+  let t = 0;
+  return (dt) => {
+    t += dt;
+    const k = Math.min(1, t / 1.2);
+    const ecart = 0.8 + 1.4 * (1 - Math.pow(1 - k, 3));
+    m.scale.set(ecart, Math.max(0.01, Math.sin(Math.PI * Math.min(1, k * 1.1)) * 1.6), ecart);
+    if (k < 1) return true;
+    parent.remove(m);
+    return false;
+  };
 }

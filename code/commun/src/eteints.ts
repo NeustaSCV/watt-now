@@ -6,7 +6,7 @@ import { BONUS_ETOURDI_CONTONDANT, DELAI_SAISIE, DUREE_A_TERRE, DUREE_CORPS, DUR
 import { heurte, type Zone } from "./lieux.ts";
 import { REGLAGES } from "./reglages.ts";
 import { voieLibre } from "./murs.ts";
-import type { Stimulus } from "./signature.ts";
+import { NOYE_ODEUR, type Stimulus } from "./signature.ts";
 
 export type EtatEteint = "dormant" | "errant" | "attire" | "poursuivant" | "a_terre" | "detruit";
 
@@ -64,10 +64,18 @@ export interface Eteint {
   // ---------- L'Équipé encaisse (plan 0.9 §3.3) ----------
   /** Coups reçus depuis qu'il est debout : l'Équipé ne vacille qu'un coup sur N (`tientLeCoup`). Remis à zéro à terre. */
   coupsRecus?: number;
+  // ---------- Le Noyé (0.10, chantier G) ----------
+  /** Le Noyé à la jambe brisée : il rampe, et reste un Noyé (il crèvera en mourant). Les autres deviennent des Rampants. */
+  jambeBrisee?: boolean;
+  /** Le Noyé détruit a crevé : ses fluides et son odeur sont partis (une seule fois, `noyesQuiCrevent`). */
+  creve?: boolean;
 }
 
-/** Les variantes de la Coopérative : le Rampant, l'Équipé (casque de moto), les anciens habitants. */
-export type VarianteEteint = "rampant" | "equipe" | "magasinier" | "mecanicien";
+/**
+ * Les variantes de la Coopérative : le Rampant, l'Équipé (casque de moto), les anciens habitants ; celles de la côte
+ * (0.10) : le Noyé, gonflé par l'eau, et l'Ensablé, un Rampant dormeur enfoui dans le sable.
+ */
+export type VarianteEteint = "rampant" | "equipe" | "magasinier" | "mecanicien" | "noye" | "ensable";
 
 /**
  * Ce que l'endroit fait à la perception et aux déplacements (Book 23 §7). Sans milieu, tout est à ciel ouvert :
@@ -128,6 +136,8 @@ export interface EteintVu {
   seReleve?: true;
   /** Détruit, le corps va être retiré : ses dernières secondes (EFFACEMENT_S). Il s'efface doucement. */
   efface?: true;
+  /** Le Noyé à la jambe brisée (0.10) : il rampe. */
+  rampe?: true;
 }
 
 /** À terre, il prend appui ces dernières secondes avant de se relever : le geste annonce le danger (chantier F). */
@@ -187,6 +197,7 @@ export function vue(e: Eteint): EteintVu {
   // À terre ou détruit, au corps (chantier F).
   if (e.etat === "a_terre" && e.aTerre <= SE_RELEVE_S) v.seReleve = true;
   if (e.etat === "detruit" && e.corps >= DUREE_CORPS - EFFACEMENT_S) v.efface = true;
+  if (e.jambeBrisee && e.variante === "noye") v.rampe = true;
   return v;
 }
 
@@ -242,7 +253,7 @@ export function mettreATerre(e: Eteint, secondes: number): void {
  * (4 pour l'Équipé), il tombe. La longue n'en fait pas : elle met à terre, ou elle détruit déjà.
  */
 function encaisserDecharge(e: Eteint, arme: Arme, appuye: boolean, force: number, voisins: readonly Eteint[], zone: Zone): EffetCoup {
-  const auSol = e.etat === "a_terre" || e.variante === "rampant";
+  const auSol = e.etat === "a_terre" || rampe(e);
   const pris = e.etourdi > 0 || (e.raidi ?? 0) > 0;
   if (auSol || (appuye && pris)) {
     e.eteintParLeCourant = true;
@@ -253,9 +264,9 @@ function encaisserDecharge(e: Eteint, arme: Arme, appuye: boolean, force: number
     return { resultat: "a_terre" };
   }
   const elec = arme.electrique;
-  // La courte frappe le torse : à 3 points (4 pour l'Équipé), il tombe, comme sous un coup.
+  // La courte frappe le torse : à 3 points (4 pour l'Équipé), il tombe, comme sous un coup (le Noyé, jamais).
   e.degats += arme.degatsTorse * force;
-  if (arme.degatsTorse > 0 && e.degats >= RESISTANCE_TORSE + (e.variante === "equipe" ? 1 : 0)) {
+  if (arme.degatsTorse > 0 && e.degats >= resistanceTorse(e)) {
     mettreATerre(e, DUREE_A_TERRE);
     return { resultat: "a_terre" };
   }
@@ -307,15 +318,15 @@ export function encaisser(e: Eteint, arme: Arme, appuye: boolean, force: number,
   e.attention = Math.max(e.attention, 2);
   if (e.etat === "dormant") e.etat = "poursuivant";
   // À terre, la tête est à portée : n'importe quel coup l'achève, même au couteau ou aux poings (décision du 2026-10-08).
-  // Le Rampant est déjà au sol : un coup l'achève (Book 23 §3, Book 06 §8.4).
-  const auSol = e.etat === "a_terre" || e.variante === "rampant";
+  // Le Rampant est déjà au sol : un coup l'achève (Book 23 §3, Book 06 §8.4). L'Ensablé et le Noyé à la jambe brisée aussi.
+  const auSol = e.etat === "a_terre" || rampe(e);
   // Le casque de l'Équipé (Book 23 §4.2) : à la tête, le tranchant glisse ; au sol, seuls le contondant et le perçant
   // l'achèvent.
   const casque = e.variante === "equipe" && arme.type === "tranchant";
   if ((auSol && !casque) || (appuye && arme.tueALaTete && force >= 1 && !casque && !auSol)) return detruire(e);
   e.degats += arme.degatsTorse * force * (appuye ? 2 : 1);
-  // L'Équipé (blouson, casque) encaisse un coup de plus au torse (Book 23 §3).
-  if (e.degats >= RESISTANCE_TORSE + (e.variante === "equipe" ? 1 : 0)) {
+  // L'Équipé (blouson, casque) encaisse un coup de plus au torse (Book 23 §3) ; le Noyé ne tombe pas (resistanceTorse).
+  if (e.degats >= resistanceTorse(e)) {
     e.etat = "a_terre";
     e.aTerre = DUREE_A_TERRE;
     e.degats = 0;
@@ -415,6 +426,8 @@ export function penser(
   // 1. Percevoir : l'attention monte avec ce qu'il entend, sent ou voit briller, selon la distance.
   let percu = false;
   let meilleur = 0;
+  // L'Ensablé dort sous le sable (0.10) : il ne perçoit rien, et surgit quand on passe tout près.
+  if (e.variante === "ensable" && e.etat === "dormant" && !surgir(e, humains, zone)) return;
   for (const s of stimuli) {
     if (e.etat === "dormant" && s.genre === "odeur") continue;
     // Les murs étouffent le son : à travers une porte fermée, presque rien n'arrive (Book 23 §7).
@@ -544,7 +557,9 @@ export function penser(
   const dz = vers.z - e.z;
   const d = Math.hypot(dx, dz);
   if (d < 1e-6) return;
-  const vitesse = e.variante === "rampant" ? Math.min(VITESSES[e.etat], VITESSE_RAMPANT) : VITESSES[e.etat];
+  // Le Noyé, gonflé, est lent en toutes choses (0.10) ; à la jambe brisée, il rampe, et pas plus vite.
+  const plafond = Math.min(rampe(e) ? VITESSE_RAMPANT : Infinity, e.variante === "noye" ? VITESSE_NOYE : Infinity);
+  const vitesse = Math.min(VITESSES[e.etat], plafond);
   // Le dernier tronçon s'arrête au contact ; un point de passage, on le dépasse.
   const final = Math.abs(vers.x - e.but.x) < 1e-6 && Math.abs(vers.z - e.but.z) < 1e-6;
   const pas = Math.min(final ? d - arret : d, vitesse * dt);
@@ -571,4 +586,91 @@ export function nouvelEteint(id: number, x: number, z: number, etat: EtatEteint,
 /** Ceux qui peuvent encore agir (ni à terre, ni détruits). */
 export function debout(e: Eteint): boolean {
   return e.etat !== "a_terre" && e.etat !== "detruit";
+}
+
+// ---------- Le Noyé et l'Ensablé (0.10, chantier G ; plan 0.10 §3.5, S-31 à S-33) ----------
+// Pas de mutants, des corps humains abîmés (Book 06 §1) : le Noyé est un Errant resté longtemps dans l'eau, gonflé par
+// les gaz ; l'Ensablé, un Rampant qui dort enfoui dans le sable. Les lieux de la côte les déclarent dans leur liste
+// d'Éteints avec `eteintsDePlaces` (comme eteints-moulin.ts) ; le lieu vivant fait crever les Noyés détruits
+// (serveur/src/lieu-vivant.ts, `crever`).
+
+/** Le Noyé ne va jamais plus vite que ça (m/s), quel que soit son état (S-31). */
+export const VITESSE_NOYE = 0.4;
+/** L'Ensablé surgit quand un humain passe à moins de ces mètres (S-33). */
+export const REVEIL_ENSABLE = 2;
+/**
+ * Quand le Noyé meurt, il crève (N2-64, S-32) : ce n'est pas une explosion, les gaz crèvent la peau. Ceux qui sont à
+ * moins de `rayon` mètres reçoivent ses fluides (la nausée, commun/src/combat.ts) ; une odeur (NOYE_ODEUR,
+ * commun/src/signature.ts) reste `odeurMs` au point de sa mort, et attire les Éteints éveillés alentour.
+ */
+export const CREVAISON = { rayon: 1.5, odeurMs: 60_000 } as const;
+
+/** Au sol pour de bon : le Rampant, l'Ensablé, le Noyé à la jambe brisée. Un coup l'achève ; il rampe. */
+export function rampe(e: Pick<Eteint, "variante" | "jambeBrisee">): boolean {
+  return e.variante === "rampant" || e.variante === "ensable" || e.jambeBrisee === true;
+}
+
+/**
+ * Ce qu'il faut de coups au torse pour le faire tomber : 3 points (RESISTANCE_TORSE), 4 pour l'Équipé ; le Noyé ne
+ * tombe pas sous un coup au torse (sa masse, S-31) : la tête, ou les jambes.
+ */
+export function resistanceTorse(e: Pick<Eteint, "variante">): number {
+  if (e.variante === "noye") return Infinity;
+  return RESISTANCE_TORSE + (e.variante === "equipe" ? 1 : 0);
+}
+
+/** La jambe brisée (un piège, Book 06 §2.2) : il devient un Rampant ; le Noyé rampe, et reste un Noyé. */
+export function briserJambe(e: Eteint): void {
+  if (e.variante === "noye") e.jambeBrisee = true;
+  else e.variante = "rampant";
+}
+
+/** L'Ensablé surgit-il ? Un humain à moins de 2 m, sans mur entre eux : il se réveille d'un coup, et va le chercher. */
+function surgir(e: Eteint, humains: readonly Humain[], zone: Zone): boolean {
+  const pres = humains.some((h) => Math.hypot(h.x - e.x, h.z - e.z) < REVEIL_ENSABLE && voieLibre(zone, e, h));
+  if (pres) e.attention = Math.max(e.attention, SEUIL_ATTIRE + 1);
+  return pres;
+}
+
+/** Les Noyés qui viennent d'être détruits, par quelque moyen que ce soit : ils crèvent (marqués, une fois). */
+export function noyesQuiCrevent(eteints: readonly Eteint[]): Eteint[] {
+  const creves = eteints.filter((e) => e.variante === "noye" && e.etat === "detruit" && !e.creve);
+  for (const e of creves) e.creve = true;
+  return creves;
+}
+
+/** L'odeur d'un Noyé crevé, au point de sa mort. */
+export function odeurDeCrevaison(e: { x: number; z: number }): Stimulus {
+  return { genre: "odeur", x: e.x, z: e.z, ...NOYE_ODEUR };
+}
+
+/** Une place d'Éteint dans la liste d'un lieu : son numéro (son identifiant), où il est, son état, sa variante. */
+export interface PlaceEteint {
+  n: number;
+  x: number;
+  z: number;
+  o?: number;
+  /** Par défaut : errant (l'Ensablé dort toujours). */
+  etat?: EtatEteint;
+  variante?: VarianteEteint;
+  groupe?: number;
+}
+
+/**
+ * Les Éteints d'un lieu, d'après leurs places (comme eteints-moulin.ts) : chacun a sa zone (il y revient) ; un dormant
+ * y dort ; l'Ensablé est toujours un dormeur. `versJeu` : du repère du modèle à celui du jeu, s'il le faut. Par exemple :
+ * `eteintsDePlaces([{ n: 1, x: 4, z: -2, variante: "noye" }, { n: 2, x: -6, z: 8, variante: "ensable" }], jeu)`.
+ */
+export function eteintsDePlaces(places: readonly PlaceEteint[], versJeu: (x: number, z: number) => { x: number; z: number } = (x, z) => ({ x, z })): Eteint[] {
+  return places.map((p) => {
+    const { x, z } = versJeu(p.x, p.z);
+    const etat = p.variante === "ensable" ? "dormant" : (p.etat ?? "errant");
+    const e = nouvelEteint(p.n, x, z, etat, p.o ?? 0);
+    e.maison = { x, z };
+    e.sansVoir = 0;
+    if (etat === "dormant") e.dormeur = true;
+    if (p.variante) e.variante = p.variante;
+    if (p.groupe !== undefined) e.groupe = p.groupe;
+    return e;
+  });
 }

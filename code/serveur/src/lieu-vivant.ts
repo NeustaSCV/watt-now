@@ -47,7 +47,7 @@
 
 import { FilDesBruits, PORTEES_BRUIT, type BruitVu } from "../../commun/src/bruits.ts";
 import { DUREE_CORPS } from "../../commun/src/combat.ts";
-import { GEMISSEMENT, penser, vue, type Eteint, type Humain, type Milieu } from "../../commun/src/eteints.ts";
+import { CREVAISON, GEMISSEMENT, noyesQuiCrevent, odeurDeCrevaison, penser, vue, type Eteint, type Humain, type Milieu } from "../../commun/src/eteints.ts";
 import type { Position } from "../../commun/src/deplacement.ts";
 import type { Zone } from "../../commun/src/lieux.ts";
 import type { Cible, MessageServeur, SacVu } from "../../commun/src/messages.ts";
@@ -118,6 +118,8 @@ export interface Voyageur {
   humain(): Humain;
   /** En pause : le lieu (s'il est à lui seul) ne bouge plus. */
   enPause?(): boolean;
+  /** Un Noyé vient de crever tout près (0.10) : ses fluides l'éclaboussent (la nausée). */
+  eclabousser?(instant: number): void;
 }
 
 /**
@@ -579,6 +581,7 @@ export class LieuVivant {
 
     // Les corps finissent par ne plus compter (en 0a, on ne les enterre pas encore).
     this.eteints = this.eteints.filter((e) => e.etat !== "detruit" || e.corps < DUREE_CORPS);
+    this.crever(instant);
 
     // Personne : rien ne bouge, et au bout d'un moment tout se rendort.
     if (this.presents.size === 0) {
@@ -633,6 +636,22 @@ export class LieuVivant {
         if (proches.length === 0) this.aucunEnvoye.add(v);
         else this.aucunEnvoye.delete(v);
         v.envoyer({ t: "eteints", eteints: proches });
+      }
+    }
+  }
+
+  // ---------- Le Noyé crève (0.10, chantier G ; S-32) ----------
+
+  /**
+   * Un Noyé détruit, par un coup, un tir, un piège ou autre chose : il crève. Ceux qui sont à moins de 1,5 m reçoivent
+   * ses fluides ; son odeur reste une minute au point de sa mort. Le client le voit se dégonfler (rendu/eteint.ts).
+   */
+  private crever(instant: number): void {
+    for (const e of noyesQuiCrevent(this.eteints)) {
+      this.ajouterBruit(`noye:${e.id}`, odeurDeCrevaison(e), instant + CREVAISON.odeurMs);
+      for (const v of this.presents) {
+        const h = v.humain();
+        if (Math.hypot(h.x - e.x, h.z - e.z) < CREVAISON.rayon) v.eclabousser?.(instant);
       }
     }
   }

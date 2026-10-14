@@ -67,6 +67,10 @@ export const SONS = {
   eteint_halete: menace(R.eteintHalete, 0.5, 30, 3),
   // À terre, il n'est pas fini : un gémissement étouffé, de loin en loin (plan 0.9, chantier F).
   eteint_gemit_sol: menace(R.eteintGemitAuSol, 0.5, 10, 4),
+  // Le Noyé et l'Ensablé (0.10, chantier G) : le râle noyé, la peau qui crève, le sable qui glisse quand il surgit.
+  eteint_noye_rale: menace(R.noyeGargouille, 0.75, 25, 4),
+  eteint_noye_creve: menace(R.noyeCreve, 1, 14, 3),
+  eteint_ensable_surgit: menace(R.ensableSurgit, 0.85, 10, 3),
 
   // Le contact et le combat
   saisie: menace(R.saisie, 0.9, 6, 3),

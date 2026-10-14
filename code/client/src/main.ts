@@ -1944,7 +1944,7 @@ function boucle(instant: number): void {
   const ouie = lieu === "gue" ? gue.ouie(position) : Infinity;
   bruiteur.eteints(
     dt,
-    [...eteints.entries()].map(([id, e]) => ({ id, x: e.objet.position.x, z: e.objet.position.z, etat: e.etat })).filter((e) => !position || Math.hypot(e.x - position.x, e.z - position.z) <= ouie),
+    [...eteints.entries()].map(([id, e]) => ({ id, x: e.objet.position.x, z: e.objet.position.z, etat: e.etat, variante: e.variante })).filter((e) => !position || Math.hypot(e.x - position.x, e.z - position.z) <= ouie),
     position,
     saisi,
     lieu === "cooperative",

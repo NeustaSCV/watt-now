@@ -490,6 +490,8 @@ export interface Sante {
   convalescenceJusqua: number;
   /** Un champignon toxique mangé : les symptômes arrivent plus tard (Book 05 §5 bis). */
   intoxication?: Intoxication;
+  /** Les fluides d'un Noyé crevé (0.10) : la nausée, jusqu'à cet instant réel. Absent dans une partie d'avant. */
+  nauseeJusqua?: number;
 }
 
 export interface Intoxication {
@@ -599,4 +601,27 @@ export const ARMES_DANS_LE_DOS: readonly TypeObjet[] = ["fourche_foin"];
 export function armeDansLeDos(inventaire: Inventaire, equipee: CleObjet | null): TypeObjet | null {
   const objet = armeEnMain(inventaire, equipee).objet;
   return objet !== null && ARMES_DANS_LE_DOS.includes(objet) ? objet : null;
+}
+
+// ---------- La nausée du Noyé (0.10, chantier G ; Q-0.10-4, S-32) ----------
+
+/**
+ * Les fluides d'un Noyé qui crève (à moins de 1,5 m, commun/src/eteints.ts `CREVAISON`) : la nausée, 30 s réelles,
+ * l'endurance revient deux fois moins vite. Rien d'autre (l'infection viendra avec le Book 05). Elle n'a pas pris
+ * l'intoxication des champignons, qui a sa latence, fait perdre de la santé et de l'eau, et se dit « empoisonné ».
+ */
+export const NAUSEE = { dureeMs: 30_000, recuperation: 0.5 } as const;
+
+/** Éclaboussé : la nausée repart pour 30 s (deux ne s'additionnent pas). */
+export function prendreLaNausee(s: Sante, instant: number): Sante {
+  return { ...s, nauseeJusqua: Math.max(s.nauseeJusqua ?? 0, instant + NAUSEE.dureeMs) };
+}
+
+export function nauseeux(s: Sante, instant: number): boolean {
+  return instant < (s.nauseeJusqua ?? 0);
+}
+
+/** L'endurance qui revient par seconde, au repos : deux fois moins vite avec la nausée. */
+export function recuperationEndurance(s: Sante, instant: number): number {
+  return ENDURANCE_RECUPERATION * (nauseeux(s, instant) ? NAUSEE.recuperation : 1);
 }

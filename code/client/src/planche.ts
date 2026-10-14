@@ -53,10 +53,13 @@ const LISTE_VARIANTES: [EteintVu["variante"], string][] = [
   ["rampant", "Rampant"],
   ["magasinier", "Magasinier"],
   ["mecanicien", "Mécanicien"],
+  // 0.10 (chantier G) : ceux de la côte.
+  ["noye", "Noyé"],
+  ["ensable", "Ensablé"],
 ];
 const eteints = VARIANTES
   ? LISTE_VARIANTES.map(([variante], i) => {
-      const e: EteintVu = { id: 3 + i * 5, x: (i - 2) * ECART, z: 0, o: 0, etat: "errant", ...(variante ? { variante } : {}) };
+      const e: EteintVu = { id: 3 + i * 5, x: (i - (LISTE_VARIANTES.length - 1) / 2) * ECART, z: 0, o: 0, etat: "errant", ...(variante ? { variante } : {}) };
       const v = new VueEteint(e);
       scene.add(v.objet);
       return { v, e };

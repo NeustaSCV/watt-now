@@ -1237,6 +1237,7 @@ export class Hud {
     }
     if (s.convalescence) puces.push(`<span class="puce-blessure calme">Convalescence</span>`);
     if (s.intoxique) puces.push(`<span class="puce-blessure saigne">Empoisonné</span>`);
+    if (s.nauseeux) puces.push(`<span class="puce-blessure">Nausée</span>`);
     this.blessures.innerHTML = puces.join("");
     this.blessures.hidden = puces.length === 0;
   }

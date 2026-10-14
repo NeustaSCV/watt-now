@@ -52,6 +52,12 @@ export const LUMIERE_NUIT: Record<"torche" | "frontale" | "lanterne", { portee: 
 /** Un feu de camp allumé : fumée le jour comme la nuit, flammes visibles la nuit. */
 export const FEU_ODEUR = { portee: 35, intensite: 0.15 };
 export const FEU_LUMIERE_NUIT = { portee: 45, intensite: 0.3 };
+/**
+ * Un Noyé qui crève (0.10, chantier G ; N2-64) : l'odeur reste une minute au point de sa mort (commun/src/eteints.ts,
+ * `CREVAISON`), forte et assez loin pour qu'un Errant à 15 m la sente en quelques secondes. Elle ne réveille pas les
+ * dormants (comme toute odeur).
+ */
+export const NOYE_ODEUR = { portee: 25, intensite: 0.4 };
 /** La charbonnière qui fume trois jours : faible, mais très loin et très longtemps (Book 06 §3.1). */
 export const CHARBONNIERE_ODEUR = { portee: 80, intensite: 0.12 };
 

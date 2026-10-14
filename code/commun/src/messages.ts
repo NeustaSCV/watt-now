@@ -403,6 +403,8 @@ export interface SanteVue {
   convalescence: boolean;
   /** Malade d'un champignon toxique (les symptômes sont là). */
   intoxique?: boolean;
+  /** Les fluides d'un Noyé crevé (0.10) : la nausée, l'endurance revient moins vite. */
+  nauseeux?: boolean;
 }
 
 /** Un sac tombé au sol après un effondrement : on peut revenir le chercher (Book 05 §10.3). */
