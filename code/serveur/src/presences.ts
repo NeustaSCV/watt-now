@@ -46,7 +46,7 @@ export type MemoirePresences = Map<number, Map<number, string>>;
 const positionsEnvoyees = new WeakMap<MemoirePresences, Map<number, Map<number, string>>>();
 
 function cleIdentite(a: AutreVu): string {
-  return `${a.pseudo}|${a.famille}|${a.lumiere ? 1 : 0}|${a.dos ?? ""}|${JSON.stringify(a.apparence)}`;
+  return `${a.pseudo}|${a.famille}|${a.lumiere ? 1 : 0}|${a.dos ?? ""}|${a.couche ? 1 : 0}|${JSON.stringify(a.apparence)}`;
 }
 
 const clePosition = (o: Observateur, allure: AllureVue = o.allure ?? 0) => `${o.vu.x},${o.vu.z},${o.vu.o},${allure}`;
@@ -106,13 +106,15 @@ export function diffuserPresences(observateurs: Observateur[], memoire: MemoireP
       dejaVues.clear();
       for (const o of voisins) dejaVues.set(o.id, clePosition(o, 0));
     } else {
-      // Les positions : id, x, z, orientation, allure, à la suite ; seulement celles qui ont changé.
+      // Les positions : id, x, z, orientation, allure, à la suite ; seulement celles qui ont changé. x et z en
+      // centimètres, l'orientation en centièmes de radian (des entiers : moins de caractères, rien de perdu, la vue est
+      // déjà arrondie au centième) ; le serveur garde ses positions précises.
       const p: number[] = [];
       for (const o of voisins) {
         const cle = clePosition(o);
         if (dejaVues.get(o.id) === cle) continue;
         dejaVues.set(o.id, cle);
-        p.push(o.id, o.vu.x, o.vu.z, o.vu.o, o.allure ?? 0);
+        p.push(o.id, Math.round(o.vu.x * 100), Math.round(o.vu.z * 100), Math.round(o.vu.o * 100), o.allure ?? 0);
       }
       if (p.length > 0) moi.envoyer({ t: "positions", h: heure, p });
     }

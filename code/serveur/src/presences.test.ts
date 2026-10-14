@@ -32,7 +32,7 @@ test("l'identité d'un voisin part une fois ; ensuite seulement sa position quan
   assert.equal(de(a, "positions").length, 0, "des voisins immobiles ne coûtent rien");
   b.vu = { ...b.vu, x: 21 };
   diffuserPresences([a, b, c], memoire);
-  assert.deepEqual(de(a, "positions")[0]!.p, [2, 21, 35, 0, 0], "seul celui qui a bougé part (id, x, z, o, allure)");
+  assert.deepEqual(de(a, "positions")[0]!.p, [2, 2100, 3500, 0, 0], "seul celui qui a bougé part (id, x, z en cm, o en centièmes de radian, allure)");
   assert.ok(JSON.stringify(de(a, "positions")[0]).length < 60, "une position pèse quelques dizaines d'octets");
 });
 
@@ -95,19 +95,19 @@ test("0.9 : l'allure part avec la position ; l'arrêt part une fois, avec l'allu
   b.vu = { ...b.vu, x: 21 };
   b.allure = 3;
   diffuserPresences([a, b], memoire, undefined, 1100);
-  assert.deepEqual(de(a, "positions").at(-1), { t: "positions", h: 1100, p: [2, 21, 35, 0, 3] });
+  assert.deepEqual(de(a, "positions").at(-1), { t: "positions", h: 1100, p: [2, 2100, 3500, 0, 3] });
   // Il s'arrête sur place : seule l'allure change, elle part une fois.
   b.allure = 0;
   diffuserPresences([a, b], memoire, undefined, 1200);
   diffuserPresences([a, b], memoire, undefined, 1300);
   diffuserPresences([a, b], memoire, undefined, 1400);
   assert.equal(de(a, "positions").length, 2);
-  assert.deepEqual(de(a, "positions").at(-1)!.p, [2, 21, 35, 0, 0]);
+  assert.deepEqual(de(a, "positions").at(-1)!.p, [2, 2100, 3500, 0, 0]);
   // Il s'accroupit sans bouger (allure 1 immobile n'existe pas : un immobile vaut 0), puis repart accroupi.
   b.vu = { ...b.vu, x: 21.5 };
   b.allure = 1;
   diffuserPresences([a, b], memoire, undefined, 1500);
-  assert.deepEqual(de(a, "positions").at(-1)!.p, [2, 21.5, 35, 0, 1]);
+  assert.deepEqual(de(a, "positions").at(-1)!.p, [2, 2150, 3500, 0, 1]);
 });
 
 test("0.9 : à l'entrée dans le champ, l'allure vaut 0 dans « autres » ; elle part au tour suivant si elle diffère", () => {
@@ -123,7 +123,7 @@ test("0.9 : à l'entrée dans le champ, l'allure vaut 0 dans « autres » ; elle
   b.vu = { ...b.vu, x: RAYON_INTERET - 1.24 };
   diffuserPresences([a, b], memoire, undefined, 5100);
   assert.deepEqual(a.recus.map((m) => m.t), ["autres", "positions"], "l'identité, puis l'allure qu'il a vraiment");
-  assert.deepEqual(de(a, "positions")[0]!.p, [2, RAYON_INTERET - 1.24, 35, 0, 2]);
+  assert.deepEqual(de(a, "positions")[0]!.p, [2, Math.round((RAYON_INTERET - 1.24) * 100), 3500, 0, 2]);
   // Immobile à l'entrée : rien de plus que l'identité (b s'est arrêté entre-temps).
   b.allure = 0;
   diffuserPresences([a, b], memoire);
@@ -292,4 +292,27 @@ test("0.9 : le début et la fin d'une action sont notés, avec son libellé ; l'
   t.joueur.recevoir({ t: "panser" });
   t.attendre(6.1);
   assert.deepEqual(t.joueur.gestesRecents.map((g) => g.geste), ["action", "fin_action"]);
+});
+
+// ---------- 0.9, chantier B : un joueur endormi se voit endormi, même pour qui arrive après ----------
+
+test("0.9 : se coucher renvoie l'identité avec « couche » ; un observateur qui arrive après le reçoit couché", () => {
+  const a = joueur(1, 0);
+  const b = joueur(2, 5);
+  const memoire: MemoirePresences = new Map();
+  diffuserPresences([a, b], memoire);
+  assert.equal(de(a, "autres")[0]!.joueurs[0]!.couche, undefined, "debout : rien");
+  b.vu = { ...b.vu, couche: true };
+  diffuserPresences([a, b], memoire);
+  assert.equal(de(a, "autres").length, 2, "le coucher change l'identité");
+  assert.equal(de(a, "autres")[1]!.joueurs[0]!.couche, true);
+  // c arrive après le coucher : il le reçoit couché dès l'entrée dans le champ.
+  const c = joueur(3, 8);
+  diffuserPresences([a, b, c], memoire);
+  assert.equal(de(c, "autres")[0]!.joueurs.find((j) => j.id === 2)!.couche, true);
+  // Il se réveille : l'identité repart, sans « couche ».
+  const { couche: _, ...debout } = b.vu;
+  b.vu = debout;
+  diffuserPresences([a, b, c], memoire);
+  assert.equal(de(c, "autres").at(-1)!.joueurs.find((j) => j.id === 2)!.couche, undefined);
 });

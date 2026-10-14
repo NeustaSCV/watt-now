@@ -55,7 +55,7 @@ import { MenuAdmin } from "./admin-ui.ts";
 import { animerComptoir, creerComptoir, lumieresComptoir } from "./rendu/comptoir.ts";
 import { VueEteint } from "./rendu/eteint.ts";
 import { solDesCorps } from "./rendu/eteint-au-sol.ts";
-import { VueAutre, horlogeAutres } from "./rendu/autres.ts";
+import { Partants, VueAutre, horlogeAutres } from "./rendu/autres.ts";
 import { Pluie } from "./rendu/pluie.ts";
 import { Rodeurs } from "./rendu/rodeurs.ts";
 import { Brume } from "./rendu/brume.ts";
@@ -200,6 +200,8 @@ let elan: { dx: number; dz: number; restant: number } | null = null;
 const sacs = new Map<number, { vue: THREE.Group; donnees: SacVu }>();
 /** Les autres joueurs du lieu (É4, lot 3). */
 const autres = new Map<number, VueAutre>();
+/** Ceux qui viennent de s'effondrer et de partir : on les voit encore tomber (0.9). */
+const partants = new Partants();
 const pluie = new Pluie(scene.scene, qualite.niveau === "bas" ? 500 : qualite.niveau === "moyen" ? 900 : 1500);
 let endormi = false;
 /** Le trajet jusqu'à la couche de l'abri, en cours (0.8.2, R12). */
@@ -549,6 +551,7 @@ function installer(message: Bienvenue): void {
   eteints.clear();
   majEteints(message.eteints);
   autres.clear();
+  partants.vider((v) => contenu.remove(v.objet));
   sang.vider();
   sacs.clear();
   majSacs(message.sacs);
@@ -987,10 +990,11 @@ function recevoir(message: MessageServeur): void {
     case "rapport":
       hud.rapport(message.rapport);
       return;
-    // Les autres joueurs fluides (0.9, plan §3.4) : id, x, z, orientation, allure à la suite, à l'heure du serveur `h`.
+    // Les autres joueurs fluides (0.9, plan §3.4) : id, x, z (cm), orientation (centièmes de radian), allure à la suite,
+    // à l'heure du serveur `h`.
     case "positions":
       horlogeAutres.recaler(message.h, performance.now());
-      for (let i = 0; i + 4 < message.p.length; i += 5) autres.get(message.p[i]!)?.deplacer(message.h, message.p[i + 1]!, message.p[i + 2]!, message.p[i + 3]!, message.p[i + 4]! as AllureVue);
+      for (let i = 0; i + 4 < message.p.length; i += 5) autres.get(message.p[i]!)?.deplacer(message.h, message.p[i + 1]! / 100, message.p[i + 2]! / 100, message.p[i + 3]! / 100, message.p[i + 4]! as AllureVue);
       return;
     case "gestes":
       for (const g of message.g) autres.get(g.id)?.geste(g);
@@ -1091,7 +1095,9 @@ function majAutres(liste: AutreVu[]): void {
   const vus = new Set(liste.map((a) => a.id));
   for (const [id, v] of autres) {
     if (vus.has(id)) continue;
-    contenu.remove(v.objet);
+    // Effondré, il quitte le lieu : on le garde le temps de la chute.
+    if (v.tombe) partants.garder(v);
+    else contenu.remove(v.objet);
     autres.delete(id);
   }
   for (const a of liste) {
@@ -1915,6 +1921,7 @@ function boucle(instant: number): void {
   dechetsVue.animer(dt, enVoyage ? null : position, lumiere && lumierePortee(inventaire) !== null);
   for (const e of eteints.values()) e.animer(dt);
   for (const a of autres.values()) a.animer(dt);
+  partants.animer(dt, (v) => contenu.remove(v.objet));
   if (lieu === "comptoir") animerComptoir(dt);
   sang.animer(dt);
   // Le son du monde : Éteints, autres joueurs, feux, installations, pluie ; la nuit pour la musique.
