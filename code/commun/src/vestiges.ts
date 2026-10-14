@@ -1400,7 +1400,10 @@ export const DEMONTAGE: Partial<Record<TypeObjet, Demontage>> = {
 // ---------- La fouille rapporte du bric-à-brac ----------
 
 /** Les lieux de fouille : chacun a sa table de vestiges. */
-export type LieuFouille = "boutique" | "atelier" | "epave" | "grange" | "libre_service" | "quai" | "atelier_coop" | "hangar" | "bureaux" | "chambre_froide" | "caisse_ruine" | "salle_de_bains";
+export type LieuFouille = "boutique" | "atelier" | "epave" | "grange" | "libre_service" | "quai" | "atelier_coop" | "hangar" | "bureaux" | "chambre_froide" | "caisse_ruine" | "salle_de_bains" | LieuFouilleCorniche;
+
+/** 0.10, chantier I : les chambres du Panoramique, à la corniche (le fil dentaire courant, N2-61). */
+export type LieuFouilleCorniche = "chambre_panoramique";
 
 /** Quel lieu pour quelle ressource fouillée (la halte, et la caisse à outils de la ruine de ferme). */
 export const LIEU_DE_FOUILLE: Partial<Record<TypeRessource, LieuFouille>> = {
@@ -1450,6 +1453,16 @@ export const LIEU_DE_FOUILLE: Partial<Record<TypeRessource, LieuFouille>> = {
   hotel_machinerie: "atelier",
   hotel_chambre_8: "atelier",
   hotel_office: "boutique",
+  // La corniche du Cap Rouge (0.10, chantier I) : ses fouilles suivent les tables qui leur ressemblent ; les chambres du
+  // Panoramique ont la leur (le fil dentaire, courant au niveau 2). Rarement, un objet-clé (R-BUTIN : H2B).
+  corniche_boutique: "boutique",
+  corniche_cantonnier: "atelier",
+  corniche_epave: "epave",
+  corniche_camp: "quai",
+  corniche_chambre: "chambre_panoramique",
+  corniche_cuisine: "libre_service",
+  corniche_villa: "bureaux",
+  corniche_cabanon: "quai",
 };
 
 /**
@@ -1472,6 +1485,8 @@ export const FAMILLES_PAR_LIEU: Record<LieuFouille, Partial<Record<FamilleVestig
   caisse_ruine: { garage: 6, gadget: 1, voiture: 1 },
   // 0.10, chantier J : les salles de bains du Grand Hôtel.
   salle_de_bains: { salle_de_bain: 6, gadget: 1 },
+  // 0.10, chantier I : les chambres du Panoramique (le lavabo et sa trousse de toilette, la literie, la lampe de chevet).
+  chambre_panoramique: { salle_de_bain: 4, salon: 2 },
 };
 
 /**
@@ -1492,6 +1507,11 @@ export const EN_PLUS_PAR_LIEU: Partial<Record<LieuFouille, Partial<Record<TypeOb
   atelier_coop: { echelle_aluminium: "P" },
   // 0.10, chantier J : les salles de bains du Grand Hôtel, où le fil dentaire est courant (COURANTS_AU_NIVEAU_2, N2-61).
   salle_de_bains: { fil_dentaire: "C" },
+  // 0.10, chantier I (N2-61) : le fil dentaire, courant dans les trousses de toilette des chambres du Panoramique (lu à
+  // l'usage : COURANTS_AU_NIVEAU_2 est déclaré plus bas).
+  get chambre_panoramique() {
+    return { ...COURANTS_AU_NIVEAU_2 };
+  },
 };
 
 /**

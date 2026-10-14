@@ -15,6 +15,7 @@ import { TOUS_LES_LIEUX, estLieuJouable, type LieuId } from "../../commun/src/li
 import { estHalte, estPersonnel } from "../../commun/src/registre-lieux.ts";
 import type { Base } from "./base.ts";
 import { Cooperatives } from "./cooperative.ts";
+import { LieuCorniche } from "./corniche.ts";
 import { Gue } from "./gue.ts";
 import { Halte } from "./halte.ts";
 import { LieuVivant, type Voyageur } from "./lieu-vivant.ts";
@@ -49,6 +50,8 @@ export const FABRIQUES: Partial<Record<LieuId, Fabrique>> = {
   moulin: (b, a, m) => new Moulins(b, a, m),
   // 0.10, chantier J : le Grand Hôtel des Flots et son check-in (serveur/src/hotel.ts).
   grand_hotel: (b, a, m) => gardienHotel(b, a, m),
+  // 0.10, chantier I : la corniche du Cap Rouge (le péage du tunnel s'y branchera : serveur/src/corniche.ts).
+  corniche: (b, a) => gardienPartage(new LieuCorniche(b, a)),
 };
 
 /** Un lieu du registre sans fabrique : une halte partagée, ou un lieu à soi qui revient à 24 h. */

@@ -86,6 +86,8 @@ test("les quatre lieux du niveau 2 sont branchés vides : ni Éteints ni butin ;
   // 0.10, chantier J : l'hôtel a son contenu (ses Éteints, son butin : serveur/src/hotel.test.ts).
   for (const lieu of LIEUX_NIVEAU_2.filter((l) => l !== "grand_hotel")) {
     assert.ok(CONTENU_LIEUX[lieu], `${lieu} a son contenu`);
+    // 0.10, chantier I : la corniche est remplie (commun/src/corniche.test.ts).
+    if (lieu === "corniche") continue;
     assert.deepEqual(contenuDe(lieu).eteints(), []);
     assert.deepEqual(contenuDe(lieu).ressources(), []);
   }

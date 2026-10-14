@@ -9,6 +9,8 @@
 //
 // 0.10 : les quatre lieux du niveau 2 sont branchés vides (ni Éteints ni butin) ; les chantiers H à K les remplissent.
 
+import { MILIEU_CORNICHE } from "./corniche.ts";
+import { BUTIN_CORNICHE, SEMIS_VIVANT_CORNICHE, VERSION_CORNICHE, eteintsCorniche, ressourcesCorniche } from "./corniche-contenu.ts";
 import type { Eteint, Milieu } from "./eteints.ts";
 import { eteintsHotel } from "./eteints-hotel.ts";
 import { VERSION_HOTEL, butinHotel } from "./hotel.ts";
@@ -47,7 +49,15 @@ export const CONTENU_LIEUX: Partial<Record<LieuId, () => ContenuLieu>> = {
   // 0.10, chantier J : le Grand Hôtel des Flots (hotel.ts, eteints-hotel.ts, milieu-hotel.ts ; « le check-in » :
   // serveur/src/hotel.ts).
   grand_hotel: () => ({ eteints: eteintsHotel, ressources: butinHotel, version: VERSION_HOTEL, milieu: milieuHotel }),
-  corniche: () => CONTENU_VIDE,
+  // 0.10, chantier I : la corniche du Cap Rouge (corniche-contenu.ts ; sa géographie et son milieu : corniche.ts).
+  corniche: () => ({
+    eteints: eteintsCorniche,
+    ressources: ressourcesCorniche,
+    version: VERSION_CORNICHE,
+    butin: BUTIN_CORNICHE,
+    semis: SEMIS_VIVANT_CORNICHE,
+    milieu: () => MILIEU_CORNICHE,
+  }),
   phare: () => CONTENU_VIDE,
 };
 

@@ -57,7 +57,9 @@ export type TypeRessource =
   | "coop_ifs"
   | TypeRessourceNiveau1
   // 0.10, chantier J : le Grand Hôtel des Flots (ressources-hotel.ts).
-  | TypeRessourceHotel;
+  | TypeRessourceHotel
+
+  | TypeRessourceCorniche;
 
 /**
  * Les ressources du niveau 1 (plan 0.8, chantier 3) : déclarées d'avance, pour que les chantiers des lieux n'aient qu'à
@@ -105,6 +107,22 @@ export type TypeRessourceNiveau1 =
   | "moulin_boutique"
   | "moulin_magasin"
   | "moulin_camp";
+
+/**
+ * H2B, la corniche du Cap Rouge (plan 0.10, chantier I ; commun/src/corniche-contenu.ts) : le pin d'Alep tombé, le tas
+ * de bois personnel (N2-29, S-21 : comme celui de la station) ; les fouilles, dont les chambres du Panoramique (le fil
+ * dentaire, courant au niveau 2 : N2-61). Le modèle les dessine : rendu/ressources.ts n'y ajoute rien.
+ */
+export type TypeRessourceCorniche =
+  | "pin_tombe"
+  | "corniche_boutique"
+  | "corniche_cantonnier"
+  | "corniche_epave"
+  | "corniche_camp"
+  | "corniche_chambre"
+  | "corniche_cuisine"
+  | "corniche_villa"
+  | "corniche_cabanon";
 
 /** L'emprise au sol de ce qu'on vise (m) : le cercle de visée s'y ajuste (P-007). 0,5 m par défaut. */
 export const EMPRISE_RESSOURCE: Partial<Record<TypeRessource, number>> = {
@@ -159,6 +177,9 @@ export const EMPRISE_RESSOURCE: Partial<Record<TypeRessource, number>> = {
   gisement_glaise: 0.8,
   banc_galets: 0.9,
   gue_barques: 1.2,
+  // La corniche (0.10, chantier I) : le pin tombé est long ; on le débite depuis son flanc.
+  pin_tombe: 1.6,
+  corniche_epave: 1.6,
 };
 
 export interface RessourceSol {
@@ -322,6 +343,17 @@ export const REPOUSSE_MS: Record<TypeRessource, number | null> = {
   gue_garde_peche: 12 * 3_600_000,
   // 0.10, chantier J : le Grand Hôtel des Flots (ressources-hotel.ts).
   ...REPOUSSE_HOTEL,
+  // La corniche (0.10, chantier I) : le pin tombé revient comme le tas de bois de la station (6 h, le réglage
+  // `tas_bois_retour_h` : corniche-contenu.ts) ; les fouilles, comme celles des haltes, en 12 h.
+  pin_tombe: 6 * 3_600_000,
+  corniche_boutique: 12 * 3_600_000,
+  corniche_cantonnier: 12 * 3_600_000,
+  corniche_epave: 12 * 3_600_000,
+  corniche_camp: 12 * 3_600_000,
+  corniche_chambre: 12 * 3_600_000,
+  corniche_cuisine: 12 * 3_600_000,
+  corniche_villa: 12 * 3_600_000,
+  corniche_cabanon: 12 * 3_600_000,
 };
 
 /** Les ressources qui restent en place une fois fouillées (une épave ne disparaît pas). */
@@ -375,6 +407,16 @@ export const RESTE_EN_PLACE: Partial<Record<TypeRessource, true>> = {
   gue_garde_peche: true,
   // 0.10, chantier J : le Grand Hôtel des Flots (ressources-hotel.ts).
   ...RESTE_EN_PLACE_HOTEL,
+  // La corniche (0.10, chantier I) : le pin et les fouilles sont dans le modèle, qui reste.
+  pin_tombe: true,
+  corniche_boutique: true,
+  corniche_cantonnier: true,
+  corniche_epave: true,
+  corniche_camp: true,
+  corniche_chambre: true,
+  corniche_cuisine: true,
+  corniche_villa: true,
+  corniche_cabanon: true,
 };
 
 // ---------- Le butin d'un lieu vivant (plan 0.8, chantier 10 ; le moteur est serveur/src/lieu-vivant.ts) ----------
@@ -473,7 +515,7 @@ export const ARBRES_ISOLES: readonly (readonly [number, number])[] = [[6, 8], [4
  * Ce qu'on fait de chaque ressource du sol, et ce qu'elle donne (Book 02 §5). 0.8.2 (R20) : les baies, les branches, les
  * pierres et les bûches se ramassent deux fois plus vite qu'en 0.8.1 (ici, au tas de bois, aux poutres, aux galets).
  */
-const USAGES_ETABLIS: Record<Exclude<TypeRessource, TypeRessourceNiveau1 | TypeRessourceHotel>, UsageRessource> = {
+const USAGES_ETABLIS: Record<Exclude<TypeRessource, TypeRessourceNiveau1 | TypeRessourceHotel | TypeRessourceCorniche>, UsageRessource> = {
   branche: { verbe: "ramasser", libelle: "Ramasser la branche", donne: { branche: 1 }, qualites: {}, duree: 0.6, examen: "Du bois mort, bien sec." },
   buche: { verbe: "ramasser", libelle: "Ramasser la bûche", donne: { buche: 1 }, qualites: {}, duree: 1.25, examen: "Une bûche tombée d'un vieux tas. Sèche." },
   pierre: { verbe: "ramasser", libelle: "Ramasser la pierre", donne: { pierre: 1 }, qualites: {}, duree: 0.9, examen: "Une pierre plate, bonne pour un cercle de feu." },
@@ -989,11 +1031,93 @@ const USAGES_NIVEAU1: Partial<Record<TypeRessourceNiveau1, UsageRessource>> = {
   },
 };
 
+// ---------- H2B, la corniche du Cap Rouge (plan 0.10, chantier I ; commun/src/corniche-contenu.ts) ----------
+
+/**
+ * Le pin tombé se débite comme on prend au tas de bois de la station (S-21) ; les fouilles rapportent le bric-à-brac de
+ * leur table (LIEU_DE_FOUILLE, vestiges.ts). Les chambres du Panoramique donnent toujours des chiffons (niveau-2.md §10.1) ; leurs
+ * couvertures sont polaires (N2-58), jamais de laine.
+ */
+const USAGES_CORNICHE: Record<TypeRessourceCorniche, UsageRessource> = {
+  pin_tombe: {
+    verbe: "ramasser",
+    libelle: "Débiter une bûche du pin",
+    donne: { buche: 1 },
+    qualites: {},
+    duree: 1.5,
+    examen: "Un pin d'Alep tombé de la paroi, couché en travers de l'aire. Le tronc s'est fendu dans la chute : du bois de chauffage pour qui passe.",
+  },
+  corniche_boutique: {
+    verbe: "fouiller",
+    libelle: "Fouiller la boutique de la station",
+    donne: {},
+    qualites: {},
+    duree: 5,
+    examen: "La boutique de la station : des cartes routières, des briquets, des ampoules de rechange. Le tiroir-caisse est resté ouvert.",
+  },
+  corniche_cantonnier: {
+    verbe: "fouiller",
+    libelle: "Fouiller l'abri du cantonnier",
+    donne: {},
+    qualites: {},
+    duree: 5,
+    examen: "L'abri du cantonnier : des outils pendus au mur, des sacs de sel, une bougie dans un bocal.",
+  },
+  corniche_epave: {
+    verbe: "fouiller",
+    libelle: "Fouiller l'épave",
+    donne: {},
+    qualites: {},
+    duree: 4,
+    examen: "Une voiture abandonnée, les portières ouvertes. Personne n'a vidé le coffre.",
+  },
+  corniche_camp: {
+    verbe: "fouiller",
+    libelle: "Fouiller le camp des pillards",
+    donne: {},
+    qualites: {},
+    duree: 5,
+    examen: "Derrière la barricade, sous une bâche : des couvertures polaires, un réchaud, des cordages, des boîtes vides.",
+  },
+  corniche_chambre: {
+    verbe: "fouiller",
+    libelle: "Fouiller la chambre",
+    donne: { chiffons: 1 },
+    qualites: {},
+    duree: 5,
+    examen: "Une chambre du Panoramique : le lit défait, une couverture polaire, un lavabo et sa trousse de toilette.",
+  },
+  corniche_cuisine: {
+    verbe: "fouiller",
+    libelle: "Fouiller la cuisine",
+    donne: {},
+    qualites: {},
+    duree: 5,
+    examen: "La cuisine du Panoramique : le piano de cuisson, des casseroles pendues, des étagères de conserves.",
+  },
+  corniche_villa: {
+    verbe: "fouiller",
+    libelle: "Fouiller la villa",
+    donne: {},
+    qualites: {},
+    duree: 5,
+    examen: "La villa Les Mouettes : un canapé rond, un bar roulant, et un écran « Maison Sereine » qui luit encore.",
+  },
+  corniche_cabanon: {
+    verbe: "fouiller",
+    libelle: "Fouiller le cabanon du pêcheur",
+    donne: {},
+    qualites: {},
+    duree: 4,
+    examen: "Le cabanon du pêcheur : des filets, des nasses, des lignes et des hameçons.",
+  },
+};
+
 /**
  * Tous les usages. Les ressources du niveau 1 qui n'ont pas encore le leur n'existent dans aucun lieu : le type les
  * déclare d'avance, la table les reçoit avec leur lieu.
  */
-export const USAGES = { ...USAGES_ETABLIS, ...USAGES_NIVEAU1, ...USAGES_HOTEL } as Record<TypeRessource, UsageRessource>;
+export const USAGES = { ...USAGES_ETABLIS, ...USAGES_NIVEAU1, ...USAGES_HOTEL, ...USAGES_CORNICHE } as Record<TypeRessource, UsageRessource>;
 
 /** Les vestiges de la ruine, à leur place dans les décombres. */
 export function genererVestiges(premierId: number): Omit<RessourceSol, "disponible">[] {
