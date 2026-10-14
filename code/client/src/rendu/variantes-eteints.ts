@@ -316,53 +316,44 @@ export const PEAU_NOYE = 0xd4e2e6;
 /** La peau de l'Ensablé : grise, poudrée de sable. */
 export const PEAU_ENSABLE = 0x939a86;
 /**
- * Le Noyé gonflé : un peu plus large en tout (`large`, `epais`), et surtout le ventre, les cuisses et les bras enflés
- * (`ENFLURE`, os par os). Il se dégonfle en crevant (`apres`), en `crevaison` secondes, après un dernier gonflement.
+ * Le Noyé gonflé (porteur, 2026-10-14) : un Éteint de taille normale (même hauteur, mêmes jambes, une petite tête)
+ * dont le tronc est devenu une boule, plus large que haute, d'où sortent la tête, des bras courts et les jambes. Tout
+ * passe par l'échelle des os (`ENFLURE`) : le corps entier n'est pas agrandi (`large`, `epais` : 1). Il se dégonfle en
+ * crevant (`apres`), en `crevaison` secondes, après un dernier gonflement.
  */
-export const GONFLE = { large: 1.4, epais: 1.38, apres: { large: 1, epais: 0.95 }, crevaison: 0.45, gonflement: 0.1 };
+export const GONFLE = { large: 1, epais: 1, apres: { large: 1, epais: 0.96 }, crevaison: 0.45, gonflement: 0.08 };
 /**
- * L'enflure, os par os : l'os s'élargit en travers (pas en longueur) de ce facteur. Ses enfants nommés retrouvent la
- * largeur qu'on leur veut (la leur, ou 1) : sans ça, tout le haut du corps suivrait le ventre, et il aurait l'air
- * costaud, pas gonflé.
+ * L'enflure, os par os : la largeur voulue en travers de l'os (1 + facteur), et sa longueur (1 + allonge). Ses enfants
+ * nommés retrouvent la largeur qu'on leur veut (la leur, ou 1) : seule la boule du tronc enfle.
  */
-const ENFLURE: [os: string, facteur: number, enfants: string[]][] = [
-  // Le ventre en tonneau, la poitrine et les épaules bouffies.
-  ["spine_01", 1.05, ["spine_02"]],
-  ["spine_02", 0.85, ["spine_03"]],
-  ["spine_03", 0.5, ["neck_01", "clavicle_l", "clavicle_r"]],
-  ["clavicle_l", 0.3, ["upperarm_l"]],
-  ["clavicle_r", 0.3, ["upperarm_r"]],
-  // Le cou et le visage bouffis.
-  ["neck_01", 0.8, ["Head"]],
-  ["Head", 0.32, []],
-  // Les cuisses et les bras boudinés, les mains enflées.
-  ["thigh_l", 0.7, ["calf_l"]],
-  ["thigh_r", 0.7, ["calf_r"]],
-  ["calf_l", 0.45, ["foot_l"]],
-  ["calf_r", 0.45, ["foot_r"]],
-  ["foot_l", 0.2, []],
-  ["foot_r", 0.2, []],
-  ["upperarm_l", 0.65, ["lowerarm_l"]],
-  ["upperarm_r", 0.65, ["lowerarm_r"]],
-  ["lowerarm_l", 0.5, ["hand_l"]],
-  ["lowerarm_r", 0.5, ["hand_r"]],
-  ["hand_l", 0.45, []],
-  ["hand_r", 0.45, []],
+const ENFLURE: [os: string, facteur: number, enfants: string[], allonge?: number][] = [
+  // La boule : le bas du ventre, le ventre, la poitrine (un peu allongés : ronde, pas plate).
+  ["spine_01", 1.75, ["spine_02"], 0.25],
+  ["spine_02", 1.45, ["spine_03"], 0.2],
+  ["spine_03", 0.6, ["neck_01", "clavicle_l", "clavicle_r"], 0.1],
+  // La tête, petite, posée sur le haut de la boule ; les bras courts, à peine enflés.
+  ["neck_01", 0.15, ["Head"], 0.3],
+  ["Head", -0.08, []],
+  ["upperarm_l", 0.15, ["lowerarm_l"], -0.3],
+  ["upperarm_r", 0.15, ["lowerarm_r"], -0.3],
+  ["hand_l", 0.15, []],
+  ["hand_r", 0.15, []],
 ];
 
 /**
  * Gonfle le corps du Noyé (`k` : 1 gonflé, 0 dégonflé) : chaque os d'ENFLURE s'élargit en travers de son axe (celui qui
- * mène à son enfant), et ses enfants compensent ce qu'ils en héritent. Rien que l'échelle des os : ni matériau ni
- * maillage en plus. La tête garde son agrandissement (les proportions du jeu, Humanoide).
+ * mène à son enfant) et change de longueur ; ses enfants compensent la largeur qu'ils en héritent. Rien que l'échelle
+ * des os : ni matériau ni maillage en plus. La tête garde ses proportions de jeu (Humanoide), à l'enflure près.
  */
 export function gonfler(corps: Humanoide, k: number): void {
-  const voulu = (nom: string) => 1 + (ENFLURE.find(([n]) => n === nom)?.[1] ?? 0) * k;
+  const entree = (nom: string) => ENFLURE.find(([n]) => n === nom);
+  const voulu = (nom: string) => 1 + (entree(nom)?.[1] ?? 0) * k;
   const parent = new Map<string, string>();
   for (const [nom, , enfants] of ENFLURE) for (const e of enfants) parent.set(e, nom);
   for (const nom of new Set([...ENFLURE.map(([n]) => n), ...parent.keys()])) {
     const os = corps.osNomme(nom);
     if (!os) continue;
-    // L'axe de l'os : vers son premier enfant (sa longueur ne change pas).
+    // L'axe de l'os : vers son premier enfant.
     const enfant = os.children.find((c) => (c as THREE.Bone).isBone);
     const a = enfant?.position ?? new THREE.Vector3(0, 1, 0);
     const ax = Math.abs(a.x);
@@ -372,7 +363,7 @@ export function gonfler(corps: Humanoide, k: number): void {
     const p = parent.get(nom);
     const f = voulu(nom) / (p ? voulu(p) : 1);
     const base = (os.userData.echelleRepos as number | undefined) ?? (os.userData.echelleRepos = os.scale.y);
-    os.scale.setScalar(base);
+    os.scale.setScalar(base * (1 + (entree(nom)?.[3] ?? 0) * k));
     for (const i of [0, 1, 2]) if (i !== axe) os.scale.setComponent(i, base * f);
   }
 }
