@@ -16,7 +16,7 @@ import { cerclesSignature, type BruitAction } from "../../commun/src/signature.t
 import { ALLURES, type Allure } from "../../commun/src/regles.ts";
 import { APPUIS_DEGAGEMENT, ESQUIVE, REPOUSSER, SEUIL_EPUISE, armeEnMain, freinSaisie } from "../../commun/src/combat.ts";
 import { armeDansLeDos } from "../../commun/src/combat.ts";
-import type { AutreVu, SacVu, SanteVue, VueComptoir } from "../../commun/src/messages.ts";
+import type { AllureVue, AutreVu, SacVu, SanteVue, VueComptoir } from "../../commun/src/messages.ts";
 import { PORTEE_CABLE_PANNEAU, type Charges } from "../../commun/src/energie.ts";
 import type { Bienvenue, EtatCoopVu, InstallationVue, MessageClient, MessageServeur } from "../../commun/src/messages.ts";
 import { OBJETS, lumierePortee, traineTravois, type Inventaire } from "../../commun/src/objets.ts";
@@ -54,7 +54,7 @@ import { InterfaceLecon } from "./lecon-ui.ts";
 import { MenuAdmin } from "./admin-ui.ts";
 import { animerComptoir, creerComptoir, lumieresComptoir } from "./rendu/comptoir.ts";
 import { VueEteint } from "./rendu/eteint.ts";
-import { VueAutre } from "./rendu/autres.ts";
+import { VueAutre, horlogeAutres } from "./rendu/autres.ts";
 import { Pluie } from "./rendu/pluie.ts";
 import { Rodeurs } from "./rendu/rodeurs.ts";
 import { Brume } from "./rendu/brume.ts";
@@ -978,8 +978,13 @@ function recevoir(message: MessageServeur): void {
     case "rapport":
       hud.rapport(message.rapport);
       return;
+    // Les autres joueurs fluides (0.9, plan §3.4) : id, x, z, orientation, allure à la suite, à l'heure du serveur `h`.
     case "positions":
-      for (let i = 0; i + 3 < message.p.length; i += 4) autres.get(message.p[i]!)?.deplacer(message.p[i + 1]!, message.p[i + 2]!, message.p[i + 3]!);
+      horlogeAutres.recaler(message.h, performance.now());
+      for (let i = 0; i + 4 < message.p.length; i += 5) autres.get(message.p[i]!)?.deplacer(message.h, message.p[i + 1]!, message.p[i + 2]!, message.p[i + 3]!, message.p[i + 4]! as AllureVue);
+      return;
+    case "gestes":
+      for (const g of message.g) autres.get(g.id)?.geste(g);
       return;
     case "autres":
       majAutres(message.joueurs);

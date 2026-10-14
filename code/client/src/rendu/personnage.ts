@@ -14,6 +14,8 @@ import { Assemblage, V3, bosseler, placer } from "./assemblage.ts";
 import { Mesure, bandeau, bandouliere, pan } from "./accessoires.ts";
 import { modeleMetier } from "./metier/index.ts";
 import { TENUE_TOGE, habillerToge } from "./toge.ts";
+import { VITESSE_ANIM, clipDAllure } from "./interpolation.ts";
+import type { AllureVue } from "../../../commun/src/messages.ts";
 
 /** La surface du corps, mesurée une fois par famille et par corps (elle ne dépend ni de la carnation ni des cheveux). */
 const MESURES = new Map<string, Mesure>();
@@ -67,8 +69,6 @@ const ANIMATION_GESTE: Record<GesteAction, string> = {
   interagir: "Interact",
 };
 
-/** Vitesse propre des animations de déplacement (m/s, mesurée sur la bibliothèque, ramenée à 1,75 m). */
-const VITESSE_ANIM = { accroupi: 0.71, marche: 0.93, trot: 5.1 } as const;
 
 /** Une lame ou un fer plat : un profil (z, y) extrudé sur l'épaisseur x, le fil (y > `fil`) plus clair. */
 function fer(c: Assemblage, profil: [number, number][], epaisseur: number, fil: number, acier = 0x55524d, brillant = 0xc9cbc8, decalage = 0): void {
@@ -616,8 +616,13 @@ export class Personnage {
     this.corps?.tacher(this.blessures);
   }
 
-  /** Anime le personnage selon sa vitesse réelle (m/s) et ce qu'il fait. */
-  animer(dt: number, vitesse: number): void {
+  /**
+   * Anime le personnage selon sa vitesse réelle (m/s) et ce qu'il fait. `allure` : celle reçue d'un autre joueur (0.9,
+   * plan §3.1) ; elle choisit le clip, la vitesse n'en règle que la cadence. Sans elle (le joueur local), la vitesse
+   * choisit tout.
+   */
+  animer(dt: number, vitesse: number, allure?: AllureVue): void {
+    const clip = allure === undefined ? undefined : clipDAllure(allure, vitesse);
     const c = this.corps;
     if (!c) return;
     this.unique = Math.max(0, this.unique - dt);
@@ -625,7 +630,8 @@ export class Personnage {
     else if (this.couche) c.poser("LayToIdle", 0, 0.8);
     else if (this.unique > 0) {
       // On laisse finir la frappe ou la roulade.
-    } else if (vitesse > 0.15) {
+    } else if (clip) c.jouer(clip.nom, { vitesse: clip.cadence });
+    else if (allure === undefined && vitesse > 0.15) {
       // Plan 0.8.2 §7.6 : dans l'eau, la marche freinée reste une marche (au pas lent), pas une marche accroupie.
       if (this.dansLEau && vitesse >= 0.9 && vitesse < 3.4) c.jouer("Walk_Loop", { vitesse: Math.min(2.2, vitesse / VITESSE_ANIM.marche) });
       else if (vitesse < 1.7) c.jouer("Crouch_Fwd_Loop", { vitesse: Math.min(1.8, vitesse / VITESSE_ANIM.accroupi) });
