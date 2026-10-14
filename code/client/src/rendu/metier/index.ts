@@ -46,3 +46,6 @@ import "./electricite.ts";
 // lui-même tomberait avant elle : les imports passent avant le corps du module).
 import { modelesMecanique } from "./mecanique.ts";
 for (const [objet, usage, fabrique] of modelesMecanique()) enregistrerModele(objet, usage, fabrique);
+// Les meubles nouveaux du niveau 2 (plan 0.10, chantier D) : le cuiseur, les bacs de tri, la rampe, le moulin, l'arbalète.
+import { modelesMeublesNeufs } from "./meubles-neufs.ts";
+for (const [objet, usage, fabrique] of modelesMeublesNeufs()) enregistrerModele(objet, usage, fabrique);

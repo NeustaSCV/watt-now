@@ -307,4 +307,47 @@ export const RECETTES_MECANISTES: Recette[] = [
     intensite: "moyenne",
     famille: "mecanistes",
   },
+
+  // ---------- Les meubles nouveaux du niveau 2, chantier D (plan 0.10 ; N2-46 à N2-48) : avec les roulements montés ----------
+  {
+    // La charrette à bras (S-27) : la brouette, avec 100 kg roulés au lieu de 60. Deux roulements neufs sur les moyeux.
+    id: "charrette_bras",
+    lieu: aCote("pedalier", { accessoire: "roulements" }),
+    categorie: "sur_soi",
+    nom: "Charrette à bras",
+    produit: { objet: "charrette_bras", quantite: 1 },
+    ingredients: { roue_velo: 2, roulements: 2, tube_aluminium: 4, buche: 2 },
+    qualites: { serrer: 2 },
+    duree: 120,
+    intensite: "moyenne",
+    famille: "mecanistes",
+  },
+  {
+    // Le moulin de jerricans (S-28), une éolienne Savonius : 15 W quand il vente, 5 W par temps voilé, rien au calme, au
+    // calendrier, même hors ligne, vers la batterie de la base. La poulie d'aluminium des Charbonniers : + 50 %.
+    id: "moulin_jerricans",
+    lieu: POSEE,
+    categorie: "ateliers",
+    nom: "Moulin de jerricans",
+    produit: { installation: "moulin_jerricans" },
+    ingredients: { jerrican: 2, tube_aluminium: 3, roulements: 1, petit_moteur: 1 },
+    qualites: { serrer: 2 },
+    duree: 120,
+    intensite: "moyenne",
+    famille: "mecanistes",
+  },
+  {
+    // L'arbalète de garde (S-29) : un piège, comme l'assommoir ; le premier Éteint qui passe le fil, à 1 m devant elle,
+    // reçoit un carreau (les dégâts de l'arbalète posée). Jamais un joueur (N2-Q5). On la réarme : 2 s au cranequin léger.
+    id: "arbalete_garde",
+    lieu: POSEE,
+    categorie: "batir",
+    nom: "Arbalète de garde",
+    produit: { installation: "arbalete_garde" },
+    ingredients: { arbalete: 1, tube_aluminium: 1, rouleau_fil_fer: 1, petit_ressort: 1 },
+    qualites: { serrer: 1 },
+    duree: 45,
+    intensite: "legere",
+    famille: "mecanistes",
+  },
 ];

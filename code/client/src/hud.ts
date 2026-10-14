@@ -11,7 +11,7 @@ import type { VueProgression } from "../../commun/src/progression.ts";
 import { SILHOUETTES_DEPLIEES, enTete, etatCle, nouveautesParOnglet, ongletsVides, planFabrication, recetteVisible, sousTitre, type PlanFabrication } from "./fabrication-arbre.ts";
 import { ACTIONS, RESERVEES, assigner, avecTouches, nomDe, nomTouche, retablir, surChangement, type Action } from "./touches.ts";
 import { PanneauAide } from "./aide.ts";
-import { CAPACITES, NOMS_BATTERIES, type Charges } from "../../commun/src/energie.ts";
+import { CAPACITES, NOMS_BATTERIES, SOLEIL_PAR_TEMPS, TYPES_BATTERIES, facteurHeureSoleil, type Charges } from "../../commun/src/energie.ts";
 import { ARMES, NOMS_BLESSURES, PLAFOND_FORTUNE, RESISTANCE_TORSE, SEUIL_ABIMEE, armeDeCle, capaciteChargeArme, caracteristiquesArme, estArme, etatArme } from "../../commun/src/combat.ts";
 import type { EchangeVu, FeuVu, GesteRepriseArme, InstallationVue, OffreEchange, OperationComptoir, OperationEchange, Personne, RapportBase, SanteVue, Verbe, VueComptoir, WottsVus } from "../../commun/src/messages.ts";
 import {
@@ -317,6 +317,8 @@ export class Hud {
   private readonly sante: HTMLElement;
   private readonly sommeilJauge: HTMLElement;
   private dernierTemps = "";
+  /** L'heure de jeu affichée : la fiche du banc dit ce que donne le soleil en ce moment (plan 0.10, chantier D). */
+  private heureVue = 12;
   private readonly endurance: HTMLElement;
   private readonly blessures: HTMLElement;
   private derniereSante = "";
@@ -692,6 +694,7 @@ export class Hud {
    * Le compte des jours de jeu (24 min chacun) passe dans l'infobulle.
    */
   heure(jour: number, heure: number, date = ""): void {
+    this.heureVue = heure;
     this.horloge.textContent = date ? `${date} · ${formaterHeure(heure)}` : `Jour ${jour} · ${formaterHeure(heure)}`;
     this.horloge.title = `Jour de jeu ${jour}. Le calendrier avance d'un jour toutes les 1 h 50 réelles : un an dure 4 semaines.`;
   }
@@ -976,7 +979,7 @@ export class Hud {
         });
       corps = `<ul class="lignes">${lignes.join("") || "<li class=\"vide\">Rien en stock.</li>"}</ul>`;
     } else if (this.onglet === "energie") {
-      const batteries: TypeBatterie[] = ["petite_batterie", "batterie_voiture"];
+      const batteries = TYPES_BATTERIES;
       const lignes = batteries
         .filter((b) => (this.inventaire[b] ?? 0) > 0)
         .map((b) => {
@@ -2329,7 +2332,7 @@ export class Hud {
       ${enteteFiche(nom)}
       ${l ? `<p class="niveau">Niveau ${niveau}${etat ? ` · ${etat}` : ""}</p>` : etat ? `<p class="niveau">${etat}</p>` : ""}
       <p class="examen">${examen}</p>
-      ${i.type === "banc_recharge" ? htmlFicheBanc(i, this.inventaire, this.charges, this.chargeArmes) : ""}
+      ${i.type === "banc_recharge" ? htmlFicheBanc(i, this.inventaire, this.charges, this.chargeArmes, this.dernierTemps ? (REGLAGES.panneau_wh_jour / 24) * facteurHeureSoleil(this.heureVue) * SOLEIL_PAR_TEMPS[this.dernierTemps as Temps] : undefined) : ""}
       ${piece}
       ${ameliorer ? `<h3>Améliorer, sur place</h3>${ameliorer}` : ""}
       <div class="defaire">${defaire}</div>

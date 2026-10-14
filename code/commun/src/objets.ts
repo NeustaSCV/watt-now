@@ -361,14 +361,20 @@ export function capaciteSurSoi(inventaire: Inventaire): number {
 
 /** La brouette des Mécanistes (Book 25 §6.4) : 60 kg roulés de plus que le sac, et l'on court encore. */
 export const CAPACITE_BROUETTE = 60;
+/** La charrette à bras des Mécanistes (plan 0.10, chantier D ; S-27) : la brouette, avec 100 kg roulés au lieu de 60. */
+export const CAPACITE_CHARRETTE = 100;
+
+/** Ce qu'on roule ou qu'on traîne en plus du sac : le meilleur du travois, de la brouette et de la charrette (kg). */
+export function capaciteRoulee(inventaire: Inventaire): number {
+  return Math.max((inventaire.travois ?? 0) > 0 ? CAPACITE_TRAVOIS : 0, (inventaire.brouette ?? 0) > 0 ? CAPACITE_BROUETTE : 0, (inventaire.charrette_bras ?? 0) > 0 ? CAPACITE_CHARRETTE : 0);
+}
 
 /**
- * Ce qu'on peut emporter avec ce qu'on a : le meilleur contenant (ou les poches), plus le travois ou la brouette (on
- * ne pousse pas l'une en traînant l'autre : la meilleure des deux compte).
+ * Ce qu'on peut emporter avec ce qu'on a : le meilleur contenant (ou les poches), plus le travois, la brouette ou la
+ * charrette (on ne pousse pas l'une en traînant l'autre : la meilleure compte).
  */
 export function capaciteDe(inventaire: Inventaire): number {
-  const roule = Math.max((inventaire.travois ?? 0) > 0 ? CAPACITE_TRAVOIS : 0, (inventaire.brouette ?? 0) > 0 ? CAPACITE_BROUETTE : 0);
-  return capaciteSurSoi(inventaire) + roule;
+  return capaciteSurSoi(inventaire) + capaciteRoulee(inventaire);
 }
 
 /**
@@ -376,7 +382,7 @@ export function capaciteDe(inventaire: Inventaire): number {
  * roule : avec elle, on court encore (Book 25 §6.4).
  */
 export function traineTravois(inventaire: Inventaire): boolean {
-  return (inventaire.travois ?? 0) > 0 && (inventaire.brouette ?? 0) === 0 && poidsInventaire(inventaire) > capaciteSurSoi(inventaire) + 1e-9;
+  return (inventaire.travois ?? 0) > 0 && (inventaire.brouette ?? 0) === 0 && (inventaire.charrette_bras ?? 0) === 0 && poidsInventaire(inventaire) > capaciteSurSoi(inventaire) + 1e-9;
 }
 
 /** Le nom de ce qui porte les affaires : « Sac », « Sac de fortune », ou « Poches ». */

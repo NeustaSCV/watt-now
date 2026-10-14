@@ -36,6 +36,8 @@ import { aleaDe, contenuConteneur, graineDe, piecesAmas, type TypeLieuDechets } 
 import { tableDecharge } from "./decharge.ts";
 import { REASSORT_MS, STOCK_DE_BASE } from "./economie.ts";
 import { COUT_BAC } from "./forge.ts";
+import { MS_JOUR_CALENDRIER, productionPanneau } from "./energie.ts";
+import { REGLAGES } from "./reglages.ts";
 import { BUTIN_GUE } from "./gue.ts";
 import { BUTIN_HALTE } from "./halte.ts";
 import { ETAPES_LIEUX, lieuDeLEtape, type LieuId } from "./lieux.ts";
@@ -200,8 +202,18 @@ const DUREES_QUETES: Readonly<Record<string, { travail: number; lieu?: "station"
 /** Les quêtes qui demandent un autre joueur : un joueur seul ne peut pas les finir (ce n'est pas un blocage). */
 const QUETES_SOCIALES = new Set(["main_tendue"]);
 
-/** Les attentes du monde, en minutes de jeu (Book 25 : la meule cuit trois jours de jeu, 72 min). */
-const ATTENTE = { defourne: 72, wh_panneau: 25 } as const;
+/**
+ * Le panneau suit le soleil (plan 0.10, chantier D ; S-30) : rien la nuit ni sous la pluie, moins sous les nuages. Sur
+ * un mois de calendrier du monde, il ne donne qu'une part de ses 80 Wh par jour (≈ 53 % : la nuit est déjà dans la
+ * moyenne, pas la pluie ni les nuages) ; l'attente des 20 Wh de la quête « La charge » s'allonge d'autant.
+ */
+export const PART_DU_SOLEIL = productionPanneau(0, 30 * MS_JOUR_CALENDRIER, 0) / (30 * REGLAGES.panneau_wh_jour);
+
+/**
+ * Les attentes du monde, en minutes de jeu (Book 25 : la meule cuit trois jours de jeu, 72 min). Le panneau donnait
+ * 20 Wh en 25 min au calendrier ; il suit le soleil depuis la 0.10.
+ */
+const ATTENTE = { defourne: 72, wh_panneau: Math.round(25 / PART_DU_SOLEIL) } as const;
 
 /**
  * Une sortie, pour un joueur moyen (minutes de jeu connecté) : le trajet (10 s à l'écran), le lieu à traverser, ses

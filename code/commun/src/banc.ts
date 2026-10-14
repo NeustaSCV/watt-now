@@ -3,7 +3,7 @@
 // (client/src/fiche-banc.ts). Les chiffres du banc (débit, rendement, portée du pédalier) sont dans energie.ts.
 
 import { armeDeCle, capaciteChargeArme, chargeArme } from "./combat.ts";
-import { CAPACITES, NOMS_BATTERIES, capacite, type Charges, type TypeBatterie } from "./energie.ts";
+import { CAPACITES, NOMS_BATTERIES, TYPES_BATTERIES, capacite, type Charges, type TypeBatterie } from "./energie.ts";
 import type { CleObjet } from "./etoiles.ts";
 import { nommer, type Inventaire } from "./objets.ts";
 
@@ -35,7 +35,7 @@ function majuscule(t: string): string {
  */
 export function chosesACharger(inventaire: Inventaire, charges: Charges, chargeArmes: Partial<Record<string, number>>): ChoseACharger[] {
   const r: ChoseACharger[] = [];
-  for (const b of ["petite_batterie", "batterie_voiture"] as const) {
+  for (const b of TYPES_BATTERIES) {
     const n = inventaire[b] ?? 0;
     if (n <= 0) continue;
     const nom = n > 1 ? `Tes ${nommer(b, n)}` : majuscule(NOMS_BATTERIES[b]);

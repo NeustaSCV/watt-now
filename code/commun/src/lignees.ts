@@ -735,7 +735,7 @@ export const LIGNEES_INSTALLATIONS: Partial<Record<TypeInstallation, readonly Et
         ideePlusTard: "Ce panneau servira sur un banc, un jour.",
         indice: ["Un panneau solaire ? Les stations-service en avaient.", "À la station."],
       },
-      apporte: "Brancher et assembler ce qui marche au courant. Le panneau posé dessus remplit sa batterie au soleil, 80 Wh par jour.",
+      apporte: "Brancher et assembler ce qui marche au courant. Le panneau posé dessus remplit sa batterie au soleil, 80 Wh par beau jour (rien la nuit).",
       examen: "Un banc de planches, des pinces, un régulateur bricolé ; le petit panneau de la station couché dessus, plein sud.",
     },
     {

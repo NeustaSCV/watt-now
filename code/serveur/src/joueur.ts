@@ -108,7 +108,7 @@ import {
   valeurWotts,
   type Wotts,
 } from "../../commun/src/economie.ts";
-import { BONUS_MECANISTE, PORTEE_CABLE_PANNEAU, WH_M_PAR_HEURE, porteBatteries, productionPanneau, stocker } from "../../commun/src/energie.ts";
+import { BONUS_MECANISTE, PORTEE_CABLE_PANNEAU, TYPES_BATTERIES, WH_M_PAR_HEURE, porteBatteries, productionPanneau, stocker } from "../../commun/src/energie.ts";
 import type { AutreVu, OffreEchange, OperationComptoir, RapportBase, WottsVus } from "../../commun/src/messages.ts";
 import { COMPTOIR, dansBoite, deLieu, destinations, etapeVers, minuscule, type Zone } from "../../commun/src/lieux.ts";
 import { LEURRES, PORTEE_PORTE, PORTES, boitePorte, distancePorte } from "../../commun/src/cooperative.ts";
@@ -196,6 +196,8 @@ import {
 import { refusAVenir, type AVenir } from "../../commun/src/lignees.ts";
 import { outilsAPortee, refusRatelier } from "../../commun/src/outils-a-portee.ts";
 import { stimuliTorches } from "../../commun/src/torche.ts";
+import { stimuliRampes } from "../../commun/src/meubles-neufs.ts";
+import { MeublesNeufs, etatDePose, rendDeLArbaleteGarde, rendusMeublesNeufs, type ContexteMeublesNeufs } from "./meubles-neufs.ts";
 import { estClocheAlarme, sonAlarme } from "../../commun/src/meubles-niveau2.ts";
 // Se servir du meuble d'une autre famille, une fois sa recette apprise (plan 0.8.2 §7.3, chantier J).
 import { saitSeServir } from "../../commun/src/savoir-meuble.ts";
@@ -241,7 +243,7 @@ interface ActionEnCours {
 const INTERVALLE_TIRAGE = 20_000;
 const INTERVALLE_ETEINTS = 200;
 
-const BATTERIES: TypeBatterie[] = ["petite_batterie", "batterie_voiture"];
+const BATTERIES: readonly TypeBatterie[] = TYPES_BATTERIES;
 /** Au comptoir, rien à ramasser : l'esplanade est entretenue par les Compteurs. */
 const SANS_RESSOURCES = new Map<number, RessourceEnBase>();
 
@@ -391,6 +393,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
   private readonly forge: Forge = new Forge(this.contexteForge());
   /** L'électricité des Voltaïques (Book 25 §5) : décharges, recharge, pièges électriques (serveur/src/electricite.ts). */
   private readonly electricite: Electricite = new Electricite(this.contexteElectricite());
+  /** Les meubles nouveaux du niveau 2 (plan 0.10, chantier D) : cuiseur, bacs de tri, creuset, moulin, rampe, arbalète de garde. */
+  private readonly meublesNeufs: MeublesNeufs = new MeublesNeufs(this.contexteMeublesNeufs());
   /** Reprendre une arme sur son meuble : la réparer, la monter d'une étoile (plan 0.8, chantier 9 ; serveur/src/evolution-armes.ts). */
   private readonly evolution: EvolutionArmes = new EvolutionArmes(this.contexteEvolution());
 
@@ -1335,6 +1339,37 @@ export class Joueur implements Voyageur, ParticipantLecon {
   }
 
   /** Ce que le joueur prête au module de l'électricité (electricite.ts) : des accès, aucune règle. */
+  /** Ce que le joueur prête aux meubles nouveaux du niveau 2 (serveur/src/meubles-neufs.ts) : rien que des accès. */
+  private contexteMeublesNeufs(): ContexteMeublesNeufs {
+    const j = this;
+    return {
+      maintenant: () => j.maintenant(),
+      debutMonde: () => j.debutMonde,
+      position: () => j.position,
+      installations: () => j.installations.values(),
+      inventaire: () => j.inventaire,
+      outils: () => j.outils(),
+      retirer: (objets) => j.retirerPlusieurs(objets),
+      gourde: () => j.gourde,
+      eauBouillie: () => {
+        j.gourde = { contenu: "potable", litres: j.gourde.litres };
+        if (j.tuto) j.tuto.bouilli = true;
+        j.noterFait("ebullition");
+        j.envoyerBesoins();
+      },
+      sauverInstallation: (i) => {
+        j.base.sauverEtatInstallation(j.compte.id, i.id, i.etat);
+        if (j.lieu === "terrain" && !j.voyage) j.envoyer({ t: "installation", installation: i });
+      },
+      majBase: () => j.mettreAJourBase(j.maintenant()),
+      info: (t) => j.info(t),
+      noter: (f) => j.noterFait(f),
+      commencer: (libelle, dureeS, appliquer) => j.commencer(libelle, dureeS, appliquer),
+      alea: () => j.alea(),
+      apresDestruction: (e, comment) => j.apresDestruction(e, comment),
+    };
+  }
+
   private contexteElectricite(): ContexteElectricite {
     const j = this;
     return {
@@ -1960,10 +1995,13 @@ export class Joueur implements Voyageur, ParticipantLecon {
     const apres: Inventaire = { ...this.inventaire, [objet]: (this.inventaire[objet] ?? 0) - par };
     for (const [t, k] of Object.entries(d.donne) as [TypeObjet, number][]) apres[t] = (apres[t] ?? 0) + k;
     if (poidsInventaire(apres) > capaciteDe(apres) + 1e-9) return this.sacTropLourd();
-    this.commencer(`Démonter : ${OBJETS[objet].nom}`, (d.duree * facteur) / REGLAGES.gestes_vitesse, () => {
+    // Les bacs de tri à 3 m (plan 0.10, chantier D ; S-23) : deux fois plus vite, une matière de plus un démontage sur trois.
+    this.commencer(`Démonter : ${OBJETS[objet].nom}`, (d.duree * facteur) / REGLAGES.gestes_vitesse / this.meublesNeufs.vitesseDemontage(), () => {
       if ((this.inventaire[objet] ?? 0) < par) return;
       this.retirerPlusieurs({ [objet]: par });
-      this.ajouterPlusieurs(d.donne);
+      const enPlus = this.meublesNeufs.matiereEnPlus(d.donne);
+      this.ajouterPlusieurs(somme(d.donne, enPlus));
+      if (Object.keys(enPlus).length) this.info(`Aux bacs de tri, rien ne se perd : une matière de plus (${(Object.entries(enPlus) as [TypeObjet, number][]).map(([t, k]) => nommer(t, k)).join(", ")}).`);
       this.verifierLumiere();
       this.noterFait(`demonte:${objet}`);
       this.mesurer("progression", `demontage:${objet}`, 1);
@@ -2569,6 +2607,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       if (i.type === "charbonniere" && i.etat.pretLe && instant < i.etat.pretLe) s.push({ genre: "odeur", x: i.x, z: i.z, ...CHARBONNIERE_ODEUR });
     }
     s.push(...stimuliTorches(this.installations.values(), instant, nuit));
+    s.push(...stimuliRampes(this.installations.values(), nuit));
     return this.sousLaPluie(s);
   }
 
@@ -2623,6 +2662,11 @@ export class Joueur implements Voyageur, ParticipantLecon {
     this.eteints = this.eteints.filter((e) => e.etat !== "detruit" || e.corps < DUREE_CORPS);
     this.verifierAlarmes(instant);
     this.verifierDeclencheurs(instant);
+    // L'arbalète de garde (plan 0.10, chantier D) : un carreau sur le premier Éteint qui passe son fil.
+    for (const a of this.meublesNeufs.verifierArbaletes(this.installations.values(), this.eteints, zoneDe("terrain"))) {
+      this.base.sauverEtatInstallation(this.compte.id, a.id, a.etat);
+      this.envoyer({ t: "installation", installation: a });
+    }
 
     if (instant - this.dernierTirage >= INTERVALLE_TIRAGE) {
       this.dernierTirage = instant;
@@ -3089,9 +3133,14 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (facteur === null) return this.infos(outilsManquantsBref(r.qualites, this.outils(), undefined, this.recetteVisible));
     // Le lieu (plan 0.8, chantier 1) : la forme du foyer, la construction à son niveau, l'accessoire ; le refus nomme ce qui manque.
     const refus = refusLieu(r.lieu, this.alentours());
-    if (refus) return this.info(refus);
+    // Le cuiseur solaire (plan 0.10, chantier D ; S-22) : sans feu à portée, les plats du foyer de pierres cuisent au
+    // soleil, sans bois, deux fois plus lentement (`lenteur`).
+    const soleil = refus ? this.meublesNeufs.cuissonSolaire(r) : null;
+    if (soleil && "refus" in soleil) return this.info(soleil.refus);
+    if (refus && !soleil) return this.info(refus);
+    const lenteur = soleil?.lenteur ?? 1;
     // La cuisine selon le foyer (Book 24 §3.1) : les mijotés demandent de l'eau et du bois ; deux plats à la fois.
-    const cuisine = r.lieu.genre === "construction" && r.lieu.construction === "feu" ? this.cuisinePour(r) : { fois: 1, foyer: null, bois: 0, eau: 0 };
+    const cuisine = r.lieu.genre === "construction" && r.lieu.construction === "feu" && !soleil ? this.cuisinePour(r) : { fois: 1, foyer: null, bois: 0, eau: 0 };
     if ("refus" in cuisine) return this.info(cuisine.refus);
     // La forge (Book 25 §4) : la maîtrise ; le risque de la trempe à l'eau est dit ici.
     const refusForge = this.forge.refus(r);
@@ -3107,8 +3156,15 @@ export class Joueur implements Voyageur, ParticipantLecon {
       if (erreur) return this.info(erreur);
       this.commencer(r.nom, dureeReelle(r) * facteur, () => {
         if (!ingredientsPresents(this.inventaire, r) || this.emplacementInvalide(x, z, type)) return;
-        this.retirerPlusieurs(r.ingredients);
+        // L'état à la pose (plan 0.10, chantier D) : l'arbalète de garde garde les étoiles de l'arbalète qu'elle prend.
+        const etatPose = etatDePose(type, this.inventaire);
+        // Un ingrédient de métier (l'arbalète) se prend toutes étoiles confondues, le moins bon d'abord.
+        this.retirerIngredients(r.ingredients);
         const installation = this.base.ajouterInstallation(this.compte.id, type, x, z, Number.isFinite(o) ? (o as number) : 0);
+        if (etatPose) {
+          installation.etat = { ...installation.etat, ...etatPose };
+          this.base.sauverEtatInstallation(this.compte.id, installation.id, installation.etat);
+        }
         this.installations.set(installation.id, installation);
         this.envoyer({ t: "installation", installation });
         this.mesurer("progression", `recette:${r.id}`, 1);
@@ -3130,7 +3186,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (poidsInventaire(this.inventaire, this.gourde.litres) + delta > capaciteDe({ ...this.inventaire, [produit.objet]: (this.inventaire[produit.objet] ?? 0) + quantite })) return this.sacTropLourd();
     // Le redresseur de fûts de l'établi : les flèches vont deux fois plus vite (Book 25 §9.3).
     const redresse = accelerationFleches(r.id, this.installations.values(), (ix, iz) => this.proche(ix, iz, 3));
-    this.commencer(fois > 1 ? `${r.nom} (deux à la fois)` : r.nom, dureeReelle(r) * facteur * redresse, () => {
+    this.commencer(fois > 1 ? `${r.nom} (deux à la fois)` : soleil ? `${r.nom} (au soleil)` : r.nom, dureeReelle(r) * facteur * redresse * lenteur, () => {
       // Un ingrédient de métier compte toutes étoiles confondues.
       if (!Object.entries(ingredients).every(([t, n]) => compter(this.inventaire, t as TypeObjet) >= (n ?? 0))) return;
       if (cuisine.foyer) {
@@ -3223,7 +3279,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     const bilan = { produit: 0, stocke: 0, perdu: 0, decharge: 0, remonte: 0 };
     const changes = new Set<InstallationVue>();
     // Le banc solaire (chantier 7) : son panneau remplit ses batteries (avant la décharge, qui avance `majLe`).
-    for (const [k, v] of Object.entries(produireBancsSolaires(this.installations.values(), instant)) as [keyof typeof bilan, number][]) bilan[k] += v;
+    for (const [k, v] of Object.entries(produireBancsSolaires(this.installations.values(), instant, this.debutMonde)) as [keyof typeof bilan, number][]) bilan[k] += v;
     // Les batteries posées (banc, pédalier) se déchargent, comme les autres.
     for (const banc of this.installations.values()) {
       if (!porteBatteries(banc.type)) continue;
@@ -3237,7 +3293,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     for (const panneau of this.installations.values()) {
       if (panneau.type !== "panneau_solaire") continue;
       const depuis = panneau.etat.majLe ?? instant;
-      const wh = productionPanneau(instant - depuis);
+      const wh = productionPanneau(depuis, instant, this.debutMonde);
       panneau.etat = { ...panneau.etat, majLe: instant };
       changes.add(panneau);
       bilan.produit += wh;
@@ -3251,6 +3307,13 @@ export class Joueur implements Voyageur, ParticipantLecon {
       bilan.stocke += r.stocke;
       bilan.perdu += r.perdu;
     }
+    // Le moulin de jerricans remplit la batterie de la base au vent ; la rampe de LED la vide la nuit (plan 0.10, chantier D).
+    const neufs = this.meublesNeufs.majBase([...this.installations.values()], instant);
+    bilan.produit += neufs.produit;
+    bilan.stocke += neufs.stocke;
+    bilan.perdu += neufs.perdu;
+    for (const i of neufs.changees) changes.add(i);
+    if (this.lieu === "terrain" && !this.voyage) for (const i of neufs.bascules) this.envoyer({ t: "installation", installation: i });
     // Les clôtures électriques tirent leur courant du banc, même hors ligne (Book 25 §5.3).
     for (const c of alimenterClotures(this.installations.values(), instant, (c) => this.lieu === "terrain" && !this.voyage && this.envoyer({ t: "installation", installation: c }))) changes.add(c);
     // La décharge fait remonter des objets, même hors ligne (P-001).
@@ -3914,9 +3977,10 @@ export class Joueur implements Voyageur, ParticipantLecon {
           i.etat.redresseur ? REDRESSEUR.cout : {},
           Forge.accessoiresRendus(i),
           rendDesAccessoires(i.etat),
+          rendusMeublesNeufs(i),
           batterieDuBanc,
         );
-        const rend = rendDuDemontage(somme(laRecette.ingredients, ...(i.etat.payes ?? []), accessoires));
+        const rend = rendDeLArbaleteGarde(i, rendDuDemontage(somme(laRecette.ingredients, ...(i.etat.payes ?? []), accessoires)));
         if (!this.peutReprendre(rend)) return;
         return this.commencer(`Démonter : ${nom}`, Math.max(2, dureeReelle(laRecette) / 2), () => {
           if (!this.installations.has(i.id)) return;
@@ -3954,6 +4018,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
     // Le banc solaire (plan 0.8, chantier 7) : poser le panneau sur le banc (serveur/src/electricite.ts).
     if (this.electricite.utiliser(i, verbe as Verbe)) return;
     if (utiliserNiveau1(this.contexteMecanique(maj), i, verbe as Verbe, () => this.maintenant(), this.debutMonde)) return;
+    // Les meubles nouveaux du niveau 2 (plan 0.10, chantier D) : le cuiseur, le creuset, la poulie, l'arbalète de garde.
+    if (this.meublesNeufs.utiliser(i, verbe)) return;
 
     switch (verbe) {
       case "porter":

@@ -4,7 +4,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { CHARGE_TROUVEE, DUREE_CHARBONNIERE_MS, MS_JOUR_CALENDRIER, whEDePedalage } from "../../commun/src/energie.ts";
+import { CHARGE_TROUVEE, DUREE_CHARBONNIERE_MS, MS_JOUR_CALENDRIER, productionPanneau, whEDePedalage } from "../../commun/src/energie.ts";
 import { etoilesForge, forgeProche } from "../../commun/src/forge.ts";
 import { LIGNEES_INSTALLATIONS } from "../../commun/src/lignees.ts";
 import type { MessageServeur, Verbe } from "../../commun/src/messages.ts";
@@ -59,16 +59,19 @@ function seul(famille: Famille, piece: Inventaire, laisses: readonly (keyof Inve
     joueur.recevoir({ t: "interagir", cible: { genre: "installation", id }, verbe });
     attendre(secondes);
   };
+  /** Le soleil de la dernière absence (Wh) : depuis la 0.10 (chantier D, S-30), le panneau suit le soleil du monde. */
+  let soleil = 0;
   /** Se déconnecter, s'absenter, revenir. */
   const absence = (ms: number) => {
     joueur.sauvegarder();
     joueur.partir();
+    soleil = productionPanneau(instant, instant + ms, base.debutMonde());
     instant += ms;
     joueur = new Joueur(compte, base, (m) => recus.push(m), () => instant, new Halte(base), JAMAIS);
     joueur.position = { x: 20, z: 20, o: 0 };
     return joueur;
   };
-  return { base, compte, joueur: () => joueur, attendre, dernier, infos, sac, construire, meuble, utiliser, absence };
+  return { base, compte, joueur: () => joueur, attendre, dernier, infos, sac, construire, meuble, utiliser, absence, soleil: () => soleil };
 }
 
 // ---------- Les lignées et leurs clés ----------
@@ -145,7 +148,7 @@ test("🔥 la charbonnette : 5 bûches et 20 branches font la meule, qui rend 4 
 
 // ---------- ⚡ Le banc solaire ----------
 
-test("⚡ un Voltaïque seul : le banc solaire, le panneau posé dessus, la batterie de la ruine ; ≈ 80 Wh par jour de soleil", () => {
+test("⚡ un Voltaïque seul : le banc solaire, le panneau posé dessus, la batterie de la ruine ; le soleil d'un jour", () => {
   const t = seul("voltaiques", { panneau_solaire: 1 }, ["pierre", "bache", "ressort_lames", "cadre_velo", "roue_velo", "chaine_velo"]);
   const id = t.construire("banc_recharge");
   t.utiliser(id, "poser_panneau", 21);
@@ -160,9 +163,10 @@ test("⚡ un Voltaïque seul : le banc solaire, le panneau posé dessus, la batt
   const avant = total();
   assert.equal(Math.round(t.meuble(id).etat.charges!.batterie_voiture!), CHARGE_TROUVEE.batterie_voiture);
   t.absence(MS_JOUR_CALENDRIER);
-  // 80 Wh entrés, moins la décharge spontanée d'un jour (≈ 0,3 Wh).
+  // Le soleil du jour entré (80 Wh par beau jour, rien la nuit ni sous la pluie), moins la décharge spontanée (≈ 0,3 Wh).
   const apres = total();
-  assert.ok(Math.abs(apres - avant - 80) < 1, `${avant} → ${apres}`);
+  assert.ok(t.soleil() > 0, `soleil : ${t.soleil()}`);
+  assert.ok(Math.abs(apres - avant - t.soleil()) < 1.5, `${avant} → ${apres} pour ${t.soleil()}`);
   // Démonté, le banc rend son panneau entier, et sa batterie (à demeure : elle ne se reprend pas avant).
   t.utiliser(id, "demonter_installation", 40);
   assert.equal(t.sac().panneau_solaire, 1);
