@@ -293,11 +293,13 @@ test("martèlement : face à un Errant, aucune saisie, avec chaque arme commune 
   }
 });
 
-test("martèlement : face à un Équipé, il encaisse des coups ; un coup sur 3, il finit par saisir au gourdin", () => {
+test("martèlement : face à un Équipé, il encaisse des coups et finit par saisir (au gourdin, au marteau)", () => {
   for (const o of ["gourdin", "marteau", "couteau"] as const) assert.ok(marteler(armeDeContact(o), true).encaisses > 0, o);
+  for (const o of ["gourdin", "marteau"] as const) assert.ok(marteler(armeDeContact(o), true).saisies >= 1, o);
+  // Avant la 0.9 (un coup sur 1), le martèlement le bloquait : aucune saisie.
   try {
-    appliquerReglages({ equipe_vacille_un_sur: 3 });
-    assert.ok(marteler(armeDeContact("gourdin"), true).saisies >= 1);
+    appliquerReglages({ equipe_vacille_un_sur: 1 });
+    assert.equal(marteler(armeDeContact("gourdin"), true).saisies, 0);
   } finally {
     appliquerReglages({});
   }

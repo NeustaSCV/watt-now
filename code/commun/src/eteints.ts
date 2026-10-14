@@ -310,8 +310,10 @@ export function encaisser(e: Eteint, arme: Arme, appuye: boolean, force: number,
     e.coupsRecus = 0;
     return "a_terre";
   }
-  // Un coup sur deux, l'Équipé ne vacille pas (plan 0.9 §3.3) : ni étourdi, ni recul, il garde sa prise et son contact.
-  if (!auSol && tientLeCoup(e)) {
+  // À terre, la lame sur le casque ajoute ses dégâts au torse, sans le faire vaciller ni reculer (porteur, 2026-10-14).
+  if (auSol) return "encaisse";
+  // Un coup sur N, l'Équipé vacille (plan 0.9 §3.3) ; les autres : ni étourdi, ni recul, il garde sa prise et son contact.
+  if (tientLeCoup(e)) {
     Object.assign(e, prise);
     return "encaisse";
   }
@@ -326,7 +328,7 @@ export function encaisser(e: Eteint, arme: Arme, appuye: boolean, force: number,
 
 /**
  * L'Équipé encaisse (plan 0.9 §3.3) : un coup reçu de plus, et ne vacille-t-il pas ? Le premier coup le fait vaciller
- * (Q-8), puis un coup sur N (`REGLAGES.equipe_vacille_un_sur`, 2 par défaut) ; les autres, il les prend sans broncher.
+ * (Q-8), puis un coup sur N (`REGLAGES.equipe_vacille_un_sur`, 3 par défaut, porteur 2026-10-14) ; les autres, il les prend sans broncher.
  * Les autres Éteints vacillent à chaque coup. La poussée et la décharge ne passent pas par ici : elles font toujours vaciller.
  */
 export function tientLeCoup(e: Eteint): boolean {
