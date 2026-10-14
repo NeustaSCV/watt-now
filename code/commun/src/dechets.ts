@@ -582,7 +582,7 @@ export const POINTS_DECHETS: Record<TypePointDechets, DefinitionPointDechets> = 
     nom: "frigo connecté",
     verbe: "demonter",
     libelle: "Démonter le frigo",
-    examen: "Son écran annonce encore « Lait : à racheter ». Du cuivre, de l'aluminium, du plastique.",
+    examen: "Son écran annonce encore « Lait : à racheter ». Du fil de cuivre, des chutes d'aluminium, du plastique.",
     qualites: { visser: 1 },
     duree: 30,
     donne: { fil_cuivre: 4, aluminium: 2, plastique: 6 },

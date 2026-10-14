@@ -30,6 +30,7 @@ import { Entrees, type Commande } from "./entrees.ts";
 import { Hud } from "./hud.ts";
 import { LIBELLE_FERMER_FICHE } from "./fiche-examiner.ts";
 import { propositionsEndormi, proposer, retenirSavoir, type ActionProposee, type Propositions } from "./interaction.ts";
+import { propositionsCombat } from "./bras-pris.ts";
 import { Reseau } from "./reseau.ts";
 import { FeuDeCamp } from "./rendu/feu.ts";
 import { VueInstallation, creerEscabeau } from "./rendu/installations.ts";
@@ -328,6 +329,10 @@ function porteEscabeau(): boolean {
   for (const i of installations.values()) if (i.vue.etat.portee) return true;
   // 0.10, chantier K : l'escabeau du gardien du phare, dans les bras.
   return lieu === "phare" && phare.dansLesBras;
+}
+/** Les bras pris (0.10, S-08, V2-12) : l'escabeau, ou la batterie et la tête du robot de l'hôtel. On ne frappe pas. */
+function brasPris(): boolean {
+  return porteEscabeau() || (lieu === "grand_hotel" && hotel.porte() !== null);
 }
 /**
  * Les grands disques des fruitiers : seulement quand on porte l'escabeau (porteur du projet, 2026-10-08). Sinon,
@@ -1410,8 +1415,8 @@ function executer(c: Commande): void {
     case "A":
       // Tenu, A sert à se dégager comme B (0.8.4), dès l'appui : on n'a pas l'amplitude pour frapper.
       if (saisi > 0) return degagerUnCoup();
-      // En combat, A se juge au relâchement (coup rapide ou appuyé).
-      if (modeCombat) return;
+      // En combat, A se juge au relâchement (coup rapide ou appuyé). Les bras pris, A pose ce qu'on porte (V2-12).
+      if (modeCombat && !brasPris()) return;
       if (occupe) return envoyer({ t: "annuler" });
       // Un geste sur ce qu'on vise se fait en tenant A (sauf dormir : on ne tient pas une touche toute la nuit).
       {
@@ -1434,6 +1439,8 @@ function executer(c: Commande): void {
         return;
       }
       if (!modeCombat || enVoyage || carte.ouverte) return;
+      // Les bras pris, on ne frappe pas : A a déjà posé (V2-12).
+      if (brasPris()) return;
       // Tenu, le coup chargé est perdu : le relâchement ne frappe pas (l'appui a déjà compté pour se dégager).
       if (saisi > 0) return;
       // Un coup va jusqu'au bout (P-004) : pendant le geste, on garde un seul appui, joué à la fin.
@@ -1855,9 +1862,9 @@ function boucle(instant: number): void {
     if (coupEnAttente !== null && performance.now() >= coupFiniLe) {
       const appuye = coupEnAttente;
       coupEnAttente = null;
-      if (modeCombat && !enVoyage && saisi === 0) frapper(appuye);
+      if (modeCombat && !enVoyage && saisi === 0 && !brasPris()) frapper(appuye);
     }
-    personnage.preparer(arcVise ? 1 : modeCombat ? entrees.chargeA : viseeEnCours ? 1 : 0);
+    personnage.preparer(arcVise ? 1 : modeCombat && !brasPris() ? entrees.chargeA : viseeEnCours ? 1 : 0);
     // Le lancer (0.6) : la visée suit l'Éteint accroché ; le bouton dit ce qu'il fera (Lancer, Tirer, Réarmer).
     majViseeLancer();
     projectiles.animer(dt);
@@ -1898,20 +1905,19 @@ function boucle(instant: number): void {
     // Au phare : l'escabeau, la cuve, le prisme, l'escalier et la lanterne, la corne, la rampe (chantier K).
     if (lieu === "phare") propositions = phare.proposer(position, propositions);
     if (lieu === "corniche") propositions = corniche.proposer(position, propositions); // le péage du tunnel (0.10, I)
-    // Les déchets à portée de main (0.7) : la cible la plus proche l'emporte.
-    const dechet = dechetsVue.proposer(position);
+    // Les bras pris (V2-12) : ce que le lieu propose aux bras (poser, brancher, présenter) ; rien d'autre ne passe devant.
+    const bras = brasPris();
+    const gesteBras = bras ? propositions.A : null;
+    // Les déchets à portée de main (0.7) : la cible la plus proche l'emporte (les bras libres).
+    const dechet = bras ? null : dechetsVue.proposer(position);
     if (dechet) {
       const c = propositions.cible;
       // Une sortie ou la mare (sans cible au sol) passent avant : on s'y tient exprès.
       if (!propositions.A || (c && dechet.distance < Math.max(0, Math.hypot(c.x - position.x, c.z - position.z) - (c.rayon ?? 0.5)))) propositions = dechet.propositions;
     }
     if (modeCombat || saisi > 0) {
-      // En combat, A frappe et B esquive ; saisi, A et B servent à se dégager.
-      propositions = {
-        A: { libelle: saisi > 0 ? "Se dégager" : "Frapper (maintenir : à la tête)", examiner: "" },
-        B: { libelle: saisi > 0 ? "Se dégager" : aRepousser() ? "Repousser" : "Esquiver", examiner: "" },
-        cible: null,
-      };
+      // En combat, A frappe et B esquive ; saisi, A et B servent à se dégager ; les bras pris, A pose (V2-12 : bras-pris.ts).
+      propositions = propositionsCombat({ saisi: saisi > 0, brasPris: bras, bras: gesteBras, repousser: aRepousser() });
     }
     // La pièce visée bat avec l'anneau (son liseré), seulement si c'est bien elle qu'on vise.
     dechetsVue.cibler(dechet !== null && propositions === dechet.propositions);

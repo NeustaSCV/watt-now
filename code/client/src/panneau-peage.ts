@@ -1,7 +1,7 @@
 // La caisse du péage à l'écran (plan 0.10, S-19, chantier H) : on touche la caisse, le sac s'ouvre en mode « donner ».
 // C'est l'écran du coffre (le panneau `.panneau.coffre`, son en-tête et ses gestes : panneau-coffre.ts), avec à gauche
 // ce qu'on porte et à droite ce qu'on met dans la caisse ; un toucher fait passer un objet d'un côté à l'autre. Le
-// compteur monte jusqu'à 12 wotts (au prix du Comptoir, les ordures à 0 : commun/src/peage.ts) ; « Payer » envoie
+// compteur monte jusqu'à 12 wotts (au prix de rachat du Comptoir ; ce qu'il ne reprend pas, 0 : commun/src/peage.ts) ; « Payer » envoie
 // `payer_passage`. Rien ne quitte le sac avant « Payer » : le serveur décide, et la voix d'en haut répond en message.
 //
 // Ce module ne connaît pas le HUD : il dessine dans le panneau qu'on lui donne (hud.ts, `ouvrirCaisse`).
@@ -44,7 +44,7 @@ export function htmlCaisse(passage: Passage, sac: Readonly<Inventaire>, caisse: 
   const total = valeurObjets(caisse);
   const assez = total >= PRIX_PASSAGE;
   const compte = `<span class="nom"><strong>${dixieme(Math.min(total, 99))} / ${PRIX_PASSAGE} wotts</strong><small>${
-    assez ? (total > PRIX_PASSAGE ? "Le compte y est. Rien ne sera rendu." : "Le compte y est.") : `Encore ${dixieme(PRIX_PASSAGE - total)}. Au prix du Comptoir ; les ordures ne comptent pas.`
+    assez ? (total > PRIX_PASSAGE ? "Le compte y est. Rien ne sera rendu." : "Le compte y est.") : `Encore ${dixieme(PRIX_PASSAGE - total)}. Au prix du Comptoir : ce qu'il ne reprend pas ne compte pas.`
   }</small></span>`;
   const bouton = `<span class="boutons"><button type="button" class="principal" data-payer ${assez && !attente ? "" : "disabled"}>${attente ? "…" : "Payer"}</button></span>`;
   const titre = passage === "pont" ? "Caisse du péage" : "Caisse du tunnel";

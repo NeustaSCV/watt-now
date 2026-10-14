@@ -17,7 +17,7 @@ import type { Passage } from "../../commun/src/peage.ts";
 import type { Base } from "./base.ts";
 import { LieuVivant, type ContexteLieu, type Voyageur } from "./lieu-vivant.ts";
 import { definitionDuRegistre } from "./lieux-personnels.ts";
-import { Peage, type ContextePeage } from "./peage.ts";
+import { Peage, vientDuLieu, type ContextePeage } from "./peage.ts";
 
 /** Ce que le péage demande au joueur, tiré de ce qu'il prête au lieu. */
 function contextePeage(ctx: ContexteLieu): ContextePeage {
@@ -41,7 +41,10 @@ export class LieuCorniche extends LieuVivant {
 
   override entrer(v: Voyageur): void {
     super.entrer(v);
-    v.envoyer(this.peage.etat(v.humain().id, this.instant || Date.now()));
+    // Arrivé du côté du lieu, on rentre chez soi : on passe sans payer (V2-01, « à l'aller seulement »).
+    const h = v.humain();
+    if (vientDuLieu("corniche", h.x, h.z)) this.peage.retour(h.id);
+    v.envoyer(this.peage.etat(h.id, this.instant || Date.now()));
   }
 
   override sortir(v: Voyageur): void {

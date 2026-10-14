@@ -17,7 +17,7 @@ import { LIGNE_BANC_SOUS_L_EAU, LIGNE_MAREE_MONTE, RETOUR_MAREE, estBancDeLaCale
 import type { Base } from "./base.ts";
 import { LieuVivant, type ContexteLieu, type Voyageur } from "./lieu-vivant.ts";
 import { definitionDuRegistre } from "./lieux-personnels.ts";
-import { Peage, type ContextePeage } from "./peage.ts";
+import { Peage, vientDuLieu, type ContextePeage } from "./peage.ts";
 
 /** Le bouton du message de la marée (jamais une croix). */
 export const BOUTON_MAREE = "Compris";
@@ -58,7 +58,10 @@ export class RoutePont extends LieuVivant {
 
   override entrer(v: Voyageur): void {
     super.entrer(v);
-    v.envoyer(this.peage.etat(v.humain().id, this.instant || Date.now()));
+    // Arrivé du côté du lieu, on rentre chez soi : on passe sans payer (V2-01, « à l'aller seulement »).
+    const h = v.humain();
+    if (vientDuLieu("route_pont", h.x, h.z)) this.peage.retour(h.id);
+    v.envoyer(this.peage.etat(h.id, this.instant || Date.now()));
   }
 
   override sortir(v: Voyageur): void {

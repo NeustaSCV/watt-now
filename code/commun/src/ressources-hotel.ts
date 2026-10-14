@@ -115,8 +115,9 @@ export const USAGES_HOTEL: Record<TypeRessourceHotel, UsageRessource> = {
   hotel_roulements: {
     verbe: "ramasser",
     libelle: "Prendre la boîte de roulements",
-    // V1-01 : une boîte de trois roulements.
-    donne: { roulements: 3 },
+    // V1-01 : **une** boîte, qui contient trois roulements (on l'ouvre au sac : DEMONTAGE.roulements). Chantier L : elle
+    // donnait trois boîtes (neuf roulements), quand le Comptoir et la chance n'en donnent qu'une.
+    donne: { roulements: 1 },
     qualites: {},
     duree: 2,
     examen: "Sur l'établi du mécanicien de l'ascenseur, une boîte de roulements à billes neufs, dans leur papier huilé.",

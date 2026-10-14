@@ -6,9 +6,13 @@
 // - On touche la caisse ; le sac s'ouvre en mode « donner » ; on choisit soi-même ce qu'on donne, un compteur monte
 //   jusqu'à 12 wotts ; « Payer ». Pas de monnaie rendue : ce qu'on donne de trop est perdu.
 // - Chaque objet compte **au prix du Comptoir** : ce que les Compteurs en donneraient (`prixAchatCle`, sans compter une
-//   trésorerie basse) ; une ordure vaut 0 et ne compte pas.
+//   trésorerie basse). Plan 0.10, V2-02 (« soyons sympa ») : une ordure compte si le Comptoir la reprend déjà (un sac de
+//   canettes) ; celles qu'il refuse (à 0 : une canette seule) ne comptent pas. La règle est donc le seul prix de rachat.
 // - Payé, on passe librement **une heure réelle** (S-19 : l'aller et le retour d'une sortie) ; la chicane s'ouvre
 //   **pour soi seul**. Pendant cette heure, on ne redemande rien.
+// - **À l'aller seulement** (N2-60 ; V2-01) : dans le sens lieu → terrain (le retour de l'hôtel par le pont, du phare par
+//   la corniche), on passe toujours librement, même l'heure passée. Le serveur le sait par le côté d'où l'on arrive
+//   dans la halte (serveur/src/peage.ts, `vientDuLieu`).
 // - La voix vient d'en haut, en un message (jamais une fenêtre à croix) : « Douze, et tu passes. »
 //
 // Générique : paramétré par `passage` (« pont » ou « tunnel »). Le tunnel de la corniche (chantier I) le reprend tel
@@ -19,7 +23,6 @@
 import { prixAchatCle } from "./economie.ts";
 import { typeDe, type CleObjet } from "./etoiles.ts";
 import type { Inventaire } from "./objets.ts";
-import { estOrdure } from "./vestiges.ts";
 
 /** Les deux péages du niveau 2 : la chicane du pont (H2A), la barricade du tunnel (H2B). */
 export type Passage = "pont" | "tunnel";
@@ -43,11 +46,11 @@ export function donnablePeage(cle: CleObjet): boolean {
 
 /**
  * Ce que vaut un objet à la caisse : ce que le Comptoir en donnerait (un exemplaire étoilé selon ses étoiles, un
- * objet-clé à son prix de rachat) ; une ordure, ou ce que le Comptoir ne reprend pas, 0.
+ * objet-clé à son prix de rachat, une ordure qu'il reprend à son prix) ; ce que le Comptoir ne reprend pas (les ordures
+ * à 0), 0 (V2-02).
  */
 export function valeurPeage(cle: CleObjet): number {
-  const type = typeDe(cle);
-  if (!donnablePeage(cle) || estOrdure(type)) return 0;
+  if (!donnablePeage(cle)) return 0;
   return prixAchatCle(cle, false) ?? 0;
 }
 
@@ -102,7 +105,7 @@ export interface TextesPeage {
   paye: string;
   /** Pas assez : `du` wotts manquent. */
   tropPeu: (du: number) => string;
-  /** On touche la caisse alors qu'on a déjà payé (dans l'heure). */
+  /** On touche la caisse alors que le passage est libre : payé dans l'heure, ou sur le retour (V2-01). */
   dejaPaye: string;
   /** L'heure est passée : la chicane s'est refermée pour soi. */
   referme: string;
@@ -118,17 +121,17 @@ export const TEXTES_PEAGE: Record<Passage, TextesPeage> = {
   pont: {
     paye: "Une voix, d'en haut : « Douze, et tu passes. » La porte du péage s'ouvre pour toi.",
     tropPeu: (du) => `Une voix, d'en haut : « Douze, j'ai dit. Il en manque ${dixieme(du)}. »`,
-    dejaPaye: "Une voix, d'en haut : « T'as payé. Passe. »",
+    dejaPaye: "Une voix, d'en haut : « C'est bon pour toi. Passe. »",
     referme: "La porte du péage s'est refermée : ton heure est passée. Douze de plus, pour repasser.",
     ferme: "La porte du péage est fermée. Douze wotts d'objets, dans la caisse au pied du poste de guet.",
-    examen: "Un coffre de bois cerclé, une fente dans le couvercle, « PÉAGE » peint à la main. Là-haut, quelqu'un regarde. Douze wotts d'objets par tête, au prix du Comptoir ; les ordures ne comptent pas.",
+    examen: "Un coffre de bois cerclé, une fente dans le couvercle, « PÉAGE » peint à la main. Là-haut, quelqu'un regarde. Douze wotts d'objets par tête, au prix du Comptoir : ce qu'il ne reprend pas ne compte pas.",
   },
   tunnel: {
     paye: "Une voix, de derrière la barricade : « Douze, et tu passes. » Le passage s'ouvre pour toi.",
     tropPeu: (du) => `Une voix, de derrière la barricade : « Douze, j'ai dit. Il en manque ${dixieme(du)}. »`,
-    dejaPaye: "Une voix, de derrière la barricade : « T'as payé. Passe. »",
+    dejaPaye: "Une voix, de derrière la barricade : « C'est bon pour toi. Passe. »",
     referme: "La barricade s'est refermée : ton heure est passée. Douze de plus, pour repasser.",
     ferme: "La barricade est fermée. Douze wotts d'objets, dans la caisse au pied de la barricade.",
-    examen: "Une caisse de bois, une fente dans le couvercle. Derrière la barricade, on t'écoute. Douze wotts d'objets par tête, au prix du Comptoir ; les ordures ne comptent pas.",
+    examen: "Une caisse de bois, une fente dans le couvercle. Derrière la barricade, on t'écoute. Douze wotts d'objets par tête, au prix du Comptoir : ce qu'il ne reprend pas ne compte pas.",
   },
 };
