@@ -152,7 +152,7 @@ export const COMPOSANTS = {
   aluminium: {
     nom: "chute d'aluminium",
     pluriel: "chutes d'aluminium",
-    description: "De l'aluminium aplati au marteau. Il fond à 660 °C : au creuset, il redevient ce qu'on veut.",
+    description: "Un bout de métal léger, aplati au marteau. Il fond à 660 °C : au creuset, il redevient ce qu'on veut.",
     poids: 0.25,
     valeur: 6,
     famille: "composant",
@@ -235,7 +235,7 @@ const VESTIGES_LOT1 = {
   casserole: {
     nom: "casserole cabossée",
     pluriel: "casseroles cabossées",
-    description: "Cabossée, le manche branlant, mais elle tient l'eau. Aplatie au marteau, de l'aluminium à refondre.",
+    description: "Cabossée, le manche branlant, mais elle tient l'eau. Aplatie au marteau : des chutes d'aluminium à refondre.",
     poids: 1,
     valeur: 8,
     famille: "cuisine",

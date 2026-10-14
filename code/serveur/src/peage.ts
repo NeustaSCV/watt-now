@@ -9,10 +9,14 @@
 // - `suivre` : à chaque tic, pour chaque joueur présent ; quand son heure est passée, on le lui dit, et sa porte se
 //   referme.
 // - Qui a payé est gardé en base (l'instance `peage:<passage>`) : un serveur qui redémarre ne fait pas repayer.
+// - **À l'aller seulement** (N2-60 ; plan 0.10, V2-01) : qui entre dans la halte du côté du lieu (il revient de l'hôtel
+//   ou du phare, vers chez lui) passe librement tant qu'il y est, même l'heure passée (`retour`, `vientDuLieu`). Rien
+//   n'est gardé en base pour lui : une reconnexion le replace à l'entrée la plus proche, et l'on refait le calcul.
 //
 // Ce module ne connaît pas le joueur : il passe par un `ContextePeage` (ce que le joueur lui prête).
 
 import { DUREE_PASSAGE_MS, TEXTES_PEAGE, passageLibre, resteAPayer, verifierPaiement, type Passage } from "../../commun/src/peage.ts";
+import { destinations, entreesDe, type LieuJouable } from "../../commun/src/lieux.ts";
 import type { MessageServeur } from "../../commun/src/messages.ts";
 import type { Inventaire } from "../../commun/src/objets.ts";
 import type { Base } from "./base.ts";
@@ -28,6 +32,18 @@ export interface ContextePeage {
   envoyer(m: MessageServeur): void;
 }
 
+/**
+ * Arrive-t-on dans cette halte du côté du lieu (le Grand Hôtel, le phare), c'est-à-dire sur le retour, vers chez soi ?
+ * Le serveur place toujours l'arrivée à l'entrée qui mène d'où l'on vient (`arriveeDans`, lieux.ts) : l'entrée la plus
+ * proche de (x, z) le dit. Vrai si elle ne mène pas au terrain.
+ */
+export function vientDuLieu(halte: LieuJouable, x: number, z: number): boolean {
+  const entrees = entreesDe(halte);
+  if (entrees.length === 0) return false;
+  const proche = entrees.reduce((a, b) => (Math.hypot(b.arrivee.x - x, b.arrivee.z - z) < Math.hypot(a.arrivee.x - x, a.arrivee.z - z) ? b : a));
+  return !destinations(proche).includes("terrain");
+}
+
 export class Peage {
   readonly passage: Passage;
   private readonly base: Base;
@@ -35,6 +51,8 @@ export class Peage {
   private readonly payes = new Map<number, number>();
   /** Ceux à qui l'on a dit que la porte est ouverte (pour leur dire quand elle se referme). */
   private readonly ouverts = new Set<number>();
+  /** Ceux qui sont arrivés du côté du lieu, sur le retour : ils passent librement tant qu'ils sont là (V2-01). */
+  private readonly retours = new Set<number>();
 
   constructor(base: Base, passage: Passage) {
     this.base = base;
@@ -52,9 +70,17 @@ export class Peage {
     return this.payes.get(compteId) ?? 0;
   }
 
-  /** La porte est-elle ouverte pour ce joueur à cet instant ? */
+  /** La porte est-elle ouverte pour ce joueur à cet instant (payé dans l'heure, ou sur le retour) ? */
   ouvertPour(compteId: number, instant: number): boolean {
-    return passageLibre(this.payes.get(compteId), instant);
+    return this.retours.has(compteId) || passageLibre(this.payes.get(compteId), instant);
+  }
+
+  /**
+   * Le joueur arrive dans la halte du côté du lieu (`vientDuLieu`) : il rentre chez lui, on ne lui demande rien, tant
+   * qu'il est là (V2-01 : « à l'aller seulement »). À appeler à l'entrée, avant d'envoyer l'état.
+   */
+  retour(compteId: number): void {
+    this.retours.add(compteId);
   }
 
   /** Ce que l'écran doit savoir du passage de ce joueur. */
@@ -75,6 +101,12 @@ export class Peage {
   payer(ctx: ContextePeage, objets: Readonly<Inventaire>): boolean {
     const instant = ctx.maintenant();
     const textes = TEXTES_PEAGE[this.passage];
+    // Sur le retour, on ne paie pas : la voix le dit, rien n'est pris (V2-01).
+    if (this.retours.has(ctx.id)) {
+      ctx.info(textes.dejaPaye);
+      ctx.envoyer(this.etat(ctx.id, instant));
+      return false;
+    }
     const r = verifierPaiement(objets, ctx.inventaire(), this.payes.get(ctx.id), instant);
     if (!r.accepte) {
       if (r.raison === "deja_paye") ctx.info(textes.dejaPaye);
@@ -102,9 +134,10 @@ export class Peage {
     ctx.envoyer(this.etat(ctx.id, instant));
   }
 
-  /** Le joueur s'en va : on ne le suit plus (son passage payé reste, jusqu'à son heure). */
+  /** Le joueur s'en va : on ne le suit plus (son passage payé reste, jusqu'à son heure ; son retour est fini). */
   sortir(compteId: number): void {
     this.ouverts.delete(compteId);
+    this.retours.delete(compteId);
   }
 
   /** On garde les passages encore valables (les autres sont oubliés). */

@@ -192,7 +192,7 @@ export class MeublesNeufs {
 
   private poserCreuset(forge: InstallationVue): void {
     if (forge.etat.creuset) return this.ctx.info("Le creuset est déjà sur la forge.");
-    if ((forge.niveau ?? 1) < NIVEAU_FORGE_CREUSET) return this.ctx.info("Le creuset ne va qu'à une forge ventilée : il faut fondre l'aluminium.");
+    if ((forge.niveau ?? 1) < NIVEAU_FORGE_CREUSET) return this.ctx.info("Le creuset ne va qu'à une forge ventilée : il faut sa chaleur pour fondre les chutes d'aluminium.");
     const manque = (Object.entries(COUT_CREUSET) as [TypeObjet, number][]).filter(([t, n]) => (this.ctx.inventaire()[t] ?? 0) < n);
     if (manque.length) return this.ctx.info(`Le creuset et ses moules sont de terre cuite : il manque ${manque.map(([t, n]) => nommer(t, n - (this.ctx.inventaire()[t] ?? 0))).join(", ")}.`);
     if (multiplicateurQualites(this.ctx.outils(), QUALITES_CREUSET) === null) return this.ctx.info("Il faut de quoi marteler (Marteler 1) : une pierre suffit.");

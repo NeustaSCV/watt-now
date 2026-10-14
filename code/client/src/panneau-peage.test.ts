@@ -1,5 +1,5 @@
 // La caisse du péage à l'écran (plan 0.10, S-19, chantier H) : l'écran du coffre en mode « donner ». Le compteur monte
-// au prix du Comptoir, les ordures ne comptent pas ; « Payer » ne s'allume qu'à 12 wotts ; ce qu'on a mis dans la caisse
+// au prix du Comptoir, ce qu'il ne reprend pas (les ordures à 0) ne compte pas (V2-02, chantier L) ; « Payer » ne s'allume qu'à 12 wotts ; ce qu'on a mis dans la caisse
 // suit ce qu'on porte encore.
 
 import { test } from "node:test";
@@ -18,7 +18,7 @@ test("« Payer » reste éteint sous 12 wotts, s'allume à 12 ; le compte se lit
   const peu = htmlCaisse("pont", sac, { canette: 3, branche: 3 }, false);
   assert.match(bouton(peu), /disabled/);
   assert.match(peu, /9,6 \/ 12 wotts/);
-  assert.match(peu, /les ordures ne comptent pas/);
+  assert.match(peu, /ce qu'il ne reprend pas ne compte pas/);
   assert.match(peu, /title="canette[^"]*: ne compte pas"/);
   // Quatre branches : 12,8, le compte y est, rien n'est rendu.
   const assez = htmlCaisse("pont", sac, { branche: 4 }, false);

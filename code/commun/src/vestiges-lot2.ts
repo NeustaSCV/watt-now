@@ -36,7 +36,7 @@ export const VESTIGES_LOT2 = {
   canette: {
     nom: "canette écrasée",
     pluriel: "canettes écrasées",
-    description: "« Boisson Énergie Totale, zéro sucre, zéro tout. » Quinze grammes d'aluminium.",
+    description: "« Boisson Énergie Totale, zéro sucre, zéro tout. » Écrasées par trois : une chute d'aluminium.",
     poids: 0.015,
     valeur: 0,
     famille: "dechet",
@@ -46,7 +46,7 @@ export const VESTIGES_LOT2 = {
   sac_canettes: {
     nom: "sac de canettes",
     pluriel: "sacs de canettes",
-    description: "Trente canettes écrasées, mises de côté par quelqu'un qui croyait encore à la consigne. Aplaties, de l'aluminium.",
+    description: "Trente canettes écrasées, mises de côté par quelqu'un qui croyait encore à la consigne. Aplaties : deux chutes d'aluminium.",
     poids: 0.5,
     valeur: 4,
     famille: "dechet",
@@ -559,7 +559,7 @@ export const VESTIGES_LOT2 = {
   planche_roulettes: {
     nom: "planche à roulettes",
     pluriel: "planches à roulettes",
-    description: "Ses roues tournent encore mieux que le monde. Pour le reste : de l'aluminium et une planche.",
+    description: "Ses roues tournent encore mieux que le monde. Pour le reste : des chutes d'aluminium et une planche.",
     poids: 2.5,
     valeur: 15,
     famille: "loisir",
