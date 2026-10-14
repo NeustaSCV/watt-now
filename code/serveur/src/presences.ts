@@ -82,8 +82,9 @@ export function diffuserPresences(observateurs: Observateur[], memoire: MemoireP
       const cle = `${o.vu.x},${o.vu.z},${o.vu.o}`;
       if (dejaVues.get(o.id) === cle) continue;
       dejaVues.set(o.id, cle);
-      p.push(o.id, o.vu.x, o.vu.z, o.vu.o);
+      // Provisoire (chantier B, en attendant le chantier A qui envoie la vraie allure) : le format du plan-0.9 §3.4.
+      p.push(o.id, o.vu.x, o.vu.z, o.vu.o, 2);
     }
-    if (p.length > 0) moi.envoyer({ t: "positions", p });
+    if (p.length > 0) moi.envoyer({ t: "positions", h: Date.now(), p });
   }
 }

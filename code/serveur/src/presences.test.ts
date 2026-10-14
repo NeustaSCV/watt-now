@@ -25,7 +25,7 @@ test("l'identité d'un voisin part une fois ; ensuite seulement sa position quan
   assert.equal(de(a, "positions").length, 0, "des voisins immobiles ne coûtent rien");
   b.vu = { ...b.vu, x: 21 };
   diffuserPresences([a, b, c], memoire);
-  assert.deepEqual(de(a, "positions")[0]!.p, [2, 21, 35, 0], "seul celui qui a bougé part");
+  assert.deepEqual(de(a, "positions")[0]!.p, [2, 21, 35, 0, 2], "seul celui qui a bougé part");
   assert.ok(JSON.stringify(de(a, "positions")[0]).length < 60, "une position pèse quelques dizaines d'octets");
 });
 

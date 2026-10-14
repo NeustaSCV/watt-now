@@ -339,6 +339,8 @@ export interface AutreVu extends Personne {
   lumiere: boolean;
   /** Son apparence (Book 14 §3) : on reconnaît les gens. */
   apparence: Apparence;
+  /** L'arme encombrante équipée, portée dans le dos (0.9, plan §3.4 : la fourche) ; absente : rien dans le dos. */
+  dos?: CleObjet;
 }
 
 export type OperationComptoir =
@@ -505,6 +507,8 @@ export type MessageServeur =
   | MessageServeurReprise
   // Dormir dans l'abri (0.8.2, chantier I) : voir le bloc « la couche » en fin de fichier.
   | MessageServeurCouche
+  // Les autres joueurs fluides (0.9, chantiers A et B) : voir le bloc « les autres joueurs » en fin de fichier.
+  | MessageServeurAutres
   | { t: "expulse"; raison: string }
   | { t: "inventaire"; inventaire: Inventaire }
   | { t: "besoins"; besoins: Besoins; gourde: Gourde }
@@ -567,8 +571,6 @@ export type MessageServeur =
   /** Les autres joueurs du lieu, plusieurs fois par seconde (É4, lot 3). */
   /** L'identité des autres joueurs en vue (envoyée seulement quand elle change ou que quelqu'un entre ou sort du champ). */
   | { t: "autres"; joueurs: AutreVu[] }
-  /** Leurs positions, 10 fois par seconde : id, x, z, orientation, à la suite (Book 17 §5.2). */
-  | { t: "positions"; p: number[] }
   | { t: "demande_echange"; de: Personne }
   /** L'échange en cours (null : terminé ou annulé). */
   | { t: "echange"; echange: EchangeVu | null }
@@ -755,3 +757,37 @@ export interface Bienvenue {
    */
   arrivee?: { mode: ModeArrivee; protection: number };
 }
+
+// ---------- Les autres joueurs fluides (0.9, chantiers A et B : plan-0.9 §3.4) ----------
+
+/** L'allure d'un autre joueur, transmise avec sa position : 0 immobile, 1 discrète, 2 marche, 3 course. */
+export type AllureVue = 0 | 1 | 2 | 3;
+
+/** Un geste d'un autre joueur, que le client rejoue sur son personnage (plan-0.9 §3.1). */
+export type GesteAutre = "frappe" | "poussee" | "esquive" | "degagement" | "touche" | "action" | "fin_action" | "effondre" | "releve" | "couche";
+
+export interface GesteVu {
+  /** Qui fait le geste. */
+  id: number;
+  /** L'heure du serveur du geste (ms). */
+  h: number;
+  geste: GesteAutre;
+  /** Frappe : le coup appuyé. */
+  appuye?: boolean;
+  /** Frappe : l'arme du coup (absente : à mains nues). */
+  objet?: CleObjet;
+  /** Frappe : la durée du geste (s). */
+  duree?: number;
+  /** Action : son libellé (« Ramasser… », « Couper… »), d'où le client tire le geste. */
+  action?: string;
+}
+
+export type MessageServeurAutres =
+  /**
+   * Les positions des autres, toutes les 100 ms (Book 17 §5.2) : `h` l'heure du serveur de l'envoi (ms) ; `p` des
+   * quintuplets id, x, z, orientation, allure (`AllureVue`), à la suite. Un joueur part quand sa position ou son allure
+   * change : l'arrêt part une fois, avec l'allure 0.
+   */
+  | { t: "positions"; h: number; p: number[] }
+  /** Leurs gestes depuis l'envoi précédent, aux mêmes observateurs que les positions. */
+  | { t: "gestes"; g: GesteVu[] };
