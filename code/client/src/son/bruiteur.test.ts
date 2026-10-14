@@ -114,3 +114,17 @@ test("⚙️ le pédalier générateur : l'alternateur se lance, puis ronronne s
   assert.ok((g.apres2 ?? 0) > 1, "le ronronnement prend la suite du lancement");
   assert.equal(gesteDe("Pédaler pour charger la batterie", "outil").continu2, undefined);
 });
+
+test("à terre, il gémit de loin en loin ; détruit, plus un son (chantier F)", () => {
+  const { son, joues } = fausseSortie();
+  const b = new Bruiteur(son);
+  const moi = { x: 0, z: 0 };
+  b.eteints(0.1, [{ id: 1, x: 4, z: 0, etat: "poursuivant" }], moi, 0);
+  joues.length = 0;
+  for (let t = 0; t < 8; t += 0.1) b.eteints(0.1, [{ id: 1, x: 4, z: 0, etat: "a_terre" }], moi, 0);
+  const gemissements = joues.filter((j) => j === "eteint_gemit_sol").length;
+  assert.ok(gemissements >= 2 && gemissements <= 6, `gémissements : ${gemissements}`);
+  joues.length = 0;
+  for (let t = 0; t < 8; t += 0.1) b.eteints(0.1, [{ id: 1, x: 4, z: 0, etat: "detruit" }], moi, 0);
+  assert.deepEqual(joues, []);
+});

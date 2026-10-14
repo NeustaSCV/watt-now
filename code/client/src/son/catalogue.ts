@@ -65,6 +65,8 @@ export const SONS = {
   eteint_pas_presse: menace(R.eteintPasPresse, 0.55, 30),
   eteint_rale_rapide: menace(R.eteintRaleRapide, 0.8, 30, 6),
   eteint_halete: menace(R.eteintHalete, 0.5, 30, 3),
+  // À terre, il n'est pas fini : un gémissement étouffé, de loin en loin (plan 0.9, chantier F).
+  eteint_gemit_sol: menace(R.eteintGemitAuSol, 0.5, 10, 4),
 
   // Le contact et le combat
   saisie: menace(R.saisie, 0.9, 6, 3),

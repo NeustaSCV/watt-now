@@ -2,7 +2,7 @@
 // Book 06 : lents, bêtes, guidés par l'ouïe ; la vue est mauvaise. L'attention monte avec intensité × durée,
 // et retombe quand plus rien ne se passe.
 
-import { BONUS_ETOURDI_CONTONDANT, DELAI_SAISIE, DUREE_A_TERRE, DUREE_A_TERRE_ELECTRIQUE, DUREE_ETOURDI, PORTEE_SAUT_DECHARGE, RESISTANCE_TORSE, type Arme } from "./combat.ts";
+import { BONUS_ETOURDI_CONTONDANT, DELAI_SAISIE, DUREE_A_TERRE, DUREE_CORPS, DUREE_A_TERRE_ELECTRIQUE, DUREE_ETOURDI, PORTEE_SAUT_DECHARGE, RESISTANCE_TORSE, type Arme } from "./combat.ts";
 import { heurte, type Zone } from "./lieux.ts";
 import { voieLibre } from "./murs.ts";
 import type { Stimulus } from "./signature.ts";
@@ -119,7 +119,17 @@ export interface EteintVu {
   raidi?: true;
   /** Détruit par le courant : il s'affaisse, les yeux ternissent (pas de sang). */
   eteintParLeCourant?: true;
+  // ---------- À terre ou détruit, au corps (plan 0.9, chantier F) ----------
+  /** À terre, il va se relever : ses dernières secondes au sol (SE_RELEVE_S). Il prend appui. */
+  seReleve?: true;
+  /** Détruit, le corps va être retiré : ses dernières secondes (EFFACEMENT_S). Il s'efface doucement. */
+  efface?: true;
 }
+
+/** À terre, il prend appui ces dernières secondes avant de se relever : le geste annonce le danger (chantier F). */
+export const SE_RELEVE_S = 1.6;
+/** Le corps détruit s'efface pendant ces dernières secondes avant d'être retiré (DUREE_CORPS), au lieu de disparaître. */
+export const EFFACEMENT_S = 4;
 
 /**
  * Vitesses (m/s). Book 06 §2.1 : ≈ 0,6 m/s en marche, 0,9 en poursuite, pour un humain qui marche à 1,4.
@@ -170,6 +180,9 @@ export function vue(e: Eteint): EteintVu {
   if (e.etat === "dormant" && e.attention > 0) v.eveil = Math.max(0.1, Math.round(Math.min(1, e.attention / SEUIL_REVEIL) * 10) / 10);
   if ((e.raidi ?? 0) > 0 && e.etat !== "detruit") v.raidi = true;
   if (e.eteintParLeCourant && e.etat === "detruit") v.eteintParLeCourant = true;
+  // À terre ou détruit, au corps (chantier F).
+  if (e.etat === "a_terre" && e.aTerre <= SE_RELEVE_S) v.seReleve = true;
+  if (e.etat === "detruit" && e.corps >= DUREE_CORPS - EFFACEMENT_S) v.efface = true;
   return v;
 }
 
