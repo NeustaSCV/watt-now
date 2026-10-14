@@ -9,7 +9,6 @@ import { Humanoide, chargerHumanoides, humanoidesPrets, type Coiffure, type Tenu
 import { AMBIANCE } from "./ciel.ts";
 import { aleatoire } from "./materiaux.ts";
 import {
-  BOULE,
   ENFOUI,
   GONFLE,
   LUISANCE_NOYE,
@@ -17,10 +16,11 @@ import {
   PEAU_NOYE,
   Rampement,
   bouffeeDeSable,
-  bouleDuNoye,
   butteDeSable,
   crevaison,
   gonfler,
+  gonflerLeCorps,
+  type CorpsGonfle,
   habillerVariante,
   herbeDuRampant,
   tenueDeVariante,
@@ -266,7 +266,6 @@ export class VueEteint {
 
     if (this.rampant) {
       this.ramper(dt, raidi ? 0 : vitesse);
-      this.porterLaBoule(dt);
       this.auSol(dt);
       return;
     }
@@ -303,7 +302,6 @@ export class VueEteint {
     } else c.jouer("Zombie_Idle_Loop", { fondu: 0.4 });
     c.mettreAJour(dt);
     this.redresser(dt);
-    this.porterLaBoule(dt);
     this.auSol(dt);
   }
 
@@ -435,10 +433,8 @@ export class VueEteint {
   private construireCote(corps: Humanoide): void {
     const v = this.cible.variante;
     if (v === "noye") {
-      const mort = this.cible.etat === "detruit";
-      corps.objet.scale.set(mort ? GONFLE.apres.large : GONFLE.large, 1, mort ? GONFLE.apres.epais : GONFLE.epais);
-      gonfler(corps, mort ? 0 : 1);
-      if (mort) this.crevee = Infinity;
+      // Trouvé déjà crevé : le corps d'un Errant, dégonflé.
+      if (this.cible.etat === "detruit") this.crevee = Infinity;
       else {
         corps.ternir(0, 0, -LUISANCE_NOYE, 0, CENDRE_NEUTRE, CENDRE_NEUTRE);
         // Le dos droit : les os du dos et du cou au repos (le corps n'a pas encore été animé).
@@ -446,9 +442,14 @@ export class VueEteint {
           const os = corps.osNomme(nom);
           if (os) this.dosDroit.push({ os, repos: os.quaternion.clone() });
         }
-        this.boule = bouleDuNoye();
-        this.objet.add(this.boule);
-        this.porterLaBoule(0);
+        for (const nom of ["upperarm_l", "upperarm_r"]) {
+          const os = corps.osNomme(nom);
+          if (os) this.bras.push({ os, cote: Math.sign(corps.repere(nom).x) || 1 });
+        }
+        // Le corps bouffi : le maillage gonflé (au repos, avant la première animation), la tête élargie.
+        this.gonfle = gonflerLeCorps(corps, this.cible.id);
+        this.gonfle?.regler(1);
+        gonfler(corps, 1);
       }
     } else if (v === "ensable") {
       this.sorti = this.cible.etat === "dormant" ? 0 : 1;
@@ -490,20 +491,10 @@ export class VueEteint {
         const enflure = k < 0.2 ? 1 + GONFLE.gonflement * (k / 0.2) : 1;
         const vide = k < 0.2 ? 0 : (k - 0.2) / 0.8;
         const doux = 1 - Math.pow(1 - vide, 3);
-        c.objet.scale.set(
-          (GONFLE.large + (GONFLE.apres.large - GONFLE.large) * doux) * enflure,
-          1,
-          (GONFLE.epais + (GONFLE.apres.epais - GONFLE.epais) * doux) * enflure,
-        );
+        // Le corps crève : il enfle encore un instant, puis se vide (le maillage revient à celui d'un Errant).
+        this.gonfle?.regler((1 - doux) * enflure);
         gonfler(c, (1 - doux) * enflure);
-        // La boule crève : elle enfle encore un instant, puis se vide.
-        if (this.boule) {
-          this.boule.scale.setScalar(Math.max(0.01, (1 - doux) * enflure));
-          if (k >= 1) {
-            this.objet.remove(this.boule);
-            this.boule = null;
-          }
-        }
+        if (k >= 1) this.gonfle = null;
         if (k >= 1 && !this.fluides) this.crevee = Infinity;
       }
       this.fluides?.animer(dt);
@@ -522,13 +513,16 @@ export class VueEteint {
 
   /** Les os du dos du Noyé, et leur pose de repos (droite). */
   private readonly dosDroit: { os: THREE.Bone; repos: THREE.Quaternion }[] = [];
-  /** La boule du Noyé (tant qu'il n'a pas crevé). */
-  private boule: THREE.Mesh | null = null;
+  /** Les bras du Noyé (os du haut du bras) et leur côté (+1, -1, en x dans le corps). */
+  private readonly bras: { os: THREE.Bone; cote: number }[] = [];
+  /** Le corps gonflé du Noyé (tant qu'il n'a pas fini de crever). */
+  private gonfle: CorpsGonfle | null = null;
   private dandine = 0;
 
   /**
    * Le Noyé marche droit, lourd, en se dandinant : debout, ses os du dos et du cou reprennent leur pose de repos
    * (droite) par-dessus l'animation de l'Éteint, qui le penche en avant, et le corps se balance d'un pied sur l'autre.
+   * Ses bras gonflés s'écartent un peu du corps (`GONFLE.ecartBras`) : ils ne rentrent pas dans le ventre.
    */
   private redresser(dt: number): void {
     const c = this.corps;
@@ -537,19 +531,17 @@ export class VueEteint {
     for (const { os, repos } of this.dosDroit) os.quaternion.copy(repos);
     this.dandine += dt * 4.2;
     c.objet.rotation.z = Math.sin(this.dandine) * 0.07;
-  }
-
-  /** La boule suit le bas du dos (où qu'il soit : debout, couché, en tombant), et reste une sphère droite. */
-  private porterLaBoule(_dt: number): void {
-    const b = this.boule;
-    const os = this.corps?.osNomme("spine_01");
-    if (!b || !os) return;
-    this.objet.updateMatrixWorld(true);
-    os.getWorldPosition(b.position);
-    this.objet.worldToLocal(b.position);
-    // Debout, un peu plus haut que le bas du dos : le centre du ventre.
-    if (!this.rampant && this.cible.etat !== "a_terre" && this.cible.etat !== "detruit") b.position.y += BOULE.hausse;
-    b.rotation.y = -this.objet.rotation.y;
+    // Écarter le bras : une rotation autour de l'axe avant du corps, passée dans le repère du parent de l'os.
+    const avant = _v.set(0, 0, 1).applyQuaternion(c.objet.getWorldQuaternion(_q1));
+    for (const { os, cote } of this.bras) {
+      const parent = os.parent;
+      if (!parent) continue;
+      parent.updateWorldMatrix(true, false);
+      parent.getWorldQuaternion(_q1);
+      _q2.setFromAxisAngle(avant, GONFLE.ecartBras * cote);
+      // q_local' = parent⁻¹ · écart · parent · q_local
+      os.quaternion.premultiply(_q3.copy(_q1).invert().multiply(_q2).multiply(_q1));
+    }
   }
 
   /** Redessiné de neuf (le Noyé dont un piège a brisé la jambe : il rampe), à la même place. */
@@ -565,13 +557,19 @@ export class VueEteint {
     this.butte = null;
     this.bouffee = null;
     this.fluides = null;
-    this.boule = null;
+    this.gonfle = null;
     this.dosDroit.length = 0;
+    this.bras.length = 0;
     this.etatJoue = null;
     this.rampant = rampantDe(this.cible);
     this.construire();
   }
 }
+
+const _v = new THREE.Vector3();
+const _q1 = new THREE.Quaternion();
+const _q2 = new THREE.Quaternion();
+const _q3 = new THREE.Quaternion();
 
 /** Les os que le Noyé garde droits en marchant (le dos, le cou). */
 const DOS_DROIT = ["spine_01", "spine_02", "spine_03", "neck_01"];

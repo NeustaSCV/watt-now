@@ -316,54 +316,209 @@ export const PEAU_NOYE = 0xd4e2e6;
 /** La peau de l'Ensablé : grise, poudrée de sable. */
 export const PEAU_ENSABLE = 0x939a86;
 /**
- * Le Noyé gonflé (porteur, 2026-10-14) : un Éteint de taille normale (même hauteur, mêmes jambes, une petite tête)
- * dont le tronc est devenu une boule. La boule est une sphère à part (`bouleDuNoye`), posée sur son ventre et toujours
- * droite, quelle que soit l'animation : un gonflement des os du dos suivait leur flexion, et s'aplatissait en disque vu
- * de la caméra du jeu. Le corps n'est pas agrandi (`large`, `epais` : 1) ; il marche droit (eteint.ts, `redresser`).
- * En crevant, la boule se vide en `crevaison` secondes, après un dernier gonflement.
+ * Le Noyé gonflé (porteur, 2026-10-14, troisième retour) : ni un géant, ni une boule posée sur un Errant, mais un corps
+ * de noyé bouffi, « patatoïde ». C'est le maillage du corps lui-même qui gonfle (`gonflerLeCorps`) : chaque sommet est
+ * poussé le long de sa normale, au repos, d'autant plus que les os qui le portent sont gonflés (le tronc et le ventre
+ * surtout, puis le cou, les cuisses et les bras, boudinés ; ni les mains ni les pieds), avec des bosses (un bruit lent)
+ * et un côté plus enflé que l'autre. La tête est un peu bouffie (os de la tête élargi en travers). Il garde la taille
+ * d'un Errant ; ses bras s'écartent un peu du ventre en marchant (eteint.ts, `redresser`).
+ * Trois gonflements à montrer au porteur, en mètres le long de la normale ; `GONFLEMENT_NOYE` choisit celui du jeu.
+ * - tronc : le tronc tout autour (la poitrine, le dos) ; ventre : le ventre et les flancs en plus, le plus gros au
+ *   nombril, davantage devant (une poire, pas les pectoraux d'un costaud) ;
+ * - bras, cuisses, cou : les membres et le cou ; tete : l'élargissement de la tête (1 + tete) ;
+ * - bosses : l'amplitude des bosses (part du gonflement) ; asymetrie : un côté plus gonflé que l'autre (part) ;
+ * - ecartBras : de combien (rad) les bras s'écartent du corps, debout, pour ne pas rentrer dans le ventre.
  */
-export const GONFLE = { large: 1, epais: 1, apres: { large: 1, epais: 1 }, crevaison: 0.45, gonflement: 0.12 };
-/** La boule : son rayon (≈ 1,5 fois la largeur des épaules d'un Errant), et sa hauteur au-dessus du bas du dos. */
-export const BOULE = { rayon: 0.37, hausse: 0.12 };
-/**
- * Le reste du corps, os par os : la largeur voulue en travers de l'os (1 + facteur), et sa longueur (1 + allonge). Ses
- * enfants nommés retrouvent la largeur qu'on leur veut (la leur, ou 1). Une petite tête, des bras courts.
- */
-const ENFLURE: [os: string, facteur: number, enfants: string[], allonge?: number][] = [
-  ["neck_01", 0.1, ["Head"], 0.1],
-  ["Head", -0.1, []],
-  ["upperarm_l", 0.2, ["lowerarm_l"], -0.35],
-  ["upperarm_r", 0.2, ["lowerarm_r"], -0.35],
-  ["hand_l", 0.2, []],
-  ["hand_r", 0.2, []],
-];
+export const GONFLEMENTS = {
+  leger: { tronc: 0.012, ventre: 0.05, bras: 0.012, cuisses: 0.016, cou: 0.02, tete: 0.04, bosses: 0.35, asymetrie: 0.15, ecartBras: 0.1 },
+  moyen: { tronc: 0.018, ventre: 0.08, bras: 0.018, cuisses: 0.024, cou: 0.03, tete: 0.07, bosses: 0.45, asymetrie: 0.22, ecartBras: 0.17 },
+  fort: { tronc: 0.024, ventre: 0.11, bras: 0.024, cuisses: 0.032, cou: 0.04, tete: 0.1, bosses: 0.5, asymetrie: 0.28, ecartBras: 0.24 },
+} as const;
+export type Gonflement = keyof typeof GONFLEMENTS;
+/** Le gonflement du Noyé en jeu (à choisir par le porteur parmi `GONFLEMENTS`). */
+export const GONFLEMENT_NOYE: Gonflement = "moyen";
+/** Le gonflement retenu ; en crevant, il se vide en `crevaison` secondes, après un dernier gonflement (`gonflement`). */
+export const GONFLE = { ...GONFLEMENTS[GONFLEMENT_NOYE], crevaison: 0.45, gonflement: 0.12 };
 
 /**
- * Gonfle le corps du Noyé (`k` : 1 gonflé, 0 dégonflé) : chaque os d'ENFLURE s'élargit en travers de son axe (celui qui
- * mène à son enfant) et change de longueur ; ses enfants compensent la largeur qu'ils en héritent. Rien que l'échelle
- * des os : ni matériau ni maillage en plus. La tête garde ses proportions de jeu (Humanoide), à l'enflure près.
+ * Élargit la tête du Noyé en travers de son axe (`k` : 1 gonflé, 0 dégonflé) : des joues bouffies, sans l'allonger.
+ * Rien que l'échelle d'un os. La tête garde ses proportions de jeu (Humanoide), à l'enflure près.
  */
 export function gonfler(corps: Humanoide, k: number): void {
-  const entree = (nom: string) => ENFLURE.find(([n]) => n === nom);
-  const voulu = (nom: string) => 1 + (entree(nom)?.[1] ?? 0) * k;
-  const parent = new Map<string, string>();
-  for (const [nom, , enfants] of ENFLURE) for (const e of enfants) parent.set(e, nom);
-  for (const nom of new Set([...ENFLURE.map(([n]) => n), ...parent.keys()])) {
-    const os = corps.osNomme(nom);
-    if (!os) continue;
-    // L'axe de l'os : vers son premier enfant.
-    const enfant = os.children.find((c) => (c as THREE.Bone).isBone);
-    const a = enfant?.position ?? new THREE.Vector3(0, 1, 0);
-    const ax = Math.abs(a.x);
-    const ay = Math.abs(a.y);
-    const az = Math.abs(a.z);
-    const axe = ax >= ay && ax >= az ? 0 : ay >= az ? 1 : 2;
-    const p = parent.get(nom);
-    const f = voulu(nom) / (p ? voulu(p) : 1);
-    const base = (os.userData.echelleRepos as number | undefined) ?? (os.userData.echelleRepos = os.scale.y);
-    os.scale.setScalar(base * (1 + (entree(nom)?.[3] ?? 0) * k));
-    for (const i of [0, 1, 2]) if (i !== axe) os.scale.setComponent(i, base * f);
+  const os = corps.osNomme("Head");
+  if (!os) return;
+  const enfant = os.children.find((c) => (c as THREE.Bone).isBone);
+  const a = enfant?.position ?? new THREE.Vector3(0, 1, 0);
+  const ax = Math.abs(a.x);
+  const ay = Math.abs(a.y);
+  const az = Math.abs(a.z);
+  const axe = ax >= ay && ax >= az ? 0 : ay >= az ? 1 : 2;
+  const base = (os.userData.echelleRepos as number | undefined) ?? (os.userData.echelleRepos = os.scale.y);
+  os.scale.setScalar(base);
+  for (const i of [0, 1, 2]) if (i !== axe) os.scale.setComponent(i, base * (1 + GONFLE.tete * k));
+}
+
+/** Le gonflement de chaque os (part de `tronc`, `bras`, `cuisses` ou `cou`) ; les autres (tête, mains, pieds) : rien. */
+const OS_GONFLES: [motif: RegExp, membre: "tronc" | "bras" | "cuisses" | "cou", part: number][] = [
+  [/^(pelvis|spine_0)/, "tronc", 1],
+  [/^clavicle/, "tronc", 0.5],
+  [/^upperarm/, "bras", 1],
+  [/^lowerarm/, "bras", 0.85],
+  [/^hand/, "bras", 0.25],
+  [/^thigh/, "cuisses", 1],
+  [/^calf/, "cuisses", 0.55],
+  [/^neck/, "cou", 1],
+];
+
+/** Le corps gonflé d'un Noyé : `regler(k)` le gonfle (1), le dégonfle (0), ou le gonfle encore un peu (> 1). */
+export interface CorpsGonfle {
+  regler(k: number): void;
+}
+
+/**
+ * Gonfle le maillage du corps fondu du Noyé (Humanoide.fondre, déjà fait) : un décalage par sommet le long de sa
+ * normale, calculé une fois au repos, que la peau (le squelette) emporte ensuite dans toutes les animations. Les
+ * vêtements fondus avec le corps gonflent avec lui (ils sont portés par les mêmes os). Les normales sont recalculées
+ * sur la forme gonflée (les bosses accrochent la lumière), puis recousues là où le maillage est coupé (mêmes points).
+ * Ni maillage, ni matériau, ni appel de dessin en plus : la géométrie fondue est déjà propre à chaque personnage.
+ */
+export function gonflerLeCorps(corps: Humanoide, graine: number): CorpsGonfle | null {
+  let maillage: THREE.SkinnedMesh | null = null;
+  corps.objet.traverse((n) => {
+    const m = n as THREE.SkinnedMesh;
+    if (m.isSkinnedMesh && m.geometry.getAttribute("aPiece")) maillage = m;
+  });
+  const m = maillage as THREE.SkinnedMesh | null;
+  if (!m) return null;
+  const g = m.geometry;
+  const pos = g.getAttribute("position") as THREE.BufferAttribute;
+  const nor = g.getAttribute("normal") as THREE.BufferAttribute;
+  const si = g.getAttribute("skinIndex");
+  const sw = g.getAttribute("skinWeight");
+  if (!pos || !nor || !si || !sw) return null;
+  // Le gonflement de chaque os du squelette, et sa part de tronc (pour le ventre et l'asymétrie).
+  const gonfleOs = m.skeleton.bones.map((os) => {
+    const e = OS_GONFLES.find(([motif]) => motif.test(os.name));
+    return e ? GONFLE[e[1]] * e[2] : 0;
+  });
+  const troncOs = m.skeleton.bones.map((os) => (/^(pelvis|spine_0)/.test(os.name) ? 1 : 0));
+  // Du maillage au corps (mètres, debout, au repos) : la peau au repos (les os tels qu'ils sont, tête agrandie
+  // comprise), sommet par sommet, puis le maillage dans le corps ; et retour, par l'inverse.
+  corps.objet.updateMatrixWorld(true);
+  m.skeleton.update();
+  const versCorps = corps.objet.matrixWorld.clone().invert().multiply(m.matrixWorld);
+  const os = m.skeleton.boneMatrices!;
+  const somme = new THREE.Matrix4();
+  const mi = new THREE.Matrix4();
+  const peauDe = (i: number, sortie: THREE.Matrix4) => {
+    const e = somme.elements;
+    e.fill(0);
+    for (let k = 0; k < 4; k++) {
+      const w = sw.getComponent(i, k);
+      if (!w) continue;
+      const o = si.getComponent(i, k) * 16;
+      for (let c = 0; c < 16; c++) e[c]! += w * os[o + c]!;
+    }
+    return sortie.copy(versCorps).multiply(m.bindMatrixInverse).multiply(somme).multiply(m.bindMatrix);
+  };
+  const normaleCorps = new THREE.Matrix3();
+  let echelle = 1;
+  // Le nombril : un peu au-dessus du bas du dos ; la largeur des hanches (pour l'asymétrie).
+  const bas = corps.repere("spine_01");
+  const torse = corps.repere("spine_03");
+  const yVentre = bas.y + (torse.y - bas.y) * 0.3;
+  const demiLarge = Math.max(0.12, Math.abs(corps.repere("thigh_r").x) * 1.6);
+  // Chaque Noyé a ses bosses et son côté le plus gonflé.
+  const h = aleatoire(graine * 7919 + 13);
+  const ph = [0, 1, 2, 3, 4, 5].map(() => h() * Math.PI * 2);
+  const cote = h() < 0.5 ? -1 : 1;
+  const bosse = (x: number, y: number, z: number) =>
+    Math.max(-1, Math.min(1,
+      1.7 * Math.sin(8.3 * x + ph[0]!) * Math.sin(6.1 * y + ph[1]!) * Math.sin(7.7 * z + ph[2]!) +
+        0.6 * Math.sin(17.9 * x + ph[3]!) * Math.sin(15.3 * y + ph[4]!) * Math.sin(19.1 * z + ph[5]!)));
+
+  const n = pos.count;
+  const base = new Float32Array(pos.array as Float32Array);
+  const baseN = new Float32Array(nor.array as Float32Array);
+  const gonfle = new Float32Array(n * 3);
+  const p = new THREE.Vector3();
+  const q = new THREE.Vector3();
+  const d = new THREE.Vector3();
+  for (let i = 0; i < n; i++) {
+    let membres = 0;
+    let tronc = 0;
+    for (let k = 0; k < 4; k++) {
+      const w = sw.getComponent(i, k);
+      if (!w) continue;
+      const o = si.getComponent(i, k);
+      membres += w * (gonfleOs[o] ?? 0);
+      tronc += w * (troncOs[o] ?? 0);
+    }
+    peauDe(i, mi);
+    if (i === 0) echelle = Math.cbrt(Math.abs(mi.determinant())) || 1;
+    p.fromBufferAttribute(pos, i).applyMatrix4(mi);
+    q.fromBufferAttribute(nor, i).applyMatrix3(normaleCorps.getNormalMatrix(mi)).normalize();
+    // Le ventre et les flancs : le plus gros au nombril (un peu plus bas que haut), surtout devant, peu dans le dos.
+    const devant = Math.max(0, Math.min(1, 0.6 + 0.55 * q.z));
+    const v = (p.y - yVentre) / (p.y < yVentre ? 0.17 : 0.24);
+    // Bosselé (le ventre surtout ; les membres, juste un peu), et plus enflé d'un côté que de l'autre.
+    const b = bosse(p.x, p.y, p.z);
+    const flanc = Math.max(-1, Math.min(1, p.x / demiLarge)) * cote;
+    let a = GONFLE.ventre * tronc * devant * Math.exp(-v * v) * (1 + GONFLE.bosses * b);
+    a += membres * (1 + GONFLE.bosses * 0.3 * b);
+    a *= 1 + GONFLE.asymetrie * flanc;
+    d.copy(q).multiplyScalar(Math.max(0, a)).add(p).applyMatrix4(mi.invert());
+    gonfle[i * 3] = d.x;
+    gonfle[i * 3 + 1] = d.y;
+    gonfle[i * 3 + 2] = d.z;
   }
+  // Les normales de la forme gonflée.
+  const essai = new THREE.BufferGeometry();
+  essai.setAttribute("position", new THREE.BufferAttribute(gonfle, 3));
+  essai.setIndex(g.getIndex());
+  essai.computeVertexNormals();
+  const gonfleN = (essai.getAttribute("normal") as THREE.BufferAttribute).array as Float32Array;
+  essai.dispose();
+  // Recousues aux coupures du maillage : les points au même endroit (au demi-millimètre près), tournés du même côté.
+  const groupes = new Map<string, number[]>();
+  const u = 0.0005 / echelle;
+  for (let i = 0; i < n; i++) {
+    const cle = `${Math.round(base[i * 3]! / u)},${Math.round(base[i * 3 + 1]! / u)},${Math.round(base[i * 3 + 2]! / u)}`;
+    const l = groupes.get(cle);
+    if (l) l.push(i);
+    else groupes.set(cle, [i]);
+  }
+  for (const l of groupes.values()) {
+    if (l.length < 2) continue;
+    const r = l[0]!;
+    let sx = 0;
+    let sy = 0;
+    let sz = 0;
+    const membres = l.filter((i) => baseN[i * 3]! * baseN[r * 3]! + baseN[i * 3 + 1]! * baseN[r * 3 + 1]! + baseN[i * 3 + 2]! * baseN[r * 3 + 2]! > 0.2);
+    for (const i of membres) {
+      sx += gonfleN[i * 3]!;
+      sy += gonfleN[i * 3 + 1]!;
+      sz += gonfleN[i * 3 + 2]!;
+    }
+    const lg = Math.hypot(sx, sy, sz) || 1;
+    for (const i of membres) {
+      gonfleN[i * 3] = sx / lg;
+      gonfleN[i * 3 + 1] = sy / lg;
+      gonfleN[i * 3 + 2] = sz / lg;
+    }
+  }
+  const P = pos.array as Float32Array;
+  const N = nor.array as Float32Array;
+  return {
+    regler(k: number) {
+      for (let i = 0; i < n * 3; i++) {
+        P[i] = base[i]! + (gonfle[i]! - base[i]!) * k;
+        N[i] = baseN[i]! + (gonfleN[i]! - baseN[i]!) * Math.min(1, k);
+      }
+      pos.needsUpdate = true;
+      nor.needsUpdate = true;
+    },
+  };
 }
 
 /**
@@ -371,38 +526,6 @@ export function gonfler(corps: Humanoide, k: number): void {
  * 0 : la matière d'origine. Détruit, le corps redevient mat avec les autres (eteint-au-sol.ts).
  */
 export const LUISANCE_NOYE = 0.5;
-let boule: THREE.BufferGeometry | null = null;
-/**
- * La boule du Noyé : une sphère de chair blême et bleuâtre, tendue, où restent des lambeaux de chemise délavée et la
- * ceinture du pantalon, craquée. Une géométrie et un matériau partagés par tous les Noyés (les couleurs sont dans les
- * sommets) : un appel de dessin de plus par Noyé, rien d'autre.
- */
-export function bouleDuNoye(): THREE.Mesh {
-  if (!boule) {
-    const a = new Assemblage(17);
-    const r = BOULE.rayon;
-    const peau = new THREE.Color(0xeef4f1);
-    const veine = new THREE.Color(0xa9bfd0);
-    const chemise = new THREE.Color(0x8e9a88);
-    const pantalon = new THREE.Color(0x5f6a5c);
-    a.ajouterDegrade(new THREE.IcosahedronGeometry(r, 4), (q) => {
-      const y = q.y / r;
-      const ang = Math.atan2(q.x, q.z);
-      // Le bas : la ceinture du pantalon, tendue, craquée devant.
-      if (y < -0.62 && !(y > -0.8 && Math.abs(ang) < 0.35)) return pantalon.getHex();
-      // Des lambeaux de chemise sur les épaules et le dos, déchirés en pointes.
-      const lambeau = y > 0.15 && Math.sin(ang * 3 + 1.3) + Math.sin(ang * 7) * 0.5 + (y - 0.15) * 1.2 > 0.9;
-      if (lambeau) return chemise.getHex();
-      // La chair : blême, marbrée de veines bleues.
-      const marbre = 0.5 + 0.5 * Math.sin(q.x * 31 + q.y * 17) * Math.sin(q.z * 23 - q.y * 11);
-      return _c.copy(peau).lerp(veine, marbre * 0.3).getHex();
-    }, "mat");
-    boule = a.maillages()[0]!.geometry;
-  }
-  const m = new THREE.Mesh(boule, materiauSommets("mat"));
-  m.castShadow = true;
-  return m;
-}
 
 /** L'Ensablé qui dort : le corps enfoncé de tant (m) sous le sol ; la butte de sable couvre les jambes et les reins. */
 export const ENFOUI = 0.15;
