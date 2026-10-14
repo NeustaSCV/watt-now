@@ -33,6 +33,8 @@ export interface Cadrage {
   x: number;
   z: number;
   zoom: number;
+  /** La hauteur du point regardé (0.10, K2 : le milieu de la tour du phare, la crique) ; 0 par défaut. */
+  y?: number;
 }
 
 export class Scene {
@@ -165,7 +167,7 @@ export class Scene {
     this.lacet += (lacetVise - this.lacet) * (immediat ? 1 : Math.min(1, dt * 8));
     this.cible.x += (x - this.cible.x) * lissage;
     this.cible.z += (z - this.cible.z) * lissage;
-    this.cible.y += ((this.cadrage ? 0 : this.hauteurSuivie) - this.cible.y) * lissage;
+    this.cible.y += ((this.cadrage ? (this.cadrage.y ?? 0) : this.hauteurSuivie) - this.cible.y) * lissage;
 
     const horizontal = Math.cos(ELEVATION) * distance;
     const s = this.decalageCamera;

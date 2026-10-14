@@ -376,6 +376,11 @@ export interface EtatPhareVu {
   compresseur: boolean;
   /** La corne a déjà sonné cette nuit. */
   corneSonnee: boolean;
+  /**
+   * Dans combien de ms le cargo s'échoue (la lanterne allumée, l'épave pas encore là) : le client en tire ses feux qui
+   * approchent, la corne grave au large et le cadrage de la crique (K2). Absent sinon (une partie plus ancienne aussi).
+   */
+  cargoDans?: number;
 }
 
 /** Les gestes du phare (`interagir`, cible `{ genre: "phare", id }`) : en plus de porter, remplir, ramasser, allumer. */
@@ -402,5 +407,4 @@ export const TEXTES_PHARE = {
   corne: "La corne de brume mugit vers le large : tout le cap l'entend.",
   corneSonnee: "Le réservoir d'air est vide : la corne a déjà sonné cette nuit.",
   sauter: "Tu sautes sur la partie basse de la rampe. Par là, on ne remonte pas.",
-  cargo: "Une corne grave, au large… Un cargo fonce droit sur la crique.",
 } as const;

@@ -86,6 +86,8 @@ export class LieuPhare extends LieuVivant {
       lanterne: e.allumeLe !== null,
       compresseur: e.compresseur,
       corneSonnee: e.corneNuit === nuitDe(instant, this.debutDuMonde),
+      // K2 : l'arrivée du cargo, pour que le client la mette en scène (ses feux, sa corne, le cadrage de la crique).
+      ...(e.allumeLe !== null && this.portes.epave !== true ? { cargoDans: Math.max(0, CARGO_MS - (instant - e.allumeLe)) } : {}),
     };
   }
 
@@ -175,10 +177,8 @@ export class LieuPhare extends LieuVivant {
     const e = this.etat;
     if (e.allumeLe === null || this.portes.epave === true || instant - e.allumeLe < CARGO_MS) return;
     // Le client joue la scène (la corne grave, le choc, le fondu), puis montre l'épave ; celui qui arrive après la trouve.
-    if (devantLeJoueur) {
-      this.annoncer(instant, { cargo: true });
-      this.diffuser({ t: "info", texte: TEXTES_PHARE.cargo });
-    }
+    // Pas de texte du serveur ici : la pensée du guidage (P-26) le dit (commun/src/guidage.ts).
+    if (devantLeJoueur) this.annoncer(instant, { cargo: true });
     this.basculerPorte("epave", true);
     for (const r of this.ressources.values()) if (DE_L_EPAVE.has(r.type) && r.disponibleLe <= instant) this.diffuser({ t: "ressource", id: r.id, disponible: true });
   }

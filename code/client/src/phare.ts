@@ -15,6 +15,8 @@ import { BandeauAvertissement } from "./avertissement.ts";
 import type { ActionProposee, Propositions } from "./interaction.ts";
 import { lumieresPhare, solPhare, type ScenePhare } from "./rendu/phare.ts";
 import { Secousse, type Decalage } from "./rendu/secousse.ts";
+import { MiseEnScenePhare, PROCHE_ETEINT } from "./phare-scene.ts";
+import type { Cadrage } from "./rendu/scene.ts";
 import type { SourceLumiere } from "./rendu/lumieres.ts";
 import type { IdSon } from "./son/catalogue.ts";
 
@@ -54,23 +56,31 @@ export class PhareClient {
   private yPerso: number | null = null;
   /** L'écran tremble quand le cargo s'échoue (au choc), pour qui est au phare à ce moment (rendu/secousse.ts). */
   readonly secousse: Secousse;
+  /** K2 : la mise en scène de l'allumage et de l'approche du cargo (client/src/phare-scene.ts). */
+  readonly mise: MiseEnScenePhare;
+  private nuit = false;
+  private cadre = false;
 
   private readonly jouer: Joueur;
   private readonly hud: () => HTMLElement;
 
-  constructor(jouer: Joueur, hud: () => HTMLElement, secousse: Secousse = new Secousse()) {
+  constructor(jouer: Joueur, hud: () => HTMLElement, secousse: Secousse = new Secousse(), mise: MiseEnScenePhare = new MiseEnScenePhare()) {
     this.jouer = jouer;
     this.hud = hud;
     this.secousse = secousse;
+    this.mise = mise;
   }
 
   /** Le message `phare` du serveur. */
   recevoir(m: MessageServeurPhare): void {
+    this.mise.recevoir(this.etat, m.etat, performance.now()); // K2 : le recul à l'allumage, l'approche du cargo
     this.etat = m.etat;
     if (m.cargo) {
       this.cargo = performance.now();
       this.sonsJoues.clear();
-      this.jouer("corne_cargo");
+      // K2 : sa corne a déjà sonné au large dix secondes plus tôt ; sinon (arrivé tard), elle sonne ici.
+      if (!this.mise.corneProcheJouee) this.jouer("corne_cargo");
+      this.mise.echouage(this.cargo);
     }
     if (m.corne) this.jouer("corne_brume", ENDROITS_PHARE.pavillons);
     // Un message fermé par un bouton (S-14), jamais une fenêtre à croix.
@@ -99,16 +109,35 @@ export class PhareClient {
 
   /** Ce que le décor doit montrer (rendu/phare.ts, animerPhare). */
   scene(portes: Readonly<Record<string, boolean>>): ScenePhare {
-    return { etat: this.etat, epave: this.epaveVisible(portes) };
+    const epave = this.epaveVisible(portes);
+    return { etat: this.etat, epave, nuit: this.nuit, feux: this.mise.feux(performance.now(), epave), cadre: this.cadre };
   }
 
   /** Les lumières du phare, la nuit (la lanterne allumée, le feu de détresse de l'épave). */
   lumieres(portes: Readonly<Record<string, boolean>>, nuit: boolean): SourceLumiere[] {
+    this.nuit = nuit; // K2 : le balayage du faisceau ne se voit que la nuit
     return lumieresPhare(this.scene(portes), nuit);
   }
 
-  /** À chaque image : la scène du cargo (le choc, le fondu au noir). */
+  /**
+   * K2 : le cadrage de la caméra à cette image (le recul sur la tour à l'allumage, la crique avant le choc), ou null. Pas
+   * de cadrage avec un Éteint debout à moins de 6 m, du même étage (main.ts, une ligne après la vue d'ensemble).
+   */
+  cadrage(position: { x: number; z: number }, zoom: number, eteints: Iterable<{ etat: string; objet: THREE.Object3D }>): Cadrage | null {
+    let menace = false;
+    for (const e of eteints) {
+      if (e.etat === "dormant" || e.etat === "detruit" || e.etat === "a_terre") continue;
+      const p = e.objet.position;
+      if (Math.hypot(p.x - position.x, p.z - position.z) < PROCHE_ETEINT && this.menace(p, position)) menace = true;
+    }
+    const c = this.mise.cadrage(performance.now(), { x: position.x, z: position.z, y: this.yPerso ?? 0, zoom }, menace);
+    this.cadre = c !== null;
+    return c;
+  }
+
+  /** À chaque image : la corne du cargo au large (K2), la scène du cargo (le choc, le fondu au noir). */
   animer(): void {
+    for (const _ of this.mise.cornesAJouer(performance.now())) this.jouer("corne_cargo");
     if (this.cargo === null) return;
     const t = (performance.now() - this.cargo) / 1000;
     if (t >= SCENE_CARGO.choc && !this.sonsJoues.has("choc")) {

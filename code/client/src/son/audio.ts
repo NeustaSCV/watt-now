@@ -16,6 +16,17 @@ const BASE_EFFETS = "/assets/effets/";
  * Ajouter ici l'identifiant d'un son enregistré qui ne convient pas.
  */
 const RECETTE_PREFEREE = new Set<string>([]);
+/**
+ * Les effets que le jeu ajoute lui-même à la livraison de la session « son » (0.10, K2 : la corne grave du cargo, un
+ * enregistrement CC0) : rangés dans /assets/effets-jeu/<id>/<id>_<n>.opus et .m4a (client/public/assets/effets-jeu/),
+ * hors du dossier que scripts/copier-effets.mjs efface et recopie. Tant que le fichier manque, la recette synthétisée
+ * reste ; la livraison de la session « son », si elle a un jour le même identifiant, passe avant.
+ */
+const BASE_EFFETS_JEU = "/assets/effets-jeu/";
+const EFFETS_DU_JEU: Partial<Record<IdSon, string[]>> = {
+  // Kinoton, « Cruise Ship Horn, 3x » (CC0, Freesound 352374) : un coup par variante, avec l'écho du port (licences.csv).
+  corne_cargo: ["corne_cargo/corne_cargo_0", "corne_cargo/corne_cargo_1", "corne_cargo/corne_cargo_2"],
+};
 
 interface ManifesteEffets {
   sons: Record<string, { boucle: boolean; variantes: string[] }>;
@@ -92,6 +103,8 @@ export class Sonorisation {
   /** Les effets enregistrés déjà décodés (ils priment sur les recettes). */
   private readonly enregistres = new Map<IdSon, AudioBuffer[]>();
   private readonly enChargement = new Set<IdSon>();
+  /** Les effets du jeu dont le fichier manque (on ne le redemande pas à chaque fois). */
+  private readonly introuvables = new Set<IdSon>();
   /** Le manifeste des effets enregistrés, et l'extension que ce navigateur sait lire. */
   private manifesteEffets: Promise<ManifesteEffets | null> | null = null;
   private extensionEffets = ".opus";
@@ -150,6 +163,8 @@ export class Sonorisation {
     this.manifesteEffets = fetch(`${BASE_EFFETS}manifeste.json`)
       .then((r) => (r.ok ? (r.json() as Promise<ManifesteEffets>) : null))
       .catch(() => null);
+    // Les effets du jeu (la corne du cargo) se chargent d'avance : le premier coup est déjà le bon.
+    for (const id of Object.keys(EFFETS_DU_JEU) as IdSon[]) this.chargerEnregistre(id);
     this.prechauffer(this.aPrechauffer.splice(0));
   }
 
@@ -395,24 +410,27 @@ export class Sonorisation {
 
   /** Charge et décode, en tâche de fond, les fichiers d'un effet enregistré (s'il existe). */
   private chargerEnregistre(id: IdSon): void {
-    if (!this.ctx || !this.manifesteEffets || this.enregistres.has(id) || this.enChargement.has(id) || RECETTE_PREFEREE.has(id)) return;
+    if (!this.ctx || !this.manifesteEffets || this.enregistres.has(id) || this.enChargement.has(id) || this.introuvables.has(id) || RECETTE_PREFEREE.has(id)) return;
     this.enChargement.add(id);
     const ctx = this.ctx;
     void this.manifesteEffets
       .then(async (m) => {
         const entree = m?.sons[id];
-        if (!entree) return;
+        const chemins = entree ? entree.variantes.map((c) => BASE_EFFETS + c) : EFFETS_DU_JEU[id]?.map((c) => BASE_EFFETS_JEU + c);
+        if (!chemins) return;
         const liste = await Promise.all(
-          entree.variantes.map(async (chemin) => {
-            const r = await fetch(`${BASE_EFFETS}${chemin}${this.extensionEffets}`);
+          chemins.map(async (chemin) => {
+            const r = await fetch(`${chemin}${this.extensionEffets}`);
             if (!r.ok) throw new Error(`${chemin} : ${r.status}`);
             return ctx.decodeAudioData(await r.arrayBuffer());
           }),
         );
         this.enregistres.set(id, liste);
       })
-      // Un fichier manque ou ne se décode pas : la recette reste (rien ne casse).
-      .catch(() => undefined)
+      // Un fichier manque ou ne se décode pas : la recette reste (rien ne casse) ; un effet du jeu n'est pas redemandé.
+      .catch(() => {
+        if (EFFETS_DU_JEU[id]) this.introuvables.add(id);
+      })
       .finally(() => this.enChargement.delete(id));
   }
 

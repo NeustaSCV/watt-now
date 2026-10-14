@@ -61,6 +61,7 @@ const chocCargo: Recette = (h) => {
 /** Les sons du phare, ajoutés au catalogue (catalogue.ts). */
 export const SONS_PHARE = {
   corne_brume: { recette: corneBrume, bus: "environnement", priorite: 2, variantes: 1, gain: 0.75, portee: 60 },
+  // La corne grave du cargo : un vrai paquebot (Kinoton, CC0) quand son fichier est là (son/audio.ts, EFFETS_DU_JEU) ; sinon, celle-ci.
   corne_cargo: { recette: corneCargo, bus: "environnement", priorite: 2, variantes: 1, gain: 0.8, portee: 0 },
   choc_cargo: { recette: chocCargo, bus: "environnement", priorite: 2, variantes: 1, gain: 0.8, portee: 0 },
 } satisfies Record<string, DefSon>;

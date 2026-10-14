@@ -23,7 +23,9 @@ import type { Boite } from "../../../commun/src/lieux.ts";
 import { ENDROITS_PHARE, PHARE, auModele, type EtatPhareVu } from "../../../commun/src/phare.ts";
 import { LUMIERES_MODELE, PLACES_OBJETS } from "../../../commun/src/phare-modele.ts";
 import type { TypeRessource } from "../../../commun/src/terrain.ts";
-import { estomperToits } from "./halte.ts";
+import { estomperToits, montrerTousLesToits } from "./halte.ts";
+import { animerNuitPhare, creerNuitPhare } from "./phare-nuit.ts";
+import type { FeuxCargo } from "../phare-scene.ts";
 import type { SourceLumiere } from "./lumieres.ts";
 import { nommer } from "./materiaux.ts";
 
@@ -106,6 +108,8 @@ export function creerPhare(): THREE.Group {
   etendreAlentours(modele);
   groupe.add(modele);
   nommer(groupe, ["phare"]);
+  // K2 : le balayage du faisceau, les feux du cargo (rendu/phare-nuit.ts).
+  creerNuitPhare(groupe);
   etats.set(groupe, (modele.userData.objets ?? {}) as Partial<Record<ObjetNomme, THREE.Object3D | null>>);
   return groupe;
 }
@@ -189,6 +193,19 @@ function objetsDe(decor: THREE.Object3D): Partial<Record<ObjetNomme, THREE.Objec
   return e;
 }
 
+/** Le groupe du phare (creerPhare) dans le décor que le jeu lui a donné, cherché une seule fois. */
+const groupes = new WeakMap<THREE.Object3D, THREE.Object3D>();
+function groupePhare(decor: THREE.Object3D): THREE.Object3D | undefined {
+  let g = groupes.get(decor);
+  if (!g) {
+    decor.traverse((o) => {
+      if (!g && etats.has(o)) g = o;
+    });
+    if (g) groupes.set(decor, g);
+  }
+  return g;
+}
+
 /** Les couches du phare d'un groupe (comme `objetsDe`). */
 function couchesDe(decor: THREE.Object3D): CoucheEnRelief[] | undefined {
   let c = couchesEnRelief.get(decor);
@@ -201,6 +218,12 @@ export interface ScenePhare {
   etat: EtatPhareVu | null;
   /** L'épave se voit (échouée, et le fondu du cargo passé). */
   epave: boolean;
+  /** K2 : la nuit (le balayage du faisceau ne se voit qu'alors). */
+  nuit?: boolean;
+  /** K2 : les feux du cargo qui approche (client/src/phare-scene.ts), ou rien. */
+  feux?: FeuxCargo | null;
+  /** K2 : la caméra cadre la tour ou la crique : toutes les couches restent (on voit la lanterne, la coque). */
+  cadre?: boolean;
 }
 
 /**
@@ -221,7 +244,11 @@ export function animerPhare(
     const ySol = solPhare(x, z, vu.epave);
     for (const c of couches) Object.assign(c, hauteursDepuis(c, ySol));
   }
+  if (vu.cadre) montrerTousLesToits(true);
   estomperToits(decor, x, z, dt, lacet);
+  if (vu.cadre) montrerTousLesToits(false);
+  const groupe = groupePhare(decor);
+  if (groupe) animerNuitPhare(groupe, dt, lacet, { nuit: vu.nuit === true, lanterne: vu.etat?.lanterne === true, epave: vu.epave, feux: vu.feux ?? null });
   const o = objetsDe(decor);
   if (!o) return;
   const montrer = (id: ObjetNomme, oui: boolean) => {

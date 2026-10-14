@@ -601,7 +601,7 @@ export const TEXTES_HOTEL = {
   borneEteinte: "La borne « Check-in par sourire » : un écran noir, un petit objectif. Pas de courant.",
   borneAllumee: "La borne s'est réveillée : sur l'écran, Watty attend ton plus beau sourire.",
   borneSansCourant: "La borne ne répond pas : son écran reste noir.",
-  sourireNonReconnu: "« Sourire non reconnu. Veuillez réessayer. »",
+  sourireNonReconnu: "« Sourire non reconnu. Veuillez sourire davantage. »",
   carteRemise: "« Bienvenue, cher client ! » Une carte glisse de la fente : la carte de la chambre 7. La tête reste sur la borne.",
   dejaLaCarte: "« Vous avez déjà votre carte, cher client. »",
   brancher: "Tu branches la batterie au pied de la borne. L'écran s'allume : Watty sourit.",
