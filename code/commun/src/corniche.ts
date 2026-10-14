@@ -8,7 +8,7 @@
 // - la zone : les obstacles du modèle (la paroi, le bord de la falaise, les murets, les murs du Panoramique…), le pin
 //   tombé (`obstaclesPin`, gardé dans les deux états : débité, ses rondelles et sa tête restent en travers), et la porte
 //   de la barricade du tunnel (`obstaclesBarricade`), fermée tant qu'on n'a pas payé le péage (`zoneCorniche`) ;
-// - les deux goulets (G16 du gué, R50) : le tunnel et sa barricade, l'éboulement et son ruban de 2,5 m ;
+// - les deux goulets (R50) : le tunnel et sa barricade, l'éboulement et son ruban de 2,5 m ;
 // - les pièces et les portes du modèle (la vue par pièce, les pièces noires) et le milieu des Éteints ;
 // - la caisse et la barricade du péage (§3.4, S-19) : leurs places ; la règle est dans commun/src/peage.ts (chantier H).
 //
@@ -163,8 +163,8 @@ export function heurteCorniche(x: number, z: number, rayon: number, barricadeOuv
 // ---------- Les sorties ----------
 
 /** Les deux bouts de la route : vers le terrain (ouest, entrée A du modèle) et vers le phare (est, sortie B). */
-const BOUT_OUEST = aLaCorniche(-100, zRouteCorniche(0) - 35);
-const BOUT_EST = aLaCorniche(100, zRouteCorniche(200) - 35);
+const BOUT_OUEST = { z: arrondi(zRouteCorniche(0)) };
+const BOUT_EST = { z: arrondi(zRouteCorniche(CORNICHE.longueur)) };
 
 export const SORTIES_CORNICHE: Sortie[] = [
   {
