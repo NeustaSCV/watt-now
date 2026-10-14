@@ -34,7 +34,6 @@ import {
   accostage,
   crue,
   eteintsGue,
-  genererGue,
   placeRadeau,
   surLeRadier,
   zoneGue,
@@ -50,6 +49,7 @@ import { tirerCleRare } from "../../commun/src/vestiges.ts";
 import type { Base } from "./base.ts";
 import { LieuVivant, type DefinitionLieuVivant, type Voyageur } from "./lieu-vivant.ts";
 import { ZONE_GUE } from "../../commun/src/lieux.ts";
+import { ressourcesSemees, semisVivant } from "../../commun/src/semis-lieux.ts";
 
 /** Le geste du bac : un geste long (un appui le lance, un autre l'arrête, comme les autres gestes de plus de 5 s). */
 export const LIBELLE_HALER = "Haler le bac";
@@ -65,9 +65,11 @@ export function definitionGue(): DefinitionLieuVivant {
     eteints: eteintsGue,
     // Plan 0.8.2 (recette de la 0.8) : le plein air, mais les Éteints passent par le bout de la chicane de l'entrée.
     milieu: () => MILIEU_GUE,
-    ressources: genererGue,
+    // Le semis au hasard (plan 0.9, M5 et M7 : commun/src/semis.ts).
+    ressources: ressourcesSemees("gue"),
     version: VERSION_GUE,
     butin: BUTIN_GUE,
+    semis: semisVivant("gue"),
   };
 }
 

@@ -506,6 +506,16 @@ export class VueRessource {
     this.majVisibilite();
   }
 
+  /** Un point semé au hasard reparaît ailleurs (plan 0.9) : il y va ; renvoie de combien il a bougé (pour ses lots). */
+  deplacer(x: number, z: number): { dx: number; dz: number } {
+    const de = { dx: x - this.donnees.x, dz: z - this.donnees.z };
+    this.donnees.x = x;
+    this.donnees.z = z;
+    this.objet.position.set(x, 0, z);
+    this.objet.updateMatrixWorld(true);
+    return de;
+  }
+
   /** Un butin personnel à plusieurs prises (le tas de bois) : ce qu'il en reste pour moi (plan 0.8, chantier 10). */
   reste(n: number | undefined): void {
     if (n === undefined) return;

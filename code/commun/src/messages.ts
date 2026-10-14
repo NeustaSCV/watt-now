@@ -512,7 +512,8 @@ export type MessageServeur =
   | { t: "expulse"; raison: string }
   | { t: "inventaire"; inventaire: Inventaire }
   | { t: "besoins"; besoins: Besoins; gourde: Gourde }
-  | { t: "ressource"; id: number; disponible: boolean; reste?: number }
+  /** `x`, `z` : la place d'un point semé au hasard qui reparaît (plan 0.9 : il revient ailleurs). */
+  | { t: "ressource"; id: number; disponible: boolean; reste?: number; x?: number; z?: number }
   | { t: "feu"; feu: FeuVu }
   | { t: "installation"; installation: InstallationVue }
   | { t: "installation_retiree"; id: number }

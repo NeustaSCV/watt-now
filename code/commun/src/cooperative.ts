@@ -331,7 +331,7 @@ export function radioSurEtabli(ou: { x: number; z: number }): boolean {
 }
 
 /** Version du contenu de la Coopérative (ressources, butin) : la changer régénère les instances. */
-export const VERSION_COOP = 3;
+export const VERSION_COOP = 4;
 
 /**
  * Le parc à volailles (plan 0.8, chantier 10) : dans la cour des silos, au nord du grand bâtiment, un enclos de piquets

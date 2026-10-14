@@ -59,3 +59,21 @@ test("lots : un matériau brouillé après une première signature (lieu revisit
   assert.ok(estBrouille((apres.groupe.children[0] as THREE.Mesh).material as THREE.Material));
   apres.vider();
 });
+
+test("lots : une ressource semée qui reparaît ailleurs (plan 0.9) emmène ses morceaux dans leur lot", () => {
+  const lots = new LotsDeRessources();
+  const r = ressource(2, [0x884422], false);
+  lots.prendre(r);
+  lots.prendre(ressource(9, [0x884422], false));
+  lots.construire();
+  const lot = lots.groupe.children[0] as THREE.BatchedMesh;
+  r.objet.position.set(12, 0, 5);
+  lots.deplacer(r, { dx: 10, dz: 5 });
+  const m = new THREE.Matrix4();
+  lot.getMatrixAt(0, m);
+  const p = new THREE.Vector3().setFromMatrixPosition(m);
+  assert.deepEqual([p.x, p.z], [12, 5], "le morceau a suivi");
+  lot.getMatrixAt(1, m);
+  assert.equal(new THREE.Vector3().setFromMatrixPosition(m).x, 9, "l'autre n'a pas bougé");
+  lots.vider();
+});
