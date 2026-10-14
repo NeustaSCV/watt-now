@@ -113,6 +113,10 @@ export interface TextesPeage {
   ferme: string;
   /** L'examen de la caisse. */
   examen: string;
+  /** À l'approche de la porte, à l'aller, sans avoir payé (guidage 0.10, P-01 et P-07 : commun/src/guidage.ts). */
+  approche: string;
+  /** Resté devant la porte fermée sans payer, 20 s (guidage 0.10, P-02 et P-08). */
+  attente: string;
 }
 
 const dixieme = (v: number) => (Math.round(v * 10) / 10).toString().replace(".", ",");
@@ -125,6 +129,8 @@ export const TEXTES_PEAGE: Record<Passage, TextesPeage> = {
     referme: "La porte du péage s'est refermée : ton heure est passée. Douze de plus, pour repasser.",
     ferme: "La porte du péage est fermée. Douze wotts d'objets, dans la caisse au pied du poste de guet.",
     examen: "Un coffre de bois cerclé, une fente dans le couvercle, « PÉAGE » peint à la main. Là-haut, quelqu'un regarde. Douze wotts d'objets par tête, au prix du Comptoir : ce qu'il ne reprend pas ne compte pas.",
+    approche: "La voix d'en haut : « Halte ! Douze wotts d'objets dans la caisse, et tu passes. »",
+    attente: "La voix : « Mets les objets dans la caisse, au pied du poste. »",
   },
   tunnel: {
     paye: "Une voix, de derrière la barricade : « Douze, et tu passes. » Le passage s'ouvre pour toi.",
@@ -133,5 +139,7 @@ export const TEXTES_PEAGE: Record<Passage, TextesPeage> = {
     referme: "La barricade s'est refermée : ton heure est passée. Douze de plus, pour repasser.",
     ferme: "La barricade est fermée. Douze wotts d'objets, dans la caisse au pied de la barricade.",
     examen: "Une caisse de bois, une fente dans le couvercle. Derrière la barricade, on t'écoute. Douze wotts d'objets par tête, au prix du Comptoir : ce qu'il ne reprend pas ne compte pas.",
+    approche: "Une voix derrière les sacs de sable : « Douze wotts d'objets dans la caisse, ou demi-tour. »",
+    attente: "La voix : « La caisse est là, à tes pieds. On n'a pas toute la nuit. »",
   },
 };

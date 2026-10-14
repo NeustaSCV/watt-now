@@ -6213,6 +6213,39 @@ body.vue-ensemble #hud .bloc.aide {
   max-height: none;
   overflow: visible;
 }
+/* Le guidage 0.10 (client/src/guidage.ts) : la pensée du personnage en italique, l'écriteau qu'on lit en grand ; tous
+   deux en entier, comme le texte d'Examiner. */
+#hud .messages p.pensee,
+#hud .messages p.ecriteau {
+  display: block;
+  -webkit-line-clamp: unset;
+  line-clamp: none;
+  overflow: visible;
+}
+#hud .messages p.pensee {
+  font-style: italic;
+}
+#hud .messages p.ecriteau {
+  font-size: 14px !important;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 8px 14px;
+}
+#hud .messages:has(p.pensee),
+#hud .messages:has(p.ecriteau) {
+  max-height: none;
+  overflow: visible;
+}
+@media (orientation: landscape) and (max-height: 520px) {
+  #hud .messages p.pensee:not(:last-child),
+  #hud .messages p.ecriteau:not(:last-child) {
+    -webkit-line-clamp: unset;
+    line-clamp: none;
+  }
+  #hud .messages p.ecriteau {
+    font-size: 13px !important;
+  }
+}
 @media (orientation: landscape) and (max-height: 520px) {
   #hud .messages p.examen:not(:last-child) {
     -webkit-line-clamp: unset;
