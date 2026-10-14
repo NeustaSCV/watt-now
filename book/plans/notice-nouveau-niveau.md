@@ -50,10 +50,10 @@
 | # | Règle | Source |
 |---|---|---|
 | **R8** | **Une clé est un ingrédient ou un outil.** **Une porte, une clé** : une évolution demande **au plus un** objet de dehors (ingrédient **ou** outil), tout le reste est en matériaux de base. Une clé-outil (le rabot, le fer à souder) **est** la clé. | `regles` « Les clés » ; `avis-game-designer.md` règle 2 |
-| **R9** | **Quatre sources par clé** : **garantie** (une place fixe dans son lieu L, qui revient), **chance** (rare, fixée à la main), **repli** (une recette plus chère ou moins bonne, ou « aucun » si le réel l'impose, comme le rabot), **Comptoir** (après une première visite du lieu). La pièce de famille n'est pas au Comptoir. | `regles` « Les clés » ; `avis-game-designer.md` règle 1 ; I7 |
+| **R9** | **Trois sources par clé** : **garantie** (une place fixe dans son lieu L, qui revient), **chance** (rare, fixée à la main), **Comptoir** (toujours disponible après une première visite de son lieu, sans rupture de stock, à son prix). **Pas de repli, à aucun niveau** (décision du porteur, 2026-10-14 : « une complexité en plus à gérer » ; les replis du niveau 1 déjà codés sont à retirer). La pièce de famille n'est pas au Comptoir. | `regles` « Les clés » ; `avis-game-designer.md` règle 1 ; I7 ; N2-REPLI |
 | **R10** | **Le niveau 1 n'a rien de propre à une famille.** Seule exception : la **pièce de famille**, garantie à H1A dans le tutoriel (⚡ panneau, 🔥 enclume, ⚙️ petit alternateur). | V4-4, V4-5, V5-1 |
 | **R11** | **À partir du niveau 2 : une seule clé par famille pour tout le niveau**, dans L#A **ou** dans L#B, pas les deux. | V4-4, V5-5 |
-| **R12** | **Le mélange** : à partir du niveau 2, la clé suivante d'un meuble peut changer de route ; **rien ne doit être prévisible**. L'exception ouverte : l'établi reste sur la route B au niveau 2 (C12, « plus tard »). | V4-1, C12 |
+| **R12** | **Le mélange** : à partir du niveau 2, la clé suivante d'un meuble peut changer de route ; **rien ne doit être prévisible**. L'exception : l'établi reste sur la route B au niveau 2 (C12, fermée le 2026-10-14) ; il changera de route au niveau 3. | V4-1, C12 |
 | **R13** | **Deux routes de difficulté équivalente** : même nombre de clés (3 et 3 au niveau 1, 5 et 5 au niveau 2), même danger, même distance à peu près, des armes trouvées de même rang. | `progression-par-ingredients.md` §0.1 et §2 ; A6, I22, I30 |
 | **R14** | **La clé de famille sert à sa famille, seule.** Elle doit ouvrir une marche visible du métier, sans l'aide des autres familles (leçon des roulements, qui ne donnaient rien au Mécaniste seul : P9). | `armes-par-niveau.md` §2.3 et P9 |
 | **R15** | **Une clé ne traîne pas avant son lieu.** Si l'objet existe déjà comme déchet ou vestige courant, on le retire des tables de fouille courantes, ou l'on change de clé (le jerrican devenu « jerrican percé », la casserole remplacée par la cocotte, l'étau sorti des fouilles). | C3, I5, I6, I7 |
@@ -74,7 +74,7 @@
 
 | # | Règle | Source |
 |---|---|---|
-| **R23** | **Les outils sont des portes dures**, mais **plusieurs outils sont compatibles** pour une même qualité, et les **objets de fortune** donnent le niveau 1. Le premier outil d'une qualité se fabrique en version pauvre. Une **qualité nouvelle** ne se crée que si le réel l'impose (Raboter, Souder). Un outil peut **rouvrir un lieu connu**. | `regles` « Les outils » ; V4-9 ; `avis-game-designer.md` règle 5 ; `outils` |
+| **R23** | **Les outils sont des portes dures**, mais **plusieurs outils sont compatibles** pour une même qualité, et les **objets de fortune** donnent le niveau 1. Le premier outil d'une qualité se fabrique en version pauvre (exception décidée le 2026-10-14 : le fer à souder, qui n'a pas de version pauvre). Une **qualité nouvelle** ne se crée que si le réel l'impose (Raboter, Souder). Un outil peut **rouvrir un lieu connu**. | `regles` « Les outils » ; V4-9 ; `avis-game-designer.md` règle 5 ; `outils` |
 
 ### 1.E Les armes
 
@@ -129,7 +129,7 @@
 | **R45** | **Les réserves des haltes reviennent vite ; celles du terrain jamais.** Le vrac partagé d'une halte (bûches, pierres) revient **en 30 minutes** (la station : 12 bûches) ; les pierres et les bûches du **terrain** ne reviennent pas (les branches, oui, en 40 min). Le vrac grandit avec le nombre de voyageurs présents : **+ 50 % par voyageur, jusqu'à × 3**. | B1, B2, B4, B8 (`candidats-h1b-l1b-et-budget.md`) |
 | **R46** | **Les tas personnels.** Une halte qui fournit la matière lourde d'un niveau a, en plus du vrac, un **tas personnel** par joueur, qui revient en **6 h réelles** (station : un tas de bois de 10 bûches ; gué : un banc de galets de 8 pierres). Un joueur n'attend jamais qu'un autre ait vidé le stock. | B3, B5 ; R22 |
 | **R47** | **Le Comptoir est un filet payant pour les matériaux de base** : un petit stock (10 bûches, 10 pierres), un réassort lent (1 toutes les 2 h), au prix de vente. Ni bloquant, ni gratuit. | B13 |
-| **R49** | **Un lieu L se mérite par un parcours.** L'accès au lieu personnel L#X passe par une **clé d'accès** trouvée dans un **bâtiment annexe** (isolé, devant le lieu) ; elle ouvre le bâtiment principal. Dedans, un **parcours imposé** mène à la **partie du fond**, où sont le butin intéressant et les **clés du niveau** ; on en ressort par un **chemin à sens unique** (visible et crédible : saut, trappe, échelle qu'on fait tomber, porte qui ne s'ouvre que d'un côté ; garanti par le serveur), pour qu'on ne puisse pas aller tout droit au butin. Les Éteints sont placés le long du parcours. Compatible avec la vision par pièce (0.7.2). | Le porteur, conception du Moulin (L1B), 2026-10-10 |
+| **R49** | **Un lieu L se mérite par un parcours.** L'accès au lieu personnel L#X se gagne **soit par une clé d'accès** trouvée dans un **bâtiment annexe** (isolé, devant le lieu), qui ouvre le bâtiment principal (la Coopérative, le Moulin), **soit par un mécanisme propre au lieu**, qui exploite ce qu'il est (le phare qu'on rallume pour qu'un cargo s'échoue ; la borne de l'hôtel qui remet la carte de l'ascenseur : décision du porteur, 2026-10-14). Dedans, un **parcours imposé** mène à la **partie du fond**, où sont le butin intéressant et les **clés du niveau** ; on en ressort par un **chemin à sens unique** (visible et crédible : saut, trappe, échelle qu'on fait tomber, porte qui ne s'ouvre que d'un côté ; garanti par le serveur), pour qu'on ne puisse pas aller tout droit au butin. Les Éteints sont placés le long du parcours. Compatible avec la vision par pièce (0.7.2). | Le porteur, conception du Moulin (L1B), 2026-10-10 ; élargie le 2026-10-14 (niveau 2) |
 | **R50** | **Une halte H a ses moments de jeu propres**, liés à son thème et à son lieu (au gué : traverser, la crue, le bac à câble, la roselière, les galets, la glaise…), pas seulement un stock de matières. On en retient deux ou trois par halte, choisis pour le plaisir de jeu et leur coût de développement. | Le porteur, conception du gué (H1B), 2026-10-10 ; étude `h1b-l1b-conception.md` (en cours) |
 | **R51** | **Un lieu personnel L se réinitialise au bout de 24 h** : ses Éteints, son butin, ses clés garanties, et sa clé d'accès (la porte principale se referme). | Le porteur, 2026-10-10 (L1A et L1B) |
 | **R48** | **Pas de dialogue à croix.** Un avertissement ou un conseil se ferme **avec un bouton**, jamais par une fenêtre de dialogue avec une croix : « les dialogues avec une croix cassent complètement la dynamique de jeu ». | B14 (condition du porteur) |
@@ -304,11 +304,11 @@ et dégâts(étoile) > dégâts(étoile − 1)
 1. Pour chaque clé de N : où est-elle **garantie** (place fixe, coin du lieu, délai de retour) ?
 2. Où est-elle **rare** (H#A, H#B, l'autre L#) ? Est-elle déjà **courante** quelque part avant N dans le code (R15) ? Si oui : la retirer des tables courantes, ou changer de clé.
 3. Quelles clés des niveaux < N deviennent **plus courantes** à H_N et L_N (R19) ?
-4. Le **repli** existe-t-il, et est-il vraiment moins bon ? Le **Comptoir** la vend-il après une 1ʳᵉ visite (R9) ?
+4. Le **Comptoir** la vend-il, toujours disponible après une 1ʳᵉ visite de son lieu (R9) ? Pas de repli.
 
 **Le délai de retour d'une place fixe (repère tiré des niveaux 1 et 2)** : **24 h** pour une clé qu'on peut vouloir en plusieurs (toile de jute, feuillards, cocotte, seau, couvertures, jerrican) ; **4 jours** pour un objet durable et unique (grillage, étau, tôles, lanterne-tempête, fer à souder, roulements, porte de four, rabot, cloche, soufflet) ; **une fois** pour une arme trouvée ; **12 h** pour un arbre.
 
-**Ce qu'on écrit** : pour chaque clé, le bloc `cle` complet (`garanti`, `par_chance`, `repli`, `comptoir`) ; pour chaque lieu, le champ `par_chance`.
+**Ce qu'on écrit** : pour chaque clé, le bloc `cle` complet (`garanti`, `par_chance`, `comptoir` ; pas de `repli`) ; pour chaque lieu, le champ `par_chance`.
 
 ### 3.g Les Éteints du niveau
 
@@ -520,7 +520,6 @@ C'est la source du tableau maître ; la clé y porte ses quatre sources :
     "lieu": "L3A",
     "garanti": "L3A (le coin du lieu, place fixe, revient 4 jours)",
     "par_chance": "rare à H3A, H3B et L3B ; plus courant au niveau 4 et après (règle du butin)",
-    "repli": "la recette de repli, et ce qu'elle a de moins bon",
     "comptoir": "oui, après une 1re visite de L3A"
   },
   "outils": ["Couper 1"],
