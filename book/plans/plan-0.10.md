@@ -602,3 +602,5 @@ Décidés (MS-01 à MS-09, MS-Q1 à MS-Q8, §3.2), sortis de la 0.10 pour la gar
 | V4-02 ✅ | **L'écran tremble** quand le cargo s'échoue (0,8 s ; rien si l'appareil demande de réduire les mouvements) |
 | V4-03 ✅ | **La lanterne allumée se voit** : le faisceau balaie le sol (A) et la caméra recule quelques secondes sur la tour à l'allumage (C) |
 | V4-04 ✅ | **L'arrivée du cargo se voit** : ses feux approchent dans les dernières secondes, sa corne au large (A), puis la caméra cadre la crique pour l'échouage (C) ; S-17 (un son et un fondu seulement) est remplacée |
+| V4-05 ✅ | **Le cargo** : le premier coup de corne **10 s après l'allumage** (au lieu de ≈ 60 s ; « 1 minute, c'est trop long si le joueur a déjà fouillé tout le lieu »), le second juste avant le choc ; **un vrai son de paquebot** : « Cruise Ship Horn, 3x » de Kinoton (Freesound 352374, CC0) |
+| V4-06 ✅ | Le guidage : le texte du serveur à l'arrivée du cargo retiré (P-26 le remplace) ; « La mèche prend… » gardé avec P-24 ; la borne répond « Veuillez sourire davantage. » ; P-03 dite aussi à l'approche au retour ; « Lire » remplace « Examiner » à la borne et à la porte du péage |
