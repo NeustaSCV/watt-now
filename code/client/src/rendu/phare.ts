@@ -105,9 +105,10 @@ function etendreAlentours(modele: THREE.Group): void {
   // La tranche de la falaise, de part et d'autre du lot, et la mer au sud.
   quad(sol, [[-L - M, -0.02, BORD], [-L - M, MER - 1, BORD], [-L, MER - 1, BORD], [-L, -0.02, BORD]], roc);
   quad(sol, [[L, -0.02, BORD], [L, MER - 1, BORD], [L + M, MER - 1, BORD], [L + M, -0.02, BORD]], roc);
-  rect(eau, -L - M, BORD, -L, P, 0x3e6c74, MER);
-  rect(eau, L, BORD, L + M, P, 0x3e6c74, MER);
-  rect(eau, -L - M, P, L + M, P + M, 0x3e6c74, MER);
+  // La mer : blanche aux sommets, comme celle du modèle (sa matière porte la teinte de l'eau).
+  rect(eau, -L - M, BORD, -L, P, 0xffffff, MER);
+  rect(eau, L, BORD, L + M, P, 0xffffff, MER);
+  rect(eau, -L - M, P, L + M, P + M, 0xffffff, MER);
   // Les maillages du modèle : le sol mat (le plateau, la roche) et la mer.
   let auSol: THREE.Mesh | null = null;
   let aLaMer: THREE.Mesh | null = null;

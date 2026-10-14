@@ -135,8 +135,13 @@ declarerObstaclesBas([TROU_RAMPE]);
  */
 const BORD_RAMPE = "bord de la rampe du canot (le vide, les chevalets)";
 const BORDS_RAMPE: SegmentModele[] = [-25.5, -22.5].map((x) => ({ x1: x, z1: 12.6, x2: x, z2: 21, nature: BORD_RAMPE }));
+/**
+ * Le canot, sur son ber, dans le hangar : ses flancs s'arrêtent 0,6 m avant sa poupe dessinée, pour qu'on passe entre la
+ * poupe et la grande porte (1,4 m, au lieu de 0,8) vers la rampe.
+ */
+const CANOT = (s: SegmentModele): SegmentModele => (s.nature === "canot" ? { ...s, z2: Math.min(s.z2, 10.6) } : s);
 
-const FIXES = [...SEGMENTS_MODELE.filter((s) => !SOUS_LA_COQUE(s) && s.nature !== BORD_RAMPE), ...BORDS_RAMPE].flatMap(boitesDuSegment);
+const FIXES = [...SEGMENTS_MODELE.filter((s) => !SOUS_LA_COQUE(s) && s.nature !== BORD_RAMPE).map(CANOT), ...BORDS_RAMPE].flatMap(boitesDuSegment);
 FIXES.push(TROU_RAMPE);
 const SOUS_COQUE = SEGMENTS_MODELE.filter(SOUS_LA_COQUE).flatMap(boitesDuSegment);
 const EPAVE = SEGMENTS_EPAVE.flatMap(boitesDuSegment);
@@ -238,9 +243,14 @@ export const PORTES_PHARE: readonly PorteDuPhare[] = PORTES_MODELE.filter((p) =>
   entre: [p.entre[0]!, p.entre[1]!],
 }));
 
-/** Les murs qui arrêtent la vue (repère du jeu) : les murs et les cloisons des maisons, du hangar, de la tour. */
+/**
+ * Les murs qui arrêtent la vue (repère du jeu) : ceux des pièces (la tour, les maisons, le hangar, la salle de la corne,
+ * l'abri), et leurs cloisons. Le muret de l'enceinte (1,15 m, noté « mur » lui aussi) ne cache rien : on voit par-dessus.
+ */
 export function mursVuePhare(): Boite[] {
-  return SEGMENTS_MODELE.filter((s) => s.nature === "mur" || s.nature === "cloison").flatMap(boitesBrutes);
+  const pieces = Object.values(PIECES_MODELE).filter((p) => !p.apresEpave).flatMap((p) => p.boites);
+  const contre = (x: number, z: number) => pieces.some((b) => Math.abs(x - b.x) <= b.l / 2 + 0.6 && Math.abs(z - b.z) <= b.p / 2 + 0.6);
+  return SEGMENTS_MODELE.filter((s) => (s.nature === "mur" || s.nature === "cloison") && contre((s.x1 + s.x2) / 2, (s.z1 + s.z2) / 2)).flatMap(boitesBrutes);
 }
 
 // ---------- Les endroits du scénario (repère du jeu) ----------

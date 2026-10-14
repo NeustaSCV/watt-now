@@ -93,6 +93,8 @@ export class LieuPhare extends LieuVivant {
   }
 
   override entrer(v: Voyageur): void {
+    // Un escabeau resté « dans les bras » sans personne (le serveur arrêté pendant qu'on le portait) : il est au hangar.
+    if (this.ici.size === 0 && this.etat.escabeau === "bras") this.changer({ escabeau: "hangar" });
     super.entrer(v);
     this.ici.add(v);
     this.aPrevenir.add(v.humain().id);
