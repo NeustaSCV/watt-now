@@ -2,8 +2,8 @@
 //
 // Ce module est la **table des quantités** (SEMIS) : tout ce qu'un lieu sème dans l'herbe (branches, bûches, pierres ;
 // cèpes, amanites, buissons à baies), ligne par ligne, avec son délai de retour. **Une seule table, à changer d'un coup.**
-// Les lignes « 0.9 » sont à zéro : leurs quantités attendent la décision du porteur
-// (`.claude-travail/proposition-quantites.md` du chantier). Changer un nombre change le contenu du lieu :
+// Les lignes « 0.9 » ont les quantités validées par le porteur (2026-10-14, proposition du chantier G+I, telle quelle).
+// Changer un nombre change le contenu du lieu :
 // **augmenter alors la version du lieu** (VERSION_HALTE, VERSION_GUE, VERSION_MOULIN, VERSION_COOP), sinon la base
 // garde l'ancien semis (semis.test.ts le vérifie).
 //
@@ -57,8 +57,9 @@ const MIN = 60_000;
 
 /**
  * **La table.** Les lignes d'avant gardent leurs quantités (0.8.2 : B2 à B8, Q1 du plan 0.8.2) ; les lignes nouvelles
- * (`nouvelle`) sont à zéro tant que le porteur ne les a pas validées. Ne pas ajouter de bûches ni de branches à la
- * station (porteur, 2026-10-13) ; la nourriture : la station et le gué seulement, pas de poules.
+ * (`nouvelle`) sont celles validées par le porteur (2026-10-14). Pas de bûches ni de branches en plus à la station
+ * (porteur, 2026-10-13) ; la nourriture : la station et le gué seulement, pas de poules, pas de fruitier ; les branches
+ * du gué en vrac ; rien au Carrefour ; retour en 1 h au Moulin et à la Coopérative.
  */
 export const SEMIS: Record<LieuSemis, SemisLieu> = {
   station: {
@@ -72,16 +73,16 @@ export const SEMIS: Record<LieuSemis, SemisLieu> = {
       pierres_ferme: { type: "pierre", n: 5, ou: "ferme", ecart: 1.5, ailleurs: true },
       buissons: { type: "buisson", n: 5, ou: "bords", ecart: 1.5, ailleurs: false },
       // 0.9 (M5) : des pierres sur les pelouses ; pas de bois en plus.
-      pierres_pelouse: { type: "pierre", n: 0, ou: "pelouse", ecart: 2, ailleurs: true, nouvelle: true },
+      pierres_pelouse: { type: "pierre", n: 4, ou: "pelouse", ecart: 2, ailleurs: true, nouvelle: true },
       // 0.9 (M7) : des cèpes et quelques amanites sous les arbres de la lisière ; des buissons en lisière.
-      cepes: { type: "cepe", n: 0, ou: "sous_arbres", ecart: 1.5, ailleurs: true, nouvelle: true },
-      amanites_tue_mouches: { type: "amanite_tue_mouches", n: 0, ou: "sous_arbres", ecart: 1.5, ailleurs: true, nouvelle: true },
-      amanites_phalloides: { type: "amanite_phalloide", n: 0, ou: "sous_arbres", ecart: 1.5, ailleurs: true, nouvelle: true },
-      buissons_lisiere: { type: "buisson", n: 0, ou: "en_lisiere", ecart: 2.5, ailleurs: false, nouvelle: true },
+      cepes: { type: "cepe", n: 4, ou: "sous_arbres", ecart: 1.5, ailleurs: true, nouvelle: true },
+      amanites_tue_mouches: { type: "amanite_tue_mouches", n: 1, ou: "sous_arbres", ecart: 1.5, ailleurs: true, nouvelle: true },
+      amanites_phalloides: { type: "amanite_phalloide", n: 1, ou: "sous_arbres", ecart: 1.5, ailleurs: true, nouvelle: true },
+      buissons_lisiere: { type: "buisson", n: 2, ou: "en_lisiere", ecart: 2.5, ailleurs: false, nouvelle: true },
     },
   },
   gue: {
-    vrac: { pierre: true, buche: true },
+    vrac: { pierre: true, buche: true, branche: true },
     // Plan 0.8.2 (R1) : les pierres, les bûches et les branches reviennent en 30 min.
     repousse: { pierre: 30 * MIN, buche: 30 * MIN, branche: 30 * MIN },
     lignes: {
@@ -93,35 +94,35 @@ export const SEMIS: Record<LieuSemis, SemisLieu> = {
       branches_berges: { type: "branche", n: 3, ou: "berges", ecart: 3, ailleurs: true },
       buches_talus: { type: "buche", n: 4, ou: "talus", ecart: 4, ailleurs: true },
       // 0.9 (M5) : du bois mort et des cailloux sur les pelouses du fond de vallée.
-      branches_pelouse: { type: "branche", n: 0, ou: "pelouse", ecart: 2, ailleurs: true, nouvelle: true },
-      buches_pelouse: { type: "buche", n: 0, ou: "pelouse", ecart: 2.5, ailleurs: true, nouvelle: true },
-      pierres_pelouse: { type: "pierre", n: 0, ou: "pelouse", ecart: 2, ailleurs: true, nouvelle: true },
+      branches_pelouse: { type: "branche", n: 10, ou: "pelouse", ecart: 2, ailleurs: true, nouvelle: true },
+      buches_pelouse: { type: "buche", n: 4, ou: "pelouse", ecart: 2.5, ailleurs: true, nouvelle: true },
+      pierres_pelouse: { type: "pierre", n: 6, ou: "pelouse", ecart: 2, ailleurs: true, nouvelle: true },
       // 0.9 (M7) : des cèpes et quelques amanites sous les saules, les aulnes et les frênes ; des buissons au pied des talus.
-      cepes: { type: "cepe", n: 0, ou: "sous_arbres", ecart: 1.5, ailleurs: true, nouvelle: true },
-      amanites_tue_mouches: { type: "amanite_tue_mouches", n: 0, ou: "sous_arbres", ecart: 1.5, ailleurs: true, nouvelle: true },
-      amanites_phalloides: { type: "amanite_phalloide", n: 0, ou: "sous_arbres", ecart: 1.5, ailleurs: true, nouvelle: true },
-      buissons: { type: "buisson", n: 0, ou: "en_lisiere", ecart: 2.5, ailleurs: false, nouvelle: true },
+      cepes: { type: "cepe", n: 5, ou: "sous_arbres", ecart: 1.5, ailleurs: true, nouvelle: true },
+      amanites_tue_mouches: { type: "amanite_tue_mouches", n: 1, ou: "sous_arbres", ecart: 1.5, ailleurs: true, nouvelle: true },
+      amanites_phalloides: { type: "amanite_phalloide", n: 1, ou: "sous_arbres", ecart: 1.5, ailleurs: true, nouvelle: true },
+      buissons: { type: "buisson", n: 4, ou: "en_lisiere", ecart: 2.5, ailleurs: false, nouvelle: true },
     },
   },
   moulin: {
     vrac: {},
-    // À valider avec les quantités (tout revient de toute façon à 24 h, avec le Moulin).
-    repousse: { branche: 30 * MIN, buche: 30 * MIN, pierre: 30 * MIN },
+    // 1 h (validé, 2026-10-14) ; tout revient de toute façon à 24 h, avec le Moulin.
+    repousse: { branche: 60 * MIN, buche: 60 * MIN, pierre: 60 * MIN },
     lignes: {
-      branches_pelouse: { type: "branche", n: 0, ou: "pelouse", ecart: 2, ailleurs: true, nouvelle: true },
-      buches_pelouse: { type: "buche", n: 0, ou: "pelouse", ecart: 2.5, ailleurs: true, nouvelle: true },
-      pierres_pelouse: { type: "pierre", n: 0, ou: "pelouse", ecart: 2, ailleurs: true, nouvelle: true },
+      branches_pelouse: { type: "branche", n: 8, ou: "pelouse", ecart: 2, ailleurs: true, nouvelle: true },
+      buches_pelouse: { type: "buche", n: 3, ou: "pelouse", ecart: 2.5, ailleurs: true, nouvelle: true },
+      pierres_pelouse: { type: "pierre", n: 6, ou: "pelouse", ecart: 2, ailleurs: true, nouvelle: true },
     },
   },
   cooperative: {
     vrac: {},
-    // À valider avec les quantités (tout revient de toute façon à 24 h, avec la Coopérative).
-    repousse: { branche: 30 * MIN, buche: 30 * MIN, pierre: 30 * MIN },
+    // 1 h (validé, 2026-10-14) ; tout revient de toute façon à 24 h, avec la Coopérative.
+    repousse: { branche: 60 * MIN, buche: 60 * MIN, pierre: 60 * MIN },
     lignes: {
       // La Coopérative n'a pas de pelouse : la cour est de gravier ; l'herbe pousse le long du grillage.
-      branches_grillage: { type: "branche", n: 0, ou: "grillage", ecart: 2, ailleurs: true, nouvelle: true },
+      branches_grillage: { type: "branche", n: 4, ou: "grillage", ecart: 2, ailleurs: true, nouvelle: true },
       buches_grillage: { type: "buche", n: 0, ou: "grillage", ecart: 2.5, ailleurs: true, nouvelle: true },
-      pierres_grillage: { type: "pierre", n: 0, ou: "grillage", ecart: 2, ailleurs: true, nouvelle: true },
+      pierres_grillage: { type: "pierre", n: 3, ou: "grillage", ecart: 2, ailleurs: true, nouvelle: true },
     },
   },
 };

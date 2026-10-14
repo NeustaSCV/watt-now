@@ -104,11 +104,12 @@ test("le premier sac-poubelle du chemin donne toujours 4 sacs plastique, en plus
 
 // ---------- H1A, la station ----------
 
-test("la station : 12 bûches et 13 pierres en vrac, qui reviennent en 30 min ; au terrain, jamais", () => {
+test("la station : 12 bûches et 13 pierres en vrac (17 avec les pierres des prés, 0.9), qui reviennent en 30 min ; au terrain, jamais", () => {
   const ressources = genererHalte();
   assert.equal(ressources.filter((r) => r.type === "buche").length, 36, "12, et de quoi aller jusqu'à ×3");
+  // Le semis d'avant (genererHalte) ; la 0.9 (M5) y ajoute 4 pierres sur les prés, à chaque tournée (semis-lieux.ts).
   assert.equal(ressources.filter((r) => r.type === "pierre").length, 39);
-  assert.deepEqual(BUTIN_HALTE.vrac, { buche: 12, pierre: 13 });
+  assert.deepEqual(BUTIN_HALTE.vrac, { buche: 12, pierre: 17 });
   const t = monde();
   assert.equal(t.halte.delaiRepousse("buche"), 30 * MIN);
   assert.equal(t.halte.delaiRepousse("pierre"), 30 * MIN);
@@ -119,7 +120,7 @@ test("la station : 12 bûches et 13 pierres en vrac, qui reviennent en 30 min ; 
   t.allerALaStation(a.joueur);
   const vues = a.dernier("bienvenue")!.ressources;
   assert.equal(vues.filter((r) => r.type === "buche" && r.disponible).length, 12, "seul : 12 bûches");
-  assert.equal(vues.filter((r) => r.type === "pierre" && r.disponible).length, 13, "seul : 13 pierres");
+  assert.equal(vues.filter((r) => r.type === "pierre" && r.disponible).length, 17, "seul : 17 pierres");
   const buche = vues.find((r) => r.type === "buche" && r.disponible)!;
   t.prendre(a.joueur, buche.id, buche.x, buche.z, "ramasser", 4);
   assert.equal(a.inv().buche, 1);

@@ -195,8 +195,9 @@ test("les 21 pierres en vrac (15 sur le banc, 6 sur les pistes) reviennent en 30
   const m = monde();
   const rose = m.nouveau("Rose");
   const vrac = parType(m.gue, "pierre");
-  assert.equal(vrac.length, 63);
-  assert.equal(rose.vues().filter((r) => r.type === "pierre" && r.disponible).length, 21);
+  // 0.9 (M5) : 6 pierres de plus sur les pelouses (semis.ts), à chaque tournée.
+  assert.equal(vrac.length, 63 + 18);
+  assert.equal(rose.vues().filter((r) => r.type === "pierre" && r.disponible).length, 21 + 6);
   const malo = m.nouveau("Malo");
   // À deux, +50 % (B8) : les deux voient les mêmes.
   const vuesRose = rose.vues().filter((r) => r.type === "pierre" && r.disponible).map((r) => r.id);
@@ -497,16 +498,17 @@ test("0.8.2 (R1) : seul au gué, 8 branches en tout (le tas compris), 4 bûches,
   const vues = rose.vues().filter((r) => r.disponible);
   const tas = FOUILLE_MODELE_TAS();
   const branches = vues.filter((r) => r.type === "branche" && Math.hypot(r.x - tas.x, r.z - tas.z) > 3);
-  assert.equal(branches.length, BRANCHES_EPARSES);
-  assert.equal(vues.filter((r) => r.type === "branche").length, 8, "8 branches en tout, le tas compris");
-  assert.equal(vues.filter((r) => r.type === "buche").length, 4);
+  // 0.9 (M5, semis.ts) : en plus, sur les pelouses, 10 branches, 4 bûches, 6 pierres pour un voyageur seul.
+  assert.equal(branches.length, BRANCHES_EPARSES + 10);
+  assert.equal(vues.filter((r) => r.type === "branche").length, 8 + 10, "18 branches en tout, le tas compris");
+  assert.equal(vues.filter((r) => r.type === "buche").length, 4 + 4);
   const pierres = vues.filter((r) => r.type === "pierre");
-  assert.equal(pierres.filter((r) => !surLeBanc(r.x, r.z, 0.3)).length, 6, "6 pierres sur les pistes");
+  assert.equal(pierres.filter((r) => !surLeBanc(r.x, r.z, 0.3)).length, 6 + 6, "6 pierres sur les pistes, 6 sur les pelouses");
   assert.equal(pierres.filter((r) => surLeBanc(r.x, r.z, 0.3)).length, PIERRES_DU_BANC);
   // À trois voyageurs, les bûches en vrac grandissent comme à la station (×2).
   m.nouveau("Malo");
   const lou = m.nouveau("Lou");
-  assert.equal(lou.vues().filter((r) => r.type === "buche" && r.disponible).length, vracEnJeu(4, 3));
+  assert.equal(lou.vues().filter((r) => r.type === "buche" && r.disponible).length, vracEnJeu(4 + 4, 3));
   // Tout se ramasse à pied, depuis l'arrivée.
   const arrivee = SORTIES_GUE.find((s) => s.vers === "terrain")!.arrivee;
   for (const r of [...branches, ...vues.filter((v) => v.type === "buche"), ...pierres.filter((p) => !surLeBanc(p.x, p.z, 0.3))]) {
@@ -604,10 +606,11 @@ test("0.8.2 : une partie 0.8.1 se relit (le contenu du gué se régénère, rien
   base.sauverInstance(`perso:gue:${compte.id}`, { version: 2, etats: { "1": { prises: 5, depuis: base.debutMonde() } } }, base.debutMonde());
   // La 0.8.2 relit la même base : le gué a son nouveau contenu (VERSION_GUE), le sac de Rose est intact, son banc plein.
   const gue = new Gue(base, () => 0.5);
-  assert.equal(VERSION_GUE, 5);
-  assert.equal(parType(gue, "buche").length, 12);
-  assert.equal(parType(gue, "branche").length, 8);
-  assert.equal(parType(gue, "pierre").length, 63);
+  // 0.9 : le semis des pelouses (semis.ts), 3 tournées de 4 bûches, 10 branches, 6 pierres.
+  assert.equal(VERSION_GUE, 6);
+  assert.equal(parType(gue, "buche").length, 12 + 12);
+  assert.equal(parType(gue, "branche").length, 8 + 30);
+  assert.equal(parType(gue, "pierre").length, 63 + 18);
   assert.deepEqual(base.chargerInventaire(compte.id), { pierre: 3, glaise: 2, sac_a_dos: 1 });
   const banc = parType(gue, "banc_galets")[0]!;
   assert.ok(gue.disponiblePour(banc, compte.id, base.debutMonde() + 1000), "le banc de galets repart plein");

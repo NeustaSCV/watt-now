@@ -9,7 +9,7 @@ import { SEMIS, vracDuSemis, type Etendue, type Semes } from "./semis.ts";
 import { VRAC_MAX, aleatoire, type ButinLieu, type RessourceSol, type TypeRessource } from "./terrain.ts";
 
 /** À augmenter quand le contenu de la halte change : la base le régénère alors. */
-export const VERSION_HALTE = 6;
+export const VERSION_HALTE = 7;
 
 
 /**

@@ -58,7 +58,8 @@ test("un point pris revient ailleurs, dans son étendue ; le retour dit sa place
     lieu.entrer(a);
     const { semes } = semerLieu("gue");
     const t0 = 1_000_000;
-    const ids = [...semes].filter(([, s]) => s.ligne === "branches_pelouse" || s.ligne === "cepes").map(([id]) => id);
+    // Ceux qui sont en jeu (les branches du gué sont en vrac : seule la première tournée l'est pour un voyageur seul).
+    const ids = [...semes].filter(([id, s]) => (s.ligne === "branches_pelouse" || s.ligne === "cepes") && lieu.enJeu(lieu.ressources.get(id)!)).map(([id]) => id);
     assert.ok(ids.length >= 8);
     for (const id of ids) {
       const r = lieu.ressources.get(id)!;

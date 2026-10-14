@@ -495,7 +495,7 @@ export const LEURRES_MOULIN: readonly LeurreMoulin[] = [
 // ---------- Le butin (M22 à M28, B11 ; plan 0.8 §2.5 et §9.1, N1) ----------
 
 /** Version du contenu du Moulin (points de butin, Éteints) : la changer régénère les Moulins. */
-export const VERSION_MOULIN = 2;
+export const VERSION_MOULIN = 3;
 
 /**
  * Tout le Moulin revient au bout de 24 h (plan 0.8 §9.1, N1 ; R51) : les Éteints, le butin, les clés à place fixe, la

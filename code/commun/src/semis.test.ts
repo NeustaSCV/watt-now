@@ -1,6 +1,6 @@
 // Le semis au hasard (plan 0.9, chantiers G et I) : jamais dans l'eau, un bâtiment, sur une route ou un obstacle
-// (pour chaque lieu, sur 1 000 tirages) ; les lignes nouvelles se posent après le contenu d'avant ; la table à l'état
-// « actuel » ne change rien aux lieux (pas de version à changer) ; une quantité changée demande une version nouvelle.
+// (pour chaque lieu, sur 1 000 tirages) ; les lignes nouvelles se posent après le contenu d'avant, qui ne bouge pas ;
+// une quantité changée demande une version nouvelle.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -65,18 +65,20 @@ test("chaque étendue : 1 000 tirages, jamais dans l'eau, un bâtiment, sur une 
   }
 });
 
-test("la table à l'état actuel ne change rien aux lieux : mêmes points, mêmes places (pas de version nouvelle)", () => {
-  assert.deepEqual(semerLieu("station").ressources, genererHalte());
-  assert.deepEqual(semerLieu("gue").ressources, genererGue());
-  assert.deepEqual(semerLieu("moulin").ressources, butinMoulin());
-  assert.deepEqual(semerLieu("cooperative").ressources, butinCoop());
-  // Les quantités d'avant (0.8.2 : B2 à B8, Q1).
-  assert.deepEqual(vracDuSemis("station"), { buche: 12, pierre: 13 });
-  assert.deepEqual(vracDuSemis("gue"), { pierre: 21, buche: 4 });
+test("le semis validé (2026-10-14) : le contenu d'avant en tête, inchangé ; les quantités de la table", () => {
+  // Les points d'avant gardent leur identifiant et leur place : les lignes nouvelles viennent après.
+  for (const [lieu, ancien] of [["station", genererHalte()], ["gue", genererGue()], ["moulin", butinMoulin()], ["cooperative", butinCoop()]] as const) {
+    assert.deepEqual(semerLieu(lieu).ressources.slice(0, ancien.length), ancien, lieu);
+  }
+  // Les quantités d'avant (0.8.2 : B2 à B8, Q1), et celles de la 0.9.
+  assert.deepEqual(vracDuSemis("station"), { buche: 12, pierre: 13 + 4 });
+  assert.deepEqual(vracDuSemis("gue"), { pierre: 21 + 6, buche: 4 + 4, branche: 8 + 10 });
   assert.equal(semisDe("station", "branche"), 26);
-  assert.equal(semisDe("gue", "branche"), 8);
+  assert.equal(semisDe("station", "cepe"), 4);
+  assert.equal(semisDe("gue", "cepe"), 5);
+  assert.equal(semisDe("moulin", "branche"), 8);
   // Pas de bois en plus à la station (porteur, 2026-10-13) ; pas de nourriture au Moulin ni à la Coopérative.
-  for (const l of Object.values(SEMIS.station.lignes)) if (l.nouvelle) assert.ok(l.type !== "buche" && l.type !== "branche");
+  for (const l of Object.values(SEMIS.station.lignes)) if (l.nouvelle && l.n > 0) assert.ok(l.type !== "buche" && l.type !== "branche");
   for (const lieu of ["moulin", "cooperative"] as const) for (const l of Object.values(SEMIS[lieu].lignes)) assert.ok(["branche", "buche", "pierre"].includes(l.type));
 });
 
@@ -85,10 +87,12 @@ test("la table à l'état actuel ne change rien aux lieux : mêmes points, même
  * change ce nombre : il faut alors augmenter la version du lieu (sinon la base garde l'ancien semis), puis ce tableau.
  */
 const POINTS_A_LA_VERSION: Record<LieuSemis, [version: number, points: number]> = {
-  station: [6, 11 + 26 + 3 * (12 + 8 + 5) + 5],
-  gue: [5, 2 + 6 + 6 + 5 + 15 + 6 + 2 * 21 + 3 + 3 * 4],
-  moulin: [2, 14],
-  cooperative: [3, 17],
+  // 0.8.4 : 117 points ; 0.9 : 12 pierres (3 tournées de 4), 6 champignons, 2 buissons.
+  station: [7, 117 + 12 + 6 + 2],
+  // 0.8.4 : 97 ; 0.9 : 30 branches, 12 bûches, 18 pierres (3 tournées), 7 champignons, 4 buissons.
+  gue: [6, 97 + 30 + 12 + 18 + 7 + 4],
+  moulin: [3, 14 + 8 + 3 + 6],
+  cooperative: [4, 17 + 4 + 3],
 };
 
 test("une quantité changée demande une version nouvelle du lieu (garde-fou)", () => {

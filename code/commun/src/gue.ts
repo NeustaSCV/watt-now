@@ -24,7 +24,7 @@ import { percer, type FenetreVue, type PlanVue, type PorteVue } from "./vue.ts";
 import { BAC_MODELE, ETEINTS_MODELE, FOUILLE_MODELE, NAPPE_MODELE, SEGMENTS_MODELE, type SegmentModele } from "./gue-modele.ts";
 
 /** À augmenter quand le contenu du gué change : la base le régénère alors. */
-export const VERSION_GUE = 5;
+export const VERSION_GUE = 6;
 
 // ---------- Le repère : le gué retourné ----------
 
