@@ -146,8 +146,8 @@ test("aucun ingrédient introuvable : tout ce que l'arbre peut dévoiler se fabr
     const infaisables = RECETTES.filter((r) => !r.aVenir && !t.recettes.has(r.id) && !niveau2.has(r.id)).map((r) => r.id);
     // Le boyau séché vient du lapin, et le collet n'attrape encore rien : sa corde d'arc ne se dévoile jamais
     // (déclencheur « vu : boyaux »), elle ne trompe donc personne. Le pack soudé (plan 0.10, chantier C) demande le
-    // fer à souder, un objet-clé du niveau 2 : le simulateur ne le trouvera qu'avec les lieux du niveau 2 (chantier M).
-    assert.deepEqual(infaisables, ["corde_arc_boyau", "pack_soude"], famille);
+    // fer à souder, un objet-clé du niveau 2 : depuis le chantier J, il est à sa place au Grand Hôtel.
+    assert.deepEqual(infaisables, ["corde_arc_boyau"], famille);
   }
 });
 

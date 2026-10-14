@@ -112,7 +112,7 @@ export function messageValide(m: unknown): m is MessageClient {
           estTable(m.cible) &&
           chaine(m.cible.genre) &&
           // Une porte se désigne par son nom dans le plan ; tout le reste, par un numéro.
-          (m.cible.genre === "porte" || m.cible.genre === "leurre" ? chaine(m.cible.id) && m.cible.id.length <= 40 : nombreOuRien(m.cible.id)) &&
+          (m.cible.genre === "porte" || m.cible.genre === "leurre" || m.cible.genre === "lieu" ? chaine(m.cible.id) && m.cible.id.length <= 40 : nombreOuRien(m.cible.id)) &&
           chaine(m.verbe)
         )
       )

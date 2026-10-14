@@ -1281,6 +1281,20 @@ const VESTIGES_LOT1 = {
     teinte: "#5a4636",
     horsTirage: true,
   },
+  // ---------- 0.10, chantier J : le Grand Hôtel des Flots (S-10) ----------
+  // La carte de la chambre 7, que la borne remet au robot reconnu : elle fait monter l'ascenseur, et reste à l'hôtel
+  // quand on en part (serveur/src/hotel.ts).
+  carte_chambre_7: {
+    nom: "carte de la chambre 7",
+    pluriel: "cartes de la chambre 7",
+    description: "Une carte dorée, « Grand Hôtel des Flots · Chambre 7 · Séjour Zéro-Effort ». Elle ne sert qu'à l'hôtel.",
+    poids: 0.01,
+    valeur: 0,
+    famille: "salon",
+    rarete: "C",
+    teinte: "#c9a227",
+    horsTirage: true,
+  },
 } satisfies Record<string, DefinitionVestige>;
 
 /** Les vestiges : le lot 1 (0.3 et 0.6) et les déchets de l'Abondance (lot 2, 0.7 : vestiges-lot2.ts). */
@@ -1386,7 +1400,7 @@ export const DEMONTAGE: Partial<Record<TypeObjet, Demontage>> = {
 // ---------- La fouille rapporte du bric-à-brac ----------
 
 /** Les lieux de fouille : chacun a sa table de vestiges. */
-export type LieuFouille = "boutique" | "atelier" | "epave" | "grange" | "libre_service" | "quai" | "atelier_coop" | "hangar" | "bureaux" | "chambre_froide" | "caisse_ruine";
+export type LieuFouille = "boutique" | "atelier" | "epave" | "grange" | "libre_service" | "quai" | "atelier_coop" | "hangar" | "bureaux" | "chambre_froide" | "caisse_ruine" | "salle_de_bains";
 
 /** Quel lieu pour quelle ressource fouillée (la halte, et la caisse à outils de la ruine de ferme). */
 export const LIEU_DE_FOUILLE: Partial<Record<TypeRessource, LieuFouille>> = {
@@ -1413,6 +1427,29 @@ export const LIEU_DE_FOUILLE: Partial<Record<TypeRessource, LieuFouille>> = {
   moulin_boutique: "libre_service",
   moulin_magasin: "grange",
   moulin_camp: "quai",
+  // 0.10, chantier J : le Grand Hôtel des Flots ; ses salles de bains ont leur table (le fil dentaire, courant au niveau 2).
+  hotel_reception: "bureaux",
+  hotel_bagages: "bureaux",
+  hotel_cuisines: "libre_service",
+  hotel_conserves: "libre_service",
+  hotel_poisson: "libre_service",
+  hotel_desserte: "libre_service",
+  hotel_camp: "bureaux",
+  hotel_bar: "libre_service",
+  hotel_buvette: "boutique",
+  hotel_barque: "quai",
+  hotel_maitre_nageur: "boutique",
+  hotel_transats: "grange",
+  hotel_balcon_tombe: "grange",
+  hotel_bain_suite: "salle_de_bains",
+  hotel_bain_7: "salle_de_bains",
+  hotel_toilette_9: "salle_de_bains",
+  hotel_chambre_11: "bureaux",
+  hotel_lingerie: "bureaux",
+  hotel_suite: "bureaux",
+  hotel_machinerie: "atelier",
+  hotel_chambre_8: "atelier",
+  hotel_office: "boutique",
 };
 
 /**
@@ -1433,6 +1470,8 @@ export const FAMILLES_PAR_LIEU: Record<LieuFouille, Partial<Record<FamilleVestig
   chambre_froide: { garage: 3, ferme: 3 },
   // La caisse à outils de la ruine : les familles de l'atelier, mais pas son échelle (EN_PLUS_PAR_LIEU, V1-10).
   caisse_ruine: { garage: 6, gadget: 1, voiture: 1 },
+  // 0.10, chantier J : les salles de bains du Grand Hôtel.
+  salle_de_bains: { salle_de_bain: 6, gadget: 1 },
 };
 
 /**
@@ -1451,6 +1490,8 @@ export const EN_PLUS_PAR_LIEU: Partial<Record<LieuFouille, Partial<Record<TypeOb
   // Coopérative. Pas dans la caisse à outils de la ruine (V1-10, décision du porteur) : elle a sa table, `caisse_ruine`.
   atelier: { echelle_aluminium: "P" },
   atelier_coop: { echelle_aluminium: "P" },
+  // 0.10, chantier J : les salles de bains du Grand Hôtel, où le fil dentaire est courant (COURANTS_AU_NIVEAU_2, N2-61).
+  salle_de_bains: { fil_dentaire: "C" },
 };
 
 /**

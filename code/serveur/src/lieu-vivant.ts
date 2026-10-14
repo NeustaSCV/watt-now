@@ -181,6 +181,20 @@ export class LieuVivant {
   /** À chaque tic, pour chaque joueur présent (hors voyage) : ce que le lieu fait de lui (la marée qui monte…). */
   accompagner(_ctx: ContexteLieu, _dt: number): void {}
 
+  /**
+   * Ce qu'un joueur porte dans ses bras, propre au lieu (0.10, chantier J : la batterie, la tête du robot de l'hôtel ;
+   * S-08) : son nom (« la tête du robot ») ; null : rien. Les bras pris, on ne court pas, on ne frappe pas, on ne fait
+   * rien d'autre (serveur/src/joueur.ts).
+   */
+  dansLesBras(_compteId: number): string | null {
+    return null;
+  }
+
+  /** Poser devant soi ce qu'on porte dans les bras (propre au lieu) : true si le lieu l'a fait. */
+  poser(_ctx: ContexteLieu): boolean {
+    return false;
+  }
+
   ajouterBruit(id: string, stimulus: Stimulus, jusqua: number): void {
     this.bruits.set(id, { stimulus, jusqua });
   }

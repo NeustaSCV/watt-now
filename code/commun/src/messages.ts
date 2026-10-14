@@ -25,6 +25,7 @@ import type { TypeInstallation } from "./recettes.ts";
 import type { Allure, Famille } from "./regles.ts";
 import type { AspectFeu, Besoins, Gourde } from "./survie.ts";
 import type { RessourceSol } from "./terrain.ts";
+import type { EtatHotel } from "./hotel.ts";
 
 // ---------- HTTP ----------
 
@@ -88,7 +89,9 @@ export type Cible =
   /** Une porte de la Coopérative (Book 23 §2.2) : son identifiant dans le plan. */
   | { genre: "porte"; id: string }
   /** Un leurre du décor de la Coopérative (Book 23 §4.7) : le klaxon, la sonnette, la radio. */
-  | { genre: "leurre"; id: string };
+  | { genre: "leurre"; id: string }
+  /** Un objet propre au lieu (0.10, chantier J : la borne, le robot, la batterie, la tête, l'ascenseur de l'hôtel). */
+  | { genre: "lieu"; id: string };
 
 export type Verbe =
   | "ramasser"
@@ -160,7 +163,13 @@ export type Verbe =
   /** Le moulin de jerricans ⚙️ : poser la poulie d'aluminium sur son axe. */
   | "poser_poulie"
   /** Le coffre (ou la réserve couverte) : y poser les étagères de l'établi de menuisier (plan 0.10, V1-04) : + 50 kg. */
-  | "poser_etageres";
+  | "poser_etageres"
+  // Le Grand Hôtel, « le check-in » (plan 0.10 §3.6, chantier J ; serveur/src/hotel.ts) : brancher la batterie à la
+  // borne, dégager le robot du sable, présenter sa tête à la borne, appeler l'ascenseur.
+  | "brancher"
+  | "degager"
+  | "presenter"
+  | "appeler_ascenseur";
 
 /** État propre à certaines installations. */
 export interface EtatInstallation {
@@ -601,7 +610,9 @@ export type MessageServeur =
   /** Ce qui est prêt à lancer (null : la pierre, s'il y en a), et si l'arbalète est armée. */
   | { t: "pret"; objet: CleObjet | null; armee?: boolean }
   /** Un objet en vol, du lanceur au point d'impact : le client le dessine, puis montre l'impact. */
-  | { t: "projectile"; projectile: ProjectileVu };
+  | { t: "projectile"; projectile: ProjectileVu }
+  // Le Grand Hôtel, « le check-in » (plan 0.10, chantier J) : voir le bloc « l'hôtel » en fin de fichier.
+  | MessageServeurHotel;
 
 /** Un projectile, vu par le client (Book 25 §10.3) : d'où il part, où il arrive, et ce qu'il y fait. */
 export interface ProjectileVu {
@@ -815,3 +826,14 @@ export type MessageServeurPresences =
   | { t: "positions"; h: number; p: number[] }
   /** Leurs gestes depuis l'envoi précédent, aux mêmes observateurs que les positions, chacun une fois. */
   | { t: "gestes"; g: GesteVu[] };
+
+// ---------- L'hôtel, « le check-in » (plan 0.10, chantier J ; commun/src/hotel.ts, serveur/src/hotel.ts) ----------
+
+export type MessageServeurHotel =
+  /** Où en est le check-in (la batterie, la tête du robot, le robot dégagé), à l'entrée et à chaque changement. */
+  | { t: "hotel"; hotel: EtatHotel }
+  /**
+   * Une scène (plan 0.10 §3.6) : l'ascenseur qui monte ou descend, le saut du balcon. Le client joue le fondu au noir
+   * d'une seconde à l'heure du serveur `debut` (ms) ; le joueur change de place au milieu (S-01).
+   */
+  | { t: "scene"; lieu: LieuId; scene: "ascenseur" | "balcon"; etape: string; debut: number };

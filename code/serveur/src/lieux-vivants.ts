@@ -20,6 +20,7 @@ import { Halte } from "./halte.ts";
 import { LieuVivant, type Voyageur } from "./lieu-vivant.ts";
 import { LieuxPersonnels, definitionDuRegistre } from "./lieux-personnels.ts";
 import { Moulins } from "./moulin.ts";
+import { gardienHotel } from "./hotel.ts";
 
 /** Ce qui garde un lieu : le lieu vivant d'un joueur (le même pour tous dans une halte), sa vie à chaque tic. */
 export interface GardienLieu {
@@ -46,6 +47,8 @@ export const FABRIQUES: Partial<Record<LieuId, Fabrique>> = {
   gue: (b, a) => gardienPartage(new Gue(b, a)),
   cooperative: (b, a, m) => new Cooperatives(b, a, m),
   moulin: (b, a, m) => new Moulins(b, a, m),
+  // 0.10, chantier J : le Grand Hôtel des Flots et son check-in (serveur/src/hotel.ts).
+  grand_hotel: (b, a, m) => gardienHotel(b, a, m),
 };
 
 /** Un lieu du registre sans fabrique : une halte partagée, ou un lieu à soi qui revient à 24 h. */
