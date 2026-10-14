@@ -8,9 +8,12 @@
 // que ce module (une ligne par point d'appel).
 
 import * as THREE from "three";
-import { CORNICHE, TRONCONS_CORNICHE, aLaCorniche, tronconCorniche, type TronconCorniche } from "../../../commun/src/corniche.ts";
+import { CAISSE_PEAGE, CORNICHE, PORTE_BARRICADE_TUNNEL, PORTEE_CAISSE_TUNNEL, TRONCONS_CORNICHE, aLaCorniche, procheBarricade, tronconCorniche, zoneCorniche, type TronconCorniche } from "../../../commun/src/corniche.ts";
 import { LUMIERES_CORNICHE } from "../../../commun/src/corniche-modele.ts";
-import type { Boite } from "../../../commun/src/lieux.ts";
+import type { Boite, Zone } from "../../../commun/src/lieux.ts";
+import type { MessageServeur } from "../../../commun/src/messages.ts";
+import { TEXTES_PEAGE } from "../../../commun/src/peage.ts";
+import type { Propositions } from "../interaction.ts";
 import type { RessourceSol } from "../../../commun/src/terrain.ts";
 import { brouillerTout } from "./carte-vue.ts";
 import { estomperToits } from "./halte.ts";
@@ -101,14 +104,43 @@ export class RenduCorniche {
     return this.groupe;
   }
 
-  /**
-   * Le péage du tunnel : la porte de la barricade, ouverte (rabattue contre les sacs de sable) ou fermée. Point d'appel
-   * du péage (commun/src/peage.ts, chantier H) : quand le serveur dit `passage` (`passage: "tunnel"`, `ouvert`), main.ts
-   * l'appelle ; la zone où l'on marche suit (zoneCorniche(ouvert), commun/src/corniche.ts).
-   */
+  /** La porte de la barricade, ouverte (rabattue contre les sacs de sable) ou fermée. */
   barricade(ouverte: boolean): void {
     this.barricadeOuverte = ouverte;
     this.montrerEtats();
+  }
+
+  // ---------- Le péage du tunnel (S-19 ; commun/src/peage.ts) ----------
+
+  /** Le passage du péage, pour ce joueur (message `passage`) : la porte s'ouvre pour lui seul. */
+  passage(m: Extract<MessageServeur, { t: "passage" }>): void {
+    if (m.passage === "tunnel") this.barricade(m.ouvert);
+  }
+
+  /** La zone où l'on marche : comme le serveur, la porte de la barricade ouverte si l'on a payé. */
+  zone(): Zone {
+    return zoneCorniche(this.barricadeOuverte);
+  }
+
+  /** Est-on à portée de la caisse (ou de la porte) du péage ? (pour fermer la caisse quand on s'éloigne) */
+  prochePeage(p: { x: number; z: number }): boolean {
+    return procheBarricade(p.x, p.z);
+  }
+
+  /** Ce qu'on peut faire ici en plus : payer le péage, à la caisse ou contre la porte (comme au pont). */
+  proposer(p: { x: number; z: number }, base: Propositions): Propositions {
+    if (!procheBarricade(p.x, p.z)) return base;
+    const dBase = base.cible ? Math.max(0, Math.hypot(base.cible.x - p.x, base.cible.z - p.z) - (base.cible.rayon ?? 0.5)) : base.A ? 0 : Infinity;
+    const aLaCaisse = Math.hypot(p.x - CAISSE_PEAGE.x, p.z - CAISSE_PEAGE.z) <= PORTEE_CAISSE_TUNNEL;
+    const porte = { x: PORTE_BARRICADE_TUNNEL.x, z: (PORTE_BARRICADE_TUNNEL.z0 + PORTE_BARRICADE_TUNNEL.z1) / 2, rayon: 0.9 };
+    const cible = aLaCaisse ? { x: CAISSE_PEAGE.x, z: CAISSE_PEAGE.z, rayon: 0.5 } : porte;
+    if (Math.max(0, Math.hypot(cible.x - p.x, cible.z - p.z) - cible.rayon) > dBase + 0.3) return base;
+    const t = TEXTES_PEAGE.tunnel;
+    return {
+      A: this.barricadeOuverte ? null : { libelle: "Payer le péage", ouvrirCaisse: "tunnel" },
+      B: { libelle: "Examiner", examiner: this.barricadeOuverte ? t.dejaPaye : aLaCaisse ? t.examen : t.ferme },
+      cible,
+    };
   }
 
   // ---------- La lumière ----------

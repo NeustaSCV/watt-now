@@ -137,6 +137,7 @@ let etatCoop: EtatCoopVu = { radio: { ...RADIO_ETABLI }, klaxons: KLAXONS_PAR_BA
 function zoneIci(): Zone {
   if (lieu === "gue") return gue.zone(Date.now() + decalage, debutMonde); // le radeau du bac, le radier noyé (chantier 11)
   if (lieu === "route_pont") return routePont.zone(Date.now() + decalage, debutMonde); // la marée, la porte du péage (0.10, H)
+  if (lieu === "corniche") return corniche.zone(); // la barricade du tunnel, ouverte pour qui a payé (0.10, I)
   return zoneSelonPortes(lieu, portesCoop);
 }
 /**
@@ -941,6 +942,7 @@ function recevoir(message: MessageServeur): void {
     // et un message fermé par son bouton.
     case "passage":
       routePont.passage(message);
+      corniche.passage(message);
       hud.reponseCaisse(message.ouvert);
       return;
     case "maree_remonte":
@@ -1832,7 +1834,7 @@ function boucle(instant: number): void {
     // Le guichet se ferme quand on s'en éloigne.
     if (hud.guichetOuvert && (lieu !== "comptoir" || Math.hypot(position.x - COMPTOIR.guichet.x, position.z - COMPTOIR.guichet.z) > 4)) hud.fermerPanneaux();
     // La caisse du péage aussi (0.10, chantier H).
-    if (hud.caisseOuverte && (lieu !== "route_pont" || !routePont.prochePeage(position))) hud.fermerCaisse();
+    if (hud.caisseOuverte && !(lieu === "route_pont" ? routePont.prochePeage(position) : lieu === "corniche" && corniche.prochePeage(position))) hud.fermerCaisse();
     // L'arc en main pendant qu'on vise, bras levé : le personnage bande (Book 25 §3.4).
     const arcVise = viseeEnCours?.pret.genre === "tir" && !viseeEnCours.pret.arme.armeeDAvance ? typeDe(viseeEnCours.pret.cle) : null;
     personnage.tenir(arcVise ?? (modeCombat ? armeEnMain(inventaire, armeEquipee).objet : undefined));
@@ -1882,6 +1884,7 @@ function boucle(instant: number): void {
     if (lieu === "grand_hotel") propositions = hotel.proposer(position, propositions, inventaire);
     // À la route du pont : payer le péage, lire l'échelle de marée (0.10, chantier H).
     if (lieu === "route_pont") propositions = routePont.proposer(position, propositions, Date.now() + decalage, debutMonde);
+    if (lieu === "corniche") propositions = corniche.proposer(position, propositions); // le péage du tunnel (0.10, I)
     // Les déchets à portée de main (0.7) : la cible la plus proche l'emporte.
     const dechet = dechetsVue.proposer(position);
     if (dechet) {
