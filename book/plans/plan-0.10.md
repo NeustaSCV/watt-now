@@ -543,3 +543,14 @@ Décidés (MS-01 à MS-09, MS-Q1 à MS-Q8, §3.2), sortis de la 0.10 pour la gar
 | V1-16 ✅ | **La poulie et le lingot** : sans charbon (« 4 chutes ») | **1 charbon** chacun, comme les autres recettes de forge |
 | V1-17 ✅ | **La batterie de la base** remplie par le moulin, la rampe : la plus proche, **sans limite de distance** | **15 m au plus** (comme le reste de la base), et la fiche du banc cite le moulin |
 | V1-18 ✅ | **R38** : quelques anciens textes écrivent encore « aluminium » seul (casserole, canette, planche à roulettes) | **Corriger** au chantier L |
+
+**Après le chantier V1 (2026-10-14)** : fusionné dans `integration-0-10` (1 036 tests). Quatre précisions tranchées par le porteur, toutes selon les recommandations :
+
+| # | Question | Décision |
+|---|---|---|
+| V1-19 ✅ | « 80 Wh par beau jour » et « la moyenne d'avant » ne tiennent pas ensemble | **La moyenne** : 80 Wh par jour sur la vraie météo, soit ≈ 160 Wh par beau jour ; le moulin de jerricans à la même moyenne (≈ 5,9 W par vent, 2 W voilé) |
+| V1-20 ✅ | Les « 4 clous » des étagères (les clous n'existent qu'en poignée) | **1 poignée de clous** |
+| V1-21 ✅ | Les « planches rabotées » n'existent pas comme objet | En 0.10 : **2 planches fendues, et le rabot** ; le vrai objet en 0.10.1, avec les murs |
+| V1-22 ✅ | La matraque ★★★ obtenue par la maîtrise dès le niveau 1 a aussi 24 Wh | **Accepté** (la capacité suit les étoiles) |
+
+**Le Noyé** : la boule refusée ; le corps lui-même gonflé (« patate »), **variante moyenne** choisie par le porteur, fusionnée.
