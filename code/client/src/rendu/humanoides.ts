@@ -154,6 +154,13 @@ interface Reglages {
   haut: { value: THREE.Vector3 };
   bande: { value: THREE.Vector2 };
   couleurBande: { value: THREE.Color };
+  /**
+   * Le corps d'un Éteint détruit (plan 0.9, chantier F) : x la part de la peau virée au gris cendre, y la matité,
+   * z l'effacement de la fin, w la part des vêtements passée aux teintes du sol (0 partout : rien ne change).
+   */
+  mort: { value: THREE.Vector4 };
+  cendre: { value: THREE.Color };
+  solMort: { value: THREE.Color };
 }
 
 /** La teinte moyenne de la texture de peau d'origine : la carnation la remplace par un rapport. */
@@ -272,6 +279,9 @@ function materiauPersonnage(corps: THREE.MeshStandardMaterial, r: Reglages, cart
       uHaut: r.haut,
       uBande: r.bande,
       uCouleurBande: r.couleurBande,
+      uMort: r.mort,
+      uCendre: r.cendre,
+      uSolMort: r.solMort,
       uYeux: { value: yeux ?? new THREE.Color(1, 1, 1) },
       uCarte1: { value: cartes[0] ?? null },
       uCarte2: { value: cartes[1] ?? null },
@@ -321,6 +331,9 @@ function materiauPersonnage(corps: THREE.MeshStandardMaterial, r: Reglages, cart
         uniform vec3 uHaut;
         uniform vec2 uBande;
         uniform vec3 uCouleurBande;
+        uniform vec4 uMort;
+        uniform vec3 uCendre;
+        uniform vec3 uSolMort;
         uniform vec3 uYeux;
         uniform sampler2D uCarte1;
         uniform sampler2D uCarte2;
@@ -342,7 +355,9 @@ function materiauPersonnage(corps: THREE.MeshStandardMaterial, r: Reglages, cart
         // Les cheveux sous le chapeau (coupe), les morceaux qui n'avaient qu'une face.
         if (dot(vCoupe.xyz, vRepos) + vCoupe.w > 0.0) discard;
         float drapeaux = vPiece.z;
-        if (mod(floor(drapeaux / 2.0), 2.0) > 0.5 && !gl_FrontFacing) discard;`,
+        if (mod(floor(drapeaux / 2.0), 2.0) > 0.5 && !gl_FrontFacing) discard;
+        // L'effacement du corps détruit (chantier F) : un tramage qui gagne, sans transparence ni tri.
+        if (uMort.z > 0.0 && fract(sin(dot(floor(gl_FragCoord.xy), vec2(12.9898, 78.233))) * 43758.5453) < uMort.z) discard;`,
       )
       .replace(
         "#include <map_fragment>",
@@ -357,10 +372,17 @@ function materiauPersonnage(corps: THREE.MeshStandardMaterial, r: Reglages, cart
           ${glslPeauTissu("genre > 0.5")}
         } else if (genre < 2.5) diffuseColor.rgb *= uYeux;
         diffuseColor.rgb *= vTeinte.rgb;
-        if (mod(floor(drapeaux / 4.0), 2.0) > 0.5) diffuseColor.rgb *= vSommet;`,
+        if (mod(floor(drapeaux / 4.0), 2.0) > 0.5) diffuseColor.rgb *= vSommet;
+        // Le détruit (chantier F) : la peau et les yeux virent au gris cendre, le reste aux teintes du sol ; on garde
+        // le clair et le sombre de chaque morceau, pour que le corps reste lisible.
+        if (uMort.x + uMort.w > 0.0) {
+          float clarte = clamp(dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114)) * 2.6, 0.55, 1.3);
+          bool chair = genre < 0.5 || (genre > 1.5 && genre < 2.5);
+          diffuseColor.rgb = mix(diffuseColor.rgb, (chair ? uCendre : uSolMort) * clarte, chair ? uMort.x : uMort.w);
+        }`,
       )
-      .replace("#include <roughnessmap_fragment>", "float roughnessFactor = vPiece.w;")
-      .replace("#include <metalnessmap_fragment>", "float metalnessFactor = vTeinte.w;")
+      .replace("#include <roughnessmap_fragment>", "float roughnessFactor = mix(vPiece.w, 1.0, uMort.y);")
+      .replace("#include <metalnessmap_fragment>", "float metalnessFactor = vTeinte.w * (1.0 - uMort.y);")
       .replace(
         "#include <normal_fragment_begin>",
         `#include <normal_fragment_begin>
@@ -372,7 +394,7 @@ function materiauPersonnage(corps: THREE.MeshStandardMaterial, r: Reglages, cart
       )
       .replace("#include <emissivemap_fragment>", "totalEmissiveRadiance = vEmission;");
   };
-  m.customProgramCacheKey = () => "personnage-watt-1";
+  m.customProgramCacheKey = () => "personnage-watt-2";
   return m;
 }
 
@@ -469,6 +491,9 @@ export class Humanoide {
       haut: { value: new THREE.Vector3(0, 1, 0) },
       bande: { value: new THREE.Vector2(0, 0) },
       couleurBande: { value: new THREE.Color(o.tenue.bande?.couleur ?? 0xffffff) },
+      mort: { value: new THREE.Vector4(0, 0, 0, 0) },
+      cendre: { value: new THREE.Color(0x9b9a94) },
+      solMort: { value: new THREE.Color(0x6f6a4e) },
     };
     this.modele.traverse((n) => {
       if ((n as THREE.Bone).isBone) this.os.set(n.name, n as THREE.Bone);
@@ -848,6 +873,17 @@ export class Humanoide {
   /** Le nombre de taches de sang sur les vêtements. */
   tacher(n: number): void {
     this.reglages.taches.value = n;
+  }
+
+  /**
+   * Le corps d'un Éteint détruit (plan 0.9, chantier F), sur le personnage fondu seulement : `peau` et `vetements`, la
+   * part virée au gris `cendre` et aux teintes du `sol` (0 à 1) ; `matite` (0 à 1) ; `effacement` (0 à 1 : disparu).
+   * Rien que des valeurs passées à son matériau : ni matériau ni programme en plus.
+   */
+  ternir(peau: number, vetements: number, matite: number, effacement: number, cendre: THREE.Color, sol: THREE.Color): void {
+    this.reglages.mort.value.set(peau, matite, effacement, vetements);
+    this.reglages.cendre.value.copy(cendre);
+    this.reglages.solMort.value.copy(sol);
   }
 
   /** Les yeux qui se ferment (Éteint qui dort) : on les teinte comme la peau. */

@@ -54,6 +54,7 @@ import { InterfaceLecon } from "./lecon-ui.ts";
 import { MenuAdmin } from "./admin-ui.ts";
 import { animerComptoir, creerComptoir, lumieresComptoir } from "./rendu/comptoir.ts";
 import { VueEteint } from "./rendu/eteint.ts";
+import { solDesCorps } from "./rendu/eteint-au-sol.ts";
 import { VueAutre, horlogeAutres } from "./rendu/autres.ts";
 import { Pluie } from "./rendu/pluie.ts";
 import { Rodeurs } from "./rendu/rodeurs.ts";
@@ -464,6 +465,7 @@ function installer(message: Bienvenue): void {
   voile.hidden = true;
   lieu = message.lieu;
   montrerDecor(lieu);
+  solDesCorps(lieu);
   // La pause : seulement là où l'on est seul (son terrain, sa Coopérative).
   hud.pausePossible(lieu === "terrain" || lieu === "cooperative" || lieu === "moulin");
   hud.majPause(false);

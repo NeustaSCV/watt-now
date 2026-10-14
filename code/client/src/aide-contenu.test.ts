@@ -130,3 +130,9 @@ test("0.8.2 §7.6 : l'aide ne dit plus de maintenir {agir} pour ramasser ; un ap
   // Le combat garde sa règle : maintenir pour le coup appuyé.
   assert.match(tout, /Coup appuyé\*\* : maintiens \{agir\}/);
 });
+
+test("0.9 aide (chantier F) : à terre, il remue encore ; détruit, il ne bouge plus et pâlit", () => {
+  const tout = RUBRIQUES_AIDE.map(texte).join("\n");
+  assert.match(tout, /À terre, il remue encore : achève-le\./);
+  assert.match(tout, /Détruit, il ne bouge plus, et pâlit\./);
+});
