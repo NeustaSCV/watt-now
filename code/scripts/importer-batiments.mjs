@@ -21,6 +21,8 @@ const A_COPIER = [
   "halte-corniche/modele.js",
   // 0.10, chantier H : la route du pont (H2A).
   "halte-route-pont/modele.js", "halte-route-pont/objets.js",
+  // 0.10, chantier K : le phare du cap (L2B ; son modèle n'importe que l'atelier commun).
+  "phare/modele.js",
 ];
 
 for (const chemin of A_COPIER) {

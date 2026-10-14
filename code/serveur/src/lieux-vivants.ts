@@ -23,6 +23,7 @@ import { LieuxPersonnels, definitionDuRegistre } from "./lieux-personnels.ts";
 import { Moulins } from "./moulin.ts";
 import { gardienHotel } from "./hotel.ts";
 import { RoutePont } from "./route-pont.ts";
+import { Phares } from "./phare.ts";
 
 /** Ce qui garde un lieu : le lieu vivant d'un joueur (le même pour tous dans une halte), sa vie à chaque tic. */
 export interface GardienLieu {
@@ -55,6 +56,8 @@ export const FABRIQUES: Partial<Record<LieuId, Fabrique>> = {
   corniche: (b, a) => gardienPartage(new LieuCorniche(b, a)),
   // 0.10, chantier H : la route du pont, son péage et sa marée (serveur/src/route-pont.ts).
   route_pont: (b, a) => gardienPartage(new RoutePont(b, a)),
+  // 0.10, chantier K : le phare du cap, « le feu et le cargo » (serveur/src/phare.ts).
+  phare: (b, a, m) => new Phares(b, a, m),
 };
 
 /** Un lieu du registre sans fabrique : une halte partagée, ou un lieu à soi qui revient à 24 h. */

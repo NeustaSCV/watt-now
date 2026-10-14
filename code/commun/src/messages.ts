@@ -11,6 +11,7 @@ import type { Position } from "./deplacement.ts";
 import type { MouvementRadeau } from "./gue.ts";
 import type { Passage } from "./peage.ts";
 import type { CibleCharge } from "./banc.ts";
+import type { ElementPhare, EtatPhareVu, VerbePhare } from "./phare.ts";
 import type { ModeArrivee } from "./arrivee.ts";
 import type { Charges, TypeBatterie } from "./energie.ts";
 import type { LieuId, LieuJouable } from "./lieux.ts";
@@ -92,7 +93,9 @@ export type Cible =
   /** Un leurre du décor de la Coopérative (Book 23 §4.7) : le klaxon, la sonnette, la radio. */
   | { genre: "leurre"; id: string }
   /** Un objet propre au lieu (0.10, chantier J : la borne, le robot, la batterie, la tête, l'ascenseur de l'hôtel). */
-  | { genre: "lieu"; id: string };
+  | { genre: "lieu"; id: string }
+  // 0.10, chantier K : voir le bloc « le phare » en fin de fichier.
+  | CiblePhare;
 
 export type Verbe =
   | "ramasser"
@@ -170,7 +173,9 @@ export type Verbe =
   | "brancher"
   | "degager"
   | "presenter"
-  | "appeler_ascenseur";
+  | "appeler_ascenseur"
+  // 0.10, chantier K : voir le bloc « le phare » en fin de fichier.
+  | VerbePhare;
 
 /** État propre à certaines installations. */
 export interface EtatInstallation {
@@ -617,7 +622,9 @@ export type MessageServeur =
   /** Un objet en vol, du lanceur au point d'impact : le client le dessine, puis montre l'impact. */
   | { t: "projectile"; projectile: ProjectileVu }
   // Le Grand Hôtel, « le check-in » (plan 0.10, chantier J) : voir le bloc « l'hôtel » en fin de fichier.
-  | MessageServeurHotel;
+  | MessageServeurHotel
+  // 0.10, chantier K : voir le bloc « le phare » en fin de fichier.
+  | MessageServeurPhare;
 
 /** Un projectile, vu par le client (Book 25 §10.3) : d'où il part, où il arrive, et ce qu'il y fait. */
 export interface ProjectileVu {
@@ -860,3 +867,18 @@ export type MessageServeurPeage =
    * (sa position suit) ; l'écran fait un fondu et montre `texte`, fermé par son bouton (jamais une croix).
    */
   | { t: "maree_remonte"; texte: string; bouton: string };
+
+// ---------- Le phare du cap (plan 0.10, chantier K ; commun/src/phare.ts, serveur/src/phare.ts) ----------
+
+/** Ce qu'on touche au phare : l'escabeau, l'escalier coupé (la marque), la cuve, le prisme, la corne, la rampe du canot. */
+export type CiblePhare = { genre: "phare"; id: ElementPhare };
+
+export type MessageServeurPhare =
+  /**
+   * L'état du phare (à l'arrivée et à chaque changement) : où est l'escabeau, le bidon, le prisme, la lanterne, la corne.
+   * `cargo` : le cargo s'échoue à l'instant (S-17) : le client joue la corne grave, le choc et le fondu, puis montre
+   * l'épave (l'épave elle-même est un état du lieu : `portes.epave`). `corne` : la corne de brume sonne (S-16), aux
+   * pavillons, au bord de la falaise. `avertissement` : un message fermé par un bouton (« Le feu ne sert qu'à la nuit
+   * tombée. », S-14).
+   */
+  { t: "phare"; etat: EtatPhareVu; cargo?: true; corne?: true; avertissement?: string };

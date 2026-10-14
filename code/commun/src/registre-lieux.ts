@@ -34,6 +34,8 @@ import { REINITIALISATION_MOULIN_MS, portesInitialesMoulin, sombreMoulin } from 
 import { PLAN_VUE_COOP, PLAN_VUE_GUE, PLAN_VUE_HALTE, PLAN_VUE_MOULIN } from "./vue-lieux.ts";
 import type { PlanVue } from "./vue.ts";
 import { PLAN_ROUTE_PONT } from "./route-pont.ts";
+import { portesInitialesPhare, sombrePhare, zonePhare } from "./phare.ts";
+import { PLAN_VUE_PHARE } from "./phare-vivant.ts";
 
 /**
  * La nature d'un lieu :
@@ -146,12 +148,15 @@ export const REGISTRE_LIEUX: Readonly<Record<LieuId, FicheLieu>> = {
   },
   // 0.10, chantier I : la corniche du Cap Rouge (commun/src/corniche.ts) : la vue par pièce, le tunnel noir.
   corniche: { id: "corniche", nature: "halte", niveau: 2, etape: "H2B", plan: PLAN_CORNICHE, sombre: sombreCorniche, traverser: "la traverser", musique: "corniche" },
+  // 0.10, chantier K : le phare du cap (commun/src/phare.ts, phare-vivant.ts) ; son épave est un état, comme une porte.
   phare: {
     id: "phare",
     nature: "personnel",
     niveau: 2,
     etape: "L2B",
-    plan: null,
+    portes: { initiales: portesInitialesPhare, zone: zonePhare },
+    plan: PLAN_VUE_PHARE,
+    sombre: sombrePhare,
     reinitialisationMs: REINITIALISATION_LIEU_MS,
     musique: "phare",
     pourPartir: () => "Pour partir, repasse la grille, au nord.",

@@ -17,6 +17,7 @@ import { VERSION_HOTEL, butinHotel } from "./hotel.ts";
 import { milieuHotel } from "./milieu-hotel.ts";
 import type { LieuId } from "./lieux.ts";
 import type { SemisVivant } from "./semis.ts";
+import { MILIEU_PHARE, VERSION_PHARE, butinPhare, eteintsPhare } from "./phare-vivant.ts";
 import type { ButinLieu, RessourceSol } from "./terrain.ts";
 import { eteintsRoutePont } from "./eteints-route-pont.ts";
 import { BUTIN_ROUTE_PONT, SEMIS_VIVANT_ROUTE_PONT, VERSION_ROUTE_PONT, ressourcesRoutePont } from "./route-pont.ts";
@@ -61,7 +62,8 @@ export const CONTENU_LIEUX: Partial<Record<LieuId, () => ContenuLieu>> = {
     semis: SEMIS_VIVANT_CORNICHE,
     milieu: () => MILIEU_CORNICHE,
   }),
-  phare: () => CONTENU_VIDE,
+  // 0.10, chantier K : le phare du cap (commun/src/phare-vivant.ts) ; ses règles : serveur/src/phare.ts.
+  phare: () => ({ eteints: eteintsPhare, ressources: butinPhare, version: VERSION_PHARE, milieu: () => MILIEU_PHARE }),
 };
 
 /** Le contenu d'un lieu (vide s'il n'en déclare pas). */

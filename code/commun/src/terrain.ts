@@ -7,6 +7,7 @@ import type { Qualite } from "./recettes.ts";
 import { TERRAIN_TAILLE, type Famille } from "./regles.ts";
 import { MS_JOUR_CALENDRIER } from "./energie.ts";
 import { REPOUSSE_HOTEL, RESTE_EN_PLACE_HOTEL, USAGES_HOTEL, type TypeRessourceHotel } from "./ressources-hotel.ts";
+import { REPOUSSE_PHARE, USAGES_PHARE, type TypeRessourcePhare } from "./ressources-phare.ts";
 
 export type TypeRessource =
   | "branche"
@@ -63,7 +64,10 @@ export type TypeRessource =
   | TypeRessourceCorniche
 
   // 0.10, chantier H : la route du pont (commun/src/ressources-pont.ts).
-  | TypeRessourcePont;
+  | TypeRessourcePont
+
+  // 0.10, chantier K : le phare du cap (commun/src/ressources-phare.ts).
+  | TypeRessourcePhare;
 
 /**
  * Les ressources du niveau 1 (plan 0.8, chantier 3) : déclarées d'avance, pour que les chantiers des lieux n'aient qu'à
@@ -362,6 +366,8 @@ export const REPOUSSE_MS: Record<TypeRessource, number | null> = {
   corniche_cabanon: 12 * 3_600_000,
   // 0.10, chantier H : la route du pont (commun/src/ressources-pont.ts).
   ...REPOUSSE_PONT,
+  // 0.10, chantier K : le phare du cap (commun/src/ressources-phare.ts).
+  ...REPOUSSE_PHARE,
 };
 
 /** Les ressources qui restent en place une fois fouillées (une épave ne disparaît pas). */
@@ -525,7 +531,7 @@ export const ARBRES_ISOLES: readonly (readonly [number, number])[] = [[6, 8], [4
  * Ce qu'on fait de chaque ressource du sol, et ce qu'elle donne (Book 02 §5). 0.8.2 (R20) : les baies, les branches, les
  * pierres et les bûches se ramassent deux fois plus vite qu'en 0.8.1 (ici, au tas de bois, aux poutres, aux galets).
  */
-const USAGES_ETABLIS: Record<Exclude<TypeRessource, TypeRessourceNiveau1 | TypeRessourceHotel | TypeRessourceCorniche | TypeRessourcePont>, UsageRessource> = {
+const USAGES_ETABLIS: Record<Exclude<TypeRessource, TypeRessourceNiveau1 | TypeRessourceHotel | TypeRessourceCorniche | TypeRessourcePont | TypeRessourcePhare>, UsageRessource> = {
   branche: { verbe: "ramasser", libelle: "Ramasser la branche", donne: { branche: 1 }, qualites: {}, duree: 0.6, examen: "Du bois mort, bien sec." },
   buche: { verbe: "ramasser", libelle: "Ramasser la bûche", donne: { buche: 1 }, qualites: {}, duree: 1.25, examen: "Une bûche tombée d'un vieux tas. Sèche." },
   pierre: { verbe: "ramasser", libelle: "Ramasser la pierre", donne: { pierre: 1 }, qualites: {}, duree: 0.9, examen: "Une pierre plate, bonne pour un cercle de feu." },
@@ -1128,6 +1134,8 @@ const USAGES_CORNICHE: Record<TypeRessourceCorniche, UsageRessource> = {
  * déclare d'avance, la table les reçoit avec leur lieu.
  */
 export const USAGES = { ...USAGES_ETABLIS, ...USAGES_NIVEAU1, ...USAGES_HOTEL, ...USAGES_CORNICHE, ...USAGES_PONT } as Record<TypeRessource, UsageRessource>;
+// 0.10, chantier K : le phare du cap (commun/src/ressources-phare.ts).
+Object.assign(USAGES, USAGES_PHARE);
 
 /** Les vestiges de la ruine, à leur place dans les décombres. */
 export function genererVestiges(premierId: number): Omit<RessourceSol, "disponible">[] {
