@@ -415,3 +415,21 @@ Décidé aussi : **le phare ne se joue que la nuit** (de jour, on prépare la mo
 | # | Décision du porteur (2026-10-14) | Ce qu'il faudra faire dans le code |
 |---|---|---|
 | N2-66 ✅ | **La fourche à foin** (arme trouvée du Moulin, L1B) passe de 1,5 à **2,3** au torse, pour approcher la masse de la route A (2,5) | `armes/communes.ts` (`degatsTorse: 2.3`) et le test `equilibre.test.ts` (« 1,5, allonge 2 m ») ; l'examen du Moulin ne cite pas de chiffre |
+
+---
+
+## 13. Les décisions prises avec le plan de la 0.10 (2026-10-14)
+
+*Le niveau 2 sera la version **0.10** ([`plan-0.10.md`](plan-0.10.md)). Les questions Q-0.10-1 à Q-0.10-9 ont été tranchées en suivant les recommandations ; celles qui changent ce fichier :*
+
+| # | Décision | Ce qu'elle change ici |
+|---|---|---|
+| Q-0.10-1 | Les murs et les sols sortent en **0.10.1** | §8 : décidés, codés après la 0.10 |
+| Q-0.10-2 | La répartition des objets-clés est gardée (L2A, l'hôtel ; L2B, le phare), avec leurs coins : à l'hôtel, les couvertures à la lingerie, les roulements dans la machinerie de l'ascenseur, le fer à souder au local technique, la lanterne-tempête dans la suite, les tôles sur le toit des cabines ; au phare, la cloche du cargo, le rabot à l'établi du hangar, le jerrican sous l'escalier, la porte de four et le soufflet dans les conteneurs | §9.3 : « les objets-clés de chaque lieu » est réglé |
+| Q-0.10-3 | Les Éteints **s'acharnent** sur un mur, ils ne le contournent pas (Book 06 §2.1) | MS-Q3 précisée : pas de contournement |
+| Q-0.10-4 | Les fluides du Noyé : une **nausée de 30 s** (l'endurance revient deux fois moins vite) et l'odeur ; l'infection plus tard | N2-64 précisée |
+| Q-0.10-5 | Le péage : une **caisse au pied du poste de guet** et une **voix** d'en haut | N2-59 précisée |
+| Q-0.10-6 | **Le banc solaire suit le soleil** : rien la nuit, moins par temps couvert, rien sous la pluie, la même moyenne de 80 Wh par beau jour | Le moulin de jerricans (N2-47) prend tout son sens |
+| Q-0.10-7 | La marée de la route du pont : **basse la moitié du temps**, cycle de 12 min réelles, lisible sur l'échelle du quai | §10.3 précisé |
+| Q-0.10-8 | La tête du robot se porte **à deux mains** (8 kg) : on ne frappe pas en la portant | §9.2 précisé |
+| Q-0.10-9 | Au phare de jour, **on prépare** (la montée, le pétrole, le prisme, le compresseur) | §9.1 précisé |
