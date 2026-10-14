@@ -67,6 +67,12 @@ export class Scene {
    * la suit, en douceur. 0 partout ailleurs.
    */
   hauteurSuivie = 0;
+  /**
+   * 0.10, chantier K : un décalage de la caméra et de ce qu'elle regarde (une secousse : rendu/secousse.ts) ; l'image
+   * glisse d'autant, sans tourner. Zéro hors d'une secousse.
+   */
+  decalageCamera: { x: number; y: number; z: number } = { x: 0, y: 0, z: 0 };
+  private readonly regard = new THREE.Vector3();
   /** Le zoom de la projection en place (pour ne la refaire que s'il change). */
   private zoomApplique = 1;
   /** La vue d'ensemble immobile : le cadrage de l'image d'avant, et depuis combien d'images il n'a pas bougé. */
@@ -162,12 +168,13 @@ export class Scene {
     this.cible.y += ((this.cadrage ? 0 : this.hauteurSuivie) - this.cible.y) * lissage;
 
     const horizontal = Math.cos(ELEVATION) * distance;
+    const s = this.decalageCamera;
     this.camera.position.set(
-      this.cible.x + Math.cos(this.lacet) * horizontal,
-      this.cible.y + Math.sin(ELEVATION) * distance,
-      this.cible.z + Math.sin(this.lacet) * horizontal,
+      this.cible.x + Math.cos(this.lacet) * horizontal + s.x,
+      this.cible.y + Math.sin(ELEVATION) * distance + s.y,
+      this.cible.z + Math.sin(this.lacet) * horizontal + s.z,
     );
-    this.camera.lookAt(this.cible);
+    this.camera.lookAt(this.regard.set(this.cible.x + s.x, this.cible.y + s.y, this.cible.z + s.z));
 
   }
 
