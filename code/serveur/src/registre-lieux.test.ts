@@ -145,8 +145,8 @@ test("une reconnexion à l'hôtel ramène à son entrée ; dans une halte du niv
   assert.deepEqual(retour.joueur.position, arriveeDans("grand_hotel", "route_pont"));
   assert.equal(m.lieux.vivant("grand_hotel", rose.joueur.compte.id)!.nombrePresents, 1);
   retour.voyager("route_pont");
-  // Près du bout ouest de la route du pont (côté hôtel) : on y revient.
-  retour.joueur.position = { x: 30, z: 35, o: 0 };
+  // Près du bout est de la route du pont (côté hôtel, comme sur la carte : chantier H) : on y revient.
+  retour.joueur.position = { x: 170, z: 35, o: 0 };
   retour.joueur.sauvegarder();
   retour.joueur.partir();
   assert.equal(m.lieux.vivant("route_pont", 0)!.nombrePresents, 0, "en partant, on quitte la halte");

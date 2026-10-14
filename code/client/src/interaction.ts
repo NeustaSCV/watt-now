@@ -10,6 +10,7 @@ import { KLAXONS_PAR_BATTERIE, LEURRES, PORTES, chargeBatterieTracteur, distance
 import type { AutreVu, EtatCoopVu, InstallationVue, MessageClient, SacVu, Verbe } from "../../commun/src/messages.ts";
 import { nommer, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
 import type { SavoirRecettes } from "../../commun/src/recettes.ts";
+import type { Passage } from "../../commun/src/peage.ts";
 import { saitSeServir } from "../../commun/src/savoir-meuble.ts";
 import { COUT_BAC, ENCLUMES, ETOILES_PIERRE_PLATE, NIVEAU_FORGE_VENTILEE, enclumeDuSac } from "../../commun/src/forge.ts";
 import { NOMS_FAMILLES, type Famille } from "../../commun/src/regles.ts";
@@ -33,7 +34,9 @@ export type ActionProposee =
   /** Près d'un coffre : ouvrir le coffre (ranger, reprendre). */
   | { libelle: string; ouvrirCoffre: number }
   /** Un feu ou une installation à soi : sa fiche (ce qu'il fait, l'améliorer, le démonter ; Book 24). */
-  | { libelle: string; ouvrirFiche: { genre: "feu" | "installation"; id: number } };
+  | { libelle: string; ouvrirFiche: { genre: "feu" | "installation"; id: number } }
+  /** 0.10, chantier H : à la caisse d'un péage, le sac en mode « donner » (client/src/panneau-peage.ts). */
+  | { libelle: string; ouvrirCaisse: Passage };
 
 export interface Propositions {
   A: ActionProposee | null;

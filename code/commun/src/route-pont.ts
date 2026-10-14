@@ -3,10 +3,11 @@
 // fichier dit tout ce que le serveur et le client partagent :
 //
 // - le repère : le modèle (`batiment/halte-route-pont/`, copié dans client/src/batiments/) est posé tel quel, décalé
-//   (x du jeu = x du modèle + 100 ; z du jeu = z du modèle + 35). Comme sur la carte (chantier A), le terrain est à
-//   l'est (le bout « rive des marins » du modèle) et l'hôtel à l'ouest (le bout « bourg »). On n'a pas retourné le modèle
-//   (il ne sait pas le faire, et ses murs coupés regardent la caméra) : en venant du terrain, on passe la brèche, puis la
-//   caisse du péage, puis la chicane, avant le bourg. Les données du modèle viennent de `route-pont-modele.ts`
+//   (x du jeu = x du modèle + 100 ; z du jeu = z du modèle + 35). Comme sur la carte (client/src/carte.ts : le terrain
+//   au nord-ouest du pont, l'hôtel au sud-est) et comme le modèle le dit (ses panneaux, ses entrées), le terrain est à
+//   l'ouest (le bourg) et l'hôtel à l'est (la rive des marins). En venant du terrain, on passe le bourg, puis la porte
+//   du péage (la caisse est derrière, au pied du poste de guet : on paie contre la porte, la voix d'en haut entend), la
+//   brèche, et la rive des marins. Les données du modèle viennent de `route-pont-modele.ts`
 //   (scripts/extraire-route-pont.mjs) ;
 // - la zone : les obstacles du modèle, et ce qui change d'état (S-02) : la porte du péage, fermée pour tous sauf pour qui
 //   a payé (commun/src/peage.ts), et l'accès de la cale basse, fermé à marée haute (`zoneRoutePont`) ;
@@ -137,12 +138,13 @@ export const PORTE_PEAGE = (() => {
 export const PORTEE_CAISSE = 1.6;
 
 /**
- * Où l'on peut payer : à la caisse, et contre la porte du péage, de l'un ou l'autre côté (au retour de l'hôtel, la caisse
- * est derrière la porte : la voix d'en haut entend aussi de là).
+ * Où l'on peut payer : à la caisse, et contre la porte du péage, de l'un ou l'autre côté. En venant du terrain, la caisse
+ * est derrière la porte (le modèle la pose au pied du poste de guet, sur la pile) : on paie contre la porte, sous le
+ * panneau « DANS LA CAISSE ↓ », et la voix d'en haut répond. À proposer au porteur : la caisse devant la porte.
  */
 export function prochePeage(x: number, z: number): boolean {
   if (Math.hypot(x - CAISSE_PEAGE.x, z - CAISSE_PEAGE.z) <= PORTEE_CAISSE) return true;
-  return Math.abs(x - PORTE_PEAGE.x) <= 1.4 && z > PORTE_PEAGE.z0 - 0.6 && z < PORTE_PEAGE.z1 + 0.6;
+  return Math.abs(x - PORTE_PEAGE.x) <= 1.8 && z > PORTE_PEAGE.z0 - 0.6 && z < PORTE_PEAGE.z1 + 0.6;
 }
 
 // ---------- La zone : le modèle, et ce qui change d'état ----------
@@ -289,17 +291,18 @@ export const ZONE_ROUTE_PONT: Zone = zoneRoutePont({ haute: false, ouverte: fals
 
 // ---------- Les sorties ----------
 
+/** Les deux bouts de la route du Littoral : le terrain à l'ouest (le bourg), l'hôtel à l'est (la rive des marins). */
 export const SORTIES_ROUTE_PONT: Sortie[] = [
   {
     vers: "terrain",
-    boite: { x: ROUTE_PONT.longueur - 2, z: ROUTE_Z, l: 4, p: 10 },
-    arrivee: { x: ROUTE_PONT.longueur - 4.5, z: ROUTE_Z, o: -Math.PI / 2 },
+    boite: { x: 2, z: ROUTE_Z, l: 4, p: 10 },
+    arrivee: { x: 4.5, z: ROUTE_Z, o: Math.PI / 2 },
     libelle: "Rentrer chez toi",
   },
   {
     vers: "grand_hotel",
-    boite: { x: 2, z: ROUTE_Z, l: 4, p: 10 },
-    arrivee: { x: 4.5, z: ROUTE_Z, o: Math.PI / 2 },
+    boite: { x: ROUTE_PONT.longueur - 2, z: ROUTE_Z, l: 4, p: 10 },
+    arrivee: { x: ROUTE_PONT.longueur - 4.5, z: ROUTE_Z, o: -Math.PI / 2 },
     libelle: "Continuer vers le Grand Hôtel",
   },
 ];

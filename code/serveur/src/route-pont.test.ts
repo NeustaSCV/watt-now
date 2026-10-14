@@ -117,11 +117,12 @@ test("les données tirées du modèle sont à jour (scripts/extraire-route-pont.
 test("la zone : on traverse du terrain à l'hôtel, la porte du péage ouverte ; fermée, on ne passe pas", () => {
   const terrain = sortiesDe("route_pont").find((s) => s.vers === "terrain")!.arrivee;
   const hotel = sortiesDe("route_pont").find((s) => s.vers === "grand_hotel")!.arrivee;
-  assert.ok(terrain.x > hotel.x, "le terrain à l'est, l'hôtel à l'ouest, comme sur la carte");
+  assert.ok(terrain.x < hotel.x, "le terrain à l'ouest, l'hôtel à l'est, comme sur la carte et dans le modèle");
   assert.ok(relies(zoneRoutePont({ haute: false, ouverte: true }), terrain, hotel), "porte ouverte : on passe");
   assert.ok(!relies(zoneRoutePont({ haute: false, ouverte: false }), terrain, hotel), "porte fermée : la chicane arrête");
-  // En venant du terrain, la caisse est de ce côté-ci de la porte.
-  assert.ok(relies(zoneRoutePont({ haute: false, ouverte: false }), terrain, { x: CAISSE_PEAGE.x - 0.9, z: CAISSE_PEAGE.z }));
+  // En venant du terrain, on arrive contre la porte (on y paie) ; la caisse est derrière, du côté de l'hôtel.
+  assert.ok(relies(zoneRoutePont({ haute: false, ouverte: false }), terrain, { x: PORTE_PEAGE.x - 1, z: PORTE_PEAGE.z }));
+  assert.ok(relies(zoneRoutePont({ haute: false, ouverte: false }), hotel, { x: CAISSE_PEAGE.x - 0.9, z: CAISSE_PEAGE.z }));
   // La cale : à marée basse, on y descend du quai ; à marée haute, l'accès est fermé.
   const cale = { x: (CALE.x0 + CALE.x1) / 2, z: (CALE.z0 + CALE.z1) / 2 };
   assert.ok(relies(zoneRoutePont({ haute: false, ouverte: false }), RETOUR_MAREE, cale));
@@ -191,7 +192,8 @@ test("le péage : 11 wotts refusés, 12 acceptés ; la porte ne s'ouvre que pour
   // Loin de la caisse : rien.
   rose.joueur.recevoir({ t: "payer_passage", passage: "pont", objets: { branche: 4 } });
   assert.ok(rose.infos().at(-1)!.startsWith("Approche-toi de la caisse"));
-  for (const j of [rose, malo]) j.joueur.position = { x: CAISSE_PEAGE.x - 1, z: CAISSE_PEAGE.z, o: 0 };
+  // Contre la porte, côté terrain (la caisse est derrière : la voix d'en haut entend).
+  for (const j of [rose, malo]) j.joueur.position = { x: PORTE_PEAGE.x - 1, z: PORTE_PEAGE.z, o: Math.PI / 2 };
   rose.joueur.recevoir({ t: "payer_passage", passage: "pont", objets: { branche: 2, chiffons: 1 } });
   assert.equal(rose.dernier("passage")!.ouvert, false);
   assert.deepEqual(rose.joueur.bienvenue(0).inventaire, { sac_a_dos: 1, branche: 10, chiffons: 2 }, "rien n'est pris");
@@ -203,14 +205,14 @@ test("le péage : 11 wotts refusés, 12 acceptés ; la porte ne s'ouvre que pour
   const pont = m.pont();
   assert.equal(pont.zonePour(rose.id), zoneRoutePont({ haute: false, ouverte: true }));
   assert.equal(pont.zonePour(malo.id), zoneRoutePont({ haute: false, ouverte: false }));
-  // Ils marchent vers l'ouest, devant la porte : Rose passe, Malo reste derrière.
+  // Ils marchent vers l'est, vers l'hôtel : Rose passe la porte, Malo reste devant.
   for (const j of [rose, malo]) {
-    j.joueur.position = { x: PORTE_PEAGE.x + 1.2, z: PORTE_PEAGE.z, o: -Math.PI / 2 };
-    j.joueur.recevoir({ t: "intention", dx: -1, dz: 0, allure: "marche", seq: 1 });
+    j.joueur.position = { x: PORTE_PEAGE.x - 1.2, z: PORTE_PEAGE.z, o: Math.PI / 2 };
+    j.joueur.recevoir({ t: "intention", dx: 1, dz: 0, allure: "marche", seq: 1 });
   }
   m.attendre(3);
-  assert.ok(rose.joueur.position.x < PORTE_PEAGE.x - 1, `Rose a passé la porte (x = ${rose.joueur.position.x})`);
-  assert.ok(malo.joueur.position.x > PORTE_PEAGE.x, `Malo est resté derrière (x = ${malo.joueur.position.x})`);
+  assert.ok(rose.joueur.position.x > PORTE_PEAGE.x + 1, `Rose a passé la porte (x = ${rose.joueur.position.x})`);
+  assert.ok(malo.joueur.position.x < PORTE_PEAGE.x, `Malo est resté devant (x = ${malo.joueur.position.x})`);
   for (const j of [rose, malo]) j.joueur.recevoir({ t: "intention", dx: 0, dz: 0, allure: "marche", seq: 2 });
   // Pendant l'heure, on ne redemande rien.
   rose.joueur.position = { x: CAISSE_PEAGE.x - 1, z: CAISSE_PEAGE.z, o: 0 };

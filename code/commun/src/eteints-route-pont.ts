@@ -9,8 +9,8 @@ import { ETEINTS_PONT } from "./route-pont-modele.ts";
 /**
  * Douze des vingt places de la fiche (S-06 : ≈ 12 par halte, à régler à la mesure sur l'iPhone) : les trois Noyés de la
  * vase, le patron du bar derrière son comptoir, l'errant du quai, l'équipé derrière la porte du péage et l'errant de la
- * pile, les rampants et les errants de la brèche et du tablier, l'équipé du hangar. Un « ancien habitant » somnole
- * debout (un dormeur) ; les Noyés errent, lentement (0,4 m/s).
+ * pile, les rampants et les errants de la brèche et du tablier, l'équipé du hangar. Un « ancien habitant » et l'équipé
+ * de derrière la porte du péage somnolent debout (des dormeurs) ; les Noyés errent, lentement (0,4 m/s).
  */
 const PLACES_ETEINTS: readonly string[] = [
   "Noyé (enlisé dans la vase",
@@ -38,7 +38,12 @@ export function eteintsRoutePont(): Eteint[] {
     else if (t.startsWith("rampant")) {
       place.variante = "rampant";
       place.etat = "dormant";
-    } else if (t.startsWith("équipé")) place.variante = "equipe";
+    } else if (t.startsWith("équipé")) {
+      place.variante = "equipe";
+      // Celui de derrière la porte du péage somnole debout, adossé à la tôle : il attend qu'on passe (éveillé, il
+      // tiendrait en mode Combat qui paie à la porte, à trois mètres, de l'autre côté).
+      if (t.includes("porte du péage")) place.etat = "dormant";
+    }
     else if (t.startsWith("ancien habitant")) place.etat = "dormant";
     return place;
   });

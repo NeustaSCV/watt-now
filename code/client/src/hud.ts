@@ -41,6 +41,8 @@ import { texteAVenir } from "../../commun/src/lignees.ts";
 import { enteteFiche, piedFiche } from "./fiche-examiner.ts";
 import { brancherFicheBanc, htmlFicheBanc, type GesteBanc } from "./fiche-banc.ts";
 import { brancherCoffre, enteteCoffre } from "./panneau-coffre.ts";
+import { CaissePeage } from "./panneau-peage.ts";
+import type { Passage } from "../../commun/src/peage.ts";
 import { texteLieu, type Alentours } from "../../commun/src/lieu-recette.ts";
 import { reprise, seReprend, type Reprise } from "../../commun/src/evolution-armes.ts";
 import { PRIX_RETRAIT, estObjetCle, formaterWotts, prixAchatExemplaire, prixVenteCle } from "../../commun/src/economie.ts";
@@ -674,6 +676,7 @@ export class Hud {
     }
     this.redessiner();
     if (this.coffre) this.dessinerCoffre();
+    this.caisse?.dessiner();
     this.majFiche();
   }
 
@@ -1479,6 +1482,7 @@ export class Hud {
     const avant = [this.sac, this.fabrication, this.guichet].some((p) => !p.hidden);
     for (const p of [this.sac, this.fabrication, this.guichet, this.panneauEchange, this.panneauCoffre, this.panneauFiche, ...this.panneauCommandes]) p.hidden = !(oui && p === panneau);
     if (panneau !== this.panneauCoffre || !oui) this.coffre = null;
+    if (panneau !== this.panneauCoffre || !oui) this.caisse = null;
     if (panneau !== this.panneauFiche || !oui) this.fiche = null;
     if (oui || avant) this.surPanneau?.(oui);
     // Un échange en cours ne se ferme que par ses propres boutons : sa fenêtre revient quand on ferme les autres.
@@ -2045,6 +2049,31 @@ export class Hud {
         this.dessinerCoffre();
       },
     });
+  }
+
+  // ---------- La caisse du péage (0.10, chantier H : le sac en mode « donner », client/src/panneau-peage.ts) ----------
+
+  private caisse: CaissePeage | null = null;
+
+  /** On touche la caisse : l'écran du coffre s'ouvre en mode « donner » ; « Payer » appelle `payer`. */
+  ouvrirCaisse(passage: Passage, payer: (objets: Inventaire) => void): void {
+    this.ouvrir(this.panneauCoffre, true);
+    this.caisse = new CaissePeage(this.panneauCoffre, passage, () => this.inventaire, payer, () => this.ouvrir(this.panneauCoffre, false));
+    this.caisse.dessiner();
+  }
+
+  /** La caisse ouverte, s'il y en a une (pour la fermer quand on s'en éloigne). */
+  get caisseOuverte(): boolean {
+    return this.caisse !== null;
+  }
+
+  /** La réponse du péage : payé, la caisse se ferme ; refusé, on garde ce qu'on avait choisi. */
+  reponseCaisse(ouvert: boolean): void {
+    this.caisse?.reponse(ouvert);
+  }
+
+  fermerCaisse(): void {
+    if (this.caisse) this.ouvrir(this.panneauCoffre, false);
   }
 
   // ---------- La fiche d'un feu ou d'une installation (Book 24 : améliorer sa base, sur place) ----------
