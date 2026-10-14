@@ -44,6 +44,7 @@ import { ArriveeDansUnLieu } from "./arrivee.ts";
 import { animerMoulin, creerMoulin } from "./rendu/moulin.ts";
 import { animerHotel, creerHotel, lumieresHotel } from "./rendu/hotel.ts";
 import { ClientHotel } from "./hotel.ts";
+import { Guidage } from "./guidage.ts";
 import { animerPhare, creerPhare } from "./rendu/phare.ts";
 import { PhareClient } from "./phare.ts";
 import { pieceMoulin } from "../../commun/src/moulin.ts";
@@ -182,6 +183,8 @@ const corniche = new RenduCorniche();
 const routePont = new RenduRoutePont();
 // 0.10, chantier K : le phare du cap, « le feu et le cargo » (client/src/phare.ts).
 const phare = new PhareClient((id, ou) => son.jouer(id, ou ?? null), () => document.getElementById("hud")!);
+// Le guidage du niveau 2 (0.10) : les voix et les pensées à l'approche, les écriteaux qu'on lit (client/src/guidage.ts).
+const guidage = new Guidage((texte, genre) => hud.message(texte, genre === "pensee" ? "pensee" : ""));
 /** L'atelier de chaque famille : quand il est installé, son thème joue au complet (moment-vitrine 4). */
 const ATELIERS = { charbonniers: "forge", voltaiques: "banc_recharge", mecanistes: "pedalier" } as const;
 /** Les sons qu'on fabrique d'avance en entrant dans le monde. */
@@ -770,6 +773,7 @@ function lancerProjectile(p: ProjectileVu): void {
 }
 
 function recevoir(message: MessageServeur): void {
+  guidage.recevoir(message); // le guidage 0.10 regarde passer les messages (il n'en prend aucun)
   // Le Grand Hôtel (0.10, chantier J) : l'état du check-in, la scène de l'ascenseur et du balcon.
   if (hotel.recevoir(message)) return;
   switch (message.t) {
@@ -1337,8 +1341,11 @@ function agir(a: ActionProposee | null): void {
   // Rien à portée : on dit comment trouver quelque chose à faire, plutôt que de ne rien faire.
   if (!a) return indice("rien", "Rien à portée : approche-toi jusqu'à voir un cercle au sol.");
   if ("message" in a) envoyer(a.message);
-  else if ("examiner" in a) hud.message(a.examiner, "examen");
-  else if ("ouvrirCoffre" in a) {
+  else if ("examiner" in a) {
+    // Un écriteau qu'on lit (le guidage 0.10) : son texte en grand ; sinon, le texte d'Examiner.
+    if (a.lire) hud.message(a.examiner, "ecriteau");
+    else hud.message(a.examiner, "examen");
+  } else if ("ouvrirCoffre" in a) {
     const c = installations.get(a.ouvrirCoffre);
     if (c) hud.ouvrirCoffre(c.vue);
   } else if ("ouvrirFiche" in a) {
@@ -1828,6 +1835,7 @@ function boucle(instant: number): void {
     if (lieu === "gue" && decor) gue.animer(position, dt, scene.angleCamera, Date.now() + decalage, debutMonde);
     if (lieu === "corniche" && decor) corniche.animer(position, dt, scene.angleCamera, ressources.values()); // 0.10, chantier I
     if (lieu === "route_pont" && decor) routePont.animer(position, dt, scene.angleCamera, Date.now() + decalage, debutMonde);
+    if (!vueArrivee.attend && !enVoyage) guidage.suivre(lieu, position, Date.now() + decalage, debutMonde, inventaire); // 0.10, guidage
     if (lieu === "cooperative" && decorCoop) {
       estomperCooperative(decorCoop, position.x, position.z, dt, scene.angleCamera);
       animerCooperative(decorCoop, dt);
@@ -1907,6 +1915,7 @@ function boucle(instant: number): void {
     // Au phare : l'escabeau, la cuve, le prisme, l'escalier et la lanterne, la corne, la rampe (chantier K).
     if (lieu === "phare") propositions = phare.proposer(position, propositions);
     if (lieu === "corniche") propositions = corniche.proposer(position, propositions); // le péage du tunnel (0.10, I)
+    propositions = guidage.proposer(lieu, position, propositions); // les écriteaux qu'on lit (0.10, guidage)
     // Les bras pris (V2-12) : ce que le lieu propose aux bras (poser, brancher, présenter) ; rien d'autre ne passe devant.
     const bras = brasPris();
     const gesteBras = bras ? propositions.A : null;
@@ -2087,6 +2096,8 @@ if (import.meta.env.DEV) {
       fondre: basculerRegroupements,
       /** La vue par pièce (0.7.2) : la carte de vue (souvenirImpose, redessins). */
       carteVue,
+      /** Le guidage 0.10 : ce qui s'est déjà dit pendant la visite. */
+      guidage,
     },
   });
 }

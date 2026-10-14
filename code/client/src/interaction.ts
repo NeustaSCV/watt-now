@@ -24,8 +24,11 @@ import { COUT_CREUSET, NIVEAU_FORGE_CREUSET } from "../../commun/src/meubles-neu
 
 export type ActionProposee =
   | { libelle: string; message: MessageClient }
-  /** Action locale au client : afficher un texte, ou ouvrir le panneau de fabrication. */
-  | { libelle: string; examiner: string }
+  /**
+   * Action locale au client : afficher un texte, ou ouvrir le panneau de fabrication. `lire` : un écriteau qu'on lit
+   * (guidage 0.10, client/src/guidage.ts), son texte affiché en grand.
+   */
+  | { libelle: string; examiner: string; lire?: true }
   | { libelle: string; ouvrirFabrication: true }
   /** À une sortie : ouvrir la carte, la destination déjà choisie. */
   | { libelle: string; ouvrirCarte: readonly LieuId[] }
