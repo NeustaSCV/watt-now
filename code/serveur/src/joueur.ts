@@ -205,6 +205,10 @@ import { pasVersLaCouche, trajetCouche, type AbriPose, type TrajetCouche } from 
 import { SANTE_DEPART } from "../../commun/src/combat.ts";
 import type { OperationAdmin, VueAdmin } from "../../commun/src/admin.ts";
 import { nombreFabriques, type VueProgression } from "../../commun/src/progression.ts";
+// Les présences de la 0.9 (chantier A) : l'allure et les gestes montrés aux autres, l'arme dans le dos.
+import { armeDansLeDos } from "../../commun/src/combat.ts";
+import type { AllureVue, GesteVu } from "../../commun/src/messages.ts";
+import { GESTES_MAX } from "./presences.ts";
 
 const JAMAIS = Number.MAX_SAFE_INTEGER;
 const INTERVALLE_BESOINS = 1000;
@@ -289,6 +293,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
   /** Le monde est prévenu de chaque fabrication (« voir faire », à 5 m) ; null : personne n'écoute. */
   surFabrication: ((recette: string) => void) | null = null;
   private bouge = false;
+  /** Ses gestes depuis la dernière diffusion des présences, montrés aux autres (0.9, presences.ts vide la file). */
+  readonly gestesRecents: GesteVu[] = [];
   // ---------- Combat et santé (É3, lot 3) ----------
   private sante: Sante;
   private endurance: number;
@@ -856,7 +862,28 @@ export class Joueur implements Voyageur, ParticipantLecon {
       o: Math.round(this.position.o * 100) / 100,
       lumiere: this.lumiere,
       apparence: this.apparence,
+      // L'arme encombrante équipée se voit dans le dos (0.9, Q-7).
+      ...(this.dos ? { dos: this.dos } : {}),
     };
+  }
+
+  private get dos(): TypeObjet | null {
+    return armeDansLeDos(this.inventaire, this.armeEquipee);
+  }
+
+  /** L'allure montrée aux autres (0.9) : 0 immobile, 1 discrète, 2 marche, 3 course. */
+  get allureVue(): AllureVue {
+    // En route vers sa couche, il avance accroupi (0.8.2, R12).
+    if (this.versLaCouche) return 1;
+    if (!this.bouge) return 0;
+    const allure = this.allureEffective();
+    return allure === "discrete" ? 1 : allure === "marche" ? 2 : 3;
+  }
+
+  /** Un geste montré aux autres joueurs qui le voient (0.9), à l'heure du serveur. */
+  private geste(g: Omit<GesteVu, "id" | "h">): void {
+    if (this.gestesRecents.length >= GESTES_MAX) this.gestesRecents.shift();
+    this.gestesRecents.push({ id: this.compte.id, h: this.maintenant(), ...g });
   }
 
   /** Ce qui manque pour donner une offre, ou null si tout y est. */
@@ -1118,6 +1145,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     const force = this.endurance < SEUIL_EPUISE ? 0.5 : 1;
     this.endurance = Math.max(0, this.endurance - cout);
     this.prochaineFrappe = instant + (appuye ? enMain.coupAppuye : enMain.coup) - TOLERANCE_COUP_MS;
+    this.geste({ geste: "frappe", appuye, ...(enMain.objet ? { objet: enMain.objet } : {}), duree: (appuye ? enMain.coupAppuye : enMain.coup) / 1000 });
     this.bruitCoupJusqua = instant + 600;
     // Le choc s'entend plus loin que le tranchant ; la décharge crépite (Book 25 §8.4).
     this.porteeDuCoup = porteeBruitCoup(enMain, appuye);
@@ -1400,6 +1428,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     // Sans direction, on recule.
     const [ux, uz] = l > 0.01 ? [dx / l, dz / l] : [-Math.sin(this.position.o), -Math.cos(this.position.o)];
     this.annulerAction();
+    this.geste({ geste: "esquive" });
     this.endurance -= COUT_ENDURANCE.esquive;
     this.esquiveJusqua = instant + ESQUIVE.invulnerable * 1000;
     this.elan = { dx: ux, dz: uz, restant: ESQUIVE.duree };
@@ -1525,6 +1554,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
   private repousserDevant(): void {
     if (this.voyage) return;
     if (this.endurance < REPOUSSER.cout) return this.info("Trop essoufflé pour repousser : recule, ton souffle revient vite.");
+    // Le geste se voit même si personne n'est assez près pour reculer (le client l'a joué en l'envoyant).
+    this.geste({ geste: "poussee" });
     const proches = this.eteintsIci()
       .filter((e) => debout(e))
       .map((e) => ({ e, d: Math.hypot(e.x - this.position.x, e.z - this.position.z) }))
@@ -1590,6 +1621,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
   private degager(): void {
     const tiennent = this.saisisseurs();
     if (tiennent.length === 0) return;
+    this.geste({ geste: "degagement" });
     this.endurance = Math.max(0, this.endurance - COUT_ENDURANCE.degagement);
     this.appuisDegagement++;
     const besoin = APPUIS_DEGAGEMENT * tiennent.length;
@@ -1668,6 +1700,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       if (!this.invincible) this.sante = aggraver(this.sante, "morsure", DEGATS_MORSURE, instant);
       this.noterFait("morsure");
       this.envoyer({ t: "morsure" });
+      this.geste({ geste: "touche" });
       this.envoyerSante(true);
     }
 
@@ -1707,6 +1740,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
   private effondrer(raison: string): void {
     if (this.invincible) return this.garderInvincible();
     this.mesurer("effondrement", raison, 1, { lieu: this.lieu });
+    this.geste({ geste: "effondre" });
     const instant = this.maintenant();
     this.reveiller("");
     this.poserObjetLourd();
@@ -2346,6 +2380,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     this.annulerAction();
     this.intention = INTENTION_REPOS;
     this.sommeil = { dansUnAbri, surUnLit, confort };
+    this.geste({ geste: "couche" });
     this.endormiDepuis = this.maintenant();
     if (this.tuto && dansUnAbri) this.tuto.dormiAbri = true;
     this.lumiere = false;
@@ -2387,6 +2422,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     // Une vraie nuit (abri ou lit, une demi-minute au moins) : elle fait penser au bâton à fouir, au coffre…
     if ((this.sommeil.dansUnAbri || this.sommeil.surUnLit) && this.maintenant() - this.endormiDepuis >= 30_000) this.noterFait("nuit");
     this.sommeil = null;
+    this.geste({ geste: "releve" });
     this.mesurer("activite", "sommeil", (this.maintenant() - this.endormiDepuis) / 1000);
     this.envoyer({ t: "sommeil", dort: false, dansUnAbri: false });
     this.envoyerBesoins();
@@ -2718,6 +2754,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       this.mesurer("activite", categorieAction(action.libelle), (instant - action.lance) / 1000);
       action.appliquer();
       this.envoyer({ t: "action", etat: "fin" });
+      this.geste({ geste: "fin_action" });
     }
   }
 
@@ -2863,6 +2900,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     const debut = instant - deja * dureeS * 1000;
     this.action = { libelle, debut, fin: debut + dureeS * 1000, total: dureeS, lance: instant, appliquer, kcalEnPlus, bruit };
     this.envoyer({ t: "action", etat: "debut", libelle, duree: dureeS, bruit, ...(deja > 0 ? { deja: Math.round(deja * 1000) / 1000 } : {}) });
+    this.geste({ geste: "action", action: libelle });
   }
 
   private annulerAction(): void {
@@ -2875,6 +2913,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     this.mesurer("activite", categorieAction(a.libelle), (instant - a.lance) / 1000);
     this.action = null;
     this.envoyer({ t: "action", etat: "annulee" });
+    this.geste({ geste: "fin_action" });
   }
 
   private info(texte: string): void {

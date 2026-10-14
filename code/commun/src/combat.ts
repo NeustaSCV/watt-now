@@ -586,3 +586,17 @@ export function panser(s: Sante): Sante {
 export function seRelever(s: Sante, instant: number): Sante {
   return { ...s, points: Math.max(s.points, 35), saignement: "aucun", convalescenceJusqua: instant + DUREE_CONVALESCENCE_MS };
 }
+
+// ---------- L'arme dans le dos (0.9, chantier A ; plan 0.9 Q-7) ----------
+
+/**
+ * Les armes encombrantes : équipées, elles se portent dans le dos hors du coup (plan 0.8 §2.4), et les autres joueurs
+ * les y voient en permanence (plan 0.9 Q-7). Une seule liste, pour le serveur (`AutreVu.dos`) et le client local.
+ */
+export const ARMES_DANS_LE_DOS: readonly TypeObjet[] = ["fourche_foin"];
+
+/** L'arme qu'on porte dans le dos : celle qu'on a en main (`armeEnMain`) si elle est encombrante, sinon null. */
+export function armeDansLeDos(inventaire: Inventaire, equipee: CleObjet | null): TypeObjet | null {
+  const objet = armeEnMain(inventaire, equipee).objet;
+  return objet !== null && ARMES_DANS_LE_DOS.includes(objet) ? objet : null;
+}

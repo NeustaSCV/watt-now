@@ -15,6 +15,7 @@ import type { EteintVu } from "../../commun/src/eteints.ts";
 import { cerclesSignature, type BruitAction } from "../../commun/src/signature.ts";
 import { ALLURES, type Allure } from "../../commun/src/regles.ts";
 import { APPUIS_DEGAGEMENT, ESQUIVE, REPOUSSER, SEUIL_EPUISE, armeEnMain, freinSaisie } from "../../commun/src/combat.ts";
+import { armeDansLeDos } from "../../commun/src/combat.ts";
 import type { AutreVu, SacVu, SanteVue, VueComptoir } from "../../commun/src/messages.ts";
 import { PORTEE_CABLE_PANNEAU, type Charges } from "../../commun/src/energie.ts";
 import type { Bienvenue, EtatCoopVu, InstallationVue, MessageClient, MessageServeur } from "../../commun/src/messages.ts";
@@ -1761,7 +1762,7 @@ function boucle(instant: number): void {
     const arcVise = viseeEnCours?.pret.genre === "tir" && !viseeEnCours.pret.arme.armeeDAvance ? typeDe(viseeEnCours.pret.cle) : null;
     personnage.tenir(arcVise ?? (modeCombat ? armeEnMain(inventaire, armeEquipee).objet : undefined));
     // Hors du combat, la fourche à foin se porte dans le dos (plan 0.8 §2.4, chantier 8).
-    personnage.porterDansLeDos(!modeCombat && !arcVise && armeEnMain(inventaire, armeEquipee).objet === "fourche_foin" ? "fourche_foin" : null);
+    personnage.porterDansLeDos(!modeCombat && !arcVise ? armeDansLeDos(inventaire, armeEquipee) : null);
     // L'appui gardé pendant le coup précédent part à la fin du geste : on enchaîne sans marteler.
     if (coupEnAttente !== null && performance.now() >= coupFiniLe) {
       const appuye = coupEnAttente;
