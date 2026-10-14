@@ -13,7 +13,10 @@ const batiment = process.argv[2] ? resolve(process.argv[2]) : join(code, "..", "
 const cible = join(code, "client", "src", "batiments");
 
 /** Ce qu'on copie : les modèles du jeu et l'atelier commun dont ils dépendent (pas la visionneuse, ni les vendeurs). */
-const A_COPIER = ["commun/atelier.js", "halte-gue/modele.js", "halte-gue/atlas.js", "halte-gue/outils.js", "moulin/modele.js"];
+const A_COPIER = ["commun/atelier.js", "halte-gue/modele.js", "halte-gue/atlas.js", "halte-gue/outils.js", "moulin/modele.js",
+  // 0.10, chantier I : la corniche du Cap Rouge (H2B ; son modèle n'importe que l'atelier commun).
+  "halte-corniche/modele.js",
+];
 
 for (const chemin of A_COPIER) {
   if (!existsSync(join(batiment, chemin))) {

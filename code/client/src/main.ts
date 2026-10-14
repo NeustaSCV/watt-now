@@ -45,6 +45,7 @@ import { animerMoulin, creerMoulin } from "./rendu/moulin.ts";
 import { pieceMoulin } from "../../commun/src/moulin.ts";
 // Le Gué-aux-Saules (plan 0.8, chantier 11) : son décor, son bac, sa crue, ses sons.
 import { RenduGue } from "./rendu/gue.ts";
+import { RenduCorniche } from "./rendu/corniche.ts";
 import { animerCooperative, creerCooperative, estomperCooperative, majPortes, ouverturesPortes, placerRadio, secouerPorte } from "./rendu/cooperative.ts";
 import { CarteVue, arcsParPiece, brouillerTout, clartesDe } from "./rendu/carte-vue.ts";
 import { Ondes } from "./rendu/ondes.ts";
@@ -147,7 +148,7 @@ const DECORS: Record<LieuJouable, () => THREE.Object3D[]> = {
   // 0.10 : le niveau 2, branché vide (chantier A) ; les modèles aux chantiers H à K.
   route_pont: () => [creerLieuVide("route_pont")],
   grand_hotel: () => [creerLieuVide("grand_hotel")],
-  corniche: () => [creerLieuVide("corniche")],
+  corniche: () => [corniche.creer()], // 0.10, chantier I : le modèle de la corniche du Cap Rouge
   phare: () => [creerLieuVide("phare")],
 };
 function montrerDecor(lieu: LieuJouable): void {
@@ -166,6 +167,8 @@ const entrees = new Entrees(document.getElementById("joystick")!, canvas);
 const son = new Sonorisation(tactile);
 const bruiteur = new Bruiteur(son);
 const gue = new RenduGue((id, ou) => son.jouer(id, ou ?? null));
+/** La corniche du Cap Rouge (0.10, chantier I) : ses tronçons, le pin tombé, la barricade du tunnel. */
+const corniche = new RenduCorniche();
 /** L'atelier de chaque famille : quand il est installé, son thème joue au complet (moment-vitrine 4). */
 const ATELIERS = { charbonniers: "forge", voltaiques: "banc_recharge", mecanistes: "pedalier" } as const;
 /** Les sons qu'on fabrique d'avance en entrant dans le monde. */
@@ -1610,6 +1613,7 @@ function sourcesDeLumiere(): SourceLumiere[] {
   // Au Carrefour, la lumière électrique ne s'éteint jamais.
   if (lieu === "comptoir") sources.push(...lumieresComptoir());
   if (lieu === "gue") sources.push(...gue.lumieres(estNuit(Number.isFinite(HEURE_FORCEE) ? HEURE_FORCEE : heureDeJeu(Date.now() + decalage, debutMonde)), position));
+  if (lieu === "corniche") sources.push(...corniche.lumieres(estNuit(Number.isFinite(HEURE_FORCEE) ? HEURE_FORCEE : heureDeJeu(Date.now() + decalage, debutMonde))));
   const portee = lumierePortee(inventaire);
   if (lumiere && portee && position) {
     const genre = OBJETS[portee].lumiere!;
@@ -1771,6 +1775,7 @@ function boucle(instant: number): void {
     // Les toits qui cachent le personnage s'effacent (à la halte et au Comptoir), selon l'angle de la caméra.
     if ((lieu === "station" || lieu === "comptoir") && decor) estomperToits(decor, position.x, position.z, dt, scene.angleCamera);
     if (lieu === "gue" && decor) gue.animer(position, dt, scene.angleCamera, Date.now() + decalage, debutMonde);
+    if (lieu === "corniche" && decor) corniche.animer(position, dt, scene.angleCamera, ressources.values()); // 0.10, chantier I
     if (lieu === "cooperative" && decorCoop) {
       estomperCooperative(decorCoop, position.x, position.z, dt, scene.angleCamera);
       animerCooperative(decorCoop, dt);

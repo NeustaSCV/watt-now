@@ -27,6 +27,7 @@
 
 import type { EtapeMonde } from "./lignees.ts";
 import { REINITIALISATION_COOP_MS, portesInitiales, sombreIci } from "./cooperative.ts";
+import { PLAN_CORNICHE, sombreCorniche } from "./corniche.ts";
 import { TOUS_LES_LIEUX, zoneCoop, zoneDe, zoneMoulin, type LieuId, type Sortie, type Zone } from "./lieux.ts";
 import { REINITIALISATION_MOULIN_MS, portesInitialesMoulin, sombreMoulin } from "./moulin.ts";
 import { PLAN_VUE_COOP, PLAN_VUE_GUE, PLAN_VUE_HALTE, PLAN_VUE_MOULIN } from "./vue-lieux.ts";
@@ -138,7 +139,8 @@ export const REGISTRE_LIEUX: Readonly<Record<LieuId, FicheLieu>> = {
     musique: "grand_hotel",
     pourPartir: () => "Pour partir, reprends la promenade, à l'est.",
   },
-  corniche: { id: "corniche", nature: "halte", niveau: 2, etape: "H2B", plan: null, traverser: "la traverser", musique: "corniche" },
+  // 0.10, chantier I : la corniche du Cap Rouge (commun/src/corniche.ts) : la vue par pièce, le tunnel noir.
+  corniche: { id: "corniche", nature: "halte", niveau: 2, etape: "H2B", plan: PLAN_CORNICHE, sombre: sombreCorniche, traverser: "la traverser", musique: "corniche" },
   phare: {
     id: "phare",
     nature: "personnel",
