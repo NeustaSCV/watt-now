@@ -425,7 +425,7 @@ Décidé aussi : **le phare ne se joue que la nuit** (de jour, on prépare la mo
 | # | Décision | Ce qu'elle change ici |
 |---|---|---|
 | Q-0.10-1 | Les murs et les sols sortent en **0.10.1** | §8 : décidés, codés après la 0.10 |
-| Q-0.10-2 | La répartition des objets-clés est gardée (L2A, l'hôtel ; L2B, le phare), avec leurs coins : à l'hôtel, les couvertures à la lingerie, les roulements dans la machinerie de l'ascenseur, le fer à souder au local technique, la lanterne-tempête dans la suite, les tôles sur le toit des cabines ; au phare, la cloche du cargo, le rabot à l'établi du hangar, le jerrican sous l'escalier, la porte de four et le soufflet dans les conteneurs | §9.3 : « les objets-clés de chaque lieu » est réglé |
+| Q-0.10-2 | La répartition des objets-clés est gardée (L2A, l'hôtel ; L2B, le phare), avec leurs coins, **tous au fond** (R49) : à l'hôtel, à l'étage — les couvertures à la lingerie, la lanterne-tempête dans la suite, les roulements et le fer à souder dans la machinerie de l'ascenseur, les tôles dans la chambre au balcon ; au phare, dans l'épave — la cloche du cargo, et dans les conteneurs la porte de four, le soufflet, le rabot et le jerrican | §9.3 : « les objets-clés de chaque lieu » est réglé |
 | Q-0.10-3 | Les Éteints **s'acharnent** sur un mur, ils ne le contournent pas (Book 06 §2.1) | MS-Q3 précisée : pas de contournement |
 | Q-0.10-4 | Les fluides du Noyé : une **nausée de 30 s** (l'endurance revient deux fois moins vite) et l'odeur ; l'infection plus tard | N2-64 précisée |
 | Q-0.10-5 | Le péage : une **caisse au pied du poste de guet** et une **voix** d'en haut | N2-59 précisée |
@@ -433,3 +433,5 @@ Décidé aussi : **le phare ne se joue que la nuit** (de jour, on prépare la mo
 | Q-0.10-7 | La marée de la route du pont : **basse la moitié du temps**, cycle de 12 min réelles, lisible sur l'échelle du quai | §10.3 précisé |
 | Q-0.10-8 | La tête du robot se porte **à deux mains** (8 kg) : on ne frappe pas en la portant | §9.2 précisé |
 | Q-0.10-9 | Au phare de jour, **on prépare** (la montée, le pétrole, le prisme, le compresseur) | §9.1 précisé |
+
+| S-07, S-12, S-19, S-28 | Validées avec le plan de la 0.10 (§10) : à la borne, seulement la batterie du panneau de la promenade (pas de pack) ; au phare, on monte seulement par l'escabeau (pas de colonne des poids) ; le péage payé vaut **1 h réelle** de passage libre ; la poulie donne **+ 50 %** au moulin de jerricans (pas d'entraînement direct) | N2-47, N2-60, §9.1, §9.2 précisés |

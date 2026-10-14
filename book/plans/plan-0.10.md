@@ -1,6 +1,8 @@
 # Plan de développement — version 0.10 : le niveau 2, sur la côte
 
-*Version du plan : v0.2 · 2026-10-14 · **Statut : décidé, pas encore codé.***
+*Version du plan : v0.3 · 2026-10-14 · **Statut : décidé, pas encore codé.***
+
+*v0.3 (2026-10-14) : les **33 précisions S-01 à S-33** (§10) validées par le porteur, pour un développement simple ; les dix objets-clés **tous au fond** des lieux (R49) ; la demande à la session « bâtiments » écrite ([`demande-batiments-niveau-2.md`](demande-batiments-niveau-2.md)).*
 
 *v0.2 (2026-10-14) : les neuf questions tranchées en suivant toutes les recommandations (§9). **Les murs et les sols sortent en 0.10.1** (le chantier E passe au §8) ; **le banc solaire suit le soleil** (chantier D) ; les fluides du Noyé donnent une nausée de 30 s ; le péage : une caisse et une voix ; la marée basse la moitié du temps (cycle de 12 min) ; la tête du robot portée à deux mains ; au phare de jour, on prépare.*
 
@@ -55,7 +57,7 @@ Tout ce qui est décidé dans `niveau-2.md` (✅), c'est-à-dire :
 
 ### 1.3 Ce qui doit être livré avant (la session « bâtiments »)
 
-Une demande à écrire dans `.claude-travail/propositions/demande-batiment-niveau-2.md`, à faire **dès la validation du plan** (les chantiers H à K en dépendent) :
+La demande est écrite : [`demande-batiments-niveau-2.md`](demande-batiments-niveau-2.md) (2026-10-14) (les chantiers H à K en dépendent) :
 
 | Modèle | Ce qu'il faut ajouter ou changer |
 |---|---|
@@ -390,7 +392,7 @@ Décidés (MS-01 à MS-09, MS-Q1 à MS-Q8, §3.2), sortis de la 0.10 pour la gar
 | # | Question | Décision (la recommandation) |
 |---|---|---|
 | **Q-0.10-1** ✅ | **Les murs et les sols** dans la 0.10, ou en **0.10.1** ? | **En 0.10.1** : la 0.10 reste centrée sur les lieux et gagne ≈ 5 jours-agent de risque ; les murs auront leur propre recette |
-| **Q-0.10-2** ✅ | **Les objets-clés dans les lieux** : on garde la répartition décidée (L2A, l'hôtel : tôles, couvertures de laine, lanterne-tempête, fer à souder, roulements ; L2B, le phare : porte de four, jerrican, rabot, cloche, soufflet) ? | **Oui**, elle va bien aux lieux : à l'hôtel, les couvertures à la **lingerie**, les roulements dans la **machinerie de l'ascenseur**, le fer à souder au **local technique**, la lanterne-tempête dans la **suite**, les tôles sur le **toit des cabines** ; au phare, la cloche est **la cloche du cargo**, le rabot à l'**établi du hangar**, le jerrican sous l'escalier, la porte de four et le soufflet **dans les conteneurs** (la livraison du jour) |
+| **Q-0.10-2** ✅ | **Les objets-clés dans les lieux** : on garde la répartition décidée (L2A, l'hôtel : tôles, couvertures de laine, lanterne-tempête, fer à souder, roulements ; L2B, le phare : porte de four, jerrican, rabot, cloche, soufflet) ? | **Oui**, et **toutes au fond** (R49) : à l'hôtel, **à l'étage** — les couvertures à la **lingerie**, la lanterne-tempête dans la **suite**, les roulements et le fer à souder dans la **machinerie de l'ascenseur**, les tôles dans la **chambre au balcon** ; au phare, **dans l'épave** — **la cloche du cargo**, et dans les conteneurs la porte de four, le soufflet, le rabot et le jerrican (la livraison du jour) |
 | **Q-0.10-3** ✅ | **Les Éteints face à un mur** : MS-Q3 disait « ils le contournent ou s'acharnent dessus », mais ils ne savent pas contourner (pas de recherche de chemin, Book 06 §2.1). | **Ils s'acharnent** : un Éteint arrêté par un mur l'abîme (le mur de branches cède en ≈ 20 s) ; pas de contournement (cohérent avec le Book 06) |
 | **Q-0.10-4** ✅ | **Les fluides du Noyé** : « risque d'infection », mais l'infection n'existe pas encore. | Pour la 0.10 : **l'odeur** (déjà décidée) et une **nausée** de 30 s (l'endurance revient deux fois moins vite) ; l'infection viendra avec le Book 05 |
 | **Q-0.10-5** ✅ | **Le péage** : les survivants ne sont pas des personnages du jeu. À qui donne-t-on ? | Une **caisse au pied du poste de guet** et une **voix** d'en haut (« Douze, et tu passes. ») ; on y dépose les objets, la chicane s'ouvre pour soi seul ; l'écran montre le compte ; un message fermé par un bouton (R48) |
@@ -398,3 +400,79 @@ Décidés (MS-01 à MS-09, MS-Q1 à MS-Q8, §3.2), sortis de la 0.10 pour la gar
 | **Q-0.10-7** ✅ | **La marée** de la route du pont : quel rythme ? | **Marée basse la moitié du temps**, un cycle de 12 h de jeu (12 min réelles) ; l'heure de la marée se lit sur l'échelle peinte du quai |
 | **Q-0.10-8** ✅ | **La tête du robot** : un objet qu'on porte (poids, sac) ou qu'on tient à deux mains (on ne frappe plus) ? | **À deux mains**, 8 kg : on ne frappe pas en la portant, ce qui fait de la traversée un moment de tension |
 | **Q-0.10-9** ✅ | **La nuit du phare** : si le joueur arrive de jour, que fait-il ? | Il **prépare** : la montée, le pétrole, le prisme, le compresseur ; un message dit « Le feu ne sert qu'à la nuit tombée. » ; il peut aussi rentrer et revenir |
+
+---
+
+## 10. Les précisions pour un développement simple (validées le 2026-10-14)
+
+*But : que chaque chantier sache exactement quoi faire, en **réutilisant ce qui existe** plutôt qu'en inventant un mécanisme. Toutes validées par le porteur ; elles priment sur les sections précédentes en cas d'écart (S-07, S-12, S-19 et S-28 modifient des décisions de `niveau-2.md`). La demande à la session « bâtiments » ([`demande-batiments-niveau-2.md`](demande-batiments-niveau-2.md)) suit déjà ces propositions.*
+
+### 10.1 Les lieux
+
+| # | Précision | Ce qu'on réutilise |
+|---|---|---|
+| S-01 | **Un lieu = un seul repère.** L'étage de l'hôtel est posé **à côté** du rez-de-chaussée, au sol ; l'**ascenseur** et le **balcon** sont des **téléportations** dans le lieu, avec un **fondu au noir** d'une seconde. Pas de vrai étage superposé, pas de cabine qui bouge | Le placement d'arrivée (`arriveeDans`), le fondu du voyage |
+| S-02 | **Ce qui change d'état est un état du lieu**, comme les portes du Moulin : la grille de l'ascenseur, la borne, la lanterne, l'épave, la marée, la chicane du péage. Le modèle livre les deux versions ; le jeu montre l'une | `EtatMoulin.portes`, `zoneMoulin(portes)` |
+| S-03 | **Les objets-clés** ont chacun **une place fixe**, comme la fourche et l'étau du Moulin ; ils reviennent selon leur délai (24 h ou 4 jours) | Les ressources de lieu (`moulin_fourche`, `REPOUSSE_MS`) |
+| S-04 | **La réinitialisation à 24 h** se fait comme au Moulin : à l'entrée, lieu vide | `aReinitialiser`, `LieuVivant.reinitialiser()` |
+| S-05 | **Les deux haltes** sont faites comme le gué : un lot de 200 × 70 m en tronçons, partagé | Le code du gué |
+| S-06 | **Le nombre d'Éteints** : on part de **20 par lieu personnel** (la Coopérative en a 24, le Moulin 22) et **12 par halte** (la station en a 11), puis on règle à la mesure sur l'iPhone | Les places de la `FICHE` |
+
+### 10.2 L'hôtel, « le check-in »
+
+| # | Précision | Ce qu'on réutilise |
+|---|---|---|
+| S-07 | **La batterie** est celle du panneau de la promenade, **un objet du lieu** : on la prend, on la branche à la borne, elle y reste. Le joueur ne dépense rien de son sac. **La variante « le pack d'un Voltaïque » est retirée** | La clé du Moulin laissée dans la serrure |
+| S-08 | **La tête du robot** et **la batterie** se portent **dans les bras**, comme l'escabeau : on ne court pas, on ne frappe pas, on peut les poser | L'objet lourd dans les bras (`messages.ts` l.115, l.178) |
+| S-09 | **Dégager le robot** : un geste de 10 s avec Creuser 1 (la pelle, ou les mains à Creuser 0 en 30 s) | Le gisement de glaise du gué |
+| S-10 | **La borne** : batterie branchée + tête présentée → elle remet **la carte de la chambre 7** (un objet). **La carte disparaît du sac quand on quitte le lieu** (pas d'expiration à gérer) | `donne` d'une ressource |
+| S-11 | **L'ascenseur** : la carte en main, appeler → fondu → l'étage. On **redescend** par l'ascenseur tant qu'on est à l'étage ; on **sort** par le balcon (sens unique : on retombe sur la dune, on ne remonte pas) | S-01 ; `sansArrivee` |
+
+### 10.3 Le phare, « le feu et le cargo »
+
+| # | Précision | Ce qu'on réutilise |
+|---|---|---|
+| S-12 | **La montée** : seulement **l'escabeau du gardien**, pris dans le hangar et porté dans les bras jusqu'au pied de l'escalier coupé. **La colonne des poids est retirée** (un seul chemin) | S-08 ; l'escabeau posé au pied d'un arbre |
+| S-13 | **Le pétrole** : on remplit le bidon à la cuve (5 s), on le monte, on remplit la lanterne. **Le prisme** : on le ramasse, on le monte, on le remet. Ce sont deux objets ordinaires du lieu | Des ressources de lieu |
+| S-14 | **Allumer** n'est possible **que la nuit** (21 h – 5 h 30 de jeu) ; de jour, un message fermé par un bouton : « Le feu ne sert qu'à la nuit tombée. » | `estNuit` |
+| S-15 | **La « vague »** : **pas d'Éteints qui apparaissent**. 8 à 10 **dormeurs** sont déjà couchés sur le chemin des douaniers ; la lanterne allumée est une **lumière** qui les réveille et les attire | `Stimulus` lumière, les dormeurs |
+| S-16 | **La corne de brume** : réparer le compresseur (Serrer 1, 10 s, sans pièce) ; sonner = **un leurre** : un bruit fort au bord de la falaise, 60 s, une fois par nuit | `LEURRES_MOULIN` |
+| S-17 | **Le cargo** : **pas de cinématique synchronisée**. **2 min réelles** après l'allumage, le serveur passe le lieu à l'état « épave » : le client joue **la corne grave du cargo**, **un choc**, un **fondu de 2 s**, et l'épave est là. Un joueur qui arrive après la trouve déjà échouée | S-02 ; un son et un fondu |
+| S-18 | **L'épave reste jusqu'à la réinitialisation** (24 h) ; elle ne revient qu'avec un nouvel allumage, la nuit suivante | S-04 |
+
+### 10.4 Les haltes
+
+| # | Précision | Ce qu'on réutilise |
+|---|---|---|
+| S-19 | **Le péage** : on touche la caisse ; **le sac s'ouvre en mode « donner »** ; on touche des objets, un compteur monte jusqu'à 12 wotts ; « Payer » ; la chicane s'ouvre **pour soi**. Pas de monnaie rendue. **« À l'aller seulement »** = on paie une fois et on passe librement **pendant 1 h réelle** (l'aller et le retour d'une sortie) | L'écran du coffre, `energieGrise` |
+| S-20 | **La marée** : **deux états** qui alternent toutes les **6 min réelles**, la même heure pour tout le monde (calculée comme la météo). Pas d'eau animée : le modèle montre l'un ou l'autre. Les bancs se fouillent à marée basse seulement | `meteo.ts` (un tirage par tranche) |
+| S-21 | **Le pin tombé** : un tas personnel de 10 bûches, comme le tas de bois de la station | Le tas personnel de H1A (B3) |
+
+### 10.5 Les meubles nouveaux
+
+| # | Précision | Ce qu'on réutilise |
+|---|---|---|
+| S-22 | **Le cuiseur solaire** = **un foyer qui ne brûle rien** : les recettes « bouillir l'eau » et les plats du foyer de pierres, **deux fois plus lentes**, au soleil et le jour seulement | Les recettes du foyer |
+| S-23 | **Les bacs de tri** = **un bonus de proximité** (3 m), comme le râtelier : démonter 2 fois plus vite ; **une matière de plus, un démontage sur trois** (au hasard, tiré par le serveur) | La proximité du râtelier |
+| S-24 | **Le creuset** = **deux recettes à la forge ventilée** : 4 chutes → 1 poulie ; 4 chutes → 1 lingot | Les recettes de forge |
+| S-25 | **La rampe de LED** = **une lumière posée** comme la lanterne fixe (20 m), qui **tire 3 W** sur la batterie de la base, la nuit seulement ; batterie vide : éteinte | La lanterne fixe, `decharger` |
+| S-26 | **La batterie de cellules** = **un type de batterie de 120 Wh** posé à la base | `TypeBatterie` |
+| S-27 | **La charrette** = **la brouette avec + 100 kg** (au lieu de + 60) | La brouette |
+| S-28 | **Le moulin de jerricans** = **un producteur comme le banc** : 15 W quand il vente (couvert, pluie), 5 W par temps voilé, rien au soleil, au calendrier, même hors ligne, vers la batterie de la base. **La poulie (🔥) : + 50 % de production**, au lieu d'un entraînement direct de la meule et du tour (une mécanique de moins) | `productionPanneau`, `NUAGES` |
+| S-29 | **L'arbalète de garde** = **un piège** comme l'assommoir : le premier Éteint qui passe à 1 m devant reçoit **un carreau** (les dégâts de l'arbalète posée) ; puis il faut la réarmer (2 s au cranequin léger, 3 s sinon). Pas de trajectoire | L'assommoir, les dégâts de `tir.ts` |
+| S-30 | **Le banc qui suit le soleil** : la production = la moyenne actuelle × un facteur d'heure (0 la nuit) × un facteur de temps (soleil 1, voilé 0,6, couvert 0,3, pluie 0), réglé pour donner **80 Wh par beau jour** | `productionPanneau`, `meteo()` |
+
+### 10.6 Les Éteints
+
+| # | Précision | Ce qu'on réutilise |
+|---|---|---|
+| S-31 | **Le Noyé** = **une variante d'Errant** (`noye`) : 0,4 m/s ; **un coup au torse ne le fait pas tomber** ; la tête et les jambes comme les autres | `VarianteEteint`, `encaisser` |
+| S-32 | **Quand il crève** : tout joueur à **moins de 1,5 m** prend **la nausée** (30 s : l'endurance revient deux fois moins vite, une icône) ; une **odeur** (stimulus) d'1 min au point de sa mort. Pas de corps qui reste gonflé | `Stimulus` odeur ; un état comme l'intoxication |
+| S-33 | **L'Ensablé** = **un rampant dormeur** dessiné à moitié sous le sable ; aucune règle nouvelle | Le rampant, le dormeur |
+
+### 10.7 Ce qu'on retire pour simplifier (déjà pris en compte ci-dessus)
+
+- La **colonne des poids** du phare (S-12) et le **pack du Voltaïque** à la borne (S-07).
+- L'**entraînement direct** de la meule par le moulin (S-28 : un bonus de production à la place).
+- Les **deux cartes** de l'hôtel (S-01 : un seul lot).
+- L'**animation** du cargo, de l'ascenseur et de la marée (S-17, S-01, S-20 : des états et des fondus).
