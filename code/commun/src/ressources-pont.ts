@@ -86,7 +86,7 @@ export const EMPRISE_PONT: Partial<Record<TypeRessource, number>> = {
   banc_mobylette: 0.8,
 };
 
-const fouille = (libelle: string, examen: string, duree = 5): UsageRessource => ({ verbe: "fouiller", libelle, donne: {}, qualites: {}, duree, examen });
+const fouille = (libelle: string, examen: string, duree = 5, donne: UsageRessource["donne"] = {}): UsageRessource => ({ verbe: "fouiller", libelle, donne, qualites: {}, duree, examen });
 
 export const USAGES_PONT: Record<TypeRessourcePont, UsageRessource> = {
   // ---------- Le vrac ----------
@@ -133,8 +133,9 @@ export const USAGES_PONT: Record<TypeRessourcePont, UsageRessource> = {
   },
   // ---------- Les fouilles « par chance » ----------
   pont_pontier: fouille("Fouiller le bureau du pontier", "Le bureau du pontier : le registre des passages depuis 1934, le tampon, une caisse de jetons. Le tarif est encore au mur : piéton, 0 f 10."),
-  pont_epicerie: fouille("Fouiller l'épicerie", "Les rayons de l'épicerie du bar : des sardines, du sel, des allumettes, des appâts, des brosses à dents."),
-  pont_bar: fouille("Fouiller derrière le comptoir", "Le comptoir « Au Rendez-vous des Pêcheurs » : des bouteilles, du sucre, du tabac, l'ardoise du Wi-Fi des marées."),
+  // V3-03 (chantier V3) : une bouteille vide à l'épicerie (la consigne), une derrière le comptoir du bar.
+  pont_epicerie: fouille("Fouiller l'épicerie", "Les rayons de l'épicerie du bar : des sardines, du sel, des allumettes, des appâts, des brosses à dents, un casier de bouteilles consignées.", 5, { bouteille_verre: 1 }),
+  pont_bar: fouille("Fouiller derrière le comptoir", "Le comptoir « Au Rendez-vous des Pêcheurs » : des bouteilles, du sucre, du tabac, l'ardoise du Wi-Fi des marées.", 5, { bouteille_verre: 1 }),
   pont_voiture: fouille("Fouiller la voiture", "Une voiture restée sur le pont : la boîte à gants, le coffre, les sièges. Les gens sont partis à pied.", 4),
   pont_camionnette: fouille("Fouiller les colis", "Des colis « Livré en 7 min, garanti » : des chargeurs, des gadgets, une bouilloire connectée, des chaussettes."),
   pont_peniche: fouille("Fouiller la péniche", "« Ma Liberté », échouée dans la forme : un salon de coussins et de plaids polaires, une cuisine, des livres de bord."),
@@ -144,7 +145,8 @@ export const USAGES_PONT: Record<TypeRessourcePont, UsageRessource> = {
   banc_caddie: {
     verbe: "demonter",
     libelle: "Démonter le caddie échoué",
-    donne: { tube_aluminium: 1, aluminium: 2, caoutchouc: 2 },
+    // V3-02 (chantier V3) : deux tubes (le cadre et la poignée).
+    donne: { tube_aluminium: 2, aluminium: 2, caoutchouc: 2 },
     qualites: { serrer: 1 },
     duree: 12,
     examen: "Un caddie couché dans la vase de la cale, des algues dans les roues. Son cadre d'aluminium se démonte.",

@@ -1090,10 +1090,11 @@ const USAGES_CORNICHE: Record<TypeRessourceCorniche, UsageRessource> = {
   corniche_camp: {
     verbe: "fouiller",
     libelle: "Fouiller le camp des pillards",
-    donne: {},
+    // V3-02 (chantier V3) : une chaise de camping (deux tubes d'aluminium, au démontage).
+    donne: { chaise_camping: 1 },
     qualites: {},
     duree: 5,
-    examen: "Derrière la barricade, sous une bâche : des couvertures polaires, un réchaud, des cordages, des boîtes vides.",
+    examen: "Derrière la barricade, sous une bâche : des couvertures polaires, un réchaud, une chaise de camping, des cordages, des boîtes vides.",
   },
   corniche_chambre: {
     verbe: "fouiller",

@@ -114,13 +114,13 @@ export const USAGES_HOTEL: Record<TypeRessourceHotel, UsageRessource> = {
   },
   hotel_roulements: {
     verbe: "ramasser",
-    libelle: "Prendre la boîte de roulements",
-    // V1-01 : **une** boîte, qui contient trois roulements (on l'ouvre au sac : DEMONTAGE.roulements). Chantier L : elle
-    // donnait trois boîtes (neuf roulements), quand le Comptoir et la chance n'en donnent qu'une.
-    donne: { roulements: 1 },
+    libelle: "Prendre les boîtes de roulements",
+    // V1-01 : une boîte contient trois roulements (on l'ouvre au sac : DEMONTAGE.roulements). V3-01 (décision du porteur,
+    // chantier V3) : la machinerie en donne **deux**, six roulements, les cinq qu'use le Mécaniste et un de reste.
+    donne: { roulements: 2 },
     qualites: {},
     duree: 2,
-    examen: "Sur l'établi du mécanicien de l'ascenseur, une boîte de roulements à billes neufs, dans leur papier huilé.",
+    examen: "Sur l'établi du mécanicien de l'ascenseur, deux boîtes de roulements à billes neufs, dans leur papier huilé.",
   },
   hotel_fer: {
     verbe: "ramasser",
@@ -149,16 +149,18 @@ export const USAGES_HOTEL: Record<TypeRessourceHotel, UsageRessource> = {
   // ---------- Le rez-de-chaussée et les dehors ----------
   hotel_reception: fouille("Fouiller la réception", { ficelle: 1 }, "Le comptoir de la réception : le registre ouvert, des stylos, un nécessaire de couture, le tableau des chambres vide."),
   hotel_bagages: fouille("Fouiller les valises", { chiffons: 2 }, "Le chariot à bagages en laiton, chargé de valises jamais montées : des vêtements, des trousses de toilette."),
-  hotel_cuisines: fouille("Fouiller les cuisines", { conserve: 1 }, "Les cuisines : le piano de cuisson froid, des marmites, des couteaux de chef dans leur bloc."),
+  // V3-03 : une bouteille vide aux cuisines (le vin de la sauce), trois au bar ; le four de terre en demande six.
+  hotel_cuisines: fouille("Fouiller les cuisines", { conserve: 1, bouteille_verre: 1 }, "Les cuisines : le piano de cuisson froid, des marmites, des couteaux de chef dans leur bloc, des bouteilles de vin de cuisine vides."),
   hotel_conserves: fouille("Fouiller la chambre froide", { conserve: 2 }, "La chambre froide des conserves, tiède depuis longtemps : des boîtes alignées, des sacs de farine éventrés."),
   hotel_poisson: fouille("Fouiller la chambre froide", { conserve: 1 }, "La chambre froide du poisson : l'odeur est partie, il reste des bocaux et des boîtes de sardines."),
   hotel_desserte: fouille("Fouiller la desserte", { chiffons: 2 }, "La desserte de la salle à manger : l'argenterie ternie, des nappes et des serviettes, des bougies."),
   hotel_camp: fouille("Fouiller le camp des survivants", { chiffons: 2 }, "Devant la cheminée du grand salon, un camp de survivants : des couvertures polaires, un réchaud, un carnet écrit serré."),
-  hotel_bar: fouille("Fouiller le bar", { bouteille_verre: 1 }, "Le bar de la rotonde, barricadé : des bouteilles, des verres, des siphons."),
+  hotel_bar: fouille("Fouiller le bar", { bouteille_verre: 3 }, "Le bar de la rotonde, barricadé : des bouteilles vides alignées, des verres, des siphons."),
   hotel_buvette: fouille("Fouiller la buvette", { bouteille_plastique: 1 }, "La buvette de la promenade : une glacière de sodas éventés, du sel, des gobelets, la toile de l'auvent."),
   hotel_barque: fouille("Fouiller la barque", { corde: 1 }, "Une barque échouée sur le sable : un cordage, une rame, une petite ancre."),
   hotel_maitre_nageur: fouille("Fouiller le poste du maître-nageur", { pansement: 1 }, "Le poste du maître-nageur : une bouée, une corde, une trousse de secours, un sifflet."),
-  hotel_transats: fouille("Fouiller les transats", { chiffons: 1 }, "Des transats délavés, des parasols de toile rayée : du tissu, du bois, de la visserie."),
+  // V3-02 : deux transats pliants (des chaises de camping : deux tubes d'aluminium chacune, au démontage).
+  hotel_transats: fouille("Fouiller les transats", { chiffons: 1, chaise_camping: 2 }, "Des transats pliants délavés, en tubes d'aluminium, des parasols de toile rayée : du tissu, de la visserie."),
   hotel_balcon_tombe: fouille("Fouiller le balcon tombé", { ferraille_tordue: 1 }, "Le balcon de la chambre 8, tombé sur la dune : du fer forgé tordu, des moellons."),
   // ---------- L'étage ----------
   hotel_bain_suite: fouille("Fouiller la salle de bains", { fil_dentaire: 1 }, "La salle de bains de la suite : l'armoire à pharmacie ouverte, des savons, des serviettes, un peignoir."),
