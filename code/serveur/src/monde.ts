@@ -16,6 +16,7 @@ import { Halte } from "./halte.ts";
 import { Gue } from "./gue.ts";
 import { Moulins } from "./moulin.ts";
 import { Joueur } from "./joueur.ts";
+import { LieuxVivants } from "./lieux-vivants.ts";
 import { diffuserPresences, tourDePresences, type MemoirePresences } from "./presences.ts";
 import { messageValide } from "./controle.ts";
 import { Rencontres, temoins, type Present } from "./rencontres.ts";
@@ -57,6 +58,8 @@ export class Monde {
   /** 0.8, la route B : le Gué-aux-Saules, partagé comme la halte ; les Moulins du Gué, un par joueur. */
   private readonly gue: Gue;
   private readonly moulins: Moulins;
+  /** 0.10 : tous les lieux vivants, rangés par le registre des lieux (les quatre d'avant, et ceux du niveau 2). */
+  private readonly lieux: LieuxVivants;
   /** Les échanges entre joueurs (É4, lot 3). */
   private readonly echanges = new Echanges((id) => this.connexions.get(id)?.joueur);
   /** Les leçons entre joueurs de familles différentes (Book 25 §2.3). */
@@ -83,6 +86,7 @@ export class Monde {
     this.cooperatives = new Cooperatives(base);
     this.gue = new Gue(base);
     this.moulins = new Moulins(base);
+    this.lieux = new LieuxVivants(base, { station: this.halte, cooperative: this.cooperatives, gue: this.gue, moulin: this.moulins });
   }
 
   demarrer(): void {
@@ -138,7 +142,7 @@ export class Monde {
     try {
       // Un nouveau joueur apporte sa dotation à la trésorerie du comptoir (Book 07 §3.6).
       this.comptoir.doter();
-      joueur = new Joueur(compte, this.base, (m) => envoyer(socket, m), Date.now, this.halte, Math.random, this.comptoir, this.cooperatives, this.gue, this.moulins);
+      joueur = new Joueur(compte, this.base, (m) => envoyer(socket, m), Date.now, this.halte, Math.random, this.comptoir, this.cooperatives, this.gue, this.moulins, this.lieux);
     } catch (erreur) {
       journal(`Impossible de charger ${compte.pseudo} : ${String(erreur)}`);
       socket.close(1011, "Personnage introuvable");
@@ -201,10 +205,8 @@ export class Monde {
     const instant = performance.now();
     const dt = Math.min((instant - this.dernierTick) / 1000, 0.25);
     this.dernierTick = instant;
-    this.halte.tick(Date.now(), dt);
-    this.cooperatives.tick(Date.now(), dt);
-    this.gue.tick(Date.now(), dt);
-    this.moulins.tick(Date.now(), dt);
+    // La halte, les Coopératives, le gué, les Moulins, puis les lieux du niveau 2 où quelqu'un est déjà allé.
+    this.lieux.tick(Date.now(), dt);
     this.echanges.verifier();
     this.lecons.verifier();
     // Les autres joueurs d'un lieu public : 10 fois par seconde, à pas fixe (0.9 ; avant, 100 ou 150 ms selon les tours).
@@ -273,8 +275,8 @@ export class Monde {
         envoyer: (m: MessageServeur) => joueur.envoyer(m),
       })),
       this.memoirePresences,
-      // À la halte, les murs de la boutique arrêtent la vue (0.7.2) ; au gué, ceux de son plan de vue s'il en a un (0.8).
-      (lieu, a, b) => (lieu === "station" ? this.halte.voitEntre(a, b) : lieu === "gue" ? this.gue.voitEntre(a, b) : true),
+      // Dans une halte, ses murs arrêtent la vue : la boutique de la station (0.7.2), la cabane du gué (0.8)…
+      (lieu, a, b) => this.lieux.voitEntre(lieu, a, b),
     );
   }
 
@@ -316,8 +318,7 @@ export class Monde {
       connexion.socket.close(FERMETURE_JETON_REFUSE, "Session fermée");
     }
     this.aSauver = this.aSauver.filter((id) => id !== compteId);
-    if (oublier) this.cooperatives.oublier(compteId);
-    if (oublier) this.moulins.oublier(compteId);
+    if (oublier) this.lieux.oublier(compteId);
     return connexion !== undefined;
   }
 }

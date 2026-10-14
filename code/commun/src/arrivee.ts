@@ -7,12 +7,16 @@
 // - « abri » : dans une halte (la station, le Carrefour, le gué), le monde ne s'arrête pas pour les autres ; le joueur
 //   reste immobile et on ne peut pas le saisir, jusqu'à son premier geste ou au plus PROTECTION_ARRIVEE_MS.
 
-import type { LieuId } from "./lieux.ts";
+import { TOUS_LES_LIEUX, type LieuId } from "./lieux.ts";
+import { pausePossibleIci } from "./registre-lieux.ts";
 
 export type ModeArrivee = "pause" | "abri";
 
-/** Les lieux où l'on est seul : la pause y est possible (la même règle que le bouton pause). */
-export const LIEUX_A_SOI: readonly LieuId[] = ["terrain", "cooperative", "moulin"];
+/**
+ * Les lieux où l'on est seul : la pause y est possible (la même règle que le bouton pause : le registre des lieux,
+ * commun/src/registre-lieux.ts). Le terrain, la Coopérative, le Moulin ; en 0.10, l'hôtel et le phare.
+ */
+export const LIEUX_A_SOI: readonly LieuId[] = TOUS_LES_LIEUX.filter(pausePossibleIci);
 
 /**
  * Dans une halte, la protection ne dure pas plus de 15 s : de quoi regarder le lieu, pas de quoi s'en servir pour

@@ -30,6 +30,7 @@ import { ATELIER, BATIMENT, PIECES } from "./cooperative.ts";
 import { BOUTIQUE, FERME_HALTE, ROUTE, ZONE_COMPTOIR, dansBoite, heurte, sortiesDe, zoneDe, type Boite, type LieuJouable } from "./lieux.ts";
 import type { Inventaire, TypeObjet } from "./objets.ts";
 import { POINT_ARRIVEE, TERRAIN_TAILLE } from "./regles.ts";
+import { estPartage } from "./registre-lieux.ts";
 import { ARBRES_ISOLES, MARE, RUINE, distanceMare } from "./terrain.ts";
 import { DECHARGE } from "./decharge.ts";
 import { BAC, CLOCHE, DEMI_ROUTE, GLAISE, TROU_DU_PONT, VN_MODELE, VS_MODELE, axeRiviere, interpoler, zRoute } from "./gue.ts";
@@ -100,6 +101,11 @@ export const ZONES_DECHETS: Record<Exclude<LieuJouable, "terrain">, readonly Zon
     return ZONES_GUE;
   },
   moulin: [],
+  // 0.10 (chantier A) : le niveau 2, branché vide ; ses déchets viendront avec son contenu (chantiers H à K).
+  route_pont: [],
+  grand_hotel: [],
+  corniche: [],
+  phare: [],
 };
 
 // ---------- Le gué (plan 0.8.2, chantier F) ----------
@@ -185,7 +191,8 @@ export function cleCarreau(cx: number, cz: number): string {
 
 /** La clé de la couche d'un lieu : partagée (« station », « gue »), ou à un joueur (« cooperative:12 », « terrain:12 »). */
 export function cleCouche(lieu: LieuJouable, compteId: number): string {
-  return lieu === "station" || lieu === "comptoir" || lieu === "gue" ? lieu : `${lieu}:${compteId}`;
+  // Les lieux partagés (registre-lieux.ts : les haltes et le Comptoir) n'ont qu'une couche pour tous.
+  return estPartage(lieu) ? lieu : `${lieu}:${compteId}`;
 }
 
 /** Le lieu d'une clé de couche. */

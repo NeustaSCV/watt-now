@@ -84,7 +84,8 @@ test("les étapes du monde ont leur lieu, et l'affichage leur nom (Q-0.8-25)", (
   assert.equal(ETAPES_LIEUX.H1B, "gue");
   assert.equal(ETAPES_LIEUX.L1A, "cooperative");
   assert.equal(ETAPES_LIEUX.L1B, "moulin");
-  assert.equal(lieuDeLEtape("H2A"), undefined);
+  // 0.10 (chantier A) : le niveau 2 a ses lieux (avant : undefined).
+  assert.equal(lieuDeLEtape("H2A"), "route_pont");
   assert.equal(LIEUX[lieuDeLEtape("H1B")!].nom, "Le Gué-aux-Saules");
   assert.equal(LIEUX[lieuDeLEtape("L1B")!].nom, "Le Moulin du Gué");
   // 0.8.2 (R18) : la carte ne promet plus rien (chantier K, client/src/textes-du-jeu.test.ts).

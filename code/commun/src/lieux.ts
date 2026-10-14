@@ -5,18 +5,30 @@
 // 0.8 (plan §3, chantier 4) : la carte à deux routes. La route A passe la rivière par le pont (la station, puis la
 // Coopérative) ; la route B la passe à gué (le Gué-aux-Saules, puis le Moulin du Gué). Le gué et le Moulin sont
 // branchés ici vides : leur contenu (obstacles, butin, Éteints, rendu) est aux chantiers 11 et 12.
+//
+// 0.10 (plan §4, chantier A) : le niveau 2, sur la côte. La route A continue de la Coopérative à la route du pont (H2A),
+// puis au Grand Hôtel des Flots (L2A) ; la route B, du Moulin à la corniche du Cap Rouge (H2B), puis au phare du cap
+// (L2B). Ce que le serveur et le client savent de chaque lieu (sa nature, son plan de vue, ses portes…) est rassemblé
+// dans le registre des lieux (registre-lieux.ts) ; ici, la géographie : les routes, les zones, les sorties, la carte.
 
 import { ARRIVEE_COOP, BRECHE, COOP, PORTAIL, PORTES, boitePorte, obstaclesCoop, portesInitiales } from "./cooperative.ts";
 import type { Position } from "./deplacement.ts";
 import { MARGE_GRILLE, boitesPres, creerGrille, type GrilleObstacles } from "./grille.ts";
 import { PORTES_MOULIN, boitePorteMoulin, obstaclesMoulin, portesInitialesMoulin } from "./moulin.ts";
 import { zoneGueFixe } from "./gue.ts";
+import { SORTIES_CORNICHE, ZONE_CORNICHE } from "./corniche.ts";
+import { SORTIES_HOTEL, ZONE_HOTEL } from "./hotel.ts";
+import { SORTIES_PHARE, ZONE_PHARE } from "./phare.ts";
+import { SORTIES_ROUTE_PONT, ZONE_ROUTE_PONT } from "./route-pont.ts";
 import type { EtapeMonde } from "./lignees.ts";
 import { MARGE_BORD, POINT_ARRIVEE, TERRAIN_TAILLE } from "./regles.ts";
 
-export type LieuId = "terrain" | "station" | "comptoir" | "cooperative" | "gue" | "moulin";
+export type LieuId = "terrain" | "station" | "comptoir" | "cooperative" | "gue" | "moulin" | "route_pont" | "grand_hotel" | "corniche" | "phare";
 
-/** Lieux où l'on peut se trouver (le comptoir ouvre à l'É4, la Coopérative en 0.5, le gué et le Moulin en 0.8). */
+/**
+ * Lieux où l'on peut se trouver (le comptoir ouvre à l'É4, la Coopérative en 0.5, le gué et le Moulin en 0.8, les
+ * quatre lieux du niveau 2 en 0.10).
+ */
 export type LieuJouable = LieuId;
 
 /**
@@ -24,6 +36,15 @@ export type LieuJouable = LieuId;
  * §1.1, le parcours : la station à la 1re sortie, le gué à la 2e, puis l'un des deux L1).
  */
 export const ORDRE_ROUTE: readonly LieuId[] = ["terrain", "station", "comptoir", "gue", "cooperative", "moulin"];
+
+/**
+ * Les lieux du niveau 2 (0.10), dans l'ordre de leurs routes : la route A (le pont, l'hôtel), puis la route B (la
+ * corniche, le phare). Après ceux du niveau 1 (ORDRE_ROUTE, qui garde la route de la Campagne).
+ */
+export const LIEUX_NIVEAU_2: readonly LieuId[] = ["route_pont", "grand_hotel", "corniche", "phare"];
+
+/** Tous les lieux : ceux de la route de la Campagne, puis ceux de la côte. */
+export const TOUS_LES_LIEUX: readonly LieuId[] = [...ORDRE_ROUTE, ...LIEUX_NIVEAU_2];
 
 /**
  * Les tronçons de la route, d'un lieu à son voisin, en km (Book 01 §2 bis : ≈ 60 kcal et 0,08 L d'eau par km).
@@ -39,11 +60,17 @@ export const TRONCONS: readonly { a: LieuId; b: LieuId; km: number }[] = [
   { a: "comptoir", b: "cooperative", km: 3 },
   { a: "terrain", b: "gue", km: 3 },
   { a: "gue", b: "moulin", km: 2 },
+  // 0.10 (B16, chantier A) : le niveau 2, aux mêmes distances sur les deux routes. La Coopérative → la route du pont
+  // 3 km, → le Grand Hôtel 2 km ; le Moulin → la corniche 3 km, → le phare 2 km.
+  { a: "cooperative", b: "route_pont", km: 3 },
+  { a: "route_pont", b: "grand_hotel", km: 2 },
+  { a: "moulin", b: "corniche", km: 3 },
+  { a: "corniche", b: "phare", km: 2 },
 ];
 
 /**
  * Les étapes du monde et leur lieu (plan 0.8 §3, chantier 4) : le contenu du jeu (clés, quêtes, indices) cite l'étape
- * (`EtapeMonde`, lignees.ts) ; l'affichage met le nom du lieu. Le niveau 2 complétera la même table.
+ * (`EtapeMonde`, lignees.ts) ; l'affichage met le nom du lieu. 0.10 : le niveau 2 complète la même table.
  */
 export const ETAPES_LIEUX = {
   maison: "terrain",
@@ -51,9 +78,13 @@ export const ETAPES_LIEUX = {
   H1B: "gue",
   L1A: "cooperative",
   L1B: "moulin",
+  H2A: "route_pont",
+  H2B: "corniche",
+  L2A: "grand_hotel",
+  L2B: "phare",
 } as const satisfies Partial<Record<EtapeMonde, LieuId>>;
 
-/** Le lieu d'une étape du monde (undefined : une étape qui n'a pas encore de lieu, le niveau 2). */
+/** Le lieu d'une étape du monde (undefined : une étape qui n'a pas encore de lieu, le niveau 3). */
 export function lieuDeLEtape(etape: EtapeMonde): LieuId | undefined {
   return (ETAPES_LIEUX as Partial<Record<EtapeMonde, LieuId>>)[etape];
 }
@@ -100,6 +131,8 @@ export interface Sortie {
    * alors qu'à dire où l'on se tient juste à l'intérieur.
    */
   sansArrivee?: boolean;
+  /** Ce qu'on en dit quand on l'examine (sans : « La route continue. Au bout, il faudra la carte. »). */
+  examen?: string;
 }
 
 // ---------- Le terrain ----------
@@ -122,6 +155,7 @@ export const SORTIE_TERRAIN: Sortie = {
   boite: { x: 25, z: TERRAIN_TAILLE - 1.5, l: 6, p: 3 },
   arrivee: { x: 25, z: TERRAIN_TAILLE - 3, o: Math.PI },
   libelle: "Prendre la route",
+  examen: "Le chemin de terre rejoint la route de la Campagne : par le pont vers la station-service, ou en aval vers le gué.",
 };
 
 // ---------- La halte : la station-service (≈ 200 × 70 m, Book 01 §2 bis) ----------
@@ -231,6 +265,7 @@ export const SORTIES_STATION: Sortie[] = [
     boite: { x: CHEMIN_COOP_HALTE.x, z: ZONE_STATION.zMin + 1.5, l: CHEMIN_COOP_HALTE.demiLargeur * 2 + 1.4, p: 3 },
     arrivee: { x: CHEMIN_COOP_HALTE.x, z: ZONE_STATION.zMin + 3.5, o: 0 },
     libelle: "Prendre le chemin de la Coopérative",
+    examen: "Un chemin de terre file vers le nord, sous les arbres : la Coopérative du Plateau, à 2 km. Au bout, il faudra la carte.",
   },
 ];
 
@@ -446,6 +481,17 @@ export const SORTIES_COOP: Sortie[] = [
     libelle: "Se glisser dehors par la brèche",
     sansArrivee: true,
   },
+  // 0.10 (chantier A) : la route de la côte part aussi du portail (le niveau 2, vers la route du pont). La même boîte
+  // que le chemin : on y choisit sa destination sur la carte (destinationsIci). On en revient par le portail, la
+  // première sortie (d'où `sansArrivee`).
+  {
+    vers: "route_pont",
+    boite: { x: PORTAIL.x, z: COOP.profondeur - 1.4, l: PORTAIL.largeur, p: 2.8 },
+    arrivee: { ...ARRIVEE_COOP },
+    libelle: "Prendre la route de la côte",
+    sansArrivee: true,
+    examen: "Au bout du chemin, une route descend vers la côte : la route du pont, à 3 km. Au bout, il faudra la carte.",
+  },
 ];
 
 // ---------- H1B, le Gué-aux-Saules (plan 0.8, chantier 11) : une halte partagée, comme la station ----------
@@ -537,6 +583,18 @@ export const SORTIES_MOULIN: Sortie[] = [
     arrivee: { x: HALAGE.x, z: 3.5, o: Math.PI },
     libelle: "Prendre le chemin de halage",
     sansArrivee: true,
+    examen: "Le chemin de halage suit la levée vers le gué, à 2 km. On part par là ; on n'y revient jamais.",
+  },
+  // 0.10 (chantier A) : la route de la côte repart aussi du pont (le niveau 2, vers la corniche). La même boîte que la
+  // route du gué : on y choisit sa destination sur la carte (destinationsIci). On en revient par le pont, la première
+  // sortie (d'où `sansArrivee` : on arrive toujours au pont, M19).
+  {
+    vers: "corniche",
+    boite: { x: MOULIN.largeur - 1.5, z: PONT_MOULIN.z - 3, l: 3, p: 8 },
+    arrivee: { x: PONT_MOULIN.x, z: PONT_MOULIN.z, o: -Math.PI / 2 },
+    libelle: "Prendre la route de la côte",
+    sansArrivee: true,
+    examen: "Passé le pont, une route file vers la côte : la corniche du Cap Rouge, à 3 km. Au bout, il faudra la carte.",
   },
 ];
 
@@ -596,6 +654,35 @@ export const LIEUX: Record<LieuId, LieuCarte> = {
     description:
       "En aval du gué, la vieille minoterie et sa roue arrêtée sur le bief. On y entre par le pont de pierre ; le chemin de halage ramène au gué. Les Éteints dorment dans les pièces sombres.",
   },
+  // 0.10 (chantier A) : le niveau 2, sur la côte. Comme les autres (R18), la fiche dit l'ambiance, jamais ce qu'on y trouve.
+  route_pont: {
+    id: "route_pont",
+    nom: "La route du pont",
+    km: 8,
+    ouvert: true,
+    description: "Une halte sur la route de la côte, au vieux pont de l'estuaire. Le vent de la mer y souffle fort.",
+  },
+  grand_hotel: {
+    id: "grand_hotel",
+    nom: "Le Grand Hôtel des Flots",
+    km: 10,
+    ouvert: true,
+    description: "Passé le pont, un palace de bord de mer fermé depuis la Grande Panne. Sa longue façade pèle face aux vagues.",
+  },
+  corniche: {
+    id: "corniche",
+    nom: "La corniche du Cap Rouge",
+    km: 8,
+    ouvert: true,
+    description: "Une halte sur la route du cap : la route file au flanc de la falaise rouge, entre les pins et la mer.",
+  },
+  phare: {
+    id: "phare",
+    nom: "Le phare du cap",
+    km: 10,
+    ouvert: true,
+    description: "Tout au bout du cap, la tour blanche et rouge du phare, éteinte depuis la Grande Panne. La mer bat les rochers en contrebas.",
+  },
 };
 
 /** Le nom d'un lieu en milieu de phrase : « la station-service », « le Comptoir du Carrefour », « ton terrain ». */
@@ -618,12 +705,12 @@ export const DUREE_VOYAGE_S = 10;
 /** Les distances les plus courtes, par la route, de chaque lieu à chaque autre (calculées une fois). */
 const DISTANCES: Record<LieuId, Record<LieuId, number>> = (() => {
   const d = {} as Record<LieuId, Record<LieuId, number>>;
-  for (const a of ORDRE_ROUTE) {
+  for (const a of TOUS_LES_LIEUX) {
     d[a] = {} as Record<LieuId, number>;
-    for (const b of ORDRE_ROUTE) d[a][b] = a === b ? 0 : Infinity;
+    for (const b of TOUS_LES_LIEUX) d[a][b] = a === b ? 0 : Infinity;
   }
   for (const t of TRONCONS) d[t.a][t.b] = d[t.b][t.a] = t.km;
-  for (const k of ORDRE_ROUTE) for (const a of ORDRE_ROUTE) for (const b of ORDRE_ROUTE) d[a][b] = Math.min(d[a][b], d[a][k] + d[k][b]);
+  for (const k of TOUS_LES_LIEUX) for (const a of TOUS_LES_LIEUX) for (const b of TOUS_LES_LIEUX) d[a][b] = Math.min(d[a][b], d[a][k] + d[k][b]);
   return d;
 })();
 
@@ -639,7 +726,19 @@ export function distanceKm(de: LieuId, vers: LieuId): number {
 
 // ---------- Outils ----------
 
-const ZONES: Record<LieuId, Zone> = { terrain: ZONE_TERRAIN, station: ZONE_STATION, comptoir: ZONE_COMPTOIR, cooperative: ZONE_COOP, gue: ZONE_GUE, moulin: ZONE_MOULIN };
+const ZONES: Record<LieuId, Zone> = {
+  terrain: ZONE_TERRAIN,
+  station: ZONE_STATION,
+  comptoir: ZONE_COMPTOIR,
+  cooperative: ZONE_COOP,
+  gue: ZONE_GUE,
+  moulin: ZONE_MOULIN,
+  // 0.10 : le niveau 2 (leurs modules : route-pont.ts, hotel.ts, corniche.ts, phare.ts).
+  route_pont: ZONE_ROUTE_PONT,
+  grand_hotel: ZONE_HOTEL,
+  corniche: ZONE_CORNICHE,
+  phare: ZONE_PHARE,
+};
 const SORTIES: Record<LieuId, Sortie[]> = {
   terrain: [SORTIE_TERRAIN],
   station: SORTIES_STATION,
@@ -647,6 +746,10 @@ const SORTIES: Record<LieuId, Sortie[]> = {
   cooperative: SORTIES_COOP,
   gue: SORTIES_GUE,
   moulin: SORTIES_MOULIN,
+  route_pont: SORTIES_ROUTE_PONT,
+  grand_hotel: SORTIES_HOTEL,
+  corniche: SORTIES_CORNICHE,
+  phare: SORTIES_PHARE,
 };
 
 export function zoneDe(lieu: LieuJouable): Zone {
@@ -746,6 +849,16 @@ export function sortieIci(lieu: LieuJouable, x: number, z: number): Sortie | nul
 }
 
 /**
+ * Tous les lieux où l'on peut partir d'ici (0.10) : ceux de toutes les sorties où l'on se tient (au portail de la
+ * Coopérative, le chemin et la route de la côte partagent la même boîte), dans l'ordre des sorties. Chez soi, ceux de
+ * la sortie du terrain, de n'importe où.
+ */
+export function destinationsIci(lieu: LieuJouable, x: number, z: number): LieuId[] {
+  if (lieu === "terrain") return destinations(SORTIE_TERRAIN);
+  return [...new Set(sortiesDe(lieu).filter((s) => dansBoite(x, z, s.boite)).flatMap(destinations))];
+}
+
+/**
  * La sortie par où l'on peut partir d'ici (0.8.4) : chez soi, sur son terrain, on part par la carte de n'importe où ;
  * ailleurs, il faut se tenir à une sortie.
  */
@@ -768,5 +881,5 @@ export function arriveeDans(lieu: LieuJouable, depuis: LieuId): Position {
 export const ARRIVEE_DEPART: Position = { x: POINT_ARRIVEE.x, z: POINT_ARRIVEE.z, o: 0 };
 
 export function estLieuJouable(valeur: unknown): valeur is LieuJouable {
-  return typeof valeur === "string" && (ORDRE_ROUTE as readonly string[]).includes(valeur);
+  return typeof valeur === "string" && (TOUS_LES_LIEUX as readonly string[]).includes(valeur);
 }

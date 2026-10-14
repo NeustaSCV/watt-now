@@ -48,8 +48,10 @@
 import { FilDesBruits, PORTEES_BRUIT, type BruitVu } from "../../commun/src/bruits.ts";
 import { DUREE_CORPS } from "../../commun/src/combat.ts";
 import { GEMISSEMENT, penser, vue, type Eteint, type Humain, type Milieu } from "../../commun/src/eteints.ts";
+import type { Position } from "../../commun/src/deplacement.ts";
 import type { Zone } from "../../commun/src/lieux.ts";
-import type { MessageServeur, SacVu } from "../../commun/src/messages.ts";
+import type { Cible, MessageServeur, SacVu } from "../../commun/src/messages.ts";
+import type { Inventaire, TypeObjet } from "../../commun/src/objets.ts";
 import type { Stimulus } from "../../commun/src/signature.ts";
 import { REGLAGES } from "../../commun/src/reglages.ts";
 import type { Famille } from "../../commun/src/regles.ts";
@@ -118,6 +120,27 @@ export interface Voyageur {
   enPause?(): boolean;
 }
 
+/**
+ * Ce qu'un joueur prête à un lieu pour ses gestes propres (0.10, le registre des lieux : `geste` et `accompagner`, plus
+ * bas) : rien que des accès, aucune règle. Les chantiers des lieux y ajoutent ce dont ils ont besoin (serveur/src/joueur.ts,
+ * `contexteLieu`).
+ */
+export interface ContexteLieu {
+  readonly id: number;
+  maintenant(): number;
+  position(): Position;
+  deplacer(p: Position): void;
+  info(texte: string): void;
+  envoyer(m: MessageServeur): void;
+  inventaire(): Readonly<Inventaire>;
+  ajouter(objets: Inventaire): void;
+  /** Retire n objets du sac ; false s'il n'y en a pas assez (rien n'est retiré). */
+  retirer(objet: TypeObjet, n: number): boolean;
+  /** Un geste qui dure (il s'arrête si l'on bouge, si l'on frappe, ou d'un second appui). */
+  commencer(libelle: string, dureeS: number, appliquer: () => void): void;
+  annuler(): void;
+}
+
 /** On voit les Éteints de la halte jusqu'à cette distance (la caméra en montre ≈ 30 m ; un peu de marge). */
 const RAYON_VUE_ETEINTS = 45;
 /** Un Éteint à moins de 3 m derrière un mur se « sent » (onde rouge, souffle), une fois toutes les 1,2 s. */
@@ -142,6 +165,19 @@ export class LieuVivant {
   private readonly fil = new FilDesBruits();
   /** Pour chaque joueur, quand chaque Éteint tout proche a été « senti » pour la dernière fois. */
   private readonly sentis = new WeakMap<Voyageur, Map<number, number>>();
+
+  // ---------- Les points d'appel des lieux (0.10, le registre des lieux) ----------
+  // Un lieu qui a ses propres gestes (brancher la borne, payer le péage, allumer la lanterne…) les prend ici, dans sa
+  // classe (sur LieuVivant) : le joueur lui passe la main avant ses gestes à lui, et l'accompagne à chaque tic. Par
+  // défaut, un lieu n'a rien en propre.
+
+  /** Un geste propre au lieu : true s'il l'a pris (le joueur n'en fait rien d'autre). */
+  geste(_ctx: ContexteLieu, _cible: Cible, _verbe: string): boolean {
+    return false;
+  }
+
+  /** À chaque tic, pour chaque joueur présent (hors voyage) : ce que le lieu fait de lui (la marée qui monte…). */
+  accompagner(_ctx: ContexteLieu, _dt: number): void {}
 
   ajouterBruit(id: string, stimulus: Stimulus, jusqua: number): void {
     this.bruits.set(id, { stimulus, jusqua });

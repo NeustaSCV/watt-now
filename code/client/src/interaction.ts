@@ -2,9 +2,10 @@
 // A : interagir. B : examiner (Book 03 §6), ou une action secondaire près d'un feu.
 
 import { PERIODES_FRUITIERS, enSaison, etatDuFruitier, phaseFruitier, visibleEnSaison } from "../../commun/src/calendrier.ts";
+import { examenSortie } from "../../commun/src/registre-lieux.ts";
 import type { Position } from "../../commun/src/deplacement.ts";
 import { BATTERIES_DE_BANC, CAPACITES, bancDuPedalier, batterieDuBanc, type Charges } from "../../commun/src/energie.ts";
-import { COMPTOIR, destinations, sortieIci, type LieuId, type LieuJouable } from "../../commun/src/lieux.ts";
+import { COMPTOIR, destinationsIci, sortieIci, type LieuId, type LieuJouable } from "../../commun/src/lieux.ts";
 import { KLAXONS_PAR_BATTERIE, LEURRES, PORTES, chargeBatterieTracteur, distancePorte } from "../../commun/src/cooperative.ts";
 import type { AutreVu, EtatCoopVu, InstallationVue, MessageClient, SacVu, Verbe } from "../../commun/src/messages.ts";
 import { nommer, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
@@ -541,18 +542,9 @@ export function proposer(
   const sortie = sortieIci(lieu, position.x, position.z);
   if (sortie) {
     garder(0, {
-      A: { libelle: sortie.libelle, ouvrirCarte: destinations(sortie) },
-      B: {
-        libelle: "Examiner",
-        examiner:
-          lieu === "terrain"
-            ? "Le chemin de terre rejoint la route de la Campagne : par le pont vers la station-service, ou en aval vers le gué."
-            : lieu === "station" && sortie.vers === "cooperative"
-              ? "Un chemin de terre file vers le nord, sous les arbres : la Coopérative du Plateau, à 2 km. Au bout, il faudra la carte."
-              : sortie.sansArrivee && lieu === "moulin"
-                ? "Le chemin de halage suit la levée vers le gué, à 2 km. On part par là ; on n'y revient jamais."
-                : "La route continue. Au bout, il faudra la carte.",
-      },
+      A: { libelle: sortie.libelle, ouvrirCarte: destinationsIci(lieu, position.x, position.z) },
+      // Ce qu'on en dit : la sortie le porte (commun/src/lieux.ts, `examen`), sinon la phrase commune.
+      B: { libelle: "Examiner", examiner: examenSortie(sortie) },
       cible: null,
     });
   }

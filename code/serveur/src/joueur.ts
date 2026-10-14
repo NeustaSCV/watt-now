@@ -68,7 +68,7 @@ import {
   entreesDe,
   distanceKm,
   sortiePourPartir,
-  sortiesDe,
+  destinationsIci,
   zoneDe,
   type LieuId,
   type LieuJouable,
@@ -79,7 +79,9 @@ import { Halte, type Voyageur } from "./halte.ts";
 import { Gue, type ContexteGue } from "./gue.ts";
 import { GESTE_RICOCHET_MS, ricochet } from "../../commun/src/gue.ts";
 import { Moulins } from "./moulin.ts";
-import type { LieuVivant } from "./lieu-vivant.ts";
+import type { ContexteLieu, LieuVivant } from "./lieu-vivant.ts";
+import { LieuxVivants } from "./lieux-vivants.ts";
+import { estHalte, estPartage, estPersonnel, ficheLieu, pausePossibleIci, traverserLieu } from "../../commun/src/registre-lieux.ts";
 import { Comptoir } from "./comptoir.ts";
 import { Tir, type ContexteTir } from "./tir.ts";
 import { Sechage, accelerationFleches } from "./arc.ts";
@@ -108,7 +110,7 @@ import {
 } from "../../commun/src/economie.ts";
 import { BONUS_MECANISTE, PORTEE_CABLE_PANNEAU, WH_M_PAR_HEURE, porteBatteries, productionPanneau, stocker } from "../../commun/src/energie.ts";
 import type { AutreVu, OffreEchange, OperationComptoir, RapportBase, WottsVus } from "../../commun/src/messages.ts";
-import { COMPTOIR, dansBoite, deLieu, destinations, etapeVers, minuscule, type Zone } from "../../commun/src/lieux.ts";
+import { COMPTOIR, dansBoite, deLieu, etapeVers, minuscule, type Zone } from "../../commun/src/lieux.ts";
 import { LEURRES, PORTEE_PORTE, PORTES, boitePorte, distancePorte } from "../../commun/src/cooperative.ts";
 import { atteintDansLaFosse, pousserDansLaFosse } from "../../commun/src/moulin.ts";
 import { DECHARGE, remonter } from "../../commun/src/decharge.ts";
@@ -252,7 +254,6 @@ export class Joueur implements Voyageur, ParticipantLecon {
   /** Le lieu où se trouve le personnage (É3). */
   lieu: LieuJouable;
   private voyage: Voyage | null = null;
-  private readonly halte: Halte;
   private readonly debutMonde: number;
   private readonly alea: () => number;
   /** Les Éteints venus sur le terrain, attirés par la signature (ils repartent quand le joueur s'en va). */
@@ -390,15 +391,16 @@ export class Joueur implements Voyageur, ParticipantLecon {
   /** Reprendre une arme sur son meuble : la réparer, la monter d'une étoile (plan 0.8, chantier 9 ; serveur/src/evolution-armes.ts). */
   private readonly evolution: EvolutionArmes = new EvolutionArmes(this.contexteEvolution());
 
-  /** Le lieu vivant où l'on se trouve (la halte, le gué, partagés ; sa Coopérative, son Moulin, à soi) ; null sur le terrain et au Comptoir. */
+  /**
+   * Les lieux vivants (0.10, le registre des lieux : serveur/src/lieux-vivants.ts) : la halte, le gué, la route du pont,
+   * la corniche, partagés ; la Coopérative, le Moulin, l'hôtel, le phare, à soi.
+   */
+  private readonly lieux: LieuxVivants;
+
+  /** Le lieu vivant où l'on se trouve (une halte partagée, ou son lieu à soi) ; null sur le terrain, au Comptoir, en route. */
   private get vivant(): LieuVivant | null {
     if (this.voyage) return null;
-    return this.lieu === "station" ? this.halte : this.lieu === "cooperative" ? this.cooperatives.de(this.compte.id) : this.vivantRouteB(this.lieu);
-  }
-
-  /** Le gué ou son Moulin, si c'est là qu'on est (0.8, route B). */
-  private vivantRouteB(lieu: LieuJouable): LieuVivant | null {
-    return lieu === "gue" ? this.gue : lieu === "moulin" ? this.moulins.de(this.compte.id) : null;
+    return this.lieux.vivant(this.lieu, this.compte.id);
   }
 
   constructor(
@@ -412,17 +414,18 @@ export class Joueur implements Voyageur, ParticipantLecon {
     cooperatives: Cooperatives = new Cooperatives(base),
     gue: Gue = new Gue(base),
     moulins: Moulins = new Moulins(base),
+    lieux: LieuxVivants = new LieuxVivants(base, { station: halte, cooperative: cooperatives, gue, moulin: moulins }),
   ) {
     this.compte = compte;
     this.base = base;
     this.envoyer = envoyer;
     this.maintenant = maintenant;
-    this.halte = halte;
     this.alea = alea;
     this.comptoir = comptoir;
     this.cooperatives = cooperatives;
     this.gue = gue;
     this.moulins = moulins;
+    this.lieux = lieux;
     const w = base.chargerWotts(compte.id);
     this.poche = w.poche;
     this.compteWotts = w.compte;
@@ -447,29 +450,18 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (!perso) throw new Error(`Personnage introuvable pour le compte ${compte.id}`);
     this.position = perso.position;
     this.lieu = perso.lieu;
-    if (this.lieu === "station") {
-      // Reconnexion dans la halte : on réapparaît à l'entrée la plus proche (Book 01 §2 bis) : le bout est de la route
-      // (le terrain, P-006), le bout ouest (le Carrefour) ou le chemin de la Coopérative (0.7.3).
+    if (this.lieu !== "terrain") {
+      // Reconnexion hors de chez soi (le registre des lieux) : dans une halte, à l'entrée la plus proche (Book 01 §2 bis :
+      // à la station, le bout est de la route, le bout ouest ou le chemin de la Coopérative) ; ailleurs, à la première
+      // entrée (la route du Comptoir, le portail de la Coopérative, le pont du Moulin : M19).
       const { x, z } = this.position;
-      const entree = sortiesDe("station").reduce((a, b) => (Math.hypot(b.arrivee.x - x, b.arrivee.z - z) < Math.hypot(a.arrivee.x - x, a.arrivee.z - z) ? b : a));
+      const entrees = entreesDe(this.lieu);
+      const entree = estHalte(this.lieu)
+        ? entrees.reduce((a, b) => (Math.hypot(b.arrivee.x - x, b.arrivee.z - z) < Math.hypot(a.arrivee.x - x, a.arrivee.z - z) ? b : a))
+        : entrees[0]!;
       this.position = { ...entree.arrivee };
-      halte.entrer(this);
-    }
-    if (this.lieu === "comptoir") {
-      this.position = arriveeDans("comptoir", "station");
-      comptoir.entrer(this.envoyer, () => this.quetes.etat.faits);
-    }
-    if (this.lieu === "cooperative") {
-      // Reconnexion dans la Coopérative : on réapparaît au portail (Book 23 §3).
-      this.position = arriveeDans("cooperative", "comptoir");
-      cooperatives.de(compte.id).entrer(this);
-    }
-    if (this.lieu === "gue" || this.lieu === "moulin") {
-      // Reconnexion au gué : à l'entrée la plus proche, comme à la halte ; au Moulin : toujours au pont (M19).
-      const { x, z } = this.position;
-      const entree = entreesDe(this.lieu).reduce((a, b) => (Math.hypot(b.arrivee.x - x, b.arrivee.z - z) < Math.hypot(a.arrivee.x - x, a.arrivee.z - z) ? b : a));
-      this.position = this.lieu === "gue" ? { ...entree.arrivee } : arriveeDans("moulin", "gue");
-      this.vivantRouteB(this.lieu)!.entrer(this);
+      this.lieux.vivant(this.lieu, compte.id)?.entrer(this);
+      if (this.lieu === "comptoir") comptoir.entrer(this.envoyer, () => this.quetes.etat.faits);
     }
     this.besoins = perso.besoins;
     this.gourde = perso.gourde;
@@ -589,7 +581,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
         ? { leurres: this.cooperatives.leurresActifs(this.compte.id, this.maintenant()), etatCoop: this.cooperatives.vue(this.compte.id) }
         : {}),
       ...(this.lieu === "comptoir" ? { comptoir: this.vueComptoir(instant) } : {}),
-      ...((this.lieu === "cooperative" || this.lieu === "moulin") && this.vivant ? { portes: { ...this.vivant.portes } } : {}),
+      ...(ficheLieu(this.lieu).portes && this.vivant ? { portes: { ...this.vivant.portes } } : {}),
     };
   }
 
@@ -604,10 +596,10 @@ export class Joueur implements Voyageur, ParticipantLecon {
     return this.pause;
   }
 
-  /** On peut faire une pause là où personne d'autre ne joue : son terrain, sa Coopérative, son Moulin. */
+  /** On peut faire une pause là où personne d'autre ne joue : son terrain, ses lieux à soi (le registre des lieux). */
   private pausePossible(): string | null {
     if (this.voyage) return "Pas en route.";
-    if (this.lieu !== "terrain" && this.lieu !== "cooperative" && this.lieu !== "moulin") return "Pas de pause ici : d'autres joueurs partagent ce lieu.";
+    if (!pausePossibleIci(this.lieu)) return "Pas de pause ici : d'autres joueurs partagent ce lieu.";
     if (this.saisisseurs().length > 0) return "Pas pendant qu'il te tient !";
     return null;
   }
@@ -824,10 +816,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (this.objetPorte()) this.poserObjetLourd();
     const de = this.lieu;
     if (de === "cooperative" && (this.inventaire.radio_piles ?? 0) > 0) this.poserRadio();
-    if (de === "station") this.halte.sortir(this);
-    if (de === "cooperative") this.cooperatives.de(this.compte.id).sortir(this);
     if (de === "comptoir") this.comptoir.sortir(this.envoyer);
-    this.vivantRouteB(de)?.sortir(this);
+    this.lieux.vivant(de, this.compte.id)?.sortir(this);
     this.eteints = [];
     this.intention = INTENTION_REPOS;
     this.elan = null;
@@ -849,7 +839,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
   /** Dans un lieu public (halte, comptoir), on voit les autres et on peut échanger ; le terrain et la Coopérative restent privés. */
 
   get enLieuPublic(): boolean {
-    return (this.lieu === "station" || this.lieu === "comptoir" || this.lieu === "gue") && !this.voyage;
+    return estPartage(this.lieu) && !this.voyage;
   }
 
   get vu(): AutreVu {
@@ -1261,6 +1251,32 @@ export class Joueur implements Voyageur, ParticipantLecon {
         j.commencer(libelle, dureeS, appliquer, 0, "outil");
       },
       geste: () => j.action?.libelle ?? null,
+      annuler: () => j.annulerAction(),
+    });
+  }
+
+  private ctxLieu: ContexteLieu | null = null;
+  /** Ce que le joueur prête au lieu où il est, pour ses gestes propres (0.10, LieuVivant.geste et accompagner). */
+  private contexteLieu(): ContexteLieu {
+    const j = this;
+    return (this.ctxLieu ??= {
+      id: j.compte.id,
+      maintenant: () => j.maintenant(),
+      position: () => j.position,
+      deplacer: (p) => {
+        j.position = p;
+        j.positionEnvoyee = false;
+      },
+      info: (t) => j.info(t),
+      envoyer: (m) => j.envoyer(m),
+      inventaire: () => j.inventaire,
+      ajouter: (objets) => j.ajouterPlusieurs(objets),
+      retirer: (objet, n) => {
+        if ((j.inventaire[objet] ?? 0) < n) return false;
+        j.retirer(objet, n);
+        return true;
+      },
+      commencer: (libelle, dureeS, appliquer) => j.commencer(libelle, dureeS, appliquer),
       annuler: () => j.annulerAction(),
     });
   }
@@ -1752,7 +1768,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       const auComptoir = this.lieu === "comptoir";
       const sac = this.base.poserSac({
         lieu: auComptoir ? "terrain" : this.lieu,
-        terrainDe: this.lieu === "station" || this.lieu === "gue" ? 0 : this.compte.id,
+        terrainDe: estHalte(this.lieu) ? 0 : this.compte.id,
         proprietaire: this.compte.id,
         x: auComptoir ? POINT_ARRIVEE.x + 1.5 : this.position.x,
         z: auComptoir ? POINT_ARRIVEE.z + 1 : this.position.z,
@@ -1882,8 +1898,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
       return;
     }
     const sac = this.base.poserSac({
-      lieu: this.lieu === "station" || this.lieu === "cooperative" || this.lieu === "gue" || this.lieu === "moulin" ? this.lieu : "terrain",
-      terrainDe: this.lieu === "station" || this.lieu === "gue" ? 0 : this.compte.id,
+      lieu: estHalte(this.lieu) || estPersonnel(this.lieu) ? this.lieu : "terrain",
+      terrainDe: estHalte(this.lieu) ? 0 : this.compte.id,
       proprietaire: this.compte.id,
       x: ou ? ou.x : this.position.x + Math.sin(this.position.o) * 0.6,
       z: ou ? ou.z : this.position.z + Math.cos(this.position.o) * 0.6,
@@ -2080,10 +2096,10 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (this.saisisseurs().length > 0) return this.info("Il te tient : dégage-toi d'abord.");
     // Du terrain au Carrefour, la route passe par la halte : on s'y arrête, il faut la traverser (Book 01 §2 bis).
     const etape = etapeVers(this.lieu, vers);
-    if (!sortie || !destinations(sortie).includes(etape)) return this.info("Pour prendre la route, va jusqu'à la sortie.");
+    if (!sortie || !destinationsIci(this.lieu, this.position.x, this.position.z).includes(etape)) return this.info("Pour prendre la route, va jusqu'à la sortie.");
     if (this.objetPorte()) return this.info("Pose d'abord l'escabeau : il reste sur ton terrain.");
     if (!LIEUX[etape].ouvert) return this.info(`${LIEUX[etape].nom} n'a pas encore ouvert ses portes.`);
-    if (etape !== vers) this.info(`La route ${deLieu(vers)} passe par ${minuscule(LIEUX[etape].nom)} : il faudra ${etape === "station" ? "la traverser" : etape === "gue" ? "le traverser" : "y passer"} à pied.`);
+    if (etape !== vers) this.info(`La route ${deLieu(vers)} passe par ${minuscule(LIEUX[etape].nom)} : il faudra ${traverserLieu(etape)} à pied.`);
     vers = etape;
     this.annulerAction();
     this.tir.quitterLieu();
@@ -2102,10 +2118,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (portes) this.info(portes);
     this.voyage = { de, vers, arrivee: this.maintenant() + DUREE_VOYAGE_S * 1000 };
     this.mesurer("activite", "expédition", DUREE_VOYAGE_S, { vers });
-    if (de === "station") this.halte.sortir(this);
-    if (de === "cooperative") this.cooperatives.de(this.compte.id).sortir(this);
     if (de === "comptoir") this.comptoir.sortir(this.envoyer);
-    this.vivantRouteB(de)?.sortir(this);
+    this.lieux.vivant(de, this.compte.id)?.sortir(this);
     // Les Éteints du terrain ne suivent pas : il n'y a pas de siège en son absence.
     this.eteints = [];
     // On enregistre tout de suite la destination : une déconnexion en route fait arriver à bon port.
@@ -2134,10 +2148,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
   /** Le joueur se déconnecte : il quitte la halte (hors ligne, il est sur la carte, Book 01 §2 bis). */
   partir(): void {
     this.dechets.partir();
-    this.halte.sortir(this);
-    if (this.lieu === "cooperative") this.cooperatives.de(this.compte.id).sortir(this);
-    this.gue.sortir(this);
-    if (this.lieu === "moulin") this.moulins.de(this.compte.id).sortir(this);
+    this.lieux.sortirDesHaltes(this);
+    if (estPersonnel(this.lieu)) this.lieux.vivant(this.lieu, this.compte.id)?.sortir(this);
     this.comptoir.sortir(this.envoyer);
   }
 
@@ -2652,6 +2664,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (bouge && this.action) this.annulerAction();
     // Au gué : le radeau emporte qui est à bord, la corde du bac coûte un peu d'endurance (plan 0.8, chantier 11).
     if (this.lieu === "gue" && !this.voyage) this.gue.suivre(this.contexteGue(), dt);
+    // Ce que le lieu fait de qui s'y trouve (0.10, le registre des lieux : LieuVivant.accompagner ; rien par défaut).
+    this.vivant?.accompagner(this.contexteLieu(), dt);
     // Saisi : ralenti par un, immobilisé par deux (Book 06 §2.3). Épuisé : on ne court plus.
     const frein = freinSaisie(this.saisisseurs().length);
     const allure = this.allureEffective();
@@ -2931,6 +2945,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
   }
 
   private interagir(cible: Cible, verbe: string): void {
+    // Un geste propre au lieu où l'on est (0.10, le registre des lieux : LieuVivant.geste) passe avant les autres.
+    if (this.vivant?.geste(this.contexteLieu(), cible, verbe)) return;
     if (cible?.genre === "ressource" && (verbe === "ramasser" || verbe === "demonter" || verbe === "fouiller")) return this.utiliserRessource(cible.id);
     if (cible?.genre === "sac" && verbe === "reprendre") return this.reprendreSac(cible.id);
     if (cible?.genre === "comptoir" && verbe === "pedaler_comptoir") return this.pedalerAuComptoir();

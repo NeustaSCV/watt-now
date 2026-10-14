@@ -10,7 +10,8 @@ import { avecTouches } from "./touches.ts";
 import { sousTension, suivreElectrique } from "./electricite.ts";
 import * as THREE from "three";
 import { INTENTION_REPOS, avancer, type Position } from "../../commun/src/deplacement.ts";
-import { COMPTOIR, destinations, sortiePourPartir, sortiesDe, zoneCoop, zoneDe, zoneMoulin, type LieuJouable, type Zone } from "../../commun/src/lieux.ts";
+import { COMPTOIR, destinationsIci, sortiePourPartir, sortiesDe, type LieuJouable, type Zone } from "../../commun/src/lieux.ts";
+import { estPersonnel, ficheLieu, pausePossibleIci, planDe, sombreDans, zoneSelonPortes } from "../../commun/src/registre-lieux.ts";
 import type { EteintVu } from "../../commun/src/eteints.ts";
 import { cerclesSignature, type BruitAction } from "../../commun/src/signature.ts";
 import { ALLURES, type Allure } from "../../commun/src/regles.ts";
@@ -38,17 +39,17 @@ import { avancerVersLaCouche } from "../../commun/src/sommeil-abri.ts";
 import { estomperAbri } from "./rendu/abri-dormeur.ts";
 import { creerRuine } from "./rendu/ruine.ts";
 import { creerHalte, estomperToits, montrerTousLesToits } from "./rendu/halte.ts";
+import { creerLieuVide } from "./rendu/lieu-vide.ts";
 import { ArriveeDansUnLieu } from "./arrivee.ts";
 import { animerMoulin, creerMoulin } from "./rendu/moulin.ts";
-import { pieceMoulin, sombreMoulin } from "../../commun/src/moulin.ts";
+import { pieceMoulin } from "../../commun/src/moulin.ts";
 // Le Gué-aux-Saules (plan 0.8, chantier 11) : son décor, son bac, sa crue, ses sons.
 import { RenduGue } from "./rendu/gue.ts";
 import { animerCooperative, creerCooperative, estomperCooperative, majPortes, ouverturesPortes, placerRadio, secouerPorte } from "./rendu/cooperative.ts";
 import { CarteVue, arcsParPiece, brouillerTout, clartesDe } from "./rendu/carte-vue.ts";
 import { Ondes } from "./rendu/ondes.ts";
-import { planVue } from "../../commun/src/vue-lieux.ts";
 import { bruitAlarmant } from "../../commun/src/bruits.ts";
-import { KLAXONS_PAR_BATTERIE, RADIO_ETABLI, pieceDe, portesInitiales, sombreIci } from "../../commun/src/cooperative.ts";
+import { KLAXONS_PAR_BATTERIE, RADIO_ETABLI, pieceDe, portesInitiales } from "../../commun/src/cooperative.ts";
 import { IndicateurHorsChamp } from "./hors-champ.ts";
 import { InterfaceLecon } from "./lecon-ui.ts";
 import { MenuAdmin } from "./admin-ui.ts";
@@ -122,26 +123,38 @@ const decors = new Map<LieuJouable, THREE.Group>();
 let decorCoop: THREE.Group | null = null;
 /** Les leurres de la Coopérative en marche (la radio allumée). */
 const leurresActifs = new Set<string>();
-/** L'état des portes de la Coopérative (ouverte : true), tel que le serveur l'a dit. */
+/** L'état des portes du lieu à portes où l'on est (la Coopérative, le Moulin… ; ouverte : true), tel que le serveur l'a dit. */
 let portesCoop: Record<string, boolean> = portesInitiales();
 /** Où est la radio de la Coopérative, et ce qui reste au klaxon (0.5.1). */
 let etatCoop: EtatCoopVu = { radio: { ...RADIO_ETABLI }, klaxons: KLAXONS_PAR_BATTERIE };
-/** La zone où l'on se déplace : à la Coopérative, les portes fermées bouchent le passage. */
+/** La zone où l'on se déplace : dans un lieu à portes (la Coopérative, le Moulin), les portes fermées bouchent le passage. */
 function zoneIci(): Zone {
   if (lieu === "gue") return gue.zone(Date.now() + decalage, debutMonde); // le radeau du bac, le radier noyé (chantier 11)
-  return lieu === "cooperative" ? zoneCoop(portesCoop) : lieu === "moulin" ? zoneMoulin(portesCoop) : zoneDe(lieu);
+  return zoneSelonPortes(lieu, portesCoop);
 }
+/**
+ * Le décor de chaque lieu (0.10, le registre des lieux : commun/src/registre-lieux.ts). Un lieu dont le modèle n'est pas
+ * encore importé a son décor provisoire (rendu/lieu-vide.ts) : un sol, ses chemins, un panneau à chaque sortie.
+ */
+const DECORS: Record<LieuJouable, () => THREE.Object3D[]> = {
+  terrain: () => [creerTerrain(), creerMare(), creerRuine()],
+  station: () => [creerHalte()],
+  comptoir: () => [creerComptoir()],
+  cooperative: () => [(decorCoop = creerCooperative())],
+  gue: () => [gue.creer()], // 0.8, chantier 11 : le modèle du gué, retourné pour suivre la carte
+  moulin: () => [creerMoulin()], // 0.8, chantier 12 : le Moulin du Gué
+  // 0.10 : le niveau 2, branché vide (chantier A) ; les modèles aux chantiers H à K.
+  route_pont: () => [creerLieuVide("route_pont")],
+  grand_hotel: () => [creerLieuVide("grand_hotel")],
+  corniche: () => [creerLieuVide("corniche")],
+  phare: () => [creerLieuVide("phare")],
+};
 function montrerDecor(lieu: LieuJouable): void {
   if (!decors.has(lieu)) {
     const g = new THREE.Group();
-    if (lieu === "terrain") g.add(creerTerrain(), creerMare(), creerRuine());
-    else if (lieu === "comptoir") g.add(creerComptoir());
-    else if (lieu === "cooperative") g.add((decorCoop = creerCooperative()));
-    else if (lieu === "gue") g.add(gue.creer()); // 0.8, chantier 11 : le modèle du gué, retourné pour suivre la carte
-    else if (lieu === "moulin") g.add(creerMoulin()); // 0.8, chantier 12 : le Moulin du Gué
-    else g.add(creerHalte());
+    g.add(...DECORS[lieu]());
     // Les lieux à murs (0.7.2) : ce que le personnage ne voit pas est dessiné « en souvenir » (rendu/carte-vue.ts).
-    if (planVue(lieu)) brouillerTout([g]);
+    if (planDe(lieu)) brouillerTout([g]);
     decors.set(lieu, g);
     scene.scene.add(g);
   }
@@ -469,7 +482,7 @@ function installer(message: Bienvenue): void {
   montrerDecor(lieu);
   solDesCorps(lieu);
   // La pause : seulement là où l'on est seul (son terrain, sa Coopérative).
-  hud.pausePossible(lieu === "terrain" || lieu === "cooperative" || lieu === "moulin");
+  hud.pausePossible(pausePossibleIci(lieu));
   hud.majPause(false);
   // Les portes de la Coopérative, dans l'état où on les a laissées ; la radio, si elle joue encore.
   if (message.portes) portesCoop = message.portes;
@@ -509,7 +522,7 @@ function installer(message: Bienvenue): void {
 
   contenu.clear();
   ressources.clear();
-  carteVue.activer(planVue(lieu), clartesDe(lieu));
+  carteVue.activer(planDe(lieu), clartesDe(lieu));
   ondes.vider();
   feux.clear();
   installations.clear();
@@ -592,7 +605,7 @@ function installer(message: Bienvenue): void {
   lecons.maj(null);
   son.entrer({
     famille: message.moi.famille,
-    lieu: lieu === "station" ? "halte" : lieu,
+    lieu: ficheLieu(lieu).musique,
     nuit: estNuit(heureDeJeu(Date.now() + decalage, debutMonde)),
     atelier: message.installations.some((i) => i.type === ATELIERS[message.moi.famille]),
     // Tutoriel : la Vie n'entre qu'au premier feu (étape 3, moment-vitrine 2).
@@ -1202,7 +1215,7 @@ function majCercles(dt: number, allure: Allure, bouge: boolean, nuit: boolean): 
   const c = cerclesSignature({ x: position.x, z: position.z, allure, bouge, action: bruitAction, lumiere: portee ? (OBJETS[portee].lumiere ?? null) : null, nuit });
   // La pluie couvre le bruit (Book 13 §4) : le cercle rétrécit.
   c.son *= attenuationMeteo(meteo(Date.now() + decalage, debutMonde), "son");
-  const plan = lieu === "cooperative" || lieu === "moulin" ? planVue(lieu) : null;
+  const plan = estPersonnel(lieu) ? planDe(lieu) : null;
   for (const [ligne, pieces, rayon] of [
     [cercleSon, cercleSonPieces, c.son],
     [cercleLumiere, cercleLumierePieces, c.lumiere],
@@ -1428,7 +1441,7 @@ function executer(c: Commande): void {
     case "carte": {
       hud.fermerPanneaux();
       const sortie = position ? sortiePourPartir(lieu, position.x, position.z) : null;
-      carte.basculer(lieu, sortie ? destinations(sortie) : []);
+      carte.basculer(lieu, sortie ? destinationsIci(lieu, position!.x, position!.z) : []);
       return;
     }
     case "lumiere":
@@ -1571,9 +1584,9 @@ function lampeDansLeNoir(l: (typeof LUMIERES_PORTEES)[keyof typeof LUMIERES_PORT
   return { ...l, x: p.x + Math.sin(p.o) * 0.45, y: 2.7, z: p.z + Math.cos(p.o) * 0.45, intensite: l.intensite * 2, portee: 9, decroissance: 1 };
 }
 
-/** Dans une pièce noire de la Coopérative (Book 23 §4.5) : il y fait nuit, même de jour. */
+/** Dans une pièce noire de la Coopérative, du Moulin (Book 23 §4.5) : il y fait nuit, même de jour. */
 function dansLeNoir(): boolean {
-  return position !== null && ((lieu === "cooperative" && sombreIci(position.x, position.z)) || (lieu === "moulin" && sombreMoulin(position.x, position.z)));
+  return position !== null && sombreDans(lieu, position.x, position.z);
 }
 
 function sourcesDeLumiere(): SourceLumiere[] {
@@ -1819,7 +1832,7 @@ function boucle(instant: number): void {
       besoins.repos,
       lieu === "terrain" ? volaille.places() : [],
       jourAffiche,
-      lieu === "cooperative" || lieu === "moulin" ? portesCoop : null,
+      ficheLieu(lieu).portes ? portesCoop : null,
       leurresActifs,
       etatCoop,
     );
@@ -1911,7 +1924,7 @@ function boucle(instant: number): void {
   // s'il est vu (le serveur ne l'envoie déjà que dans ce cas : c'est la double sécurité, pendant qu'une porte s'ouvre).
   if (carteVue.actif && position) {
     carteVue.souvenir(scene.ciel.nuit, scene.ciel.obscurite);
-    carteVue.maj(scene.rendu, position.x, position.z, lieu === "cooperative" && decorCoop ? ouverturesPortes(decorCoop) : lieu === "moulin" ? portesCoop : {});
+    carteVue.maj(scene.rendu, position.x, position.z, lieu === "cooperative" && decorCoop ? ouverturesPortes(decorCoop) : ficheLieu(lieu).portes ? portesCoop : {});
     for (const e of eteints.values()) e.objet.visible = carteVue.voit(position, e.objet.position.x, e.objet.position.z);
     for (const a of autres.values()) a.objet.visible = carteVue.voit(position, a.objet.position.x, a.objet.position.z);
   }

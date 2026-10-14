@@ -3,6 +3,7 @@
 // Un seul AudioContext, débloqué au premier geste du joueur (iOS l'exige, Book 21 §6.4.3).
 
 import { MoteurAudio, type NiveauMenace, type VoixEffet, type ZoneMusique } from "../audio/moteur-couches.js";
+import type { MusiqueLieu } from "../../../commun/src/registre-lieux.ts";
 import { ecrire, lire } from "../stockage.ts";
 import { SONS, fabriquer, type DefSon, type IdSon } from "./catalogue.ts";
 import { FE } from "./dsp.ts";
@@ -21,7 +22,8 @@ interface ManifesteEffets {
 }
 const CLE_SON = "watt.son";
 
-export type LieuMusique = "terrain" | "halte" | "comptoir" | "cooperative" | "gue" | "moulin";
+/** La musique d'un lieu (sa fiche du registre des lieux, commun/src/registre-lieux.ts : `musique`). */
+export type LieuMusique = MusiqueLieu;
 
 /** Les lieux dont la musique est livrée (leurs pièces, et leur conduite par le directeur). */
 type LieuJoue = "terrain" | "halte" | "comptoir" | "cooperative";
@@ -31,7 +33,15 @@ type LieuJoue = "terrain" | "halte" | "comptoir" | "cooperative";
  * session musique). En attendant, le gué joue la halte, le Moulin la Coopérative. Retirer la ligne quand les pièces
  * du lieu sont livrées (et les ajouter à PIECES et au directeur).
  */
-const EN_ATTENDANT: Record<Exclude<LieuMusique, LieuJoue>, LieuJoue> = { gue: "halte", moulin: "cooperative" };
+const EN_ATTENDANT: Record<Exclude<LieuMusique, LieuJoue>, LieuJoue> = {
+  gue: "halte",
+  moulin: "cooperative",
+  // 0.10 : le niveau 2, de même ; les haltes jouent la halte, les lieux à soi la Coopérative.
+  route_pont: "halte",
+  corniche: "halte",
+  grand_hotel: "cooperative",
+  phare: "cooperative",
+};
 
 /** Le lieu dont on joue la musique. */
 function lieuJoue(lieu: LieuMusique): LieuJoue {
