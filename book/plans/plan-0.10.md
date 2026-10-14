@@ -521,7 +521,7 @@ Décidés (MS-01 à MS-09, MS-Q1 à MS-Q8, §3.2), sortis de la 0.10 pour la gar
 
 **Fait et fusionné dans `integration-0-10`** (1 023 tests, verif et build passent) : A (le registre des lieux, la carte, les routes depuis le terrain, le menu de l'administrateur), B (les matières, les objets-clés, le Comptoir toujours servi, plus aucun repli), C (les dix meubles du niveau 2, le pack soudé), D (les huit meubles nouveaux, le banc qui suit le soleil), F (les armes ★★★, le cranequin léger, le pied de guéridon, le harpon, la fourche à 2,3), G (le Noyé, très gonflé à la demande du porteur, et l'Ensablé). **Pause demandée par le porteur.** Reste : la vague 2 (les quatre lieux, H à K), puis L, M, N.
 
-**Les questions remontées par les chantiers.** **Décision du porteur (2026-10-14) : toutes les recommandations acceptées (✅), sauf V1-17, à réexpliquer.**
+**Les questions remontées par les chantiers.** **Décision du porteur (2026-10-14) : toutes les recommandations acceptées (✅), V1-17 comprise (réexpliquée : le moulin de jerricans et la rampe de LED se branchent à une batterie à 15 m au plus).**
 
 | # | Question | Recommandation |
 |---|---|---|
@@ -541,5 +541,5 @@ Décidés (MS-01 à MS-09, MS-Q1 à MS-Q8, §3.2), sortis de la 0.10 pour la gar
 | V1-14 ✅ | **La matraque ★★★ avec le pack soudé** : 24 Wh (Q-C10) au lieu de 12 ? | **Oui, 24 Wh** (C10 décidée) ; surveiller l'électrique à 15 m (1,92, sous la limite de 2) |
 | V1-15 ✅ | **Le Noyé** : 0,4 m/s même en poursuite ? Vacille-t-il sous les coups au torse ? | **0,4 m/s partout** (on le fuit en marchant) ; **il ne vacille pas** (sa masse, comme l'Équipé qui encaisse) |
 | V1-16 ✅ | **La poulie et le lingot** : sans charbon (« 4 chutes ») | **1 charbon** chacun, comme les autres recettes de forge |
-| V1-17 ❓ (à réexpliquer) | **La batterie de la base** remplie par le moulin, la rampe : la plus proche, **sans limite de distance** | **15 m au plus** (comme le reste de la base), et la fiche du banc cite le moulin |
+| V1-17 ✅ | **La batterie de la base** remplie par le moulin, la rampe : la plus proche, **sans limite de distance** | **15 m au plus** (comme le reste de la base), et la fiche du banc cite le moulin |
 | V1-18 ✅ | **R38** : quelques anciens textes écrivent encore « aluminium » seul (casserole, canette, planche à roulettes) | **Corriger** au chantier L |
