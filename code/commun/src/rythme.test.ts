@@ -1,6 +1,7 @@
 // Le rythme de l'arbre de progression (0.7, chantier 6 ; décision Q5) : les parcours types tiennent la cible, rien ne
 // bloque, le tutoriel et le carnet ne demandent jamais une recette invisible, chaque ingrédient se trouve.
 // Plan 0.8 (chantier 14) : les sorties, les portes du niveau 1 et le budget de bois et de pierre (§2.7, critères 6, 7, 11).
+// Plan 0.10 (chantier M) : le niveau 2, sur la côte (les sorties, les péages, la nuit du phare, les roulements, le budget).
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -25,7 +26,21 @@ import {
   quetesDeLaFamille,
   simulerServeur,
   tousLesParcours,
+  CIBLE_NIVEAU_2,
+  CLES_NIVEAU_2,
+  HORIZON_NIVEAU_2_MIN,
+  OUTILS_NIVEAU_2,
+  allumeLaNuit,
+  budgetNiveau2,
+  ecartsAuNiveau2,
+  heureDuMonde,
+  jouerParcoursN2,
+  pireMalchanceN2,
+  simulerServeurN2,
+  tousLesParcoursN2,
+  wottsDePeage,
 } from "./rythme.ts";
+import { SAC_LIBRE_KG, budgetEnergie, demandeNiveau2, offreDeLaCote, poidsDesCles } from "./rythme-niveau2.ts";
 import { trouvables } from "./trouvables.ts";
 import { lieuPossede } from "./lieu-recette.ts";
 import { PLAFONDS_NIVEAU_1 } from "./armes/grille.ts";
@@ -135,15 +150,10 @@ test("les quêtes qui font fabriquer quelque chose le disent : l'arbre sait quoi
 test("aucun ingrédient introuvable : tout ce que l'arbre peut dévoiler se fabrique (sauf le boyau, qui attend le collet)", () => {
   for (const famille of FAMILLES) {
     const t = trouvables(famille, false);
-    // Les recettes « plus tard » (plan 0.8 §1.3) ne se dévoilent pas : le module à bobine et le cranequin attendent
-    // le niveau 2, où se trouveront la bobine et les roulements (I9, I12 ; leurs dernières sources sont retirées).
-    // Plan 0.10 (chantier F) : les armes du niveau 2 sont jouables, mais leurs matières (les roulements, la bobine, le tube
-    // d'aluminium, le pack soudé) viennent des lieux du niveau 2 (chantiers B, C, H à K), que ce calcul ne connaît pas encore.
-    // Plan 0.10 (chantier D) : de même, les meubles nouveaux des familles demandent les roulements (la charrette, le moulin)
-    // ou le fer à souder du poste de montage (la rampe de LED, la batterie de cellules).
-    // Plan 0.10 (V1-04) : les étagères demandent l'établi de menuisier, donc le rabot de L2B.
-    const niveau2 = new Set(["cranequin_leger", "module_bobine", "matraque_contacts_soudes", "charrette_bras", "moulin_jerricans", "rampe_led", "batterie_cellules", "etageres"]);
-    const infaisables = RECETTES.filter((r) => !r.aVenir && !t.recettes.has(r.id) && !niveau2.has(r.id)).map((r) => r.id);
+    // Les recettes « plus tard » ne se dévoilent pas. Plan 0.10 (chantier M) : plus aucune exclusion pour le niveau 2 —
+    // ses matières (les roulements de la boîte, la bobine, le tube d'aluminium, le pack soudé) et ses outils (le rabot, le
+    // fer à souder) se trouvent dans ses quatre lieux, que ce calcul connaît : tout ce qui est jouable se fait.
+    const infaisables = RECETTES.filter((r) => !r.aVenir && !t.recettes.has(r.id)).map((r) => r.id);
     // Le boyau séché vient du lapin, et le collet n'attrape encore rien : sa corde d'arc ne se dévoile jamais
     // (déclencheur « vu : boyaux »), elle ne trompe donc personne. Le pack soudé (plan 0.10, chantier C) demande le
     // fer à souder, un objet-clé du niveau 2 : depuis le chantier J, il est à sa place au Grand Hôtel.
@@ -297,4 +307,103 @@ test("critère 13 : le garde-fou des armes, rejoué à chaque étape (maison, H1
     assert.deepEqual(v.fautes, [], etape);
     assert.ok(v.pireRapport <= 2 && v.ecartCout <= 3, `${etape} : ${v.pireRapport}, ${v.ecartCout}`);
   }
+});
+
+// ---------- Plan 0.10, chantier M : le rythme et le budget du niveau 2 ----------
+
+const N2 = tousLesParcoursN2();
+
+test("niveau 2 : les objets-clés de l'hôtel et du phare, et les deux outils qu'on ne trouve qu'avec eux (le rabot, le fer à souder)", () => {
+  assert.deepEqual([...CLES_NIVEAU_2.entries()].filter(([, l]) => l === "grand_hotel").map(([t]) => t).sort(), ["couvertures_laine", "fer_souder", "lanterne_tempete", "roulements", "toles_ondulees"]);
+  assert.deepEqual([...CLES_NIVEAU_2.entries()].filter(([, l]) => l === "phare").map(([t]) => t).sort(), ["cloche_bronze", "jerrican_20l", "porte_four", "rabot", "soufflet_forge"]);
+  assert.deepEqual(OUTILS_NIVEAU_2, { raboter: "rabot", souder: "fer_souder" });
+  // Le niveau 1 ne connaît que ses clés : jouer le niveau 2 après ne change rien à la première soirée.
+  assert.deepEqual(jouerParcoursN2("prudent", "voltaiques").niveau1.evenements, PARCOURS.find((r) => r.profil === "prudent" && r.famille === "voltaiques")!.evenements);
+});
+
+test("niveau 2 : douze parcours, et chacun tient les cibles (tout le niveau 2 à l'horizon, sans blocage, le ravitaillement, le péage, la nuit du phare)", () => {
+  assert.equal(N2.length, 12);
+  const fautes = [...N2, ...FAMILLES.map((f) => pireMalchanceN2(f))].flatMap(ecartsAuNiveau2);
+  assert.deepEqual(fautes, [], fautes.join("\n"));
+  for (const r of N2) {
+    assert.ok(r.tout !== null && r.tout <= HORIZON_NIVEAU_2_MIN, `${r.profil} ${r.famille}`);
+    assert.equal(r.postesFaits.length, r.postes.length, `${r.profil} ${r.famille}`);
+    // Les quatre lieux de la côte : on traverse la halte pour aller au lieu de chaque route.
+    for (const e of ["H2A", "L2A", "H2B", "L2B"] as const) assert.ok(r.atteint[e] !== undefined, `${r.profil} ${r.famille} : ${e}`);
+    assert.ok(r.atteint.H2A! <= r.atteint.L2A! && r.atteint.H2B! <= r.atteint.L2B!, `${r.profil} ${r.famille}`);
+  }
+});
+
+test("niveau 2 : le péage (12 wotts) à l'aller seulement, une fois par voyage ; le retour est libre (V2-01), le ravitaillement de bois en deçà aussi", () => {
+  for (const r of N2) {
+    const allers = r.sorties.filter((s) => s.lieu === "grand_hotel" || s.lieu === "phare");
+    assert.equal(r.peages.length, allers.length, `${r.profil} ${r.famille}`);
+    for (const p of r.peages) {
+      const s = allers.find((x) => x.minute === p.minute);
+      assert.ok(s, `${r.profil} ${r.famille} : un péage sans aller`);
+      assert.equal(p.passage, s.lieu === "grand_hotel" ? "pont" : "tunnel");
+    }
+    assert.equal(wottsDePeage(r), 12 * r.peages.length);
+  }
+});
+
+test("niveau 2 : le feu du phare s'allume la nuit seulement (S-14) ; on part pour arriver à la nuit tombée", () => {
+  assert.equal(heureDuMonde(0), 6);
+  assert.equal(heureDuMonde(15), 21);
+  for (const r of N2) {
+    const phare = r.sorties.filter((s) => s.lieu === "phare");
+    assert.ok(phare.length >= 1, `${r.profil} ${r.famille}`);
+    for (const s of phare) assert.ok(allumeLaNuit(r, s), `${r.profil} ${r.famille} : départ à ${s.minute}`);
+  }
+});
+
+test("niveau 2 : les roulements (V1-01) — une boîte en donne trois ; le Mécaniste en use cinq ; s'il en manque, le Comptoir vend la boîte", () => {
+  for (const r of N2.filter((x) => x.famille === "mecanistes")) {
+    const b = r.roulements;
+    assert.equal((b.hotel + b.chance + b.comptoir) * 3 - b.reste, 5, `${r.profil}`);
+  }
+  // La machinerie ne donnerait qu'une boîte : la seconde s'achète (500 wotts), et tout le niveau 2 se fait quand même.
+  const une = jouerParcoursN2("prudent", "mecanistes", { hypotheses: { ...HYPOTHESES_DECIDEES, boitesHotel: 1 } }).niveau2;
+  assert.deepEqual([une.roulements.hotel, une.roulements.comptoir, une.achats], [1, 1, 500]);
+  assert.ok(une.tout !== null);
+});
+
+test("niveau 2, critère 8 : le Mécaniste seul a son meuble de famille et tout son métier (le cranequin léger, l'arbalète) sans aller au phare", () => {
+  const r = jouerParcoursN2("prudent", "mecanistes", { seulementFamille: true }).niveau2;
+  assert.ok(r.tout !== null);
+  assert.equal(r.atteint.L2B, undefined);
+  assert.ok(r.postesFaits.some((p) => p.id === "cranequin_leger@2") && r.postesFaits.some((p) => p.id === "arbalete@2"));
+  assert.deepEqual(r.blocages, []);
+});
+
+test("niveau 2, budget : les allers-retours de ravitaillement (4 au plus ; le bois des 🔥, 3 au plus : N2-29) — seul, malchanceux, à cinq ; les haltes jamais vides plus de 30 min", () => {
+  for (const scenario of ["seul", "malchanceux", "cinq_en_file"] as const) {
+    for (const l of budgetNiveau2(scenario)) {
+      assert.ok(l.ravitaillements <= CIBLE_NIVEAU_2.ravitaillementsMax, `${scenario}, ${l.famille} : ${l.ravitaillements}`);
+      if (l.famille === "charbonniers") assert.ok(l.bois <= CIBLE_NIVEAU_2.boisCharbonniersMax, `${scenario} : ${l.bois} allers-retours de bois`);
+      assert.ok(l.tout !== null, `${scenario}, ${l.famille}`);
+    }
+  }
+  const s = simulerServeurN2(SERVEURS.cinq_en_file);
+  assert.ok(s.videCorniche <= 30 && s.videPont <= 30, `corniche ${s.videCorniche}, pont ${s.videPont}`);
+  // Le four de terre demande de la glaise pour tous (N2-13) : chacun va au gué, une fois.
+  for (const r of N2) assert.equal(r.ravitaillements.filter((x) => x.motif === "glaise").length, 1, `${r.profil} ${r.famille}`);
+});
+
+test("niveau 2, budget des matières : une charge de sac par route (les matériaux, et les objets-clés rapportés d'un coup) ; l'énergie du banc compensé", () => {
+  for (const f of FAMILLES) {
+    const d = demandeNiveau2(f);
+    for (const kg of [d.kgA, d.kgB, d.kgClesA, d.kgClesB]) assert.ok(kg > 0 && kg <= SAC_LIBRE_KG, `${f} : ${kg} kg`);
+  }
+  assert.ok(poidsDesCles("phare") <= SAC_LIBRE_KG && poidsDesCles("grand_hotel") <= SAC_LIBRE_KG);
+  // L'offre d'une visite : l'hôtel est le lieu le plus riche ; le tube d'aluminium vient surtout de la cale du pont.
+  const o = offreDeLaCote(100);
+  const parLieu = new Map(o.parLieu.map((x) => [x.lieu, x]));
+  assert.ok(parLieu.get("grand_hotel")!.wotts > 12 && parLieu.get("phare")!.wotts > 12, "une visite paie le péage");
+  assert.ok((parLieu.get("route_pont")!.matieres.tube_aluminium ?? 0) >= 2);
+  assert.deepEqual(parLieu.get("grand_hotel")!.cles.sort(), ["couvertures_laine", "fer_souder", "lanterne_tempete", "roulements", "toles_ondulees"]);
+  // Le banc qui suit le soleil, compensé (V1-19) : la rampe de LED ne prend qu'une part de ce qu'il donne.
+  const e = budgetEnergie();
+  assert.ok(e.rampeParNuit < e.bancParJour && e.bancParBeauJour > e.bancParJour);
+  assert.ok(Math.abs(e.moulinParJour - e.bancParJour) / e.bancParJour < 0.3, `moulin ${e.moulinParJour}, banc ${e.bancParJour}`);
 });

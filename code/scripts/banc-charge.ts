@@ -1,8 +1,12 @@
 // Banc de charge du serveur : N joueurs simulés (faux sockets) dans le vrai Monde, pendant quelques secondes.
 // Mesure : CPU (part d'un cœur), retard de la boucle d'événements, mémoire, débit envoyé par joueur.
-// Usage : node scripts/banc-charge.ts <terrain|halte|cooperative> <joueurs> <secondes> [--detail] [--dechets]  (dans le conteneur : docker compose exec jeu node scripts/banc-charge.ts halte 50 30)
+// Usage : node scripts/banc-charge.ts <terrain|halte|lieu> <joueurs> <secondes> [--detail] [--dechets]  (dans le conteneur : docker compose exec jeu node scripts/banc-charge.ts halte 50 30)
 // « cooperative » (0.5g, Book 23 §7) : chacun dans sa Coopérative (24 Éteints chacune), une hache à la main ; il
 // bouge et frappe sans arrêt : le pire cas pour l'IA. Cible : retard p99 < 25 ms à 10 joueurs sur le Pi.
+// Plan 0.10 (chantier M) : tout lieu du registre (registre-lieux.ts) : « station » (comme « halte »), « gue », « moulin »,
+// et le niveau 2 : « route_pont », « corniche » (des haltes partagées : tous ensemble), « grand_hotel », « phare » (des
+// lieux à soi : chacun le sien, une hache à la main, il frappe comme à la Coopérative). On arrive par la première
+// entrée du lieu, un peu écartés les uns des autres. Pour le chantier N : la mesure du Pi à l'hôtel et au phare.
 // La base du banc est jetable : serveur/donnees/banc.sqlite, effacée à chaque lancement.
 
 import { monitorEventLoopDelay } from "node:perf_hooks";
@@ -10,8 +14,18 @@ import { mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { Base } from "../serveur/src/base.ts";
 import { Monde } from "../serveur/src/monde.ts";
+import { TOUS_LES_LIEUX, entreesDe, type LieuId } from "../commun/src/lieux.ts";
+import { estPersonnel } from "../commun/src/registre-lieux.ts";
 
 const scenario = process.argv[2] ?? "terrain";
+/** Le lieu du banc : « halte » est la station (comme avant la 0.10) ; « terrain », chez soi. */
+const lieu: LieuId = scenario === "halte" ? "station" : (scenario as LieuId);
+if (!TOUS_LES_LIEUX.includes(lieu) || lieu === "comptoir") {
+  console.error(`Lieu inconnu : ${scenario} (terrain, halte, ${TOUS_LES_LIEUX.filter((l) => l !== "terrain" && l !== "comptoir").join(", ")})`);
+  process.exit(2);
+}
+/** Un lieu à soi (la Coopérative, le Moulin, l'hôtel, le phare) : on s'y bat. */
+const personnel = estPersonnel(lieu);
 const N = Number(process.argv[3] ?? 20);
 const secondes = Number(process.argv[4] ?? 15);
 
@@ -35,11 +49,15 @@ const parType = new Map<string, number>();
 
 for (let i = 0; i < N; i++) {
   const compte = base.creerCompte(`Joueur ${i}`, "motdepasse1", (["charbonniers", "voltaiques", "mecanistes"] as const)[i % 3]);
-  if (scenario === "halte") base.sauverPosition(compte.id, { x: 20 + (i % 20) * 8, z: 33 + (i % 3), o: 0 }, "station", Date.now());
-  if (scenario === "cooperative") {
-    base.sauverInventaire(compte.id, { sac_a_dos: 1, hache: 1, lampe_frontale: 1 });
-    base.sauverPosition(compte.id, { x: 43, z: 56, o: Math.PI }, "cooperative", Date.now());
+  if (lieu === "station") base.sauverPosition(compte.id, { x: 20 + (i % 20) * 8, z: 33 + (i % 3), o: 0 }, "station", Date.now());
+  else if (lieu === "cooperative") base.sauverPosition(compte.id, { x: 43, z: 56, o: Math.PI }, "cooperative", Date.now());
+  else if (lieu !== "terrain") {
+    // La première entrée du lieu ; dans une halte, chacun un peu à l'écart (le serveur recale qui tombe dans un mur).
+    const a = entreesDe(lieu)[0]!.arrivee;
+    const ecart = personnel ? 0 : i % 6;
+    base.sauverPosition(compte.id, { x: a.x + (ecart % 3) * 0.8, z: a.z + Math.floor(ecart / 3) * 0.8, o: a.o }, lieu, Date.now());
   }
+  if (personnel) base.sauverInventaire(compte.id, { sac_a_dos: 1, hache: 1, lampe_frontale: 1 });
   const ecouteurs: Record<string, (d: Buffer) => void> = {};
   const c: FauxClient = {
     octets: 0,
@@ -85,9 +103,10 @@ const pilote = setInterval(() => {
     c.envoyer({ t: "intention", dx: Math.cos(a), dz: Math.sin(a), allure: Math.random() < 0.2 ? "course" : "marche", seq: ++seq });
   }
 }, 250);
-// En Coopérative, on se bat : un coup toutes les 0,8 s (le serveur refuse ceux qui arrivent trop tôt).
+// Dans un lieu à soi (la Coopérative, l'hôtel, le phare…), on se bat : un coup toutes les 0,8 s (le serveur refuse ceux
+// qui arrivent trop tôt).
 const coups = setInterval(() => {
-  if (scenario !== "cooperative") return;
+  if (!personnel) return;
   for (const c of clients) c.envoyer({ t: "frapper", appuye: Math.random() < 0.3 });
 }, 800);
 // La couche de déchets (0.7) : avec --dechets, chacun tente de ramasser une pièce au hasard deux fois par seconde
@@ -131,7 +150,7 @@ setTimeout(() => {
       debit_ko_s_par_joueur: +(octets / 1024 / duree / N).toFixed(2),
       messages_s_par_joueur: +(messages / duree / N).toFixed(1),
       memoire_rss_mo: Math.round(mem.rss / 1048576),
-      encore_sur_place: clients.filter((c) => c.lieu === (scenario === "halte" ? "station" : scenario)).length,
+      encore_sur_place: clients.filter((c) => c.lieu === lieu).length,
       tas_mo: Math.round(mem.heapUsed / 1048576),
     }),
   );
