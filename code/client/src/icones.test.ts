@@ -5,10 +5,11 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { OBJETS, type TypeObjet } from "../../commun/src/objets.ts";
 import { NOMS_INSTALLATIONS, type TypeInstallation } from "../../commun/src/recettes.ts";
-import { NOMS_FAMILLES_VESTIGES, type FamilleVestige } from "../../commun/src/vestiges.ts";
+import { NOMS_FAMILLES_VESTIGES, NOUVEAUX_OBJETS_0_10, type FamilleVestige } from "../../commun/src/vestiges.ts";
 import { VESTIGES_LOT2 } from "../../commun/src/vestiges-lot2.ts";
 import { DESSINS_DECHETS } from "./icones-dechets.ts";
 import { DESSINS_NIVEAU1 } from "./icones-niveau1.ts";
+import { DESSINS_NIVEAU2 } from "./icones-niveau2.ts";
 import { NOUVEAUX_OBJETS_0_8, NOUVEAUX_OBJETS_0_8_2 } from "../../commun/src/objets-niveau1.ts";
 import { estDessinee, icone, iconeFamille, type Pictogramme } from "./icones.ts";
 
@@ -104,4 +105,21 @@ test("les deux condensateurs de la 0.8.2 ont chacun leur dessin, distinct de tou
     assert.ok(estDessinee(type), type);
     verifierSvg(type, icone(type, 48));
   }
+});
+
+test("chaque objet nouveau de la 0.10 a son propre dessin, distinct de tous les autres (plan 0.10, chantier B)", () => {
+  assert.equal(NOUVEAUX_OBJETS_0_10.length, 12);
+  const tous = new Map<string, string>();
+  for (const type of TOUS) {
+    if (!estDessinee(type)) continue;
+    const svg = icone(type, 48);
+    if (NOUVEAUX_OBJETS_0_10.includes(type as TypeObjet)) assert.equal(tous.get(svg), undefined, `${type} et ${tous.get(svg)} ont le même dessin`);
+    tous.set(svg, type);
+  }
+  for (const type of NOUVEAUX_OBJETS_0_10) {
+    assert.ok(estDessinee(type), type);
+    verifierSvg(type, icone(type, 48));
+  }
+  const connus = new Set<string>(TOUS);
+  for (const type of Object.keys(DESSINS_NIVEAU2)) assert.ok(connus.has(type), `${type} : dessin d'un objet inconnu`);
 });

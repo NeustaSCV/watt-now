@@ -38,9 +38,10 @@ import { DEMONTAGE_LOT2, VESTIGES_LOT2, estVestigeLot2, type TypeVestigeLot2 } f
 const LOT2 = Object.keys(VESTIGES_LOT2) as TypeVestigeLot2[];
 const LIEUX = Object.keys(PROFILS_DECHETS) as TypeLieuDechets[];
 
-test("le catalogue du lot 2 : 91 objets du sac (et le trampoline, point fixe), pesés, nommés, valorisés", () => {
-  assert.equal(LOT2.length, 91);
-  assert.ok(POINTS_DECHETS.trampoline, "le 92e : le trampoline, démonté sur place");
+test("le catalogue du lot 2 : 92 objets du sac (et le trampoline, point fixe), pesés, nommés, valorisés", () => {
+  // 91, et la chaise de camping (plan 0.10, chantier B).
+  assert.equal(LOT2.length, 92);
+  assert.ok(POINTS_DECHETS.trampoline, "le 93e : le trampoline, démonté sur place");
   for (const t of LOT2) {
     const d = VESTIGES_LOT2[t];
     assert.ok(estObjet(t), t);

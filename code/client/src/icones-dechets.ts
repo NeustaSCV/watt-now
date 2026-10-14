@@ -354,6 +354,15 @@ export const DESSINS_DECHETS: Record<string, string> = {
     <path d="M14 23 Q24 34 34 23" stroke="#f4ecd8" stroke-width="2.2" fill="none"/>
     <path d="M17 28 Q24 36 31 28" stroke="#3f8fb0" stroke-width="2" fill="none"/>
     ${trait("M12 15 V24 M36 15 V24", "#6b4a32", 2)}`,
+  // 0.10 (chantier B) : la chaise de camping, ses tubes croisés et sa toile tendue, l'accoudoir.
+  chaise_camping: `
+    ${trait("M10 42 L36 16 M38 42 L14 18", "#d4d8dc", 2.4)}
+    <path d="M12 18 H38 L36 28 H14 Z" fill="#2f6f8a" ${T}/>
+    <path d="M14 28 Q25 32 36 28" fill="none" stroke="#f4ecd8" stroke-width="1.6"/>
+    <path d="M12 8 H36 V18 H12 Z" fill="#2f6f8a" ${T}/>
+    <path d="M14 11 H34" stroke="#f4ecd8" stroke-width="1.4"/>
+    ${trait("M38 18 L44 18 L44 22", "#d4d8dc", 2)}
+    <path d="M6 42 H14 M34 42 H42" ${T}/>`,
   tente_popup: `
     <path d="M2 39 H46" ${T}/>
     <path d="M4 39 Q7 11 24 9 Q41 11 44 39 Z" fill="#5f9f55" ${T}/>

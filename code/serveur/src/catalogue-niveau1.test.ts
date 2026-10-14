@@ -145,7 +145,7 @@ test("aucune table de fouille courante ne tire l'étau, le grillage ni la cocott
   assert.ok(tableDeFouille("atelier").some(([t]) => t === "bocal_clous"));
   // L'exception R-BUTIN : 2 % par fouille, à H1 (les six clés) et dans l'autre L1 (les trois de l'autre).
   assert.deepEqual(
-    Object.fromEntries(Object.entries(CLES_RARES).map(([e, { chance, cles }]) => [e, { chance, cles: [...cles].sort() }])),
+    Object.fromEntries(Object.entries(CLES_RARES).filter(([e]) => e.includes("1")).map(([e, { chance, cles }]) => [e, { chance, cles: [...cles].sort() }])),
     {
       H1A: { chance: 0.02, cles: ["cocotte_fonte", "etau", "feuillards", "grillage_rouleau", "seau_10l", "toile_jute"] },
       H1B: { chance: 0.02, cles: ["cocotte_fonte", "etau", "feuillards", "grillage_rouleau", "seau_10l", "toile_jute"] },

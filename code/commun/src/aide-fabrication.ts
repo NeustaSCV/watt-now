@@ -1,7 +1,7 @@
 // Pourquoi une recette n'est pas faisable (Book 03 §4) : ce qui manque, où le trouver, et par quoi le remplacer.
 // Tout vient des données du jeu (ressources, recettes, stock du Comptoir, qualités d'outil) : rien n'est écrit à la main.
 
-import { STOCK_DE_BASE } from "./economie.ts";
+import { seVendAuComptoir } from "./economie.ts";
 import { OBJETS, kitDeDepart, nommer, type Inventaire, type TypeObjet } from "./objets.ts";
 import { FAMILLES } from "./regles.ts";
 import { ouSeFait } from "./lieu-recette.ts";
@@ -57,7 +57,7 @@ export function ouTrouver(type: TypeObjet, visible: RecetteVisible = TOUTES): st
   // Ce qui reste d'une recette (Book 25 §9.6) : les plumes et l'os de la poule qu'on plume.
   for (const r of RECETTES) if ((r.sousProduits?.[type] ?? 0) > 0 && visible(r.id)) ou.push(`ce qui reste quand on fait « ${r.nom} »`);
   if (cachee && !ou.some((s) => s.startsWith("le fabriquer"))) ou.push(SE_FABRIQUE_CACHE);
-  if ((STOCK_DE_BASE[type] ?? 0) > 0) ou.push("l'acheter au Comptoir");
+  if (seVendAuComptoir(type)) ou.push("l'acheter au Comptoir");
   // Le kit de départ : celui de tout le monde, ou celui d'une famille (on peut alors l'échanger avec elle). 0.8.2
   // (chantier K) : on ne dit pas ce qu'il y a dans le kit des autres familles.
   const familles = FAMILLES.filter((f) => (kitDeDepart(f)[type] ?? 0) > 0);

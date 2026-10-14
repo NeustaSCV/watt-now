@@ -21,7 +21,10 @@ export const RESSOURCES_DE_BASE: TypeObjet[] = ["branche", "buche", "pierre", "b
  */
 const INVENDABLES: TypeObjet[] = ["sac_a_dos", "panneau_solaire", "enclume_depanneur", "petit_alternateur"];
 
-// ---------- Les clés de L1 au Comptoir (plan 0.8, chantier 10 ; avis du game designer, règle 6 et Q4 ; Q-0.8-12) ----------
+// ---------- Les objets-clés au Comptoir (plan 0.8, chantier 10 ; avis du game designer, règle 6 et Q4 ; Q-0.8-12) ----------
+// Plan 0.10 (chantier B) : plus de repli, à aucun niveau ; le Comptoir vend tout objet-clé, **toujours**, à qui connaît
+// son lieu (sans stock ni réassort). Le niveau 2 est à la même distance du terrain que le niveau 1 (5 km, B16) : même
+// prix.
 
 /**
  * Le prix des clés de L1 : « une soupape, pas un raccourci ». Il vaut **deux allers-retours de travail** jusqu'à leur
@@ -35,7 +38,7 @@ const INVENDABLES: TypeObjet[] = ["sac_a_dos", "panneau_solaire", "enclume_depan
  */
 export const PRIX_CLES_L1 = { vente: 500, rachat: 90 } as const;
 
-/** Les clés de L1 et leur lieu : le Comptoir ne les vend qu'à qui y est déjà allé (le fait `visite:<lieu>`). */
+/** Les objets-clés et leur lieu : le Comptoir ne les vend qu'à qui y est déjà allé (le fait `visite:<lieu>`). */
 export const LIEU_DES_CLES: Partial<Record<TypeObjet, LieuId>> = {
   grillage_rouleau: "cooperative",
   cocotte_fonte: "cooperative",
@@ -43,10 +46,29 @@ export const LIEU_DES_CLES: Partial<Record<TypeObjet, LieuId>> = {
   toile_jute: "moulin",
   feuillards: "moulin",
   etau: "moulin",
+  // Le niveau 2 (plan 0.10 §3.1) : L2A, le Grand Hôtel ; L2B, le phare.
+  toles_ondulees: "grand_hotel",
+  couvertures_laine: "grand_hotel",
+  lanterne_tempete: "grand_hotel",
+  fer_souder: "grand_hotel",
+  roulements: "grand_hotel",
+  porte_four: "phare",
+  jerrican_20l: "phare",
+  rabot: "phare",
+  cloche_bronze: "phare",
+  soufflet_forge: "phare",
 };
 
+/** Est-ce un objet-clé (le Comptoir le vend toujours, à qui connaît son lieu) ? */
+export function estObjetCle(type: TypeObjet): boolean {
+  return LIEU_DES_CLES[type] !== undefined;
+}
+
+/** Ce que l'étal montre d'un objet-clé : il ne manque jamais (on en achète autant qu'on veut, un par un). */
+export const TOUJOURS_DISPONIBLE = 1;
+
 /**
- * Le Comptoir refuse-t-il de vendre cet objet à ce joueur ? Une clé de L1 ne se vend qu'après une première visite de
+ * Le Comptoir refuse-t-il de vendre cet objet à ce joueur ? Un objet-clé ne se vend qu'après une première visite de
  * son lieu (plan 0.8 §2.2 : la quatrième source d'une clé). Renvoie la phrase du refus, ou null.
  */
 export function refusVenteCle(type: TypeObjet, faits: Readonly<Record<string, number>>): string | null {
@@ -56,23 +78,28 @@ export function refusVenteCle(type: TypeObjet, faits: Readonly<Record<string, nu
 }
 
 /**
- * L'étal du Comptoir tel qu'un joueur le voit (plan 0.8 §9.2, chantier 13) : les clés de L1 dont il n'a pas visité le
- * lieu en sont **absentes** (pas grisées) ; tout le reste, tel quel. Le serveur l'applique à chaque vue qu'il envoie.
+ * L'étal du Comptoir tel qu'un joueur le voit (plan 0.8 §9.2, chantier 13) : les objets-clés dont il n'a pas visité le
+ * lieu en sont **absents** (pas grisés) ; ceux dont il connaît le lieu y sont **toujours** (plan 0.10 : ni stock ni
+ * réassort pour eux, ce qu'en dit le stock ne compte pas) ; tout le reste, tel quel. Le serveur l'applique à chaque vue
+ * qu'il envoie.
  */
 export function etalPour(stock: Inventaire, faits: Readonly<Record<string, number>>): Inventaire {
   const etal: Inventaire = {};
-  for (const [cle, n] of Object.entries(stock) as [CleObjet, number][]) {
-    const lieu = LIEU_DES_CLES[typeDe(cle)];
-    if (!lieu || (faits[`visite:${lieu}`] ?? 0) > 0) etal[cle] = n;
-  }
+  for (const [cle, n] of Object.entries(stock) as [CleObjet, number][]) if (!estObjetCle(typeDe(cle))) etal[cle] = n;
+  for (const [type, lieu] of Object.entries(LIEU_DES_CLES) as [TypeObjet, LieuId][]) if ((faits[`visite:${lieu}`] ?? 0) > 0) etal[type] = TOUJOURS_DISPONIBLE;
   return etal;
+}
+
+/** Le Comptoir vend-il cet objet (à son stock de base, ou un objet-clé, à qui connaît son lieu) ? */
+export function seVendAuComptoir(type: TypeObjet): boolean {
+  return (STOCK_DE_BASE[type] ?? 0) > 0 || estObjetCle(type);
 }
 
 export function prixBase(type: TypeObjet): number {
   return energieGrise(type);
 }
 
-/** Ce que coûte un objet au comptoir (une clé de L1 : PRIX_CLES_L1). */
+/** Ce que coûte un objet au comptoir (un objet-clé, du niveau 1 ou 2 : PRIX_CLES_L1). */
 export function prixVente(type: TypeObjet): number {
   if (LIEU_DES_CLES[type]) return PRIX_CLES_L1.vente;
   return Math.max(1, Math.round(prixBase(type) * (1 + REGLAGES.prix_fourchette)));
@@ -188,13 +215,7 @@ export const STOCK_DE_BASE: Inventaire = {
   get pierre() {
     return REGLAGES.comptoir_pierres;
   },
-  // Plan 0.8 (chantier 10) : une clé de L1 de chaque, en stock limité, vendue après une première visite de son lieu.
-  grillage_rouleau: 1,
-  cocotte_fonte: 1,
-  seau_10l: 1,
-  toile_jute: 1,
-  feuillards: 1,
-  etau: 1,
+  // Plan 0.10 (chantier B) : les objets-clés n'y sont plus (ils sont toujours disponibles : etalPour, LIEU_DES_CLES).
 };
 /** Un objet du stock de base revient toutes les deux heures réelles, jusqu'au niveau de départ (le défaut du réglage). */
 export const REASSORT_MS = 2 * 3_600_000;
@@ -222,6 +243,8 @@ export function reassortir(e: EtatComptoir, instant: number): EtatComptoir {
   const n = Math.floor((instant - e.reassortLe) / delai);
   if (n <= 0) return e;
   const stock = { ...e.stock };
+  // Une partie de la 0.9 gardait une clé de L1 de chaque en stock : elle n'y sert plus (etalPour), on l'efface.
+  for (const cle of Object.keys(stock) as CleObjet[]) if (estObjetCle(typeDe(cle))) delete stock[cle];
   for (const [type, cible] of Object.entries(STOCK_DE_BASE) as [TypeObjet, number][]) {
     stock[type] = Math.min(Math.max(stock[type] ?? 0, cible), (stock[type] ?? 0) + n);
   }
