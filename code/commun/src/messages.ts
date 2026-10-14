@@ -339,6 +339,8 @@ export interface AutreVu extends Personne {
   lumiere: boolean;
   /** Son apparence (Book 14 §3) : on reconnaît les gens. */
   apparence: Apparence;
+  /** 0.9 (Q-7) : l'arme encombrante équipée, portée dans le dos (la fourche) ; absente : rien dans le dos. */
+  dos?: CleObjet;
 }
 
 export type OperationComptoir =
@@ -567,8 +569,8 @@ export type MessageServeur =
   /** Les autres joueurs du lieu, plusieurs fois par seconde (É4, lot 3). */
   /** L'identité des autres joueurs en vue (envoyée seulement quand elle change ou que quelqu'un entre ou sort du champ). */
   | { t: "autres"; joueurs: AutreVu[] }
-  /** Leurs positions, 10 fois par seconde : id, x, z, orientation, à la suite (Book 17 §5.2). */
-  | { t: "positions"; p: number[] }
+  // Leurs positions et leurs gestes (0.9, chantier A) : voir le bloc « présences » en fin de fichier.
+  | MessageServeurPresences
   | { t: "demande_echange"; de: Personne }
   /** L'échange en cours (null : terminé ou annulé). */
   | { t: "echange"; echange: EchangeVu | null }
@@ -755,3 +757,37 @@ export interface Bienvenue {
    */
   arrivee?: { mode: ModeArrivee; protection: number };
 }
+
+// ---------- Les présences : positions horodatées, allure et gestes des autres (0.9, chantier A ; plan 0.9 §3.4) ----------
+
+/** L'allure d'un autre joueur : 0 immobile, 1 discrète, 2 marche, 3 course (le client en tire le clip). */
+export type AllureVue = 0 | 1 | 2 | 3;
+
+/** Les gestes d'un autre joueur que le client joue sur son personnage (plan 0.9 §3.1). */
+export type GesteAutre = "frappe" | "poussee" | "esquive" | "degagement" | "touche" | "action" | "fin_action" | "effondre" | "releve" | "couche";
+
+export interface GesteVu {
+  /** Le joueur qui fait le geste. */
+  id: number;
+  /** L'heure du serveur du geste (ms, `Date.now()`). */
+  h: number;
+  geste: GesteAutre;
+  /** Frappe : le coup appuyé. */
+  appuye?: boolean;
+  /** Frappe : l'arme en main (absente : à mains nues). */
+  objet?: CleObjet;
+  /** Frappe : la durée du geste, en secondes (comme `Personnage.frapper`). */
+  duree?: number;
+  /** Action : le libellé de l'action (le client en tire le geste, `gesteDAction`). */
+  action?: string;
+}
+
+export type MessageServeurPresences =
+  /**
+   * Les positions des autres en vue, 10 fois par seconde (un tour de serveur sur deux) : `h`, l'heure du serveur de
+   * l'envoi (ms) ; `p`, des quintuplets id, x, z, orientation, allure, à la suite. Seuls partent ceux dont la position
+   * ou l'allure a changé (l'arrêt part donc une fois, allure 0).
+   */
+  | { t: "positions"; h: number; p: number[] }
+  /** Leurs gestes depuis l'envoi précédent, aux mêmes observateurs que les positions, chacun une fois. */
+  | { t: "gestes"; g: GesteVu[] };

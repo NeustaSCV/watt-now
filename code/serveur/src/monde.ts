@@ -16,7 +16,7 @@ import { Halte } from "./halte.ts";
 import { Gue } from "./gue.ts";
 import { Moulins } from "./moulin.ts";
 import { Joueur } from "./joueur.ts";
-import { diffuserPresences, type MemoirePresences } from "./presences.ts";
+import { diffuserPresences, tourDePresences, type MemoirePresences } from "./presences.ts";
 import { messageValide } from "./controle.ts";
 import { Rencontres, temoins, type Present } from "./rencontres.ts";
 
@@ -29,8 +29,6 @@ const INTERVALLE_SAUVEGARDE = 5000;
 const TICS_ETALEMENT = 20;
 /** La charge du serveur est mesurée chaque minute. */
 const INTERVALLE_MESURES = 60_000;
-/** Les autres joueurs d'un lieu public sont envoyés 10 fois par seconde. */
-const INTERVALLE_PRESENCES = 100;
 /** Les rencontres (l'arbre de progression, 0.7) sont regardées une fois par seconde. */
 const INTERVALLE_RENCONTRES = 1000;
 
@@ -63,7 +61,8 @@ export class Monde {
   private readonly echanges = new Echanges((id) => this.connexions.get(id)?.joueur);
   /** Les leçons entre joueurs de familles différentes (Book 25 §2.3). */
   private readonly lecons = new Lecons((id) => this.connexions.get(id)?.joueur);
-  private dernieresPresences = 0;
+  /** Les tours de serveur comptés depuis le démarrage : les présences partent un tour sur deux (0.9, `tourDePresences`). */
+  private tours = 0;
   /** Les rencontres entre familles et le « voir faire » (l'arbre de progression, 0.7). */
   private readonly rencontres = new Rencontres();
   private dernieresRencontres = 0;
@@ -208,10 +207,8 @@ export class Monde {
     this.moulins.tick(Date.now(), dt);
     this.echanges.verifier();
     this.lecons.verifier();
-    if (instant - this.dernieresPresences >= INTERVALLE_PRESENCES) {
-      this.dernieresPresences = instant;
-      this.diffuserPresences();
-    }
+    // Les autres joueurs d'un lieu public : 10 fois par seconde, à pas fixe (0.9 ; avant, 100 ou 150 ms selon les tours).
+    if (tourDePresences(this.tours++)) this.diffuserPresences();
     if (instant - this.dernieresRencontres >= INTERVALLE_RENCONTRES) {
       const dtRencontres = this.dernieresRencontres > 0 ? (instant - this.dernieresRencontres) / 1000 : 1;
       this.dernieresRencontres = instant;
@@ -271,6 +268,8 @@ export class Monde {
         id: joueur.compte.id,
         lieu: joueur.enLieuPublic ? joueur.lieu : null,
         vu: joueur.vu,
+        allure: joueur.allureVue,
+        gestes: joueur.gestesRecents,
         envoyer: (m: MessageServeur) => joueur.envoyer(m),
       })),
       this.memoirePresences,
