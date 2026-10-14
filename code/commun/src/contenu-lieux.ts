@@ -10,6 +10,9 @@
 // 0.10 : les quatre lieux du niveau 2 sont branchés vides (ni Éteints ni butin) ; les chantiers H à K les remplissent.
 
 import type { Eteint, Milieu } from "./eteints.ts";
+import { eteintsHotel } from "./eteints-hotel.ts";
+import { VERSION_HOTEL, butinHotel } from "./hotel.ts";
+import { milieuHotel } from "./milieu-hotel.ts";
 import type { LieuId } from "./lieux.ts";
 import type { SemisVivant } from "./semis.ts";
 import type { ButinLieu, RessourceSol } from "./terrain.ts";
@@ -41,7 +44,9 @@ export const CONTENU_LIEUX: Partial<Record<LieuId, () => ContenuLieu>> = {
   // ---------- 0.10 : le niveau 2, vide (chantier A) ; à remplir par les chantiers H (le pont), I (la corniche), J
   // (l'hôtel), K (le phare) ----------
   route_pont: () => CONTENU_VIDE,
-  grand_hotel: () => CONTENU_VIDE,
+  // 0.10, chantier J : le Grand Hôtel des Flots (hotel.ts, eteints-hotel.ts, milieu-hotel.ts ; « le check-in » :
+  // serveur/src/hotel.ts).
+  grand_hotel: () => ({ eteints: eteintsHotel, ressources: butinHotel, version: VERSION_HOTEL, milieu: milieuHotel }),
   corniche: () => CONTENU_VIDE,
   phare: () => CONTENU_VIDE,
 };

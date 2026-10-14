@@ -27,6 +27,7 @@
 
 import type { EtapeMonde } from "./lignees.ts";
 import { REINITIALISATION_COOP_MS, portesInitiales, sombreIci } from "./cooperative.ts";
+import { PLAN_VUE_HOTEL, sombreHotel } from "./hotel.ts";
 import { TOUS_LES_LIEUX, zoneCoop, zoneDe, zoneMoulin, type LieuId, type Sortie, type Zone } from "./lieux.ts";
 import { REINITIALISATION_MOULIN_MS, portesInitialesMoulin, sombreMoulin } from "./moulin.ts";
 import { PLAN_VUE_COOP, PLAN_VUE_GUE, PLAN_VUE_HALTE, PLAN_VUE_MOULIN } from "./vue-lieux.ts";
@@ -133,7 +134,9 @@ export const REGISTRE_LIEUX: Readonly<Record<LieuId, FicheLieu>> = {
     nature: "personnel",
     niveau: 2,
     etape: "L2A",
-    plan: null,
+    // 0.10, chantier J : le plan de l'hôtel, ses pièces sombres (commun/src/hotel.ts).
+    plan: PLAN_VUE_HOTEL,
+    sombre: sombreHotel,
     reinitialisationMs: REINITIALISATION_LIEU_MS,
     musique: "grand_hotel",
     pourPartir: () => "Pour partir, reprends la promenade, à l'est.",

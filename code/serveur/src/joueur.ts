@@ -676,6 +676,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
         this.voyager(message.vers);
         return;
       case "poser":
+        // Ce que le lieu met dans les bras (0.10, chantier J : la batterie, la tête du robot de l'hôtel) se pose là.
+        if (this.vivant?.poser(this.contexteLieu())) return;
         this.poserObjetLourd();
         return;
       case "poser_radio":
@@ -696,6 +698,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
       case "frapper":
         // On ne frappe pas avec un escabeau dans les bras : on le lâche d'abord.
         if (this.objetPorte()) this.poserObjetLourd();
+        // Ni avec ce que le lieu met dans les bras (0.10, chantier J : la tête du robot, 8 kg à deux mains, Q-0.10-8).
+        if (this.brasDuLieu()) return this.info(`Les bras pris, on ne frappe pas : pose d'abord ${this.brasDuLieu()}.`);
         this.frapper(message.appuye === true);
         return;
       case "esquiver":
@@ -1208,6 +1212,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
             ? "Pas au Comptoir : les Compteurs n'aiment pas le désordre."
             : j.objetPorte()
             ? "Tu as les bras pris : pose d'abord l'escabeau."
+            : j.brasDuLieu()
+            ? "Tu as les bras pris."
             : j.sommeil
               ? "Tu dors."
               : null,
@@ -2520,7 +2526,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
    * dessine (il fait le même calcul) : à bout de souffle, on ne fait pas le bruit d'une course.
    */
   private allureEffective(): Allure {
-    const allure = allureAutorisee(this.intention.allure, this.besoins, this.objetPorte() !== undefined || traineTravois(this.inventaire));
+    const allure = allureAutorisee(this.intention.allure, this.besoins, this.objetPorte() !== undefined || this.brasDuLieu() !== null || traineTravois(this.inventaire));
     // Sur le radier du gué, on marche, on n'y court pas (plan 0.8, Q-0.8-22).
     if (allure === "course" && this.lieu === "gue" && this.gue.pasDeCourse(this.position)) return "marche";
     return allure === "course" && this.endurance < SEUIL_EPUISE ? "marche" : allure;
@@ -2940,6 +2946,11 @@ export class Joueur implements Voyageur, ParticipantLecon {
     return undefined;
   }
 
+  /** Ce que le lieu met dans les bras (0.10, chantier J : « la tête du robot » à l'hôtel) ; null : rien. */
+  private brasDuLieu(): string | null {
+    return this.vivant?.dansLesBras(this.compte.id) ?? null;
+  }
+
   /** Le pose devant soi, immédiatement. */
   private poserObjetLourd(): void {
     const i = this.objetPorte();
@@ -2965,6 +2976,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
   private commencer(libelle: string, dureeS: number, appliquer: () => void, kcalEnPlus = 0, bruit: BruitAction = "leger"): void {
     if (this.voyage) return;
     if (this.objetPorte()) return this.info("Tu as les bras pris : pose d'abord l'escabeau.");
+    if (this.brasDuLieu()) return this.info(`Tu as les bras pris : pose d'abord ${this.brasDuLieu()}.`);
     if (this.action) return this.info(`Tu es déjà occupé : attends la fin, ou appuie sur A pour arrêter.`);
     if (this.sommeil) this.reveiller("");
     // Fatigué, on travaille moins vite (Book 05 §3).

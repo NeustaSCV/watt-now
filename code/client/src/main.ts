@@ -42,6 +42,8 @@ import { creerHalte, estomperToits, montrerTousLesToits } from "./rendu/halte.ts
 import { creerLieuVide } from "./rendu/lieu-vide.ts";
 import { ArriveeDansUnLieu } from "./arrivee.ts";
 import { animerMoulin, creerMoulin } from "./rendu/moulin.ts";
+import { animerHotel, creerHotel, lumieresHotel } from "./rendu/hotel.ts";
+import { ClientHotel } from "./hotel.ts";
 import { pieceMoulin } from "../../commun/src/moulin.ts";
 // Le Gué-aux-Saules (plan 0.8, chantier 11) : son décor, son bac, sa crue, ses sons.
 import { RenduGue } from "./rendu/gue.ts";
@@ -146,7 +148,7 @@ const DECORS: Record<LieuJouable, () => THREE.Object3D[]> = {
   moulin: () => [creerMoulin()], // 0.8, chantier 12 : le Moulin du Gué
   // 0.10 : le niveau 2, branché vide (chantier A) ; les modèles aux chantiers H à K.
   route_pont: () => [creerLieuVide("route_pont")],
-  grand_hotel: () => [creerLieuVide("grand_hotel")],
+  grand_hotel: () => [creerHotel()], // 0.10, chantier J : le Grand Hôtel des Flots
   corniche: () => [creerLieuVide("corniche")],
   phare: () => [creerLieuVide("phare")],
 };
@@ -166,6 +168,8 @@ const entrees = new Entrees(document.getElementById("joystick")!, canvas);
 const son = new Sonorisation(tactile);
 const bruiteur = new Bruiteur(son);
 const gue = new RenduGue((id, ou) => son.jouer(id, ou ?? null));
+/** Le Grand Hôtel (0.10, chantier J) : le check-in, le fondu de l'ascenseur et du balcon. */
+const hotel = new ClientHotel();
 /** L'atelier de chaque famille : quand il est installé, son thème joue au complet (moment-vitrine 4). */
 const ATELIERS = { charbonniers: "forge", voltaiques: "banc_recharge", mecanistes: "pedalier" } as const;
 /** Les sons qu'on fabrique d'avance en entrant dans le monde. */
@@ -749,6 +753,8 @@ function lancerProjectile(p: ProjectileVu): void {
 }
 
 function recevoir(message: MessageServeur): void {
+  // Le Grand Hôtel (0.10, chantier J) : l'état du check-in, la scène de l'ascenseur et du balcon.
+  if (hotel.recevoir(message)) return;
   switch (message.t) {
     case "bienvenue":
       installer(message);
@@ -1610,6 +1616,7 @@ function sourcesDeLumiere(): SourceLumiere[] {
   // Au Carrefour, la lumière électrique ne s'éteint jamais.
   if (lieu === "comptoir") sources.push(...lumieresComptoir());
   if (lieu === "gue") sources.push(...gue.lumieres(estNuit(Number.isFinite(HEURE_FORCEE) ? HEURE_FORCEE : heureDeJeu(Date.now() + decalage, debutMonde)), position));
+  if (lieu === "grand_hotel") sources.push(...lumieresHotel(decors.get(lieu), estNuit(Number.isFinite(HEURE_FORCEE) ? HEURE_FORCEE : heureDeJeu(Date.now() + decalage, debutMonde)), hotel.etat, position));
   const portee = lumierePortee(inventaire);
   if (lumiere && portee && position) {
     const genre = OBJETS[portee].lumiere!;
@@ -1676,7 +1683,8 @@ function boucle(instant: number): void {
     const { dx, dz } = scene.versMonde(entree.x, entree.y);
     // Carte ouverte ou en route : le personnage s'arrête.
     const immobile = enVoyage || carte.ouverte || hud.enPause || vueArrivee.attend;
-    let allure = allureAutorisee(entree.allure, besoins, porteEscabeau() || traineTravois(inventaire));
+    const brasHotel = lieu === "grand_hotel" && hotel.porte() !== null; // la batterie, la tête du robot (0.10, chantier J)
+    let allure = allureAutorisee(entree.allure, besoins, porteEscabeau() || brasHotel || traineTravois(inventaire));
     if (allure === "course" && endurance < SEUIL_EPUISE) allure = "marche";
     if (allure === "course" && lieu === "gue" && gue.surLeRadier(position)) allure = "marche"; // le radier : on n'y court pas
     // On voulait courir, mais on marche : on dit pourquoi, et comment y remédier.
@@ -1685,6 +1693,8 @@ function boucle(instant: number): void {
         ? "Sur le radier, on marche : le béton glisse sous l'eau qui court."
         : porteEscabeau()
         ? "Les bras chargés, on ne court pas : pose d'abord l'escabeau."
+        : brasHotel
+        ? "Les bras chargés, on ne court pas."
         : aFaim(besoins)
           ? "Trop faible pour courir : tu as faim. Mange (Sac)."
           : aSoif(besoins)
@@ -1784,6 +1794,8 @@ function boucle(instant: number): void {
       const piece = pieceMoulin(position.x, position.z);
       son.zone(piece === "dehors" || piece === "jardin" ? "dehors" : "dedans");
     }
+    // Le Grand Hôtel (0.10, chantier J) : l'étage ou le rez-de-chaussée, ses couches, le check-in, ce qu'on a pris.
+    if (lieu === "grand_hotel" && decor) animerHotel(decor, position.x, position.z, personnage.objet.rotation.y, dt, scene.angleCamera, hotel.etat, ressources.values());
 
     majMode(dt);
     // Le coffre se ferme quand on s'en éloigne.
@@ -1839,6 +1851,8 @@ function boucle(instant: number): void {
     );
     // Au gué : la cloche, haler ou rappeler le bac, examiner une balise (chantier 11).
     if (lieu === "gue") propositions = gue.proposer(position, propositions, Date.now() + decalage, debutMonde);
+    // Au Grand Hôtel : la batterie, le robot, la borne, l'ascenseur (0.10, chantier J).
+    if (lieu === "grand_hotel") propositions = hotel.proposer(position, propositions, inventaire);
     // Les déchets à portée de main (0.7) : la cible la plus proche l'emporte.
     const dechet = dechetsVue.proposer(position);
     if (dechet) {

@@ -137,4 +137,12 @@ export const DESSINS_NIVEAU2: Record<string, string> = {
     ${trait("M33 24 L44 24", "#5c5650", 2.6)}
     ${trait("M12 9 L6 3", BOIS_CLAIR, 2.2)}
     <circle cx="22" cy="24" r="2" fill="${BOIS_CLAIR}" ${T} stroke-width="1"/>`,
+  // ---------- 0.10, chantier J : le Grand Hôtel ----------
+  // La carte de la chambre 7 : une carte dorée en biais, sa bande sombre, le grand « 7 », l'ondulation de l'hôtel.
+  carte_chambre_7: `
+    <path d="M6 17 L36 9 L42 31 L12 39 Z" fill="#d9b23a" ${T}/>
+    <path d="M7.6 23 L37.6 15 L38.8 19.4 L8.8 27.4 Z" fill="#4a3a2a"/>
+    <path d="M22 28 L28 26.4 L23.4 35.6" fill="none" stroke="${ENCRE}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M30 31 Q32 29 34 30 Q36 31 38 29" ${F}/>
+    <path d="M9 18.6 L20 15.6" stroke="#f6e3a0" stroke-width="1.6" stroke-linecap="round" opacity="0.9"/>`,
 };
