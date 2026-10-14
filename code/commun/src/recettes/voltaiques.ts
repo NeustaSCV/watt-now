@@ -218,7 +218,7 @@ export const RECETTES_VOLTAIQUES: Recette[] = [
     categorie: "outils",
     nom: "Matraque à contacts soudés",
     produit: { objet: "matraque_electrique", quantite: 1 },
-    ingredients: { tube_alu: 1, plastique: 1, module_decharge: 1, caoutchouc: 1, fil_cuivre: 1 },
+    ingredients: { tube_aluminium: 1, plastique: 1, module_decharge: 1, caoutchouc: 1, fil_cuivre: 1 },
     auChoix: [{ pack_soude: 1 }, { petite_batterie: 1 }],
     qualites: { souder: 1, visser: 1 },
     duree: 45,

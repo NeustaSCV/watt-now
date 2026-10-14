@@ -256,21 +256,21 @@ test("⚙️ 0.10 : l'arc d'if se façonne à l'établi à étau ; l'arbalète �
 
 test("⚙️ 0.10 : la récupération — l'arbrier d'un tube d'aluminium, les carreaux empennés de plastique", () => {
   const arbrier = recette("arbrier")!;
-  assert.deepEqual(arbrier.auChoix, [{ buche: 1 }, { tube_alu: 1 }]);
-  assert.equal(etoilesDuProduit(arbrier, { tube_alu: 1, scie: 1 }), 4);
+  assert.deepEqual(arbrier.auChoix, [{ buche: 1 }, { tube_aluminium: 1 }]);
+  assert.equal(etoilesDuProduit(arbrier, { tube_aluminium: 1, scie: 1 }), 4);
   for (const id of ["carreaux_os", "carreaux_clou", "carreaux_acier"]) {
     const r = recette(id)!;
     assert.equal(r.ingredients.plumes, undefined, id);
     assert.ok(r.auChoix?.some((f) => (f.plastique ?? 0) > 0), id);
   }
   // En jeu : un tube, et pas de bûche ; puis des carreaux sans plumes.
-  const t = monter("mecanistes", { scie: 1, cle_plate: 1, couteau: 1, tube_alu: 1, branche: 1, os: 2, plastique: 1 }, [
+  const t = monter("mecanistes", { scie: 1, cle_plate: 1, couteau: 1, tube_aluminium: 1, branche: 1, os: 2, plastique: 1 }, [
     { type: "pedalier" as const, x: 30, z: 30, etat: { alternateur: true } },
     { type: "etabli" as const, x: 20, z: 21.8, etat: {} },
   ]);
   t.fabriquer("arbrier", 4.5);
   assert.equal(t.inventaire().arbrier, 1);
-  assert.equal(t.inventaire().tube_alu, undefined);
+  assert.equal(t.inventaire().tube_aluminium, undefined);
   t.fabriquer("carreaux_os", 2);
   assert.equal(t.inventaire().carreau, 4);
   assert.equal(t.inventaire().plastique, undefined);

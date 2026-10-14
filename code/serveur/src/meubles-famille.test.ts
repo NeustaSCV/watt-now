@@ -73,7 +73,7 @@ function seul(famille: Famille, piece: Inventaire, laisses: readonly (keyof Inve
 
 // ---------- Les lignées et leurs clés ----------
 
-test("chaque meuble de famille a sa lignée, sa clé de la station et son repli, avec des textes au nom affiché du lieu", () => {
+test("chaque meuble de famille a sa lignée et sa clé de la station, sans repli (plan 0.10), avec des textes au nom affiché du lieu", () => {
   const attendu = { forge: ["enclume_depanneur", "charbonniers"], banc_recharge: ["panneau_solaire", "voltaiques"], pedalier: ["petit_alternateur", "mecanistes"] } as const;
   for (const [type, [cle, famille]] of Object.entries(attendu)) {
     const premier = LIGNEES_INSTALLATIONS[type as keyof typeof attendu]![0]!;
@@ -81,7 +81,7 @@ test("chaque meuble de famille a sa lignée, sa clé de la station et son repli,
     assert.equal(premier.cle?.ou, "H1A", type);
     assert.equal(premier.etapeLieu, "H1", type);
     assert.equal(premier.famille, famille, type);
-    assert.ok(premier.cle?.replis?.length, `${type} : un repli`);
+    assert.equal("replis" in premier.cle!, false, `${type} : pas de repli`);
     // Le niveau 1 coûte ce que coûte sa recette (la pièce se monte ensuite, sur le meuble posé).
     assert.deepEqual(premier.couts[0], recette(type)!.ingredients, type);
     // On écrit le nom du lieu (« la station »), jamais le code de l'étape.

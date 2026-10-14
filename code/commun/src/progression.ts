@@ -243,7 +243,7 @@ export const PROGRESSION: Readonly<Record<string, LigneProgression>> = {
   // Le niveau 2 (plan 0.10, chantier F) : liées à une construction, la construction seule les dévoile.
   cranequin_leger: { quand: [vu("roulements")], indice: "Un arc d'if ne se bande pas à la main." },
   machette_forgee_caoutchouc: { quand: [vu("caoutchouc")], indice: "Une poignée qui ne glisse plus." },
-  matraque_contacts_soudes: { quand: [vu("tube_alu")], indice: "Un tube creux, des contacts soudés : une vraie matraque." },
+  matraque_contacts_soudes: { quand: [vu("tube_aluminium")], indice: "Un tube creux, des contacts soudés : une vraie matraque." },
   carreaux_acier: { quand: [vu("pointe_acier")], indice: "Une pointe d'acier perce mieux que l'os." },
 
   // ---------- Le niveau 1 : le stockage, l'établi, la lumière, les outils de fortune (plan 0.8, chantier 6) ----------

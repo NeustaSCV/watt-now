@@ -101,7 +101,7 @@ export const RECETTES_MECANISTES: Recette[] = [
     nom: "Arbrier d'arbalète",
     produit: { objet: "arbrier", quantite: 1 },
     ingredients: {},
-    auChoix: [{ buche: 1 }, { tube_alu: 1 }],
+    auChoix: [{ buche: 1 }, { tube_aluminium: 1 }],
     qualites: { scier_bois: 2 },
     duree: 90,
     intensite: "moyenne",

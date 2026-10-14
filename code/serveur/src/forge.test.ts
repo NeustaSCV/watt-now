@@ -106,7 +106,8 @@ test("🔥 la lignée de la forge : le foyer (clé : l'enclume de dépanneur), p
   assert.deepEqual(l[0]!.couts[0], recette("forge")!.ingredients, "le niveau 1 coûte ce que coûte sa recette");
   assert.equal(l[0]!.cle?.objet, "enclume_depanneur");
   assert.equal(l[0]!.cle?.ou, "H1A");
-  assert.ok(l[0]!.cle?.replis?.some((r) => /pierre plate/.test(r.note)), "le repli : la grosse pierre plate");
+  // Sans enclume, la grosse pierre plate : le foyer forge quand même, à ★ (ce n'est pas un repli de sa clé, plan 0.10).
+  assert.match(l[0]!.apporte, /pierre plate/);
   // Le mot « soufflet » est réservé à la clé de la forge ventilée (Q-0.8-13).
   for (const t of [l[0]!.nom, l[0]!.apporte, l[0]!.examen]) assert.ok(!/soufflet/i.test(t), t);
   assert.equal(l[1]!.id, "forge_ventilee");

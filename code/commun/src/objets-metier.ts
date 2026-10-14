@@ -335,16 +335,10 @@ export const OBJETS_METIER = {
     poids: 12,
     description: "Une roue de vélo, deux bras, une caisse de planches : soixante kilos roulés, et l'on court encore sur le chemin.",
   },
-  // ---------- PROVISOIRE (plan 0.10, chantier F) : à retirer à l'intégration ----------
-  // Le tube d'aluminium est du chantier B, le pack soudé du chantier C : déclarés ici au plus court pour que les recettes
-  // des armes compilent. À l'intégration, garder leurs vraies définitions (B, C) et supprimer ce bloc et ses deux icônes
-  // (client/src/icones-niveau1.ts, bloc « PROVISOIRE »).
-  tube_alu: {
-    nom: "tube d'aluminium",
-    pluriel: "tubes d'aluminium",
-    poids: 0.5,
-    description: "Un montant creux, léger et droit. (Provisoire.)",
-  },
+  // ---------- PROVISOIRE (plan 0.10, chantier F) : à retirer à l'intégration du chantier C ----------
+  // Le pack soudé est du chantier C : déclaré ici au plus court pour que la matraque à contacts soudés compile. À
+  // l'intégration, garder sa vraie définition (C) et supprimer ce bloc, sa valeur et son icône (client/src/icones-niveau1.ts,
+  // bloc « PROVISOIRE »).
   pack_soude: {
     nom: "pack soudé",
     pluriel: "packs soudés",
@@ -404,8 +398,7 @@ export const ENERGIE_GRISE_PROVISOIRE: Partial<Record<TypeObjet, number>> = {
   arbalete_lourde: 520,
   cranequin: 260,
   cranequin_leger: 200,
-  // PROVISOIRE (plan 0.10, chantier F) : les valeurs des objets des chantiers B et C, à retirer à l'intégration.
-  tube_alu: 10,
+  // PROVISOIRE (plan 0.10, chantier F) : la valeur du pack soudé du chantier C, à retirer à l'intégration de C.
   pack_soude: 90,
   carreau: 8,
   carreau_acier: 15,

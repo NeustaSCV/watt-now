@@ -99,6 +99,7 @@ import {
   PRIX_RETRAIT,
   WOTTS_PAR_WH_M,
   ajouterWotts,
+  estObjetCle,
   etalPour,
   formaterWotts,
   prixAchatCle,
@@ -174,6 +175,7 @@ import {
   capaciteCoffre,
   boisMarmite,
   contenanceRecuperateur,
+  choisirCout,
   coutPour,
   effetsFeu,
   etapeFeu,
@@ -195,7 +197,6 @@ import { stimuliTorches } from "../../commun/src/torche.ts";
 // Se servir du meuble d'une autre famille, une fois sa recette apprise (plan 0.8.2 §7.3, chantier J).
 import { saitSeServir } from "../../commun/src/savoir-meuble.ts";
 import { utiliserNiveau1 } from "./niveau1-base.ts";
-import { choisirFacon } from "../../commun/src/replis.ts";
 import { carteInstallations, feuxDuLieu, refusLieu, type Alentours } from "../../commun/src/lieu-recette.ts";
 import { ETAPE_CARTE, ETAPE_FAMILLE, ETAPE_NUIT, ETAPE_PREMIER_ETEINT, ETAPE_SAISIE, NOMBRE_ETAPES, REPAS_DU_TUTORIEL, etapesTutoriel, type EtatTutoriel, type VueTutoriel } from "../../commun/src/tutoriel.ts";
 import { AvertissementBuche, etapesReussies, progresCarte, progresFamille, type PourFinDuTutoriel } from "./tutoriel-fin.ts";
@@ -975,7 +976,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
         if (!this.comptoir.payer(total)) return this.info("Le comptoir n'a plus de quoi payer. Reviens plus tard : sa trésorerie se refait quand les joueurs achètent.");
         this.retirerPlusieurs({ [op.objet]: n });
         this.bornerCharges();
-        this.comptoir.entrerEnStock(op.objet, n);
+        // Un objet-clé racheté n'entre pas en stock : le Comptoir en a toujours (plan 0.10, chantier B).
+        if (!estObjetCle(typeDe(op.objet))) this.comptoir.entrerEnStock(op.objet, n);
         this.poche = ajouterWotts(this.poche, total, instant);
         this.mesurer("wotts", "vente", total, { objet: op.objet, n });
         this.noterFait("wotts_gagnes", total);
@@ -985,14 +987,16 @@ export class Joueur implements Voyageur, ParticipantLecon {
       }
       case "acheter": {
         const n = Math.floor(op.quantite);
-        if (!(n >= 1) || !estCleObjet(op.objet) || (this.comptoir.stock[op.objet] ?? 0) < n) return;
-        // Une clé de L1 : seulement après une première visite de son lieu (plan 0.8, chantier 10).
+        // Un objet-clé ne manque jamais (plan 0.10, chantier B) : il ne sort pas du stock.
+        const toujours = estCleObjet(op.objet) && estObjetCle(typeDe(op.objet));
+        if (!(n >= 1) || !estCleObjet(op.objet) || (!toujours && (this.comptoir.stock[op.objet] ?? 0) < n)) return;
+        // Un objet-clé : seulement après une première visite de son lieu (plan 0.8, chantier 10).
         const refusCle = refusVenteCle(typeDe(op.objet), this.quetes.etat.faits);
         if (refusCle) return this.info(refusCle);
         const total = prixVenteCle(op.objet) * n;
         if (total > enPoche + 1e-6) return this.info(`Il te faut ${formaterWotts(total)} en bons. Gagne-les : dépose de l'électricité, vends, ou pédale pour les Compteurs.`);
         if (poidsInventaire(this.inventaire, this.gourde.litres) + OBJETS[typeDe(op.objet)].poids * n > capaciteDe(this.inventaire)) return this.sacTropLourd({ [op.objet]: n });
-        if (!this.comptoir.sortirDuStock(op.objet, n)) return;
+        if (!toujours && !this.comptoir.sortirDuStock(op.objet, n)) return;
         this.poche = ajouterWotts(this.poche, -total, instant);
         this.mesurer("wotts", "achat", -total, { objet: op.objet, n });
         this.comptoir.encaisser(total);
@@ -3569,22 +3573,22 @@ export class Joueur implements Voyageur, ParticipantLecon {
       this.info(plusTard);
       return null;
     }
-    // Avec la clé, ou par un repli (plan 0.8 §2.2, chantier 5 : commun/src/replis.ts) : la première façon possible.
-    const { facon, cout, payable, outils: facteur } = choisirFacon(this.inventaire, e, this.compte.famille, (q) => multiplicateurQualites(this.outils(), q));
+    // Avec sa clé, et rien d'autre (plan 0.10, chantier B : plus de repli, à aucun niveau).
+    const { cout, payable } = choisirCout(this.inventaire, e.couts, e, this.compte.famille);
+    const facteur = multiplicateurQualites(this.outils(), e.qualites);
     if (!payable) {
       const manque = (Object.entries(cout) as [TypeObjet, number][])
         .filter(([t, n]) => (this.inventaire[t] ?? 0) < n)
         .map(([t, n]) => `${nommer(t, n)} (tu en as ${this.inventaire[t] ?? 0})`);
-      const autres = facon.couts.length > 1 ? ` Ou bien : ${facon.couts.slice(1).map((c) => Object.entries(coutPour(c, e, this.compte.famille)).map(([t, n]) => nommer(t as TypeObjet, n ?? 0)).join(", ")).join(" ; ")}.` : "";
-      const replis = (e.cle?.replis ?? []).map((r) => ` ${r.note}`).join("");
-      this.info(`Il te manque : ${manque.join(", ")}.${autres}${replis}`);
+      const autres = e.couts.length > 1 ? ` Ou bien : ${e.couts.slice(1).map((c) => Object.entries(coutPour(c, e, this.compte.famille)).map(([t, n]) => nommer(t as TypeObjet, n ?? 0)).join(", ")).join(" ; ")}.` : "";
+      this.info(`Il te manque : ${manque.join(", ")}.${autres}`);
       return null;
     }
     if (facteur === null) {
-      this.infos(outilsManquantsBref(facon.qualites, this.outils(), undefined, this.recetteVisible));
+      this.infos(outilsManquantsBref(e.qualites, this.outils(), undefined, this.recetteVisible));
       return null;
     }
-    return { cout, dureeS: Math.max(2, facon.duree / REGLAGES.fabrication_acceleration) * facteur };
+    return { cout, dureeS: Math.max(2, e.duree / REGLAGES.fabrication_acceleration) * facteur };
   }
 
   /** Rendre des objets au sac : refusé (et dit) si le sac ne peut pas les porter. */
