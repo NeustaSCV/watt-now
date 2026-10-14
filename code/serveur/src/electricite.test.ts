@@ -219,9 +219,10 @@ test("0.6 Voltaïques : la courte puis la longue éteignent un Errant, puis un �
     assert.equal(t.coups().at(-1)?.resultat, "detruit", variante ?? "errant");
     assert.equal(e.etat, "detruit");
     assert.ok(t.infos().includes("Il s'éteint."));
+    // La matraque ★★★ tient 24 Wh, son pack soudé (plan 0.10, V1-14).
     const charge = t.dernier("usure")?.charge?.matraque_electrique;
-    assert.equal(charge, 12 - 1.25);
-    assert.equal(t.base.chargerChargeArmes(t.compte.id).matraque_electrique, 10.75, "la charge est sauvée");
+    assert.equal(charge, 24 - 1.25);
+    assert.equal(t.base.chargerChargeArmes(t.compte.id).matraque_electrique, 22.75, "la charge est sauvée");
   }
 });
 
@@ -279,7 +280,8 @@ test("0.8.2 Voltaïques (R17) : au banc, la manivelle de la lampe à dynamo remp
   assert.match(v.infos().at(-1)!, /pas de batterie/);
 });
 
-test("0.6 Voltaïques : au banc, un pack vide se recharge en ≈ 25 s, pris à la batterie du banc (85 %)", () => {
+// Plan 0.10 (V1-14) : la matraque ★★★ tient 24 Wh (son pack soudé) : ≈ 48 s au banc.
+test("0.6 Voltaïques : au banc, un pack vide se recharge en ≈ 48 s, pris à la batterie du banc (85 %)", () => {
   const t = surLeTerrain(
     { matraque_electrique: 1, sac_a_dos: 1 },
     [{ type: "banc_recharge", x: 20.5, z: 20, etat: { batteries: { batterie_voiture: 1 }, charges: { batterie_voiture: 40 } } }],
@@ -288,13 +290,13 @@ test("0.6 Voltaïques : au banc, un pack vide se recharge en ≈ 25 s, pris à l
   const banc = t.joueur.bienvenue(0).installations.find((i) => i.type === "banc_recharge")!;
   // 0.8.2 (R17) : depuis la fiche du banc, la ligne de la matraque et son bouton « Charger ».
   t.joueur.recevoir({ t: "banc", id: banc.id, op: "charger", cible: "matraque_electrique" });
-  t.attendre(20);
+  t.attendre(44);
   assert.equal(t.dernier("usure")?.charge?.matraque_electrique ?? 0, 0, "pas encore");
   t.attendre(6);
   assert.equal(t.dernier("usure")?.charge?.matraque_electrique, undefined, "pleine (absente : pleine)");
-  assert.ok(t.infos().some((x) => x.startsWith("+12 Wh")), t.infos().join(" | "));
+  assert.ok(t.infos().some((x) => x.startsWith("+24 Wh")), t.infos().join(" | "));
   const apres = t.base.chargerInstallations(t.compte.id).find((i) => i.type === "banc_recharge")!;
-  assert.ok(Math.abs((apres.etat.charges?.batterie_voiture ?? 0) - (40 - 12 / 0.85)) < 0.5);
+  assert.ok(Math.abs((apres.etat.charges?.batterie_voiture ?? 0) - (40 - 24 / 0.85)) < 0.5);
   // Sans batterie dans le banc : on le dit.
   const u = surLeTerrain({ matraque_electrique: 1 }, [{ type: "banc_recharge", x: 20.5, z: 20 }], { matraque_electrique: 0 });
   const b2 = u.joueur.bienvenue(0).installations.find((i) => i.type === "banc_recharge")!;

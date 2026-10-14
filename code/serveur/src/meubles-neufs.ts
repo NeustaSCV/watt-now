@@ -19,6 +19,7 @@ import { meubleABatterieProche, msDeNuit, productionMoulin, stocker, whDePuissan
 import type { Zone } from "../../commun/src/lieux.ts";
 import type { InstallationVue, Verbe } from "../../commun/src/messages.ts";
 import { meteo } from "../../commun/src/meteo.ts";
+import { ETAGERES_KG, POSER_ETAGERES_S } from "../../commun/src/meubles-niveau2.ts";
 import {
   COUT_CREUSET,
   NIVEAU_FORGE_CREUSET,
@@ -122,7 +123,27 @@ export class MeublesNeufs {
       this.rearmer(i);
       return true;
     }
+    if (i.type === "coffre" && verbe === "poser_etageres") {
+      this.poserEtageres(i);
+      return true;
+    }
     return false;
+  }
+
+  // ---------- Les étagères du coffre (plan 0.10, V1-04) ----------
+
+  /** Poser les étagères de l'établi de menuisier dans le coffre (ou la réserve couverte) : 50 kg de plus. */
+  private poserEtageres(coffre: InstallationVue): void {
+    if (coffre.etat.etageres) return this.ctx.info("Ce coffre a déjà ses étagères.");
+    if ((this.ctx.inventaire().etageres ?? 0) < 1) return this.ctx.info("Il faut un jeu d'étagères : des planches rabotées, à l'établi de menuisier.");
+    this.ctx.commencer("Poser les étagères dans le coffre", POSER_ETAGERES_S, () => {
+      if (coffre.etat.etageres || (this.ctx.inventaire().etageres ?? 0) < 1) return;
+      this.ctx.retirer({ etageres: 1 });
+      coffre.etat = { ...coffre.etat, etageres: true };
+      this.ctx.sauverInstallation(coffre);
+      this.ctx.noter("coffre:etageres");
+      this.ctx.info(`Les étagères sont posées : le coffre tient ${ETAGERES_KG} kg de plus.`);
+    });
   }
 
   // ---------- Le cuiseur solaire (S-22) ----------
@@ -306,10 +327,11 @@ export function etatDePose(type: string, inventaire: Inventaire): InstallationVu
   return { etoiles, declencheur: declencheurNeuf() };
 }
 
-/** Ce que rend en plus un meuble nouveau qu'on démonte : le creuset de la forge, la poulie du moulin. */
+/** Ce que rend en plus un meuble nouveau qu'on démonte : le creuset de la forge, la poulie du moulin, les étagères du coffre. */
 export function rendusMeublesNeufs(i: Pick<InstallationVue, "type" | "etat">): Inventaire {
   if (i.type === "forge" && i.etat.creuset) return { ...COUT_CREUSET };
   if (i.type === "moulin_jerricans" && i.etat.poulie) return { poulie_aluminium: 1 };
+  if (i.type === "coffre" && i.etat.etageres) return { etageres: 1 };
   return {};
 }
 

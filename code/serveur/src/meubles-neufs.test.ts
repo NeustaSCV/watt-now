@@ -1,5 +1,5 @@
 // Plan 0.10, chantier D : les meubles nouveaux du niveau 2 (S-22 à S-30). Le banc solaire suit le soleil (rien la nuit
-// ni sous la pluie, 80 Wh par beau jour) ; le cuiseur solaire ne cuit pas la nuit ; le moulin de jerricans produit sous
+// ni sous la pluie, ≈ 162 Wh par beau jour, 80 en moyenne : V1-02) ; le cuiseur solaire ne cuit pas la nuit ; le moulin de jerricans produit sous
 // la pluie et rien au soleil, + 50 % avec la poulie ; la batterie de cellules ne dépasse pas 120 Wh ; la rampe de LED
 // s'éteint batterie vide ; l'arbalète de garde ne tire pas sur un joueur, et abat un Errant ; la charrette porte 100 kg de
 // plus ; les bacs de tri doublent la vitesse à 3 m ; les meubles communs n'apparaissent qu'après la visite d'un lieu du
@@ -7,14 +7,13 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { CAPACITES, MS_JOUR_CALENDRIER, msDeNuit, productionMoulin, productionPanneau, stocker, whDePuissance } from "../../commun/src/energie.ts";
+import { CAPACITES, MS_JOUR_CALENDRIER, WATTS_MOULIN, msDeNuit, productionMoulin, productionPanneau, stocker, whDePuissance, whParBeauJour } from "../../commun/src/energie.ts";
 import { nouvelEteint } from "../../commun/src/eteints.ts";
 import type { InstallationVue, MessageServeur, Verbe } from "../../commun/src/messages.ts";
 import { vent, type Temps } from "../../commun/src/meteo.ts";
 import { capaciteDe, type Inventaire } from "../../commun/src/objets.ts";
 import { aDevoiler, devoileesAuDepart, toutDevoile, type EtatPourDevoilement } from "../../commun/src/progression.ts";
 import { dureeReelle, recette } from "../../commun/src/recettes.ts";
-import { REGLAGES } from "../../commun/src/reglages.ts";
 import type { Famille } from "../../commun/src/regles.ts";
 import { MS_PAR_HEURE_JEU, MS_PAR_JOUR_JEU } from "../../commun/src/temps.ts";
 import { Base } from "./base.ts";
@@ -28,13 +27,15 @@ const aHeure = (h: number) => ((h - 6 + 24) % 24) * MS_PAR_HEURE_JEU;
 
 // ---------- Le banc qui suit le soleil (S-30) ----------
 
-test("☀️ le banc ne charge rien la nuit ni sous la pluie, et donne ses 80 Wh par beau jour", () => {
+// Plan 0.10 (V1-02) : compensé pour la vraie météo, le banc donne ≈ 162 Wh par beau jour (80 Wh en moyenne).
+test("☀️ le banc ne charge rien la nuit ni sous la pluie, et donne ses ≈ 162 Wh par beau jour (80 en moyenne)", () => {
   // La nuit, de 21 h à 5 h 30 : rien, même par grand soleil.
   assert.equal(productionPanneau(aHeure(21), aHeure(21) + 8.5 * MS_PAR_HEURE_JEU, 0, toujours("soleil")), 0);
   // Sous la pluie, un jour entier : rien.
   assert.equal(productionPanneau(0, MS_JOUR_CALENDRIER, 0, toujours("pluie")), 0);
-  // Par beau temps : 80 Wh par jour de calendrier (73 jours de calendrier = 336 jours de jeu, sans reste).
-  assert.ok(Math.abs(productionPanneau(0, 73 * MS_JOUR_CALENDRIER, 0, toujours("soleil")) / 73 - REGLAGES.panneau_wh_jour) < 1e-6);
+  // Par beau temps : ≈ 162 Wh par jour de calendrier (73 jours de calendrier = 336 jours de jeu, sans reste).
+  assert.ok(Math.abs(productionPanneau(0, 73 * MS_JOUR_CALENDRIER, 0, toujours("soleil")) / 73 - whParBeauJour()) < 1e-6);
+  assert.ok(Math.abs(whParBeauJour() - 162) < 1, `${whParBeauJour()}`);
   // Voilé, couvert : 0,6 et 0,3 du beau temps.
   const jours = (t: Temps) => productionPanneau(0, 10 * MS_PAR_JOUR_JEU, 0, toujours(t));
   assert.ok(Math.abs(jours("voile") / jours("soleil") - 0.6) < 1e-9);
@@ -50,13 +51,13 @@ test("⚙️ le moulin de jerricans produit sous la pluie, rien au soleil, et la
   assert.equal(vent("couvert"), "fort");
   assert.equal(vent("voile"), "faible");
   assert.equal(vent("soleil"), "calme");
-  // 15 W tout un jour de calendrier sous la pluie : 360 Wh ; 5 W par temps voilé ; rien au soleil.
-  assert.ok(Math.abs(productionMoulin(0, MS_JOUR_CALENDRIER, 0, false, toujours("pluie")) - 360) < 1e-6);
-  assert.ok(Math.abs(productionMoulin(0, MS_JOUR_CALENDRIER, 0, false, toujours("voile")) - 120) < 1e-6);
+  // Plan 0.10 (V1-03) : ≈ 5,9 W tout un jour de calendrier sous la pluie (≈ 141 Wh) ; ≈ 2 W par temps voilé ; rien au soleil.
+  assert.ok(Math.abs(productionMoulin(0, MS_JOUR_CALENDRIER, 0, false, toujours("pluie")) - 24 * WATTS_MOULIN.fort) < 1e-6);
+  assert.ok(Math.abs(productionMoulin(0, MS_JOUR_CALENDRIER, 0, false, toujours("voile")) - 24 * WATTS_MOULIN.faible) < 1e-6);
   assert.equal(productionMoulin(0, MS_JOUR_CALENDRIER, 0, false, toujours("soleil")), 0);
   // La nuit aussi : le vent ne dort pas.
   assert.ok(productionMoulin(aHeure(22), aHeure(23), 0, false, toujours("pluie")) > 0);
-  assert.ok(Math.abs(productionMoulin(0, MS_JOUR_CALENDRIER, 0, true, toujours("pluie")) - 540) < 1e-6);
+  assert.ok(Math.abs(productionMoulin(0, MS_JOUR_CALENDRIER, 0, true, toujours("pluie")) - 1.5 * 24 * WATTS_MOULIN.fort) < 1e-6);
 });
 
 // ---------- La batterie de cellules (S-26) ----------
@@ -239,8 +240,9 @@ test("⚙️ le moulin remplit la batterie de la base au vent, même hors ligne 
   const vent = productionMoulin(depuis, t.instant(), t.debut);
   const wh = t.installation(banc).etat.charges!.batterie_cellules!;
   assert.ok(Math.abs(wh - Math.min(120, 10 + vent)) < 0.5, `${wh} pour ${vent}`);
-  // Très longtemps (quatre heures réelles, plus de deux jours de calendrier) : jamais plus de 120 Wh.
-  t.attendre(4 * 3600, 60);
+  // Très longtemps (six heures réelles, plus de trois jours de calendrier ; le moulin à la moyenne du banc, V1-03) :
+  // jamais plus de 120 Wh.
+  t.attendre(6 * 3600, 60);
   assert.ok(t.installation(banc).etat.charges!.batterie_cellules! <= 120 + 1e-9);
   assert.ok(productionMoulin(depuis, t.instant(), t.debut) > 120, "le vent du monde a soufflé plus qu'elle n'en tient");
   assert.equal(t.installation(moulin).etat.poulie, undefined);
@@ -292,7 +294,8 @@ test("⚡ la rampe de LED tire 3 W la nuit sur la batterie de la base, rien le j
 });
 
 test("🔥 le creuset se pose sur la forge ventilée, pas sur le foyer de forge ; quatre chutes font une poulie ou un lingot", () => {
-  const cout = { glaise: 4, pierre: 2, aluminium: 8 };
+  // Un charbon par coulée (plan 0.10, V1-16).
+  const cout = { glaise: 4, pierre: 2, aluminium: 8, charbon_bois: 2 };
   // Sur le foyer de forge (niveau 1) : refusé.
   const foyer = monter("charbonniers", cout, [{ type: "forge", x: 21, z: 20, etat: { enclume: "depanneur" } }]);
   foyer.utiliser(foyer.ids[0]!, "poser_creuset");
@@ -310,4 +313,5 @@ test("🔥 le creuset se pose sur la forge ventilée, pas sur le foyer de forge 
   assert.equal(t.sac().poulie_aluminium, 1);
   assert.equal(t.sac().lingot_aluminium, 1);
   assert.equal(t.sac().aluminium, undefined);
+  assert.equal(t.sac().charbon_bois, undefined);
 });

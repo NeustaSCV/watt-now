@@ -75,7 +75,8 @@ test("0.8.2 banc : le panneau posé dessus remplit la batterie du banc au soleil
   t.joueur.recevoir({ t: "banc", id, op: "echanger" });
   const wh = batterieDuBanc(t.installation(id).etat)!.wh;
   const soleil = productionPanneau(debut + 60_000, debut + 60_000 + secondes * 1000, debut);
-  assert.ok(soleil > 10 && soleil < 90, `${soleil}`);
+  // Compensé pour la vraie météo (plan 0.10, V1-02) : ≈ 162 Wh au plus un jour tout au soleil.
+  assert.ok(soleil > 10 && soleil < 170, `${soleil}`);
   assert.ok(Math.abs(wh - 100 - soleil) < 1.5, `${wh} pour ${soleil}`);
 });
 
@@ -160,7 +161,8 @@ test("0.8.2 banc : la petite batterie de la frontale, puis une matraque, se char
   const id = t.ids[0]!;
   // La fiche du banc : une ligne par chose qui se charge, nommée.
   const lignes = chosesACharger(t.sac(), t.chargesPortees(), { matraque_electrique: 0 });
-  assert.deepEqual(lignes.map((c) => [c.nom, c.source]), [["La petite batterie de la frontale", undefined], ["Matraque électrique", "son pack de cellules"]]);
+  // La matraque ★★★ : son pack soudé, 24 Wh (plan 0.10, V1-14).
+  assert.deepEqual(lignes.map((c) => [c.nom, c.source]), [["La petite batterie de la frontale", undefined], ["Matraque électrique", "son pack soudé"]]);
   // 30 Wh manquent à la petite batterie : une minute réelle (30 Wh par heure de jeu).
   assert.equal(dureeCharge(30), 60);
   t.joueur.recevoir({ t: "banc", id, op: "charger", cible: "petite_batterie" });
@@ -171,12 +173,12 @@ test("0.8.2 banc : la petite batterie de la frontale, puis une matraque, se char
   const apresFrontale = batterieDuBanc(t.installation(id).etat)!.wh;
   assert.ok(Math.abs(apresFrontale - (100 - 30 / RENDEMENT_BANC)) < 0.5, `${apresFrontale}`);
   assert.equal(t.infos().at(-1), "+30 Wh dans la petite batterie de la frontale. Il reste 64,7 Wh dans la batterie de voiture de la ruine.");
-  // Puis la matraque, vidée au combat : 12 Wh, ≈ 24 s.
+  // Puis la matraque, vidée au combat : 24 Wh, ≈ 48 s.
   t.joueur.recevoir({ t: "banc", id, op: "charger", cible: "matraque_electrique" });
-  t.attendre(26);
+  t.attendre(50);
   assert.equal(t.dernier("usure")?.charge?.matraque_electrique, undefined, "pleine (absente : pleine)");
   const apresMatraque = batterieDuBanc(t.installation(id).etat)!.wh;
-  assert.ok(Math.abs(apresMatraque - (apresFrontale - 12 / RENDEMENT_BANC)) < 0.5, `${apresMatraque}`);
+  assert.ok(Math.abs(apresMatraque - (apresFrontale - 24 / RENDEMENT_BANC)) < 0.5, `${apresMatraque}`);
 });
 
 test("0.8.2 banc : rien ne se charge si la batterie du banc est vide, et le refus le dit", () => {

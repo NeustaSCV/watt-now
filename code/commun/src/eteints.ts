@@ -353,9 +353,11 @@ export function encaisser(e: Eteint, arme: Arme, appuye: boolean, force: number,
 /**
  * L'Équipé encaisse (plan 0.9 §3.3) : un coup reçu de plus, et ne vacille-t-il pas ? Le premier coup le fait vaciller
  * (Q-8), puis un coup sur N (`REGLAGES.equipe_vacille_un_sur`, 3 par défaut, porteur 2026-10-14) ; les autres, il les prend sans broncher.
- * Les autres Éteints vacillent à chaque coup. La poussée et la décharge ne passent pas par ici : elles font toujours vaciller.
+ * Le Noyé, lui, ne vacille jamais sous un coup au torse : sa masse l'encaisse (plan 0.10, V1-15). Les autres Éteints
+ * vacillent à chaque coup. La poussée et la décharge ne passent pas par ici : elles font toujours vaciller.
  */
 export function tientLeCoup(e: Eteint): boolean {
+  if (e.variante === "noye") return true;
   if (e.variante !== "equipe") return false;
   const n = (e.coupsRecus ?? 0) + 1;
   e.coupsRecus = n;

@@ -225,7 +225,8 @@ test("⚙️ 0.10 : le cranequin léger réarme l'arbalète en 2 s au lieu de 3 
   assert.match(t.etat.gestes.at(-1)!.libelle, /Réarmer l'arbalète \(cranequin léger\)/);
   // Le cranequin léger : au pédalier équipé des roulements montés, Serrer 2 ; le cranequin d'avant suit la lourde (niveau 3).
   const r = recette("cranequin_leger")!;
-  assert.deepEqual([r.ingredients, r.qualites, r.lieu, r.aVenir], [{ roulements: 1, chaine_velo: 1, barre_metal: 1 }, { serrer: 2 }, { genre: "construction", construction: "pedalier", accessoire: "roulements" }, undefined]);
+  // Un roulement, tiré de sa boîte (plan 0.10, V1-01).
+  assert.deepEqual([r.ingredients, r.qualites, r.lieu, r.aVenir], [{ roulement: 1, chaine_velo: 1, barre_metal: 1 }, { serrer: 2 }, { genre: "construction", construction: "pedalier", accessoire: "roulements" }, undefined]);
   assert.equal(recette("cranequin")!.aVenir, "niveau 3");
 });
 

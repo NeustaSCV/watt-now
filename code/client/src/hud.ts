@@ -11,7 +11,7 @@ import type { VueProgression } from "../../commun/src/progression.ts";
 import { SILHOUETTES_DEPLIEES, enTete, etatCle, nouveautesParOnglet, ongletsVides, planFabrication, recetteVisible, sousTitre, type PlanFabrication } from "./fabrication-arbre.ts";
 import { ACTIONS, RESERVEES, assigner, avecTouches, nomDe, nomTouche, retablir, surChangement, type Action } from "./touches.ts";
 import { PanneauAide } from "./aide.ts";
-import { CAPACITES, NOMS_BATTERIES, SOLEIL_PAR_TEMPS, TYPES_BATTERIES, facteurHeureSoleil, type Charges } from "../../commun/src/energie.ts";
+import { CAPACITES, NOMS_BATTERIES, SOLEIL_PAR_TEMPS, TYPES_BATTERIES, facteurHeureSoleil, whParBeauJour, type Charges } from "../../commun/src/energie.ts";
 import { ARMES, NOMS_BLESSURES, PLAFOND_FORTUNE, RESISTANCE_TORSE, SEUIL_ABIMEE, armeDeCle, capaciteChargeArme, caracteristiquesArme, estArme, etatArme } from "../../commun/src/combat.ts";
 import type { EchangeVu, FeuVu, GesteRepriseArme, InstallationVue, OffreEchange, OperationComptoir, OperationEchange, Personne, RapportBase, SanteVue, Verbe, VueComptoir, WottsVus } from "../../commun/src/messages.ts";
 import {
@@ -2332,7 +2332,7 @@ export class Hud {
       ${enteteFiche(nom)}
       ${l ? `<p class="niveau">Niveau ${niveau}${etat ? ` · ${etat}` : ""}</p>` : etat ? `<p class="niveau">${etat}</p>` : ""}
       <p class="examen">${examen}</p>
-      ${i.type === "banc_recharge" ? htmlFicheBanc(i, this.inventaire, this.charges, this.chargeArmes, this.dernierTemps ? (REGLAGES.panneau_wh_jour / 24) * facteurHeureSoleil(this.heureVue) * SOLEIL_PAR_TEMPS[this.dernierTemps as Temps] : undefined) : ""}
+      ${i.type === "banc_recharge" ? htmlFicheBanc(i, this.inventaire, this.charges, this.chargeArmes, this.dernierTemps ? (whParBeauJour() / 24) * facteurHeureSoleil(this.heureVue) * SOLEIL_PAR_TEMPS[this.dernierTemps as Temps] : undefined) : ""}
       ${piece}
       ${ameliorer ? `<h3>Améliorer, sur place</h3>${ameliorer}` : ""}
       <div class="defaire">${defaire}</div>

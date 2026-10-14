@@ -158,7 +158,9 @@ export type Verbe =
   /** La forge ventilée 🔥 : y poser le creuset et ses moules. */
   | "poser_creuset"
   /** Le moulin de jerricans ⚙️ : poser la poulie d'aluminium sur son axe. */
-  | "poser_poulie";
+  | "poser_poulie"
+  /** Le coffre (ou la réserve couverte) : y poser les étagères de l'établi de menuisier (plan 0.10, V1-04) : + 50 kg. */
+  | "poser_etageres";
 
 /** État propre à certaines installations. */
 export interface EtatInstallation {
@@ -213,6 +215,8 @@ export interface EtatInstallation {
   poulie?: boolean;
   courant?: boolean;
   etoiles?: number;
+  /** Le coffre ou la réserve couverte : ses étagères de planches rabotées sont posées, + 50 kg (plan 0.10, V1-04). */
+  etageres?: boolean;
 }
 
 /** L'état d'une installation à déclencheur. */

@@ -210,6 +210,19 @@ export const COMPOSANTS = {
     rarete: "C",
     teinte: "#3a3a3a",
   },
+  // 0.10 (V1-01) : un roulement à billes, tiré de sa boîte (la boîte de roulements, objet-clé de L2A, en contient trois :
+  // DEMONTAGE.roulements). On ne le trouve nulle part ailleurs.
+  roulement: {
+    nom: "roulement à billes",
+    pluriel: "roulements à billes",
+    description: "Une bague d'acier, ses billes graissées dedans : un axe qui tourne dessus ne force plus.",
+    poids: 0.4,
+    valeur: 30,
+    famille: "composant",
+    rarete: "R",
+    teinte: "#a8aeb4",
+    horsTirage: true,
+  },
 } satisfies Record<string, DefinitionVestige>;
 
 export type TypeComposant = keyof typeof COMPOSANTS;
@@ -741,7 +754,7 @@ const VESTIGES_LOT1 = {
   roulements: {
     nom: "boîte de roulements à billes",
     pluriel: "boîtes de roulements à billes",
-    description: "Trois roulements neufs, encore graissés dans leur papier huilé. Sans eux, rien ne tourne : ni roue, ni meule, ni dynamo.",
+    description: "Trois roulements neufs, encore graissés dans leur papier huilé. Sans eux, rien ne tourne : ni roue, ni meule, ni dynamo. On l'ouvre pour s'en servir.",
     poids: 1.2,
     valeur: 90,
     famille: "garage",
@@ -1362,6 +1375,10 @@ export const DEMONTAGE: Partial<Record<TypeObjet, Demontage>> = {
   raquette_moustiques: { donne: { condensateur_moyen: 1 }, qualites: { visser: 1 }, duree: 3 },
   // 0.10 (N2-05) : l'échelle, les rivets chassés à la pierre, donne ses quatre tubes.
   echelle_aluminium: { donne: { tube_aluminium: 4 }, qualites: { marteler: 1 }, duree: 15 },
+  // 0.10 (V1-01) : ouvrir la boîte de roulements, comme on vide le bocal de clous : ses trois roulements, un par un. Les
+  // recettes comptent les leurs (roulements montés, cranequin léger, moulin : 1 ; charrette : 2). Une boîte gardée d'une
+  // partie d'avant s'ouvre de même.
+  roulements: { donne: { roulement: 3 }, qualites: {}, duree: 3 },
   // Les déchets de l'Abondance (lot 2, 0.7) : vestiges-lot2.ts.
   ...DEMONTAGE_LOT2,
 };
@@ -1369,13 +1386,14 @@ export const DEMONTAGE: Partial<Record<TypeObjet, Demontage>> = {
 // ---------- La fouille rapporte du bric-à-brac ----------
 
 /** Les lieux de fouille : chacun a sa table de vestiges. */
-export type LieuFouille = "boutique" | "atelier" | "epave" | "grange" | "libre_service" | "quai" | "atelier_coop" | "hangar" | "bureaux" | "chambre_froide";
+export type LieuFouille = "boutique" | "atelier" | "epave" | "grange" | "libre_service" | "quai" | "atelier_coop" | "hangar" | "bureaux" | "chambre_froide" | "caisse_ruine";
 
 /** Quel lieu pour quelle ressource fouillée (la halte, et la caisse à outils de la ruine de ferme). */
 export const LIEU_DE_FOUILLE: Partial<Record<TypeRessource, LieuFouille>> = {
   rayonnage: "boutique",
   caisse_atelier: "atelier",
-  caisse_outils: "atelier",
+  // La caisse à outils de la ruine : la table de l'atelier, sans l'échelle en aluminium (plan 0.10, V1-10).
+  caisse_outils: "caisse_ruine",
   epave_voiture: "epave",
   epave_camion: "epave",
   grenier: "grange",
@@ -1413,6 +1431,8 @@ export const FAMILLES_PAR_LIEU: Record<LieuFouille, Partial<Record<FamilleVestig
   hangar: { ferme: 6, garage: 2 },
   bureaux: { gadget: 3, salon: 3 },
   chambre_froide: { garage: 3, ferme: 3 },
+  // La caisse à outils de la ruine : les familles de l'atelier, mais pas son échelle (EN_PLUS_PAR_LIEU, V1-10).
+  caisse_ruine: { garage: 6, gadget: 1, voiture: 1 },
 };
 
 /**
@@ -1427,8 +1447,8 @@ export const EN_PLUS_PAR_LIEU: Partial<Record<LieuFouille, Partial<Record<TypeOb
   grange: { couteau: "R" },
   hangar: { trottinette_electrique: "P", echelle_aluminium: "P" },
   bureaux: { onduleur: "P" },
-  // 0.10 (N2-05) : l'échelle en aluminium dans les ateliers (la station, le Moulin, et la caisse de la ruine qui partage
-  // leur table) et dans l'atelier et le hangar de la Coopérative.
+  // 0.10 (N2-05) : l'échelle en aluminium dans les ateliers (la station, le Moulin) et dans l'atelier et le hangar de la
+  // Coopérative. Pas dans la caisse à outils de la ruine (V1-10, décision du porteur) : elle a sa table, `caisse_ruine`.
   atelier: { echelle_aluminium: "P" },
   atelier_coop: { echelle_aluminium: "P" },
 };
@@ -1519,11 +1539,11 @@ export interface TirageCles {
 /** La chance « rare » d'un objet-clé hors de sa place, par fouille (plan 0.8, chantier 10). */
 export const CHANCE_CLE_RARE = 0.02;
 /**
- * La chance « plus courante » des objets-clés du niveau 1 au niveau 2 (R-BUTIN) : trois fois la rare. **Proposition du
- * chantier B de la 0.10, à valider par le porteur** : l'hôtel a 25 points à fouiller, soit ≈ 1,5 objet-clé du niveau 1
- * par visite (un joueur qui ne les a pas encore les trouve là ; sinon, il les revend 90 wotts).
+ * La chance « plus courante » des objets-clés du niveau 1 au niveau 2 (R-BUTIN) : deux fois la rare. Plan 0.10 (V1-07,
+ * décision du porteur) : 4 % par fouille, et non 6 % : l'hôtel a 25 points à fouiller, soit ≈ 1 objet-clé du niveau 1
+ * par visite ; trouver reste une surprise (un joueur qui ne les a pas encore les trouve là ; sinon, il les revend).
  */
-export const CHANCE_CLE_COURANTE = 0.06;
+export const CHANCE_CLE_COURANTE = 0.04;
 
 /**
  * R-BUTIN : un objet-clé est **rare** hors de sa place à son niveau, **plus courant** au niveau d'après. Hors de sa place

@@ -75,8 +75,8 @@ export const EXAMENS_INSTALLATIONS: Record<InstallationVue["type"], string> = {
   // Les meubles nouveaux du niveau 2 (plan 0.10, chantier D).
   cuiseur_solaire: "Une boîte à réflecteurs d'aluminium, sa vitre, son isolant de papier. Au soleil, elle fait bouillir l'eau et cuit les plats du foyer de pierres, sans bois, deux fois plus lentement. Par temps voilé, à moitié ; rien sous un ciel couvert, ni la nuit.",
   bacs_tri: "Trois jerricans coupés, un aimant pendu au-dessus. Ce qu'on démonte à côté se trie : deux fois plus vite, et parfois une matière de plus.",
-  rampe_led: "Dix LED sur un tube d'aluminium : vingt mètres de lumière la nuit, sans flamme, sur la batterie de la base.",
-  moulin_jerricans: "Deux jerricans coupés en godets, sur un mât de tubes. Quand il vente, son petit moteur fait du courant pour la batterie de la base, même en ton absence.",
+  rampe_led: "Dix LED sur un tube d'aluminium : vingt mètres de lumière la nuit, sans flamme, sur une batterie de la base à moins de 15 m.",
+  moulin_jerricans: "Deux jerricans coupés en godets, sur un mât de tubes. Quand il vente, son petit moteur fait du courant pour une batterie de la base à moins de 15 m, même en ton absence.",
   arbalete_garde: "Une arbalète bridée sur un tube, un fil de fer tendu à un mètre devant. Le premier Éteint qui le passe reçoit un carreau.",
 };
 
@@ -130,7 +130,8 @@ function actionsInstallation(
       return [{ libelle: "Travailler à l'établi", ouvrirFabrication: true }, redresseur ? msg("Monter le redresseur de fûts", "monter_redresseur") : examiner];
     }
     case "coffre":
-      return [{ libelle: "Ouvrir le coffre", ouvrirCoffre: i.id }, examiner];
+      // Les étagères de l'établi de menuisier (plan 0.10, V1-04) : à poser, s'il y en a dans le sac.
+      return [{ libelle: "Ouvrir le coffre", ouvrirCoffre: i.id }, !i.etat.etageres && (inventaire.etageres ?? 0) > 0 ? msg("Poser les étagères", "poser_etageres") : examiner];
     // Plan 0.8, chantier 6 : le râtelier s'ouvre comme un coffre (d'outils) ; la torche plantée s'allume une fois.
     case "ratelier_outils":
       return [{ libelle: "Ranger tes outils", ouvrirCoffre: i.id }, examiner];
@@ -236,7 +237,7 @@ function actionsInstallation(
     case "moulin_jerricans":
       return [!i.etat.poulie && (inventaire.poulie_aluminium ?? 0) > 0 ? msg("Poser la poulie d'aluminium", "poser_poulie") : null, examiner];
     case "rampe_led":
-      return [null, { libelle: "Examiner", examiner: `${EXAMENS_INSTALLATIONS.rampe_led} ${i.etat.courant === false ? "La batterie de la base est vide : elle reste éteinte." : "Elle s'allume à la nuit tombée."}` }];
+      return [null, { libelle: "Examiner", examiner: `${EXAMENS_INSTALLATIONS.rampe_led} ${i.etat.courant === false ? "Pas de batterie chargée à moins de 15 m : elle reste éteinte." : "Elle s'allume à la nuit tombée."}` }];
     case "arbalete_garde": {
       const d = i.etat.declencheur;
       return [d && !d.arme ? msg((inventaire.cranequin_leger ?? 0) > 0 ? "Réarmer l'arbalète (cranequin léger)" : "Réarmer l'arbalète", "rearmer_piege") : null, examiner];

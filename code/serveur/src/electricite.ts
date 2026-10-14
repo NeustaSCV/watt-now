@@ -319,7 +319,7 @@ export class Electricite {
       this.ctx.sauverInstallation(i);
       this.ctx.noter("banc:panneau");
       const bat = batterieDuBanc(i.etat);
-      this.ctx.info(bat ? `Le panneau est posé, plein sud : au soleil, il remplit ${bat.nom} (80 Wh par beau jour, rien la nuit).` : "Le panneau est posé, plein sud. Branche la batterie de voiture de la ruine dans le banc : le soleil s'y mettra en réserve.");
+      this.ctx.info(bat ? `Le panneau est posé, plein sud : au soleil, il remplit ${bat.nom} (≈ 160 Wh par beau jour, rien la nuit).` : "Le panneau est posé, plein sud. Branche la batterie de voiture de la ruine dans le banc : le soleil s'y mettra en réserve.");
     });
     return true;
   }
