@@ -55,12 +55,12 @@ export const TRACES: { a: LieuId; b: LieuId; points: [number, number][]; genre: 
     a: "cooperative",
     b: "route_pont",
     genre: "route",
-    points: [[376, 296], [364, 318], [354, 344], [348, 370], [344, 396], [338, 428], [326, 462], [310, 498], [292, 534], [272, 568], [256, 596], [244, 616]],
+    points: [[376, 296], [362, 320], [350, 346], [342, 372], [336, 398], [328, 428], [318, 458], [304, 494], [288, 530], [270, 566], [256, 596], [244, 616]],
   },
   { a: "route_pont", b: "grand_hotel", genre: "route", points: [[244, 616], [222, 622], [196, 618], [170, 624], [144, 620], [118, 622]] },
   // La route B du niveau 2 : du Moulin, elle suit la rivière vers l'aval puis tourne à l'est, au flanc de la falaise,
   // jusqu'à la corniche ; de là, le chemin du cap.
-  { a: "moulin", b: "corniche", genre: "route", points: [[379, 560], [398, 578], [422, 592], [450, 600], [482, 604], [512, 606]] },
+  { a: "moulin", b: "corniche", genre: "route", points: [[379, 560], [383, 580], [390, 596], [412, 603], [446, 606], [480, 606], [512, 606]] },
   { a: "corniche", b: "phare", genre: "route", points: [[512, 606], [540, 610], [568, 616], [590, 626], [604, 634], [612, 642]] },
 ];
 
@@ -152,7 +152,7 @@ export function dessinCarte(): string {
       <path d="M0 646 C150 622 250 660 400 634 S650 604 800 628 S950 618 1000 632 L1000 700 L0 700 Z" fill="url(#hachures-mer)"/>
       <path d="M0 646 C150 622 250 660 400 634 S650 604 800 628 S950 618 1000 632" class="cote"/>
       <text x="520" y="676" class="nom-zone">La Mer</text>
-      <text x="700" y="600" class="nom-lieu">Côte des Flots</text>
+      <text x="748" y="598" class="nom-lieu">Côte des Flots</text>
       <rect x="56" y="516" width="150" height="54" rx="26" fill="url(#roseaux)" opacity="0.8"/>
       <text x="74" y="510" class="nom-lieu">Les Marais</text>
       ${sommets()}
@@ -188,7 +188,8 @@ export function dessinCarte(): string {
 
     <!-- La rivière : du barrage à la mer, en contournant le terrain par l'ouest -->
     <path d="M592 148 C560 210 520 250 510 300 S486 370 490 394 S476 470 430 520 S300 600 220 640" class="riviere"/>
-    <text x="318" y="618" class="nom-petit" transform="rotate(-26 318 618)">la rivière</text>
+    <!-- 0.10 : le nom de la rivière remonte en amont du pont (la côte prend son embouchure) -->
+    <text x="480" y="362" class="nom-petit" transform="rotate(-80 480 362)">la rivière</text>
 
     <!-- 0.10 : le cap du phare, qui avance dans la mer -->
     <path d="M582 612 C592 626 598 650 610 656 C624 662 632 648 630 634 C628 622 636 616 646 612" fill="#ecdfbf" stroke="#5f8590" stroke-width="1.2"/>
@@ -221,7 +222,7 @@ export function dessinCarte(): string {
       <path d="M-9 -3 v10 M9 -3 v10" class="trait"/>
       <rect x="-4" y="1" width="8" height="7" fill="#c8362b" stroke="${ENCRE}" stroke-width="1"/>
       <text y="30" text-anchor="middle" class="nom-ouvert">Station-service</text>
-      <text x="-98" y="52" class="crayon petit">ça dort, dans le coin…</text>
+      <text x="-72" y="58" class="crayon petit">ça dort, dans le coin…</text>
     </g>
     <g class="lieu" data-lieu="comptoir" transform="translate(300 380)" tabindex="0" role="button" aria-label="Le Comptoir du Carrefour">
       <circle r="22" class="zone-clic"/>
@@ -302,7 +303,7 @@ export function dessinCarte(): string {
       <path d="M-15 8 L-9 -4 L-2 -2 L5 -9 L15 -6" class="trait-fin"/>
       <path d="M-13 4 h26" stroke="${ENCRE}" stroke-width="1.6"/>
       <path d="M8 -9 l-3 -7 M5 -16 q-6 -2 -9 1 M5 -16 q5 -3 9 -1" class="trait"/>
-      <text x="-6" y="-20" text-anchor="middle" class="nom-ouvert">Corniche du Cap Rouge</text>
+      <text x="18" y="-8" class="nom-ouvert">Corniche du Cap Rouge</text>
     </g>
     <!-- Le phare du cap : la tour à bande rouge, sa lanterne éteinte -->
     <g class="lieu" data-lieu="phare" transform="translate(612 642)" tabindex="0" role="button" aria-label="${LIEUX.phare.nom}">
@@ -311,7 +312,7 @@ export function dessinCarte(): string {
       <path d="M-3.6 -1 L3.6 -1 L3.9 3 L-3.9 3 Z" fill="#c8362b"/>
       <rect x="-3" y="-16" width="6" height="5" fill="#ecdfbf" stroke="${ENCRE}" stroke-width="1.2"/>
       <path d="M-4 -16 h8 M0 -16 v-2" class="trait"/>
-      <text x="14" y="10" class="nom-ouvert">Phare du cap</text>
+      <text x="14" y="-8" class="nom-ouvert">Phare du cap</text>
     </g>
 
     <!-- Le pion -->
