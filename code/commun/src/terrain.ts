@@ -1,6 +1,7 @@
 // Contenu du terrain de départ (Book 21 §3.2 : une seule topologie en 0a — prairie, bois mort, une mare).
 // La génération est déterministe : le même terrain pour un même compte.
 
+import { EMPRISE_PONT, REPOUSSE_PONT, RESTE_EN_PLACE_PONT, USAGES_PONT, type TypeRessourcePont } from "./ressources-pont.ts";
 import type { Inventaire } from "./objets.ts";
 import type { Qualite } from "./recettes.ts";
 import { TERRAIN_TAILLE, type Famille } from "./regles.ts";
@@ -54,7 +55,9 @@ export type TypeRessource =
   | "coop_batterie"
   // La haie d'ifs taillés en boules, devant les bureaux de la Coopérative (Book 25 §3.2) : un bâton d'if par visite.
   | "coop_ifs"
-  | TypeRessourceNiveau1;
+  | TypeRessourceNiveau1
+  // 0.10, chantier H : la route du pont (commun/src/ressources-pont.ts).
+  | TypeRessourcePont;
 
 /**
  * Les ressources du niveau 1 (plan 0.8, chantier 3) : déclarées d'avance, pour que les chantiers des lieux n'aient qu'à
@@ -156,6 +159,8 @@ export const EMPRISE_RESSOURCE: Partial<Record<TypeRessource, number>> = {
   gisement_glaise: 0.8,
   banc_galets: 0.9,
   gue_barques: 1.2,
+  // 0.10, chantier H : la route du pont.
+  ...EMPRISE_PONT,
 };
 
 export interface RessourceSol {
@@ -317,6 +322,8 @@ export const REPOUSSE_MS: Record<TypeRessource, number | null> = {
   gue_camping_car: 12 * 3_600_000,
   gue_lavoir: 12 * 3_600_000,
   gue_garde_peche: 12 * 3_600_000,
+  // 0.10, chantier H : la route du pont (commun/src/ressources-pont.ts).
+  ...REPOUSSE_PONT,
 };
 
 /** Les ressources qui restent en place une fois fouillées (une épave ne disparaît pas). */
@@ -368,6 +375,8 @@ export const RESTE_EN_PLACE: Partial<Record<TypeRessource, true>> = {
   gue_camping_car: true,
   gue_lavoir: true,
   gue_garde_peche: true,
+  // 0.10, chantier H : la route du pont.
+  ...RESTE_EN_PLACE_PONT,
 };
 
 // ---------- Le butin d'un lieu vivant (plan 0.8, chantier 10 ; le moteur est serveur/src/lieu-vivant.ts) ----------
@@ -466,7 +475,7 @@ export const ARBRES_ISOLES: readonly (readonly [number, number])[] = [[6, 8], [4
  * Ce qu'on fait de chaque ressource du sol, et ce qu'elle donne (Book 02 §5). 0.8.2 (R20) : les baies, les branches, les
  * pierres et les bûches se ramassent deux fois plus vite qu'en 0.8.1 (ici, au tas de bois, aux poutres, aux galets).
  */
-const USAGES_ETABLIS: Record<Exclude<TypeRessource, TypeRessourceNiveau1>, UsageRessource> = {
+const USAGES_ETABLIS: Record<Exclude<TypeRessource, TypeRessourceNiveau1 | TypeRessourcePont>, UsageRessource> = {
   branche: { verbe: "ramasser", libelle: "Ramasser la branche", donne: { branche: 1 }, qualites: {}, duree: 0.6, examen: "Du bois mort, bien sec." },
   buche: { verbe: "ramasser", libelle: "Ramasser la bûche", donne: { buche: 1 }, qualites: {}, duree: 1.25, examen: "Une bûche tombée d'un vieux tas. Sèche." },
   pierre: { verbe: "ramasser", libelle: "Ramasser la pierre", donne: { pierre: 1 }, qualites: {}, duree: 0.9, examen: "Une pierre plate, bonne pour un cercle de feu." },
@@ -986,7 +995,7 @@ const USAGES_NIVEAU1: Partial<Record<TypeRessourceNiveau1, UsageRessource>> = {
  * Tous les usages. Les ressources du niveau 1 qui n'ont pas encore le leur n'existent dans aucun lieu : le type les
  * déclare d'avance, la table les reçoit avec leur lieu.
  */
-export const USAGES = { ...USAGES_ETABLIS, ...USAGES_NIVEAU1 } as Record<TypeRessource, UsageRessource>;
+export const USAGES = { ...USAGES_ETABLIS, ...USAGES_NIVEAU1, ...USAGES_PONT } as Record<TypeRessource, UsageRessource>;
 
 /** Les vestiges de la ruine, à leur place dans les décombres. */
 export function genererVestiges(premierId: number): Omit<RessourceSol, "disponible">[] {

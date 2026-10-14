@@ -20,6 +20,7 @@ import { Halte } from "./halte.ts";
 import { LieuVivant, type Voyageur } from "./lieu-vivant.ts";
 import { LieuxPersonnels, definitionDuRegistre } from "./lieux-personnels.ts";
 import { Moulins } from "./moulin.ts";
+import { RoutePont } from "./route-pont.ts";
 
 /** Ce qui garde un lieu : le lieu vivant d'un joueur (le même pour tous dans une halte), sa vie à chaque tic. */
 export interface GardienLieu {
@@ -46,6 +47,8 @@ export const FABRIQUES: Partial<Record<LieuId, Fabrique>> = {
   gue: (b, a) => gardienPartage(new Gue(b, a)),
   cooperative: (b, a, m) => new Cooperatives(b, a, m),
   moulin: (b, a, m) => new Moulins(b, a, m),
+  // 0.10, chantier H : la route du pont, son péage et sa marée (serveur/src/route-pont.ts).
+  route_pont: (b, a) => gardienPartage(new RoutePont(b, a)),
 };
 
 /** Un lieu du registre sans fabrique : une halte partagée, ou un lieu à soi qui revient à 24 h. */

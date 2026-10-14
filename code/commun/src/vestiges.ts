@@ -1369,7 +1369,7 @@ export const DEMONTAGE: Partial<Record<TypeObjet, Demontage>> = {
 // ---------- La fouille rapporte du bric-à-brac ----------
 
 /** Les lieux de fouille : chacun a sa table de vestiges. */
-export type LieuFouille = "boutique" | "atelier" | "epave" | "grange" | "libre_service" | "quai" | "atelier_coop" | "hangar" | "bureaux" | "chambre_froide";
+export type LieuFouille = "boutique" | "atelier" | "epave" | "grange" | "libre_service" | "quai" | "atelier_coop" | "hangar" | "bureaux" | "chambre_froide" | "epicerie";
 
 /** Quel lieu pour quelle ressource fouillée (la halte, et la caisse à outils de la ruine de ferme). */
 export const LIEU_DE_FOUILLE: Partial<Record<TypeRessource, LieuFouille>> = {
@@ -1395,6 +1395,16 @@ export const LIEU_DE_FOUILLE: Partial<Record<TypeRessource, LieuFouille>> = {
   moulin_boutique: "libre_service",
   moulin_magasin: "grange",
   moulin_camp: "quai",
+  // La route du pont (plan 0.10, chantier H) : ses fouilles suivent les tables qui leur ressemblent ; une fouille y donne
+  // aussi, rarement, un objet-clé (R-BUTIN : etapeButin("route_pont") = H2A).
+  pont_pontier: "bureaux",
+  pont_epicerie: "epicerie",
+  pont_bar: "libre_service",
+  pont_voiture: "epave",
+  pont_camionnette: "bureaux",
+  pont_peniche: "libre_service",
+  pont_hangar: "quai",
+  pont_chapelle: "bureaux",
 };
 
 /**
@@ -1413,6 +1423,8 @@ export const FAMILLES_PAR_LIEU: Record<LieuFouille, Partial<Record<FamilleVestig
   hangar: { ferme: 6, garage: 2 },
   bureaux: { gadget: 3, salon: 3 },
   chambre_froide: { garage: 3, ferme: 3 },
+  // L'épicerie du bar de la route du pont (plan 0.10, chantier H) : la cuisine, la salle de bain, un peu de gadgets.
+  epicerie: { cuisine: 3, salle_de_bain: 3, gadget: 1 },
 };
 
 /**
@@ -1431,6 +1443,8 @@ export const EN_PLUS_PAR_LIEU: Partial<Record<LieuFouille, Partial<Record<TypeOb
   // leur table) et dans l'atelier et le hangar de la Coopérative.
   atelier: { echelle_aluminium: "P" },
   atelier_coop: { echelle_aluminium: "P" },
+  // 0.10, chantier H : l'épicerie de la route du pont, où le fil dentaire est courant (N2-61 : COURANTS_AU_NIVEAU_2).
+  epicerie: { fil_dentaire: "C" },
 };
 
 /**

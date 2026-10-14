@@ -52,6 +52,7 @@ import type { Position } from "../../commun/src/deplacement.ts";
 import type { Zone } from "../../commun/src/lieux.ts";
 import type { Cible, MessageServeur, SacVu } from "../../commun/src/messages.ts";
 import type { Inventaire, TypeObjet } from "../../commun/src/objets.ts";
+import type { Passage } from "../../commun/src/peage.ts";
 import type { Stimulus } from "../../commun/src/signature.ts";
 import { REGLAGES } from "../../commun/src/reglages.ts";
 import type { Famille } from "../../commun/src/regles.ts";
@@ -141,6 +142,8 @@ export interface ContexteLieu {
   /** Un geste qui dure (il s'arrête si l'on bouge, si l'on frappe, ou d'un second appui). */
   commencer(libelle: string, dureeS: number, appliquer: () => void): void;
   annuler(): void;
+  /** 0.10, chantier H : ces objets quittent le sac (la caisse du péage). */
+  donner(objets: Inventaire): void;
 }
 
 /** On voit les Éteints de la halte jusqu'à cette distance (la caméra en montre ≈ 30 m ; un peu de marge). */
@@ -180,6 +183,14 @@ export class LieuVivant {
 
   /** À chaque tic, pour chaque joueur présent (hors voyage) : ce que le lieu fait de lui (la marée qui monte…). */
   accompagner(_ctx: ContexteLieu, _dt: number): void {}
+
+  /** La zone de ce joueur (0.10, chantier H : au pont, la porte du péage ouverte pour qui a payé) ; par défaut, celle du lieu. */
+  zonePour(_compteId: number): Zone {
+    return this.zone;
+  }
+
+  /** « Payer » à la caisse d'un péage (0.10, chantier H : serveur/src/peage.ts) ; un lieu sans péage n'en fait rien. */
+  payerPassage(_ctx: ContexteLieu, _passage: Passage, _objets: Inventaire): void {}
 
   ajouterBruit(id: string, stimulus: Stimulus, jusqua: number): void {
     this.bruits.set(id, { stimulus, jusqua });

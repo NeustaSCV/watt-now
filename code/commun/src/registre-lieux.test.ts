@@ -83,7 +83,8 @@ test("la zone d'un lieu à portes suit ses portes ; sans portes, c'est sa zone",
 });
 
 test("les quatre lieux du niveau 2 sont branchés vides : ni Éteints ni butin ; leur zone est le lot du modèle", () => {
-  for (const lieu of LIEUX_NIVEAU_2) {
+  // 0.10, chantier H : la route du pont a son contenu (serveur/src/route-pont.test.ts).
+  for (const lieu of LIEUX_NIVEAU_2.filter((l) => l !== "route_pont")) {
     assert.ok(CONTENU_LIEUX[lieu], `${lieu} a son contenu`);
     assert.deepEqual(contenuDe(lieu).eteints(), []);
     assert.deepEqual(contenuDe(lieu).ressources(), []);
