@@ -10,7 +10,7 @@
 //   de la barricade du tunnel (`obstaclesBarricade`), fermée tant qu'on n'a pas payé le péage (`zoneCorniche`) ;
 // - les deux goulets (R50) : le tunnel et sa barricade, l'éboulement et son ruban de 2,5 m ;
 // - les pièces et les portes du modèle (la vue par pièce, les pièces noires) et le milieu des Éteints ;
-// - la caisse et la barricade du péage (§3.4, S-19) : leurs places ; la règle est dans commun/src/peage.ts (chantier H).
+// - la caisse et la barricade du péage (§3.4, S-19) : leurs places, où l'on paie ; la règle est dans commun/src/peage.ts.
 //
 // Le contenu (les Éteints, le pin tombé, les pierres, le bois, les fouilles, le semis) est dans corniche-contenu.ts,
 // que seul le serveur charge. Ce module n'importe rien de lieux.ts que des types (lieux.ts en tire ZONE_CORNICHE).
@@ -84,6 +84,21 @@ export function surLaChaussee(x: number, z: number, marge = 0): boolean {
 /** La barricade du tunnel (la porte du péage, x du jeu) et la caisse au pied, côté ouest (FICHE.objets.caisse_peage). */
 export const BARRICADE = { ...aLaCorniche(-24.55, 0.44), largeur: 2.12 } as const;
 export const CAISSE_PEAGE = aLaCorniche(-25.78, 2.35);
+
+/** La porte de la barricade : x (jeu), et l'étendue de son passage de 2 m (le modèle : ZB1, ZB2). */
+export const PORTE_BARRICADE_TUNNEL = { x: BARRICADE.x, z0: aLaCorniche(0, -0.62).z, z1: aLaCorniche(0, 1.5).z } as const;
+
+/** On touche la caisse à moins de ce nombre de mètres (comme au pont). */
+export const PORTEE_CAISSE_TUNNEL = 1.6;
+
+/**
+ * Où l'on paie le péage du tunnel : à la caisse, et contre la porte de la barricade, de l'un ou l'autre côté (comme à la
+ * chicane du pont, commun/src/route-pont.ts : `prochePeage`).
+ */
+export function procheBarricade(x: number, z: number): boolean {
+  if (Math.hypot(x - CAISSE_PEAGE.x, z - CAISSE_PEAGE.z) <= PORTEE_CAISSE_TUNNEL) return true;
+  return Math.abs(x - PORTE_BARRICADE_TUNNEL.x) <= 1.8 && z > PORTE_BARRICADE_TUNNEL.z0 - 0.6 && z < PORTE_BARRICADE_TUNNEL.z1 + 0.6;
+}
 
 /** L'éboulement : le ruban de 2,5 m entre la paroi et le vide, de x = 61 à x = 74 dans le modèle (FICHE.goulets). */
 export const RUBAN = { x0: aLaCorniche(61, 0).x, x1: aLaCorniche(74, 0).x, largeur: 2.5 } as const;

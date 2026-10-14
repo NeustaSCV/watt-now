@@ -6,11 +6,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { BARRICADE, CAISSE_PEAGE, PIN_TOMBE, RUBAN, SORTIES_CORNICHE, ZONE_CORNICHE, accessibleCorniche, heurteCorniche, pieceCorniche, sombreCorniche, zoneCorniche } from "../../commun/src/corniche.ts";
+import { BARRICADE, CAISSE_PEAGE, PORTE_BARRICADE_TUNNEL, PIN_TOMBE, RUBAN, SORTIES_CORNICHE, ZONE_CORNICHE, accessibleCorniche, heurteCorniche, pieceCorniche, sombreCorniche, zRouteCorniche, zoneCorniche } from "../../commun/src/corniche.ts";
 import { BUTIN_CORNICHE, SEMIS_CORNICHE, eteintsCorniche, ressourcesCorniche } from "../../commun/src/corniche-contenu.ts";
 import { ETEINTS_CORNICHE, OBSTACLES_BARRICADE, OBSTACLES_PIN } from "../../commun/src/corniche-modele.ts";
 import { DUREE_VOYAGE_S, SORTIE_TERRAIN, arriveeDans, etapeVers, sortiesDe, zoneDe, type LieuId } from "../../commun/src/lieux.ts";
 import type { MessageServeur } from "../../commun/src/messages.ts";
+import { DUREE_PASSAGE_MS, TEXTES_PEAGE, valeurObjets } from "../../commun/src/peage.ts";
 import { planDe, sombreDans } from "../../commun/src/registre-lieux.ts";
 import { REGLAGES } from "../../commun/src/reglages.ts";
 import { USAGES, type RessourceSol } from "../../commun/src/terrain.ts";
@@ -48,9 +49,9 @@ function monde(alea: () => number = Math.random) {
       lieux.tick(instant, pas);
     }
   };
-  const nouveau = (pseudo: string) => {
+  const nouveau = (pseudo: string, inventaire: Record<string, number> = {}) => {
     const compte = base.creerCompte(pseudo, "potager42", "mecanistes");
-    base.sauverInventaire(compte.id, { sac_a_dos: 1 });
+    base.sauverInventaire(compte.id, { sac_a_dos: 1, ...inventaire });
     const recus: MessageServeur[] = [];
     const joueur = new Joueur({ id: compte.id, pseudo, famille: "mecanistes" }, base, (m) => recus.push(m), maintenant, halte, alea, new Comptoir(base, instant), cooperatives, gue, moulins, lieux);
     joueurs.push(joueur);
@@ -64,7 +65,8 @@ function monde(alea: () => number = Math.random) {
       joueur.recevoir({ t: "voyager", vers });
       attendre(DUREE_VOYAGE_S + 0.5);
     };
-    return { compte, joueur, recus, dernier, inv, voyager };
+    const infos = () => recus.filter((x) => x.t === "info").map((x) => (x as { texte: string }).texte);
+    return { compte, joueur, recus, dernier, inv, infos, voyager };
   };
   const corniche = () => lieux.vivant("corniche", 0)!;
   /** Prendre une ressource de la corniche : on s'y place, on agit, on attend le geste. */
@@ -239,4 +241,76 @@ test("on voyage terrain → corniche → phare, et retour ; la corniche est une 
   assert.deepEqual(rose.dernier("bienvenue")!.position, arriveeDans("corniche", "phare"), "on revient du côté du phare");
   rose.voyager("terrain");
   assert.equal(rose.joueur.lieu, "terrain");
+});
+
+test("le péage du tunnel : la même règle que le pont (11 wotts refusés, 12 acceptés, la porte pour le payeur seul, une heure)", () => {
+  const m = monde();
+  const rose = m.nouveau("Rose", { branche: 10, chiffons: 2 });
+  const malo = m.nouveau("Malo", { branche: 10 });
+  for (const j of [rose, malo]) j.voyager("corniche");
+  m.corniche().eteints = [];
+  const corniche = m.corniche() as LieuCorniche;
+  // En arrivant, chacun sait que sa porte est fermée.
+  assert.deepEqual(rose.dernier("passage"), { t: "passage", passage: "tunnel", ouvert: false, du: 12 });
+  // Loin de la caisse : rien.
+  rose.joueur.recevoir({ t: "payer_passage", passage: "tunnel", objets: { branche: 4 } });
+  assert.ok(rose.infos().at(-1)!.startsWith("Approche-toi de la caisse"));
+  // À la caisse, du côté du terrain : 11 wotts refusés, rien n'est pris.
+  for (const j of [rose, malo]) j.joueur.position = { x: CAISSE_PEAGE.x - 1.2, z: CAISSE_PEAGE.z, o: Math.PI / 2 };
+  const onze = { branche: 2, chiffons: 1 };
+  assert.ok(valeurObjets(onze) >= 10 && valeurObjets(onze) < 12, `${valeurObjets(onze)} wotts : moins de 12`);
+  rose.joueur.recevoir({ t: "payer_passage", passage: "tunnel", objets: onze });
+  assert.equal(rose.dernier("passage")!.ouvert, false);
+  assert.deepEqual(rose.joueur.bienvenue(0).inventaire, { sac_a_dos: 1, branche: 10, chiffons: 2 }, "rien n'est pris");
+  // 12 acceptés : la voix de derrière la barricade.
+  rose.joueur.recevoir({ t: "payer_passage", passage: "tunnel", objets: { branche: 4 } });
+  assert.deepEqual(rose.dernier("passage"), { t: "passage", passage: "tunnel", ouvert: true, du: 0 });
+  assert.equal(rose.infos().at(-1), TEXTES_PEAGE.tunnel.paye);
+  assert.equal(rose.joueur.bienvenue(0).inventaire.branche, 6);
+  // Le péage du pont n'y est pour rien.
+  rose.joueur.recevoir({ t: "payer_passage", passage: "pont", objets: { branche: 4 } });
+  assert.equal(rose.joueur.bienvenue(0).inventaire.branche, 6);
+  // La porte : ouverte pour Rose, fermée pour Malo.
+  assert.equal(corniche.zonePour(rose.compte.id), zoneCorniche(true));
+  assert.equal(corniche.zonePour(malo.compte.id), zoneCorniche(false));
+  // Ils marchent vers l'est, vers le phare : Rose passe la barricade, Malo reste devant.
+  for (const j of [rose, malo]) {
+    j.joueur.position = { x: PORTE_BARRICADE_TUNNEL.x - 1.2, z: BARRICADE.z, o: Math.PI / 2 };
+    j.joueur.recevoir({ t: "intention", dx: 1, dz: 0, allure: "marche", seq: 1 });
+  }
+  m.attendre(3);
+  assert.ok(rose.joueur.position.x > BARRICADE.x + 1, `Rose a passé la barricade (x = ${rose.joueur.position.x})`);
+  assert.ok(malo.joueur.position.x < BARRICADE.x, `Malo est resté devant (x = ${malo.joueur.position.x})`);
+  for (const j of [rose, malo]) j.joueur.recevoir({ t: "intention", dx: 0, dz: 0, allure: "marche", seq: 2 });
+  // Pendant l'heure, on ne redemande rien (contre la porte, de l'autre côté : comme au pont).
+  rose.joueur.position = { x: BARRICADE.x + 1, z: BARRICADE.z, o: 0 };
+  m.sauter(DUREE_PASSAGE_MS - 120_000);
+  rose.joueur.recevoir({ t: "payer_passage", passage: "tunnel", objets: { branche: 4 } });
+  assert.equal(rose.infos().at(-1), TEXTES_PEAGE.tunnel.dejaPaye);
+  assert.equal(rose.joueur.bienvenue(0).inventaire.branche, 6);
+  // L'heure passée, la porte se referme pour elle (on le lui dit).
+  m.sauter(180_000);
+  m.attendre(1);
+  assert.equal(rose.dernier("passage")!.ouvert, false);
+  assert.ok(rose.infos().includes(TEXTES_PEAGE.tunnel.referme));
+});
+
+test("une fois payé, on traverse la corniche à pied, du terrain jusqu'à la sortie vers le phare", () => {
+  const m = monde();
+  const rose = m.nouveau("Rose", { branche: 10 });
+  rose.voyager("corniche");
+  m.corniche().eteints = [];
+  rose.joueur.position = { x: CAISSE_PEAGE.x - 1.2, z: CAISSE_PEAGE.z, o: Math.PI / 2 };
+  rose.joueur.recevoir({ t: "payer_passage", passage: "tunnel", objets: { branche: 4 } });
+  // Le long de l'axe de la route, par petits pas vers l'est (sur l'éboulement, le long du ruban, contre la paroi) : on
+  // ne bute nulle part jusqu'au bout.
+  rose.joueur.position = { ...SORTIES_CORNICHE[0]!.arrivee };
+  const sortie = SORTIES_CORNICHE[1]!;
+  for (let i = 0; i < 400 && rose.joueur.position.x < sortie.boite.x - 3; i++) {
+    const q = rose.joueur.position;
+    const z = q.x + 2 > RUBAN.x0 - 3 && q.x + 2 < RUBAN.x1 + 3 ? 30.8 : zRouteCorniche(q.x + 2);
+    rose.joueur.recevoir({ t: "intention", dx: 2, dz: z - q.z, allure: "course", seq: i + 1 });
+    m.attendre(0.5);
+  }
+  assert.ok(rose.joueur.position.x > sortie.boite.x - 3, `au bout de la corniche (x = ${rose.joueur.position.x.toFixed(1)})`);
 });
