@@ -3,7 +3,7 @@
 // les sons continus (feu, pédalier, pluie) et le niveau de menace transmis à la musique.
 
 import type { BruitVu, GenreBruit } from "../../../commun/src/bruits.ts";
-import type { EtatEteint } from "../../../commun/src/eteints.ts";
+import type { EtatEteint, ResultatCoup } from "../../../commun/src/eteints.ts";
 import { BOUTIQUE, COMPTOIR, ROUTE, ROUTE_CARREFOUR, STATION, type LieuJouable } from "../../../commun/src/lieux.ts";
 import type { AspectFeu } from "../../../commun/src/survie.ts";
 import type { BruitAction } from "../../../commun/src/signature.ts";
@@ -280,6 +280,10 @@ export class Bruiteur {
         } else if (e.etat === "poursuivant") {
           this.son.jouer(Math.random() < 0.75 ? "eteint_rale_rapide" : "eteint_halete", ou);
           s.prochainCri = this.t + 1.2 + Math.random() * 1.6;
+        } else if (e.etat === "a_terre") {
+          // À terre, il n'est pas fini (chantier F) : il gémit, étouffé, de loin en loin.
+          this.son.jouer("eteint_gemit_sol", ou);
+          s.prochainCri = this.t + 1.8 + Math.random() * 2.2;
         } else s.prochainCri = this.t + 2;
       }
 
@@ -321,7 +325,11 @@ export class Bruiteur {
       this.son.jouer("eteint_rale_rapide", ou);
       s.prochainCri = this.t + 1.2;
     }
-    if (etat === "a_terre") setTimeout(() => this.son.jouer("chute_corps", ou), 150);
+    if (etat === "a_terre") {
+      setTimeout(() => this.son.jouer("chute_corps", ou), 150);
+      // Le premier gémissement, une fois tombé.
+      s.prochainCri = this.t + 1.2 + Math.random() * 0.8;
+    }
   }
 
   // ---------- Le combat ----------
@@ -337,7 +345,7 @@ export class Bruiteur {
     this.son.jouer(appuye ? "sifflement_lourd" : "sifflement");
   }
 
-  coup(resultat: "detruit" | "a_terre" | "vacille" | "raidi", ou: Ou & { electrique?: true }): void {
+  coup(resultat: ResultatCoup, ou: Ou & { electrique?: true }): void {
     // La décharge (Book 25 §5.4) : la courte crépite (il se raidit) ; la longue claque (à terre, ou il s'éteint).
     if (ou.electrique) {
       this.son.jouer(resultat === "raidi" ? "decharge_courte" : "decharge_longue", ou);
@@ -345,6 +353,8 @@ export class Bruiteur {
       return;
     }
     if (resultat === "raidi") this.son.jouer("impact", ou);
+    // L'Équipé encaisse (plan 0.9 §3.3) : le choc mat du blouson et du casque.
+    else if (resultat === "encaisse") this.son.jouer("impact_mat", ou);
     else if (resultat === "detruit") {
       this.son.jouer("coup_tete", ou);
       setTimeout(() => this.son.jouer("chute_corps", ou), 280);

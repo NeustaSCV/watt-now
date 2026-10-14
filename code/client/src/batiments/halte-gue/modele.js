@@ -136,9 +136,9 @@ const ENTREES = [
   { x: -100, z: 7, nature: "entrée A : la petite route descend de la Campagne dans le chemin creux" },
   { x: -76, z: -14, nature: "porte de l'huilerie en ruine" },
   { x: -68.2, z: -18.4, nature: "brèche du mur est de l'huilerie (salle du pressoir)" },
-  { x: -21, z: -27.3, nature: "porte de la cabane du passeur (côté bac)" },
+  { x: -21, z: -27.25, nature: "porte de la cabane du passeur (côté bac)" },
   { x: -12.4, z: -25, nature: "cale du bac : on monte à bord du radeau à câble" },
-  { x: -31.5, z: 23, nature: "porte de la buvette Chez Lulu (côté tables)" },
+  { x: -31.6, z: 23, nature: "porte de la buvette Chez Lulu (côté tables)" },
   { x: -11.6, z: -11.25, nature: "tête ouest du radier submersible (le gué)" },
   { x: 13.7, z: -11.25, nature: "tête est du radier" },
   { x: 11, z: -25, nature: "ponton est du bac" },
@@ -1196,7 +1196,7 @@ function cabane(ctx) {
   const spec = { h: 2.6, ep: 0.12, couleur: C.planchesCabane, mat: M.planches, interieur: { couleur: 0x9a8a72, mat: M.planches } };
   quatreMurs(ctx, k, [x1, z1, x2, z2], spec, {
     s: [{ u: 3.6, l: 1.0, bas: 1.0, haut: 1.9, type: "fenetre", croisillons: 1, bris: 0.3 + 0.4 * u, volet: "ouvert", couleurVolet: 0x6a7f6a }],
-    e: [{ u: 2.2, l: 0.9, bas: 0, haut: 2.1, type: "porte", vantail: "entrouvert", angle: 1.3, couleurPorte: 0x6a5440 }],
+    e: [{ u: 2.25, l: 1.2, bas: 0, haut: 2.1, type: "porte", vantail: "entrouvert", angle: 1.3, couleurPorte: 0x6a5440 }],
     o: [{ u: 2.4, l: 0.7, bas: 1.1, haut: 1.8, type: "fenetre", croisillons: 0, bris: 0.6 }],
   });
   // Le plancher, posé à même le sol
@@ -1249,8 +1249,10 @@ function cabane(ctx) {
   c.repere({ x: -18.9, y: 1.1, z: -30.16 }, () => {
     for (let i = 0; i < 6; i++) c.boite(0.02, 1.5, 0.02, 0x6a6450, { x: -1.2 + i * 0.5, y: 0 }, M.mat, { crasse: false });
   });
-  barque(c, -18.5, 0.5, -24.6, 0.3, 0x6f8b76, { retournee: true, rz: 0.04 });
-  b.obstacle(-20.2, -24.6, -16.8, -24.6, "barque retournée");
+  // La barque, à l'écart du coin de la cabane : on passe à l'aise entre les deux (0.9) ; son obstacle épouse la coque
+  barque(c, -17.8, 0.5, -23.6, 0.3, 0x6f8b76, { retournee: true, rz: 0.04 });
+  const coque = [[-19.8, -23.63], [-16.17, -24.75], [-15.8, -23.57], [-19.43, -22.45]];
+  for (let i = 0; i < 4; i++) b.obstacle(...coque[i], ...coque[(i + 1) % 4], "barque retournée");
   semer(ctx, -28, -31, -18, -23, 14);
 }
 
@@ -1272,13 +1274,13 @@ function guinguette(ctx) {
   const k = b.couche("buvette Chez Lulu", { x: -33, z: 26.75, l: 9.4, p: 9 }, 1.05, 4.6);
   const spec = { h: 2.8, ep: 0.14, couleur: C.creme, mat: M.planches, interieur: { couleur: 0xd8cfb4, mat: M.planches } };
   quatreMurs(ctx, k, [x1, z1, x2, z2], spec, {
-    n: [{ u: 2.4, l: 1.0, bas: 0, haut: 2.15, type: "porte", vantail: "entrouvert", angle: 1.6, couleurPorte: C.vertGuinguette }, { u: 6.0, l: 1.2, bas: 1.0, haut: 2.0, type: "fenetre", bris: 0.5 }],
+    n: [{ u: 2.6, l: 1.2, bas: 0, haut: 2.15, type: "porte", vantail: "entrouvert", angle: 1.6, couleurPorte: C.vertGuinguette }, { u: 6.0, l: 1.2, bas: 1.0, haut: 2.0, type: "fenetre", bris: 0.5 }],
     e: [{ u: 3.75, l: 4.2, bas: 1.05, haut: 2.35, type: "vide" }],
     s: [{ u: 2.2, l: 1.1, bas: 1.0, haut: 2.0, type: "fenetre", bris: 0.3 + 0.5 * u, volet: u > 0.5 ? "pendu" : "ouvert", couleurVolet: C.vertGuinguette }, { u: 6, l: 1.1, bas: 1.0, haut: 2.0, type: "fenetre", bris: 0.6, volet: "ouvert", couleurVolet: C.vertGuinguette }],
     o: [{ u: 3.75, l: 1.0, bas: 1.0, haut: 1.9, type: "fenetre", bris: 0.4 }],
   });
   // La cloison entre le bar et la réserve, avec son passage
-  mur(c, [-33, 23.1], [-33, 30.4], { h: 2.8, ep: 0.1, couleur: 0xd8cfb4, mat: M.planches, batiment: b, ouvertures: [{ u: 5.6, l: 0.9, bas: 0, haut: 2.1, type: "porte" }] });
+  mur(c, [-33, 23.1], [-33, 30.4], { h: 2.8, ep: 0.1, couleur: 0xd8cfb4, mat: M.planches, batiment: b, ouvertures: [{ u: 5.88, l: 1.2, bas: 0, haut: 2.1, type: "porte" }] });
   // Les sols : carrelage du bar, planches de la réserve
   c.pave(-33, 0, 23.07, -29.07, 0.03, 30.43, 0xcfc6ae, M.planches, { crasse: false });
   c.pave(-36.93, 0, 23.07, -33, 0.03, 30.43, 0x9a8466, M.planches, { crasse: false });

@@ -80,10 +80,10 @@ for (const l of seul) {
   const r = parcours.find((x) => x.profil === "prudent" && x.famille === l.famille)!;
   sortie.push(`| ${NOMS_FAMILLES[l.famille]} | ${l.depense.buche ?? 0} | ${l.depense.pierre ?? 0} | ${l.depense.branche ?? 0} | ${l.depense.glaise ?? 0} | ${r.budget.meules}${r.budget.charbonnette ? ` (dont ${r.budget.charbonnette} en charbonnette)` : ""} | ${min(l.attenteBranches)} | ${min(l.feuACourt)} |`);
 }
-sortie.push("", "### D'où viennent les bûches et les pierres (le prudent, seul)", "", "| Famille | Bûches : terrain | tas de bois | vrac de la station | Moulin | Comptoir | Pierres : terrain | banc de galets | vrac (gué, station) |", "|---|---|---|---|---|---|---|---|---|");
+sortie.push("", "### D'où viennent les bûches et les pierres (le prudent, seul)", "", "| Famille | Bûches : terrain | tas de bois | vrac (station, gué) | Moulin, Coopérative | Comptoir | Pierres : terrain | banc de galets | vrac (gué, station, Moulin, Coopérative) |", "|---|---|---|---|---|---|---|---|---|");
 for (const l of seul) {
   const v = l.venu;
-  sortie.push(`| ${NOMS_FAMILLES[l.famille]} | ${v.terrain?.buche ?? 0} | ${v.tas_bois?.buche ?? 0} | ${v.station?.buche ?? 0} | ${v.moulin?.buche ?? 0} | ${v.comptoir?.buche ?? 0} | ${v.terrain?.pierre ?? 0} | ${v.banc_galets?.pierre ?? 0} | ${(v.gue?.pierre ?? 0) + (v.station?.pierre ?? 0)} |`);
+  sortie.push(`| ${NOMS_FAMILLES[l.famille]} | ${v.terrain?.buche ?? 0} | ${v.tas_bois?.buche ?? 0} | ${(v.station?.buche ?? 0) + (v.gue?.buche ?? 0)} | ${(v.moulin?.buche ?? 0) + (v.cooperative?.buche ?? 0)} | ${v.comptoir?.buche ?? 0} | ${v.terrain?.pierre ?? 0} | ${v.banc_galets?.pierre ?? 0} | ${(v.gue?.pierre ?? 0) + (v.station?.pierre ?? 0) + (v.moulin?.pierre ?? 0) + (v.cooperative?.pierre ?? 0)} |`);
 }
 const scenarios: [ScenarioBudget, string][] = [
   ["seul", "Seul"],

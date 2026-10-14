@@ -400,7 +400,7 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
         ],
       },
       { sous_titre: "À terre" },
-      "Un Éteint qui tombe **se relève** au bout de quelques secondes. Profite qu'il soit à terre pour l'achever.",
+      "Un Éteint qui tombe **se relève** au bout de quelques secondes. À terre, il remue encore : achève-le. S'il prend appui, il se relève. Détruit, il ne bouge plus, et pâlit.",
       { sous_titre: "Repousser ou esquiver : {examiner} selon la situation" },
       {
         liste: [

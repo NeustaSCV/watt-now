@@ -12,6 +12,15 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
+## 0.9.0 · prête à déployer
+
+- **Les autres joueurs, fluides** : on les voit marcher, courir, avancer accroupis et s'arrêter sans à-coups, avec la bonne allure. On les voit frapper (l'arme en main), esquiver, repousser, ramasser, couper, s'effondrer. La fourche équipée se voit dans leur dos, et la nuit, ils tiennent leur lampe levée.
+- **L'Équipé (le casqué) ne se laisse plus bloquer** : un coup sur trois seulement le fait vaciller ; les autres, il les encaisse (un son mat, peu de sang) et continue d'avancer. Le repousser, ou une décharge, le font toujours vaciller. À terre, une lame ne le fait plus reculer.
+- **À terre ou détruit, ça se voit** : à terre, l'Éteint remue, gémit, et prend appui juste avant de se relever. Détruit, il ne bouge plus, vire au gris cendre et se fond dans le décor, puis s'efface doucement.
+- **Du bois, des pierres et de quoi manger** : des branches, des bûches et des pierres éparses sur les pelouses du gué, du Moulin et de la Coopérative (des pierres en plus à la station). À la station et au gué, des cèpes (et des amanites : méfiance), des baies. Ce qu'on ramasse revient ailleurs.
+- **La cabane du passeur, au gué** : la barque retournée ne bloque plus l'entrée, et les portes de la cabane et de la buvette sont plus larges.
+- **La saisie** : le bandeau dit enfin « deux fois A ou B ».
+
 ## 0.8.4 · déployée le 2026-10-13
 
 - **Se dégager, enfin faisable** : quand un Éteint te tient, tu ne frappes plus. A sert à se dégager, comme B, et **deux appuis suffisent**, même essoufflé (avant : six sur B, neuf essoufflé). Aucune arme ne libère d'un coup, la matraque non plus.

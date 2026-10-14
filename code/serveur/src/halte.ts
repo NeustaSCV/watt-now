@@ -1,10 +1,11 @@
 // La halte de la station-service, côté serveur : un lieu vivant partagé par tous les voyageurs présents
 // (Book 01 §2 bis). Chacun reçoit les changements faits par les autres, et les Éteints réagissent à la signature de tous.
 
-import { BUTIN_HALTE, VERSION_HALTE, eteintsHalte, genererHalte } from "../../commun/src/halte.ts";
+import { BUTIN_HALTE, VERSION_HALTE, eteintsHalte } from "../../commun/src/halte.ts";
 import { ZONE_STATION } from "../../commun/src/lieux.ts";
 import { milieuHalte } from "../../commun/src/milieu-coop.ts";
 import { PLAN_VUE_HALTE } from "../../commun/src/vue-lieux.ts";
+import { ressourcesSemees, semisVivant } from "../../commun/src/semis-lieux.ts";
 import type { Base } from "./base.ts";
 import { LieuVivant } from "./lieu-vivant.ts";
 
@@ -22,9 +23,11 @@ export class Halte extends LieuVivant {
         plan: PLAN_VUE_HALTE,
         milieu: milieuHalte,
         eteints: eteintsHalte,
-        ressources: genererHalte,
+        // Le semis au hasard (plan 0.9, M5 et M7 : commun/src/semis.ts).
+        ressources: ressourcesSemees("station"),
         version: VERSION_HALTE,
         butin: BUTIN_HALTE,
+        semis: semisVivant("station"),
       },
       alea,
     );

@@ -17,6 +17,9 @@ import {
   armeDeContact,
   gardeFou,
   gardeFouEtape,
+  ARMES_MARTELEMENT,
+  marteler,
+  martelementTexte,
   simuler,
   tableau,
   tableauEtape,
@@ -278,4 +281,27 @@ test("0.8 : les plafonds de la grille par les recettes (I13, Q-A5, Q-0.8-3) ; le
     });
     for (let i = 1; i < degats.length; i++) assert.ok(degats[i]! >= degats[i - 1]! - 1e-9, `${objet} : ${degats.join(" / ")}`);
   }
+});
+
+// ---------- Le martèlement face à un Équipé (plan 0.9 §3.3, chantier D) ----------
+
+test("martèlement : face à un Errant, aucune saisie, avec chaque arme commune (comme avant la 0.9)", () => {
+  for (const o of ARMES_MARTELEMENT) {
+    const m = marteler(armeDeContact(o), false);
+    assert.equal(m.saisies, 0, o);
+    assert.equal(m.encaisses, 0, o);
+  }
+});
+
+test("martèlement : face à un Équipé, il encaisse des coups et finit par saisir (au gourdin, au marteau)", () => {
+  for (const o of ["gourdin", "marteau", "couteau"] as const) assert.ok(marteler(armeDeContact(o), true).encaisses > 0, o);
+  for (const o of ["gourdin", "marteau"] as const) assert.ok(marteler(armeDeContact(o), true).saisies >= 1, o);
+  // Avant la 0.9 (un coup sur 1), le martèlement le bloquait : aucune saisie.
+  try {
+    appliquerReglages({ equipe_vacille_un_sur: 1 });
+    assert.equal(marteler(armeDeContact("gourdin"), true).saisies, 0);
+  } finally {
+    appliquerReglages({});
+  }
+  assert.match(martelementTexte(), /le gourdin/);
 });

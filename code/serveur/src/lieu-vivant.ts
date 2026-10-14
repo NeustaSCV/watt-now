@@ -36,6 +36,10 @@
 //   butin personnel, à tous sinon) ;
 // - `delaiRepousse(type)` : le délai de ce lieu pour ce type (ms ; null : jamais).
 //
+// 4. **Le semis** (plan 0.9, M5 et M7 : commun/src/semis.ts, semis-lieux.ts) : `semis.tournee(id)` range le vrac par
+//    tournée (la première en jeu d'abord), et `semis.ailleurs(...)` donne la nouvelle place d'un point qu'on prend : il
+//    y est déplacé aussitôt (on ne le voit plus) et y reparaît à son délai ; le message du retour porte sa place (x, z).
+//
 // Exemple, le gué (chantier 11) : `butin: { repousse: { pierre: 30 * 60_000, joncs: 30 * 60_000 }, vrac: { pierre: 15 },
 // personnel: { banc_galets: 8 } }`, avec 45 pierres posées par le générateur et REPOUSSE_MS.banc_galets (6 h).
 // Le Moulin (chantier 12) est à un joueur : il n'a besoin que de `repousse` (et de son retour à 24 h, comme la
@@ -49,6 +53,7 @@ import type { MessageServeur, SacVu } from "../../commun/src/messages.ts";
 import type { Stimulus } from "../../commun/src/signature.ts";
 import { REGLAGES } from "../../commun/src/reglages.ts";
 import type { Famille } from "../../commun/src/regles.ts";
+import type { SemisVivant } from "../../commun/src/semis.ts";
 import { REPOUSSE_MS, ressourceVisible, vracEnJeu, type ButinLieu, type RessourceSol, type TypeRessource } from "../../commun/src/terrain.ts";
 import { estNuit, heureDeJeu } from "../../commun/src/temps.ts";
 import { obstaclesVue, passageSon, voit, type ObstaclesVue, type PlanVue } from "../../commun/src/vue.ts";
@@ -91,6 +96,8 @@ export interface DefinitionLieuVivant {
   version: number;
   /** La repousse du lieu, son butin personnel, son vrac qui grandit (plan 0.8, chantier 10 : voir en tête du fichier). */
   butin?: ButinLieu;
+  /** Le semis au hasard (plan 0.9, M5 et M7) : les tournées du vrac, et un point pris qui revient ailleurs. */
+  semis?: SemisVivant;
 }
 
 /** Une ressource prise qui ne revient jamais. */
@@ -180,7 +187,9 @@ export class LieuVivant {
     this.sacs.push(...base.chargerSacs(definition.sacs.lieu, definition.sacs.terrainDe));
     const vrac = definition.butin?.vrac ?? {};
     const rangs = new Map<TypeRessource, number>();
-    for (const r of [...this.ressources.values()].sort((a, b) => a.id - b.id)) {
+    // Par tournée du semis (plan 0.9), puis par identifiant : la première tournée est en jeu d'abord.
+    const tournee = (r: RessourceEnBase) => definition.semis?.tournee(r.id) ?? 0;
+    for (const r of [...this.ressources.values()].sort((a, b) => tournee(a) - tournee(b) || a.id - b.id)) {
       if (vrac[r.type] === undefined) continue;
       const k = rangs.get(r.type) ?? 0;
       this.rangsVrac.set(r.id, k);
@@ -328,7 +337,7 @@ export class LieuVivant {
         if (r.type !== type) continue;
         const rang = this.rangsVrac.get(r.id) ?? 0;
         if (rang < de || rang >= a) continue;
-        this.diffuser({ t: "ressource", id: r.id, disponible: this.enJeu(r) && r.disponibleLe <= instant });
+        this.diffuser(this.messageRessource(r, this.enJeu(r) && r.disponibleLe <= instant));
       }
     }
   }
@@ -491,11 +500,24 @@ export class LieuVivant {
     }
   }
 
-  /** Une ressource a été prise : on l'enregistre et on prévient tous ceux qui sont là. */
+  /**
+   * Une ressource a été prise : on l'enregistre et on prévient tous ceux qui sont là. Semée au hasard (plan 0.9), elle
+   * part aussitôt à sa nouvelle place, où elle reparaîtra.
+   */
   prendre(r: RessourceEnBase, disponibleLe: number): void {
     r.disponibleLe = disponibleLe;
     this.base.sauverRessourceLieu(this.definition.cle, r.id, disponibleLe);
     this.diffuser({ t: "ressource", id: r.id, disponible: false });
+    const ailleurs = this.definition.semis?.ailleurs(r, this.alea, this.ressources.values());
+    if (!ailleurs) return;
+    r.x = ailleurs.x;
+    r.z = ailleurs.z;
+    this.base.deplacerRessourceLieu(this.definition.cle, r.id, r.x, r.z);
+  }
+
+  /** Le message d'une ressource qui paraît ou disparaît ; dans un lieu semé, avec sa place (elle a pu changer). */
+  private messageRessource(r: RessourceEnBase, disponible: boolean): MessageServeur {
+    return { t: "ressource", id: r.id, disponible, ...(disponible && this.definition.semis ? { x: r.x, z: r.z } : {}) };
   }
 
   tick(instant: number, dt: number): void {
@@ -513,7 +535,7 @@ export class LieuVivant {
           // délai partagé s'efface sans rien annoncer ; chacun le voit selon son propre état.
           if (this.prisesPersonnelles(r.type) !== undefined) continue;
           // Un point de vrac hors jeu revient sans se montrer : il paraîtra quand les voyageurs seront assez nombreux.
-          if (this.enJeu(r)) this.diffuser({ t: "ressource", id: r.id, disponible: true });
+          if (this.enJeu(r)) this.diffuser(this.messageRessource(r, true));
         }
         this.rendrePersonnels(instant);
       }

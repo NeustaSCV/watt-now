@@ -20,7 +20,7 @@ export type Aide =
 export const TEXTES_AIDES: Record<Aide, string> = {
   pluie: "Il pleut : la pluie couvre les bruits et les odeurs. Bon moment pour travailler sans attirer les Éteints.",
   eteint: "Un Éteint ! Lent, presque aveugle, mais il entend tout. En allure discrète, il peut te manquer.",
-  saisie: "Saisi : tape {examiner} très vite pour te dégager. Plus ils sont nombreux, plus c'est dur.",
+  saisie: "Saisi : tape deux fois {agir} ou {examiner} pour te dégager. Plus ils sont nombreux, plus il en faut.",
   saignement: "Tu saignes : un pansement arrête le saignement. Les Éteints sentent le sang de loin.",
   faim: "Tu as faim : mange quelque chose (le sac, puis « Manger »). Affamé, tu ne peux plus courir.",
   soif: "Tu as soif : bois à ta gourde. L'eau de la mare doit bouillir avant.",
