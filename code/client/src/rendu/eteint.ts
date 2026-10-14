@@ -181,11 +181,12 @@ export class VueEteint {
   private sursaut = 0;
 
   /**
-   * Il encaisse sans vaciller (l'Équipé, un coup sur deux) : un léger sursaut du corps, sans recul ni geste de coup
+   * Il encaisse sans vaciller (l'Équipé, deux coups sur trois) : un léger sursaut du corps, sans recul ni geste de coup
    * reçu. Il continue d'avancer, de griffer : le joueur doit lire « celui-là encaisse ». Pas de tache de plus.
    */
   encaisser(): void {
-    if (this.corps && !this.rampant) this.sursaut = SURSAUT.duree;
+    const debout = this.cible.etat !== "a_terre" && this.cible.etat !== "detruit" && this.cible.etat !== "dormant";
+    if (this.corps && !this.rampant && debout) this.sursaut = SURSAUT.duree;
   }
 
   /** Le sursaut : le corps bascule un instant en arrière depuis les pieds, les épaules secouées, puis revient. */
