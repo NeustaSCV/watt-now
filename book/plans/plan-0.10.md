@@ -1,6 +1,8 @@
 # Plan de développement — version 0.10 : le niveau 2, sur la côte
 
-*Version du plan : v0.3 · 2026-10-14 · **Statut : décidé, pas encore codé.***
+*Version du plan : v0.4 · 2026-10-14 · **Statut : décidé, pas encore codé ; les quatre modèles livrés.***
+
+*v0.4 (2026-10-14) : **la session « bâtiments » a livré les quatre modèles** (réponse : `.claude-travail/propositions/reponse-batiments-niveau-2.md` ; format : `batiment/CONSIGNE-NIVEAU-2.md`). Trois points tranchés (§11) : le banc de vase du pont ramené au niveau d'une cale basse ; le relief du phare gardé, avec une fonction de hauteur du sol fournie par le modèle ; l'étage de l'hôtel caché par le jeu. Un complément de demande (§6 de la demande). Le chantier K passe à 6,5 jours-agent.*
 
 *v0.3 (2026-10-14) : les **33 précisions S-01 à S-33** (§10) validées par le porteur, pour un développement simple ; les dix objets-clés **tous au fond** des lieux (R49) ; la demande à la session « bâtiments » écrite ([`demande-batiments-niveau-2.md`](demande-batiments-niveau-2.md)).*
 
@@ -24,7 +26,7 @@
   - **Le banc solaire suit le soleil** (rien la nuit ni sous la pluie, la même moyenne par beau jour) : le moulin de jerricans prend le relais par mauvais temps.
   - **Les murs et les sols** sortent en **0.10.1** (Q-0.10-1).
 - **13 chantiers en 4 vagues** (le chantier E, les murs, passe en 0.10.1), plus les **livraisons de la session « bâtiments »**, qui passent avant (§1.3).
-- **Estimation** : **≈ 39 jours-agent**, soit **une journée et demie en temps réel**, agents en parallèle (§7).
+- **Estimation** : **≈ 40 jours-agent**, soit **une journée et demie en temps réel**, agents en parallèle (§7).
 - **Les neuf questions sont tranchées** (§9).
 
 ---
@@ -57,7 +59,7 @@ Tout ce qui est décidé dans `niveau-2.md` (✅), c'est-à-dire :
 
 ### 1.3 Ce qui doit être livré avant (la session « bâtiments »)
 
-La demande est écrite : [`demande-batiments-niveau-2.md`](demande-batiments-niveau-2.md) (2026-10-14) (les chantiers H à K en dépendent) :
+La demande est écrite : [`demande-batiments-niveau-2.md`](demande-batiments-niveau-2.md) (2026-10-14) (les chantiers H à K en dépendent). **Livrés le 2026-10-14** (§11) ; il reste le complément du §6 de la demande (le banc du pont, la hauteur du sol du phare). Ce qui était demandé :
 
 | Modèle | Ce qu'il faut ajouter ou changer |
 |---|---|
@@ -238,7 +240,8 @@ Dans le code, `client/src/rendu/lieu-vide.ts` permet de brancher un lieu **avant
 
 - **Contenu** : le modèle importé (plan, milieu, vue, Éteints dont des Noyés dans la vase) ; le vrac du thème « électrique et atelier » (cuivre, résistances, cellules, lames de ressort, barres, huile) et la **bobine** sur le moteur hors-bord (et la mobylette) ; les fouilles (le fil dentaire de l'épicerie, couvertures **polaires**) ; les goulets (la brèche : un par un) ; **le péage** (§3.4, `payer_passage`) ; **la marée** (Q-0.10-7) : basse la moitié du temps, sur un cycle de 12 h de jeu (12 min réelles), au calendrier ; l'heure se lit sur l'échelle peinte du quai ; les bancs de vase fouillables à marée basse ; **la caisse du péage** au pied du poste de guet, et la voix d'en haut (Q-0.10-5) ; le semis.
 - **Fichiers** : un nouveau `commun/src/route-pont.ts` (+ milieu, Éteints), son entrée au registre, `serveur/src/route-pont.ts` ou une halte générique, `client/src/rendu/route-pont.ts`, un module partagé `commun/src/peage.ts` (repris par I).
-- **Tests** : le péage refuse 11 wotts, accepte 12, ne redemande pas au retour ; à marée haute, les bancs ne se fouillent pas.
+- **Les objets nommés du modèle** : `maree_basse` / `maree_haute` (et `obstaclesMareeHaute`), `chicane_fermee` / `chicane_ouverte` (et `obstaclesChicane`), `caisse_peage` ; **le banc ramené au niveau d'une cale basse** (complément de demande) : quand la mer monte, un joueur resté sur le banc est remis **en haut de l'escalier du quai**, avec un fondu et un message fermé par un bouton (« La mer monte : tu remontes sur le quai. »).
+- **Tests** : le péage refuse 11 wotts, accepte 12, ne redemande pas pendant 1 h ; à marée haute, les bancs ne se fouillent pas, et un joueur resté sur le banc se retrouve sur le quai.
 
 **Chantier I · H2B, la corniche** (**M à L**)
 
@@ -250,13 +253,16 @@ Dans le code, `client/src/rendu/lieu-vide.ts` permet de brancher un lieu **avant
 
 - **Contenu** : le modèle (la façade, l'intérieur et **l'étage** livré) ; le scénario « le check-in » (§3.3) : brancher une batterie à la borne, dégager le robot (Creuser), porter **sa tête** **à deux mains** (8 kg : on ne frappe pas en la portant, Q-0.10-8), la présenter, recevoir la **carte de la chambre 7** ; l'**ascenseur** (scène `ascenseur`) change de zone ; l'étage : les objets-clés (Q-0.10-2), les clients couchés qui se relèvent (dormeurs), l'Ensablé, les Noyés de la piscine ; le **pied de guéridon** (la terrasse) ; la **sortie à sens unique** (balcon ou draps : `sansArrivee`) ; la réinitialisation à 24 h (la carte expire, le robot revient) ; le fil dentaire des salles de bains.
 - **Fichiers** : `commun/src/hotel.ts` (+ milieu, Éteints, vue), registre, `serveur/src/hotel.ts` (sur `LieuVivant`), `client/src/rendu/hotel.ts`, `client/src/hotel.ts` (les interactions).
-- **Tests** : sans carte, l'ascenseur ne monte pas ; sans courant, la borne ne répond pas ; le joueur seul n'est pas reconnu ; on ne rentre pas par le balcon ; tout revient au bout de 24 h.
+- **Le modèle livré** : un seul lot de 64 × 66 m, l'étage posé au nord ; **deux groupes nommés `rez_de_chaussee` et `etage` : le jeu cache celui où le joueur n'est pas** (sinon l'étage se voit du rez-de-chaussée) ; obstacles et lumières portent un champ `niveau` ; `teleports[0]` (l'ascenseur) et `sensUnique[0]` (le balcon) ; la lumière de la borne ne s'allume qu'avec l'écran allumé ; 18 Éteints placés.
+- **Tests** : l'étage ne se voit pas du rez-de-chaussée ; sans carte, l'ascenseur ne monte pas ; sans courant, la borne ne répond pas ; le joueur seul n'est pas reconnu ; on ne rentre pas par le balcon ; tout revient au bout de 24 h.
 
 **Chantier K · L2B, le phare du cap** (**L**)
 
 - **Contenu** : le modèle (la tour, la crique, **l'épave en deux états**) ; la montée (l'escabeau sous l'escalier coupé, ou la colonne des poids) ; remplir la lanterne (pétrole de la cuve) et remettre le prisme ; **allumer, la nuit seulement** (`estNuit`) ; de jour, on prépare la montée, le pétrole, le prisme et le compresseur, et un message (fermé par un bouton) dit « Le feu ne sert qu'à la nuit tombée. » (Q-0.10-9) ; un stimulus de lumière qui fait monter les Éteints du chemin des douaniers ; **la corne de brume** (réparer le compresseur, sonner : un leurre vers la falaise) ; **la scène du cargo** (`scene: "cargo"`, 2 à 3 min réelles après l'allumage) qui ouvre la zone de l'épave (un état, comme les portes du Moulin) ; les **objets-clés** dans les conteneurs (Q-0.10-2) ; le **harpon** (la cuisine du gardien) ; la **sortie à sens unique** par la rampe du canot ; les Noyés de la crique ; la réinitialisation à 24 h.
 - **Fichiers** : `commun/src/phare.ts` (+ milieu, Éteints, vue), registre, `serveur/src/phare.ts`, `client/src/rendu/phare.ts` (l'animation du cargo), `client/src/phare.ts`.
-- **Tests** : la lanterne ne s'allume pas de jour ; sans lanterne allumée, pas de cargo ; la corne détourne un Errant ; l'épave s'ouvre une fois par 24 h ; on ne remonte pas la rampe.
+- **Le relief** (gardé, §11) : la grève (y ≈ − 8,8), le pont de l'épave (y ≈ − 4,1) et la rampe du canot (≈ 37°). **Le serveur reste en 2D** ; le client pose les personnages, les Éteints et les objets sur **la hauteur du sol** que le modèle fournit (complément de demande) ; la caméra suit.
+- **Le modèle livré** : `epave_apres` et `obstaclesEpave` (31 segments), les conteneurs marqués `apresEpave`, `FICHE.escabeau` (la marque à la craie), `sensUnique` « rampe_canot ».
+- **Tests** : un personnage descend la rampe et marche sur la grève à la bonne hauteur ; la lanterne ne s'allume pas de jour ; sans lanterne allumée, pas de cargo ; la corne détourne un Errant ; l'épave s'ouvre une fois par 24 h ; on ne remonte pas la rampe.
 
 ### Vague 3 · Le lien et la recette
 
@@ -338,11 +344,11 @@ Dans le code, `client/src/rendu/lieu-vide.ts` permet de brancher un lieu **avant
 | H · La route du pont | L | 4 |
 | I · La corniche | M à L | 3 |
 | J · Le Grand Hôtel | L | 5 |
-| K · Le phare | L | 5,5 |
+| K · Le phare (dont le relief) | L | 6,5 |
 | L · Butin, indices, textes | M | 2 |
 | M · Rythme et budget | S à M | 1 |
 | N · Recette, mesures, books, version | M | 2,5 |
-| **Total** | | **≈ 39 jours-agent** (fourchette 28 à 55) ; + ≈ 5 pour la 0.10.1 (les murs) |
+| **Total** | | **≈ 40 jours-agent** (fourchette 29 à 56) ; + ≈ 5 pour la 0.10.1 (les murs) |
 
 **En temps réel**, d'après la 0.8 (≈ 47 jours-agent estimés, faits en ≈ 7 h, agents en parallèle) et la 0.9 :
 - vague 0 (le registre) : 1 h 30 à 2 h, **seule** : c'est la fondation ;
@@ -359,7 +365,7 @@ Dans le code, `client/src/rendu/lieu-vide.ts` permet de brancher un lieu **avant
 2. **Le banc qui suit le soleil (D)** change la vie des ⚡ : leur recharge baisse par mauvais temps. Parade : la même moyenne par beau jour, la batterie de cellules et le moulin ⚙️ (une commande entre familles) ; `npm run rythme` le vérifie.
 3. **Les scènes (le cargo, l'ascenseur)** : la synchronisation entre le serveur (qui décide) et le client (qui anime) ; un joueur qui se déconnecte au milieu. Parade : le serveur garde l'état final (épave ouverte, étage atteint), le client rejoue la scène ou saute à la fin.
 4. **Les modèles** : l'étage de l'hôtel et l'épave n'existent pas ; un retard bloque J et K. Parade : `lieu-vide.ts` et des boîtes provisoires pour coder la logique d'abord.
-5. **La performance** : l'hôtel (deux cartes et un étage) et le phare (la tour, la crique, l'épave) sont de gros modèles. Parade : le budget du Book 17 par carte, la vision par pièce, et la mesure iPhone **avant** de fixer le nombre d'Éteints.
+5. **La performance** : les modèles livrés sont **à la limite** (l'hôtel à 40 appels de dessin, le phare et le bourg du pont à 39) ; les Éteints et les joueurs s'y ajoutent. Parade : **mesurer sur l'iPhone dès l'import** (pas à la fin), la vision par pièce, et au besoin une retouche demandée aux bâtiments.
 6. **L'équilibre** : les armes ★★★ face à des Éteints **inchangés** (N2-52 refusée) : le niveau 2 peut paraître facile. Parade : le Noyé, la nuit au phare, le nombre d'Éteints réglé au parcours ; `npm run rythme` le dira.
 
 ---
@@ -476,3 +482,24 @@ Décidés (MS-01 à MS-09, MS-Q1 à MS-Q8, §3.2), sortis de la 0.10 pour la gar
 - L'**entraînement direct** de la meule par le moulin (S-28 : un bonus de production à la place).
 - Les **deux cartes** de l'hôtel (S-01 : un seul lot).
 - L'**animation** du cargo, de l'ascenseur et de la marée (S-17, S-01, S-20 : des états et des fondus).
+
+---
+
+## 11. La livraison des bâtiments (2026-10-14)
+
+*Les quatre modèles sont dans `batiment/` (versions d'avant dans `.claude-travail/avant-niveau-2/`), au format de `batiment/CONSIGNE-NIVEAU-2.md` : objets nommés (`FICHE.objets`, `groupe.userData.objets`), obstacles propres à un état (`obstaclesEpave`, `obstaclesChicane`, `obstaclesMareeHaute`, `obstaclesBarricade`, `obstaclesPin`), `pieces` et `portes` au format du Moulin, `sensUnique`, `teleports` (l'hôtel). Les objets-clés d'autres niveaux sont retirés du décor ; toutes les couvertures sont polaires ; passages ≥ 1,2 m.*
+
+| Lieu | Budget livré (k triangles / appels de dessin / lumières) | Ce qui change pour le jeu |
+|---|---|---|
+| Grand Hôtel | 55,4 / **40** / 8 (un seul lot, 64 × 66 m) | `FICHE.cartes` a disparu ; le pavillon des bains est retiré ; 18 Éteints, 25 fouilles |
+| Phare | 57,6 / **39** / 5 | Le ponton retiré ; 9 dormeurs sur le chemin, 3 Noyés |
+| Route du pont | bourg 39,3 / **39** ; les autres tronçons plus légers | Le péage déplacé sur le goulet n° 2 ; le fil dentaire à l'épicerie |
+| Corniche | 46,7 / 26 au plus | La barricade refaite (on passait par les côtés) |
+
+**Les trois points renvoyés au jeu, tranchés par le porteur (2026-10-14)** :
+
+| # | Point | Décision |
+|---|---|---|
+| L-1 | **Le relief** : le banc de vase du pont (8 m sous le quai), la grève et le pont de l'épave du phare, la rampe du canot (≈ 37°) | **Au pont, aplatir** : le banc ramené au niveau d'une cale basse ; quand la mer monte, le joueur resté sur le banc est remis en haut de l'escalier. **Au phare, garder le relief** : le modèle fournit une fonction de **hauteur du sol** ; le client s'en sert, le serveur reste en 2D (+ 1 jour-agent au chantier K) |
+| L-2 | **L'étage de l'hôtel se voit** du rez-de-chaussée | Le jeu **cache le groupe** où le joueur n'est pas (chantier J) |
+| L-3 | **Les deux caisses de péage** se ressemblent sans être identiques | **On les garde** : même comportement |

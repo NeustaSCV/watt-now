@@ -91,3 +91,16 @@
 ## 5. Après la livraison
 
 La session du jeu importera les modèles (`npm run batiments:importer`, liste `A_COPIER`), reprendra les points de la `FICHE` et signalera dans une **réponse** (comme `reponse-batiment-moulin.md`) ce qui reste à retoucher.
+
+---
+
+## 6. Complément (2026-10-14), après la livraison
+
+> Merci pour la livraison (`.claude-travail/propositions/reponse-batiments-niveau-2.md`). Le porteur a tranché les trois points de la réponse ; deux demandent une retouche.
+
+| # | Demande | Pourquoi |
+|---|---|---|
+| K1 | **Route du pont : ramener le banc de vase fouillable au niveau d'une cale basse** (comme vous le proposiez), à peu près à hauteur du quai bas, avec un accès praticable (rampe douce ou quelques marches) ; garder `maree_basse` / `maree_haute` et `obstaclesMareeHaute`. Indiquer dans la `FICHE` **le point en haut de l'escalier** où le jeu remettra un joueur resté sur le banc quand la mer monte | Le jeu fait marcher tout le monde à plat : un banc 8 m plus bas demanderait de gérer le relief partout pour une halte |
+| K2 | **Phare : exporter une fonction `hauteurSol(x, z)`** (dans le repère du jeu, ou avec la conversion écrite dans la `FICHE`) qui donne la hauteur du sol où l'on marche : la tour et l'enclos (0), la rampe du canot (la pente), la grève (≈ − 8,8), le pont de l'épave et les conteneurs (≈ − 4,1, seulement quand `epave_apres` est visible : un second paramètre ou une seconde fonction). Hors des endroits où l'on marche, n'importe quelle valeur | Le relief du phare est gardé (le scénario en a besoin) ; le client posera les personnages sur cette hauteur, le serveur reste en 2D. Au gué, le jeu a dû recopier la fonction `hauteur` du modèle faute d'export |
+| — | **L'étage de l'hôtel** : rien à faire, le jeu cache le groupe `etage` ou `rez_de_chaussee` | — |
+| — | **Les deux caisses de péage** : rien à faire, on les garde | — |
