@@ -143,10 +143,11 @@ export const SEGMENTS_HOTEL: readonly SegmentHotel[] = [
   [-25.35, 19.65, -23.85, 19.65, "cabine de plage", R],
   [5, 23, 9, 24.2, "barque", R],
   [-31.6, -11, -31.6, 12.8, "ganivelles (bord du lot)", R],
-  [-31.6, 17.2, -31.6, 28, "ganivelles (bord du lot)", R],
+  [-31.6, 12.8, -31.6, 17.2, "ganivelle en travers de la promenade (bord du lot)", R],
+  [-31.6, 17.2, -31.6, 32.2, "ganivelles (bord du lot)", R],
   [31.6, -9.6, 31.6, 12.8, "ganivelles (bord du lot)", R],
-  [31.6, 17.2, 31.6, 28, "ganivelles (bord du lot)", R],
-  [-32, 28.2, 32, 28.2, "la mer (bord du lot)", R],
+  [31.6, 16.7, 31.6, 32.2, "ganivelles (bord du lot)", R],
+  [-32, 31.7, 32, 31.7, "le large : on perd pied (bord du lot)", R],
   [-32, -11, -29.25, -11, "mur de la cour de service (bord du lot)", R],
   [17.25, -9.6, 32, -9.6, "mur de la cour de service (bord du lot)", R],
   [10.2, -16.05, 13.8, -16.05, "cheminée", R],
@@ -257,20 +258,21 @@ export function boitesDuSegment(segment: SegmentHotel): Boite[] {
 
 // ---------- L'eau peu profonde, au sud (0.10, R52 ; décision du porteur du 2026-10-15) ----------
 
-/** Le bord de l'eau du modèle (« la mer (bord du lot) », lot z 28,2), dans le repère du jeu. */
-export const BORD_EAU_HOTEL = jeuHotel(0, 28.2).z;
 /**
- * Comme à la grève du phare (commun/src/phare.ts) : le bord de l'eau ne bloque plus ; une bande d'eau peu profonde de
- * 3,5 m le longe, où l'on marche jusqu'aux genoux, ralenti (FREIN_EAU_HOTEL), sans courir ; les Éteints y vont aussi,
- * ralentis de même. Au-delà, on perd pied : la ligne du large (LARGE_HOTEL) arrête tout le monde.
+ * La mer du modèle (FICHE.mer, G-3) : l'eau claire, où l'on marche jusqu'aux genoux, du bord de l'eau (lot z 28,2) à la
+ * ligne de brisants (lot z 31,7), où l'obstacle du modèle « le large : on perd pied » arrête tout le monde. Comme à la
+ * grève du phare (commun/src/phare.ts) : on y avance ralenti (FREIN_EAU_HOTEL), sans courir ; les Éteints aussi. Le test
+ * client/src/rendu/hotel.test.ts vérifie que ces deux lignes sont celles du modèle.
  */
-export const LARGEUR_EAU_HOTEL = 3.5;
-export const LARGE_HOTEL = BORD_EAU_HOTEL + LARGEUR_EAU_HOTEL;
+export const MER_HOTEL = { bord: 28.2, brisants: 31.7 } as const;
+/** Le bord de l'eau, dans le repère du jeu. */
+export const BORD_EAU_HOTEL = jeuHotel(0, MER_HOTEL.bord).z;
+/** La ligne du large (les brisants), dans le repère du jeu. */
+export const LARGE_HOTEL = jeuHotel(0, MER_HOTEL.brisants).z;
 /** Dans l'eau jusqu'aux genoux, on avance à 60 % de son allure (comme au phare). */
 export const FREIN_EAU_HOTEL = 0.6;
 /** De combien on s'enfonce dans l'eau (m), au plus : jusqu'aux genoux. */
 export const ENFONCE_EAU_HOTEL = 0.42;
-const SEGMENT_LARGE: SegmentHotel = [-32, 28.2 + LARGEUR_EAU_HOTEL, 32, 28.2 + LARGEUR_EAU_HOTEL, "le large (on perd pied)", R];
 
 /** Ce point du jeu est-il dans l'eau peu profonde, au sud de la plage ? */
 export function dansLEauHotel(x: number, z: number): boolean {
@@ -285,9 +287,7 @@ export function profondeurEauHotel(x: number, z: number): number {
 
 /** Tous les obstacles de l'hôtel (les grilles de l'ascenseur restent fermées : on monte par une téléportation, S-01). */
 export function obstaclesHotel(): Boite[] {
-  // Le bord de l'eau du modèle ne bloque plus : la ligne du large, 3,5 m plus loin, le remplace (0.10, R52).
-  const segments = SEGMENTS_HOTEL.filter((s) => s[4] !== "la mer (bord du lot)");
-  return [...segments, SEGMENT_LARGE, BORD_DU_BALCON].flatMap(boitesDuSegment);
+  return [...SEGMENTS_HOTEL, BORD_DU_BALCON].flatMap(boitesDuSegment);
 }
 
 /** L'hôtel tel qu'on le trouve : rien n'y change de place (la borne, le robot, l'ascenseur sont des états, pas des murs). */
@@ -303,10 +303,11 @@ export const ZONE_HOTEL: Zone = (() => {
 const PROMENADE = jeuHotel(28, 15);
 
 /**
- * Le panneau de sortie (0.10, R52) : planté par le jeu juste au-delà de la sortie, au bord nord de la promenade prolongée,
- * tourné vers la caméra du jeu (client/src/rendu/bords-hotel.ts) ; on le lit (commun/src/guidage.ts, E-16), une lanterne l'éclaire.
+ * Le panneau de sortie du modèle (FICHE.panneaux, 0.10, G-1 : lot x 32,9, z 12,2) : juste au-delà de la sortie, au bord
+ * nord de la promenade prolongée ; on le lit (commun/src/guidage.ts, E-16), la lanterne du modèle l'éclaire la nuit. Le
+ * test client/src/rendu/hotel.test.ts vérifie qu'il est là où le modèle le plante.
  */
-export const PANNEAU_SORTIE_HOTEL = { x: HOTEL.largeur + 0.3, z: PROMENADE.z - 2.8 } as const;
+export const PANNEAU_SORTIE_HOTEL = jeuHotel(32.9, 12.2);
 
 export const SORTIES_HOTEL: Sortie[] = [
   {

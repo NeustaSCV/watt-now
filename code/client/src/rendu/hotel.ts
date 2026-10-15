@@ -12,6 +12,9 @@
 //   l'écran de la borne s'allume avec la batterie, et sa lumière avec lui.
 // - Ce qu'on emporte et qui est dessiné dans le modèle (les objets-clés de l'étage, le pied de guéridon) se cache quand
 //   on l'a pris, et revient avec lui.
+// - Ce qui borde le lieu est dans le modèle depuis la 0.10 (R52) : la promenade prolongée, les ganivelles, les dunes, la
+//   mer claire puis profonde, la rue au nord (son groupe `alentours`), le panneau de sortie et sa lanterne. À l'étage, on
+//   cache les alentours (on est en haut : un sol sombre autour des murs).
 
 import * as THREE from "three";
 // @ts-ignore — le modèle est en JavaScript (session « bâtiments »), sans déclaration de types.
@@ -19,10 +22,8 @@ import { creer as creerModele } from "../batiments/grand-hotel/modele.js";
 import { BORNE, HOTEL, borneAlimentee, niveauHotel, type EtatHotel, type NiveauHotel } from "../../../commun/src/hotel.ts";
 import type { Boite } from "../../../commun/src/lieux.ts";
 import type { TypeRessource } from "../../../commun/src/terrain.ts";
-import { creerBordsHotel } from "./bords-hotel.ts";
-import { lumieresLanternes } from "./decor-cote.ts";
 import { estomperToits } from "./halte.ts";
-import type { LanternePanneau } from "./lanterne-panneau.ts";
+import { estLanternePanneau, lumiereLanterneModele } from "./lanterne-panneau.ts";
 import type { SourceLumiere } from "./lumieres.ts";
 import { nommer } from "./materiaux.ts";
 
@@ -57,15 +58,13 @@ interface LumiereModele {
 /** Ce que le décor de l'hôtel garde pour s'animer. */
 interface EtatDecor {
   niveaux: Record<NiveauHotel, THREE.Object3D | null>;
-  /** Autour du lot (le sable, la mer, la cour), vus du rez-de-chaussée ; le vide autour de l'étage. */
-  alentours: THREE.Object3D;
+  /** Autour du lot (les alentours du modèle : le sable, la mer, la rue), vus du rez-de-chaussée ; le vide autour de l'étage. */
+  alentours: THREE.Object3D | null;
   vide: THREE.Object3D;
   objets: Record<string, THREE.Object3D>;
   /** La boîte d'origine de chaque objet qui se déplace (repère du jeu). */
   boites: Record<string, THREE.Box3>;
   lumieres: LumiereModele[];
-  /** La lanterne du panneau de sortie (0.10, R52). */
-  lanternes: LanternePanneau[];
 }
 
 const etats = new WeakMap<THREE.Object3D, EtatDecor>();
@@ -81,64 +80,18 @@ export function creerHotel(): THREE.Group {
   const toits = (modele.userData.toits as { boite: Boite; horsDe?: Boite }[]).map((t) => ({ ...t, boite: auJeu(t.boite), ...(t.horsDe ? { horsDe: auJeu(t.horsDe) } : {}) }));
   delete modele.userData.toits;
   groupe.userData.toits = toits;
-  const alentours = creerAlentours();
-  // 0.10 (R52) : la promenade prolongée, les ganivelles, les dunes, la bande d'eau peu profonde, le panneau de sortie
-  // (rendu/bords-hotel.ts) ; avec les alentours (on ne les voit pas de l'étage).
-  const bords = creerBordsHotel();
-  alentours.add(bords.groupe);
+  const alentours = modele.getObjectByName("alentours") ?? null;
   const vide = creerVide();
-  groupe.add(modele, alentours, vide);
-  nommer(groupe, ["hotel", "alentours", "vide"]);
+  groupe.add(modele, vide);
+  nommer(groupe, ["hotel", "vide"]);
   modele.updateMatrixWorld(true);
   const objets = (modele.userData.objets ?? {}) as Record<string, THREE.Object3D>;
   const boites: Record<string, THREE.Box3> = {};
   for (const id of ["batterie_panneau", "tete_robot"]) if (objets[id]) boites[id] = new THREE.Box3().setFromObject(objets[id]);
   const lumieres = (modele.userData.lumieres as LumiereModele[]).map((l) => ({ ...l, x: l.x + OX, z: l.z + OZ }));
   const niveau = (nom: string) => modele.children.find((o) => o.name === nom) ?? null;
-  etats.set(groupe, { niveaux: { rez_de_chaussee: niveau("rez_de_chaussee"), etage: niveau("etage") }, alentours, vide, objets, boites, lumieres, lanternes: bords.lanternes });
+  etats.set(groupe, { niveaux: { rez_de_chaussee: niveau("rez_de_chaussee"), etage: niveau("etage") }, alentours, vide, objets, boites, lumieres });
   return groupe;
-}
-
-/**
- * Autour du lot : le sable de la plage et de la promenade à l'est et à l'ouest, la mer au sud, la cour de service et
- * la rue au nord. Deux grands aplats (un appel de dessin chacun) : le bord du lot ne se voit pas.
- */
-function creerAlentours(): THREE.Group {
-  const g = new THREE.Group();
-  const L = HOTEL.largeur;
-  const P = HOTEL.profondeur;
-  const M = 60;
-  const sol: number[] = [];
-  const couleurs: number[] = [];
-  const c = new THREE.Color();
-  const rect = (x0: number, z0: number, x1: number, z1: number, couleur: number, y = -0.02) => {
-    c.setHex(couleur);
-    for (const [x, z] of [[x0, z0], [x0, z1], [x1, z1], [x0, z0], [x1, z1], [x1, z0]] as const) {
-      sol.push(x, y, z);
-      couleurs.push(c.r, c.g, c.b);
-    }
-  };
-  const sable = 0xd9c49a;
-  const cour = 0x8f8a80;
-  // Le nord (la cour de service, la rue), puis l'ouest et l'est (les dunes), jusqu'à la mer (lot : z 28,2).
-  rect(-M, -M, L + M, 0, cour);
-  rect(-M, 0, 0, OZ + 33.2, sable);
-  rect(L, 0, L + M, OZ + 33.2, sable);
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute("position", new THREE.Float32BufferAttribute(sol, 3));
-  geo.setAttribute("color", new THREE.Float32BufferAttribute(couleurs, 3));
-  geo.computeVertexNormals();
-  const terre = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 }));
-  terre.receiveShadow = true;
-  g.add(terre);
-  // La mer, au-delà du lot, jusqu'à l'horizon.
-  const mer = new THREE.Mesh(
-    new THREE.PlaneGeometry(L + 2 * M, M).rotateX(-Math.PI / 2).translate(L / 2, -0.25, P + M / 2 - 0.5),
-    new THREE.MeshStandardMaterial({ color: 0x4f7f8c, roughness: 0.25, metalness: 0.1 }),
-  );
-  mer.receiveShadow = true;
-  g.add(mer);
-  return g;
 }
 
 /**
@@ -216,7 +169,7 @@ export function animerHotel(
   const ici = niveauHotel(x, z);
   if (e.niveaux.rez_de_chaussee) e.niveaux.rez_de_chaussee.visible = ici === "rez_de_chaussee";
   if (e.niveaux.etage) e.niveaux.etage.visible = ici === "etage";
-  e.alentours.visible = ici === "rez_de_chaussee";
+  if (e.alentours) e.alentours.visible = ici === "rez_de_chaussee";
   e.vide.visible = ici === "etage";
   estomperToits(decor, x, z, dt, lacet);
   for (const r of ressources) {
@@ -242,11 +195,14 @@ export function lumieresHotel(decor: THREE.Object3D | undefined, nuit: boolean, 
   const e = decor ? etatDe(decor) : undefined;
   if (!e || !p) return [];
   const ici = niveauHotel(p.x, p.z);
-  // La lanterne du panneau de sortie (0.10, R52), au rez-de-chaussée : son verre luit la nuit.
-  const lanternes = lumieresLanternes(e.lanternes, nuit && ici === "rez_de_chaussee");
-  const sources: SourceLumiere[] = [...lanternes];
+  const sources: SourceLumiere[] = [];
   for (const l of e.lumieres) {
     if (l.niveau !== ici) continue;
+    // La lanterne du panneau de sortie (0.10, R0-1) : celle du modèle, la nuit seulement.
+    if (estLanternePanneau(l.nature)) {
+      if (nuit) sources.push(lumiereLanterneModele(l, { x: 0, z: 0 }));
+      continue;
+    }
     const borne = l.nature.startsWith("écran de la borne");
     if (borne ? !etat || !borneAlimentee(etat) : !nuit) continue;
     if (l.nature.startsWith("panneau") && etat && etat.batterie !== "panneau") continue;
