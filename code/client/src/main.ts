@@ -47,6 +47,7 @@ import { ClientHotel } from "./hotel.ts";
 import { Guidage } from "./guidage.ts";
 import { animerPhare, creerPhare } from "./rendu/phare.ts";
 import { PhareClient } from "./phare.ts";
+import { hauteurSolLieu } from "./sol-lieu.ts";
 import { ScenePhareCargo } from "./phare-cargo.ts";
 import { pieceMoulin } from "../../commun/src/moulin.ts";
 // Le Gué-aux-Saules (plan 0.8, chantier 11) : son décor, son bac, sa crue, ses sons.
@@ -254,7 +255,8 @@ function aider(aide: Aide): void {
 }
 /** Le guichet des Compteurs, tel qu'on le voit (au Carrefour seulement). */
 let vueComptoir: VueComptoir | null = null;
-const sang = new Sang(scene.scene);
+// Le sang se pose sur le sol du lieu (au phare, la grève et l'épave sont 4 à 9 m sous le plateau : client/src/sol-lieu.ts).
+const sang = new Sang(scene.scene, (x, z) => hauteurSolLieu(lieu, x, z, portesCoop));
 /** Libellé de l'action en cours (pour animer le pédalier). */
 let actionEnCours = "";
 let inventaire: Inventaire = {};
