@@ -25,7 +25,7 @@ if (!(globalThis as { document?: unknown }).document) Object.assign(globalThis, 
 const { ECRITEAU_SENTIER, NIVEAU_MER, auModele, dansLEauPhare, etageDuPhare, jeu } = await import("../../../commun/src/phare.ts");
 const { EPAVE_MODELE } = await import("../../../commun/src/phare-modele.ts");
 const { ecriteauProche } = await import("../../../commun/src/guidage.ts");
-const { animerPhare, creerPhare, solPhare, ENFONCE_EAU } = await import("./phare.ts");
+const { animerPhare, creerPhare, lumieresPhare, solPhare, ENFONCE_EAU } = await import("./phare.ts");
 const { conteneursEpave, ouvrirLaCoupee } = await import("./phare-epave.ts");
 const { hauteurPiedsLieu, hauteurSolLieu, hauteurSurfaceLieu } = await import("../sol-lieu.ts");
 const { PhareClient } = await import("../phare.ts");
@@ -169,21 +169,37 @@ test("H : le pavois s'ouvre au haut de l'échelle de coupée (la tôle abaissée
   assert.equal(ouvrirLaCoupee(epave), 0, "déjà ouvert");
 });
 
-test("G : le panneau du sentier côtier se lit à la sortie de la grève ; il est planté sur les galets, dans le maillage des panneaux du modèle", () => {
-  const e = ecriteauProche("phare", ECRITEAU_SENTIER.x + 0.5, ECRITEAU_SENTIER.z + 1.2);
-  assert.equal(e?.ecriteau.id, "E-12");
-  assert.match(e!.ecriteau.texte, /Sentier côtier · ← Port · 6 km/);
-  // Près de la sortie de la grève (à l'ouest), sur les galets.
-  assert.equal(etageDuPhare(ECRITEAU_SENTIER.x, ECRITEAU_SENTIER.z, false), "bas");
-  const decor = creerPhare();
+test("G : le panneau du sentier côtier se lit à son nouvel endroit, près de l'eau, au départ du sentier ; une lanterne l'éclaire la nuit", () => {
+  // Près de l'eau (le bord de l'eau du modèle est à z 23,3 à cet endroit), à quelques pas du bas de la rampe.
   const m = auModele(ECRITEAU_SENTIER.x, ECRITEAU_SENTIER.z);
-  const y = solPhare(ECRITEAU_SENTIER.x, ECRITEAU_SENTIER.z, false) + 1.3;
-  let trouve = false;
-  decor.traverse((o) => {
-    const g = (o as THREE.Mesh).geometry;
-    if (!(o as THREE.Mesh).isMesh || !g) return;
-    const p = g.getAttribute("position");
-    for (let i = 0; i < p.count && !trouve; i++) if (Math.abs(p.getX(i) - m.x) < 0.5 && Math.abs(p.getY(i) - y) < 0.35 && Math.abs(p.getZ(i) - m.z - 0.07) < 0.01) trouve = true;
-  });
-  assert.ok(trouve, "la planche est là");
+  assert.ok(m.z > 21.5 && m.z < 23, `à ${m.z} du nord du lot`);
+  assert.equal(etageDuPhare(ECRITEAU_SENTIER.x, ECRITEAU_SENTIER.z, false), "bas");
+  assert.ok(!dansLEauPhare(ECRITEAU_SENTIER.x, ECRITEAU_SENTIER.z, false), "sur les galets");
+  const basRampe = jeu(-24, 22.3);
+  assert.ok(Math.hypot(basRampe.x - ECRITEAU_SENTIER.x, basRampe.z - ECRITEAU_SENTIER.z) < 3, "à trois pas du bas de la rampe");
+  // On le lit (« Lire »), devant lui comme depuis le bas de la rampe.
+  for (const [dx, dz] of [[0.6, 0.6], [1.2, 0.3], [-0.5, 1.0]]) {
+    const e = ecriteauProche("phare", ECRITEAU_SENTIER.x + dx!, ECRITEAU_SENTIER.z + dz!);
+    assert.equal(e?.ecriteau.id, "E-12");
+    assert.match(e!.ecriteau.texte, /Sentier côtier · ← Port · 6 km/);
+  }
+  // Sa planche et sa lanterne sont là, au-dessus des galets, à cet endroit.
+  const decor = creerPhare();
+  const panneau = decor.getObjectByName("panneau du sentier côtier")!;
+  assert.ok(panneau, "le panneau");
+  const b = new THREE.Box3().setFromObject(panneau);
+  const sol = solPhare(ECRITEAU_SENTIER.x, ECRITEAU_SENTIER.z, false);
+  assert.ok(b.min.y > sol - 0.1 && b.max.y > sol + 2.4 && b.max.y < sol + 3.1, `de ${b.min.y} à ${b.max.y}`);
+  // (Le décor est posé dans le repère du jeu.)
+  assert.ok(Math.abs((b.min.x + b.max.x) / 2 - ECRITEAU_SENTIER.x) < 1 && Math.abs((b.min.z + b.max.z) / 2 - ECRITEAU_SENTIER.z) < 1);
+  assert.ok(decor.getObjectByName("lanterne de panneau"), "la lanterne");
+  // La nuit, sa lumière est une source du phare ; le jour, non. Le verre luit la nuit.
+  const lanterne = lumieresPhare({ etat: null, epave: false }, true).find((s) => Math.hypot(s.x - ECRITEAU_SENTIER.x, s.z - ECRITEAU_SENTIER.z) < 1.5);
+  assert.ok(lanterne && lanterne.y > sol + 1.8, "la lanterne éclaire le panneau, la nuit");
+  assert.equal(lumieresPhare({ etat: null, epave: false }, false).length, 0);
+  animerPhare(decor, ECRITEAU_SENTIER.x, ECRITEAU_SENTIER.z + 1, 0.016, Math.PI / 4, { ...VU, nuit: true }, []);
+  const verre = (decor.getObjectByName("lanterne de panneau") as THREE.Mesh).material as THREE.MeshStandardMaterial;
+  assert.ok(verre.emissiveIntensity > 1);
+  animerPhare(decor, ECRITEAU_SENTIER.x, ECRITEAU_SENTIER.z + 1, 0.016, Math.PI / 4, { ...VU, nuit: false }, []);
+  assert.equal(verre.emissiveIntensity, 0);
 });
