@@ -36,8 +36,14 @@ export interface LanternePanneau {
   allumer(nuit: boolean): void;
 }
 
-/** La lumière d'une lanterne : chaude, un peu vacillante (une flamme), de quoi éclairer le panneau et ses abords. */
-export const LUMIERE_LANTERNE = { couleur: 0xffcf8a, intensite: 5, portee: 7, decroissance: 1.5, vacillement: 0.12 } as const;
+/**
+ * La lumière d'une lanterne : chaude, un peu vacillante (une flamme), de quoi éclairer le panneau et ses abords, pas plus
+ * loin. Sa portée reste courte (4,2 m) : plus loin, près de l'eau (la grève du phare), son reflet sur la mer luisante
+ * faisait une tache claire à quatre ou cinq mètres sous la lanterne, qu'on prenait pour un halo mal placé.
+ */
+export const LUMIERE_LANTERNE = { couleur: 0xffcf8a, intensite: 6, portee: 4.2, decroissance: 1.5, vacillement: 0.12 } as const;
+/** Le milieu du verre de la lanterne, sous le haut du poteau (m) : là qu'est posée sa lumière. */
+export const VERRE_SOUS_POTENCE = 0.24;
 /** L'éclat du verre, la nuit (sur la carte d'émission) ; le jour, éteint. */
 const ECLAT = { nuit: 2.4, jour: 0 } as const;
 
@@ -73,7 +79,7 @@ export function poserLanterne(pose: PoseLanterne): LanternePanneau {
   const a = pose.avance ?? 0.45;
   const fer = (l: number, h: number, p: number, x: number, y: number, z: number) => piece(new THREE.BoxGeometry(l, h, p).translate(x, y, z), 0);
   // Dans le repère du poteau (y : depuis son haut ; +z : devant le panneau).
-  const yL = -0.24; // le milieu du verre, sous la potence
+  const yL = -VERRE_SOUS_POTENCE; // le milieu du verre, sous la potence
   const pieces = [
     // La potence : un bras de fer, et sa jambe de force.
     fer(0.04, 0.04, a + 0.06, 0, 0, a / 2 - 0.01),
