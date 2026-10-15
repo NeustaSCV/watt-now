@@ -18,7 +18,7 @@
 // Ce fichier n'importe des autres modules du jeu que des types, murs.ts, grille.ts et vue.ts (lieux.ts l'importe pour
 // sa zone et ses sorties).
 
-import { creerGrille } from "./grille.ts";
+import { boitesPres, creerGrille } from "./grille.ts";
 import type { Boite, Sortie, Zone } from "./lieux.ts";
 import { declarerObstaclesBas } from "./murs.ts";
 import type { TypeRessourceHotel } from "./ressources-hotel.ts";
@@ -554,14 +554,15 @@ const placeValide = (v: unknown): v is PlaceAuSol =>
 
 /**
  * Relit l'état gardé en base : une partie d'avant la 0.10 n'en a pas (l'hôtel neuf). Ce qui était dans les bras (une
- * coupure) revient à sa place d'origine.
+ * coupure) revient à sa place d'origine. Ce qui avait été posé devant la grille de l'ascenseur (avant qu'on l'en écarte)
+ * en est écarté : sinon, il ne se reprend plus.
  */
 export function lireEtatHotel(brut: unknown): EtatHotel {
   const neuf = etatHotelNeuf();
   if (typeof brut !== "object" || brut === null) return neuf;
   const b = brut as Record<string, unknown>;
-  const batterie = b.batterie === "borne" ? "borne" : placeValide(b.batterie) ? { x: b.batterie.x, z: b.batterie.z } : "panneau";
-  const tete = b.tete === "borne" ? "borne" : placeValide(b.tete) ? { x: b.tete.x, z: b.tete.z } : "robot";
+  const batterie = b.batterie === "borne" ? "borne" : placeValide(b.batterie) ? horsDeLAscenseur({ x: b.batterie.x, z: b.batterie.z }) : "panneau";
+  const tete = b.tete === "borne" ? "borne" : placeValide(b.tete) ? horsDeLAscenseur({ x: b.tete.x, z: b.tete.z }) : "robot";
   return { batterie, tete, degage: b.degage === true || tete !== "robot" };
 }
 
@@ -586,6 +587,53 @@ export function ouEst(e: EtatHotel, objet: ObjetPorte): PlaceAuSol | null {
   if (place === "robot") return ROBOT;
   if (place === "borne") return BORNE;
   return place;
+}
+
+/** Le rayon de la grille de l'ascenseur pour les propositions (le client compte la portée depuis son bord). */
+export const RAYON_GRILLE = 0.9;
+
+/**
+ * Ce qu'on pose devant la grille de l'ascenseur (la batterie, la tête) en est écarté jusqu'à cette distance : sinon,
+ * l'appel de l'ascenseur, plus proche, passe avant « Prendre », et l'objet ne se reprend plus (essai du porteur, 0.10).
+ */
+export const ECART_ASCENSEUR = PORTEE_HOTEL + 0.3;
+
+/** Le rayon d'un personnage (deplacement.ts) : l'objet écarté est posé là où l'on peut se tenir. */
+const RAYON_PERSONNAGE = 0.35;
+
+const libreAuSol = (x: number, z: number): boolean => {
+  if (x < ZONE_HOTEL.xMin || x > ZONE_HOTEL.xMax || z < ZONE_HOTEL.zMin || z > ZONE_HOTEL.zMax) return false;
+  const r = RAYON_PERSONNAGE;
+  const boites = ZONE_HOTEL.grille ? boitesPres(ZONE_HOTEL.grille, x, z) : ZONE_HOTEL.obstacles;
+  return !boites.some((b) => Math.abs(x - b.x) <= b.l / 2 + r && Math.abs(z - b.z) <= b.p / 2 + r);
+};
+
+/**
+ * Un objet posé trop près d'une grille de l'ascenseur (en bas comme en haut) est poussé à ECART_ASCENSEUR de la grille,
+ * du côté de `depuis` (celui qui le pose ; sinon, du côté où il est tombé), sur un point libre de la même pièce que
+ * l'arrivée de l'ascenseur. Si cette direction est bouchée, on tourne de 20° en 20° autour de la grille. Ailleurs (ou
+ * sans point libre), il reste où il est.
+ */
+export function horsDeLAscenseur(ou: PlaceAuSol, depuis?: { x: number; z: number }): PlaceAuSol {
+  for (const cote of [ASCENSEUR.bas, ASCENSEUR.haut]) {
+    const g = cote.grille;
+    if (Math.hypot(ou.x - g.x, ou.z - g.z) >= ECART_ASCENSEUR) continue;
+    const piece = pieceHotel(cote.arrivee.x, cote.arrivee.z);
+    const vers = [depuis, ou, cote.arrivee].find((v) => v && Math.hypot(v.x - g.x, v.z - g.z) > 0.05)!;
+    const angle = Math.atan2(vers.x - g.x, vers.z - g.z);
+    // Un centimètre de plus : arrondi au centimètre, l'objet reste hors de l'écart (relu, il ne bouge plus).
+    const d = ECART_ASCENSEUR + 0.01;
+    for (let pas = 0; pas <= 9; pas++) {
+      for (const signe of pas === 0 ? [1] : [1, -1]) {
+        const a = angle + (signe * pas * Math.PI) / 9;
+        const x = Math.round((g.x + Math.sin(a) * d) * 100) / 100;
+        const z = Math.round((g.z + Math.cos(a) * d) * 100) / 100;
+        if (pieceHotel(x, z) === piece && libreAuSol(x, z)) return { x, z };
+      }
+    }
+    return ou;
+  }
+  return ou;
 }
 
 // ---------- Le butin (S-03 ; FICHE.fouille, FICHE.objets) ----------

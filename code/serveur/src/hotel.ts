@@ -34,6 +34,7 @@ import {
   borneAlimentee,
   dansLesBrasHotel,
   etatHotelNeuf,
+  horsDeLAscenseur,
   lireEtatHotel,
   niveauHotel,
   ouEst,
@@ -117,7 +118,7 @@ export class LieuHotel extends LieuVivant {
     const porte = dansLesBrasHotel(this.checkIn);
     if (porte) {
       const h = v.humain();
-      this.deposer(porte, { x: h.x, z: h.z });
+      this.deposer(porte, horsDeLAscenseur({ x: h.x, z: h.z }));
       this.acces.sauver();
     }
     if (ctx) {
@@ -147,12 +148,16 @@ export class LieuHotel extends LieuVivant {
     return porte ? NOMS_PORTES[porte] : null;
   }
 
-  /** Poser devant soi ce qu'on porte (comme l'escabeau : à 0,9 m devant). */
+  /**
+   * Poser devant soi ce qu'on porte (comme l'escabeau : à 0,9 m devant). Devant la grille de l'ascenseur, l'objet en est
+   * écarté, de notre côté : l'appel de l'ascenseur ne passe pas avant « Prendre » (horsDeLAscenseur).
+   */
   override poser(ctx: ContexteLieu): boolean {
     const porte = dansLesBrasHotel(this.checkIn);
     if (!porte) return false;
     const p = ctx.position();
-    this.deposer(porte, { x: Math.round((p.x + Math.sin(p.o) * 0.9) * 100) / 100, z: Math.round((p.z + Math.cos(p.o) * 0.9) * 100) / 100 });
+    const devant = { x: Math.round((p.x + Math.sin(p.o) * 0.9) * 100) / 100, z: Math.round((p.z + Math.cos(p.o) * 0.9) * 100) / 100 };
+    this.deposer(porte, horsDeLAscenseur(devant, p));
     this.changer();
     return true;
   }
