@@ -41,6 +41,7 @@ import { texteAVenir } from "../../commun/src/lignees.ts";
 import { enteteFiche, piedFiche } from "./fiche-examiner.ts";
 import { brancherFicheBanc, htmlFicheBanc, type GesteBanc } from "./fiche-banc.ts";
 import { brancherCoffre, enteteCoffre } from "./panneau-coffre.ts";
+import { ajusterOffre, ajusterWotts, brancherEchange, htmlEchange, lirePlaces, remettrePlaces } from "./panneau-echange.ts";
 import { CaissePeage } from "./panneau-peage.ts";
 import type { Passage } from "../../commun/src/peage.ts";
 import { texteLieu, type Alentours } from "../../commun/src/lieu-recette.ts";
@@ -338,6 +339,8 @@ export class Hud {
   private monOffre: OffreEchange = { objets: {}, wotts: 0 };
   private envoiOffre = 0;
   private dernierEchange = "";
+  /** L'objet choisi dans le panneau d'échange (0.10.1, A3) : gardé d'un dessin à l'autre. */
+  private choixEchange: CleObjet | null = null;
   private dernierMode = "";
   private images = 0;
   private depuis = performance.now();
@@ -814,7 +817,10 @@ export class Hud {
       this.echangeOuvert(false);
       return;
     }
-    if (nouveau) this.monOffre = { objets: {}, wotts: 0 };
+    if (nouveau) {
+      this.monOffre = { objets: {}, wotts: 0 };
+      this.choixEchange = null;
+    }
     // Le serveur fait foi : s'il a refusé une offre, on repart de la sienne.
     if (Date.now() - this.envoiOffre > 600) this.monOffre = { objets: { ...e.moi.objets }, wotts: e.moi.wotts };
     if (nouveau) this.ouvrir(this.panneauEchange, true);
@@ -847,64 +853,49 @@ export class Hud {
     const e = this.echange;
     const el = this.panneauEchange;
     if (!e || el.hidden) return;
-    const o = this.monOffre;
-    const mesObjets = (Object.entries(this.inventaire) as [CleObjet, number][])
-      // Un exemplaire étoilé s'échange comme le reste, avec ses étoiles (Book 25 §4.2).
-      .filter(([t, n]) => n > 0 && estCleObjet(t))
-      .map(([type, n]) => {
-        const mis = o.objets[type] ?? 0;
-        return `<li class="${mis > 0 ? "mis" : ""}">${icone(typeDe(type), 28)}<span class="nom">${nomEtoile(type)}<small>${n} dans ton sac</small></span>
-          <span class="pas"><button type="button" data-moins="${type}" ${mis > 0 ? "" : "disabled"} aria-label="Moins">−</button><b>${mis}</b><button type="button" data-plus="${type}" ${mis < n ? "" : "disabled"} aria-label="Plus">+</button></span></li>`;
-      })
-      .join("");
-    const sesObjets = (Object.entries(e.lui.objets) as [CleObjet, number][])
-      .filter(([, n]) => n > 0)
-      .map(([type, n]) => `<li class="mis">${icone(typeDe(type), 28)}<span class="nom">${nomEtoile(type, n)}</span></li>`)
-      .join("");
-    const html = `
-      <header><h2>Échange avec ${e.avec.pseudo}</h2><button type="button" class="fermer" aria-label="Annuler l'échange">✕</button></header>
-      <div class="colonnes">
-        <section>
-          <h3>Tu donnes</h3>
-          <ul class="lignes">${mesObjets || '<li class="vide">Ton sac est vide.</li>'}</ul>
-          <div class="wotts-offre"><span>Wotts</span>
-            <button type="button" data-wotts="-10">−10</button><b>${formaterWotts(o.wotts)}</b><button type="button" data-wotts="10">+10</button>
-            <small>en poche : ${formaterWotts(this.wotts.poche)}</small></div>
-        </section>
-        <section class="recoit">
-          <h3>Tu reçois</h3>
-          <ul class="lignes">${sesObjets || `<li class="vide">${e.avec.pseudo} n'a encore rien posé.</li>`}</ul>
-          <div class="wotts-offre"><span>Wotts</span><b>${formaterWotts(e.lui.wotts)}</b></div>
-        </section>
-      </div>
-      <p class="accords"><span class="${e.accordMoi ? "ok" : ""}">${e.accordMoi ? "✓ Tu es d'accord" : "Tu n'as pas encore dit oui"}</span>
-        <span class="${e.accordLui ? "ok" : ""}">${e.accordLui ? `✓ ${e.avec.pseudo} est d'accord` : `${e.avec.pseudo} réfléchit…`}</span></p>
-      <div class="boutons"><button type="button" data-annuler>Annuler</button>
-        <button type="button" class="oui ${e.accordMoi ? "actif" : ""}" data-accord>${e.accordMoi ? "Je ne suis plus d'accord" : "Je suis d'accord"}</button></div>`;
+    // Les cases du sac, rangées comme dans le sac du jeu (la gourde d'abord). Un exemplaire étoilé s'échange comme le
+    // reste, avec ses étoiles (Book 25 §4.2).
+    const rang = (cle: CleObjet) => {
+      const i = ORDRE_SAC.indexOf(typeDe(cle));
+      return i < 0 ? ORDRE_SAC.length : i;
+    };
+    const sac = (Object.keys(this.inventaire) as CleObjet[])
+      .filter((t) => (this.inventaire[t] ?? 0) > 0 && estCleObjet(t))
+      .map((c, i) => ({ c, i }))
+      .sort((a, b) => rang(a.c) - rang(b.c) || (rang(a.c) === ORDRE_SAC.length ? a.i - b.i : 0) || (etoilesDe(b.c) ?? 0) - (etoilesDe(a.c) ?? 0))
+      .map(({ c }) => c);
+    const html = htmlEchange({
+      echange: e,
+      offre: this.monOffre,
+      sac,
+      inventaire: this.inventaire,
+      poche: this.wotts.poche,
+      choisi: this.choixEchange,
+      couleur: COULEURS_FAMILLES[e.avec.famille],
+    });
     if (html === this.dernierEchange) return;
     this.dernierEchange = html;
+    // Le serveur renvoie l'échange à chaque geste des deux joueurs : la grille et les rangées gardent leur place.
+    const places = lirePlaces(el);
     el.innerHTML = html;
+    remettrePlaces(el, places);
     const total = (type: CleObjet, delta: number) => {
-      const n = Math.max(0, Math.min(this.inventaire[type] ?? 0, (o.objets[type] ?? 0) + delta));
-      const objets = { ...o.objets };
-      if (n > 0) objets[type] = n;
-      else delete objets[type];
-      this.monOffre = { ...o, objets };
+      this.monOffre = ajusterOffre(this.monOffre, this.inventaire, type, delta);
       this.envoyerOffre();
     };
-    for (const b of el.querySelectorAll<HTMLButtonElement>("[data-plus]")) b.addEventListener("click", () => total(b.dataset.plus as CleObjet, 1));
-    for (const b of el.querySelectorAll<HTMLButtonElement>("[data-moins]")) b.addEventListener("click", () => total(b.dataset.moins as CleObjet, -1));
-    for (const b of el.querySelectorAll<HTMLButtonElement>("[data-wotts]")) {
-      b.addEventListener("click", () => {
-        const w = Math.max(0, Math.min(Math.floor(this.wotts.poche * 10) / 10, o.wotts + Number(b.dataset.wotts)));
-        this.monOffre = { ...o, wotts: Math.round(w * 10) / 10 };
+    brancherEchange(el, {
+      choisir: (cle) => {
+        this.choixEchange = this.choixEchange === cle ? null : cle;
+        this.dessinerEchange();
+      },
+      ajuster: total,
+      wotts: (delta) => {
+        this.monOffre = ajusterWotts(this.monOffre, this.wotts.poche, delta);
         this.envoyerOffre();
-      });
-    }
-    const annuler = () => this.actions.echange({ genre: "annuler" });
-    el.querySelector("[data-annuler]")!.addEventListener("click", annuler);
-    el.querySelector(".fermer")!.addEventListener("click", annuler);
-    el.querySelector("[data-accord]")!.addEventListener("click", () => this.actions.echange({ genre: "accord", oui: !e.accordMoi }));
+      },
+      annuler: () => this.actions.echange({ genre: "annuler" }),
+      accord: () => this.actions.echange({ genre: "accord", oui: !e.accordMoi }),
+    });
   }
 
   // ---------- Le rapport de la base (É4, lot 2 : Book 01 §2 bis) ----------
