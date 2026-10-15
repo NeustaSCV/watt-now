@@ -126,6 +126,27 @@ test("le cargo, 50 s après l'allumage : sa corne à 10 s et 8 s avant l'échoua
   assert.equal(m.feux(CARGO_MS + 6_000, true), null);
 });
 
+test("les feux du cargo suivent la route du cargo en marche du modèle (P-9) : du départ, au large, vers l'échouage, la proue devant", async () => {
+  // @ts-ignore — le modèle est en JavaScript (session « bâtiments »), sans déclaration de types.
+  const { creerCargo } = await import("./batiments/phare/cargo.js");
+  const { jeu } = await import("../../commun/src/phare.ts");
+  const route = (creerCargo({ usure: 0.7 }) as THREE.Group).userData.route as { depart: { x: number; z: number }; arrivee: { x: number; z: number }; cap: number };
+  const depart = jeu(route.depart.x, route.depart.z);
+  const echouage = jeu(route.arrivee.x, route.arrivee.z);
+  assert.ok(Math.hypot(FEUX_CARGO.depart.x - depart.x, FEUX_CARGO.depart.z - depart.z) < 0.05, "le départ de la route");
+  // L'arrivée des feux : sur la route, entre le départ et l'échouage, à 5 m de lui (l'entrée de la crique).
+  const ux = (echouage.x - depart.x) / Math.hypot(echouage.x - depart.x, echouage.z - depart.z);
+  const uz = (echouage.z - depart.z) / Math.hypot(echouage.x - depart.x, echouage.z - depart.z);
+  const travers = Math.abs((FEUX_CARGO.arrivee.x - depart.x) * uz - (FEUX_CARGO.arrivee.z - depart.z) * ux);
+  assert.ok(travers < 0.1, `sur l'axe de la route (${travers.toFixed(2)} m)`);
+  assert.ok(Math.abs(Math.hypot(FEUX_CARGO.arrivee.x - echouage.x, FEUX_CARGO.arrivee.z - echouage.z) - 5) < 0.1);
+  // Le cap des feux est celui du cargo (la proue vers l'échouage).
+  const m = new MiseEnScenePhare(() => false);
+  m.recevoir(ETEINTE, { ...ALLUMEE, cargoDans: 40_000 }, 0);
+  const f = m.feux(20_000, false)!;
+  assert.ok(Math.abs(Math.atan2(Math.sin(f.cap - route.cap), Math.cos(f.cap - route.cap))) < 0.01, `cap ${f.cap.toFixed(3)} contre ${route.cap.toFixed(3)}`);
+});
+
 test("un Éteint à moins de 6 m annule le recul sur la tour (et il ne reprend pas)", () => {
   const r = new MiseEnScenePhare(() => false);
   r.recevoir(ETEINTE, ALLUMEE, 0);

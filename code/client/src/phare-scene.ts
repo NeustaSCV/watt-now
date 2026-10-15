@@ -32,8 +32,13 @@ export const SCENE_CARGO = { noirDebut: 0.45, noir: 0.75, ouvert: 1.05, corne: 0
 const CARGO_S = CARGO_MS / 1000;
 /** La corne grave du cargo au large, en secondes avant l'échouage : 10 s après l'allumage (on sait vite qu'il vient), puis 8 s avant. */
 export const CORNES_CARGO_S = [CARGO_S - 10, 8] as const;
-/** Les feux du cargo : visibles dès la première corne, du large jusqu'à l'entrée de la crique (repère du jeu). */
-export const FEUX_CARGO = { avantS: CORNES_CARGO_S[0], depart: { x: 10, z: 112 }, arrivee: { x: 23, z: 52 } } as const;
+/**
+ * Les feux du cargo : visibles dès la première corne, du large jusqu'à l'entrée de la crique (repère du jeu), sur la route
+ * du cargo en marche du modèle (batiment/phare/cargo.js, `userData.route` : 0.10, P-9) : du départ conseillé, 90 m au
+ * large, jusqu'à 5 m de l'échouage, sur l'axe de l'épave (le cap du cargo de la scène). Le test client/src/phare-scene.test.ts
+ * vérifie qu'ils suivent la route du modèle.
+ */
+export const FEUX_CARGO = { avantS: CORNES_CARGO_S[0], depart: { x: 49.99, z: 135.66 }, arrivee: { x: 27.9, z: 53.58 } } as const;
 /** À moins de cette distance, un Éteint annule le recul sur la tour (le mode Combat se met au même seuil). */
 export const PROCHE_ETEINT = 6;
 
