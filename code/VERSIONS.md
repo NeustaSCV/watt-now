@@ -12,6 +12,24 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
+## 0.10.0 · en préparation
+
+- **Le niveau 2, sur la côte** : deux routes nouvelles partent de ton terrain, aussi longues l'une que l'autre. Par la route du pont, le Grand Hôtel des Flots ; par la corniche du Cap Rouge, le phare du cap. Les quatre lieux se voient sur la carte, sans dire ce qu'on y trouve.
+- **La route du pont** : la brèche se passe un par un. Au poste de guet, une voix demande douze wotts d'objets (au prix du Comptoir) : on les dépose dans la caisse, la porte s'ouvre pour soi seul, et le retour est libre. À marée basse (la moitié du temps, la même pour tous), on fouille les caddies et les trottinettes échoués sur la cale ; la mer qui monte te remonte sur le quai.
+- **La corniche** : le pin tombé est ton tas de bois (10 bûches, à toi, qui reviennent en 6 h), le tunnel a son péage, comme le pont, et l'éboulement ne laisse qu'un ruban au-dessus du vide.
+- **Le Grand Hôtel, « le check-in »** : la borne veut du courant et un sourire. Trouve l'un, dégage l'autre du sable, porte-le à deux mains, et la borne te remet la carte de la chambre 7 : l'ascenseur monte à l'étage. On en ressort par le balcon effondré, sans pouvoir y remonter. Le lendemain, tout est revenu.
+- **Le phare, « le feu et le cargo »** : de jour, on prépare la montée, le pétrole et le prisme ; la nuit, on allume. La lumière balaie la lande et fait venir du monde : tiens la tour, la corne de brume aide. Puis un cargo de l'Abondance prend le phare pour le port… On ressort par la rampe du canot et la grève, où l'on marche dans l'eau jusqu'aux genoux.
+- **Dix meubles du niveau 2**, faits surtout de récupération (le tube d'aluminium, nouveau, sort des parasols, des échelles, des chaises de camping) : la réserve couverte, l'abri doublé, la lanterne fixe, le four de terre, le jerrican de 20 L, l'établi de menuisier et ses étagères, la cloche d'alarme, et pour chaque famille son installation (le poste de montage, la forge ventilée, les roulements montés).
+- **Plus aucun repli** : un meuble demande son objet. Tu le trouves dans son lieu, parfois ailleurs par chance, et le Comptoir le vend toujours, sans rupture, dès que tu as visité son lieu. Ce que tu as déjà construit avec un repli reste construit.
+- **Huit meubles nouveaux** : le cuiseur solaire et les bacs de tri pour tous ; le creuset 🔥 (une poulie ou un lingot pour quatre chutes) ; la rampe de LED et la batterie de cellules (120 Wh) ⚡ ; la charrette à bras (100 kg de plus), le moulin de jerricans et l'arbalète de garde ⚙️.
+- **Le banc solaire suit le soleil** : rien la nuit ni sous la pluie, beaucoup plus au plein soleil, et la même recharge qu'avant en moyenne. Par mauvais temps, le moulin de jerricans prend le relais.
+- **Les armes ★★★** : la machette et la hache forgées au manche de caoutchouc, la matraque au pack soudé (24 Wh), l'arbalète d'if au cranequin léger (réarmée en 2 s). Deux armes trouvées, une seule fois : le pied de guéridon de l'hôtel et le harpon du gardien. La fourche du Moulin frappe plus fort (2,3).
+- **Deux Éteints de la côte** : le Noyé, gonflé et lent, ne tombe pas sous un coup au torse (vise la tête, ou les jambes) et crève en mourant : de trop près, ses fluides donnent la nausée, et son odeur attire les autres. L'Ensablé dort sous le sable de la salle à manger et surgit quand on passe.
+- **Le coup à la tête se voit** : une jauge fait le tour du bouton A pendant l'appui long ; pleine, le coup appuyé part. Sur iPhone, un glissement du pouce ne l'interrompt plus.
+- **On se repère** : des pensées et une voix à l'approche des moments importants, des écriteaux à « Lire », des panneaux de sortie éclairés par une lanterne, et des lieux qui ne s'arrêtent plus net (un muret, une ganivelle, la route qui continue).
+- **Plus aucune fenêtre en jeu** : les avertissements sont des messages qui passent.
+- **Rien n'est perdu** : ta partie de la 0.9 se relit telle quelle, ce que tu as construit et ce que tu portes.
+
 ## 0.9.0 · déployée le 2026-10-14
 
 - **Les autres joueurs, fluides** : on les voit marcher, courir, avancer accroupis et s'arrêter sans à-coups, avec la bonne allure. On les voit frapper (l'arme en main), esquiver, repousser, ramasser, couper, s'effondrer. La fourche équipée se voit dans leur dos, et la nuit, ils tiennent leur lampe levée.

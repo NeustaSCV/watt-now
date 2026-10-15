@@ -1,3 +1,3 @@
-// La version du jeu (2026-10-13) : affichée à l'accueil et dans le jeu, donnée par /api/sante, et portée par
+// La version du jeu (2026-10-15) : affichée à l'accueil et dans le jeu, donnée par /api/sante, et portée par
 // l'image Docker. À changer à chaque livraison, avec une ligne dans code/VERSIONS.md.
-export const VERSION = "0.9.0";
+export const VERSION = "0.10.0";
