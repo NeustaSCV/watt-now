@@ -32,6 +32,7 @@ import {
   tirerVestiges,
   type LieuFouille,
 } from "../../commun/src/vestiges.ts";
+import { avecCoteOuverte } from "../../commun/src/acces-cote.ts";
 import { Base } from "./base.ts";
 import { Comptoir } from "./comptoir.ts";
 import { Cooperatives } from "./cooperative.ts";
@@ -210,6 +211,8 @@ function monde() {
     const compte = base.creerCompte(pseudo, "potager42", "mecanistes");
     base.sauverInventaire(compte.id, { sac_a_dos: 1, branche: 10 });
     const recus: MessageServeur[] = [];
+    // Plan 0.10 (V4-19) : ces essais portent sur le niveau 2 lui-même : la côte y est ouverte.
+    base.sauverQuetes(compte.id, avecCoteOuverte(base.chargerQuetes(compte.id)));
     const joueur = new Joueur({ id: compte.id, pseudo, famille: "mecanistes" }, base, (m) => recus.push(m), maintenant, halte, alea, new Comptoir(base, instant), cooperatives, gue, moulins, lieux);
     joueurs.push(joueur);
     const dernier = <T extends MessageServeur["t"]>(t: T) => recus.findLast((m) => m.t === t) as Extract<MessageServeur, { t: T }> | undefined;

@@ -13,6 +13,7 @@ import { CARGO_MS, DUREES_PHARE, ENDROITS_PHARE, PORTES_PHARE, SCENE_CARGO_MS, T
 import { LANDE } from "../../commun/src/phare-vivant.ts";
 import { REINITIALISATION_LIEU_MS } from "../../commun/src/registre-lieux.ts";
 import { MS_PAR_HEURE_JEU, estNuit, heureDeJeu } from "../../commun/src/temps.ts";
+import { avecCoteOuverte } from "../../commun/src/acces-cote.ts";
 import { Base } from "./base.ts";
 import { Comptoir } from "./comptoir.ts";
 import { Cooperatives } from "./cooperative.ts";
@@ -45,6 +46,8 @@ function auPhare(graine = 0.3) {
   const c = base.creerCompte("Rose", "potager42", "mecanistes");
   base.sauverInventaire(c.id, { sac_a_dos: 1 });
   const recus: MessageServeur[] = [];
+  // Plan 0.10 (V4-19) : ces essais portent sur le niveau 2 lui-même : la côte y est ouverte.
+  base.sauverQuetes(c.id, avecCoteOuverte(base.chargerQuetes(c.id)));
   const joueur = new Joueur({ id: c.id, pseudo: "Rose", famille: "mecanistes" }, base, (m) => recus.push(m), maintenant, halte, alea, new Comptoir(base, instant), cooperatives, gue, moulins, lieux);
   const attendre = (secondes: number, pas = 0.1) => {
     for (let s = 0; s < secondes; s += pas) {

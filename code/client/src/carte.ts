@@ -7,9 +7,13 @@
 // falaise (la corniche du Cap Rouge) jusqu'au phare du cap. 3 km puis 2 km sur chacune, comme le niveau 1.
 // Comme les lieux du niveau 1, ils sont sur la carte dès le départ, ouverts (LIEUX, commun/src/lieux.ts) ; leur fiche
 // ne dit que l'ambiance, la distance et le coût du trajet (R18).
+// Plan 0.10 (V4-19) : tant que le joueur n'a pas fait ses preuves à la Coopérative et au Moulin, la côte est grisée (ses
+// deux routes et ses quatre lieux, en retrait, classe `acces-cote`) ; la toucher dit pourquoi, dans sa fiche, à la place
+// du bouton Partir (commun/src/acces-cote.ts). Le serveur refuse la route avec le même message.
 
 import { DUREE_VOYAGE_S, EAU_PAR_KM, KCAL_PAR_KM, LIEUX, distanceKm, etapeVers, minuscule, type LieuId, type LieuJouable } from "../../commun/src/lieux.ts";
 import { pourPartirDe } from "../../commun/src/registre-lieux.ts";
+import { TEXTE_COTE_FERMEE, routeFermee, surLaCote } from "../../commun/src/acces-cote.ts";
 
 /** Les lieux de la route de la Campagne sur la feuille (viewBox 1000 × 700 ; l'échelle : 53 unités par km). */
 export const POINTS: Record<LieuId, [number, number]> = {
@@ -193,7 +197,7 @@ export function dessinCarte(): string {
     <text x="446" y="550" class="crayon petit" transform="rotate(-50 446 550)">halage</text>
 
     <!-- La route de la Campagne, les chemins de terre de la Coopérative (depuis la station, depuis le Carrefour), la route du gué -->
-    ${TRACES.map((t) => `<path d="M${t.points.map((p) => p.join(" ")).join(" L")}" class="${t.genre}"/>`).join("")}
+    ${TRACES.map((t) => `<path d="M${t.points.map((p) => p.join(" ")).join(" L")}" class="${t.genre}${surLaCote(t.a) || surLaCote(t.b) ? " acces-cote" : ""}"/>`).join("")}
     <path d="M482 386 h18 M482 402 h18" class="trait"/>
     <text x="474" y="378" class="crayon petit">le pont tient</text>
 
@@ -272,7 +276,7 @@ export function dessinCarte(): string {
       <text x="14" y="26" class="crayon petit">la roue ne tourne plus</text>
     </g>
     <!-- 0.10, la côte. La route du pont : le pont suspendu sur l'estuaire, ses deux pylônes -->
-    <g class="lieu" data-lieu="route_pont" transform="translate(652 528)" tabindex="0" role="button" aria-label="${LIEUX.route_pont.nom}">
+    <g class="lieu acces-cote" data-lieu="route_pont" transform="translate(652 528)" tabindex="0" role="button" aria-label="${LIEUX.route_pont.nom}">
       <circle r="22" class="zone-clic"/>
       <path d="M-15 4 h30" stroke="${ENCRE}" stroke-width="2.4"/>
       <path d="M-8 6 v-16 M8 6 v-16" class="trait"/>
@@ -282,7 +286,7 @@ export function dessinCarte(): string {
       <text x="18" y="6" class="nom-ouvert">Route du pont</text>
     </g>
     <!-- Le Grand Hôtel des Flots : la longue façade face à la mer, ses fenêtres -->
-    <g class="lieu" data-lieu="grand_hotel" transform="translate(712 598)" tabindex="0" role="button" aria-label="${LIEUX.grand_hotel.nom}">
+    <g class="lieu acces-cote" data-lieu="grand_hotel" transform="translate(712 598)" tabindex="0" role="button" aria-label="${LIEUX.grand_hotel.nom}">
       <circle r="24" class="zone-clic"/>
       <rect x="-17" y="-8" width="34" height="14" fill="#ecdfbf" stroke="${ENCRE}" stroke-width="1.6"/>
       <path d="M-18 -8 h36 M-6 -8 l6 -6 l6 6" fill="none" stroke="${ENCRE}" stroke-width="1.3"/>
@@ -291,7 +295,7 @@ export function dessinCarte(): string {
       <text x="22" y="4" class="nom-ouvert">Grand Hôtel des Flots</text>
     </g>
     <!-- La corniche du Cap Rouge : la route au flanc de la falaise, un pin penché -->
-    <g class="lieu" data-lieu="corniche" transform="translate(552 550)" tabindex="0" role="button" aria-label="${LIEUX.corniche.nom}">
+    <g class="lieu acces-cote" data-lieu="corniche" transform="translate(552 550)" tabindex="0" role="button" aria-label="${LIEUX.corniche.nom}">
       <circle r="22" class="zone-clic"/>
       <path d="M-15 8 L-9 -4 L-2 -2 L5 -9 L15 -6" fill="none" stroke="#c8362b" stroke-width="1.8"/>
       <path d="M-15 8 L-9 -4 L-2 -2 L5 -9 L15 -6" class="trait-fin"/>
@@ -300,7 +304,7 @@ export function dessinCarte(): string {
       <text x="14" y="14" class="nom-ouvert">Corniche<tspan x="14" dy="15">du Cap Rouge</tspan></text>
     </g>
     <!-- Le phare du cap : la tour à bande rouge, sa lanterne éteinte -->
-    <g class="lieu" data-lieu="phare" transform="translate(562 646)" tabindex="0" role="button" aria-label="${LIEUX.phare.nom}">
+    <g class="lieu acces-cote" data-lieu="phare" transform="translate(562 646)" tabindex="0" role="button" aria-label="${LIEUX.phare.nom}">
       <circle r="22" class="zone-clic"/>
       <path d="M-4.5 8 L-2.6 -11 L2.6 -11 L4.5 8 Z" fill="#ecdfbf" stroke="${ENCRE}" stroke-width="1.4"/>
       <path d="M-3.6 -1 L3.6 -1 L3.9 3 L-3.9 3 Z" fill="#c8362b"/>
@@ -359,6 +363,8 @@ export class Carte {
   private enRoute = false;
   private animation = 0;
   private readonly partir: (vers: LieuId) => void;
+  /** La côte ouverte (V4-19) ; fermée au départ, le serveur le dit à l'arrivée (`bienvenue.coteOuverte`). */
+  private cote = false;
 
   constructor(racine: HTMLElement, partir: (vers: LieuId) => void) {
     this.racine = racine;
@@ -381,6 +387,7 @@ export class Carte {
     });
     this.pion = racine.querySelector(".pion")!;
     this.trace = racine.querySelector(".trace")!;
+    this.racine.classList.add("cote-fermee");
     for (const g of racine.querySelectorAll<SVGGElement>(".lieu")) {
       const choisir = () => {
         if (this.enRoute) return;
@@ -396,6 +403,18 @@ export class Carte {
       if (bouton.dataset.action === "fermer") this.fermer();
       if (bouton.dataset.action === "partir") this.partir(this.choisi);
     });
+  }
+
+  /** La côte s'ouvre (ou se ferme) : ses routes et ses lieux se dessinent normalement, ou grisés (V4-19). */
+  majCote(ouverte: boolean): void {
+    this.cote = ouverte;
+    this.racine.classList.toggle("cote-fermee", !ouverte);
+    if (this.ouverte && !this.enRoute) this.dessinerFiche();
+  }
+
+  /** La route vers ce lieu est-elle fermée (la côte, depuis l'intérieur, tant qu'elle est fermée) ? */
+  private coteFermeeVers(vers: LieuId): boolean {
+    return vers !== this.lieu && routeFermee(this.lieu, etapeVers(this.lieu, vers), this.cote);
   }
 
   get ouverte(): boolean {
@@ -503,6 +522,7 @@ export class Carte {
     if (this.enRoute) etat = `<p class="en-route">En route vers ${minuscule(l.nom)}…</p>`;
     else if (ici) etat = `<p class="note">Tu es ici.</p>`;
     else if (!l.ouvert) etat = `<p class="note">Fermé pour l'instant.</p>`;
+    else if (this.coteFermeeVers(this.choisi)) etat = `<p class="note">${TEXTE_COTE_FERMEE}</p>`;
     else if (!this.sorties.includes(etape)) {
       // Par où repartir : chaque lieu le dit dans sa fiche du registre (commun/src/registre-lieux.ts, `pourPartir`).
       etat = `<p class="note">${pourPartirDe(this.lieu, etape)}</p>`;
