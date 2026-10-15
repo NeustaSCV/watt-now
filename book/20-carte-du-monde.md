@@ -1,7 +1,8 @@
 # Book 20 — La Carte du Monde
 
-> Document de conception · version 0.2 · 2026-10-07
+> Document de conception · version 0.3 · 2026-10-15
 > Statut : **validé** dans le principe (disposition, lieux, géographie de référence, §1 ter). Le dessin final reste à confier à un illustrateur (§1 bis).
+> v0.3 (2026-10-15) : §1 quinquies, **les deux routes du niveau 2** (0.10) : la route du pont et la corniche, l'accès à la côte (V4-19), les péages, la marée, le pin tombé, le guidage, les panneaux de sortie et leurs lanternes, la règle R52 ; §3.5 et §4 mis à jour. Le Grand Hôtel et le phare : Book 23 §13.
 > S'appuie sur le [Book 01 §2 bis](01-les-trois-feux.md) (structure du monde, haltes, flux et stocks) et le [Book 07 §4](07-economie.md) (comptoirs).
 
 ---
@@ -133,6 +134,55 @@ La 0.8 porte le **niveau 1** sur **deux routes**, qui passent la rivière chacun
 - **Rien ne change de la carte elle-même** : les deux routes, les distances, le dessin, le chemin de halage en sortie seule.
 - **Le budget de l'iPhone 13 mini** au gué et au Moulin (`?mesure=1`, banc de 90 s) est **à mesurer par le porteur** à la recette de la 0.8.2.
 
+
+### 1 quinquies. Les deux routes du niveau 2, sur la côte (0.10, 2026-10-15)
+
+*Plan 0.10 (§3, §10, §12, §13 : S-05, S-19 à S-21, V2-01 à V2-05, V4-01, V4-15 à V4-19), `niveau-2.md` (§9, §10), la notice (R48, R52) ; **codé en 0.10** (`commun/src/registre-lieux.ts`, `commun/src/lieux.ts`, `commun/src/route-pont.ts`, `commun/src/corniche.ts`, `commun/src/peage.ts`, `commun/src/guidage.ts`, `client/src/carte.ts`). Les deux lieux du fond, le Grand Hôtel et le phare, sont décrits au Book 23 §13.*
+
+La 0.10 ouvre le **niveau 2**, sur **la côte**. Comme au niveau 1, **deux routes**, chacune avec **une halte** (partagée) puis **un lieu à soi** (un par joueur). **Les deux routes partent du terrain** (décision du porteur, 2026-10-14 : « sinon c'est trop complexe ») : ni la Coopérative ni le Moulin ne mènent à la côte.
+
+| Étape | Lieu | Route | Distance |
+|---|---|---|---|
+| **H2A** | **La route du pont** (l'estuaire, le vieux pont) | A | 3 km du terrain |
+| **L2A** | **Le Grand Hôtel des Flots** (un palace de bord de mer) | A, passé le pont | 2 km de la route du pont (5 km du terrain) |
+| **H2B** | **La corniche du Cap Rouge** (la route au flanc de la falaise) | B | 3 km du terrain |
+| **L2B** | **Le phare du cap** (tout au bout du cap) | B, passé le tunnel | 2 km de la corniche (5 km du terrain) |
+
+- **Les mêmes distances sur les deux routes** (B16, N2-Q10) : le même temps de trajet, le même coût, quel que soit le côté.
+- **La carte ne promet rien** (R18, §1 quater ter) : les fiches des quatre lieux disent l'ambiance, la distance et le coût de l'étape, jamais ce qu'on y trouve.
+- **L'accès à la côte** (V4-19, décision du porteur du 2026-10-15) : la côte (les quatre lieux) **s'ouvre dès que le joueur a pris au moins un objet-clé à la Coopérative et au moins un au Moulin, dans le lieu même** (pas acheté au Comptoir, pas trouvé par chance ailleurs). La même règle pour tous, les anciens joueurs compris. Tant qu'elle est fermée, la côte se voit sur la carte, **grisée**, avec ce message : « La côte est loin et dangereuse. Fais d'abord tes preuves à la Coopérative et au Moulin. »
+- **Le menu « Aller à… » de god** propose aussi les quatre lieux du niveau 2.
+
+**La route du pont** (H2A, le thème « électrique et atelier ») :
+
+| Quoi | Ce que fait le jeu |
+|---|---|
+| **La brèche** | Le tablier du pont est tombé en partie : on passe sur des planches au-dessus du vide, **un par un** |
+| **Le péage des survivants** (N2-59, N2-60, Q-0.10-5, S-19, V2-01, V2-02) | À la porte du poste de guet, une **voix d'en haut** : « Douze, et tu passes. » On touche **la caisse** posée devant la porte, le sac s'ouvre pour donner : on choisit des objets jusqu'à **12 wotts**, comptés au **prix de rachat du Comptoir** (une ordure compte si le Comptoir la reprend déjà ; à 0, non) ; pas de monnaie rendue. La porte s'ouvre **pour soi seul**, et l'on passe librement **pendant 1 h réelle**. **Au retour** (du lieu vers le terrain), on passe toujours, sans rien payer, même des heures après |
+| **La marée** (Q-0.10-7, S-20) | **Basse la moitié du temps** : les deux états alternent toutes les **6 min réelles**, la même heure pour tout le monde. L'heure se lit sur **l'échelle peinte du quai** (« Lire »). À marée basse, on descend sur **la cale** et l'on fouille les caddies, les trottinettes et la mobylette échoués dans la vase (des tubes d'aluminium, la bobine) ; à marée haute, la cale est sous l'eau. **Qui y reste quand la mer monte** est remis en haut de l'accès, sur le quai, avec un **message qui passe** (« La mer monte : tu remontes sur le quai. ») |
+| **Les matières** (V2-03) | Du vrac « électrique et atelier » (cuivre, résistances, cellules, lames de ressort, barres, huile), la **bobine** sur le moteur hors-bord du hangar ; 10 pierres, 8 branches et 4 bûches en vrac ; le fil dentaire à l'épicerie du bar |
+| **Les Éteints** | 12, dont **3 Noyés** dans la vase de la cale (Book 06 §5.1) ; ceux de derrière la porte du péage somnolent (V2-05) |
+
+**La corniche du Cap Rouge** (H2B, le thème « pierre, terre, bois », sans glaise) :
+
+| Quoi | Ce que fait le jeu |
+|---|---|
+| **Le pin tombé** (N2-29, S-21) | Le pin d'Alep tombé de la falaise : c'est **le tas de bois personnel** de la halte, **10 bûches à chacun**, qui reviennent en **6 h** |
+| **Le péage du tunnel** (N2-Q11) | **La même règle que le pont** : la barricade du tunnel des pillards, sa caisse, 12 wotts d'objets, la porte pour soi seul pendant 1 h, le retour libre ; le tunnel est noir |
+| **L'éboulement** | Un ruban d'environ **2,5 m** au-dessus du vide, entre la paroi et le précipice |
+| **Les matières** (V2-03) | 20 pierres (l'éboulement, les murets), 8 bûches et 18 branches en vrac, en plus du pin ; le fil dentaire dans les chambres du Panoramique |
+| **Les Éteints** | 12 |
+
+**Se repérer** (V4-01, V4-06, V4-15 à V4-17, R48, R52) :
+
+- **Les pensées et la voix** (G-1) : à l'approche des moments importants (la brèche, la marée, le péage, le pin, la barricade, la borne de l'hôtel, la tour du phare…), le personnage pense tout haut (en italique) ou une voix parle (entre guillemets), **une fois par visite** ; 27 phrases, validées mot pour mot par le porteur.
+- **Les écriteaux** (G-2) : près d'un écriteau ou d'un panneau peint dans le décor, B propose « **Lire** » et le texte s'affiche en grand, **dans un message**, jamais une fenêtre.
+- **Les panneaux de sortie** disent **la vraie destination** (par exemple, à l'ouest de la route du pont : « ← Ton terrain · 3 km · Grand Hôtel des Flots, par le pont → ») et se lisent par « Lire » ; **chacun a une lanterne au-dessus**, qui l'éclaire la nuit.
+- **Un lieu ne s'arrête jamais net** (R52, le porteur, 2026-10-15) : chaque bord a un obstacle visible et crédible (un muret de pierres sèches au phare, des ganivelles et des dunes au pont et à l'hôtel, la roche qui se referme sur la route de la corniche, un éboulis, la mer profonde), et le décor se prolonge de 40 à 100 m au-delà (les « alentours » des modèles). **La vue d'ensemble de l'arrivée** dessine tout le lieu, tous les tronçons des haltes compris ; la station et le gué ont aussi leurs alentours.
+- **Plus aucune fenêtre en jeu** (R48, précisée le 2026-10-15) : un avertissement ou un conseil est un message qui passe, ni dialogue à croix, ni bandeau à bouton. La caisse du péage s'ouvre comme le sac et le coffre, avec sa croix (V2-15 : ce n'est pas un message).
+
+**Pour plus tard** : les petits défauts de décor relevés à l'import des modèles (les bords des alentours en vue d'ensemble, les cimes du gué, les dunes du pont) sont à transmettre à la session « bâtiments ».
+
 ## 2. Les six environnements
 
 | Environnement | Ressources dominantes | Famille la plus concernée |
@@ -204,11 +254,11 @@ La 0.8 porte le **niveau 1** sur **deux routes**, qui passent la rivière chacun
 |---|---|---|---|
 | Camping des Flots | Proche | Tentes, bâches, réchauds, bouteilles de gaz, vélos | ● |
 | Plage | Proche | Sable, bois flotté, coquillages, algues, pêche à pied (flux) | ● |
-| Station balnéaire | Moyen | Hôtels (literie, textiles, conserves), cuisines pro, piscine | ●●● |
+| Station balnéaire | Moyen | Hôtels (literie, textiles, conserves), cuisines pro, piscine ; **le Grand Hôtel des Flots** (L2A, 0.10) | ●●● |
 | **Marais salants** | Moyen | **Sel** (conservation, savon) | ● |
 | Port de pêche | Lointain | Filets, cordages, bateaux, moteurs, poisson (flux) | ●●● |
-| Épave du cargo | Lointain | **Conteneurs** (maisons métalliques, Book 10), marchandises, acier | ●●●● |
-| Phare | Lointain | Lentille, verre, lampe, groupe électrogène, longue-vue | ●● |
+| Épave du cargo | Lointain | **Conteneurs** (maisons métalliques, Book 10), marchandises, acier ; en 0.10, un cargo s'échoue au pied du phare (Book 23 §13.2) | ●●●● |
+| Phare | Lointain | Lentille, verre, lampe, groupe électrogène, longue-vue ; **le phare du cap** (L2B, 0.10) | ●● |
 
 ### 3.6 Marais et rivière
 
@@ -243,8 +293,8 @@ La 0.8 porte le **niveau 1** sur **deux routes**, qui passent la rivière chacun
 | Montagne | Le col, le tunnel |
 | Ville | Le passage à niveau, l'avenue barricadée |
 | Zone industrielle | Le péage, l'aire d'autoroute |
-| Littoral | La route du pont, la corniche |
-| Marais | La digue (pressentie pour H2B), le gué (**le Gué-aux-Saules**, H1B en 0.8) |
+| Littoral | La route du pont (**H2A** en 0.10), la corniche (**H2B** en 0.10) |
+| Marais | La digue (gardée pour un autre niveau : la corniche a pris H2B, N2-Q8), le gué (**le Gué-aux-Saules**, H1B en 0.8) |
 | Campagne | Le carrefour, la station-service |
 
 > Le nombre de haltes par trajet reste un **paramètre de réglage** (Book 01 §9).
