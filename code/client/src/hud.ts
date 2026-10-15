@@ -116,6 +116,8 @@ function lireTriSac(): TriSac {
 export interface ActionsJoueur {
   manger(objet: TypeObjet): void;
   boire(): void;
+  /** Plan 0.10.1 (A4) : boire une bouteille d'eau, d'un trait. */
+  boireBouteille(): void;
   lumiere(): void;
   /** `dakota` : un foyer Dakota, creusé dans le sol (P-002). */
   construireFeu(dakota?: boolean): void;
@@ -1619,8 +1621,12 @@ export class Hud {
       const infos: string[] = [];
       let enMain = "";
       if (s === "gourde") {
-        detail = g.litres <= 0 ? "Vide. Remplis-la à la mare." : `${kg(g.litres)} L d'eau ${g.contenu === "potable" ? "potable" : "brute : fais-la bouillir sur le feu avant de la boire"}.`;
+        // Plusieurs gourdes, une seule réserve, 1 L chacune (plan 0.10.1, A5).
+        const plusieurs = (this.inventaire.gourde ?? 1) > 1;
+        detail = g.litres <= 0 ? (plusieurs ? "Vides. Remplis-les à la mare." : "Vide. Remplis-la à la mare.") : `${kg(g.litres)} L d'eau ${g.contenu === "potable" ? "potable" : `brute : fais-${plusieurs ? "les" : "la"} bouillir sur le feu avant de la boire`}.`;
         actions.push(`<button type="button" class="principal" data-action="boire" ${g.litres > 0 ? "" : "disabled"}>Boire</button>`);
+      } else if (s === "bouteille_eau") {
+        actions.push(`<button type="button" class="principal" data-action="boire-bouteille">Boire</button>`);
       } else if (d.kcal) {
         actions.push(`<button type="button" class="principal" data-action="manger">Manger</button>`);
       } else if (d.lumiere) {
@@ -1763,6 +1769,7 @@ export class Hud {
       b.addEventListener("click", () => {
         const action = b.dataset.action;
         if (action === "boire") this.actions.boire();
+        if (action === "boire-bouteille") this.actions.boireBouteille();
         if (action === "manger" && this.selection) this.actions.manger(typeDe(this.selection));
         if (action === "lumiere") this.actions.lumiere();
         if (action === "panser") this.actions.panser();

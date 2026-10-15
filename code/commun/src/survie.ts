@@ -2,7 +2,7 @@
 // Valeurs réalistes du Book 05 §3 et du Book 02, rapportées à l'horloge d'action. Réglages à caler en test.
 
 import { REGLAGES } from "./reglages.ts";
-import { OBJETS, type TypeObjet } from "./objets.ts";
+import { OBJETS, type Inventaire, type TypeObjet } from "./objets.ts";
 import type { Allure } from "./regles.ts";
 import { FEU_COUVERT, effetsFeu } from "./lignees.ts";
 
@@ -12,17 +12,22 @@ import { FEU_COUVERT, effetsFeu } from "./lignees.ts";
 export const KCAL_PAR_HEURE = 2500 / 24;
 /** Besoin en eau : ≈ 2,5 L par jour de jeu. */
 export const LITRES_PAR_HEURE = 2.5 / 24;
-/** Réserves maximales : une journée de nourriture, une journée et demie d'eau. */
+/**
+ * Réserves maximales : une journée de nourriture ; 1,5 L d'eau (plan 0.10.1, A8 : 2,5 L avant). La soif est un débit en
+ * litres : `soif_rythme` a été ralenti d'autant (0,35 → 0,21), si bien que la jauge pleine dure toujours ≈ 70 min réelles.
+ */
 export const RESERVE_KCAL_MAX = 2500;
-export const RESERVE_EAU_MAX = 2.5;
+export const RESERVE_EAU_MAX = 1.5;
 /** En dessous de ce seuil (part de la réserve), le personnage a faim ou soif : plus de course. */
 export const SEUIL_MANQUE = 0.15;
 /** Un plat chaud cale : la faim revient deux fois moins vite pendant ces heures de jeu (2026-10-08). */
 export const RASSASIE_HEURES = 6;
 /** La cuisson rend les aliments plus digestes : un plat apporte ≈ 25 % d'énergie de plus que ses ingrédients crus. */
 export const BONUS_CUISSON = 1.25;
-/** Contenance de la gourde, en litres. */
+/** Contenance d'une gourde, en litres. */
 export const CONTENANCE_GOURDE = 1;
+/** La bouteille d'eau pleine (plan 0.10.1, A4) : un litre, qu'on boit d'un trait. */
+export const LITRES_BOUTEILLE = 1;
 /** Une gorgée, en litres. */
 export const GORGEE = 0.25;
 
@@ -69,17 +74,32 @@ export interface Gourde {
   litres: number;
 }
 
+/**
+ * Plusieurs gourdes, une seule réserve (plan 0.10.1, A5) : elle tient 1 L par gourde portée. Une gourde qui quitte le
+ * sac emporte l'eau qui ne tient plus dans les autres.
+ */
+export function contenanceGourdes(inventaire: Inventaire): number {
+  return CONTENANCE_GOURDE * Math.max(0, Math.floor(inventaire.gourde ?? 0));
+}
+
+/** « ta gourde » ou « tes gourdes », selon ce qu'on porte. */
+export function taGourde(inventaire: Inventaire, majuscule = false): string {
+  const t = (inventaire.gourde ?? 0) > 1 ? "tes gourdes" : "ta gourde";
+  return majuscule ? t[0]!.toUpperCase() + t.slice(1) : t;
+}
+
 export const BESOINS_DEPART: Besoins = { kcal: RESERVE_KCAL_MAX, eau: RESERVE_EAU_MAX * 0.8, repos: 1 };
 export const GOURDE_DEPART: Gourde = { contenu: "potable", litres: CONTENANCE_GOURDE };
 
 /**
  * Fait passer `heures` heures de jeu sur les besoins. Les besoins sont gelés hors ligne (Book 01 §2 bis).
  * `cale` : après un vrai repas chaud, la faim revient deux fois moins vite (voir RASSASIE_HEURES).
+ * `saison` : le surplus de la saison (saisons.ts, `surplusSaison`), 1 au printemps et à l'automne.
  */
-export function consommer(besoins: Besoins, heures: number, effort = 1, endormi = false, cale = false): Besoins {
+export function consommer(besoins: Besoins, heures: number, effort = 1, endormi = false, cale = false, saison: { faim: number; soif: number } = { faim: 1, soif: 1 }): Besoins {
   return {
-    kcal: Math.max(0, besoins.kcal - KCAL_PAR_HEURE * REGLAGES.faim_rythme * heures * effort * (cale ? 0.5 : 1)),
-    eau: Math.max(0, besoins.eau - LITRES_PAR_HEURE * REGLAGES.soif_rythme * heures * effort),
+    kcal: Math.max(0, besoins.kcal - KCAL_PAR_HEURE * REGLAGES.faim_rythme * heures * effort * (cale ? 0.5 : 1) * saison.faim),
+    eau: Math.max(0, besoins.eau - LITRES_PAR_HEURE * REGLAGES.soif_rythme * heures * effort * saison.soif),
     repos: endormi ? besoins.repos : Math.max(0, (besoins.repos ?? 1) - REPOS_PERDU_PAR_HEURE * REGLAGES.sommeil_rythme * heures),
   };
 }

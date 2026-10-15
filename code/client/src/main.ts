@@ -438,6 +438,7 @@ const hud = new Hud(
   {
     manger: (objet) => envoyer({ t: "manger", objet }),
     boire: () => envoyer({ t: "boire" }),
+    boireBouteille: () => envoyer({ t: "boire_bouteille" }),
     construireFeu: (dakota = false) => {
       if (!position) return;
       // On choisit d'abord où le monter (2026-10-08).

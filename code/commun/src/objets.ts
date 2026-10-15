@@ -122,7 +122,8 @@ const OBJETS_DE_BASE: Record<TypeObjetDeBase, DefinitionObjet> = {
   conserve: { description: "Un vestige de l'Abondance. L'étiquette promet « Saveur Bonheur ». 400 kcal.", nom: "conserve", pluriel: "conserves", poids: 0.45, kcal: 400, eau: 0.3 },
   couteau: { description: "Lame ébréchée, manche recollé. Mieux que rien.", nom: "couteau abîmé", pluriel: "couteaux abîmés", poids: 0.2 },
   briquet: { description: "Il fait encore des étincelles. Pour combien de temps ?", nom: "briquet", pluriel: "briquets", poids: 0.05 },
-  gourde: { description: "Un litre (un kilo d'eau, pleine). L'eau de la mare doit bouillir avant d'être bue.", nom: "gourde", pluriel: "gourdes", poids: 0.3 },
+  // Plan 0.10.1 (A5) : plusieurs gourdes, une seule réserve, 1 L par gourde.
+  gourde: { description: "Un litre (un kilo d'eau, pleine). Deux gourdes, deux litres : elles se remplissent ensemble. L'eau de la mare doit bouillir avant d'être bue.", nom: "gourde", pluriel: "gourdes", poids: 0.3 },
   sac_a_dos: { description: "Un sac de randonnée de l'Abondance. Porte jusqu'à 55 kg.", nom: "sac à dos", pluriel: "sacs à dos", poids: 1.5 },
   pierre_a_feu: { description: "Silex et acier : le feu des Charbonniers, inusable.", nom: "pierre à feu", pluriel: "pierres à feu", poids: 0.1 },
   marteau: { description: "Tête de fer, manche de frêne. L'outil de la forge.", nom: "marteau", pluriel: "marteaux", poids: 0.8 },

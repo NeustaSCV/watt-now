@@ -69,6 +69,17 @@ export const DESSINS_DECHETS: Record<string, string> = {
     <path d="M18 26.5 q3 -2 6 0 t6 0" stroke="#f4ecd8" stroke-width="1.4" fill="none"/>
     <path d="M16 34 h16 M16 38 h16" stroke-width="1" opacity="0.5" ${T}/>
     <path d="M18.5 15 q-1.6 2.5 -1.6 5" stroke="#ffffff" stroke-width="1.6" fill="none" stroke-linecap="round"/>`,
+  // Plan 0.10.1 (A4) : la bouteille vide, pleine d'eau jusqu'à l'épaule, le bouchon scellé.
+  bouteille_eau: `
+    <path d="M21 9 h6 v3 q6 3 6 9 v18 q0 4 -4 4 h-10 q-4 0 -4 -4 v-18 q0 -6 6 -9 Z" fill="#cfe3ec" ${T}/>
+    <path d="M15.4 17 h17.2 q0.4 2 0.4 4 v18 q0 4 -4 4 h-10 q-4 0 -4 -4 v-18 q0 -2 0.4 -4 Z" fill="#7fbadb"/>
+    <path d="M21 9 h6 v3 q6 3 6 9 v18 q0 4 -4 4 h-10 q-4 0 -4 -4 v-18 q0 -6 6 -9 Z" fill="none" ${T}/>
+    <rect x="20.5" y="4" width="7" height="5" rx="1" fill="#2f6fa4" ${T}/>
+    <path d="M20.5 9 h7" stroke="#1f4f78" stroke-width="1.4"/>
+    <path d="M15 23 h18 v7 h-18 Z" fill="#5f9fc8" ${T} stroke-width="1.4"/>
+    <path d="M18 26.5 q3 -2 6 0 t6 0" stroke="#f4ecd8" stroke-width="1.4" fill="none"/>
+    <path d="M17 34 q3.5 -1.5 7 0 t7 0" stroke="#ffffff" stroke-width="1.2" fill="none" opacity="0.7"/>
+    <path d="M18.5 15 q-1.6 2.5 -1.6 5" stroke="#ffffff" stroke-width="1.6" fill="none" stroke-linecap="round"/>`,
   sac_plastique: `
     <path d="M14 17 Q13 6 19 6 Q24 6 22 17 M26 17 Q24 6 29 6 Q35 6 34 17" fill="none" ${T} stroke-width="2.2"/>
     <path d="M9 16 L39 16 L41 39 Q24 45 7 39 Z" fill="#f0ece2" ${T}/>

@@ -56,9 +56,21 @@ export const VESTIGES_LOT2 = {
   bouteille_plastique: {
     nom: "bouteille d'eau vide",
     pluriel: "bouteilles d'eau vides",
-    description: "« Eau Pure des Glaciers, 1,5 L. » Vide depuis l'Abondance ; le glacier aussi.",
+    description: "« Eau Pure des Glaciers, 1 L. » Vide depuis l'Abondance ; le glacier aussi.",
     poids: 0.03,
     valeur: 0,
+    famille: "dechet",
+    rarete: "C",
+    lieux: "partout",
+  },
+  // Plan 0.10.1 (A4) : la même, pleine, le bouchon jamais ouvert. Commune, partout, comme la vide ; elle se boit d'un
+  // trait depuis le sac (1 L dans la jauge de soif au plus), et il reste la bouteille vide.
+  bouteille_eau: {
+    nom: "bouteille d'eau",
+    pluriel: "bouteilles d'eau",
+    description: "« Eau Pure des Glaciers, 1 L. » Pleine, le bouchon jamais ouvert. Elle se boit telle quelle, d'un trait.",
+    poids: 1.03,
+    valeur: 2,
     famille: "dechet",
     rarete: "C",
     lieux: "partout",

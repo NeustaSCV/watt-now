@@ -203,6 +203,7 @@ export function messageValide(m: unknown): m is MessageClient {
     case "bander":
     case "rearmer":
     case "boire":
+    case "boire_bouteille":
     case "annuler":
     case "poser":
     case "poser_radio":

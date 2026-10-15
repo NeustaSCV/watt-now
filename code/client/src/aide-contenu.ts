@@ -156,7 +156,7 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
     resume: "L'eau de la mare, la gourde, la pluie, la cueillette, la cuisine et la chasse.",
     blocs: [
       { sous_titre: "L'eau" },
-      "Ta gourde contient un litre. Remplis-la au milieu de la mare (entre dans l'eau, puis {agir}), puis **fais-la bouillir** sur un feu allumé avant de la boire : l'eau de la mare n'est pas potable. Bouillir coûte du bois. Pour boire : Sac → gourde.",
+      "Ta gourde contient un litre ; deux gourdes, deux litres, qui se remplissent ensemble. Remplis-la au milieu de la mare (entre dans l'eau, puis {agir}), puis **fais-la bouillir** sur un feu allumé avant de la boire : l'eau de la mare n'est pas potable. Bouillir coûte du bois. Pour boire : Sac → gourde.",
       "La **pluie** est une alliée : un récupérateur de pluie se remplit tout seul, même quand tu n'es pas là, et l'eau de pluie se boit sans bouillir.",
       { sous_titre: "Ce qui se mange" },
       {
