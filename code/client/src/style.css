@@ -788,6 +788,60 @@ body {
   font-size: 13px;
 }
 
+/*
+ * La jauge du coup appuyé (0.10, décision du porteur) : en mode Combat, tenir A remplit un anneau autour du rond en
+ * DUREE_APPUI_MS (hud.ts, jaugeCoup : `--charge` de 0 à 1) ; plein, il passe à l'ambre et le rond s'éclaire : « coup à la
+ * tête prêt ». Lâché, il disparaît aussitôt. Sur iPhone, l'appui long ne doit ni faire défiler (pointercancel), ni ouvrir
+ * la loupe ou un menu : touch-action none et pas de « callout » sur ce bouton (jauge-coup.ts retient aussi le touchstart).
+ */
+#hud .tactile .b-A {
+  --charge: 0;
+  position: relative;
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+#hud .tactile .b-A::after {
+  content: "";
+  position: absolute;
+  inset: -9px;
+  border-radius: 50%;
+  /* La part remplie (crème) part du haut et tourne dans le sens des aiguilles ; le reste, un rail sombre. */
+  background: conic-gradient(var(--creme) calc(var(--charge) * 1turn), rgba(20, 24, 32, 0.55) 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px));
+  opacity: 0;
+  pointer-events: none;
+}
+
+#hud .tactile .b-A.en-charge::after {
+  opacity: 1;
+}
+
+#hud .tactile .b-A.pret {
+  border-color: #ffd36b;
+  box-shadow: 0 0 0 2px rgba(255, 211, 107, 0.35), 0 0 18px 4px rgba(255, 196, 80, 0.6);
+}
+
+#hud .tactile .b-A.pret::after {
+  background: #ffd36b;
+  animation: eclat-coup 0.22s ease-out;
+}
+
+@keyframes eclat-coup {
+  0% {
+    transform: scale(0.94);
+  }
+  60% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
 #hud .tactile .b-B {
   width: 68px;
   height: 68px;

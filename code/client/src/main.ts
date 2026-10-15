@@ -1874,6 +1874,8 @@ function boucle(instant: number): void {
       if (modeCombat && !enVoyage && saisi === 0 && !brasPris()) frapper(appuye);
     }
     personnage.preparer(arcVise ? 1 : modeCombat && !brasPris() ? entrees.chargeA : viseeEnCours ? 1 : 0);
+    // La jauge du coup appuyé autour du bouton A (0.10) : seulement quand le relâchement frappera (en combat, bras libres, pas saisi).
+    hud.jaugeCoup(modeCombat && !brasPris() && saisi === 0 && !enVoyage ? entrees.chargeA : 0);
     // Le lancer (0.6) : la visée suit l'Éteint accroché ; le bouton dit ce qu'il fera (Lancer, Tirer, Réarmer).
     majViseeLancer();
     projectiles.animer(dt);
