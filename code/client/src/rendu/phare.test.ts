@@ -224,12 +224,7 @@ test("l'écran tremble au choc du cargo, pour qui est au phare ; rien si les mou
       const scene = { hauteurSuivie: 0, decalageCamera: { x: 0, y: 0, z: 0 } };
       const poser = (dt: number) => client.poser(true, { epave: true }, dt, { personnage: null, eteints: [], cercles: [], scene });
       client.recevoir({ t: "phare", etat: { escabeau: "marque", bidon: "verse", prisme: "remis", lanterne: true, compresseur: false, corneSonnee: false }, cargo: true });
-      // Avant le choc, rien ; au choc, la caméra bouge (sauf mouvements réduits) ; 0,8 s plus tard, elle est revenue.
-      t += 3000;
-      client.animer();
-      poser(0.016);
-      assert.deepEqual(scene.decalageCamera, { x: 0, y: 0, z: 0 });
-      t += 1000;
+      // Le choc tombe à l'annonce de l'échouage : la caméra bouge (sauf mouvements réduits) ; 0,8 s plus tard, elle est revenue.
       client.animer();
       let max = 0;
       for (let i = 0; i < 30; i++) {
