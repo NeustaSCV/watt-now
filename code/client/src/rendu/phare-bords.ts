@@ -12,8 +12,13 @@
 // - le panneau du sentier côtier (ECRITEAU_SENTIER ; E-12) : grand, peint clair, éclairé la nuit par la lanterne des
 //   panneaux de sortie, au-dessus de lui (rendu/lanterne-panneau.ts ; une source de la réserve de lumières : lumieresPhare).
 //
-// Le coût : la côte, le sentier, les rochers sont fondus dans le maillage du sol du modèle, la mer dans le sien, l'écume
-// dans la sienne (aucun appel de dessin de plus) ; le panneau et sa lanterne ont chacun leur maillage (deux appels).
+// - à l'est (0.10, R52, chantier des bords), la falaise de la pointe continue hors du lot, au lieu d'une tranche
+//   verticale au bout d'une lande plate ; au nord, la route d'accès continue dans la lande et s'y perd ; à l'arrivée, le
+//   panneau de sortie « ← La corniche · Ton terrain » (ECRITEAU_ROUTE ; E-17), une lanterne au-dessus.
+//
+// Le coût : la côte, le sentier, les rochers, la route du nord sont fondus dans le maillage du sol du modèle, la mer dans
+// le sien, l'écume dans la sienne (aucun appel de dessin de plus) ; les deux panneaux partagent un maillage (leur
+// texture), leurs deux lanternes un autre (deux appels en tout : le budget du phare est à sa limite).
 // Les profils de la falaise sont ceux du modèle (et de la maquette du cargo, qui les reproduit), prolongés.
 
 import * as THREE from "three";
@@ -22,7 +27,7 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js
 import { hauteurSol } from "../batiments/phare/modele.js";
 // @ts-ignore — l'atelier des modèles (session « bâtiments »), sans déclaration de types.
 import { Chantier } from "../batiments/commun/atelier.js";
-import { EBOULIS_EST, ECRITEAU_SENTIER, LARGEUR_EAU, ROCHERS_OUEST, auModele, jeu } from "../../../commun/src/phare.ts";
+import { EBOULIS_EST, ECRITEAU_ROUTE, ECRITEAU_SENTIER, LARGEUR_EAU, ROCHERS_OUEST, auModele, jeu } from "../../../commun/src/phare.ts";
 import { poserLanterne, type LanternePanneau, type PoseLanterne } from "./lanterne-panneau.ts";
 import type { SourceLumiere } from "./lumieres.ts";
 
@@ -170,6 +175,54 @@ function coteOuest(p: number[], col: number[], alea: () => number): void {
     }
   }
 }
+
+/**
+ * La falaise de la pointe à l'est du lot (de x 30 à 100) : le profil du modèle (sans crique : la falaise tombe droit
+ * dans la mer), en quelques colonnes de plus en plus espacées ; le plateau, jusqu'à l'arête, au niveau de la lande.
+ */
+function coteEst(p: number[], col: number[], alea: () => number): void {
+  const X = [30, 32, 34.5, 38, 43, 50, 60, 76, 100];
+  const V = X.map((x0, i) => {
+    const { D, Y } = profil(x0);
+    const bz = bordFalaise(x0);
+    const rang: [number, number, number][] = [[x0, -0.02, 11.5]];
+    for (let n = 0; n < D.length; n++) {
+      const paroi = n >= 1 && n <= 5 && i > 0;
+      const x = paroi ? x0 + (alea() - 0.5) * 0.6 : x0;
+      const y = Y[n]! + (paroi ? (alea() - 0.5) * (n >= 4 ? 0.3 : 1.0) : 0);
+      rang.push([x, Math.min(0, y), bz + D[n]! + (paroi ? (alea() - 0.5) * 0.5 : 0)]);
+    }
+    const zDernier = bz + D[6]!;
+    rang.push([x0, -11.4, (zDernier + 26) / 2], [x0, -12, 60]);
+    return rang;
+  });
+  const c = new THREE.Color();
+  for (let i = 0; i < X.length - 1; i++) {
+    for (let j = 0; j < V[i]!.length - 1; j++) {
+      const a = V[i]![j]!, b = V[i + 1]![j]!, cc = V[i]![j + 1]!, d = V[i + 1]![j + 1]!;
+      // Vers l'est, les colonnes vont croissant : (a, cc, b) et (b, cc, d) regardent vers le haut et le large.
+      for (const t of [[a, cc, b], [b, cc, d]] as [number, number, number][][]) {
+        const ys = t.map((q) => q[1]);
+        const cy = (ys[0]! + ys[1]! + ys[2]!) / 3;
+        const r = alea();
+        let h: number;
+        if (Math.min(...ys) > -0.05) h = r < 0.5 ? HERBE : 0x95a05e;
+        else if (cy > -1.6) h = r < 0.4 ? 0xb59d52 : r < 0.55 ? 0x7f8a52 : 0x938e83;
+        else if (cy > -7.4) h = GRANITS[Math.floor(r * GRANITS.length)]!;
+        else if (cy > MER_Y - 0.4) h = r < 0.35 ? 0x4f5a3a : MOUILLE;
+        else h = cy > -9.9 ? 0x48463f : 0x3a4540;
+        c.setHex(h).offsetHSL(0, 0, (alea() - 0.5) * 0.04);
+        for (const q of t) {
+          p.push(...q);
+          col.push(c.r, c.g, c.b);
+        }
+      }
+    }
+  }
+}
+
+/** La route d'accès au nord : elle sort du lot au bout de l'allée de la grille nord, file dans la lande et s'y perd. */
+const TRACE_ROUTE_NORD: [number, number][] = [[-2.05, -24.95], [-2.6, -29], [-3.9, -34], [-5.2, -40], [-5.4, -46], [-4.3, -52], [-2.6, -58], [-1.6, -63]];
 
 // ---------- Le sentier côtier ----------
 
@@ -461,6 +514,8 @@ export function poserBords(modele: THREE.Object3D, m: MaillagesDuModele): void {
   const p: number[] = [];
   const col: number[] = [];
   coteOuest(p, col, alea);
+  coteEst(p, col, alea);
+  ruban(p, col, TRACE_ROUTE_NORD, 2.5, 0x9a8b70, () => 0, 0.013, alea, 18);
   ruban(p, col, TRACE_GREVE, 1.2, BATTUE, solSentier, 0.1, alea);
   const haut = MARCHES.x0 - MARCHES.pas * (MARCHES.n - 1);
   const lande: [number, number][] = [[haut + 0.1, bordFalaise(haut) - 0.3]];
@@ -505,8 +560,19 @@ export const PANNEAU_SENTIER = {
   poteau: 2.85,
 } as const;
 
-/** Les régions de la texture du panneau (x, y, largeur, hauteur, sur 512 × 512). */
-const T = { face: [0, 0, 512, 300], dos: [0, 300, 256, 100], bois: [256, 300, 128, 100] } as const;
+/** Le panneau de sortie de la route du nord (repère du lot ; 0.10, R52) : comme celui du sentier, plus petit. */
+export const PANNEAU_ROUTE = {
+  ...auModele(ECRITEAU_ROUTE.x, ECRITEAU_ROUTE.z),
+  largeur: 1.6,
+  hauteur: 0.5,
+  milieu: 1.65,
+  /** Tourné vers la caméra du jeu (au sud-est), comme celui du sentier. */
+  angle: Math.PI / 4,
+  poteau: 2.75,
+} as const;
+
+/** Les régions de la texture des panneaux (x, y, largeur, hauteur, sur 512 × 512). */
+const T = { face: [0, 0, 512, 300], dos: [0, 300, 256, 100], bois: [256, 300, 128, 100], route: [0, 400, 512, 112] } as const;
 
 function dessinerPanneau(g: CanvasRenderingContext2D): void {
   const [fx, fy, fl, fh] = T.face;
@@ -532,6 +598,23 @@ function dessinerPanneau(g: CanvasRenderingContext2D): void {
   g.fillRect(T.dos[0], T.dos[1], T.dos[2], T.dos[3]);
   g.fillStyle = "#6b5a48";
   g.fillRect(T.bois[0], T.bois[1], T.bois[2], T.bois[3]);
+  // Le panneau de la route du nord (sa face est plus allongée que la région : le texte est dessiné un peu tassé en hauteur).
+  const [rx, ry, rl, rh] = T.route;
+  g.fillStyle = "#fbf5e6";
+  g.fillRect(rx, ry, rl, rh);
+  g.strokeStyle = "#2f4a3a";
+  g.lineWidth = 6;
+  g.strokeRect(rx + 5, ry + 5, rl - 10, rh - 10);
+  g.save();
+  g.translate(rx + rl / 2, ry);
+  g.scale(1, 0.7);
+  g.fillStyle = "#1f3440";
+  g.textAlign = "center";
+  g.font = "bold 74px serif";
+  g.fillText("← La corniche", 0, 82);
+  g.font = "italic 56px serif";
+  g.fillText("Ton terrain", 0, 140);
+  g.restore();
 }
 
 function toile(trace: (g: CanvasRenderingContext2D) => void): THREE.CanvasTexture {
@@ -559,9 +642,8 @@ function piece(g: THREE.BufferGeometry, region: readonly number[], face?: readon
   return n;
 }
 
-/** La pose de la lanterne du panneau : en haut du poteau, devant la planche (repère du lot ; la lumière, au jeu). */
-function poseLanterne(): PoseLanterne {
-  const P = PANNEAU_SENTIER;
+/** La pose de la lanterne d'un panneau : en haut du poteau, devant la planche (repère du lot ; la lumière, au jeu). */
+function poseLanterne(P: { x: number; z: number; poteau: number; angle: number } = PANNEAU_SENTIER): PoseLanterne {
   return { x: P.x, y: solCote(P.x, P.z) + P.poteau, z: P.z, angle: P.angle, avance: 0.4, monde: jeu(0, 0) };
 }
 
@@ -576,15 +658,36 @@ export function creerPanneauSentier(): THREE.Group {
     piece(new THREE.BoxGeometry(P.largeur, P.hauteur, 0.05).translate(0, P.milieu, 0.1), T.dos, T.face),
     piece(new THREE.BoxGeometry(0.13, P.poteau + 0.04, 0.13).translate(0, (P.poteau + 0.04) / 2, 0), T.bois),
   ];
-  const geo = mergeGeometries(pieces) ?? new THREE.BufferGeometry();
+  const sentier = mergeGeometries(pieces) ?? new THREE.BufferGeometry();
   for (const g of pieces) g.dispose();
-  geo.rotateY(P.angle);
-  geo.translate(P.x, solCote(P.x, P.z), P.z);
+  sentier.rotateY(P.angle);
+  sentier.translate(P.x, solCote(P.x, P.z), P.z);
+  // Le panneau de sortie de la route du nord (0.10, R52) : dans le même maillage (la même texture : aucun appel de plus).
+  const R = PANNEAU_ROUTE;
+  const morceaux = [
+    piece(new THREE.BoxGeometry(R.largeur, R.hauteur, 0.05).translate(0, R.milieu, 0.1), T.dos, T.route),
+    piece(new THREE.BoxGeometry(0.12, R.poteau + 0.04, 0.12).translate(0, (R.poteau + 0.04) / 2, 0), T.bois),
+  ];
+  const route = mergeGeometries(morceaux) ?? new THREE.BufferGeometry();
+  for (const g of morceaux) g.dispose();
+  route.rotateY(R.angle);
+  route.translate(R.x, solCote(R.x, R.z), R.z);
+  const geo = mergeGeometries([sentier, route]) ?? sentier;
+  route.dispose();
+  if (geo !== sentier) sentier.dispose();
   const planche = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: toile(dessinerPanneau), roughness: 0.75 }));
   planche.name = "planche du sentier côtier";
   planche.castShadow = true;
   planche.receiveShadow = true;
   const lanterne = poserLanterne(poseLanterne());
+  // La lanterne du panneau de la route du nord, fondue dans celle du sentier (la même matière : un seul appel).
+  const nord = poserLanterne(poseLanterne(PANNEAU_ROUTE));
+  const deux = mergeGeometries([lanterne.maillage.geometry, nord.maillage.geometry]);
+  nord.maillage.geometry.dispose();
+  if (deux) {
+    lanterne.maillage.geometry.dispose();
+    lanterne.maillage.geometry = deux;
+  }
   const groupe = new THREE.Group();
   groupe.name = "panneau du sentier côtier";
   groupe.add(planche, lanterne.maillage);
@@ -595,6 +698,17 @@ export function creerPanneauSentier(): THREE.Group {
 /** La lanterne du panneau, la nuit : elle luit (et la réserve de lumières l'allume : `lampePanneau`). */
 export function allumerPanneau(panneau: THREE.Object3D | undefined, nuit: boolean): void {
   (panneau?.userData.lanterne as LanternePanneau | undefined)?.allumer(nuit);
+}
+
+/** La lumière de la lanterne du panneau de la route du nord (0.10, R52), dans le repère du jeu. */
+let sourceRoute: SourceLumiere | null = null;
+export function lampePanneauRoute(): SourceLumiere {
+  if (!sourceRoute) {
+    const l = poserLanterne(poseLanterne(PANNEAU_ROUTE));
+    l.maillage.geometry.dispose();
+    sourceRoute = l.source;
+  }
+  return sourceRoute;
 }
 
 /** La lumière de la lanterne du panneau, dans le repère du jeu (une source de la réserve de lumières, la nuit). */
