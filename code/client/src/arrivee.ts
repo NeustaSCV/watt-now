@@ -89,6 +89,11 @@ export class ArriveeDansUnLieu {
     return this.vue.cadrage(maintenant, position, zoomJoueur);
   }
 
+  /** La part de la brume de l'aube qu'on montre (0.10.1, A10) : rien pendant la vue d'ensemble, un fondu à la fin du zoom. */
+  get brume(): number {
+    return this.vue.brume(performance.now());
+  }
+
   /** Les toits restent pendant qu'on voit le lieu de loin. */
   get toitsVisibles(): boolean {
     return this.vue.toitsVisibles(performance.now());

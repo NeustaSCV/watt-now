@@ -2047,7 +2047,7 @@ function boucle(instant: number): void {
   }
   ondes.animer(dt);
   pluie.animer(dt, temps.pluie, scene.centre, scene.ciel.nuit);
-  brume.animer(dt, heure, scene.centre, temps.pluie);
+  brume.animer(dt, heure, scene.centre, temps.pluie, vueArrivee.brume);
   for (const f of feux.values()) f.animer(dt, scene.ciel.nuit);
   // L'éclat de repère des déchets : de jour à moins de 8 m ; la nuit, seulement dans la lumière qu'on porte.
   dechetsVue.animer(dt, enVoyage ? null : position, lumiere && lumierePortee(inventaire) !== null);

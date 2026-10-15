@@ -4,7 +4,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { zoneDe, type LieuId } from "../../../commun/src/lieux.ts";
-import { DUREE_ZOOM, VueEnsemble, boiteDeLaVue, cadrerEnsemble, tronconsVoulus, type BoiteVue } from "./vue-ensemble.ts";
+import { DUREE_ZOOM, FONDU_BRUME, VueEnsemble, boiteDeLaVue, cadrerEnsemble, tronconsVoulus, type BoiteVue } from "./vue-ensemble.ts";
 import { ELEVATION, demiLargeurDeBase, type Cadrage } from "./scene.ts";
 
 const LACET = Math.PI / 4;
@@ -121,4 +121,21 @@ test("le zoom va au zoom habituel du joueur (molette), pas forcément 1", () => 
   v.lancer(0);
   const c = v.cadrage(DUREE_ZOOM - 1, { x: 3, z: 4 }, 1.4)!;
   assert.ok(Math.abs(c.zoom - 1.4) < 0.01);
+});
+
+test("la brume de l'aube (0.10.1, A10) : masquée pendant la vue d'ensemble et le zoom, puis un fondu d'une seconde", () => {
+  const v = new VueEnsemble();
+  const joueur = { x: 10, z: 10 };
+  assert.equal(v.brume(0), 1, "sans vue d'ensemble (une connexion) : toute la brume");
+  v.commencer({ x: 30, z: 30, zoom: 4 });
+  assert.equal(v.brume(5000), 0, "on regarde le lieu de loin : pas de brume");
+  v.lancer(10_000);
+  v.cadrage(10_000 + DUREE_ZOOM / 2, joueur, 1);
+  assert.equal(v.brume(10_000 + DUREE_ZOOM / 2), 0, "pendant le zoom : pas de brume");
+  const fin = 10_000 + DUREE_ZOOM;
+  assert.equal(v.cadrage(fin, joueur, 1), null, "le zoom est fini");
+  assert.equal(v.brume(fin), 0);
+  assert.equal(v.brume(fin + FONDU_BRUME / 2), 0.5, "elle revient en fondu");
+  assert.equal(v.brume(fin + FONDU_BRUME), 1);
+  assert.ok(FONDU_BRUME >= 800 && FONDU_BRUME <= 1200, "≈ 1 s");
 });
