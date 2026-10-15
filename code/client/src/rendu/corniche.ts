@@ -16,6 +16,7 @@ import { TEXTES_PEAGE } from "../../../commun/src/peage.ts";
 import type { Propositions } from "../interaction.ts";
 import type { RessourceSol } from "../../../commun/src/terrain.ts";
 import { brouillerTout } from "./carte-vue.ts";
+import { tronconsVoulus } from "./vue-ensemble.ts";
 import { estomperToits } from "./halte.ts";
 import type { SourceLumiere } from "./lumieres.ts";
 // @ts-expect-error : le modèle de la corniche est en JavaScript, sans types (client/src/batiments/ ne se modifie pas) : typé ici.
@@ -157,15 +158,13 @@ export class RenduCorniche {
   // ---------- À chaque image ----------
 
   /**
-   * Les tronçons autour du joueur, le pin (débité quand je l'ai vidé : `ressources`, ce que le serveur m'a dit de mon
+   * Les tronçons autour du joueur (tous pendant la vue d'ensemble), le pin (débité quand je l'ai vidé : `ressources`, ce que le serveur m'a dit de mon
    * butin personnel ; il revient entier avec mes bûches), les toits qui s'effacent, l'écume.
    */
-  animer(p: { x: number; z: number }, dt: number, lacet: number, ressources: Iterable<{ donnees: RessourceSol }>): void {
-    const ici = TRONCONS_CORNICHE.indexOf(tronconCorniche(p.x));
-    const voulus = new Set<TronconCorniche>([TRONCONS_CORNICHE[ici]!]);
-    if (ici > 0) voulus.add(TRONCONS_CORNICHE[ici - 1]!);
-    if (ici < 3) voulus.add(TRONCONS_CORNICHE[ici + 1]!);
-    for (const id of voulus) if (!this.troncons.has(id)) this.construire(id);
+  animer(p: { x: number; z: number }, dt: number, lacet: number, ressources: Iterable<{ donnees: RessourceSol }>, ensemble = false): void {
+    // Pendant la vue d'ensemble de l'arrivée (`ensemble`), tout le lieu (0.10, R52) ; ensuite, autour du joueur.
+    const { voulus, aConstruire } = tronconsVoulus(TRONCONS_CORNICHE, TRONCONS_CORNICHE.indexOf(tronconCorniche(p.x)), ensemble, this.troncons);
+    for (const id of aConstruire) this.construire(id);
     for (const [id, t] of this.troncons) if (!voulus.has(id)) this.defaire(id, t);
 
     for (const r of ressources) {

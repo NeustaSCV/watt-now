@@ -1842,9 +1842,10 @@ function boucle(instant: number): void {
     const decor = decors.get(lieu);
     // Les toits qui cachent le personnage s'effacent (à la halte et au Comptoir), selon l'angle de la caméra.
     if ((lieu === "station" || lieu === "comptoir") && decor) estomperToits(decor, position.x, position.z, dt, scene.angleCamera);
-    if (lieu === "gue" && decor) gue.animer(position, dt, scene.angleCamera, Date.now() + decalage, debutMonde);
-    if (lieu === "corniche" && decor) corniche.animer(position, dt, scene.angleCamera, ressources.values()); // 0.10, chantier I
-    if (lieu === "route_pont" && decor) routePont.animer(position, dt, scene.angleCamera, Date.now() + decalage, debutMonde);
+    // (0.10, R52 : pendant la vue d'ensemble de l'arrivée, les haltes par tronçons construisent tout le lieu.)
+    if (lieu === "gue" && decor) gue.animer(position, dt, scene.angleCamera, Date.now() + decalage, debutMonde, vueArrivee.ensemble);
+    if (lieu === "corniche" && decor) corniche.animer(position, dt, scene.angleCamera, ressources.values(), vueArrivee.ensemble); // 0.10, chantier I
+    if (lieu === "route_pont" && decor) routePont.animer(position, dt, scene.angleCamera, Date.now() + decalage, debutMonde, vueArrivee.ensemble);
     if (!vueArrivee.attend && !enVoyage) guidage.suivre(lieu, position, Date.now() + decalage, debutMonde, inventaire); // 0.10, guidage
     if (lieu === "cooperative" && decorCoop) {
       estomperCooperative(decorCoop, position.x, position.z, dt, scene.angleCamera);

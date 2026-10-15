@@ -4,7 +4,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { zoneDe, type LieuId } from "../../../commun/src/lieux.ts";
-import { DUREE_ZOOM, VueEnsemble, boiteDeLaVue, cadrerEnsemble, type BoiteVue } from "./vue-ensemble.ts";
+import { DUREE_ZOOM, VueEnsemble, boiteDeLaVue, cadrerEnsemble, tronconsVoulus, type BoiteVue } from "./vue-ensemble.ts";
 import { ELEVATION, demiLargeurDeBase, type Cadrage } from "./scene.ts";
 
 const LACET = Math.PI / 4;
@@ -62,11 +62,31 @@ test("en portrait, le lieu tient sous le HUD du haut", () => {
   }
 });
 
-test("au gué, on montre le tronçon d'arrivée et son voisin vers le milieu (100 × 70 m)", () => {
+test("au gué, on montre tout le lieu (0.10, R52 : ses quatre tronçons sont construits pendant la vue d'ensemble)", () => {
   const zone = zoneDe("gue");
-  assert.deepEqual(boiteDeLaVue("gue", zone, { x: 196, z: 30 }), { xMin: 100, xMax: 200, zMin: 0, zMax: 70 });
-  assert.deepEqual(boiteDeLaVue("gue", zone, { x: 4, z: 30 }), { xMin: 0, xMax: 100, zMin: 0, zMax: 70 });
-  assert.deepEqual(boiteDeLaVue("gue", zone, { x: 60, z: 30 }), { xMin: 50, xMax: 150, zMin: 0, zMax: 70 });
+  for (const x of [196, 4, 60]) assert.deepEqual(boiteDeLaVue("gue", zone, { x, z: 30 }), { xMin: 0, xMax: 200, zMin: 0, zMax: 70 });
+});
+
+test("les tronçons voulus : en jeu, le joueur et ses voisins ; pendant la vue d'ensemble, tous, les lointains un par image", () => {
+  const ordre = ["a", "b", "c", "d"] as const;
+  const construits = new Set<string>();
+  // En jeu, au premier tronçon : lui et son voisin, tout de suite.
+  let r = tronconsVoulus(ordre, 0, false, construits);
+  assert.deepEqual([...r.voulus], ["a", "b"]);
+  assert.deepEqual(r.aConstruire, ["a", "b"]);
+  // La vue d'ensemble : les deux proches, puis un lointain par image, jusqu'à tous.
+  r = tronconsVoulus(ordre, 0, true, construits);
+  assert.deepEqual([...r.voulus], ["a", "b", "c", "d"]);
+  assert.deepEqual(r.aConstruire, ["a", "b", "c"]);
+  for (const id of r.aConstruire) construits.add(id);
+  r = tronconsVoulus(ordre, 0, true, construits);
+  assert.deepEqual(r.aConstruire, ["d"]);
+  construits.add("d");
+  assert.deepEqual(tronconsVoulus(ordre, 0, true, construits).aConstruire, []);
+  // Après le zoom : on revient au jeu, les lointains ne sont plus voulus (ils seront défaits).
+  r = tronconsVoulus(ordre, 0, false, construits);
+  assert.deepEqual([...r.voulus], ["a", "b"]);
+  assert.deepEqual(r.aConstruire, []);
 });
 
 test("l'attente garde la vue d'ensemble ; le geste lance un zoom de 1,5 s qui finit sur le personnage", () => {

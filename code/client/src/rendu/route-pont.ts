@@ -20,6 +20,7 @@ import type { Boite, Zone } from "../../../commun/src/lieux.ts";
 import type { MessageServeur } from "../../../commun/src/messages.ts";
 import type { Propositions } from "../interaction.ts";
 import { brouillerTout } from "./carte-vue.ts";
+import { tronconsVoulus } from "./vue-ensemble.ts";
 import { estomperToits } from "./halte.ts";
 import type { SourceLumiere } from "./lumieres.ts";
 // @ts-expect-error : le modèle de la route du pont est en JavaScript, sans types (client/src/batiments/ ne se modifie pas).
@@ -234,11 +235,11 @@ export class RenduRoutePont {
 
   // ---------- À chaque image ----------
 
-  /** Les tronçons autour du joueur, la marée et la porte du péage, les toits qui s'effacent, ce qui bouge. */
-  animer(p: { x: number; z: number }, dt: number, lacet: number, instant: number, debutMonde: number): void {
-    const ici = ORDRE.indexOf(tronconDe(p.x));
-    const voulus = new Set<string>([ORDRE[ici]!, ...(ici > 0 ? [ORDRE[ici - 1]!] : []), ...(ici < 3 ? [ORDRE[ici + 1]!] : [])]);
-    for (const id of voulus) if (!this.troncons.has(id)) this.construire(id);
+  /** Les tronçons autour du joueur (tous pendant la vue d'ensemble), la marée et la porte du péage, les toits qui s'effacent, ce qui bouge. */
+  animer(p: { x: number; z: number }, dt: number, lacet: number, instant: number, debutMonde: number, ensemble = false): void {
+    // Pendant la vue d'ensemble de l'arrivée (`ensemble`), tout le lieu (0.10, R52) ; ensuite, autour du joueur.
+    const { voulus, aConstruire } = tronconsVoulus<string>(ORDRE, ORDRE.indexOf(tronconDe(p.x)), ensemble, this.troncons);
+    for (const id of aConstruire) this.construire(id);
     for (const [id, t] of this.troncons) if (!voulus.has(id)) this.defaire(id, t);
     const haute = maree(instant, debutMonde) === "haute";
     for (const t of this.troncons.values()) {
