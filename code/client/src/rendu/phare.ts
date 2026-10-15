@@ -25,6 +25,7 @@ import { LUMIERES_MODELE, PLACES_OBJETS } from "../../../commun/src/phare-modele
 import type { TypeRessource } from "../../../commun/src/terrain.ts";
 import { estomperToits, montrerTousLesToits } from "./halte.ts";
 import { animerNuitPhare, creerNuitPhare } from "./phare-nuit.ts";
+import { creerCloture } from "./phare-cloture.ts";
 import type { FeuxCargo } from "../phare-scene.ts";
 import type { SourceLumiere } from "./lumieres.ts";
 import { nommer } from "./materiaux.ts";
@@ -108,8 +109,9 @@ export function creerPhare(): THREE.Group {
   etendreAlentours(modele);
   groupe.add(modele);
   nommer(groupe, ["phare"]);
-  // K2 : le balayage du faisceau, les feux du cargo (rendu/phare-nuit.ts).
+  // K2 : le balayage du faisceau, les feux du cargo (rendu/phare-nuit.ts) ; la clôture des bords (rendu/phare-cloture.ts).
   creerNuitPhare(groupe);
+  groupe.add(creerCloture());
   etats.set(groupe, (modele.userData.objets ?? {}) as Partial<Record<ObjetNomme, THREE.Object3D | null>>);
   return groupe;
 }

@@ -249,3 +249,26 @@ test("le cargo qui approche, la nuit, braque son projecteur sur la crique (une l
   assert.equal(lumieresPhare({ etat, epave: false, feux: { x: 20, z: 70, cap: Math.PI } }, true).length, sans + 1);
   assert.equal(lumieresPhare({ etat, epave: false, feux: { x: 20, z: 70, cap: Math.PI } }, false).length, 0, "le jour, rien");
 });
+
+test("la clôture : un muret sur la limite du lot, ouvert sur la route au nord, sans obstacle de plus ; un appel de dessin", async () => {
+  const { CLOTURE, tronconsCloture } = await import("./phare-cloture.ts");
+  const { SORTIES_PHARE, zonePhare } = await import("../../../commun/src/phare.ts");
+  const decor = creerPhare();
+  const muret = decor.children.find((o) => o.name.startsWith("clôture"))! as THREE.Mesh;
+  assert.ok(muret, "le muret est dans le décor");
+  assert.ok(!Array.isArray(muret.material), "un seul matériau : un appel de dessin");
+  const zone = zonePhare({ epave: false });
+  // Tout le muret est hors de ce qu'on foule : au-delà de la limite de la zone (côté lande), sur sa ligne.
+  muret.geometry.computeBoundingBox();
+  const pos = muret.geometry.getAttribute("position");
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i);
+    const z = pos.getZ(i);
+    const dehors = x <= zone.xMin || x >= zone.xMax || z <= zone.zMin;
+    assert.ok(dehors, `une pierre empiète sur le lieu (${x.toFixed(2)}, ${z.toFixed(2)})`);
+  }
+  // La route d'arrivée reste ouverte : aucun tronçon ne traverse la sortie du nord.
+  const s = SORTIES_PHARE[0]!;
+  for (const t of tronconsCloture()) if (t.z1 === t.z2) assert.ok(t.x2 <= s.boite.x - s.boite.l / 2 || t.x1 >= s.boite.x + s.boite.l / 2);
+  assert.ok(CLOTURE.retrait + CLOTURE.largeur / 2 < zone.xMin + 0.01);
+});
