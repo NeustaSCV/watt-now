@@ -9,10 +9,10 @@
 
 import * as THREE from "three";
 import { DISTANCE_INTERACTION } from "../../commun/src/terrain.ts";
-import { ENDROITS_PHARE, PORTEE_SAUT, RAYON_MARQUE, type EtatPhareVu } from "../../commun/src/phare.ts";
+import { ENDROITS_PHARE, NIVEAU_MER, PORTEE_SAUT, RAYON_MARQUE, dansLEauPhare, etageDuPhare, memeEtagePhare, type EtagePhare, type EtatPhareVu } from "../../commun/src/phare.ts";
 import type { MessageServeurPhare } from "../../commun/src/messages.ts";
 import type { ActionProposee, Propositions } from "./interaction.ts";
-import { lumieresPhare, solPhare, type ScenePhare } from "./rendu/phare.ts";
+import { lumieresPhare, piedsPhare, surfacePhare, type ScenePhare } from "./rendu/phare.ts";
 import { MiseEnScenePhare, PROCHE_ETEINT, SCENE_CARGO, momentCargo } from "./phare-scene.ts";
 import type { CinemaCargo } from "./phare-cargo.ts";
 import type { Cadrage } from "./rendu/scene.ts";
@@ -29,16 +29,26 @@ const EXAMEN_RAMPE = "Le tronçon effondré de la rampe du canot : un mètre et 
 
 type Joueur = (id: IdSon, ou?: { x: number; z: number }) => void;
 
-/** Sous cette hauteur (sans l'épave), on est en bas : la partie basse de la rampe, la grève, le pont de l'épave. */
-const LIMITE_ETAGES = -6;
-
 /**
- * Les deux étages du phare (L-1) : en haut, le plateau et la partie haute de la rampe ; en bas, la partie basse de la
- * rampe, la grève et l'épave. À pied, rien ne les relie, ni pour le joueur (on saute, on ne remonte pas) ni pour un
- * Éteint (la falaise, le trou de la rampe) : un Éteint d'en bas ne menace pas qui est en haut, et l'inverse.
+ * Les étages du phare (L-1 ; commun/src/phare.ts, etageDuPhare) : en haut, le plateau et la partie haute de la rampe ; en
+ * bas, la partie basse de la rampe, la grève et l'eau de la crique ; à part, le pont de l'épave, relié à la grève par
+ * l'échelle de coupée. Un Éteint d'un autre étage ne menace pas (le mode Combat, les gestes du bouton A), et l'on ne le
+ * frappe pas (le serveur, `cibleDevant`).
  */
-export function etagePhare(x: number, z: number): "haut" | "bas" {
-  return solPhare(x, z, false) > LIMITE_ETAGES ? "haut" : "bas";
+export function etagePhare(x: number, z: number, epave = false): EtagePhare {
+  return etageDuPhare(x, z, epave);
+}
+
+/** Le remous aux jambes, dans l'eau de la crique : un anneau d'écume qui bat doucement à la surface. */
+function creerRemous(): THREE.Mesh {
+  const m = new THREE.Mesh(
+    new THREE.RingGeometry(0.28, 0.42, 20).rotateX(-Math.PI / 2),
+    new THREE.MeshBasicMaterial({ color: 0xe8f2f0, transparent: true, opacity: 0.45, depthWrite: false }),
+  );
+  m.name = "remous";
+  m.renderOrder = 3;
+  m.visible = false;
+  return m;
 }
 
 export class PhareClient {
@@ -55,6 +65,11 @@ export class PhareClient {
   private readonly cinema: CinemaCargo | null;
   private nuit = false;
   private cadre = false;
+  /** L'épave est échouée (`portes.epave`, gardé à chaque pose) : les étages en dépendent. */
+  private epave = false;
+  /** Le remous aux jambes du personnage, dans l'eau de la crique (créé à la première pose). */
+  private remous: THREE.Mesh | null = null;
+  private tempsRemous = 0;
 
   private readonly jouer: Joueur;
 
@@ -85,8 +100,13 @@ export class PhareClient {
    * étage : les Noyés de la grève ne mettent pas en garde qui est au bord du tronçon effondré (le geste « Sauter » y
    * restait caché derrière « Frapper » : essai sur l'iPhone, 2026-10-14), ni qui longe le haut de la falaise.
    */
-  menace(e: { x: number; z: number }, position: { x: number; z: number }): boolean {
-    return etagePhare(e.x, e.z) === etagePhare(position.x, position.z);
+  menace(e: { x: number; z: number }, position: { x: number; z: number }, epave = this.epave): boolean {
+    return memeEtagePhare(e, position, epave);
+  }
+
+  /** Est-on dans l'eau de la crique, jusqu'aux genoux ? (on n'y court pas : main.ts le dit) */
+  dansLEau(position: { x: number; z: number }): boolean {
+    return dansLEauPhare(position.x, position.z, this.epave);
   }
 
   /** L'escabeau du gardien est dans les bras (on marche, on ne court pas ; l'escabeau se voit dans les bras). */
@@ -185,21 +205,36 @@ export class PhareClient {
     if (!auPhare) {
       this.yPerso = null;
       cible.scene.hauteurSuivie = 0;
+      if (this.remous) this.remous.visible = false;
       // Parti pendant la scène de l'échouage : elle s'arrête net.
       if (this.cargo !== null) this.finirScene();
       return;
     }
     const epave = portes.epave === true;
-    const sol = (o: THREE.Object3D) => solPhare(o.position.x, o.position.z, epave);
+    this.epave = epave;
+    // Les pieds : sur le sol, ou dans l'eau de la crique, enfoncés jusqu'aux genoux (0.10).
+    const pieds = (o: THREE.Object3D) => piedsPhare(o.position.x, o.position.z, epave);
     if (cible.personnage) {
-      const y = sol(cible.personnage);
+      const p = cible.personnage.position;
+      const y = pieds(cible.personnage);
       // On descend la rampe, on saute le tronçon effondré, on pose le pied sur les galets : la hauteur suit, en douceur.
       this.yPerso = this.yPerso === null || Math.abs(y - this.yPerso) > 4 ? y : this.yPerso + (y - this.yPerso) * Math.min(1, dt * 12);
-      cible.personnage.position.y = this.yPerso;
+      p.y = this.yPerso;
       cible.scene.hauteurSuivie = this.yPerso;
+      // Le remous aux jambes, à la surface, tant qu'on a de l'eau aux mollets.
+      const r = (this.remous ??= creerRemous());
+      if (r.parent !== cible.personnage.parent) cible.personnage.parent?.add(r);
+      r.visible = dansLEauPhare(p.x, p.z, epave) && NIVEAU_MER - this.yPerso > 0.12;
+      if (r.visible) {
+        this.tempsRemous += dt;
+        const s = 1 + 0.12 * Math.sin(this.tempsRemous * 3.1);
+        r.position.set(p.x, NIVEAU_MER + 0.02, p.z);
+        r.scale.set(s, 1, s);
+      }
     }
-    for (const e of cible.eteints) e.objet.position.y = sol(e.objet);
-    for (const c of cible.cercles) c.position.y = sol(c) + 0.03;
+    for (const e of cible.eteints) e.objet.position.y = pieds(e.objet);
+    // Ce qui est posé à plat (la visée, l'anneau d'une action) : le sol, ou la surface de l'eau.
+    for (const c of cible.cercles) c.position.y = surfacePhare(c.position.x, c.position.z, epave) + 0.03;
   }
 
   /**

@@ -47,7 +47,7 @@ import { ClientHotel } from "./hotel.ts";
 import { Guidage } from "./guidage.ts";
 import { animerPhare, creerPhare } from "./rendu/phare.ts";
 import { PhareClient } from "./phare.ts";
-import { hauteurSolLieu } from "./sol-lieu.ts";
+import { hauteurPiedsLieu, hauteurSolLieu, hauteurSurfaceLieu } from "./sol-lieu.ts";
 import { ScenePhareCargo } from "./phare-cargo.ts";
 import { pieceMoulin } from "../../commun/src/moulin.ts";
 // Le Gué-aux-Saules (plan 0.8, chantier 11) : son décor, son bac, sa crue, ses sons.
@@ -747,7 +747,7 @@ function majViseeLancer(): void {
   const visables = [...eteints.entries()].map(([id, e]) => ({ id, x: e.objet.position.x, z: e.objet.position.z, debout: e.etat !== "a_terre" && e.etat !== "detruit" }));
   const v = viser(position, position.o, pret, visables, pointSouris());
   viseeEnCours.visee = v;
-  dessinVisee.montrer(position, v, pret, entrees.tenuLancer ?? 0);
+  dessinVisee.montrer(position, v, pret, entrees.tenuLancer ?? 0, (x, z) => hauteurSurfaceLieu(lieu, x, z, portesCoop));
 }
 
 /** Un projectile vole (le sien, ou celui d'un autre joueur) : on le dessine, puis l'impact. */
@@ -1258,6 +1258,8 @@ function majCercles(dt: number, allure: Allure, bouge: boolean, nuit: boolean): 
   // La pluie couvre le bruit (Book 13 §4) : le cercle rétrécit.
   c.son *= attenuationMeteo(meteo(Date.now() + decalage, debutMonde), "son");
   const plan = estPersonnel(lieu) ? planDe(lieu) : null;
+  // Posés sur le sol où l'on est (0.10 : au phare, la grève, le pont de l'épave, la surface de l'eau).
+  const y = hauteurSurfaceLieu(lieu, position.x, position.z, portesCoop) + 0.1;
   for (const [ligne, pieces, rayon] of [
     [cercleSon, cercleSonPieces, c.son],
     [cercleLumiere, cercleLumierePieces, c.lumiere],
@@ -1268,6 +1270,8 @@ function majCercles(dt: number, allure: Allure, bouge: boolean, nuit: boolean): 
     ligne.scale.set(r, 1, r);
     ligne.position.x = position.x;
     ligne.position.z = position.z;
+    ligne.position.y = y;
+    pieces.position.y = y;
     // En mode photo, l'image doit rester propre : pas de cercle.
     const montre = r > 1.2 && !enVoyage && !photo.actif;
     ligne.visible = montre && !plan;
@@ -1632,8 +1636,10 @@ async function entrer(messageInitial = ""): Promise<void> {
  * égale (décroissance 1, nulle à 9 m), tenue haut et un peu devant (sinon le corps jette une grande ombre à ses pieds).
  */
 function lampeDansLeNoir(l: (typeof LUMIERES_PORTEES)[keyof typeof LUMIERES_PORTEES], p: { x: number; z: number; o: number }, noir: boolean): SourceLumiere {
-  if (!noir) return { x: p.x, y: 1.7, z: p.z, ...l };
-  return { ...l, x: p.x + Math.sin(p.o) * 0.45, y: 2.7, z: p.z + Math.cos(p.o) * 0.45, intensite: l.intensite * 2, portee: 9, decroissance: 1 };
+  // Tenue au-dessus des pieds, là où ils sont (0.10 : au phare, la grève et l'épave sont 4 à 9 m sous le plateau).
+  const pieds = hauteurPiedsLieu(lieu, p.x, p.z, portesCoop);
+  if (!noir) return { x: p.x, y: pieds + 1.7, z: p.z, ...l };
+  return { ...l, x: p.x + Math.sin(p.o) * 0.45, y: pieds + 2.7, z: p.z + Math.cos(p.o) * 0.45, intensite: l.intensite * 2, portee: 9, decroissance: 1 };
 }
 
 /** Dans une pièce noire de la Coopérative, du Moulin (Book 23 §4.5) : il y fait nuit, même de jour. */
@@ -1656,7 +1662,8 @@ function sourcesDeLumiere(): SourceLumiere[] {
   for (const a of autres.values()) {
     if (!a.donnees.lumiere) continue;
     const genre = a.donnees.famille === "charbonniers" ? "torche" : a.donnees.famille === "voltaiques" ? "frontale" : "lanterne";
-    sources.push({ x: a.objet.position.x, y: 1.7, z: a.objet.position.z, ...LUMIERES_PORTEES[genre] });
+    const pa = a.objet.position;
+    sources.push({ x: pa.x, y: hauteurPiedsLieu(lieu, pa.x, pa.z, portesCoop) + 1.7, z: pa.z, ...LUMIERES_PORTEES[genre] });
   }
   // Au Carrefour, la lumière électrique ne s'éteint jamais.
   if (lieu === "comptoir") sources.push(...lumieresComptoir());
@@ -1736,10 +1743,14 @@ function boucle(instant: number): void {
     let allure = allureAutorisee(entree.allure, besoins, porteEscabeau() || brasHotel || traineTravois(inventaire));
     if (allure === "course" && endurance < SEUIL_EPUISE) allure = "marche";
     if (allure === "course" && lieu === "gue" && gue.surLeRadier(position)) allure = "marche"; // le radier : on n'y court pas
+    const dansLEau = lieu === "phare" && phare.dansLEau(position); // 0.10 : l'eau de la crique, jusqu'aux genoux
+    if (allure === "course" && dansLEau) allure = "marche";
     // On voulait courir, mais on marche : on dit pourquoi, et comment y remédier.
     if (entree.allure === "course" && allure !== "course" && Math.hypot(dx, dz) > 0.05) {
       const raison = lieu === "gue" && gue.surLeRadier(position)
         ? "Sur le radier, on marche : le béton glisse sous l'eau qui court."
+        : dansLEau
+        ? "De l'eau jusqu'aux genoux : on n'y court pas."
         : porteEscabeau()
         ? "Les bras chargés, on ne court pas : pose d'abord l'escabeau."
         : brasHotel
@@ -1971,7 +1982,8 @@ function boucle(instant: number): void {
     }
     // Le phare du cap (0.10, chantier K) : son décor suit son état ; le relief (personnage, Éteints, cercles, caméra).
     if (lieu === "phare" && decors.get(lieu)) animerPhare(decors.get(lieu)!, position.x, position.z, dt, scene.angleCamera, phare.scene(portesCoop), ressources.values());
-    phare.poser(lieu === "phare", portesCoop, dt, { personnage: personnage.objet, eteints: eteints.values(), cercles: [visee, anneauProgres], scene });
+    // Les autres joueurs aussi se posent sur le relief (0.10 : sinon, sur la grève, ils flottaient au niveau du plateau).
+    phare.poser(lieu === "phare", portesCoop, dt, { personnage: personnage.objet, eteints: lieu === "phare" ? [...eteints.values(), ...autres.values()] : [], cercles: [visee, anneauProgres], scene });
     phare.animer();
   } else {
     scene.suivre(25, 25, dt);

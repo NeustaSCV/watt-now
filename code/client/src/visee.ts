@@ -123,7 +123,7 @@ export class DessinVisee {
    * Montre la visée de `de` vers `v`. `tenuMs` : depuis combien de temps on tient (l'arc se bande et le cercle se
    * referme). Rend la couleur du cercle (le client peut s'en servir pour le son).
    */
-  montrer(de: { x: number; z: number }, v: Visee, pret: Pret, tenuMs: number): "blanc" | "orange" | "rouge" {
+  montrer(de: { x: number; z: number }, v: Visee, pret: Pret, tenuMs: number, sol: (x: number, z: number) => number = () => 0): "blanc" | "orange" | "rouge" {
     this.objet.visible = true;
     let rayon = 0.5;
     let couleur: "blanc" | "orange" | "rouge" = "blanc";
@@ -138,11 +138,13 @@ export class DessinVisee {
     } else rayon = pret.def.genre === "leurre" ? 0.7 : 0.45;
     this.matiere.color.setHex(COULEURS[couleur]);
     this.construireAnneau(rayon);
-    this.anneau.position.set(v.x, 0, v.z);
-    this.contour.position.set(v.x, 0, v.z);
+    // Au phare (0.10), le cercle et les points se posent sur le sol réel (la grève, le pont de l'épave, l'eau).
+    const yv = sol(v.x, v.z);
+    this.anneau.position.set(v.x, yv, v.z);
+    this.contour.position.set(v.x, yv, v.z);
     this.disque.visible = couleur === "rouge";
     this.disque.scale.set(rayon, 1, rayon);
-    this.disque.position.set(v.x, 0, v.z);
+    this.disque.position.set(v.x, yv, v.z);
     // La ligne de points, du pied au cercle (elle s'arrête au bord du cercle).
     const dx = v.x - de.x;
     const dz = v.z - de.z;
@@ -153,7 +155,7 @@ export class DessinVisee {
       const p = this.points[i]!;
       p.visible = utile > 0.4;
       const t = d > 0 ? (utile * k) / d : 0;
-      p.position.set(de.x + dx * t, 0, de.z + dz * t);
+      p.position.set(de.x + dx * t, sol(de.x + dx * t, de.z + dz * t), de.z + dz * t);
       // Les points rapetissent vers la cible : on lit la direction d'un coup d'œil.
       const s = 1.15 - 0.5 * k;
       p.scale.set(s, 1, s);

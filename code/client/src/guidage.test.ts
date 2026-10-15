@@ -401,12 +401,15 @@ test("Les textes exacts des écriteaux (G-2)", () => {
     "E-09": "« Journal de bord · Rallumé quand même. »",
     "E-10": "« ÉTEINS LA LANTERNE ! ILS VOIENT LA LUMIÈRE »",
     "E-11": "« PHARE DU CAP · allumé en 1883 »",
+    // 0.10 (essai sur l'iPhone du 2026-10-15) : le panneau du sentier côtier, à la sortie de la grève.
+    "E-12": "« Sentier côtier · ← Port · 6 km »",
   });
 });
 
-test("Toutes les phrases P-01 à P-27 sont là (sauf P-23, déjà en jeu), et aucune ne dit « clé »", () => {
+test("Toutes les phrases P-01 à P-28 sont là (sauf P-23, déjà en jeu), et aucune ne dit « clé »", () => {
   const ids = DECLENCHEURS.map((d) => d.id);
-  const attendus = Array.from({ length: 27 }, (_, i) => `P-${String(i + 1).padStart(2, "0")}`).filter((id) => id !== "P-23");
+  // P-28 (0.10, essai sur l'iPhone du 2026-10-15) : sur les galets, par où l'on ressort.
+  const attendus = Array.from({ length: 28 }, (_, i) => `P-${String(i + 1).padStart(2, "0")}`).filter((id) => id !== "P-23");
   assert.deepEqual([...ids].sort(), attendus);
   const tous = [...DECLENCHEURS.flatMap((d) => d.lignes.map((l) => l.texte)), ...ECRITEAUX.map((e) => e.texte)];
   for (const t of tous) assert.doesNotMatch(t, /\bcl[ée]s?\b/i, t);
