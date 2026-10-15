@@ -1,5 +1,6 @@
 // La première nuit (plan 0.8 §2.6, B14) : une bûche du terrain mise au feu quand il en reste moins de 6 fait avertir,
-// une fois par nuit ; jamais au feu d'une halte ; une branche, jamais.
+// une fois par nuit ; jamais au feu d'une halte ; une branche, jamais. L'avertissement est un message ordinaire, qui
+// passe (le porteur, 2026-10-15 : plus de bandeau à bouton en jeu).
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -20,7 +21,7 @@ test("une bûche au feu du terrain avec 5 bûches restantes déclenche l'avertis
   assert.equal(SEUIL_BUCHES, 6);
   const recus: MessageServeur[] = [];
   assert.equal(new AvertissementBuche().verifier(auFeu(5), (m) => recus.push(m)), true);
-  assert.deepEqual(recus, [{ t: "avertissement", id: "buche", texte: TEXTE_AVERTISSEMENT_BUCHE, bouton: "Compris" }]);
+  assert.deepEqual(recus, [{ t: "info", texte: TEXTE_AVERTISSEMENT_BUCHE }], "un message qui passe, sans bouton");
   assert.equal(new AvertissementBuche().verifier(auFeu(6), (m) => recus.push(m)), false);
   assert.equal(recus.length, 1);
 });
@@ -64,7 +65,7 @@ test("les bûches restantes : au sol (encore là), dans le sac, dans les coffres
   assert.equal(n, 2 + 1 + 3);
 });
 
-test("sur le terrain, mettre une bûche au feu quand il en reste peu envoie le bandeau, une fois", () => {
+test("sur le terrain, mettre une bûche au feu quand il en reste peu envoie le message du carnet, une fois", () => {
   const base = new Base(":memory:");
   const compte = base.creerCompte("Rose", "potager42", "charbonniers");
   base.sauverInventaire(compte.id, { sac_a_dos: 1, buche: 3 });
@@ -83,7 +84,7 @@ test("sur le terrain, mettre une bûche au feu quand il en reste peu envoie le b
     joueur.tick(0.5);
   };
   mettre();
-  const avertis = () => recus.filter((m) => m.t === "avertissement");
+  const avertis = () => recus.filter((m) => m.t === "info" && m.texte === TEXTE_AVERTISSEMENT_BUCHE);
   assert.equal(avertis().length, 1, "4 restantes : l'avertissement part");
   mettre();
   assert.equal(avertis().length, 1, "pas deux fois la même nuit");
