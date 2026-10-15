@@ -35,8 +35,9 @@ export async function extraire() {
   for (const [id, o] of Object.entries(u.objets)) {
     if (!o) continue;
     const b = new THREE.Box3().setFromObject(o);
-    const c = b.getCenter(new THREE.Vector3());
-    places[id] = { x: arr(c.x), z: arr(c.z), y: arr(b.min.y) };
+    // Un repère vide (les panneaux de sortie : leurs maillages sont fondus dans le lieu) : sa position.
+    const c = b.isEmpty() ? o.getWorldPosition(new THREE.Vector3()) : b.getCenter(new THREE.Vector3());
+    places[id] = { x: arr(c.x), z: arr(c.z), y: arr(b.isEmpty() ? c.y : b.min.y) };
   }
   return {
     lot: FICHE.lot,
@@ -56,6 +57,10 @@ export async function extraire() {
     // Les points de fouille, sans leur description (elle n'est pas un texte du jeu : les textes sont dans ressources-phare.ts).
     fouille: FICHE.fouille.map(({ quoi: _quoi, ...p }) => point(p)),
     eteints: FICHE.eteints.map(point),
+    // Les panneaux de sortie (0.10, R52) : leur pied, leur texte, leur sortie, et leur lanterne.
+    panneaux: FICHE.panneaux.map(({ id, x, z, texte, sortie, lanterne }) => ({ id, x: arr(x), z: arr(z), texte, sortie, lanterne: point(lanterne) })),
+    // La mer (R0-3) : la ligne de brisants, là où l'on perd pied (le jeu garde sa propre ligne : LARGEUR_EAU).
+    ligneDuLarge: FICHE.mer.ligneDuLarge,
   };
 }
 
@@ -161,7 +166,21 @@ export const PLACES_OBJETS: Readonly<Record<(typeof OBJETS_MODELE)[number], { x:
 /** L'échelle de coupée et la cloche de l'épave. */
 ${valeur("EPAVE_MODELE", d.epave)}
 ${liste("FOUILLE_MODELE", "PointModele", d.fouille)}
-${liste("ETEINTS_MODELE", "PointModele", d.eteints)}`;
+${liste("ETEINTS_MODELE", "PointModele", d.eteints)}
+/** Un panneau de sortie du modèle (0.10, R52) : son pied, son texte, sa sortie, sa lanterne (le verre, la lumière). */
+export interface PanneauModele {
+  id: string;
+  x: number;
+  z: number;
+  texte: string;
+  sortie: string;
+  lanterne: { x: number; y: number; z: number };
+}
+
+${liste("PANNEAUX_MODELE", "PanneauModele", d.panneaux)}
+/** La ligne de brisants de la mer du modèle (FICHE.mer.ligneDuLarge : [x, z]), où l'eau claire devient profonde. */
+export const LIGNE_DU_LARGE_MODELE: readonly (readonly [number, number])[] = ${JSON.stringify(d.ligneDuLarge)};
+`;
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {

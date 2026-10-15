@@ -78,6 +78,13 @@ export interface PointMaree extends PointModele {
   maree?: string;
 }
 
+/** Un panneau de la fiche ; ceux de sortie (0.10, R52) disent laquelle, et portent une lanterne. */
+export interface PanneauPont extends PointModele {
+  sortie?: string;
+  nom?: string;
+  lanterne?: { x: number; y: number; z: number };
+}
+
 ${liste("SEGMENTS_PONT", "SegmentModele", d.segments)}
 /** La porte du péage fermée (obstaclesChicane du modèle). */
 ${liste("CHICANE_FERMEE_PONT", "SegmentModele", d.etats.chicaneFermee)}
@@ -88,7 +95,7 @@ ${liste("MAREE_HAUTE_PONT", "SegmentModele", d.etats.mareeHaute)}
 ${liste("ENTREES_PONT", "PointModele", d.entrees)}
 ${liste("FOUILLE_PONT", "PointMaree", d.fouille)}
 ${liste("ETEINTS_PONT", "PointMaree", d.eteints)}
-${liste("PANNEAUX_PONT", "PointModele", d.panneaux)}
+${liste("PANNEAUX_PONT", "PanneauPont", d.panneaux)}
 ${liste("GOULETS_PONT", "PointModele", d.goulets)}
 /** La marée (FICHE.maree) : les hauteurs d'eau, l'échelle, la cale basse et le point de retour. */
 export const MAREE_PONT = ${JSON.stringify(d.maree, null, 2)} as const;

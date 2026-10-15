@@ -777,7 +777,15 @@ export const GOULETS_CORNICHE: readonly PointModele[] = [
   {"x":68,"z":-3.6,"nature":"éboulement : il ne reste qu'un ruban de 2,5 m entre la paroi et le vide, de x = 61 à x = 74 (mesuré entre les obstacles)"},
 ];
 
+/** Les panneaux de la fiche ; ceux des sorties (0.10, R52) disent laquelle. */
+export const PANNEAUX_CORNICHE: readonly (PointModele & { sortie?: string })[] = [
+  {"x":-96.5,"z":-0.47,"texte":"← Ton terrain · 3 km · Phare du cap, par le tunnel →","sortie":"ouest"},
+  {"x":-68,"z":-5.4,"texte":"Corniche panoramique : vue certifiée 5 étoiles, selfie-points tous les 200 m"},
+  {"x":96.5,"z":-3.25,"texte":"Phare du cap · 2 km → · ← La corniche, ton terrain","sortie":"est"},
+];
+
 export const LUMIERES_CORNICHE: readonly LumiereModele[] = [
+  {"troncon":"montee","x":-96.18,"y":2.85,"z":-0.15,"couleur":16764810,"intensite":4,"portee":6,"nature":"lanterne du panneau de sortie"},
   {"troncon":"montee","x":-78,"y":1.4,"z":-2.9,"couleur":8376575,"intensite":2.2,"portee":5,"nature":"écran de la pompe connectée, « paiement par appli » (il luit encore)"},
   {"troncon":"montee","x":-60.4,"y":1.1,"z":-9.4,"couleur":16760944,"intensite":2.5,"portee":6,"nature":"bougie dans un bocal, sur la table de l'abri du cantonnier"},
   {"troncon":"tunnel","x":-21,"y":1.1,"z":-3.9,"couleur":16747069,"intensite":9,"portee":10,"nature":"brasero des pillards, derrière la barricade du tunnel"},
@@ -785,6 +793,7 @@ export const LUMIERES_CORNICHE: readonly LumiereModele[] = [
   {"troncon":"panoramique","x":19.2,"y":1.3,"z":9.8,"couleur":16760944,"intensite":1.8,"portee":5,"nature":"bougie sur le comptoir du bar"},
   {"troncon":"panoramique","x":10.5,"y":1,"z":21.6,"couleur":16747069,"intensite":12,"portee":12,"nature":"feu des survivants sur la terrasse du Panoramique"},
   {"troncon":"panoramique","x":41.2,"y":1.5,"z":-11.4,"couleur":9433280,"intensite":1.8,"portee":4,"nature":"écran domotique « Maison Sereine » qui luit encore (« alarme active »)"},
+  {"troncon":"eboulement","x":96.82,"y":2.85,"z":-2.93,"couleur":16764810,"intensite":4,"portee":6,"nature":"lanterne du panneau de sortie"},
   {"troncon":"eboulement","x":55,"y":1.6,"z":-4.41,"couleur":9425151,"intensite":1.8,"portee":4,"nature":"écran de la borne « Corniche+ » (il luit encore)"},
   {"troncon":"eboulement","x":86.6,"y":0.7,"z":8.8,"couleur":16760944,"intensite":2.4,"portee":6,"nature":"bougie dans un bocal, sur la caisse du cabanon du pêcheur"},
 ];

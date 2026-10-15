@@ -58,6 +58,8 @@ export async function extraire() {
     portes: points("portes"),
     pieces,
     goulets: FICHE.goulets,
+    // Les panneaux (0.10, R52 : ceux des deux sorties disent laquelle ; leur lanterne est dans les lumières).
+    panneaux: FICHE.panneaux,
     lumieres,
   };
 }
@@ -103,6 +105,8 @@ ${liste("PORTES_CORNICHE", "PorteModele", d.portes)}
 export const PIECES_CORNICHE: Readonly<Record<string, PieceModele>> = ${JSON.stringify(d.pieces, null, 2)};
 
 ${liste("GOULETS_CORNICHE", "PointModele", d.goulets)}
+/** Les panneaux de la fiche ; ceux des sorties (0.10, R52) disent laquelle. */
+${liste("PANNEAUX_CORNICHE", "(PointModele & { sortie?: string })", d.panneaux)}
 ${liste("LUMIERES_CORNICHE", "LumiereModele", d.lumieres)}`;
 }
 
