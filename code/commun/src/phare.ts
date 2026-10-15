@@ -296,10 +296,24 @@ export const DUREES_PHARE = { cuve: 5, prisme: 1, verser: 6, remettre: 6, allume
 
 /**
  * Le cargo s'échoue 50 s réelles après l'allumage (S-17 ; réglage du porteur, 2026-10-15 : deux minutes, c'était trop
- * long pour qui a déjà fouillé tout le lieu). Le seul endroit où ce délai est écrit : le client (sa corne, ses feux, le
- * cadrage de la crique) et le simulateur de rythme en partent.
+ * long pour qui a déjà fouillé tout le lieu). Le seul endroit où ce délai est écrit : le client (sa corne, ses feux, la
+ * scène de l'échouage) et le simulateur de rythme en partent.
  */
 export const CARGO_MS = 50_000;
+
+/**
+ * La scène de l'échouage (0.10, K4 : la maquette validée par le porteur, variante 1) dure 6,6 s à partir de CARGO_MS :
+ * pendant ce temps, les Éteints du phare ne bougent ni ne frappent, pour personne (le serveur) ; le client la joue
+ * (client/src/phare-scene.ts, SCENE_CARGO, de la même durée).
+ */
+export const SCENE_CARGO_MS = 6_600;
+
+/** La scène de l'échouage se joue-t-elle à cet instant (ms réelles), la lanterne allumée à `allumeLe` ? */
+export function enSceneCargo(allumeLe: number | null, instant: number): boolean {
+  if (allumeLe === null) return false;
+  const t = instant - allumeLe - CARGO_MS;
+  return t >= 0 && t < SCENE_CARGO_MS;
+}
 
 /**
  * La lanterne allumée, la nuit : une lumière qui réveille les dormeurs du chemin des douaniers et les fait monter (S-15)
@@ -387,7 +401,8 @@ export interface EtatPhareVu {
   corneSonnee: boolean;
   /**
    * Dans combien de ms le cargo s'échoue (la lanterne allumée, l'épave pas encore là) : le client en tire ses feux qui
-   * approchent, la corne grave au large et le cadrage de la crique (K2). Absent sinon (une partie plus ancienne aussi).
+   * approchent, la corne grave au large (K2) et prépare la scène de l'échouage (K4). Absent sinon (une partie plus
+   * ancienne aussi).
    */
   cargoDans?: number;
 }

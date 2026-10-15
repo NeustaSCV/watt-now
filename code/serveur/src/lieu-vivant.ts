@@ -583,6 +583,11 @@ export class LieuVivant {
     return { t: "ressource", id: r.id, disponible, ...(disponible && this.definition.semis ? { x: r.x, z: r.z } : {}) };
   }
 
+  /** Les Éteints du lieu sont-ils figés à cet instant, pour tout le monde ? (un lieu qui a ses moments à part : le phare) */
+  protected figeLesEteints(_instant: number): boolean {
+    return false;
+  }
+
   tick(instant: number, dt: number): void {
     // La repousse ne se calcule que si quelqu'un est là (plan 0.8 §6 : une halte vide ne coûte rien) ; la disponibilité
     // se lit de toute façon à l'instant (disponibleLe), dès l'entrée.
@@ -620,6 +625,8 @@ export class LieuVivant {
     this.videDepuis = 0;
     // Tout le monde est en pause (un lieu à un seul joueur, sa Coopérative) : les Éteints ne bougent plus.
     if ([...this.presents].every((v) => v.enPause?.() === true)) return;
+    // Un moment à part du lieu (0.10, K4 : la scène de l'échouage au phare) : les Éteints ne bougent ni ne frappent.
+    if (this.figeLesEteints(instant)) return;
 
     const nuit = estNuit(heureDeJeu(instant, this.debutMonde));
     // Les gémissements des Éteints qui se réveillent sont des bruits comme les autres : la cascade (Book 23 §3).

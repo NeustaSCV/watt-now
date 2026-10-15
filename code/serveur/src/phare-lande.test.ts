@@ -9,7 +9,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { DUREE_VOYAGE_S, SORTIE_TERRAIN, etapeVers, heurte, sortiesDe } from "../../commun/src/lieux.ts";
 import type { MessageServeur, Verbe } from "../../commun/src/messages.ts";
-import { DUREES_PHARE, ENDROITS_PHARE, PORTES_PHARE, TEXTES_PHARE, piecePhare, zonePhare, type ElementPhare } from "../../commun/src/phare.ts";
+import { CARGO_MS, DUREES_PHARE, ENDROITS_PHARE, PORTES_PHARE, SCENE_CARGO_MS, TEXTES_PHARE, piecePhare, zonePhare, type ElementPhare } from "../../commun/src/phare.ts";
 import { LANDE } from "../../commun/src/phare-vivant.ts";
 import { REINITIALISATION_LIEU_MS } from "../../commun/src/registre-lieux.ts";
 import { MS_PAR_HEURE_JEU, estNuit, heureDeJeu } from "../../commun/src/temps.ts";
@@ -176,4 +176,38 @@ test("la nuit du phare : une fois par nuit ; pas gardés en base ; partis au ret
   assert.equal(p.joueur.lieu, "phare");
   assert.equal(p.arrivants().length, 0);
   assert.equal(p.lieu().etat.allumeLe, null);
+});
+
+test("K4 : pendant la scène de l'échouage (6,6 s à partir de CARGO_MS), les Éteints du phare ne bougent ni ne frappent ; ils reprennent après", () => {
+  const p = auPhare();
+  p.preparer();
+  p.aller(ENDROITS_PHARE.marque);
+  p.allumer();
+  const allume = p.lieu().etat.allumeLe!;
+  // Jusqu'à une demi-seconde avant l'échouage : les arrivants de la lande approchent.
+  p.attendre((allume + CARGO_MS - 500 - p.instant()) / 1000);
+  const debout = () => p.arrivants().filter((e) => e.etat !== "detruit");
+  assert.ok(debout().length >= 2);
+  // L'un d'eux tient le joueur, juste à côté (il le mordrait dans 3 s) ; un autre marche vers lui ; les autres sont tués
+  // (à trois sur lui, il s'effondrerait).
+  const j = p.joueur.position;
+  const [tenant, marcheur, ...autres] = debout();
+  for (const e of autres) e.etat = "detruit";
+  Object.assign(tenant!, { x: j.x - 0.5, z: j.z, etat: "poursuivant", saisit: p.compte, tenue: 0 });
+  Object.assign(marcheur!, { x: j.x, z: j.z - 4, etat: "poursuivant", but: { x: j.x, z: j.z }, saisit: null, tenue: 0 });
+  p.attendre(0.6);
+  assert.equal(p.lieu().portes.epave, true, "le cargo s'est échoué");
+  const tenue = tenant!.tenue;
+  const places = debout().map((e) => `${e.x.toFixed(3)},${e.z.toFixed(3)}`);
+  p.recus.length = 0;
+  // Toute la scène : rien ne bouge, personne n'est mordu, la prise n'avance pas.
+  p.attendre((allume + CARGO_MS + SCENE_CARGO_MS - 300 - p.instant()) / 1000);
+  assert.ok(p.instant() - allume - CARGO_MS > SCENE_CARGO_MS - 400 && p.instant() - allume - CARGO_MS < SCENE_CARGO_MS);
+  assert.deepEqual(debout().map((e) => `${e.x.toFixed(3)},${e.z.toFixed(3)}`), places, "ils n'ont pas bougé");
+  assert.equal(tenant!.tenue, tenue, "la prise n'avance pas");
+  assert.ok(!p.recus.some((m) => m.t === "morsure"), "pas de morsure pendant la scène");
+  // Après le fondu, ils reprennent : celui qui tient le joueur finit par mordre, les autres marchent.
+  p.attendre(4);
+  assert.ok(p.recus.some((m) => m.t === "morsure"), "la morsure, après la scène");
+  assert.notDeepEqual(debout().map((e) => `${e.x.toFixed(3)},${e.z.toFixed(3)}`), places, "ils bougent de nouveau");
 });
