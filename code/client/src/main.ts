@@ -72,6 +72,7 @@ import { Partants, VueAutre, horlogeAutres } from "./rendu/autres.ts";
 import { Pluie } from "./rendu/pluie.ts";
 import { Rodeurs } from "./rendu/rodeurs.ts";
 import { Brume } from "./rendu/brume.ts";
+import { empecherLeZoom } from "./anti-zoom.ts";
 import { Aides, type Aide } from "./aides.ts";
 import { CONSEILS, watty } from "./watty.ts";
 import { ModePhoto } from "./photo.ts";
@@ -123,6 +124,7 @@ const LUMIERES_PORTEES = {
 const accueil = document.getElementById("accueil")!;
 const voile = document.getElementById("voile")!;
 const canvas = document.getElementById("monde") as HTMLCanvasElement;
+empecherLeZoom(); // 0.10.1 (A6) : pas de zoom de la page au double appui sur iPhone
 const tactile = Entrees.estTactile();
 const qualite = qualiteActuelle(tactile);
 
