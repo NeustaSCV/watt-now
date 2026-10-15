@@ -26,7 +26,7 @@ import type { TypeRessource } from "../../../commun/src/terrain.ts";
 import { estomperToits, montrerTousLesToits } from "./halte.ts";
 import { animerNuitPhare, creerNuitPhare } from "./phare-nuit.ts";
 import { creerCloture } from "./phare-cloture.ts";
-import { allumerPanneau, creerPanneauSentier, lampePanneau, poserBords } from "./phare-bords.ts";
+import { allumerPanneau, creerPanneauSentier, lampePanneau, lampePanneauRoute, poserBords } from "./phare-bords.ts";
 import { montrerConteneurs, ouvrirConteneurs, ouvrirLaCoupee } from "./phare-epave.ts";
 import type { FeuxCargo } from "../phare-scene.ts";
 import type { SourceLumiere } from "./lumieres.ts";
@@ -155,8 +155,8 @@ export function creerPhare(): THREE.Group {
 }
 
 /**
- * Autour du lot : la lande au nord, à l'ouest et à l'est (au niveau du plateau), avec la tranche de la falaise qui
- * continue à l'est ; la côte de l'ouest et la mer sont posées par rendu/phare-bords.ts (R52). Dans le maillage du sol du
+ * Autour du lot : la lande au nord, à l'ouest et à l'est (au niveau du plateau) ; la côte de l'ouest et de l'est (la
+ * falaise qui continue) et la mer sont posées par rendu/phare-bords.ts (R52). Dans le maillage du sol du
  * modèle (même matière) : aucun appel de dessin de plus. Rend les maillages du sol et de la mer du modèle.
  */
 function etendreAlentours(modele: THREE.Group): { sol: THREE.Mesh | null; mer: THREE.Mesh | null } {
@@ -164,7 +164,6 @@ function etendreAlentours(modele: THREE.Group): { sol: THREE.Mesh | null; mer: T
   const L = PHARE.largeur / 2;
   const P = PHARE.profondeur / 2;
   const BORD = 11.5; // le bord de la falaise, au bout du plateau (repère du modèle)
-  const MER = -9;
   const sol = { p: [] as number[], c: [] as number[] };
   const c = new THREE.Color();
   const quad = (cible: typeof sol, coins: [number, number, number][], couleur: number) => {
@@ -176,14 +175,12 @@ function etendreAlentours(modele: THREE.Group): { sol: THREE.Mesh | null; mer: T
   };
   const rect = (cible: typeof sol, x0: number, z0: number, x1: number, z1: number, couleur: number, y: number) => quad(cible, [[x0, y, z0], [x0, y, z1], [x1, y, z1], [x1, y, z0]], couleur);
   const lande = 0x8a9658;
-  const roc = 0x5a554c;
   // La lande : au nord, sur toute la largeur ; à l'ouest et à l'est, jusqu'au bord de la falaise (légèrement sous le
   // plateau du modèle, pour ne pas le doubler).
   rect(sol, -L - M, -P - M, L + M, -P, lande, -0.02);
   rect(sol, -L - M, -P, -L, BORD, lande, -0.02);
   rect(sol, L, -P, L + M, BORD, lande, -0.02);
-  // La tranche de la falaise, à l'est du lot (à l'ouest, la côte continue : rendu/phare-bords.ts).
-  quad(sol, [[L, -0.02, BORD], [L, MER - 1, BORD], [L + M, MER - 1, BORD], [L + M, -0.02, BORD]], roc);
+  // (À l'est comme à l'ouest, la falaise continue au-delà du lot : rendu/phare-bords.ts, 0.10, R52.)
   // Les maillages du modèle : le sol mat (le plateau, la roche) et la mer.
   let auSol: THREE.Mesh | null = null;
   let aLaMer: THREE.Mesh | null = null;
@@ -341,6 +338,8 @@ export function lumieresPhare(vu: ScenePhare, nuit: boolean): SourceLumiere[] {
   // 0.10 (R52) : la lanterne du panneau du sentier côtier, sur la grève (rendu/phare-bords.ts) : il se voit de nuit. Une
   // lumière de la réserve (on n'en crée pas) : elle ne s'allume que si elle est parmi les plus proches.
   sources.push(lampePanneau());
+  // 0.10 (R52) : la lanterne du panneau de sortie de la route du nord, à l'arrivée.
+  sources.push(lampePanneauRoute());
   // K2 : le projecteur du cargo qui approche, braqué devant lui : il éclaire la crique et la falaise (sans lui, le cadrage
   // de la crique, la nuit, ne montrait que du noir : essai sur l'iPhone, 2026-10-15). Une lumière de la réserve.
   if (vu.feux) {

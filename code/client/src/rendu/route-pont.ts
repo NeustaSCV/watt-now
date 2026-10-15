@@ -19,7 +19,11 @@ import { TEXTES_PEAGE, type Passage } from "../../../commun/src/peage.ts";
 import type { Boite, Zone } from "../../../commun/src/lieux.ts";
 import type { MessageServeur } from "../../../commun/src/messages.ts";
 import type { Propositions } from "../interaction.ts";
+import { creerBordsPont } from "./bords-pont.ts";
 import { brouillerTout } from "./carte-vue.ts";
+import { lumieresLanternes } from "./decor-cote.ts";
+import type { LanternePanneau } from "./lanterne-panneau.ts";
+import { tronconsVoulus } from "./vue-ensemble.ts";
 import { estomperToits } from "./halte.ts";
 import type { SourceLumiere } from "./lumieres.ts";
 // @ts-expect-error : le modèle de la route du pont est en JavaScript, sans types (client/src/batiments/ ne se modifie pas).
@@ -46,14 +50,18 @@ const Y_HAUTE = -5.7;
  * Un rectangle horizontal du repère du jeu, dans une matière du modèle (ses couleurs par sommet, sa tuile : les
  * coordonnées de texture du modèle, pour que le sol se raccorde au lot).
  */
-function plaque(x0: number, x1: number, z0: number, z1: number, y: number, couleur: number, m: Matiere, tuile = m.userData.tuile ?? 6, tuileZ = tuile): THREE.Mesh {
-  const g = new THREE.PlaneGeometry(x1 - x0, z1 - z0).rotateX(-Math.PI / 2).translate((x0 + x1) / 2, y, (z0 + z1) / 2);
+function plaque(x0: number, x1: number, z0: number, z1: number, y: number, couleur: number, m: Matiere, tuile = m.userData.tuile ?? 6, tuileZ = tuile, teinte?: (x: number, z: number, c: THREE.Color) => void): THREE.Mesh {
+  // Une plaque teintée par endroits (`teinte`) est découpée en carreaux de 3 m, pour que la teinte se fonde.
+  const n = (l: number) => (teinte ? Math.max(1, Math.round(l / 3)) : 1);
+  const g = new THREE.PlaneGeometry(x1 - x0, z1 - z0, n(x1 - x0), n(z1 - z0)).rotateX(-Math.PI / 2).translate((x0 + x1) / 2, y, (z0 + z1) / 2);
   const pos = g.attributes.position!;
   const uv = g.attributes.uv!;
   const c = new THREE.Color(couleur);
   const couleurs: number[] = [];
   for (let i = 0; i < pos.count; i++) {
     uv.setXY(i, (pos.getX(i) - 100) / tuile, (pos.getZ(i) - 35) / tuileZ);
+    c.setHex(couleur);
+    teinte?.(pos.getX(i), pos.getZ(i), c);
     couleurs.push(c.r, c.g, c.b);
   }
   g.setAttribute("color", new THREE.Float32BufferAttribute(couleurs, 3));
@@ -73,11 +81,21 @@ function creerAlentours(): { groupe: THREE.Group; eau: THREE.Mesh[] } {
   const groupe = new THREE.Group();
   groupe.name = "route_pont:alentours";
   const SOL = 0xb9b19c;
+  const SABLE_CLAIR = 0xddd1b2;
   const ASPHALTE = 0x8e8d88;
   const TROTTOIR = 0xb3ada2;
   const QUAI = 0xa8a090;
   const EAU = 0x7f9890;
   const loin = 90;
+  // Le sable clair des dunes du nord du lot (le modèle : z 0 à 19, aux deux bouts) se prolonge en se fondant dans le sol
+  // des terre-pleins (0.10, R52 : plus de couture nette au bord du lot, à x = 0 et 200, ni à z = 0).
+  const clair = new THREE.Color(SABLE_CLAIR);
+  const fondu = (x: number, z: number, c: THREE.Color) => {
+    const dx = Math.max(0, Math.min(Math.abs(x - 21), Math.abs(x - 179)) - 21);
+    const dz = Math.max(0, -z, z - 19);
+    const f = 1 - Math.min(1, Math.hypot(dx, dz) / 16);
+    if (f > 0) c.lerp(clair, f * f * (3 - 2 * f));
+  };
   // Les terre-pleins : à l'ouest et à l'est du lot, et au nord et au sud des deux rives (le quai est en x 42 et 158).
   for (const [x0, x1, z0, z1] of [
     [-loin, 0, -loin, 70 + loin],
@@ -86,7 +104,7 @@ function creerAlentours(): { groupe: THREE.Group; eau: THREE.Mesh[] } {
     [0, 42, 70, 70 + loin],
     [158, 200, -loin, 0],
     [158, 200, 70, 70 + loin],
-  ] as const) groupe.add(plaque(x0, x1, z0, z1, -0.02, SOL, M.sol));
+  ] as const) groupe.add(plaque(x0, x1, z0, z1, -0.02, SOL, M.sol, undefined, undefined, fondu));
   // La route et ses trottoirs, aux deux bouts.
   for (const [x0, x1] of [[-loin, 0], [200, 200 + loin]] as const) {
     groupe.add(plaque(x0, x1, 31.5, 38.5, 0.0, ASPHALTE, M.asphalte));
@@ -144,6 +162,8 @@ export class RenduRoutePont {
   private voile: HTMLElement | null = null;
   /** L'eau des alentours (elle suit la marée). */
   private eauAlentours: THREE.Mesh[] = [];
+  /** Les lanternes des deux panneaux de sortie (0.10, R52). */
+  private lanternes: LanternePanneau[] = [];
 
   constructor() {
     this.groupe.name = "route_pont";
@@ -156,6 +176,10 @@ export class RenduRoutePont {
       const a = creerAlentours();
       this.groupe.add(a.groupe);
       this.eauAlentours = a.eau;
+      // Les bords des deux bouts (0.10, R52) : ganivelles, dunes, oyats, la lanterne des panneaux de sortie.
+      const bords = creerBordsPont();
+      this.groupe.add(bords.groupe);
+      this.lanternes = bords.lanternes;
     }
     return this.groupe;
   }
@@ -220,10 +244,12 @@ export class RenduRoutePont {
 
   // ---------- La lumière ----------
 
-  /** Les lumières de la nuit : le brasero du poste de guet, la baladeuse du péage, les bougies, le portique… */
+  /** Les lumières de la nuit : les lanternes des panneaux de sortie, le brasero du poste de guet, la baladeuse du péage, les bougies, le portique… */
   lumieres(nuit: boolean, p: { x: number; z: number } | null): SourceLumiere[] {
+    // Les lanternes des panneaux de sortie (0.10, R52) : leur verre luit la nuit, s'éteint le jour.
+    const lanternes = lumieresLanternes(this.lanternes, nuit);
     if (!nuit || !p) return [];
-    const sources: SourceLumiere[] = [];
+    const sources: SourceLumiere[] = [...lanternes];
     for (const l of LUMIERES) {
       if (Math.abs(l.x - p.x) > 60) continue;
       const feu = /feu|brasero|bougie|cierge|lanterne/.test(l.nature);
@@ -234,11 +260,11 @@ export class RenduRoutePont {
 
   // ---------- À chaque image ----------
 
-  /** Les tronçons autour du joueur, la marée et la porte du péage, les toits qui s'effacent, ce qui bouge. */
-  animer(p: { x: number; z: number }, dt: number, lacet: number, instant: number, debutMonde: number): void {
-    const ici = ORDRE.indexOf(tronconDe(p.x));
-    const voulus = new Set<string>([ORDRE[ici]!, ...(ici > 0 ? [ORDRE[ici - 1]!] : []), ...(ici < 3 ? [ORDRE[ici + 1]!] : [])]);
-    for (const id of voulus) if (!this.troncons.has(id)) this.construire(id);
+  /** Les tronçons autour du joueur (tous pendant la vue d'ensemble), la marée et la porte du péage, les toits qui s'effacent, ce qui bouge. */
+  animer(p: { x: number; z: number }, dt: number, lacet: number, instant: number, debutMonde: number, ensemble = false): void {
+    // Pendant la vue d'ensemble de l'arrivée (`ensemble`), tout le lieu (0.10, R52) ; ensuite, autour du joueur.
+    const { voulus, aConstruire } = tronconsVoulus<string>(ORDRE, ORDRE.indexOf(tronconDe(p.x)), ensemble, this.troncons);
+    for (const id of aConstruire) this.construire(id);
     for (const [id, t] of this.troncons) if (!voulus.has(id)) this.defaire(id, t);
     const haute = maree(instant, debutMonde) === "haute";
     for (const t of this.troncons.values()) {

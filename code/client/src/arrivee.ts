@@ -4,8 +4,8 @@
 // zoome vers le personnage (≈ 1,5 s) et le jeu commence ; le serveur l'apprend (« arrivee ») et lève la pause (seul) ou la
 // protection (dans une halte). Ce premier geste ne fait rien d'autre : ni action, ni bouton du HUD.
 // Dans une halte, le serveur ne protège que 15 s : passé ce délai, le zoom part tout seul.
-// main.ts appelle ce module en quatre points : à l'installation (`arriver`), à chaque image (`cadrage`, `toitsVisibles`),
-// et pour savoir si le personnage doit rester immobile (`attend`).
+// main.ts appelle ce module en quatre points : à l'installation (`arriver`), à chaque image (`cadrage`, `toitsVisibles`,
+// `ensemble` : tout le lieu construit, 0.10), et pour savoir si le personnage doit rester immobile (`attend`).
 
 import type { ModeArrivee } from "../../commun/src/arrivee.ts";
 import type { LieuId, Zone } from "../../commun/src/lieux.ts";
@@ -65,6 +65,14 @@ export class ArriveeDansUnLieu {
   /** Vrai tant qu'on regarde le lieu de loin : le personnage ne bouge pas, rien ne se propose. */
   get attend(): boolean {
     return this.vue.etat === "attente";
+  }
+
+  /**
+   * Vrai pendant toute la vue d'ensemble, le zoom vers le personnage compris (0.10, R52) : les haltes par tronçons
+   * construisent alors tout le lieu, puis reviennent aux tronçons du joueur (rendu/vue-ensemble.ts : tronconsVoulus).
+   */
+  get ensemble(): boolean {
+    return this.vue.etat !== null;
   }
 
   /**

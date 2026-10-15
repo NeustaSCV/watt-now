@@ -98,6 +98,12 @@ export const CALE = (() => {
 /** Le point de retour (K1) : en haut de l'accès, sur le quai, où l'on remet qui est resté sur la cale. */
 export const RETOUR_MAREE = auPont(MAREE_PONT.retour.x, MAREE_PONT.retour.z);
 
+/**
+ * Les deux panneaux routiers de sortie (FICHE.panneaux : x ∓ 95, sur le trottoir), à l'ouest (vers le terrain) et à l'est
+ * (vers le Grand Hôtel) : on les lit (commun/src/guidage.ts, E-14 et E-15), une lanterne les éclaire la nuit (0.10, R52).
+ */
+export const PANNEAUX_SORTIE_PONT = [auPont(-95, -6.6), auPont(95, 6.6)] as const;
+
 /** L'échelle de marée émaillée, sur le mur du quai, sous le tablier. */
 export const ECHELLE_MAREE = auPont(MAREE_PONT.echelle.x, MAREE_PONT.echelle.z);
 

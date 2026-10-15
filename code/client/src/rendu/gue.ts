@@ -36,6 +36,7 @@ import type { MessageServeurGue, ProjectileVu } from "../../../commun/src/messag
 import type { ActionProposee, Propositions } from "../interaction.ts";
 import type { IdSon } from "../son/catalogue.ts";
 import { brouillerTout } from "./carte-vue.ts";
+import { tronconsVoulus } from "./vue-ensemble.ts";
 import { estomperToits } from "./halte.ts";
 import type { SourceLumiere } from "./lumieres.ts";
 // @ts-expect-error : le modèle du gué est en JavaScript, sans types (client/src/batiments/ ne se modifie pas) : typé ici.
@@ -431,14 +432,18 @@ export class RenduGue {
 
   // ---------- À chaque image ----------
 
-  /** Les tronçons autour du joueur, le radeau, la nappe du radier, les toits qui s'effacent, l'eau qui court. */
-  animer(p: { x: number; z: number }, dt: number, lacet: number, instant: number, debutMonde: number): void {
+  /** Les tronçons autour du joueur (tous pendant la vue d'ensemble), le radeau, la nappe du radier, les toits qui s'effacent, l'eau qui court. */
+  animer(p: { x: number; z: number }, dt: number, lacet: number, instant: number, debutMonde: number, ensemble = false): void {
     const xr = this.radeau(instant);
     const ici = ORDRE.indexOf(tronconDe(p.x));
-    const voulus = new Set<string>([ORDRE[ici]!, ...(ici > 0 ? [ORDRE[ici - 1]!] : []), ...(ici < 3 ? [ORDRE[ici + 1]!] : [])]);
+    // Pendant la vue d'ensemble de l'arrivée (`ensemble`), tout le gué (0.10, R52) ; ensuite, autour du joueur.
+    const { voulus, aConstruire } = tronconsVoulus<string>(ORDRE, ici, ensemble, this.troncons);
     // Le radeau est dans le tronçon de la rive : on le garde tant qu'il n'est pas rentré à la cale.
-    if (accostage(xr) !== "cale" && Math.abs(ORDRE.indexOf(TRONCON_RADEAU) - ici) <= 2) voulus.add(TRONCON_RADEAU);
-    for (const id of voulus) if (!this.troncons.has(id)) this.construire(id);
+    if (accostage(xr) !== "cale" && Math.abs(ORDRE.indexOf(TRONCON_RADEAU) - ici) <= 2) {
+      voulus.add(TRONCON_RADEAU);
+      if (!this.troncons.has(TRONCON_RADEAU) && !aConstruire.includes(TRONCON_RADEAU)) aConstruire.push(TRONCON_RADEAU);
+    }
+    for (const id of aConstruire) this.construire(id);
     for (const [id, t] of this.troncons) if (!voulus.has(id)) this.defaire(id, t);
 
     // La nappe du radier monte avec la crue (G4), doucement.

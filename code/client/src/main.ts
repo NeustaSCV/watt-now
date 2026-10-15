@@ -43,6 +43,8 @@ import { creerHalte, estomperToits, montrerTousLesToits } from "./rendu/halte.ts
 import { ArriveeDansUnLieu } from "./arrivee.ts";
 import { animerMoulin, creerMoulin } from "./rendu/moulin.ts";
 import { animerHotel, creerHotel, lumieresHotel } from "./rendu/hotel.ts";
+import { creerBordsStation } from "./rendu/bords-station.ts";
+import { dansLEauHotel, profondeurEauHotel } from "../../commun/src/hotel.ts";
 import { ClientHotel } from "./hotel.ts";
 import { Guidage } from "./guidage.ts";
 import { animerPhare, creerPhare } from "./rendu/phare.ts";
@@ -150,7 +152,7 @@ function zoneIci(): Zone {
  */
 const DECORS: Record<LieuJouable, () => THREE.Object3D[]> = {
   terrain: () => [creerTerrain(), creerMare(), creerRuine()],
-  station: () => [creerHalte()],
+  station: () => [creerHalte(), creerBordsStation()], // 0.10, R52 : un décor simple autour (rendu/bords-station.ts)
   comptoir: () => [creerComptoir()],
   cooperative: () => [(decorCoop = creerCooperative())],
   gue: () => [gue.creer()], // 0.8, chantier 11 : le modèle du gué, retourné pour suivre la carte
@@ -1743,7 +1745,8 @@ function boucle(instant: number): void {
     let allure = allureAutorisee(entree.allure, besoins, porteEscabeau() || brasHotel || traineTravois(inventaire));
     if (allure === "course" && endurance < SEUIL_EPUISE) allure = "marche";
     if (allure === "course" && lieu === "gue" && gue.surLeRadier(position)) allure = "marche"; // le radier : on n'y court pas
-    const dansLEau = lieu === "phare" && phare.dansLEau(position); // 0.10 : l'eau de la crique, jusqu'aux genoux
+    // 0.10 : l'eau de la crique du phare, et celle de la plage de l'hôtel (R52), jusqu'aux genoux.
+    const dansLEau = (lieu === "phare" && phare.dansLEau(position)) || (lieu === "grand_hotel" && dansLEauHotel(position.x, position.z));
     if (allure === "course" && dansLEau) allure = "marche";
     // On voulait courir, mais on marche : on dit pourquoi, et comment y remédier.
     if (entree.allure === "course" && allure !== "course" && Math.hypot(dx, dz) > 0.05) {
@@ -1821,8 +1824,8 @@ function boucle(instant: number): void {
     // Au Comptoir, la musique sort d'un petit poste ; elle s'ouvre en grand près du guichet (LIVRAISON §3).
     if (lieu === "comptoir") son.radio(Math.hypot(position.x - COMPTOIR.guichet.x, position.z - COMPTOIR.guichet.z) > 7);
     personnage.objet.position.set(position.x, 0, position.z);
-    // Dans la mare, l'eau aux genoux (0.8.2, R21).
-    personnage.patauger(lieu === "terrain" ? profondeurMare(position.x, position.z) : 0, dt, vitesse);
+    // Dans la mare, l'eau aux genoux (0.8.2, R21) ; dans l'eau peu profonde de la plage de l'hôtel aussi (0.10, R52).
+    personnage.patauger(lieu === "terrain" ? profondeurMare(position.x, position.z) : lieu === "grand_hotel" ? profondeurEauHotel(position.x, position.z) : 0, dt, vitesse);
     // Rotation du personnage : on prend le plus court chemin angulaire.
     const ecartAngle = Math.atan2(Math.sin(position.o - personnage.objet.rotation.y), Math.cos(position.o - personnage.objet.rotation.y));
     personnage.objet.rotation.y += ecartAngle * Math.min(1, dt * 14);
@@ -1842,9 +1845,10 @@ function boucle(instant: number): void {
     const decor = decors.get(lieu);
     // Les toits qui cachent le personnage s'effacent (à la halte et au Comptoir), selon l'angle de la caméra.
     if ((lieu === "station" || lieu === "comptoir") && decor) estomperToits(decor, position.x, position.z, dt, scene.angleCamera);
-    if (lieu === "gue" && decor) gue.animer(position, dt, scene.angleCamera, Date.now() + decalage, debutMonde);
-    if (lieu === "corniche" && decor) corniche.animer(position, dt, scene.angleCamera, ressources.values()); // 0.10, chantier I
-    if (lieu === "route_pont" && decor) routePont.animer(position, dt, scene.angleCamera, Date.now() + decalage, debutMonde);
+    // (0.10, R52 : pendant la vue d'ensemble de l'arrivée, les haltes par tronçons construisent tout le lieu.)
+    if (lieu === "gue" && decor) gue.animer(position, dt, scene.angleCamera, Date.now() + decalage, debutMonde, vueArrivee.ensemble);
+    if (lieu === "corniche" && decor) corniche.animer(position, dt, scene.angleCamera, ressources.values(), vueArrivee.ensemble); // 0.10, chantier I
+    if (lieu === "route_pont" && decor) routePont.animer(position, dt, scene.angleCamera, Date.now() + decalage, debutMonde, vueArrivee.ensemble);
     if (!vueArrivee.attend && !enVoyage) guidage.suivre(lieu, position, Date.now() + decalage, debutMonde, inventaire); // 0.10, guidage
     if (lieu === "cooperative" && decorCoop) {
       estomperCooperative(decorCoop, position.x, position.z, dt, scene.angleCamera);

@@ -169,6 +169,26 @@ test("H : le pavois s'ouvre au haut de l'échelle de coupée (la tôle abaissée
   assert.equal(ouvrirLaCoupee(epave), 0, "déjà ouvert");
 });
 
+/**
+ * La boîte (repère du jeu) de ce qu'un objet dessine à moins de `r` mètres (à plat) d'un point : les panneaux du sentier
+ * et de la route du nord partagent leur maillage, leurs lanternes aussi (0.10, R52 : le budget du phare).
+ */
+function boitePres(objet: THREE.Object3D, x: number, z: number, r = 2): THREE.Box3 {
+  objet.updateWorldMatrix(true, true);
+  const b = new THREE.Box3();
+  const v = new THREE.Vector3();
+  objet.traverse((o) => {
+    const m = o as THREE.Mesh;
+    if (!m.isMesh) return;
+    const pos = m.geometry.getAttribute("position");
+    for (let i = 0; i < pos.count; i++) {
+      v.fromBufferAttribute(pos, i).applyMatrix4(m.matrixWorld);
+      if (Math.hypot(v.x - x, v.z - z) <= r) b.expandByPoint(v);
+    }
+  });
+  return b;
+}
+
 test("G : le panneau du sentier côtier se lit à son nouvel endroit, près de l'eau, au départ du sentier ; une lanterne l'éclaire la nuit", () => {
   // Près de l'eau (le bord de l'eau du modèle est à z 23,3 à cet endroit), à quelques pas du bas de la rampe.
   const m = auModele(ECRITEAU_SENTIER.x, ECRITEAU_SENTIER.z);
@@ -187,7 +207,7 @@ test("G : le panneau du sentier côtier se lit à son nouvel endroit, près de l
   const decor = creerPhare();
   const panneau = decor.getObjectByName("panneau du sentier côtier")!;
   assert.ok(panneau, "le panneau");
-  const b = new THREE.Box3().setFromObject(panneau);
+  const b = boitePres(panneau, ECRITEAU_SENTIER.x, ECRITEAU_SENTIER.z);
   const sol = solPhare(ECRITEAU_SENTIER.x, ECRITEAU_SENTIER.z, false);
   assert.ok(b.min.y > sol - 0.1 && b.max.y > sol + 2.4 && b.max.y < sol + 3.1, `de ${b.min.y} à ${b.max.y}`);
   // (Le décor est posé dans le repère du jeu.)
@@ -219,7 +239,7 @@ test("G2 : la lanterne du panneau, son verre et sa lumière sont à la hauteur r
   const decor = creerPhare();
   decor.updateMatrixWorld(true);
   const lanterne = decor.getObjectByName("lanterne de panneau") as THREE.Mesh;
-  const b = new THREE.Box3().setFromObject(lanterne);
+  const b = boitePres(lanterne, ECRITEAU_SENTIER.x, ECRITEAU_SENTIER.z);
   assert.ok(b.min.y > sol + 2 && b.max.y < sol + PANNEAU_SENTIER.poteau + 0.05, `la lanterne de ${b.min.y.toFixed(2)} à ${b.max.y.toFixed(2)}`);
   assert.ok(source.y > b.min.y && source.y < b.max.y, "la lumière est dans la lanterne");
   // Son reflet sur la mer, vu par la caméra du jeu (35° au-dessus de l'horizon), est hors de sa portée.

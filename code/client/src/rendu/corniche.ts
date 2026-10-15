@@ -8,14 +8,18 @@
 // que ce module (une ligne par point d'appel).
 
 import * as THREE from "three";
-import { CAISSE_PEAGE, CORNICHE, PORTE_BARRICADE_TUNNEL, PORTEE_CAISSE_TUNNEL, TRONCONS_CORNICHE, aLaCorniche, procheBarricade, tronconCorniche, zoneCorniche, type TronconCorniche } from "../../../commun/src/corniche.ts";
+import { CAISSE_PEAGE, PORTE_BARRICADE_TUNNEL, PORTEE_CAISSE_TUNNEL, TRONCONS_CORNICHE, aLaCorniche, procheBarricade, tronconCorniche, zoneCorniche, type TronconCorniche } from "../../../commun/src/corniche.ts";
 import { LUMIERES_CORNICHE } from "../../../commun/src/corniche-modele.ts";
 import type { Boite, Zone } from "../../../commun/src/lieux.ts";
 import type { MessageServeur } from "../../../commun/src/messages.ts";
 import { TEXTES_PEAGE } from "../../../commun/src/peage.ts";
 import type { Propositions } from "../interaction.ts";
 import type { RessourceSol } from "../../../commun/src/terrain.ts";
+import { creerBordsCorniche } from "./bords-corniche.ts";
 import { brouillerTout } from "./carte-vue.ts";
+import { lumieresLanternes } from "./decor-cote.ts";
+import type { LanternePanneau } from "./lanterne-panneau.ts";
+import { tronconsVoulus } from "./vue-ensemble.ts";
 import { estomperToits } from "./halte.ts";
 import type { SourceLumiere } from "./lumieres.ts";
 // @ts-expect-error : le modèle de la corniche est en JavaScript, sans types (client/src/batiments/ ne se modifie pas) : typé ici.
@@ -45,42 +49,14 @@ interface Troncon {
   modele: THREE.Group;
 }
 
-/** Le niveau de la mer (le modèle : MER_Y) et sa couleur (MER). */
-const MER_Y = -15;
-const MER = 0x2e7380;
-
 /**
- * Autour du lot, la mer continue jusqu'à l'horizon, et la paroi rouge aux deux bouts : sans cela, on verrait le vide
- * au-delà du lot, vers le large et aux deux bouts de la route. Deux appels de dessin.
+ * Autour du lot (0.10, R52 : rendu/bords-corniche.ts) : la route prolongée aux deux bouts jusqu'à ce qu'elle tourne
+ * derrière la roche, la mer jusqu'à l'horizon, de la matière de celle du lot, et les lanternes des panneaux de sortie.
  */
-function creerAlentours(): THREE.Group {
-  const g = new THREE.Group();
-  g.name = "corniche:alentours";
-  const mer = new THREE.Mesh(new THREE.PlaneGeometry(1200, 600).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: MER, roughness: 0.35, metalness: 0.1 }));
-  // Un peu sous la mer du modèle : elle ne la recouvre pas ; au-delà du lot, c'est elle qu'on voit.
-  mer.position.set(CORNICHE.longueur / 2, MER_Y - 0.25, CORNICHE.largeur / 2 + 200);
-  mer.receiveShadow = true;
-  g.add(mer);
-  // Aux deux bouts, la route s'enfonce dans la falaise rouge : une masse de roche de chaque côté, au nord de la route.
-  const roche = new THREE.MeshStandardMaterial({ color: 0xa2654a, roughness: 1, flatShading: true });
-  const geo = new THREE.BoxGeometry(1, 1, 1);
-  const masse = new THREE.InstancedMesh(geo, roche, 4);
-  const m = new THREE.Matrix4();
-  const places: [number, number, number, number, number][] = [
-    // x, z, largeur, profondeur, hauteur (le pied à y = 0 côté route, plus bas côté mer)
-    [-30, 14, 60, 40, 22],
-    [CORNICHE.longueur + 30, 14, 60, 40, 22],
-    [-30, 58, 60, 18, 2],
-    [CORNICHE.longueur + 30, 58, 60, 18, 2],
-  ];
-  places.forEach(([x, z, l, p, h], i) => {
-    m.compose(new THREE.Vector3(x, h / 2 - (i >= 2 ? 16 : 0), z), new THREE.Quaternion(), new THREE.Vector3(l, h, p));
-    masse.setMatrixAt(i, m);
-  });
-  masse.castShadow = true;
-  masse.receiveShadow = true;
-  g.add(masse);
-  return g;
+function creerAlentours(): { groupe: THREE.Group; lanternes: LanternePanneau[] } {
+  const b = creerBordsCorniche();
+  b.groupe.name = "corniche:alentours";
+  return b;
 }
 
 /** Les lumières du modèle, dans le repère du jeu. */
@@ -93,6 +69,8 @@ export class RenduCorniche {
   /** Mon pin tombé : vidé (débité) ou non ; la porte de la barricade : ouverte pour moi, ou fermée. */
   private pinDebite = false;
   private barricadeOuverte = false;
+  /** Les lanternes des deux panneaux de sortie (0.10, R52). */
+  private lanternes: LanternePanneau[] = [];
 
   constructor() {
     this.groupe.name = "corniche";
@@ -100,7 +78,11 @@ export class RenduCorniche {
 
   /** Le décor : les alentours tout de suite ; les tronçons se construisent autour du joueur (animer). */
   creer(): THREE.Group {
-    if (this.groupe.children.length === 0) this.groupe.add(creerAlentours());
+    if (this.groupe.children.length === 0) {
+      const a = creerAlentours();
+      this.groupe.add(a.groupe);
+      this.lanternes = a.lanternes;
+    }
     return this.groupe;
   }
 
@@ -145,27 +127,30 @@ export class RenduCorniche {
 
   // ---------- La lumière ----------
 
-  /** Les lumières de la corniche, la nuit : le brasero des pillards, le feu de la terrasse, les bougies, les écrans. */
+  /** Les lumières de la corniche, la nuit : les lanternes des panneaux de sortie, le brasero des pillards, le feu de la terrasse, les bougies, les écrans. */
   lumieres(nuit: boolean): SourceLumiere[] {
+    // Les lanternes des panneaux de sortie (0.10, R52) : leur verre luit la nuit, s'éteint le jour.
+    const lanternes = lumieresLanternes(this.lanternes, nuit);
     if (!nuit) return [];
-    return LUMIERES.map((l) => {
-      const feu = /^(brasero|feu|bougie)/.test(l.nature);
-      return { x: l.x, y: l.y, z: l.z, couleur: l.couleur, intensite: l.intensite, portee: l.portee, vacillement: feu ? 0.8 : 0 };
-    });
+    return [
+      ...lanternes,
+      ...LUMIERES.map((l) => {
+        const feu = /^(brasero|feu|bougie)/.test(l.nature);
+        return { x: l.x, y: l.y, z: l.z, couleur: l.couleur, intensite: l.intensite, portee: l.portee, vacillement: feu ? 0.8 : 0 };
+      }),
+    ];
   }
 
   // ---------- À chaque image ----------
 
   /**
-   * Les tronçons autour du joueur, le pin (débité quand je l'ai vidé : `ressources`, ce que le serveur m'a dit de mon
+   * Les tronçons autour du joueur (tous pendant la vue d'ensemble), le pin (débité quand je l'ai vidé : `ressources`, ce que le serveur m'a dit de mon
    * butin personnel ; il revient entier avec mes bûches), les toits qui s'effacent, l'écume.
    */
-  animer(p: { x: number; z: number }, dt: number, lacet: number, ressources: Iterable<{ donnees: RessourceSol }>): void {
-    const ici = TRONCONS_CORNICHE.indexOf(tronconCorniche(p.x));
-    const voulus = new Set<TronconCorniche>([TRONCONS_CORNICHE[ici]!]);
-    if (ici > 0) voulus.add(TRONCONS_CORNICHE[ici - 1]!);
-    if (ici < 3) voulus.add(TRONCONS_CORNICHE[ici + 1]!);
-    for (const id of voulus) if (!this.troncons.has(id)) this.construire(id);
+  animer(p: { x: number; z: number }, dt: number, lacet: number, ressources: Iterable<{ donnees: RessourceSol }>, ensemble = false): void {
+    // Pendant la vue d'ensemble de l'arrivée (`ensemble`), tout le lieu (0.10, R52) ; ensuite, autour du joueur.
+    const { voulus, aConstruire } = tronconsVoulus(TRONCONS_CORNICHE, TRONCONS_CORNICHE.indexOf(tronconCorniche(p.x)), ensemble, this.troncons);
+    for (const id of aConstruire) this.construire(id);
     for (const [id, t] of this.troncons) if (!voulus.has(id)) this.defaire(id, t);
 
     for (const r of ressources) {

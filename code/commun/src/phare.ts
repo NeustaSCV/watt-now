@@ -385,6 +385,13 @@ const GREVE_OUEST = jeu(-28.6, 16.8);
 export const ECRITEAU_SENTIER = jeu(-26.6, 22.2);
 
 /**
+ * Le panneau de sortie de la route d'accès, au nord (0.10, R52) : planté par le jeu à l'arrivée, à l'est de l'allée de la
+ * grille nord, entre le bord du lot et l'enceinte : « ← La corniche · Ton terrain » (commun/src/guidage.ts, E-17), une
+ * lanterne au-dessus (client/src/rendu/phare-bords.ts). Repère du modèle : x 1,3, z − 22,6.
+ */
+export const ECRITEAU_ROUTE = jeu(1.3, -22.6);
+
+/**
  * On arrive toujours par la route d'accès, au nord (la première sortie). La grève de la crique, à l'ouest, est une
  * sortie sans arrivée : on repart par là vers la corniche, on n'y entre jamais (comme le halage du Moulin).
  */

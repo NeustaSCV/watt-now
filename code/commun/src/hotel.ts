@@ -255,21 +255,58 @@ export function boitesDuSegment(segment: SegmentHotel): Boite[] {
   return boites;
 }
 
+// ---------- L'eau peu profonde, au sud (0.10, R52 ; décision du porteur du 2026-10-15) ----------
+
+/** Le bord de l'eau du modèle (« la mer (bord du lot) », lot z 28,2), dans le repère du jeu. */
+export const BORD_EAU_HOTEL = jeuHotel(0, 28.2).z;
+/**
+ * Comme à la grève du phare (commun/src/phare.ts) : le bord de l'eau ne bloque plus ; une bande d'eau peu profonde de
+ * 3,5 m le longe, où l'on marche jusqu'aux genoux, ralenti (FREIN_EAU_HOTEL), sans courir ; les Éteints y vont aussi,
+ * ralentis de même. Au-delà, on perd pied : la ligne du large (LARGE_HOTEL) arrête tout le monde.
+ */
+export const LARGEUR_EAU_HOTEL = 3.5;
+export const LARGE_HOTEL = BORD_EAU_HOTEL + LARGEUR_EAU_HOTEL;
+/** Dans l'eau jusqu'aux genoux, on avance à 60 % de son allure (comme au phare). */
+export const FREIN_EAU_HOTEL = 0.6;
+/** De combien on s'enfonce dans l'eau (m), au plus : jusqu'aux genoux. */
+export const ENFONCE_EAU_HOTEL = 0.42;
+const SEGMENT_LARGE: SegmentHotel = [-32, 28.2 + LARGEUR_EAU_HOTEL, 32, 28.2 + LARGEUR_EAU_HOTEL, "le large (on perd pied)", R];
+
+/** Ce point du jeu est-il dans l'eau peu profonde, au sud de la plage ? */
+export function dansLEauHotel(x: number, z: number): boolean {
+  return z > BORD_EAU_HOTEL && z < LARGE_HOTEL + 0.5 && x > 0 && x < HOTEL.largeur;
+}
+
+/** De combien les pieds s'enfoncent dans l'eau (0 sur le sable ; jusqu'aux genoux à 1,5 m du bord). */
+export function profondeurEauHotel(x: number, z: number): number {
+  if (!dansLEauHotel(x, z)) return 0;
+  return ENFONCE_EAU_HOTEL * Math.min(1, 0.3 + (z - BORD_EAU_HOTEL) / 1.5);
+}
+
 /** Tous les obstacles de l'hôtel (les grilles de l'ascenseur restent fermées : on monte par une téléportation, S-01). */
 export function obstaclesHotel(): Boite[] {
-  return [...SEGMENTS_HOTEL, BORD_DU_BALCON].flatMap(boitesDuSegment);
+  // Le bord de l'eau du modèle ne bloque plus : la ligne du large, 3,5 m plus loin, le remplace (0.10, R52).
+  const segments = SEGMENTS_HOTEL.filter((s) => s[4] !== "la mer (bord du lot)");
+  return [...segments, SEGMENT_LARGE, BORD_DU_BALCON].flatMap(boitesDuSegment);
 }
 
 /** L'hôtel tel qu'on le trouve : rien n'y change de place (la borne, le robot, l'ascenseur sont des états, pas des murs). */
 export const ZONE_HOTEL: Zone = (() => {
   const obstacles = obstaclesHotel();
-  return { xMin: 0.5, xMax: HOTEL.largeur - 0.5, zMin: 0.5, zMax: HOTEL.profondeur - 0.5, obstacles, grille: creerGrille(obstacles) };
+  const frein = (x: number, z: number) => (dansLEauHotel(x, z) ? FREIN_EAU_HOTEL : 1);
+  return { xMin: 0.5, xMax: HOTEL.largeur - 0.5, zMin: 0.5, zMax: HOTEL.profondeur - 0.5, obstacles, grille: creerGrille(obstacles), frein };
 })();
 
 // ---------- La sortie ----------
 
 /** L'arrivée sur la promenade, par l'est (FICHE.entrees[0] : x 31,5, z 15 du lot ; FICHE.depart : x 28). */
 const PROMENADE = jeuHotel(28, 15);
+
+/**
+ * Le panneau de sortie (0.10, R52) : planté par le jeu juste au-delà de la sortie, au bord nord de la promenade prolongée,
+ * tourné vers la caméra du jeu (client/src/rendu/bords-hotel.ts) ; on le lit (commun/src/guidage.ts, E-16), une lanterne l'éclaire.
+ */
+export const PANNEAU_SORTIE_HOTEL = { x: HOTEL.largeur + 0.3, z: PROMENADE.z - 2.8 } as const;
 
 export const SORTIES_HOTEL: Sortie[] = [
   {
