@@ -5,7 +5,12 @@
 FROM node:25-bookworm-slim AS construction
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci --no-audit --no-fund
+# npm saute en silence une dépendance optionnelle qu'il n'a pas pu télécharger : le module natif de rolldown (vite)
+# manquait ainsi au déploiement de la 0.10, et l'étape gardée en cache échouait ensuite à chaque fois. On vérifie
+# qu'il est là (celui de la plateforme qui construit) : une étape ratée n'est jamais gardée en cache.
+RUN npm ci --no-audit --no-fund \
+ && node -e 'require.resolve(`@rolldown/binding-${process.platform}-${process.arch}-gnu`)' \
+ || { echo "Le module natif de rolldown manque (téléchargement raté ?) : relancer la construction."; exit 1; }
 COPY . .
 RUN npm run build
 
