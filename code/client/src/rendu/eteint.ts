@@ -1,6 +1,6 @@
 // L'Éteint (Book 18 §4.3) : le même squelette que les survivants, peau gris-vert, yeux blancs, vêtements
-// délavés et déchirés, démarche traînante (Book 06 §2.1). Le dormant est couché au sol, les yeux fermés ;
-// réveillé, il se relève. À terre, il tombe ; s'il n'est pas achevé, il se relève.
+// délavés et déchirés, démarche traînante (Book 06 §2.1). Le dormant est couché au sol, les yeux mi-clos : dans le
+// noir, une lueur plus faible (70 %), qui grandit quand il s'éveille ; réveillé, il se relève. À terre, il tombe ; s'il n'est pas achevé, il se relève.
 // Le serveur envoie les positions 5 fois par seconde : on glisse entre deux.
 
 import * as THREE from "three";

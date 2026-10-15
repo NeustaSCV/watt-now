@@ -155,7 +155,7 @@ Dégâts, vitesse (durée du geste), allonge, coup appuyé à la tête (0.3, aff
 
 - **La fenêtre de frappe** (≈ 1,1 s entre l'allonge d'une hache et la saisie d'un poursuivant) est à **mesurer** ; si elle est trop courte, la saisie passe à 0,8 s face à une arme levée.
 - **Un indicateur au bord de l'écran** pour les Éteints qui approchent hors champ (première cause probable de mort injuste en vue isométrique sur iPhone).
-- **Les yeux blancs se voient dans le noir** à ≈ 6 m, sans lumière.
+- **Les yeux blancs se voient dans le noir** à ≈ 6 m, sans lumière. **Un dormeur garde une lueur plus faible** (≈ 70 %, les yeux mi-clos), **qui grandit quand il s'éveille** (tranché le 2026-10-15, 0.10.1).
 - **À terre ou détruit, ça se lit au corps (0.9)**, sans barre de vie : à terre, l'Éteint remue, gémit et prend appui juste avant de se relever ; détruit, il est inerte, les yeux éteints, la peau gris cendre, et se fond dans le décor avant de s'effacer doucement.
 
 ### 4.6 Nouvelles armes (0.5)

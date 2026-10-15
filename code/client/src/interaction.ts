@@ -28,7 +28,8 @@ export type ActionProposee =
    * Action locale au client : afficher un texte, ou ouvrir le panneau de fabrication. `lire` : un écriteau qu'on lit
    * (guidage 0.10, client/src/guidage.ts), son texte affiché en grand.
    */
-  | { libelle: string; examiner: string; lire?: true }
+  /** `constat` (0.10.1, A1) : en plus du texte, un fait signalé au serveur (le fruitier trop haut fait penser à l'escabeau). */
+  | { libelle: string; examiner: string; lire?: true; constat?: "arbre_haut" }
   | { libelle: string; ouvrirFabrication: true }
   /** À une sortie : ouvrir la carte, la destination déjà choisie. */
   | { libelle: string; ouvrirCarte: readonly LieuId[] }
@@ -375,7 +376,7 @@ export function proposer(
         ? { libelle: libelleHorsSaison(r.donnees.type, jour), examiner: etatDuFruitier(r.donnees.type, jour) ?? "Ce n'est pas la saison." }
         : escabeau
         ? { libelle: usage.libelle, message: { t: "interagir", cible: { genre: "ressource", id: r.donnees.id }, verbe: usage.verbe } }
-        : { libelle: `${usage.libelle} (escabeau)`, examiner: "Les fruits sont trop haut. Pose un escabeau au pied de l'arbre, dans le cercle, puis monte cueillir." },
+        : { libelle: `${usage.libelle} (escabeau)`, examiner: "Les fruits sont trop haut. Pose un escabeau au pied de l'arbre, dans le cercle, puis monte cueillir.", constat: "arbre_haut" },
       B: {
         libelle: "Examiner",
         examiner:

@@ -91,6 +91,9 @@ function adoucir(t: number): number {
   return t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
 }
 
+/** La brume revient en fondu à la fin du zoom (ms ; 0.10.1, A10). */
+export const FONDU_BRUME = 1000;
+
 export type EtatVue = "attente" | "zoom" | null;
 
 /**
@@ -102,6 +105,8 @@ export class VueEnsemble {
   private etatVue: EtatVue = null;
   private depart: Cadrage | null = null;
   private debutZoom = 0;
+  /** Quand le zoom vers le personnage s'est fini (performance.now) : la brume revient en fondu à partir de là. */
+  private finZoom = -Infinity;
 
   get etat(): EtatVue {
     return this.etatVue;
@@ -144,6 +149,7 @@ export class VueEnsemble {
     const t = this.avancee(maintenant);
     if (t >= 1) {
       this.arreter();
+      this.finZoom = maintenant;
       return null;
     }
     const e = adoucir(t);
@@ -151,6 +157,16 @@ export class VueEnsemble {
     // L'écart au personnage, mesuré en largeurs d'écran, se réduit en ligne droite.
     const k = ((1 - e) * zoom) / d.zoom;
     return { x: joueur.x - (joueur.x - d.x) * k, z: joueur.z - (joueur.z - d.z) * k, zoom };
+  }
+
+  /**
+   * La part de la brume de l'aube qu'on montre (0.10.1, A10) : vue de haut, ses nappes de 70 m, qui suivent la caméra, se
+   * lisaient comme un voile carré au-dessus du lieu, et glissaient pendant le zoom. Masquée pendant toute la vue
+   * d'ensemble, elle revient en fondu (FONDU_BRUME) à la fin du zoom.
+   */
+  brume(maintenant: number): number {
+    if (this.etatVue !== null) return 0;
+    return Math.min(1, Math.max(0, (maintenant - this.finZoom) / FONDU_BRUME));
   }
 
   /** Les toits restent tant qu'on voit le lieu de loin, et s'effacent à la fin du zoom, comme d'habitude. */

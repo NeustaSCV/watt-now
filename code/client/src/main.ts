@@ -72,6 +72,7 @@ import { Partants, VueAutre, horlogeAutres } from "./rendu/autres.ts";
 import { Pluie } from "./rendu/pluie.ts";
 import { Rodeurs } from "./rendu/rodeurs.ts";
 import { Brume } from "./rendu/brume.ts";
+import { empecherLeZoom } from "./anti-zoom.ts";
 import { Aides, type Aide } from "./aides.ts";
 import { CONSEILS, watty } from "./watty.ts";
 import { ModePhoto } from "./photo.ts";
@@ -123,6 +124,7 @@ const LUMIERES_PORTEES = {
 const accueil = document.getElementById("accueil")!;
 const voile = document.getElementById("voile")!;
 const canvas = document.getElementById("monde") as HTMLCanvasElement;
+empecherLeZoom(); // 0.10.1 (A6) : pas de zoom de la page au double appui sur iPhone
 const tactile = Entrees.estTactile();
 const qualite = qualiteActuelle(tactile);
 
@@ -1050,6 +1052,7 @@ function recevoir(message: MessageServeur): void {
     case "portes":
       portesCoop = message.portes;
       if (decorCoop && lieu === "cooperative") majPortes(decorCoop, portesCoop, true);
+      poserSacs(); // au phare, l'épave échouée change le sol (0.10.1, A2)
       // La grande porte du Moulin grince (M6).
       // Au phare, c'est l'épave qui s'échoue : la scène du cargo a ses sons (client/src/phare.ts).
       if (lieu !== "phare") son.jouer(lieu === "moulin" ? "grande_porte" : "geste_bois");
@@ -1191,6 +1194,12 @@ function majSacs(liste: SacVu[]): void {
     contenu.add(vue);
     sacs.set(s.id, { vue, donnees: s });
   }
+  poserSacs();
+}
+
+/** Les sacs et les tas posés sur le vrai sol (0.10.1, A2) : au phare, la grève est 8,8 m sous le plateau. */
+function poserSacs(): void {
+  for (const s of sacs.values()) s.vue.position.y = hauteurSolLieu(lieu, s.vue.position.x, s.vue.position.z, portesCoop);
 }
 
 /** Les Éteints du lieu : on crée, on met à jour, on retire ceux qui ne sont plus là. */
@@ -1356,6 +1365,8 @@ function agir(a: ActionProposee | null): void {
     // Un écriteau qu'on lit (le guidage 0.10) : son texte en grand ; sinon, le texte d'Examiner.
     if (a.lire) hud.message(a.examiner, "ecriteau");
     else hud.message(a.examiner, "examen");
+    // 0.10.1 (A1) : le fruitier trop haut se dit ici, mais le serveur doit le savoir (l'idée de l'escabeau).
+    if (a.constat) envoyer({ t: "constat", quoi: a.constat });
   } else if ("ouvrirCoffre" in a) {
     const c = installations.get(a.ouvrirCoffre);
     if (c) hud.ouvrirCoffre(c.vue);
@@ -2037,7 +2048,7 @@ function boucle(instant: number): void {
   }
   ondes.animer(dt);
   pluie.animer(dt, temps.pluie, scene.centre, scene.ciel.nuit);
-  brume.animer(dt, heure, scene.centre, temps.pluie);
+  brume.animer(dt, heure, scene.centre, temps.pluie, vueArrivee.brume);
   for (const f of feux.values()) f.animer(dt, scene.ciel.nuit);
   // L'éclat de repère des déchets : de jour à moins de 8 m ; la nuit, seulement dans la lumière qu'on porte.
   dechetsVue.animer(dt, enVoyage ? null : position, lumiere && lumierePortee(inventaire) !== null);

@@ -70,8 +70,9 @@ export class Brume {
     }
   }
 
-  animer(dt: number, heure: number, centre: THREE.Vector3, pluie: number): void {
-    const e = epaisseurBrume(heure) * (1 - pluie * 0.6);
+  /** `part` (0 à 1) : la part qu'on en montre ; la vue d'ensemble de l'arrivée la masque, puis la ramène en fondu (0.10.1, A10). */
+  animer(dt: number, heure: number, centre: THREE.Vector3, pluie: number, part = 1): void {
+    const e = epaisseurBrume(heure) * (1 - pluie * 0.6) * part;
     this.derive += dt * 0.004;
     this.nappes.forEach((m, i) => {
       m.visible = e > 0.01;
