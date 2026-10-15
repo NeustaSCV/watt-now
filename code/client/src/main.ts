@@ -43,7 +43,7 @@ import { creerHalte, estomperToits, montrerTousLesToits } from "./rendu/halte.ts
 import { ArriveeDansUnLieu } from "./arrivee.ts";
 import { animerMoulin, creerMoulin } from "./rendu/moulin.ts";
 import { animerHotel, creerHotel, lumieresHotel } from "./rendu/hotel.ts";
-import { creerBordsStation } from "./rendu/bords-station.ts";
+import { creerAlentoursStation } from "./rendu/alentours-station.ts";
 import { dansLEauHotel, profondeurEauHotel } from "../../commun/src/hotel.ts";
 import { ClientHotel } from "./hotel.ts";
 import { Guidage } from "./guidage.ts";
@@ -152,7 +152,7 @@ function zoneIci(): Zone {
  */
 const DECORS: Record<LieuJouable, () => THREE.Object3D[]> = {
   terrain: () => [creerTerrain(), creerMare(), creerRuine()],
-  station: () => [creerHalte(), creerBordsStation()], // 0.10, R52 : un décor simple autour (rendu/bords-station.ts)
+  station: () => [creerHalte(), creerAlentoursStation()], // 0.10, R52 : le décor autour (rendu/alentours-station.ts)
   comptoir: () => [creerComptoir()],
   cooperative: () => [(decorCoop = creerCooperative())],
   gue: () => [gue.creer()], // 0.8, chantier 11 : le modèle du gué, retourné pour suivre la carte

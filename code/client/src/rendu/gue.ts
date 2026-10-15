@@ -41,8 +41,6 @@ import { estomperToits } from "./halte.ts";
 import type { SourceLumiere } from "./lumieres.ts";
 // @ts-expect-error : le modèle du gué est en JavaScript, sans types (client/src/batiments/ ne se modifie pas) : typé ici.
 import * as modeleJs from "../batiments/halte-gue/modele.js";
-// @ts-expect-error : idem (les matières partagées du modèle, dont la texture des enseignes).
-import * as outilsJs from "../batiments/halte-gue/outils.js";
 
 /** Ce que le jeu prend du modèle. */
 interface ModeleGue {
@@ -51,11 +49,6 @@ interface ModeleGue {
   FICHE_MIROIR: { cartes: { id: string; decalage: { x: number; z: number } }[] };
 }
 const modele = modeleJs as unknown as ModeleGue;
-const outils = outilsJs as unknown as {
-  matieres(): Record<string, THREE.Material & { map?: THREE.Texture | null }>;
-  bruit(x: number, z: number): number;
-  interp(table: readonly (readonly [number, number])[], x: number): number;
-};
 
 /** Un toit, une façade qui s'efface (le format de rendu/halte.ts : estomperToits), dans le repère du jeu. */
 interface ToitJeu {
@@ -93,144 +86,11 @@ function eclatGuirlande(t: number): number {
   return 0.86 + 0.14 * Math.sin(t * 9);
 }
 
-// ---------- Les alentours : la vallée continue au-delà du lot ----------
-
-/**
- * Le relief du modèle (sa fonction `hauteur`, reprise ici : le modèle ne l'exporte pas), dans son repère, prolongé
- * au-delà du lot : la route file entre ses talus, la rivière dans son lit. Sans rivière ni banc, que les bords.
- */
-const VN: readonly (readonly [number, number])[] = [[-101, 1.8], [-86, 1.4], [-84, -26], [-65, -26], [-62, -1.2], [-56, -2.6], [-46, -31], [44, -31], [54, -7.5], [66, -7.5], [68, -21.5], [86, -21.5], [88, -8.8], [101, -9.2]];
-const VS: readonly (readonly [number, number])[] = [[-101, 11.2], [-72, 10.4], [-69.5, 14], [-59, 14], [-56.5, 8.2], [-47, 33], [44, 33], [54, 4], [101, 0.6]];
-const ZR: readonly (readonly [number, number])[] = [[-101, 7], [-85, 6.5], [-65, 4], [-48, 1], [-36, 0], [30, 0], [50, -1], [70, -3], [101, -5]];
-const XC = (z: number) => 2 + 1.2 * Math.sin(z * 0.08);
-function hauteurModele(x: number, z: number): number {
-  const t = 11.5 - Math.abs(x - XC(z));
-  if (t > 0) return Math.max(-3.2 + 0.3 * (outils.bruit(x * 0.4, z * 0.4) - 0.5), -t * 1.25);
-  const xb = Math.max(-101, Math.min(101, x));
-  const dt = Math.max(outils.interp(VN, xb) - z, z - outils.interp(VS, xb));
-  if (dt <= 0) return 0;
-  return Math.min(8.5, dt * 0.95 * (0.8 + 0.4 * outils.bruit(x * 0.13, z * 0.13)));
-}
-
-/**
- * Autour du lot (200 × 70 m), le pays continue : les talus boisés, la route qui file vers le terrain et vers le Moulin,
- * la rivière qui vient du nord et repart au sud. Sans cela, on verrait le vide aux deux bouts de la route et la coupe
- * du terrain sur les bords. Un seul relief (deux appels), de l'eau, des arbres instanciés.
- */
-function creerAlentours(eau: THREE.Material | undefined, terre: THREE.Material | undefined): THREE.Group {
-  const groupe = new THREE.Group();
-  groupe.name = "gue:alentours";
-  const PAS = 2.5;
-  const x0 = -70;
-  const x1 = 270;
-  const z0 = -50;
-  const z1 = 120;
-  const nx = (x1 - x0) / PAS;
-  const nz = (z1 - z0) / PAS;
-  const h = (x: number, z: number) => hauteurModele(100 - x, z - 35);
-  const pos: number[] = [];
-  const couleurs: number[] = [];
-  // Les coordonnées de texture du modèle (une tuile de terre par 6 m, dans son repère) : la terre se raccorde au lot.
-  const uvs: number[] = [];
-  const c = new THREE.Color();
-  const dans = (x: number, z: number) => x > 0.01 && x < 199.99 && z > 0.01 && z < 69.99;
-  const sommet = (x: number, z: number) => {
-    const y = h(x, z);
-    const mx = 100 - x;
-    const mz = z - 35;
-    const route = Math.abs(mz - outils.interp(ZR, Math.max(-101, Math.min(101, mx)))) < 3.4 && (x < 0 || x > 200);
-    const b = outils.bruit(x * 0.17 + 3, z * 0.17);
-    if (route) c.setHex(Math.abs(mz - outils.interp(ZR, Math.max(-101, Math.min(101, mx)))) < 2.8 ? 0x5d5f5c : 0x8b8468);
-    else if (y < -0.05) c.setHex(0x6a5d47);
-    else if (y > 4.5) c.setHex(b > 0.5 ? 0x4c5e34 : 0x56693a);
-    else if (y > 0.3) c.setHex(b > 0.55 ? 0x4f6236 : 0x5d6e3c);
-    else c.setHex(b > 0.6 ? 0x86a356 : 0x7c9a50);
-    pos.push(x, y, z);
-    couleurs.push(c.r, c.g, c.b);
-    uvs.push(mx / 6, mz / 6);
-  };
-  for (let j = 0; j < nz; j++) {
-    for (let i = 0; i < nx; i++) {
-      const xa = x0 + i * PAS;
-      const za = z0 + j * PAS;
-      // Le lot a son propre sol : on n'y pose rien (ses bords tombent pile sur la grille).
-      if (dans(xa + PAS / 2, za + PAS / 2)) continue;
-      for (const [x, z] of [[xa, za], [xa, za + PAS], [xa + PAS, za + PAS], [xa, za], [xa + PAS, za + PAS], [xa + PAS, za]] as const) sommet(x, z);
-    }
-  }
-  const g = new THREE.BufferGeometry();
-  g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
-  g.setAttribute("color", new THREE.Float32BufferAttribute(couleurs, 3));
-  g.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
-  g.computeVertexNormals();
-  const sol = new THREE.Mesh(g, terre ?? new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 }));
-  sol.receiveShadow = true;
-  groupe.add(sol);
-
-  // La rivière qui entre au nord et sort au sud : la même eau que le modèle (sa matière court avec lui).
-  if (eau) {
-    const bande = (za: number, zb: number, y: number) => {
-      const P: number[] = [];
-      const UV: number[] = [];
-      const C: number[] = [];
-      for (let z = za; z < zb; z += 5) {
-        const coins = [[XC(z - 35) - 11.3, z], [XC(z + 5 - 35) - 11.3, z + 5], [XC(z + 5 - 35) + 11.3, z + 5], [XC(z - 35) + 11.3, z]] as const;
-        for (const k of [0, 1, 2, 0, 2, 3]) {
-          const [mx, zz] = coins[k]!;
-          P.push(100 - mx, y, zz);
-          UV.push(mx / 6, -(zz - 35) / 6);
-          C.push(0.44, 0.55, 0.48);
-        }
-      }
-      const ge = new THREE.BufferGeometry();
-      ge.setAttribute("position", new THREE.Float32BufferAttribute(P, 3));
-      ge.setAttribute("uv", new THREE.Float32BufferAttribute(UV, 2));
-      ge.setAttribute("color", new THREE.Float32BufferAttribute(C, 3));
-      ge.computeVertexNormals();
-      groupe.add(new THREE.Mesh(ge, eau));
-    };
-    bande(z0, 0, -0.6);
-    bande(70, z1, -1.5);
-  }
-
-  // Les arbres des talus : aulnes et frênes sur les pentes, jamais sur la route ni dans l'eau.
-  const aleat = (() => {
-    let a = 2207;
-    return () => ((a = (a * 16807) % 2147483647) / 2147483647);
-  })();
-  const places: { x: number; y: number; z: number; e: number }[] = [];
-  for (let k = 0; k < 2600 && places.length < 560; k++) {
-    const x = x0 + aleat() * (x1 - x0);
-    const z = z0 + aleat() * (z1 - z0);
-    if (x > -1 && x < 201 && z > -1 && z < 71) continue;
-    const y = h(x, z);
-    if (y < 0.6) continue;
-    // Côté caméra (au sud du lot, et au sud de la route aux deux bouts), des arbres bas : on doit voir le personnage.
-    const route = 35 + outils.interp(ZR, Math.max(-101, Math.min(101, 100 - x)));
-    const sud = (z > 70 && z < 90) || ((x < 0 || x > 200) && z > route && z < route + 26);
-    places.push({ x, y, z, e: sud ? 0.45 + aleat() * 0.2 : 0.9 + aleat() * 0.8 });
-  }
-  const tronc = new THREE.CylinderGeometry(0.16, 0.24, 1.6, 5, 1, true).translate(0, 0.8, 0);
-  const feuillage = new THREE.IcosahedronGeometry(1.25, 0).translate(0, 2.55, 0);
-  const troncs = new THREE.InstancedMesh(tronc, new THREE.MeshStandardMaterial({ color: 0x5a4a38, roughness: 1 }), places.length);
-  const feuilles = new THREE.InstancedMesh(feuillage, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, flatShading: true }), places.length);
-  const m = new THREE.Matrix4();
-  const q = new THREE.Quaternion();
-  const tons = [0x4f6a3a, 0x3f5b33, 0x5d7a44, 0x6a7f48];
-  places.forEach((p, i) => {
-    q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), aleat() * Math.PI * 2);
-    m.compose(new THREE.Vector3(p.x, p.y - 0.2, p.z), q, new THREE.Vector3(p.e, p.e * (1.2 + aleat() * 0.6), p.e));
-    troncs.setMatrixAt(i, m);
-    feuilles.setMatrixAt(i, m);
-    feuilles.setColorAt(i, c.setHex(tons[i % tons.length]!));
-  });
-  for (const im of [troncs, feuilles]) {
-    im.castShadow = true;
-    im.receiveShadow = true;
-    groupe.add(im);
-  }
-  return groupe;
-}
+// ---------- Les alentours ----------
+//
+// La vallée qui continue au-delà du lot (le relief, la rivière en amont et en aval, la route, quelques arbres) est dans le
+// modèle depuis la 0.10 (N-2 : le groupe `alentours` de chaque tronçon, retourné avec lui par le miroir) : le jeu n'y
+// ajoute que quelques pierres éboulées au bout ouest.
 
 /**
  * Plan 0.8.2 (obstacles-visibles.test.ts) : au bout ouest, le pied du talus touche la route vers le Moulin sans rien qui
@@ -276,9 +136,9 @@ export class RenduGue {
   /** En développement : la dernière place vue et la dernière proposition (pour les essais). */
   dernier: { p?: { x: number; z: number }; prop?: Propositions; base?: Propositions } = {};
 
-  /** Le décor : les alentours tout de suite ; les tronçons se construisent autour du joueur (animer). */
+  /** Le décor : l'éboulis tout de suite ; les tronçons (et leurs alentours) se construisent autour du joueur (animer). */
   creer(): THREE.Group {
-    if (this.groupe.children.length === 0) this.groupe.add(creerAlentours(outils.matieres().eau, outils.matieres().terrain), creerEboulis());
+    if (this.groupe.children.length === 0) this.groupe.add(creerEboulis());
     return this.groupe;
   }
 
