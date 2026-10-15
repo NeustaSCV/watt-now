@@ -304,7 +304,7 @@ const PROMENADE = jeuHotel(28, 15);
 
 /**
  * Le panneau de sortie (0.10, R52) : planté par le jeu juste au-delà de la sortie, au bord nord de la promenade prolongée,
- * tourné vers l'hôtel (client/src/rendu/bords-hotel.ts) ; on le lit (commun/src/guidage.ts, E-16), une lanterne l'éclaire.
+ * tourné vers la caméra du jeu (client/src/rendu/bords-hotel.ts) ; on le lit (commun/src/guidage.ts, E-16), une lanterne l'éclaire.
  */
 export const PANNEAU_SORTIE_HOTEL = { x: HOTEL.largeur + 0.3, z: PROMENADE.z - 2.8 } as const;
 

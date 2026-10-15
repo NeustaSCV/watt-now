@@ -92,12 +92,13 @@ export function creerBordsHotel(): { groupe: THREE.Group; lanternes: LanternePan
     oyats(c, Mp, xa, PROMENADE.z1 + 2, xb, BORD_EAU_HOTEL - 2, 8);
   }
 
-  // Le panneau de sortie, tourné vers l'hôtel (on le lit en allant vers la sortie), et sa lanterne au-dessus.
+  // Le panneau de sortie, tourné vers la caméra du jeu (au sud-est, comme ceux du phare : de dos, on ne lisait que du
+  // bois), et sa lanterne au-dessus.
   const P = PANNEAU_SORTIE_HOTEL;
-  const panneau = creerPanneauRoute("Route du pont →", "ton terrain, par le pont · 5 km", P.x, P.z, -Math.PI / 2);
+  const panneau = creerPanneauRoute("Route du pont →", "ton terrain, par le pont · 5 km", P.x, P.z, Math.PI / 4);
   panneau.name = "panneau de sortie de l'hôtel";
   c.boite(0.08, 0.7, 0.08, 0x4a3b2c, { x: P.x, y: 2.3, z: P.z }, m.mat);
-  const lanterne = poserLanterne({ x: P.x, y: 2.62, z: P.z, angle: -Math.PI / 2, avance: 0.45 });
+  const lanterne = poserLanterne({ x: P.x, y: 2.62, z: P.z, angle: Math.PI / 4, avance: 0.45 });
 
   // La bande d'eau peu profonde, plus claire que la mer, du bord de l'eau à la ligne où l'on perd pied (le lot seul :
   // ailleurs, on n'y marche pas ; les ganivelles des deux bords y entrent).
