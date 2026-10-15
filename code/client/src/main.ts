@@ -1049,6 +1049,7 @@ function recevoir(message: MessageServeur): void {
     case "portes":
       portesCoop = message.portes;
       if (decorCoop && lieu === "cooperative") majPortes(decorCoop, portesCoop, true);
+      poserSacs(); // au phare, l'épave échouée change le sol (0.10.1, A2)
       // La grande porte du Moulin grince (M6).
       // Au phare, c'est l'épave qui s'échoue : la scène du cargo a ses sons (client/src/phare.ts).
       if (lieu !== "phare") son.jouer(lieu === "moulin" ? "grande_porte" : "geste_bois");
@@ -1190,6 +1191,12 @@ function majSacs(liste: SacVu[]): void {
     contenu.add(vue);
     sacs.set(s.id, { vue, donnees: s });
   }
+  poserSacs();
+}
+
+/** Les sacs et les tas posés sur le vrai sol (0.10.1, A2) : au phare, la grève est 8,8 m sous le plateau. */
+function poserSacs(): void {
+  for (const s of sacs.values()) s.vue.position.y = hauteurSolLieu(lieu, s.vue.position.x, s.vue.position.z, portesCoop);
 }
 
 /** Les Éteints du lieu : on crée, on met à jour, on retire ceux qui ne sont plus là. */

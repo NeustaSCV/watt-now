@@ -175,8 +175,12 @@ export function creerTas(contenu: Partial<Record<string, number>>): THREE.Group 
       m = new THREE.Mesh(new THREE.CylinderGeometry(type === "buche" ? 0.06 : 0.025, type === "buche" ? 0.06 : 0.025, 0.45, 6).rotateZ(Math.PI / 2), mat(0x6b4a32));
       m.position.set(x, type === "buche" ? 0.06 : 0.03, z);
       m.rotation.y = a;
-    } else if (type === "pierre" || type === "charbon_bois") {
-      m = new THREE.Mesh(new THREE.DodecahedronGeometry(0.09), mat(type === "pierre" ? 0x8f8a80 : 0x2b2b2b));
+    } else if (type === "pierre") {
+      // 0.10.1 (A2) : une pierre lancée doit se retrouver dans l'herbe : un peu plus grosse, plus claire que le sol.
+      m = new THREE.Mesh(new THREE.DodecahedronGeometry(0.13), mat(0xc4beb2));
+      m.position.set(x, 0.1, z);
+    } else if (type === "charbon_bois") {
+      m = new THREE.Mesh(new THREE.DodecahedronGeometry(0.09), mat(0x2b2b2b));
       m.position.set(x, 0.07, z);
     } else if (/barre|cle|tournevis|marteau|hache|couteau|lame|ressort|cadre|roue|chaine/.test(type)) {
       m = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.04, 0.05), mat(0x6e6a63));
