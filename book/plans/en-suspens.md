@@ -168,7 +168,7 @@ Les plus gros morceaux : A3, A5, A7, A9 et D1.
 
 ### À mesurer
 
-- **Le Pi après le déploiement de la 0.10** (cible : retard p99 < 25 ms à 10 joueurs) : `cd ~/watt-now && docker compose exec jeu node --disable-warning=ExperimentalWarning scripts/banc-charge.ts grand_hotel 10 30`, puis la même avec `phare`. Sur le Mac (2026-10-15, deux passages) : l'hôtel p99 9,9 et 8,0 ms, le phare 8,2 et 9,2 ms. — plan 0.10, critère 12 ; recette N2.
+- ~~**Le Pi après le déploiement de la 0.10.**~~ *Abandonné (le porteur, 2026-10-15) : le jeu migrera sur un VPS avant de monter en charge ; la mesure se fera là (`scripts/banc-charge.ts grand_hotel 10 30`, puis `phare`). Sur le Mac : 8 à 10 ms de retard p99 à 10 joueurs.* — plan 0.10, critère 12.
 
 ### Ce que la recette a trouvé
 
