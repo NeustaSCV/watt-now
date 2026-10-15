@@ -315,6 +315,25 @@ const CONTENEUR_ECRASE: SegmentModele[] = (() => {
   });
 })();
 
+// ---------- Les bouts de la grève (0.10, R52 ; essai sur l'iPhone du 2026-10-15) ----------
+
+/**
+ * « On ne peut pas arrêter la carte de manière abrupte » (le porteur) : chaque bout de la grève a un obstacle qui se voit.
+ * À l'est, un éboulis de gros rochers tombés de la falaise ferme la plage et l'eau peu profonde, du pied de la falaise
+ * jusqu'au large, juste avant l'endroit où l'on butait (la ligne du large et les rochers du bout de la crique) ; à
+ * l'ouest, au sud de la sortie, un chaos de rochers ferme la grève et l'eau : seul le sentier côtier, au pied de la
+ * falaise, continue (la sortie sans arrivée). Le client dessine les rochers sur ces lignes (client/src/rendu/phare-bords.ts).
+ * Repère du modèle ; des obstacles bas, comme les rochers du bout de la crique (on lance par-dessus).
+ */
+export const EBOULIS_EST = { x1: -3, z1: 15, x2: -5.7, z2: 28 } as const;
+export const ROCHERS_OUEST = { x1: -29.2, z1: 18.6, x2: -29.2, z2: 24 } as const;
+const BOUTS_GREVE = ([EBOULIS_EST, ROCHERS_OUEST] as const).flatMap((s, i) => boitesDuSegment({ ...s, nature: i ? "rochers au sud du sentier côtier" : "éboulis au bout de la crique" }));
+/** Avec l'épave, ce qui de l'éboulis passe sous la coque s'efface (le pont du cargo reste entier). */
+const BOUTS_GREVE_EPAVE = BOUTS_GREVE.filter((b) => {
+  const m = auModele(b.x, b.z);
+  return !dansLaCoque(m.x, m.z);
+});
+
 const FIXES = [...SEGMENTS_MODELE.filter((s) => !SOUS_LA_COQUE(s) && !BORD_EAU(s) && s.nature !== BORD_RAMPE).map(CANOT), ...BORDS_RAMPE].flatMap(boitesDuSegment);
 FIXES.push(TROU_RAMPE);
 const SOUS_COQUE = SEGMENTS_MODELE.filter((s) => SOUS_LA_COQUE(s) && !BORD_EAU(s)).flatMap(boitesDuSegment);
@@ -335,7 +354,7 @@ export function zonePhare(portes: Readonly<Record<string, boolean>>): Zone {
   const cle = epave ? "epave" : "crique";
   let z = zones.get(cle);
   if (!z) {
-    const obstacles = epave ? [...FIXES, ...BOITES_LARGE_EPAVE, ...EPAVE] : [...FIXES, ...BOITES_LARGE, ...SOUS_COQUE];
+    const obstacles = epave ? [...FIXES, ...BOITES_LARGE_EPAVE, ...BOUTS_GREVE_EPAVE, ...EPAVE] : [...FIXES, ...BOITES_LARGE, ...BOUTS_GREVE, ...SOUS_COQUE];
     // Le lot s'arrête à 50 m vers le sud ; la ligne du large passe un peu au-delà (z 26,9 du modèle) : la zone s'étend
     // jusque-là (la mer du client continue bien plus loin).
     const zMax = jeu(0, Math.max(...LIGNE_LARGE.map((s) => Math.max(s.z1, s.z2)))).z + 0.5;
@@ -357,12 +376,13 @@ const GRILLE_NORD = jeu(-1.5, -16);
 const GREVE_OUEST = jeu(-28.6, 16.8);
 
 /**
- * Le panneau du sentier côtier, planté à la sortie de la grève (0.10, essai sur l'iPhone du 2026-10-15 : rien ne montrait
- * par où l'on ressort) : celui du modèle (« Sentier côtier · ← Port · 6 km ») est sur le plateau ; le jeu en plante un
- * pareil sur les galets, au pied de la falaise, juste à l'est de la sortie (repère du modèle : x − 27,4, z 16,6). On le lit
- * (commun/src/guidage.ts, E-12).
+ * Le panneau du sentier côtier (0.10, essais sur l'iPhone du 2026-10-15) : celui du modèle (« Sentier côtier · ← Port ·
+ * 6 km ») est sur le plateau ; le jeu en plante un plus grand, peint clair, avec une petite lampe de balisage, sur les
+ * galets, près de l'eau, au départ du sentier dessiné qui file vers la sortie de l'ouest (planté d'abord au pied de la
+ * falaise, on ne le voyait pas, surtout de nuit). On le voit en arrivant au bas de la rampe ; on le lit
+ * (commun/src/guidage.ts, E-12). Repère du modèle : x − 26,6, z 22,2.
  */
-export const ECRITEAU_SENTIER = jeu(-27.4, 16.6);
+export const ECRITEAU_SENTIER = jeu(-26.6, 22.2);
 
 /**
  * On arrive toujours par la route d'accès, au nord (la première sortie). La grève de la crique, à l'ouest, est une
