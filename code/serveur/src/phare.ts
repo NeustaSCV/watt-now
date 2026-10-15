@@ -304,13 +304,14 @@ export class LieuPhare extends LieuVivant {
     if (verbe !== "allumer") return;
     if (e.allumeLe !== null) return ctx.info(TEXTES_PHARE.dejaAllume);
     if (e.bidon !== "verse" || e.prisme !== "remis") return ctx.info(e.bidon !== "verse" && e.prisme !== "remis" ? TEXTES_PHARE.manque : e.bidon !== "verse" ? TEXTES_PHARE.manquePetrole : TEXTES_PHARE.manquePrisme);
-    // De jour, on prépare ; le feu ne s'allume qu'à la nuit tombée (S-14, Q-0.10-9) : un message fermé par un bouton.
-    if (!estNuit(heureDeJeu(ctx.maintenant(), this.debutDuMonde))) return void ctx.envoyer({ t: "phare", etat: this.vue(ctx.maintenant()), avertissement: TEXTES_PHARE.jour });
+    // De jour, on prépare ; le feu ne s'allume qu'à la nuit tombée (S-14, Q-0.10-9) : un message qui passe (le porteur,
+    // 2026-10-15 : pas de fenêtre en jeu, même fermée par un bouton).
+    if (!estNuit(heureDeJeu(ctx.maintenant(), this.debutDuMonde))) return ctx.info(TEXTES_PHARE.jour);
     ctx.commencer("Monter allumer la lanterne", DUREES_PHARE.allumer, () => {
       const instant = ctx.maintenant();
       const f = this.etat;
       if (f.allumeLe !== null || f.bidon !== "verse" || f.prisme !== "remis" || f.escabeau !== "marque") return;
-      if (!estNuit(heureDeJeu(instant, this.debutDuMonde))) return void ctx.envoyer({ t: "phare", etat: this.vue(instant), avertissement: TEXTES_PHARE.jour });
+      if (!estNuit(heureDeJeu(instant, this.debutDuMonde))) return ctx.info(TEXTES_PHARE.jour);
       this.changer({ allumeLe: instant });
       ctx.info(TEXTES_PHARE.allume);
       this.annoncer(instant);

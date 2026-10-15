@@ -5,7 +5,7 @@
 //   a payé, et pour lui seul (`zonePour`) ;
 // - la marée (S-20) : elle se lit de l'heure du monde ; à marée haute, la cale basse est sous l'eau (son accès fermé,
 //   ses bancs qu'on ne fouille plus), et qui y est resté est remis en haut de l'accès, sur le quai (K1), avec un message
-//   fermé par un bouton (le fondu est à l'écran).
+//   qui passe (le fondu est à l'écran ; le bouton n'est plus montré).
 //
 // joueur.ts n'y touche que par les points d'appel de LieuVivant (`geste`, `accompagner`, `zonePour`, `payerPassage`).
 
@@ -92,7 +92,7 @@ export class RoutePont extends LieuVivant {
 
   /**
    * Le péage : l'heure passée, la porte se referme pour lui. La marée : à marée haute, qui est sur la cale remonte sur le
-   * quai, en haut de l'accès (K1) ; l'écran fait le fondu et montre le message, fermé par son bouton.
+   * quai, en haut de l'accès (K1) ; l'écran fait le fondu et montre le message, qui passe.
    */
   override accompagner(ctx: ContexteLieu, _dt: number): void {
     const instant = ctx.maintenant();

@@ -179,7 +179,7 @@ test("on porte l'escabeau du hangar à la marque : les bras pris, on ne court pa
   assert.ok(Math.hypot(pose.x - ENDROITS_PHARE.marque.x, pose.z - ENDROITS_PHARE.marque.z) < 0.01);
 });
 
-test("la lanterne ne s'allume pas de jour : un message fermé par un bouton ; la nuit, elle s'allume", () => {
+test("la lanterne ne s'allume pas de jour : un message qui passe (pas de fenêtre) ; la nuit, elle s'allume", () => {
   const p = phare();
   // Sans escabeau, on ne monte pas ; sans pétrole ni prisme, on n'allume pas.
   p.aller(ENDROITS_PHARE.marque);
@@ -190,8 +190,8 @@ test("la lanterne ne s'allume pas de jour : un message fermé par un bouton ; la
   assert.ok(!estNuit(heureDeJeu(p.instant(), p.debut)));
   p.faire("escalier", "allumer");
   assert.equal(p.lieu.etat.allumeLe, null, "de jour, on prépare");
-  const avertissement = p.recus.findLast((m) => m.t === "phare") as Extract<MessageServeur, { t: "phare" }>;
-  assert.equal(avertissement.avertissement, TEXTES_PHARE.jour);
+  assert.equal(p.infos().at(-1), TEXTES_PHARE.jour);
+  assert.ok(!p.recus.some((m) => m.t === "phare" && m.avertissement), "plus de bandeau à bouton");
   assert.equal(TEXTES_PHARE.jour, "Le feu ne sert qu'à la nuit tombée.");
   p.nuit();
   p.faire("escalier", "allumer");

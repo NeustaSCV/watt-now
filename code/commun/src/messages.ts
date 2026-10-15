@@ -878,7 +878,7 @@ export type MessageServeurPhare =
    * L'état du phare (à l'arrivée et à chaque changement) : où est l'escabeau, le bidon, le prisme, la lanterne, la corne.
    * `cargo` : le cargo s'échoue à l'instant (S-17) : le client joue la corne grave, le choc et le fondu, puis montre
    * l'épave (l'épave elle-même est un état du lieu : `portes.epave`). `corne` : la corne de brume sonne (S-16), aux
-   * pavillons, au bord de la falaise. `avertissement` : un message fermé par un bouton (« Le feu ne sert qu'à la nuit
-   * tombée. », S-14).
+   * pavillons, au bord de la falaise. `avertissement` : n'est plus envoyé (le message de jour, S-14, est un message
+   * d'information depuis le 2026-10-15 : pas de fenêtre en jeu) ; gardé pour la compatibilité.
    */
   { t: "phare"; etat: EtatPhareVu; cargo?: true; corne?: true; avertissement?: string };

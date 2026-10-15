@@ -952,15 +952,16 @@ function recevoir(message: MessageServeur): void {
       gue.recevoir(message);
       return;
     // Le péage et la marée de la route du pont (plan 0.10, chantier H) : la porte pour soi ; la mer qui monte, un fondu
-    // et un message fermé par son bouton.
+    // et un message qui passe.
     case "passage":
       routePont.passage(message);
       corniche.passage(message);
       hud.reponseCaisse(message.ouvert);
       return;
     case "maree_remonte":
+      // Un fondu, puis un message qui passe (le porteur, 2026-10-15 : pas de fenêtre en jeu ; le bouton n'est plus montré).
       routePont.fondu();
-      (bandeauAvertissement ??= new BandeauAvertissement(document.getElementById("hud")!)).montrer({ texte: message.texte, bouton: message.bouton });
+      window.setTimeout(() => hud.message(message.texte), 650);
       return;
     // 0.10, chantier K : l'état du phare, l'arrivée du cargo, la corne de brume.
     case "phare":

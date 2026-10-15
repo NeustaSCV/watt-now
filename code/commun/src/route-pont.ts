@@ -106,7 +106,7 @@ export function surLaCale(x: number, z: number): boolean {
   return dansRect(x, z, CALE, 0.05);
 }
 
-/** Le message fermé par un bouton, quand la mer monte et qu'on est resté sur la cale (K1). */
+/** Le message qui passe, après un fondu, quand la mer monte et qu'on est resté sur la cale (K1). */
 export const LIGNE_MAREE_MONTE = "La mer monte : tu remontes sur le quai.";
 
 /** Ce que dit l'échelle peinte du quai : le niveau de l'eau, et quand la mer change (en heures de jeu). */
