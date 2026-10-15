@@ -233,11 +233,13 @@ export class Monde {
   /**
    * Un joueur qui ne fait plus rien depuis `inactivite_min` minutes est déconnecté d'office (2026-10-08) : il a sans
    * doute fermé la page ou quitté son écran. Hors ligne, ses besoins sont gelés (Book 01 §2 bis) ; connecté, ils
-   * continueraient de baisser pour rien.
+   * continueraient de baisser pour rien. En pause (0.10.1, C2), le monde attend le joueur : on ne le déconnecte pas, et
+   * le compte ne repart qu'à la fin de la pause.
    */
   private deconnecterInactifs(): void {
     const limite = Date.now() - REGLAGES.inactivite_min * 60_000;
     for (const c of this.connexions.values()) {
+      if (c.joueur.enPause()) c.activite = Date.now();
       if (c.activite >= limite) continue;
       journal(`${c.joueur.compte.pseudo} ne joue plus depuis ${REGLAGES.inactivite_min} min : déconnecté.`);
       c.socket.close(FERMETURE_INACTIF, "Inactif");
