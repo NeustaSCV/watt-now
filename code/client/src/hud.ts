@@ -86,6 +86,7 @@ import type { Commande } from "./entrees.ts";
 import { icone, type Pictogramme } from "./icones.ts";
 import { examenInstallation, type Propositions } from "./interaction.ts";
 import { ORDRE_NIVEAUX, changerQualite, type NiveauQualite } from "./rendu/qualite.ts";
+import { brancherBoutonTenu, etatJaugeCoup } from "./jauge-coup.ts";
 import { COMPOSANTS, DEMONTAGE, NOMS_FAMILLES_VESTIGES, VESTIGES, estOrdure, type FamilleVestige } from "../../commun/src/vestiges.ts";
 
 /** Ordre d'affichage dans le sac : à boire et à manger, matériaux, pièces, outils, lumières. */
@@ -599,14 +600,8 @@ export class Hud {
     lier(".r-carte", "carte");
     if (tactile) {
       // A se juge au relâchement en combat (appui court, ou maintenu pour viser la tête).
-      const a = q(".b-A");
-      a.addEventListener("pointerdown", (e) => {
-        e.preventDefault();
-        a.setPointerCapture(e.pointerId);
-        boutonA.appuyer();
-      });
-      a.addEventListener("pointerup", () => boutonA.relacher());
-      a.addEventListener("pointercancel", () => boutonA.relacher());
+      // Branché pour l'iPhone (client/src/jauge-coup.ts) : ni loupe ni menu à l'appui long, relâché si le système reprend le doigt.
+      brancherBoutonTenu(q(".b-A"), boutonA);
       // Lancer (0.6) : comme A, maintenir puis relâcher (l'arc de visée paraît, l'arc se bande).
       const l = q(".b-lancer");
       l.addEventListener("pointerdown", (e) => {
@@ -711,6 +706,23 @@ export class Hud {
   }
 
   // ---------- Actions ----------
+
+  /** La part de l'anneau de A déjà posée (pour ne toucher au style que quand elle change). */
+  private jaugeVue = -1;
+
+  /**
+   * La jauge du coup appuyé (0.10) : l'anneau autour du bouton A suit la charge (0 à 1, `Entrees.chargeA`) ; plein, il dit
+   * « coup à la tête prêt ». À 0 (relâché, ou hors du mode Combat), il disparaît. Rien au clavier (pas de bouton A).
+   */
+  jaugeCoup(charge: number): void {
+    if (!this.boutonA) return;
+    const { part, pret } = etatJaugeCoup(charge);
+    if (part === this.jaugeVue) return;
+    this.jaugeVue = part;
+    this.boutonA.style.setProperty("--charge", String(part));
+    this.boutonA.classList.toggle("en-charge", part > 0);
+    this.boutonA.classList.toggle("pret", pret);
+  }
 
   /** `tenu` : le geste en cours se fait en tenant A (son libellé, pour le bouton tactile). */
   propositions(p: Propositions, occupe: boolean, tenu: string | null = null): void {

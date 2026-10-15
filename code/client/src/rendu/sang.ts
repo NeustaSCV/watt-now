@@ -39,8 +39,11 @@ export class Sang {
   private readonly traces: Trace[] = [];
   private readonly formes: THREE.BufferGeometry[];
   private readonly matGoutte = new THREE.MeshBasicMaterial({ color: 0x9a1515 });
+  /** La hauteur du sol du lieu courant (0.10 : la grève et l'épave du phare, 4 à 9 m sous le plateau) ; 0 : à plat. */
+  private readonly sol: (x: number, z: number) => number;
 
-  constructor(scene: THREE.Scene) {
+  constructor(scene: THREE.Scene, sol: (x: number, z: number) => number = () => 0) {
+    this.sol = sol;
     this.groupe.userData.poste = "sang";
     scene.add(this.groupe);
     let s = 17;
@@ -48,12 +51,16 @@ export class Sang {
     this.formes = Array.from({ length: 6 }, () => geoTache(alea));
   }
 
-  /** Un coup qui porte : une gerbe de gouttes, puis des taches au sol. `force` : 1 pour un coup, 2 pour une tête. */
+  /**
+   * Un coup qui porte : une gerbe de gouttes, puis des taches au sol. `hauteur` : au-dessus du sol du lieu (pas du
+   * plateau) ; `force` : 1 pour un coup, 2 pour une tête.
+   */
   eclabousser(x: number, z: number, hauteur: number, force: number): void {
     const n = Math.round(10 * force);
+    const y = this.sol(x, z) + hauteur;
     for (let i = 0; i < n; i++) {
       const m = new THREE.Mesh(geoGoutte, this.matGoutte);
-      m.position.set(x, hauteur, z);
+      m.position.set(x, y, z);
       const a = Math.random() * Math.PI * 2;
       const v = 1.2 + Math.random() * 2.2 * force;
       this.gouttes.push({ maillage: m, vx: Math.cos(a) * v, vy: 1 + Math.random() * 2.5, vz: Math.sin(a) * v });
@@ -74,7 +81,7 @@ export class Sang {
       polygonOffsetFactor: -2,
     });
     const m = new THREE.Mesh(this.formes[Math.floor(Math.random() * this.formes.length)]!, mat);
-    m.position.set(x, 0.045 + Math.random() * 0.01, z);
+    m.position.set(x, this.sol(x, z) + 0.045 + Math.random() * 0.01, z);
     m.rotation.y = Math.random() * Math.PI * 2;
     m.scale.setScalar(taille * (0.7 + Math.random() * 0.6));
     m.receiveShadow = true;
@@ -98,7 +105,8 @@ export class Sang {
       g.maillage.position.x += g.vx * dt;
       g.maillage.position.y += g.vy * dt;
       g.maillage.position.z += g.vz * dt;
-      if (g.maillage.position.y <= 0.05) {
+      // Le sol sous la goutte, là où elle est (au phare, elle peut tomber du pont de l'épave sur les galets).
+      if (g.maillage.position.y <= this.sol(g.maillage.position.x, g.maillage.position.z) + 0.05) {
         // La goutte touche le sol : une petite tache.
         if (Math.random() < 0.45) this.tacher(g.maillage.position.x, g.maillage.position.z, 0.09 + Math.random() * 0.08);
         this.groupe.remove(g.maillage);

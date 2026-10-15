@@ -2,7 +2,7 @@
 // Les touches viennent de touches.ts (réassignables, menu « Commandes »). A = agir ou clic gauche,
 // B = examiner ou clic droit. En combat, A se juge au relâchement : appui court = coup rapide, maintenu = coup appuyé.
 
-import { DUREE_APPUI_MS } from "../../commun/src/combat.ts";
+import { AppuiTenu } from "./jauge-coup.ts";
 import type { Allure } from "../../commun/src/regles.ts";
 import { actionDe, tenue } from "./touches.ts";
 
@@ -42,8 +42,8 @@ export class Entrees {
   private readonly touches = new Set<string>();
   private joystick = { x: 0, y: 0, actif: false };
   private commandes: Commande[] = [];
-  /** Instant où A a été enfoncé (null : relâché). */
-  private debutA: number | null = null;
+  /** A tenu : depuis quand (client/src/jauge-coup.ts) ; il se juge court ou long au relâchement. */
+  private readonly appuiA = new AppuiTenu();
   /** Réassignation en cours : la prochaine touche frappée lui est donnée. */
   private capture: ((code: string) => void) | null = null;
 
@@ -110,7 +110,7 @@ export class Entrees {
     });
     window.addEventListener("blur", () => {
       this.touches.clear();
-      this.debutA = null;
+      this.appuiA.oublier();
       this.relacherLancer();
     });
 
@@ -153,17 +153,13 @@ export class Entrees {
 
   /** A enfoncé (clavier, souris, bouton tactile). */
   appuyerA(): void {
-    if (this.debutA !== null) return;
-    this.debutA = performance.now();
-    this.commande("A");
+    if (this.appuiA.appuyer()) this.commande("A");
   }
 
   /** A relâché : court ou long. */
   relacherA(): void {
-    if (this.debutA === null) return;
-    const duree = performance.now() - this.debutA;
-    this.debutA = null;
-    this.commande(duree >= DUREE_APPUI_MS ? "A_long" : "A_court");
+    const appui = this.appuiA.relacher();
+    if (appui) this.commande(appui === "long" ? "A_long" : "A_court");
   }
 
   /** Instant où Lancer a été enfoncé (null : relâché). */
@@ -192,7 +188,7 @@ export class Entrees {
 
   /** A est-il tenu depuis assez longtemps pour un coup appuyé ? (pour l'animation de préparation) */
   get chargeA(): number {
-    return this.debutA === null ? 0 : Math.min(1, (performance.now() - this.debutA) / DUREE_APPUI_MS);
+    return this.appuiA.charge;
   }
 
   /** Une commande venue d'un bouton de l'interface ou du clavier. */
