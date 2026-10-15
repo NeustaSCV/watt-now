@@ -31,7 +31,7 @@
 
 ## 1. Les règles à respecter
 
-*Chaque règle porte un numéro (R1…R51) et sa source. « Décidé » : une décision du porteur ; « repère » : une valeur d'étude, pas encore tranchée. Les identifiants entre parenthèses renvoient au champ `decisions` du tableau maître ou aux études citées.*
+*Chaque règle porte un numéro (R1…R52) et sa source. « Décidé » : une décision du porteur ; « repère » : une valeur d'étude, pas encore tranchée. Les identifiants entre parenthèses renvoient au champ `decisions` du tableau maître ou aux études citées.*
 
 ### 1.A Les meubles et la progression
 
@@ -132,7 +132,8 @@
 | **R49** | **Un lieu L se mérite par un parcours.** L'accès au lieu personnel L#X se gagne **soit par une clé d'accès** trouvée dans un **bâtiment annexe** (isolé, devant le lieu), qui ouvre le bâtiment principal (la Coopérative, le Moulin), **soit par un mécanisme propre au lieu**, qui exploite ce qu'il est (le phare qu'on rallume pour qu'un cargo s'échoue ; la borne de l'hôtel qui remet la carte de l'ascenseur : décision du porteur, 2026-10-14). Dedans, un **parcours imposé** mène à la **partie du fond**, où sont le butin intéressant et les **clés du niveau** ; on en ressort par un **chemin à sens unique** (visible et crédible : saut, trappe, échelle qu'on fait tomber, porte qui ne s'ouvre que d'un côté ; garanti par le serveur), pour qu'on ne puisse pas aller tout droit au butin. Les Éteints sont placés le long du parcours. Compatible avec la vision par pièce (0.7.2). | Le porteur, conception du Moulin (L1B), 2026-10-10 ; élargie le 2026-10-14 (niveau 2) |
 | **R50** | **Une halte H a ses moments de jeu propres**, liés à son thème et à son lieu (au gué : traverser, la crue, le bac à câble, la roselière, les galets, la glaise…), pas seulement un stock de matières. On en retient deux ou trois par halte, choisis pour le plaisir de jeu et leur coût de développement. | Le porteur, conception du gué (H1B), 2026-10-10 ; étude `h1b-l1b-conception.md` (en cours) |
 | **R51** | **Un lieu personnel L se réinitialise au bout de 24 h** : ses Éteints, son butin, ses clés garanties, et sa clé d'accès (la porte principale se referme). | Le porteur, 2026-10-10 (L1A et L1B) |
-| **R48** | **Pas de dialogue à croix.** Un avertissement ou un conseil se ferme **avec un bouton**, jamais par une fenêtre de dialogue avec une croix : « les dialogues avec une croix cassent complètement la dynamique de jeu ». | B14 (condition du porteur) |
+| **R48** | **Pas de fenêtre en jeu.** Un avertissement ou un conseil est **un message qui passe**, jamais une fenêtre : ni dialogue à croix (« les dialogues avec une croix cassent complètement la dynamique de jeu »), ni bandeau fermé par un bouton (précisé par le porteur le 2026-10-15, essais du phare de la 0.10). | B14 (condition du porteur) ; plan 0.10 V4-08, V4-10 |
+| **R52** | **Un lieu ne s'arrête jamais net.** Chaque bord d'une carte a **un obstacle visible et crédible** qui fait comprendre au joueur qu'il ne peut pas aller plus loin (un muret, une clôture, un éboulis, des rochers, la mer profonde, une haie…), et le décor se prolonge un peu au-delà ; une sortie se montre (un chemin dessiné qui continue hors de la carte, un panneau lisible de nuit comme de jour). « Arrêter le dessin comme ça est rude et vraiment pas clair comme expérience pour le joueur. » À demander dès la conception à la session « bâtiments ». | Le porteur, 2026-10-15 (essais du phare, 0.10) |
 
 ---
 
