@@ -12,7 +12,7 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
-## 0.10.0 · en préparation
+## 0.10.0 · déployée le 2026-10-15
 
 - **Le niveau 2, sur la côte** : deux routes nouvelles partent de ton terrain, aussi longues l'une que l'autre. Par la route du pont, le Grand Hôtel des Flots ; par la corniche du Cap Rouge, le phare du cap. Les quatre lieux se voient sur la carte, sans dire ce qu'on y trouve. La côte s'ouvre quand tu as pris un objet à la Coopérative et un au Moulin, sur place ; avant, elle reste grisée.
 - **La route du pont** : la brèche se passe un par un. Au poste de guet, une voix demande douze wotts d'objets (au prix du Comptoir) : on les dépose dans la caisse, la porte s'ouvre pour soi seul, et le retour est libre. À marée basse (la moitié du temps, la même pour tous), on fouille les caddies et les trottinettes échoués sur la cale ; la mer qui monte te remonte sur le quai.
