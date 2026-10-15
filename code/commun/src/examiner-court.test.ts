@@ -104,7 +104,7 @@ test("« Se monte sur » : l'alternateur et la dynamo sur le pédalier, s'il est
 test("le pédalier sans batterie dit pourquoi ; avec une batterie, rien", () => {
   const sansBatterie: EtatInstallation = { alternateur: true };
   assert.equal(raisonArret({ type: "pedalier", etat: sansBatterie }, {}), RAISON_PEDALIER_SANS_BATTERIE);
-  assert.equal(RAISON_PEDALIER_SANS_BATTERIE, "Il lui faut une batterie : dans ton sac, ou un banc à moins de 3 m.");
+  assert.equal(RAISON_PEDALIER_SANS_BATTERIE, "Il lui faut une batterie : dans ton sac, ou un banc à moins de 3 m.");
   // Une batterie dans le sac, posée dessus, ou un banc tout près : il marche.
   assert.equal(raisonArret({ type: "pedalier", etat: sansBatterie }, { petite_batterie: 1 }), null);
   assert.equal(raisonArret({ type: "pedalier", etat: { alternateur: true, batteries: { petite_batterie: 1 } } }, {}), null);
@@ -119,9 +119,9 @@ test("le pédalier sans batterie dit pourquoi ; avec une batterie, rien", () => 
 });
 
 test("les autres raisons sont celles que le jeu disait déjà ; une installation qui marche n'en a pas", () => {
-  assert.equal(raisonArret({ type: "cloture_electrique", etat: { declencheur: { arme: false, prises: 0 } } }, {}), "Le courant ne passe pas : il lui faut un banc chargé à moins de 6 m.");
+  assert.equal(raisonArret({ type: "cloture_electrique", etat: { declencheur: { arme: false, prises: 0 } } }, {}), "Le courant ne passe pas : il lui faut un banc chargé à moins de 6 m.");
   assert.equal(raisonArret({ type: "cloture_fortune", etat: { declencheur: { arme: true, prises: 0 } } }, {}), null);
-  assert.equal(raisonArret({ type: "rampe_led", etat: { courant: false } }, {}), "Pas de batterie chargée à moins de 15 m : elle reste éteinte.");
+  assert.equal(raisonArret({ type: "rampe_led", etat: { courant: false } }, {}), "Pas de batterie chargée à moins de 15 m : elle reste éteinte.");
   assert.equal(raisonArret({ type: "rampe_led", etat: { courant: true } }, {}), null);
   assert.equal(raisonArret({ type: "coffre", etat: {} }, {}), null);
 });

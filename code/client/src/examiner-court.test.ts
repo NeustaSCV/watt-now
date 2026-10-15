@@ -40,7 +40,7 @@ test("la clôture sans courant : la raison à part, en tête ; avec courant, le 
   const B = (arme: boolean) => proposer({ x: 20, z: 20, o: 0 }, "terrain", "voltaiques", [], [], [cloture(arme)], {}, GOURDE, {}, 0).B;
   const sans = B(false);
   assert.ok(sans && "examiner" in sans);
-  assert.equal(sans.raison, "Le courant ne passe pas : il lui faut un banc chargé à moins de 6 m.");
+  assert.equal(sans.raison, "Le courant ne passe pas : il lui faut un banc chargé à moins de 6 m.");
   assert.match(sans.examiner, /^Six mètres de fil sous tension/);
   const avec = B(true);
   assert.ok(avec && "examiner" in avec);

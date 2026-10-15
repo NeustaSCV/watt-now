@@ -160,8 +160,11 @@ export function lignesObjet(type: TypeObjet, famille: Famille, savoir: SavoirRec
 
 // ---------- Pourquoi une installation ne marche pas ----------
 
-/** La raison du pédalier sans batterie (validée par le porteur, 2026-10-16). */
-export const RAISON_PEDALIER_SANS_BATTERIE = "Il lui faut une batterie : dans ton sac, ou un banc à moins de 3 m.";
+/**
+ * La raison du pédalier sans batterie (validée par le porteur, 2026-10-16). Dans toutes les raisons, une espace
+ * insécable avant « m » : la distance ne se coupe pas en fin de ligne (« 6 / m. » sur l'iPhone en paysage).
+ */
+export const RAISON_PEDALIER_SANS_BATTERIE = "Il lui faut une batterie : dans ton sac, ou un banc à moins de 3 m.";
 
 /** Le pédalier est à moins de 3 m d'un banc dont la batterie a encore de la place (0.8.2, R17). */
 export function pedalierChargeLeBanc(pedalier: { x: number; z: number }, installations: Iterable<{ type: string; x: number; z: number; etat: EtatInstallation }>): boolean {
@@ -188,7 +191,7 @@ export function raisonArret(i: { type: TypeInstallation; etat: EtatInstallation 
     case "cloture_fortune":
     case "cloture_electrique":
       if (d?.couche) return "Couchée : trois Éteints ont poussé ensemble. Relève-la.";
-      return d?.arme === false ? "Le courant ne passe pas : il lui faut un banc chargé à moins de 6 m." : null;
+      return d?.arme === false ? "Le courant ne passe pas : il lui faut un banc chargé à moins de 6 m." : null;
     case "plaque_choc":
       return d && !(d.arme ?? true) ? "Elle a servi : réarme-la." : null;
     case "assommoir":
@@ -197,7 +200,7 @@ export function raisonArret(i: { type: TypeInstallation; etat: EtatInstallation 
     case "fosse_pieux":
       return d?.fausse ? "Faussées : elles ne se réarment plus. Démonte-les, refais-en." : null;
     case "rampe_led":
-      return i.etat.courant === false ? "Pas de batterie chargée à moins de 15 m : elle reste éteinte." : null;
+      return i.etat.courant === false ? "Pas de batterie chargée à moins de 15 m : elle reste éteinte." : null;
     default:
       return null;
   }
