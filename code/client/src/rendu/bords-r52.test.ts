@@ -201,3 +201,38 @@ test("les sorties restent atteignables à pied depuis l'arrivée (route du pont,
     }
   }
 });
+
+test("budget iPhone : chaque tronçon des haltes de la côte et du gué tient, alentours compris (≤ 40 appels, ≤ 60 000 triangles) ; le jeu n'y ajoute rien", () => {
+  const compter = (g: THREE.Object3D) => {
+    let triangles = 0;
+    let appels = 0;
+    g.traverseVisible((o) => {
+      const m = o as THREE.Mesh;
+      if (!m.isMesh || (m.material as THREE.Material).colorWrite === false) return;
+      triangles += (m.geometry.index ? m.geometry.index.count : m.geometry.getAttribute("position").count) / 3;
+      appels++;
+    });
+    return { triangles, appels };
+  };
+  const pont = new RenduRoutePont();
+  pont.creer();
+  pont.toutConstruire();
+  pont.animer({ x: 75, z: 35 }, 0.016, Math.PI / 4, 0, 0, true);
+  const corniche = new RenduCorniche();
+  corniche.creer();
+  corniche.toutConstruire();
+  const gue = new RenduGue(() => {});
+  gue.creer();
+  gue.toutConstruire();
+  let n = 0;
+  for (const g of [pont.groupe, corniche.groupe, gue.groupe]) {
+    for (const t of g.children) {
+      if (t.name === "gue:eboulis") continue;
+      const c = compter(t);
+      assert.ok(c.appels <= 40, `${t.name} : ${c.appels} appels`);
+      assert.ok(c.triangles <= 60_000, `${t.name} : ${c.triangles} triangles`);
+      n++;
+    }
+  }
+  assert.equal(n, 12, "les douze tronçons");
+});
