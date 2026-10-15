@@ -284,6 +284,8 @@ export type MessageClient =
   | { t: "interagir"; cible: Cible; verbe: Verbe }
   | { t: "manger"; objet: TypeObjet }
   | { t: "boire" }
+  /** Plan 0.10.1 (A4) : boire une bouteille d'eau d'un trait, depuis le sac (sans passer par la gourde). */
+  | { t: "boire_bouteille" }
   | { t: "construire_feu"; x: number; z: number; dakota?: boolean }
   | { t: "fabriquer"; recette: string; x?: number; z?: number; o?: number }
   | { t: "lumiere"; allumee: boolean }

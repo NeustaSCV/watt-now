@@ -119,7 +119,7 @@ export const PROFILS_DECHETS: Record<TypeLieuDechets, ProfilLieuDechets> = {
     familles: {},
     groupes: [
       { nom: "la rivière", part: 0.5, objets: { branche: 4, fibres: 3, plumes: 2, os: 2 } },
-      { nom: "ce que la crue charrie", part: 0.35, objets: { sac_plastique: 3, bouteille_plastique: 3, canette: 2, chiffons: 2, ficelle: 2, corde: 0.3 } },
+      { nom: "ce que la crue charrie", part: 0.35, objets: { sac_plastique: 3, bouteille_plastique: 3, bouteille_eau: 1, canette: 2, chiffons: 2, ficelle: 2, corde: 0.3 } },
       {
         nom: "la pêche et la guinguette",
         part: 0.15,

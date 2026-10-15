@@ -208,7 +208,7 @@ test("invincible : ni dégâts, ni faim, ni soif, ni fatigue ; désactivé, il p
   t.attendre(30);
   assert.equal(prive.sante.points, 100);
   assert.equal(prive.sante.saignement, "aucun");
-  assert.ok(prive.besoins.kcal > 2000 && prive.besoins.eau > 2 && prive.besoins.repos === 1);
+  assert.ok(prive.besoins.kcal > 2000 && prive.besoins.eau > 1.4 && prive.besoins.repos === 1);
   assert.equal(t.dernier("effondrement"), undefined);
   // Désactivé dans ⚙ : il redevient mortel.
   t.joueur.recevoir({ t: "admin", op: { genre: "invincible", oui: false } });

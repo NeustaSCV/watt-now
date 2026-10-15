@@ -12,7 +12,7 @@ import { POINT_ARRIVEE, type Famille } from "../../commun/src/regles.ts";
 import { savoirValide, type Savoir } from "../../commun/src/savoir.ts";
 import { sechageValide, type EtatSechage } from "../../commun/src/arc.ts";
 import { PROGRESSION_VIDE, devoileesAuDepart, devoileesDEmblee, progressionValide, type EtatProgression } from "../../commun/src/progression.ts";
-import { BESOINS_DEPART, GOURDE_DEPART, type Besoins, type EtatFeu, type Gourde } from "../../commun/src/survie.ts";
+import { BESOINS_DEPART, GOURDE_DEPART, RESERVE_EAU_MAX, type Besoins, type EtatFeu, type Gourde } from "../../commun/src/survie.ts";
 import type { Charges } from "../../commun/src/energie.ts";
 import { SANTE_DEPART, type Sante } from "../../commun/src/combat.ts";
 import type { Wotts } from "../../commun/src/economie.ts";
@@ -667,7 +667,9 @@ export class Base {
       lieu: estLieuJouable(ligne.lieu) ? ligne.lieu : "terrain",
       position: { x: ligne.x, z: ligne.z, o: ligne.orientation },
       vuLe: Date.parse(ligne.maj_le) || 0,
-      besoins: { kcal: ligne.kcal, eau: ligne.eau, repos: ligne.repos },
+      // Plan 0.10.1 (A8) : la jauge de soif tient 1,5 L (2,5 avant) ; une réserve plus grande, gardée par la 0.10, est
+      // ramenée à 1,5 L (pas de remise à zéro).
+      besoins: { kcal: ligne.kcal, eau: Math.min(RESERVE_EAU_MAX, ligne.eau), repos: ligne.repos },
       gourde: { contenu: ligne.gourde_contenu === "brute" ? "brute" : "potable", litres: ligne.gourde_litres },
     };
   }

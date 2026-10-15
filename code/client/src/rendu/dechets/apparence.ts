@@ -72,6 +72,8 @@ export const APPARENCES: Partial<Record<TypeObjet, ApparenceObjet>> = {
   canette: { s: "cylindre", e: [1, 0.6, 1] },
   sac_canettes: { s: "sac", e: 1.6, t: 0x9cc8d8 },
   bouteille_plastique: { s: "bouteille", t: 0x9cc8d8, a: BLEU },
+  // Plan 0.10.1 (A4) : pleine, l'eau la fonce un peu.
+  bouteille_eau: { s: "bouteille", t: 0x6fb0d0, a: BLEU },
   bouteille_verre: { s: "bouteille", e: [0.95, 1.1, 1.1], t: 0x3a7a4a, a: 0xc9ccd0 },
   sac_plastique: { s: "sac", t: BLANC },
   barquette: { s: "plaque", e: [0.7, 3, 0.8], t: BLANC },
