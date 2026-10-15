@@ -15,13 +15,11 @@ import { BandeauAvertissement } from "./avertissement.ts";
 import type { ActionProposee, Propositions } from "./interaction.ts";
 import { lumieresPhare, solPhare, type ScenePhare } from "./rendu/phare.ts";
 import { Secousse, type Decalage } from "./rendu/secousse.ts";
-import { MiseEnScenePhare, PROCHE_ETEINT } from "./phare-scene.ts";
+import { MiseEnScenePhare, PROCHE_ETEINT, SCENE_CARGO } from "./phare-scene.ts";
 import type { Cadrage } from "./rendu/scene.ts";
 import type { SourceLumiere } from "./rendu/lumieres.ts";
 import type { IdSon } from "./son/catalogue.ts";
 
-/** L'arrivée du cargo (S-17), en secondes depuis son début : la corne grave, le choc, le fondu de 2 s (1 s au noir, 1 s pour revenir). */
-const SCENE_CARGO = { choc: 3.8, noir: 4.2, epave: 5.2, fin: 6.2 } as const;
 
 const EXAMEN_ESCALIER = "L'escalier en fonte tourne dans la tour… et s'arrête net à trois mètres du sol. Dessous, une marque à la craie.";
 const EXAMEN_ESCABEAU = "L'escabeau du gardien, en bois, ses marches usées. Assez haut pour atteindre une première marche à trois mètres.";

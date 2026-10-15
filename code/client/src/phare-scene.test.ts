@@ -29,7 +29,7 @@ const { nuitDe } = await import("./rendu/phare-nuit.ts");
 const ETEINTE: EtatPhareVu = { escabeau: "marque", bidon: "verse", prisme: "remis", lanterne: false, compresseur: true, corneSonnee: false };
 const ALLUMEE: EtatPhareVu = { ...ETEINTE, lanterne: true };
 const JOUEUR = { x: 20.5, z: 10.8, y: 0, zoom: 1 };
-const CHOC = 3800;
+const CHOC = 0; // le choc tombe à l'échouage (SCENE_CARGO.choc)
 
 test("le balayage du faisceau ne se voit que lanterne allumée, la nuit ; il tourne, posé sur le relief", () => {
   const decor = creerPhare();
@@ -99,10 +99,10 @@ test("le cargo, 50 s après l'allumage : sa corne à 10 s et juste avant le cadr
   // L'échouage annoncé (un peu en retard) : on reste sur la crique jusqu'au bout de la scène, puis on revient.
   const arrive = CARGO_MS + 400;
   m.echouage(arrive);
-  assert.ok(m.cadrage(arrive + 6000, JOUEUR, false));
-  assert.equal(m.cadrage(arrive + 7300, JOUEUR, false), null);
+  assert.ok(m.cadrage(arrive + 2000, JOUEUR, false));
+  assert.equal(m.cadrage(arrive + 3500, JOUEUR, false), null);
   // L'épave revenue du fondu : plus de feux.
-  assert.equal(m.feux(arrive + 5300, true), null);
+  assert.equal(m.feux(arrive + 1500, true), null);
 });
 
 test("un Éteint à moins de 6 m annule le cadrage de la crique (et il ne reprend pas)", () => {
@@ -142,4 +142,39 @@ test("qui arrive après le cargo (ou se reconnecte) trouve l'épave : rien ne se
   for (let t = 0; t <= 30_000; t += 500) cornes.push(...n.cornesAJouer(t));
   assert.deepEqual(cornes, [CORNES_CARGO_S[1]]);
   assert.ok(n.feux(1000, false));
+});
+
+test("le choc et la secousse tombent à CARGO_MS (50 s) après l'allumage, la seconde corne et le cadrage avant", async () => {
+  const { PhareClient } = await import("./phare.ts");
+  const { Secousse } = await import("./rendu/secousse.ts");
+  const vrai = performance.now.bind(performance);
+  let t = 0;
+  Object.defineProperty(performance, "now", { value: () => t, configurable: true, writable: true });
+  try {
+    const sons: [string, number][] = [];
+    const client = new PhareClient((id) => sons.push([id, t]), () => ({}) as HTMLElement, new Secousse(() => false), new MiseEnScenePhare(() => false));
+    client.recevoir({ t: "phare", etat: ETEINTE });
+    client.recevoir({ t: "phare", etat: { ...ALLUMEE, cargoDans: CARGO_MS } });
+    let cadreLe: number | null = null;
+    for (t = 0; t < CARGO_MS; t += 100) {
+      client.animer();
+      // Le cadrage de la crique (plus bas que le joueur ; le recul sur la tour, à l'allumage, regarde en haut).
+      const c = client.cadrage({ x: 20, z: 35 }, 1, []);
+      if (cadreLe === null && c && (c.y ?? 0) < 0) cadreLe = t;
+    }
+    // Le serveur bascule à CARGO_MS : le choc et la secousse à cette image même.
+    t = CARGO_MS;
+    client.recevoir({ t: "phare", etat: { ...ALLUMEE, cargoDans: 0 }, cargo: true });
+    client.animer();
+    const choc = sons.find(([id]) => id === "choc_cargo");
+    assert.equal(choc?.[1], CARGO_MS);
+    assert.ok(client.secousse.enCours);
+    const cornes = sons.filter(([id]) => id === "corne_cargo").map(([, q]) => q);
+    assert.equal(cornes.length, 2, "pas de troisième corne au choc");
+    assert.equal(cornes[0], 10_000);
+    assert.ok(cadreLe !== null && Math.abs(cadreLe - (CARGO_MS - 7000)) <= 100, `cadrage à ${cadreLe} ms`);
+    assert.ok(cornes[1]! < cadreLe!, "la seconde corne juste avant le cadrage");
+  } finally {
+    Object.defineProperty(performance, "now", { value: vrai, configurable: true, writable: true });
+  }
 });

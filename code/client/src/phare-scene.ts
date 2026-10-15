@@ -20,16 +20,21 @@ import { mouvementsReduits } from "./rendu/secousse.ts";
 export const RECUL_TOUR = { aller: 0.7, reste: 2.4, retour: 0.7, x: 20, y: 13, z: 19, zoom: 2.6 } as const;
 /** Le cadrage de la crique : il commence 7 s avant le choc, finit 1 s après l'épave revenue du fondu. */
 export const CADRAGE_CRIQUE = { avantChoc: 7, aller: 0.9, retour: 0.9, x: 22, y: -6, z: 45, zoom: 2.4 } as const;
-/** Les secondes de la scène du choc (client/src/phare.ts, SCENE_CARGO) dont dépend le cadrage. */
-const CHOC_S = 3.8;
-const FIN_SCENE_S = 6.2;
+/**
+ * La scène de l'échouage (S-17), en secondes depuis l'annonce du serveur (CARGO_MS après l'allumage) : le choc tout de
+ * suite (avec la secousse : le porteur veut le choc à 50 s), puis le fondu de 2 s (1 s au noir, l'épave, 1 s pour revenir).
+ * Joué par client/src/phare.ts ; le cadrage en dépend.
+ */
+export const SCENE_CARGO = { choc: 0, noir: 0.4, epave: 1.4, fin: 2.4 } as const;
+const CHOC_S = SCENE_CARGO.choc;
+const FIN_SCENE_S = SCENE_CARGO.fin;
 /** Le délai du cargo, en secondes (commun/src/phare.ts). */
 const CARGO_S = CARGO_MS / 1000;
 /**
  * La corne grave du cargo au large, en secondes avant l'échouage : 10 s après l'allumage (on sait vite qu'il vient), puis
- * 5 s avant l'échouage, juste avant que la caméra cadre la crique (7 s avant le choc, qui suit l'échouage de 3,8 s).
+ * 8 s avant l'échouage, juste avant que la caméra cadre la crique (7 s avant le choc, à l'échouage même).
  */
-export const CORNES_CARGO_S = [CARGO_S - 10, 5] as const;
+export const CORNES_CARGO_S = [CARGO_S - 10, 8] as const;
 /** Les feux du cargo : visibles dès la première corne, du large jusqu'à l'entrée de la crique (repère du jeu). */
 export const FEUX_CARGO = { avantS: CORNES_CARGO_S[0], depart: { x: 10, z: 112 }, arrivee: { x: 23, z: 52 } } as const;
 /** À moins de cette distance, un Éteint annule le cadrage (le mode Combat se met au même seuil). */
