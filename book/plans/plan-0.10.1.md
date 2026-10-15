@@ -1,6 +1,6 @@
 # Plan de développement — version 0.10.1 : les corrections des points en suspens
 
-*Version du plan : v0.2 · 2026-10-15 · **Statut : validé par le porteur ; lot 1 (A, B) lancé, maquettes du lot 2 (C, D, E) en préparation.***
+*Version du plan : v0.2 · 2026-10-15 · **Statut : validé par le porteur ; lot 1 (A, B) lancé ; E décidé (V3) et lancé ; maquettes C et D en préparation.***
 
 *v0.2 (2026-10-15) : **toutes les recommandations acceptées**, sauf : **les saisons suivent les vraies dates** (Q-4) ; **la bouteille d'eau se boit directement**, sans passer par la gourde (Q-5 et Q-6 sans objet). **Les murs et les sols en 0.10.2** (Q-1).*
 
@@ -127,7 +127,7 @@ Un seul chantier, parce que les quatre points touchent les mêmes lignes (`commu
 
 - *Lu dans le code* : le texte d'Examiner passe **en entier** dans la colonne des messages, 4 à 12 s selon sa longueur (`client/src/texte-examen.ts`) ; la fiche d'un objet du sac (`hud.ts:1563`, `dessinerSac`) dit la description, le poids, la valeur, le démontage, l'énergie grise, mais jamais **à quoi sert l'objet** ni **ce qu'il permet comme outil** ; la fiche d'une installation (`hud.ts:2138`, `dessinerFiche`) dit le texte d'examen et le niveau, pas **pourquoi elle ne marche pas**. L'étude complète (`.claude-travail/propositions/examiner-detaille.md`, maquette `maquettes/examiner/`) prévoyait six blocs : tu as retenu la version courte.
 - *Proposé* : trois lignes au plus, seulement quand il y a quelque chose à dire : **Sert à** (les fabrications **dévoilées** où l'objet entre, au plus 4, puis « et 2 autres » ; jamais une recette cachée) ; **Outil** (« couper, visser ») ; pour une installation, **pourquoi elle ne marche pas** (« il lui faut une batterie dans le sac »). Pour C3 : l'agent relève, à 375 × 630 et 812 × 320, tous les textes d'examen qui débordent, et propose une version courte de chacun **à ta validation mot pour mot** (aucun texte changé sans toi).
-- *À trancher* : la maquette ; Q-9 (ce que tu as vu coupé).
+- *Décidé (2026-10-16, maquette `.claude-travail/maquettes-0-10-1/examiner-court/`)* : **la variante V3 partout** (dans le sac, sur la fiche d'une installation, dans les messages d'Examiner) : les lignes utiles **avant** la phrase d'ambiance, titres en petites capitales ; ce qui ne va pas en **bandeau orange** tout en haut de la fiche (« Ne marche pas : … »). Phrases validées : pour le pédalier, « il lui faut une batterie : dans ton sac, ou un banc à moins de 3 m » ; « Rien que tu saches faire, pour l'instant. » seulement pour un objet qui n'est pas une ordure et dont toutes les recettes sont cachées (sinon pas de ligne) ; une pièce qui se monte sur une installation (dynamo, panneau solaire, alternateur) dit « Se monte sur : le pédalier » (ou son installation). Les variantes d'une recette comptent une fois ; le feu de camp compte. Q-9 : l'agent relève tout ce qui déborde.
 
 ### Chantier F · Les murs et les sols — **L**, en 0.10.2 (Q-1), pas dans cette version
 
