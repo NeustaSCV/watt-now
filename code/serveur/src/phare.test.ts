@@ -1,5 +1,5 @@
 // Plan 0.10, chantier K : le phare du cap, « le feu et le cargo » (S-12 à S-18). La lanterne ne s'allume que la nuit ;
-// sans elle, pas de cargo ; deux minutes après l'allumage, l'épave est là, une fois par retour du phare (24 h) ; la corne
+// sans elle, pas de cargo ; 50 s après l'allumage (V4-07), l'épave est là, une fois par retour du phare (24 h) ; la corne
 // de brume détourne un Errant ; on ne remonte pas la rampe du canot ; les objets-clés sont dans l'épave ; un phare gardé
 // avant le chantier se relit.
 
@@ -200,7 +200,7 @@ test("la lanterne ne s'allume pas de jour : un message qui passe (pas de fenêtr
   assert.ok((p.recus.findLast((m) => m.t === "phare") as Extract<MessageServeur, { t: "phare" }>).etat.lanterne);
 });
 
-test("sans lanterne allumée, pas de cargo ; deux minutes après l'allumage, l'épave est là", () => {
+test("sans lanterne allumée, pas de cargo ; 50 s après l'allumage (CARGO_MS, V4-07), l'épave est là", () => {
   const p = phare();
   p.preparer();
   p.nuit();
