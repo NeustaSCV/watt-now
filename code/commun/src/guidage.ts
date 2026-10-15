@@ -16,12 +16,12 @@
 // Ce fichier n'importe des autres modules du jeu que des positions, des états et des textes.
 
 import { aLaCorniche, BARRICADE, PIN_TOMBE, RUBAN } from "./corniche.ts";
-import { ASCENSEUR, BALCON, BORNE, CARTE, PANNEAU, borneAlimentee, jeuHotel, niveauHotel, pieceHotel, type EtatHotel, type PieceHotel } from "./hotel.ts";
+import { ASCENSEUR, BALCON, BORNE, CARTE, PANNEAU, PANNEAU_SORTIE_HOTEL, borneAlimentee, jeuHotel, niveauHotel, pieceHotel, type EtatHotel, type PieceHotel } from "./hotel.ts";
 import { destinations, entreesDe, type LieuId } from "./lieux.ts";
 import type { Inventaire } from "./objets.ts";
 import { TEXTES_PEAGE } from "./peage.ts";
-import { ECRITEAU_SENTIER, ENDROITS_PHARE, jeu as auPhare, piecePhare, surLaGreve, type EtatPhareVu } from "./phare.ts";
-import { auPont, ECHELLE_MAREE, PORTE_PEAGE, type EtatMaree } from "./route-pont.ts";
+import { ECRITEAU_ROUTE, ECRITEAU_SENTIER, ENDROITS_PHARE, jeu as auPhare, piecePhare, surLaGreve, type EtatPhareVu } from "./phare.ts";
+import { auPont, ECHELLE_MAREE, PANNEAUX_SORTIE_PONT, PORTE_PEAGE, type EtatMaree } from "./route-pont.ts";
 
 /** Une pensée du personnage (en italique) ou une voix (le texte porte ses guillemets). */
 export type GenreGuidage = "pensee" | "voix";
@@ -184,7 +184,11 @@ export const DECLENCHEURS: readonly Declencheur[] = [
 export const ECRITEAUX: readonly Ecriteau[] = [
   { id: "E-01", lieu: "route_pont", points: [CHICANE], rayon: 0.9, texte: "« PÉAGE · 12 WOTTS / TÊTE · DANS LA CAISSE ↓ · UN À LA FOIS ! »" },
   { id: "E-02", lieu: "route_pont", points: [auPont(-61.6, 0)], rayon: 3, texte: "« PONT CONNECTÉ · votre passage est optimisé en temps réel · trafic : 0 véhicule · attente : 0 min »" },
-  { id: "E-04", lieu: "corniche", points: [aLaCorniche(-96.5, 0.03), aLaCorniche(96.5, -2.76)], rayon: 1.5, texte: "« Cap du Phare · Port de pêche → »" },
+  { id: "E-04", lieu: "corniche", points: [aLaCorniche(-96.5, 0.03)], rayon: 1.5, texte: "« ← Ton terrain · 3 km · Phare du cap, par le tunnel → »" },
+  { id: "E-13", lieu: "corniche", points: [aLaCorniche(96.5, -2.76)], rayon: 1.5, texte: "« Phare du cap · 2 km → · ← La corniche, ton terrain »" },
+  { id: "E-14", lieu: "route_pont", points: [PANNEAUX_SORTIE_PONT[0]], rayon: 1.7, texte: "« ← Ton terrain · 3 km · Grand Hôtel des Flots, par le pont → »" },
+  { id: "E-15", lieu: "route_pont", points: [PANNEAUX_SORTIE_PONT[1]], rayon: 1.7, texte: "« Grand Hôtel des Flots · 2 km → · ← Le pont, ton terrain »" },
+  { id: "E-16", lieu: "grand_hotel", points: [PANNEAU_SORTIE_HOTEL], rayon: 0.9, texte: "« Route du pont → · Ton terrain, par le pont · 5 km »" },
   { id: "E-05", lieu: "corniche", points: [aLaCorniche(-68, -5)], rayon: 3.6, texte: "« CORNICHE PANORAMIQUE · VUE CERTIFIÉE 5 ÉTOILES · Selfie-points tous les 200 m »" },
   { id: "E-06", lieu: "grand_hotel", points: [BORNE], rayon: 0.6, dans: aLHotelDans("hall"), texte: "« CHECK-IN PAR SOURIRE »" },
   { id: "E-07", lieu: "grand_hotel", points: [jeuHotel(26.89, 16.53)], rayon: 0.8, texte: "« SÉJOUR ZÉRO-EFFORT · On respire pour vous. · Repas mâchés · Bronzage par abonnement »" },
@@ -193,6 +197,7 @@ export const ECRITEAUX: readonly Ecriteau[] = [
   { id: "E-10", lieu: "phare", points: [auPhare(-7.78, -1.92)], rayon: 0.8, texte: "« ÉTEINS LA LANTERNE ! ILS VOIENT LA LUMIÈRE »" },
   { id: "E-11", lieu: "phare", points: [auPhare(0.7, 1.86)], rayon: 0.4, texte: "« PHARE DU CAP · allumé en 1883 »" },
   { id: "E-12", lieu: "phare", points: [ECRITEAU_SENTIER], rayon: 0.9, texte: "« Sentier côtier · ← Port · 6 km »" },
+  { id: "E-17", lieu: "phare", points: [ECRITEAU_ROUTE], rayon: 0.8, texte: "« ← La corniche · Ton terrain »" },
 ];
 
 /**

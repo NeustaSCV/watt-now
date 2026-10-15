@@ -393,7 +393,13 @@ test("Les textes exacts des écriteaux (G-2)", () => {
   assert.deepEqual(t, {
     "E-01": "« PÉAGE · 12 WOTTS / TÊTE · DANS LA CAISSE ↓ · UN À LA FOIS ! »",
     "E-02": "« PONT CONNECTÉ · votre passage est optimisé en temps réel · trafic : 0 véhicule · attente : 0 min »",
-    "E-04": "« Cap du Phare · Port de pêche → »",
+    // 0.10 (R52) : les panneaux de sortie disent la vraie destination (E-04 ne dit plus « Port de pêche » ; textes à valider).
+    "E-04": "« ← Ton terrain · 3 km · Phare du cap, par le tunnel → »",
+    "E-13": "« Phare du cap · 2 km → · ← La corniche, ton terrain »",
+    "E-14": "« ← Ton terrain · 3 km · Grand Hôtel des Flots, par le pont → »",
+    "E-15": "« Grand Hôtel des Flots · 2 km → · ← Le pont, ton terrain »",
+    "E-16": "« Route du pont → · Ton terrain, par le pont · 5 km »",
+    "E-17": "« ← La corniche · Ton terrain »",
     "E-05": "« CORNICHE PANORAMIQUE · VUE CERTIFIÉE 5 ÉTOILES · Selfie-points tous les 200 m »",
     "E-06": "« CHECK-IN PAR SOURIRE »",
     "E-07": "« SÉJOUR ZÉRO-EFFORT · On respire pour vous. · Repas mâchés · Bronzage par abonnement »",

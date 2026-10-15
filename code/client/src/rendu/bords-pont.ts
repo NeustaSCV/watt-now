@@ -13,7 +13,7 @@
 // dans le modèle (à lui demander).
 
 import * as THREE from "three";
-import { ZONE_ROUTE_PONT } from "../../../commun/src/route-pont.ts";
+import { PANNEAUX_SORTIE_PONT as PANNEAUX, ZONE_ROUTE_PONT } from "../../../commun/src/route-pont.ts";
 import type { LanternePanneau } from "./lanterne-panneau.ts";
 import { ganivelle, lanterneSurPanneau, lesBordsTouches, type ChantierModele } from "./decor-cote.ts";
 // @ts-expect-error : les outils des modèles sont en JavaScript, sans types (client/src/batiments/ ne se modifie pas).
@@ -32,10 +32,10 @@ const objets = objetsJs as unknown as {
 const BORD = { ouest: ZONE_ROUTE_PONT.xMin - 0.2, est: ZONE_ROUTE_PONT.xMax + 0.2, sud: ZONE_ROUTE_PONT.zMax + 0.2 } as const;
 const ROUTE = { z0: 29.3, z1: 40.7 } as const;
 const GANIVELLE_NORD = 4.5;
-/** Les deux panneaux de sortie du modèle (FICHE.panneaux, repère du jeu) : 3,4 m de large, le haut à 2,13 m. */
-export const PANNEAUX_SORTIE_PONT = [
-  { x: 5, z: 28.4, cote: 1 as const },
-  { x: 195, z: 41.6, cote: -1 as const },
+/** Les deux panneaux de sortie du modèle (3,4 m de large, le haut à 2,13 m) : la lanterne, sur le poteau côté route qui part. */
+const PANNEAUX_SORTIE = [
+  { ...PANNEAUX[0], cote: 1 as const },
+  { ...PANNEAUX[1], cote: -1 as const },
 ];
 
 /** Un tirage reproductible. */
@@ -112,7 +112,7 @@ function creerBout(cote: "ouest" | "est"): { groupe: THREE.Group; lanterne: Lant
   objets.semerOyats(c, M, Math.min(X(-4), X(0.4)), GANIVELLE_NORD, Math.max(X(-4), X(0.4)), BORD.sud, 40);
 
   // La lanterne du panneau de sortie : en haut du poteau du côté de la route qui part.
-  const panneau = PANNEAUX_SORTIE_PONT[est ? 1 : 0]!;
+  const panneau = PANNEAUX_SORTIE[est ? 1 : 0]!;
   const lanterne = lanterneSurPanneau(c, M.metal, 0x8d969a, panneau, 0, 1.4, 2.13, panneau.cote);
   const groupe = c.construire();
   groupe.name = `bords du pont (${cote})`;
