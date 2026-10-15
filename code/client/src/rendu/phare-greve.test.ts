@@ -203,3 +203,27 @@ test("G : le panneau du sentier côtier se lit à son nouvel endroit, près de l
   animerPhare(decor, ECRITEAU_SENTIER.x, ECRITEAU_SENTIER.z + 1, 0.016, Math.PI / 4, { ...VU, nuit: false }, []);
   assert.equal(verre.emissiveIntensity, 0);
 });
+
+test("G2 : la lanterne du panneau, son verre et sa lumière sont à la hauteur réelle du panneau (le sol de la grève à son pied + la potence), pas à celle du plateau ; sa lumière ne porte pas jusqu'à son reflet sur la mer", async () => {
+  const { PANNEAU_SENTIER, lampePanneau } = await import("./phare-bords.ts");
+  const { VERRE_SOUS_POTENCE } = await import("./lanterne-panneau.ts");
+  const sol = solPhare(ECRITEAU_SENTIER.x, ECRITEAU_SENTIER.z, false);
+  assert.ok(sol < -8.5, `le pied du panneau sur la grève (${sol.toFixed(2)})`);
+  const attendu = sol + PANNEAU_SENTIER.poteau - VERRE_SOUS_POTENCE;
+  // La source donnée à la réserve de lumières (lumieresPhare, la nuit).
+  const source = lumieresPhare({ etat: null, epave: true }, true).find((s) => Math.hypot(s.x - ECRITEAU_SENTIER.x, s.z - ECRITEAU_SENTIER.z) < 1.5)!;
+  assert.equal(source, lampePanneau());
+  assert.ok(Math.abs(source.y - attendu) < 0.02, `la lumière à ${source.y.toFixed(2)}, attendue à ${attendu.toFixed(2)}`);
+  assert.ok(Math.hypot(source.x - ECRITEAU_SENTIER.x, source.z - ECRITEAU_SENTIER.z) < 0.6, "juste devant la planche");
+  // Le verre de la lanterne (ce qui luit), dans le décor : au même endroit que la lumière.
+  const decor = creerPhare();
+  decor.updateMatrixWorld(true);
+  const lanterne = decor.getObjectByName("lanterne de panneau") as THREE.Mesh;
+  const b = new THREE.Box3().setFromObject(lanterne);
+  assert.ok(b.min.y > sol + 2 && b.max.y < sol + PANNEAU_SENTIER.poteau + 0.05, `la lanterne de ${b.min.y.toFixed(2)} à ${b.max.y.toFixed(2)}`);
+  assert.ok(source.y > b.min.y && source.y < b.max.y, "la lumière est dans la lanterne");
+  // Son reflet sur la mer, vu par la caméra du jeu (35° au-dessus de l'horizon), est hors de sa portée.
+  const h = source.y - NIVEAU_MER;
+  const reflet = Math.hypot(h, h / Math.tan(Math.atan(1 / Math.SQRT2)));
+  assert.ok(source.portee < reflet, `portée ${source.portee} m, reflet à ${reflet.toFixed(1)} m`);
+});
