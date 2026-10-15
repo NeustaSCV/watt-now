@@ -178,7 +178,8 @@ export const DECLENCHEURS: readonly Declencheur[] = [
  * - E-09 : le journal de bord, sur la table du gardien ; E-10 : la planche peinte des survivants, contre la tour, près
  *   de la porte ; E-11 : la plaque, sur le pilier de la grille sud ;
  * - E-12 : le panneau du sentier côtier (le texte de celui du modèle, qui est sur le plateau, au bord du chemin des
- *   douaniers), planté par le jeu à la sortie de la grève, à l'ouest (ECRITEAU_SENTIER ; client/src/rendu/phare.ts).
+ *   douaniers), planté par le jeu sur la grève, près de l'eau, au départ du sentier qui file vers la sortie de l'ouest
+ *   (ECRITEAU_SENTIER ; client/src/rendu/phare-bords.ts).
  */
 export const ECRITEAUX: readonly Ecriteau[] = [
   { id: "E-01", lieu: "route_pont", points: [CHICANE], rayon: 0.9, texte: "« PÉAGE · 12 WOTTS / TÊTE · DANS LA CAISSE ↓ · UN À LA FOIS ! »" },
