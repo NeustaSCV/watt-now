@@ -172,6 +172,6 @@ Les plus gros morceaux : A3, A5, A7, A9 et D1.
 
 ### Ce que la recette a trouvé
 
-- **Le statut de la bible est écrit en dur** dans `.claude-travail/propositions/outils/construire-page.py` (« le niveau 2 et au-delà restent une étude ») et les lignes codées ne portent que l'étiquette « codé en 0.8 » : à mettre à jour (« le niveau 2 est codé en 0.10 », une étiquette « codé en 0.10 ») ; le script n'a pas été touché (mission : les JSON seulement). — recette N2.
-- **La rampe de LED** : la bible demande « 1 pack » dans ses matériaux, le code non (10 LED, 2 fils de cuivre, 1 tube ; Souder 1) ; et la bible dit « ≈ 25 Wh par nuit » quand le code tire 3 W la nuit (≈ 5,5 Wh par nuit de jeu, `npm run rythme`). À trancher : la bible suit le code, ou l'inverse. — recette N2.
+- ~~**Le statut de la bible est écrit en dur.**~~ *Réglé le 2026-10-15 : « niveau 2 codé en 0.10 », l'étiquette sur les lignes du niveau 2, le bandeau qui suit la version (5.5).* — recette N2.
+- ~~**La rampe de LED** : la bible et le code ne disaient pas la même chose.~~ *Réglé le 2026-10-15 : la bible suit le code (3 W la nuit, ≈ 5,5 Wh par nuit de jeu, batterie à 15 m) ; le pack (de cellules ou soudé) est bien demandé par le code, il reste dans la bible.* — recette N2.
 - ~~**Le test instable** de `npm test`.~~ *Corrigé : `client/src/rendu/sang.test.ts` (des gouttes retombaient sur la rampe), 40 passages sur 40.* — recette N2.
