@@ -2194,6 +2194,16 @@ body {
 #hud .demande-echange[hidden] {
   display: none;
 }
+/* 0.10.1 (A3) : la demande passe au-dessus du bandeau ; en vertical, sous les raccourcis (elle s'y cachait). */
+#hud .demande-echange {
+  z-index: 14;
+  max-width: calc(100vw - 24px);
+}
+@media (max-width: 560px) and (orientation: portrait) {
+  #hud .demande-echange {
+    top: calc(var(--bas-raccourcis, 186px) + 10px);
+  }
+}
 #hud .demande-echange p {
   margin: 0 0 10px;
   display: flex;
@@ -2236,158 +2246,165 @@ body {
   color: var(--canard);
 }
 
+/* Le panneau d'échange sur iPhone (plan 0.10.1, chantier C, A3 ; maquette V2 « toucher = choisir », choisie par le
+   porteur le 2026-10-16). Presque plein écran, dans les marges de sécurité : ce que tu reçois, ce que tu donnes, les
+   wotts, ton sac en grille et la barre de l'objet choisi, puis les accords et les deux boutons, toujours visibles.
+   En paysage, le sac à gauche et l'échange à droite. */
 #hud .panneau.echange {
   position: absolute;
-  left: 50%;
-  top: 50% !important;
-  transform: translate(-50%, -50%);
-  width: min(620px, calc(100vw - 24px));
-  max-height: calc(100dvh - 40px) !important;
-  overflow-y: auto;
+  top: calc(6px + env(safe-area-inset-top)) !important;
+  bottom: calc(6px + env(safe-area-inset-bottom)) !important;
+  left: calc(6px + env(safe-area-inset-left)) !important;
+  right: calc(6px + env(safe-area-inset-right)) !important;
+  width: auto !important;
+  max-width: 560px;
+  max-height: 760px !important;
+  margin: auto;
+  transform: none !important;
+  z-index: 14;
+  overflow: hidden;
   pointer-events: auto;
   background: var(--creme);
   color: var(--encre);
   border-radius: 8px;
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
-  padding: 12px 14px;
+  padding: 8px 10px 10px;
   font-size: 14px;
 }
-#hud .panneau.echange header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-#hud .panneau.echange h2 {
-  margin: 0;
-  font-family: "Futura", "Avenir Next Condensed", "Arial Black", sans-serif;
-  font-size: 19px;
-}
-#hud .panneau.echange header .fermer {
-  border: none;
-  background: transparent;
-  font-size: 18px;
-  cursor: pointer;
-  color: var(--encre);
-}
-#hud .panneau.echange .colonnes {
+#hud .panneau.echange:not([hidden]) {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin: 8px 0;
+  gap: 6px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto auto auto minmax(0, 1fr) auto;
+  grid-template-areas: "tete" "recoit" "donnes" "wotts" "sac" "pied";
 }
-#hud .panneau.echange section {
-  border: 2px solid rgba(59, 42, 30, 0.15);
-  border-radius: 6px;
-  padding: 6px 8px;
-  max-height: 46vh;
-  overflow-y: auto;
+body:has(#hud .panneau.echange:not([hidden])) #hud .tactile,
+body:has(#hud .panneau.echange:not([hidden])) #joystick {
+  display: none !important;
 }
-#hud .panneau.echange section.recoit {
-  background: rgba(31, 94, 102, 0.06);
+#hud .panneau.echange > header { grid-area: tete; display: flex; align-items: center; min-height: 30px; }
+#hud .panneau.echange .recoit { grid-area: recoit; }
+#hud .panneau.echange .donnes { grid-area: donnes; }
+#hud .panneau.echange .wotts-offre { grid-area: wotts; }
+#hud .panneau.echange .mon-sac { grid-area: sac; }
+#hud .panneau.echange .pied { grid-area: pied; }
+#hud .panneau.echange h2 {
+  margin: 0; display: flex; align-items: center; gap: 6px;
+  font-family: "Futura", "Avenir Next Condensed", "Arial Black", sans-serif; font-size: 17px;
 }
+#hud .panneau.echange .pastille { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: none; }
 #hud .panneau.echange h3 {
-  margin: 0 0 4px;
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  opacity: 0.75;
+  margin: 0 0 3px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.75;
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
 }
-#hud .panneau.echange .lignes {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+#hud .panneau.echange h3 .astuce { text-transform: none; letter-spacing: 0; font-weight: 400; font-size: 11px; opacity: 0.85; white-space: nowrap; }
+#hud .panneau.echange .z { border: 2px solid rgba(59, 42, 30, 0.15); border-radius: 6px; padding: 5px 7px; min-width: 0; }
+#hud .panneau.echange .recoit { background: rgba(31, 94, 102, 0.07); border-color: rgba(31, 94, 102, 0.3); }
+#hud .panneau.echange .vide { margin: 2px 0; font-style: italic; font-size: 13px; opacity: 0.7; min-height: 20px; }
+#hud .panneau.echange .resume {
+  margin: 3px 0 0; font-size: 12.5px; font-weight: 600; line-height: 1.25;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
-#hud .panneau.echange .lignes li {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 0;
-  border-bottom: 1px dashed rgba(59, 42, 30, 0.15);
-  opacity: 0.75;
+/* Une rangée d'icônes : ce que chacun pose */
+#hud .panneau.echange .rang { display: flex; gap: 5px; overflow-x: auto; overscroll-behavior: contain; scrollbar-width: none; padding-bottom: 1px; }
+#hud .panneau.echange .rang::-webkit-scrollbar { display: none; }
+#hud .panneau.echange .pion {
+  position: relative; flex: none; width: 42px; height: 42px; padding: 2px; display: grid; place-items: center;
+  background: #fffaf0; border: 1.5px solid var(--creme-fonce); border-radius: 7px; color: var(--encre); font: inherit;
 }
-#hud .panneau.echange .lignes li.mis {
-  opacity: 1;
+#hud .panneau.echange button.pion { cursor: pointer; touch-action: manipulation; }
+#hud .panneau.echange .pion.choisi { border-color: var(--encre); box-shadow: inset 0 0 0 1px var(--encre); }
+#hud .panneau.echange .pion svg,
+#hud .panneau.echange .case svg { width: 100%; height: 100%; }
+#hud .panneau.echange .pion-wotts {
+  flex: none; align-self: center; height: 42px; display: flex; align-items: center; padding: 0 10px; border-radius: 7px;
+  background: var(--nuit); color: #e8c547; font-weight: 800; font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums;
 }
-#hud .panneau.echange .lignes li.vide {
-  font-style: italic;
+/* Les marques en coin, comme dans le sac du jeu */
+#hud .panneau.echange .etoiles-case {
+  position: absolute; right: 1px; top: 1px; font-size: 10px; font-weight: 800; line-height: 1.1; color: #8a5a00;
+  background: rgba(255, 236, 170, 0.92); border-radius: 4px; padding: 0 2px; font-variant-numeric: tabular-nums;
 }
-#hud .panneau.echange .nom {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  font-size: 12.5px;
-  font-weight: 700;
+#hud .panneau.echange .badge {
+  position: absolute; right: 1px; bottom: 1px; font-size: 10px; font-weight: 800; color: var(--encre);
+  background: rgba(244, 236, 216, 0.92); border-radius: 4px; padding: 0 3px; font-variant-numeric: tabular-nums;
 }
-#hud .panneau.echange .nom small {
-  font-weight: 400;
-  font-size: 11px;
-  opacity: 0.7;
-}
-#hud .panneau.echange .pas {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-#hud .panneau.echange .pas b {
-  min-width: 18px;
-  text-align: center;
-}
-#hud .panneau.echange .pas button,
+/* Les wotts */
+#hud .panneau.echange .wotts-offre { display: flex; flex-wrap: nowrap; align-items: center; gap: 6px; padding: 0 2px; font-variant-numeric: tabular-nums; }
+#hud .panneau.echange .wotts-offre .titre-wotts { font-weight: 700; font-size: 13px; white-space: nowrap; }
+#hud .panneau.echange .wotts-offre b { min-width: 70px; text-align: center; font-size: 14px; white-space: nowrap; }
+#hud .panneau.echange .wotts-offre small { margin-left: auto; font-size: 11.5px; opacity: 0.7; line-height: 1.15; text-align: right; white-space: nowrap; }
 #hud .panneau.echange .wotts-offre button {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 2px solid var(--encre);
-  background: transparent;
-  color: var(--encre);
-  font-weight: 700;
-  cursor: pointer;
-  touch-action: manipulation;
+  height: 34px; min-width: 46px; padding: 0 8px; border-radius: 999px; border: 2px solid var(--encre);
+  background: transparent; color: var(--encre); font: inherit; font-weight: 700; cursor: pointer; touch-action: manipulation;
 }
-#hud .panneau.echange .wotts-offre button {
-  width: auto;
-  border-radius: 999px;
-  padding: 0 8px;
+/* Ton sac : la grille, comme le sac du jeu */
+#hud .panneau.echange .mon-sac { display: flex; flex-direction: column; min-height: 0; padding-bottom: 6px; }
+#hud .panneau.echange .grille {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(46px, 1fr)); grid-auto-rows: max-content; gap: 4px; align-content: start; padding: 2px;
 }
-#hud .panneau.echange button:disabled {
-  opacity: 0.3;
-  cursor: default;
+#hud .panneau.echange .grille > .vide { grid-column: 1 / -1; }
+#hud .panneau.echange .case {
+  position: relative; aspect-ratio: 1; padding: 3px; display: grid; place-items: center; font: inherit;
+  background: #fffaf0; border: 1.5px solid var(--creme-fonce); border-radius: 7px; cursor: pointer; touch-action: manipulation; -webkit-touch-callout: none;
 }
-#hud .panneau.echange .wotts-offre {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  margin-top: 8px;
-  font-family: "Courier New", monospace;
+#hud .panneau.echange .case.posee { border-color: var(--canard); box-shadow: inset 0 0 0 1px var(--canard); background: #eaf2ef; }
+#hud .panneau.echange .case.epuisee svg { opacity: 0.35; }
+#hud .panneau.echange .case.choisie { border-color: var(--encre); box-shadow: inset 0 0 0 2px var(--encre); }
+#hud .panneau.echange .case .nombre-pose {
+  position: absolute; left: -4px; top: -4px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px;
+  background: var(--canard); color: var(--creme); font-size: 12px; font-weight: 800; line-height: 20px; text-align: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
-#hud .panneau.echange .wotts-offre span {
-  font-weight: 700;
+/* La barre de l'objet choisi : son nom, ses étoiles, et deux gros − et + */
+#hud .panneau.echange .choix {
+  flex: none; display: flex; align-items: center; gap: 8px; margin-top: 6px; padding: 4px 6px; border-top: 2px solid var(--encre); min-height: 50px;
 }
-#hud .panneau.echange .wotts-offre small {
-  width: 100%;
-  opacity: 0.7;
+#hud .panneau.echange .choix > svg { width: 38px; height: 38px; flex: none; }
+#hud .panneau.echange .choix.vide p { margin: 0; font-style: italic; font-size: 13px; opacity: 0.7; }
+#hud .panneau.echange .nom { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: 13px; font-weight: 700; line-height: 1.2; }
+#hud .panneau.echange .nom small { font-weight: 400; font-size: 11px; opacity: 0.7; }
+#hud .panneau.echange .pas { display: flex; align-items: center; gap: 4px; flex: none; }
+#hud .panneau.echange .pas b { min-width: 20px; text-align: center; font-variant-numeric: tabular-nums; }
+#hud .panneau.echange .pas button {
+  width: 38px; height: 38px; border-radius: 50%; border: 2px solid var(--encre); background: transparent;
+  color: var(--encre); font: inherit; font-weight: 700; font-size: 18px; cursor: pointer; line-height: 1; touch-action: manipulation;
 }
-#hud .panneau.echange .accords {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  margin: 6px 0 10px;
-  font-size: 13px;
-  font-style: italic;
-}
-#hud .panneau.echange .accords .ok {
-  color: var(--canard);
-  font-style: normal;
-  font-weight: 700;
-}
-@media (max-width: 560px) {
-  #hud .panneau.echange .colonnes {
-    grid-template-columns: 1fr;
+#hud .panneau.echange button:disabled { opacity: 0.3; cursor: default; }
+/* Le pied : les accords et les deux boutons, toujours visibles */
+#hud .panneau.echange .pied { display: flex; flex-direction: column; gap: 5px; }
+#hud .panneau.echange .accords { margin: 0; display: flex; justify-content: space-between; gap: 8px; font-size: 12px; min-height: 16px; }
+#hud .panneau.echange .accords span { opacity: 0.65; }
+#hud .panneau.echange .accords span.ok { opacity: 1; color: var(--canard); font-weight: 700; }
+#hud .panneau.echange .boutons { justify-content: stretch; }
+#hud .panneau.echange .boutons button { flex: 1 1 0; min-height: 44px; }
+#hud .panneau.echange .boutons button.oui { flex: 2 1 0; }
+/* « Tu reçois de ● X » ne sert qu'en paysage, où l'en-tête disparaît. */
+#hud .panneau.echange .de-qui { display: none; text-transform: none; letter-spacing: 0; font-weight: 700; }
+
+/* En paysage : ton sac à gauche, l'échange à droite ; pas d'en-tête (« Annuler » ferme), pas de noms sous « Tu donnes »
+   (les nombres sont sur les cases du sac). */
+@media (orientation: landscape) {
+  #hud .panneau.echange { max-width: 900px; padding: 6px 8px 8px; }
+  #hud .panneau.echange:not([hidden]) {
+    gap: 4px 10px;
+    grid-template-columns: minmax(0, 1.05fr) minmax(300px, 1fr);
+    grid-template-rows: auto auto auto minmax(0, 1fr);
+    grid-template-areas: "sac recoit" "sac donnes" "sac wotts" "sac pied";
   }
-  #hud .panneau.echange section {
-    max-height: 26vh;
-  }
+  #hud .panneau.echange > header { display: none; }
+  #hud .panneau.echange .de-qui { display: inline-flex; align-items: center; gap: 4px; }
+  #hud .panneau.echange .z { padding: 3px 6px; }
+  #hud .panneau.echange .pion { width: 36px; height: 36px; }
+  #hud .panneau.echange .pion-wotts { height: 36px; }
+  #hud .panneau.echange .resume { -webkit-line-clamp: 1; font-size: 12px; margin-top: 2px; }
+  #hud .panneau.echange .donnes .resume { display: none; }
+  #hud .panneau.echange .wotts-offre button { height: 30px; }
+  #hud .panneau.echange .wotts-offre small { font-size: 11px; }
+  #hud .panneau.echange .pied { align-self: end; }
+  #hud .panneau.echange .boutons button { min-height: 40px; }
+  #hud .panneau.echange .choix { min-height: 44px; margin-top: 4px; }
 }
 
 /* ---------- Sommeil et météo (É5) ---------- */
