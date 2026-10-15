@@ -1,6 +1,6 @@
 // Ce qu'on fait au phare du cap (plan 0.10, chantier K), côté client : les gestes proposés (l'escabeau, la cuve, le
 // prisme, l'escalier coupé et la lanterne, la corne de brume, le saut de la rampe), l'arrivée du cargo (S-17 : sa corne
-// grave, le choc, un fondu de 2 s, puis l'épave), la corne de brume (S-16), et le relief (L-1) :
+// grave au large, puis la scène de l'échouage, K4 : client/src/phare-cargo.ts), la corne de brume (S-16), et le relief (L-1) :
 // les personnages, les Éteints et le cercle de visée posés sur la hauteur du sol du modèle, la caméra qui suit.
 //
 // Le serveur décide de tout (serveur/src/phare.ts) ; ce module ne fait que montrer et proposer. main.ts l'appelle à
@@ -13,8 +13,8 @@ import { ENDROITS_PHARE, PORTEE_SAUT, RAYON_MARQUE, type EtatPhareVu } from "../
 import type { MessageServeurPhare } from "../../commun/src/messages.ts";
 import type { ActionProposee, Propositions } from "./interaction.ts";
 import { lumieresPhare, solPhare, type ScenePhare } from "./rendu/phare.ts";
-import { Secousse, type Decalage } from "./rendu/secousse.ts";
-import { MiseEnScenePhare, PROCHE_ETEINT, SCENE_CARGO } from "./phare-scene.ts";
+import { MiseEnScenePhare, PROCHE_ETEINT, SCENE_CARGO, momentCargo } from "./phare-scene.ts";
+import type { CinemaCargo } from "./phare-cargo.ts";
 import type { Cadrage } from "./rendu/scene.ts";
 import type { SourceLumiere } from "./rendu/lumieres.ts";
 import type { IdSon } from "./son/catalogue.ts";
@@ -44,38 +44,38 @@ export function etagePhare(x: number, z: number): "haut" | "bas" {
 export class PhareClient {
   /** L'état du phare, tel que le serveur l'a dit (null : pas encore reçu). */
   etat: EtatPhareVu | null = null;
-  /** L'arrivée du cargo en cours : son début (performance.now(), ms), ou null. */
+  /** La scène de l'échouage en cours : son début (performance.now(), ms : l'annonce du serveur), ou null. */
   private cargo: number | null = null;
   private sonsJoues = new Set<string>();
-  private voile: HTMLElement | null = null;
   /** La hauteur où le personnage est posé (lissée : on descend la rampe, on saute, sans à-coups). */
   private yPerso: number | null = null;
-  /** L'écran tremble quand le cargo s'échoue (au choc), pour qui est au phare à ce moment (rendu/secousse.ts). */
-  readonly secousse: Secousse;
   /** K2 : la mise en scène de l'allumage et de l'approche du cargo (client/src/phare-scene.ts). */
   readonly mise: MiseEnScenePhare;
+  /** K4 : la scène de l'échouage (client/src/phare-cargo.ts) ; null : pas de scène (les tests du reste). */
+  private readonly cinema: CinemaCargo | null;
   private nuit = false;
   private cadre = false;
 
   private readonly jouer: Joueur;
 
   /** `_hud` : plus servi (le message de jour est un message d'information) ; gardé pour ne pas changer les appels. */
-  constructor(jouer: Joueur, _hud: () => HTMLElement, secousse: Secousse = new Secousse(), mise: MiseEnScenePhare = new MiseEnScenePhare()) {
+  constructor(jouer: Joueur, _hud: () => HTMLElement, mise: MiseEnScenePhare = new MiseEnScenePhare(), cinema: CinemaCargo | null = null) {
     this.jouer = jouer;
-    this.secousse = secousse;
     this.mise = mise;
+    this.cinema = cinema;
   }
 
   /** Le message `phare` du serveur. */
   recevoir(m: MessageServeurPhare): void {
     this.mise.recevoir(this.etat, m.etat, performance.now()); // K2 : le recul à l'allumage, l'approche du cargo
     this.etat = m.etat;
+    // K4 : le cargo approche : la scène de l'échouage se prépare (chargée, construite, compilée d'avance).
+    if (m.etat.cargoDans !== undefined) this.cinema?.preparer();
     if (m.cargo) {
       this.cargo = performance.now();
       this.sonsJoues.clear();
-      // K2 : sa corne a déjà sonné au large dix secondes plus tôt ; sinon (arrivé tard), elle sonne ici.
-      if (!this.mise.corneProcheJouee) this.jouer("corne_cargo");
       this.mise.echouage(this.cargo);
+      this.cinema?.commencer(0);
     }
     if (m.corne) this.jouer("corne_brume", ENDROITS_PHARE.pavillons);
   }
@@ -94,10 +94,10 @@ export class PhareClient {
     return this.etat?.escabeau === "bras";
   }
 
-  /** L'épave se voit : échouée (`portes.epave`), et le fondu du cargo passé. */
+  /** L'épave se voit : échouée (`portes.epave`), et la scène de l'échouage revenue au personnage. */
   private epaveVisible(portes: Readonly<Record<string, boolean>>): boolean {
     if (portes.epave !== true) return false;
-    return this.cargo === null || performance.now() - this.cargo >= SCENE_CARGO.epave * 1000;
+    return this.cargo === null || momentCargo((performance.now() - this.cargo) / 1000).epave;
   }
 
   /** Ce que le décor doit montrer (rendu/phare.ts, animerPhare). */
@@ -113,8 +113,8 @@ export class PhareClient {
   }
 
   /**
-   * K2 : le cadrage de la caméra à cette image (le recul sur la tour à l'allumage, la crique avant le choc), ou null. Pas
-   * de cadrage avec un Éteint debout à moins de 6 m, du même étage (main.ts, une ligne après la vue d'ensemble).
+   * K2 : le cadrage de la caméra à cette image (le recul sur la tour à l'allumage), ou null. Pas de recul avec un Éteint
+   * debout à moins de 6 m, du même étage (main.ts, une ligne après la vue d'ensemble).
    */
   cadrage(position: { x: number; z: number }, zoom: number, eteints: Iterable<{ etat: string; objet: THREE.Object3D }>): Cadrage | null {
     let menace = false;
@@ -128,33 +128,43 @@ export class PhareClient {
     return c;
   }
 
-  /** À chaque image : la corne du cargo au large (K2), la scène du cargo (le choc, le fondu au noir). */
+  /** À chaque image : la corne du cargo au large (K2), la scène de l'échouage (K4 : le noir, les bandes, la fin). */
   animer(): void {
     for (const _ of this.mise.cornesAJouer(performance.now())) this.jouer("corne_cargo");
     if (this.cargo === null) return;
     const t = (performance.now() - this.cargo) / 1000;
-    if (t >= SCENE_CARGO.choc && !this.sonsJoues.has("choc")) {
+    const m = momentCargo(t);
+    // La scène n'a pas pu se préparer (son module pas chargé) : le choc s'entend quand même, dans le noir.
+    if (m.plan && !this.cinema?.pret && !this.sonsJoues.has("choc") && t >= SCENE_CARGO.choc) {
       this.sonsJoues.add("choc");
       this.jouer("choc_cargo");
-      this.secousse.lancer();
     }
-    const noir = t < SCENE_CARGO.noir ? 0 : t < SCENE_CARGO.epave ? (t - SCENE_CARGO.noir) / (SCENE_CARGO.epave - SCENE_CARGO.noir) : t < SCENE_CARGO.fin ? 1 - (t - SCENE_CARGO.epave) / (SCENE_CARGO.fin - SCENE_CARGO.epave) : 0;
-    this.fondu(noir);
-    if (t >= SCENE_CARGO.fin) this.cargo = null;
+    this.cinema?.montrer(m);
+    if (m.fini) this.finirScene();
   }
 
-  /** Le fondu au noir de l'arrivée du cargo (un voile par-dessus le jeu, qui ne prend aucun geste). */
-  private fondu(opacite: number): void {
-    if (!this.voile) {
-      if (opacite <= 0) return;
-      const v = document.createElement("div");
-      v.className = "voile-phare";
-      v.style.cssText = "position:fixed;inset:0;background:#05070b;pointer-events:none;z-index:40;opacity:0";
-      document.body.append(v);
-      this.voile = v;
+  /**
+   * K4 : à la place de la vue du jeu, le plan de la crique de la scène de l'échouage (main.ts : la scène du jeu ne se
+   * dessine pas à cette image si c'est fait). Une scène pas prête : le jeu se dessine, sous le voile noir.
+   */
+  dessinerScene(): boolean {
+    if (this.cargo === null) return false;
+    const t = (performance.now() - this.cargo) / 1000;
+    if (!momentCargo(t).plan) {
+      this.cinema?.finPlan();
+      return false;
     }
-    this.voile.style.opacity = String(Math.max(0, Math.min(1, opacite)));
-    this.voile.hidden = opacite <= 0;
+    return this.cinema?.rendre(t) ?? false;
+  }
+
+  /** La scène se joue-t-elle ? (pour les tests, et l'interface) */
+  get enScene(): boolean {
+    return this.cargo !== null;
+  }
+
+  private finirScene(): void {
+    this.cargo = null;
+    this.cinema?.arreter();
   }
 
   /**
@@ -169,18 +179,16 @@ export class PhareClient {
       personnage: THREE.Object3D | null;
       eteints: Iterable<{ objet: THREE.Object3D }>;
       cercles: readonly THREE.Object3D[];
-      scene: { hauteurSuivie: number; decalageCamera?: Decalage };
+      scene: { hauteurSuivie: number };
     },
   ): void {
     if (!auPhare) {
       this.yPerso = null;
       cible.scene.hauteurSuivie = 0;
-      // Parti pendant la secousse : elle s'arrête net (son décalage, que la scène lit, revient à zéro).
-      if (this.secousse.enCours) this.secousse.arreter();
+      // Parti pendant la scène de l'échouage : elle s'arrête net.
+      if (this.cargo !== null) this.finirScene();
       return;
     }
-    // La secousse du choc : la scène lit son décalage (remis à zéro, exactement, quand elle finit).
-    if (this.secousse.enCours && cible.scene.decalageCamera) cible.scene.decalageCamera = this.secousse.avancer(dt);
     const epave = portes.epave === true;
     const sol = (o: THREE.Object3D) => solPhare(o.position.x, o.position.z, epave);
     if (cible.personnage) {

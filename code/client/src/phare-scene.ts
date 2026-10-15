@@ -1,44 +1,66 @@
-// La mise en scène du phare (0.10, K2, choisie par le porteur après l'essai sur l'iPhone) : ce que le client montre de
-// l'allumage et de l'arrivée du cargo, en plus des règles (serveur/src/phare.ts) et de la scène du choc (client/src/phare.ts).
+// La mise en scène du phare (0.10, K2 puis K4, choisie par le porteur après les essais sur l'iPhone) : ce que le client
+// montre de l'allumage et de l'arrivée du cargo, en plus des règles (serveur/src/phare.ts) et de la scène de l'échouage
+// (client/src/phare.ts, client/src/rendu/cargo/).
 //
-// - L'allumage : la caméra recule sur la tour 3 à 4 s, puis revient exactement au personnage (un cadrage, Scene.cadrage).
-// - L'arrivée du cargo (CARGO_MS après l'allumage : 50 s, S-17) : la corne grave au large 10 s après l'allumage, puis
-//   juste avant le cadrage ; ses feux (rouge, vert, blanc) et leur reflet approchent dès la première corne ; 7 s avant le
-//   choc, la caméra cadre la crique, jusqu'à l'épave revenue du fondu.
-// - Pas de cadrage avec un Éteint à moins de 6 m (on garde la main) ; aucun mouvement de caméra si le système demande de
-//   réduire les mouvements : la corne et les feux disent seuls ce qui arrive.
+// - L'allumage : la caméra recule sur la tour 3 à 4 s, puis revient exactement au personnage (un cadrage, Scene.cadrage) ;
+//   pas de recul avec un Éteint à moins de 6 m (on garde la main), ni si le système demande de réduire les mouvements.
+// - L'approche du cargo (CARGO_MS après l'allumage : 50 s, S-17) : sa corne grave au large 10 s après l'allumage, puis
+//   8 s avant l'échouage ; ses feux (rouge, vert, blanc) et leur reflet approchent dès la première corne, dans la vue
+//   normale.
+// - L'échouage (K4) : la scène de la maquette validée (variante 1, « Large »), ≈ 6,6 s, un moment à part rendu dans sa
+//   propre scène (SCENE_CARGO, ci-dessous), puis le retour au personnage devant l'épave. Elle se joue aussi avec la
+//   réduction des mouvements, sans la secousse de l'image.
 // - Celui qui arrive après le cargo, ou se reconnecte après, trouve l'épave : rien ne se joue (le serveur ne donne plus
-//   `cargoDans`). Celui qui arrive pendant l'approche la voit finir.
+//   `cargoDans`). Celui qui arrive pendant l'approche voit la fin des feux, puis la scène.
 //
-// Le temps est celui de performance.now() (ms), comme la scène du choc.
+// Le temps est celui de performance.now() (ms).
 
-import { CARGO_MS, type EtatPhareVu } from "../../commun/src/phare.ts";
+import { CARGO_MS, SCENE_CARGO_MS, type EtatPhareVu } from "../../commun/src/phare.ts";
 import type { Cadrage } from "./rendu/scene.ts";
 import { mouvementsReduits } from "./rendu/secousse.ts";
 
 /** Le recul sur la tour : aller, rester, revenir (s) ; le point regardé (le milieu de la tour, repère du jeu) et le zoom. */
 export const RECUL_TOUR = { aller: 0.7, reste: 2.4, retour: 0.7, x: 20, y: 13, z: 19, zoom: 2.6 } as const;
-/** Le cadrage de la crique : il commence 7 s avant le choc, finit 1 s après l'épave revenue du fondu. */
-export const CADRAGE_CRIQUE = { avantChoc: 7, aller: 0.9, retour: 0.9, x: 22, y: -6, z: 45, zoom: 2.4 } as const;
 /**
- * La scène de l'échouage (S-17), en secondes depuis l'annonce du serveur (CARGO_MS après l'allumage) : le choc tout de
- * suite (avec la secousse : le porteur veut le choc à 50 s), puis le fondu de 2 s (1 s au noir, l'épave, 1 s pour revenir).
- * Joué par client/src/phare.ts ; le cadrage en dépend.
+ * La scène de l'échouage (K4), en secondes depuis l'annonce du serveur (CARGO_MS après l'allumage), celles de la maquette
+ * validée : la vue du jeu s'éteint (noirDebut → noir), le plan de la crique s'ouvre (noir → ouvert), la corne du cargo,
+ * le choc, la cassure de la poupe, le repos (le feu de détresse), le noir (noirFin → retour), le retour au personnage
+ * devant l'épave (retour → jeu), la fin. Les bandes du cinéma, de noirDebut − 0,1 à jeu.
  */
-export const SCENE_CARGO = { choc: 0, noir: 0.4, epave: 1.4, fin: 2.4 } as const;
-const CHOC_S = SCENE_CARGO.choc;
-const FIN_SCENE_S = SCENE_CARGO.fin;
+export const SCENE_CARGO = { noirDebut: 0.45, noir: 0.75, ouvert: 1.05, corne: 0.55, choc: 4.0, cassure: 4.45, repos: 5.2, noirFin: 5.6, retour: 5.9, jeu: 6.25, fin: SCENE_CARGO_MS / 1000 } as const;
 /** Le délai du cargo, en secondes (commun/src/phare.ts). */
 const CARGO_S = CARGO_MS / 1000;
-/**
- * La corne grave du cargo au large, en secondes avant l'échouage : 10 s après l'allumage (on sait vite qu'il vient), puis
- * 8 s avant l'échouage, juste avant que la caméra cadre la crique (7 s avant le choc, à l'échouage même).
- */
+/** La corne grave du cargo au large, en secondes avant l'échouage : 10 s après l'allumage (on sait vite qu'il vient), puis 8 s avant. */
 export const CORNES_CARGO_S = [CARGO_S - 10, 8] as const;
 /** Les feux du cargo : visibles dès la première corne, du large jusqu'à l'entrée de la crique (repère du jeu). */
 export const FEUX_CARGO = { avantS: CORNES_CARGO_S[0], depart: { x: 10, z: 112 }, arrivee: { x: 23, z: 52 } } as const;
-/** À moins de cette distance, un Éteint annule le cadrage (le mode Combat se met au même seuil). */
+/** À moins de cette distance, un Éteint annule le recul sur la tour (le mode Combat se met au même seuil). */
 export const PROCHE_ETEINT = 6;
+
+/** Ce que montre la scène de l'échouage à `t` s de son début. */
+export interface MomentCargo {
+  /** Le plan de la crique se dessine (à la place de la vue du jeu). */
+  plan: boolean;
+  /** L'opacité du noir par-dessus (0 à 1). */
+  noir: number;
+  /** Les bandes du cinéma. */
+  bandes: boolean;
+  /** L'épave du jeu se voit (le retour au personnage). */
+  epave: boolean;
+  /** La scène est finie. */
+  fini: boolean;
+}
+
+/** La scène de l'échouage à `t` s de l'annonce (les fondus et les bandes de la maquette, scene.js : etat). */
+export function momentCargo(t: number): MomentCargo {
+  const T = SCENE_CARGO;
+  let noir = 0;
+  if (t > T.noirDebut && t < T.noir) noir = (t - T.noirDebut) / (T.noir - T.noirDebut);
+  else if (t >= T.noir && t < T.ouvert) noir = 1 - (t - T.noir) / (T.ouvert - T.noir);
+  else if (t > T.noirFin && t < T.retour) noir = (t - T.noirFin) / (T.retour - T.noirFin);
+  else if (t >= T.retour && t < T.jeu) noir = 1 - (t - T.retour) / (T.jeu - T.retour);
+  return { plan: t >= T.noir && t < T.retour, noir, bandes: t > T.noirDebut - 0.1 && t < T.jeu, epave: t >= T.retour, fini: t >= T.fin };
+}
 
 /** Où l'on regarde quand rien n'est cadré : le personnage, à sa hauteur, au zoom du joueur. */
 export interface VueJoueur {
@@ -70,8 +92,8 @@ export class MiseEnScenePhare {
   private cargoPrevu: number | null = null;
   /** L'échouage annoncé par le serveur (la scène du choc a commencé), ou null. */
   private cargoArrive: number | null = null;
-  /** Un cadrage annulé (un Éteint trop près) ne reprend pas. */
-  private annule = new Set<"recul" | "crique">();
+  /** Le recul annulé (un Éteint trop près) ne reprend pas. */
+  private reculAnnule = false;
   private cornes = new Set<number>();
   private readonly reduit: () => boolean;
 
@@ -83,14 +105,13 @@ export class MiseEnScenePhare {
   recevoir(avant: EtatPhareVu | null, etat: EtatPhareVu, maintenant: number): void {
     if (avant && !avant.lanterne && etat.lanterne) {
       this.recul = maintenant;
-      this.annule.delete("recul");
+      this.reculAnnule = false;
     }
     if (etat.cargoDans !== undefined) {
       // Un nouveau cargo en route (le premier, ou celui d'un nouvel allumage, la nuit suivante) : tout repart.
       if (this.cargoPrevu === null || (this.cargoArrive !== null && maintenant - this.cargoArrive > 30_000)) {
         this.cargoArrive = null;
         this.cornes.clear();
-        this.annule.delete("crique");
       }
       this.cargoPrevu = maintenant + etat.cargoDans;
       // Une approche qu'on prend en route : les cornes déjà passées ne sonnent pas après coup.
@@ -98,7 +119,7 @@ export class MiseEnScenePhare {
     } else if (this.cargoArrive === null) this.cargoPrevu = null;
   }
 
-  /** Le serveur annonce l'échouage : la scène du choc commence. */
+  /** Le serveur annonce l'échouage : la scène commence. */
   echouage(maintenant: number): void {
     this.cargoArrive = maintenant;
     this.cargoPrevu ??= maintenant;
@@ -117,11 +138,6 @@ export class MiseEnScenePhare {
     return res;
   }
 
-  /** La corne des dernières secondes a-t-elle sonné ? (la scène du choc ne la redouble pas) */
-  get corneProcheJouee(): boolean {
-    return this.cornes.has(CORNES_CARGO_S[CORNES_CARGO_S.length - 1]!);
-  }
-
   /** Les feux du cargo à cet instant, ou null (hors des 40 dernières secondes, ou l'épave revenue du fondu). */
   feux(maintenant: number, epaveVisible: boolean): FeuxCargo | null {
     if (this.cargoPrevu === null || epaveVisible) return null;
@@ -134,44 +150,32 @@ export class MiseEnScenePhare {
   }
 
   /**
-   * Le cadrage de cette image (null : la caméra suit le joueur). `menace` : un Éteint debout à moins de 6 m (le cadrage
-   * s'annule, et ne reprend pas). Rien si le système demande de réduire les mouvements.
+   * Le cadrage de cette image (null : la caméra suit le joueur) : le recul sur la tour à l'allumage. `menace` : un Éteint
+   * debout à moins de 6 m (le recul s'annule, et ne reprend pas). Rien si le système demande de réduire les mouvements.
+   * K4 : plus de cadrage de la crique avant le choc (la scène de l'échouage le remplace).
    */
   cadrage(maintenant: number, joueur: VueJoueur, menace: boolean): Cadrage | null {
-    if (this.reduit()) return null;
-    const vers = (k: number, c: { x: number; y: number; z: number; zoom: number }): Cadrage => ({
+    if (this.reduit() || this.recul === null || this.reculAnnule) return null;
+    const t = (maintenant - this.recul) / 1000;
+    const duree = RECUL_TOUR.aller + RECUL_TOUR.reste + RECUL_TOUR.retour;
+    if (t >= duree) {
+      this.recul = null;
+      return null;
+    }
+    if (menace) {
+      this.reculAnnule = true;
+      return null;
+    }
+    const k = poidsCadrage(t, duree, RECUL_TOUR.aller, RECUL_TOUR.retour);
+    if (k <= 0) return null;
+    const c = RECUL_TOUR;
+    return {
       x: joueur.x + (c.x - joueur.x) * k,
       z: joueur.z + (c.z - joueur.z) * k,
       y: joueur.y + (c.y - joueur.y) * k,
       zoom: joueur.zoom + (c.zoom - joueur.zoom) * k,
       // La brume du temps recule au-delà de ce qu'on voit (sinon, de loin et la nuit : un voile gris).
       degage: true,
-    });
-    // Le cadrage de la crique passe avant le recul (ils ne se croisent pas : le recul finit 4 s après l'allumage).
-    if (this.cargoPrevu !== null && !this.annule.has("crique")) {
-      const debut = this.cargoPrevu + CHOC_S * 1000 - CADRAGE_CRIQUE.avantChoc * 1000;
-      const fin = (this.cargoArrive ?? Math.max(this.cargoPrevu, maintenant)) + (FIN_SCENE_S + 1) * 1000;
-      if (maintenant >= debut && maintenant < fin) {
-        if (menace) {
-          this.annule.add("crique");
-          return null;
-        }
-        const t = (maintenant - debut) / 1000;
-        // Tant que l'échouage n'est pas annoncé, on reste sur la crique ; après, on revient à la fin de la scène.
-        const k = this.cargoArrive === null ? lisse(t / CADRAGE_CRIQUE.aller) : poidsCadrage(t, (fin - debut) / 1000, CADRAGE_CRIQUE.aller, CADRAGE_CRIQUE.retour);
-        if (k > 0) return vers(k, CADRAGE_CRIQUE);
-      }
-    }
-    if (this.recul !== null && !this.annule.has("recul")) {
-      const t = (maintenant - this.recul) / 1000;
-      const duree = RECUL_TOUR.aller + RECUL_TOUR.reste + RECUL_TOUR.retour;
-      if (t >= duree) this.recul = null;
-      else if (menace) this.annule.add("recul");
-      else {
-        const k = poidsCadrage(t, duree, RECUL_TOUR.aller, RECUL_TOUR.retour);
-        if (k > 0) return vers(k, RECUL_TOUR);
-      }
-    }
-    return null;
+    };
   }
 }

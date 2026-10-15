@@ -476,6 +476,14 @@ export class Sonorisation {
     window.setTimeout(suivant, 200);
   }
 
+  /**
+   * 0.10, K4 : le contexte audio et la sortie générale du moteur (le son coupé la coupe aussi), pour la scène de
+   * l'échouage du cargo, qui joue ses sons à elle (client/src/rendu/cargo/son.js) ; null tant que le son n'est pas débloqué.
+   */
+  sortieScene(): { ctx: AudioContext; sortie: AudioNode } | null {
+    return this.ctx && this.moteur ? { ctx: this.ctx, sortie: this.moteur.maitre } : null;
+  }
+
   /** Joue un effet. `ou` : sa source dans le monde (sinon : sur le personnage). */
   jouer(id: IdSon, ou: Ou | null = null, o: { gain?: number; portee?: number } = {}): void {
     if (!this.moteur || !this.ctx || this.ctx.state !== "running") return;
