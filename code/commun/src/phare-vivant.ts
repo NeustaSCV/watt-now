@@ -31,6 +31,57 @@ export const PLAN_VUE_PHARE: PlanVue = {
 /** Au milieu d'une porte, l'Éteint vise un point un peu plus loin, de l'autre côté. */
 const AU_DELA = 1.3;
 
+/**
+ * Le muret de l'enceinte (le modèle : `enceinte`, de x − 18 à 16, de z − 16 à 1,5, repère du modèle) et ses deux grilles
+ * (la grille sud, arrachée, vers le chemin des douaniers ; la grille nord, vers la route) : un Éteint du dehors qui va à la
+ * tour (la lumière de la lanterne, au pied de l'escalier) passe par une grille, comme par une porte (essai sur l'iPhone,
+ * 2026-10-15 : les dormeurs du chemin restaient plantés contre le muret).
+ */
+const ENCEINTE = { x1: jeu(-18, -16).x, z1: jeu(-18, -16).z, x2: jeu(16, 1.5).x, z2: jeu(16, 1.5).z } as const;
+const GRILLES: readonly PorteDuPhare[] = [
+  { id: "grille_sud", ...jeu(2.3, 1.5), largeur: 2.5, sens: "x", entre: ["dehors", "dehors"] },
+  { id: "grille_nord", ...jeu(-1.5, -16), largeur: 2.9, sens: "x", entre: ["dehors", "dehors"] },
+];
+/** Ce point du jeu est-il dans l'enceinte (la tour, les maisons, la cour) ? */
+export function dansEnceinte(x: number, z: number): boolean {
+  return x > ENCEINTE.x1 && x < ENCEINTE.x2 && z > ENCEINTE.z1 && z < ENCEINTE.z2;
+}
+
+/** Le segment de (ax, az) à (bx, bz) traverse-t-il l'enceinte (un peu élargie : l'épaisseur du muret, celle de l'Éteint) ? */
+function coupeLeMuret(ax: number, az: number, bx: number, bz: number): boolean {
+  const m = 0.6;
+  for (let i = 1; i < 24; i++) {
+    const t = i / 24;
+    const x = ax + (bx - ax) * t;
+    const z = az + (bz - az) * t;
+    if (x > ENCEINTE.x1 - m && x < ENCEINTE.x2 + m && z > ENCEINTE.z1 - m && z < ENCEINTE.z2 + m) return true;
+  }
+  return false;
+}
+
+/** L'angle de l'enceinte (à 1,4 m dehors) par où contourner le muret pour aller de (ax, az) à `vers`, le plus court. */
+function angleVers(ax: number, az: number, vers: { x: number; z: number }): { x: number; z: number } {
+  const d = 1.4;
+  const angles = [
+    { x: ENCEINTE.x1 - d, z: ENCEINTE.z1 - d },
+    { x: ENCEINTE.x2 + d, z: ENCEINTE.z1 - d },
+    { x: ENCEINTE.x1 - d, z: ENCEINTE.z2 + d },
+    { x: ENCEINTE.x2 + d, z: ENCEINTE.z2 + d },
+  ].filter((c) => !coupeLeMuret(ax, az, c.x, c.z));
+  const cout = (c: { x: number; z: number }) => Math.hypot(c.x - ax, c.z - az) + Math.hypot(vers.x - c.x, vers.z - c.z);
+  return angles.sort((u, v) => cout(u) - cout(v))[0] ?? vers;
+}
+
+/** Le prochain point pour franchir l'ouverture `p` (porte ou grille, de sens « x » ou « z »), venant de (ax, az). */
+function franchir(p: PorteDuPhare, ax: number, az: number, cible: { x: number; z: number }): { x: number; z: number } {
+  const versLa = p.sens === "x" ? { x: 0, z: Math.sign(cible.z - p.z) || 1 } : { x: Math.sign(cible.x - p.x) || 1, z: 0 };
+  if (Math.hypot(p.x - ax, p.z - az) < 0.9) return { x: p.x + versLa.x * AU_DELA, z: p.z + versLa.z * AU_DELA };
+  // On s'aligne d'abord sur l'axe de l'ouverture (pour ne pas frotter le chambranle, le pilier), puis on entre.
+  const recul = p.sens === "x" ? { x: p.x, z: p.z - versLa.z * 0.8 } : { x: p.x - versLa.x * 0.8, z: p.z };
+  const aligne = p.sens === "x" ? Math.abs(ax - p.x) < p.largeur / 2 - 0.35 : Math.abs(az - p.z) < p.largeur / 2 - 0.35;
+  return aligne ? { x: p.x + versLa.x * AU_DELA, z: p.z + versLa.z * AU_DELA } : recul;
+}
+
 /** Le milieu du phare : les portes ne se ferment pas, il ne dépend pas de l'état du lieu. */
 export const MILIEU_PHARE: Milieu = (() => {
   const ov = obstaclesVue(PLAN_VUE_PHARE, {});
@@ -59,15 +110,28 @@ export const MILIEU_PHARE: Milieu = (() => {
     passage(ax, az, bx, bz) {
       const pa = piecePhare(ax, az);
       const pb = piecePhare(bx, bz);
+      // Dehors, d'un côté du muret à l'autre : par la grille la plus courte.
+      if (pa === "dehors" && dansEnceinte(ax, az) !== dansEnceinte(bx, bz)) {
+        const g = [...GRILLES].sort((u, v) => Math.hypot(u.x - ax, u.z - az) + Math.hypot(u.x - bx, u.z - bz) - Math.hypot(v.x - ax, v.z - az) - Math.hypot(v.x - bx, v.z - bz))[0]!;
+        const cible = { x: g.x, z: g.z + (dansEnceinte(bx, bz) === dansEnceinte(g.x, g.z - 1) ? -1 : 1) };
+        // Dehors, le muret entre nous et la grille (pas encore devant elle) : on le contourne par un angle.
+        if (!dansEnceinte(ax, az) && Math.hypot(g.x - ax, g.z - az) > 2) {
+          const devant = { x: g.x, z: g.z - (cible.z - g.z) * 0.8 };
+          if (coupeLeMuret(ax, az, devant.x, devant.z)) return angleVers(ax, az, devant);
+        }
+        return franchir(g, ax, az, cible);
+      }
       if (pa === pb) return { x: bx, z: bz };
       const p = premiere.get(`${pa}>${pb}`);
       if (!p) return { x: bx, z: bz };
-      const versLa = p.sens === "x" ? { x: 0, z: Math.sign(p.z - az) || 1 } : { x: Math.sign(p.x - ax) || 1, z: 0 };
-      if (Math.hypot(p.x - ax, p.z - az) < 0.9) return { x: p.x + versLa.x * AU_DELA, z: p.z + versLa.z * AU_DELA };
-      // On s'aligne d'abord sur l'axe de la porte (pour ne pas frotter le chambranle), puis on entre.
-      const recul = p.sens === "x" ? { x: p.x, z: p.z - versLa.z * 0.8 } : { x: p.x - versLa.x * 0.8, z: p.z };
-      const aligne = p.sens === "x" ? Math.abs(ax - p.x) < p.largeur / 2 - 0.35 : Math.abs(az - p.z) < p.largeur / 2 - 0.35;
-      return aligne ? { x: p.x + versLa.x * AU_DELA, z: p.z + versLa.z * AU_DELA } : recul;
+      // La porte à prendre : on la franchit vers la pièce d'à côté (son centre ; vers le dehors : loin du centre de la
+      // nôtre). Pas d'après notre côté de la porte : la pièce déborde un peu le seuil, on y oscillerait.
+      const la = p.entre[0] === pa ? p.entre[1] : p.entre[0];
+      const centre = (piece: string) => PIECES_PHARE[piece]?.boites[0];
+      const c = centre(la);
+      const ici = centre(pa);
+      const cible = c ? { x: c.x, z: c.z } : ici ? { x: 2 * p.x - ici.x, z: 2 * p.z - ici.z } : { x: bx, z: bz };
+      return franchir(p, ax, az, cible);
     },
   };
 })();

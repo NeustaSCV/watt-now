@@ -331,6 +331,22 @@ test("K2 : le client sait dans combien de temps le cargo s'échoue ; l'épave l�
   assert.equal(p.lieu.vue(p.instant()).cargoDans, undefined);
 });
 
+test("essai sur l'iPhone (2) : allumé depuis la tour, les dormeurs entrent et arrivent au pied de l'escalier, jusqu'au joueur", () => {
+  const p = phare();
+  p.preparer();
+  p.nuit();
+  p.aller(ENDROITS_PHARE.marque);
+  p.faire("escalier", "allumer");
+  assert.notEqual(p.lieu.etat.allumeLe, null);
+  const pres = () => p.lieu.eteints.filter((e) => e.dormeur && e.etat !== "detruit" && Math.hypot(e.x - p.position().x, e.z - p.position().z) < 3);
+  let max = 0;
+  for (let t = 0; t < 40_000; t += 500) {
+    p.passer(500, 100);
+    max = Math.max(max, pres().length);
+  }
+  assert.ok(max >= 5, `${max} dormeurs à moins de 3 m du joueur, dans la tour, en 40 s`);
+});
+
 test("la corne de brume détourne un Errant vers la falaise, une fois par nuit ; il faut d'abord réparer le compresseur", () => {
   const p = phare();
   p.preparer();
