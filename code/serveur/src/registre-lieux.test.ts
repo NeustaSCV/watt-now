@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 import { DUREE_VOYAGE_S, SORTIE_TERRAIN, arriveeDans, distanceKm, etapeVers, sortiesDe, type LieuId } from "../../commun/src/lieux.ts";
 import type { MessageServeur } from "../../commun/src/messages.ts";
 import { REINITIALISATION_LIEU_MS } from "../../commun/src/registre-lieux.ts";
+import { avecCoteOuverte } from "../../commun/src/acces-cote.ts";
 import { Base } from "./base.ts";
 import { Comptoir } from "./comptoir.ts";
 import { Cooperatives } from "./cooperative.ts";
@@ -32,6 +33,8 @@ function monde() {
   const lieux = new LieuxVivants(base, { station: halte, cooperative: cooperatives, gue, moulin: moulins }, Math.random, maintenant);
   const ouvrir = (compteId: number, pseudo: string) => {
     const recus: MessageServeur[] = [];
+    // Plan 0.10 (V4-19) : ces essais portent sur le niveau 2 lui-même : la côte y est ouverte.
+    base.sauverQuetes(compteId, avecCoteOuverte(base.chargerQuetes(compteId)));
     const joueur = new Joueur({ id: compteId, pseudo, famille: "mecanistes" }, base, (m) => recus.push(m), maintenant, halte, Math.random, new Comptoir(base, instant), cooperatives, gue, moulins, lieux);
     const attendre = (secondes: number, pas = 0.5) => {
       for (let s = 0; s < secondes; s += pas) {

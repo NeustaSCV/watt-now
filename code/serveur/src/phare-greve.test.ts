@@ -14,6 +14,7 @@ import { EPAVE_MODELE } from "../../commun/src/phare-modele.ts";
 import { milieuPhare, remettreSurLaGreve } from "../../commun/src/phare-vivant.ts";
 import { ALLURES } from "../../commun/src/regles.ts";
 import { MS_PAR_HEURE_JEU } from "../../commun/src/temps.ts";
+import { avecCoteOuverte } from "../../commun/src/acces-cote.ts";
 import { Base } from "./base.ts";
 import { rendreSilencieux } from "./journal.ts";
 import type { LieuPhare } from "./phare.ts";
@@ -208,6 +209,8 @@ test("D : au serveur, on ne frappe pas un Éteint d'un autre étage (du haut de 
   const c = base.creerCompte("Rose", "potager42", "mecanistes");
   base.sauverInventaire(c.id, { sac_a_dos: 1 });
   const recus: MessageServeur[] = [];
+  // Plan 0.10 (V4-19) : ces essais portent sur le niveau 2 lui-même : la côte y est ouverte.
+  base.sauverQuetes(c.id, avecCoteOuverte(base.chargerQuetes(c.id)));
   const joueur = new Joueur({ id: c.id, pseudo: "Rose", famille: "mecanistes" }, base, (m) => recus.push(m), maintenant, halte, Math.random, new Comptoir(base, instant), cooperatives, gue, moulins, lieux);
   const attendre = (secondes: number, pas = 0.5) => {
     for (let s = 0; s < secondes; s += pas) {
