@@ -6232,3 +6232,46 @@ body.vue-ensemble #hud .bloc.aide {
     right: calc(max(16px, env(safe-area-inset-right)) + 196px) !important;
   }
 }
+
+/* ---------- La fiche « Examiner » courte (0.10.1, chantier E ; maquette examiner-court, variante V3) ----------
+   L'utile d'abord : « Sert à », « Se monte sur », « Outil », avant la phrase d'ambiance, titres en petites capitales ;
+   ce qui ne va pas, en bandeau orange tout en haut de la fiche d'une installation, ou en tête du message d'Examiner. */
+#hud .examen-court {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 10px;
+  margin: 8px 0 2px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--creme);
+}
+#hud .examen-court dt {
+  padding-top: 2px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--canard);
+}
+#hud .examen-court dd {
+  margin: 0;
+  line-height: 1.35;
+}
+#hud .examen-court i {
+  color: #7a6a58;
+}
+#hud .panneau.fiche .ne-marche-pas {
+  margin: 0 0 8px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  background: #fbe3c6;
+  color: #8f3f12;
+  box-shadow: inset 3px 0 0 #c4561c;
+  line-height: 1.4;
+}
+#hud .messages p.examen .raison {
+  display: block;
+  margin-bottom: 2px;
+  color: #ffc27a;
+  font-weight: 700;
+}

@@ -4,7 +4,7 @@
 import { PERIODES_FRUITIERS, enSaison, etatDuFruitier, phaseFruitier, visibleEnSaison } from "../../commun/src/calendrier.ts";
 import { examenSortie } from "../../commun/src/registre-lieux.ts";
 import type { Position } from "../../commun/src/deplacement.ts";
-import { BATTERIES_DE_BANC, CAPACITES, bancDuPedalier, batterieDuBanc, type Charges } from "../../commun/src/energie.ts";
+import { BATTERIES_DE_BANC, CAPACITES, batterieDuBanc, type Charges } from "../../commun/src/energie.ts";
 import { COMPTOIR, destinations, sortieIci, type LieuId, type LieuJouable } from "../../commun/src/lieux.ts";
 import { KLAXONS_PAR_BATTERIE, LEURRES, PORTES, chargeBatterieTracteur, distancePorte } from "../../commun/src/cooperative.ts";
 import type { AutreVu, EtatCoopVu, InstallationVue, MessageClient, SacVu, Verbe } from "../../commun/src/messages.ts";
@@ -21,15 +21,17 @@ import type { VueRessource } from "./rendu/ressources.ts";
 import { proposerMoulin } from "./moulin.ts";
 import { estLanterneFixe } from "../../commun/src/meubles-niveau2.ts";
 import { COUT_CREUSET, NIVEAU_FORGE_CREUSET } from "../../commun/src/meubles-neufs.ts";
+import { pedalierChargeLeBanc, raisonArret } from "../../commun/src/examiner-court.ts";
 
 export type ActionProposee =
   | { libelle: string; message: MessageClient }
   /**
    * Action locale au client : afficher un texte, ou ouvrir le panneau de fabrication. `lire` : un écriteau qu'on lit
-   * (guidage 0.10, client/src/guidage.ts), son texte affiché en grand.
+   * (guidage 0.10, client/src/guidage.ts), son texte affiché en grand. `raison` : pourquoi la chose ne marche pas,
+   * montrée en tête du message (0.10.1, chantier E ; commun/src/examiner-court.ts).
    */
   /** `constat` (0.10.1, A1) : en plus du texte, un fait signalé au serveur (le fruitier trop haut fait penser à l'escabeau). */
-  | { libelle: string; examiner: string; lire?: true; constat?: "arbre_haut" }
+  | { libelle: string; examiner: string; lire?: true; constat?: "arbre_haut"; raison?: string }
   | { libelle: string; ouvrirFabrication: true }
   /** À une sortie : ouvrir la carte, la destination déjà choisie. */
   | { libelle: string; ouvrirCarte: readonly LieuId[] }
@@ -214,15 +216,17 @@ function actionsInstallation(
     case "plaque_choc": {
       // Book 25 §5.3 : une décharge, puis il faut la réarmer (0,5 Wh).
       const armee = i.etat.declencheur?.arme ?? true;
-      return [armee ? null : msg("Réarmer la plaque (0,5 Wh)", "rearmer_piege"), { libelle: "Examiner", examiner: `${EXAMENS_INSTALLATIONS.plaque_choc} ${armee ? "Elle est armée." : "Elle a servi : réarme-la."}` }];
+      // La raison (0.10.1, chantier E) passe en tête du message : commun/src/examiner-court.ts.
+      const raison = raisonArret(i, inventaire) ?? undefined;
+      return [armee ? null : msg("Réarmer la plaque (0,5 Wh)", "rearmer_piege"), { libelle: "Examiner", examiner: armee ? `${EXAMENS_INSTALLATIONS.plaque_choc} Elle est armée.` : EXAMENS_INSTALLATIONS.plaque_choc, raison }];
     }
     case "cloture_fortune":
     case "cloture_electrique": {
       // Elle tire son courant d'un banc chargé à moins de 6 m ; trois Éteints qui poussent la couchent.
       const d = i.etat.declencheur;
-      if (d?.couche) return [msg("Relever la clôture", "rearmer_piege"), { libelle: "Examiner", examiner: "Couchée : trois Éteints ont poussé ensemble. Relève-la." }];
-      const courant = d?.arme === false ? "Le courant ne passe pas : il lui faut un banc chargé à moins de 6 m." : "Le courant passe.";
-      return [null, { libelle: "Examiner", examiner: `${EXAMENS_INSTALLATIONS[i.type]} ${courant}` }];
+      const raison = raisonArret(i, inventaire);
+      if (d?.couche) return [msg("Relever la clôture", "rearmer_piege"), { libelle: "Examiner", examiner: "", raison: raison! }];
+      return [null, raison ? { libelle: "Examiner", examiner: EXAMENS_INSTALLATIONS[i.type], raison } : { libelle: "Examiner", examiner: `${EXAMENS_INSTALLATIONS[i.type]} Le courant passe.` }];
     }
     // ⚙️ Les pièges (Book 25 §6.3) : réarmer ce qui a pris ; le tour à perche, un atelier.
     case "assommoir":
@@ -230,7 +234,7 @@ function actionsInstallation(
     case "piege_machoires":
     case "fosse_pieux": {
       const d = i.etat.declencheur;
-      if (d?.fausse) return [null, { libelle: "Examiner", examiner: "Faussées : elles ne se réarment plus. Démonte-les, refais-en." }];
+      if (d?.fausse) return [null, { libelle: "Examiner", examiner: "", raison: raisonArret(i, inventaire)! }];
       return [d && !d.arme ? msg(i.type === "fosse_pieux" ? "Dégager la fosse" : "Réarmer le piège", "rearmer_piege") : null, examiner];
     }
     case "tour_perche":
@@ -244,7 +248,7 @@ function actionsInstallation(
     case "moulin_jerricans":
       return [!i.etat.poulie && (inventaire.poulie_aluminium ?? 0) > 0 ? msg("Poser la poulie d'aluminium", "poser_poulie") : null, examiner];
     case "rampe_led":
-      return [null, { libelle: "Examiner", examiner: `${EXAMENS_INSTALLATIONS.rampe_led} ${i.etat.courant === false ? "Pas de batterie chargée à moins de 15 m : elle reste éteinte." : "Elle s'allume à la nuit tombée."}` }];
+      return [null, i.etat.courant === false ? { libelle: "Examiner", examiner: EXAMENS_INSTALLATIONS.rampe_led, raison: raisonArret(i, inventaire)! } : { libelle: "Examiner", examiner: `${EXAMENS_INSTALLATIONS.rampe_led} Elle s'allume à la nuit tombée.` }];
     case "arbalete_garde": {
       const d = i.etat.declencheur;
       return [d && !d.arme ? msg((inventaire.cranequin_leger ?? 0) > 0 ? "Réarmer l'arbalète (cranequin léger)" : "Réarmer l'arbalète", "rearmer_piege") : null, examiner];
@@ -265,9 +269,7 @@ function actionsInstallation(
 
 /** Le pédalier est à moins de 3 m d'un banc dont la batterie a encore de la place (0.8.2, R17). */
 function bancARemplir(pedalier: InstallationVue, installations: readonly InstallationVue[]): boolean {
-  const banc = bancDuPedalier(pedalier, installations);
-  const bat = banc ? batterieDuBanc(banc.etat) : null;
-  return !!bat && bat.capacite - bat.wh > 0.5;
+  return pedalierChargeLeBanc(pedalier, installations);
 }
 
 /** La part de charge des batteries posées sur un meuble (0 à 1). */

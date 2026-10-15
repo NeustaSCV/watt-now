@@ -18,5 +18,5 @@ test("le texte d'Examiner n'est jamais coupé à deux lignes", () => {
   assert.match(css, /#hud \.messages:has\(p\.examen\) \{[^}]*max-height: none;/);
   // Le texte d'Examiner part avec le genre « examen » (main.ts) ; le HUD l'accepte.
   const main = readFileSync(new URL("./main.ts", import.meta.url), "utf8");
-  assert.match(main, /hud\.message\(a\.examiner, "examen"\)/);
+  assert.match(main, /hud\.message\(a\.examiner, "examen", a\.raison\)/);
 });

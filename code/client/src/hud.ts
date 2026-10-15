@@ -88,6 +88,7 @@ import { examenInstallation, type Propositions } from "./interaction.ts";
 import { ORDRE_NIVEAUX, changerQualite, type NiveauQualite } from "./rendu/qualite.ts";
 import { brancherBoutonTenu, etatJaugeCoup } from "./jauge-coup.ts";
 import { COMPOSANTS, DEMONTAGE, NOMS_FAMILLES_VESTIGES, VESTIGES, estOrdure, type FamilleVestige } from "../../commun/src/vestiges.ts";
+import { RIEN_POUR_L_INSTANT, lignesObjet, pedalierChargeLeBanc, raisonArret, texteNeMarchePas, type LigneExamen } from "../../commun/src/examiner-court.ts";
 
 /** Ordre d'affichage dans le sac : à boire et à manger, matériaux, pièces, outils, lumières. */
 const ORDRE_SAC: TypeObjet[] = [
@@ -184,6 +185,20 @@ function virguleWh(wh: number): string {
 
 function kg(valeur: number): string {
   return valeur.toFixed(2).replace(".", ",").replace(/,?0+$/, "");
+}
+
+/**
+ * La fiche « Examiner » courte (0.10.1, chantier E, variante V3) : « Sert à », « Se monte sur », « Outil », avant la
+ * phrase d'ambiance, titres en petites capitales. Rien à dire : rien du tout. Les textes viennent des données du jeu.
+ */
+function htmlExamenCourt(lignes: readonly LigneExamen[]): string {
+  if (lignes.length === 0) return "";
+  return `<dl class="examen-court">${lignes.map((l) => `<dt>${l.titre}</dt><dd>${l.texte === RIEN_POUR_L_INSTANT ? `<i>${l.texte}</i>` : l.texte}</dd>`).join("")}</dl>`;
+}
+
+/** Le bandeau orange, tout en haut d'une fiche d'installation : « Ne marche pas : il lui faut une batterie… ». */
+function htmlNeMarchePas(raison: string): string {
+  return `<p class="ne-marche-pas"><b>Ne marche pas :</b> ${texteNeMarchePas(raison)}</p>`;
 }
 
 /** Les infos techniques (images/s, latence, version) affichées ou non. */
@@ -1340,7 +1355,9 @@ export class Hud {
    * doublon (un message déjà affiché est relancé, avec « ×2 »), et quand la pile est pleine on retire d'abord le moins
    * important (leçon > aide > info > indice). Une même phrase d'indice ne revient pas avant 90 s.
    */
-  message(texte: string, genre: "" | "aide" | "lecon" | "indice" | "examen" | "pensee" | "ecriteau" = ""): void {
+  message(texte: string, genre: "" | "aide" | "lecon" | "indice" | "examen" | "pensee" | "ecriteau" = "", raison?: string): void {
+    // La raison d'un Examiner (0.10.1, chantier E) : ce qui ne va pas passe en tête, en orange, puis le texte d'examen.
+    if (raison) return this.messageAvecRaison(raison, texte, genre);
     const maintenant = performance.now();
     if (genre === "indice") {
       const vu = this.indicesVus.get(texte);
@@ -1373,6 +1390,23 @@ export class Hud {
       victime.remove();
     }
     this.programmerSortie(p, duree);
+  }
+
+  /**
+   * Un Examiner qui dit pourquoi une chose ne marche pas (0.10.1, chantier E, V3) : la raison en tête, détachée, puis
+   * l'examen. Le même tri que les autres messages (sans doublon, le moins important retiré d'abord) ; écrit en texte
+   * seulement (textContent), jamais en HTML.
+   */
+  private messageAvecRaison(raison: string, texte: string, genre: Parameters<Hud["message"]>[1]): void {
+    const entier = texte ? `${raison} ${texte}` : raison;
+    this.message(entier, genre);
+    const p = [...this.messages.children].find((e) => (e as HTMLElement).dataset.texte === entier) as HTMLElement | undefined;
+    if (!p) return;
+    const fois = Number(p.dataset.fois ?? "1");
+    const tete = document.createElement("span");
+    tete.className = "raison";
+    tete.textContent = raison;
+    p.replaceChildren(tete, document.createTextNode(`${texte}${fois > 1 ? ` ×${fois}` : ""}`));
   }
 
   private indicesVus = new Map<string, number>();
@@ -1722,6 +1756,7 @@ export class Hud {
           <small>${kg(d.poids * n + (s === "gourde" ? g.litres : 0))} kg · valeur ≈ ${formaterWotts(energieGrise(t))}${famille}${enMain}</small></div></div>
         ${actions.length ? `<div class="actions-objet">${actions.join("")}</div>` : ""}
         ${reprendre}
+        ${htmlExamenCourt(lignesObjet(t, this.famille, this.savoir, this.vueProgression))}
         <p class="description">${detail}</p>
         ${caracs}
         ${infos.join("")}
@@ -2378,8 +2413,13 @@ export class Hud {
       `<button type="button" class="secondaire" data-verbe="demonter_installation" ${plein ? "disabled" : ""}>Démonter</button>`,
     ].join("");
 
+    // La fiche courte (0.10.1, chantier E) : ce qui ne va pas, en bandeau tout en haut.
+    const voisines = this.voisinsFiche?.().installations ?? [];
+    const raison = raisonArret(i, this.inventaire, i.type === "pedalier" && pedalierChargeLeBanc(i, voisines));
+
     return `
       ${enteteFiche(nom)}
+      ${raison ? htmlNeMarchePas(raison) : ""}
       ${l ? `<p class="niveau">Niveau ${niveau}${etat ? ` · ${etat}` : ""}</p>` : etat ? `<p class="niveau">${etat}</p>` : ""}
       <p class="examen">${examen}</p>
       ${i.type === "banc_recharge" ? htmlFicheBanc(i, this.inventaire, this.charges, this.chargeArmes, this.dernierTemps ? (whParBeauJour() / 24) * facteurHeureSoleil(this.heureVue) * SOLEIL_PAR_TEMPS[this.dernierTemps as Temps] : undefined) : ""}
