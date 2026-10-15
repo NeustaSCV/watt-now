@@ -1,7 +1,8 @@
 // 0.10, la grève et l'épave du phare à l'écran, après l'essai sur l'iPhone du 2026-10-15 : ce qui suit le personnage (sa
-// lampe, les cercles, la visée) se pose sur le vrai sol, et dans l'eau de la crique il enfonce jusqu'aux genoux ; un
-// conteneur s'ouvre (toit et parois) quand on y entre ; la partie de l'épave où l'on se tient ne s'efface jamais ; un
-// Éteint d'un autre étage ne menace pas ; le pavois s'ouvre au haut de l'échelle ; le panneau du sentier se lit.
+// lampe, les cercles, la visée) se pose sur le vrai sol, et dans l'eau de la crique il enfonce jusqu'aux genoux ; les
+// conteneurs s'ouvrent (toits et parois : la couche du modèle, P-7) quand on entre dans l'un d'eux ; la partie de l'épave
+// où l'on se tient ne s'efface jamais ; un Éteint d'un autre étage ne menace pas ; le pavois est ouvert au haut de
+// l'échelle (P-5) ; le panneau du sentier (celui du modèle) se lit, et sa lanterne l'éclaire la nuit.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -23,22 +24,23 @@ const contexte2d: unknown = new Proxy(
 if (!(globalThis as { document?: unknown }).document) Object.assign(globalThis, { document: { createElement: () => ({ width: 1, height: 1, style: {}, getContext: () => contexte2d }) } });
 
 const { ECRITEAU_SENTIER, NIVEAU_MER, auModele, dansLEauPhare, etageDuPhare, jeu } = await import("../../../commun/src/phare.ts");
-const { EPAVE_MODELE } = await import("../../../commun/src/phare-modele.ts");
+const { COUCHES_MODELE, EPAVE_MODELE, PANNEAUX_MODELE } = await import("../../../commun/src/phare-modele.ts");
 const { ecriteauProche } = await import("../../../commun/src/guidage.ts");
 const { animerPhare, creerPhare, lumieresPhare, solPhare, ENFONCE_EAU } = await import("./phare.ts");
-const { conteneursEpave, ouvrirLaCoupee } = await import("./phare-epave.ts");
+const { avancer } = await import("../../../commun/src/deplacement.ts");
+const { zonePhare } = await import("../../../commun/src/phare.ts");
 const { hauteurPiedsLieu, hauteurSolLieu, hauteurSurfaceLieu } = await import("../sol-lieu.ts");
 const { PhareClient } = await import("../phare.ts");
-// @ts-ignore — le modèle est en JavaScript (session « bâtiments »), sans déclaration de types.
-const { creer: creerModele } = await import("../batiments/phare/modele.js");
 
 const VU = { etat: { escabeau: "marque" as const, bidon: "verse" as const, prisme: "remis" as const, lanterne: true, compresseur: false, corneSonnee: false }, epave: true, nuit: true };
 /** Un point de l'eau peu profonde, au sud de la grève de l'ouest (repère du modèle : x − 18, z 24,5). */
 const EAU = jeu(-18, 24.5);
 /** Sur la grève, entre les deux conteneurs. */
 const GREVE = jeu(-15.5, 20.5);
-/** Le milieu des conteneurs (d'après leurs parois), dans le repère du jeu. */
-const CONTENEURS = Object.fromEntries(conteneursEpave().map((c) => [c.nom, jeu(c.x, c.z)]));
+/** Le milieu des conteneurs (les couches de leurs toits et parois, dans le modèle), dans le repère du jeu. */
+const CONTENEURS = Object.fromEntries(
+  COUCHES_MODELE.filter((c) => c.nom.startsWith("conteneur") && !c.nom.includes("avec la coque")).map((c) => [c.nom.startsWith("conteneurs de l'épave") ? "conteneur de la Livraison du Jour" : c.nom.replace(/ \(toit et parois\)$/, ""), jeu(c.boite.x, c.boite.z)]),
+);
 
 test("A : au phare, la lampe, les cercles et la visée suivent le vrai sol ; dans l'eau, les pieds sont aux genoux sous la surface ; ailleurs, rien ne bouge", () => {
   const portes = { epave: true };
@@ -84,44 +86,37 @@ test("A et F : le personnage est posé dans l'eau jusqu'aux genoux, avec un remo
   assert.ok(!remous.visible);
 });
 
-test("B : un conteneur de l'épave s'ouvre (toit et parois) quand on y est, et se referme quand on en sort ; la coque, elle, reste", () => {
+test("B : les conteneurs de l'épave s'ouvrent (toits et parois) quand on entre dans l'un d'eux, et se referment quand on en sort ; la coque, elle, reste", () => {
   const decor = creerPhare();
-  const toits = decor.userData.toits as { nom?: string; efface?: boolean }[];
+  const toits = decor.userData.toits as { nom?: string; efface?: boolean; materiaux: THREE.Material[] }[];
   const couche = (debut: string) => toits.find((t) => t.nom?.startsWith(debut))!;
-  for (const nom of ["conteneur de la Livraison du Jour", "conteneur des provisions du bord", "conteneur d'outillage sur le pont"]) assert.ok(couche(nom), nom);
-  // Ce que dessinent les maillages de l'épave (les tranches dessinées : drawRange).
-  const epave = decor.getObjectByName("epave_apres")!;
-  const dessines = () => {
-    let n = 0;
-    epave.traverse((o) => {
-      const m = o as THREE.Mesh;
-      if (m.isMesh && !m.geometry.index) n += Math.min(m.geometry.drawRange.count, m.geometry.getAttribute("position").count - m.geometry.drawRange.start);
-    });
-    return n;
-  };
+  for (const nom of ["conteneurs de l'épave (toits et parois)", "conteneur des provisions du bord", "conteneur d'outillage sur le pont"]) assert.ok(couche(nom), nom);
+  assert.equal(Object.keys(CONTENEURS).length, 3);
+  // La couche des toits et parois (une seule pour les trois : le modèle reste à 39 appels) se voit-elle ?
+  const parois = couche("conteneurs de l'épave (toits et parois)").materiaux;
+  const ouverts = () => parois.every((m) => (m.userData.fondu ?? 1) < 0.5);
+  const fermes = () => parois.every((m) => (m.userData.fondu ?? 1) === 1);
   const loin = jeu(-27, 18);
-  animerPhare(decor, loin.x, loin.z, 0.5, Math.PI / 4, VU, []);
-  const tout = dessines();
-  // Dans le conteneur des provisions du bord (sur la grève) : il s'ouvre, l'autre non.
+  for (let i = 0; i < 20; i++) animerPhare(decor, loin.x, loin.z, 0.5, Math.PI / 4, VU, []);
+  assert.ok(fermes(), "de loin, fermés");
+  // Dans le conteneur des provisions du bord (sur la grève) : ils s'ouvrent.
   const bord = CONTENEURS["conteneur des provisions du bord"]!;
-  animerPhare(decor, bord.x, bord.z, 0.5, Math.PI / 4, VU, []);
+  for (let i = 0; i < 20; i++) animerPhare(decor, bord.x, bord.z, 0.5, Math.PI / 4, VU, []);
   assert.ok(couche("conteneur des provisions du bord").efface, "dedans, il s'ouvre");
-  assert.ok(!couche("conteneur de la Livraison du Jour").efface, "l'autre reste fermé");
-  const ouvert = dessines();
-  assert.ok(ouvert < tout - 100, `des triangles en moins (${(tout - ouvert) / 3})`);
-  // Loin de lui, sur la grève de l'ouest : il se referme.
-  animerPhare(decor, loin.x, loin.z, 0.5, Math.PI / 4, VU, []);
+  assert.ok(ouverts(), "toits et parois effacés");
+  // Loin de lui, sur la grève de l'ouest : ils se referment.
+  for (let i = 0; i < 20; i++) animerPhare(decor, loin.x, loin.z, 0.5, Math.PI / 4, VU, []);
   assert.ok(!couche("conteneur des provisions du bord").efface);
-  assert.equal(dessines(), tout);
+  assert.ok(fermes());
   // Dans le conteneur d'outillage, sur le pont : il s'ouvre, la coque (sous les pieds) reste.
   const outil = CONTENEURS["conteneur d'outillage sur le pont"]!;
   assert.equal(etageDuPhare(outil.x, outil.z, true), "pont");
   for (let quart = 0; quart < 4; quart++) {
-    animerPhare(decor, outil.x, outil.z, 0.5, Math.PI / 4 + (quart * Math.PI) / 2, VU, []);
+    for (let i = 0; i < 20; i++) animerPhare(decor, outil.x, outil.z, 0.5, Math.PI / 4 + (quart * Math.PI) / 2, VU, []);
     assert.ok(couche("conteneur d'outillage").efface, "l'outillage s'ouvre");
     assert.ok(!couche("coque de l'épave").efface, "la coque reste sous les pieds");
+    assert.ok(ouverts());
   }
-  assert.ok(dessines() < tout);
 });
 
 test("C : sur le pont de l'épave, à l'avant comme à l'arrière, la coque ne s'efface jamais, quel que soit l'angle de la caméra", () => {
@@ -161,35 +156,25 @@ test("D : un Éteint d'un autre étage ne menace pas (ni mode Combat, ni « Frap
   assert.ok(client.menace(noye, jeu(-24, 20.6)), "sauté sur la partie basse, on est à leur étage");
 });
 
-test("H : le pavois s'ouvre au haut de l'échelle de coupée (la tôle abaissée au ras du pont, la lisse ôtée)", () => {
-  const modele = creerModele({ usure: 0.7 }) as THREE.Group;
-  const epave = modele.getObjectByName("epave_apres")!;
-  const abaisses = ouvrirLaCoupee(epave);
-  assert.ok(abaisses >= 4, `${abaisses} sommets abaissés`);
-  assert.equal(ouvrirLaCoupee(epave), 0, "déjà ouvert");
+test("H : le pavois est ouvert au haut de l'échelle de coupée (P-5) : du pont, on descend l'échelle jusqu'aux galets, et l'on remonte", () => {
+  const zone = zonePhare({ epave: true });
+  const { bas, haut } = EPAVE_MODELE.echelle;
+  const l = Math.hypot(haut.x - bas.x, haut.z - bas.z);
+  const ux = (bas.x - haut.x) / l;
+  const uz = (bas.z - haut.z) / l;
+  // Du pont, un mètre avant le haut de l'échelle, on marche vers le bas.
+  let p = { ...jeu(haut.x - ux, haut.z - uz), o: 0 };
+  assert.equal(etageDuPhare(p.x, p.z, true), "pont");
+  for (let t = 0; t < l / 1.2 + 4; t += 0.05) p = avancer(p, { dx: ux, dz: uz, allure: "marche" }, 0.05, zone);
+  assert.equal(etageDuPhare(p.x, p.z, true), "bas", `arrivé en ${auModele(p.x, p.z).x.toFixed(2)}, ${auModele(p.x, p.z).z.toFixed(2)}`);
+  for (let t = 0; t < l / 1.2 + 4; t += 0.05) p = avancer(p, { dx: -ux, dz: -uz, allure: "marche" }, 0.05, zone);
+  assert.equal(etageDuPhare(p.x, p.z, true), "pont", "remonté sur le pont");
 });
 
-/**
- * La boîte (repère du jeu) de ce qu'un objet dessine à moins de `r` mètres (à plat) d'un point : les panneaux du sentier
- * et de la route du nord partagent leur maillage, leurs lanternes aussi (0.10, R52 : le budget du phare).
- */
-function boitePres(objet: THREE.Object3D, x: number, z: number, r = 2): THREE.Box3 {
-  objet.updateWorldMatrix(true, true);
-  const b = new THREE.Box3();
-  const v = new THREE.Vector3();
-  objet.traverse((o) => {
-    const m = o as THREE.Mesh;
-    if (!m.isMesh) return;
-    const pos = m.geometry.getAttribute("position");
-    for (let i = 0; i < pos.count; i++) {
-      v.fromBufferAttribute(pos, i).applyMatrix4(m.matrixWorld);
-      if (Math.hypot(v.x - x, v.z - z) <= r) b.expandByPoint(v);
-    }
-  });
-  return b;
-}
-
-test("G : le panneau du sentier côtier se lit à son nouvel endroit, près de l'eau, au départ du sentier ; une lanterne l'éclaire la nuit", () => {
+test("G : le panneau du sentier côtier (celui du modèle) est près de l'eau, au départ du sentier ; on le lit ; sa lanterne l'éclaire la nuit, pas le jour", () => {
+  const modele = PANNEAUX_MODELE.find((p) => p.id === "panneau_sortie_greve")!;
+  assert.match(modele.texte, /Sentier côtier · ← Port · 6 km/);
+  assert.deepEqual(ECRITEAU_SENTIER, jeu(modele.x, modele.z), "l'écriteau « Lire » est au panneau du modèle");
   // Près de l'eau (le bord de l'eau du modèle est à z 23,3 à cet endroit), à quelques pas du bas de la rampe.
   const m = auModele(ECRITEAU_SENTIER.x, ECRITEAU_SENTIER.z);
   assert.ok(m.z > 21.5 && m.z < 23, `à ${m.z} du nord du lot`);
@@ -203,47 +188,28 @@ test("G : le panneau du sentier côtier se lit à son nouvel endroit, près de l
     assert.equal(e?.ecriteau.id, "E-12");
     assert.match(e!.ecriteau.texte, /Sentier côtier · ← Port · 6 km/);
   }
-  // Sa planche et sa lanterne sont là, au-dessus des galets, à cet endroit.
+  // Le jeu ne pose plus de panneau ni de lanterne à lui (le modèle a les siens).
   const decor = creerPhare();
-  const panneau = decor.getObjectByName("panneau du sentier côtier")!;
-  assert.ok(panneau, "le panneau");
-  const b = boitePres(panneau, ECRITEAU_SENTIER.x, ECRITEAU_SENTIER.z);
+  assert.equal(decor.getObjectByName("panneau du sentier côtier"), undefined);
+  assert.equal(decor.getObjectByName("lanterne de panneau"), undefined);
+  assert.ok(decor.getObjectByName("panneau_sortie_greve"), "le panneau du modèle");
+  // La nuit, la lumière de sa lanterne (celle du modèle, au-dessus de la planche) est une source du phare ; le jour, non.
   const sol = solPhare(ECRITEAU_SENTIER.x, ECRITEAU_SENTIER.z, false);
-  assert.ok(b.min.y > sol - 0.1 && b.max.y > sol + 2.4 && b.max.y < sol + 3.1, `de ${b.min.y} à ${b.max.y}`);
-  // (Le décor est posé dans le repère du jeu.)
-  assert.ok(Math.abs((b.min.x + b.max.x) / 2 - ECRITEAU_SENTIER.x) < 1 && Math.abs((b.min.z + b.max.z) / 2 - ECRITEAU_SENTIER.z) < 1);
-  assert.ok(decor.getObjectByName("lanterne de panneau"), "la lanterne");
-  // La nuit, sa lumière est une source du phare ; le jour, non. Le verre luit la nuit.
   const lanterne = lumieresPhare({ etat: null, epave: false }, true).find((s) => Math.hypot(s.x - ECRITEAU_SENTIER.x, s.z - ECRITEAU_SENTIER.z) < 1.5);
-  assert.ok(lanterne && lanterne.y > sol + 1.8, "la lanterne éclaire le panneau, la nuit");
+  assert.ok(lanterne && lanterne.y > sol + 1.8 && lanterne.y < sol + 3, `la lanterne éclaire le panneau, la nuit (${lanterne?.y.toFixed(2)})`);
   assert.equal(lumieresPhare({ etat: null, epave: false }, false).length, 0);
-  animerPhare(decor, ECRITEAU_SENTIER.x, ECRITEAU_SENTIER.z + 1, 0.016, Math.PI / 4, { ...VU, nuit: true }, []);
-  const verre = (decor.getObjectByName("lanterne de panneau") as THREE.Mesh).material as THREE.MeshStandardMaterial;
-  assert.ok(verre.emissiveIntensity > 1);
-  animerPhare(decor, ECRITEAU_SENTIER.x, ECRITEAU_SENTIER.z + 1, 0.016, Math.PI / 4, { ...VU, nuit: false }, []);
-  assert.equal(verre.emissiveIntensity, 0);
+  // Sa lumière ne porte pas jusqu'à son reflet sur la mer, vu par la caméra du jeu (35° au-dessus de l'horizon).
+  const h = lanterne.y - NIVEAU_MER;
+  const reflet = Math.hypot(h, h / Math.tan(Math.atan(1 / Math.SQRT2)));
+  assert.ok(lanterne.portee < reflet, `portée ${lanterne.portee} m, reflet à ${reflet.toFixed(1)} m`);
 });
 
-test("G2 : la lanterne du panneau, son verre et sa lumière sont à la hauteur réelle du panneau (le sol de la grève à son pied + la potence), pas à celle du plateau ; sa lumière ne porte pas jusqu'à son reflet sur la mer", async () => {
-  const { PANNEAU_SENTIER, lampePanneau } = await import("./phare-bords.ts");
-  const { VERRE_SOUS_POTENCE } = await import("./lanterne-panneau.ts");
-  const sol = solPhare(ECRITEAU_SENTIER.x, ECRITEAU_SENTIER.z, false);
-  assert.ok(sol < -8.5, `le pied du panneau sur la grève (${sol.toFixed(2)})`);
-  const attendu = sol + PANNEAU_SENTIER.poteau - VERRE_SOUS_POTENCE;
-  // La source donnée à la réserve de lumières (lumieresPhare, la nuit).
-  const source = lumieresPhare({ etat: null, epave: true }, true).find((s) => Math.hypot(s.x - ECRITEAU_SENTIER.x, s.z - ECRITEAU_SENTIER.z) < 1.5)!;
-  assert.equal(source, lampePanneau());
-  assert.ok(Math.abs(source.y - attendu) < 0.02, `la lumière à ${source.y.toFixed(2)}, attendue à ${attendu.toFixed(2)}`);
-  assert.ok(Math.hypot(source.x - ECRITEAU_SENTIER.x, source.z - ECRITEAU_SENTIER.z) < 0.6, "juste devant la planche");
-  // Le verre de la lanterne (ce qui luit), dans le décor : au même endroit que la lumière.
-  const decor = creerPhare();
-  decor.updateMatrixWorld(true);
-  const lanterne = decor.getObjectByName("lanterne de panneau") as THREE.Mesh;
-  const b = boitePres(lanterne, ECRITEAU_SENTIER.x, ECRITEAU_SENTIER.z);
-  assert.ok(b.min.y > sol + 2 && b.max.y < sol + PANNEAU_SENTIER.poteau + 0.05, `la lanterne de ${b.min.y.toFixed(2)} à ${b.max.y.toFixed(2)}`);
-  assert.ok(source.y > b.min.y && source.y < b.max.y, "la lumière est dans la lanterne");
-  // Son reflet sur la mer, vu par la caméra du jeu (35° au-dessus de l'horizon), est hors de sa portée.
-  const h = source.y - NIVEAU_MER;
-  const reflet = Math.hypot(h, h / Math.tan(Math.atan(1 / Math.SQRT2)));
-  assert.ok(source.portee < reflet, `portée ${source.portee} m, reflet à ${reflet.toFixed(1)} m`);
+test("G2 : la lanterne du panneau de la route du nord s'allume aussi la nuit, au-dessus de son panneau (« ← La corniche · Ton terrain »)", async () => {
+  const { ECRITEAU_ROUTE } = await import("../../../commun/src/phare.ts");
+  const nord = PANNEAUX_MODELE.find((p) => p.id === "panneau_sortie_nord")!;
+  assert.deepEqual(ECRITEAU_ROUTE, jeu(nord.x, nord.z));
+  assert.equal(ecriteauProche("phare", ECRITEAU_ROUTE.x + 0.5, ECRITEAU_ROUTE.z + 0.5)?.ecriteau.id, "E-17");
+  const nuit = lumieresPhare({ etat: null, epave: false }, true).filter((s) => Math.hypot(s.x - ECRITEAU_ROUTE.x, s.z - ECRITEAU_ROUTE.z) < 1.5);
+  assert.equal(nuit.length, 1);
+  assert.ok(nuit[0]!.y > 1.8 && nuit[0]!.y < 3);
 });

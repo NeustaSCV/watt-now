@@ -4,9 +4,9 @@
 // - Le relief (L-1) : la fonction `hauteurSol` du modèle, importée telle quelle, donne la hauteur du sol où l'on marche
 //   (le plateau à 0, la rampe du canot, la grève à − 8,8, le pont de l'épave à − 4) ; `solPhare` la lit dans le repère du
 //   jeu. Le serveur reste en 2D ; client/src/phare.ts pose les personnages, les Éteints et le cercle de visée dessus.
-// - Le modèle fournit son sol sur ses 60 × 50 m (`solPropre` : la falaise et la mer sont creusées) ; autour, on étend la
-//   lande au nord, à l'ouest et à l'est, la mer au sud, pour que le bord du lot ne se voie pas (dans les matières du
-//   modèle : aucun appel de dessin de plus).
+// - Le modèle dessine aussi ce qui borde le lieu (0.10, R52) : le muret de la lande, le sentier côtier, les rochers des
+//   deux bouts de la grève, la mer claire puis profonde, et ses alentours (le groupe `alentours` : la falaise, la lande,
+//   la route du nord) ; ses panneaux de sortie et leurs lanternes (FICHE.panneaux). Le jeu n'y ajoute plus rien.
 // - Ses couches (le fût de la tour, les toits, la coque de l'épave) s'effacent quand le personnage passe dessous ou
 //   derrière, comme les toits de la halte (estomperToits). Leurs hauteurs sont comptées depuis leur sol (le plateau ; la
 //   grève pour la coque) : on les recompte depuis le sol du personnage (`hauteursDepuis`), sinon la coque, neuf mètres
@@ -16,7 +16,6 @@
 //   courroie du compresseur, le harpon, l'épave et ses objets-clés.
 
 import * as THREE from "three";
-import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 // @ts-ignore — le modèle est en JavaScript (session « bâtiments »), sans déclaration de types.
 import { creer as creerModele, hauteurSol } from "../batiments/phare/modele.js";
 import type { Boite } from "../../../commun/src/lieux.ts";
@@ -25,10 +24,8 @@ import { LUMIERES_MODELE, PLACES_OBJETS } from "../../../commun/src/phare-modele
 import type { TypeRessource } from "../../../commun/src/terrain.ts";
 import { estomperToits, montrerTousLesToits } from "./halte.ts";
 import { animerNuitPhare, creerNuitPhare } from "./phare-nuit.ts";
-import { creerCloture } from "./phare-cloture.ts";
-import { allumerPanneau, creerPanneauSentier, lampePanneau, lampePanneauRoute, poserBords } from "./phare-bords.ts";
-import { montrerConteneurs, ouvrirConteneurs, ouvrirLaCoupee } from "./phare-epave.ts";
 import type { FeuxCargo } from "../phare-scene.ts";
+import { estLanternePanneau, lumiereLanterneModele } from "./lanterne-panneau.ts";
 import type { SourceLumiere } from "./lumieres.ts";
 import { nommer } from "./materiaux.ts";
 
@@ -119,16 +116,8 @@ export function creerPhare(): THREE.Group {
   const groupe = new THREE.Group();
   const modele = creerModele({ usure: USURE }) as THREE.Group;
   modele.position.set(OX, 0, OZ);
-  // 0.10 (essai sur l'iPhone du 2026-10-15) : les conteneurs de l'épave s'ouvrent quand on y entre (leur toit, leurs
-  // flancs) ; le pavois s'ouvre au haut de l'échelle de coupée (rendu/phare-epave.ts).
-  const epave = modele.getObjectByName("epave_apres");
-  if (epave) {
-    const plancher = (x: number, z: number) => (hauteurSol as (x: number, z: number, o: { epave: boolean }) => number)(x, z, { epave: true });
-    (modele.userData.toits as unknown[]).push(...ouvrirConteneurs(epave, plancher));
-    ouvrirLaCoupee(epave);
-  }
   // Les couches qui s'effacent, dans le repère du jeu ; le modèle ne garde pas les siennes (on les lirait deux fois).
-  // (Les mêmes objets, ramenés sur place : rendu/phare-epave.ts garde ceux des conteneurs pour savoir s'ils s'ouvrent.)
+  // (Les toits et parois des conteneurs de l'épave en sont, depuis la 0.10 : P-7, ils s'effacent quand on y entre.)
   const toits = (modele.userData.toits as { boite: Boite; horsDe?: Boite }[]).map((t) => Object.assign(t, { boite: auJeu(t.boite) }, t.horsDe ? { horsDe: auJeu(t.horsDe) } : {}));
   delete modele.userData.toits;
   groupe.userData.toits = toits;
@@ -140,78 +129,13 @@ export function creerPhare(): THREE.Group {
     if (t.horsDe) t.horsDeModele = t.horsDe;
   }
   couchesEnRelief.set(groupe, toits as CoucheEnRelief[]);
-  // 0.10 (R52) : la côte qui continue à l'ouest, le sentier côtier, les rochers des deux bouts de la grève, la mer
-  // claire ou profonde, le panneau du sentier (rendu/phare-bords.ts).
-  poserBords(modele, etendreAlentours(modele));
-  modele.add(creerPanneauSentier());
   groupe.add(modele);
   nommer(groupe, ["phare"]);
-  // K2 : le balayage du faisceau, les feux du cargo (rendu/phare-nuit.ts) ; la clôture des bords (rendu/phare-cloture.ts).
+  // K2 : le balayage du faisceau, les feux du cargo (rendu/phare-nuit.ts).
   creerNuitPhare(groupe);
-  groupe.add(creerCloture());
 
   etats.set(groupe, (modele.userData.objets ?? {}) as Partial<Record<ObjetNomme, THREE.Object3D | null>>);
   return groupe;
-}
-
-/**
- * Autour du lot : la lande au nord, à l'ouest et à l'est (au niveau du plateau) ; la côte de l'ouest et de l'est (la
- * falaise qui continue) et la mer sont posées par rendu/phare-bords.ts (R52). Dans le maillage du sol du
- * modèle (même matière) : aucun appel de dessin de plus. Rend les maillages du sol et de la mer du modèle.
- */
-function etendreAlentours(modele: THREE.Group): { sol: THREE.Mesh | null; mer: THREE.Mesh | null } {
-  const M = 70;
-  const L = PHARE.largeur / 2;
-  const P = PHARE.profondeur / 2;
-  const BORD = 11.5; // le bord de la falaise, au bout du plateau (repère du modèle)
-  const sol = { p: [] as number[], c: [] as number[] };
-  const c = new THREE.Color();
-  const quad = (cible: typeof sol, coins: [number, number, number][], couleur: number) => {
-    c.setHex(couleur);
-    for (const k of [0, 1, 2, 0, 2, 3]) {
-      cible.p.push(...coins[k]!);
-      cible.c.push(c.r, c.g, c.b);
-    }
-  };
-  const rect = (cible: typeof sol, x0: number, z0: number, x1: number, z1: number, couleur: number, y: number) => quad(cible, [[x0, y, z0], [x0, y, z1], [x1, y, z1], [x1, y, z0]], couleur);
-  const lande = 0x8a9658;
-  // La lande : au nord, sur toute la largeur ; à l'ouest et à l'est, jusqu'au bord de la falaise (légèrement sous le
-  // plateau du modèle, pour ne pas le doubler).
-  rect(sol, -L - M, -P - M, L + M, -P, lande, -0.02);
-  rect(sol, -L - M, -P, -L, BORD, lande, -0.02);
-  rect(sol, L, -P, L + M, BORD, lande, -0.02);
-  // (À l'est comme à l'ouest, la falaise continue au-delà du lot : rendu/phare-bords.ts, 0.10, R52.)
-  // Les maillages du modèle : le sol mat (le plateau, la roche) et la mer.
-  let auSol: THREE.Mesh | null = null;
-  let aLaMer: THREE.Mesh | null = null;
-  modele.traverse((o) => {
-    const m = o as THREE.Mesh;
-    if (!m.isMesh || (o as unknown as THREE.InstancedMesh).isInstancedMesh || m.geometry.index) return;
-    const mat = m.material as THREE.MeshStandardMaterial;
-    if (!auSol && !mat.map && !mat.transparent && mat.roughness === 0.95 && mat.metalness === 0) auSol = m;
-    if (!aLaMer && mat.transparent && mat.roughness === 0.15 && mat.metalness === 0.25) aLaMer = m;
-  });
-  modele.updateMatrixWorld(true);
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute("position", new THREE.Float32BufferAttribute(sol.p, 3));
-  geo.setAttribute("color", new THREE.Float32BufferAttribute(sol.c, 3));
-  geo.setAttribute("uv", new THREE.Float32BufferAttribute(new Array((sol.p.length / 3) * 2).fill(0), 2));
-  geo.computeVertexNormals();
-  const cible = auSol as THREE.Mesh | null;
-  if (cible) {
-    // Le modèle est posé en (OX, 0, OZ) : la géométrie ajoutée est dans le repère du lot, comme la sienne.
-    const memes = ["position", "normal", "uv", "color"].every((n) => cible.geometry.getAttribute(n)?.itemSize === geo.getAttribute(n).itemSize);
-    const fondu = memes && mergeGeometries([cible.geometry, geo]);
-    if (fondu) {
-      cible.geometry.dispose();
-      cible.geometry = fondu;
-      return { sol: cible, mer: aLaMer };
-    }
-  }
-  const m = new THREE.Mesh(geo, cible ? cible.material : new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 }));
-  m.receiveShadow = true;
-  modele.add(m);
-  return { sol: cible, mer: aLaMer };
 }
 
 /** Le décor du phare d'un groupe (le jeu le pose dans un groupe à lui : main.ts, montrerDecor). */
@@ -282,12 +206,7 @@ export function animerPhare(
   estomperToits(decor, x, z, dt, lacet);
   if (vu.cadre) montrerTousLesToits(false);
   const groupe = groupePhare(decor);
-  // Les conteneurs de l'épave : ouverts quand on y est (leurs couches viennent d'être évaluées).
-  const epave = groupe?.getObjectByName("epave_apres");
-  if (epave) montrerConteneurs(epave);
   if (groupe) animerNuitPhare(groupe, dt, lacet, { nuit: vu.nuit === true, lanterne: vu.etat?.lanterne === true, epave: vu.epave, feux: vu.feux ?? null });
-  // La lanterne du panneau du sentier côtier luit la nuit (rendu/phare-bords.ts).
-  allumerPanneau(groupe?.getObjectByName("panneau du sentier côtier"), vu.nuit === true);
   const o = objetsDe(decor);
   if (!o) return;
   const montrer = (id: ObjetNomme, oui: boolean) => {
@@ -324,22 +243,26 @@ function placerEscabeau(objet: THREE.Object3D | null, ou: EtatPhareVu["escabeau"
   objet.position.set(m.x - depart.x, solPhare(cible.x, cible.z, epave) - depart.y, m.z - depart.z);
 }
 
-/** Les lumières du phare, la nuit (Book 18) : la lanterne allumée, le feu de détresse du cargo échoué. */
+/**
+ * Les lumières du phare, la nuit (Book 18) : la lanterne allumée, le feu de détresse du cargo échoué, les lanternes des
+ * panneaux de sortie (0.10, R0-1 : celles du modèle ; la nuit seulement, comme toutes celles-ci).
+ */
 export function lumieresPhare(vu: ScenePhare, nuit: boolean): SourceLumiere[] {
   if (!nuit) return [];
   const sources: SourceLumiere[] = [];
   for (const l of LUMIERES_MODELE) {
+    if (estLanternePanneau(l.nature)) {
+      // Près de l'eau (le panneau de la grève), une portée un peu plus courte que celle du modèle : son reflet sur la mer
+      // luisante faisait une tache claire sous la lanterne, qu'on prenait pour un halo mal placé (essai du 2026-10-15).
+      sources.push({ ...lumiereLanterneModele(l, { x: OX, z: OZ }), portee: Math.min(l.portee, PORTEE_LANTERNE_PANNEAU) });
+      continue;
+    }
     const lanterne = l.nature.startsWith("lanterne");
     const detresse = l.nature.startsWith("feu de détresse");
     if ((lanterne && vu.etat?.lanterne !== true) || (detresse && !vu.epave)) continue;
     if (!lanterne && !detresse) continue;
     sources.push({ x: l.x + OX, y: l.y, z: l.z + OZ, couleur: l.couleur, intensite: l.intensite, portee: l.portee, vacillement: lanterne ? 0.05 : 0.3 });
   }
-  // 0.10 (R52) : la lanterne du panneau du sentier côtier, sur la grève (rendu/phare-bords.ts) : il se voit de nuit. Une
-  // lumière de la réserve (on n'en crée pas) : elle ne s'allume que si elle est parmi les plus proches.
-  sources.push(lampePanneau());
-  // 0.10 (R52) : la lanterne du panneau de sortie de la route du nord, à l'arrivée.
-  sources.push(lampePanneauRoute());
   // K2 : le projecteur du cargo qui approche, braqué devant lui : il éclaire la crique et la falaise (sans lui, le cadrage
   // de la crique, la nuit, ne montrait que du noir : essai sur l'iPhone, 2026-10-15). Une lumière de la réserve.
   if (vu.feux) {
@@ -348,6 +271,9 @@ export function lumieresPhare(vu: ScenePhare, nuit: boolean): SourceLumiere[] {
   }
   return sources;
 }
+
+/** La portée des lanternes des panneaux de sortie, au phare (m). */
+const PORTEE_LANTERNE_PANNEAU = 3.8;
 
 /** Le projecteur du cargo : au-dessus de la mer (y − 9), une lumière large et douce. */
 const PROJECTEUR = { y: 6, intensite: 16, portee: 45 } as const;
