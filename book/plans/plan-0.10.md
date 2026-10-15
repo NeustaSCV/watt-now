@@ -1,6 +1,8 @@
 # Plan de développement — version 0.10 : le niveau 2, sur la côte
 
-*Version du plan : v0.7 · 2026-10-14 · **Statut : en cours de codage ; vagues 0 et 1 fusionnées dans `integration-0-10` ; pause.***
+*Version du plan : v0.8 · 2026-10-15 · **Statut : codée et fusionnée dans `main` (version 0.10.0, commit da3e59e) ; à déployer par le porteur, puis l'étiquette `v0.10` et la mesure du Pi.***
+
+*v0.8 (2026-10-15) : les vagues 2 et 3 faites, les essais du porteur sur l'iPhone (V4-01 à V4-19, §13), les retouches de la session bâtiments importées, la recette N2 ; 1 228 tests.*
 
 *v0.7 (2026-10-14) : les questions V1-01 à V1-18 tranchées (toutes les recommandations, V1-17 à réexpliquer) ; le Noyé redessiné (taille normale, tronc en boule) ; la vague 1 finie (A, B, C, D, F, G fusionnés, 1 023 tests) ; les 18 questions remontées par les chantiers au §12.*
 
