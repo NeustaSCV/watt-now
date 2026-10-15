@@ -272,3 +272,18 @@ test("la clôture : un muret sur la limite du lot, ouvert sur la route au nord, 
   for (const t of tronconsCloture()) if (t.z1 === t.z2) assert.ok(t.x2 <= s.boite.x - s.boite.l / 2 || t.x1 >= s.boite.x + s.boite.l / 2);
   assert.ok(CLOTURE.retrait + CLOTURE.largeur / 2 < zone.xMin + 0.01);
 });
+
+test("au pied de l'escalier, la fouille de la réserve (posée sur la marque) ne cache pas « Monter allumer la lanterne »", () => {
+  const client = new PhareClient(() => {}, () => ({}) as HTMLElement);
+  const m = ENDROITS_PHARE.marque;
+  // La fouille de la réserve du gardien, pas encore faite, juste sous les pieds.
+  const fouille = { A: { libelle: "Fouiller la réserve du gardien", message: { t: "interagir", cible: { genre: "ressource", id: 13 }, verbe: "fouiller" } }, B: null, cible: { x: m.x + 0.05, z: m.z + 0.05, rayon: 0.5 } } as unknown as Parameters<typeof client.proposer>[1];
+  const etat = { escabeau: "marque" as const, bidon: "verse" as const, prisme: "remis" as const, lanterne: false, compresseur: false, corneSonnee: false };
+  client.recevoir({ t: "phare", etat });
+  assert.equal(client.proposer(m, fouille).A?.libelle, "Monter allumer la lanterne");
+  client.recevoir({ t: "phare", etat: { ...etat, bidon: "plein" } });
+  assert.equal(client.proposer(m, fouille).A?.libelle, "Monter verser le pétrole");
+  // Le scénario fait (la lanterne allumée), la fouille reprend sa place.
+  client.recevoir({ t: "phare", etat: { ...etat, lanterne: true } });
+  assert.equal(client.proposer(m, fouille).A?.libelle, "Fouiller la réserve du gardien");
+});

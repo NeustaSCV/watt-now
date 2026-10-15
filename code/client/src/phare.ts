@@ -258,7 +258,11 @@ export class PhareClient {
     const c = propositions.cible;
     const dAvant = c ? Math.max(0, Math.hypot(c.x - position.x, c.z - position.z) - (c.rayon ?? 0.5)) : Infinity;
     // Un geste du phare passe devant ce qui est plus loin, ou devant rien ; un simple examen ne prend pas la place d'un geste.
-    if (!propositions.A || (choix.p.A && choix.d < dAvant)) return choix.p;
+    // Au pied de l'escalier, les gestes du scénario (monter verser, remettre, allumer) passent toujours avant le reste : la
+    // fouille de la réserve du gardien est posée sur la marque à la craie (on la fouille d'un peu plus loin).
+    const cible = choix.p.A && "message" in choix.p.A ? (choix.p.A.message as { cible?: { genre?: string; id?: string } }).cible : undefined;
+    const duScenario = cible?.genre === "phare" && cible.id === "escalier";
+    if (!propositions.A || (choix.p.A && (choix.d < dAvant || duScenario))) return choix.p;
     return propositions;
   }
 }
