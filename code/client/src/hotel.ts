@@ -12,6 +12,7 @@ import {
   CARTE,
   NOMS_PORTES,
   PORTEE_HOTEL,
+  RAYON_GRILLE,
   ROBOT,
   TEXTES_HOTEL,
   borneAlimentee,
@@ -109,7 +110,7 @@ export class ClientHotel {
     }
     // L'ascenseur : en bas, il monte avec la carte ; en haut, il redescend.
     const ascenseur = etage ? ASCENSEUR.haut : ASCENSEUR.bas;
-    garder(ascenseur.grille, { A: geste(etage ? "Redescendre par l'ascenseur" : "Appeler l'ascenseur", "ascenseur", "appeler_ascenseur"), B: examiner(etage ? TEXTES_HOTEL.ascenseurHaut : TEXTES_HOTEL.ascenseurBas) }, 0.9);
+    garder(ascenseur.grille, { A: geste(etage ? "Redescendre par l'ascenseur" : "Appeler l'ascenseur", "ascenseur", "appeler_ascenseur"), B: examiner(etage ? TEXTES_HOTEL.ascenseurHaut : TEXTES_HOTEL.ascenseurBas) }, RAYON_GRILLE);
     return meilleure ? (meilleure as { prop: Propositions }).prop : base;
   }
 }

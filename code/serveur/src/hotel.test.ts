@@ -5,8 +5,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { eteintsHotel } from "../../commun/src/eteints-hotel.ts";
-import { ASCENSEUR, BALCON, BORNE, CARTE, PANNEAU, ROBOT, TEXTES_HOTEL, butinHotel, lireEtatHotel, niveauHotel, pieceHotel, type EtatHotel } from "../../commun/src/hotel.ts";
-import { DUREE_VOYAGE_S, arriveeDans, entreesDe, sortiesDe } from "../../commun/src/lieux.ts";
+import { ClientHotel } from "../../client/src/hotel.ts";
+import { ASCENSEUR, BALCON, BORNE, CARTE, ECART_ASCENSEUR, PANNEAU, PORTEE_HOTEL, ROBOT, TEXTES_HOTEL, ZONE_HOTEL, butinHotel, horsDeLAscenseur, lireEtatHotel, niveauHotel, pieceHotel, type EtatHotel } from "../../commun/src/hotel.ts";
+import { DUREE_VOYAGE_S, arriveeDans, entreesDe, heurte, sortiesDe } from "../../commun/src/lieux.ts";
 import type { MessageServeur } from "../../commun/src/messages.ts";
 import { milieuHotel } from "../../commun/src/milieu-hotel.ts";
 import { REINITIALISATION_LIEU_MS } from "../../commun/src/registre-lieux.ts";
@@ -342,4 +343,82 @@ test("une partie d'avant la 0.10 se relit : un hôtel sans état du check-in est
   assert.deepEqual(a.hotel().checkIn, { batterie: "panneau", tete: "robot", degage: false });
   t.attendre(0.5);
   assert.deepEqual(a.dernier("hotel")?.hotel, { batterie: "panneau", tete: "robot", degage: false });
+});
+
+/** Ce que le client propose, debout sur ce point, avec l'état du check-in que le serveur a dit. */
+function proposeIci(etat: EtatHotel, p: { x: number; z: number }): string | undefined {
+  const client = new ClientHotel();
+  client.recevoir({ t: "hotel", hotel: etat });
+  return client.proposer(p, { A: null, B: null, cible: null }, {}).A?.libelle;
+}
+
+const loin = (o: unknown, g: { x: number; z: number }) => Math.hypot((o as { x: number }).x - g.x, (o as { z: number }).z - g.z);
+
+test("la tête posée devant la grille de l'ascenseur en est écartée, de notre côté : « Prendre la tête » est proposé là", () => {
+  const t = monter();
+  const a = t.nouveau("Rose");
+  const h = a.hotel();
+  calmer(h);
+  a.geste("robot", "degager", pres(ROBOT), Math.PI);
+  t.attendre(31);
+  a.geste("tete", "porter", pres(ROBOT), Math.PI);
+  // Devant la grille du bas, tourné vers elle : posée à 0,9 m, elle serait contre la grille.
+  a.joueur.position = { ...ASCENSEUR.bas.arrivee, o: Math.PI };
+  a.joueur.recevoir({ t: "poser" });
+  const posee = h.checkIn.tete as { x: number; z: number };
+  assert.equal(typeof posee, "object");
+  assert.ok(loin(posee, ASCENSEUR.bas.grille) >= ECART_ASCENSEUR, `écartée (${loin(posee, ASCENSEUR.bas.grille).toFixed(2)} m)`);
+  assert.ok(loin(posee, ASCENSEUR.bas.grille) > PORTEE_HOTEL, "hors de portée de l'appel");
+  assert.ok(posee.z > ASCENSEUR.bas.grille.z, "de notre côté (le hall)");
+  assert.equal(pieceHotel(posee.x, posee.z), "hall");
+  assert.ok(!heurte(ZONE_HOTEL, posee.x, posee.z, 0.35), "sur un point libre");
+  assert.equal(proposeIci(h.checkIn, posee), "Prendre la tête du robot");
+  a.geste("tete", "porter", posee);
+  assert.equal(h.checkIn.tete, "bras");
+  // Ailleurs, rien ne change : à 0,9 m devant soi.
+  a.joueur.position = { ...pres(BORNE), x: BORNE.x + 3, o: 0 };
+  a.joueur.recevoir({ t: "poser" });
+  assert.deepEqual(h.checkIn.tete, { x: BORNE.x + 3, z: Math.round((BORNE.z + 0.8 + 0.9) * 100) / 100 });
+  // Lâchée devant la grille en partant (une déconnexion) : écartée de même.
+  a.geste("tete", "porter", h.checkIn.tete as { x: number; z: number });
+  a.joueur.position = { ...ASCENSEUR.bas.arrivee, o: Math.PI };
+  t.partir(a.joueur);
+  const gardee = (t.base.chargerInstance(`grand_hotel:${a.id}`) as { propre: { hotel: EtatHotel } }).propre.hotel.tete;
+  assert.ok(loin(gardee, ASCENSEUR.bas.grille) >= ECART_ASCENSEUR, `lâchée, écartée (${loin(gardee, ASCENSEUR.bas.grille).toFixed(2)} m)`);
+});
+
+test("en haut aussi, ce qu'on pose devant la grille en est écarté, sur le palier, sur un point libre", () => {
+  const t = monter();
+  const a = t.nouveau("Rose");
+  const h = a.hotel();
+  calmer(h);
+  a.geste("batterie", "porter", pres(PANNEAU), Math.PI);
+  a.joueur.position = { ...ASCENSEUR.haut.arrivee, o: Math.PI / 2 };
+  a.joueur.recevoir({ t: "poser" });
+  const posee = h.checkIn.batterie as { x: number; z: number };
+  assert.ok(loin(posee, ASCENSEUR.haut.grille) >= ECART_ASCENSEUR, `écartée (${loin(posee, ASCENSEUR.haut.grille).toFixed(2)} m)`);
+  assert.equal(pieceHotel(posee.x, posee.z), "palier");
+  assert.ok(!heurte(ZONE_HOTEL, posee.x, posee.z, 0.35), "sur un point libre");
+  // Relue, elle ne bouge plus.
+  assert.deepEqual(horsDeLAscenseur(posee), posee);
+});
+
+test("la tête déjà posée contre la grille dans une partie gardée (la base de l'essai du porteur) en est écartée à l'entrée", () => {
+  const t = monter();
+  const c = t.base.creerCompte("Rose", "potager42", "mecanistes");
+  t.base.sauverInventaire(c.id, { sac_a_dos: 1 });
+  t.base.sauverPosition(c.id, { x: 29.5, z: 21, o: Math.PI }, "grand_hotel", t.maintenant());
+  // L'état tel qu'il est dans la base de l'essai sur l'iPhone : la tête à 0,64 m de la grille du bas.
+  const tete = { x: 30.02, z: 17.95 };
+  t.base.sauverInstance(`grand_hotel:${c.id}`, { detruits: [], portes: {}, pleineLe: t.maintenant(), propre: { hotel: { batterie: "panneau", tete, degage: true } } }, t.maintenant());
+  const a = t.connecter(c.id, "Rose");
+  calmer(a.hotel());
+  t.attendre(0.5);
+  const dite = a.dernier("hotel")!.hotel;
+  const posee = dite.tete as { x: number; z: number };
+  assert.ok(loin(posee, ASCENSEUR.bas.grille) >= ECART_ASCENSEUR, `écartée (${loin(posee, ASCENSEUR.bas.grille).toFixed(2)} m)`);
+  assert.equal(pieceHotel(posee.x, posee.z), "hall");
+  assert.equal(proposeIci(dite, posee), "Prendre la tête du robot");
+  a.geste("tete", "porter", posee);
+  assert.equal(a.hotel().checkIn.tete, "bras");
 });
