@@ -1,7 +1,8 @@
-// 0.10, R52 (« un lieu ne s'arrête jamais net », essai sur l'iPhone du 2026-10-15) : les bouts de la grève du phare. La
-// sortie de l'ouest (le sentier côtier) reste atteignable depuis le bas de la rampe ; à l'est, l'éboulis arrête sur les
-// galets comme dans l'eau, et ne coupe pas le pont de l'épave ; à l'ouest, au sud du sentier, les rochers ferment la
-// grève ; le décor dessine les rochers sur ces lignes, le sentier, la côte qui continue, la mer claire ou profonde.
+// 0.10, R52 (« un lieu ne s'arrête jamais net », essai sur l'iPhone du 2026-10-15) : les bouts de la grève du phare, tels
+// que le modèle les dessine depuis ses retouches de la 0.10 (P-1 à P-4, R0-3). La sortie de l'ouest (le sentier côtier)
+// reste atteignable depuis le bas de la rampe ; à l'est, l'éboulis arrête sur les galets comme dans l'eau, et ne coupe pas
+// le pont de l'épave ; à l'ouest, au sud du sentier, les rochers ferment la grève ; le décor du modèle dessine les rochers
+// sur ces lignes, la côte qui continue (ses alentours), et une seule mer, claire où l'on marche, sombre au large.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -24,9 +25,19 @@ if (!(globalThis as { document?: unknown }).document) Object.assign(globalThis, 
 
 const { avancer } = await import("../../../commun/src/deplacement.ts");
 const { heurte, dansBoite, sortiePourPartir } = await import("../../../commun/src/lieux.ts");
-const { EBOULIS_EST, ROCHERS_OUEST, SORTIES_PHARE, auModele, dansLaCoque, etageDuPhare, jeu, zonePhare } = await import("../../../commun/src/phare.ts");
+const { LARGEUR_EAU, SORTIES_PHARE, auModele, dansLEauPhare, dansLaCoque, etageDuPhare, jeu, zonePhare } = await import("../../../commun/src/phare.ts");
+const { SEGMENTS_MODELE } = await import("../../../commun/src/phare-modele.ts");
 const { creerPhare } = await import("./phare.ts");
-const { zLarge } = await import("./phare-bords.ts");
+
+/** Une ligne d'obstacles du modèle (ses segments mis bout à bout, du premier point au dernier). */
+function ligne(debut: string): { x1: number; z1: number; x2: number; z2: number } {
+  const s = SEGMENTS_MODELE.filter((q) => q.nature.startsWith(debut));
+  assert.ok(s.length > 3, debut);
+  return { x1: s[0]!.x1, z1: s[0]!.z1, x2: s.at(-1)!.x2, z2: s.at(-1)!.z2 };
+}
+/** L'éboulis de l'est et les rochers de l'ouest (P-3), obstacles du modèle. */
+const EBOULIS_EST = ligne("rochers : éboulis");
+const ROCHERS_OUEST = ligne("rochers au sud du sentier");
 
 /** Le x (repère du modèle) de la ligne de l'éboulis à ce z. */
 const xEboulis = (z: number) => EBOULIS_EST.x1 + ((EBOULIS_EST.x2 - EBOULIS_EST.x1) * (z - EBOULIS_EST.z1)) / (EBOULIS_EST.z2 - EBOULIS_EST.z1);
@@ -77,7 +88,7 @@ test("à l'est, l'éboulis arrête sur les galets et dans l'eau, là où l'on bu
   }
   // Dans l'eau peu profonde : de même.
   const z = 24;
-  assert.ok(z < zLarge(-6), "dans la bande d'eau praticable");
+  assert.ok(dansLEauPhare(jeu(-6, z).x, jeu(-6, z).z, false), "dans la bande d'eau praticable");
   const p = marcher({ x: -12, z }, 1, 0, 14, false);
   assert.ok(p.x < xEboulis(z) && p.x > xEboulis(z) - 0.9, `dans l'eau, arrêté en x ${p.x.toFixed(2)}`);
   // Avec l'épave : le pont reste entier là où passe la ligne de l'éboulis. Les boîtes de l'éboulis (celles de la crique
@@ -106,7 +117,7 @@ test("à l'ouest, au sud du sentier, les rochers ferment la grève et l'eau : on
   }
 });
 
-test("le décor : des rochers sur les deux lignes, le sentier, la côte au-delà du bord ouest du lot, la mer sombre au large", () => {
+test("le décor du modèle : des rochers sur les deux lignes, la côte au-delà des bords du lot, une seule mer, claire où l'on marche, sombre au large", () => {
   const decor = creerPhare();
   decor.updateMatrixWorld(true);
   // Les sommets de tout le décor, dans le repère du modèle.
@@ -127,28 +138,33 @@ test("le décor : des rochers sur les deux lignes, le sentier, la côte au-delà
     const zo = ROCHERS_OUEST.z1 + (ROCHERS_OUEST.z2 - ROCHERS_OUEST.z1) * t;
     assert.ok(autour(ROCHERS_OUEST.x1 - 1, zo, 1.5, -8.6), `les rochers de l'ouest à z ${zo.toFixed(1)}`);
   }
-  // La côte continue à l'ouest du lot (la falaise, à mi-hauteur), et les marches du sentier y montent.
-  assert.ok(autour(-45, 13, 2, -6), "la falaise au-delà du lot");
-  assert.ok(autour(-36, 14.5, 1.2, -6) && autour(-40.5, 13, 1.2, -2.5), "les marches");
-  // La mer : plus sombre au-delà de la bande où l'on marche.
-  let mer: THREE.Mesh | null = null;
+  // La côte continue hors du lot (les alentours du modèle : la falaise, à l'ouest comme à l'est), la lande au nord.
+  assert.ok(autour(-45, 13, 3, -6), "la falaise au-delà du lot, à l'ouest");
+  assert.ok(autour(45, 13, 3, -6), "la falaise au-delà du lot, à l'est");
+  assert.ok(autour(0, -45, 3, -1), "la lande au nord");
+  // La mer : une seule (le jeu ne pose plus la sienne : deux eaux se superposaient), plus claire sur la bande où l'on
+  // marche qu'au-delà de la ligne du large.
+  const mers: THREE.Mesh[] = [];
   decor.traverse((o) => {
     const m = o as THREE.Mesh;
-    if (!mer && m.isMesh && (m.material as THREE.MeshStandardMaterial).transparent && (m.material as THREE.MeshStandardMaterial).metalness === 0.25) mer = m;
+    if (m.isMesh && (m.material as THREE.MeshStandardMaterial).transparent && (m.material as THREE.MeshStandardMaterial).metalness === 0.25) mers.push(m);
   });
-  const g = (mer as unknown as THREE.Mesh).geometry;
+  assert.equal(mers.length, 1, "une seule mer");
+  const g = mers[0]!.geometry;
   const pos = g.getAttribute("position");
   const col = g.getAttribute("color");
+  assert.ok(col, "l'eau est coloriée par sommet");
   const teinte = (x: number, z: number) => {
     let best = -1, d0 = Infinity;
     for (let i = 0; i < pos.count; i++) {
       const d = Math.hypot(pos.getX(i) - x, pos.getZ(i) - z);
-      if (pos.getY(i) > -9.01 && pos.getY(i) < -8.99 && d < d0) {
+      if (pos.getY(i) > -9.3 && pos.getY(i) < -8.7 && d < d0) {
         d0 = d;
         best = i;
       }
     }
-    return col.getX(best);
+    return col.getX(best) + col.getY(best) + col.getZ(best);
   };
-  assert.ok(teinte(-18, zLarge(-18) - 1) > teinte(-18, zLarge(-18) + 2) + 0.3, "la bande claire, le large sombre");
+  // Le bord de l'eau du modèle à x − 18 est en z 22,8 ; le jeu y marche sur LARGEUR_EAU mètres.
+  assert.ok(teinte(-18, 22.8 + LARGEUR_EAU / 2) > teinte(-18, 22.8 + LARGEUR_EAU + 6) + 0.1, "la bande claire, le large sombre");
 });

@@ -14,7 +14,6 @@
 
 import * as THREE from "three";
 import * as PHARE from "../../batiments/phare/modele.js";
-import { matiereEau } from "../../batiments/commun/atelier.js";
 import { creerCargo, EPAVE } from "./cargo.js";
 import { creerMer, creerCiel, materiauFaisceau, geoCone, halo, creerGerbe, creerAnneau, creerSillage, NB_FEUX } from "./effets.js";
 import { prolongerTerrain } from "./terrain.js";
@@ -30,6 +29,9 @@ const COUL = {
   nuage: 0x323b52,
   fond: 0x07121b,
 };
+
+/** Une matière d'eau du modèle (matiereEau de l'atelier : transparente, lisse, un peu métallique), quelle que soit sa teinte. */
+const estEau = (m) => !!m && m.transparent && m.roughness === 0.15 && m.metalness === 0.25;
 
 /** La variante 1 de la maquette : « Plongée sur la crique depuis le large, la tour à gauche ». */
 const PLAN = { phase: 2.3, pos: [-20, 45, 85], cible: [-6, -4, 16], fovP: 55, fovL: 34 };
@@ -79,11 +81,12 @@ export function creerSceneCargo(T, options = {}) {
   objets.lanterne_allumee.visible = true;
   objets.prisme_manquant.visible = true;
   objets.epave_apres.visible = false;
-  // La mer du lot (une tranche d'eau du lot) laisse la place à la grande mer de la maquette
-  const merDuLot = matiereEau(0x3e6c74, 0.86);
+  // La mer du modèle laisse la place à la grande mer de la maquette ; ses alentours (0.10, R52 : la falaise et la lande
+  // prolongées) au cap de la maquette (prolongerTerrain), fait pour ce plan : le plan reste celui que le porteur a validé.
   phare.traverse((o) => {
-    if (o.isMesh && o.material === merDuLot) o.visible = false;
+    if (o.isMesh && estEau(o.material)) o.visible = false;
   });
+  if (objets.alentours) objets.alentours.visible = false;
   const terrain = prolongerTerrain();
   matieresPropres([phare, terrain]);
   const ecume = phare.getObjectByName("écume");

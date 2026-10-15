@@ -13,7 +13,7 @@ import type { MessageServeur } from "../../commun/src/messages.ts";
 import type { Inventaire } from "../../commun/src/objets.ts";
 import { TEXTES_PEAGE } from "../../commun/src/peage.ts";
 import { ENDROITS_PHARE, jeu as auPhare, type EtatPhareVu } from "../../commun/src/phare.ts";
-import { DUREE_MAREE_MS, ECHELLE_MAREE, PORTE_PEAGE, SORTIES_ROUTE_PONT, auPont } from "../../commun/src/route-pont.ts";
+import { CAISSE_PEAGE, DUREE_MAREE_MS, ECHELLE_MAREE, PORTE_PEAGE, SORTIES_ROUTE_PONT, auPont } from "../../commun/src/route-pont.ts";
 import type { Propositions } from "./interaction.ts";
 
 type Point = { x: number; z: number };
@@ -377,12 +377,15 @@ test("Chaque écriteau propose « Lire » sur B et montre son texte ; A reste ce
   // Ailleurs que dans son lieu : rien.
   const e1 = ECRITEAUX.find((e) => e.id === "E-01")!;
   assert.equal(g.proposer("corniche", e1.points[0]!, rien), rien);
-  // Devant la porte du péage : A paie toujours, B lit le panneau (le même geste qu'Examiner, un autre libellé).
-  const payer: Propositions = { A: { libelle: "Payer le péage", ouvrirCaisse: "pont" }, B: { libelle: "Examiner", examiner: TEXTES_PEAGE.pont.ferme }, cible: { x: PORTE_PEAGE.x, z: PORTE_PEAGE.z, rayon: 0.9 } };
-  const devant = g.proposer("route_pont", { x: PORTE_PEAGE.x - 1.2, z: PORTE_PEAGE.z }, payer);
+  // Entre la caisse (devant la porte du péage depuis la 0.10, H-1) et le panneau de la porte, plus près du panneau : A paie
+  // toujours, B lit le panneau (le même geste qu'Examiner, un autre libellé). Tout contre la caisse, elle garde son Examiner.
+  const payer: Propositions = { A: { libelle: "Payer le péage", ouvrirCaisse: "pont" }, B: { libelle: "Examiner", examiner: TEXTES_PEAGE.pont.examen }, cible: { x: CAISSE_PEAGE.x, z: CAISSE_PEAGE.z, rayon: 0.5 } };
+  const entre = { x: (CAISSE_PEAGE.x + PORTE_PEAGE.x) / 2 - 0.5, z: (CAISSE_PEAGE.z + PORTE_PEAGE.z) / 2 - 0.3 };
+  const devant = g.proposer("route_pont", entre, payer);
   assert.equal(devant.A, payer.A);
   assert.ok(devant.B && "examiner" in devant.B);
   assert.equal(devant.B.examiner, "« PÉAGE · 12 WOTTS / TÊTE · DANS LA CAISSE ↓ · UN À LA FOIS ! »");
+  assert.equal(g.proposer("route_pont", { x: CAISSE_PEAGE.x - 0.3, z: CAISSE_PEAGE.z + 0.3 }, payer), payer);
   // Quelque chose de nettement plus près (la batterie, au pied du panneau Zéro-Effort) garde son Examiner.
   const batterie: Propositions = { A: { libelle: "Prendre la batterie", examiner: "" }, B: { libelle: "Examiner", examiner: "batterie" }, cible: { x: PANNEAU.x, z: PANNEAU.z, rayon: 0.4 } };
   assert.equal(g.proposer("grand_hotel", { x: PANNEAU.x + 0.3, z: PANNEAU.z - 0.3 }, batterie), batterie);

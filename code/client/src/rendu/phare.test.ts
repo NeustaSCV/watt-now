@@ -24,6 +24,7 @@ if (!(globalThis as { document?: unknown }).document) Object.assign(globalThis, 
 
 const { avancer } = await import("../../../commun/src/deplacement.ts");
 const { ENDROITS_PHARE, jeu, zonePhare } = await import("../../../commun/src/phare.ts");
+const { EPAVE_MODELE } = await import("../../../commun/src/phare-modele.ts");
 const { animerPhare, creerPhare, solPhare } = await import("./phare.ts");
 const { PhareClient } = await import("../phare.ts");
 
@@ -95,8 +96,10 @@ test("avec l'épave : le pont du cargo est à − 4, l'échelle de coupée desce
   const pont = jeu(-5, 20);
   assert.ok(Math.abs(solPhare(pont.x, pont.z, true) + 4.1) < 0.3);
   assert.ok(solPhare(pont.x, pont.z, false) < -8.5);
-  const bas = jeu(-13.1, 21.7);
-  const haut = jeu(-7.5, 20.2);
+  // L'échelle de coupée (FICHE.epave.echelle), un pas en deçà de ses deux bouts.
+  const { bas: b, haut: h } = EPAVE_MODELE.echelle;
+  const bas = jeu(b.x + (h.x - b.x) * 0.05, b.z + (h.z - b.z) * 0.05);
+  const haut = jeu(b.x + (h.x - b.x) * 0.95, b.z + (h.z - b.z) * 0.95);
   assert.ok(solPhare(bas.x, bas.z, true) < -8);
   assert.ok(solPhare(haut.x, haut.z, true) > -4.6);
   // Le plateau et la marque à la craie : à plat.
@@ -245,27 +248,23 @@ test("le cargo qui approche, la nuit, braque son projecteur sur la crique (une l
   assert.equal(lumieresPhare({ etat, epave: false, feux: { x: 20, z: 70, cap: Math.PI } }, false).length, 0, "le jour, rien");
 });
 
-test("la clôture : un muret sur la limite du lot, ouvert sur la route au nord, sans obstacle de plus ; un appel de dessin", async () => {
-  const { CLOTURE, tronconsCloture } = await import("./phare-cloture.ts");
-  const { SORTIES_PHARE, zonePhare } = await import("../../../commun/src/phare.ts");
-  const decor = creerPhare();
-  const muret = decor.children.find((o) => o.name.startsWith("clôture"))! as THREE.Mesh;
-  assert.ok(muret, "le muret est dans le décor");
-  assert.ok(!Array.isArray(muret.material), "un seul matériau : un appel de dessin");
+test("la clôture : le muret de pierres sèches du modèle (P-1) borde le lot au nord, à l'ouest et à l'est, juste au-delà de la limite, ouvert sur la route au nord", async () => {
+  const { SORTIES_PHARE, zonePhare, jeu: auJeu } = await import("../../../commun/src/phare.ts");
+  const { SEGMENTS_MODELE } = await import("../../../commun/src/phare-modele.ts");
   const zone = zonePhare({ epave: false });
-  // Tout le muret est hors de ce qu'on foule : au-delà de la limite de la zone (côté lande), sur sa ligne.
-  muret.geometry.computeBoundingBox();
-  const pos = muret.geometry.getAttribute("position");
-  for (let i = 0; i < pos.count; i++) {
-    const x = pos.getX(i);
-    const z = pos.getZ(i);
-    const dehors = x <= zone.xMin || x >= zone.xMax || z <= zone.zMin;
-    assert.ok(dehors, `une pierre empiète sur le lieu (${x.toFixed(2)}, ${z.toFixed(2)})`);
+  const muret = SEGMENTS_MODELE.filter((s) => s.nature.startsWith("muret de pierres sèches")).map((s) => ({ a: auJeu(s.x1, s.z1), b: auJeu(s.x2, s.z2) }));
+  assert.ok(muret.length >= 4, "le muret");
+  // Sur la limite (à moins d'un demi-mètre), côté lande : il ne mange rien de ce qu'on foule.
+  for (const { a, b } of muret) {
+    for (const p of [a, b]) assert.ok(p.x <= zone.xMin || p.x >= zone.xMax || p.z <= zone.zMin, `une pierre dans le lieu (${p.x.toFixed(2)}, ${p.z.toFixed(2)})`);
+    if (a.x === b.x) assert.ok(Math.abs(a.x - zone.xMin) < 0.5 || Math.abs(a.x - zone.xMax) < 0.5);
+    else assert.ok(Math.abs(a.z - zone.zMin) < 0.5);
   }
-  // La route d'arrivée reste ouverte : aucun tronçon ne traverse la sortie du nord.
+  // Les trois bords : l'ouest, le nord, l'est.
+  assert.ok(muret.some(({ a, b }) => a.x === b.x && a.x < zone.xMin) && muret.some(({ a, b }) => a.x === b.x && a.x > zone.xMax));
+  // La route d'arrivée reste ouverte : aucun tronçon du nord ne traverse la sortie.
   const s = SORTIES_PHARE[0]!;
-  for (const t of tronconsCloture()) if (t.z1 === t.z2) assert.ok(t.x2 <= s.boite.x - s.boite.l / 2 || t.x1 >= s.boite.x + s.boite.l / 2);
-  assert.ok(CLOTURE.retrait + CLOTURE.largeur / 2 < zone.xMin + 0.01);
+  for (const { a, b } of muret) if (a.z === b.z) assert.ok(Math.max(a.x, b.x) <= s.boite.x - s.boite.l / 2 + 0.01 || Math.min(a.x, b.x) >= s.boite.x + s.boite.l / 2 - 0.01, `le muret coupe la route (${a.x} → ${b.x})`);
 });
 
 test("au pied de l'escalier, la fouille de la réserve (posée sur la marque) ne cache pas « Monter allumer la lanterne »", () => {

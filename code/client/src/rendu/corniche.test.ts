@@ -77,10 +77,11 @@ test("le pin se montre débité quand je l'ai vidé, entier quand il est revenu 
   assert.ok(!c.objet("barricade_fermee")!.visible && c.objet("barricade_ouverte")!.visible);
 });
 
-test("la nuit, les lumières du modèle s'allument (le brasero des pillards, le feu de la terrasse) ; le jour, aucune", () => {
+test("la nuit, les lumières du modèle s'allument (le brasero des pillards, le feu de la terrasse, les lanternes des deux panneaux de sortie) ; le jour, aucune", () => {
   const c = new RenduCorniche();
   assert.deepEqual(c.lumieres(false), []);
   const nuit = c.lumieres(true);
-  assert.ok(nuit.length >= 8 && nuit.length <= 10);
+  assert.ok(nuit.length >= 10 && nuit.length <= 12, `${nuit.length} lumières`);
+  assert.equal(nuit.filter((l) => l.couleur === 0xffcf8a && l.y > 2.5 && (l.x < 5 || l.x > 195)).length, 2, "les deux lanternes, aux deux bouts");
   assert.ok(nuit.some((l) => l.vacillement > 0), "les flammes vacillent");
 });

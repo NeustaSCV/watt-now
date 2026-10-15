@@ -14,6 +14,11 @@
 //
 // Les objets nommés (T2, T3) : creer() les range dans groupe.userData.objets ; l'état de départ est visible
 // (lanterne_eteinte…), l'autre caché (lanterne_allumee, prisme_manquant, epave_apres et tout ce qu'elle contient).
+//
+// Retouches de la 0.10 (R52 « un lieu ne s'arrête jamais net ») : le muret de pierres sèches de la lande, le sentier
+// côtier et son panneau à lanterne sur les galets, le panneau de l'arrivée, l'éboulis de l'est et les rochers de l'ouest
+// de la grève, la mer en une seule nappe (claire où l'on marche, sombre au large, la ligne de brisants), les alentours
+// (lande, falaise prolongée, route du nord), l'échelle de coupée droite et la coupée ouverte, la couche des conteneurs.
 
 import * as THREE from "three";
 import { Batiment, Chantier, aleatoire, PALETTE, matiere, matiereMonde, matiereVerre, matiereEau, matiereLueur, mur, lierre, touffes, gravats, debris, jonchee, mousse, arbuste, raiDeLumiere, toitDeuxPans, dessiner } from "../commun/atelier.js";
@@ -48,13 +53,32 @@ export const FICHE = {
     "La falaise de granit à facettes qui plonge de 9 m, la crique et sa grève de galets, l'îlot et sa tourelle noire et rouge",
     "Après l'échouage : le « Prime Abondance » cassé en deux sur les rochers, la cale ouverte, l'échelle de coupée, la cloche sur la proue, les conteneurs de la Livraison du Jour éventrés sur la grève",
     "Le chemin des douaniers et ses bornes blanches, où dorment les Éteints",
+    "Les bords (R52) : le muret de pierres sèches de la lande, ouvert sur la route d'arrivée qui continue au nord ; la falaise qui file à l'est et à l'ouest ; l'éboulis qui ferme la grève à l'est, le chaos de rochers au sud de la sortie ouest",
+    "Le sentier côtier : terre battue bordée de pierres et de bornes blanc et rouge, au pied de la falaise ; hors du lot, une banquette au ras de l'eau et des marches taillées dans le rocher",
+    "Les deux panneaux de sortie et leur lanterne : « ← La corniche · Ton terrain » à l'arrivée, « Sentier côtier · ← Port · 6 km » sur les galets",
+    "La mer : claire et turquoise là où l'on marche jusqu'aux genoux, sombre au large, la ligne de brisants entre les deux",
   ],
   lot: { l: 60, p: 50 },
   solPropre: true, // la falaise et la mer descendent sous y = 0 : le lot fournit tout son sol
   depart: { x: 6, z: 7.5 },
   // Le bord du lot (T5) : le muret de l'enceinte et la falaise (arête notée en obstacle) ; à l'ouest, au nord et à l'est
   // le plateau s'ouvre sur la lande (affleurements, ajoncs) ; dans la crique, la falaise au nord et la mer au sud.
-  bords: "falaise et mer au sud (arête, pied de falaise et bord de l'eau notés en obstacles) ; lande ouverte au nord, à l'ouest et à l'est ; la grève de la crique sort du lot à l'ouest",
+  bords: "R52 : au nord, à l'ouest et à l'est, un muret de pierres sèches au ras de la limite (x ± 29,75, z − 24,75 ; obstacle), ouvert au nord sur la route d'arrivée (x − 5 à 2) ; au sud, l'arête de la falaise ; dans la crique, le pied de la falaise, l'eau peu profonde puis le large, l'éboulis de l'est (de x − 3, z 15 à x − 5,7, z 28) et les rochers au sud de la sortie ouest (x − 29,2, z 18,6 à 26,8), notés en obstacles « rochers… » ; la sortie : le sentier côtier, à l'ouest, au pied de la falaise (z ≈ 16 à 17,5)",
+  // R0-2 : le décor au-delà du lot, dans le groupe nommé `alentours` (userData.objets.alentours) : la lande (jusqu'à
+  // 70 à 100 m), la falaise qui continue à l'est et à l'ouest, le fond de la mer, la route du nord, le sentier hors du lot
+  alentours: "groupe `alentours` : lande au nord, à l'ouest et à l'est ; falaise prolongée à l'est (P-4) et à l'ouest (la banquette et les marches du sentier côtier) ; la route d'arrivée qui continue au nord et se perd dans la lande ; aucun obstacle",
+  // R0-1 : les panneaux de sortie (objets nommés : des repères, leurs maillages sont fondus dans ceux du lieu)
+  panneaux: [
+    { id: "panneau_sortie_nord", x: 1.3, z: -22.6, texte: "← La corniche · Ton terrain", sortie: "nord (la route d'arrivée)", lanterne: { x: 1.7, y: 2.23, z: -22.2 } },
+    { id: "panneau_sortie_greve", x: -26.6, z: 22.2, y: -8.94, texte: "Sentier côtier · ← Port · 6 km", sortie: "grève, à l'ouest (le sentier côtier)", lanterne: { x: -26.2, y: -6.71, z: 22.6 } },
+  ],
+  // R0-3 : la mer, une seule matière ; l'eau peu profonde (où l'on marche) le long de la grève, de x − 29,6 à − 3,6
+  mer: {
+    niveau: -9,
+    peuProfonde: "dans la crique, de x − 29,6 à x − 3,6 : du bord de l'eau (≈ z 23,2 à 23,9) jusqu'à 3,2 m au large, soit la ligne du large du jeu (bord de l'eau du modèle moins 30 cm, plus 3,5 m) ; claire et turquoise",
+    profonde: "au-delà de la ligne de brisants, et partout ailleurs (au pied de la falaise hors de la crique) ; sombre",
+    ligneDuLarge: [[-29.6, 24.2], [-28, 26.3], [-24, 26.1], [-20, 26.4], [-16, 26.4], [-12, 26.8], [-8, 26.9], [-5, 27.1], [-4, 26.6]],
+  },
   entrees: [
     { x: 2.3, z: 1.5, nature: "grille du sud de l'enceinte (depuis le chemin des douaniers)" },
     { x: -1.5, z: -16, nature: "grille du nord (la route d'accès)" },
@@ -64,12 +88,12 @@ export const FICHE = {
     { x: -20, z: 7.5, nature: "porte latérale du hangar à bateau" },
     { x: -24, z: 12, nature: "grande porte du hangar, ouverte sur la rampe du canot (descente vers la crique)" },
     { x: 15, z: 7, nature: "porte de la salle de la corne de brume" },
-    { x: -29.6, z: 20, y: -8.8, nature: "la grève de galets de la crique, vers l'ouest : on ressort par là" },
+    { x: -29.6, z: 16.6, y: -8.8, nature: "le sentier côtier, au pied de la falaise, à l'ouest de la grève : on ressort par là (panneau au départ, près de l'eau, x − 26,6, z 22,2)" },
   ],
   // P4 : l'escalier de la tour reprend à 3 m ; la marque à la craie où poser l'escabeau, sous la première marche
   escabeau: { marque: { x: -12.01, z: -8.25 }, premiereMarche: { x: -12.01, z: -8.25, y: 3.04 } },
   // K2 : la hauteur du sol où l'on marche
-  hauteurSol: "export hauteurSol(x, z, { epave }) : y du sol où l'on marche, dans le repère du lot (celui des obstacles et de la FICHE) ; 0 sur le plateau (tour, enclos, maisons, hangar), la pente de la rampe du canot (partie haute puis partie basse affaissée), les galets de la crique (≈ −8,7 à −9) ; avec epave: true (epave_apres montrée) en plus l'échelle de coupée, le pont du cargo et le conteneur d'outillage (≈ −4,1) et le plancher des deux conteneurs de la grève ; sans épave, à ces endroits, la grève ou le fond de l'eau",
+  hauteurSol: "export hauteurSol(x, z, { epave }) : y du sol où l'on marche, dans le repère du lot (celui des obstacles et de la FICHE) ; 0 sur le plateau (tour, enclos, maisons, hangar), la pente de la rampe du canot (partie haute puis partie basse affaissée), les galets de la crique et le sentier côtier (≈ −8,7 à −9) ; avec epave: true (epave_apres montrée) en plus le pont du cargo et le conteneur d'outillage (≈ −4,1), l'échelle de coupée (droite vers l'ouest, z 20,44 à 22,46, de x − 7,2 à − 15) et le plancher des deux conteneurs de la grève ; sans épave, à ces endroits, la grève ou le fond de l'eau",
   // La descente vers la crique (P8) : la rampe du canot, praticable du hangar (y = 0) jusqu'à la grève (y ≈ −8,8) ; un
   // tronçon effondré se saute vers le bas (≈ 1,5 m) et ne se remonte pas.
   sensUnique: [
@@ -119,12 +143,17 @@ export const FICHE = {
     soufflet: "le soufflet de forge, dans le conteneur de la Livraison du Jour (enfant de epave_apres)",
     rabot: "le rabot, dans le conteneur d'outillage sur le pont (enfant de epave_apres)",
     jerrican: "le jerrican de 20 L, avec les bidons du bord dans le conteneur des provisions (enfant de epave_apres)",
+    alentours: "le décor au-delà du lot (R0-2) : lande, falaise prolongée, route du nord, sentier hors du lot (un groupe, toujours visible)",
+    panneau_sortie_nord: "le panneau de sortie de l'arrivée, « ← La corniche · Ton terrain », et sa lanterne (repère sans maillage : userData.texte, userData.lanterne)",
+    panneau_sortie_greve: "le panneau du sentier côtier sur les galets, « Sentier côtier · ← Port · 6 km », et sa lanterne (repère sans maillage)",
   },
   // Les obstacles de l'épave (coque, conteneurs, échelle de coupée) n'existent qu'après l'échouage : ils sont à part,
   // dans groupe.userData.obstaclesEpave (comme obstaclesTraversee du gué), et non dans userData.obstacles.
   epave: {
     note: "le jeu ajoute groupe.userData.obstaclesEpave quand il montre epave_apres. On monte sur le pont par l'échelle de coupée (pente raide, de la grève y ≈ −8,8 au pont y ≈ −4,2) ; la cloche est sur la proue, le conteneur d'outillage sur le pont. La couche « coque de l'épave » s'efface quand elle cache le joueur sur la grève (hauteurs comptées depuis la grève), pas quand il est à bord (horsDe).",
-    echelle: { bas: { x: -13.26, z: 21.74, y: -8.85 }, haut: { x: -7.27, z: 20.13, y: -4.06 } },
+    // P-5 : l'échelle descend droit vers l'ouest (alignée sur les axes), 2 m de large, ≈ 30° ; le pavois est ouvert à la
+    // coupée (côté grève, entre les stations 2,2 et 4,2 de la coque) ; rambardes (obstacles) en z 20,44 et 22,46
+    echelle: { bas: { x: -15.0, z: 21.45, y: -8.73 }, haut: { x: -7.16, z: 21.45, y: -4.01 }, largeur: 2.02, zN: 20.44, zS: 22.46 },
     cloche: { x: -5.14, z: 17.28, y: -3.5 },
   },
   fouille: [
@@ -153,7 +182,7 @@ export const FICHE = {
     { x: -10.4, z: 17.3, y: -8.6, apresEpave: true, quoi: "conteneur des provisions du bord : le jerrican de 20 L (jerrican), fûts et bidons, conserves de l'équipage" },
     { x: -2.5, z: 21.6, y: -4.1, apresEpave: true, quoi: "conteneur d'outillage sur le pont : le rabot (rabot), caisses à outils, élingues" },
     { x: -5.1, z: 17.6, y: -3.9, apresEpave: true, quoi: "la proue : la cloche du cargo (cloche_cargo), le guindeau, les chaînes d'ancre" },
-    { x: -15.5, z: 20.9, y: -8.8, apresEpave: true, quoi: "cartons de la Livraison du Jour éventrés sur la grève : « Livré avant d'être commandé »" },
+    { x: -15.4, z: 22.75, y: -8.8, apresEpave: true, quoi: "cartons de la Livraison du Jour éventrés sur la grève : « Livré avant d'être commandé »" },
   ],
   eteints: [
     { x: -2.6, z: -5.2, type: "ancien habitant (le dernier gardien, ciré jaune délavé)" },
@@ -161,7 +190,7 @@ export const FICHE = {
     ...DORMEURS.map(([x, z], i) => ({ x, z, type: `dormeur (couché le long du chemin des douaniers, ${i + 1}/${DORMEURS.length} ; se lève quand la lanterne s'allume)` })),
     { x: -27.4, z: 22.0, y: -8.9, type: "Noyé (au bord de l'eau, sur la grève de la crique)" },
     { x: -19.8, z: 22.1, y: -8.9, type: "Noyé (au bord de l'eau, sur la grève de la crique)" },
-    { x: -14.4, z: 22.4, y: -8.9, type: "Noyé (au pied de l'échelle de coupée, au bord de l'eau)" },
+    { x: -16.4, z: 22.8, y: -8.9, type: "Noyé (au pied de l'échelle de coupée, au bord de l'eau)" },
   ],
 };
 
@@ -212,6 +241,9 @@ const R = {
   coque: [512, 512, 512, 128], // le nom du cargo, sur la joue de la proue
   carton: [512, 640, 256, 128], // l'étiquette des cartons de la Livraison du Jour
   porteC: [768, 640, 256, 256], // les portes d'un conteneur, barres de fermeture
+  // Les panneaux de sortie (R0-1) : grosses lettres sombres sur fond clair (1,7 × 0,95 m)
+  panneauNord: [0, 768, 384, 216],
+  panneauGreve: [384, 768, 384, 216],
 };
 
 let MATS = null;
@@ -231,7 +263,9 @@ function matieres() {
     tole: matiere(0.75, 0.3),
     metal: matiere(0.4, 0.7),
     verre: matiereVerre(PALETTE.verreSombre, 0.4),
-    mer: matiereEau(MER, 0.86),
+    // R0-3 : une seule matière pour toute la mer (lot et alentours) ; la teinte vient des sommets (claire où l'on marche,
+    // profonde au-delà)
+    mer: matiereEau(0xffffff, 0.86),
     lueur: matiereLueur(0xfff0c8, 0.16),
     panneaux,
     ecume,
@@ -248,6 +282,7 @@ export function creer({ usure = 0.7 } = {}) {
 
   terrain(b, c, M, usure);
   enceinte(b, c, M, usure);
+  muret(b, c, M, usure);
   tour(b, c, M, usure);
   piedDeTour(b, c, M, usure);
   maisons(b, c, M, usure);
@@ -259,37 +294,50 @@ export function creer({ usure = 0.7 } = {}) {
   corne(b, c, M, usure);
   abriDouanier(b, c, M, usure);
   rivage(b, c, M, usure);
+  // Les panneaux de sortie (R0-1) : des repères nommés ; leur planche, leur poteau et leur lanterne sont fondus ici
+  const panneaux = PANNEAUX.map((p) => panneauSortie(b, c, M, p));
 
   // Les objets nommés du phare (la lanterne et sa lentille, le prisme tombé, le bidon, l'escabeau, le harpon, la courroie)
   const lanternes = lanterne(M);
   const objetsLieu = objetsPhare(M);
-  for (const o of [...lanternes, ...objetsLieu]) b.ajouter(o);
+  for (const o of [...lanternes, ...objetsLieu, ...panneaux]) b.ajouter(o);
+  // Le décor au-delà du lot (R0-2) : la lande, la falaise qui continue, la route du nord, le sentier hors du lot
+  const al = alentours(M);
+  b.ajouter(al);
   // L'épave (cachée au départ), avec sa couche et ses obstacles à part
   const ep = epave(b, M, usure);
 
   // La nuit : la lanterne allumée (un signal visible de loin, qui attire les Éteints), le feu de la cuisinière, le
-  // photophore du hangar, une bougie dans la chambre ; le feu de détresse du cargo (avec l'épave).
+  // photophore du hangar, une bougie dans la chambre ; le feu de détresse du cargo (avec l'épave) ; les lanternes des deux
+  // panneaux de sortie (panneauSortie).
   b.lumiere(TX, 28.1, TZ, 0xffb45a, 40, 46, "lanterne du phare allumée (seulement quand lanterne_allumee est montrée ; signal : attire les Éteints)");
   b.lumiere(-4.5, 0.7, -7.9, 0xff8a3d, 10, 9, "feu de la cuisinière");
   b.lumiere(-27.1, 1.4, 6, 0xbfe6ff, 3, 6, "photophore solaire « Watty Glow » sur l'établi du hangar");
   b.lumiere(4.6, 0.95, -10.3, 0xffc070, 2.5, 5, "bougie");
 
-  // Le faîtage de zinc des toits (atelier : une matière « tôle ») rejoint la matière mate de la couche des maisons : un
-  // appel de dessin de moins
-  const km = b.couches.find((q) => q.nom.startsWith("maisons")).c;
-  const zinc = km.lots.get(M.tole);
-  if (zinc && km.lots.has(M.mat)) {
-    km.lots.get(M.mat).push(...zinc);
-    km.lots.delete(M.tole);
-  }
+  // Des matières proches fondues (P-10), pour faire de la place aux bords du lot : le faîtage de zinc des maisons et la tôle
+  // du toit du hangar rejoignent la matière mate de leur couche ; le satiné du sol (bouées, mobilier) rejoint le mat
+  fondreLot(b.couches.find((q) => q.nom.startsWith("maisons")).c, M.tole, M.mat);
+  fondreLot(b.couches.find((q) => q.nom.startsWith("hangar")).c, M.tole, M.mat);
+  fondreLot(c, M.satine, M.mat);
 
   const groupe = b.construire();
   // La lanterne s'efface avec le fût ; la cloche et le rabot avec la coque de l'épave
   fondreAvec(groupe, "tour du phare (fût, galerie, lanterne)", lanternes);
   fondreAvec(groupe, ep.nomCouche, ep.fondus);
-  // La couche de la coque passe dans epave_apres : cacher l'épave cache tout
-  const coque = groupe.children.find((o) => o.name === ep.nomCouche);
-  if (coque) ep.groupe.add(coque);
+  // Les couches de la coque et des conteneurs passent dans epave_apres : cacher l'épave cache tout
+  for (const nom of [ep.nomCouche, ep.nomConteneurs]) {
+    const o = groupe.children.find((q) => q.name === nom);
+    if (o) ep.groupe.add(o);
+  }
+  // P-7 : les toits et parois des trois conteneurs sont une seule couche (mêmes matières) ; elle s'efface quand on entre
+  // dans l'un d'eux (une entrée par conteneur, hauteurs comptées depuis son plancher : solCouche), et avec la coque
+  const kc = groupe.userData.toits.find((t) => t.nom === ep.nomConteneurs);
+  if (kc) {
+    const [premier, ...autres] = ep.entreesConteneurs;
+    Object.assign(kc, premier, { nom: ep.nomConteneurs, conteneur: premier.nom });
+    for (const e of autres) groupe.userData.toits.push({ ...e, materiaux: kc.materiaux });
+  }
   ep.groupe.visible = false;
   groupe.add(ep.groupe);
   groupe.userData.obstaclesEpave = ep.obstacles;
@@ -298,6 +346,15 @@ export function creer({ usure = 0.7 } = {}) {
   for (const id of Object.keys(FICHE.objets)) objets[id] = groupe.getObjectByName(id) ?? null;
   groupe.userData.objets = objets;
   return groupe;
+}
+
+/** Verse les pièces d'une matière dans une autre, dans un chantier (un appel de dessin de moins). */
+function fondreLot(ch, de, vers) {
+  const lot = ch.lots.get(de);
+  if (!lot) return;
+  if (ch.lots.has(vers)) ch.lots.get(vers).push(...lot);
+  else ch.lots.set(vers, lot);
+  ch.lots.delete(de);
 }
 
 /** Ajoute les matières des objets nommés à une couche qui s'efface (des copies : elles se fondent avec elle). */
@@ -363,9 +420,14 @@ function pignon(c, mat, couleur, x, zc, p, y0, hf, ep = 0.3) {
   g.dispose();
 }
 
-const ROCHE = new THREE.DodecahedronGeometry(1, 0);
+// Les rochers : un icosaèdre déformé (20 facettes au lieu de 36 : P-10, place faite aux bords du lot)
+const ROCHE = new THREE.IcosahedronGeometry(1, 0);
 const BRIN = new THREE.ConeGeometry(0.07, 0.42, 3, 1, true).translate(0, 0.21, 0);
 const BOULE = new THREE.IcosahedronGeometry(1, 0);
+/** Une plaque à plat (deux triangles), face vers le haut : taches, lichen, écume, sentier. */
+const PLAQUE = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
+/** Un caillou (huit triangles). */
+const CAILLOU = new THREE.OctahedronGeometry(1, 0);
 
 /** Un rocher de granit à facettes, avec un peu de lichen jaune sur le dessus. */
 function rocher(c, x, z, s, y = 0, ton = ROC, elance = 1) {
@@ -374,7 +436,7 @@ function rocher(c, x, z, s, y = 0, ton = ROC, elance = 1) {
   const ez = s * c.entre(0.9, 1.4);
   c.poser(ROCHE, matiere(0.95), ton, { x, y, z, rx: c.entre(-0.3, 0.3), ry: c.hasard() * 3, rz: c.entre(-0.3, 0.3), e: [ex, ey, ez] }, { nuance: 0.12 });
   if (c.hasard() < 0.55) {
-    for (let i = 0; i < 2; i++) c.boite(s * c.entre(0.3, 0.6), 0.02, s * c.entre(0.25, 0.5), c.hasard() < 0.5 ? 0xc9a548 : 0xb7b48a, { x: x + c.entre(-0.3, 0.3) * s, y: y + ey * 0.92, z: z + c.entre(-0.3, 0.3) * s, ry: c.hasard() * 3 }, matiere(0.95), { crasse: false, nuance: 0.1 });
+    for (let i = 0; i < 2; i++) c.poser(PLAQUE, matiere(0.95), c.hasard() < 0.5 ? 0xc9a548 : 0xb7b48a, { x: x + c.entre(-0.3, 0.3) * s, y: y + ey * 0.93, z: z + c.entre(-0.3, 0.3) * s, ry: c.hasard() * 3, e: [s * c.entre(0.3, 0.6), 1, s * c.entre(0.25, 0.5)] }, { crasse: false, nuance: 0.1 });
   }
 }
 
@@ -390,12 +452,12 @@ function herbeCouchee(c, x, z, y = 0, n = 4) {
 function armerie(c, x, z, y = 0) {
   const s = c.entre(0.22, 0.4);
   c.poser(BOULE, matiere(), 0x55703f, { x, y: y + s * 0.15, z, e: [s, s * 0.45, s], ry: c.hasard() * 3 }, { nuance: 0.08, crasse: false });
-  const n = 2 + Math.floor(c.hasard() * 3);
+  const n = 2 + Math.floor(c.hasard() * 2);
   for (let i = 0; i < n; i++) {
     const a = c.hasard() * 6.3;
     const px = x + Math.cos(a) * s * 0.5;
     const pz = z + Math.sin(a) * s * 0.5;
-    c.boite(0.09, 0.09, 0.09, 0xd590ab, { x: px, y: y + s * 0.42, z: pz, ry: a }, matiere(), { nuance: 0.1, crasse: false });
+    c.poser(CAILLOU, matiere(), 0xd590ab, { x: px, y: y + s * 0.42, z: pz, ry: a, e: 0.06 }, { nuance: 0.1, crasse: false });
   }
 }
 
@@ -420,6 +482,8 @@ function libre(x, z, marge = 0.3) {
  * descend, l'épave du cargo s'y échoue. */
 function crique(x) {
   const lisse = (a, b, v) => Math.min(1, Math.max(0, (v - a) / (b - a)));
+  // Hors du lot, à l'ouest (alentours) : la grève se resserre en une banquette au pied de la falaise, effacée vers x − 46
+  if (x < -30) return (2 / 3) * lisse(-46, -30, x);
   return lisse(-31, -29.5, x) * (1 - lisse(-3.5, -1, x));
 }
 
@@ -479,19 +543,18 @@ function solFalaise(x, z) {
 const CHEMIN = [[-30, 1.2], [-19, 1.9], [-11, 7.2], [-1, 7.9], [8, 6.9], [13, 2.6], [22, 2.1], [30, 0.6]];
 
 function terrain(b, c, M, usure) {
-  // Le plateau : herbe rase (la bande du bord, jusqu'à l'arête, fait partie du maillage de la falaise) ; dessous, le
-  // socle de roche, dont on voit la tranche sur les bords du lot
-  c.pave(-30, -0.05, -25, 30, 0, 11.5, HERBE, matiere(1), { crasse: false, nuance: 0 });
-  c.pave(-30, -12, -25, 30, -0.05, 11.5, 0x5a554c, matiere(1), { crasse: false, nuance: 0 });
-  // Taches d'herbe plus sèche et de terre nue, là où le vent râpe
+  // Le plateau : herbe rase (la bande du bord, jusqu'à l'arête, fait partie du maillage de la falaise). La lande continue
+  // au-delà du lot (alentours) : plus de socle dont on verrait la tranche.
+  c.poser(PLAQUE, M.mat, HERBE, { x: 0, y: 0, z: -6.75, e: [60, 1, 36.5] }, { crasse: false, nuance: 0 });
+  // Taches d'herbe plus sèche et de terre nue, là où le vent râpe (à plat : deux triangles chacune)
   for (let i = 0; i < 26; i++) {
-    const x = c.entre(-29, 29);
-    const z = c.entre(-24, 11);
+    const x = c.entre(-28.5, 28.5);
+    const z = c.entre(-23.5, 11);
     if (!libre(x, z, 1)) continue;
-    c.boite(c.entre(1.5, 4), 0.012, c.entre(1, 2.5), c.hasard() < 0.6 ? HERBE_SECHE : 0x9c8f6e, { x, y: 0.006, z, ry: c.hasard() * 3 }, matiere(1), { crasse: false, nuance: 0.05 });
+    c.poser(PLAQUE, M.mat, c.hasard() < 0.6 ? HERBE_SECHE : 0x9c8f6e, { x, y: 0.008, z, ry: c.hasard() * 3, e: [c.entre(1.5, 4), 1, c.entre(1, 2.5)] }, { crasse: false, nuance: 0.05 });
   }
-  // La mer, neuf mètres plus bas : une tranche d'eau verte qui remplit le pied de la falaise
-  c.pave(-30, -12, 11.5, 30, MER_Y, 25, 0xffffff, M.mer, { crasse: false, nuance: 0 });
+  // La mer, neuf mètres plus bas, jusqu'à l'horizon : une seule nappe, claire où l'on marche, sombre au large (R0-3)
+  mer(c, M);
 
   // Le chemin des douaniers : terre battue, cailloux, bornes blanchies
   for (let i = 0; i < CHEMIN.length - 1; i++) {
@@ -511,39 +574,37 @@ function terrain(b, c, M, usure) {
     c.boite(0.35, 0.5, 0.3, 0xe2ddd0, { x, y: 0.25, z, ry: c.hasard() }, matiere(0.95), { nuance: 0.05 });
     c.boite(0.36, 0.08, 0.31, 0xc8362b, { x, y: 0.42, z }, matiere(0.95), { crasse: false, nuance: 0.1 });
   }
-  // Le panneau du sentier
-  c.boite(0.12, 1.5, 0.12, PALETTE.boisGris, { x: -17.5, y: 0.75, z: 2.9 }, matiere(0.9));
-  panneau(c, M, R.sentier, { x: -17.5, y: 1.3, z: 2.97 }, 0.9, 0.6);
+  // (Le panneau du sentier côtier n'est plus sur le plateau : il est sur les galets, au départ du sentier, R0-1.)
 
-  // Rochers du plateau : affleurements en bancs, surtout au nord et sur la pointe
-  const affleurements = [[-26, -20, 4], [-20, -22, 3], [18, -21, 4], [25, -14, 4], [24, -6, 3], [-27, -12, 3], [26, 6, 3], [9, -21, 2], [-12, -21, 2], [-28, 6.5, 2]];
+  // Rochers du plateau : affleurements en bancs, surtout au nord et sur la pointe (pas contre le muret de la lande)
+  const affleurements = [[-26, -20, 4], [-20, -22, 3], [18, -21, 4], [25, -14, 4], [24, -6, 3], [-27, -12, 3], [26, 6, 3], [9, -21, 2], [-12, -21, 2], [-27.5, 6.5, 2]];
   for (const [x, z, n] of affleurements) {
     for (let i = 0; i < n; i++) {
-      const px = x + c.entre(-2.5, 2.5);
-      const pz = z + c.entre(-2, 2);
+      const px = Math.min(27.6, Math.max(-27.6, x + c.entre(-2.5, 2.5)));
+      const pz = Math.max(-22.8, z + c.entre(-2, 2));
       if (!libre(px, pz, 0.6)) continue;
       rocher(c, px, pz, c.entre(0.4, 1.3), -0.1);
     }
   }
-  // Herbe couchée, armérie, ajoncs
+  // Herbe couchée, armérie, ajoncs (moins de touffes qu'avant, P-10 : la lande des alentours prend le relais)
   let n = 0;
-  for (let i = 0; i < 520 && n < 150 + usure * 60; i++) {
-    const x = c.entre(-29.5, 29.5);
-    const z = c.entre(-24.5, 15.5);
+  for (let i = 0; i < 520 && n < 120 + usure * 40; i++) {
+    const x = c.entre(-29.1, 29.1);
+    const z = c.entre(-24.2, 15.5);
     if (z > bordFalaise(x) - 0.3 || !libre(x, z)) continue;
     if (x > -18.4 && x < 16.4 && z > -16.4 && z < 1.9 && c.hasard() < 0.5) continue; // la cour est plus rase
-    herbeCouchee(c, x, z, 0, c.hasard() < 0.3 ? 3 : 4);
+    herbeCouchee(c, x, z, 0, 3);
     n++;
   }
   for (let i = 0; i < 34; i++) {
-    const x = c.entre(-29.5, 29.5);
-    const z = c.entre(-24.5, 15.5);
+    const x = c.entre(-29.1, 29.1);
+    const z = c.entre(-24.2, 15.5);
     if (z > bordFalaise(x) - 0.4 || !libre(x, z, 0.5)) continue;
     if (x > -18.4 && x < 16.4 && z > -16.4 && z < 1.9) continue;
     armerie(c, x, z);
   }
   const ajonc = [0x4d6338, 0x5a7040, 0x3f5530];
-  for (const [x, z, t] of [[-22, -15, 1.1], [-26, -2, 0.9], [21, -17, 1.2], [27, -9, 1], [-15, -22, 0.9], [13, -20, 1], [25, 12.5, 0.8], [-29, 9.5, 0.8]]) {
+  for (const [x, z, t] of [[-22, -15, 1.1], [-26, -2, 0.9], [21, -17, 1.2], [27, -9, 1], [-15, -22, 0.9], [13, -20, 1], [25, 12.5, 0.8], [-28.2, -3.5, 0.8]]) {
     arbuste(c, x, z, t, 0, ajonc);
     for (let k = 0; k < 6; k++) c.poser(BOULE, matiere(), 0xd8b23a, { x: x + c.entre(-0.6, 0.6) * t, y: c.entre(0.5, 1.1) * t, z: z + c.entre(-0.6, 0.6) * t, e: 0.06 }, { crasse: false, nuance: 0.1 });
   }
@@ -1356,7 +1417,7 @@ const RAMPE_Z_REPRISE = 19.8;
 const RAMPE_Y_REPRISE = -6.65;
 const RAMPE_Z_BAS = 23.2;
 const RAMPE_Y_BAS = -8.95;
-const RAMPE_FIN_COTES = 22.0; // les garde-fous s'arrêtent là : on descend du bout de la rampe sur les galets
+const RAMPE_FIN_COTES = 20.1; // les garde-fous s'arrêtent juste après la reprise (P-6) : de la partie basse, on sort sur le côté, sur les galets
 const HX2 = -20;
 const HZ1 = 3;
 const HZ2 = 12;
@@ -1419,8 +1480,8 @@ function hangar(b, c, M, usure) {
   for (const x of [RAMPE_X1 + 0.05, RAMPE_X2 - 0.05]) {
     const yz = (z) => (z <= RAMPE_Z_COUPE ? (RAMPE_Y_COUPE * (z - zA)) / (RAMPE_Z_COUPE - zA) : RAMPE_Y_REPRISE + ((yB - RAMPE_Y_REPRISE) * (z - RAMPE_Z_REPRISE)) / (zB - RAMPE_Z_REPRISE));
     let prec = null;
-    for (const z of [zA + 0.3, 14.5, 17, RAMPE_Z_COUPE - 0.1, null, RAMPE_Z_REPRISE + 0.2, 21.8]) {
-      if (z === null) { prec = null; continue; }
+    // P-6 : la partie basse n'a plus de garde-corps (on en sort sur le côté, sur les galets)
+    for (const z of [zA + 0.3, 14.5, 17, RAMPE_Z_COUPE - 0.1]) {
       const p = [x, yz(z) + 0.9, z];
       c.tube([x, yz(z), z], p, 0.04, 0x55524c, M.tole, 4);
       if (prec) c.poutre(prec, p, 0.025, 0x2a2a28, M.tole);
@@ -1499,7 +1560,7 @@ function canot(c, M, x, z, usure) {
   const Lc = 7.0;
   const Bc = 2.3;
   const Dc = 1.0;
-  const nS = 10;
+  const nS = 8;
   const nK = 5;
   const P = (t, f, s) => {
     const w = (Bc / 2) * Math.pow(Math.max(0, 1 - t * t), 0.5);
@@ -1547,7 +1608,7 @@ function canot(c, M, x, z, usure) {
     }
     // Un aviron, une gaffe, l'eau de pluie au fond
     c.poutre([-0.5, 0.45, -2], [0.6, 0.6, 2.2], 0.06, 0xb09a78, M.mat);
-    c.boite(1.2, 0.01, 2.6, 0x9ab07a, { y: 0.22 }, M.mer, { crasse: false, nuance: 0 });
+    c.boite(1.2, 0.01, 2.6, 0x4a6650, { y: 0.22 }, M.mer, { crasse: false, nuance: 0 });
   });
   // La plaque du canot
   panneau(c, M, R.canot, { x: x + 1.35, y: 1.25, z: z + 2.4, ry: Math.PI / 2 - 0.15 }, 0.6, 0.4);
@@ -1724,13 +1785,14 @@ function rivage(b, c, M, usure) {
   // Les cuvettes des blocs de l'arête où le sel cristallise
   for (const [x, z] of blocs.filter((q, n) => n % 3 === 1).slice(0, 3)) {
     const g = new THREE.CylinderGeometry(0.35, 0.35, 0.02, 9);
-    c.poser(g, M.mer, 0xb8d0c8, { x, y: 0.42, z }, { crasse: false, nuance: 0 });
+    c.poser(g, M.mer, 0x86aaa4, { x, y: 0.42, z }, { crasse: false, nuance: 0 });
     g.dispose();
     for (let i = 0; i < 4; i++) c.boite(c.entre(0.08, 0.2), 0.02, c.entre(0.06, 0.15), 0xf2efe8, { x: x + c.entre(-0.4, 0.4), y: 0.44, z: z + c.entre(-0.4, 0.4), ry: c.hasard() * 3 }, M.lisse, { crasse: false, nuance: 0.03 });
   }
   // La grève de la crique : bouées échouées, épave de barque, bois flotté
   const yG = MER_Y + 0.35;
-  for (const [x, z, t] of [[-27.8, 18.0, 0], [-20.9, 21.6, 1], [-29.2, 21.2, 2]]) {
+  // (P-8 : déplacées vers l'est, entre le bas de la rampe et l'échelle de coupée : le départ du sentier reste dégagé)
+  for (const [x, z, t] of [[-21.6, 20.3, 0], [-19.2, 22.9, 1], [-18.6, 20.6, 2]]) {
     if (t === 1) c.poser(BOULE, M.satine, 0xc0503a, { x, y: yG + 0.3, z, e: 0.32 }, { crasse: false, nuance: 0.05 });
     else if (t === 2) cylindre(c, M.satine, 0xc0503a, x, yG, z, 0.4, 0.5, 1.1, 8, { rz: 1.1, y: yG + 0.3 });
     else {
@@ -1738,12 +1800,13 @@ function rivage(b, c, M, usure) {
       cylindre(c, M.satine, 0xc0503a, x, yG, z + 0.2, 0.26, 0.26, 0.2, 8, { rx: Math.PI / 2, y: yG + 0.25 });
     }
   }
-  c.repere({ x: -28.0, y: yG + 0.35, z: 20.4, ry: 1.2, rz: Math.PI - 0.25 }, () => {
+  c.repere({ x: -20.6, y: yG + 0.35, z: 21.7, ry: 0.15, rz: Math.PI - 0.25 }, () => {
     for (let i = 0; i < 4; i++) c.boite(3.2 - i * 0.3, 0.05, 0.28, i % 2 ? 0x5d7f93 : 0xd8d2c4, { y: -0.1 - i * 0.12, z: -0.6 + i * 0.4, rx: 0.4 - i * 0.25 }, M.mat, { nuance: 0.06 });
   });
   for (let i = 0; i < 6; i++) {
-    const x = c.entre(-29, -9);
+    const x = c.entre(-22, -9);
     const z = c.entre(piedFalaise(x) + 0.5, bordEau(x) - 0.5);
+    if (z > ECHELLE.zN - 0.6 && z < ECHELLE.zS + 0.6 && x > ECHELLE.xBas - 1.6) continue; // sous l'échelle de coupée
     c.boite(c.entre(0.8, 2), 0.12, 0.14, 0xb5ab98, { x, y: solFalaise(x, z) + 0.06, z, ry: c.hasard() * 3 }, M.mat, { nuance: 0.08 });
   }
   // Les laisses de mer : algues noires et bouchons, le long du bord de l'eau
@@ -1752,7 +1815,7 @@ function rivage(b, c, M, usure) {
     c.boite(c.entre(0.3, 0.8), 0.03, c.entre(0.1, 0.3), c.hasard() < 0.6 ? 0x3e4630 : 0x5a5038, { x, y: solFalaise(x, z) + 0.03, z, ry: c.entre(-0.3, 0.3) }, M.mat, { crasse: false, nuance: 0.08 });
   }
   // Sur le plateau : bouées, filets et cordages remontés par les gardiens, près du hangar et de la corne
-  for (const [x, z, t] of [[-19, 10.4, 0], [-17.4, 11.0, 1], [-29, 9, 0], [11, 10.5, 1]]) {
+  for (const [x, z, t] of [[-19, 10.4, 0], [-17.4, 11.0, 1], [-28.4, 9, 0], [11, 10.5, 1]]) {
     if (t === 1) {
       c.poser(BOULE, M.satine, 0xc0503a, { x, y: 0.3, z, e: 0.32 }, { crasse: false, nuance: 0.05 });
       c.boite(0.04, 0.04, 0.6, 0x2a2a28, { x: x + 0.3, y: 0.05, z: z + 0.2, ry: 0.6 }, M.mat);
@@ -1761,7 +1824,7 @@ function rivage(b, c, M, usure) {
       cylindre(c, M.satine, 0xc0503a, x, 0.12, z + 0.2, 0.26, 0.26, 0.2, 8, { rx: Math.PI / 2, y: 0.25 });
     }
   }
-  for (const [x, z, ry] of [[-18.2, 10.6, 0.3], [-29.2, 10.6, -0.4], [7.0, 10.6, 0.8]]) {
+  for (const [x, z, ry] of [[-18.2, 10.6, 0.3], [-28.2, 10.9, -0.4], [7.0, 10.6, 0.8]]) {
     for (let i = 0; i < 5; i++) c.boite(c.entre(0.8, 1.5), 0.04, c.entre(0.6, 1.1), i % 2 ? 0x4f5a44 : 0x5f5a3e, { x: x + c.entre(-0.6, 0.6), y: 0.05 + i * 0.03, z: z + c.entre(-0.4, 0.4), ry: ry + c.entre(-0.5, 0.5), rx: c.entre(-0.2, 0.2) }, M.mat, { crasse: false, nuance: 0.08 });
     for (let i = 0; i < 4; i++) c.poser(BOULE, M.satine, 0xb09a6a, { x: x + c.entre(-0.8, 0.8), y: 0.12, z: z + c.entre(-0.5, 0.5), e: 0.08 }, { crasse: false });
   }
@@ -1778,27 +1841,36 @@ function rivage(b, c, M, usure) {
     let d = D[5];
     for (let n = 1; n < D.length; n++) if (Y[n] <= MER_Y) { d = D[n - 1] + ((D[n] - D[n - 1]) * (Y[n - 1] - MER_Y)) / (Y[n - 1] - Y[n]); break; }
     const z = bordFalaise(x) + d + e.entre(0, 0.5) + (k > 0.5 ? 0.3 : 0);
-    e.boite(e.entre(0.6, 1.6), 0.04, e.entre(0.3, 0.8), 0xffffff, { x, y: yE, z, ry: e.entre(-0.4, 0.4) }, M.ecume, { crasse: false, nuance: 0.05 });
-    if (e.hasard() < 0.4) e.boite(e.entre(0.5, 1.2), 0.04, e.entre(0.2, 0.4), 0xffffff, { x: x + e.entre(-0.3, 0.3), y: yE, z: z + e.entre(0.8, 1.6), ry: e.entre(-0.4, 0.4) }, M.ecume, { crasse: false, nuance: 0.05 });
+    e.poser(PLAQUE, M.ecume, 0xffffff, { x, y: yE, z, ry: e.entre(-0.4, 0.4), e: [e.entre(0.6, 1.6), 1, e.entre(0.3, 0.8)] }, { crasse: false, nuance: 0.05 });
+    if (e.hasard() < 0.4) e.poser(PLAQUE, M.ecume, 0xffffff, { x: x + e.entre(-0.3, 0.3), y: yE, z: z + e.entre(0.8, 1.6), ry: e.entre(-0.4, 0.4), e: [e.entre(0.5, 1.2), 1, e.entre(0.2, 0.4)] }, { crasse: false, nuance: 0.05 });
   }
   for (const [x, z, s] of [...ecueils, [ilot[0], ilot[1], 2.6]]) {
     const n = s > 2 ? 9 : 3;
     for (let i = 0; i < n; i++) {
       const a = (i / n) * 6.3 + e.hasard();
-      e.boite(e.entre(0.5, 1.1) * Math.min(s, 1.4), 0.04, e.entre(0.15, 0.35), 0xffffff, { x: x + Math.cos(a) * s * 1.15, y: yE + 0.005, z: z + Math.sin(a) * s, ry: -a + Math.PI / 2 }, M.ecume, { crasse: false, nuance: 0.05 });
+      e.poser(PLAQUE, M.ecume, 0xffffff, { x: x + Math.cos(a) * s * 1.15, y: yE + 0.005, z: z + Math.sin(a) * s, ry: -a + Math.PI / 2, e: [e.entre(0.5, 1.1) * Math.min(s, 1.4), 1, e.entre(0.15, 0.35)] }, { crasse: false, nuance: 0.05 });
     }
   }
   // Au bout de la rampe, sur les galets mouillés
-  e.boite(3.2, 0.04, 0.4, 0xffffff, { x: -24, y: yE, z: RAMPE_Z_BAS + 0.3 }, M.ecume, { crasse: false, nuance: 0 });
+  e.poser(PLAQUE, M.ecume, 0xffffff, { x: -24, y: yE, z: RAMPE_Z_BAS + 0.3, e: [3.2, 1, 0.4] }, { crasse: false, nuance: 0 });
   // Les vagues : de longues crêtes blanches qui arrivent du large
   for (let i = 0; i < 8; i++) {
     const x = e.entre(-26, 26);
     const z = e.entre(19.5, 24.6);
     if (Math.hypot(x - ilot[0], z - ilot[1]) < 4 || (x < 1 && z < bordEau(x) + 0.8)) continue;
-    e.boite(e.entre(3, 6), 0.05, 0.25, 0xf4f6f4, { x, y: yE + 0.01, z, ry: e.entre(-0.1, 0.1) }, M.ecume, { crasse: false, nuance: 0 });
+    e.poser(PLAQUE, M.ecume, 0xf4f6f4, { x, y: yE + 0.01, z, ry: e.entre(-0.1, 0.1), e: [e.entre(3, 6), 1, 0.25] }, { crasse: false, nuance: 0 });
   }
+  // R52 : le sentier côtier sur les galets, les rochers des deux bouts de la grève, la ligne de brisants (R0-3)
+  sentierCotier(b, c, M);
+  rochersLigne(b, c, e, M, EBOULIS_EST, -1, 11, [0.75, 1.3], true, "rochers : éboulis au bout de la crique (tombé de la falaise)");
+  rochersLigne(b, c, e, M, ROCHERS_OUEST, 1, 7, [0.55, 1.0], false, "rochers au sud du sentier côtier");
+  brisants(e, M);
   const ecume = e.construire();
   ecume.name = "écume";
+  // L'écume se dessine après la nappe de la mer (toutes deux transparentes) : sinon la mer la recouvre
+  ecume.traverse((o) => {
+    if (o.isMesh) o.renderOrder = 3;
+  });
   ecume.userData.animer = (t) => {
     ecume.position.y = Math.sin(t * 0.9) * 0.06;
     ecume.position.z = Math.sin(t * 0.45) * 0.2;
@@ -1884,24 +1956,507 @@ function falaise(c, M) {
     coul.setHex(h).offsetHSL(0, 0, (al() - 0.5) * 0.04);
     for (let q = 0; q < 3; q++) col.set([coul.r, coul.g, coul.b], (n * 3 + q) * 3);
   });
-  // Les tranches du lot : x = ±30 et z = 25, du profil jusqu'à −12
-  const tr = [];
-  const quad = (p1, p2, sens) => {
-    const q1 = [p1[0], -12, p1[2]];
-    const q2 = [p2[0], -12, p2[2]];
-    if (sens) tr.push(...p1, ...q1, ...p2, ...p2, ...q1, ...q2);
-    else tr.push(...p1, ...p2, ...q1, ...p2, ...q2, ...q1);
-  };
-  for (let j = 0; j < nJ - 1; j++) {
-    quad(V[0][j], V[0][j + 1], true);
-    quad(V[X.length - 1][j], V[X.length - 1][j + 1], false);
+  // Plus de tranches aux bords du lot (R52) : la falaise et le fond continuent dans les alentours, qui reprennent ces
+  // sommets pour s'y raccorder sans fente
+  FALAISE.X = X;
+  FALAISE.V = V;
+}
+/** Les sommets de la falaise du lot (colonnes x, rangées vers le large), repris par les alentours. */
+const FALAISE = { X: null, V: null };
+
+// ---------- Les bords du lot (R52) : le muret de la lande, la mer, le sentier côtier, les rochers des deux bouts ----------
+
+/** Pose des triangles (sommets à plat, trois par triangle) coloriés sommet par sommet, dans une matière du chantier. */
+function colorier(ch, mat, pos, couleurs) {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  g.computeVertexNormals();
+  ch.poser(g, mat, 0xffffff, {}, { crasse: false, nuance: 0 });
+  g.dispose();
+  const lot = ch.lots.get(mat);
+  lot[lot.length - 1].attributes.color.array.set(couleurs);
+}
+
+/** Une teinte un peu bougée, en [r, g, b]. */
+const _coul = new THREE.Color();
+function teinte(hex, ecart = 0.04, al = Math.random) {
+  _coul.setHex(hex).offsetHSL(0, 0, (al() - 0.5) * ecart);
+  return [_coul.r, _coul.g, _coul.b];
+}
+
+// Le muret de pierres sèches de la lande (P-1) : au ras de la limite du lot, au nord, à l'ouest et à l'est ; ouvert au
+// nord sur la route d'arrivée (x − 5 à 2) ; il s'arrête au bord de la falaise.
+const MURET = { ep: 0.55, ouest: -29.75, est: 29.75, nord: -24.75, route: [-5, 2] };
+const MURET_TONS = [0x8b867b, 0x7d786d, 0x948e81, 0x6f6a60, 0x9a9488, 0x84806f];
+
+function muret(b, c, M, usure) {
+  const fin = (x) => bordFalaise(x) - 0.4;
+  const lignes = [
+    [[MURET.ouest, fin(MURET.ouest)], [MURET.ouest, MURET.nord]],
+    [[MURET.ouest, MURET.nord], [MURET.route[0], MURET.nord]],
+    [[MURET.route[1], MURET.nord], [MURET.est, MURET.nord]],
+    [[MURET.est, MURET.nord], [MURET.est, fin(MURET.est)]],
+  ];
+  const ton = () => MURET_TONS[Math.floor(c.hasard() * MURET_TONS.length)];
+  for (const [[x1, z1], [x2, z2]] of lignes) {
+    const L = Math.hypot(x2 - x1, z2 - z1);
+    const ux = (x2 - x1) / L;
+    const uz = (z2 - z1) / L;
+    // Le dehors (la lande) : la normale qui s'éloigne du centre du lot
+    let nx = -uz;
+    let nz = ux;
+    if (nx * (x1 + x2) + nz * (z1 + z2) < 0) [nx, nz] = [-nx, -nz];
+    const ry = -Math.atan2(z2 - z1, x2 - x1);
+    const pt = (u, d = 0) => [x1 + ux * u + nx * d, z1 + uz * u + nz * d];
+    // L'assise : de gros blocs bruts, chacun un peu de travers
+    for (let u = 0; u < L - 0.15; ) {
+      const l = Math.min(c.entre(1.4, 2.3), L - u);
+      const h = c.entre(0.48, 0.66);
+      const [x, z] = pt(u + l / 2, c.entre(-0.05, 0.05));
+      c.boite(l + 0.06, h, MURET.ep * c.entre(0.92, 1.06), ton(), { x, y: h / 2 - 0.05, z, ry: ry + c.entre(-0.05, 0.05), rz: c.entre(-0.04, 0.04) }, M.mat, { nuance: 0.07 });
+      u += l;
+    }
+    // Le couronnement : des pierres plates posées dessus, quelques-unes tombées côté lande
+    for (let u = 0.35; u < L - 0.3; u += c.entre(1.0, 1.5)) {
+      const l = c.entre(0.6, 0.95);
+      if (c.hasard() < 0.12 + 0.2 * usure) {
+        const [x, z] = pt(u, c.entre(0.6, 1.2));
+        c.boite(l, 0.2, 0.42, ton(), { x, y: 0.06, z, ry: ry + c.entre(-0.8, 0.8), rz: c.entre(-0.3, 0.3) }, M.mat, { nuance: 0.07 });
+        continue;
+      }
+      const [x, z] = pt(u, c.entre(-0.06, 0.06));
+      c.boite(l, c.entre(0.18, 0.28), MURET.ep * 0.82, ton(), { x, y: c.entre(0.62, 0.7), z, ry: ry + c.entre(-0.12, 0.12), rz: c.entre(-0.1, 0.1) }, M.mat, { nuance: 0.07 });
+    }
+    b.obstacle(x1, z1, x2, z2, "muret de pierres sèches (le bord du lot, la lande au-delà)");
   }
-  for (let i = 0; i < X.length - 1; i++) quad(V[i][nJ - 1], V[i + 1][nJ - 1], true);
-  const gt = new THREE.BufferGeometry();
-  gt.setAttribute("position", new THREE.Float32BufferAttribute(tr, 3));
-  gt.computeVertexNormals();
-  c.poser(gt, M.mat, 0x4f4b44, {}, { crasse: false, nuance: 0 });
-  gt.dispose();
+  // Les têtes du muret, de part et d'autre de la route : un gros bloc dressé
+  for (const x of MURET.route) {
+    const [l, h] = [0.7, 1.05];
+    c.boite(l, h, 0.62, 0x86817a, { x: x + (x < 0 ? -0.2 : 0.2), y: h / 2 - 0.05, z: MURET.nord, ry: c.entre(-0.1, 0.1) }, M.mat, { nuance: 0.05 });
+  }
+  // Au bord de la falaise, le muret finit sur un dernier bloc
+  for (const x of [MURET.ouest, MURET.est]) rocher(c, x, fin(x) + 0.1, 0.55, -0.1, GRANIT_SOMBRE);
+}
+
+// ---------- La mer (R0-3) : une seule nappe, une seule matière, du lot jusqu'à l'horizon ----------
+
+// La grève se marche jusqu'aux genoux (le jeu : LARGEUR_EAU = 3,5 m depuis le bord de l'eau du modèle moins 30 cm) : là,
+// l'eau est claire et turquoise ; au-delà, on perd pied, elle est sombre ; entre les deux, la ligne de brisants.
+const PEU_PROFONDE = { x1: -29.6, x2: -3.6, largeur: 3.2 }; // la bande claire, et sa largeur depuis le bord de l'eau
+const EAU_CLAIRE = 0x6fb4ad;
+const EAU_PASSAGE = 0x4f8f8f;
+const EAU_PROFONDE = 0x2c5862;
+const EAU_LARGE = 0x284e5a;
+/** Où l'on perd pied (z), dans la crique. */
+function zLarge(x) {
+  return bordEau(x) + PEU_PROFONDE.largeur;
+}
+
+function mer(c, M) {
+  const al = aleatoire(4417);
+  const X = [-100, -76, -58, -46, -38, -32];
+  for (let x = PEU_PROFONDE.x1; x < PEU_PROFONDE.x2; x += 1.5) X.push(x);
+  X.push(PEU_PROFONDE.x2, 4, 16, 30, 48, 70, 100);
+  const rangs = (x) => {
+    if (x < PEU_PROFONDE.x1 - 0.01 || x > PEU_PROFONDE.x2 + 0.01) return [[10.5, EAU_PROFONDE], [40, EAU_PROFONDE], [95, EAU_LARGE]];
+    const zl = zLarge(x);
+    return [[10.5, EAU_CLAIRE], [zl - 0.5, EAU_CLAIRE], [zl + 0.5, EAU_PASSAGE], [zl + 2.5, EAU_PROFONDE], [40, EAU_PROFONDE], [95, EAU_LARGE]];
+  };
+  const pos = [];
+  const col = [];
+  const som = (x, [z, h]) => {
+    pos.push(x, MER_Y, z);
+    col.push(...teinte(h, 0.03, al));
+  };
+  for (let i = 0; i < X.length - 1; i++) {
+    let r1 = rangs(X[i]);
+    let r2 = rangs(X[i + 1]);
+    // Au passage de la crique au large, les deux colonnes prennent le même nombre de rangées
+    if (r1.length !== r2.length) {
+      const court = r1.length < r2.length ? r1 : r2;
+      const long = r1.length < r2.length ? r2 : r1;
+      const x0 = r1.length < r2.length ? X[i] : X[i + 1];
+      const plein = long.map(([z], j) => [j === 0 ? 10.5 : z, j >= long.length - 1 ? EAU_LARGE : EAU_PROFONDE]);
+      if (court === r1) r1 = plein;
+      else r2 = plein;
+      void x0;
+    }
+    for (let j = 0; j < r1.length - 1; j++) {
+      // (x1, a), (x1, b), (x2, b2) et (x1, a), (x2, b2), (x2, a2) : faces vers le haut
+      som(X[i], r1[j]); som(X[i], r1[j + 1]); som(X[i + 1], r2[j + 1]);
+      som(X[i], r1[j]); som(X[i + 1], r2[j + 1]); som(X[i + 1], r2[j]);
+    }
+  }
+  colorier(c, M.mer, pos, col);
+}
+
+/** La ligne de brisants, là où l'on perd pied, du chaos de l'ouest jusqu'à l'éboulis de l'est (dans l'écume animée). */
+function brisants(e, M) {
+  for (let x = PEU_PROFONDE.x1 + 0.4; x < -4.2; x += e.entre(0.7, 1.3)) {
+    const z = zLarge(x) + e.entre(-0.25, 0.25);
+    e.poser(PLAQUE, M.ecume, 0xffffff, { x, y: MER_Y + 0.05, z, ry: e.entre(-0.25, 0.25), e: [e.entre(0.9, 1.7), 1, e.entre(0.22, 0.45)] }, { crasse: false, nuance: 0.05 });
+    if (e.hasard() < 0.45) e.poser(PLAQUE, M.ecume, 0xf4f6f4, { x: x + e.entre(-0.3, 0.3), y: MER_Y + 0.05, z: z + e.entre(0.7, 1.3), ry: e.entre(-0.3, 0.3), e: [e.entre(0.5, 1.1), 1, e.entre(0.15, 0.3)] }, { crasse: false, nuance: 0.05 });
+  }
+}
+
+// ---------- Le sentier côtier (P-2) et les rochers des bouts de la grève (P-3) ----------
+
+/**
+ * Le tracé du sentier sur les galets (repère du lot) : du panneau, près de l'eau, à trois pas du bas de la rampe, il
+ * longe le pied de la falaise vers l'ouest jusqu'à la sortie (x − 30), puis, hors du lot, une banquette de dalles au ras
+ * de l'eau et des marches taillées dans la falaise (alentours).
+ */
+const SENTIER = [[-26.45, 21.45], [-26.75, 20.2], [-27.0, 18.6], [-27.6, 17.3], [-28.8, 16.75], [-29.6, 16.55], [-30.3, 16.3]];
+const SENTIER_DEHORS = [[-30.3, 16.3], [-31.2, 16.05], [-32.0, 15.95]];
+/** Les marches taillées dans la falaise, hors du lot : du pied (y − 8,6) jusqu'à la lande, en allant vers l'ouest. */
+const MARCHES = { x0: -32.3, pas: 0.46, n: 22, bas: -8.6 };
+const hauteurMarche = (i) => MARCHES.bas * (1 - (i + 0.5) / MARCHES.n);
+// Les rochers des deux bouts de la grève (lignes d'obstacle, repère du lot ; ceux qui passent sous la coque s'effacent
+// avec l'épave dans le jeu)
+const EBOULIS_EST = { x1: -3, z1: 15, x2: -5.7, z2: 28 };
+const ROCHERS_OUEST = { x1: -29.2, z1: 18.6, x2: -29.2, z2: 26.8 };
+const TERRE_BATTUE = 0x7a6650;
+const BORNE = 0xe2ddd0;
+const BORNE_ROUGE = 0xc8362b;
+
+/** Le sol du sentier : les galets, ou, au bord du lot, les dalles de la banquette au ras de l'eau. */
+function solSentier(x, z) {
+  return x < -29.4 ? Math.max(solFalaise(x, z), MER_Y + 0.27) : solFalaise(x, z);
+}
+
+/** Un ruban posé sur le sol le long d'un tracé (rééchantillonné tous les 50 cm), de largeur qui respire un peu. */
+function ruban(c, mat, trace, largeur, couleur, sol, haut, al, fondu = 0, versHerbe = HERBE) {
+  const pts = [];
+  for (let i = 0; i < trace.length - 1; i++) {
+    const [x1, z1] = trace[i];
+    const [x2, z2] = trace[i + 1];
+    const n = Math.max(1, Math.ceil(Math.hypot(x2 - x1, z2 - z1) / 0.5));
+    for (let k = 0; k < n; k++) pts.push([x1 + ((x2 - x1) * k) / n, z1 + ((z2 - z1) * k) / n]);
+  }
+  pts.push(trace[trace.length - 1]);
+  const bords = pts.map(([x, z], i) => {
+    const [xa, za] = pts[Math.max(0, i - 1)];
+    const [xb, zb] = pts[Math.min(pts.length - 1, i + 1)];
+    const l = Math.hypot(xb - xa, zb - za) || 1;
+    const w = (largeur / 2) * (0.85 + al() * 0.3);
+    const nx = -(zb - za) / l;
+    const nz = (xb - xa) / l;
+    return [[x + nx * w, z + nz * w], [x - nx * w, z - nz * w]].map(([px, pz]) => [px, sol(px, pz) + haut, pz]);
+  });
+  const pos = [];
+  const col = [];
+  const herbe = new THREE.Color(versHerbe);
+  for (let i = 0; i < bords.length - 1; i++) {
+    const [g1, d1] = bords[i];
+    const [g2, d2] = bords[i + 1];
+    const f = fondu ? Math.min(1, Math.max(0, (i - (bords.length - 1 - fondu)) / fondu)) : 0;
+    _coul.setHex(couleur).offsetHSL(0, 0, (al() - 0.5) * 0.04).lerp(herbe, f * 0.85);
+    // Dans ce sens, les faces regardent vers le haut
+    for (const q of [g1, d1, g2, d1, d2, g2]) {
+      pos.push(...q);
+      col.push(_coul.r, _coul.g, _coul.b);
+    }
+  }
+  // Le sens des faces dépend du sens du tracé : on le vérifie sur le premier triangle
+  const ny = (pos[3] - pos[0]) * (pos[8] - pos[2]) - (pos[5] - pos[2]) * (pos[6] - pos[0]);
+  if (ny > 0) for (let t = 0; t < pos.length; t += 9) for (let k = 0; k < 3; k++) [pos[t + 3 + k], pos[t + 6 + k]] = [pos[t + 6 + k], pos[t + 3 + k]];
+  colorier(c, mat, pos, col);
+}
+
+/** Une borne blanchie au chapeau rouge (celles du chemin des douaniers). */
+function borne(c, M, x, y, z) {
+  c.boite(0.32, 0.55, 0.28, BORNE, { x, y: y + 0.27, z, ry: c.hasard() }, M.mat, { nuance: 0.05 });
+  c.boite(0.33, 0.1, 0.29, BORNE_ROUGE, { x, y: y + 0.5, z }, M.mat, { crasse: false, nuance: 0.1 });
+}
+
+/** Le sentier sur les galets : la terre battue, les pierres de bordure, les bornes blanc et rouge. */
+function sentierCotier(b, c, M) {
+  const al = aleatoire(5151);
+  ruban(c, M.mat, SENTIER, 1.25, TERRE_BATTUE, solSentier, 0.02, al);
+  // Les pierres de bordure, de part et d'autre (quelques-unes, pas une allée de jardin)
+  for (let i = 0; i < SENTIER.length - 1; i++) {
+    const [x1, z1] = SENTIER[i];
+    const [x2, z2] = SENTIER[i + 1];
+    const l = Math.hypot(x2 - x1, z2 - z1);
+    const nx = -(z2 - z1) / l;
+    const nz = (x2 - x1) / l;
+    for (let u = 0.25; u < l; u += c.entre(0.45, 0.75)) {
+      const cote = c.hasard() < 0.5 ? 1 : -1;
+      const x = x1 + ((x2 - x1) * u) / l + nx * cote * c.entre(0.72, 0.85);
+      const z = z1 + ((z2 - z1) * u) / l + nz * cote * c.entre(0.72, 0.85);
+      const t = c.entre(0.16, 0.26);
+      c.poser(CAILLOU, M.mat, c.hasard() < 0.5 ? 0xd2cbbb : 0xb9b2a2, { x, y: solSentier(x, z) + t * 0.25, z, ry: c.hasard() * 3, e: [t * 1.3, t * 0.6, t] }, { crasse: false, nuance: 0.06 });
+    }
+  }
+  // Les bornes : au départ (près du panneau) et à la sortie, contre la falaise
+  borne(c, M, -25.85, solFalaise(-25.85, 20.6), 20.6);
+  borne(c, M, -28.6, solFalaise(-28.6, 15.95) - 0.05, 16.05);
+  // Les marques blanc et rouge peintes sur un bloc, au pied de la falaise, là où le sentier tourne vers l'ouest
+  const [mx, mz] = [-27.9, piedFalaise(-27.9) - 0.25];
+  rocher(c, mx, mz, 0.55, solFalaise(mx, mz) + 0.1, GRANIT_SOMBRE);
+  c.boite(0.32, 0.07, 0.03, 0xf2efe6, { x: mx, y: solFalaise(mx, mz) + 0.55, z: mz + 0.62 }, M.mat, { crasse: false, nuance: 0 });
+  c.boite(0.32, 0.07, 0.03, BORNE_ROUGE, { x: mx, y: solFalaise(mx, mz) + 0.47, z: mz + 0.62 }, M.mat, { crasse: false, nuance: 0 });
+}
+
+/**
+ * Des rochers le long d'une ligne d'obstacle, du côté `cote` (+1 : à sa gauche en allant de 1 à 2, vu d'en haut), leur
+ * face au ras de la ligne : là où l'on bute, on touche la pierre. `hauts` : contre la falaise, ils s'entassent (un
+ * éboulis). Dans l'eau, ils dépassent de la surface, l'écume autour. Les obstacles, par tronçons de 1,5 m.
+ */
+function rochersLigne(b, c, e, M, ligne, cote, n, taille, hauts, nature) {
+  const l = Math.hypot(ligne.x2 - ligne.x1, ligne.z2 - ligne.z1);
+  const ux = (ligne.x2 - ligne.x1) / l;
+  const uz = (ligne.z2 - ligne.z1) / l;
+  const px = -uz * cote;
+  const pz = ux * cote;
+  const tons = [GRANIT_SOMBRE, 0x6e6b63, 0x625f58, ROC];
+  for (let i = 0; i < n; i++) {
+    const t = (i + c.entre(0.15, 0.85)) / n;
+    for (let rang = 0; rang < 2; rang++) {
+      const s = c.entre(taille[0], taille[1]) * (rang ? 0.85 : 1);
+      const ecart = s * 1.05 + rang * s * 1.6 + c.entre(0, 0.3);
+      const x = ligne.x1 + ux * l * t + px * ecart;
+      const z = ligne.z1 + uz * l * t + pz * ecart;
+      const sol = solFalaise(x, z);
+      let y = Math.max(sol, -10.2) + s * 0.25;
+      if (y + s * 0.6 < MER_Y + 0.45) y = MER_Y + 0.45 - s * 0.6 + c.entre(0, 0.4); // on le voit dépasser, de jour comme de nuit
+      rocher(c, x, z, s, y, tons[Math.floor(c.hasard() * tons.length)], 1.15);
+      if (sol < MER_Y - 0.05) {
+        for (let k = 0; k < 2; k++) {
+          const a = c.hasard() * 6.3;
+          e.poser(PLAQUE, M.ecume, 0xffffff, { x: x + Math.cos(a) * s * 1.3, y: MER_Y + 0.06, z: z + Math.sin(a) * s * 1.2, ry: -a + Math.PI / 2, e: [c.entre(0.6, 1.2), 1, c.entre(0.15, 0.3)] }, { crasse: false, nuance: 0.05 });
+        }
+      }
+    }
+    // Contre la falaise, l'éboulis monte : des blocs sur la paroi
+    if (hauts && t < 0.3) {
+      const s = c.entre(0.8, 1.25);
+      const x = ligne.x1 + ux * l * t + px * c.entre(0.8, 2.0);
+      const z = ligne.z1 + uz * l * t - c.entre(0.3, 1.2);
+      rocher(c, x, z, s, solFalaise(x, z) + s * 0.4, tons[Math.floor(c.hasard() * tons.length)], 1.2);
+    }
+  }
+  // Quelques cailloux roulés devant, sur les galets
+  for (let i = 0; i < 5; i++) {
+    const t = c.hasard();
+    const x = ligne.x1 + ux * l * t - px * c.entre(0.5, 1.5);
+    const z = ligne.z1 + uz * l * t - pz * c.entre(0.5, 1.5);
+    const sol = solFalaise(x, z);
+    if (sol < MER_Y - 0.05) continue;
+    const t2 = c.entre(0.15, 0.3);
+    c.poser(CAILLOU, M.mat, tons[i % 4], { x, y: sol + t2 * 0.3, z, ry: c.hasard() * 3, e: [t2 * 1.3, t2 * 0.7, t2] }, { crasse: false, nuance: 0.06 });
+  }
+  const nT = Math.ceil(l / 1.5);
+  for (let i = 0; i < nT; i++) {
+    const a = i / nT;
+    const bb = (i + 1) / nT;
+    b.obstacle(ligne.x1 + ux * l * a, ligne.z1 + uz * l * a, ligne.x1 + ux * l * bb, ligne.z1 + uz * l * bb, nature);
+  }
+}
+
+// ---------- Les panneaux de sortie (R0-1) ----------
+
+/**
+ * Les deux panneaux de sortie : planche peinte (atlas : grosses lettres sombres sur fond clair, la vraie destination),
+ * 1,7 × 0,95 m, tournée vers la caméra du sud-est, deux poteaux, une potence et sa lanterne au-dessus. Le jeu les lit
+ * (`texte`) ; les maillages sont fondus dans ceux du lieu (aucun appel de dessin de plus) : l'objet nommé est un repère.
+ */
+const PANNEAUX = [
+  { id: "panneau_sortie_nord", x: 1.3, z: -22.6, sortie: "nord (la route d'arrivée, vers la corniche)", texte: "← La corniche · Ton terrain", region: "panneauNord" },
+  { id: "panneau_sortie_greve", x: -26.6, z: 22.2, sortie: "grève, à l'ouest (le sentier côtier ; sortie sans arrivée)", texte: "Sentier côtier · ← Port · 6 km", region: "panneauGreve" },
+];
+const PANNEAU = { l: 2.0, h: 1.12, milieu: 1.62, poteau: 2.65, avance: 0.5, ry: Math.PI / 4 };
+
+function panneauSortie(b, c, M, P) {
+  const y0 = solFalaise(P.x, P.z);
+  const { l, h, milieu, poteau, avance, ry } = PANNEAU;
+  const yL = poteau - 0.32; // le milieu du verre de la lanterne
+  c.repere({ x: P.x, y: y0, z: P.z, ry }, () => {
+    // Les deux poteaux, la traverse du haut
+    for (const sx of [-0.86, 0.86]) c.boite(0.13, poteau, 0.13, 0x6b5a48, { x: sx, y: poteau / 2 - 0.1 }, M.mat, { nuance: 0.05 });
+    c.boite(1.9, 0.1, 0.1, 0x5e4f40, { y: poteau - 0.12 }, M.mat, { nuance: 0.04 });
+    // La planche (le dos, bois), la face peinte devant
+    c.boite(l + 0.1, h + 0.1, 0.06, 0x5e4f40, { y: milieu, z: 0.09 }, M.mat, { nuance: 0.04 });
+    panneau(c, M, R[P.region], { y: milieu, z: 0.125 }, l, h);
+    // La potence : un bras de fer qui avance au-dessus du panneau, sa jambe de force
+    c.boite(0.05, 0.05, avance + 0.08, FONTE, { y: poteau - 0.04, z: avance / 2 + 0.06 }, M.tole, { crasse: false });
+    c.poutre([0, poteau - 0.3, 0.1], [0, poteau - 0.06, avance * 0.6], 0.03, FONTE, M.tole, { crasse: false });
+    // La lanterne pendue au bout : chapeau, cadre, socle, montants ; le verre luit (matière lueur)
+    const z = avance + 0.06;
+    c.boite(0.02, 0.08, 0.02, FONTE, { y: poteau - 0.1, z }, M.tole, { crasse: false });
+    const chapeau = new THREE.ConeGeometry(0.14, 0.12, 4);
+    c.poser(chapeau, M.tole, FONTE, { y: yL + 0.18, z, ry: Math.PI / 4 }, { crasse: false });
+    chapeau.dispose();
+    c.boite(0.18, 0.03, 0.18, FONTE, { y: yL + 0.11, z }, M.tole, { crasse: false });
+    c.boite(0.17, 0.04, 0.17, FONTE, { y: yL - 0.11, z }, M.tole, { crasse: false });
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) c.boite(0.02, 0.2, 0.02, FONTE, { x: sx * 0.075, y: yL, z: z + sz * 0.075 }, M.tole, { crasse: false });
+    for (const k of [0.13, 0.1, 0.07]) c.boite(k, k * 1.4, k, 0xffe2a8, { y: yL, z }, M.lueur, { crasse: false, nuance: 0 });
+  });
+  // La lumière de la lanterne (le jeu l'allume la nuit), et le repère nommé
+  const lx = P.x + Math.sin(ry) * (avance + 0.06);
+  const lz = P.z + Math.cos(ry) * (avance + 0.06);
+  b.lumiere(lx, y0 + yL, lz, 0xffcf8a, 6, 4.2, `lanterne du panneau de sortie (${P.id})`);
+  const o = new THREE.Object3D();
+  o.name = P.id;
+  o.position.set(P.x, y0, P.z);
+  o.rotation.y = ry;
+  o.userData = { nom: P.id, texte: P.texte, sortie: P.sortie, planche: { l, h, milieu }, lanterne: { x: lx, y: y0 + yL, z: lz } };
+  return o;
+}
+
+// ---------- Les alentours (R0-2) : la lande, la falaise qui continue, la route du nord, le sentier hors du lot ----------
+
+const LANDE = [HERBE, 0x95a05e, HERBE_SECHE, 0x8f9a5c, 0x9c9a62];
+
+/** Le coloris d'un triangle de falaise selon sa hauteur (celui de la falaise du lot). */
+function teinteFalaise(cy, ymin, k, r) {
+  if (ymin > -0.05) return r < 0.5 ? HERBE : 0x95a05e;
+  if (cy > -1.6) return r < 0.4 ? 0xb59d52 : r < 0.55 ? 0x7f8a52 : 0x938e83;
+  if (cy > -7.4) return r < 0.06 ? 0xd2cdc0 : r < 0.5 ? 0x8a867d : r < 0.8 ? 0x7b776f : 0x96918a;
+  if (k > 0.25 && cy > MER_Y - 0.5 && cy < MER_Y + 1.2) return r < 0.5 ? 0xa39a88 : 0x8f8676;
+  if (cy > MER_Y - 0.4) return r < 0.35 ? 0x4f5a3a : 0x55524b;
+  return cy > -9.9 ? 0x48463f : 0x3a4540;
+}
+
+function alentours(M) {
+  const ch = new Chantier(6061);
+  const al = aleatoire(6062);
+  const ent = (a, b2) => a + (b2 - a) * al();
+  const pos = [];
+  const col = [];
+  const tri = (a, b2, cc, h) => {
+    const t = teinte(h, 0.05, al);
+    pos.push(...a, ...b2, ...cc);
+    col.push(...t, ...t, ...t);
+  };
+  // Le relief de la lande : plat au bord du lot, de douces ondulations plus loin
+  const yLande = (x, z) => {
+    const d = Math.max(0, Math.max(Math.abs(x) - 30, -25 - z) - 8);
+    return Math.min(1, d / 30) * (0.5 * Math.sin(x * 0.09 + z * 0.05) + 0.35 * Math.sin(z * 0.13 - x * 0.04) + 0.3);
+  };
+  const quad = (p, q, r, s2, h) => {
+    // p (x1, z1), q (x2, z1), r (x1, z2), s2 (x2, z2), z2 > z1 : faces vers le haut
+    const t = typeof h === "function" ? h() : h;
+    tri(p, r, q, t);
+    tri(q, r, s2, t);
+  };
+  const herbe = () => LANDE[Math.floor(al() * LANDE.length)];
+  // La lande au nord : de x − 100 à 100, de z − 110 au lot
+  // (Ses colonnes reprennent celles des côtes de l'ouest et de l'est : pas de fente le long de z − 25.)
+  const XO = [-30, -31, -32.5, -34, -36, -38.5, -41.5, -45, -50, -57, -66, -80, -100];
+  const XE = [30, 32, 34.5, 38, 43, 50, 60, 76, 100];
+  const XN = [...XO.slice().reverse(), -22, -14, -7, 0, 7, 14, 22, ...XE];
+  const ZN = [-110, -80, -58, -44, -34, -25];
+  for (let i = 0; i < XN.length - 1; i++) {
+    for (let j = 0; j < ZN.length - 1; j++) {
+      const P = (x, z) => [x, yLande(x, z), z];
+      quad(P(XN[i], ZN[j]), P(XN[i + 1], ZN[j]), P(XN[i], ZN[j + 1]), P(XN[i + 1], ZN[j + 1]), herbe);
+    }
+  }
+  // La falaise et la lande à l'ouest et à l'est : colonnes de profil, du nord du lot (z − 25) jusqu'au fond de la mer
+  const cote = (X, sens) => {
+    const V = X.map((x0, i) => {
+      const { D, Y } = profil(x0);
+      const bz = bordFalaise(x0);
+      // La colonne du bord du lot reprend exactement les sommets de la falaise du lot
+      const bordLot = i === 0 && FALAISE.V;
+      const r = [];
+      for (const z of [-25, -14, -3, 6]) r.push([x0, yLande(x0, z) * Math.min(1, (bz - z) / 12), z]);
+      if (bordLot) {
+        const fv = sens < 0 ? FALAISE.V[0] : FALAISE.V[FALAISE.V.length - 1];
+        r.push(...fv.map((p) => [...p]));
+      } else {
+        r.push([x0, 0, 11.5]);
+        for (let n = 0; n < D.length; n++) {
+          const paroi = n >= 1 && n <= 5;
+          r.push([x0 + (paroi ? ent(-0.35, 0.35) : 0), Math.min(0, Y[n] + (paroi ? ent(-0.5, 0.5) : 0)), bz + D[n] + (paroi ? ent(-0.25, 0.25) : 0)]);
+        }
+        const zd = bz + D[6];
+        for (let n = 1; n <= 4; n++) r.push([x0, n === 4 ? -10.9 : -10.8 + ent(-0.3, 0.3), n === 4 ? 25 : zd + ((25 - zd) * n) / 4]);
+      }
+      r.push([x0, -12, 60]);
+      return r;
+    });
+    for (let i = 0; i < X.length - 1; i++) {
+      const k = crique((X[i] + X[i + 1]) / 2);
+      for (let j = 0; j < V[i].length - 1; j++) {
+        const a = V[i][j], b2 = V[i + 1][j], cc = V[i][j + 1], d = V[i + 1][j + 1];
+        const T = sens < 0 ? [[a, b2, cc], [b2, d, cc]] : [[a, cc, b2], [b2, cc, d]];
+        for (const t of T) {
+          const ys = t.map((p) => p[1]);
+          const cy = (ys[0] + ys[1] + ys[2]) / 3;
+          const h = j < 4 ? herbe() : teinteFalaise(cy, Math.min(...ys), k, al());
+          tri(t[0], t[1], t[2], h);
+        }
+      }
+    }
+  };
+  cote(XO, -1);
+  cote(XE, 1);
+  // Le fond de la mer au large du lot (z 25 à 60), sous la nappe
+  if (FALAISE.V) {
+    const bas = FALAISE.V.map((r) => r[r.length - 1]);
+    for (let i = 0; i < bas.length - 1; i++) {
+      const p = bas[i], q = bas[i + 1];
+      quad(p, q, [p[0], -12, 60], [q[0], -12, 60], 0x3a4540);
+    }
+  }
+  colorier(ch, M.mat, pos, col);
+
+  // La route d'accès continue au nord dans la lande et s'y perd (P-4)
+  const route = [[-2.05, -24.9], [-2.6, -29], [-3.9, -34], [-5.2, -40], [-5.4, -46], [-4.3, -52], [-2.6, -58], [-1.6, -64]];
+  ruban(ch, M.mat, route, 2.5, 0x9a8b70, (x, z) => (z > -25.5 ? 0 : yLande(x, z)), 0.014, al, 12);
+  for (const [x, z] of [[-0.6, -31], [-6.8, -43], [-2.9, -55]]) borne(ch, M, x, yLande(x, z), z);
+  // Quelques rochers et ajoncs dans la lande, de loin en loin
+  for (const [x, z, s] of [[-14, -33, 1.1], [-26, -41, 1.4], [12, -36, 1.0], [24, -48, 1.5], [-40, -12, 1.2], [-44, 4, 0.9], [40, -6, 1.3], [44, 8, 1.0], [36, -30, 1.1]]) rocher(ch, x, z, s, yLande(x, z) - 0.15);
+  const ajonc = [0x4d6338, 0x5a7040, 0x3f5530];
+  for (const [x, z, t] of [[-9, -30, 1.0], [6, -42, 1.2], [-34, -20, 1.1], [35, -16, 0.9], [-38, 6, 1.0], [38, 3, 1.1]]) {
+    arbuste(ch, x, z, t, yLande(x, z), ajonc);
+    for (let k = 0; k < 4; k++) ch.poser(BOULE, M.mat, 0xd8b23a, { x: x + ch.entre(-0.6, 0.6) * t, y: yLande(x, z) + ch.entre(0.5, 1.1) * t, z: z + ch.entre(-0.6, 0.6) * t, e: 0.06 }, { crasse: false, nuance: 0.1 });
+  }
+
+  // Le sentier côtier hors du lot : la banquette de dalles au ras de l'eau, les marches taillées dans la falaise, la main
+  // courante, les marques, puis le sentier qui file dans la lande
+  ruban(ch, M.mat, SENTIER_DEHORS, 1.1, TERRE_BATTUE, solSentier, 0.035, al);
+  for (let x = -29.4; x > MARCHES.x0 + 0.1; x -= 0.6) {
+    const z = 16.35 + (x + 29.4) * 0.17;
+    ch.boite(0.66, 0.5, 1.4, [0x7b776f, 0x6e6b63, 0x86837b][Math.floor(ch.hasard() * 3)], { x, y: MER_Y + 0.02, z, ry: ch.entre(-0.15, 0.15) }, M.mat, { crasse: false, nuance: 0.06 });
+  }
+  const poteaux = [];
+  const distanceA = (x, y) => {
+    const { D, Y } = profil(x);
+    for (let i = 1; i < D.length; i++) if (Y[i] <= y) return D[i - 1] + ((D[i] - D[i - 1]) * (Y[i - 1] - y)) / (Y[i - 1] - Y[i]);
+    return D[D.length - 1];
+  };
+  for (let i = 0; i < MARCHES.n; i++) {
+    const x = MARCHES.x0 - i * MARCHES.pas;
+    const y = hauteurMarche(i);
+    const z = bordFalaise(x) + distanceA(x, y);
+    ch.boite(0.52, 1.3, 1.2, i % 3 ? 0xa59d8e : 0x9a9284, { x, y: y - 0.65, z: z + 0.2, ry: ch.entre(-0.06, 0.06) }, M.mat, { crasse: false, nuance: 0.05 });
+    if (i % 5 === 0 || i === MARCHES.n - 1) poteaux.push([x, y + 0.95, z + 0.75]);
+  }
+  for (let i = 0; i < poteaux.length; i++) {
+    const [x, yh, z] = poteaux[i];
+    ch.boite(0.08, 1.05, 0.08, 0x6b5a48, { x, y: yh - 0.5, z }, M.mat, { crasse: false, nuance: 0.05 });
+    if (i > 0) ch.poutre(poteaux[i - 1], poteaux[i], 0.04, 0xb09a6a, M.mat, { crasse: false });
+  }
+  for (const i of [0, 11]) {
+    const x = MARCHES.x0 - i * MARCHES.pas + 0.05;
+    const y = hauteurMarche(i);
+    const z = bordFalaise(x) + distanceA(x, y + 0.6) + 0.12;
+    ch.boite(0.3, 0.07, 0.03, 0xf2efe6, { x, y: y + 0.62, z }, M.mat, { crasse: false, nuance: 0 });
+    ch.boite(0.3, 0.07, 0.03, BORNE_ROUGE, { x, y: y + 0.53, z }, M.mat, { crasse: false, nuance: 0 });
+  }
+  const haut = MARCHES.x0 - MARCHES.pas * (MARCHES.n - 1);
+  const lande = [[haut + 0.1, bordFalaise(haut) - 0.3]];
+  for (let x = haut - 0.2; x > -66; x -= 3) lande.push([x, bordFalaise(x) - 1.3 + 0.4 * Math.sin(x * 0.3)]);
+  ruban(ch, M.mat, lande, 1.0, TERRE, (x, z) => yLande(x, z), 0.015, al, 6);
+  borne(ch, M, haut - 0.9, 0, bordFalaise(haut - 0.9) - 0.9);
+
+  const g = ch.construire();
+  g.name = "alentours";
+  g.userData.nom = "alentours";
+  return g;
 }
 
 // ---------- L'épave du cargo (P1 à P3), cachée au départ : epave_apres ----------
@@ -1945,8 +2500,19 @@ function versLieu(o, lx, lz) {
   return [o.x + lx * c + lz * s, o.z - lx * s + lz * c];
 }
 
-// L'échelle de coupée : du pavois (côté grève, s = 4,5) jusqu'aux galets
-const ECHELLE = { s: 4.5, x1: 0, x2: 9.0, demi: 0.65 };
+// L'échelle de coupée (P-5) : le pavois est ouvert (la coupée) côté grève entre les stations 2,2 et 4,2 ; l'échelle en
+// descend droit vers l'ouest, alignée sur les axes du lot (de biais, on s'y coinçait), large de 2 m, jusqu'aux galets
+// (≈ 30° au lieu de 38°). Repère du lot.
+const COUPEE = { de: 2.2, a: 4.2 };
+const ECHELLE = (() => {
+  const [xN, zN] = versMonde(largeurCoque(COUPEE.a), COUPEE.a);
+  const [xS, zS] = versMonde(largeurCoque(COUPEE.de), COUPEE.de);
+  return { zN, zS, xN, xS, xHaut: (xN + xS) / 2, xBas: -15.0 };
+})();
+/** Les hauteurs du haut (le pont, à la coupée) et du bas (les galets) de l'échelle de coupée. */
+function hauteursEchelle() {
+  return { yHaut: ponCoque((COUPEE.de + COUPEE.a) / 2) + 0.05, yBas: solFalaise(ECHELLE.xBas, (ECHELLE.zN + ECHELLE.zS) / 2) + 0.12 };
+}
 // Les conteneurs : sur la grève (livraison, provisions du bord) et sur le pont (outillage, 10 pieds)
 const C_LIVRAISON = { x: -19.4, z: 17.8, ry: 0.04, long: 6.06, ouvert: 1 };
 const C_BORD = { x: -11.6, z: 17.45, ry: 0.06, long: 6.06, ouvert: -1 };
@@ -1971,20 +2537,17 @@ function versLocal(o, x, z) {
 export function hauteurSol(x, z, { epave = false } = {}) {
   if (epave) {
     const [lx, s] = versLocal(EPAVE, x, z);
-    // L'échelle de coupée : du pavois (pont) jusqu'aux galets
-    const x1 = largeurCoque(ECHELLE.s) + 0.05;
-    if (Math.abs(s - ECHELLE.s) <= ECHELLE.demi + 0.05 && lx >= x1 - 0.3 && lx <= ECHELLE.x2) {
-      const yHaut = ponCoque(ECHELLE.s) + 0.05;
-      const [gx, gz] = versMonde(ECHELLE.x2, ECHELLE.s);
-      const yBas = solFalaise(gx, gz) + 0.12;
-      const t = Math.min(1, Math.max(0, (lx - x1) / (ECHELLE.x2 - x1)));
-      return yHaut + (yBas - yHaut) * t + 0.07;
-    }
     // Le pont (et le plancher du conteneur d'outillage)
     if (s >= 0.3 && s <= COQUE_L && Math.abs(lx) <= largeurCoque(s)) {
       const cl = C_OUTIL.long / 2;
       if (Math.abs(s - C_OUTIL.s) <= cl && Math.abs(lx - C_OUTIL.lx) <= 1.22) return ponCoque(C_OUTIL.s) + 0.14;
       return ponCoque(s);
+    }
+    // L'échelle de coupée (P-5) : de la coupée jusqu'aux galets, droit vers l'ouest
+    if (z >= ECHELLE.zN - 0.05 && z <= ECHELLE.zS + 0.05 && x >= ECHELLE.xBas && x <= ECHELLE.xHaut + 0.3) {
+      const { yHaut, yBas } = hauteursEchelle();
+      const t = Math.min(1, Math.max(0, (ECHELLE.xHaut - x) / (ECHELLE.xHaut - ECHELLE.xBas)));
+      return yHaut + (yBas - yHaut) * t + 0.07;
     }
     // Les conteneurs posés sur la grève : leur plancher
     for (const C of [C_LIVRAISON, C_BORD]) {
@@ -2006,29 +2569,32 @@ export function hauteurSol(x, z, { epave = false } = {}) {
  * Un conteneur maritime (repère local : x le long, z en travers, y depuis le plancher), portes ouvertes rabattues contre
  * les flancs à l'extrémité `ouvert` (+1 : +x, −1 : −x). Renvoie ses segments d'obstacles en local.
  */
-function conteneur(ch, M, couleur, long, ouvert, options = {}) {
+function conteneur(ch, murs, M, couleur, long, ouvert) {
   const l = long / 2;
   const w = 1.22;
   const h = 2.59;
   const fonce = new THREE.Color(couleur).multiplyScalar(0.7).getHex();
-  ch.boite(long, 0.12, 2.44, 0x4a3e32, { y: 0.06 }, M.tole, { nuance: 0.03 }); // le plancher de contreplaqué
-  if (!options.sansToit) ch.boite(long, 0.06, 2.44, couleur, { y: h - 0.03 }, M.tole, { nuance: 0.04 });
+  // Ce qui reste quand le conteneur s'ouvre (P-7) : le plancher de contreplaqué et les longerons du bas ; le toit, les
+  // parois, les montants et les portes rabattues vont dans `murs` (la couche qui s'efface quand on entre)
+  ch.boite(long, 0.12, 2.44, 0x4a3e32, { y: 0.06 }, M.tole, { nuance: 0.03 });
+  murs.boite(long, 0.06, 2.44, couleur, { y: h - 0.03 }, M.tole, { nuance: 0.04 });
   for (const sz of [-1, 1]) {
-    ch.boite(long, h - 0.2, 0.05, couleur, { y: h / 2, z: sz * (w - 0.025) }, M.tole, { nuance: 0.04 });
+    murs.boite(long, h - 0.2, 0.05, couleur, { y: h / 2, z: sz * (w - 0.025) }, M.tole, { nuance: 0.04 });
     // Le flanc ondulé et le logo « Abondance Express » (l'atlas, teinté par les sommets)
-    panneau(ch, M, R.conteneur, { y: h / 2, z: sz * (w + 0.005), ry: sz > 0 ? 0 : Math.PI }, long - 0.3, h - 0.25);
+    panneau(murs, M, R.conteneur, { y: h / 2, z: sz * (w + 0.005), ry: sz > 0 ? 0 : Math.PI }, long - 0.3, h - 0.25);
     // Les longerons haut et bas
-    for (const y of [0.1, h - 0.08]) ch.boite(long, 0.16, 0.1, fonce, { y, z: sz * (w - 0.05) }, M.tole, { crasse: false });
+    ch.boite(long, 0.16, 0.1, fonce, { y: 0.1, z: sz * (w - 0.05) }, M.tole, { crasse: false });
+    murs.boite(long, 0.16, 0.1, fonce, { y: h - 0.08, z: sz * (w - 0.05) }, M.tole, { crasse: false });
   }
   // Le fond fermé, les montants d'angle
-  ch.boite(0.05, h - 0.2, 2.34, couleur, { x: -ouvert * (l - 0.03), y: h / 2 }, M.tole, { nuance: 0.04 });
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) ch.boite(0.16, h, 0.16, fonce, { x: sx * (l - 0.08), y: h / 2, z: sz * (w - 0.08) }, M.tole, { crasse: false });
-  ch.boite(0.12, 0.2, 2.44, fonce, { x: ouvert * (l - 0.06), y: h - 0.1 }, M.tole, { crasse: false });
+  murs.boite(0.05, h - 0.2, 2.34, couleur, { x: -ouvert * (l - 0.03), y: h / 2 }, M.tole, { nuance: 0.04 });
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) murs.boite(0.16, h, 0.16, fonce, { x: sx * (l - 0.08), y: h / 2, z: sz * (w - 0.08) }, M.tole, { crasse: false });
+  murs.boite(0.12, 0.2, 2.44, fonce, { x: ouvert * (l - 0.06), y: h - 0.1 }, M.tole, { crasse: false });
   // Les deux portes, ouvertes en grand, rabattues contre les flancs
   for (const sz of [-1, 1]) {
-    ch.repere({ x: ouvert * l, y: 0.1, z: sz * (w + 0.06), ry: ouvert > 0 ? 0 : Math.PI }, () => {
-      ch.boite(1.18, 2.38, 0.05, couleur, { x: -0.6, y: 1.19 }, M.tole, { nuance: 0.05 });
-      panneau(ch, M, R.porteC, { x: -0.6, y: 1.19, z: sz * (ouvert > 0 ? 0.03 : -0.03), ry: sz * (ouvert > 0 ? 1 : -1) > 0 ? 0 : Math.PI }, 1.14, 2.3);
+    murs.repere({ x: ouvert * l, y: 0.1, z: sz * (w + 0.06), ry: ouvert > 0 ? 0 : Math.PI }, () => {
+      murs.boite(1.18, 2.38, 0.05, couleur, { x: -0.6, y: 1.19 }, M.tole, { nuance: 0.05 });
+      panneau(murs, M, R.porteC, { x: -0.6, y: 1.19, z: sz * (ouvert > 0 ? 0.03 : -0.03), ry: sz * (ouvert > 0 ? 1 : -1) > 0 ? 0 : Math.PI }, 1.14, 2.3);
     });
   }
   return [
@@ -2047,6 +2613,11 @@ function carton(ch, M, x, y, z, l, h, p, ry, eventre) {
   });
 }
 
+/** Pose dans deux chantiers à la fois, dans le même repère (le conteneur et sa couche qui s'efface). */
+function deux(a, bb, pose, faire) {
+  a.repere(pose, () => bb.repere(pose, faire));
+}
+
 /** Une palette de bois. */
 function palette(ch, M, x, y, z, ry, rz = 0) {
   ch.repere({ x, y, z, ry, rz }, () => {
@@ -2056,7 +2627,6 @@ function palette(ch, M, x, y, z, ry, rz = 0) {
 }
 
 function epave(b, M, usure) {
-  ECHELLE.x1 = largeurCoque(ECHELLE.s) + 0.05;
   const groupe = new THREE.Group();
   groupe.name = "epave_apres";
   groupe.userData.nom = "epave_apres";
@@ -2068,12 +2638,20 @@ function epave(b, M, usure) {
   // La couche qui s'efface : la coque, le pont et tout ce qui est dessus. Hauteurs comptées depuis la grève (y ≈ −8,8) ;
   // rien ne s'efface tant que le joueur est à bord (horsDe).
   const nomCouche = "coque de l'épave (cargo « Prime Abondance »)";
-  const k = b.couche(nomCouche, { x: -3.9, z: 20, l: 8.2, p: 9.4 }, 0.6, 6.2, { x: bx, z: bz, l: 4.2, p: 5.2 });
+  const boiteCoque = { x: -3.9, z: 20, l: 8.2, p: 9.4 };
+  const horsDeCoque = { x: bx, z: bz, l: 4.2, p: 5.2 };
+  const k = b.couche(nomCouche, boiteCoque, 0.6, 6.2, horsDeCoque);
   const coque = { x: EPAVE.x, y: 0, z: EPAVE.z, ry: EPAVE.ry };
+  // P-7 : les toits et parois des trois conteneurs, une couche à part (mêmes matières pour les trois : deux appels) ; ses
+  // entrées (une par conteneur, plus une avec la coque) sont faites dans creer()
+  const nomConteneurs = "conteneurs de l'épave (toits et parois)";
+  const kc = b.couche(nomConteneurs, { x: C_LIVRAISON.x, z: C_LIVRAISON.z, l: 6.4, p: 2.9 }, 0.3, 2.7);
 
   // --- La coque : un maillage par bande (œuvres vives rouges, œuvres mortes bleu nuit), double face (on voit dedans
   // par la cassure). La cassure est déchiquetée : chaque point du profil s'arrête à une distance différente.
-  const S = [0, 0.8, 1.6, 2.6, 3.4, 4.2, 5.0, 5.8, 6.5, 7.1, 7.6, 8.0, 8.3, COQUE_L];
+  const S = [0, 0.8, 1.6, COUPEE.de - 0.1, COUPEE.de, 2.6, 3.4, COUPEE.a, COUPEE.a + 0.1, 5.0, 5.8, 6.5, 7.1, 7.6, 8.0, 8.3, COQUE_L];
+  /** La coupée (P-5) : côté grève (+x local), le pavois est ouvert au ras du pont entre ces stations. */
+  const ouvert = (s, cote) => cote > 0 && s >= COUPEE.de - 0.001 && s <= COUPEE.a + 0.001;
   const al = aleatoire(77);
   const dechire = [0.05, 0.55, 0.2, 0.75, 0.35, 0.9];
   const profilCoque = (s, cote, n) => {
@@ -2085,7 +2663,7 @@ function epave(b, M, usure) {
     const yf = Math.max(COQUE_FLOTTAISON, yb);
     // La flottaison : on interpole la largeur entre le bouchain (fonds) et le pont (l'évasement de l'avant)
     const wFl = wf + ((w - wf) * (yf - yb)) / Math.max(0.01, yd - yb);
-    const pts = [[0, yk], [wf * 0.72, yk], [wf, yb], [wFl, yf], [w, yd + 1.0]];
+    const pts = [[0, yk], [wf * 0.72, yk], [wf, yb], [wFl, yf], [w, yd + (ouvert(s, cote) ? 0.05 : 1.0)]];
     return pts.map(([x, y], i) => [x, y, n === 0 ? s + dechire[i] + (cote > 0 ? 0 : 0.15) : s]);
   };
   const bande = (i0, i1, couleur, cible) => {
@@ -2137,7 +2715,7 @@ function epave(b, M, usure) {
       for (let n = 1; n < S.length - 1; n++) {
         const a = [largeurCoque(S[n]) * cote, ponCoque(S[n]) + 1.02, S[n]];
         const bb = [largeurCoque(S[n + 1]) * cote, ponCoque(S[n + 1]) + 1.02, S[n + 1]];
-        k.poutre(a, bb, 0.12, 0xd8d4c8, M.tole);
+        if (!ouvert(S[n], cote) && !ouvert(S[n + 1], cote)) k.poutre(a, bb, 0.12, 0xd8d4c8, M.tole);
         // Le liston blanc au niveau du pont, la ligne rouge au-dessus de la flottaison
         k.poutre([a[0] * 1.004, a[1] - 1.15, a[2]], [bb[0] * 1.004, bb[1] - 1.15, bb[2]], 0.1, 0xd8d4c8, M.tole);
       }
@@ -2192,9 +2770,9 @@ function epave(b, M, usure) {
     k.poutre([-0.6, yC + 1.72, sC], [0.6, yC + 1.72, sC], 0.08, 0xc9c3b6, M.tole);
     k.tube([0, yC, sC + 0.3], [0, yC + 4.2, sC + 0.25], 0.07, 0xc9c3b6, M.tole, 6); // le mât de misaine, court
     k.boite(0.9, 0.06, 0.06, 0xc9c3b6, { y: yC + 3.6, z: sC + 0.25 }, M.tole, { crasse: false });
-    // Le conteneur d'outillage de 10 pieds, sur le pont, portes vers la cassure
+    // Le conteneur d'outillage de 10 pieds, sur le pont, portes vers la cassure (son toit et ses parois : la couche kc)
     k.repere({ x: C_OUTIL.lx, y: ponCoque(C_OUTIL.s) + 0.02, z: C_OUTIL.s, ry: -Math.PI / 2, rz: 0 }, () => {
-      conteneur(k, M, 0x3f6a5a, C_OUTIL.long, 1);
+      kc.repere({ ...coque }, () => kc.repere({ x: C_OUTIL.lx, y: ponCoque(C_OUTIL.s) + 0.02, z: C_OUTIL.s, ry: -Math.PI / 2, rz: 0 }, () => conteneur(k, kc, M, 0x3f6a5a, C_OUTIL.long, 1)));
       // Dedans : l'établi au fond, les caisses à outils, les outils pendus
       k.boite(0.6, 0.85, 2.2, 0x6a4c32, { x: -1.0, y: 0.55 }, M.tole, { nuance: 0.05 });
       for (let i = 0; i < 3; i++) k.boite(0.5, 0.25, 0.3, [0xb03a2a, 0x2f5a7a, 0xb0782a][i], { x: 0.2 - i * 0.25, y: 0.25 + (i === 2 ? 0.25 : 0), z: -0.9 + (i % 2) * 0.1 }, M.tole, { nuance: 0.05 });
@@ -2213,25 +2791,27 @@ function epave(b, M, usure) {
     k.repere(coque, () => panneau(k, M, R.coque, { x: (wa + wb) / 2, y: ponCoque(6) - 0.3, z: (sa + sb) / 2, ry }, Math.hypot(sb - sa, wb - wa) * 0.98, 0.55));
   }
 
-  // --- L'échelle de coupée (passerelle praticable, 1,3 m de large) : du pavois jusqu'aux galets
+  // --- L'échelle de coupée (P-5 ; passerelle praticable, 2 m de large) : de la coupée jusqu'aux galets, droit vers l'ouest
   {
-    const yHaut = ponCoque(ECHELLE.s) + 0.05;
-    const [gx, gz] = versMonde(ECHELLE.x2, ECHELLE.s);
-    const yBas = solFalaise(gx, gz) + 0.12;
-    const L = Math.hypot(ECHELLE.x2 - ECHELLE.x1, yHaut - yBas);
-    const p = Math.atan2(yHaut - yBas, ECHELLE.x2 - ECHELLE.x1);
-    ch.repere(coque, () => {
-      ch.repere({ x: (ECHELLE.x1 + ECHELLE.x2) / 2, y: (yHaut + yBas) / 2, z: ECHELLE.s, rz: -p }, () => {
-        for (const sz of [-1, 1]) ch.boite(L, 0.22, 0.06, 0xb9b4a8, { z: sz * ECHELLE.demi }, M.tole, { nuance: 0.03 });
-        for (let i = 0; i < 12; i++) ch.boite(0.24, 0.04, ECHELLE.demi * 2, 0x8d8a82, { x: -L / 2 + 0.3 + (i * (L - 0.6)) / 11, y: 0.05, rz: p }, M.tole, { crasse: false });
-        for (const sz of [-1, 1]) {
-          for (let i = 0; i <= 4; i++) ch.boite(0.04, 0.95, 0.04, 0xc9c3b6, { x: -L / 2 + 0.2 + (i * (L - 0.4)) / 4, y: 0.55, z: sz * ECHELLE.demi, rz: p }, M.tole, { crasse: false });
-          ch.boite(L, 0.04, 0.04, 0xc9c3b6, { y: 1.0, z: sz * ECHELLE.demi }, M.tole, { crasse: false });
-        }
-      });
-      // Le palier du bas, posé de travers sur les galets
-      ch.boite(1.4, 0.08, 1.5, 0x8d8a82, { x: ECHELLE.x2 + 0.6, y: yBas + 0.02, z: ECHELLE.s, rz: 0.06 }, M.tole, { nuance: 0.05 });
+    const { yHaut, yBas } = hauteursEchelle();
+    const zc = (ECHELLE.zN + ECHELLE.zS) / 2;
+    const demi = (ECHELLE.zS - ECHELLE.zN) / 2;
+    const L = Math.hypot(ECHELLE.xHaut - ECHELLE.xBas, yHaut - yBas);
+    const p = Math.atan2(yHaut - yBas, ECHELLE.xHaut - ECHELLE.xBas);
+    ch.repere({ x: (ECHELLE.xHaut + ECHELLE.xBas) / 2, y: (yHaut + yBas) / 2, z: zc, rz: p }, () => {
+      // Les limons, les marches (à plat), les chandeliers et la main courante, des deux côtés
+      for (const sz of [-1, 1]) ch.boite(L, 0.24, 0.07, 0xb9b4a8, { z: sz * (demi - 0.04) }, M.tole, { nuance: 0.03 });
+      // Le plancher de tôle striée, sous les marches (on ne passe pas le pied entre elles)
+      ch.boite(L, 0.03, demi * 2 - 0.1, 0x77746c, { y: 0.03 }, M.tole, { crasse: false, nuance: 0.03 });
+      const nM = 16;
+      for (let i = 0; i < nM; i++) ch.boite(0.26, 0.04, demi * 2 - 0.1, 0x8d8a82, { x: -L / 2 + 0.3 + (i * (L - 0.6)) / (nM - 1), y: 0.06, rz: -p }, M.tole, { crasse: false });
+      for (const sz of [-1, 1]) {
+        for (let i = 0; i <= 5; i++) ch.boite(0.045, 0.95, 0.045, 0xc9c3b6, { x: -L / 2 + 0.2 + (i * (L - 0.4)) / 5, y: 0.55, z: sz * (demi - 0.04), rz: -p }, M.tole, { crasse: false });
+        ch.boite(L, 0.045, 0.045, 0xc9c3b6, { y: 1.02, z: sz * (demi - 0.04) }, M.tole, { crasse: false });
+      }
     });
+    // Le palier du bas, posé de travers sur les galets
+    ch.boite(1.4, 0.08, demi * 2 + 0.1, 0x8d8a82, { x: ECHELLE.xBas - 0.65, y: yBas + 0.0, z: zc, rz: 0.05, ry: 0.04 }, M.tole, { nuance: 0.05 });
   }
 
   // --- Les conteneurs de la grève
@@ -2239,8 +2819,8 @@ function epave(b, M, usure) {
   for (const [C, couleur, nom] of [[C_LIVRAISON, 0x9a4a32, "livraison"], [C_BORD, 0x2f5a7a, "bord"]]) {
     const y = solFalaise(C.x, C.z) - 0.05;
     C.y = y;
-    ch.repere({ x: C.x, y, z: C.z, ry: C.ry, rz: nom === "bord" ? 0.02 : -0.015 }, () => {
-      const segs = conteneur(ch, M, couleur, C.long, C.ouvert);
+    deux(ch, kc, { x: C.x, y, z: C.z, ry: C.ry, rz: nom === "bord" ? 0.02 : -0.015 }, () => {
+      const segs = conteneur(ch, kc, M, couleur, C.long, C.ouvert);
       for (const [a1, b1, a2, b2] of segs) obs(versLieu(C, a1, b1), versLieu(C, a2, b2), `conteneur ${nom === "bord" ? "des provisions du bord" : "de la Livraison du Jour"} (paroi)`);
     });
     posesSurGreve.push(C);
@@ -2264,10 +2844,10 @@ function epave(b, M, usure) {
   });
 
   // --- La grève après l'échouage : cartons éventrés, palettes, tôles arrachées, ce que la mer rejette
-  for (const [x, z, l, h, p, r, ev] of [[-15.7, 20.6, 0.55, 0.45, 0.5, 0.5, true], [-16.3, 21.3, 0.5, 0.4, 0.45, 1.1, false], [-14.6, 21.9, 0.6, 0.5, 0.5, 0.2, true], [-21.6, 20.6, 0.45, 0.4, 0.4, 0.7, true], [-18.0, 22.1, 0.5, 0.35, 0.45, 2.1, false], [-9.2, 22.3, 0.55, 0.45, 0.5, -0.4, true], [-26.5, 19.6, 0.5, 0.4, 0.4, 0.9, true]]) carton(ch, M, x, solFalaise(x, z), z, l, h, p, r, ev);
-  palette(ch, M, -17.2, solFalaise(-17.2, 20.4), 20.4, 0.6, 0.06);
-  palette(ch, M, -12.4, solFalaise(-12.4, 22.4), 22.4, -0.3, -0.1);
-  for (const [x, z, r] of [[-10.6, 20.6, 0.4], [-8.4, 23.0, 1.2], [-20.0, 22.6, 2.2]]) ch.boite(1.6, 0.04, 0.9, 0x26384a, { x, y: solFalaise(x, z) + 0.12, z, ry: r, rz: 0.15, rx: 0.1 }, M.tole, { nuance: 0.06 });
+  for (const [x, z, l, h, p, r, ev] of [[-15.4, 22.75, 0.55, 0.45, 0.5, 0.5, true], [-17.6, 22.6, 0.5, 0.4, 0.45, 1.1, false], [-13.2, 22.8, 0.6, 0.5, 0.5, 0.2, true], [-22.6, 19.7, 0.45, 0.4, 0.4, 0.7, true], [-18.0, 22.1, 0.5, 0.35, 0.45, 2.1, false], [-9.4, 22.9, 0.55, 0.45, 0.5, -0.4, true], [-28.3, 22.6, 0.5, 0.4, 0.4, 0.9, true]]) carton(ch, M, x, solFalaise(x, z), z, l, h, p, r, ev);
+  palette(ch, M, -17.9, solFalaise(-17.9, 21.3), 21.3, 0.6, 0.06);
+  palette(ch, M, -11.6, solFalaise(-11.6, 22.85), 22.85, -0.3, -0.1);
+  for (const [x, z, r] of [[-10.4, 23.0, 0.4], [-8.4, 23.2, 1.2], [-20.2, 22.9, 2.2]]) ch.boite(1.6, 0.04, 0.9, 0x26384a, { x, y: solFalaise(x, z) + 0.12, z, ry: r, rz: 0.15, rx: 0.1 }, M.tole, { nuance: 0.06 });
   // Un conteneur écrasé, couché dans l'eau au pied de la cassure (décor : on n'y entre pas)
   ch.repere({ x: -9.8, y: MER_Y - 1.35, z: 24.1, ry: 0.55, rz: 0.12, rx: Math.PI / 2 - 0.25 }, () => {
     ch.boite(6.06, 2.44, 2.59, 0x8a5a3a, {}, M.tole, { nuance: 0.05 });
@@ -2344,15 +2924,16 @@ function epave(b, M, usure) {
   objets.push(cloche, rabot, porteFour, soufflet, jerrican);
 
   // --- Les obstacles de l'épave (après l'échouage seulement) : la coque, l'échelle, le pont
-  const Sg = [0.3, 1.5, 2.6, ECHELLE.s - ECHELLE.demi, ECHELLE.s + ECHELLE.demi, 5.6, 6.5, 7.3, 8.0, COQUE_L];
+  const Sg = [0.3, 1.5, COUPEE.de, COUPEE.a, 5.6, 6.5, 7.3, 8.0, COQUE_L];
   for (const cote of [-1, 1]) {
     for (let n = 0; n < Sg.length - 1; n++) {
-      if (cote > 0 && Sg[n] === ECHELLE.s - ECHELLE.demi) continue; // l'arrivée de l'échelle sur le pont
+      if (cote > 0 && Sg[n] === COUPEE.de) continue; // la coupée : l'arrivée de l'échelle sur le pont
       obs(versMonde(largeurCoque(Sg[n]) * cote, Sg[n]), versMonde(largeurCoque(Sg[n + 1]) * cote, Sg[n + 1]), "coque du cargo (bordé, pavois)");
     }
   }
   obs(versMonde(-COQUE_W, 0.3), versMonde(COQUE_W, 0.3), "la cassure de la coque (le vide, la cale)");
-  for (const sz of [-1, 1]) obs(versMonde(ECHELLE.x1, ECHELLE.s + sz * ECHELLE.demi), versMonde(ECHELLE.x2, ECHELLE.s + sz * ECHELLE.demi), "rambarde de l'échelle de coupée");
+  obs([ECHELLE.xBas, ECHELLE.zN], [ECHELLE.xN, ECHELLE.zN], "rambarde de l'échelle de coupée");
+  obs([ECHELLE.xBas, ECHELLE.zS], [ECHELLE.xS, ECHELLE.zS], "rambarde de l'échelle de coupée");
   // Sur le pont : le conteneur d'outillage (ouvert vers la cassure), le guindeau
   {
     const o = { x: C_OUTIL.lx, z: C_OUTIL.s, ry: -Math.PI / 2 };
@@ -2368,11 +2949,24 @@ function epave(b, M, usure) {
 
   b.lumiere(...(() => { const [x, z] = versMonde(0, 7.4); return [x, ponCoque(7.4) + 4.0, z]; })(), 0xff3a2a, 3, 8, "feu de détresse du cargo, sur batterie (seulement avec epave_apres)");
 
+  // Les cartons et les palettes (mat) rejoignent la tôle de l'épave : un appel de dessin de moins (P-10)
+  fondreLot(ch, M.mat, M.tole);
   const base = ch.construire();
   base.name = "épave (bas de coque, grève, conteneurs)";
   groupe.add(base);
   for (const o of objets) groupe.add(o);
-  return { groupe, obstacles, nomCouche, fondus, objets };
+  // Les entrées de la couche des conteneurs (P-7) : chacun s'ouvre quand on y entre (hauteurs depuis son plancher) ; tous
+  // s'effacent aussi avec la coque, quand elle cache le joueur sur la grève
+  const boiteDe = (C, ex, ez) => ({ x: r2(C.x), z: r2(C.z), l: r2(ex * 2), p: r2(ez * 2) });
+  const [ox, oz] = versMonde(C_OUTIL.lx, C_OUTIL.s);
+  const [ux, uz] = [Math.abs(Math.sin(EPAVE.ry)), Math.abs(Math.cos(EPAVE.ry))]; // le grand axe du conteneur d'outillage
+  const entreesConteneurs = [
+    { nom: "conteneur de la Livraison du Jour (toit et parois)", boite: boiteDe(C_LIVRAISON, 3.25, 1.45), bas: 0.3, haut: 2.7, solCouche: r2(C_LIVRAISON.y + 0.12) },
+    { nom: "conteneur des provisions du bord (toit et parois)", boite: boiteDe(C_BORD, 3.25, 1.45), bas: 0.3, haut: 2.7, solCouche: r2(C_BORD.y + 0.12) },
+    { nom: "conteneur d'outillage sur le pont (toit et parois)", boite: boiteDe({ x: ox, z: oz }, ux * 1.55 + uz * 1.4, uz * 1.55 + ux * 1.4), bas: 0.3, haut: 2.7, solCouche: r2(ponCoque(C_OUTIL.s) + 0.14) },
+    { nom: "conteneurs de l'épave, avec la coque", boite: boiteCoque, bas: 0.6, haut: 6.2, horsDe: horsDeCoque, solCouche: -8.8 },
+  ];
+  return { groupe, obstacles, nomCouche, nomConteneurs, entreesConteneurs, fondus, objets };
 }
 
 // ---------- L'atlas des panneaux ----------
@@ -2617,6 +3211,31 @@ function dessinerAtlas(g) {
     texte("← Port · 6 km", x + l / 2, y + 74, "18px serif", "#e6e0d0");
     texte("Phare du Cap →", x + l / 2, y + 104, "18px serif", "#e6e0d0");
   }
+  // Les panneaux de sortie (R0-1) : fond crème, cadre vert sombre, la vraie destination en grosses lettres
+  const sortie = (r, lignes, marque) => {
+    const [x, y, l, h] = r;
+    g.fillStyle = "#f4ecd8";
+    g.fillRect(x, y, l, h);
+    g.strokeStyle = "#2f4a3a";
+    g.lineWidth = 9;
+    g.strokeRect(x + 7, y + 7, l - 14, h - 14);
+    if (marque) {
+      // La marque du sentier côtier : blanc sur rouge
+      g.fillStyle = "#ffffff";
+      g.fillRect(x + 26, y + 26, 46, 13);
+      g.fillStyle = "#c8362b";
+      g.fillRect(x + 26, y + 39, 46, 13);
+      g.strokeStyle = "#8a8070";
+      g.lineWidth = 1.5;
+      g.strokeRect(x + 26, y + 26, 46, 26);
+    }
+    lignes.forEach(([t, police, dy]) => texte(t, x + l / 2 + (marque && dy < 100 ? 24 : 0), y + dy, police, "#1c2a30"));
+    g.fillStyle = "#c8362b";
+    g.fillRect(x + 40, y + h - 40, l - 80, 6);
+    salir(x, y, l, h, 6, "rgba(120,100,70,0.16)");
+  };
+  sortie(R.panneauNord, [["← La corniche", "bold 50px serif", 86], ["Ton terrain", "bold 46px serif", 150]], false);
+  sortie(R.panneauGreve, [["Sentier côtier", "bold 44px serif", 82], ["← Port · 6 km", "bold 50px serif", 150]], true);
   // La plaque du canot
   {
     const [x, y, l, h] = R.canot;

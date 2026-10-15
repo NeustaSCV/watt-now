@@ -6,8 +6,8 @@
 //   (x du jeu = x du modèle + 100 ; z du jeu = z du modèle + 35). Comme sur la carte (client/src/carte.ts : le terrain
 //   au nord-ouest du pont, l'hôtel au sud-est) et comme le modèle le dit (ses panneaux, ses entrées), le terrain est à
 //   l'ouest (le bourg) et l'hôtel à l'est (la rive des marins). En venant du terrain, on passe le bourg, puis la porte
-//   du péage (la caisse est derrière, au pied du poste de guet : on paie contre la porte, la voix d'en haut entend), la
-//   brèche, et la rive des marins. Les données du modèle viennent de `route-pont-modele.ts`
+//   du péage (la caisse est devant elle, côté terrain : on y paie, la voix d'en haut entend), la brèche, et la rive des
+//   marins. Les données du modèle viennent de `route-pont-modele.ts`
 //   (scripts/extraire-route-pont.mjs) ;
 // - la zone : les obstacles du modèle, et ce qui change d'état (S-02) : la porte du péage, fermée pour tous sauf pour qui
 //   a payé (commun/src/peage.ts), et l'accès de la cale basse, fermé à marée haute (`zoneRoutePont`) ;
@@ -35,6 +35,7 @@ import {
   FOUILLE_PONT,
   MAREE_HAUTE_PONT,
   MAREE_PONT,
+  PANNEAUX_PONT,
   SEGMENTS_PONT,
   type PointMaree,
 } from "./route-pont-modele.ts";
@@ -99,10 +100,15 @@ export const CALE = (() => {
 export const RETOUR_MAREE = auPont(MAREE_PONT.retour.x, MAREE_PONT.retour.z);
 
 /**
- * Les deux panneaux routiers de sortie (FICHE.panneaux : x ∓ 95, sur le trottoir), à l'ouest (vers le terrain) et à l'est
- * (vers le Grand Hôtel) : on les lit (commun/src/guidage.ts, E-14 et E-15), une lanterne les éclaire la nuit (0.10, R52).
+ * Les deux panneaux routiers de sortie du modèle (FICHE.panneaux : x ∓ 95, sur le trottoir), à l'ouest (vers le terrain) et
+ * à l'est (vers le Grand Hôtel) : on les lit (commun/src/guidage.ts, E-14 et E-15), la lanterne du modèle les éclaire la
+ * nuit (0.10, R52).
  */
-export const PANNEAUX_SORTIE_PONT = [auPont(-95, -6.6), auPont(95, 6.6)] as const;
+export const PANNEAUX_SORTIE_PONT = (["ouest", "est"] as const).map((cote) => {
+  const p = PANNEAUX_PONT.find((q) => q.sortie === cote);
+  if (!p) throw new Error(`Le modèle de la route du pont n'a plus de panneau de sortie à l'${cote}`);
+  return auPont(p.x, p.z);
+}) as unknown as readonly [{ x: number; z: number }, { x: number; z: number }];
 
 /** L'échelle de marée émaillée, sur le mur du quai, sous le tablier. */
 export const ECHELLE_MAREE = auPont(MAREE_PONT.echelle.x, MAREE_PONT.echelle.z);
@@ -126,7 +132,7 @@ export function texteEchelle(instant: number, debutMonde: number): string {
 
 // ---------- Le péage (S-19 ; la règle est dans commun/src/peage.ts) ----------
 
-/** La caisse du péage, au pied du poste de guet (objet « caisse_peage »). */
+/** La caisse du péage, devant la porte, côté terrain (objet « caisse_peage » ; 0.10, H-1 : elle était derrière). */
 export const CAISSE_PEAGE = (() => {
   const p = FOUILLE_PONT.find((f) => f.quoi?.startsWith("la caisse du péage"))!;
   return auPont(p.x, p.z);
@@ -144,13 +150,12 @@ export const PORTE_PEAGE = (() => {
 export const PORTEE_CAISSE = 1.6;
 
 /**
- * Où l'on peut payer : à la caisse, et contre la porte du péage, de l'un ou l'autre côté. En venant du terrain, la caisse
- * est derrière la porte (le modèle la pose au pied du poste de guet, sur la pile) : on paie contre la porte, sous le
- * panneau « DANS LA CAISSE ↓ », et la voix d'en haut répond. À proposer au porteur : la caisse devant la porte.
+ * Où l'on peut payer : à la caisse, devant la porte du péage, sous le panneau « DANS LA CAISSE ↓ » (la voix d'en haut
+ * répond). Depuis la 0.10 (H-1, décision du porteur V2-04), le modèle la pose devant la porte, côté terrain : on ne paie
+ * plus contre la porte.
  */
 export function prochePeage(x: number, z: number): boolean {
-  if (Math.hypot(x - CAISSE_PEAGE.x, z - CAISSE_PEAGE.z) <= PORTEE_CAISSE) return true;
-  return Math.abs(x - PORTE_PEAGE.x) <= 1.8 && z > PORTE_PEAGE.z0 - 0.6 && z < PORTE_PEAGE.z1 + 0.6;
+  return Math.hypot(x - CAISSE_PEAGE.x, z - CAISSE_PEAGE.z) <= PORTEE_CAISSE;
 }
 
 // ---------- La zone : le modèle, et ce qui change d'état ----------
@@ -199,64 +204,13 @@ function boitesDuSegment(s: SegmentModele): Boite[] {
 }
 
 /**
- * Là où l'on marche, dans le repère du modèle : les deux rives (le quai de pierre, et à l'est la forme de radoub et sa
- * péniche), le tablier (sauf la moitié sud qui pend dans la brèche ; les planches couvrent le trou de la voie nord), les
- * plateformes des quatre piles, la cale basse du quai sud-ouest, le ponton et la cabane du carrelet. Le reste est l'eau,
- * huit mètres plus bas : le modèle n'en ferme pas tous les bords (la pile est, la brèche), le jeu la ferme.
+ * Les obstacles fixes (tous les états à part) : hauts, puis bas (les bords, les garde-corps). Depuis la 0.10 (H-4), le
+ * modèle ouvre la tête du pont et ferme lui-même toutes les fuites vers l'eau (le jeu les fermait par des bandes d'eau).
  */
-export function solDuModele(xm: number, zm: number): boolean {
-  if (xm <= -58 || xm >= 58) return true;
-  if ((xm <= -50 || xm >= 50) && zm >= -20 && zm <= 14) return true;
-  if (zm >= -5.62 && zm <= 5.62 && xm >= -50 && xm <= 50) return !(xm > -5 && xm < 15 && zm > -1.8);
-  const ax = Math.abs(xm);
-  if (ax >= 32.5 && ax <= 42.5 && Math.abs(zm) >= 5.62 && Math.abs(zm) <= 10.4) return true;
-  const c = MAREE_PONT.cale;
-  if (xm >= c.x1 && xm <= c.x2 && zm >= c.z1 && zm <= c.z2) return true;
-  if (xm <= -50.75 && zm >= -27.6 && zm <= -26.4) return true;
-  return xm >= -54.75 && xm <= -50.75 && zm >= -29 && zm <= -25;
-}
-
-/**
- * Le modèle ferme le bord du quai d'un seul segment (x = ± 50, de z − 20 à 14), y compris là où le tablier s'appuie sur
- * le quai : on y ouvre la tête du pont (la largeur du tablier), sinon on ne passerait pas d'une rive au pont.
- */
-function teteDuPont(s: SegmentModele): SegmentModele[] {
-  if (!s.nature.startsWith("bord du quai") || s.x1 !== s.x2 || Math.abs(s.x1) !== 50) return [s];
-  const [z0, z1] = [Math.min(s.z1, s.z2), Math.max(s.z1, s.z2)];
-  return [
-    { ...s, z1: z0, z2: -5.62 },
-    { ...s, z1: 5.62, z2: z1 },
-  ].filter((m) => m.z2 - m.z1 > 0.01);
-}
-
-/** L'eau : des bandes de 0,5 m (repère du jeu) partout où l'on ne marche pas, entre les deux quais. */
-function boitesDEau(): Boite[] {
-  const boites: Boite[] = [];
-  const pas = 0.25;
-  for (let z = 0.25; z < ROUTE_PONT.largeur; z += 0.5) {
-    let debut: number | null = null;
-    const fermer = (x: number) => {
-      if (debut === null) return;
-      boites.push({ x: arrondi((debut + x) / 2), z: arrondi(z), l: arrondi(x - debut), p: 0.5 });
-      debut = null;
-    };
-    for (let x = 41; x <= 159; x += pas) {
-      const m = auModelePont(x + pas / 2, z);
-      const eau = !solDuModele(m.x, m.z);
-      if (eau && debut === null) debut = x;
-      if (!eau) fermer(x);
-    }
-    fermer(159);
-  }
-  return boites;
-}
-
-/** Les obstacles fixes (tous les états à part) : hauts, puis bas (les bords, les garde-corps, l'eau). */
 const OBSTACLES_FIXES: readonly Boite[] = (() => {
   const hautes: Boite[] = [];
   const basses: Boite[] = [];
-  for (const s of SEGMENTS_PONT.flatMap(teteDuPont)) (NATURES_HAUTES.has(s.nature) ? hautes : basses).push(...boitesDuSegment(s));
-  basses.push(...boitesDEau());
+  for (const s of SEGMENTS_PONT) (NATURES_HAUTES.has(s.nature) ? hautes : basses).push(...boitesDuSegment(s));
   declarerObstaclesBas(basses);
   return [...hautes, ...basses];
 })();

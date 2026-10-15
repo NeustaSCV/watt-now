@@ -120,8 +120,8 @@ export const SEGMENTS_MODELE: readonly SegmentModele[] = [
   {"x1":25.5,"z1":16.2,"x2":27,"z2":16.27,"nature":"falaise"},
   {"x1":27,"z1":16.27,"x2":28.5,"z2":16.78,"nature":"falaise"},
   {"x1":28.5,"z1":16.78,"x2":30,"z2":16.42,"nature":"falaise"},
-  {"x1":-25.5,"z1":12,"x2":-25.5,"z2":22,"nature":"bord de la rampe du canot (le vide, les chevalets)"},
-  {"x1":-22.5,"z1":12,"x2":-22.5,"z2":22,"nature":"bord de la rampe du canot (le vide, les chevalets)"},
+  {"x1":-25.5,"z1":12,"x2":-25.5,"z2":20.1,"nature":"bord de la rampe du canot (le vide, les chevalets)"},
+  {"x1":-22.5,"z1":12,"x2":-22.5,"z2":20.1,"nature":"bord de la rampe du canot (le vide, les chevalets)"},
   {"x1":-30,"z1":15.44,"x2":-28.5,"z2":15.83,"nature":"pied de la falaise (crique)"},
   {"x1":-30,"z1":15.66,"x2":-28.5,"z2":22.84,"nature":"la mer (bord de l'eau, crique)"},
   {"x1":-28.5,"z1":15.83,"x2":-27,"z2":16.22,"nature":"pied de la falaise (crique)"},
@@ -168,6 +168,10 @@ export const SEGMENTS_MODELE: readonly SegmentModele[] = [
   {"x1":-3,"z1":-16,"x2":-11.68,"z2":-16,"nature":"mur"},
   {"x1":-14.05,"z1":-16,"x2":-18,"z2":-16,"nature":"mur"},
   {"x1":-18,"z1":-16,"x2":-18,"z2":1.5,"nature":"mur"},
+  {"x1":-29.75,"z1":12.12,"x2":-29.75,"z2":-24.75,"nature":"muret de pierres sèches (le bord du lot, la lande au-delà)"},
+  {"x1":-29.75,"z1":-24.75,"x2":-5,"z2":-24.75,"nature":"muret de pierres sèches (le bord du lot, la lande au-delà)"},
+  {"x1":2,"z1":-24.75,"x2":29.75,"z2":-24.75,"nature":"muret de pierres sèches (le bord du lot, la lande au-delà)"},
+  {"x1":29.75,"z1":-24.75,"x2":29.75,"z2":16.24,"nature":"muret de pierres sèches (le bord du lot, la lande au-delà)"},
   {"x1":-6.71,"z1":-3.69,"x2":-6.04,"z2":-5.31,"nature":"mur"},
   {"x1":-7.85,"z1":-2.6,"x2":-6.6,"z2":-3.85,"nature":"mur"},
   {"x1":-9.31,"z1":-2.04,"x2":-7.69,"z2":-2.71,"nature":"mur"},
@@ -229,10 +233,24 @@ export const SEGMENTS_MODELE: readonly SegmentModele[] = [
   {"x1":19.5,"z1":13.2,"x2":19.5,"z2":15.7,"nature":"corne de brume"},
   {"x1":-22.4,"z1":-8.8,"x2":-25.6,"z2":-8.8,"nature":"mur"},
   {"x1":-25.6,"z1":-8.8,"x2":-25.6,"z2":-5.2,"nature":"mur"},
-  {"x1":-22.4,"z1":-5.2,"x2":-22.4,"z2":-7.6,"nature":"mur"},
-  {"x1":-22.4,"z1":-8,"x2":-22.4,"z2":-8.8,"nature":"mur"},
-  {"x1":-25.6,"z1":-5.2,"x2":-25.2,"z2":-5.2,"nature":"mur"},
-  {"x1":-24.8,"z1":-5.2,"x2":-24.4,"z2":-5.2,"nature":"mur"},
+  {"x1":-22.4,"z1":-5.2,"x2":-22.4,"z2":-7.2,"nature":"mur"},
+  {"x1":-22.4,"z1":-7.6,"x2":-22.4,"z2":-8.8,"nature":"mur"},
+  {"x1":-25.2,"z1":-5.2,"x2":-24.8,"z2":-5.2,"nature":"mur"},
+  {"x1":-3,"z1":15,"x2":-3.3,"z2":16.44,"nature":"rochers : éboulis au bout de la crique (tombé de la falaise)"},
+  {"x1":-3.3,"z1":16.44,"x2":-3.6,"z2":17.89,"nature":"rochers : éboulis au bout de la crique (tombé de la falaise)"},
+  {"x1":-3.6,"z1":17.89,"x2":-3.9,"z2":19.33,"nature":"rochers : éboulis au bout de la crique (tombé de la falaise)"},
+  {"x1":-3.9,"z1":19.33,"x2":-4.2,"z2":20.78,"nature":"rochers : éboulis au bout de la crique (tombé de la falaise)"},
+  {"x1":-4.2,"z1":20.78,"x2":-4.5,"z2":22.22,"nature":"rochers : éboulis au bout de la crique (tombé de la falaise)"},
+  {"x1":-4.5,"z1":22.22,"x2":-4.8,"z2":23.67,"nature":"rochers : éboulis au bout de la crique (tombé de la falaise)"},
+  {"x1":-4.8,"z1":23.67,"x2":-5.1,"z2":25.11,"nature":"rochers : éboulis au bout de la crique (tombé de la falaise)"},
+  {"x1":-5.1,"z1":25.11,"x2":-5.4,"z2":26.56,"nature":"rochers : éboulis au bout de la crique (tombé de la falaise)"},
+  {"x1":-5.4,"z1":26.56,"x2":-5.7,"z2":28,"nature":"rochers : éboulis au bout de la crique (tombé de la falaise)"},
+  {"x1":-29.2,"z1":18.6,"x2":-29.2,"z2":19.97,"nature":"rochers au sud du sentier côtier"},
+  {"x1":-29.2,"z1":19.97,"x2":-29.2,"z2":21.33,"nature":"rochers au sud du sentier côtier"},
+  {"x1":-29.2,"z1":21.33,"x2":-29.2,"z2":22.7,"nature":"rochers au sud du sentier côtier"},
+  {"x1":-29.2,"z1":22.7,"x2":-29.2,"z2":24.07,"nature":"rochers au sud du sentier côtier"},
+  {"x1":-29.2,"z1":24.07,"x2":-29.2,"z2":25.43,"nature":"rochers au sud du sentier côtier"},
+  {"x1":-29.2,"z1":25.43,"x2":-29.2,"z2":26.8,"nature":"rochers au sud du sentier côtier"},
 ];
 
 /** Les segments de l'épave (`obstaclesEpave`) : ils n'existent qu'après l'échouage. */
@@ -244,25 +262,23 @@ export const SEGMENTS_EPAVE: readonly SegmentModele[] = [
   {"x1":-14.54,"z1":18.97,"x2":-8.5,"z2":18.61,"nature":"conteneur des provisions du bord (paroi)"},
   {"x1":-8.65,"z1":16.05,"x2":-8.5,"z2":18.49,"nature":"conteneur des provisions du bord (paroi)"},
   {"x1":-0.39,"z1":22.63,"x2":-0.7,"z2":21.47,"nature":"coque du cargo (bordé, pavois)"},
-  {"x1":-0.7,"z1":21.47,"x2":-0.99,"z2":20.41,"nature":"coque du cargo (bordé, pavois)"},
-  {"x1":-0.99,"z1":20.41,"x2":-1.53,"z2":19.26,"nature":"coque du cargo (bordé, pavois)"},
-  {"x1":-1.53,"z1":19.26,"x2":-2.37,"z2":18.14,"nature":"coque du cargo (bordé, pavois)"},
-  {"x1":-2.37,"z1":18.14,"x2":-2.72,"z2":17.77,"nature":"coque du cargo (bordé, pavois)"},
+  {"x1":-0.7,"z1":21.47,"x2":-0.88,"z2":20.79,"nature":"coque du cargo (bordé, pavois)"},
+  {"x1":-0.88,"z1":20.79,"x2":-1.73,"z2":18.95,"nature":"coque du cargo (bordé, pavois)"},
+  {"x1":-1.73,"z1":18.95,"x2":-2.72,"z2":17.77,"nature":"coque du cargo (bordé, pavois)"},
   {"x1":-2.72,"z1":17.77,"x2":-3.48,"z2":17.04,"nature":"coque du cargo (bordé, pavois)"},
   {"x1":-3.48,"z1":17.04,"x2":-4.25,"z2":16.42,"nature":"coque du cargo (bordé, pavois)"},
   {"x1":-4.25,"z1":16.42,"x2":-4.97,"z2":15.89,"nature":"coque du cargo (bordé, pavois)"},
   {"x1":-4.97,"z1":15.89,"x2":-5.58,"z2":15.43,"nature":"coque du cargo (bordé, pavois)"},
   {"x1":-6.57,"z1":24.29,"x2":-6.88,"z2":23.13,"nature":"coque du cargo (bordé, pavois)"},
-  {"x1":-6.88,"z1":23.13,"x2":-7.17,"z2":22.07,"nature":"coque du cargo (bordé, pavois)"},
-  {"x1":-7.17,"z1":22.07,"x2":-7.28,"z2":20.81,"nature":"coque du cargo (bordé, pavois)"},
-  {"x1":-7.11,"z1":19.41,"x2":-6.99,"z2":18.92,"nature":"coque du cargo (bordé, pavois)"},
+  {"x1":-6.88,"z1":23.13,"x2":-7.06,"z2":22.46,"nature":"coque du cargo (bordé, pavois)"},
+  {"x1":-7.25,"z1":20.44,"x2":-6.99,"z2":18.92,"nature":"coque du cargo (bordé, pavois)"},
   {"x1":-6.99,"z1":18.92,"x2":-6.69,"z2":17.91,"nature":"coque du cargo (bordé, pavois)"},
   {"x1":-6.69,"z1":17.91,"x2":-6.35,"z2":16.98,"nature":"coque du cargo (bordé, pavois)"},
   {"x1":-6.35,"z1":16.98,"x2":-5.99,"z2":16.16,"nature":"coque du cargo (bordé, pavois)"},
   {"x1":-5.99,"z1":16.16,"x2":-5.69,"z2":15.46,"nature":"coque du cargo (bordé, pavois)"},
   {"x1":-0.39,"z1":22.63,"x2":-6.57,"z2":24.29,"nature":"la cassure de la coque (le vide, la cale)"},
-  {"x1":-7.1,"z1":20.76,"x2":-13.09,"z2":22.37,"nature":"rambarde de l'échelle de coupée"},
-  {"x1":-7.44,"z1":19.5,"x2":-13.43,"z2":21.12,"nature":"rambarde de l'échelle de coupée"},
+  {"x1":-15,"z1":20.44,"x2":-7.25,"z2":20.44,"nature":"rambarde de l'échelle de coupée"},
+  {"x1":-15,"z1":22.46,"x2":-7.06,"z2":22.46,"nature":"rambarde de l'échelle de coupée"},
   {"x1":-3.43,"z1":23.03,"x2":-4.21,"z2":20.14,"nature":"conteneur d'outillage sur le pont (paroi)"},
   {"x1":-0.84,"z1":22.33,"x2":-1.62,"z2":19.44,"nature":"conteneur d'outillage sur le pont (paroi)"},
   {"x1":-3.31,"z1":23,"x2":-0.96,"z2":22.36,"nature":"conteneur d'outillage sur le pont (paroi)"},
@@ -276,9 +292,15 @@ export const COUCHES_MODELE: readonly CoucheModele[] = [
   {"nom":"hangar à bateau (hauts des murs, toit)","boite":{"x":-24,"z":7.5,"l":8.8,"p":9.8},"bas":1.05,"haut":5},
   {"nom":"salle de la corne de brume (hauts des murs, toit)","boite":{"x":18.5,"z":7,"l":7.8,"p":6.8},"bas":1.05,"haut":4},
   {"nom":"coque de l'épave (cargo « Prime Abondance »)","boite":{"x":-3.9,"z":20,"l":8.2,"p":9.4},"bas":0.6,"haut":6.2,"horsDe":{"x":-4.44,"z":19.89,"l":4.2,"p":5.2}},
+  {"nom":"conteneurs de l'épave (toits et parois)","boite":{"x":-19.4,"z":17.8,"l":6.5,"p":2.9},"bas":0.3,"haut":2.7},
+  {"nom":"conteneur des provisions du bord (toit et parois)","boite":{"x":-11.6,"z":17.45,"l":6.5,"p":2.9},"bas":0.3,"haut":2.7},
+  {"nom":"conteneur d'outillage sur le pont (toit et parois)","boite":{"x":-2.52,"z":21.24,"l":3.51,"p":3.72},"bas":0.3,"haut":2.7},
+  {"nom":"conteneurs de l'épave, avec la coque","boite":{"x":-3.9,"z":20,"l":8.2,"p":9.4},"bas":0.6,"haut":6.2,"horsDe":{"x":-4.44,"z":19.89,"l":4.2,"p":5.2}},
 ];
 
 export const LUMIERES_MODELE: readonly LumiereModele[] = [
+  {"x":1.7,"y":2.33,"z":-22.2,"couleur":16764810,"intensite":6,"portee":4.2,"nature":"lanterne du panneau de sortie (panneau_sortie_nord)"},
+  {"x":-26.2,"y":-6.61,"z":22.6,"couleur":16764810,"intensite":6,"portee":4.2,"nature":"lanterne du panneau de sortie (panneau_sortie_greve)"},
   {"x":-5.32,"y":0.17,"z":16.6,"couleur":16726570,"intensite":3,"portee":8,"nature":"feu de détresse du cargo, sur batterie (seulement avec epave_apres)"},
   {"x":-10,"y":28.1,"z":-6,"couleur":16757850,"intensite":40,"portee":46,"nature":"lanterne du phare allumée (seulement quand lanterne_allumee est montrée ; signal : attire les Éteints)"},
   {"x":-4.5,"y":0.7,"z":-7.9,"couleur":16747069,"intensite":10,"portee":9,"nature":"feu de la cuisinière"},
@@ -295,7 +317,7 @@ export const ENTREES_MODELE: readonly PointModele[] = [
   {"x":-20,"z":7.5,"nature":"porte latérale du hangar à bateau"},
   {"x":-24,"z":12,"nature":"grande porte du hangar, ouverte sur la rampe du canot (descente vers la crique)"},
   {"x":15,"z":7,"nature":"porte de la salle de la corne de brume"},
-  {"x":-29.6,"z":20,"y":-8.8,"nature":"la grève de galets de la crique, vers l'ouest : on ressort par là"},
+  {"x":-29.6,"z":16.6,"y":-8.8,"nature":"le sentier côtier, au pied de la falaise, à l'ouest de la grève : on ressort par là (panneau au départ, près de l'eau, x − 26,6, z 22,2)"},
 ];
 
 /** La marque à la craie où poser l'escabeau, sous la première marche de l'escalier coupé (P4). */
@@ -471,7 +493,7 @@ export const PORTES_MODELE: readonly PorteModele[] = [
 ];
 
 /** Les objets nommés du modèle (FICHE.objets). */
-export const OBJETS_MODELE = ["lanterne_eteinte","lanterne_allumee","prisme_manquant","prisme_tombe","escabeau_phare","bidon_petrole","courroie_compresseur","harpon","epave_apres","cloche_cargo","porte_four","soufflet","rabot","jerrican"] as const;
+export const OBJETS_MODELE = ["lanterne_eteinte","lanterne_allumee","prisme_manquant","prisme_tombe","escabeau_phare","bidon_petrole","courroie_compresseur","harpon","epave_apres","cloche_cargo","porte_four","soufflet","rabot","jerrican","alentours","panneau_sortie_nord","panneau_sortie_greve"] as const;
 
 /** Où sont les objets nommés (le centre de leur boîte ; y : leur bas). */
 export const PLACES_OBJETS: Readonly<Record<(typeof OBJETS_MODELE)[number], { x: number; z: number; y: number }>> = {
@@ -516,7 +538,7 @@ export const PLACES_OBJETS: Readonly<Record<(typeof OBJETS_MODELE)[number], { x:
     "y": 1.52
   },
   "epave_apres": {
-    "x": -13.36,
+    "x": -14.32,
     "z": 20.48,
     "y": -13.26
   },
@@ -544,6 +566,21 @@ export const PLACES_OBJETS: Readonly<Record<(typeof OBJETS_MODELE)[number], { x:
     "x": -10.01,
     "z": 17.15,
     "y": -8.68
+  },
+  "alentours": {
+    "x": 0.04,
+    "z": -25,
+    "y": -12
+  },
+  "panneau_sortie_nord": {
+    "x": 1.3,
+    "z": -22.6,
+    "y": 0
+  },
+  "panneau_sortie_greve": {
+    "x": -26.6,
+    "z": 22.2,
+    "y": -8.94
   }
 };
 
@@ -551,15 +588,18 @@ export const PLACES_OBJETS: Readonly<Record<(typeof OBJETS_MODELE)[number], { x:
 export const EPAVE_MODELE = {
   "echelle": {
     "bas": {
-      "x": -13.26,
-      "z": 21.74,
-      "y": -8.85
+      "x": -15,
+      "z": 21.45,
+      "y": -8.73
     },
     "haut": {
-      "x": -7.27,
-      "z": 20.13,
-      "y": -4.06
-    }
+      "x": -7.16,
+      "z": 21.45,
+      "y": -4.01
+    },
+    "largeur": 2.02,
+    "zN": 20.44,
+    "zS": 22.46
   },
   "cloche": {
     "x": -5.14,
@@ -594,7 +634,7 @@ export const FOUILLE_MODELE: readonly PointModele[] = [
   {"x":-10.4,"z":17.3,"y":-8.6,"apresEpave":true},
   {"x":-2.5,"z":21.6,"y":-4.1,"apresEpave":true},
   {"x":-5.1,"z":17.6,"y":-3.9,"apresEpave":true},
-  {"x":-15.5,"z":20.9,"y":-8.8,"apresEpave":true},
+  {"x":-15.4,"z":22.75,"y":-8.8,"apresEpave":true},
 ];
 
 export const ETEINTS_MODELE: readonly PointModele[] = [
@@ -611,5 +651,23 @@ export const ETEINTS_MODELE: readonly PointModele[] = [
   {"x":18.6,"z":2.7,"type":"dormeur (couché le long du chemin des douaniers, 9/9 ; se lève quand la lanterne s'allume)"},
   {"x":-27.4,"z":22,"y":-8.9,"type":"Noyé (au bord de l'eau, sur la grève de la crique)"},
   {"x":-19.8,"z":22.1,"y":-8.9,"type":"Noyé (au bord de l'eau, sur la grève de la crique)"},
-  {"x":-14.4,"z":22.4,"y":-8.9,"type":"Noyé (au pied de l'échelle de coupée, au bord de l'eau)"},
+  {"x":-16.4,"z":22.8,"y":-8.9,"type":"Noyé (au pied de l'échelle de coupée, au bord de l'eau)"},
 ];
+
+/** Un panneau de sortie du modèle (0.10, R52) : son pied, son texte, sa sortie, sa lanterne (le verre, la lumière). */
+export interface PanneauModele {
+  id: string;
+  x: number;
+  z: number;
+  texte: string;
+  sortie: string;
+  lanterne: { x: number; y: number; z: number };
+}
+
+export const PANNEAUX_MODELE: readonly PanneauModele[] = [
+  {"id":"panneau_sortie_nord","x":1.3,"z":-22.6,"texte":"← La corniche · Ton terrain","sortie":"nord (la route d'arrivée)","lanterne":{"x":1.7,"y":2.23,"z":-22.2}},
+  {"id":"panneau_sortie_greve","x":-26.6,"z":22.2,"texte":"Sentier côtier · ← Port · 6 km","sortie":"grève, à l'ouest (le sentier côtier)","lanterne":{"x":-26.2,"y":-6.71,"z":22.6}},
+];
+
+/** La ligne de brisants de la mer du modèle (FICHE.mer.ligneDuLarge : [x, z]), où l'eau claire devient profonde. */
+export const LIGNE_DU_LARGE_MODELE: readonly (readonly [number, number])[] = [[-29.6,24.2],[-28,26.3],[-24,26.1],[-20,26.4],[-16,26.4],[-12,26.8],[-8,26.9],[-5,27.1],[-4,26.6]];

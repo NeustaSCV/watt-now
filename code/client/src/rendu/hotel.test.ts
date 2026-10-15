@@ -24,6 +24,8 @@ Object.assign(globalThis, { document: { createElement: () => ({ width: 1, height
 
 interface Fiche {
   lot: { l: number; p: number };
+  mer: { bord: number; brisants: number };
+  panneaux: { x: number; z: number; texte: string; sortie?: string }[];
   depart: { x: number; z: number };
   objets: Record<string, string>;
   teleports: { id: string; bas: { x: number; z: number }; haut: { x: number; z: number } }[];
@@ -35,7 +37,7 @@ interface Fiche {
 }
 // @ts-ignore — le modèle est en JavaScript (session « bâtiments »), sans déclaration de types.
 const modele = (await import("../batiments/grand-hotel/modele.js")) as { FICHE: Fiche; creer(o: { usure: number }): THREE.Group };
-const { SEGMENTS_HOTEL, HOTEL, PIECES_HOTEL, PORTES_HOTEL, ASCENSEUR, BALCON, BORNE, ROBOT, PANNEAU, butinHotel, jeuHotel, niveauHotel, pieceHotel } = await import("../../../commun/src/hotel.ts");
+const { MER_HOTEL, PANNEAU_SORTIE_HOTEL, SEGMENTS_HOTEL, HOTEL, PIECES_HOTEL, PORTES_HOTEL, ASCENSEUR, BALCON, BORNE, ROBOT, PANNEAU, butinHotel, jeuHotel, niveauHotel, pieceHotel } = await import("../../../commun/src/hotel.ts");
 const { eteintsHotel } = await import("../../../commun/src/eteints-hotel.ts");
 const { arriveeDans } = await import("../../../commun/src/lieux.ts");
 const { animerHotel, creerHotel, lumieresHotel } = await import("./hotel.ts");
@@ -79,6 +81,17 @@ test("la fiche du modèle : le lot, l'arrivée, les pièces et les portes, l'asc
     const r = butin.find((x) => x.type === type)!;
     assert.ok(Math.hypot(c.x + HOTEL.origineModele.x - r.x, c.z + HOTEL.origineModele.z - r.z) < 0.3, type);
   }
+});
+
+test("la mer et le panneau de sortie (0.10, G-1, G-3) : là où le modèle les met ; on perd pied à la ligne de brisants du modèle", () => {
+  const f = modele.FICHE;
+  assert.deepEqual(MER_HOTEL, { bord: f.mer.bord, brisants: f.mer.brisants });
+  const large = SEGMENTS_HOTEL.find((s) => s[4].startsWith("le large"))!;
+  assert.ok(large && large[1] === f.mer.brisants && large[3] === f.mer.brisants, "l'obstacle du large, aux brisants");
+  assert.ok(!SEGMENTS_HOTEL.some((s) => s[4] === "la mer (bord du lot)"), "le bord de l'eau n'arrête plus");
+  const sortie = f.panneaux.find((p) => p.sortie?.startsWith("est"))!;
+  assert.deepEqual(PANNEAU_SORTIE_HOTEL, jeuHotel(sortie.x, sortie.z));
+  assert.match(sortie.texte, /Route du pont → · Ton terrain, par le pont · 5 km/);
 });
 
 test("les 18 Éteints sont aux places de la fiche, et les fouilles aussi", () => {

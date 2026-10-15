@@ -11,6 +11,13 @@ export interface PointMaree extends PointModele {
   maree?: string;
 }
 
+/** Un panneau de la fiche ; ceux de sortie (0.10, R52) disent laquelle, et portent une lanterne. */
+export interface PanneauPont extends PointModele {
+  sortie?: string;
+  nom?: string;
+  lanterne?: { x: number; y: number; z: number };
+}
+
 export const SEGMENTS_PONT: readonly SegmentModele[] = [
   {"x1":-58,"z1":-35,"x2":-58,"z2":-27.55,"nature":"bord du quai : huit mètres de vide jusqu'à la vase"},
   {"x1":-58,"z1":-26.45,"x2":-58,"z2":-20,"nature":"bord du quai : huit mètres de vide jusqu'à la vase"},
@@ -20,6 +27,7 @@ export const SEGMENTS_PONT: readonly SegmentModele[] = [
   {"x1":-58,"z1":18,"x2":-58,"z2":35,"nature":"bord du quai : huit mètres de vide jusqu'à la vase"},
   {"x1":-51,"z1":14,"x2":-51,"z2":34.25,"nature":"bord de la cale basse : le chenal, huit mètres plus bas"},
   {"x1":-58,"z1":34.25,"x2":-51,"z2":34.25,"nature":"clôture du port, au bout de la cale (bord du lot)"},
+  {"x1":-58,"z1":14.6,"x2":-51,"z2":14.6,"nature":"mur du quai, au bout de la cale"},
   {"x1":-59,"z1":-8.6,"x2":-54,"z2":-8.6,"nature":"massif d'ancrage du câble"},
   {"x1":-54,"z1":-8.6,"x2":-54,"z2":-5.7,"nature":"massif d'ancrage du câble"},
   {"x1":-54,"z1":-5.7,"x2":-59,"z2":-5.7,"nature":"massif d'ancrage du câble"},
@@ -28,6 +36,9 @@ export const SEGMENTS_PONT: readonly SegmentModele[] = [
   {"x1":-54,"z1":5.7,"x2":-54,"z2":8.6,"nature":"massif d'ancrage du câble"},
   {"x1":-54,"z1":8.6,"x2":-59,"z2":8.6,"nature":"massif d'ancrage du câble"},
   {"x1":-59,"z1":8.6,"x2":-59,"z2":5.7,"nature":"massif d'ancrage du câble"},
+  {"x1":-99.7,"z1":-30.5,"x2":-99.7,"z2":-5.6,"nature":"ganivelle et dunes"},
+  {"x1":-99.7,"z1":5.6,"x2":-99.7,"z2":23.5,"nature":"ganivelle et dunes"},
+  {"x1":-80,"z1":34.6,"x2":-58.4,"z2":34.6,"nature":"ganivelle et dunes"},
   {"x1":-61.9,"z1":-5.3,"x2":-61.3,"z2":-5.3,"nature":"poteau du portique"},
   {"x1":-61.9,"z1":5.3,"x2":-61.3,"z2":5.3,"nature":"poteau du portique"},
   {"x1":-60.6,"z1":-6.32,"x2":-59.8,"z2":-6.32,"nature":"armoire technique du portique"},
@@ -83,15 +94,12 @@ export const SEGMENTS_PONT: readonly SegmentModele[] = [
   {"x1":-62.62,"z1":30.39,"x2":-62.19,"z2":31.4,"nature":"pierres du parapet éboulé"},
   {"x1":-62.19,"z1":31.4,"x2":-64.58,"z2":32.41,"nature":"pierres du parapet éboulé"},
   {"x1":-64.58,"z1":32.41,"x2":-65.01,"z2":31.4,"nature":"pierres du parapet éboulé"},
-  {"x1":-80,"z1":34.6,"x2":-58.4,"z2":34.6,"nature":"clôture du port"},
   {"x1":-58,"z1":-27.6,"x2":-54.5,"z2":-27.6,"nature":"ponton du carrelet"},
   {"x1":-58,"z1":-26.4,"x2":-54.5,"z2":-26.4,"nature":"ponton du carrelet"},
-  {"x1":-54.5,"z1":-28.7,"x2":-54.5,"z2":-27.42,"nature":"mur"},
-  {"x1":-54.5,"z1":-26.57,"x2":-54.5,"z2":-25.3,"nature":"mur"},
-  {"x1":-54.5,"z1":-25.3,"x2":-53.33,"z2":-25.3,"nature":"mur"},
-  {"x1":-52.17,"z1":-25.3,"x2":-51,"z2":-25.3,"nature":"mur"},
-  {"x1":-51,"z1":-25.3,"x2":-51,"z2":-26.15,"nature":"mur"},
-  {"x1":-51,"z1":-27.85,"x2":-51,"z2":-28.7,"nature":"mur"},
+  {"x1":-54.5,"z1":-28.7,"x2":-54.5,"z2":-27.85,"nature":"mur"},
+  {"x1":-54.5,"z1":-26.15,"x2":-54.5,"z2":-25.3,"nature":"mur"},
+  {"x1":-54.5,"z1":-25.3,"x2":-51,"z2":-25.3,"nature":"mur"},
+  {"x1":-51,"z1":-25.3,"x2":-51,"z2":-28.7,"nature":"mur"},
   {"x1":-51,"z1":-28.7,"x2":-54.5,"z2":-28.7,"nature":"mur"},
   {"x1":-99.6,"z1":23.5,"x2":-90.4,"z2":23.5,"nature":"mur"},
   {"x1":-90.4,"z1":23.5,"x2":-90.4,"z2":33.5,"nature":"mur"},
@@ -106,7 +114,8 @@ export const SEGMENTS_PONT: readonly SegmentModele[] = [
   {"x1":-100,"z1":23.5,"x2":-99.6,"z2":23.5,"nature":"maisons du bourg"},
   {"x1":-80.6,"z1":24.5,"x2":-80,"z2":34.6,"nature":"maisons du bourg"},
   {"x1":-100,"z1":-30.5,"x2":-58,"z2":-30.5,"nature":"ganivelle et dunes"},
-  {"x1":-50,"z1":-20,"x2":-50,"z2":14,"nature":"bord du quai : huit mètres de vide jusqu'à la vase"},
+  {"x1":-50,"z1":-20,"x2":-50,"z2":-5.62,"nature":"bord du quai : huit mètres de vide jusqu'à la vase"},
+  {"x1":-50,"z1":5.62,"x2":-50,"z2":14,"nature":"bord du quai : huit mètres de vide jusqu'à la vase"},
   {"x1":-50,"z1":-5.62,"x2":0,"z2":-5.62,"nature":"garde-corps nord : le vide au-dessus de l'estuaire"},
   {"x1":-50,"z1":5.62,"x2":-37.5,"z2":5.62,"nature":"garde-corps sud : le vide au-dessus de l'estuaire"},
   {"x1":-35,"z1":5.62,"x2":-5,"z2":5.62,"nature":"garde-corps sud : le vide au-dessus de l'estuaire"},
@@ -132,24 +141,24 @@ export const SEGMENTS_PONT: readonly SegmentModele[] = [
   {"x1":-43.48,"z1":-1.16,"x2":-45.27,"z2":-1.05,"nature":"chicane : voiture en travers"},
   {"x1":-44.6,"z1":-1.15,"x2":-44.6,"z2":1.75,"nature":"chicane : sacs de sable et barbelés"},
   {"x1":-44.6,"z1":3.55,"x2":-44.6,"z2":5.62,"nature":"chicane : sacs de sable et barbelés"},
+  {"x1":-44.88,"z1":4.01,"x2":-44.82,"z2":4.85,"nature":"caisse du péage"},
+  {"x1":-44.82,"z1":4.85,"x2":-45.36,"z2":4.89,"nature":"caisse du péage"},
+  {"x1":-45.36,"z1":4.89,"x2":-45.42,"z2":4.05,"nature":"caisse du péage"},
+  {"x1":-45.42,"z1":4.05,"x2":-44.88,"z2":4.01,"nature":"caisse du péage"},
   {"x1":-29.39,"z1":1.2,"x2":-29.81,"z2":5.38,"nature":"chicane : voiture en travers"},
   {"x1":-29.81,"z1":5.38,"x2":-31.61,"z2":5.2,"nature":"chicane : voiture en travers"},
   {"x1":-31.61,"z1":5.2,"x2":-31.19,"z2":1.02,"nature":"chicane : voiture en travers"},
   {"x1":-31.19,"z1":1.02,"x2":-29.39,"z2":1.2,"nature":"chicane : voiture en travers"},
   {"x1":-30.7,"z1":-1.5,"x2":-30.7,"z2":1.2,"nature":"chicane : palettes et tôles"},
-  {"x1":-35.9,"z1":8.2,"x2":-35.52,"z2":8.2,"nature":"mur"},
-  {"x1":-34.02,"z1":8.2,"x2":-32.9,"z2":8.2,"nature":"mur"},
-  {"x1":-32.9,"z1":8.2,"x2":-32.9,"z2":10.3,"nature":"mur"},
-  {"x1":-32.9,"z1":10.3,"x2":-35.9,"z2":10.3,"nature":"mur"},
-  {"x1":-35.9,"z1":10.3,"x2":-35.9,"z2":8.2,"nature":"mur"},
-  {"x1":-35.9,"z1":8.2,"x2":-35.52,"z2":8.2,"nature":"cabane du poste de guet"},
-  {"x1":-34.02,"z1":8.2,"x2":-32.9,"z2":8.2,"nature":"cabane du poste de guet"},
-  {"x1":-33.75,"z1":6.73,"x2":-32.92,"z2":6.63,"nature":"caisse du péage"},
-  {"x1":-32.92,"z1":6.63,"x2":-32.85,"z2":7.17,"nature":"caisse du péage"},
-  {"x1":-32.85,"z1":7.17,"x2":-33.68,"z2":7.27,"nature":"caisse du péage"},
-  {"x1":-33.68,"z1":7.27,"x2":-33.75,"z2":6.73,"nature":"caisse du péage"},
-  {"x1":-32.9,"z1":8.2,"x2":-32.9,"z2":10.3,"nature":"cabane du poste de guet"},
-  {"x1":-35.9,"z1":8.2,"x2":-35.9,"z2":10.3,"nature":"cabane du poste de guet"},
+  {"x1":-35.05,"z1":8.2,"x2":-34.67,"z2":8.2,"nature":"mur"},
+  {"x1":-33.13,"z1":8.2,"x2":-32.75,"z2":8.2,"nature":"mur"},
+  {"x1":-32.75,"z1":8.2,"x2":-32.75,"z2":10.3,"nature":"mur"},
+  {"x1":-32.75,"z1":10.3,"x2":-35.05,"z2":10.3,"nature":"mur"},
+  {"x1":-35.05,"z1":10.3,"x2":-35.05,"z2":8.2,"nature":"mur"},
+  {"x1":-35.05,"z1":8.2,"x2":-34.67,"z2":8.2,"nature":"cabane du poste de guet"},
+  {"x1":-33.13,"z1":8.2,"x2":-32.75,"z2":8.2,"nature":"cabane du poste de guet"},
+  {"x1":-32.75,"z1":8.2,"x2":-32.75,"z2":10.3,"nature":"cabane du poste de guet"},
+  {"x1":-35.05,"z1":8.2,"x2":-35.05,"z2":10.3,"nature":"cabane du poste de guet"},
   {"x1":-21.21,"z1":1.32,"x2":-17.06,"z2":0.7,"nature":"voiture brûlée"},
   {"x1":-17.06,"z1":0.7,"x2":-16.79,"z2":2.48,"nature":"voiture brûlée"},
   {"x1":-16.79,"z1":2.48,"x2":-20.94,"z2":3.1,"nature":"voiture brûlée"},
@@ -158,7 +167,8 @@ export const SEGMENTS_PONT: readonly SegmentModele[] = [
   {"x1":-8.24,"z1":-2.95,"x2":-8.69,"z2":-1.21,"nature":"voiture abandonnée"},
   {"x1":-8.69,"z1":-1.21,"x2":-12.76,"z2":-2.25,"nature":"voiture abandonnée"},
   {"x1":-12.76,"z1":-2.25,"x2":-12.31,"z2":-3.99,"nature":"voiture abandonnée"},
-  {"x1":50,"z1":-20,"x2":50,"z2":14,"nature":"bord du quai : huit mètres de vide jusqu'à la vase"},
+  {"x1":50,"z1":-20,"x2":50,"z2":-5.62,"nature":"bord du quai : huit mètres de vide jusqu'à la vase"},
+  {"x1":50,"z1":5.62,"x2":50,"z2":14,"nature":"bord du quai : huit mètres de vide jusqu'à la vase"},
   {"x1":0,"z1":-5.62,"x2":50,"z2":-5.62,"nature":"garde-corps nord : le vide au-dessus de l'estuaire"},
   {"x1":15,"z1":5.62,"x2":50,"z2":5.62,"nature":"garde-corps sud : le vide au-dessus de l'estuaire"},
   {"x1":0,"z1":-1.8,"x2":2.5,"z2":-1.8,"nature":"bord de la brèche : le tablier a lâché"},
@@ -204,6 +214,9 @@ export const SEGMENTS_PONT: readonly SegmentModele[] = [
   {"x1":54,"z1":8.6,"x2":54,"z2":5.7,"nature":"massif d'ancrage du câble"},
   {"x1":61.3,"z1":-5.3,"x2":61.9,"z2":-5.3,"nature":"poteau du portique"},
   {"x1":61.3,"z1":5.3,"x2":61.9,"z2":5.3,"nature":"poteau du portique"},
+  {"x1":99.7,"z1":-30.5,"x2":99.7,"z2":-5.6,"nature":"ganivelle et dunes"},
+  {"x1":99.7,"z1":5.6,"x2":99.7,"z2":34.6,"nature":"ganivelle et dunes"},
+  {"x1":58.4,"z1":34.6,"x2":100,"z2":34.6,"nature":"ganivelle et dunes"},
   {"x1":60.42,"z1":30.49,"x2":62.9,"z2":31.26,"nature":"pierres du parapet éboulé"},
   {"x1":62.9,"z1":31.26,"x2":62.58,"z2":32.31,"nature":"pierres du parapet éboulé"},
   {"x1":62.58,"z1":32.31,"x2":60.1,"z2":31.54,"nature":"pierres du parapet éboulé"},
@@ -214,9 +227,11 @@ export const SEGMENTS_PONT: readonly SegmentModele[] = [
   {"x1":71,"z1":-22,"x2":63,"z2":-22,"nature":"mur"},
   {"x1":63,"z1":-22,"x2":63,"z2":-9.6,"nature":"mur"},
   {"x1":58,"z1":19,"x2":64.7,"z2":19,"nature":"bord de la cale"},
-  {"x1":65.7,"z1":19,"x2":78,"z2":19,"nature":"bord de la cale"},
+  {"x1":66.05,"z1":19,"x2":78,"z2":19,"nature":"bord de la cale"},
   {"x1":58,"z1":27,"x2":78,"z2":27,"nature":"bord de la cale"},
   {"x1":78,"z1":19,"x2":78,"z2":27,"nature":"tête de la cale"},
+  {"x1":64.7,"z1":19,"x2":64.7,"z2":20.6,"nature":"bord de la passerelle : la forme, en contrebas"},
+  {"x1":66.05,"z1":19,"x2":66.05,"z2":20.6,"nature":"bord de la passerelle : la forme, en contrebas"},
   {"x1":78.9,"z1":22.1,"x2":80.3,"z2":22.1,"nature":"treuil de la cale"},
   {"x1":80.3,"z1":22.1,"x2":80.3,"z2":23.9,"nature":"treuil de la cale"},
   {"x1":80.3,"z1":23.9,"x2":78.9,"z2":23.9,"nature":"treuil de la cale"},
@@ -224,17 +239,16 @@ export const SEGMENTS_PONT: readonly SegmentModele[] = [
   {"x1":75.6,"z1":20.72,"x2":77.45,"z2":23,"nature":"bordé de la péniche"},
   {"x1":75.6,"z1":25.28,"x2":77.45,"z2":23,"nature":"bordé de la péniche"},
   {"x1":64.5,"z1":20.6,"x2":64.7,"z2":20.6,"nature":"bordé de la péniche"},
-  {"x1":65.7,"z1":20.6,"x2":75.6,"z2":20.6,"nature":"bordé de la péniche"},
+  {"x1":66.05,"z1":20.6,"x2":75.6,"z2":20.6,"nature":"bordé de la péniche"},
   {"x1":64.5,"z1":25.4,"x2":75.6,"z2":25.4,"nature":"bordé de la péniche"},
   {"x1":64.5,"z1":20.6,"x2":64.5,"z2":25.4,"nature":"tableau arrière de la péniche"},
-  {"x1":66.2,"z1":20.85,"x2":66.2,"z2":21.63,"nature":"mur"},
-  {"x1":66.2,"z1":22.41,"x2":66.2,"z2":25.15,"nature":"mur"},
-  {"x1":69.6,"z1":20.85,"x2":69.6,"z2":22.8,"nature":"mur"},
-  {"x1":69.6,"z1":23.59,"x2":69.6,"z2":25.15,"nature":"mur"},
-  {"x1":72.8,"z1":20.85,"x2":72.8,"z2":22.8,"nature":"mur"},
-  {"x1":72.8,"z1":23.59,"x2":72.8,"z2":25.15,"nature":"mur"},
-  {"x1":75.2,"z1":20.85,"x2":75.2,"z2":21.24,"nature":"mur"},
-  {"x1":75.2,"z1":21.63,"x2":75.2,"z2":25.15,"nature":"mur"},
+  {"x1":66.2,"z1":20.85,"x2":66.2,"z2":21.24,"nature":"mur"},
+  {"x1":66.2,"z1":22.8,"x2":66.2,"z2":25.15,"nature":"mur"},
+  {"x1":69.6,"z1":20.85,"x2":69.6,"z2":22.41,"nature":"mur"},
+  {"x1":69.6,"z1":23.98,"x2":69.6,"z2":25.15,"nature":"mur"},
+  {"x1":72.8,"z1":20.85,"x2":72.8,"z2":22.41,"nature":"mur"},
+  {"x1":72.8,"z1":23.98,"x2":72.8,"z2":25.15,"nature":"mur"},
+  {"x1":75.2,"z1":22.41,"x2":75.2,"z2":25.15,"nature":"mur"},
   {"x1":81,"z1":29,"x2":81,"z2":23.87,"nature":"mur"},
   {"x1":81,"z1":19.13,"x2":81,"z2":14,"nature":"mur"},
   {"x1":81,"z1":14,"x2":95,"z2":14,"nature":"mur"},
@@ -262,7 +276,6 @@ export const SEGMENTS_PONT: readonly SegmentModele[] = [
   {"x1":90,"z1":8.44,"x2":90.17,"z2":10.14,"nature":"barque sur sa remorque"},
   {"x1":90.17,"z1":10.14,"x2":86,"z2":10.56,"nature":"barque sur sa remorque"},
   {"x1":86,"z1":10.56,"x2":85.83,"z2":8.86,"nature":"barque sur sa remorque"},
-  {"x1":58.4,"z1":34.6,"x2":100,"z2":34.6,"nature":"clôture du port"},
 ];
 
 /** La porte du péage fermée (obstaclesChicane du modèle). */
@@ -289,7 +302,7 @@ export const ENTREES_PONT: readonly PointModele[] = [
   {"x":-58,"z":17,"nature":"accès à la cale basse (2 m, deux marches basses) : à marée basse seulement"},
   {"x":-50,"z":0,"nature":"tête du pont : le tablier commence au-dessus du quai"},
   {"x":-44.6,"z":2.65,"nature":"la porte du péage, dans la chicane (1,8 m entre ses poteaux ; fermée au départ : objet « chicane_fermee »)"},
-  {"x":-35.7,"z":5.8,"nature":"percée dans le treillis sud (1,45 m entre le pied du pylône et le treillis) : vers la pile, la caisse du péage et le poste de guet"},
+  {"x":-35.7,"z":5.8,"nature":"percée dans le treillis sud (1,45 m entre le pied du pylône et le treillis) : vers la pile, le poste de guet et la réserve des guetteurs (1,4 m entre le pied du pylône et la cabane)"},
   {"x":-34.8,"z":8.2,"nature":"porte du poste de guet (1,5 m)"},
   {"x":2.3,"z":-4.7,"nature":"les planches au-dessus du trou (un à la fois)"},
   {"x":50,"z":0,"nature":"tête du pont, rive est"},
@@ -297,7 +310,7 @@ export const ENTREES_PONT: readonly PointModele[] = [
   {"x":65.2,"z":19.2,"nature":"passerelle de la péniche échouée dans la forme"},
   {"x":81,"z":21.5,"nature":"grandes portes du hangar à bateaux, face à la cale"},
   {"x":88,"z":29,"nature":"porte de service du hangar (sud)"},
-  {"x":100,"z":0,"nature":"sortie B : la route du Littoral file vers le Comptoir du Port"},
+  {"x":100,"z":0,"nature":"sortie B : la route du Littoral file vers le Grand Hôtel des Flots"},
 ];
 
 export const FOUILLE_PONT: readonly PointMaree[] = [
@@ -323,7 +336,7 @@ export const FOUILLE_PONT: readonly PointMaree[] = [
   {"x":-70,"z":20,"quoi":"barque retournée sur le quai : avirons, écope, ancre"},
   {"x":-65.8,"z":-4.6,"quoi":"borne « Pont Express » : batterie, monnayeur, écran"},
   {"x":-84,"z":-24,"quoi":"dériveur échoué dans les dunes : voile (bâche), cordages, poulies"},
-  {"x":-33.3,"z":6.95,"quoi":"la caisse du péage, au pied du poste de guet : on y dépose son dû (objet « caisse_peage »)"},
+  {"x":-45.12,"z":4.45,"quoi":"la caisse du péage, devant la porte, côté terrain : on y dépose son dû (objet « caisse_peage »)"},
   {"x":-40,"z":8.8,"quoi":"réserve des guetteurs, sur la pile : conserves de péage, couvertures polaires, fûts d'eau"},
   {"x":-44.5,"z":-3.2,"quoi":"voiture de la chicane : coffre (bâche, cric, trousse de secours)"},
   {"x":-30.5,"z":3.2,"quoi":"voiture de la chicane : boîte à gants, siège-auto, glacière"},
@@ -369,18 +382,18 @@ export const ETEINTS_PONT: readonly PointMaree[] = [
   {"x":84,"z":-26,"type":"errant (dans les dunes)"},
 ];
 
-export const PANNEAUX_PONT: readonly PointModele[] = [
-  {"x":-95,"z":-6.6,"texte":"Côte des Flots · Comptoir du Port → par le pont de l'estuaire (passage à pied) · ← Ton terrain · 9 km"},
+export const PANNEAUX_PONT: readonly PanneauPont[] = [
+  {"x":-95,"z":-6.6,"texte":"← Ton terrain · 3 km · Grand Hôtel des Flots, par le pont →","sortie":"ouest","nom":"panneau_sortie_ouest","lanterne":{"x":-94.65,"y":2.66,"z":-6.25}},
   {"x":-61.6,"z":0,"texte":"PONT CONNECTÉ — votre passage est optimisé en temps réel"},
   {"x":-65.8,"z":-4.6,"texte":"PONT EXPRESS — sans arrêt"},
   {"x":-44.6,"z":2.65,"texte":"PÉAGE · 12 WOTTS / TÊTE · DANS LA CAISSE ↓"},
   {"x":61.6,"z":0,"texte":"FIN DU PONT CONNECTÉ — merci d'avoir été optimisé"},
-  {"x":95,"z":6.6,"texte":"Comptoir du Port · 4 km → · ← Pont de l'estuaire · Ton terrain"},
+  {"x":95,"z":6.6,"texte":"Grand Hôtel des Flots · 2 km → · ← Le pont, ton terrain","sortie":"est","nom":"panneau_sortie_est","lanterne":{"x":95.35,"y":2.66,"z":6.95}},
 ];
 
 export const GOULETS_PONT: readonly PointModele[] = [
   {"x":5,"z":-4.75,"nature":"la brèche : une seule voie de planches au-dessus du vide, le long du garde-corps nord ; on passe un par un, huit mètres au-dessus de l'eau"},
-  {"x":-44.6,"z":2.65,"nature":"le péage du pylône ouest : la porte de la chicane (1,8 m), fermée tant qu'on n'a pas payé, sous l'œil du poste de guet de la pile ; puis le passage nord de la seconde voiture (x = −30,7)"},
+  {"x":-44.6,"z":2.65,"nature":"le péage du pylône ouest : la porte de la chicane (1,8 m), fermée tant qu'on n'a pas payé, sous l'œil du poste de guet de la pile, la caisse devant elle côté terrain ; puis le passage nord de la seconde voiture (x = −30,7)"},
 ];
 
 /** La marée (FICHE.maree) : les hauteurs d'eau, l'échelle, la cale basse et le point de retour. */
@@ -424,7 +437,7 @@ export const COUCHES_PONT: readonly CoucheModele[] = [
   {"nom":"cabane du carrelet","troncon":"bourg","boite":{"x":-52.75,"z":-27,"l":4,"p":4},"bas":1.05,"haut":3.6},
   {"nom":"maisons du bourg","troncon":"bourg","boite":{"x":-90,"z":28.5,"l":21,"p":11},"bas":1.05,"haut":9},
   {"nom":"pylône ouest","troncon":"pylone","boite":{"x":-37.5,"z":0,"l":4.2,"p":17},"bas":4,"haut":14.9},
-  {"nom":"poste de guet","troncon":"pylone","boite":{"x":-34.4,"z":9.25,"l":3.6,"p":2.7000000000000015},"bas":1.1,"haut":5.4},
+  {"nom":"poste de guet","troncon":"pylone","boite":{"x":-33.9,"z":9.25,"l":2.8999999999999972,"p":2.7000000000000015},"bas":1.1,"haut":5.4},
   {"nom":"pylône est","troncon":"breche","boite":{"x":37.5,"z":0,"l":4.2,"p":17},"bas":4,"haut":14.9},
   {"nom":"chapelle des marins","troncon":"marins","boite":{"x":67,"z":-15.8,"l":8.8,"p":14},"bas":1.05,"haut":11},
   {"nom":"péniche","troncon":"marins","boite":{"x":70.75,"z":23,"l":14.1,"p":5.399999999999997},"bas":1,"haut":3.6},
@@ -432,13 +445,15 @@ export const COUCHES_PONT: readonly CoucheModele[] = [
 ];
 
 export const LUMIERES_PONT: readonly LumiereModele[] = [
+  {"troncon":"bourg","x":-94.65,"y":2.66,"z":-6.25,"couleur":16764810,"intensite":6,"portee":5,"nature":"lanterne du panneau de sortie"},
   {"troncon":"bourg","x":-73.8,"y":1.15,"z":-8.5,"couleur":16761962,"intensite":6,"portee":9,"nature":"bougie dans un bocal, sur la table de la cuisine du pontier"},
   {"troncon":"bourg","x":-88.6,"y":1.35,"z":11,"couleur":16756832,"intensite":3,"portee":7,"nature":"bougies dans des bocaux, sur le comptoir du bar"},
   {"troncon":"bourg","x":-60.8,"y":6.8,"z":0,"couleur":9425151,"intensite":2.2,"portee":9,"nature":"écran « Pont connecté » qui luit encore par à-coups"},
   {"troncon":"pylone","x":-44.3,"y":2,"z":1.75,"couleur":16760944,"intensite":3,"portee":7,"nature":"baladeuse de chantier à batterie, au poteau de la porte du péage"},
-  {"troncon":"pylone","x":-34.4,"y":3.4,"z":9.3,"couleur":16747069,"intensite":12,"portee":16,"nature":"feu de brasero du poste de guet, sur la pile du pylône"},
+  {"troncon":"pylone","x":-33.9,"y":3.4,"z":9.3,"couleur":16747069,"intensite":12,"portee":16,"nature":"feu de brasero du poste de guet, sur la pile du pylône"},
   {"troncon":"breche","x":6.4,"y":-1.6,"z":-2.9,"couleur":16752704,"intensite":1.4,"portee":5,"nature":"feux de détresse de la voiture suspendue : la batterie tient encore"},
   {"troncon":"breche","x":27.6,"y":6.2,"z":6.550000000000001,"couleur":16728112,"intensite":1.2,"portee":4,"nature":"voyant du drone livreur pris dans les câbles (« Livré en 7 min »)"},
+  {"troncon":"marins","x":95.35,"y":2.66,"z":6.95,"couleur":16764810,"intensite":6,"portee":5,"nature":"lanterne du panneau de sortie"},
   {"troncon":"marins","x":67,"y":1.25,"z":-20.3,"couleur":16760944,"intensite":3,"portee":7,"nature":"bougie sur l'autel de la chapelle des marins"},
   {"troncon":"marins","x":70,"y":2.75,"z":23,"couleur":13625599,"intensite":1.6,"portee":6,"nature":"lampe solaire de jardin sur le toit de la péniche : elle se recharge encore"},
 ];

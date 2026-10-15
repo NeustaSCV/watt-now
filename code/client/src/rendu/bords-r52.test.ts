@@ -1,7 +1,8 @@
 // 0.10, R52 (« un lieu ne s'arrête jamais net ») : la vue d'ensemble construit tous les tronçons des haltes puis revient ;
-// les bords ajoutés (ganivelles, prolongements, dunes) restent hors de ce qu'on foule (aucun obstacle de plus) ; à l'hôtel,
-// on marche lentement dans la bande d'eau, on n'y court pas, et l'eau profonde arrête ; chaque panneau de sortie a sa
-// lanterne, une source de lumière la nuit ; les sorties restent atteignables.
+// les alentours des modèles (le décor au-delà du lot : ganivelles, dunes, routes prolongées, la mer) remplacent ceux que
+// le jeu posait, et restent hors de ce qu'on foule (aucun obstacle de plus) ; à l'hôtel, on marche lentement dans la bande
+// d'eau, on n'y court pas, et l'eau profonde (la ligne du large du modèle) arrête ; chaque panneau de sortie du modèle se
+// lit, et sa lanterne est une source de lumière la nuit seulement ; les sorties restent atteignables.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -28,12 +29,11 @@ const { RenduGue } = await import("./gue.ts");
 const { creerHotel, lumieresHotel } = await import("./hotel.ts");
 const { heurte, sortiesDe, entreesDe, zoneDe } = await import("../../../commun/src/lieux.ts");
 const { zoneRoutePont, PANNEAUX_SORTIE_PONT } = await import("../../../commun/src/route-pont.ts");
-const { zoneCorniche } = await import("../../../commun/src/corniche.ts");
+const { PANNEAUX_SORTIE_CORNICHE, zoneCorniche } = await import("../../../commun/src/corniche.ts");
 const { BORD_EAU_HOTEL, LARGE_HOTEL, PANNEAU_SORTIE_HOTEL, dansLEauHotel, profondeurEauHotel } = await import("../../../commun/src/hotel.ts");
 const { avancer } = await import("../../../commun/src/deplacement.ts");
 const { ALLURES } = await import("../../../commun/src/regles.ts");
 const { ECRITEAUX } = await import("../../../commun/src/guidage.ts");
-const { PANNEAUX_SORTIE_CORNICHE } = await import("./bords-corniche.ts");
 
 type Zone = ReturnType<typeof zoneDe>;
 type LieuId = Parameters<typeof zoneDe>[0];
@@ -82,34 +82,41 @@ function sommets(groupe: THREE.Object3D, garder: (m: THREE.Mesh) => boolean = ()
 /** Ce point est-il là où l'on marche (dans la zone, hors des obstacles) ? */
 const foule = (zone: Zone, x: number, z: number) => x > zone.xMin && x < zone.xMax && z > zone.zMin && z < zone.zMax && !heurte(zone, x, z, 0.05);
 
-test("les ganivelles, les prolongements et les dunes ajoutés ne sont pas là où l'on marche (aucun obstacle de plus)", () => {
-  // La route du pont : ganivelles, piquets, oyats (les dunes posées sur la limite y débordent d'un mètre, à ras du sol).
+test("les alentours des modèles remplacent les décors du jeu : chaque lieu a les siens, le jeu n'en pose plus, ils ne sont pas là où l'on marche", () => {
+  /** Les sommets des alentours d'un décor, au-dessus du sol, là où l'on marche (il ne doit y en avoir aucun). */
+  const dansLaZone = (decor: THREE.Object3D, zone: Zone) => {
+    const groupes: THREE.Object3D[] = [];
+    decor.traverse((o) => {
+      if (o.name === "alentours") groupes.push(o);
+    });
+    // (Les dunes posées sur la limite y débordent de quelques centimètres : on ne compte qu'à 30 cm du bord de la zone. Le
+    // houppier d'un arbre du talus peut pencher au-dessus du lot, bien au-dessus des têtes : on ne compte que sous 2,5 m.)
+    const auBord = (v: THREE.Vector3) => Math.min(v.x - zone.xMin, zone.xMax - v.x, v.z - zone.zMin, zone.zMax - v.z) < 0.3;
+    return { groupes: groupes.length, dedans: groupes.flatMap((g) => sommets(g)).filter((v) => v.y > 0.05 && v.y < 2.5 && foule(zone, v.x, v.z) && !auBord(v)) };
+  };
+  // Aucun des décors que posait le jeu (0.10, R52) n'est encore là.
+  const anciens = ["route_pont:alentours", "bords du pont", "corniche:alentours", "bords de la corniche (ouest)", "bords de la corniche (est)", "bords de l'hôtel", "gue:alentours"];
   const pont = new RenduRoutePont();
-  const decorPont = pont.creer();
-  const zp = zoneRoutePont({ haute: false, ouverte: true });
-  const loinDesPanneaux = (v: THREE.Vector3) => PANNEAUX_SORTIE_PONT.every((p) => Math.hypot(v.x - p.x, v.z - p.z) > 2.5);
-  const bords = decorPont.getObjectByName("bords du pont")!;
-  assert.ok(bords, "les bords du pont");
-  const dedans = sommets(bords, (m) => !(m.material as THREE.MeshStandardMaterial).map).filter((v) => v.y > 0.05 && loinDesPanneaux(v) && foule(zp, v.x, v.z));
-  assert.equal(dedans.length, 0, `${dedans.length} sommets là où l'on marche, ex. ${JSON.stringify(dedans[0])}`);
-  // La ganivelle est bien posée sur les deux limites (de part et d'autre de la route) : des lattes à moins de 30 cm.
-  const lattes = sommets(bords).filter((v) => v.y > 0.6 && v.y < 1.2);
-  for (const x of [zp.xMin, zp.xMax]) for (const z of [15, 55]) assert.ok(lattes.some((v) => Math.abs(v.x - x) < 0.4 && Math.abs(v.z - z) < 1), `une latte en (${x}, ${z})`);
-  // La corniche : tout le prolongement est au-delà des deux bouts du lot (sauf le mât de la lanterne, au panneau).
+  pont.creer();
+  pont.toutConstruire();
   const corniche = new RenduCorniche();
-  const decorCo = corniche.creer();
-  for (const cote of ["ouest", "est"]) {
-    const g = decorCo.getObjectByName(`bords de la corniche (${cote})`)!;
-    assert.ok(g, cote);
-    const hors = sommets(g).filter((v) => v.x > 0.5 && v.x < 199.5);
-    assert.equal(hors.length, 0, `${cote} : ${hors.length} sommets dans le lot`);
-  }
-  // L'hôtel : la promenade prolongée, les ganivelles, les dunes sont hors de la zone (l'eau peu profonde, elle, y est).
+  corniche.creer();
+  corniche.toutConstruire();
+  const gue = new RenduGue(() => {});
+  gue.creer();
+  gue.toutConstruire();
   const hotel = creerHotel();
-  const b = hotel.getObjectByName("bords de l'hôtel")!;
-  const zh = zoneDe("grand_hotel");
-  const horsZone = sommets(b, (m) => m.name !== "eau peu profonde" && !m.name.startsWith("lanterne")).filter((v) => v.y > 0.05 && foule(zh, v.x, v.z) && Math.hypot(v.x - PANNEAU_SORTIE_HOTEL.x, v.z - PANNEAU_SORTIE_HOTEL.z) > 2);
-  assert.equal(horsZone.length, 0, `${horsZone.length} sommets là où l'on marche, ex. ${JSON.stringify(horsZone[0])}`);
+  for (const [lieu, decor, zone, n] of [
+    ["route_pont", pont.groupe, zoneRoutePont({ haute: false, ouverte: true }), 4],
+    ["corniche", corniche.groupe, zoneCorniche(true), 4],
+    ["gue", gue.groupe, zoneDe("gue"), 4],
+    ["grand_hotel", hotel, zoneDe("grand_hotel"), 1],
+  ] as const) {
+    for (const nom of anciens) assert.equal(decor.getObjectByName(nom), undefined, `${lieu} : « ${nom} »`);
+    const { groupes, dedans } = dansLaZone(decor, zone);
+    assert.equal(groupes, n, `${lieu} : les alentours de chaque tronçon`);
+    assert.equal(dedans.length, 0, `${lieu} : ${dedans.length} sommets là où l'on marche, ex. ${JSON.stringify(dedans.map((v) => [v.x.toFixed(1), v.y.toFixed(1), v.z.toFixed(1)]))}`);
+  }
 });
 
 test("à l'hôtel, la bande d'eau peu profonde : on y marche ralenti, on n'y court pas, on s'y enfonce ; l'eau profonde arrête", () => {
@@ -193,4 +200,39 @@ test("les sorties restent atteignables à pied depuis l'arrivée (route du pont,
       if (lieu === "grand_hotel") assert.ok(vus.has(cle(Math.round(40 / pas), Math.round((BORD_EAU_HOTEL + 1.5) / pas))), "la bande d'eau se rejoint");
     }
   }
+});
+
+test("budget iPhone : chaque tronçon des haltes de la côte et du gué tient, alentours compris (≤ 40 appels, ≤ 60 000 triangles) ; le jeu n'y ajoute rien", () => {
+  const compter = (g: THREE.Object3D) => {
+    let triangles = 0;
+    let appels = 0;
+    g.traverseVisible((o) => {
+      const m = o as THREE.Mesh;
+      if (!m.isMesh || (m.material as THREE.Material).colorWrite === false) return;
+      triangles += (m.geometry.index ? m.geometry.index.count : m.geometry.getAttribute("position").count) / 3;
+      appels++;
+    });
+    return { triangles, appels };
+  };
+  const pont = new RenduRoutePont();
+  pont.creer();
+  pont.toutConstruire();
+  pont.animer({ x: 75, z: 35 }, 0.016, Math.PI / 4, 0, 0, true);
+  const corniche = new RenduCorniche();
+  corniche.creer();
+  corniche.toutConstruire();
+  const gue = new RenduGue(() => {});
+  gue.creer();
+  gue.toutConstruire();
+  let n = 0;
+  for (const g of [pont.groupe, corniche.groupe, gue.groupe]) {
+    for (const t of g.children) {
+      if (t.name === "gue:eboulis") continue;
+      const c = compter(t);
+      assert.ok(c.appels <= 40, `${t.name} : ${c.appels} appels`);
+      assert.ok(c.triangles <= 60_000, `${t.name} : ${c.triangles} triangles`);
+      n++;
+    }
+  }
+  assert.equal(n, 12, "les douze tronçons");
 });

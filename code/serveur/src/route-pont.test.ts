@@ -29,6 +29,7 @@ import {
   zoneRoutePont,
 } from "../../commun/src/route-pont.ts";
 import { EMPRISE_RESSOURCE, USAGES } from "../../commun/src/terrain.ts";
+import { MAREE_PONT } from "../../commun/src/route-pont-modele.ts";
 import { etapeButin, tirerVestiges, LIEU_DE_FOUILLE } from "../../commun/src/vestiges.ts";
 import { Base } from "./base.ts";
 import { Comptoir } from "./comptoir.ts";
@@ -120,15 +121,43 @@ test("la zone : on traverse du terrain à l'hôtel, la porte du péage ouverte ;
   assert.ok(terrain.x < hotel.x, "le terrain à l'ouest, l'hôtel à l'est, comme sur la carte et dans le modèle");
   assert.ok(relies(zoneRoutePont({ haute: false, ouverte: true }), terrain, hotel), "porte ouverte : on passe");
   assert.ok(!relies(zoneRoutePont({ haute: false, ouverte: false }), terrain, hotel), "porte fermée : la chicane arrête");
-  // En venant du terrain, on arrive contre la porte (on y paie) ; la caisse est derrière, du côté de l'hôtel.
-  assert.ok(relies(zoneRoutePont({ haute: false, ouverte: false }), terrain, { x: PORTE_PEAGE.x - 1, z: PORTE_PEAGE.z }));
-  assert.ok(relies(zoneRoutePont({ haute: false, ouverte: false }), hotel, { x: CAISSE_PEAGE.x - 0.9, z: CAISSE_PEAGE.z }));
+  // En venant du terrain, on arrive à la caisse, devant la porte (0.10, H-1 : on y paie) ; de l'hôtel, contre la porte.
+  assert.ok(CAISSE_PEAGE.x < PORTE_PEAGE.x, "la caisse est du côté du terrain");
+  assert.ok(relies(zoneRoutePont({ haute: false, ouverte: false }), terrain, { x: CAISSE_PEAGE.x - 0.9, z: CAISSE_PEAGE.z }));
+  assert.ok(relies(zoneRoutePont({ haute: false, ouverte: false }), hotel, { x: PORTE_PEAGE.x + 1, z: PORTE_PEAGE.z }));
   // La cale : à marée basse, on y descend du quai ; à marée haute, l'accès est fermé.
   const cale = { x: (CALE.x0 + CALE.x1) / 2, z: (CALE.z0 + CALE.z1) / 2 };
   assert.ok(relies(zoneRoutePont({ haute: false, ouverte: false }), RETOUR_MAREE, cale));
   assert.ok(!relies(zoneRoutePont({ haute: true, ouverte: false }), RETOUR_MAREE, cale));
   // La zone du lieu (lieux.ts) est celle qu'on trouve en arrivant : porte fermée, marée basse.
   assert.equal(zoneDe("route_pont"), zoneRoutePont({ haute: false, ouverte: false }));
+});
+
+/**
+ * Là où l'on marche, dans le repère du modèle : les deux rives (le quai de pierre, et à l'est la forme de radoub et sa
+ * péniche), le tablier (sauf la moitié sud qui pend dans la brèche), les plateformes des quatre piles, la cale basse du
+ * quai sud-ouest, le ponton et la cabane du carrelet. Le reste est l'eau, huit mètres plus bas. (Jusqu'à la 0.10, le jeu
+ * fermait l'eau par des bandes d'obstacles ; le modèle la ferme désormais lui-même : H-4.)
+ */
+const CALE_MODELE = MAREE_PONT.cale;
+function solDuModele(xm: number, zm: number): boolean {
+  if (xm <= -58 || xm >= 58) return true;
+  if ((xm <= -50 || xm >= 50) && zm >= -20 && zm <= 14) return true;
+  if (zm >= -5.62 && zm <= 5.62 && xm >= -50 && xm <= 50) return !(xm > -5 && xm < 15 && zm > -1.8);
+  const ax = Math.abs(xm);
+  if (ax >= 32.5 && ax <= 42.5 && Math.abs(zm) >= 5.62 && Math.abs(zm) <= 10.4) return true;
+  if (xm >= CALE_MODELE.x1 && xm <= CALE_MODELE.x2 && zm >= CALE_MODELE.z1 && zm <= CALE_MODELE.z2) return true;
+  if (xm <= -50.75 && zm >= -27.6 && zm <= -26.4) return true;
+  return xm >= -54.75 && xm <= -50.75 && zm >= -29 && zm <= -25;
+}
+
+test("l'eau du pont est fermée par le modèle (H-4) : depuis la route, aucune case où l'on marche n'est dans l'eau ; la tête du pont est ouverte des deux côtés", () => {
+  let dansLEau = 0;
+  for (let x = 0.25; x < ROUTE_PONT.longueur; x += 0.5)
+    for (let z = 0.25; z < ROUTE_PONT.largeur; z += 0.5) if (marchable(x, z) && !solDuModele(x - 100, z - 35)) dansLEau++;
+  assert.equal(dansLEau, 0, `${dansLEau} cases d'eau atteintes`);
+  // La tête du pont : on passe du quai au tablier, à l'ouest comme à l'est (x ∓ 50 du modèle), sur la route.
+  for (const x of [50 - 1, 50 + 1, 150 - 1, 150 + 1]) assert.ok(marchable(x, 35), `x ${x}`);
 });
 
 test("le contenu : douze Éteints dont trois Noyés, le vrac « électrique et atelier », la bobine, les fouilles à portée", () => {
@@ -192,8 +221,14 @@ test("le péage : 11 wotts refusés, 12 acceptés ; la porte ne s'ouvre que pour
   // Loin de la caisse : rien.
   rose.joueur.recevoir({ t: "payer_passage", passage: "pont", objets: { branche: 4 } });
   assert.ok(rose.infos().at(-1)!.startsWith("Approche-toi de la caisse"));
-  // Contre la porte, côté terrain (la caisse est derrière : la voix d'en haut entend).
+  // Contre la porte, loin de la caisse : rien non plus (0.10, H-1 : on ne paie plus contre la porte).
   for (const j of [rose, malo]) j.joueur.position = { x: PORTE_PEAGE.x - 1, z: PORTE_PEAGE.z, o: Math.PI / 2 };
+  if (Math.hypot(PORTE_PEAGE.x - 1 - CAISSE_PEAGE.x, PORTE_PEAGE.z - CAISSE_PEAGE.z) > 1.6) {
+    rose.joueur.recevoir({ t: "payer_passage", passage: "pont", objets: { branche: 4 } });
+    assert.ok(rose.infos().at(-1)!.startsWith("Approche-toi de la caisse"));
+  }
+  // À la caisse, devant la porte, côté terrain (la voix d'en haut entend).
+  for (const j of [rose, malo]) j.joueur.position = { x: CAISSE_PEAGE.x - 0.9, z: CAISSE_PEAGE.z, o: Math.PI / 2 };
   rose.joueur.recevoir({ t: "payer_passage", passage: "pont", objets: { branche: 2, chiffons: 1 } });
   assert.equal(rose.dernier("passage")!.ouvert, false);
   assert.deepEqual(rose.joueur.bienvenue(0).inventaire, { sac_a_dos: 1, branche: 10, chiffons: 2 }, "rien n'est pris");

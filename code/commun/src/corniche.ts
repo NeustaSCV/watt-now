@@ -21,7 +21,7 @@ import type { Milieu } from "./eteints.ts";
 import { declarerObstaclesBas } from "./murs.ts";
 import { obstaclesVue, voit, type PlanVue, type PorteVue } from "./vue.ts";
 import type { SegmentModele } from "./gue-modele.ts";
-import { OBSTACLES_BARRICADE, OBSTACLES_PIN, PIECES_CORNICHE, PORTES_CORNICHE, SEGMENTS_CORNICHE } from "./corniche-modele.ts";
+import { OBSTACLES_BARRICADE, OBSTACLES_PIN, PANNEAUX_CORNICHE, PIECES_CORNICHE, PORTES_CORNICHE, SEGMENTS_CORNICHE } from "./corniche-modele.ts";
 
 // ---------- Le repère ----------
 
@@ -39,6 +39,16 @@ export function aLaCorniche(xm: number, zm: number): { x: number; z: number } {
 export function auModeleCorniche(x: number, z: number): { x: number; z: number } {
   return { x: x - 100, z: z - 35 };
 }
+
+/**
+ * Les deux panneaux de sortie du modèle (FICHE.panneaux, 0.10, R52), à l'ouest (vers le terrain) et à l'est (vers le
+ * phare), dans le repère du jeu : on les lit (commun/src/guidage.ts, E-04 et E-13) ; la lanterne du modèle les éclaire.
+ */
+export const PANNEAUX_SORTIE_CORNICHE = (["ouest", "est"] as const).map((cote) => {
+  const p = PANNEAUX_CORNICHE.find((q) => q.sortie === cote);
+  if (!p) throw new Error(`Le modèle de la corniche n'a plus de panneau de sortie à l'${cote}`);
+  return aLaCorniche(p.x, p.z);
+}) as unknown as readonly [{ x: number; z: number }, { x: number; z: number }];
 
 /** Les quatre tronçons, d'ouest en est, et le x (jeu) de leur bord ouest (le modèle : X0 − 25). */
 export const TRONCONS_CORNICHE = ["montee", "tunnel", "panoramique", "eboulement"] as const;

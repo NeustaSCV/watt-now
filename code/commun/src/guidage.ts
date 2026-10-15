@@ -15,7 +15,7 @@
 //
 // Ce fichier n'importe des autres modules du jeu que des positions, des états et des textes.
 
-import { aLaCorniche, BARRICADE, PIN_TOMBE, RUBAN } from "./corniche.ts";
+import { aLaCorniche, BARRICADE, PANNEAUX_SORTIE_CORNICHE, PIN_TOMBE, RUBAN } from "./corniche.ts";
 import { ASCENSEUR, BALCON, BORNE, CARTE, PANNEAU, PANNEAU_SORTIE_HOTEL, borneAlimentee, jeuHotel, niveauHotel, pieceHotel, type EtatHotel, type PieceHotel } from "./hotel.ts";
 import { destinations, entreesDe, type LieuId } from "./lieux.ts";
 import type { Inventaire } from "./objets.ts";
@@ -170,22 +170,23 @@ export const DECLENCHEURS: readonly Declencheur[] = [
  * Les écriteaux lisibles. Les places, prises dans les modèles :
  * - E-01 : le panneau des survivants, sur les poteaux de la porte du péage (halte-route-pont, `barricade`) ;
  * - E-02 : l'écran du portique « connecté », au-dessus de la route (x = − 61,6) ;
- * - E-04 : le panneau routier à double face, aux deux bouts de la corniche (x = ± 96,5, au bord nord de la chaussée) ;
+ * - E-04, E-13 : les panneaux de sortie des deux bouts de la corniche (ceux du modèle, x = ± 96,5) ; E-14, E-15 :
+ *   ceux de la route du pont (x ∓ 95) ; E-16 : celui du Grand Hôtel, au bout de la promenade ; E-17 : celui de la route
+ *   du nord, au phare (tous dans les modèles depuis la 0.10, R52) ;
  * - E-05 : le grand panneau de la corniche, sur ses deux poteaux (x = − 68, z = − 5) ;
  * - E-06 : la borne du hall (BORNE) ; E-07 : le panneau « Séjour Zéro-Effort », devant sa face, à côté du coffret de la
  *   batterie (repère H du modèle : (25,6 ; 20,4), tourné de 45° ; le lot est centré en H (− 1 ; 5)) ; E-08 : le panneau
  *   de la piscine (H : (3 ; 8,65)) ;
  * - E-09 : le journal de bord, sur la table du gardien ; E-10 : la planche peinte des survivants, contre la tour, près
  *   de la porte ; E-11 : la plaque, sur le pilier de la grille sud ;
- * - E-12 : le panneau du sentier côtier (le texte de celui du modèle, qui est sur le plateau, au bord du chemin des
- *   douaniers), planté par le jeu sur la grève, près de l'eau, au départ du sentier qui file vers la sortie de l'ouest
- *   (ECRITEAU_SENTIER ; client/src/rendu/phare-bords.ts).
+ * - E-12 : le panneau du sentier côtier (celui du modèle), sur la grève, près de l'eau, au départ du sentier qui file
+ *   vers la sortie de l'ouest (ECRITEAU_SENTIER).
  */
 export const ECRITEAUX: readonly Ecriteau[] = [
   { id: "E-01", lieu: "route_pont", points: [CHICANE], rayon: 0.9, texte: "« PÉAGE · 12 WOTTS / TÊTE · DANS LA CAISSE ↓ · UN À LA FOIS ! »" },
   { id: "E-02", lieu: "route_pont", points: [auPont(-61.6, 0)], rayon: 3, texte: "« PONT CONNECTÉ · votre passage est optimisé en temps réel · trafic : 0 véhicule · attente : 0 min »" },
-  { id: "E-04", lieu: "corniche", points: [aLaCorniche(-96.5, 0.03)], rayon: 1.5, texte: "« ← Ton terrain · 3 km · Phare du cap, par le tunnel → »" },
-  { id: "E-13", lieu: "corniche", points: [aLaCorniche(96.5, -2.76)], rayon: 1.5, texte: "« Phare du cap · 2 km → · ← La corniche, ton terrain »" },
+  { id: "E-04", lieu: "corniche", points: [PANNEAUX_SORTIE_CORNICHE[0]], rayon: 1.5, texte: "« ← Ton terrain · 3 km · Phare du cap, par le tunnel → »" },
+  { id: "E-13", lieu: "corniche", points: [PANNEAUX_SORTIE_CORNICHE[1]], rayon: 1.5, texte: "« Phare du cap · 2 km → · ← La corniche, ton terrain »" },
   { id: "E-14", lieu: "route_pont", points: [PANNEAUX_SORTIE_PONT[0]], rayon: 1.7, texte: "« ← Ton terrain · 3 km · Grand Hôtel des Flots, par le pont → »" },
   { id: "E-15", lieu: "route_pont", points: [PANNEAUX_SORTIE_PONT[1]], rayon: 1.7, texte: "« Grand Hôtel des Flots · 2 km → · ← Le pont, ton terrain »" },
   { id: "E-16", lieu: "grand_hotel", points: [PANNEAU_SORTIE_HOTEL], rayon: 0.9, texte: "« Route du pont → · Ton terrain, par le pont · 5 km »" },

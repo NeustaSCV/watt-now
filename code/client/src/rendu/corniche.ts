@@ -4,6 +4,10 @@
 // ou débité quand on en a pris les dix bûches : chacun voit le sien), la porte de la barricade du tunnel (fermée, ou
 // ouverte pour qui a payé le péage), les toits qui s'effacent, les lumières de la nuit, l'écume qui monte et descend.
 //
+// Ce qui borde le lieu est dans le modèle depuis la 0.10 (R52) : la route prolongée aux deux bouts jusqu'à ce qu'elle
+// tourne derrière la roche, la roche, la mer jusqu'au large (une seule eau, celle du modèle), les panneaux de sortie et
+// leurs lanternes (le groupe `alentours` de chaque tronçon). Le jeu n'y ajoute plus rien.
+//
 // Quatre tronçons de 50 × 70 m : seuls celui du joueur et ses voisins sont construits (comme au gué). main.ts n'appelle
 // que ce module (une ligne par point d'appel).
 
@@ -15,10 +19,8 @@ import type { MessageServeur } from "../../../commun/src/messages.ts";
 import { TEXTES_PEAGE } from "../../../commun/src/peage.ts";
 import type { Propositions } from "../interaction.ts";
 import type { RessourceSol } from "../../../commun/src/terrain.ts";
-import { creerBordsCorniche } from "./bords-corniche.ts";
 import { brouillerTout } from "./carte-vue.ts";
-import { lumieresLanternes } from "./decor-cote.ts";
-import type { LanternePanneau } from "./lanterne-panneau.ts";
+import { estLanternePanneau, lumiereLanterneModele } from "./lanterne-panneau.ts";
 import { tronconsVoulus } from "./vue-ensemble.ts";
 import { estomperToits } from "./halte.ts";
 import type { SourceLumiere } from "./lumieres.ts";
@@ -49,16 +51,6 @@ interface Troncon {
   modele: THREE.Group;
 }
 
-/**
- * Autour du lot (0.10, R52 : rendu/bords-corniche.ts) : la route prolongée aux deux bouts jusqu'à ce qu'elle tourne
- * derrière la roche, la mer jusqu'à l'horizon, de la matière de celle du lot, et les lanternes des panneaux de sortie.
- */
-function creerAlentours(): { groupe: THREE.Group; lanternes: LanternePanneau[] } {
-  const b = creerBordsCorniche();
-  b.groupe.name = "corniche:alentours";
-  return b;
-}
-
 /** Les lumières du modèle, dans le repère du jeu. */
 const LUMIERES = LUMIERES_CORNICHE.map((l) => ({ ...l, ...aLaCorniche(l.x, l.z) }));
 
@@ -69,20 +61,13 @@ export class RenduCorniche {
   /** Mon pin tombé : vidé (débité) ou non ; la porte de la barricade : ouverte pour moi, ou fermée. */
   private pinDebite = false;
   private barricadeOuverte = false;
-  /** Les lanternes des deux panneaux de sortie (0.10, R52). */
-  private lanternes: LanternePanneau[] = [];
 
   constructor() {
     this.groupe.name = "corniche";
   }
 
-  /** Le décor : les alentours tout de suite ; les tronçons se construisent autour du joueur (animer). */
+  /** Le décor : les tronçons (et leurs alentours) se construisent autour du joueur (animer). */
   creer(): THREE.Group {
-    if (this.groupe.children.length === 0) {
-      const a = creerAlentours();
-      this.groupe.add(a.groupe);
-      this.lanternes = a.lanternes;
-    }
     return this.groupe;
   }
 
@@ -129,12 +114,11 @@ export class RenduCorniche {
 
   /** Les lumières de la corniche, la nuit : les lanternes des panneaux de sortie, le brasero des pillards, le feu de la terrasse, les bougies, les écrans. */
   lumieres(nuit: boolean): SourceLumiere[] {
-    // Les lanternes des panneaux de sortie (0.10, R52) : leur verre luit la nuit, s'éteint le jour.
-    const lanternes = lumieresLanternes(this.lanternes, nuit);
     if (!nuit) return [];
     return [
-      ...lanternes,
       ...LUMIERES.map((l) => {
+        // Les lanternes des panneaux de sortie (0.10, R0-1) : celles du modèle, la nuit seulement.
+        if (estLanternePanneau(l.nature)) return lumiereLanterneModele(l, { x: 0, z: 0 });
         const feu = /^(brasero|feu|bougie)/.test(l.nature);
         return { x: l.x, y: l.y, z: l.z, couleur: l.couleur, intensite: l.intensite, portee: l.portee, vacillement: feu ? 0.8 : 0 };
       }),

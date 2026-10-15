@@ -22,7 +22,7 @@
 
 import * as THREE from "three";
 import { Batiment, Chantier, PALETTE, aleatoire, mur, gravats, debris, jonchee, raiDeLumiere, toitDeuxPans, mousse, touffes } from "../commun/atelier.js";
-import { C, R, chiffre, matieres, panneau, boiteEntre, planche, cylindre, pilier, dalle, obstacleBoite, BOULE, CAILLOU, oyats, semerOyats, dune, fientes, couluresBlanches, bitte, glene, bouee, barbeles, caisse, casier, filet, filetPendu, barque, voiture, camionnette, chaise, table, etagere, tonneau, sacs, palette } from "./objets.js";
+import { C, R, TEXTES_SORTIE, chiffre, matieres, panneau, boiteAtlas, boiteEntre, planche, cylindre, pilier, dalle, obstacleBoite, BOULE, CAILLOU, oyats, semerOyats, dune, fientes, couluresBlanches, bitte, glene, bouee, barbeles, caisse, casier, filet, filetPendu, barque, voiture, camionnette, chaise, table, etagere, tonneau, sacs, palette } from "./objets.js";
 
 // ---------- Les tronçons ----------
 
@@ -50,7 +50,9 @@ const CALE = { x1: -58, x2: -51, z1: 14.6, z2: 34.4 };
 const ACCES = { x: -58, z1: 16.0, z2: 18.0 }; // l'accès, dans le bord du quai (2 m) : le haut du mur, puis une marche
 const RETOUR = { x: -59.2, z: 17.0 }; // en haut de l'accès, sur le quai : là où le jeu remet un joueur quand la mer monte
 const GRILLE = { x: -44.6, z1: 1.75, z2: 3.55 }; // la porte de la chicane, entre ses deux poteaux
-const CAISSE = { x: -33.3, z: 6.95 }; // la caisse du péage, au pied du poste de guet (sur la pile)
+// La caisse du péage (H-1, décision du porteur V2-04) : devant la porte, côté terrain (à l'ouest de la chicane, là où
+// l'on arrive), au pied des sacs de sable, sous le panneau « DANS LA CAISSE ↓ » ; enchaînée au poteau sud de la porte.
+const CAISSE = { x: -45.12, z: 4.45 };
 const ANGLE_PORTE = 1.62; // la porte ouverte, rabattue vers l'est contre les sacs
 const Y_FOND = -9.6;
 const Y_VASE = -7.82;
@@ -73,6 +75,7 @@ const PERCEE = { x1: -37.5, x2: -35 }; // le panneau du treillis sud découpé a
 const ANGLE_DALLE = Math.asin(0.86); // les dalles qui pendent descendent jusque dans l'eau
 const FORME = { x1: 64, x2: 78, z1: 19, z2: 27, y: -1.3 }; // la forme de radoub au sommet de la cale
 const PENICHE = { x1: 64.5, x2: 77.0, z1: 20.6, z2: 25.4 };
+const PASSERELLE = { x1: PENICHE.x1 + 0.2, x2: PENICHE.x1 + 1.55 }; // la passerelle : 1,35 m entre ses bords (T4)
 
 /** La hauteur du câble porteur en x (parabole dans la travée centrale, droite qui fléchit vers les ancrages). */
 function cableY(x) {
@@ -99,7 +102,7 @@ const ENTREES = [
   { x: -58, z: -27, nature: "ponton du carrelet, depuis le quai nord" },
   { x: -50, z: 0, nature: "tête du pont : le tablier commence au-dessus du quai" },
   { x: -44.6, z: 2.65, nature: "la porte du péage, dans la chicane (1,8 m entre ses poteaux ; fermée au départ : objet « chicane_fermee »)" },
-  { x: -35.7, z: 5.8, nature: "percée dans le treillis sud (1,45 m entre le pied du pylône et le treillis) : vers la pile, la caisse du péage et le poste de guet" },
+  { x: -35.7, z: 5.8, nature: "percée dans le treillis sud (1,45 m entre le pied du pylône et le treillis) : vers la pile, le poste de guet et la réserve des guetteurs (1,4 m entre le pied du pylône et la cabane)" },
   { x: -34.8, z: 8.2, nature: "porte du poste de guet (1,5 m)" },
   { x: -58, z: 17.0, nature: "accès à la cale basse (2 m, deux marches basses) : à marée basse seulement" },
   { x: 2.3, z: -4.7, nature: "les planches au-dessus du trou (un à la fois)" },
@@ -108,7 +111,7 @@ const ENTREES = [
   { x: 65.2, z: 19.2, nature: "passerelle de la péniche échouée dans la forme" },
   { x: 81, z: 21.5, nature: "grandes portes du hangar à bateaux, face à la cale" },
   { x: 88, z: 29, nature: "porte de service du hangar (sud)" },
-  { x: 100, z: 0, nature: "sortie B : la route du Littoral file vers le Comptoir du Port" },
+  { x: 100, z: 0, nature: "sortie B : la route du Littoral file vers le Grand Hôtel des Flots" },
 ];
 
 const FOUILLE = [
@@ -137,7 +140,7 @@ const FOUILLE = [
   { x: -65.8, z: -4.6, quoi: "borne « Pont Express » : batterie, monnayeur, écran" },
   { x: -84, z: -24, quoi: "dériveur échoué dans les dunes : voile (bâche), cordages, poulies" },
   // Le pylône barricadé
-  { x: -33.3, z: 6.95, quoi: "la caisse du péage, au pied du poste de guet : on y dépose son dû (objet « caisse_peage »)" },
+  { x: CAISSE.x, z: CAISSE.z, quoi: "la caisse du péage, devant la porte, côté terrain : on y dépose son dû (objet « caisse_peage »)" },
   { x: -40, z: 8.8, quoi: "réserve des guetteurs, sur la pile : conserves de péage, couvertures polaires, fûts d'eau" },
   { x: -44.5, z: -3.2, quoi: "voiture de la chicane : coffre (bâche, cric, trousse de secours)" },
   { x: -30.5, z: 3.2, quoi: "voiture de la chicane : boîte à gants, siège-auto, glacière" },
@@ -210,7 +213,7 @@ export const FICHE = {
     "La brèche : la moitié sud du tablier pend en V jusque dans l'eau, poutre en treillis comprise ; suspentes cassées qui pendent du câble sud",
     "Goulet n° 1 : la voie unique le long du garde-corps nord, et les planches posées au-dessus du trou (« UN À LA FOIS ! »), huit mètres au-dessus de l'eau",
     "La voiture suspendue au-dessus du vide, retenue par son pare-chocs arrière (feux de détresse la nuit)",
-    "Goulet n° 2 : le portique du pylône ouest fermé par une chicane de voitures, sacs de sable et barbelés ; la porte du péage en tôle ondulée (fermée ou ouverte), son panneau « PÉAGE 12 WOTTS / TÊTE » ; la caisse du péage au pied du poste de guet, sur la pile ; le feu et le drapeau de chiffon de la vigie",
+    "Goulet n° 2 : le portique du pylône ouest fermé par une chicane de voitures, sacs de sable et barbelés ; la porte du péage en tôle ondulée (fermée ou ouverte), son panneau « PÉAGE 12 WOTTS / TÊTE » ; la caisse du péage devant la porte, côté terrain, enchaînée au poteau ; le poste de guet sur la pile, son feu, le drapeau de chiffon de la vigie, la réserve des guetteurs",
     "Le portique « Pont connecté — votre passage est optimisé en temps réel », qui clignote encore, et la borne « Pont Express sans arrêt » à côté du vieux guichet de 1934",
     "Le drone livreur pris dans les suspentes, son colis « Livré en 7 min — garanti » éventré sur le tablier",
     "La maison du pontier : guichet du péage, tarif de 1934 (piéton 0 f 10), registre des passages, cuisine, réserve ; sa bougie la nuit",
@@ -223,30 +226,44 @@ export const FICHE = {
     "La cale, son treuil, et la péniche « Ma Liberté » échouée dans la forme : on la visite (salon, cuisine, timonerie)",
     "Le hangar de la Société des canotiers : barques sur tréteaux, filets, avirons, le moteur hors-bord serré sur l'établi",
     "Le vent : oyats couchés, drapeaux en lambeaux, manche à air ; plus une mouette, mais leurs fientes partout",
+    "Les bords (R52) : la ganivelle de châtaignier et les dunes aux deux bouts et au sud des terre-pleins, la ganivelle du nord qui file au-delà ; la route qui continue vers le bourg à l'ouest et vers l'hôtel à l'est",
+    "Les deux panneaux de sortie, tournés vers le sud-est, une lanterne au-dessus qui luit la nuit",
+    "Les alentours : l'estuaire qui remonte au nord entre ses quais, et au sud l'embouchure entre deux jetées, la plage, l'eau claire sur le sable, la ligne des brisants, la mer sombre au large",
   ],
   lot: { l: 200, p: 70 },
   depart: { x: -98, z: 1.6 },
   goulets: [
     { x: 5, z: -4.75, nature: "la brèche : une seule voie de planches au-dessus du vide, le long du garde-corps nord ; on passe un par un, huit mètres au-dessus de l'eau" },
-    { x: -44.6, z: 2.65, nature: "le péage du pylône ouest : la porte de la chicane (1,8 m), fermée tant qu'on n'a pas payé, sous l'œil du poste de guet de la pile ; puis le passage nord de la seconde voiture (x = −30,7)" },
+    { x: -44.6, z: 2.65, nature: "le péage du pylône ouest : la porte de la chicane (1,8 m), fermée tant qu'on n'a pas payé, sous l'œil du poste de guet de la pile, la caisse devant elle côté terrain ; puis le passage nord de la seconde voiture (x = −30,7)" },
   ],
   panneaux: [
-    { x: -95, z: -6.6, texte: "Côte des Flots · Comptoir du Port → par le pont de l'estuaire (passage à pied) · ← Ton terrain · 9 km" },
+    { x: -95, z: -6.6, texte: TEXTES_SORTIE.ouest, sortie: "ouest", nom: "panneau_sortie_ouest", lanterne: { x: -94.65, y: 2.66, z: -6.25 } },
     { x: -61.6, z: 0, texte: "PONT CONNECTÉ — votre passage est optimisé en temps réel" },
     { x: -65.8, z: -4.6, texte: "PONT EXPRESS — sans arrêt" },
     { x: -44.6, z: 2.65, texte: "PÉAGE · 12 WOTTS / TÊTE · DANS LA CAISSE ↓" },
     { x: 61.6, z: 0, texte: "FIN DU PONT CONNECTÉ — merci d'avoir été optimisé" },
-    { x: 95, z: 6.6, texte: "Comptoir du Port · 4 km → · ← Pont de l'estuaire · Ton terrain" },
+    { x: 95, z: 6.6, texte: TEXTES_SORTIE.est, sortie: "est", nom: "panneau_sortie_est", lanterne: { x: 95.35, y: 2.66, z: 6.95 } },
   ],
   // Les objets à part, nommés (T2, T3) : creer() les range dans groupe.userData.objets. État de départ : maree_basse,
   // chicane_fermee et caisse_peage visibles ; maree_haute et chicane_ouverte cachés. Chaque tronçon a ses propres
   // maree_basse et maree_haute (même nom partout) ; la chicane et la caisse sont au tronçon « pylone ».
   objets: {
-    maree_basse: "les bancs de vase découverts et ce qu'ils portent (caddies, trottinettes, mobylette, débroussailleuse, pneus, barque coulée)",
-    maree_haute: "l'eau de la marée haute, 2,3 m plus haut (y = −5,7), qui couvre les bancs",
+    maree_basse: "les bancs de vase découverts et ce qu'ils portent (caddies, trottinettes, mobylette, débroussailleuse, pneus, barque coulée), et l'écume des brisants de basse mer au sud",
+    maree_haute: "l'eau de la marée haute, 2,3 m plus haut (y = −5,7), qui couvre les bancs, dans le lot et dans les alentours (l'estuaire, la mer, les brisants de pleine mer)",
     chicane_fermee: "la porte du péage fermée, en travers de la chicane",
     chicane_ouverte: "la porte du péage ouverte, rabattue contre les sacs",
-    caisse_peage: "la caisse du péage, au pied du poste de guet, où l'on dépose son dû",
+    caisse_peage: "la caisse du péage, devant la porte côté terrain, où l'on dépose son dû",
+    panneau_sortie_ouest: "le panneau de sortie ouest (vers le terrain, et vers l'hôtel par le pont), sa lanterne",
+    panneau_sortie_est: "le panneau de sortie est (vers le Grand Hôtel des Flots), sa lanterne",
+    alentours: "le décor au-delà du lot (R52) : sol, dunes, l'estuaire et ses quais au nord, l'embouchure et la mer au sud, la route qui continue",
+  },
+  // La mer (R0-3) : une seule matière (celle de l'eau du lot), teintée par sommet selon la profondeur.
+  mer: {
+    peuProfonde: "turquoise clair : le long des quais et des bancs de vase dans l'estuaire, et au sud (z > 35, alentours) sur la plage de part et d'autre des jetées, de la laisse de basse mer (z ≈ 70) jusqu'aux brisants (z ≈ 80) ; à marée haute, de z ≈ 62 à z ≈ 66",
+    profonde: "vert-bleu sombre : le chenal au milieu de l'estuaire (|x| < 50 environ), l'embouchure entre les jetées et le large au-delà des brisants",
+    brisants: "une ligne d'écume blanche à z ≈ 80 (marée basse) ou z ≈ 66 (marée haute) pour |x| > 58, qui s'arrondit en barre devant l'embouchure (z ≈ 94 au milieu)",
+    niveau: { basse: Y_EAU, haute: Y_HAUTE },
+    note: "personne ne marche dans l'eau ici : elle est huit mètres sous le quai ; les alentours ne portent aucun obstacle",
   },
   // La marée (S-20) : deux états. Les obstacles qui ne valent qu'à un état sont à part, dans le groupe du tronçon :
   // userData.obstaclesChicane (la porte fermée), userData.obstaclesMareeHaute (la tête de l'escalier fermée par l'eau).
@@ -269,7 +286,14 @@ export const FICHE = {
     fouille: versTroncon(FOUILLE, t.id),
     eteints: versTroncon(ETEINTS, t.id),
     ...(t.id === "bourg" ? { retourMaree: { x: arr(RETOUR.x - X0.bourg), z: RETOUR.z } } : {}),
-    objets: t.id === "pylone" ? ["maree_basse", "maree_haute", "chicane_fermee", "chicane_ouverte", "caisse_peage"] : ["maree_basse", "maree_haute"],
+    objets: [
+      "maree_basse",
+      "maree_haute",
+      ...(t.id === "pylone" ? ["chicane_fermee", "chicane_ouverte", "caisse_peage"] : []),
+      ...(t.id === "bourg" ? ["panneau_sortie_ouest"] : []),
+      ...(t.id === "marins" ? ["panneau_sortie_est"] : []),
+      "alentours",
+    ],
   })),
 };
 
@@ -317,8 +341,8 @@ function teinteFer(u, i, j) {
 
 /** Un mur double : le bas (jusqu'à `coupe`) reste, le haut va dans la couche `k` (vue en coupe). */
 function murDouble(ctx, k, a, bb, spec) {
-  const { h, ep = 0.3, coupe = 1.05, bas, haut = bas, ouvertures = [], interieur = null, breches = [] } = spec;
-  mur(ctx.c, a, bb, { h: coupe, ep, couleur: bas.couleur, mat: bas.mat, interieur, batiment: ctx.b, ouvertures: ouvertures.map((o) => ({ ...o, type: o.type === "porte" ? "porte" : "vide" })) });
+  const { h, ep = 0.3, coupe = 1.05, bas, haut = bas, ouvertures = [], interieur = null, breches = [], seuil } = spec;
+  mur(ctx.c, a, bb, { h: coupe, ep, couleur: bas.couleur, mat: bas.mat, interieur, batiment: ctx.b, seuilObstacle: seuil, ouvertures: ouvertures.map((o) => ({ ...o, type: o.type === "porte" ? "porte" : "vide" })) });
   mur(k ?? ctx.c, a, bb, {
     h: h - coupe,
     y0: coupe,
@@ -331,16 +355,115 @@ function murDouble(ctx, k, a, bb, spec) {
   });
 }
 
-/** Un panneau routier double face sur deux poteaux. */
-function panneauRoute(ctx, r, x, z, ry, l = 3.2, h = 0.8, y = 1.6) {
-  const { c, M } = ctx;
-  c.repere({ x, y: 0, z, ry }, () => {
-    for (const s of [-1, 1]) c.boite(0.1, y + h / 2 + 0.1, 0.1, 0x8d969a, { x: s * (l / 2 - 0.3), y: (y + h / 2 + 0.1) / 2 }, M.metal);
-    c.boite(l + 0.08, h + 0.08, 0.05, 0xd8d5cb, { y }, M.tole);
-    panneau(c, M.atlas, r, { y, z: 0.03 }, l, h);
-    panneau(c, M.atlas, r, { y, z: -0.03, ry: Math.PI }, l, h);
-    fientes(c, M, -l / 2, -0.03, l / 2, 0.03, y + h / 2 + 0.04, 4);
+/**
+ * Un panneau de sortie (R52, R0-1) : grande tôle émaillée sur deux poteaux, tournée vers la caméra (sud-est), la vraie
+ * destination peinte en grosses lettres, et une lanterne au-dessus, au bout d'une potence, qui luit la nuit et l'éclaire.
+ * C'est un objet nommé « panneau_sortie_<cote> » à deux matières : l'atlas (la face, et tout le reste sur sa case
+ * blanche, teinté par sommet) et la lueur (le verre de la lanterne). Sa lumière est notée dans `lumieres`.
+ */
+function panneauSortie(ctx, cote, r, x, z) {
+  const { M, b } = ctx;
+  const RY = Math.PI / 4; // la face regarde le sud-est
+  const L = 3.8; // 1024 × 240 px dans l'atlas
+  const H = 0.9;
+  const Y = 1.75; // le milieu de la face
+  const haut = Y + H / 2;
+  const yV = 2.66; // le milieu du verre de la lanterne
+  const av = 0.5; // la lanterne pend devant la face
+  const fer = 0x2e2c2a;
+  objetNomme(ctx, `panneau_sortie_${cote}`, cote === "ouest" ? 3311 : 3312, (k) => {
+    const A = M.atlas;
+    k.repere({ x, y: 0, z, ry: RY }, () => {
+      // Les deux poteaux de fer galvanisé, leurs pieds bétonnés
+      for (const s of [-1, 1]) {
+        boiteAtlas(k, A, 0.1, haut + 0.08, 0.1, 0x7d878b, { x: s * (L / 2 - 0.4), y: (haut + 0.08) / 2, z: -0.08 });
+        boiteAtlas(k, A, 0.34, 0.12, 0.34, 0xa8a296, { x: s * (L / 2 - 0.4), y: 0.06, z: -0.08 });
+      }
+      // La tôle (cadre et dos), les deux faces peintes (lisibles des deux côtés)
+      boiteAtlas(k, A, L + 0.12, H + 0.12, 0.04, 0xcfcbc0, { y: Y });
+      panneau(k, A, r, { y: Y, z: 0.03 }, L, H);
+      panneau(k, A, r, { y: Y, z: -0.03, ry: Math.PI }, L, H);
+      // Des fientes sur la tranche haute
+      for (let i = 0; i < 5; i++) boiteAtlas(k, A, 0.08 + hache(i, 91) * 0.1, 0.015, 0.06, C.fiente, { x: (hache(i, 92) - 0.5) * L, y: haut + 0.07, z: 0 });
+      // La potence : une tige au milieu du panneau, un bras vers l'avant, sa jambe de force
+      boiteAtlas(k, A, 0.05, yV + 0.3 - haut + 0.1, 0.05, fer, { y: haut - 0.1 + (yV + 0.3 - haut + 0.1) / 2, z: -0.05 });
+      boiteAtlas(k, A, 0.04, 0.04, av + 0.1, fer, { y: yV + 0.28, z: av / 2 - 0.02 });
+      boiteAtlas(k, A, 0.025, 0.025, Math.hypot(av * 0.6, 0.22), fer, { y: yV + 0.17, z: av * 0.3, rx: Math.atan2(0.22, av * 0.6) });
+      // La lanterne : crochet, chapeau, cadre, socle (le fer), et le verre qui luit (la lueur)
+      k.repere({ x: 0, y: yV, z: av }, () => {
+        boiteAtlas(k, A, 0.015, 0.07, 0.015, fer, { y: 0.25 });
+        boiteAtlas(k, A, 0.2, 0.06, 0.2, fer, { y: 0.17, ry: Math.PI / 4 });
+        boiteAtlas(k, A, 0.17, 0.03, 0.17, fer, { y: 0.11 });
+        boiteAtlas(k, A, 0.16, 0.035, 0.16, fer, { y: -0.1 });
+        for (const [sx, sz] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) boiteAtlas(k, A, 0.02, 0.19, 0.02, fer, { x: sx * 0.07, z: sz * 0.07 });
+        k.boite(0.13, 0.17, 0.13, 0xffd890, {}, M.lueur, { crasse: false, nuance: 0 });
+        k.boite(0.08, 0.12, 0.08, 0xffe6b0, {}, M.lueur, { crasse: false, nuance: 0 });
+        k.boite(0.05, 0.08, 0.05, 0xfff2d0, {}, M.lueur, { crasse: false, nuance: 0 });
+      });
+    });
   });
+  b.lumiere(arr(x + Math.sin(RY) * av), yV, arr(z + Math.cos(RY) * av), 0xffcf8a, 6, 5, "lanterne du panneau de sortie");
+}
+
+/**
+ * Une ganivelle (lattes de châtaignier, deux fils de fer) le long d'un segment quelconque, sans découpe au tronçon :
+ * pour les bords du lot (R52) et ses prolongements au-delà. `obstacle` : on y bute (sur la limite du lot).
+ */
+function ganivelleSeg(ctx, x1, z1, x2, z2, { obstacle = true, ensable = 0.3, graine = 77, pas = 0.16 } = {}) {
+  const { c, M } = ctx;
+  const L = Math.hypot(x2 - x1, z2 - z1);
+  const dx = (x2 - x1) / L;
+  const dz = (z2 - z1) / L;
+  const ry = -Math.atan2(z2 - z1, x2 - x1);
+  const pied = ensable * 0.25;
+  let k = 0;
+  for (let u = 0.1; u < L; u += pas, k++) {
+    const x = x1 + dx * u;
+    const z = z1 + dz * u;
+    if (k % Math.round(2.4 / pas) === 0) c.boite(0.08, 1.25, 0.08, 0x7a6e5e, { x, y: 0.625 - pied, z, ry }, M.mat, { nuance: 0.08 });
+    if (hache(k, graine) < 0.1) continue; // une latte arrachée
+    const couchee = hache(k, graine + 1) < 0.08;
+    const h = 1.1 - ensable * hache(k, graine + 2);
+    c.boite(0.05, h, 0.03, C.boisGris, { x: x - dz * (hache(k, graine + 3) - 0.5) * 0.06, y: h / 2 - pied, z: z + dx * (hache(k, graine + 3) - 0.5) * 0.06, ry, rx: couchee ? 0.6 : (hache(k, graine + 4) - 0.5) * 0.12 }, M.mat, { nuance: 0.1, crasse: false });
+  }
+  for (const y of [0.3, 0.85]) c.boite(L, 0.015, 0.015, 0x6a625a, { x: (x1 + x2) / 2, y: y - pied, z: (z1 + z2) / 2, ry }, M.metal, { crasse: false });
+  if (obstacle) ctx.b.obstacle(x1, z1, x2, z2, "ganivelle et dunes");
+}
+
+/**
+ * Les bords d'un bout du lot (R52, H-2) : la ganivelle sur la limite de part et d'autre de la route (qui reste
+ * ouverte), la ganivelle du sud du terre-plein (à la place de la clôture du port), les dunes posées dessus (elles
+ * débordent d'un mètre au plus sur ce qu'on foule), le sable qui mord les pavés, la ganivelle du nord prolongée au-delà.
+ */
+function bordsDuBout(ctx, sx) {
+  const { c, M } = ctx;
+  const xl = sx * 99.7; // la limite (la zone du jeu s'arrête à 99,5)
+  const zFin = sx < 0 ? 23.5 : 34.6; // à l'ouest, les maisons du bourg ferment le reste
+  const gr = sx < 0 ? 11 : 21;
+  ganivelleSeg(ctx, xl, -30.5, xl, -ZTR - 0.2, { graine: gr });
+  ganivelleSeg(ctx, xl, ZTR + 0.2, xl, zFin, { graine: gr + 1 });
+  // Le sud du terre-plein, du quai au bout du lot
+  const [s1, s2] = sx < 0 ? [-80, -58.4] : [58.4, 100];
+  ganivelleSeg(ctx, s1, 34.6, s2, 34.6, { graine: gr + 2, ensable: 0.45 });
+  // La ganivelle du nord prolongée d'une vingtaine de mètres au-delà du bout (décor : hors du lot)
+  ganivelleSeg(ctx, sx * 121, -30.5, sx * 100, -30.5, { obstacle: false, graine: gr + 3, ensable: 0.5, pas: 0.3 });
+  // Les dunes sur la limite, côté dehors
+  const A = aleatoire(sx < 0 ? 3301 : 3307);
+  for (let z = -27.5; z < zFin + 3; z += 5 + A() * 2.5) {
+    if (z > -ZTR - 3.5 && z < ZTR + 3.5) continue;
+    const l = 5 + A() * 4;
+    const p = 4 + A() * 3;
+    dune(c, M, xl + sx * (l / 2 - 0.9), z, l, p, 0.7 + A() * 0.6, 2);
+  }
+  for (let x = s1 + 2; x < s2 - 1; x += 6 + A() * 3) {
+    const l = 5 + A() * 3;
+    const p = 4 + A() * 2;
+    dune(c, M, x, 34.6 + p / 2 - 0.9, l, p, 0.6 + A() * 0.6, 2);
+    // Le sable que le vent pousse sur les pavés, contre la ganivelle
+    c.boite(l * 0.8, 0.04, 0.7 + A() * 0.5, C.sableClair, { x, y: 0.035, z: 34.1, ry: (A() - 0.5) * 0.15 }, M.sol, { crasse: false, nuance: 0.03 });
+  }
+  semerOyats(c, M, Math.min(xl, xl + sx * 4), -30, Math.max(xl, xl + sx * 4), zFin, 18);
+  semerOyats(c, M, s1, 34.8, s2, 37, Math.round((s2 - s1) / 3));
 }
 
 /** Un réverbère de bord de mer en fonte (éteint), un peu penché par le vent. */
@@ -380,7 +503,14 @@ const QUAI_O = [[-58, -35], [-58, -20], [-50, -20], [-50, 14], [-58, 14], [-58, 
 const QUAI_E = [[58, -35], [58, -20], [50, -20], [50, 14], [58, 14], [58, FORME.z1]];
 const QUAI_E2 = [[58, FORME.z2], [58, 35]];
 // Le ponton du carrelet et la tête de l'escalier de quai traversent le bord du quai
-const PASSAGES = [{ x: -58, z1: -27.55, z2: -26.45 }, { x: ACCES.x, z1: ACCES.z1, z2: ACCES.z2 }];
+// (H-4) La tête du pont : le tablier s'appuie sur le quai en x = ± 50 ; le bord du quai s'ouvre sur sa largeur (entre les
+// garde-corps), et son couronnement de granit aussi (plus de marche de 16 cm en travers de la chaussée).
+const PASSAGES = [
+  { x: -58, z1: -27.55, z2: -26.45 },
+  { x: ACCES.x, z1: ACCES.z1, z2: ACCES.z2, coupe: true },
+  { x: -50, z1: -ZB, z2: ZB, coupe: true },
+  { x: 50, z1: -ZB, z2: ZB, coupe: true },
+];
 
 function sols(ctx) {
   const { c, M, xa, xb } = ctx;
@@ -388,37 +518,132 @@ function sols(ctx) {
   if (xa <= -100) dalle(c, M.sol, C.sol, [[-100, -35], ...QUAI_O, [-100, 35]]);
   if (xb >= 100) dalle(c, M.sol, C.sol, [[100, -35], [58, -35], [58, -20], [50, -20], [50, 14], [58, 14], [58, FORME.z1], [FORME.x2, FORME.z1], [FORME.x2, FORME.z2], [58, FORME.z2], [58, 35], [100, 35]]);
 
-  // Le fond de l'estuaire et l'eau (le courant descend vers la mer, au sud)
+  // Le fond de l'estuaire et l'eau (le courant descend vers la mer, au sud). L'eau est teintée par sommet selon la
+  // profondeur (R0-3) : claire le long des quais et des bancs, sombre dans le chenal ; la même matière que la mer des
+  // alentours, qui la prolonge au nord et au sud (plus de tranches de maquette au bord du lot).
   const x1 = Math.max(xa, -62);
   const x2 = Math.min(xb, 62);
   if (x2 > x1) {
     c.pave(x1, Y_FOND - 0.3, -35, x2, Y_FOND, 35, 0x6a6658, M.sol, { crasse: false, nuance: 0 });
-    const g = new THREE.PlaneGeometry(x2 - x1, 70).rotateX(-Math.PI / 2).translate((x1 + x2) / 2, Y_EAU, 0);
-    const pos = g.attributes.position;
-    const uv = g.attributes.uv;
-    for (let i = 0; i < pos.count; i++) uv.setXY(i, pos.getX(i) / 9, pos.getZ(i) / 16);
-    c.poser(g, M.eau, C.eauEstuaire, {}, { crasse: false, nuance: 0 });
+    nappe(c, M.eau, x1, x2, -35, 35, 2.5, 5, Y_EAU);
     // La marée haute (objet « maree_haute », caché au départ) : la même eau, 2,3 m plus haut, sur les bancs de vase
-    ctx.haute.poser(g.translate(0, Y_HAUTE - Y_EAU, 0), M.eau, C.eauEstuaire, {}, { crasse: false, nuance: 0 });
-    g.dispose();
-    // Les tranches du lot (le fleuve coupé net, comme une maquette) ; à marée haute, elles montent avec l'eau
-    for (const s of [-1, 1]) {
-      c.pave(x1, Y_FOND - 0.3, s * 35 - 0.05, x2, Y_EAU, s * 35 + 0.05, 0x34413a, M.mat, { crasse: false, nuance: 0 });
-      ctx.haute.pave(x1, Y_EAU - 0.02, s * 35 - 0.05, x2, Y_HAUTE, s * 35 + 0.05, 0x2c3a33, M.eau, { crasse: false, nuance: 0 });
-    }
-  }
-  // Les tranches de la terre ferme
-  const terre = 0x6e6250;
-  if (xa <= -100) {
-    c.pave(-100.1, -10, -35, -100, 0, 35, terre, M.mat, { crasse: false, nuance: 0 });
-    for (const s of [-1, 1]) c.pave(-100, -10, s * 35 - 0.05, -58, 0, s * 35 + 0.05, terre, M.mat, { crasse: false, nuance: 0 });
-  }
-  if (xb >= 100) {
-    c.pave(100, -10, -35, 100.1, 0, 35, terre, M.mat, { crasse: false, nuance: 0 });
-    for (const s of [-1, 1]) c.pave(58, -10, s * 35 - 0.05, 100, 0, s * 35 + 0.05, terre, M.mat, { crasse: false, nuance: 0 });
+    nappe(ctx.haute, M.eau, x1, x2, -35, 35, 2.5, 5, Y_HAUTE);
   }
   quais(ctx);
   vasieres(ctx);
+}
+
+// ---------- L'eau teintée, le sol des alentours (R0-2, R0-3) ----------
+
+const EAU = { clair: 0x93d4c4, moyen: 0x6f9c96, sombre: 0x3a5d68, ecume: 0xf2f5f0 };
+
+/** Un mélange de deux teintes (0xRRGGBB), t de 0 à 1. */
+function melange(a, b, t) {
+  const r = ((a >> 16) & 255) + (((b >> 16) & 255) - ((a >> 16) & 255)) * t;
+  const g = ((a >> 8) & 255) + (((b >> 8) & 255) - ((a >> 8) & 255)) * t;
+  const bl = (a & 255) + ((b & 255) - (a & 255)) * t;
+  return (Math.round(r) << 16) | (Math.round(g) << 8) | Math.round(bl);
+}
+const lisser = (a, b, x) => {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};
+/** Un bruit doux et reproductible (pour varier les teintes du sol et de l'eau). */
+function bruit(x, z, pas = 9) {
+  const i = Math.floor(x / pas);
+  const j = Math.floor(z / pas);
+  const fx = lisser(0, 1, x / pas - i);
+  const fz = lisser(0, 1, z / pas - j);
+  const h = (a, b) => hache(a + 9000, b + 9000);
+  return (h(i, j) * (1 - fx) + h(i + 1, j) * fx) * (1 - fz) + (h(i, j + 1) * (1 - fx) + h(i + 1, j + 1) * fx) * fz;
+}
+
+/**
+ * Le sol naturel hors du lot (y) : plat au nord et aux bouts ; au sud, une bande de dunes jusqu'à z = 44, puis la plage
+ * qui descend jusqu'à la laisse de basse mer (y = −8 à z = 70), puis le fond qui s'enfonce doucement sous la mer.
+ */
+function solNaturel(x, z) {
+  if (z <= 44) return 0;
+  if (z <= 70) return -(z - 44) * (8 / 26);
+  return -8 - Math.min(24, z - 70) * 0.125;
+}
+
+/** La profondeur de l'eau au niveau `niveau` : le chenal entre les quais (plus profond au milieu), la mer ailleurs. */
+function profondeur(x, z, niveau) {
+  const ax = Math.abs(x);
+  if (ax < 58) {
+    const berge = ax <= 50.5 && z >= -20 && z <= 14 ? 50 : 58;
+    const d = berge - ax + Math.max(0, z - 74) * 0.6;
+    return 0.35 + d * 0.32 + (niveau - Y_EAU);
+  }
+  return niveau - solNaturel(x, z);
+}
+
+/** La teinte de l'eau : turquoise clair où elle est peu profonde, vert-bleu sombre où elle est profonde. */
+function teinteEau(x, z, niveau) {
+  const p = profondeur(x, z, niveau);
+  const t = lisser(0.2, 3.2, p);
+  const base = t < 0.5 ? melange(EAU.clair, EAU.moyen, t * 2) : melange(EAU.moyen, EAU.sombre, (t - 0.5) * 2);
+  return melange(base, 0xffffff, (bruit(x, z, 7) - 0.5) * 0.08);
+}
+
+/**
+ * Pose une géométrie teintée sommet par sommet (`teinte(x, y, z)`) dans un chantier : le chantier de l'atelier teinte
+ * une pièce d'une seule couleur, on fournit donc nous-mêmes l'attribut de couleur (même format : position, normale,
+ * UV, couleur ; non indexé). `uv(x, y, z)` : les coordonnées de texture (UV « monde »). Repère courant ignoré (racine).
+ */
+function poserTeinte(c, mat, geo, teinte, uv) {
+  const g = geo.index ? geo.toNonIndexed() : geo;
+  g.computeVertexNormals();
+  const pos = g.attributes.position;
+  const uvs = new Float32Array(pos.count * 2);
+  const col = new Float32Array(pos.count * 3);
+  const cc = new THREE.Color();
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i);
+    const y = pos.getY(i);
+    const z = pos.getZ(i);
+    const [u, v] = uv(x, y, z);
+    uvs[i * 2] = u;
+    uvs[i * 2 + 1] = v;
+    cc.setHex(teinte(x, y, z));
+    col[i * 3] = cc.r;
+    col[i * 3 + 1] = cc.g;
+    col[i * 3 + 2] = cc.b;
+  }
+  g.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
+  g.setAttribute("color", new THREE.BufferAttribute(col, 3));
+  let lot = c.lots.get(mat);
+  if (!lot) c.lots.set(mat, (lot = []));
+  lot.push(g);
+  if (g !== geo) geo.dispose();
+}
+
+/** Une grille horizontale de x1 à x2, z1 à z2 (pas en x, en z), à la hauteur `y(x, z)`, face vers le haut. */
+function grille(x1, x2, z1, z2, px, pz, y) {
+  const nx = Math.max(1, Math.ceil((x2 - x1) / px - 1e-6));
+  const nz = Math.max(1, Math.ceil((z2 - z1) / pz - 1e-6));
+  const pos = [];
+  const P = (i, j) => {
+    const x = x1 + ((x2 - x1) * i) / nx;
+    const z = z1 + ((z2 - z1) * j) / nz;
+    return [x, y(x, z), z];
+  };
+  for (let j = 0; j < nz; j++) {
+    for (let i = 0; i < nx; i++) {
+      const a = P(i, j), b = P(i + 1, j), d = P(i, j + 1), e = P(i + 1, j + 1);
+      pos.push(...a, ...d, ...b, ...b, ...d, ...e);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  return g;
+}
+
+/** Une nappe d'eau au niveau `niveau`, teintée selon la profondeur (UV : les filets du courant, comme l'eau du lot). */
+function nappe(c, mat, x1, x2, z1, z2, px, pz, niveau) {
+  if (x2 - x1 < 0.01 || z2 - z1 < 0.01) return;
+  poserTeinte(c, mat, grille(x1, x2, z1, z2, px, pz, () => niveau), (x, y, z) => teinteEau(x, z, niveau), (x, y, z) => [x / 9, z / 16]);
 }
 
 /** Les murs de quai : pierre de taille, couronnement, laisse de marée verte, échelles, anneaux. */
@@ -443,8 +668,8 @@ function quais(ctx) {
       c.boite(L + 0.63, 0.9, 0.63, C.alguesBrunes, { x: cx + nx * 0.03, y: Y_EAU + 2.15, z: cz + nz * 0.03, ry }, M.mat, { crasse: false, nuance: 0.05 });
       // Le couronnement en granit
       const passage = PASSAGES.find((p) => ax === bx && Math.abs(ax - p.x) < 0.01 && p.z1 > Math.min(az, bz) && p.z2 < Math.max(az, bz));
-      // Le couronnement en granit (coupé à l'accès de la cale basse)
-      if (passage && passage === PASSAGES[1]) {
+      // Le couronnement en granit (coupé à l'accès de la cale basse et à la tête du pont)
+      if (passage?.coupe) {
         const za = Math.min(az, bz);
         const zb2 = Math.max(az, bz);
         for (const [q1, q2] of [[za - 0.35, passage.z1], [passage.z2, zb2 + 0.35]]) c.pave(cx + nx * 0.05 - 0.4, -0.06, q1, cx + nx * 0.05 + 0.4, 0.18, q2, C.quaiSombre, M.pierre, { crasse: false, nuance: 0.03 });
@@ -616,6 +841,8 @@ function caleBasse(ctx, v) {
   // Les obstacles : le bord côté chenal, la clôture du bout
   b.obstacle(x2, 14.0, x2, z2 - 0.15, "bord de la cale basse : le chenal, huit mètres plus bas");
   b.obstacle(x1, z2 - 0.15, x2, z2 - 0.15, "clôture du port, au bout de la cale (bord du lot)");
+  // (H-4) Le bout nord de la cale : le mur du quai (sa crête, 0,7 m plus haut), qu'on ne prend pas pour un chemin
+  b.obstacle(x1, z1, x2, z1, "mur du quai, au bout de la cale");
   // À marée haute : la nappe qui noie la cale, l'écume sur la bordure, et l'accès fermé
   const yn = Y_CALE + 0.2;
   ctx.haute.pave(xm, yn - 0.02, z1, x2 + 0.08, yn, z2 - 0.2, C.eauEstuaire, M.eau, { crasse: false, nuance: 0 });
@@ -1174,8 +1401,9 @@ function bourg(ctx) {
   // Côté nord : un trottoir élargi devant la maison du pontier
   c.pave(-79, -0.04, -6.6, -60, 0.03, -ZTR, C.paves, M.paves, { crasse: false, nuance: 0 });
 
-  // Le panneau de direction de l'entrée A
-  panneauRoute(ctx, R.dirOuest, -95, -6.6, 0, 3.4, 0.85, 1.7);
+  // Le panneau de sortie ouest (vers le terrain ; vers l'hôtel par le pont), sa lanterne ; les bords du bout ouest
+  panneauSortie(ctx, "ouest", R.sortieOuest, -95, -6.6);
+  bordsDuBout(ctx, -1);
   reverbere(ctx, -90, -5.9, 0.03);
   reverbere(ctx, -70, 5.9, -0.06);
   reverbere(ctx, -56, 12.8, 0.08);
@@ -1259,7 +1487,7 @@ function maisonPontier(ctx) {
   murDouble(ctx, k, [X1, -11], [X2, -11], { h: H, ep: 0.14, bas: int, ouvertures: [{ u: 3.5, l: 0.9, bas: 0, haut: 2.1, type: "vide" }, { u: 9.0, l: 0.9, bas: 0, haut: 2.1, type: "vide" }] });
   murDouble(ctx, k, [-70.5, -11], [-70.5, Z2], { h: H, ep: 0.14, bas: int, ouvertures: [{ u: 2.2, l: 0.9, bas: 0, haut: 2.1, type: "vide" }] });
   // Sols
-  c.pave(X1 + 0.1, 0, Z1 + 0.1, X2 - 0.1, 0.03, Z2 - 0.1, 0xb8ad94, M.carrelage, { crasse: false, nuance: 0 });
+  c.pave(X1 + 0.1, 0, Z1 + 0.1, X2 - 0.1, 0.03, Z2 - 0.1, 0xb8ad94, M.pierre, { crasse: false, nuance: 0 });
   // Le soubassement de brique et la plaque peinte du péage au-dessus du guichet
   c.pave(X1 - 0.18, 0, Z2 - 0.05, X2 + 0.18, 0.5, Z2 + 0.2, PALETTE.brique, M.mat, { crasse: false, nuance: 0.03 });
   panneau(k, M.atlas, R.peage, { x: -67.4, y: 2.62, z: Z2 + 0.17 }, 2.1, 0.4);
@@ -1333,7 +1561,7 @@ function bar(ctx) {
   murDouble(ctx, k, [X1, Z1], [X1, Z2], { h: H, bas: enduit, interieur: int });
   // La cloison de la réserve
   murDouble(ctx, k, [X1, 12.5], [X2, 12.5], { h: H, ep: 0.14, bas: int, ouvertures: [{ u: 7.6, l: 1.0, bas: 0, haut: 2.1, type: "vide" }] });
-  c.pave(X1 + 0.1, 0, Z1 + 0.1, X2 - 0.1, 0.03, Z2 - 0.1, 0xc8a878, M.carrelage, { crasse: false, nuance: 0 });
+  c.pave(X1 + 0.1, 0, Z1 + 0.1, X2 - 0.1, 0.03, Z2 - 0.1, 0xc8a878, M.pierre, { crasse: false, nuance: 0 });
   // L'étage, le toit, l'enseigne
   k.pave(X1 - 0.12, H, Z1 - 0.12, X2 + 0.12, H + 0.2, Z2 + 0.12, 0xe6e2d8, M.mat, { crasse: false });
   const fenH = (uu) => ({ u: uu, l: 1.0, bas: 0.7, haut: 1.9, type: "fenetre", bris, croisillons: 1, traverses: 2, volet: "ouvert", couleurVolet: C.volet });
@@ -1348,7 +1576,7 @@ function bar(ctx) {
   k.repere({ x: X2 + 1.2, y: 2.6, z: 9.5 }, () => {
     for (let i = 0; i < 6; i++) {
       if (hache(i, 9) < 0.35 * u) continue;
-      k.boite(2.4, 0.03, 0.7, i % 2 ? 0x2f6f73 : 0xe9dfc6, { y: -0.4 + 0.0, z: -1.75 + i * 0.7, rz: -0.32 }, M.toile, { crasse: false });
+      k.boite(2.4, 0.03, 0.7, i % 2 ? 0x2f6f73 : 0xe9dfc6, { y: -0.4 + 0.0, z: -1.75 + i * 0.7, rz: -0.32 }, M.mat, { crasse: false });
     }
   });
   c.pave(X2, 0, Z1, X2 + 5.5, 0.04, Z2, 0xa49276, M.mat, { crasse: false, nuance: 0.02 });
@@ -1432,10 +1660,7 @@ function quaiOuest(ctx) {
   c.boite(0.08, 5.2, 0.08, 0xd9d6cc, { x: -62, y: 2.6, z: 33.6 }, M.metal);
   const manche = new THREE.CylinderGeometry(0.28, 0.12, 1.6, 8, 1, true).rotateZ(Math.PI / 2).translate(0.85, 0, 0);
   etoffe(ctx, -62, 5.0, 33.6, manche, 0xc8705a, -0.4, 0.5);
-  // La clôture du port, au bout du quai (bord sud)
-  for (let x = -79.5; x < -58.4; x += 2.5) c.boite(0.08, 1.8, 0.08, 0x6a6c6a, { x, y: 0.9, z: 34.6 }, M.metal);
-  c.boite(21.1, 1.5, 0.02, 0x8a8c88, { x: -69, y: 0.95, z: 34.6 }, M.metal, { crasse: false });
-  b.obstacle(-80, 34.6, -58.4, 34.6, "clôture du port");
+  // (Le bord sud du quai : la ganivelle et les dunes, voir bordsDuBout.)
   fientes(c, M, -80, 6, -59, 34, 0.04, Math.round(30 + 30 * u));
   touffes(c, [[-79.4, 33.8], [-75, 34], [-62.6, 33.9], [-58.6, 21], [-58.7, 30]], C.oyatSec);
 }
@@ -1535,7 +1760,8 @@ function cablesCuivre(ctx, x, z) {
 function carrelet(ctx) {
   const { c, M, b, u } = ctx;
   const Z = -27;
-  // Le ponton (planches à y = 0), ses pilotis jusqu'à la vase
+  // Le ponton (planches à y = 0), ses pilotis jusqu'à la vase. (H-4) La cabane est close : ses fenêtres ont un appui
+  // qui arrête (seuil de 0,8 m), on ne passe que par la porte.
   for (let x = -58; x < -54.4; x += 0.22) c.boite(0.2, 0.05, 1.2, hache(Math.round(x * 10), 7) < 0.1 ? 0x5a4a3a : C.boisGris, { x: x + 0.1, y: -0.02, z: Z }, M.mat, { nuance: 0.06 });
   for (const x of [-57, -55.2]) for (const s of [-1, 1]) c.boite(0.16, 8, 0.16, 0x4a3e32, { x, y: -4.05, z: Z + s * 0.55 }, M.mat);
   for (const s of [-1, 1]) c.boite(3.6, 0.05, 0.05, C.boisGris, { x: -56.2, y: 0.95, z: Z + s * 0.6 }, M.mat);
@@ -1548,10 +1774,10 @@ function carrelet(ctx) {
   c.pave(X1, -0.08, Z - 1.7, X2, 0.0, Z + 1.7, C.boisGris, M.mat, { crasse: false });
   for (const [x, z] of [[X1 + 0.2, Z - 1.5], [X2 - 0.2, Z - 1.5], [X1 + 0.2, Z + 1.5], [X2 - 0.2, Z + 1.5]]) c.boite(0.2, 8, 0.2, 0x4a3e32, { x, y: -4.05, z }, M.mat);
   const bois = { couleur: C.boisGris, mat: M.mat };
-  murDouble(ctx, k, [X1, Z - 1.7], [X1, Z + 1.7], { h: 2.4, ep: 0.1, bas: bois, ouvertures: [{ u: 1.7, l: 1.0, bas: 0, haut: 2.0, type: "porte", vantail: "entrouvert", couleurPorte: 0x5d8a96, angle: 1.4 }] });
-  murDouble(ctx, k, [X1, Z + 1.7], [X2, Z + 1.7], { h: 2.4, ep: 0.1, bas: bois, ouvertures: [{ u: 1.75, l: 1.0, bas: 1.0, haut: 1.8, type: "vide" }] });
-  murDouble(ctx, k, [X2, Z + 1.7], [X2, Z - 1.7], { h: 2.4, ep: 0.1, bas: bois, ouvertures: [{ u: 1.7, l: 1.6, bas: 0.95, haut: 1.9, type: "vide" }] });
-  murDouble(ctx, k, [X2, Z - 1.7], [X1, Z - 1.7], { h: 2.4, ep: 0.1, bas: bois });
+  murDouble(ctx, k, [X1, Z - 1.7], [X1, Z + 1.7], { h: 2.4, ep: 0.1, bas: bois, seuil: 0.8, ouvertures: [{ u: 1.7, l: 1.55, bas: 0, haut: 2.0, type: "porte", vantail: "entrouvert", couleurPorte: 0x5d8a96, angle: 1.4 }] }); // la porte : 1,9 m entre les morceaux de mur (T4)
+  murDouble(ctx, k, [X1, Z + 1.7], [X2, Z + 1.7], { h: 2.4, ep: 0.1, bas: bois, seuil: 0.8, ouvertures: [{ u: 1.75, l: 1.0, bas: 1.0, haut: 1.8, type: "vide" }] });
+  murDouble(ctx, k, [X2, Z + 1.7], [X2, Z - 1.7], { h: 2.4, ep: 0.1, bas: bois, seuil: 0.8, ouvertures: [{ u: 1.7, l: 1.6, bas: 0.95, haut: 1.9, type: "vide" }] });
+  murDouble(ctx, k, [X2, Z - 1.7], [X1, Z - 1.7], { h: 2.4, ep: 0.1, bas: bois, seuil: 0.8 });
   k.boite(4.2, 0.06, 4.0, C.tole, { x: (X1 + X2) / 2, y: 2.6, z: Z, rx: 0.12 }, M.tole, { crasse: false });
   fientes(k, M, X1, Z - 1.8, X2, Z + 1.8, 2.66, 10);
   // Le treuil et le banc dedans ; la grande flèche et son filet carré
@@ -1646,13 +1872,17 @@ function barricade(ctx) {
   // Au sud de la porte : sacs, pneus et barbelés jusqu'au treillis
   sacs(c, M, -44.6, G.z2 + 0.1, -44.6, ZB - 0.05, 4);
   barbeles(c, M, -44.6, G.z2 + 0.15, -44.6, ZB - 0.1, 1.15);
-  for (let i = 0; i < 3; i++) cylindre(c, M.mat, 0x262626, -45.3, i * 0.22, 4.7, 0.36, 0.36, 0.22, 8);
+  for (let i = 0; i < 3; i++) cylindre(c, M.mat, 0x262626, -46.25, i * 0.22, 5.1, 0.36, 0.36, 0.22, 8);
   b.obstacle(-44.6, G.z2, -44.6, ZB, "chicane : sacs de sable et barbelés");
   // Les deux poteaux de la porte (madriers), le panneau du péage et la baladeuse de chantier à batterie
   for (const zp of [G.z1, G.z2]) c.boite(0.14, zp === G.z1 ? 2.4 : 2.1, 0.14, C.boisGris, { x: G.x, y: zp === G.z1 ? 1.2 : 1.05, z: zp }, M.mat);
   c.boite(0.1, 0.1, G.z2 - G.z1 + 0.14, C.boisGris, { x: G.x, y: 2.15, z: (G.z1 + G.z2) / 2 }, M.mat);
-  panneau(c, M.atlas, R.barricade, { x: G.x - 0.06, y: 2.6, z: (G.z1 + G.z2) / 2, ry: -Math.PI / 2 }, 1.2, 0.6);
+  // Côté terrain, le panneau est planté dans les sacs, juste au-dessus de la caisse (« DANS LA CAISSE ↓ »)
+  panneau(c, M.atlas, R.barricade, { x: G.x - 0.23, y: 1.6, z: CAISSE.z, ry: -Math.PI / 2 }, 1.2, 0.6);
+  c.boite(1.3, 0.66, 0.03, C.boisGris, { x: G.x - 0.2, y: 1.6, z: CAISSE.z, ry: Math.PI / 2 }, M.mat);
+  for (const s of [-1, 1]) c.boite(0.06, 1.95, 0.06, C.boisGris, { x: G.x - 0.16, y: 0.97, z: CAISSE.z + s * 0.5, rz: s * 0.03 }, M.mat);
   panneau(c, M.atlas, R.barricade, { x: G.x + 0.06, y: 2.6, z: (G.z1 + G.z2) / 2, ry: Math.PI / 2 }, 1.2, 0.6);
+  c.boite(0.03, 0.66, 1.26, C.boisGris, { x: G.x + 0.03, y: 2.6, z: (G.z1 + G.z2) / 2 }, M.mat); // le dos du panneau (planches)
   for (const s of [-1, 1]) c.boite(0.06, 0.75, 0.06, C.boisGris, { x: G.x, y: 2.5, z: (G.z1 + G.z2) / 2 + s * 0.5 }, M.mat);
   c.boite(0.16, 0.2, 0.1, 0xd8b030, { x: G.x + 0.12, y: 2.0, z: G.z1 }, M.satine);
   c.boite(0.02, 0.12, 0.08, 0xfff0c0, { x: G.x + 0.21, y: 2.0, z: G.z1 }, M.lisse);
@@ -1675,6 +1905,28 @@ function barricade(ctx) {
       k.boite(0.08, 0.1, 0.04, 0x8a7a4a, { x: 0.1, y: 1.0, z: L - 0.08 }, M.tole);
     });
   };
+  // La caisse du péage (H-1) : devant la porte, côté terrain, là où l'on arrive ; un coffre de bois cerclé, une fente
+  // dans le couvercle, un cadenas, « PÉAGE » peint à la main, une chaîne jusqu'au poteau sud de la porte. On y dépose son
+  // dû sous l'œil du poste de guet (objet nommé « caisse_peage »).
+  const RYC = -Math.PI / 2 + 0.08; // la face (+z local) regarde l'ouest
+  objetNomme(ctx, "caisse_peage", 3303, (k) => {
+    k.repere({ x: CAISSE.x, y: 0.07, z: CAISSE.z, ry: RYC }, () => {
+      k.boite(0.8, 0.5, 0.5, 0x6a5038, { y: 0.25 }, M.mat, { nuance: 0.05 });
+      k.boite(0.84, 0.07, 0.54, 0x5a4430, { y: 0.53 }, M.mat);
+      for (const s of [-0.3, 0.3]) k.boite(0.05, 0.52, 0.53, 0x2e2c2a, { x: s, y: 0.27 }, M.mat, { crasse: false });
+      k.boite(0.3, 0.02, 0.04, 0x141414, { y: 0.575 }, M.mat, { crasse: false });
+      // Le cadenas et « PÉAGE » peint à la main (des traits blancs), sur la face qui regarde l'ouest (on arrive par là)
+      k.boite(0.08, 0.1, 0.04, 0xb89a4a, { y: 0.4, z: 0.27 }, M.mat, { crasse: false });
+      for (let i = 0; i < 5; i++) k.boite(0.06, 0.12, 0.01, 0xe8e2d0, { x: -0.18 + i * 0.09, y: 0.27, z: 0.255 }, M.mat, { crasse: false });
+    });
+    // La chaîne, du flanc de la caisse au poteau sud de la porte
+    const [ax, az, bx, bz] = [CAISSE.x + 0.1, CAISSE.z - 0.42, G.x - 0.06, G.z2 + 0.05];
+    for (let i = 0; i < 9; i++) {
+      const t = (i + 0.5) / 9;
+      k.boite(0.09, 0.03, 0.05, 0x3a3836, { x: ax + (bx - ax) * t, y: 0.12 + t * 0.35 - Math.sin(t * Math.PI) * 0.08, z: az + (bz - az) * t, ry: -Math.atan2(bz - az, bx - ax) + (i % 2 ? 0.5 : -0.5) }, M.mat, { crasse: false });
+    }
+  });
+  obstacleBoite(b, CAISSE.x, CAISSE.z, 0.84, 0.54, RYC, "caisse du péage");
   const fermee = objetNomme(ctx, "chicane_fermee", 3301, (k) => porte(k, false));
   const ouverte = objetNomme(ctx, "chicane_ouverte", 3302, (k) => porte(k, true));
   const obsFermee = [{ x1: G.x, z1: G.z1, x2: G.x, z2: G.z2, nature: "porte du péage fermée" }];
@@ -1702,8 +1954,10 @@ function barricade(ctx) {
 function posteDeGuet(ctx) {
   const { c, M, b, u } = ctx;
   if (!ctx.ici(-34)) return;
-  const X1 = -35.9;
-  const X2 = -32.9;
+  // (H-3) La cabane est à 1,4 m du pied du pylône (elle en était à 0,6 m) : on passe entre les deux vers la réserve des
+  // guetteurs, à l'ouest de la plateforme.
+  const X1 = -35.05;
+  const X2 = -32.75;
   const Z1 = 8.2;
   const Z2 = 10.3;
   const k = b.couche("poste de guet", { x: (X1 + X2) / 2, z: (Z1 + Z2) / 2, l: X2 - X1 + 0.6, p: Z2 - Z1 + 0.6 }, 1.1, 5.4);
@@ -1714,7 +1968,7 @@ function posteDeGuet(ctx) {
   }
   const bois = { couleur: C.boisGris, mat: M.mat };
   const tole = { couleur: C.tole, mat: M.tole };
-  // La porte, au nord-ouest (1,5 m : les colonnes de 0,375 m de 0,375 à 1,875 sont ouvertes)
+  // La porte, au nord-ouest (1,53 m : les colonnes de 0,383 m de 0,383 à 1,917 sont ouvertes)
   murDouble(ctx, k, [X1, Z1], [X2, Z1], { h: 2.5, ep: 0.06, coupe: 1.1, bas: bois, haut: tole, ouvertures: [{ u: 1.05, l: 1.5, bas: 0, haut: 2.0, type: "vide" }] });
   murDouble(ctx, k, [X2, Z1], [X2, Z2], { h: 2.5, ep: 0.06, coupe: 1.1, bas: tole, haut: bois });
   murDouble(ctx, k, [X2, Z2], [X1, Z2], { h: 2.5, ep: 0.06, coupe: 1.1, bas: bois, ouvertures: [{ u: 1.5, l: 1.0, bas: 1.2, haut: 1.9, type: "vide" }] });
@@ -1724,44 +1978,30 @@ function posteDeGuet(ctx) {
   k.repere({ x: 0, y: 2.62, z: 0 }, () => {
     for (const [a1, a2, b1, b2] of [[X1 - 0.2, Z2 + 0.2, X2 + 0.2, Z2 + 0.2], [X2 + 0.2, Z1 - 0.2, X2 + 0.2, Z2 + 0.2], [X1 - 0.2, Z1 - 0.2, X1 - 0.2, Z2 + 0.2]]) sacs(k, M, a1, a2, b1, b2, 2);
   });
-  cylindre(k, M.tole, 0x3a3634, -34.4, 2.62, 9.3, 0.38, 0.3, 0.5, 8);
+  cylindre(k, M.tole, 0x3a3634, -33.9, 2.62, 9.3, 0.38, 0.3, 0.5, 8);
   for (let i = 0; i < 4; i++) {
     const g = new THREE.ConeGeometry(0.12 + hache(i, 5) * 0.1, 0.5 + hache(i, 6) * 0.4, 5);
-    k.poser(g, M.lueur, 0xff9a40, { x: -34.4 + (hache(i, 7) - 0.5) * 0.3, y: 3.35 + hache(i, 8) * 0.15, z: 9.3 + (hache(i, 9) - 0.5) * 0.3 }, { crasse: false, nuance: 0 });
+    k.poser(g, M.lueur, 0xff9a40, { x: -33.9 + (hache(i, 7) - 0.5) * 0.3, y: 3.35 + hache(i, 8) * 0.15, z: 9.3 + (hache(i, 9) - 0.5) * 0.3 }, { crasse: false, nuance: 0 });
     g.dispose();
   }
-  chaise(k, M, -33.5, 8.7, 2.5);
+  chaise(k, M, -33.25, 8.75, 2.5);
   for (const [x, z, y] of [[X1 - 0.3, Z1 - 0.3, 4.4], [X2 + 0.3, Z1 - 0.3, 4.4], [X1 - 0.3, Z2 + 0.3, 3.9], [X2 + 0.3, Z2 + 0.3, 3.9]]) {
     k.boite(0.08, y - 2.62, 0.08, C.bois, { x, y: 2.62 + (y - 2.62) / 2, z }, M.mat);
   }
   k.boite(3.8, 0.04, 3.0, 0x5a6a4a, { x: (X1 + X2) / 2, y: 4.18, z: (Z1 + Z2) / 2, rx: 0.17 }, M.toile, { crasse: false });
   // L'échelle de la vigie (côté nord) ; le mât et le drapeau de chiffon
-  for (const s of [-1, 1]) planche(c, [-33.6 + s * 0.25, 0, 7.9], [-33.6 + s * 0.25, 2.7, 8.15], 0.07, 0.07, C.bois, M.mat);
-  for (let i = 1; i < 8; i++) c.boite(0.5, 0.04, 0.04, C.bois, { x: -33.6, y: i * 0.34, z: 7.9 + i * 0.03 }, M.mat);
+  for (const s of [-1, 1]) planche(c, [-32.98 + s * 0.22, 0, 7.9], [-32.98 + s * 0.22, 2.7, 8.15], 0.07, 0.07, C.bois, M.mat);
+  for (let i = 1; i < 8; i++) c.boite(0.44, 0.04, 0.04, C.bois, { x: -32.98, y: i * 0.34, z: 7.9 + i * 0.03 }, M.mat);
   k.boite(0.07, 3.0, 0.07, C.boisGris, { x: X2 + 0.3, y: 5.9, z: Z1 - 0.3 }, M.mat);
   const drap = new THREE.PlaneGeometry(1.2, 0.7, 3, 1).translate(0.6, -0.35, 0);
   etoffe(ctx, X2 + 0.3, 7.35, Z1 - 0.3, drap, 0xb06a40, 0.3, 0.45);
   // Dedans : le matelas et sa couverture polaire (rose fluo, synthétique), la réserve de conserves (le péage)
-  c.boite(1.8, 0.15, 0.8, 0x7a6a5a, { x: -34.4, y: 0.08, z: 9.8 }, M.toile);
-  c.boite(1.3, 0.05, 0.86, 0xe0508a, { x: -34.1, y: 0.18, z: 9.8, ry: 0.08 }, M.toile, { crasse: false });
-  c.boite(0.5, 0.12, 0.7, 0x38b8c8, { x: -35.0, y: 0.2, z: 9.75, ry: -0.2 }, M.toile, { crasse: false });
-  for (let i = 0; i < 12; i++) cylindre(c, M.metal, i % 3 ? 0xb8b4a8 : 0xc8a050, -35.5 + (i % 4) * 0.13, 0.02 + Math.floor(i / 4) * 0.12, 8.5, 0.05, 0.05, 0.11, 6);
-  b.obstacle(X1, Z1, X1 + 0.375, Z1, "cabane du poste de guet");
-  b.obstacle(X1 + 1.875, Z1, X2, Z1, "cabane du poste de guet");
-  // La caisse du péage, au pied du poste de guet : un coffre de bois cerclé, une fente dans le couvercle, un cadenas.
-  // On y dépose son dû ; la voix vient d'en haut (objet nommé « caisse_peage »).
-  objetNomme(ctx, "caisse_peage", 3303, (k) => {
-    k.repere({ x: CAISSE.x, y: 0.02, z: CAISSE.z, ry: 0.12 }, () => {
-      k.boite(0.8, 0.5, 0.5, 0x6a5038, { y: 0.25 }, M.mat, { nuance: 0.05 });
-      k.boite(0.84, 0.07, 0.54, 0x5a4430, { y: 0.53 }, M.mat);
-      for (const s of [-0.3, 0.3]) k.boite(0.05, 0.52, 0.53, 0x2e2c2a, { x: s, y: 0.27 }, M.mat, { crasse: false });
-      k.boite(0.3, 0.02, 0.04, 0x141414, { y: 0.575 }, M.mat, { crasse: false });
-      k.boite(0.08, 0.1, 0.04, 0xb89a4a, { y: 0.4, z: 0.27 }, M.mat, { crasse: false });
-      // « PÉAGE » peint à la main : des traits blancs sur la face
-      for (let i = 0; i < 5; i++) k.boite(0.06, 0.12, 0.01, 0xe8e2d0, { x: -0.18 + i * 0.09, y: 0.27, z: 0.255 }, M.mat, { crasse: false });
-    });
-  });
-  obstacleBoite(b, CAISSE.x, CAISSE.z, 0.84, 0.54, 0.12, "caisse du péage");
+  c.boite(1.8, 0.15, 0.8, 0x7a6a5a, { x: -33.85, y: 0.08, z: 9.8 }, M.toile);
+  c.boite(1.3, 0.05, 0.86, 0xe0508a, { x: -33.55, y: 0.18, z: 9.8, ry: 0.08 }, M.toile, { crasse: false });
+  c.boite(0.5, 0.12, 0.7, 0x38b8c8, { x: -34.45, y: 0.2, z: 9.75, ry: -0.2 }, M.toile, { crasse: false });
+  for (let i = 0; i < 12; i++) cylindre(c, M.metal, i % 3 ? 0xb8b4a8 : 0xc8a050, -34.85 + (i % 4) * 0.13, 0.02 + Math.floor(i / 4) * 0.12, 8.5, 0.05, 0.05, 0.11, 6);
+  b.obstacle(X1, Z1, X1 + 0.38, Z1, "cabane du poste de guet");
+  b.obstacle(X1 + 1.92, Z1, X2, Z1, "cabane du poste de guet");
   b.obstacle(X2, Z1, X2, Z2, "cabane du poste de guet");
   b.obstacle(X1, Z1, X1, Z2, "cabane du poste de guet");
   // La réserve à l'ouest de la plateforme : fûts d'eau, caisses sous une bâche
@@ -1770,7 +2010,7 @@ function posteDeGuet(ctx) {
   caisse(c, M, -40.4, 8.65, 0.8, 0.5, 0.6, -0.2, 0x8a7a62, 0.7);
   c.boite(1.6, 0.04, 1.4, 0x4a5a3a, { x: -40.2, y: 1.25, z: 8.7, rz: 0.1 }, M.toile);
   sacs(c, M, -42.3, 6.4, -42.3, 8.0, 2);
-  b.lumiere(-34.4, 3.4, 9.3, 0xff8a3d, 12, 16, "feu de brasero du poste de guet, sur la pile du pylône");
+  b.lumiere(-33.9, 3.4, 9.3, 0xff8a3d, 12, 16, "feu de brasero du poste de guet, sur la pile du pylône");
   void u;
 }
 
@@ -1853,7 +2093,8 @@ function marins(ctx) {
   c.pave(58.3, -0.04, FORME.z2, FORME.x2, 0.03, 35, C.paves, M.paves, { crasse: false, nuance: 0 });
   c.pave(60, -0.04, -9.4, 76, 0.03, -ZTR, C.paves, M.paves, { crasse: false, nuance: 0 });
   portiqueConnecte(ctx, 61.6, R.finConnecte);
-  panneauRoute(ctx, R.dirEst, 95, 6.6, 0, 3.4, 0.85, 1.7);
+  panneauSortie(ctx, "est", R.sortieEst, 95, 6.6);
+  bordsDuBout(ctx, 1);
   reverbere(ctx, 70, 5.9, -0.05);
   reverbere(ctx, 90, -5.9, 0.04);
   for (const z of [-15, -6, 8]) bitte(c, M, 50.9, z, 0.03, z === 8);
@@ -1887,10 +2128,7 @@ function marins(ctx) {
   for (const s of [-1, 1]) cylindre(c, M.mat, 0x262626, 88 + s * 0.1, 0.3, 9.5 + s * 0.85, 0.3, 0.3, 0.18, 8, { rx: Math.PI / 2, y: 0.3 });
   c.boite(3.6, 0.1, 0.1, 0x6a6c6a, { x: 88, y: 0.35, z: 9.5 }, M.metal);
   obstacleBoite(b, 88, 9.5, 4.2, 1.7, 0.1, "barque sur sa remorque");
-  // La clôture du port au sud
-  for (let x = 58.6; x < 100; x += 2.5) c.boite(0.08, 1.8, 0.08, 0x6a6c6a, { x, y: 0.9, z: 34.6 }, M.metal);
-  c.boite(41.4, 1.5, 0.02, 0x8a8c88, { x: 79.3, y: 0.95, z: 34.6 }, M.metal, { crasse: false });
-  b.obstacle(58.4, 34.6, 100, 34.6, "clôture du port");
+  // (Le bord sud : la ganivelle et les dunes, voir bordsDuBout.)
   fientes(c, M, 51, 6, 99, 34, 0.04, Math.round(30 + 30 * u));
   // Les lumières de la rive est
   b.lumiere(67, 1.25, -20.3, 0xffc070, 3, 7, "bougie sur l'autel de la chapelle des marins");
@@ -2001,9 +2239,11 @@ function cale(ctx) {
   c.boite(4, 0.5, 6, C.algues, { x: 52, y: -8.2, z: 23, rz: 0.48 }, M.mat, { crasse: false });
   // Les obstacles : les bords de la forme (sauf la passerelle de la péniche)
   b.obstacle(58, z1, PENICHE.x1 + 0.2, z1, "bord de la cale");
-  b.obstacle(PENICHE.x1 + 1.2, z1, x2, z1, "bord de la cale");
+  b.obstacle(PASSERELLE.x2, z1, x2, z1, "bord de la cale");
   b.obstacle(58, z2, x2, z2, "bord de la cale");
   b.obstacle(x2, z1, x2, z2, "tête de la cale");
+  // (H-4) Les deux côtés de la passerelle : la forme, 1,3 m plus bas, qui s'ouvre sur l'eau par la rampe
+  for (const xp of [PASSERELLE.x1, PASSERELLE.x2]) b.obstacle(xp, z1, xp, PENICHE.z1, "bord de la passerelle : la forme, en contrebas");
   // Le treuil de halage, son câble jusqu'à l'étrave
   c.repere({ x: 79.6, y: 0, z: 23 }, () => {
     for (const s of [-1, 1]) c.boite(0.2, 1.2, 0.2, 0x3a3c3c, { y: 0.6, z: s * 0.7 }, M.tole);
@@ -2014,8 +2254,13 @@ function cale(ctx) {
   planche(c, [79.3, 0.9, 23], [77.4, 0.6, 23], 0.03, 0.03, 0x3a3a38, M.metal);
   obstacleBoite(b, 79.6, 23, 1.4, 1.8, 0, "treuil de la cale");
   // La passerelle (planches à plat) du quai à la péniche
-  for (let k = 0; k < 3; k++) c.boite(0.28, 0.05, 1.8, C.boisGris, { x: PENICHE.x1 + 0.4 + k * 0.3, y: 0.03, z: z1 + 0.75 }, M.mat, { nuance: 0.06 });
-  for (const s of [0, 1]) c.boite(0.04, 0.9, 0.04, C.bois, { x: PENICHE.x1 + 0.2 + s * 1.0, y: 0.45, z: z1 + 0.2 }, M.mat);
+  // (T4) 1,35 m : cinq planches, et de chaque côté un garde-corps de deux poteaux et une lisse
+  const lp = PASSERELLE.x2 - PASSERELLE.x1;
+  for (let k = 0; k < 5; k++) c.boite(lp / 5 - 0.02, 0.05, 1.8, C.boisGris, { x: PASSERELLE.x1 + (k + 0.5) * (lp / 5), y: 0.03, z: z1 + 0.75 }, M.mat, { nuance: 0.06 });
+  for (const xp of [PASSERELLE.x1, PASSERELLE.x2]) {
+    for (const zp of [z1 + 0.2, PENICHE.z1 - 0.1]) c.boite(0.04, 0.9, 0.04, C.bois, { x: xp, y: 0.45, z: zp }, M.mat);
+    c.boite(0.04, 0.04, PENICHE.z1 - z1 - 0.2, C.bois, { x: xp, y: 0.9, z: (z1 + 0.2 + PENICHE.z1 - 0.1) / 2 }, M.mat);
+  }
 }
 
 /** La péniche de plaisance « Ma Liberté », échouée dans la forme : on la visite (plancher à y = 0). */
@@ -2028,7 +2273,7 @@ function peniche(ctx) {
   c.pave(X1, yb, Z1, X2 - 1.4, yb + 0.2, Z2, C.antifouling, M.tole, { crasse: false });
   for (const [z1, z2] of [[Z1, Z1 + 0.25], [Z2 - 0.25, Z2]]) {
     const nord = z1 === Z1;
-    const tranches = nord ? [[X1, X1 + 0.2], [X1 + 1.2, X2 - 1.4]] : [[X1, X2 - 1.4]];
+    const tranches = nord ? [[X1, PASSERELLE.x1], [PASSERELLE.x2, X2 - 1.4]] : [[X1, X2 - 1.4]];
     c.pave(X1, yb, z1, X2 - 1.4, -0.6, z2, C.antifouling, M.tole, { crasse: false });
     for (const [a, bb] of [[X1, X2 - 1.4]]) c.pave(a, -0.6, z1, bb, 0.0, z2, C.coque, M.satine, { crasse: false });
     for (const [a, bb] of tranches) {
@@ -2053,7 +2298,7 @@ function peniche(ctx) {
   // Le plancher (y = 0)
   c.pave(X1 + 0.2, -0.04, Z1 + 0.25, X2 - 1.4, 0.03, Z2 - 0.25, C.boisClair, M.mat, { crasse: false, nuance: 0.02 });
   b.obstacle(X1, Z1, X1 + 0.2, Z1, "bordé de la péniche");
-  b.obstacle(X1 + 1.2, Z1, X2 - 1.4, Z1, "bordé de la péniche");
+  b.obstacle(PASSERELLE.x2, Z1, X2 - 1.4, Z1, "bordé de la péniche");
   b.obstacle(X1, Z2, X2 - 1.4, Z2, "bordé de la péniche");
   b.obstacle(X1, Z1, X1, Z2, "tableau arrière de la péniche");
   // Le rouf (salon et cuisine) et la timonerie : bas des cloisons visible, le haut et le toit en couche
@@ -2064,12 +2309,12 @@ function peniche(ctx) {
   const zi1 = Z1 + 0.25;
   const zi2 = Z2 - 0.25;
   const hublots = (n, L) => Array.from({ length: n }, (_, i) => ({ u: ((i + 0.5) * L) / n, l: 0.5, bas: 1.3, haut: 1.75, type: "fenetre", bris: 0.3 + 0.5 * u, croisillons: 0, traverses: 1, cadre: 0xb8a27a, appui: false }));
-  murDouble(ctx, k, [RX1, zi1], [RX1, zi2], { h: 2.2, ep: 0.12, bas: rouf, ouvertures: [{ u: 1.0, l: 0.8, bas: 0, haut: 1.95, type: "porte", vantail: "entrouvert", couleurPorte: 0x8a6a44, angle: 1.4 }] });
+  murDouble(ctx, k, [RX1, zi1], [RX1, zi2], { h: 2.2, ep: 0.12, bas: rouf, ouvertures: [{ u: 1.17, l: 1.3, bas: 0, haut: 1.95, type: "porte", vantail: "entrouvert", couleurPorte: 0x8a6a44, angle: 1.4 }] }); // 1,56 m (T4)
   for (const [a, bb] of [[[RX1, zi1], [RX2, zi1]], [[RX2, zi2], [RX1, zi2]]]) mur(k, a, bb, { h: 1.25, y0: 0.95, ep: 0.12, couleur: 0xe4e0d4, mat: M.satine, ouvertures: hublots(5, RX2 - RX1).map((o) => ({ ...o, bas: o.bas - 0.95, haut: o.haut - 0.95 })) });
-  murDouble(ctx, k, [69.6, zi1], [69.6, zi2], { h: 2.2, ep: 0.08, bas: { couleur: 0xa08a66, mat: M.mat }, ouvertures: [{ u: 2.4, l: 0.8, bas: 0, haut: 1.9, type: "vide" }] });
-  murDouble(ctx, k, [RX2, zi1], [RX2, zi2], { h: 2.2, ep: 0.1, bas: { couleur: 0xa08a66, mat: M.mat }, ouvertures: [{ u: 2.2, l: 0.8, bas: 0, haut: 1.9, type: "vide" }] });
+  murDouble(ctx, k, [69.6, zi1], [69.6, zi2], { h: 2.2, ep: 0.08, bas: { couleur: 0xa08a66, mat: M.mat }, ouvertures: [{ u: 2.35, l: 1.3, bas: 0, haut: 1.9, type: "vide" }] }); // 1,56 m
+  murDouble(ctx, k, [RX2, zi1], [RX2, zi2], { h: 2.2, ep: 0.1, bas: { couleur: 0xa08a66, mat: M.mat }, ouvertures: [{ u: 2.35, l: 1.3, bas: 0, haut: 1.9, type: "vide" }] }); // 1,56 m
   for (const [a, bb] of [[[RX2, zi1], [TX2, zi1]], [[TX2, zi2], [RX2, zi2]]]) mur(k, a, bb, { h: 1.75, y0: 0.95, ep: 0.1, couleur: 0xe4e0d4, mat: M.satine, ouvertures: [{ u: (TX2 - RX2) / 2, l: 1.6, bas: 0.35, haut: 1.5, type: "fenetre", bris: 0.5 + 0.4 * u, croisillons: 1, traverses: 1, cadre: 0xb8a27a }] });
-  murDouble(ctx, k, [TX2, zi1], [TX2, zi2], { h: 2.7, ep: 0.1, bas: rouf, ouvertures: [{ u: 2.2, l: 2.4, bas: 1.15, haut: 2.3, type: "fenetre", bris: 0.6, croisillons: 2, traverses: 1, cadre: 0xb8a27a }, { u: 0.6, l: 0.7, bas: 0, haut: 1.9, type: "porte", vantail: "tombe" }] });
+  murDouble(ctx, k, [TX2, zi1], [TX2, zi2], { h: 2.7, ep: 0.1, bas: rouf, ouvertures: [{ u: 2.85, l: 2.1, bas: 1.15, haut: 2.3, type: "fenetre", bris: 0.6, croisillons: 2, traverses: 1, cadre: 0xb8a27a }, { u: 0.78, l: 1.3, bas: 0, haut: 1.9, type: "porte", vantail: "tombe" }] }); // la porte : 1,56 m
   k.pave(RX1 - 0.1, 2.2, zi1 - 0.1, RX2 + 0.05, 2.32, zi2 + 0.1, 0xd8d4c8, M.satine, { crasse: false });
   k.pave(RX2, 2.7, zi1 - 0.15, TX2 + 0.15, 2.82, zi2 + 0.15, 0xd8d4c8, M.satine, { crasse: false });
   // Sur le toit : jardinières mortes, vélo, lampe solaire de jardin, fientes
@@ -2197,6 +2442,200 @@ function hangar(ctx) {
   jonchee(c, X1 + 0.4, Z1 + 0.4, X2 - 0.4, Z2 - 0.4, Math.round(10 * u), [0x9a8466, 0xc9b48a]);
 }
 
+// ---------- Les alentours (R52, R0-2, R0-3) ----------
+
+const ALENT = { nord: -85, sud: 100, bout: 150 }; // jusqu'où va le décor au-delà du lot (50 à 65 m)
+const JETEE = 74; // les quais de l'estuaire se prolongent en jetées jusque-là, au sud
+
+/** La teinte du sol des alentours : le sable des dunes, le gris du terre-plein près du lot, la plage mouillée. */
+function teinteSol(x, y, z) {
+  const n = bruit(x, z, 11);
+  let t = melange(C.sableClair, C.sable, n);
+  if (n > 0.62) t = melange(t, 0xb2ad86, (n - 0.62) * 1.6); // les prés d'oyats, gris-vert
+  // Près des bouts du lot, le terre-plein gris du lot se prolonge (le raccord ne se voit pas)
+  const ax = Math.abs(x);
+  if (ax > 99 && z > -16 && z < 35) t = melange(C.sol, t, lisser(100, 118, ax));
+  // La plage : sable sec, puis mouillé sous la laisse de haute mer, puis la vase sous l'eau
+  if (y < -0.4) t = melange(t, 0xc9bb98, lisser(-0.4, -3, y));
+  if (y < Y_HAUTE + 0.6) t = melange(t, 0x9f9175, lisser(Y_HAUTE + 0.6, Y_HAUTE - 0.8, y));
+  if (y < Y_EAU + 0.2) t = melange(t, 0x7d725e, lisser(Y_EAU + 0.2, Y_EAU - 1.2, y));
+  return t;
+}
+
+/**
+ * Le décor au-delà du lot, très léger, dans un chantier à part (le groupe « alentours ») et dans deux matières du lot
+ * seulement : le sol (sable, terre-plein, route, quais, dunes et oyats, quelques maisons du bourg) et l'eau (la même que
+ * l'estuaire du lot). Chaque tronçon porte sa bande nord et sud ; le bourg et la rive des marins, en plus, le
+ * prolongement à l'ouest et à l'est. Aucun obstacle : on ne va pas là.
+ */
+function alentours(ctx) {
+  const { M, xa, xb } = ctx;
+  const a = new Chantier(4400 + Math.round(ctx.x0));
+  const h = ctx.haute;
+  const MS = uneMatiere(M, M.sol);
+  const S = M.sol;
+  const X1 = xa <= -100 ? -ALENT.bout : xa;
+  const X2 = xb >= 100 ? ALENT.bout : xb;
+  const tuile = S.userData.tuile;
+  const uvSol = (x, y, z) => [x / tuile, z / tuile];
+  const sol = (x1, x2, z1, z2, pas = 6) => {
+    if (x2 - x1 < 0.01) return;
+    poserTeinte(a, S, grille(x1, x2, z1, z2, pas, pas, solNaturel), teinteSol, uvSol);
+  };
+  // Les morceaux de terre (|x| ≥ 58) et d'estuaire (|x| < 58) de la bande du tronçon
+  const coupe = (lo, hi) => [Math.max(X1, lo), Math.min(X2, hi)];
+  const terres = [coupe(-ALENT.bout, -58), coupe(58, ALENT.bout)].filter(([p, q]) => q - p > 0.01);
+  const [e1, e2] = coupe(-58, 58);
+  const estuaire = e2 - e1 > 0.01;
+
+  // ---- La terre : au nord, les dunes ; au sud, les dunes puis la plage ; aux bouts, le terre-plein qui continue
+  for (const [p, q] of terres) {
+    sol(p, q, ALENT.nord, -35);
+    sol(p, q, 35, ALENT.sud);
+    const [b1, b2] = [Math.max(p, -ALENT.bout), Math.min(q, -100)];
+    if (b2 - b1 > 0.01) sol(b1, b2, -35, 35);
+    const [c1, c2] = [Math.max(p, 100), Math.min(q, ALENT.bout)];
+    if (c2 - c1 > 0.01) sol(c1, c2, -35, 35);
+    // La mer, au sud, de part et d'autre de l'embouchure (sous la plage, le sable la cache) ; à marée haute aussi
+    nappe(a, M.eau, p, q, 60, ALENT.sud, 5, 4, Y_EAU);
+    nappe(h, M.eau, p, q, 56, ALENT.sud, 5, 4, Y_HAUTE);
+  }
+
+  // ---- L'estuaire : l'eau, le fond, les quais qui continuent au nord et deviennent des jetées au sud
+  if (estuaire) {
+    for (const [z1, z2] of [[ALENT.nord, -35], [35, ALENT.sud]]) {
+      a.pave(e1, Y_FOND - 0.3, z1, e2, Y_FOND, z2, 0x6a6658, S, { crasse: false, nuance: 0 });
+      nappe(a, M.eau, e1, e2, z1, z2, 2.5, 5, Y_EAU);
+      nappe(h, M.eau, e1, e2, z1, z2, 2.5, 5, Y_HAUTE);
+    }
+    for (const sx of [-1, 1]) {
+      const xm = sx * 57.7;
+      if (xm < X1 || xm > X2) continue;
+      for (const [z1, z2] of [[ALENT.nord, -35], [35, JETEE]]) {
+        a.pave(xm - 0.3, Y_FOND - 0.4, z1, xm + 0.3, -0.05, z2, C.quai, S, { crasse: false, nuance: 0.02 });
+        a.pave(xm - 0.31, Y_EAU - 0.2, z1, xm + 0.31, Y_EAU + 2.6, z2, C.algues, S, { crasse: false, nuance: 0.03 });
+        a.pave(xm - 0.4, -0.06, z1, xm + 0.4, 0.18, z2, C.quaiSombre, S, { crasse: false, nuance: 0.02 });
+      }
+      // Le musoir de la jetée, et son feu éteint (une tourelle blanche et rouge)
+      a.pave(xm - 1.2, Y_FOND - 0.4, JETEE - 1.6, xm + 1.2, 0.3, JETEE + 0.8, C.quai, S, { crasse: false, nuance: 0.02 });
+      a.pave(xm - 1.21, Y_EAU - 0.2, JETEE - 1.61, xm + 1.21, Y_EAU + 2.6, JETEE + 0.81, C.algues, S, { crasse: false, nuance: 0.03 });
+      cylindre(a, S, sx < 0 ? 0xb8463a : 0x4f8a5a, xm, 0.3, JETEE - 0.4, 0.45, 0.55, 3.2, 8);
+      cylindre(a, S, 0xe8e4da, xm, 3.5, JETEE - 0.4, 0.3, 0.35, 0.6, 8);
+      // Des bancs de vase le long des quais, au nord (découverts à marée basse)
+      for (let i = 0; i < 3; i++) {
+        const zc = -45 - i * 13 - hache(i, sx + 40) * 4;
+        const l = 2.5 + hache(i, sx + 41) * 3;
+        const p = 4 + hache(i, sx + 42) * 3;
+        const pts = [];
+        for (let j = 0; j < 9; j++) {
+          const t = (j / 8) * Math.PI;
+          pts.push([xm - sx * (0.3 + Math.sin(t) * l * (0.7 + 0.3 * hache(i * 9 + j, sx + 44))), zc - Math.cos(t) * p]);
+        }
+        dalle(a, S, i % 2 ? C.vase : C.vaseClaire, pts, Y_VASE, { nuance: 0.02 });
+      }
+    }
+  }
+
+  // ---- La route du Littoral qui continue aux deux bouts, à demi ensablée
+  for (const [r1, r2] of [[Math.max(X1, -ALENT.bout), Math.min(X2, -100)], [Math.max(X1, 100), Math.min(X2, ALENT.bout)]]) {
+    if (r2 - r1 < 0.01) continue;
+    a.pave(r1, -0.06, -HL, r2, 0.025, HL, C.asphalte, S, { crasse: false, nuance: 0 });
+    for (const sz of [-1, 1]) a.pave(r1, -0.06, sz > 0 ? HL : -ZTR, r2, 0.07, sz > 0 ? ZTR : -HL, C.trottoir, S, { crasse: false, nuance: 0 });
+    for (let x = r1 + 1; x < r2 - 2; x += 4) if (hache(Math.round(x), 61) > 0.3) a.boite(2.3, 0.01, 0.13, C.ligne, { x: x + 1.2, y: 0.035, z: 0 }, S, { crasse: false });
+    // Le sable qui mord la chaussée, de plus en plus loin du lot
+    for (let i = 0; i < 9; i++) {
+      const x = r1 + (r2 - r1) * hache(i, Math.round(r1) + 62);
+      const loin = Math.abs(x) - 100;
+      const l = 2 + hache(i, 63) * 5 + loin * 0.08;
+      a.boite(l, 0.04, 1.5 + hache(i, 64) * 3, C.sableClair, { x, y: 0.04, z: (hache(i, 65) - 0.5) * 9, ry: (hache(i, 66) - 0.5) * 0.5 }, S, { crasse: false, nuance: 0.03 });
+    }
+  }
+
+  // ---- Les dunes et les oyats (tout dans la matière du sol)
+  const A = aleatoire(4500 + Math.round(ctx.x0));
+  const dunes = (x1, x2, z1, z2, n, hmax = 1.6) => {
+    for (let i = 0; i < n; i++) {
+      const x = x1 + A() * (x2 - x1);
+      const z = z1 + A() * (z2 - z1);
+      if (x < X1 || x > X2 || Math.abs(x) < 61 || (Math.abs(x) < 100.5 && z > -35.5 && z < 35.5)) continue;
+      if (Math.abs(z) < 9 && Math.abs(x) > 100) continue; // la route
+      dune(a, MS, x, z, 6 + A() * 9, 4 + A() * 6, 0.7 + A() * hmax, A() < 0.3 ? 1 : 0);
+    }
+  };
+  dunes(X1, X2, -80, -37, Math.round((X2 - X1) / 8));
+  dunes(X1, X2, 37, 43, Math.round((X2 - X1) / 10), 1.1);
+  if (X1 < -100) dunes(-148, -102, -34, 34, 9);
+  if (X2 > 100) dunes(102, 148, -34, 34, 9);
+  for (const [p, q] of terres) {
+    semerOyats(a, MS, p, -84, q, -36, Math.round((q - p) / 7));
+    semerOyats(a, MS, p, 36, q, 43, Math.round((q - p) / 10));
+  }
+
+  // ---- Le bourg qui continue à l'ouest : quelques maisons basses le long de la route, volets clos
+  if (X1 < -100) {
+    for (const [x, z, l, p, hh, coul, toit] of [
+      [-112, -14, 9, 7, 5.2, 0xd8cdb2, C.tuile],
+      [-126, -13, 8, 6.5, 4.6, 0xe2dccb, 0x8a5e4a],
+      [-140, -15, 10, 8, 5.6, 0xc9d2cf, C.tuile],
+      [-118, 14, 8, 7, 4.8, 0xe2dccb, 0x8a5e4a],
+      [-134, 15, 11, 8, 5.4, 0xd8cdb2, C.tuile],
+    ]) {
+      a.boite(l, hh, p, coul, { x, y: hh / 2, z }, S, { nuance: 0.03 });
+      const pg = new THREE.Shape();
+      pg.moveTo(-p / 2 - 0.4, 0);
+      pg.lineTo(p / 2 + 0.4, 0);
+      pg.lineTo(0, p * 0.42);
+      pg.lineTo(-p / 2 - 0.4, 0);
+      const g = new THREE.ExtrudeGeometry(pg, { depth: l + 0.6, bevelEnabled: false });
+      a.poser(g, S, toit, { x: x - (l + 0.6) / 2, y: hh, z, ry: Math.PI / 2 }, { crasse: false, nuance: 0.03 });
+      g.dispose();
+      for (const s of [-1, 1]) a.boite(0.6, 1.2, 0.06, C.volet, { x: x + s * l * 0.25, y: 1.6, z: z + Math.sign(-z) * (p / 2 + 0.03) }, S, { crasse: false });
+    }
+  }
+  // À l'est, vers l'hôtel : une cabine de plage abandonnée, des poteaux télégraphiques
+  if (X2 > 100) {
+    for (let i = 0; i < 4; i++) {
+      const x = 106 + i * 12;
+      a.boite(0.22, 7, 0.22, 0x6a5a48, { x, y: 3.5, z: -8.5, rz: (hache(i, 70) - 0.5) * 0.08 }, S, { nuance: 0.05 });
+      a.boite(1.6, 0.14, 0.14, 0x6a5a48, { x, y: 6.6, z: -8.5 }, S);
+    }
+    a.boite(2.2, 2.4, 2.2, 0xe6e2da, { x: 128, y: 1.2, z: 30, ry: 0.2 }, S, { nuance: 0.03 });
+    for (let k = 0; k < 4; k++) a.boite(0.3, 2.42, 2.22, k % 2 ? 0x4f8aa0 : 0xe6e2da, { x: 128 - 0.9 + k * 0.55, y: 1.21, z: 30, ry: 0.2 }, S, { crasse: false });
+  }
+
+  // ---- Les brisants : une ligne d'écume entre l'eau claire et l'eau sombre ; devant l'embouchure, la barre (des
+  // plaques d'écume à plat, deux triangles chacune)
+  const PLAQUE = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
+  const brisants = (ch0, mat, niveau, zLigne, graine) => {
+    const ch = { boite: (l, hh, p, coul, pose, mat, opt) => ch0.poser(PLAQUE, mat, coul, { ...pose, e: [l, 1, p] }, opt) };
+    for (let x = X1; x < X2; x += 2.2) {
+      const ax = Math.abs(x);
+      const z0 = ax >= 58 ? zLigne : zLigne + (58 - ax) * 0.28;
+      for (let k = 0; k < 2; k++) {
+        const r = hache(Math.round(x * 3) + k * 7, graine);
+        if (r < 0.15) continue;
+        const l = 2.4 + r * 3;
+        ch.boite(l, 0.02, 0.35 + r * 0.6 - k * 0.15, EAU.ecume, { x: x + r, y: niveau + 0.03 + k * 0.005, z: z0 + (bruit(x, graine, 13) - 0.5) * 3 + k * (1.6 + r), ry: (r - 0.5) * 0.25 }, mat, { crasse: false, nuance: 0.03 });
+      }
+      // L'écume du bord, à la laisse (là où le sable entre dans l'eau)
+      if (ax >= 60 && hache(Math.round(x * 2), graine + 1) > 0.3) {
+        const zb = 44 + (Y_EAU === niveau ? 26 : (-niveau) * (26 / 8));
+        ch.boite(1.4 + hache(Math.round(x), graine + 2) * 2, 0.02, 0.3, EAU.ecume, { x: x + 1, y: niveau + 0.04, z: zb + 0.4, ry: (hache(Math.round(x), graine + 3) - 0.5) * 0.3 }, mat, { crasse: false, nuance: 0.03 });
+      }
+    }
+  };
+  // (à marée basse, l'écume va avec les bancs découverts, dans « maree_basse » : elle disparaît quand la mer monte)
+  brisants(ctx.basse, M.satine, Y_EAU, 79.6, 801);
+  brisants(h, M.eau, Y_HAUTE, 66.4, 802);
+  PLAQUE.dispose();
+
+  const g = a.construire();
+  g.name = "alentours";
+  g.userData.nom = "alentours";
+  ctx.b.ajouter(g);
+  ctx.objets.alentours = g;
+}
+
 // ---------- La halte : un tronçon à la fois ----------
 
 /** Recentre un tronçon sur son lot : la géométrie fondue est translatée, les objets animés sont déplacés. */
@@ -2247,6 +2686,7 @@ export function creer({ usure = 0.7, carte = "bourg" } = {}) {
   voituresOuest(ctx);
   breche(ctx);
   marins(ctx);
+  alentours(ctx);
   animations(ctx);
   // Les deux états de la marée (marée basse visible, marée haute cachée)
   for (const [nom, ch] of [["maree_basse", ctx.basse], ["maree_haute", ctx.haute]]) {

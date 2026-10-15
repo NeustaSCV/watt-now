@@ -1,7 +1,11 @@
 // La lanterne des panneaux de sortie (0.10, décision du porteur du 2026-10-15 : « tous les panneaux de sortie sont
 // éclairés par une lanterne au-dessus d'eux ») : une lanterne de fer accrochée au bout d'une potence, au-dessus du
-// panneau, qui luit la nuit et l'éclaire. Le phare (le sentier côtier de la grève) s'en sert ; la route du pont, la
-// corniche et l'hôtel s'en serviront pour leurs panneaux de sortie.
+// panneau, qui luit la nuit et l'éclaire.
+//
+// Depuis la 0.10 (R0-1), les modèles des quatre lieux de la côte dessinent leurs panneaux de sortie et leur lanterne (le
+// verre en matière lueur, une entrée « lanterne du panneau de sortie » dans leurs lumières) : le jeu n'en allume que la
+// lumière, la nuit (`lumiereLanterneModele`). `poserLanterne` ne sert plus qu'à un lieu dont le modèle n'aurait pas la
+// sienne.
 //
 // - `poserLanterne(pose)` rend le maillage (la potence et la lanterne : un maillage, une matière, un appel de dessin),
 //   la source de lumière à donner à la réserve de lumières la nuit (rendu/lumieres.ts : on n'en crée pas, elle ne
@@ -119,3 +123,16 @@ export function poserLanterne(pose: PoseLanterne): LanternePanneau {
     },
   };
 }
+
+/**
+ * La lumière de la lanterne d'un panneau de sortie dessinée par le modèle d'un lieu (0.10, R0-1 : une entrée `nature:
+ * "lanterne du panneau de sortie"` de ses `lumieres`), dans le repère du jeu (`monde` : l'origine du modèle) : sa place,
+ * sa couleur, sa force et sa portée sont celles du modèle ; elle vacille comme les nôtres. La nuit seulement (le verre du
+ * modèle, lui, luit un peu de jour : une matière lueur, qu'on laisse telle quelle).
+ */
+export function lumiereLanterneModele(l: { x: number; y: number; z: number; couleur: number; intensite: number; portee: number }, monde: { x: number; z: number }): SourceLumiere {
+  return { x: l.x + monde.x, y: l.y, z: l.z + monde.z, couleur: l.couleur, intensite: l.intensite, portee: l.portee, decroissance: LUMIERE_LANTERNE.decroissance, vacillement: LUMIERE_LANTERNE.vacillement };
+}
+
+/** Cette lumière d'un modèle est-elle la lanterne d'un panneau de sortie ? */
+export const estLanternePanneau = (nature: string): boolean => nature.startsWith("lanterne du panneau de sortie");

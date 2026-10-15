@@ -16,13 +16,18 @@
 // (façade sud) ; rotonde de rayon 5,5 m centrée en (17,6 ; 1). Terrasse jusqu'à z = 18, promenade jusqu'à z = 22, plage,
 // mer au-delà de z = 33. L'étage : x = -20 à 6, z = -26,6 à -15,6. Le lot (64 × 66 m) est centré en H (-1 ; 5) : tout
 // (géométrie et données de jeu) est recentré sur lui à la fin de creer().
+//
+// 0.10 (R52, « un lieu ne s'arrête jamais net ») : un troisième groupe, `alentours`, prolonge le décor de 45 m autour
+// du lot (la côte, les dunes et leurs ganivelles, la promenade qui se perd dans le sable à l'est et à l'ouest, la mer,
+// la rue de derrière et ses façades au nord). Le panneau de sortie de l'est (`panneau_sortie_est`) et sa lanterne ; la
+// mer en bandes (l'eau claire où l'on marche, la ligne de brisants, le large), d'une seule matière dans le lot et autour.
 
 import * as THREE from "three";
 import {
   Batiment, Chantier, PALETTE, mur, lierre as lierreA, semerTouffes as semerA, gravats, debris as debrisA, jonchee as joncheeA, mousse,
-  raiDeLumiere as raiA, aleatoire,
+  raiDeLumiere as raiA, aleatoire, matiereLueur,
 } from "../commun/atelier.js";
-import { COUL, R, matieres, panneau } from "./textures.js";
+import { COUL, R, matieres, panneau, uvAtlas } from "./textures.js";
 import {
   cylindre, geoTriangle, chaise, tableRonde, gueridon, lustre, fauteuil, canape, piano, palmier, transat, parasol, cabine, barque, chariotBagages,
   presentoir, pouf, litBaldaquin, litFer, baignoire, lavabo, armoire, pianoCuisson, tableInox, etagere, conserves, linge, bouteilles,
@@ -78,6 +83,16 @@ const ASC_H = { x1: 3.8, x2: 5.8, z1: -19.6, z2: -17.6 };
 /** Le balcon effondré de la chambre 8 (porte-fenêtre dans le mur sud). */
 const BALCON_E = { x: -4.5 };
 
+/** La mer (repère H) : le bord de l'eau, la ligne de brisants où l'on perd pied (celle du jeu : 3,5 m plus loin). */
+const MER = { bord: 33.2, brisants: 36.7 };
+/** Ces limites dans le repère du lot (FICHE). */
+const MER_LOT = { bord: 28.2, brisants: 31.7 };
+/** Le panneau de sortie de l'est : au bout de la promenade, juste après la sortie, tourné vers la caméra (sud-est). */
+const PANNEAU_EST = { x: 31.9, z: 17.2, ry: Math.PI / 4 };
+const TEXTE_PANNEAU_EST = "Route du pont → · Ton terrain, par le pont · 5 km";
+/** Le verre de la lanterne, dans le repère du panneau (u le long, v devant, y la hauteur). */
+const LANTERNE_EST = { u: 0.25, v: 0.4, y: 2.86 };
+
 /** Lot unique : 64 × 66 m, centré en H (-1 ; 5) : x de -33 à 31, z de -28 à 38. */
 const CENTRE = { x: -1, z: 5 };
 const LOT = { l: 64, p: 66 };
@@ -129,11 +144,17 @@ export const FICHE = {
   solPropre: true,
   depart: vers([{ x: 27, z: 20 }])[0],
   bords:
-    "la mer au sud ; des ganivelles et des dunes à l'ouest et à l'est (ouvertes sur la promenade) ; au nord, l'hôtel et les murs de la cour de service ; l'étage est clos par ses murs",
-  entrees: vers([
-    { x: 30.5, z: 20, nature: "la promenade, par l'est (l'arrivée)" },
-    { x: -32.5, z: 20, nature: "la promenade, par l'ouest (vers la corniche)" },
-  ]),
+    "au sud, la mer : l'eau claire où l'on marche jusqu'aux genoux, puis la ligne de brisants où l'on perd pied ; à l'ouest, une ganivelle continue, en travers de la promenade et jusque dans l'eau ; à l'est, des ganivelles jusque dans l'eau, ouvertes sur la promenade (la sortie) ; au nord, l'hôtel et les murs de la cour de service ; l'étage est clos par ses murs",
+  entrees: vers([{ x: 30.5, z: 20, nature: "la promenade, par l'est (l'arrivée, et la sortie vers la route du pont)" }]),
+  // R0-1 : le panneau de sortie (objet nommé `panneau_sortie_est`), sa lanterne au-dessus (FICHE ↔ userData.lumieres).
+  panneaux: vers([{ x: PANNEAU_EST.x, z: PANNEAU_EST.z, texte: TEXTE_PANNEAU_EST, sortie: "est : la promenade, vers la route du pont" }]),
+  // R0-3 : la mer (repère du lot). Une seule matière (l'atlas) pour l'eau du lot et celle des alentours.
+  mer: {
+    peuProfonde: `l'eau claire, turquoise, où l'on marche jusqu'aux genoux : du bord de l'eau (z = ${MER_LOT.bord}) à la ligne de brisants (z = ${MER_LOT.brisants}), sur toute la largeur du lot (et au-delà, dans les alentours)`,
+    profonde: `au-delà de la ligne de brisants (écume blanche, z = ${MER_LOT.brisants}) : l'eau sombre, on perd pied (obstacle « le large »)`,
+    bord: MER_LOT.bord,
+    brisants: MER_LOT.brisants,
+  },
   // Les objets à part, nommés (groupe.userData.objets) : le jeu les montre, les cache ou les efface.
   objets: {
     grille_ascenseur_bas: "la grille de la cabine de l'ascenseur, dans le hall (fermée ; le jeu l'efface quand on l'ouvre)",
@@ -150,6 +171,8 @@ export const FICHE = {
     roulements: "la boîte de roulements, sur l'établi de la machinerie de l'ascenseur (objet-clé)",
     fer_a_souder: "le fer à souder, sur l'établi de la machinerie de l'ascenseur (objet-clé)",
     toles: "les tôles ondulées empilées dans la chambre 8, au balcon effondré (objet-clé)",
+    panneau_sortie_est: "le panneau de sortie de l'est, au bout de la promenade : « Route du pont → · Ton terrain, par le pont · 5 km » (sa lanterne luit à part, dans le décor)",
+    alentours: "le décor au-delà du lot (R52) : la côte, les dunes, la promenade qui se perd dans le sable, la mer, la rue de derrière ; vu du rez-de-chaussée (le jeu le cache à l'étage s'il veut)",
   },
   // L'ascenseur : la cabine du hall et celle du palier (pas de cabine qui bouge) ; le jeu fait le fondu au noir.
   teleports: [
@@ -375,9 +398,15 @@ function matiereRideau() {
 export function creer({ usure = 0.7 } = {}) {
   const m = matieres();
   // Économie d'appels de dessin (un seul lot pour tout l'hôtel) : le marbre et la céramique prennent la finition
-  // satinée, le laiton et l'inox la finition « tôle ». (matieres() est partagée : le mobilier suit.)
+  // satinée, et depuis la 0.10 (R52 : de quoi poser les alentours et le panneau de sortie) le laiton, l'inox et la tôle
+  // aussi. (matieres() est partagée : le mobilier suit.)
   m.lisse = m.satin;
-  m.metal = m.tole;
+  m.tole = m.satin;
+  m.metal = m.satin;
+  // 0.10 : au rez-de-chaussée, le bas des murs tapissés prend l'enduit qui pèle, comme leur haut (un appel de moins) ;
+  // l'étage garde son papier peint.
+  const papierPeint = m.papier;
+  m.papier = m.pele;
 
   // ===== Le rez-de-chaussée et les dehors =====
   const b = new Batiment(1903, usure);
@@ -409,6 +438,7 @@ export function creer({ usure = 0.7 } = {}) {
   salon(k);
   cuisines(k);
   aileOuest(k);
+  panneauSortie(k);
   animations(k);
 
   // Les lumières de la nuit (8 au plus pour tout le lot : 6 en bas, 2 à l'étage)
@@ -417,7 +447,9 @@ export function creer({ usure = 0.7 } = {}) {
   b.lumiere(26.4, 3.2, 21.2, 0xfff0d8, 4, 9, "panneau « Zéro-Effort », rétroéclairé par son panneau solaire (s'éteint quand on prend sa batterie)");
   b.lumiere(11, 0.9, -11.1, 0xff8a3d, 12, 14, "feu de survivants dans la grande cheminée du salon");
   b.lumiere(4.4, 1.5, 0.9, 0x8fd8ff, 3, 5, "écran de la borne « Check-in par sourire » (seulement quand ecran_borne_allume est montré)");
-  b.lumiere(-5.2, 1.2, -11.3, 0xffc874, 3, 7, "photophore posé sur la table des cuisines");
+  // 0.10 : le photophore des cuisines s'est éteint ; sa lumière va à la lanterne du panneau de sortie (8 au plus).
+  const [lx, lz] = horsRepere(PANNEAU_EST, LANTERNE_EST.u, LANTERNE_EST.v);
+  b.lumiere(lx, LANTERNE_EST.y, lz, 0xffcf8a, 6, 4.2, "lanterne du panneau de sortie");
 
   // Les rideaux au vent, fondus avec la couche de l'hôtel
   if (!k.rideaux.vide) b.ajouter(k.rideaux.construire());
@@ -428,6 +460,7 @@ export function creer({ usure = 0.7 } = {}) {
   hotel.materiaux.push(k.matRideau, ...k.fondusHotel);
 
   // ===== L'étage, posé au sol au nord de l'hôtel =====
+  m.papier = papierPeint;
   const be = new Batiment(1907, usure);
   const ke = { b: be, c: be.c, m, usure, objets: [] };
   etage(ke);
@@ -439,7 +472,11 @@ export function creer({ usure = 0.7 } = {}) {
   // ===== L'assemblage, recentré sur le lot =====
   const groupe = new THREE.Group();
   groupe.name = "grand-hotel";
-  for (const g of [rdc, et]) {
+  // ===== Les alentours (R52), rangés à part : ni dans le rez-de-chaussée, ni dans l'étage =====
+  const autour = alentours(m, usure);
+  autour.name = "alentours";
+
+  for (const g of [rdc, et, autour]) {
     g.position.set(-CENTRE.x, 0, -CENTRE.z);
     g.userData.nom = g.name;
     groupe.add(g);
@@ -475,6 +512,7 @@ export function creer({ usure = 0.7 } = {}) {
   // Les objets nommés (FICHE.objets) : l'état de départ est visible, l'autre caché.
   const objets = {};
   for (const o of [...k.objets, ...ke.objets]) objets[o.name] = o;
+  objets.alentours = autour;
   for (const id of Object.keys(FICHE.objets)) if (!objets[id]) console.warn(`grand-hotel : l'objet « ${id} » manque`);
   objets.ecran_borne_allume.visible = false;
   groupe.userData.objets = objets;
@@ -499,7 +537,12 @@ function sols(k) {
   const { c, m } = k;
   const sol = (x1, z1, x2, z2, mat, coul) => c.pave(x1, 0, z1, x2, 0.06, z2, coul, mat, { crasse: false, nuance: 0 });
   // Le rez-de-chaussée, pièce par pièce
-  sol(-3.8, Z0, 5.8, ZS, m.damier, 0xd9d2c4); // hall : marbre noir et blanc
+  // hall : marbre noir et blanc. 0.10 : le damier est peint dans l'atlas (4 × 6 dalles de 2,4 m), sur une dalle de pierre
+  // (un appel de dessin de moins que sa matière à part)
+  sol(-3.8, Z0, 5.8, ZS, m.dalle, 0xd9d2c4);
+  for (let i = 0; i < 4; i++) for (let j = 0; j < 6; j++) {
+    panneau(c, m.enseignes, R.damier, { x: -3.8 + (i + 0.5) * 2.4, y: 0.062, z: Z0 + (j + 0.5) * (14 / 6), rx: -Math.PI / 2 }, 2.4, 14 / 6);
+  }
   sol(5.8, Z0, X1, ZS, m.parquet, 0xb59a78); // grand salon
   sol(-16.6, -6, -3.8, ZS, m.parquet, 0xa98e6c); // salle à manger
   sol(X0, Z0, -16.6, ZS, m.parquet, 0x9a8466); // l'aile ouest effondrée
@@ -522,7 +565,7 @@ function sols(k) {
   dalle(-33, 18, 31, 22, COUL.dalleGrise);
   // La plage, et le sable mouillé au bord de l'eau
   c.pave(-33, -0.03, 22, 31, 0.02, 31, COUL.sable, m.sable, { crasse: false, nuance: 0 });
-  c.pave(-33, -0.03, 31, 31, 0.015, 34, COUL.sableMouille, m.sable, { crasse: false, nuance: 0 });
+  c.pave(-33, -0.03, 31, 31, 0.015, MER.bord + 0.6, COUL.sableMouille, m.sable, { crasse: false, nuance: 0 });
   // Le fond du lot (solPropre) : les pavés sombres de la rue de derrière et des cours, sous tout le reste, percé à la
   // place de la piscine
   const fond = (x1, z1, x2, z2) => c.pave(x1, -0.09, z1, x2, -0.03, z2, 0x6a655c, m.dalle, { crasse: false, nuance: 0 });
@@ -530,8 +573,32 @@ function sols(k) {
   fond(-33, 15.4, 31, 38);
   fond(-33, 8.6, 3.6, 15.4);
   fond(16.4, 8.6, 31, 15.4);
-  // La mer (opaque : un appel de dessin de moins ; l'écume animée la fait vivre)
-  c.pave(-33, 0.0, 33, 31, 0.04, 38, COUL.mer, m.satin, { crasse: false, nuance: 0 });
+  // La mer (R0-3) : l'eau claire où l'on marche, la ligne de brisants, le large ; peinte dans l'atlas (la même matière
+  // que celle des alentours), l'écume animée la fait vivre
+  mer(c, m, -33, 31, 38);
+}
+
+/** Les bandes de la mer (repère H) : la couleur de chacune, de la plage vers le large. */
+const BANDES_MER = [
+  [MER.bord, MER.bord + 1.5, 0x8fcbbd], // l'eau claire, turquoise, sur le sable (jusqu'aux chevilles)
+  [MER.bord + 1.5, MER.brisants - 0.3, 0x63aeab], // jusqu'aux genoux
+  [MER.brisants - 0.3, MER.brisants + 0.3, 0xe6efe9], // la ligne de brisants, l'écume blanche
+  [MER.brisants + 0.3, MER.brisants + 1.6, 0x3d7c84], // on perd pied
+];
+
+/**
+ * La mer, de x1 à x2, du bord de l'eau jusqu'à `zFin` (les bandes, puis l'eau profonde) : des carreaux de l'atlas
+ * (rides peintes, teintées par la couleur des sommets), une seule matière dans le lot et dans les alentours.
+ */
+function mer(ch, m, x1, x2, zFin) {
+  const carreaux = (za, zb, coul, pas = 8) => {
+    const n = Math.max(1, Math.round((x2 - x1) / pas));
+    const l = (x2 - x1) / n;
+    for (let i = 0; i < n; i++) panneau(ch, m.enseignes, R.mer, { x: x1 + (i + 0.5) * l, y: 0.04, z: (za + zb) / 2, rx: -Math.PI / 2 }, l + 0.01, zb - za + 0.01, coul);
+  };
+  for (const [za, zb, coul] of BANDES_MER) if (za < zFin) carreaux(za, Math.min(zb, zFin), coul);
+  const z0 = BANDES_MER[BANDES_MER.length - 1][1];
+  if (zFin > z0) carreaux(z0, zFin, 0x2f6874, 12);
 }
 
 // ---------- Les façades ----------
@@ -1268,25 +1335,28 @@ function plage(k) {
 }
 
 /**
- * Les bords du lot (T5) : la mer au sud, des ganivelles plantées dans les dunes à l'ouest et à l'est (ouvertes sur la
- * promenade), et au nord les murs de la cour de service, de part et d'autre de l'hôtel.
+ * Les bords du lot (T5, R52) : la mer au sud (le large, où l'on perd pied) ; des ganivelles plantées dans les dunes à
+ * l'ouest et à l'est, jusque dans l'eau claire ; celle de l'ouest barre aussi la promenade (G-2) ; celle de l'est s'ouvre
+ * sur la promenade (la sortie). Au nord, les murs de la cour de service, de part et d'autre de l'hôtel.
  */
 function bords(k) {
   const { c, m } = k;
-  // Les ganivelles : lattes de châtaignier tenues par deux fils, sur des piquets ; un peu de travers
-  const ganivelle = (x, z1, z2) => {
-    for (let z = z1; z < z2; z += 0.7) c.boite(0.05, 1.1 + c.entre(-0.1, 0.1), 0.06, 0x9a8462, { x: x + c.entre(-0.05, 0.05), y: 0.55, z, rz: c.entre(-0.08, 0.08) }, m.mat, { nuance: 0.1 });
-    for (const y of [0.3, 0.85]) c.boite(0.03, 0.03, z2 - z1, 0x5a5048, { x, y, z: (z1 + z2) / 2 }, m.tole);
-    k.b.obstacle(x, z1, x, z2, "ganivelles (bord du lot)");
+  const ganivelle = (a, b2, nature = "ganivelles (bord du lot)") => {
+    ganivelleAtlas(c, m, a, b2);
+    k.b.obstacle(a[0], a[1], b2[0], b2[1], nature);
   };
-  for (const x of [-32.6, 30.6]) {
-    ganivelle(x, x < 0 ? -6 : -4.6, 17.8);
-    ganivelle(x, 22.2, 33);
-  }
+  // L'ouest : continue, de la cour jusque dans l'eau ; on bute sur elle au bout de la promenade (G-2)
+  ganivelle([-32.6, -6], [-32.6, 17.8]);
+  ganivelle([-32.6, 17.8], [-32.6, 22.2], "ganivelle en travers de la promenade (bord du lot)");
+  ganivelle([-32.6, 22.2], [-32.6, MER.brisants + 0.5]);
+  // L'est : ouverte sur la promenade, la sortie vers la route du pont
+  ganivelle([30.6, -4.6], [30.6, 17.8]);
+  ganivelle([30.6, 21.7], [30.6, MER.brisants + 0.5]); // jointive avec la balustrade (z = 21,8)
   dune(c, -31.4, 9, 3, 9, 0.9, m.sable, COUL.sable);
   dune(c, 29.6, 27, 3, 8, 0.7, m.sable, COUL.sable);
-  // La mer : on ne s'y aventure pas
-  k.b.obstacle(-33, 33.2, 31, 33.2, "la mer (bord du lot)");
+  dune(c, -31.2, 20, 2.2, 3.4, 0.35, m.sable, COUL.sableClair);
+  // La mer : au-delà de la ligne de brisants, on perd pied (avant la 0.10 : le bord de l'eau)
+  k.b.obstacle(-33, MER.brisants, 31, MER.brisants, "le large : on perd pied (bord du lot)");
   // Les murs de la cour de service (pierre, chaperon de tuile), de part et d'autre de l'hôtel
   const murCour = (a, b2) => {
     mur(c, a, b2, { h: 2.2, ep: 0.4, couleur: COUL.cremeOmbre, mat: m.pele });
@@ -1297,6 +1367,239 @@ function bords(k) {
   murCour([-33, -6], [X0 - EP / 2, -6]);
   murCour([X1 + EP / 2, -4.6], [31, -4.6]);
   lierre(c, 24, 0, -4.35, 0, 4, 2.2, 80);
+}
+
+/** Une boîte dont toutes les faces prennent une région de l'atlas (un aplat : le bois, le fer, le blanc teinté). */
+function boiteAtlas(ch, m, r, l, h, p, couleur, pose, options = {}) {
+  const g = uvAtlas(new THREE.BoxGeometry(l, h, p), r);
+  ch.poser(g, m.enseignes, couleur, pose, { crasse: false, ...options });
+  g.dispose();
+}
+
+/**
+ * Une ganivelle de a à b (repère du chantier), peinte dans l'atlas : des pans de 2,2 m environ, un peu de travers et
+ * plus ou moins ensablés, un piquet tous les deux pans. Deux triangles par pan : on peut en planter partout.
+ */
+function ganivelleAtlas(ch, m, a, b, hauteur = 1.1) {
+  const { L, ry, dx, dz } = repereMur(a, b);
+  const n = Math.max(1, Math.round(L / 2.2));
+  const pas = L / n;
+  for (let i = 0; i < n; i++) {
+    const u = (i + 0.5) * pas;
+    const enfonce = ch.entre(0.02, 0.18);
+    panneau(ch, m.enseignes, R.ganivelle, { x: a[0] + (dx * u) / L, y: hauteur / 2 - enfonce, z: a[1] + (dz * u) / L, ry, rz: ch.entre(-0.03, 0.03), rx: ch.entre(-0.05, 0.05) }, pas + 0.03, hauteur);
+  }
+  for (let i = 0; i <= n; i += 2) {
+    const u = i * pas;
+    boiteAtlas(ch, m, R.bois, 0.08, hauteur + 0.2, 0.08, 0xb8a58a, { x: a[0] + (dx * u) / L, y: (hauteur + 0.2) / 2 - 0.12, z: a[1] + (dz * u) / L, ry, rz: ch.entre(-0.06, 0.06) });
+  }
+}
+
+/**
+ * R0-1 : le panneau de sortie de l'est, au bout de la promenade (`panneau_sortie_est`) : deux poteaux de bois, la planche
+ * peinte (2,2 × 1,1 m, tournée vers la caméra du sud-est), et au-dessus, au bout d'une potence de fer, une lanterne dont
+ * le verre luit (la matière lueur partagée avec les rais de lumière) ; sa lumière est dans `lumieres`.
+ */
+function panneauSortie(k) {
+  const { c, m } = k;
+  const P = PANNEAU_EST;
+  const L = LANTERNE_EST;
+  objetNomme(k, "panneau_sortie_est", 93, (e) => {
+    e.repere({ x: P.x, z: P.z, ry: P.ry }, () => {
+      // les poteaux (celui de droite monte porter la potence), la planche, son chapeau
+      boiteAtlas(e, m, R.bois, 0.13, 2.6, 0.13, 0xffffff, { x: -1.14, y: 1.3, z: -0.08, rz: 0.015 });
+      boiteAtlas(e, m, R.bois, 0.13, 3.4, 0.13, 0xffffff, { x: 1.14, y: 1.7, z: -0.08 });
+      boiteAtlas(e, m, R.bois, 2.3, 1.18, 0.05, 0xd9cdb8, { y: 1.85, z: -0.035 });
+      boiteAtlas(e, m, R.bois, 2.44, 0.06, 0.16, 0xffffff, { y: 2.47, z: -0.03 });
+      panneau(e, m.enseignes, R.panneauSortie, { y: 1.85, z: -0.005 }, 2.2, 1.1);
+      // la potence de fer, sa jambe de force, la lanterne (chapeau, cadre, socle, montants)
+      const yP = L.y + 0.36;
+      boiteAtlas(e, m, R.fer, 1.14 - L.u + 0.04, 0.04, 0.04, 0xffffff, { x: (1.14 + L.u) / 2, y: yP, z: 0 });
+      boiteAtlas(e, m, R.fer, 0.04, 0.04, L.v + 0.04, 0xffffff, { x: L.u, y: yP, z: L.v / 2 });
+      boiteAtlas(e, m, R.fer, 0.03, 0.03, 0.5, 0xffffff, { x: 0.93, y: yP - 0.16, z: 0, ry: Math.PI / 2, rz: 0.6 });
+      boiteAtlas(e, m, R.fer, 0.015, 0.1, 0.015, 0xffffff, { x: L.u, y: yP - 0.05, z: L.v });
+      const chapeau = uvAtlas(new THREE.ConeGeometry(0.15, 0.13, 4).rotateY(Math.PI / 4), R.fer);
+      e.poser(chapeau, m.enseignes, 0xffffff, { x: L.u, y: L.y + 0.2, z: L.v }, { crasse: false });
+      chapeau.dispose();
+      boiteAtlas(e, m, R.fer, 0.2, 0.03, 0.2, 0xffffff, { x: L.u, y: L.y + 0.13, z: L.v });
+      boiteAtlas(e, m, R.fer, 0.19, 0.04, 0.19, 0xffffff, { x: L.u, y: L.y - 0.13, z: L.v });
+      for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) boiteAtlas(e, m, R.fer, 0.02, 0.24, 0.02, 0xffffff, { x: L.u + sx * 0.085, y: L.y, z: L.v + sz * 0.085 });
+    });
+  });
+  // Le verre de la lanterne : des boîtes de lueur emboîtées (additives : elles s'ajoutent), dans le chantier du lieu
+  const lueur = matiereLueur(0xfff0c8, 0.09);
+  c.repere({ x: P.x, z: P.z, ry: P.ry }, () => {
+    for (let i = 0; i < 7; i++) {
+      const s = 1 - i * 0.09;
+      c.boite(0.15 * s, 0.22 * s, 0.15 * s, 0xffc46e, { x: L.u, y: L.y, z: L.v }, lueur, { crasse: false, nuance: 0 });
+    }
+  });
+}
+
+// ---------- Les alentours (R52) ----------
+
+/**
+ * Le décor au-delà du lot, en version légère (R0-2, G-1 à G-4) : trois matières seulement, celles du lot (le sable, la
+ * pierre, l'atlas), et aucun obstacle (rien ne s'y foule). Repère H, comme tout le reste.
+ *
+ * - à l'est (G-1) : la promenade prolongée de 35 m (dalles, bordure, balustrade dont la lisse tient encore sur 12 m),
+ *   que le sable recouvre peu à peu, puis une piste de sable tassé qui file vers la route du pont ;
+ * - à l'ouest (G-2) : derrière la ganivelle qui barre la promenade, ses dalles se perdent sous la dune ;
+ * - des deux côtés : les dunes, les oyats, des rangs de ganivelles, la plage, le sable mouillé ;
+ * - au sud (G-3) : la mer, les mêmes bandes que dans le lot (l'eau claire, la ligne de brisants), puis le large ;
+ * - au nord (G-4) : la rue de derrière, pavée, et en face de l'hôtel une rangée de maisons de bains de mer et de
+ *   boutiques fermées ; une ruelle part vers le nord entre deux maisons. L'étage (posé au sol au nord de l'hôtel, dans
+ *   le lot) reste à part : la rue commence au bord du lot (z = -28), ses façades à z = -32,5.
+ */
+function alentours(m, usure) {
+  const ch = new Chantier(2026);
+  const W = -78; // 45 m à l'ouest du lot
+  const E = 76; // 45 m à l'est
+  const N = -70;
+  const S = 98; // 60 m de mer au sud
+  const LX0 = -33;
+  const LX1 = 31;
+  const LZ0 = -28;
+  const LZ1 = 38;
+  const sol = (x1, z1, x2, z2, coul, mat, y = 0) => ch.pave(x1, y - 0.06, z1, x2, y, z2, coul, mat, { crasse: false, nuance: 0 });
+  const pave = 0x6a655c; // les pavés sombres de la rue (ceux du fond du lot)
+
+  // --- Le sol : la rue et les cours au nord, le sable des deux côtés, le sable mouillé
+  sol(W, N, E, LZ0, pave, m.dalle, -0.03);
+  sol(W, LZ0, LX0, -6, pave, m.dalle, -0.03);
+  sol(LX1, LZ0, E, -4.6, pave, m.dalle, -0.03);
+  sol(W, -32.5, E, -31, 0x8f877a, m.dalle, 0.1); // le trottoir, devant les façades
+  sol(W, -6, LX0, 31, COUL.sable, m.sable);
+  sol(LX1, -4.6, E, 31, COUL.sable, m.sable);
+  for (const [x1, x2] of [[W, LX0], [LX1, E]]) sol(x1, 31, x2, MER.bord + 0.6, COUL.sableMouille, m.sable, -0.005);
+  // les murs de la cour de service se prolongent un peu, puis s'écroulent dans le sable
+  for (const [x1, x2, z] of [[-41, LX0, -6], [LX1, 38, -4.6]]) {
+    ch.pave(x1, 0, z - 0.2, x2, 2.2, z + 0.2, COUL.cremeOmbre, m.dalle, { nuance: 0.03 });
+    ch.pave(x1 - 0.05, 2.2, z - 0.28, x2 + 0.05, 2.34, z + 0.28, 0x9a5a3c, m.dalle, { crasse: false });
+  }
+  for (const [x, z] of [[-42.4, -6], [39.4, -4.6]]) ch.boite(2.2, 1.1, 0.4, COUL.cremeOmbre, { x, y: 0.4, z, rz: x < 0 ? 0.35 : -0.35 }, m.dalle);
+
+  // --- La mer (G-3) : les bandes du lot prolongées à l'est et à l'ouest, puis le large jusqu'à l'horizon
+  mer(ch, m, W, LX0, LZ1);
+  mer(ch, m, LX1, E, LZ1);
+  for (let z = LZ1, i = 0; z < S; z += 15, i++) {
+    const coul = new THREE.Color(0x2f6874).lerp(new THREE.Color(0x24515f), Math.min(1, i / 3)).getHex();
+    const n = 10;
+    for (let j = 0; j < n; j++) panneau(ch, m.enseignes, R.mer, { x: W + (j + 0.5) * ((E - W) / n), y: 0.04, z: z + 7.5, rx: -Math.PI / 2 }, (E - W) / n + 0.01, 15.01, coul);
+  }
+
+  // --- La promenade prolongée à l'est (G-1) : 35 m, puis le sable la mange ; une piste continue vers la route du pont
+  const PE = LX1 + 35;
+  ch.pave(LX1, -0.02, 18, PE, 0.04, 22, COUL.dalleGrise, m.dalle, { crasse: false, nuance: 0 });
+  ch.pave(LX1, 0.04, 17.95, PE - 4, 0.14, 18.2, 0xd6cfbf, m.dalle, { crasse: false }); // la bordure côté dunes
+  ch.pave(LX1, 0.04, 21.66, PE - 2, 0.18, 21.94, 0xd6cfbf, m.dalle); // le pied de la balustrade
+  const lisse = LX1 + 12;
+  ch.pave(LX1, 0.9, 21.64, lisse, 1.04, 21.96, 0xe6dfcf, m.dalle, { crasse: false });
+  for (let x = LX1; x < lisse - 0.05; x += 2.56) {
+    const lx = Math.min(2.56, lisse - x);
+    for (const sgn of [-1, 1]) panneau(ch, m.enseignes, R.balustrade, { x: x + lx / 2, y: 0.54, z: 21.8 + sgn * 0.03, ry: sgn > 0 ? 0 : Math.PI }, lx, 0.72);
+  }
+  for (let x = LX1 + 2.6; x < PE - 3; x += 2.6) {
+    if (x > lisse && ch.hasard() < 0.6) continue;
+    ch.pave(x - 0.18, 0.04, 21.6, x + 0.18, x < lisse ? 1.12 : ch.entre(0.4, 1.12), 22.0, 0xe6dfcf, m.dalle);
+  }
+  // des morceaux de lisse tombés sur la plage, des balustres
+  for (let i = 0; i < 4; i++) ch.boite(ch.entre(1.6, 2.8), 0.14, 0.32, 0xe6dfcf, { x: lisse + 2 + i * 4.5 + ch.entre(-1, 1), y: 0.1, z: 22.6 + ch.entre(0, 1.6), ry: ch.entre(-0.4, 0.4), rz: 0.05 }, m.dalle);
+  // le sable qui recouvre la promenade, de plus en plus vers l'est ; puis la piste de sable tassé
+  for (let x = LX1 + 8, i = 0; x < PE + 2; x += ch.entre(3.5, 6), i++) {
+    const t = (x - LX1) / 35;
+    duneLegere(ch, m, x, 18.4 + ch.entre(0, 3), 2.5 + t * 5, 1.6 + t * 2.6, 0.12 + t * 0.45, t > 0.5 ? COUL.sable : COUL.sableClair, ch.entre(0, 3), t > 0.5);
+  }
+  ch.pave(PE - 6, 0.0, 18.3, PE, 0.07, 21.7, COUL.sableClair, m.sable, { crasse: false, nuance: 0 });
+  ch.pave(PE, -0.02, 18.6, E, 0.035, 21.4, 0xc8b086, m.sable, { crasse: false, nuance: 0 }); // la piste
+  for (const x of [PE + 3, PE + 7.5]) boiteAtlas(ch, m, R.bois, 0.12, 1.1, 0.12, 0xc8b79a, { x, y: 0.5, z: 18.2, rz: ch.entre(-0.1, 0.1) }); // des balises de bois
+
+  // --- À l'ouest (G-2), derrière la ganivelle : la promenade se perd sous la dune
+  const PO = LX0 - 13;
+  ch.pave(PO, -0.02, 18, LX0, 0.04, 22, COUL.dalleGrise, m.dalle, { crasse: false, nuance: 0 });
+  ch.pave(PO + 3, 0.04, 21.66, LX0, 0.18, 21.94, 0xd6cfbf, m.dalle);
+  for (const x of [LX0 - 2.6, LX0 - 7.8]) ch.pave(x - 0.18, 0.04, 21.6, x + 0.18, x > LX0 - 4 ? 1.12 : 0.6, 22.0, 0xe6dfcf, m.dalle);
+  duneLegere(ch, m, LX0 - 5, 19.5, 5, 3.2, 0.35, COUL.sableClair, 0.3, true);
+  duneLegere(ch, m, LX0 - 11, 20, 9, 6, 0.8, COUL.sable, -0.2, true);
+
+  // --- Les dunes, les oyats, les rangs de ganivelles, des deux côtés
+  const dunes = [
+    [-38, 4, 7, 6, 1.0], [-47, -1, 10, 7, 1.4], [-58, 8, 12, 9, 1.8], [-70, 0, 14, 10, 2.2], [-52, 14, 9, 5, 1.0],
+    [-66, 16, 10, 7, 1.4], [-42, 27, 6, 3, 0.5], [-61, 26, 9, 4, 0.7], [-74, 24, 8, 6, 1.1],
+    [36, 6, 6, 5, 0.9], [44, -1, 9, 6, 1.3], [54, 7, 12, 8, 1.7], [67, 1, 14, 10, 2.1], [48, 13, 8, 5, 0.9],
+    [63, 14, 10, 6, 1.2], [40, 27, 6, 3, 0.5], [58, 26, 9, 4, 0.7], [72, 23, 8, 6, 1.0],
+  ];
+  for (const [x, z, l, p, h] of dunes) duneLegere(ch, m, x, z, l * 1.3, p * 1.1, h * 0.6, ch.hasard() < 0.5 ? COUL.sable : COUL.sableClair, ch.entre(-0.4, 0.4), l < 10);
+  for (const [x1, z1, x2, z2] of [
+    [LX1 + 0.4, 17.8, LX1 + 16, 17.8], [LX0 - 0.4, 17.8, LX0 - 16, 17.8], [LX0 - 0.4, 22.6, LX0 - 12, 22.6],
+    [39, -2, 39, 12], [50, 3, 62, 0], [58, 10, 70, 12], [-40, -1, -40, 12], [-52, 4, -64, 1], [-60, 11, -72, 13],
+  ]) ganivelleAtlas(ch, m, [x1, z1], [x2, z2]);
+  const oyats = (x, z) => {
+    const e = ch.entre(0.7, 1.2);
+    const ry = ch.entre(0, Math.PI);
+    for (const r of [0, Math.PI / 2]) panneau(ch, m.enseignes, R.oyats, { x, y: 0.42 * e, z, ry: ry + r }, 1.2 * e, 0.9 * e);
+  };
+  const nOyats = Math.round(36 + 24 * usure);
+  for (let i = 0; i < nOyats; i++) {
+    const ouest = i % 2 === 0;
+    const x = ouest ? ch.entre(W + 2, LX0 - 1) : ch.entre(LX1 + 1, E - 2);
+    const z = ch.entre(-4, 26);
+    if (z > 16.5 && z < 23.5) continue; // pas sur la promenade
+    oyats(x, z);
+  }
+
+  // --- La rue de derrière (G-4) : les façades d'en face, une ruelle vers le nord
+  const maisons = [
+    [-78, -69, 9.5, 0xe0d2b0], [-69, -60, 12, 0xd8b4a0], [-60, -52, 8.5, 0xb9c4c4], [-52, -42, 11, 0xe8e2d4],
+    [-42, -33, 9, 0xd8b878], [-33, -24, 12.5, 0xe0d2b0], [-24, -14, 10, 0xc9b8a8], [-14, -7.5, 8, 0xb9c4c4],
+    [-4.5, 4, 11.5, 0xd8b4a0], [4, 13, 9, 0xe8e2d4], [13, 22, 12, 0xd8b878], [22, 31, 8.5, 0xb9c4c4],
+    [31, 40, 10.5, 0xe0d2b0], [40, 49, 9, 0xd8b4a0], [49, 58, 12, 0xe8e2d4], [58, 67, 8, 0xc9b8a8], [67, 76, 10, 0xd8b878],
+  ];
+  const ZF = -32.5; // le nu des façades
+  const P = 9; // la profondeur des maisons
+  maisons.forEach(([x1, x2, h, coul], i) => {
+    const l = x2 - x1 - 0.2;
+    const cx = (x1 + x2) / 2;
+    ch.pave(x1 + 0.1, 0, ZF - P, x2 - 0.1, h, ZF, coul, m.dalle, { nuance: 0.03 });
+    // la corniche, et le toit (une croupe d'ardoise ou de tuile)
+    ch.pave(x1, h - 0.3, ZF - 0.25, x2, h, ZF + 0.25, COUL.modenature, m.dalle, { crasse: false });
+    const toit = uvAtlas(new THREE.ConeGeometry(1, 1, 4, 1, true).rotateY(Math.PI / 4), R.blanc);
+    ch.poser(toit, m.enseignes, i % 3 === 1 ? 0x9a5a3c : COUL.ardoise, { x: cx, y: h + 1.6, z: ZF - P / 2, e: [l * 0.72, 3.2, P * 0.72] }, { crasse: false });
+    toit.dispose();
+    // le rez-de-chaussée : une boutique fermée ; les étages : des fenêtres peintes, des persiennes
+    const v = R.vitrines;
+    const reg = [v[0] + (i % 4) * 128, v[1], 128, v[3]];
+    panneau(ch, m.enseignes, reg, { x: cx, y: 1.7, z: ZF + 0.02 }, Math.min(l - 1, 4.6), 3.2);
+    const n = Math.max(2, Math.floor(l / 2.6));
+    for (let et = 0; 4.2 + et * 3.1 + 2 < h; et++) {
+      for (let j = 0; j < n; j++) {
+        const x = x1 + 0.1 + (l * (j + 0.5)) / n;
+        const r = ch.hasard();
+        const reg2 = r < 0.4 * usure ? R.fenB : r < 0.6 * usure ? R.fenD : r < 0.7 ? R.fenC : R.fenA;
+        panneau(ch, m.enseignes, reg2, { x, y: 4.2 + et * 3.1 + 0.95, z: ZF + 0.02 }, 1.1, 1.9);
+      }
+    }
+  });
+  // les réverbères du trottoir, éteints (l'un est tombé)
+  for (const x of [-64, -44, -24, -2, 18, 38, 58]) {
+    const tombe = x === 18;
+    boiteAtlas(ch, m, R.fer, 0.12, 4.2, 0.12, 0xffffff, tombe ? { x: x + 2, y: 0.18, z: -29.6, rz: Math.PI / 2 - 0.05, ry: 0.3 } : { x, y: 2.1, z: -31.4 });
+    if (!tombe) boiteAtlas(ch, m, R.fer, 0.9, 0.08, 0.1, 0xffffff, { x: x + 0.4, y: 4.15, z: -31.4 });
+  }
+  // la ruelle vers le nord, entre deux maisons, qui continue au-delà
+  ch.pave(-7.5, -0.02, N, -4.5, 0.02, ZF, 0x7a746a, m.dalle, { crasse: false, nuance: 0 });
+
+  const g = ch.construire();
+  g.userData.nature = "alentours (R52) : le décor au-delà du lot, sans obstacle";
+  return g;
+}
+
+const DUNE1 = new THREE.IcosahedronGeometry(1, 1);
+const DUNE0 = new THREE.IcosahedronGeometry(1, 0);
+
+/** Une dune des alentours : une seule bosse, à facettes (80 triangles, ou 20 pour les petites). */
+function duneLegere(ch, m, x, z, l, p, h, coul, ry = 0, petite = false) {
+  ch.poser(petite ? DUNE0 : DUNE1, m.sable, coul, { x, y: -h * 0.35, z, ry, e: [l / 2, h, p / 2] }, { crasse: false, nuance: 0.02 });
 }
 
 // ---------- Les intérieurs ----------
@@ -1735,8 +2038,8 @@ function aileOuest(k) {
 // le palier de l'ascenseur ; au nord (côté rue) : la lingerie, la chambre 11, l'office d'étage, la machinerie de
 // l'ascenseur. Les murs du fond (nord, ouest) montent à 3,2 m ; ceux qui sont du côté de la caméra (sud, est) et les
 // cloisons sont coupés (1 m et 1,3 m), comme une maquette en coupe. Autour, la terrasse de zinc du premier étage.
-// Six matières seulement (papier peint, parquet, carrelage, mat, satiné, atlas) : la tôle et le métal y prennent la
-// finition satinée le temps de la construction.
+// Cinq matières seulement (papier peint, parquet, mat, satiné, atlas) : la tôle, le métal et (depuis la 0.10) le
+// carrelage y prennent la finition satinée.
 
 function etage(k) {
   const { c, m, usure } = k;
@@ -1749,9 +2052,10 @@ function etage(k) {
   sol(EX0, EC2, EX1, EZS, m.parquet, 0xb39878);
   sol(EX0, EC1, 2, EC2, m.parquet, 0xa98e6c);
   sol(EX0, EZ0, 2, EC1, m.parquet, 0xb59a78);
-  sol(EX0, EC2, -17.6, EZS, m.carrelage, 0xdfe6df);
-  sol(-12, EC2, -9.6, -17.8, m.carrelage, 0xd8e2df);
-  sol(2, EC1, EX1, EZS, m.carrelage, 0xd9d2c4);
+  // (0.10 : le carrelage des salles de bains et du palier en céramique unie, satinée : un appel de dessin de moins)
+  sol(EX0, EC2, -17.6, EZS, m.satin, 0xdfe6df);
+  sol(-12, EC2, -9.6, -17.8, m.satin, 0xd8e2df);
+  sol(2, EC1, EX1, EZS, m.satin, 0xd9d2c4);
   sol(2, EZ0, EX1, EC1, m.mat, 0x8a8478);
   // La terrasse de zinc du premier étage, tout autour (avec son chéneau) : on est « en haut »
   const zinc = (x1, z1, x2, z2) => c.pave(x1, -0.02, z1, x2, 0.03, z2, COUL.zinc, m.mat, { crasse: false, nuance: 0.03 });
@@ -1974,7 +2278,8 @@ function animations(k) {
     const mat = new THREE.MeshBasicMaterial({ color: 0xe8efea, transparent: true, opacity: 0.5, depthWrite: false });
     mat.userData.sansOmbre = true;
     // la frange d'écume qui lèche le sable, et une vague plus au large
-    for (const [z0, l, pas] of [[33.25, 1, 4.2], [34.9, 0.55, 5.5]]) {
+    // la frange d'écume au bord de l'eau, et la ligne de brisants (0.10, R0-3), là où l'on perd pied
+    for (const [z0, l, pas] of [[MER.bord + 0.05, 1, 4.2], [MER.brisants - 0.05, 1.1, 3.2]]) {
       for (let x = -33; x < 30; x += pas) {
         const lg = pas * (1.15 + 0.3 * c(x));
         ch.boite(lg, 0.02, (0.35 + 0.35 * c(x * 3.1)) * l, 0xffffff, { x: x + pas / 2, y: 0.06, z: z0 + Math.sin(x * 0.45) * 0.35 * l, ry: Math.cos(x * 0.7) * 0.06 }, mat, { crasse: false, nuance: 0 });
