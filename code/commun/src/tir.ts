@@ -105,6 +105,11 @@ export interface ArmeTir {
    */
   rearmerAvec?: readonly { objet: TypeObjet; ms: number }[];
   /**
+   * Un outil qui réarme plus vite qu'au pied (le cranequin léger de l'arbalète, plan 0.10, N2-33) : s'il est dans le sac,
+   * on réarme à sa durée (ms) ; sinon au pied, en `rechargeMs`. Il ne sert pas aux armes de `rearmerAvec`.
+   */
+  plusViteAvec?: readonly { objet: TypeObjet; ms: number }[];
+  /**
    * Les valeurs décidées étoile par étoile (plan 0.8 §2.4, K40 à K56) : `degats` est le tir plein (le tir rapide en
    * garde la part déclarée). Comme pour les armes de contact (`valeurDecidee`, combat.ts).
    */
@@ -131,8 +136,9 @@ export const ARMES_TIR: ArmeTir[] = [
   // L'arbalète légère (Book 25 §6.1 et §8.3), valeurs à ★★★ (arc d'if) : armée d'avance, elle tire tout de suite ;
   // réarmer au pied prend 3 s, immobile. Un tir plein à 12 m détruit (réglage accepté le 2026-10-09).
   // Plan 0.8 §2.4 (chantier 8, K40 à K44) : égale à la lame en dégâts (sa force est la portée), moins solide (M1) ;
-  // ★★ au niveau 1 (le ressort), ★★★ par la maîtrise, l'arc d'if attend le niveau 2 (Q-0.8-3).
-  { objet: "arbalete", nom: "l'arbalète", type: "percant", porteeUtile: 15, porteeMax: 30, porteeTete: 12, degatsRapide: null, degatsPlein: 2.5, pleinMs: 300, rechargeMs: 3000, endurance: 10, bruit: 6, solidite: 100, metier: true, armeeDAvance: true, parEtoiles: { 1: { degats: 1.1, solidite: 60, etape: "H1" }, 2: { degats: 1.2, solidite: 80, etape: "H1" }, 3: { degats: 2.5, solidite: 100, etape: "L2" }, 4: { degats: 3.5, solidite: 140, etape: "L3" }, 5: { degats: 4.5, solidite: 180, etape: "plus_tard" } } },
+  // ★★ au niveau 1 (le ressort), ★★★ par la maîtrise ou l'arc d'if (niveau 2 : monter l'arbalète à arc d'if demande le
+  // cranequin léger, plan 0.10, N2-32). Le cranequin léger la réarme en 2 s au lieu de 3 (N2-33).
+  { objet: "arbalete", nom: "l'arbalète", type: "percant", porteeUtile: 15, porteeMax: 30, porteeTete: 12, degatsRapide: null, degatsPlein: 2.5, pleinMs: 300, rechargeMs: 3000, endurance: 10, bruit: 6, solidite: 100, metier: true, armeeDAvance: true, plusViteAvec: [{ objet: "cranequin_leger", ms: 2000 }], parEtoiles: { 1: { degats: 1.1, solidite: 60, etape: "H1" }, 2: { degats: 1.2, solidite: 80, etape: "H1" }, 3: { degats: 2.5, solidite: 100, etape: "L2" }, 4: { degats: 3.5, solidite: 140, etape: "L3" }, 5: { degats: 4.5, solidite: 180, etape: "plus_tard" } } },
   // L'arbalète lourde : deux ressorts retrempés (🔥), son niveau réel est ★★★★ et ses valeurs y sont données. Un
   // carreau met à terre. Trop raide pour le pied : le cranequin (4 s) ou le pied-de-biche (6 s). Niveau 3 (K46 à K49) ;
   // sa solidité reste celle d'avant la 0.8 (Q-0.8-7).

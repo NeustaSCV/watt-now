@@ -8,7 +8,7 @@
 // n'ajoute que des appels d'une ligne (Book 25 §10.4).
 
 import type { Arme } from "../../commun/src/combat.ts";
-import { encaisser, type Eteint, type ResultatCoup } from "../../commun/src/eteints.ts";
+import { encaisser, rampe, type Eteint, type ResultatCoup } from "../../commun/src/eteints.ts";
 import type { LieuJouable, Zone } from "../../commun/src/lieux.ts";
 import type { MessageServeur, ProjectileVu } from "../../commun/src/messages.ts";
 import { estCleObjet, nommer, type Inventaire } from "../../commun/src/objets.ts";
@@ -116,7 +116,7 @@ export function toucher(e: Eteint, t: Touche, de: { x: number; z: number }, zone
   if (t.genre === "tir") return encaisser(e, armeDImpact("percant", t.degats, true, "la flèche"), t.tete, 1, de, zone);
   const d = t.def;
   const arme = armeDImpact(d.type, d.degats, d.coupHeureux > 0, d.nom);
-  const auSol = e.etat === "a_terre" || e.variante === "rampant";
+  const auSol = e.etat === "a_terre" || rampe(e);
   // Une pierre sur un Éteint à terre : elle rebondit. Il faut une vraie arme pour l'achever.
   if (auSol && d.degats < 1) return "vacille";
   const resultat = encaisser(e, arme, t.heureux && !auSol, 1, de, zone);

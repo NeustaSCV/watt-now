@@ -296,6 +296,14 @@ export const FICHE = {
   },
   // La crue (G4) : objet userData.nappeRadier des tronçons « rive » et « gue » ; le jeu monte sa position.y
   nappeRadier: { z1: RAD.z1, z2: RAD.z2, x1: RAD.x1, x2: RAD.x2, y: 0.035, note: "position.y = montée de l'eau au-dessus de la nappe ordinaire (0 au repos)" },
+  // Les alentours (R52) : objet « alentours » de chaque tronçon (userData.objets.alentours), sans obstacle
+  alentours: {
+    nord: 45,
+    sud: 45,
+    ouest: 45,
+    est: 45,
+    note: "chaque tronçon porte sa bande nord et sud (45 m) ; le chemin creux le prolongement ouest, la remontée le prolongement est (45 m) : talus boisés et plateau, la rivière en amont et en aval, la route qui continue aux deux bouts",
+  },
 };
 
 // ---------- Couleurs du lieu (passées, vertes) ----------
@@ -623,15 +631,21 @@ function bords(ctx) {
   const x1 = Math.max(-100, xa);
   const x2 = Math.min(100, xb);
   const dansRiviere = (x, z) => Math.abs(x - XC(z)) < W2 + 0.3;
-  // Le pied des talus (là où le sol monte de plus d'un mètre)
+  // Le pied des talus (là où le sol monte de plus d'un mètre). Près de la rivière, le segment est rogné sur la ligne de
+  // la berge (R52) : le talus rejoint l'obstacle de la berge, sans passage entre les deux vers le bord du lot.
+  const berge = (z, xRef) => XC(z) + Math.sign(xRef - XC(z)) * (W2 - 0.2);
+  const talus = (xA, zA, xB, zB) => {
+    const a = dansRiviere(xA, zA);
+    const bb = dansRiviere(xB, zB);
+    if (a && bb) return;
+    if (a) xA = berge(zA, xB);
+    if (bb) xB = berge(zB, xA);
+    if (xB - xA > 0.05) b.obstacle(xA, zA, xB, zB, "talus boisé");
+  };
   for (let x = x1; x < x2 - 0.01; x += 2) {
     const xn = x + 2;
-    const n1 = vn(x) - 1.2;
-    const n2 = vn(xn) - 1.2;
-    const s1 = vs(x) + 1.2;
-    const s2 = vs(xn) + 1.2;
-    if (!dansRiviere(x, n1) && !dansRiviere(xn, n2)) b.obstacle(x, n1, xn, n2, "talus boisé");
-    if (!dansRiviere(x, s1) && !dansRiviere(xn, s2)) b.obstacle(x, s1, xn, s2, "talus boisé");
+    talus(x, vn(x) - 1.2, xn, vn(xn) - 1.2);
+    talus(x, vs(x) + 1.2, xn, vs(xn) + 1.2);
   }
   if (xa <= -100) {
     b.obstacle(-100, vn(-100) - 1.2, -100, zr(-100) - HL - 0.3, "talus (bout de la halte)");
@@ -784,6 +798,163 @@ function nature(ctx) {
     else pts.push([x, z, 0]);
   }
   touffes(c, pts, PALETTE.herbeSeche);
+}
+
+// ---------- Les alentours (R52) : la vallée continue au-delà du lot ----------
+//
+// Vu de haut, le lot ne doit plus flotter sur le ciel. Chaque tronçon porte sa bande nord et sa bande sud (45 m) ; le
+// chemin creux porte en plus le prolongement ouest, la remontée le prolongement est (45 m). On y voit le relief de la
+// vallée (les talus boisés, le plateau), la rivière qui vient du nord et repart au sud, la route qui continue aux deux
+// bouts. Très léger : un relief à couleur par triangle (matière du terrain), l'eau du lot, des silhouettes d'arbres
+// (une boule, un fût) ; trois appels de dessin, aucun obstacle. Tout est dans le groupe nommé « alentours ».
+
+const LOIN = 45;
+// Les rangées du relief au-delà du bord nord ou sud : serrées près du lot (raccord), lâches au loin.
+const RANGS = [0, 2.5, 5, 7.5, 10, 15, 20, 25, 32.5, 40, LOIN];
+
+/** Le relief des alentours : celui du lot, qui s'ouvre peu à peu en une vallée qui suit la rivière. */
+function hauteurAlentours(x, z) {
+  const h0 = hauteur(x, z);
+  const d = Math.abs(z) - 35;
+  if (d <= 0) return h0;
+  const t = W2 - Math.abs(x - XC(z));
+  if (t > 0) return h0; // le lit de la rivière
+  const e = -t; // la distance à la berge
+  const hv = Math.min(8.5, 1.5 + e * 0.45) * (0.85 + 0.3 * bruit(x * 0.13, z * 0.13));
+  return h0 + (hv - h0) * lisse(d / 22);
+}
+
+// Le fût d'un arbre lointain : un prisme à trois pans, sans fond (6 triangles)
+const FUT_LOIN = new THREE.CylinderGeometry(0.6, 1, 1, 3, 1, true).translate(0, 0.5, 0);
+const TONS_LOIN = [0x3d5e34, 0x47693a, 0x355330, 0x5f8540, 0x6f9448, 0x4f7a3e];
+
+function alentours(ctx) {
+  const { x0, xa, xb } = ctx;
+  const ouest = xa <= -100;
+  const est = xb >= 100;
+  const a = new Chantier(7700 + Math.round(x0));
+  // La grille : x tous les 2,5 m au droit du lot, tous les 5 m au-delà des bouts ; z serré près des bords
+  const xs = [];
+  if (ouest) for (let x = xa - LOIN; x < xa; x += 5) xs.push(x);
+  for (let x = xa; x < xb - 1e-6; x += 2.5) xs.push(x);
+  xs.push(xb);
+  if (est) for (let x = xb + 5; x <= xb + LOIN + 1e-6; x += 5) xs.push(x);
+  const zs = [...RANGS.slice(1).reverse().map((d) => -35 - d), -35];
+  if (ouest || est) for (let z = -32.5; z < 35 - 1e-6; z += 2.5) zs.push(z);
+  zs.push(...RANGS.map((d) => 35 + d));
+  const dansLeLot = (x, z) => x > Math.max(-100, xa) && x < Math.min(100, xb) && Math.abs(z) < 35;
+  const loin = (x, z) => Math.max(Math.abs(z) - 35, x < -100 ? -100 - x : x > 100 ? x - 100 : 0, 0);
+  const V = zs.map((z) => xs.map((x) => [x, hauteurAlentours(x, z), z]));
+  // Les triangles, rangés par teinte (comme le terrain du lot) ; le sous-bois s'assombrit avec la distance
+  const classes = new Map();
+  const ajouter = (cle, ...pts) => {
+    let t = classes.get(cle);
+    if (!t) classes.set(cle, (t = []));
+    for (const p of pts) t.push(p[0], p[1], p[2]);
+  };
+  const va = new THREE.Vector3();
+  const vb = new THREE.Vector3();
+  const tri = (p, q, r) => {
+    va.set(q[0] - p[0], q[1] - p[1], q[2] - p[2]);
+    vb.set(r[0] - p[0], r[1] - p[1], r[2] - p[2]);
+    const ny = va.cross(vb).normalize().y;
+    const cx = (p[0] + q[0] + r[0]) / 3;
+    const cy = (p[1] + q[1] + r[1]) / 3;
+    const cz = (p[2] + q[2] + r[2]) / 3;
+    let [coul] = classe(cx, cy, cz, ny);
+    // La berge, plus grossière qu'au lot : de la terre (pas la grève claire, qui ferait de grands triangles pâles)
+    const db = Math.abs(Math.abs(cx - XC(cz)) - W2);
+    if (db < 2.5 && cy > -0.6) coul = cy > 1.5 ? 0x6d5a40 : 0x75684f;
+    // Hors du lot, l'accotement en dents de scie ferait tache : de l'herbe (la route a sa propre bordure)
+    if (coul === C.accotement) coul = 0x7c9a50;
+    const f = Math.round(lisse(loin(cx, cz) / LOIN) * 3);
+    if (f && cy > 0.3) coul = new THREE.Color(coul).multiplyScalar(1 - 0.09 * f).getHex();
+    ajouter(coul, p, q, r);
+  };
+  for (let j = 0; j < zs.length - 1; j++) {
+    for (let i = 0; i < xs.length - 1; i++) {
+      if (dansLeLot((xs[i] + xs[i + 1]) / 2, (zs[j] + zs[j + 1]) / 2)) continue;
+      const v00 = V[j][i];
+      const v10 = V[j][i + 1];
+      const v01 = V[j + 1][i];
+      const v11 = V[j + 1][i + 1];
+      if ((i + j) % 2) {
+        tri(v00, v01, v10);
+        tri(v10, v01, v11);
+      } else {
+        tri(v00, v01, v11);
+        tri(v00, v11, v10);
+      }
+    }
+  }
+  // Le pourtour extérieur : une coupe de terre, comme les tranches du lot
+  const coupe = (p, q) => {
+    const p2 = [p[0], -6, p[2]];
+    const q2 = [q[0], -6, q[2]];
+    ajouter(0x4a4537, p, p2, q, q, p2, q2, p, q, p2, q, q2, p2);
+  };
+  const nz = zs.length - 1;
+  const nx = xs.length - 1;
+  for (let i = 0; i < nx; i++) {
+    coupe(V[0][i], V[0][i + 1]);
+    coupe(V[nz][i], V[nz][i + 1]);
+  }
+  if (ouest) for (let j = 0; j < nz; j++) coupe(V[j][0], V[j + 1][0]);
+  if (est) for (let j = 0; j < nz; j++) coupe(V[j][nx], V[j + 1][nx]);
+  // La route qui continue hors du lot, aux deux bouts : l'asphalte, sa bordure rongée, l'herbe au milieu
+  const route = (x1, x2) => {
+    for (let x = x1; x < x2 - 1e-6; x += 5) {
+      const xe = Math.min(x2, x + 5);
+      const z1 = zr(x);
+      const z2 = zr(xe);
+      const bande = (o1, o2, y, coul) => ajouter(coul, [x, y, z1 + o1], [x, y, z1 + o2], [xe, y, z2 + o1], [xe, y, z2 + o1], [x, y, z1 + o2], [xe, y, z2 + o2]);
+      bande(-HL, HL, 0.03, C.asphalte);
+      bande(-HL - 0.25, -HL, 0.025, 0x77766a);
+      bande(HL, HL + 0.25, 0.025, 0x77766a);
+      if (hache(Math.round(x), 5) < 0.6) bande(-0.25, 0.25, 0.034, 0x6f8448);
+    }
+  };
+  if (ouest) route(xa - LOIN, -100);
+  if (est) route(100, xb + LOIN);
+  for (const [coul, pos] of classes) {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+    g.computeVertexNormals();
+    a.poser(g, ctx.M.terrain, coul, {}, { crasse: false, nuance: 0 });
+    g.dispose();
+  }
+  // La rivière qui vient du nord et repart au sud : la même eau que dans le lot
+  const ca = { ...ctx, c: a };
+  nappeRiviere(ca, ctx.M.eau, -35 - LOIN, -35, Y_AMONT, 11.3, 6, 0x6f8c7a, 5);
+  nappeRiviere(ca, ctx.M.eau, 35, 35 + LOIN, Y_AVAL, 10.7, 3, 0x84a092, 5);
+  // Des silhouettes d'arbres : denses près des bords (elles prolongent la forêt des talus), plus rares au loin
+  const A = aleatoire(9100 + Math.round(x0));
+  const x1 = xs[0];
+  const x2 = xs[xs.length - 1];
+  const n = Math.round(((x2 - x1) * 2 * LOIN + (ouest || est ? LOIN * 70 : 0)) / (ouest || est ? 80 : 35));
+  for (let k = 0; k < n; k++) {
+    const x = x1 + A() * (x2 - x1);
+    const z = (A() < 0.5 ? -1 : 1) * (A() * (35 + LOIN));
+    const d = loin(x, z);
+    if (dansLeLot(x, z) || d < 0.5 || d > LOIN - 2) continue;
+    if (A() > 0.3 + 0.7 * (1 - d / LOIN)) continue;
+    if (Math.abs(x - XC(z)) < W2 + 1.5 || distRoute(x, z) < HL + 2.5) continue;
+    const y = hauteurAlentours(x, z);
+    if (y < 0.6) continue;
+    const h = 8 + A() * 6;
+    const s = h * (0.2 + A() * 0.06);
+    const r = 0.12 + h * 0.02;
+    a.poser(FUT_LOIN, ctx.M.mat, 0x4c4236, { x, y: y - 0.3, z, ry: A() * 3, e: [r, h * 0.5 + 0.3, r] }, { crasse: false, nuance: 0.05 });
+    a.poser(BOULE, ctx.M.mat, TONS_LOIN[Math.floor(A() * TONS_LOIN.length)], { x, y: y + h * 0.66, z, ry: A() * 3, e: [s, s * 1.35, s] }, { crasse: false, nuance: 0.08 });
+  }
+  if (a.vide) return;
+  const g = a.construire();
+  g.name = "alentours";
+  g.userData.nom = "alentours";
+  g.traverse((o) => {
+    if (o.isMesh) o.castShadow = false;
+  });
+  ctx.b.ajouter(g);
 }
 
 // ---------- Les murs à deux étages (bas dans le principal, haut dans une couche) ----------
@@ -1958,6 +2129,7 @@ export function creer({ usure = 0.7, carte = "chemin", miroir = false } = {}) {
   route(ctx);
   bords(ctx);
   nature(ctx);
+  alentours(ctx);
   pont(ctx);
   radier(ctx);
   bac(ctx);
@@ -1979,6 +2151,8 @@ export function creer({ usure = 0.7, carte = "chemin", miroir = false } = {}) {
   // Les objets que le jeu anime : le radeau du bac (tronçon « rive ») et la nappe du radier (tronçons « rive » et « gue »)
   groupe.userData.radeau = groupe.getObjectByName("radeau") ?? null;
   groupe.userData.nappeRadier = groupe.getObjectByName("nappeRadier") ?? null;
+  // Les alentours (R52) : le décor au-delà du lot, que le jeu peut montrer ou cacher
+  groupe.userData.objets = { ...(groupe.userData.objets ?? {}), alentours: groupe.getObjectByName("alentours") ?? null };
   return miroir ? miroiter(groupe) : groupe;
 }
 

@@ -106,6 +106,10 @@ export const QUALITES_OBJETS: Partial<Record<TypeObjet, Partial<Record<Qualite, 
   marteau_fortune: { marteler: 2 },
   coin_bois: { fendre: 1 },
   baton_fouir_durci: { creuser: 1 },
+  // 0.10 (chantier B) : les deux outils-clés du niveau 2, qui donnent Raboter et Souder (les qualités sont plus haut,
+  // déclarées dès la 0.8). Le fer à souder n'a pas de version pauvre (exception à R23).
+  rabot: { raboter: 1 },
+  fer_souder: { souder: 1 },
 };
 
 /**
@@ -172,7 +176,13 @@ export type TypeInstallation =
   | "tour_perche"
   // Le niveau 1 (plan 0.8, chantier 6) : déclarés d'avance par le chantier 1.
   | "ratelier_outils"
-  | "torche_plantee";
+  | "torche_plantee"
+  // Les meubles nouveaux du niveau 2 (plan 0.10, chantier D ; meubles-neufs.ts).
+  | "cuiseur_solaire"
+  | "bacs_tri"
+  | "rampe_led"
+  | "moulin_jerricans"
+  | "arbalete_garde";
 
 export const NOMS_INSTALLATIONS: Record<TypeInstallation, string> = {
   etabli: "établi",
@@ -201,10 +211,15 @@ export const NOMS_INSTALLATIONS: Record<TypeInstallation, string> = {
   tour_perche: "tour à perche",
   ratelier_outils: "râtelier à outils",
   torche_plantee: "torche plantée",
+  cuiseur_solaire: "cuiseur solaire",
+  bacs_tri: "bacs de tri",
+  rampe_led: "rampe de LED",
+  moulin_jerricans: "moulin de jerricans",
+  arbalete_garde: "arbalète de garde",
 };
 
 /** Les petites installations : on peut les poser plus près des autres (un lit à côté de l'abri, une alarme le long du chemin). */
-export const PETITES_INSTALLATIONS: readonly string[] = ["lit_branchages", "torche_plantee", "alarme_boites", "alarme_electrique", "collet", "plaque_choc", "machoires_fortune", "piege_machoires"];
+export const PETITES_INSTALLATIONS: readonly string[] = ["lit_branchages", "torche_plantee", "alarme_boites", "alarme_electrique", "collet", "plaque_choc", "machoires_fortune", "piege_machoires", "arbalete_garde"];
 
 /** Intensité du travail (Book 02 §2), en kcal par heure de jeu. */
 export const INTENSITES = { legere: 150, moyenne: 250, lourde: 350, tres_lourde: 500 } as const;

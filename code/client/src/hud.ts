@@ -11,7 +11,7 @@ import type { VueProgression } from "../../commun/src/progression.ts";
 import { SILHOUETTES_DEPLIEES, enTete, etatCle, nouveautesParOnglet, ongletsVides, planFabrication, recetteVisible, sousTitre, type PlanFabrication } from "./fabrication-arbre.ts";
 import { ACTIONS, RESERVEES, assigner, avecTouches, nomDe, nomTouche, retablir, surChangement, type Action } from "./touches.ts";
 import { PanneauAide } from "./aide.ts";
-import { CAPACITES, NOMS_BATTERIES, type Charges } from "../../commun/src/energie.ts";
+import { CAPACITES, NOMS_BATTERIES, SOLEIL_PAR_TEMPS, TYPES_BATTERIES, facteurHeureSoleil, whParBeauJour, type Charges } from "../../commun/src/energie.ts";
 import { ARMES, NOMS_BLESSURES, PLAFOND_FORTUNE, RESISTANCE_TORSE, SEUIL_ABIMEE, armeDeCle, capaciteChargeArme, caracteristiquesArme, estArme, etatArme } from "../../commun/src/combat.ts";
 import type { EchangeVu, FeuVu, GesteRepriseArme, InstallationVue, OffreEchange, OperationComptoir, OperationEchange, Personne, RapportBase, SanteVue, Verbe, VueComptoir, WottsVus } from "../../commun/src/messages.ts";
 import {
@@ -22,6 +22,7 @@ import {
   VOIE_SURFACE,
   capaciteCoffre,
   contenanceRecuperateur,
+  choisirCout,
   coutPour,
   effetsFeu,
   etapeFeu,
@@ -40,10 +41,11 @@ import { texteAVenir } from "../../commun/src/lignees.ts";
 import { enteteFiche, piedFiche } from "./fiche-examiner.ts";
 import { brancherFicheBanc, htmlFicheBanc, type GesteBanc } from "./fiche-banc.ts";
 import { brancherCoffre, enteteCoffre } from "./panneau-coffre.ts";
-import { choisirFacon } from "../../commun/src/replis.ts";
+import { CaissePeage } from "./panneau-peage.ts";
+import type { Passage } from "../../commun/src/peage.ts";
 import { texteLieu, type Alentours } from "../../commun/src/lieu-recette.ts";
 import { reprise, seReprend, type Reprise } from "../../commun/src/evolution-armes.ts";
-import { PRIX_RETRAIT, formaterWotts, prixAchatExemplaire, prixVenteCle } from "../../commun/src/economie.ts";
+import { PRIX_RETRAIT, estObjetCle, formaterWotts, prixAchatExemplaire, prixVenteCle } from "../../commun/src/economie.ts";
 import { detailEnergieGrise } from "../../commun/src/recettes.ts";
 import type { TypeBatterie } from "../../commun/src/energie.ts";
 import type { Inventaire, TypeObjet } from "../../commun/src/objets.ts";
@@ -84,6 +86,7 @@ import type { Commande } from "./entrees.ts";
 import { icone, type Pictogramme } from "./icones.ts";
 import { examenInstallation, type Propositions } from "./interaction.ts";
 import { ORDRE_NIVEAUX, changerQualite, type NiveauQualite } from "./rendu/qualite.ts";
+import { brancherBoutonTenu, etatJaugeCoup } from "./jauge-coup.ts";
 import { COMPOSANTS, DEMONTAGE, NOMS_FAMILLES_VESTIGES, VESTIGES, estOrdure, type FamilleVestige } from "../../commun/src/vestiges.ts";
 
 /** Ordre d'affichage dans le sac : à boire et à manger, matériaux, pièces, outils, lumières. */
@@ -210,7 +213,8 @@ function lireCarnetOuvert(): boolean {
 
 /** L'importance d'un message : quand la pile est pleine, le moins important part en premier. */
 // « examen » : le texte d'Examiner (0.8.2, Q9), montré en entier ; aussi important qu'une aide.
-const RANG_MESSAGE = { indice: 0, "": 1, aide: 2, examen: 2, lecon: 3 } as const;
+// Le guidage 0.10 (client/src/guidage.ts) : une pensée compte comme une information, un écriteau lu comme un examen.
+const RANG_MESSAGE = { indice: 0, "": 1, pensee: 1, aide: 2, examen: 2, ecriteau: 2, lecon: 3 } as const;
 
 /** Le type de dégât, en une phrase (Book 23 §4.2). */
 const TYPES_DEGATS = {
@@ -317,6 +321,8 @@ export class Hud {
   private readonly sante: HTMLElement;
   private readonly sommeilJauge: HTMLElement;
   private dernierTemps = "";
+  /** L'heure de jeu affichée : la fiche du banc dit ce que donne le soleil en ce moment (plan 0.10, chantier D). */
+  private heureVue = 12;
   private readonly endurance: HTMLElement;
   private readonly blessures: HTMLElement;
   private derniereSante = "";
@@ -594,14 +600,8 @@ export class Hud {
     lier(".r-carte", "carte");
     if (tactile) {
       // A se juge au relâchement en combat (appui court, ou maintenu pour viser la tête).
-      const a = q(".b-A");
-      a.addEventListener("pointerdown", (e) => {
-        e.preventDefault();
-        a.setPointerCapture(e.pointerId);
-        boutonA.appuyer();
-      });
-      a.addEventListener("pointerup", () => boutonA.relacher());
-      a.addEventListener("pointercancel", () => boutonA.relacher());
+      // Branché pour l'iPhone (client/src/jauge-coup.ts) : ni loupe ni menu à l'appui long, relâché si le système reprend le doigt.
+      brancherBoutonTenu(q(".b-A"), boutonA);
       // Lancer (0.6) : comme A, maintenir puis relâcher (l'arc de visée paraît, l'arc se bande).
       const l = q(".b-lancer");
       l.addEventListener("pointerdown", (e) => {
@@ -672,6 +672,7 @@ export class Hud {
     }
     this.redessiner();
     if (this.coffre) this.dessinerCoffre();
+    this.caisse?.dessiner();
     this.majFiche();
   }
 
@@ -692,6 +693,7 @@ export class Hud {
    * Le compte des jours de jeu (24 min chacun) passe dans l'infobulle.
    */
   heure(jour: number, heure: number, date = ""): void {
+    this.heureVue = heure;
     this.horloge.textContent = date ? `${date} · ${formaterHeure(heure)}` : `Jour ${jour} · ${formaterHeure(heure)}`;
     this.horloge.title = `Jour de jeu ${jour}. Le calendrier avance d'un jour toutes les 1 h 50 réelles : un an dure 4 semaines.`;
   }
@@ -704,6 +706,23 @@ export class Hud {
   }
 
   // ---------- Actions ----------
+
+  /** La part de l'anneau de A déjà posée (pour ne toucher au style que quand elle change). */
+  private jaugeVue = -1;
+
+  /**
+   * La jauge du coup appuyé (0.10) : l'anneau autour du bouton A suit la charge (0 à 1, `Entrees.chargeA`) ; plein, il dit
+   * « coup à la tête prêt ». À 0 (relâché, ou hors du mode Combat), il disparaît. Rien au clavier (pas de bouton A).
+   */
+  jaugeCoup(charge: number): void {
+    if (!this.boutonA) return;
+    const { part, pret } = etatJaugeCoup(charge);
+    if (part === this.jaugeVue) return;
+    this.jaugeVue = part;
+    this.boutonA.style.setProperty("--charge", String(part));
+    this.boutonA.classList.toggle("en-charge", part > 0);
+    this.boutonA.classList.toggle("pret", pret);
+  }
 
   /** `tenu` : le geste en cours se fait en tenant A (son libellé, pour le bouton tactile). */
   propositions(p: Propositions, occupe: boolean, tenu: string | null = null): void {
@@ -971,11 +990,12 @@ export class Hud {
         .filter(([t, n]) => n > 0 && estCleObjet(t))
         .map(([type, n]) => {
           const prix = prixVenteCle(type);
-          return ligne(type, `<span class="prix">${formaterWotts(prix)}</span><button type="button" data-op="acheter" data-objet="${type}" data-n="1" ${w.poche + 1e-6 >= prix ? "" : "disabled"}>Acheter</button>`, `en stock : ${n}`);
+          // Un objet-clé ne manque jamais (plan 0.10, chantier B) : pas de stock à montrer.
+          return ligne(type, `<span class="prix">${formaterWotts(prix)}</span><button type="button" data-op="acheter" data-objet="${type}" data-n="1" ${w.poche + 1e-6 >= prix ? "" : "disabled"}>Acheter</button>`, estObjetCle(typeDe(type)) ? "toujours disponible" : `en stock : ${n}`);
         });
       corps = `<ul class="lignes">${lignes.join("") || "<li class=\"vide\">Rien en stock.</li>"}</ul>`;
     } else if (this.onglet === "energie") {
-      const batteries: TypeBatterie[] = ["petite_batterie", "batterie_voiture"];
+      const batteries = TYPES_BATTERIES;
       const lignes = batteries
         .filter((b) => (this.inventaire[b] ?? 0) > 0)
         .map((b) => {
@@ -1237,6 +1257,7 @@ export class Hud {
     }
     if (s.convalescence) puces.push(`<span class="puce-blessure calme">Convalescence</span>`);
     if (s.intoxique) puces.push(`<span class="puce-blessure saigne">Empoisonné</span>`);
+    if (s.nauseeux) puces.push(`<span class="puce-blessure">Nausée</span>`);
     this.blessures.innerHTML = puces.join("");
     this.blessures.hidden = puces.length === 0;
   }
@@ -1317,7 +1338,7 @@ export class Hud {
    * doublon (un message déjà affiché est relancé, avec « ×2 »), et quand la pile est pleine on retire d'abord le moins
    * important (leçon > aide > info > indice). Une même phrase d'indice ne revient pas avant 90 s.
    */
-  message(texte: string, genre: "" | "aide" | "lecon" | "indice" | "examen" = ""): void {
+  message(texte: string, genre: "" | "aide" | "lecon" | "indice" | "examen" | "pensee" | "ecriteau" = ""): void {
     const maintenant = performance.now();
     if (genre === "indice") {
       const vu = this.indicesVus.get(texte);
@@ -1325,7 +1346,8 @@ export class Hud {
       this.indicesVus.set(texte, maintenant);
     }
     // Le texte d'Examiner, en entier (0.8.2, Q9) : le temps de le lire, ≈ 15 caractères par seconde.
-    const duree = genre === "examen" ? dureeExamen(texte) : { "": 4000, indice: 5000, aide: 8000, lecon: 9000 }[genre];
+    // Une pensée, un écriteau (le guidage 0.10) : le temps de les lire, comme Examiner.
+    const duree = genre === "examen" || genre === "pensee" || genre === "ecriteau" ? dureeExamen(texte) : { "": 4000, indice: 5000, aide: 8000, lecon: 9000 }[genre];
     const present = [...this.messages.children].find((e) => (e as HTMLElement).dataset.texte === texte) as HTMLElement | undefined;
     if (present) {
       const n = Number(present.dataset.fois ?? "1") + 1;
@@ -1474,6 +1496,7 @@ export class Hud {
     const avant = [this.sac, this.fabrication, this.guichet].some((p) => !p.hidden);
     for (const p of [this.sac, this.fabrication, this.guichet, this.panneauEchange, this.panneauCoffre, this.panneauFiche, ...this.panneauCommandes]) p.hidden = !(oui && p === panneau);
     if (panneau !== this.panneauCoffre || !oui) this.coffre = null;
+    if (panneau !== this.panneauCoffre || !oui) this.caisse = null;
     if (panneau !== this.panneauFiche || !oui) this.fiche = null;
     if (oui || avant) this.surPanneau?.(oui);
     // Un échange en cours ne se ferme que par ses propres boutons : sa fenêtre revient quand on ferme les autres.
@@ -2042,6 +2065,31 @@ export class Hud {
     });
   }
 
+  // ---------- La caisse du péage (0.10, chantier H : le sac en mode « donner », client/src/panneau-peage.ts) ----------
+
+  private caisse: CaissePeage | null = null;
+
+  /** On touche la caisse : l'écran du coffre s'ouvre en mode « donner » ; « Payer » appelle `payer`. */
+  ouvrirCaisse(passage: Passage, payer: (objets: Inventaire) => void): void {
+    this.ouvrir(this.panneauCoffre, true);
+    this.caisse = new CaissePeage(this.panneauCoffre, passage, () => this.inventaire, payer, () => this.ouvrir(this.panneauCoffre, false));
+    this.caisse.dessiner();
+  }
+
+  /** La caisse ouverte, s'il y en a une (pour la fermer quand on s'en éloigne). */
+  get caisseOuverte(): boolean {
+    return this.caisse !== null;
+  }
+
+  /** La réponse du péage : payé, la caisse se ferme ; refusé, on garde ce qu'on avait choisi. */
+  reponseCaisse(ouvert: boolean): void {
+    this.caisse?.reponse(ouvert);
+  }
+
+  fermerCaisse(): void {
+    if (this.caisse) this.ouvrir(this.panneauCoffre, false);
+  }
+
   // ---------- La fiche d'un feu ou d'une installation (Book 24 : améliorer sa base, sur place) ----------
 
   /** L'état à jour de ce que montre la fiche (tenu par main.ts). */
@@ -2147,9 +2195,9 @@ export class Hud {
     bloque: string | null = null,
     gratuit = false,
   ): string {
-    // Avec la clé, ou par un repli (plan 0.8 §2.2 ; commun/src/replis.ts) : la première façon possible.
-    const { facon, cout, payable, outils: facteur } = choisirFacon(this.inventaire, { duree: 0, ...e }, this.famille, (q) => multiplicateurQualites(this.outils, q));
-    const outils = facteur !== null;
+    // Avec sa clé, et rien d'autre (plan 0.10, chantier B : plus de repli, à aucun niveau).
+    const { cout, payable } = choisirCout(this.inventaire, e.couts, e, this.famille);
+    const outils = multiplicateurQualites(this.outils, e.qualites) !== null;
     const possible = (gratuit || (payable && outils)) && !bloque;
     const badge = e.famille ? ` <span class="badge-famille ${e.famille}" title="Un niveau de métier">${NOMS_FAMILLES[e.famille]}${e.famille !== this.famille ? " · ×1,5" : ""}</span>` : "";
     // Plan 0.8, chantier 13 : la clé a sa ligne et son indice en deux temps ; elle ne se répète pas dans ce qui manque
@@ -2157,7 +2205,7 @@ export class Hud {
     const sansCle = e.cle?.objet ? (Object.fromEntries(Object.entries(cout).filter(([t]) => t !== e.cle!.objet)) as Inventaire) : cout;
     const manque =
       !possible && !bloque && !gratuit
-        ? this.listeManqueRepliee({ id: "fiche", lieu: { genre: "main" }, categorie: "batir", nom: titre, produit: { objet: "branche", quantite: 0 }, ingredients: sansCle, qualites: facon.qualites, duree: 0, intensite: "legere", famille: "tous" })
+        ? this.listeManqueRepliee({ id: "fiche", lieu: { genre: "main" }, categorie: "batir", nom: titre, produit: { objet: "branche", quantite: 0 }, ingredients: sansCle, qualites: e.qualites, duree: 0, intensite: "legere", famille: "tous" })
         : "";
     return `
       <article class="etape ${possible ? "possible" : ""}">
@@ -2165,7 +2213,6 @@ export class Hud {
           <small>${texte}</small>
           ${this.ligneCle(e)}
           ${gratuit ? "" : this.pucesCout(e.couts, e.qualites, e.famille)}
-          ${gratuit ? "" : (e.cle?.replis ?? []).map((r) => `<small class="repli${facon.repli === r ? " retenu" : ""}">${r.note}</small>`).join("")}
           ${bloque ? `<small class="bloque">${bloque}</small>` : manque}
         </div>
         <button type="button" data-verbe="${verbe}" ${possible ? "" : "disabled"}>${bouton}</button>
@@ -2314,7 +2361,7 @@ export class Hud {
     // Un meuble de famille sans sa pièce (plan 0.8 §9.2) : la clé de son niveau reste à trouver, ou à poser dessus.
     const piece =
       etape?.cle && pieceAPoser(i)
-        ? `<h3>Sa pièce, à poser dessus</h3><article class="etape apres"><div class="corps">${this.ligneCle(etape)}${(etape.cle.replis ?? []).map((r) => `<small class="repli">En attendant : ${r.note.charAt(0).toLowerCase()}${r.note.slice(1)}</small>`).join("")}</div></article>`
+        ? `<h3>Sa pièce, à poser dessus</h3><article class="etape apres"><div class="corps">${this.ligneCle(etape)}</div></article>`
         : "";
 
     const plein = i.type === "coffre" && Object.values(i.etat.contenu ?? {}).some((n) => (n ?? 0) > 0);
@@ -2328,7 +2375,7 @@ export class Hud {
       ${enteteFiche(nom)}
       ${l ? `<p class="niveau">Niveau ${niveau}${etat ? ` · ${etat}` : ""}</p>` : etat ? `<p class="niveau">${etat}</p>` : ""}
       <p class="examen">${examen}</p>
-      ${i.type === "banc_recharge" ? htmlFicheBanc(i, this.inventaire, this.charges, this.chargeArmes) : ""}
+      ${i.type === "banc_recharge" ? htmlFicheBanc(i, this.inventaire, this.charges, this.chargeArmes, this.dernierTemps ? (whParBeauJour() / 24) * facteurHeureSoleil(this.heureVue) * SOLEIL_PAR_TEMPS[this.dernierTemps as Temps] : undefined) : ""}
       ${piece}
       ${ameliorer ? `<h3>Améliorer, sur place</h3>${ameliorer}` : ""}
       <div class="defaire">${defaire}</div>

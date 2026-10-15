@@ -8,6 +8,8 @@ import { definitionVestige, type FamilleVestige } from "../../commun/src/vestige
 import { DESSINS_METIER } from "./icones-metier.ts";
 import { DESSINS_DECHETS } from "./icones-dechets.ts";
 import { DESSINS_NIVEAU1 } from "./icones-niveau1.ts";
+import { DESSINS_NIVEAU2 } from "./icones-niveau2.ts";
+import { DESSINS_MEUBLES_NEUFS } from "./icones-meubles-neufs.ts";
 
 const ENCRE = "#3b2a1e";
 const T = `stroke="${ENCRE}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"`;
@@ -878,13 +880,15 @@ export function estDessinee(type: Pictogramme): boolean {
   return dessinPropre(type) !== undefined;
 }
 
-/** Le dessin propre d'un pictogramme, s'il en a un (lot 1, métier, niveau 1 de la 0.8, lot 2 des déchets). */
+/** Le dessin propre d'un pictogramme, s'il en a un (lot 1, métier, niveau 1 de la 0.8, niveau 2 de la 0.10, lot 2 des déchets). */
 function dessinPropre(type: Pictogramme): string | undefined {
   return (
     DESSINS[type] ??
     DESSINS_VESTIGES[type] ??
     DESSINS_METIER[type] ??
     (Object.hasOwn(DESSINS_NIVEAU1, type) ? DESSINS_NIVEAU1[type] : undefined) ??
+    (Object.hasOwn(DESSINS_NIVEAU2, type) ? DESSINS_NIVEAU2[type] : undefined) ??
+    (Object.hasOwn(DESSINS_MEUBLES_NEUFS, type) ? DESSINS_MEUBLES_NEUFS[type] : undefined) ??
     (Object.hasOwn(DESSINS_DECHETS, type) ? DESSINS_DECHETS[type] : undefined)
   );
 }

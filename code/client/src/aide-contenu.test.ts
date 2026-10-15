@@ -90,10 +90,12 @@ test("0.8 aide : « Fabriquer » — les recettes liées aux meubles, « Tu y pe
   assert.doesNotMatch(t, /plus lentement \(« outil de fortune »\)/);
 });
 
-test("0.8 aide : « Améliorer sa base » — la pièce de dehors, l'indice, les replis, les outils de fortune, le râtelier", () => {
+test("0.8 aide : « Améliorer sa base » — la pièce de dehors, l'indice, le Comptoir, les outils de fortune, le râtelier", () => {
   const t = rubrique("ameliorer");
-  // 0.8.2 (R9) : plus de « clé » ; la pièce de dehors.
-  for (const m of [/une pièce de dehors/i, /indice/, /Où chercher/, /repli/, /outils de fortune/, /râtelier/]) assert.match(t, m);
+  // 0.8.2 (R9) : plus de « clé » ; la pièce de dehors. Plan 0.10 (chantier L) : plus de repli, à aucun niveau ; le
+  // Comptoir la vend, à qui connaît son lieu.
+  for (const m of [/une pièce de dehors/i, /indice/, /Où chercher/, /Comptoir/, /outils de fortune/, /râtelier/]) assert.match(t, m);
+  assert.doesNotMatch(t, /(?<!\p{L})replis?(?!\p{L})/u, "plus de repli (« replié » se dit encore de l'indice)");
   // « Je suis coincé » renvoie à la fiche du meuble et à ses indices.
   const q = rubrique("questions");
   assert.match(q, /Un meuble ne monte pas/);
@@ -135,4 +137,37 @@ test("0.9 aide (chantier F) : à terre, il remue encore ; détruit, il ne bouge 
   const tout = RUBRIQUES_AIDE.map(texte).join("\n");
   assert.match(tout, /À terre, il remue encore : achève-le\./);
   assert.match(tout, /Détruit, il ne bouge plus, et pâlit\./);
+});
+
+// Plan 0.10, chantier L : l'aide du niveau 2. Comment, jamais où est le rare ; rien de ce que le phare fait venir.
+
+test("0.10 aide : plus aucun repli nulle part ; quatre routes ; la côte, l'hôtel et le phare ont leur rubrique", () => {
+  const tout = RUBRIQUES_AIDE.map(texte).join("\n");
+  assert.doesNotMatch(tout, /(?<!\p{L})replis?(?!\p{L})/iu);
+  const ids = RUBRIQUES_AIDE.map((r) => r.id);
+  for (const id of ["cote", "hotel", "phare"]) assert.ok(ids.includes(id), id);
+  assert.match(rubrique("voyager"), /Quatre routes/);
+  assert.match(rubrique("voyager"), /deux routes vers la côte/);
+  assert.match(rubrique("questions"), /ton Grand Hôtel et ton phare/);
+});
+
+test("0.10 aide : le péage (douze wotts, au prix du Comptoir, à l'aller seulement), la marée, le Noyé, les bras pris", () => {
+  const c = rubrique("cote");
+  for (const m of [/douze wotts/, /prix où le Comptoir le reprend/, /ce qu'il refuse ne compte pas/, /une heure réelle/, /on ne paie qu'à l'aller/, /marée/, /moitié du temps/, /échelle peinte/]) assert.match(c, m);
+  const e = rubrique("eteints");
+  for (const m of [/Noyés/, /ne les fait pas tomber/, /la tête, ou les jambes/, /crève/, /nausée/]) assert.match(e, m);
+  const b = rubrique("commandes");
+  assert.match(b, /Les bras pris/);
+  assert.match(b, /on ne frappe pas\*\*, même en Combat/);
+  assert.match(b, /\{agir\} \*\*pose\*\*/);
+});
+
+test("0.10 aide : l'hôtel et le phare disent comment, sans divulgâcher (ni cargo, ni épave, ni où sont les objets-clés)", () => {
+  const h = rubrique("hotel");
+  for (const m of [/ascenseur/, /carte d'une chambre/, /borne/, /chambre 7/, /que dans ce sens-là/, /24 h/]) assert.match(h, m);
+  const p = rubrique("phare");
+  for (const m of [/trois mètres/, /pétrole/, /ne sert qu'à la nuit tombée/, /corne/, /une fois par nuit/, /que dans ce sens-là/, /24 h/]) assert.match(p, m);
+  const tout = [h, p, rubrique("cote")].join("\n");
+  for (const secret of [/cargo/i, /épave/i, /conteneur/i, /naufrag/i, /s'échoue/i, /lingerie/i, /machinerie/i, /suite/i, /tôles/i, /couvertures de laine/i, /lanterne-tempête/i, /roulements/i, /fer à souder/i, /porte de four/i, /jerrican/i, /rabot/i, /cloche/i, /soufflet/i, /tête du robot/i, /escabeau/i])
+    assert.doesNotMatch(tout, secret);
 });

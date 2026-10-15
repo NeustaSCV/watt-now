@@ -8,6 +8,7 @@ import { ACIER, Assemblage, BOIS, CORDE, NOIR, ROUILLE_SOMBRE, SOL_PLAT, V, V3, 
 import { batterieVoiture, modulePanneau, roueVelo } from "./pieces.ts";
 import { frene, haieIfs, ifSombre } from "./essences.ts";
 import { fusionnerStatique } from "./fusion.ts";
+import { vracPont } from "./ressources-pont.ts";
 
 /**
  * Les modèles partagés des ressources dessinées en lots (lots.ts : une géométrie et un matériau par type, un appel
@@ -495,6 +496,13 @@ export class VueRessource {
         for (const m of c.maillages(ombre)) this.objet.add(m);
         break;
       }
+      // 0.10, chantier H : le vrac de la route du pont (rendu/ressources-pont.ts) ; le reste est dessiné par le modèle.
+      case "pont_cuivre":
+      case "pont_resistances":
+      case "pont_cellules":
+      case "pont_huile":
+        for (const m of vracPont(donnees.type, donnees.id, aleat, ombre)) this.objet.add(m);
+        break;
     }
     // Ce qu'on montre ou cache à part (fruits, fleurs, contenu fouillé) reste un groupe à part, même fusionné.
     for (const g of [this.contenu, this.fleurs, this.verts]) if (g) g.userData.garder = true;

@@ -83,8 +83,10 @@ test("équilibre : l'arbalète armée détruit tout de suite ; à 15 m, elle en 
   const a = ligne("arbalete", 3);
   assert.ok(a.seule.errant.temps <= 0.35, "armée d'avance : 0,3 s");
   assert.ok(a.seule.groupe15.avantContact >= 2);
-  // Seule, rattrapée par un groupe, elle se fait prendre : il lui faut une seconde arme (§8.4).
-  assert.ok(a.seule.groupe5.saisies >= 2);
+  // Seule, rattrapée par un groupe, elle se fait prendre : il lui faut une seconde arme (§8.4). À ★★★, le cranequin
+  // léger (2 s au lieu de 3, plan 0.10, N2-33) la tire encore d'affaire à 5 m ; serrée à 2,5 m, non.
+  assert.ok(ligne("arbalete", 2).seule.groupe5.saisies >= 2);
+  assert.ok(a.seule.serre.saisies >= 2);
   assert.ok(a.avecSeconde.groupe5.temps < a.seule.groupe5.temps);
 });
 
@@ -149,7 +151,7 @@ test("équilibre : l'endurance d'une décharge est celle du serveur", () => {
 
 // ---------- Plan 0.8 §2.4 (chantier 8) : les chiffres décidés, les plafonds, le garde-fou par étape ----------
 
-test("0.8 : le garde-fou rejoué par étape tient à la maison, à H1 et à L1 (pire rapport ≤ 2, coût ≤ 3 fois)", () => {
+test("0.8 : le garde-fou rejoué par étape tient à la maison, à H1, à L1 et à L2 (pire rapport ≤ 2, coût ≤ 3 fois)", () => {
   for (const etape of ETAPES_EQUILIBRE) {
     const v = gardeFouEtape(etape);
     assert.deepEqual(v.fautes, [], `${etape} :\n${v.fautes.join("\n")}`);
@@ -164,6 +166,50 @@ test("0.8 : le garde-fou rejoué par étape tient à la maison, à H1 et à L1 (
   }
   // Les armes de l'étape sont celles de la grille : ★★ à H1 et L1.
   assert.deepEqual(ARMES_DES_ETAPES.H1, { lame: "machette_forgee#2", electrique: "matraque_electrique#2", arbalete: "arbalete#2", arc: "arc_simple" });
+});
+
+test("0.10 : le garde-fou tient à L2 (R30) ; l'électrique sous 2 fois contre trois Errants à 15 m ; l'arbalète ★★★ en 6,5 s", () => {
+  assert.ok(ETAPES_EQUILIBRE.includes("L2"));
+  assert.deepEqual(ARMES_DES_ETAPES.L2, { lame: "machette_forgee", electrique: "matraque_electrique", arbalete: "arbalete", arc: "arc_if#3" });
+  const lignes = tableauEtape("L2");
+  const v = gardeFouEtape("L2", lignes);
+  assert.deepEqual(v.fautes, []);
+  assert.ok(v.pireRapport <= ECART_MAX && v.ecartCout <= ECART_COUT_MAX, `${v.pireRapport} ; ${v.ecartCout}`);
+  // Sur son terrain, chaque arme de métier est la meilleure.
+  for (const famille of ARMES_DE_METIER) {
+    const sienne = lignes.find((l) => l.famille === famille)!;
+    for (const s of TERRAINS[famille]) for (const autre of ARMES_DE_METIER) assert.ok(sienne.seule[s].temps <= lignes.find((l) => l.famille === autre)!.seule[s].temps, `${famille}, « ${SCENARIOS[s].titre} »`);
+  }
+  const electrique = v.rapports.find((r) => r.famille === "electrique" && r.scenario === "groupe15")!;
+  assert.ok(electrique.rapport < 2, `électrique à 15 m : ${electrique.rapport}`);
+  // N2-34 : le cranequin léger réarme en 2 s ; trois Errants à 15 m, de 8,5 à 6,5 s.
+  const arbalete = lignes.find((l) => l.famille === "arbalete")!;
+  assert.ok(Math.abs(arbalete.seule.groupe15.temps - 6.5) < 0.15, `${arbalete.seule.groupe15.temps}`);
+  // Les chiffres ★★★ décidés (K1 à K56).
+  const contact: [string, number][] = [["machette_forgee", 2.5], ["hache_forgee", 3], ["glaive", 2.6], ["hachette", 2.25], ["serpe", 2.1], ["lame_forgee", 2], ["matraque_electrique", 2.25], ["aiguillon", 2.1]];
+  for (const [cle, d] of contact) assert.ok(Math.abs(armeDeCle(cle)!.degatsTorse - d) < 1e-9, cle);
+  const arb = armeTirExemplaire("arbalete", armeTirDe("arbalete")!);
+  assert.deepEqual([arb.degatsPlein, arb.solidite], [2.5, 100]);
+});
+
+test("0.10 : les armes trouvées du niveau 2 — pied de guéridon et harpon, 3,2, tuent à la tête, solidité 50, sans étoiles", () => {
+  const pied = armeDeCle("pied_gueridon")!;
+  const harpon = armeDeCle("harpon")!;
+  assert.deepEqual([pied.type, pied.degatsTorse, pied.tueALaTete, pied.solidite, pied.coup, pied.metier], ["contondant", 3.2, true, 50, 1000, undefined]);
+  assert.deepEqual([harpon.type, harpon.degatsTorse, harpon.tueALaTete, harpon.solidite, harpon.allonge, harpon.metier], ["percant", 3.2, true, 50, 2.4, undefined]);
+  for (const a of [pied, harpon]) {
+    assert.equal(etoilesDe(a.objet!), null);
+    assert.equal(QUALITES_OBJETS[a.objet!], undefined, "pas un outil");
+    // Elles passent le casque.
+    const casque = Object.assign(nouvelEteint(1, 0, 1, "poursuivant"), { variante: "equipe" as const });
+    assert.equal(encaisser(casque, a, true, 1, { x: 0, z: 0 }, ZONE_VIDE), "detruit", a.objet!);
+    // Au-dessus de la masse (2,5) : sans arme équipée, c'est elles qu'on prend.
+    assert.ok(a.degatsTorse > armeDeCle("masse")!.degatsTorse);
+    assert.ok(ARMES.indexOf(a) < ARMES.findIndex((x) => x.objet === "masse"), a.objet!);
+  }
+  // La fonte fendue ne se reprend pas ; la hampe du harpon, si (à l'établi, comme la fourche).
+  assert.equal(MATIERE_ARME.pied_gueridon, undefined);
+  assert.equal(MATIERE_ARME.harpon, "bois");
 });
 
 test("0.8 : le garde-fou d'une étape voit une faute", () => {
@@ -223,9 +269,11 @@ test("0.8 : la maîtrise sans plafond (K-Q1) — une machette ★★ maîtrisée
   assert.equal(armeTirExemplaire(cleExemplaire("arc_simple", maitrise), armeTirDe("arc_simple")!).degatsPlein, 1.35);
 });
 
-test("0.8 : la fourche à foin tue à la tête et passe le casque ; 1,5, allonge 2 m, 80 coups, ni étoiles ni outil", () => {
+test("0.8 : la fourche à foin tue à la tête et passe le casque ; 2,3 (0.10, N2-66), allonge 2 m, 80 coups, ni étoiles ni outil", () => {
   const f = armeDeCle("fourche_foin")!;
-  assert.deepEqual([f.type, f.degatsTorse, f.allonge, f.coup, f.coupAppuye, f.solidite, f.tueALaTete], ["percant", 1.5, 2, 650, 900, 80, true]);
+  assert.deepEqual([f.type, f.degatsTorse, f.allonge, f.coup, f.coupAppuye, f.solidite, f.tueALaTete], ["percant", 2.3, 2, 650, 900, 80, true]);
+  // Elle approche la masse de la route A (2,5), sans la dépasser.
+  assert.ok(f.degatsTorse < armeDeCle("masse")!.degatsTorse);
   assert.equal(f.metier, undefined);
   assert.equal(etoilesDe("fourche_foin"), null);
   assert.equal(QUALITES_OBJETS.fourche_foin, undefined, "pas un outil");

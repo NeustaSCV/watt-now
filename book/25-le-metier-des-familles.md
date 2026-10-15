@@ -1,6 +1,7 @@
 # Book 25 — Le métier des familles
 
 > Document de conception · version 0.2 · 2026-10-09
+> **0.10 (2026-10-15)** : le niveau 2 des familles (la forge ventilée et le creuset, le poste de montage, les roulements montés et leurs meubles), les armes ★★★ de récupération, le cranequin léger, les deux armes trouvées, la fourche à 2,3, le garde-fou au niveau 2 : **§15**, qui fait foi.
 > Statut : **v0.2, validé par le porteur (2026-10-09)** ; codé en 0.6 et 0.7. **0.8 (2026-10-10)** : la grille des étoiles du niveau 1, les bandes, les enclumes ★★, la pièce de famille, les dégâts électriques, la maîtrise sans plafond et l'évolution d'une arme sur son meuble : **§13**, qui fait foi ; la règle d'or du §2.5 est réécrite avec la grille (Q-0.8-26). **0.8.2 (2026-10-13)** : les condensateurs, le module de décharge unique, la matraque et la corde d'arc en une recette, les armes de métier qui attendent le meuble complet de leur métier : **§14**, qui fait foi.
 > Demande du porteur (v0.1) : « Aujourd'hui, on va développer le craft spécifique à chaque famille. Il faudra sans doute ajouter des objets et des matières de base. Fais-moi des propositions. Les charbonniers ont les lames. Les voltaïques peuvent avoir des armes électriques (taser ?) et les mécanistes peuvent avoir des arbalètes ? Arc pour tout le monde, c'est assez basique comme technologie. Fais-moi une proposition étoffée. »
 > Décisions du porteur (v0.2) : « Il ne faut pas qu'il y ait trop de dépendances. Elles doivent pouvoir permettre des améliorations, mais ne pas bloquer les choses de base de chaque famille. Au début du jeu il n'y a pas toutes les familles, alors il faut que chacun soit — un peu — autonome. Il aura besoin des autres pour faire évoluer ses armes évidemment. Il faut veiller à ce que l'arme de chaque famille soit équilibrée. La matraque électrique me semble un peu en dessous car elle ne permet pas de tuer les Éteints. 1. oui 2. oui 3. oui 4. oui 5. oui 6. oui 7. oui 8. les deux. La machette trouvée peut être une machette de fortune (un bout de métal avec un manche), rien à voir avec une lame forgée. Je comprends pas comment on obtient un ressort à partir d'une lame ébréchée ? C'est pas logique. Il faut sans doute rendre l'électricité plus dangereuse, sinon les Voltaïques sont désavantagés ? Je pense que les versions 0.6 à 0.8 peuvent faire l'objet d'une seule livraison. »
@@ -1113,3 +1114,58 @@ Une recette peut désormais se faire **de plusieurs façons** : des ingrédients
 - **Le ×1,5 du §2.3 ne change pas** : une recette d'une autre famille coûte une fois et demie ses matières (arrondies au-dessus, **ingrédients au choix compris**) et son temps, et plafonne à ★★. Il vaut aussi pour le coût d'un niveau de meuble d'une autre famille.
 - **Il ne touche que ce qu'on fabrique**, jamais les gestes : pédaler, charger au banc, poser sa pièce coûtent le même prix à tous.
 - **Le §2.3 se corrige** : les machines de métier qui demandent le savoir (la forge, le banc) ne sont plus fermées à qui **a appris** leur recette ; elles le restent à qui ne l'a pas apprise (« C'est le savoir d'une autre famille : échange avec l'un des siens, à la halte ou au Carrefour. »).
+
+## 15. Le niveau 2 des familles (0.10, 2026-10-15)
+
+*`niveau-2.md` (§3, §4.3 à §4.6, §5, §12), plan 0.10 (chantiers C, D, F ; S-24 à S-29 ; V1-01, V1-03, V1-05, V1-11 à V1-17, V1-22, V3-01) ; **codé en 0.10** (`commun/src/lignees.ts`, `commun/src/recettes/*.ts`, `commun/src/armes/*.ts`, `commun/src/meubles-neufs.ts`, `commun/src/energie.ts`, `commun/src/tir.ts`). Les lignées communes du niveau 2 et le banc qui suit le soleil : Book 24 §14.*
+
+### 15.1 Une installation par famille, et ce qu'elle ouvre
+
+Au niveau 2, chaque famille a **son installation**, avec son objet-clé (Book 24 §14.2), et **la clé de famille ouvre aussi l'accessoire et les meubles de la famille** (R14 : une marche visible, seule). **Les meubles nouveaux ne demandent aucune autre clé** (R11) : des matières de récupération, un outil et l'installation du niveau 2 posée. **Les Mécanistes sont favorisés** (demandé par le porteur) : trois meubles, contre deux aux ⚡ et un aux 🔥, plus les poulies que les 🔥 leur couleront.
+
+| Famille | Installation du niveau 2 · objet-clé | Ce qu'elle ouvre |
+|---|---|---|
+| 🔥 | **Forge ventilée** · le soufflet de forge (phare) | Les lames **★★★**, sans pomper ; **le creuset et ses moules** (un accessoire : 4 glaises, 2 pierres ; Marteler 1) : **4 chutes d'aluminium et 1 charbon → 1 poulie d'aluminium** (pour le moulin des ⚙️) ou **1 lingot** (il se vend au Comptoir) (S-24, V1-16) |
+| ⚡ | **Poste de montage** · le fer à souder (hôtel) | **Le pack soudé de 24 Wh** (6 cellules, 1 LED de témoin, 1 fil de cuivre ; Souder 1, 30 min : V1-05) ; **la batterie de cellules** (12 cellules, 4 fils de cuivre, 1 plastique ; Souder 1) : **120 Wh** à la base, et elle se pose aussi dans le banc ; **la rampe de LED** (10 LED, 2 fils de cuivre, 1 tube ; Souder 1) : **20 m de lumière** la nuit, qui tire **3 W** sur la batterie de la base (≈ 5,5 Wh par nuit de jeu), éteinte quand la batterie est vide |
+| ⚙️ | **Roulements montés** · la boîte de roulements (hôtel) | Pédaler : − 30 % d'effort, + 30 % de courant ; **le cranequin léger**, **la charrette à bras**, **le moulin de jerricans** ; et **l'arbalète de garde** |
+
+**Les roulements** (V1-01, V3-01) : **une boîte contient 3 roulements** (des objets), et chaque recette compte les siens : les roulements montés 1, le cranequin léger 1, le moulin 1, la charrette 2. Un Mécaniste qui veut tout en demande 5 : **la machinerie de l'hôtel garde deux boîtes**. Une boîte gardée d'une partie d'avant s'ouvre, et ses roulements servent.
+
+### 15.2 ⚙️ Les meubles des Mécanistes
+
+| Meuble | Matières · outil | Ce qu'il fait |
+|---|---|---|
+| **Cranequin léger** (N2-33) | 1 roulement, 1 chaîne de vélo, 1 barre ; Serrer 2, au pédalier équipé des roulements montés | Il **réarme l'arbalète en 2 s au lieu de 3** ; **monter l'arbalète ★★★ le demande** (l'arc en if ne se bande pas à la main). Le cranequin d'avant garde l'arbalète lourde (niveau 3) |
+| **Charrette à bras** (N2-46, S-27) | 2 roues de vélo, 2 roulements, 4 tubes, 2 bûches ; Serrer 2 | **+ 100 kg** roulés (la brouette : + 60) ; elle se prête ou se vend aux autres familles |
+| **Moulin de jerricans** (N2-47, S-28, V1-03, V1-19) | 2 jerricans percés, 3 tubes, 1 roulement, 1 petit moteur ; Serrer 2 | Une éolienne Savonius : **≈ 5,9 W quand il vente** (ciel couvert, pluie), **≈ 2 W par temps voilé**, **rien au soleil** (le vent se déduit du temps : N2-Q4), au calendrier, même hors ligne, vers **la batterie de la base** (la plus proche à 15 m au plus : V1-17). **La même moyenne que le banc solaire** (80 Wh par jour de calendrier) : il complète le panneau sans l'écraser. **Avec une poulie d'aluminium** (🔥) : **+ 50 %** |
+| **Arbalète de garde** (N2-48, S-29) | 1 arbalète (n'importe quelle étoile), 1 tube, 1 rouleau de fil de fer, 1 petit ressort ; Serrer 1 | **Un piège**, comme l'assommoir : le premier Éteint qui passe à 1 m devant reçoit **un carreau** (les dégâts de l'arbalète posée) ; **jamais un joueur** (N2-Q5) ; on la réarme (2 s au cranequin léger, 3 s sinon) |
+
+### 15.3 Les armes ★★★, faites de récupération
+
+| Famille | L'arme ★★★ | Ce qui change |
+|---|---|---|
+| 🔥 | **Machette forgée 2,5**, **hache forgée 3,0**, **glaive de ressort 2,6** (N2-30) | Le manche n'est plus une branche et de la ficelle : il est **tourné de caoutchouc** (une chambre à air, N2-35) ; la hache forgée prend **2 caoutchoucs à la place de la bûche** du manche (V1-12). **La machette à manche ficelé** reste plafonnée à ★★ (V1-11) |
+| ⚡ | **La matraque au pack soudé** | Les contacts soudés montés sur **1 tube d'aluminium et 1 plastique** (l'isolant) au lieu du gourdin (N2-36) ; le **pack soudé tient 24 Wh** (V1-14, C10) ; une matraque ★★★ obtenue par la maîtrise dès le niveau 1 a aussi 24 Wh (V1-22 : la capacité suit les étoiles) |
+| ⚙️ | **L'arbalète ★★★** | L'**arc d'arbalète en if** se façonne à **l'établi à étau** (le niveau 1, L1B : N2-31), et non plus à l'établi de menuisier ; l'arbrier est **1 tube d'aluminium** (N2-38) ; monter l'arbalète demande **le cranequin léger** (N2-32). Les carreaux peuvent prendre un **empennage de plastique** (une bouteille découpée) au lieu des plumes, un choix parmi les trois carreaux à plumes (N2-39, V1-13) |
+| Tous | **L'arc simple ★★★** | Le **fil dentaire** devient **rare au niveau 1** et **courant au niveau 2**, sur les deux routes (les salles de bains de l'hôtel, les chambres du Panoramique à la corniche, l'épicerie du bar du pont : N2-61, V2-07) ; le boyau restera une seconde source en 0b |
+
+**Le Mécaniste seul** obtient son arbalète ★★★ par le cranequin léger **sans aller au phare** : l'arc d'if se fait à l'établi à étau du niveau 1, et ses roulements sont à l'hôtel (critère 8 du plan ; `npm run rythme` : son meuble de famille et tout son métier en 79 min, une sortie).
+
+### 15.4 Les deux armes trouvées, et la fourche
+
+- **Le pied de guéridon en fonte** (Grand Hôtel, la terrasse ; N2-49) : **contondant, 3,2**, lent (≈ 1 s), tue à la tête et passe le casque, **solidité 50**, sans étoiles ; il ne se refait pas.
+- **Le harpon du gardien** (phare, au-dessus de la cuisinière ; N2-62) : **perçant et long** (allonge **2,4 m**), **3,2**, tue à la tête, **solidité 50**, sans étoiles. Une arme qui n'existe nulle part ailleurs dans le jeu ; même rang que le pied de guéridon (R31).
+- **Une fois par personnage** chacune, comme la fourche à foin et le pied-de-biche.
+- **La fourche à foin** du Moulin (L1B) passe de 1,5 à **2,3** au torse (N2-66), pour approcher la masse de la route A (2,5).
+
+### 15.5 Le garde-fou au niveau 2
+
+`npm run equilibre -- --etape L2` rejoue le §8.4 avec les armes ★★★ (relevé du 2026-10-15, pour la livraison de la 0.10) :
+
+| Étape | Pire rapport hors terrain (au plus 2) | Écart de coût par Errant (au plus 3) | Verdict |
+|---|---|---|---|
+| L2 | **1,92** (l'électrique contre trois Errants à 15 m) | 1,28 fois | OK |
+
+- L'arbalète ★★★ contre trois Errants à 15 m : **6,5 s** (8,5 s avant le cranequin léger, N2-34).
+- L'électrique à 15 m reste **sous la limite de 2** avec le pack de 24 Wh (à surveiller, V1-14).
+- **Les Éteints ne changent pas** au niveau 2 (« un Éteint est un Éteint », N2-52 refusée) : le danger vient du **Noyé**, de la nuit au phare et du nombre d'Éteints réglé au parcours (Book 06 §5.1 et §5.2).

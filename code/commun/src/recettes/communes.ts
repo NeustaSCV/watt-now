@@ -10,6 +10,8 @@ import { A_LA_CREMAILLERE, A_LA_MAIN, A_LA_POELE, AU_FOUR, AU_FOYER_DE_PIERRES, 
 export const A_L_ETABLI_A_ETAU = aCote("etabli", { niveau: 2 });
 /** Où l'on répare le manche d'une arme ou d'un outil, sans forge, pour toutes les familles (R-ARMES-4, I19). */
 export const LIEU_REPARER_MANCHE = A_L_ETABLI_A_ETAU;
+/** L'établi de menuisier (niveau 3 de l'établi, le rabot de L2B) : les étagères (plan 0.10, V1-04). */
+export const A_L_ETABLI_DE_MENUISIER = aCote("etabli", { niveau: 3 });
 /** Remmancher une hache ou un marteau (0.8.2, R13) : près d'un établi, au niveau 1, plus à la main. */
 export const A_COTE_DE_L_ETABLI = aCote("etabli");
 
@@ -122,12 +124,12 @@ export const RECETTES_COMMUNES: Recette[] = [
   },
   // ---------- Le feu et la cuisine (2026-10-08 ; plan 0.8 §2.3, chantier 5) : les plats nourrissent mieux que les
   // ingrédients crus. Feu de camp : les pommes cuites ; foyer de pierres : la poêlée (aussi au Dakota) et ce qui se durcit ;
-  // foyer de cuisine : la soupe ; le four (plus tard) : la volaille aux cèpes et le pot-au-feu, grisés en attendant. ----------
+  // foyer de cuisine : la soupe ; le four (niveau 2) : la volaille aux cèpes et le pot-au-feu, grisés jusqu'à la 0b. ----------
   {
     id: "volaille_cepes",
     lieu: AU_FOUR,
-    // Le four de terre attend sa porte de fonte (niveau 2) : grisée, dans la fiche du foyer de cuisine (V4-6).
-    aVenir: "niveau 2",
+    // Le four de terre se bâtit au niveau 2 (plan 0.10, chantier C) ; ses plats attendent la 0b, grisés (V4-6).
+    aVenir: "0b",
     categorie: "feu",
     nom: "Volaille aux cèpes",
     produit: { objet: "volaille_cepes", quantite: 1 },
@@ -179,7 +181,7 @@ export const RECETTES_COMMUNES: Recette[] = [
   {
     id: "pot_au_feu",
     lieu: AU_FOUR,
-    aVenir: "niveau 2",
+    aVenir: "0b",
     categorie: "feu",
     nom: "Pot-au-feu de volaille",
     produit: { objet: "pot_au_feu", quantite: 1 },
@@ -472,6 +474,21 @@ export const RECETTES_COMMUNES: Recette[] = [
     intensite: "moyenne",
     famille: "tous",
   },
+  {
+    // Les étagères de l'établi de menuisier (plan 0.10, V1-04) : deux planches fendues, rabotées sur place, et une
+    // poignée de clous. Posées dans le coffre ou la réserve couverte : 50 kg de plus (meubles-niveau2.ts, ETAGERES_KG).
+    // Les manches + 25 % sont reportés ; la porte de planches attend les murs (0.10.1).
+    id: "etageres",
+    lieu: A_L_ETABLI_DE_MENUISIER,
+    categorie: "batir",
+    nom: "Étagères (planches rabotées)",
+    produit: { objet: "etageres", quantite: 1 },
+    ingredients: { planche_fendue: 2, poignee_clous: 1 },
+    qualites: { raboter: 1 },
+    duree: 40,
+    intensite: "moyenne",
+    famille: "tous",
+  },
   // ---------- L'arc pour tous (Book 25 §3.3, chantier 4 · 0.6) : tout se fait seul, quelle que soit la famille ----------
   {
     // Une perche verte et une ficelle : il tire tout de suite, mais le bois vert fatigue vite (★).
@@ -645,6 +662,37 @@ export const RECETTES_COMMUNES: Recette[] = [
     ingredients: { branche: 1, plumes: 1, ficelle: 1, pointe_acier: 3 },
     qualites: { couper: 1 },
     duree: 20,
+    intensite: "legere",
+    famille: "tous",
+  },
+
+  // ---------- Les meubles nouveaux du niveau 2, pour tous (plan 0.10, chantier D ; N2-40, N2-41, N2-Q3) ----------
+  // Ils apparaissent après la première visite d'un lieu du niveau 2 (progression.ts). Leurs effets : meubles-neufs.ts.
+  {
+    // Une boîte à réflecteurs (S-22) : un foyer qui ne brûle rien. L'eau bout et les plats du foyer de pierres cuisent au
+    // soleil, deux fois plus lentement ; à moitié par temps voilé ; rien sous un ciel couvert, sous la pluie, la nuit.
+    id: "cuiseur_solaire",
+    lieu: POSEE,
+    categorie: "feu",
+    nom: "Cuiseur solaire",
+    produit: { installation: "cuiseur_solaire" },
+    ingredients: { aluminium: 4, verre: 1, papier: 4, boite_vide: 1 },
+    qualites: { couper: 1 },
+    duree: 40,
+    intensite: "legere",
+    famille: "tous",
+  },
+  {
+    // Le tri sélectif de l'Abondance, enfin utile (S-23) : à 3 m, démonter va deux fois plus vite, et un démontage sur
+    // trois rend une matière de plus. L'aimant sépare le fer de l'aluminium.
+    id: "bacs_tri",
+    lieu: POSEE,
+    categorie: "ateliers",
+    nom: "Bacs de tri",
+    produit: { installation: "bacs_tri" },
+    ingredients: { jerrican: 3, aimant: 1, tube_aluminium: 1 },
+    qualites: { couper: 1 },
+    duree: 30,
     intensite: "legere",
     famille: "tous",
   },

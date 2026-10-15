@@ -12,6 +12,7 @@ import type { Qualite } from "./recettes.ts";
 import type { TypeRessource } from "./terrain.ts";
 import { ETAPES_LIEUX, type LieuId } from "./lieux.ts";
 import { DEMONTAGE_LOT2, VESTIGES_LOT2 } from "./vestiges-lot2.ts";
+import { LIEU_DE_FOUILLE_PHARE } from "./ressources-phare.ts";
 
 /** Rareté (P-003 §1) : commun, peu commun, rare, légendaire. */
 export type Rarete = "C" | "P" | "R" | "L";
@@ -151,12 +152,24 @@ export const COMPOSANTS = {
   aluminium: {
     nom: "chute d'aluminium",
     pluriel: "chutes d'aluminium",
-    description: "De l'aluminium aplati au marteau. Il fond à 660 °C : au creuset, il redevient ce qu'on veut.",
+    description: "Un bout de métal léger, aplati au marteau. Il fond à 660 °C : au creuset, il redevient ce qu'on veut.",
     poids: 0.25,
     valeur: 6,
     famille: "composant",
     rarete: "C",
     teinte: "#c9ccd0",
+  },
+  // 0.10 (chantier B, N2-02) : le tube, distinct de la chute (R38 : jamais « aluminium » seul dans un texte). Il fait
+  // les structures légères, qui ne chauffent pas et ne portent pas de charge sur un axe ; il épargne les barres de métal.
+  tube_aluminium: {
+    nom: "tube d'aluminium",
+    pluriel: "tubes d'aluminium",
+    description: "Un montant creux, léger et droit, tiré d'une échelle, d'un parasol ou d'une chaise pliante. Il ne chauffe pas et ne porte pas lourd, mais il fait une charpente.",
+    poids: 0.4,
+    valeur: 8,
+    famille: "composant",
+    rarete: "C",
+    teinte: "#d4d8dc",
   },
   plastique: {
     nom: "morceau de plastique",
@@ -198,6 +211,19 @@ export const COMPOSANTS = {
     rarete: "C",
     teinte: "#3a3a3a",
   },
+  // 0.10 (V1-01) : un roulement à billes, tiré de sa boîte (la boîte de roulements, objet-clé de L2A, en contient trois :
+  // DEMONTAGE.roulements). On ne le trouve nulle part ailleurs.
+  roulement: {
+    nom: "roulement à billes",
+    pluriel: "roulements à billes",
+    description: "Une bague d'acier, ses billes graissées dedans : un axe qui tourne dessus ne force plus.",
+    poids: 0.4,
+    valeur: 30,
+    famille: "composant",
+    rarete: "R",
+    teinte: "#a8aeb4",
+    horsTirage: true,
+  },
 } satisfies Record<string, DefinitionVestige>;
 
 export type TypeComposant = keyof typeof COMPOSANTS;
@@ -209,7 +235,7 @@ const VESTIGES_LOT1 = {
   casserole: {
     nom: "casserole cabossée",
     pluriel: "casseroles cabossées",
-    description: "Cabossée, le manche branlant, mais elle tient l'eau. Aplatie au marteau, de l'aluminium à refondre.",
+    description: "Cabossée, le manche branlant, mais elle tient l'eau. Aplatie au marteau : des chutes d'aluminium à refondre.",
     poids: 1,
     valeur: 8,
     famille: "cuisine",
@@ -725,10 +751,11 @@ const VESTIGES_LOT1 = {
     horsTirage: true,
   },
   // ---------- La Coopérative du Plateau (Book 23 §2.2) : on ne les trouve que là ----------
+  // 0.10 (plan §3.1) : la boîte de roulements est un objet-clé de L2A (le Grand Hôtel), la boîte de trois roulements.
   roulements: {
     nom: "boîte de roulements à billes",
     pluriel: "boîtes de roulements à billes",
-    description: "Six roulements neufs, encore graissés dans leur papier huilé. Sans eux, rien ne tourne : ni roue, ni meule, ni dynamo.",
+    description: "Trois roulements neufs, encore graissés dans leur papier huilé. Sans eux, rien ne tourne : ni roue, ni meule, ni dynamo. On l'ouvre pour s'en servir.",
     poids: 1.2,
     valeur: 90,
     famille: "garage",
@@ -841,7 +868,8 @@ const VESTIGES_LOT1 = {
     poids: 0.02,
     valeur: 4,
     famille: "salle_de_bain",
-    rarete: "C",
+    // 0.10 (N2-61) : rare au niveau 1 (la station, la Coopérative) ; courant au niveau 2 (COURANTS_AU_NIVEAU_2).
+    rarete: "R",
     teinte: "#7fd0c8",
   },
   appareil_photo_jetable: {
@@ -1110,6 +1138,164 @@ const VESTIGES_LOT1 = {
     teinte: "#2f7a5a",
     horsTirage: true,
   },
+  // ---------- 0.10 (chantier B) : la récupération et les objets-clés du niveau 2 ----------
+  // L'échelle en aluminium (N2-05) : quatre tubes, dans les ateliers du niveau 1 (EN_PLUS_PAR_LIEU), hors des tables.
+  echelle_aluminium: {
+    nom: "échelle en aluminium",
+    pluriel: "échelles en aluminium",
+    description: "Trois mètres d'échelle pliante, un barreau tordu, ses rivets rouillés. Démontée : quatre tubes légers et droits.",
+    poids: 7,
+    valeur: 30,
+    famille: "garage",
+    rarete: "P",
+    teinte: "#c4c9ce",
+    horsTirage: true,
+  },
+  // Les dix objets-clés du niveau 2 (plan 0.10 §3.1, Q-0.10-2) : chacun à sa place fixe, tout au fond de son lieu
+  // (R49) ; rarement ailleurs (CLES_RARES) ; au Comptoir après une première visite de son lieu. La boîte de roulements
+  // est plus haut. L2A, le Grand Hôtel :
+  toles_ondulees: {
+    nom: "paquet de tôles ondulées",
+    pluriel: "paquets de tôles ondulées",
+    description: "Trois tôles ondulées galvanisées, à peine piquées, encore percées de leurs trous de clous. Un toit qui ne fuit pas.",
+    poids: 12,
+    valeur: 40,
+    famille: "ferme",
+    rarete: "R",
+    teinte: "#a9b0b5",
+    horsTirage: true,
+  },
+  couvertures_laine: {
+    nom: "paire de couvertures de laine",
+    pluriel: "paires de couvertures de laine",
+    description: "Deux couvertures de laine épaisse, pliées au carré, qui sentent encore la lavande. Personne n'a eu aussi chaud depuis la Panne.",
+    poids: 3,
+    valeur: 30,
+    famille: "textile",
+    rarete: "R",
+    teinte: "#8c3b2e",
+    horsTirage: true,
+  },
+  lanterne_tempete: {
+    nom: "lanterne-tempête",
+    pluriel: "lanternes-tempête",
+    description: "Une lanterne à pétrole, son verre bombé dans une cage de fil, sa mèche qu'on monte d'un bouton. Le vent ne l'éteint pas.",
+    poids: 1.2,
+    valeur: 35,
+    famille: "ferme",
+    rarete: "R",
+    teinte: "#b5442e",
+    horsTirage: true,
+  },
+  // Un outil : Souder 1 (QUALITES_OBJETS). Il n'a pas de version pauvre (exception à R23).
+  fer_souder: {
+    nom: "fer à souder",
+    pluriel: "fers à souder",
+    description: "Un fer d'atelier, sa panne de cuivre, du fil d'étain enroulé autour du manche. Il soude ce qu'aucune pince ne tient.",
+    poids: 0.4,
+    valeur: 40,
+    famille: "gadget",
+    rarete: "R",
+    teinte: "#3f5f7a",
+    horsTirage: true,
+  },
+  // L2B, le phare (dans l'épave du cargo) :
+  porte_four: {
+    nom: "porte de four en fonte",
+    pluriel: "portes de four en fonte",
+    description: "La porte d'un four à pain, en fonte, avec son loquet et sa bouche noircie. Il ne lui manque que le four.",
+    poids: 9,
+    valeur: 40,
+    famille: "cuisine",
+    rarete: "R",
+    teinte: "#3a3633",
+    horsTirage: true,
+  },
+  // Le vrai jerrican de 20 L (le « jerrican » du lot 2 est le jerrican percé, un déchet : I5).
+  jerrican_20l: {
+    nom: "jerrican de 20 L",
+    pluriel: "jerricans de 20 L",
+    description: "Un jerrican de plastique épais, son bouchon et son bec verseur. Vingt litres, sans une fuite.",
+    poids: 1.5,
+    valeur: 25,
+    famille: "garage",
+    rarete: "R",
+    teinte: "#3f7a3a",
+    horsTirage: true,
+  },
+  // Un outil : Raboter 1 (QUALITES_OBJETS).
+  rabot: {
+    nom: "rabot",
+    pluriel: "rabots",
+    description: "Un rabot de menuisier en fonte, son fer encore affûté. Il rend une planche lisse comme une table.",
+    poids: 1.6,
+    valeur: 40,
+    famille: "garage",
+    rarete: "R",
+    teinte: "#7a5a3a",
+    horsTirage: true,
+  },
+  cloche_bronze: {
+    nom: "cloche de bronze",
+    pluriel: "cloches de bronze",
+    description: "Une cloche de navire, un nom gravé à moitié effacé, son battant tenu d'un bout de cordage. Elle s'entend de loin.",
+    poids: 12,
+    valeur: 60,
+    famille: "salon",
+    rarete: "R",
+    teinte: "#b8863b",
+    horsTirage: true,
+  },
+  soufflet_forge: {
+    nom: "soufflet de forge",
+    pluriel: "soufflets de forge",
+    description: "Un grand soufflet de maréchal, deux flasques de bois et un cuir plissé. Un coup de levier, et la braise blanchit.",
+    poids: 10,
+    valeur: 60,
+    famille: "garage",
+    rarete: "R",
+    teinte: "#6b4a2e",
+    horsTirage: true,
+  },
+  // ---------- Les armes trouvées du niveau 2 (plan 0.10, chantier F ; N2-49, N2-62) ----------
+  // Une seule fois par personnage, à une place fixe (les chantiers J et K les posent) ; leurs valeurs d'arme sont dans
+  // armes/communes.ts. Elles ne servent pas d'outil.
+  pied_gueridon: {
+    nom: "pied de guéridon",
+    pluriel: "pieds de guéridon",
+    description: "La colonne de fonte d'une table de terrasse, arrachée à son plateau. Lourde au bout, elle cogne comme une masse, mais la fonte casse net.",
+    poids: 3.5,
+    valeur: 60,
+    famille: "salon",
+    rarete: "P",
+    teinte: "#2a2826",
+    horsTirage: true,
+  },
+  harpon: {
+    nom: "harpon du gardien",
+    pluriel: "harpons du gardien",
+    description: "Un vieux harpon de baleinier, longtemps pendu en trophée : une hampe brunie, un fer barbelé. On le tient à plus de deux mètres.",
+    poids: 2.2,
+    valeur: 60,
+    famille: "garage",
+    rarete: "P",
+    teinte: "#5a4636",
+    horsTirage: true,
+  },
+  // ---------- 0.10, chantier J : le Grand Hôtel des Flots (S-10) ----------
+  // La carte de la chambre 7, que la borne remet au robot reconnu : elle fait monter l'ascenseur, et reste à l'hôtel
+  // quand on en part (serveur/src/hotel.ts).
+  carte_chambre_7: {
+    nom: "carte de la chambre 7",
+    pluriel: "cartes de la chambre 7",
+    description: "Une carte dorée, « Grand Hôtel des Flots · Chambre 7 · Séjour Zéro-Effort ». Elle ne sert qu'à l'hôtel.",
+    poids: 0.01,
+    valeur: 0,
+    famille: "salon",
+    rarete: "C",
+    teinte: "#c9a227",
+    horsTirage: true,
+  },
 } satisfies Record<string, DefinitionVestige>;
 
 /** Les vestiges : le lot 1 (0.3 et 0.6) et les déchets de l'Abondance (lot 2, 0.7 : vestiges-lot2.ts). */
@@ -1202,6 +1388,12 @@ export const DEMONTAGE: Partial<Record<TypeObjet, Demontage>> = {
   // ⚡ Les condensateurs (0.8.2, R14) : le flash jetable donne le petit, la raquette à moustiques le moyen.
   appareil_photo_jetable: { donne: { petit_condensateur: 1 }, qualites: { visser: 1 }, duree: 3 },
   raquette_moustiques: { donne: { condensateur_moyen: 1 }, qualites: { visser: 1 }, duree: 3 },
+  // 0.10 (N2-05) : l'échelle, les rivets chassés à la pierre, donne ses quatre tubes.
+  echelle_aluminium: { donne: { tube_aluminium: 4 }, qualites: { marteler: 1 }, duree: 15 },
+  // 0.10 (V1-01) : ouvrir la boîte de roulements, comme on vide le bocal de clous : ses trois roulements, un par un. Les
+  // recettes comptent les leurs (roulements montés, cranequin léger, moulin : 1 ; charrette : 2). Une boîte gardée d'une
+  // partie d'avant s'ouvre de même.
+  roulements: { donne: { roulement: 3 }, qualites: {}, duree: 3 },
   // Les déchets de l'Abondance (lot 2, 0.7) : vestiges-lot2.ts.
   ...DEMONTAGE_LOT2,
 };
@@ -1209,13 +1401,17 @@ export const DEMONTAGE: Partial<Record<TypeObjet, Demontage>> = {
 // ---------- La fouille rapporte du bric-à-brac ----------
 
 /** Les lieux de fouille : chacun a sa table de vestiges. */
-export type LieuFouille = "boutique" | "atelier" | "epave" | "grange" | "libre_service" | "quai" | "atelier_coop" | "hangar" | "bureaux" | "chambre_froide";
+export type LieuFouille = "boutique" | "atelier" | "epave" | "grange" | "libre_service" | "quai" | "atelier_coop" | "hangar" | "bureaux" | "chambre_froide" | "caisse_ruine" | "salle_de_bains" | "epicerie" | LieuFouilleCorniche;
+
+/** 0.10, chantier I : les chambres du Panoramique, à la corniche (le fil dentaire courant, N2-61). */
+export type LieuFouilleCorniche = "chambre_panoramique";
 
 /** Quel lieu pour quelle ressource fouillée (la halte, et la caisse à outils de la ruine de ferme). */
 export const LIEU_DE_FOUILLE: Partial<Record<TypeRessource, LieuFouille>> = {
   rayonnage: "boutique",
   caisse_atelier: "atelier",
-  caisse_outils: "atelier",
+  // La caisse à outils de la ruine : la table de l'atelier, sans l'échelle en aluminium (plan 0.10, V1-10).
+  caisse_outils: "caisse_ruine",
   epave_voiture: "epave",
   epave_camion: "epave",
   grenier: "grange",
@@ -1235,6 +1431,51 @@ export const LIEU_DE_FOUILLE: Partial<Record<TypeRessource, LieuFouille>> = {
   moulin_boutique: "libre_service",
   moulin_magasin: "grange",
   moulin_camp: "quai",
+  // 0.10, chantier J : le Grand Hôtel des Flots ; ses salles de bains ont leur table (le fil dentaire, courant au niveau 2).
+  hotel_reception: "bureaux",
+  hotel_bagages: "bureaux",
+  hotel_cuisines: "libre_service",
+  hotel_conserves: "libre_service",
+  hotel_poisson: "libre_service",
+  hotel_desserte: "libre_service",
+  hotel_camp: "bureaux",
+  hotel_bar: "libre_service",
+  hotel_buvette: "boutique",
+  hotel_barque: "quai",
+  hotel_maitre_nageur: "boutique",
+  hotel_transats: "grange",
+  hotel_balcon_tombe: "grange",
+  hotel_bain_suite: "salle_de_bains",
+  hotel_bain_7: "salle_de_bains",
+  hotel_toilette_9: "salle_de_bains",
+  hotel_chambre_11: "bureaux",
+  hotel_lingerie: "bureaux",
+  hotel_suite: "bureaux",
+  hotel_machinerie: "atelier",
+  hotel_chambre_8: "atelier",
+  hotel_office: "boutique",
+  // La corniche du Cap Rouge (0.10, chantier I) : ses fouilles suivent les tables qui leur ressemblent ; les chambres du
+  // Panoramique ont la leur (le fil dentaire, courant au niveau 2). Rarement, un objet-clé (R-BUTIN : H2B).
+  corniche_boutique: "boutique",
+  corniche_cantonnier: "atelier",
+  corniche_epave: "epave",
+  corniche_camp: "quai",
+  corniche_chambre: "chambre_panoramique",
+  corniche_cuisine: "libre_service",
+  corniche_villa: "bureaux",
+  corniche_cabanon: "quai",
+  // La route du pont (plan 0.10, chantier H) : ses fouilles suivent les tables qui leur ressemblent ; une fouille y donne
+  // aussi, rarement, un objet-clé (R-BUTIN : etapeButin("route_pont") = H2A).
+  pont_pontier: "bureaux",
+  pont_epicerie: "epicerie",
+  pont_bar: "libre_service",
+  pont_voiture: "epave",
+  pont_camionnette: "bureaux",
+  pont_peniche: "libre_service",
+  pont_hangar: "quai",
+  pont_chapelle: "bureaux",
+  // 0.10, chantier K : le butin commun du phare du cap (commun/src/ressources-phare.ts).
+  ...LIEU_DE_FOUILLE_PHARE,
 };
 
 /**
@@ -1253,6 +1494,14 @@ export const FAMILLES_PAR_LIEU: Record<LieuFouille, Partial<Record<FamilleVestig
   hangar: { ferme: 6, garage: 2 },
   bureaux: { gadget: 3, salon: 3 },
   chambre_froide: { garage: 3, ferme: 3 },
+  // La caisse à outils de la ruine : les familles de l'atelier, mais pas son échelle (EN_PLUS_PAR_LIEU, V1-10).
+  caisse_ruine: { garage: 6, gadget: 1, voiture: 1 },
+  // 0.10, chantier J : les salles de bains du Grand Hôtel.
+  salle_de_bains: { salle_de_bain: 6, gadget: 1 },
+  // 0.10, chantier I : les chambres du Panoramique (le lavabo et sa trousse de toilette, la literie, la lampe de chevet).
+  chambre_panoramique: { salle_de_bain: 4, salon: 2 },
+  // L'épicerie du bar de la route du pont (plan 0.10, chantier H) : la cuisine, la salle de bain, un peu de gadgets.
+  epicerie: { cuisine: 3, salle_de_bain: 3, gadget: 1 },
 };
 
 /**
@@ -1265,9 +1514,29 @@ export const EN_PLUS_PAR_LIEU: Partial<Record<LieuFouille, Partial<Record<TypeOb
   boutique: { couteau: "R", sac_charbon_bbq: "P", conserve_bombee: "C", onduleur: "P" },
   libre_service: { couteau: "R", conserve_bombee: "C" },
   grange: { couteau: "R" },
-  hangar: { trottinette_electrique: "P" },
+  hangar: { trottinette_electrique: "P", echelle_aluminium: "P" },
   bureaux: { onduleur: "P" },
+  // 0.10 (N2-05) : l'échelle en aluminium dans les ateliers (la station, le Moulin) et dans l'atelier et le hangar de la
+  // Coopérative. Pas dans la caisse à outils de la ruine (V1-10, décision du porteur) : elle a sa table, `caisse_ruine`.
+  atelier: { echelle_aluminium: "P" },
+  atelier_coop: { echelle_aluminium: "P" },
+  // 0.10, chantier J : les salles de bains du Grand Hôtel, où le fil dentaire est courant (COURANTS_AU_NIVEAU_2, N2-61).
+  salle_de_bains: { fil_dentaire: "C" },
+  // 0.10, chantier I (N2-61) : le fil dentaire, courant dans les trousses de toilette des chambres du Panoramique (lu à
+  // l'usage : COURANTS_AU_NIVEAU_2 est déclaré plus bas).
+  get chambre_panoramique() {
+    return { ...COURANTS_AU_NIVEAU_2 };
+  },
+  // 0.10, chantier H : l'épicerie de la route du pont, où le fil dentaire est courant (N2-61 : COURANTS_AU_NIVEAU_2).
+  epicerie: { fil_dentaire: "C" },
 };
+
+/**
+ * 0.10 (N2-61) : ce qui est rare au niveau 1 et courant au niveau 2. Les fouilles des lieux du niveau 2 (chantiers H à K)
+ * l'ajoutent à leur `EN_PLUS_PAR_LIEU` (`{ ...COURANTS_AU_NIVEAU_2 }`), là où il a sa place (les salles de bains de
+ * l'hôtel, les chambres du Panoramique, l'épicerie du pont).
+ */
+export const COURANTS_AU_NIVEAU_2: Readonly<Partial<Record<TypeObjet, Rarete>>> = { fil_dentaire: "C" };
 
 /** Le poids de tirage de chaque rareté (P-003 §1). */
 export const POIDS_RARETE: Record<Rarete, number> = { C: 10, P: 4, R: 1, L: 0.25 };
@@ -1321,38 +1590,76 @@ export function tirerVestiges(lieu: LieuFouille, alea: () => number, etape?: Eta
   return trouve;
 }
 
-// ---------- La règle du butin opportuniste (R-BUTIN, I7 ; plan 0.8 §2.5, chantier 10) ----------
+// ---------- La règle du butin opportuniste (R-BUTIN, I7 ; plan 0.8 §2.5, chantier 10 ; plan 0.10, chantier B) ----------
 
 /** Les clés de L1 : celles de la Coopérative (L1A) et celles du Moulin (L1B). Chacune a sa place fixe dans son lieu. */
 export const CLES_L1A: readonly TypeObjet[] = ["grillage_rouleau", "cocotte_fonte", "seau_10l"];
 export const CLES_L1B: readonly TypeObjet[] = ["toile_jute", "feuillards", "etau"];
-
-/** Les étapes du niveau 1 où une fouille peut, rarement, donner une clé de L1. */
-export type EtapeButin = "H1A" | "H1B" | "L1A" | "L1B";
+/** Les objets-clés du niveau 2 (plan 0.10 §3.1) : ceux du Grand Hôtel (L2A) et ceux du phare (L2B). */
+export const CLES_L2A: readonly TypeObjet[] = ["toles_ondulees", "couvertures_laine", "lanterne_tempete", "fer_souder", "roulements"];
+export const CLES_L2B: readonly TypeObjet[] = ["porte_four", "jerrican_20l", "rabot", "cloche_bronze", "soufflet_forge"];
 
 /**
- * R-BUTIN : une clé de L1 est **rare** à H1 et en L1 (plus courante à H2 et en L2, qui n'existent pas en 0.8). Hors de sa
- * place fixe, elle ne sort donc que rarement, avec une chance fixée à la main, en plus du tirage de la fouille (elle
- * n'est dans aucune table : catalogue-niveau1.test.ts). Aux haltes (H1A, H1B), une des six ; dans un L1, une des
- * trois de l'autre L1 (les siennes y sont à leur place). La chance est par fouille (2 %) : la station a 7 points à
- * fouiller, soit ≈ une clé toutes les 7 visites ; la Coopérative en a 12, ≈ une clé du Moulin toutes les 4 visites.
+ * Les objets nouveaux de la 0.10 (chantier B) : le tube d'aluminium, l'échelle et la chaise de camping qui en donnent,
+ * et les objets-clés du niveau 2 (sauf la boîte de roulements, qui existait) ; chacun a son icône (icones-niveau2.ts).
  */
-export const CLES_RARES: Record<EtapeButin, { chance: number; cles: readonly TypeObjet[] }> = {
-  H1A: { chance: 0.02, cles: [...CLES_L1A, ...CLES_L1B] },
-  H1B: { chance: 0.02, cles: [...CLES_L1A, ...CLES_L1B] },
-  L1A: { chance: 0.02, cles: CLES_L1B },
-  L1B: { chance: 0.02, cles: CLES_L1A },
+export const NOUVEAUX_OBJETS_0_10: readonly TypeObjet[] = ["tube_aluminium", "echelle_aluminium", "chaise_camping", ...CLES_L2A.filter((t) => t !== "roulements"), ...CLES_L2B];
+
+/** Les étapes où une fouille peut, en plus, donner un objet-clé hors de sa place : les haltes et les lieux. */
+export type EtapeButin = "H1A" | "H1B" | "L1A" | "L1B" | "H2A" | "H2B" | "L2A" | "L2B";
+
+/** Un tirage d'objet-clé : sa chance par fouille, et ceux qu'il peut donner (un au hasard). */
+export interface TirageCles {
+  chance: number;
+  cles: readonly TypeObjet[];
+}
+
+/** La chance « rare » d'un objet-clé hors de sa place, par fouille (plan 0.8, chantier 10). */
+export const CHANCE_CLE_RARE = 0.02;
+/**
+ * La chance « plus courante » des objets-clés du niveau 1 au niveau 2 (R-BUTIN) : deux fois la rare. Plan 0.10 (V1-07,
+ * décision du porteur) : 4 % par fouille, et non 6 % : l'hôtel a 25 points à fouiller, soit ≈ 1 objet-clé du niveau 1
+ * par visite ; trouver reste une surprise (un joueur qui ne les a pas encore les trouve là ; sinon, il les revend).
+ */
+export const CHANCE_CLE_COURANTE = 0.04;
+
+/**
+ * R-BUTIN : un objet-clé est **rare** hors de sa place à son niveau, **plus courant** au niveau d'après. Hors de sa place
+ * fixe, il ne sort donc qu'avec une chance fixée à la main, en plus du tirage de la fouille (il n'est dans aucune table :
+ * catalogue-niveau1.test.ts). Aux haltes du niveau 1 (H1A, H1B), une des six clés de L1 ; dans un L1, une des trois de
+ * l'autre L1 (les siennes y sont à leur place). La chance est par fouille (2 %) : la station a 7 points à fouiller, soit
+ * ≈ une clé toutes les 7 visites ; la Coopérative en a 12, ≈ une clé du Moulin toutes les 4 visites.
+ * Au niveau 2 (plan 0.10) : aux haltes (H2A, H2B), un des dix objets-clés du niveau 2, rare ; dans un L2, un des cinq de
+ * l'autre L2, rare ; et partout au niveau 2, une des six clés de L1, plus courante (`courantes`).
+ */
+export const CLES_RARES: Record<EtapeButin, TirageCles & { courantes?: TirageCles }> = {
+  H1A: { chance: CHANCE_CLE_RARE, cles: [...CLES_L1A, ...CLES_L1B] },
+  H1B: { chance: CHANCE_CLE_RARE, cles: [...CLES_L1A, ...CLES_L1B] },
+  L1A: { chance: CHANCE_CLE_RARE, cles: CLES_L1B },
+  L1B: { chance: CHANCE_CLE_RARE, cles: CLES_L1A },
+  H2A: { chance: CHANCE_CLE_RARE, cles: [...CLES_L2A, ...CLES_L2B], courantes: { chance: CHANCE_CLE_COURANTE, cles: [...CLES_L1A, ...CLES_L1B] } },
+  H2B: { chance: CHANCE_CLE_RARE, cles: [...CLES_L2A, ...CLES_L2B], courantes: { chance: CHANCE_CLE_COURANTE, cles: [...CLES_L1A, ...CLES_L1B] } },
+  L2A: { chance: CHANCE_CLE_RARE, cles: CLES_L2B, courantes: { chance: CHANCE_CLE_COURANTE, cles: [...CLES_L1A, ...CLES_L1B] } },
+  L2B: { chance: CHANCE_CLE_RARE, cles: CLES_L2A, courantes: { chance: CHANCE_CLE_COURANTE, cles: [...CLES_L1A, ...CLES_L1B] } },
 };
 
-/** L'étape du niveau 1 d'un lieu, si une fouille peut y donner une clé rare (la maison et le Comptoir : non). */
+/** L'étape d'un lieu, si une fouille peut y donner un objet-clé rare (la maison et le Comptoir : non). */
 export function etapeButin(lieu: LieuId): EtapeButin | undefined {
   for (const etape of Object.keys(CLES_RARES) as EtapeButin[]) if ((ETAPES_LIEUX as Partial<Record<string, LieuId>>)[etape] === lieu) return etape;
   return undefined;
 }
 
-/** Le tirage rare d'une clé de L1 (R-BUTIN), à part du tirage de la fouille : null le plus souvent. */
-export function tirerCleRare(etape: EtapeButin, alea: () => number): TypeObjet | null {
-  const { chance, cles } = CLES_RARES[etape];
+/** Un tirage : un objet-clé de la liste, avec sa chance, ou null. */
+function tirerUneCle({ chance, cles }: TirageCles, alea: () => number): TypeObjet | null {
   if (Math.min(Math.max(alea(), 0), 0.999999) >= chance) return null;
   return cles[Math.min(cles.length - 1, Math.floor(Math.min(Math.max(alea(), 0), 0.999999) * cles.length))]!;
+}
+
+/**
+ * Le tirage d'un objet-clé hors de sa place (R-BUTIN), à part du tirage de la fouille : null le plus souvent. D'abord le
+ * rare ; au niveau 2, s'il n'a rien donné, le plus courant (une fouille donne au plus un objet-clé).
+ */
+export function tirerCleRare(etape: EtapeButin, alea: () => number): TypeObjet | null {
+  const t = CLES_RARES[etape];
+  return tirerUneCle(t, alea) ?? (t.courantes ? tirerUneCle(t.courantes, alea) : null);
 }

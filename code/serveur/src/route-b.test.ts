@@ -84,7 +84,8 @@ test("les étapes du monde ont leur lieu, et l'affichage leur nom (Q-0.8-25)", (
   assert.equal(ETAPES_LIEUX.H1B, "gue");
   assert.equal(ETAPES_LIEUX.L1A, "cooperative");
   assert.equal(ETAPES_LIEUX.L1B, "moulin");
-  assert.equal(lieuDeLEtape("H2A"), undefined);
+  // 0.10 (chantier A) : le niveau 2 a ses lieux (avant : undefined).
+  assert.equal(lieuDeLEtape("H2A"), "route_pont");
   assert.equal(LIEUX[lieuDeLEtape("H1B")!].nom, "Le Gué-aux-Saules");
   assert.equal(LIEUX[lieuDeLEtape("L1B")!].nom, "Le Moulin du Gué");
   // 0.8.2 (R18) : la carte ne promet plus rien (chantier K, client/src/textes-du-jeu.test.ts).
@@ -191,7 +192,8 @@ test("le gué est partagé, comme la station ; le Moulin est à chacun, comme la
 test("god va au gué et au Moulin d'un coup (menu « Aller à… »)", () => {
   assert.deepEqual(
     lieuxAdmin().map((l) => l.id),
-    ["terrain", "station", "comptoir", "gue", "cooperative", "moulin"],
+    // 0.10 (chantier A, décision du porteur) : et les quatre lieux du niveau 2.
+    ["terrain", "station", "comptoir", "gue", "cooperative", "moulin", "route_pont", "grand_hotel", "corniche", "phare"],
   );
   const m = monde();
   const god = preparerGod(m.base, "olympe42", undefined, 1000).compte;

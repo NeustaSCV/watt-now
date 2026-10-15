@@ -20,7 +20,9 @@ const AU_BANC = aCote("banc_recharge");
 const AU_POSTE_DE_MONTAGE = aCote("banc_recharge", { accessoire: "poste_montage" });
 /**
  * Ce qui attend le niveau 2 (plan 0.8 §1.3, `decisions-armes.json`) : le poste de montage (L2A, sa clé : le fer à souder)
- * et ce qui s'y fait, l'aiguillon, la clôture électrique. Grisé « plus tard » ; le serveur le refuse.
+ * et ce qui s'y fait, la clôture électrique. Grisé « plus tard » ; le serveur le refuse. Depuis la 0.10 (chantier F), les
+ * armes du niveau 2 sont jouables : le module à bobine, l'aiguillon, les matraques à électrodes, à manche tourné et à
+ * contacts soudés ; elles se font là où le poste de montage est monté (chantier C).
  */
 const NIVEAU_2 = { aVenir: "niveau 2" } as const;
 
@@ -31,6 +33,8 @@ const NIVEAU_2 = { aVenir: "niveau 2" } as const;
 const NOTE_PETITE_BATTERIE = "La petite batterie de la frontale est unique : elle va à la matraque de fortune ou à la matraque électrique, pas aux deux.";
 /** La petite batterie, source d'une matraque électrique : une source ★★ (Q-A5). */
 const SOURCE_PETITE_BATTERIE = 2;
+/** Le pack soudé de 24 Wh (chantier C, au poste de montage) : une source ★★★, comme le pack de cellules (Q-C10). */
+const SOURCE_PACK_SOUDE = 3;
 
 /** L'étoile de chaque condensateur (Q-0.8.2-4) : le module de décharge la prend (maillon faible). */
 export const ETOILES_CONDENSATEUR = { petit_condensateur: 1, condensateur_moyen: 2 } as const;
@@ -113,7 +117,6 @@ export const RECETTES_VOLTAIQUES: Recette[] = [
   {
     // La bobine d'allumage, attaquée par le petit condensateur (celui du flash) : la vraie haute tension (★★★), qui saute au voisin.
     id: "module_bobine",
-    ...NIVEAU_2,
     lieu: AU_POSTE_DE_MONTAGE,
     categorie: "materiaux",
     nom: "Module de décharge (bobine)",
@@ -166,7 +169,6 @@ export const RECETTES_VOLTAIQUES: Recette[] = [
     // L'amélioration du Charbonnier : deux pointes d'acier forgées pour tenir contre une tempe, un pack trié (deux
     // packs, la moitié des cellules jetée). Une étoile de plus : ★★★★ avec une bobine.
     id: "matraque_electrodes",
-    ...NIVEAU_2,
     lieu: AU_POSTE_DE_MONTAGE,
     categorie: "outils",
     nom: "Matraque à électrodes forgées",
@@ -181,7 +183,6 @@ export const RECETTES_VOLTAIQUES: Recette[] = [
   {
     // Le haut de gamme passe par les trois métiers (Book 25 §7.3) : électrodes 🔥, manche tourné et isolé ⚙️, montage ⚡.
     id: "matraque_manche_tourne",
-    ...NIVEAU_2,
     lieu: AU_POSTE_DE_MONTAGE,
     categorie: "outils",
     nom: "Matraque à manche tourné",
@@ -196,7 +197,6 @@ export const RECETTES_VOLTAIQUES: Recette[] = [
   {
     // La même décharge au bout d'un épieu : deux fils de cuivre courent jusqu'aux électrodes.
     id: "aiguillon",
-    ...NIVEAU_2,
     lieu: AU_BANC,
     categorie: "outils",
     nom: "Aiguillon de défense",
@@ -207,6 +207,25 @@ export const RECETTES_VOLTAIQUES: Recette[] = [
     intensite: "legere",
     famille: "voltaiques",
     facteursEtoiles: facteursArme(3, 0),
+  },
+
+  {
+    // La matraque à contacts soudés (plan 0.10, chantier F ; Q-A2e, N2-36) : le corps n'est plus un gourdin, mais un tube
+    // d'aluminium gainé d'un plastique (l'isolant) ; les contacts soudés au fer (Souder 1, la clé ⚡ de L2A). Sa source : le
+    // pack soudé de 24 Wh, ou la petite batterie du kit (★★ au plus, Q-A5) ; le pack passe d'abord.
+    id: "matraque_contacts_soudes",
+    lieu: AU_POSTE_DE_MONTAGE,
+    categorie: "outils",
+    nom: "Matraque à contacts soudés",
+    produit: { objet: "matraque_electrique", quantite: 1 },
+    ingredients: { tube_aluminium: 1, plastique: 1, module_decharge: 1, caoutchouc: 1, fil_cuivre: 1 },
+    auChoix: [{ pack_soude: 1 }, { petite_batterie: 1 }],
+    qualites: { souder: 1, visser: 1 },
+    duree: 45,
+    intensite: "legere",
+    famille: "voltaiques",
+    facteursEtoiles: (inventaire, _contexte, facon) => [etoilesModule(inventaire), facon?.petite_batterie ? SOURCE_PETITE_BATTERIE : SOURCE_PACK_SOUDE, 3],
+    note: `Avec la petite batterie, ★★ au plus. ${NOTE_PETITE_BATTERIE}`,
   },
 
   // ---------- Le reste de la gamme (Book 25 §5.3) ----------
@@ -330,5 +349,53 @@ export const RECETTES_VOLTAIQUES: Recette[] = [
     intensite: "legere",
     famille: "voltaiques",
     facteursEtoiles: derouille("machette"),
+  },
+
+  // ---------- Le niveau 2, chantier C (plan 0.10 §4) : au poste de montage ----------
+  {
+    // Le pack soudé (Q-C10) : six cellules soudées en barrette au fer, leur LED de charge, un fil de cuivre ; 24 Wh, le
+    // double du pack de cellules, qui ne se décroche pas. Il fait la source des contacts soudés (chantier F).
+    id: "pack_soude",
+    lieu: AU_POSTE_DE_MONTAGE,
+    categorie: "materiaux",
+    nom: "Souder un pack de 24 Wh",
+    produit: { objet: "pack_soude", quantite: 1 },
+    ingredients: { cellule_lithium: 6, led: 1, fil_cuivre: 1 },
+    qualites: { souder: 1 },
+    duree: 30,
+    intensite: "legere",
+    famille: "voltaiques",
+  },
+
+  // ---------- Les meubles nouveaux du niveau 2, chantier D (plan 0.10 ; N2-44, N2-45) : avec le poste de montage ----------
+  {
+    // La rampe de LED (S-25) : une lumière posée, comme la lanterne fixe, 20 m ; elle tire 3 W sur la batterie de la base,
+    // la nuit seulement (≈ 25 Wh par nuit de calendrier) ; batterie vide, elle s'éteint. Elle apparaît avec le poste de
+    // montage (progression.ts).
+    id: "rampe_led",
+    lieu: POSEE,
+    categorie: "batir",
+    nom: "Rampe de LED",
+    produit: { installation: "rampe_led" },
+    ingredients: { led: 10, fil_cuivre: 2, tube_aluminium: 1 },
+    auChoix: [{ pack_cellules: 1 }, { pack_soude: 1 }],
+    qualites: { souder: 1 },
+    duree: 45,
+    intensite: "legere",
+    famille: "voltaiques",
+  },
+  {
+    // La batterie de cellules (S-26) : douze cellules d'environ 10 Wh soudées en bloc, 120 Wh ; elle se pose dans le banc
+    // comme la batterie de voiture (energie.ts, BATTERIES_DE_BANC). Elle sort vide du poste.
+    id: "batterie_cellules",
+    lieu: AU_POSTE_DE_MONTAGE,
+    categorie: "materiaux",
+    nom: "Batterie de cellules (120 Wh)",
+    produit: { objet: "batterie_cellules", quantite: 1 },
+    ingredients: { cellule_lithium: 12, fil_cuivre: 4, plastique: 1 },
+    qualites: { souder: 1 },
+    duree: 60,
+    intensite: "legere",
+    famille: "voltaiques",
   },
 ];

@@ -1,7 +1,8 @@
-// Le feu et l'eau jusqu'au niveau 1 (plan 0.8, chantier 5) : le foyer de cuisine et sa clé (le grillage) ou son repli
-// (deux barres, Marteler 2, deux fois plus long) ; la soupe au seul foyer de cuisine ; la marmite norvégienne et sa
-// cocotte, ou la casserole du repli ; le Dakota qui rend ses 5 pierres ; le bâton à fouir durci ; le four « plus tard » ;
-// le récupérateur de 5 L (le bidon, les 4 sacs) et le récupérateur à seau de 10 L, qui se remplit même hors ligne.
+// Le feu et l'eau jusqu'au niveau 1 (plan 0.8, chantier 5) : le foyer de cuisine et sa clé (le grillage), sans repli
+// (plan 0.10) ; la soupe au seul foyer de cuisine ; la marmite norvégienne et sa cocotte (une marmite montée à la
+// casserole dans une partie de la 0.9 se relit) ; le Dakota qui rend ses 5 pierres ; le bâton à fouir durci ; le four
+// « plus tard » ; le récupérateur de 5 L (le bidon, les 4 sacs) et le récupérateur à seau de 10 L, qui se remplit même
+// hors ligne.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -11,7 +12,6 @@ import { meteo } from "../../commun/src/meteo.ts";
 import type { MessageServeur } from "../../commun/src/messages.ts";
 import { etapesAvecCle, nouvellesIdees, toutDevoile } from "../../commun/src/progression.ts";
 import { RECETTES, recette } from "../../commun/src/recettes.ts";
-import { choisirFacon, faconsEtape } from "../../commun/src/replis.ts";
 import { Base } from "./base.ts";
 import { Joueur } from "./joueur.ts";
 
@@ -59,15 +59,11 @@ function poserFeu(base: Base, id: number, feu: { id: number; bois?: number; allu
 
 // ---------- Le feu ----------
 
-test("le foyer de cuisine se monte avec un grillage (Marteler 1), ou deux barres et Marteler 2, deux fois plus long", () => {
+test("le foyer de cuisine se monte avec un grillage (Marteler 1), et sans grillage, pas du tout (plan 0.10 : pas de repli)", () => {
   const foyer = VOIE_SURFACE.find((e) => e.id === "foyer_cuisine")!;
   assert.equal(foyer.cle?.objet, "grillage_rouleau");
   assert.equal(foyer.etapeLieu, "L1");
-  const [avecCle, repli] = faconsEtape(foyer);
-  assert.deepEqual(avecCle!.couts, [{ branche: 3, corde: 1, grillage_rouleau: 1 }]);
-  assert.deepEqual(repli!.couts, [{ branche: 3, corde: 1, barre_metal: 2 }]);
-  assert.deepEqual(repli!.qualites, { couper: 1, marteler: 2 });
-  assert.equal(repli!.duree, foyer.duree * 2);
+  assert.deepEqual(foyer.couts, [{ branche: 3, corde: 1, grillage_rouleau: 1 }]);
 
   // Le grillage et une pierre (Marteler 1) suffisent.
   const t = monter({ branche: 3, corde: 1, grillage_rouleau: 1, couteau: 1, pierre: 1 }, (b, id) => poserFeu(b, id, { id: 1, niveau: 2 }));
@@ -75,27 +71,13 @@ test("le foyer de cuisine se monte avec un grillage (Marteler 1), ou deux barres
   assert.equal(t.dernier("feu")!.feu.niveau, 3);
   assert.deepEqual(t.base.chargerFeux(t.compte.id)[0]!.payes?.at(-1), { branche: 3, corde: 1, grillage_rouleau: 1 });
 
-  // Deux barres et une pierre : il manque Marteler 2.
-  const u = monter({ branche: 3, corde: 1, barre_metal: 2, couteau: 1, pierre: 1 }, (b, id) => poserFeu(b, id, { id: 1, niveau: 2 }));
-  u.agir("feu", 1, "ameliorer");
-  assert.notEqual(u.dernier("feu")?.feu.niveau, 3);
-  assert.match(u.infos().join(" "), /Marteler 2/);
-
-  // Deux barres et le marteau : deux fois plus long que le grillage.
+  // Deux barres et le marteau (l'ancien repli) : il manque le grillage, et rien ne se fait.
   const v = monter({ branche: 3, corde: 1, barre_metal: 2, couteau: 1, marteau: 1 }, (b, id) => poserFeu(b, id, { id: 1, niveau: 2 }));
-  v.joueur().recevoir({ t: "interagir", cible: { genre: "feu", id: 1 }, verbe: "ameliorer" });
-  const w = monter({ branche: 3, corde: 1, grillage_rouleau: 1, couteau: 1, marteau: 1 }, (b, id) => poserFeu(b, id, { id: 1, niveau: 2 }));
-  w.joueur().recevoir({ t: "interagir", cible: { genre: "feu", id: 1 }, verbe: "ameliorer" });
-  const duree = (x: ReturnType<typeof monter>) => {
-    const a = x.dernier("action")!;
-    return a.t === "action" && a.etat === "debut" ? a.duree : 0;
-  };
-  assert.ok(duree(w) > 0);
-  // (En jeu, la durée accélérée a un plancher de 2 s : on compare donc sans exiger le double exact.)
-  assert.ok(duree(v) > duree(w), `${duree(v)} s contre ${duree(w)} s`);
-  v.attendre(30);
-  assert.equal(v.dernier("feu")!.feu.niveau, 3);
-  assert.equal(v.inventaireActuel().barre_metal ?? 0, 0);
+  v.agir("feu", 1, "ameliorer");
+  assert.notEqual(v.dernier("feu")?.feu.niveau, 3);
+  assert.match(v.infos().join(" "), /rouleau de grillage/);
+  assert.doesNotMatch(v.infos().join(" "), /Ou deux barres/);
+  assert.equal(v.inventaireActuel().barre_metal, 2);
 });
 
 test("la soupe n'apparaît qu'au foyer de cuisine : refusée au foyer de pierres ; le foyer de cuisine l'ouvre", () => {
@@ -131,14 +113,16 @@ test("le bâton à fouir se durcit au foyer de pierres, pas au feu de camp", () 
   assert.equal(u.inventaireActuel().baton_fouir ?? 0, 0);
 });
 
-test("le four de terre attend « plus tard », avec sa clé nommée ; ses deux plats aussi, grisés", () => {
+test("le four de terre (0.10) se bâtit avec sa porte de fonte, sans repli ; ses deux plats attendent la 0b, grisés", () => {
   const four = VOIE_SURFACE.find((e) => e.id === "four_terre")!;
-  assert.equal(four.aVenir, "niveau 2");
-  assert.equal(four.cle?.nom, "porte de four en fonte");
-  for (const id of ["pot_au_feu", "volaille_cepes"]) assert.equal(recette(id)!.aVenir, "niveau 2", id);
-  const t = monter({ pierre: 6, branche: 4, glaise: 4 }, (b, id) => poserFeu(b, id, { id: 1, niveau: 3 }));
+  assert.equal(four.aVenir, undefined);
+  assert.equal(four.cle?.objet, "porte_four");
+  assert.equal("replis" in four.cle!, false);
+  for (const id of ["pot_au_feu", "volaille_cepes"]) assert.equal(recette(id)!.aVenir, "0b", id);
+  // Les anciens matériaux ne suffisent plus : il manque la porte (et les bouteilles), rien ne se bâtit.
+  const t = monter({ pierre: 6, branche: 4, glaise: 4, marteau: 1 }, (b, id) => poserFeu(b, id, { id: 1, niveau: 3 }));
   t.agir("feu", 1, "ameliorer");
-  assert.match(t.infos().at(-1)!, /plus tard/);
+  assert.match(t.infos().at(-1)!, /porte de four en fonte/);
   assert.equal(t.dernier("feu")?.feu.niveau ?? 3, 3);
 });
 
@@ -155,21 +139,20 @@ test("creuser un feu de camp en Dakota rend ses 5 pierres ; le combler en coûte
   assert.equal(t.inventaireActuel().pierre ?? 0, 0);
 });
 
-test("la marmite norvégienne : la cocotte en fonte (bois ×0,5), ou la casserole du repli (×0,75)", () => {
+test("la marmite norvégienne : la cocotte en fonte (bois ×0,5) ; plus de casserole (plan 0.10), une marmite 0.9 à la casserole se relit (×0,75)", () => {
   const marmite = ACCESSOIRES_FEU.marmite;
   assert.equal(marmite.cle?.objet, "cocotte_fonte");
   assert.deepEqual(marmite.couts, [{ branche: 4, chiffons: 4, cocotte_fonte: 1 }]);
-  assert.deepEqual(faconsEtape(marmite)[1]!.couts, [{ branche: 4, chiffons: 4, casserole: 1 }]);
   assert.equal(boisMarmite(undefined), 1);
   assert.equal(boisMarmite({ branche: 4, chiffons: 4, cocotte_fonte: 1 }), BOIS_MARMITE.cocotte);
   assert.equal(boisMarmite({ branche: 4, chiffons: 4, casserole: 1 }), BOIS_MARMITE.casserole);
   assert.ok(BOIS_MARMITE.cocotte < BOIS_MARMITE.casserole && BOIS_MARMITE.casserole < 1);
 
-  // Montée avec la casserole, sur un foyer de cuisine ; la soupe y prend 0,375 kg de bois par plat au lieu de 0,5.
+  // La casserole (l'ancien repli) ne monte plus la marmite.
   const t = monter({ branche: 4, chiffons: 4, casserole: 1 }, (b, id) => poserFeu(b, id, { id: 1, niveau: 3, bois: 5 }));
   t.agir("feu", 1, "monter_marmite", 25);
-  assert.deepEqual(t.dernier("feu")!.feu.accessoires, ["marmite"]);
-  assert.deepEqual(t.base.chargerFeux(t.compte.id)[0]!.accessoires?.marmite, { branche: 4, chiffons: 4, casserole: 1 });
+  assert.equal(t.base.chargerFeux(t.compte.id)[0]!.accessoires?.marmite, undefined);
+  assert.equal(t.inventaireActuel().casserole, 1);
 
   const soupe = (marmitePayee: Record<string, number>) => {
     const u = monter({ cepe: 2, gourde: 1 }, (b, id) => poserFeu(b, id, { id: 1, niveau: 3, bois: 5, allume: true, accessoires: { marmite: marmitePayee } }));
@@ -225,7 +208,7 @@ test("le récupérateur de 5 L se fait à la maison : le bidon de la ruine, 4 br
   assert.equal(u.inventaireActuel().bidon_5l ?? 0, 0);
 });
 
-test("la lignée de l'eau : 5 L, le seau de 10 L (clé : le seau ; repli : le bidon d'huile), 20 L plus tard ; plus de citerne", () => {
+test("la lignée de l'eau : 5 L, le seau de 10 L (clé : le seau, sans repli), 20 L plus tard ; plus de citerne", () => {
   assert.deepEqual([...CONTENANCES_RECUPERATEUR], [5, 10, 20]);
   const l = lignee("recuperateur_pluie")!;
   assert.deepEqual(l.map((e) => e.id), ["recuperateur_pluie", "recuperateur_seau", "recuperateur_jerrican"]);
@@ -234,10 +217,9 @@ test("la lignée de l'eau : 5 L, le seau de 10 L (clé : le seau ; repli : le bi
   assert.equal(seau.cle?.objet, "seau_10l");
   assert.deepEqual(seau.couts, [{ seau_10l: 1, branche: 2 }]);
   assert.deepEqual(seau.qualites, { couper: 1 });
-  assert.deepEqual(faconsEtape(seau)[1]!.couts, [{ branche: 2, bidon_huile: 1 }]);
-  assert.equal(choisirFacon({ branche: 2, bidon_huile: 1, couteau: 1 }, seau, "mecanistes").facon.repli, seau.cle!.replis![0]);
-  assert.equal(l[2]!.aVenir, "niveau 2");
-  assert.equal(l[2]!.cle?.nom, "jerrican de 20 L");
+  // Plan 0.10 (chantier C) : le jerrican de 20 L, sans repli.
+  assert.equal(l[2]!.aVenir, undefined);
+  assert.equal(l[2]!.cle?.objet, "jerrican_20l");
   // Aucune recette ne pose plus de citerne.
   assert.ok(!RECETTES.some((r) => r.id === "citerne"));
 });

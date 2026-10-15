@@ -116,6 +116,8 @@ export const APPARENCES: Partial<Record<TypeObjet, ApparenceObjet>> = {
   attrape_reves: { s: "roue", e: [0.3, 0.15, 0.3] },
   balise_solaire: { s: "barre", e: [0.35, 1.8, 1.8], t: 0x5c5953, a: 0xd6dfe4 },
   parasol: { s: "barre", e: [2, 3, 3] },
+  // 0.10 (chantier B) : la chaise de camping repliée, sa toile autour des tubes.
+  chaise_camping: { s: "chiffon", e: [1.1, 0.7, 2.6], t: 0x2f6f8a },
   barbecue: { s: "barbecue", t: ROUILLE },
   sac_charbon_bbq: { s: "coussin", e: [1, 1.2, 1.1] },
   trottinette_electrique: { s: "trottinette" },

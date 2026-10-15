@@ -9,7 +9,9 @@ import type { AnimalVu } from "./faune.ts";
 import type { Apparence } from "./apparence.ts";
 import type { Position } from "./deplacement.ts";
 import type { MouvementRadeau } from "./gue.ts";
+import type { Passage } from "./peage.ts";
 import type { CibleCharge } from "./banc.ts";
+import type { ElementPhare, EtatPhareVu, VerbePhare } from "./phare.ts";
 import type { ModeArrivee } from "./arrivee.ts";
 import type { Charges, TypeBatterie } from "./energie.ts";
 import type { LieuId, LieuJouable } from "./lieux.ts";
@@ -25,6 +27,7 @@ import type { TypeInstallation } from "./recettes.ts";
 import type { Allure, Famille } from "./regles.ts";
 import type { AspectFeu, Besoins, Gourde } from "./survie.ts";
 import type { RessourceSol } from "./terrain.ts";
+import type { EtatHotel } from "./hotel.ts";
 
 // ---------- HTTP ----------
 
@@ -88,7 +91,11 @@ export type Cible =
   /** Une porte de la Coopérative (Book 23 §2.2) : son identifiant dans le plan. */
   | { genre: "porte"; id: string }
   /** Un leurre du décor de la Coopérative (Book 23 §4.7) : le klaxon, la sonnette, la radio. */
-  | { genre: "leurre"; id: string };
+  | { genre: "leurre"; id: string }
+  /** Un objet propre au lieu (0.10, chantier J : la borne, le robot, la batterie, la tête, l'ascenseur de l'hôtel). */
+  | { genre: "lieu"; id: string }
+  // 0.10, chantier K : voir le bloc « le phare » en fin de fichier.
+  | CiblePhare;
 
 export type Verbe =
   | "ramasser"
@@ -153,7 +160,22 @@ export type Verbe =
   /** Le banc solaire ⚡ : poser le panneau sur le banc. */
   | "poser_panneau"
   /** Le pédalier générateur ⚙️ : monter le petit alternateur, entraîné par la roue. */
-  | "monter_alternateur";
+  | "monter_alternateur"
+  // Les meubles nouveaux du niveau 2 (plan 0.10, chantier D ; serveur/src/meubles-neufs.ts).
+  /** La forge ventilée 🔥 : y poser le creuset et ses moules. */
+  | "poser_creuset"
+  /** Le moulin de jerricans ⚙️ : poser la poulie d'aluminium sur son axe. */
+  | "poser_poulie"
+  /** Le coffre (ou la réserve couverte) : y poser les étagères de l'établi de menuisier (plan 0.10, V1-04) : + 50 kg. */
+  | "poser_etageres"
+  // Le Grand Hôtel, « le check-in » (plan 0.10 §3.6, chantier J ; serveur/src/hotel.ts) : brancher la batterie à la
+  // borne, dégager le robot du sable, présenter sa tête à la borne, appeler l'ascenseur.
+  | "brancher"
+  | "degager"
+  | "presenter"
+  | "appeler_ascenseur"
+  // 0.10, chantier K : voir le bloc « le phare » en fin de fichier.
+  | VerbePhare;
 
 /** État propre à certaines installations. */
 export interface EtatInstallation {
@@ -199,6 +221,17 @@ export interface EtatInstallation {
   alternateur?: boolean;
   /** La torche plantée (plan 0.8, chantier 6) : l'instant réel où elle s'éteint (absente : pas encore allumée ; passé : consumée). */
   eteinteLe?: number;
+  /**
+   * Les meubles nouveaux du niveau 2 (plan 0.10, chantier D) : le creuset posé sur la forge ventilée 🔥 ; la poulie
+   * d'aluminium posée sur le moulin de jerricans ⚙️ ; la rampe de LED ⚡ a du courant (la batterie de la base n'est pas
+   * vide : elle éclaire la nuit) ; l'arbalète de garde ⚙️ garde les étoiles de l'arbalète posée (ses dégâts).
+   */
+  creuset?: boolean;
+  poulie?: boolean;
+  courant?: boolean;
+  etoiles?: number;
+  /** Le coffre ou la réserve couverte : ses étagères de planches rabotées sont posées, + 50 kg (plan 0.10, V1-04). */
+  etageres?: boolean;
 }
 
 /** L'état d'une installation à déclencheur. */
@@ -246,6 +279,8 @@ export type MessageClient =
   | MessageClientBanc
   // La vue d'ensemble à l'arrivée (0.8.2, chantier G) : voir le bloc « arrivée » en fin de fichier.
   | MessageClientArrivee
+  // Le péage des survivants (plan 0.10 §3.6, chantier H) : voir le bloc « péage » en fin de fichier.
+  | MessageClientPeage
   | { t: "interagir"; cible: Cible; verbe: Verbe }
   | { t: "manger"; objet: TypeObjet }
   | { t: "boire" }
@@ -403,6 +438,8 @@ export interface SanteVue {
   convalescence: boolean;
   /** Malade d'un champignon toxique (les symptômes sont là). */
   intoxique?: boolean;
+  /** Les fluides d'un Noyé crevé (0.10) : la nausée, l'endurance revient moins vite. */
+  nauseeux?: boolean;
 }
 
 /** Un sac tombé au sol après un effondrement : on peut revenir le chercher (Book 05 §10.3). */
@@ -480,6 +517,8 @@ export interface Bienvenue {
   progression?: VueProgression;
   /** La couche de déchets du lieu (0.7) : de quoi reconstruire les amas, les conteneurs et les points (≈ 1 Ko). */
   dechets?: VueDechets;
+  /** L'accès au niveau 2 (plan 0.10, V4-19) : la côte ouverte ; absent ou false : grisée sur la carte, la route refusée. */
+  coteOuverte?: boolean;
 }
 
 /**
@@ -499,8 +538,6 @@ export type MessageServeur =
   | MessageServeurSavoir
   // Le gué (plan 0.8, chantier 11) : voir le bloc « gué » en fin de fichier.
   | MessageServeurGue
-  // Un avertissement fermé par un bouton (plan 0.8, chantier 13) : voir le bloc en fin de fichier.
-  | MessageServeurAvertissement
   // L'arbre de progression (0.7) : voir le bloc « progression » en fin de fichier.
   | MessageServeurProgression
   // La couche de déchets (0.7) : voir le bloc « déchets » en fin de fichier.
@@ -509,6 +546,10 @@ export type MessageServeur =
   | MessageServeurReprise
   // Dormir dans l'abri (0.8.2, chantier I) : voir le bloc « la couche » en fin de fichier.
   | MessageServeurCouche
+  // Le péage et la marée de la route du pont (plan 0.10 §3.6, chantier H) : voir le bloc « péage » en fin de fichier.
+  | MessageServeurPeage
+  // L'accès au niveau 2 (plan 0.10, V4-19 ; commun/src/acces-cote.ts) : la côte s'ouvre.
+  | { t: "cote"; ouverte: boolean }
   | { t: "expulse"; raison: string }
   | { t: "inventaire"; inventaire: Inventaire }
   | { t: "besoins"; besoins: Besoins; gourde: Gourde }
@@ -565,8 +606,8 @@ export type MessageServeur =
   | { t: "quetes"; quetes: VueQuetes | null }
   /** L'arme équipée a changé (P-005). */
   | { t: "arme"; arme: CleObjet | null }
-  /** Une alarme à boîtes de conserve tinte sur le terrain (P-002). */
-  | { t: "alarme"; x: number; z: number }
+  /** Une alarme à boîtes de conserve tinte sur le terrain (P-002) ; `cloche` : la cloche d'alarme sonne (plan 0.10). */
+  | { t: "alarme"; x: number; z: number; cloche?: true }
   /** On s'endort (dans l'abri ou par terre) ou on se réveille (É5). */
   | { t: "sommeil"; dort: boolean; dansUnAbri: boolean }
   /** Les autres joueurs du lieu, plusieurs fois par seconde (É4, lot 3). */
@@ -581,7 +622,11 @@ export type MessageServeur =
   /** Ce qui est prêt à lancer (null : la pierre, s'il y en a), et si l'arbalète est armée. */
   | { t: "pret"; objet: CleObjet | null; armee?: boolean }
   /** Un objet en vol, du lanceur au point d'impact : le client le dessine, puis montre l'impact. */
-  | { t: "projectile"; projectile: ProjectileVu };
+  | { t: "projectile"; projectile: ProjectileVu }
+  // Le Grand Hôtel, « le check-in » (plan 0.10, chantier J) : voir le bloc « l'hôtel » en fin de fichier.
+  | MessageServeurHotel
+  // 0.10, chantier K : voir le bloc « le phare » en fin de fichier.
+  | MessageServeurPhare;
 
 /** Un projectile, vu par le client (Book 25 §10.3) : d'où il part, où il arrive, et ce qu'il y fait. */
 export interface ProjectileVu {
@@ -710,15 +755,6 @@ export type MessageServeurGue =
   /** Le radeau du bac : sa place et où il va (le client le prolonge seul) ; `cloche` : la cloche du passeur sonne. */
   { t: "gue"; radeau: MouvementRadeau; cloche?: true };
 
-// ---------- Un avertissement, fermé par un bouton (plan 0.8 §2.6, chantier 13 ; commun/src/tutoriel.ts) ----------
-
-export type MessageServeurAvertissement =
-  /**
-   * Un bandeau dans la charte du carnet, fermé par son bouton (`bouton` : « Compris »), jamais par une croix (règle du
-   * porteur). `id` : de quoi il parle (« buche » : une bûche du terrain mise au feu, B14).
-   */
-  { t: "avertissement"; id: "buche"; texte: string; bouton: string };
-
 // ---------- Les constats de l'interface (plan 0.8, chantier 14 ; serveur/src/mesures.ts) ----------
 
 export type MessageClientConstat =
@@ -795,3 +831,47 @@ export type MessageServeurPresences =
   | { t: "positions"; h: number; p: number[] }
   /** Leurs gestes depuis l'envoi précédent, aux mêmes observateurs que les positions, chacun une fois. */
   | { t: "gestes"; g: GesteVu[] };
+
+// ---------- L'hôtel, « le check-in » (plan 0.10, chantier J ; commun/src/hotel.ts, serveur/src/hotel.ts) ----------
+
+export type MessageServeurHotel =
+  /** Où en est le check-in (la batterie, la tête du robot, le robot dégagé), à l'entrée et à chaque changement. */
+  | { t: "hotel"; hotel: EtatHotel }
+  /**
+   * Une scène (plan 0.10 §3.6) : l'ascenseur qui monte ou descend, le saut du balcon. Le client joue le fondu au noir
+   * d'une seconde à l'heure du serveur `debut` (ms) ; le joueur change de place au milieu (S-01).
+   */
+  | { t: "scene"; lieu: LieuId; scene: "ascenseur" | "balcon"; etape: string; debut: number };
+
+// ---------- Le péage des survivants, la marée (plan 0.10 §3.4, §3.6, chantier H ; commun/src/peage.ts, route-pont.ts) ----------
+
+export type MessageClientPeage =
+  /**
+   * « Payer » à la caisse du péage (le sac ouvert en mode « donner ») : ces objets, au moins 12 wotts au prix du
+   * Comptoir. Refusé si la valeur est en dessous, ou si l'on a déjà payé (le passage est libre une heure).
+   */
+  { t: "payer_passage"; passage: Passage; objets: Inventaire };
+
+export type MessageServeurPeage =
+  /** Le passage pour ce joueur : ouvert (payé, pour une heure) ou fermé ; `du` : ce qu'il reste à payer (wotts). */
+  | { t: "passage"; passage: Passage; ouvert: boolean; du: number }
+  /**
+   * La mer monte (S-20, complément K1) : le joueur resté sur la cale basse est remis en haut de l'accès, sur le quai
+   * (sa position suit) ; l'écran fait un fondu et montre `texte`, fermé par son bouton (jamais une croix).
+   */
+  | { t: "maree_remonte"; texte: string; bouton: string };
+
+// ---------- Le phare du cap (plan 0.10, chantier K ; commun/src/phare.ts, serveur/src/phare.ts) ----------
+
+/** Ce qu'on touche au phare : l'escabeau, l'escalier coupé (la marque), la cuve, le prisme, la corne, la rampe du canot. */
+export type CiblePhare = { genre: "phare"; id: ElementPhare };
+
+export type MessageServeurPhare =
+  /**
+   * L'état du phare (à l'arrivée et à chaque changement) : où est l'escabeau, le bidon, le prisme, la lanterne, la corne.
+   * `cargo` : le cargo s'échoue à l'instant (S-17) : le client joue la corne grave, le choc et le fondu, puis montre
+   * l'épave (l'épave elle-même est un état du lieu : `portes.epave`). `corne` : la corne de brume sonne (S-16), aux
+   * pavillons, au bord de la falaise. `avertissement` : n'est plus envoyé (le message de jour, S-14, est un message
+   * d'information depuis le 2026-10-15 : pas de fenêtre en jeu) ; gardé pour la compatibilité.
+   */
+  { t: "phare"; etat: EtatPhareVu; cargo?: true; corne?: true; avertissement?: string };

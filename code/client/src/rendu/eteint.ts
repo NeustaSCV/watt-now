@@ -8,7 +8,23 @@ import type { EteintVu } from "../../../commun/src/eteints.ts";
 import { Humanoide, chargerHumanoides, humanoidesPrets, type Coiffure, type Tenue } from "./humanoides.ts";
 import { AMBIANCE } from "./ciel.ts";
 import { aleatoire } from "./materiaux.ts";
-import { Rampement, habillerVariante, herbeDuRampant, tenueDeVariante } from "./variantes-eteints.ts";
+import {
+  ENFOUI,
+  GONFLE,
+  LUISANCE_NOYE,
+  PEAU_ENSABLE,
+  PEAU_NOYE,
+  Rampement,
+  bouffeeDeSable,
+  butteDeSable,
+  crevaison,
+  gonfler,
+  gonflerLeCorps,
+  type CorpsGonfle,
+  habillerVariante,
+  herbeDuRampant,
+  tenueDeVariante,
+} from "./variantes-eteints.ts";
 import { CorpsAuSol } from "./eteint-au-sol.ts";
 
 const HAUTEUR = 1.72;
@@ -68,8 +84,11 @@ export class VueEteint {
   private ouverture: number;
   private taches = 0;
   private readonly aleat: () => number;
-  /** Le Rampant (Book 23 §3) : au sol, sur le ventre, l'herbe qui frémit autour de lui. */
-  private readonly rampant: boolean;
+  /**
+   * Le Rampant (Book 23 §3) : au sol, sur le ventre, l'herbe qui frémit autour de lui. L'Ensablé aussi, et le Noyé à la
+   * jambe brisée (0.10) : celui qui change en cours de route (un piège) est redessiné (`maj`).
+   */
+  private rampant: boolean;
   private herbe: ReturnType<typeof herbeDuRampant> | null = null;
   private rampement: Rampement | null = null;
   private lueur: THREE.Mesh | null = null;
@@ -91,7 +110,7 @@ export class VueEteint {
     this.objet.position.set(e.x, 0, e.z);
     this.objet.rotation.y = e.o;
     this.ouverture = e.etat === "dormant" ? 0 : 1;
-    this.rampant = e.variante === "rampant";
+    this.rampant = rampantDe(e);
     if (humanoidesPrets()) this.construire();
     else void chargerHumanoides().then(() => this.construire());
   }
@@ -102,7 +121,9 @@ export class VueEteint {
     const genre = a() < 0.5 ? "femme" : "homme";
     const coiffure = choisir(COIFFURES);
     const v = this.cible.variante;
-    const peau = choisir(PEAUX);
+    const tiree = choisir(PEAUX);
+    // Le Noyé, blême ; l'Ensablé, poudré de sable (0.10) : le même tirage pour le reste.
+    const peau = v === "noye" ? PEAU_NOYE : v === "ensable" ? PEAU_ENSABLE : tiree;
     const tenueTiree: Tenue = {
       haut: choisir(HAUTS),
       // Manches arrachées, pieds nus : il a perdu ce qu'il pouvait perdre.
@@ -117,8 +138,8 @@ export class VueEteint {
       peau,
       // Les variantes gardent le même tirage (même corps, même taille) et changent seulement d'habits.
       tenue: v ? tenueDeVariante(v, tenueTiree) : tenueTiree,
-      // Sous le casque de l'Équipé, pas de cheveux.
-      coiffure: v === "equipe" ? null : coiffure === "buns" && genre === "homme" ? "buzzed" : coiffure,
+      // Sous le casque de l'Équipé, pas de cheveux ; le Noyé les a perdus dans l'eau (son crâne blême se voit de haut).
+      coiffure: v === "equipe" || v === "noye" ? null : coiffure === "buns" && genre === "homme" ? "buzzed" : coiffure,
       couleurCheveux: choisir(CHEVEUX),
       tete: 1.25,
       hauteur: HAUTEUR * (0.95 + a() * 0.08),
@@ -148,9 +169,13 @@ export class VueEteint {
       this.rampement = new Rampement(corps);
       corps.objet.rotation.x = Math.PI / 2;
       corps.objet.position.set(0, RAMPANT.levee, RAMPANT.recul);
-      this.herbe = herbeDuRampant(this.cible.id * 31 + 5);
-      this.objet.add(this.herbe.objet);
+      // Sur le sable, pas d'herbe (l'Ensablé a sa butte, plus bas).
+      if (v !== "ensable") {
+        this.herbe = herbeDuRampant(this.cible.id * 31 + 5);
+        this.objet.add(this.herbe.objet);
+      }
     }
+    this.construireCote(corps);
     // Chacun traîne à son rythme.
     corps.mixer.timeScale = 0.9 + a() * 0.2;
   }
@@ -159,8 +184,14 @@ export class VueEteint {
     return this.cible.etat;
   }
 
+  get variante(): EteintVu["variante"] {
+    return this.cible.variante;
+  }
+
   maj(e: EteintVu): void {
     this.cible = e;
+    // Il rampe désormais (la jambe brisée par un piège) : on le redessine, couché.
+    if (rampantDe(e) !== this.rampant && this.corps) this.reconstruire();
   }
 
   /** Il vient d'être frappé : il encaisse, et ses vêtements se tachent de sang (sans plaie visible). */
@@ -231,6 +262,7 @@ export class VueEteint {
     const raidi = !!this.cible.raidi && etat !== "a_terre" && etat !== "detruit";
     this.electriser(dt, raidi);
     this.sursauter(dt);
+    this.animerCote(dt);
 
     if (this.rampant) {
       this.ramper(dt, raidi ? 0 : vitesse);
@@ -269,6 +301,7 @@ export class VueEteint {
       c.jouer("Zombie_Walk_Fwd_Loop", { fondu: 0.3, vitesse: Math.min(presse ? 2 : 1.5, Math.max(0.5, vitesse / VITESSE_MARCHE)) });
     } else c.jouer("Zombie_Idle_Loop", { fondu: 0.4 });
     c.mettreAJour(dt);
+    this.redresser(dt);
     this.auSol(dt);
   }
 
@@ -382,4 +415,169 @@ export class VueEteint {
     l.visible = opacite > 0.02;
     (l.material as THREE.MeshBasicMaterial).opacity = opacite;
   }
+
+  // ---------- Le Noyé et l'Ensablé (0.10, chantier G ; S-31 à S-33) ----------
+
+  /** Le Noyé : déjà crevé, ou en train (s) ; -1 : pas encore. */
+  private crevee = -1;
+  private fluides: ReturnType<typeof crevaison> | null = null;
+  /** L'Ensablé : sa butte de sable (tant qu'il dort), et la bouffée quand il surgit. */
+  private butte: THREE.Mesh | null = null;
+  private bouffee: ((dt: number) => boolean) | null = null;
+  /** Où en est l'Ensablé qui sort du sable (0 : enfoui ; 1 : dehors). */
+  private sorti = 1;
+  /** On l'a vu debout (ou éveillé) : sa mort se joue ; sinon, c'est un corps trouvé en arrivant. */
+  private vuVivant = false;
+
+  /** À la construction : la carrure gonflée et luisante du Noyé, la butte de l'Ensablé qui dort. */
+  private construireCote(corps: Humanoide): void {
+    const v = this.cible.variante;
+    if (v === "noye") {
+      // Trouvé déjà crevé : le corps d'un Errant, dégonflé.
+      if (this.cible.etat === "detruit") this.crevee = Infinity;
+      else {
+        corps.ternir(0, 0, -LUISANCE_NOYE, 0, CENDRE_NEUTRE, CENDRE_NEUTRE);
+        // Le dos droit : les os du dos et du cou au repos (le corps n'a pas encore été animé).
+        for (const nom of DOS_DROIT) {
+          const os = corps.osNomme(nom);
+          if (os) this.dosDroit.push({ os, repos: os.quaternion.clone() });
+        }
+        for (const nom of ["upperarm_l", "upperarm_r"]) {
+          const os = corps.osNomme(nom);
+          if (os) this.bras.push({ os, cote: Math.sign(corps.repere(nom).x) || 1 });
+        }
+        // Le corps bouffi : le maillage gonflé (au repos, avant la première animation), la tête élargie.
+        this.gonfle = gonflerLeCorps(corps, this.cible.id);
+        this.gonfle?.regler(1);
+        gonfler(corps, 1);
+      }
+    } else if (v === "ensable") {
+      this.sorti = this.cible.etat === "dormant" ? 0 : 1;
+      this.poserButte(this.sorti === 0);
+      corps.objet.position.y = RAMPANT.levee - ENFOUI * (1 - this.sorti);
+    }
+  }
+
+  private poserButte(oui: boolean): void {
+    if (oui && !this.butte) {
+      this.butte = butteDeSable(this.cible.id);
+      this.objet.add(this.butte);
+    } else if (!oui && this.butte) {
+      this.objet.remove(this.butte);
+      this.butte = null;
+    }
+  }
+
+  /**
+   * À chaque image : le Noyé qui meurt crève (il se dégonfle d'un coup, ses fluides giclent, la flaque s'étale) ;
+   * l'Ensablé qui se réveille sort du sable (la butte s'efface dans une bouffée), et s'y renfonce s'il se rendort.
+   */
+  private animerCote(dt: number): void {
+    const c = this.corps;
+    if (!c) return;
+    const etat = this.cible.etat;
+    if (etat !== "detruit" && etat !== "dormant") this.vuVivant = true;
+    const v = this.cible.variante;
+    if (v === "noye") {
+      if (etat === "detruit" && this.crevee < 0) {
+        this.crevee = 0;
+        if (this.vuVivant) this.fluides = crevaison(this.objet, 0, this.rampant ? RAMPANT.recul * 0.4 : 0);
+        else this.crevee = GONFLE.crevaison;
+      }
+      if (this.crevee >= 0 && this.crevee !== Infinity) {
+        this.crevee += dt;
+        // Un instant, il gonfle encore ; puis la peau crève et il retombe, vidé.
+        const k = Math.min(1, this.crevee / GONFLE.crevaison);
+        const enflure = k < 0.2 ? 1 + GONFLE.gonflement * (k / 0.2) : 1;
+        const vide = k < 0.2 ? 0 : (k - 0.2) / 0.8;
+        const doux = 1 - Math.pow(1 - vide, 3);
+        // Le corps crève : il enfle encore un instant, puis se vide (le maillage revient à celui d'un Errant).
+        this.gonfle?.regler((1 - doux) * enflure);
+        gonfler(c, (1 - doux) * enflure);
+        if (k >= 1) this.gonfle = null;
+        if (k >= 1 && !this.fluides) this.crevee = Infinity;
+      }
+      this.fluides?.animer(dt);
+      return;
+    }
+    if (v !== "ensable") return;
+    const dort = etat === "dormant";
+    if (!dort && this.butte) {
+      this.poserButte(false);
+      this.bouffee = bouffeeDeSable(this.objet, 0, -0.2);
+    } else if (dort && !this.butte && this.sorti >= 1) this.poserButte(true);
+    this.sorti += ((dort ? 0 : 1) - this.sorti) * Math.min(1, dt * (dort ? 0.8 : 6));
+    c.objet.position.y = RAMPANT.levee - ENFOUI * (1 - this.sorti);
+    if (this.bouffee && !this.bouffee(dt)) this.bouffee = null;
+  }
+
+  /** Les os du dos du Noyé, et leur pose de repos (droite). */
+  private readonly dosDroit: { os: THREE.Bone; repos: THREE.Quaternion }[] = [];
+  /** Les bras du Noyé (os du haut du bras) et leur côté (+1, -1, en x dans le corps). */
+  private readonly bras: { os: THREE.Bone; cote: number }[] = [];
+  /** Le corps gonflé du Noyé (tant qu'il n'a pas fini de crever). */
+  private gonfle: CorpsGonfle | null = null;
+  private dandine = 0;
+
+  /**
+   * Le Noyé marche droit, lourd, en se dandinant : debout, ses os du dos et du cou reprennent leur pose de repos
+   * (droite) par-dessus l'animation de l'Éteint, qui le penche en avant, et le corps se balance d'un pied sur l'autre.
+   * Ses bras gonflés s'écartent un peu du corps (`GONFLE.ecartBras`) : ils ne rentrent pas dans le ventre.
+   */
+  private redresser(dt: number): void {
+    const c = this.corps;
+    const etat = this.cible.etat;
+    if (!c || this.cible.variante !== "noye" || this.rampant || etat === "dormant" || etat === "a_terre" || etat === "detruit") return;
+    for (const { os, repos } of this.dosDroit) os.quaternion.copy(repos);
+    this.dandine += dt * 4.2;
+    c.objet.rotation.z = Math.sin(this.dandine) * 0.07;
+    // Écarter le bras : une rotation autour de l'axe avant du corps, passée dans le repère du parent de l'os.
+    const avant = _v.set(0, 0, 1).applyQuaternion(c.objet.getWorldQuaternion(_q1));
+    for (const { os, cote } of this.bras) {
+      const parent = os.parent;
+      if (!parent) continue;
+      parent.updateWorldMatrix(true, false);
+      parent.getWorldQuaternion(_q1);
+      _q2.setFromAxisAngle(avant, GONFLE.ecartBras * cote);
+      // q_local' = parent⁻¹ · écart · parent · q_local
+      os.quaternion.premultiply(_q3.copy(_q1).invert().multiply(_q2).multiply(_q1));
+    }
+  }
+
+  /** Redessiné de neuf (le Noyé dont un piège a brisé la jambe : il rampe), à la même place. */
+  private reconstruire(): void {
+    this.objet.clear();
+    this.corps = null;
+    this.herbe = null;
+    this.rampement = null;
+    this.lueur = null;
+    this.arcs = null;
+    this.halo = null;
+    this.sol = null;
+    this.butte = null;
+    this.bouffee = null;
+    this.fluides = null;
+    this.gonfle = null;
+    this.dosDroit.length = 0;
+    this.bras.length = 0;
+    this.etatJoue = null;
+    this.rampant = rampantDe(this.cible);
+    this.construire();
+  }
 }
+
+const _v = new THREE.Vector3();
+const _q1 = new THREE.Quaternion();
+const _q2 = new THREE.Quaternion();
+const _q3 = new THREE.Quaternion();
+
+/** Les os que le Noyé garde droits en marchant (le dos, le cou). */
+const DOS_DROIT = ["spine_01", "spine_02", "spine_03", "neck_01"];
+
+/** Au sol pour de bon (commun/src/eteints.ts, `rampe`) : le Rampant, l'Ensablé, le Noyé à la jambe brisée. */
+function rampantDe(e: EteintVu): boolean {
+  return e.variante === "rampant" || e.variante === "ensable" || e.rampe === true;
+}
+
+/** Les couleurs de « ternir » pour la luisance du Noyé vivant : sans effet (rien n'est encore viré au gris). */
+const CENDRE_NEUTRE = new THREE.Color(0xffffff);

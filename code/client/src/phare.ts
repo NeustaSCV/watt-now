@@ -1,0 +1,311 @@
+// Ce qu'on fait au phare du cap (plan 0.10, chantier K), côté client : les gestes proposés (l'escabeau, la cuve, le
+// prisme, l'escalier coupé et la lanterne, la corne de brume, le saut de la rampe), l'arrivée du cargo (S-17 : sa corne
+// grave au large, puis la scène de l'échouage, K4 : client/src/phare-cargo.ts), la corne de brume (S-16), et le relief (L-1) :
+// les personnages, les Éteints et le cercle de visée posés sur la hauteur du sol du modèle, la caméra qui suit.
+//
+// Le serveur décide de tout (serveur/src/phare.ts) ; ce module ne fait que montrer et proposer. main.ts l'appelle à
+// quelques endroits (une ligne chacun) : la réception du message `phare`, les propositions, la pose sur le relief, les
+// lumières, l'escabeau dans les bras.
+
+import * as THREE from "three";
+import { DISTANCE_INTERACTION } from "../../commun/src/terrain.ts";
+import { ENDROITS_PHARE, NIVEAU_MER, PORTEE_SAUT, RAYON_MARQUE, dansLEauPhare, etageDuPhare, memeEtagePhare, type EtagePhare, type EtatPhareVu } from "../../commun/src/phare.ts";
+import type { MessageServeurPhare } from "../../commun/src/messages.ts";
+import type { ActionProposee, Propositions } from "./interaction.ts";
+import { lumieresPhare, piedsPhare, surfacePhare, type ScenePhare } from "./rendu/phare.ts";
+import { MiseEnScenePhare, PROCHE_ETEINT, SCENE_CARGO, momentCargo } from "./phare-scene.ts";
+import type { CinemaCargo } from "./phare-cargo.ts";
+import type { Cadrage } from "./rendu/scene.ts";
+import type { SourceLumiere } from "./rendu/lumieres.ts";
+import type { IdSon } from "./son/catalogue.ts";
+
+
+const EXAMEN_ESCALIER = "L'escalier en fonte tourne dans la tour… et s'arrête net à trois mètres du sol. Dessous, une marque à la craie.";
+const EXAMEN_ESCABEAU = "L'escabeau du gardien, en bois, ses marches usées. Assez haut pour atteindre une première marche à trois mètres.";
+const EXAMEN_CUVE = "La cuve à pompe de la réserve : du pétrole lampant, et un bidon pour le monter.";
+const EXAMEN_PRISME = "Un prisme de verre épais, taillé en biseau, tombé de la lentille. Là-haut, il manque.";
+const EXAMEN_CORNE = "La corne de brume, ses deux pavillons tournés vers le large. Son cri porte sur tout le cap.";
+const EXAMEN_RAMPE = "Le tronçon effondré de la rampe du canot : un mètre et demi plus bas, la partie affaissée descend jusqu'aux galets. On saute ; on ne remonte pas.";
+
+type Joueur = (id: IdSon, ou?: { x: number; z: number }) => void;
+
+/**
+ * Les étages du phare (L-1 ; commun/src/phare.ts, etageDuPhare) : en haut, le plateau et la partie haute de la rampe ; en
+ * bas, la partie basse de la rampe, la grève et l'eau de la crique ; à part, le pont de l'épave, relié à la grève par
+ * l'échelle de coupée. Un Éteint d'un autre étage ne menace pas (le mode Combat, les gestes du bouton A), et l'on ne le
+ * frappe pas (le serveur, `cibleDevant`).
+ */
+export function etagePhare(x: number, z: number, epave = false): EtagePhare {
+  return etageDuPhare(x, z, epave);
+}
+
+/** Le remous aux jambes, dans l'eau de la crique : un anneau d'écume qui bat doucement à la surface. */
+function creerRemous(): THREE.Mesh {
+  const m = new THREE.Mesh(
+    new THREE.RingGeometry(0.28, 0.42, 20).rotateX(-Math.PI / 2),
+    new THREE.MeshBasicMaterial({ color: 0xe8f2f0, transparent: true, opacity: 0.45, depthWrite: false }),
+  );
+  m.name = "remous";
+  m.renderOrder = 3;
+  m.visible = false;
+  return m;
+}
+
+export class PhareClient {
+  /** L'état du phare, tel que le serveur l'a dit (null : pas encore reçu). */
+  etat: EtatPhareVu | null = null;
+  /** La scène de l'échouage en cours : son début (performance.now(), ms : l'annonce du serveur), ou null. */
+  private cargo: number | null = null;
+  private sonsJoues = new Set<string>();
+  /** La hauteur où le personnage est posé (lissée : on descend la rampe, on saute, sans à-coups). */
+  private yPerso: number | null = null;
+  /** K2 : la mise en scène de l'allumage et de l'approche du cargo (client/src/phare-scene.ts). */
+  readonly mise: MiseEnScenePhare;
+  /** K4 : la scène de l'échouage (client/src/phare-cargo.ts) ; null : pas de scène (les tests du reste). */
+  private readonly cinema: CinemaCargo | null;
+  private nuit = false;
+  private cadre = false;
+  /** L'épave est échouée (`portes.epave`, gardé à chaque pose) : les étages en dépendent. */
+  private epave = false;
+  /** Le remous aux jambes du personnage, dans l'eau de la crique (créé à la première pose). */
+  private remous: THREE.Mesh | null = null;
+  private tempsRemous = 0;
+
+  private readonly jouer: Joueur;
+
+  /** `_hud` : plus servi (le message de jour est un message d'information) ; gardé pour ne pas changer les appels. */
+  constructor(jouer: Joueur, _hud: () => HTMLElement, mise: MiseEnScenePhare = new MiseEnScenePhare(), cinema: CinemaCargo | null = null) {
+    this.jouer = jouer;
+    this.mise = mise;
+    this.cinema = cinema;
+  }
+
+  /** Le message `phare` du serveur. */
+  recevoir(m: MessageServeurPhare): void {
+    this.mise.recevoir(this.etat, m.etat, performance.now()); // K2 : le recul à l'allumage, l'approche du cargo
+    this.etat = m.etat;
+    // K4 : le cargo approche : la scène de l'échouage se prépare (chargée, construite, compilée d'avance).
+    if (m.etat.cargoDans !== undefined) this.cinema?.preparer();
+    if (m.cargo) {
+      this.cargo = performance.now();
+      this.sonsJoues.clear();
+      this.mise.echouage(this.cargo);
+      this.cinema?.commencer(0);
+    }
+    if (m.corne) this.jouer("corne_brume", ENDROITS_PHARE.pavillons);
+  }
+
+  /**
+   * Cet Éteint menace-t-il le joueur (le mode Combat qui se met tout seul : main.ts, majMode) ? Pas s'il est à l'autre
+   * étage : les Noyés de la grève ne mettent pas en garde qui est au bord du tronçon effondré (le geste « Sauter » y
+   * restait caché derrière « Frapper » : essai sur l'iPhone, 2026-10-14), ni qui longe le haut de la falaise.
+   */
+  menace(e: { x: number; z: number }, position: { x: number; z: number }, epave = this.epave): boolean {
+    return memeEtagePhare(e, position, epave);
+  }
+
+  /** Est-on dans l'eau de la crique, jusqu'aux genoux ? (on n'y court pas : main.ts le dit) */
+  dansLEau(position: { x: number; z: number }): boolean {
+    return dansLEauPhare(position.x, position.z, this.epave);
+  }
+
+  /** L'escabeau du gardien est dans les bras (on marche, on ne court pas ; l'escabeau se voit dans les bras). */
+  get dansLesBras(): boolean {
+    return this.etat?.escabeau === "bras";
+  }
+
+  /** L'épave se voit : échouée (`portes.epave`), et la scène de l'échouage revenue au personnage. */
+  private epaveVisible(portes: Readonly<Record<string, boolean>>): boolean {
+    if (portes.epave !== true) return false;
+    return this.cargo === null || momentCargo((performance.now() - this.cargo) / 1000).epave;
+  }
+
+  /** Ce que le décor doit montrer (rendu/phare.ts, animerPhare). */
+  scene(portes: Readonly<Record<string, boolean>>): ScenePhare {
+    const epave = this.epaveVisible(portes);
+    return { etat: this.etat, epave, nuit: this.nuit, feux: this.mise.feux(performance.now(), epave), cadre: this.cadre };
+  }
+
+  /** Les lumières du phare, la nuit (la lanterne allumée, le feu de détresse de l'épave). */
+  lumieres(portes: Readonly<Record<string, boolean>>, nuit: boolean): SourceLumiere[] {
+    this.nuit = nuit; // K2 : le balayage du faisceau ne se voit que la nuit
+    return lumieresPhare(this.scene(portes), nuit);
+  }
+
+  /**
+   * K2 : le cadrage de la caméra à cette image (le recul sur la tour à l'allumage), ou null. Pas de recul avec un Éteint
+   * debout à moins de 6 m, du même étage (main.ts, une ligne après la vue d'ensemble).
+   */
+  cadrage(position: { x: number; z: number }, zoom: number, eteints: Iterable<{ etat: string; objet: THREE.Object3D }>): Cadrage | null {
+    let menace = false;
+    for (const e of eteints) {
+      if (e.etat === "dormant" || e.etat === "detruit" || e.etat === "a_terre") continue;
+      const p = e.objet.position;
+      if (Math.hypot(p.x - position.x, p.z - position.z) < PROCHE_ETEINT && this.menace(p, position)) menace = true;
+    }
+    const c = this.mise.cadrage(performance.now(), { x: position.x, z: position.z, y: this.yPerso ?? 0, zoom }, menace);
+    this.cadre = c !== null;
+    return c;
+  }
+
+  /** À chaque image : la corne du cargo au large (K2), la scène de l'échouage (K4 : le noir, les bandes, la fin). */
+  animer(): void {
+    for (const _ of this.mise.cornesAJouer(performance.now())) this.jouer("corne_cargo");
+    if (this.cargo === null) return;
+    const t = (performance.now() - this.cargo) / 1000;
+    const m = momentCargo(t);
+    // La scène n'a pas pu se préparer (son module pas chargé) : le choc s'entend quand même, dans le noir.
+    if (m.plan && !this.cinema?.pret && !this.sonsJoues.has("choc") && t >= SCENE_CARGO.choc) {
+      this.sonsJoues.add("choc");
+      this.jouer("choc_cargo");
+    }
+    this.cinema?.montrer(m);
+    if (m.fini) this.finirScene();
+  }
+
+  /**
+   * K4 : à la place de la vue du jeu, le plan de la crique de la scène de l'échouage (main.ts : la scène du jeu ne se
+   * dessine pas à cette image si c'est fait). Une scène pas prête : le jeu se dessine, sous le voile noir.
+   */
+  dessinerScene(): boolean {
+    if (this.cargo === null) return false;
+    const t = (performance.now() - this.cargo) / 1000;
+    if (!momentCargo(t).plan) {
+      this.cinema?.finPlan();
+      return false;
+    }
+    return this.cinema?.rendre(t) ?? false;
+  }
+
+  /** La scène se joue-t-elle ? (pour les tests, et l'interface) */
+  get enScene(): boolean {
+    return this.cargo !== null;
+  }
+
+  private finirScene(): void {
+    this.cargo = null;
+    this.cinema?.arreter();
+  }
+
+  /**
+   * Le relief (L-1) : le personnage, les Éteints et les cercles posés sur la hauteur du sol du modèle ; la caméra suit
+   * (`hauteurSuivie`). Ailleurs qu'au phare, tout revient à plat.
+   */
+  poser(
+    auPhare: boolean,
+    portes: Readonly<Record<string, boolean>>,
+    dt: number,
+    cible: {
+      personnage: THREE.Object3D | null;
+      eteints: Iterable<{ objet: THREE.Object3D }>;
+      cercles: readonly THREE.Object3D[];
+      scene: { hauteurSuivie: number };
+    },
+  ): void {
+    if (!auPhare) {
+      this.yPerso = null;
+      cible.scene.hauteurSuivie = 0;
+      if (this.remous) this.remous.visible = false;
+      // Parti pendant la scène de l'échouage : elle s'arrête net.
+      if (this.cargo !== null) this.finirScene();
+      return;
+    }
+    const epave = portes.epave === true;
+    this.epave = epave;
+    // Les pieds : sur le sol, ou dans l'eau de la crique, enfoncés jusqu'aux genoux (0.10).
+    const pieds = (o: THREE.Object3D) => piedsPhare(o.position.x, o.position.z, epave);
+    if (cible.personnage) {
+      const p = cible.personnage.position;
+      const y = pieds(cible.personnage);
+      // On descend la rampe, on saute le tronçon effondré, on pose le pied sur les galets : la hauteur suit, en douceur.
+      this.yPerso = this.yPerso === null || Math.abs(y - this.yPerso) > 4 ? y : this.yPerso + (y - this.yPerso) * Math.min(1, dt * 12);
+      p.y = this.yPerso;
+      cible.scene.hauteurSuivie = this.yPerso;
+      // Le remous aux jambes, à la surface, tant qu'on a de l'eau aux mollets.
+      const r = (this.remous ??= creerRemous());
+      if (r.parent !== cible.personnage.parent) cible.personnage.parent?.add(r);
+      r.visible = dansLEauPhare(p.x, p.z, epave) && NIVEAU_MER - this.yPerso > 0.12;
+      if (r.visible) {
+        this.tempsRemous += dt;
+        const s = 1 + 0.12 * Math.sin(this.tempsRemous * 3.1);
+        r.position.set(p.x, NIVEAU_MER + 0.02, p.z);
+        r.scale.set(s, 1, s);
+      }
+    }
+    for (const e of cible.eteints) e.objet.position.y = pieds(e.objet);
+    // Ce qui est posé à plat (la visée, l'anneau d'une action) : le sol, ou la surface de l'eau.
+    for (const c of cible.cercles) c.position.y = surfacePhare(c.position.x, c.position.z, epave) + 0.03;
+  }
+
+  /**
+   * Les gestes du phare, à portée de main : ils l'emportent sur ce qui est proposé ailleurs s'ils sont plus près. Les
+   * bras chargés (l'escabeau), A le pose, rien d'autre.
+   */
+  proposer(position: { x: number; z: number }, propositions: Propositions): Propositions {
+    const e = this.etat;
+    if (!e) return propositions;
+    const m = ENDROITS_PHARE.marque;
+    const dMarque = Math.hypot(position.x - m.x, position.z - m.z);
+    if (e.escabeau === "bras") {
+      return {
+        A: { libelle: dMarque <= RAYON_MARQUE + 0.9 ? "Poser l'escabeau sous l'escalier" : "Poser l'escabeau", message: { t: "interagir", cible: { genre: "phare", id: "escabeau" }, verbe: "poser" } },
+        B: { libelle: "Examiner", examiner: "Tu portes l'escabeau du gardien : on marche, on ne court pas. Sous l'escalier coupé de la tour, une marque à la craie." },
+        cible: null,
+      };
+    }
+    let meilleure: { d: number; p: Propositions } | null = null;
+    const garder = (o: { x: number; z: number }, A: ActionProposee | null, examen: string, ecart = 0, portee = DISTANCE_INTERACTION) => {
+      const d = Math.max(0, Math.hypot(position.x - o.x, position.z - o.z) - ecart);
+      if (d > portee || (meilleure && d >= meilleure.d)) return;
+      meilleure = { d, p: { A, B: { libelle: "Examiner", examiner: examen }, cible: { x: o.x, z: o.z } } };
+    };
+    const geste = (id: "escabeau" | "escalier" | "cuve" | "prisme" | "corne" | "rampe", verbe: "porter" | "poser" | "remplir" | "ramasser" | "remettre" | "allumer" | "sonner_corne" | "sauter", libelle: string): ActionProposee => ({
+      libelle,
+      message: { t: "interagir", cible: { genre: "phare", id }, verbe },
+    });
+    const prendreEscabeau = geste("escabeau", "porter", "Prendre l'escabeau (dans les bras)");
+
+    // L'escalier coupé : l'escabeau posé dessous, on monte verser le pétrole, remettre le prisme, puis allumer.
+    if (e.escabeau === "marque") {
+      const A =
+        e.bidon === "plein"
+          ? geste("escalier", "remplir", "Monter verser le pétrole")
+          : e.prisme === "main"
+            ? geste("escalier", "remettre", "Monter remettre le prisme")
+            : e.bidon === "verse" && e.prisme === "remis" && !e.lanterne
+              ? geste("escalier", "allumer", "Monter allumer la lanterne")
+              : prendreEscabeau;
+      const haut = e.lanterne
+        ? "Là-haut, la lanterne brûle : son faisceau balaie le cap."
+        : `Là-haut, la lanterne : ${e.bidon === "verse" ? "le pétrole versé" : "sèche"}, ${e.prisme === "remis" ? "le prisme à sa place" : "un prisme manque à la lentille"}.`;
+      garder(m, A, `L'escabeau est calé sous l'escalier coupé : on monte. ${haut}`, 0.2);
+    } else {
+      garder(m, null, EXAMEN_ESCALIER, 0.6);
+      const ou = e.escabeau === "hangar" ? ENDROITS_PHARE.hangar : e.escabeau;
+      garder(ou, prendreEscabeau, EXAMEN_ESCABEAU, 0.3);
+    }
+    if (e.bidon === "cuve") garder(ENDROITS_PHARE.cuve, geste("cuve", "remplir", "Remplir le bidon à la cuve"), EXAMEN_CUVE, 0.2);
+    if (e.prisme === "tombe") garder(ENDROITS_PHARE.prisme, geste("prisme", "ramasser", "Ramasser le prisme"), EXAMEN_PRISME, 0.2);
+    // La corne : réparée (le compresseur se répare comme une ressource, Serrer 1), on la sonne une fois par nuit.
+    if (e.compresseur)
+      garder(
+        ENDROITS_PHARE.compresseur,
+        e.corneSonnee ? null : geste("corne", "sonner_corne", "Sonner la corne de brume (attire les Éteints)"),
+        e.corneSonnee ? "Le réservoir d'air est vide : la corne a déjà sonné cette nuit." : EXAMEN_CORNE,
+        0.4,
+      );
+    garder(ENDROITS_PHARE.sautDe, geste("rampe", "sauter", "Sauter (on ne remonte pas)"), EXAMEN_RAMPE, 0, PORTEE_SAUT);
+
+    const choix = meilleure as { d: number; p: Propositions } | null;
+    if (!choix) return propositions;
+    const c = propositions.cible;
+    const dAvant = c ? Math.max(0, Math.hypot(c.x - position.x, c.z - position.z) - (c.rayon ?? 0.5)) : Infinity;
+    // Un geste du phare passe devant ce qui est plus loin, ou devant rien ; un simple examen ne prend pas la place d'un geste.
+    // Au pied de l'escalier, les gestes du scénario (monter verser, remettre, allumer) passent toujours avant le reste : la
+    // fouille de la réserve du gardien est posée sur la marque à la craie (on la fouille d'un peu plus loin).
+    const cible = choix.p.A && "message" in choix.p.A ? (choix.p.A.message as { cible?: { genre?: string; id?: string } }).cible : undefined;
+    const duScenario = cible?.genre === "phare" && cible.id === "escalier";
+    if (!propositions.A || (choix.p.A && (choix.d < dAvant || duScenario))) return choix.p;
+    return propositions;
+  }
+}

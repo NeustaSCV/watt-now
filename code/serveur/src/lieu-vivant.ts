@@ -47,9 +47,12 @@
 
 import { FilDesBruits, PORTEES_BRUIT, type BruitVu } from "../../commun/src/bruits.ts";
 import { DUREE_CORPS } from "../../commun/src/combat.ts";
-import { GEMISSEMENT, penser, vue, type Eteint, type Humain, type Milieu } from "../../commun/src/eteints.ts";
+import { CREVAISON, GEMISSEMENT, noyesQuiCrevent, odeurDeCrevaison, penser, vue, type Eteint, type Humain, type Milieu } from "../../commun/src/eteints.ts";
+import type { Position } from "../../commun/src/deplacement.ts";
 import type { Zone } from "../../commun/src/lieux.ts";
-import type { MessageServeur, SacVu } from "../../commun/src/messages.ts";
+import type { Cible, MessageServeur, SacVu } from "../../commun/src/messages.ts";
+import type { Inventaire, TypeObjet } from "../../commun/src/objets.ts";
+import type { Passage } from "../../commun/src/peage.ts";
 import type { Stimulus } from "../../commun/src/signature.ts";
 import { REGLAGES } from "../../commun/src/reglages.ts";
 import type { Famille } from "../../commun/src/regles.ts";
@@ -116,6 +119,31 @@ export interface Voyageur {
   humain(): Humain;
   /** En pause : le lieu (s'il est à lui seul) ne bouge plus. */
   enPause?(): boolean;
+  /** Un Noyé vient de crever tout près (0.10) : ses fluides l'éclaboussent (la nausée). */
+  eclabousser?(instant: number): void;
+}
+
+/**
+ * Ce qu'un joueur prête à un lieu pour ses gestes propres (0.10, le registre des lieux : `geste` et `accompagner`, plus
+ * bas) : rien que des accès, aucune règle. Les chantiers des lieux y ajoutent ce dont ils ont besoin (serveur/src/joueur.ts,
+ * `contexteLieu`).
+ */
+export interface ContexteLieu {
+  readonly id: number;
+  maintenant(): number;
+  position(): Position;
+  deplacer(p: Position): void;
+  info(texte: string): void;
+  envoyer(m: MessageServeur): void;
+  inventaire(): Readonly<Inventaire>;
+  ajouter(objets: Inventaire): void;
+  /** Retire n objets du sac ; false s'il n'y en a pas assez (rien n'est retiré). */
+  retirer(objet: TypeObjet, n: number): boolean;
+  /** Un geste qui dure (il s'arrête si l'on bouge, si l'on frappe, ou d'un second appui). */
+  commencer(libelle: string, dureeS: number, appliquer: () => void): void;
+  annuler(): void;
+  /** 0.10, chantier H : ces objets quittent le sac (la caisse du péage). */
+  donner(objets: Inventaire): void;
 }
 
 /** On voit les Éteints de la halte jusqu'à cette distance (la caméra en montre ≈ 30 m ; un peu de marge). */
@@ -142,6 +170,41 @@ export class LieuVivant {
   private readonly fil = new FilDesBruits();
   /** Pour chaque joueur, quand chaque Éteint tout proche a été « senti » pour la dernière fois. */
   private readonly sentis = new WeakMap<Voyageur, Map<number, number>>();
+
+  // ---------- Les points d'appel des lieux (0.10, le registre des lieux) ----------
+  // Un lieu qui a ses propres gestes (brancher la borne, payer le péage, allumer la lanterne…) les prend ici, dans sa
+  // classe (sur LieuVivant) : le joueur lui passe la main avant ses gestes à lui, et l'accompagne à chaque tic. Par
+  // défaut, un lieu n'a rien en propre.
+
+  /** Un geste propre au lieu : true s'il l'a pris (le joueur n'en fait rien d'autre). */
+  geste(_ctx: ContexteLieu, _cible: Cible, _verbe: string): boolean {
+    return false;
+  }
+
+  /** À chaque tic, pour chaque joueur présent (hors voyage) : ce que le lieu fait de lui (la marée qui monte…). */
+  accompagner(_ctx: ContexteLieu, _dt: number): void {}
+
+  /**
+   * Ce qu'un joueur porte dans ses bras, propre au lieu (0.10, chantier J : la batterie, la tête du robot de l'hôtel ;
+   * S-08) : son nom (« la tête du robot ») ; null : rien. Les bras pris, on ne court pas, on ne frappe pas, on ne fait
+   * rien d'autre (serveur/src/joueur.ts).
+   */
+  dansLesBras(_compteId: number): string | null {
+    return null;
+  }
+
+  /** Poser devant soi ce qu'on porte dans les bras (propre au lieu) : true si le lieu l'a fait. */
+  poser(_ctx: ContexteLieu): boolean {
+    return false;
+  }
+
+  /** La zone de ce joueur (0.10, chantier H : au pont, la porte du péage ouverte pour qui a payé) ; par défaut, celle du lieu. */
+  zonePour(_compteId: number): Zone {
+    return this.zone;
+  }
+
+  /** « Payer » à la caisse d'un péage (0.10, chantier H : serveur/src/peage.ts) ; un lieu sans péage n'en fait rien. */
+  payerPassage(_ctx: ContexteLieu, _passage: Passage, _objets: Inventaire): void {}
 
   ajouterBruit(id: string, stimulus: Stimulus, jusqua: number): void {
     this.bruits.set(id, { stimulus, jusqua });
@@ -520,6 +583,11 @@ export class LieuVivant {
     return { t: "ressource", id: r.id, disponible, ...(disponible && this.definition.semis ? { x: r.x, z: r.z } : {}) };
   }
 
+  /** Les Éteints du lieu sont-ils figés à cet instant, pour tout le monde ? (un lieu qui a ses moments à part : le phare) */
+  protected figeLesEteints(_instant: number): boolean {
+    return false;
+  }
+
   tick(instant: number, dt: number): void {
     // La repousse ne se calcule que si quelqu'un est là (plan 0.8 §6 : une halte vide ne coûte rien) ; la disponibilité
     // se lit de toute façon à l'instant (disponibleLe), dès l'entrée.
@@ -543,6 +611,7 @@ export class LieuVivant {
 
     // Les corps finissent par ne plus compter (en 0a, on ne les enterre pas encore).
     this.eteints = this.eteints.filter((e) => e.etat !== "detruit" || e.corps < DUREE_CORPS);
+    this.crever(instant);
 
     // Personne : rien ne bouge, et au bout d'un moment tout se rendort.
     if (this.presents.size === 0) {
@@ -556,6 +625,8 @@ export class LieuVivant {
     this.videDepuis = 0;
     // Tout le monde est en pause (un lieu à un seul joueur, sa Coopérative) : les Éteints ne bougent plus.
     if ([...this.presents].every((v) => v.enPause?.() === true)) return;
+    // Un moment à part du lieu (0.10, K4 : la scène de l'échouage au phare) : les Éteints ne bougent ni ne frappent.
+    if (this.figeLesEteints(instant)) return;
 
     const nuit = estNuit(heureDeJeu(instant, this.debutMonde));
     // Les gémissements des Éteints qui se réveillent sont des bruits comme les autres : la cascade (Book 23 §3).
@@ -597,6 +668,22 @@ export class LieuVivant {
         if (proches.length === 0) this.aucunEnvoye.add(v);
         else this.aucunEnvoye.delete(v);
         v.envoyer({ t: "eteints", eteints: proches });
+      }
+    }
+  }
+
+  // ---------- Le Noyé crève (0.10, chantier G ; S-32) ----------
+
+  /**
+   * Un Noyé détruit, par un coup, un tir, un piège ou autre chose : il crève. Ceux qui sont à moins de 1,5 m reçoivent
+   * ses fluides ; son odeur reste une minute au point de sa mort. Le client le voit se dégonfler (rendu/eteint.ts).
+   */
+  private crever(instant: number): void {
+    for (const e of noyesQuiCrevent(this.eteints)) {
+      this.ajouterBruit(`noye:${e.id}`, odeurDeCrevaison(e), instant + CREVAISON.odeurMs);
+      for (const v of this.presents) {
+        const h = v.humain();
+        if (Math.hypot(h.x - e.x, h.z - e.z) < CREVAISON.rayon) v.eclabousser?.(instant);
       }
     }
   }

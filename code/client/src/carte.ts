@@ -2,8 +2,18 @@
 // On y choisit une destination ; on ne s'y promène pas (Book 01 §2 bis). Pendant le trajet, le pion avance.
 // 0.8 (plan §3, chantier 4) : deux routes passent la rivière. La route A par le pont (la station, la Coopérative), la
 // route B à gué, en aval (le Gué-aux-Saules, puis le Moulin du Gué, au bord de la rivière).
+// 0.10 (plan §4, chantier A) : la côte, le niveau 2. Deux routes descendent du terrain vers le sud : la route A passe
+// le pont de l'estuaire (la route du pont), puis longe la côte jusqu'au Grand Hôtel des Flots ; la route B suit la
+// falaise (la corniche du Cap Rouge) jusqu'au phare du cap. 3 km puis 2 km sur chacune, comme le niveau 1.
+// Comme les lieux du niveau 1, ils sont sur la carte dès le départ, ouverts (LIEUX, commun/src/lieux.ts) ; leur fiche
+// ne dit que l'ambiance, la distance et le coût du trajet (R18).
+// Plan 0.10 (V4-19) : tant que le joueur n'a pas fait ses preuves à la Coopérative et au Moulin, la côte est grisée (ses
+// deux routes et ses quatre lieux, en retrait, classe `acces-cote`) ; la toucher dit pourquoi, dans sa fiche, à la place
+// du bouton Partir (commun/src/acces-cote.ts). Le serveur refuse la route avec le même message.
 
 import { DUREE_VOYAGE_S, EAU_PAR_KM, KCAL_PAR_KM, LIEUX, distanceKm, etapeVers, minuscule, type LieuId, type LieuJouable } from "../../commun/src/lieux.ts";
+import { pourPartirDe } from "../../commun/src/registre-lieux.ts";
+import { TEXTE_COTE_FERMEE, routeFermee, surLaCote } from "../../commun/src/acces-cote.ts";
 
 /** Les lieux de la route de la Campagne sur la feuille (viewBox 1000 × 700 ; l'échelle : 53 unités par km). */
 export const POINTS: Record<LieuId, [number, number]> = {
@@ -15,6 +25,12 @@ export const POINTS: Record<LieuId, [number, number]> = {
   // 0.8 : le gué, sur la rivière en aval du pont (3 km du terrain) ; le Moulin, 2 km plus bas, au bord de l'eau.
   gue: [462, 481],
   moulin: [379, 560],
+  // 0.10 : la côte, au sud du terrain. Le pont, sur l'estuaire d'un petit fleuve côtier ; l'hôtel, sur la plage à son
+  // embouchure ; la corniche, au-dessus de la falaise ; le phare, au bout du cap.
+  route_pont: [652, 528],
+  grand_hotel: [712, 598],
+  corniche: [552, 550],
+  phare: [562, 646],
 };
 
 /** Le chemin de halage, le long de la rive est, du Moulin au gué : une sortie du Moulin, jamais une arrivée. */
@@ -38,6 +54,12 @@ export const TRACES: { a: LieuId; b: LieuId; points: [number, number][]; genre: 
   // ouest jusqu'au Moulin.
   { a: "terrain", b: "gue", genre: "route", points: [[560, 382], [563, 410], [556, 438], [540, 460], [516, 476], [488, 483], [462, 481]] },
   { a: "gue", b: "moulin", genre: "route", points: [[462, 481], [446, 490], [432, 503], [418, 520], [402, 537], [379, 560]] },
+  // Les routes de la côte (0.10) : toutes deux partent du terrain vers le sud. La route A passe le fleuve côtier au
+  // pont, puis descend vers la plage et l'hôtel ; la route B suit la crête jusqu'à la corniche, puis le chemin du cap.
+  { a: "terrain", b: "route_pont", genre: "route", points: [[560, 382], [586, 404], [606, 432], [622, 462], [638, 496], [652, 528]] },
+  { a: "route_pont", b: "grand_hotel", genre: "route", points: [[652, 528], [668, 550], [684, 570], [700, 588], [712, 598]] },
+  { a: "terrain", b: "corniche", genre: "route", points: [[560, 382], [574, 412], [578, 446], [574, 482], [564, 516], [552, 550]] },
+  { a: "corniche", b: "phare", genre: "route", points: [[552, 550], [556, 578], [560, 604], [562, 628], [562, 646]] },
 ];
 
 /** Le tracé d'un lieu à son voisin, dans le sens du trajet. */
@@ -128,10 +150,9 @@ export function dessinCarte(): string {
       <path d="M0 646 C150 622 250 660 400 634 S650 604 800 628 S950 618 1000 632 L1000 700 L0 700 Z" fill="url(#hachures-mer)"/>
       <path d="M0 646 C150 622 250 660 400 634 S650 604 800 628 S950 618 1000 632" class="cote"/>
       <text x="520" y="676" class="nom-zone">La Mer</text>
-      <text x="640" y="618" class="nom-lieu">Côte des Flots</text>
-      <path d="M880 600 l-5 -22 h10 z" class="trait"/><circle cx="880" cy="574" r="3" class="trait"/>
-      <rect x="90" y="560" width="190" height="64" rx="30" fill="url(#roseaux)" opacity="0.8"/>
-      <text x="120" y="552" class="nom-lieu">Les Marais</text>
+      <text x="800" y="630" class="nom-lieu">Côte des Flots</text>
+      <rect x="56" y="516" width="150" height="54" rx="26" fill="url(#roseaux)" opacity="0.8"/>
+      <text x="74" y="510" class="nom-lieu">Les Marais</text>
       ${sommets()}
       <ellipse cx="590" cy="128" rx="46" ry="20" fill="#bdd0cf" stroke="#5f8590" stroke-width="1.2"/>
       <path d="M556 146 L624 146" stroke="${ENCRE}" stroke-width="3"/>
@@ -157,7 +178,6 @@ export function dessinCarte(): string {
       <!-- Routes vers le reste de la région -->
       <path d="M560 382 C620 330 690 290 760 250" class="route-pale"/>
       <path d="M560 382 C660 400 760 430 960 440" class="route-pale"/>
-      <path d="M560 382 C580 470 620 540 650 610" class="route-pale"/>
       <path d="M560 382 C570 300 585 220 590 150" class="route-pale"/>
       <path d="M300 380 C240 370 190 350 140 336" class="route-pale"/>
       <path d="M300 380 C290 440 240 520 200 580" class="route-pale"/>
@@ -165,14 +185,19 @@ export function dessinCarte(): string {
 
     <!-- La rivière : du barrage à la mer, en contournant le terrain par l'ouest -->
     <path d="M592 148 C560 210 520 250 510 300 S486 370 490 394 S476 470 430 520 S300 600 220 640" class="riviere"/>
-    <text x="318" y="618" class="nom-petit" transform="rotate(-26 318 618)">la rivière</text>
+    <!-- 0.10 : le nom de la rivière remonte en amont du pont (la côte prend son embouchure) -->
+    <text x="480" y="362" class="nom-petit" transform="rotate(-80 480 362)">la rivière</text>
+
+    <!-- 0.10 : le fleuve côtier et son estuaire (le pont de la route A) ; le cap du phare, qui avance dans la mer -->
+    <path d="M700 452 C672 488 656 512 652 528 S660 585 676 612" class="riviere"/>
+    <path d="M538 614 C548 628 552 652 562 658 C574 664 584 650 582 636 C580 624 588 618 598 614" fill="#ecdfbf" stroke="#5f8590" stroke-width="1.2"/>
 
     <!-- Le chemin de halage, sur la rive est (0.8) : on part du Moulin par là, vers le gué -->
     <path d="M${HALAGE.map((p) => p.join(" ")).join(" L")}" fill="none" stroke="#6b4a2e" stroke-width="1.5" stroke-dasharray="1.5 3.5" stroke-linecap="round"/>
     <text x="446" y="550" class="crayon petit" transform="rotate(-50 446 550)">halage</text>
 
     <!-- La route de la Campagne, les chemins de terre de la Coopérative (depuis la station, depuis le Carrefour), la route du gué -->
-    ${TRACES.map((t) => `<path d="M${t.points.map((p) => p.join(" ")).join(" L")}" class="${t.genre}"/>`).join("")}
+    ${TRACES.map((t) => `<path d="M${t.points.map((p) => p.join(" ")).join(" L")}" class="${t.genre}${surLaCote(t.a) || surLaCote(t.b) ? " acces-cote" : ""}"/>`).join("")}
     <path d="M482 386 h18 M482 402 h18" class="trait"/>
     <text x="474" y="378" class="crayon petit">le pont tient</text>
 
@@ -195,7 +220,7 @@ export function dessinCarte(): string {
       <path d="M-9 -3 v10 M9 -3 v10" class="trait"/>
       <rect x="-4" y="1" width="8" height="7" fill="#c8362b" stroke="${ENCRE}" stroke-width="1"/>
       <text y="30" text-anchor="middle" class="nom-ouvert">Station-service</text>
-      <text x="-98" y="52" class="crayon petit">ça dort, dans le coin…</text>
+      <text x="-72" y="58" class="crayon petit">ça dort, dans le coin…</text>
     </g>
     <g class="lieu" data-lieu="comptoir" transform="translate(300 380)" tabindex="0" role="button" aria-label="Le Comptoir du Carrefour">
       <circle r="22" class="zone-clic"/>
@@ -250,6 +275,43 @@ export function dessinCarte(): string {
       <text x="-24" y="4" text-anchor="end" class="nom-ouvert">Moulin du Gué</text>
       <text x="14" y="26" class="crayon petit">la roue ne tourne plus</text>
     </g>
+    <!-- 0.10, la côte. La route du pont : le pont suspendu sur l'estuaire, ses deux pylônes -->
+    <g class="lieu acces-cote" data-lieu="route_pont" transform="translate(652 528)" tabindex="0" role="button" aria-label="${LIEUX.route_pont.nom}">
+      <circle r="22" class="zone-clic"/>
+      <path d="M-15 4 h30" stroke="${ENCRE}" stroke-width="2.4"/>
+      <path d="M-8 6 v-16 M8 6 v-16" class="trait"/>
+      <path d="M-15 1 Q-8 -12 -8 -10 Q0 0 8 -10 Q8 -12 15 1" class="trait-fin"/>
+      <path d="M-4 4 v-5 M0 4 v-3 M4 4 v-5" class="trait-fin"/>
+      <rect x="-10" y="-13" width="4" height="3" fill="#c8362b" stroke="${ENCRE}" stroke-width="0.6"/>
+      <text x="18" y="6" class="nom-ouvert">Route du pont</text>
+    </g>
+    <!-- Le Grand Hôtel des Flots : la longue façade face à la mer, ses fenêtres -->
+    <g class="lieu acces-cote" data-lieu="grand_hotel" transform="translate(712 598)" tabindex="0" role="button" aria-label="${LIEUX.grand_hotel.nom}">
+      <circle r="24" class="zone-clic"/>
+      <rect x="-17" y="-8" width="34" height="14" fill="#ecdfbf" stroke="${ENCRE}" stroke-width="1.6"/>
+      <path d="M-18 -8 h36 M-6 -8 l6 -6 l6 6" fill="none" stroke="${ENCRE}" stroke-width="1.3"/>
+      ${[-12, -6, 6, 12].map((x) => `<rect x="${x - 1.5}" y="-4" width="3" height="3.5" fill="${ENCRE}"/>`).join("")}
+      <rect x="-2" y="-1" width="4" height="7" fill="#c8362b" stroke="${ENCRE}" stroke-width="0.8"/>
+      <text x="22" y="4" class="nom-ouvert">Grand Hôtel des Flots</text>
+    </g>
+    <!-- La corniche du Cap Rouge : la route au flanc de la falaise, un pin penché -->
+    <g class="lieu acces-cote" data-lieu="corniche" transform="translate(552 550)" tabindex="0" role="button" aria-label="${LIEUX.corniche.nom}">
+      <circle r="22" class="zone-clic"/>
+      <path d="M-15 8 L-9 -4 L-2 -2 L5 -9 L15 -6" fill="none" stroke="#c8362b" stroke-width="1.8"/>
+      <path d="M-15 8 L-9 -4 L-2 -2 L5 -9 L15 -6" class="trait-fin"/>
+      <path d="M-13 4 h26" stroke="${ENCRE}" stroke-width="1.6"/>
+      <path d="M8 -9 l-3 -7 M5 -16 q-6 -2 -9 1 M5 -16 q5 -3 9 -1" class="trait"/>
+      <text x="14" y="14" class="nom-ouvert">Corniche<tspan x="14" dy="15">du Cap Rouge</tspan></text>
+    </g>
+    <!-- Le phare du cap : la tour à bande rouge, sa lanterne éteinte -->
+    <g class="lieu acces-cote" data-lieu="phare" transform="translate(562 646)" tabindex="0" role="button" aria-label="${LIEUX.phare.nom}">
+      <circle r="22" class="zone-clic"/>
+      <path d="M-4.5 8 L-2.6 -11 L2.6 -11 L4.5 8 Z" fill="#ecdfbf" stroke="${ENCRE}" stroke-width="1.4"/>
+      <path d="M-3.6 -1 L3.6 -1 L3.9 3 L-3.9 3 Z" fill="#c8362b"/>
+      <rect x="-3" y="-16" width="6" height="5" fill="#ecdfbf" stroke="${ENCRE}" stroke-width="1.2"/>
+      <path d="M-4 -16 h8 M0 -16 v-2" class="trait"/>
+      <text x="14" y="6" class="nom-ouvert">Phare du cap</text>
+    </g>
 
     <!-- Le pion -->
     <g class="pion" transform="translate(560 382)">
@@ -301,6 +363,8 @@ export class Carte {
   private enRoute = false;
   private animation = 0;
   private readonly partir: (vers: LieuId) => void;
+  /** La côte ouverte (V4-19) ; fermée au départ, le serveur le dit à l'arrivée (`bienvenue.coteOuverte`). */
+  private cote = false;
 
   constructor(racine: HTMLElement, partir: (vers: LieuId) => void) {
     this.racine = racine;
@@ -323,6 +387,7 @@ export class Carte {
     });
     this.pion = racine.querySelector(".pion")!;
     this.trace = racine.querySelector(".trace")!;
+    this.racine.classList.add("cote-fermee");
     for (const g of racine.querySelectorAll<SVGGElement>(".lieu")) {
       const choisir = () => {
         if (this.enRoute) return;
@@ -338,6 +403,18 @@ export class Carte {
       if (bouton.dataset.action === "fermer") this.fermer();
       if (bouton.dataset.action === "partir") this.partir(this.choisi);
     });
+  }
+
+  /** La côte s'ouvre (ou se ferme) : ses routes et ses lieux se dessinent normalement, ou grisés (V4-19). */
+  majCote(ouverte: boolean): void {
+    this.cote = ouverte;
+    this.racine.classList.toggle("cote-fermee", !ouverte);
+    if (this.ouverte && !this.enRoute) this.dessinerFiche();
+  }
+
+  /** La route vers ce lieu est-elle fermée (la côte, depuis l'intérieur, tant qu'elle est fermée) ? */
+  private coteFermeeVers(vers: LieuId): boolean {
+    return vers !== this.lieu && routeFermee(this.lieu, etapeVers(this.lieu, vers), this.cote);
   }
 
   get ouverte(): boolean {
@@ -445,20 +522,10 @@ export class Carte {
     if (this.enRoute) etat = `<p class="en-route">En route vers ${minuscule(l.nom)}…</p>`;
     else if (ici) etat = `<p class="note">Tu es ici.</p>`;
     else if (!l.ouvert) etat = `<p class="note">Fermé pour l'instant.</p>`;
+    else if (this.coteFermeeVers(this.choisi)) etat = `<p class="note">${TEXTE_COTE_FERMEE}</p>`;
     else if (!this.sorties.includes(etape)) {
-      etat = `<p class="note">${
-        this.lieu === "terrain"
-          ? "D'ici, la route ne mène pas là."
-          : this.lieu === "cooperative"
-            ? etape === "comptoir"
-              ? "Pour partir, repasse le portail, au sud (ou glisse-toi par la brèche, à l'ouest)."
-              : "Pour partir, repasse le portail, au sud."
-            : this.lieu === "station" && etape === "cooperative"
-              ? "Pour partir, prends le chemin de terre au nord de la route, à l'ouest de la station, jusqu'à la lisière."
-              : this.lieu === "moulin"
-                ? "Pour partir, repasse le pont de pierre (ou prends le chemin de halage, au bout de la levée)."
-                : "Pour partir, rejoins le bout de la route, du côté de ta destination."
-      }</p>`;
+      // Par où repartir : chaque lieu le dit dans sa fiche du registre (commun/src/registre-lieux.ts, `pourPartir`).
+      etat = `<p class="note">${pourPartirDe(this.lieu, etape)}</p>`;
     } else peutPartir = true;
     const trajet = ici
       ? ""

@@ -1,5 +1,6 @@
 // La vue d'ensemble à l'arrivée dans un lieu (0.8.2, chantier G ; R4) : le cadrage de la caméra, sans rien dessiner.
-// - `boiteDeLaVue` : ce qu'on montre du lieu (sa zone ; au gué, le tronçon d'arrivée et son voisin vers le milieu) ;
+// - `boiteDeLaVue` : ce qu'on montre du lieu (sa zone, le gué compris : 0.10, R52) ;
+// - `tronconsVoulus` : dans les haltes par tronçons (la route du pont, la corniche, le gué), lesquels construire ;
 // - `cadrerEnsemble` : le point regardé et le zoom pour que cette boîte, toits compris, tienne à l'écran, sous l'angle de
 //   la caméra du moment ;
 // - `VueEnsemble` : l'attente du premier geste, puis le zoom vers le personnage (≈ 1,5 s, doux), et c'est fini.
@@ -22,22 +23,28 @@ export const DUREE_ZOOM = 1500;
 const HAUTEUR_TOITS = 9;
 /** Un peu d'air autour du lieu (et la place du bandeau du haut et des boutons du bas). */
 const MARGE = 1.08;
-/** Le gué se construit par tronçons de 50 m (rendu/gue.ts) ; on en montre deux de loin. */
-const TRONCON_GUE = 50;
+/**
+ * Ce qu'on montre du lieu : sa zone (où l'on marche), le décor tout autour remplit l'écran. Au gué, tout le lieu
+ * (200 × 70 m) : pendant la vue d'ensemble, ses quatre tronçons sont construits (0.10, R52 : `tronconsVoulus`).
+ */
+export function boiteDeLaVue(lieu: LieuId, zone: Zone, _arrivee: { x: number; z: number }): BoiteVue {
+  if (lieu === "gue") return { xMin: 0, xMax: TAILLE_GUE.longueur, zMin: 0, zMax: TAILLE_GUE.largeur };
+  return { xMin: zone.xMin, xMax: zone.xMax, zMin: zone.zMin, zMax: zone.zMax };
+}
 
 /**
- * Ce qu'on montre du lieu. Partout, sa zone (où l'on marche) : le décor tout autour remplit l'écran. Au gué (200 × 70 m,
- * quatre tronçons dont seuls celui du joueur et ses voisins sont construits), le tronçon d'arrivée et son voisin vers le
- * milieu du gué : 100 × 70 m, déjà construits, dans le budget de l'iPhone (deux tronçons, plus un bout du troisième).
+ * Les haltes par tronçons (la route du pont, la corniche, le gué : quatre tronçons de 50 m d'ouest en est) : en jeu,
+ * celui du joueur (`ici`) et ses voisins ; pendant la vue d'ensemble (`ensemble`), tous (0.10, R52 : de loin, on ne voit
+ * plus le lieu coupé net). `voulus` : ce qui doit rester construit ; `aConstruire` : ce qu'on construit à cette image,
+ * les voisins du joueur tout de suite, les autres un par image (sans figer l'écran).
  */
-export function boiteDeLaVue(lieu: LieuId, zone: Zone, arrivee: { x: number; z: number }): BoiteVue {
-  if (lieu === "gue") {
-    const i = Math.max(0, Math.min(3, Math.floor(arrivee.x / TRONCON_GUE)));
-    const voisin = i <= 1 ? i + 1 : i - 1;
-    const de = Math.min(i, voisin) * TRONCON_GUE;
-    return { xMin: de, xMax: de + 2 * TRONCON_GUE, zMin: 0, zMax: TAILLE_GUE.largeur };
-  }
-  return { xMin: zone.xMin, xMax: zone.xMax, zMin: zone.zMin, zMax: zone.zMax };
+export function tronconsVoulus<T extends string>(ordre: readonly T[], ici: number, ensemble: boolean, construits: { has(id: T): boolean }): { voulus: Set<T>; aConstruire: T[] } {
+  const proches = ordre.filter((_, i) => Math.abs(i - ici) <= 1);
+  const voulus = new Set<T>(ensemble ? ordre : proches);
+  const aConstruire = proches.filter((id) => !construits.has(id));
+  const loin = ensemble ? ordre.find((id) => !proches.includes(id) && !construits.has(id)) : undefined;
+  if (loin !== undefined) aConstruire.push(loin);
+  return { voulus, aConstruire };
 }
 
 /**

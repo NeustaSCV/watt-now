@@ -1125,3 +1125,69 @@ export const borneJingle: Recette = (h) => {
   p.ajouter(souffle(5, h, { filtre: "passe-haut", f: 3000, env: () => 1 }), 0, 0.03);
   return saturer(p.donnees, 1.8);
 };
+
+// =====================================================================================
+// Le Noyé et l'Ensablé (0.10, chantier G) : synthétisés, sans fichier livré
+// =====================================================================================
+
+/** Des bulles qui crèvent : de petites sinusoïdes qui montent très vite (une gorge pleine d'eau). */
+function bulles(h: Hasard, duree: number, densite: number, f: [number, number]): Float32Array {
+  const p = new Piste(duree + 0.1, h);
+  let t = entre(h, 0, 0.05);
+  while (t < duree) {
+    const d = entre(h, 0.012, 0.03);
+    const f0 = entre(h, f[0], f[1]);
+    p.ajouter(enveloppe(oscillateur(n(d), (x) => f0 * (1 + 3 * x)), cloche(d)), t, entre(h, 0.3, 1));
+    t += -Math.log(1 - h() * 0.999) / densite;
+  }
+  return p.donnees;
+}
+
+/**
+ * Le Noyé : son râle se noie dans ce qu'il a dans la gorge. Plus grave que celui de l'Errant, traînant, mouillé de
+ * bulles qui crèvent ; on le reconnaît avant de le voir.
+ */
+export const noyeGargouille: Recette = (h) => {
+  const d = entre(h, 1.4, 2.2);
+  const f0 = entre(h, 44, 56);
+  const p = new Piste(d + 0.3, h);
+  p.ajouter(
+    rale(d, h, {
+      f0: (t) => f0 * (1 + 0.1 * Math.sin(Math.PI * Math.min(1, t / (d * 0.5)))) * (1 - 0.2 * (t / d)),
+      formants: VOYELLES[1]!,
+      rauque: entre(h, 0.5, 0.75),
+      env: points([0, 0], [0.25, 0.8], [d * 0.45, 1], [d * 0.85, 0.5], [d, 0]),
+    }),
+    0,
+    0.8,
+  );
+  p.ajouter(bulles(h, d * 0.9, 22, [180, 420]), d * 0.08, 0.55);
+  return filtrer(saturer(p.donnees, 1.5), "passe-bas", 1400, 0.7);
+};
+
+/**
+ * Le Noyé crève : pas une explosion, une peau tendue qui cède. Un choc mou, le gaz qui fuse, les fluides qui
+ * giclent et retombent en pluie grasse, quelques gouttes à la fin.
+ */
+export const noyeCreve: Recette = (h) => {
+  const p = new Piste(1.5, h);
+  p.ajouter(sourd(78, 32, 0.07), 0, 1);
+  p.ajouter(souffle(0.35, h, { bruit: "rose", filtre: "passe-bas", f: (t) => 1500 - t * 2600, env: points([0, 0], [0.01, 1], [0.12, 0.5], [0.35, 0]) }), 0.005, 0.7);
+  p.ajouter(grains(0.6, h, (t) => 260 * Math.exp(-t * 6), { f: [500, 2600], q: 3, longueur: [0.004, 0.012], amplitude: [0.2, 1] }), 0.03, 0.8);
+  p.ajouter(bulles(h, 0.5, 14, [300, 700]), 0.45, 0.4);
+  for (let i = 0; i < 3; i++) p.ajouter(enveloppe(oscillateur(n(0.03), (x) => entre(h, 500, 900) * (1 + 2 * x)), cloche(0.03)), 0.8 + i * entre(h, 0.12, 0.22), 0.35);
+  return filtrer(saturer(p.donnees, 1.3), "passe-bas", 3200, 0.7);
+};
+
+/** L'Ensablé surgit : le sable qui glisse et retombe de son dos, et un souffle rauque qui sort de terre. */
+export const ensableSurgit: Recette = (h) => {
+  const p = new Piste(1.4, h);
+  p.ajouter(souffle(1, h, { bruit: "rose", filtre: "passe-bande", f: (t) => 2600 - t * 1200, q: 0.9, env: points([0, 0], [0.04, 1], [0.4, 0.7], [1, 0]) }), 0, 0.55);
+  p.ajouter(grains(1, h, (t) => 900 * Math.exp(-t * 3), { f: [1500, 6000], q: 1.5, longueur: [0.001, 0.003], amplitude: [0.1, 0.6] }), 0, 0.6);
+  p.ajouter(
+    rale(0.6, h, { f0: (t) => entre(h, 60, 70) * (1 + 0.3 * t), formants: VOYELLES[0]!, rauque: 0.7, env: points([0, 0], [0.08, 1], [0.4, 0.6], [0.6, 0]) }),
+    0.25,
+    0.6,
+  );
+  return saturer(p.donnees, 1.4);
+};

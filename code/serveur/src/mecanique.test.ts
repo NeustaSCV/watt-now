@@ -204,8 +204,77 @@ test("⚙️ étoiles de l'arbalète : frêne et noix de bois ★ ; lame brute �
   // Le ciseau à bois d'un Charbonnier : l'arbrier gagne une étoile.
   assert.equal(etoilesDuProduit(recette("arbrier")!, { buche: 1, scie: 1 }), 4);
   assert.equal(etoilesDuProduit(recette("arbrier")!, { buche: 1, scie: 1, ciseau_bois: 1 }), 5);
-  // Hors famille : ×1,5 en matières.
-  assert.deepEqual(recettePour(recette("carreaux_os")!, "charbonniers").ingredients, { branche: 2, plumes: 2, os: 3 });
+  // Hors famille : ×1,5 en matières, l'empennage au choix aussi.
+  assert.deepEqual(recettePour(recette("carreaux_os")!, "charbonniers").ingredients, { branche: 2, os: 3 });
+  assert.deepEqual(recettePour(recette("carreaux_os")!, "charbonniers").auChoix, [{ plumes: 2 }, { plastique: 2 }]);
+});
+
+// ---------- Le niveau 2 (plan 0.10, chantier F ; N2-31 à N2-39) ----------
+
+test("⚙️ 0.10 : le cranequin léger réarme l'arbalète en 2 s au lieu de 3 ; il ne bande pas la lourde", () => {
+  assert.deepEqual(rearmement(armeTirDe("arbalete")!, { cranequin_leger: 1 }), { ms: 2000, outil: "cranequin_leger" });
+  assert.deepEqual(rearmement(armeTirDe("arbalete")!, {}), { ms: 3000, outil: null });
+  assert.equal(rearmement(armeTirDe("arbalete_lourde")!, { cranequin_leger: 1 }), null, "la lourde garde le cranequin (niveau 3)");
+  // En jeu : le geste « Réarmer » dure 2 s, et le dit.
+  const t = tireur({ arbalete: 1, carreau: 3, cranequin_leger: 1 }, [devant(1, 11)]);
+  t.tir.preparer("arbalete");
+  t.tir.lancer(0, 1, 1);
+  t.attendre(1000);
+  t.tir.bander();
+  assert.equal(t.etat.gestes.at(-1)!.duree, 2);
+  assert.match(t.etat.gestes.at(-1)!.libelle, /Réarmer l'arbalète \(cranequin léger\)/);
+  // Le cranequin léger : au pédalier équipé des roulements montés, Serrer 2 ; le cranequin d'avant suit la lourde (niveau 3).
+  const r = recette("cranequin_leger")!;
+  // Un roulement, tiré de sa boîte (plan 0.10, V1-01).
+  assert.deepEqual([r.ingredients, r.qualites, r.lieu, r.aVenir], [{ roulement: 1, chaine_velo: 1, barre_metal: 1 }, { serrer: 2 }, { genre: "construction", construction: "pedalier", accessoire: "roulements" }, undefined]);
+  assert.equal(recette("cranequin")!.aVenir, "niveau 3");
+});
+
+test("⚙️ 0.10 : l'arc d'if se façonne à l'établi à étau ; l'arbalète ★★★ refusée sans cranequin léger, montée avec", () => {
+  const arc = recette("arc_arbalete_if")!;
+  assert.equal(arc.aVenir, undefined);
+  assert.deepEqual(arc.lieu, { genre: "construction", construction: "etabli", niveau: 2 });
+  // Un Mécaniste à son établi à étau, l'arc d'if et les autres pièces dans le sac.
+  const pedalier = [
+    { type: "pedalier" as const, x: 30, z: 30, etat: { alternateur: true } },
+    { type: "etabli" as const, x: 20, z: 21.8, etat: {} },
+  ];
+  const pieces = { cle_plate: 1, arbrier: 1, "noix_detente#3": 1, arc_arbalete: 1, corde_arbalete: 1 };
+  const t = monter("mecanistes", pieces, pedalier);
+  t.fabriquer("arbalete", 2);
+  assert.match(t.infos().at(-1)!, /arc d'if ne se bande pas à la main : il te faut un cranequin léger/);
+  assert.equal(t.inventaire().arbalete, undefined);
+  // Avec un cranequin léger dans le sac (il n'est pas pris) : l'arbalète ★★★.
+  const u = monter("mecanistes", { ...pieces, cranequin_leger: 1 }, pedalier);
+  u.fabriquer("arbalete", 2);
+  assert.equal(u.inventaire().arbalete, 1, JSON.stringify(u.inventaire()));
+  assert.equal(u.inventaire().cranequin_leger, 1);
+  // Un arc de frêne ou de ressort se bande toujours à la main.
+  const v = monter("mecanistes", { ...pieces, arc_arbalete: 0, "arc_arbalete#2": 1 } as Inventaire, pedalier);
+  v.fabriquer("arbalete", 2);
+  assert.equal(v.inventaire()["arbalete#2" as "arbalete"], 1);
+});
+
+test("⚙️ 0.10 : la récupération — l'arbrier d'un tube d'aluminium, les carreaux empennés de plastique", () => {
+  const arbrier = recette("arbrier")!;
+  assert.deepEqual(arbrier.auChoix, [{ buche: 1 }, { tube_aluminium: 1 }]);
+  assert.equal(etoilesDuProduit(arbrier, { tube_aluminium: 1, scie: 1 }), 4);
+  for (const id of ["carreaux_os", "carreaux_clou", "carreaux_acier"]) {
+    const r = recette(id)!;
+    assert.equal(r.ingredients.plumes, undefined, id);
+    assert.ok(r.auChoix?.some((f) => (f.plastique ?? 0) > 0), id);
+  }
+  // En jeu : un tube, et pas de bûche ; puis des carreaux sans plumes.
+  const t = monter("mecanistes", { scie: 1, cle_plate: 1, couteau: 1, tube_aluminium: 1, branche: 1, os: 2, plastique: 1 }, [
+    { type: "pedalier" as const, x: 30, z: 30, etat: { alternateur: true } },
+    { type: "etabli" as const, x: 20, z: 21.8, etat: {} },
+  ]);
+  t.fabriquer("arbrier", 4.5);
+  assert.equal(t.inventaire().arbrier, 1);
+  assert.equal(t.inventaire().tube_aluminium, undefined);
+  t.fabriquer("carreaux_os", 2);
+  assert.equal(t.inventaire().carreau, 4);
+  assert.equal(t.inventaire().plastique, undefined);
 });
 
 // ---------- Dans le jeu : un Mécaniste seul ----------

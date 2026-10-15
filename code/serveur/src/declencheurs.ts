@@ -8,7 +8,7 @@
 // `enregistrerDeclencheur`, sans toucher à eteints.ts ni à base.ts (Book 25 §10.4). Le joueur appelle `declencher`
 // à chaque pas de calcul des Éteints de son terrain.
 
-import { debout, mettreATerre, raidir, repousser, type Eteint } from "../../commun/src/eteints.ts";
+import { briserJambe, debout, mettreATerre, raidir, rampe, repousser, type Eteint } from "../../commun/src/eteints.ts";
 import type { Zone } from "../../commun/src/lieux.ts";
 import type { EtatDeclencheur } from "../../commun/src/messages.ts";
 
@@ -109,12 +109,12 @@ export function appliquerEffet(e: Eteint, effet: EffetDeclencheur, de: { x: numb
       raidir(e, effet.secondes);
       return;
     case "mettre_a_terre":
-      if (e.variante === "rampant") raidir(e, effet.secondes);
+      if (rampe(e)) raidir(e, effet.secondes);
       else mettreATerre(e, effet.secondes);
       return;
     case "briser_jambe":
-      // Un Rampant ne se relève plus (Book 06 §2.2) ; un piège ne détruit pas : il reste à l'achever.
-      e.variante = "rampant";
+      // Un Rampant ne se relève plus (Book 06 §2.2) ; un piège ne détruit pas : il reste à l'achever. (Le Noyé rampe.)
+      briserJambe(e);
       if (e.etat === "a_terre") e.etat = "poursuivant";
       e.saisit = null;
       e.tenue = 0;

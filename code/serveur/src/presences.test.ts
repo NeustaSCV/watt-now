@@ -262,7 +262,8 @@ test("0.9 : l'allure montrée suit le pas : immobile, marche, course", () => {
 });
 
 test("0.9 : équiper la fourche la met dans le dos (vu.dos) ; une arme non encombrante ne l'y met pas", () => {
-  assert.deepEqual(ARMES_DANS_LE_DOS, ["fourche_foin"]);
+  // La fourche, et depuis la 0.10 (chantier F) le harpon du gardien, aussi long qu'elle.
+  assert.deepEqual(ARMES_DANS_LE_DOS, ["fourche_foin", "harpon"]);
   const t = aLaHalte({ fourche_foin: 1, marteau: 1 }, null);
   t.joueur.recevoir({ t: "equiper", objet: "marteau" });
   assert.equal(t.joueur.vu.dos, undefined);

@@ -123,7 +123,7 @@ export const PROFILS_DECHETS: Record<TypeLieuDechets, ProfilLieuDechets> = {
       {
         nom: "la pêche et la guinguette",
         part: 0.15,
-        objets: { ballon_foot: 3, flamant_rose: 2, volants_badminton: 2, attrape_reves: 1, parasol: 1, barbecue: 1, tente_popup: 0.5, sac_charbon_bbq: 0.3 },
+        objets: { ballon_foot: 3, flamant_rose: 2, volants_badminton: 2, attrape_reves: 1, parasol: 1, barbecue: 1, tente_popup: 0.5, sac_charbon_bbq: 0.3, chaise_camping: 1 },
       },
     ],
   },
@@ -582,7 +582,7 @@ export const POINTS_DECHETS: Record<TypePointDechets, DefinitionPointDechets> = 
     nom: "frigo connecté",
     verbe: "demonter",
     libelle: "Démonter le frigo",
-    examen: "Son écran annonce encore « Lait : à racheter ». Du cuivre, de l'aluminium, du plastique.",
+    examen: "Son écran annonce encore « Lait : à racheter ». Du fil de cuivre, des chutes d'aluminium, du plastique.",
     qualites: { visser: 1 },
     duree: 30,
     donne: { fil_cuivre: 4, aluminium: 2, plastique: 6 },

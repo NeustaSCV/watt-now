@@ -14,7 +14,7 @@ import { QUETES } from "./quetes.ts";
 import { QUALITES_OBJETS, RECETTES, estHorsFamille, type Qualite, type Recette } from "./recettes.ts";
 import type { Famille } from "./regles.ts";
 import { USAGES, ressourceVisible, type TypeRessource } from "./terrain.ts";
-import { DEMONTAGE, FAMILLES_PAR_LIEU, tableDeFouille, type LieuFouille } from "./vestiges.ts";
+import { CLES_L1A, CLES_L1B, CLES_L2A, CLES_L2B, DEMONTAGE, FAMILLES_PAR_LIEU, tableDeFouille, type LieuFouille } from "./vestiges.ts";
 
 /** D'où vient un objet (pour le rapport). */
 export type Source = "kit" | "sol" | "fouille" | "dechets" | "decharge" | "comptoir" | "quete" | "monde" | "demontage" | "fabrication" | "autres";
@@ -64,6 +64,9 @@ export function sourcesDuMonde(famille: Famille): Map<TypeObjet, Source> {
   for (const p of Object.values(POINTS_DECHETS)) ajouterInventaire(objets, p.donne, "dechets");
   for (const [t] of tableDecharge()) if (!objets.has(t)) objets.set(t, "decharge");
   ajouterInventaire(objets, STOCK_DE_BASE, "comptoir");
+  // Les objets-clés, toujours au Comptoir après la visite de leur lieu (plan 0.10, chantier B) ; ceux du niveau 2 sont
+  // aussi à leur place dans leurs lieux (le sol de l'hôtel et du phare, plus haut : chantiers J et K).
+  for (const t of [...CLES_L1A, ...CLES_L1B, ...CLES_L2A, ...CLES_L2B]) if (!objets.has(t)) objets.set(t, "comptoir");
   for (const q of QUETES) if ((!q.famille || q.famille === famille) && q.recompense?.objets) ajouterInventaire(objets, q.recompense.objets, "quete");
   for (const m of DU_MONDE) if (m.depuis === null && !objets.has(m.objet)) objets.set(m.objet, "monde");
   return objets;

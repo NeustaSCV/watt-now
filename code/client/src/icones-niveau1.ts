@@ -249,4 +249,32 @@ export const DESSINS_NIVEAU1: Record<string, string> = {
     <path d="M20 18 H28" stroke="${ENCRE}" stroke-width="1" opacity="0.6"/>
     <path d="M24 3 Q30 9 28 14 Q26 16 24 15 Q21 16 20 14 Q18 9 24 3 Z" fill="#ff8a3d" stroke-width="1.4" ${T}/>
     <path d="M24 8 Q26.5 11 25.5 13.5 Q24 14.5 22.5 13.5 Q22 11 24 8 Z" fill="#ffd27a"/>`,
+  // ---------- Les armes du niveau 2 (plan 0.10, chantier F) ----------
+  // Le pied de guéridon : une colonne de fonte en balustre, noire, écaillée de rouille ; la volute du pied, en bas.
+  pied_gueridon: `
+    ${trait("M34 6 L22 30", "#2a2826", 3.2)}
+    <path d="M24 24 Q15 27 14 35 Q14 40 19 41 Q25 41 25 36 Q25 32 21 33" fill="none" stroke="${ENCRE}" stroke-width="6.4" stroke-linecap="round"/>
+    <path d="M24 24 Q15 27 14 35 Q14 40 19 41 Q25 41 25 36 Q25 32 21 33" fill="none" stroke="#3a3633" stroke-width="4" stroke-linecap="round"/>
+    <ellipse cx="27" cy="20" rx="4.2" ry="3" transform="rotate(-62 27 20)" fill="#3a3633" ${T}/>
+    <path d="M31 12 l3 1.6 M29 15.6 l3 1.6" stroke="${ENCRE}" stroke-width="1.4" stroke-linecap="round"/>
+    <path d="M27 19 l1.6 .6 M18 36 l1.4 -.8 M33 9 l1 .6" stroke="#a0522d" stroke-width="1.6" stroke-linecap="round"/>`,
+  // Le harpon du gardien : une longue hampe brunie, la douille, la tige de fer, le fer barbelé ; deux tours de corde.
+  harpon: `
+    ${trait("M4 46 L27 23", "#6e5236", 3.2)}
+    ${trait("M26 24 L30 20", ACIER_SOMBRE, 3.2)}
+    ${trait("M30 20 L38 12", "#5a4636", 1.8)}
+    <path d="M37 9 L44 4 L39 13 Z" fill="${ACIER}" ${T}/>
+    <path d="M38 11 L37 16" stroke="${ENCRE}" stroke-width="3.4" stroke-linecap="round"/>
+    <path d="M38 11 L37 16" stroke="${ACIER}" stroke-width="1.6" stroke-linecap="round"/>
+    <path d="M22 26 l3 3 M20 28 l3 3" stroke="${CORDE}" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M21 30 Q19 36 22 40" fill="none" stroke="${CORDE}" stroke-width="1.6" stroke-linecap="round"/>`,
+  // Le cranequin léger : un petit pignon sur son roulement, une courte crémaillère de maillons de chaîne, la manivelle.
+  cranequin_leger: `
+    <circle cx="18" cy="28" r="9" fill="${ACIER_SOMBRE}" ${T}/>
+    <circle cx="18" cy="28" r="5" fill="${ACIER}" ${T} stroke-width="1.2"/>
+    <circle cx="18" cy="28" r="2" fill="#55524d"/>
+    <path d="M18 28 L32 16 L38 18" stroke="${ENCRE}" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path d="M18 28 L32 16 L38 18" stroke="#55524d" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path d="M28 36 h14 v4 h-14 Z" fill="${ACIER}" ${T}/>
+    <path d="M30 36 v4 M33.5 36 v4 M37 36 v4 M40.5 36 v4" stroke="${ENCRE}" stroke-width="1" opacity="0.7"/>`,
 };

@@ -2,6 +2,7 @@
 
 > Document de conception · version 0.2 · 2026-10-07
 > Statut : **brouillon de travail**.
+> 0.10 (2026-10-15) : §3.3, la jauge du coup appuyé autour du bouton A, et les bras pris (« Poser »).
 
 ---
 
@@ -99,6 +100,10 @@ Garder les commandes **très simples** : un déplacement, **deux boutons d'actio
 > **Décisions (2026-10-08, propositions P-004 et P-005 des testeurs)** :
 > - **Un coup va jusqu'au bout.** Pendant le geste, un nouvel appui ne relance ni l'animation, ni le son, ni le coup : il est **gardé** et joué à la fin du geste (on enchaîne sans marteler). Chaque arme a la durée de son geste, coup simple et coup appuyé : la hache est lente (0,7 s / 0,95 s), le couteau vif (0,42 s / 0,65 s). Le serveur refuse un coup avant la fin du geste (80 ms de tolérance pour le réseau). Dix appuis en une seconde à la hache : deux coups.
 > - **On choisit son arme.** Dans le sac, « Équiper pour le combat » sur toute arme (une petite épée ⚔ marque l'équipée). C'est elle qu'on a en main en mode Combat. Si on ne l'a plus (jetée, vendue, tombée avec le sac), on prend la meilleure du sac, et le jeu le dit une fois. Sans choix, la règle d'avant reste : la meilleure du sac. Le choix est gardé d'une session à l'autre. Les emplacements rapides (ceinture, holster, Book 12 §2.1) viendront plus tard.
+>
+> **Décisions de la 0.10 (2026-10-15 ; plan 0.10, V2-12 et V4-12)** :
+> - **Le coup appuyé se voit** : en mode Combat, **une jauge fait le tour du bouton A** pendant qu'on le tient ; **pleine en 0,35 s**, le coup à la tête est prêt ; elle se vide dès qu'on lâche. Aucune règle ne change : le coup se juge toujours au relâchement. Sur iPhone, le bouton A ne laisse plus Safari interrompre l'appui long au moindre glissement du pouce (il était compté comme un coup court) : c'est sans doute pourquoi le porteur ne l'avait jamais vu marcher. Garder ou non le coup à la tête reste à l'étude, selon les essais sur l'iPhone.
+> - **Les bras pris** (la batterie ou la tête du robot à l'hôtel, l'escabeau ; Book 23 §13) : on ne frappe pas, et **le bouton A dit « Poser »**.
 
 ### 3.4 Disposition sur mobile
 

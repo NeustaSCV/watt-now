@@ -30,24 +30,42 @@
 // **portes** : le niveau 1 de chaque meuble, dans l'ordre du parcours (§1.1 du plan). Le simulateur relève aussi les
 // **blocages** : une recette que le tutoriel ou une quête demande et qui n'est jamais dévoilée, un ingrédient
 // introuvable, une porte qu'on ne peut pas franchir. Calcul pur, sans état global ; il ne tourne jamais en jeu.
+//
+// Plan 0.10 (chantier M) : **le niveau 2**, joué à la suite de la première soirée par la même simulation
+// (`jouerParcoursN2`) : les portes du niveau 2 (`postesNiveau2` : les dix évolutions, les meubles nouveaux, les étagères,
+// le métier ★★★), les sorties à l'hôtel par la route du pont et au phare par la corniche, **le péage** à l'aller
+// seulement (12 wotts, une heure de passage libre ; le retour toujours libre, V2-01), **le check-in** (la durée de la
+// visite de l'hôtel), **le feu du phare la nuit** (on part pour l'allumer à la nuit tombée ; le cargo 50 s après), les
+// objets-clés et les outils du niveau 2 (le rabot, le fer à souder), **les boîtes de roulements** (trois roulements
+// chacune, V1-01 ; le Comptoir en vend s'il en manque), le bois (le pin tombé de la corniche, le tas de la station), la
+// glaise du gué. Le budget des matières et de l'énergie est à côté : rythme-niveau2.ts.
 
-import { tirerCleRare, tirerVestiges, type LieuFouille } from "./vestiges.ts";
+import { DEMONTAGE, LIEU_DE_FOUILLE, etapeButin, tirerCleRare, tirerVestiges, type EtapeButin, type LieuFouille } from "./vestiges.ts";
 import { aleaDe, contenuConteneur, graineDe, piecesAmas, type TypeLieuDechets } from "./dechets.ts";
 import { tableDecharge } from "./decharge.ts";
-import { REASSORT_MS, STOCK_DE_BASE } from "./economie.ts";
+import { LIEU_DES_CLES, PRIX_CLES_L1, REASSORT_MS, STOCK_DE_BASE } from "./economie.ts";
 import { COUT_BAC } from "./forge.ts";
+import { CHARBON_PRODUIT, MS_JOUR_CALENDRIER, productionPanneau } from "./energie.ts";
+import { REGLAGES } from "./reglages.ts";
 import { BUTIN_GUE } from "./gue.ts";
 import { BUTIN_HALTE } from "./halte.ts";
-import { ETAPES_LIEUX, lieuDeLEtape, type LieuId } from "./lieux.ts";
+import { ETAPES_LIEUX, LIEUX_NIVEAU_2, lieuDeLEtape, type LieuId } from "./lieux.ts";
+import { CARGO_MS } from "./phare.ts";
+import { SEMIS_CORNICHE } from "./corniche-contenu.ts";
+import { SEMIS_ROUTE_PONT } from "./route-pont.ts";
+import { DUREE_PASSAGE_MS, PRIX_PASSAGE, type Passage as PassagePeage } from "./peage.ts";
+import { ACCESSOIRES_DE_NIVEAU } from "./meubles-niveau2.ts";
+import { COUT_CREUSET, NIVEAU_FORGE_CREUSET } from "./meubles-neufs.ts";
+import { HEURE_DEPART, HEURE_TOMBEE_NUIT, estNuit } from "./temps.ts";
 import { CAPACITE_BROUETTE, CAPACITE_SAC, CAPACITE_TRAVOIS, OBJETS, type Inventaire, type TypeObjet } from "./objets.ts";
 import { ATELIER, aDevoiler, devoileesAuDepart, devoileesDEmblee, etapesAvecCle, nomDuLieu, recetteDeBase, recettesDeLEtape, type EtatPourDevoilement } from "./progression.ts";
 import type { LieuRecette } from "./recettes.ts";
 import { lieuPossede } from "./lieu-recette.ts";
 import { ACCESSOIRES_FEU, PIECES_DE_FAMILLE, VOIE_CREUSEE, VOIE_SURFACE, lignee, type AccessoireFeu, type EtapeMonde, type FormeFeu } from "./lignees.ts";
 import { QUETES, queteSuivante, type Condition, type LigneQuete, type Quete } from "./quetes.ts";
-import { RECETTES, faconsRecette, recette, type Recette } from "./recettes.ts";
+import { QUALITES_OBJETS, RECETTES, faconsRecette, recette, type Qualite, type Recette } from "./recettes.ts";
 import type { Famille } from "./regles.ts";
-import { SEMIS, semisDe, type LieuSemis } from "./semis.ts";
+import { SEMIS, semisDe, type LieuSemis, type SemisLieu } from "./semis.ts";
 import { REPOUSSE_MS, USAGES, genererRessources, vracEnJeu } from "./terrain.ts";
 import { trouvables, type Source } from "./trouvables.ts";
 import { etapesTutoriel } from "./tutoriel.ts";
@@ -200,8 +218,19 @@ const DUREES_QUETES: Readonly<Record<string, { travail: number; lieu?: "station"
 /** Les quêtes qui demandent un autre joueur : un joueur seul ne peut pas les finir (ce n'est pas un blocage). */
 const QUETES_SOCIALES = new Set(["main_tendue"]);
 
-/** Les attentes du monde, en minutes de jeu (Book 25 : la meule cuit trois jours de jeu, 72 min). */
-const ATTENTE = { defourne: 72, wh_panneau: 25 } as const;
+/**
+ * Le panneau suit le soleil (plan 0.10, chantier D ; S-30) : rien la nuit ni sous la pluie, moins sous les nuages. Sur
+ * un mois de calendrier du monde, il ne donnait qu'une part de ses 80 Wh par jour (≈ 53 % : la nuit est déjà dans la
+ * moyenne, pas la pluie ni les nuages). Depuis la compensation (V1-02), sa moyenne sur la vraie météo est celle d'avant :
+ * ce mois-ci, un peu plus (≈ 107 %, le hasard du ciel) ; l'attente des 20 Wh de la quête « La charge » suit.
+ */
+export const PART_DU_SOLEIL = productionPanneau(0, 30 * MS_JOUR_CALENDRIER, 0) / (30 * REGLAGES.panneau_wh_jour);
+
+/**
+ * Les attentes du monde, en minutes de jeu (Book 25 : la meule cuit trois jours de jeu, 72 min). Le panneau donnait
+ * 20 Wh en 25 min au calendrier ; il suit le soleil depuis la 0.10.
+ */
+const ATTENTE = { defourne: 72, wh_panneau: Math.round(25 / PART_DU_SOLEIL) } as const;
 
 /**
  * Une sortie, pour un joueur moyen (minutes de jeu connecté) : le trajet (10 s à l'écran), le lieu à traverser, ses
@@ -285,7 +314,7 @@ const GESTES_TUTO: Readonly<Record<string, readonly (readonly [number, Geste])[]
   "Le vestige": [
     // La caisse à outils de la ruine : la tête de hache, la clé plate, le tournevis, la tête de marteau (I10).
     [0.4, { voir: ["tete_hache", "cle_plate", "tournevis", "tete_marteau"] }],
-    [0.45, { fouiller: "atelier" }],
+    [0.45, { fouiller: "caisse_ruine" }],
     [0.9, { voir: ["cadre_velo", "chaine_velo", "roue_velo", "dynamo_velo"] }],
   ],
   "L'outil": [[0.9, { fabriquer: "hache" }]],
@@ -314,7 +343,7 @@ const INSTALLATION_DU_VETERAN: readonly [number, Geste][] = [
   [2.5, { fabriquer: "feu_de_camp" }],
   [2.6, { noter: "feu_allume" }],
   [5, { voir: ["tete_hache", "cle_plate", "tournevis", "tete_marteau", "bache", "barre_metal", "ressort_lames", "bidon_5l", "sac_plastique"] }],
-  [5.1, { fouiller: "atelier" }],
+  [5.1, { fouiller: "caisse_ruine" }],
   [6, { voir: ["cadre_velo", "chaine_velo", "roue_velo", "dynamo_velo"] }],
   [9, { fabriquer: "abri" }],
   // « Ta famille t'attend à la station » (Q-0.8-15) : il y va tout de suite après s'être installé.
@@ -327,7 +356,7 @@ const INSTALLATION_DU_VETERAN: readonly [number, Geste][] = [
 // ---------- Le niveau 1 : les portes, et ce qu'il faut bâtir (plan 0.8 §1.1, §2.3, §5 critères 2 à 5) ----------
 
 /** Les formes du feu qu'on bâtit (la voie de surface sur un premier feu, la voie creusée sur un second). */
-type FormeBatie = "foyer_pierres" | "foyer_cuisine" | "dakota" | "poele_fusee";
+type FormeBatie = "foyer_pierres" | "foyer_cuisine" | "dakota" | "poele_fusee" | "four_terre";
 
 /** Une chose à bâtir pour avoir « tout le niveau 1 ». */
 export type Poste =
@@ -345,7 +374,11 @@ export type Poste =
   | { id: string; genre: "bac" }
   | { id: string; genre: "meule" }
   /** La sortie au gué du parcours visé (sortie 2 : « de quoi bâtir »), pour qui la fait sans en avoir besoin. */
-  | { id: string; genre: "gue" };
+  | { id: string; genre: "gue" }
+  /** Plan 0.10 (chantier M) : une recette du niveau 2, fabriquée une fois de plus (l'arme ★★★ sur le meuble du niveau 2). */
+  | { id: string; genre: "objet2"; recette: string }
+  /** Un accessoire posé sur un meuble du niveau 2 (le creuset de la forge ventilée). */
+  | { id: string; genre: "accessoire2"; type: "forge"; accessoire: "creuset" };
 
 const r = (id: string): Poste => ({ id, genre: "recette", recette: id });
 const n = (type: string, niveau: number): Poste => ({ id: `${type}#${niveau}`, genre: "niveau", type, niveau });
@@ -403,6 +436,89 @@ export function postesNiveau1(famille: Famille, route: "A" | "B" = "A", gue: "pa
   return [...POSTES_MAISON, ...POSTES_FAMILLE[famille], ...auGue, ...l1, ...POSTES_MAISON_ENSUITE, ...POSTES_METIER[famille]];
 }
 
+// ---------- Le niveau 2 : ce qu'il faut bâtir (plan 0.10 §3.1, §4 chantier M ; niveau-2.md §2 à §4) ----------
+
+const r2 = (id: string): Poste => ({ id: `${id}@2`, genre: "objet2", recette: id });
+
+/** Les évolutions communes de l'hôtel (L2A) : l'abri doublé, la lanterne fixe, la réserve couverte. */
+const POSTES_N2_L2A: readonly Poste[] = [n("abri", 4), n("torche_plantee", 2), n("coffre", 3)];
+/** Celles du phare (L2B) : le four de terre, le récupérateur à jerrican, l'établi de menuisier, la cloche d'alarme. */
+const POSTES_N2_L2B: readonly Poste[] = [{ id: "four_terre", genre: "feu", forme: "four_terre" }, n("recuperateur_pluie", 3), n("etabli", 3), n("alarme_boites", 2)];
+/** Le meuble de famille du niveau 2, à son lieu : ⚡ le poste de montage et ⚙️ les roulements montés (L2A), 🔥 la forge ventilée (L2B). */
+const POSTES_N2_FAMILLE: Readonly<Record<Famille, { lieu: "L2A" | "L2B"; postes: readonly Poste[] }>> = {
+  voltaiques: { lieu: "L2A", postes: [n("banc_recharge", 2)] },
+  mecanistes: { lieu: "L2A", postes: [n("pedalier", 2)] },
+  charbonniers: { lieu: "L2B", postes: [n("forge", 2)] },
+};
+/** Les meubles nouveaux communs (N2-40, N2-41) et les étagères de l'établi de menuisier (V1-04). */
+const POSTES_N2_COMMUNS_ENSUITE: readonly Poste[] = [r2("cuiseur_solaire"), r2("bacs_tri"), r2("etageres")];
+/**
+ * Ce que chaque famille fait de son meuble du niveau 2 : ses armes ★★★ et ses meubles nouveaux (N2-43 à N2-48). 🔥 le
+ * creuset, la hache et la machette ★★★ (le glaive attend la maîtrise du couteau), un lingot ; ⚡ le pack soudé, la
+ * matraque à contacts soudés, le module à bobine, la batterie de cellules, la rampe de LED ; ⚙️ le cranequin léger, l'arc
+ * d'arbalète en if et l'arbalète, la charrette à bras, le moulin de jerricans, l'arbalète de garde.
+ */
+const POSTES_N2_METIER: Readonly<Record<Famille, readonly Poste[]>> = {
+  charbonniers: [{ id: "creuset", genre: "accessoire2", type: "forge", accessoire: "creuset" }, r2("hache_forgee"), r2("machette_forgee"), r2("lingot_aluminium")],
+  voltaiques: [r2("pack_soude"), r2("matraque_contacts_soudes"), r2("module_bobine"), r2("batterie_cellules"), r2("rampe_led")],
+  mecanistes: [r2("cranequin_leger"), r2("arc_arbalete_if"), r2("arbalete"), r2("charrette_bras"), r2("moulin_jerricans"), r2("arbalete_garde")],
+};
+
+/**
+ * Tout le niveau 2 d'une famille, dans l'ordre de sa route : le lieu de la route prise d'abord (A : l'hôtel ; B : le
+ * phare), ses évolutions communes et le meuble de famille s'il y est, puis l'autre lieu, puis les meubles nouveaux et le
+ * métier. `famille` seulement : le meuble de famille et son métier (le critère 8 : le Mécaniste seul, sans aller aux deux
+ * lieux).
+ */
+export function postesNiveau2(famille: Famille, route: "A" | "B" = "A", seulementFamille = false): Poste[] {
+  const f = POSTES_N2_FAMILLE[famille];
+  const auLieu = (l: "L2A" | "L2B") => [...(seulementFamille ? [] : l === "L2A" ? POSTES_N2_L2A : POSTES_N2_L2B), ...(f.lieu === l ? f.postes : [])];
+  const ordre = route === "A" ? (["L2A", "L2B"] as const) : (["L2B", "L2A"] as const);
+  return [...auLieu(ordre[0]), ...auLieu(ordre[1]), ...(seulementFamille ? [] : POSTES_N2_COMMUNS_ENSUITE), ...POSTES_N2_METIER[famille]];
+}
+
+/** Les lieux du niveau 2 où l'on va pour un objet-clé, et la halte qu'on traverse (et son péage) pour y aller. */
+type LieuNiveau2 = "grand_hotel" | "phare";
+const HALTE_DE: Readonly<Record<LieuNiveau2, { halte: "route_pont" | "corniche"; passage: PassagePeage }>> = {
+  grand_hotel: { halte: "route_pont", passage: "pont" },
+  phare: { halte: "corniche", passage: "tunnel" },
+};
+
+/**
+ * Une sortie du niveau 2, pour un joueur moyen (minutes de jeu connecté), aux mêmes distances que le niveau 1 (B16 : 3 km
+ * jusqu'à la halte, 2 km jusqu'au lieu) : l'hôtel, 35 min (la Coopérative : 30) pour le check-in (la batterie à la borne,
+ * le robot dégagé, sa tête portée à deux mains, l'ascenseur) ; le phare, 30 min, dont la préparation (l'escabeau, le
+ * pétrole, le prisme, le compresseur : faisable de jour) et l'attente du cargo après l'allumage (S-17 : CARGO_MS), qui se fait la
+ * nuit. Des estimations, à caler au test familial comme celles du niveau 1.
+ */
+export const DUREES_SORTIES_N2 = { grand_hotel: 35, phare: 30, preparerPhare: 8, cargo: CARGO_MS / 60_000 } as const;
+
+/**
+ * Le ravitaillement de bois à la corniche ne passe pas la barricade (on ne paie pas) : le pin tombé est en deçà (x = − 78
+ * du modèle, la barricade à − 25), avec 4 des 9 pins sous lesquels le vrac de bûches est semé (corniche-contenu.ts,
+ * `PINS`) : ≈ 4/9 de ses 8 bûches, soit 3.
+ */
+export const BUCHES_CORNICHE_EN_DECA = 3;
+
+/**
+ * Les tables de fouille des lieux du niveau 2, dans l'ordre de leurs points (vestiges.ts, LIEU_DE_FOUILLE : les points de
+ * l'hôtel, du phare, de la route du pont et de la corniche, reconnus à leur préfixe).
+ */
+export const FOUILLES_N2: Readonly<Partial<Record<LieuId, readonly LieuFouille[]>>> = (() => {
+  const prefixes: Partial<Record<LieuId, string>> = { route_pont: "pont_", grand_hotel: "hotel_", corniche: "corniche_", phare: "phare_" };
+  const t: Partial<Record<LieuId, LieuFouille[]>> = {};
+  for (const [lieu, prefixe] of Object.entries(prefixes) as [LieuId, string][]) t[lieu] = Object.entries(LIEU_DE_FOUILLE).filter(([r]) => r.startsWith(prefixe)).map(([, f]) => f!);
+  return t;
+})();
+
+/** La durée simulée du niveau 2 (minutes de jeu connecté), après la première soirée (HORIZON_MIN). */
+export const HORIZON_NIVEAU_2_MIN = 600;
+
+/** L'heure du monde à une minute du serveur simulé : il commence au matin (HEURE_DEPART) ; une heure de jeu par minute. */
+export function heureDuMonde(minute: number): number {
+  return (((HEURE_DEPART + minute) % 24) + 24) % 24;
+}
+
 /** Les ressources que le simulateur compte (le reste se ramasse ou se fouille sans compter). */
 export type Vrac = "buche" | "pierre" | "branche" | "glaise" | "charbon_bois";
 const COMPTES: readonly Vrac[] = ["buche", "pierre", "branche", "glaise", "charbon_bois"];
@@ -419,11 +535,33 @@ export const CLES_DE_LIEU: ReadonlyMap<TypeObjet, LieuId> = (() => {
   const m = new Map<TypeObjet, LieuId>();
   for (const x of etapesAvecCle()) {
     const c = x.etape.cle;
-    if (x.etape.aVenir || !c.objet || c.ou === "maison") continue;
+    // Le niveau 2 (plan 0.10, chantier M) a sa table à part (CLES_NIVEAU_2) : le parcours du niveau 1 n'en sait rien.
+    if (x.etape.aVenir || !c.objet || c.ou === "maison" || x.etape.etapeLieu === "L2" || x.etape.etapeLieu === "H2") continue;
     const lieu = lieuDeLEtape(c.ou);
     if (lieu) m.set(c.objet, lieu);
   }
   return m.set("glaise", "gue");
+})();
+
+/**
+ * Les objets-clés du niveau 2 (plan 0.10 §3.1) et leur lieu, tels que le Comptoir les connaît (LIEU_DES_CLES) : les
+ * cinq de l'hôtel (à l'étage, après le check-in), les cinq du phare (dans l'épave, après le feu et le cargo). Le rabot et
+ * le fer à souder en sont : ce sont des outils (OUTILS_NIVEAU_2). Seul le parcours du niveau 2 s'en sert.
+ */
+export const CLES_NIVEAU_2: ReadonlyMap<TypeObjet, LieuId> = new Map(
+  (Object.entries(LIEU_DES_CLES) as [TypeObjet, LieuId][]).filter(([, l]) => (LIEUX_NIVEAU_2 as readonly LieuId[]).includes(l)),
+);
+
+/**
+ * Les qualités qu'aucun outil ne donne hors des objets-clés du niveau 2 (Raboter : le rabot ; Souder : le fer à souder) :
+ * l'établi de menuisier, le poste de montage et ce qui s'y fait attendent l'objet, et donc sa sortie.
+ */
+export const OUTILS_NIVEAU_2: Readonly<Partial<Record<Qualite, TypeObjet>>> = (() => {
+  const par = new Map<Qualite, TypeObjet[]>();
+  for (const [t, q] of Object.entries(QUALITES_OBJETS) as [TypeObjet, Partial<Record<Qualite, number>>][]) for (const k of Object.keys(q) as Qualite[]) par.set(k, [...(par.get(k) ?? []), t]);
+  const outils: Partial<Record<Qualite, TypeObjet>> = {};
+  for (const [q, objets] of par) if (objets.every((t) => CLES_NIVEAU_2.has(t))) outils[q] = objets[0]!;
+  return outils;
 })();
 
 /** L'étape du monde d'un lieu (H1A pour la station…), ou « maison ». */
@@ -446,8 +584,14 @@ export const TERRAIN_VRAC: Readonly<Record<"buche" | "pierre" | "branche", numbe
   return c;
 })();
 const RETOUR_BRANCHE_MIN = REPOUSSE_MS.branche! / 60_000;
-/** Les lieux semés (plan 0.9, semis.ts) : les haltes, partagées, et les lieux à un joueur (le Moulin, la Coopérative). */
-type LieuSeme = LieuSemis;
+/**
+ * Les lieux semés (plan 0.9, semis.ts) : les haltes, partagées, et les lieux à un joueur (le Moulin, la Coopérative) ;
+ * plan 0.10 : les deux haltes du niveau 2, qui tiennent leur semis à part (route-pont.ts, corniche-contenu.ts).
+ */
+type LieuSeme = LieuSemis | "route_pont" | "corniche";
+function semisDu(lieu: LieuSeme): SemisLieu {
+  return lieu === "route_pont" ? SEMIS_ROUTE_PONT : lieu === "corniche" ? SEMIS_CORNICHE : SEMIS[lieu];
+}
 const A_UN_JOUEUR: ReadonlySet<LieuSeme> = new Set(["moulin", "cooperative"]);
 /** Ce qui se ramasse dans un lieu semé : le bois et les pierres (la cueillette ne se simule pas : pas de faim ici). */
 type TypeRamasse = "buche" | "pierre" | "branche";
@@ -474,6 +618,11 @@ export interface Hypotheses {
   reassortMin: number;
   /** Les bûches brûlées la première nuit (0 : le joueur suit le conseil du tutoriel, B14). */
   buchesPremiereNuit: number;
+  /** Plan 0.10 (N2-29, S-21) : le pin tombé de la corniche, tas personnel (bûches), et son retour (minutes réelles). */
+  pinTombe: number;
+  retourPinMin: number;
+  /** Plan 0.10 (V1-01) : combien de boîtes de trois roulements la machinerie de l'hôtel donne d'un coup. */
+  boitesHotel: number;
 }
 
 export const HYPOTHESES_DECIDEES: Hypotheses = {
@@ -489,6 +638,11 @@ export const HYPOTHESES_DECIDEES: Hypotheses = {
   stockComptoir: STOCK_DE_BASE.buche ?? 0,
   reassortMin: REASSORT_MS / 60_000,
   buchesPremiereNuit: 0,
+  // S-21 : les réglages du tas de bois de la station (corniche-contenu.ts, BUTIN_CORNICHE).
+  pinTombe: REGLAGES.tas_bois_buches,
+  retourPinMin: REGLAGES.tas_bois_retour_h * 60,
+  // ressources-hotel.ts : la machinerie de l'ascenseur (hotel_roulements).
+  boitesHotel: USAGES.hotel_roulements.donne.roulements ?? 1,
 };
 
 /** Un passage d'un joueur dans un lieu (minutes absolues : depuis le début du serveur simulé). */
@@ -553,13 +707,15 @@ export class Haltes {
   private base(lieu: LieuSeme, type: TypeRamasse): number {
     if (type !== "branche" && lieu === "station") return this.h.vracStation[type];
     if (type === "pierre" && lieu === "gue") return this.h.vracGue;
+    if (lieu === "route_pont" || lieu === "corniche") return Object.values(semisDu(lieu).lignes).reduce((s, l) => s + (l.type === type ? l.n : 0), 0);
     return semisDe(lieu, type);
   }
 
   /** Le délai de retour (minutes) : celui du lieu (semis.ts), sinon REPOUSSE_MS ; le vrac des haltes : l'hypothèse. */
   private retour(lieu: LieuSeme, type: TypeRamasse): number {
-    if (type !== "branche" && SEMIS[lieu].vrac[type]) return this.h.retourVracMin;
-    const ms = SEMIS[lieu].repousse[type] !== undefined ? SEMIS[lieu].repousse[type]! : REPOUSSE_MS[type];
+    const semis = semisDu(lieu);
+    if (type !== "branche" && semis.vrac[type]) return this.h.retourVracMin;
+    const ms = semis.repousse[type] !== undefined ? semis.repousse[type]! : REPOUSSE_MS[type];
     return ms === null ? Infinity : ms / 60_000;
   }
 
@@ -569,7 +725,7 @@ export class Haltes {
    */
   vrac(lieu: LieuSeme, type: TypeRamasse, t: number): number {
     const seul = A_UN_JOUEUR.has(lieu);
-    const enVrac = SEMIS[lieu].vrac[type] === true;
+    const enVrac = semisDu(lieu).vrac[type] === true;
     if (this.videAvant && enVrac && !seul) return 0;
     const retour = this.retour(lieu, type);
     const pris = [...this.prises, ...(seul ? [] : this.autres.prises)].filter((p) => p.lieu === lieu && p.type === type && p.minute <= t && p.minute > t - retour).reduce((s, p) => s + p.n, 0);
@@ -592,10 +748,23 @@ export class Haltes {
     return k;
   }
 
-  /** Son tas personnel (le tas de bois de la station, le banc de galets du gué) : plein, ou ce qu'il en reste. */
-  prendreTas(quel: "tas_bois" | "banc_galets", t: number, max: number): number {
-    const plein = quel === "tas_bois" ? this.h.tasBois : this.h.bancGalets;
-    const retour = quel === "tas_bois" ? this.h.retourTasMin : this.h.retourBancMin;
+  /** Ce qu'il reste de son tas personnel à cet instant (sans rien prendre). */
+  resteTas(quel: "tas_bois" | "banc_galets" | "pin_tombe", t: number): number {
+    const e = this.tas.get(quel);
+    return !e || t >= e.revient ? this.pleinTas(quel) : e.reste;
+  }
+
+  private pleinTas(quel: "tas_bois" | "banc_galets" | "pin_tombe"): number {
+    return quel === "tas_bois" ? this.h.tasBois : quel === "pin_tombe" ? this.h.pinTombe : this.h.bancGalets;
+  }
+
+  /**
+   * Son tas personnel (le tas de bois de la station, le banc de galets du gué ; plan 0.10 : le pin tombé de la
+   * corniche) : plein, ou ce qu'il en reste.
+   */
+  prendreTas(quel: "tas_bois" | "banc_galets" | "pin_tombe", t: number, max: number): number {
+    const plein = this.pleinTas(quel);
+    const retour = quel === "tas_bois" ? this.h.retourTasMin : quel === "pin_tombe" ? this.h.retourPinMin : this.h.retourBancMin;
     let e = this.tas.get(quel);
     if (!e || t >= e.revient) e = { reste: plein, revient: Infinity };
     const k = Math.max(0, Math.min(Math.floor(max), e.reste));
@@ -659,7 +828,7 @@ export interface Evenement {
 }
 
 /** Pourquoi on sort. */
-export type MotifSortie = "tutoriel" | "parcours" | "cle" | "ravitaillement" | "quete" | "pierres" | "glaise";
+export type MotifSortie = "tutoriel" | "parcours" | "cle" | "ravitaillement" | "quete" | "pierres" | "glaise" | "achat";
 
 export interface SortieSimulee {
   minute: number;
@@ -744,7 +913,7 @@ export interface Budget {
   /** Ce que les constructions ont consommé. */
   depense: Partial<Record<Vrac, number>>;
   /** D'où vient ce qu'on a eu : le terrain, chaque lieu, le Comptoir. */
-  venu: Partial<Record<"terrain" | "station" | "tas_bois" | "gue" | "banc_galets" | "moulin" | "cooperative" | "comptoir" | "sac_charbon" | "meule", Partial<Record<Vrac, number>>>>;
+  venu: Partial<Record<"terrain" | "station" | "tas_bois" | "gue" | "banc_galets" | "moulin" | "cooperative" | "comptoir" | "sac_charbon" | "meule" | "route_pont" | "corniche" | "pin_tombe", Partial<Record<Vrac, number>>>>;
   /** Les bûches et les pierres achetées au Comptoir (wotts). */
   achats: number;
   /** Les meules de charbonnière (🔥), et combien en charbonnette. */
@@ -816,7 +985,9 @@ class Simulation {
   readonly sorties: SortieSimulee[] = [];
   readonly portes: PorteFranchie[] = [];
   readonly atteint: Partial<Record<EtapeMonde, number>> = { maison: 0 };
-  readonly postes: Poste[];
+  /** Les portes du niveau 1 ; `postes` : celles qu'on passe maintenant (le niveau 1, puis le niveau 2). */
+  readonly postesN1: Poste[];
+  postes: Poste[];
   readonly faits0_8 = new Set<string>();
   readonly budget: Budget = { depense: {}, venu: {}, achats: 0, meules: 0, charbonnette: 0, attenteBranches: 0, feuACourt: 0, reste: {} };
   private enSortie = false;
@@ -828,6 +999,20 @@ class Simulation {
   /** La minute où tout le niveau 1 est bâti. */
   private niveau1Le: number | null = null;
 
+  // ----- Plan 0.10 (chantier M) : le niveau 2 -----
+  /** Le parcours en est au niveau 2 (les objets-clés de l'hôtel et du phare, les roulements, les péages). */
+  niveau2 = false;
+  /** Les roulements à billes sous la main (des boîtes ouvertes), les boîtes ouvertes et celles achetées au Comptoir. */
+  roulements = 0;
+  boites = { hotel: 0, chance: 0, comptoir: 0 };
+  /** Les péages payés (12 wotts d'objets à l'aller, une fois par voyage ; S-19, V2-01). */
+  readonly peages: { minute: number; passage: PassagePeage }[] = [];
+  /** Le phare : depuis quand on voudrait y aller, et l'attente de la nuit à chaque fois (minutes). */
+  private phareVoulu: number | null = null;
+  readonly attentesNuit: number[] = [];
+  /** Ce que le Comptoir a vendu au niveau 2 (wotts : les boîtes de roulements). */
+  achatsN2 = 0;
+
   constructor(profil: Profil, famille: Famille, o: OptionsParcours = {}) {
     this.profil = profil;
     this.famille = famille;
@@ -838,7 +1023,8 @@ class Simulation {
     this.h = o.hypotheses ?? HYPOTHESES_DECIDEES;
     this.decalage = o.decalage ?? 0;
     this.haltes = new Haltes(o.joueur ?? 0, o.autres ?? PERSONNE, this.h, this.def.malchance);
-    this.postes = postesNiveau1(famille, this.def.route, this.def.gue);
+    this.postesN1 = postesNiveau1(famille, this.def.route, this.def.gue);
+    this.postes = this.postesN1;
     this.portesDabord = (o.portes ?? "dabord") === "dabord";
     for (const a of agendaDuMonde(profil)) this.planifier(a.minute, () => (a.fait === "volaille_rotie" ? this.voir(["poule", "volaille_crue", "graisse"]) : this.noter(a.fait)));
     if (this.def.curieux) for (const c of CUEILLETTE_CURIEUSE) this.planifier(c.minute, () => this.voir(c.objets));
@@ -905,8 +1091,8 @@ class Simulation {
 
   reevaluer(): void {
     if (this.niveau1Le === null) {
-      for (const p of this.postes) if (!this.postesFaits.some((x) => x.id === p.id) && this.posteFait(p)) this.postesFaits.push({ id: p.id, minute: this.minute });
-      if (this.postesFaits.length === this.postes.length) this.niveau1Le = this.minute;
+      for (const p of this.postesN1) if (!this.postesFaits.some((x) => x.id === p.id) && this.posteFait(p)) this.postesFaits.push({ id: p.id, minute: this.minute });
+      if (this.postesFaits.length === this.postesN1.length) this.niveau1Le = this.minute;
     }
     const neuves = aDevoiler(this.etat());
     if (neuves.length === 0) return;
@@ -1034,7 +1220,7 @@ class Simulation {
   }
 
   /** Ce que demandent encore les portes du niveau 1 qui restent (pour savoir combien rapporter d'une sortie). */
-  besoinRestant(type: "buche" | "pierre" | "branche"): number {
+  besoinRestant(type: "buche" | "pierre" | "branche" | "glaise"): number {
     let total = 0;
     for (const p of this.postes) if (!this.posteFait(p)) total += coutPoste(p)[type] ?? 0;
     return total;
@@ -1073,6 +1259,37 @@ class Simulation {
         this.budget.depense.branche = (this.budget.depense.branche ?? 0) + k;
       } else this.depenser(t, k);
     }
+    if (this.niveau2 && cout.roulement) this.roulements -= cout.roulement;
+    return OK;
+  }
+
+  /**
+   * Avoir `k` roulements sous la main (V1-01) : les boîtes de la machinerie de l'hôtel d'abord (une sortie) ; elle ne
+   * les rend qu'au bout de 4 jours (S-03) : au-delà, une boîte au Comptoir (500 wotts, après la visite de l'hôtel).
+   */
+  private assurerRoulements(k: number): Issue {
+    if (this.roulements >= k) return OK;
+    if (!this.cles.has("roulements")) {
+      const i = this.obtenir("roulements");
+      if (!i.ok) return i;
+    }
+    for (let garde = 0; this.roulements < k && garde < 4; garde++) {
+      this.sortie("comptoir", "achat");
+      this.ouvrirBoites(1, "comptoir");
+      this.achatsN2 += PRIX_CLES_L1.vente;
+    }
+    return this.roulements >= k ? OK : { ok: false, raison: "roulements" };
+  }
+
+  /** Les outils qui ne sont que des objets-clés du niveau 2 (le rabot, le fer à souder) : on va les chercher. */
+  private outilsN2(qualites: Partial<Record<Qualite, number>>): Issue {
+    if (!this.niveau2) return OK;
+    for (const q of Object.keys(qualites) as Qualite[]) {
+      const t = OUTILS_NIVEAU_2[q];
+      if (!t) continue;
+      const i = this.obtenir(t);
+      if (!i.ok) return i;
+    }
     return OK;
   }
 
@@ -1102,7 +1319,7 @@ class Simulation {
       const avant = this.stock[t];
       if (t === "glaise") this.sortie("gue", "glaise");
       else if (t === "pierre") this.sortie(this.atteint.H1B !== undefined || this.def.gue === "parcours" ? "gue" : "station", "pierres");
-      else this.sortie("station", "ravitaillement");
+      else this.sortie(this.niveau2 ? this.haltePourBois() : "station", "ravitaillement");
       if (this.stock[t] < k && (t === "buche" || t === "pierre")) {
         // Le filet payant (B13) : le Comptoir, deux kilomètres après la station.
         const achat = this.haltes.acheter(t, this.absolu, k - this.stock[t]);
@@ -1194,10 +1411,12 @@ class Simulation {
       if (!this.def.malchance) this.cleRare("H1B");
       // La glaise du bac (B6), les pierres : son banc de galets, puis le vrac ; les joncs repoussent comme à la maison.
       const glaise = this.installations.has("forge+bac") ? 0 : Math.max(0, (COUT_BAC.glaise ?? 0) - this.stock.glaise);
-      if (this.famille === "charbonniers" && glaise > 0) {
+      if (this.famille === "charbonniers" && glaise > 0 && !this.niveau2) {
         porter("glaise", Math.min(glaise, place(2)), "gue");
         this.obtenirCle("glaise", s);
       }
+      // Plan 0.10 : au niveau 2, la glaise du four de terre (pour tous), de la forge ventilée et du creuset (🔥).
+      if (this.niveau2) porter("glaise", Math.min(Math.max(0, Math.max(this.demande.glaise ?? 0, this.besoinRestant("glaise")) - this.stock.glaise), place(2)), "gue");
       const veut = this.aRapporter("pierre");
       porter("pierre", this.haltes.prendreTas("banc_galets", this.absolu, Math.min(veut, place(2))), "banc_galets");
       porter("pierre", this.haltes.prendreVrac("gue", "pierre", this.absolu, Math.min(Math.max(0, veut - (s.rapporte.pierre ?? 0)), place(2))), "gue");
@@ -1209,6 +1428,18 @@ class Simulation {
     const semis = (l: "moulin" | "cooperative") => {
       porter("buche", this.haltes.prendreVrac(l, "buche", this.absolu, Math.min(Math.max(0, this.aRapporter("buche") - (s.rapporte.buche ?? 0)), place(2))), l);
       porter("pierre", this.haltes.prendreVrac(l, "pierre", this.absolu, Math.min(Math.max(0, this.aRapporter("pierre") - (s.rapporte.pierre ?? 0)), place(2))), l);
+      porter("branche", this.haltes.prendreBranches(l, this.absolu, Math.min(this.branchesARapporter(), place(0.5))), l);
+    };
+
+    // Plan 0.10 : une halte du niveau 2. Le bois : le pin tombé de la corniche (à soi, S-21), puis le vrac ; en deçà de la
+    // barricade (sans la passer), une part du vrac seulement. Les pierres et les branches en vrac, en passant.
+    const halteN2 = (l: "route_pont" | "corniche", dureeLa: number, traverse: boolean) => {
+      arriver(l, dureeLa);
+      const veut = this.aRapporter("buche");
+      if (l === "corniche") porter("buche", this.haltes.prendreTas("pin_tombe", this.absolu, Math.min(veut, place(2))), "pin_tombe");
+      const part = traverse ? Infinity : BUCHES_CORNICHE_EN_DECA;
+      porter("buche", this.haltes.prendreVrac(l, "buche", this.absolu, Math.min(Math.max(0, veut - (s.rapporte.buche ?? 0)), place(2), part)), l);
+      if (traverse) porter("pierre", this.haltes.prendreVrac(l, "pierre", this.absolu, Math.min(Math.max(0, this.aRapporter("pierre") - (s.rapporte.pierre ?? 0)), place(2))), l);
       porter("branche", this.haltes.prendreBranches(l, this.absolu, Math.min(this.branchesARapporter(), place(0.5))), l);
     };
 
@@ -1261,6 +1492,41 @@ class Simulation {
         semis("moulin");
         break;
       }
+      // ---------- Plan 0.10 (chantier M) : le niveau 2 ----------
+      case "corniche":
+        // Le ravitaillement de bois : le pin tombé (à soi) et les bûches en deçà de la barricade, sans payer.
+        halteN2("corniche", duree(DUREES_SORTIES.ravitaillement), false);
+        this.avancerEnSortie(duree(DUREES_SORTIES.ravitaillement));
+        break;
+      case "grand_hotel":
+      case "phare": {
+        // L'aller : la halte (sa chicane ou sa barricade : le péage, une fois par voyage), son bois et ses pierres s'il en
+        // manque, puis le lieu. Le retour repasse la halte librement (V2-01 : dans le sens lieu → terrain, on ne paie pas).
+        const { halte, passage } = HALTE_DE[lieu];
+        s.enPassant.push(halte);
+        this.payerPeage(passage);
+        halteN2(halte, duree(DUREES_SORTIES.enPassant), true);
+        this.avancerEnSortie(duree(DUREES_SORTIES.enPassant));
+        const dureeLa = duree(DUREES_SORTIES_N2[lieu]);
+        arriver(lieu, dureeLa);
+        this.fouillerN2(lieu);
+        // L'arme trouvée du lieu : le pied de guéridon de la terrasse (N2-49), le harpon du gardien (N2-62).
+        this.voir([lieu === "grand_hotel" ? "pied_gueridon" : "harpon"]);
+        let reste = dureeLa;
+        if (lieu === "phare") {
+          // La préparation, puis le feu (la nuit, S-14), l'attente du cargo (S-17) : les objets-clés sont dans l'épave.
+          const avant = duree(DUREES_SORTIES_N2.preparerPhare) + DUREES_SORTIES_N2.cargo;
+          this.avancerEnSortie(avant);
+          reste -= avant;
+          this.noter("phare_allume");
+        }
+        this.clesDuLieu(lieu, s, reste);
+        this.avancerEnSortie(reste);
+        for (const t of s.cles) charge += OBJETS[t]?.poids ?? 0;
+        this.haltes.passer(halte, this.absolu, this.absolu + duree(DUREES_SORTIES.enPassant));
+        this.avancerEnSortie(duree(DUREES_SORTIES.enPassant));
+        break;
+      }
       default:
         this.avancerEnSortie(duree(DUREES_SORTIES.station));
     }
@@ -1291,32 +1557,100 @@ class Simulation {
     }
   }
 
-  private cleRare(etape: "H1A" | "H1B" | "L1A" | "L1B"): void {
+  private cleRare(etape: EtapeButin): void {
     const t = tirerCleRare(etape, this.alea);
-    if (t && CLES_DE_LIEU.has(t)) this.obtenirCle(t, this.sorties.at(-1)!);
+    if (t && this.lieuDeCle(t)) this.obtenirCle(t, this.sorties.at(-1)!, "chance");
   }
 
-  private obtenirCle(t: TypeObjet, s: SortieSimulee): void {
+  /** Le lieu d'une clé de lieu (au niveau 2, aussi les objets-clés de l'hôtel et du phare), sinon undefined. */
+  lieuDeCle(t: TypeObjet): LieuId | undefined {
+    return CLES_DE_LIEU.get(t) ?? (this.niveau2 ? CLES_NIVEAU_2.get(t) : undefined);
+  }
+
+  /**
+   * `origine` : à sa place, ou par chance (R-BUTIN). La boîte de roulements (V1-01) : la machinerie de l'hôtel en donne
+   * `boitesHotel` d'un coup ; une fouille, une seule.
+   */
+  private obtenirCle(t: TypeObjet, s: SortieSimulee, origine: "place" | "chance" = "place"): void {
     if (this.cles.has(t)) return;
     this.cles.set(t, this.sorties.indexOf(s));
     s.cles.push(t);
     this.voir([t]);
     // « Tu y penses » (§2.2) : un but nouveau, celui de la porte que la clé ouvre.
     this.but(`idee:${t}`, `Tu y penses : ${OBJETS[t]?.nom ?? t}`);
+    if (this.niveau2 && t === "roulements") this.ouvrirBoites(origine === "place" ? this.h.boitesHotel : 1, origine === "place" ? "hotel" : "chance");
+  }
+
+  /** Ouvrir des boîtes de roulements (V1-01, DEMONTAGE.roulements) : trois roulements chacune. */
+  private ouvrirBoites(n: number, d: "hotel" | "chance" | "comptoir"): void {
+    this.boites[d] += n;
+    this.roulements += n * (DEMONTAGE.roulements?.donne.roulement ?? 3);
   }
 
   /** Les clés à place fixe d'un lieu, ramassées au fil de la visite (pas toutes à l'entrée). */
   private clesDuLieu(lieu: LieuId, s: SortieSimulee, duree: number): void {
-    const cles = [...CLES_DE_LIEU].filter(([, l]) => l === lieu).map(([t]) => t);
+    const cles = [...CLES_DE_LIEU, ...(this.niveau2 ? CLES_NIVEAU_2 : [])].filter(([, l]) => l === lieu).map(([t]) => t);
     cles.forEach((t, i) => this.planifier(this.minute + ((i + 1) / (cles.length + 1)) * duree, () => this.obtenirCle(t, s)));
   }
 
-  /** Une clé de lieu qu'on n'a pas : on va la chercher (une sortie). */
+  /** Une clé de lieu qu'on n'a pas : on va la chercher (une sortie). Le phare attend la nuit (S-14) : on part à l'heure. */
   obtenir(t: TypeObjet): Issue {
     if (this.cles.has(t)) return OK;
-    const lieu = CLES_DE_LIEU.get(t)!;
+    const lieu = this.lieuDeCle(t)!;
+    if (lieu === "phare") {
+      const depart = this.departAuPhare();
+      if (depart > this.minute + 1e-9) {
+        this.phareVoulu ??= this.minute;
+        return { ok: false, attente: depart, raison: "le feu attend la nuit" };
+      }
+      this.attentesNuit.push(this.minute - (this.phareVoulu ?? this.minute));
+      this.phareVoulu = null;
+    }
     this.sortie(lieu, lieu === "gue" ? "glaise" : "cle");
     return this.cles.has(t) ? OK : { ok: false, raison: `${t} : pas trouvé ${lieu === "station" ? "à la station" : `au lieu ${lieu}`}` };
+  }
+
+  /**
+   * Quand partir au phare pour que le feu s'allume la nuit (S-14 : de 21 h à 5 h 30) : la traversée de la corniche et la
+   * préparation (l'escabeau, le pétrole, le prisme, le compresseur : de jour, c'est possible) passent avant ; le feu,
+   * lui, attend la nuit. Maintenant, si l'allumage tombe la nuit ; sinon, à l'heure qui le met à la tombée de la nuit.
+   */
+  departAuPhare(): number {
+    const avant = (DUREES_SORTIES.enPassant + DUREES_SORTIES_N2.preparerPhare) * this.def.facteur;
+    const h = heureDuMonde(this.absolu + avant);
+    if (estNuit(h)) return this.minute;
+    return this.minute + ((HEURE_TOMBEE_NUIT - h + 24) % 24);
+  }
+
+  /**
+   * Le péage des survivants (§3.4, S-19, V2-01) : 12 wotts d'objets à l'aller, une fois ; payé, on passe librement une
+   * heure réelle. Le retour ne le demande jamais.
+   */
+  private payerPeage(passage: PassagePeage): void {
+    const dernier = this.peages.findLast((p) => p.passage === passage);
+    if (dernier && this.minute - dernier.minute < DUREE_PASSAGE_MS / 60_000) return;
+    this.peages.push({ minute: this.minute, passage });
+  }
+
+  /** Les fouilles d'un lieu du niveau 2 (les tables de ses points de fouille), et l'objet-clé rare de R-BUTIN. */
+  private fouillerN2(lieu: LieuId): void {
+    const tables = FOUILLES_N2[lieu] ?? [];
+    const etape = etapeButin(lieu);
+    for (let i = 0; i < this.def.fouilles && tables.length > 0; i++) {
+      this.voir(Object.keys(tirerVestiges(tables[i % tables.length]!, this.alea)));
+      if (!this.def.malchance && etape) this.cleRare(etape);
+    }
+  }
+
+  /**
+   * Où aller chercher du bois au niveau 2 : la station (son tas de bois et son vrac) ou la corniche (le pin tombé et les
+   * bûches en deçà de la barricade), là où il y en a le plus pour soi à cet instant ; à égalité, la station.
+   */
+  haltePourBois(): "station" | "corniche" {
+    const t = this.absolu;
+    const station = this.haltes.resteTas("tas_bois", t) + this.haltes.vrac("station", "buche", t);
+    const corniche = this.haltes.resteTas("pin_tombe", t) + Math.min(BUCHES_CORNICHE_EN_DECA, this.haltes.vrac("corniche", "buche", t));
+    return corniche > station ? "corniche" : "station";
   }
 
   /** Une porte franchie : la clé, et la sortie qui l'a rapportée. */
@@ -1331,7 +1665,7 @@ class Simulation {
 
   /** Cet objet se ramasse, se fouille ou se démonte (pas besoin de recette) ? Pas les clés de lieu : il faut sortir. */
   brut(t: TypeObjet): boolean {
-    if (CLES_DE_LIEU.has(t)) return false;
+    if (this.lieuDeCle(t)) return false;
     const s = this.sources.get(t);
     return s !== undefined && s !== "fabrication" && s !== "autres" && !(t === "charbon_bois" || t === "ebauche_arc_seche" || t === "ebauche_if_seche");
   }
@@ -1344,7 +1678,13 @@ class Simulation {
     const aFabriquer: TypeObjet[] = [];
     for (const t of Object.keys(ingredients) as TypeObjet[]) {
       if (estCompte(t)) continue;
-      if (CLES_DE_LIEU.has(t)) {
+      // Plan 0.10 (V1-01) : au niveau 2, les roulements se comptent (trois par boîte, et les boîtes viennent de l'hôtel).
+      if (this.niveau2 && t === "roulement") {
+        const i = this.assurerRoulements(ingredients[t] ?? 0);
+        if (!i.ok) return i;
+        continue;
+      }
+      if (this.lieuDeCle(t)) {
         const i = this.obtenir(t);
         if (!i.ok) return i;
       } else if (this.brut(t)) this.voir([t]);
@@ -1384,6 +1724,8 @@ class Simulation {
     const ingredients = this.facon(r);
     const b = this.attendreBranches(ingredients);
     if (b) return b;
+    const o = this.outilsN2(r.qualites);
+    if (!o.ok) return o;
     const f = this.fournir(ingredients, id, profondeur);
     if (!f.ok) return f;
     if (!this.devoilees.has(id)) return { ok: false, raison: `${id} pas dévoilé` };
@@ -1399,7 +1741,7 @@ class Simulation {
    */
   facon(r: Recette): Inventaire {
     const facons = faconsRecette(r);
-    return facons.find((f) => (Object.keys(f) as TypeObjet[]).every((t) => estCompte(t) || CLES_DE_LIEU.has(t) || this.sources.has(t))) ?? facons[0]!;
+    return facons.find((f) => (Object.keys(f) as TypeObjet[]).every((t) => estCompte(t) || this.lieuDeCle(t) || this.sources.has(t))) ?? facons[0]!;
   }
 
   /** Les foyers dans la carte des constructions : « feu » au meilleur niveau, chaque forme, les accessoires montés. */
@@ -1526,6 +1868,23 @@ class Simulation {
       this.installations.set(cle, 1);
       return OK;
     }
+    // Plan 0.10 : le poste de montage ⚡ et les roulements montés ⚙️ sont des niveaux 2 (meubles-niveau2.ts).
+    const deNiveau = ACCESSOIRES_DE_NIVEAU[accessoire];
+    if (deNiveau && deNiveau.type === type) {
+      const m2 = this.monter(type, deNiveau.niveau, profondeur + 1);
+      if (!m2.ok) return m2;
+      this.installations.set(cle, deNiveau.niveau);
+      return OK;
+    }
+    // Le creuset 🔥, sur la forge ventilée : 4 glaises, 2 pierres (meubles-neufs.ts).
+    if (type === "forge" && accessoire === "creuset") {
+      const m2 = this.monter("forge", NIVEAU_FORGE_CREUSET, profondeur + 1);
+      if (!m2.ok) return m2;
+      const p = this.payer(COUT_CREUSET);
+      if (!p.ok) return p;
+      this.installations.set(cle, NIVEAU_FORGE_CREUSET);
+      return OK;
+    }
     const piece = PIECES_DE_FAMILLE[type as keyof typeof PIECES_DE_FAMILLE];
     if (piece === accessoire) {
       const o = this.obtenir(objetPiece(type as "forge" | "banc_recharge" | "pedalier"));
@@ -1567,12 +1926,18 @@ class Simulation {
     const cout = etape.couts[0] ?? {};
     const b = this.attendreBranches(cout);
     if (b) return b;
+    const o = this.outilsN2(etape.qualites);
+    if (!o.ok) return o;
     const f = this.fournir(cout, etape.id, profondeur);
     if (!f.ok) return f;
     const p = this.payer(cout);
     if (!p.ok) return p;
-    this.voir(Object.keys(cout).filter((t) => !CLES_DE_LIEU.has(t as TypeObjet)));
+    this.voir(Object.keys(cout).filter((t) => !this.lieuDeCle(t as TypeObjet)));
     this.installations.set(type, niveau);
+    // Les accessoires montés suivent le niveau du meuble (lieu-recette.ts, carteInstallations : « forge+bac » au niveau 2) ;
+    // le poste de montage et les roulements montés sont des niveaux, que la carte montre comme des accessoires.
+    for (const [acc, a] of Object.entries(ACCESSOIRES_DE_NIVEAU)) if (a.type === type && niveau >= a.niveau) this.installations.set(`${type}+${acc}`, niveau);
+    for (const k of [...this.installations.keys()]) if (k.startsWith(`${type}+`)) this.installations.set(k, Math.max(this.installations.get(k)!, niveau));
     if (etape.cle?.objet) this.porte(etape.id, etape.cle.objet);
     this.noter(`niveau:${etape.id}`);
     this.reevaluer();
@@ -1583,7 +1948,10 @@ class Simulation {
   charbon(): Issue {
     if (this.pret.defourne === undefined) {
       // La charbonnette (B9) quand les bûches manquent et qu'elle est dévoilée ; sinon la meule de bûches.
-      const charbonnette = this.devoilees.has("charbonniere_charbonnette") && this.stock.buche + this.terrain.buche < 10;
+      // Plan 0.10 : au niveau 2, la charbonnette seulement si ses branches sont là (le feu de tous les jours prend celles du
+      // terrain) ; sinon la meule de bûches, quitte à aller en chercher.
+      const branches = recette("charbonniere_charbonnette")?.ingredients.branche ?? 0;
+      const charbonnette = this.devoilees.has("charbonniere_charbonnette") && this.stock.buche + this.terrain.buche < 10 && (!this.niveau2 || this.stock.branche + this.branchesDispo() >= branches);
       const i = this.fabriquer(charbonnette ? "charbonniere_charbonnette" : "charbonniere");
       if (!i.ok) return i;
     }
@@ -1653,6 +2021,10 @@ class Simulation {
         return this.installations.has("pedalier+meule");
       case "gue":
         return this.atteint.H1B !== undefined;
+      case "objet2":
+        return (this.faits[`n2:${p.recette}`] ?? 0) > 0;
+      case "accessoire2":
+        return this.installations.has(`${p.type}+${p.accessoire}`);
     }
   }
 
@@ -1679,6 +2051,14 @@ class Simulation {
       case "gue":
         this.sortie("gue", "parcours");
         return OK;
+      case "objet2": {
+        if (!this.devoilees.has(p.recette)) return { ok: false, raison: `${p.recette} pas dévoilé` };
+        const i = this.fabriquer(p.recette);
+        if (i.ok) this.noter(`n2:${p.recette}`);
+        return i;
+      }
+      case "accessoire2":
+        return this.monterAccessoireInstallation(p.type, p.accessoire);
     }
   }
 
@@ -1712,7 +2092,7 @@ class Simulation {
         if (c.n === 1 && !c.etoiles && c.types.some((t) => this.vus.has(t))) return OK;
         const t = c.types[0]!;
         if (t === "charbon_bois") return this.charbonDispo(c.n);
-        if (CLES_DE_LIEU.has(t)) return this.obtenir(t);
+        if (this.lieuDeCle(t)) return this.obtenir(t);
         if (this.brut(t)) {
           this.voir([t]);
           return OK;
@@ -1933,11 +2313,112 @@ class Simulation {
     };
   }
 
+  // ----- Plan 0.10 (chantier M) : le niveau 2, après la première soirée -----
+
+  /**
+   * Le carnet du niveau 2 : les portes du niveau 2 l'une après l'autre (le carnet les nomme, comme au niveau 1), ce qui
+   * attend (la nuit du phare, un dévoilement) est repris plus tard, et l'on passe à la suivante en attendant.
+   */
+  carnetNiveau2(fin: number): { id: string; minute: number }[] {
+    const faits: { id: string; minute: number }[] = [];
+    const reprise = new Map<string, number>();
+    const enSouffrance = new Map<string, { depuis: number; raison: string }>();
+    const noter = () => {
+      for (const p of this.postes) if (!faits.some((x) => x.id === p.id) && this.posteFait(p)) faits.push({ id: p.id, minute: this.minute });
+    };
+    while (this.minute < fin) {
+      noter();
+      const p = this.postes.find((x) => !this.posteFait(x) && (reprise.get(x.id) ?? 0) <= this.minute);
+      if (!p) {
+        const restants = this.postes.filter((x) => !this.posteFait(x));
+        if (restants.length === 0) break;
+        const prochaine = Math.min(...restants.map((x) => reprise.get(x.id) ?? Infinity));
+        this.avancer(Number.isFinite(prochaine) ? Math.max(0.5, Math.min(5, prochaine - this.minute)) : 5);
+        continue;
+      }
+      this.but(`porte2:${p.id}`, `Porte : ${nomPoste(p)}`);
+      const i = this.fairePoste(p);
+      if (i.ok) {
+        enSouffrance.delete(p.id);
+        this.avancer(TRAVAIL_PORTE * this.def.facteur);
+        continue;
+      }
+      if (i.attente !== undefined && i.attente > this.minute) reprise.set(p.id, i.attente);
+      else {
+        reprise.set(p.id, this.minute + 10);
+        if (!enSouffrance.has(p.id)) enSouffrance.set(p.id, { depuis: this.minute, raison: i.raison });
+      }
+    }
+    noter();
+    for (const [id, x] of enSouffrance) {
+      const p = this.postes.find((y) => y.id === id);
+      if (p && !this.posteFait(p)) this.blocages.add(`${this.famille} : niveau 2, la porte « ${id} » bloque depuis la minute ${Math.round(x.depuis)} (${x.raison})`);
+    }
+    return faits;
+  }
+
+  /** Le niveau 2 (après `jouer`) : ses portes, ses sorties, ses péages, son budget, depuis la fin de la première soirée. */
+  jouerNiveau2(seulementFamille = false): ResultatNiveau2 {
+    this.niveau2 = true;
+    const debut = this.minute;
+    this.postes = postesNiveau2(this.famille, this.def.route, seulementFamille);
+    const s0 = this.sorties.length;
+    const p0 = this.portes.length;
+    const e0 = this.evenements.length;
+    const b0 = new Set(this.blocages);
+    const depense0 = { ...this.budget.depense };
+    const venu0 = JSON.parse(JSON.stringify(this.budget.venu)) as Budget["venu"];
+    const faits = this.carnetNiveau2(debut + HORIZON_NIVEAU_2_MIN);
+    const rel = (m: number) => m - debut;
+    const sorties = this.sorties.slice(s0);
+    const portes = this.portes.slice(p0);
+    const buts = this.evenements.slice(e0).filter((e) => e.genre === "but").map((e) => e.minute);
+    const atteint: ResultatNiveau2["atteint"] = {};
+    for (const e of ["H2A", "H2B", "L2A", "L2B"] as const) if (this.atteint[e] !== undefined) atteint[e] = rel(this.atteint[e]!);
+    const depense: Partial<Record<Vrac, number>> = {};
+    for (const t of COMPTES) {
+      const d = (this.budget.depense[t] ?? 0) - (depense0[t] ?? 0);
+      if (d) depense[t] = d;
+    }
+    const venu: Budget["venu"] = {};
+    for (const [src, v] of Object.entries(this.budget.venu) as [keyof Budget["venu"], Partial<Record<Vrac, number>>][]) {
+      for (const t of COMPTES) {
+        const d = (v[t] ?? 0) - (venu0[src]?.[t] ?? 0);
+        if (d > 0) (venu[src] ??= {})[t] = d;
+      }
+    }
+    const tout = faits.length === this.postes.length ? rel(Math.max(...faits.map((f) => f.minute))) : null;
+    const dernierBut = buts.length ? Math.max(...buts) : debut;
+    return {
+      profil: this.profil,
+      famille: this.famille,
+      debut,
+      postes: this.postes.map((p) => p.id),
+      postesFaits: faits.map((f) => ({ id: f.id, minute: rel(f.minute) })),
+      tout,
+      atteint,
+      sorties: sorties.map((x) => ({ ...x, minute: rel(x.minute) })),
+      portes: portes.map((x) => ({ ...x, minute: rel(x.minute) })),
+      peages: this.peages.map((x) => ({ ...x, minute: rel(x.minute) })),
+      ravitaillements: sorties.filter((x) => x.motif === "ravitaillement" || x.motif === "pierres" || x.motif === "glaise").map((x) => ({ lieu: x.lieu, motif: x.motif })),
+      roulements: { ...this.boites, reste: this.roulements },
+      achats: this.achatsN2 + 0,
+      attentesNuit: [...this.attentesNuit],
+      ecartButs: buts.length ? ecartMax(buts, debut, dernierBut) : 0,
+      blocages: [...this.blocages].filter((b) => !b0.has(b)),
+      depense,
+      venu,
+      haltes: { passages: this.haltes.passages, prises: this.haltes.prises },
+    };
+  }
 }
 
-/** Ce que coûte une porte en bois et en pierre (pour savoir combien rapporter) ; la meule de charbonnière comprise. */
-export function coutPoste(p: Poste): Partial<Record<"buche" | "pierre" | "branche", number>> {
-  const de = (inv: Inventaire | undefined) => ({ buche: inv?.buche ?? 0, pierre: inv?.pierre ?? 0, branche: inv?.branche ?? 0 });
+/**
+ * Ce que coûte une porte en bois, en pierre et en glaise (pour savoir combien rapporter) ; la meule de charbonnière
+ * comprise. Au niveau 2, le charbon d'une recette se compte en bûches (une meule : 10 bûches pour 4 charbons).
+ */
+export function coutPoste(p: Poste): Partial<Record<"buche" | "pierre" | "branche" | "glaise", number>> {
+  const de = (inv: Inventaire | undefined) => ({ buche: inv?.buche ?? 0, pierre: inv?.pierre ?? 0, branche: inv?.branche ?? 0, glaise: inv?.glaise ?? 0 });
   switch (p.genre) {
     case "recette": {
       const rc = recette(p.recette);
@@ -1965,6 +2446,14 @@ export function coutPoste(p: Poste): Partial<Record<"buche" | "pierre" | "branch
     case "piece":
     case "gue":
       return {};
+    case "objet2": {
+      const rc = recette(p.recette);
+      const base = de(rc?.ingredients);
+      base.buche += ((rc?.ingredients.charbon_bois ?? 0) * 10) / CHARBON_PRODUIT;
+      return base;
+    }
+    case "accessoire2":
+      return de(COUT_CREUSET);
   }
 }
 
@@ -1987,6 +2476,10 @@ export function nomPoste(p: Poste): string {
       return "Meule du pédalier";
     case "gue":
       return "Le Gué-aux-Saules";
+    case "objet2":
+      return recette(p.recette)?.nom ?? p.recette;
+    case "accessoire2":
+      return "Creuset et moules";
   }
 }
 
@@ -2026,6 +2519,62 @@ export function mesurer(evenements: readonly Evenement[], quetesFinies: number, 
     dernierePorte: instantsPortes.length ? Math.max(...instantsPortes) : null,
     ravitaillements: sorties.filter((s) => s.motif === "ravitaillement").length,
   };
+}
+
+/** Le niveau 2 d'un parcours (minutes depuis le début du niveau 2, sauf `debut`). */
+export interface ResultatNiveau2 {
+  profil: Profil;
+  famille: Famille;
+  /** Quand le niveau 2 commence (minutes de jeu connecté depuis le début : la fin de la première soirée). */
+  debut: number;
+  /** Les portes du niveau 2, dans l'ordre, et quand chacune a été passée. */
+  postes: string[];
+  postesFaits: { id: string; minute: number }[];
+  /** Tout le niveau 2 bâti, null s'il ne l'a pas à l'horizon. */
+  tout: number | null;
+  atteint: Partial<Record<"H2A" | "H2B" | "L2A" | "L2B", number>>;
+  sorties: SortieSimulee[];
+  portes: PorteFranchie[];
+  /** Les péages payés (12 wotts d'objets chacun). */
+  peages: { minute: number; passage: PassagePeage }[];
+  /** Les allers-retours de ravitaillement (le bois, les pierres, la glaise), et où. */
+  ravitaillements: { lieu: LieuId; motif: MotifSortie }[];
+  /** Les boîtes de roulements ouvertes (de l'hôtel, par chance, du Comptoir) et les roulements qui restent. */
+  roulements: { hotel: number; chance: number; comptoir: number; reste: number };
+  /** Ce que le Comptoir a vendu (wotts). */
+  achats: number;
+  /** Chaque départ au phare : combien de temps il a attendu la nuit (en faisant autre chose). */
+  attentesNuit: number[];
+  /** Le plus long écart entre deux buts nouveaux au niveau 2. */
+  ecartButs: number;
+  blocages: string[];
+  /** Ce que le niveau 2 a coûté en bois, pierre, glaise, charbon, et d'où c'est venu. */
+  depense: Partial<Record<Vrac, number>>;
+  venu: Budget["venu"];
+  haltes: { passages: Passage[]; prises: Prise[] };
+}
+
+/**
+ * Joue un parcours type jusqu'au bout du niveau 2 : la première soirée (le niveau 1, `jouerParcours`), puis le niveau 2.
+ * `seulementFamille` : le niveau 2 ne fait que le meuble de famille et son métier (critère 8).
+ */
+export function jouerParcoursN2(profil: Profil, famille: Famille, o: OptionsParcours & { seulementFamille?: boolean } = {}): { niveau1: ResultatParcours; niveau2: ResultatNiveau2 } {
+  const sim = new Simulation(profil, famille, o);
+  // Une copie : le niveau 2 continue la même simulation (ses tableaux d'événements, de sorties, de portes grandissent).
+  const niveau1 = structuredClone(sim.jouer());
+  const niveau2 = sim.jouerNiveau2(o.seulementFamille ?? false);
+  return { niveau1, niveau2 };
+}
+
+/** Ce que les péages ont coûté (wotts d'objets, au prix du Comptoir : 12 par passage, N2-59). */
+export function wottsDePeage(r: ResultatNiveau2): number {
+  return r.peages.length * PRIX_PASSAGE;
+}
+
+/** Tous les parcours types, jusqu'au bout du niveau 2. */
+export function tousLesParcoursN2(): ResultatNiveau2[] {
+  const familles: Famille[] = ["charbonniers", "voltaiques", "mecanistes"];
+  return (Object.keys(PROFILS) as Profil[]).flatMap((p) => familles.map((f) => jouerParcoursN2(p, f).niveau2));
 }
 
 /** Joue un parcours type. */
@@ -2257,6 +2806,136 @@ export function sensibilite(): LigneSensibilite[] {
       const b = cinq.find((x) => x.famille === f)!;
       familles[f] = { seul: a.ravitaillements, cinq: b.ravitaillements, achats: Math.max(a.achats, b.achats) };
     }
+    return { nom, familles };
+  });
+}
+
+// ---------- Le niveau 2 : les cibles, à plusieurs, le budget (plan 0.10, chantier M) ----------
+
+/**
+ * Les cibles du niveau 2 (plan 0.10 §4 chantier M, §6 critères 1 à 8 et 11 ; notice §3.i) :
+ * - chaque parcours a tout le niveau 2 à l'horizon, sans blocage ;
+ * - les allers-retours de ravitaillement (le bois, les pierres, la glaise), en plus des sorties aux lieux : « confortable »,
+ *   4 au plus (notice §3.i) ; pour le bois des 🔥, 3 au plus (N2-29 : « 2 à 3 allers-retours de bois ») ;
+ * - le péage (12 wotts) à l'aller seulement, une fois par voyage (S-19, V2-01) ;
+ * - le feu du phare allumé la nuit seulement (S-14) ;
+ * - une charge de sac par route : les matériaux des évolutions d'un lieu, et ses objets-clés, tiennent chacun dans un
+ *   sac à dos (≈ 45 kg libres) — rythme-niveau2.ts le mesure ;
+ * - le Mécaniste seul a son meuble de famille et son métier sans aller au phare (critère 8).
+ */
+export const CIBLE_NIVEAU_2 = { ravitaillementsMax: 4, boisCharbonniersMax: 3 } as const;
+
+/** Les allers-retours de bois d'un parcours du niveau 2 (à la station ou à la corniche). */
+export function ravitaillementsBois(r: ResultatNiveau2): number {
+  return r.ravitaillements.filter((x) => x.motif === "ravitaillement").length;
+}
+
+/** Le feu de ce départ au phare s'allume-t-il la nuit (S-14) ? (la traversée et la préparation, puis le feu) */
+export function allumeLaNuit(r: ResultatNiveau2, s: SortieSimulee): boolean {
+  const avant = (DUREES_SORTIES.enPassant + DUREES_SORTIES_N2.preparerPhare) * PROFILS[r.profil].facteur;
+  return estNuit(heureDuMonde(r.debut + s.minute + avant));
+}
+
+/** Ce qui ne tient pas les cibles du niveau 2, parcours par parcours (vide : tout tient). */
+export function ecartsAuNiveau2(r: ResultatNiveau2): string[] {
+  const qui = `${PROFILS[r.profil].nom}, ${r.famille}`;
+  const fautes: string[] = [];
+  if (r.tout === null) fautes.push(`${qui} : pas tout le niveau 2 en ${HORIZON_NIVEAU_2_MIN} min`);
+  if (r.blocages.length > 0) fautes.push(`${qui} : ${r.blocages.length} blocage(s) au niveau 2`);
+  if (r.ravitaillements.length > CIBLE_NIVEAU_2.ravitaillementsMax) fautes.push(`${qui} : ${r.ravitaillements.length} allers-retours de ravitaillement au niveau 2 (au plus ${CIBLE_NIVEAU_2.ravitaillementsMax})`);
+  if (r.famille === "charbonniers" && ravitaillementsBois(r) > CIBLE_NIVEAU_2.boisCharbonniersMax) fautes.push(`${qui} : ${ravitaillementsBois(r)} allers-retours de bois (au plus ${CIBLE_NIVEAU_2.boisCharbonniersMax})`);
+  // Le péage : un par voyage vers un lieu du niveau 2 (l'heure de passage libre peut en couvrir deux), jamais au retour.
+  const versLieux = r.sorties.filter((s) => s.lieu === "grand_hotel" || s.lieu === "phare");
+  if (r.peages.length > versLieux.length || r.peages.some((p) => !versLieux.some((s) => s.minute === p.minute))) fautes.push(`${qui} : un péage hors d'un aller vers l'hôtel ou le phare`);
+  for (const s of r.sorties.filter((x) => x.lieu === "phare")) if (!allumeLaNuit(r, s)) fautes.push(`${qui} : le feu du phare allumé de jour (départ à ${Math.round(s.minute)} min)`);
+  return fautes;
+}
+
+/** Plusieurs joueurs jusqu'au bout du niveau 2 : les haltes partagées (le vrac de la corniche et du pont, B8). */
+export function simulerServeurN2(joueurs: readonly JoueurSimule[], h: Hypotheses = HYPOTHESES_DECIDEES, passes = 3): { joueurs: ResultatNiveau2[]; videCorniche: number; videPont: number } {
+  const decaler = (x: { passages: Passage[]; prises: Prise[] }, i: number) => ({ passages: x.passages.map((p) => ({ ...p, joueur: i })), prises: x.prises.map((p) => ({ ...p, joueur: i })) });
+  let resultats = joueurs.map((j, i) => jouerParcoursN2(j.profil, j.famille, { joueur: i, decalage: j.decalage, hypotheses: h, graine: `j${i}` }).niveau2);
+  for (let passe = 1; passe < passes; passe++) {
+    const mondes = resultats.map((r, i) => decaler(r.haltes, i));
+    resultats = joueurs.map((j, i) => {
+      const autres: Autres = { passages: mondes.filter((_, k) => k !== i).flatMap((m) => m.passages), prises: mondes.filter((_, k) => k !== i).flatMap((m) => m.prises) };
+      return jouerParcoursN2(j.profil, j.famille, { joueur: i, decalage: j.decalage, hypotheses: h, graine: `j${i}`, autres }).niveau2;
+    });
+  }
+  const tous: Autres = { passages: resultats.flatMap((r) => r.haltes.passages), prises: resultats.flatMap((r) => r.haltes.prises) };
+  const fin = Math.max(...joueurs.map((j) => j.decalage)) + HORIZON_MIN + HORIZON_NIVEAU_2_MIN;
+  return { joueurs: resultats, videCorniche: plusLongVide(tous, "corniche", "buche", fin, h), videPont: plusLongVide(tous, "route_pont", "buche", fin, h) };
+}
+
+/** Le malchanceux du niveau 2 : le pire de plusieurs tirages, au regard du temps de tout le niveau 2. */
+export function pireMalchanceN2(famille: Famille, tirages = 10, h: Hypotheses = HYPOTHESES_DECIDEES): ResultatNiveau2 {
+  let pire: ResultatNiveau2 | null = null;
+  for (let g = 0; g < tirages; g++) {
+    const r = jouerParcoursN2("malchanceux", famille, { graine: `m${g}`, hypotheses: h }).niveau2;
+    const t = r.tout ?? Infinity;
+    if (!pire || t > (pire.tout ?? Infinity) || (t === (pire.tout ?? Infinity) && r.ravitaillements.length > pire.ravitaillements.length)) pire = r;
+  }
+  return pire!;
+}
+
+/** Le budget du niveau 2 d'une famille dans un scénario : le pire de ses joueurs. */
+export interface LigneBudgetN2 {
+  famille: Famille;
+  ravitaillements: number;
+  bois: number;
+  peages: number;
+  achats: number;
+  /** Les bûches, pierres, glaises et charbons du niveau 2, et d'où sont venues les bûches. */
+  depense: Partial<Record<Vrac, number>>;
+  venu: Budget["venu"];
+  tout: number | null;
+}
+
+export function budgetNiveau2(scenario: "seul" | "malchanceux" | "cinq_en_file", h: Hypotheses = HYPOTHESES_DECIDEES): LigneBudgetN2[] {
+  const joueurs: ResultatNiveau2[] =
+    scenario === "seul"
+      ? FAMILLES_BUDGET.map((f) => jouerParcoursN2("prudent", f, { hypotheses: h }).niveau2)
+      : scenario === "malchanceux"
+        ? FAMILLES_BUDGET.map((f) => pireMalchanceN2(f, 10, h))
+        : simulerServeurN2(SERVEURS.cinq_en_file, h).joueurs;
+  return FAMILLES_BUDGET.flatMap((famille) => {
+    const les = joueurs.filter((r) => r.famille === famille);
+    if (les.length === 0) return [];
+    const pire = les.reduce((a, b) => (b.ravitaillements.length + b.achats > a.ravitaillements.length + a.achats ? b : a));
+    const t = les.map((r) => r.tout);
+    return [
+      {
+        famille,
+        ravitaillements: Math.max(...les.map((r) => r.ravitaillements.length)),
+        bois: Math.max(...les.map(ravitaillementsBois)),
+        peages: Math.max(...les.map((r) => r.peages.length)),
+        achats: Math.max(...les.map((r) => r.achats)),
+        depense: pire.depense,
+        venu: pire.venu,
+        tout: t.includes(null) ? null : Math.max(...(t as number[])),
+      },
+    ];
+  });
+}
+
+/**
+ * Les chiffres du niveau 2 qu'on fait varier (plan 0.10 : le pin tombé, 10 bûches en 6 h ; V1-01 : les boîtes de la
+ * machinerie de l'hôtel) : les allers-retours, les achats au Comptoir, le temps de tout le niveau 2, seul.
+ */
+export const VARIANTES_N2: readonly { nom: string; h: Hypotheses }[] = [
+  { nom: "Décidé (code de la 0.10)", h: HYPOTHESES_DECIDEES },
+  { nom: "La machinerie donne 1 boîte de roulements", h: { ...HYPOTHESES_DECIDEES, boitesHotel: 1 } },
+  { nom: "La machinerie donne 2 boîtes de roulements", h: { ...HYPOTHESES_DECIDEES, boitesHotel: 2 } },
+  { nom: "Pin tombé à 6 bûches", h: { ...HYPOTHESES_DECIDEES, pinTombe: 6 } },
+  { nom: "Sans pin tombé", h: { ...HYPOTHESES_DECIDEES, pinTombe: 0 } },
+  { nom: "Sans pin tombé ni tas de bois à la station", h: { ...HYPOTHESES_DECIDEES, pinTombe: 0, tasBois: 0 } },
+];
+
+export function sensibiliteN2(): { nom: string; familles: Record<Famille, LigneBudgetN2> }[] {
+  return VARIANTES_N2.map(({ nom, h }) => {
+    const seul = budgetNiveau2("seul", h);
+    const familles = {} as Record<Famille, LigneBudgetN2>;
+    for (const f of FAMILLES_BUDGET) familles[f] = seul.find((x) => x.famille === f)!;
     return { nom, familles };
   });
 }

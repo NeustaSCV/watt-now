@@ -10,7 +10,8 @@ import { avecTouches } from "./touches.ts";
 import { sousTension, suivreElectrique } from "./electricite.ts";
 import * as THREE from "three";
 import { INTENTION_REPOS, avancer, type Position } from "../../commun/src/deplacement.ts";
-import { COMPTOIR, destinations, sortiePourPartir, sortiesDe, zoneCoop, zoneDe, zoneMoulin, type LieuJouable, type Zone } from "../../commun/src/lieux.ts";
+import { COMPTOIR, destinations, sortiePourPartir, sortiesDe, type LieuJouable, type Zone } from "../../commun/src/lieux.ts";
+import { estPersonnel, ficheLieu, pausePossibleIci, planDe, sombreDans, zoneSelonPortes } from "../../commun/src/registre-lieux.ts";
 import type { EteintVu } from "../../commun/src/eteints.ts";
 import { cerclesSignature, type BruitAction } from "../../commun/src/signature.ts";
 import { ALLURES, type Allure } from "../../commun/src/regles.ts";
@@ -29,6 +30,7 @@ import { Entrees, type Commande } from "./entrees.ts";
 import { Hud } from "./hud.ts";
 import { LIBELLE_FERMER_FICHE } from "./fiche-examiner.ts";
 import { propositionsEndormi, proposer, retenirSavoir, type ActionProposee, type Propositions } from "./interaction.ts";
+import { propositionsCombat } from "./bras-pris.ts";
 import { Reseau } from "./reseau.ts";
 import { FeuDeCamp } from "./rendu/feu.ts";
 import { VueInstallation, creerEscabeau } from "./rendu/installations.ts";
@@ -40,15 +42,26 @@ import { creerRuine } from "./rendu/ruine.ts";
 import { creerHalte, estomperToits, montrerTousLesToits } from "./rendu/halte.ts";
 import { ArriveeDansUnLieu } from "./arrivee.ts";
 import { animerMoulin, creerMoulin } from "./rendu/moulin.ts";
-import { pieceMoulin, sombreMoulin } from "../../commun/src/moulin.ts";
+import { animerHotel, creerHotel, lumieresHotel } from "./rendu/hotel.ts";
+import { creerAlentoursStation } from "./rendu/alentours-station.ts";
+import { dansLEauHotel, profondeurEauHotel } from "../../commun/src/hotel.ts";
+import { ClientHotel } from "./hotel.ts";
+import { Guidage } from "./guidage.ts";
+import { animerPhare, creerPhare } from "./rendu/phare.ts";
+import { PhareClient } from "./phare.ts";
+import { hauteurPiedsLieu, hauteurSolLieu, hauteurSurfaceLieu } from "./sol-lieu.ts";
+import { ScenePhareCargo } from "./phare-cargo.ts";
+import { pieceMoulin } from "../../commun/src/moulin.ts";
 // Le Gué-aux-Saules (plan 0.8, chantier 11) : son décor, son bac, sa crue, ses sons.
 import { RenduGue } from "./rendu/gue.ts";
+import { RenduCorniche } from "./rendu/corniche.ts";
+// La route du pont (plan 0.10, chantier H) : son décor, sa marée, son péage.
+import { RenduRoutePont } from "./rendu/route-pont.ts";
 import { animerCooperative, creerCooperative, estomperCooperative, majPortes, ouverturesPortes, placerRadio, secouerPorte } from "./rendu/cooperative.ts";
 import { CarteVue, arcsParPiece, brouillerTout, clartesDe } from "./rendu/carte-vue.ts";
 import { Ondes } from "./rendu/ondes.ts";
-import { planVue } from "../../commun/src/vue-lieux.ts";
 import { bruitAlarmant } from "../../commun/src/bruits.ts";
-import { KLAXONS_PAR_BATTERIE, RADIO_ETABLI, pieceDe, portesInitiales, sombreIci } from "../../commun/src/cooperative.ts";
+import { KLAXONS_PAR_BATTERIE, RADIO_ETABLI, pieceDe, portesInitiales } from "../../commun/src/cooperative.ts";
 import { IndicateurHorsChamp } from "./hors-champ.ts";
 import { InterfaceLecon } from "./lecon-ui.ts";
 import { MenuAdmin } from "./admin-ui.ts";
@@ -62,7 +75,8 @@ import { Brume } from "./rendu/brume.ts";
 import { Aides, type Aide } from "./aides.ts";
 import { CONSEILS, watty } from "./watty.ts";
 import { ModePhoto } from "./photo.ts";
-import { attenuationMeteo, meteo, type Meteo, type Temps } from "../../commun/src/meteo.ts";
+import { attenuationMeteo, meteo, vent, type Meteo, type Temps } from "../../commun/src/meteo.ts";
+import { regleVentDesMoulins } from "./rendu/metier/meubles-neufs.ts";
 import { Sang, creerSacTombe, creerTas } from "./rendu/sang.ts";
 import type { SourceLumiere } from "./rendu/lumieres.ts";
 import { outilsAPortee } from "../../commun/src/outils-a-portee.ts";
@@ -90,7 +104,6 @@ import { CoucheDechetsVue } from "./rendu/dechets/couche.ts";
 import { BandeauIdee } from "./bandeau-idee.ts";
 import { seFaitEnTenantA } from "./geste-tenu.ts";
 import { AnneauProgres } from "./rendu/anneau-progres.ts";
-import { BandeauAvertissement } from "./avertissement.ts";
 
 const CLE_JETON = "watt.jeton";
 /** En développement : `?heure=22` fige l'heure affichée, pour régler la nuit sans attendre. */
@@ -122,26 +135,40 @@ const decors = new Map<LieuJouable, THREE.Group>();
 let decorCoop: THREE.Group | null = null;
 /** Les leurres de la Coopérative en marche (la radio allumée). */
 const leurresActifs = new Set<string>();
-/** L'état des portes de la Coopérative (ouverte : true), tel que le serveur l'a dit. */
+/** L'état des portes du lieu à portes où l'on est (la Coopérative, le Moulin… ; ouverte : true), tel que le serveur l'a dit. */
 let portesCoop: Record<string, boolean> = portesInitiales();
 /** Où est la radio de la Coopérative, et ce qui reste au klaxon (0.5.1). */
 let etatCoop: EtatCoopVu = { radio: { ...RADIO_ETABLI }, klaxons: KLAXONS_PAR_BATTERIE };
-/** La zone où l'on se déplace : à la Coopérative, les portes fermées bouchent le passage. */
+/** La zone où l'on se déplace : dans un lieu à portes (la Coopérative, le Moulin), les portes fermées bouchent le passage. */
 function zoneIci(): Zone {
   if (lieu === "gue") return gue.zone(Date.now() + decalage, debutMonde); // le radeau du bac, le radier noyé (chantier 11)
-  return lieu === "cooperative" ? zoneCoop(portesCoop) : lieu === "moulin" ? zoneMoulin(portesCoop) : zoneDe(lieu);
+  if (lieu === "route_pont") return routePont.zone(Date.now() + decalage, debutMonde); // la marée, la porte du péage (0.10, H)
+  if (lieu === "corniche") return corniche.zone(); // la barricade du tunnel, ouverte pour qui a payé (0.10, I)
+  return zoneSelonPortes(lieu, portesCoop);
 }
+/**
+ * Le décor de chaque lieu (0.10, le registre des lieux : commun/src/registre-lieux.ts). Un lieu dont le modèle n'est pas
+ * encore importé a son décor provisoire (rendu/lieu-vide.ts) : un sol, ses chemins, un panneau à chaque sortie.
+ */
+const DECORS: Record<LieuJouable, () => THREE.Object3D[]> = {
+  terrain: () => [creerTerrain(), creerMare(), creerRuine()],
+  station: () => [creerHalte(), creerAlentoursStation()], // 0.10, R52 : le décor autour (rendu/alentours-station.ts)
+  comptoir: () => [creerComptoir()],
+  cooperative: () => [(decorCoop = creerCooperative())],
+  gue: () => [gue.creer()], // 0.8, chantier 11 : le modèle du gué, retourné pour suivre la carte
+  moulin: () => [creerMoulin()], // 0.8, chantier 12 : le Moulin du Gué
+  // 0.10 : le niveau 2, branché vide (chantier A) ; les modèles aux chantiers H à K.
+  route_pont: () => [routePont.creer()], // 0.10, chantier H : le modèle de la route du pont
+  grand_hotel: () => [creerHotel()], // 0.10, chantier J : le Grand Hôtel des Flots
+  corniche: () => [corniche.creer()], // 0.10, chantier I : le modèle de la corniche du Cap Rouge
+  phare: () => [creerPhare()], // 0.10, chantier K : le phare du cap
+};
 function montrerDecor(lieu: LieuJouable): void {
   if (!decors.has(lieu)) {
     const g = new THREE.Group();
-    if (lieu === "terrain") g.add(creerTerrain(), creerMare(), creerRuine());
-    else if (lieu === "comptoir") g.add(creerComptoir());
-    else if (lieu === "cooperative") g.add((decorCoop = creerCooperative()));
-    else if (lieu === "gue") g.add(gue.creer()); // 0.8, chantier 11 : le modèle du gué, retourné pour suivre la carte
-    else if (lieu === "moulin") g.add(creerMoulin()); // 0.8, chantier 12 : le Moulin du Gué
-    else g.add(creerHalte());
+    g.add(...DECORS[lieu]());
     // Les lieux à murs (0.7.2) : ce que le personnage ne voit pas est dessiné « en souvenir » (rendu/carte-vue.ts).
-    if (planVue(lieu)) brouillerTout([g]);
+    if (planDe(lieu)) brouillerTout([g]);
     decors.set(lieu, g);
     scene.scene.add(g);
   }
@@ -152,6 +179,15 @@ const entrees = new Entrees(document.getElementById("joystick")!, canvas);
 const son = new Sonorisation(tactile);
 const bruiteur = new Bruiteur(son);
 const gue = new RenduGue((id, ou) => son.jouer(id, ou ?? null));
+/** Le Grand Hôtel (0.10, chantier J) : le check-in, le fondu de l'ascenseur et du balcon. */
+const hotel = new ClientHotel();
+/** La corniche du Cap Rouge (0.10, chantier I) : ses tronçons, le pin tombé, la barricade du tunnel. */
+const corniche = new RenduCorniche();
+const routePont = new RenduRoutePont();
+// 0.10, chantier K : le phare du cap, « le feu et le cargo » (client/src/phare.ts).
+const phare = new PhareClient((id, ou) => son.jouer(id, ou ?? null), () => document.getElementById("hud")!, undefined, new ScenePhareCargo(scene.rendu, () => son.sortieScene()));
+// Le guidage du niveau 2 (0.10) : les voix et les pensées à l'approche, les écriteaux qu'on lit (client/src/guidage.ts).
+const guidage = new Guidage((texte, genre) => hud.message(texte, genre === "pensee" ? "pensee" : ""));
 /** L'atelier de chaque famille : quand il est installé, son thème joue au complet (moment-vitrine 4). */
 const ATELIERS = { charbonniers: "forge", voltaiques: "banc_recharge", mecanistes: "pedalier" } as const;
 /** Les sons qu'on fabrique d'avance en entrant dans le monde. */
@@ -221,7 +257,8 @@ function aider(aide: Aide): void {
 }
 /** Le guichet des Compteurs, tel qu'on le voit (au Carrefour seulement). */
 let vueComptoir: VueComptoir | null = null;
-const sang = new Sang(scene.scene);
+// Le sang se pose sur le sol du lieu (au phare, la grève et l'épave sont 4 à 9 m sous le plateau : client/src/sol-lieu.ts).
+const sang = new Sang(scene.scene, (x, z) => hauteurSolLieu(lieu, x, z, portesCoop));
 /** Libellé de l'action en cours (pour animer le pédalier). */
 let actionEnCours = "";
 let inventaire: Inventaire = {};
@@ -297,7 +334,12 @@ const DISQUE_ESCABEAU = new THREE.RingGeometry(RAYON_ESCABEAU - 0.08, RAYON_ESCA
 const disquesArbres = new Map<number, THREE.Mesh>();
 function porteEscabeau(): boolean {
   for (const i of installations.values()) if (i.vue.etat.portee) return true;
-  return false;
+  // 0.10, chantier K : l'escabeau du gardien du phare, dans les bras.
+  return lieu === "phare" && phare.dansLesBras;
+}
+/** Les bras pris (0.10, S-08, V2-12) : l'escabeau, ou la batterie et la tête du robot de l'hôtel. On ne frappe pas. */
+function brasPris(): boolean {
+  return porteEscabeau() || (lieu === "grand_hotel" && hotel.porte() !== null);
 }
 /**
  * Les grands disques des fruitiers : seulement quand on porte l'escabeau (porteur du projet, 2026-10-08). Sinon,
@@ -376,7 +418,7 @@ function afficherVoile(texte: string, bouton?: { libelle: string; action: () => 
 /** Le bandeau « Tu y penses », posé dans le HUD au premier usage (après que le HUD a dessiné son contenu). */
 let bandeauIdee: BandeauIdee | null = null;
 /** Plan 0.8.2 §7.6 : le message ne recouvre jamais un panneau ouvert du HUD (le carnet du tutoriel, le sac, une fiche…). */
-const PANNEAUX_OUVERTS = [".carnet", ".rapport", ".panneau", ".aide-jeu", ".demande-echange", ".bandeau-avertissement"].map((c) => `:scope > ${c}:not([hidden])`).join(", ");
+const PANNEAUX_OUVERTS = [".carnet", ".rapport", ".panneau", ".aide-jeu", ".demande-echange"].map((c) => `:scope > ${c}:not([hidden])`).join(", ");
 function nouveauBandeauIdee(): BandeauIdee {
   const el = document.getElementById("hud")!;
   return new BandeauIdee(el, window, {
@@ -384,7 +426,6 @@ function nouveauBandeauIdee(): BandeauIdee {
     hauteur: () => window.innerHeight,
   });
 }
-let bandeauAvertissement: BandeauAvertissement | null = null;
 const hud = new Hud(
   document.getElementById("hud")!,
   qualite.niveau,
@@ -469,8 +510,10 @@ function installer(message: Bienvenue): void {
   montrerDecor(lieu);
   solDesCorps(lieu);
   // La pause : seulement là où l'on est seul (son terrain, sa Coopérative).
-  hud.pausePossible(lieu === "terrain" || lieu === "cooperative" || lieu === "moulin");
+  hud.pausePossible(pausePossibleIci(lieu));
   hud.majPause(false);
+  // L'accès au niveau 2 (plan 0.10, V4-19) : la côte, grisée sur la carte tant qu'elle est fermée.
+  carte.majCote(message.coteOuverte === true);
   // Les portes de la Coopérative, dans l'état où on les a laissées ; la radio, si elle joue encore.
   if (message.portes) portesCoop = message.portes;
   leurresActifs.clear();
@@ -509,7 +552,7 @@ function installer(message: Bienvenue): void {
 
   contenu.clear();
   ressources.clear();
-  carteVue.activer(planVue(lieu), clartesDe(lieu));
+  carteVue.activer(planDe(lieu), clartesDe(lieu));
   ondes.vider();
   feux.clear();
   installations.clear();
@@ -592,7 +635,7 @@ function installer(message: Bienvenue): void {
   lecons.maj(null);
   son.entrer({
     famille: message.moi.famille,
-    lieu: lieu === "station" ? "halte" : lieu,
+    lieu: ficheLieu(lieu).musique,
     nuit: estNuit(heureDeJeu(Date.now() + decalage, debutMonde)),
     atelier: message.installations.some((i) => i.type === ATELIERS[message.moi.famille]),
     // Tutoriel : la Vie n'entre qu'au premier feu (étape 3, moment-vitrine 2).
@@ -708,7 +751,7 @@ function majViseeLancer(): void {
   const visables = [...eteints.entries()].map(([id, e]) => ({ id, x: e.objet.position.x, z: e.objet.position.z, debout: e.etat !== "a_terre" && e.etat !== "detruit" }));
   const v = viser(position, position.o, pret, visables, pointSouris());
   viseeEnCours.visee = v;
-  dessinVisee.montrer(position, v, pret, entrees.tenuLancer ?? 0);
+  dessinVisee.montrer(position, v, pret, entrees.tenuLancer ?? 0, (x, z) => hauteurSurfaceLieu(lieu, x, z, portesCoop));
 }
 
 /** Un projectile vole (le sien, ou celui d'un autre joueur) : on le dessine, puis l'impact. */
@@ -735,6 +778,9 @@ function lancerProjectile(p: ProjectileVu): void {
 }
 
 function recevoir(message: MessageServeur): void {
+  guidage.recevoir(message); // le guidage 0.10 regarde passer les messages (il n'en prend aucun)
+  // Le Grand Hôtel (0.10, chantier J) : l'état du check-in, la scène de l'ascenseur et du balcon.
+  if (hotel.recevoir(message)) return;
   switch (message.t) {
     case "bienvenue":
       installer(message);
@@ -910,6 +956,26 @@ function recevoir(message: MessageServeur): void {
     case "gue":
       gue.recevoir(message);
       return;
+    // Le péage et la marée de la route du pont (plan 0.10, chantier H) : la porte pour soi ; la mer qui monte, un fondu
+    // et un message qui passe.
+    case "passage":
+      routePont.passage(message);
+      corniche.passage(message);
+      hud.reponseCaisse(message.ouvert);
+      return;
+    // L'accès au niveau 2 (plan 0.10, V4-19) : la côte s'ouvre (son message passe par un « info »).
+    case "cote":
+      carte.majCote(message.ouverte);
+      return;
+    case "maree_remonte":
+      // Un fondu, puis un message qui passe (le porteur, 2026-10-15 : pas de fenêtre en jeu ; le bouton n'est plus montré).
+      routePont.fondu();
+      window.setTimeout(() => hud.message(message.texte), 650);
+      return;
+    // 0.10, chantier K : l'état du phare, l'arrivée du cargo, la corne de brume.
+    case "phare":
+      phare.recevoir(message);
+      return;
     case "animaux":
       volaille.maj(message.animaux);
       return;
@@ -984,7 +1050,8 @@ function recevoir(message: MessageServeur): void {
       portesCoop = message.portes;
       if (decorCoop && lieu === "cooperative") majPortes(decorCoop, portesCoop, true);
       // La grande porte du Moulin grince (M6).
-      son.jouer(lieu === "moulin" ? "grande_porte" : "geste_bois");
+      // Au phare, c'est l'épave qui s'échoue : la scène du cargo a ses sons (client/src/phare.ts).
+      if (lieu !== "phare") son.jouer(lieu === "moulin" ? "grande_porte" : "geste_bois");
       return;
     case "wotts":
       hud.majWotts(message.wotts);
@@ -1012,8 +1079,8 @@ function recevoir(message: MessageServeur): void {
       hud.majArme(armeEquipee);
       break;
     case "alarme":
-      // Les boîtes de conserve tintent (P-002) : le serveur le dit aussi par écrit.
-      bruiteur.alarme({ x: message.x, z: message.z });
+      // Les boîtes de conserve tintent (P-002), ou la cloche d'alarme sonne (plan 0.10) : le serveur le dit aussi par écrit.
+      bruiteur.alarme({ x: message.x, z: message.z }, message.cloche === true);
       break;
     case "tutoriel":
       hud.majTutoriel(message.tutoriel);
@@ -1058,10 +1125,6 @@ function recevoir(message: MessageServeur): void {
     case "idee":
       (bandeauIdee ??= nouveauBandeauIdee()).montrer({ texte: message.texte, plusTard: message.plusTard, ...(message.objet ? { objet: message.objet } : {}) });
       son.jouer("idee");
-      return;
-    // Un avertissement du carnet (plan 0.8, chantier 13 ; B14) : un bandeau fermé par son bouton « Compris ».
-    case "avertissement":
-      (bandeauAvertissement ??= new BandeauAvertissement(document.getElementById("hud")!)).montrer({ texte: message.texte, bouton: message.bouton, objet: message.id });
       return;
     case "lecons_possibles":
       lecons.choisir(message.a, message.recettes);
@@ -1202,7 +1265,9 @@ function majCercles(dt: number, allure: Allure, bouge: boolean, nuit: boolean): 
   const c = cerclesSignature({ x: position.x, z: position.z, allure, bouge, action: bruitAction, lumiere: portee ? (OBJETS[portee].lumiere ?? null) : null, nuit });
   // La pluie couvre le bruit (Book 13 §4) : le cercle rétrécit.
   c.son *= attenuationMeteo(meteo(Date.now() + decalage, debutMonde), "son");
-  const plan = lieu === "cooperative" || lieu === "moulin" ? planVue(lieu) : null;
+  const plan = estPersonnel(lieu) ? planDe(lieu) : null;
+  // Posés sur le sol où l'on est (0.10 : au phare, la grève, le pont de l'épave, la surface de l'eau).
+  const y = hauteurSurfaceLieu(lieu, position.x, position.z, portesCoop) + 0.1;
   for (const [ligne, pieces, rayon] of [
     [cercleSon, cercleSonPieces, c.son],
     [cercleLumiere, cercleLumierePieces, c.lumiere],
@@ -1213,6 +1278,8 @@ function majCercles(dt: number, allure: Allure, bouge: boolean, nuit: boolean): 
     ligne.scale.set(r, 1, r);
     ligne.position.x = position.x;
     ligne.position.z = position.z;
+    ligne.position.y = y;
+    pieces.position.y = y;
     // En mode photo, l'image doit rester propre : pas de cercle.
     const montre = r > 1.2 && !enVoyage && !photo.actif;
     ligne.visible = montre && !plan;
@@ -1284,8 +1351,11 @@ function agir(a: ActionProposee | null): void {
   // Rien à portée : on dit comment trouver quelque chose à faire, plutôt que de ne rien faire.
   if (!a) return indice("rien", "Rien à portée : approche-toi jusqu'à voir un cercle au sol.");
   if ("message" in a) envoyer(a.message);
-  else if ("examiner" in a) hud.message(a.examiner, "examen");
-  else if ("ouvrirCoffre" in a) {
+  else if ("examiner" in a) {
+    // Un écriteau qu'on lit (le guidage 0.10) : son texte en grand ; sinon, le texte d'Examiner.
+    if (a.lire) hud.message(a.examiner, "ecriteau");
+    else hud.message(a.examiner, "examen");
+  } else if ("ouvrirCoffre" in a) {
     const c = installations.get(a.ouvrirCoffre);
     if (c) hud.ouvrirCoffre(c.vue);
   } else if ("ouvrirFiche" in a) {
@@ -1295,6 +1365,10 @@ function agir(a: ActionProposee | null): void {
   } else if ("ouvrirCarte" in a) {
     hud.fermerPanneaux();
     carte.ouvrir(lieu, a.ouvrirCarte);
+  } else if ("ouvrirCaisse" in a) {
+    // La caisse d'un péage (0.10, chantier H) : le sac en mode « donner » ; « Payer » part au serveur.
+    const passage = a.ouvrirCaisse;
+    hud.ouvrirCaisse(passage, (objets) => envoyer({ t: "payer_passage", passage, objets }));
   } else hud.basculerFabrication(true);
 }
 
@@ -1358,8 +1432,8 @@ function executer(c: Commande): void {
     case "A":
       // Tenu, A sert à se dégager comme B (0.8.4), dès l'appui : on n'a pas l'amplitude pour frapper.
       if (saisi > 0) return degagerUnCoup();
-      // En combat, A se juge au relâchement (coup rapide ou appuyé).
-      if (modeCombat) return;
+      // En combat, A se juge au relâchement (coup rapide ou appuyé). Les bras pris, A pose ce qu'on porte (V2-12).
+      if (modeCombat && !brasPris()) return;
       if (occupe) return envoyer({ t: "annuler" });
       // Un geste sur ce qu'on vise se fait en tenant A (sauf dormir : on ne tient pas une touche toute la nuit).
       {
@@ -1382,6 +1456,8 @@ function executer(c: Commande): void {
         return;
       }
       if (!modeCombat || enVoyage || carte.ouverte) return;
+      // Les bras pris, on ne frappe pas : A a déjà posé (V2-12).
+      if (brasPris()) return;
       // Tenu, le coup chargé est perdu : le relâchement ne frappe pas (l'appui a déjà compté pour se dégager).
       if (saisi > 0) return;
       // Un coup va jusqu'au bout (P-004) : pendant le geste, on garde un seul appui, joué à la fin.
@@ -1508,6 +1584,7 @@ function majMode(dt: number): void {
   for (const [id, e] of eteints) {
     if (e.etat === "dormant" || e.etat === "detruit" || e.etat === "a_terre") continue;
     if (lieu === "gue" && !gue.menace(id, position)) continue; // 0.8.2 (R3) : l'Éteint qui dérive, hors du radier
+    if (lieu === "phare" && !phare.menace(e.objet.position, position)) continue; // 0.10 (K2) : l'autre étage du phare
     plusProche = Math.min(plusProche, Math.hypot(e.objet.position.x - position.x, e.objet.position.z - position.z));
   }
   if (plusProche < 6 && !modeCombat && calmeDepuis >= 0) {
@@ -1567,13 +1644,15 @@ async function entrer(messageInitial = ""): Promise<void> {
  * égale (décroissance 1, nulle à 9 m), tenue haut et un peu devant (sinon le corps jette une grande ombre à ses pieds).
  */
 function lampeDansLeNoir(l: (typeof LUMIERES_PORTEES)[keyof typeof LUMIERES_PORTEES], p: { x: number; z: number; o: number }, noir: boolean): SourceLumiere {
-  if (!noir) return { x: p.x, y: 1.7, z: p.z, ...l };
-  return { ...l, x: p.x + Math.sin(p.o) * 0.45, y: 2.7, z: p.z + Math.cos(p.o) * 0.45, intensite: l.intensite * 2, portee: 9, decroissance: 1 };
+  // Tenue au-dessus des pieds, là où ils sont (0.10 : au phare, la grève et l'épave sont 4 à 9 m sous le plateau).
+  const pieds = hauteurPiedsLieu(lieu, p.x, p.z, portesCoop);
+  if (!noir) return { x: p.x, y: pieds + 1.7, z: p.z, ...l };
+  return { ...l, x: p.x + Math.sin(p.o) * 0.45, y: pieds + 2.7, z: p.z + Math.cos(p.o) * 0.45, intensite: l.intensite * 2, portee: 9, decroissance: 1 };
 }
 
-/** Dans une pièce noire de la Coopérative (Book 23 §4.5) : il y fait nuit, même de jour. */
+/** Dans une pièce noire de la Coopérative, du Moulin (Book 23 §4.5) : il y fait nuit, même de jour. */
 function dansLeNoir(): boolean {
-  return position !== null && ((lieu === "cooperative" && sombreIci(position.x, position.z)) || (lieu === "moulin" && sombreMoulin(position.x, position.z)));
+  return position !== null && sombreDans(lieu, position.x, position.z);
 }
 
 function sourcesDeLumiere(): SourceLumiere[] {
@@ -1591,11 +1670,17 @@ function sourcesDeLumiere(): SourceLumiere[] {
   for (const a of autres.values()) {
     if (!a.donnees.lumiere) continue;
     const genre = a.donnees.famille === "charbonniers" ? "torche" : a.donnees.famille === "voltaiques" ? "frontale" : "lanterne";
-    sources.push({ x: a.objet.position.x, y: 1.7, z: a.objet.position.z, ...LUMIERES_PORTEES[genre] });
+    const pa = a.objet.position;
+    sources.push({ x: pa.x, y: hauteurPiedsLieu(lieu, pa.x, pa.z, portesCoop) + 1.7, z: pa.z, ...LUMIERES_PORTEES[genre] });
   }
   // Au Carrefour, la lumière électrique ne s'éteint jamais.
   if (lieu === "comptoir") sources.push(...lumieresComptoir());
   if (lieu === "gue") sources.push(...gue.lumieres(estNuit(Number.isFinite(HEURE_FORCEE) ? HEURE_FORCEE : heureDeJeu(Date.now() + decalage, debutMonde)), position));
+  if (lieu === "grand_hotel") sources.push(...lumieresHotel(decors.get(lieu), estNuit(Number.isFinite(HEURE_FORCEE) ? HEURE_FORCEE : heureDeJeu(Date.now() + decalage, debutMonde)), hotel.etat, position));
+  if (lieu === "corniche") sources.push(...corniche.lumieres(estNuit(Number.isFinite(HEURE_FORCEE) ? HEURE_FORCEE : heureDeJeu(Date.now() + decalage, debutMonde))));
+  if (lieu === "route_pont") sources.push(...routePont.lumieres(estNuit(Number.isFinite(HEURE_FORCEE) ? HEURE_FORCEE : heureDeJeu(Date.now() + decalage, debutMonde)), position));
+  // 0.10, chantier K : la lanterne du phare allumée, le feu de détresse de l'épave.
+  if (lieu === "phare") sources.push(...phare.lumieres(portesCoop, estNuit(Number.isFinite(HEURE_FORCEE) ? HEURE_FORCEE : heureDeJeu(Date.now() + decalage, debutMonde))));
   const portee = lumierePortee(inventaire);
   if (lumiere && portee && position) {
     const genre = OBJETS[portee].lumiere!;
@@ -1662,15 +1747,23 @@ function boucle(instant: number): void {
     const { dx, dz } = scene.versMonde(entree.x, entree.y);
     // Carte ouverte ou en route : le personnage s'arrête.
     const immobile = enVoyage || carte.ouverte || hud.enPause || vueArrivee.attend;
-    let allure = allureAutorisee(entree.allure, besoins, porteEscabeau() || traineTravois(inventaire));
+    const brasHotel = lieu === "grand_hotel" && hotel.porte() !== null; // la batterie, la tête du robot (0.10, chantier J)
+    let allure = allureAutorisee(entree.allure, besoins, porteEscabeau() || brasHotel || traineTravois(inventaire));
     if (allure === "course" && endurance < SEUIL_EPUISE) allure = "marche";
     if (allure === "course" && lieu === "gue" && gue.surLeRadier(position)) allure = "marche"; // le radier : on n'y court pas
+    // 0.10 : l'eau de la crique du phare, et celle de la plage de l'hôtel (R52), jusqu'aux genoux.
+    const dansLEau = (lieu === "phare" && phare.dansLEau(position)) || (lieu === "grand_hotel" && dansLEauHotel(position.x, position.z));
+    if (allure === "course" && dansLEau) allure = "marche";
     // On voulait courir, mais on marche : on dit pourquoi, et comment y remédier.
     if (entree.allure === "course" && allure !== "course" && Math.hypot(dx, dz) > 0.05) {
       const raison = lieu === "gue" && gue.surLeRadier(position)
         ? "Sur le radier, on marche : le béton glisse sous l'eau qui court."
+        : dansLEau
+        ? "De l'eau jusqu'aux genoux : on n'y court pas."
         : porteEscabeau()
         ? "Les bras chargés, on ne court pas : pose d'abord l'escabeau."
+        : brasHotel
+        ? "Les bras chargés, on ne court pas."
         : aFaim(besoins)
           ? "Trop faible pour courir : tu as faim. Mange (Sac)."
           : aSoif(besoins)
@@ -1737,8 +1830,8 @@ function boucle(instant: number): void {
     // Au Comptoir, la musique sort d'un petit poste ; elle s'ouvre en grand près du guichet (LIVRAISON §3).
     if (lieu === "comptoir") son.radio(Math.hypot(position.x - COMPTOIR.guichet.x, position.z - COMPTOIR.guichet.z) > 7);
     personnage.objet.position.set(position.x, 0, position.z);
-    // Dans la mare, l'eau aux genoux (0.8.2, R21).
-    personnage.patauger(lieu === "terrain" ? profondeurMare(position.x, position.z) : 0, dt, vitesse);
+    // Dans la mare, l'eau aux genoux (0.8.2, R21) ; dans l'eau peu profonde de la plage de l'hôtel aussi (0.10, R52).
+    personnage.patauger(lieu === "terrain" ? profondeurMare(position.x, position.z) : lieu === "grand_hotel" ? profondeurEauHotel(position.x, position.z) : 0, dt, vitesse);
     // Rotation du personnage : on prend le plus court chemin angulaire.
     const ecartAngle = Math.atan2(Math.sin(position.o - personnage.objet.rotation.y), Math.cos(position.o - personnage.objet.rotation.y));
     personnage.objet.rotation.y += ecartAngle * Math.min(1, dt * 14);
@@ -1750,13 +1843,19 @@ function boucle(instant: number): void {
     personnage.porterLumiere(lumiere && (dansLeNoir() || estNuit(Number.isFinite(HEURE_FORCEE) ? HEURE_FORCEE : heureDeJeu(Date.now() + decalage, debutMonde))));
     // La vue d'ensemble à l'arrivée impose son cadrage, puis zoome vers le personnage ; les toits restent jusque-là.
     scene.cadrage = vueArrivee.cadrage(position, scene.angleCamera, scene.niveauZoom);
+    if (lieu === "phare" && !scene.cadrage) scene.cadrage = phare.cadrage(position, scene.niveauZoom, eteints.values()); // 0.10, K2
     montrerTousLesToits(vueArrivee.toitsVisibles);
-    carteVue.toutMontrer(vueArrivee.toitsVisibles);
+    // (0.10, K2 : un cadrage du phare montre tout, comme la vue d'ensemble ; sinon la crique, hors de la vue, restait noire.)
+    carteVue.toutMontrer(vueArrivee.toitsVisibles || scene.cadrage?.degage === true);
     scene.suivre(position.x, position.z, dt);
     const decor = decors.get(lieu);
     // Les toits qui cachent le personnage s'effacent (à la halte et au Comptoir), selon l'angle de la caméra.
     if ((lieu === "station" || lieu === "comptoir") && decor) estomperToits(decor, position.x, position.z, dt, scene.angleCamera);
-    if (lieu === "gue" && decor) gue.animer(position, dt, scene.angleCamera, Date.now() + decalage, debutMonde);
+    // (0.10, R52 : pendant la vue d'ensemble de l'arrivée, les haltes par tronçons construisent tout le lieu.)
+    if (lieu === "gue" && decor) gue.animer(position, dt, scene.angleCamera, Date.now() + decalage, debutMonde, vueArrivee.ensemble);
+    if (lieu === "corniche" && decor) corniche.animer(position, dt, scene.angleCamera, ressources.values(), vueArrivee.ensemble); // 0.10, chantier I
+    if (lieu === "route_pont" && decor) routePont.animer(position, dt, scene.angleCamera, Date.now() + decalage, debutMonde, vueArrivee.ensemble);
+    if (!vueArrivee.attend && !enVoyage) guidage.suivre(lieu, position, Date.now() + decalage, debutMonde, inventaire); // 0.10, guidage
     if (lieu === "cooperative" && decorCoop) {
       estomperCooperative(decorCoop, position.x, position.z, dt, scene.angleCamera);
       animerCooperative(decorCoop, dt);
@@ -1770,6 +1869,8 @@ function boucle(instant: number): void {
       const piece = pieceMoulin(position.x, position.z);
       son.zone(piece === "dehors" || piece === "jardin" ? "dehors" : "dedans");
     }
+    // Le Grand Hôtel (0.10, chantier J) : l'étage ou le rez-de-chaussée, ses couches, le check-in, ce qu'on a pris.
+    if (lieu === "grand_hotel" && decor) animerHotel(decor, position.x, position.z, personnage.objet.rotation.y, dt, scene.angleCamera, hotel.etat, ressources.values());
 
     majMode(dt);
     // Le coffre se ferme quand on s'en éloigne.
@@ -1780,6 +1881,8 @@ function boucle(instant: number): void {
     if (fiche && (lieu !== "terrain" || Math.hypot(position.x - fiche.x, position.z - fiche.z) > 3.5)) hud.fermerPanneaux();
     // Le guichet se ferme quand on s'en éloigne.
     if (hud.guichetOuvert && (lieu !== "comptoir" || Math.hypot(position.x - COMPTOIR.guichet.x, position.z - COMPTOIR.guichet.z) > 4)) hud.fermerPanneaux();
+    // La caisse du péage aussi (0.10, chantier H).
+    if (hud.caisseOuverte && !(lieu === "route_pont" ? routePont.prochePeage(position) : lieu === "corniche" && corniche.prochePeage(position))) hud.fermerCaisse();
     // L'arc en main pendant qu'on vise, bras levé : le personnage bande (Book 25 §3.4).
     const arcVise = viseeEnCours?.pret.genre === "tir" && !viseeEnCours.pret.arme.armeeDAvance ? typeDe(viseeEnCours.pret.cle) : null;
     personnage.tenir(arcVise ?? (modeCombat ? armeEnMain(inventaire, armeEquipee).objet : undefined));
@@ -1789,9 +1892,11 @@ function boucle(instant: number): void {
     if (coupEnAttente !== null && performance.now() >= coupFiniLe) {
       const appuye = coupEnAttente;
       coupEnAttente = null;
-      if (modeCombat && !enVoyage && saisi === 0) frapper(appuye);
+      if (modeCombat && !enVoyage && saisi === 0 && !brasPris()) frapper(appuye);
     }
-    personnage.preparer(arcVise ? 1 : modeCombat ? entrees.chargeA : viseeEnCours ? 1 : 0);
+    personnage.preparer(arcVise ? 1 : modeCombat && !brasPris() ? entrees.chargeA : viseeEnCours ? 1 : 0);
+    // La jauge du coup appuyé autour du bouton A (0.10) : seulement quand le relâchement frappera (en combat, bras libres, pas saisi).
+    hud.jaugeCoup(modeCombat && !brasPris() && saisi === 0 && !enVoyage ? entrees.chargeA : 0);
     // Le lancer (0.6) : la visée suit l'Éteint accroché ; le bouton dit ce qu'il fera (Lancer, Tirer, Réarmer).
     majViseeLancer();
     projectiles.animer(dt);
@@ -1819,26 +1924,33 @@ function boucle(instant: number): void {
       besoins.repos,
       lieu === "terrain" ? volaille.places() : [],
       jourAffiche,
-      lieu === "cooperative" || lieu === "moulin" ? portesCoop : null,
+      ficheLieu(lieu).portes ? portesCoop : null,
       leurresActifs,
       etatCoop,
     );
     // Au gué : la cloche, haler ou rappeler le bac, examiner une balise (chantier 11).
     if (lieu === "gue") propositions = gue.proposer(position, propositions, Date.now() + decalage, debutMonde);
-    // Les déchets à portée de main (0.7) : la cible la plus proche l'emporte.
-    const dechet = dechetsVue.proposer(position);
+    // Au Grand Hôtel : la batterie, le robot, la borne, l'ascenseur (0.10, chantier J).
+    if (lieu === "grand_hotel") propositions = hotel.proposer(position, propositions, inventaire);
+    // À la route du pont : payer le péage, lire l'échelle de marée (0.10, chantier H).
+    if (lieu === "route_pont") propositions = routePont.proposer(position, propositions, Date.now() + decalage, debutMonde);
+    // Au phare : l'escabeau, la cuve, le prisme, l'escalier et la lanterne, la corne, la rampe (chantier K).
+    if (lieu === "phare") propositions = phare.proposer(position, propositions);
+    if (lieu === "corniche") propositions = corniche.proposer(position, propositions); // le péage du tunnel (0.10, I)
+    propositions = guidage.proposer(lieu, position, propositions); // les écriteaux qu'on lit (0.10, guidage)
+    // Les bras pris (V2-12) : ce que le lieu propose aux bras (poser, brancher, présenter) ; rien d'autre ne passe devant.
+    const bras = brasPris();
+    const gesteBras = bras ? propositions.A : null;
+    // Les déchets à portée de main (0.7) : la cible la plus proche l'emporte (les bras libres).
+    const dechet = bras ? null : dechetsVue.proposer(position);
     if (dechet) {
       const c = propositions.cible;
       // Une sortie ou la mare (sans cible au sol) passent avant : on s'y tient exprès.
       if (!propositions.A || (c && dechet.distance < Math.max(0, Math.hypot(c.x - position.x, c.z - position.z) - (c.rayon ?? 0.5)))) propositions = dechet.propositions;
     }
     if (modeCombat || saisi > 0) {
-      // En combat, A frappe et B esquive ; saisi, A et B servent à se dégager.
-      propositions = {
-        A: { libelle: saisi > 0 ? "Se dégager" : "Frapper (maintenir : à la tête)", examiner: "" },
-        B: { libelle: saisi > 0 ? "Se dégager" : aRepousser() ? "Repousser" : "Esquiver", examiner: "" },
-        cible: null,
-      };
+      // En combat, A frappe et B esquive ; saisi, A et B servent à se dégager ; les bras pris, A pose (V2-12 : bras-pris.ts).
+      propositions = propositionsCombat({ saisi: saisi > 0, brasPris: bras, bras: gesteBras, repousser: aRepousser() });
     }
     // La pièce visée bat avec l'anneau (son liseré), seulement si c'est bien elle qu'on vise.
     dechetsVue.cibler(dechet !== null && propositions === dechet.propositions);
@@ -1878,6 +1990,11 @@ function boucle(instant: number): void {
         majVisee(propositions.cible.rayon ?? 0.5, instant);
       }
     }
+    // Le phare du cap (0.10, chantier K) : son décor suit son état ; le relief (personnage, Éteints, cercles, caméra).
+    if (lieu === "phare" && decors.get(lieu)) animerPhare(decors.get(lieu)!, position.x, position.z, dt, scene.angleCamera, phare.scene(portesCoop), ressources.values());
+    // Les autres joueurs aussi se posent sur le relief (0.10 : sinon, sur la grève, ils flottaient au niveau du plateau).
+    phare.poser(lieu === "phare", portesCoop, dt, { personnage: personnage.objet, eteints: lieu === "phare" ? [...eteints.values(), ...autres.values()] : [], cercles: [visee, anneauProgres], scene });
+    phare.animer();
   } else {
     scene.suivre(25, 25, dt);
   }
@@ -1895,6 +2012,8 @@ function boucle(instant: number): void {
   const forcee = photo.actif && photo.reglages.temps ? photo.reglages.temps : METEO_FORCEE;
   const temps: Meteo = forcee ? { temps: forcee, pluie: forcee === "pluie" ? 1 : 0, nuages: { soleil: 0, voile: 0.3, couvert: 0.65, pluie: 0.85 }[forcee] } : meteo(maintenant, debutMonde);
   hud.temps(temps.temps);
+  // Les moulins de jerricans tournent au vent, déduit du temps (plan 0.10, chantier D).
+  regleVentDesMoulins(vent(temps));
   if (temps.temps === "pluie" && position) aider("pluie");
   if (position) {
     if (aFaim(besoins)) aider("faim");
@@ -1911,7 +2030,7 @@ function boucle(instant: number): void {
   // s'il est vu (le serveur ne l'envoie déjà que dans ce cas : c'est la double sécurité, pendant qu'une porte s'ouvre).
   if (carteVue.actif && position) {
     carteVue.souvenir(scene.ciel.nuit, scene.ciel.obscurite);
-    carteVue.maj(scene.rendu, position.x, position.z, lieu === "cooperative" && decorCoop ? ouverturesPortes(decorCoop) : lieu === "moulin" ? portesCoop : {});
+    carteVue.maj(scene.rendu, position.x, position.z, lieu === "cooperative" && decorCoop ? ouverturesPortes(decorCoop) : ficheLieu(lieu).portes ? portesCoop : {});
     for (const e of eteints.values()) e.objet.visible = carteVue.voit(position, e.objet.position.x, e.objet.position.z);
     for (const a of autres.values()) a.objet.visible = carteVue.voit(position, a.objet.position.x, a.objet.position.z);
   }
@@ -1931,7 +2050,7 @@ function boucle(instant: number): void {
   const ouie = lieu === "gue" ? gue.ouie(position) : Infinity;
   bruiteur.eteints(
     dt,
-    [...eteints.entries()].map(([id, e]) => ({ id, x: e.objet.position.x, z: e.objet.position.z, etat: e.etat })).filter((e) => !position || Math.hypot(e.x - position.x, e.z - position.z) <= ouie),
+    [...eteints.entries()].map(([id, e]) => ({ id, x: e.objet.position.x, z: e.objet.position.z, etat: e.etat, variante: e.variante })).filter((e) => !position || Math.hypot(e.x - position.x, e.z - position.z) <= ouie),
     position,
     saisi,
     lieu === "cooperative",
@@ -1967,7 +2086,8 @@ function boucle(instant: number): void {
     [...eteints.entries()].filter(([, e]) => e.objet.visible).map(([id, e]) => ({ id, x: e.objet.position.x, z: e.objet.position.z, etat: e.etat })),
     enVoyage ? null : position,
   );
-  scene.dessiner();
+  // 0.10, K4 : pendant la scène de l'échouage du cargo, son plan remplace la vue du jeu (client/src/phare.ts).
+  if (!(lieu === "phare" && phare.dessinerScene())) scene.dessiner();
   hud.compter(reseau?.latence ?? 0);
   mesureur?.fin();
 }
@@ -2000,6 +2120,8 @@ if (import.meta.env.DEV) {
       fondre: basculerRegroupements,
       /** La vue par pièce (0.7.2) : la carte de vue (souvenirImpose, redessins). */
       carteVue,
+      /** Le guidage 0.10 : ce qui s'est déjà dit pendant la visite. */
+      guidage,
     },
   });
 }

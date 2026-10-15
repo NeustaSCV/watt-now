@@ -232,6 +232,9 @@ export const MATIERE_ARME: Partial<Record<TypeObjet, MatiereArme>> = {
   pied_de_biche: "metal",
   // La fourche à foin (L1B, I30) : un manche de frêne, des dents d'acier ; c'est le manche qui lâche.
   fourche_foin: "bois",
+  // Le harpon du gardien (L2B, plan 0.10, chantier F) : comme la fourche, c'est la hampe qui lâche. Le pied de guéridon
+  // n'y est pas : la fonte fendue ne se reprend pas (sa contrepartie est l'usure, R31).
+  harpon: "bois",
   // 🔥 Les lames des Charbonniers (Book 25 §4.4, chantier 5).
   ...MATIERES_ARMES_CHARBONNIERS,
   // ⚡ Les armes électriques (Book 25 §5.3) : un manche de bois (gourdin, épieu) et leur câblage, qui se reprennent au
@@ -314,6 +317,9 @@ export const DEBRIS_ARME: Partial<Record<TypeObjet, TypeObjet>> = {
   masse: "ferraille_tordue",
   pied_de_biche: "ferraille_tordue",
   fourche_foin: "manche_fendu",
+  // Les armes trouvées du niveau 2 (plan 0.10, chantier F) : la fonte casse en morceaux, la hampe du harpon se fend.
+  pied_gueridon: "ferraille_tordue",
+  harpon: "manche_fendu",
   // 🔥 Les lames des Charbonniers : une lame ébréchée, que la forge reforge (Book 25 §4.4, chantier 5).
   ...DEBRIS_ARMES_CHARBONNIERS,
   // ⚡ Le manche fend ; le câblage brûlé ne se récupère pas.
@@ -490,6 +496,8 @@ export interface Sante {
   convalescenceJusqua: number;
   /** Un champignon toxique mangé : les symptômes arrivent plus tard (Book 05 §5 bis). */
   intoxication?: Intoxication;
+  /** Les fluides d'un Noyé crevé (0.10) : la nausée, jusqu'à cet instant réel. Absent dans une partie d'avant. */
+  nauseeJusqua?: number;
 }
 
 export interface Intoxication {
@@ -593,10 +601,33 @@ export function seRelever(s: Sante, instant: number): Sante {
  * Les armes encombrantes : équipées, elles se portent dans le dos hors du coup (plan 0.8 §2.4), et les autres joueurs
  * les y voient en permanence (plan 0.9 Q-7). Une seule liste, pour le serveur (`AutreVu.dos`) et le client local.
  */
-export const ARMES_DANS_LE_DOS: readonly TypeObjet[] = ["fourche_foin"];
+export const ARMES_DANS_LE_DOS: readonly TypeObjet[] = ["fourche_foin", "harpon"];
 
 /** L'arme qu'on porte dans le dos : celle qu'on a en main (`armeEnMain`) si elle est encombrante, sinon null. */
 export function armeDansLeDos(inventaire: Inventaire, equipee: CleObjet | null): TypeObjet | null {
   const objet = armeEnMain(inventaire, equipee).objet;
   return objet !== null && ARMES_DANS_LE_DOS.includes(objet) ? objet : null;
+}
+
+// ---------- La nausée du Noyé (0.10, chantier G ; Q-0.10-4, S-32) ----------
+
+/**
+ * Les fluides d'un Noyé qui crève (à moins de 1,5 m, commun/src/eteints.ts `CREVAISON`) : la nausée, 30 s réelles,
+ * l'endurance revient deux fois moins vite. Rien d'autre (l'infection viendra avec le Book 05). Elle n'a pas pris
+ * l'intoxication des champignons, qui a sa latence, fait perdre de la santé et de l'eau, et se dit « empoisonné ».
+ */
+export const NAUSEE = { dureeMs: 30_000, recuperation: 0.5 } as const;
+
+/** Éclaboussé : la nausée repart pour 30 s (deux ne s'additionnent pas). */
+export function prendreLaNausee(s: Sante, instant: number): Sante {
+  return { ...s, nauseeJusqua: Math.max(s.nauseeJusqua ?? 0, instant + NAUSEE.dureeMs) };
+}
+
+export function nauseeux(s: Sante, instant: number): boolean {
+  return instant < (s.nauseeJusqua ?? 0);
+}
+
+/** L'endurance qui revient par seconde, au repos : deux fois moins vite avec la nausée. */
+export function recuperationEndurance(s: Sante, instant: number): number {
+  return ENDURANCE_RECUPERATION * (nauseeux(s, instant) ? NAUSEE.recuperation : 1);
 }

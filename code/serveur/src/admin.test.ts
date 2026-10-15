@@ -122,9 +122,9 @@ test("la commande crée god : admin, terrain monté sans chevauchement, coffres 
   const installations = base.chargerInstallations(id);
   for (const type of installationsConstructibles()) assert.ok(installations.some((i) => i.type === type), `une construction ${type}`);
   assert.deepEqual(r.terrain.sansPlace, []);
-  // Les foyers : les cinq formes jouables (feu de camp, pierres, cuisine, Dakota, poêle-fusée).
+  // Les foyers : les six formes jouables (feu de camp, pierres, cuisine, Dakota, poêle-fusée ; le four de terre, 0.10).
   const feux = base.chargerFeux(id);
-  assert.equal(feux.length, 5);
+  assert.equal(feux.length, 6);
   // Aucune construction ne gêne les autres selon les règles de pose du jeu (l'escabeau, qu'on déplace, compris).
   for (const i of installations) {
     const autres = installations.filter((x) => x.id !== i.id);

@@ -205,6 +205,8 @@ export const ENDROITS_PRECIS: readonly RegExp[] = [
   "magasin", "barils", "sacs de jute", "meules", "rhabilleur", "étable", "logis", "bief",
   // Les lieux d'après (« plus loin ») : leurs coins non plus.
   "fournil", "remise", "les lits",
+  // Plan 0.10 (chantier L) : les coins du Grand Hôtel et du phare, où sont les objets-clés du niveau 2 (R49).
+  "lingerie", "suite", "machinerie", "ascenseur", "chambre", "balcon", "conteneurs?", "épave", "cargo", "crique", "proue",
   // Les tournures d'endroit exact.
   "sous l'", "sous le", "sous la", "sur l'", "sur le", "sur la", "contre le", "contre la", "au fond",
   // Des mots entiers (« berge », pas « auberge ») ; « sous l' » se suit d'une lettre.
@@ -216,6 +218,9 @@ const LIEU_DE_L_INDICE: Readonly<Record<string, string>> = {
   cooperative: "À la Coopérative.",
   gue: "Au Gué-aux-Saules.",
   moulin: "Au Moulin du Gué.",
+  // Plan 0.10 (chantier C) : les deux lieux du niveau 2 où sont les objets-clés.
+  grand_hotel: "Au Grand Hôtel des Flots.",
+  phare: "Au phare du cap.",
 };
 const PLUS_LOIN = "Plus loin, pas encore sur ta carte.";
 
@@ -311,4 +316,34 @@ test("0.8.2 aide : elle ne nomme ni les armes de métier ni la glaise du gué (d
   const aide = RUBRIQUES_AIDE.map((r) => JSON.stringify(r)).join(" ");
   for (const r of [/arbalète/i, /matraque/i, /machette/i, /hachette/i, /glaive/i, /aiguillon/i, /lames? forgées?/i, /module de décharge/i, /armes? électriques? des/i, /glaise/i])
     assert.doesNotMatch(aide, r);
+});
+
+// ---------- R38 : « aluminium » jamais seul (plan 0.10, V1-18 ; chantier L) ----------
+
+/**
+ * « Aluminium » ne s'écrit que dans un nom : la chute, le tube, la poulie, le lingot, l'échelle en aluminium, ou un nom
+ * qui dit de quoi une chose est faite (un réflecteur, un cadre d'aluminium). Jamais seul (« de l'aluminium »,
+ * « quinze grammes d'aluminium ») : l'objet qu'on récupère s'appelle « chute d'aluminium » (R38).
+ */
+export function aluminiumSeul(texte: string): boolean {
+  // Un identifiant (« tube_aluminium », « poulie_aluminium ») n'est pas un texte.
+  for (const m of texte.matchAll(/(?<![\w])aluminium(?![\w])/giu)) {
+    const avant = texte.slice(0, m.index);
+    const nom = /(\p{L}+) (?:d'|en )$/u.exec(avant);
+    if (!nom || /^(?:grammes?|kilos?|kg|tonnes?|peu|plein|bout|morceaux?)$/iu.test(nom[1]!)) return true;
+  }
+  return false;
+}
+
+test("0.10 R38 : aucun texte n'écrit « aluminium » seul ; on dit chute ou tube d'aluminium (V1-18)", () => {
+  assert.ok(aluminiumSeul("Aplaties, de l'aluminium.") && aluminiumSeul("Quinze grammes d'aluminium.") && aluminiumSeul("Aluminium."));
+  assert.ok(!aluminiumSeul("Deux chutes d'aluminium, un tube d'aluminium, une échelle en aluminium, une poulie d'aluminium."));
+  const sources = ["commun/src", "client/src", "serveur/src"].flatMap((d) => fichiers(join(RACINE, d))).filter((f) => !HORS_JEU.some((r) => r.test(f)) && f.endsWith(".ts"));
+  const textes: [string, string][] = [
+    ...sources.flatMap((f) => chainesDuSource(readFileSync(f, "utf8")).map((t): [string, string] => [relative(RACINE, f), t])),
+    ...textesDesDonnees(),
+  ];
+  // Un texte, pas un identifiant (« tube_aluminium », « aluminium » seul comme clé d'objet).
+  const fautes = textes.filter(([, t]) => /\s/.test(t) && aluminiumSeul(t)).map(([ou, t]) => `${ou} : ${t}`);
+  assert.deepEqual(fautes, [], `« aluminium » seul dans :\n${fautes.join("\n")}`);
 });

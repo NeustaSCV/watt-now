@@ -239,7 +239,7 @@ MECANIQUE.forEach(([nom, type, etat], i) => {
 // ---------- Les armes en main ----------
 
 // Les armes de la 0.5 (Book 23 §4.6) : machette, masse et lance arrivent dans les types de `commun/`.
-const ARMES = ["hache", "marteau", "barre_metal", "couteau", "lame_forgee", "gourdin", "epieu", "pied_de_biche", "machette", "masse", "lance", "hachette", "serpe", "machette_forgee", "hache_forgee", "glaive", "lance_forgee", "matraque_fortune", "matraque_electrique", "aiguillon", "fourche_foin"] as TypeObjet[];
+const ARMES = ["hache", "marteau", "barre_metal", "couteau", "lame_forgee", "gourdin", "epieu", "pied_de_biche", "machette", "masse", "lance", "hachette", "serpe", "machette_forgee", "hache_forgee", "glaive", "lance_forgee", "matraque_fortune", "matraque_electrique", "aiguillon", "fourche_foin", "pied_gueridon", "harpon"] as TypeObjet[];
 const etatArmes = { pose: "repos" as "repos" | "garde" | "frappe", attente: 0 };
 const porteurs: Personnage[] = [];
 void chargerHumanoides().then(() => {

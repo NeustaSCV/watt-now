@@ -2,7 +2,7 @@
 // (code/scripts/admin.ts), jamais depuis le jeu. Ici, ce que client et serveur partagent : le pseudo réservé,
 // les gestes admin (le serveur vérifie à chaque fois que c'est bien l'admin), les lieux où l'on peut aller d'un coup.
 
-import { LIEUX, ORDRE_ROUTE, type LieuId } from "./lieux.ts";
+import { LIEUX, TOUS_LES_LIEUX, type LieuId } from "./lieux.ts";
 
 /** Le seul pseudo admin. */
 export const PSEUDO_ADMIN = "god";
@@ -44,7 +44,7 @@ export interface VueAdmin {
 
 /** Les lieux du menu « Aller à… » : tous ceux de la carte qui sont ouverts, dans l'ordre de la route. */
 export function lieuxAdmin(): { id: LieuId; nom: string }[] {
-  return ORDRE_ROUTE.filter((id) => LIEUX[id].ouvert).map((id) => ({ id, nom: LIEUX[id].nom }));
+  return TOUS_LES_LIEUX.filter((id) => LIEUX[id].ouvert).map((id) => ({ id, nom: LIEUX[id].nom }));
 }
 
 export function estOperationAdmin(op: unknown): op is OperationAdmin {
@@ -54,7 +54,7 @@ export function estOperationAdmin(op: unknown): op is OperationAdmin {
     case "invincible":
       return typeof o.oui === "boolean";
     case "aller":
-      return typeof o.vers === "string" && (ORDRE_ROUTE as readonly string[]).includes(o.vers);
+      return typeof o.vers === "string" && (TOUS_LES_LIEUX as readonly string[]).includes(o.vers);
     case "remplir":
       return true;
     default:

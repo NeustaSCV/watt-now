@@ -4,11 +4,10 @@
 // hud.ts n'en fait qu'un appel (le html) et un branchement (les boutons) ; le serveur juge tout (serveur/src/electricite.ts).
 
 import { chosesACharger, pleine, type CibleCharge } from "../../commun/src/banc.ts";
-import { BATTERIES_DE_BANC, PORTEE_PEDALIER_BANC, RENDEMENT_BANC, WH_RECHARGE_PAR_HEURE, batterieDuBanc, type Charges } from "../../commun/src/energie.ts";
+import { BATTERIES_DE_BANC, PORTEE_BATTERIE_BASE, PORTEE_PEDALIER_BANC, RENDEMENT_BANC, WH_RECHARGE_PAR_HEURE, batterieDuBanc, whParBeauJour, type Charges } from "../../commun/src/energie.ts";
 import type { CleObjet } from "../../commun/src/etoiles.ts";
 import type { InstallationVue } from "../../commun/src/messages.ts";
 import type { Inventaire } from "../../commun/src/objets.ts";
-import { REGLAGES } from "../../commun/src/reglages.ts";
 
 /** Ce que la fiche du banc envoie : charger une chose, échanger la batterie, la remplir à la manivelle. */
 export type GesteBanc = { op: "charger"; cible: CibleCharge } | { op: "echanger" } | { op: "manivelle" };
@@ -27,13 +26,19 @@ function niveau(wh: number, capacite: number): string {
   return `<span class="charge-batterie"><span class="charge-barre"><span style="width:${pct}%"></span></span> ${nb(wh)} / ${nb(capacite)} Wh</span>`;
 }
 
-/** Le bloc du banc dans sa fiche : sa batterie, puis ce qu'on porte et qui se charge. */
-export function htmlFicheBanc(i: InstallationVue, inventaire: Inventaire, charges: Charges, chargeArmes: Partial<Record<CleObjet, number>>): string {
+/**
+ * Le bloc du banc dans sa fiche : sa batterie, puis ce qu'on porte et qui se charge. `soleil` : ce que donne le panneau
+ * en ce moment (W) ; depuis la 0.10 (chantier D, S-30), il suit le soleil : rien la nuit ni sous la pluie.
+ */
+export function htmlFicheBanc(i: InstallationVue, inventaire: Inventaire, charges: Charges, chargeArmes: Partial<Record<CleObjet, number>>, soleil?: number): string {
   const bat = batterieDuBanc(i.etat);
   const aEchanger = BATTERIES_DE_BANC.some((b) => (inventaire[b] ?? 0) > 0);
+  const maintenant = soleil === undefined ? "" : soleil < 0.05 ? " ; en ce moment, rien" : ` ; en ce moment, ≈ ${nb(soleil)} W`;
   const remplir = [
-    i.etat.panneau ? `le panneau, au soleil (${REGLAGES.panneau_wh_jour} Wh par jour)` : "le panneau, une fois posé dessus",
+    i.etat.panneau ? `le panneau, au soleil seulement (≈ ${Math.round(whParBeauJour() / 10) * 10} Wh par beau jour, rien la nuit ni sous la pluie${maintenant})` : "le panneau, une fois posé dessus",
     `un pédalier générateur à moins de ${PORTEE_PEDALIER_BANC} m, quand on pédale`,
+    // Plan 0.10 (V1-17) : le moulin de jerricans, s'il est à moins de 15 m (la batterie la plus proche dans ce rayon).
+    `un moulin de jerricans à moins de ${PORTEE_BATTERIE_BASE} m, quand il vente`,
     "la manivelle de la lampe à dynamo, lentement",
   ].join(" ; ");
   // La manivelle (le secours lent, R17) : avec la lampe à dynamo du kit, tant que la batterie du banc n'est pas pleine.
@@ -45,7 +50,7 @@ export function htmlFicheBanc(i: InstallationVue, inventaire: Inventaire, charge
         <div class="corps"><strong>${majuscule(bat.nom)}</strong>
           ${niveau(bat.wh, bat.capacite)}
           <small>La remplissent : ${remplir}.</small>
-          ${aEchanger ? "" : `<small>Pour l'échanger, il te faut une autre batterie de voiture dans ton sac.</small>`}
+          ${aEchanger ? "" : `<small>Pour l'échanger, il te faut une autre batterie dans ton sac : de voiture, ou de cellules.</small>`}
         </div>
         <span class="boutons-banc">
           <button type="button" class="secondaire" data-banc="echanger" ${aEchanger ? "" : "disabled"}>Échanger</button>

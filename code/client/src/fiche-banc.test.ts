@@ -60,3 +60,10 @@ test("0.8.2 fiche du banc (R17) : avec la lampe à dynamo, la manivelle remplit 
   // Pleine, la batterie du banc n'a plus rien à prendre.
   assert.match(htmlFicheBanc(banc(360), { lampe_dynamo: 1 }, {}, {}), /data-banc="manivelle" disabled/);
 });
+
+test("0.10 fiche du banc (V1-17, V1-02) : elle cite le moulin de jerricans à 15 m, et le beau jour compensé", () => {
+  const html = htmlFicheBanc(banc(180), {}, {}, {});
+  assert.match(html, /un moulin de jerricans à moins de 15 m, quand il vente/);
+  assert.match(html, /≈ 160 Wh par beau jour/);
+  assert.doesNotMatch(html, /clé/i);
+});

@@ -55,6 +55,11 @@ const SOLS: Record<LieuJouable, { teinte: number; couvert: Couvert }> = {
   // La Coopérative et le Carrefour : du béton, des sols de magasin. De la poussière, rien qui pousse.
   cooperative: { teinte: 0x77736a, couvert: null },
   comptoir: { teinte: 0x77736a, couvert: null },
+  // 0.10 (chantier A) : le niveau 2, branché vide ; le sol du terrain en attendant les modèles (chantiers H à K).
+  route_pont: { teinte: 0x6f6a4e, couvert: "herbe" },
+  grand_hotel: { teinte: 0x6f6a4e, couvert: "herbe" },
+  corniche: { teinte: 0x6f6a4e, couvert: "herbe" },
+  phare: { teinte: 0x6f6a4e, couvert: "herbe" },
 };
 let sol = SOLS.terrain;
 /** Le lieu où l'on est (main.ts, à l'arrivée) : la teinte du sol des corps, et leur couvert. */

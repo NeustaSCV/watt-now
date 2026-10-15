@@ -303,6 +303,14 @@ export const OBJETS_METIER = {
     poids: 1.5,
     description: "Une manivelle, un pignon, une crémaillère : il réarme l'arbalète lourde sans y laisser le dos.",
   },
+  // Le cranequin léger (plan 0.10, chantier F ; N2-33) : un roulement, une chaîne de vélo, une barre. L'arbalète à arc
+  // d'if ne se bande pas à la main : il la réarme, et toute arbalète légère, en 2 s au lieu de 3.
+  cranequin_leger: {
+    nom: "cranequin léger",
+    pluriel: "cranequins légers",
+    poids: 0.9,
+    description: "Un pignon sur son roulement, une crémaillère de chaîne de vélo : trois tours de manivelle, et l'arbalète est bandée.",
+  },
   carreau: {
     nom: "carreau",
     pluriel: "carreaux",
@@ -326,6 +334,50 @@ export const OBJETS_METIER = {
     pluriel: "brouettes",
     poids: 12,
     description: "Une roue de vélo, deux bras, une caisse de planches : soixante kilos roulés, et l'on court encore sur le chemin.",
+  },
+
+  // ---------- ⚡ Le niveau 2 (plan 0.10, chantier C) : ce qui se fait au poste de montage ----------
+  pack_soude: {
+    nom: "pack soudé",
+    pluriel: "packs soudés",
+    poids: 0.35,
+    description: "Six cellules lithium soudées en barrette, leur LED de charge sur le côté : 24 Wh qui ne se décrochent pas.",
+  },
+
+  // ---------- Les meubles nouveaux du niveau 2 (plan 0.10, chantier D ; meubles-neufs.ts) ----------
+  // ⚡ La batterie de cellules (N2-45, S-26) : un type de batterie de 120 Wh, posé à la base (energie.ts).
+  batterie_cellules: {
+    nom: "batterie de cellules",
+    pluriel: "batteries de cellules",
+    poids: 0.9,
+    description: "Douze cellules lithium soudées en bloc, dans un boîtier de plastique : 120 Wh, pour le banc de la base.",
+  },
+  // ⚙️ La charrette à bras (N2-46, S-27) : la brouette avec 100 kg roulés au lieu de 60 (objets.ts, `capaciteDe`).
+  charrette_bras: {
+    nom: "charrette à bras",
+    pluriel: "charrettes à bras",
+    poids: 16,
+    description: "Deux roues de vélo sur roulements neufs, un châssis de tubes, un plateau de bûches : cent kilos roulés, et l'on court encore.",
+  },
+  // 🔥 Ce que coule le creuset de la forge ventilée (N2-43, S-24) : la poulie (pour le moulin de jerricans), le lingot.
+  poulie_aluminium: {
+    nom: "poulie d'aluminium",
+    pluriel: "poulies d'aluminium",
+    poids: 0.6,
+    description: "Une poulie coulée dans un moule de terre, sa gorge reprise à la lime. Sur l'axe d'un moulin, elle fait tourner plus vite.",
+  },
+  lingot_aluminium: {
+    nom: "lingot d'aluminium",
+    pluriel: "lingots d'aluminium",
+    poids: 1,
+    description: "Quatre chutes fondues en un lingot propre, mat et léger : il se vend au Comptoir.",
+  },
+  // L'établi de menuisier (plan 0.10, V1-04) : les étagères, posées dans le coffre ou la réserve couverte (+ 50 kg).
+  etageres: {
+    nom: "jeu d'étagères",
+    pluriel: "jeux d'étagères",
+    poids: 6,
+    description: "Deux planches rabotées, leurs tasseaux cloués : posées dans ton coffre, elles y font de la place pour cinquante kilos de plus.",
   },
 } satisfies Record<string, DefinitionObjet>;
 
@@ -379,6 +431,7 @@ export const ENERGIE_GRISE_PROVISOIRE: Partial<Record<TypeObjet, number>> = {
   arbalete: 220,
   arbalete_lourde: 520,
   cranequin: 260,
+  cranequin_leger: 200,
   carreau: 8,
   carreau_acier: 15,
   manche_tourne: 25,

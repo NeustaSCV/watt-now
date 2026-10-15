@@ -13,7 +13,7 @@ import { OBJETS, type Inventaire, type TypeObjet } from "../../commun/src/objets
 import { ATELIER } from "../../commun/src/progression.ts";
 import { NOMS_INSTALLATIONS, type TypeInstallation } from "../../commun/src/recettes.ts";
 import type { Famille } from "../../commun/src/regles.ts";
-import { BOUTON_AVERTISSEMENT, PIECE_DE_FAMILLE, TEXTE_AVERTISSEMENT_BUCHE, avertirBuche, nuitDuJeu } from "../../commun/src/tutoriel.ts";
+import { PIECE_DE_FAMILLE, TEXTE_AVERTISSEMENT_BUCHE, avertirBuche, nuitDuJeu } from "../../commun/src/tutoriel.ts";
 
 /** Ce que les deux étapes regardent chez le joueur. */
 export interface PourFinDuTutoriel {
@@ -108,7 +108,8 @@ export class AvertissementBuche {
     const nuit = nuitDuJeu(c.instant, c.debutMonde);
     if (!avertirBuche({ lieu: c.lieu, bois: c.bois, restantes: buchesRestantes(c), nuit, dejaAverti: this.nuit })) return false;
     this.nuit = nuit;
-    envoyer({ t: "avertissement", id: "buche", texte: TEXTE_AVERTISSEMENT_BUCHE, bouton: BOUTON_AVERTISSEMENT });
+    // Un message ordinaire, qui passe (décision du porteur, 2026-10-15 : plus de bandeau à bouton en jeu).
+    envoyer({ t: "info", texte: TEXTE_AVERTISSEMENT_BUCHE });
     return true;
   }
 }

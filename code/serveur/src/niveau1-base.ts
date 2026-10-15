@@ -8,6 +8,7 @@
 
 import type { InstallationVue, Verbe } from "../../commun/src/messages.ts";
 import { extinctionTorche, torcheConsumee } from "../../commun/src/torche.ts";
+import { estLanterneFixe } from "../../commun/src/meubles-niveau2.ts";
 import type { ContexteMecanique } from "./mecanique.ts";
 
 /** Le temps d'allumer le chiffon gras (secondes réelles). */
@@ -19,6 +20,11 @@ const ALLUMER_TORCHE_S = 3;
  */
 export function utiliserNiveau1(ctx: ContexteMecanique, i: InstallationVue, verbe: Verbe, maintenant: () => number, debutMonde: number): boolean {
   if (i.type !== "torche_plantee" || verbe !== "allumer") return false;
+  // La lanterne fixe (plan 0.10, chantier C) : elle s'allume seule à la nuit tombée.
+  if (estLanterneFixe(i)) {
+    ctx.info("La lanterne fixe s'allume d'elle-même à la nuit tombée.");
+    return true;
+  }
   if (torcheConsumee(i, maintenant())) {
     ctx.info("La torche est consumée : plante une autre torche (une branche, un chiffon, de la graisse).");
     return true;

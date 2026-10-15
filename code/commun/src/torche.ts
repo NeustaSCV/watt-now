@@ -3,9 +3,12 @@
 // l'heure où on l'allume (plan 0.8 §9.2, chantier 13), puis elle est consumée. On ne la regarnit pas : on en plante une
 // autre.
 // La nuit, sa flamme se voit de loin, comme une torche à la main (LUMIERE_NUIT.torche) : elle compte dans la signature.
+// Au niveau 2, c'est la lanterne fixe (plan 0.10, chantier C ; meubles-niveau2.ts) : 14 m, chaque nuit, d'elle-même ;
+// sans flamme nue, elle se voit comme une lanterne portée (LUMIERE_NUIT.lanterne), pas comme une torche.
 
 import type { EtatInstallation } from "./messages.ts";
 import { LUMIERE_NUIT, type Stimulus } from "./signature.ts";
+import { estLanterneFixe, lanterneAllumee } from "./meubles-niveau2.ts";
 import { HEURE_FIN_NUIT, MS_PAR_HEURE_JEU, heureDeJeu } from "./temps.ts";
 
 /**
@@ -22,6 +25,8 @@ export const PORTEE_TORCHE = 6;
 /** Une torche telle que le jeu la regarde. */
 export interface TorchePlantee {
   type: string;
+  /** Au niveau 2 : la lanterne fixe. */
+  niveau?: number;
   x: number;
   z: number;
   etat: EtatInstallation;
@@ -29,18 +34,21 @@ export interface TorchePlantee {
 
 /** Brûle-t-elle à cet instant (allumée, pas encore consumée) ? */
 export function torcheAllumee(i: TorchePlantee, instant: number): boolean {
-  return i.type === "torche_plantee" && i.etat.eteinteLe !== undefined && instant < i.etat.eteinteLe;
+  return i.type === "torche_plantee" && !estLanterneFixe(i) && i.etat.eteinteLe !== undefined && instant < i.etat.eteinteLe;
 }
 
 /** A-t-elle déjà brûlé jusqu'au bout ? Une torche consumée ne se rallume pas : on en plante une autre. */
 export function torcheConsumee(i: TorchePlantee, instant: number): boolean {
-  return i.type === "torche_plantee" && i.etat.eteinteLe !== undefined && instant >= i.etat.eteinteLe;
+  return i.type === "torche_plantee" && !estLanterneFixe(i) && i.etat.eteinteLe !== undefined && instant >= i.etat.eteinteLe;
 }
 
-/** La lumière des torches allumées, la nuit (Book 06 §3.2) : ce que les Éteints voient de loin. */
+/** La lumière des torches allumées et des lanternes fixes, la nuit (Book 06 §3.2) : ce que les Éteints voient de loin. */
 export function stimuliTorches(installations: Iterable<TorchePlantee>, instant: number, nuit: boolean): Stimulus[] {
   if (!nuit) return [];
   const s: Stimulus[] = [];
-  for (const i of installations) if (torcheAllumee(i, instant)) s.push({ genre: "lumiere", x: i.x, z: i.z, ...LUMIERE_NUIT.torche });
+  for (const i of installations) {
+    if (torcheAllumee(i, instant)) s.push({ genre: "lumiere", x: i.x, z: i.z, ...LUMIERE_NUIT.torche });
+    else if (lanterneAllumee(i, nuit)) s.push({ genre: "lumiere", x: i.x, z: i.z, ...LUMIERE_NUIT.lanterne });
+  }
   return s;
 }

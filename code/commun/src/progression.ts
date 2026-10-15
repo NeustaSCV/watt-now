@@ -22,6 +22,7 @@ import { QUETE, type Condition, type Quete } from "./quetes.ts";
 import type { Famille } from "./regles.ts";
 import { NOMS_ACCESSOIRES, lieuPossede, nomConstruction, nomFormeFeu } from "./lieu-recette.ts";
 import { ETAPE_ABRI, ETAPE_FAMILLE, ETAPE_FEU, ETAPE_OUTIL } from "./tutoriel.ts";
+import { LIEUX_NIVEAU_2 } from "./meubles-neufs.ts";
 
 // ---------- Les déclencheurs ----------
 
@@ -90,7 +91,7 @@ const A: Declencheur = { a: "autres" };
 const ARC = vu("arc_fortune", "arc_simple", "arc_if", "arc_sportif");
 const ARCS_FORTUNE = fab("arc_fortune", "arc_fortune_branche");
 const COUTEAUX_FORGES = fab("lame_forgee", "lame_forgee_fer", "lame_forgee_lime");
-const MACHETTES_FORGEES = fab("machette_forgee", "machette_forgee_fer", "machette_forgee_ebrechee");
+const MACHETTES_FORGEES = fab("machette_forgee", "machette_forgee_fer", "machette_forgee_ebrechee", "machette_forgee_caoutchouc");
 // Le module de décharge unique (0.8.2, R14) : les modules « au flash » et « à la raquette » d'une partie 0.8.1 comptent
 // pour lui (ANCIENNES_RECETTES).
 const MODULES = fab("module_decharge", "module_bobine");
@@ -99,10 +100,12 @@ const FLECHES_OU_CARREAUX = vu("fleche_durcie", "fleche_os", "fleche_clou", "fle
 /** Cinq lames forgées : la pratique ouvre seule ce que la rencontre ouvre plus vite (Book 25 §2.5). */
 const CINQ_LAMES: Declencheur = {
   a: "fabrique",
-  recettes: ["lame_forgee", "lame_forgee_fer", "lame_forgee_lime", "machette_forgee", "machette_forgee_fer", "machette_forgee_ebrechee", "serpe", "serpe_soc", "hachette", "hache_forgee", "hache_forgee_soc", "reforger_lame"],
+  recettes: ["lame_forgee", "lame_forgee_fer", "lame_forgee_lime", "machette_forgee", "machette_forgee_fer", "machette_forgee_ebrechee", "machette_forgee_caoutchouc", "serpe", "serpe_soc", "hachette", "hache_forgee", "hache_forgee_soc", "reforger_lame"],
   but: 5,
 };
 const FOYER_CUISINE = ou(fait("foyer:foyer_cuisine"), { a: "installation", type: "feu", niveau: 3 });
+/** Une première visite d'un lieu du niveau 2 (plan 0.10, chantier D ; N2-Q3 : meubles-neufs.ts, LIEUX_NIVEAU_2). */
+const VISITE_NIVEAU_2 = ou(...LIEUX_NIVEAU_2.map((l) => fait(`visite:${l}`)));
 
 /** Les deux cartes qui ne sont pas des recettes : le feu de camp et le foyer Dakota (dessinées à part, hud.ts). */
 export const CARTES_SPECIALES = ["feu_de_camp", "foyer_dakota"] as const;
@@ -216,6 +219,8 @@ export const PROGRESSION: Readonly<Record<string, LigneProgression>> = {
   alarme_electrique: { quand: [et(ou(vu("rouleau_fil_fer"), fab("alarme_boites")), fab("banc_recharge")), quete("alarme_electrique")], indice: "Une alarme qui ne fait pas de bruit." },
   cloture_fortune: { quand: [et(vu("condensateur_moyen", "raquette_moustiques"), MODULES), fab("alarme_electrique")], indice: "Un fil qui mord ceux qui passent." },
   electrificateur: { quand: [vu("resistance")], indice: "Une décharge qui revient sans cesse." },
+  // Plan 0.10 (chantier C) : le poste de montage monté, des cellules en main.
+  pack_soude: { quand: [et(fait("niveau:poste_montage"), vu("cellule_lithium"))], indice: "Des cellules soudées tiennent mieux que du scotch." },
   cloture_electrique: { quand: [fab("electrificateur")], indice: "Un vrai enclos qui se défend seul." },
   plaque_choc: { quand: [et(vu("casserole"), MODULES)], indice: "Le sol lui-même peut mordre." },
   bain_derouillage: { quand: [et(vu("casserole"), vu("machette"))], indice: "La rouille se défait, avec un peu de courant." },
@@ -240,6 +245,10 @@ export const PROGRESSION: Readonly<Record<string, LigneProgression>> = {
   arbalete_lourde: { quand: [vu("ressort_retrempe")], indice: "Deux ressorts retrempés, une arme lourde." },
   piege_machoires: { quand: [vu("ressort_retrempe")], indice: "Des mâchoires qui ne lâchent jamais." },
   cranequin: { quand: [et(fab("arbalete_lourde"), vu("roulements"))], indice: "Une manivelle pour bander l'arme lourde." },
+  // Le niveau 2 (plan 0.10, chantier F) : liées à une construction, la construction seule les dévoile.
+  cranequin_leger: { quand: [vu("roulements")], indice: "Un arc d'if ne se bande pas à la main." },
+  machette_forgee_caoutchouc: { quand: [vu("caoutchouc")], indice: "Une poignée qui ne glisse plus." },
+  matraque_contacts_soudes: { quand: [vu("tube_aluminium")], indice: "Un tube creux, des contacts soudés : une vraie matraque." },
   carreaux_acier: { quand: [vu("pointe_acier")], indice: "Une pointe d'acier perce mieux que l'os." },
 
   // ---------- Le niveau 1 : le stockage, l'établi, la lumière, les outils de fortune (plan 0.8, chantier 6) ----------
@@ -254,6 +263,21 @@ export const PROGRESSION: Readonly<Record<string, LigneProgression>> = {
   maillet: { quand: [{ a: "installation", type: "etabli", niveau: 2 }], indice: "Frapper un coin sans le fendre." },
   coins_bois: { quand: [{ a: "installation", type: "etabli", niveau: 2 }], indice: "Un coin bien enfoncé ouvre une bûche en deux." },
   planches_fendues: { quand: [{ a: "installation", type: "etabli", niveau: 2 }], indice: "Une bûche fendue droit donne de vraies planches." },
+  // Plan 0.10 (V1-04) : les étagères, avec l'établi de menuisier.
+  etageres: { quand: [{ a: "installation", type: "etabli", niveau: 3 }], indice: "Des planches lisses font des étagères : le coffre tient plus." },
+
+  // ---------- Les meubles nouveaux du niveau 2 (plan 0.10, chantier D) ----------
+  // Les deux meubles communs apparaissent après la première visite d'un lieu du niveau 2 (N2-Q3) ; ceux des familles,
+  // avec leur installation du niveau 2 (le poste de montage, les roulements montés, le creuset de la forge ventilée).
+  cuiseur_solaire: { quand: [VISITE_NIVEAU_2], indice: "Le soleil chauffe assez pour cuire, sans un bout de bois." },
+  bacs_tri: { quand: [VISITE_NIVEAU_2], indice: "Ce qu'on démonte se trie : rien ne se perd." },
+  rampe_led: { quand: [{ a: "installation", type: "banc_recharge", niveau: 2 }], indice: "De la lumière toute la nuit, sans flamme." },
+  batterie_cellules: { quand: [vu("cellule_lithium")], indice: "Garder le soleil du jour pour la nuit." },
+  charrette_bras: { quand: [vu("roulements")], indice: "Ce qui roule bien porte plus que la brouette." },
+  moulin_jerricans: { quand: [{ a: "installation", type: "pedalier", niveau: 2 }], indice: "Quand le soleil manque, le vent tourne encore." },
+  arbalete_garde: { quand: [{ a: "installation", type: "pedalier", niveau: 2 }], indice: "Une arme qui veille quand tu dors." },
+  poulie_aluminium: { quand: [vu("aluminium")], indice: "Des chutes fondues font une pièce qui tourne." },
+  lingot_aluminium: { quand: [vu("aluminium")], indice: "Des chutes fondues valent plus que des chutes." },
 };
 
 /** L'atelier de chaque famille : rien de son métier ne se dévoile avant lui (sauf ce qu'une quête demande). */
@@ -267,7 +291,7 @@ export const ATELIER: Readonly<Record<Famille, string>> = { charbonniers: "forge
  * sont aussi, pour le jour où ils viendront.
  */
 export const ARMES_DE_METIER: Readonly<Record<Famille, readonly string[]>> = {
-  voltaiques: ["matraque_fortune", "matraque_electrique", "matraque_electrodes", "matraque_manche_tourne", "module_decharge", "module_bobine", "aiguillon"],
+  voltaiques: ["matraque_fortune", "matraque_electrique", "matraque_electrodes", "matraque_manche_tourne", "matraque_contacts_soudes", "module_decharge", "module_bobine", "aiguillon"],
   charbonniers: [
     "lame_forgee",
     "lame_forgee_fer",
@@ -276,6 +300,7 @@ export const ARMES_DE_METIER: Readonly<Record<Famille, readonly string[]>> = {
     "machette_forgee",
     "machette_forgee_fer",
     "machette_forgee_ebrechee",
+    "machette_forgee_caoutchouc",
     "hachette",
     "hache_forgee",
     "hache_forgee_soc",
@@ -303,6 +328,7 @@ export const ARMES_DE_METIER: Readonly<Record<Famille, readonly string[]>> = {
     "carreaux_papier",
     "carreaux_acier",
     "cranequin",
+    "cranequin_leger",
   ],
 };
 
@@ -760,7 +786,6 @@ export function silhouettes(e: EtatPourDevoilement): SilhouetteVue[] {
     if (!r || r.aVenir || !cachee(id)) continue;
     const lieu = r.lieu;
     if (lieu.genre !== "construction" || lieuPossede(lieu, e.installations)) continue;
-    if (lieu.accessoire && ACCESSOIRES_PLUS_TARD.has(lieu.accessoire)) continue;
     // La construction d'abord (sans son accessoire) : déjà là, ou au niveau suivant d'une qu'on a.
     const sansAccessoire: LieuRecette = { ...lieu, accessoire: undefined };
     const nom = lieuPossede(sansAccessoire, e.installations) ? nomDuLieu(lieu) : (suivants.find((x) => lieuPossede(sansAccessoire, x.avec))?.nom ?? null);
@@ -772,9 +797,6 @@ export function silhouettes(e: EtatPourDevoilement): SilhouetteVue[] {
   }
   return liste;
 }
-
-/** Les accessoires du niveau 2 (plan 0.8 §1.3) : rien ne les pose encore, leurs recettes ne sont pas des silhouettes. */
-const ACCESSOIRES_PLUS_TARD: ReadonlySet<string> = new Set(["poste_montage", "roulements"]);
 
 /**
  * Les recettes des autres familles dépliées une à une (§3.3, Q6) : on a vu quelqu'un la faire, on en tient le produit,

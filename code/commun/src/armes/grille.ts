@@ -2,7 +2,7 @@
 //
 // Seul, on fait ★ à la maison, ★★ à H1 et L1 ; avec une autre famille, une étoile de plus, pas deux (Q-A2f). La grille
 // tient **par les recettes** : la forge du niveau 1 fait ★★, la corde d'arc de fil dentaire ★★★, l'arc d'if se monte ★★,
-// l'arc d'arbalète en if attend le niveau 2… La **maîtrise** donne l'étoile du dessus, avec ses vrais dégâts, même quand
+// l'arbalète à arc d'if attend le cranequin léger du niveau 2 (0.10, N2-32)… La **maîtrise** donne l'étoile du dessus, avec ses vrais dégâts, même quand
 // elle appartient à l'étape suivante (K-Q1, refusé : pas de plafond par étape). Le niveau 1 se joue avec les armes de
 // la station (K-Q2) : aucune étoile intermédiaire pour L1.
 //
@@ -44,8 +44,9 @@ export const PLAFONDS_NIVEAU_1: Partial<Record<TypeObjet, PlafondArme>> = {
   matraque_fortune: { recette: 1, maitrise: 2, pourquoi: "Le flash et la petite batterie : ★ ; ★★ par la maîtrise seulement (K27)." },
   matraque_electrique: { recette: 2, maitrise: 3, pourquoi: "Le module de décharge du condensateur moyen : ★★ ; le module à bobine attend le poste de montage (L2A)." },
   aiguillon: { recette: null, maitrise: null, pourquoi: "Le poste de montage (L2A) : plus tard." },
-  // ⚙️ L'arbalète ★★ (la lame de ressort) ; l'arc d'arbalète en if attend l'établi de menuisier (Q-0.8-3).
-  arbalete: { recette: 2, maitrise: 3, pourquoi: "★★ au ressort ; l'arc d'arbalète en if est grisé « plus tard » (Q-0.8-3)." },
+  // ⚙️ L'arbalète ★★ (la lame de ressort) ; l'arc d'arbalète en if se façonne à l'établi à étau (0.10, N2-31), mais
+  // l'arbalète qu'il fait demande le cranequin léger, aux roulements montés de L2A (N2-32, N2-33).
+  arbalete: { recette: 2, maitrise: 3, pourquoi: "★★ au ressort ; l'arc d'if (★★★) ne se bande qu'au cranequin léger, du niveau 2 (N2-32)." },
   arbalete_lourde: { recette: null, maitrise: null, pourquoi: "Les ressorts retrempés (niveau 3) : plus tard." },
   // L'arc pour tous : la corde fait l'étoile (I13).
   arc_fortune: { recette: 1, maitrise: 2, pourquoi: "Le bois vert : ★ ; ★★ par la maîtrise seulement (K51)." },

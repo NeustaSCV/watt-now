@@ -33,6 +33,13 @@ export interface Cadrage {
   x: number;
   z: number;
   zoom: number;
+  /** La hauteur du point regardé (0.10, K2 : le milieu de la tour du phare, la crique) ; 0 par défaut. */
+  y?: number;
+  /**
+   * 0.10, K2 : la brume recule au-delà de tout ce qu'on voit (le cadrage du phare, la nuit, sous un ciel couvert : avec la
+   * brume du temps, la crique cadrée de loin n'était qu'un voile gris sur l'iPhone, essai du 2026-10-15).
+   */
+  degage?: boolean;
 }
 
 export class Scene {
@@ -62,6 +69,17 @@ export class Scene {
    * lissage et au-delà des bornes de la molette ; null : la caméra suit le personnage, au zoom du joueur.
    */
   cadrage: Cadrage | null = null;
+  /**
+   * 0.10, chantier K : la hauteur du sol sous le personnage (le phare : la grève à − 8,8, le pont de l'épave) ; la caméra
+   * la suit, en douceur. 0 partout ailleurs.
+   */
+  hauteurSuivie = 0;
+  /**
+   * 0.10, chantier K : un décalage de la caméra et de ce qu'elle regarde (une secousse : rendu/secousse.ts) ; l'image
+   * glisse d'autant, sans tourner. Zéro hors d'une secousse.
+   */
+  decalageCamera: { x: number; y: number; z: number } = { x: 0, y: 0, z: 0 };
+  private readonly regard = new THREE.Vector3();
   /** Le zoom de la projection en place (pour ne la refaire que s'il change). */
   private zoomApplique = 1;
   /** La vue d'ensemble immobile : le cadrage de l'image d'avant, et depuis combien d'images il n'a pas bougé. */
@@ -154,14 +172,16 @@ export class Scene {
     this.lacet += (lacetVise - this.lacet) * (immediat ? 1 : Math.min(1, dt * 8));
     this.cible.x += (x - this.cible.x) * lissage;
     this.cible.z += (z - this.cible.z) * lissage;
+    this.cible.y += ((this.cadrage ? (this.cadrage.y ?? 0) : this.hauteurSuivie) - this.cible.y) * lissage;
 
     const horizontal = Math.cos(ELEVATION) * distance;
+    const s = this.decalageCamera;
     this.camera.position.set(
-      this.cible.x + Math.cos(this.lacet) * horizontal,
-      Math.sin(ELEVATION) * distance,
-      this.cible.z + Math.sin(this.lacet) * horizontal,
+      this.cible.x + Math.cos(this.lacet) * horizontal + s.x,
+      this.cible.y + Math.sin(ELEVATION) * distance + s.y,
+      this.cible.z + Math.sin(this.lacet) * horizontal + s.z,
     );
-    this.camera.lookAt(this.cible);
+    this.camera.lookAt(this.regard.set(this.cible.x + s.x, this.cible.y + s.y, this.cible.z + s.z));
 
   }
 
@@ -176,7 +196,8 @@ export class Scene {
   /** Heure de jeu et sources de lumière artificielles de l'image. */
   eclairer(heure: number, sources: SourceLumiere[], dt: number, nuages = 0): void {
     const c = this.ciel;
-    c.obscurite = Math.min(1, Math.max(0, c.obscurite + (this.pieceNoireVisee ? 1 : -1) * (dt / 0.6)));
+    // Un cadrage du phare regarde dehors (la crique, la tour) : l'obscurité de la pièce où l'on est s'efface (0.10, K2).
+    c.obscurite = Math.min(1, Math.max(0, c.obscurite + (this.pieceNoireVisee && !this.cadrage?.degage ? 1 : -1) * (dt / 0.6)));
     // Le ciel place aussi le soleil (ou la lune) : une seule carte d'ombre, centrée sur ce qu'on voit.
     c.appliquer(heure, this.cible, nuages);
     this.etendreEnsemble();
@@ -214,6 +235,12 @@ export class Scene {
       const recul = DISTANCE_CAMERA * (k - 1);
       this.scene.fog.near += recul;
       this.scene.fog.far += recul;
+    }
+    if (this.cadrage?.degage && this.scene.fog instanceof THREE.Fog) {
+      // Le point regardé est à DISTANCE_CAMERA × k ; le haut de l'image, bien plus loin (la demi-hauteur de la vue).
+      const loin = DISTANCE_CAMERA * k + Math.abs(this.camera.top) * 2;
+      this.scene.fog.near = Math.max(this.scene.fog.near, loin);
+      this.scene.fog.far = Math.max(this.scene.fog.far, loin + 60);
     }
     const c = this.soleil.shadow.camera;
     if (c.right === OMBRE_DEMI * k) return;

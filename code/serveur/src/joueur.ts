@@ -68,7 +68,6 @@ import {
   entreesDe,
   distanceKm,
   sortiePourPartir,
-  sortiesDe,
   zoneDe,
   type LieuId,
   type LieuJouable,
@@ -79,7 +78,9 @@ import { Halte, type Voyageur } from "./halte.ts";
 import { Gue, type ContexteGue } from "./gue.ts";
 import { GESTE_RICOCHET_MS, ricochet } from "../../commun/src/gue.ts";
 import { Moulins } from "./moulin.ts";
-import type { LieuVivant } from "./lieu-vivant.ts";
+import type { ContexteLieu, LieuVivant } from "./lieu-vivant.ts";
+import { LieuxVivants } from "./lieux-vivants.ts";
+import { estHalte, estPartage, estPersonnel, ficheLieu, pausePossibleIci, traverserLieu } from "../../commun/src/registre-lieux.ts";
 import { Comptoir } from "./comptoir.ts";
 import { Tir, type ContexteTir } from "./tir.ts";
 import { Sechage, accelerationFleches } from "./arc.ts";
@@ -93,11 +94,12 @@ import { EvolutionArmes, type ContexteEvolution } from "./evolution-armes.ts";
 import { declencher, declencheurNeuf, definitionDeclencheur, estDeclencheur, type DeclencheurPose } from "./declencheurs.ts";
 import { Electricite, alimenterClotures, batteriesEnTrop, coutEnduranceCoup, produireBancsSolaires, type ContexteElectricite } from "./electricite.ts";
 import { FilsDeRasoir, utiliserMecanique, type ContexteMecanique } from "./mecanique.ts";
-import { rendDesAccessoires } from "../../commun/src/mecanique.ts";
+import { refusMontageArbalete, rendDesAccessoires } from "../../commun/src/mecanique.ts";
 import {
   PRIX_RETRAIT,
   WOTTS_PAR_WH_M,
   ajouterWotts,
+  estObjetCle,
   etalPour,
   formaterWotts,
   prixAchatCle,
@@ -106,7 +108,7 @@ import {
   valeurWotts,
   type Wotts,
 } from "../../commun/src/economie.ts";
-import { BONUS_MECANISTE, PORTEE_CABLE_PANNEAU, WH_M_PAR_HEURE, porteBatteries, productionPanneau, stocker } from "../../commun/src/energie.ts";
+import { BONUS_MECANISTE, PORTEE_CABLE_PANNEAU, TYPES_BATTERIES, WH_M_PAR_HEURE, porteBatteries, productionPanneau, stocker } from "../../commun/src/energie.ts";
 import type { AutreVu, OffreEchange, OperationComptoir, RapportBase, WottsVus } from "../../commun/src/messages.ts";
 import { COMPTOIR, dansBoite, deLieu, destinations, etapeVers, minuscule, type Zone } from "../../commun/src/lieux.ts";
 import { LEURRES, PORTEE_PORTE, PORTES, boitePorte, distancePorte } from "../../commun/src/cooperative.ts";
@@ -125,7 +127,6 @@ import {
   ENDURANCE_CONVALESCENCE,
   ENDURANCE_COURSE,
   ENDURANCE_MAX,
-  ENDURANCE_RECUPERATION,
   ESQUIVE,
   NIVEAU_APRES_EFFONDREMENT,
   SEUIL_EPUISE,
@@ -133,6 +134,9 @@ import {
   evoluer,
   freinSaisie,
   intoxiquer,
+  nauseeux,
+  prendreLaNausee,
+  recuperationEndurance,
   MALUS_ABIMEE,
   DEBRIS_ARME,
   REPOUSSER,
@@ -173,6 +177,7 @@ import {
   capaciteCoffre,
   boisMarmite,
   contenanceRecuperateur,
+  choisirCout,
   coutPour,
   effetsFeu,
   etapeFeu,
@@ -191,16 +196,20 @@ import {
 import { refusAVenir, type AVenir } from "../../commun/src/lignees.ts";
 import { outilsAPortee, refusRatelier } from "../../commun/src/outils-a-portee.ts";
 import { stimuliTorches } from "../../commun/src/torche.ts";
+import { stimuliRampes } from "../../commun/src/meubles-neufs.ts";
+import { MeublesNeufs, etatDePose, rendDeLArbaleteGarde, rendusMeublesNeufs, type ContexteMeublesNeufs } from "./meubles-neufs.ts";
+import { estClocheAlarme, sonAlarme } from "../../commun/src/meubles-niveau2.ts";
 // Se servir du meuble d'une autre famille, une fois sa recette apprise (plan 0.8.2 §7.3, chantier J).
 import { saitSeServir } from "../../commun/src/savoir-meuble.ts";
 import { utiliserNiveau1 } from "./niveau1-base.ts";
-import { choisirFacon } from "../../commun/src/replis.ts";
 import { carteInstallations, feuxDuLieu, refusLieu, type Alentours } from "../../commun/src/lieu-recette.ts";
 import { ETAPE_CARTE, ETAPE_FAMILLE, ETAPE_NUIT, ETAPE_PREMIER_ETEINT, ETAPE_SAISIE, NOMBRE_ETAPES, REPAS_DU_TUTORIEL, etapesTutoriel, type EtatTutoriel, type VueTutoriel } from "../../commun/src/tutoriel.ts";
 import { AvertissementBuche, etapesReussies, progresCarte, progresFamille, type PourFinDuTutoriel } from "./tutoriel-fin.ts";
 // Le compte admin « god » (outil du porteur) : serveur/src/admin.ts.
 import { remplirCoffres, savoirAdmin, vueProgressionAdmin } from "./admin.ts";
 import { ARRIVEE_DEPART } from "../../commun/src/lieux.ts";
+// L'accès au niveau 2 (plan 0.10, V4-19) : la côte s'ouvre avec un objet-clé pris à la Coopérative et un au Moulin.
+import { TEXTE_COTE_FERMEE, TEXTE_COTE_OUVERTE, coteOuverte, preuveDuLieu, routeFermee } from "../../commun/src/acces-cote.ts";
 import { pasVersLaCouche, trajetCouche, type AbriPose, type TrajetCouche } from "./sommeil-abri.ts";
 import { SANTE_DEPART } from "../../commun/src/combat.ts";
 import type { OperationAdmin, VueAdmin } from "../../commun/src/admin.ts";
@@ -236,7 +245,7 @@ interface ActionEnCours {
 const INTERVALLE_TIRAGE = 20_000;
 const INTERVALLE_ETEINTS = 200;
 
-const BATTERIES: TypeBatterie[] = ["petite_batterie", "batterie_voiture"];
+const BATTERIES: readonly TypeBatterie[] = TYPES_BATTERIES;
 /** Au comptoir, rien à ramasser : l'esplanade est entretenue par les Compteurs. */
 const SANS_RESSOURCES = new Map<number, RessourceEnBase>();
 
@@ -252,7 +261,6 @@ export class Joueur implements Voyageur, ParticipantLecon {
   /** Le lieu où se trouve le personnage (É3). */
   lieu: LieuJouable;
   private voyage: Voyage | null = null;
-  private readonly halte: Halte;
   private readonly debutMonde: number;
   private readonly alea: () => number;
   /** Les Éteints venus sur le terrain, attirés par la signature (ils repartent quand le joueur s'en va). */
@@ -387,18 +395,21 @@ export class Joueur implements Voyageur, ParticipantLecon {
   private readonly forge: Forge = new Forge(this.contexteForge());
   /** L'électricité des Voltaïques (Book 25 §5) : décharges, recharge, pièges électriques (serveur/src/electricite.ts). */
   private readonly electricite: Electricite = new Electricite(this.contexteElectricite());
+  /** Les meubles nouveaux du niveau 2 (plan 0.10, chantier D) : cuiseur, bacs de tri, creuset, moulin, rampe, arbalète de garde. */
+  private readonly meublesNeufs: MeublesNeufs = new MeublesNeufs(this.contexteMeublesNeufs());
   /** Reprendre une arme sur son meuble : la réparer, la monter d'une étoile (plan 0.8, chantier 9 ; serveur/src/evolution-armes.ts). */
   private readonly evolution: EvolutionArmes = new EvolutionArmes(this.contexteEvolution());
 
-  /** Le lieu vivant où l'on se trouve (la halte, le gué, partagés ; sa Coopérative, son Moulin, à soi) ; null sur le terrain et au Comptoir. */
+  /**
+   * Les lieux vivants (0.10, le registre des lieux : serveur/src/lieux-vivants.ts) : la halte, le gué, la route du pont,
+   * la corniche, partagés ; la Coopérative, le Moulin, l'hôtel, le phare, à soi.
+   */
+  private readonly lieux: LieuxVivants;
+
+  /** Le lieu vivant où l'on se trouve (une halte partagée, ou son lieu à soi) ; null sur le terrain, au Comptoir, en route. */
   private get vivant(): LieuVivant | null {
     if (this.voyage) return null;
-    return this.lieu === "station" ? this.halte : this.lieu === "cooperative" ? this.cooperatives.de(this.compte.id) : this.vivantRouteB(this.lieu);
-  }
-
-  /** Le gué ou son Moulin, si c'est là qu'on est (0.8, route B). */
-  private vivantRouteB(lieu: LieuJouable): LieuVivant | null {
-    return lieu === "gue" ? this.gue : lieu === "moulin" ? this.moulins.de(this.compte.id) : null;
+    return this.lieux.vivant(this.lieu, this.compte.id);
   }
 
   constructor(
@@ -412,17 +423,18 @@ export class Joueur implements Voyageur, ParticipantLecon {
     cooperatives: Cooperatives = new Cooperatives(base),
     gue: Gue = new Gue(base),
     moulins: Moulins = new Moulins(base),
+    lieux: LieuxVivants = new LieuxVivants(base, { station: halte, cooperative: cooperatives, gue, moulin: moulins }),
   ) {
     this.compte = compte;
     this.base = base;
     this.envoyer = envoyer;
     this.maintenant = maintenant;
-    this.halte = halte;
     this.alea = alea;
     this.comptoir = comptoir;
     this.cooperatives = cooperatives;
     this.gue = gue;
     this.moulins = moulins;
+    this.lieux = lieux;
     const w = base.chargerWotts(compte.id);
     this.poche = w.poche;
     this.compteWotts = w.compte;
@@ -447,29 +459,18 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (!perso) throw new Error(`Personnage introuvable pour le compte ${compte.id}`);
     this.position = perso.position;
     this.lieu = perso.lieu;
-    if (this.lieu === "station") {
-      // Reconnexion dans la halte : on réapparaît à l'entrée la plus proche (Book 01 §2 bis) : le bout est de la route
-      // (le terrain, P-006), le bout ouest (le Carrefour) ou le chemin de la Coopérative (0.7.3).
+    if (this.lieu !== "terrain") {
+      // Reconnexion hors de chez soi (le registre des lieux) : dans une halte, à l'entrée la plus proche (Book 01 §2 bis :
+      // à la station, le bout est de la route, le bout ouest ou le chemin de la Coopérative) ; ailleurs, à la première
+      // entrée (la route du Comptoir, le portail de la Coopérative, le pont du Moulin : M19).
       const { x, z } = this.position;
-      const entree = sortiesDe("station").reduce((a, b) => (Math.hypot(b.arrivee.x - x, b.arrivee.z - z) < Math.hypot(a.arrivee.x - x, a.arrivee.z - z) ? b : a));
+      const entrees = entreesDe(this.lieu);
+      const entree = estHalte(this.lieu)
+        ? entrees.reduce((a, b) => (Math.hypot(b.arrivee.x - x, b.arrivee.z - z) < Math.hypot(a.arrivee.x - x, a.arrivee.z - z) ? b : a))
+        : entrees[0]!;
       this.position = { ...entree.arrivee };
-      halte.entrer(this);
-    }
-    if (this.lieu === "comptoir") {
-      this.position = arriveeDans("comptoir", "station");
-      comptoir.entrer(this.envoyer, () => this.quetes.etat.faits);
-    }
-    if (this.lieu === "cooperative") {
-      // Reconnexion dans la Coopérative : on réapparaît au portail (Book 23 §3).
-      this.position = arriveeDans("cooperative", "comptoir");
-      cooperatives.de(compte.id).entrer(this);
-    }
-    if (this.lieu === "gue" || this.lieu === "moulin") {
-      // Reconnexion au gué : à l'entrée la plus proche, comme à la halte ; au Moulin : toujours au pont (M19).
-      const { x, z } = this.position;
-      const entree = entreesDe(this.lieu).reduce((a, b) => (Math.hypot(b.arrivee.x - x, b.arrivee.z - z) < Math.hypot(a.arrivee.x - x, a.arrivee.z - z) ? b : a));
-      this.position = this.lieu === "gue" ? { ...entree.arrivee } : arriveeDans("moulin", "gue");
-      this.vivantRouteB(this.lieu)!.entrer(this);
+      this.lieux.vivant(this.lieu, compte.id)?.entrer(this);
+      if (this.lieu === "comptoir") comptoir.entrer(this.envoyer, () => this.quetes.etat.faits);
     }
     this.besoins = perso.besoins;
     this.gourde = perso.gourde;
@@ -585,11 +586,12 @@ export class Joueur implements Voyageur, ParticipantLecon {
       savoir: this.vueSavoir(),
       progression: this.vueProgression(this.devoilement.vue()),
       dechets: this.dechets.vue(),
+      coteOuverte: coteOuverte(this.quetes.etat.faits),
       ...(this.lieu === "cooperative"
         ? { leurres: this.cooperatives.leurresActifs(this.compte.id, this.maintenant()), etatCoop: this.cooperatives.vue(this.compte.id) }
         : {}),
       ...(this.lieu === "comptoir" ? { comptoir: this.vueComptoir(instant) } : {}),
-      ...((this.lieu === "cooperative" || this.lieu === "moulin") && this.vivant ? { portes: { ...this.vivant.portes } } : {}),
+      ...(ficheLieu(this.lieu).portes && this.vivant ? { portes: { ...this.vivant.portes } } : {}),
     };
   }
 
@@ -604,10 +606,10 @@ export class Joueur implements Voyageur, ParticipantLecon {
     return this.pause;
   }
 
-  /** On peut faire une pause là où personne d'autre ne joue : son terrain, sa Coopérative, son Moulin. */
+  /** On peut faire une pause là où personne d'autre ne joue : son terrain, ses lieux à soi (le registre des lieux). */
   private pausePossible(): string | null {
     if (this.voyage) return "Pas en route.";
-    if (this.lieu !== "terrain" && this.lieu !== "cooperative" && this.lieu !== "moulin") return "Pas de pause ici : d'autres joueurs partagent ce lieu.";
+    if (!pausePossibleIci(this.lieu)) return "Pas de pause ici : d'autres joueurs partagent ce lieu.";
     if (this.saisisseurs().length > 0) return "Pas pendant qu'il te tient !";
     return null;
   }
@@ -677,6 +679,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
         this.voyager(message.vers);
         return;
       case "poser":
+        // Ce que le lieu met dans les bras (0.10, chantier J : la batterie, la tête du robot de l'hôtel) se pose là.
+        if (this.vivant?.poser(this.contexteLieu())) return;
         this.poserObjetLourd();
         return;
       case "poser_radio":
@@ -697,6 +701,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
       case "frapper":
         // On ne frappe pas avec un escabeau dans les bras : on le lâche d'abord.
         if (this.objetPorte()) this.poserObjetLourd();
+        // Ni avec ce que le lieu met dans les bras (0.10, chantier J : la tête du robot, 8 kg à deux mains, Q-0.10-8).
+        if (this.brasDuLieu()) return this.info(`Les bras pris, on ne frappe pas : pose d'abord ${this.brasDuLieu()}.`);
         this.frapper(message.appuye === true);
         return;
       case "esquiver":
@@ -765,6 +771,10 @@ export class Joueur implements Voyageur, ParticipantLecon {
       case "gue":
         if (this.lieu === "gue" && !this.voyage) message.op === "haler" ? this.gue.haler(this.contexteGue()) : this.gue.sonnerCloche(this.contexteGue());
         return;
+      // Le péage des survivants (plan 0.10 §3.6, chantier H) : le lieu où l'on est le prend (serveur/src/route-pont.ts).
+      case "payer_passage":
+        if (!this.voyage) this.vivant?.payerPassage(this.contexteLieu(), message.passage, message.objets);
+        return;
     }
   }
 
@@ -824,10 +834,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (this.objetPorte()) this.poserObjetLourd();
     const de = this.lieu;
     if (de === "cooperative" && (this.inventaire.radio_piles ?? 0) > 0) this.poserRadio();
-    if (de === "station") this.halte.sortir(this);
-    if (de === "cooperative") this.cooperatives.de(this.compte.id).sortir(this);
     if (de === "comptoir") this.comptoir.sortir(this.envoyer);
-    this.vivantRouteB(de)?.sortir(this);
+    this.lieux.vivant(de, this.compte.id)?.sortir(this);
     this.eteints = [];
     this.intention = INTENTION_REPOS;
     this.elan = null;
@@ -849,7 +857,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
   /** Dans un lieu public (halte, comptoir), on voit les autres et on peut échanger ; le terrain et la Coopérative restent privés. */
 
   get enLieuPublic(): boolean {
-    return (this.lieu === "station" || this.lieu === "comptoir" || this.lieu === "gue") && !this.voyage;
+    return estPartage(this.lieu) && !this.voyage;
   }
 
   get vu(): AutreVu {
@@ -986,7 +994,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
         if (!this.comptoir.payer(total)) return this.info("Le comptoir n'a plus de quoi payer. Reviens plus tard : sa trésorerie se refait quand les joueurs achètent.");
         this.retirerPlusieurs({ [op.objet]: n });
         this.bornerCharges();
-        this.comptoir.entrerEnStock(op.objet, n);
+        // Un objet-clé racheté n'entre pas en stock : le Comptoir en a toujours (plan 0.10, chantier B).
+        if (!estObjetCle(typeDe(op.objet))) this.comptoir.entrerEnStock(op.objet, n);
         this.poche = ajouterWotts(this.poche, total, instant);
         this.mesurer("wotts", "vente", total, { objet: op.objet, n });
         this.noterFait("wotts_gagnes", total);
@@ -996,14 +1005,16 @@ export class Joueur implements Voyageur, ParticipantLecon {
       }
       case "acheter": {
         const n = Math.floor(op.quantite);
-        if (!(n >= 1) || !estCleObjet(op.objet) || (this.comptoir.stock[op.objet] ?? 0) < n) return;
-        // Une clé de L1 : seulement après une première visite de son lieu (plan 0.8, chantier 10).
+        // Un objet-clé ne manque jamais (plan 0.10, chantier B) : il ne sort pas du stock.
+        const toujours = estCleObjet(op.objet) && estObjetCle(typeDe(op.objet));
+        if (!(n >= 1) || !estCleObjet(op.objet) || (!toujours && (this.comptoir.stock[op.objet] ?? 0) < n)) return;
+        // Un objet-clé : seulement après une première visite de son lieu (plan 0.8, chantier 10).
         const refusCle = refusVenteCle(typeDe(op.objet), this.quetes.etat.faits);
         if (refusCle) return this.info(refusCle);
         const total = prixVenteCle(op.objet) * n;
         if (total > enPoche + 1e-6) return this.info(`Il te faut ${formaterWotts(total)} en bons. Gagne-les : dépose de l'électricité, vends, ou pédale pour les Compteurs.`);
         if (poidsInventaire(this.inventaire, this.gourde.litres) + OBJETS[typeDe(op.objet)].poids * n > capaciteDe(this.inventaire)) return this.sacTropLourd({ [op.objet]: n });
-        if (!this.comptoir.sortirDuStock(op.objet, n)) return;
+        if (!toujours && !this.comptoir.sortirDuStock(op.objet, n)) return;
         this.poche = ajouterWotts(this.poche, -total, instant);
         this.mesurer("wotts", "achat", -total, { objet: op.objet, n });
         this.comptoir.encaisser(total);
@@ -1115,8 +1126,11 @@ export class Joueur implements Voyageur, ParticipantLecon {
     let meilleur: Eteint | null = null;
     let meilleureDistance = Infinity;
     const zone = this.zoneIci();
+    // Au phare (0.10) : pas d'un autre étage du relief (le pont de l'épave vu de la grève, la grève vue du plateau).
+    const milieu = this.vivant?.milieu;
     for (const e of this.eteintsIci()) {
       if (e.etat === "detruit") continue;
+      if (milieu?.atteint?.(this.position.x, this.position.z, e.x, e.z) === false) continue;
       const dx = e.x - this.position.x;
       const dz = e.z - this.position.z;
       const d = Math.hypot(dx, dz);
@@ -1208,6 +1222,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
             ? "Pas au Comptoir : les Compteurs n'aiment pas le désordre."
             : j.objetPorte()
             ? "Tu as les bras pris : pose d'abord l'escabeau."
+            : j.brasDuLieu()
+            ? "Tu as les bras pris."
             : j.sommeil
               ? "Tu dors."
               : null,
@@ -1265,6 +1281,37 @@ export class Joueur implements Voyageur, ParticipantLecon {
     });
   }
 
+  private ctxLieu: ContexteLieu | null = null;
+  /** Ce que le joueur prête au lieu où il est, pour ses gestes propres (0.10, LieuVivant.geste et accompagner). */
+  private contexteLieu(): ContexteLieu {
+    const j = this;
+    return (this.ctxLieu ??= {
+      id: j.compte.id,
+      maintenant: () => j.maintenant(),
+      position: () => j.position,
+      deplacer: (p) => {
+        j.position = p;
+        j.positionEnvoyee = false;
+      },
+      info: (t) => j.info(t),
+      envoyer: (m) => j.envoyer(m),
+      inventaire: () => j.inventaire,
+      ajouter: (objets) => j.ajouterPlusieurs(objets),
+      retirer: (objet, n) => {
+        if ((j.inventaire[objet] ?? 0) < n) return false;
+        j.retirer(objet, n);
+        return true;
+      },
+      commencer: (libelle, dureeS, appliquer) => j.commencer(libelle, dureeS, appliquer),
+      annuler: () => j.annulerAction(),
+      // 0.10, chantier H : ce qu'on met dans la caisse du péage quitte le sac (et la charge des batteries suit).
+      donner: (objets) => {
+        j.retirerPlusieurs(objets);
+        j.bornerCharges();
+      },
+    });
+  }
+
   /** Ce que le joueur prête à la forge (forge.ts) : rien que des accès, aucune règle. */
   /** La couche de déchets (0.7) : ce qu'elle demande au joueur. */
   private creerDechets(): CoucheDechets {
@@ -1313,6 +1360,37 @@ export class Joueur implements Voyageur, ParticipantLecon {
   }
 
   /** Ce que le joueur prête au module de l'électricité (electricite.ts) : des accès, aucune règle. */
+  /** Ce que le joueur prête aux meubles nouveaux du niveau 2 (serveur/src/meubles-neufs.ts) : rien que des accès. */
+  private contexteMeublesNeufs(): ContexteMeublesNeufs {
+    const j = this;
+    return {
+      maintenant: () => j.maintenant(),
+      debutMonde: () => j.debutMonde,
+      position: () => j.position,
+      installations: () => j.installations.values(),
+      inventaire: () => j.inventaire,
+      outils: () => j.outils(),
+      retirer: (objets) => j.retirerPlusieurs(objets),
+      gourde: () => j.gourde,
+      eauBouillie: () => {
+        j.gourde = { contenu: "potable", litres: j.gourde.litres };
+        if (j.tuto) j.tuto.bouilli = true;
+        j.noterFait("ebullition");
+        j.envoyerBesoins();
+      },
+      sauverInstallation: (i) => {
+        j.base.sauverEtatInstallation(j.compte.id, i.id, i.etat);
+        if (j.lieu === "terrain" && !j.voyage) j.envoyer({ t: "installation", installation: i });
+      },
+      majBase: () => j.mettreAJourBase(j.maintenant()),
+      info: (t) => j.info(t),
+      noter: (f) => j.noterFait(f),
+      commencer: (libelle, dureeS, appliquer) => j.commencer(libelle, dureeS, appliquer),
+      alea: () => j.alea(),
+      apresDestruction: (e, comment) => j.apresDestruction(e, comment),
+    };
+  }
+
   private contexteElectricite(): ContexteElectricite {
     const j = this;
     return {
@@ -1651,6 +1729,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       blessures: this.sante.blessures.map((b) => b.type),
       convalescence: this.maintenant() < this.sante.convalescenceJusqua,
       intoxique: symptomes(this.sante, this.maintenant()) !== null,
+      ...(nauseeux(this.sante, this.maintenant()) ? { nauseeux: true } : {}),
     };
   }
 
@@ -1708,7 +1787,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
     // Endurance : la course fatigue, le reste du temps on souffle.
     const court = this.bouge && this.intention.allure === "course";
     if (court) this.endurance -= ENDURANCE_COURSE * dt;
-    else if (instant > this.prochaineFrappe + 600) this.endurance += ENDURANCE_RECUPERATION * dt;
+    // La nausée d'un Noyé crevé (0.10) : deux fois moins vite.
+    else if (instant > this.prochaineFrappe + 600) this.endurance += recuperationEndurance(this.sante, instant) * dt;
     this.endurance = Math.max(0, Math.min(this.enduranceMax(), this.endurance));
 
     this.sante = evoluer(this.sante, dt, instant, this.besoins.kcal > 0 && this.besoins.eau > 0);
@@ -1752,7 +1832,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       const auComptoir = this.lieu === "comptoir";
       const sac = this.base.poserSac({
         lieu: auComptoir ? "terrain" : this.lieu,
-        terrainDe: this.lieu === "station" || this.lieu === "gue" ? 0 : this.compte.id,
+        terrainDe: estHalte(this.lieu) ? 0 : this.compte.id,
         proprietaire: this.compte.id,
         x: auComptoir ? POINT_ARRIVEE.x + 1.5 : this.position.x,
         z: auComptoir ? POINT_ARRIVEE.z + 1 : this.position.z,
@@ -1882,8 +1962,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
       return;
     }
     const sac = this.base.poserSac({
-      lieu: this.lieu === "station" || this.lieu === "cooperative" || this.lieu === "gue" || this.lieu === "moulin" ? this.lieu : "terrain",
-      terrainDe: this.lieu === "station" || this.lieu === "gue" ? 0 : this.compte.id,
+      lieu: estHalte(this.lieu) || estPersonnel(this.lieu) ? this.lieu : "terrain",
+      terrainDe: estHalte(this.lieu) ? 0 : this.compte.id,
       proprietaire: this.compte.id,
       x: ou ? ou.x : this.position.x + Math.sin(this.position.o) * 0.6,
       z: ou ? ou.z : this.position.z + Math.cos(this.position.o) * 0.6,
@@ -1936,10 +2016,13 @@ export class Joueur implements Voyageur, ParticipantLecon {
     const apres: Inventaire = { ...this.inventaire, [objet]: (this.inventaire[objet] ?? 0) - par };
     for (const [t, k] of Object.entries(d.donne) as [TypeObjet, number][]) apres[t] = (apres[t] ?? 0) + k;
     if (poidsInventaire(apres) > capaciteDe(apres) + 1e-9) return this.sacTropLourd();
-    this.commencer(`Démonter : ${OBJETS[objet].nom}`, (d.duree * facteur) / REGLAGES.gestes_vitesse, () => {
+    // Les bacs de tri à 3 m (plan 0.10, chantier D ; S-23) : deux fois plus vite, une matière de plus un démontage sur trois.
+    this.commencer(`Démonter : ${OBJETS[objet].nom}`, (d.duree * facteur) / REGLAGES.gestes_vitesse / this.meublesNeufs.vitesseDemontage(), () => {
       if ((this.inventaire[objet] ?? 0) < par) return;
       this.retirerPlusieurs({ [objet]: par });
-      this.ajouterPlusieurs(d.donne);
+      const enPlus = this.meublesNeufs.matiereEnPlus(d.donne);
+      this.ajouterPlusieurs(somme(d.donne, enPlus));
+      if (Object.keys(enPlus).length) this.info(`Aux bacs de tri, rien ne se perd : une matière de plus (${(Object.entries(enPlus) as [TypeObjet, number][]).map(([t, k]) => nommer(t, k)).join(", ")}).`);
       this.verifierLumiere();
       this.noterFait(`demonte:${objet}`);
       this.mesurer("progression", `demontage:${objet}`, 1);
@@ -2083,7 +2166,9 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (!sortie || !destinations(sortie).includes(etape)) return this.info("Pour prendre la route, va jusqu'à la sortie.");
     if (this.objetPorte()) return this.info("Pose d'abord l'escabeau : il reste sur ton terrain.");
     if (!LIEUX[etape].ouvert) return this.info(`${LIEUX[etape].nom} n'a pas encore ouvert ses portes.`);
-    if (etape !== vers) this.info(`La route ${deLieu(vers)} passe par ${minuscule(LIEUX[etape].nom)} : il faudra ${etape === "station" ? "la traverser" : etape === "gue" ? "le traverser" : "y passer"} à pied.`);
+    // Plan 0.10 (V4-19) : la côte, tant que le joueur n'a pas fait ses preuves à la Coopérative et au Moulin.
+    if (routeFermee(this.lieu, etape, coteOuverte(this.quetes.etat.faits))) return this.info(TEXTE_COTE_FERMEE);
+    if (etape !== vers) this.info(`La route ${deLieu(vers)} passe par ${minuscule(LIEUX[etape].nom)} : il faudra ${traverserLieu(etape)} à pied.`);
     vers = etape;
     this.annulerAction();
     this.tir.quitterLieu();
@@ -2102,10 +2187,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (portes) this.info(portes);
     this.voyage = { de, vers, arrivee: this.maintenant() + DUREE_VOYAGE_S * 1000 };
     this.mesurer("activite", "expédition", DUREE_VOYAGE_S, { vers });
-    if (de === "station") this.halte.sortir(this);
-    if (de === "cooperative") this.cooperatives.de(this.compte.id).sortir(this);
     if (de === "comptoir") this.comptoir.sortir(this.envoyer);
-    this.vivantRouteB(de)?.sortir(this);
+    this.lieux.vivant(de, this.compte.id)?.sortir(this);
     // Les Éteints du terrain ne suivent pas : il n'y a pas de siège en son absence.
     this.eteints = [];
     // On enregistre tout de suite la destination : une déconnexion en route fait arriver à bon port.
@@ -2134,10 +2217,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
   /** Le joueur se déconnecte : il quitte la halte (hors ligne, il est sur la carte, Book 01 §2 bis). */
   partir(): void {
     this.dechets.partir();
-    this.halte.sortir(this);
-    if (this.lieu === "cooperative") this.cooperatives.de(this.compte.id).sortir(this);
-    this.gue.sortir(this);
-    if (this.lieu === "moulin") this.moulins.de(this.compte.id).sortir(this);
+    this.lieux.sortirDesHaltes(this);
+    if (estPersonnel(this.lieu)) this.lieux.vivant(this.lieu, this.compte.id)?.sortir(this);
     this.comptoir.sortir(this.envoyer);
   }
 
@@ -2150,6 +2231,16 @@ export class Joueur implements Voyageur, ParticipantLecon {
   /** Le carnet des quêtes (null pendant le tutoriel : il a son propre carnet). */
   private vueQuetes(): VueQuetes | null {
     return this.tuto ? null : this.quetes.vue(this.pourQuetes());
+  }
+
+  /** Plan 0.10 (V4-19) : la preuve d'un lieu ; quand la seconde arrive, la côte s'ouvre, avec son message, une fois. */
+  private noterPreuve(fait: string | null): void {
+    if (!fait) return;
+    const avant = coteOuverte(this.quetes.etat.faits);
+    this.noterFait(fait);
+    if (avant || !coteOuverte(this.quetes.etat.faits)) return;
+    this.info(TEXTE_COTE_OUVERTE);
+    this.envoyer({ t: "cote", ouverte: true });
   }
 
   /** Un fait pour les quêtes (un repas, une vente, un échange…), compté même pendant le tutoriel. */
@@ -2462,15 +2553,18 @@ export class Joueur implements Voyageur, ParticipantLecon {
    * dessine (il fait le même calcul) : à bout de souffle, on ne fait pas le bruit d'une course.
    */
   private allureEffective(): Allure {
-    const allure = allureAutorisee(this.intention.allure, this.besoins, this.objetPorte() !== undefined || traineTravois(this.inventaire));
+    const allure = allureAutorisee(this.intention.allure, this.besoins, this.objetPorte() !== undefined || this.brasDuLieu() !== null || traineTravois(this.inventaire));
     // Sur le radier du gué, on marche, on n'y court pas (plan 0.8, Q-0.8-22).
     if (allure === "course" && this.lieu === "gue" && this.gue.pasDeCourse(this.position)) return "marche";
+    // Dans l'eau de la crique du phare (0.10), jusqu'aux genoux : on n'y court pas (ce que la zone freine).
+    if (allure === "course" && (this.zoneIci().frein?.(this.position.x, this.position.z) ?? 1) < 1) return "marche";
     return allure === "course" && this.endurance < SEUIL_EPUISE ? "marche" : allure;
   }
 
   /** La zone où l'on se déplace ici : celle du lieu vivant (avec ses portes fermées), ou celle du lieu. */
   private zoneIci(): Zone {
-    return this.vivant?.zone ?? zoneDe(this.lieu);
+    // 0.10, chantier H : la zone de ce joueur (au pont, la porte du péage ouverte pour qui a payé).
+    return this.vivant?.zonePour(this.compte.id) ?? zoneDe(this.lieu);
   }
 
   /**
@@ -2520,6 +2614,13 @@ export class Joueur implements Voyageur, ParticipantLecon {
     };
   }
 
+  /** Un Noyé crève tout près (0.10, chantier G) : ses fluides, la nausée (30 s, l'endurance revient deux fois moins vite). */
+  eclabousser(instant: number): void {
+    this.sante = prendreLaNausee(this.sante, instant);
+    this.info("Il crève, et ses fluides t'éclaboussent : la nausée te coupe le souffle.");
+    this.envoyerSante(true);
+  }
+
   /** Les sources fixes du terrain : feux allumés, charbonnière qui fume. */
   private sourcesTerrain(nuit: boolean): Stimulus[] {
     const s: Stimulus[] = [];
@@ -2536,12 +2637,13 @@ export class Joueur implements Voyageur, ParticipantLecon {
     for (const [id, jusqua] of this.alarmesSonnent) {
       const a = this.installations.get(id);
       if (!a || instant >= jusqua) this.alarmesSonnent.delete(id);
-      else s.push({ genre: "son", x: a.x, z: a.z, portee: 14, intensite: 0.5 });
+      else s.push({ genre: "son", x: a.x, z: a.z, ...sonAlarme(a) });
     }
     for (const i of this.installations.values()) {
       if (i.type === "charbonniere" && i.etat.pretLe && instant < i.etat.pretLe) s.push({ genre: "odeur", x: i.x, z: i.z, ...CHARBONNIERE_ODEUR });
     }
     s.push(...stimuliTorches(this.installations.values(), instant, nuit));
+    s.push(...stimuliRampes(this.installations.values(), nuit));
     return this.sousLaPluie(s);
   }
 
@@ -2552,8 +2654,11 @@ export class Joueur implements Voyageur, ParticipantLecon {
       const passe = this.eteints.some((e) => debout(e) && Math.hypot(e.x - a.x, e.z - a.z) < 2.5);
       if (!passe) continue;
       this.alarmesSonnent.set(a.id, instant + 3000);
-      this.envoyer({ t: "alarme", x: a.x, z: a.z });
-      this.info("Les boîtes de conserve tintent ! Quelque chose passe près de ton alarme.");
+      // La cloche d'alarme (plan 0.10, chantier C) : elle s'entend à 40 m, et elle réveille le dormeur.
+      const cloche = estClocheAlarme(a);
+      this.envoyer({ t: "alarme", x: a.x, z: a.z, ...(cloche ? { cloche: true as const } : {}) });
+      if (cloche && this.sommeil) this.reveiller("La cloche sonne ! Quelque chose passe près de ton fil.");
+      else this.info(cloche ? "La cloche sonne ! Quelque chose passe près de ton fil." : "Les boîtes de conserve tintent ! Quelque chose passe près de ton alarme.");
     }
   }
 
@@ -2593,6 +2698,11 @@ export class Joueur implements Voyageur, ParticipantLecon {
     this.eteints = this.eteints.filter((e) => e.etat !== "detruit" || e.corps < DUREE_CORPS);
     this.verifierAlarmes(instant);
     this.verifierDeclencheurs(instant);
+    // L'arbalète de garde (plan 0.10, chantier D) : un carreau sur le premier Éteint qui passe son fil.
+    for (const a of this.meublesNeufs.verifierArbaletes(this.installations.values(), this.eteints, zoneDe("terrain"))) {
+      this.base.sauverEtatInstallation(this.compte.id, a.id, a.etat);
+      this.envoyer({ t: "installation", installation: a });
+    }
 
     if (instant - this.dernierTirage >= INTERVALLE_TIRAGE) {
       this.dernierTirage = instant;
@@ -2652,6 +2762,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (bouge && this.action) this.annulerAction();
     // Au gué : le radeau emporte qui est à bord, la corde du bac coûte un peu d'endurance (plan 0.8, chantier 11).
     if (this.lieu === "gue" && !this.voyage) this.gue.suivre(this.contexteGue(), dt);
+    // Ce que le lieu fait de qui s'y trouve (0.10, le registre des lieux : LieuVivant.accompagner ; rien par défaut).
+    this.vivant?.accompagner(this.contexteLieu(), dt);
     // Saisi : ralenti par un, immobilisé par deux (Book 06 §2.3). Épuisé : on ne court plus.
     const frein = freinSaisie(this.saisisseurs().length);
     const allure = this.allureEffective();
@@ -2864,6 +2976,11 @@ export class Joueur implements Voyageur, ParticipantLecon {
     return undefined;
   }
 
+  /** Ce que le lieu met dans les bras (0.10, chantier J : « la tête du robot » à l'hôtel) ; null : rien. */
+  private brasDuLieu(): string | null {
+    return this.vivant?.dansLesBras(this.compte.id) ?? null;
+  }
+
   /** Le pose devant soi, immédiatement. */
   private poserObjetLourd(): void {
     const i = this.objetPorte();
@@ -2889,6 +3006,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
   private commencer(libelle: string, dureeS: number, appliquer: () => void, kcalEnPlus = 0, bruit: BruitAction = "leger"): void {
     if (this.voyage) return;
     if (this.objetPorte()) return this.info("Tu as les bras pris : pose d'abord l'escabeau.");
+    if (this.brasDuLieu()) return this.info(`Tu as les bras pris : pose d'abord ${this.brasDuLieu()}.`);
     if (this.action) return this.info(`Tu es déjà occupé : attends la fin, ou appuie sur A pour arrêter.`);
     if (this.sommeil) this.reveiller("");
     // Fatigué, on travaille moins vite (Book 05 §3).
@@ -2931,6 +3049,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
   }
 
   private interagir(cible: Cible, verbe: string): void {
+    // Un geste propre au lieu où l'on est (0.10, le registre des lieux : LieuVivant.geste) passe avant les autres.
+    if (this.vivant?.geste(this.contexteLieu(), cible, verbe)) return;
     if (cible?.genre === "ressource" && (verbe === "ramasser" || verbe === "demonter" || verbe === "fouiller")) return this.utiliserRessource(cible.id);
     if (cible?.genre === "sac" && verbe === "reprendre") return this.reprendreSac(cible.id);
     if (cible?.genre === "comptoir" && verbe === "pedaler_comptoir") return this.pedalerAuComptoir();
@@ -2989,6 +3109,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
         this.envoyer({ t: "ressource", id: r.id, disponible: false });
       }
       this.ajouterPlusieurs(usage.donne);
+      // Plan 0.10 (V4-19) : un objet-clé pris à sa place, au fond de la Coopérative ou du Moulin, ouvre la côte.
+      this.noterPreuve(preuveDuLieu(lieu, usage.donne));
       if (r.type === "coop_batterie" && lieu === "cooperative") {
         // La batterie du tracteur (Book 23 §4.7) : ce que les coups de klaxon lui ont laissé. Le klaxon se tait.
         const wh = this.ajouterCharge("batterie_voiture", this.cooperatives.prendreBatterie(this.compte.id));
@@ -3055,13 +3177,21 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (facteur === null) return this.infos(outilsManquantsBref(r.qualites, this.outils(), undefined, this.recetteVisible));
     // Le lieu (plan 0.8, chantier 1) : la forme du foyer, la construction à son niveau, l'accessoire ; le refus nomme ce qui manque.
     const refus = refusLieu(r.lieu, this.alentours());
-    if (refus) return this.info(refus);
+    // Le cuiseur solaire (plan 0.10, chantier D ; S-22) : sans feu à portée, les plats du foyer de pierres cuisent au
+    // soleil, sans bois, deux fois plus lentement (`lenteur`).
+    const soleil = refus ? this.meublesNeufs.cuissonSolaire(r) : null;
+    if (soleil && "refus" in soleil) return this.info(soleil.refus);
+    if (refus && !soleil) return this.info(refus);
+    const lenteur = soleil?.lenteur ?? 1;
     // La cuisine selon le foyer (Book 24 §3.1) : les mijotés demandent de l'eau et du bois ; deux plats à la fois.
-    const cuisine = r.lieu.genre === "construction" && r.lieu.construction === "feu" ? this.cuisinePour(r) : { fois: 1, foyer: null, bois: 0, eau: 0 };
+    const cuisine = r.lieu.genre === "construction" && r.lieu.construction === "feu" && !soleil ? this.cuisinePour(r) : { fois: 1, foyer: null, bois: 0, eau: 0 };
     if ("refus" in cuisine) return this.info(cuisine.refus);
     // La forge (Book 25 §4) : la maîtrise ; le risque de la trempe à l'eau est dit ici.
     const refusForge = this.forge.refus(r);
     if (refusForge) return this.info(refusForge);
+    // L'arbalète à arc d'if demande le cranequin léger (plan 0.10, chantier F).
+    const refusArbalete = refusMontageArbalete(r.id, this.inventaire);
+    if (refusArbalete) return this.info(refusArbalete);
 
     if ("installation" in r.produit) {
       const type = r.produit.installation;
@@ -3070,8 +3200,15 @@ export class Joueur implements Voyageur, ParticipantLecon {
       if (erreur) return this.info(erreur);
       this.commencer(r.nom, dureeReelle(r) * facteur, () => {
         if (!ingredientsPresents(this.inventaire, r) || this.emplacementInvalide(x, z, type)) return;
-        this.retirerPlusieurs(r.ingredients);
+        // L'état à la pose (plan 0.10, chantier D) : l'arbalète de garde garde les étoiles de l'arbalète qu'elle prend.
+        const etatPose = etatDePose(type, this.inventaire);
+        // Un ingrédient de métier (l'arbalète) se prend toutes étoiles confondues, le moins bon d'abord.
+        this.retirerIngredients(r.ingredients);
         const installation = this.base.ajouterInstallation(this.compte.id, type, x, z, Number.isFinite(o) ? (o as number) : 0);
+        if (etatPose) {
+          installation.etat = { ...installation.etat, ...etatPose };
+          this.base.sauverEtatInstallation(this.compte.id, installation.id, installation.etat);
+        }
         this.installations.set(installation.id, installation);
         this.envoyer({ t: "installation", installation });
         this.mesurer("progression", `recette:${r.id}`, 1);
@@ -3093,7 +3230,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (poidsInventaire(this.inventaire, this.gourde.litres) + delta > capaciteDe({ ...this.inventaire, [produit.objet]: (this.inventaire[produit.objet] ?? 0) + quantite })) return this.sacTropLourd();
     // Le redresseur de fûts de l'établi : les flèches vont deux fois plus vite (Book 25 §9.3).
     const redresse = accelerationFleches(r.id, this.installations.values(), (ix, iz) => this.proche(ix, iz, 3));
-    this.commencer(fois > 1 ? `${r.nom} (deux à la fois)` : r.nom, dureeReelle(r) * facteur * redresse, () => {
+    this.commencer(fois > 1 ? `${r.nom} (deux à la fois)` : soleil ? `${r.nom} (au soleil)` : r.nom, dureeReelle(r) * facteur * redresse * lenteur, () => {
       // Un ingrédient de métier compte toutes étoiles confondues.
       if (!Object.entries(ingredients).every(([t, n]) => compter(this.inventaire, t as TypeObjet) >= (n ?? 0))) return;
       if (cuisine.foyer) {
@@ -3186,7 +3323,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     const bilan = { produit: 0, stocke: 0, perdu: 0, decharge: 0, remonte: 0 };
     const changes = new Set<InstallationVue>();
     // Le banc solaire (chantier 7) : son panneau remplit ses batteries (avant la décharge, qui avance `majLe`).
-    for (const [k, v] of Object.entries(produireBancsSolaires(this.installations.values(), instant)) as [keyof typeof bilan, number][]) bilan[k] += v;
+    for (const [k, v] of Object.entries(produireBancsSolaires(this.installations.values(), instant, this.debutMonde)) as [keyof typeof bilan, number][]) bilan[k] += v;
     // Les batteries posées (banc, pédalier) se déchargent, comme les autres.
     for (const banc of this.installations.values()) {
       if (!porteBatteries(banc.type)) continue;
@@ -3200,7 +3337,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     for (const panneau of this.installations.values()) {
       if (panneau.type !== "panneau_solaire") continue;
       const depuis = panneau.etat.majLe ?? instant;
-      const wh = productionPanneau(instant - depuis);
+      const wh = productionPanneau(depuis, instant, this.debutMonde);
       panneau.etat = { ...panneau.etat, majLe: instant };
       changes.add(panneau);
       bilan.produit += wh;
@@ -3214,6 +3351,13 @@ export class Joueur implements Voyageur, ParticipantLecon {
       bilan.stocke += r.stocke;
       bilan.perdu += r.perdu;
     }
+    // Le moulin de jerricans remplit la batterie de la base au vent ; la rampe de LED la vide la nuit (plan 0.10, chantier D).
+    const neufs = this.meublesNeufs.majBase([...this.installations.values()], instant);
+    bilan.produit += neufs.produit;
+    bilan.stocke += neufs.stocke;
+    bilan.perdu += neufs.perdu;
+    for (const i of neufs.changees) changes.add(i);
+    if (this.lieu === "terrain" && !this.voyage) for (const i of neufs.bascules) this.envoyer({ t: "installation", installation: i });
     // Les clôtures électriques tirent leur courant du banc, même hors ligne (Book 25 §5.3).
     for (const c of alimenterClotures(this.installations.values(), instant, (c) => this.lieu === "terrain" && !this.voyage && this.envoyer({ t: "installation", installation: c }))) changes.add(c);
     // La décharge fait remonter des objets, même hors ligne (P-001).
@@ -3551,22 +3695,22 @@ export class Joueur implements Voyageur, ParticipantLecon {
       this.info(plusTard);
       return null;
     }
-    // Avec la clé, ou par un repli (plan 0.8 §2.2, chantier 5 : commun/src/replis.ts) : la première façon possible.
-    const { facon, cout, payable, outils: facteur } = choisirFacon(this.inventaire, e, this.compte.famille, (q) => multiplicateurQualites(this.outils(), q));
+    // Avec sa clé, et rien d'autre (plan 0.10, chantier B : plus de repli, à aucun niveau).
+    const { cout, payable } = choisirCout(this.inventaire, e.couts, e, this.compte.famille);
+    const facteur = multiplicateurQualites(this.outils(), e.qualites);
     if (!payable) {
       const manque = (Object.entries(cout) as [TypeObjet, number][])
         .filter(([t, n]) => (this.inventaire[t] ?? 0) < n)
         .map(([t, n]) => `${nommer(t, n)} (tu en as ${this.inventaire[t] ?? 0})`);
-      const autres = facon.couts.length > 1 ? ` Ou bien : ${facon.couts.slice(1).map((c) => Object.entries(coutPour(c, e, this.compte.famille)).map(([t, n]) => nommer(t as TypeObjet, n ?? 0)).join(", ")).join(" ; ")}.` : "";
-      const replis = (e.cle?.replis ?? []).map((r) => ` ${r.note}`).join("");
-      this.info(`Il te manque : ${manque.join(", ")}.${autres}${replis}`);
+      const autres = e.couts.length > 1 ? ` Ou bien : ${e.couts.slice(1).map((c) => Object.entries(coutPour(c, e, this.compte.famille)).map(([t, n]) => nommer(t as TypeObjet, n ?? 0)).join(", ")).join(" ; ")}.` : "";
+      this.info(`Il te manque : ${manque.join(", ")}.${autres}`);
       return null;
     }
     if (facteur === null) {
-      this.infos(outilsManquantsBref(facon.qualites, this.outils(), undefined, this.recetteVisible));
+      this.infos(outilsManquantsBref(e.qualites, this.outils(), undefined, this.recetteVisible));
       return null;
     }
-    return { cout, dureeS: Math.max(2, facon.duree / REGLAGES.fabrication_acceleration) * facteur };
+    return { cout, dureeS: Math.max(2, e.duree / REGLAGES.fabrication_acceleration) * facteur };
   }
 
   /** Rendre des objets au sac : refusé (et dit) si le sac ne peut pas les porter. */
@@ -3847,7 +3991,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
         if (niveau <= 1) return this.info("C'est déjà le premier niveau : pour l'enlever, démonte-le.");
         const payes = i.etat.payes ?? [];
         const rend = rendDuDemontage(payes.at(-1) ?? {});
-        const apres = { type: i.type, niveau: niveau - 1 };
+        const apres = { type: i.type, niveau: niveau - 1, etat: i.etat };
         if (i.type === "coffre" && poidsInventaire(i.etat.contenu ?? {}) > capaciteCoffre(apres) + 1e-9) return this.info(`Il y a trop dans le coffre pour qu'il redevienne plus petit : vide-le jusqu'à ${capaciteCoffre(apres)} kg.`);
         if (!this.peutReprendre(rend)) return;
         return this.commencer(`Défaire : ${nom}`, Math.max(2, (etape?.duree ?? 20) / 2 / REGLAGES.fabrication_acceleration), () => {
@@ -3877,9 +4021,10 @@ export class Joueur implements Voyageur, ParticipantLecon {
           i.etat.redresseur ? REDRESSEUR.cout : {},
           Forge.accessoiresRendus(i),
           rendDesAccessoires(i.etat),
+          rendusMeublesNeufs(i),
           batterieDuBanc,
         );
-        const rend = rendDuDemontage(somme(laRecette.ingredients, ...(i.etat.payes ?? []), accessoires));
+        const rend = rendDeLArbaleteGarde(i, rendDuDemontage(somme(laRecette.ingredients, ...(i.etat.payes ?? []), accessoires)));
         if (!this.peutReprendre(rend)) return;
         return this.commencer(`Démonter : ${nom}`, Math.max(2, dureeReelle(laRecette) / 2), () => {
           if (!this.installations.has(i.id)) return;
@@ -3917,6 +4062,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
     // Le banc solaire (plan 0.8, chantier 7) : poser le panneau sur le banc (serveur/src/electricite.ts).
     if (this.electricite.utiliser(i, verbe as Verbe)) return;
     if (utiliserNiveau1(this.contexteMecanique(maj), i, verbe as Verbe, () => this.maintenant(), this.debutMonde)) return;
+    // Les meubles nouveaux du niveau 2 (plan 0.10, chantier D) : le cuiseur, le creuset, la poulie, l'arbalète de garde.
+    if (this.meublesNeufs.utiliser(i, verbe)) return;
 
     switch (verbe) {
       case "porter":

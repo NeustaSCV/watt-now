@@ -21,6 +21,21 @@ const TRANSITIONS: Record<Temps, [number, number, number, number]> = {
 };
 const ORDRE: Temps[] = ["soleil", "voile", "couvert", "pluie"];
 
+/**
+ * La part de chaque temps sur la durée (plan 0.10, V1-02) : la distribution stationnaire de la chaîne ci-dessus (≈ 27 %
+ * de soleil, 24 % de voilé, 26 % de couvert, 23 % de pluie). Le banc solaire et le moulin de jerricans s'y calent, pour
+ * donner en moyenne ce qu'on a voulu.
+ */
+export const PARTS_DU_TEMPS: Readonly<Record<Temps, number>> = (() => {
+  let p = [1, 0, 0, 0];
+  for (let k = 0; k < 500; k++) {
+    const q = [0, 0, 0, 0];
+    for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) q[j] = q[j]! + p[i]! * TRANSITIONS[ORDRE[i]!][j]!;
+    p = q;
+  }
+  return { soleil: p[0]!, voile: p[1]!, couvert: p[2]!, pluie: p[3]! };
+})();
+
 /** Un tirage stable pour une tranche donnée. */
 function tirage(tranche: number): number {
   let x = (tranche * 2654435761) >>> 0;
@@ -100,3 +115,15 @@ export function attenuationMeteo(m: Meteo, genre: GenreStimulus): number {
 }
 
 export const NOMS_TEMPS: Record<Temps, string> = { soleil: "Ensoleillé", voile: "Voilé", couvert: "Couvert", pluie: "Pluie" };
+
+// ---------- Le vent (plan 0.10, chantier D ; N2-Q4) ----------
+// Il n'est pas dans la météo : on le déduit du temps. Couvert et pluie : il vente ; voilé : un peu ; soleil : calme.
+
+export type Vent = "calme" | "faible" | "fort";
+
+const VENTS: Record<Temps, Vent> = { soleil: "calme", voile: "faible", couvert: "fort", pluie: "fort" };
+
+/** Le vent qu'il fait, déduit du temps (la météo d'un instant, ou un temps). */
+export function vent(m: Meteo | Temps): Vent {
+  return VENTS[typeof m === "string" ? m : m.temps];
+}

@@ -3,7 +3,7 @@
 // les sons continus (feu, pédalier, pluie) et le niveau de menace transmis à la musique.
 
 import type { BruitVu, GenreBruit } from "../../../commun/src/bruits.ts";
-import type { EtatEteint, ResultatCoup } from "../../../commun/src/eteints.ts";
+import type { EtatEteint, ResultatCoup, VarianteEteint } from "../../../commun/src/eteints.ts";
 import { BOUTIQUE, COMPTOIR, ROUTE, ROUTE_CARREFOUR, STATION, type LieuJouable } from "../../../commun/src/lieux.ts";
 import type { AspectFeu } from "../../../commun/src/survie.ts";
 import type { BruitAction } from "../../../commun/src/signature.ts";
@@ -38,8 +38,8 @@ export function solIci(lieu: LieuJouable, x: number, z: number): Sol {
     if (x > STATION.auvent.x - STATION.auvent.l / 2 - 6 && x < STATION.atelier.x + STATION.atelier.l / 2 + 2 && z > BOUTIQUE.porte.z - 0.5 && z < ROUTE.z) return "beton";
     return "herbe";
   }
-  // 0.8 : le gué et le Moulin, branchés vides (chantier 4) : de la terre, en attendant leurs sols (chantiers 11 et 12).
-  if (lieu === "gue" || lieu === "moulin") return "terre";
+  // Les autres lieux (le gué, le Moulin, le niveau 2) : de la terre, en attendant leurs sols ; le Comptoir a les siens.
+  if (lieu !== "comptoir") return "terre";
   if (Math.abs(z - ROUTE_CARREFOUR.z) <= ROUTE_CARREFOUR.demiLargeur || Math.abs(x - ROUTE_CARREFOUR.x) <= ROUTE_CARREFOUR.demiLargeur) return "beton";
   if (dans(x, z, COMPTOIR.batiment, 4)) return "beton";
   return "terre";
@@ -61,6 +61,8 @@ interface SuiviEteint {
   saisit: boolean;
   /** Il gémissait au dernier envoi (on ne rejoue le gémissement qu'au début). */
   gemit: boolean;
+  /** Sa variante (0.10 : le Noyé et l'Ensablé ont leurs sons). */
+  variante?: VarianteEteint;
 }
 
 /** Le geste sonore d'une action, d'après son libellé (et son bruit de signature). */
@@ -226,7 +228,7 @@ export class Bruiteur {
    */
   eteints(
     dt: number,
-    liste: { id: number; x: number; z: number; etat: EtatEteint; saisit?: boolean; gemit?: boolean }[],
+    liste: { id: number; x: number; z: number; etat: EtatEteint; saisit?: boolean; gemit?: boolean; variante?: VarianteEteint }[],
     moi: Ou | null,
     saisi: number,
     nombre = false,
@@ -244,6 +246,9 @@ export class Bruiteur {
         s = { etat: e.etat, x: e.x, z: e.z, prochainCri: this.t + 0.5 + Math.random() * 3, foulee: 0, saisit: false, gemit: false };
         this.suivis.set(e.id, s);
       }
+      s.variante = e.variante;
+      // Le Noyé râle noyé (0.10).
+      const rale = e.variante === "noye" ? "eteint_noye_rale" : "eteint_rale";
       const ou = { x: e.x, z: e.z };
       if (e.etat !== s.etat) this.changement(s, e.etat, ou);
       s.etat = e.etat;
@@ -271,14 +276,14 @@ export class Bruiteur {
           this.son.jouer(Math.random() < 0.15 ? "eteint_machoire" : "eteint_souffle", ou);
           s.prochainCri = this.t + 3 + Math.random() * 1.5;
         } else if (e.etat === "errant") {
-          this.son.jouer("eteint_rale", ou);
+          this.son.jouer(rale, ou);
           s.prochainCri = this.t + 4 + Math.random() * 6;
         } else if (e.etat === "attire") {
           // L'Attiré se tait : on n'entend que son souffle, de temps en temps.
           if (Math.random() < 0.4) this.son.jouer("eteint_halete", ou, { gain: 0.6 });
           s.prochainCri = this.t + 3 + Math.random() * 3;
         } else if (e.etat === "poursuivant") {
-          this.son.jouer(Math.random() < 0.75 ? "eteint_rale_rapide" : "eteint_halete", ou);
+          this.son.jouer(Math.random() < 0.75 ? (e.variante === "noye" ? rale : "eteint_rale_rapide") : "eteint_halete", ou);
           s.prochainCri = this.t + 1.2 + Math.random() * 1.6;
         } else if (e.etat === "a_terre") {
           // À terre, il n'est pas fini (chantier F) : il gémit, étouffé, de loin en loin.
@@ -314,7 +319,11 @@ export class Bruiteur {
   }
 
   private changement(s: SuiviEteint, etat: EtatEteint, ou: Ou): void {
-    if (s.etat === "dormant" && etat !== "detruit") this.son.jouer("eteint_machoire", ou, { portee: 10 });
+    // Le Noyé crève (0.10) : la peau qui cède, les fluides qui giclent, après le coup.
+    if (etat === "detruit" && s.variante === "noye") setTimeout(() => this.son.jouer("eteint_noye_creve", ou), 120);
+    // L'Ensablé surgit du sable (0.10) ; les autres dormants font craquer leur mâchoire.
+    if (s.etat === "dormant" && etat !== "detruit" && s.variante === "ensable") this.son.jouer("eteint_ensable_surgit", ou);
+    else if (s.etat === "dormant" && etat !== "detruit") this.son.jouer("eteint_machoire", ou, { portee: 10 });
     if (etat === "attire" && s.etat !== "poursuivant") {
       // Le râle coupé net, la tête qui se tourne : le son le plus important du jeu.
       this.son.jouer("eteint_rale_coupe", ou);
@@ -334,8 +343,15 @@ export class Bruiteur {
 
   // ---------- Le combat ----------
 
-  /** L'alarme à boîtes de conserve (P-002) : du métal qui s'entrechoque, plusieurs fois. */
-  alarme(ou: Ou): void {
+  /**
+   * L'alarme à boîtes de conserve (P-002) : du métal qui s'entrechoque, plusieurs fois. La cloche d'alarme (plan 0.10,
+   * chantier C) : la cloche de bronze, celle du passeur du gué (un effet déjà livré, entendu à 40 m).
+   */
+  alarme(ou: Ou, cloche = false): void {
+    if (cloche) {
+      this.son.jouer("cloche_bac", ou);
+      return;
+    }
     this.son.jouer("marteau_metal", ou);
     setTimeout(() => this.son.jouer("marteau_metal", ou), 160);
     setTimeout(() => this.son.jouer("marteau_metal", ou), 420);

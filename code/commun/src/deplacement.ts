@@ -57,8 +57,11 @@ export function avancer(position: Position, intention: Intention, dt: number, zo
   const facteur = longueur > 1 ? 1 / longueur : 1;
   const dx = intention.dx * facteur;
   const dz = intention.dz * facteur;
-  // Dans la mare du terrain, l'eau freine le pas (0.8.2, R21 : on y entre pour remplir la gourde au milieu).
-  const vitesse = ALLURES[intention.allure] * (zone === ZONE_TERRAIN ? freinMare(position.x, position.z) : 1);
+  // Dans la mare du terrain, l'eau freine le pas (0.8.2, R21 : on y entre pour remplir la gourde au milieu). Ailleurs, ce
+  // que la zone freine (l'eau de la crique du phare, 0.10) : on y marche, on n'y court pas.
+  const frein = zone.frein?.(position.x, position.z) ?? 1;
+  const allure = frein < 1 && intention.allure === "course" ? "marche" : intention.allure;
+  const vitesse = ALLURES[allure] * (zone === ZONE_TERRAIN ? freinMare(position.x, position.z) : 1) * frein;
 
   let x = borner(position.x + dx * vitesse * dt, zone.xMin, zone.xMax);
   let z = borner(position.z + dz * vitesse * dt, zone.zMin, zone.zMax);
