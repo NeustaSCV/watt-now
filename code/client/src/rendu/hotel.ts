@@ -19,7 +19,10 @@ import { creer as creerModele } from "../batiments/grand-hotel/modele.js";
 import { BORNE, HOTEL, borneAlimentee, niveauHotel, type EtatHotel, type NiveauHotel } from "../../../commun/src/hotel.ts";
 import type { Boite } from "../../../commun/src/lieux.ts";
 import type { TypeRessource } from "../../../commun/src/terrain.ts";
+import { creerBordsHotel } from "./bords-hotel.ts";
+import { lumieresLanternes } from "./decor-cote.ts";
 import { estomperToits } from "./halte.ts";
+import type { LanternePanneau } from "./lanterne-panneau.ts";
 import type { SourceLumiere } from "./lumieres.ts";
 import { nommer } from "./materiaux.ts";
 
@@ -61,6 +64,8 @@ interface EtatDecor {
   /** La boîte d'origine de chaque objet qui se déplace (repère du jeu). */
   boites: Record<string, THREE.Box3>;
   lumieres: LumiereModele[];
+  /** La lanterne du panneau de sortie (0.10, R52). */
+  lanternes: LanternePanneau[];
 }
 
 const etats = new WeakMap<THREE.Object3D, EtatDecor>();
@@ -77,6 +82,10 @@ export function creerHotel(): THREE.Group {
   delete modele.userData.toits;
   groupe.userData.toits = toits;
   const alentours = creerAlentours();
+  // 0.10 (R52) : la promenade prolongée, les ganivelles, les dunes, la bande d'eau peu profonde, le panneau de sortie
+  // (rendu/bords-hotel.ts) ; avec les alentours (on ne les voit pas de l'étage).
+  const bords = creerBordsHotel();
+  alentours.add(bords.groupe);
   const vide = creerVide();
   groupe.add(modele, alentours, vide);
   nommer(groupe, ["hotel", "alentours", "vide"]);
@@ -86,7 +95,7 @@ export function creerHotel(): THREE.Group {
   for (const id of ["batterie_panneau", "tete_robot"]) if (objets[id]) boites[id] = new THREE.Box3().setFromObject(objets[id]);
   const lumieres = (modele.userData.lumieres as LumiereModele[]).map((l) => ({ ...l, x: l.x + OX, z: l.z + OZ }));
   const niveau = (nom: string) => modele.children.find((o) => o.name === nom) ?? null;
-  etats.set(groupe, { niveaux: { rez_de_chaussee: niveau("rez_de_chaussee"), etage: niveau("etage") }, alentours, vide, objets, boites, lumieres });
+  etats.set(groupe, { niveaux: { rez_de_chaussee: niveau("rez_de_chaussee"), etage: niveau("etage") }, alentours, vide, objets, boites, lumieres, lanternes: bords.lanternes });
   return groupe;
 }
 
@@ -233,7 +242,9 @@ export function lumieresHotel(decor: THREE.Object3D | undefined, nuit: boolean, 
   const e = decor ? etatDe(decor) : undefined;
   if (!e || !p) return [];
   const ici = niveauHotel(p.x, p.z);
-  const sources: SourceLumiere[] = [];
+  // La lanterne du panneau de sortie (0.10, R52), au rez-de-chaussée : son verre luit la nuit.
+  const lanternes = lumieresLanternes(e.lanternes, nuit && ici === "rez_de_chaussee");
+  const sources: SourceLumiere[] = [...lanternes];
   for (const l of e.lumieres) {
     if (l.niveau !== ici) continue;
     const borne = l.nature.startsWith("écran de la borne");
