@@ -167,7 +167,7 @@ function dessinerEau(g) {
 // ---------- L'atlas des enseignes ----------
 
 export const AL = 1024;
-export const AH = 1024;
+export const AH = 1536; // 1024 × 1536 : le bas de l'atlas porte les deux panneaux de sortie (R52) et une case blanche
 export const R = {
   pontConnecte: [0, 0, 512, 128],
   pontExpress: [512, 0, 256, 256],
@@ -194,6 +194,17 @@ export const R = {
   registre: [0, 864, 256, 128],
   pontier: [256, 928, 256, 64],
   bouee: [576, 928, 192, 96],
+  // Les panneaux de sortie (R52, R0-1) : grosses lettres sombres sur fond clair, la vraie destination
+  sortieOuest: [0, 1024, 1024, 240],
+  sortieEst: [0, 1264, 1024, 240],
+  // Une case blanche : les pièces d'un objet à une seule matière (atlas) prennent leur teinte des sommets
+  blanc: [0, 1504, 32, 32],
+};
+
+/** Les textes des panneaux de sortie, validés par le porteur (demande du 2026-10-15, §0) : à recopier exactement. */
+export const TEXTES_SORTIE = {
+  ouest: "← Ton terrain · 3 km · Grand Hôtel des Flots, par le pont →",
+  est: "Grand Hôtel des Flots · 2 km → · ← Le pont, ton terrain",
 };
 
 /** La case du chiffre `d` (0 à 9) de l'échelle de marée, dans l'atlas. */
@@ -563,6 +574,31 @@ function dessinerAtlas(g) {
     texte(g, "géolocalisation : non disponible", l / 2, 52, 12, "#2b2b29", { police: "" });
     texte(g, "s'abonner pour être secouru", l / 2, 74, 13, "#c8362b", { police: "" });
   });
+  // Les panneaux de sortie : tôle émaillée blanc cassé, liseré sombre, deux lignes en grosses lettres (le « · » qui
+  // sépare les deux destinations devient le retour à la ligne), un peu de rouille et de sel
+  for (const [r, lignes] of [
+    [R.sortieOuest, ["← Ton terrain · 3 km", "Grand Hôtel des Flots, par le pont →"]],
+    [R.sortieEst, ["Grand Hôtel des Flots · 2 km →", "← Le pont, ton terrain"]],
+  ]) {
+    region(g, r, (l, h) => {
+      g.fillStyle = "#f2efe6";
+      g.fillRect(0, 0, l, h);
+      g.strokeStyle = "#23262a";
+      g.lineWidth = 12;
+      g.strokeRect(10, 10, l - 20, h - 20);
+      g.fillStyle = "rgba(35, 38, 42, 0.35)";
+      g.fillRect(60, h / 2 - 2, l - 120, 4);
+      texte(g, lignes[0], l / 2, h * 0.29, 84, "#1c1f22", { max: l - 70 });
+      texte(g, lignes[1], l / 2, h * 0.71, 84, "#1c1f22", { max: l - 70 });
+      salir(g, a, l, h, 7, 0.14);
+      g.fillStyle = "rgba(150, 80, 40, 0.35)";
+      for (let i = 0; i < 6; i++) g.fillRect(12 + a() * (l - 30), h - 16 - a() * 6, 3 + a() * 5, 6 + a() * 14);
+    });
+  }
+  region(g, R.blanc, (l, h) => {
+    g.fillStyle = "#ffffff";
+    g.fillRect(0, 0, l, h);
+  });
 }
 
 // ---------- Les matières (une seule fois pour toute la halte) ----------
@@ -584,7 +620,7 @@ export function matieres() {
   MATS = {
     mat: matiere(0.95, 0),
     satine: matiere(0.6, 0.05),
-    lisse: matiere(0.3, 0.05),
+    lisse: null, // fondue dans « satine » (R52 : un appel de dessin de moins par tronçon), voir plus bas
     tole: matiere(0.75, 0.3),
     metal: matiere(0.4, 0.7),
     verre: matiereVerre(PALETTE.verreSombre, 0.4),
@@ -602,6 +638,7 @@ export function matieres() {
     atlas: new THREE.MeshStandardMaterial({ map: atlas, vertexColors: true, roughness: 0.8, side: THREE.DoubleSide }),
     lumineux,
   };
+  MATS.lisse = MATS.satine;
   return MATS;
 }
 
@@ -614,6 +651,19 @@ export function panneau(c, mat, r, pose, l, h, couleur = 0xffffff) {
   const [px, py, pw, ph] = r;
   for (let i = 0; i < uv.count; i++) uv.setXY(i, (px + uv.getX(i) * pw) / AL, 1 - (py + (1 - uv.getY(i)) * ph) / AH);
   c.poser(g, mat, couleur, pose, { crasse: false, nuance: 0 });
+  g.dispose();
+}
+
+/**
+ * Une boîte dont toutes les faces lisent la case blanche de l'atlas : sa teinte vient des sommets. Sert aux objets
+ * nommés à une seule matière (le panneau de sortie : poteaux, cadre, lanterne dans la matière de l'atlas).
+ */
+export function boiteAtlas(c, mat, l, h, p, couleur, pose = {}, options = {}) {
+  const g = new THREE.BoxGeometry(l, h, p);
+  const uv = g.attributes.uv;
+  const [px, py, pw, ph] = R.blanc;
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, (px + pw / 2) / AL, 1 - (py + ph / 2) / AH);
+  c.poser(g, mat, couleur, pose, { crasse: false, nuance: 0.03, ...options });
   g.dispose();
 }
 

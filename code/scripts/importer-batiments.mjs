@@ -23,6 +23,8 @@ const A_COPIER = [
   "halte-route-pont/modele.js", "halte-route-pont/objets.js",
   // 0.10, chantier K : le phare du cap (L2B ; son modèle n'importe que l'atelier commun).
   "phare/modele.js",
+  // 0.10, chantier N (retouches R52) : le cargo en marche de la scène de l'échouage, et le décor autour de la station.
+  "phare/cargo.js", "alentours-station/modele.js",
 ];
 
 for (const chemin of A_COPIER) {

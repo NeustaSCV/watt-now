@@ -50,7 +50,7 @@ export const COUL = {
 // ---------- L'atlas ----------
 
 export const AL = 1024;
-export const AH = 1536;
+export const AH = 2048; // 0.10 (R52) : une bande de plus, en bas, pour le panneau de sortie, les ganivelles, la mer, le damier du hall
 
 /** Les régions de l'atlas : [x, y, l, h] en pixels. */
 export const R = {
@@ -87,7 +87,19 @@ export const R = {
   fenB: [640, 1344, 128, 192],
   fenC: [768, 1344, 128, 192],
   fenD: [896, 1344, 128, 192],
+  // 0.10 (R52, retouches) : le panneau de sortie, la ganivelle, les oyats, le damier du hall, la mer, des aplats
+  panneauSortie: [0, 1536, 512, 256],
+  ganivelle: [512, 1536, 256, 128],
+  oyats: [768, 1536, 128, 128],
+  damier: [896, 1536, 128, 128],
+  mer: [520, 1676, 240, 104], // lue en retrait : peinte sur [512, 1664, 256, 128]
+  vitrines: [0, 1792, 512, 128],
+  // des aplats (peints plus grands que la région lue : pas de bavure de couleur voisine au loin)
+  blanc: [544, 1824, 192, 192], // blanc, teinté par la couleur des sommets (la mer, les toits, les façades de la rue)
+  bois: [784, 1808, 96, 96], // le bois des poteaux du panneau
+  fer: [912, 1808, 96, 96], // le fer noirci de la lanterne
 };
+const APLATS = [[[512, 1792, 256, 256], "#ffffff"], [[768, 1792, 128, 256], "#5b4632"], [[896, 1792, 128, 256], "#2b2926"]];
 
 let MATS = null;
 
@@ -347,6 +359,142 @@ function dessinerAtlas(g) {
   fenetrePeinte(g, a, R.fenB, 1);
   fenetrePeinte(g, a, R.fenC, 2);
   fenetrePeinte(g, a, R.fenD, 3);
+  panneauSortie(g, a);
+  ganivellePeinte(g, a);
+  oyatsPeints(g, a);
+  damierHall(g, a);
+  merPeinte(g, a);
+  vitrines(g, a);
+  for (const [r, c] of APLATS) {
+    g.fillStyle = c;
+    g.fillRect(r[0], r[1], r[2], r[3]);
+  }
+}
+
+/**
+ * Le panneau de sortie de l'est (R0-1, texte validé par le porteur) : « Route du pont → · Ton terrain, par le pont ·
+ * 5 km ». Grosses lettres sombres sur fond clair, cadre de bois, un peu de sel et de rouille.
+ */
+function panneauSortie(g, a) {
+  const [x, y, l, h] = R.panneauSortie;
+  g.fillStyle = "#5b4632";
+  g.fillRect(x, y, l, h);
+  g.fillStyle = "#efe7d2";
+  g.fillRect(x + 12, y + 12, l - 24, h - 24);
+  g.strokeStyle = "#2c2620";
+  g.lineWidth = 4;
+  g.strokeRect(x + 22, y + 22, l - 44, h - 44);
+  texte(g, "Route du pont →", x + l / 2, y + 78, 84, "#1d1915", "900", SANS, "center", 0, l - 64);
+  g.fillStyle = "#2c2620";
+  g.fillRect(x + 50, y + 128, l - 100, 5);
+  texte(g, "Ton terrain, par le pont", x + l / 2, y + 166, 54, "#1d1915", "900", SANS, "center", 0, l - 64);
+  texte(g, "5 km", x + l / 2, y + 214, 50, "#1d1915", "900", SANS, "center", 0, l - 64);
+  salir(g, a, x + 12, y + 12, l - 24, h - 24, 0.8);
+}
+
+/** Une ganivelle : lattes de châtaignier grisé, de travers, tenues par deux fils de fer (fond transparent). */
+function ganivellePeinte(g, a) {
+  const [x, y, l, h] = R.ganivelle;
+  g.clearRect(x, y, l, h);
+  for (let u = 2; u < l - 4; u += 13) {
+    if (a() < 0.06) continue; // une latte arrachée
+    const haut = y + 4 + a() * 14;
+    const tons = ["#9a907f", "#8a7f6c", "#a69c88", "#7d7262"];
+    g.fillStyle = tons[Math.floor(a() * tons.length)];
+    g.save();
+    g.translate(x + u + 3.5, y + h);
+    g.rotate((a() - 0.5) * 0.08);
+    g.beginPath();
+    g.moveTo(-3.5, 0);
+    g.lineTo(-3.5, haut - (y + h) + 4);
+    g.lineTo(0, haut - (y + h));
+    g.lineTo(3.5, haut - (y + h) + 4);
+    g.lineTo(3.5, 0);
+    g.closePath();
+    g.fill();
+    g.fillStyle = "rgba(40,32,24,0.25)";
+    g.fillRect(1.5, haut - (y + h) + 6, 2, y + h - haut - 6);
+    g.restore();
+  }
+  // Les deux fils de fer, et le sable qui mange le pied
+  g.fillStyle = "#4a423b";
+  for (const yy of [y + 36, y + 96]) g.fillRect(x, yy, l, 3);
+  g.fillStyle = "#d6c08f";
+  for (let u = 0; u < l; u += 4) g.fillRect(x + u, y + h - 6 - Math.abs(Math.sin(u * 0.05)) * 10, 4, 16);
+}
+
+/** Des touffes d'oyats (fond transparent) : des brins fins, vert-de-gris, qui plient au vent. */
+function oyatsPeints(g, a) {
+  const [x, y, l, h] = R.oyats;
+  g.clearRect(x, y, l, h);
+  g.lineCap = "round";
+  for (let i = 0; i < 46; i++) {
+    const bx = x + l / 2 + (a() - 0.5) * l * 0.55;
+    const lg = h * (0.45 + a() * 0.5);
+    const pli = (a() - 0.3) * 30;
+    g.strokeStyle = ["#9aa36b", "#8c9660", "#b3b081", "#7d8a58"][i % 4];
+    g.lineWidth = 2 + a() * 1.5;
+    g.beginPath();
+    g.moveTo(bx, y + h);
+    g.quadraticCurveTo(bx + pli * 0.3, y + h - lg * 0.6, bx + pli, y + h - lg);
+    g.stroke();
+  }
+}
+
+/** Le marbre noir et blanc du hall, en damier (8 × 8), un peu terni. */
+function damierHall(g, a) {
+  const [x, y, l, h] = R.damier;
+  const c = l / 8;
+  for (let i = 0; i < 8; i++) for (let j = 0; j < 8; j++) {
+    g.fillStyle = (i + j) % 2 ? "#2f2c2a" : "#e2ddd2";
+    g.fillRect(x + i * c, y + j * c, c, c);
+  }
+  grain(g, a, 500, x, y, l, h, 0.07);
+  g.strokeStyle = "rgba(120,110,95,0.35)";
+  g.lineWidth = 1;
+  for (let k = 0; k < 6; k++) {
+    g.beginPath();
+    g.moveTo(x + a() * l, y + a() * h);
+    g.lineTo(x + a() * l, y + a() * h);
+    g.stroke();
+  }
+}
+
+/** La surface de la mer : un blanc légèrement strié de rides (la couleur vient des sommets). */
+function merPeinte(g, a) {
+  const [x, y, l, h] = [512, 1664, 256, 128];
+  g.fillStyle = "#f4f6f4";
+  g.fillRect(x, y, l, h);
+  for (let i = 0; i < 70; i++) {
+    g.fillStyle = a() < 0.5 ? "rgba(255,255,255,0.7)" : "rgba(150,170,175,0.35)";
+    g.fillRect(x + a() * l, y + a() * h, 14 + a() * 46, 2);
+  }
+}
+
+/** Les rez-de-chaussée de la rue de derrière : vitrines fermées, rideaux de fer, enseignes passées (4 travées). */
+function vitrines(g, a) {
+  const [x, y, l, h] = R.vitrines;
+  const noms = [["PHARMACIE DES BAINS", "#3f6b55"], ["GLACIER", "#b0675a"], ["LOCATION DE TRANSATS", "#3d5f78"], ["RECHARGE ZÉRO-EFFORT", "#a8352c"]];
+  const lt = l / 4;
+  noms.forEach(([t, c], i) => {
+    const x0 = x + i * lt;
+    g.fillStyle = "#d9cdb2";
+    g.fillRect(x0, y, lt, h);
+    g.fillStyle = c;
+    g.fillRect(x0 + 6, y + 6, lt - 12, 24);
+    texte(g, t, x0 + lt / 2, y + 18, 16, "#efe6cf", "900", SANS, "center", 0, lt - 20);
+    // le rideau de fer, à moitié levé, ou la vitrine sombre
+    g.fillStyle = "#2b2a28";
+    g.fillRect(x0 + 10, y + 38, lt - 20, h - 38);
+    if (i % 2 === 0) {
+      g.fillStyle = "#8b8d88";
+      const bas = y + 38 + (h - 38) * (0.4 + a() * 0.5);
+      g.fillRect(x0 + 10, y + 38, lt - 20, bas - y - 38);
+      g.fillStyle = "rgba(40,40,40,0.5)";
+      for (let k = y + 42; k < bas; k += 6) g.fillRect(x0 + 10, k, lt - 20, 1);
+    }
+    salir(g, a, x0, y, lt, h, 1.2);
+  });
 }
 
 /** Une rangée de balustres de béton blanc (fond transparent), pour la balustrade de la promenade. */
