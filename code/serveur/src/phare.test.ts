@@ -179,7 +179,7 @@ test("on porte l'escabeau du hangar à la marque : les bras pris, on ne court pa
   assert.ok(Math.hypot(pose.x - ENDROITS_PHARE.marque.x, pose.z - ENDROITS_PHARE.marque.z) < 0.01);
 });
 
-test("la lanterne ne s'allume pas de jour : un message fermé par un bouton ; la nuit, elle s'allume", () => {
+test("la lanterne ne s'allume pas de jour : un message qui passe (pas de fenêtre) ; la nuit, elle s'allume", () => {
   const p = phare();
   // Sans escabeau, on ne monte pas ; sans pétrole ni prisme, on n'allume pas.
   p.aller(ENDROITS_PHARE.marque);
@@ -190,8 +190,8 @@ test("la lanterne ne s'allume pas de jour : un message fermé par un bouton ; la
   assert.ok(!estNuit(heureDeJeu(p.instant(), p.debut)));
   p.faire("escalier", "allumer");
   assert.equal(p.lieu.etat.allumeLe, null, "de jour, on prépare");
-  const avertissement = p.recus.findLast((m) => m.t === "phare") as Extract<MessageServeur, { t: "phare" }>;
-  assert.equal(avertissement.avertissement, TEXTES_PHARE.jour);
+  assert.equal(p.infos().at(-1), TEXTES_PHARE.jour);
+  assert.ok(!p.recus.some((m) => m.t === "phare" && m.avertissement), "plus de bandeau à bouton");
   assert.equal(TEXTES_PHARE.jour, "Le feu ne sert qu'à la nuit tombée.");
   p.nuit();
   p.faire("escalier", "allumer");
@@ -329,6 +329,22 @@ test("K2 : le client sait dans combien de temps le cargo s'échoue ; l'épave l�
   p.passer(CARGO_MS);
   assert.equal(p.lieu.portes.epave, true);
   assert.equal(p.lieu.vue(p.instant()).cargoDans, undefined);
+});
+
+test("essai sur l'iPhone (2) : allumé depuis la tour, les dormeurs entrent et arrivent au pied de l'escalier, jusqu'au joueur", () => {
+  const p = phare();
+  p.preparer();
+  p.nuit();
+  p.aller(ENDROITS_PHARE.marque);
+  p.faire("escalier", "allumer");
+  assert.notEqual(p.lieu.etat.allumeLe, null);
+  const pres = () => p.lieu.eteints.filter((e) => e.dormeur && e.etat !== "detruit" && Math.hypot(e.x - p.position().x, e.z - p.position().z) < 3);
+  let max = 0;
+  for (let t = 0; t < 40_000; t += 500) {
+    p.passer(500, 100);
+    max = Math.max(max, pres().length);
+  }
+  assert.ok(max >= 5, `${max} dormeurs à moins de 3 m du joueur, dans la tour, en 40 s`);
 });
 
 test("la corne de brume détourne un Errant vers la falaise, une fois par nuit ; il faut d'abord réparer le compresseur", () => {

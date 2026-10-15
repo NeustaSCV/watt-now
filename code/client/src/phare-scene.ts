@@ -144,6 +144,8 @@ export class MiseEnScenePhare {
       z: joueur.z + (c.z - joueur.z) * k,
       y: joueur.y + (c.y - joueur.y) * k,
       zoom: joueur.zoom + (c.zoom - joueur.zoom) * k,
+      // La brume du temps recule au-delà de ce qu'on voit (sinon, de loin et la nuit : un voile gris).
+      degage: true,
     });
     // Le cadrage de la crique passe avant le recul (ils ne se croisent pas : le recul finit 4 s après l'allumage).
     if (this.cargoPrevu !== null && !this.annule.has("crique")) {

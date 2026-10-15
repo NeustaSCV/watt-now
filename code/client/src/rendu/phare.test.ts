@@ -241,3 +241,49 @@ test("l'écran tremble au choc du cargo, pour qui est au phare ; rien si les mou
     Object.defineProperty(performance, "now", { value: vraiMaintenant, configurable: true, writable: true });
   }
 });
+
+test("le cargo qui approche, la nuit, braque son projecteur sur la crique (une lumière de plus, seulement alors)", async () => {
+  const { lumieresPhare } = await import("./phare.ts");
+  const etat = { escabeau: "marque" as const, bidon: "verse" as const, prisme: "remis" as const, lanterne: true, compresseur: true, corneSonnee: false };
+  const sans = lumieresPhare({ etat, epave: false }, true).length;
+  assert.equal(lumieresPhare({ etat, epave: false, feux: { x: 20, z: 70, cap: Math.PI } }, true).length, sans + 1);
+  assert.equal(lumieresPhare({ etat, epave: false, feux: { x: 20, z: 70, cap: Math.PI } }, false).length, 0, "le jour, rien");
+});
+
+test("la clôture : un muret sur la limite du lot, ouvert sur la route au nord, sans obstacle de plus ; un appel de dessin", async () => {
+  const { CLOTURE, tronconsCloture } = await import("./phare-cloture.ts");
+  const { SORTIES_PHARE, zonePhare } = await import("../../../commun/src/phare.ts");
+  const decor = creerPhare();
+  const muret = decor.children.find((o) => o.name.startsWith("clôture"))! as THREE.Mesh;
+  assert.ok(muret, "le muret est dans le décor");
+  assert.ok(!Array.isArray(muret.material), "un seul matériau : un appel de dessin");
+  const zone = zonePhare({ epave: false });
+  // Tout le muret est hors de ce qu'on foule : au-delà de la limite de la zone (côté lande), sur sa ligne.
+  muret.geometry.computeBoundingBox();
+  const pos = muret.geometry.getAttribute("position");
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i);
+    const z = pos.getZ(i);
+    const dehors = x <= zone.xMin || x >= zone.xMax || z <= zone.zMin;
+    assert.ok(dehors, `une pierre empiète sur le lieu (${x.toFixed(2)}, ${z.toFixed(2)})`);
+  }
+  // La route d'arrivée reste ouverte : aucun tronçon ne traverse la sortie du nord.
+  const s = SORTIES_PHARE[0]!;
+  for (const t of tronconsCloture()) if (t.z1 === t.z2) assert.ok(t.x2 <= s.boite.x - s.boite.l / 2 || t.x1 >= s.boite.x + s.boite.l / 2);
+  assert.ok(CLOTURE.retrait + CLOTURE.largeur / 2 < zone.xMin + 0.01);
+});
+
+test("au pied de l'escalier, la fouille de la réserve (posée sur la marque) ne cache pas « Monter allumer la lanterne »", () => {
+  const client = new PhareClient(() => {}, () => ({}) as HTMLElement);
+  const m = ENDROITS_PHARE.marque;
+  // La fouille de la réserve du gardien, pas encore faite, juste sous les pieds.
+  const fouille = { A: { libelle: "Fouiller la réserve du gardien", message: { t: "interagir", cible: { genre: "ressource", id: 13 }, verbe: "fouiller" } }, B: null, cible: { x: m.x + 0.05, z: m.z + 0.05, rayon: 0.5 } } as unknown as Parameters<typeof client.proposer>[1];
+  const etat = { escabeau: "marque" as const, bidon: "verse" as const, prisme: "remis" as const, lanterne: false, compresseur: false, corneSonnee: false };
+  client.recevoir({ t: "phare", etat });
+  assert.equal(client.proposer(m, fouille).A?.libelle, "Monter allumer la lanterne");
+  client.recevoir({ t: "phare", etat: { ...etat, bidon: "plein" } });
+  assert.equal(client.proposer(m, fouille).A?.libelle, "Monter verser le pétrole");
+  // Le scénario fait (la lanterne allumée), la fouille reprend sa place.
+  client.recevoir({ t: "phare", etat: { ...etat, lanterne: true } });
+  assert.equal(client.proposer(m, fouille).A?.libelle, "Fouiller la réserve du gardien");
+});

@@ -66,7 +66,7 @@ test("la caméra recule sur la tour une fois, à l'allumage, et revient exacteme
   m2.recevoir(ETEINTE, ALLUMEE, 1000);
   const duree = (RECUL_TOUR.aller + RECUL_TOUR.reste + RECUL_TOUR.retour) * 1000;
   const milieu = m2.cadrage(1000 + duree / 2, JOUEUR, false)!;
-  assert.deepEqual(milieu, { x: RECUL_TOUR.x, z: RECUL_TOUR.z, y: RECUL_TOUR.y, zoom: RECUL_TOUR.zoom });
+  assert.deepEqual(milieu, { x: RECUL_TOUR.x, z: RECUL_TOUR.z, y: RECUL_TOUR.y, zoom: RECUL_TOUR.zoom, degage: true });
   // Au bout du retour, on est revenu au joueur (le dernier cadrage s'en approche), puis plus rien.
   const presque = m2.cadrage(1000 + duree - 20, JOUEUR, false)!;
   assert.ok(Math.hypot(presque.x - JOUEUR.x, presque.z - JOUEUR.z) < 0.05 && Math.abs(presque.zoom - JOUEUR.zoom) < 0.01);

@@ -1,6 +1,6 @@
 // Ce qu'on fait au phare du cap (plan 0.10, chantier K), côté client : les gestes proposés (l'escabeau, la cuve, le
 // prisme, l'escalier coupé et la lanterne, la corne de brume, le saut de la rampe), l'arrivée du cargo (S-17 : sa corne
-// grave, le choc, un fondu de 2 s, puis l'épave), la corne de brume (S-16), le message de jour (S-14), et le relief (L-1) :
+// grave, le choc, un fondu de 2 s, puis l'épave), la corne de brume (S-16), et le relief (L-1) :
 // les personnages, les Éteints et le cercle de visée posés sur la hauteur du sol du modèle, la caméra qui suit.
 //
 // Le serveur décide de tout (serveur/src/phare.ts) ; ce module ne fait que montrer et proposer. main.ts l'appelle à
@@ -11,7 +11,6 @@ import * as THREE from "three";
 import { DISTANCE_INTERACTION } from "../../commun/src/terrain.ts";
 import { ENDROITS_PHARE, PORTEE_SAUT, RAYON_MARQUE, type EtatPhareVu } from "../../commun/src/phare.ts";
 import type { MessageServeurPhare } from "../../commun/src/messages.ts";
-import { BandeauAvertissement } from "./avertissement.ts";
 import type { ActionProposee, Propositions } from "./interaction.ts";
 import { lumieresPhare, solPhare, type ScenePhare } from "./rendu/phare.ts";
 import { Secousse, type Decalage } from "./rendu/secousse.ts";
@@ -49,7 +48,6 @@ export class PhareClient {
   private cargo: number | null = null;
   private sonsJoues = new Set<string>();
   private voile: HTMLElement | null = null;
-  private bandeau: BandeauAvertissement | null = null;
   /** La hauteur où le personnage est posé (lissée : on descend la rampe, on saute, sans à-coups). */
   private yPerso: number | null = null;
   /** L'écran tremble quand le cargo s'échoue (au choc), pour qui est au phare à ce moment (rendu/secousse.ts). */
@@ -60,11 +58,10 @@ export class PhareClient {
   private cadre = false;
 
   private readonly jouer: Joueur;
-  private readonly hud: () => HTMLElement;
 
-  constructor(jouer: Joueur, hud: () => HTMLElement, secousse: Secousse = new Secousse(), mise: MiseEnScenePhare = new MiseEnScenePhare()) {
+  /** `_hud` : plus servi (le message de jour est un message d'information) ; gardé pour ne pas changer les appels. */
+  constructor(jouer: Joueur, _hud: () => HTMLElement, secousse: Secousse = new Secousse(), mise: MiseEnScenePhare = new MiseEnScenePhare()) {
     this.jouer = jouer;
-    this.hud = hud;
     this.secousse = secousse;
     this.mise = mise;
   }
@@ -81,8 +78,6 @@ export class PhareClient {
       this.mise.echouage(this.cargo);
     }
     if (m.corne) this.jouer("corne_brume", ENDROITS_PHARE.pavillons);
-    // Un message fermé par un bouton (S-14), jamais une fenêtre à croix.
-    if (m.avertissement) (this.bandeau ??= new BandeauAvertissement(this.hud())).montrer({ texte: m.avertissement, bouton: "Compris" });
   }
 
   /**
@@ -263,7 +258,11 @@ export class PhareClient {
     const c = propositions.cible;
     const dAvant = c ? Math.max(0, Math.hypot(c.x - position.x, c.z - position.z) - (c.rayon ?? 0.5)) : Infinity;
     // Un geste du phare passe devant ce qui est plus loin, ou devant rien ; un simple examen ne prend pas la place d'un geste.
-    if (!propositions.A || (choix.p.A && choix.d < dAvant)) return choix.p;
+    // Au pied de l'escalier, les gestes du scénario (monter verser, remettre, allumer) passent toujours avant le reste : la
+    // fouille de la réserve du gardien est posée sur la marque à la craie (on la fouille d'un peu plus loin).
+    const cible = choix.p.A && "message" in choix.p.A ? (choix.p.A.message as { cible?: { genre?: string; id?: string } }).cible : undefined;
+    const duScenario = cible?.genre === "phare" && cible.id === "escalier";
+    if (!propositions.A || (choix.p.A && (choix.d < dAvant || duScenario))) return choix.p;
     return propositions;
   }
 }

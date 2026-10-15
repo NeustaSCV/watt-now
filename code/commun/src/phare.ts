@@ -274,8 +274,12 @@ export const ENDROITS_PHARE = {
   /** Le haut du tronçon effondré de la rampe (`sensUnique.de`), et où l'on retombe (`sensUnique.vers`). */
   sautDe: jeu(SENS_UNIQUE_MODELE[0].de.x, SENS_UNIQUE_MODELE[0].de.z),
   sautVers: jeu(SENS_UNIQUE_MODELE[0].vers.x, SENS_UNIQUE_MODELE[0].vers.z),
-  /** Devant la porte de la tour (dehors) : la lumière de la lanterne y descend, pour les Éteints du chemin. */
-  lumiere: jeu(-10, -0.6),
+  /**
+   * Où la lumière de la lanterne attire les Éteints : au pied de l'escalier, dans la tour, là où l'on allume (essai sur
+   * l'iPhone, 2026-10-15 : posée devant la porte, elle les arrêtait dehors, et le joueur, dedans, ne voyait rien venir).
+   * Ils entrent par la porte (le milieu du phare : `passage`) : il faut tenir la tour.
+   */
+  lumiere: jeu(ESCABEAU_MODELE.marque.x, ESCABEAU_MODELE.marque.z),
 } as const;
 
 /** On touche la marque, la cuve, le compresseur… jusqu'à cette distance (comme DISTANCE_INTERACTION, un peu plus). */
@@ -298,10 +302,11 @@ export const DUREES_PHARE = { cuve: 5, prisme: 1, verser: 6, remettre: 6, allume
 export const CARGO_MS = 50_000;
 
 /**
- * La lanterne allumée, la nuit : une lumière qui réveille les dormeurs du chemin des douaniers et les fait monter (S-15).
- * Elle descend devant la porte de la tour ; à 45 m, les plus loin se lèvent en quelques secondes.
+ * La lanterne allumée, la nuit : une lumière qui réveille les dormeurs du chemin des douaniers et les fait monter (S-15)
+ * jusqu'au pied de l'escalier. Le milieu du phare compte la porte de la tour comme toute porte (la moitié passe) : dehors,
+ * elle porte à 45 m ; les plus loin se lèvent en quelques secondes.
  */
-export const LUMIERE_LANTERNE = { portee: 45, intensite: 0.5 } as const;
+export const LUMIERE_LANTERNE = { portee: 90, intensite: 0.5 } as const;
 
 /** La corne de brume (S-16) : un bruit fort au bord de la falaise, 60 s, une fois par nuit ; plus fort que la lanterne. */
 export const CORNE = { portee: 60, intensite: 1.3, dureeS: 60 } as const;
