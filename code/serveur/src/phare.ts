@@ -67,8 +67,10 @@ export class LieuPhare extends LieuVivant {
   /** Le gardien lui confie ce qu'il garde (à chaque `de`, le même objet jusqu'au retour à 24 h). */
   lier(propre: () => Record<string, unknown>, instant: number): void {
     this.propre = propre;
-    // Allumé puis laissé seul (le lieu déchargé de la mémoire) : le cargo s'est échoué entre-temps (S-17).
-    this.echouerSiLHeureEstVenue(instant, false);
+    // Allumé puis laissé seul (le lieu déchargé de la mémoire) : le cargo s'est échoué entre-temps (S-17), sans scène.
+    // K4 : le gardien relie le lieu à chaque fois qu'on le demande (le joueur qui marche le demande à chaque pas) ; avec
+    // quelqu'un là, l'échouage s'annonce (la scène se joue), sinon il passait en silence et personne ne voyait la scène.
+    this.echouerSiLHeureEstVenue(instant, this.ici.size > 0);
   }
 
   /** L'état du phare, relu (un champ abîmé ou absent prend sa valeur de départ). */

@@ -211,3 +211,22 @@ test("K4 : pendant la scène de l'échouage (6,6 s à partir de CARGO_MS), les �
   assert.ok(p.recus.some((m) => m.t === "morsure"), "la morsure, après la scène");
   assert.notDeepEqual(debout().map((e) => `${e.x.toFixed(3)},${e.z.toFixed(3)}`), places, "ils bougent de nouveau");
 });
+
+test("K4 : le joueur qui marche au moment de l'échouage voit la scène (l'échouage s'annonce, il ne passe plus en silence)", () => {
+  const p = auPhare();
+  p.preparer();
+  p.aller(ENDROITS_PHARE.marque);
+  p.allumer();
+  for (const e of p.arrivants()) e.etat = "detruit";
+  const allume = p.lieu().etat.allumeLe!;
+  p.attendre((allume + CARGO_MS - 2000 - p.instant()) / 1000);
+  p.recus.length = 0;
+  // Il marche (chaque pas redemande son lieu au registre) pendant que le cargo arrive.
+  let seq = 1;
+  for (let i = 0; i < 40; i++) {
+    p.joueur.recevoir({ t: "intention", dx: i % 20 < 10 ? 1 : -1, dz: 0, allure: "marche", seq: seq++ });
+    p.attendre(0.1);
+  }
+  assert.equal(p.lieu().portes.epave, true);
+  assert.ok(p.recus.some((m) => m.t === "phare" && m.cargo === true), "l'échouage est annoncé : la scène se joue");
+});
