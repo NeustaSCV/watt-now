@@ -2,10 +2,10 @@
 // (le milieu), les Éteints placés par la fiche du modèle, et les points de butin. À part du plan (phare.ts), comme le
 // Moulin (vue-lieux.ts, milieu-moulin.ts, eteints-moulin.ts) : le plan sert aux lieux, et ceci dépend des lieux.
 
-import { eteintsDePlaces, type Eteint, type Milieu, type PlaceEteint } from "./eteints.ts";
+import { ATTENTION_MAX, eteintsDePlaces, nouvelEteint, type Eteint, type Milieu, type PlaceEteint } from "./eteints.ts";
 import { ETEINTS_MODELE } from "./phare-modele.ts";
 import { heurte } from "./lieux.ts";
-import { PIECES_PHARE, PORTES_PHARE, jeu, mursVuePhare, piecePhare, sombrePhare, zonePhare, type PorteDuPhare } from "./phare.ts";
+import { PHARE, PIECES_PHARE, PORTES_PHARE, jeu, mursVuePhare, piecePhare, sombrePhare, zonePhare, type PorteDuPhare } from "./phare.ts";
 import type { TypeRessourcePhare } from "./ressources-phare.ts";
 import type { RessourceSol } from "./terrain.ts";
 import { facteurSon, obstaclesVue, voit, type PlanVue } from "./vue.ts";
@@ -175,6 +175,54 @@ export function eteintsPhare(): Eteint[] {
   return eteintsDePlaces(PLACES_ETEINTS_PHARE, (x, z) => {
     const j = jeu(x, z);
     return placeLibre(j.x, j.z);
+  });
+}
+
+// ---------- Ceux qui arrivent de la lande à l'allumage (décision du porteur, 2026-10-15) ----------
+
+/**
+ * Quand on allume la lanterne, on a d'ordinaire déjà tué les Éteints du lieu : la lumière en fait venir 2 ou 3 de la lande,
+ * des Errants ordinaires, déjà réveillés. Ils paraissent au bord du lot, côté lande (là où passe le muret de pierres
+ * sèches, qui n'arrête personne), hors de la vue du joueur, et marchent vers lui. Ils ne sont pas gardés en base (leur
+ * numéro n'est pas dans la fiche) : ils disparaissent au retour du lieu à 24 h.
+ */
+export const LANDE = { nombre: [2, 3], premierNumero: 101, distanceMin: 18, loinDeLaVue: 30 } as const;
+
+/**
+ * Les bords du lot où ils paraissent (repère du jeu) : à l'est et à l'ouest, à hauteur de la grille sud de l'enceinte. La
+ * porte de la tour donne au sud, et la tour touche les maisons des gardiens : de là, le milieu du phare les mène à peu
+ * près en ligne droite par la grille sud jusqu'à la porte (40 à 45 m, moins d'une minute à pas d'Éteint attiré). Du nord
+ * (la route, la lande), il faudrait contourner la tour par l'étroit couloir entre elle et le muret : on n'y passe pas.
+ */
+const BORDS_LANDE: readonly { x: number; z: number }[] = (() => {
+  const zone = zonePhare({});
+  const points: { x: number; z: number }[] = [];
+  for (const z of [20, 22, 24, 26]) points.push({ x: PHARE.largeur - 1.2, z });
+  for (const z of [24, 26]) points.push({ x: 1.2, z });
+  return points.filter((p) => !heurte(zone, p.x, p.z, 0.4));
+})();
+
+/**
+ * Les arrivants de la lande : 2 ou 3 (au hasard), à des bords différents, hors de la vue du joueur (`voit` : la vue passe-t-
+ * elle du joueur à ce point ? un mur l'arrête ; ou bien à 30 m, de nuit) et à 18 m au moins ; à défaut, les plus loin. Ils
+ * marchent vers le joueur (`but`), l'attention au plus haut ; la lumière de la lanterne et le joueur, qu'ils perçoivent,
+ * font le reste (le milieu du phare : par la grille sud et la porte de la tour).
+ */
+export function arrivantsDeLaLande(joueur: { x: number; z: number }, voit: (a: { x: number; z: number }, b: { x: number; z: number }) => boolean, alea: () => number): Eteint[] {
+  const n = alea() < 0.5 ? LANDE.nombre[0] : LANDE.nombre[1];
+  const loin = (p: { x: number; z: number }) => Math.hypot(p.x - joueur.x, p.z - joueur.z);
+  const caches = BORDS_LANDE.filter((p) => loin(p) >= LANDE.distanceMin && (loin(p) >= LANDE.loinDeLaVue || !voit(joueur, p)));
+  // Mélangés (le même tirage que le lieu), puis espacés : pas deux arrivants l'un sur l'autre.
+  const ordre = (caches.length >= n ? caches : [...BORDS_LANDE].sort((a, b) => loin(b) - loin(a))).map((p) => ({ p, k: alea() })).sort((a, b) => a.k - b.k).map((c) => c.p);
+  const choisis: { x: number; z: number }[] = [];
+  for (const p of ordre) if (choisis.length < n && choisis.every((c) => Math.hypot(c.x - p.x, c.z - p.z) >= 4)) choisis.push(p);
+  for (const p of ordre) if (choisis.length < n && !choisis.includes(p)) choisis.push(p);
+  return choisis.map((p, i) => {
+    const e = nouvelEteint(LANDE.premierNumero + i, p.x, p.z, "attire", Math.atan2(joueur.x - p.x, joueur.z - p.z));
+    e.attention = ATTENTION_MAX;
+    e.but = { x: joueur.x, z: joueur.z };
+    e.sansVoir = 0;
+    return e;
   });
 }
 

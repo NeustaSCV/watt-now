@@ -175,10 +175,8 @@ export function tutorielEnCours(v: VueTutoriel | null): VueTutoriel | null {
 
 // ---------- La première nuit : l'avertissement de la bûche (plan 0.8 §2.6, B14) ----------
 
-/** Le texte du bandeau, dans la voix du carnet. */
+/** Le texte de l'avertissement, dans la voix du carnet : un message qui passe (le porteur, 2026-10-15 : plus de bandeau à bouton). */
 export const TEXTE_AVERTISSEMENT_BUCHE = "Une bûche ne repousse pas : garde-la pour bâtir.";
-/** Le bouton qui le ferme (jamais une croix : règle du porteur, §2.6). */
-export const BOUTON_AVERTISSEMENT = "Compris";
 /** En dessous de ce nombre de bûches restantes, une bûche au feu fait avertir. */
 export const SEUIL_BUCHES = 6;
 

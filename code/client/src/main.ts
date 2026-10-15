@@ -100,7 +100,6 @@ import { CoucheDechetsVue } from "./rendu/dechets/couche.ts";
 import { BandeauIdee } from "./bandeau-idee.ts";
 import { seFaitEnTenantA } from "./geste-tenu.ts";
 import { AnneauProgres } from "./rendu/anneau-progres.ts";
-import { BandeauAvertissement } from "./avertissement.ts";
 
 const CLE_JETON = "watt.jeton";
 /** En développement : `?heure=22` fige l'heure affichée, pour régler la nuit sans attendre. */
@@ -414,7 +413,7 @@ function afficherVoile(texte: string, bouton?: { libelle: string; action: () => 
 /** Le bandeau « Tu y penses », posé dans le HUD au premier usage (après que le HUD a dessiné son contenu). */
 let bandeauIdee: BandeauIdee | null = null;
 /** Plan 0.8.2 §7.6 : le message ne recouvre jamais un panneau ouvert du HUD (le carnet du tutoriel, le sac, une fiche…). */
-const PANNEAUX_OUVERTS = [".carnet", ".rapport", ".panneau", ".aide-jeu", ".demande-echange", ".bandeau-avertissement"].map((c) => `:scope > ${c}:not([hidden])`).join(", ");
+const PANNEAUX_OUVERTS = [".carnet", ".rapport", ".panneau", ".aide-jeu", ".demande-echange"].map((c) => `:scope > ${c}:not([hidden])`).join(", ");
 function nouveauBandeauIdee(): BandeauIdee {
   const el = document.getElementById("hud")!;
   return new BandeauIdee(el, window, {
@@ -422,7 +421,6 @@ function nouveauBandeauIdee(): BandeauIdee {
     hauteur: () => window.innerHeight,
   });
 }
-let bandeauAvertissement: BandeauAvertissement | null = null;
 const hud = new Hud(
   document.getElementById("hud")!,
   qualite.niveau,
@@ -1116,10 +1114,6 @@ function recevoir(message: MessageServeur): void {
     case "idee":
       (bandeauIdee ??= nouveauBandeauIdee()).montrer({ texte: message.texte, plusTard: message.plusTard, ...(message.objet ? { objet: message.objet } : {}) });
       son.jouer("idee");
-      return;
-    // Un avertissement du carnet (plan 0.8, chantier 13 ; B14) : un bandeau fermé par son bouton « Compris ».
-    case "avertissement":
-      (bandeauAvertissement ??= new BandeauAvertissement(document.getElementById("hud")!)).montrer({ texte: message.texte, bouton: message.bouton, objet: message.id });
       return;
     case "lecons_possibles":
       lecons.choisir(message.a, message.recettes);

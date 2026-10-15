@@ -29,6 +29,7 @@ import {
   type EtatPhare,
   type EtatPhareVu,
 } from "../../commun/src/phare.ts";
+import { arrivantsDeLaLande } from "../../commun/src/phare-vivant.ts";
 import { FOUILLES_DE_L_EPAVE, OBJETS_DE_L_EPAVE, type TypeRessourcePhare } from "../../commun/src/ressources-phare.ts";
 import type { Base, RessourceEnBase } from "./base.ts";
 import { JAMAIS, LieuVivant, type ContexteLieu, type DefinitionLieuVivant, type Voyageur } from "./lieu-vivant.ts";
@@ -51,9 +52,13 @@ export class LieuPhare extends LieuVivant {
   /** Ceux qui viennent d'entrer : l'état du phare leur part au premier tic (après la bienvenue). */
   private readonly aPrevenir = new Set<number>();
   private readonly ici = new Set<Voyageur>();
+  private readonly aleaDuPhare: () => number;
+  /** La nuit (nuitDe) où des Éteints sont venus de la lande (en mémoire seulement : une fois par allumage). */
+  private landeNuit: number | null = null;
 
   constructor(base: Base, definition: DefinitionLieuVivant, alea: () => number = Math.random) {
     super(base, definition, alea);
+    this.aleaDuPhare = alea;
     this.baseDuPhare = base;
     this.debutDuMonde = base.debutMonde();
   }
@@ -315,7 +320,19 @@ export class LieuPhare extends LieuVivant {
       this.changer({ allumeLe: instant });
       ctx.info(TEXTES_PHARE.allume);
       this.annoncer(instant);
+      this.faireVenirDeLaLande(instant, ctx.position());
     });
+  }
+
+  /**
+   * À l'allumage, 2 ou 3 Éteints arrivent de la lande (décision du porteur, 2026-10-15 : on a déjà tué ceux du lieu) : en
+   * plus de ceux du lieu, pas gardés en base, une fois par nuit, seulement si quelqu'un est là (commun/src/phare-vivant.ts).
+   */
+  private faireVenirDeLaLande(instant: number, joueur: { x: number; z: number }): void {
+    const nuit = nuitDe(instant, this.debutDuMonde);
+    if (this.landeNuit === nuit || this.ici.size === 0) return;
+    this.landeNuit = nuit;
+    this.eteints.push(...arrivantsDeLaLande(joueur, (a, b) => this.voitEntre(a, b), this.aleaDuPhare));
   }
 
   /** La corne de brume (S-16) : un leurre de 60 s au bord de la falaise, une fois par nuit, comme ceux du Moulin. */
