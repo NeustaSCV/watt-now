@@ -208,6 +208,8 @@ import { AvertissementBuche, etapesReussies, progresCarte, progresFamille, type 
 // Le compte admin « god » (outil du porteur) : serveur/src/admin.ts.
 import { remplirCoffres, savoirAdmin, vueProgressionAdmin } from "./admin.ts";
 import { ARRIVEE_DEPART } from "../../commun/src/lieux.ts";
+// L'accès au niveau 2 (plan 0.10, V4-19) : la côte s'ouvre avec un objet-clé pris à la Coopérative et un au Moulin.
+import { TEXTE_COTE_FERMEE, TEXTE_COTE_OUVERTE, coteOuverte, preuveDuLieu, routeFermee } from "../../commun/src/acces-cote.ts";
 import { pasVersLaCouche, trajetCouche, type AbriPose, type TrajetCouche } from "./sommeil-abri.ts";
 import { SANTE_DEPART } from "../../commun/src/combat.ts";
 import type { OperationAdmin, VueAdmin } from "../../commun/src/admin.ts";
@@ -584,6 +586,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       savoir: this.vueSavoir(),
       progression: this.vueProgression(this.devoilement.vue()),
       dechets: this.dechets.vue(),
+      coteOuverte: coteOuverte(this.quetes.etat.faits),
       ...(this.lieu === "cooperative"
         ? { leurres: this.cooperatives.leurresActifs(this.compte.id, this.maintenant()), etatCoop: this.cooperatives.vue(this.compte.id) }
         : {}),
@@ -2163,6 +2166,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (!sortie || !destinations(sortie).includes(etape)) return this.info("Pour prendre la route, va jusqu'à la sortie.");
     if (this.objetPorte()) return this.info("Pose d'abord l'escabeau : il reste sur ton terrain.");
     if (!LIEUX[etape].ouvert) return this.info(`${LIEUX[etape].nom} n'a pas encore ouvert ses portes.`);
+    // Plan 0.10 (V4-19) : la côte, tant que le joueur n'a pas fait ses preuves à la Coopérative et au Moulin.
+    if (routeFermee(this.lieu, etape, coteOuverte(this.quetes.etat.faits))) return this.info(TEXTE_COTE_FERMEE);
     if (etape !== vers) this.info(`La route ${deLieu(vers)} passe par ${minuscule(LIEUX[etape].nom)} : il faudra ${traverserLieu(etape)} à pied.`);
     vers = etape;
     this.annulerAction();
@@ -2226,6 +2231,16 @@ export class Joueur implements Voyageur, ParticipantLecon {
   /** Le carnet des quêtes (null pendant le tutoriel : il a son propre carnet). */
   private vueQuetes(): VueQuetes | null {
     return this.tuto ? null : this.quetes.vue(this.pourQuetes());
+  }
+
+  /** Plan 0.10 (V4-19) : la preuve d'un lieu ; quand la seconde arrive, la côte s'ouvre, avec son message, une fois. */
+  private noterPreuve(fait: string | null): void {
+    if (!fait) return;
+    const avant = coteOuverte(this.quetes.etat.faits);
+    this.noterFait(fait);
+    if (avant || !coteOuverte(this.quetes.etat.faits)) return;
+    this.info(TEXTE_COTE_OUVERTE);
+    this.envoyer({ t: "cote", ouverte: true });
   }
 
   /** Un fait pour les quêtes (un repas, une vente, un échange…), compté même pendant le tutoriel. */
@@ -3094,6 +3109,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
         this.envoyer({ t: "ressource", id: r.id, disponible: false });
       }
       this.ajouterPlusieurs(usage.donne);
+      // Plan 0.10 (V4-19) : un objet-clé pris à sa place, au fond de la Coopérative ou du Moulin, ouvre la côte.
+      this.noterPreuve(preuveDuLieu(lieu, usage.donne));
       if (r.type === "coop_batterie" && lieu === "cooperative") {
         // La batterie du tracteur (Book 23 §4.7) : ce que les coups de klaxon lui ont laissé. Le klaxon se tait.
         const wh = this.ajouterCharge("batterie_voiture", this.cooperatives.prendreBatterie(this.compte.id));

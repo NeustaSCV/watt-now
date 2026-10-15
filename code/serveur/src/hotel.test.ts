@@ -12,6 +12,7 @@ import type { MessageServeur } from "../../commun/src/messages.ts";
 import { milieuHotel } from "../../commun/src/milieu-hotel.ts";
 import { REINITIALISATION_LIEU_MS } from "../../commun/src/registre-lieux.ts";
 import { USAGES } from "../../commun/src/terrain.ts";
+import { avecCoteOuverte } from "../../commun/src/acces-cote.ts";
 import { Base } from "./base.ts";
 import { Comptoir } from "./comptoir.ts";
 import { Cooperatives } from "./cooperative.ts";
@@ -40,6 +41,8 @@ function monter() {
   const joueurs: Joueur[] = [];
   const connecter = (id: number, pseudo: string) => {
     const recus: MessageServeur[] = [];
+    // Plan 0.10 (V4-19) : ces essais portent sur le niveau 2 lui-même : la côte y est ouverte.
+    base.sauverQuetes(id, avecCoteOuverte(base.chargerQuetes(id)));
     const joueur = new Joueur({ id, pseudo, famille: "mecanistes" }, base, (m) => recus.push(m), maintenant, halte, () => 0.5, new Comptoir(base, instant), cooperatives, gue, moulins, lieux);
     joueurs.push(joueur);
     const dernier = <T extends MessageServeur["t"]>(t: T) => recus.findLast((m) => m.t === t) as Extract<MessageServeur, { t: T }> | undefined;

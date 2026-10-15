@@ -512,6 +512,8 @@ function installer(message: Bienvenue): void {
   // La pause : seulement là où l'on est seul (son terrain, sa Coopérative).
   hud.pausePossible(pausePossibleIci(lieu));
   hud.majPause(false);
+  // L'accès au niveau 2 (plan 0.10, V4-19) : la côte, grisée sur la carte tant qu'elle est fermée.
+  carte.majCote(message.coteOuverte === true);
   // Les portes de la Coopérative, dans l'état où on les a laissées ; la radio, si elle joue encore.
   if (message.portes) portesCoop = message.portes;
   leurresActifs.clear();
@@ -960,6 +962,10 @@ function recevoir(message: MessageServeur): void {
       routePont.passage(message);
       corniche.passage(message);
       hud.reponseCaisse(message.ouvert);
+      return;
+    // L'accès au niveau 2 (plan 0.10, V4-19) : la côte s'ouvre (son message passe par un « info »).
+    case "cote":
+      carte.majCote(message.ouverte);
       return;
     case "maree_remonte":
       // Un fondu, puis un message qui passe (le porteur, 2026-10-15 : pas de fenêtre en jeu ; le bouton n'est plus montré).

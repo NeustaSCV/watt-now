@@ -517,6 +517,8 @@ export interface Bienvenue {
   progression?: VueProgression;
   /** La couche de déchets du lieu (0.7) : de quoi reconstruire les amas, les conteneurs et les points (≈ 1 Ko). */
   dechets?: VueDechets;
+  /** L'accès au niveau 2 (plan 0.10, V4-19) : la côte ouverte ; absent ou false : grisée sur la carte, la route refusée. */
+  coteOuverte?: boolean;
 }
 
 /**
@@ -546,6 +548,8 @@ export type MessageServeur =
   | MessageServeurCouche
   // Le péage et la marée de la route du pont (plan 0.10 §3.6, chantier H) : voir le bloc « péage » en fin de fichier.
   | MessageServeurPeage
+  // L'accès au niveau 2 (plan 0.10, V4-19 ; commun/src/acces-cote.ts) : la côte s'ouvre.
+  | { t: "cote"; ouverte: boolean }
   | { t: "expulse"; raison: string }
   | { t: "inventaire"; inventaire: Inventaire }
   | { t: "besoins"; besoins: Besoins; gourde: Gourde }

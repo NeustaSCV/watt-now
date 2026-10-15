@@ -1497,6 +1497,9 @@ body {
 .carte .lieu:focus-visible .zone-clic { stroke: rgba(200, 54, 43, 0.45); }
 .carte .lieu.choisi .zone-clic { stroke: #c8362b; stroke-dasharray: 4 3; }
 .carte .lieu.ferme .nom-ouvert { opacity: 0.7; }
+/* Plan 0.10 (V4-19) : la côte fermée, ses routes et ses lieux dessinés en retrait, à l'encre pâlie. */
+.carte.cote-fermee .acces-cote { opacity: 0.38; filter: grayscale(1); }
+.carte.cote-fermee .route.acces-cote { stroke-dasharray: 7 5; }
 .carte .pion { filter: drop-shadow(0 2px 1px rgba(0, 0, 0, 0.35)); pointer-events: none; }
 
 .carte-fiche {

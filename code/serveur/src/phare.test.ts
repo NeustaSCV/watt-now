@@ -28,6 +28,7 @@ import { OBJETS_DE_L_EPAVE, REPOUSSE_PHARE, USAGES_PHARE } from "../../commun/sr
 import { REINITIALISATION_LIEU_MS, ficheLieu } from "../../commun/src/registre-lieux.ts";
 import { MS_PAR_HEURE_JEU, estNuit, heureDeJeu } from "../../commun/src/temps.ts";
 import { USAGES } from "../../commun/src/terrain.ts";
+import { avecCoteOuverte } from "../../commun/src/acces-cote.ts";
 import { Base } from "./base.ts";
 import { rendreSilencieux } from "./journal.ts";
 import type { ContexteLieu, Voyageur } from "./lieu-vivant.ts";
@@ -520,6 +521,8 @@ test("au phare, le joueur reçoit l'état du lieu ; l'escabeau dans les bras, il
   const c = base.creerCompte("Rose", "potager42", "mecanistes");
   base.sauverInventaire(c.id, { sac_a_dos: 1 });
   const recus: MessageServeur[] = [];
+  // Plan 0.10 (V4-19) : ces essais portent sur le niveau 2 lui-même : la côte y est ouverte.
+  base.sauverQuetes(c.id, avecCoteOuverte(base.chargerQuetes(c.id)));
   const joueur = new Joueur({ id: c.id, pseudo: "Rose", famille: "mecanistes" }, base, (m) => recus.push(m), maintenant, halte, Math.random, new Comptoir(base, instant), cooperatives, gue, moulins, lieux);
   const attendre = (secondes: number, pas = 0.5) => {
     for (let s = 0; s < secondes; s += pas) {

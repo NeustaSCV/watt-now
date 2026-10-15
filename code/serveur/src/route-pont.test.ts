@@ -31,6 +31,7 @@ import {
 import { EMPRISE_RESSOURCE, USAGES } from "../../commun/src/terrain.ts";
 import { MAREE_PONT } from "../../commun/src/route-pont-modele.ts";
 import { etapeButin, tirerVestiges, LIEU_DE_FOUILLE } from "../../commun/src/vestiges.ts";
+import { avecCoteOuverte } from "../../commun/src/acces-cote.ts";
 import { Base } from "./base.ts";
 import { Comptoir } from "./comptoir.ts";
 import { Cooperatives } from "./cooperative.ts";
@@ -59,6 +60,8 @@ function monde(decalage = 60_000) {
     const c = base.creerCompte(pseudo, "potager42", "mecanistes");
     base.sauverInventaire(c.id, { sac_a_dos: 1, ...sac });
     const recus: MessageServeur[] = [];
+    // Plan 0.10 (V4-19) : ces essais portent sur le niveau 2 lui-même : la côte y est ouverte.
+    base.sauverQuetes(c.id, avecCoteOuverte(base.chargerQuetes(c.id)));
     const joueur = new Joueur({ id: c.id, pseudo, famille: "mecanistes" }, base, (m) => recus.push(m), maintenant, halte, Math.random, new Comptoir(base, instant), cooperatives, gue, moulins, lieux);
     tous.push(() => joueur.tick(0.5));
     const dernier = <T extends MessageServeur["t"]>(t: T) => recus.findLast((m) => m.t === t) as Extract<MessageServeur, { t: T }> | undefined;
