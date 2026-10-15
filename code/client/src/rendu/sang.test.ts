@@ -33,7 +33,10 @@ function sangDans(lieu: string, portes: Record<string, boolean> = {}) {
 }
 
 test("au phare, le sang d'un coup sur la grève part de la hauteur de la grève, et ses taches s'y posent", () => {
-  const greve = jeu(-20, 20);
+  // Au milieu des galets, à plus de 4 m de la rampe du canot et du pied de la falaise : les gouttes, lancées au hasard,
+  // retombent à moins de 3 m (3,4 m/s au plus, moins de 0,9 s en l'air). En (− 20 ; 20), la rampe était à 2,4 m : une
+  // goutte qui y retombait laissait sa tache à ≈ − 7 m, et le test échouait une fois sur quelques-unes.
+  const greve = jeu(-16, 22);
   const sol = hauteurSolLieu("phare", greve.x, greve.z, {});
   assert.ok(sol < -8.5, `la grève : ${sol.toFixed(2)}`);
   const { sang, gouttes, taches } = sangDans("phare");

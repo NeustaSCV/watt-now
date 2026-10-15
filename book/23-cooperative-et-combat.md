@@ -2,6 +2,7 @@
 
 > Document de conception · version 0.2 · 2026-10-08
 > Statut : **validé** par le porteur du projet (2026-10-08), en cours de réalisation. Cible : versions 0.5 et 0.6.
+> v0.3 (2026-10-15) : §13, **les deux lieux du niveau 2** (0.10) : le Grand Hôtel des Flots et « le check-in », le phare du cap, « le feu et le cargo » et sa scène, la grève et l'eau jusqu'aux genoux, les Éteints de la côte. Les deux haltes du niveau 2 et l'accès à la côte : Book 20 §1 quinquies.
 > Avancement (2026-10-08) : **0.5a fait** (lieu vivant, une Coopérative par joueur, chemin agricole au nord du Carrefour, route en ligne) ; **0.5b fait** (murs, portes qu'on ouvre et referme, grille d'obstacles de 4 m) ; **0.5c fait** (les murs étouffent le son et arrêtent la vue, obscurité par pièce, passage par les portes, cascade des gémissements, groupes, Rampant et Équipé, retour dans sa zone après 3 min, IA à 10 Hz et 2 Hz, envoi limité à ce que le joueur perçoit ; 24 Éteints placés) ; **0.5d fait** :
 >   - **sauvegarde** de chaque Coopérative : Éteints détruits, portes, butin pris ;
 >   - **repeuplement** : 3 Éteints toutes les 12 h réelles, la chambre froide d'abord (réglages `coop_repeuplement_h` et `coop_repeuplement_n`) ;
@@ -289,3 +290,59 @@ Depuis la 0.8, la Coopérative est **L1A**, le lieu personnel de la **route A** 
 - **Tout revient à 24 h**, comme à la Coopérative : Éteints, butin, clés garanties ; la grosse clé retourne au tableau et la grande porte se referme. La fourche, elle, ne revient pas.
 - **Gardé pour plus tard** : la **roue à restaurer** (« objectif des Mécanistes » dans le modèle), au niveau 3 : au niveau 1, rien n'est propre à une famille.
 - **Rien au-delà** : aucun panneau n'annonce de lieu plus loin que le Moulin (Book 20 §1 quater bis).
+
+## 13. Les deux lieux du niveau 2 : le Grand Hôtel et le phare (0.10, 2026-10-15)
+
+*Plan 0.10 (§3.3, §10.2, §10.3, §12, §13 : S-01 à S-18, V2-08 à V2-11, V4-01 à V4-18), `niveau-2.md` §9 ; **codé en 0.10** (chantiers J et K, puis les retouches après les essais du porteur : `commun/src/hotel.ts`, `serveur/src/hotel.ts`, `commun/src/phare.ts`, `commun/src/phare-vivant.ts`, `serveur/src/phare.ts`, `client/src/rendu/phare*.ts`). Les modèles 3D sont ceux de la session « bâtiments » (`batiment/grand-hotel/`, `batiment/phare/`). Les deux haltes (la route du pont, la corniche) et l'accès à la côte : Book 20 §1 quinquies.*
+
+Au niveau 2, **plus de clé qui ouvre une porte** : chaque lieu a **son propre mécanisme** (R49 élargie), un parcours imposé, **la partie du fond** où sont les objets-clés, une **sortie à sens unique**, et **tout revient à 24 h** (à l'entrée, lieu vide, comme à la Coopérative et au Moulin). Un lieu à soi, un par joueur. **Un seul repère par lieu** (S-01) : ce qui change d'état (la borne, l'étage atteint, la lanterne, l'épave) est un état du lieu, comme les portes du Moulin (S-02) ; le modèle livre les deux versions, le jeu montre l'une.
+
+**Les objets portés dans les bras** (S-08) : la batterie et la tête du robot à l'hôtel, l'escabeau au phare se portent **à deux mains**, comme l'escabeau du terrain : on ne court pas, on ne frappe pas (le bouton A dit « Poser »), on les pose où l'on veut.
+
+### 13.1 Le Grand Hôtel des Flots (L2A), « le check-in »
+
+Un palace de bord de mer fermé depuis la Grande Panne, au bout de la route A, passé le pont. On arrive par **la promenade, à l'est** ; on en repart par là.
+
+| Étape | Ce que fait le joueur |
+|---|---|
+| **Le courant** (S-07, V2-11) | La borne « Check-in par sourire » du hall est éteinte. On prend **la batterie du panneau « Zéro-Effort » de la promenade** (un objet du lieu, rien de son sac) et on la branche : l'écran s'allume, la batterie y reste |
+| **Le sourire** (S-09, S-10) | La borne ne reconnaît pas le joueur (« Veuillez sourire davantage. »). Seul **le robot-serveur** ensablé de la salle à manger a le bon sourire : on le **dégage** (10 s avec un outil qui creuse, 30 s à mains nues), on porte **sa tête** (8 kg, à deux mains : Q-0.10-8) devant la borne, qui remet **la carte de la chambre 7** |
+| **L'ascenseur** (S-11) | La carte en main, on appelle l'ascenseur à grille : **fondu au noir d'une seconde**, et l'on est **à l'étage**. Sans carte, il ne monte pas. On redescend par l'ascenseur tant qu'on est en haut. La carte disparaît du sac quand on quitte le lieu. Une tête ou une batterie posée devant la grille est écartée de la zone d'appel (V4-17) |
+| **L'étage** (Q-0.10-2, R49) | Les objets-clés, **tous au fond** : les **couvertures de laine** à la lingerie, la **lanterne-tempête** dans la suite, **le fer à souder** et **deux boîtes de roulements** (V3-01) dans la machinerie de l'ascenseur, les **tôles ondulées** dans la chambre au balcon. Les fouilles des chambres et des salles de bains (le fil dentaire, courant ici : N2-61) |
+| **La sortie** (S-11) | Par **le balcon effondré** de la chambre 8 : on saute sur la dune, on ne remonte pas par là |
+| **24 h** | La borne s'éteint, la batterie retourne au panneau, le robot reprend sa place ; les couvertures reviennent en 24 h, les autres objets-clés en 4 jours |
+
+- **L'étage ne se voit pas d'en bas** (L-2) : il est posé au sol, au nord, derrière l'hôtel ; le jeu cache le groupe où le joueur n'est pas. Les Éteints d'un niveau ne voient ni n'entendent l'autre.
+- **Les Éteints** : **18**, dont **6 clients couchés** du « Séjour Zéro-Effort » qui se relèvent (des dormeurs), **2 Noyés** dans la piscine et **l'Ensablé** de la salle à manger (Book 06 §5.1).
+- **L'arme trouvée** : **le pied de guéridon** en fonte, sur la terrasse (3,2, lent, solidité 50, sans étoiles ; une fois par personnage : Book 25 §15).
+- **Les bords** (R52) : la promenade prolongée à l'est jusqu'au panneau de sortie, une **ganivelle en travers à l'ouest de la promenade** (vue à la recette de la 0.10 : on y bute sur une vraie clôture), des dunes et des oyats, la rue des maisons de bains au nord, et au sud **une bande d'eau claire** où l'on marche jusqu'aux genoux, avant le large.
+
+### 13.2 Le phare du cap (L2B), « le feu et le cargo »
+
+Tout au bout du cap, la tour blanche et rouge du phare, éteinte depuis la Grande Panne. On arrive par **la route du nord**, à travers la lande ; on repart par **la grève**, à l'ouest, et le sentier côtier.
+
+| Étape | Ce que fait le joueur |
+|---|---|
+| **Monter** (S-12) | L'escalier en fonte de la tour s'arrête net à 3 m. On prend **l'escabeau du gardien** au hangar et on le pose à **la marque à la craie**, sous l'escalier coupé. Un seul chemin (la colonne des poids est retirée) |
+| **Le feu** (S-13, V2-10) | On remplit **le bidon** à la cuve à pompe (5 s), on le monte, on remplit la lanterne ; on ramasse **le prisme** tombé au pied de la tour et on le remet. Ce sont des états du lieu, pas des objets du sac |
+| **Allumer, la nuit seulement** (S-14, V2-09, V4-03) | De 21 h à 5 h 30 du jeu. **De jour, on prépare** : allumer donne un **message qui passe** (« Le feu ne sert qu'à la nuit tombée. »). Allumée, la lanterne éclaire **45 m**, son faisceau balaie le sol et la caméra recule quelques secondes sur la tour ; elle reste allumée jusqu'au retour à 24 h et n'attire que la nuit |
+| **Tenir la tour** (S-15, V4-08, V4-10) | La lumière réveille **les dormeurs du chemin des douaniers**, qui montent **jusqu'au pied de l'escalier**. Et comme on a d'ordinaire déjà nettoyé le lieu, **2 ou 3 Éteints arrivent de la lande** à l'allumage, hors de la vue, et marchent vers la tour (Book 06 §5.2) : *La lumière balaie la lande. Au loin, des silhouettes se mettent en marche.* |
+| **La corne de brume** (S-16) | On répare le compresseur (Serrer 1, 10 s, sans pièce), on sonne : **un leurre** au bord de la falaise, 60 s, **une fois par nuit**, plus fort que la lumière de la lanterne |
+| **Le cargo** (V4-04, V4-05, V4-07, V4-09, V4-11) | Un porte-conteneurs de l'Abondance, sans équipage, sur pilote automatique, qui fait toujours sa « livraison du jour », prend le phare pour le port. **Le premier coup de corne au large 10 s après l'allumage**, ses feux et sa coque qui approchent ; **il s'échoue 50 s après l'allumage**. Une **courte scène de 6,6 s** (plan large en plongée sur la crique, fondu et bandes, la coque qui arrive et s'écrase, la secousse, la poupe qui se casse et coule, retour au personnage devant l'épave) ; **pendant la scène, les Éteints du phare s'arrêtent**, et reprennent après. Le son de la corne : un vrai son de paquebot (CC0) |
+| **L'épave** (S-18, Q-0.10-2) | Le cargo éventré sur les rochers de la crique : **la partie du fond**. **La cloche du cargo**, et dans les conteneurs ouverts, la livraison du jour : **la porte de four**, **le soufflet de forge**, **le rabot** et **le jerrican de 20 L**. On y monte de la grève par **l'échelle de coupée**. Un joueur qui arrive après la trouve déjà échouée ; elle reste jusqu'au retour à 24 h, et relancer le feu ne fait pas venir un autre cargo |
+| **La sortie** (P8) | Par **la rampe du canot** : on saute le tronçon effondré, on ne la remonte jamais ; puis la grève de galets jusqu'au **sentier côtier** et son panneau éclairé (« Sentier côtier · ← Port · 6 km ») |
+| **24 h** | L'épave est partie, la lanterne éteinte, l'escabeau au hangar ; un autre cargo viendra au prochain allumage |
+
+- **Le relief** (L-1, K2, V4-13) : le plateau (y 0), la grève (≈ − 8,8), le pont de l'épave (≈ − 4) et la rampe du canot (≈ 37°) sont gardés. **Le serveur reste en 2D** ; le client pose les personnages, les Éteints, les lampes, les cercles, la visée et le sang sur **la hauteur du vrai sol**, que donne le modèle (`hauteurSol`). Les **étages** du phare (le haut, le bas, le pont, l'échelle) règlent qui voit, frappe et saisit qui (Book 06 §5.2).
+- **L'eau jusqu'aux genoux** (V4-13) : le long de la grève, une bande d'eau peu profonde de 3,5 m où l'on marche **ralenti** (60 % de son allure, sans courir), les Éteints aussi ; au-delà, on perd pied, et la mer arrête tout le monde.
+- **Dans l'épave** : le toit des conteneurs s'efface quand on y entre (les trois ensemble, pour tenir le budget de dessin) ; la partie du navire où l'on se tient ne s'efface jamais.
+- **Les Éteints** : **14** placés par le modèle (V2-08 : le nombre retenu après la mesure sur l'iPhone), dont **9 dormeurs** sur le chemin des douaniers et **3 Noyés** dans la crique, plus les **2 ou 3 de la lande** à l'allumage. La nuit au phare, le porteur a mesuré **60 images par seconde** sur son iPhone 13 mini avec 16 à 18 Éteints à l'écran (243 appels de dessin).
+- **L'arme trouvée** : **le harpon du gardien**, au-dessus de la cuisinière de la cuisine (perçant, allonge 2,4 m, 3,2, solidité 50 ; une fois par personnage : Book 25 §15).
+- **Les bords** (V4-08, R52) : un **muret de pierres sèches** clôt la lande au nord, à l'ouest et à l'est, la route d'arrivée restant ouverte, avec son panneau éclairé (« ← La corniche · Ton terrain ») ; la falaise de la pointe et la route du nord se prolongent ; un éboulis ferme le bout est de la grève, et l'eau profonde se voit.
+
+### 13.3 Ce qui reste pour plus tard
+
+- **Le cargo en marche** des bâtiments (d'un seul bloc), son sillage et la houle : la scène garde pour l'instant le cargo de la maquette (V4-18).
+- **L'angle nord-est de la tour**, où les Éteints venus du nord se coincent (V4-11), et plus largement **les Éteints qui ne contournent rien** (le guindeau, les portes des conteneurs : V4-14 ; Book 06 §2.1).
+- **Le verre des lanternes** des panneaux de sortie, qui luit aussi un peu de jour (accepté, V4-18).
+- **Les draps noués** de la lingerie, seconde sortie de l'hôtel prévue au §9.2 de `niveau-2.md` : non faits (le balcon suffit, S-11).

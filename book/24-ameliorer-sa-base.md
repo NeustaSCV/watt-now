@@ -3,6 +3,7 @@
 > Document de conception · version 0.3 · 2026-10-08
 > Statut : **validé dans ses grandes lignes** par le porteur du projet (« tout ça est cohérent », 2026-10-08). Les six recommandations des questions ouvertes sont retenues. **Lots 0 et 1 codés, lot 2 en partie** (couchage, eau 1 à 2, coffre) : voir §11.
 > **0.8 (2026-10-10)** : les lignées vont jusqu'au **niveau 1**, chaque niveau au-delà de la maison avec sa **clé** trouvée dehors ; la citerne et le lit de branchages disparaissent ; l'établi, le râtelier et la torche plantée arrivent : voir **§12**, qui fait foi.
+> **0.10 (2026-10-15)** : les lignées vont jusqu'au **niveau 2** (les dix meubles et leurs objets-clés, faits de récupération), **plus aucun repli**, les étagères, les deux meubles nouveaux pour tous (le cuiseur solaire, les bacs de tri), **le banc solaire qui suit le soleil** : voir **§14**, qui fait foi.
 > Demande du porteur : « faire évoluer les éléments existants (je pense au feu notamment, pour éviter d'avoir 50 places à feu dans la base) », et ajouter de nouveaux éléments à fabriquer pour la base.
 > S'appuie sur les books [02](02-crafting.md) (§8 installations, §10 démontage, §14 bis bushcraft), [03](03-bibliotheque-et-savoir.md) (§5 savoir), [04](04-siderurgie-et-chimie.md), [06](06-zombies.md) (signature), [10](10-construction.md) (abri, chauffage), [11](11-agriculture-elevage-alimentation.md) (§11 conservation), [19](19-modele-du-terrain.md) (emprises), [21](21-perimetre-phase-0.md) (0a, 0b), [22](22-quetes-et-objectifs.md) (carnet) et sur la proposition P-002 (`PROPOSITIONS.md`, gamme bushcraft et ses « évolutions »).
 
@@ -442,3 +443,54 @@ Une recette **liée à une construction** apparaît dès qu'on possède la const
 - **Le malus ×1,5** reste sur **ce qu'on y fabrique** (Book 25 §2.3), **pas sur les gestes** : pédaler, charger, poser sa pièce coûtent le même prix à tous.
 - **Exemple** : un Voltaïque qui a appris le pédalier générateur peut pédaler à moins de 3 m de son banc pour remplir sa batterie.
 - **Les armes de métier** n'apparaissent qu'avec **le meuble complet de leur métier**, bâti et équipé de sa pièce, même pour un apprenti d'une autre famille (Book 25 §14).
+
+## 14. Le niveau 2 : la récupération, et plus aucun repli (0.10, 2026-10-15)
+
+*`niveau-2.md` (§1, §2, §4.2), plan 0.10 (§3.1, chantiers B, C, D ; S-22, S-23, S-30 ; V1-01 à V1-06, V1-17 à V1-21, V3-02, V3-03) ; **codé en 0.10** (`commun/src/lignees.ts`, `commun/src/meubles-neufs.ts`, `commun/src/energie.ts`, `commun/src/economie.ts`, `serveur/src/meubles-neufs.ts`). Là où le §12 et le §13 diffèrent, ce paragraphe fait foi. Les meubles des familles du niveau 2 et leurs recettes : Book 25 §15.*
+
+### 14.1 La règle, revue
+
+- **Construire** un niveau reste **le niveau d'avant posé + les matériaux + l'outil**, et **l'objet-clé** du niveau (§12.1).
+- **Plus aucun repli, à aucun niveau** (décision du porteur, 2026-10-14 : « une complexité en plus à gérer ») : les replis du niveau 1 (deux barres en grille, la casserole, les chiffons cousus, le bidon d'huile, la barre en bandes…) **sont retirés**. Sans son objet-clé, un niveau ne se monte pas, même avec ce que demandait son ancien repli. **Ce qu'on avait déjà bâti avec un repli reste bâti** (un abri fermé aux chiffons garde son ×1,35, une marmite à la casserole son ×0,75). Restent, parce que ce ne sont pas des replis de clé mais les voies de secours des familles (V1-08, V1-09) : la pierre plate en enclume, la manivelle de la lampe, la dynamo du vélo, le serre-joint de fortune.
+- **Les trois sources d'un objet-clé** : **sa place garantie** dans son lieu (tous **au fond** : R49) ; **la chance** (rare à la route du pont, à la corniche et dans l'autre lieu du niveau 2 ; les objets-clés du niveau 1 y sortent plus souvent, à 4 % par fouille : V1-07) ; **le Comptoir**, qui le vend **toujours**, sans stock ni réassort, **dès qu'on a visité son lieu** (et jamais avant). Les objets-clés du niveau 1 suivent la même règle au Comptoir.
+- **La récupération** (N2-01) : au niveau 2, les meubles demandent surtout des matières démontées ; les pierres, les branches, les bûches et la glaise restent ceux de la maison et du niveau 1 (et serviront aux murs de la 0.10.1).
+- **Le tube d'aluminium** (N2-02 à N2-05), une matière nouvelle, distincte de la chute d'aluminium : il sort du **parasol**, de la **débroussailleuse**, de la **trottinette d'enfant** et de la **perche à selfie** démontés, de l'**échelle en aluminium** (4 tubes ; dans les ateliers de la station, de la Coopérative et du Moulin, le hangar du phare) et de la **chaise de camping** (2 tubes, 1 chiffon ; le jardin de la station, les berges du gué, les transats de l'hôtel). Sur la côte, **≈ 15 tubes et 8 bouteilles en verre par tournée** (V3-02, V3-03).
+
+### 14.2 Les lignées jusqu'au niveau 2
+
+| Meuble | Niveau 1 (L1) | **Niveau 2 (L2)** · objet-clé (lieu) · matériaux ; outil | Ce qu'il apporte |
+|---|---|---|---|
+| **Feu** | Foyer de cuisine | **Four de terre** · **porte de four en fonte** (phare) · 4 glaises, 2 pierres, 6 bouteilles en verre (le lit de bouteilles isole la sole) ; Marteler 1 | **Bois × 0,5** ; ses deux plats (pot-au-feu, volaille aux cèpes) restent grisés jusqu'à la 0b |
+| **Eau** | Récupérateur à seau, 10 L | **Récupérateur à jerrican** · **jerrican de 20 L** (phare) · 2 caoutchoucs (le tuyau), 1 plastique (l'entonnoir) ; Couper 1 | **20 L** d'eau de pluie |
+| **Couchage** | Abri fermé | **Abri doublé** · **couvertures de laine** (hôtel) · 1 bâche, 4 chiffons ; Couper 1 | Sommeil **× 1,6** |
+| **Stockage** | Coffre cerclé | **Réserve couverte** · **tôles ondulées** (hôtel) · 4 tubes d'aluminium, 1 rouleau de fil de fer, 1 poignée de clous ; Couper 1, Marteler 2 | **400 kg** |
+| **Établi** | Établi à étau | **Établi de menuisier** · **le rabot** (phare : la qualité Raboter) · 2 bûches, 1 barre (la vis de presse), 1 poignée de clous | Les **étagères** (§14.3) |
+| **Lumière** | Torche plantée | **Lanterne fixe** · **lanterne-tempête** (hôtel) · 1 tube (la potence), 2 chutes d'aluminium (le réflecteur), 1 bidon d'huile, consommé une fois (V1-06) ; Couper 1 | **14 m** de lumière **chaque nuit, d'elle-même**, sans flamme nue ; rien à rallumer |
+| **Alarme** | Alarme à boîtes | **Cloche d'alarme** · **cloche de bronze** (phare : la cloche du cargo) · 2 tubes, 1 rouleau de fil de fer, 1 petit ressort ; Marteler 1 | On l'entend à **40 m**, et elle **réveille le dormeur** (l'alarme à boîtes prévient seulement qui est éveillé) |
+| 🔥 **Forge** | Foyer de forge | **Forge ventilée** · **soufflet de forge** (phare) · 3 pierres, 2 glaises, 1 barre (la tuyère) ; Marteler 2 | Vers 1 300 °C **sans pomper** : les lames ★★★ (Book 25 §15) |
+| ⚡ **Banc** | Banc solaire | **Poste de montage** · **fer à souder** (hôtel : la qualité Souder, sans version pauvre) · 1 fil de cuivre, 1 résistance, 1 aimant, 2 plastiques | Souder : le pack soudé de 24 Wh, la batterie de cellules, la rampe de LED (Book 25 §15) |
+| ⚙️ **Pédalier** | Pédalier générateur | **Roulements montés** · **1 roulement** (hôtel : la boîte en contient 3, V1-01) ; Serrer 2 | **− 30 % d'effort, + 30 % de courant** ; le cranequin léger, la charrette, le moulin de jerricans (Book 25 §15) |
+
+- **Les délais de retour** des objets-clés : les couvertures et le jerrican en **24 h**, les autres en **4 jours** (N2-18 à N2-27).
+- **Les fiches** : « Tu y penses » au ramassage, et l'indice en deux temps, qui nomme le type de lieu puis le lieu, jamais l'endroit exact (« De la vraie laine ? Un grand hôtel en avait plein. », puis « Au Grand Hôtel des Flots. »).
+
+### 14.3 Les étagères de l'établi de menuisier
+
+- **Étagères** (V1-04, V1-20, V1-21) : **2 planches fendues** et **1 poignée de clous**, rabotées au rabot (Raboter 1), à côté de l'établi de menuisier : **+ 50 kg** au coffre ou à la réserve d'à côté. Le vrai objet « planche rabotée » viendra avec les murs, en 0.10.1.
+- **Les manches + 25 %** sont reportés (il faudrait une solidité par exemplaire) ; **la porte de planches** attend les murs (0.10.1).
+
+### 14.4 Deux meubles nouveaux pour tous
+
+**Ils apparaissent après la première visite d'un lieu du niveau 2** (N2-Q3), sans objet-clé ni meuble d'avant.
+
+| Meuble | Matériaux · outil | Ce qu'il fait |
+|---|---|---|
+| **Cuiseur solaire** (N2-40, S-22) | 4 chutes d'aluminium (les réflecteurs), 1 verre (la vitre), 4 papiers (l'isolant), 1 boîte vide ; Couper 1 | **Un foyer qui ne brûle rien** : il fait bouillir l'eau et cuit les plats du foyer de pierres, **deux fois plus lentement**, **au soleil et le jour seulement** ; moitié moins vite par temps voilé ; rien sous un ciel couvert, sous la pluie ni la nuit (et il le dit) |
+| **Bacs de tri** (N2-41, S-23) | 3 jerricans percés, 1 aimant (il sépare le fer de l'aluminium), 1 tube ; Couper 1 | À moins de 3 m, **démonter va deux fois plus vite**, et **une matière de plus, un démontage sur trois** (tiré par le serveur) |
+
+### 14.5 Le banc solaire suit le soleil (Q-0.10-6, S-30, V1-02, V1-19)
+
+- **Le panneau ne produit plus au calendrier sans regarder le ciel** : il suit **l'heure** (rien la nuit, le plus fort à midi) et **le temps** (plein soleil 1, voilé 0,6, couvert 0,3, pluie 0), même joueur absent.
+- **La même recharge qu'avant, en moyenne** : **80 Wh par jour de calendrier** sur la vraie météo, soit **≈ 160 Wh par beau jour** (≈ 162 ; tout est multiplié par ≈ 2). Mesuré par `npm run rythme` : ≈ 18,7 Wh par jour de jeu en moyenne, 35,2 un jour tout au soleil.
+- **Par mauvais temps, le moulin de jerricans prend le relais** (⚙️, Book 25 §15) : il remplit la même batterie de la base, à la même moyenne.
+- **La batterie de la base**, que remplissent le banc et le moulin et que vide la rampe de LED, est **la plus proche à 15 m au plus** (V1-17) ; au-delà, rien ne charge et la rampe reste éteinte. La batterie de voiture du banc (360 Wh) peut être remplacée par **la batterie de cellules** (120 Wh) des ⚡.
