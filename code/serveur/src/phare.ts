@@ -30,7 +30,7 @@ import {
   type EtatPhare,
   type EtatPhareVu,
 } from "../../commun/src/phare.ts";
-import { arrivantsDeLaLande } from "../../commun/src/phare-vivant.ts";
+import { arrivantsDeLaLande, remettreSurLaGreve } from "../../commun/src/phare-vivant.ts";
 import { FOUILLES_DE_L_EPAVE, OBJETS_DE_L_EPAVE, type TypeRessourcePhare } from "../../commun/src/ressources-phare.ts";
 import type { Base, RessourceEnBase } from "./base.ts";
 import { JAMAIS, LieuVivant, type ContexteLieu, type DefinitionLieuVivant, type Voyageur } from "./lieu-vivant.ts";
@@ -196,6 +196,9 @@ export class LieuPhare extends LieuVivant {
     // Pas de texte du serveur ici : la pensée du guidage (P-26) le dit (commun/src/guidage.ts).
     if (devantLeJoueur) this.annoncer(instant, { cargo: true });
     this.basculerPorte("epave", true);
+    // Un Éteint dans l'eau, là où l'épave se pose, est remis sur les galets (pas sur le pont, d'où il ne savait pas
+    // redescendre : essai sur l'iPhone, 2026-10-15).
+    remettreSurLaGreve(this.eteints);
     for (const r of this.ressources.values()) if (DE_L_EPAVE.has(r.type) && r.disponibleLe <= instant) this.diffuser({ t: "ressource", id: r.id, disponible: true });
   }
 

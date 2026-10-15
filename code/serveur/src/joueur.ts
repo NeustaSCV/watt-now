@@ -1123,8 +1123,11 @@ export class Joueur implements Voyageur, ParticipantLecon {
     let meilleur: Eteint | null = null;
     let meilleureDistance = Infinity;
     const zone = this.zoneIci();
+    // Au phare (0.10) : pas d'un autre étage du relief (le pont de l'épave vu de la grève, la grève vue du plateau).
+    const milieu = this.vivant?.milieu;
     for (const e of this.eteintsIci()) {
       if (e.etat === "detruit") continue;
+      if (milieu?.atteint?.(this.position.x, this.position.z, e.x, e.z) === false) continue;
       const dx = e.x - this.position.x;
       const dz = e.z - this.position.z;
       const d = Math.hypot(dx, dz);
@@ -2538,6 +2541,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
     const allure = allureAutorisee(this.intention.allure, this.besoins, this.objetPorte() !== undefined || this.brasDuLieu() !== null || traineTravois(this.inventaire));
     // Sur le radier du gué, on marche, on n'y court pas (plan 0.8, Q-0.8-22).
     if (allure === "course" && this.lieu === "gue" && this.gue.pasDeCourse(this.position)) return "marche";
+    // Dans l'eau de la crique du phare (0.10), jusqu'aux genoux : on n'y court pas (ce que la zone freine).
+    if (allure === "course" && (this.zoneIci().frein?.(this.position.x, this.position.z) ?? 1) < 1) return "marche";
     return allure === "course" && this.endurance < SEUIL_EPUISE ? "marche" : allure;
   }
 

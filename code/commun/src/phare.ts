@@ -27,6 +27,7 @@ import { creerGrille } from "./grille.ts";
 import type { Boite, Sortie, Zone } from "./lieux.ts";
 import { declarerObstaclesBas } from "./murs.ts";
 import {
+  EPAVE_MODELE,
   ESCABEAU_MODELE,
   PIECES_MODELE,
   PLACES_OBJETS,
@@ -52,9 +53,14 @@ export function auModele(x: number, z: number): { x: number; z: number } {
 
 // ---------- Les obstacles : ceux du modèle (`userData.obstacles`, `obstaclesEpave`) ----------
 
-/** Les obstacles qui arrêtent les coups et les objets lancés : les murs, les cloisons, les parois des conteneurs. */
+/**
+ * Les obstacles qui arrêtent les coups et les objets lancés : les murs, les cloisons, les parois des conteneurs ; et ce qui
+ * sépare deux étages du relief sur moins d'un mètre (0.10, essai sur l'iPhone du 2026-10-15) : la coque de l'épave (le
+ * pont est 4 m au-dessus de la grève) et les bords de la rampe du canot (le vide, jusqu'à 5 m). Ni saisie ni coup
+ * par-dessus.
+ */
 function arreteLesCoupsPhare(nature: string): boolean {
-  return nature === "mur" || nature === "cloison" || nature.startsWith("conteneur");
+  return nature === "mur" || nature === "cloison" || nature.startsWith("conteneur") || nature.startsWith("coque") || nature === BORD_RAMPE;
 }
 
 /** L'épaisseur de la boîte d'un segment : les murs comptent leur maçonnerie, le reste est mince. */
@@ -116,6 +122,97 @@ export function dansLaCoque(x: number, z: number): boolean {
   return dedans;
 }
 
+// ---------- Les étages du relief (L-1 ; 0.10, essai sur l'iPhone du 2026-10-15) ----------
+
+/**
+ * L'échelle de coupée (FICHE.epave.echelle, repère du modèle) : 1,3 m de large, de la grève (le bas) au pavois (le haut).
+ * Elle relie la grève au pont.
+ */
+const ECHELLE = { bas: EPAVE_MODELE.echelle.bas, haut: EPAVE_MODELE.echelle.haut, demi: 0.65 } as const;
+
+/** Où en est-on sur l'échelle de coupée (0 en bas, 1 en haut), ou null si l'on n'y est pas (repère du modèle). */
+function surLEchelle(x: number, z: number): number | null {
+  const ux = ECHELLE.haut.x - ECHELLE.bas.x;
+  const uz = ECHELLE.haut.z - ECHELLE.bas.z;
+  const l = Math.hypot(ux, uz);
+  const t = ((x - ECHELLE.bas.x) * ux + (z - ECHELLE.bas.z) * uz) / (l * l);
+  const travers = Math.abs((x - ECHELLE.bas.x) * uz - (z - ECHELLE.bas.z) * ux) / l;
+  return t >= -0.05 && t <= 1.05 && travers <= ECHELLE.demi + 0.1 ? t : null;
+}
+
+/** Le bord de la falaise (« falaise » du modèle) : son z à ce x, repère du modèle (null sous la rampe du canot). */
+function zFalaise(x: number): number | null {
+  for (const s of SEGMENTS_MODELE) {
+    if (s.nature !== "falaise" || x < Math.min(s.x1, s.x2) || x > Math.max(s.x1, s.x2)) continue;
+    const t = s.x2 === s.x1 ? 0 : (x - s.x1) / (s.x2 - s.x1);
+    return s.z1 + (s.z2 - s.z1) * t;
+  }
+  return null;
+}
+
+/** La rampe du canot (repère du modèle) : entre ses bords, du seuil du hangar jusqu'aux galets. */
+const RAMPE = { x1: -25.6, x2: -22.4, z1: 12, z2: 23.2 } as const;
+
+/**
+ * Les étages du phare, en 2D : le plateau et la partie haute de la rampe (« haut ») ; la partie basse de la rampe, la
+ * grève et l'eau de la crique (« bas ») ; le pont de l'épave (« pont ») ; l'échelle de coupée, entre la grève et le pont
+ * (« echelle »). À pied, seule l'échelle relie deux étages (on saute de la rampe, on ne remonte pas).
+ */
+export type EtagePhare = "haut" | "bas" | "pont" | "echelle";
+
+/** L'étage d'un point du jeu ; `epave` : l'épave est échouée. */
+export function etageDuPhare(x: number, z: number, epave: boolean): EtagePhare {
+  const m = auModele(x, z);
+  if (epave && dansLaCoque(m.x, m.z)) return "pont";
+  if (epave && surLEchelle(m.x, m.z) !== null) return "echelle";
+  if (m.x >= RAMPE.x1 && m.x <= RAMPE.x2 && m.z >= RAMPE.z1 && m.z <= RAMPE.z2) return m.z <= TROU_RAMPE_Z ? "haut" : "bas";
+  const f = zFalaise(m.x);
+  // Le bord de la falaise du modèle est 25 cm en deçà de l'arête ; on est en bas un mètre plus loin (le pied de la falaise
+  // est à trois mètres : entre les deux, la paroi, où l'on ne va pas).
+  return f === null || m.z < f + 1 ? "haut" : "bas";
+}
+
+/** Deux points du phare sont-ils au même étage (l'échelle touche la grève et le pont) ? */
+export function memeEtagePhare(a: { x: number; z: number }, b: { x: number; z: number }, epave: boolean): boolean {
+  const ea = etageDuPhare(a.x, a.z, epave);
+  const eb = etageDuPhare(b.x, b.z, epave);
+  if (ea === eb) return true;
+  const paire = new Set([ea, eb]);
+  return paire.has("echelle") && (paire.has("bas") || paire.has("pont"));
+}
+
+/**
+ * Le chemin d'un étage à l'autre du bas, pour un Éteint (le milieu du phare, phare-vivant.ts) : du pont vers la grève (ou
+ * l'inverse), il passe par l'échelle de coupée (sinon il restait collé au flanc de la coque : essai sur l'iPhone,
+ * 2026-10-15) ; d'ailleurs, null (tout droit). L'épave est supposée là : sans elle, personne n'est sur le pont.
+ */
+export function passageEchelle(ax: number, az: number, bx: number, bz: number): { x: number; z: number } | null {
+  const ea = etageDuPhare(ax, az, true);
+  const eb = etageDuPhare(bx, bz, true);
+  if (ea === eb || eb === "haut" || ea === "haut") return null;
+  // Un point de l'échelle (t : 0 en bas, 1 en haut ; au-delà, un pas sur le pont ; en deçà, un pas sur les galets).
+  const sur = (t: number) => jeu(ECHELLE.bas.x + (ECHELLE.haut.x - ECHELLE.bas.x) * t, ECHELLE.bas.z + (ECHELLE.haut.z - ECHELLE.bas.z) * t);
+  const pont = sur(1.15);
+  const galets = sur(-0.15);
+  const milieu = sur(0.5);
+  // Près d'un bout (à moins d'un mètre : le point d'abord est à 0,93 m), on s'engage sur l'échelle ; plus loin, on y va.
+  const loin = (p: { x: number; z: number }) => Math.hypot(ax - p.x, az - p.z) > 1;
+  // Sur l'échelle : on va au bout qui mène à b. Ailleurs : d'abord au pied (ou au haut) de l'échelle, puis on s'y engage.
+  if (ea === "echelle") return eb === "pont" ? pont : galets;
+  if (ea === "pont") return loin(sur(1)) ? pont : milieu;
+  return loin(sur(0)) ? galets : milieu;
+}
+
+/**
+ * Sur les galets de la crique (la grève, l'eau peu profonde, pas sur la rampe ni sur le pont), pour la pensée qui montre
+ * la sortie (commun/src/guidage.ts).
+ */
+export function surLaGreve(x: number, z: number): boolean {
+  const m = auModele(x, z);
+  if (m.x >= RAMPE.x1 && m.x <= RAMPE.x2 && m.z <= RAMPE.z2) return false;
+  return etageDuPhare(x, z, false) === "bas";
+}
+
 /** Le bord de l'eau qui passe sous la coque : il s'efface quand l'épave est là. */
 const SOUS_LA_COQUE = (s: SegmentModele) => (s.nature.startsWith("la mer") || s.nature.startsWith("rochers")) && dansLaCoque((s.x1 + s.x2) / 2, (s.z1 + s.z2) / 2);
 
@@ -124,27 +221,104 @@ const SOUS_LA_COQUE = (s: SegmentModele) => (s.nature.startsWith("la mer") || s.
  * partie haute (z 18,95, y − 5,15) et la partie basse affaissée (z 19,8, y − 6,65). En 2D, un obstacle qui barre la rampe :
  * personne ne le franchit à pied, ni joueur ni Éteint ; on le saute d'en haut (SAUT_RAMPE), on ne le remonte jamais.
  */
-const TROU_RAMPE: Boite = { ...jeu(-24, 19.375), l: 3.2, p: 0.85 };
+const TROU_RAMPE_Z = 19.375;
+const TROU_RAMPE: Boite = { ...jeu(-24, TROU_RAMPE_Z), l: 3.2, p: 0.85 };
 declarerObstaclesBas([TROU_RAMPE]);
 
 /**
  * Les deux bords de la rampe (le vide, les chevalets), retouchés pour qu'on y passe à pied (T4, 1,2 m au moins) : ils
- * commencent 0,6 m après le seuil du hangar (la poupe du canot, sur son ber, n'y laissait que 0,8 m), et s'arrêtent à
- * z 21 : on descend du bas de la rampe sur les galets, d'un côté ou de l'autre (le bord de l'eau, à z 22,6, ne laissait
- * que 0,6 m sous le bout des garde-fous). Le client pose le personnage sur la rampe ou sur la grève (hauteurSol).
+ * commencent 0,6 m après le seuil du hangar (la poupe du canot, sur son ber, n'y laissait que 0,8 m), et s'arrêtent juste
+ * après le tronçon effondré (`FIN_BORDS_RAMPE`, 0,3 m après sa reprise : ils le bordent, sinon on contournerait le trou par
+ * les galets) : dès le haut de la partie basse, on quitte la rampe sur les galets, d'un côté ou de l'autre, ou l'on
+ * descend jusqu'en bas, dans l'eau (essai sur l'iPhone, 2026-10-15 : arrêtés à z 21, ils ne laissaient qu'un mètre avant
+ * l'eau). Le client pose le personnage sur la rampe ou sur la grève (hauteurSol).
  */
 const BORD_RAMPE = "bord de la rampe du canot (le vide, les chevalets)";
-const BORDS_RAMPE: SegmentModele[] = [-25.5, -22.5].map((x) => ({ x1: x, z1: 12.6, x2: x, z2: 21, nature: BORD_RAMPE }));
+/** Où s'arrêtent les bords de la rampe (repère du modèle) : la reprise de la partie basse (z 19,8), plus 0,3 m. */
+export const FIN_BORDS_RAMPE = 20.1;
+const BORDS_RAMPE: SegmentModele[] = [-25.5, -22.5].map((x) => ({ x1: x, z1: 12.6, x2: x, z2: FIN_BORDS_RAMPE, nature: BORD_RAMPE }));
 /**
  * Le canot, sur son ber, dans le hangar : ses flancs s'arrêtent 0,6 m avant sa poupe dessinée, pour qu'on passe entre la
  * poupe et la grande porte (1,4 m, au lieu de 0,8) vers la rampe.
  */
 const CANOT = (s: SegmentModele): SegmentModele => (s.nature === "canot" ? { ...s, z2: Math.min(s.z2, 10.6) } : s);
 
-const FIXES = [...SEGMENTS_MODELE.filter((s) => !SOUS_LA_COQUE(s) && s.nature !== BORD_RAMPE).map(CANOT), ...BORDS_RAMPE].flatMap(boitesDuSegment);
+// ---------- L'eau peu profonde de la crique (0.10, décision du porteur du 2026-10-15) ----------
+
+/**
+ * Le bord de l'eau du modèle (« la mer (bord de l'eau, crique) », 30 cm en deçà de l'eau) ne bloque plus : une bande
+ * d'eau peu profonde de LARGEUR_EAU mètres le longe, vers le large, où l'on marche jusqu'aux genoux, ralenti (FREIN_EAU),
+ * sans courir ; les Éteints y vont aussi, ralentis de même. Au-delà, on perd pied : la ligne du large (le bord de l'eau
+ * reculé de LARGEUR_EAU) arrête tout le monde. Avec l'épave, la bande en fait le tour là où elle n'est pas sur la coque
+ * (le long du flanc, côté grève, et sous la cassure). Le serveur reste en 2D : la bande n'est qu'un frein de la zone ; le
+ * client y pose le personnage enfoncé jusqu'aux genoux (client/src/phare.ts).
+ */
+export const LARGEUR_EAU = 3.5;
+/** Dans l'eau jusqu'aux genoux, on avance à 60 % de son allure (et l'on n'y court pas). */
+export const FREIN_EAU = 0.6;
+/** La surface de la mer (repère du modèle : MER_Y) : le client y pose les cercles, et enfonce le personnage dessous. */
+export const NIVEAU_MER = -9;
+
+const BORD_EAU = (s: SegmentModele) => s.nature.startsWith("la mer");
+/** Le bord de l'eau du modèle, d'ouest en est (une ligne brisée, x croissant). */
+const LIGNE_EAU: readonly SegmentModele[] = SEGMENTS_MODELE.filter(BORD_EAU);
+
+/** Le z (repère du modèle) du bord de l'eau à ce x, ou null hors de la crique (à l'est de ses rochers). */
+function zBordEau(x: number): number | null {
+  for (const s of LIGNE_EAU) {
+    if (x < Math.min(s.x1, s.x2) || x > Math.max(s.x1, s.x2)) continue;
+    const t = s.x2 === s.x1 ? 0 : (x - s.x1) / (s.x2 - s.x1);
+    return s.z1 + (s.z2 - s.z1) * t;
+  }
+  return null;
+}
+
+/** Ce point du jeu est-il dans l'eau peu profonde de la crique ? (pas sur le pont de l'épave, quand elle est là) */
+export function dansLEauPhare(x: number, z: number, epave: boolean): boolean {
+  const m = auModele(x, z);
+  const bord = zBordEau(m.x);
+  if (bord === null || m.z <= bord || m.z > bord + LARGEUR_EAU) return false;
+  return !(epave && dansLaCoque(m.x, m.z));
+}
+
+/** La ligne du large : le bord de l'eau reculé de LARGEUR_EAU, fermée à l'est par les rochers du bout de la crique. */
+const LARGE = "le large (on perd pied)";
+const LIGNE_LARGE: SegmentModele[] = [
+  ...LIGNE_EAU.map((s) => ({ ...s, z1: s.z1 + LARGEUR_EAU, z2: s.z2 + LARGEUR_EAU, nature: LARGE })),
+  ...(() => {
+    const est = LIGNE_EAU.reduce((a, b) => (Math.max(b.x1, b.x2) > Math.max(a.x1, a.x2) ? b : a));
+    const x = Math.max(est.x1, est.x2);
+    const z = est.x2 >= est.x1 ? est.z2 : est.z1;
+    return [{ x1: x, z1: z, x2: x, z2: z + LARGEUR_EAU, nature: "rochers au bout de la crique" }];
+  })(),
+];
+const BOITES_LARGE = LIGNE_LARGE.flatMap(boitesDuSegment);
+/** Avec l'épave, ce qui de la ligne du large passe sur la coque s'efface (on ne coupe pas le pont en deux). */
+const BOITES_LARGE_EPAVE = BOITES_LARGE.filter((b) => {
+  const m = auModele(b.x, b.z);
+  return !dansLaCoque(m.x, m.z);
+});
+
+/**
+ * Le conteneur écrasé, couché dans l'eau au pied de la cassure (le décor du modèle : « on n'y entre pas ») : il est dans la
+ * bande, on le contourne. Son emprise, reprise du modèle (posé en x − 9,8, z 24,1, tourné de 0,55 rad ; 6,06 × 2,6 m).
+ */
+const CONTENEUR_ECRASE: SegmentModele[] = (() => {
+  const o = { x: -9.8, z: 24.1, ry: 0.55 };
+  const c = Math.cos(o.ry);
+  const sn = Math.sin(o.ry);
+  const coin = (lx: number, lz: number): [number, number] => [o.x + lx * c + lz * sn, o.z - lx * sn + lz * c];
+  const coins = [coin(-3.03, -1.3), coin(3.03, -1.3), coin(3.03, 1.3), coin(-3.03, 1.3)];
+  return coins.map(([x1, z1], i) => {
+    const [x2, z2] = coins[(i + 1) % 4]!;
+    return { x1, z1, x2, z2, nature: "conteneur écrasé, couché dans l'eau" };
+  });
+})();
+
+const FIXES = [...SEGMENTS_MODELE.filter((s) => !SOUS_LA_COQUE(s) && !BORD_EAU(s) && s.nature !== BORD_RAMPE).map(CANOT), ...BORDS_RAMPE].flatMap(boitesDuSegment);
 FIXES.push(TROU_RAMPE);
-const SOUS_COQUE = SEGMENTS_MODELE.filter(SOUS_LA_COQUE).flatMap(boitesDuSegment);
-const EPAVE = SEGMENTS_EPAVE.flatMap(boitesDuSegment);
+const SOUS_COQUE = SEGMENTS_MODELE.filter((s) => SOUS_LA_COQUE(s) && !BORD_EAU(s)).flatMap(boitesDuSegment);
+const EPAVE = [...SEGMENTS_EPAVE, ...CONTENEUR_ECRASE].flatMap(boitesDuSegment);
 const zones = new Map<string, Zone>();
 
 /** L'état du phare qui change sa zone (S-02, comme les portes du Moulin) : l'épave échouée (true) ou la crique vide. */
@@ -161,8 +335,12 @@ export function zonePhare(portes: Readonly<Record<string, boolean>>): Zone {
   const cle = epave ? "epave" : "crique";
   let z = zones.get(cle);
   if (!z) {
-    const obstacles = epave ? [...FIXES, ...EPAVE] : [...FIXES, ...SOUS_COQUE];
-    z = { xMin: 0.5, xMax: PHARE.largeur - 0.5, zMin: 0.5, zMax: PHARE.profondeur - 0.5, obstacles, grille: creerGrille(obstacles) };
+    const obstacles = epave ? [...FIXES, ...BOITES_LARGE_EPAVE, ...EPAVE] : [...FIXES, ...BOITES_LARGE, ...SOUS_COQUE];
+    // Le lot s'arrête à 50 m vers le sud ; la ligne du large passe un peu au-delà (z 26,9 du modèle) : la zone s'étend
+    // jusque-là (la mer du client continue bien plus loin).
+    const zMax = jeu(0, Math.max(...LIGNE_LARGE.map((s) => Math.max(s.z1, s.z2)))).z + 0.5;
+    const frein = (x: number, zj: number) => (dansLEauPhare(x, zj, epave) ? FREIN_EAU : 1);
+    z = { xMin: 0.5, xMax: PHARE.largeur - 0.5, zMin: 0.5, zMax, obstacles, grille: creerGrille(obstacles), frein };
     zones.set(cle, z);
   }
   return z;
@@ -177,6 +355,14 @@ export const ZONE_PHARE: Zone = zonePhare(portesInitialesPhare());
 const GRILLE_NORD = jeu(-1.5, -16);
 /** La grève de la crique, à l'ouest (FICHE.entrees, y ≈ − 8,8) : entre le pied de la falaise et l'eau. */
 const GREVE_OUEST = jeu(-28.6, 16.8);
+
+/**
+ * Le panneau du sentier côtier, planté à la sortie de la grève (0.10, essai sur l'iPhone du 2026-10-15 : rien ne montrait
+ * par où l'on ressort) : celui du modèle (« Sentier côtier · ← Port · 6 km ») est sur le plateau ; le jeu en plante un
+ * pareil sur les galets, au pied de la falaise, juste à l'est de la sortie (repère du modèle : x − 27,4, z 16,6). On le lit
+ * (commun/src/guidage.ts, E-12).
+ */
+export const ECRITEAU_SENTIER = jeu(-27.4, 16.6);
 
 /**
  * On arrive toujours par la route d'accès, au nord (la première sortie). La grève de la crique, à l'ouest, est une

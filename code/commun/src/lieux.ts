@@ -107,6 +107,11 @@ export interface Zone {
   obstacles: readonly Boite[];
   /** Pour les lieux aux nombreux obstacles (la Coopérative) : les obstacles rangés par cases. */
   grille?: GrilleObstacles;
+  /**
+   * Ce qui freine le pas à cet endroit (1 : rien ; moins : on avance moins vite, et l'on n'y court pas). Au phare, l'eau
+   * peu profonde de la crique (0.10, commun/src/phare.ts) ; joueurs et Éteints, de même.
+   */
+  frein?: (x: number, z: number) => number;
 }
 
 /** Un point (avec son rayon) touche-t-il un obstacle de la zone ? */

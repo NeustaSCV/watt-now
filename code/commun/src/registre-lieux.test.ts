@@ -98,7 +98,8 @@ test("les quatre lieux du niveau 2 sont branchés vides : ni Éteints ni butin ;
     return [Math.round(z.xMax + z.xMin), Math.round(z.zMax + z.zMin)];
   };
   assert.deepEqual(lot("grand_hotel"), [64, 66], "l'hôtel : 64 × 66 m");
-  assert.deepEqual(lot("phare"), [60, 50], "le phare : 60 × 50 m");
+  // Le phare : 60 × 50 m, et vers le sud jusqu'à la ligne du large de la crique (l'eau peu profonde, 0.10 : z 52,7).
+  assert.deepEqual(lot("phare"), [60, 53], "le phare : 60 × 50 m, plus l'eau de la crique");
   for (const halte of ["route_pont", "corniche"] as const) assert.equal(zoneDe(halte).xMax + zoneDe(halte).xMin, 200, `${halte} : 200 m de long`);
 });
 
