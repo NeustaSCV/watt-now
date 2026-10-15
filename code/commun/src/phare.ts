@@ -290,8 +290,12 @@ export const RAYON_MARQUE = 1.2;
 /** Les gestes (secondes réelles) : remplir le bidon (S-13 : 5 s), monter les 31 m de marches, sauter. */
 export const DUREES_PHARE = { cuve: 5, prisme: 1, verser: 6, remettre: 6, allumer: 4 } as const;
 
-/** Le cargo s'échoue 2 minutes réelles après l'allumage (S-17). */
-export const CARGO_MS = 2 * 60_000;
+/**
+ * Le cargo s'échoue 50 s réelles après l'allumage (S-17 ; réglage du porteur, 2026-10-15 : deux minutes, c'était trop
+ * long pour qui a déjà fouillé tout le lieu). Le seul endroit où ce délai est écrit : le client (sa corne, ses feux, le
+ * cadrage de la crique) et le simulateur de rythme en partent.
+ */
+export const CARGO_MS = 50_000;
 
 /**
  * La lanterne allumée, la nuit : une lumière qui réveille les dormeurs du chemin des douaniers et les fait monter (S-15).

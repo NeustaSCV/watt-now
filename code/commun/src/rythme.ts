@@ -35,7 +35,7 @@
 // (`jouerParcoursN2`) : les portes du niveau 2 (`postesNiveau2` : les dix évolutions, les meubles nouveaux, les étagères,
 // le métier ★★★), les sorties à l'hôtel par la route du pont et au phare par la corniche, **le péage** à l'aller
 // seulement (12 wotts, une heure de passage libre ; le retour toujours libre, V2-01), **le check-in** (la durée de la
-// visite de l'hôtel), **le feu du phare la nuit** (on part pour l'allumer à la nuit tombée ; le cargo 2 min après), les
+// visite de l'hôtel), **le feu du phare la nuit** (on part pour l'allumer à la nuit tombée ; le cargo 50 s après), les
 // objets-clés et les outils du niveau 2 (le rabot, le fer à souder), **les boîtes de roulements** (trois roulements
 // chacune, V1-01 ; le Comptoir en vend s'il en manque), le bois (le pin tombé de la corniche, le tas de la station), la
 // glaise du gué. Le budget des matières et de l'énergie est à côté : rythme-niveau2.ts.
@@ -50,6 +50,7 @@ import { REGLAGES } from "./reglages.ts";
 import { BUTIN_GUE } from "./gue.ts";
 import { BUTIN_HALTE } from "./halte.ts";
 import { ETAPES_LIEUX, LIEUX_NIVEAU_2, lieuDeLEtape, type LieuId } from "./lieux.ts";
+import { CARGO_MS } from "./phare.ts";
 import { SEMIS_CORNICHE } from "./corniche-contenu.ts";
 import { SEMIS_ROUTE_PONT } from "./route-pont.ts";
 import { DUREE_PASSAGE_MS, PRIX_PASSAGE, type Passage as PassagePeage } from "./peage.ts";
@@ -487,10 +488,10 @@ const HALTE_DE: Readonly<Record<LieuNiveau2, { halte: "route_pont" | "corniche";
  * Une sortie du niveau 2, pour un joueur moyen (minutes de jeu connecté), aux mêmes distances que le niveau 1 (B16 : 3 km
  * jusqu'à la halte, 2 km jusqu'au lieu) : l'hôtel, 35 min (la Coopérative : 30) pour le check-in (la batterie à la borne,
  * le robot dégagé, sa tête portée à deux mains, l'ascenseur) ; le phare, 30 min, dont la préparation (l'escabeau, le
- * pétrole, le prisme, le compresseur : faisable de jour) et les 2 min du cargo après l'allumage (S-17), qui se fait la
+ * pétrole, le prisme, le compresseur : faisable de jour) et l'attente du cargo après l'allumage (S-17 : CARGO_MS), qui se fait la
  * nuit. Des estimations, à caler au test familial comme celles du niveau 1.
  */
-export const DUREES_SORTIES_N2 = { grand_hotel: 35, phare: 30, preparerPhare: 8, cargo: 2 } as const;
+export const DUREES_SORTIES_N2 = { grand_hotel: 35, phare: 30, preparerPhare: 8, cargo: CARGO_MS / 60_000 } as const;
 
 /**
  * Le ravitaillement de bois à la corniche ne passe pas la barricade (on ne paie pas) : le pin tombé est en deçà (x = − 78
@@ -1513,7 +1514,7 @@ class Simulation {
         this.voir([lieu === "grand_hotel" ? "pied_gueridon" : "harpon"]);
         let reste = dureeLa;
         if (lieu === "phare") {
-          // La préparation, puis le feu (la nuit, S-14), les 2 min du cargo (S-17) : les objets-clés sont dans l'épave.
+          // La préparation, puis le feu (la nuit, S-14), l'attente du cargo (S-17) : les objets-clés sont dans l'épave.
           const avant = duree(DUREES_SORTIES_N2.preparerPhare) + DUREES_SORTIES_N2.cargo;
           this.avancerEnSortie(avant);
           reste -= avant;
