@@ -23,6 +23,7 @@ import {
   PORTEE_SAUT,
   RAYON_MARQUE,
   TEXTES_PHARE,
+  enSceneCargo,
   etatPhareNeuf,
   lireEtatPhare,
   nuitDe,
@@ -66,8 +67,10 @@ export class LieuPhare extends LieuVivant {
   /** Le gardien lui confie ce qu'il garde (à chaque `de`, le même objet jusqu'au retour à 24 h). */
   lier(propre: () => Record<string, unknown>, instant: number): void {
     this.propre = propre;
-    // Allumé puis laissé seul (le lieu déchargé de la mémoire) : le cargo s'est échoué entre-temps (S-17).
-    this.echouerSiLHeureEstVenue(instant, false);
+    // Allumé puis laissé seul (le lieu déchargé de la mémoire) : le cargo s'est échoué entre-temps (S-17), sans scène.
+    // K4 : le gardien relie le lieu à chaque fois qu'on le demande (le joueur qui marche le demande à chaque pas) ; avec
+    // quelqu'un là, l'échouage s'annonce (la scène se joue), sinon il passait en silence et personne ne voyait la scène.
+    this.echouerSiLHeureEstVenue(instant, this.ici.size > 0);
   }
 
   /** L'état du phare, relu (un champ abîmé ou absent prend sa valeur de départ). */
@@ -91,7 +94,7 @@ export class LieuPhare extends LieuVivant {
       lanterne: e.allumeLe !== null,
       compresseur: e.compresseur,
       corneSonnee: e.corneNuit === nuitDe(instant, this.debutDuMonde),
-      // K2 : l'arrivée du cargo, pour que le client la mette en scène (ses feux, sa corne, le cadrage de la crique).
+      // K2 : l'arrivée du cargo, pour que le client la mette en scène (ses feux, sa corne, puis la scène de l'échouage).
       ...(e.allumeLe !== null && this.portes.epave !== true ? { cargoDans: Math.max(0, CARGO_MS - (instant - e.allumeLe)) } : {}),
     };
   }
@@ -177,11 +180,19 @@ export class LieuPhare extends LieuVivant {
     super.tick(instant, dt);
   }
 
-  /** Deux minutes réelles après l'allumage, le cargo s'échoue (S-17) ; une fois par retour du phare (S-18). */
+  /**
+   * K4 : pendant la scène de l'échouage (de CARGO_MS à CARGO_MS + 6,6 s après l'allumage), les Éteints du phare ne bougent
+   * ni ne frappent, pour personne ; ils reprennent après le fondu.
+   */
+  protected override figeLesEteints(instant: number): boolean {
+    return enSceneCargo(this.etat.allumeLe, instant);
+  }
+
+  /** 50 s réelles après l'allumage, le cargo s'échoue (S-17) ; une fois par retour du phare (S-18). */
   private echouerSiLHeureEstVenue(instant: number, devantLeJoueur: boolean): void {
     const e = this.etat;
     if (e.allumeLe === null || this.portes.epave === true || instant - e.allumeLe < CARGO_MS) return;
-    // Le client joue la scène (la corne grave, le choc, le fondu), puis montre l'épave ; celui qui arrive après la trouve.
+    // Le client joue la scène (K4 : la maquette validée, 6,6 s), puis montre l'épave ; celui qui arrive après la trouve.
     // Pas de texte du serveur ici : la pensée du guidage (P-26) le dit (commun/src/guidage.ts).
     if (devantLeJoueur) this.annoncer(instant, { cargo: true });
     this.basculerPorte("epave", true);

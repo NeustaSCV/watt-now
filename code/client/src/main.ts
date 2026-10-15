@@ -47,6 +47,7 @@ import { ClientHotel } from "./hotel.ts";
 import { Guidage } from "./guidage.ts";
 import { animerPhare, creerPhare } from "./rendu/phare.ts";
 import { PhareClient } from "./phare.ts";
+import { ScenePhareCargo } from "./phare-cargo.ts";
 import { pieceMoulin } from "../../commun/src/moulin.ts";
 // Le Gué-aux-Saules (plan 0.8, chantier 11) : son décor, son bac, sa crue, ses sons.
 import { RenduGue } from "./rendu/gue.ts";
@@ -181,7 +182,7 @@ const hotel = new ClientHotel();
 const corniche = new RenduCorniche();
 const routePont = new RenduRoutePont();
 // 0.10, chantier K : le phare du cap, « le feu et le cargo » (client/src/phare.ts).
-const phare = new PhareClient((id, ou) => son.jouer(id, ou ?? null), () => document.getElementById("hud")!);
+const phare = new PhareClient((id, ou) => son.jouer(id, ou ?? null), () => document.getElementById("hud")!, undefined, new ScenePhareCargo(scene.rendu, () => son.sortieScene()));
 // Le guidage du niveau 2 (0.10) : les voix et les pensées à l'approche, les écriteaux qu'on lit (client/src/guidage.ts).
 const guidage = new Guidage((texte, genre) => hud.message(texte, genre === "pensee" ? "pensee" : ""));
 /** L'atelier de chaque famille : quand il est installé, son thème joue au complet (moment-vitrine 4). */
@@ -2059,7 +2060,8 @@ function boucle(instant: number): void {
     [...eteints.entries()].filter(([, e]) => e.objet.visible).map(([id, e]) => ({ id, x: e.objet.position.x, z: e.objet.position.z, etat: e.etat })),
     enVoyage ? null : position,
   );
-  scene.dessiner();
+  // 0.10, K4 : pendant la scène de l'échouage du cargo, son plan remplace la vue du jeu (client/src/phare.ts).
+  if (!(lieu === "phare" && phare.dessinerScene())) scene.dessiner();
   hud.compter(reseau?.latence ?? 0);
   mesureur?.fin();
 }

@@ -157,7 +157,7 @@ export const DECLENCHEURS: readonly Declencheur[] = [
   { id: "P-21", lieu: "phare", points: [ENDROITS_PHARE.prisme], rayon: 6, si: (e) => e.phare?.prisme === "tombe", lignes: [pensee("Quelque chose brille dans l'herbe, au pied de la tour.")] },
   { id: "P-22", lieu: "phare", points: [ENDROITS_PHARE.cuve], rayon: 3, dans: auPhareDans("tour"), lignes: [pensee("Une cuve de pétrole, avec sa pompe. Ça sent encore.")] },
   // P-23 (« Le feu ne sert qu'à la nuit tombée. ») est déjà en jeu : le message du serveur, fermé par son bouton.
-  { id: "P-24", lieu: "phare", evenement: "allumage", lignes: [pensee("La lumière balaie la lande. Là-bas, sur le chemin, des silhouettes se relèvent.")] },
+  { id: "P-24", lieu: "phare", evenement: "allumage", lignes: [pensee("La lumière balaie la lande. Au loin, des silhouettes se mettent en marche.")] },
   { id: "P-25", lieu: "phare", points: [ENDROITS_PHARE.compresseur], rayon: 3, dans: auPhareDans("corne"), si: (e) => e.phare !== null && !e.phare.compresseur, lignes: [pensee("Le compresseur de la corne de brume. Il a l'air de pouvoir repartir.")] },
   { id: "P-26", lieu: "phare", evenement: "cargo", lignes: [pensee("Une corne grave, au large. Un cargo… droit sur les rochers !")] },
   // En haut de la rampe du canot, au sortir du hangar (la rampe descend de z = 12,6 ; le tronçon effondré est à 19).

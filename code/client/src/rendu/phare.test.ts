@@ -213,30 +213,23 @@ test("les Noyés de la grève ne mettent pas en garde au bord du tronçon effond
   assert.ok(client.menace(noye, jeu(-5, 20)));
 });
 
-test("l'écran tremble au choc du cargo, pour qui est au phare ; rien si les mouvements sont réduits", async () => {
-  const { Secousse } = await import("./secousse.ts");
+test("K4 : à l'échouage, la vue du jeu ne tremble plus (la secousse est dans le plan de la scène) ; l'épave attend le retour au personnage", async () => {
   const vraiMaintenant = performance.now.bind(performance);
   let t = 1000;
   Object.defineProperty(performance, "now", { value: () => t, configurable: true, writable: true });
   try {
-    for (const reduit of [false, true]) {
-      const client = new PhareClient(() => {}, () => ({}) as HTMLElement, new Secousse(() => reduit));
-      const scene = { hauteurSuivie: 0, decalageCamera: { x: 0, y: 0, z: 0 } };
-      const poser = (dt: number) => client.poser(true, { epave: true }, dt, { personnage: null, eteints: [], cercles: [], scene });
-      client.recevoir({ t: "phare", etat: { escabeau: "marque", bidon: "verse", prisme: "remis", lanterne: true, compresseur: false, corneSonnee: false }, cargo: true });
-      // Le choc tombe à l'annonce de l'échouage : la caméra bouge (sauf mouvements réduits) ; 0,8 s plus tard, elle est revenue.
+    const client = new PhareClient(() => {}, () => ({}) as HTMLElement);
+    const scene = { hauteurSuivie: 0, decalageCamera: { x: 0, y: 0, z: 0 } };
+    client.recevoir({ t: "phare", etat: { escabeau: "marque", bidon: "verse", prisme: "remis", lanterne: true, compresseur: false, corneSonnee: false }, cargo: true });
+    for (let i = 0; i < 30; i++) {
+      t += 16;
       client.animer();
-      let max = 0;
-      for (let i = 0; i < 30; i++) {
-        poser(0.016);
-        max = Math.max(max, Math.hypot(scene.decalageCamera.x, scene.decalageCamera.z));
-      }
-      if (reduit) assert.equal(max, 0, "rien avec la réduction des mouvements");
-      else assert.ok(max > 0.1, `la secousse se voit (${max.toFixed(2)} m)`);
-      for (let i = 0; i < 40; i++) poser(0.016);
-      assert.deepEqual(scene.decalageCamera, { x: 0, y: 0, z: 0 });
-      assert.ok(!client.secousse.enCours);
+      client.poser(true, { epave: true }, 0.016, { personnage: null, eteints: [], cercles: [], scene });
     }
+    assert.deepEqual(scene.decalageCamera, { x: 0, y: 0, z: 0 });
+    assert.equal(client.scene({ epave: true }).epave, false, "pas encore l'épave");
+    t += 6000;
+    assert.equal(client.scene({ epave: true }).epave, true);
   } finally {
     Object.defineProperty(performance, "now", { value: vraiMaintenant, configurable: true, writable: true });
   }
