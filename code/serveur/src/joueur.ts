@@ -345,8 +345,11 @@ export class Joueur implements Voyageur, ParticipantLecon {
   /** Le carnet des quêtes déjà envoyé (on ne le renvoie que s'il change). */
   private derniereVueQuetes = "";
   private quetesASauver = false;
-  /** Le dernier constat de l'interface reçu (plan 0.8, chantier 14) : un par 10 s au plus. */
-  private dernierConstat = 0;
+  /**
+   * Le dernier constat reçu (plan 0.8, chantier 14) : un par 10 s au plus. Ceux de l'interface (fiche, aide) partagent
+   * leur délai ; le fruitier trop haut (0.10.1, A1) a le sien, pour qu'une fiche ouverte juste avant ne l'avale pas.
+   */
+  private derniersConstats = new Map<"interface" | "arbre_haut", number>();
   /** La carnation choisie à la création (−1 : celle de la famille). */
   private readonly apparence: Apparence;
   private intention: Intention = INTENTION_REPOS;
@@ -693,9 +696,13 @@ export class Joueur implements Voyageur, ParticipantLecon {
         this.mesuresClient(message);
         return;
       case "constat":
-        // Plan 0.8 (chantier 14) : la fiche ouverte sans pouvoir améliorer, l'aide « Je suis coincé » (une fois par 10 s).
-        if (Date.now() - this.dernierConstat < 10_000) return;
-        this.dernierConstat = Date.now();
+        // Plan 0.8 (chantier 14) : la fiche ouverte sans pouvoir améliorer, l'aide « Je suis coincé » (une fois par 10 s) ;
+        // 0.10.1 (A1) : le fruitier trop haut, que le client dit seul, fait penser à l'escabeau (son propre délai).
+        {
+          const sorte = message.quoi === "arbre_haut" ? "arbre_haut" : "interface";
+          if (Date.now() - (this.derniersConstats.get(sorte) ?? -Infinity) < 10_000) return;
+          this.derniersConstats.set(sorte, Date.now());
+        }
         this.noterFait(message.quoi === "fiche_bloquee" ? `fiche_bloquee:${message.construction ?? "?"}` : message.quoi);
         return;
       case "frapper":

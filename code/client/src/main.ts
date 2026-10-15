@@ -1355,6 +1355,8 @@ function agir(a: ActionProposee | null): void {
     // Un écriteau qu'on lit (le guidage 0.10) : son texte en grand ; sinon, le texte d'Examiner.
     if (a.lire) hud.message(a.examiner, "ecriteau");
     else hud.message(a.examiner, "examen");
+    // 0.10.1 (A1) : le fruitier trop haut se dit ici, mais le serveur doit le savoir (l'idée de l'escabeau).
+    if (a.constat) envoyer({ t: "constat", quoi: a.constat });
   } else if ("ouvrirCoffre" in a) {
     const c = installations.get(a.ouvrirCoffre);
     if (c) hud.ouvrirCoffre(c.vue);
