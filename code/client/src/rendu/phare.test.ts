@@ -241,3 +241,11 @@ test("l'écran tremble au choc du cargo, pour qui est au phare ; rien si les mou
     Object.defineProperty(performance, "now", { value: vraiMaintenant, configurable: true, writable: true });
   }
 });
+
+test("le cargo qui approche, la nuit, braque son projecteur sur la crique (une lumière de plus, seulement alors)", async () => {
+  const { lumieresPhare } = await import("./phare.ts");
+  const etat = { escabeau: "marque" as const, bidon: "verse" as const, prisme: "remis" as const, lanterne: true, compresseur: true, corneSonnee: false };
+  const sans = lumieresPhare({ etat, epave: false }, true).length;
+  assert.equal(lumieresPhare({ etat, epave: false, feux: { x: 20, z: 70, cap: Math.PI } }, true).length, sans + 1);
+  assert.equal(lumieresPhare({ etat, epave: false, feux: { x: 20, z: 70, cap: Math.PI } }, false).length, 0, "le jour, rien");
+});

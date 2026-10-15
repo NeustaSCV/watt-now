@@ -1828,7 +1828,8 @@ function boucle(instant: number): void {
     scene.cadrage = vueArrivee.cadrage(position, scene.angleCamera, scene.niveauZoom);
     if (lieu === "phare" && !scene.cadrage) scene.cadrage = phare.cadrage(position, scene.niveauZoom, eteints.values()); // 0.10, K2
     montrerTousLesToits(vueArrivee.toitsVisibles);
-    carteVue.toutMontrer(vueArrivee.toitsVisibles);
+    // (0.10, K2 : un cadrage du phare montre tout, comme la vue d'ensemble ; sinon la crique, hors de la vue, restait noire.)
+    carteVue.toutMontrer(vueArrivee.toitsVisibles || scene.cadrage?.degage === true);
     scene.suivre(position.x, position.z, dt);
     const decor = decors.get(lieu);
     // Les toits qui cachent le personnage s'effacent (à la halte et au Comptoir), selon l'angle de la caméra.

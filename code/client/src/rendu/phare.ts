@@ -296,5 +296,14 @@ export function lumieresPhare(vu: ScenePhare, nuit: boolean): SourceLumiere[] {
     if (!lanterne && !detresse) continue;
     sources.push({ x: l.x + OX, y: l.y, z: l.z + OZ, couleur: l.couleur, intensite: l.intensite, portee: l.portee, vacillement: lanterne ? 0.05 : 0.3 });
   }
+  // K2 : le projecteur du cargo qui approche, braqué devant lui : il éclaire la crique et la falaise (sans lui, le cadrage
+  // de la crique, la nuit, ne montrait que du noir : essai sur l'iPhone, 2026-10-15). Une lumière de la réserve.
+  if (vu.feux) {
+    const f = vu.feux;
+    sources.push({ x: f.x + Math.sin(f.cap) * 12, y: PROJECTEUR.y, z: f.z + Math.cos(f.cap) * 12, couleur: 0xfff0d6, intensite: PROJECTEUR.intensite, portee: PROJECTEUR.portee, decroissance: 1, vacillement: 0 });
+  }
   return sources;
 }
+
+/** Le projecteur du cargo : au-dessus de la mer (y − 9), une lumière large et douce. */
+const PROJECTEUR = { y: 6, intensite: 16, portee: 45 } as const;

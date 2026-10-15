@@ -35,6 +35,11 @@ export interface Cadrage {
   zoom: number;
   /** La hauteur du point regardé (0.10, K2 : le milieu de la tour du phare, la crique) ; 0 par défaut. */
   y?: number;
+  /**
+   * 0.10, K2 : la brume recule au-delà de tout ce qu'on voit (le cadrage du phare, la nuit, sous un ciel couvert : avec la
+   * brume du temps, la crique cadrée de loin n'était qu'un voile gris sur l'iPhone, essai du 2026-10-15).
+   */
+  degage?: boolean;
 }
 
 export class Scene {
@@ -191,7 +196,8 @@ export class Scene {
   /** Heure de jeu et sources de lumière artificielles de l'image. */
   eclairer(heure: number, sources: SourceLumiere[], dt: number, nuages = 0): void {
     const c = this.ciel;
-    c.obscurite = Math.min(1, Math.max(0, c.obscurite + (this.pieceNoireVisee ? 1 : -1) * (dt / 0.6)));
+    // Un cadrage du phare regarde dehors (la crique, la tour) : l'obscurité de la pièce où l'on est s'efface (0.10, K2).
+    c.obscurite = Math.min(1, Math.max(0, c.obscurite + (this.pieceNoireVisee && !this.cadrage?.degage ? 1 : -1) * (dt / 0.6)));
     // Le ciel place aussi le soleil (ou la lune) : une seule carte d'ombre, centrée sur ce qu'on voit.
     c.appliquer(heure, this.cible, nuages);
     this.etendreEnsemble();
@@ -229,6 +235,12 @@ export class Scene {
       const recul = DISTANCE_CAMERA * (k - 1);
       this.scene.fog.near += recul;
       this.scene.fog.far += recul;
+    }
+    if (this.cadrage?.degage && this.scene.fog instanceof THREE.Fog) {
+      // Le point regardé est à DISTANCE_CAMERA × k ; le haut de l'image, bien plus loin (la demi-hauteur de la vue).
+      const loin = DISTANCE_CAMERA * k + Math.abs(this.camera.top) * 2;
+      this.scene.fog.near = Math.max(this.scene.fog.near, loin);
+      this.scene.fog.far = Math.max(this.scene.fog.far, loin + 60);
     }
     const c = this.soleil.shadow.camera;
     if (c.right === OMBRE_DEMI * k) return;
