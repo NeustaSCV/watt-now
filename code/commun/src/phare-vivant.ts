@@ -5,7 +5,7 @@
 import { ATTENTION_MAX, eteintsDePlaces, nouvelEteint, type Eteint, type Milieu, type PlaceEteint } from "./eteints.ts";
 import { ETEINTS_MODELE } from "./phare-modele.ts";
 import { heurte } from "./lieux.ts";
-import { PHARE, PIECES_PHARE, PORTES_PHARE, jeu, mursVuePhare, piecePhare, sombrePhare, zonePhare, type PorteDuPhare } from "./phare.ts";
+import { PHARE, PIECES_PHARE, PORTES_PHARE, etageDuPhare, jeu, memeEtagePhare, mursVuePhare, passageEchelle, piecePhare, sombrePhare, zonePhare, type PorteDuPhare } from "./phare.ts";
 import type { TypeRessourcePhare } from "./ressources-phare.ts";
 import type { RessourceSol } from "./terrain.ts";
 import { facteurSon, obstaclesVue, voit, type PlanVue } from "./vue.ts";
@@ -136,6 +136,26 @@ export const MILIEU_PHARE: Milieu = (() => {
   };
 })();
 
+/**
+ * Le milieu du phare selon l'état du lieu (0.10, essai sur l'iPhone du 2026-10-15) : celui d'en haut (MILIEU_PHARE), plus
+ * les étages du relief (commun/src/phare.ts) : un Éteint ne saisit pas d'un étage à l'autre (du pont de l'épave à la
+ * grève, par-dessus la coque) ; l'épave échouée, il descend du pont à la grève (ou y monte) par l'échelle de coupée.
+ */
+const milieux = new Map<boolean, Milieu>();
+export function milieuPhare(portes: Readonly<Record<string, boolean>>): Milieu {
+  const epave = portes.epave === true;
+  let m = milieux.get(epave);
+  if (!m) {
+    m = {
+      ...MILIEU_PHARE,
+      passage: (ax, az, bx, bz) => (epave ? passageEchelle(ax, az, bx, bz) : null) ?? MILIEU_PHARE.passage(ax, az, bx, bz),
+      atteint: (ax, az, bx, bz) => memeEtagePhare({ x: ax, z: az }, { x: bx, z: bz }, epave),
+    };
+    milieux.set(epave, m);
+  }
+  return m;
+}
+
 // ---------- Les Éteints (FICHE.eteints) ----------
 
 /**
@@ -168,6 +188,37 @@ function placeLibre(x: number, z: number): { x: number; z: number } {
     }
   }
   return { x, z };
+}
+
+/**
+ * À l'échouage (0.10, essai sur l'iPhone du 2026-10-15) : un Éteint qui se trouvait là où la coque, l'échelle ou un
+ * conteneur se posent (dans l'eau de la crique) n'est pas laissé dedans ni hissé sur le pont : il est remis sur les
+ * galets, au point libre de la grève le plus proche (par cercles de 25 cm, jusqu'à 10 m). Renvoie ceux qu'on a bougés.
+ */
+export function remettreSurLaGreve(eteints: Eteint[]): Eteint[] {
+  const zone = zonePhare({ epave: true });
+  const bouges: Eteint[] = [];
+  const bon = (x: number, z: number) => !heurte(zone, x, z, 0.35) && etageDuPhare(x, z, true) === "bas";
+  for (const e of eteints) {
+    if (e.etat === "detruit") continue;
+    const etage = etageDuPhare(e.x, e.z, true);
+    if (etage === "haut" || (etage === "bas" && !heurte(zone, e.x, e.z, 0.3))) continue;
+    let fait = false;
+    for (let r = 0.25; r <= 10 && !fait; r += 0.25) {
+      for (let k = 0; k < 24 && !fait; k++) {
+        const a = (k / 24) * Math.PI * 2;
+        const px = e.x + Math.cos(a) * r;
+        const pz = e.z + Math.sin(a) * r;
+        if (!bon(px, pz)) continue;
+        e.x = px;
+        e.z = pz;
+        e.but = null;
+        fait = true;
+      }
+    }
+    if (fait) bouges.push(e);
+  }
+  return bouges;
 }
 
 /** Les Éteints du phare, au calme : chacun chez lui. */

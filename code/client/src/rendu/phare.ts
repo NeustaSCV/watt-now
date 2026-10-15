@@ -20,12 +20,13 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js
 // @ts-ignore — le modèle est en JavaScript (session « bâtiments »), sans déclaration de types.
 import { creer as creerModele, hauteurSol } from "../batiments/phare/modele.js";
 import type { Boite } from "../../../commun/src/lieux.ts";
-import { ENDROITS_PHARE, PHARE, auModele, type EtatPhareVu } from "../../../commun/src/phare.ts";
+import { ECRITEAU_SENTIER, ENDROITS_PHARE, NIVEAU_MER, PHARE, auModele, dansLEauPhare, etageDuPhare, type EtatPhareVu } from "../../../commun/src/phare.ts";
 import { LUMIERES_MODELE, PLACES_OBJETS } from "../../../commun/src/phare-modele.ts";
 import type { TypeRessource } from "../../../commun/src/terrain.ts";
 import { estomperToits, montrerTousLesToits } from "./halte.ts";
 import { animerNuitPhare, creerNuitPhare } from "./phare-nuit.ts";
 import { creerCloture } from "./phare-cloture.ts";
+import { montrerConteneurs, ouvrirConteneurs, ouvrirLaCoupee } from "./phare-epave.ts";
 import type { FeuxCargo } from "../phare-scene.ts";
 import type { SourceLumiere } from "./lumieres.ts";
 import { nommer } from "./materiaux.ts";
@@ -43,6 +44,24 @@ const USURE = 0.7;
 export function solPhare(x: number, z: number, epave: boolean): number {
   const m = auModele(x, z);
   return (hauteurSol as (x: number, z: number, o: { epave: boolean }) => number)(m.x, m.z, { epave });
+}
+
+/** Dans l'eau peu profonde de la crique, on enfonce jusqu'aux genoux (m sous la surface). */
+export const ENFONCE_EAU = 0.45;
+
+/**
+ * Où sont les pieds, à un point du jeu (0.10) : sur le sol, ou, dans l'eau peu profonde de la crique (commun/src/phare.ts,
+ * dansLEauPhare), jusqu'aux genoux sous la surface (jamais plus bas que le fond, jamais plus haut que le sol).
+ */
+export function piedsPhare(x: number, z: number, epave: boolean): number {
+  const sol = solPhare(x, z, epave);
+  return dansLEauPhare(x, z, epave) ? Math.max(sol, NIVEAU_MER - ENFONCE_EAU) : sol;
+}
+
+/** Où se dessine ce qui est posé à plat (les cercles, la visée) : le sol, ou la surface de l'eau. */
+export function surfacePhare(x: number, z: number, epave: boolean): number {
+  const sol = solPhare(x, z, epave);
+  return dansLEauPhare(x, z, epave) ? Math.max(sol, NIVEAU_MER) : sol;
 }
 
 /** Les objets nommés du modèle (FICHE.objets) que le jeu montre, cache ou déplace. */
@@ -70,6 +89,9 @@ interface CoucheEnRelief {
   hautModele?: number;
   /** La hauteur du sol d'où le modèle compte ses hauteurs : la grève pour la coque de l'épave, le plateau sinon. */
   solCouche?: number;
+  /** La boîte où rien ne s'efface, telle que le modèle la donne (la coque : on la remplace à bord, `animerPhare`). */
+  horsDe?: Boite;
+  horsDeModele?: Boite;
 }
 
 /** La grève de la crique, d'où le modèle compte les hauteurs de la coque de l'épave (y ≈ − 8,8). */
@@ -96,22 +118,35 @@ export function creerPhare(): THREE.Group {
   const groupe = new THREE.Group();
   const modele = creerModele({ usure: USURE }) as THREE.Group;
   modele.position.set(OX, 0, OZ);
+  // 0.10 (essai sur l'iPhone du 2026-10-15) : les conteneurs de l'épave s'ouvrent quand on y entre (leur toit, leurs
+  // flancs) ; le pavois s'ouvre au haut de l'échelle de coupée (rendu/phare-epave.ts).
+  const epave = modele.getObjectByName("epave_apres");
+  if (epave) {
+    const plancher = (x: number, z: number) => (hauteurSol as (x: number, z: number, o: { epave: boolean }) => number)(x, z, { epave: true });
+    (modele.userData.toits as unknown[]).push(...ouvrirConteneurs(epave, plancher));
+    ouvrirLaCoupee(epave);
+  }
   // Les couches qui s'effacent, dans le repère du jeu ; le modèle ne garde pas les siennes (on les lirait deux fois).
-  const toits = (modele.userData.toits as { boite: Boite; horsDe?: Boite }[]).map((t) => ({ ...t, boite: auJeu(t.boite), ...(t.horsDe ? { horsDe: auJeu(t.horsDe) } : {}) }));
+  // (Les mêmes objets, ramenés sur place : rendu/phare-epave.ts garde ceux des conteneurs pour savoir s'ils s'ouvrent.)
+  const toits = (modele.userData.toits as { boite: Boite; horsDe?: Boite }[]).map((t) => Object.assign(t, { boite: auJeu(t.boite) }, t.horsDe ? { horsDe: auJeu(t.horsDe) } : {}));
   delete modele.userData.toits;
   groupe.userData.toits = toits;
   for (const t of toits as CoucheEnRelief[]) {
     t.basModele = t.bas;
     t.hautModele = t.haut;
-    t.solCouche = t.nom?.startsWith("coque de l'épave") ? SOL_GREVE : 0;
+    // Les toits des conteneurs portent leur sol (leur plancher : la grève, le pont) ; la coque compte depuis la grève.
+    t.solCouche ??= t.nom?.startsWith("coque de l'épave") ? SOL_GREVE : 0;
+    if (t.horsDe) t.horsDeModele = t.horsDe;
   }
   couchesEnRelief.set(groupe, toits as CoucheEnRelief[]);
   etendreAlentours(modele);
+  planterSentier(modele);
   groupe.add(modele);
   nommer(groupe, ["phare"]);
   // K2 : le balayage du faisceau, les feux du cargo (rendu/phare-nuit.ts) ; la clôture des bords (rendu/phare-cloture.ts).
   creerNuitPhare(groupe);
   groupe.add(creerCloture());
+
   etats.set(groupe, (modele.userData.objets ?? {}) as Partial<Record<ObjetNomme, THREE.Object3D | null>>);
   return groupe;
 }
@@ -188,6 +223,53 @@ function etendreAlentours(modele: THREE.Group): void {
   }
 }
 
+/** Le panneau du sentier côtier dans l'atlas du modèle (R.sentier : x, y, largeur, hauteur, sur 1024 × 1024). */
+const ATLAS_SENTIER = { x: 640, y: 384, l: 192, h: 128, cote: 1024 } as const;
+
+/**
+ * Le panneau du sentier côtier, planté à la sortie de la grève (commun/src/phare.ts, ECRITEAU_SENTIER ; on le lit : E-12) :
+ * le même que celui du modèle, sur le plateau (son poteau de 1,5 m, sa planche de 0,9 × 0,6 m peinte dans l'atlas), face à
+ * la mer. Ajouté au maillage des panneaux du modèle (même matière, même atlas) : aucun appel de dessin de plus.
+ */
+function planterSentier(modele: THREE.Group): void {
+  let panneaux: THREE.Mesh | null = null;
+  modele.traverse((o) => {
+    const m = o as THREE.Mesh;
+    if (panneaux || !m.isMesh || m.geometry.index || Array.isArray(m.material)) return;
+    const mat = m.material as THREE.MeshStandardMaterial;
+    // La matière des panneaux : l'atlas, des deux côtés ; pas celle de l'épave (cachée au départ), le décor du plateau.
+    let dansEpave = false;
+    for (let p = o.parent; p; p = p.parent) if (p.name === "epave_apres") dansEpave = true;
+    if (mat.map && mat.side === THREE.DoubleSide && mat.roughness === 0.85 && !dansEpave) panneaux = m;
+  });
+  const cible = panneaux as THREE.Mesh | null;
+  if (!cible) return;
+  const m = auModele(ECRITEAU_SENTIER.x, ECRITEAU_SENTIER.z);
+  const y0 = solPhare(ECRITEAU_SENTIER.x, ECRITEAU_SENTIER.z, false);
+  const A = ATLAS_SENTIER;
+  // Une géométrie au format du maillage des panneaux (position, normale, uv, couleur), dans le repère du lot.
+  const morceau = (g: THREE.BufferGeometry, uv: (u: number, v: number) => [number, number], x: number, y: number, z: number) => {
+    const n = g.toNonIndexed();
+    g.dispose();
+    const u = n.getAttribute("uv");
+    for (let i = 0; i < u.count; i++) u.setXY(i, ...uv(u.getX(i), u.getY(i)));
+    n.translate(x, y, z);
+    for (const nom of Object.keys(n.attributes)) if (!cible.geometry.getAttribute(nom)) n.deleteAttribute(nom);
+    if (cible.geometry.getAttribute("color")) n.setAttribute("color", new THREE.Float32BufferAttribute(new Array(n.getAttribute("position").count * 3).fill(1), 3));
+    return n;
+  };
+  // La planche peinte, et le poteau (teint par le fond brun du panneau : un coin de l'atlas sans écriture).
+  const planche = morceau(new THREE.PlaneGeometry(0.9, 0.6), (u, v) => [(A.x + u * A.l) / A.cote, 1 - (A.y + (1 - v) * A.h) / A.cote], m.x, y0 + 1.3, m.z + 0.07);
+  const fond: [number, number] = [(A.x + 6) / A.cote, 1 - (A.y + 6) / A.cote];
+  const poteau = morceau(new THREE.BoxGeometry(0.12, 1.5, 0.12), () => fond, m.x, y0 + 0.75, m.z);
+  const memes = (g: THREE.BufferGeometry) => Object.keys(cible.geometry.attributes).every((nom) => g.getAttribute(nom)?.itemSize === cible.geometry.getAttribute(nom).itemSize);
+  if (!memes(planche) || !memes(poteau)) return;
+  const fondu = mergeGeometries([cible.geometry, planche, poteau]);
+  if (!fondu) return;
+  cible.geometry.dispose();
+  cible.geometry = fondu;
+}
+
 /** Le décor du phare d'un groupe (le jeu le pose dans un groupe à lui : main.ts, montrerDecor). */
 function objetsDe(decor: THREE.Object3D): Partial<Record<ObjetNomme, THREE.Object3D | null>> | undefined {
   let e = etats.get(decor);
@@ -244,12 +326,21 @@ export function animerPhare(
   const couches = couchesDe(decor);
   if (couches) {
     const ySol = solPhare(x, z, vu.epave);
-    for (const c of couches) Object.assign(c, hauteursDepuis(c, ySol));
+    // Sur le pont de l'épave, la coque ne s'efface jamais (essai sur l'iPhone, 2026-10-15 : l'avant s'effaçait sous les
+    // pieds, hors de la boîte `horsDe` du modèle, trop courte) : on est toujours « hors d'effacement ».
+    const aBord = vu.epave && etageDuPhare(x, z, true) === "pont";
+    for (const c of couches) {
+      Object.assign(c, hauteursDepuis(c, ySol));
+      if (c.horsDeModele) c.horsDe = aBord ? { x, z, l: 2, p: 2 } : c.horsDeModele;
+    }
   }
   if (vu.cadre) montrerTousLesToits(true);
   estomperToits(decor, x, z, dt, lacet);
   if (vu.cadre) montrerTousLesToits(false);
   const groupe = groupePhare(decor);
+  // Les conteneurs de l'épave : ouverts quand on y est (leurs couches viennent d'être évaluées).
+  const epave = groupe?.getObjectByName("epave_apres");
+  if (epave) montrerConteneurs(epave);
   if (groupe) animerNuitPhare(groupe, dt, lacet, { nuit: vu.nuit === true, lanterne: vu.etat?.lanterne === true, epave: vu.epave, feux: vu.feux ?? null });
   const o = objetsDe(decor);
   if (!o) return;

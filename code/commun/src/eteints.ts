@@ -93,6 +93,11 @@ export interface Milieu {
   passage(ax: number, az: number, bx: number, bz: number): { x: number; z: number };
   /** Un dormant qui se réveille gémit, et réveille ses voisins (Book 23 §3) ; false : pas ici (la halte, 0.7.2). */
   cascade?: boolean;
+  /**
+   * Peut-on, de a, saisir ou frapper qui est en b ? (même étage du relief : au phare, le plateau, la grève, le pont de
+   * l'épave, 0.10) ; absent : partout.
+   */
+  atteint?(ax: number, az: number, bx: number, bz: number): boolean;
 }
 
 /** Ce que voit un Éteint d'un humain proche. */
@@ -479,7 +484,7 @@ export function penser(
   if (e.saisit !== null) {
     const tenu = humains.find((h) => h.id === e.saisit);
     // Un mur entre eux (0.7.1) : il ne tient plus personne.
-    if (!tenu || tenu.intouchable || Math.hypot(tenu.x - e.x, tenu.z - e.z) > CONTACT + 0.6 || !voieLibre(zone, e, tenu)) {
+    if (!tenu || tenu.intouchable || Math.hypot(tenu.x - e.x, tenu.z - e.z) > CONTACT + 0.6 || !voieLibre(zone, e, tenu) || milieu?.atteint?.(e.x, e.z, tenu.x, tenu.z) === false) {
       e.saisit = null;
       e.tenue = 0;
     } else {
@@ -498,7 +503,8 @@ export function penser(
     e.perdu = 0;
     e.attention = Math.max(e.attention, SEUIL_ATTIRE + 1);
     // Au contact un instant, il attrape ; jamais à travers un mur (0.7.1 : ni saisie, ni morsure).
-    if (Math.hypot(proie.x - e.x, proie.z - e.z) <= CONTACT + 0.15 && !proie.intouchable && voieLibre(zone, e, proie)) {
+    // Pas d'un autre étage du relief (au phare : du pont de l'épave à la grève, par-dessus la coque).
+    if (Math.hypot(proie.x - e.x, proie.z - e.z) <= CONTACT + 0.15 && !proie.intouchable && voieLibre(zone, e, proie) && milieu?.atteint?.(e.x, e.z, proie.x, proie.z) !== false) {
       e.contact += dt;
       if (e.contact >= DELAI_SAISIE) {
         e.saisit = proie.id;
@@ -561,7 +567,8 @@ export function penser(
   if (d < 1e-6) return;
   // Le Noyé, gonflé, est lent en toutes choses (0.10) ; à la jambe brisée, il rampe, et pas plus vite.
   const plafond = Math.min(rampe(e) ? VITESSE_RAMPANT : Infinity, e.variante === "noye" ? VITESSE_NOYE : Infinity);
-  const vitesse = Math.min(VITESSES[e.etat], plafond);
+  // Ce que la zone freine (l'eau de la crique du phare, 0.10) : les Éteints y vont aussi, ralentis comme les joueurs.
+  const vitesse = Math.min(VITESSES[e.etat], plafond) * (zone.frein?.(e.x, e.z) ?? 1);
   // Le dernier tronçon s'arrête au contact ; un point de passage, on le dépasse.
   const final = Math.abs(vers.x - e.but.x) < 1e-6 && Math.abs(vers.z - e.but.z) < 1e-6;
   const pas = Math.min(final ? d - arret : d, vitesse * dt);

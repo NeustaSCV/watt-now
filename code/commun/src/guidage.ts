@@ -20,7 +20,7 @@ import { ASCENSEUR, BALCON, BORNE, CARTE, PANNEAU, borneAlimentee, jeuHotel, niv
 import { destinations, entreesDe, type LieuId } from "./lieux.ts";
 import type { Inventaire } from "./objets.ts";
 import { TEXTES_PEAGE } from "./peage.ts";
-import { ENDROITS_PHARE, jeu as auPhare, piecePhare, type EtatPhareVu } from "./phare.ts";
+import { ECRITEAU_SENTIER, ENDROITS_PHARE, jeu as auPhare, piecePhare, surLaGreve, type EtatPhareVu } from "./phare.ts";
 import { auPont, ECHELLE_MAREE, PORTE_PEAGE, type EtatMaree } from "./route-pont.ts";
 
 /** Une pensée du personnage (en italique) ou une voix (le texte porte ses guillemets). */
@@ -162,6 +162,8 @@ export const DECLENCHEURS: readonly Declencheur[] = [
   { id: "P-26", lieu: "phare", evenement: "cargo", lignes: [pensee("Une corne grave, au large. Un cargo… droit sur les rochers !")] },
   // En haut de la rampe du canot, au sortir du hangar (la rampe descend de z = 12,6 ; le tronçon effondré est à 19).
   { id: "P-27", lieu: "phare", points: [auPhare(-24, 13.2)], rayon: 2.5, lignes: [pensee("La rampe s'est effondrée à mi-pente. En sautant, on atteint la grève, mais on ne remonte pas.")] },
+  // En arrivant sur les galets de la crique (essai sur l'iPhone, 2026-10-15 : rien ne montrait par où l'on ressort).
+  { id: "P-28", lieu: "phare", dans: surLaGreve, lignes: [pensee("Le sentier côtier remonte par les rochers, à l'ouest.")] },
 ];
 
 /**
@@ -174,7 +176,9 @@ export const DECLENCHEURS: readonly Declencheur[] = [
  *   batterie (repère H du modèle : (25,6 ; 20,4), tourné de 45° ; le lot est centré en H (− 1 ; 5)) ; E-08 : le panneau
  *   de la piscine (H : (3 ; 8,65)) ;
  * - E-09 : le journal de bord, sur la table du gardien ; E-10 : la planche peinte des survivants, contre la tour, près
- *   de la porte ; E-11 : la plaque, sur le pilier de la grille sud.
+ *   de la porte ; E-11 : la plaque, sur le pilier de la grille sud ;
+ * - E-12 : le panneau du sentier côtier (le texte de celui du modèle, qui est sur le plateau, au bord du chemin des
+ *   douaniers), planté par le jeu à la sortie de la grève, à l'ouest (ECRITEAU_SENTIER ; client/src/rendu/phare.ts).
  */
 export const ECRITEAUX: readonly Ecriteau[] = [
   { id: "E-01", lieu: "route_pont", points: [CHICANE], rayon: 0.9, texte: "« PÉAGE · 12 WOTTS / TÊTE · DANS LA CAISSE ↓ · UN À LA FOIS ! »" },
@@ -187,6 +191,7 @@ export const ECRITEAUX: readonly Ecriteau[] = [
   { id: "E-09", lieu: "phare", points: [auPhare(-2.45, -6.45)], rayon: 1, dans: auPhareDans("cuisine"), texte: "« Journal de bord · Rallumé quand même. »" },
   { id: "E-10", lieu: "phare", points: [auPhare(-7.78, -1.92)], rayon: 0.8, texte: "« ÉTEINS LA LANTERNE ! ILS VOIENT LA LUMIÈRE »" },
   { id: "E-11", lieu: "phare", points: [auPhare(0.7, 1.86)], rayon: 0.4, texte: "« PHARE DU CAP · allumé en 1883 »" },
+  { id: "E-12", lieu: "phare", points: [ECRITEAU_SENTIER], rayon: 0.9, texte: "« Sentier côtier · ← Port · 6 km »" },
 ];
 
 /**

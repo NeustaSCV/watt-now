@@ -209,8 +209,10 @@ test("les Noyés de la grève ne mettent pas en garde au bord du tronçon effond
   // Sauté sur la partie basse, on est à leur étage : ils menacent, le dormeur d'en haut plus.
   assert.ok(client.menace(noye, ENDROITS_PHARE.sautVers));
   assert.ok(!client.menace(dormeur, ENDROITS_PHARE.sautVers));
-  // Sur le pont de l'épave aussi, on est en bas.
-  assert.ok(client.menace(noye, jeu(-5, 20)));
+  // Sans l'épave, là où elle s'échouera, c'est l'eau de la crique : en bas. L'épave là, son pont est un étage à part (0.10,
+  // essai sur l'iPhone du 2026-10-15 : rendu/phare-greve.test.ts).
+  assert.ok(client.menace(noye, jeu(-5, 20), false));
+  assert.ok(!client.menace(noye, jeu(-5, 20), true));
 });
 
 test("K4 : à l'échouage, la vue du jeu ne tremble plus (la secousse est dans le plan de la scène) ; l'épave attend le retour au personnage", async () => {
