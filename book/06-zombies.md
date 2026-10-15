@@ -1,7 +1,8 @@
 # Book 06 — Les Zombies
 
-> Document de conception · version 0.7 · 2026-10-09
+> Document de conception · version 0.8 · 2026-10-15
 > Statut : **brouillon de travail**. Valeurs indicatives, à calibrer en playtest.
+> v0.8 (2026-10-15) : §5.1 et §5.2, **les Éteints de la côte** (0.10) : le Noyé (sa règle, son corps « patate »), l'Ensablé, ceux qui arrivent de la lande quand on allume le phare, les étages du relief et l'eau jusqu'aux genoux.
 > v0.7 (2026-10-09) : §8.2 et §9.3 alignés sur le [Book 25](25-le-metier-des-familles.md) : l'arc pour tous, l'arbalète mécaniste, l'arme électrique qui raidit puis détruit (le casque n'y change rien), la clôture qui raidit sans détruire, l'arme à feu reportée après la 1.0, le bruit d'un coup tranchant à 10 m.
 > S'appuie sur les books [01](01-les-trois-feux.md) (signature, monde, temps), [02](02-crafting.md) (bruit des outils) et [05](05-sante-et-soins.md) (morsure, infection).
 
@@ -134,8 +135,42 @@ Pas de mutants : seulement des corps différents, selon ce qu'ils ont vécu et l
 | **Gelé** | L'hiver, raide et presque immobile. Se réveille au dégel ou près d'une source de chaleur. | Faible, mais peut surprendre près d'un feu | — |
 | **Équipé** | Mort avec une protection : casque de moto, tenue de pompier, gilet | **Résiste aux lames** à la tête : il faut une arme contondante ou viser autrement | **Butin intéressant** : l'équipement lui-même |
 | **Ancien habitant** | Zombie qui portait son métier : infirmière, mécanicien, chasseur | Comme un errant | **Vestiges** liés au métier (médicaments, outils, munitions) |
+| **Noyé** (0.10) | Resté longtemps dans l'eau, **gonflé** par les gaz : plus lourd, **plus lent** (0,4 m/s, même en poursuite). **Ne tombe pas** sous un coup au torse | **Crève** en mourant : ses fluides donnent la nausée à qui est trop près, son odeur attire les autres (§5.1) | — |
+| **Ensablé** (0.10) | Un rampant **endormi sous le sable**, à moitié enfoui | **Surgit** quand on passe tout près (§5.1) | — |
 
 > **Les zombies sont aussi des vestiges.** Ce qu'ils portent raconte qui ils étaient, et peut valoir la peine du combat.
+
+### 5.1 Les Éteints de la côte : le Noyé et l'Ensablé (0.10, 2026-10-15)
+
+*`niveau-2.md` (N2-63, N2-64, N2-Q12, N2-Q13), plan 0.10 (§3.5, S-31 à S-33, Q-0.10-4, V1-15, V4-12) ; **codé en 0.10** (`commun/src/eteints.ts`, `commun/src/combat.ts`, `commun/src/signature.ts`, `serveur/src/lieu-vivant.ts`, `client/src/rendu/variantes-eteints.ts`). Toujours pas de mutants (§1) : deux corps différents, et **« un Éteint est un Éteint »** (le porteur) : les autres ne changent pas.*
+
+**Le Noyé.** Un corps resté longtemps dans l'eau. On le trouve **au bord de l'eau, à partir du niveau 2** : la vase de la cale de la route du pont (3), la piscine du Grand Hôtel (2), la crique du phare (3).
+
+| Quoi | La règle |
+|---|---|
+| **Son corps** | Gonflé tout entier, le tronc en **« patate »** (la variante moyenne choisie par le porteur, à taille d'homme : la boule a été refusée) |
+| **Sa vitesse** | **0,4 m/s**, toujours, même en poursuite (V1-15) : on le fuit en marchant |
+| **Le torse** | **Un coup au torse ne le fait pas tomber**, et il **ne vacille pas** : sa masse encaisse, comme l'Équipé |
+| **La tête et les jambes** | Comme les autres : le coup appuyé à la tête le détruit debout ; une jambe brisée le met au sol, où il **rampe en restant un Noyé** (un coup l'achève) |
+| **Quand il meurt, il crève** (N2-64, S-32) | Ce n'est pas une explosion : les gaz crèvent la peau, une seule fois. Tout joueur à **moins de 1,5 m** reçoit ses **fluides** : **la nausée**, 30 s réelles, pendant lesquelles **l'endurance revient deux fois moins vite** (une icône la montre). Au point de sa mort, **une odeur** reste **1 min** et attire les Éteints éveillés alentour (portée 25 m). Pas de corps qui reste gonflé |
+| **L'infection** | Pas encore : elle viendra avec le Book 05 (Q-0.10-4) |
+
+> **Il change la façon de se battre** : on le tue **de loin** (l'arbalète, l'arc, la lance, le harpon) ou **on recule** après le coup ; et l'on se méfie de ce que son odeur fera venir.
+
+**L'Ensablé** (N2-Q13, S-33). Un **rampant dormeur** enfoui dans la dune qui a envahi la salle à manger du Grand Hôtel, dessiné à moitié sous le sable. Il **surgit** quand un humain passe à **moins de 2 m** sans mur entre eux, et va le chercher ; au sol, un coup l'achève. **Aucune règle nouvelle** : c'est un rampant caché, comme ceux des herbes.
+
+### 5.2 Au phare : ceux qui viennent de la lande, et les étages du relief (0.10, 2026-10-15)
+
+*Plan 0.10 (S-15, V4-08, V4-10, V4-11, V4-13) ; **codé en 0.10** (`commun/src/phare.ts`, `commun/src/phare-vivant.ts`, `serveur/src/phare.ts`). Le scénario du phare : Book 23 §13.2.*
+
+- **La lumière attire** (§3.1) : la lanterne du phare allumée la nuit réveille les dormeurs du chemin des douaniers, qui montent **jusqu'au pied de l'escalier de la tour** (par les grilles du muret de l'enceinte, comme par des portes).
+- **Ceux qui arrivent de la lande** (V4-10, décision du porteur : quand on allume, on a d'ordinaire déjà tué les Éteints du lieu) : **à l'allumage, 2 ou 3 Errants** paraissent au bord du lot, côté lande, **hors de la vue du joueur** et à plus de 18 m, déjà réveillés, et marchent vers la tour et vers lui. **Une fois par nuit**, et seulement si quelqu'un est là ; ils ne sont pas gardés en base et partent au retour du phare à 24 h. C'est la seule exception à « pas d'Éteints qui apparaissent » (S-15).
+- **Pendant la scène du cargo** (6,6 s), les Éteints du phare **s'arrêtent** : ils ne bougent ni ne frappent, et reprennent après (V4-11).
+- **Les étages du relief** (V4-13) : le serveur reste en 2D, mais le phare a **quatre étages** : le haut (le plateau, le haut de la rampe du canot), le bas (la partie basse de la rampe, la grève, l'eau de la crique), le pont de l'épave, et l'échelle de coupée, qui touche la grève et le pont. **Un Éteint ne voit, ne frappe et ne saisit qu'à son étage** (ou par l'échelle), et le joueur de même ; pour passer de la grève au pont, l'Éteint prend l'échelle (sinon il restait collé au flanc de la coque). On saute de la rampe, on ne la remonte pas : les Éteints non plus.
+- **L'eau jusqu'aux genoux** (V4-13) : dans la bande d'eau peu profonde de la crique (3,5 m), les Éteints avancent **ralentis comme le joueur** (60 % de leur allure) ; au-delà, personne ne passe.
+- **Ils ne contournent toujours rien** (§2.1) : au phare, ceux du nord se coincent à l'angle nord-est de la tour, et dans l'épave, contre le guindeau ou les portes des conteneurs. Noté pour plus tard (V4-11, V4-14).
+
+**Combien ?** Le nombre d'Éteints d'un lieu se règle **au jeu** (le parcours, ses passages, ses moments), sans minimum ; **le plafond, c'est l'iPhone 13 mini à 60 images par seconde** avec le plus d'Éteints visibles à la fois (N2-65). En 0.10 : **12** à la route du pont et à la corniche, **18** au Grand Hôtel, **14** au phare (plus les 2 ou 3 de la lande) ; la nuit au phare, 16 à 18 Éteints à l'écran tiennent 60 images par seconde sur l'iPhone du porteur.
 
 ---
 
