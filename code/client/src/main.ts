@@ -1354,7 +1354,8 @@ function agir(a: ActionProposee | null): void {
   else if ("examiner" in a) {
     // Un écriteau qu'on lit (le guidage 0.10) : son texte en grand ; sinon, le texte d'Examiner.
     if (a.lire) hud.message(a.examiner, "ecriteau");
-    else hud.message(a.examiner, "examen");
+    // Une chose qui ne marche pas (0.10.1, chantier E) : sa raison en tête du message.
+    else hud.message(a.examiner, "examen", a.raison);
   } else if ("ouvrirCoffre" in a) {
     const c = installations.get(a.ouvrirCoffre);
     if (c) hud.ouvrirCoffre(c.vue);
