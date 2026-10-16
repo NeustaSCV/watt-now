@@ -199,7 +199,7 @@ const BOUTONS: Partial<Record<Action, string>> = {
   fabriquer: "Fabriquer",
   carte: "Carte",
   carnet: "Carnet",
-  lumiere: "Lumière",
+  lumiere: "le bouton de ta lumière",
   tourner: "la boussole",
   lancer: "Lancer",
   courir: "joystick à fond",

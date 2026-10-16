@@ -5,6 +5,7 @@
 import { libelleBoutonB, motLongB } from "./libelle-bouton.ts";
 import { inviteArreter } from "./geste-tenu.ts";
 import { Boussoles } from "./boussole.ts";
+import { BoutonLumiere } from "./bouton-lumiere.ts";
 import { VERSION } from "../../commun/src/version.ts";
 import { REGLAGES } from "../../commun/src/reglages.ts";
 import { ceQuiManque } from "../../commun/src/aide-fabrication.ts";
@@ -326,6 +327,8 @@ export class Hud {
   surSon: (() => boolean) | null = null;
   /** La boussole (0.10.1, chantier D) : le rond du bas (vertical) et la tuile du haut (paysage). */
   private readonly boussoles: Boussoles;
+  /** Le bouton « Lumière » en icône (0.10.1, chantier L) : sur écran tactile seulement. */
+  private readonly boutonLumiere: BoutonLumiere | null;
   private readonly element: HTMLElement;
   private readonly ips: HTMLElement;
   private readonly latence: HTMLElement;
@@ -475,7 +478,7 @@ export class Hud {
         tactile
           ? `<div class="tactile">
               <button type="button" class="b-mode" aria-label="Mode">Explorer</button>
-              <button type="button" class="b-lumiere">Lumière</button>
+              <button type="button" class="b-lumiere" aria-pressed="false" aria-label="Lumière"><span class="dessin"></span></button>
               <button type="button" class="b-tourner boussole" aria-label="Tourner la vue"><span class="cadran"></span></button>
               <button type="button" class="b-lancer" hidden aria-label="Lancer">Lancer</button>
               <button type="button" class="b-B" disabled>B</button>
@@ -627,11 +630,15 @@ export class Hud {
     // La boussole (0.10.1, chantier D) : elle suit la caméra (majBoussole) ; à l'appui, elle s'enfonce un instant.
     const boutonsBoussole = [...element.querySelectorAll<HTMLElement>(".boussole")];
     this.boussoles = new Boussoles(boutonsBoussole.map((b) => b.querySelector<HTMLElement>(".cadran")!), element.querySelector<HTMLElement>(".r-tourner .legende"));
-    for (const b of boutonsBoussole)
+    // Le bouton « Lumière » en icône (0.10.1, chantier L) : il s'enfonce aussi un instant à l'appui.
+    const bLumiere = element.querySelector<HTMLElement>(".b-lumiere");
+    this.boutonLumiere = bLumiere ? new BoutonLumiere(bLumiere, bLumiere.querySelector<HTMLElement>(".dessin")!) : null;
+    for (const b of [...boutonsBoussole, ...(bLumiere ? [bLumiere] : [])])
       b.addEventListener("pointerdown", () => {
         b.classList.add("appui");
         setTimeout(() => b.classList.remove("appui"), 130);
       });
+    this.majBoutonLumiere();
     if (tactile) {
       // A se juge au relâchement en combat (appui court, ou maintenu pour viser la tête).
       // Branché pour l'iPhone (client/src/jauge-coup.ts) : ni loupe ni menu à l'appui long, relâché si le système reprend le doigt.
@@ -702,6 +709,7 @@ export class Hud {
 
   majInventaire(inventaire: Inventaire): void {
     this.inventaire = inventaire;
+    this.majBoutonLumiere();
     // Le bouton du sac dit ce qu'on porte vraiment : le sac, le sac de fortune, ou ses poches (sac perdu).
     const bouton = this.element.querySelector<HTMLElement>(".r-sac");
     const nom = nomContenant(inventaire);
@@ -717,6 +725,7 @@ export class Hud {
 
   majCharges(charges: Charges): void {
     this.charges = charges;
+    this.majBoutonLumiere();
     this.redessiner();
     // La fiche du banc montre le niveau de ce qu'on porte (0.8.2).
     this.majFiche();
@@ -724,7 +733,13 @@ export class Hud {
 
   majLumiere(allumee: boolean): void {
     this.lumiereAllumee = allumee;
+    this.majBoutonLumiere();
     this.redessiner();
+  }
+
+  /** Le bouton « Lumière » suit la lumière qu'on porte (ramassage, échange, coffre…) et si elle brille. */
+  private majBoutonLumiere(): void {
+    this.boutonLumiere?.maj(this.inventaire, this.charges, this.lumiereAllumee);
   }
 
   /**
