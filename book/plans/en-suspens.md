@@ -143,7 +143,7 @@ Les plus gros morceaux : A3, A5, A7, A9 et D1.
 - Le niveau 2 (décisions et propositions) : `book/plans/niveau-2.md`.
 - La notice d'un nouveau niveau : `book/plans/notice-nouveau-niveau.md`.
 - Les études et données : `.claude-travail/propositions/` (non versionné : à ne pas supprimer).
-- ~~Versions : 0.7.3 déployée le 2026-10-10 (étiquette v0.7.3).~~ Versions : 0.8 et 0.8.1 déployées le 2026-10-11, 0.8.2 le 2026-10-13 ; 0.8.3 le 2026-10-13 (étiquette v0.8.3) ; 0.8.4 le 2026-10-13 (étiquette v0.8.4, avec la barre de métal à 1 de dégâts) ; 0.9 le 2026-10-14 (étiquette v0.9) ; 0.10 le 2026-10-15 (étiquette v0.10) ; 0.10.1 en préparation (plan `book/plans/plan-0.10.1.md`). Le plan de la 0.8.2 : `book/plans/plan-0.8.2.md`.
+- ~~Versions : 0.7.3 déployée le 2026-10-10 (étiquette v0.7.3).~~ Versions : 0.8 et 0.8.1 déployées le 2026-10-11, 0.8.2 le 2026-10-13 ; 0.8.3 le 2026-10-13 (étiquette v0.8.3) ; 0.8.4 le 2026-10-13 (étiquette v0.8.4, avec la barre de métal à 1 de dégâts) ; 0.9 le 2026-10-14 (étiquette v0.9) ; 0.10 le 2026-10-15 (étiquette v0.10) ; 0.10.1 le 2026-10-16 (étiquette v0.10.1, plan `book/plans/plan-0.10.1.md`). Le plan de la 0.8.2 : `book/plans/plan-0.8.2.md`.
 
 ## 6. Après la 0.10 (recette du 2026-10-15)
 

@@ -1,6 +1,6 @@
 # Plan de développement — version 0.10.1 : les corrections des points en suspens
 
-*Version du plan : v0.3 · 2026-10-16 · **Statut : codée et fusionnée dans `main` (version 0.10.1, commit 861d2e9, 1 297 tests) ; à déployer par le porteur, puis l'étiquette `v0.10.1`.***
+*Version du plan : v0.3 · 2026-10-16 · **Statut : codée et fusionnée dans `main` (version 0.10.1, commit 861d2e9, 1 297 tests) ; déployée le 2026-10-16 (étiquette `v0.10.1`).***
 
 *v0.3 (2026-10-16) : tous les chantiers faits (A, A2, B, C, C2, D, E, E2, L, G, G2) ; les décisions en route au §7 (R-01 à R-17) ; l'essai du porteur sur l'iPhone (R-14).*
 
