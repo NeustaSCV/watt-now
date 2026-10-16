@@ -3,6 +3,7 @@
 > Document de conception · version 0.2 · 2026-10-07
 > Statut : **brouillon de travail**.
 > 0.10 (2026-10-15) : §3.3, la jauge du coup appuyé autour du bouton A, et les bras pris (« Poser »).
+> 0.11 (2026-10-16) : §3.3, le mode Combat tient (D-17) et se voit à tous par le halo ; le duel ([`plans/duel-entre-joueurs.md`](plans/duel-entre-joueurs.md)).
 
 ---
 
@@ -104,6 +105,11 @@ Garder les commandes **très simples** : un déplacement, **deux boutons d'actio
 > **Décisions de la 0.10 (2026-10-15 ; plan 0.10, V2-12 et V4-12)** :
 > - **Le coup appuyé se voit** : en mode Combat, **une jauge fait le tour du bouton A** pendant qu'on le tient ; **pleine en 0,35 s**, le coup à la tête est prêt ; elle se vide dès qu'on lâche. Aucune règle ne change : le coup se juge toujours au relâchement. Sur iPhone, le bouton A ne laisse plus Safari interrompre l'appui long au moindre glissement du pouce (il était compté comme un coup court) : c'est sans doute pourquoi le porteur ne l'avait jamais vu marcher. Garder ou non le coup à la tête reste à l'étude, selon les essais sur l'iPhone.
 > - **Les bras pris** (la batterie ou la tête du robot à l'hôtel, l'escabeau ; Book 23 §13) : on ne frappe pas, et **le bouton A dit « Poser »**.
+>
+> **Décisions de la 0.11 (2026-10-16 ; D-10, D-11, D-17, D-19, D-20 de [`plans/duel-entre-joueurs.md`](plans/duel-entre-joueurs.md))** :
+> - **Le Combat se met tout seul et tient** (D-17, qui remplace D-1) : quand un Éteint debout approche, le jeu passe en Combat, comme avant ; mais il **ne repasse plus jamais tout seul en Exploration** (l'ancien retour 3 s après le dernier Éteint est retiré). Deux états seulement : seul le joueur revient en Exploration, avec le bouton Mode ou la touche X. **Exploration à chaque connexion** (D-10).
+> - **Le halo** : le mode est connu du serveur et se voit de tous dans les haltes : **un anneau au sol, vert lisse en Exploration, rouge à pointes en Combat**, bordé de sombre (D-19) ; la bascule automatique le rend rouge comme un Combat choisi. Le bouton Mode porte la **pastille** du halo, qui **bat** quand le Combat se met tout seul. Un joueur vert frappé par un rouge passe en Combat tout seul pour riposter (D-20).
+> - **Le ciblage** : en Combat, dans une halte, le coup vise **le plus proche** devant soi, joueur ou Éteint (D-11) ; un joueur touché lance un duel. En Exploration, on ne frappe jamais un joueur.
 
 ### 3.4 Disposition sur mobile
 
@@ -230,7 +236,7 @@ Les joueurs peuvent **acheter des Wh avec de l'argent réel**, dans une proporti
 ## 5. Questions ouvertes
 
 - [ ] **Commandes :** valider la proposition A et ses préréglages.
-- [ ] **Bascule automatique du mode Combat :** activée ou désactivée par défaut ?
+- [x] **Bascule automatique du mode Combat :** activée ou désactivée par défaut ? ✅ *Activée : elle met en Combat face à un Éteint et n'en sort plus toute seule (D-17, 2026-10-16, §3.3).*
 - [x] **Plafond d'achat de Wh :** ✅ ≈ 25 % du gain hebdomadaire médian, recalculé automatiquement.
 - [ ] **Remerciement des donateurs :** rien, ou un signe discret (titre, décoration) ?
 - [ ] **Navigateurs pris en charge :** fixer une liste minimale (Chrome, Firefox, Safari, Edge récents).

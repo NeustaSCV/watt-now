@@ -1,6 +1,8 @@
 # Le combat entre joueurs : le duel
 
-*Version : v0.3 · 2026-10-16 · **Statut : règles décidées, planifiées (`plan-duel.md`, version 0.11), pas encore codées**.*
+*Version : v0.4 · 2026-10-16 · **Statut : codé en 0.11 (en préparation)** (`plan-duel.md`) ; les règles n'ont pas changé.*
+
+*v0.4 (2026-10-16) : le duel codé en 0.11, en recette ; le statut seul change, aucune décision.*
 
 *v0.3 (2026-10-16) : les questions D-7 à D-24 (dont les choix sur maquette, D-19), apparues en préparant le plan, tranchées par le porteur, et sa demande D-16 (§10) ; le duel passe **avant** les murs et les sols, en **0.11** (les murs en 0.12).*
 
