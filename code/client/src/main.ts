@@ -2088,7 +2088,7 @@ function boucle(instant: number): void {
 
   if (position && estNuit(heure) && !nuitAnnoncee) {
     nuitAnnoncee = true;
-    if (!lumiere && lumierePortee(inventaire)) hud.message("La nuit tombe. R (ou « Lumière ») pour t'éclairer… mais la lumière se voit de loin.");
+    if (!lumiere && lumierePortee(inventaire)) hud.message(avecTouches("La nuit tombe. Allume ta lumière ({lumiere}) pour t'éclairer… mais elle se voit de loin.", tactile));
     aider("nuit");
     aider("partir");
   }

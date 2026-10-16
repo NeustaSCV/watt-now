@@ -337,7 +337,7 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
       { sous_titre: "La nuit" },
       "Elle dure de 21 h à 5 h 30 environ (un peu plus de 8 minutes réelles). Il fait sombre, et **toute lumière se voit de loin**. C'est le bon moment pour dormir dans ton abri, près du feu.",
       { sous_titre: "La lumière portée" },
-      "{lumiere} allume ou éteint ta lumière. Chaque famille part avec la sienne : examine-la dans ton sac. Une flamme porte loin et se voit de loin ; une lumière à pile, il faut la recharger.",
+      "Pour allumer ou éteindre ta lumière : {lumiere}. Chaque famille part avec la sienne : examine-la dans ton sac. Une flamme porte loin et se voit de loin ; une lumière à pile, il faut la recharger.",
       "Sans lumière, échange-en une avec un joueur d'une autre famille. Le jour, la lumière ne compte pas ; la nuit, elle attire les Éteints.",
       { sous_titre: "Le temps qu'il fait" },
       "Le ciel change par tranches de quelques heures de jeu : soleil, voilé, couvert, pluie. Au printemps, il pleut souvent, et une averse a tendance à durer.",
