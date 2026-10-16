@@ -60,7 +60,7 @@ import {
 } from "../../commun/src/survie.ts";
 import { surplusSaison } from "../../commun/src/saisons.ts";
 import { DISTANCE_INTERACTION, EMPRISE_RESSOURCE, PORTEE_ARBRE, TEXTE_GOURDE_AU_MILIEU, auMilieuDeLaMare, distanceMare, RAYON_ESCABEAU, REPOUSSE_MS, USAGES, estArbre, ressourceVisible } from "../../commun/src/terrain.ts";
-import { heuresEcoulees } from "../../commun/src/temps.ts";
+import { heuresEcoulees, MS_PAR_HEURE_JEU } from "../../commun/src/temps.ts";
 import { DEMONTAGE, LIEU_DE_FOUILLE, estOrdure, etapeButin, tirerVestiges } from "../../commun/src/vestiges.ts";
 import {
   DUREE_VOYAGE_S,
@@ -226,6 +226,8 @@ const JAMAIS = Number.MAX_SAFE_INTEGER;
 const INTERVALLE_BESOINS = 1000;
 /** L'hiver ne coûte rien de plus à qui se tient à moins de ça d'un feu allumé (m ; plan 0.10.1, A7). */
 const AU_FEU = 3;
+/** La forge garde ses braises (elle réchauffe encore) tant de temps après un geste de forge (ms ; plan 0.10.1, R-02). */
+const BRAISES_FORGE_MS = 2 * MS_PAR_HEURE_JEU;
 const INTERVALLE_FEUX = 2000;
 const INTERVALLE_REPOUSSE = 5000;
 
@@ -401,6 +403,12 @@ export class Joueur implements Voyageur, ParticipantLecon {
   });
   /** La forge des Charbonniers (Book 25 §4) : trempe, reforgeage, accessoires ; dans serveur/src/forge.ts. */
   private readonly forge: Forge = new Forge(this.contexteForge());
+  /**
+   * Jusqu'à quand chaque forge brûle son charbon (id de l'installation → fin du dernier geste de forge ; plan 0.10.1,
+   * R-02) : elle réchauffe pendant le geste et encore `BRAISES_FORGE_MS` après. En mémoire seulement : après un
+   * redémarrage, la forge est froide.
+   */
+  private readonly chauffesForge = new Map<number, number>();
   /** L'électricité des Voltaïques (Book 25 §5) : décharges, recharge, pièges électriques (serveur/src/electricite.ts). */
   private readonly electricite: Electricite = new Electricite(this.contexteElectricite());
   /** Les meubles nouveaux du niveau 2 (plan 0.10, chantier D) : cuiseur, bacs de tri, creuset, moulin, rampe, arbalète de garde. */
@@ -1621,7 +1629,11 @@ export class Joueur implements Voyageur, ParticipantLecon {
         j.borneGourdes();
         j.envoyer({ t: "inventaire", inventaire: j.inventaire });
       },
-      commencer: (libelle, dureeS, appliquer, pose) => j.commencer(libelle, dureeS, appliquer, 0, pose),
+      commencer: (libelle, dureeS, appliquer, pose, brule) => {
+        const avant = j.action;
+        j.commencer(libelle, dureeS, appliquer, 0, pose);
+        if (brule) j.chaufferLaForge(avant);
+      },
       info: (t) => j.info(t),
       envoyer: (m) => j.envoyer(m),
       sauver: () => {
@@ -3250,6 +3262,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (poidsInventaire(this.inventaire, this.gourde.litres) + delta > capaciteDe({ ...this.inventaire, [produit.objet]: (this.inventaire[produit.objet] ?? 0) + quantite })) return this.sacTropLourd();
     // Le redresseur de fûts de l'établi : les flèches vont deux fois plus vite (Book 25 §9.3).
     const redresse = accelerationFleches(r.id, this.installations.values(), (ix, iz) => this.proche(ix, iz, 3));
+    const avant = this.action;
     this.commencer(fois > 1 ? `${r.nom} (deux à la fois)` : soleil ? `${r.nom} (au soleil)` : r.nom, dureeReelle(r) * facteur * redresse * lenteur, () => {
       // Un ingrédient de métier compte toutes étoiles confondues.
       if (!Object.entries(ingredients).every(([t, n]) => compter(this.inventaire, t as TypeObjet) >= (n ?? 0))) return;
@@ -3277,6 +3290,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       this.noterFait(`fabrique:${r.id}`);
       this.surFabrication?.(r.id);
     }, this.forge.kcalEnPlus(r), r.qualites.marteler ? "lourd" : "outil");
+    if (r.installation === "forge" && (ingredients.charbon_bois ?? 0) > 0) this.chaufferLaForge(avant);
   }
 
   /** Retire les ingrédients d'une recette : un objet de métier, les exemplaires les moins bons d'abord. */
@@ -3713,15 +3727,38 @@ export class Joueur implements Voyageur, ParticipantLecon {
   /**
    * Les saisons sur la faim et la soif (plan 0.10.1, A7 : saisons.ts). Le surplus de faim de l'hiver est annulé à 3 m
    * d'un feu allumé à soi (feu de camp, Dakota, foyers, four, poêle : tout ce qui brûle sur son terrain), ou endormi
-   * dans un abri. L'été, rien n'atténue la soif.
+   * dans un abri. R-02 : à 3 m aussi d'une forge qui brûle son charbon (pendant un geste de forge, et ses braises 2 h de
+   * jeu après), ou d'une charbonnière qui cuit. L'été, rien n'atténue la soif.
    */
   private saisonSurLesBesoins(instant: number): { faim: number; soif: number } {
     const saison = surplusSaison(jourDuCalendrier(instant, this.debutMonde));
     if (saison.faim <= 1) return saison;
+    const aPortee = (x: number, z: number) => Math.hypot(x - this.position.x, z - this.position.z) <= AU_FEU;
+    const chezSoi = this.lieu === "terrain" && !this.voyage;
     const auChaud =
       this.sommeil?.dansUnAbri === true ||
-      (this.lieu === "terrain" && !this.voyage && [...this.feux.values()].some((f) => f.allume && f.bois > 0 && Math.hypot(f.x - this.position.x, f.z - this.position.z) <= AU_FEU));
+      (chezSoi && [...this.feux.values()].some((f) => f.allume && f.bois > 0 && aPortee(f.x, f.z))) ||
+      (chezSoi &&
+        [...this.installations.values()].some(
+          (i) =>
+            aPortee(i.x, i.z) &&
+            ((i.type === "forge" && instant <= (this.chauffesForge.get(i.id) ?? -Infinity) + BRAISES_FORGE_MS) ||
+              (i.type === "charbonniere" && i.etat.pretLe !== undefined && instant < i.etat.pretLe)),
+        ));
     return auChaud ? { ...saison, faim: 1 } : saison;
+  }
+
+  /**
+   * Un geste de forge qui brûle du charbon vient de commencer (plan 0.10.1, R-02) : les forges à portée chauffent jusqu'à
+   * la fin du geste (ses braises durent ensuite `BRAISES_FORGE_MS`). `avant` : l'action d'avant l'appel, pour ne rien
+   * noter si le geste a été refusé.
+   */
+  private chaufferLaForge(avant: ActionEnCours | null): void {
+    if (!this.action || this.action === avant) return;
+    // Les forges à portée (celles que le geste a pu prendre : forge.ts les cherche à 3 m, comme `AU_FEU`).
+    for (const i of this.installations.values()) {
+      if (i.type === "forge" && this.proche(i.x, i.z, AU_FEU)) this.chauffesForge.set(i.id, Math.max(this.chauffesForge.get(i.id) ?? 0, this.action.fin));
+    }
   }
 
   /** « Ta gourde est vide… », au pluriel quand on en porte plusieurs. */
