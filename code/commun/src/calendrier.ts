@@ -1,14 +1,19 @@
 // Le calendrier des récoltes (décision du 2026-10-08, Book 13, Book 11 §10).
 // Le calendrier tourne : 1 année de 365 jours = 4 semaines réelles (Book 01 §2 bis), soit un jour de calendrier
-// toutes les ≈ 1 h 50 réelles, le même pour tout le serveur. Le monde commence le 1er juin (fin de printemps).
+// toutes les ≈ 1 h 50 réelles, le même pour tout le serveur. Le monde commence le 21 mars, premier jour du printemps
+// (décision du porteur du 2026-10-16 ; avant : le 1er juin).
 // Les fruits et les champignons suivent leurs vraies périodes (France tempérée). En 0a, l'herbe, la lumière et la
 // production solaire restent celles du printemps (Book 21 §3.6) : seules les récoltes suivent le calendrier.
 
 import { MS_JOUR_CALENDRIER } from "./energie.ts";
 import type { TypeRessource } from "./terrain.ts";
 
-/** Le monde commence le 1er juin (jour 152) : les premiers cèpes sortent, les cerises arrivent quelques jours après. */
-export const JOUR_DEPART = 152;
+/**
+ * Le monde commence le 21 mars (jour 80), le lendemain de la fin de l'hiver (saisons.ts) : les pruniers puis les
+ * cerisiers fleurissent ; les premiers cèpes sortent le 1er juin et les cerises mûrissent le 5 juin, soit ≈ 5 jours
+ * et demi réels après le début du monde (un jour de calendrier ≈ 1 h 50).
+ */
+export const JOUR_DEPART = 80;
 
 const MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"] as const;
 const LONGUEURS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];

@@ -19,7 +19,7 @@ interface Montage {
   inventaire?: Record<string, number>;
   besoins?: Besoins;
   gourde?: Gourde;
-  /** Le jour du calendrier où l'on joue (le 1er juin par défaut). */
+  /** Le jour du calendrier où l'on joue (le 21 mars par défaut). */
   jour?: number;
   avant?: (base: Base, id: number, instant: number) => void;
 }

@@ -2,6 +2,7 @@
 
 > Document de conception · version 0.2 · 2026-10-07
 > v0.3 (2026-10-16) : §3 bis, la faim de l'hiver et la soif de l'été (0.10.1).
+> v0.4 (2026-10-16) : §3 bis, le monde commence le 21 mars, premier jour du printemps (et non plus le 1er juin).
 > Statut : **brouillon de travail**.
 
 ---
@@ -57,7 +58,7 @@ Techniquement, la météo a **deux couches**, qui suivent les deux horloges du j
 ## 3 bis. Le calendrier des récoltes (décision du 2026-10-08)
 
 **Le calendrier tourne** : 1 an de 365 jours = 4 semaines réelles (Book 01 §2 bis), soit un jour de calendrier toutes les ≈ 1 h 50 réelles. C'est le même pour tout le serveur.
-- Le monde a commencé le **1er juin**, à la fin du printemps.
+- Le monde commence le **21 mars**, premier jour du printemps (décision du porteur du 2026-10-16 ; avant : le 1er juin). Le serveur de production repart de là à sa remise à zéro avant l'ouverture au public. Les arbres fleurissent dans les premiers jours ; les premières récoltes de saison (cèpes le 1er juin, cerises le 5 juin) arrivent ≈ 5 jours et demi réels après le début du monde.
 - La date s'affiche en haut à droite, à la place du « Jour N » (le compte des jours de jeu de 24 min passe dans l'infobulle).
 
 **En phase 0a, seules les récoltes suivent le calendrier.** L'herbe, la lumière, la météo et la production solaire restent celles de la fin du printemps (Book 21 §3.6). Les quatre palettes de saison viendront en 0b.

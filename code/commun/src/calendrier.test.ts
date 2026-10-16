@@ -3,9 +3,9 @@ import assert from "node:assert/strict";
 import { enSaison, formaterDate, instantDuJour, jourDuCalendrier, phaseFruitier } from "./calendrier.ts";
 import { MS_JOUR_CALENDRIER } from "./energie.ts";
 
-test("le monde commence le 1er juin ; un an dure 4 semaines réelles", () => {
-  assert.equal(formaterDate(jourDuCalendrier(0, 0)), "1er juin");
-  assert.equal(formaterDate(jourDuCalendrier(MS_JOUR_CALENDRIER * 365, 0)), "1er juin");
+test("le monde commence le 21 mars, premier jour du printemps ; un an dure 4 semaines réelles", () => {
+  assert.equal(formaterDate(jourDuCalendrier(0, 0)), "21 mars");
+  assert.equal(formaterDate(jourDuCalendrier(MS_JOUR_CALENDRIER * 365, 0)), "21 mars");
   assert.ok(Math.abs(MS_JOUR_CALENDRIER * 365 - 28 * 24 * 3_600_000) < 1);
   assert.equal(jourDuCalendrier(instantDuJour(240, 5000), 5000), 240);
   assert.equal(formaterDate(240), "28 août");
