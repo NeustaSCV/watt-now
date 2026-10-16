@@ -10,6 +10,7 @@
 
 import { CAPACITES, bancDuPedalier, batterieDuBanc, type TypeBatterie } from "./energie.ts";
 import { ENCLUMES } from "./forge.ts";
+import { RAISON_PEDALIER_SANS_ORGANE } from "./mecanique.ts";
 import { LIGNEES_INSTALLATIONS } from "./lignees.ts";
 import type { EtatInstallation } from "./messages.ts";
 import type { Inventaire, TypeObjet } from "./objets.ts";
@@ -175,15 +176,16 @@ export function pedalierChargeLeBanc(pedalier: { x: number; z: number }, install
 
 /**
  * Pourquoi cette installation ne marche pas, en une phrase (null : elle marche, ou rien à en dire). Les phrases sont
- * celles que le jeu disait déjà à l'examen (la clôture, la rampe de LED, la plaque, les mâchoires) ; celle du pédalier
- * a été validée par le porteur. `bancARemplir` : pour le pédalier, un banc à moins de 3 m dont la batterie a de la place.
+ * celles que le jeu disait déjà à l'examen (la clôture, la rampe de LED, la plaque, les mâchoires) ou en pédalant (le
+ * pédalier qui n'entraîne rien) ; celle du pédalier sans batterie a été validée par le porteur. `bancARemplir` : pour le pédalier, un banc à moins de 3 m dont la batterie a de la place.
  */
 export function raisonArret(i: { type: TypeInstallation; etat: EtatInstallation }, inventaire: Inventaire, bancARemplir = false): string | null {
   const d = i.etat.declencheur;
   switch (i.type) {
     case "pedalier": {
+      // Rien de monté : la phrase que le serveur dit quand on pédale (R-06, une seule source).
+      if (!i.etat.alternateur && !i.etat.dynamo) return RAISON_PEDALIER_SANS_ORGANE;
       // Comme le bouton A (interaction.ts) : il entraîne l'alternateur ou la dynamo, mais n'a rien à charger.
-      if (!i.etat.alternateur && !i.etat.dynamo) return null;
       const surPedalier = Object.values(i.etat.batteries ?? {}).some((n) => (n ?? 0) > 0);
       const enPoche = (Object.keys(CAPACITES) as TypeBatterie[]).some((b) => (inventaire[b] ?? 0) > 0);
       return bancARemplir || surPedalier || enPoche ? null : RAISON_PEDALIER_SANS_BATTERIE;
