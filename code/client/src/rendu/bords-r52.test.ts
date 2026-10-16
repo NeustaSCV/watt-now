@@ -147,9 +147,9 @@ test("chaque panneau de sortie a « Lire » (sa vraie destination) et une lanter
   const pres = (lieu: LieuId, p: { x: number; z: number }) => ECRITEAUX.find((e) => e.lieu === lieu && e.points.some((q) => Math.hypot(q.x - p.x, q.z - p.z) < 1));
   const ouest = (lieu: LieuId, p: { x: number; z: number }) => pres(lieu, p)?.texte ?? "";
   assert.match(ouest("route_pont", PANNEAUX_SORTIE_PONT[0]), /Ton terrain/);
-  assert.match(ouest("route_pont", PANNEAUX_SORTIE_PONT[1]), /Grand Hôtel des Flots · 2 km →/);
-  assert.match(ouest("corniche", PANNEAUX_SORTIE_CORNICHE[0]!), /Ton terrain · 3 km/);
-  assert.match(ouest("corniche", PANNEAUX_SORTIE_CORNICHE[1]!), /Phare du cap · 2 km →/);
+  assert.match(ouest("route_pont", PANNEAUX_SORTIE_PONT[1]), /Grand Hôtel des Flots · 2 km →/);
+  assert.match(ouest("corniche", PANNEAUX_SORTIE_CORNICHE[0]!), /Ton terrain · 3 km/);
+  assert.match(ouest("corniche", PANNEAUX_SORTIE_CORNICHE[1]!), /Phare du cap · 2 km →/);
   assert.match(ouest("grand_hotel", PANNEAU_SORTIE_HOTEL), /Route du pont.*Ton terrain/);
   for (const e of ECRITEAUX) assert.doesNotMatch(e.texte, /Port de pêche/, e.id);
   // Les lanternes : une source à moins de 1,5 m au-dessus de chaque panneau, la nuit ; aucune le jour.

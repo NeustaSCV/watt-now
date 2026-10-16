@@ -90,14 +90,14 @@ test("0.8.2 banc : un pédalier générateur à 3 m charge directement la batter
   t.attendre(61);
   const apres = batterieDuBanc(t.installation(idBanc).etat)!;
   assert.ok(Math.abs(apres.wh - 100 - whEDePedalage("mecanistes")) < 0.5, `${apres.wh}`);
-  assert.match(t.infos().at(-1)!, new RegExp(`\\+60 Wh dans ${NOM_BATTERIE_DE_LA_RUINE}, dans le banc`));
+  assert.match(t.infos().at(-1)!, new RegExp(`\\+60 Wh dans ${NOM_BATTERIE_DE_LA_RUINE}, dans le banc`));
   // À 4 m, le banc est trop loin : sans batterie sur le pédalier ni dans le sac, rien à charger.
   const u = surLeTerrain("mecanistes", {}, [banc(100), pedalier(24.5)]);
   u.joueur.position = { x: 24.5, z: 21, o: 0 };
   u.joueur.recevoir({ t: "interagir", cible: { genre: "installation", id: u.ids[1]! }, verbe: "pedaler" });
   u.attendre(61);
   assert.ok(Math.abs(batterieDuBanc(u.installation(u.ids[0]!).etat)!.wh - 100) < 0.01, "rien n'est entré (la décharge spontanée seule)");
-  assert.match(u.infos().at(-1)!, /moins de 3 m du banc/);
+  assert.match(u.infos().at(-1)!, /moins de 3 m du banc/);
 });
 
 test("0.8.2 §7.3 : un Voltaïque qui a lu le manuel des Mécanistes pédale et remplit son banc à 3 m, sans le bonus ; sans l'avoir lu, refusé", () => {
@@ -172,7 +172,7 @@ test("0.8.2 banc : la petite batterie de la frontale, puis une matraque, se char
   assert.ok(Math.abs((t.dernier("charges")!.charges.petite_batterie ?? 0) - 50) < 0.1, `${t.dernier("charges")!.charges.petite_batterie}`);
   const apresFrontale = batterieDuBanc(t.installation(id).etat)!.wh;
   assert.ok(Math.abs(apresFrontale - (100 - 30 / RENDEMENT_BANC)) < 0.5, `${apresFrontale}`);
-  assert.equal(t.infos().at(-1), "+30 Wh dans la petite batterie de la frontale. Il reste 64,7 Wh dans la batterie de voiture de la ruine.");
+  assert.equal(t.infos().at(-1), "+30 Wh dans la petite batterie de la frontale. Il reste 64,7 Wh dans la batterie de voiture de la ruine.");
   // Puis la matraque, vidée au combat : 24 Wh, ≈ 48 s.
   t.joueur.recevoir({ t: "banc", id, op: "charger", cible: "matraque_electrique" });
   t.attendre(50);

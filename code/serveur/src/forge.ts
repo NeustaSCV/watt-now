@@ -283,7 +283,7 @@ export class Forge {
       case "monter_ventilateur": {
         if (i.etat.ventilateur) return true;
         if ((inv.ventilateur_forge ?? 0) < 1) {
-          this.ctx.info("Le ventilateur 12 V se fabrique chez les Voltaïques.");
+          this.ctx.info("Le ventilateur 12 V se fabrique chez les Voltaïques.");
           return true;
         }
         this.ctx.commencer("Monter le ventilateur sur la forge", 6, () => {

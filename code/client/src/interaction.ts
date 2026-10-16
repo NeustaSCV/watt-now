@@ -59,13 +59,13 @@ export const EXAMENS_INSTALLATIONS: Record<InstallationVue["type"], string> = {
   charbonniere: "Une meule de bois couverte de terre. Allumée, elle cuit trois jours en fumant beaucoup.",
   forge: "Un foyer de pierres, une tuyère de fer, un billot et sa pierre plate pour enclume. Il faut du charbon de bois.",
   pedalier: "Le vieux vélo de la ruine sur un bâti de bois. Sa roue entraîne ce qu'on y monte : l'alternateur, une meule.",
-  banc_recharge: "Un banc de planches, des pinces, un régulateur bricolé. Il fait passer le courant de sa batterie dans ce que tu portes ; le panneau posé dessus la remplit au soleil.",
+  banc_recharge: "Un banc de planches, des pinces, un régulateur bricolé. Sa batterie charge ce que tu portes ; le panneau posé dessus la remplit au soleil.",
   panneau_solaire: "Le petit panneau de la station, plein sud. Il charge la batterie du banc, même quand tu n'es pas là.",
   escabeau: "Un escabeau de bois ligaturé de corde. Posé au pied d'un arbre fruitier, dans son cercle, il permet de cueillir en haut.",
-  recuperateur_pluie: "Quatre sacs plastique tendus en entonnoir au-dessus d'un bidon de 5 L. Quand il pleut, il se remplit, même quand tu n'es pas là. L'eau du ciel se boit sans la faire bouillir.",
+  recuperateur_pluie: "Quatre sacs tendus en entonnoir sur un bidon de 5 L. Il se remplit quand il pleut, même sans toi. L'eau du ciel se boit sans bouillir.",
   alarme_boites: "Une ficelle tendue entre deux piquets, des boîtes de conserve qui pendent. Si un Éteint passe, tu l'entendras. Lui aussi.",
   lit_branchages: "Un cadre de branches couvert de rameaux. On y dort isolé du sol ; glissé sous ton abri (Améliorer), il le garnit.",
-  decharge: "Un tas d'ordures de l'Âge de l'Abondance, au bord du terrain. La pluie et le temps en font remonter des objets : surtout des trucs nuls, parfois une bonne surprise.",
+  decharge: "Un tas d'ordures de l'Âge de l'Abondance. Le temps en fait remonter des objets : surtout des trucs nuls, parfois une bonne surprise.",
   // Le métier des familles (Book 25, 0.6) : les chantiers 6 et 7 les font vivre.
   alarme_electrique: "Un fil de fer tendu bas, une pile, une LED. Si un Éteint passe, la LED s'allume et ton alerte vibre, sans un bruit.",
   cloture_fortune: "Quatre mètres de fil de fer sur des piquets, isolés au plastique, branchés au banc. L'Éteint qui la touche se raidit.",
@@ -82,10 +82,10 @@ export const EXAMENS_INSTALLATIONS: Record<InstallationVue["type"], string> = {
   ratelier_outils: "Deux perches et des chevilles contre un piquet : chaque outil a sa place. Rangé ici, il sert à tout ce qu'on bâtit autour.",
   torche_plantee: "Une branche plantée, un chiffon gras qui brûle au bout. Elle éclaire six mètres autour, une nuit durant.",
   // Les meubles nouveaux du niveau 2 (plan 0.10, chantier D).
-  cuiseur_solaire: "Une boîte à réflecteurs d'aluminium, sa vitre, son isolant de papier. Au soleil, elle fait bouillir l'eau et cuit les plats du foyer de pierres, sans bois, deux fois plus lentement. Par temps voilé, à moitié ; rien sous un ciel couvert, ni la nuit.",
+  cuiseur_solaire: "Une boîte à réflecteurs d'aluminium. Au soleil, elle fait bouillir l'eau et cuit sans bois, deux fois plus lentement. Voilé : à moitié. Couvert ou la nuit : rien.",
   bacs_tri: "Trois jerricans coupés, un aimant pendu au-dessus. Ce qu'on démonte à côté se trie : deux fois plus vite, et parfois une matière de plus.",
-  rampe_led: "Dix LED sur un tube d'aluminium : vingt mètres de lumière la nuit, sans flamme, sur une batterie de la base à moins de 15 m.",
-  moulin_jerricans: "Deux jerricans coupés en godets, sur un mât de tubes. Quand il vente, son petit moteur fait du courant pour une batterie de la base à moins de 15 m, même en ton absence.",
+  rampe_led: "Dix LED sur un tube d'aluminium : vingt mètres de lumière la nuit, sans flamme, sur une batterie de la base à moins de 15 m.",
+  moulin_jerricans: "Deux jerricans en godets sur un mât de tubes. Quand il vente, il charge une batterie de la base à moins de 15 m, même sans toi.",
   arbalete_garde: "Une arbalète bridée sur un tube, un fil de fer tendu à un mètre devant. Le premier Éteint qui le passe reçoit un carreau.",
 };
 
@@ -164,7 +164,7 @@ function actionsInstallation(
     }
     case "recuperateur_pluie": {
       const l = i.etat.litres ?? 0;
-      return [l >= 0.1 && (inventaire.gourde ?? 0) > 0 ? msg(`Remplir la gourde (eau de pluie, ${l.toFixed(1).replace(".", ",")} L)`, "remplir_pluie") : null, examiner];
+      return [l >= 0.1 && (inventaire.gourde ?? 0) > 0 ? msg(`Remplir la gourde (eau de pluie, ${l.toFixed(1).replace(".", ",")} L)`, "remplir_pluie") : null, examiner];
     }
     case "forge": {
       // B : un accessoire à poser, s'il y a de quoi dans le sac (Book 25 §9.3) ; sinon, la fiche (améliorer la forge).
@@ -189,7 +189,7 @@ function actionsInstallation(
       const reste = i.etat.pretLe - maintenantServeur;
       if (reste > 0) {
         const minutes = Math.ceil(reste / 60_000);
-        return [null, { libelle: "Examiner", examiner: `La meule fume. Le charbon sera prêt dans ${minutes} min réelle${minutes > 1 ? "s" : ""}.` }];
+        return [null, { libelle: "Examiner", examiner: `La meule fume. Le charbon sera prêt dans ${minutes} min réelle${minutes > 1 ? "s" : ""}.` }];
       }
       return [msg("Défourner le charbon", "defourner"), examiner];
     }
@@ -218,7 +218,7 @@ function actionsInstallation(
       const armee = i.etat.declencheur?.arme ?? true;
       // La raison (0.10.1, chantier E) passe en tête du message : commun/src/examiner-court.ts.
       const raison = raisonArret(i, inventaire) ?? undefined;
-      return [armee ? null : msg("Réarmer la plaque (0,5 Wh)", "rearmer_piege"), { libelle: "Examiner", examiner: armee ? `${EXAMENS_INSTALLATIONS.plaque_choc} Elle est armée.` : EXAMENS_INSTALLATIONS.plaque_choc, raison }];
+      return [armee ? null : msg("Réarmer la plaque (0,5 Wh)", "rearmer_piege"), { libelle: "Examiner", examiner: armee ? `${EXAMENS_INSTALLATIONS.plaque_choc} Elle est armée.` : EXAMENS_INSTALLATIONS.plaque_choc, raison }];
     }
     case "cloture_fortune":
     case "cloture_electrique": {
@@ -468,7 +468,7 @@ export function proposer(
     const examenKlaxon = !batterieEnPlace
       ? "Le klaxon du tracteur rouge. Plus de batterie sous le capot : il ne sonnera plus, tant qu'une autre ne se sera pas retrouvée là."
       : klaxons > 0
-        ? `Le klaxon du tracteur rouge : de quoi faire venir tous les Éteints du coin. Encore ${klaxons} coup${klaxons > 1 ? "s" : ""} : chacun vide un quart de la batterie (il lui reste ≈ ${wh} Wh), qui ne se recharge pas ici.`
+        ? `Le klaxon du tracteur rouge : de quoi faire venir tous les Éteints du coin. Encore ${klaxons} coup${klaxons > 1 ? "s" : ""} : chacun vide un quart de la batterie (il lui reste ≈ ${wh} Wh), qui ne se recharge pas ici.`
         : "Le klaxon du tracteur rouge. La batterie est morte : il ne fait plus qu'un clic.";
     for (const l of LEURRES) {
       // La radio est là où on l'a posée ; dans un sac, elle n'est nulle part.
@@ -482,7 +482,7 @@ export function proposer(
             message: { t: "interagir", cible: { genre: "leurre", id: "radio" }, verbe: "actionner" },
           },
           // B la prend : on la pose ailleurs, puis on l'allume (Book 23 §4.7 : « elle se transporte et se pose »).
-          B: { libelle: "Prendre la radio (2 kg)", message: { t: "interagir", cible: { genre: "leurre", id: "radio" }, verbe: "prendre_radio" } },
+          B: { libelle: "Prendre la radio (2 kg)", message: { t: "interagir", cible: { genre: "leurre", id: "radio" }, verbe: "prendre_radio" } },
           cible: { x: ou.x, z: ou.z },
         });
         continue;
@@ -613,9 +613,9 @@ function examenBatterieTracteur(klaxons: number, famille: Famille): string {
   const wh = Math.round(chargeBatterieTracteur(klaxons));
   const charge =
     klaxons >= KLAXONS_PAR_BATTERIE
-      ? `Encore pleine : ≈ ${wh} Wh.`
+      ? `Encore pleine : ≈ ${wh} Wh.`
       : wh > 0
-        ? `Les coups de klaxon l'ont entamée : ≈ ${wh} Wh sur ${CAPACITES.batterie_voiture}.`
+        ? `Les coups de klaxon l'ont entamée : ≈ ${wh} Wh sur ${CAPACITES.batterie_voiture}.`
         : "Le klaxon l'a vidée : elle se rechargerait sur un banc.";
   const choix =
     famille === "voltaiques"
@@ -623,5 +623,5 @@ function examenBatterieTracteur(klaxons: number, famille: Famille): string {
       : famille === "mecanistes"
         ? " Pour un atelier, c'est une batterie de démarrage… mais sans elle, plus de klaxon pour vider le hangar."
         : " Sans elle, plus de klaxon pour vider le hangar.";
-  return `La batterie du tracteur rouge, sanglée sur le garde-boue : c'est elle qui fait sonner le klaxon. ${charge} 18 kg, une clé plate pour les cosses.${choix} Chaque coup de klaxon en vide un quart.`;
+  return `La batterie du tracteur rouge, sanglée sur le garde-boue : c'est elle qui fait sonner le klaxon. ${charge} 18 kg, une clé plate pour les cosses.${choix} Chaque coup de klaxon en vide un quart.`;
 }

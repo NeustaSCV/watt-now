@@ -87,7 +87,7 @@ export const CONSEILS = [
   "Un bon est un reçu. Il se décharge : dépensez-le.",
   "Seule l'électricité déposée crée des wotts. Le reste, c'est du commerce.",
   "La fumée se sent de loin. Les Éteints aussi la sentent.",
-  "Une batterie de voiture pèse 18 kg. Le lithium, c'est autre chose.",
+  "Une batterie de voiture pèse 18 kg. Le lithium, c'est autre chose.",
   "Dormir dans un abri récupère deux fois plus vite que par terre.",
   "La pluie couvre les bruits. Les Compteurs, eux, entendent tout.",
   "Ne vous laissez jamais encercler. Un couloir vaut mieux qu'une bonne arme.",

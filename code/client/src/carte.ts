@@ -529,12 +529,12 @@ export class Carte {
     } else peutPartir = true;
     const trajet = ici
       ? ""
-      : `<p class="trajet"><span>≈ ${String(km).replace(".", ",")} km à pied</span><span>≈ ${kcal} kcal</span><span>≈ ${eau} L d'eau</span><span>${DUREE_VOYAGE_S} min de route</span></p>${
+      : `<p class="trajet"><span>≈ ${String(km).replace(".", ",")} km à pied</span><span>≈ ${kcal} kcal</span><span>≈ ${eau} L d'eau</span><span>${DUREE_VOYAGE_S} min de route</span></p>${
           parHalte ? `<p class="note">La route passe par ${minuscule(LIEUX[etape].nom)} : il faudra y passer à pied.</p>` : ""
         }`;
     // En-tête (titre, ✕), corps qui défile, pied fixe : le bouton Partir ne passe jamais sous le bord de l'écran.
     // 0.8.2 (R18) : la fiche ne dit pas ce qu'on trouve dans le lieu ; son ambiance, la distance, le coût du trajet.
-    const corps = this.enRoute ? `<p class="trajet"><span>${DUREE_VOYAGE_S} min de route</span></p>` : `<p>${l.description}</p>${trajet}`;
+    const corps = this.enRoute ? `<p class="trajet"><span>${DUREE_VOYAGE_S} min de route</span></p>` : `<p>${l.description}</p>${trajet}`;
     const pied = this.enRoute
       ? `${etat}<div class="progression" aria-hidden="true"><span></span></div>`
       : ici || !peutPartir

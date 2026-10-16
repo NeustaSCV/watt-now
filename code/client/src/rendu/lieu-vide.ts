@@ -39,7 +39,7 @@ export function creerLieuVide(lieu: LieuJouable): THREE.Group {
     const vers = LIEUX[s.vers];
     const km = String(distanceKm(lieu, s.vers)).replace(".", ",");
     const titre = s.sansArrivee ? s.libelle.replace(/^Prendre le /, "") : vers.nom;
-    const sousTitre = s.sansArrivee ? `${vers.nom.replace(/^Le /, "")} · ${km} km` : `${km} km`;
+    const sousTitre = s.sansArrivee ? `${vers.nom.replace(/^Le /, "")} · ${km} km` : `${km} km`;
     const ox = Math.sign(cx - s.boite.x) * 3;
     const oz = Math.sign(cz - s.boite.z) * 3;
     groupe.add(creerPanneauRoute(titre, sousTitre, s.boite.x + ox + 2.5, s.boite.z + oz - 2.5, Math.atan2(cx - s.boite.x, cz - s.boite.z)));

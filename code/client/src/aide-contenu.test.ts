@@ -109,7 +109,7 @@ test("0.8 aide : « Le gué » et « Le Moulin » disent leurs mécanismes", () 
   // 0.8.2 (chantier K, décision du porteur) : l'aide ne nomme pas la glaise du gué.
   assert.doesNotMatch(g, /glaise/i);
   const m = rubrique("moulin");
-  for (const x of [/grosse clé/, /grande porte/, /fosse/, /halage/, /24 h/]) assert.match(m, x);
+  for (const x of [/grosse clé/, /grande porte/, /fosse/, /halage/, /24 h/]) assert.match(m, x);
 });
 
 test("0.8 aide : « Faire évoluer une arme » remplace « Réparer (Sac → l'arme) » : Reprendre, remettre à neuf, monter d'une étoile, le manche", () => {
@@ -164,9 +164,9 @@ test("0.10 aide : le péage (douze wotts, au prix du Comptoir, à l'aller seulem
 
 test("0.10 aide : l'hôtel et le phare disent comment, sans divulgâcher (ni cargo, ni épave, ni où sont les objets-clés)", () => {
   const h = rubrique("hotel");
-  for (const m of [/ascenseur/, /carte d'une chambre/, /borne/, /chambre 7/, /que dans ce sens-là/, /24 h/]) assert.match(h, m);
+  for (const m of [/ascenseur/, /carte d'une chambre/, /borne/, /chambre 7/, /que dans ce sens-là/, /24 h/]) assert.match(h, m);
   const p = rubrique("phare");
-  for (const m of [/trois mètres/, /pétrole/, /ne sert qu'à la nuit tombée/, /corne/, /une fois par nuit/, /que dans ce sens-là/, /24 h/]) assert.match(p, m);
+  for (const m of [/trois mètres/, /pétrole/, /ne sert qu'à la nuit tombée/, /corne/, /une fois par nuit/, /que dans ce sens-là/, /24 h/]) assert.match(p, m);
   const tout = [h, p, rubrique("cote")].join("\n");
   for (const secret of [/cargo/i, /épave/i, /conteneur/i, /naufrag/i, /s'échoue/i, /lingerie/i, /machinerie/i, /suite/i, /tôles/i, /couvertures de laine/i, /lanterne-tempête/i, /roulements/i, /fer à souder/i, /porte de four/i, /jerrican/i, /rabot/i, /cloche/i, /soufflet/i, /tête du robot/i, /escabeau/i])
     assert.doesNotMatch(tout, secret);

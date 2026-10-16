@@ -173,7 +173,7 @@ test("H : le pavois est ouvert au haut de l'échelle de coupée (P-5) : du pont,
 
 test("G : le panneau du sentier côtier (celui du modèle) est près de l'eau, au départ du sentier ; on le lit ; sa lanterne l'éclaire la nuit, pas le jour", () => {
   const modele = PANNEAUX_MODELE.find((p) => p.id === "panneau_sortie_greve")!;
-  assert.match(modele.texte, /Sentier côtier · ← Port · 6 km/);
+  assert.match(modele.texte, /Sentier côtier · ← Port · 6 km/); // le modèle extrait du bâtiment garde son espace
   assert.deepEqual(ECRITEAU_SENTIER, jeu(modele.x, modele.z), "l'écriteau « Lire » est au panneau du modèle");
   // Près de l'eau (le bord de l'eau du modèle est à z 23,3 à cet endroit), à quelques pas du bas de la rampe.
   const m = auModele(ECRITEAU_SENTIER.x, ECRITEAU_SENTIER.z);
@@ -186,7 +186,7 @@ test("G : le panneau du sentier côtier (celui du modèle) est près de l'eau, a
   for (const [dx, dz] of [[0.6, 0.6], [1.2, 0.3], [-0.5, 1.0]]) {
     const e = ecriteauProche("phare", ECRITEAU_SENTIER.x + dx!, ECRITEAU_SENTIER.z + dz!);
     assert.equal(e?.ecriteau.id, "E-12");
-    assert.match(e!.ecriteau.texte, /Sentier côtier · ← Port · 6 km/);
+    assert.match(e!.ecriteau.texte, /Sentier côtier · ← Port · 6 km/);
   }
   // Le jeu ne pose plus de panneau ni de lanterne à lui (le modèle a les siens).
   const decor = creerPhare();

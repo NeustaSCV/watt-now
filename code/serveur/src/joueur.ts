@@ -1052,7 +1052,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
         this.mesurer("wotts", "création (dépôt d'électricité)", wotts, { wh });
         this.noterFait("wotts_gagnes", wotts);
         this.noterFait("depot_wh", wh);
-        this.info(`${Math.round(wh)} Wh déposés : +${formaterWotts(wotts)} en bons frais.`);
+        this.info(`${Math.round(wh)} Wh déposés : +${formaterWotts(wotts)} en bons frais.`);
         break;
       }
       case "retirer": {
@@ -1067,7 +1067,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
         this.poche = ajouterWotts(this.poche, -wh * PRIX_RETRAIT, instant);
         this.mesurer("wotts", "destruction (recharge au comptoir)", -wh * PRIX_RETRAIT, { wh });
         this.ajouterCharge(op.batterie, wh);
-        this.info(`+${Math.round(wh)} Wh dans ${nommer(op.batterie, 1)}.`);
+        this.info(`+${Math.round(wh)} Wh dans ${nommer(op.batterie, 1)}.`);
         break;
       }
       case "verser": {
@@ -1880,7 +1880,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     this.sauvegarder();
     this.envoyer({ t: "effondrement" });
     this.info(`${raison} Des inconnus t'ont ramené chez toi, sans ton sac.`);
-    this.info("Tu n'as plus que tes poches (10 kg) : va reprendre ton sac, ou fabrique un sac de fortune.");
+    this.info("Tu n'as plus que tes poches (10 kg) : va reprendre ton sac, ou fabrique un sac de fortune.");
     this.envoyer(this.bienvenue(this.debutMonde));
   }
 
@@ -2108,7 +2108,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       if (objet === "sac_a_dos" || objet === "sac_fortune") return this.info("Ton sac, tu le gardes sur le dos.");
       const max = ratelier ? Infinity : capaciteCoffre(coffre);
       if (poidsInventaire(contenu) + OBJETS[typeDe(objet)].poids * n > max + 1e-9) {
-        return this.info(`Le coffre est plein (${max} kg) : ${etapeSuivanteInstallation(coffre) ? "améliore-le (il tiendra plus)" : "construis-en un autre"}, ou vends le surplus au Comptoir.`);
+        return this.info(`Le coffre est plein (${max} kg) : ${etapeSuivanteInstallation(coffre) ? "améliore-le (il tiendra plus)" : "construis-en un autre"}, ou vends le surplus au Comptoir.`);
       }
       if (batterie) {
         const part = this.chargesQuiPartent({ [objet]: n })[b] ?? 0;
@@ -3136,7 +3136,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
         const wh = this.ajouterCharge("batterie_voiture", this.cooperatives.prendreBatterie(this.compte.id));
         this.info(
           wh >= 1
-            ? `Tu desserres les cosses : la batterie du tracteur est à toi, ${Math.round(wh)} Wh dedans. Le klaxon se tait.`
+            ? `Tu desserres les cosses : la batterie du tracteur est à toi, ${Math.round(wh)} Wh dedans. Le klaxon se tait.`
             : "La batterie du tracteur est à toi, mais vide : le klaxon l'a épuisée. Recharge-la au banc.",
         );
       } else for (const b of BATTERIES) if (usage.donne[b]) this.ajouterCharge(b, CHARGE_TROUVEE[b] * (usage.donne[b] ?? 0));
@@ -3516,7 +3516,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     // Les branches d'abord, puis les bûches (plan 0.8 §9.3) : le conseil de la première nuit devient possible.
     const type: TypeObjet | null = (this.inventaire.branche ?? 0) > 0 ? "branche" : (this.inventaire.buche ?? 0) > 0 ? "buche" : null;
     if (!type) return this.info("Tu n'as pas de bois : ramasse des branches ou des bûches de bois mort sur ton terrain.");
-    if (feu.bois + combustibleDe(type) > effetsFeu(feu).boisMax + 1e-9) return this.info(`Le feu a déjà assez de bois (${effetsFeu(feu).boisMax} kg au plus).`);
+    if (feu.bois + combustibleDe(type) > effetsFeu(feu).boisMax + 1e-9) return this.info(`Le feu a déjà assez de bois (${effetsFeu(feu).boisMax} kg au plus).`);
     // Immédiat (Book 08 §3, 2026-10-08) : une action sans jauge se fait sur-le-champ, un clic = un morceau de bois.
     if (this.action) return this.info(`Tu es déjà occupé : attends la fin, ou appuie sur A pour arrêter.`);
     this.retirer(type, 1);
@@ -3949,7 +3949,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     const foyer = feuxDuLieu(r.lieu, this.alentours()).sort((a, b) => effetsFeu(b).plats - effetsFeu(a).plats)[0];
     if (!foyer) return { refus: refusLieu(r.lieu, this.alentours()) ?? "Il te faut un feu allumé, tout près." };
     const parPlat = { bois: (r.boisFeu ?? 0) * boisMarmite(foyer.accessoires?.marmite), eau: r.eau ?? 0 };
-    if (parPlat.eau > 0 && this.gourde.litres < parPlat.eau - 1e-9) return { refus: `Il faut ${String(parPlat.eau).replace(".", ",")} L d'eau dans ta gourde (celle de la mare suffit : elle va bouillir).` };
+    if (parPlat.eau > 0 && this.gourde.litres < parPlat.eau - 1e-9) return { refus: `Il faut ${String(parPlat.eau).replace(".", ",")} L d'eau dans ta gourde (celle de la mare suffit : elle va bouillir).` };
     if (parPlat.bois > 0 && foyer.bois < parPlat.bois - 1e-9) return { refus: "Le feu n'a pas assez de bois pour une longue cuisson : ajoute une bûche." };
     const deux =
       effetsFeu(foyer).plats >= 2 &&
@@ -4054,7 +4054,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
         const payes = i.etat.payes ?? [];
         const rend = rendDuDemontage(payes.at(-1) ?? {});
         const apres = { type: i.type, niveau: niveau - 1, etat: i.etat };
-        if (i.type === "coffre" && poidsInventaire(i.etat.contenu ?? {}) > capaciteCoffre(apres) + 1e-9) return this.info(`Il y a trop dans le coffre pour qu'il redevienne plus petit : vide-le jusqu'à ${capaciteCoffre(apres)} kg.`);
+        if (i.type === "coffre" && poidsInventaire(i.etat.contenu ?? {}) > capaciteCoffre(apres) + 1e-9) return this.info(`Il y a trop dans le coffre pour qu'il redevienne plus petit : vide-le jusqu'à ${capaciteCoffre(apres)} kg.`);
         if (!this.peutReprendre(rend)) return;
         return this.commencer(`Défaire : ${nom}`, Math.max(2, (etape?.duree ?? 20) / 2 / REGLAGES.fabrication_acceleration), () => {
           if (!this.installations.has(i.id) || niveauInstallation(i) !== niveau) return;
@@ -4170,12 +4170,12 @@ export class Joueur implements Voyageur, ParticipantLecon {
         return this.commencer("Allumer la meule", 3, () => {
           i.etat = { ...i.etat, pretLe: this.maintenant() + DUREE_CHARBONNIERE_MS };
           maj();
-          this.info("La meule fume : le charbon sera prêt dans trois jours de jeu (1 h 12 réelle).");
+          this.info("La meule fume : le charbon sera prêt dans trois jours de jeu (1 h 12 réelle).");
         });
       }
       case "defourner": {
         if (i.type !== "charbonniere" || !i.etat.pretLe) return;
-        if (this.maintenant() < i.etat.pretLe) return this.info(`Le charbon n'est pas encore prêt : encore ${Math.ceil((i.etat.pretLe - this.maintenant()) / 60_000)} min réelles.`);
+        if (this.maintenant() < i.etat.pretLe) return this.info(`Le charbon n'est pas encore prêt : encore ${Math.ceil((i.etat.pretLe - this.maintenant()) / 60_000)} min réelles.`);
         if (poidsInventaire(this.inventaire, this.gourde.litres) + CHARBON_PRODUIT > capaciteDe(this.inventaire)) return this.sacTropLourd();
         return this.commencer("Défourner le charbon", 10, () => {
           this.ajouterPlusieurs({ charbon_bois: CHARBON_PRODUIT });
@@ -4348,7 +4348,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
 
 /** « 1,5 kg », « 45 kg ». */
 function kgTexte(kg: number): string {
-  return `${(Math.round(kg * 100) / 100).toString().replace(".", ",")} kg`;
+  return `${(Math.round(kg * 100) / 100).toString().replace(".", ",")} kg`;
 }
 
 function poidsDe(objets: Inventaire): number {

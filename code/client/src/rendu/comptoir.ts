@@ -68,11 +68,11 @@ export function creerComptoir(): THREE.Group {
   COMPTEURS.push(new Compteur(COMPTOIR.guichet.x + 3.4, COMPTOIR.guichet.z + 0.8, -0.4, true, "femme"));
   for (const c of COMPTEURS) g.add(c.objet);
   // P-006 : la station est à l'est (à droite), la Ville à l'ouest (à gauche), comme sur la carte.
-  g.add(creerPanneauRoute("Station-service", "2 km · ton terrain 5 km →", MOBILIER_COMPTOIR.panneauStation.x, MOBILIER_COMPTOIR.panneauStation.z, 0));
+  g.add(creerPanneauRoute("Station-service", "2 km · ton terrain 5 km →", MOBILIER_COMPTOIR.panneauStation.x, MOBILIER_COMPTOIR.panneauStation.z, 0));
   // Les routes fermées : la Ville à l'ouest, la Côte au sud (l'enceinte du lieu, lieux.ts).
   for (const b of ENCEINTE_COMPTOIR.barrages) g.add(creerBarrage(b.x, b.z, b.o, b.texte));
   // Le chemin agricole de la Coopérative, au nord (0.5) : ouvert, lui.
-  g.add(creerPanneauRoute("Coopérative du Plateau", "↑ 3 km · chemin agricole", CHEMIN_COOP.x + 3.4, 6.5, 0));
+  g.add(creerPanneauRoute("Coopérative du Plateau", "↑ 3 km · chemin agricole", CHEMIN_COOP.x + 3.4, 6.5, 0));
   nommer(g, ["sol", "routes", "agence", "cellules", "pedalier", "cloture", "haies", "foret", "lampadaire"]);
   return g;
 }
@@ -168,7 +168,7 @@ function textureBareme(): THREE.CanvasTexture {
     c.fillText("BARÈME DE DÉCHARGE", 96, 26);
     c.font = "13px 'Courier New', monospace";
     c.textAlign = "left";
-    const lignes = ["Âge du bon   Valeur", "1 saison      98 %", "2 saisons     96 %", "3 saisons     94 %", "1 an          92 %", "", "Dépôt : 0,85 wott/Wh", "Retrait : 1 wott/Wh", "", "« Un bon est un reçu."];
+    const lignes = ["Âge du bon   Valeur", "1 saison      98 %", "2 saisons     96 %", "3 saisons     94 %", "1 an          92 %", "", "Dépôt : 0,85 wott/Wh", "Retrait : 1 wott/Wh", "", "« Un bon est un reçu."];
     lignes.forEach((l, i) => c.fillText(l, 14, 56 + i * 18));
     c.fillText("  Il se décharge. »", 14, 56 + lignes.length * 18);
     c.strokeStyle = "#1f7a6d";
@@ -194,7 +194,7 @@ function textureAvis(): THREE.CanvasTexture {
     c.fillRect(6, 6, 244, 148);
     // Des avis punaisés : bons, échanges, recherches de personnes
     const avis = [
-      ["ÉCHANGE", "batterie 12 V", "contre graines"],
+      ["ÉCHANGE", "batterie 12 V", "contre graines"],
       ["CHERCHE", "ma sœur Lina", "vue à la Côte"],
       ["BON DE", "DÉPÔT n° 4471", "— VÉRIFIÉ —"],
       ["COUVRE-FEU", "à la nuit :", "lumières éteintes"],

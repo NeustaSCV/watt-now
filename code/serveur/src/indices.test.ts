@@ -40,7 +40,7 @@ test("sac trop lourd : on dit de combien, et comment s'en sortir", () => {
   t.j.position = { x: branche.x, z: branche.z, o: 0 };
   t.j.recevoir({ t: "interagir", cible: { genre: "ressource", id: branche.id }, verbe: "ramasser" });
   // Ce qu'on voulait prendre, son poids, puis le sac (0.8.2, chantier H).
-  assert.match(t.infos().at(-1)!, /^Branche, [\d,]+ kg : trop lourd, ton sac est à 57,5 kg sur 55\. Jette.*coffre/);
+  assert.match(t.infos().at(-1)!, /^Branche, [\d,]+ kg : trop lourd, ton sac est à 57,5 kg sur 55\. Jette.*coffre/);
 });
 
 test("un outil manque : on dit lequel, et où le trouver", () => {

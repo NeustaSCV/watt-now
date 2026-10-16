@@ -133,5 +133,5 @@ test("les quêtes de métier revues : le banc solaire, le pédalier générateur
   assert.match(q("repas").texte, /pommes cuites, ou une poêlée/);
   // L'eau du ciel : le récupérateur de 5 L, plus de bâche ni de bassine.
   assert.doesNotMatch(q("eau_du_ciel").texte, /bâche|bassine/);
-  assert.match(q("eau_du_ciel").texte, /bidon de 5 L/);
+  assert.match(q("eau_du_ciel").texte, /bidon de 5 L/);
 });

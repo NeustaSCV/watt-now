@@ -25,10 +25,10 @@ export function texteTropLourd(inventaire: Inventaire, litresGourde: number, vis
     const noms = pieces.map(([cle, n]) => (pieces.length > 1 && n === 1 ? `1 ${nommer(cle, 1)}` : nommer(cle, n)));
     const liste = noms.length > 1 ? `${noms.slice(0, -1).join(", ")} et ${noms.at(-1)}` : noms[0]!;
     const poids = pieces.reduce((s, [cle, n]) => s + OBJETS[typeDe(cle)].poids * n, 0);
-    lignes.push(`${liste.charAt(0).toUpperCase()}${liste.slice(1)}, ${kilos(poids)} kg : trop lourd, ${sansSac ? "tes poches sont" : "ton sac est"} à ${kilos(porte)} kg sur ${capacite}. ${conseil}`);
+    lignes.push(`${liste.charAt(0).toUpperCase()}${liste.slice(1)}, ${kilos(poids)} kg : trop lourd, ${sansSac ? "tes poches sont" : "ton sac est"} à ${kilos(porte)} kg sur ${capacite}. ${conseil}`);
   } else {
-    lignes.push(`${sansSac ? "Tes poches sont pleines" : "Ton sac est trop lourd"} (${Math.round(porte)} kg sur ${capacite}) : jette (Sac → Jeter) ou range dans un coffre.`);
+    lignes.push(`${sansSac ? "Tes poches sont pleines" : "Ton sac est trop lourd"} (${Math.round(porte)} kg sur ${capacite}) : jette (Sac → Jeter) ou range dans un coffre.`);
   }
-  if (sansSac) lignes.push("Sans sac, tu ne portes que 10 kg : reprends le tien, ou fabrique un sac de fortune (4 branches, 2 cordes).");
+  if (sansSac) lignes.push("Sans sac, tu ne portes que 10 kg : reprends le tien, ou fabrique un sac de fortune (4 branches, 2 cordes).");
   return lignes;
 }

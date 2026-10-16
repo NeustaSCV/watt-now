@@ -241,7 +241,7 @@ export function choisirApparence(conteneur: HTMLElement, famille: Famille, depar
         for (const b of groupe.querySelectorAll<HTMLButtonElement>("button")) b.setAttribute("aria-pressed", String(b.dataset.valeur === valeur));
       }
       for (const c of racine.querySelectorAll<HTMLInputElement>("[data-curseur]")) c.value = String(a[c.dataset.curseur as "taille" | "corpulence"]);
-      sortie("taille").textContent = `${hauteurDe(a).toFixed(2).replace(".", ",")} m`;
+      sortie("taille").textContent = `${hauteurDe(a).toFixed(2).replace(".", ",")} m`;
       sortie("corpulence").textContent = a.corpulence < 0.3 ? "mince" : a.corpulence < 0.7 ? "moyenne" : "forte";
       afficherPerso();
     }

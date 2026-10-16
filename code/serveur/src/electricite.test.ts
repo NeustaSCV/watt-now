@@ -294,7 +294,7 @@ test("0.6 Voltaïques : au banc, un pack vide se recharge en ≈ 48 s, pris à l
   assert.equal(t.dernier("usure")?.charge?.matraque_electrique ?? 0, 0, "pas encore");
   t.attendre(6);
   assert.equal(t.dernier("usure")?.charge?.matraque_electrique, undefined, "pleine (absente : pleine)");
-  assert.ok(t.infos().some((x) => x.startsWith("+24 Wh")), t.infos().join(" | "));
+  assert.ok(t.infos().some((x) => x.startsWith("+24 Wh")), t.infos().join(" | "));
   const apres = t.base.chargerInstallations(t.compte.id).find((i) => i.type === "banc_recharge")!;
   assert.ok(Math.abs((apres.etat.charges?.batterie_voiture ?? 0) - (40 - 24 / 0.85)) < 0.5);
   // Sans batterie dans le banc : on le dit.
@@ -372,7 +372,7 @@ test("0.6 Voltaïques : la plaque de choc met à terre le premier qui passe ; la
   const u = surLeTerrain({}, [{ type: "plaque_choc", x: 20.5, z: 20, etat: { declencheur: { arme: false, prises: 1 } } }]);
   const p2 = u.joueur.bienvenue(0).installations.find((i) => i.type === "plaque_choc")!;
   u.joueur.recevoir({ t: "interagir", cible: { genre: "installation", id: p2.id }, verbe: "rearmer_piege" });
-  assert.match(u.infos().at(-1)!, /0,5 Wh/);
+  assert.match(u.infos().at(-1)!, /0,5 Wh/);
 });
 
 test("0.6 Voltaïques : l'alarme électrique prévient sans rien faire à l'Éteint", () => {

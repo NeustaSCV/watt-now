@@ -137,7 +137,7 @@ export const USAGES_PONT: Record<TypeRessourcePont, UsageRessource> = {
   pont_epicerie: fouille("Fouiller l'épicerie", "Les rayons de l'épicerie du bar : des sardines, du sel, des allumettes, des appâts, des brosses à dents, un casier de bouteilles consignées.", 5, { bouteille_verre: 1 }),
   pont_bar: fouille("Fouiller derrière le comptoir", "Le comptoir « Au Rendez-vous des Pêcheurs » : des bouteilles, du sucre, du tabac, l'ardoise du Wi-Fi des marées.", 5, { bouteille_verre: 1 }),
   pont_voiture: fouille("Fouiller la voiture", "Une voiture restée sur le pont : la boîte à gants, le coffre, les sièges. Les gens sont partis à pied.", 4),
-  pont_camionnette: fouille("Fouiller les colis", "Des colis « Livré en 7 min, garanti » : des chargeurs, des gadgets, une bouilloire connectée, des chaussettes."),
+  pont_camionnette: fouille("Fouiller les colis", "Des colis « Livré en 7 min, garanti » : des chargeurs, des gadgets, une bouilloire connectée, des chaussettes."),
   pont_peniche: fouille("Fouiller la péniche", "« Ma Liberté », échouée dans la forme : un salon de coussins et de plaids polaires, une cuisine, des livres de bord."),
   pont_hangar: fouille("Fouiller le hangar", "Le hangar des canotiers : des barques sur tréteaux, des filets, des avirons, des gilets de sauvetage."),
   pont_chapelle: fouille("Fouiller la chapelle", "La chapelle des marins : des cierges, une nappe d'autel, des maquettes de bateaux pendues à la voûte.", 4),
