@@ -4,8 +4,8 @@
 # sans écho (« ssh -t » et « docker exec -it » gardent le terminal) : il ne passe ni en argument ni dans un fichier.
 # Si god existe déjà, il est écrasé : nouveau mot de passe, personnage neuf, terrain monté, coffres remplis.
 # Déconnecte god du jeu avant (connecté, son personnage en mémoire réécrirait par-dessus).
-# Usage : code/deploiement/admin-pi.sh             crée (ou écrase) god, monte son terrain, remplit ses coffres
-#         code/deploiement/admin-pi.sh --remplir   re-remplit seulement ses coffres (sans mot de passe de god)
+# Usage : code/deploiement/god-pi.sh               crée (ou écrase) god, monte son terrain, remplit ses coffres
+#         code/deploiement/god-pi.sh --remplir     re-remplit seulement ses coffres (sans mot de passe de god)
 #         (WATT_PI, WATT_PI_UTILISATEUR comme deployer.sh)
 set -euo pipefail
 PI="${WATT_PI:-192.168.254.99}"

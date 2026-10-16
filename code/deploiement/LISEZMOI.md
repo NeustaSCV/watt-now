@@ -175,9 +175,12 @@ Viser un **retard de boucle p99 sous 50 ms** (le temps entre deux calculs du mon
 Un seul compte admin : son terrain a toutes les constructions, ses coffres tout le catalogue, et son menu ⚙ « Invincible », « Aller à… », « Remplir mes coffres ». Après un déploiement qui contient la 0.7, depuis le Mac (god déconnecté du jeu) :
 
 ```bash
-code/deploiement/admin-pi.sh            # crée god (ou l'écrase s'il existe) : son mot de passe se tape au clavier
-code/deploiement/admin-pi.sh --remplir  # re-remplit seulement ses coffres
+code/deploiement/god-pi.sh            # préprod (le Pi) : crée god (ou l'écrase s'il existe) ; son mot de passe se tape au clavier
+code/deploiement/god-pi.sh --remplir  # re-remplit seulement ses coffres
+code/deploiement/god-prod.sh          # production (le VPS) : la même chose ; --remplir aussi, --famille voltaiques à la création
 ```
+
+Ce n'est pas **godfather** : godfather n'ouvre que la page `/admin` de la production (`admin-prod.sh`, §10) ; **god** est le compte administrateur dans le jeu. Il ne peut ni provoquer ni être provoqué en duel (0.11).
 
 ## 8 ter. La page d'administration (0.8, port 4321)
 
@@ -187,7 +190,7 @@ Une page web, **sans mot de passe**, pour gérer les comptes depuis le réseau d
 - la liste des comptes, et la fiche de chacun : ce que le serveur sait déjà (compte, personnage, sac, coffres, installations, feux, mesures). Elle n'ajoute aucun compteur ;
 - **réinitialiser un mot de passe** : la page tire un mot de passe provisoire (`k7mp-2xqa-hn4d`) et l'affiche **une seule fois**, à donner au joueur ; ses sessions sont fermées (s'il joue, il revient à l'écran de connexion) ;
 - **supprimer un compte** : retaper son pseudo, puis « Supprimer définitivement ». S'il joue, il est déconnecté d'abord ; le compte et tout ce qui en dépend partent (personnage, sac, terrain, coffres, feux, Coopérative, sacs au sol, mesures). On ne revient pas en arrière, sauf par une sauvegarde (§7) ;
-- le compte **god** est protégé : ni suppression, ni réinitialisation (pour lui : `admin-pi.sh`, §8 bis).
+- le compte **god** est protégé : ni suppression, ni réinitialisation (pour lui : `god-pi.sh` ou `god-prod.sh`, §8 bis).
 
 **L'ouvrir** : depuis un ordinateur ou un téléphone de la maison, `http://192.168.254.99:4321` (par l'adresse du Pi ou par un nom, peu importe).
 
@@ -241,6 +244,12 @@ code/deploiement/admin-prod.sh
 ```
 
 Taper deux fois le mot de passe ; la commande affiche **une seule fois** la clé de configuration : dans l'application, « Ajouter un compte » → « Saisir une clé », puis taper le code à 6 chiffres qu'elle montre. Rien n'est enregistré tant que ce code n'est pas bon. Relancer la commande remplace le compte (nouvelle clé : refaire l'application). L'heure du téléphone doit être juste (réglage automatique).
+
+**Créer le compte god** (l'administrateur dans le jeu, §8 bis ; god déconnecté du jeu) :
+
+```bash
+code/deploiement/god-prod.sh
+```
 
 **Remettre le monde à zéro** (avant l'ouverture au public) :
 
