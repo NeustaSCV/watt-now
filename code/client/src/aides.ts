@@ -15,7 +15,10 @@ export type Aide =
   | "comptoir"
   | "nuit"
   | "effondrement"
-  | "partir";
+  | "partir"
+  // Le duel (0.11, D-23) : des indices d'une ligne, une fois chacun (voir main.ts, indiceUneFois).
+  | "combat_halte"
+  | "halo_rouge";
 
 export const TEXTES_AIDES: Record<Aide, string> = {
   pluie: "Il pleut : la pluie couvre les bruits et les odeurs. Bon moment pour travailler sans attirer les Éteints.",
@@ -30,6 +33,9 @@ export const TEXTES_AIDES: Record<Aide, string> = {
   nuit: "La nuit tombe. Ta lumière se voit de loin : allume-la quand il le faut, pas plus.",
   partir: "Avant de quitter, dors dans ton abri : ça compte comme une nuit, et hors ligne faim et soif sont gelées.",
   effondrement: "Tu t'es effondré. Ton sac est resté là-bas : va le reprendre, il est marqué d'un anneau jaune.",
+  // Mot pour mot (duel-entre-joueurs.md §10, D-23).
+  combat_halte: "En Combat, les autres te voient en rouge.",
+  halo_rouge: "Halo rouge : il peut te frapper.",
 };
 
 export class Aides {
