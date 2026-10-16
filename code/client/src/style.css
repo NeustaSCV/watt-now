@@ -6292,3 +6292,33 @@ body.vue-ensemble #hud .bloc.aide {
   color: #ffc27a;
   font-weight: 700;
 }
+
+/* ---------- La boussole (0.10.1, chantier D : le cadran V3 de la maquette) ----------
+   Vertical : un rond de papier crème de 60 px, à la place exacte du « ⟳ » (case « tourner » de la grille) ; paysage
+   (téléphone) : le cadran remplace l'icône de la tuile « Vue », la légende écrit la direction (« N-O »). Le papier crème
+   garde les lettres lisibles de jour comme de nuit. */
+#hud .tactile .b-tourner.boussole {
+  width: 60px;
+  height: 60px;
+  min-width: 60px;
+  min-height: 60px;
+  padding: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  align-self: center;
+  justify-self: end;
+  background: rgba(244, 236, 216, 0.94);
+  border-color: rgba(59, 42, 30, 0.55);
+  transition: transform 0.12s ease-out;
+}
+#hud .boussole .cadran { display: block; width: 54px; height: 54px; pointer-events: none; }
+#hud .boussole .cadran svg { display: block; width: 100%; height: 100%; overflow: visible; }
+#hud .raccourcis .r-tourner.boussole { transition: transform 0.12s ease-out; }
+#hud .raccourcis .r-tourner.boussole .cadran { width: 32px; height: 32px; margin: -1px 0; }
+#hud .raccourcis .r-tourner.boussole .legende { font-variant-numeric: tabular-nums; }
+/* Le petit appui : le bouton s'enfonce un instant. */
+#hud .boussole.appui { transform: scale(0.9); }
+@media (orientation: landscape) and (max-height: 520px) and (pointer: coarse) {
+  #hud .tactile .b-tourner.boussole { display: none; }
+}

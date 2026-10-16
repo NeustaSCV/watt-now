@@ -4,6 +4,7 @@
 
 import { libelleBoutonB, motLongB } from "./libelle-bouton.ts";
 import { inviteArreter } from "./geste-tenu.ts";
+import { Boussoles } from "./boussole.ts";
 import { VERSION } from "../../commun/src/version.ts";
 import { REGLAGES } from "../../commun/src/reglages.ts";
 import { ceQuiManque } from "../../commun/src/aide-fabrication.ts";
@@ -323,6 +324,8 @@ export class Hud {
   private infosTechniques = false;
   /** Le bouton « Son » : coupe ou remet le son, renvoie true si le son est actif. */
   surSon: (() => boolean) | null = null;
+  /** La boussole (0.10.1, chantier D) : le rond du bas (vertical) et la tuile du haut (paysage). */
+  private readonly boussoles: Boussoles;
   private readonly element: HTMLElement;
   private readonly ips: HTMLElement;
   private readonly latence: HTMLElement;
@@ -421,7 +424,7 @@ export class Hud {
         <button type="button" class="r-sac" title="Sac (I)" aria-label="Sac">${icone("sac_a_dos", 30)}<span>Sac</span></button>
         <button type="button" class="r-fabriquer" title="Fabriquer (B)" aria-label="Fabriquer">${icone("marteau", 30)}<span>Fabriquer</span><span class="pastille-fabriquer" hidden></span></button>
         <button type="button" class="r-carte" title="Carte (M)" aria-label="Carte"><svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><path d="M4 8 L11 5 L21 8 L28 5 V24 L21 27 L11 24 L4 27 Z" fill="#ecdfbf" stroke="#3b2a1e" stroke-width="2" stroke-linejoin="round"/><path d="M11 5 V24 M21 8 V27" stroke="#3b2a1e" stroke-width="1.5"/><path d="M7 19 C10 15 14 18 17 13 S23 12 25 9" fill="none" stroke="#c8362b" stroke-width="1.8" stroke-dasharray="2 2"/></svg><span>Carte</span></button>
-        <button type="button" class="r-tourner" title="Tourner la vue (V)" aria-label="Tourner la vue"><svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><path d="M25 12a10 10 0 1 0 1 8" fill="none" stroke="#1c2333" stroke-width="3" stroke-linecap="round"/><path d="M27 5v8h-8" fill="none" stroke="#c8362b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Vue</span></button>
+        <button type="button" class="r-tourner boussole" title="Tourner la vue (V)" aria-label="Tourner la vue"><span class="cadran"></span><span class="legende">Vue</span></button>
       </div>
       </div>
       <div class="depart" hidden role="alertdialog" aria-modal="true" aria-labelledby="titre-depart">
@@ -470,7 +473,7 @@ export class Hud {
           ? `<div class="tactile">
               <button type="button" class="b-mode" aria-label="Mode">Explorer</button>
               <button type="button" class="b-lumiere">Lumière</button>
-              <button type="button" class="b-tourner" aria-label="Tourner la vue">⟳</button>
+              <button type="button" class="b-tourner boussole" aria-label="Tourner la vue"><span class="cadran"></span></button>
               <button type="button" class="b-lancer" hidden aria-label="Lancer">Lancer</button>
               <button type="button" class="b-B" disabled>B</button>
               <button type="button" class="b-A" disabled>A</button>
@@ -618,6 +621,14 @@ export class Hud {
     lier(".r-fabriquer", "fabriquer");
     lier(".r-tourner", "tourner+");
     lier(".r-carte", "carte");
+    // La boussole (0.10.1, chantier D) : elle suit la caméra (majBoussole) ; à l'appui, elle s'enfonce un instant.
+    const boutonsBoussole = [...element.querySelectorAll<HTMLElement>(".boussole")];
+    this.boussoles = new Boussoles(boutonsBoussole.map((b) => b.querySelector<HTMLElement>(".cadran")!), element.querySelector<HTMLElement>(".r-tourner .legende"));
+    for (const b of boutonsBoussole)
+      b.addEventListener("pointerdown", () => {
+        b.classList.add("appui");
+        setTimeout(() => b.classList.remove("appui"), 130);
+      });
     if (tactile) {
       // A se juge au relâchement en combat (appui court, ou maintenu pour viser la tête).
       // Branché pour l'iPhone (client/src/jauge-coup.ts) : ni loupe ni menu à l'appui long, relâché si le système reprend le doigt.
@@ -636,6 +647,11 @@ export class Hud {
       lier(".b-lumiere", "lumiere");
       lier(".b-tourner", "tourner+");
     }
+  }
+
+  /** La boussole suit le lacet lissé de la caméra (`scene.angleCamera`), à chaque image : ne redessine que s'il a bougé. */
+  majBoussole(lacet: number): void {
+    this.boussoles.maj(lacet);
   }
 
   /** Le compte admin « god » (admin-ui.ts) : ses recettes s'affichent sans le surcoût hors famille. */

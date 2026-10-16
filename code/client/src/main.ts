@@ -2011,6 +2011,7 @@ function boucle(instant: number): void {
   } else {
     scene.suivre(25, 25, dt);
   }
+  hud.majBoussole(scene.angleCamera); // la boussole tourne avec la vue (0.10.1, chantier D)
 
   const maintenant = Date.now() + decalage;
   const heure = photo.actif ? photo.reglages.heure : Number.isFinite(HEURE_FORCEE) ? HEURE_FORCEE : heureDeJeu(maintenant, debutMonde);
