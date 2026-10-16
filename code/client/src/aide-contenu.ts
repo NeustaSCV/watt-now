@@ -254,10 +254,10 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
       "Un feu, un abri, un coffre, un établi… se construisent **sur ton terrain**, nulle part ailleurs. Quand tu lances la construction, un **fantôme** apparaît : vert, on peut construire ; rouge, non (le message dit pourquoi : trop près du bord, de l'eau, d'un feu, d'une autre installation…).",
       {
         liste: [
-          "Pendant la pose, ton personnage ne bouge pas : c'est le fantôme qui bouge (clavier ou joystick).",
+          "Pendant la pose, ton personnage ne bouge pas : c'est le fantôme qui bouge ([[clavier ou ]]joystick).",
           "Clique (ou touche) le sol pour y amener le fantôme, puis clique dessus pour construire. Le bouton « Construire ici » fait pareil.",
-          "Tourner : la molette[[, {lumiere}]] ou le bouton « Tourner ».",
-          "Annuler : Échap, clic droit, {examiner} ou le bouton « Annuler ».",
+          "Tourner : [[la molette, {lumiere} ou ]]le bouton « Tourner ».",
+          "Annuler : [[Échap, clic droit, ]]{examiner} ou le bouton « Annuler ».",
           "Le cercle pointillé montre jusqu'où tu peux construire : approche-toi si c'est trop loin.",
         ],
       },
