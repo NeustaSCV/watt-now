@@ -395,15 +395,15 @@ test("Les textes exacts des écriteaux (G-2)", () => {
   const t = Object.fromEntries(ECRITEAUX.map((e) => [e.id, e.texte]));
   assert.deepEqual(t, {
     "E-01": "« PÉAGE · 12 WOTTS / TÊTE · DANS LA CAISSE ↓ · UN À LA FOIS ! »",
-    "E-02": "« PONT CONNECTÉ · votre passage est optimisé en temps réel · trafic : 0 véhicule · attente : 0 min »",
+    "E-02": "« PONT CONNECTÉ · votre passage est optimisé en temps réel · trafic : 0 véhicule · attente : 0 min »",
     // 0.10 (R52) : les panneaux de sortie disent la vraie destination (E-04 ne dit plus « Port de pêche » ; textes à valider).
-    "E-04": "« ← Ton terrain · 3 km · Phare du cap, par le tunnel → »",
-    "E-13": "« Phare du cap · 2 km → · ← La corniche, ton terrain »",
-    "E-14": "« ← Ton terrain · 3 km · Grand Hôtel des Flots, par le pont → »",
-    "E-15": "« Grand Hôtel des Flots · 2 km → · ← Le pont, ton terrain »",
-    "E-16": "« Route du pont → · Ton terrain, par le pont · 5 km »",
+    "E-04": "« ← Ton terrain · 3 km · Phare du cap, par le tunnel → »",
+    "E-13": "« Phare du cap · 2 km → · ← La corniche, ton terrain »",
+    "E-14": "« ← Ton terrain · 3 km · Grand Hôtel des Flots, par le pont → »",
+    "E-15": "« Grand Hôtel des Flots · 2 km → · ← Le pont, ton terrain »",
+    "E-16": "« Route du pont → · Ton terrain, par le pont · 5 km »",
     "E-17": "« ← La corniche · Ton terrain »",
-    "E-05": "« CORNICHE PANORAMIQUE · VUE CERTIFIÉE 5 ÉTOILES · Selfie-points tous les 200 m »",
+    "E-05": "« CORNICHE PANORAMIQUE · VUE CERTIFIÉE 5 ÉTOILES · Selfie-points tous les 200 m »",
     "E-06": "« CHECK-IN PAR SOURIRE »",
     "E-07": "« SÉJOUR ZÉRO-EFFORT · On respire pour vous. · Repas mâchés · Bronzage par abonnement »",
     "E-08": "« Baignade interdite aux chiens ET AUX ÉTEINTS »",
@@ -411,7 +411,7 @@ test("Les textes exacts des écriteaux (G-2)", () => {
     "E-10": "« ÉTEINS LA LANTERNE ! ILS VOIENT LA LUMIÈRE »",
     "E-11": "« PHARE DU CAP · allumé en 1883 »",
     // 0.10 (essai sur l'iPhone du 2026-10-15) : le panneau du sentier côtier, à la sortie de la grève.
-    "E-12": "« Sentier côtier · ← Port · 6 km »",
+    "E-12": "« Sentier côtier · ← Port · 6 km »",
   });
 });
 

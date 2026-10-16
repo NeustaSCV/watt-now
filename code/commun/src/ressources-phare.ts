@@ -111,7 +111,7 @@ export const USAGES_PHARE: Record<TypeRessourcePhare, UsageRessource> = {
     "Un soufflet de forge, cuir et bois de hêtre, encore sous plastique. L'étiquette promet « l'artisanat d'autrefois, livré demain ».",
   ),
   phare_rabot: prendre("Prendre le rabot", { rabot: 1 }, 2, "Dans une caisse à outils du conteneur : un rabot de menuisier, la lame encore huilée."),
-  phare_jerrican: prendre("Prendre le jerrican de 20 L", { jerrican_20l: 1 }, 2, "Parmi les bidons du bord, un jerrican de 20 L, vide, son bouchon vissé. Solide, étanche."),
+  phare_jerrican: prendre("Prendre le jerrican de 20 L", { jerrican_20l: 1 }, 2, "Parmi les bidons du bord, un jerrican de 20 L, vide, son bouchon vissé. Solide, étanche."),
   // V3-03 (chantier V3) : deux bouteilles vides dans le vaisselier de la cuisine du gardien.
   phare_vaisselier: fouiller("Fouiller le vaisselier", { bouteille_verre: 2 }, "Le vaisselier du gardien : des assiettes ébréchées, des bouteilles vides, des conserves, des bougies, des allumettes humides."),
   phare_chambre: fouiller("Fouiller le coffre de marin", {}, "Un coffre de marin au pied du lit : des vêtements de mer pliés, une lampe à huile, une couverture polaire."),

@@ -152,7 +152,7 @@ export const COMPOSANTS = {
   aluminium: {
     nom: "chute d'aluminium",
     pluriel: "chutes d'aluminium",
-    description: "Un bout de métal léger, aplati au marteau. Il fond à 660 °C : au creuset, il redevient ce qu'on veut.",
+    description: "Un bout de métal léger, aplati au marteau. Il fond à 660 °C : au creuset, il redevient ce qu'on veut.",
     poids: 0.25,
     valeur: 6,
     famille: "composant",
@@ -319,7 +319,7 @@ const VESTIGES_LOT1 = {
   seche_cheveux: {
     nom: "sèche-cheveux",
     pluriel: "sèche-cheveux",
-    description: "Une résistance et un moteur dans une coque rose. Branché un jour sur du 230 V, il soufflera une forge.",
+    description: "Une résistance et un moteur dans une coque rose. Branché un jour sur du 230 V, il soufflera une forge.",
     poids: 0.7,
     valeur: 10,
     famille: "salle_de_bain",
@@ -457,7 +457,7 @@ const VESTIGES_LOT1 = {
   smartphone_fele: {
     nom: "smartphone à l'écran fêlé",
     pluriel: "smartphones à l'écran fêlé",
-    description: "2 % de batterie depuis trois ans. Quarante notifications en attente, pour personne.",
+    description: "2 % de batterie depuis trois ans. Quarante notifications en attente, pour personne.",
     poids: 0.2,
     valeur: 12,
     famille: "gadget",
@@ -612,8 +612,8 @@ const VESTIGES_LOT1 = {
     rarete: "P",
   },
   rallonge: {
-    nom: "rallonge de 25 m",
-    pluriel: "rallonges de 25 m",
+    nom: "rallonge de 25 m",
+    pluriel: "rallonges de 25 m",
     description: "Vingt-cinq mètres de câble orange enroulés n'importe comment. Du cuivre, ou une corde qui ne pourrit pas.",
     poids: 2.5,
     valeur: 18,
@@ -864,7 +864,7 @@ const VESTIGES_LOT1 = {
   fil_dentaire: {
     nom: "bobine de fil dentaire",
     pluriel: "bobines de fil dentaire",
-    description: "« Menthe Glaciale, 50 m ». Retordu en trois, il fait la meilleure corde d'arc qu'on puisse trouver.",
+    description: "« Menthe Glaciale, 50 m ». Retordu en trois, il fait la meilleure corde d'arc qu'on puisse trouver.",
     poids: 0.02,
     valeur: 4,
     famille: "salle_de_bain",
@@ -895,7 +895,7 @@ const VESTIGES_LOT1 = {
   bobine_allumage: {
     nom: "bobine d'allumage",
     pluriel: "bobines d'allumage",
-    description: "Elle faisait jaillir l'étincelle des bougies : des milliers de volts, d'une batterie de 12 V. La vraie haute tension.",
+    description: "Elle faisait jaillir l'étincelle des bougies : des milliers de volts, d'une batterie de 12 V. La vraie haute tension.",
     poids: 0.8,
     valeur: 35,
     famille: "voiture",
@@ -999,8 +999,8 @@ const VESTIGES_LOT1 = {
   // chance rare ailleurs (R-BUTIN, I7). Les objets fabriqués du niveau 1 sont dans objets-niveau1.ts.
   // La maison : la ruine et sa caisse à outils.
   bidon_5l: {
-    nom: "bidon de 5 L",
-    pluriel: "bidons de 5 L",
+    nom: "bidon de 5 L",
+    pluriel: "bidons de 5 L",
     description: "Un bidon de plastique blanc, cinq litres, son bouchon encore vissé. Rincé, il gardera l'eau de pluie.",
     poids: 0.3,
     valeur: 4,
@@ -1057,8 +1057,8 @@ const VESTIGES_LOT1 = {
   },
   // L1A : la laiterie de la Coopérative (I8).
   seau_10l: {
-    nom: "seau galvanisé de 10 L",
-    pluriel: "seaux galvanisés de 10 L",
+    nom: "seau galvanisé de 10 L",
+    pluriel: "seaux galvanisés de 10 L",
     description: "Un seau de laiterie en tôle galvanisée, une anse de fil. Dix litres, sans une fuite.",
     poids: 1.4,
     valeur: 12,
@@ -1213,8 +1213,8 @@ const VESTIGES_LOT1 = {
   },
   // Le vrai jerrican de 20 L (le « jerrican » du lot 2 est le jerrican percé, un déchet : I5).
   jerrican_20l: {
-    nom: "jerrican de 20 L",
-    pluriel: "jerricans de 20 L",
+    nom: "jerrican de 20 L",
+    pluriel: "jerricans de 20 L",
     description: "Un jerrican de plastique épais, son bouchon et son bec verseur. Vingt litres, sans une fuite.",
     poids: 1.5,
     valeur: 25,

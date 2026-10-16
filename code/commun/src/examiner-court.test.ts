@@ -9,6 +9,7 @@ import { devoileesDEmblee } from "./progression.ts";
 import { estOrdure } from "./vestiges.ts";
 import { RECETTE_FEU } from "./survie.ts";
 import type { EtatInstallation } from "./messages.ts";
+import { RAISON_PEDALIER_SANS_ORGANE } from "./mecanique.ts";
 import { MAX_SERT_A, RAISON_PEDALIER_SANS_BATTERIE, RIEN_POUR_L_INSTANT, fabricationsDe, lignesObjet, pedalierChargeLeBanc, raisonArret, seMonteSur, sertA, verbesOutil } from "./examiner-court.ts";
 
 const TYPES = Object.keys(OBJETS) as TypeObjet[];
@@ -110,8 +111,10 @@ test("le pédalier sans batterie dit pourquoi ; avec une batterie, rien", () => 
   assert.equal(raisonArret({ type: "pedalier", etat: { alternateur: true, batteries: { petite_batterie: 1 } } }, {}), null);
   assert.equal(raisonArret({ type: "pedalier", etat: { dynamo: true } }, {}, true), null);
   assert.equal(raisonArret({ type: "pedalier", etat: { dynamo: true } }, {}), RAISON_PEDALIER_SANS_BATTERIE);
-  // Sans alternateur ni dynamo, la phrase ne serait pas la bonne : rien (proposition au porteur).
-  assert.equal(raisonArret({ type: "pedalier", etat: {} }, {}), null);
+  // Sans alternateur ni dynamo : la phrase du serveur quand on pédale (R-06), qu'on ait une batterie ou non.
+  assert.equal(raisonArret({ type: "pedalier", etat: {} }, {}), RAISON_PEDALIER_SANS_ORGANE);
+  assert.equal(raisonArret({ type: "pedalier", etat: {} }, { petite_batterie: 1 }, true), RAISON_PEDALIER_SANS_ORGANE);
+  assert.equal(RAISON_PEDALIER_SANS_ORGANE, "Rien à entraîner : monte l'alternateur de la station (ou, à défaut, la dynamo du vélo).");
   // Le banc à moins de 3 m, sa batterie pas pleine.
   const banc = { type: "banc_recharge", x: 2, z: 0, etat: { batteries: { batterie_voiture: 1 }, charges: { batterie_voiture: 10 } } as EtatInstallation };
   assert.equal(pedalierChargeLeBanc({ x: 0, z: 0 }, [banc]), true);

@@ -15,7 +15,7 @@ import { DUREE_PEDALAGE, KCAL_PEDALAGE_EN_PLUS, bancDuPedalier, batterieDuBanc, 
 import { nommer, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
 import { niveauQualite } from "../../commun/src/recettes.ts";
 import type { Famille } from "../../commun/src/regles.ts";
-import { ACCESSOIRES_PEDALIER, BONUS_FIL_DE_RASOIR, MONTER_ALTERNATEUR, REARMER_PIEGE, accessoireMonte, estPiegeMecanique, type AccessoirePedalier } from "../../commun/src/mecanique.ts";
+import { ACCESSOIRES_PEDALIER, BONUS_FIL_DE_RASOIR, MONTER_ALTERNATEUR, RAISON_PEDALIER_SANS_ORGANE, REARMER_PIEGE, accessoireMonte, estPiegeMecanique, type AccessoirePedalier } from "../../commun/src/mecanique.ts";
 import { declencheurNeuf, enregistrerDeclencheur, rearmer, type DefinitionDeclencheur } from "./declencheurs.ts";
 import { ROULEMENTS, aDesRoulements } from "../../commun/src/meubles-niveau2.ts";
 
@@ -140,7 +140,7 @@ function monterAlternateur(ctx: ContexteMecanique, i: InstallationVue): void {
     i.etat = { ...i.etat, alternateur: true };
     ctx.maj();
     ctx.noter("pedalier:alternateur");
-    ctx.info("L'alternateur est monté, la courroie tendue sur la roue. Pédale : la batterie se charge, environ 60 Wh par heure.");
+    ctx.info("L'alternateur est monté, la courroie tendue sur la roue. Pédale : la batterie se charge, environ 60 Wh par heure.");
   }, "outil");
 }
 
@@ -158,9 +158,9 @@ function bancACharger(ctx: ContexteMecanique, i: InstallationVue): InstallationV
  */
 function pedaler(ctx: ContexteMecanique, i: InstallationVue): void {
   const organe = organeDuPedalier(i);
-  if (!organe) return ctx.info("Rien à entraîner : monte l'alternateur de la station (ou, à défaut, la dynamo du vélo).");
+  if (!organe) return ctx.info(RAISON_PEDALIER_SANS_ORGANE);
   const surPedalier = placeSurLePedalier(i) > 0.5;
-  if (!bancACharger(ctx, i) && !surPedalier && !ctx.batterieDuSac()) return ctx.info("Rien à charger : approche le pédalier à moins de 3 m du banc, ou pose une batterie dessus.");
+  if (!bancACharger(ctx, i) && !surPedalier && !ctx.batterieDuSac()) return ctx.info("Rien à charger : approche le pédalier à moins de 3 m du banc, ou pose une batterie dessus.");
   const libelle = organe === "alternateur" ? "Pédaler : l'alternateur charge la batterie" : "Pédaler pour charger la batterie";
   ctx.commencer(
     libelle,
@@ -189,7 +189,7 @@ function pedaler(ctx: ContexteMecanique, i: InstallationVue): void {
         ou = nommer(b, 1);
       }
       ctx.noter("pedale");
-      ctx.info(`+${Math.round(mis)} Wh dans ${ou}.`);
+      ctx.info(`+${Math.round(mis)} Wh dans ${ou}.`);
     },
     "outil",
     KCAL_PEDALAGE_EN_PLUS * (aDesRoulements(i) ? ROULEMENTS.effort : 1),

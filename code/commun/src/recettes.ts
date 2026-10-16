@@ -118,7 +118,7 @@ export const QUALITES_OBJETS: Partial<Record<TypeObjet, Partial<Record<Qualite, 
  * sous la clé `poste:<id>`, quand on est à 3 m.
  */
 export const QUALITES_POSTES: Readonly<Record<string, { nom: string; qualites: Partial<Record<Qualite, number>> }>> = {
-  "poste:etabli_etau": { nom: "un établi à étau (à 3 m)", qualites: { serrer: 3 } },
+  "poste:etabli_etau": { nom: "un établi à étau (à 3 m)", qualites: { serrer: 3 } },
 };
 
 /** Le meilleur niveau d'une qualité parmi les objets portés (0 si aucun), et les postes à portée s'il y en a. */

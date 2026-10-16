@@ -834,7 +834,7 @@ function recevoir(message: MessageServeur): void {
       // Du bois en plus : on le montre tout de suite (ajouter du bois est immédiat).
       const boisAvant = boisDesFeux.get(message.feu.id);
       if (boisAvant !== undefined && message.feu.bois > boisAvant + 0.05) {
-        hud.pastille("feu_de_camp", `Feu : ${String(Math.round(message.feu.bois * 10) / 10).replace(".", ",")} kg de bois`);
+        hud.pastille("feu_de_camp", `Feu : ${String(Math.round(message.feu.bois * 10) / 10).replace(".", ",")} kg de bois`);
         son.jouer("geste_bois");
       }
       boisDesFeux.set(message.feu.id, message.feu.bois);
@@ -906,7 +906,7 @@ function recevoir(message: MessageServeur): void {
         }
         // Un geste court se lit sur l'anneau seul ; un geste long et une fabrication ont aussi le pourcentage à côté.
         if (!maintien.tenu) hud.debutAction(message.libelle, message.duree, message.deja ?? 0);
-        if ((message.deja ?? 0) > 0) hud.message(`Tu reprends là où tu t'étais arrêté (${Math.round((message.deja ?? 0) * 100)} %).`);
+        if ((message.deja ?? 0) > 0) hud.message(`Tu reprends là où tu t'étais arrêté (${Math.round((message.deja ?? 0) * 100)} %).`);
         bruiteur.debutAction(message.libelle, message.bruit);
         personnage?.agir(gesteDAction(message.libelle));
       } else {

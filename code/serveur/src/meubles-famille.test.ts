@@ -187,7 +187,7 @@ test("⚙️ un Mécaniste seul : le pédalier générateur, l'alternateur mont�
   t.utiliser(id, "pedaler", 61);
   const apres = t.meuble(id).etat.charges!.batterie_voiture!;
   assert.ok(Math.abs(apres - avant - 60) <= 1, `${avant} → ${apres}`);
-  assert.match(t.infos().at(-1)!, /\+60 Wh dans la batterie du pédalier/);
+  assert.match(t.infos().at(-1)!, /\+60 Wh dans la batterie du pédalier/);
   assert.ok(Math.abs(whEDePedalage("mecanistes") - 60) < 1);
   // La dynamo du vélo, le repli, ne donne presque rien ; avec l'alternateur monté, on ne la propose plus.
   assert.equal(whEDePedalage("mecanistes", 1, "dynamo"), 5);
@@ -207,5 +207,5 @@ test("⚙️ sans alternateur ni dynamo, on pédale dans le vide ; sans batterie
   t.utiliser(id, "monter_dynamo", 21);
   // La batterie de la ruine, dans le sac : la dynamo la charge à peine (5 Wh par heure).
   t.utiliser(id, "pedaler", 61);
-  assert.match(t.infos().at(-1)!, /\+5 Wh dans/);
+  assert.match(t.infos().at(-1)!, /\+5 Wh dans/);
 });

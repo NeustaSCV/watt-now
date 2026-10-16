@@ -71,7 +71,7 @@ test("0.5.1 : démonter la batterie du tracteur — elle part avec ce que le kla
   t.attendre(12);
   assert.equal(t.dernier("inventaire")?.inventaire.batterie_voiture, 1);
   assert.equal(t.dernier("charges")?.charges.batterie_voiture, 180, "deux coups sur quatre : la moitié");
-  assert.ok(t.infos().some((x) => /batterie du tracteur est à toi, 180 Wh/.test(x)));
+  assert.ok(t.infos().some((x) => /batterie du tracteur est à toi, 180 Wh/.test(x)));
   assert.ok(t.recus.some((m) => m.t === "ressource" && m.id === point.id && !m.disponible));
   // Plus de batterie : le klaxon reste muet, et ne fait aucun bruit.
   klaxonner();

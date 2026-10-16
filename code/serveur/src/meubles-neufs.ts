@@ -142,7 +142,7 @@ export class MeublesNeufs {
       coffre.etat = { ...coffre.etat, etageres: true };
       this.ctx.sauverInstallation(coffre);
       this.ctx.noter("coffre:etageres");
-      this.ctx.info(`Les étagères sont posées : le coffre tient ${ETAGERES_KG} kg de plus.`);
+      this.ctx.info(`Les étagères sont posées : le coffre tient ${ETAGERES_KG} kg de plus.`);
     });
   }
 

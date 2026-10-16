@@ -416,7 +416,7 @@ export class Hud {
             <button type="button" class="infos" role="menuitem" aria-pressed="false">Infos techniques : non</button>
           </div>
         </div>
-        <div class="ligne-haut"><span class="meteo" hidden>☀️</span><span class="latence-alerte" hidden title="Connexion lente">📶</span><span class="horloge">–</span><span class="sep"> · </span><span class="wotts" title="Tes bons de wotts (ils se déchargent d'≈ 2 % par semaine)">⚡ <span>0 wott</span></span></div>
+        <div class="ligne-haut"><span class="meteo" hidden>☀️</span><span class="latence-alerte" hidden title="Connexion lente">📶</span><span class="horloge">–</span><span class="sep"> · </span><span class="wotts" title="Tes bons de wotts (ils se déchargent d'≈ 2 % par semaine)">⚡ <span>0 wott</span></span></div>
         <div class="mesures" hidden>v${VERSION} · <span class="ips">–</span> img/s · <span class="latence">–</span> ms</div>
       </div>
       <div class="raccourcis">
@@ -731,7 +731,7 @@ export class Hud {
   heure(jour: number, heure: number, date = ""): void {
     this.heureVue = heure;
     this.horloge.textContent = date ? `${date} · ${formaterHeure(heure)}` : `Jour ${jour} · ${formaterHeure(heure)}`;
-    this.horloge.title = `Jour de jeu ${jour}. Le calendrier avance d'un jour toutes les 1 h 50 réelles : un an dure 4 semaines.`;
+    this.horloge.title = `Jour de jeu ${jour}. Le calendrier avance d'un jour toutes les 1 h 50 réelles : un an dure 4 semaines.`;
   }
 
   private redessiner(): void {
@@ -820,7 +820,7 @@ export class Hud {
     if (e.nature === "collecte") return `Énergie grise : le travail de la cueillette, ≈ ${formaterWotts(e.total)}.`;
     if (e.nature === "vestige") return "Énergie grise : un vestige de l'Abondance. Il vaut ce qu'il coûterait à refaire aujourd'hui.";
     const minutes = Math.round(e.minutes ?? 0);
-    return `Énergie grise : matières ≈ ${formaterWotts(e.matieres ?? 0)} · travail ${minutes} min de jeu, ${Math.round(e.kcal ?? 0)} kcal ≈ ${formaterWotts(e.travail ?? 0)}.`;
+    return `Énergie grise : matières ≈ ${formaterWotts(e.matieres ?? 0)} · travail ${minutes} min de jeu, ${Math.round(e.kcal ?? 0)} kcal ≈ ${formaterWotts(e.travail ?? 0)}.`;
   }
 
   // ---------- L'échange entre joueurs (É4, lot 3) : une fenêtre, deux accords, pas de chat ----------
@@ -935,20 +935,20 @@ export class Hud {
     const el = this.element.querySelector<HTMLElement>(".rapport")!;
     const h = Math.floor(r.absence / 3_600_000);
     const min = Math.round((r.absence % 3_600_000) / 60_000);
-    const duree = h > 0 ? `${h} h ${String(min).padStart(2, "0")}` : `${min} min`;
+    const duree = h > 0 ? `${h} h ${String(min).padStart(2, "0")}` : `${min} min`;
     const lignes: string[] = [];
     if (r.produit > 0) {
-      lignes.push(`<li><b>Panneau solaire</b> : ${r.produit} Wh produits, ${r.stocke} Wh dans la batterie du banc${r.perdu > 0 ? `, <span class="perdu">${r.perdu} Wh perdus</span> (${r.stocke === 0 ? "pas de batterie dans le banc" : "batterie pleine"})` : ""}.</li>`);
+      lignes.push(`<li><b>Panneau solaire</b> : ${r.produit} Wh produits, ${r.stocke} Wh dans la batterie du banc${r.perdu > 0 ? `, <span class="perdu">${r.perdu} Wh perdus</span> (${r.stocke === 0 ? "pas de batterie dans le banc" : "batterie pleine"})` : ""}.</li>`);
     }
     const banc = Object.entries(r.surLeBanc).filter(([, wh]) => (wh ?? 0) > 0);
     // 0.8.2 (R17) : chaque batterie par son nom (une seule reste dans le banc).
-    if (banc.length) lignes.push(`<li><b>Dans le banc</b> : ${banc.map(([b, wh]) => `${NOMS_BATTERIES[b as TypeBatterie]}, ${wh} Wh`).join(" ; ")}.</li>`);
+    if (banc.length) lignes.push(`<li><b>Dans le banc</b> : ${banc.map(([b, wh]) => `${NOMS_BATTERIES[b as TypeBatterie]}, ${wh} Wh`).join(" ; ")}.</li>`);
     if (r.charbonniere === "prete") lignes.push(`<li><b>La charbonnière</b> a fini de cuire : le charbon est prêt.</li>`);
-    else if (typeof r.charbonniere === "number") lignes.push(`<li><b>La charbonnière</b> fume encore : prête dans ${r.charbonniere} min.</li>`);
+    else if (typeof r.charbonniere === "number") lignes.push(`<li><b>La charbonnière</b> fume encore : prête dans ${r.charbonniere} min.</li>`);
     if (r.feuxEteints > 0) lignes.push(`<li><b>${r.feuxEteints > 1 ? `${r.feuxEteints} feux se sont éteints` : "Le feu s'est éteint"}</b> faute de bois.</li>`);
     if (r.decharge_remonte) lignes.push(`<li>La décharge a fait remonter ${r.decharge_remonte > 1 ? `${r.decharge_remonte} objets` : "un objet"}.</li>`);
     if (r.feuxAllumes > 0) lignes.push(`<li>${r.feuxAllumes > 1 ? `${r.feuxAllumes} feux brûlent` : "Le feu brûle"} encore.</li>`);
-    if (r.decharge >= 1) lignes.push(`<li>Les batteries se sont déchargées toutes seules : −${r.decharge} Wh.</li>`);
+    if (r.decharge >= 1) lignes.push(`<li>Les batteries se sont déchargées toutes seules : −${r.decharge} Wh.</li>`);
     if (r.repousse > 0) lignes.push(`<li>Du bois mort et des baies ont repoussé (${r.repousse}).</li>`);
     if (lignes.length === 0) lignes.push(`<li>Rien n'a bougé : aucune de tes installations n'a travaillé en ton absence.</li>`);
     el.innerHTML = `
@@ -1004,7 +1004,7 @@ export class Hud {
           return ligne(
             type,
             `<span class="prix">${formaterWotts(prix)}</span><button type="button" data-op="vendre" data-objet="${type}" data-n="1">Vendre</button>${n > 1 ? `<button type="button" data-op="vendre" data-objet="${type}" data-n="${n}">Tout · ${formaterWotts(prix * n)}</button>` : ""}`,
-            `× ${n}${(type === "petite_batterie" || type === "batterie_voiture") && (this.charges[type] ?? 0) >= 1 ? ` · ${Math.round(this.charges[type] ?? 0)} Wh dedans : dépose-les d'abord` : ""}`,
+            `× ${n}${(type === "petite_batterie" || type === "batterie_voiture") && (this.charges[type] ?? 0) >= 1 ? ` · ${Math.round(this.charges[type] ?? 0)} Wh dedans : dépose-les d'abord` : ""}`,
           );
         });
       corps = `${v.tresorerieBasse ? `<p class="avis">Les caisses sont presque vides : on ne rachète plus que le bois, la pierre et la nourriture, au prix plancher.</p>` : ""}
@@ -1029,13 +1029,13 @@ export class Hud {
           return ligne(
             b,
             `<button type="button" data-op="deposer" data-batterie="${b}" ${wh >= 1 ? "" : "disabled"}>Déposer · +${formaterWotts(wh * REGLAGES.depot_wotts_par_wh)}</button><button type="button" data-op="retirer" data-batterie="${b}" ${retrait >= 1 ? "" : "disabled"}>Recharger · −${formaterWotts(retrait * PRIX_RETRAIT)}</button>`,
-            `${Math.round(wh)} / ${cap} Wh`,
+            `${Math.round(wh)} / ${cap} Wh`,
           );
         });
-      corps = `<p class="explication">Seul le dépôt d'électricité <b>crée</b> des wotts. Au printemps, le comptoir prend ${String(REGLAGES.depot_wotts_par_wh).replace(".", ",")} wott par Wh ; il le rend à ${PRIX_RETRAIT} wott par Wh. Énergie en réserve : ${v.reserveWh} Wh.</p>
+      corps = `<p class="explication">Seul le dépôt d'électricité <b>crée</b> des wotts. Au printemps, le comptoir prend ${String(REGLAGES.depot_wotts_par_wh).replace(".", ",")} wott par Wh ; il le rend à ${PRIX_RETRAIT} wott par Wh. Énergie en réserve : ${v.reserveWh} Wh.</p>
         <ul class="lignes">${lignes.join("") || "<li class=\"vide\">Tu n'as pas de batterie sur toi.</li>"}</ul>`;
     } else {
-      corps = `<p class="explication">Sur ton compte, les bons sont à l'abri : si tu t'effondres en route, tu ne les perds pas. Ils se déchargent pareil (≈ 2 % par semaine).</p>
+      corps = `<p class="explication">Sur ton compte, les bons sont à l'abri : si tu t'effondres en route, tu ne les perds pas. Ils se déchargent pareil (≈ 2 % par semaine).</p>
         <div class="compte">
           <div><span>En poche</span><strong>${formaterWotts(w.poche)}</strong></div>
           <div><span>Sur ton compte</span><strong>${formaterWotts(w.compte)}</strong></div>
@@ -1638,14 +1638,14 @@ export class Hud {
       const nom = nommer(cle, 1);
       // Une ordure (valeur 0, 0.7) a son icône grisée : le sac se lit d'un regard, « ça, c'est à jeter ».
       return `<button type="button" class="case ${classe} ${estOrdure(typeDe(cle)) ? "ordure" : ""} ${this.selection === cle ? "choisie" : ""}" data-objet="${cle}"
-        title="${nom} (${kg(pile)} kg) — ${d.description}" aria-label="${nom}${classe === "equipee" ? ", en main au combat" : classe === "portee" ? ", sur ton dos" : ""}">${icone(typeDe(cle))}${etoiles}${barre}${munitions}${badge ? `<span class="badge">${badge}</span>` : ""}</button>`;
+        title="${nom} (${kg(pile)} kg) — ${d.description}" aria-label="${nom}${classe === "equipee" ? ", en main au combat" : classe === "portee" ? ", sur ton dos" : ""}">${icone(typeDe(cle))}${etoiles}${barre}${munitions}${badge ? `<span class="badge">${badge}</span>` : ""}</button>`;
     };
     // Ce qu'on a sur soi (0.8.2, R6) : l'arme en main au combat, choisie ou prise d'office (la meilleure du sac), et le
     // sac sur le dos ont la même marque en coin.
     const armeEnMainCombat = armeMarquee(this.inventaire, this.armeEquipee);
     const surLeDos = sacPorte(this.inventaire);
     const cases = [
-      (this.inventaire.gourde ?? 0) > 0 ? case_("gourde", g.litres > 0 ? `${kg(g.litres)} L` : "vide", g.contenu === "brute" && g.litres > 0 ? "brute" : "") : "",
+      (this.inventaire.gourde ?? 0) > 0 ? case_("gourde", g.litres > 0 ? `${kg(g.litres)} L` : "vide", g.contenu === "brute" && g.litres > 0 ? "brute" : "") : "",
       ...presents.map((t) => case_(t, (this.inventaire[t] ?? 0) > 1 ? `×${this.inventaire[t]}` : "", t === armeEnMainCombat ? "equipee" : t === surLeDos ? "portee" : "")),
     ].join("");
 
@@ -1664,7 +1664,7 @@ export class Hud {
       if (s === "gourde") {
         // Plusieurs gourdes, une seule réserve, 1 L chacune (plan 0.10.1, A5).
         const plusieurs = (this.inventaire.gourde ?? 1) > 1;
-        detail = g.litres <= 0 ? (plusieurs ? "Vides. Remplis-les à la mare." : "Vide. Remplis-la à la mare.") : `${kg(g.litres)} L d'eau ${g.contenu === "potable" ? "potable" : `brute : fais-${plusieurs ? "les" : "la"} bouillir sur le feu avant de la boire`}.`;
+        detail = g.litres <= 0 ? (plusieurs ? "Vides. Remplis-les à la mare." : "Vide. Remplis-la à la mare.") : `${kg(g.litres)} L d'eau ${g.contenu === "potable" ? "potable" : `brute : fais-${plusieurs ? "les" : "la"} bouillir sur le feu avant de la boire`}.`;
         actions.push(`<button type="button" class="principal" data-action="boire" ${g.litres > 0 ? "" : "disabled"}>Boire</button>`);
       } else if (s === "bouteille_eau") {
         actions.push(`<button type="button" class="principal" data-action="boire-bouteille">Boire</button>`);
@@ -1704,7 +1704,7 @@ export class Hud {
         const wh = this.charges[batterie] ?? 0;
         const cap = CAPACITES[batterie] * Math.max(1, this.inventaire[batterie] ?? 0);
         const pct = Math.round((wh / cap) * 100);
-        infos.push(`<span class="charge-batterie"><span class="charge-barre"><span style="width:${Math.min(100, pct)}%"></span></span> ${Math.round(wh)} / ${cap} Wh${s === "lampe_frontale" ? " (petite batterie)" : ""}</span>`);
+        infos.push(`<span class="charge-batterie"><span class="charge-barre"><span style="width:${Math.min(100, pct)}%"></span></span> ${Math.round(wh)} / ${cap} Wh${s === "lampe_frontale" ? " (petite batterie)" : ""}</span>`);
         if (s === "lampe_frontale" && (this.inventaire.petite_batterie ?? 0) === 0) detail += " Il lui faut une petite batterie.";
       }
       // Une arme : ses dégâts et sa vitesse, comparés aux autres (2026-10-08), et sa réparation (Book 23 §4.3).
@@ -1748,7 +1748,7 @@ export class Hud {
       const charge = this.partCharge(s);
       if (charge !== null) {
         const wh = this.chargeArmes[s];
-        infos.push(`<span class="charge-batterie charge-arme"><span class="charge-barre"><span style="width:${Math.round(charge * 100)}%"></span></span> ${charge <= 0 ? "Plus de courant : un gourdin court." : wh === undefined ? "Pleine" : `${virguleWh(wh)} Wh`}</span>`);
+        infos.push(`<span class="charge-batterie charge-arme"><span class="charge-barre"><span style="width:${Math.round(charge * 100)}%"></span></span> ${charge <= 0 ? "Plus de courant : un gourdin court." : wh === undefined ? "Pleine" : `${virguleWh(wh)} Wh`}</span>`);
       }
       if (s === surLeDos) enMain += " · 🎒 sur ton dos";
       // Les étoiles d'un objet de métier (Book 25 §4.2), en clair : « ★★★☆☆ ».
@@ -1760,7 +1760,7 @@ export class Hud {
       const famille = d.famille ? ` · ${NOMS_FAMILLES_VESTIGES[d.famille]}` : "";
       fiche = `
         <div class="fiche-tete">${icone(t, 36)}<div><strong>${titreObjet(nommer(t, n))}${etoilesFiche}</strong>
-          <small>${kg(d.poids * n + (s === "gourde" ? g.litres : 0))} kg · valeur ≈ ${formaterWotts(energieGrise(t))}${famille}${enMain}</small></div></div>
+          <small>${kg(d.poids * n + (s === "gourde" ? g.litres : 0))} kg · valeur ≈ ${formaterWotts(energieGrise(t))}${famille}${enMain}</small></div></div>
         ${actions.length ? `<div class="actions-objet">${actions.join("")}</div>` : ""}
         ${reprendre}
         ${htmlExamenCourt(lignesObjet(t, this.famille, this.savoir, this.vueProgression))}
@@ -1773,9 +1773,9 @@ export class Hud {
     const capacite = capaciteDe(this.inventaire);
     const html = `
       <header><h2>${nomContenant(this.inventaire)}</h2>
-        <span class="charge" title="${poids.toFixed(1)} / ${capacite} kg"><span style="width:${Math.min(100, (poids / capacite) * 100).toFixed(0)}%"></span></span>
-        <span class="poids-total">${poids.toFixed(1).replace(".", ",")} / ${capacite} kg</span>
-        ${capacite < 30 ? `<p class="sans-sac">Sans sac, tu ne portes que ${capacite} kg : retourne chercher le tien, ou fabrique un sac de fortune (4 branches, 2 cordes).</p>` : ""}
+        <span class="charge" title="${poids.toFixed(1)} / ${capacite} kg"><span style="width:${Math.min(100, (poids / capacite) * 100).toFixed(0)}%"></span></span>
+        <span class="poids-total">${poids.toFixed(1).replace(".", ",")} / ${capacite} kg</span>
+        ${capacite < 30 ? `<p class="sans-sac">Sans sac, tu ne portes que ${capacite} kg : retourne chercher le tien, ou fabrique un sac de fortune (4 branches, 2 cordes).</p>` : ""}
         <button type="button" class="fermer" aria-label="Fermer">✕</button></header>
       ${presents.length > 8 ? `<div class="tri-sac" role="group" aria-label="Trier le sac">Trier :
         <button type="button" data-tri="sorte" aria-pressed="${this.triSac === "sorte"}">par sorte</button>
@@ -1867,7 +1867,7 @@ export class Hud {
         <button type="button" data-action="${action}" ${p.possible ? "" : "disabled"}>${libelle}</button>
         <small>${p.possible ? (Object.keys(p.cout).length ? cout(p.cout) : "Rien à fournir.") : (p.raison ?? "")}</small>
       </div>`;
-    const lignes = [ligne("reprendre-reparer", r.etat < 1 ? `Remettre à neuf (${Math.round(r.etat * 100)} %)` : "Remettre à neuf", r.reparer)];
+    const lignes = [ligne("reprendre-reparer", r.etat < 1 ? `Remettre à neuf (${Math.round(r.etat * 100)} %)` : "Remettre à neuf", r.reparer)];
     if (r.monter) {
       const cible = r.monter.cible ?? (((r.etoiles ?? 0) + 1) as Etoiles);
       lignes.push(ligne("reprendre-monter", `Monter à <span class="etoiles-nom">${etoilesTexte(Math.min(5, cible) as Etoiles)}</span>`, r.monter));
@@ -1938,14 +1938,14 @@ export class Hud {
     const reste = this.usureArmes[cle];
     const etat = reste === undefined || !Number.isFinite(a.solidite) ? 1 : Math.max(0, Math.min(1, reste / a.solidite));
     const cadence = a.armeeDAvance
-      ? `Armée d'avance : le tir part tout de suite. Réarmer : ${s(a.rechargeMs)} s, sans bouger.`
-      : `Bander ${s(a.pleinMs)} s pour un tir plein ; encocher ${s(a.rechargeMs)} s.`;
+      ? `Armée d'avance : le tir part tout de suite. Réarmer : ${s(a.rechargeMs)} s, sans bouger.`
+      : `Bander ${s(a.pleinMs)} s pour un tir plein ; encocher ${s(a.rechargeMs)} s.`;
     return `<div class="caracs-arme caracs-tir">
-      <span class="tete-carac">🎯 Sûr jusqu'à ${m(a.porteeUtile)} m, au plus ${m(a.porteeMax)} m.</span>
-      <span class="tete-carac">☠ Tir plein à la tête : il tombe pour de bon, jusqu'à ${m(a.porteeTete)} m.</span>
+      <span class="tete-carac">🎯 Sûr jusqu'à ${m(a.porteeUtile)} m, au plus ${m(a.porteeMax)} m.</span>
+      <span class="tete-carac">☠ Tir plein à la tête : il tombe pour de bon, jusqu'à ${m(a.porteeTete)} m.</span>
       <span class="tete-carac">${cadence}</span>
       <span class="tete-carac munitions-fiche">${munitions.total > 0 ? `${a.armeeDAvance ? "Carreaux" : "Flèches"} : ${munitions.detail}.` : `Plus de ${a.armeeDAvance ? "carreaux" : "flèches"} : fabrique-en.`}</span>
-      <span class="carac" title="Chaque tir l'use ; à zéro, elle casse."><span class="nom-carac">Solidité</span><span class="barre-carac"><span style="width:${Math.round(etat * 100)}%"></span></span><span class="valeur-carac">${Math.round(etat * 100)} %</span></span>
+      <span class="carac" title="Chaque tir l'use ; à zéro, elle casse."><span class="nom-carac">Solidité</span><span class="barre-carac"><span style="width:${Math.round(etat * 100)}%"></span></span><span class="valeur-carac">${Math.round(etat * 100)} %</span></span>
       <span class="tete-carac">Perçant : un casque ne l'arrête que de dos ; de face, à moitié moins loin.</span>
     </div>`;
   }
@@ -1965,7 +1965,7 @@ export class Hud {
     const degats = barre("Dégâts", a.degats / maxDegats, virgule(a.degats), `${coupsPourTomber} coup${coupsPourTomber > 1 ? "s" : ""} au torse pour le faire tomber`);
     const premiere =
       a.type === "electrique"
-        ? degats + barre("Raidit", (a.raidi ?? 0) / ETOILES[5].raidi, `${virgule(a.raidi ?? 0)} s`, "Une décharge courte : il lâche et ne bouge plus pendant ce temps")
+        ? degats + barre("Raidit", (a.raidi ?? 0) / ETOILES[5].raidi, `${virgule(a.raidi ?? 0)} s`, "Une décharge courte : il lâche et ne bouge plus pendant ce temps")
         : degats;
     const tete =
       a.type === "electrique"
@@ -1975,9 +1975,9 @@ export class Hud {
           : "Ne tue pas d'un coup à la tête : il faut l'achever au sol.";
     return `<div class="caracs-arme">
       ${premiere}
-      ${barre("Vitesse", a.vitesse / maxVitesse, `${virgule(a.coup, 2)} s`, `Un coup simple dure ${virgule(a.coup, 2)} s, un coup appuyé ${virgule(a.coupAppuye, 2)} s`)}
-      ${barre("Allonge", a.allonge / maxAllonge, `${virgule(a.allonge)} m`, "Jusqu'où il porte")}
-      ${barre("Solidité", etat, abimee ? "abîmée" : `${Math.round(etat * 100)} %`, abimee ? "Abîmée : ses coups portent 30 % moins fort. Répare-la." : "Elle s'use à chaque coup qui touche ; à zéro, elle casse.")}
+      ${barre("Vitesse", a.vitesse / maxVitesse, `${virgule(a.coup, 2)} s`, `Un coup simple dure ${virgule(a.coup, 2)} s, un coup appuyé ${virgule(a.coupAppuye, 2)} s`)}
+      ${barre("Allonge", a.allonge / maxAllonge, `${virgule(a.allonge)} m`, "Jusqu'où il porte")}
+      ${barre("Solidité", etat, abimee ? "abîmée" : `${Math.round(etat * 100)} %`, abimee ? "Abîmée : ses coups portent 30 % moins fort. Répare-la." : "Elle s'use à chaque coup qui touche ; à zéro, elle casse.")}
       <span class="tete-carac">${tete}</span>
       <span class="tete-carac">${TYPES_DEGATS[a.type]}</span>
     </div>`;
@@ -2039,7 +2039,7 @@ export class Hud {
         .map((t) => {
           const n = inv[t] ?? 0;
           const choisie = choix?.sens === sens && choix.objet === t;
-          return `<button type="button" class="case${choisie ? " choisie" : ""}" data-sens="${sens}" data-objet="${t}" aria-pressed="${choisie}" title="${OBJETS[typeDe(t)].nom} (${kg(OBJETS[typeDe(t)].poids * n)} kg)" aria-label="${OBJETS[typeDe(t)].nom}">${icone(typeDe(t))}${n > 1 ? `<span class="badge">×${n}</span>` : `${estDecharge && sens === "prendre" ? `<span class="badge">${kg(OBJETS[typeDe(t)].poids)} kg</span>` : ""}`}</button>`;
+          return `<button type="button" class="case${choisie ? " choisie" : ""}" data-sens="${sens}" data-objet="${t}" aria-pressed="${choisie}" title="${OBJETS[typeDe(t)].nom} (${kg(OBJETS[typeDe(t)].poids * n)} kg)" aria-label="${OBJETS[typeDe(t)].nom}">${icone(typeDe(t))}${n > 1 ? `<span class="badge">×${n}</span>` : `${estDecharge && sens === "prendre" ? `<span class="badge">${kg(OBJETS[typeDe(t)].poids)} kg</span>` : ""}`}</button>`;
         })
         .join("") || `<p class="indice">Rien.</p>`;
     // La bande : l'objet choisi, où il est, et ce qu'on peut en faire.
@@ -2065,14 +2065,14 @@ export class Hud {
       }
       const note =
         estDecharge && choix.sens === "deposer" ? " · la décharge ne reprend rien" : n > 0 && !boutons.includes("disabled") ? "" : n > 0 ? ` · ${choix.sens === "deposer" ? "coffre plein" : "sac plein"}` : "";
-      bande = `${icone(typeDe(choix.objet), 32)}<span class="nom"><strong>${titreObjet(nommer(choix.objet, 1))}</strong><small>${n > 1 ? `×${n} · ` : ""}${kg(d.poids * Math.max(1, n))} kg · ${ou}${note}</small></span><span class="boutons">${boutons}</span>`;
+      bande = `${icone(typeDe(choix.objet), 32)}<span class="nom"><strong>${titreObjet(nommer(choix.objet, 1))}</strong><small>${n > 1 ? `×${n} · ` : ""}${kg(d.poids * Math.max(1, n))} kg · ${ou}${note}</small></span><span class="boutons">${boutons}</span>`;
     }
     const plein = (place: number, inv: Inventaire) => Object.keys(inv).length > 0 && place < Math.min(...(Object.keys(inv) as CleObjet[]).map((t) => OBJETS[typeDe(t)].poids));
     const html = `
       ${enteteCoffre(estDecharge ? "Décharge" : estRatelier ? "Râtelier à outils" : "Coffre")}
       <div class="colonnes">
-        <section><h3>Sur toi <small class="${plein(placeSac, contenu) ? "plein" : ""}">${kg(poidsSac)} / ${capSac} kg</small></h3><div class="grille">${cases(this.inventaire, "deposer")}</div></section>
-        <section><h3>${estDecharge ? `Remonté du tas <small>${kg(poidsCoffre)} kg</small>` : estRatelier ? `Au râtelier <small>à 3 m, ils comptent</small>` : `Dans le coffre <small class="${plein(placeCoffre, this.inventaire) ? "plein" : ""}">${kg(poidsCoffre)} / ${capCoffre} kg</small>`}</h3><div class="grille">${cases(contenu, "prendre")}</div></section>
+        <section><h3>Sur toi <small class="${plein(placeSac, contenu) ? "plein" : ""}">${kg(poidsSac)} / ${capSac} kg</small></h3><div class="grille">${cases(this.inventaire, "deposer")}</div></section>
+        <section><h3>${estDecharge ? `Remonté du tas <small>${kg(poidsCoffre)} kg</small>` : estRatelier ? `Au râtelier <small>à 3 m, ils comptent</small>` : `Dans le coffre <small class="${plein(placeCoffre, this.inventaire) ? "plein" : ""}">${kg(poidsCoffre)} / ${capCoffre} kg</small>`}</h3><div class="grille">${cases(contenu, "prendre")}</div></section>
       </div>
       <div class="bande-objet${classeBande}" aria-live="polite">${bande}</div>`;
     // On ne redessine que si quelque chose a changé, et en gardant le défilement des grilles (sinon un toucher se perd).
@@ -2310,7 +2310,7 @@ export class Hud {
     const aspect = v.couvert ? "couvert sous la cendre" : { flammes: "en flammes", braises: "en braises", eteint: "éteint", cendres: "froid, des cendres" }[v.aspect];
     const nb = (x: number) => String(Math.round(x * 100) / 100).replace(".", ",");
     const proprietes = [
-      `${nb(v.bois)} kg de bois sur ${effets.boisMax}`,
+      `${nb(v.bois)} kg de bois sur ${effets.boisMax}`,
       effets.bois !== 1 ? `brûle ×${nb(effets.bois)}` : "",
       effets.chaleur > 1 ? "réchauffe l'abri voisin" : "",
       effets.plats > 1 ? "deux plats à la fois" : "",
@@ -2388,9 +2388,9 @@ export class Hud {
     const nb = (x: number) => String(Math.round(x * 10) / 10).replace(".", ",");
     const etat =
       i.type === "coffre"
-        ? `${nb(poidsInventaire(i.etat.contenu ?? {}))} kg sur ${capaciteCoffre(i)}`
+        ? `${nb(poidsInventaire(i.etat.contenu ?? {}))} kg sur ${capaciteCoffre(i)}`
         : i.type === "recuperateur_pluie"
-          ? `${nb(i.etat.litres ?? 0)} L sur ${contenanceRecuperateur(i)}`
+          ? `${nb(i.etat.litres ?? 0)} L sur ${contenanceRecuperateur(i)}`
           : "";
 
     let ameliorer = "";
@@ -2574,7 +2574,7 @@ export class Hud {
         texteLieu(r) +
         (r.note ? `${r.note} ` : "") +
         (plusTard ? `${texteAVenir(plusTard)} ` : "") +
-        (r.eau ? `${String(r.eau).replace(".", ",")} L d'eau de la gourde (celle de la mare suffit). ` : "");
+        (r.eau ? `${String(r.eau).replace(".", ",")} L d'eau de la gourde (celle de la mare suffit). ` : "");
       const secondes = Math.round(dureeReelle(r) * (outils ?? 1) * 10) / 10;
       const badge =
         r.famille === "tous"
@@ -2587,7 +2587,7 @@ export class Hud {
           ${icone(pictogramme, 40)}
           <div class="corps"><strong>${r.nom}${badge}${etiquette(r.id)}</strong>
             <span class="puces">${this.pucesRecette(r)}${qualites}</span>
-            <small>${ou}${String(secondes).replace(".", ",")} s · ≈ ${Math.round(energieGriseRecette(r))} wotts</small>${this.pourquoi === r.id ? this.listeManque(r) : ""}</div>
+            <small>${ou}${String(secondes).replace(".", ",")} s · ≈ ${Math.round(energieGriseRecette(r))} wotts</small>${this.pourquoi === r.id ? this.listeManque(r) : ""}</div>
           ${
             plusTard
               ? `<button type="button" disabled>Plus tard</button>`
@@ -2769,30 +2769,30 @@ export class Hud {
       bulle.hidden = true;
       return;
     }
-    const pc = (x: number) => `${Math.round(Math.max(0, Math.min(1, x)) * 100)} %`;
+    const pc = (x: number) => `${Math.round(Math.max(0, Math.min(1, x)) * 100)} %`;
     const b = this.besoins;
     // Les durées réelles suivent les réglages (rythme 1 : une journée de jeu de 24 min ; 0,35 : ≈ 70 min).
-    const minutes = (base: number, rythme: number) => (rythme > 0 ? `≈ ${Math.round(base / rythme / 5) * 5} min de jeu réel` : "sans limite");
+    const minutes = (base: number, rythme: number) => (rythme > 0 ? `≈ ${Math.round(base / rythme / 5) * 5} min de jeu réel` : "sans limite");
     const textes: Record<NomJauge, [string, string]> = {
       faim: [
         `Faim · ${b ? pc(b.kcal / RESERVE_KCAL_MAX) : "–"}`,
-        `Ta réserve de nourriture : pleine, elle tient ${minutes(24, REGLAGES.faim_rythme)} au calme. Elle baisse avec le temps, plus vite quand tu cours ou travailles dur. Pour la remonter : ouvre ton sac et mange. Sous 15 %, tu ne peux plus courir ; à vide, tes blessures ne guérissent plus.`,
+        `Ta réserve de nourriture : pleine, elle tient ${minutes(24, REGLAGES.faim_rythme)} au calme. Elle baisse avec le temps, plus vite quand tu cours ou travailles dur. Pour la remonter : ouvre ton sac et mange. Sous 15 %, tu ne peux plus courir ; à vide, tes blessures ne guérissent plus.`,
       ],
       eau: [
         `Eau · ${b ? pc(b.eau / RESERVE_EAU_MAX) : "–"}`,
-        "Ce que ton corps a bu. Elle baisse avec le temps et l'effort. Pour la remonter : bois à ta gourde (dans le sac), remplis-la à la mare, et fais bouillir l'eau brute sur un feu avant de la boire. Sous 15 %, plus de course ; à vide, tes blessures ne guérissent plus.",
+        "Ce que ton corps a bu. Elle baisse avec le temps et l'effort. Pour la remonter : bois à ta gourde (dans le sac), remplis-la à la mare, et fais bouillir l'eau brute sur un feu avant de la boire. Sous 15 %, plus de course ; à vide, tes blessures ne guérissent plus.",
       ],
       sommeil: [
         `Sommeil · ${b ? pc(b.repos ?? 1) : "–"}`,
-        `Ta fraîcheur : éveillé, tu t'uses en ${minutes(16, REGLAGES.sommeil_rythme)}. Pour la remonter : dors dans un abri (8 heures de jeu pour une nuit complète). Sous 15 %, tu es épuisé : plus de course, et tu travailles plus lentement.`,
+        `Ta fraîcheur : éveillé, tu t'uses en ${minutes(16, REGLAGES.sommeil_rythme)}. Pour la remonter : dors dans un abri (8 heures de jeu pour une nuit complète). Sous 15 %, tu es épuisé : plus de course, et tu travailles plus lentement.`,
       ],
       sante: [
-        `Santé · ${this.santeVue ? `${Math.round(this.santeVue.points)} %` : "–"}`,
+        `Santé · ${this.santeVue ? `${Math.round(this.santeVue.points)} %` : "–"}`,
         "Les morsures, coupures et coups l'entament ; un saignement la vide peu à peu : panse-le vite. Elle remonte toute seule, lentement, quand tu ne saignes plus et que tu as mangé et bu. À zéro, tu t'effondres et passes un jour en convalescence.",
       ],
       endurance: [
-        `Endurance · ${Math.round(this.valeurEndurance)} %`,
-        `Ton souffle : pleine quand tu es en forme. Courir, frapper, esquiver ou te dégager la vident ; elle se remplit vite dès que tu souffles (marcher ou rester sur place). Sous 15 %, tu es essoufflé : plus de course, coups faibles.${this.santeVue?.convalescence ? " En convalescence, elle ne remonte qu'à 60 %." : ""}`,
+        `Endurance · ${Math.round(this.valeurEndurance)} %`,
+        `Ton souffle : pleine quand tu es en forme. Courir, frapper, esquiver ou te dégager la vident ; elle se remplit vite dès que tu souffles (marcher ou rester sur place). Sous 15 %, tu es essoufflé : plus de course, coups faibles.${this.santeVue?.convalescence ? " En convalescence, elle ne remonte qu'à 60 %." : ""}`,
       ],
     };
     const [titre, texte] = textes[this.jaugeOuverte];
@@ -2822,7 +2822,7 @@ export class Hud {
   compter(latenceMs: number): void {
     if (!this.progression.hidden && this.dureeAction > 0) {
       const part = 1 - Math.max(0, this.finAction - performance.now()) / this.dureeAction;
-      this.progression.querySelector<HTMLElement>(".pourcent")!.textContent = `${Math.min(100, Math.round(part * 100))} %`;
+      this.progression.querySelector<HTMLElement>(".pourcent")!.textContent = `${Math.min(100, Math.round(part * 100))} %`;
     }
     this.images += 1;
     const instant = performance.now();

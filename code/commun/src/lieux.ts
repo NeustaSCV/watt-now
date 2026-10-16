@@ -272,7 +272,7 @@ export const SORTIES_STATION: Sortie[] = [
     boite: { x: CHEMIN_COOP_HALTE.x, z: ZONE_STATION.zMin + 1.5, l: CHEMIN_COOP_HALTE.demiLargeur * 2 + 1.4, p: 3 },
     arrivee: { x: CHEMIN_COOP_HALTE.x, z: ZONE_STATION.zMin + 3.5, o: 0 },
     libelle: "Prendre le chemin de la Coopérative",
-    examen: "Un chemin de terre file vers le nord, sous les arbres : la Coopérative du Plateau, à 2 km. Au bout, il faudra la carte.",
+    examen: "Un chemin de terre file vers le nord, sous les arbres : la Coopérative du Plateau, à 2 km. Au bout, il faudra la carte.",
   },
 ];
 
@@ -579,7 +579,7 @@ export const SORTIES_MOULIN: Sortie[] = [
     arrivee: { x: HALAGE.x, z: 3.5, o: Math.PI },
     libelle: "Prendre le chemin de halage",
     sansArrivee: true,
-    examen: "Le chemin de halage suit la levée vers le gué, à 2 km. On part par là ; on n'y revient jamais.",
+    examen: "Le chemin de halage suit la levée vers le gué, à 2 km. On part par là ; on n'y revient jamais.",
   },
 ];
 

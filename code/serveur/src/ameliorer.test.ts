@@ -296,7 +296,7 @@ test("sans lit voisin, garnir l'abri coûte 6 branches ; le coffre cerclé garde
     b.sauverEtatInstallation(id, 1, { contenu: { pierre: 90 }, payes: [{ barre_metal: 1, buche: 2 }] });
   });
   v.agir("installation", 1, "redescendre");
-  assert.match(v.infos().at(-1)!, /150 kg/);
+  assert.match(v.infos().at(-1)!, /150 kg/);
 });
 
 test("les niveaux de famille coûtent ×1,5 aux autres familles (arrondi au-dessus)", () => {

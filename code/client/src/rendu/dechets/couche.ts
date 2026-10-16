@@ -597,7 +597,7 @@ export class CoucheDechetsVue {
     const objets = f.objets
       .map(
         (o) =>
-          `<button type="button" class="${estOrdure(o.objet) ? "ordure" : ""}" data-i="${o.i}">${icone(o.objet, 30)}<span>${nommer(o.objet, 1)}<small>${String(Math.round(OBJETS[o.objet].poids * 100) / 100).replace(".", ",")} kg</small></span></button>`,
+          `<button type="button" class="${estOrdure(o.objet) ? "ordure" : ""}" data-i="${o.i}">${icone(o.objet, 30)}<span>${nommer(o.objet, 1)}<small>${String(Math.round(OBJETS[o.objet].poids * 100) / 100).replace(".", ",")} kg</small></span></button>`,
       )
       .join("");
     p.innerHTML = `<header><h2>${f.nom[0]!.toUpperCase()}${f.nom.slice(1)}</h2><button type="button" class="fermer" aria-label="Fermer">✕</button></header>${

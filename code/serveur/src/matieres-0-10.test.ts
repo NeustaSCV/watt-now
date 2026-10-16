@@ -122,7 +122,7 @@ test("les dix objets-clés du niveau 2 sont des objets du jeu, chacun à son lie
   assert.deepEqual(QUALITES_OBJETS.rabot, { raboter: 1 });
   // Le jerrican percé (I5) reste un déchet ; le jerrican de 20 L est un autre objet.
   assert.equal(OBJETS.jerrican.nom, "jerrican percé");
-  assert.equal(OBJETS.jerrican_20l.nom, "jerrican de 20 L");
+  assert.equal(OBJETS.jerrican_20l.nom, "jerrican de 20 L");
 });
 
 test("un objet-clé du niveau 2 s'achète au Comptoir après la visite de son lieu, jamais avant, et ne manque jamais", () => {

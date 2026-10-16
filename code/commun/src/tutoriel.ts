@@ -59,7 +59,7 @@ export function etapesTutoriel(famille: Famille): EtapeTutoriel[] {
       consigne: "Va à la ruine, à l'est. Essaie les allures : discrète ({discret}), marche, course ({courir}).",
       lecon: "Le cercle, c'est jusqu'où porte le bruit que tu fais. Plus tu cours, plus on t'entend.",
     },
-    { titre: "Ramasser", consigne: "Ramasse 3 branches et 5 pierres ({agir}).", lecon: "Tout pèse : ton sac porte 55 kg." },
+    { titre: "Ramasser", consigne: "Ramasse 3 branches et 5 pierres ({agir}).", lecon: "Tout pèse : ton sac porte 55 kg." },
     {
       titre: "Le feu",
       consigne: "Monte un feu de camp (5 pierres, 3 branches) via Fabriquer, ajoute du bois, allume-le.",

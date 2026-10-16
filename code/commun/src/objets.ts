@@ -116,15 +116,15 @@ export interface DefinitionObjet {
 
 const OBJETS_DE_BASE: Record<TypeObjetDeBase, DefinitionObjet> = {
   branche: { description: "Du bois mort, sec et léger. Parfait pour démarrer un feu.", nom: "branche", pluriel: "branches", poids: 0.5, combustible: 0.5 },
-  buche: { description: "Bois sec et dense : un feu tient avec ça. Environ 1 h 20 de flammes.", nom: "bûche de bois sec", pluriel: "bûches de bois sec", poids: 2, combustible: 2 },
+  buche: { description: "Bois sec et dense : un feu tient avec ça. Environ 1 h 20 de flammes.", nom: "bûche de bois sec", pluriel: "bûches de bois sec", poids: 2, combustible: 2 },
   pierre: { description: "Une pierre de la taille d'un poing. Un cercle de pierres garde le feu à sa place.", nom: "pierre", pluriel: "pierres", poids: 2 },
-  baies: { description: "Sauvages, un peu acides. 130 kcal la poignée.", nom: "poignée de baies", pluriel: "poignées de baies", poids: 0.25, kcal: 130, eau: 0.2 },
-  conserve: { description: "Un vestige de l'Abondance. L'étiquette promet « Saveur Bonheur ». 400 kcal.", nom: "conserve", pluriel: "conserves", poids: 0.45, kcal: 400, eau: 0.3 },
+  baies: { description: "Sauvages, un peu acides. 130 kcal la poignée.", nom: "poignée de baies", pluriel: "poignées de baies", poids: 0.25, kcal: 130, eau: 0.2 },
+  conserve: { description: "Un vestige de l'Abondance. L'étiquette promet « Saveur Bonheur ». 400 kcal.", nom: "conserve", pluriel: "conserves", poids: 0.45, kcal: 400, eau: 0.3 },
   couteau: { description: "Lame ébréchée, manche recollé. Mieux que rien.", nom: "couteau abîmé", pluriel: "couteaux abîmés", poids: 0.2 },
   briquet: { description: "Il fait encore des étincelles. Pour combien de temps ?", nom: "briquet", pluriel: "briquets", poids: 0.05 },
   // Plan 0.10.1 (A5) : plusieurs gourdes, une seule réserve, 1 L par gourde.
   gourde: { description: "Un litre (un kilo d'eau, pleine). Deux gourdes, deux litres : elles se remplissent ensemble. L'eau de la mare doit bouillir avant d'être bue.", nom: "gourde", pluriel: "gourdes", poids: 0.3 },
-  sac_a_dos: { description: "Un sac de randonnée de l'Abondance. Porte jusqu'à 55 kg.", nom: "sac à dos", pluriel: "sacs à dos", poids: 1.5 },
+  sac_a_dos: { description: "Un sac de randonnée de l'Abondance. Porte jusqu'à 55 kg.", nom: "sac à dos", pluriel: "sacs à dos", poids: 1.5 },
   pierre_a_feu: { description: "Silex et acier : le feu des Charbonniers, inusable.", nom: "pierre à feu", pluriel: "pierres à feu", poids: 0.1 },
   marteau: { description: "Tête de fer, manche de frêne. L'outil de la forge.", nom: "marteau", pluriel: "marteaux", poids: 0.8 },
   lampe_dynamo: { description: "On tourne la manivelle, elle éclaire. Pas de pile, pas de souci.", nom: "lampe à dynamo", pluriel: "lampes à dynamo", poids: 0.3 },
@@ -145,12 +145,12 @@ const OBJETS_DE_BASE: Record<TypeObjetDeBase, DefinitionObjet> = {
   ressort_lames: { description: "Acier à ressort de l'Abondance : la meilleure matière pour une lame.", nom: "lame de ressort", pluriel: "lames de ressort", poids: 0.4 },
   bache: { description: "Bleue, imperméable, un peu déchirée. Un toit pour une nuit.", nom: "bâche", pluriel: "bâches", poids: 1.5 },
   barre_metal: { description: "Un mètre de fer rond. Levier, arme, ou matière à forger.", nom: "barre de métal", pluriel: "barres de métal", poids: 2 },
-  batterie_voiture: { description: "12 V, 60 Ah : environ 360 Wh utiles. Lourde, mais précieuse.", nom: "batterie de voiture", pluriel: "batteries de voiture", poids: 18 },
-  charbon_bois: { description: "Léger, noir, il chauffe à 1 300 °C : de quoi forger. Un kilo par lame.", nom: "kilo de charbon de bois", pluriel: "kilos de charbon de bois", poids: 1, combustible: 1.8 },
+  batterie_voiture: { description: "12 V, 60 Ah : environ 360 Wh utiles. Lourde, mais précieuse.", nom: "batterie de voiture", pluriel: "batteries de voiture", poids: 18 },
+  charbon_bois: { description: "Léger, noir, il chauffe à 1 300 °C : de quoi forger. Un kilo par lame.", nom: "kilo de charbon de bois", pluriel: "kilos de charbon de bois", poids: 1, combustible: 1.8 },
   lame_forgee: { description: "Un couteau de forge : une lame tirée d'un ressort, trempée, emmanchée sur une branche. Il se vendra bien.", nom: "couteau de forge", pluriel: "couteaux de forge", poids: 0.3 },
   couteau_aiguise: { description: "Le même couteau, repassé à la meule. Il coupe enfin.", nom: "couteau aiguisé", pluriel: "couteaux aiguisés", poids: 0.2 },
   panneau_solaire: {
-    description: "Un petit panneau de 20 W démonté de l'auvent. Personne ne sait plus en fabriquer : il vaut ce qu'il coûterait à refaire.",
+    description: "Un petit panneau de 20 W démonté de l'auvent. Personne ne sait plus en fabriquer : il vaut ce qu'il coûterait à refaire.",
     nom: "petit panneau solaire",
     pluriel: "petits panneaux solaires",
     poids: 2.5,
@@ -164,12 +164,12 @@ const OBJETS_DE_BASE: Record<TypeObjetDeBase, DefinitionObjet> = {
     poids: 0.05,
   },
   // Les fruits : énergie réelle (tables Ciqual), au poids d'un fruit ou d'une poignée.
-  pomme: { description: "Une pomme un peu acide, ferme. 150 g, ≈ 80 kcal (52 kcal pour 100 g).", nom: "pomme", pluriel: "pommes", poids: 0.15, kcal: 80, eau: 0.13 },
-  poire: { description: "Une poire juteuse, à manger vite avant qu'elle blettisse. 180 g, ≈ 100 kcal.", nom: "poire", pluriel: "poires", poids: 0.18, kcal: 100, eau: 0.15 },
-  prunes: { description: "Une poignée de quetsches violettes. 150 g, ≈ 70 kcal (46 kcal pour 100 g).", nom: "poignée de prunes", pluriel: "poignées de prunes", poids: 0.15, kcal: 70, eau: 0.13 },
-  cerises: { description: "Une poignée de cerises sucrées. 150 g, ≈ 95 kcal (63 kcal pour 100 g).", nom: "poignée de cerises", pluriel: "poignées de cerises", poids: 0.15, kcal: 95, eau: 0.12 },
+  pomme: { description: "Une pomme un peu acide, ferme. 150 g, ≈ 80 kcal (52 kcal pour 100 g).", nom: "pomme", pluriel: "pommes", poids: 0.15, kcal: 80, eau: 0.13 },
+  poire: { description: "Une poire juteuse, à manger vite avant qu'elle blettisse. 180 g, ≈ 100 kcal.", nom: "poire", pluriel: "poires", poids: 0.18, kcal: 100, eau: 0.15 },
+  prunes: { description: "Une poignée de quetsches violettes. 150 g, ≈ 70 kcal (46 kcal pour 100 g).", nom: "poignée de prunes", pluriel: "poignées de prunes", poids: 0.15, kcal: 70, eau: 0.13 },
+  cerises: { description: "Une poignée de cerises sucrées. 150 g, ≈ 95 kcal (63 kcal pour 100 g).", nom: "poignée de cerises", pluriel: "poignées de cerises", poids: 0.15, kcal: 95, eau: 0.12 },
   noix: {
-    description: "Une poignée de noix dans leur coque : 45 g de cerneaux, ≈ 290 kcal (654 kcal pour 100 g). Le meilleur rapport poids-énergie de la nature.",
+    description: "Une poignée de noix dans leur coque : 45 g de cerneaux, ≈ 290 kcal (654 kcal pour 100 g). Le meilleur rapport poids-énergie de la nature.",
     nom: "poignée de noix",
     pluriel: "poignées de noix",
     poids: 0.1,
@@ -177,7 +177,7 @@ const OBJETS_DE_BASE: Record<TypeObjetDeBase, DefinitionObjet> = {
   },
   // Les champignons : le cèpe se mange, les amanites tuent ou rendent très malade.
   cepe: {
-    description: "Un cèpe de Bordeaux : chapeau brun, pied ventru, une éponge blanche sous le chapeau (pas de lames). 150 g, ≈ 45 kcal. Un régal.",
+    description: "Un cèpe de Bordeaux : chapeau brun, pied ventru, une éponge blanche sous le chapeau (pas de lames). 150 g, ≈ 45 kcal. Un régal.",
     nom: "cèpe",
     pluriel: "cèpes",
     poids: 0.15,
@@ -206,13 +206,13 @@ const OBJETS_DE_BASE: Record<TypeObjetDeBase, DefinitionObjet> = {
     poids: 1.2,
   },
   poule: {
-    description: "Une poule ensauvagée de la ferme, assommée. ≈ 1,8 kg. À plumer et vider (Couper 1) avant de la cuire.",
+    description: "Une poule ensauvagée de la ferme, assommée. ≈ 1,8 kg. À plumer et vider (Couper 1) avant de la cuire.",
     nom: "poule",
     pluriel: "poules",
     poids: 1.8,
   },
   volaille_crue: {
-    description: "Une portion de volaille crue, 200 g. ≈ 380 kcal, mais crue elle peut rendre malade : à cuire sur le feu.",
+    description: "Une portion de volaille crue, 200 g. ≈ 380 kcal, mais crue elle peut rendre malade : à cuire sur le feu.",
     nom: "portion de volaille crue",
     pluriel: "portions de volaille crue",
     poids: 0.2,
@@ -221,7 +221,7 @@ const OBJETS_DE_BASE: Record<TypeObjetDeBase, DefinitionObjet> = {
   },
   // Les plats : l'énergie des ingrédients, ×1,25 pour la cuisson (Book 11 §11).
   volaille_cepes: {
-    description: "Une portion de volaille rôtie aux cèpes, cuite au feu. ≈ 590 kcal (380 + 2 × 45, ×1,25 par la cuisson). Un vrai repas : il cale, et il réconforte.",
+    description: "Une portion de volaille rôtie aux cèpes, cuite au feu. ≈ 590 kcal (380 + 2 × 45, ×1,25 par la cuisson). Un vrai repas : il cale, et il réconforte.",
     nom: "volaille aux cèpes",
     pluriel: "portions de volaille aux cèpes",
     poids: 0.4,
@@ -229,7 +229,7 @@ const OBJETS_DE_BASE: Record<TypeObjetDeBase, DefinitionObjet> = {
     plat: { sante: 10 },
   },
   cepes_poeles: {
-    description: "Trois cèpes poêlés sur une pierre plate, au coin du feu. ≈ 170 kcal. Simple et bon.",
+    description: "Trois cèpes poêlés sur une pierre plate, au coin du feu. ≈ 170 kcal. Simple et bon.",
     nom: "poêlée de cèpes",
     pluriel: "poêlées de cèpes",
     poids: 0.35,
@@ -237,7 +237,7 @@ const OBJETS_DE_BASE: Record<TypeObjetDeBase, DefinitionObjet> = {
     plat: { sante: 4 },
   },
   pommes_cuites: {
-    description: "Trois pommes cuites sous la cendre, fondantes. ≈ 300 kcal.",
+    description: "Trois pommes cuites sous la cendre, fondantes. ≈ 300 kcal.",
     nom: "pommes cuites",
     pluriel: "portions de pommes cuites",
     poids: 0.4,
@@ -246,7 +246,7 @@ const OBJETS_DE_BASE: Record<TypeObjetDeBase, DefinitionObjet> = {
   },
   // Les mijotés (Book 24 §3.1) : il faut la crémaillère du foyer de cuisine, et de l'eau (elle bout, la mare suffit).
   soupe_cepes: {
-    description: "Une soupe de cèpes mijotée à la crémaillère, dans un demi-litre d'eau. ≈ 110 kcal (2 × 45, ×1,25 par la cuisson), et elle désaltère. Un vrai repas.",
+    description: "Une soupe de cèpes mijotée à la crémaillère, dans un demi-litre d'eau. ≈ 110 kcal (2 × 45, ×1,25 par la cuisson), et elle désaltère. Un vrai repas.",
     nom: "soupe de cèpes",
     pluriel: "bols de soupe de cèpes",
     poids: 0.6,
@@ -254,7 +254,7 @@ const OBJETS_DE_BASE: Record<TypeObjetDeBase, DefinitionObjet> = {
     plat: { sante: 6 },
   },
   pot_au_feu: {
-    description: "Une portion de volaille et un cèpe, mijotés longtemps dans un demi-litre d'eau. ≈ 530 kcal (380 + 45, ×1,25 par la cuisson), et il désaltère. Ça cale, ça réconforte.",
+    description: "Une portion de volaille et un cèpe, mijotés longtemps dans un demi-litre d'eau. ≈ 530 kcal (380 + 45, ×1,25 par la cuisson), et il désaltère. Ça cale, ça réconforte.",
     nom: "pot-au-feu de volaille",
     pluriel: "bols de pot-au-feu de volaille",
     poids: 0.75,
@@ -293,7 +293,7 @@ const OBJETS_DE_BASE: Record<TypeObjetDeBase, DefinitionObjet> = {
     poids: 0.3,
   },
   travois: {
-    description: "Deux longues perches et un plancher de branches liés à la corde. On traîne 50 kg de plus que son sac, mais on ne court plus quand il est chargé.",
+    description: "Deux longues perches et un plancher de branches liés à la corde. On traîne 50 kg de plus que son sac, mais on ne court plus quand il est chargé.",
     nom: "travois",
     pluriel: "travois",
     poids: 4,
@@ -305,13 +305,13 @@ const OBJETS_DE_BASE: Record<TypeObjetDeBase, DefinitionObjet> = {
     poids: 1.6,
   },
   sac_fortune: {
-    description: "Un cadre de branches lié de corde, des bretelles tressées : on y attache ses affaires. Porte 30 kg (le sac à dos : 55).",
+    description: "Un cadre de branches lié de corde, des bretelles tressées : on y attache ses affaires. Porte 30 kg (le sac à dos : 55).",
     nom: "sac de fortune",
     pluriel: "sacs de fortune",
     poids: 2,
   },
   volaille_cuite: {
-    description: "Une portion de volaille rôtie sur le feu, 150 g. ≈ 380 kcal, et sans risque.",
+    description: "Une portion de volaille rôtie sur le feu, 150 g. ≈ 380 kcal, et sans risque.",
     nom: "portion de volaille rôtie",
     pluriel: "portions de volaille rôtie",
     poids: 0.15,

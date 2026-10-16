@@ -214,7 +214,7 @@ export const OBJETS_METIER = {
     nom: "pack de cellules",
     pluriel: "packs de cellules",
     poids: 0.2,
-    description: "Trois cellules lithium câblées et scotchées : 12 Wh qui tiennent dans la main.",
+    description: "Trois cellules lithium câblées et scotchées : 12 Wh qui tiennent dans la main.",
   },
   module_decharge: {
     nom: "module de décharge",
@@ -248,8 +248,8 @@ export const OBJETS_METIER = {
     lumiere: "frontale",
   },
   ventilateur_forge: {
-    nom: "ventilateur de forge 12 V",
-    pluriel: "ventilateurs de forge 12 V",
+    nom: "ventilateur de forge 12 V",
+    pluriel: "ventilateurs de forge 12 V",
     poids: 0.6,
     description: "Un petit moteur, une hélice de plastique : posé sur une forge, il souffle à la place du forgeron.",
   },
@@ -341,7 +341,7 @@ export const OBJETS_METIER = {
     nom: "pack soudé",
     pluriel: "packs soudés",
     poids: 0.35,
-    description: "Six cellules lithium soudées en barrette, leur LED de charge sur le côté : 24 Wh qui ne se décrochent pas.",
+    description: "Six cellules lithium soudées en barrette, leur LED de charge sur le côté : 24 Wh qui ne se décrochent pas.",
   },
 
   // ---------- Les meubles nouveaux du niveau 2 (plan 0.10, chantier D ; meubles-neufs.ts) ----------
@@ -350,7 +350,7 @@ export const OBJETS_METIER = {
     nom: "batterie de cellules",
     pluriel: "batteries de cellules",
     poids: 0.9,
-    description: "Douze cellules lithium soudées en bloc, dans un boîtier de plastique : 120 Wh, pour le banc de la base.",
+    description: "Douze cellules lithium soudées en bloc, dans un boîtier de plastique : 120 Wh, pour le banc de la base.",
   },
   // ⚙️ La charrette à bras (N2-46, S-27) : la brouette avec 100 kg roulés au lieu de 60 (objets.ts, `capaciteDe`).
   charrette_bras: {

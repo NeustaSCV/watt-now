@@ -662,7 +662,7 @@ const USAGES_ETABLIS: Record<Exclude<TypeRessource, TypeRessourceNiveau1 | TypeR
     donne: { batterie_voiture: 1 },
     qualites: {},
     duree: 3,
-    examen: "Une batterie de voiture sortie d'une épave. 18 kg. Il lui reste peut-être de la charge.",
+    examen: "Une batterie de voiture sortie d'une épave. 18 kg. Il lui reste peut-être de la charge.",
   },
   ressort: {
     verbe: "ramasser",
@@ -689,7 +689,7 @@ const USAGES_ETABLIS: Record<Exclude<TypeRessource, TypeRessourceNiveau1 | TypeR
     qualites: { visser: 1 },
     duree: 25,
     examen:
-      "Un petit panneau solaire tombé de l'auvent, appuyé contre un pilier. Il alimentait l'enseigne. Quatre vis le tiennent encore à son cadre : il faut de quoi visser (couteau ou tournevis).",
+      "Un petit panneau solaire tombé de l'auvent. Quatre vis le tiennent encore à son cadre : il faut de quoi visser (couteau ou tournevis).",
   },
   epave_voiture: {
     verbe: "demonter",
@@ -715,7 +715,7 @@ const USAGES_ETABLIS: Record<Exclude<TypeRessource, TypeRessourceNiveau1 | TypeR
     donne: { barre_metal: 1, bocal_clous: 1, rouleau_fil_fer: 1, bidon_huile: 1 },
     qualites: {},
     duree: 6,
-    examen: "L'atelier de la station : un établi, des chutes de métal, une odeur d'huile froide. Dans la caisse, un bocal de clous, un rouleau de fil de fer, un bidon d'huile.",
+    examen: "L'atelier de la station : un établi, des chutes de métal, une odeur d'huile froide. Dans la caisse, des clous, du fil de fer, un bidon d'huile.",
   },
   grenier: {
     verbe: "fouiller",
@@ -800,7 +800,7 @@ const USAGES_ETABLIS: Record<Exclude<TypeRessource, TypeRessourceNiveau1 | TypeR
     donne: { batterie_voiture: 1 },
     qualites: { serrer: 1 },
     duree: 8,
-    examen: "La batterie du tracteur rouge, sanglée sur le garde-boue : c'est elle qui fait sonner le klaxon. Une 12 V de 18 kg, comme celle d'une voiture.",
+    examen: "La batterie du tracteur rouge, sanglée sur le garde-boue : c'est elle qui fait sonner le klaxon. Une 12 V de 18 kg, comme celle d'une voiture.",
   },
 };
 
@@ -859,7 +859,7 @@ const USAGES_NIVEAU1: Partial<Record<TypeRessourceNiveau1, UsageRessource>> = {
     donne: { cocotte_fonte: 1 },
     qualites: {},
     duree: 2,
-    examen: "En tête de gondole, sous une pancarte « −20 % », une cocotte en fonte rouge, son couvercle encore posé dessus. Cinq kilos et demi.",
+    examen: "En tête de gondole, sous une pancarte « −20 % », une cocotte en fonte rouge, son couvercle encore posé dessus. Cinq kilos et demi.",
   },
   // ---------- L1B, le Moulin du Gué (chantier 12) : la grosse clé, la fourche, les clés à place fixe, l'if ----------
   moulin_cle: {
@@ -870,7 +870,7 @@ const USAGES_NIVEAU1: Partial<Record<TypeRessourceNiveau1, UsageRessource>> = {
     // M3 : un geste silencieux d'une seconde ; en allure discrète, les deux dormants de l'atelier ne se réveillent pas.
     duree: 1,
     silencieux: true,
-    examen: "Le tableau à clés de l'atelier : une planche à clous, de petites clés rouillées, et au quatrième clou une grosse clé de fer, son étiquette de bois : « GRANDE PORTE ».",
+    examen: "Le tableau à clés de l'atelier : de petites clés rouillées et, au quatrième clou, une grosse clé de fer étiquetée « GRANDE PORTE ».",
   },
   moulin_fourche: {
     verbe: "ramasser",
@@ -886,7 +886,7 @@ const USAGES_NIVEAU1: Partial<Record<TypeRessourceNiveau1, UsageRessource>> = {
     donne: { etau: 1 },
     qualites: { serrer: 1 },
     duree: 10,
-    examen: "L'établi du rhabilleur, contre le mur nord : un étau de forge boulonné au plateau, les marteaux à rhabiller, la pierre à aiguiser. Le meunier l'avait monté de l'atelier.",
+    examen: "L'établi du rhabilleur : un étau de forge boulonné au plateau, les marteaux, la pierre à aiguiser. Le meunier l'avait monté de l'atelier.",
   },
   poutres_chene: {
     verbe: "ramasser",
@@ -935,7 +935,7 @@ const USAGES_NIVEAU1: Partial<Record<TypeRessourceNiveau1, UsageRessource>> = {
     donne: { branche: 2 },
     qualites: {},
     duree: 6,
-    examen: "L'établi du charpentier de moulin : la caisse d'alluchons de rechange, des chevilles, des copeaux. Sur le plateau, la trace claire d'un étau et deux trous de vis : il n'est plus là.",
+    examen: "L'établi du charpentier de moulin : des alluchons de rechange, des chevilles, des copeaux. Sur le plateau, la trace d'un étau : il n'est plus là.",
   },
   moulin_logis: {
     verbe: "fouiller",
