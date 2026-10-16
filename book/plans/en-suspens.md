@@ -133,7 +133,7 @@ Les plus gros morceaux : A3, A5, A7, A9 et D1.
 - Les **poules dans les haltes** (1 ou 2 par halte, partagées entre joueurs) : écartées « pour l'instant » de la 0.9 (2026-10-13) ; il faut d'abord une faune partagée dans les lieux à plusieurs (`plan-0.9.md` §2.7).
 - La **halte de cueillette et de chasse** (gibier, boyaux, corde d'arc en boyau) : Book 99.
 - La **bibliothèque de bâtiments** `batiment/` : à valider par le porteur ; Book 99.
-- Le **combat entre joueurs** : règles du duel décidées le 2026-10-13 (`duel-entre-joueurs.md`). **Planifié en 0.11 le 2026-10-16** (`plan-duel.md`), avant les murs et les sols ; questions D-7 à D-24 tranchées, maquettes choisies (D-19). **Codé en 0.11 le 2026-10-16 (0.11.0, en préparation)** : en recette, à essayer par le porteur sur l'iPhone à deux comptes, puis à déployer. *En attente du porteur* : les phrases « Un duel commence : l'échange est annulé. » et « … la leçon s'arrête. » ; un coup épuisé à part pleine ; l'arme gagnée neuve ; la saisie à trois qui fait lâcher prise ; le message d'effondrement montré au retour d'un corps (pas codé).
+- ~~Le **combat entre joueurs**~~ *Fait : le duel, codé en 0.11 (`plan-duel.md`, `duel-entre-joueurs.md` v0.6, D-1 à D-28), essayé par le porteur en préprod (jauge réduite à 50 points, touche du mode au clavier), **déployé en prod le 2026-10-16** (étiquette `v0.11`).*
 
 ## 5. Où sont les choses
 
@@ -143,7 +143,7 @@ Les plus gros morceaux : A3, A5, A7, A9 et D1.
 - Le niveau 2 (décisions et propositions) : `book/plans/niveau-2.md`.
 - La notice d'un nouveau niveau : `book/plans/notice-nouveau-niveau.md`.
 - Les études et données : `.claude-travail/propositions/` (non versionné : à ne pas supprimer).
-- ~~Versions : 0.7.3 déployée le 2026-10-10 (étiquette v0.7.3).~~ Versions : 0.8 et 0.8.1 déployées le 2026-10-11, 0.8.2 le 2026-10-13 ; 0.8.3 le 2026-10-13 (étiquette v0.8.3) ; 0.8.4 le 2026-10-13 (étiquette v0.8.4, avec la barre de métal à 1 de dégâts) ; 0.9 le 2026-10-14 (étiquette v0.9) ; 0.10 le 2026-10-15 (étiquette v0.10) ; 0.10.1 le 2026-10-16 (étiquette v0.10.1, plan `book/plans/plan-0.10.1.md`). Le plan de la 0.8.2 : `book/plans/plan-0.8.2.md`.
+- ~~Versions : 0.7.3 déployée le 2026-10-10 (étiquette v0.7.3).~~ Versions : 0.8 et 0.8.1 déployées le 2026-10-11, 0.8.2 le 2026-10-13 ; 0.8.3 le 2026-10-13 (étiquette v0.8.3) ; 0.8.4 le 2026-10-13 (étiquette v0.8.4, avec la barre de métal à 1 de dégâts) ; 0.9 le 2026-10-14 (étiquette v0.9) ; 0.10 le 2026-10-15 (étiquette v0.10) ; 0.10.1 le 2026-10-16 (étiquette v0.10.1, plan `book/plans/plan-0.10.1.md`) ; 0.11, le duel, le 2026-10-16 (étiquette v0.11, plan `book/plans/plan-duel.md`). Le plan de la 0.8.2 : `book/plans/plan-0.8.2.md`.
 
 ## 6. Après la 0.10 (recette du 2026-10-15)
 

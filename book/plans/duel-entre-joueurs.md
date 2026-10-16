@@ -1,6 +1,6 @@
 # Le combat entre joueurs : le duel
 
-*Version : v0.6 · 2026-10-16 · **Statut : codé en 0.11 (en préparation)** (`plan-duel.md`).*
+*Version : v0.6 · 2026-10-16 · **Statut : codé en 0.11, déployé le 2026-10-16** (étiquette `v0.11` ; `plan-duel.md`).*
 
 *v0.6 (2026-10-16) : après l'essai du porteur, D-27 (la jauge à 50 points, des duels deux fois plus courts) et D-28 (la touche du mode dans l'invite, au clavier).*
 

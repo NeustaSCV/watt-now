@@ -1,6 +1,6 @@
 # Plan de développement — le duel entre joueurs (version 0.11)
 
-*Version du plan : v0.5 · 2026-10-16 · **Statut : codée, en recette** (version 0.11.0, en préparation) ; pas encore essayée par le porteur ni déployée.*
+*Version du plan : v0.5 · 2026-10-16 · **Statut : codée, essayée par le porteur en préprod, déployée en prod le 2026-10-16** (version 0.11.0, étiquette `v0.11`). Après l'essai : la jauge à 50 points (D-27) et la touche du mode au clavier (D-28).*
 
 *v0.5 (2026-10-16) : le duel codé sur `integration-duel`. **Le découpage réel** (il remplace l'ordre du §4) : trois chantiers en parallèle, **S** le serveur du duel (B, C, la partie serveur de A, les phrases), **K** le client du duel (la partie client de A, D, les indices et l'aide de F), **E** le corps qui reste à la déconnexion (E étendu par D-18), fusionnés dans cet ordre, puis **G** la recette, les books et le numéro 0.11.0. Les maquettes (H) avaient été faites avant. Recette au strict nécessaire : 1 363 tests, et un essai à deux comptes dans le vrai client à la station (le Combat et l'anneau rouge, un duel gagné, l'objet à ses pieds, la fuite annulée, la déconnexion en duel et le corps qui reste une minute). Restent les essais du porteur sur l'iPhone, à deux comptes (§7).*
 
