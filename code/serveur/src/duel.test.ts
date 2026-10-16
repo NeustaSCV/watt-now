@@ -252,7 +252,7 @@ test("sac du gagnant trop lourd : l'objet tombe à ses pieds, en tas ramassable"
   const [rose, paul] = t.tous;
   gagner(t, rose!.j, paul!.id);
   assert.ok(rose!.infos().includes("Duel gagné : sa masse est à tes pieds."));
-  assert.equal(rose!.dernier("inventaire")!.inventaire.masse, undefined);
+  assert.equal((rose!.j["inventaire"] as Record<string, number>).masse, undefined);
   const tas = t.halte.sacs.find((s) => s.contenu.jete && s.contenu.inventaire.masse === 1);
   assert.ok(tas, "un tas avec la masse");
   assert.ok(Math.hypot(tas!.x - rose!.j.position.x, tas!.z - rose!.j.position.z) < 0.01, "à ses pieds");

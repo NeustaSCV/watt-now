@@ -1,6 +1,8 @@
 # Le combat entre joueurs : le duel
 
-*Version : v0.5 · 2026-10-16 · **Statut : codé en 0.11 (en préparation)** (`plan-duel.md`).*
+*Version : v0.6 · 2026-10-16 · **Statut : codé en 0.11 (en préparation)** (`plan-duel.md`).*
+
+*v0.6 (2026-10-16) : après l'essai du porteur, D-27 (la jauge à 50 points, des duels deux fois plus courts) et D-28 (la touche du mode dans l'invite, au clavier).*
 
 *v0.5 (2026-10-16) : D-25 (les sept choix du codage, acceptés) et D-26 (l'indice du Combat différé).*
 
@@ -107,7 +109,7 @@
 | D-11 | En rouge, un Éteint et un joueur tous deux devant soi, à portée | **Le plus proche** est visé, joueur ou Éteint |
 | D-12 | Ce qui est exclu du tirage, en plus des objets-clés des lieux et des clefs de porte (il n'existe pas d'objet de quête) | **Aussi les pièces de famille** (panneau solaire, enclume de dépanneur, petit alternateur) **et les sacs et ce qui roule** (sac à dos, sac de fortune, travois, brouette, charrette) |
 | D-13 | Le corps laissé à la déconnexion | Le joueur perd le duel tout de suite ; son corps reste **1 minute** dans la halte, immobile, exposé aux Éteints (santé, saisie, effondrement habituels) ; reconnecté avant, il reprend la main là où est son corps |
-| D-14 | Les réglages de la jauge (D-5, D-6) | **100 points**. Frapper sans arrêt retire **4 points par seconde avec la plus faible arme** (les poings) et **6 avec la plus forte** : l'écart × 1,5 se juge par seconde de combat, la part d'un coup suit la durée du coup ; le coup appuyé retire plus, à proportion de sa lenteur. Tous les coups touchés : 17 à 25 s ; avec esquives et ratés, ≈ 25 à 40 s. **Une morsure d'Éteint retire 18 points** |
+| D-14 | Les réglages de la jauge (D-5, D-6) | **100 points**. Frapper sans arrêt retire **4 points par seconde avec la plus faible arme** (les poings) et **6 avec la plus forte** *(la jauge passée à 50 points par D-27)* : l'écart × 1,5 se juge par seconde de combat, la part d'un coup suit la durée du coup ; le coup appuyé retire plus, à proportion de sa lenteur. Tous les coups touchés : 17 à 25 s ; avec esquives et ratés, ≈ 25 à 40 s. **Une morsure d'Éteint retire 18 points** |
 | D-16 | Comprendre la fin du duel | *Demande du porteur* : à la résolution, **« + machette » au-dessus du gagnant et « − machette » au-dessus du perdant** (l'objet réellement pris), vus des duellistes et des témoins |
 | D-17 | Le mode Combat après la bascule automatique (*remplace D-1*) | **Le Combat ne se désactive plus jamais tout seul** ; il s'active encore tout seul quand un Éteint approche, et **le halo devient rouge**, comme un Combat choisi. Deux états seulement : Exploration (vert) et Combat (rouge) ; seul le joueur repasse en Exploration |
 | D-18 | La déconnexion comme triche, hors duel aussi | **Partout où il y a des Éteints** (les quatre haltes et les lieux personnels : Coopérative, Moulin, hôtel, phare), **toute déconnexion laisse le corps 1 minute**, immobile, exposé aux Éteints ; ni au terrain ni au Comptoir. Reconnecté avant la fin, on reprend la main là où il est. En duel, on perd en plus le duel (D-13) |
@@ -119,6 +121,8 @@
 | D-24 | Un repère des 45 s de protection | **Oui : l'anneau du perdant devient blanc et se vide comme une horloge** pendant 45 s, vu de tous ; il reprend sa couleur à la fin. Le perdant peut lancer un duel pendant ce temps (§5) ; il garde l'anneau blanc jusqu'au bout des 45 s |
 | D-25 | Ce que le codage a dû choisir (accepté le 2026-10-16) | **(1)** Un duel coupe un échange ou une leçon : « Un duel commence : l'échange est annulé. » / « Un duel commence : la leçon s'arrête. » ; **(2)** épuisé, un coup sur un joueur retire quand même sa part pleine ; **(3)** l'arme gagnée arrive neuve (l'usure reste chez le perdant, comme à l'échange) ; **(4)** quand la saisie à trois vide la jauge, les trois Éteints lâchent prise ; **(5)** un perdant protégé ne fait pas écran : un Éteint derrière lui prend le coup ; **(6)** god reste hors du duel même quand il n'est plus invincible ; **(7)** le corps qui s'effondre pendant la minute d'absence : le joueur lit « Des inconnus t'ont ramené chez toi, sans ton sac. » à son retour |
 | D-26 | L'indice « En Combat, les autres te voient en rouge. » arrive en même temps que « Duel avec… » chez le joueur frappé | **Différé** : il attend un passage en Combat sans duel (le bouton ou un Éteint) |
+| D-27 | Après l'essai du porteur (2026-10-16) : la jauge | **Deux fois plus petite : 50 points** au lieu de 100 ; les coups retirent autant (4 à 6 points par seconde), donc **un duel dure deux fois moins** (≈ 10 à 20 s). La morsure d'un Éteint reste à 18 points (elle pèse donc deux fois plus) |
+| D-28 | Après l'essai du porteur (2026-10-16) : la touche du mode au clavier | **Seulement au clavier**, la ligne d'invite montre toujours la touche du mode : « X Combat » en Exploration, « X Exploration » en Combat (la touche réelle si le joueur l'a changée) ; au toucher, le bouton suffit |
 | D-15 | Les phrases du jeu (des messages qui passent ; chaque indice une seule fois) | Acceptées telles quelles : voir ci-dessous |
 
 **Les phrases (D-23, raccourcies le 2026-10-16 ; elles remplacent D-15)** :

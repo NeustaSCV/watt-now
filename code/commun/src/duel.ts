@@ -1,7 +1,7 @@
 // Le duel entre joueurs (0.11) : les règles pures, sans serveur (book/plans/duel-entre-joueurs.md, plan-duel.md §3 B et C).
 // Le serveur (serveur/src/duel.ts) s'en sert pour juger ; les tests les essaient seules.
 //
-// - La jauge (D-5, D-6, D-14) : 100 points. Frapper sans arrêt en retire 4 par seconde avec la plus faible arme (les
+// - La jauge (D-5, D-6, D-14 ; D-27 : réduite de moitié après l'essai du porteur) : 50 points. Frapper sans arrêt en retire 4 par seconde avec la plus faible arme (les
 //   poings) et 6 avec la plus forte : l'écart (× 1,5 au plus) se juge par seconde de combat ; la part d'un coup suit
 //   donc la durée du coup (un couteau vif retire moins par coup qu'une masse lente) ; le coup appuyé retire plus, à
 //   proportion de sa lenteur (pas d'avantage). Une morsure d'Éteint retire 18 points ; la saisie à trois vide la jauge.
@@ -14,8 +14,8 @@ import { typeDe, type CleObjet } from "./etoiles.ts";
 import { nommer, type Inventaire, type TypeObjet } from "./objets.ts";
 import { ARMES, POINGS, type Arme } from "./combat.ts";
 
-/** La jauge de duel, pleine (D-14). */
-export const JAUGE_DUEL = 100;
+/** La jauge de duel, pleine (D-14 : 100 ; D-27, 2026-10-16 : deux fois plus petite, des duels deux fois plus courts). */
+export const JAUGE_DUEL = 50;
 /** Points retirés par seconde de coups ininterrompus : avec la plus faible arme, avec la plus forte (D-14 : × 1,5). */
 export const TAUX_DUEL_MIN = 4;
 export const TAUX_DUEL_MAX = 6;

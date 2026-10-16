@@ -786,8 +786,8 @@ export class Hud {
         ? ""
         : inviteArreter(nomDe("agir"))
       : // Au clavier, on montre les vraies touches (E ou clic gauche, F ou clic droit).
-        [p.A ? `<kbd>${nomDe("agir")}</kbd> ${p.A.libelle}` : "", p.B ? `<kbd>${nomDe("examiner")}</kbd> ${p.B.libelle}` : "", this.inviteTir()].filter(Boolean).join("<span class='sep'>·</span>");
-    const cle = `${occupe}|${tenu}|${p.A?.libelle ?? ""}|${p.B?.libelle ?? ""}|${nomDe("agir")}|${nomDe("examiner")}|${this.inviteTir()}`;
+        [p.A ? `<kbd>${nomDe("agir")}</kbd> ${p.A.libelle}` : "", p.B ? `<kbd>${nomDe("examiner")}</kbd> ${p.B.libelle}` : "", this.inviteTir(), this.inviteMode()].filter(Boolean).join("<span class='sep'>·</span>");
+    const cle = `${occupe}|${tenu}|${p.A?.libelle ?? ""}|${p.B?.libelle ?? ""}|${nomDe("agir")}|${nomDe("examiner")}|${this.inviteTir()}|${this.inviteMode()}`;
     if (cle === this.derniereInvite) return;
     this.derniereInvite = cle;
     this.invite.innerHTML = texte;
@@ -1330,7 +1330,7 @@ export class Hud {
     }
     const c = this.element.querySelector<HTMLElement>(".mode-clavier")!;
     // Au clavier, pas d'étiquette « X Exploration / Combat » : on la prenait pour un bouton de plus (2026-10-08).
-    // La touche reste dans le panneau Commandes ; en combat, l'invite (Frapper, Esquiver) et son bord rouge suffisent.
+    // La touche est dans l'invite (0.11, inviteMode) et dans le panneau Commandes.
     c.hidden = true;
     c.querySelector("span")!.textContent = combat ? "Combat" : "Exploration";
     c.classList.toggle("combat", combat);
@@ -1626,6 +1626,15 @@ export class Hud {
     if (this.verbeLancer === "Tirer") return `<kbd>${nomDe("lancer")}</kbd> Tirer (maintenir : viser)`;
     if (this.verbeLancer === "Réarmer") return `<kbd>${nomDe("lancer")}</kbd> Réarmer`;
     return "";
+  }
+
+  /**
+   * Au clavier seulement (0.11, demande du porteur après l'essai du duel) : la touche qui fait passer de Combat à
+   * Exploration, et l'inverse, toujours dans l'invite (au toucher, le bouton du mode suffit).
+   */
+  private inviteMode(): string {
+    if (this.boutonA) return "";
+    return `<kbd>${nomDe("combat")}</kbd> ${this.element.classList.contains("en-combat") ? "Exploration" : "Combat"}`;
   }
 
   /**

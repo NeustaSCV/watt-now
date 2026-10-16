@@ -22,7 +22,7 @@ import { LIEU_DES_CLES } from "./economie.ts";
 import { OBJETS, type TypeObjet } from "./objets.ts";
 
 test("D-14 : les poings retirent 4 points par seconde, la plus forte arme 6 ; l'écart ne dépasse jamais × 1,5", () => {
-  assert.equal(JAUGE_DUEL, 100);
+  assert.equal(JAUGE_DUEL, 50);
   assert.equal(tauxDuel(POINGS), TAUX_DUEL_MIN);
   const taux = ARMES.map(tauxDuel);
   assert.equal(Math.max(...taux), TAUX_DUEL_MAX);
@@ -61,21 +61,21 @@ function dureeDuel(arme: Arme, touche: number, alea: () => number): number {
   return t / 1000;
 }
 
-test("D-5 : un duel simulé entre deux joueurs de même force dure de 20 à 40 s", () => {
+test("D-5, D-27 : un duel simulé entre deux joueurs de même force dure de 10 à 20 s", () => {
   let graine = 7;
   const alea = () => ((graine = (graine * 16807) % 2147483647) / 2147483647);
-  // Tous les coups touchés (le plus court) : 17 à 25 s, quelle que soit l'arme (D-14).
+  // Tous les coups touchés (le plus court) : 8 à 13 s, quelle que soit l'arme (D-14, D-27).
   for (const a of [POINGS, ...ARMES]) {
     const d = dureeDuel(a, 1, alea);
-    assert.ok(d >= 16 && d <= 26, `${a.nom} : ${d.toFixed(1)} s`);
+    assert.ok(d >= 7 && d <= 13, `${a.nom} : ${d.toFixed(1)} s`);
   }
-  // Avec les esquives et les ratés (deux coups sur trois touchent), en moyenne sur cent duels : 20 à 40 s.
+  // Avec les esquives et les ratés (deux coups sur trois touchent), en moyenne sur cent duels : 10 à 20 s.
   for (const objet of [null, "machette", "masse", "couteau", "glaive"] as const) {
     const a = objet ? ARMES.find((x) => x.objet === objet)! : POINGS;
     let total = 0;
     for (let i = 0; i < 100; i++) total += dureeDuel(a, 2 / 3, alea);
     const moyenne = total / 100;
-    assert.ok(moyenne >= 20 && moyenne <= 40, `${a.nom} : ${moyenne.toFixed(1)} s`);
+    assert.ok(moyenne >= 10 && moyenne <= 20, `${a.nom} : ${moyenne.toFixed(1)} s`);
   }
 });
 
