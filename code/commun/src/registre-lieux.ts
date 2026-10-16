@@ -73,6 +73,11 @@ export interface FicheLieu {
   /** Une halte : ce qu'on dit quand la route y passe (« il faudra la traverser à pied ») ; sans : « y passer ». */
   traverser?: string;
   musique: MusiqueLieu;
+  /**
+   * Le duel entre joueurs y est-il permis ? (0.11, duel-entre-joueurs.md §7 : chaque lieu doit le dire.) Dans les haltes
+   * seulement ; jamais chez soi, au Comptoir, ni dans un lieu à soi (on y est seul).
+   */
+  duel: boolean;
   /** Sur la carte, quand on n'est pas à la bonne sortie : par où repartir vers `etape` (sans : la phrase commune). */
   pourPartir?: (etape: LieuId) => string;
 }
@@ -85,6 +90,7 @@ export const REGISTRE_LIEUX: Readonly<Record<LieuId, FicheLieu>> = {
   terrain: {
     id: "terrain",
     nature: "terrain",
+    duel: false,
     niveau: 0,
     etape: "maison",
     plan: null,
@@ -94,6 +100,7 @@ export const REGISTRE_LIEUX: Readonly<Record<LieuId, FicheLieu>> = {
   station: {
     id: "station",
     nature: "halte",
+    duel: true,
     niveau: 1,
     etape: "H1A",
     plan: PLAN_VUE_HALTE,
@@ -104,11 +111,12 @@ export const REGISTRE_LIEUX: Readonly<Record<LieuId, FicheLieu>> = {
         ? "Pour partir, prends le chemin de terre au nord de la route, à l'ouest de la station, jusqu'à la lisière."
         : "Pour partir, rejoins le bout de la route, du côté de ta destination.",
   },
-  comptoir: { id: "comptoir", nature: "neutre", niveau: 0, etape: null, plan: null, musique: "comptoir" },
-  gue: { id: "gue", nature: "halte", niveau: 1, etape: "H1B", plan: PLAN_VUE_GUE, traverser: "le traverser", musique: "gue" },
+  comptoir: { id: "comptoir", nature: "neutre", duel: false, niveau: 0, etape: null, plan: null, musique: "comptoir" },
+  gue: { id: "gue", nature: "halte", duel: true, niveau: 1, etape: "H1B", plan: PLAN_VUE_GUE, traverser: "le traverser", musique: "gue" },
   cooperative: {
     id: "cooperative",
     nature: "personnel",
+    duel: false,
     niveau: 1,
     etape: "L1A",
     portes: { initiales: portesInitiales, zone: zoneCoop },
@@ -122,6 +130,7 @@ export const REGISTRE_LIEUX: Readonly<Record<LieuId, FicheLieu>> = {
   moulin: {
     id: "moulin",
     nature: "personnel",
+    duel: false,
     niveau: 1,
     etape: "L1B",
     portes: { initiales: portesInitialesMoulin, zone: zoneMoulin },
@@ -133,10 +142,11 @@ export const REGISTRE_LIEUX: Readonly<Record<LieuId, FicheLieu>> = {
   },
   // ---------- 0.10 : le niveau 2, branché vide (chantier A) ; leur contenu aux chantiers H à K ----------
   // H2A (chantier H) : les murs du modèle arrêtent la vue (commun/src/route-pont.ts).
-  route_pont: { id: "route_pont", nature: "halte", niveau: 2, etape: "H2A", plan: PLAN_ROUTE_PONT, traverser: "la traverser", musique: "route_pont" },
+  route_pont: { id: "route_pont", nature: "halte", duel: true, niveau: 2, etape: "H2A", plan: PLAN_ROUTE_PONT, traverser: "la traverser", musique: "route_pont" },
   grand_hotel: {
     id: "grand_hotel",
     nature: "personnel",
+    duel: false,
     niveau: 2,
     etape: "L2A",
     // 0.10, chantier J : le plan de l'hôtel, ses pièces sombres (commun/src/hotel.ts).
@@ -147,11 +157,12 @@ export const REGISTRE_LIEUX: Readonly<Record<LieuId, FicheLieu>> = {
     pourPartir: () => "Pour partir, reprends la promenade, à l'est.",
   },
   // 0.10, chantier I : la corniche du Cap Rouge (commun/src/corniche.ts) : la vue par pièce, le tunnel noir.
-  corniche: { id: "corniche", nature: "halte", niveau: 2, etape: "H2B", plan: PLAN_CORNICHE, sombre: sombreCorniche, traverser: "la traverser", musique: "corniche" },
+  corniche: { id: "corniche", nature: "halte", duel: true, niveau: 2, etape: "H2B", plan: PLAN_CORNICHE, sombre: sombreCorniche, traverser: "la traverser", musique: "corniche" },
   // 0.10, chantier K : le phare du cap (commun/src/phare.ts, phare-vivant.ts) ; son épave est un état, comme une porte.
   phare: {
     id: "phare",
     nature: "personnel",
+    duel: false,
     niveau: 2,
     etape: "L2B",
     portes: { initiales: portesInitialesPhare, zone: zonePhare },
@@ -182,6 +193,11 @@ export function estPersonnel(lieu: LieuId): boolean {
 /** Une halte partagée, qu'on traverse (la station, le gué, la route du pont, la corniche). */
 export function estHalte(lieu: LieuId): boolean {
   return REGISTRE_LIEUX[lieu].nature === "halte";
+}
+
+/** Le duel entre joueurs est-il permis ici ? (0.11 : les quatre haltes seulement.) */
+export function duelPermis(lieu: LieuId): boolean {
+  return REGISTRE_LIEUX[lieu].duel;
 }
 
 /** Là où l'on est seul (son terrain, ses lieux à soi) : la pause y est possible. */

@@ -63,7 +63,7 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
       },
       "Un geste court (ramasser, cueillir) se fait en **maintenant** {agir} jusqu'au bout : si tu lâches trop tôt, il s'arrête. Un geste long (démonter, fabriquer longtemps) se lance d'un appui et s'arrête d'un autre appui. Ce qui est fait reste fait : tu reprends là où tu t'étais arrêté.",
       { sous_titre: "Les deux modes" },
-      "Le mode **Exploration** sert à tout faire ; le mode **Combat** ({combat}) sert à frapper et esquiver. Le jeu passe tout seul en Combat quand un Éteint debout s'approche, et revient en Exploration quand plus rien ne menace. Voir la rubrique « Se battre ».",
+      "Le mode **Exploration** sert à tout faire ; le mode **Combat** ({combat}) sert à frapper et esquiver. Le jeu passe tout seul en Combat quand un Éteint debout s'approche, et y reste : c'est toi qui reviens en Exploration. Voir la rubrique « Se battre ».",
       { sous_titre: "Le reste" },
       {
         liste: [
@@ -393,7 +393,17 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
     titre: "Se battre",
     resume: "Le mode Combat, le coup, le coup appuyé, repousser, l'esquive, les armes et leur usure, la saisie.",
     blocs: [
-      "Le mode **Combat** ({combat}) se met tout seul quand un Éteint debout approche. En Combat, {agir} frappe et {examiner} esquive. Tu vises automatiquement l'Éteint le plus proche, devant toi.",
+      "Le mode **Combat** ({combat}) se met tout seul quand un Éteint debout approche. Il ne repasse jamais tout seul en Exploration : c'est toi qui y reviens ({combat}). En Combat, {agir} frappe et {examiner} esquive. Tu vises automatiquement l'Éteint le plus proche, devant toi.",
+      { sous_titre: "Le duel" },
+      "Dans une halte, chacun a un **halo** au sol : **vert** en Exploration, **rouge** en Combat. En rouge, tu peux frapper un voyageur, et lui aussi.",
+      {
+        liste: [
+          "Le premier coup qui touche lance un **duel** : une barre sous chaque nom. Personne n'y perd de santé.",
+          "Celui dont la barre se vide perd : l'autre prend **un objet au hasard** dans son sac.",
+          "Le perdant a un halo **blanc** : on le laisse tranquille 45 secondes.",
+          "On ne quitte pas la halte pendant un duel. Trop loin l'un de l'autre trop longtemps, et le duel s'arrête.",
+        ],
+      },
       { sous_titre: "Frapper" },
       {
         liste: [

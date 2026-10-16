@@ -1,6 +1,10 @@
 # Le combat entre joueurs : le duel
 
-*Version : v0.3 · 2026-10-16 · **Statut : règles décidées, planifiées (`plan-duel.md`, version 0.11), pas encore codées**.*
+*Version : v0.5 · 2026-10-16 · **Statut : codé en 0.11 (en préparation)** (`plan-duel.md`).*
+
+*v0.5 (2026-10-16) : D-25 (les sept choix du codage, acceptés) et D-26 (l'indice du Combat différé).*
+
+*v0.4 (2026-10-16) : le duel codé en 0.11, en recette ; le statut seul change, aucune décision.*
 
 *v0.3 (2026-10-16) : les questions D-7 à D-24 (dont les choix sur maquette, D-19), apparues en préparant le plan, tranchées par le porteur, et sa demande D-16 (§10) ; le duel passe **avant** les murs et les sols, en **0.11** (les murs en 0.12).*
 
@@ -113,6 +117,8 @@
 | D-22 | Une phrase pour les témoins à la fin d'un duel | **Rien** : ils voient les étiquettes au-dessus des duellistes |
 | D-23 | Les phrases trop longues pour l'écran | **Raccourcies** (elles remplacent celles de D-15) : voir ci-dessous |
 | D-24 | Un repère des 45 s de protection | **Oui : l'anneau du perdant devient blanc et se vide comme une horloge** pendant 45 s, vu de tous ; il reprend sa couleur à la fin. Le perdant peut lancer un duel pendant ce temps (§5) ; il garde l'anneau blanc jusqu'au bout des 45 s |
+| D-25 | Ce que le codage a dû choisir (accepté le 2026-10-16) | **(1)** Un duel coupe un échange ou une leçon : « Un duel commence : l'échange est annulé. » / « Un duel commence : la leçon s'arrête. » ; **(2)** épuisé, un coup sur un joueur retire quand même sa part pleine ; **(3)** l'arme gagnée arrive neuve (l'usure reste chez le perdant, comme à l'échange) ; **(4)** quand la saisie à trois vide la jauge, les trois Éteints lâchent prise ; **(5)** un perdant protégé ne fait pas écran : un Éteint derrière lui prend le coup ; **(6)** god reste hors du duel même quand il n'est plus invincible ; **(7)** le corps qui s'effondre pendant la minute d'absence : le joueur lit « Des inconnus t'ont ramené chez toi, sans ton sac. » à son retour |
+| D-26 | L'indice « En Combat, les autres te voient en rouge. » arrive en même temps que « Duel avec… » chez le joueur frappé | **Différé** : il attend un passage en Combat sans duel (le bouton ou un Éteint) |
 | D-15 | Les phrases du jeu (des messages qui passent ; chaque indice une seule fois) | Acceptées telles quelles : voir ci-dessous |
 
 **Les phrases (D-23, raccourcies le 2026-10-16 ; elles remplacent D-15)** :

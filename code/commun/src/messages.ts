@@ -281,6 +281,8 @@ export type MessageClient =
   | MessageClientArrivee
   // Le péage des survivants (plan 0.10 §3.6, chantier H) : voir le bloc « péage » en fin de fichier.
   | MessageClientPeage
+  // Le duel entre joueurs (0.11, plan-duel.md §2) : voir le bloc « duel » en fin de fichier.
+  | MessageClientDuel
   | { t: "interagir"; cible: Cible; verbe: Verbe }
   | { t: "manger"; objet: TypeObjet }
   | { t: "boire" }
@@ -380,6 +382,13 @@ export interface AutreVu extends Personne {
   dos?: CleObjet;
   /** Il dort (0.9) : un état, pas un geste, pour qu'un joueur arrivé après le voie couché ; absent : debout. */
   couche?: true;
+  /** 0.11 (duel, D-17) : en mode Combat, son halo est rouge ; absent : vert (Exploration). */
+  rouge?: true;
+  /**
+   * 0.11 (duel, D-24) : il vient de perdre un duel et ne peut pas être provoqué jusqu'à cette heure du serveur (ms) :
+   * son anneau est blanc et se vide. Absent : pas protégé.
+   */
+  protegeJusqua?: number;
 }
 
 export type OperationComptoir =
@@ -628,7 +637,9 @@ export type MessageServeur =
   // Le Grand Hôtel, « le check-in » (plan 0.10, chantier J) : voir le bloc « l'hôtel » en fin de fichier.
   | MessageServeurHotel
   // 0.10, chantier K : voir le bloc « le phare » en fin de fichier.
-  | MessageServeurPhare;
+  | MessageServeurPhare
+  // Le duel entre joueurs (0.11, plan-duel.md §2) : voir le bloc « duel » en fin de fichier.
+  | MessageServeurDuel;
 
 /** Un projectile, vu par le client (Book 25 §10.3) : d'où il part, où il arrive, et ce qu'il y fait. */
 export interface ProjectileVu {
@@ -807,7 +818,7 @@ export interface Bienvenue {
 export type AllureVue = 0 | 1 | 2 | 3;
 
 /** Les gestes d'un autre joueur que le client joue sur son personnage (plan 0.9 §3.1). */
-export type GesteAutre = "frappe" | "poussee" | "esquive" | "degagement" | "touche" | "action" | "fin_action" | "effondre" | "releve" | "couche";
+export type GesteAutre = "frappe" | "poussee" | "esquive" | "degagement" | "touche" | "action" | "fin_action" | "effondre" | "releve" | "couche" | "tressaille";
 
 export interface GesteVu {
   /** Le joueur qui fait le geste. */
@@ -879,3 +890,35 @@ export type MessageServeurPhare =
    * d'information depuis le 2026-10-15 : pas de fenêtre en jeu) ; gardé pour la compatibilité.
    */
   { t: "phare"; etat: EtatPhareVu; cargo?: true; corne?: true; avertissement?: string };
+
+// ---------- Le duel entre joueurs (0.11 ; book/plans/plan-duel.md §2, duel-entre-joueurs.md) ----------
+
+export type MessageClientDuel =
+  /**
+   * Le mode du joueur (D-17) : Combat (halo rouge) ou Exploration (vert), qu'il vienne du bouton, de la touche, de la
+   * bascule automatique face à un Éteint ou d'un coup reçu d'un joueur (D-20). Le serveur s'en sert pour le halo et
+   * pour permettre de frapper un joueur.
+   */
+  { t: "mode"; combat: boolean };
+
+/** Un duel vu : les deux duellistes et leurs jauges (de 0 à 1). */
+export interface DuelVu {
+  a: number;
+  b: number;
+  ja: number;
+  jb: number;
+  /** Depuis cette heure du serveur (ms), ils sont à plus de 25 m l'un de l'autre (D-4) ; absent : assez près. */
+  loinDepuis?: number;
+}
+
+export type MessageServeurDuel =
+  /**
+   * Les duels en vue, à tous ceux qui voient l'un des deux duellistes, au tour des présences, quand une jauge (ou
+   * l'éloignement) change ; une liste vide efface. Chaque envoi donne la liste complète des duels que l'observateur voit.
+   */
+  | { t: "duels"; d: DuelVu[] }
+  /**
+   * La fin d'un duel, aux mêmes témoins, une fois (D-16, D-19, D-21) : `gagne` (un gagnant, l'objet pris ; `auSol` :
+   * tombé aux pieds du gagnant ; `sacVide` : le perdant n'avait rien à prendre) ou `annule` (la fuite).
+   */
+  | { t: "duel_fin"; a: number; b: number; issue: "gagne" | "annule"; gagnant?: number; objet?: CleObjet; auSol?: true; sacVide?: true };

@@ -25,6 +25,7 @@ import {
 import {
   REGISTRE_LIEUX,
   REINITIALISATION_LIEU_MS,
+  duelPermis,
   estHalte,
   estPartage,
   estPersonnel,
@@ -155,4 +156,11 @@ test("R18 : la fiche de carte des lieux du niveau 2 ne dit pas ce qu'on y trouve
   assert.equal(LIEUX.grand_hotel.nom, "Le Grand Hôtel des Flots");
   assert.equal(LIEUX.corniche.nom, "La corniche du Cap Rouge");
   assert.equal(LIEUX.phare.nom, "Le phare du cap");
+});
+
+test("0.11 (duel, §7) : chaque lieu dit si le duel y est permis ; seulement dans les quatre haltes", () => {
+  for (const lieu of TOUS_LES_LIEUX) assert.equal(typeof (ficheLieu(lieu) as { duel?: unknown }).duel, "boolean", `${lieu} : le champ duel`);
+  assert.deepEqual(TOUS_LES_LIEUX.filter(duelPermis), ["station", "gue", "route_pont", "corniche"]);
+  // Jamais chez soi, au Comptoir, ni dans un lieu à soi.
+  for (const lieu of TOUS_LES_LIEUX) if (!estHalte(lieu)) assert.equal(duelPermis(lieu), false, lieu);
 });

@@ -144,6 +144,9 @@ export function messageValide(m: unknown): m is MessageClient {
       return chaine(m.vers);
     case "frapper":
       return booleen(m.appuye);
+    // Le mode Combat ou Exploration (0.11, duel, D-17).
+    case "mode":
+      return booleen(m.combat);
     case "esquiver":
       return nombre(m.dx) && nombre(m.dz);
     case "pause":

@@ -297,6 +297,19 @@ export function creerArme(objet: TypeObjet): THREE.Group | null {
   return arme;
 }
 
+/** Le tressaillement (duel 0.11) : sa durée (s), l'angle du pli de tout le buste (rad), et sa part par os. */
+const DUREE_TRESSAILLEMENT = 0.36;
+const ANGLE_TRESSAILLEMENT = 0.75;
+const PLI_BUSTE: readonly [string, number][] = [
+  ["spine_02", 0.25],
+  ["spine_03", 0.3],
+  ["neck_01", 0.45],
+];
+const _axe = new THREE.Vector3();
+const _q1 = new THREE.Quaternion();
+const _q2 = new THREE.Quaternion();
+const _q3 = new THREE.Quaternion();
+
 export class Personnage {
   readonly objet = new THREE.Group();
   readonly famille: Famille;
@@ -320,6 +333,9 @@ export class Personnage {
   /** Le remous de l'eau autour des jambes, dans la mare (créé à la première entrée). */
   private remous: THREE.Group | null = null;
   private tempsRemous = 0;
+  /** Le tressaillement (duel 0.11, coup reçu V2) : le temps qui reste (s), et les os du dos et du cou qui plient. */
+  private tressaille = 0;
+  private osBuste: { os: THREE.Bone; part: number }[] = [];
 
   /** `apparence` : celle choisie à la création (Book 14 §3) ; sinon, celle du personnage de référence de la famille. */
   constructor(famille: Famille, apparence: Apparence = APPARENCES_DE_REFERENCE[famille]) {
@@ -362,6 +378,12 @@ export class Personnage {
     }
     // L'arme dans le dos : un groupe accroché au torse, à part comme l'arme en main (on la montre ou la cache).
     corps.accrocher(this.dos, "spine_03");
+    // Le buste qui plie au coup reçu d'un joueur : la part de chaque os dans le pli (le cou un peu plus, la tête suit).
+    this.osBuste = [];
+    for (const [nom, part] of PLI_BUSTE) {
+      const os = corps.osNomme(nom);
+      if (os) this.osBuste.push({ os, part });
+    }
     this.objet.add(corps.objet);
     // Un seul maillage pour tout le personnage (même image, un appel de dessin) ; l'arme en main reste à part.
     corps.fondre([this.main, this.dos]);
@@ -575,6 +597,34 @@ export class Personnage {
     this.lancer(Math.random() < 0.5 ? "Hit_Chest" : "Hit_Head", 1.2);
   }
 
+  /**
+   * Un coup reçu d'un joueur pendant un duel (0.11, D-19 coup reçu V2) : **le buste plie en arrière puis revient**, les
+   * pieds ne bougent pas. Ni recul ni étourdissement : l'animation en cours continue dessous (on peut riposter aussitôt).
+   */
+  tressaillir(): void {
+    this.tressaille = DUREE_TRESSAILLEMENT;
+  }
+
+  /** Le pli du tressaillement, posé par-dessus l'animation : une rotation autour de l'axe des épaules du personnage. */
+  private plier(dt: number): void {
+    if (this.tressaille <= 0 || this.osBuste.length === 0) return;
+    this.tressaille = Math.max(0, this.tressaille - dt);
+    const t = 1 - this.tressaille / DUREE_TRESSAILLEMENT;
+    // Il part vite, tient un instant, revient en douceur.
+    const enveloppe = Math.sin(Math.PI * Math.min(1, t * 1.25)) * (t < 0.8 ? 1 : (1 - t) / 0.2);
+    const epaules = _axe.set(1, 0, 0).applyQuaternion(this.objet.getWorldQuaternion(_q1));
+    for (const { os, part } of this.osBuste) {
+      const parent = os.parent;
+      if (!parent) continue;
+      parent.updateWorldMatrix(true, false);
+      parent.getWorldQuaternion(_q1);
+      // En arrière : la poitrine part vers le dos (−z du personnage), donc un angle négatif autour de l'axe des épaules.
+      _q2.setFromAxisAngle(epaules, -ANGLE_TRESSAILLEMENT * part * enveloppe);
+      // q_local' = parent⁻¹ · pli · parent · q_local (comme le dos droit du Noyé, eteint.ts)
+      os.quaternion.premultiply(_q3.copy(_q1).invert().multiply(_q2).multiply(_q1));
+    }
+  }
+
   /** `duree` (s), si donnée, fixe la vitesse pour que le geste dure exactement ce temps. */
   private lancer(nom: string, vitesse: number, duree?: number): void {
     const a = this.corps?.jouer(nom, { boucle: false, fondu: 0.08, vitesse });
@@ -679,5 +729,6 @@ export class Personnage {
       c.jouer(this.famille === "charbonniers" ? "Idle_Torch_Loop" : "Idle_Lantern_Loop", { fondu: 0.4 });
     else c.jouer("Idle_Loop", { fondu: 0.3, vitesse: 1 });
     c.mettreAJour(dt);
+    if (!this.effondre && !this.couche) this.plier(dt);
   }
 }

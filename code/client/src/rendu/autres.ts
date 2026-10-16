@@ -1,49 +1,16 @@
 // Les autres joueurs croisés à la halte et au comptoir (É4, lot 3) : leur personnage de famille (la silhouette se
 // reconnaît de loin, Book 18 §4), leur nom au-dessus de la tête, et leur lampe la nuit. En 0.9 (plan §3.1) : montrés
-// 150 ms en arrière, sans à-coups, à leur allure, avec leurs gestes et l'arme du coup en main.
+// 150 ms en arrière, sans à-coups, à leur allure, avec leurs gestes et l'arme du coup en main. En 0.11 (duel) : leur
+// halo au sol (rendu/halo.ts), et leur nom passe dans la couche HTML au-dessus du monde (client/src/etiquettes.ts), où
+// se mettent aussi les jauges du duel.
 
 import * as THREE from "three";
 import type { AllureVue, AutreVu, GesteVu } from "../../../commun/src/messages.ts";
-import type { Famille } from "../../../commun/src/regles.ts";
 import { typeDe } from "../../../commun/src/etoiles.ts";
 import type { TypeObjet } from "../../../commun/src/objets.ts";
 import { Personnage, gesteDAction } from "./personnage.ts";
 import { FileGestes, HorlogeServeur, Interpolateur, RETARD_AFFICHAGE } from "./interpolation.ts";
-
-const COULEURS: Record<Famille, string> = { charbonniers: "#a4552f", voltaiques: "#2f5fa4", mecanistes: "#7f8f3a" };
-
-function etiquette(pseudo: string, famille: Famille): THREE.Sprite {
-  const c = document.createElement("canvas");
-  c.width = 256;
-  c.height = 64;
-  const g = c.getContext("2d")!;
-  g.font = "bold 26px 'Avenir Next', 'Helvetica Neue', sans-serif";
-  const largeur = Math.min(240, g.measureText(pseudo).width + 44);
-  const x0 = (256 - largeur) / 2;
-  g.fillStyle = "rgba(20, 24, 32, 0.72)";
-  // Une pastille arrondie (tracée à la main : roundRect manque sur les vieux Safari)
-  g.beginPath();
-  g.moveTo(x0 + 20, 12);
-  g.lineTo(x0 + largeur - 20, 12);
-  g.arc(x0 + largeur - 20, 32, 20, -Math.PI / 2, Math.PI / 2);
-  g.lineTo(x0 + 20, 52);
-  g.arc(x0 + 20, 32, 20, Math.PI / 2, -Math.PI / 2);
-  g.fill();
-  g.fillStyle = COULEURS[famille];
-  g.beginPath();
-  g.arc(x0 + 20, 32, 8, 0, Math.PI * 2);
-  g.fill();
-  g.fillStyle = "#f2efe6";
-  g.textBaseline = "middle";
-  g.fillText(pseudo, x0 + 34, 33, largeur - 42);
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false, transparent: true }));
-  s.scale.set(2, 0.5, 1);
-  s.position.y = 2.25;
-  s.renderOrder = 10;
-  return s;
-}
+import { Halo } from "./halo.ts";
 
 /** L'heure du serveur, recalée sur les `positions` reçues : la même pour tous les autres joueurs. */
 export const horlogeAutres = new HorlogeServeur();
@@ -65,7 +32,6 @@ export class VueAutre {
     this.cible = a;
     this.trajet = new Interpolateur(a.x, a.z, a.o);
     this.personnage = new Personnage(a.famille, a.apparence);
-    this.personnage.objet.add(etiquette(a.pseudo, a.famille));
     this.personnage.objet.position.set(a.x, 0, a.z);
     this.personnage.objet.rotation.y = a.o;
     this.equiper();
@@ -91,6 +57,27 @@ export class VueAutre {
   private etat(): void {
     this.personnage.coucher(this.cible.couche === true);
     this.personnage.porterLumiere(this.cible.lumiere);
+  }
+
+  /** Son halo (0.11, duel) : créé dans la première halte où il paraît. */
+  private halo: Halo | null = null;
+
+  /**
+   * Le halo, chaque image (0.11, D-19, D-24) : rouge s'il est en Combat, blanc pendant sa protection ; `montrer` : dans une
+   * halte, et debout. `ySol` : le vrai sol sous lui.
+   */
+  majHalo(dt: number, montrer: boolean, maintenantServeur: number, ySol: number): void {
+    const oui = montrer && !this.chute;
+    if (!oui) {
+      if (this.halo) this.halo.objet.visible = false;
+      return;
+    }
+    if (!this.halo) {
+      this.halo = new Halo();
+      this.objet.add(this.halo.objet);
+    }
+    this.halo.objet.visible = true;
+    this.halo.maj(dt, this.cible.rouge === true, this.cible.protegeJusqua, maintenantServeur, ySol, this.objet);
   }
 
   /** Il s'effondre : sa vue est gardée le temps de la chute après son départ du lieu (`Partants`). */
@@ -155,6 +142,10 @@ export class VueAutre {
       case "degagement":
       case "touche":
         p.toucher();
+        return;
+      // Un coup reçu d'un joueur, pendant un duel (0.11) : le buste plie et revient, sans recul.
+      case "tressaille":
+        p.tressaillir();
         return;
       case "action":
         p.agir(gesteDAction(g.action ?? ""));
