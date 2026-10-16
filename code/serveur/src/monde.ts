@@ -55,6 +55,8 @@ export class Monde {
   private readonly connexions = new Map<number, Connexion>();
   /** 0.11 (D-18) : les corps restés une minute après la déconnexion, là où il y a des Éteints (corps-absent.ts). */
   private readonly corps = new CorpsAbsents<{ joueur: Joueur; sortie: Sortie }>();
+  /** Ce qu'un joueur dont le corps est parti doit lire à son retour (son effondrement pendant la minute, D-18). */
+  private readonly aDireAuRetour = new Map<number, string[]>();
   private minuterieTick: NodeJS.Timeout | undefined;
   private minuterieSauvegarde: NodeJS.Timeout | undefined;
   private dernierTick = performance.now();
@@ -240,6 +242,9 @@ export class Monde {
     }
     // Ce que la base a fait pendant l'absence (Book 01 §2 bis).
     if (joueur.rapport) envoyer(socket, { t: "rapport", rapport: joueur.rapport });
+    // Son corps s'est effondré pendant la minute après sa déconnexion (0.11, D-18) : on le lui dit maintenant.
+    for (const texte of this.aDireAuRetour.get(compte.id) ?? []) envoyer(socket, { t: "info", texte });
+    this.aDireAuRetour.delete(compte.id);
     journal(`${compte.pseudo} arrive (${this.connexions.size} connecté(s))`);
   }
 
@@ -286,6 +291,7 @@ export class Monde {
 
   private renvoyerCorps(joueur: Joueur, sauver = true): void {
     joueur.corpsAbsent = false;
+    if (joueur.aDireAuRetour.length > 0) this.aDireAuRetour.set(joueur.compte.id, joueur.aDireAuRetour);
     if (sauver) joueur.sauvegarder();
     joueur.partir();
     this.aSauver = this.aSauver.filter((id) => id !== joueur.compte.id);

@@ -166,7 +166,7 @@ test("au bout d'une minute, le corps s'en va et la sauvegarde est à jour", () =
   }
 });
 
-test("effondré pendant la minute : l'effondrement habituel, le sac reste dans la halte, le corps s'en va", () => {
+test("effondré pendant la minute : l'effondrement habituel, le sac reste dans la halte, le corps s'en va ; il le lit à son retour", () => {
   const t = monter();
   try {
     const rose = t.brancher("Rose");
@@ -180,6 +180,14 @@ test("effondré pendant la minute : l'effondrement habituel, le sac reste dans l
     const perso = t.base.chargerPersonnage(rose.compte.id)!;
     assert.equal(perso.lieu, "terrain");
     assert.equal(t.base.chargerSacs("station", 0).length, 1, "le sac est resté sur place");
+    // À son retour, il lit ce qui lui est arrivé (une seule fois).
+    const retour = t.brancher("Rose", "station", rose.compte);
+    const infos = retour.recus.filter((m) => m.t === "info").map((m) => (m.t === "info" ? m.texte : ""));
+    assert.ok(infos.some((x) => x.includes("Des inconnus t'ont ramené chez toi, sans ton sac.")), infos.join(" | "));
+    retour.fermer();
+    t.attendre(61);
+    const encore = t.brancher("Rose", "terrain", rose.compte);
+    assert.ok(!encore.recus.some((m) => m.t === "info" && m.texte.includes("Des inconnus")), "pas une seconde fois");
   } finally {
     t.finir();
   }

@@ -232,7 +232,8 @@ const mode = new ModeCombat((combat, origine) => {
   envoyer({ t: "mode", combat });
   // Le Combat s'est mis tout seul : la pastille du bouton bat (D-19 bouton V2).
   if (origine !== "joueur") hud.combatAuto();
-  if (combat && estHalte(lieu)) indiceUneFois("combat_halte");
+  // Mis en Combat par un duel (D-20) : il lit déjà « Duel avec… » ; l'indice attend un passage en Combat sans duel.
+  if (combat && origine !== "serveur" && estHalte(lieu)) indiceUneFois("combat_halte");
 });
 /** L'arme équipée pour le combat (P-005) ; null : la meilleure du sac. */
 let armeEquipee: CleObjet | null = null;

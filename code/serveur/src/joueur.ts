@@ -1983,8 +1983,10 @@ export class Joueur implements Voyageur, ParticipantLecon {
     this.endurance = ENDURANCE_CONVALESCENCE;
     this.sauvegarder();
     this.envoyer({ t: "effondrement" });
-    this.info(`${raison} Des inconnus t'ont ramené chez toi, sans ton sac.`);
-    this.info("Tu n'as plus que tes poches (10 kg) : va reprendre ton sac, ou fabrique un sac de fortune.");
+    const textes = [`${raison} Des inconnus t'ont ramené chez toi, sans ton sac.`, "Tu n'as plus que tes poches (10 kg) : va reprendre ton sac, ou fabrique un sac de fortune."];
+    this.infos(textes);
+    // Effondré pendant la minute où son corps est resté (0.11, D-18) : il le lira à son retour.
+    if (this.corpsAbsent) this.aDireAuRetour = textes;
     this.envoyer(this.bienvenue(this.debutMonde));
   }
 
@@ -2353,6 +2355,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
 
   /** Parti, mais son corps est encore là (la minute après la déconnexion) : personne ne le joue. */
   corpsAbsent = false;
+  /** Ce qu'il a manqué pendant cette minute et qu'on lui dira à son retour (l'effondrement). */
+  aDireAuRetour: string[] = [];
 
   /** Ce qui dit si son corps reste à la déconnexion. */
   get etatPourCorps(): EtatPourCorps {
