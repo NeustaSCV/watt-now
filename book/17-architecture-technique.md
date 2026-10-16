@@ -39,7 +39,7 @@
 
 **Le serveur fait autorité** : c'est lui qui décide de tout (combat, crafting, économie). Le client ne fait qu'afficher et envoyer les intentions du joueur. Cela empêche la triche et garde le monde cohérent.
 
-**Déconnexion d'office (0.4, 2026-10-08)** : un joueur qui ne fait rien depuis **5 minutes** (réglage à chaud `inactivite_min`) est déconnecté. Ne comptent pas : les pings, les mesures, ni l'intention « ne pas bouger » que le client renvoie par sécurité. Hors ligne, la faim, la soif et la fatigue sont **gelées** (Book 01 §2 bis) : connecté et parti, elles baisseraient pour rien. Le joueur voit un écran qui explique la pause, redonne le conseil de l'abri, et propose « Reprendre ».
+**Déconnexion d'office (0.4, 2026-10-08)** : un joueur qui ne fait rien depuis **5 minutes** (réglage à chaud `inactivite_min`) est déconnecté. Ne comptent pas : les pings, les mesures, ni l'intention « ne pas bouger » que le client renvoie par sécurité. Hors ligne, la faim, la soif et la fatigue sont **gelées** (Book 01 §2 bis) : connecté et parti, elles baisseraient pour rien. Le joueur voit un écran qui explique la pause, redonne le conseil de l'abri, et propose « Reprendre ». **Pendant la pause du jeu, on n'est jamais déconnecté** (0.10.1) : les 5 minutes repartent à la fin de la pause.
 
 **Ce que le serveur ne croit jamais** (0.1.1, 2026-10-08, après la revue BMAD) :
 

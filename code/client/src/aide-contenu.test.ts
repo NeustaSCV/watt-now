@@ -171,3 +171,11 @@ test("0.10 aide : l'hôtel et le phare disent comment, sans divulgâcher (ni car
   for (const secret of [/cargo/i, /épave/i, /conteneur/i, /naufrag/i, /s'échoue/i, /lingerie/i, /machinerie/i, /suite/i, /tôles/i, /couvertures de laine/i, /lanterne-tempête/i, /roulements/i, /fer à souder/i, /porte de four/i, /jerrican/i, /rabot/i, /cloche/i, /soufflet/i, /tête du robot/i, /escabeau/i])
     assert.doesNotMatch(tout, secret);
 });
+
+test("0.10.1 : au téléphone, l'aide de la pose ne dit pas que la lumière tourne le fantôme ; au clavier, rien ne change", async () => {
+  const { selonLeMode } = await import("./aide.ts");
+  const { avecTouches } = await import("./touches.ts");
+  const ligne = RUBRIQUES_AIDE.flatMap((r) => r.blocs).flatMap((b) => (typeof b === "object" && "liste" in b ? b.liste : [])).find((l) => l.startsWith("Tourner : la molette"))!;
+  assert.equal(avecTouches(selonLeMode(ligne, true), true), "Tourner : la molette ou le bouton « Tourner ».");
+  assert.equal(selonLeMode(ligne, false), "Tourner : la molette, {lumiere} ou le bouton « Tourner ».");
+});

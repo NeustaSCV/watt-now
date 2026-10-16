@@ -128,3 +128,11 @@ test("les autres raisons sont celles que le jeu disait déjà ; une installation
   assert.equal(raisonArret({ type: "rampe_led", etat: { courant: true } }, {}), null);
   assert.equal(raisonArret({ type: "coffre", etat: {} }, {}), null);
 });
+
+test("R-12 : le pédalier qui porte la meule, sans alternateur ni dynamo, sert à affûter : pas de « Ne marche pas »", () => {
+  assert.equal(raisonArret({ type: "pedalier", etat: { meule: true } }, {}), null);
+  assert.equal(raisonArret({ type: "pedalier", etat: { meule: true, meuleFine: true } }, {}), null);
+  // Sans la meule, toujours la phrase du serveur ; avec l'alternateur et sans batterie, toujours la batterie.
+  assert.equal(raisonArret({ type: "pedalier", etat: { soufflet: true } }, {}), RAISON_PEDALIER_SANS_ORGANE);
+  assert.equal(raisonArret({ type: "pedalier", etat: { meule: true, alternateur: true } }, {}), RAISON_PEDALIER_SANS_BATTERIE);
+});

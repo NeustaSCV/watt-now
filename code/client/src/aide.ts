@@ -5,9 +5,17 @@
 import { RUBRIQUES_AIDE, type RubriqueAide } from "./aide-contenu.ts";
 import { avecTouches } from "./touches.ts";
 
+/**
+ * Ce qui, entre [[ et ]], ne vaut qu'au clavier : au téléphone, le morceau disparaît (0.10.1 : au doigt, la lumière ne
+ * tourne pas le fantôme de la pose, seul le bouton « Tourner » le fait).
+ */
+export function selonLeMode(texte: string, tactile: boolean): string {
+  return texte.replace(/\[\[(.*?)\]\]/g, (_, morceau: string) => (tactile ? "" : morceau));
+}
+
 /** Échappe le texte, puis rend le **gras**. */
 function enLigne(texte: string, tactile: boolean): string {
-  const sur = avecTouches(texte, tactile).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+  const sur = avecTouches(selonLeMode(texte, tactile), tactile).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
   return sur.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
 }
 

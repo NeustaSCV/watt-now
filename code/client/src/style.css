@@ -2221,6 +2221,19 @@ body {
   border-radius: 50%;
   display: inline-block;
 }
+/* R-11 (0.10.1) : « X te propose un échange. » tient sur une ligne, les deux boutons dessous. La boîte prend la largeur
+   de sa phrase (posée à left: 50 %, elle s'arrêtait à la moitié de l'écran) et la phrase coule comme un texte (en flex,
+   elle faisait deux colonnes). Un long pseudo passe à la ligne entre les mots. La leçon garde sa mise en page. */
+#hud .demande-echange:not(.demande-lecon) {
+  width: max-content;
+}
+#hud .demande-echange:not(.demande-lecon) p {
+  display: block;
+}
+#hud .demande-echange:not(.demande-lecon) .pastille {
+  margin-right: 6px;
+  vertical-align: 1px;
+}
 #hud .demande-echange div,
 #hud .panneau.echange .boutons {
   display: flex;

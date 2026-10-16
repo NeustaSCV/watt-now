@@ -183,8 +183,9 @@ export function raisonArret(i: { type: TypeInstallation; etat: EtatInstallation 
   const d = i.etat.declencheur;
   switch (i.type) {
     case "pedalier": {
-      // Rien de monté : la phrase que le serveur dit quand on pédale (R-06, une seule source).
-      if (!i.etat.alternateur && !i.etat.dynamo) return RAISON_PEDALIER_SANS_ORGANE;
+      // Rien de monté : la phrase que le serveur dit quand on pédale (R-06, une seule source). Avec la meule (ou la meule
+      // fine), il sert à affûter : il marche (R-12).
+      if (!i.etat.alternateur && !i.etat.dynamo) return i.etat.meule || i.etat.meuleFine ? null : RAISON_PEDALIER_SANS_ORGANE;
       // Comme le bouton A (interaction.ts) : il entraîne l'alternateur ou la dynamo, mais n'a rien à charger.
       const surPedalier = Object.values(i.etat.batteries ?? {}).some((n) => (n ?? 0) > 0);
       const enPoche = (Object.keys(CAPACITES) as TypeBatterie[]).some((b) => (inventaire[b] ?? 0) > 0);
