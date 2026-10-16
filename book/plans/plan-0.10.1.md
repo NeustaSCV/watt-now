@@ -226,3 +226,6 @@ En temps réel : **≈ 4 à 6 h de travail des agents**, en parallèle, plus le 
 | R-12 ✅ | À la recette : **un pédalier qui porte la meule** (sans alternateur ni dynamo) n'affiche pas « Ne marche pas : rien à entraîner… » : il sert à affûter |
 | R-13 ✅ | **La pile vide** sur le bouton Lumière : une frontale dont la petite batterie est vide montre une petite pile vide dans un coin du bouton |
 | R-14 ✅ | **Essai du porteur sur l'iPhone (2026-10-16)** : bon pour le zoom, la boussole, la fiche Examiner, l'échange, l'eau, la brume, les pierres, la pause. **L'escabeau n'a pas pu être essayé** (ce n'est pas la saison des fruits) : seuls les tests le couvrent |
+| R-15 ✅ | **L'aide au téléphone** ne cite plus de gestes du clavier dans la rubrique de la pose (« Échap, clic droit », « la molette ») ; au clavier, rien ne change |
+| R-16 ✅ | **À la mare, une gourde (ou des gourdes) pleine d'eau potable ne se remplit pas** : « Ta gourde est déjà pleine. » (le défaut existait en 0.10 : l'eau potable devenait brute) |
+| R-17 ✅ | **La bible** mise à jour après la fusion : version 0.10.1, murs et sols en 0.10.2, la bouteille d'eau, ce qui réchauffe l'hiver ; republiée |
