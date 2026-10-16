@@ -46,7 +46,8 @@ export type MemoirePresences = Map<number, Map<number, string>>;
 const positionsEnvoyees = new WeakMap<MemoirePresences, Map<number, Map<number, string>>>();
 
 function cleIdentite(a: AutreVu): string {
-  return `${a.pseudo}|${a.famille}|${a.lumiere ? 1 : 0}|${a.dos ?? ""}|${a.couche ? 1 : 0}|${JSON.stringify(a.apparence)}`;
+  // 0.11 (duel) : le halo rouge et la protection du perdant en font partie : ils ne partent que quand ils changent.
+  return `${a.pseudo}|${a.famille}|${a.lumiere ? 1 : 0}|${a.dos ?? ""}|${a.couche ? 1 : 0}|${a.rouge ? 1 : 0}|${a.protegeJusqua ?? ""}|${JSON.stringify(a.apparence)}`;
 }
 
 const clePosition = (o: Observateur, allure: AllureVue = o.allure ?? 0) => `${o.vu.x},${o.vu.z},${o.vu.o},${allure}`;
@@ -54,8 +55,12 @@ const clePosition = (o: Observateur, allure: AllureVue = o.allure ?? 0) => `${o.
 /** La vue passe-t-elle de a à b dans ce lieu ? (sans : à ciel ouvert) */
 export type VueDuLieu = (lieu: string, a: { x: number; z: number }, b: { x: number; z: number }) => boolean;
 
-/** Une diffusion : à appeler 10 fois par seconde (`tourDePresences`). `heure` : l'heure du serveur (ms) de cet envoi. */
-export function diffuserPresences(observateurs: Observateur[], memoire: MemoirePresences, vueDuLieu?: VueDuLieu, heure = Date.now()): void {
+/**
+ * Une diffusion : à appeler 10 fois par seconde (`tourDePresences`). `heure` : l'heure du serveur (ms) de cet envoi.
+ * Renvoie qui voit qui (pour chaque observateur, les joueurs qu'il voit) : les jauges du duel partent aux mêmes (0.11).
+ */
+export function diffuserPresences(observateurs: Observateur[], memoire: MemoirePresences, vueDuLieu?: VueDuLieu, heure = Date.now()): Map<number, Set<number>> {
+  const vus = new Map<number, Set<number>>();
   const parLieu = new Map<string, Observateur[]>();
   for (const o of observateurs) {
     if (!o.lieu) continue;
@@ -83,6 +88,7 @@ export function diffuserPresences(observateurs: Observateur[], memoire: MemoireP
           return !vueDuLieu || vueDuLieu(moi.lieu!, moi.vu, o.vu);
         })
       : [];
+    if (voisins.length > 0) vus.set(moi.id, new Set(voisins.map((o) => o.id)));
     // L'identité : seulement si quelqu'un entre ou sort du champ, ou si elle a changé.
     const maintenant = new Map(voisins.map((o) => [o.id, cles.get(o.id)!]));
     let change = maintenant.size !== avant.size;
@@ -125,4 +131,5 @@ export function diffuserPresences(observateurs: Observateur[], memoire: MemoireP
   }
   // Chaque geste ne part qu'une fois : la file est vidée, même si personne ne l'a vu.
   for (const o of observateurs) if (o.gestes?.length) o.gestes.length = 0;
+  return vus;
 }
