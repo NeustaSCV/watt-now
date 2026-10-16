@@ -1385,11 +1385,17 @@ export class Hud {
     this.pastille(type, `+${n} ${n > 1 ? d.pluriel : d.nom}`);
   }
 
+  /** Retire les pastilles de gain de cette sorte encore à l'écran (0.11 : l'objet gagné au duel a déjà son « + »). */
+  retirerGain(type: string): void {
+    for (const div of this.element.querySelectorAll<HTMLElement>(".gains .gain")) if (div.dataset.type === type) div.remove();
+  }
+
   /** Une pastille qui monte au-dessus du personnage et s'efface : l'effet immédiat d'une action. */
   pastille(type: TypeObjet | "feu_de_camp", texte: string): void {
     const conteneur = this.element.querySelector<HTMLElement>(".gains")!;
     const div = document.createElement("div");
     div.className = "gain";
+    div.dataset.type = type;
     div.innerHTML = `${icone(type, 22)}<span>${texte}</span>`;
     // Plusieurs gains à la fois : ils s'empilent.
     div.style.animationDelay = `${conteneur.children.length * 0.12}s`;

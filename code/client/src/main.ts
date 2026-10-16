@@ -1269,7 +1269,11 @@ function finDuel(m: Extract<MessageServeur, { t: "duel_fin" }>): void {
   const perdant = m.gagnant === m.a ? m.b : m.a;
   // Sa propre protection : le serveur ne s'envoie pas son identité ; elle commence maintenant (45 s, §5).
   if (perdant === monId) maProtection = Date.now() + decalage + PROTECTION_MS;
-  if (m.gagnant === monId && m.objet && !m.auSol) gainDuel = { type: typeDe(m.objet), jusqua: performance.now() + 2500 };
+  // Le serveur envoie le sac mis à jour avant cette fin : le « +1 » déjà montré s'efface ; s'il arrive après, il est sauté.
+  if (m.gagnant === monId && m.objet && !m.auSol) {
+    gainDuel = { type: typeDe(m.objet), jusqua: performance.now() + 2500 };
+    hud.retirerGain(m.objet);
+  }
 }
 
 /** Les sacs tombés au sol (effondrement) : on peut revenir les chercher. */
