@@ -42,7 +42,7 @@ import { texteAVenir } from "../../commun/src/lignees.ts";
 import { enteteFiche, piedFiche } from "./fiche-examiner.ts";
 import { brancherFicheBanc, htmlFicheBanc, type GesteBanc } from "./fiche-banc.ts";
 import { brancherCoffre, enteteCoffre } from "./panneau-coffre.ts";
-import { ajusterOffre, ajusterWotts, brancherEchange, htmlEchange, lirePlaces, remettrePlaces } from "./panneau-echange.ts";
+import { DELAI_DEMANDE_MS, DUREE_ECLAIR_MS, ajusterOffre, ajusterWotts, brancherEchange, htmlDemande, htmlEchange, lirePlaces, remettrePlaces, suivreEchange } from "./panneau-echange.ts";
 import { CaissePeage } from "./panneau-peage.ts";
 import type { Passage } from "../../commun/src/peage.ts";
 import { texteLieu, type Alentours } from "../../commun/src/lieu-recette.ts";
@@ -359,6 +359,9 @@ export class Hud {
   private dernierEchange = "";
   /** L'objet choisi dans le panneau d'échange (0.10.1, A3) : gardé d'un dessin à l'autre. */
   private choixEchange: CleObjet | null = null;
+  /** R-09 : la ligne « X a changé son offre… », et l'heure du dernier changement de ce que l'autre te donne (l'éclair). */
+  private avisEchange = false;
+  private eclairEchange = 0;
   private dernierMode = "";
   private images = 0;
   private depuis = performance.now();
@@ -828,8 +831,7 @@ export class Hud {
   /** Quelqu'un propose un échange : accepter ou refuser (sans réponse en 20 s, c'est non). */
   demandeEchange(de: Personne): void {
     const el = this.element.querySelector<HTMLElement>(".demande-echange")!;
-    el.innerHTML = `<p><span class="pastille" style="background:${COULEURS_FAMILLES[de.famille]}"></span><b>${de.pseudo}</b> te propose un échange.</p>
-      <div><button type="button" data-r="non">Refuser</button><button type="button" data-r="oui" class="oui">Voir l'échange</button></div>`;
+    el.innerHTML = htmlDemande(de.pseudo, COULEURS_FAMILLES[de.famille]);
     el.hidden = false;
     const repondre = (accepte: boolean) => {
       if (el.hidden) return;
@@ -838,16 +840,21 @@ export class Hud {
     };
     el.querySelector("[data-r='oui']")!.addEventListener("click", () => repondre(true));
     el.querySelector("[data-r='non']")!.addEventListener("click", () => repondre(false));
-    window.setTimeout(() => repondre(false), 20_000);
+    window.setTimeout(() => repondre(false), DELAI_DEMANDE_MS);
   }
 
   majEchange(e: EchangeVu | null): void {
     const nouveau = e !== null && this.echange === null;
+    // R-09 : l'autre a-t-il changé son offre (la ligne des accords, l'éclair de « Tu reçois ») ?
+    const suite = e ? suivreEchange(this.echange, e, this.avisEchange) : { avis: false, change: false };
+    this.avisEchange = suite.avis;
+    if (suite.change) this.eclairEchange = Date.now();
     this.echange = e;
     if (!e) {
       this.echangeOuvert(false);
       return;
     }
+    if (suite.change) window.setTimeout(() => this.dessinerEchange(), DUREE_ECLAIR_MS + 50);
     if (nouveau) {
       this.monOffre = { objets: {}, wotts: 0 };
       this.choixEchange = null;
@@ -876,6 +883,8 @@ export class Hud {
 
   private envoyerOffre(): void {
     this.envoiOffre = Date.now();
+    // Tu changes ton offre : la ligne « X a changé son offre » n'a plus lieu d'être.
+    this.avisEchange = false;
     this.actions.echange({ genre: "offrir", offre: this.monOffre });
     this.dessinerEchange();
   }
@@ -903,6 +912,8 @@ export class Hud {
       poche: this.wotts.poche,
       choisi: this.choixEchange,
       couleur: COULEURS_FAMILLES[e.avec.famille],
+      avis: this.avisEchange,
+      eclair: Date.now() - this.eclairEchange < DUREE_ECLAIR_MS ? Date.now() - this.eclairEchange : null,
     });
     if (html === this.dernierEchange) return;
     this.dernierEchange = html;

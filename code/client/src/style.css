@@ -2210,6 +2210,11 @@ body {
   align-items: center;
   gap: 8px;
 }
+/* R-09 : le trait qui raccourcit pendant les 20 s qu'on a pour répondre (la durée est posée par htmlDemande). */
+#hud .demande-echange { overflow: hidden; padding-bottom: 14px; }
+#hud .demande-echange .delai { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: rgba(59, 42, 30, 0.12); }
+#hud .demande-echange .delai span { display: block; height: 100%; background: var(--canard); transform-origin: left; animation: fondre-demande 20s linear forwards; }
+@keyframes fondre-demande { to { transform: scaleX(0); } }
 #hud .demande-echange .pastille {
   width: 10px;
   height: 10px;
@@ -2377,9 +2382,18 @@ body:has(#hud .panneau.echange:not([hidden])) #joystick {
 #hud .panneau.echange .accords { margin: 0; display: flex; justify-content: space-between; gap: 8px; font-size: 12px; min-height: 16px; }
 #hud .panneau.echange .accords span { opacity: 0.65; }
 #hud .panneau.echange .accords span.ok { opacity: 1; color: var(--canard); font-weight: 700; }
+/* R-09 : la ligne qui dit pourquoi les accords sont partis (l'autre a changé son offre), à la place des accords */
+#hud .panneau.echange .avis { margin: 0; font-size: 12px; min-height: 16px; color: var(--rouge); font-weight: 700; }
 #hud .panneau.echange .boutons { justify-content: stretch; }
 #hud .panneau.echange .boutons button { flex: 1 1 0; min-height: 44px; }
 #hud .panneau.echange .boutons button.oui { flex: 2 1 0; }
+/* R-09 : le bref éclair jaune sur « Tu reçois » quand l'autre change ce qu'il donne (1,2 s, comme DUREE_ECLAIR_MS) ;
+   rien si l'appareil demande moins de mouvement. */
+#hud .panneau.echange .recoit.change { animation: eclair-recoit 1.2s ease-out both; }
+@keyframes eclair-recoit { 0% { background: rgba(232, 197, 71, 0.55); } 100% { background: rgba(31, 94, 102, 0.07); } }
+@media (prefers-reduced-motion: reduce) {
+  #hud .panneau.echange .recoit.change { animation: none; }
+}
 /* « Tu reçois de ● X » ne sert qu'en paysage, où l'en-tête disparaît. */
 #hud .panneau.echange .de-qui { display: none; text-transform: none; letter-spacing: 0; font-weight: 700; }
 
