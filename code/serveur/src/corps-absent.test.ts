@@ -48,12 +48,24 @@ function monter() {
   const joueurDe = (id: number) => connexions.get(id)?.joueur;
   const corps = () => monde["corps"] as { get(id: number): { joueur: Joueur } | undefined; nombre: number };
   const halte = monde["halte"] as unknown as { eteints: ReturnType<typeof nouvelEteint>[]; nombrePresents: number };
-  /** Le monde avance, par tics de 50 ms. */
+  /**
+   * Le monde avance, par tics de 50 ms exactement. Le pas du monde se mesure à l'horloge réelle (`performance.now`) :
+   * on la fige pendant chaque tic, sinon une machine chargée (toute la suite de tests, une construction d'image) faisait
+   * des pas plus longs, et les Éteints allaient plus loin (test instable, vu au déploiement du 2026-10-16).
+   */
   const attendre = (secondes: number) => {
-    for (let s = 0; s < secondes - 1e-9; s += 0.05) {
-      mock.timers.tick(50);
-      monde["dernierTick"] = performance.now() - 50;
-      monde["tick"]();
+    const horloge = performance.now;
+    try {
+      for (let s = 0; s < secondes - 1e-9; s += 0.05) {
+        mock.timers.tick(50);
+        const instant = horloge.call(performance);
+        monde["dernierTick"] = instant - 50;
+        performance.now = () => instant;
+        monde["tick"]();
+        performance.now = horloge;
+      }
+    } finally {
+      performance.now = horloge;
     }
   };
   const finir = () => {
@@ -98,6 +110,9 @@ test("déconnecté dans une halte : le corps reste, les autres le voient, un Ét
 
 test("reconnecté pendant la minute : le même corps, au même endroit, même santé, sans doublon dans la halte", () => {
   const t = monter();
+  // Ce test ne parle pas des Éteints : sans eux, rien ne dépend du hasard ni de la charge de la machine (le pas du
+  // monde suit l'horloge réelle : machine chargée, les Éteints vont plus loin à chaque pas et finissaient par saisir le corps).
+  t.halte.eteints.length = 0;
   try {
     const rose = t.brancher("Rose");
     const corpsRose = t.joueurDe(rose.compte.id)!;
@@ -142,6 +157,9 @@ test("une connexion depuis ailleurs pendant qu'on joue : la nouvelle reprend le 
 
 test("au bout d'une minute, le corps s'en va et la sauvegarde est à jour", () => {
   const t = monter();
+  // Ce test ne parle pas des Éteints : sans eux, rien ne dépend du hasard ni de la charge de la machine (le pas du
+  // monde suit l'horloge réelle : machine chargée, les Éteints vont plus loin à chaque pas et finissaient par saisir le corps).
+  t.halte.eteints.length = 0;
   try {
     const rose = t.brancher("Rose");
     const corpsRose = t.joueurDe(rose.compte.id)!;
