@@ -31,6 +31,53 @@ export interface VueEchange {
   choisi: CleObjet | null;
   /** La couleur de la famille de l'autre (sa pastille). */
   couleur: string;
+  /** L'autre a changé son offre alors que tu avais dit d'accord : la ligne des accords le dit (R-09). */
+  avis?: boolean;
+  /** Depuis combien de ms l'autre a changé ce qu'il te donne, pendant l'éclair de « Tu reçois » (R-09) ; sinon null. */
+  eclair?: number | null;
+}
+
+// ---------- Les trois petits signes de la maquette (plan 0.10.1, R-09) ----------
+
+/** Le temps qu'on a pour répondre à une demande d'échange (sans réponse, c'est non) ; le trait fond en autant. */
+export const DELAI_DEMANDE_MS = 20_000;
+/** La durée de l'éclair jaune sur « Tu reçois » (la même que l'animation `eclair-recoit` du CSS). */
+export const DUREE_ECLAIR_MS = 1_200;
+
+/** La demande « X te propose un échange », avec son trait qui raccourcit pendant les 20 s. */
+export function htmlDemande(pseudo: string, couleur: string): string {
+  return `<p><span class="pastille" style="background:${couleur}"></span><b>${pseudo}</b> te propose un échange.</p>
+      <div><button type="button" data-r="non">Refuser</button><button type="button" data-r="oui" class="oui">Voir l'échange</button></div>
+      <span class="delai" aria-hidden="true"><span style="animation-duration:${DELAI_DEMANDE_MS / 1000}s"></span></span>`;
+}
+
+/** Une offre en une ligne, pour voir si elle a bougé d'un message à l'autre (l'ordre des objets ne compte pas). */
+function signeOffre(o: OffreEchange): string {
+  return `${poses(o)
+    .map(([c, n]) => `${c}:${n}`)
+    .sort()
+    .join(",")}|${o.wotts}`;
+}
+
+/** Ce que le HUD tire de deux messages d'échange successifs. */
+export interface SuiteEchange {
+  /** La ligne « X a changé son offre : redis d'accord si ça te va. » est à montrer. */
+  avis: boolean;
+  /** L'autre a changé ce qu'il te donne : « Tu reçois » s'éclaire. */
+  change: boolean;
+}
+
+/**
+ * Compare l'échange reçu au précédent (côté client : la règle du serveur ne bouge pas). La ligne paraît quand l'autre a
+ * changé son offre alors que tu avais dit d'accord (le serveur vient de retirer les accords) ; elle s'efface dès qu'un
+ * accord revient (tu redis d'accord, ou l'autre dit d'accord sur sa nouvelle offre). Quand c'est toi qui changes, ce
+ * qu'il te donne ne bouge pas : ni ligne ni éclair (le HUD efface la ligne à ton premier geste).
+ */
+export function suivreEchange(avant: EchangeVu | null, apres: EchangeVu, avis: boolean): SuiteEchange {
+  if (!avant || avant.avec.id !== apres.avec.id) return { avis: false, change: false };
+  const change = signeOffre(avant.lui) !== signeOffre(apres.lui);
+  if (apres.accordMoi || apres.accordLui) return { avis: false, change };
+  return { avis: avis || (change && avant.accordMoi), change };
 }
 
 /**
@@ -93,7 +140,9 @@ export function htmlEchange(v: VueEchange): string {
   const recus = poses(e.lui);
   const pionsRecus = recus.map(([c, n]) => `<span class="pion" title="${OBJETS[typeDe(c)].nom}">${icone(typeDe(c), 36)}${marques(c, n)}</span>`).join("");
   const wottsRecus = e.lui.wotts > 0 ? `<span class="pion-wotts">⚡ ${formaterWotts(e.lui.wotts)}</span>` : "";
-  const recoit = `<section class="z recoit">
+  // L'éclair jaune quand l'autre change ce qu'il donne ; un redessin pendant l'éclair le reprend où il en était.
+  const eclair = v.eclair != null && v.eclair < DUREE_ECLAIR_MS ? ` change" style="animation-delay:-${Math.round(v.eclair)}ms` : "";
+  const recoit = `<section class="z recoit${eclair}">
       <h3><span>Tu reçois <span class="de-qui">de ${pastille}${e.avec.pseudo}</span></span></h3>
       ${recus.length || e.lui.wotts > 0 ? `<div class="rang" data-defile="recoit">${pionsRecus}${wottsRecus}</div><p class="resume">${resume(recus, e.lui.wotts)}</p>` : `<p class="vide">${e.avec.pseudo} n'a encore rien posé.</p>`}
     </section>`;
@@ -132,9 +181,12 @@ export function htmlEchange(v: VueEchange): string {
       ${barreChoix(choisi, v.inventaire, o)}
     </section>`;
 
+  const accords = v.avis
+    ? `<p class="avis" role="status">${e.avec.pseudo} a changé son offre : redis d'accord si ça te va.</p>`
+    : `<p class="accords"><span class="${e.accordMoi ? "ok" : ""}">${e.accordMoi ? "✓ Tu es d'accord" : "Tu n'as pas encore dit oui"}</span>
+        <span class="${e.accordLui ? "ok" : ""}">${e.accordLui ? `✓ ${e.avec.pseudo} est d'accord` : `${e.avec.pseudo} réfléchit…`}</span></p>`;
   const pied = `<div class="pied">
-      <p class="accords"><span class="${e.accordMoi ? "ok" : ""}">${e.accordMoi ? "✓ Tu es d'accord" : "Tu n'as pas encore dit oui"}</span>
-        <span class="${e.accordLui ? "ok" : ""}">${e.accordLui ? `✓ ${e.avec.pseudo} est d'accord` : `${e.avec.pseudo} réfléchit…`}</span></p>
+      ${accords}
       <div class="boutons"><button type="button" data-annuler>Annuler</button>
         <button type="button" class="oui ${e.accordMoi ? "actif" : ""}" data-accord>${e.accordMoi ? "Je ne suis plus d'accord" : "Je suis d'accord"}</button></div>
     </div>`;

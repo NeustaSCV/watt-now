@@ -4,9 +4,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { ajusterOffre, ajusterWotts, brancherEchange, htmlEchange, lirePlaces, remettrePlaces, type GestesEchange, type VueEchange } from "./panneau-echange.ts";
+import { DELAI_DEMANDE_MS, DUREE_ECLAIR_MS, ajusterOffre, ajusterWotts, brancherEchange, htmlDemande, htmlEchange, lirePlaces, remettrePlaces, suivreEchange, type GestesEchange, type VueEchange } from "./panneau-echange.ts";
 import type { CleObjet } from "../../commun/src/etoiles.ts";
 import type { Inventaire } from "../../commun/src/objets.ts";
+import type { EchangeVu } from "../../commun/src/messages.ts";
 
 const INVENTAIRE: Inventaire = { gourde: 1, branche: 6, pierre: 4, pomme: 5, "lame_forgee#4": 1 } as Inventaire;
 
@@ -171,4 +172,65 @@ test("chaque bouton du panneau reçoit son geste, un seul", () => {
     "annuler",
     "accord",
   ]);
+});
+
+// ---------- R-09 : les trois petits signes de la maquette ----------
+
+/** Un échange vu, avec Marion qui pose une serpe et 5 carreaux. */
+function vu(autres: Partial<EchangeVu> = {}): EchangeVu {
+  return { ...vue().echange, ...autres };
+}
+
+test("R-09 : la ligne paraît quand Marion change son offre alors que tu avais dit d'accord", () => {
+  const avant = vu({ accordMoi: true });
+  const apres = vu({ lui: { objets: { "serpe#4": 1, carreau: 10 } as Inventaire, wotts: 30 } });
+  const s = suivreEchange(avant, apres, false);
+  assert.deepEqual(s, { avis: true, change: true });
+  const html = htmlEchange(vue({ echange: apres, avis: s.avis }));
+  assert.ok(html.includes('<p class="avis" role="status">Marion a changé son offre : redis d\'accord si ça te va.</p>'));
+  assert.ok(!html.includes('class="accords"'), "la ligne prend la place des accords");
+  // Sans la ligne, les accords reviennent.
+  assert.ok(htmlEchange(vue({ echange: apres })).includes('class="accords"'));
+});
+
+test("R-09 : pas de ligne quand c'est toi qui changes, ni quand tu n'avais pas dit d'accord", () => {
+  // Toi : ton offre bouge, la sienne pas (le serveur retire quand même les accords).
+  const toi = suivreEchange(vu({ accordMoi: true, accordLui: true }), vu({ moi: { objets: { pomme: 1 } as Inventaire, wotts: 0 } }), false);
+  assert.deepEqual(toi, { avis: false, change: false });
+  // Elle change, mais tu n'avais rien dit : l'éclair, pas la ligne.
+  const lui = suivreEchange(vu(), vu({ lui: { objets: {}, wotts: 30 } }), false);
+  assert.deepEqual(lui, { avis: false, change: true });
+  // Le même contenu dans un autre ordre n'est pas un changement.
+  const ordre = suivreEchange(vu({ accordMoi: true }), vu({ accordMoi: true, lui: { objets: { carreau: 5, "serpe#4": 1 } as Inventaire, wotts: 30 } }), false);
+  assert.deepEqual(ordre, { avis: false, change: false });
+  // Un premier message (ou un autre partenaire) : rien.
+  assert.deepEqual(suivreEchange(null, vu(), true), { avis: false, change: false });
+  assert.deepEqual(suivreEchange(vu({ accordMoi: true }), vu({ avec: { id: 3, pseudo: "Léo", famille: "voltaiques" }, lui: { objets: {}, wotts: 0 } }), false), { avis: false, change: false });
+});
+
+test("R-09 : la ligne reste tant que rien ne bouge, et s'efface quand un accord revient", () => {
+  const apres = vu({ lui: { objets: {}, wotts: 30 } });
+  assert.equal(suivreEchange(apres, apres, true).avis, true, "un message sans changement la garde");
+  assert.equal(suivreEchange(apres, { ...apres, accordMoi: true }, true).avis, false, "tu redis d'accord");
+  assert.equal(suivreEchange(apres, { ...apres, accordLui: true }, true).avis, false, "elle dit d'accord : l'offre se fige");
+});
+
+test("R-09 : l'éclair de « Tu reçois » est posé pendant 1,2 s, repris où il en était après un redessin", () => {
+  assert.ok(htmlEchange(vue({ eclair: 0 })).includes('class="z recoit change" style="animation-delay:-0ms"'));
+  assert.ok(htmlEchange(vue({ eclair: 400 })).includes('class="z recoit change" style="animation-delay:-400ms"'));
+  assert.ok(htmlEchange(vue({ eclair: DUREE_ECLAIR_MS })).includes('class="z recoit"'));
+  assert.ok(htmlEchange(vue({ eclair: null })).includes('class="z recoit"'));
+  // Le CSS : la même durée, et rien si l'appareil demande moins de mouvement.
+  const css = readFileSync(new URL("./style.css", import.meta.url), "utf8");
+  assert.ok(css.includes(`.recoit.change { animation: eclair-recoit ${DUREE_ECLAIR_MS / 1000}s`));
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{\s*#hud \.panneau\.echange \.recoit\.change \{ animation: none; \}/);
+});
+
+test("R-09 : la demande porte un trait qui fond en 20 s, le temps qu'on a pour répondre", () => {
+  assert.equal(DELAI_DEMANDE_MS, 20_000);
+  const html = htmlDemande("Marion", "#2f5fa4");
+  assert.ok(html.includes("<b>Marion</b> te propose un échange."));
+  assert.ok(html.includes('<span class="delai" aria-hidden="true"><span style="animation-duration:20s"></span></span>'));
+  const hud = readFileSync(new URL("./hud.ts", import.meta.url), "utf8");
+  assert.ok(hud.includes("window.setTimeout(() => repondre(false), DELAI_DEMANDE_MS)"), "la minuterie et le trait ont la même durée");
 });
