@@ -12,6 +12,7 @@ import { nouvellePoule, penserPoule, vuePoule, type Poule } from "../../commun/s
 import type { Apparence } from "../../commun/src/apparence.ts";
 import { INTENTION_REPOS, avancer, nettoyerIntention, type Intention, type Position } from "../../commun/src/deplacement.ts";
 import { AttenteArrivee } from "./arrivee.ts";
+import type { EtatPourCorps } from "./corps-absent.ts";
 import type { Bienvenue, Cible, FeuVu, InstallationVue, MessageClient, MessageServeur } from "../../commun/src/messages.ts";
 import { CAPACITE_SAC, CONTENANTS, OBJETS, capaciteDe, estCleObjet, estObjet, lumierePortee, nommer, poidsInventaire, traineTravois, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
 import { compter, estMaitrisee, estObjetDeMetier, retirerExemplaires, typeDe, type CleObjet } from "../../commun/src/etoiles.ts";
@@ -2252,6 +2253,34 @@ export class Joueur implements Voyageur, ParticipantLecon {
     this.lieux.sortirDesHaltes(this);
     if (estPersonnel(this.lieu)) this.lieux.vivant(this.lieu, this.compte.id)?.sortir(this);
     this.comptoir.sortir(this.envoyer);
+  }
+
+  // ---------- Le corps qui reste à la déconnexion (0.11, D-18 : serveur/src/corps-absent.ts) ----------
+
+  /** Parti, mais son corps est encore là (la minute après la déconnexion) : personne ne le joue. */
+  corpsAbsent = false;
+
+  /** Ce qui dit si son corps reste à la déconnexion. */
+  get etatPourCorps(): EtatPourCorps {
+    return { lieu: this.lieu, enRoute: this.voyage !== null, enPause: this.pause };
+  }
+
+  /** Il part et son corps reste : immobile, rien en cours (l'action est arrêtée, ce qui est fait reste fait). */
+  laisserLeCorps(): void {
+    this.corpsAbsent = true;
+    this.annulerAction();
+    this.intention = INTENTION_REPOS;
+    this.elan = null;
+  }
+
+  /** Il revient pendant la minute (après sa bienvenue) : ce qu'elle ne dit pas, la saisie et le sommeil. */
+  reprendreLeCorps(): void {
+    this.corpsAbsent = false;
+    // Le nouveau client recompte ses intentions depuis zéro.
+    this.seq = 0;
+    this.santeEnvoyee = "";
+    this.envoyerSante(true);
+    if (this.sommeil) this.envoyer({ t: "sommeil", dort: true, dansUnAbri: this.sommeil.dansUnAbri });
   }
 
   // ---------- Les quêtes après le tutoriel (Book 22) ----------

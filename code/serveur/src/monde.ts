@@ -20,6 +20,7 @@ import { LieuxVivants } from "./lieux-vivants.ts";
 import { diffuserPresences, tourDePresences, type MemoirePresences } from "./presences.ts";
 import { messageValide } from "./controle.ts";
 import { Rencontres, temoins, type Present } from "./rencontres.ts";
+import { CorpsAbsents, corpsResteIci } from "./corps-absent.ts";
 
 /** Intervalle entre deux sauvegardes de chaque joueur, en millisecondes. */
 const INTERVALLE_SAUVEGARDE = 5000;
@@ -36,14 +37,23 @@ const INTERVALLE_RENCONTRES = 1000;
 interface Connexion {
   joueur: Joueur;
   socket: WebSocket;
+  /** Où partent les messages du joueur : sa socket, rien quand il est parti (son corps resté), la nouvelle s'il revient. */
+  sortie: Sortie;
   /** Pour mesurer la durée de la séance. */
   arrivee: number;
   /** Le dernier vrai geste du joueur (ms) : au-delà de `inactivite_min`, on le déconnecte. */
   activite: number;
 }
 
+/** La sortie des messages d'un joueur, qui survit à sa socket (0.11, le corps qui reste : corps-absent.ts). */
+interface Sortie {
+  socket: WebSocket | null;
+}
+
 export class Monde {
   private readonly connexions = new Map<number, Connexion>();
+  /** 0.11 (D-18) : les corps restés une minute après la déconnexion, là où il y a des Éteints (corps-absent.ts). */
+  private readonly corps = new CorpsAbsents<{ joueur: Joueur; sortie: Sortie }>();
   private minuterieTick: NodeJS.Timeout | undefined;
   private minuterieSauvegarde: NodeJS.Timeout | undefined;
   private dernierTick = performance.now();
@@ -138,18 +148,30 @@ export class Monde {
       ancienne.socket.close(FERMETURE_REMPLACE, "Connecté ailleurs");
     }
 
+    // Son corps est encore là (parti il y a moins d'une minute, D-18) : il reprend la main sur le même joueur, là où il est.
+    const reste = this.corps.reprendre(compte.id);
     let joueur: Joueur;
-    try {
-      // Un nouveau joueur apporte sa dotation à la trésorerie du comptoir (Book 07 §3.6).
+    let sortie: Sortie;
+    if (reste) {
+      ({ joueur, sortie } = reste);
+      sortie.socket = socket;
+      // Le nouveau client ne voit encore personne : les présences repartent de zéro pour lui.
+      this.memoirePresences.delete(compte.id);
       this.comptoir.doter();
-      joueur = new Joueur(compte, this.base, (m) => envoyer(socket, m), Date.now, this.halte, Math.random, this.comptoir, this.cooperatives, this.gue, this.moulins, this.lieux);
-    } catch (erreur) {
-      journal(`Impossible de charger ${compte.pseudo} : ${String(erreur)}`);
-      socket.close(1011, "Personnage introuvable");
-      return;
+    } else {
+      sortie = { socket };
+      try {
+        // Un nouveau joueur apporte sa dotation à la trésorerie du comptoir (Book 07 §3.6).
+        this.comptoir.doter();
+        joueur = new Joueur(compte, this.base, (m) => sortie.socket && envoyer(sortie.socket, m), Date.now, this.halte, Math.random, this.comptoir, this.cooperatives, this.gue, this.moulins, this.lieux);
+      } catch (erreur) {
+        journal(`Impossible de charger ${compte.pseudo} : ${String(erreur)}`);
+        socket.close(1011, "Personnage introuvable");
+        return;
+      }
     }
     // `activite` : le dernier vrai geste du joueur (pas les pings, ni l'intention « ne pas bouger » renvoyée par sécurité).
-    const connexion = { joueur, socket, arrivee: Date.now(), activite: Date.now() };
+    const connexion = { joueur, socket, sortie, arrivee: Date.now(), activite: Date.now() };
     this.connexions.set(compte.id, connexion);
     // « Voir faire » (Q7) : ceux qui sont à 5 m de lui, dans un lieu public, y penseront aussi.
     joueur.surFabrication = (recette) => {
@@ -183,22 +205,60 @@ export class Monde {
 
     envoyer(socket, { t: "reglages", reglages: reglagesChanges() });
     envoyer(socket, joueur.bienvenue(this.debutMonde));
+    if (reste) {
+      joueur.reprendreLeCorps();
+      journal(`${compte.pseudo} revient dans son corps (${this.connexions.size} connecté(s))`);
+      return;
+    }
     // Ce que la base a fait pendant l'absence (Book 01 §2 bis).
     if (joueur.rapport) envoyer(socket, { t: "rapport", rapport: joueur.rapport });
     journal(`${compte.pseudo} arrive (${this.connexions.size} connecté(s))`);
   }
 
-  private quitter(compteId: number): void {
+  /**
+   * La connexion se ferme (ou est remplacée, ou fermée par l'admin). `laisserLeCorps` : là où il y a des Éteints, son
+   * corps reste une minute (D-18) ; faux pour la page d'administration, qui le fait partir tout de suite.
+   */
+  private quitter(compteId: number, laisserLeCorps = true): void {
     const connexion = this.connexions.get(compteId);
     if (!connexion) return;
-    this.echanges.annuler(connexion.joueur, `${connexion.joueur.compte.pseudo} est parti.`);
-    this.lecons.annuler(connexion.joueur, `${connexion.joueur.compte.pseudo} est parti : la leçon s'arrête.`);
-    connexion.joueur.sauvegarder();
-    connexion.joueur.partir();
+    const { joueur } = connexion;
+    this.echanges.annuler(joueur, `${joueur.compte.pseudo} est parti.`);
+    this.lecons.annuler(joueur, `${joueur.compte.pseudo} est parti : la leçon s'arrête.`);
+    joueur.sauvegarder();
     this.connexions.delete(compteId);
-    const c = connexion.joueur.compte;
+    connexion.sortie.socket = null;
+    const c = joueur.compte;
     this.base.mesurer({ instant: Date.now(), compteId: c.id, famille: c.famille, genre: "session", quoi: "séance", valeur: (Date.now() - connexion.arrivee) / 1000 });
-    journal(`${connexion.joueur.compte.pseudo} part, état sauvegardé (${this.connexions.size} connecté(s))`);
+    // Le corps reste une minute, immobile, exposé aux Éteints (D-18 ; corps-absent.ts).
+    if (laisserLeCorps && corpsResteIci(joueur.etatPourCorps)) {
+      joueur.laisserLeCorps();
+      this.corps.laisser(compteId, { joueur, sortie: connexion.sortie }, Date.now());
+      journal(`${c.pseudo} part, état sauvegardé, son corps reste une minute (${this.connexions.size} connecté(s))`);
+      return;
+    }
+    joueur.partir();
+    journal(`${c.pseudo} part, état sauvegardé (${this.connexions.size} connecté(s))`);
+  }
+
+  /** Les corps restés vivent comme les autres ; au bout de la minute (ou effondrés), ils s'en vont, sauvegarde à jour. */
+  private tickCorps(dt: number): void {
+    for (const { joueur } of this.corps.tous()) {
+      try {
+        joueur.tick(dt);
+      } catch (erreur) {
+        journal(`Erreur de calcul pour ${joueur.compte.pseudo} : ${String(erreur)}`);
+      }
+    }
+    for (const { joueur } of this.corps.aRenvoyer(Date.now(), ({ joueur }) => corpsResteIci(joueur.etatPourCorps))) this.renvoyerCorps(joueur);
+  }
+
+  private renvoyerCorps(joueur: Joueur, sauver = true): void {
+    joueur.corpsAbsent = false;
+    if (sauver) joueur.sauvegarder();
+    joueur.partir();
+    this.aSauver = this.aSauver.filter((id) => id !== joueur.compte.id);
+    journal(`Le corps de ${joueur.compte.pseudo} s'en va.`);
   }
 
   private tick(): void {
@@ -226,6 +286,7 @@ export class Monde {
         journal(`Erreur de calcul pour ${joueur.compte.pseudo} : ${String(erreur)}`);
       }
     }
+    this.tickCorps(dt);
     this.sauvegarderUnPeu();
   }
 
@@ -249,7 +310,7 @@ export class Monde {
   private planifierSauvegardes(): void {
     this.deconnecterInactifs();
     const deja = new Set(this.aSauver);
-    for (const id of this.connexions.keys()) if (!deja.has(id)) this.aSauver.push(id);
+    for (const id of [...this.connexions.keys(), ...this.corps.ids()]) if (!deja.has(id)) this.aSauver.push(id);
     this.parTic = Math.max(1, Math.ceil(this.aSauver.length / TICS_ETALEMENT));
   }
 
@@ -258,7 +319,7 @@ export class Monde {
     const lot = this.aSauver.splice(0, this.parTic);
     try {
       this.base.transaction(() => {
-        for (const id of lot) this.connexions.get(id)?.joueur.sauvegarder();
+        for (const id of lot) (this.connexions.get(id) ?? this.corps.get(id))?.joueur.sauvegarder();
       });
     } catch (erreur) {
       journal(`Sauvegarde impossible : ${String(erreur)}`);
@@ -267,8 +328,9 @@ export class Monde {
 
   /** Dans chaque lieu public, chacun voit les autres joueurs proches (Book 01 §2 bis ; présences allégées, presences.ts). */
   private diffuserPresences(): void {
+    // Les corps restés aussi (D-18) : dans une halte, les autres le voient, debout et immobile.
     diffuserPresences(
-      [...this.connexions.values()].map(({ joueur }) => ({
+      [...this.connexions.values(), ...this.corps.tous()].map(({ joueur }) => ({
         id: joueur.compte.id,
         lieu: joueur.enLieuPublic ? joueur.lieu : null,
         vu: joueur.vu,
@@ -297,7 +359,7 @@ export class Monde {
   sauvegarder(): void {
     this.aSauver = [];
     this.base.transaction(() => {
-      for (const { joueur } of this.connexions.values()) joueur.sauvegarder();
+      for (const { joueur } of [...this.connexions.values(), ...this.corps.tous()]) joueur.sauvegarder();
     });
   }
 
@@ -316,12 +378,15 @@ export class Monde {
   deconnecter(compteId: number, oublier = false): boolean {
     const connexion = this.connexions.get(compteId);
     if (connexion) {
-      this.quitter(compteId);
+      this.quitter(compteId, false);
       connexion.socket.close(FERMETURE_JETON_REFUSE, "Session fermée");
     }
+    // Son corps resté (D-18) part aussi, tout de suite ; un compte qu'on supprime n'est pas réécrit.
+    const reste = this.corps.reprendre(compteId);
+    if (reste) this.renvoyerCorps(reste.joueur, !oublier);
     this.aSauver = this.aSauver.filter((id) => id !== compteId);
     if (oublier) this.lieux.oublier(compteId);
-    return connexion !== undefined;
+    return connexion !== undefined || reste !== undefined;
   }
 }
 
