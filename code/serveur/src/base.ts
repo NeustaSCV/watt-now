@@ -279,6 +279,17 @@ const SCHEMA = `
     compte_id  INTEGER NOT NULL UNIQUE REFERENCES comptes(id) ON DELETE CASCADE,
     invincible INTEGER NOT NULL DEFAULT 1
   );
+  -- Le compte de la page d'administration en production (« godfather », 2026-10-16) : à part des comptes de jeu, sans
+  -- personnage. Mot de passe en empreinte scrypt ; le secret du code à usage unique (TOTP) doit rester lisible pour
+  -- calculer les codes. Une seule ligne possible : un seul compte.
+  CREATE TABLE IF NOT EXISTS admin_web (
+    seul         INTEGER PRIMARY KEY CHECK (seul = 1),
+    identifiant  TEXT NOT NULL,
+    sel          TEXT NOT NULL,
+    empreinte    TEXT NOT NULL,
+    secret_totp  TEXT NOT NULL,
+    cree_le      TEXT NOT NULL
+  );
 `;
 
 /** Colonnes ajoutées après la première version (É0) : ajoutées si elles manquent. */
@@ -454,6 +465,34 @@ export class Base {
   admin(): number | null {
     const l = this.db.prepare("SELECT compte_id FROM admin").get() as { compte_id: number } | undefined;
     return l ? l.compte_id : null;
+  }
+
+  // ---------- Le compte de la page d'administration (admin-web.ts, scripts/admin-web.ts) ----------
+
+  /** Crée ou remplace le compte de la page d'administration (un seul). */
+  definirAdminWeb(identifiant: string, motDePasse: string, secretTotp: string): void {
+    const { sel, empreinte } = empreinteMotDePasse(motDePasse);
+    this.db
+      .prepare("INSERT OR REPLACE INTO admin_web (seul, identifiant, sel, empreinte, secret_totp, cree_le) VALUES (1, ?, ?, ?, ?, ?)")
+      .run(identifiant, sel, empreinte, secretTotp, maintenant());
+  }
+
+  /** L'identifiant du compte de la page d'administration, ou null s'il n'existe pas encore. */
+  identifiantAdminWeb(): string | null {
+    const l = this.db.prepare("SELECT identifiant FROM admin_web").get() as { identifiant: string } | undefined;
+    return l?.identifiant ?? null;
+  }
+
+  /**
+   * L'identifiant et le mot de passe sont-ils bons ? Rend alors le secret du code à usage unique (à vérifier ensuite).
+   * Le calcul scrypt est fait même pour un identifiant inconnu : la durée de la réponse ne dit pas lequel est faux.
+   */
+  verifierAdminWeb(identifiant: string, motDePasse: string): { secretTotp: string } | null {
+    const l = this.db.prepare("SELECT identifiant, sel, empreinte, secret_totp FROM admin_web").get() as
+      | { identifiant: string; sel: string; empreinte: string; secret_totp: string }
+      | undefined;
+    const bon = verifierMotDePasse(motDePasse, l?.sel ?? "sel-factice", l?.empreinte ?? "00".repeat(64));
+    return l && bon && l.identifiant === identifiant ? { secretTotp: l.secret_totp } : null;
   }
 
   estAdmin(compteId: number): boolean {

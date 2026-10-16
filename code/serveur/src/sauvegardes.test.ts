@@ -24,6 +24,21 @@ test("noms du jour et de la semaine ; on garde 7 quotidiennes et 4 hebdomadaires
   ]);
 });
 
+test("en production (VPS) : les 5 dernières quotidiennes seulement, et plus d'hebdomadaire", () => {
+  const dossier = join(import.meta.dirname, "..", "donnees", "essais-sauvegardes-prod");
+  rmSync(dossier, { recursive: true, force: true });
+  mkdirSync(dossier, { recursive: true });
+  try {
+    const base = new Base(join(dossier, "jeu.sqlite"));
+    const s = new Sauvegardes(base, join(dossier, "sauvegardes"), undefined, { quotidiennes: 5, hebdomadaires: 0 });
+    for (let j = 1; j <= 8; j++) s.verifier(new Date(`2026-10-${String(j).padStart(2, "0")}T03:00:00Z`));
+    assert.deepEqual(readdirSync(join(dossier, "sauvegardes")).sort(), [4, 5, 6, 7, 8].map((j) => `quotidienne-2026-10-0${j}.sqlite`));
+    base.fermer();
+  } finally {
+    rmSync(dossier, { recursive: true, force: true });
+  }
+});
+
 test("la sauvegarde est une vraie base, lisible, avec les comptes ; une seule par jour", () => {
   // Dans le dossier du projet (jamais dans un dossier temporaire du système).
   const dossier = join(import.meta.dirname, "..", "donnees", "essais-sauvegardes");

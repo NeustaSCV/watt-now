@@ -1,0 +1,67 @@
+# Le jeu en production, sur le VPS (décision du porteur du 2026-10-16) : https://jeu.example.org.
+# Envoyé dans ~/watt-now (utilisateur debian) par deployer-prod.sh, avec l'image déjà construite sur le Mac.
+# Les données (base, réglages, sauvegardes) sont dans ./donnees, à côté de ce fichier : elles survivent aux mises à jour.
+#
+# Le VPS porte déjà Traefik (traefik:v3.6) et d'autres services (d'autres sites). Ce fichier ne touche à rien
+# d'autre que ce conteneur :
+#   - aucun port publié sur le VPS : seul Traefik joint le jeu, par le réseau Docker traefik_proxy (déjà là) ;
+#   - des routeurs Traefik à son seul nom (wattnow, wattnow-admin) : Traefik obtient et renouvelle tout seul le
+#     certificat de jeu.example.org (résolveur « letsencrypt », défi HTTP), comme pour les autres sites ;
+#   - la page d'administration sous https://jeu.example.org/admin, avec connexion obligatoire (identifiant, mot
+#     de passe, code à usage unique : compte créé par admin-prod.sh).
+
+name: watt-now
+
+services:
+  jeu:
+    # « courante » : la version qui tourne (deployer-prod.sh la pose ; chaque version garde aussi son propre numéro).
+    image: watt-now:courante
+    container_name: watt-now
+    restart: unless-stopped
+    # Le jeu tourne sous l'utilisateur debian (.env, écrit par deployer-prod.sh) : il écrit dans ./donnees sans sudo.
+    user: "${WATT_UID:-1000}:${WATT_GID:-1000}"
+    networks:
+      - traefik_proxy
+    volumes:
+      - ./donnees:/app/serveur/donnees
+    environment:
+      TZ: Europe/Paris
+      # Le jeu n'est joignable que par Traefik : l'adresse des joueurs est celle qu'il transmet (limite d'essais, journal).
+      WATT_PROXY: "1"
+      # La page d'administration sous /admin, connexion obligatoire.
+      WATT_ADMIN_CONNEXION: /admin
+      # Les 5 dernières sauvegardes quotidiennes, sur le disque du VPS (./donnees/sauvegardes).
+      WATT_SAUVEGARDES_GARDER: "5"
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: traefik_proxy
+      # Le jeu (et ses WebSocket, que Traefik passe sans réglage).
+      traefik.http.routers.wattnow.rule: Host(`jeu.example.org`)
+      traefik.http.routers.wattnow.entrypoints: websecure
+      traefik.http.routers.wattnow.tls.certresolver: letsencrypt
+      traefik.http.routers.wattnow.service: wattnow
+      traefik.http.routers.wattnow.middlewares: wattnow-securite
+      traefik.http.services.wattnow.loadbalancer.server.port: "8080"
+      # La page d'administration : même nom, même certificat, sous /admin (priorité plus forte que le jeu).
+      traefik.http.routers.wattnow-admin.rule: Host(`jeu.example.org`) && PathPrefix(`/admin`)
+      traefik.http.routers.wattnow-admin.priority: "200"
+      traefik.http.routers.wattnow-admin.entrypoints: websecure
+      traefik.http.routers.wattnow-admin.tls.certresolver: letsencrypt
+      traefik.http.routers.wattnow-admin.service: wattnow-admin
+      traefik.http.routers.wattnow-admin.middlewares: wattnow-securite
+      traefik.http.services.wattnow-admin.loadbalancer.server.port: "4321"
+      # Le navigateur ne reviendra plus qu'en HTTPS sur ce nom (6 mois ; ce nom seul, pas les autres sous-domaines).
+      traefik.http.middlewares.wattnow-securite.headers.stsSeconds: "15552000"
+    # Le VPS a 4 cœurs et 7,6 Go (≈ 6 Go libres le 2026-10-16) : le jeu en prend au plus 2 et 1,5 Go.
+    cpus: 2
+    mem_limit: 1536m
+    stop_grace_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  traefik_proxy:
+    external: true

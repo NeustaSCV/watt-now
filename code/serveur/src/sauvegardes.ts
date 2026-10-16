@@ -2,6 +2,8 @@
 // Le serveur s'en charge lui-même (pas de tâche planifiée à installer sur le Pi). Le dossier peut être un disque
 // externe (variable WATT_SAUVEGARDES). Depuis la 0.7, la copie hors de la carte SD se fait sur la clé USB du Pi
 // (variable WATT_CLE_USB, voir cle-sauvegardes.ts) : chaque vérification y recopie ce qui manque, sans bloquer le jeu.
+// En production sur le VPS (2026-10-16) : les 5 dernières quotidiennes seulement, sans hebdomadaire
+// (WATT_SAUVEGARDES_GARDER=5, voir index.ts).
 
 import { existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
@@ -9,8 +11,14 @@ import type { Base } from "./base.ts";
 import { CleSauvegardes, type EtatCle } from "./cle-sauvegardes.ts";
 import { journal } from "./journal.ts";
 
-const GARDER_QUOTIDIENNES = 7;
-const GARDER_HEBDOMADAIRES = 4;
+/** Combien de sauvegardes garder de chaque sorte. 0 hebdomadaire : on n'en fait pas. */
+export interface Conservation {
+  quotidiennes: number;
+  hebdomadaires: number;
+}
+
+/** Sur le Pi : 7 quotidiennes et 4 hebdomadaires. En production (VPS), les 5 dernières quotidiennes seulement (2026-10-16). */
+export const CONSERVATION_PI: Conservation = { quotidiennes: 7, hebdomadaires: 4 };
 /** On vérifie toutes les heures s'il faut faire la sauvegarde du jour. */
 const INTERVALLE_VERIFICATION = 3_600_000;
 
@@ -34,21 +42,23 @@ export function nomsDuJour(d: Date): { quotidienne: string; hebdomadaire: string
 }
 
 /** Les fichiers à supprimer pour ne garder que les plus récents de chaque sorte (les noms se trient par date). */
-export function aSupprimer(fichiers: readonly string[]): string[] {
+export function aSupprimer(fichiers: readonly string[], garder: Conservation = CONSERVATION_PI): string[] {
   const trier = (prefixe: string) => fichiers.filter((f) => f.startsWith(prefixe) && f.endsWith(".sqlite")).sort().reverse();
-  return [...trier("quotidienne-").slice(GARDER_QUOTIDIENNES), ...trier("hebdomadaire-").slice(GARDER_HEBDOMADAIRES)];
+  return [...trier("quotidienne-").slice(garder.quotidiennes), ...trier("hebdomadaire-").slice(garder.hebdomadaires)];
 }
 
 export class Sauvegardes {
   private readonly base: Base;
   private readonly dossier: string;
+  private readonly garder: Conservation;
   /** La copie sur la clé USB (absente : pas de clé configurée, comme en local). */
   readonly cle: CleSauvegardes | null;
   private minuterie: NodeJS.Timeout | undefined;
 
-  constructor(base: Base, dossier: string, cle?: { dossier: string; reglages?: string; certificat?: string }) {
+  constructor(base: Base, dossier: string, cle?: { dossier: string; reglages?: string; certificat?: string }, garder: Conservation = CONSERVATION_PI) {
     this.base = base;
     this.dossier = dossier;
+    this.garder = garder;
     this.cle = cle ? new CleSauvegardes(cle.dossier, { sauvegardes: dossier, reglages: cle.reglages, certificat: cle.certificat }) : null;
   }
 
@@ -70,7 +80,7 @@ export class Sauvegardes {
     try {
       mkdirSync(this.dossier, { recursive: true });
       const { quotidienne, hebdomadaire } = nomsDuJour(maintenant);
-      for (const nom of [quotidienne, hebdomadaire]) {
+      for (const nom of this.garder.hebdomadaires > 0 ? [quotidienne, hebdomadaire] : [quotidienne]) {
         const chemin = join(this.dossier, nom);
         if (existsSync(chemin)) continue;
         const debut = performance.now();
@@ -78,7 +88,7 @@ export class Sauvegardes {
         nouvelle = true;
         journal(`Sauvegarde : ${nom} (${Math.round(performance.now() - debut)} ms)`);
       }
-      for (const f of aSupprimer(readdirSync(this.dossier))) rmSync(join(this.dossier, f));
+      for (const f of aSupprimer(readdirSync(this.dossier), this.garder)) rmSync(join(this.dossier, f));
     } catch (erreur) {
       journal(`Sauvegarde impossible : ${String(erreur)}`);
     }

@@ -212,3 +212,46 @@ Une page web, **sans mot de passe**, pour gérer les comptes depuis le réseau d
 - **Tunnel (Cloudflare Tunnel)** : une adresse publique en HTTPS (par exemple `https://watt-now.mondomaine.fr`), rien à installer chez les joueurs, aucun port à ouvrir sur la box ; il faut un nom de domaine.
 
 Sur iPhone, le son et le plein écran demandent HTTPS : le tunnel le fournit ; avec Tailscale, on peut activer HTTPS dans Tailscale (`tailscale serve`).
+
+## 10. La production sur le VPS (https://jeu.example.org)
+
+Décision du 2026-10-16 : le Pi reste la **préprod** (sections 1 à 9, `deployer.sh`, sans changement) ; la **production** tourne sur un VPS Debian (4 cœurs, 7,6 Go, x86_64), utilisateur `debian`, où **Traefik** (v3.6) sert déjà d'autres sites (d'autres sites). Les fichiers : `deployer-prod.sh`, `admin-prod.sh` et `prod/` (`compose.yaml`, `installer.sh`).
+
+**Ce qui change par rapport au Pi**
+- **HTTPS** : c'est Traefik qui obtient et renouvelle le certificat de `jeu.example.org` (résolveur `letsencrypt`, défi HTTP). Le jeu ne publie **aucun port** : il est seulement sur le réseau Docker `traefik_proxy`, avec des routeurs à son nom (`wattnow`, `wattnow-admin`). Traefik et les autres services ne sont pas modifiés.
+- **La page d'administration** est sur Internet, à `https://jeu.example.org/admin`, avec **connexion obligatoire** : identifiant `godfather`, mot de passe (12 caractères au moins), et le **code à 6 chiffres** d'une application d'authentification (Google Authenticator, Aegis, 1Password…). Session de 30 minutes sans activité (8 h au plus), cookie protégé, 5 échecs depuis une adresse → bloquée un quart d'heure (20 échecs en tout → tout le monde), un code ne sert qu'une fois, chaque connexion notée au journal avec l'adresse.
+- **L'adresse des joueurs** est celle que Traefik transmet (`WATT_PROXY=1`) : la limite d'essais de connexion au jeu reste par joueur, pas pour tout le monde à la fois.
+- **Sauvegardes** : les 5 dernières quotidiennes, sur le disque du VPS (`~/watt-now/donnees/sauvegardes/`) ; pas d'hebdomadaire, pas de clé USB.
+- **Limites** : 2 cœurs et 1,5 Go pour le jeu.
+
+**Avant le premier déploiement** (vérifié le 2026-10-16) : `jeu.example.org` pointe sur le VPS ; `debian` lance `docker` sans `sudo` ; le conteneur `traefik` et le réseau `traefik_proxy` existent. Le script le revérifie à chaque fois.
+
+**Déployer** (depuis le Mac ; le mot de passe de `debian` est demandé trois fois) :
+
+```bash
+code/deploiement/deployer-prod.sh
+```
+
+Il lance les tests, vérifie le VPS, construit l'image pour x86_64 sur le Mac (plus long que pour le Pi : émulation), l'envoie, installe `compose.yaml` et `installer.sh` dans `~/watt-now`, relance le jeu, attend qu'il soit en bonne santé, puis vérifie de dehors que `https://jeu.example.org` répond avec un certificat valable et que `/admin/` renvoie bien vers la connexion. Au tout premier déploiement, Traefik met quelques secondes à obtenir le certificat : le script attend.
+
+**Créer le compte godfather** (une fois, après le premier déploiement ; le téléphone à la main) :
+
+```bash
+code/deploiement/admin-prod.sh
+```
+
+Taper deux fois le mot de passe ; la commande affiche **une seule fois** la clé de configuration : dans l'application, « Ajouter un compte » → « Saisir une clé », puis taper le code à 6 chiffres qu'elle montre. Rien n'est enregistré tant que ce code n'est pas bon. Relancer la commande remplace le compte (nouvelle clé : refaire l'application). L'heure du téléphone doit être juste (réglage automatique).
+
+**Remettre le monde à zéro** (avant l'ouverture au public) :
+
+```bash
+code/deploiement/deployer-prod.sh --remise-a-zero
+```
+
+Il faut retaper le nom du site pour confirmer. Le jeu est arrêté, l'ancienne base est **rangée** (pas effacée) dans `~/watt-now/donnees/avant-remise-<date>/`, puis le jeu repart d'une base neuve : plus aucun compte de jeu, personnages et terrains neufs, nouveau début du monde. Le compte **godfather est gardé** (même mot de passe, même clé). Les réglages et les sauvegardes déjà faites ne bougent pas.
+
+**Sur le VPS**, dans `~/watt-now` :
+- l'état et le journal : `docker compose ps`, `docker compose logs -f jeu` ; les connexions à l'admin : `docker compose logs jeu | grep Admin` ;
+- relancer sans redéployer : `./installer.sh` ;
+- revenir à la version d'avant : `docker tag watt-now:<version> watt-now:courante && ./installer.sh` (les versions : `docker images watt-now`) ;
+- fermer toutes les sessions d'admin ouvertes : `docker compose restart jeu`.

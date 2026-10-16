@@ -17,7 +17,8 @@ import { Monde } from "./monde.ts";
 import { FichierReglages } from "./reglages-fichier.ts";
 import { VERSION } from "../../commun/src/version.ts";
 import { certificatPresent, portMixte, type Certificat } from "./https.ts";
-import { Sauvegardes } from "./sauvegardes.ts";
+import { Sauvegardes, type Conservation } from "./sauvegardes.ts";
+import { adresseClient } from "./adresse-client.ts";
 
 export interface OptionsServeur {
   port: number;
@@ -33,6 +34,10 @@ export interface OptionsServeur {
   dossierCle?: string;
   /** Le certificat HTTPS : s'il est là, le port sert HTTPS (et renvoie le HTTP en clair vers HTTPS). */
   certificat?: Certificat;
+  /** Combien de sauvegardes garder (absent : 7 quotidiennes et 4 hebdomadaires, comme sur le Pi). */
+  garderSauvegardes?: Conservation;
+  /** Derrière Traefik (production) : l'adresse du joueur est celle que Traefik transmet (adresse-client.ts). */
+  derriereProxy?: boolean;
 }
 
 export interface ServeurDemarre {
@@ -167,6 +172,7 @@ export async function demarrerServeur(options: OptionsServeur): Promise<ServeurD
         options.dossierCle
           ? { dossier: options.dossierCle, reglages: options.cheminReglages, certificat: options.certificat ? dirname(options.certificat.cert) : undefined }
           : undefined,
+        options.garderSauvegardes,
       )
     : null;
   sauvegardes?.demarrer();
@@ -179,7 +185,7 @@ export async function demarrerServeur(options: OptionsServeur): Promise<ServeurD
   const TROP_D_ESSAIS = { ok: false as const, erreur: "Trop d'essais. Attends quelques minutes avant de réessayer." };
 
   async function inscription(req: IncomingMessage, res: ServerResponse): Promise<void> {
-    const adresse = req.socket.remoteAddress ?? "?";
+    const adresse = adresseClient(req, options.derriereProxy === true) ?? "?";
     if (!inscriptionsParAdresse.autorise(adresse)) return repondre(res, 429, TROP_D_ESSAIS);
     const corps = await lireJson(req);
     const pseudo = corps?.pseudo;
@@ -227,7 +233,7 @@ export async function demarrerServeur(options: OptionsServeur): Promise<ServeurD
     const corps = await lireJson(req);
     const pseudo = corps?.pseudo;
     const motDePasse = corps?.motDePasse;
-    const adresse = req.socket.remoteAddress ?? "?";
+    const adresse = adresseClient(req, options.derriereProxy === true) ?? "?";
     const clePseudo = typeof pseudo === "string" ? pseudo.trim().toLowerCase() : "";
     if (!echecsParAdresse.autorise(adresse) || !echecsParPseudo.autorise(clePseudo)) return repondre(res, 429, TROP_D_ESSAIS);
     const compte =

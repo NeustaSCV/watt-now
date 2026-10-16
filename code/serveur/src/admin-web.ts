@@ -10,6 +10,10 @@
 //
 // Du HTML simple, sans script : des liens, des formulaires, une confirmation dans la page avec un bouton (jamais de
 // fenêtre de dialogue, règle R48).
+//
+// En production (VPS, décision du porteur du 2026-10-16), l'option `connexion` change deux choses : la page vit sous
+// un chemin (« /admin », derrière Traefik, sur le même nom que le jeu), et elle demande d'abord l'identifiant, le mot
+// de passe et le code à usage unique (admin-connexion.ts). Sans cette option (le Pi), rien ne change.
 
 import { randomInt } from "node:crypto";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
@@ -23,6 +27,7 @@ import { NOMS_INSTALLATIONS } from "../../commun/src/recettes.ts";
 import { NOMS_FAMILLES, estFamille } from "../../commun/src/regles.ts";
 import { NOMBRE_ETAPES, etapesTutoriel } from "../../commun/src/tutoriel.ts";
 import type { CleObjet } from "../../commun/src/etoiles.ts";
+import { GardienAdmin, cookieSession, jetonDe } from "./admin-connexion.ts";
 import { CompteProtege, type Base, type FicheCompte } from "./base.ts";
 import { journal } from "./journal.ts";
 import type { Monde } from "./monde.ts";
@@ -38,8 +43,19 @@ export interface OptionsAdminWeb {
   hote?: string;
   base: Base;
   monde: MondeAdmin;
-  /** L'adresse d'où vient une requête (les tests la remplacent pour jouer un poste de la DMZ). */
+  /** L'adresse d'où vient une requête (les tests la remplacent pour jouer un poste de la DMZ ; derrière Traefik, l'adresse transmise). */
   adresseDe?: (req: IncomingMessage) => string | undefined;
+  /** La production : connexion obligatoire, sous ce chemin. Absente : la page ouverte du réseau local (le Pi). */
+  connexion?: OptionsConnexion;
+}
+
+export interface OptionsConnexion {
+  /** Le chemin de la page (« /admin ») ; toutes ses adresses commencent par lui. */
+  prefixe: string;
+  /** Le cookie ne voyage qu'en HTTPS (vrai en production ; faux dans les tests, en HTTP). */
+  cookieSecurise: boolean;
+  /** L'horloge (les tests la font avancer). */
+  horloge?: () => number;
 }
 
 export interface AdminWebDemarre {
@@ -105,14 +121,41 @@ const ENTETES = {
   "X-Content-Type-Options": "nosniff",
 };
 
-function envoyer(res: ServerResponse, statut: number, html: string): void {
-  res.writeHead(statut, ENTETES);
-  res.end(html);
+/** Le sous-titre de l'en-tête des pages, sur le réseau local (le Pi). */
+const SOUS_TITRE_LOCAL = `<span>réseau local seulement · sans mot de passe</span>`;
+
+/**
+ * Une page prête à partir : ses adresses (« /joueur/12 ») passent sous le chemin de la page (« /admin/joueur/12 »), et le
+ * sous-titre de l'en-tête dit si l'on est connecté (avec le bouton pour se déconnecter).
+ */
+export function habiller(html: string, prefixe: string, sousTitre: string): string {
+  // Le sous-titre d'abord : le bouton « Se déconnecter » qu'il porte passe lui aussi sous le chemin.
+  const complet = html.replace(SOUS_TITRE_LOCAL, sousTitre);
+  return prefixe ? complet.replaceAll(`href="/`, `href="${prefixe}/`).replaceAll(`action="/`, `action="${prefixe}/`) : complet;
 }
 
 export async function demarrerAdminWeb(options: OptionsAdminWeb): Promise<AdminWebDemarre> {
-  const { base, monde } = options;
+  const { base, monde, connexion } = options;
   const adresseDe = options.adresseDe ?? ((req: IncomingMessage) => req.socket.remoteAddress);
+  const prefixe = connexion?.prefixe.replace(/\/+$/, "") ?? "";
+  const gardien = connexion ? new GardienAdmin(base, connexion.horloge) : null;
+
+  /** Envoie une page. En production, toute page autre que celle de connexion porte le bouton « Se déconnecter ». */
+  const envoyer = (res: ServerResponse, statut: number, html: string, suite: { pageConnexion?: boolean; entetes?: Record<string, string> } = {}): void => {
+    const sousTitre = !gardien
+      ? SOUS_TITRE_LOCAL
+      : suite.pageConnexion
+        ? `<span>connexion requise</span>`
+        : `<form method="post" action="/deconnexion" class="sortie"><button type="submit" class="bouton">Se déconnecter</button></form>`;
+    res.writeHead(statut, { ...ENTETES, ...suite.entetes });
+    res.end(habiller(html, prefixe, sousTitre));
+  };
+
+  /** Vers une autre page de l'admin (après un formulaire : 303, le navigateur y va en GET). */
+  const rediriger = (res: ServerResponse, vers: string, entetes: Record<string, string> = {}): void => {
+    res.writeHead(303, { "Cache-Control": "no-store", Location: `${prefixe}${vers}`, ...entetes });
+    res.end();
+  };
   /** Les adresses refusées déjà notées au journal (une ligne par adresse et par heure, pas une par requête). */
   const refusNotes = new Map<string, number>();
 
@@ -126,7 +169,26 @@ export async function demarrerAdminWeb(options: OptionsAdminWeb): Promise<AdminW
   const traiter = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     const adresse = adresseNue(adresseDe(req) ?? "?");
     const url = new URL(req.url ?? "/", "http://admin");
-    const chemin = url.pathname;
+    let chemin = url.pathname;
+    if (prefixe) {
+      if (chemin !== prefixe && !chemin.startsWith(`${prefixe}/`)) return envoyer(res, 404, page("Introuvable", "<h1>Introuvable</h1>"), { pageConnexion: true });
+      chemin = chemin.slice(prefixe.length) || "/";
+    }
+    if (gardien) {
+      if (chemin === "/connexion" && req.method === "GET") return envoyer(res, 200, pageConnexion(gardien.compteCree()), { pageConnexion: true });
+      if (chemin === "/connexion" && req.method === "POST") return seConnecter(req, res, gardien, adresse);
+      if (chemin === "/deconnexion" && req.method === "POST") {
+        if (!origineAutorisee(req)) return envoyer(res, 403, page("Accès refusé", `<p>Ce formulaire ne vient pas de la page d'administration.</p>`), { pageConnexion: true });
+        gardien.deconnecter(jetonDe(req));
+        journal(`Admin (${adresse}) : déconnexion`);
+        return rediriger(res, "/connexion", { "Set-Cookie": cookieSession(null, prefixe, connexion!.cookieSecurise) });
+      }
+      // Tout le reste demande une session : sans elle, on renvoie vers la connexion (rien d'autre n'est montré).
+      if (!gardien.valide(jetonDe(req))) {
+        if (req.method === "GET") return rediriger(res, "/connexion");
+        return envoyer(res, 403, page("Session expirée", `<h1>Session expirée</h1><p><a class="bouton" href="/connexion">Se reconnecter</a></p>`), { pageConnexion: true });
+      }
+    }
     if (req.method === "GET" && chemin === "/") return envoyer(res, 200, pageAccueil(base, monde));
     const fiche = /^\/joueur\/(\d+)$/.exec(chemin);
     if (req.method === "GET" && fiche) {
@@ -153,6 +215,27 @@ export async function demarrerAdminWeb(options: OptionsAdminWeb): Promise<AdminW
     }
     envoyer(res, 404, pageIntrouvable());
   };
+
+  async function seConnecter(req: IncomingMessage, res: ServerResponse, g: GardienAdmin, adresse: string): Promise<void> {
+    if (!origineAutorisee(req)) {
+      noterRefus(adresse, "formulaire de connexion venu d'une autre page");
+      return envoyer(res, 403, page("Accès refusé", `<p>Ce formulaire ne vient pas de la page d'administration.</p>`), { pageConnexion: true });
+    }
+    const formulaire = await lireFormulaire(req);
+    const identifiant = formulaire?.get("identifiant") ?? "";
+    const resultat = g.connecter(adresse, identifiant, formulaire?.get("motDePasse") ?? "", formulaire?.get("code") ?? "");
+    if (resultat.ok) {
+      journal(`Admin (${adresse}) : connexion de « ${identifiant.trim()} »`);
+      return rediriger(res, "/", { "Set-Cookie": cookieSession(resultat.jeton, prefixe, connexion!.cookieSecurise) });
+    }
+    if (resultat.raison === "bloque") {
+      noterRefus(adresse, "trop d'essais de connexion");
+      return envoyer(res, 429, pageConnexion(true, "Trop d'essais. Réessaie dans un quart d'heure."), { pageConnexion: true });
+    }
+    if (resultat.raison === "sans-compte") return envoyer(res, 503, pageConnexion(false), { pageConnexion: true });
+    journal(`Admin (${adresse}) : connexion refusée (identifiant « ${identifiant.trim().slice(0, 40)} »)`);
+    return envoyer(res, 401, pageConnexion(true, "Identifiant, mot de passe ou code incorrect.", identifiant), { pageConnexion: true });
+  }
 
   function reinitialiser(res: ServerResponse, f: FicheCompte, adresse: string): void {
     const provisoire = motDePasseProvisoire();
@@ -275,6 +358,29 @@ function listeObjets(inventaire: Inventaire | undefined): string {
 
 function arrondi(n: number, chiffres = 0): string {
   return n.toLocaleString("fr-FR", { maximumFractionDigits: chiffres });
+}
+
+/** La page de connexion (production). `compteCree` faux : le compte n'existe pas encore, on dit comment le créer. */
+function pageConnexion(compteCree: boolean, erreur?: string, identifiant = ""): string {
+  if (!compteCree) {
+    return page(
+      "Connexion",
+      `<h1>Connexion</h1>
+      <section class="bloc"><p>Aucun compte d'administration n'existe encore sur ce serveur.</p>
+      <p class="note">Pour le créer, depuis le Mac : <code>code/deploiement/admin-prod.sh</code>.</p></section>`,
+    );
+  }
+  return page(
+    "Connexion",
+    `<h1>Connexion</h1>
+    ${erreur ? `<p class="erreur">${e(erreur)}</p>` : ""}
+    <form method="post" action="/connexion" class="bloc">
+      <label class="champ"><span>Identifiant</span><input name="identifiant" value="${e(identifiant)}" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>
+      <label class="champ"><span>Mot de passe</span><input name="motDePasse" type="password" autocomplete="current-password" required></label>
+      <label class="champ"><span>Code de l'application d'authentification (6 chiffres)</span><input name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="7" required></label>
+      <button type="submit" class="bouton">Se connecter</button>
+    </form>`,
+  );
 }
 
 function retour(): string {
@@ -475,6 +581,8 @@ body { margin: 0; background: var(--fond); color: var(--texte); font: 16px/1.45 
 header { background: var(--carte); border-bottom: 1px solid var(--ligne); padding: 10px 16px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 header strong { font-size: 17px; }
 header span { color: var(--doux); font-size: 13px; }
+header .sortie { margin-left: auto; }
+header .sortie .bouton { min-height: 36px; padding: 4px 12px; font-size: 14px; }
 main { max-width: 1040px; margin: 0 auto; padding: 12px 16px 32px; }
 h1 { font-size: 24px; margin: 8px 0 12px; display: flex; align-items: center; gap: 8px; overflow-wrap: anywhere; }
 h2 { font-size: 17px; margin: 0 0 8px; display: flex; align-items: center; gap: 8px; }
@@ -531,7 +639,7 @@ code { font-family: ui-monospace, Menlo, monospace; }
 </style>
 </head>
 <body>
-<header><strong>Watt Now? · administration</strong><span>réseau local seulement · sans mot de passe</span></header>
+<header><strong>Watt Now? · administration</strong>${SOUS_TITRE_LOCAL}</header>
 <main>
 ${corps}
 </main>

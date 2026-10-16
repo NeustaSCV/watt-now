@@ -1,4 +1,5 @@
-# L'image du jeu pour le Raspberry Pi (Book 17 §5) : le serveur de jeu sert aussi le client compilé.
+# L'image du jeu, pour le Raspberry Pi (préprod, Book 17 §5) et pour le VPS (production, deploiement/prod/) : le serveur
+# de jeu sert aussi le client compilé.
 # Construite sur le Pi lui-même (arm64) ou ailleurs avec « docker buildx build --platform linux/arm64 ».
 
 # ---------- 1. Compiler le client ----------
@@ -25,7 +26,7 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
 COPY commun ./commun
 COPY serveur/src ./serveur/src
-COPY scripts/bilan-mesures.ts scripts/reglages.ts scripts/banc-charge.ts scripts/admin.ts ./scripts/
+COPY scripts/bilan-mesures.ts scripts/reglages.ts scripts/banc-charge.ts scripts/admin.ts scripts/clavier.ts scripts/admin-web.ts scripts/remise-a-zero.ts ./scripts/
 COPY --from=construction /app/client/dist ./client/dist
 # Les données (base, réglages, sauvegardes) vivent dans un volume : elles survivent aux mises à jour de l'image.
 RUN mkdir -p serveur/donnees && chown -R node:node serveur/donnees
