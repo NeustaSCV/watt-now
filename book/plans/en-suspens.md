@@ -133,7 +133,7 @@ Les plus gros morceaux : A3, A5, A7, A9 et D1.
 - Les **poules dans les haltes** (1 ou 2 par halte, partagées entre joueurs) : écartées « pour l'instant » de la 0.9 (2026-10-13) ; il faut d'abord une faune partagée dans les lieux à plusieurs (`plan-0.9.md` §2.7).
 - La **halte de cueillette et de chasse** (gibier, boyaux, corde d'arc en boyau) : Book 99.
 - La **bibliothèque de bâtiments** `batiment/` : à valider par le porteur ; Book 99.
-- Le **combat entre joueurs** : règles du duel décidées le 2026-10-13 (`duel-entre-joueurs.md`), à coder **bien après la 0.9**, une fois la fluidité validée , toutes les questions tranchées.
+- Le **combat entre joueurs** : règles du duel décidées le 2026-10-13 (`duel-entre-joueurs.md`). **Planifié en 0.11 le 2026-10-16** (`plan-duel.md`), avant les murs et les sols ; questions D-7 à D-16 tranchées ; maquettes à faire, puis le code.
 
 ## 5. Où sont les choses
 
@@ -152,7 +152,7 @@ Les plus gros morceaux : A3, A5, A7, A9 et D1.
 ### Pour plus tard (décidé « plus tard » pendant la 0.10)
 
 - **Les buts de carnet du niveau 2** (des quêtes après « S'installer » et « Le métier ») : le niveau 2 n'en a pas ; ses seuls buts sont les portes nommées, les lieux atteints et les objets-clés trouvés. — plan 0.10, V3-05 ; `npm run rythme` (écart max entre buts : 22 à 42 min).
-- **Les murs et les sols** (mur de branches, claie, plancher, sol de pierres, mur de planches, porte de planches ; le vrai objet « planche rabotée ») : **en 0.10.2**, juste après la 0.10.1 (décidé le 2026-10-15, Q-1 du plan de la 0.10.1 ; une maquette d'abord). — plan 0.10, Q-0.10-1, §8.1 ; V1-04, V1-21 ; plan 0.10.1, chantier F.
+- **Les murs et les sols** (mur de branches, claie, plancher, sol de pierres, mur de planches, porte de planches ; le vrai objet « planche rabotée ») : ~~en 0.10.2~~ **en 0.12**, après le duel (0.11) (décidé le 2026-10-16, D-7 ; à l'origine le 2026-10-15, Q-1 du plan de la 0.10.1 ; une maquette d'abord). — plan 0.10, Q-0.10-1, §8.1 ; V1-04, V1-21 ; plan 0.10.1, chantier F.
 - **Les manches + 25 % de l'établi de menuisier** : reportés (il faut une solidité par exemplaire). — plan 0.10, V1-04.
 - **L'angle nord-est de la tour du phare** : les Éteints venus du nord s'y coincent. — plan 0.10, V4-11.
 - **Les Éteints ne contournent rien** (le guindeau, les portes des conteneurs de l'épave, l'angle de la tour) : pas de recherche de chemin. — plan 0.10, V4-14 ; Book 06 §2.1 et §5.2.
