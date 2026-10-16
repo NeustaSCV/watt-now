@@ -213,7 +213,7 @@ En temps réel : **≈ 4 à 6 h de travail des agents**, en parallèle, plus le 
 | # | Décision |
 |---|---|
 | R-01 ✅ | La bouteille d'eau pleine vaut **2 wotts** (elle reste dans les déchets, aussi commune que la vide) ; elle est aussi dans ce que la crue charrie au gué |
-| R-02 ✅ | **La forge et la charbonnière ne réchauffent pas** l'hiver (pas d'état « allumé ») ; seuls les feux qui brûlent comptent ; **un feu couvert sous la cendre réchauffe** |
+| R-02 ✅ | *Corrigé par le porteur le 2026-10-16* : **la forge réchauffe** (à 3 m) pendant un geste de forge et encore **2 h de jeu après** (les braises ; elle n'a pas d'état « allumée » dans le code) ; **la charbonnière réchauffe pendant qu'elle cuit** (jusqu'au défournement) ; **un feu couvert sous la cendre réchauffe** |
 | R-03 ✅ | Ramasser près d'un Éteint debout (mode Combat, moins de 10 m) : **rien ne change** (A frappe) |
 | R-04 ✅ | Une pierre lancée dans la mer au phare : **la faire disparaître, plus tard** (`en-suspens.md`) |
 | R-05 ✅ | **C3** : aucun texte n'est coupé à l'écran ; ce qui coupe, c'est le temps (12 s au plus). **Les 12 textes courts proposés sont validés mot pour mot** (`.claude-travail/wt101/e-examiner/.claude-travail/c3-textes.md`) ; le plafond de 12 s reste |
