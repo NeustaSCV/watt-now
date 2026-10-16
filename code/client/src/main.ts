@@ -72,6 +72,7 @@ import { Partants, VueAutre, horlogeAutres } from "./rendu/autres.ts";
 import { Pluie } from "./rendu/pluie.ts";
 import { Rodeurs } from "./rendu/rodeurs.ts";
 import { Brume } from "./rendu/brume.ts";
+import { empecherLeZoom } from "./anti-zoom.ts";
 import { Aides, type Aide } from "./aides.ts";
 import { CONSEILS, watty } from "./watty.ts";
 import { ModePhoto } from "./photo.ts";
@@ -123,6 +124,7 @@ const LUMIERES_PORTEES = {
 const accueil = document.getElementById("accueil")!;
 const voile = document.getElementById("voile")!;
 const canvas = document.getElementById("monde") as HTMLCanvasElement;
+empecherLeZoom(); // 0.10.1 (A6) : pas de zoom de la page au double appui sur iPhone
 const tactile = Entrees.estTactile();
 const qualite = qualiteActuelle(tactile);
 
@@ -438,6 +440,7 @@ const hud = new Hud(
   {
     manger: (objet) => envoyer({ t: "manger", objet }),
     boire: () => envoyer({ t: "boire" }),
+    boireBouteille: () => envoyer({ t: "boire_bouteille" }),
     construireFeu: (dakota = false) => {
       if (!position) return;
       // On choisit d'abord où le monter (2026-10-08).
@@ -831,7 +834,7 @@ function recevoir(message: MessageServeur): void {
       // Du bois en plus : on le montre tout de suite (ajouter du bois est immédiat).
       const boisAvant = boisDesFeux.get(message.feu.id);
       if (boisAvant !== undefined && message.feu.bois > boisAvant + 0.05) {
-        hud.pastille("feu_de_camp", `Feu : ${String(Math.round(message.feu.bois * 10) / 10).replace(".", ",")} kg de bois`);
+        hud.pastille("feu_de_camp", `Feu : ${String(Math.round(message.feu.bois * 10) / 10).replace(".", ",")} kg de bois`);
         son.jouer("geste_bois");
       }
       boisDesFeux.set(message.feu.id, message.feu.bois);
@@ -903,7 +906,7 @@ function recevoir(message: MessageServeur): void {
         }
         // Un geste court se lit sur l'anneau seul ; un geste long et une fabrication ont aussi le pourcentage à côté.
         if (!maintien.tenu) hud.debutAction(message.libelle, message.duree, message.deja ?? 0);
-        if ((message.deja ?? 0) > 0) hud.message(`Tu reprends là où tu t'étais arrêté (${Math.round((message.deja ?? 0) * 100)} %).`);
+        if ((message.deja ?? 0) > 0) hud.message(`Tu reprends là où tu t'étais arrêté (${Math.round((message.deja ?? 0) * 100)} %).`);
         bruiteur.debutAction(message.libelle, message.bruit);
         personnage?.agir(gesteDAction(message.libelle));
       } else {
@@ -1049,6 +1052,7 @@ function recevoir(message: MessageServeur): void {
     case "portes":
       portesCoop = message.portes;
       if (decorCoop && lieu === "cooperative") majPortes(decorCoop, portesCoop, true);
+      poserSacs(); // au phare, l'épave échouée change le sol (0.10.1, A2)
       // La grande porte du Moulin grince (M6).
       // Au phare, c'est l'épave qui s'échoue : la scène du cargo a ses sons (client/src/phare.ts).
       if (lieu !== "phare") son.jouer(lieu === "moulin" ? "grande_porte" : "geste_bois");
@@ -1190,6 +1194,12 @@ function majSacs(liste: SacVu[]): void {
     contenu.add(vue);
     sacs.set(s.id, { vue, donnees: s });
   }
+  poserSacs();
+}
+
+/** Les sacs et les tas posés sur le vrai sol (0.10.1, A2) : au phare, la grève est 8,8 m sous le plateau. */
+function poserSacs(): void {
+  for (const s of sacs.values()) s.vue.position.y = hauteurSolLieu(lieu, s.vue.position.x, s.vue.position.z, portesCoop);
 }
 
 /** Les Éteints du lieu : on crée, on met à jour, on retire ceux qui ne sont plus là. */
@@ -1354,7 +1364,10 @@ function agir(a: ActionProposee | null): void {
   else if ("examiner" in a) {
     // Un écriteau qu'on lit (le guidage 0.10) : son texte en grand ; sinon, le texte d'Examiner.
     if (a.lire) hud.message(a.examiner, "ecriteau");
-    else hud.message(a.examiner, "examen");
+    // Une chose qui ne marche pas (0.10.1, chantier E) : sa raison en tête du message.
+    else hud.message(a.examiner, "examen", a.raison);
+    // 0.10.1 (A1) : le fruitier trop haut se dit ici, mais le serveur doit le savoir (l'idée de l'escabeau).
+    if (a.constat) envoyer({ t: "constat", quoi: a.constat });
   } else if ("ouvrirCoffre" in a) {
     const c = installations.get(a.ouvrirCoffre);
     if (c) hud.ouvrirCoffre(c.vue);
@@ -1998,6 +2011,7 @@ function boucle(instant: number): void {
   } else {
     scene.suivre(25, 25, dt);
   }
+  hud.majBoussole(scene.angleCamera); // la boussole tourne avec la vue (0.10.1, chantier D)
 
   const maintenant = Date.now() + decalage;
   const heure = photo.actif ? photo.reglages.heure : Number.isFinite(HEURE_FORCEE) ? HEURE_FORCEE : heureDeJeu(maintenant, debutMonde);
@@ -2036,7 +2050,7 @@ function boucle(instant: number): void {
   }
   ondes.animer(dt);
   pluie.animer(dt, temps.pluie, scene.centre, scene.ciel.nuit);
-  brume.animer(dt, heure, scene.centre, temps.pluie);
+  brume.animer(dt, heure, scene.centre, temps.pluie, vueArrivee.brume);
   for (const f of feux.values()) f.animer(dt, scene.ciel.nuit);
   // L'éclat de repère des déchets : de jour à moins de 8 m ; la nuit, seulement dans la lumière qu'on porte.
   dechetsVue.animer(dt, enVoyage ? null : position, lumiere && lumierePortee(inventaire) !== null);
@@ -2074,7 +2088,7 @@ function boucle(instant: number): void {
 
   if (position && estNuit(heure) && !nuitAnnoncee) {
     nuitAnnoncee = true;
-    if (!lumiere && lumierePortee(inventaire)) hud.message("La nuit tombe. R (ou « Lumière ») pour t'éclairer… mais la lumière se voit de loin.");
+    if (!lumiere && lumierePortee(inventaire)) hud.message(avecTouches("La nuit tombe. Allume ta lumière ({lumiere}) pour t'éclairer… mais elle se voit de loin.", tactile));
     aider("nuit");
     aider("partir");
   }

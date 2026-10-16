@@ -56,9 +56,21 @@ export const VESTIGES_LOT2 = {
   bouteille_plastique: {
     nom: "bouteille d'eau vide",
     pluriel: "bouteilles d'eau vides",
-    description: "« Eau Pure des Glaciers, 1,5 L. » Vide depuis l'Abondance ; le glacier aussi.",
+    description: "« Eau Pure des Glaciers, 1 L. » Vide depuis l'Abondance ; le glacier aussi.",
     poids: 0.03,
     valeur: 0,
+    famille: "dechet",
+    rarete: "C",
+    lieux: "partout",
+  },
+  // Plan 0.10.1 (A4) : la même, pleine, le bouchon jamais ouvert. Commune, partout, comme la vide ; elle se boit d'un
+  // trait depuis le sac (1 L dans la jauge de soif au plus), et il reste la bouteille vide.
+  bouteille_eau: {
+    nom: "bouteille d'eau",
+    pluriel: "bouteilles d'eau",
+    description: "« Eau Pure des Glaciers, 1 L. » Pleine, le bouchon jamais ouvert. Elle se boit telle quelle, d'un trait.",
+    poids: 1.03,
+    valeur: 2,
     famille: "dechet",
     rarete: "C",
     lieux: "partout",
@@ -346,7 +358,7 @@ export const VESTIGES_LOT2 = {
   rideau: {
     nom: "rideau occultant",
     pluriel: "rideaux occultants",
-    description: "« Bloque 100 % de la lumière extérieure. » Pratique, maintenant que la lumière attire.",
+    description: "« Bloque 100 % de la lumière extérieure. » Pratique, maintenant que la lumière attire.",
     poids: 1.2,
     valeur: 2,
     famille: "textile",
@@ -478,7 +490,7 @@ export const VESTIGES_LOT2 = {
   parasol: {
     nom: "parasol de terrasse",
     pluriel: "parasols de terrasse",
-    description: "« Résiste aux vents jusqu'à 30 km/h. » Le 31 a eu raison de lui. Un mât en tube d'aluminium, une toile.",
+    description: "« Résiste aux vents jusqu'à 30 km/h. » Le 31 a eu raison de lui. Un mât en tube d'aluminium, une toile.",
     poids: 8,
     valeur: 3,
     famille: "loisir",
@@ -874,8 +886,8 @@ export const VESTIGES_LOT2 = {
     lieux: ["V", "D"],
   },
   fut_200: {
-    nom: "fût métallique de 200 L",
-    pluriel: "fûts métalliques de 200 L",
+    nom: "fût métallique de 200 L",
+    pluriel: "fûts métalliques de 200 L",
     description: "Dix-huit kilos de tôle vide. Un jour, une charbonnière en fût ou un récupérateur d'eau.",
     poids: 18,
     valeur: 15,
@@ -908,7 +920,7 @@ export const VESTIGES_LOT2 = {
   velo_appartement: {
     nom: "vélo d'appartement connecté",
     pluriel: "vélos d'appartement connectés",
-    description: "Il t'a fait pédaler 4 000 km sans bouger. Il continue sans toi.",
+    description: "Il t'a fait pédaler 4 000 km sans bouger. Il continue sans toi.",
     poids: 35,
     valeur: 20,
     famille: "loisir",

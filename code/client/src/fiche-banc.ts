@@ -23,7 +23,7 @@ function majuscule(t: string): string {
 /** Une barre de niveau, comme celle du sac. */
 function niveau(wh: number, capacite: number): string {
   const pct = capacite > 0 ? Math.max(0, Math.min(100, Math.round((wh / capacite) * 100))) : 0;
-  return `<span class="charge-batterie"><span class="charge-barre"><span style="width:${pct}%"></span></span> ${nb(wh)} / ${nb(capacite)} Wh</span>`;
+  return `<span class="charge-batterie"><span class="charge-barre"><span style="width:${pct}%"></span></span> ${nb(wh)} / ${nb(capacite)} Wh</span>`;
 }
 
 /**
@@ -33,12 +33,12 @@ function niveau(wh: number, capacite: number): string {
 export function htmlFicheBanc(i: InstallationVue, inventaire: Inventaire, charges: Charges, chargeArmes: Partial<Record<CleObjet, number>>, soleil?: number): string {
   const bat = batterieDuBanc(i.etat);
   const aEchanger = BATTERIES_DE_BANC.some((b) => (inventaire[b] ?? 0) > 0);
-  const maintenant = soleil === undefined ? "" : soleil < 0.05 ? " ; en ce moment, rien" : ` ; en ce moment, ≈ ${nb(soleil)} W`;
+  const maintenant = soleil === undefined ? "" : soleil < 0.05 ? " ; en ce moment, rien" : ` ; en ce moment, ≈ ${nb(soleil)} W`;
   const remplir = [
-    i.etat.panneau ? `le panneau, au soleil seulement (≈ ${Math.round(whParBeauJour() / 10) * 10} Wh par beau jour, rien la nuit ni sous la pluie${maintenant})` : "le panneau, une fois posé dessus",
-    `un pédalier générateur à moins de ${PORTEE_PEDALIER_BANC} m, quand on pédale`,
+    i.etat.panneau ? `le panneau, au soleil seulement (≈ ${Math.round(whParBeauJour() / 10) * 10} Wh par beau jour, rien la nuit ni sous la pluie${maintenant})` : "le panneau, une fois posé dessus",
+    `un pédalier générateur à moins de ${PORTEE_PEDALIER_BANC} m, quand on pédale`,
     // Plan 0.10 (V1-17) : le moulin de jerricans, s'il est à moins de 15 m (la batterie la plus proche dans ce rayon).
-    `un moulin de jerricans à moins de ${PORTEE_BATTERIE_BASE} m, quand il vente`,
+    `un moulin de jerricans à moins de ${PORTEE_BATTERIE_BASE} m, quand il vente`,
     "la manivelle de la lampe à dynamo, lentement",
   ].join(" ; ");
   // La manivelle (le secours lent, R17) : avec la lampe à dynamo du kit, tant que la batterie du banc n'est pas pleine.
@@ -54,7 +54,7 @@ export function htmlFicheBanc(i: InstallationVue, inventaire: Inventaire, charge
         </div>
         <span class="boutons-banc">
           <button type="button" class="secondaire" data-banc="echanger" ${aEchanger ? "" : "disabled"}>Échanger</button>
-          ${manivelle ? `<button type="button" class="secondaire" data-banc="manivelle" ${bat.wh >= bat.capacite - 0.05 ? "disabled" : ""} title="1 Wh par minute, à la force du bras">Manivelle</button>` : ""}
+          ${manivelle ? `<button type="button" class="secondaire" data-banc="manivelle" ${bat.wh >= bat.capacite - 0.05 ? "disabled" : ""} title="1 Wh par minute, à la force du bras">Manivelle</button>` : ""}
         </span>
       </article>`
     : `<article class="etape banc-batterie">
@@ -82,7 +82,7 @@ export function htmlFicheBanc(i: InstallationVue, inventaire: Inventaire, charge
     })
     .join("");
   const rien = `<p class="indice">Rien sur toi ne se charge ici : la petite batterie de la frontale, une arme électrique ou une batterie de voiture, oui.</p>`;
-  const rendement = `<p class="indice">${Math.round(RENDEMENT_BANC * 100)} % du courant arrive au bout des pinces ; ${WH_RECHARGE_PAR_HEURE} Wh par heure de jeu, deux minutes au plus à la fois. Ne bouge pas pendant la charge.</p>`;
+  const rendement = `<p class="indice">${Math.round(RENDEMENT_BANC * 100)} % du courant arrive au bout des pinces ; ${WH_RECHARGE_PAR_HEURE} Wh par heure de jeu, deux minutes au plus à la fois. Ne bouge pas pendant la charge.</p>`;
 
   return `
     <h3>La batterie du banc</h3>

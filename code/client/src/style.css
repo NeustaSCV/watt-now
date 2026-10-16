@@ -33,6 +33,8 @@ body {
   user-select: none;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior: none;
+  /* 0.10.1 (A6) : pas de zoom au double appui sur iPhone, même sur un bouton grisé ou un fond (client/src/anti-zoom.ts). */
+  touch-action: manipulation;
 }
 
 #monde {
@@ -248,6 +250,7 @@ body {
   position: fixed;
   inset: 0;
   pointer-events: none;
+  touch-action: manipulation; /* 0.10.1 (A6) : voir html, body */
   color: var(--hud-texte);
   font-size: 14px;
 }
@@ -2191,17 +2194,45 @@ body {
 #hud .demande-echange[hidden] {
   display: none;
 }
+/* 0.10.1 (A3) : la demande passe au-dessus du bandeau ; en vertical, sous les raccourcis (elle s'y cachait). */
+#hud .demande-echange {
+  z-index: 14;
+  max-width: calc(100vw - 24px);
+}
+@media (max-width: 560px) and (orientation: portrait) {
+  #hud .demande-echange {
+    top: calc(var(--bas-raccourcis, 186px) + 10px);
+  }
+}
 #hud .demande-echange p {
   margin: 0 0 10px;
   display: flex;
   align-items: center;
   gap: 8px;
 }
+/* R-09 : le trait qui raccourcit pendant les 20 s qu'on a pour répondre (la durée est posée par htmlDemande). */
+#hud .demande-echange { overflow: hidden; padding-bottom: 14px; }
+#hud .demande-echange .delai { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: rgba(59, 42, 30, 0.12); }
+#hud .demande-echange .delai span { display: block; height: 100%; background: var(--canard); transform-origin: left; animation: fondre-demande 20s linear forwards; }
+@keyframes fondre-demande { to { transform: scaleX(0); } }
 #hud .demande-echange .pastille {
   width: 10px;
   height: 10px;
   border-radius: 50%;
   display: inline-block;
+}
+/* R-11 (0.10.1) : « X te propose un échange. » tient sur une ligne, les deux boutons dessous. La boîte prend la largeur
+   de sa phrase (posée à left: 50 %, elle s'arrêtait à la moitié de l'écran) et la phrase coule comme un texte (en flex,
+   elle faisait deux colonnes). Un long pseudo passe à la ligne entre les mots. La leçon garde sa mise en page. */
+#hud .demande-echange:not(.demande-lecon) {
+  width: max-content;
+}
+#hud .demande-echange:not(.demande-lecon) p {
+  display: block;
+}
+#hud .demande-echange:not(.demande-lecon) .pastille {
+  margin-right: 6px;
+  vertical-align: 1px;
 }
 #hud .demande-echange div,
 #hud .panneau.echange .boutons {
@@ -2233,158 +2264,174 @@ body {
   color: var(--canard);
 }
 
+/* Le panneau d'échange sur iPhone (plan 0.10.1, chantier C, A3 ; maquette V2 « toucher = choisir », choisie par le
+   porteur le 2026-10-16). Presque plein écran, dans les marges de sécurité : ce que tu reçois, ce que tu donnes, les
+   wotts, ton sac en grille et la barre de l'objet choisi, puis les accords et les deux boutons, toujours visibles.
+   En paysage, le sac à gauche et l'échange à droite. */
 #hud .panneau.echange {
   position: absolute;
-  left: 50%;
-  top: 50% !important;
-  transform: translate(-50%, -50%);
-  width: min(620px, calc(100vw - 24px));
-  max-height: calc(100dvh - 40px) !important;
-  overflow-y: auto;
+  top: calc(6px + env(safe-area-inset-top)) !important;
+  bottom: calc(6px + env(safe-area-inset-bottom)) !important;
+  left: calc(6px + env(safe-area-inset-left)) !important;
+  right: calc(6px + env(safe-area-inset-right)) !important;
+  width: auto !important;
+  max-width: 560px;
+  max-height: 760px !important;
+  margin: auto;
+  transform: none !important;
+  z-index: 14;
+  overflow: hidden;
   pointer-events: auto;
   background: var(--creme);
   color: var(--encre);
   border-radius: 8px;
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
-  padding: 12px 14px;
+  padding: 8px 10px 10px;
   font-size: 14px;
 }
-#hud .panneau.echange header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-#hud .panneau.echange h2 {
-  margin: 0;
-  font-family: "Futura", "Avenir Next Condensed", "Arial Black", sans-serif;
-  font-size: 19px;
-}
-#hud .panneau.echange header .fermer {
-  border: none;
-  background: transparent;
-  font-size: 18px;
-  cursor: pointer;
-  color: var(--encre);
-}
-#hud .panneau.echange .colonnes {
+#hud .panneau.echange:not([hidden]) {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin: 8px 0;
+  gap: 6px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto auto auto minmax(0, 1fr) auto;
+  grid-template-areas: "tete" "recoit" "donnes" "wotts" "sac" "pied";
 }
-#hud .panneau.echange section {
-  border: 2px solid rgba(59, 42, 30, 0.15);
-  border-radius: 6px;
-  padding: 6px 8px;
-  max-height: 46vh;
-  overflow-y: auto;
+body:has(#hud .panneau.echange:not([hidden])) #hud .tactile,
+body:has(#hud .panneau.echange:not([hidden])) #joystick {
+  display: none !important;
 }
-#hud .panneau.echange section.recoit {
-  background: rgba(31, 94, 102, 0.06);
+#hud .panneau.echange > header { grid-area: tete; display: flex; align-items: center; min-height: 30px; }
+#hud .panneau.echange .recoit { grid-area: recoit; }
+#hud .panneau.echange .donnes { grid-area: donnes; }
+#hud .panneau.echange .wotts-offre { grid-area: wotts; }
+#hud .panneau.echange .mon-sac { grid-area: sac; }
+#hud .panneau.echange .pied { grid-area: pied; }
+#hud .panneau.echange h2 {
+  margin: 0; display: flex; align-items: center; gap: 6px;
+  font-family: "Futura", "Avenir Next Condensed", "Arial Black", sans-serif; font-size: 17px;
 }
+#hud .panneau.echange .pastille { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: none; }
 #hud .panneau.echange h3 {
-  margin: 0 0 4px;
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  opacity: 0.75;
+  margin: 0 0 3px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.75;
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
 }
-#hud .panneau.echange .lignes {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+#hud .panneau.echange h3 .astuce { text-transform: none; letter-spacing: 0; font-weight: 400; font-size: 11px; opacity: 0.85; white-space: nowrap; }
+#hud .panneau.echange .z { border: 2px solid rgba(59, 42, 30, 0.15); border-radius: 6px; padding: 5px 7px; min-width: 0; }
+#hud .panneau.echange .recoit { background: rgba(31, 94, 102, 0.07); border-color: rgba(31, 94, 102, 0.3); }
+#hud .panneau.echange .vide { margin: 2px 0; font-style: italic; font-size: 13px; opacity: 0.7; min-height: 20px; }
+#hud .panneau.echange .resume {
+  margin: 3px 0 0; font-size: 12.5px; font-weight: 600; line-height: 1.25;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
-#hud .panneau.echange .lignes li {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 0;
-  border-bottom: 1px dashed rgba(59, 42, 30, 0.15);
-  opacity: 0.75;
+/* Une rangée d'icônes : ce que chacun pose */
+#hud .panneau.echange .rang { display: flex; gap: 5px; overflow-x: auto; overscroll-behavior: contain; scrollbar-width: none; padding-bottom: 1px; }
+#hud .panneau.echange .rang::-webkit-scrollbar { display: none; }
+#hud .panneau.echange .pion {
+  position: relative; flex: none; width: 42px; height: 42px; padding: 2px; display: grid; place-items: center;
+  background: #fffaf0; border: 1.5px solid var(--creme-fonce); border-radius: 7px; color: var(--encre); font: inherit;
 }
-#hud .panneau.echange .lignes li.mis {
-  opacity: 1;
+#hud .panneau.echange button.pion { cursor: pointer; touch-action: manipulation; }
+#hud .panneau.echange .pion.choisi { border-color: var(--encre); box-shadow: inset 0 0 0 1px var(--encre); }
+#hud .panneau.echange .pion svg,
+#hud .panneau.echange .case svg { width: 100%; height: 100%; }
+#hud .panneau.echange .pion-wotts {
+  flex: none; align-self: center; height: 42px; display: flex; align-items: center; padding: 0 10px; border-radius: 7px;
+  background: var(--nuit); color: #e8c547; font-weight: 800; font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums;
 }
-#hud .panneau.echange .lignes li.vide {
-  font-style: italic;
+/* Les marques en coin, comme dans le sac du jeu */
+#hud .panneau.echange .etoiles-case {
+  position: absolute; right: 1px; top: 1px; font-size: 10px; font-weight: 800; line-height: 1.1; color: #8a5a00;
+  background: rgba(255, 236, 170, 0.92); border-radius: 4px; padding: 0 2px; font-variant-numeric: tabular-nums;
 }
-#hud .panneau.echange .nom {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  font-size: 12.5px;
-  font-weight: 700;
+#hud .panneau.echange .badge {
+  position: absolute; right: 1px; bottom: 1px; font-size: 10px; font-weight: 800; color: var(--encre);
+  background: rgba(244, 236, 216, 0.92); border-radius: 4px; padding: 0 3px; font-variant-numeric: tabular-nums;
 }
-#hud .panneau.echange .nom small {
-  font-weight: 400;
-  font-size: 11px;
-  opacity: 0.7;
-}
-#hud .panneau.echange .pas {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-#hud .panneau.echange .pas b {
-  min-width: 18px;
-  text-align: center;
-}
-#hud .panneau.echange .pas button,
+/* Les wotts */
+#hud .panneau.echange .wotts-offre { display: flex; flex-wrap: nowrap; align-items: center; gap: 6px; padding: 0 2px; font-variant-numeric: tabular-nums; }
+#hud .panneau.echange .wotts-offre .titre-wotts { font-weight: 700; font-size: 13px; white-space: nowrap; }
+#hud .panneau.echange .wotts-offre b { min-width: 70px; text-align: center; font-size: 14px; white-space: nowrap; }
+#hud .panneau.echange .wotts-offre small { margin-left: auto; font-size: 11.5px; opacity: 0.7; line-height: 1.15; text-align: right; white-space: nowrap; }
 #hud .panneau.echange .wotts-offre button {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 2px solid var(--encre);
-  background: transparent;
-  color: var(--encre);
-  font-weight: 700;
-  cursor: pointer;
-  touch-action: manipulation;
+  height: 34px; min-width: 46px; padding: 0 8px; border-radius: 999px; border: 2px solid var(--encre);
+  background: transparent; color: var(--encre); font: inherit; font-weight: 700; cursor: pointer; touch-action: manipulation;
 }
-#hud .panneau.echange .wotts-offre button {
-  width: auto;
-  border-radius: 999px;
-  padding: 0 8px;
+/* Ton sac : la grille, comme le sac du jeu */
+#hud .panneau.echange .mon-sac { display: flex; flex-direction: column; min-height: 0; padding-bottom: 6px; }
+#hud .panneau.echange .grille {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(46px, 1fr)); grid-auto-rows: max-content; gap: 4px; align-content: start; padding: 2px;
 }
-#hud .panneau.echange button:disabled {
-  opacity: 0.3;
-  cursor: default;
+#hud .panneau.echange .grille > .vide { grid-column: 1 / -1; }
+#hud .panneau.echange .case {
+  position: relative; aspect-ratio: 1; padding: 3px; display: grid; place-items: center; font: inherit;
+  background: #fffaf0; border: 1.5px solid var(--creme-fonce); border-radius: 7px; cursor: pointer; touch-action: manipulation; -webkit-touch-callout: none;
 }
-#hud .panneau.echange .wotts-offre {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  margin-top: 8px;
-  font-family: "Courier New", monospace;
+#hud .panneau.echange .case.posee { border-color: var(--canard); box-shadow: inset 0 0 0 1px var(--canard); background: #eaf2ef; }
+#hud .panneau.echange .case.epuisee svg { opacity: 0.35; }
+#hud .panneau.echange .case.choisie { border-color: var(--encre); box-shadow: inset 0 0 0 2px var(--encre); }
+#hud .panneau.echange .case .nombre-pose {
+  position: absolute; left: -4px; top: -4px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px;
+  background: var(--canard); color: var(--creme); font-size: 12px; font-weight: 800; line-height: 20px; text-align: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
-#hud .panneau.echange .wotts-offre span {
-  font-weight: 700;
+/* La barre de l'objet choisi : son nom, ses étoiles, et deux gros − et + */
+#hud .panneau.echange .choix {
+  flex: none; display: flex; align-items: center; gap: 8px; margin-top: 6px; padding: 4px 6px; border-top: 2px solid var(--encre); min-height: 50px;
 }
-#hud .panneau.echange .wotts-offre small {
-  width: 100%;
-  opacity: 0.7;
+#hud .panneau.echange .choix > svg { width: 38px; height: 38px; flex: none; }
+#hud .panneau.echange .choix.vide p { margin: 0; font-style: italic; font-size: 13px; opacity: 0.7; }
+#hud .panneau.echange .nom { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: 13px; font-weight: 700; line-height: 1.2; }
+#hud .panneau.echange .nom small { font-weight: 400; font-size: 11px; opacity: 0.7; }
+#hud .panneau.echange .pas { display: flex; align-items: center; gap: 4px; flex: none; }
+#hud .panneau.echange .pas b { min-width: 20px; text-align: center; font-variant-numeric: tabular-nums; }
+#hud .panneau.echange .pas button {
+  width: 38px; height: 38px; border-radius: 50%; border: 2px solid var(--encre); background: transparent;
+  color: var(--encre); font: inherit; font-weight: 700; font-size: 18px; cursor: pointer; line-height: 1; touch-action: manipulation;
 }
-#hud .panneau.echange .accords {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  margin: 6px 0 10px;
-  font-size: 13px;
-  font-style: italic;
+#hud .panneau.echange button:disabled { opacity: 0.3; cursor: default; }
+/* Le pied : les accords et les deux boutons, toujours visibles */
+#hud .panneau.echange .pied { display: flex; flex-direction: column; gap: 5px; }
+#hud .panneau.echange .accords { margin: 0; display: flex; justify-content: space-between; gap: 8px; font-size: 12px; min-height: 16px; }
+#hud .panneau.echange .accords span { opacity: 0.65; }
+#hud .panneau.echange .accords span.ok { opacity: 1; color: var(--canard); font-weight: 700; }
+/* R-09 : la ligne qui dit pourquoi les accords sont partis (l'autre a changé son offre), à la place des accords */
+#hud .panneau.echange .avis { margin: 0; font-size: 12px; min-height: 16px; color: var(--rouge); font-weight: 700; }
+#hud .panneau.echange .boutons { justify-content: stretch; }
+#hud .panneau.echange .boutons button { flex: 1 1 0; min-height: 44px; }
+#hud .panneau.echange .boutons button.oui { flex: 2 1 0; }
+/* R-09 : le bref éclair jaune sur « Tu reçois » quand l'autre change ce qu'il donne (1,2 s, comme DUREE_ECLAIR_MS) ;
+   rien si l'appareil demande moins de mouvement. */
+#hud .panneau.echange .recoit.change { animation: eclair-recoit 1.2s ease-out both; }
+@keyframes eclair-recoit { 0% { background: rgba(232, 197, 71, 0.55); } 100% { background: rgba(31, 94, 102, 0.07); } }
+@media (prefers-reduced-motion: reduce) {
+  #hud .panneau.echange .recoit.change { animation: none; }
 }
-#hud .panneau.echange .accords .ok {
-  color: var(--canard);
-  font-style: normal;
-  font-weight: 700;
-}
-@media (max-width: 560px) {
-  #hud .panneau.echange .colonnes {
-    grid-template-columns: 1fr;
+/* « Tu reçois de ● X » ne sert qu'en paysage, où l'en-tête disparaît. */
+#hud .panneau.echange .de-qui { display: none; text-transform: none; letter-spacing: 0; font-weight: 700; }
+
+/* En paysage : ton sac à gauche, l'échange à droite ; pas d'en-tête (« Annuler » ferme), pas de noms sous « Tu donnes »
+   (les nombres sont sur les cases du sac). */
+@media (orientation: landscape) {
+  #hud .panneau.echange { max-width: 900px; padding: 6px 8px 8px; }
+  #hud .panneau.echange:not([hidden]) {
+    gap: 4px 10px;
+    grid-template-columns: minmax(0, 1.05fr) minmax(300px, 1fr);
+    grid-template-rows: auto auto auto minmax(0, 1fr);
+    grid-template-areas: "sac recoit" "sac donnes" "sac wotts" "sac pied";
   }
-  #hud .panneau.echange section {
-    max-height: 26vh;
-  }
+  #hud .panneau.echange > header { display: none; }
+  #hud .panneau.echange .de-qui { display: inline-flex; align-items: center; gap: 4px; }
+  #hud .panneau.echange .z { padding: 3px 6px; }
+  #hud .panneau.echange .pion { width: 36px; height: 36px; }
+  #hud .panneau.echange .pion-wotts { height: 36px; }
+  #hud .panneau.echange .resume { -webkit-line-clamp: 1; font-size: 12px; margin-top: 2px; }
+  #hud .panneau.echange .donnes .resume { display: none; }
+  #hud .panneau.echange .wotts-offre button { height: 30px; }
+  #hud .panneau.echange .wotts-offre small { font-size: 11px; }
+  #hud .panneau.echange .pied { align-self: end; }
+  #hud .panneau.echange .boutons button { min-height: 40px; }
+  #hud .panneau.echange .choix { min-height: 44px; margin-top: 4px; }
 }
 
 /* ---------- Sommeil et météo (É5) ---------- */
@@ -6228,4 +6275,155 @@ body.vue-ensemble #hud .bloc.aide {
   #hud .messages {
     right: calc(max(16px, env(safe-area-inset-right)) + 196px) !important;
   }
+}
+
+/* ---------- La fiche « Examiner » courte (0.10.1, chantier E ; maquette examiner-court, variante V3) ----------
+   L'utile d'abord : « Sert à », « Se monte sur », « Outil », avant la phrase d'ambiance, titres en petites capitales ;
+   ce qui ne va pas, en bandeau orange tout en haut de la fiche d'une installation, ou en tête du message d'Examiner. */
+#hud .examen-court {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 10px;
+  margin: 8px 0 2px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--creme);
+}
+#hud .examen-court dt {
+  padding-top: 2px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--canard);
+}
+#hud .examen-court dd {
+  margin: 0;
+  line-height: 1.35;
+}
+#hud .examen-court i {
+  color: #7a6a58;
+}
+#hud .panneau.fiche .ne-marche-pas {
+  margin: 0 0 8px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  background: #fbe3c6;
+  color: #8f3f12;
+  box-shadow: inset 3px 0 0 #c4561c;
+  line-height: 1.4;
+}
+#hud .messages p.examen .raison {
+  display: block;
+  margin-bottom: 2px;
+  color: #ffc27a;
+  font-weight: 700;
+}
+
+/* ---------- La boussole (0.10.1, chantier D : le cadran V3 de la maquette) ----------
+   Vertical : un rond de papier crème de 60 px, à la place exacte du « ⟳ » (case « tourner » de la grille) ; paysage
+   (téléphone) : le cadran remplace l'icône de la tuile « Vue », la légende écrit la direction (« N-O »). Le papier crème
+   garde les lettres lisibles de jour comme de nuit. */
+#hud .tactile .b-tourner.boussole {
+  width: 60px;
+  height: 60px;
+  min-width: 60px;
+  min-height: 60px;
+  padding: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  align-self: center;
+  justify-self: end;
+  background: rgba(244, 236, 216, 0.94);
+  border-color: rgba(59, 42, 30, 0.55);
+  transition: transform 0.12s ease-out;
+}
+#hud .boussole .cadran { display: block; width: 54px; height: 54px; pointer-events: none; }
+#hud .boussole .cadran svg { display: block; width: 100%; height: 100%; overflow: visible; }
+#hud .raccourcis .r-tourner.boussole { transition: transform 0.12s ease-out; }
+#hud .raccourcis .r-tourner.boussole .cadran { width: 32px; height: 32px; margin: -1px 0; }
+#hud .raccourcis .r-tourner.boussole .legende { font-variant-numeric: tabular-nums; }
+/* Le petit appui : le bouton s'enfonce un instant. */
+#hud .boussole.appui { transform: scale(0.9); }
+@media (orientation: landscape) and (max-height: 520px) and (pointer: coarse) {
+  #hud .tactile .b-tourner.boussole { display: none; }
+}
+
+/* ---------- Le bouton « Lumière » en icône (0.10.1, chantier L, R-10 : la variante V3 de la maquette, « l'auréole ») ----------
+   Un rond de 56 px à la place du mot « Lumière » (case « lumiere » de la grille, à droite d'« Explorer », au-dessus de la
+   boussole ; en paysage, à la même place), avec la lumière qu'on porte (client/src/bouton-lumiere.ts) sur le rond sombre
+   des boutons. Éteinte : le dessin terne ; allumée : une auréole de sa couleur (LUMIERES_PORTEES de main.ts) déborde du
+   bouton, orange qui vacille pour la torche, jaune doux pour la lanterne, blanc froid fixe pour la frontale et la lampe.
+   L'auréole est réglée pour ne pas monter sur le N de la boussole juste en dessous. Sans lumière : un rond en pointillé. */
+#hud .tactile .b-lumiere {
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
+  min-height: 56px;
+  padding: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  position: relative;
+  transition: transform 0.12s ease-out, border-color 0.25s;
+  -webkit-touch-callout: none;
+  --aura: rgba(255, 138, 61, 0.55);
+  --bord: #ffae5a;
+}
+#hud .tactile .b-lumiere.g-lanterne { --aura: rgba(255, 210, 122, 0.5); --bord: #ffd27a; }
+#hud .tactile .b-lumiere:is(.g-frontale, .g-lampe) { --aura: rgba(230, 240, 255, 0.5); --bord: #eef4ff; }
+#hud .b-lumiere .dessin { display: block; width: 46px; height: 46px; pointer-events: none; transition: opacity 0.25s; }
+#hud .b-lumiere .dessin svg.objet { transition: filter 0.25s; }
+#hud .b-lumiere .dessin { position: relative; }
+#hud .b-lumiere .dessin svg { display: block; width: 100%; height: 100%; overflow: visible; }
+/* La petite pile vide de la frontale : par-dessus le dessin, hors du filtre qui le ternit. */
+#hud .b-lumiere .dessin svg.pile-vide { position: absolute; inset: 0; }
+#hud .b-lumiere.appui { transform: scale(0.9); }
+/* L'auréole : un anneau de la couleur de la lumière, autour du bouton. */
+#hud .tactile .b-lumiere::before {
+  content: "";
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
+  background: radial-gradient(circle, transparent 0 62%, var(--aura) 70%, transparent 94%);
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity 0.3s, transform 0.3s;
+  pointer-events: none;
+}
+#hud .tactile .b-lumiere.allumee { border-color: var(--bord); }
+#hud .tactile .b-lumiere.allumee::before { opacity: 1; transform: scale(1); }
+#hud .tactile .b-lumiere.allumee.g-torche::before { animation: lumiere-aura 1.1s ease-in-out infinite; }
+#hud .tactile .b-lumiere.allumee.g-lanterne::before { animation: lumiere-aura 2.4s ease-in-out infinite; }
+#hud .tactile .b-lumiere:not(.allumee) .dessin svg.objet { filter: grayscale(0.85) brightness(0.78); }
+#hud .tactile .b-lumiere.sans { border-style: dashed; }
+#hud .tactile .b-lumiere.sans .dessin { opacity: 0.5; }
+/* La flamme vacille, la fumée monte (le dessin ne change qu'au changement d'état : l'animation ne repart pas). */
+#hud .b-lumiere .flamme { transform-box: view-box; transform-origin: 24px 22px; animation: lumiere-flamme 0.95s ease-in-out infinite; }
+#hud .b-lumiere .flamme.petite { transform-origin: 24px 29px; animation-duration: 1.6s; }
+#hud .b-lumiere .fumee { animation: lumiere-fumee 2.8s ease-in-out infinite; }
+@keyframes lumiere-aura {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  30% { opacity: 0.78; transform: scale(0.97); }
+  60% { opacity: 0.95; transform: scale(1.03); }
+}
+@keyframes lumiere-flamme {
+  0%, 100% { transform: scale(1, 1) skewX(0deg); }
+  22% { transform: scale(0.96, 1.06) skewX(-3deg); }
+  48% { transform: scale(1.03, 0.95) skewX(2deg); }
+  74% { transform: scale(0.98, 1.04) skewX(-1.5deg); }
+}
+@keyframes lumiere-fumee {
+  0% { transform: translateY(2px); opacity: 0.35; }
+  45% { opacity: 0.95; }
+  100% { transform: translateY(-3px); opacity: 0.25; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #hud .tactile .b-lumiere,
+  #hud .tactile .b-lumiere::before,
+  #hud .b-lumiere .dessin svg.objet { transition: none; }
+  #hud .tactile .b-lumiere.allumee::before,
+  #hud .b-lumiere .flamme,
+  #hud .b-lumiere .fumee { animation: none; }
 }

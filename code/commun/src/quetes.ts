@@ -111,7 +111,7 @@ const INSTALLER: Quete[] = [
     titre: "L'eau du ciel",
     icone: "bidon_5l",
     // Plan 0.8 §2.3 : le récupérateur de 5 L (le bidon de la ruine, les sacs plastique en entonnoir), sans bâche.
-    texte: "Bouillir l'eau de la mare coûte du bois. Le bidon de 5 L de la ruine, des sacs plastique ouverts en entonnoir, quatre branches et une corde : la pluie se boit telle quelle.",
+    texte: "Bouillir l'eau de la mare coûte du bois. Le bidon de 5 L de la ruine, des sacs plastique ouverts en entonnoir, quatre branches et une corde : la pluie se boit telle quelle.",
     objectifs: [{ libelle: "Récupérateur de pluie", condition: installation("recuperateur_pluie") }],
     lecon: "Il se remplit quand il pleut, même quand tu n'es pas là.",
     recompense: { wotts: 10 },
@@ -123,7 +123,7 @@ const INSTALLER: Quete[] = [
     icone: "coffre",
     texte: "Tout porter, c'est s'épuiser. Fabrique un coffre de rangement (bûches, branches, une corde de fibres de la mare).",
     objectifs: [{ libelle: "Coffre sur ton terrain", condition: installation("coffre") }],
-    lecon: "Le coffre garde 150 kg pour toi. Ne pars en route qu'avec ce qu'il faut.",
+    lecon: "Le coffre garde 150 kg pour toi. Ne pars en route qu'avec ce qu'il faut.",
   },
   // Plan 0.8 §9.3 (0.8.2, chantier J) : le lit juste après le coffre, avant les portes (l'abri fermé suppose l'abri
   // garni).
@@ -184,17 +184,17 @@ const INSTALLER: Quete[] = [
     icone: "feuillards",
     texte: "Cerclé de fer, cloué au marteau remmanché, ton coffre tiendrait bien plus lourd. Sa fiche dit où chercher les cercles.",
     objectifs: [{ libelle: "Coffre cerclé", condition: { a: "un_de", conditions: [{ a: "installation", type: "coffre", niveau: 2 }, fait("niveau:coffre_cercle")] } }],
-    lecon: "250 kg à l'abri : de quoi garder la matière de tes sorties.",
+    lecon: "250 kg à l'abri : de quoi garder la matière de tes sorties.",
     recompense: { wotts: 15 },
   },
   {
     id: "dix_litres",
     ligne: "installer",
     route: "A",
-    besoin: "il te faut un seau de 10 L",
+    besoin: "il te faut un seau de 10 L",
     titre: "Dix litres",
     icone: "seau_10l",
-    texte: "Ton bidon de 5 L déborde à chaque averse. Un seau de 10 L sous l'entonnoir : deux fois plus d'eau. Sa fiche dit où chercher.",
+    texte: "Ton bidon de 5 L déborde à chaque averse. Un seau de 10 L sous l'entonnoir : deux fois plus d'eau. Sa fiche dit où chercher.",
     objectifs: [{ libelle: "Récupérateur à seau", condition: { a: "un_de", conditions: [{ a: "installation", type: "recuperateur_pluie", niveau: 2 }, fait("niveau:recuperateur_seau")] } }],
     lecon: "Dix litres d'eau potable qui t'attendent, même quand tu es sur la route.",
     recompense: { wotts: 15 },
@@ -284,7 +284,7 @@ const INSTALLER: Quete[] = [
     titre: "Traîner plus lourd",
     texte: "Le bois, la pierre, ça pèse. Deux longues perches, des traverses, deux cordes : un travois.",
     objectifs: [{ libelle: "Travois", condition: { a: "objet", types: ["travois"], n: 1 } }],
-    lecon: "50 kg de plus derrière toi. Chargé, on ne court plus : choisis bien quand tu sors avec.",
+    lecon: "50 kg de plus derrière toi. Chargé, on ne court plus : choisis bien quand tu sors avec.",
     recompense: { wotts: 15 },
   },
 ];
@@ -415,7 +415,7 @@ const METIER: Quete[] = [
     // Plan 0.8 (chantiers 7 et 13) : le petit alternateur de la station ; la dynamo du vélo reste le repli, très lent.
     texte: "Monte le petit alternateur de la station sur ton pédalier générateur ({agir} au pédalier) : tes jambes feront de l'électricité.",
     objectifs: [{ libelle: "Alternateur sur le pédalier", condition: { a: "un_de", conditions: [{ a: "installation", type: "pedalier", avec: "alternateur" }, { a: "installation", type: "pedalier", avec: "dynamo" }] } }],
-    lecon: "Une heure de pédalage, environ 60 Wh dans la batterie. C'est à toi, et ça ne fume pas.",
+    lecon: "Une heure de pédalage, environ 60 Wh dans la batterie. C'est à toi, et ça ne fume pas.",
     recompense: { wotts: 20 },
   },
   {
@@ -451,7 +451,7 @@ const METIER: Quete[] = [
     // Plan 0.8 (chantiers 7 et 13) : le panneau se pose sur le banc solaire, plein sud.
     texte: "Pose le panneau sur ton banc solaire ({agir} au banc), puis la batterie de la ruine dedans : le soleil s'y met en réserve.",
     objectifs: [{ libelle: "Panneau sur le banc", condition: { a: "un_de", conditions: [{ a: "installation", type: "banc_recharge", avec: "panneau" }, { a: "installation", type: "panneau_solaire" }] } }],
-    lecon: "Il charge au soleil, même quand tu n'es pas là : ≈ 160 Wh par beau jour, rien la nuit.",
+    lecon: "Il charge au soleil, même quand tu n'es pas là : ≈ 160 Wh par beau jour, rien la nuit.",
     recompense: { wotts: 15 },
   },
   {
@@ -460,7 +460,7 @@ const METIER: Quete[] = [
     famille: "voltaiques",
     titre: "Faire le plein",
     icone: "petite_batterie",
-    texte: "Laisse le soleil travailler : il te faut 20 Wh dans tes batteries.",
+    texte: "Laisse le soleil travailler : il te faut 20 Wh dans tes batteries.",
     objectifs: [{ libelle: "Wh en batteries", condition: { a: "wh", but: 20 } }],
     lecon: "Une batterie pleine pèse pareil qu'une vide. Le transport, c'est ton vrai coût.",
     recompense: { wotts: 20 },
@@ -540,7 +540,7 @@ const METIER_06: Quete[] = [
     icone: "pack_cellules",
     texte: "Trois cellules lithium (une batterie externe, une perceuse…), du fil de cuivre : monte un pack de cellules.",
     objectifs: [{ libelle: "Pack de cellules", condition: fabriqueOuObjet(["pack_cellules"], ["pack_cellules"]) }],
-    lecon: "12 Wh qui tiennent dans la main : de quoi éteindre neuf Éteints.",
+    lecon: "12 Wh qui tiennent dans la main : de quoi éteindre neuf Éteints.",
     recompense: { wotts: 20 },
   },
   {
@@ -588,7 +588,7 @@ const METIER_06: Quete[] = [
     icone: "arbalete",
     texte: "À l'établi : un arbrier scié, une noix, un arc (une perche de frêne suffit), une corde. Monte une arbalète.",
     objectifs: [{ libelle: "Arbalète", condition: fabriqueOuObjet(["arbalete", "arbalete_lourde"], ["arbalete", "arbalete_lourde"]) }],
-    lecon: "Armée d'avance, elle tire tout de suite. Réarmer : 3 s sans bouger.",
+    lecon: "Armée d'avance, elle tire tout de suite. Réarmer : 3 s sans bouger.",
     recompense: { wotts: 20 },
   },
   {
@@ -599,7 +599,7 @@ const METIER_06: Quete[] = [
     icone: "carreau",
     texte: "Sac → « Prêt à tirer », puis {lancer} : un carreau à la tête, et l'Éteint ne se relève plus.",
     objectifs: [{ libelle: "Éteint détruit d'un carreau", condition: fait("tete:carreau") }],
-    lecon: "Jusqu'à 12 m, rien à bander. Au contact, il te faut une autre arme.",
+    lecon: "Jusqu'à 12 m, rien à bander. Au contact, il te faut une autre arme.",
     recompense: { wotts: 25 },
   },
   {

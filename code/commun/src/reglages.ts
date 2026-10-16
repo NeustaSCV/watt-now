@@ -15,7 +15,8 @@ export const DEFINITIONS_REGLAGES = {
   gestes_vitesse: { defaut: 1, min: 0.2, max: 5, aide: "Vitesse des gestes sur le terrain (ramasser, fouiller, démonter) : 2 = deux fois plus rapides." },
   // Ralentis le 2026-10-08 (porteur du projet) : au rythme réel, une réserve pleine ne tenait que 24 min réelles.
   faim_rythme: { defaut: 0.35, min: 0, max: 5, aide: "Vitesse à laquelle on a faim : 1 = 2 500 kcal par jour de jeu (réserve vide en 24 min réelles) ; 0,35 = en ≈ 70 min." },
-  soif_rythme: { defaut: 0.35, min: 0, max: 5, aide: "Vitesse à laquelle on a soif : 1 = 2,5 L par jour de jeu (24 min réelles) ; 0,35 = en ≈ 70 min." },
+  // Plan 0.10.1 (A8) : la jauge de soif tient 1,5 L (2,5 avant) ; ralentie d'autant, elle dure toujours ≈ 70 min.
+  soif_rythme: { defaut: 0.21, min: 0, max: 5, aide: "Vitesse à laquelle on a soif : 1 = 2,5 L par jour de jeu (la jauge de 1,5 L se vide en ≈ 14 min réelles) ; 0,21 = en ≈ 70 min." },
   sommeil_rythme: { defaut: 0.4, min: 0, max: 5, aide: "Vitesse à laquelle on se fatigue : 1 = épuisé après 16 h de jeu éveillé (16 min réelles) ; 0,4 = en 40 min." },
   repousse_rythme: { defaut: 1, min: 0.1, max: 20, aide: "Vitesse de repousse des ressources (bois mort, baies, fruits, champignons, vestiges) : 2 = deux fois plus vite." },
   eteints_terrain_max: { defaut: 3, min: 0, max: 12, aide: "Nombre maximal d'Éteints debout en même temps sur un terrain." },

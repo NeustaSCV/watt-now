@@ -78,7 +78,7 @@ export function creerTerrain(): THREE.Group {
   groupe.add(creerLisiere(aleat));
   groupe.add(creerCloture(aleat));
   groupe.add(creerDetails(aleat));
-  groupe.add(creerPanneauRoute("Route de la Campagne", "Station-service 3 km", 27.8, T - 1.2, 0));
+  groupe.add(creerPanneauRoute("Route de la Campagne", "Station-service 3 km", 27.8, T - 1.2, 0));
   nommer(groupe, ["sol", "exterieur", "lisiere", "cloture", "details", "panneau"]);
   return groupe;
 }

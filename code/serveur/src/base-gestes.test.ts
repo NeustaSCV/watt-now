@@ -96,6 +96,8 @@ test("0.8.2 §7.6 : le frein de la mare se sent (serveur et prédiction) : mi-al
 
 test("R21 : la gourde se remplit au milieu de la mare, pas au bord", () => {
   const t = monter({ gourde: 1 });
+  // La gourde de départ est pleine d'eau potable : à moitié bue, la mare la complète (pleine, elle refuserait : R-16).
+  (t.joueur as unknown as { gourde: { contenu: string; litres: number } }).gourde = { contenu: "potable", litres: 0.5 };
   t.joueur.position = { x: MARE.x - MARE.rayon - 0.3, z: MARE.z, o: 0 };
   assert.ok(distanceMare(t.joueur.position.x, t.joueur.position.z) > 0);
   t.joueur.recevoir({ t: "interagir", cible: { genre: "mare" }, verbe: "remplir" });

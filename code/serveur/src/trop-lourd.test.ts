@@ -14,19 +14,19 @@ test("l'objet visé : son nom, son poids, puis le sac et sa capacité, et commen
   const [ligne, ...autres] = texteTropLourd(sac, 0, { etau: 1 });
   assert.equal(autres.length, 0);
   // « Étau d'établi, 9 kg : trop lourd, ton sac est à 50 kg sur 55. »
-  assert.equal(ligne, `É${OBJETS.etau.nom.slice(1)}, ${String(OBJETS.etau.poids).replace(".", ",")} kg : trop lourd, ton sac est à ${porte} kg sur 55. Jette (Sac → Jeter) ou range dans un coffre.`);
+  assert.equal(ligne, `É${OBJETS.etau.nom.slice(1)}, ${String(OBJETS.etau.poids).replace(".", ",")} kg : trop lourd, ton sac est à ${porte} kg sur 55. Jette (Sac → Jeter) ou range dans un coffre.`);
   assert.match(porte, /^(49,5|50|50,5)$/);
 });
 
 test("plusieurs objets visés : leur liste et leur poids total", () => {
   const [ligne] = texteTropLourd({ sac_a_dos: 1, batterie_voiture: 3 }, 0, { buche: 2, pierre: 1 });
   const poids = String(Math.round((OBJETS.buche.poids * 2 + OBJETS.pierre.poids) * 10) / 10).replace(".", ",");
-  assert.match(ligne!, new RegExp(`^2 ${OBJETS.buche.pluriel} et 1 ${OBJETS.pierre.nom}, ${poids} kg : trop lourd, ton sac est à [\\d,]+ kg sur 55\\.`));
+  assert.match(ligne!, new RegExp(`^2 ${OBJETS.buche.pluriel} et 1 ${OBJETS.pierre.nom}, ${poids} kg : trop lourd, ton sac est à [\\d,]+ kg sur 55\\.`));
 });
 
 test("sans sac : les poches, et le rappel du sac de fortune ; sans objet visé, la ligne d'avant", () => {
   const lignes = texteTropLourd({ pierre: 9 }, 0, { pierre: 1 });
-  assert.match(lignes[0]!, /trop lourd, tes poches sont à [\d,]+ kg sur 10\./);
+  assert.match(lignes[0]!, /trop lourd, tes poches sont à [\d,]+ kg sur 10\./);
   assert.match(lignes[1]!, /sac de fortune/);
-  assert.match(texteTropLourd({ sac_a_dos: 1, batterie_voiture: 3, pierre: 1 }, 0)[0]!, /^Ton sac est trop lourd \(\d+ kg sur 55\)/);
+  assert.match(texteTropLourd({ sac_a_dos: 1, batterie_voiture: 3, pierre: 1 }, 0)[0]!, /^Ton sac est trop lourd \(\d+ kg sur 55\)/);
 });

@@ -12,6 +12,19 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
+## 0.10.1 · en préparation
+
+- **La soif, plus douce** : la jauge de soif tient 1,5 L (2,5 avant). Chaque gorgée la remplit plus vite, et une jauge pleine dure autant qu'avant.
+- **Plusieurs gourdes** : chaque gourde du sac ajoute 1 L à ta réserve. La mare et le récupérateur de pluie les remplissent toutes d'un coup, et bouillir purifie toute l'eau d'un coup. Si une gourde quitte ton sac, l'eau qu'elle portait s'en va avec elle.
+- **La bouteille d'eau** : on en trouve partout, dans les fouilles et parmi les déchets. Dans le sac, « Boire » : jusqu'à 1 L d'un trait, et tu gardes la bouteille vide. Si tu n'as pas soif, garde-la pour plus tard.
+- **Les saisons** : l'hiver, on a plus faim ; l'été, plus soif (jusqu'à un quart de plus au cœur de la saison). Près de ton feu, de ta forge encore chaude ou de ta charbonnière qui cuit, ou endormi dans ton abri, l'hiver ne creuse pas plus.
+- **La boussole** : le bouton qui tourne la vue devient une boussole, qui tourne avec elle. Au repos, le nord est en haut à droite : le chemin de ton terrain est bien du côté du S.
+- **La lumière en icône** : le bouton montre la lumière que tu portes ; allumée, elle s'entoure de sa couleur. Une frontale à la pile vide le montre d'un coup d'œil.
+- **L'échange sur téléphone** : ce que tu reçois en haut, ton sac en grille ; un toucher choisit un objet, − et + règlent le nombre, et les deux boutons restent visibles, en vertical comme couché. Si l'autre change son offre après ton accord, le jeu te le dit. La demande tient sur une ligne et montre le temps qu'il reste pour répondre.
+- **« Examiner », court et utile** : un objet dit à quoi il sert et ce qu'il fait comme outil ; une installation qui ne marche pas dit pourquoi, tout en haut de sa fiche. Les textes trop longs pour être lus en entier sont raccourcis, et un nombre ne se sépare plus de son unité en fin de ligne.
+- **Les petits correctifs** : l'idée de l'escabeau vient quand on vise un fruitier mûr trop haut ; une pierre lancée se voit mieux par terre et se reprend partout, au phare aussi ; plus de zoom quand on touche deux fois l'écran ; plus de voile de brume dans la vue d'ensemble de l'arrivée ; plus de déconnexion pendant la pause.
+- **Rien n'est perdu** : ta partie de la 0.10 se relit, ce que tu as construit et ce que tu portes ; une réserve d'eau au-dessus de 1,5 L revient à 1,5 L.
+
 ## 0.10.0 · déployée le 2026-10-15
 
 - **Le niveau 2, sur la côte** : deux routes nouvelles partent de ton terrain, aussi longues l'une que l'autre. Par la route du pont, le Grand Hôtel des Flots ; par la corniche du Cap Rouge, le phare du cap. Les quatre lieux se voient sur la carte, sans dire ce qu'on y trouve. La côte s'ouvre quand tu as pris un objet à la Coopérative et un au Moulin, sur place ; avant, elle reste grisée.

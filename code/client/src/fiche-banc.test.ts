@@ -24,7 +24,7 @@ function boutons(html: string): { cible: string; actif: boolean }[] {
 test("0.8.2 fiche du banc : la batterie nommée, une ligne par chose qui se charge, un bouton « Charger »", () => {
   const html = htmlFicheBanc(banc(180), { petite_batterie: 1, lampe_frontale: 1, "matraque_electrique#2": 1, couteau: 1 }, { petite_batterie: 20 }, { "matraque_electrique#2": 3 });
   assert.match(html, /La batterie de voiture de la ruine/);
-  assert.match(html, /180 \/ 360 Wh/);
+  assert.match(html, /180 \/ 360 Wh/);
   assert.match(html, /La petite batterie de la frontale/);
   assert.match(html, /Matraque électrique ★★/);
   assert.match(html, /sa petite batterie/);
@@ -63,7 +63,7 @@ test("0.8.2 fiche du banc (R17) : avec la lampe à dynamo, la manivelle remplit 
 
 test("0.10 fiche du banc (V1-17, V1-02) : elle cite le moulin de jerricans à 15 m, et le beau jour compensé", () => {
   const html = htmlFicheBanc(banc(180), {}, {}, {});
-  assert.match(html, /un moulin de jerricans à moins de 15 m, quand il vente/);
-  assert.match(html, /≈ 160 Wh par beau jour/);
+  assert.match(html, /un moulin de jerricans à moins de 15 m, quand il vente/);
+  assert.match(html, /≈ 160 Wh par beau jour/);
   assert.doesNotMatch(html, /clé/i);
 });

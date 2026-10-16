@@ -284,6 +284,8 @@ export type MessageClient =
   | { t: "interagir"; cible: Cible; verbe: Verbe }
   | { t: "manger"; objet: TypeObjet }
   | { t: "boire" }
+  /** Plan 0.10.1 (A4) : boire une bouteille d'eau d'un trait, depuis le sac (sans passer par la gourde). */
+  | { t: "boire_bouteille" }
   | { t: "construire_feu"; x: number; z: number; dakota?: boolean }
   | { t: "fabriquer"; recette: string; x?: number; z?: number; o?: number }
   | { t: "lumiere"; allumee: boolean }
@@ -761,8 +763,10 @@ export type MessageClientConstat =
   /**
    * Ce que le client signale pour les mesures du test (avis-game-designer.md §5.2) : la fiche d'une construction ouverte
    * sans pouvoir l'améliorer (`construction` : son type), l'aide « Je suis coincé » ouverte. Le serveur en fait un fait.
+   * `arbre_haut` (0.10.1, A1) : A devant un fruitier mûr sans escabeau dans son cercle ; le client le dit lui-même (rien ne
+   * se lance), mais l'idée de l'escabeau naît de ce fait (`commun/src/progression.ts`).
    */
-  { t: "constat"; quoi: "fiche_bloquee" | "aide_coince"; construction?: string };
+  { t: "constat"; quoi: "fiche_bloquee" | "aide_coince" | "arbre_haut"; construction?: string };
 
 // ---------- Le banc de recharge (0.8.2, chantier C : R17 ; commun/src/banc.ts, serveur/src/electricite.ts) ----------
 

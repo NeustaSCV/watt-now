@@ -109,7 +109,7 @@ test("0.8 aide : « Le gué » et « Le Moulin » disent leurs mécanismes", () 
   // 0.8.2 (chantier K, décision du porteur) : l'aide ne nomme pas la glaise du gué.
   assert.doesNotMatch(g, /glaise/i);
   const m = rubrique("moulin");
-  for (const x of [/grosse clé/, /grande porte/, /fosse/, /halage/, /24 h/]) assert.match(m, x);
+  for (const x of [/grosse clé/, /grande porte/, /fosse/, /halage/, /24 h/]) assert.match(m, x);
 });
 
 test("0.8 aide : « Faire évoluer une arme » remplace « Réparer (Sac → l'arme) » : Reprendre, remettre à neuf, monter d'une étoile, le manche", () => {
@@ -164,10 +164,30 @@ test("0.10 aide : le péage (douze wotts, au prix du Comptoir, à l'aller seulem
 
 test("0.10 aide : l'hôtel et le phare disent comment, sans divulgâcher (ni cargo, ni épave, ni où sont les objets-clés)", () => {
   const h = rubrique("hotel");
-  for (const m of [/ascenseur/, /carte d'une chambre/, /borne/, /chambre 7/, /que dans ce sens-là/, /24 h/]) assert.match(h, m);
+  for (const m of [/ascenseur/, /carte d'une chambre/, /borne/, /chambre 7/, /que dans ce sens-là/, /24 h/]) assert.match(h, m);
   const p = rubrique("phare");
-  for (const m of [/trois mètres/, /pétrole/, /ne sert qu'à la nuit tombée/, /corne/, /une fois par nuit/, /que dans ce sens-là/, /24 h/]) assert.match(p, m);
+  for (const m of [/trois mètres/, /pétrole/, /ne sert qu'à la nuit tombée/, /corne/, /une fois par nuit/, /que dans ce sens-là/, /24 h/]) assert.match(p, m);
   const tout = [h, p, rubrique("cote")].join("\n");
   for (const secret of [/cargo/i, /épave/i, /conteneur/i, /naufrag/i, /s'échoue/i, /lingerie/i, /machinerie/i, /suite/i, /tôles/i, /couvertures de laine/i, /lanterne-tempête/i, /roulements/i, /fer à souder/i, /porte de four/i, /jerrican/i, /rabot/i, /cloche/i, /soufflet/i, /tête du robot/i, /escabeau/i])
     assert.doesNotMatch(tout, secret);
+});
+
+test("0.10.1 : au téléphone, l'aide de la pose ne cite aucun geste du clavier ; au clavier, aucun mot ne change", async () => {
+  const { selonLeMode } = await import("./aide.ts");
+  const { avecTouches } = await import("./touches.ts");
+  const lignes = RUBRIQUES_AIDE.find((r) => r.id === "fabriquer")!.blocs.flatMap((b) => (typeof b === "object" && "liste" in b ? b.liste : []));
+  const ligne = (debut: string) => lignes.find((l) => l.startsWith(debut))!;
+  const telephone = (l: string) => avecTouches(selonLeMode(l, true), true);
+  const clavier = (l: string) => selonLeMode(l, false);
+  // Au téléphone : seulement ce qui existe au doigt.
+  assert.equal(telephone(ligne("Tourner :")), "Tourner : le bouton « Tourner ».");
+  assert.equal(telephone(ligne("Annuler :")), "Annuler : B ou le bouton « Annuler ».");
+  assert.equal(telephone(ligne("Pendant la pose")), "Pendant la pose, ton personnage ne bouge pas : c'est le fantôme qui bouge (joystick).");
+  // Au clavier : les phrases d'avant, mot pour mot.
+  assert.equal(clavier(ligne("Tourner :")), "Tourner : la molette, {lumiere} ou le bouton « Tourner ».");
+  assert.equal(clavier(ligne("Annuler :")), "Annuler : Échap, clic droit, {examiner} ou le bouton « Annuler ».");
+  assert.equal(clavier(ligne("Pendant la pose")), "Pendant la pose, ton personnage ne bouge pas : c'est le fantôme qui bouge (clavier ou joystick).");
+  // Nulle part dans la rubrique, au téléphone, un geste du clavier.
+  const rubriqueTel = RUBRIQUES_AIDE.find((r) => r.id === "fabriquer")!.blocs.map((b) => (typeof b === "string" ? b : "sous_titre" in b ? b.sous_titre : b.liste.join("\n"))).map(telephone).join("\n");
+  for (const geste of [/Échap/, /clic droit/, /molette/, /clavier/]) assert.doesNotMatch(rubriqueTel, geste);
 });

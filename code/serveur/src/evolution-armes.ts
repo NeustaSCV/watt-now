@@ -33,8 +33,11 @@ export interface ContexteEvolution {
   retirerPlusieurs(objets: Inventaire): void;
   /** Retirer et ajouter d'un coup (une seule mise à jour du sac). */
   echanger(retire: Inventaire, ajoute: Inventaire): void;
-  /** Un geste qui prend du temps, avec sa pose (« outil » ou « lourd »). */
-  commencer(libelle: string, dureeS: number, appliquer: () => void, pose: "leger" | "outil" | "lourd"): void;
+  /**
+   * Un geste qui prend du temps, avec sa pose (« outil » ou « lourd ») ; `brule` : il brûle du charbon à la forge, qui
+   * en réchauffe (plan 0.10.1, R-02).
+   */
+  commencer(libelle: string, dureeS: number, appliquer: () => void, pose: "leger" | "outil" | "lourd", brule?: boolean): void;
   info(texte: string): void;
   envoyer(m: MessageServeur): void;
   /** Sauver l'usure et la charge des armes. */
@@ -109,7 +112,7 @@ export class EvolutionArmes {
       if (!q?.possible) return this.ctx.info(q?.raison ?? "Ça n'a pas pris.");
       if (geste === "reparer") this.appliquerReparation(objet, encore);
       else this.appliquerMontee(objet, encore);
-    }, p.pose);
+    }, p.pose, (p.cout.charbon_bois ?? 0) > 0);
   }
 
   /** L'usure revient à neuf ; à la meule fine, l'affûtage donne un fil de rasoir. */

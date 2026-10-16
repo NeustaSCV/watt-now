@@ -215,7 +215,7 @@ function texturePanneauPortail(): THREE.CanvasTexture {
     g.fillStyle = "#2b2f2a";
     g.font = "26px 'Avenir Next', Arial, sans-serif";
     g.fillText("Approvisionnement agricole · Libre-service", 256, 118, 480);
-    g.fillText("Lundi – samedi : 8 h – 12 h · 14 h – 18 h", 256, 156, 480);
+    g.fillText("Lundi – samedi : 8 h – 12 h · 14 h – 18 h", 256, 156, 480);
     g.fillText("Pont-bascule 50 t — se présenter à l'accueil", 256, 192, 480);
     // À la bombe rouge, de travers
     g.save();
@@ -2012,7 +2012,7 @@ export function creerCooperative(): THREE.Group {
     enseigne: matiereTexture(textureEnseigne(), { roughness: 0.7 }),
     toitPlat: matiereTexture(textureToitPlat(2305)),
     translucide: matiereVerre(0xdfe6d6, 0.55),
-    affiches: [matiereTexture(textureAffichePromo("-20 %", "ENGRAIS GAZON", "#f2e27a"))],
+    affiches: [matiereTexture(textureAffichePromo("-20 %", "ENGRAIS GAZON", "#f2e27a"))],
     carrelage: (() => {
       const t = textureCarrelage();
       t.repeat.set((58 - B.x0) / 2, (B.z1 - 32) / 2);

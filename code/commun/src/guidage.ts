@@ -184,20 +184,20 @@ export const DECLENCHEURS: readonly Declencheur[] = [
  */
 export const ECRITEAUX: readonly Ecriteau[] = [
   { id: "E-01", lieu: "route_pont", points: [CHICANE], rayon: 0.9, texte: "« PÉAGE · 12 WOTTS / TÊTE · DANS LA CAISSE ↓ · UN À LA FOIS ! »" },
-  { id: "E-02", lieu: "route_pont", points: [auPont(-61.6, 0)], rayon: 3, texte: "« PONT CONNECTÉ · votre passage est optimisé en temps réel · trafic : 0 véhicule · attente : 0 min »" },
-  { id: "E-04", lieu: "corniche", points: [PANNEAUX_SORTIE_CORNICHE[0]], rayon: 1.5, texte: "« ← Ton terrain · 3 km · Phare du cap, par le tunnel → »" },
-  { id: "E-13", lieu: "corniche", points: [PANNEAUX_SORTIE_CORNICHE[1]], rayon: 1.5, texte: "« Phare du cap · 2 km → · ← La corniche, ton terrain »" },
-  { id: "E-14", lieu: "route_pont", points: [PANNEAUX_SORTIE_PONT[0]], rayon: 1.7, texte: "« ← Ton terrain · 3 km · Grand Hôtel des Flots, par le pont → »" },
-  { id: "E-15", lieu: "route_pont", points: [PANNEAUX_SORTIE_PONT[1]], rayon: 1.7, texte: "« Grand Hôtel des Flots · 2 km → · ← Le pont, ton terrain »" },
-  { id: "E-16", lieu: "grand_hotel", points: [PANNEAU_SORTIE_HOTEL], rayon: 0.9, texte: "« Route du pont → · Ton terrain, par le pont · 5 km »" },
-  { id: "E-05", lieu: "corniche", points: [aLaCorniche(-68, -5)], rayon: 3.6, texte: "« CORNICHE PANORAMIQUE · VUE CERTIFIÉE 5 ÉTOILES · Selfie-points tous les 200 m »" },
+  { id: "E-02", lieu: "route_pont", points: [auPont(-61.6, 0)], rayon: 3, texte: "« PONT CONNECTÉ · votre passage est optimisé en temps réel · trafic : 0 véhicule · attente : 0 min »" },
+  { id: "E-04", lieu: "corniche", points: [PANNEAUX_SORTIE_CORNICHE[0]], rayon: 1.5, texte: "« ← Ton terrain · 3 km · Phare du cap, par le tunnel → »" },
+  { id: "E-13", lieu: "corniche", points: [PANNEAUX_SORTIE_CORNICHE[1]], rayon: 1.5, texte: "« Phare du cap · 2 km → · ← La corniche, ton terrain »" },
+  { id: "E-14", lieu: "route_pont", points: [PANNEAUX_SORTIE_PONT[0]], rayon: 1.7, texte: "« ← Ton terrain · 3 km · Grand Hôtel des Flots, par le pont → »" },
+  { id: "E-15", lieu: "route_pont", points: [PANNEAUX_SORTIE_PONT[1]], rayon: 1.7, texte: "« Grand Hôtel des Flots · 2 km → · ← Le pont, ton terrain »" },
+  { id: "E-16", lieu: "grand_hotel", points: [PANNEAU_SORTIE_HOTEL], rayon: 0.9, texte: "« Route du pont → · Ton terrain, par le pont · 5 km »" },
+  { id: "E-05", lieu: "corniche", points: [aLaCorniche(-68, -5)], rayon: 3.6, texte: "« CORNICHE PANORAMIQUE · VUE CERTIFIÉE 5 ÉTOILES · Selfie-points tous les 200 m »" },
   { id: "E-06", lieu: "grand_hotel", points: [BORNE], rayon: 0.6, dans: aLHotelDans("hall"), texte: "« CHECK-IN PAR SOURIRE »" },
   { id: "E-07", lieu: "grand_hotel", points: [jeuHotel(26.89, 16.53)], rayon: 0.8, texte: "« SÉJOUR ZÉRO-EFFORT · On respire pour vous. · Repas mâchés · Bronzage par abonnement »" },
   { id: "E-08", lieu: "grand_hotel", points: [jeuHotel(4.0, 3.65)], rayon: 0.6, texte: "« Baignade interdite aux chiens ET AUX ÉTEINTS »" },
   { id: "E-09", lieu: "phare", points: [auPhare(-2.45, -6.45)], rayon: 1, dans: auPhareDans("cuisine"), texte: "« Journal de bord · Rallumé quand même. »" },
   { id: "E-10", lieu: "phare", points: [auPhare(-7.78, -1.92)], rayon: 0.8, texte: "« ÉTEINS LA LANTERNE ! ILS VOIENT LA LUMIÈRE »" },
   { id: "E-11", lieu: "phare", points: [auPhare(0.7, 1.86)], rayon: 0.4, texte: "« PHARE DU CAP · allumé en 1883 »" },
-  { id: "E-12", lieu: "phare", points: [ECRITEAU_SENTIER], rayon: 0.9, texte: "« Sentier côtier · ← Port · 6 km »" },
+  { id: "E-12", lieu: "phare", points: [ECRITEAU_SENTIER], rayon: 0.9, texte: "« Sentier côtier · ← Port · 6 km »" },
   { id: "E-17", lieu: "phare", points: [ECRITEAU_ROUTE], rayon: 0.8, texte: "« ← La corniche · Ton terrain »" },
 ];
 

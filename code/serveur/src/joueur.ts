@@ -36,7 +36,6 @@ import { GESTE_TENU_MAX_S, PROGRESSION_GARDEE_MS, TERRAIN_TAILLE, TICK_HZ, type 
 import {
   BOIS_INITIAL_FEU,
   BOIS_PAR_LITRE_BOUILLI,
-  CONTENANCE_GOURDE,
   DUREES,
   EFFORT_PAR_ALLURE,
   GORGEE,
@@ -53,11 +52,15 @@ import {
   bruler,
   combustibleDe,
   consommer,
+  contenanceGourdes,
+  taGourde,
+  LITRES_BOUTEILLE,
   type Besoins,
   type Gourde,
 } from "../../commun/src/survie.ts";
+import { surplusSaison } from "../../commun/src/saisons.ts";
 import { DISTANCE_INTERACTION, EMPRISE_RESSOURCE, PORTEE_ARBRE, TEXTE_GOURDE_AU_MILIEU, auMilieuDeLaMare, distanceMare, RAYON_ESCABEAU, REPOUSSE_MS, USAGES, estArbre, ressourceVisible } from "../../commun/src/terrain.ts";
-import { heuresEcoulees } from "../../commun/src/temps.ts";
+import { heuresEcoulees, MS_PAR_HEURE_JEU } from "../../commun/src/temps.ts";
 import { DEMONTAGE, LIEU_DE_FOUILLE, estOrdure, etapeButin, tirerVestiges } from "../../commun/src/vestiges.ts";
 import {
   DUREE_VOYAGE_S,
@@ -221,6 +224,10 @@ import { GESTES_MAX } from "./presences.ts";
 
 const JAMAIS = Number.MAX_SAFE_INTEGER;
 const INTERVALLE_BESOINS = 1000;
+/** L'hiver ne coûte rien de plus à qui se tient à moins de ça d'un feu allumé (m ; plan 0.10.1, A7). */
+const AU_FEU = 3;
+/** La forge garde ses braises (elle réchauffe encore) tant de temps après un geste de forge (ms ; plan 0.10.1, R-02). */
+const BRAISES_FORGE_MS = 2 * MS_PAR_HEURE_JEU;
 const INTERVALLE_FEUX = 2000;
 const INTERVALLE_REPOUSSE = 5000;
 
@@ -345,8 +352,11 @@ export class Joueur implements Voyageur, ParticipantLecon {
   /** Le carnet des quêtes déjà envoyé (on ne le renvoie que s'il change). */
   private derniereVueQuetes = "";
   private quetesASauver = false;
-  /** Le dernier constat de l'interface reçu (plan 0.8, chantier 14) : un par 10 s au plus. */
-  private dernierConstat = 0;
+  /**
+   * Le dernier constat reçu (plan 0.8, chantier 14) : un par 10 s au plus. Ceux de l'interface (fiche, aide) partagent
+   * leur délai ; le fruitier trop haut (0.10.1, A1) a le sien, pour qu'une fiche ouverte juste avant ne l'avale pas.
+   */
+  private derniersConstats = new Map<"interface" | "arbre_haut", number>();
   /** La carnation choisie à la création (−1 : celle de la famille). */
   private readonly apparence: Apparence;
   private intention: Intention = INTENTION_REPOS;
@@ -393,6 +403,12 @@ export class Joueur implements Voyageur, ParticipantLecon {
   });
   /** La forge des Charbonniers (Book 25 §4) : trempe, reforgeage, accessoires ; dans serveur/src/forge.ts. */
   private readonly forge: Forge = new Forge(this.contexteForge());
+  /**
+   * Jusqu'à quand chaque forge brûle son charbon (id de l'installation → fin du dernier geste de forge ; plan 0.10.1,
+   * R-02) : elle réchauffe pendant le geste et encore `BRAISES_FORGE_MS` après. En mémoire seulement : après un
+   * redémarrage, la forge est froide.
+   */
+  private readonly chauffesForge = new Map<number, number>();
   /** L'électricité des Voltaïques (Book 25 §5) : décharges, recharge, pièges électriques (serveur/src/electricite.ts). */
   private readonly electricite: Electricite = new Electricite(this.contexteElectricite());
   /** Les meubles nouveaux du niveau 2 (plan 0.10, chantier D) : cuiseur, bacs de tri, creuset, moulin, rampe, arbalète de garde. */
@@ -475,6 +491,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
     this.besoins = perso.besoins;
     this.gourde = perso.gourde;
     this.inventaire = base.chargerInventaire(compte.id);
+    // Plan 0.10.1 (A5) : la réserve ne tient que 1 L par gourde du sac (une partie 0.10 se relit sans rien perdre d'autre).
+    this.borneGourdes(false);
     if (this.lieu === "cooperative") cooperatives.retrouverRadio(compte.id, (this.inventaire.radio_piles ?? 0) > 0);
     for (const r of base.chargerRessources(compte.id)) this.ressources.set(r.id, r);
     for (const i of base.chargerInstallations(compte.id)) {
@@ -656,6 +674,10 @@ export class Joueur implements Voyageur, ParticipantLecon {
       case "boire":
         this.boire();
         return;
+      // Plan 0.10.1 (A4) : la bouteille d'eau, bue d'un trait depuis le sac.
+      case "boire_bouteille":
+        this.boireBouteille();
+        return;
       case "construire_feu":
         this.construireFeu(message.x, message.z, message.dakota === true);
         return;
@@ -693,9 +715,13 @@ export class Joueur implements Voyageur, ParticipantLecon {
         this.mesuresClient(message);
         return;
       case "constat":
-        // Plan 0.8 (chantier 14) : la fiche ouverte sans pouvoir améliorer, l'aide « Je suis coincé » (une fois par 10 s).
-        if (Date.now() - this.dernierConstat < 10_000) return;
-        this.dernierConstat = Date.now();
+        // Plan 0.8 (chantier 14) : la fiche ouverte sans pouvoir améliorer, l'aide « Je suis coincé » (une fois par 10 s) ;
+        // 0.10.1 (A1) : le fruitier trop haut, que le client dit seul, fait penser à l'escabeau (son propre délai).
+        {
+          const sorte = message.quoi === "arbre_haut" ? "arbre_haut" : "interface";
+          if (Date.now() - (this.derniersConstats.get(sorte) ?? -Infinity) < 10_000) return;
+          this.derniersConstats.set(sorte, Date.now());
+        }
         this.noterFait(message.quoi === "fiche_bloquee" ? `fiche_bloquee:${message.construction ?? "?"}` : message.quoi);
         return;
       case "frapper":
@@ -1034,7 +1060,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
         this.mesurer("wotts", "création (dépôt d'électricité)", wotts, { wh });
         this.noterFait("wotts_gagnes", wotts);
         this.noterFait("depot_wh", wh);
-        this.info(`${Math.round(wh)} Wh déposés : +${formaterWotts(wotts)} en bons frais.`);
+        this.info(`${Math.round(wh)} Wh déposés : +${formaterWotts(wotts)} en bons frais.`);
         break;
       }
       case "retirer": {
@@ -1049,7 +1075,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
         this.poche = ajouterWotts(this.poche, -wh * PRIX_RETRAIT, instant);
         this.mesurer("wotts", "destruction (recharge au comptoir)", -wh * PRIX_RETRAIT, { wh });
         this.ajouterCharge(op.batterie, wh);
-        this.info(`+${Math.round(wh)} Wh dans ${nommer(op.batterie, 1)}.`);
+        this.info(`+${Math.round(wh)} Wh dans ${nommer(op.batterie, 1)}.`);
         break;
       }
       case "verser": {
@@ -1600,9 +1626,14 @@ export class Joueur implements Voyageur, ParticipantLecon {
         for (const [t, n] of Object.entries(ajoute) as [CleObjet, number][]) inventaire[t] = (inventaire[t] ?? 0) + n;
         j.inventaire = inventaire;
         j.base.sauverInventaire(j.compte.id, j.inventaire);
+        j.borneGourdes();
         j.envoyer({ t: "inventaire", inventaire: j.inventaire });
       },
-      commencer: (libelle, dureeS, appliquer, pose) => j.commencer(libelle, dureeS, appliquer, 0, pose),
+      commencer: (libelle, dureeS, appliquer, pose, brule) => {
+        const avant = j.action;
+        j.commencer(libelle, dureeS, appliquer, 0, pose);
+        if (brule) j.chaufferLaForge(avant);
+      },
       info: (t) => j.info(t),
       envoyer: (m) => j.envoyer(m),
       sauver: () => {
@@ -1847,6 +1878,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     this.inventaire = {};
     this.charges = {};
     this.base.sauverInventaire(this.compte.id, this.inventaire);
+    this.borneGourdes();
     this.annulerAction();
     this.lumiere = false;
     this.elan = null;
@@ -1860,7 +1892,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     this.sauvegarder();
     this.envoyer({ t: "effondrement" });
     this.info(`${raison} Des inconnus t'ont ramené chez toi, sans ton sac.`);
-    this.info("Tu n'as plus que tes poches (10 kg) : va reprendre ton sac, ou fabrique un sac de fortune.");
+    this.info("Tu n'as plus que tes poches (10 kg) : va reprendre ton sac, ou fabrique un sac de fortune.");
     this.envoyer(this.bienvenue(this.debutMonde));
   }
 
@@ -2088,7 +2120,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       if (objet === "sac_a_dos" || objet === "sac_fortune") return this.info("Ton sac, tu le gardes sur le dos.");
       const max = ratelier ? Infinity : capaciteCoffre(coffre);
       if (poidsInventaire(contenu) + OBJETS[typeDe(objet)].poids * n > max + 1e-9) {
-        return this.info(`Le coffre est plein (${max} kg) : ${etapeSuivanteInstallation(coffre) ? "améliore-le (il tiendra plus)" : "construis-en un autre"}, ou vends le surplus au Comptoir.`);
+        return this.info(`Le coffre est plein (${max} kg) : ${etapeSuivanteInstallation(coffre) ? "améliore-le (il tiendra plus)" : "construis-en un autre"}, ou vends le surplus au Comptoir.`);
       }
       if (batterie) {
         const part = this.chargesQuiPartent({ [objet]: n })[b] ?? 0;
@@ -2794,7 +2826,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     }
 
     // Besoins : ils baissent seulement quand le joueur est connecté.
-    this.besoins = consommer(this.besoins, heures, EFFORT_PAR_ALLURE[bouge ? intention.allure : "repos"], this.sommeil !== null, instant < this.caleJusqua);
+    this.besoins = consommer(this.besoins, heures, EFFORT_PAR_ALLURE[bouge ? intention.allure : "repos"], this.sommeil !== null, instant < this.caleJusqua, this.saisonSurLesBesoins(instant));
     if (this.action?.kcalEnPlus) this.besoins = { ...this.besoins, kcal: Math.max(0, this.besoins.kcal - this.action.kcalEnPlus * heures) };
     // L'admin : relu en base toutes les 5 s (un autre a pu être désigné) ; invincible, ni faim, ni soif, ni fatigue.
     if (this.admin && instant - this.derniereVerifAdmin >= 5000) {
@@ -3116,7 +3148,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
         const wh = this.ajouterCharge("batterie_voiture", this.cooperatives.prendreBatterie(this.compte.id));
         this.info(
           wh >= 1
-            ? `Tu desserres les cosses : la batterie du tracteur est à toi, ${Math.round(wh)} Wh dedans. Le klaxon se tait.`
+            ? `Tu desserres les cosses : la batterie du tracteur est à toi, ${Math.round(wh)} Wh dedans. Le klaxon se tait.`
             : "La batterie du tracteur est à toi, mais vide : le klaxon l'a épuisée. Recharge-la au banc.",
         );
       } else for (const b of BATTERIES) if (usage.donne[b]) this.ajouterCharge(b, CHARGE_TROUVEE[b] * (usage.donne[b] ?? 0));
@@ -3230,6 +3262,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (poidsInventaire(this.inventaire, this.gourde.litres) + delta > capaciteDe({ ...this.inventaire, [produit.objet]: (this.inventaire[produit.objet] ?? 0) + quantite })) return this.sacTropLourd();
     // Le redresseur de fûts de l'établi : les flèches vont deux fois plus vite (Book 25 §9.3).
     const redresse = accelerationFleches(r.id, this.installations.values(), (ix, iz) => this.proche(ix, iz, 3));
+    const avant = this.action;
     this.commencer(fois > 1 ? `${r.nom} (deux à la fois)` : soleil ? `${r.nom} (au soleil)` : r.nom, dureeReelle(r) * facteur * redresse * lenteur, () => {
       // Un ingrédient de métier compte toutes étoiles confondues.
       if (!Object.entries(ingredients).every(([t, n]) => compter(this.inventaire, t as TypeObjet) >= (n ?? 0))) return;
@@ -3257,6 +3290,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
       this.noterFait(`fabrique:${r.id}`);
       this.surFabrication?.(r.id);
     }, this.forge.kcalEnPlus(r), r.qualites.marteler ? "lourd" : "outil");
+    if (r.installation === "forge" && (ingredients.charbon_bois ?? 0) > 0) this.chaufferLaForge(avant);
   }
 
   /** Retire les ingrédients d'une recette : un objet de métier, les exemplaires les moins bons d'abord. */
@@ -3265,6 +3299,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     for (const [t, n] of Object.entries(ingredients)) retirerExemplaires(inventaire, t as TypeObjet, n ?? 0);
     this.inventaire = inventaire;
     this.base.sauverInventaire(this.compte.id, this.inventaire);
+    this.borneGourdes();
     this.envoyer({ t: "inventaire", inventaire: this.inventaire });
   }
 
@@ -3401,6 +3436,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     }
     this.inventaire = inventaire;
     this.base.sauverInventaire(this.compte.id, this.inventaire);
+    this.borneGourdes();
     this.base.sauverCharges(this.compte.id, this.charges, this.maintenant());
     this.base.sauverEtatInstallation(this.compte.id, banc.id, banc.etat);
   }
@@ -3494,7 +3530,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     // Les branches d'abord, puis les bûches (plan 0.8 §9.3) : le conseil de la première nuit devient possible.
     const type: TypeObjet | null = (this.inventaire.branche ?? 0) > 0 ? "branche" : (this.inventaire.buche ?? 0) > 0 ? "buche" : null;
     if (!type) return this.info("Tu n'as pas de bois : ramasse des branches ou des bûches de bois mort sur ton terrain.");
-    if (feu.bois + combustibleDe(type) > effetsFeu(feu).boisMax + 1e-9) return this.info(`Le feu a déjà assez de bois (${effetsFeu(feu).boisMax} kg au plus).`);
+    if (feu.bois + combustibleDe(type) > effetsFeu(feu).boisMax + 1e-9) return this.info(`Le feu a déjà assez de bois (${effetsFeu(feu).boisMax} kg au plus).`);
     // Immédiat (Book 08 §3, 2026-10-08) : une action sans jauge se fait sur-le-champ, un clic = un morceau de bois.
     if (this.action) return this.info(`Tu es déjà occupé : attends la fin, ou appuie sur A pour arrêter.`);
     this.retirer(type, 1);
@@ -3606,8 +3642,9 @@ export class Joueur implements Voyageur, ParticipantLecon {
 
   private bouillir(feu: FeuEnBase): void {
     if (!feu.allume) return this.info("Le feu n'est pas allumé : allume-le d'abord (briquet ou pierre à feu).");
-    if (this.gourde.litres <= 0) return this.info("Ta gourde est vide : remplis-la à la mare, puis fais bouillir l'eau sur un feu.");
-    if (this.gourde.contenu === "potable") return this.info("L'eau de ta gourde est déjà potable.");
+    if (this.gourde.litres <= 0) return this.info(this.texteGourdeVide());
+    if (this.gourde.contenu === "potable") return this.info(`L'eau de ${taGourde(this.inventaire)} est déjà potable.`);
+    // Toute la réserve bout d'un coup, quel que soit le nombre de gourdes (plan 0.10.1, A5).
     const e = effetsFeu(feu);
     const casserole = e.cuisine >= 3 && CASSEROLES.some((t) => (this.inventaire[t] ?? 0) > 0);
     const boisNecessaire = BOIS_PAR_LITRE_BOUILLI * this.gourde.litres * e.bouillirBois * (casserole ? BOUILLIR_AVEC_CASSEROLE : 1);
@@ -3628,10 +3665,13 @@ export class Joueur implements Voyageur, ParticipantLecon {
     // Au milieu de la mare, pas au bord (0.8.2, R21) : au bord, on coupe les joncs.
     if (distanceMare(this.position.x, this.position.z) > 1.5) return this.info("Approche-toi de la mare.");
     if (!auMilieuDeLaMare(this.position.x, this.position.z)) return this.info(TEXTE_GOURDE_AU_MILIEU);
-    if (this.gourde.litres >= CONTENANCE_GOURDE && this.gourde.contenu === "brute") return this.info("Ta gourde est déjà pleine.");
+    // Toutes les gourdes du sac se remplissent : 1 L chacune, une seule réserve (plan 0.10.1, A5).
+    const contenance = contenanceGourdes(this.inventaire);
+    // Pleine, brute ou potable, on ne puise plus (0.10.1, R-16 : l'eau potable ne doit pas redevenir brute pour rien).
+    if (this.gourde.litres >= contenance) return this.info(`${taGourde(this.inventaire, true)} ${(this.inventaire.gourde ?? 0) > 1 ? "sont déjà pleines" : "est déjà pleine"}.`);
     this.commencer("Remplir la gourde à la mare", DUREES.remplirGourde, () => {
-      // L'eau de la mare n'est pas potable : mélangée, toute la gourde devient de l'eau brute.
-      this.gourde = { contenu: "brute", litres: CONTENANCE_GOURDE };
+      // L'eau de la mare n'est pas potable : mélangée, toute la réserve devient de l'eau brute.
+      this.gourde = { contenu: "brute", litres: contenanceGourdes(this.inventaire) };
       this.envoyerBesoins();
       this.info("Eau de la mare : fais-la bouillir avant de la boire.");
     });
@@ -3674,13 +3714,73 @@ export class Joueur implements Voyageur, ParticipantLecon {
 
   private boire(): void {
     if (this.besoins.eau >= RESERVE_EAU_MAX * 0.97) return this.info("Tu n'as plus soif : garde ton eau pour plus tard.");
-    if (this.gourde.litres <= 0) return this.info("Ta gourde est vide : remplis-la à la mare, puis fais bouillir l'eau sur un feu.");
+    if (this.gourde.litres <= 0) return this.info(this.texteGourdeVide());
     this.commencer("Boire", DUREES.boire, () => {
       const gorgee = Math.min(GORGEE, this.gourde.litres);
       this.gourde = { ...this.gourde, litres: Math.max(0, this.gourde.litres - gorgee) };
       this.besoins = { ...this.besoins, eau: Math.min(RESERVE_EAU_MAX, this.besoins.eau + gorgee) };
       if (this.gourde.contenu === "brute") this.info("Eau non bouillie : c'est risqué (les maladies arrivent bientôt).");
       if (this.gourde.litres === 0) this.gourde = { contenu: "potable", litres: 0 };
+      this.envoyerBesoins();
+    }, 0, "aucun");
+  }
+
+  /**
+   * Les saisons sur la faim et la soif (plan 0.10.1, A7 : saisons.ts). Le surplus de faim de l'hiver est annulé à 3 m
+   * d'un feu allumé à soi (feu de camp, Dakota, foyers, four, poêle : tout ce qui brûle sur son terrain), ou endormi
+   * dans un abri. R-02 : à 3 m aussi d'une forge qui brûle son charbon (pendant un geste de forge, et ses braises 2 h de
+   * jeu après), ou d'une charbonnière qui cuit. L'été, rien n'atténue la soif.
+   */
+  private saisonSurLesBesoins(instant: number): { faim: number; soif: number } {
+    const saison = surplusSaison(jourDuCalendrier(instant, this.debutMonde));
+    if (saison.faim <= 1) return saison;
+    const aPortee = (x: number, z: number) => Math.hypot(x - this.position.x, z - this.position.z) <= AU_FEU;
+    const chezSoi = this.lieu === "terrain" && !this.voyage;
+    const auChaud =
+      this.sommeil?.dansUnAbri === true ||
+      (chezSoi && [...this.feux.values()].some((f) => f.allume && f.bois > 0 && aPortee(f.x, f.z))) ||
+      (chezSoi &&
+        [...this.installations.values()].some(
+          (i) =>
+            aPortee(i.x, i.z) &&
+            ((i.type === "forge" && instant <= (this.chauffesForge.get(i.id) ?? -Infinity) + BRAISES_FORGE_MS) ||
+              (i.type === "charbonniere" && i.etat.pretLe !== undefined && instant < i.etat.pretLe)),
+        ));
+    return auChaud ? { ...saison, faim: 1 } : saison;
+  }
+
+  /**
+   * Un geste de forge qui brûle du charbon vient de commencer (plan 0.10.1, R-02) : les forges à portée chauffent jusqu'à
+   * la fin du geste (ses braises durent ensuite `BRAISES_FORGE_MS`). `avant` : l'action d'avant l'appel, pour ne rien
+   * noter si le geste a été refusé.
+   */
+  private chaufferLaForge(avant: ActionEnCours | null): void {
+    if (!this.action || this.action === avant) return;
+    // Les forges à portée (celles que le geste a pu prendre : forge.ts les cherche à 3 m, comme `AU_FEU`).
+    for (const i of this.installations.values()) {
+      if (i.type === "forge" && this.proche(i.x, i.z, AU_FEU)) this.chauffesForge.set(i.id, Math.max(this.chauffesForge.get(i.id) ?? 0, this.action.fin));
+    }
+  }
+
+  /** « Ta gourde est vide… », au pluriel quand on en porte plusieurs. */
+  private texteGourdeVide(): string {
+    return (this.inventaire.gourde ?? 0) > 1
+      ? "Tes gourdes sont vides : remplis-les à la mare, puis fais bouillir l'eau sur un feu."
+      : "Ta gourde est vide : remplis-la à la mare, puis fais bouillir l'eau sur un feu.";
+  }
+
+  /**
+   * Boire une bouteille d'eau (plan 0.10.1, A4) : l'eau potable va droit dans la jauge de soif, 1 L au plus ; ce que la
+   * soif ne prend pas est perdu ; la bouteille vide reste dans le sac. Elle ne passe pas par la gourde, et ne s'entame pas.
+   */
+  private boireBouteille(): void {
+    if ((this.inventaire.bouteille_eau ?? 0) < 1) return;
+    if (this.besoins.eau >= RESERVE_EAU_MAX * 0.97) return this.info("Tu n'as plus soif : garde-la pour plus tard.");
+    this.commencer("Boire une bouteille d'eau", DUREES.boire, () => {
+      if ((this.inventaire.bouteille_eau ?? 0) < 1) return;
+      this.retirer("bouteille_eau", 1);
+      this.ajouterPlusieurs({ bouteille_plastique: 1 });
+      this.besoins = { ...this.besoins, eau: Math.min(RESERVE_EAU_MAX, this.besoins.eau + LITRES_BOUTEILLE) };
       this.envoyerBesoins();
     }, 0, "aucun");
   }
@@ -3887,7 +3987,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     const foyer = feuxDuLieu(r.lieu, this.alentours()).sort((a, b) => effetsFeu(b).plats - effetsFeu(a).plats)[0];
     if (!foyer) return { refus: refusLieu(r.lieu, this.alentours()) ?? "Il te faut un feu allumé, tout près." };
     const parPlat = { bois: (r.boisFeu ?? 0) * boisMarmite(foyer.accessoires?.marmite), eau: r.eau ?? 0 };
-    if (parPlat.eau > 0 && this.gourde.litres < parPlat.eau - 1e-9) return { refus: `Il faut ${String(parPlat.eau).replace(".", ",")} L d'eau dans ta gourde (celle de la mare suffit : elle va bouillir).` };
+    if (parPlat.eau > 0 && this.gourde.litres < parPlat.eau - 1e-9) return { refus: `Il faut ${String(parPlat.eau).replace(".", ",")} L d'eau dans ta gourde (celle de la mare suffit : elle va bouillir).` };
     if (parPlat.bois > 0 && foyer.bois < parPlat.bois - 1e-9) return { refus: "Le feu n'a pas assez de bois pour une longue cuisson : ajoute une bûche." };
     const deux =
       effetsFeu(foyer).plats >= 2 &&
@@ -3992,7 +4092,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
         const payes = i.etat.payes ?? [];
         const rend = rendDuDemontage(payes.at(-1) ?? {});
         const apres = { type: i.type, niveau: niveau - 1, etat: i.etat };
-        if (i.type === "coffre" && poidsInventaire(i.etat.contenu ?? {}) > capaciteCoffre(apres) + 1e-9) return this.info(`Il y a trop dans le coffre pour qu'il redevienne plus petit : vide-le jusqu'à ${capaciteCoffre(apres)} kg.`);
+        if (i.type === "coffre" && poidsInventaire(i.etat.contenu ?? {}) > capaciteCoffre(apres) + 1e-9) return this.info(`Il y a trop dans le coffre pour qu'il redevienne plus petit : vide-le jusqu'à ${capaciteCoffre(apres)} kg.`);
         if (!this.peutReprendre(rend)) return;
         return this.commencer(`Défaire : ${nom}`, Math.max(2, (etape?.duree ?? 20) / 2 / REGLAGES.fabrication_acceleration), () => {
           if (!this.installations.has(i.id) || niveauInstallation(i) !== niveau) return;
@@ -4086,14 +4186,15 @@ export class Joueur implements Voyageur, ParticipantLecon {
         this.mettreAJourBase(this.maintenant());
         const l = i.etat.litres ?? 0;
         if (!this.inventaire.gourde) return this.info("Il te faut une gourde.");
-        const place = CONTENANCE_GOURDE - (this.gourde.contenu === "potable" ? this.gourde.litres : 0);
+        // Il ne donne que ce qui manque pour remplir toutes les gourdes portées ; le reste demeure (plan 0.10.1, A5).
+        const place = contenanceGourdes(this.inventaire) - this.gourde.litres;
         if (l < 0.1) return this.info("Le récupérateur est vide : il faut attendre la pluie.");
-        if (place < 0.05) return this.info("Ta gourde est déjà pleine d'eau potable.");
+        if (place < 0.05) return this.info(`${taGourde(this.inventaire, true)} ${(this.inventaire.gourde ?? 0) > 1 ? "sont déjà pleines" : "est déjà pleine"}.`);
         return this.commencer("Remplir la gourde (eau de pluie)", DUREES.remplirGourde, () => {
-          const verse = Math.min(place, i.etat.litres ?? 0);
+          const verse = Math.max(0, Math.min(contenanceGourdes(this.inventaire) - this.gourde.litres, i.etat.litres ?? 0));
           // L'eau du ciel, tombée sur une bâche propre : elle se boit sans bouillir. Mélangée à de l'eau brute, non.
           const brute = this.gourde.contenu === "brute" && this.gourde.litres > 0.01;
-          this.gourde = brute ? { contenu: "brute", litres: Math.min(CONTENANCE_GOURDE, this.gourde.litres + verse) } : { contenu: "potable", litres: Math.min(CONTENANCE_GOURDE, (this.gourde.contenu === "potable" ? this.gourde.litres : 0) + verse) };
+          this.gourde = { contenu: brute ? "brute" : "potable", litres: this.gourde.litres + verse };
           i.etat = { ...i.etat, litres: Math.max(0, (i.etat.litres ?? 0) - verse) };
           maj();
           this.envoyerBesoins();
@@ -4107,12 +4208,12 @@ export class Joueur implements Voyageur, ParticipantLecon {
         return this.commencer("Allumer la meule", 3, () => {
           i.etat = { ...i.etat, pretLe: this.maintenant() + DUREE_CHARBONNIERE_MS };
           maj();
-          this.info("La meule fume : le charbon sera prêt dans trois jours de jeu (1 h 12 réelle).");
+          this.info("La meule fume : le charbon sera prêt dans trois jours de jeu (1 h 12 réelle).");
         });
       }
       case "defourner": {
         if (i.type !== "charbonniere" || !i.etat.pretLe) return;
-        if (this.maintenant() < i.etat.pretLe) return this.info(`Le charbon n'est pas encore prêt : encore ${Math.ceil((i.etat.pretLe - this.maintenant()) / 60_000)} min réelles.`);
+        if (this.maintenant() < i.etat.pretLe) return this.info(`Le charbon n'est pas encore prêt : encore ${Math.ceil((i.etat.pretLe - this.maintenant()) / 60_000)} min réelles.`);
         if (poidsInventaire(this.inventaire, this.gourde.litres) + CHARBON_PRODUIT > capaciteDe(this.inventaire)) return this.sacTropLourd();
         return this.commencer("Défourner le charbon", 10, () => {
           this.ajouterPlusieurs({ charbon_bois: CHARBON_PRODUIT });
@@ -4240,6 +4341,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     else delete inventaire[type];
     this.inventaire = inventaire;
     this.base.sauverInventaire(this.compte.id, this.inventaire);
+    this.borneGourdes();
     this.envoyer({ t: "inventaire", inventaire: this.inventaire });
   }
 
@@ -4248,6 +4350,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     for (const [type, n] of Object.entries(objets)) inventaire[type as TypeObjet] = (inventaire[type as TypeObjet] ?? 0) + (n ?? 0);
     this.inventaire = inventaire;
     this.base.sauverInventaire(this.compte.id, this.inventaire);
+    this.borneGourdes();
     this.envoyer({ t: "inventaire", inventaire: this.inventaire });
   }
 
@@ -4260,17 +4363,30 @@ export class Joueur implements Voyageur, ParticipantLecon {
     }
     this.inventaire = inventaire;
     this.base.sauverInventaire(this.compte.id, this.inventaire);
+    this.borneGourdes();
     this.envoyer({ t: "inventaire", inventaire: this.inventaire });
   }
 
   private envoyerBesoins(): void {
     this.envoyer({ t: "besoins", besoins: this.besoins, gourde: this.gourde });
   }
+
+  /**
+   * Plusieurs gourdes, une seule réserve (plan 0.10.1, A5) : appelé après chaque changement du sac. Une gourde jetée,
+   * posée au coffre, échangée, vendue, payée au péage ou perdue à l'effondrement emporte l'eau qui ne tient plus dans
+   * les autres : elle est perdue. `envoyer` : faux au chargement (la bienvenue dira la gourde).
+   */
+  borneGourdes(envoyer = true): void {
+    const contenance = contenanceGourdes(this.inventaire);
+    if (this.gourde.litres <= contenance + 1e-9) return;
+    this.gourde = contenance > 0 ? { ...this.gourde, litres: contenance } : { contenu: "potable", litres: 0 };
+    if (envoyer) this.envoyerBesoins();
+  }
 }
 
 /** « 1,5 kg », « 45 kg ». */
 function kgTexte(kg: number): string {
-  return `${(Math.round(kg * 100) / 100).toString().replace(".", ",")} kg`;
+  return `${(Math.round(kg * 100) / 100).toString().replace(".", ",")} kg`;
 }
 
 function poidsDe(objets: Inventaire): number {

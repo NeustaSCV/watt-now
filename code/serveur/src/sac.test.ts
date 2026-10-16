@@ -29,7 +29,7 @@ test("effondré, on n'a plus que ses poches ; on fabrique un sac de fortune ; un
   };
   const infos = () => recus.filter((m) => m.t === "info").map((m) => (m as { texte: string }).texte);
   (j as unknown as { effondrer: (r: string) => void }).effondrer("Ils sont trop nombreux.");
-  assert.match(infos().at(-1)!, /poches \(10 kg\).*sac de fortune/);
+  assert.match(infos().at(-1)!, /poches \(10 kg\).*sac de fortune/);
 
   // 8,2 kg en poche : une pierre de plus (2 kg) dépasserait les 10 kg.
   (j as unknown as { inventaire: Record<string, number> }).inventaire = { pierre: 2, branche: 4, corde: 2, couteau: 1 };
@@ -37,7 +37,7 @@ test("effondré, on n'a plus que ses poches ; on fabrique un sac de fortune ; un
   j.position = { x: pierre.x, z: pierre.z, o: 0 };
   j.recevoir({ t: "interagir", cible: { genre: "ressource", id: pierre.id }, verbe: "ramasser" });
   // Deux messages courts : la pierre et ses 2 kg, les poches à 8,2 kg sur 10 (0.8.2), puis comment s'en sortir sans sac.
-  assert.match(infos().slice(-2).join(" "), /^Pierre, 2 kg : trop lourd, tes poches sont à 8,2 kg sur 10\..*sac de fortune/);
+  assert.match(infos().slice(-2).join(" "), /^Pierre, 2 kg : trop lourd, tes poches sont à 8,2 kg sur 10\..*sac de fortune/);
 
   j.recevoir({ t: "fabriquer", recette: "sac_fortune" });
   attendre(3);

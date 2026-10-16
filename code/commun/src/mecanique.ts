@@ -154,6 +154,12 @@ export function rendDesAccessoires(etat: EtatInstallation): Inventaire {
 /** Monter le petit alternateur : serrer ses brides (la clé plate du kit), tendre la courroie sur la roue. */
 export const MONTER_ALTERNATEUR = { secondes: 20, qualites: { serrer: 1 } } as const;
 
+/**
+ * Le pédalier qui n'entraîne rien (ni alternateur ni dynamo) : la phrase du serveur quand on pédale, reprise telle
+ * quelle par le bandeau « Ne marche pas » de la fiche (0.10.1, R-06). Une seule source.
+ */
+export const RAISON_PEDALIER_SANS_ORGANE = "Rien à entraîner : monte l'alternateur de la station (ou, à défaut, la dynamo du vélo).";
+
 /** Le ventilateur à manivelle souffle sur une forge à moins de 3 m (Book 25 §6.4). */
 export const PORTEE_SOUFFLET = 3;
 

@@ -142,6 +142,8 @@ test("le feu brûle pendant l'absence du joueur (processus passif)", () => {
 
 test("l'eau de la mare se remplit brute, et devient potable une fois bouillie", () => {
   const { joueur, attendre, dernier, infos } = monter({ pierre: 5, branche: 3, buche: 2, briquet: 1, gourde: 1 });
+  // La gourde de départ est pleine d'eau potable : à moitié bue, la mare la complète (pleine, elle refuserait : R-16).
+  (joueur as unknown as { gourde: { contenu: string; litres: number } }).gourde = { contenu: "potable", litres: 0.5 };
   // Au bord, on ne remplit pas (0.8.2, R21) : on entre dans la mare, jusqu'au milieu.
   joueur.position = { x: MARE.x - MARE.rayon - 0.5, z: MARE.z, o: 0 };
   joueur.recevoir({ t: "interagir", cible: { genre: "mare" }, verbe: "remplir" });

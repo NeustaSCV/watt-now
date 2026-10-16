@@ -319,7 +319,7 @@ export class Electricite {
       this.ctx.sauverInstallation(i);
       this.ctx.noter("banc:panneau");
       const bat = batterieDuBanc(i.etat);
-      this.ctx.info(bat ? `Le panneau est posé, plein sud : au soleil, il remplit ${bat.nom} (≈ 160 Wh par beau jour, rien la nuit).` : "Le panneau est posé, plein sud. Branche la batterie de voiture de la ruine dans le banc : le soleil s'y mettra en réserve.");
+      this.ctx.info(bat ? `Le panneau est posé, plein sud : au soleil, il remplit ${bat.nom} (≈ 160 Wh par beau jour, rien la nuit).` : "Le panneau est posé, plein sud. Branche la batterie de voiture de la ruine dans le banc : le soleil s'y mettra en réserve.");
     });
     return true;
   }
@@ -372,7 +372,7 @@ export class Electricite {
       this.ctx.noter("banc:batterie");
       const pose = batterieDuBanc(banc.etat)!;
       const soleil = banc.etat.panneau ? "Le panneau la remplit au soleil." : "Pose le panneau sur le banc : le soleil la remplira.";
-      this.ctx.info(`${majuscule(pose.nom)} est dans le banc, à demeure (${arrondi(pose.wh)} Wh sur ${pose.capacite}). ${soleil}`);
+      this.ctx.info(`${majuscule(pose.nom)} est dans le banc, à demeure (${arrondi(pose.wh)} Wh sur ${pose.capacite}). ${soleil}`);
     });
   }
 
@@ -393,7 +393,7 @@ export class Electricite {
       this.ctx.sauverInstallation(banc);
       this.ctx.noter("banc:echange");
       const nouvelle = batterieDuBanc(banc.etat)!;
-      this.ctx.info(`Échangée : ${avant.nom} revient dans ton sac (${arrondi(avant.wh)} Wh) ; ${nouvelle.nom} est dans le banc (${arrondi(nouvelle.wh)} Wh).`);
+      this.ctx.info(`Échangée : ${avant.nom} revient dans ton sac (${arrondi(avant.wh)} Wh) ; ${nouvelle.nom} est dans le banc (${arrondi(nouvelle.wh)} Wh).`);
     });
   }
 
@@ -430,7 +430,7 @@ export class Electricite {
         this.alerteDonnee = false;
       }
       this.ctx.noter("banc:charge");
-      this.ctx.info(`+${arrondi(mis)} Wh dans ${nom}. Il reste ${arrondi(batterieDuBanc(banc.etat)?.wh ?? 0)} Wh dans ${source.nom}.`);
+      this.ctx.info(`+${arrondi(mis)} Wh dans ${nom}. Il reste ${arrondi(batterieDuBanc(banc.etat)?.wh ?? 0)} Wh dans ${source.nom}.`);
     });
   }
 
@@ -459,7 +459,7 @@ export class Electricite {
         banc.etat = { ...banc.etat, charges: r.stockage.charges };
         this.ctx.sauverInstallation(banc);
         this.ctx.depenser(minutes * MANIVELLE.enduranceParMinute);
-        this.ctx.info(`+${arrondi(r.stocke)} Wh dans ${source.nom}, à la force du bras.`);
+        this.ctx.info(`+${arrondi(r.stocke)} Wh dans ${source.nom}, à la force du bras.`);
       },
       MANIVELLE.kcalParHeure,
     );
@@ -477,7 +477,7 @@ export class Electricite {
         return true;
       }
       if (!this.peutPayer(WH_REARMER_PLAQUE)) {
-        this.ctx.info("Il faut un peu de courant (0,5 Wh) : une batterie ou une arme électrique chargée.");
+        this.ctx.info("Il faut un peu de courant (0,5 Wh) : une batterie ou une arme électrique chargée.");
         return true;
       }
       this.ctx.commencer("Réarmer la plaque de choc", 3, () => {
@@ -492,7 +492,7 @@ export class Electricite {
     if (estCloture(i.type)) {
       const etat = i.etat.declencheur ?? declencheurNeuf();
       if (!etat.couche) {
-        this.ctx.info(etat.arme ? "Le courant passe : elle tient." : "Le courant ne passe pas : un banc chargé à moins de 6 m la nourrit.");
+        this.ctx.info(etat.arme ? "Le courant passe : elle tient." : "Le courant ne passe pas : un banc chargé à moins de 6 m la nourrit.");
         return true;
       }
       this.ctx.commencer("Relever la clôture", 5, () => {

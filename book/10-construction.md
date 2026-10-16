@@ -158,7 +158,7 @@ Besoin de chauffage de la pièce de vie standard (§2.1), par jour d'hiver, et b
 > - **Son empreinte au sol** est verte si l'on peut construire, rouge sinon. La raison s'affiche : trop près du bord, de l'eau, d'un feu, d'une autre construction, dans les ruines. C'est la même règle que celle du serveur (`commun/src/emplacement.ts`). Les escabeaux ne gênent pas, puisqu'on les déplace.
 > - **Commandes** :
 >   - construire : A (E), un second clic sur le fantôme ou « Construire ici » ;
->   - tourner d'un quart de tour : la molette, la touche de lumière (R) ou « Tourner » ;
+>   - tourner d'un quart de tour : la molette, la touche de lumière (R) ou « Tourner » (au téléphone, « Tourner » seulement) ;
 >   - annuler : B, le clic droit, Échap ou « Annuler ».
 > - **Plus tard : un mode Construction** pour déplacer les constructions existantes et poser des murs, des sols et des toits sur cette grille (§7.1).
 

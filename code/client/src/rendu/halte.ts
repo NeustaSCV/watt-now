@@ -147,11 +147,11 @@ export function creerHalte(): THREE.Group {
   groupe.add(creerSol(n), creerRoute(aleat, n), creerForet(aleat), creerStation(aleat), creerFerme(), creerGoulet(aleat));
   groupe.add(creerPoteaux(aleat), creerHerbes(aleat), creerDebris(aleat));
   // P-006 : le Carrefour à l'ouest (à gauche), le terrain à l'est (à droite), comme sur la carte.
-  groupe.add(creerPanneauRoute("Le Carrefour", "← Comptoir · 2 km", 7, ROUTE.z + ROUTE.demiLargeur + 1.6, 0));
-  groupe.add(creerPanneauRoute("Ton terrain", "3 km, par le pont →", L - 9, ROUTE.z + ROUTE.demiLargeur + 1.6, 0));
+  groupe.add(creerPanneauRoute("Le Carrefour", "← Comptoir · 2 km", 7, ROUTE.z + ROUTE.demiLargeur + 1.6, 0));
+  groupe.add(creerPanneauRoute("Ton terrain", "3 km, par le pont →", L - 9, ROUTE.z + ROUTE.demiLargeur + 1.6, 0));
   groupe.add(creerBarrage());
   // 0.7.3 : le chemin de terre de la Coopérative, au nord de la route, à l'ouest de la station (Book 23 §1).
-  groupe.add(creerCheminCoop(), creerPanneauRoute("Coopérative", "du Plateau · 2 km ↑", CHEMIN_COOP_HALTE.x - CHEMIN_COOP_HALTE.demiLargeur - 1.6, ROUTE.z - ROUTE.demiLargeur - 1.5, 0));
+  groupe.add(creerCheminCoop(), creerPanneauRoute("Coopérative", "du Plateau · 2 km ↑", CHEMIN_COOP_HALTE.x - CHEMIN_COOP_HALTE.demiLargeur - 1.6, ROUTE.z - ROUTE.demiLargeur - 1.5, 0));
   nommer(groupe, ["sol", "route", "foret", "station", "ferme", "goulet", "poteaux", "herbes", "debris", "panneau", "panneau", "barrage", "chemin-coop", "panneau"]);
   return groupe;
 }
@@ -1386,7 +1386,7 @@ function textureEnseigneBoutique(): THREE.CanvasTexture {
     c.fillText("ABONDANCE", 210, 30);
     c.fillStyle = "#3b2a1e";
     c.font = "italic 17px Georgia, serif";
-    c.fillText("ouvert 24 h / 24 · 7 j / 7", 210, 52);
+    c.fillText("ouvert 24 h / 24 · 7 j / 7", 210, 52);
     // Le logo : un rond rouge, l'éclair de Watty
     c.fillStyle = "#c8362b";
     c.beginPath();
@@ -1465,7 +1465,7 @@ function textureVitrine(): THREE.CanvasTexture {
     c.textAlign = "center";
     c.fillText("PROMO", 64, 40);
     c.font = "bold 18px sans-serif";
-    c.fillText("-50 % !", 64, 66);
+    c.fillText("-50 % !", 64, 66);
     // Watty : « Faites le plein de bonheur »
     c.fillStyle = "#e9dfc6";
     c.fillRect(20, 86, 88, 70);

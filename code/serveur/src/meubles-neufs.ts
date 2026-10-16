@@ -38,7 +38,7 @@ import {
 } from "../../commun/src/meubles-neufs.ts";
 import { nommer, type Inventaire, type TypeObjet } from "../../commun/src/objets.ts";
 import { multiplicateurQualites, type Recette } from "../../commun/src/recettes.ts";
-import { DUREES } from "../../commun/src/survie.ts";
+import { DUREES, taGourde } from "../../commun/src/survie.ts";
 import { estNuit, heureDeJeu } from "../../commun/src/temps.ts";
 import { armeTirDe, armeTirExemplaire } from "../../commun/src/tir.ts";
 import { declencheurNeuf } from "./declencheurs.ts";
@@ -142,7 +142,7 @@ export class MeublesNeufs {
       coffre.etat = { ...coffre.etat, etageres: true };
       this.ctx.sauverInstallation(coffre);
       this.ctx.noter("coffre:etageres");
-      this.ctx.info(`Les étagères sont posées : le coffre tient ${ETAGERES_KG} kg de plus.`);
+      this.ctx.info(`Les étagères sont posées : le coffre tient ${ETAGERES_KG} kg de plus.`);
     });
   }
 
@@ -151,8 +151,10 @@ export class MeublesNeufs {
   /** Faire bouillir l'eau de la gourde au soleil : sans bois, deux fois plus lentement qu'au foyer de pierres. */
   private bouillir(): void {
     const g = this.ctx.gourde();
-    if (g.litres <= 0) return this.ctx.info("Ta gourde est vide : remplis-la à la mare, puis fais-la bouillir au soleil.");
-    if (g.contenu === "potable") return this.ctx.info("L'eau de ta gourde est déjà potable.");
+    // Plusieurs gourdes, une seule réserve : tout bout d'un coup, les textes au pluriel (plan 0.10.1, A5).
+    const plusieurs = (this.ctx.inventaire().gourde ?? 0) > 1;
+    if (g.litres <= 0) return this.ctx.info(plusieurs ? "Tes gourdes sont vides : remplis-les à la mare, puis fais-les bouillir au soleil." : "Ta gourde est vide : remplis-la à la mare, puis fais-la bouillir au soleil.");
+    if (g.contenu === "potable") return this.ctx.info(`L'eau de ${taGourde(this.ctx.inventaire())} est déjà potable.`);
     const { temps, nuit } = this.temps();
     const lenteur = lenteurCuiseur(temps, nuit);
     if (lenteur === null) return this.ctx.info(refusCuiseur(temps, nuit)!);
