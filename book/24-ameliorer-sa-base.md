@@ -333,7 +333,7 @@ Les six recommandations sont retenues par le porteur du projet (2026-10-08).
 ### 11.4 Choix tranchés en codant
 
 - **Les soupes** : soupe de cèpes (2 cèpes, 0,5 L d'eau, 0,5 kg de bois du foyer) et pot-au-feu de volaille (1 portion crue, 1 cèpe, 0,5 L, 0,8 kg). L'eau de la gourde peut être celle de la mare : elle bout.
-- **« Bouillir 2 L d'un coup »** : la gourde ne tient qu'un litre ; le foyer de cuisine fait donc bouillir **deux fois plus vite** (et ×0,7 de bois avec une casserole), ce qui revient au même pour le joueur.
+- **« Bouillir 2 L d'un coup »** : la gourde ne tient qu'un litre (depuis la 0.10.1, un litre par gourde du sac : on en bout autant d'un coup, Book 05 §3) ; le foyer de cuisine fait donc bouillir **deux fois plus vite** (et ×0,7 de bois avec une casserole), ce qui revient au même pour le joueur.
 - **Un feu couvert** : il n'émet plus de lumière la nuit, son odeur est réduite de moitié ; on ne cuisine pas dessus.
 - **Ce qu'on récupère** : on garde ce qui a été réellement payé à chaque niveau (le grillage ou les deux barres). Creuser ou combler remet le compte au coût de base de la nouvelle voie.
 - **Un accessoire qui ne va plus** (après une redescente, un creusement) revient entier dans le sac ; démonté avec le foyer, il suit la règle des 50 %.

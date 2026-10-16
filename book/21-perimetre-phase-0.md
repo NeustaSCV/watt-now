@@ -134,7 +134,7 @@ Les trois familles, avec leurs stats (Book 01 §4). Les traits sont gardés quan
 | Élément | Phase 0a |
 |---|---|
 | **Horloge d'action** | Oui : jour + nuit = 24 min réelles (Book 01 §2 bis) |
-| **Calendrier** | Il tourne pour la production de la base et les processus passifs, mais **la saison reste fixée** |
+| **Calendrier** | Il tourne pour la production de la base et les processus passifs, mais **la saison reste fixée** ; seules les récoltes (Book 13 §3 bis) et, depuis la 0.10.1, la faim de l'hiver et la soif de l'été (Book 05 §3) le suivent |
 | **Hors ligne** | Règles du Book 01 §2 bis pour ce qui existe en 0a (besoins gelés, base qui produit et consomme, batteries qui se déchargent) |
 | **Besoins** | Faim, soif, sommeil (Book 05 §3) |
 | **Blessures** | Coupure, contusion, morsure, saignement ; **effondrement** (Book 05 §10) |
@@ -158,6 +158,7 @@ Les trois familles, avec leurs stats (Book 01 §4). Les traits sont gardés quan
 - **Inventaire** avec poids (Book 12), **écran de recette** (Book 02 §13), **carte du monde**, **carnet** réduit aux objectifs (Book 14 §4.3).
 - **Tutoriel** complet (Book 14 §4.2).
 - Habillage d'interface par famille : voir §5.
+- **L'écran au téléphone (0.10.1, 2026-10-16)** : une **boussole** (un cadran crème, le N en rouge) remplace les boutons « Vue » et « ⟳ » ; elle tourne avec la vue, et au repos le N est en haut à droite (la vue regarde le nord-ouest) ; en paysage, sa tuile écrit la direction (« N-O »…). Le bouton de la **lumière** devient l'icône de la lumière qu'on porte, terne éteinte, entourée de sa couleur allumée, avec une petite pile vide pour la frontale déchargée. **L'échange** tient sur l'iPhone : ce qu'on reçoit en haut, son sac en grille, un toucher pour choisir un objet, − et +, les deux boutons toujours visibles ; la demande « X te propose un échange » tient sur une ligne, avec un trait qui raccourcit pendant ses 20 s. **« Examiner »** dit en quelques lignes, avant la phrase d'ambiance, à quoi sert un objet (les fabrications dévoilées), ce qu'il fait comme outil, sur quoi il se monte, et, pour une installation, pourquoi elle ne marche pas (un bandeau orange en tête de sa fiche).
 
 ### 3.9 Les étapes de construction
 

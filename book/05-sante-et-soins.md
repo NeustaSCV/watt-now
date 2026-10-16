@@ -1,6 +1,7 @@
 # Book 05 — Santé et Soins
 
 > Document de conception · version 0.4 · 2026-10-07
+> v0.5 (2026-10-16) : §3, **l'eau et les saisons** (0.10.1) : la jauge de soif à 1,5 L, plusieurs gourdes, la bouteille d'eau, la faim de l'hiver et la soif de l'été, et ce qui réchauffe.
 > Statut : **brouillon de travail**. Les effets médicaux sont **simplifiés pour le jeu**. Ils restent crédibles dans leurs grandes lignes, mais ce book n'est pas un guide de soins réel.
 > S'appuie sur les books [01](01-les-trois-feux.md), [02](02-crafting.md), [03](03-bibliotheque-et-savoir.md) et [04](04-siderurgie-et-chimie.md).
 
@@ -47,7 +48,7 @@ La santé utilise les deux horloges du jeu (Book 01 §2 bis), plus une échelle 
 |---|---|---|---|
 | **Nourriture** | 2 500 kcal par jour de jeu | Effort (Book 02 §2), froid, Mécanistes +15 % | Faiblesse (FOR, END), puis amaigrissement, puis mort (plusieurs semaines réalistes) |
 | **Variété** | Quatre groupes : féculents, protéines, fruits et légumes, graisses | — | **Carences** : fatigue, guérison lente, **scorbut** après ≈ 1 à 3 mois sans fruits ni légumes, comptés en jours de jeu connectés (≈ 30 à 90 jours, soit ≈ 12 à 36 h de connexion) |
-| **Eau** | ≈ 2,5 L par jour | Chaleur, effort, fièvre, diarrhée | Soif, confusion, puis mort en ≈ 3 jours |
+| **Eau** | ≈ 2,5 L par jour (la jauge du jeu en tient 1,5 L) | Chaleur, effort, fièvre, diarrhée | Soif, confusion, puis mort en ≈ 3 jours |
 | **Température** | Neutre | Vent, pluie, hiver, vêtements mouillés | Frissons, maladresse, **hypothermie** ; ou coup de chaleur l'été |
 | **Sommeil** | ≈ 8 h par jour | Effort, maladie | Fatigue : erreurs de crafting, perception réduite |
 | **Hygiène** | Propre | Forge, tannage, combat, fouille, fumier, **camouflage d'odeur** (Book 06 §8.5) | **Multiplie le risque d'infection** de toute plaie (§5) |
@@ -74,6 +75,23 @@ La santé utilise les deux horloges du jeu (Book 01 §2 bis), plus une échelle 
 >   - **quelques points de santé** rendus : le réconfort d'un vrai repas ;
 >   - **ça cale** : la faim revient deux fois moins vite pendant 6 heures de jeu.
 >   - Exemple : **volaille aux cèpes**, ≈ 590 kcal et +10 de santé.
+
+> **Décision (2026-10-15, codée en 0.10.1) : l'eau et les saisons.**
+> - **La jauge de soif tient 1,5 L** (2,5 L avant) :
+>   - la soif baisse en litres, pas en part de jauge : son rythme passe de 0,35 à **0,21**, et une jauge pleine tient toujours ≈ 70 min ;
+>   - une gorgée (0,25 L) remplit donc ≈ 17 % de la jauge : la jauge remonte plus vite, la soif vient plus lentement ;
+>   - une partie plus ancienne se relit : une réserve au-dessus de 1,5 L est ramenée à 1,5 L.
+> - **Plusieurs gourdes, une seule réserve** : 1 L par gourde du sac.
+>   - La mare et le récupérateur de pluie remplissent tout d'un coup (le récupérateur ne donne que ce qui manque) ; bouillir purifie toute la réserve.
+>   - Quand une gourde quitte le sac (posée, donnée, vendue, payée au péage, perdue en s'effondrant), l'eau au-delà de ce que portent les autres est perdue.
+> - **La bouteille d'eau** (1 L, 1 kg, commune, partout, dans toutes les fouilles ; 2 wotts) **se boit d'un trait**, sans passer par la gourde :
+>   - jusqu'à 1 L dans la jauge ; ce que la soif ne prend pas est perdu ; on garde la bouteille vide (1 L, elle aussi) ;
+>   - refusée si l'on n'a pas soif : « garde-la pour plus tard ».
+> - **Les saisons**, aux vraies dates du calendrier du monde (un an = 4 semaines réelles, Book 13) :
+>   - **l'hiver** (21 décembre → 20 mars), **la faim** ; **l'été** (21 juin → 22 septembre), **la soif** ;
+>   - en cloche : rien le premier jour, **+ 25 %** au milieu de la saison, rien le dernier ; au printemps et à l'automne, rien ;
+>   - **ce qui réchauffe** annule le surplus de l'hiver : à 3 m d'un **feu allumé à soi** (feu de camp, foyer Dakota, four, forge ; un feu couvert sous la cendre compte), **endormi dans son abri**, à 3 m d'une **forge** pendant un geste de forge et encore **2 h de jeu après** (les braises), à 3 m d'une **charbonnière qui cuit** (jusqu'au défournement) ;
+>   - l'été, rien n'atténue la soif. Rien ne s'affiche : ni température, ni vêtements chauds (Book 13).
 
 ---
 

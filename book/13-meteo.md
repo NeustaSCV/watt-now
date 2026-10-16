@@ -1,6 +1,7 @@
 # Book 13 — La Météo
 
 > Document de conception · version 0.2 · 2026-10-07
+> v0.3 (2026-10-16) : §3 bis, la faim de l'hiver et la soif de l'été (0.10.1).
 > Statut : **brouillon de travail**.
 
 ---
@@ -60,6 +61,8 @@ Techniquement, la météo a **deux couches**, qui suivent les deux horloges du j
 - La date s'affiche en haut à droite, à la place du « Jour N » (le compte des jours de jeu de 24 min passe dans l'infobulle).
 
 **En phase 0a, seules les récoltes suivent le calendrier.** L'herbe, la lumière, la météo et la production solaire restent celles de la fin du printemps (Book 21 §3.6). Les quatre palettes de saison viendront en 0b.
+
+**La faim et la soif suivent aussi les saisons (décision du 2026-10-15, codée en 0.10.1)**, aux vraies dates : **l'hiver** (21 décembre → 20 mars) creuse la **faim**, **l'été** (21 juin → 22 septembre) donne **soif**, en cloche (rien le premier jour, + 25 % au milieu, rien le dernier). Un feu allumé à soi, une forge encore chaude, une charbonnière qui cuit (à 3 m) ou le sommeil dans son abri annulent le surplus de l'hiver. Rien ne s'affiche : ni température, ni vêtements chauds (le détail : Book 05 §3).
 
 | Récolte | Fleurs | Mûr | Fin |
 |---|---|---|---|
