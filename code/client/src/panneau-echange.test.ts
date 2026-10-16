@@ -234,3 +234,11 @@ test("R-09 : la demande porte un trait qui fond en 20 s, le temps qu'on a pour r
   const hud = readFileSync(new URL("./hud.ts", import.meta.url), "utf8");
   assert.ok(hud.includes("window.setTimeout(() => repondre(false), DELAI_DEMANDE_MS)"), "la minuterie et le trait ont la même durée");
 });
+
+test("R-11 : la demande tient sur une ligne (la boîte prend la largeur de sa phrase, la phrase coule comme un texte)", () => {
+  const css = readFileSync(new URL("./style.css", import.meta.url), "utf8");
+  assert.match(css, /#hud \.demande-echange:not\(\.demande-lecon\) \{\s*width: max-content;\s*\}/);
+  assert.match(css, /#hud \.demande-echange:not\(\.demande-lecon\) p \{\s*display: block;\s*\}/);
+  // La pastille, le pseudo et la phrase dans le même paragraphe ; les boutons dessous.
+  assert.match(htmlDemande("Marion", "#2f5fa4"), /^<p><span class="pastille"[^>]*><\/span><b>Marion<\/b> te propose un échange\.<\/p>\s*<div><button/);
+});
