@@ -133,7 +133,7 @@ Les plus gros morceaux : A3, A5, A7, A9 et D1.
 - Les **poules dans les haltes** (1 ou 2 par halte, partagées entre joueurs) : écartées « pour l'instant » de la 0.9 (2026-10-13) ; il faut d'abord une faune partagée dans les lieux à plusieurs (`plan-0.9.md` §2.7).
 - La **halte de cueillette et de chasse** (gibier, boyaux, corde d'arc en boyau) : Book 99.
 - La **bibliothèque de bâtiments** `batiment/` : à valider par le porteur ; Book 99.
-- Le **combat entre joueurs** : règles du duel décidées le 2026-10-13 (`duel-entre-joueurs.md`). **Planifié en 0.11 le 2026-10-16** (`plan-duel.md`), avant les murs et les sols ; questions D-7 à D-16 tranchées ; maquettes à faire, puis le code.
+- Le **combat entre joueurs** : règles du duel décidées le 2026-10-13 (`duel-entre-joueurs.md`). **Planifié en 0.11 le 2026-10-16** (`plan-duel.md`), avant les murs et les sols ; questions D-7 à D-24 tranchées, maquettes choisies (D-19). **Codé en 0.11 le 2026-10-16 (0.11.0, en préparation)** : en recette, à essayer par le porteur sur l'iPhone à deux comptes, puis à déployer. *En attente du porteur* : les phrases « Un duel commence : l'échange est annulé. » et « … la leçon s'arrête. » ; un coup épuisé à part pleine ; l'arme gagnée neuve ; la saisie à trois qui fait lâcher prise ; le message d'effondrement montré au retour d'un corps (pas codé).
 
 ## 5. Où sont les choses
 

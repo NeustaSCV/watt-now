@@ -1,6 +1,8 @@
 # Plan de développement — le duel entre joueurs (version 0.11)
 
-*Version du plan : v0.4 · 2026-10-16 · **Statut : questions tranchées, maquettes choisies ; en attente de l'accord du porteur pour coder.** Rien n'est codé.*
+*Version du plan : v0.5 · 2026-10-16 · **Statut : codée, en recette** (version 0.11.0, en préparation) ; pas encore essayée par le porteur ni déployée.*
+
+*v0.5 (2026-10-16) : le duel codé sur `integration-duel`. **Le découpage réel** (il remplace l'ordre du §4) : trois chantiers en parallèle, **S** le serveur du duel (B, C, la partie serveur de A, les phrases), **K** le client du duel (la partie client de A, D, les indices et l'aide de F), **E** le corps qui reste à la déconnexion (E étendu par D-18), fusionnés dans cet ordre, puis **G** la recette, les books et le numéro 0.11.0. Les maquettes (H) avaient été faites avant. Recette au strict nécessaire : 1 363 tests, et un essai à deux comptes dans le vrai client à la station (le Combat et l'anneau rouge, un duel gagné, l'objet à ses pieds, la fuite annulée, la déconnexion en duel et le corps qui reste une minute). Restent les essais du porteur sur l'iPhone, à deux comptes (§7).*
 
 *v0.4 (2026-10-16) : les variantes choisies sur la maquette (D-19 : halo V1 l'anneau, bouton V2 la pastille, jauges V1 la barre fine, coup reçu V2 le buste qui plie, fin V1 « + / − » qui montent et descendent avec le compte des 10 s de fuite) ; le vert frappé passe en Combat tout seul (D-20) ; « sac vide » au-dessus du perdant (D-21) ; rien pour les témoins (D-22) ; les phrases raccourcies (D-23) ; l'anneau blanc qui se vide pendant les 45 s de protection (D-24).*
 

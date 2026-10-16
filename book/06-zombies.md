@@ -1,7 +1,8 @@
 # Book 06 — Les Zombies
 
-> Document de conception · version 0.8 · 2026-10-15
+> Document de conception · version 0.9 · 2026-10-16
 > Statut : **brouillon de travail**. Valeurs indicatives, à calibrer en playtest.
+> v0.9 (2026-10-16) : §8.6, **les Éteints et les duellistes** (0.11, [`plans/duel-entre-joueurs.md`](plans/duel-entre-joueurs.md) §4) ; le corps laissé à la déconnexion, exposé aux Éteints (D-18).
 > v0.8 (2026-10-15) : §5.1 et §5.2, **les Éteints de la côte** (0.10) : le Noyé (sa règle, son corps « patate »), l'Ensablé, ceux qui arrivent de la lande quand on allume le phare, les étages du relief et l'eau jusqu'aux genoux.
 > v0.7 (2026-10-09) : §8.2 et §9.3 alignés sur le [Book 25](25-le-metier-des-familles.md) : l'arc pour tous, l'arbalète mécaniste, l'arme électrique qui raidit puis détruit (le casque n'y change rien), la clôture qui raidit sans détruire, l'arme à feu reportée après la 1.0, le bruit d'un coup tranchant à 10 m.
 > S'appuie sur les books [01](01-les-trois-feux.md) (signature, monde, temps), [02](02-crafting.md) (bruit des outils) et [05](05-sante-et-soins.md) (morsure, infection).
@@ -56,7 +57,7 @@ Le zombie n'attaque pas comme un combattant. Il **attrape**, puis il **mord**.
 |---|---|
 | Un zombie saisit le joueur | Le joueur est **ralenti**. Il doit se dégager (test de FOR et d'END) ou tuer le zombie. Au bout de quelques secondes : **morsure**. |
 | Deux zombies saisissent | Le joueur est **immobilisé**. Se dégager devient très difficile. |
-| Trois zombies ou plus | **Effondrement** quasi certain (Book 05 §10). |
+| Trois zombies ou plus | **Effondrement** quasi certain (Book 05 §10). *Pendant un duel : la saisie à trois vide la jauge de duel d'un coup, au lieu de faire s'effondrer (§8.6).* |
 
 > **Règle d'or du joueur :** ne jamais se laisser encercler. Un couloir, une porte, un fossé valent mieux qu'une bonne arme.
 
@@ -276,6 +277,18 @@ Un zombie détruit laisse un **corps** :
 | **Ce que ça ne fait pas** | Ne réduit ni le bruit ni la lumière. Un zombie qui **voit** le joueur bouger à courte distance réagit quand même. |
 
 > C'est une technique de fouille et d'infiltration : idéale pour traverser une ruine dense en silence, mauvaise idée quand on est blessé. Elle donne une valeur de plus au savon et à l'eau propre.
+
+### 8.6 Les Éteints et les duellistes (0.11, 2026-10-16)
+
+Dans les haltes, deux joueurs peuvent se battre en **duel**, sur une **jauge** à part de leur santé ([`plans/duel-entre-joueurs.md`](plans/duel-entre-joueurs.md)). Les Éteints restent dans la partie :
+
+- **Les coups des duellistes ne font rien aux Éteints** tant que le duel dure, au corps à corps comme au tir (D-8).
+- **Les Éteints touchent les duellistes**, et c'est la **jauge de duel** qui encaisse : une morsure retire **18 points** sur 100 (D-14), sans blessure ni santé perdue.
+- **La saisie par trois Éteints vide la jauge d'un coup** (D-3), au lieu de faire s'effondrer.
+- **Si un Éteint vide la jauge d'un duelliste, celui-ci perd le duel**, comme s'il avait été touché par l'autre joueur (D-2) : le gagnant prend un objet tiré au hasard dans son sac.
+- **Dès qu'une jauge est vide, le duel s'arrête** ; il reste les Éteints, et chacun retrouve sa santé normale, qui encaisse à nouveau.
+
+**Le corps laissé à la déconnexion (D-18)** : partout où il y a des Éteints (les quatre haltes et les lieux personnels : Coopérative, Moulin, hôtel, phare), un joueur qui se déconnecte laisse son corps **1 minute**, immobile. Les Éteints le voient et l'attaquent comme un joueur : santé, saisie et effondrement habituels. Se déconnecter n'est donc plus une façon d'échapper à une saisie.
 
 ---
 

@@ -1,7 +1,8 @@
 # Book 01 — Les Trois Feux
 
-> Document de conception · version 1.8 · 2026-10-09
+> Document de conception · version 1.9 · 2026-10-16
 > Statut : **brouillon de travail**. Les valeurs chiffrées sont des hypothèses de départ à calibrer en playtest.
+> v1.9 (2026-10-16) : le **duel entre joueurs**, codé en 0.11 ([`plans/duel-entre-joueurs.md`](plans/duel-entre-joueurs.md)), remplace pour le combat entre joueurs le pillage et l'effondrement avec perte de l'inventaire : un **objet tiré au hasard**, **dans les haltes seulement** ; le corps reste **1 minute** à la déconnexion là où il y a des Éteints (D-18). Notes en §2 bis et §6 bis.
 > v1.8 (2026-10-09) : aligné sur le [Book 25](25-le-metier-des-familles.md), validé par le porteur. L'arc devient commun à tous (les Mécanistes gardent l'arbalète, les pièges et le tour) ; le combat des Charbonniers passe aux **lames**, la poudre noire est **reportée après la 1.0** ; l'électricité **raidit, met à terre, et détruit** à la tête un Éteint raidi ou à terre ; chaque famille fait **seule** sa base.
 
 ---
@@ -104,6 +105,8 @@ Comme dans *Last Day on Earth*, il n'y a **pas de grande carte jouable continue*
 | **Ruines** | Bourg, zone commerciale, garage, hôpital, zone industrielle | ✅ | **Vestiges** (stock fini, voir plus bas) |
 | **Haltes** | Pont, carrefour, station-service abandonnée | ✅ | Peu de ressources : ce sont des lieux de rencontre |
 
+> *Depuis la 0.11 (2026-10-16, [`plans/duel-entre-joueurs.md`](plans/duel-entre-joueurs.md))* : le combat entre joueurs est le **duel**, et il n'existe **que dans les haltes** pour l'instant ; les lieux de flux et les ruines marqués ✅ ne l'ont pas encore. Chaque nouvelle zone dit si le duel y est permis (le champ `duel` du registre des lieux). Jamais sur un terrain ni au Comptoir.
+
 ### Distance, voyage et énergie
 
 Se déplacer coûte du **temps** et de l'**énergie**, comme tout le reste. Plus un lieu est riche, plus il est loin.
@@ -148,7 +151,7 @@ Un trajet long passe obligatoirement par une ou plusieurs **haltes**. Une halte 
 ```
 
 - La traversée est le moment où les voyageurs se croisent : on peut s'ignorer, commercer, s'escorter ou s'embusquer.
-- Le combat entre joueurs y est autorisé (§6 bis).
+- Le combat entre joueurs y est autorisé (§6 bis) : *depuis la 0.11, sous la forme du duel ([`plans/duel-entre-joueurs.md`](plans/duel-entre-joueurs.md))*.
 - Sans haltes, aucun risque n'existerait entre le comptoir et la base, et le transport de wotts perdrait tout son enjeu.
 
 **Format d'une halte (validé) :**
@@ -252,6 +255,8 @@ Pourquoi ces seuils :
 - se déconnecter **hors d'une sortie de map** laisse le personnage **30 secondes** dans la map, vulnérable, avant qu'il disparaisse ;
 - ce délai passe à **60 secondes** si le personnage a reçu ou infligé des dégâts récemment ;
 - se déconnecter **sur une sortie de map** (ou sur son terrain, ou dans un comptoir) est immédiat.
+
+> *Remplacé le 2026-10-16 (D-18, codé en 0.11, [`plans/duel-entre-joueurs.md`](plans/duel-entre-joueurs.md))* : **partout où il y a des Éteints** (les quatre haltes et les lieux personnels : Coopérative, Moulin, hôtel, phare), **toute déconnexion laisse le corps 1 minute**, immobile, exposé aux Éteints (santé, saisie, effondrement habituels), sortie de map ou non, combat ou non ; **ni au terrain ni au Comptoir**. Reconnecté avant la fin, on reprend la main là où est le corps. En duel, on perd en plus le duel tout de suite.
 
 ### Le temps
 
@@ -689,7 +694,7 @@ cours = prix_base × (demande / offre) ^ k
 
 1. **Crédible :** sa valeur doit s'expliquer dans l'univers.
 2. **Neutre :** aucune famille ne doit pouvoir « imprimer » de l'argent mieux que les autres.
-3. **Risquée à transporter :** en dehors de sa base, on peut être pillé (§6 bis). Porter sa fortune sur soi doit être un vrai choix.
+3. **Risquée à transporter :** en dehors de sa base, on peut être pillé (§6 bis ; *en 0.11, un duel perdu dans une halte coûte un objet tiré au hasard*). Porter sa fortune sur soi doit être un vrai choix.
 4. **Sans inflation :** l'argent ne doit pas apparaître à partir de rien.
 5. **Favorable à l'onboarding :** les anciens ne doivent pas pouvoir accumuler une fortune qui rend l'économie inaccessible aux nouveaux.
 
@@ -804,6 +809,8 @@ Chaque joueur reçoit **un terrain de taille fixe** à la création de son perso
 | **Partout ailleurs** (nature, ruines, routes) | ✅ **Possible** | Oui |
 
 - **Mort face à un joueur :** même règle que d'habitude. L'inventaire courant tombe au sol et peut être ramassé, puis le joueur revient à sa base.
+
+> *Remplacé pour le duel le 2026-10-16 (codé en 0.11, [`plans/duel-entre-joueurs.md`](plans/duel-entre-joueurs.md))* : un joueur ne fait **jamais perdre de santé** à un autre, donc ni effondrement ni sac au sol par sa faute. Le duel se joue sur une **jauge** à part ; le gagnant prend **un objet tiré au hasard** dans le sac du perdant (jamais un sac ni ce qui roule, une pièce de famille, une clef de porte ou l'objet-clé d'un lieu ; l'arme en main peut partir ; sac plein, l'objet tombe à ses pieds), et le perdant a **45 s** de répit. Le duel n'existe **que dans les haltes** : « partout ailleurs » ci-dessus reste à décider zone par zone. L'effondrement avec perte de l'inventaire ne vient jamais du duel.
 - **Rien n'oblige à attaquer.** Les joueurs peuvent se parler, s'ignorer ou commercer.
 
 ### Lire les intentions
@@ -924,7 +931,7 @@ Chaque force doit avoir une situation où elle **ne sert à rien** :
 | Unité d'énergie | **Wh** (Wh_th, Wh_é, Wh_m) |
 | Couche « Trois Sangs » | **Reportée en V2** : voir [Book 99 — Évolutions futures](99-evolutions-futures.md) |
 | Économie | **Cours dynamiques** selon l'offre et la demande (§6) |
-| Pillage entre joueurs | **Impossible dans sa propre base, possible partout ailleurs.** On peut aussi se parler et commercer (§6 bis). |
+| Pillage entre joueurs | **Impossible dans sa propre base, possible partout ailleurs.** On peut aussi se parler et commercer (§6 bis). *Depuis la 0.11 (2026-10-16) : le **duel**, dans les haltes seulement ; le gagnant prend un objet tiré au hasard ([`plans/duel-entre-joueurs.md`](plans/duel-entre-joueurs.md)).* |
 | Structure du monde | **Pas de monde ouvert** : une carte de navigation et des lieux instanciés, avec chargement entre chaque (§2 bis) |
 | Haltes | **Map à traverser obligatoirement** sur les longs trajets (§2 bis) |
 | Hors ligne | **Le personnage est sur la carte**, hors de toute map. À la connexion, il apparaît à l'entrée d'un lieu ou d'un côté d'une halte. |

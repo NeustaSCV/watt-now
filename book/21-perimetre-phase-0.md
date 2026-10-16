@@ -26,7 +26,7 @@
 | **Durée du test** | ≈ 2 semaines réelles | ≈ 4 semaines réelles (une année de jeu) |
 | **Saisons** | **Fixe** (fin de printemps) | Les quatre saisons |
 | **Joueurs** | Famille et proches : ≈ 5 à 20 (Book 17 §5.2) | Idem |
-| **Combat entre joueurs** | **Désactivé** partout (validé) | Désactivé, sauf décision contraire après la 0a |
+| **Combat entre joueurs** | **Désactivé** partout (validé) ; *remplacé le 2026-10-16, pour le **duel dans les haltes** seulement, par [`plans/duel-entre-joueurs.md`](plans/duel-entre-joueurs.md) (codé en 0.11)* | Désactivé, sauf décision contraire après la 0a ; *le duel des haltes : voir la colonne de gauche* |
 | **Appareil de référence** | **iPhone 13** (le plus ancien de la famille, validé) : il fixe le plancher de performance | Idem |
 | **Critère de fin** | §3.1 | §8.2 |
 
@@ -264,7 +264,7 @@ Chaque étape produit quelque chose de **jouable** et de **testable**. Elles ava
 | **Santé** | Infection, maladies simples | Médecine II–III |
 | **Savoir** | — | Livres, expérimentation, domaines à trois niveaux, enseignement |
 | **Économie** | — | Cours dynamiques, carnet d'ordres, commandes artisanales |
-| **Joueurs** | Visites entre amis | Combat entre joueurs, pillage, cycle complet, classements |
+| **Joueurs** | Visites entre amis | Combat entre joueurs (*sauf le duel dans les haltes, venu en 0.11 le 2026-10-16 : `plans/duel-entre-joueurs.md`*), pillage, cycle complet, classements |
 | **Personnage** | — | Points libres, apparence détaillée (Book 14) |
 
 ---
@@ -669,7 +669,7 @@ Pour que toutes les couches se superposent sans heurt, **une seule grille** sert
 | **Grand Dégel** et grands événements | Hors périmètre |
 | Thèmes des autres lieux, ruines profondes, autres environnements | Une seule halte en 0a |
 | Musique diégétique jouable, voix des personnages | Questions ouvertes du Book 16 §5 |
-| Combat entre joueurs (tirs, pas d'autres joueurs hostiles) | Désactivé en 0a |
+| Combat entre joueurs (tirs, pas d'autres joueurs hostiles) | Désactivé en 0a ; *le duel des haltes est venu en 0.11 (2026-10-16, `plans/duel-entre-joueurs.md`), au corps à corps et sans musique propre* |
 
 ---
 
