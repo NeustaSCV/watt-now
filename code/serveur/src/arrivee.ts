@@ -15,7 +15,8 @@ import type { LieuId } from "../../commun/src/lieux.ts";
 import type { MessageClient } from "../../commun/src/messages.ts";
 
 /** Les messages que le client envoie sans geste du joueur : ils ne mettent pas fin à l'attente. */
-const SANS_GESTE: ReadonlySet<MessageClient["t"]> = new Set(["ping", "mesures", "recettes_vues", "constat"]);
+// 0.11 : le mode (Combat ou Exploration) part aussi tout seul, quand un Éteint approche (D-17).
+const SANS_GESTE: ReadonlySet<MessageClient["t"]> = new Set(["ping", "mesures", "recettes_vues", "constat", "mode"]);
 
 export class AttenteArrivee {
   private mode: ModeArrivee | null = null;

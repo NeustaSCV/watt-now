@@ -221,6 +221,8 @@ import { nombreFabriques, type VueProgression } from "../../commun/src/progressi
 import { armeDansLeDos } from "../../commun/src/combat.ts";
 import type { AllureVue, GesteVu } from "../../commun/src/messages.ts";
 import { GESTES_MAX } from "./presences.ts";
+// Le duel entre joueurs (0.11) : le registre du monde (serveur/src/duel.ts) ; ici, rien que des points d'appel.
+import type { Duels, Duelliste, Visee } from "./duel.ts";
 
 const JAMAIS = Number.MAX_SAFE_INTEGER;
 const INTERVALLE_BESOINS = 1000;
@@ -389,6 +391,12 @@ export class Joueur implements Voyageur, ParticipantLecon {
   private readonly moulins: Moulins;
   /** Le lancer et le tir (Book 25 §10.3) : son moteur est dans serveur/src/tir.ts. */
   private readonly tir: Tir = new Tir(this.contexteTir());
+  /** Le registre des duels du monde (0.11, serveur/src/duel.ts) ; null hors du monde (un joueur seul, dans les tests). */
+  duels: Duels | null = null;
+  /** Le mode choisi (D-10, D-17) : Combat (halo rouge) ou Exploration (vert) ; Exploration à chaque connexion. */
+  private modeCombat = false;
+  /** Ce que le joueur prête au duel (serveur/src/duel.ts) : rien que des accès, aucune règle. */
+  readonly duelliste: Duelliste = this.contexteDuel();
   /** Les ébauches d'arc qui sèchent dans le sac, même hors ligne (Book 25 §3.3) : serveur/src/arc.ts. */
   private readonly sechage: Sechage = new Sechage({
     maintenant: () => this.maintenant(),
@@ -653,7 +661,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (this.arrivee.recevoir(message)) return;
     if (message.t === "pause") return this.basculerPause(message.oui === true);
     // En pause, le monde attend : on n'agit pas (le client le sait aussi).
-    if (this.pause && message.t !== "ping" && message.t !== "mesures") return;
+    if (this.pause && message.t !== "ping" && message.t !== "mesures" && message.t !== "mode") return;
     switch (message.t) {
       case "intention": {
         const intention = nettoyerIntention(message);
@@ -730,6 +738,10 @@ export class Joueur implements Voyageur, ParticipantLecon {
         // Ni avec ce que le lieu met dans les bras (0.10, chantier J : la tête du robot, 8 kg à deux mains, Q-0.10-8).
         if (this.brasDuLieu()) return this.info(`Les bras pris, on ne frappe pas : pose d'abord ${this.brasDuLieu()}.`);
         this.frapper(message.appuye === true);
+        return;
+      // Le mode choisi (0.11, D-10, D-17) : le bouton, la touche X, la bascule automatique face à un Éteint.
+      case "mode":
+        this.modeCombat = message.combat === true;
         return;
       case "esquiver":
         this.esquiver(message.dx, message.dz);
@@ -887,6 +899,7 @@ export class Joueur implements Voyageur, ParticipantLecon {
   }
 
   get vu(): AutreVu {
+    const protege = this.duels?.protegeJusqua(this.compte.id);
     return {
       id: this.compte.id,
       pseudo: this.compte.pseudo,
@@ -899,6 +912,9 @@ export class Joueur implements Voyageur, ParticipantLecon {
       // L'arme encombrante équipée se voit dans le dos (0.9, Q-7).
       ...(this.dos ? { dos: this.dos } : {}),
       ...(this.sommeil ? { couche: true as const } : {}),
+      // Le halo (0.11, D-17) : rouge en Combat ; blanc pendant la protection du perdant (D-24).
+      ...(this.modeCombat ? { rouge: true as const } : {}),
+      ...(protege !== undefined ? { protegeJusqua: protege } : {}),
     };
   }
 
@@ -1191,6 +1207,10 @@ export class Joueur implements Voyageur, ParticipantLecon {
     // Le choc s'entend plus loin que le tranchant ; la décharge crépite (Book 25 §8.4).
     this.porteeDuCoup = porteeBruitCoup(enMain, appuye);
     const cible = this.cibleDevant(enMain.allonge);
+    // Le duel (0.11, serveur/src/duel.ts) : un joueur plus proche que l'Éteint, un refus, ou un duelliste (les Éteints
+    // ne comptent plus pour lui).
+    const visee = this.duels?.viser(this.duelliste, enMain.allonge, cible ? Math.hypot(cible.x - this.position.x, cible.z - this.position.z) : Infinity);
+    if (visee) return this.frapperUnJoueur(visee, enMain, appuye);
     if (!cible) return;
     this.position = { ...this.position, o: Math.atan2(cible.x - this.position.x, cible.z - this.position.z) };
     // Abîmée (sous 30 % de solidité), elle frappe 30 % moins fort (Book 23 §4.3).
@@ -1220,6 +1240,68 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (resultat === "detruit" && arme.objet === null) this.info(`À mains nues, ça ne suffira pas : prends une arme. ${ouTrouverPhrase("gourdin", this.recetteVisible)}`);
   }
 
+  /** Le coup qui vise un joueur (0.11) : le duel juge ; un coup qui touche use l'arme, comme sur un Éteint. */
+  private frapperUnJoueur(visee: Visee, enMain: Arme, appuye: boolean): void {
+    if (visee.refus) this.info(visee.refus);
+    if (!visee.cible) return;
+    this.position = { ...this.position, o: Math.atan2(visee.cible.x - this.position.x, visee.cible.z - this.position.z) };
+    if (!this.duels!.toucher(this.duelliste, visee.cible.id, enMain, appuye)) return;
+    this.user(enMain);
+    this.electricite.apresDecharge(enMain, appuye);
+  }
+
+  /** Ce que le joueur prête au duel (serveur/src/duel.ts) : rien que des accès, aucune règle. */
+  private contexteDuel(): Duelliste {
+    const j = this;
+    return {
+      get id() {
+        return j.compte.id;
+      },
+      get pseudo() {
+        return j.compte.pseudo;
+      },
+      lieu: () => (j.enLieuPublic ? j.lieu : null),
+      position: () => j.position,
+      combat: () => j.modeCombat,
+      dieu: () => j.admin,
+      esquive: () => j.maintenant() < j.esquiveJusqua,
+      atteint: (p) => voieLibre(j.zoneIci(), j.position, p) && j.vivant?.milieu?.atteint?.(j.position.x, j.position.z, p.x, p.z) !== false,
+      passerEnCombat: () => (j.modeCombat = true),
+      tressaillir: () => j.geste({ geste: "tressaille" }),
+      interrompre: () => {
+        if (j.sommeil) j.reveiller("");
+        j.annulerAction();
+      },
+      info: (t) => j.info(t),
+      envoyer: (m) => j.envoyer(m),
+      sac: () => j.inventaire,
+      ceder: (cle) => {
+        const partent = j.chargesQuiPartent({ [cle]: 1 });
+        j.charges = Object.fromEntries(BATTERIES.map((b) => [b, Math.max(0, (j.charges[b] ?? 0) - (partent[b] ?? 0))])) as Charges;
+        j.retirer(cle, 1);
+        j.bornerCharges();
+        j.verifierLumiere();
+        j.base.sauverCharges(j.compte.id, j.charges, j.maintenant());
+        j.envoyerCharges();
+        return partent;
+      },
+      recevoir: (cle, charges) => {
+        // Trop lourd : à ses pieds, en tas ramassable (comme le débris d'une arme cassée).
+        if (poidsInventaire(j.inventaire, j.gourde.litres) + poidsDe({ [cle]: 1 }) > capaciteDe(j.inventaire) + 1e-9) {
+          j.poserAuSol({ [cle]: 1 }, charges, { x: j.position.x, z: j.position.z });
+          return false;
+        }
+        j.ajouterPlusieurs({ [cle]: 1 });
+        for (const [b, wh] of Object.entries(charges) as [TypeBatterie, number][]) j.charges = { ...j.charges, [b]: (j.charges[b] ?? 0) + wh };
+        j.bornerCharges();
+        j.base.sauverCharges(j.compte.id, j.charges, j.maintenant());
+        j.envoyerCharges();
+        return true;
+      },
+      enBloc: (f) => j.enBloc(f),
+    };
+  }
+
   /** Ce que le joueur prête au moteur des projectiles (tir.ts) : rien que des accès, aucune règle. */
   private contexteTir(): ContexteTir {
     const j = this;
@@ -1236,7 +1318,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
       },
       lieu: () => j.lieu,
       zone: () => j.zoneIci(),
-      eteints: () => j.eteintsIci(),
+      // Pendant un duel, un tir ne fait rien aux Éteints (D-8) : il passe sans les toucher.
+      eteints: () => (j.duels?.enDuel(j.compte.id) ? [] : j.eteintsIci()),
       inventaire: () => j.inventaire,
       retirer: (cle, n) => j.retirer(cle, n),
       poserAuSol: (objets, ou) => j.poserAuSol(objets, {}, ou),
@@ -1778,10 +1861,15 @@ export class Joueur implements Voyageur, ParticipantLecon {
 
   /** Le combat, la santé et l'endurance, à chaque pas. */
   private tickCombat(instant: number, dt: number): void {
-    const tiennent = this.saisisseurs();
+    let tiennent = this.saisisseurs();
     if (tiennent.length === 0) this.appuisDegagement = 0;
     // Trois ou plus : effondrement quasi certain (Book 06 §2.3). Sauf l'admin invincible.
-    if (tiennent.length >= 3 && !this.invincible) return this.effondrer("Ils sont trop nombreux.");
+    if (tiennent.length >= 3 && !this.invincible) {
+      // Pendant un duel (D-3) : la jauge de duel se vide d'un coup, au lieu de l'effondrement ; ils lâchent prise.
+      if (!this.duels?.saisieATrois(this.compte.id)) return this.effondrer("Ils sont trop nombreux.");
+      for (const e of tiennent) lacher(e, this.position, this.zoneIci());
+      tiennent = [];
+    }
     for (const e of tiennent) {
       // L'Éteint du tutoriel ne mord jamais : il lâche prise tout seul (validé, 2026-10-08).
       if (e.tuto) {
@@ -1808,7 +1896,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
         continue;
       }
       // L'admin invincible : la morsure se voit et s'entend, sans blessure.
-      if (!this.invincible) this.sante = aggraver(this.sante, "morsure", DEGATS_MORSURE, instant);
+      // Pendant un duel (§4), c'est la jauge de duel qui encaisse : ni santé perdue, ni blessure.
+      if (!this.invincible && !this.duels?.morsure(this.compte.id)) this.sante = aggraver(this.sante, "morsure", DEGATS_MORSURE, instant);
       this.noterFait("morsure");
       this.envoyer({ t: "morsure" });
       this.geste({ geste: "touche" });
@@ -1851,6 +1940,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
    */
   private effondrer(raison: string): void {
     if (this.invincible) return this.garderInvincible();
+    // S'effondrer pendant un duel (le poison, le sang perdu), c'est le perdre (0.11).
+    this.duels?.abandonner(this.compte.id);
     this.mesurer("effondrement", raison, 1, { lieu: this.lieu });
     this.geste({ geste: "effondre" });
     const instant = this.maintenant();
@@ -2190,6 +2281,9 @@ export class Joueur implements Voyageur, ParticipantLecon {
   /** Prendre la route depuis une sortie : le trajet coûte des calories et de l'eau (Book 01 §2 bis). */
   private voyager(vers: LieuId): void {
     if (this.voyage) return;
+    // On ne quitte pas la halte pendant un duel (0.11, §6).
+    const refusDuel = this.duels?.refusDepart(this.compte.id);
+    if (refusDuel) return this.info(refusDuel);
     // Chez soi, on part de n'importe où sur le terrain (0.8.4) ; ailleurs, depuis une sortie. Jamais quand on est tenu.
     const sortie = sortiePourPartir(this.lieu, this.position.x, this.position.z);
     if (this.saisisseurs().length > 0) return this.info("Il te tient : dégage-toi d'abord.");

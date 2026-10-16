@@ -20,6 +20,7 @@ import { LieuxVivants } from "./lieux-vivants.ts";
 import { diffuserPresences, tourDePresences, type MemoirePresences } from "./presences.ts";
 import { messageValide } from "./controle.ts";
 import { Rencontres, temoins, type Present } from "./rencontres.ts";
+import { Duels } from "./duel.ts";
 
 /** Intervalle entre deux sauvegardes de chaque joueur, en millisecondes. */
 const INTERVALLE_SAUVEGARDE = 5000;
@@ -64,6 +65,26 @@ export class Monde {
   private readonly echanges = new Echanges((id) => this.connexions.get(id)?.joueur);
   /** Les leçons entre joueurs de familles différentes (Book 25 §2.3). */
   private readonly lecons = new Lecons((id) => this.connexions.get(id)?.joueur);
+  /**
+   * Le duel entre joueurs (0.11, serveur/src/duel.ts) : un seul registre pour tout le serveur. Au premier coup, l'échange
+   * et la leçon en cours des deux duellistes s'annulent.
+   */
+  private readonly duels = new Duels({
+    trouver: (id) => this.connexions.get(id)?.joueur.duelliste,
+    tous: () => [...this.connexions.values()].map(({ joueur }) => joueur.duelliste),
+    maintenant: () => Date.now(),
+    alea: () => Math.random(),
+    auPremierCoup: (a, b) => {
+      for (const d of [a, b]) {
+        const j = this.connexions.get(d.id)?.joueur;
+        if (!j) continue;
+        this.echanges.annuler(j, "Un duel commence : l'échange est annulé.");
+        this.lecons.annuler(j, "Un duel commence : la leçon s'arrête.");
+      }
+    },
+  });
+  /** Le ping de chacun (0.11) : l'heure d'envoi du dernier « ping » de WebSocket, en attente de sa réponse. */
+  private readonly pingsEnvoyes = new Map<number, number>();
   /** Les tours de serveur comptés depuis le démarrage : les présences partent un tour sur deux (0.9, `tourDePresences`). */
   private tours = 0;
   /** Les rencontres entre familles et le « voir faire » (l'arbre de progression, 0.7). */
@@ -151,6 +172,13 @@ export class Monde {
     // `activite` : le dernier vrai geste du joueur (pas les pings, ni l'intention « ne pas bouger » renvoyée par sécurité).
     const connexion = { joueur, socket, arrivee: Date.now(), activite: Date.now() };
     this.connexions.set(compte.id, connexion);
+    joueur.duels = this.duels;
+    // Le ping (0.11, chantier C) : le navigateur répond seul aux « ping » du protocole WebSocket ; le duel juge le coup
+    // d'après ce que voyait le frappeur, un demi-aller-retour plus tôt.
+    socket.on?.("pong", () => {
+      const envoye = this.pingsEnvoyes.get(compte.id);
+      if (envoye !== undefined && this.connexions.get(compte.id) === connexion) this.duels.noterPing(compte.id, Date.now() - envoye);
+    });
     // « Voir faire » (Q7) : ceux qui sont à 5 m de lui, dans un lieu public, y penseront aussi.
     joueur.surFabrication = (recette) => {
       const presents = this.presents();
@@ -193,6 +221,9 @@ export class Monde {
     if (!connexion) return;
     this.echanges.annuler(connexion.joueur, `${connexion.joueur.compte.pseudo} est parti.`);
     this.lecons.annuler(connexion.joueur, `${connexion.joueur.compte.pseudo} est parti : la leçon s'arrête.`);
+    // Se déconnecter pendant un duel, c'est le perdre tout de suite (0.11, §6, D-13).
+    this.duels.abandonner(compteId);
+    this.pingsEnvoyes.delete(compteId);
     connexion.joueur.sauvegarder();
     connexion.joueur.partir();
     this.connexions.delete(compteId);
@@ -226,6 +257,8 @@ export class Monde {
         journal(`Erreur de calcul pour ${joueur.compte.pseudo} : ${String(erreur)}`);
       }
     }
+    // Le duel (0.11) : les positions de la dernière seconde, la fuite, après le pas de chaque joueur.
+    this.duels.tick();
     this.sauvegarderUnPeu();
   }
 
@@ -248,9 +281,23 @@ export class Monde {
 
   private planifierSauvegardes(): void {
     this.deconnecterInactifs();
+    this.mesurerPings();
     const deja = new Set(this.aSauver);
     for (const id of this.connexions.keys()) if (!deja.has(id)) this.aSauver.push(id);
     this.parTic = Math.max(1, Math.ceil(this.aSauver.length / TICS_ETALEMENT));
+  }
+
+  /** Toutes les 5 s, un « ping » du protocole WebSocket à chacun (0.11) : sa réponse donne l'aller-retour. */
+  private mesurerPings(): void {
+    for (const [id, { socket }] of this.connexions) {
+      if (socket.readyState !== socket.OPEN || typeof socket.ping !== "function") continue;
+      this.pingsEnvoyes.set(id, Date.now());
+      try {
+        socket.ping();
+      } catch {
+        // Une socket qui se ferme : son ping n'a plus d'importance.
+      }
+    }
   }
 
   private sauvegarderUnPeu(): void {
@@ -267,7 +314,7 @@ export class Monde {
 
   /** Dans chaque lieu public, chacun voit les autres joueurs proches (Book 01 §2 bis ; présences allégées, presences.ts). */
   private diffuserPresences(): void {
-    diffuserPresences(
+    const voisins = diffuserPresences(
       [...this.connexions.values()].map(({ joueur }) => ({
         id: joueur.compte.id,
         lieu: joueur.enLieuPublic ? joueur.lieu : null,
@@ -280,6 +327,8 @@ export class Monde {
       // Dans une halte, ses murs arrêtent la vue : la boutique de la station (0.7.2), la cabane du gué (0.8)…
       (lieu, a, b) => this.lieux.voitEntre(lieu, a, b),
     );
+    // Les jauges du duel (0.11) : aux mêmes, au même tour, quand elles changent.
+    this.duels.diffuser(voisins);
   }
 
   /** Les joueurs connectés, et le lieu public où chacun se trouve (pour les rencontres et le « voir faire »). */
