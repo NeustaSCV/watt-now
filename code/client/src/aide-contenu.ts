@@ -70,7 +70,7 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
           "Sac : {sac} · Fabriquer : {fabriquer} · Carte : {carte} · Carnet : {carnet}.",
           "Lumière portée : {lumiere} (si tu as une torche, une lampe ou une lanterne).",
           "Lancer, tirer : {lancer} (maintenir pour viser). Voir « Lancer et tirer ».",
-          "Tourner la vue d'un quart de tour : {tourner}. Sur ordinateur, Maj + {tourner} tourne dans l'autre sens, et la molette zoome.",
+          "Un appui sur {tourner} tourne la vue d'un quart de tour. Sur ordinateur, avec Maj, elle tourne dans l'autre sens, et la molette zoome.",
           "Échap ferme la fenêtre ouverte.",
           "Sur ordinateur, le menu ⚙ → Commandes permet de changer chaque touche. Le jeu part d'un clavier AZERTY.",
         ],

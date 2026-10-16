@@ -200,7 +200,7 @@ const BOUTONS: Partial<Record<Action, string>> = {
   carte: "Carte",
   carnet: "Carnet",
   lumiere: "Lumière",
-  tourner: "⟳",
+  tourner: "la boussole",
   lancer: "Lancer",
   courir: "joystick à fond",
   discret: "joystick à peine incliné",
