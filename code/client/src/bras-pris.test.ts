@@ -41,7 +41,7 @@ test("V2-12 : un geste des bras, c'est poser, brancher ou présenter", () => {
 
 test("V2-12 : main.ts ne frappe pas les bras pris (A pose, le relâchement ne frappe pas)", () => {
   const main = readFileSync(new URL("./main.ts", import.meta.url), "utf8");
-  assert.match(main, /if \(modeCombat && !brasPris\(\)\) return;/);
+  assert.match(main, /if \(mode\.combat && !brasPris\(\)\) return;/);
   assert.match(main, /if \(brasPris\(\)\) return;/);
   assert.match(main, /propositionsCombat\(\{ saisi: saisi > 0, brasPris: bras, bras: gesteBras, repousser: aRepousser\(\) \}\)/);
   assert.doesNotMatch(main, /"Frapper \(maintenir/);

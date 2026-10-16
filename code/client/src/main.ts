@@ -11,13 +11,13 @@ import { sousTension, suivreElectrique } from "./electricite.ts";
 import * as THREE from "three";
 import { INTENTION_REPOS, avancer, type Position } from "../../commun/src/deplacement.ts";
 import { COMPTOIR, destinations, sortiePourPartir, sortiesDe, type LieuJouable, type Zone } from "../../commun/src/lieux.ts";
-import { estPersonnel, ficheLieu, pausePossibleIci, planDe, sombreDans, zoneSelonPortes } from "../../commun/src/registre-lieux.ts";
+import { estHalte, estPersonnel, ficheLieu, pausePossibleIci, planDe, sombreDans, zoneSelonPortes } from "../../commun/src/registre-lieux.ts";
 import type { EteintVu } from "../../commun/src/eteints.ts";
 import { cerclesSignature, type BruitAction } from "../../commun/src/signature.ts";
 import { ALLURES, type Allure } from "../../commun/src/regles.ts";
 import { APPUIS_DEGAGEMENT, ESQUIVE, REPOUSSER, SEUIL_EPUISE, armeEnMain, freinSaisie } from "../../commun/src/combat.ts";
 import { armeDansLeDos } from "../../commun/src/combat.ts";
-import type { AllureVue, AutreVu, SacVu, SanteVue, VueComptoir } from "../../commun/src/messages.ts";
+import type { AllureVue, AutreVu, DuelVu, SacVu, SanteVue, VueComptoir } from "../../commun/src/messages.ts";
 import { PORTEE_CABLE_PANNEAU, type Charges } from "../../commun/src/energie.ts";
 import type { Bienvenue, EtatCoopVu, InstallationVue, MessageClient, MessageServeur } from "../../commun/src/messages.ts";
 import { OBJETS, lumierePortee, traineTravois, type Inventaire } from "../../commun/src/objets.ts";
@@ -105,6 +105,10 @@ import { CoucheDechetsVue } from "./rendu/dechets/couche.ts";
 import { BandeauIdee } from "./bandeau-idee.ts";
 import { seFaitEnTenantA } from "./geste-tenu.ts";
 import { AnneauProgres } from "./rendu/anneau-progres.ts";
+// Le duel entre joueurs (0.11) : le mode qui tient, le halo au sol, les noms et les jauges au-dessus des voyageurs.
+import { ModeCombat } from "./mode-combat.ts";
+import { Halo, PROTECTION_MS } from "./rendu/halo.ts";
+import { Etiquettes, type Porteur, type Zone as ZoneEcran } from "./etiquettes.ts";
 
 const CLE_JETON = "watt.jeton";
 /** En développement : `?heure=22` fige l'heure affichée, pour régler la nuit sans attendre. */
@@ -220,14 +224,21 @@ let bruitAction: BruitAction = "aucun";
 /** En route sur la carte : on ne bouge plus jusqu'à l'arrivée. */
 let enVoyage = false;
 // ---------- Combat et santé (É3, lot 3) ----------
-let modeCombat = false;
+/**
+ * Le mode : Exploration ou Combat (mode-combat.ts). Depuis la 0.11 (D-17), le Combat ne repasse jamais tout seul en
+ * Exploration ; chaque changement part au serveur (le halo que voient les autres, D-10).
+ */
+const mode = new ModeCombat((combat, origine) => {
+  envoyer({ t: "mode", combat });
+  // Le Combat s'est mis tout seul : la pastille du bouton bat (D-19 bouton V2).
+  if (origine !== "joueur") hud.combatAuto();
+  if (combat && estHalte(lieu)) indiceUneFois("combat_halte");
+});
 /** L'arme équipée pour le combat (P-005) ; null : la meilleure du sac. */
 let armeEquipee: CleObjet | null = null;
 /** Un coup va jusqu'au bout (P-004) : pas de nouveau coup avant cet instant ; un appui pendant le geste est gardé pour la suite. */
 let coupFiniLe = 0;
 let coupEnAttente: boolean | null = null;
-/** Depuis quand plus aucun Éteint n'est proche (retour automatique en exploration). */
-let calmeDepuis = 0;
 let sante: SanteVue = { points: 100, saignement: "aucun", blessures: [], convalescence: false };
 let endurance = 100;
 let saisi = 0;
@@ -257,6 +268,35 @@ function aider(aide: Aide): void {
   const texte = aides.premiereFois(aide);
   if (texte) hud.message(`💡 ${avecTouches(texte, tactile)}`, "aide");
 }
+/** Un indice du duel (D-23) : une ligne qui passe, une seule fois par personnage (gardé dans le navigateur, aides.ts). */
+function indiceUneFois(aide: "combat_halte" | "halo_rouge"): void {
+  const texte = aides.premiereFois(aide);
+  if (texte) hud.message(texte, "indice");
+}
+// ---------- Le duel entre joueurs (0.11) ----------
+/** Son propre id (le message de bienvenue) : pour se reconnaître dans les duels. */
+let monId = -1;
+/** Sa propre protection après un duel perdu (heure du serveur, ms) : son anneau est blanc et se vide (D-24). */
+let maProtection: number | undefined;
+/** Son halo, sous ses pieds (créé avec le personnage). */
+const monHalo = new Halo();
+/** Les noms, les jauges du duel et la fin au-dessus des voyageurs (etiquettes.ts). */
+const etiquettes = new Etiquettes(document.getElementById("etiquettes")!);
+/** La dernière morsure reçue (ms, horloge locale) : une jauge qui baisse juste après vient de l'Éteint, pas d'un joueur. */
+let derniereMorsure = -Infinity;
+/** Le dernier tressaillement joué sur soi (ms) : on ne le rejoue pas deux fois pour un même coup. */
+let dernierTressaillement = -Infinity;
+/** L'objet gagné au duel : son « +1 » dans le sac ne se montre pas en plus du « + machette » au-dessus de soi. */
+let gainDuel: { type: string; jusqua: number } | null = null;
+
+/** Un coup reçu d'un joueur (le serveur le dit) : le buste plie et revient, sans recul (D-19). */
+function tressaillirMoi(): void {
+  const maintenant = performance.now();
+  if (maintenant - dernierTressaillement < 250) return;
+  dernierTressaillement = maintenant;
+  personnage?.tressaillir();
+}
+
 /** Le guichet des Compteurs, tel qu'on le voit (au Carrefour seulement). */
 let vueComptoir: VueComptoir | null = null;
 // Le sang se pose sur le sol du lieu (au phare, la grève et l'épave sont 4 à 9 m sous le plateau : client/src/sol-lieu.ts).
@@ -544,6 +584,8 @@ function installer(message: Bienvenue): void {
     escabeauPorte.scale.setScalar(0.9);
     escabeauPorte.visible = false;
     personnage.objet.add(escabeauPorte);
+    // Son halo, sous ses pieds (0.11) : vu dans les haltes seulement.
+    personnage.objet.add(monHalo.objet);
   }
   position = message.position;
   positionServeur = message.position;
@@ -617,7 +659,11 @@ function installer(message: Bienvenue): void {
   vueComptoir = message.comptoir ?? null;
   if (vueComptoir) hud.majComptoir(vueComptoir);
   elan = null;
-  modeCombat = false;
+  // Exploration à chaque entrée dans un lieu, et à chaque connexion (D-10) : le serveur le sait aussi.
+  mode.entrer();
+  monId = message.moi.id;
+  maProtection = undefined;
+  etiquettes.vider();
   personnage.blesser(sante.blessures.length);
   personnage.effondrer(false);
   personnage.agir(null);
@@ -808,6 +854,11 @@ function recevoir(message: MessageServeur): void {
         if (!(n > (inventaire[type] ?? 0)) || vues.has(sorte)) continue;
         vues.add(sorte);
         const gagne = compter(message.inventaire, sorte) - compter(inventaire, sorte);
+        // L'objet gagné au duel se lit déjà au-dessus de soi (« + machette ») : pas de « +1 » en plus.
+        if (gainDuel && gainDuel.type === sorte && performance.now() < gainDuel.jusqua) {
+          gainDuel = null;
+          continue;
+        }
         if (gagne > 0) hud.gain(type, gagne);
       }
       inventaire = message.inventaire;
@@ -1007,6 +1058,7 @@ function recevoir(message: MessageServeur): void {
       lancerProjectile(message.projectile);
       return;
     case "morsure":
+      derniereMorsure = performance.now();
       bruiteur.morsure();
       personnage?.toucher();
       aider("saignement");
@@ -1070,7 +1122,18 @@ function recevoir(message: MessageServeur): void {
       for (let i = 0; i + 4 < message.p.length; i += 5) autres.get(message.p[i]!)?.deplacer(message.h, message.p[i + 1]! / 100, message.p[i + 2]! / 100, message.p[i + 3]! / 100, message.p[i + 4]! as AllureVue);
       return;
     case "gestes":
-      for (const g of message.g) autres.get(g.id)?.geste(g);
+      for (const g of message.g) {
+        // Un coup reçu d'un joueur, si le serveur nous le dit aussi par ce message (0.11).
+        if (g.id === monId && g.geste === "tressaille") tressaillirMoi();
+        else autres.get(g.id)?.geste(g);
+      }
+      return;
+    // Le duel entre joueurs (0.11, plan-duel.md §2) : les jauges en vue, et la fin d'un duel.
+    case "duels":
+      recevoirDuels(message.d);
+      return;
+    case "duel_fin":
+      finDuel(message);
       return;
     case "autres":
       majAutres(message.joueurs);
@@ -1178,6 +1241,35 @@ function majAutres(liste: AutreVu[]): void {
       contenu.add(nouvelle.objet);
     }
   }
+}
+
+/**
+ * Les duels en vue (0.11) : les jauges au-dessus des duellistes, pour eux comme pour les témoins. Entré dans un duel, on
+ * est en Combat (D-20 : un vert frappé passe en Combat tout seul ; le serveur l'a décidé, on le suit). Sa propre jauge qui
+ * baisse sans morsure juste avant : un coup de l'autre joueur, le buste plie.
+ */
+function recevoirDuels(liste: readonly DuelVu[]): void {
+  const avant = etiquettes.duels.enDuel(monId);
+  const touches = etiquettes.recevoirDuels(liste);
+  const dedans = etiquettes.duels.enDuel(monId);
+  if (dedans && !avant) mode.imposerCombat();
+  // (Le premier coup lance le duel et retire déjà sa part : la jauge arrive entamée.)
+  const entame = dedans && !avant && (etiquettes.duels.duelliste(monId)?.jauge ?? 1) < 1;
+  if ((touches.includes(monId) || entame) && performance.now() - derniereMorsure > 400) tressaillirMoi();
+}
+
+/**
+ * La fin d'un duel (0.11, D-16, D-21, D-24) : « + machette » au-dessus du gagnant, « − machette » ou « sac vide »
+ * au-dessus du perdant, vus de tous ; le perdant a l'anneau blanc pendant 45 s. Les phrases aux deux duellistes viennent
+ * du serveur (des messages qui passent) ; rien pour les témoins (D-22).
+ */
+function finDuel(m: Extract<MessageServeur, { t: "duel_fin" }>): void {
+  etiquettes.finir(m);
+  if (m.issue !== "gagne" || m.gagnant === undefined) return;
+  const perdant = m.gagnant === m.a ? m.b : m.a;
+  // Sa propre protection : le serveur ne s'envoie pas son identité ; elle commence maintenant (45 s, §5).
+  if (perdant === monId) maProtection = Date.now() + decalage + PROTECTION_MS;
+  if (m.gagnant === monId && m.objet && !m.auSol) gainDuel = { type: typeDe(m.objet), jusqua: performance.now() + 2500 };
 }
 
 /** Les sacs tombés au sol (effondrement) : on peut revenir les chercher. */
@@ -1446,7 +1538,7 @@ function executer(c: Commande): void {
       // Tenu, A sert à se dégager comme B (0.8.4), dès l'appui : on n'a pas l'amplitude pour frapper.
       if (saisi > 0) return degagerUnCoup();
       // En combat, A se juge au relâchement (coup rapide ou appuyé). Les bras pris, A pose ce qu'on porte (V2-12).
-      if (modeCombat && !brasPris()) return;
+      if (mode.combat && !brasPris()) return;
       if (occupe) return envoyer({ t: "annuler" });
       // Un geste sur ce qu'on vise se fait en tenant A (sauf dormir : on ne tient pas une touche toute la nuit).
       {
@@ -1464,11 +1556,11 @@ function executer(c: Commande): void {
     case "A_court":
     case "A_long":
       // Hors combat : lâcher A ne fait rien (0.8.2 §7.6) ; le geste va jusqu'au bout, un nouvel appui l'arrête.
-      if (!modeCombat && maintien) {
+      if (!mode.combat && maintien) {
         maintien.relache = true;
         return;
       }
-      if (!modeCombat || enVoyage || carte.ouverte) return;
+      if (!mode.combat || enVoyage || carte.ouverte) return;
       // Les bras pris, on ne frappe pas : A a déjà posé (V2-12).
       if (brasPris()) return;
       // Tenu, le coup chargé est perdu : le relâchement ne frappe pas (l'appui a déjà compté pour se dégager).
@@ -1481,7 +1573,7 @@ function executer(c: Commande): void {
       frapper(c === "A_long");
       return;
     case "B":
-      if (modeCombat || saisi > 0) return combatB();
+      if (mode.combat || saisi > 0) return combatB();
       // Pendant une action, n'importe quelle touche d'action l'arrête.
       if (occupe) return envoyer({ t: "annuler" });
       // B (F au clavier) ouvre la fiche Examiner, et la referme.
@@ -1495,8 +1587,7 @@ function executer(c: Commande): void {
       photo.masquerPanneau();
       return;
     case "mode":
-      modeCombat = !modeCombat;
-      calmeDepuis = 0;
+      mode.basculer();
       return;
     case "sac":
       hud.basculerSac();
@@ -1588,10 +1679,10 @@ function combatB(): void {
 }
 
 /**
- * Le mode Combat se met tout seul quand un Éteint debout approche (option par défaut en 0a, Book 08 §3.3),
- * et revient en exploration quand plus rien ne menace depuis quelques secondes.
+ * Le mode Combat se met tout seul quand un Éteint debout approche (option par défaut en 0a, Book 08 §3.3). Depuis la
+ * 0.11 (D-17), il ne repasse plus jamais tout seul en Exploration : seul le joueur y revient (mode-combat.ts).
  */
-function majMode(dt: number): void {
+function majMode(): void {
   if (!position) return;
   let plusProche = Infinity;
   for (const [id, e] of eteints) {
@@ -1600,16 +1691,8 @@ function majMode(dt: number): void {
     if (lieu === "phare" && !phare.menace(e.objet.position, position)) continue; // 0.10 (K2) : l'autre étage du phare
     plusProche = Math.min(plusProche, Math.hypot(e.objet.position.x - position.x, e.objet.position.z - position.z));
   }
-  if (plusProche < 6 && !modeCombat && calmeDepuis >= 0) {
-    modeCombat = true;
-    calmeDepuis = -1;
-    hud.message(avecTouches("Un Éteint ! Mode Combat : {agir} pour frapper (maintenir : à la tête), {examiner} pour esquiver.", tactile));
-  }
-  if (plusProche > 10) {
-    calmeDepuis = Math.max(0, calmeDepuis) + dt;
-    if (calmeDepuis > 3 && modeCombat && saisi === 0) modeCombat = false;
-  } else if (plusProche < 6) calmeDepuis = -1;
-  hud.mode(modeCombat, plusProche < 10);
+  if (mode.surveiller(plusProche)) hud.message(avecTouches("Un Éteint ! Mode Combat : {agir} pour frapper (maintenir : à la tête), {examiner} pour esquiver.", tactile));
+  hud.mode(mode.combat, plusProche < 10);
 }
 
 async function entrer(messageInitial = ""): Promise<void> {
@@ -1725,6 +1808,60 @@ function mesurerImages(dtReel: number): void {
   envoyer({ t: "mesures", ips: Math.round((imagesMesurees.length / ((maintenant - debutMesureImages) / 1000)) * 10) / 10, ipsBas: Math.round((1 / p95) * 10) / 10, appareil: appareil(), qualite: qualite.niveau });
   imagesMesurees.length = 0;
   debutMesureImages = maintenant;
+}
+
+/**
+ * La bande des messages, en haut, sous la rangée des tuiles : les étiquettes au-dessus des voyageurs passent dessous (en
+ * paysage, 812 × 320, elle est au milieu, juste au-dessus des personnages). Remesurée quand elle change.
+ */
+const blocMessages = document.querySelector<HTMLElement>("#hud .messages");
+let bandeMessages: ZoneEcran | null = null;
+let bandeAMesurer = true;
+let bandeMesureeLe = 0;
+if (blocMessages) new MutationObserver(() => (bandeAMesurer = true)).observe(blocMessages, { childList: true, subtree: true, characterData: true });
+window.addEventListener("resize", () => (bandeAMesurer = true));
+const _ecran = new THREE.Vector3();
+
+/**
+ * Ce qu'on voit du duel, chaque image (0.11, D-19, D-24) : le halo de chacun dans une halte (soi compris), et au-dessus
+ * des voyageurs, leur nom, les jauges du duel et la fin. Le premier halo rouge vu à l'écran : son indice, une fois (D-23).
+ */
+function majDuelVu(dt: number, maintenantServeur: number): void {
+  const halte = estHalte(lieu) && !photo.actif;
+  for (const a of autres.values()) a.majHalo(dt, halte, maintenantServeur, hauteurSurfaceLieu(lieu, a.objet.position.x, a.objet.position.z, portesCoop));
+  if (personnage && position) {
+    monHalo.objet.visible = halte && !enVoyage;
+    if (monHalo.objet.visible) monHalo.maj(dt, mode.combat, maProtection, maintenantServeur, hauteurSurfaceLieu(lieu, position.x, position.z, portesCoop), personnage.objet);
+  }
+  scene.camera.updateMatrixWorld();
+  if (halte && position) {
+    for (const a of autres.values()) {
+      if (!a.donnees.rouge || !a.objet.visible) continue;
+      _ecran.copy(a.objet.position).project(scene.camera);
+      if (Math.abs(_ecran.x) < 0.95 && Math.abs(_ecran.y) < 0.95 && _ecran.z < 1) {
+        indiceUneFois("halo_rouge");
+        break;
+      }
+    }
+  }
+  // (Et chaque seconde : le HUD se range autrement après un quart de tour, un panneau…)
+  if ((bandeAMesurer || performance.now() > bandeMesureeLe + 1000) && blocMessages) {
+    bandeAMesurer = false;
+    bandeMesureeLe = performance.now();
+    const r = blocMessages.getBoundingClientRect();
+    // Vide, elle commence juste sous la rangée des tuiles (Carnet, Sac…) : les étiquettes passent aussi sous celles-ci.
+    bandeMessages = r.width > 0 ? { gauche: r.left, droite: r.right, bas: r.bottom } : null;
+  }
+  const porteurs: Porteur[] = [];
+  for (const [id, a] of autres) {
+    const p = a.objet.position;
+    porteurs.push({ id, pseudo: a.donnees.pseudo, famille: a.donnees.famille, x: p.x, y: p.y, z: p.z, visible: a.objet.visible && !a.tombe });
+  }
+  if (personnage && position) {
+    const p = personnage.objet.position;
+    porteurs.push({ id: monId, pseudo: null, famille: personnage.famille, x: p.x, y: p.y, z: p.z, visible: !enVoyage });
+  }
+  etiquettes.placer(porteurs, scene.camera, canvas.clientWidth, canvas.clientHeight, maintenantServeur, bandeMessages, dt, photo.actif);
 }
 
 /** Un coup : l'animation, le son et le message durent le geste de l'arme en main (P-004). */
@@ -1885,7 +2022,7 @@ function boucle(instant: number): void {
     // Le Grand Hôtel (0.10, chantier J) : l'étage ou le rez-de-chaussée, ses couches, le check-in, ce qu'on a pris.
     if (lieu === "grand_hotel" && decor) animerHotel(decor, position.x, position.z, personnage.objet.rotation.y, dt, scene.angleCamera, hotel.etat, ressources.values());
 
-    majMode(dt);
+    majMode();
     // Le coffre se ferme quand on s'en éloigne.
     const coffre = hud.coffreOuvert;
     if (coffre && (lieu !== "terrain" || Math.hypot(position.x - coffre.x, position.z - coffre.z) > (coffre.type === "decharge" ? 4.5 : 3))) hud.fermerPanneaux();
@@ -1898,18 +2035,18 @@ function boucle(instant: number): void {
     if (hud.caisseOuverte && !(lieu === "route_pont" ? routePont.prochePeage(position) : lieu === "corniche" && corniche.prochePeage(position))) hud.fermerCaisse();
     // L'arc en main pendant qu'on vise, bras levé : le personnage bande (Book 25 §3.4).
     const arcVise = viseeEnCours?.pret.genre === "tir" && !viseeEnCours.pret.arme.armeeDAvance ? typeDe(viseeEnCours.pret.cle) : null;
-    personnage.tenir(arcVise ?? (modeCombat ? armeEnMain(inventaire, armeEquipee).objet : undefined));
+    personnage.tenir(arcVise ?? (mode.combat ? armeEnMain(inventaire, armeEquipee).objet : undefined));
     // Hors du combat, la fourche à foin se porte dans le dos (plan 0.8 §2.4, chantier 8).
-    personnage.porterDansLeDos(!modeCombat && !arcVise ? armeDansLeDos(inventaire, armeEquipee) : null);
+    personnage.porterDansLeDos(!mode.combat && !arcVise ? armeDansLeDos(inventaire, armeEquipee) : null);
     // L'appui gardé pendant le coup précédent part à la fin du geste : on enchaîne sans marteler.
     if (coupEnAttente !== null && performance.now() >= coupFiniLe) {
       const appuye = coupEnAttente;
       coupEnAttente = null;
-      if (modeCombat && !enVoyage && saisi === 0 && !brasPris()) frapper(appuye);
+      if (mode.combat && !enVoyage && saisi === 0 && !brasPris()) frapper(appuye);
     }
-    personnage.preparer(arcVise ? 1 : modeCombat && !brasPris() ? entrees.chargeA : viseeEnCours ? 1 : 0);
+    personnage.preparer(arcVise ? 1 : mode.combat && !brasPris() ? entrees.chargeA : viseeEnCours ? 1 : 0);
     // La jauge du coup appuyé autour du bouton A (0.10) : seulement quand le relâchement frappera (en combat, bras libres, pas saisi).
-    hud.jaugeCoup(modeCombat && !brasPris() && saisi === 0 && !enVoyage ? entrees.chargeA : 0);
+    hud.jaugeCoup(mode.combat && !brasPris() && saisi === 0 && !enVoyage ? entrees.chargeA : 0);
     // Le lancer (0.6) : la visée suit l'Éteint accroché ; le bouton dit ce qu'il fera (Lancer, Tirer, Réarmer).
     majViseeLancer();
     projectiles.animer(dt);
@@ -1961,16 +2098,16 @@ function boucle(instant: number): void {
       // Une sortie ou la mare (sans cible au sol) passent avant : on s'y tient exprès.
       if (!propositions.A || (c && dechet.distance < Math.max(0, Math.hypot(c.x - position.x, c.z - position.z) - (c.rayon ?? 0.5)))) propositions = dechet.propositions;
     }
-    if (modeCombat || saisi > 0) {
+    if (mode.combat || saisi > 0) {
       // En combat, A frappe et B esquive ; saisi, A et B servent à se dégager ; les bras pris, A pose (V2-12 : bras-pris.ts).
       propositions = propositionsCombat({ saisi: saisi > 0, brasPris: bras, bras: gesteBras, repousser: aRepousser() });
     }
     // La pièce visée bat avec l'anneau (son liseré), seulement si c'est bien elle qu'on vise.
     dechetsVue.cibler(dechet !== null && propositions === dechet.propositions);
     // La fiche Examiner ouverte (plan 0.8 §9.2) : B la referme, le bouton tactile et l'invite le disent.
-    if (!modeCombat && hud.ficheOuverte) propositions = { ...propositions, B: { libelle: LIBELLE_FERMER_FICHE, examiner: "" } };
+    if (!mode.combat && hud.ficheOuverte) propositions = { ...propositions, B: { libelle: LIBELLE_FERMER_FICHE, examiner: "" } };
     // Endormi : A réveille (0.8.2, chantier K), au lieu de « Dormir dans l'abri ».
-    if (endormi && !modeCombat) propositions = propositionsEndormi(propositions);
+    if (endormi && !mode.combat) propositions = propositionsEndormi(propositions);
     // Pendant la vue d'ensemble, rien ne se propose : le premier geste ne sert qu'à commencer.
     if (vueArrivee.attend) propositions = { A: null, B: null, cible: null };
     hud.propositions(propositions, occupe, maintien?.tenu && occupe ? actionEnCours : null);
@@ -2057,6 +2194,7 @@ function boucle(instant: number): void {
   for (const e of eteints.values()) e.animer(dt);
   for (const a of autres.values()) a.animer(dt);
   partants.animer(dt, (v) => contenu.remove(v.objet));
+  majDuelVu(dt, maintenant);
   if (lieu === "comptoir") animerComptoir(dt);
   sang.animer(dt);
   // Le son du monde : Éteints, autres joueurs, feux, installations, pluie ; la nuit pour la musique.
@@ -2122,7 +2260,7 @@ if (import.meta.env.DEV) {
       commande: (c: Commande) => entrees.commande(c),
       ressources: () => [...ressources.values()].map((r) => r.donnees),
       eteints: () => [...eteints.entries()].map(([id, e]) => ({ id, x: e.objet.position.x, z: e.objet.position.z, etat: e.etat })),
-      combat: () => ({ modeCombat, saisi, sante, endurance }),
+      combat: () => ({ modeCombat: mode.combat, saisi, sante, endurance }),
       son: () => son.diagnostic(),
       /** Simuler un message du serveur (captures, essais de rendu : l'indicateur hors champ, les variantes…). */
       simuler: (m: MessageServeur) => recevoir(m),
@@ -2136,6 +2274,9 @@ if (import.meta.env.DEV) {
       carteVue,
       /** Le guidage 0.10 : ce qui s'est déjà dit pendant la visite. */
       guidage,
+      /** Le duel (0.11) : les étiquettes au-dessus des voyageurs, le halo sous soi. */
+      etiquettes,
+      monHalo,
     },
   });
 }
