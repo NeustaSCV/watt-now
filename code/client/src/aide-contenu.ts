@@ -256,7 +256,7 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
         liste: [
           "Pendant la pose, ton personnage ne bouge pas : c'est le fantôme qui bouge (clavier ou joystick).",
           "Clique (ou touche) le sol pour y amener le fantôme, puis clique dessus pour construire. Le bouton « Construire ici » fait pareil.",
-          "Tourner : la molette, {lumiere} ou le bouton « Tourner ».",
+          "Tourner : la molette[[, {lumiere}]] ou le bouton « Tourner ».",
           "Annuler : Échap, clic droit, {examiner} ou le bouton « Annuler ».",
           "Le cercle pointillé montre jusqu'où tu peux construire : approche-toi si c'est trop loin.",
         ],
