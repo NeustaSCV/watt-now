@@ -172,10 +172,22 @@ test("0.10 aide : l'hôtel et le phare disent comment, sans divulgâcher (ni car
     assert.doesNotMatch(tout, secret);
 });
 
-test("0.10.1 : au téléphone, l'aide de la pose ne dit pas que la lumière tourne le fantôme ; au clavier, rien ne change", async () => {
+test("0.10.1 : au téléphone, l'aide de la pose ne cite aucun geste du clavier ; au clavier, aucun mot ne change", async () => {
   const { selonLeMode } = await import("./aide.ts");
   const { avecTouches } = await import("./touches.ts");
-  const ligne = RUBRIQUES_AIDE.flatMap((r) => r.blocs).flatMap((b) => (typeof b === "object" && "liste" in b ? b.liste : [])).find((l) => l.startsWith("Tourner : la molette"))!;
-  assert.equal(avecTouches(selonLeMode(ligne, true), true), "Tourner : la molette ou le bouton « Tourner ».");
-  assert.equal(selonLeMode(ligne, false), "Tourner : la molette, {lumiere} ou le bouton « Tourner ».");
+  const lignes = RUBRIQUES_AIDE.find((r) => r.id === "fabriquer")!.blocs.flatMap((b) => (typeof b === "object" && "liste" in b ? b.liste : []));
+  const ligne = (debut: string) => lignes.find((l) => l.startsWith(debut))!;
+  const telephone = (l: string) => avecTouches(selonLeMode(l, true), true);
+  const clavier = (l: string) => selonLeMode(l, false);
+  // Au téléphone : seulement ce qui existe au doigt.
+  assert.equal(telephone(ligne("Tourner :")), "Tourner : le bouton « Tourner ».");
+  assert.equal(telephone(ligne("Annuler :")), "Annuler : B ou le bouton « Annuler ».");
+  assert.equal(telephone(ligne("Pendant la pose")), "Pendant la pose, ton personnage ne bouge pas : c'est le fantôme qui bouge (joystick).");
+  // Au clavier : les phrases d'avant, mot pour mot.
+  assert.equal(clavier(ligne("Tourner :")), "Tourner : la molette, {lumiere} ou le bouton « Tourner ».");
+  assert.equal(clavier(ligne("Annuler :")), "Annuler : Échap, clic droit, {examiner} ou le bouton « Annuler ».");
+  assert.equal(clavier(ligne("Pendant la pose")), "Pendant la pose, ton personnage ne bouge pas : c'est le fantôme qui bouge (clavier ou joystick).");
+  // Nulle part dans la rubrique, au téléphone, un geste du clavier.
+  const rubriqueTel = RUBRIQUES_AIDE.find((r) => r.id === "fabriquer")!.blocs.map((b) => (typeof b === "string" ? b : "sous_titre" in b ? b.sous_titre : b.liste.join("\n"))).map(telephone).join("\n");
+  for (const geste of [/Échap/, /clic droit/, /molette/, /clavier/]) assert.doesNotMatch(rubriqueTel, geste);
 });
