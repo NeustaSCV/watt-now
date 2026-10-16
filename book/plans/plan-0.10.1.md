@@ -220,3 +220,5 @@ En temps réel : **≈ 4 à 6 h de travail des agents**, en parallèle, plus le 
 | R-06 ✅ | Le pédalier sans alternateur ni dynamo : le bandeau reprend la phrase du jeu, « Rien à entraîner : monte l'alternateur de la station (ou, à défaut, la dynamo du vélo). » ; pas de phrase nouvelle pour les autres installations sans qu'on la demande |
 | R-07 ✅ | **Une espace insécable entre un nombre et son unité** dans tous les textes du jeu (aucun mot ne change) |
 | R-08 ✅ | Pas de « Sert à » quand on examine une chose posée dans le monde (en 0.10.1) |
+| R-09 ✅ | **Le menu d'échange** : les trois petits ajouts de la maquette sont pris : la ligne « X a changé son offre : redis d'accord si ça te va. » quand les deux « d'accord » tombent ; le trait qui raccourcit pendant les 20 s de la demande ; le bref éclair jaune sur « Tu reçois » quand l'autre change ce qu'il donne |
+| R-10 | **Demande nouvelle du porteur** : remplacer le bouton « Lumière » par une icône de petite torche, allumée ou éteinte. **Maquette d'abord** (`.claude-travail/maquettes-0-10-1/lumiere/`), rien de codé avant son choix |
