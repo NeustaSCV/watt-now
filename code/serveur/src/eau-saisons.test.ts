@@ -68,6 +68,27 @@ test("A5 : deux gourdes → 2 L à la mare, 2 L bouillis d'un coup", () => {
   assert.deepEqual(t.dernier("besoins")?.gourde, { contenu: "potable", litres: 2 });
 });
 
+test("R-16 : à la mare, une réserve pleine d'eau potable ne se remplit pas ; pas pleine, elle se complète et devient brute", () => {
+  const une = monter({ inventaire: { gourde: 1 }, gourde: { contenu: "potable", litres: 1 } });
+  une.joueur.position = { x: MARE.x + 0.4, z: MARE.z - 0.3, o: 0 };
+  une.joueur.recevoir({ t: "interagir", cible: { genre: "mare" }, verbe: "remplir" });
+  une.attendre(3);
+  assert.equal(une.infos().at(-1), "Ta gourde est déjà pleine.");
+  assert.deepEqual(une.prive.gourde, { contenu: "potable", litres: 1 });
+  const deux = monter({ inventaire: { gourde: 2 }, gourde: { contenu: "potable", litres: 2 } });
+  deux.joueur.position = { x: MARE.x + 0.4, z: MARE.z - 0.3, o: 0 };
+  deux.joueur.recevoir({ t: "interagir", cible: { genre: "mare" }, verbe: "remplir" });
+  deux.attendre(3);
+  assert.equal(deux.infos().at(-1), "Tes gourdes sont déjà pleines.");
+  assert.deepEqual(deux.prive.gourde, { contenu: "potable", litres: 2 });
+  // Pas pleine : comme avant, la mare complète la réserve, toute brute.
+  const moitie = monter({ inventaire: { gourde: 2 }, gourde: { contenu: "potable", litres: 1 } });
+  moitie.joueur.position = { x: MARE.x + 0.4, z: MARE.z - 0.3, o: 0 };
+  moitie.joueur.recevoir({ t: "interagir", cible: { genre: "mare" }, verbe: "remplir" });
+  moitie.attendre(3);
+  assert.deepEqual(moitie.dernier("besoins")?.gourde, { contenu: "brute", litres: 2 });
+});
+
 test("A5 : le récupérateur de pluie ne donne que ce qui manque pour remplir toutes les gourdes", () => {
   const t = monter({
     inventaire: { gourde: 2 },

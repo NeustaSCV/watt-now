@@ -3667,7 +3667,8 @@ export class Joueur implements Voyageur, ParticipantLecon {
     if (!auMilieuDeLaMare(this.position.x, this.position.z)) return this.info(TEXTE_GOURDE_AU_MILIEU);
     // Toutes les gourdes du sac se remplissent : 1 L chacune, une seule réserve (plan 0.10.1, A5).
     const contenance = contenanceGourdes(this.inventaire);
-    if (this.gourde.litres >= contenance && this.gourde.contenu === "brute") return this.info(`${taGourde(this.inventaire, true)} ${(this.inventaire.gourde ?? 0) > 1 ? "sont déjà pleines" : "est déjà pleine"}.`);
+    // Pleine, brute ou potable, on ne puise plus (0.10.1, R-16 : l'eau potable ne doit pas redevenir brute pour rien).
+    if (this.gourde.litres >= contenance) return this.info(`${taGourde(this.inventaire, true)} ${(this.inventaire.gourde ?? 0) > 1 ? "sont déjà pleines" : "est déjà pleine"}.`);
     this.commencer("Remplir la gourde à la mare", DUREES.remplirGourde, () => {
       // L'eau de la mare n'est pas potable : mélangée, toute la réserve devient de l'eau brute.
       this.gourde = { contenu: "brute", litres: contenanceGourdes(this.inventaire) };
