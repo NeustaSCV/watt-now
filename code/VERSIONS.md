@@ -12,7 +12,7 @@ cd ~/watt-now && docker tag watt-now:<version> watt-now:courante && docker compo
 
 ---
 
-## 0.10.1 · en préparation
+## 0.10.1 · déployée le 2026-10-16
 
 - **La soif, plus douce** : la jauge de soif tient 1,5 L (2,5 avant). Chaque gorgée la remplit plus vite, et une jauge pleine dure autant qu'avant.
 - **Plusieurs gourdes** : chaque gourde du sac ajoute 1 L à ta réserve. La mare et le récupérateur de pluie les remplissent toutes d'un coup, et bouillir purifie toute l'eau d'un coup. Si une gourde quitte ton sac, l'eau qu'elle portait s'en va avec elle.
