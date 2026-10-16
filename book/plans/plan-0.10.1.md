@@ -121,7 +121,7 @@ Un seul chantier, parce que les quatre points touchent les mêmes lignes (`commu
 
 - *Lu dans le code* : deux boutons font tourner la vue d'un quart de tour : « Vue » (`.r-tourner`, `hud.ts:404`) et « ⟳ » (`.b-tourner`, `hud.ts:453`). L'angle de la caméra est `π/4 + quartDeTour × π/2` (`client/src/rendu/scene.ts:170`) ; le nord est le −z (`client/src/rendu/carte-vue.ts:73`). **Au repos, le haut de l'écran regarde le nord-ouest** : le nord est en haut à droite, le sud en bas à gauche. C'est exactement pourquoi le chemin du terrain (au sud, `commun/src/lieux.ts:158-165`, dessiné au sud dans `client/src/rendu/terrain.ts:36-37`) **paraît à l'ouest**.
 - *Proposé* : la boussole remplace les deux icônes ; elle suit l'angle réel de la caméra à chaque image (donc elle tourne en douceur avec la vue, et aussi dans les scènes du phare) ; le N en rouge, lisible à la taille du bouton ; même geste qu'aujourd'hui. **B2** : on ne change pas les textes (« au sud » est juste) ; la boussole le rend lisible. Maquette : la boussole sur une vue du terrain, avec le chemin, et un appui qui tourne la vue.
-- *À trancher* : Q-2 (le nord au repos) et Q-3 (B2).
+- *Décidé (2026-10-16, maquette `.claude-travail/maquettes-0-10-1/boussole/`)* : **la variante V3, le cadran** : un rond crème avec N (rouge, plus gros), E, S, O, des graduations et un cran fixe en haut qui montre où regarde l'écran ; les lettres restent droites, seule leur place tourne ; au repos, le N en haut à droite (Q-2) ; en paysage, la légende de la tuile écrit la direction (« N-O », « S-O »…) au lieu de « Vue ». Les textes « au sud » ne changent pas (Q-3).
 
 ### Chantier E · La fiche « Examiner » courte (D1) et les textes coupés (C3) — **M**, lot 2, **maquette d'abord**
 
@@ -205,3 +205,18 @@ En temps réel : **≈ 4 à 6 h de travail des agents**, en parallèle, plus le 
 10. En pause plus de 5 min : toujours là.
 11. Un « Examiner » d'objet dit à quoi il sert ; une installation dit pourquoi elle ne marche pas.
 12. Une partie 0.10 se relit ; `npm run verif`, `npm test`, `npm run build` passent.
+
+---
+
+## 7. Les décisions prises en route (2026-10-16)
+
+| # | Décision |
+|---|---|
+| R-01 ✅ | La bouteille d'eau pleine vaut **2 wotts** (elle reste dans les déchets, aussi commune que la vide) ; elle est aussi dans ce que la crue charrie au gué |
+| R-02 ✅ | **La forge et la charbonnière ne réchauffent pas** l'hiver (pas d'état « allumé ») ; seuls les feux qui brûlent comptent ; **un feu couvert sous la cendre réchauffe** |
+| R-03 ✅ | Ramasser près d'un Éteint debout (mode Combat, moins de 10 m) : **rien ne change** (A frappe) |
+| R-04 ✅ | Une pierre lancée dans la mer au phare : **la faire disparaître, plus tard** (`en-suspens.md`) |
+| R-05 ✅ | **C3** : aucun texte n'est coupé à l'écran ; ce qui coupe, c'est le temps (12 s au plus). **Les 12 textes courts proposés sont validés mot pour mot** (`.claude-travail/wt101/e-examiner/.claude-travail/c3-textes.md`) ; le plafond de 12 s reste |
+| R-06 ✅ | Le pédalier sans alternateur ni dynamo : le bandeau reprend la phrase du jeu, « Rien à entraîner : monte l'alternateur de la station (ou, à défaut, la dynamo du vélo). » ; pas de phrase nouvelle pour les autres installations sans qu'on la demande |
+| R-07 ✅ | **Une espace insécable entre un nombre et son unité** dans tous les textes du jeu (aucun mot ne change) |
+| R-08 ✅ | Pas de « Sert à » quand on examine une chose posée dans le monde (en 0.10.1) |
