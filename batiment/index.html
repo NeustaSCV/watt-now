@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bâtiments urbex — visionneuse</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #c9d8e4; color: #1d2433; font: 13px/1.35 "Avenir Next", system-ui, sans-serif; overflow: hidden; }
+      canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+      .panneau { position: fixed; background: rgba(250, 247, 240, 0.9); border-radius: 10px; padding: 8px 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.15); }
+      #barre { left: 8px; top: 8px; right: 8px; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
+      #barre .groupe { display: flex; gap: 3px; align-items: center; }
+      #barre .titre { font-weight: 600; opacity: 0.6; margin-right: 2px; }
+      button { min-height: 28px; border: 1px solid #b9b2a2; background: #fffdf8; border-radius: 6px; padding: 2px 8px; font: inherit; cursor: pointer; }
+      button.actif { background: #1d2433; color: #fff; border-color: #1d2433; }
+      input[type=range] { width: 110px; }
+      #fiche { left: 8px; bottom: 8px; width: min(380px, calc(100% - 32px)); max-height: 42vh; overflow: auto; }
+      #fiche h2 { margin: 0 0 2px; font-size: 16px; }
+      #fiche .lieu { opacity: 0.7; margin-bottom: 6px; }
+      #fiche p { margin: 4px 0; }
+      #fiche ul { margin: 4px 0; padding-left: 18px; }
+      #stats { right: 8px; bottom: 8px; font: 12px/1.4 ui-monospace, monospace; }
+      #aide { right: 8px; top: 64px; max-width: 260px; font-size: 12px; opacity: 0.85; }
+      #chargement { left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 15px; display: none; }
+    </style>
+    <script type="importmap">
+      { "imports": { "three": "./vendor/three.module.js" } }
+    </script>
+  </head>
+  <body>
+    <canvas id="vue"></canvas>
+    <div class="panneau" id="barre"></div>
+    <div class="panneau" id="fiche"></div>
+    <div class="panneau" id="stats"></div>
+    <div class="panneau" id="aide" onclick="this.style.display='none'" title="Cliquer pour masquer">
+      <b>Vue de jeu</b> : clic au sol = déplacer le personnage · ZQSD / flèches · A / E = quart de tour · molette = zoom<br />
+      <b>Vue libre</b> : glisser = tourner · clic droit ou Maj = déplacer · molette = zoom
+    </div>
+    <div class="panneau" id="chargement">Construction…</div>
+    <script>setTimeout(() => (document.getElementById("aide").style.display = "none"), 9000);</script>
+    <script type="module" src="./commun/visionneuse.js"></script>
+  </body>
+</html>
