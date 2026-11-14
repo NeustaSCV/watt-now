@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Making-of — capture</title>
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block}</style></head>
+<body><canvas id="c" width="1920" height="1080"></canvas>
+<script type="importmap">{ "imports": { "three": "./vendor/three.js" } }</script>
+<script type="module">
+/* La page de capture du making-of : le film en 1920 × 1080, rendu image par image (outils/capture.mjs la pilote).
+   La bande-son est déjà prête (assets/musique/bande.wav) : ffmpeg l'ajoute à l'assemblage. */
+const params = new URLSearchParams(location.search);
+const L = Number(params.get('l') || 1920), H = Number(params.get('h') || 1080);
+const SS = Number(params.get('ss') || 2);   // suréchantillonnage : on rend en 2× puis on réduit
+const { Moteur } = await import('./intro-copie/moteur.js');
+const { plan, chargerTout, dessinerLogo, FIN } = await import('./src/film.js');
+
+const canvas = document.getElementById('c');
+canvas.width = L; canvas.height = H; canvas.style.width = L + 'px'; canvas.style.height = H + 'px';
+await chargerTout();
+const moteur = new Moteur(canvas, { plans: [plan], capture: true, pixels: SS, largeur: L, hauteur: H, qualite: params.get('qualite') || 'haute', surCalque: dessinerLogo });
+moteur.taille(L, H);
+const reduit = document.createElement('canvas'); reduit.width = L; reduit.height = H;
+const ctxReduit = reduit.getContext('2d');
+ctxReduit.imageSmoothingEnabled = true; ctxReduit.imageSmoothingQuality = 'high';
+window.capture = {
+  fin: FIN,
+  pret: true,
+  rendre(T, dt) { moteur.image(T, dt); ctxReduit.globalAlpha = 1; ctxReduit.drawImage(canvas, 0, 0, L, H); return true; },
+  /** Le flou de mouvement d'une vraie caméra : obturateur à 180°, échantillonné en `n` sous-images moyennées. */
+  rendreFlou(T, dt, n = 6, obturateur = 0.5) {
+    for (let k = 0; k < n; k++) {
+      const Tk = T + dt * obturateur * ((k + 0.5) / n - 0.5);
+      moteur.image(Tk, dt / n);
+      ctxReduit.globalAlpha = 1 / (k + 1);
+      ctxReduit.drawImage(canvas, 0, 0, L, H);
+    }
+    ctxReduit.globalAlpha = 1;
+    return true;
+  },
+  image(qualite = 0.93) { return reduit.toDataURL('image/jpeg', qualite).split(',')[1]; },
+};
+document.title = 'capture prête';
+</script></body></html>

@@ -1,0 +1,10 @@
+# Fichiers de travail du making-of (images de capture, profil de Chrome) : jamais dans l'historique
+.travail/
+# Ce que outils/preparer.sh refait à partir du jeu, de l'intro et de la musique (lourd, régénérable)
+vendor/
+intro-copie/
+assets/
+# Les vidéos exportées sont lourdes : on les garde sur le disque
+video/*.mp4
+video/*.wav
+video/*.jpg
