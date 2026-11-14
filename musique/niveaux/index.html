@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kits de niveau</title>
+<style>
+:root{--bg:#f3ece0;--card:#fbf7ef;--ink:#2b1d12;--muted:#6b5a48;--line:#d8ccb6;--accent:#a8332a;--on:#2f6f78;--warn:#b5651d}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1a1714;--card:#24201b;--ink:#efe6d6;--muted:#b3a58f;--line:#3d352c;--accent:#e0705f;--on:#5fb3bd;--warn:#e09a4f}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:900px;margin:0 auto;padding:24px 16px 48px}
+h1{font-size:24px;font-weight:600;margin:0 0 4px}
+h2{font-size:17px;font-weight:600;margin:0 0 8px}
+p.sub{color:var(--muted);margin:0 0 20px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:0 0 14px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+label.chk{font-size:14px;display:inline-flex;gap:6px;align-items:center;margin-right:12px}
+button{font:inherit;font-size:14px;padding:7px 12px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+button:hover:not(:disabled){border-color:var(--muted)}
+button:disabled{opacity:.45;cursor:default}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.sel{border-color:var(--on);color:var(--on);font-weight:600}
+button.menace.sel{border-color:var(--warn);color:var(--warn)}
+.prog{height:8px;border-radius:4px;background:var(--line);overflow:hidden;margin:10px 0 4px}
+.prog>span{display:block;height:100%;width:0;background:var(--accent)}
+.small{font-size:13px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
+.meter{font-size:13px}
+.meter .lab{display:flex;justify-content:space-between}
+.meter .b{height:7px;border-radius:4px;background:var(--line);overflow:hidden;margin-top:2px}
+.meter .b>span{display:block;height:100%;width:0;background:var(--on);transition:width .1s linear}
+.etat{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:14px;margin-bottom:10px}
+.journal{font:12px/1.5 ui-monospace,Menlo,monospace;max-height:200px;overflow:auto;border-top:1px solid var(--line);padding-top:8px;margin-top:10px;white-space:pre-wrap}
+</style>
+</head>
+<body>
+<main>
+<h1 id="titre">Kits de niveau</h1>
+<p class="sub" id="sous-titre"></p>
+
+<div class="card">
+  <h2>1. Préparer</h2>
+  <div class="row" id="kits"></div>
+  <div class="row" style="margin-top:8px">
+    <label class="chk"><input type="checkbox" id="prod"> Jouer les fichiers produits (Opus)</label>
+    <label class="chk"><input type="checkbox" id="mobile"> Version mobile</label>
+  </div>
+  <div class="row" style="margin-top:8px"><button id="go" class="primary">Préparer et jouer</button><button id="stop" disabled>Arrêter</button><button id="wav">Exporter un parcours en WAV (≈ 3 min)</button></div>
+  <div class="prog"><span id="progBar"></span></div>
+  <div class="small" id="progTxt">Rendu en direct : une minute environ. Fichiers produits : quelques secondes (après la production).</div>
+</div>
+
+<div class="card">
+  <h2>2. Où est-on ? <span class="small">(<code>moteur.changerZone</code> : à la mesure suivante)</span></h2>
+  <div class="row" id="zones"></div>
+  <h2 style="margin-top:14px">3. La menace</h2>
+  <div class="row">
+    <button class="ev menace sel" data-m="aucune">Aucune</button>
+    <button class="ev menace" data-m="attire">Attiré</button>
+    <button class="ev menace" data-m="poursuite">Poursuite</button>
+    <button class="ev menace" data-m="saisie">Saisie</button>
+    <button class="ev menace" data-m="nombre">Encerclé (« nombre »)</button>
+  </div>
+  <h2 style="margin-top:14px">4. Sons du lieu, signaux, contrôle</h2>
+  <div class="row">
+    <label class="chk"><input type="checkbox" id="matiere" checked> <b>Sons du lieu</b> (stems « matière ») : décocher pour entendre la musique de base seule</label>
+  </div>
+  <div class="row" style="margin-top:6px" id="signaux"></div>
+  <div class="row" style="margin-top:6px">
+    <button class="ev" id="diegetique"></button>
+    <button class="ev" id="rale">Râle à 8 m</button>
+    <button class="ev" id="resp">Respiration de dormant</button>
+  </div>
+</div>
+
+<div class="card">
+  <div class="etat" id="etat"></div>
+  <div class="grid" id="metres"></div>
+  <div class="journal" id="journal"></div>
+</div>
+</main>
+
+<script src="../esquisses/js/moteur.js"></script>
+<script src="../theme-principal/echantillonneur.js"></script>
+<script src="../moteur/eteints-provisoires.js"></script>
+<script src="chateau/sons.js"></script>
+<script src="chateau/pieces.js"></script>
+<script src="commun.js"></script>
+<script src="villa/sons.js"></script>
+<script src="villa/pieces.js"></script>
+<script src="hopital/sons.js"></script>
+<script src="hopital/pieces.js"></script>
+<script src="industriel/sons.js"></script>
+<script src="industriel/pieces.js"></script>
+<script type="module">
+import { MoteurAudio } from '../moteur/moteur-couches.js';
+const $ = (s) => document.querySelector(s), pick = (a) => a[Math.floor(Math.random() * a.length)];
+/* Les kits : ajouter ici villa, hôpital, industriel quand ils existent */
+const KITS = {
+  chateau: { nom: '🏰 Château', sous: '« La chapelle sans prêtre » : tonique do, do mineur harmonique et accord napolitain, organum ; cloche, horloge, vent dans les meurtrières.',
+    kit: () => window.WattKitChateau, zones: { dehors: 'Dehors : cour, remparts', dedans: 'Dedans : grande salle', profond: 'Profond : crypte' },
+    signaux: { arriveeChateau: 'Arrivée', butinChateau: 'Butin rare', sortieChateau: 'Sortie' }, diegetique: ['horloge-chateau', '🕰️ L\'horloge sonne les heures'] },
+  villa: { nom: '🏖️ Villa', sous: '« Le luxe qui tourne à vide » : tonique fa, fa dorien en neuvièmes (lounge, bossa), fa mineur mélodique dedans ; piscine, cristal, carillon, volets.',
+    kit: () => window.WattKitVilla, zones: { dehors: 'Dehors : jardin, piscine', dedans: 'Dedans : salons', profond: 'Profond : cave, bunker' }, boucle: true,
+    signaux: { arriveeVilla: 'Arrivée', butinVilla: 'Butin rare', sortieVilla: 'Sortie' }, diegetique: ['enceinte-villa', '🔈 L\'enceinte de la domotique (marche / arrêt)'] },
+  hopital: { nom: '🏥 Hôpital', sous: '« Le cœur de la machine » : tonique si♭, quartes sans tierce, le pouls à 84 BPM ; bip du moniteur, néons, chariots, portes.',
+    kit: () => window.WattKitHopital, zones: { dehors: 'Dehors : hall d\'accueil', dedans: 'Dedans : couloirs, chambres', profond: 'Profond : bloc opératoire' }, boucle: true,
+    signaux: { arriveeHopital: 'Arrivée', butinHopital: 'Butin rare', sortieHopital: 'Sortie' }, diegetique: ['appel-hopital', '🔔 L\'appel d\'infirmière (marche / arrêt)'] },
+  industriel: { nom: '🏭 Industriel', sous: '« La machine qui joue seule » : tonique si, si mineur mélodique, machines en 3, 4 et 5 croches ; pistons, convoyeur, marteau-pilon, sirène.',
+    kit: () => window.WattKitIndustriel, zones: { dehors: 'Dehors : parking, quais', dedans: 'Dedans : ateliers', profond: 'Profond : salle des machines' },
+    signaux: { arriveeIndustriel: 'Arrivée', butinIndustriel: 'Butin rare', sortieIndustriel: 'Sortie' }, diegetique: ['sirene-industriel', '🚨 La sirène de fin de poste'] }
+};
+let id = new URLSearchParams(location.search).get('kit') || 'chateau'; if (!KITS[id]) id = 'chateau';
+let K = KITS[id], ctx = null, moteur = null, sons = null, R = {}, diegBuf = null, matiereGain = {};
+const pieces = () => ({ fond: 'fond-' + id, vie: 'explo-' + id, tension: 'tension-' + id, danger: 'danger-' + id });
+function afficherKit() {
+  $('#titre').textContent = 'Kit de niveau : ' + K.nom; $('#sous-titre').textContent = K.sous;
+  $('#kits').innerHTML = Object.entries(KITS).map(([k, v]) => '<button data-k="' + k + '" class="' + (k === id ? 'sel' : '') + '">' + v.nom + '</button>').join('');
+  document.querySelectorAll('[data-k]').forEach((b) => b.onclick = () => { if (moteur) return; id = b.dataset.k; K = KITS[id]; afficherKit(); });
+  $('#zones').innerHTML = Object.entries(K.zones).map(([z, n], i) => '<button class="ev' + (i ? '' : ' sel') + '" data-zone="' + z + '">' + n + '</button>').join('');
+  $('#signaux').innerHTML = Object.entries(K.signaux).filter(([n]) => !n.startsWith('arrivee')).map(([n, l]) => '<button class="ev" data-s="' + n + '">Signal : ' + l + '</button>').join('');
+  $('#diegetique').textContent = K.diegetique[1];
+  document.querySelectorAll('[data-zone]').forEach((b) => b.onclick = () => { choisir('data-zone', b); moteur.changerZone(b.dataset.zone); });
+  document.querySelectorAll('[data-s]').forEach((b) => b.onclick = () => moteur.jouerSignal(b.dataset.s, b.dataset.s.startsWith('sortie') ? 'maintenant' : 'temps'));
+  document.querySelectorAll('.ev').forEach((b) => b.disabled = !moteur);
+}
+const choisir = (attr, b) => document.querySelectorAll('[' + attr + ']').forEach((x) => x.classList.toggle('sel', x === b));
+afficherKit();
+
+async function rendre(ac) {
+  if (R[id]) return R[id];
+  const kit = K.kit();
+  await window.WattEchantillons.charger(ac, '../banques/', kit.instruments, (f, n) => { $('#progTxt').textContent = 'Échantillons : ' + f + ' / ' + n; });
+  return (R[id] = await kit.preparer(32000, (i, n, txt) => { $('#progBar').style.width = (i / n * 100) + '%'; $('#progTxt').textContent = 'Rendu ' + Math.min(i + 1, n) + ' / ' + n + ' : ' + txt; }));
+}
+/* Interrupteur « sons du lieu » : les stems de matière passent par un volume à part (pour l'écoute seulement ; le jeu n'en a pas besoin) */
+const estMatiere = (s) => s === 'matiere' || s.startsWith('m-');
+function brancherMatiere() {
+  Object.entries(moteur.couches).forEach(([c, C]) => Object.entries(C.stems).forEach(([s, n]) => {
+    if (!estMatiere(s) || n.__matiere) return;
+    if (!matiereGain[c]) { matiereGain[c] = ctx.createGain(); matiereGain[c].gain.value = $('#matiere').checked ? 1 : 0; matiereGain[c].connect(C.gain); }
+    n.disconnect(); n.connect(matiereGain[c]); n.__matiere = true;
+  }));
+}
+$('#matiere').onchange = () => Object.values(matiereGain).forEach((g) => g.gain.setTargetAtTime($('#matiere').checked ? 1 : 0, ctx.currentTime, 0.3));
+
+$('#go').onclick = async () => {
+  $('#go').disabled = true;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  ctx = new AC({ latencyHint: 'playback' });
+  await ctx.resume(); const z = ctx.createBufferSource(); z.buffer = ctx.createBuffer(1, 1, ctx.sampleRate); z.connect(ctx.destination); z.start();
+  const t0 = performance.now(), mobile = $('#mobile').checked; matiereGain = {};
+  moteur = new MoteurAudio(ctx, { bpm: 84, directeur: { lieu: id } });
+  if ($('#prod').checked) {
+    try {
+      const r = await moteur.chargerProduction('../production/', 'charbonniers', (f, n) => { $('#progBar').style.width = (f / n * 100) + '%'; $('#progTxt').textContent = 'Fichiers : ' + f + ' / ' + n; }, mobile, { pieces: Object.values(pieces()) });
+      const d = r.manifeste.diegetiques && r.manifeste.diegetiques[K.diegetique[0]];
+      diegBuf = d ? await ctx.decodeAudioData(await (await fetch('../production/' + (mobile ? 'mobile/' : 'jeu/') + d.fichier + '.' + r.format)).arrayBuffer()) : null;
+      $('#progTxt').textContent = 'Prêt : ' + r.fichiers + ' fichiers ' + r.format + (mobile ? ' (mobile)' : '') + ', en ' + Math.round((performance.now() - t0) / 1000) + ' s.';
+    } catch (e) { $('#progTxt').textContent = 'Échec : ' + e.message; $('#go').disabled = false; return; }
+  } else {
+    const { pieces: P, signaux, diegetiques } = await rendre(ctx);
+    Object.entries(P).forEach(([pid, p]) => moteur.chargerPiece(pid, p));
+    Object.entries(signaux).forEach(([n, b]) => moteur.chargerSignal(n, b));
+    diegBuf = diegetiques[K.diegetique[0]];
+    $('#progTxt').textContent = 'Prêt (rendu en ' + Math.round((performance.now() - t0) / 1000) + ' s).';
+  }
+  Object.entries(pieces()).forEach(([c, p]) => moteur.attribuer(c, p));
+  sons = window.WattEteints.preparer(ctx);
+  await moteur.demarrer();
+  window.moteurKit = moteur;
+  brancherMatiere(); setInterval(() => moteur && brancherMatiere(), 500);
+  construireMetres(); moteur.ecouteurs.push(afficher);
+  document.querySelectorAll('.ev').forEach((b) => b.disabled = false);
+  $('#stop').disabled = false;
+};
+$('#stop').onclick = () => {
+  diegVoix = null; moteur.arreter(); const c = ctx; setTimeout(() => c.close(), 1800); ctx = null; moteur = null;
+  document.querySelectorAll('.ev').forEach((b) => b.disabled = true);
+  $('#stop').disabled = true; $('#go').disabled = false;
+};
+document.querySelectorAll('[data-m]').forEach((b) => b.onclick = () => {
+  choisir('data-m', b); const m = b.dataset.m;
+  if (m === 'attire') moteur.jouerEffet(pick(sons.raleCoupe), { bus: 'menaces', priorite: 1, position: { x: -10, y: 8 }, portee: 25 });
+  if (m === 'saisie' || m === 'nombre') moteur.jouerEffet(pick(sons.saisie), { bus: 'menaces', priorite: 1, position: { x: 0.3, y: 0.6 }, portee: 30 });
+  moteur.signalerMenace(m);
+});
+let diegVoix = null;
+$('#diegetique').onclick = () => {
+  if (!diegBuf) return;
+  if (diegVoix) { moteur.arreterEffet(diegVoix, 0.3); diegVoix = null; return; }
+  const v = moteur.jouerEffet(diegBuf, { bus: 'environnement', priorite: 3, position: { x: 6, y: 5 }, portee: 40, varier: false, boucle: !!K.boucle });
+  if (K.boucle) diegVoix = v;
+};
+$('#rale').onclick = () => moteur.jouerEffet(pick(sons.raleErrant), { bus: 'menaces', priorite: 1, position: { x: -6.5, y: 4.6 }, portee: 25 });
+$('#resp').onclick = () => moteur.jouerEffet(pick(sons.respiration), { bus: 'menaces', priorite: 1, position: { x: 1.2, y: 1.4 }, portee: 3 });
+
+function construireMetres() {
+  const pv = moteur.pieces[pieces().vie], vie = pv ? pv.stems : [];
+  const L = Object.keys(K.zones).flatMap((z) => [['fond', z], ['fond', 'm-' + z]]).concat([['vie', null]], vie.map((s) => ['vie', s]), [['tension', null], ['danger', null], ['danger', 'nombre']]);
+  $('#metres').innerHTML = L.map(([c, s]) => '<div class="meter" data-c="' + c + '" data-s="' + (s || '') + '"><div class="lab"><span>' + c + (s ? ' · ' + s : '') + '</span><span class="v"></span></div><div class="b"><span></span></div></div>').join('');
+}
+let dernier = -1, maj = 0;
+function afficher(now) {
+  if (now - maj < 0.1) return; maj = now;
+  const e = moteur.etat(), d = moteur.directeur;
+  $('#etat').innerHTML = '<span>Mémoire décodée : <b>' + e.memoire.toFixed(0) + ' Mo</b> (budget ' + (e.mobile ? 64 : 160) + ')</span><span>Zone : <b>' + d.zone + '</b></span><span>Phase : <b>' + e.phase + '</b></span><span>Menace : <b>' + e.menace + '</b></span><span>Bloc ' + (e.pos.bloc + 1) + ' · mesure ' + (e.pos.mesure + 1) + '</span>';
+  document.querySelectorAll('.meter').forEach((m) => {
+    const C = e.couches[m.dataset.c], s = m.dataset.s, v = s ? (C.stems[s] == null ? 0 : C.stems[s] * C.gain) : C.gain;
+    m.querySelector('.b>span').style.width = Math.round(v * 100) + '%'; m.querySelector('.v').textContent = Math.round(v * 100) + ' %';
+  });
+  if (e.journal.length !== dernier) { dernier = e.journal.length; const t0 = moteur.horloge.t0; $('#journal').textContent = e.journal.slice().reverse().map((j) => (j.t - t0).toFixed(1).padStart(6) + ' s  ' + j.msg).join('\n'); }
+}
+
+/* ---------- Export d'un parcours (rendu hors ligne, pour l'iPhone) : dehors → dedans → Tension → Danger + nombre → silence → profond → dehors ---------- */
+$('#wav').onclick = async () => {
+  $('#wav').disabled = true;
+  const sr = 32000, dec = new OfflineAudioContext(2, 1, sr), { pieces: P, signaux, diegetiques } = await rendre(dec);
+  const kit = K.kit(), B = kit.DUREE_BLOC, M = kit.BAR, total = 7.5 * B + 4, off = new OfflineAudioContext(2, Math.ceil(total * sr), sr), t0 = 0.05;
+  const [zA, zB, zC] = Object.keys(K.zones), pc = pieces(), gains = {}, avecMatiere = $('#matiere').checked;
+  Object.entries(P).forEach(([pid, p]) => p.stems.forEach((s) => { const g = off.createGain(); g.gain.value = 0; g.connect(off.destination); gains[pid + '/' + s] = g; }));
+  for (let k = 0; k * B < total; k++) Object.entries(P).forEach(([pid, p]) => p.stems.forEach((s) => { const src = off.createBufferSource(); src.buffer = p.blocs[k % p.blocs.length][s]; src.connect(gains[pid + '/' + s]); src.start(t0 + k * B); }));
+  const mat = (k) => estMatiere(k.split('/')[1]) && !avecMatiere ? 0 : 1;
+  const regle = (m, v, tau) => Object.entries(v).forEach(([k, x]) => gains[k].gain.setTargetAtTime(x * 0.7 * mat(k), t0 + m * M, tau || 0.6));
+  const tous = (x) => Object.fromEntries(Object.keys(gains).map((k) => [k, x]));
+  const zone = (z, x) => ({ [pc.fond + '/' + z]: x, [pc.fond + '/m-' + z]: x });
+  const pc2 = (p, stems, x) => Object.fromEntries(stems.map((s) => [p + '/' + s, x]));
+  const vie = (x) => pc2(pc.vie, P[pc.vie].stems, x);
+  regle(0, Object.assign(tous(0), zone(zA, 1)), 0.05);
+  regle(8, vie(1), 1);
+  regle(24, Object.assign(vie(0), zone(zA, 0), zone(zB, 1)), M / 3);
+  regle(28, pc2(pc.tension, P[pc.tension].stems, 1), 0.15);
+  regle(32, Object.assign(pc2(pc.tension, P[pc.tension].stems, 0), pc2(pc.danger, P[pc.danger].stems.filter((s) => s !== 'nombre'), 1), zone(zB, 0.7)), 0.02);
+  regle(34, pc2(pc.danger, ['nombre'], 1), 0.02);
+  regle(36, tous(0), 0.4);
+  regle(38, zone(zC, 1), M / 3);
+  regle(48, Object.assign(tous(0), zone(zA, 1)), M / 3);
+  regle(52, vie(1), 1);
+  const sig = Object.keys(K.signaux);
+  [[sig[0], 0], [sig[1], 44], [sig[2], 58]].forEach(([n, m]) => { const s = off.createBufferSource(); s.buffer = signaux[n]; const g = off.createGain(); g.gain.value = 0.7; s.connect(g); g.connect(off.destination); s.start(t0 + m * M); });
+  if (diegetiques[K.diegetique[0]] && avecMatiere) { const s = off.createBufferSource(); s.buffer = diegetiques[K.diegetique[0]]; const g = off.createGain(); g.gain.value = 0.5; s.connect(g); g.connect(off.destination); s.start(t0 + 12 * M); }
+  const buf = await off.startRendering();
+  const a = document.createElement('a'); a.href = URL.createObjectURL(window.WattMusique.lib.toWav(buf)); a.download = id + '-parcours' + (avecMatiere ? '' : '-sans-matiere') + '.wav'; a.click();
+  $('#progTxt').textContent = 'Parcours exporté.';
+  $('#wav').disabled = false;
+};
+</script>
+</body>
+</html>

@@ -152,7 +152,8 @@
   const NUIT = {
     charbonniers: {          // ré éolien, et le do♯ du mineur harmonique
       accords: [[[38, [50, 57, 64]], [34, [53, 57, 62]]], [[31, [53, 58, 62]], [33, [55, 58, 61]]], [[38, [50, 57, 65]], [41, [52, 57, 60]]], [[31, [55, 58, 62]], [33, [52, 57, 61]]]],
-      melodie: { inst: 'violonSolo', o: { gain: 1.25, vel: 0.3, attack: 0.5, release: 2, lp: 2800, send: 0.6 },
+      /* 2026-10-14 : le violon solo « perçait » et sonnait « MIDI » ; ce sont maintenant les violoncelles, une octave plus bas, en jeu lié */
+      melodie: { inst: 'violoncelles', transpo: -12, lie: true, o: { gain: 1.6, vel: 0.35, nuance: 0.3, attack: 0.5, release: 2, lp: 3000, send: 0.6 },
         phrases: [[[8, 57, 4], [12, 62, 4], [16, 65, 8]], [[12, 70, 4], [16, 69, 10]], [], [[4, 69, 3], [7, 65, 3], [10, 64, 4], [14, 61, 8]]] }
     },
     voltaiques: {            // si mineur harmonique
@@ -174,10 +175,18 @@
         L.sousBasse(ctx, G, 'basse', t0 + 0.4, r, d, 1, { gain: 0.1, attack: 3, release: 3 });
       });
       const mel = nuit.melodie;
-      mel.phrases[bi].forEach(([beat, m, dur]) => {
-        const t = 0.02 + beat * TEMPS;
-        if (mel.synth) L.ondeDouce(ctx, G, 'melodie', t, m, dur * TEMPS, 1, { gain: 0.05, attack: 0.6, release: 2.5, echo: 0.35, send: 0.6, cutoff: 2200, pan: L.rnd(-0.3, 0.3) });
-        else window.WattEchantillons.jouer(ctx, G, 'melodie', mel.inst, t, m, dur * TEMPS, mel.o.vel, Object.assign({ pan: L.rnd(-0.25, 0.25) }, mel.o));
+      const ph = mel.phrases[bi], tr = mel.transpo || 0, pan = L.rnd(-0.25, 0.25);
+      ph.forEach(([beat, m, dur], i) => {
+        let t = 0.02 + beat * TEMPS, d = dur * TEMPS;
+        if (mel.synth) { L.ondeDouce(ctx, G, 'melodie', t, m, d, 1, { gain: 0.05, attack: 0.6, release: 2.5, echo: 0.35, send: 0.6, cutoff: 2200, pan: L.rnd(-0.3, 0.3) }); return; }
+        const o = Object.assign({ pan }, mel.o);
+        if (mel.lie) {
+          /* Jeu lié : chevauchement, pas de réattaque d'archet, petit glissé sur les intervalles courts, attaques humaines */
+          const prev = ph[i - 1], suite = prev && Math.abs(prev[0] + prev[2] - beat) < 1e-6;
+          d += 0.25; t += L.rnd(-0.012, 0.012);
+          if (suite) Object.assign(o, { attack: 0.15, offset: 0.08, glisseDe: Math.abs(prev[1] - m) <= 5 ? prev[1] + tr : undefined, glisse: 0.07 });
+        }
+        window.WattEchantillons.jouer(ctx, G, 'melodie', mel.inst, t, m + tr, d, mel.o.vel, o);
       });
     };
   }

@@ -80,15 +80,21 @@ export class MoteurAudio {
     const c = this.couches[couche], p = this.pieces[idPiece];
     if (!p) return;
     p.stems.forEach((s) => { if (!c.stems[s]) { const n = this.ctx.createGain(); n.gain.value = couche === 'vie' && s !== 'mix' ? 0 : 1; n.connect(c.gain); c.stems[s] = n; } });
-    if (p.stems.includes('mix')) { c.stems.mix.gain.value = 0; c.mobile = true; }
+    /* Version mobile : seule la Vie est réglée stem par stem par le directeur (stems « virtuels » → volume du prémix) ;
+       Fond, Tension et Danger sont réglés en bloc (volume de la couche) : leur prémix joue à plein volume. */
+    if (p.stems.includes('mix')) { const vie = couche === 'vie'; c.stems.mix.gain.value = vie ? 0 : 1; c.mobile = vie; }
   }
 
   /**
    * Charge les pièces produites (musique/production/) d'après le manifeste, comme le fera le jeu.
    * Les fichiers restent COMPRESSÉS en mémoire ; seuls les blocs utiles sont décodés (bloc en cours + suivant).
    * Opus si le navigateur le lit, sinon AAC (.m4a). mobile : la version prémixée (3 couches). Famille du joueur seulement.
+   * options.matiere : kits de niveau (musique/niveaux/), variante des sons du lieu (stems « matiere » et « m-<zone> »),
+   *   si le manifeste en propose une (variantesMatiere) ; sinon, la matière d'origine du kit.
+   * options.pieces : ne charger que ces pièces (ex. ['fond-villa', 'explo-villa', 'tension-villa', 'danger-villa']) ;
+   *   sans elle, toutes les pièces du manifeste (sauf la Vie des autres familles). Les signaux sont toujours tous chargés (petits).
    */
-  async chargerProduction(base, famille, progres, mobile) {
+  async chargerProduction(base, famille, progres, mobile, options = {}) {
     const man = await (await fetch(base + (mobile ? 'manifeste-mobile.json' : 'manifeste.json'))).json();
     const dossier = base + (mobile ? 'mobile/' : 'jeu/');
     const opus = typeof Audio !== 'undefined' && new Audio().canPlayType('audio/ogg; codecs="opus"') !== '';
@@ -97,11 +103,13 @@ export class MoteurAudio {
     let octets = 0;
     const lire = async (f) => { const r = await fetch(dossier + f + ext); if (!r.ok) throw new Error('fichier manquant : ' + dossier + f + ext); const d = await r.arrayBuffer(); octets += d.byteLength; return { donnees: d, buffer: null }; };
     const garder = (nom) => !nom.startsWith('vie-') || nom.endsWith('-' + famille);
-    Object.entries(man.pieces).filter(([nom]) => garder(nom)).forEach(([nom, p]) => {
+    const voulue = (nom) => !options.pieces || options.pieces.some((id) => nom === id || nom === id + '-' + famille);
+    Object.entries(man.pieces).filter(([nom]) => garder(nom) && voulue(nom)).forEach(([nom, p]) => {
       const id = nom.startsWith('vie-') ? nom.slice(0, nom.length - famille.length - 1) : nom;   // « vie-jour-atelier-charbonniers » → « vie-jour-atelier »
       const piece = { stems: p.stems, stemsPrémixés: p.stemsPrémixés, blocs: p.blocs.map(() => ({})) };
       this.chargerPiece(id, piece);
-      p.blocs.forEach((stems, b) => Object.entries(stems).forEach(([stem, f]) => taches.push(async () => { piece.blocs[b][stem] = await lire(f); })));
+      const variante = options.matiere && p.variantesMatiere && p.variantesMatiere[options.matiere];
+      p.blocs.forEach((stems, b) => Object.entries(Object.assign({}, stems, variante ? variante[b] : {})).forEach(([stem, f]) => taches.push(async () => { piece.blocs[b][stem] = await lire(f); })));
     });
     Object.entries(man.signaux).forEach(([nom, f]) => {
       if (nom.startsWith('feu-') && nom !== 'feu-' + famille) return;
@@ -125,7 +133,8 @@ export class MoteurAudio {
     return e.promesse;
   }
   _liberer(e) { if (e && e.donnees) e.buffer = null; }
-  _stemUtile(stem) { return stem !== 'outil' || (this.directeur && this.directeur.atelier); }
+  /* Le directeur dit quels stems décoder et lancer : l'atelier, et à la coopérative la zone, l'Exploration (dehors), « le nombre » */
+  _stemUtile(stem, couche) { return this.directeur ? this.directeur.stemUtile(couche, stem) : stem !== 'outil'; }
   _choisir(idPiece, exclu) {
     const p = this.pieces[idPiece]; if (!p) return 0;
     let i = Math.floor(Math.random() * p.blocs.length);
@@ -141,7 +150,7 @@ export class MoteurAudio {
       const p = this.pieces[id]; if (!p) return;
       p.blocs.forEach((bloc, b) => {
         const utile = garder.some((g) => g.piece === id && g.b === b);
-        Object.entries(bloc).forEach(([stem, e]) => { if (utile && this._stemUtile(stem)) this._decoderEntree(e); else if (!utile) this._liberer(e); });
+        Object.entries(bloc).forEach(([stem, e]) => { if (utile && this._stemUtile(stem, couche)) this._decoderEntree(e); else this._liberer(e); });
       });
     });
   }
@@ -174,7 +183,7 @@ export class MoteurAudio {
       const c = this.couches[couche]; if (!c.piece) return null;
       c.prochain = { piece: c.piece, b: this._choisir(c.piece, -1) };
       this._entretenir(couche);
-      return Promise.all(Object.entries(this.pieces[c.piece].blocs[c.prochain.b]).filter(([s]) => this._stemUtile(s)).map(([, e]) => this._decoderEntree(e)));
+      return Promise.all(Object.entries(this.pieces[c.piece].blocs[c.prochain.b]).filter(([s]) => this._stemUtile(s, couche)).map(([, e]) => this._decoderEntree(e)));
     }));
     this.horloge = creerHorloge(ctx.currentTime + 0.3, this.o.bpm);
     this.directeur.h = this.horloge;
@@ -234,7 +243,7 @@ export class MoteurAudio {
   }
   _lancer(couche, stem, e, tb, decalage) {
     const c = this.couches[couche], buf = this._buffer(e);
-    if (!c.stems[stem] || !buf || !this._stemUtile(stem)) return false;
+    if (!c.stems[stem] || !buf || !this._stemUtile(stem, couche)) return false;
     const src = this.ctx.createBufferSource();
     src.buffer = buf; src.connect(c.stems[stem]);
     src.start(tb + decalage, decalage); src.fin = tb + buf.duration;
@@ -248,7 +257,7 @@ export class MoteurAudio {
     if (!cour || now < cour.tb) return;
     const p = this.pieces[cour.piece]; if (!p) return;
     Object.entries(p.blocs[cour.b]).forEach(([stem, e]) => {
-      if (cour.programmes.has(stem) || !this._buffer(e) || !this._stemUtile(stem)) return;
+      if (cour.programmes.has(stem) || !this._buffer(e) || !this._stemUtile(stem, couche)) return;
       const decalage = now + 0.05 - cour.tb;
       if (decalage < this._buffer(e).duration - 1 && this._lancer(couche, stem, e, cour.tb, decalage)) cour.programmes.add(stem);
     });
@@ -259,7 +268,9 @@ export class MoteurAudio {
       if (cmd.type === 'gain') {
         const c = this.couches[cmd.couche];
         if (!cmd.stem) c.cible = cmd.gain;
-        if (cmd.stem && c.mobile) { this._virtuel(cmd); return; }
+        /* Mobile : les stems fondus dans le prémix sont « virtuels » ; un stem livré à part (la matière d'un kit) se règle directement */
+        const pm = this.pieces[c.pieceSuivante || c.piece];
+        if (cmd.stem && c.mobile && !(pm && pm.stems.includes(cmd.stem))) { this._virtuel(cmd); return; }
         /* Stem pas encore chargé (ex. la mélodie de la Vie de nuit) : on crée son volume tout de suite, pour ne pas perdre l'ordre */
         if (cmd.stem && !c.stems[cmd.stem]) { const n = this.ctx.createGain(); n.gain.value = 0; n.connect(c.gain); c.stems[cmd.stem] = n; }
         const nodes = cmd.stem ? [c.stems[cmd.stem]] : [c.gain];
@@ -342,7 +353,10 @@ export class MoteurAudio {
 
   /* ---------- État du jeu → directeur ---------- */
 
-  signalerMenace(niveau) { this._appliquer(this.directeur.signalerMenace(niveau, this.ctx.currentTime)); }
+  signalerMenace(niveau) { this._appliquer(this.directeur.signalerMenace(niveau, this.ctx.currentTime)); this._entretenir('tension'); this._entretenir('danger'); }
+  /** Coopérative : le joueur passe une porte ('dehors' | 'dedans' | 'froid'). Le stem de la zone est décodé tout de suite
+      et lancé dans le bloc en cours, bien calé (rattrapage) ; il monte à la mesure suivante. */
+  changerZone(zone) { this._appliquer(this.directeur.changerZone(zone, this.ctx.currentTime)); COUCHES.forEach((c) => this._entretenir(c)); }
   dormir() { this._appliquer(this.directeur.dormir(this.ctx.currentTime)); }
   premierFeu() { this._appliquer(this.directeur.premierFeu(this.ctx.currentTime)); }
   installerAtelier() {

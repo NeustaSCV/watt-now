@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La Coopérative</title>
+<style>
+:root{--bg:#f3ece0;--card:#fbf7ef;--ink:#2b1d12;--muted:#6b5a48;--line:#d8ccb6;--accent:#a8332a;--on:#2f6f78;--warn:#b5651d}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1a1714;--card:#24201b;--ink:#efe6d6;--muted:#b3a58f;--line:#3d352c;--accent:#e0705f;--on:#5fb3bd;--warn:#e09a4f}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:900px;margin:0 auto;padding:24px 16px 48px}
+h1{font-size:24px;font-weight:600;margin:0 0 4px}
+h2{font-size:17px;font-weight:600;margin:0 0 8px}
+p.sub{color:var(--muted);margin:0 0 20px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:0 0 14px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+label.chk{font-size:14px;display:inline-flex;gap:6px;align-items:center;margin-right:12px}
+button{font:inherit;font-size:14px;padding:7px 12px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+button:hover:not(:disabled){border-color:var(--muted)}
+button:disabled{opacity:.45;cursor:default}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.sel{border-color:var(--on);color:var(--on);font-weight:600}
+button.menace.sel{border-color:var(--warn);color:var(--warn)}
+.prog{height:8px;border-radius:4px;background:var(--line);overflow:hidden;margin:10px 0 4px}
+.prog>span{display:block;height:100%;width:0;background:var(--accent)}
+.small{font-size:13px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
+.meter{font-size:13px}
+.meter .lab{display:flex;justify-content:space-between}
+.meter .b{height:7px;border-radius:4px;background:var(--line);overflow:hidden;margin-top:2px}
+.meter .b>span{display:block;height:100%;width:0;background:var(--on);transition:width .1s linear}
+.etat{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:14px;margin-bottom:10px}
+.journal{font:12px/1.5 ui-monospace,Menlo,monospace;max-height:220px;overflow:auto;border-top:1px solid var(--line);padding-top:8px;margin-top:10px;white-space:pre-wrap}
+table{border-collapse:collapse;width:100%;font-size:14px}
+td,th{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600}
+</style>
+</head>
+<body>
+<main>
+<h1>La Coopérative du Plateau</h1>
+<p class="sub">Validée le 2026-10-08 (Book 23). Tonique <b>mi</b> ; la musique suit la <b>profondeur</b>. Cette page pilote le <b>vrai moteur</b> (<code>moteur/moteur-couches.js</code> et son directeur), comme le fera le jeu. Texte : <code>cooperative/PROPOSITION.md</code> ; branchement : <code>LIVRAISON.md</code>.</p>
+
+<div class="card">
+  <h2>1. Préparer</h2>
+  <div class="row">
+    <label class="chk"><input type="checkbox" id="prod" checked> Jouer les fichiers produits (Opus)</label>
+    <label class="chk"><input type="checkbox" id="mobile"> Version mobile</label>
+  </div>
+  <div class="row" style="margin-top:8px"><button id="go" class="primary">Préparer et jouer</button><button id="stop" disabled>Arrêter</button><button id="wav">Exporter un parcours en WAV (≈ 3 min)</button></div>
+  <div class="prog"><span id="progBar"></span></div>
+  <div class="small" id="progTxt">Fichiers produits : quelques secondes. Rendu en direct : une minute environ.</div>
+</div>
+
+<div class="card">
+  <h2>2. Où est-on ? <span class="small">(<code>moteur.changerZone</code> : à la mesure suivante)</span></h2>
+  <div class="row">
+    <button class="ev sel" data-zone="dehors">Dehors : cour, quai, libre-service, silos</button>
+    <button class="ev" data-zone="dedans">Dedans : atelier, hangar, bureaux</button>
+    <button class="ev" data-zone="froid">Chambre froide</button>
+  </div>
+  <h2 style="margin-top:14px">3. La menace <span class="small">(<code>moteur.signalerMenace</code>)</span></h2>
+  <div class="row">
+    <button class="ev menace sel" data-m="aucune">Aucune</button>
+    <button class="ev menace" data-m="attire">Attiré</button>
+    <button class="ev menace" data-m="poursuite">Poursuite</button>
+    <button class="ev menace" data-m="saisie">Saisie</button>
+    <button class="ev menace" data-m="nombre">Encerclé, 3 et plus (« nombre »)</button>
+  </div>
+  <h2 style="margin-top:14px">4. Signaux, radio et bruits de contrôle</h2>
+  <div class="row">
+    <button class="ev" data-s="butin">Butin rare trouvé</button>
+    <button class="ev" data-s="sortieCoop">Sortie, vivant</button>
+    <button class="ev" id="radio">📻 Allumer la radio à piles (à 4 m)</button>
+    <button class="ev" id="rale">Râle à 8 m</button>
+    <button class="ev" id="resp">Respiration de dormant</button>
+  </div>
+</div>
+
+<div class="card">
+  <div class="etat" id="etat"></div>
+  <div class="grid" id="metres"></div>
+  <div class="journal" id="journal"></div>
+</div>
+
+<div class="card">
+  <h2>Ce qu'on entend</h2>
+  <table>
+    <tr><th>Zone</th><th>Musique</th></tr>
+    <tr><td>Dehors</td><td>Fond des silos (stem « dehors ») + Exploration en mi majeur harmonique : palettes en 3+3+3+3+2+2, violoncelles en pizzicato, souffle de bois, harpe</td></tr>
+    <tr><td>Dedans</td><td>Stem « dedans » seul : bourdon grave et verre très aigu, rien entre ≈ 250 Hz et 2 kHz ; l'Exploration se tait</td></tr>
+    <tr><td>Chambre froide</td><td>Stem « froid » : un mi à 41 Hz, presque rien</td></tr>
+    <tr><td>Tension · Danger</td><td>Battement en 3 contre 4 et montants de rayonnage · tôle et acier sur la métrique du lieu ; « nombre » ajoute un stem qui remplit la grille</td></tr>
+    <tr><td>Radio à piles</td><td>Son diégétique (pas de la musique) : la réclame de l'engrais Watty, 20 s en boucle, à jouer en effet spatialisé ; les Éteints l'entendent</td></tr>
+  </table>
+</div>
+</main>
+
+<script src="../esquisses/js/moteur.js"></script>
+<script src="../theme-principal/echantillonneur.js"></script>
+<script src="../theme-principal/theme.js"></script>
+<script src="../moteur/eteints-provisoires.js"></script>
+<script src="sons.js"></script>
+<script src="pieces.js"></script>
+<script type="module">
+import { MoteurAudio } from '../moteur/moteur-couches.js';
+const $ = (s) => document.querySelector(s), P = window.WattCoopPieces;
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+let ctx = null, moteur = null, sons = null, radioBuf = null, radioVoix = null, R = null;
+document.querySelectorAll('.ev').forEach((b) => b.disabled = true);
+const suivi = (i, n, txt) => { $('#progBar').style.width = (i / n * 100) + '%'; $('#progTxt').textContent = 'Rendu ' + Math.min(i + 1, n) + ' / ' + n + ' : ' + txt; };
+async function rendre(ac) {
+  if (R) return R;
+  await window.WattEchantillons.charger(ac, '../banques/', P.instruments, (f, n) => { $('#progTxt').textContent = 'Échantillons : ' + f + ' / ' + n; });
+  return (R = await P.preparer(32000, suivi));
+}
+
+$('#go').onclick = async () => {
+  $('#go').disabled = true;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  ctx = new AC({ latencyHint: 'playback' });
+  await ctx.resume(); const muet = ctx.createBufferSource(); muet.buffer = ctx.createBuffer(1, 1, ctx.sampleRate); muet.connect(ctx.destination); muet.start();
+  const t0 = performance.now(), mobile = $('#mobile').checked;
+  moteur = new MoteurAudio(ctx, { bpm: 84, directeur: { lieu: 'cooperative' } });
+  if ($('#prod').checked) {
+    try {
+      const r = await moteur.chargerProduction('../production/', 'charbonniers', (f, n) => { $('#progBar').style.width = (f / n * 100) + '%'; $('#progTxt').textContent = 'Fichiers : ' + f + ' / ' + n; }, mobile);
+      const d = r.manifeste.diegetiques && r.manifeste.diegetiques['radio-compagnie'];
+      if (d) radioBuf = await ctx.decodeAudioData(await (await fetch('../production/' + (mobile ? 'mobile/' : 'jeu/') + d.fichier + '.' + r.format)).arrayBuffer());
+      $('#progTxt').textContent = 'Prêt : ' + r.fichiers + ' fichiers ' + r.format + (mobile ? ' (mobile)' : '') + ', ' + r.compresseMo.toFixed(1) + ' Mo compressés, en ' + Math.round((performance.now() - t0) / 1000) + ' s.';
+    } catch (e) { $('#progTxt').textContent = 'Échec : ' + e.message + ' (lancer la production d\'abord).'; $('#go').disabled = false; return; }
+  } else {
+    const { pieces, signaux, diegetiques } = await rendre(ctx);
+    Object.entries(pieces).forEach(([id, p]) => moteur.chargerPiece(id, p));
+    Object.entries(signaux).forEach(([n, b]) => moteur.chargerSignal(n, b));
+    radioBuf = diegetiques['radio-compagnie'];
+    $('#progTxt').textContent = 'Prêt (rendu en ' + Math.round((performance.now() - t0) / 1000) + ' s).';
+  }
+  moteur.attribuer('fond', 'fond-coop'); moteur.attribuer('vie', 'explo-coop'); moteur.attribuer('tension', 'tension-coop'); moteur.attribuer('danger', 'danger-coop');
+  sons = window.WattEteints.preparer(ctx);
+  await moteur.demarrer();
+  window.moteurCoop = moteur;                      // pour l'inspection depuis la console
+  construireMetres(); moteur.ecouteurs.push(afficher);
+  document.querySelectorAll('.ev').forEach((b) => b.disabled = false);
+  $('#stop').disabled = false;
+};
+$('#stop').onclick = () => {
+  moteur.arreter(); const c = ctx; setTimeout(() => c.close(), 1800); ctx = null; moteur = null; radioVoix = null;
+  document.querySelectorAll('.ev').forEach((b) => b.disabled = true);
+  $('#stop').disabled = true; $('#go').disabled = false; $('#radio').textContent = '📻 Allumer la radio à piles (à 4 m)';
+};
+const choisir = (attr, b) => document.querySelectorAll('[' + attr + ']').forEach((x) => x.classList.toggle('sel', x === b));
+document.querySelectorAll('[data-zone]').forEach((b) => b.onclick = () => { choisir('data-zone', b); moteur.changerZone(b.dataset.zone); });
+document.querySelectorAll('[data-m]').forEach((b) => b.onclick = () => {
+  choisir('data-m', b); const m = b.dataset.m;
+  if (m === 'attire') moteur.jouerEffet(pick(sons.raleCoupe), { bus: 'menaces', priorite: 1, position: { x: -10, y: 8 }, portee: 25 });
+  if (m === 'saisie' || m === 'nombre') moteur.jouerEffet(pick(sons.saisie), { bus: 'menaces', priorite: 1, position: { x: 0.3, y: 0.6 }, portee: 30 });
+  moteur.signalerMenace(m);
+});
+document.querySelectorAll('[data-s]').forEach((b) => b.onclick = () => moteur.jouerSignal(b.dataset.s, b.dataset.s === 'sortieCoop' ? 'maintenant' : 'temps'));
+$('#radio').onclick = () => {
+  if (radioVoix) { moteur.arreterEffet(radioVoix, 0.3); radioVoix = null; $('#radio').textContent = '📻 Allumer la radio à piles (à 4 m)'; return; }
+  radioVoix = moteur.jouerEffet(radioBuf, { bus: 'environnement', priorite: 3, position: { x: 3, y: 2.6 }, portee: 25, boucle: true, varier: false, gain: 1 });
+  $('#radio').textContent = '📻 Éteindre la radio';
+};
+$('#rale').onclick = () => moteur.jouerEffet(pick(sons.raleErrant), { bus: 'menaces', priorite: 1, position: { x: -6.5, y: 4.6 }, portee: 25 });
+$('#resp').onclick = () => moteur.jouerEffet(pick(sons.respiration), { bus: 'menaces', priorite: 1, position: { x: 1.2, y: 1.4 }, portee: 3 });
+
+/* ---------- Affichage ---------- */
+const LIGNES = [['fond', 'dehors'], ['fond', 'dedans'], ['fond', 'froid'], ['vie', null], ['vie', 'pulsation'], ['vie', 'basse'], ['vie', 'harmonie'], ['vie', 'melodie'], ['vie', 'mix'], ['tension', null], ['danger', null], ['danger', 'nombre']];
+function construireMetres() {
+  $('#metres').innerHTML = LIGNES.map(([c, s]) => '<div class="meter" data-c="' + c + '" data-s="' + (s || '') + '"><div class="lab"><span>' + c + (s ? ' · ' + s : '') + '</span><span class="v"></span></div><div class="b"><span></span></div></div>').join('');
+}
+let dernier = -1, maj = 0;
+function afficher(now) {
+  if (now - maj < 0.1) return; maj = now;
+  const e = moteur.etat(), d = moteur.directeur;
+  $('#etat').innerHTML = '<span>Mémoire décodée : <b>' + e.memoire.toFixed(0) + ' Mo</b> (budget ' + (e.mobile ? 64 : 160) + ')</span><span>Zone : <b>' + d.zone + '</b></span><span>Phase : <b>' + e.phase + '</b></span><span>Menace : <b>' + e.menace + '</b></span><span>Bloc ' + (e.pos.bloc + 1) + ' · mesure ' + (e.pos.mesure + 1) + '</span>';
+  document.querySelectorAll('.meter').forEach((m) => {
+    const C = e.couches[m.dataset.c], s = m.dataset.s;
+    const v = s ? (C.stems[s] == null ? 0 : C.stems[s] * C.gain) : C.gain;
+    m.querySelector('.b>span').style.width = Math.round(v * 100) + '%'; m.querySelector('.v').textContent = Math.round(v * 100) + ' %';
+  });
+  if (e.journal.length !== dernier) { dernier = e.journal.length; const t0 = moteur.horloge.t0; $('#journal').textContent = e.journal.slice().reverse().map((j) => (j.t - t0).toFixed(1).padStart(6) + ' s  ' + j.msg).join('\n'); }
+}
+
+/* ---------- Export : un parcours écrit d'avance, rendu hors ligne (pour écouter sur l'iPhone) ----------
+   Dehors (Fond, puis Exploration) → hangar → Tension → Danger, « le nombre » → silence → chambre froide → butin → dehors → sortie */
+$('#wav').onclick = async () => {
+  $('#wav').disabled = true;
+  const sr = 32000, dec = new OfflineAudioContext(2, 1, sr), { pieces, signaux } = await rendre(dec);
+  const B = P.DUREE_BLOC, M = P.BAR, total = 7.5 * B + 4, off = new OfflineAudioContext(2, Math.ceil(total * sr), sr), t0 = 0.05;
+  const gains = {};
+  Object.entries(pieces).forEach(([id, p]) => p.stems.forEach((s) => { const g = off.createGain(); g.gain.value = 0; g.connect(off.destination); gains[id + '/' + s] = g; }));
+  for (let k = 0; k * B < total; k++) Object.entries(pieces).forEach(([id, p]) => p.stems.forEach((s) => { const src = off.createBufferSource(); src.buffer = p.blocs[k % p.blocs.length][s]; src.connect(gains[id + '/' + s]); src.start(t0 + k * B); }));
+  const regle = (m, valeurs, tau) => Object.entries(valeurs).forEach(([k, v]) => gains[k].gain.setTargetAtTime(v * 0.7, t0 + m * M, tau || 0.6));
+  const tous = (v) => Object.fromEntries(Object.keys(gains).map((k) => [k, v]));
+  const vie = (v) => ({ 'explo-coop/pulsation': v, 'explo-coop/basse': v, 'explo-coop/harmonie': v, 'explo-coop/melodie': v });
+  regle(0, Object.assign(tous(0), { 'fond-coop/dehors': 1 }), 0.05);
+  regle(8, vie(1), 1);                                                               // l'Exploration entre au bloc 2
+  regle(24, Object.assign(vie(0), { 'fond-coop/dehors': 0, 'fond-coop/dedans': 1 }), M / 3);   // on entre dans le hangar
+  regle(28, { 'tension-coop/pulsation': 1, 'tension-coop/texture': 1 }, 0.15);
+  regle(32, { 'tension-coop/pulsation': 0, 'tension-coop/texture': 0, 'danger-coop/percussions': 1, 'danger-coop/basse': 1, 'danger-coop/stridences': 1, 'fond-coop/dedans': 0.7 }, 0.02);
+  regle(34, { 'danger-coop/nombre': 1 }, 0.02);
+  regle(36, tous(0), 0.4);                                                           // dégagé : silence
+  regle(38, { 'fond-coop/froid': 1 }, M / 3);                                        // la chambre froide
+  regle(48, Object.assign(tous(0), { 'fond-coop/dehors': 1 }), M / 3);               // ressorti par la cour des silos
+  regle(52, vie(1), 1);
+  [['arriveeCoop', 0], ['butin', 44], ['sortieCoop', 58]].forEach(([n, m]) => { const s = off.createBufferSource(); s.buffer = signaux[n]; const g = off.createGain(); g.gain.value = 0.7; s.connect(g); g.connect(off.destination); s.start(t0 + m * M); });
+  const buf = await off.startRendering();
+  const a = document.createElement('a'); a.href = URL.createObjectURL(window.WattMusique.lib.toWav(buf)); a.download = 'cooperative-parcours.wav'; a.click();
+  $('#progTxt').textContent = 'Parcours exporté (cooperative-parcours.wav).';
+  $('#wav').disabled = false;
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Test iPhone</title>
+<style>
+:root{--bg:#f3ece0;--card:#fbf7ef;--ink:#2b1d12;--muted:#6b5a48;--line:#d8ccb6;--accent:#a8332a;--on:#2f6f78;--ok:#2f7a3b;--ko:#b3261e}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1a1714;--card:#24201b;--ink:#efe6d6;--muted:#b3a58f;--line:#3d352c;--accent:#e0705f;--on:#5fb3bd;--ok:#6cc27a;--ko:#ef7a70}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.5 system-ui,-apple-system,sans-serif;-webkit-text-size-adjust:100%}
+main{max-width:640px;margin:0 auto;padding:16px 16px calc(32px + env(safe-area-inset-bottom))}
+h1{font-size:22px;font-weight:600;margin:4px 0}
+h2{font-size:16px;font-weight:600;margin:0 0 8px}
+p.sub{color:var(--muted);margin:0 0 14px;font-size:15px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:0 0 12px}
+.choix{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+button{font:inherit;min-height:48px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--ink);touch-action:manipulation}
+button.sel{border-color:var(--on);color:var(--on);font-weight:600;border-width:2px}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;width:100%}
+button:disabled{opacity:.45}
+label.chk{display:flex;gap:10px;align-items:center;font-size:15px;margin:8px 0}
+label.chk input{width:22px;height:22px}
+.meter{margin:6px 0;font-size:14px}
+.meter .lab{display:flex;justify-content:space-between}
+.meter .b{height:10px;border-radius:5px;background:var(--line);overflow:hidden}
+.meter .b>span{display:block;height:100%;width:0;background:var(--on)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+td{padding:6px 4px;border-bottom:1px solid var(--line);vertical-align:top}
+td.r{text-align:right;white-space:nowrap;font-weight:600}
+.ok{color:var(--ok)} .ko{color:var(--ko)} .att{color:var(--muted)}
+.etat{font-size:14px;color:var(--muted)}
+textarea{width:100%;min-height:120px;font:12px/1.4 ui-monospace,Menlo,monospace;background:transparent;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px}
+</style>
+</head>
+<body>
+<main>
+<h1>Test du son sur iPhone</h1>
+<p class="sub">Le moteur et les fichiers produits, comme dans le jeu. Le test <b>écoute ce qui sort</b> de chaque couche (Fond, Vie, Tension, Danger) et dit si elle a joué quand il fallait. Durée : ≈ 1 min par lieu. Écouteurs ou haut-parleur, volume moyen, <b>interrupteur silencieux désactivé</b>.</p>
+
+<div class="card">
+  <h2>1. Le lieu</h2>
+  <div class="choix" id="lieux">
+    <button data-l="terrain" class="sel">🏡 Terrain</button>
+    <button data-l="halte">⛽ Halte</button>
+    <button data-l="cooperative">🚜 Coopérative</button>
+    <button data-l="comptoir">🏪 Comptoir</button>
+    <button data-l="chateau">🏰 Château</button>
+    <button data-l="villa">🏖️ Villa</button>
+    <button data-l="hopital">🏥 Hôpital</button>
+    <button data-l="industriel">🏭 Industriel</button>
+  </div>
+  <div class="choix" id="familles" style="margin-top:8px">
+    <button data-f="charbonniers" class="sel">🔥 Charbonniers</button>
+    <button data-f="voltaiques">⚡ Voltaïques</button>
+    <button data-f="mecanistes">⚙️ Mécanistes</button>
+  </div>
+  <label class="chk"><input type="checkbox" id="mobile"> Version mobile (prémixée)</label>
+  <button class="primary" id="go">▶ Lancer le test</button>
+  <div class="etat" id="etat" style="margin-top:8px">Touchez « Lancer » : c'est ce toucher qui débloque le son.</div>
+</div>
+
+<div class="card">
+  <h2>2. Ce qui sort, couche par couche</h2>
+  <div id="metres"></div>
+</div>
+
+<div class="card">
+  <h2>3. Résultat</h2>
+  <table id="resultats"><tr><td class="att">Pas encore lancé.</td></tr></table>
+</div>
+
+<div class="card">
+  <h2>4. Compte rendu à copier</h2>
+  <p class="sub" style="margin-bottom:6px">À coller dans la conversation avec la session musique.</p>
+  <textarea id="rapport" readonly></textarea>
+  <button id="copier" style="margin-top:8px;width:100%">Copier le compte rendu</button>
+</div>
+</main>
+
+<script type="module">
+import { MoteurAudio } from '../moteur/moteur-couches.js';
+const $ = (s) => document.querySelector(s);
+const COUCHES = ['fond', 'vie', 'tension', 'danger'], NOMS = { fond: 'Fond', vie: 'Vie / Exploration', tension: 'Tension', danger: 'Danger' };
+const SEUIL = -60;                       // dBFS : au-dessus, la couche « joue »
+const PIECES = {
+  terrain: { fond: 'fond-jour', vie: 'vie-jour', tension: 'tension', danger: 'danger' },
+  halte: { fond: 'fond-halte', vie: 'explo-halte', tension: 'tension-halte', danger: 'danger-halte' },
+  cooperative: { fond: 'fond-coop', vie: 'explo-coop', tension: 'tension-coop', danger: 'danger-coop' },
+  comptoir: { vie: 'comptoir' },
+  chateau: { fond: 'fond-chateau', vie: 'explo-chateau', tension: 'tension-chateau', danger: 'danger-chateau' },
+  villa: { fond: 'fond-villa', vie: 'explo-villa', tension: 'tension-villa', danger: 'danger-villa' },
+  hopital: { fond: 'fond-hopital', vie: 'explo-hopital', tension: 'tension-hopital', danger: 'danger-hopital' },
+  industriel: { fond: 'fond-industriel', vie: 'explo-industriel', tension: 'tension-industriel', danger: 'danger-industriel' }
+};
+let lieu = 'terrain', famille = 'charbonniers', ctx = null, moteur = null, enCours = false;
+const iOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+$('#mobile').checked = iOS || /Android/.test(navigator.userAgent);
+const choisir = (sel, attr, f) => document.querySelectorAll(sel + ' button').forEach((b) => b.onclick = () => { if (enCours) return; document.querySelectorAll(sel + ' button').forEach((x) => x.classList.toggle('sel', x === b)); f(b.dataset[attr]); });
+choisir('#lieux', 'l', (v) => { lieu = v; $('#familles').style.display = v === 'terrain' ? '' : 'none'; });
+choisir('#familles', 'f', (v) => { famille = v; });
+$('#metres').innerHTML = COUCHES.map((c) => '<div class="meter"><div class="lab"><span>' + NOMS[c] + '</span><span id="v-' + c + '">—</span></div><div class="b"><span id="b-' + c + '"></span></div></div>').join('');
+
+/* ---------- Mesure de ce qui sort de chaque couche (analyseur branché après le volume de la couche) ---------- */
+let analyseurs = {}, niveaux = {};
+function brancherAnalyseurs() {
+  const muet = ctx.createGain(); muet.gain.value = 0; muet.connect(ctx.destination);   // Safari ne calcule pas un nœud relié à rien
+  analyseurs = {};
+  COUCHES.forEach((c) => { const a = ctx.createAnalyser(); a.fftSize = 2048; moteur.couches[c].gain.connect(a); a.connect(muet); analyseurs[c] = { a, d: new Float32Array(2048) }; });
+}
+function mesurer() {
+  COUCHES.forEach((c) => {
+    const { a, d } = analyseurs[c]; a.getFloatTimeDomainData(d);
+    let s = 0; for (let i = 0; i < d.length; i++) s += d[i] * d[i];
+    const db = 10 * Math.log10(s / d.length + 1e-12);
+    niveaux[c] = Math.max(db, (niveaux[c] ?? -120) - 1.5);                              // crête qui retombe doucement
+    $('#b-' + c).style.width = Math.max(0, Math.min(100, (niveaux[c] + 80) / 70 * 100)) + '%';
+    $('#v-' + c).textContent = niveaux[c] < -100 ? 'silence' : niveaux[c].toFixed(0) + ' dB';
+  });
+}
+
+/* ---------- Le scénario : chaque étape dit quelles couches doivent jouer ---------- */
+const attendre = (s) => new Promise((r) => setTimeout(r, s * 1000));
+async function attendreQue(cond, max) { const t = performance.now(); while (performance.now() - t < max * 1000) { if (cond()) return (performance.now() - t) / 1000; await attendre(0.1); } return null; }
+const joue = (c) => (niveaux[c] ?? -120) > SEUIL;
+const resultats = [];
+function noter(nom, ok, detail) {
+  resultats.push({ nom, ok, detail });
+  $('#resultats').innerHTML = resultats.map((r) => '<tr><td>' + r.nom + (r.detail ? '<div class="etat">' + r.detail + '</div>' : '') + '</td><td class="r ' + (r.ok ? 'ok">✔ oui' : 'ko">✘ non') + '</td></tr>').join('');
+  rapport();
+}
+function rapport(fin) {
+  const e = moteur ? moteur.etat() : null;
+  $('#rapport').value = ['Test iPhone — ' + new Date().toLocaleString('fr-FR'), navigator.userAgent, 'Lieu : ' + lieu + (lieu === 'terrain' ? ' (' + famille + ')' : '') + ' · version ' + ($('#mobile').checked ? 'mobile' : 'ordinateur') + ' · ' + (ctx ? ctx.sampleRate + ' Hz, latence ' + ((ctx.baseLatency || 0) * 1000).toFixed(0) + ' ms' : ''),
+    e ? 'Mémoire décodée : ' + e.memoire.toFixed(0) + ' Mo (pic ' + pic.toFixed(0) + ')' : '', ''].concat(resultats.map((r) => (r.ok ? 'OK   ' : 'ÉCHEC ') + r.nom + (r.detail ? ' — ' + r.detail : ''))).concat(fin ? ['', fin] : []).join('\n');
+}
+let pic = 0;
+
+$('#go').onclick = async () => {
+  if (enCours) return;
+  enCours = true; $('#go').disabled = true; resultats.length = 0; niveaux = {}; pic = 0;
+  /* Déblocage iOS : le contexte est créé et repris DANS le toucher, puis un tampon muet */
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (ctx) { try { await ctx.close(); } catch (e) {} }
+  ctx = new AC({ latencyHint: 'playback' });
+  const reprise = ctx.resume(); const z = ctx.createBufferSource(); z.buffer = ctx.createBuffer(1, 1, ctx.sampleRate); z.connect(ctx.destination); z.start();
+  await reprise;
+  noter('Son débloqué au premier toucher', ctx.state === 'running', 'état : ' + ctx.state);
+  const mobile = $('#mobile').checked, comptoir = lieu === 'comptoir';
+  moteur = new MoteurAudio(ctx, { bpm: comptoir ? 96 : 84, directeur: { lieu, echelle: 0.25 } });
+  try {
+    $('#etat').textContent = 'Chargement des fichiers…';
+    const r = await moteur.chargerProduction('../production/', famille, (f, n) => { $('#etat').textContent = 'Fichiers : ' + f + ' / ' + n; }, mobile, { pieces: Object.values(PIECES[lieu]) });
+    noter('Fichiers chargés', true, r.fichiers + ' fichiers ' + r.format + ', ' + r.compresseMo.toFixed(1) + ' Mo');
+  } catch (e) { noter('Fichiers chargés', false, e.message); fin(); return; }
+  Object.entries(PIECES[lieu]).forEach(([c, p]) => moteur.attribuer(c, p));
+  await moteur.demarrer();
+  brancherAnalyseurs();
+  const iv = setInterval(() => { mesurer(); pic = Math.max(pic, moteur.memoire()); const e = moteur.etat(); $('#etat').textContent = 'Phase : ' + e.phase + ' · menace : ' + e.menace + (moteur.directeur.niv ? ' · zone : ' + moteur.directeur.zone : '') + ' · mémoire ' + e.memoire.toFixed(0) + ' Mo'; }, 100);
+  document.addEventListener('visibilitychange', () => { if (!ctx) return; if (document.hidden) ctx.suspend(); else ctx.resume(); });
+
+  const etape = async (nom, couche, attendu, max) => {
+    $('#etat').textContent = nom + '…';
+    const t = await attendreQue(() => joue(couche) === attendu, max);
+    noter(nom, t !== null, t !== null ? 'en ' + t.toFixed(1) + ' s' : (attendu ? 'muet pendant ' + max + ' s' : 'joue encore après ' + max + ' s') + ' (niveau ' + (niveaux[couche] ?? -120).toFixed(0) + ' dB)');
+  };
+  if (comptoir) {
+    await etape('Le groove du Comptoir joue', 'vie', true, 8);
+  } else {
+    await etape('Le Fond joue', 'fond', true, 8);
+    await etape(lieu === 'terrain' ? 'La Vie entre (frontière de bloc)' : 'L\'Exploration entre', 'vie', true, 30);
+    moteur.signalerMenace('poursuite');
+    await etape('Poursuite : la Tension joue', 'tension', true, 6);
+    const niveau = !!moteur.directeur.niv;
+    moteur.signalerMenace(niveau ? 'nombre' : 'saisie');
+    await etape('Saisie : le Danger joue', 'danger', true, 3);
+    await attendre(2);
+    noter('Le Fond reste présent sous le Danger', joue('fond'), 'niveau ' + (niveaux.fond ?? -120).toFixed(0) + ' dB');
+    moteur.signalerMenace('aucune');
+    await etape('Dégagé : le Danger se tait', 'danger', false, 6);
+    await etape('Après le silence, le Fond revient', 'fond', true, 12);
+    if (niveau) {
+      moteur.changerZone('dedans');
+      await attendre(5);
+      noter('Dedans : le Fond (zone « dedans ») joue', joue('fond'), 'niveau ' + (niveaux.fond ?? -120).toFixed(0) + ' dB');
+      await etape('Dedans : l\'Exploration se tait', 'vie', false, 6);
+    }
+  }
+  clearInterval(iv);
+  noter('Mémoire sous le budget (' + (mobile ? 64 : 160) + ' Mo)', pic <= (mobile ? 64 : 160), 'pic ' + pic.toFixed(0) + ' Mo');
+  rapport(resultats.every((r) => r.ok) ? 'Tout est bon.' : 'Au moins un échec : voir ci-dessus.');
+  fin();
+};
+function fin() {
+  setTimeout(() => { if (moteur) moteur.arreter(); enCours = false; $('#go').disabled = false; $('#etat').textContent = 'Test terminé. On peut en lancer un autre (autre lieu, autre version).'; }, 1500);
+}
+$('#copier').onclick = async () => { try { await navigator.clipboard.writeText($('#rapport').value); $('#copier').textContent = 'Copié ✔'; } catch (e) { $('#rapport').select(); document.execCommand('copy'); $('#copier').textContent = 'Copié ✔'; } };
+</script>
+</body>
+</html>

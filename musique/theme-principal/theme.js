@@ -11,7 +11,7 @@
    12-19     🔥 Charbonniers        ré dorien                  violons en nappe, motif au violon solo (la ré fa la si la)
    20-27     ⚡ Voltaïques          si mineur harmonique       onde douce, motif au glockenspiel en écho
    28-35     ⚙️ Mécanistes          ré mixolydien              flûte, marimba, harpe, bambou
-   36-43     Les trois ensemble    ré lydien                  violon et flûte à l'octave, le sol♯ lydien
+   36-43     Les trois ensemble    ré lydien                  violon (doublé du violoncelle) et flûte à l'octave, le sol♯ lydien
    44-51     Queue bouclable       ré lydien                  très doux ; boucle de la mesure 44 à 52 pour l'écran titre
 
    Stems : radio (jingle et coupure), rythmique (sons trouvés, percussions), basse, harmonie (nappes), melodie. */
@@ -140,11 +140,16 @@
   /* Mélodies : [mesure, temps, note, durée en temps]. Le motif : 5 1 3 5 6 5, puis la question 5 → 1 */
   const MOTIF = (m0, deg, inst, o) => ({ m0, inst, o, notes: deg });
   const MELODIES = [
-    MOTIF(14, [[0, 57, 2], [2, 62, 2], [4, 65, 2], [6, 69, 2], [8, 71, 3], [11, 69, 5], [16, 69, 2], [18, 74, 6]], 'violonSolo', { gain: 0.6, vel: 0.35, attack: 0.25, release: 1.5 }),
+    /* Le violon (2026-10-14, il « perçait » et sonnait « MIDI ») : toujours la prise douce, l'aigu adouci et un creux vers 2,9 kHz ;
+       jeu LIÉ (notes qui se chevauchent, sans réattaque d'archet, petit glissé sur les intervalles courts), courbe de phrase,
+       attaques légèrement humaines ; doublé très bas par les violons d'ensemble, qui l'arrondissent */
+    MOTIF(14, [[0, 57, 2], [2, 62, 2], [4, 65, 2], [6, 69, 2], [8, 71, 3], [11, 69, 5], [16, 69, 2], [18, 74, 6]], 'violonSolo', { gain: 0.55, vel: 0.4, nuance: 0.2, attack: 0.3, release: 1.4, lp: 3800, presence: -5, lie: true, double: [['violons', 0, 0.4]] }),
     MOTIF(22, [[0, 78, 1], [1, 83, 1], [2, 86, 1], [3, 90, 1], [4, 91, 1.5], [5.5, 90, 2.5], [8, 90, 2], [10, 95, 6], [16, 94, 8]], 'glock', { gain: 0.16, vel: 0.5, echo: 0.45, send: 0.5 }),
-    MOTIF(30, [[0, 69, 2], [2, 74, 2], [4, 78, 2], [6, 81, 2], [8, 83, 3], [11, 81, 5], [16, 81, 2], [18, 86, 6]], 'flute', { gain: 0.5, vel: 0.4, attack: 0.15, release: 1.2 }),
-    MOTIF(36, [[0, 69, 2], [2, 74, 2], [4, 78, 2], [6, 81, 2], [8, 83, 3], [11, 81, 5], [16, 80, 2], [18, 81, 2], [20, 78, 4], [24, 81, 2], [26, 86, 6]], 'violonSolo', { gain: 0.65, vel: 0.6, attack: 0.2, release: 1.5 }),
-    MOTIF(36, [[0, 81, 2], [2, 86, 2], [4, 90, 2], [6, 93, 2], [8, 95, 3], [11, 93, 5], [16, 92, 2], [18, 93, 2], [20, 90, 4], [24, 93, 2], [26, 98, 6]], 'flute', { gain: 0.32, vel: 0.4, attack: 0.15, release: 1.2 }),
+    MOTIF(30, [[0, 69, 2], [2, 74, 2], [4, 78, 2], [6, 81, 2], [8, 83, 3], [11, 81, 5], [16, 81, 2], [18, 86, 6]], 'flute', { gain: 0.5, vel: 0.4, attack: 0.15, release: 1.2, presence: -3, lie: true }),
+    /* Le sommet : le violon une octave plus bas qu'avant (la4 – ré5 au lieu de la5 – ré6), doublé à l'octave grave par le violoncelle ;
+       la flûte prend la place qu'avait le violon (elle montait jusqu'au ré7 : c'est elle et le violon aigu qui faisaient mal) */
+    MOTIF(36, [[0, 57, 2], [2, 62, 2], [4, 66, 2], [6, 69, 2], [8, 71, 3], [11, 69, 5], [16, 68, 2], [18, 69, 2], [20, 66, 4], [24, 69, 2], [26, 74, 6]], 'violonSolo', { gain: 0.6, vel: 0.45, nuance: 0.2, attack: 0.25, release: 1.5, lp: 3800, presence: -5, lie: true, double: [['violons', 0, 0.4], ['violoncelles', -12, 0.45]] }),
+    MOTIF(36, [[0, 69, 2], [2, 74, 2], [4, 78, 2], [6, 81, 2], [8, 83, 3], [11, 81, 5], [16, 80, 2], [18, 81, 2], [20, 78, 4], [24, 81, 2], [26, 86, 6]], 'flute', { gain: 0.26, vel: 0.4, attack: 0.15, release: 1.2, lp: 5000, presence: -3, lie: true }),
     MOTIF(46, [[0, 57, 1.5], [1.5, 62, 1.5], [3, 66, 1.5], [4.5, 69, 1.5], [6, 71, 2], [8, 69, 6]], 'harpe', { gain: 0.4, vel: 0.5 })
   ];
 
@@ -216,14 +221,44 @@
 
       /* Mélodies */
       MELODIES.forEach((mel) => {
-        mel.notes.forEach(([beat, m, dur]) => {
+        const n = mel.notes.length;
+        mel.notes.forEach(([beat, m, dur], i) => {
           const tb = mel.m0 * 4 + beat;                     // en temps depuis la mesure 0
           if (Math.floor(tb / 4) !== b) return;
-          E(ctx, G, 'melodie', mel.inst, t + (tb - b * 4) * TEMPS, m, dur * TEMPS, mel.o.vel, Object.assign({ send: 0.45 }, mel.o));
+          const o = Object.assign({ send: 0.45 }, mel.o);
+          let tt = t + (tb - b * 4) * TEMPS, d = dur * TEMPS;
+          if (mel.o.lie) {
+            /* Jeu lié : la note déborde sur la suivante (pas de trou, pas de réattaque) ; si elle suit la précédente sans silence,
+               elle entre sans l'attaque de l'archet (on saute le début de l'échantillon) et glisse depuis elle si l'intervalle est court */
+            const prev = mel.notes[i - 1], suite = prev && Math.abs(prev[0] + prev[2] - beat) < 1e-6;
+            d += 0.2;
+            if (suite) Object.assign(o, { attack: 0.1, offset: 0.08, glisseDe: Math.abs(prev[1] - m) <= 5 ? prev[1] : undefined, glisse: 0.06 });
+            o.gain = mel.o.gain * (0.82 + 0.3 * Math.sin(Math.PI * i / Math.max(1, n - 1)));      // la phrase enfle puis retombe
+            tt += L.rnd(-0.012, 0.012);                                                          // une attaque humaine, pas une grille
+          }
+          /* La voix du violon peut être remplacée (theme.voixMelodie) : 'violon' (échantillon retravaillé), 'violoncelle'
+             (le pupitre, une octave plus bas), 'souffle' (le souffle accordé « violon à reflets de métal » des Charbonniers) */
+          const voix = mel.inst === 'violonSolo' ? (theme.voixMelodie || 'violon') : null;
+          if (voix === 'violoncelle') {
+            E(ctx, G, 'melodie', 'violoncelles', tt, m - 12, d, 0.4, Object.assign({}, o, { gain: o.gain * 1.25, nuance: 0.3, attack: Math.max(o.attack, 0.18), glisseDe: o.glisseDe != null ? o.glisseDe - 12 : undefined, lp: 3000, presence: 0 }));
+            return;
+          }
+          if (voix === 'souffle') {
+            L.souffleAccorde(ctx, G, 'melodie', tt, m, d, 1, { couleur: 'metal', gain: 0.05 * o.gain / mel.o.gain * (m > 70 ? 0.8 : 1), attack: o.offset ? 0.09 : 0.2, release: 0.9, pan: 0.1, send: 0.6, flutter: 0.25 });
+            L.souffleAccorde(ctx, G, 'melodie', tt + 0.03, m - 12, d, 1, { couleur: 'bois', gain: 0.018 * o.gain / mel.o.gain, attack: 0.25, release: 0.9, pan: -0.2, send: 0.5 });   // l'octave grave, en bois : le corps
+            return;
+          }
+          E(ctx, G, 'melodie', mel.inst, tt, m, d, mel.o.vel, o);
+          (mel.o.double || []).forEach(([inst, tr, part]) => E(ctx, G, 'melodie', inst, tt, m + tr, d, mel.o.vel, Object.assign({}, o, {
+            gain: o.gain * part, attack: Math.max(o.attack, 0.2), glisseDe: o.glisseDe != null ? o.glisseDe + tr : undefined, pan: -0.2 })));
         });
       });
     }
   };
 
+  /* La voix du violon : 'violoncelle' choisi par le porteur le 2026-10-14 (comparaison : theme-principal/comparer.html) */
+  theme.voixMelodie = 'violoncelle';
+  /* L'orgue de pub et la voix du crooner, réutilisés par la radio de la Compagnie (coopérative, cooperative/pieces.js) */
+  theme.radio = { orgue, voix };
   window.WattThemePrincipal = theme;
 })();

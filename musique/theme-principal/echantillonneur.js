@@ -59,7 +59,9 @@
   }
 
   /**
-   * Joue une note. o : { gain, pan, send, echo, attack, release, offset (s), tenu (force), lp (Hz) }
+   * Joue une note. o : { gain, pan, send, echo, attack, release, offset (s), tenu (force), lp (Hz),
+   *   nuance (0..1 : la prise choisie, indépendamment du volume), presence (dB, creux vers 2,9 kHz : ce qui « perce »),
+   *   glisseDe (note MIDI d'où l'on glisse, jeu lié), glisse (durée du glissé, s) }
    * Pour une percussion sans hauteur, midi = 0 et le tirage se fait parmi les variantes (o.n : indice voulu).
    */
   function jouer(ctx, G, couche, inst, t, midi, dur, vel, o) {
@@ -72,12 +74,19 @@
       if (!l.length) return;
       e = o.n != null ? l[o.n % l.length] : l[Math.floor(Math.random() * l.length)];
     }
-    else e = choisir(inst, midi, vel);
+    else e = choisir(inst, midi, o.nuance != null ? o.nuance : vel);
     if (!e) return;
     const buf = banque.buffers.get(e.f), rate = midi === 0 ? (o.rate || 1) : Math.pow(2, (midi - e.m) / 12);
     const out = L.voiceOut(ctx, G, couche, o.pan, o.send, o.echo);
     let dest = out;
-    if (o.lp) { const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = o.lp; f.connect(out); dest = f; }
+    if (o.lp) { const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = o.lp; f.connect(dest); dest = f; }
+    if (o.presence) { const f = ctx.createBiquadFilter(); f.type = 'peaking'; f.frequency.value = 2900; f.Q.value = 0.9; f.gain.value = o.presence; f.connect(dest); dest = f; }
+    /* Jeu lié : la note part de la hauteur de la précédente et y glisse (portamento court), comme un doigt qui glisse sur la corde */
+    const glisser = (src) => {
+      if (o.glisseDe == null || midi === 0) return;
+      const r0 = rate * Math.pow(2, (o.glisseDe - midi) / 12), g = o.glisse || 0.07;
+      src.playbackRate.setValueAtTime(r0, t); src.playbackRate.linearRampToValueAtTime(rate, t + g);
+    };
     const niveau = o.gain * vel * (banque.gainInst[inst] || 1);
     const fin = t + dur;
     /* Enveloppe d'ensemble : attaque (adoucie au besoin), tenue, extinction */
@@ -85,7 +94,7 @@
     out.gain.linearRampToValueAtTime(niveau, t + Math.max(0.005, o.attack));
     const dispo = (buf.duration - o.offset) / rate;
     if (!o.tenu || dur + o.release <= dispo - 0.2) {
-      const src = ctx.createBufferSource(); src.buffer = buf; src.playbackRate.value = rate; src.connect(dest);
+      const src = ctx.createBufferSource(); src.buffer = buf; src.playbackRate.value = rate; src.connect(dest); glisser(src);
       src.start(t, o.offset);
       if (o.tenu || o.coupe) {
         out.gain.setValueAtTime(niveau, Math.max(t + o.attack, fin));
@@ -100,7 +109,7 @@
     let ts = t, k = 0;
     const total = dur + o.release;
     while (ts < t + total && k < 40) {
-      const seg = ctx.createBufferSource(); seg.buffer = buf; seg.playbackRate.value = rate;
+      const seg = ctx.createBufferSource(); seg.buffer = buf; seg.playbackRate.value = rate; if (k === 0) glisser(seg);
       const sg = ctx.createGain(); seg.connect(sg); sg.connect(dest);
       const len = k === 0 ? (buf.duration - o.offset) / rate - 0.3 : segLen;
       sg.gain.setValueAtTime(k === 0 ? 1 : 0, ts);

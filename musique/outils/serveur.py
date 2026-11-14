@@ -4,6 +4,11 @@ des fichiers produits par la page de production, UNIQUEMENT dans musique/product
 
 Usage : python3 musique/outils/serveur.py   (puis http://127.0.0.1:8765)
 N'écoute que sur 127.0.0.1 : rien n'est accessible depuis le réseau.
+
+Test sur iPhone : python3 musique/outils/serveur.py --reseau
+Écoute sur le réseau local (Wi-Fi de la maison), en LECTURE SEULE (aucun enregistrement possible),
+et affiche l'adresse à ouvrir sur l'iPhone : http://<adresse-de-l-ordinateur>:8765/test-iphone/
+Arrêter avec Ctrl+C une fois le test fini.
 """
 import http.server, os, sys
 
@@ -22,6 +27,9 @@ class Gestionnaire(http.server.SimpleHTTPRequestHandler):
         super().end_headers()
 
     def do_PUT(self):
+        if RESEAU:
+            self.send_error(403, 'Serveur en lecture seule (mode réseau)')
+            return
         chemin = os.path.normpath(os.path.join(RACINE, self.path.split('?')[0].lstrip('/')))
         chemin = os.path.realpath(chemin)
         if not chemin.startswith(os.path.realpath(PRODUCTION) + os.sep):
@@ -49,6 +57,23 @@ class Gestionnaire(http.server.SimpleHTTPRequestHandler):
             sys.stderr.write('enregistré : %s\n' % self.path)
 
 
+RESEAU = '--reseau' in sys.argv
+
+
+def adresse_locale():
+    import socket
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(('10.255.255.255', 1))          # aucun paquet n'est envoyé : sert seulement à choisir l'interface
+        return s.getsockname()[0]
+    except OSError:
+        return '127.0.0.1'
+    finally:
+        s.close()
+
+
 if __name__ == '__main__':
     os.makedirs(PRODUCTION, exist_ok=True)
-    http.server.ThreadingHTTPServer(('127.0.0.1', PORT), Gestionnaire).serve_forever()
+    if RESEAU:
+        print('Réseau local, lecture seule. Sur l\'iPhone (même Wi-Fi) : http://%s:%d/test-iphone/' % (adresse_locale(), PORT), flush=True)
+    http.server.ThreadingHTTPServer(('0.0.0.0' if RESEAU else '127.0.0.1', PORT), Gestionnaire).serve_forever()

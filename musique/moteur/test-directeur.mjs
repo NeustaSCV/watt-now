@@ -183,4 +183,84 @@ test('comptoir : zone sûre, groove au complet sans fenêtre de silence, aucune 
   assert.equal(gains(c, 'vie').filter((x) => x.gain === 0).length, 0, 'pas de fenêtre de silence');
 });
 
+test('coopérative : signal au portail, Fond « dehors » seul, l\'Exploration entre au premier bloc (8 s de calme)', () => {
+  const d = new Directeur(h, { alea: () => 0, lieu: 'cooperative' });
+  const c = d.demarrer(0.1).concat(simuler(d, 0.15, B + 1, {}));
+  assert.equal(c.find((x) => x.type === 'signal').nom, 'arriveeCoop');
+  assert.deepEqual(['dehors', 'dedans', 'froid'].map((z) => gains(c, 'fond', z)[0].gain), [1, 0, 0]);
+  assert.equal(gains(c, 'danger', 'nombre')[0].gain, 0, '« le nombre » muet au départ');
+  const vie = gains(c, 'vie').filter((x) => x.stem && x.gain > 0);
+  assert.deepEqual(vie.map((x) => x.stem), ['pulsation', 'basse', 'harmonie', 'melodie']);
+  assert.equal(vie[0].at.toFixed(3), B.toFixed(3));
+});
+
+test('coopérative : passer une porte change le Fond à la mesure ; dedans, l\'Exploration se tait et ne revient pas', () => {
+  const d = new Directeur(h, { alea: () => 0, lieu: 'cooperative' });
+  d.demarrer(0.1);
+  const c = simuler(d, 0.15, 5 * B, { '30.00': [(t) => d.changerZone('dedans', t)] });
+  const at = h.suivant(30, 'mesure');
+  assert.equal(gains(c, 'fond', 'dedans').pop().at.toFixed(3), at.toFixed(3));
+  assert.equal(gains(c, 'fond', 'dedans').pop().gain, 1);
+  assert.equal(gains(c, 'fond', 'dehors').pop().gain, 0);
+  assert.ok(at - 30 <= h.dureeMesure, 'au plus une mesure d\'attente');
+  ['pulsation', 'basse', 'harmonie', 'melodie'].forEach((st) => assert.equal(gains(c, 'vie', st).pop().gain, 0, 'l\'Exploration se tait dedans : ' + st));
+  assert.equal(gains(c, 'vie').filter((x) => x.gain > 0 && x.at > at).length, 0, 'et ne revient pas tant qu\'on est dedans');
+  assert.equal(d.stemUtile('vie', 'pulsation'), false);
+  assert.equal(d.stemUtile('fond', 'dedans'), true);
+  assert.equal(d.stemUtile('fond', 'dehors'), false, 'le stem de la zone quittée est libéré');
+  assert.equal(d.changerZone('dedans', 200).length, 0, 'même zone : rien');
+});
+
+test('coopérative : de retour dehors, l\'Exploration revient au bloc suivant après 8 s de calme', () => {
+  const d = new Directeur(h, { alea: () => 0, lieu: 'cooperative' });
+  d.demarrer(0.1);
+  simuler(d, 0.15, 30, { '5.00': [(t) => d.changerZone('froid', t)] });
+  const c = simuler(d, 30.05, 4 * B, { '40.00': [(t) => d.changerZone('dehors', t)] });
+  assert.equal(gains(c, 'fond', 'froid').pop().gain, 0);
+  const vie = gains(c, 'vie', 'pulsation').filter((x) => x.gain > 0);
+  assert.equal(vie[0].at.toFixed(3), (3 * B).toFixed(3), 'B2 = 45,7 s : 5,7 s de calme seulement ; B3 = 68,6 s');
+});
+
+test('coopérative : « le nombre » ajoute son stem au Danger, au temps ; redevenu une saisie, il se retire', () => {
+  const d = new Directeur(h, { alea: () => 0, lieu: 'cooperative' });
+  d.demarrer(0.1);
+  let c = d.signalerMenace('nombre', 10);
+  assert.equal(d.phase, 'danger');
+  const n = gains(c, 'danger', 'nombre')[0];
+  assert.equal(n.gain, 1);
+  assert.ok(n.at - 10 <= T + 1e-9, 'au temps suivant');
+  assert.equal(d.stemUtile('danger', 'nombre'), true);
+  c = d.signalerMenace('saisie', 12);
+  assert.equal(gains(c, 'danger', 'nombre')[0].gain, 0);
+  assert.equal(d.phase, 'danger', 'toujours le Danger');
+  assert.equal(d.stemUtile('danger', 'nombre'), false);
+  c = d.signalerMenace('aucune', 14);
+  assert.equal(d.phase, 'silence');
+});
+
+test('hors de la coopérative : changerZone ne fait rien, tous les stems sont utiles (sauf l\'atelier)', () => {
+  const d = new Directeur(h, { alea: () => 0 });
+  d.demarrer(0);
+  assert.equal(d.changerZone('dedans', 5).length, 0);
+  assert.equal(d.stemUtile('vie', 'harmonie'), true);
+  assert.equal(d.stemUtile('vie', 'outil'), false);
+});
+
+test('mémoire : Tension et Danger ne sont utiles (décodés) qu\'à l\'approche d\'une menace', () => {
+  const d = new Directeur(h, { alea: () => 0 });
+  d.demarrer(0);
+  assert.equal(d.stemUtile('tension', 'pulsation'), false, 'calme : Tension libérée');
+  assert.equal(d.stemUtile('danger', 'percussions'), false, 'calme : Danger libéré');
+  d.signalerMenace('attire', 5);
+  assert.equal(d.stemUtile('tension', 'pulsation'), true, 'attiré : la Tension se décode (elle entre ≥ 2 s plus tard)');
+  assert.equal(d.stemUtile('danger', 'percussions'), false);
+  d.signalerMenace('poursuite', 6);
+  assert.equal(d.stemUtile('danger', 'percussions'), true, 'poursuite : le Danger se décode d\'avance');
+  d.signalerMenace('saisie', 8);
+  assert.equal(d.stemUtile('vie', 'harmonie'), false, 'Danger : la Vie (muette) est libérée');
+  d.signalerMenace('aucune', 20); for (let t = 20; t < 40; t += 0.05) d.mettreAJour(t);
+  assert.equal(d.phase === 'calme' || d.phase === 'silence', true);
+  assert.equal(d.stemUtile('tension', 'pulsation'), false, 'menace passée : libérée');
+});
+
 console.log('\n' + ok + ' tests réussis.');

@@ -9,6 +9,9 @@ Dossier de travail du compositeur (voir `BRIEF.md`). La commande est au Book 21 
 | `brief-ecoute.md` | Listes d'écoute par famille et par lieu, lecture des modes et des toniques | 1. Brief |
 | `esquisses/` | Les trois thèmes de famille, ≈ 1 minute chacun, jouables dans le navigateur | 2. Esquisses |
 | `moteur/` | Moteur de couches, directeur musical, pièces en blocs, Éteints provisoires, banc d'essai | 3. Maquette du moteur |
+| `cooperative/` | La Coopérative du Plateau (Book 23), **validée et produite** : `PROPOSITION.md`, banc d'écoute sur le vrai moteur (`index.html` : zones, menaces, radio, export d'un parcours), pièces (`pieces.js`), sons du lieu (`sons.js`) | Livrée |
+| `niveaux/` | **Kits de niveau** réutilisables (`PROPOSITION.md`) : musique de base + sons du lieu séparés (stems « matière »). Page d'écoute commune `niveaux/?kit=chateau` (interrupteur « sons du lieu », export d'un parcours). Faits : **Château**, **Villa**, **Hôpital**, **Industriel** (`niveaux/<kit>/` : `sons.js` = la matière, `pieces.js` = la musique ; `niveaux/commun.js` = ce qu'ils partagent) | Livrés |
+| `test-iphone/` | **Test sur iPhone** : lance le moteur avec les fichiers produits, mesure ce qui sort de chaque couche et coche chaque étape ; compte rendu à copier. Serveur : `python3 musique/outils/serveur.py --reseau` | Outil |
 | `propositions.md` | Propositions de modification des books (à valider) | — |
 | `credits.md` | Crédits et licences | — |
 

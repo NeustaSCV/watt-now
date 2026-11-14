@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Le violon du thème</title>
+<style>
+:root{--bg:#f3ece0;--card:#fbf7ef;--ink:#2b1d12;--muted:#6b5a48;--line:#d8ccb6;--accent:#a8332a;--on:#2f6f78}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1a1714;--card:#24201b;--ink:#efe6d6;--muted:#b3a58f;--line:#3d352c;--accent:#e0705f;--on:#5fb3bd}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:760px;margin:0 auto;padding:24px 16px 48px}
+h1{font-size:24px;font-weight:600;margin:0 0 4px}
+p.sub{color:var(--muted);margin:0 0 18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:0 0 12px}
+.card h2{font-size:17px;font-weight:600;margin:0 0 4px}
+.card p{margin:0 0 10px;color:var(--muted);font-size:14px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button{font:inherit;font-size:14px;padding:8px 12px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer;min-height:40px}
+button:disabled{opacity:.45;cursor:default}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.sel{border-color:var(--on);color:var(--on);font-weight:600}
+.prog{height:8px;border-radius:4px;background:var(--line);overflow:hidden;margin:10px 0 4px}
+.prog>span{display:block;height:100%;width:0;background:var(--accent)}
+.small{font-size:13px;color:var(--muted)}
+</style>
+</head>
+<body>
+<main>
+<h1>Le violon du thème principal</h1>
+<p class="sub">Les deux passages où joue le violon : <b>les Charbonniers</b> (mesures 12 à 19) puis <b>le sommet</b> (mesures 36 à 43), environ 23 s chacun, avec tout l'orchestre. Écoutez l'ancienne version, puis les trois nouvelles. <b>Choix du 2026-10-14 : B, les violoncelles</b> (réglé par défaut dans <code>theme.js</code>).</p>
+<div class="card">
+  <div class="row"><button id="go" class="primary">Préparer les quatre versions</button><button id="stop" disabled>Arrêter</button></div>
+  <div class="prog"><span id="bar"></span></div>
+  <div class="small" id="txt">Une à deux minutes de calcul (rendu hors ligne, dans le navigateur).</div>
+</div>
+<div id="versions"></div>
+</main>
+<script src="../esquisses/js/moteur.js"></script>
+<script src="echantillonneur.js"></script>
+<script src="theme.js"></script>
+<script>
+(function () {
+  const $ = (s) => document.querySelector(s), th = window.WattThemePrincipal, L = window.WattMusique.lib;
+  const SR = 44100, M = 240 / th.bpm, PASSAGES = [[12, 20], [36, 44]], ECART = 1.2;
+  const VERSIONS = [
+    ['avant', 'Avant', 'Tiré des masters produits (avant la production du 2026-10-14 ; depuis, c\'est la version B) : le violon d\'origine, prise forte, très aigu au sommet, doublé par la flûte jusqu\'au ré7, chaque note réattaquée.'],
+    ['violon', 'A. Le violon retravaillé', 'Même instrument : prise douce, une octave plus bas au sommet, aigu adouci (creux vers 2,9 kHz), notes liées avec un petit glissé, phrase qui enfle et retombe, doublé très bas par les violons d\'ensemble et, au sommet, par le violoncelle.'],
+    ['violoncelle', 'B. Les violoncelles', 'Le pupitre de violoncelles, une octave plus bas que le violon : chaud, grave, un pupitre plutôt qu\'un soliste (beaucoup moins « MIDI »).'],
+    ['souffle', 'C. Le souffle des Charbonniers', 'Pas d\'échantillon : le souffle accordé « violon à reflets de métal » des Charbonniers (validé pour leur thème), avec son octave grave en bois. Le plus doux, le plus « Watt Now? ».']
+  ];
+  let ctx = null, src = null, tampons = {};
+  const duree = PASSAGES.reduce((s, [a, b]) => s + (b - a) * M + ECART, 0) + 2;
+
+  async function rendreVoix(voix) {
+    th.voixMelodie = voix;
+    const off = new OfflineAudioContext(2, Math.ceil(SR * duree), SR), G = L.buildGraph(off, th.mix);
+    let t = 0.05;
+    PASSAGES.forEach(([a, b]) => { for (let m = a; m < b; m++) th.bar(off, G, m, t + (m - a) * M, L); t += (b - a) * M + ECART; });
+    return off.startRendering();
+  }
+  /* L'ancienne version : les cinq stems des masters FLAC (avant la modification), additionnés, puis les deux passages découpés */
+  async function rendreAvant() {
+    const stems = ['radio', 'rythmique', 'basse', 'harmonie', 'melodie'];
+    const bufs = await Promise.all(stems.map(async (s) => ctx.decodeAudioData(await (await fetch('../production/masters/titre/titre_intro_' + s + '.flac')).arrayBuffer())));
+    const sr = bufs[0].sampleRate, out = new AudioBuffer({ length: Math.ceil(sr * duree), numberOfChannels: 2, sampleRate: sr });
+    let t = 0.05;
+    PASSAGES.forEach(([a, b]) => {
+      const i0 = Math.floor((0.02 + a * M) * sr), n = Math.floor(((b - a) * M + 1) * sr), j0 = Math.floor(t * sr);
+      for (let c = 0; c < 2; c++) { const o = out.getChannelData(c); bufs.forEach((bf) => { const d = bf.getChannelData(Math.min(c, bf.numberOfChannels - 1)); for (let i = 0; i < n && i0 + i < d.length && j0 + i < o.length; i++) o[j0 + i] += d[i0 + i] * Math.min(1, (n - i) / (0.8 * sr)); }); }
+      t += (b - a) * M + ECART;
+    });
+    return out;
+  }
+  function jouer(id) {
+    if (src) try { src.stop(); } catch (e) {}
+    src = ctx.createBufferSource(); src.buffer = tampons[id]; src.connect(ctx.destination); src.start();
+    document.querySelectorAll('[data-v]').forEach((b) => b.classList.toggle('sel', b.dataset.v === id));
+    $('#stop').disabled = false;
+  }
+  $('#stop').onclick = () => { if (src) try { src.stop(); } catch (e) {} document.querySelectorAll('[data-v]').forEach((b) => b.classList.remove('sel')); };
+  $('#go').onclick = async () => {
+    $('#go').disabled = true;
+    ctx = new (window.AudioContext || window.webkitAudioContext)(); await ctx.resume();
+    $('#txt').textContent = 'Chargement des échantillons…';
+    await window.WattEchantillons.charger(ctx, '../banques/', th.instruments);
+    for (let i = 0; i < VERSIONS.length; i++) {
+      const [id, nom] = VERSIONS[i];
+      $('#txt').textContent = 'Calcul : ' + nom + '…'; $('#bar').style.width = (i / VERSIONS.length * 100) + '%';
+      try { tampons[id] = id === 'avant' ? await rendreAvant() : await rendreVoix(id); }
+      catch (e) { $('#txt').textContent = 'Échec (' + nom + ') : ' + e.message; }
+    }
+    th.voixMelodie = 'violoncelle';
+    $('#bar').style.width = '100%'; $('#txt').textContent = 'Prêt. Chaque extrait : les Charbonniers, une seconde de silence, puis le sommet.';
+    $('#versions').innerHTML = VERSIONS.filter(([id]) => tampons[id]).map(([id, nom, desc]) => '<div class="card"><h2>' + nom + '</h2><p>' + desc + '</p><div class="row"><button data-v="' + id + '">▶ Écouter</button><button data-w="' + id + '">Enregistrer en WAV</button></div></div>').join('');
+    document.querySelectorAll('[data-v]').forEach((b) => b.onclick = () => jouer(b.dataset.v));
+    document.querySelectorAll('[data-w]').forEach((b) => b.onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(L.toWav(tampons[b.dataset.w])); a.download = 'violon-' + b.dataset.w + '.wav'; a.click(); });
+    window.__tampons = tampons;
+  };
+})();
+</script>
+</body>
+</html>
