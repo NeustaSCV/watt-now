@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Watt Now? — labo 3D</title>
+<style>html,body{margin:0;height:100%;background:#000}canvas{width:100vw;height:56.25vw;max-height:100vh;display:block}#info{position:fixed;left:8px;bottom:8px;color:#fff;font:12px monospace}</style></head>
+<body><canvas id="c"></canvas><div id="info"></div>
+<script type="module">
+const params = new URLSearchParams(location.search);
+// le serveur de mise au point ne dit rien du cache : on force le rechargement de nos modules à chaque ouverture
+const MODULES = ['moteur', 'acteurs', 'decors', 'textures', 'salon', 'programmes', 'acte1', 'acte2', 'acte3', 'acte4', 'cartons', 'cinematique3d', 'kenney', 'accueil'].map((m) => `./src3d/${m}.js`)
+  .concat(['./src/dessins.js', './src/temps.js', './src/outils.js', './vendor/rendu-jeu.js']);
+await Promise.all(MODULES.map((u) => fetch(u, { cache: 'reload' }).catch(() => {})));
+const { Moteur } = await import('./src3d/moteur.js');
+const { pret } = await import('./src3d/acteurs.js');
+const mod = await import(params.has('m') ? `./src3d/${params.get('m')}.js` : `./src3d/plans/${params.get('plan') || 'essai'}.js`);
+await (await import('./src3d/textures.js')).prechargerImages();
+await pret();
+const plans = Object.entries(mod).map(([k, v]) => (typeof v === 'function' && k.startsWith('plans') ? v(params.get('famille') || 'charbonniers') : v)).flat().filter((p) => p && p.creer);
+const canvas = document.getElementById('c');
+const m = new Moteur(canvas, { plans, largeur: 1600, hauteur: 900, pixels: 1 });
+window.moteur = m;
+if (params.has('cam')) { const c = params.get('cam').split(',').map(Number); window.__cam = [c.slice(0, 3), c.slice(3, 6), c[6] || 35]; }
+const fixe = params.has('t') ? Number(params.get('t')) : null;
+let T = fixe ?? Number(params.get('depuis') || 0), avant = performance.now();
+function image() {
+  const n = performance.now(); const dt = (n - avant) / 1000; avant = n;
+  if (fixe === null) T += dt;
+  m.image(T, fixe === null ? dt : 1 / 30);
+  document.getElementById('info').textContent = T.toFixed(2);
+  if (fixe === null) requestAnimationFrame(image);
+}
+if (fixe !== null) { for (let i = 0; i < 20; i++) m.image(T, 1 / 30); window.pretCapture = true; } else requestAnimationFrame(image);
+</script></body></html>

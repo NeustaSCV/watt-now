@@ -1,0 +1,5 @@
+# Fichiers de travail de l’intro (images de capture, profil de Chrome) : jamais dans l’historique
+.travail/
+# Les vidéos exportées sont lourdes : on les garde sur le disque
+video/*.mp4
+video/*.wav

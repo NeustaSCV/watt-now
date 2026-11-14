@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#1d2433" />
+  <title>Watt Now? — introduction</title>
+  <link rel="stylesheet" href="src/intro.css" />
+  <style>
+    :root { color-scheme: dark; }
+    html, body { margin: 0; height: 100%; background: #1d2433; color: #f4ecd8; font-family: "Avenir Next", system-ui, sans-serif; }
+    .demo { min-height: 100%; display: grid; place-items: center; padding: 16px; box-sizing: border-box; text-align: center; }
+    .demo h1 { font: 900 32px Futura, "Arial Black", sans-serif; color: #c8362b; background: #f4ecd8; padding: 4px 14px; transform: rotate(-2deg); display: inline-block; }
+    .demo p { max-width: 34em; line-height: 1.5; color: #d9cfb8; }
+    .demo fieldset { border: 1px solid #5a6378; border-radius: 6px; margin: 12px auto; max-width: 420px; }
+    .demo label { display: inline-flex; gap: 6px; align-items: center; margin: 6px 10px; min-height: 44px; }
+    .demo button { font: 900 18px Futura, "Arial Black", sans-serif; background: #c8362b; color: #f4ecd8; border: 3px solid #3b2a1e; border-radius: 6px; padding: 12px 28px; min-height: 48px; cursor: pointer; box-shadow: 0 5px 0 #3b2a1e; }
+    .demo .mini { font-size: 13px; color: #9aa3b5; }
+    .demo a { color: #e8c547; }
+  </style>
+</head>
+<body>
+  <main class="demo" id="demo">
+    <div>
+      <h1>WATT NOW?</h1>
+      <p>Démonstration de l'introduction : la cinématique « La dernière émission » en 3D, avec les personnages du jeu (≈ 2 min 40, avec le son), puis la fiche d'accueil des Compteurs en trois pages.</p>
+      <fieldset>
+        <legend>Famille du personnage</legend>
+        <label><input type="radio" name="famille" value="charbonniers" checked /> 🔥 Charbonniers</label>
+        <label><input type="radio" name="famille" value="voltaiques" /> ⚡ Voltaïques</label>
+        <label><input type="radio" name="famille" value="mecanistes" /> ⚙️ Mécanistes</label>
+      </fieldset>
+      <button type="button" id="lancer">Lancer l'introduction</button>
+      <p class="mini" id="etat"></p>
+      <p class="mini">Mise au point : <code>?depuis=60</code> démarre la lecture à 60 s · <code>?ecrans=1</code> les écrans d'accueil 3D (1 à 3) · <code>?fiche=1</code> l'ancienne fiche (secours sans WebGL, page 1 à 3) · <code>?version=2d</code> la version dessinée · <a href="labo.html?m=acte1&amp;t=24.9">labo 3D</a> (image figée).</p>
+    </div>
+  </main>
+  <script type="module">
+    // mise au point : on force le rechargement de nos modules (le petit serveur local ne gère pas le cache)
+    const MODULES = ['src/intro.js', 'src/son.js', 'src/tele-sons.js', 'src/fiche.js', 'src/temps.js', 'src/dessins.js', 'src/outils.js', 'src/cinematique2d.js',
+      'src3d/cinematique3d.js', 'src3d/moteur.js', 'src3d/acteurs.js', 'src3d/decors.js', 'src3d/textures.js', 'src3d/cartons.js', 'src3d/salon.js',
+      'src3d/programmes.js', 'src3d/acte1.js', 'src3d/acte2.js', 'src3d/acte3.js', 'src3d/acte4.js', 'src3d/kenney.js', 'src3d/accueil.js', 'src3d/ecrans.js', 'vendor/rendu-jeu.js', 'src/intro.css'];
+    await Promise.all(MODULES.map((u) => fetch(u, { cache: 'reload' }).catch(() => {})));
+    const { jouerIntro, jouerAccueil, ouvrirFiche } = await import('./src/intro.js');
+
+    const params = new URLSearchParams(location.search);
+    const famille = () => document.querySelector('input[name="famille"]:checked').value;
+    if (params.has('famille')) document.querySelector(`input[value="${params.get('famille')}"]`).checked = true;
+
+    // ?accueil (&page=2) : les trois écrans d'accueil seuls, comme dans le jeu (sans la cinématique)
+    if (params.has('accueil')) {
+      document.getElementById('demo').hidden = true;
+      jouerAccueil(document.body, { famille: famille(), base: './', page: Number(params.get('page') || 1) }).then(() => { document.getElementById('demo').hidden = false; });
+    }
+    if (params.has('fiche')) {
+      document.getElementById('demo').hidden = true;
+      ouvrirFiche(document.body, { famille: famille(), page: Number(params.get('fiche')) - 1 });
+    }
+
+    // ?ecrans=1 (à 3) : les écrans d'accueil directement ; &auto : sans attendre le clic (mise au point, capture)
+    if (params.has('auto')) setTimeout(() => document.getElementById('lancer').click(), 300);
+    document.getElementById('lancer').addEventListener('click', async () => {
+      const etat = document.getElementById('etat');
+      document.getElementById('demo').hidden = true;
+      await jouerIntro(document.body, { famille: famille(), base: './', depuis: Number(params.get('depuis') || 0), ecrans: Number(params.get('ecrans') || 0), version: params.get('version') || '3d' });
+      document.getElementById('demo').hidden = false;
+      etat.textContent = 'Fin de l\'introduction : le jeu prendrait la main ici (terrain au petit matin).';
+    });
+  </script>
+</body>
+</html>

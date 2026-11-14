@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Watt Now? — capture</title>
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block;width:1920px;height:1080px}</style></head>
+<body><canvas id="c" width="1920" height="1080"></canvas>
+<script type="module">
+/* La page de capture : la cinématique 3D en 1920 × 1080, rendue image par image (outils/capture.mjs la pilote),
+   et la bande-son mixée hors ligne (OfflineAudioContext), rendue en WAV. */
+const params = new URLSearchParams(location.search);
+const famille = params.get('famille') || 'charbonniers';
+const L = Number(params.get('l') || 1920), H = Number(params.get('h') || 1080);
+const SS = Number(params.get('ss') || 2);   // suréchantillonnage : on rend en 2× puis on réduit
+const MODULES = ['moteur', 'acteurs', 'decors', 'textures', 'salon', 'programmes', 'acte1', 'acte2', 'acte3', 'acte4', 'cartons', 'cinematique3d', 'kenney', 'accueil'].map((m) => `./src3d/${m}.js`).concat(['./vendor/rendu-jeu.js'])
+  .concat(['./src/dessins.js', './src/temps.js', './src/outils.js', './src/son.js', './src/tele-sons.js', './src/plans-tele.js']);
+await Promise.all(MODULES.map((u) => fetch(u, { cache: 'reload' }).catch(() => {})));
+const { Moteur } = await import('./src3d/moteur.js');
+const { montage, chargerTout } = await import('./src3d/cinematique3d.js');
+const { dessinerCarton } = await import('./src3d/cartons.js');
+const { dessinerTitre } = await import('./src3d/acte4.js');
+const { SonIntro } = await import('./src/son.js');
+const { TITRE } = await import('./src/temps.js');
+
+const canvas = document.getElementById('c');
+canvas.width = L; canvas.height = H; canvas.style.width = L + 'px'; canvas.style.height = H + 'px';
+await chargerTout();
+const m = montage(famille);
+const FIN = TITRE + 9;   // le titre, puis un fondu au noir
+const moteur = new Moteur(canvas, {
+  plans: m.plans.filter((p) => !m.accueil.includes(p)), cartons: m.cartons, capture: true, pixels: SS, largeur: L, hauteur: H,
+  dessinerCarton,
+  surCalque: (ctx, T, l, h) => {
+    const t = dessinerTitre(ctx, T, l, h);
+    const f = Math.min(1, Math.max(0, (T - (FIN - 1.5)) / 1.5));
+    if (f > 0) { ctx.fillStyle = `rgba(0,0,0,${f})`; ctx.fillRect(0, 0, l, h); return true; }
+    return t;
+  },
+});
+moteur.taille(L, H);
+
+let wav = null;
+const reduit = document.createElement('canvas'); reduit.width = L; reduit.height = H;
+const ctxReduit = reduit.getContext('2d');
+ctxReduit.imageSmoothingEnabled = true; ctxReduit.imageSmoothingQuality = 'high';
+window.capture = {
+  fin: FIN,
+  pret: true,
+  rendre(T, dt) { moteur.image(T, dt); ctxReduit.globalAlpha = 1; ctxReduit.drawImage(canvas, 0, 0, L, H); return true; },
+  /**
+   * Le flou de mouvement d'une vraie caméra : obturateur à 180° (la moitié de la durée d'une image), échantillonné en
+   * `n` sous-images, moyennées. Les feux et fumées avancent d'un pas complet par image.
+   */
+  rendreFlou(T, dt, n = 6, obturateur = 0.5) {
+    for (let k = 0; k < n; k++) {
+      const Tk = T + dt * obturateur * ((k + 0.5) / n - 0.5);
+      moteur.image(Tk, dt / n);
+      ctxReduit.globalAlpha = 1 / (k + 1);
+      ctxReduit.drawImage(canvas, 0, 0, L, H);
+    }
+    ctxReduit.globalAlpha = 1;
+    return true;
+  },
+  image(qualite = 0.93) { return reduit.toDataURL('image/jpeg', qualite).split(',')[1]; },
+  /** La bande-son entière, mixée hors ligne ; renvoie sa taille en octets (puis lire par morceaux). */
+  async son() {
+    const taux = 48000;
+    const ctx = new OfflineAudioContext(2, Math.ceil(taux * FIN), taux);
+    const s = new SonIntro({ ctx, base: './' });
+    await s.preparer();
+    s.demarrer(0, m.radios, 0);
+    s.programmerJusqua(FIN);
+    // fondu final
+    s.maitre.gain.setValueAtTime(1, FIN - 1.5); s.maitre.gain.linearRampToValueAtTime(0, FIN);
+    const buf = await ctx.startRendering();
+    const n = buf.length, c0 = buf.getChannelData(0), c1 = buf.getChannelData(1);
+    const octets = new ArrayBuffer(44 + n * 4), v = new DataView(octets);
+    const ecrire = (o, t) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
+    ecrire(0, 'RIFF'); v.setUint32(4, 36 + n * 4, true); ecrire(8, 'WAVE'); ecrire(12, 'fmt ');
+    v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 2, true); v.setUint32(24, taux, true);
+    v.setUint32(28, taux * 4, true); v.setUint16(32, 4, true); v.setUint16(34, 16, true); ecrire(36, 'data'); v.setUint32(40, n * 4, true);
+    for (let i = 0; i < n; i++) {
+      v.setInt16(44 + i * 4, Math.max(-1, Math.min(1, c0[i])) * 32767, true);
+      v.setInt16(46 + i * 4, Math.max(-1, Math.min(1, c1[i])) * 32767, true);
+    }
+    wav = new Uint8Array(octets);
+    return wav.length;
+  },
+  morceau(debut, taille) {
+    const b = wav.subarray(debut, debut + taille);
+    let s = '';
+    for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000));
+    return btoa(s);
+  },
+};
+document.title = 'capture prête';
+</script></body></html>

@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Écrans d'accueil — maquettes</title>
+<!-- Trois directions pour les écrans d'accueil (après la cinématique), sur le même contenu (écran 1).
+     ?d=a | b | c : une seule maquette, plein cadre (pour la capture). Les images viennent de la cinématique (img/). -->
+<style>
+:root {
+  --encre: #2b2118; --creme: #f3ead6; --rouge: #c8362b; --canard: #1f5e66; --jaune: #f2c14e;
+  --titre: "Futura", "Avenir Next Condensed", "Arial Black", sans-serif;
+  --texte: "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --machine: "American Typewriter", "Courier New", monospace;
+  --feutre: "Marker Felt", "Chalkboard SE", cursive;
+  --plume: "Bradley Hand", "Noteworthy", "Segoe Print", cursive;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: #111; color: var(--encre); font-family: var(--texte); }
+.galerie { display: grid; gap: 40px; padding: 30px; justify-items: center; }
+.galerie h1 { color: #eee; font: 600 18px var(--texte); margin: 10px 0 -26px; justify-self: start; }
+.cadre { width: 1600px; height: 900px; position: relative; overflow: hidden; transform-origin: top left; }
+body.seul .galerie { padding: 0; gap: 0; } body.seul .galerie h1 { display: none; }
+.suivant { position: absolute; font: 700 22px var(--titre); letter-spacing: .06em; text-transform: uppercase; cursor: pointer; border: 0; }
+.points-pages { position: absolute; display: flex; gap: 10px; }
+.points-pages i { width: 12px; height: 12px; border-radius: 50%; border: 2px solid currentColor; display: block; }
+.points-pages i.ici { background: currentColor; }
+
+/* ================================================================ A. Tableaux 3D */
+.a { background: url(img/comptoir-sol.jpg) center / cover; color: #fff; }
+.a::before { content: ""; position: absolute; inset: 0; background:
+  radial-gradient(120% 90% at 60% 35%, transparent 40%, rgba(10,8,12,.55) 100%),
+  linear-gradient(180deg, rgba(0,0,0,.25) 0%, transparent 22%, transparent 48%, rgba(12,10,14,.88) 100%); }
+.a .entete { position: absolute; left: 64px; top: 48px; font: 600 15px var(--machine); letter-spacing: .18em; text-transform: uppercase; opacity: .85; }
+.a .entete b { color: var(--jaune); font-weight: 600; }
+.a h2 { position: absolute; left: 64px; bottom: 300px; z-index: 1; margin: 0; font: 800 76px/1 var(--titre); letter-spacing: -.01em; text-shadow: 0 4px 30px rgba(0,0,0,.6); }
+.a .accroche { position: absolute; left: 66px; bottom: 246px; margin: 0; font: 500 26px var(--texte); opacity: .92; }
+.a ul { position: absolute; left: 64px; right: 64px; bottom: 96px; z-index: 1; margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(3, 1fr); gap: 36px; }
+.a li { border-top: 2px solid rgba(255,255,255,.35); padding-top: 16px; display: grid; grid-template-columns: 46px 1fr; gap: 14px; }
+.a li svg { width: 46px; height: 46px; }
+.a li strong { display: block; font: 700 21px var(--titre); margin-bottom: 4px; }
+.a li span { font: 400 17px/1.4 var(--texte); opacity: .88; }
+.a .etiquette { position: absolute; font: 600 17px var(--texte); background: rgba(14,12,16,.72); backdrop-filter: blur(4px); padding: 9px 14px; border-radius: 6px; border-left: 3px solid var(--jaune); max-width: 290px; line-height: 1.3; }
+.a .etiquette small { display: block; font-weight: 400; opacity: .8; font-size: 14px; margin-top: 2px; }
+.a .fil { position: absolute; border-top: 1.5px solid rgba(255,255,255,.75); transform-origin: left center; }
+.a .fil::after { content: ""; position: absolute; right: -6px; top: -6px; width: 10px; height: 10px; border-radius: 50%; background: var(--jaune); box-shadow: 0 0 0 5px rgba(242,193,78,.3); }
+.a .note { position: absolute; right: 70px; top: 46px; font: 30px var(--feutre); color: #ffe9a8; transform: rotate(-3deg); text-shadow: 0 2px 12px rgba(0,0,0,.7); }
+.a .points-pages { left: 64px; bottom: 44px; color: #fff; }
+.a .suivant { right: 64px; bottom: 30px; background: var(--rouge); color: #fff; padding: 16px 34px; border-radius: 6px; box-shadow: 0 6px 0 #7d1f18, 0 12px 30px rgba(0,0,0,.4); }
+
+/* ================================================================ B. Dossier des Compteurs */
+.b { background:
+  radial-gradient(80% 70% at 50% 45%, rgba(255,214,150,.18), transparent 70%),
+  repeating-linear-gradient(92deg, rgba(0,0,0,.07) 0 2px, transparent 2px 9px),
+  repeating-linear-gradient(88deg, rgba(255,255,255,.03) 0 1px, transparent 1px 23px),
+  linear-gradient(180deg, #5a3a24, #3b2416); }
+.b::after { content: ""; position: absolute; inset: 0; background: radial-gradient(130% 100% at 50% 40%, transparent 50%, rgba(0,0,0,.65)); pointer-events: none; }
+.b .chemise { position: absolute; left: 130px; top: 70px; width: 1340px; height: 770px; background: #d9b77e; border-radius: 6px 18px 10px 10px; box-shadow: 0 30px 60px rgba(0,0,0,.55), inset 0 0 60px rgba(120,80,30,.35); }
+.b .chemise::before { content: "DOSSIER D'ACCUEIL — N° 4187"; position: absolute; left: 40px; top: -34px; background: #d9b77e; padding: 8px 26px 10px; border-radius: 10px 10px 0 0; font: 700 16px var(--machine); letter-spacing: .12em; }
+.b .pli { position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: rgba(90,60,20,.35); box-shadow: 1px 0 0 rgba(255,240,210,.4); }
+.b .photo { position: absolute; background: #fbf7ee; padding: 14px 14px 52px; box-shadow: 0 10px 24px rgba(0,0,0,.35); }
+.b .photo img { display: block; width: 100%; filter: sepia(.25) contrast(1.05) saturate(.9); }
+.b .photo figcaption { position: absolute; left: 16px; right: 16px; bottom: 14px; font: 22px var(--plume); color: #333; }
+.b .p1 { left: 70px; top: 70px; width: 470px; transform: rotate(-4deg); }
+.b .p2 { left: 270px; top: 400px; width: 380px; transform: rotate(5deg); }
+.b .trombone { position: absolute; width: 28px; height: 78px; border: 4px solid #9aa0a6; border-radius: 14px; top: -30px; left: 40px; }
+.b .trombone::after { content: ""; position: absolute; inset: 8px 4px 14px; border: 3px solid #9aa0a6; border-radius: 10px; }
+.b .feuille { position: absolute; right: 60px; top: 40px; width: 590px; height: 690px; background: #f6efdc; padding: 44px 50px; box-shadow: 0 8px 20px rgba(0,0,0,.3); transform: rotate(.8deg);
+  background-image: repeating-linear-gradient(180deg, transparent 0 33px, rgba(31,94,102,.12) 33px 34px); }
+.b .feuille .ref { font: 13px var(--machine); letter-spacing: .1em; text-transform: uppercase; border-bottom: 2px solid var(--encre); padding-bottom: 8px; display: flex; justify-content: space-between; }
+.b h2 { font: 800 46px/1.05 var(--titre); color: var(--rouge); margin: 26px 0 12px; }
+.b .accroche { font: 17px/1.5 var(--machine); margin: 0 0 20px; }
+.b ol { margin: 0; padding: 0; list-style: none; counter-reset: n; }
+.b li { counter-increment: n; display: grid; grid-template-columns: 44px 1fr; gap: 10px; margin-bottom: 18px; }
+.b li::before { content: counter(n) "."; font: 700 30px var(--titre); color: var(--canard); }
+.b li strong { display: block; font: 700 19px var(--titre); }
+.b li span { font: 16px/1.45 var(--texte); }
+.b .tampon { position: absolute; right: 60px; bottom: 50px; transform: rotate(-12deg); border: 5px solid rgba(200,54,43,.85); color: rgba(200,54,43,.85); font: 800 30px var(--titre); letter-spacing: .1em; padding: 8px 18px; border-radius: 8px; text-transform: uppercase; mix-blend-mode: multiply;
+  -webkit-mask: repeating-radial-gradient(circle at 30% 40%, #000 0 3px, rgba(0,0,0,.75) 3px 5px); }
+.b .marge { position: absolute; left: 40px; top: 560px; font: 34px var(--feutre); color: #1d3f8a; transform: rotate(-6deg); width: 220px; line-height: 1.05; }
+.b .marge svg { position: absolute; left: 20px; top: 80px; width: 120px; height: 70px; }
+.b .points-pages { left: 760px; bottom: 50px; color: #f0dcb8; z-index: 2; }
+.b .suivant { right: 120px; bottom: 34px; z-index: 2; background: #f0dcb8; color: var(--encre); padding: 14px 30px; border-radius: 4px; box-shadow: 0 6px 18px rgba(0,0,0,.45); font-family: var(--machine); font-weight: 700; letter-spacing: .08em; }
+
+/* ================================================================ C. Carnet du survivant */
+.c { background: radial-gradient(120% 100% at 50% 40%, #3c4436, #1b1f18); }
+.c .carnet { position: absolute; left: 80px; top: 50px; width: 1440px; height: 800px; border-radius: 14px; background: #4a3424; box-shadow: 0 40px 80px rgba(0,0,0,.6); padding: 18px; }
+.c .page { position: absolute; top: 18px; bottom: 18px; width: calc(50% - 18px); background: #efe6cf; box-shadow: inset 0 0 50px rgba(150,120,70,.35); }
+.c .gauche { left: 18px; border-radius: 8px 2px 2px 8px; background-image: linear-gradient(rgba(60,90,130,.13) 1px, transparent 1px), linear-gradient(90deg, rgba(60,90,130,.13) 1px, transparent 1px); background-size: 28px 28px; }
+.c .droite { right: 18px; border-radius: 2px 8px 8px 2px; background-image: repeating-linear-gradient(180deg, transparent 0 39px, rgba(60,90,130,.22) 39px 40px); background-position: 0 70px; }
+.c .reliure { position: absolute; left: 50%; top: 18px; bottom: 18px; width: 40px; margin-left: -20px; background: linear-gradient(90deg, rgba(0,0,0,.25), transparent 40%, transparent 60%, rgba(0,0,0,.25)); }
+.c .elastique { position: absolute; right: 34px; top: 0; bottom: 0; width: 14px; background: #7a2a22; box-shadow: 2px 0 6px rgba(0,0,0,.4); }
+.c .croquis { position: absolute; left: 60px; top: 90px; width: 560px; transform: rotate(-2deg); box-shadow: 0 6px 14px rgba(0,0,0,.2); }
+.c .croquis img { display: block; width: 100%; mix-blend-mode: multiply; }
+.c .scotch { position: absolute; width: 130px; height: 34px; background: rgba(240,230,190,.7); box-shadow: 0 1px 3px rgba(0,0,0,.15); }
+.c .legende { position: absolute; left: 80px; top: 470px; width: 560px; font: 26px/1.35 var(--plume); color: #3a2f25; }
+.c .legende b { color: var(--rouge); }
+.c .eteint { position: absolute; left: 380px; top: 610px; width: 360px; transform: rotate(4deg); }
+.c .jour { position: absolute; left: 790px; top: 64px; font: 26px var(--plume); color: #6b5a48; }
+.c h2 { position: absolute; left: 790px; top: 100px; margin: 0; font: 54px var(--plume); color: var(--encre); }
+.c h2::after { content: ""; display: block; height: 6px; margin-top: 2px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 8'%3E%3Cpath d='M2 5 C80 1 160 7 240 3 S360 5 398 2' fill='none' stroke='%23c8362b' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat; }
+.c .droite-texte { position: absolute; left: 790px; top: 200px; width: 560px; font: 25px/40px var(--plume); color: #2b2118; }
+.c .droite-texte p { margin: 0 0 40px; }
+.c .droite-texte s { color: #8a7a68; }
+.c .droite-texte .encadre { border: 2.5px solid #2b2118; border-radius: 12px 4px 14px 6px; padding: 0 16px; transform: rotate(-1deg); display: inline-block; }
+.c .points-pages { left: 830px; bottom: 100px; color: #6b5a48; }
+.c .suivant { right: 150px; bottom: 90px; background: none; color: var(--encre); font: 32px var(--plume); letter-spacing: 0; text-transform: none; }
+.c .suivant::after { content: " ⟶"; }
+</style></head>
+<body>
+<div class="galerie">
+
+<h1>A · Tableaux 3D — la scène de la cinématique, des étiquettes qui pointent, peu de texte</h1>
+<section class="cadre a" id="a">
+  <div class="entete">Les Compteurs · <b>Accueil</b> · 1 / 3</div>
+  <div class="note">Watty ment. Les Compteurs comptent.</div>
+  <svg class="fils" viewBox="0 0 1600 900" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none">
+    <g stroke="rgba(255,255,255,.8)" stroke-width="1.5" fill="none"><path d="M935 410 L1040 505"/><path d="M1395 270 L1515 175"/><path d="M1180 650 L1290 600"/></g>
+    <g fill="#f2c14e"><circle cx="1040" cy="505" r="6"/><circle cx="1515" cy="175" r="6"/><circle cx="1290" cy="600" r="6"/></g>
+    <g fill="none" stroke="rgba(242,193,78,.35)" stroke-width="8"><circle cx="1040" cy="505" r="9"/><circle cx="1515" cy="175" r="9"/><circle cx="1290" cy="600" r="9"/></g>
+  </svg>
+  <div class="etiquette" style="left:740px;top:345px">Le guichet<small>Dépose ton énergie, reçois des wotts.</small></div>
+  <div class="etiquette" style="left:1140px;top:245px">Une éolienne<small>Ici, chaque watt a une origine.</small></div>
+  <div class="etiquette" style="left:930px;top:640px">Un Compteur<small>Il note tout. Il ne triche jamais.</small></div>
+  <h2>Le monde d'aujourd'hui</h2>
+  <p class="accroche">Le réseau ne reviendra pas. L'énergie se compte, se gagne, s'échange.</p>
+  <ul>
+    <li><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="19" fill="#f2c14e" stroke="#fff" stroke-width="2.5"/><path d="M24 7 L13 25 H21 L18 37 L31 18 H23 Z" fill="#2b2118"/></svg><div><strong>L'énergie se compte</strong><span>Chaque feu, chaque lampe en dépense. Tes mains, elles, ne coûtent rien.</span></div></li>
+    <li><svg viewBox="0 0 44 44"><rect x="4" y="10" width="36" height="24" rx="3" fill="none" stroke="#fff" stroke-width="2.5"/><path d="M10 17 H28 M10 23 H22" stroke="#f2c14e" stroke-width="3"/><circle cx="32" cy="27" r="5" fill="none" stroke="#e46a4f" stroke-width="2.5"/></svg><div><strong>Le wott</strong><span>Un bon d'énergie. Il se décharge chaque semaine : on l'échange, on ne l'entasse pas.</span></div></li>
+    <li><svg viewBox="0 0 44 44"><path d="M6 20 L22 8 L38 20 Z" fill="none" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/><rect x="9" y="20" width="26" height="17" fill="none" stroke="#fff" stroke-width="2.5"/><rect x="18" y="26" width="8" height="11" fill="#f2c14e"/></svg><div><strong>Le Comptoir</strong><span>Terrain neutre. On y dépose, on y troque, on s'y croise. En paix.</span></div></li>
+  </ul>
+  <div class="points-pages"><i class="ici"></i><i></i><i></i></div>
+  <button class="suivant">Suivant ›</button>
+</section>
+
+<h1>B · Dossier des Compteurs — un vrai dossier sur une table : photos, tampon, notes au feutre</h1>
+<section class="cadre b" id="b">
+  <div class="chemise">
+    <div class="pli"></div>
+    <figure class="photo p1"><span class="trombone"></span><img src="img/comptoir.jpg" alt=""><figcaption>Comptoir du Carrefour — zone neutre</figcaption></figure>
+    <figure class="photo p2"><img src="img/forge.jpg" alt=""><figcaption>Elle, elle sait encore.</figcaption></figure>
+    <div class="feuille">
+      <div class="ref"><span>Les Compteurs · Fiche d'accueil</span><span>1 / 3</span></div>
+      <h2>Le monde d'aujourd'hui</h2>
+      <p class="accroche">Le réseau ne reviendra pas. Ici, l'énergie se compte, se gagne et s'échange.</p>
+      <ol>
+        <li><div><strong>L'énergie se compte en Wh</strong><span>Chaque feu, chaque lampe, chaque machine en dépense. Ce que tes mains savent faire ne coûte rien.</span></div></li>
+        <li><div><strong>Le wott, notre monnaie</strong><span>Dépose de l'électricité au Comptoir, reçois des bons d'énergie. Ils se déchargent chaque semaine.</span></div></li>
+        <li><div><strong>Le Comptoir est neutre</strong><span>On y dépose, on y troque, on y rencontre les autres survivants. En paix.</span></div></li>
+      </ol>
+      <div class="tampon">Vérifié</div>
+    </div>
+    <div class="marge">Watty ment !<svg viewBox="0 0 120 70"><path d="M6 10 C10 50 40 64 110 50" fill="none" stroke="#1d3f8a" stroke-width="4" stroke-linecap="round"/><path d="M96 30 L112 40 L98 52" fill="none" stroke="#1d3f8a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+  </div>
+  <div class="points-pages"><i class="ici"></i><i></i><i></i></div>
+  <button class="suivant">Tourner la page ›</button>
+</section>
+
+<h1>C · Carnet du survivant — pages manuscrites, croquis à l'encre, ratures</h1>
+<section class="cadre c" id="c">
+  <div class="carnet">
+    <div class="page gauche"></div><div class="page droite"></div><div class="reliure"></div><div class="elastique"></div>
+    <figure class="croquis"><img src="img/croquis-comptoir-pres.jpg" alt=""><span class="scotch" style="left:-30px;top:-10px;transform:rotate(-30deg)"></span><span class="scotch" style="right:-30px;bottom:-8px;transform:rotate(-25deg)"></span></figure>
+    <div class="legende">Le Comptoir du Carrefour.<br>On y échange <b>sans se battre</b>. Les Compteurs tiennent les comptes — au watt près.</div>
+    <svg class="eteint" viewBox="0 0 360 150"><g fill="none" stroke="#2b2118" stroke-width="2.4" stroke-linecap="round"><path d="M60 30 c-14 2 -16 24 -2 28 c12 3 20 -8 16 -18 c-2 -7 -8 -10 -14 -10z"/><path d="M62 58 c-6 18 -8 40 -4 62 M70 60 c4 20 4 40 0 60"/><path d="M58 70 c-14 6 -24 16 -30 26 M72 70 c14 4 26 10 36 22"/></g><circle cx="57" cy="42" r="2.5" fill="#2b2118"/><circle cx="66" cy="42" r="2.5" fill="#2b2118"/><text x="88" y="44" font-family="Bradley Hand, cursive" font-size="22" fill="#c8362b">← les Éteints. Jamais seul.</text></svg>
+    <div class="jour">Jour 1 — au petit matin</div>
+    <h2>Le monde d'aujourd'hui</h2>
+    <div class="droite-texte">
+      <p>Le réseau ne reviendra pas. <s>Ils disent « bientôt ».</s></p>
+      <p>L'énergie <span class="encadre">se compte</span>, en Wh. Mes mains, elles, ne coûtent rien.</p>
+      <p>Au Comptoir : je dépose du courant, on me donne des <b>wotts</b>. Ils se vident chaque semaine → les dépenser.</p>
+      <p style="color:#c8362b">Watty ment. Les Compteurs comptent.</p>
+    </div>
+  </div>
+  <div class="points-pages"><i class="ici"></i><i></i><i></i></div>
+  <button class="suivant">Page suivante</button>
+</section>
+</div>
+<script>
+const d = new URLSearchParams(location.search).get('d');
+if (d) { document.body.classList.add('seul'); document.querySelectorAll('.cadre').forEach((c) => { if (c.id !== d) c.style.display = 'none'; }); }
+</script>
+</body></html>
