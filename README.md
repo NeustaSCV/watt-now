@@ -33,6 +33,45 @@ Le monde ne s'est pas effondré dans un grand fracas : il s'est *abruti*, panne 
 </tr>
 </table>
 
+## Le monde : 2 niveaux jouables, 10 lieux
+
+Tout part de **ton terrain** (une prairie, une mare, une ruine de ferme) et du **Comptoir du Carrefour**, où l'on vend et
+achète en wotts. Les routes mènent ensuite vers **deux niveaux jouables** :
+
+| Niveau | Haltes (partagées, Éteints, duels) | Lieux personnels (une partie à soi, qui se réinitialise) |
+|---|---|---|
+| **1 · L'intérieur des terres** | La station-service, le Gué-aux-Saules | La Coopérative, le Moulin du Gué |
+| **2 · La côte** | La route du pont, la corniche du Cap Rouge | Le Grand Hôtel des Flots, le phare du cap |
+
+<img src="docs/captures/carte.jpg" alt="La carte de la région : terrain, Comptoir, haltes et lieux des niveaux 1 et 2" width="100%">
+
+<table>
+<tr>
+<td width="50%"><img src="docs/captures/lieu-terrain.jpg" alt="Ton terrain, vu d'en haut"></td>
+<td width="50%"><img src="docs/captures/lieu-station.jpg" alt="La station-service"></td>
+</tr>
+<tr>
+<td align="center"><sub><b>Ton terrain</b> · feux, abri, coffres, et la ruine de ferme</sub></td>
+<td align="center"><sub><b>La station-service</b> · niveau 1, la première halte</sub></td>
+</tr>
+<tr>
+<td><img src="docs/captures/lieu-gue.jpg" alt="Le Gué-aux-Saules"></td>
+<td><img src="docs/captures/lieu-moulin.jpg" alt="Le Moulin du Gué"></td>
+</tr>
+<tr>
+<td align="center"><sub><b>Le Gué-aux-Saules</b> · niveau 1, le pont est parti</sub></td>
+<td align="center"><sub><b>Le Moulin du Gué</b> · niveau 1, la roue ne tourne plus</sub></td>
+</tr>
+<tr>
+<td><img src="docs/captures/lieu-grand-hotel.jpg" alt="Le Grand Hôtel des Flots"></td>
+<td><img src="docs/captures/lieu-phare.jpg" alt="Le phare du cap"></td>
+</tr>
+<tr>
+<td align="center"><sub><b>Le Grand Hôtel des Flots</b> · niveau 2, « séjour zéro effort »</sub></td>
+<td align="center"><sub><b>Le phare du cap</b> · niveau 2, au bout de la corniche</sub></td>
+</tr>
+</table>
+
 ## Démarrer en 2 minutes
 
 Il faut **Node.js 24 ou plus** (le serveur exécute TypeScript directement, sans compilation).
