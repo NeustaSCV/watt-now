@@ -21,3 +21,6 @@ son/sources/
 # Caches Python
 __pycache__/
 *.pyc
+
+# Consignes locales des assistants de code (hors dépôt)
+CLAUDE.md
