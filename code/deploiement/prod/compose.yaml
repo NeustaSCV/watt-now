@@ -36,14 +36,14 @@ services:
       traefik.enable: "true"
       traefik.docker.network: traefik_proxy
       # Le jeu (et ses WebSocket, que Traefik passe sans réglage).
-      traefik.http.routers.wattnow.rule: Host(`jeu.example.org`)
+      traefik.http.routers.wattnow.rule: Host(`${WATT_NOM:?WATT_NOM manque dans .env}`)
       traefik.http.routers.wattnow.entrypoints: websecure
       traefik.http.routers.wattnow.tls.certresolver: letsencrypt
       traefik.http.routers.wattnow.service: wattnow
       traefik.http.routers.wattnow.middlewares: wattnow-securite
       traefik.http.services.wattnow.loadbalancer.server.port: "8080"
       # La page d'administration : même nom, même certificat, sous /admin (priorité plus forte que le jeu).
-      traefik.http.routers.wattnow-admin.rule: Host(`jeu.example.org`) && PathPrefix(`/admin`)
+      traefik.http.routers.wattnow-admin.rule: Host(`${WATT_NOM:?WATT_NOM manque dans .env}`) && PathPrefix(`/admin`)
       traefik.http.routers.wattnow-admin.priority: "200"
       traefik.http.routers.wattnow-admin.entrypoints: websecure
       traefik.http.routers.wattnow-admin.tls.certresolver: letsencrypt

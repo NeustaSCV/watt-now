@@ -8,7 +8,9 @@
 # Usage : code/deploiement/certificat/obtenir.sh            (nom : WATT_NOM, preprod.example.org par défaut)
 
 set -euo pipefail
-NOM="${WATT_NOM:-preprod.example.org}"
+# Les vraies adresses (prod, préprod) : dans hotes.local.sh, hors de Git (modèle : hotes.exemple.sh).
+[ -f "$(dirname "$0")/../hotes.local.sh" ] && . "$(dirname "$0")/../hotes.local.sh"
+NOM="${WATT_NOM:-${WATT_HOTE_PREPROD:?adresse inconnue : copier code/deploiement/hotes.exemple.sh en hotes.local.sh}}"
 ICI="$(cd "$(dirname "$0")" && pwd)"
 mkdir -p "$ICI/lettre/config" "$ICI/lettre/travail" "$ICI/lettre/journaux"
 

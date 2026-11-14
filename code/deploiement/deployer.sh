@@ -17,11 +17,13 @@
 # Sans ces variables, le certificat déjà sur le Pi est gardé tel quel.
 
 set -euo pipefail
+# Les vraies adresses (prod, préprod) : dans hotes.local.sh, hors de Git (modèle : hotes.exemple.sh).
+[ -f "$(dirname "$0")/hotes.local.sh" ] && . "$(dirname "$0")/hotes.local.sh"
 
 PI="${WATT_PI:-192.168.254.99}"
 UTILISATEUR="${WATT_PI_UTILISATEUR:-pi}"
 PORT="${WATT_PORT:-1234}"
-NOM="${WATT_NOM:-preprod.example.org}"
+NOM="${WATT_NOM:-${WATT_HOTE_PREPROD:?adresse inconnue : copier code/deploiement/hotes.exemple.sh en hotes.local.sh}}"
 CERT="${WATT_CERT:-}"
 CLE="${WATT_CLE:-}"
 DOSSIER="${WATT_PI_DOSSIER:-watt-now}"

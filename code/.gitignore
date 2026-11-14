@@ -7,3 +7,6 @@ serveur/donnees/reglages.json
 serveur/donnees/sauvegardes/
 serveur/donnees/essais-*/
 deploiement/certificat/lettre/
+
+# Les vraies adresses des serveurs (modèle : deploiement/hotes.exemple.sh)
+deploiement/hotes.local.sh

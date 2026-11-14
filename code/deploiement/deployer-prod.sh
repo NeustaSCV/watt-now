@@ -22,12 +22,14 @@
 # Revenir à la version d'avant, sur le VPS : docker tag watt-now:<version> watt-now:courante && cd ~/watt-now && ./installer.sh
 
 set -euo pipefail
+# Les vraies adresses (prod, préprod) : dans hotes.local.sh, hors de Git (modèle : hotes.exemple.sh).
+[ -f "$(dirname "$0")/hotes.local.sh" ] && . "$(dirname "$0")/hotes.local.sh"
 
-VPS="${WATT_VPS:-jeu.example.org}"
+VPS="${WATT_VPS:-${WATT_HOTE_PROD:?adresse inconnue : copier code/deploiement/hotes.exemple.sh en hotes.local.sh}}"
 UTILISATEUR="${WATT_VPS_UTILISATEUR:-debian}"
 PORT_SSH="${WATT_VPS_PORT_SSH:-22}"
 DOSSIER="${WATT_VPS_DOSSIER:-watt-now}"
-NOM="${WATT_NOM:-jeu.example.org}"
+NOM="${WATT_NOM:-$VPS}"
 ICI="$(cd "$(dirname "$0")" && pwd)"
 CODE="$(dirname "$ICI")"
 VERSION="$(sed -n 's/^export const VERSION = "\(.*\)";/\1/p' "$CODE/commun/src/version.ts")"
@@ -113,6 +115,7 @@ COPYFILE_DISABLE=1 tar -cf - -C "$ICI/prod" compose.yaml installer.sh | "${SSH[@
   set -e
   mkdir -p '$DOSSIER'
   tar -xf - --no-same-owner -C '$DOSSIER'
+  printf 'WATT_NOM=%s\n' '$NOM' > '$DOSSIER/.env'   # l'adresse des joueurs, pour compose.yaml (Traefik)
   chmod +x '$DOSSIER/installer.sh'
   '$DOSSIER/installer.sh' $REMISE
 " | tee /dev/stderr | grep '^ETAT healthy$' >/dev/null || erreur "Le jeu n'est pas en bonne santé sur le VPS (voir le journal ci-dessus)."

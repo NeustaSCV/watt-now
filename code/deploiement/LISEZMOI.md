@@ -2,6 +2,8 @@
 
 Le jeu tourne dans **un seul conteneur Docker** : le serveur de jeu sert aussi les pages du jeu. Les données (base, réglages, sauvegardes) restent dans le dossier `~/watt-now/donnees/` du Pi, hors de l'image : on peut mettre le jeu à jour sans rien perdre.
 
+**Les adresses des serveurs** (`preprod.example.org`, `jeu.example.org` dans ce dépôt public sont des exemples) : les vraies sont dans `code/deploiement/hotes.local.sh`, qui reste sur le Mac, hors de Git. Pour le créer, copier `hotes.exemple.sh` et y mettre les deux adresses. Tous les scripts de déploiement le lisent. En production, `deployer-prod.sh` écrit l'adresse des joueurs dans `~/watt-now/.env` sur le VPS, et `compose.yaml` la donne à Traefik.
+
 ## 1. Le Pi (une fois)
 
 - **Raspberry Pi 4** (le nôtre, à l'adresse 192.168.254.99) ou 5, avec 2 Go au moins pour le jeu (il en prend ≈ 130 Mo), **SSD** en USB ou NVMe (pas la carte SD seule : elle s'use vite avec une base de données), alimentation officielle (Book 17 §5.1).

@@ -10,7 +10,9 @@
 #         code/deploiement/god-prod.sh --famille voltaiques  à la création (charbonniers, voltaiques ou mecanistes)
 #         (WATT_VPS, WATT_VPS_UTILISATEUR, WATT_VPS_PORT_SSH comme deployer-prod.sh)
 set -euo pipefail
-VPS="${WATT_VPS:-jeu.example.org}"
+# Les vraies adresses (prod, préprod) : dans hotes.local.sh, hors de Git (modèle : hotes.exemple.sh).
+[ -f "$(dirname "$0")/hotes.local.sh" ] && . "$(dirname "$0")/hotes.local.sh"
+VPS="${WATT_VPS:-${WATT_HOTE_PROD:?adresse inconnue : copier code/deploiement/hotes.exemple.sh en hotes.local.sh}}"
 UTILISATEUR="${WATT_VPS_UTILISATEUR:-debian}"
 PORT_SSH="${WATT_VPS_PORT_SSH:-22}"
 OPTIONS=""
