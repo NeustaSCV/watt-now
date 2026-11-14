@@ -4,14 +4,80 @@
     {
       "name": "watt-now",
       "runtimeExecutable": "/opt/homebrew/bin/node",
-      "runtimeArgs": ["code/scripts/dev.mjs"],
+      "runtimeArgs": [
+        "code/scripts/dev.mjs"
+      ],
       "port": 5173
     },
     {
       "name": "son-ecoute",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8790", "--bind", "127.0.0.1", "--directory", "son"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8790",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "son"
+      ],
       "port": 8790
+    },
+    {
+      "name": "intro",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8791",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "intro"
+      ],
+      "port": 8791
+    },
+    {
+      "name": "batiment",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8792",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "batiment"
+      ],
+      "port": 8792
+    },
+    {
+      "name": "bible",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8793",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "book/bible"
+      ],
+      "port": 8793
+    },
+    {
+      "name": "making-of",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8794",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "making-of"
+      ],
+      "port": 8794
     }
   ]
 }

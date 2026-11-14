@@ -2,7 +2,7 @@
 
 Bonnes idées remontées par les testeurs de *Watt Now?*. Ce fichier sert de boîte à idées : une idée notée ici n'est **pas encore une décision**. Quand une idée est retenue, elle est reportée dans le book concerné (voir `book/README.md`), ou dans `book/99-evolutions-futures.md` si elle est remise à plus tard.
 
-**Statuts** : 🆕 à étudier · ✅ retenue (book indiqué) · ⏳ plus tard (évolutions futures) · ❌ écartée (raison indiquée)
+**Statuts** : 🆕 à étudier · ✅ retenue (book indiqué, et version si elle est réalisée) · ⏳ plus tard (évolutions futures) · ❌ écartée (raison indiquée)
 
 ---
 
@@ -14,7 +14,7 @@ Bonnes idées remontées par les testeurs de *Watt Now?*. Ce fichier sert de bo�
 - **Idée** : le terrain du joueur contient un vestige de décharge qui fait remonter de temps en temps, au hasard, des objets plus ou moins rares. Ces objets ne disparaissent pas : ils restent là jusqu'à ce que le joueur vienne les ramasser.
 - **Pourquoi c'est intéressant** : le joueur qui ne joue pas souvent n'est pas puni, il a même une bonne surprise en revenant. Ça donne une raison de revenir sans créer d'obligation de se connecter.
 - **Books concernés** : 19-modele-du-terrain, 09-cycles-progression-classements, 07-economie (rareté des objets)
-- **Statut** : 🆕 à étudier
+- **Statut** : ✅ retenue et réalisée en version 0.3 (Book 19 §2 ter « La décharge »)
 
 ### P-002 — Une gamme d'objets bushcraft dès le début, rangée par besoin
 - **Date** : 2026-10-08
@@ -1351,6 +1351,292 @@ On ne peut pas modéliser à la main des centaines d'armes. Mais elles sont **fa
 - **Les armes de famille** viendront-elles plus tard ? Par exemple une version forgée 🔥 de la machette de ressort, ou une version électrique ⚡ de la fourche.
 - **Les combinaisons de trois objets** : à garder pour plus tard, comme vous l'avez dit.
 - **Le ton** des armes les plus crues : à relire ensemble.
+
+### P-010 — Le vélo du retour : un raccourci à usage unique
+- **Date** : 2026-10-08
+- **Source** : demande du porteur du projet
+- **Idée** : sur **certaines maps choisies**, le joueur trouve parfois un **vélo en fin de niveau**. Il lui permet de **rentrer directement chez lui**, pour moins de calories et **sans passer par les haltes**. Arrivé chez lui, le vélo **casse** : il le démonte et récupère les pièces. C'est un **retour rapide à usage unique**, que l'on place là où il nous intéresse.
+- **Pourquoi c'est intéressant** :
+  - Une **récompense** pour celui qui est allé au bout d'un lieu lointain : il n'a pas à refaire tout le chemin chargé et fatigué.
+  - Le voyage reste dangereux en général, mais on peut **régler le rythme** d'une expédition lieu par lieu.
+  - Le vélo cassé n'est pas perdu : **ses pièces font le pédalier des Mécanistes** (cadre, chaîne, roue, déjà dans `commun/src/recettes.ts`), des rayons (fil d'acier, aiguilles), une dynamo… (Book 02 §5).
+  - Ça colle aux coûts du Book 01 : à pied ≈ 60 kcal/km, à vélo ≈ 20 kcal/km (Book 01, tableau des transports).
+
+#### 1. Le déroulé
+
+1. **En fin de niveau** (au fond d'une ruine, au bout d'une expédition), sur les maps où on l'a prévu : un vélo appuyé contre un mur, une chance de le trouver (par exemple une fois sur trois).
+2. **Examiner** : « Un vieux vélo. Les pneus tiennent… pour un trajet. »
+3. **Prendre le vélo** : la carte s'ouvre avec un seul trajet proposé, **« Rentrer chez toi à vélo »**. Les haltes du chemin sont montrées **barrées**.
+4. **Le voyage** : la courte séquence sur la carte, avec le vélo. Coût : un tiers des calories du trajet à pied, et moins d'eau.
+5. **À l'arrivée sur le terrain** : le vélo casse (une animation drôle, la roue qui part de son côté). Il devient un **vélo cassé**, posé au sol, à **démonter** (clé plate, 30 min) en pièces.
+
+#### 2. Les garde-fous
+
+Les haltes existent pour que **le transport de wotts reste risqué** (Book 01 §2 bis : « sans haltes, le transport de wotts perdrait tout son enjeu »). Le vélo ne doit pas l'annuler.
+
+- **Jamais au départ d'un comptoir.** Le trajet comptoir → terrain, celui qui transporte les wotts, garde toujours ses haltes. Le vélo n'apparaît qu'en fin de niveau des **lieux d'exploration** choisis.
+- **Seulement vers son terrain**, pas vers un autre lieu.
+- **Usage unique, non transportable** : on ne peut pas le ranger dans le sac ni le garder pour plus tard. Soit on part tout de suite, soit on le laisse.
+- **Charge limitée** : on ne roule pas avec 55 kg sur le dos. Au-delà de, par exemple, 25 kg, le vélo ne tient pas : il faut alléger, ou rentrer à pied. C'est un vrai choix (« je garde le butin lourd, ou je rentre vite ? »).
+- **Pas en hiver dans la neige** (Book 13), ou alors avec une chance de chute en route.
+- **Le placement est une décision de conception, lieu par lieu.** Une case « vélo du retour : oui, chance 30 % » dans la fiche du lieu.
+
+#### 3. Les variantes possibles
+
+- **Selon la famille** : un Mécaniste (⚙️, cyclistes d'origine, Book 15 §2.4) peut **le réparer** au lieu de le démonter, s'il a une chambre à air et une clé (P-003). Il garde alors un vrai vélo. C'est cohérent avec son domaine, le transport (Book 02 §6).
+- **Un vélo électrique** (rare, P-003) : un Voltaïque récupère en plus la batterie et le moteur dans le moyeu.
+- **D'autres raccourcis du même genre** : une barque sur la rivière (Book 20 : la rivière contourne le terrain), une draisine sur les rails de la Ville, une trottinette électrique presque vide.
+
+- **Books concernés** : 01-les-trois-feux (§2 bis haltes et transports), 20-carte-du-monde (lieux), 02-crafting (§5 vestiges), 13-meteo
+- **Statut** : 🆕 à étudier
+
+### P-011 — Sur son terrain, les bûches et les pierres ne reviennent plus
+- **Date** : 2026-10-09
+- **Source** : demande du porteur du projet
+- **Idée** : sur le terrain de base, les **grosses bûches** et les **pierres** ramassées **ne réapparaissent pas**. Les **petites branches**, elles, continuent de repousser. Le joueur a de quoi démarrer, puis il doit **sortir** chercher le gros bois et la pierre.
+- **Pourquoi c'est intéressant** : aujourd'hui, on peut vivre sans quitter son terrain. Ce changement pousse vers les haltes, les lieux et le commerce, là où se trouvent le risque et les rencontres. Les branches qui repoussent garantissent qu'on ne reste jamais sans rien pour allumer un feu.
+- **Ce que montre le code** (lecture seule) : `commun/src/terrain.ts`, `REPOUSSE_MS`.
+  - **Pierre** : déjà `null`, elle ne revient pas. Rien à changer.
+  - **Bûche** : revient en **90 min** réelles. C'est elle qu'il faut passer à `null`.
+  - **Branche** : revient en 40 min. On garde.
+  - Au départ, le terrain compte **16 bûches**, **26 pierres** et **34 branches** (`NOMBRES`).
+- **Ce qu'il faut vérifier avant** :
+  - **Le stock de départ suffit à démarrer.** Les 16 bûches doivent couvrir le tutoriel, la première nuit de feu et les premières fabrications communes (établi, coffre, escabeau, gourdin), sans laisser de joueur bloqué. Les recettes de famille gourmandes (la charbonnière en demande une dizaine) se feront avec du bois rapporté.
+  - **Le gros bois existe dehors**, en quantité : lisière de la halte, Coopérative, lieux de flux (Book 20). Sinon, le joueur est coincé.
+  - **Une autre voie que la fouille** : abattre un arbre du terrain avec la hache (Book 19 : « abattre l'arbre » donne du bois). Ce serait du **bois vert** à faire sécher (Book 02 §3), donc lent : un dernier recours sur place, pas une source infinie.
+  - **Le commerce** : des bûches au comptoir, vendues par ceux qui en ont rapporté.
+  - **Le feu de la nuit** : avec des branches seules (0,5 de combustible chacune), il faut en rajouter souvent. C'est voulu, mais le message d'aide doit dire où trouver du gros bois.
+- **Books concernés** : 19-modele-du-terrain, 02-crafting (§3 le bois), 20-carte-du-monde, 14-personnage-et-tutoriel, 21-perimetre-phase-0
+- **Statut** : 🆕 à étudier
+
+### P-012 — Dès le début, une halte « bois » et une halte « pierre »
+- **Date** : 2026-10-09
+- **Source** : demande du porteur du projet
+- **Idée** : dès le début du jeu, deux haltes proches du terrain ont chacune leur **spécialité** : une halte **forêt**, riche en bois, et une halte **pierre**. Quand le joueur a épuisé les bûches et les pierres de son terrain (P-011), il sait où aller se réapprovisionner.
+- **Pourquoi c'est intéressant** : P-011 pousse le joueur à sortir ; P-012 lui dit **où aller**. Ça donne les premiers vrais allers-retours : partir avec un sac vide, revenir chargé, à travers le risque de la halte. C'est aussi un premier usage du **thème** d'une halte (P-008 §6).
+- **Aujourd'hui** (`commun/src/halte.ts`, lecture seule) : la seule halte, la station-service, a **6 bûches** et **13 pierres** en tout, partagées par tous les voyageurs. C'est trop peu pour servir de réserve.
+
+#### 1. Les deux haltes
+
+| | 🌲 Halte forêt | 🪨 Halte pierre |
+|---|---|---|
+| **Laquelle** | La **station-service** actuelle, déjà en thème forêt : on enrichit sa lisière | **Nouvelle halte proche**, par exemple « la vieille carrière » ou « le talus du chemin de fer » (ballast, murets écroulés) |
+| **Où** | Sur la route du Comptoir, comme aujourd'hui | Sur une **deuxième route** qui part du terrain. En 0a, elle peut se terminer plus loin par un éboulement (« la route est coupée »), en attendant de mener à la Montagne (Book 20) |
+| **Ce qu'on y trouve** | Beaucoup de **bûches** et de branches, un **arbre tombé** à débiter à la hache, un **tas de bois** abandonné, des fibres et des champignons | Beaucoup de **pierres**, des **blocs** à casser à la masse, du **calcaire** (four à chaux, Book 02 §12.3), du sable, un peu de bois |
+| **Ce qui fait peur** | Les Éteints cachés dans les sous-bois | Le bruit : casser la pierre s'entend de loin (signature, Book 06 §3) |
+
+#### 2. Les règles
+
+- **Ces ressources repoussent**, contrairement à celles du terrain. C'est la différence entre une **réserve** (le terrain, qu'on épuise) et un **flux** (la halte, qui revient).
+- **Le stock est partagé** entre les voyageurs d'une même instance (comme aujourd'hui). Pour qu'un joueur ne vide pas tout pour les autres, le stock peut **grandir avec le nombre de joueurs** de l'instance.
+- **Le poids limite l'aller-retour** : une bûche ou une pierre pèse 2 kg, un sac à dos 55 kg, donc environ vingt-cinq par voyage. Ça donne tout leur intérêt au **travois** et à la **brouette** (P-002, P-003).
+- **Le voyage coûte des calories** (60 kcal/km à pied) : la halte proche doit rester proche, pour que l'aller-retour vaille la peine.
+- **Une halte se traverse** (Book 01 §2 bis) : on peut aussi y faire le plein sur le chemin d'autre chose.
+
+#### 3. Lien avec les familles
+
+- 🔥 Les **Charbonniers** iront souvent en forêt : la charbonnière demande beaucoup de bois.
+- ⚙️ Les **Mécanistes** y vont avec la scie et le travois : ils pourraient **vendre du bois au comptoir** (P-011).
+- La pierre sert à tous (foyers, forge, murs, Book 10) : c'est un bon objet de commerce entre familles.
+
+- **Books concernés** : 20-carte-du-monde (§4 haltes), 01-les-trois-feux (§2 bis), 02-crafting (§3 ressources), 19-modele-du-terrain, 21-perimetre-phase-0, P-008, P-011
+- **Statut** : 🆕 à étudier
+
+### P-013 — Se faire livrer du bois ou de la pierre, au prix de l'énergie dépensée
+- **Date** : 2026-10-10
+- **Source** : demande du porteur du projet
+- **Idée** : au comptoir, on peut **commander une livraison** de bûches ou de pierres sur son terrain. Le prix est **cohérent avec l'énergie** qu'il faut pour les porter jusque-là. Il est hors de portée d'un nouveau joueur, mais abordable pour un joueur installé.
+- **Pourquoi c'est intéressant** : le joueur installé n'a pas à refaire sans fin les allers-retours de P-012 ; il paie quelqu'un pour le faire. Ses wotts reprennent de la valeur, et le nouveau joueur voit ce qu'il pourra s'offrir plus tard.
+
+#### 1. Le calcul du prix (valeurs du code et des books)
+
+| Poste | Base de calcul | Lot de 50 bûches (100 kg) | Lot de 50 pierres (100 kg) |
+|---|---|---|---|
+| **Matière** | Prix de vente du Comptoir (`commun/src/economie.ts` : bûche 16 wotts de base, pierre 6, +20 %) | 50 × 19 = **950** | 50 × 7 = **350** |
+| **Portage** | Comptoir → terrain : 5 km (`commun/src/lieux.ts`). Un porteur prend 25 kg : 4 porteurs. Chacun dépense ≈ 85 kcal/km chargé à l'aller, 60 au retour à vide, soit ≈ 725 kcal, payées 0,2 wott/kcal (Book 01 §6) | 4 × 145 = **580** | **580** |
+| **Prime de risque** | La traversée de la halte (Book 01 §2 bis) : +30 % | **460** | **280** |
+| **Frais du comptoir** | 3 % (Book 07 §5) | **60** | **35** |
+| **Total** | | **≈ 2 050 wotts** (≈ 41 par bûche) | **≈ 1 250 wotts** (≈ 25 par pierre) |
+
+Une bûche livrée coûte ainsi **≈ 2,5 fois** son prix au comptoir, et une pierre **≈ 3,5 fois** : la pierre vaut peu, mais elle est aussi lourde que le bois.
+
+#### 2. Pourquoi c'est hors de portée d'un nouveau joueur… sans barrière artificielle
+
+- **Le prix fait le tri tout seul.** Le Book 07 §7 vise qu'un nouveau joueur gagne ses 100 premiers wotts en 10 à 15 minutes. Un lot à 2 000 wotts représente donc plusieurs heures de ses débuts. Pour un joueur qui vit de la forge, du solaire ou du commerce, c'est une dépense ordinaire.
+- **On ne vend que par lots** (50 pièces, 100 kg), pas à l'unité. C'est réaliste (une livraison se fait à la charrette) et c'est ce qui rend la livraison inaccessible au début.
+- **Faire soi-même reste toujours possible et moins cher** : 25 pièces par voyage à la halte forêt ou pierre (P-012). Le nouveau joueur a du temps et peu de wotts ; l'ancien a des wotts et peu de temps. Chacun choisit.
+- **Aucune condition d'ancienneté** : pas de verrou « niveau 10 ». C'est conforme au Book 09 (rien ne se gagne en puissance par l'ancienneté, seulement par ce qu'on fait).
+
+#### 3. Qui livre ?
+
+- **Au début, les porteurs des Compteurs** (PNJ). Les wotts payés vont à la **trésorerie du comptoir** ; ils ne sont pas créés, ils circulent (Book 07 §3.6). Les bûches viennent de son stock, alimenté par ce que les joueurs lui vendent.
+- **Ensuite, les joueurs eux-mêmes.** La livraison devient une **commande** (Book 07 §5 : wotts bloqués au comptoir jusqu'à la livraison). Un Mécaniste à la charrette ou au vélo-cargo (Book 07 §8, caravanier) l'accepte, va chercher le bois, le dépose sur le terrain du client et touche le prix. Le portage, la prime de risque et la marge deviennent **son revenu**. C'est un vrai métier.
+- **Le délai** : la livraison arrive en quelques heures réelles, **même hors ligne**. On la commande avant de se déconnecter, et le tas de bûches attend au bout du chemin.
+
+#### 4. À régler en test
+
+- La taille du lot (50 pièces ?) et la prime de risque (+30 %).
+- Un lot de **branches** a-t-il un sens ? Elles repoussent sur le terrain (P-011) : sans doute pas.
+- Plus tard, le prix pourra suivre le **cours** du bois et de la pierre au comptoir (Book 07 §4) et la **distance** pour les comptoirs plus lointains.
+
+- **Books concernés** : 07-economie (§4 prix, §5 commandes, §8 rôles), 01-les-trois-feux (§6 cours du travail), 09-cycles-progression-classements, P-011, P-012
+- **Statut** : 🆕 à étudier
+
+### P-014 — Une page d'administration sur le réseau local (port 4321)
+- **Date** : 2026-10-10
+- **Source** : demande du porteur du projet
+- **Idée** : une page web d'administration, servie par le serveur du jeu sur le **port 4321**, **sans authentification** : elle n'est pas publiée sur Internet, donc seulement accessible depuis le réseau local. Elle permet de :
+  1. **supprimer un compte** ;
+  2. **réinitialiser le mot de passe** d'un compte ;
+  3. voir **combien de joueurs sont connectés en ce moment** ;
+  4. voir **ce que l'on sait déjà** de chaque joueur.
+- **Règle** : **ne créer aucun nouveau compteur ni aucune nouvelle mesure** pour cette page. Elle affiche seulement ce que le serveur sait déjà.
+
+#### 1. Ce que le serveur sait déjà (lecture seule du code)
+
+| Information | D'où elle vient |
+|---|---|
+| Pseudo, date de création du compte | Table `comptes` (`serveur/src/base.ts`) |
+| Famille, position, dernière sauvegarde | Table `personnages` |
+| Contenu du sac et des coffres | Tables `inventaires`, `sacs`, `installations` |
+| Installations et feux du terrain | Tables `installations`, `feux` |
+| Ce qu'il a fait (collecte, combat…) | Table `mesures`, déjà remplie par le jeu |
+| Connecté ou non, lieu, instance, santé, endurance | La mémoire du serveur, pour les joueurs connectés en ce moment |
+| Le compte admin « god » | Table `admin` |
+| **Nombre de joueurs connectés** | Le nombre de joueurs connectés dans la mémoire du serveur, à l'instant où l'on regarde (pas d'historique, pas de pic) |
+
+#### 2. Les écrans
+
+- **En haut** : « 3 joueurs connectés » et la liste des connectés (pseudo, famille, lieu).
+- **La liste des comptes** : pseudo, famille, créé le, dernière sauvegarde, connecté ou non. On clique pour voir la fiche.
+- **La fiche d'un joueur** : tout ce que montre le tableau ci-dessus, en lecture.
+- **Réinitialiser le mot de passe** : le serveur tire un mot de passe provisoire et l'**affiche une seule fois**, pour le donner au joueur. Ses sessions ouvertes (table `jetons`) sont fermées.
+- **Supprimer le compte** : une confirmation qui demande de **retaper le pseudo**. Le compte et tout ce qui en dépend partent (les tables sont déjà liées en cascade). Si le joueur est connecté, il est déconnecté d'abord.
+- Le compte admin « god » est protégé : ni suppression ni réinitialisation depuis cette page.
+
+#### 3. Garde-fous, puisqu'il n'y a pas de mot de passe
+
+Le jeu est **publié sur Internet** sur le port 1234 (https://preprod.example.org:1234). La page d'admin ne doit jamais l'être.
+
+- **Un serveur web séparé** dans le même programme, qui écoute sur le port 4321 : rien de l'admin n'est accessible par le port 1234.
+- **Dans Docker** (`deploiement/compose.yaml`), publier le port 4321 **seulement sur l'adresse locale du Pi** (`192.168.254.99:4321:…`), et ne **jamais** le rediriger sur la box Internet.
+- **Refuser les adresses qui ne sont pas locales** (192.168.x.x, 10.x.x.x, 127.0.0.1) : une deuxième barrière si le port était un jour ouvert par erreur.
+- **Un journal des actions** : chaque suppression et chaque réinitialisation est notée (quoi, quel compte, quand), dans le journal du serveur.
+- Note : avec un réseau Wi-Fi partagé (invités, voisins), n'importe quel appareil connecté peut ouvrir la page.
+
+- **Books concernés** : 17-architecture-technique, 08-plateforme-commandes-financement, `deploiement/LISEZMOI.md`
+- **Statut** : 🆕 à étudier
+
+### P-015 — Une installation de nourriture par famille
+- **Date** : 2026-10-10
+- **Source** : demande du porteur du projet
+- **Idée** : chaque famille a **son installation de nourriture**, à poser sur son terrain, qui produit avec le coût propre à sa famille (Book 02 §1.4 : bois et bruit, électricité et pièces rares, ou calories et temps) :
+  - ⚡ **Voltaïques** : une **serre automatique** à arrosage automatique, à côté de la mare. Elle produit des légumes de saison, **même l'hiver**.
+  - ⚙️ **Mécanistes** : un **potager en permaculture avec des canards coureurs indiens**. Il produit des légumes de saison et de la viande, **sauf l'hiver**.
+  - 🔥 **Charbonniers** : une **machine à poulet** qui prend un poulet cru entier et sort des **canettes de poulet cuit**.
+- **Pourquoi c'est intéressant** : la nourriture devient une affaire de famille, comme la conservation dans le Book 02 §6 (🔥 fumage, ⚡ réfrigération, ⚙️ salage). Chaque famille produit quelque chose que les autres voudront lui acheter, surtout en hiver (Book 11 §11 : l'hiver, rien ne pousse dehors).
+
+#### 1. ⚡ La serre automatique
+
+| | |
+|---|---|
+| **Ce que c'est** | Une serre de vitres de vestige (Book 11 §4 : serre froide), une **pompe 12 V** qui puise dans la mare, une minuterie, des **lampes de culture à LED** et un petit chauffage pour l'hiver |
+| **Où** | Contre la mare (la pompe a besoin de l'eau tout près) |
+| **Ce qu'elle produit** | Salades, radis, tomates, selon la saison, avec les rendements du Book 11 §3, en **processus passif** : elle pousse même hors ligne |
+| **Son coût** | De l'**électricité**. Peu en été (la pompe). **Beaucoup en hiver** : la lumière et le chauffage vident les batteries. Batteries vides, la serre s'arrête et les plants gèlent |
+| **Son revers** | La nuit, la lueur **rose violacée** des LED se voit de loin : signature lumineuse (Book 06 §3) |
+| **L'intérêt en jeu** | Le seul légume frais de l'hiver. Il se vend cher au comptoir (Book 07 §6.1, prix d'hiver) |
+
+#### 2. ⚙️ Le potager en permaculture et ses canards coureurs indiens
+
+| | |
+|---|---|
+| **Ce que c'est** | Des planches de culture paillées (Book 11 §2), une haie, une cabane à canards et quelques **canards coureurs indiens**. Ces canards marchent debout, mangent les **limaces** (Book 11 §6 : les canards en sont les auxiliaires), fument le sol et pondent beaucoup |
+| **Où** | Près de la mare : les canards aiment l'eau |
+| **Ce qu'il produit** | Des légumes de saison, des **œufs**, et de temps en temps un canard pour la **viande**. **Rien l'hiver** : on vit sur ses provisions, puis on resème au printemps |
+| **Son coût** | Du **travail** et du temps : pailler, semer, récolter, nourrir les canards en grain quand la nature n'en donne plus. Aucune énergie |
+| **Son revers** | Les canards **cancanent** (une petite signature sonore, Book 11 §9 : « les animaux attirent ») et il faut les protéger des renards |
+| **L'intérêt en jeu** | La production la plus économe et la plus durable, mais qui ne tient pas l'hiver : il faut **stocker à l'automne** (Book 11 §11), ou acheter |
+
+#### 3. 🔥 La machine à poulet
+
+| | |
+|---|---|
+| **Ce que c'est** | Un **vestige de l'Abondance** retapé par les Charbonniers : une machine industrielle d'usine à volaille. On met un poulet cru **entier** d'un côté ; elle le plume, le cuit, le met en boîte, stérilise les boîtes, et sort de l'autre côté des **canettes de poulet cuit**. Sur l'étiquette d'origine : « Poulet Bonheur, prêt à vivre » |
+| **Où** | Au feu : elle chauffe au **bois ou au charbon de bois**, pour cuire et stériliser (la mise en conserve, Book 11 §11 : bocaux stérilisés, 🔥) |
+| **Ce qu'elle produit** | Des **canettes de poulet cuit** qui se gardent **plus d'un an** (comme la conserve du jeu, 400 kcal), plus des plumes, des os et de la graisse (sous-produits, Book 02 §11) |
+| **Ce qu'elle consomme** | Des **poulets entiers** (chasse aux poules ensauvagées, élevage, ou achat aux Mécanistes), des **boîtes vides** (P-003 : canettes, boîtes de conserve), du combustible |
+| **Son revers** | Fumée, odeur de poulet grillé et cliquetis de machine : **signature olfactive et sonore** forte, comme tout ce que font les Charbonniers |
+| **L'intérêt en jeu** | Elle ne produit rien toute seule : elle **transforme** et elle **conserve**. Le Charbonnier achète des poulets frais et vend des canettes qui ne pourrissent pas : une **chaîne entre familles** (Book 02 §12.4, le pain) |
+
+#### 4. Les règles communes
+
+- **Une installation par famille, mais rien d'interdit aux autres** : un Mécaniste peut monter une serre automatique, au coût d'une famille étrangère (×1,5, Book 02 §2).
+- **Le calendrier des saisons s'applique** (Book 13) : la serre triche avec l'électricité, le potager suit la nature, la machine fait des réserves.
+- **Les produits se vendent** au comptoir, avec le prix d'hiver pour ce qui est rare en hiver.
+- **Elles sont visibles et vivantes sur le terrain** : les canards qui se dandinent, la lueur rose de la serre la nuit, la fumée et le bruit de la machine.
+
+- **Books concernés** : 11-agriculture-elevage-alimentation, 02-crafting (§6 domaines, §8 installations), 13-meteo, 07-economie (§6.1 prix d'hiver), 06-zombies (signature), 25-le-metier-des-familles
+- **Statut** : 🆕 à étudier
+
+### P-016 — Après le bushcraft, la construction en dur : d'abord le sol, puis les murs
+- **Date** : 2026-10-10
+- **Source** : demande du porteur du projet
+- **Idée** : à partir d'un certain niveau, on considère que le joueur a fait le tour du bushcraft. On passe aux **constructions en dur** :
+  1. le joueur **construit le sol**, case par case (bois, pierre…) ;
+  2. il **monte des murs sur les arêtes** des cases de 1 m. **Le mur dépend du sol** : un mur en bois sur un sol en bois ou mieux, un mur mi-pierre mi-bois sur un sol en pierre, un mur en pierre sur un sol en pierre, et ainsi de suite ;
+  3. les **meubles évolués** exigent un **sol de qualité minimum**.
+- **Pourquoi c'est intéressant** :
+  - Une **deuxième étape** claire après le bushcraft, qui se voit sur le terrain : la base passe du campement à la maison.
+  - **C'est réaliste** : on ne pose pas une forge sur un plancher (incendie), ni un poêle de masse de deux tonnes sur de la terre battue.
+  - Ça **donne une raison d'être** aux idées P-011 à P-013 : il faut beaucoup de pierre et de bois, donc sortir, aller aux haltes, ou se faire livrer.
+- **Ce qui existe déjà** : le Book 19 a déjà la grille de cases de 1 m, le **sol aménagé** (couche 2 d'une case : « sol battu, dallage, plancher »), les **murs sur les arêtes** et la **détection automatique des pièces** avec leur toit. Le Book 10 a les matériaux de paroi et leur isolation. Il manque **le lien entre le sol, le mur et le meuble**.
+
+#### 1. L'échelle des sols, des murs et des meubles
+
+| Niveau | Sol | Murs permis dessus | Meubles qu'il permet (exemples) |
+|---|---|---|---|
+| **0** | Terre nue (le terrain naturel) | Aucun mur ; palissade, clôture | Tout le bushcraft (P-002, Book 24) : feu, abri, lit de branchages, coffre |
+| **1** | **Sol battu** : terre damée et paille | Clayonnage et torchis (Book 10 §3) | Banc, étagère, lit de cordes |
+| **2** | **Plancher de bois** : planches sur lambourdes | Rondins, ossature bois et paille | Lit en bois, établi de menuisier, métier à tisser, armoire, serre (P-015) |
+| **3** | **Dallage de pierre sèche** | Mur mi-pierre mi-bois : soubassement en pierre et ossature en bois ; pierre sèche | Poêle en fonte, four à pain, forge ventilée, machine à poulet (P-015) |
+| **4** | **Dallage de pierre jointée à la chaux** (Book 02 §12.3) | Pierre jointée, avec ou sans doublage isolant (Book 10 §4 : « la maison de fin de cycle ») | Poêle de masse, alambic, cellier, four à chaux, atelier électrique |
+
+#### 2. Les règles
+
+- **Un mur ne peut pas être d'un niveau plus élevé que le sol qui le porte.** Un mur est sur l'arête entre deux cases : il faut **au moins une des deux** au bon niveau. On peut ainsi monter le mur extérieur d'une maison sans paver le dehors.
+- **Un meuble évolué exige son sol minimum** sur **toutes les cases** de son emprise (Book 19 §2.1). Le refus dit pourquoi : « La forge doit reposer sur de la pierre : sur un plancher, elle mettrait le feu. »
+- **Les raisons sont physiques**, et on les dit au joueur : le poids (poêle de masse, enclume), le feu (forge, four, poêle), l'humidité (cellier, réserve de grain), le bruit (un atelier en pierre étouffe la forge, Book 10 §9).
+- **Améliorer un sol sous un meuble** se fait sur place, sans tout démonter, comme l'amélioration des installations (Book 24 §2.2).
+- **Le toit** reste automatique sur toute pièce fermée (Book 19 §4.2).
+
+#### 3. Quand on y a accès
+
+Le Book 03 §5.6 a déjà le savoir **Construction** en trois niveaux. Il peut servir de « niveau » :
+
+| Savoir | Ce qu'il ouvre |
+|---|---|
+| **Construction I** (abri, palissade, clayonnage, barricade) | Sols 0 et 1 |
+| **Construction II** (rondins, paille, terre-paille, enduits, chaume) | Sols 2 et 3 |
+| **Construction III** (pierre jointée, voûte, maison métallique) | Sol 4 |
+
+On passe ainsi à la construction en dur quand le bushcraft est fait, sans compteur de niveau à part.
+
+#### 4. Les familles (Book 10 §9)
+
+- ⚙️ **Mécanistes** : à l'aise avec le **bois** (planchers, rondins, charpente, paille). Moins chers sur les niveaux 1 et 2.
+- 🔥 **Charbonniers** : à l'aise avec la **pierre et la chaux** (dallages, maçonnerie, poêle de masse). Moins chers sur les niveaux 3 et 4.
+- ⚡ **Voltaïques** : tout leur intérêt est d'**isoler très bien** (Book 10 §4 : le chauffage électrique coûte cher). Ils achètent le reste aux deux autres familles, ou se font livrer (P-013).
+
+#### 5. À l'écran
+
+- Un **mode Construction** qui montre la grille du terrain.
+- On choisit un sol et on le « peint » sur les cases. Le coût total s'affiche avant de valider.
+- Pour les murs, les arêtes possibles s'éclairent **en vert**, les autres **en rouge** avec la raison.
+- La pièce se reconnaît dès qu'elle est fermée : surface, besoin de chauffage, fonction (Book 19 §4.2).
+
+- **Books concernés** : 19-modele-du-terrain (§2, §3, §4), 10-construction, 24-ameliorer-sa-base, 03-bibliotheque-et-savoir (§5.6 Construction), 02-crafting, P-011, P-012, P-013, P-015
+- **Statut** : 🆕 à étudier
 
 <!-- Modèle d'une entrée :
 
